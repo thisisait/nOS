@@ -37,6 +37,7 @@ worse than none, because it reads as complete.
 ## Readers — what is true right now
 - `_ledger_open.py` — One way to open the Wing ledger read-only, for readers that must not write.
 
+- `agent-capability.py` — Derive each agent's nos-work:// capability address from its manifest (the routing projection).
 - `agent-status.py` — What the agents are doing, and what came of the last ones.
 - `agent-token-status.py` — agent-token-status — can each declared agent client mint a token RIGHT NOW.
 - `anatomy-measure-margins.py` — Measure the nightly chain's temporal margins, and restamp the declared edges.

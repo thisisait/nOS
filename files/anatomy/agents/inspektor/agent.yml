@@ -86,3 +86,6 @@ gdpr:
     commit-author identity — so arming it means declaring a processor and a
     transfer. An empty `processors` list is true today and becomes the estate's
     old false assertion the moment `runner_status` changes.
+
+# nos-work:// CO segment (dtt-routing-address) — authored; see agent-capability.py
+task_types: [security-remediation, investigate]

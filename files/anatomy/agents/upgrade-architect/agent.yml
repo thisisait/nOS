@@ -129,3 +129,6 @@ pulse:
         WING_API_URL: "http://127.0.0.1:9000"
         WING_API_TOKEN: "{{ upgrade_architect_wing_api_token }}"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
+
+# nos-work:// CO segment (dtt-routing-address) — authored; see agent-capability.py
+task_types: [design, code-fix]

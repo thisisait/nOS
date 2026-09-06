@@ -197,3 +197,6 @@ pulse:
           full markdown in result_json.report_markdown. Required fields:
           ts, type, run_id — all three or the call is refused.
           A survey that lives only in this transcript did not happen.
+
+# nos-work:// CO segment (dtt-routing-address) — authored; see agent-capability.py
+task_types: [investigate, seed-edit]

@@ -373,3 +373,6 @@ pulse:
         KEAP_API_URL: "http://127.0.0.1:{{ keap_port }}"
         KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
         KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+
+# nos-work:// CO segment (dtt-routing-address) — authored; see agent-capability.py
+task_types: [investigate, seed-edit]

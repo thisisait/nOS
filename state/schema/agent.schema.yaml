@@ -30,6 +30,27 @@ properties:
     type: string
     minLength: 16
     description: "One-paragraph human description for the /agents UI + audit trail."
+  task_types:
+    type: array
+    uniqueItems: true
+    items:
+      enum:
+        - investigate
+        - code-fix
+        - seed-edit
+        - review
+        - design
+        - doc
+        - security-remediation
+        - converge
+    description: |
+      The task_type(s) this agent may work (state/task-types.yml). The one
+      segment of its nos-work:// capability address (dtt-routing-address, CO)
+      that is authored, not derived — WHERE comes from the -cloud naming +
+      model, WHO from name, KAM from tools:; only CO has no structural source.
+      Absent = '*' (any) in the derived capability. Kept minimal + governed
+      like the enum itself (a change is a proposal). Consumed by
+      tools/agent-capability.py.
   model:
     type: object
     additionalProperties: false

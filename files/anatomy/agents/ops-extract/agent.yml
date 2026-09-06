@@ -95,3 +95,6 @@ notification:
   on_info:     []
 
 capabilities: []
+
+# nos-work:// CO segment (dtt-routing-address) — authored; see agent-capability.py
+task_types: [investigate]

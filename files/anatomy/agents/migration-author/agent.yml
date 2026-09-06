@@ -108,3 +108,6 @@ gdpr:
       safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
   eu_residency: false
   transfers_outside_eu: true
+
+# nos-work:// CO segment (dtt-routing-address) — authored; see agent-capability.py
+task_types: [code-fix, seed-edit]

@@ -97,3 +97,6 @@ notification:
 capabilities:
   - nos:state:read
   - nos:security:read
+
+# nos-work:// CO segment (dtt-routing-address) — authored; see agent-capability.py
+task_types: [design]

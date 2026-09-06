@@ -241,3 +241,6 @@ pulse:
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
         # `claude` (Claude Code) must be on this PATH; adjust if installed elsewhere.
         PATH: "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+
+# nos-work:// CO segment (dtt-routing-address) — authored; see agent-capability.py
+task_types: [investigate, review]

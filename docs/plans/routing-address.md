@@ -93,9 +93,20 @@ grep 'nos-work://local/[^/]*/repo/' audit.log     # everything local touching th
 
 ## 6. Open, deferred deliberately
 
-- The **capability source**: do agents' capability addresses derive from
-  `dtt-share-model` ACL rows (my reading — one source), or are they authored
-  separately? Resolve when share-model's zod lands.
+- ~~The **capability source**~~ **RESOLVED 2026-09-06 (share-model zod landed
+  in v1.44.0): a DERIVED PROJECTION**, not a second store. `tools/agent-
+  capability.py` derives each agent's address from its manifest — WHERE from
+  the `-cloud` naming, WHO from `name`, KAM from `tools:` (plus `internet` when
+  the effective model is hosted), CO from an authored `task_types:` list (the
+  one segment nothing else declares, operator call — kept minimal, governed
+  like the enum). The dtt slice of KAM reconciles against share-model grants.
+  KAM's vocabulary is the **tool-scope namespace** (repo, dtt, keap, cortex,
+  wing, bone, loop, internet, fs:<dir>), of which the grammar table above
+  listed an excerpt; the
+  parser constrains its shape, not its membership. A tool-less local agent
+  (the ops-* measurement subjects) holds no external scope and no routing
+  capability — reported, never emitted as a malformed address. Gate:
+  `tests/anatomy/test_agent_capability_projects.py`.
 - **fs:<dir>** granularity vs the VFS tree (`fs` epic) — a KAM value like
   `fs:tenants/<t>/shared` should reuse the filesystem doctrine's paths.
 - A capability with a **set WHERE** (an agent that may run local OR eu-cloud) —
