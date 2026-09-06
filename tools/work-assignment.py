@@ -31,6 +31,7 @@ renders (loop DISPATCH from this stays a later, default-off change).
 from __future__ import annotations
 
 import argparse
+import functools
 import importlib.util
 import json
 import pathlib
@@ -38,9 +39,34 @@ import subprocess
 import sys
 import urllib.request
 
+import yaml
+
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
 import nos_work_uri  # noqa: E402
+
+
+@functools.lru_cache(maxsize=1)
+def _task_meta() -> dict:
+    return yaml.safe_load((REPO / "state/task-types.yml").read_text())["task_types"]
+
+
+def _needs_operator(task_type: str) -> bool:
+    """A needs_operator task_type (converge) is HUMAN-only — no agent can take
+    it, which is not a capability GAP. Distinguishing the two keeps the match
+    report honest (state/task-types.yml)."""
+    return bool(_task_meta().get(task_type or "", {}).get("needs_operator"))
+
+
+def _claim_ok(claim: str, capable: list[str]) -> bool:
+    """A claim is valid if unclaimed, held by a human (user:), or by an agent
+    the match says is CAPABLE. A claim by an incapable agent is a real defect."""
+    if not claim:
+        return True
+    if claim.startswith("user:"):
+        return True
+    name = claim.split(":", 1)[1] if ":" in claim else claim
+    return name in capable
 
 
 def _load(mod: str):
@@ -103,9 +129,12 @@ def _report() -> dict:
             err = None
         except Exception as e:  # noqa: BLE001
             addr, capable, err = None, [], str(e)
+        claim = row.get("claim") or ""
         out[row.get("slug")] = {
-            "address": addr, "claim": row.get("claim") or "", "status": row.get("status"),
+            "address": addr, "claim": claim, "status": row.get("status"),
             "capable": capable, "error": err,
+            "operator_only": _needs_operator(row.get("task_type")),
+            "claim_ok": _claim_ok(claim, capable),
         }
     return out
 
@@ -131,10 +160,19 @@ def main() -> int:
         print("current-state is empty — no assignments filed yet.")
         return 0
     for slug, r in rep.items():
-        held = f"claimed by {r['claim']}" if r["claim"] else "UNCLAIMED"
+        if r["claim"]:
+            held = f"claimed by {r['claim']}" + ("" if r["claim_ok"] else " ⚠ NOT CAPABLE")
+        else:
+            held = "UNCLAIMED"
         print(f"{slug}  [{r['status']}, {held}]")
         print(f"    {r['address']}")
-        print(f"    capable: {', '.join(r['capable']) or 'NONE — no agent can take this'}")
+        if r["operator_only"]:
+            who = "operator-only (needs a human — converge)"
+        elif r["capable"]:
+            who = ", ".join(r["capable"])
+        else:
+            who = "NONE — no matching agent (a capability gap)"
+        print(f"    capable: {who}")
     return 0
 
 

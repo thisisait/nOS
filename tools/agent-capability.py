@@ -89,7 +89,10 @@ def _kam(doc: dict) -> list[str]:
     seen: dict[str, None] = {}
     for s in scopes:
         seen.setdefault(s, None)
-    return list(seen)
+    # A bare scope covers its own `.read` verb (nos_work_uri._covers), so listing
+    # both is noise — drop `X.read` when bare `X` is held (jeff: repo.read+repo).
+    bare = {s for s in seen if "." not in s}
+    return [s for s in seen if not (s.endswith(".read") and s.split(".")[0] in bare)]
 
 
 def capability(doc: dict) -> str | None:

@@ -88,4 +88,4 @@ gdpr:
     old false assertion the moment `runner_status` changes.
 
 # nos-work:// CO segment (dtt-routing-address) — authored; see agent-capability.py
-task_types: [security-remediation, investigate]
+task_types: [investigate, review]

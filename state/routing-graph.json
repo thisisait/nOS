@@ -11,7 +11,6 @@
     "doc",
     "investigate",
     "review",
-    "security-remediation",
     "seed-edit"
   ],
   "scopes": [
@@ -74,7 +73,7 @@
       "label": "inspektor",
       "x": 300,
       "y": 210,
-      "address": "nos-work://local/agent:inspektor/repo.read+wing.read+bone+internet/security-remediation+investigate/*"
+      "address": "nos-work://local/agent:inspektor/repo.read+wing.read+bone+internet/investigate+review/*"
     },
     {
       "id": "agent:jeff",
@@ -82,7 +81,7 @@
       "label": "jeff",
       "x": 300,
       "y": 280,
-      "address": "nos-work://local/agent:jeff/wing.read+repo.read+repo/investigate+design+doc+code-fix/*"
+      "address": "nos-work://local/agent:jeff/wing.read+repo/investigate+design+doc+code-fix/*"
     },
     {
       "id": "agent:jeff-cloud",
@@ -90,7 +89,7 @@
       "label": "jeff-cloud",
       "x": 0,
       "y": 70,
-      "address": "nos-work://ext-cloud/agent:jeff-cloud/wing.read+repo.read/investigate+design+doc/*"
+      "address": "nos-work://ext-cloud/agent:jeff-cloud/wing.read+repo.read/investigate/*"
     },
     {
       "id": "agent:librarian",
@@ -98,7 +97,7 @@
       "label": "librarian",
       "x": 300,
       "y": 350,
-      "address": "nos-work://local/agent:librarian/repo.read+wing.read+wing+bone+keap+dtt/investigate+seed-edit/*"
+      "address": "nos-work://local/agent:librarian/repo.read+wing+bone+keap+dtt/investigate+seed-edit/*"
     },
     {
       "id": "agent:migration-author",
@@ -106,7 +105,7 @@
       "label": "migration-author",
       "x": 300,
       "y": 420,
-      "address": "nos-work://local/agent:migration-author/repo.read+wing.read+repo+internet/code-fix+seed-edit/*"
+      "address": "nos-work://local/agent:migration-author/wing.read+repo+internet/code-fix/*"
     },
     {
       "id": "agent:proposer",
@@ -122,7 +121,7 @@
       "label": "surveyor",
       "x": 300,
       "y": 560,
-      "address": "nos-work://local/agent:surveyor/repo.read+wing.read+wing+bone/investigate+seed-edit/*"
+      "address": "nos-work://local/agent:surveyor/repo.read+wing+bone/investigate+seed-edit/*"
     },
     {
       "id": "agent:upgrade-architect",
@@ -130,7 +129,7 @@
       "label": "upgrade-architect",
       "x": 300,
       "y": 630,
-      "address": "nos-work://local/agent:upgrade-architect/repo.read+wing.read+repo+internet/design+code-fix/*"
+      "address": "nos-work://local/agent:upgrade-architect/wing.read+repo+internet/design+code-fix/*"
     },
     {
       "id": "co:code-fix",
@@ -168,18 +167,11 @@
       "y": 280
     },
     {
-      "id": "co:security-remediation",
-      "kind": "task_type",
-      "label": "security-remediation",
-      "x": 900,
-      "y": 350
-    },
-    {
       "id": "co:seed-edit",
       "kind": "task_type",
       "label": "seed-edit",
       "x": 900,
-      "y": 420
+      "y": 350
     },
     {
       "id": "kam:bone",
@@ -363,7 +355,7 @@
     },
     {
       "source": "agent:inspektor",
-      "target": "co:security-remediation",
+      "target": "co:review",
       "kind": "can-do"
     },
     {
@@ -385,16 +377,6 @@
       "source": "agent:inspektor",
       "target": "kam:wing.read",
       "kind": "touches"
-    },
-    {
-      "source": "agent:jeff-cloud",
-      "target": "co:design",
-      "kind": "can-do"
-    },
-    {
-      "source": "agent:jeff-cloud",
-      "target": "co:doc",
-      "kind": "can-do"
     },
     {
       "source": "agent:jeff-cloud",
@@ -434,11 +416,6 @@
     {
       "source": "agent:jeff",
       "target": "kam:repo",
-      "kind": "touches"
-    },
-    {
-      "source": "agent:jeff",
-      "target": "kam:repo.read",
       "kind": "touches"
     },
     {
@@ -482,18 +459,8 @@
       "kind": "touches"
     },
     {
-      "source": "agent:librarian",
-      "target": "kam:wing.read",
-      "kind": "touches"
-    },
-    {
       "source": "agent:migration-author",
       "target": "co:code-fix",
-      "kind": "can-do"
-    },
-    {
-      "source": "agent:migration-author",
-      "target": "co:seed-edit",
       "kind": "can-do"
     },
     {
@@ -504,11 +471,6 @@
     {
       "source": "agent:migration-author",
       "target": "kam:repo",
-      "kind": "touches"
-    },
-    {
-      "source": "agent:migration-author",
-      "target": "kam:repo.read",
       "kind": "touches"
     },
     {
@@ -562,11 +524,6 @@
       "kind": "touches"
     },
     {
-      "source": "agent:surveyor",
-      "target": "kam:wing.read",
-      "kind": "touches"
-    },
-    {
       "source": "agent:upgrade-architect",
       "target": "co:code-fix",
       "kind": "can-do"
@@ -584,11 +541,6 @@
     {
       "source": "agent:upgrade-architect",
       "target": "kam:repo",
-      "kind": "touches"
-    },
-    {
-      "source": "agent:upgrade-architect",
-      "target": "kam:repo.read",
       "kind": "touches"
     },
     {

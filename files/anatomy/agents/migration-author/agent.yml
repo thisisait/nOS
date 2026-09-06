@@ -110,4 +110,4 @@ gdpr:
   transfers_outside_eu: true
 
 # nos-work:// CO segment (dtt-routing-address) — authored; see agent-capability.py
-task_types: [code-fix, seed-edit]
+task_types: [code-fix]

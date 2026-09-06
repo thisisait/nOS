@@ -50,6 +50,12 @@ schema:
         options: ["investigate", "code-fix", "seed-edit", "review", "design", "doc", "security-remediation", "converge"] }
     - { key: where,       label: "Where",       kind: select, role: dimension,
         options: ["local", "eu-cloud", "ext-cloud", "any"] }
+    # KAM is what the WORK needs to touch, NOT the runtime scope of the artifact
+    # being built: authoring the dtt harness/view/spec is `repo` (writing code
+    # and docs), not `dtt` — the assignment matches an agent that can WRITE the
+    # repo, not one with live-table access. Mis-modeling this as `dtt` was what
+    # first read as a capability gap (no agent does code-fix on dtt); once
+    # corrected to `repo`, jeff/upgrade-architect/migration-author match.
     - { key: kam,         label: "Scope (KAM)", kind: text,   role: attribute }
     # ── the claim (empty = unclaimed; the matcher shows who COULD take it) ─────
     - { key: claim,       label: "Claimed by",  kind: text,   role: dimension, concept: access.owner }

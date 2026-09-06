@@ -70,6 +70,19 @@ def test_subset_match_is_correct():
     ) == []
 
 
+def test_a_claim_by_an_incapable_agent_is_invalid():
+    caps = ["coder"]
+    assert wa._claim_ok("", caps)  # unclaimed
+    assert wa._claim_ok("user:pazny", caps)  # a human may hold anything
+    assert wa._claim_ok("agent:coder", caps)  # the capable agent
+    assert not wa._claim_ok("agent:proposer", caps)  # not in the capable set
+
+
+def test_converge_is_operator_only_not_a_gap():
+    assert wa._needs_operator("converge")  # needs_operator in task-types.yml
+    assert not wa._needs_operator("code-fix")
+
+
 def test_the_real_roster_capabilities_all_parse():
     caps = wa._capabilities()
     assert caps, "no agent capabilities derived — the roster or deriver is broken"
