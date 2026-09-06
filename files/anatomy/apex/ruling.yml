@@ -52,7 +52,7 @@ artifact: state/anatomy-graph.json
 # file as AMENDED AFTER SIGNING and asks for a fresh signature. To re-sign:
 #   python3 tools/apex-sign.py            # prints the diff since the last sign
 #   python3 tools/apex-sign.py --confirm  # writes the new digest
-signed_digest: 501e2d7813c7555fe522d4a02227fab5e757162d74d5d4d0d8dcae80ec6a3297
+signed_digest: 9d5ba39625eb2e27cb4b7df5f817b5bf146102404ba44db38bfdc81ef02cb3d6
 
 
 # The declared split. The gate recounts the table below and refuses to run
@@ -544,6 +544,7 @@ nodes:
   "faceapp:keap-explore": withheld
   "faceapp:planner": withheld
   "faceapp:tables": withheld
+  "gateset:corpus": withheld
   "gateset:fast": withheld
   "gateset:full": withheld
   "gateset:live": withheld

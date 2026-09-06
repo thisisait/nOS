@@ -320,7 +320,25 @@ gate_sets:
   repo:
     judges: ["ansible-lint", "genome-codegen", "pytest-anatomy"]
     unattended: true
+  # INTENT-SCOPED 2026-09-06: `live` is the general estate-health set (does the
+  # running estate still answer) — the one a config/version/deploy proposal is
+  # judged by. It NO LONGER carries cortex-corpus-diff: a version-pin-bump
+  # touching default.config.yml cannot affect the knowledge corpus, so judging
+  # it against the corpus coupled EVERY unattended proposal to an unrelated
+  # gate — measured 2026-09-06, an M3-authored freescout version bump passed
+  # nos-smoke and failed only on cortex-corpus-diff's pre-existing vendored-
+  # cortex drift, so a good proposal could never land. Corpus verification is
+  # not lost: the `pulse:cortex:cortex-corpus-diff` job runs it on a cadence,
+  # and the `corpus` set below carries it for proposals that actually touch the
+  # knowledge. A judge that can block a proposal it has nothing to do with is
+  # how the loop's edge never joined.
   live:
+    judges: ["nos-smoke"]
+    unattended: true
+  # For a proposal that TOUCHES the knowledge corpus (files/anatomy/cortex,
+  # docs/systems, the self-model, the keap tables) — smoke that the estate is up
+  # plus corpus-diff that the vendored organ still agrees with KEAP.
+  corpus:
     judges: ["nos-smoke", "cortex-corpus-diff"]
     unattended: true
   full:

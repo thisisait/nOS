@@ -191,10 +191,15 @@ def test_the_budget_is_a_function_of_the_set_not_a_constant(registry):
         (r.pattern, r.claimed_by) for r in repo_bud.oracle_rules()}
     assert "pytest-anatomy" not in {r.claimed_by for r in live_bud.oracle_rules()}
 
-    # …and symmetrically, the live-only judge's oracle is not claimed by `repo`.
+    # …and the corpus judge's oracle is claimed by `corpus` (INTENT-SCOPED
+    # 2026-09-06: cortex-corpus-diff moved out of `live` into its own set so a
+    # version-bump is not judged against the knowledge corpus), and by neither
+    # `repo` nor `live`.
+    corpus_bud = budget.budget_for("corpus", registry=registry)
     assert "cortex-corpus-diff" not in {r.claimed_by for r in repo_bud.oracle_rules()}
+    assert "cortex-corpus-diff" not in {r.claimed_by for r in live_bud.oracle_rules()}
     assert ("files/anatomy/scripts/cortex-corpus-diff.py", "cortex-corpus-diff") in {
-        (r.pattern, r.claimed_by) for r in live_bud.oracle_rules()}
+        (r.pattern, r.claimed_by) for r in corpus_bud.oracle_rules()}
 
 
 @pytest.mark.parametrize("gate_set,path,judge", [
@@ -208,7 +213,7 @@ def test_the_budget_is_a_function_of_the_set_not_a_constant(registry):
     ("fast", "state/genome/entity.schema.json", "genome-codegen"),
     ("live", "tools/nos-smoke.py", "nos-smoke"),
     ("live", "state/smoke-catalog.yml", "nos-smoke"),
-    ("live", "files/anatomy/scripts/cortex-corpus-diff.py", "cortex-corpus-diff"),
+    ("corpus", "files/anatomy/scripts/cortex-corpus-diff.py", "cortex-corpus-diff"),
 ])
 def test_a_path_that_is_a_judges_oracle_is_refused_and_the_judge_is_named(
         registry, gate_set, path, judge):
