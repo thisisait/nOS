@@ -1,0 +1,74 @@
+# =============================================================================
+# Kolben IT — synthetic business fixture seed (docs/idea/15, increment 1).
+#
+# A map keyed by table slug; each value a list of row dicts. Top-to-bottom is
+# DEPENDENCY ORDER (a rowRef target must appear above its referencer) and it
+# equals the ORDER in seed-kolben-fixture-tables.yml + the Kolben fixture gate.
+#
+# ROW IDENTITY: a row's `slug` is its KEAP row id (idempotent upsert), so every
+# rowRef VALUE below is a literal target-row slug — never a display string.
+#
+# SYNTHETIC BY RULE (docs/idea/15, enforced by the Kolben fixture gate): party
+# slugs start `synthetic-`, emails/web end `.invalid`, phones start `+420 000`,
+# tax ids match (CZ)?000001\d\d. No real Kolben client until an Article-30
+# register entry and the company's written yes exist. Dates are fixed epoch
+# seconds so the seed is byte-deterministic across a blank + reconverge.
+# =============================================================================
+
+# ── The shared EN-16931 party spine (Kolben's clients ARE parties) ───────────
+party:
+  - { slug: synthetic-pekarna-novak, legal_name: "Pekarna Novak s.r.o. (synthetic)", trading_name: "Pekarna Novak", party_kind: org, country: CZ, notes: "synthetic bakery client" }
+  - { slug: synthetic-autodily-brno, legal_name: "Autodily Brno a.s. (synthetic)", trading_name: "Autodily Brno", party_kind: org, country: CZ, notes: "synthetic auto-parts client" }
+  - { slug: synthetic-mesto-lipno, legal_name: "Mesto Lipno (synthetic)", party_kind: org, country: CZ, notes: "synthetic municipality client" }
+  - { slug: synthetic-svoboda-petr, legal_name: "Petr Svoboda (synthetic)", party_kind: person, country: CZ, notes: "synthetic sole-trader client" }
+
+party-tax-identity:
+  - { slug: tax-kolben-pekarna-vat, party: synthetic-pekarna-novak, scheme: VAT, value: "CZ00000110", valid_from: 1767225600 }
+  - { slug: tax-kolben-autodily-vat, party: synthetic-autodily-brno, scheme: VAT, value: "CZ00000111", valid_from: 1767225600 }
+  - { slug: tax-kolben-mesto-ico, party: synthetic-mesto-lipno, scheme: ICO, value: "00000112" }
+  - { slug: tax-kolben-svoboda-ico, party: synthetic-svoboda-petr, scheme: ICO, value: "00000113" }
+
+party-address:
+  - { slug: addr-kolben-pekarna-billing, party: synthetic-pekarna-novak, purpose: billing, street: "Pekarska 3 (synthetic)", city: "Praha", postcode: "110 00", subdivision: "CZ010", country: CZ }
+  - { slug: addr-kolben-autodily-billing, party: synthetic-autodily-brno, purpose: billing, street: "Traktorova 41 (synthetic)", city: "Brno", postcode: "602 00", subdivision: "CZ064", country: CZ }
+  - { slug: addr-kolben-mesto-billing, party: synthetic-mesto-lipno, purpose: registered, street: "Namesti 1 (synthetic)", city: "Lipno nad Vltavou", postcode: "382 78", subdivision: "CZ031", country: CZ }
+
+party-contact:
+  - { slug: contact-kolben-pekarna-email, party: synthetic-pekarna-novak, kind: email, value: "it@pekarna-novak.invalid", role: "primary" }
+  - { slug: contact-kolben-pekarna-phone, party: synthetic-pekarna-novak, kind: phone, value: "+420 000 000 110" }
+  - { slug: contact-kolben-autodily-email, party: synthetic-autodily-brno, kind: email, value: "it@autodily-brno.invalid", role: "primary" }
+  - { slug: contact-kolben-mesto-web, party: synthetic-mesto-lipno, kind: web, value: "https://mesto-lipno.invalid" }
+  - { slug: contact-kolben-svoboda-email, party: synthetic-svoboda-petr, kind: email, value: "petr@svoboda.invalid" }
+
+# ── Kolben IT's own domain ───────────────────────────────────────────────────
+kolben-engineer:
+  - { slug: eng-dvorak, name: "Jan Dvorak (synthetic)", role: lead }
+  - { slug: eng-cerna, name: "Eva Cerna (synthetic)", role: developer }
+  - { slug: eng-horak, name: "Tomas Horak (synthetic)", role: ops }
+  - { slug: eng-mala, name: "Lucie Mala (synthetic)", role: support }
+
+kolben-project:
+  - { slug: proj-pekarna-eshop, name: "Pekarna e-shop", client: synthetic-pekarna-novak, status: active, started: 1767225600, budget: 480000 }
+  - { slug: proj-autodily-erp, name: "Autodily ERP integration", client: synthetic-autodily-brno, status: active, started: 1769904000, budget: 1250000 }
+  - { slug: proj-mesto-portal, name: "Mesto citizen portal", client: synthetic-mesto-lipno, status: on-hold, started: 1772323200, budget: 2100000 }
+  - { slug: proj-svoboda-web, name: "Svoboda web refresh", client: synthetic-svoboda-petr, status: closed, started: 1759276800, budget: 90000 }
+
+kolben-ticket:
+  - { slug: tkt-eshop-checkout-bug, title: "Checkout throws on empty cart", project: proj-pekarna-eshop, assignee: eng-cerna, priority: high, status: in-progress, opened: 1772928000, due: 1773187200, outcome: "" }
+  - { slug: tkt-eshop-tls-expiry, title: "TLS cert expires this week", project: proj-pekarna-eshop, assignee: eng-horak, priority: critical, status: open, opened: 1773100000, due: 1773360000, outcome: "" }
+  - { slug: tkt-erp-invoice-sync, title: "Invoice sync drops line items", project: proj-autodily-erp, assignee: eng-cerna, priority: high, status: blocked, opened: 1772500000, due: 1773705600, outcome: "waiting on vendor API access" }
+  - { slug: tkt-erp-nightly-eta, title: "Nightly import ETA misses window", project: proj-autodily-erp, assignee: eng-horak, priority: medium, status: open, opened: 1772600000, due: 1774310400, outcome: "" }
+  - { slug: tkt-portal-a11y-audit, title: "Accessibility audit findings", project: proj-mesto-portal, assignee: eng-mala, priority: medium, status: open, opened: 1772700000, due: 1775520000, outcome: "" }
+  - { slug: tkt-portal-login-federation, title: "NIA login federation spike", project: proj-mesto-portal, assignee: eng-dvorak, priority: low, status: review, opened: 1772000000, due: 1774915200, outcome: "spike done; needs sign-off" }
+  - { slug: tkt-svoboda-contact-form, title: "Contact form spam", project: proj-svoboda-web, assignee: eng-mala, priority: low, status: done, opened: 1759536000, due: 1759968000, outcome: "added a honeypot; resolved" }
+  - { slug: tkt-eshop-perf, title: "Category page slow under load", project: proj-pekarna-eshop, assignee: eng-cerna, priority: medium, status: open, opened: 1772800000, due: 1774224000, outcome: "" }
+
+kolben-time-entry:
+  - { slug: te-checkout-1, ticket: tkt-eshop-checkout-bug, engineer: eng-cerna, date: 1772931600, hours: 3, billable: billable, note: "reproduced, isolated to cart-empty branch" }
+  - { slug: te-checkout-2, ticket: tkt-eshop-checkout-bug, engineer: eng-cerna, date: 1773018000, hours: 2, billable: billable, note: "fix + unit test" }
+  - { slug: te-tls-1, ticket: tkt-eshop-tls-expiry, engineer: eng-horak, date: 1773104000, hours: 1, billable: non-billable, note: "triage; internal cert renewal" }
+  - { slug: te-erp-invoice-1, ticket: tkt-erp-invoice-sync, engineer: eng-cerna, date: 1772506000, hours: 4, billable: billable, note: "mapped the missing line-item field" }
+  - { slug: te-erp-eta-1, ticket: tkt-erp-nightly-eta, engineer: eng-horak, date: 1772606000, hours: 2, billable: billable, note: "profiled the import job" }
+  - { slug: te-portal-a11y-1, ticket: tkt-portal-a11y-audit, engineer: eng-mala, date: 1772706000, hours: 5, billable: billable, note: "WCAG pass over the forms" }
+  - { slug: te-portal-nia-1, ticket: tkt-portal-login-federation, engineer: eng-dvorak, date: 1772006000, hours: 6, billable: billable, note: "federation spike write-up" }
+  - { slug: te-svoboda-1, ticket: tkt-svoboda-contact-form, engineer: eng-mala, date: 1759539600, hours: 2, billable: billable, note: "honeypot + rate limit" }

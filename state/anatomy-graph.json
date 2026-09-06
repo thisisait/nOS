@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 257,
+    "nodes": 261,
     "edges": 286,
     "nodes_pulse": 30,
     "nodes_judge": 5,
@@ -16,7 +16,7 @@
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 55,
-    "nodes_table": 18,
+    "nodes_table": 22,
     "nodes_doctrine": 13,
     "nodes_faceapp": 6,
     "nodes_agent": 14,
@@ -2911,6 +2911,34 @@
       "title": "Face Controls",
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Face Controls' (state/keap-tables/controls.table.yml)"
+    },
+    "table:kolben-engineer": {
+      "kind": "table",
+      "source": "state/keap-tables/kolben-engineer.table.yml",
+      "title": "Kolben IT · Engineer",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Kolben IT · Engineer' (state/keap-tables/kolben-engineer.table.yml)"
+    },
+    "table:kolben-project": {
+      "kind": "table",
+      "source": "state/keap-tables/kolben-project.table.yml",
+      "title": "Kolben IT · Project",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Kolben IT · Project' (state/keap-tables/kolben-project.table.yml)"
+    },
+    "table:kolben-ticket": {
+      "kind": "table",
+      "source": "state/keap-tables/kolben-ticket.table.yml",
+      "title": "Kolben IT · Ticket",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Kolben IT · Ticket' (state/keap-tables/kolben-ticket.table.yml)"
+    },
+    "table:kolben-time-entry": {
+      "kind": "table",
+      "source": "state/keap-tables/kolben-time-entry.table.yml",
+      "title": "Kolben IT · Time entry",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Kolben IT · Time entry' (state/keap-tables/kolben-time-entry.table.yml)"
     },
     "table:layouts": {
       "kind": "table",

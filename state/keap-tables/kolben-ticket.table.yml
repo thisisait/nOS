@@ -1,0 +1,40 @@
+# =============================================================================
+# KEAP DataTable — "Kolben IT · Ticket" (business fixture, docs/idea/15).
+#
+# THE CORE OBJECT — the ticket, one level up from a print job: a title, a
+# project it belongs to, an assignee, a priority, a status, when it opened and
+# when it is DUE (the SLA deadline), and a free-text outcome. This is the shape
+# whose right answer changes at 14:00 when an engineer finishes — the cortex
+# question the fixture exists to ask is "which OPEN tickets breach their `due`
+# if engineer X is out", which is a join over this table + kolben-time-entry,
+# not a document lookup.
+#
+# `project` → graph.parent (a ticket genuinely nests under its project).
+# `assignee` → graph.uses (the ticket consumes an engineer's capacity, same as
+# a print job → material). `priority` → lifecycle.criticality; `status` →
+# lifecycle.status; `opened`/`due` → the time.occurred_at / time.target pair;
+# `outcome` → identity.description (the note, like print-job.outcome). Every
+# concept is used at most once in this table (the once-per-table rule).
+# =============================================================================
+title: "Kolben IT · Ticket"
+description: >-
+  A support/dev ticket at the synthetic Kolben IT fixture: its project,
+  assignee, priority, status, open/due dates, and outcome. The SLA-bearing
+  object — the point of the whole fixture.
+driver: libsql
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,     label: "Slug",     kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: title,    label: "Title",    kind: text,   role: dimension, required: true, concept: identity.name }
+    - { key: project,  label: "Project",  kind: rowRef, role: dimension, required: true,
+        refTable: "kolben-project", refDisplay: "name", onDelete: "restrict", concept: graph.parent }
+    - { key: assignee, label: "Assignee", kind: rowRef, role: dimension, required: true,
+        refTable: "kolben-engineer", refDisplay: "name", onDelete: "restrict", concept: graph.uses }
+    - { key: priority, label: "Priority", kind: select, role: dimension, required: true, concept: lifecycle.criticality,
+        options: ["low", "medium", "high", "critical"] }
+    - { key: status,   label: "Status",   kind: select, role: dimension, required: true, concept: lifecycle.status,
+        options: ["open", "in-progress", "blocked", "review", "done"] }
+    - { key: opened,   label: "Opened",   kind: date,   role: attribute, concept: time.occurred_at }
+    - { key: due,      label: "Due",      kind: date,   role: attribute, concept: time.target }
+    - { key: outcome,  label: "Outcome",  kind: text,   role: attribute, concept: identity.description }

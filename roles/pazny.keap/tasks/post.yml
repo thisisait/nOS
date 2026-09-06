@@ -165,6 +165,15 @@
     - install_keap | default(false) | bool
     - keap_seed_business_fixture | default(false) | bool
 
+# ── Kolben IT business fixture (docs/idea/15, increment 1) ───────────────────
+# A synthetic Czech IT-services shop (party spine + kolben-* domain tables)
+# whose core object is a ticket with an SLA deadline. Independent opt-in.
+- name: "[pazny.keap] Seed the Kolben IT business fixture DataTables"
+  ansible.builtin.include_tasks: seed-kolben-fixture-tables.yml
+  when:
+    - install_keap | default(false) | bool
+    - keap_seed_kolben_fixture | default(false) | bool
+
 # ── Caddy settings + session tables ─────────────────────────────────────────
 # Two tables for the caddy: the committed settings fixture, and
 # an EMPTY session ledger that must exist before the first turn. Gated on

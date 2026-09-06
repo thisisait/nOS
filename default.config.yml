@@ -2622,6 +2622,13 @@ keap_seed_fixtures: true
 # tests/anatomy/test_fixture_tables_declare_the_business.py — real customers
 # wait for the fixture's own Article-30 entry + the company's written yes.
 keap_seed_business_fixture: false
+# The SECOND business fixture (docs/idea/15): Kolben IT s.r.o., a synthetic
+# Czech IT-services shop whose core object is a ticket with an SLA deadline
+# (state/keap-tables/kolben-*.table.yml + the shared party spine, seeded from
+# state/fixtures/kolben-it.seed.yml). Independent opt-in so enabling Kolben
+# does not drag in the label printer; same synthetic-people rule, enforced by
+# tests/anatomy/test_kolben_fixture_declares_the_business.py.
+keap_seed_kolben_fixture: false
 # system regardless of install state) — profiles/all-on.yml sets it true.
 # Optional live embedder for free-text semantic search (stored vectors come
 # from the keap-embed-sync Pulse job regardless). Docker Desktop (Mac):

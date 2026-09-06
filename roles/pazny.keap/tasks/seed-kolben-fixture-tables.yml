@@ -1,0 +1,74 @@
+---
+# =============================================================================
+# pazny.keap/tasks/seed-kolben-fixture-tables.yml — the Kolben IT business
+# fixture (docs/idea/15-business-fixture.md, increment 1).
+#
+# The SECOND business fixture: a synthetic small Czech IT-services shop whose
+# core object is a TICKET with an SLA deadline. Defined in
+# state/keap-tables/kolben-*.table.yml + the shared EN-16931 party spine, and
+# seeded from state/fixtures/kolben-it.seed.yml. Everything git-owned, so the
+# fixture is a REPRODUCIBLE TENANT: `nos --remove=data --confirm` → converge
+# recreates it byte-identically.
+#
+# A PARALLEL of seed-fixture-tables.yml (the label printer), deliberately not
+# an extension of it: each fixture keeps its own default-false opt-in flag and
+# its own ORDER, so enabling Kolben never drags in the label printer, and the
+# label-printer gate's SEEDER regex keeps reading only its own file.
+#
+# REUSES seed-face-table.yml PER TABLE (the estate's one create-or-reconcile +
+# upsert-by-slug implementation), and RE-SEEDS the shared party tables first —
+# idempotent upsert by slug means a party row Kolben and the label printer both
+# reference is written once and merged, never duplicated. The gate requires a
+# rowRef target to be a member of Kolben's own ORDER, so party leads the list.
+#
+# ORDER IS DEPENDENCY ORDER: party (+ its sub-tables) before the domain tables
+# that reference them; kolben-project before kolben-ticket before
+# kolben-time-entry. The Kolben fixture gate asserts this list equals the ORDER
+# it checks rowRef targets against, so a re-ordering here goes red offline.
+#
+# Gated on keap_seed_kolben_fixture (default false in default.config.yml) — a
+# public nOS install does not grow an IT shop unasked.
+# =============================================================================
+
+- name: "[pazny.keap] Load the Kolben IT fixture seed (git SoT)"
+  ansible.builtin.set_fact:
+    _kolben_seed: "{{ lookup('file', playbook_dir + '/state/fixtures/kolben-it.seed.yml') | from_yaml }}"
+
+# Explicit YAML list in BLOCK style (same reason as seed-fixture-tables.yml):
+# a Jinja for-block list lands in set_fact as its STRING repr without
+# jinja2_native, and an inline `- { ... | from_yaml }` trips
+# test_config_stock_jinja_only. LIST ORDER = dependency order = the gate's ORDER.
+- name: "[pazny.keap] Assemble Kolben DataTable defs + seed rows (dependency order)"
+  ansible.builtin.set_fact:
+    _kolben_tables:
+      - slug: "party"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party.table.yml') | from_yaml }}"
+        rows: "{{ _kolben_seed['party'] }}"
+      - slug: "party-tax-identity"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-tax-identity.table.yml') | from_yaml }}"
+        rows: "{{ _kolben_seed['party-tax-identity'] }}"
+      - slug: "party-address"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-address.table.yml') | from_yaml }}"
+        rows: "{{ _kolben_seed['party-address'] }}"
+      - slug: "party-contact"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-contact.table.yml') | from_yaml }}"
+        rows: "{{ _kolben_seed['party-contact'] }}"
+      - slug: "kolben-engineer"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/kolben-engineer.table.yml') | from_yaml }}"
+        rows: "{{ _kolben_seed['kolben-engineer'] }}"
+      - slug: "kolben-project"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/kolben-project.table.yml') | from_yaml }}"
+        rows: "{{ _kolben_seed['kolben-project'] }}"
+      - slug: "kolben-ticket"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/kolben-ticket.table.yml') | from_yaml }}"
+        rows: "{{ _kolben_seed['kolben-ticket'] }}"
+      - slug: "kolben-time-entry"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/kolben-time-entry.table.yml') | from_yaml }}"
+        rows: "{{ _kolben_seed['kolben-time-entry'] }}"
+
+- name: "[pazny.keap] Seed each Kolben DataTable (create/reconcile + upsert missing rows)"
+  ansible.builtin.include_tasks: seed-face-table.yml
+  loop: "{{ _kolben_tables }}"
+  loop_control:
+    loop_var: _face_tbl
+    label: "{{ _face_tbl.slug }}"

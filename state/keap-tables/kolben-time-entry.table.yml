@@ -1,0 +1,29 @@
+# =============================================================================
+# KEAP DataTable — "Kolben IT · Time entry" (business fixture, docs/idea/15).
+#
+# THE JUNCTION — logged work, exactly two rowRefs (ticket × engineer), the
+# transactional N:N shape (the label printer's print-job-step equivalent). A
+# ticket accrues many entries by many engineers; an engineer logs against many
+# tickets. `ticket` → graph.parent (the entry nests under the ticket);
+# `engineer` → graph.uses (whose time it was). `hours` has no measure concept
+# (conceptless, like print-job.quantity); `billable` → class.category;
+# `note` → identity.description.
+# =============================================================================
+title: "Kolben IT · Time entry"
+description: >-
+  A logged unit of work at the synthetic Kolben IT fixture: ticket, engineer,
+  date, hours, whether billable, and a note. The junction table.
+driver: libsql
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,     label: "Slug",     kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: ticket,   label: "Ticket",   kind: rowRef, role: dimension, required: true,
+        refTable: "kolben-ticket", refDisplay: "title", onDelete: "restrict", concept: graph.parent }
+    - { key: engineer, label: "Engineer", kind: rowRef, role: dimension, required: true,
+        refTable: "kolben-engineer", refDisplay: "name", onDelete: "restrict", concept: graph.uses }
+    - { key: date,     label: "Date",     kind: date,   role: attribute, concept: time.occurred_at }
+    - { key: hours,    label: "Hours",    kind: number, role: attribute }
+    - { key: billable, label: "Billable", kind: select, role: dimension, concept: class.category,
+        options: ["billable", "non-billable"] }
+    - { key: note,     label: "Note",     kind: text,   role: attribute, concept: identity.description }

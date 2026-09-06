@@ -1,0 +1,26 @@
+# =============================================================================
+# KEAP DataTable — "Kolben IT · Project" (business fixture, docs/idea/15).
+#
+# A client engagement. `client` is a rowRef into the shared EN-16931 `party`
+# spine (Kolben's customers ARE parties, same as the label printer's) — so a
+# converge that seeds Kolben re-seeds the party rows it references (idempotent
+# upsert by slug). No counterparty concept exists in the L1 vocabulary, so
+# `client` is conceptless (see test_keap_table_concepts CONCEPTLESS), exactly
+# as print-order.customer is.
+# =============================================================================
+title: "Kolben IT · Project"
+description: >-
+  A client engagement at the synthetic Kolben IT fixture: who it is for, its
+  lifecycle, when it started, and its budget.
+driver: libsql
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,    label: "Slug",    kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: name,    label: "Name",    kind: text,   role: dimension, required: true, concept: identity.name }
+    - { key: client,  label: "Client",  kind: rowRef, role: dimension, required: true,
+        refTable: "party", refDisplay: "legal_name", onDelete: "restrict" }
+    - { key: status,  label: "Status",  kind: select, role: dimension, required: true, concept: lifecycle.status,
+        options: ["active", "on-hold", "closed"] }
+    - { key: started, label: "Started", kind: date,   role: attribute, concept: time.occurred_at }
+    - { key: budget,  label: "Budget (CZK)", kind: number, role: attribute }
