@@ -126,20 +126,24 @@ def test_the_weakness_reader_does_not_mine_a_finding_as_a_failure(tmp_path) -> N
     conn = sqlite3.connect(db)
     conn.executescript("""
         CREATE TABLE pulse_jobs (id TEXT PRIMARY KEY, findings_exit_codes TEXT);
-        CREATE TABLE pulse_runs (job_id TEXT, exit_code INT, fired_at TEXT, stderr_tail TEXT);
+        CREATE TABLE pulse_runs (job_id TEXT, exit_code INT, fired_at TEXT,
+                                 stderr_tail TEXT, stdout_tail TEXT, duration_ms INT);
     """)
     conn.executemany("INSERT INTO pulse_jobs VALUES (?,?)", [
         ("finder", "[1,3]"),      # exits 1 to say "found something"
         ("breaker", None),        # no declaration: 1 is a failure
         ("malformed", "{oops"),   # a bad declaration must not silence a red job
     ])
-    conn.executemany("INSERT INTO pulse_runs VALUES (?,?,?,?)", [
+    # The selection is red-status.failing_jobs now (loop-pulse-runs-poison), so
+    # the fixture carries the columns it reads (stdout_tail/duration_ms) — the
+    # real pulse_runs has them; this table was just minimal.
+    conn.executemany("INSERT INTO pulse_runs VALUES (?,?,?,?,?,?)", [
         # Three findings nights in a row: the streak that used to ratchet to HIGH.
-        ("finder", 1, "2026-08-28T01:00:00Z", ""),
-        ("finder", 1, "2026-08-29T01:00:00Z", ""),
-        ("finder", 1, "2026-08-30T01:00:00Z", ""),
-        ("breaker", 1, "2026-08-30T01:00:00Z", "boom"),
-        ("malformed", 1, "2026-08-30T01:00:00Z", "boom"),
+        ("finder", 1, "2026-08-28T01:00:00Z", "", "found 1", 10),
+        ("finder", 1, "2026-08-29T01:00:00Z", "", "found 1", 10),
+        ("finder", 1, "2026-08-30T01:00:00Z", "", "found 1", 10),
+        ("breaker", 1, "2026-08-30T01:00:00Z", "boom", "boom", 10),
+        ("malformed", 1, "2026-08-30T01:00:00Z", "boom", "boom", 10),
     ])
     conn.commit()
     conn.close()

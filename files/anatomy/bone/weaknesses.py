@@ -1333,6 +1333,29 @@ def _source_prometheus_alerts(dirty: set[str]) -> SourceReport:
 _PULSE_STREAK_DEPTH = 20
 
 
+def _load_failing_jobs():
+    """`red-status.failing_jobs` — THE reader of "which pulse job is red now".
+
+    §loop-pulse-runs-poison: this source used to run its OWN
+    `WHERE exit_code <> 0` selection, so it and `tools/red-status.py` were two
+    readers of one signal and could disagree on the live estate. Worse, exit 3
+    of `loop:propose` (a committed-evidence deadlock that recurs on the scan's
+    cadence) rode that selection to a streak-3 HIGH against `files/anatomy/
+    bone/**` — a path the loop is denied — so three such nights and the loop
+    mines itself. Delegating the SELECTION makes the disagreement structurally
+    impossible. Loaded by path because red-status.py is a tool script, not a
+    bone module (the importlib pattern `loopauth` uses above); imported for one
+    pure function that takes our own read-only connection.
+    """
+    import importlib.util as ilu
+    path = repo_root() / "tools" / "red-status.py"
+    spec = ilu.spec_from_file_location("nos_red_status", str(path))
+    mod = ilu.module_from_spec(spec)
+    assert spec is not None and spec.loader is not None
+    spec.loader.exec_module(mod)
+    return mod.failing_jobs
+
+
 def _source_pulse_runs(dirty: set[str]) -> SourceReport:
     name = "pulse-runs"
     db_path = Path(os.environ.get(
@@ -1344,19 +1367,31 @@ def _source_pulse_runs(dirty: set[str]) -> SourceReport:
             evidence_committed=False,
         )
     try:
+        failing_jobs = _load_failing_jobs()
+    except Exception as exc:  # pragma: no cover — a missing tool is malformed, not empty
+        return _unavailable(
+            name, required=False, path=db_path, status=STATUS_MALFORMED,
+            detail=f"red-status.failing_jobs unavailable: {exc}",
+            evidence_committed=False,
+        )
+    try:
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
         conn.row_factory = sqlite3.Row
         try:
-            # A FINDING IS NOT A FAILURE, and the job table already says which
-            # codes mean which. `discovery:contradiction-scan` declares [1] and
-            # `loop:propose` declares [1,3] — both exit 1 to say "I found
-            # something", both were being mined here as red, and a streak of
-            # three ratchets that to HIGH. Measured 2026-08-30: of six jobs
-            # this source called failed, two had succeeded, and one of them was
-            # the LOOP'S OWN ENTRY — so the loop reported itself as a HIGH
-            # weakness its own deny rule forbids it from proposing against.
-            # Same defect as hidden fee 34, one reader over.
-            findings = {}
+            # THE SELECTION — which jobs are red now — is red-status's, not
+            # ours (§loop-pulse-runs-poison). Findings-aware, one-row-per-job,
+            # last-run-only: a job that declares its exit code as "found
+            # something" never enters this list, so the loop can no longer mine
+            # its own recurring finding as a HIGH it is forbidden to fix.
+            failing = failing_jobs(conn)
+
+            # The STREAK is this source's only added concern, and it is
+            # findings-aware for the same reason: a job that finds something
+            # every night must not ratchet to HIGH for working. Keyed off each
+            # job's declared codes, fetched once. A malformed declaration is NOT
+            # read as "no codes" — that would silence a red job — so it falls
+            # through to counting the run as a failure.
+            declared: dict[str, set[int]] = {}
             for job in conn.execute(
                 "SELECT id, findings_exit_codes FROM pulse_jobs "
                 "WHERE findings_exit_codes IS NOT NULL"
@@ -1366,40 +1401,28 @@ def _source_pulse_runs(dirty: set[str]) -> SourceReport:
                 except (TypeError, ValueError):
                     continue  # a malformed declaration must not silence a red job
                 if isinstance(codes, list):
-                    findings[job["id"]] = {int(c) for c in codes
+                    declared[job["id"]] = {int(c) for c in codes
                                            if isinstance(c, (int, str)) and str(c).lstrip("-").isdigit()}
 
             def _is_failure(job_id: str, code: object) -> bool:
                 """Red means red. Not null, not zero, not a declared finding."""
                 return (code is not None and code != 0
-                        and int(code) not in findings.get(job_id, set()))
+                        and int(code) not in declared.get(job_id, set()))
 
-            rows = [r for r in conn.execute(
-                """
-                SELECT job_id, exit_code, fired_at, stderr_tail
-                  FROM (SELECT job_id, exit_code, fired_at, stderr_tail,
-                               ROW_NUMBER() OVER (PARTITION BY job_id
-                                                  ORDER BY fired_at DESC) AS rn
-                          FROM pulse_runs)
-                 WHERE rn = 1 AND exit_code IS NOT NULL AND exit_code <> 0
-                """
-            ).fetchall() if _is_failure(r["job_id"], r["exit_code"])]
-            streaks = {}
-            for row in rows:
+            streaks: dict[str, int] = {}
+            for job in failing:
+                job_id = job["job"]
                 recent = conn.execute(
                     "SELECT exit_code FROM pulse_runs WHERE job_id = ? "
                     "ORDER BY fired_at DESC LIMIT ?",
-                    (row["job_id"], _PULSE_STREAK_DEPTH),
+                    (job_id, _PULSE_STREAK_DEPTH),
                 ).fetchall()
                 streak = 0
                 for r in recent:
-                    # A findings run breaks the streak exactly as a green one
-                    # does — otherwise a job that finds something every night
-                    # ratchets to HIGH for working.
-                    if not _is_failure(row["job_id"], r["exit_code"]):
+                    if not _is_failure(job_id, r["exit_code"]):
                         break
                     streak += 1
-                streaks[row["job_id"]] = streak
+                streaks[job_id] = streak
         finally:
             conn.close()
     except sqlite3.Error as exc:
@@ -1409,20 +1432,24 @@ def _source_pulse_runs(dirty: set[str]) -> SourceReport:
         )
 
     weaknesses = []
-    for row in rows:
-        streak = streaks.get(row["job_id"], 1)
+    for job in failing:
+        job_id = job["job"]
+        streak = streaks.get(job_id, 1)
         weaknesses.append(Weakness(
-            weakness_id=f"pulse:{row['job_id']}",
+            weakness_id=f"pulse:{job_id}",
             source=name,
             # A single red run is a blip worth seeing; a streak is a job that
             # has stopped working and nobody noticed.
             severity="high" if streak >= 3 else "medium",
-            title=f"pulse job {row['job_id']} last exited {row['exit_code']}"
+            title=f"pulse job {job_id} last exited {job['exit_code']}"
                   + (f" ({streak} consecutive failures)" if streak > 1 else ""),
-            evidence={"job_id": row["job_id"], "exit_code": row["exit_code"],
+            evidence={"job_id": job_id, "exit_code": job["exit_code"],
                       "consecutive_failures": streak},
-            observed={"fired_at": row["fired_at"],
-                      "stderr_tail": _clip(row["stderr_tail"], 400)},
+            # red-status already picked the WHY line (skipping the identical
+            # closing banner a naive last-line grab lands on) — ride it rather
+            # than re-tailing the log in a second place.
+            observed={"fired_at": job["fired_at"],
+                      "reason": _clip(job.get("last_line", ""), 400)},
             evidence_committed=False,
             evidence_committable=False,
         ))
