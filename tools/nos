@@ -51,6 +51,7 @@ if [ "${1:-}" = "dtt" ]; then
     update)  tool="roadmap-update.py" ;;
     verify)  tool="roadmap-verify.py" ;;
     extract) tool="roadmap-extract.py" ;;
+    board|claim|release|progress|file) tool="current-state.py"; set -- "$verb" "$@" ;;
     ""|-h|--help)
       cat >&2 <<'DTT'
 nos dtt <verb> [args] — DataTables ops (run from $NOS_SRC over NOS_SEED_DIR)
@@ -60,9 +61,14 @@ nos dtt <verb> [args] — DataTables ops (run from $NOS_SRC over NOS_SEED_DIR)
   update    move a row's CLAIM (status/target/…)
   verify    write a row's VERDICT (an exit code, never an argument)
   extract   one-time: live table -> per-row seed files
+  board     the currentState claim board: assignments, claims, who is capable
+  claim     claim an assignment (refused unless the match says you are capable)
+  release   release a claim
+  progress  move a claim's status (working|blocked|review|done)
+  file      file a new assignment onto the board
 DTT
       [ "$verb" = "" ] && exit 64 || exit 0 ;;
-    *) echo "nos dtt: unknown verb '$verb' (capture|seed|status|update|verify|extract)" >&2
+    *) echo "nos dtt: unknown verb '$verb' (capture|seed|status|update|verify|extract|board|claim|release|progress|file)" >&2
        exit 64 ;;
   esac
   [ -f "$NOS_SRC/tools/$tool" ] || {

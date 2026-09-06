@@ -47,6 +47,7 @@ worse than none, because it reads as complete.
 - `brew-pin-status.py` — How old is the version brew wants to give us, and is it old enough to adopt?
 - `cortex-status.py` — What the cortex organ is, all of it — not just the part KEAP serves.
 - `cortex-drift.py` — Compare the vendored cortex organ against the KEAP tree it was cut from.
+- `current-state.py` — The claim board's WRITE side: file/claim/release/progress; a claim is refused unless the match says you are capable.
 - `discovery-scan.py` — Discovery: find two representations of one fact that disagree.
 - `doctrine-cite.py` — Resolve every doctrine citation in the estate — or say exactly which do not.
 - `graph-communities.py` — Computed communities vs the declared `stack`/`layer` axes; prints only the disagreement (docs/adr/0002-graphify-borrowings.md §2).
