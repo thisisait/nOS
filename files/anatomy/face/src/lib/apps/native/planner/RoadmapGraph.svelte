@@ -34,6 +34,27 @@
 		parked: '#343a45',
 		dropped: '#26292f'
 	};
+	// The status legend, in board order — the fill colours above, given names.
+	const STATUS_LEGEND: { key: string; label: string }[] = [
+		{ key: 'active', label: 'active' },
+		{ key: 'next', label: 'next' },
+		{ key: 'queued', label: 'queued' },
+		{ key: 'blocked', label: 'blocked' },
+		{ key: 'shipped', label: 'shipped' },
+		{ key: 'parked', label: 'parked' },
+		{ key: 'dropped', label: 'dropped' }
+	];
+	// `kind` (a real roadmap column) as a left-border accent — a second glance
+	// dimension beside the status fill: an epic reads differently from a fee.
+	const KIND_ACCENT: Record<string, string> = {
+		release: '#c9902f',
+		epic: '#8a6fd8',
+		feature: '#4a9db8',
+		task: '#5a6472',
+		fee: '#c26b6b',
+		weakness: '#b8863b',
+		decision: '#6a9a6a'
+	};
 
 	let nodes = $state.raw<Node[]>([]);
 	let edges = $state.raw<Edge[]>([]);
@@ -94,6 +115,7 @@
 				style:
 					`background:${STATUS_BG[n.data.status] ?? '#343a45'};color:#e8ecf3;` +
 					'border:1px solid var(--border,#333a45);border-radius:8px;' +
+					`border-left:5px solid ${KIND_ACCENT[n.data.kind] ?? '#343a45'};` +
 					'font-size:12px;padding:6px 10px;width:240px;' +
 					(n.data.orphanParent ? 'outline:1px dashed #b8863b;' : '')
 			})) as Node[];
@@ -194,6 +216,13 @@
 					{/if}
 				</aside>
 			{/if}
+
+			<div class="legend" aria-label="Status legend">
+				{#each STATUS_LEGEND as s}
+					<span class="chip"><i style="background:{STATUS_BG[s.key]}"></i>{s.label}</span>
+				{/each}
+				<span class="chip note">border = kind</span>
+			</div>
 		</div>
 	{/if}
 </div>
@@ -241,6 +270,36 @@
 	/* Svelte Flow needs a sized parent; the flex child gives it one. */
 	.flow :global(.svelte-flow) {
 		background: var(--bg, #14171c);
+	}
+	.legend {
+		position: absolute;
+		left: 0.6rem;
+		bottom: 0.6rem;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem 0.6rem;
+		max-width: 60%;
+		padding: 0.35rem 0.5rem;
+		background: color-mix(in srgb, var(--panel, #1b1f27) 88%, transparent);
+		border: 1px solid var(--border, #333a45);
+		border-radius: 8px;
+		font-size: 0.72rem;
+		z-index: 4;
+	}
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		color: var(--muted, #9aa4b2);
+	}
+	.chip i {
+		width: 10px;
+		height: 10px;
+		border-radius: 2px;
+		display: inline-block;
+	}
+	.chip.note {
+		font-style: italic;
 	}
 	.detail {
 		position: absolute;

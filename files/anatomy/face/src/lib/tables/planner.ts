@@ -23,6 +23,7 @@ export interface PlannerNode {
 		label: string;
 		slug: string;
 		status: string;
+		kind: string; // release | epic | feature | task | fee | weakness | decision
 		track: string;
 		orphanParent?: string; // set when `parent` names a slug no row provides
 	};
@@ -163,6 +164,7 @@ export function rowsToGraph(table: DataTable | null | undefined): PlannerGraph {
 				label: cell(r, 'title') || cell(r, 'slug') || r.id,
 				slug: cell(r, 'slug'),
 				status: cell(r, 'status'),
+				kind: cell(r, 'kind'),
 				track,
 				...(orphan ? { orphanParent: orphan } : {})
 			}

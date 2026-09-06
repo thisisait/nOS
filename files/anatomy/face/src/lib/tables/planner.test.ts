@@ -16,12 +16,13 @@ describe('rowsToGraph', () => {
 	it('emits a node per row with a stable id', () => {
 		const g = rowsToGraph(
 			table([
-				{ id: 'a', slug: 'a', title: 'A', track: 'platform', parent: '' },
-				{ id: 'b', slug: 'b', title: 'B', track: 'platform', parent: 'a' }
+				{ id: 'a', slug: 'a', title: 'A', kind: 'epic', track: 'platform', parent: '' },
+				{ id: 'b', slug: 'b', title: 'B', kind: 'task', track: 'platform', parent: 'a' }
 			])
 		);
 		expect(g.nodes.map((n) => n.id).sort()).toEqual(['a', 'b']);
 		expect(g.nodes.find((n) => n.id === 'a')!.data.label).toBe('A');
+		expect(g.nodes.find((n) => n.id === 'a')!.data.kind).toBe('epic');
 	});
 
 	it('draws a parent->child edge keyed on ids, from the parent SLUG', () => {
