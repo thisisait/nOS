@@ -100,27 +100,58 @@
 		return v == null ? '' : String(v);
 	}
 
+	// Filters — 208 rows is a lot to read at once. `table` stays the FULL
+	// source (reparent lookups need it); the graph renders a filtered view.
+	const DONE = new Set(['shipped', 'dropped']);
+	let hideDone = $state(true); // done work is most of the board; hide by default
+	let trackFilter = $state('all');
+	const tracks = $derived(
+		[...new Set((table?.rows ?? []).map((r) => cellOf(r, 'track')).filter(Boolean))].sort()
+	);
+	const shown = $derived(nodes.length);
+	const total = $derived(table?.rows?.length ?? 0);
+
+	function visibleRows(t: DataTable): DataTable {
+		const rows = t.rows.filter((r) => {
+			if (hideDone && DONE.has(cellOf(r, 'status'))) return false;
+			if (trackFilter !== 'all' && cellOf(r, 'track') !== trackFilter) return false;
+			return true;
+		});
+		return { ...t, rows };
+	}
+
+	/** Build the bindable node/edge arrays from a (possibly filtered) table.
+	 *  Reassigning the arrays keeps Svelte Flow's drag state intact. */
+	function applyGraph(t: DataTable) {
+		const g = rowsToGraph(t);
+		dangling = g.danglingParents;
+		nodes = g.nodes.map((n) => ({
+			id: n.id,
+			position: n.position,
+			data: { label: n.data.label },
+			style:
+				`background:${STATUS_BG[n.data.status] ?? '#343a45'};color:#e8ecf3;` +
+				'border:1px solid var(--border,#333a45);border-radius:8px;' +
+				`border-left:5px solid ${KIND_ACCENT[n.data.kind] ?? '#343a45'};` +
+				'font-size:12px;padding:6px 10px;width:240px;' +
+				(n.data.orphanParent ? 'outline:1px dashed #b8863b;' : '')
+		})) as Node[];
+		edges = g.edges.map((e) => ({ id: e.id, source: e.source, target: e.target })) as Edge[];
+		phase = t.rows.length ? 'ok' : 'empty';
+	}
+
+	/** Re-render the graph from the current filters, without re-fetching. */
+	function refilter() {
+		if (table) applyGraph(visibleRows(table));
+	}
+
 	async function load() {
 		phase = 'loading';
 		try {
 			const t = await loadTable('roadmap');
 			source = t.source;
 			table = t;
-			const g = rowsToGraph(t);
-			dangling = g.danglingParents;
-			nodes = g.nodes.map((n) => ({
-				id: n.id,
-				position: n.position,
-				data: { label: n.data.label },
-				style:
-					`background:${STATUS_BG[n.data.status] ?? '#343a45'};color:#e8ecf3;` +
-					'border:1px solid var(--border,#333a45);border-radius:8px;' +
-					`border-left:5px solid ${KIND_ACCENT[n.data.kind] ?? '#343a45'};` +
-					'font-size:12px;padding:6px 10px;width:240px;' +
-					(n.data.orphanParent ? 'outline:1px dashed #b8863b;' : '')
-			})) as Node[];
-			edges = g.edges.map((e) => ({ id: e.id, source: e.source, target: e.target })) as Edge[];
-			phase = nodes.length ? 'ok' : 'empty';
+			applyGraph(visibleRows(t));
 		} catch (e) {
 			err = e instanceof Error ? e.message : String(e);
 			phase = 'err';
@@ -168,6 +199,16 @@
 				>{dangling.length} dangling parent{dangling.length > 1 ? 's' : ''}</Badge
 			>{/if}
 		{#if action}<span class="action" class:err={action !== 'saving…'}>{action}</span>{/if}
+		<span class="filters">
+			<select bind:value={trackFilter} onchange={refilter} aria-label="Filter by track">
+				<option value="all">all tracks</option>
+				{#each tracks as t}<option value={t}>{t}</option>{/each}
+			</select>
+			<label class="chk"
+				><input type="checkbox" bind:checked={hideDone} onchange={refilter} /> hide done</label
+			>
+			<span class="sub">{shown}/{total}</span>
+		</span>
 		<button class="refresh" onclick={load} aria-label="Reload the roadmap">↻</button>
 	</header>
 
@@ -253,8 +294,29 @@
 	.action.err {
 		color: var(--bad, #d98a94);
 	}
-	.refresh {
+	.filters {
 		margin-left: auto;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.8rem;
+	}
+	.filters select {
+		background: var(--panel, #1b1f27);
+		color: var(--fg, #e8ecf3);
+		border: 1px solid var(--border, #333a45);
+		border-radius: 6px;
+		padding: 0.1rem 0.3rem;
+		font-size: 0.8rem;
+	}
+	.chk {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		color: var(--muted, #9aa4b2);
+		white-space: nowrap;
+	}
+	.refresh {
 		background: transparent;
 		border: 1px solid var(--border, #333a45);
 		color: var(--fg, #e8ecf3);
