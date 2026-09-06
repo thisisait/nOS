@@ -560,6 +560,21 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
     """
     wid = row["weakness_id"]
     state = row["state"]
+
+    # §5a / §loop-requires-operator — the front door. The ledger stamps
+    # `requires_operator` on a gate-add (it edits the oracle's own directory)
+    # and, since §loop-pin-bump-gate, on a version-pin-bump that crosses a
+    # major, downgrades, or names a pin no oracle can read. Contract §5a says
+    # such a proposal is never auto-accepted; until now the column was stamped
+    # and read by nobody but a status reader, so a gate-add that passed a judge
+    # set landed unattended — the gate-you-can-satisfy-by-editing-the-gate
+    # class, through the front door. Held here, before any judge is re-run or
+    # any branch is cut; an operator lands it by hand.
+    if row.get("requires_operator"):
+        log(f"  {wid}: requires an operator (stamped by the ledger) — "
+            f"not auto-landed; an operator reviews and lands it by hand")
+        return 0
+
     if state in ("re-judge", "unjudged", "indeterminate") and not gate_set:
         log(f"  {wid}: the ledger row declares no gate set — cannot judge")
         return 1

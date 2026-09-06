@@ -385,7 +385,7 @@ def awaiting() -> dict:
         rows = [dict(r) for r in conn.execute(
             """
             SELECT p.uuid, p.weakness_id, p.intent_class, p.proposer_id,
-                   p.target_paths, p.diff_text,
+                   p.target_paths, p.diff_text, p.requires_operator,
                    v.result AS verdict, v.created_at AS verdict_at,
                    v.tree_sha AS verdict_tree
               FROM loop_proposals p
@@ -476,6 +476,10 @@ def awaiting() -> dict:
             "weakness_id": row["weakness_id"],
             "intent_class": row["intent_class"],
             "proposer_id": row["proposer_id"],
+            # §5a / §loop-requires-operator — carried so the DRIVER can honour
+            # it. Stamped by the ledger (gate-add, or a major/downgrade/
+            # unreadable version-pin-bump); until now only this reader read it.
+            "requires_operator": row["requires_operator"],
             # The verdict RESULT rides along because state no longer implies it:
             # a `landed` or `conflict` row may sit on a pass or on an
             # indeterminate, and a renderer that says "passed the judges" of a

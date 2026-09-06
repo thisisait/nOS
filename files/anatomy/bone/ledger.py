@@ -618,6 +618,59 @@ def content_fingerprint(diff_text: str) -> str:
     return hashlib.sha256(normalize_diff(diff_text).encode("utf-8")).hexdigest()
 
 
+#: A changed YAML scalar assignment inside a diff hunk: sign, key, value.
+#: Header lines (`--- a/…`, `+++ b/…`) don't match — after the sign the key
+#: token needs a word char and `-`/`+` is not one.
+_VERSION_ASSIGN = re.compile(r'^([+-])\s*([\w.]+)\s*:\s*["\']?([^"\'#\s]+)')
+_NUM_LEAD = re.compile(r'^\d+(?:\.\d+)*')
+
+
+def _num_tuple(value: str) -> tuple[int, ...] | None:
+    m = _NUM_LEAD.match(value)
+    return tuple(int(p) for p in m.group(0).split(".")) if m else None
+
+
+def pin_bump_needs_operator(diff_text: str) -> bool:
+    """A `version-pin-bump` is auto-acceptable ONLY for a same-major forward
+    step; anything else is held for a human. §loop-pin-bump-gate.
+
+    The gate the intent enum could not make: `version-pin-bump` is one class
+    whether the pin moves 2.2.5→2.2.8 or Kuma 1→2, and the latter served ten
+    days with zero monitors because post-start automation never reconciled.
+    So the *value* decides, read here deterministically and offline — no
+    network, so a downgrade, a major crossing, or an unparseable pin (`latest`,
+    a bare sha) is held, and a plain patch step is not. This is also the
+    version-reading oracle §loop-verdict-vacuity asked for: a nonsense bump can
+    no longer land as a vacuous pass. What stays out of reach offline — a
+    well-formed same-major version that simply does not exist upstream — is the
+    dropped network read, and it is dropped on purpose (not deterministic).
+
+    ponytail: leading-numeric compare, not full semver; a pre-release ordering
+    (2.0.0-rc1 vs 2.0.0) reads as same tuple → held only on a major/downgrade,
+    which is the safe side. Reach for `packaging.version` if that bites.
+    """
+    removed: dict[str, str] = {}
+    added: dict[str, str] = {}
+    for line in diff_text.splitlines():
+        m = _VERSION_ASSIGN.match(line)
+        if not m:
+            continue
+        sign, key, value = m.groups()
+        (removed if sign == "-" else added)[key] = value
+    for key, new in added.items():
+        old = removed.get(key)
+        if old is None:
+            continue  # a pure addition, not a bump of an existing pin
+        old_t, new_t = _num_tuple(old), _num_tuple(new)
+        if old_t is None or new_t is None:  # a pin we cannot read → a human does
+            return True
+        if new_t[0] != old_t[0]:            # major crossing, either direction
+            return True
+        if new_t <= old_t:                  # downgrade or no-op
+            return True
+    return False
+
+
 # ── Where derivation lives, and why not here (constraint H) ───────────────
 #
 # An earlier draft of this module carried its own JudgeSpec, its own adapter
@@ -1066,6 +1119,12 @@ class ProposerLedger(ReaderLedger):
         fp = fingerprint(weakness_id, target_paths, intent_class, gate_set)
         priors = self._live_priors(fp, self._weakness_evidence_sha(weakness_id))
         requires_op = intent_class in OPERATOR_REQUIRED_INTENTS
+        # §loop-pin-bump-gate — the intent enum cannot tell a patch step from a
+        # major crossing; the diff can. Ledger-computed, never caller-supplied,
+        # same as the enum check above.
+        if intent_class == "version-pin-bump" and diff_text \
+                and pin_bump_needs_operator(diff_text):
+            requires_op = True
 
         # §5 FIRST, before any history is consulted. A proposal that edits the
         # gate set it will be judged by is refused on its shape alone — it must
@@ -1247,10 +1306,11 @@ class ProposerLedger(ReaderLedger):
             (u, fp, cfp, weakness_id, weakness_evidence_sha, intent_class, gate_set,
              _canonical_json(paths), tree_sha, proposer_id, proposer_model,
              decision.attempt_n,
-             # §5a — derived from intent_class by the ledger, never accepted
-             # from the caller: a proposer cannot mark its own gate-add
-             # auto-acceptable.
-             1 if intent_class in OPERATOR_REQUIRED_INTENTS else 0,
+             # §5a — computed by the ledger (check()), never accepted from the
+             # caller: a proposer cannot mark its own gate-add — or its own
+             # major pin crossing — auto-acceptable. ONE source: recomputing
+             # the enum here would have missed the pin-bump gate check() adds.
+             1 if decision.requires_operator else 0,
              # The artifact, verbatim (A1 needs the bytes to judge; §11 needs
              # them to replay). The hash alone is a claim with no preimage.
              diff_text,
