@@ -44,6 +44,13 @@
       description: "{{ _face_tbl.def.description | default('') }}"
       driver: "{{ _face_tbl.def.driver | default('libsql') }}"
       visibility: "{{ _face_tbl.def.visibility | default('tier-users') }}"
+      # §14.3 — a table's explicit ACL (dtt-share-model). `omit` rather than
+      # `[]`: a table that declares no share sends nothing, so the door's own
+      # default holds and a reconcile never clears an ACL the definition file
+      # simply does not carry. Same silent-drop trap `view:` had — the
+      # schema-pin gate's doorBody and the create contract both accept
+      # sharedWith, but until now the seeder dropped it on the floor.
+      sharedWith: "{{ _face_tbl.def.sharedWith | default(omit) }}"
       anchors: "{{ _face_tbl.def.anchors | default([]) }}"
       columns: "{{ _face_tbl.def.schema.columns }}"
       # Render metadata (style / facets / highlights / offer). `omit` rather than

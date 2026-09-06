@@ -54,3 +54,18 @@ def test_config_tables_have_a_seeder():
     blob = "".join(p.read_text(encoding="utf-8") for p in seeders)
     for name in CONFIG_TABLES:
         assert name in blob, f"seeder does not reference the {name} table"
+
+
+def test_seeder_create_body_forwards_the_share_model():
+    """The ONE create body (seed-face-table.yml) must forward every field the
+    create contract accepts — a dropped field validates in git and reaches no
+    converged install, silently (the `view:` incident, then `sharedWith`).
+    §dtt-share-model: visibility AND the explicit ACL both reach the door.
+    """
+    body = (REPO / "roles" / "pazny.keap" / "tasks" / "seed-face-table.yml").read_text(encoding="utf-8")
+    for field in ("visibility:", "sharedWith:", "view:", "anchors:", "columns:"):
+        assert field in body, f"seed-face-table.yml create body drops {field!r}"
+    # sharedWith must ride `omit`, never `[]` — an empty list would clear an
+    # ACL the definition file simply does not carry (settlement in the seeder).
+    assert re.search(r"sharedWith:.*def\.sharedWith \| default\(omit\)", body), \
+        "sharedWith must forward `def.sharedWith | default(omit)`, not a literal"
