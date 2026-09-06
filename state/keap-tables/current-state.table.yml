@@ -37,10 +37,14 @@ schema:
   columns:
     - { key: slug,        label: "Slug",        kind: text,   role: dimension, required: true, concept: identity.slug }
     - { key: title,       label: "Title",       kind: text,   role: dimension, required: true, concept: identity.name }
-    # WHICH roadmap item this assignment advances. The claim is a child of the
-    # work item → graph.parent.
-    - { key: work,        label: "Work",        kind: rowRef, role: dimension,
-        refTable: "roadmap", refDisplay: "title", onDelete: "restrict", concept: graph.parent }
+    # WHICH roadmap item this assignment advances — the roadmap row's SLUG.
+    # A soft (text) reference, not a rowRef, DELIBERATELY: the agent door keys a
+    # table by id and roadmap's id is a UUID (minted by the human door), not the
+    # slug `roadmap`, so a rowRef→roadmap 400s at row insert ("table roadmap does
+    # not exist") — the same UUID quirk that once emptied the planner. graph.parent
+    # binds text, so the pointer keeps its meaning; DB-enforced ref integrity waits
+    # for roadmap to be agent-door-addressable by slug (a roadmap-provisioning fix).
+    - { key: work,        label: "Work",        kind: text,   role: dimension, concept: graph.parent }
     # ── the nos-work:// NEED components (WHO is always * on an assignment) ─────
     - { key: task_type,   label: "Task type",   kind: select, role: dimension, required: true, concept: class.kind,
         options: ["investigate", "code-fix", "seed-edit", "review", "design", "doc", "security-remediation", "converge"] }
