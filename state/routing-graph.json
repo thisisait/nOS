@@ -1,0 +1,600 @@
+{
+  "generated_by": "tools/routing-graph-gen.py",
+  "note": "capability space (git-derived); live assignment match is tools/work-assignment.py",
+  "wheres": [
+    "ext-cloud",
+    "local"
+  ],
+  "task_types": [
+    "code-fix",
+    "design",
+    "doc",
+    "investigate",
+    "review",
+    "security-remediation",
+    "seed-edit"
+  ],
+  "scopes": [
+    "bone",
+    "dtt",
+    "internet",
+    "keap",
+    "loop",
+    "repo",
+    "repo.read",
+    "wing",
+    "wing.read"
+  ],
+  "agents": [
+    "conductor",
+    "curator",
+    "inspektor",
+    "jeff",
+    "jeff-cloud",
+    "librarian",
+    "migration-author",
+    "proposer",
+    "surveyor",
+    "upgrade-architect"
+  ],
+  "nodes": [
+    {
+      "id": "where:ext-cloud",
+      "kind": "where",
+      "label": "ext-cloud",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "id": "where:local",
+      "kind": "where",
+      "label": "local",
+      "x": 300,
+      "y": 0
+    },
+    {
+      "id": "agent:conductor",
+      "kind": "agent",
+      "label": "conductor",
+      "x": 300,
+      "y": 70,
+      "address": "nos-work://local/agent:conductor/repo.read+wing.read+bone/investigate+review/*"
+    },
+    {
+      "id": "agent:curator",
+      "kind": "agent",
+      "label": "curator",
+      "x": 300,
+      "y": 140,
+      "address": "nos-work://local/agent:curator/repo.read+wing.read+bone+keap+dtt/seed-edit+investigate/*"
+    },
+    {
+      "id": "agent:inspektor",
+      "kind": "agent",
+      "label": "inspektor",
+      "x": 300,
+      "y": 210,
+      "address": "nos-work://local/agent:inspektor/repo.read+wing.read+bone+internet/security-remediation+investigate/*"
+    },
+    {
+      "id": "agent:jeff",
+      "kind": "agent",
+      "label": "jeff",
+      "x": 300,
+      "y": 280,
+      "address": "nos-work://local/agent:jeff/wing.read+repo.read+repo/investigate+design+doc+code-fix/*"
+    },
+    {
+      "id": "agent:jeff-cloud",
+      "kind": "agent",
+      "label": "jeff-cloud",
+      "x": 0,
+      "y": 70,
+      "address": "nos-work://ext-cloud/agent:jeff-cloud/wing.read+repo.read/investigate+design+doc/*"
+    },
+    {
+      "id": "agent:librarian",
+      "kind": "agent",
+      "label": "librarian",
+      "x": 300,
+      "y": 350,
+      "address": "nos-work://local/agent:librarian/repo.read+wing.read+wing+bone+keap+dtt/investigate+seed-edit/*"
+    },
+    {
+      "id": "agent:migration-author",
+      "kind": "agent",
+      "label": "migration-author",
+      "x": 300,
+      "y": 420,
+      "address": "nos-work://local/agent:migration-author/repo.read+wing.read+repo+internet/code-fix+seed-edit/*"
+    },
+    {
+      "id": "agent:proposer",
+      "kind": "agent",
+      "label": "proposer",
+      "x": 300,
+      "y": 490,
+      "address": "nos-work://local/agent:proposer/repo.read+loop+wing.read/design/*"
+    },
+    {
+      "id": "agent:surveyor",
+      "kind": "agent",
+      "label": "surveyor",
+      "x": 300,
+      "y": 560,
+      "address": "nos-work://local/agent:surveyor/repo.read+wing.read+wing+bone/investigate+seed-edit/*"
+    },
+    {
+      "id": "agent:upgrade-architect",
+      "kind": "agent",
+      "label": "upgrade-architect",
+      "x": 300,
+      "y": 630,
+      "address": "nos-work://local/agent:upgrade-architect/repo.read+wing.read+repo+internet/design+code-fix/*"
+    },
+    {
+      "id": "co:code-fix",
+      "kind": "task_type",
+      "label": "code-fix",
+      "x": 900,
+      "y": 0
+    },
+    {
+      "id": "co:design",
+      "kind": "task_type",
+      "label": "design",
+      "x": 900,
+      "y": 70
+    },
+    {
+      "id": "co:doc",
+      "kind": "task_type",
+      "label": "doc",
+      "x": 900,
+      "y": 140
+    },
+    {
+      "id": "co:investigate",
+      "kind": "task_type",
+      "label": "investigate",
+      "x": 900,
+      "y": 210
+    },
+    {
+      "id": "co:review",
+      "kind": "task_type",
+      "label": "review",
+      "x": 900,
+      "y": 280
+    },
+    {
+      "id": "co:security-remediation",
+      "kind": "task_type",
+      "label": "security-remediation",
+      "x": 900,
+      "y": 350
+    },
+    {
+      "id": "co:seed-edit",
+      "kind": "task_type",
+      "label": "seed-edit",
+      "x": 900,
+      "y": 420
+    },
+    {
+      "id": "kam:bone",
+      "kind": "scope",
+      "label": "bone",
+      "x": 1200,
+      "y": 0
+    },
+    {
+      "id": "kam:dtt",
+      "kind": "scope",
+      "label": "dtt",
+      "x": 1200,
+      "y": 70
+    },
+    {
+      "id": "kam:internet",
+      "kind": "scope",
+      "label": "internet",
+      "x": 1200,
+      "y": 140
+    },
+    {
+      "id": "kam:keap",
+      "kind": "scope",
+      "label": "keap",
+      "x": 1200,
+      "y": 210
+    },
+    {
+      "id": "kam:loop",
+      "kind": "scope",
+      "label": "loop",
+      "x": 1200,
+      "y": 280
+    },
+    {
+      "id": "kam:repo",
+      "kind": "scope",
+      "label": "repo",
+      "x": 1200,
+      "y": 350
+    },
+    {
+      "id": "kam:repo.read",
+      "kind": "scope",
+      "label": "repo.read",
+      "x": 1200,
+      "y": 420
+    },
+    {
+      "id": "kam:wing",
+      "kind": "scope",
+      "label": "wing",
+      "x": 1200,
+      "y": 490
+    },
+    {
+      "id": "kam:wing.read",
+      "kind": "scope",
+      "label": "wing.read",
+      "x": 1200,
+      "y": 560
+    }
+  ],
+  "edges": [
+    {
+      "source": "agent:conductor",
+      "target": "where:local",
+      "kind": "runs-in"
+    },
+    {
+      "source": "agent:curator",
+      "target": "where:local",
+      "kind": "runs-in"
+    },
+    {
+      "source": "agent:inspektor",
+      "target": "where:local",
+      "kind": "runs-in"
+    },
+    {
+      "source": "agent:jeff",
+      "target": "where:local",
+      "kind": "runs-in"
+    },
+    {
+      "source": "agent:jeff-cloud",
+      "target": "where:ext-cloud",
+      "kind": "runs-in"
+    },
+    {
+      "source": "agent:librarian",
+      "target": "where:local",
+      "kind": "runs-in"
+    },
+    {
+      "source": "agent:migration-author",
+      "target": "where:local",
+      "kind": "runs-in"
+    },
+    {
+      "source": "agent:proposer",
+      "target": "where:local",
+      "kind": "runs-in"
+    },
+    {
+      "source": "agent:surveyor",
+      "target": "where:local",
+      "kind": "runs-in"
+    },
+    {
+      "source": "agent:upgrade-architect",
+      "target": "where:local",
+      "kind": "runs-in"
+    },
+    {
+      "source": "agent:conductor",
+      "target": "co:investigate",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:conductor",
+      "target": "co:review",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:conductor",
+      "target": "kam:bone",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:conductor",
+      "target": "kam:repo.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:conductor",
+      "target": "kam:wing.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:curator",
+      "target": "co:investigate",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:curator",
+      "target": "co:seed-edit",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:curator",
+      "target": "kam:bone",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:curator",
+      "target": "kam:dtt",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:curator",
+      "target": "kam:keap",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:curator",
+      "target": "kam:repo.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:curator",
+      "target": "kam:wing.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:inspektor",
+      "target": "co:investigate",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:inspektor",
+      "target": "co:security-remediation",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:inspektor",
+      "target": "kam:bone",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:inspektor",
+      "target": "kam:internet",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:inspektor",
+      "target": "kam:repo.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:inspektor",
+      "target": "kam:wing.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:jeff-cloud",
+      "target": "co:design",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:jeff-cloud",
+      "target": "co:doc",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:jeff-cloud",
+      "target": "co:investigate",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:jeff-cloud",
+      "target": "kam:repo.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:jeff-cloud",
+      "target": "kam:wing.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:jeff",
+      "target": "co:code-fix",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:jeff",
+      "target": "co:design",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:jeff",
+      "target": "co:doc",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:jeff",
+      "target": "co:investigate",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:jeff",
+      "target": "kam:repo",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:jeff",
+      "target": "kam:repo.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:jeff",
+      "target": "kam:wing.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:librarian",
+      "target": "co:investigate",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:librarian",
+      "target": "co:seed-edit",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:librarian",
+      "target": "kam:bone",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:librarian",
+      "target": "kam:dtt",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:librarian",
+      "target": "kam:keap",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:librarian",
+      "target": "kam:repo.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:librarian",
+      "target": "kam:wing",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:librarian",
+      "target": "kam:wing.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:migration-author",
+      "target": "co:code-fix",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:migration-author",
+      "target": "co:seed-edit",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:migration-author",
+      "target": "kam:internet",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:migration-author",
+      "target": "kam:repo",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:migration-author",
+      "target": "kam:repo.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:migration-author",
+      "target": "kam:wing.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:proposer",
+      "target": "co:design",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:proposer",
+      "target": "kam:loop",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:proposer",
+      "target": "kam:repo.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:proposer",
+      "target": "kam:wing.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:surveyor",
+      "target": "co:investigate",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:surveyor",
+      "target": "co:seed-edit",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:surveyor",
+      "target": "kam:bone",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:surveyor",
+      "target": "kam:repo.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:surveyor",
+      "target": "kam:wing",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:surveyor",
+      "target": "kam:wing.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:upgrade-architect",
+      "target": "co:code-fix",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:upgrade-architect",
+      "target": "co:design",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:upgrade-architect",
+      "target": "kam:internet",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:upgrade-architect",
+      "target": "kam:repo",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:upgrade-architect",
+      "target": "kam:repo.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:upgrade-architect",
+      "target": "kam:wing.read",
+      "kind": "touches"
+    }
+  ]
+}

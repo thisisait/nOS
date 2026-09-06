@@ -36,3 +36,8 @@ package-lock.json
 src/lib/keap-contracts/visibility.ts
 src/lib/keap-contracts/table.ts
 src/lib/keap-contracts/field-concepts.ts
+
+# `src/lib/anatomy/routing-graph.json` is emitted by tools/routing-graph-gen.py
+# (agent capability projection) — same one-authority rule as the graphs above;
+# pinned by tests/anatomy/test_routing_graph_is_sound.py.
+src/lib/anatomy/routing-graph.json

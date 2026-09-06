@@ -13,10 +13,12 @@
 	import { Tabs, type TabSpec } from '$lib/components/ui';
 	import RoadmapGraph from './RoadmapGraph.svelte';
 	import LoopsView from './LoopsView.svelte';
+	import RoutingView from './RoutingView.svelte';
 
 	const tabs: TabSpec[] = [
 		{ key: 'roadmap', label: 'Roadmap' },
-		{ key: 'loops', label: 'Loops' }
+		{ key: 'loops', label: 'Loops' },
+		{ key: 'routing', label: 'Routing' }
 	];
 	let active = $state('roadmap');
 </script>
@@ -28,6 +30,8 @@
 			<RoadmapGraph />
 		{:else if active === 'loops'}
 			<LoopsView />
+		{:else if active === 'routing'}
+			<RoutingView />
 		{/if}
 	</div>
 </div>

@@ -150,6 +150,7 @@ worse than none, because it reads as complete.
 - `nos-secret.py` — nos-secret — the operator's reader for the derived credential map (P1).
 
 - `anatomy-graph-gen.py` — Compile the anatomy graph — every declared actor and edge, one address space.
+- `routing-graph-gen.py` — Compile the agent capability graph (nos-work://) into routing-graph.json for the Planner Routing view.
 - `apex-sign.py` — Sign the apex ruling — after showing what changed since it was last signed.
 - `d12-annotate-plugins.py` — D1.2.b — add `name` + `enabled` to each plugin's authentik block.
 - `e2e-auth-helper.py` — Provision / teardown ephemeral tester identities for Playwright e2e tests.
