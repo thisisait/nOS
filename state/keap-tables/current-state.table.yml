@@ -1,0 +1,56 @@
+# =============================================================================
+# KEAP DataTable — "Current state" (plat-active-work-datatable, the claim board)
+#
+# THE LIVE CLAIM/ASSIGNMENT BOARD where parallel agents (Cursor, Claude, Codex,
+# AgentKit, local models) take work without colliding. A row is an ASSIGNMENT —
+# a unit of work that NEEDS doing, expressed as the components of a nos-work://
+# address (dtt-routing-address): its task_type (CO), execution locus (WHERE),
+# and access scope (KAM). The planner MATCHES each assignment against the agent
+# capability addresses (tools/agent-capability.py) via `assignment ⊆ capability`
+# (tools/nos_work_uri.py) and an agent CLAIMS a matching row.
+#
+# WHY A SEPARATE TABLE, not columns on roadmap: roadmap is the durable PLAN
+# (git-seeded, self-nesting); a claim is EPHEMERAL churn (claimed → working →
+# released, leases expiring). Mixing them would churn the plan table on every
+# claim and lose claim history. So currentState `work` rowRefs the roadmap row
+# it advances, and the claim lives here. (roadmap.table.yml is also permanently
+# unappliable — its live `when` 409s a reconcile — so a column cannot be added
+# to it anyway; the separation is forced as well as right.)
+#
+# THE ASSIGNMENT ADDRESS IS DERIVED, NOT STORED: tools/work-assignment.py builds
+# nos-work://<where>/*/<kam>/<task_type>/<lease_until|*> from these columns — one
+# projection, symmetric with the capability side, no denormalised copy to drift.
+#
+# ROWS ARE RUNTIME, NOT GIT-SEEDED (like roadmap's): they are filed by an
+# operator or an agent and mutated by claims. The converge creates the empty
+# table; a small bootstrap seed lands the real next roadmap steps as the first
+# assignments (dogfooding). Marked UNSEEDED in test_keap_table_concepts.
+# =============================================================================
+title: "Current state"
+description: >-
+  The live claim/assignment board: units of work needing doing, expressed as
+  routing-address components, claimed by matching agents. dtt: the parallel-work
+  board (plat-active-work-datatable).
+driver: libsql
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,        label: "Slug",        kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: title,       label: "Title",       kind: text,   role: dimension, required: true, concept: identity.name }
+    # WHICH roadmap item this assignment advances. The claim is a child of the
+    # work item → graph.parent.
+    - { key: work,        label: "Work",        kind: rowRef, role: dimension,
+        refTable: "roadmap", refDisplay: "title", onDelete: "restrict", concept: graph.parent }
+    # ── the nos-work:// NEED components (WHO is always * on an assignment) ─────
+    - { key: task_type,   label: "Task type",   kind: select, role: dimension, required: true, concept: class.kind,
+        options: ["investigate", "code-fix", "seed-edit", "review", "design", "doc", "security-remediation", "converge"] }
+    - { key: where,       label: "Where",       kind: select, role: dimension,
+        options: ["local", "eu-cloud", "ext-cloud", "any"] }
+    - { key: kam,         label: "Scope (KAM)", kind: text,   role: attribute }
+    # ── the claim (empty = unclaimed; the matcher shows who COULD take it) ─────
+    - { key: claim,       label: "Claimed by",  kind: text,   role: dimension, concept: access.owner }
+    - { key: lease_until, label: "Lease until", kind: date,   role: attribute, concept: time.target }
+    - { key: started_at,  label: "Started",     kind: date,   role: attribute, concept: time.occurred_at }
+    - { key: status,      label: "Status",      kind: select, role: dimension, required: true, concept: lifecycle.status,
+        options: ["unclaimed", "claimed", "working", "blocked", "review", "done", "released"] }
+    - { key: note,        label: "Note",        kind: text,   role: attribute, concept: identity.description }

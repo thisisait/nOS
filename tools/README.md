@@ -85,6 +85,7 @@ worse than none, because it reads as complete.
 - `nos-statusline.sh` — one line of estate truth, for the tmux status bar.
 - `nos-watch.sh` — render a reader's CURRENT OUTPUT on an interval, in place.
 - `wf-panel.sh` — put the workflow tree in the nos-cc panel, and nowhere else.
+- `work-assignment.py` — Derive a currentState row's nos-work:// assignment address + match it to capable agents.
 - `workflow-lint.py` — Refuse a workflow script the runtime would reject — before it spends anything.
 - `workflow-tree.py` — Draw a workflow definition as a tree, with live progress if a run is going.
 

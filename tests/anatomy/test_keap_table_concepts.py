@@ -95,6 +95,8 @@ CONCEPTLESS = {
     "kolben-project.client": "no counterparty concept; graph.parent would claim the project nests under the client — same as print-order.customer",
     "kolben-project.budget": "no money/measure concept — needs measure.amount (a budget is not identity.* or a lifecycle)",
     "kolben-time-entry.hours": "no measure concept — needs measure.duration (hours logged is a quantity, like print-job.quantity)",
+    "current-state.where": "no execution-locus concept — needs deploy.locus (local/eu-cloud/ext-cloud is the nos-work:// WHERE segment, not access.tier)",
+    "current-state.kam": "no routing-scope concept — needs routing.scope (the nos-work:// KAM segment: repo/dtt/keap/... a tool-scope set, not a class.*)",
 }
 
 
@@ -238,6 +240,10 @@ UNSEEDED = {
     "roadmap":"rows come from tools/roadmap-seed.py, not the playbook seeder — "
                "same split as apps and systems. The DEFINITION is git-owned here; "
                "wiring the rows through the playbook is a decision, not an oversight.",
+    "current-state": "rows are RUNTIME agent claims/assignments (filed live via "
+               "the dtt door, mutated by claims, leases expiring) — git-seeding "
+               "ephemeral claim state would let a re-converge wipe a live claim. "
+               "Same split as roadmap: the definition is git-owned, the rows are not.",
 }
 
 
