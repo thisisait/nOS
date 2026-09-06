@@ -103,7 +103,12 @@ resolve() {
 # and `declare -A` is a syntax error there — which this script found the first
 # time it ran after the change.
 CALLER_WINS=" "
-for k in NOS_ARMED_BACKENDS NOS_LOCAL_MODEL NOS_LOCAL_SMALL_MODEL; do
+# NOS_MINIMAX_MODEL joined 2026-09-06: the block above says the whole point is
+# to "vary the BACKEND and the MODEL ID per run", but the minimax model id was
+# not caller-overridable — so a run could pick the minimax backend yet never the
+# minimax VERSION (M3 / M2.7 / M2.7-highspeed / M2.5 / …). Same rule as the local
+# model ids: a caller who sets it wins over the plist; unset, the daemon's pin holds.
+for k in NOS_ARMED_BACKENDS NOS_LOCAL_MODEL NOS_LOCAL_SMALL_MODEL NOS_MINIMAX_MODEL; do
     eval "v=\${$k:-}"
     [ -n "$v" ] && CALLER_WINS="${CALLER_WINS}${k} "
 done
