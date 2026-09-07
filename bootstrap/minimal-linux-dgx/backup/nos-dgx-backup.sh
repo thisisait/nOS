@@ -72,7 +72,10 @@ restic backup --tag nightly --one-file-system --exclude-caches \
   /var/lib/nos-dgx/jupyterhub /var/lib/docker/volumes/open-webui/_data \
   /var/lib/docker/volumes/iiab_n8n_data/_data \
   /home /etc/nginx/tls /etc/systemd/system/user-.slice.d \
-  2>&1 | tail -n 6 | tee -a "$LOG"
+  2>&1 | tail -n 6 | tee -a "$LOG" || rc=$?
+# restic exit 3 = snapshot saved, some files unreadable (a vanished tmp file in
+# a home dir) — worth a log line, not an abort; anything else is a failure.
+case "${rc:-0}" in 0) ;; 3) log "warning: snapshot saved with unreadable files (rc=3)";; *) log "restic backup FAILED rc=$rc"; exit "$rc";; esac
 
 # ── retention: forget nightly, prune + check on Sundays ─────────────────────
 if [ "$(date +%u)" = 7 ]; then
