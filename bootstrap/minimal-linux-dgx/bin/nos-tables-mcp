@@ -1,0 +1,10 @@
+#!/bin/sh
+# MCP stdio door to the nOS DataTables for Claude Code / Codex / Hermes.
+# Sources the tier-appropriate tokens (no secret lives in any harness config),
+# then execs the stdlib server from the runtime checkout.
+#   claude mcp add -s user nos-tables -- /srv/nos-dgx/bin/nos-tables-mcp
+for f in /etc/nos/keap.env /etc/nos/keap-rw.env; do
+  [ -r "$f" ] && { set -a; . "$f"; set +a; }
+done
+export NOS_MCP_AGENT="${NOS_MCP_AGENT:-${USER:-external}@$(hostname -s)}"
+exec python3 "${NOS_SRC:-/srv/nos}/tools/mcp-tables-server.py" "$@"

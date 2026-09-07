@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""Put nOS on THIS user's shelf: skills, the nos CLI env, the seed repo, MCP.
+
+Run as the user (or `sudo -u <user> -H nos-user-setup`). Idempotent. Mirrors
+tasks/skills.yml — the library is SYMLINKED, never copied; a `main` harness
+gets every skill, an `agent` harness only what its frontmatter names; a shelf
+is created only when its harness's parent dir already exists (a skills dir for
+a harness nobody installed reads later as evidence the harness is set up).
+
+Verify afterwards with `python3 $NOS_SRC/tools/skill-status.py` — a reader,
+so it can disagree with this script, which is the point.
+"""
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+
+import yaml
+
+HOME = pathlib.Path(os.path.expanduser("~"))
+SRC = pathlib.Path(os.environ.get("NOS_SRC", "/srv/nos"))
+SEED_BARE = "/srv/nos-seed.git"
+SEED_DIR = HOME / "nos-seed"
+LIBRARY = SRC / "files/anatomy/skills"
+# DGX extension: the repo-local Claude skills are useful outside the checkout.
+EXTRA_MAIN = [SRC / ".claude/skills/dtt-capture"]
+
+
+def consumers():
+    doc = yaml.safe_load((SRC / "default.config.yml").read_text(encoding="utf-8")) or {}
+    out = []
+    for e in doc.get("nos_skill_consumers") or []:
+        d = str(e["dir"]).replace("{{ ansible_facts['env']['HOME'] }}", str(HOME))
+        out.append({"id": e["id"], "kind": e["kind"], "dir": pathlib.Path(d)})
+    return out
+
+
+def library():
+    skills = []
+    for f in sorted(LIBRARY.glob("*/SKILL.md")):
+        fm = f.read_text(encoding="utf-8").split("---")
+        meta = yaml.safe_load(fm[1]) if len(fm) > 2 else {}
+        aud = ((meta or {}).get("metadata") or {}).get("nos", {}).get("audience") or []
+        skills.append({"name": f.parent.name, "src": f.parent, "audience": list(aud)})
+    return skills
+
+
+def link(src: pathlib.Path, dest: pathlib.Path) -> str:
+    if dest.is_symlink() and dest.resolve() == src.resolve():
+        return "ok"
+    if dest.is_symlink() or dest.exists():
+        if dest.is_symlink():
+            dest.unlink()
+        else:
+            return "FOREIGN (left alone)"
+    dest.symlink_to(src)
+    return "linked"
+
+
+def main():
+    print(f"user={os.environ.get('USER', '?')} home={HOME} src={SRC}")
+    # 1. skills
+    for c in consumers():
+        if not c["dir"].parent.is_dir():
+            print(f"  {c['id']:9} harness not installed ({c['dir'].parent})")
+            continue
+        c["dir"].mkdir(parents=True, exist_ok=True)
+        for s in library():
+            if c["kind"] == "main" or c["id"] in s["audience"]:
+                print(f"  {c['id']:9} {s['name']:18} {link(s['src'], c['dir'] / s['name'])}")
+        if c["kind"] == "main":
+            for x in EXTRA_MAIN:
+                if x.is_dir():
+                    print(f"  {c['id']:9} {x.name:18} {link(x, c['dir'] / x.name)}")
+    # 2. nos CLI env
+    nos = HOME / ".nos"
+    nos.mkdir(mode=0o700, exist_ok=True)
+    env = nos / "nos-cli.env"
+    env.write_text(f"NOS_SRC={SRC}\nNOS_PY=python3\nNOS_SEED_DIR={SEED_DIR}\n", encoding="utf-8")
+    print(f"  wrote {env}")
+    # 3. seed repo clone. /srv/nos and the bare seed repo are owned by admin,
+    # so git's dubious-ownership guard refuses them for every other user —
+    # mark them safe in THIS user's config (user scope, no root needed).
+    for safe in (SEED_BARE, str(SRC)):
+        subprocess.run(["git", "config", "--global", "--add", "safe.directory", safe],
+                       capture_output=True, text=True)
+    if not (SEED_DIR / ".git").is_dir():
+        if pathlib.Path(SEED_BARE).is_dir():
+            r = subprocess.run(["git", "clone", "-q", SEED_BARE, str(SEED_DIR)], capture_output=True, text=True)
+            print(f"  seed repo: {'cloned' if r.returncode == 0 else 'clone FAILED: ' + r.stderr.strip()} -> {SEED_DIR}")
+        else:
+            print(f"  seed repo: {SEED_BARE} absent, skipped")
+    else:
+        print(f"  seed repo: present at {SEED_DIR}")
+    # 4. MCP registration for Claude Code (user scope; the wrapper holds no secret)
+    if shutil.which("claude"):
+        have = subprocess.run(["claude", "mcp", "get", "nos-tables"], capture_output=True, text=True)
+        if have.returncode == 0:
+            print("  claude mcp: nos-tables already registered")
+        else:
+            r = subprocess.run(["claude", "mcp", "add", "-s", "user", "nos-tables", "--",
+                                "/srv/nos-dgx/bin/nos-tables-mcp"], capture_output=True, text=True)
+            print(f"  claude mcp: {'registered nos-tables' if r.returncode == 0 else 'FAILED: ' + (r.stderr or r.stdout).strip()}")
+    else:
+        print("  claude mcp: claude CLI not on PATH for this user, skipped")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

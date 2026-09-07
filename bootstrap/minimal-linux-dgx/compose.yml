@@ -1,0 +1,80 @@
+# =============================================================================
+# nos-dgx — the standalone KEAP (DataTables) + Open WebUI stack on the DGX.
+#
+# Project name `iiab` on purpose: the container becomes `iiab-keap-1`, the name
+# every host-side nOS tool (`tools/keap_api.py`, `roadmap-update.py`, …) shells
+# into for a token when the environment carries none. Members of nos-users get
+# the tokens from /etc/nos/*.env instead and never need the docker group.
+#
+# Bring up (as a member of nos-maintainers):
+#   docker compose -f /srv/nos-dgx/compose.yml up -d
+# =============================================================================
+name: iiab
+
+services:
+  keap:
+    image: nos/keap:1.44.0-a97c91f          # built from ./keap/src at tag v1.44.0
+    container_name: iiab-keap-1
+    restart: always
+    ports:
+      - "127.0.0.1:8091:8080"               # loopback agent surface + nginx upstream
+    volumes:
+      - ./keap/data:/data
+      # Knowledge SoT mounted READ-ONLY from the pinned clone — the image cannot
+      # self-serve an ingest (roles/pazny.keap/templates/compose.yml.j2 rationale).
+      - ./keap/src/knowledge:/app/knowledge:ro
+    env_file:
+      - /etc/nos/keap-compose.env           # KEAP_AGENT_TOKEN_RO/RW/CAPTURE, KEAP_PROXY_SHARED_SECRET
+    environment:
+      PORT: "8080"
+      KEAP_DATA_DIR: /data
+      # Header-less /api requests 401; identity comes ONLY from nginx (PAM) with
+      # the proxy secret — the same contract Traefik's keap-proxy@file honours.
+      KEAP_TRUSTED_PROXY: "1"
+      KEAP_TENANT_DOMAIN: "__HOST__"
+      KEAP_INSTANCE_NAME: "__SHORT__"
+      # CSRF same-origin guard + CSP frame-ancestors: MUST equal the origin the
+      # browser uses. Reach KEAP as https://__HOST__:8443, not by IP.
+      KEAP_PUBLIC_URL: "https://__HOST__:8443"
+      KEAP_EMBED_ORIGINS: "https://__HOST__:8443"
+      # Native Ollama on the host, bound to the docker0 address (172.17.0.1).
+      KEAP_OLLAMA_URL: "http://host.docker.internal:11434"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - gated_net
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    mem_limit: 2g
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: iiab-open-webui-1
+    restart: always
+    ports:
+      - "127.0.0.1:12000:8080"              # nginx upstream (was the old bundle's port)
+    volumes:
+      - open-webui:/app/backend/data        # the EXISTING data volume (accounts, chats)
+    environment:
+      OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+      WEBUI_URL: "https://__HOST__:8444"
+      # Own accounts, not the nginx/PAM identity: the SPA's bearer token and
+      # HTTP basic auth cannot share the Authorization header (nginx conf, 8444).
+      DEFAULT_USER_ROLE: "user"
+      ENABLE_SIGNUP: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - gated_net
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+networks:
+  gated_net:
+    name: gated_net
+
+volumes:
+  open-webui:
+    external: true                          # created by the previous bundle container

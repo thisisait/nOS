@@ -1,0 +1,5 @@
+# /etc/pam.d/nginx — nginx auth_pam: the box's own accounts, group-gated.
+# www-data must be in group `shadow` so pam_unix can read /etc/shadow.
+auth    required   pam_succeed_if.so user ingroup nos-users quiet_success
+auth    include    common-auth
+account include    common-account
