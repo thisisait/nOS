@@ -13,7 +13,7 @@ User=root
 Environment=BACKREST_PORT=127.0.0.1:9898
 Environment=BACKREST_CONFIG=/etc/nos/backrest/config.json
 Environment=BACKREST_DATA=/var/lib/nos-dgx/backrest
-Environment=BACKREST_RESTIC_COMMAND=/usr/bin/restic
+Environment=BACKREST_RESTIC_COMMAND=/usr/local/bin/restic
 ExecStart=/opt/nos-dgx/backrest/backrest
 Restart=always
 RestartSec=5

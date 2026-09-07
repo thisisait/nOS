@@ -349,6 +349,15 @@ else
   echo "backup disk: no filesystem labelled nos-backup — the timer will refuse to run (README: NOS_BACKUP_DEVICE + NOS_BACKUP_FORMAT=yes once)"
 fi
 install -d -m 0700 /var/lib/nos-dgx/backup
+# restic: apt ships 0.16, Backrest 1.14 requires >= 0.19.1. One binary for the
+# timer AND the UI, from the upstream release, on /usr/local/bin ahead of apt's.
+RESTIC_WANT=0.19.1
+if ! /usr/local/bin/restic version 2>/dev/null | grep -q "restic $RESTIC_WANT"; then
+  curl -fsSL "https://github.com/restic/restic/releases/download/v$RESTIC_WANT/restic_${RESTIC_WANT}_linux_arm64.bz2" | bunzip2 > /usr/local/bin/restic.new
+  chmod 0755 /usr/local/bin/restic.new && mv /usr/local/bin/restic.new /usr/local/bin/restic
+  echo "restic $(/usr/local/bin/restic version | awk '{print $2}') installed at /usr/local/bin/restic"
+fi
+export PATH=/usr/local/bin:$PATH
 if [ ! -f /etc/nos/restic.env ]; then
   umask 077
   printf 'RESTIC_REPOSITORY=%s/restic\nRESTIC_PASSWORD=%s\n' "$BK" "$(openssl rand -base64 30 | tr -d '/+=')" > /etc/nos/restic.env
@@ -378,13 +387,18 @@ if [ ! -x "$BR/backrest" ]; then
   echo "backrest $("$BR/backrest" --version 2>/dev/null | head -1) installed"
 fi
 install -d -m 0700 /etc/nos/backrest /var/lib/nos-dgx/backrest
-if [ ! -f /etc/nos/backrest/config.json ]; then
+# Backrest validates that a configured repo carries the repository's own
+# guid (`restic cat config` → id) unless it may auto-initialise; we never let
+# it initialise, so read the guid from the repo the timer writes to.
+if [ ! -f /etc/nos/backrest/config.json ] || ! grep -q '"guid"' /etc/nos/backrest/config.json; then
   # shellcheck disable=SC1091
-  ( . /etc/nos/restic.env
-    python3 - "$SHORT" "$RESTIC_REPOSITORY" "$RESTIC_PASSWORD" <<'PY' > /etc/nos/backrest/config.json
+  ( . /etc/nos/restic.env; export RESTIC_REPOSITORY RESTIC_PASSWORD
+    GUID="$(restic cat config 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' 2>/dev/null || true)"
+    [ -n "$GUID" ] || { echo "backrest: repository guid unreadable (disk mounted? restic init done?) — config not written"; exit 0; }
+    python3 - "$SHORT" "$RESTIC_REPOSITORY" "$RESTIC_PASSWORD" "$GUID" <<'PY' > /etc/nos/backrest/config.json
 import json, sys
 print(json.dumps({"modno": 1, "version": 4, "instance": sys.argv[1],
-  "repos": [{"id": "local", "uri": sys.argv[2], "password": sys.argv[3],
+  "repos": [{"id": "local", "guid": sys.argv[4], "uri": sys.argv[2], "password": sys.argv[3],
              "prunePolicy": {"schedule": {"disabled": True}}, "checkPolicy": {"schedule": {"disabled": True}}}],
   "plans": [], "auth": {"disabled": True}}, indent=1))
 PY

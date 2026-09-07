@@ -14,6 +14,7 @@ summary: restic to the local backup disk every night, a restore drill every morn
 | reader | `nos-dgx-backup-verify.timer` → `nos-dgx-backup-verify.sh`, 04:30 daily: restores the KEAP database from the latest snapshot into a scratch dir, counts the roadmap rows, compares with the live table, writes `/var/lib/nos-dgx/backup/last.json` |
 | UI | Backrest at `https://__HOST__:8446/` (admin only: PAM, group `nos-maintainers`) — browse snapshots, restore files; it schedules nothing |
 | retention | 8 weekly + 7 daily; `prune` and a 10 % `check` every Sunday |
+| restic | `/usr/local/bin/restic` 0.19.x from the upstream release (apt's 0.16 is below what Backrest needs); one binary for the timer and the UI |
 | key | `/etc/nos/restic.env` (root 0600) and a copy in `/root/nos-dgx-restic.password`. **Put it in your password manager.** Without it the disk is noise. |
 
 **The backup never says "OK" about itself.** The verdict is the verifier's:
