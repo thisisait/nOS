@@ -322,7 +322,9 @@ if [ "${NOS_BACKUP_FORMAT:-}" = yes ] && [ -n "${NOS_BACKUP_DEVICE:-}" ]; then
   # No lazy unmount here: a lazily detached filesystem keeps the block
   # device busy for wipefs as long as any holder (Nautilus) lives. Kill the
   # holders, unmount for real, or stop and say who is holding it.
-  findmnt -no TARGET "$BKREAL" 2>/dev/null | while IFS= read -r mp; do
+  # findmnt exits 1 when nothing is mounted — that is the GOOD case, and under
+  # set -e + pipefail it would end the run silently; hence the `|| true`.
+  { findmnt -no TARGET "$BKREAL" 2>/dev/null || true; } | while IFS= read -r mp; do
     fuser -km "$mp" 2>/dev/null || true
     sleep 1
     umount "$mp" || { echo "REFUSING: $mp still busy:"; fuser -vm "$mp" 2>&1; exit 1; }
