@@ -1,9 +1,9 @@
 {
   "initialized_at": "2026-04-08T12:00:00Z",
-  "last_full_scan": "2026-09-03T02:08:09Z",
-  "last_advisory_check": "2026-09-03T04:04:09+02:00",
+  "last_full_scan": "2026-09-07T02:05:10Z",
+  "last_advisory_check": "2026-09-07T04:00:14+02:00",
   "last_remediation_applied": "2026-04-09T12:00:00Z",
-  "scan_cycle": 53,
+  "scan_cycle": 55,
   "scanner_version": "2.0.0",
   "config": {
     "batch_size": 5,
@@ -36,22 +36,22 @@
       "last_scan_attempt": "2026-08-30T04:12:35+02:00"
     },
     "authentik": {
-      "last_checked": "2026-08-25T04:00:20+02:00",
-      "last_cve_scan": "2026-08-25T04:00:20+02:00",
+      "last_checked": "2026-09-06T04:13:38+02:00",
+      "last_cve_scan": "2026-09-06T04:13:38+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-25T04:00:20+02:00",
+      "last_attack_probe": "2026-09-06T04:13:38+02:00",
       "findings_count": 7,
       "status": "scanned",
-      "notes": "Cycle-40 batch-59 RE-SCAN (2026-08-25, unauthenticated_endpoint_scan): CVE leg UNCHANGED, no new row, REM-149 re-verified pending and annotated. The goauthentik/authentik repo-level advisory endpoint was re-queried directly -- still the ONLY source that works for this package, since global GHSA lookups 404 and OSV holds zero records -- and it returns nothing published after the 2026-07-15 wave (GHSA-35v6-hv2g-6992, GHSA-h8ff-c3h7-2gf8, GHSA-rv9x-92g6-9cpf, GHSA-3v9h-3hrm-29cx, GHSA-hmrg-vpp4-gj88). Pin re-confirmed live at 2026.5.2 on both infra-authentik-server-1 and infra-authentik-worker-1, still inside every '<= 2026.5.4' range, and still protected only by which authentik features nOS does not use (no LDAP Source, no inbound SAML Source, no enterprise licence). ONE CHANGE: 2026.8.0 shipped 2026-08-18, so REM-149's target is now a choice -- 2026.5.6 stays the recommended minimal same-minor move; 2026.8.0 is a two-minor jump needing the upgrade-recipe path and a blueprint review, and the row was annotated to say so rather than being silently retargeted. PROBE: unauthenticated GET at the edge 302s to /flows/-/default/authentication/; the loopback publish 127.0.0.1:9003 answers /-/health/live/ with 200 and an empty body, and /api/v3/core/users/ with 403 'Authentication credentials were not provided' -- the bypass path does NOT expose the API."
+      "notes": "Cycle-53 batch (2026-09-06, CVE + tls_crypto_weakness): CVE leg UNCHANGED -- the goauthentik/authentik repo advisory endpoint (still the ONLY working source; global GHSA 404s, OSV empty) was re-read: 43 advisories total, NOTHING published after the 2026-07-15 wave. Pin still 2026.5.2, still inside every '<= 2026.5.4' range, still shielded only by unused features (no LDAP Source, no inbound SAML Source, no RAC/enterprise, no SSF). REM-149 ANNOTATED, not retargeted silently: 2026.5.6 confirmed the END of the 2026.5.x line (no 2026.5.7), and the two-minor jump option moves 2026.8.0 -> 2026.8.1 (2026-09-01, bugfix-only body per the release read). PROBE (tls_crypto_weakness): edge GOOD -- auth.pazny.eu negotiates TLS1.3 (TLS_AES_128_GCM_SHA256), refuses TLS1.1 and a CBC-only TLS1.2 offer; router tls:{} = default option (TLS1.2 floor + AEAD-only cipher list; the unused 'modern' TLS1.3 option is REM-238, traefik). Traefik reaches the container on plain http://authentik-server:9000 over the docker fabric -- meaning the SSO session cookie and every OIDC token transit shared_net cleartext between edge and IdP, the highest-value instance of the REM-217 cleartext-fabric class (recorded as class context, not a new row -- one fix, the fabric). Cookie posture is upstream-correct behind X-Forwarded-Proto https from the edge."
     },
     "grafana": {
-      "last_checked": "2026-08-25T04:00:20+02:00",
-      "last_cve_scan": "2026-08-25T04:00:20+02:00",
+      "last_checked": "2026-09-06T04:13:38+02:00",
+      "last_cve_scan": "2026-09-06T04:13:38+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-25T04:00:20+02:00",
+      "last_attack_probe": "2026-09-06T04:13:38+02:00",
       "findings_count": 8,
       "status": "scanned",
-      "notes": "Cycle-40 batch-59 SCAN (2026-08-25, unauthenticated_endpoint_scan): NOT CLEAN -- 2 rows filed, and the core-version leg finally moved after five cycles of 'behind but no known CVE'. Grafana published five releases within 80 minutes on 2026-08-18 (v13.2.0, v13.1.4, v13.0.7, v12.4.9, v12.3.11) and the v12.4.9 release body carries a `### Security` section whose sole entry is CVE-2026-17183 -> +REM-226 (HIGH by disposition, not by vendor rating: the advisory page 404s and the CVE record is still reserved; re-rate when it publishes). Pin 12.4.4 is five patches below the in-branch fix. SECOND row: CVE-2026-17033 (MEDIUM 6.8, stored XSS via unsanitised alert.generatorURL rendered as the 'See source' href, published 2026-08-24 -- one day before this scan) has NO 12.x backport, fix is >= 13.1.0 only -> +REM-227, filed separately BECAUSE folding it into REM-226 would smuggle a two-major move into a patch row. SCANNED AND N/A, recorded so nobody re-opens them: CVE-2026-21723 (anonymous-reachable alertmanager templates-test OOM) fixes at 12.3.3+, pin is already above it; CVE-2026-11817 is multi-org-only and nOS runs one org. THE GOOD NEWS, and it is luck not process: CVE-2026-19516 (CRITICAL 9.1 SSRF via X-Grafana-URL) hits mcp-grafana below 1.1.0, and mcp_grafana_version was digest-pinned to 1.1.0 on 2026-08-10, ONE DAY before the advisory published on 2026-08-11. PROBE: loopback 127.0.0.1:3000 serves /api/health unauthenticated (leaks version + commit 42cdc391) but /api/orgs returns 401; edge 302s to /login. Health-endpoint version disclosure is accepted posture, not filed."
+      "notes": "Cycle-53 batch (2026-09-06, CVE + tls_crypto_weakness): NOT CLEAN -- +REM-252 (MEDIUM, pending), and the arc is REM-178/REM-244 in miniature: the 12.4.9 target REM-226 set on 2026-08-25 was pinned, converged 2026-08-27, and upstream published v12.4.10 on 2026-09-02 with two more CVEs, so the estate was current for six days. APPLICABLE: CVE-2026-19475 (vendor MEDIUM 6.5, $__timeGroup SQL-macro OOM DoS that BYPASSES the CVE-2026-33375 fix; core-bundled SQL datasources; PR:L behind Authentik OIDC, availability-only) -> REM-252, fix 12.4.10. N/A RECORDED: CVE-2026-14199 (HIGH 7.1 Auth Proxy session takeover -- ENTERPRISE + auth-proxy only, estate is OSS+OIDC), CVE-2026-12704 (Enterprise SAML), CVE-2026-19854 (clickhouse plugin, not installed). POINTER: CVE-2026-75889 (Alloy ServiceMonitor bearerTokenFile, HIGH 7.7) belongs to the next ALLOY batch -- likely N/A (k8s-specific) but verify, don't trust likely. REM-226 re-verified resolved (live /api/health 12.4.9 commit a895d1ba; CVE-2026-17183 STILL reserved-without-details, cannot re-rate). REM-227 stands: v12.4.10 notes re-read, still NO 12.x backport for CVE-2026-17033. PROBE (tls_crypto_weakness): edge GOOD -- grafana.pazny.eu negotiates TLS1.3, refuses TLS1.1/CBC; router tls:{} default option (REM-238 covers the declared-floor gap). Internal leg plain http://grafana:3000 (REM-217 class); GF_SERVER_ROOT_URL is https so cookies are Secure-correct behind the proxy."
     },
     "portainer": {
       "last_checked": "2026-08-31T04:05:59+02:00",
@@ -81,13 +81,13 @@
       "notes": "Cycle-48 batch-61 (2026-08-31, CVE scan + unauthenticated_endpoint_scan). NOT CLEAN on version -- and it is the same arc REM-213 recorded ten days ago, repeating. The 1.27.2 pin (advanced 2026-08-21) did clear the 08-14 wave; on 2026-08-29 upstream published TWENTY-TWO more advisories -- 4 HIGH, 15 MEDIUM, 3 LOW -- and twenty of them name 1.27.2 affected. v1.27.3 shipped the same day. Filed REM-244 HIGH. Two are already fixed at the pin and recorded so nobody re-derives them (CVE-2026-71184 8.8 and CVE-2026-73135, both '<= 1.27.1'). Unlike REM-213 the fix mapping is UNAMBIGUOUS this time: every advisory still publishes first_patched_version NULL, but v1.27.3's release body enumerates its SECURITY commits by subsystem and they line up one-for-one with the wave, so no commit-archaeology gap is being papered over. Two advisories again publish '>= 1.16.0' with no upper bound (CVE-2026-60021/60018) -- the hazard REM-213 flagged on CVE-2026-73800 -- and both are resolved from the release notes rather than from the range. ESTATE-SPECIFIC, MEASURED: the Actions cluster (the wave's largest group, including the top HIGH CVE-2026-66877 8.7 RCE-on-self-hosted-runners) is MITIGATED BY ABSENCE -- app.ini has no [actions] section so ENABLED is upstream-default TRUE, but `select count(*) from action_runner` returns ZERO and 85 action_run rows sit with nothing to execute them. That is a fact about today's deployment, not a control: registering an act_runner makes the 8.7 live with no other change and nothing would notice. There are also no forks and no external contributors, so the fork-PR precondition has no population. The restricted-user disclosure cluster needs a restricted account and /api/v1/users/search returns exactly two, neither restricted. CVE-2026-60010 (8.1, repo team-link endpoint bypasses RepoAdminChangeTeamAccess) is the one HIGH with no estate-specific brake. PROBE LEG: nothing new -- /api/v1/version, /api/v1/users/search and /explore/repos still answer 200 anonymously at the edge exactly as batch-45 measured; REM-179 amended, REM-180 (REQUIRE_SIGNIN_VIEW, still unset, still the one cheap fix) remains pending."
     },
     "nextcloud": {
-      "last_checked": "2026-08-25T04:00:20+02:00",
-      "last_cve_scan": "2026-08-25T04:00:20+02:00",
+      "last_checked": "2026-09-06T04:13:38+02:00",
+      "last_cve_scan": "2026-09-06T04:13:38+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-25T04:00:20+02:00",
+      "last_attack_probe": "2026-09-06T04:13:38+02:00",
       "findings_count": 2,
       "status": "scanned",
-      "notes": "Cycle-40 batch-59 RE-SCAN (2026-08-25, unauthenticated_endpoint_scan): CLEAN on both legs, no row filed, and the near-miss recorded in batch-51 is now CLOSED BY MEASUREMENT rather than by assumption. CVE-2026-61527 (GHSA-99gw-ww6p-f2rr, HIGH 7.1, view-only shares on External Storage / Team Folders are always writeable; affected >= 33.0.4, fixed 33.0.6): `docker exec iiab-nextcloud-1 php occ status` reports version 33.0.6.2 / versionstring 33.0.6, i.e. AT the fix floor and past it by one point release. Second advisory in window, CVE-2026-61545 (GHSA-vq3v-jv6f-6xp2, MEDIUM 4.3, Mail contact autocomplete bypasses the configured user-enumeration restriction) is against the MAIL APP, not server core, and `occ app:list` shows the Mail app is not installed -- N/A, verified rather than presumed. WORTH SAYING PLAINLY: the fix arrived because nextcloud_version is the FLOATING major tag \"33\" (default.config.yml:1528) and the image was rebuilt, not because anyone bumped a pin. That is the same mutable-tag posture REM-225 is about; here it happened to help. PROBE: loopback 127.0.0.1:8085/status.php returns 200 unauthenticated and discloses the exact patch version (33.0.6.2) -- also reachable from any shared_net peer -- but nextcloud carries its own native OIDC auth, the edge 302s to /login, and version disclosure on a status endpoint is accepted posture. Not filed."
+      "notes": "Cycle-53 batch (2026-09-06, CVE + tls_crypto_weakness): CLEAN on both legs, no row filed. CVE: the nextcloud/security-advisories repo endpoint (nextcloud/server's own is structurally EMPTY -- they publish on the sibling repo, recorded as the source rule for this component) shows newest published 2026-08-05; zero items after the 2026-08-25 baseline. The known pair unchanged: CVE-2026-61527 resolved at the 33.0.6 floor, CVE-2026-61545 Mail-app N/A. LIVE VERIFIED read-only: occ status -> 33.0.6.2 / versionstring 33.0.6, maintenance false. Upstream: 33.0.7 (07-23) and 33.0.8 (08-13) exist with NO advisory naming a server fix above 33.0.6 -- maintenance only; 33.0.9rc1 (2026-09-03) is RC. The floating '33' tag will pick these up on the next rebuild (the REM-225 mutable-tag posture, cutting both ways as batch-59 noted). PROBE (tls_crypto_weakness): edge GOOD -- cloud.pazny.eu negotiates TLS1.3, refuses TLS1.1 and TLS1.2-CBC; router tls:{} default option (TLS1.2 floor AEAD-only; declared-modern gap = REM-238). App leg HTTPS-aware: OVERWRITEPROTOCOL=https in the live override, so generated URLs and cookie Secure flags are correct behind the plain http://nextcloud:80 internal leg (REM-217 cleartext-fabric class, not re-filed)."
     },
     "wordpress": {
       "last_checked": "2026-08-28T04:13:55+02:00",
@@ -99,13 +99,13 @@
       "notes": "Cycle-45 batch-58 SCAN (2026-08-28, tls_crypto_weakness + CVE). REM-163 FALSIFIED and RESOLVED -- the headline of this batch, and a correction to our own prior work rather than to a vendor's. batch-42 concluded the auth cookie is issued without Secure because no HTTPS/proxy shim exists anywhere in the role. The grep was right; the conclusion was wrong. The shim ships in the docker-library image's wp-config-docker.php and lands at /var/www/html/wp-config.php:120-123 (HTTP_X_FORWARDED_PROTO -> $_SERVER['HTTPS']='on'), invisible to any repo search. Evaluated in the container with that header, is_ssl() is bool(true); and decisively, GET https://wordpress.pazny.eu/wp-admin/ returns ONE 302 whose Location carries redirect_to=https%3A%2F%2F... -- that value is auth_redirect()'s set_url_scheme() output, which picks its scheme straight from is_ssl(), and it is not the 301-to-self loop a false is_ssl() would produce. So wp_set_auth_cookie()'s $secure default is true. Lesson recorded on the row: a scanner must read the running container, not the source tree that only half-describes it. CVE leg CLEAN: pin and live container are both wordpress:7.0.4 (2026-08-12, CVE-2026-65640 / GHSA-8vr3-7mxf-gx8w) and there is NO 7.0.5 -- 7.0.4 remains the current 7.0.x. The batch-54 headline (REM-204) is closed by that pin."
     },
     "n8n": {
-      "last_checked": "2026-08-26T04:01:32+02:00",
-      "last_cve_scan": "2026-08-26T04:01:32+02:00",
+      "last_checked": "2026-09-07T04:00:14+02:00",
+      "last_cve_scan": "2026-09-07T04:00:14+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-26T04:01:32+02:00",
-      "findings_count": 8,
+      "last_attack_probe": "2026-09-07T04:00:14+02:00",
+      "findings_count": 9,
       "status": "scanned",
-      "notes": "Cycle-42 batch-53 SCAN (2026-08-26, default_credentials_test): +REM-229 (HIGH, pending). CVE LEG NO LONGER CLEAN. A FOURTH advisory wave landed 2026-08-19 -- five days after the batch-52 note that recorded this component clean at 2.35.0 -- and ALL EIGHT records carry NO CVE ID, so the CVE feed and a version-aware OSV npm query (n8n@2.35.0 -> NO VULNS) both return nothing while all eight apply. The repo advisory endpoint is again the only channel that shows them: GHSA-fg85-4wv2-p98j, GHSA-4r56-g65c-fm83, GHSA-wxwj-8wv6-vpw2, GHSA-mwp5-2m32-r54h, GHSA-9x83-43r8-5hwc, GHSA-95ph-833c-4wrp, GHSA-vrv8-j27g-g7cr, GHSA-jmmj-93rg-6j39 (six HIGH, two MEDIUM). Vulnerable range on each is `< 2.35.4` (plus `< 2.36.2`); the pin and the live binary are 2.35.0, below the floor on every one. Two are host RCE (Git node command neutralization; $fromAI prototype leak escaping the expression sandbox); one writes DECRYPTED credential secrets into persisted execution data, which compounds REM-202. A ninth same-day record, GHSA-jp9j-jr97-w9pj, ranges `< 2.34.1` only and does NOT apply -- recorded so it is not re-derived. Fix = 2.35.7 (2026-08-21, head of the 2.35 line). ATTACK PROBE (default_credentials_test): MITIGATED -- /rest/settings reports showSetupOnFirstLoad false, so the owner account is claimed and the first-boot owner-claim window is shut; no N8N_BASIC_AUTH default anywhere; bound 127.0.0.1:5678 behind Authentik native_oidc."
+      "notes": "Cycle-54 batch-54 SCAN (2026-09-07, resource_exhaustion_vectors): +REM-253 (HIGH, pending). CVE LEG NOT CLEAN -- a FIFTH advisory wave published 2026-09-02..03, seven days after REM-229 was resolved by the 2.35.7 bump. Nineteen records (5 HIGH, 14 MEDIUM), ALL GHSA-only, ALL floor `< 2.37.7`; estate 2.35.7 is below on every one. PROBE BULLSEYE: GHSA-hh89-3r9w-qj3j unauthenticated persistent storage exhaustion via OAuth Dynamic Client Registration -- MEASURED reachable from a shared_net peer (`docker exec iiab-miniflux-1 wget http://n8n:5678/rest/settings` -> 200), so anon DB-exhaustion is peer-network-reachable, not merely insider. Plus GHSA-j535 ReDoS + GHSA-679f prototype-pollution DoS (both authoring-bounded). Fix = 2.37.10. Details in REM-253."
     },
     "openwebui": {
       "last_checked": "2026-08-31T04:05:59+02:00",
@@ -206,13 +206,13 @@
       "last_scan_attempt": "2026-09-01T04:00:53+02:00"
     },
     "metabase": {
-      "last_checked": "2026-08-26T04:01:32+02:00",
-      "last_cve_scan": "2026-08-26T04:01:32+02:00",
+      "last_checked": "2026-09-07T04:00:14+02:00",
+      "last_cve_scan": "2026-09-07T04:00:14+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-26T04:01:32+02:00",
+      "last_attack_probe": "2026-09-07T04:00:14+02:00",
       "findings_count": 7,
       "status": "scanned",
-      "notes": "Cycle-42 batch-53 SCAN (2026-08-26, default_credentials_test): CLEAN ON BOTH LEGS, no new rows. CVE leg: the repo advisory endpoint (the only channel that has ever shown a Metabase item here -- two of the last three had no CVE id) returns NOTHING published since 2026-08-12. The last one, GHSA-r495-55cx-fjh7 (CRITICAL, 2026-08-11, REM-198), lists patched floors per line including `>= x.63.0, < x.63.10`; the pin and the live binary are v0.63.10, AT the floor -- REM-198 is correctly closed and was re-verified rather than carried. VERSION DRIFT, no exposure: v0.63.14 shipped 2026-08-20 and the estate is on v0.63.10; the release bodies for .11 through .14 contain no security wording and no advisory maps to them, so this is a routine-currency item, not a queue row. ATTACK PROBE (default_credentials_test): MITIGATED -- /api/session/properties reports has-user-setup true and setup-token null, so the first-boot setup window that would let any reacher claim admin is CLOSED; MB_DB_PASS derives from nos_derived_secrets.metabase (no default in tree); bound 127.0.0.1:3002 behind the Authentik forward_auth gate, with the documented ceiling that Metabase OSS has no OIDC and runs a shared account behind that gate."
+      "notes": "Cycle-54 batch-54 SCAN (2026-09-07, resource_exhaustion_vectors): CLEAN both legs, no row. CVE: repo advisory endpoint (the only channel that has ever shown a Metabase item here) returns nothing published since 2026-08-11 (GHSA-r495-55cx-fjh7 = REM-198, closed at v0.63.10 floor). VERSION DRIFT no exposure: v0.63.16 shipped 2026-09-01, estate on v0.63.10; release bodies .11-.16 carry no security wording and no advisory maps to them -- routine currency, not a row. PROBE: metabase carries 2g mem_limit live (JVM sized), bound 127.0.0.1:3002 behind Authentik forward_auth; the query engine is the theoretical RE surface but it is gated (no anon reach) -- OSS-no-OIDC shared-account ceiling documented. No RE row."
     },
     "superset": {
       "last_checked": "2026-09-02T04:02:54+02:00",
@@ -273,31 +273,32 @@
       "last_scan_attempt": "2026-08-19T04:07:27+02:00"
     },
     "uptime_kuma": {
-      "last_checked": "2026-08-24T04:14:07+02:00",
-      "last_cve_scan": "2026-08-24T04:14:07+02:00",
+      "last_checked": "2026-09-06T04:13:38+02:00",
+      "last_cve_scan": "2026-09-06T04:13:38+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-24T04:14:07+02:00",
+      "last_attack_probe": "2026-09-06T04:13:38+02:00",
       "findings_count": 6,
       "status": "scanned",
-      "notes": "Cycle-39 batch-58 SCAN (2026-08-24, supply_chain_freshness). 1 item filed (REM-224, MEDIUM) -- and it is NOT the finding a tag-counting scan would have produced. THE FALSE ALARM, recorded so nobody re-raises it: upstream shipped THREE releases on 2026-08-22 (2.5.1 06:50Z, 2.5.2 08:44Z, 2.5.3 09:20Z), which reads as an emergency security train and is not one. Release notes: 2.5.1 = seven notification providers plus a SQLite enum fix and a RADIUS fix; 2.5.2 = 'Non-docker installation was broken in 2.5.1'; 2.5.3 = 'release with wrong version number'. No security content. CVE leg independently clean at 2.5.0 (OSV npm newest fixed advisory is CVE-2026-32230 at 2.2.0; vendor advisory listing shows nothing since 2026-03-16). THE ACTUAL FINDING: the image is Debian 12 bookworm -- OLDSTABLE -- and ships Chromium 148.0.7778.178, confirmed running in the live container, against 151.0.7922.137 in Debian 12 security. Three Chromium majors behind, plus libnss3 two revisions behind. Chromium exists here for the 'real-browser' monitor type; the live DB was queried read-only and has ZERO of them (http|48, port|2), so the exposure is LATENT -- a dormant renderer one operator UI action from parsing remote content. THE TRANSFERABLE FACT: this image is only 23 days old and tileserver's is 140, yet this one is oldstable-stale and both are worse than jellyfin's. IMAGE AGE DOES NOT PREDICT PACKAGE STALENESS; base-distro choice does. Ubuntu 24.04 -> 56 pending, Debian 12 -> 11, Debian 13 -> 14, Alpine -> 2 (apk-tools only), scratch -> none."
+      "notes": "Cycle-53 batch (2026-09-06, CVE + tls_crypto_weakness): CLEAN on both legs, no row filed. CVE: repo advisory endpoint (18 advisories total) has nothing newer than 2026-03-16 (GHSA-v832-4r73-wx5j/CVE-2026-33130, fixed at/below the 2.5.0 pin); OSV npm shows zero records modified after 2026-08-24; upstream head is still 2.5.3 (2026-08-22, no security content per the batch-58 read) -- pin 2.5.0 trails by three non-security patches. REM-224 (Debian 12 oldstable base, stale bundled Chromium, latent -- zero real-browser monitors) unchanged, no new inputs. PROBE (tls_crypto_weakness): edge GOOD -- uptime.pazny.eu on origin Traefik negotiates TLS1.3 (TLS_AES_128_GCM_SHA256), REFUSES TLS1.1 and a TLS1.2 CBC-only offer (AES128-SHA -> handshake failure); router carries tls:{} = the 'default' option (minVersion TLS1.2, AEAD-only suite list, no CBC/no RSA-kex) -- the declared-TLS1.3-'modern'-option-unused gap is REM-238 (LOW, traefik), not re-filed per component. Internal leg is plain http://uptime-kuma:3001 on the docker fabric -- the estate-wide cleartext-fabric class REM-217 owns, not a per-service row. Kuma is forward_auth (authentik@file on the router) with no app-level session crypto of its own to probe. Rated: mitigated at the edge, cleartext-internal-by-class.",
+      "last_scan_attempt": "2026-09-06T04:13:38+02:00"
     },
     "calibreweb": {
-      "last_checked": "2026-08-25T04:00:20+02:00",
-      "last_cve_scan": "2026-08-25T04:00:20+02:00",
+      "last_checked": "2026-09-07T04:00:14+02:00",
+      "last_cve_scan": "2026-09-07T04:00:14+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-25T04:00:20+02:00",
+      "last_attack_probe": "2026-09-07T04:00:14+02:00",
       "findings_count": 3,
       "status": "scanned",
-      "notes": "Cycle-40 batch-59 RE-SCAN (2026-08-25, unauthenticated_endpoint_scan): CLEAN on both legs, no row filed. CVE: pin and live image agree at 0.6.27 (lscr.io/linuxserver/calibre-web:0.6.27), which is upstream head -- janeczku has published nothing above the 2026-08-08 'Ludmila' security release, so REM-195's bump is not merely applied but AT head. The one advisory not previously tracked here, CVE-2025-65858 (GHSA-pc5g-j9j7-p4q3, LOW, stored XSS via the username field surfacing at /ajax/listusers), declares affected `<= 0.6.25` and is therefore out of range at 0.6.27 -- checked explicitly so a future scan does not file it as new. PROBE: calibre-web is the batch's positive control and the counter-example that makes REM-228 an argument rather than a complaint. It is attached to gated_net ONLY; `docker exec iiab-miniflux-1 wget http://calibre-web:8083/` from the flat shared_net gets NO RESPONSE -- SEC-02's isolation is not doctrine here, it is live and provable. Even on its loopback publish 127.0.0.1:8083 it 302s both / and /ajax/listusers to its own login, so the forward-auth gate is defence in depth rather than the only line. Edge 302s to the Authentik authorize endpoint as designed."
+      "notes": "Cycle-54 batch-54 RE-SCAN (2026-09-07, resource_exhaustion_vectors): CLEAN both legs, no row. CVE: pin==live 0.6.27 (lscr.io/linuxserver/calibre-web:0.6.27), upstream head (janeczku published nothing above 2026-08-08 'Ludmila'); the repo security-advisory endpoint returns zero rows. PROBE: calibre-web carries a live 512m mem_limit (docker inspect: 536870912) and remains the batch's positive control -- attached to gated_net only, so the peer-container reach that hit n8n/kiwix/loki does not apply here. No unbounded-request or unauth-write RE surface; static-content serve behind forward-auth + SEC-02 isolation."
     },
     "kiwix": {
-      "last_checked": "2026-08-25T04:00:20+02:00",
-      "last_cve_scan": "2026-08-25T04:00:20+02:00",
+      "last_checked": "2026-09-07T04:00:14+02:00",
+      "last_cve_scan": "2026-09-07T04:00:14+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-25T04:00:20+02:00",
+      "last_attack_probe": "2026-09-07T04:00:14+02:00",
       "findings_count": 1,
       "status": "scanned",
-      "notes": "Cycle-40 batch-59 SCAN (2026-08-25, unauthenticated_endpoint_scan): CVE leg CLEAN, PROBE leg NOT -- +REM-228 (MEDIUM), the batch's probe finding of record. CVE: pin 3.8.2 unchanged, live-confirmed, still upstream head (kiwix/kiwix-tools has published nothing above it since 2026-03-02), and the security-advisory endpoints for kiwix-tools, libkiwix and openzim/libzim all return zero rows. PROBE: kiwix-serve has NO authentication of its own, so the Authentik forward-auth middleware IS its entire access control -- and two paths were MEASURED going around it. (1) iiab-kiwix-1 sits on shared_net as well as iiab_iiab_net, and `docker exec iiab-miniflux-1 wget http://kiwix:8080/` returns HTTP/1.1 200 OK with the library index: any of ~50 peer containers reads the whole corpus anonymously. (2) the 127.0.0.1:8888 publish answers / and /viewer with 200. The EDGE is correct -- an unauthenticated GET at https://kiwix.<tld>/ 302s to the Authentik authorize endpoint. What makes this filable rather than shruggable is the asymmetry with calibre-web, the other forward_auth-only service in the same stack: the identical probe from iiab-miniflux-1 to calibre-web:8083 gets NO RESPONSE, because SEC-02 put it on gated_net only. Same promise, one service revisited and one not. MEDIUM not HIGH: the asset is tier-4 public-domain ZIM content with no write surface and no pivot; what is damaged is the invariant, not the data."
+      "notes": "Cycle-54 batch-54 RE-SCAN (2026-09-07, resource_exhaustion_vectors): CVE CLEAN, PROBE = existing REM-228 only, no new row. CVE: pin==live 3.8.2, still upstream head (kiwix-tools published nothing since 2026-03-02); advisory endpoints for kiwix-tools/libkiwix/libzim all zero. PROBE: mem_limit 512m live; no per-request rate limit and no auth of its own, but the RE surface is bounded -- static ZIM serve, no write path, no unbounded persistence. The peer-reachability on shared_net is REM-228 (already filed MEDIUM); a request-flood is capped by the 512m limit and tier-4 public content. No new RE row."
     },
     "paperclip": {
       "last_checked": "2026-09-03T04:04:09+02:00",
@@ -319,22 +320,23 @@
       "last_scan_attempt": "2026-09-02T04:08:23+02:00"
     },
     "tileserver": {
-      "last_checked": "2026-08-24T04:14:07+02:00",
-      "last_cve_scan": "2026-08-24T04:14:07+02:00",
+      "last_checked": "2026-09-06T04:13:38+02:00",
+      "last_cve_scan": "2026-09-06T04:13:38+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-24T04:14:07+02:00",
+      "last_attack_probe": "2026-09-06T04:13:38+02:00",
       "findings_count": 2,
       "status": "scanned",
-      "notes": "Cycle-39 batch-58 SCAN (2026-08-24, supply_chain_freshness). 1 item filed (REM-223, MEDIUM) and it is the probe's FINDING OF RECORD. APP LEG CLEAN AND UNIMPROVABLE: v5.6.0 is the newest stable release (2026-04-06); npm dist-tags latest=5.6.0, everything above is a prerelease; the GitHub security-advisories API for maptiler/tileserver-gl returns count ZERO; OSV npm carries one advisory, CVE-2020-15500, fixed in 3.1.0, six years below the pin. REM-117's verdict stands. BASE LEG NOT CLEAN: the image is Ubuntu 24.04.4 built 2026-04-06 (140 days old) and carries 64 upgradable packages, 56 from the -security pocket -- libc6, libcurl4t64 (four security revisions behind), libgnutls30t64, libgcrypt20, gzip, and a ca-certificates trust store dated 20240203, i.e. two and a half years stale. There is no version to bump; the fix is an image rebuild. MEASUREMENT NOTE, carried forward as a rule for this probe type: the first measurement returned 0 upgradable and was FALSE -- the image runs non-root, apt-get update died 'Permission denied', and the pipeline counted the empty output of a failed command as an empty result. Assert the package manager's exit status before counting. Re-run with --user 0 exited 0 and produced the figures above."
+      "notes": "Cycle-53 batch (2026-09-06, CVE + tls_crypto_weakness): CLEAN app leg, no row filed. Repo advisory endpoint still count ZERO (no advisory ever published for maptiler/tileserver-gl); OSV npm still only CVE-2020-15500 (fixed 3.1.0, six years below the v5.6.0 pin at default.config.yml:1615); newest upstream is v5.7.0-pre.1 (2026-08-31, PRE-release: Prometheus endpoint + fixes, no security wording) -- v5.6.0 remains the newest STABLE, unimprovable. Web sweep surfaced only Chainguard-image package advisories (GHSA-vpq2-c234-7xj6, GHSA-q3j6-qgpj-74h6) -- a DIFFERENT vendor's rebuild of the same app, not the maptiler image, recorded so nobody re-derives them; they are exactly the base-image-package churn REM-223 (Ubuntu 24.04 base 56 security-packages stale, fix = image rebuild) tracks for ours, and REM-223 stands unchanged with still no version to bump to. PROBE (tls_crypto_weakness): edge GOOD -- maps.pazny.eu negotiates TLS1.3, refuses TLS1.1 and TLS1.2-CBC; router tls:{} = default option (TLS1.2 floor, AEAD-only; the modern/TLS1.3 declared-floor gap stays REM-238). Internal leg plain http://tileserver:8080 (REM-217 class). The service is a static tile renderer with no session/cookie/secret crypto surface of its own; its TLS story is entirely the shared edge.",
+      "last_scan_attempt": "2026-09-06T04:13:38+02:00"
     },
     "loki": {
-      "last_checked": "2026-08-26T04:01:32+02:00",
-      "last_cve_scan": "2026-08-26T04:01:32+02:00",
+      "last_checked": "2026-09-07T04:00:14+02:00",
+      "last_cve_scan": "2026-09-07T04:00:14+02:00",
       "last_misconfig_scan": null,
-      "last_attack_probe": "2026-08-26T04:01:32+02:00",
+      "last_attack_probe": "2026-09-07T04:00:14+02:00",
       "findings_count": 1,
       "status": "scanned",
-      "notes": "Cycle-42 batch-53 SCAN (2026-08-26, default_credentials_test): +REM-231 (MEDIUM, pending) -- this component has carried findings_count 0 since it was first scanned, and that zero was the defect. ATTACK PROBE, MEASURED: a throwaway container on shared_net GETs http://loki:3100/loki/api/v1/labels -> 200 with the live label set, no credential presented or demanded. 51 containers sit on shared_net today; each can read the whole corpus, which via Alloy includes nginx, PHP and AGENT logs -- i.e. prompts, tool arguments and error payloads. Loki OSS has no built-in authenticator, so auth_enabled: true would NOT fix this (it enables X-Scope-OrgID multi-tenancy, a header any caller can set); network placement is the control, and the SEC-02 gated-network pattern is the fix shape. Sibling of the pending REM-201 (tempo), filed separately because the data at risk differs in kind. Scope boundary: host publish is 127.0.0.1:3100 and state/manifest.yml gives loki port_var with NO domain_var, so Traefik derives no router -- peer-container reachable, not internet reachable. CVE LEG CLEAN at the pinned 3.7.6 (default.config.yml:1644; grafana/loki:3.7.6 live and healthy; 3.7.6 is head of the 3.7 line). The one OSV hit, GO-2026-5115 / CVE-2026-21726 / GHSA-497x-rrr9-68jp, is the module-path artifact: no fix event on the bare github.com/grafana/loki path so every version matches, while github.com/grafana/loki/v3 records fixed: 3.6.4 -- the estate is above it."
+      "notes": "Cycle-54 batch-54 SCAN (2026-09-07, resource_exhaustion_vectors): REM-231 note AUGMENTED, no new row. CVE: pin==live 3.7.6; 3.7.7 (2026-08-27) is transitive-dependency SECURITY bumps only (containerd/etcd), no Loki-binary advisory -- routine currency. The GO-2026-5115 module-path artifact stays not-applicable (v3 path fixed 3.6.4, estate above). PROBE (RE): the peer-reachable /push and query APIs REM-231 documents ARE the RE surface. Ingestion is rate-limited (ingestion_rate_mb 16, burst 32) so a push flood is capped, BUT max_query_lookback 0 (unlimited) over 744h retention + auth_enabled false (single tenant, no per-caller quota) = an unauth shared_net peer can issue a query-of-death. Facet of REM-231's network-placement defect; gated_net fix closes both. Folded into REM-231."
     },
     "tempo": {
       "last_checked": "2026-08-26T04:01:32+02:00",
@@ -503,11 +505,11 @@
   },
   "rotation": {
     "next_batch": [
-      "uptime_kuma",
-      "tileserver",
-      "authentik",
-      "grafana",
-      "nextcloud"
+      "tempo",
+      "mcp_gateway",
+      "alloy",
+      "dnsmasq",
+      "bone"
     ],
     "strategy": "oldest_first",
     "note": "Recomputed oldest-first by batch-59 (2026-08-29) from the component last_checked timestamps, not carried forward. The five just scanned (hedgedoc, bookstack, erpnext, homeassistant, firefly) now hold 2026-08-29T04:01:32+02:00 and sort last."
