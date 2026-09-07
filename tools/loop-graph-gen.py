@@ -19,6 +19,7 @@ face copy, `--check` returns 1 on drift. Gate: tests/anatomy/test_loop_graph_is_
 
 from __future__ import annotations
 
+import glob
 import json
 import os
 import sys
@@ -33,34 +34,25 @@ TARGET = os.path.join(REPO, "state", "loop-graph.json")
 FACE_TARGET = os.path.join(REPO, "files/anatomy/face/src/lib/anatomy/loop-graph.json")
 GRANTS = os.path.join(REPO, "docs/plans/rsi-research/artifacts/wing-write-grants.json")
 TOGGLE_SEED = os.path.join(REPO, "state/fixtures/loop-config.seed.yml")
+#: Operational loops are DATA — one declarative manifest each — and this is the
+#: single source for both their runtime and their picture (loop-definition-model,
+#: ratified 2026-09-07). SERE is the code exception below; every other loop is a
+#: <name>.loop.yml here, and a new loop is a new file, never a branch of markup.
+LOOPS_DIR = os.path.join(REPO, "files", "anatomy", "loops")
 
-# A loop is a selection, not a filter — draw one at a time (roadmap). The
-# estate runs more than one loop (memory nos-loop-and-sere.md): SERE is the
-# only one ledger.py describes today, so it is the only one with a real graph;
-# nos-loop-proper is listed here so the face has something to select and
-# explain, and stays honestly empty (no nodes/edges) until a doctrine module
-# for it exists to derive from — absence rendered as absence, not a guess.
+# A loop is a selection, not a filter — draw one at a time (roadmap). SERE is
+# the one loop whose shape is CODE (ledger.py), because the engine structurally
+# enforces it; it is the exception the loop-definition-model names. Every other
+# entry in the catalog comes from a manifest (see build()).
 DEFAULT_LOOP = "sere"
-LOOPS = [
-    {
-        "id": "sere",
-        "label": "SERE — self-enhancing loop",
-        "blurb": ("The estate improving itself: a model proposes a change, code "
-                   "alone judges it against the gate set, and only a pass may "
-                   "land — merge, converge, and rescan happen outside this "
-                   "engine. Doctrine: files/anatomy/bone/ledger.py."),
-    },
-    {
-        "id": "nos-loop",
-        "label": "nos-loop — business logic",
-        "blurb": ("The estate doing its actual job for the operator: Cortex/KEAP "
-                   "knowledge, AgentKit agents, Pulse cadence, the "
-                   "notification → inbox path, backup + restore, security scan "
-                   "→ remediation queue, identity/SSO, the face. No harness "
-                   "graph exists for this loop yet — it has no ledger.py "
-                   "equivalent to derive from."),
-    },
-]
+SERE_ENTRY = {
+    "id": "sere",
+    "label": "SERE — self-enhancing loop",
+    "blurb": ("The estate improving itself: a model proposes a change, code "
+               "alone judges it against the gate set, and only a pass may "
+               "land — merge, converge, and rescan happen outside this "
+               "engine. Doctrine: files/anatomy/bone/ledger.py."),
+}
 
 # Lane x-bands (kind → column); nodes stack vertically within a lane. The flow
 # edges (propose→judge→apply) draw across, so the picture reads left-to-right:
@@ -88,6 +80,121 @@ def _grants() -> list[dict]:
         return (json.load(open(GRANTS, encoding="utf-8")) or {}).get("grants", []) or []
     except OSError:
         return []
+
+
+# ── Operational loops, from data (loop-definition-model) ─────────────────────
+#
+# A loop is a manifest: id/label/blurb + a trigger + ordered steps. A step may
+# be PARAMETRISED — `for_each: <param>` expands it to one node per item in that
+# param list, so a "fetch each source" step is declared once and drawn as N
+# nodes. The face renders the emitted nodes; a future slice generates the pulse
+# job(s) from the same trigger+steps (the OTHER output the model names).
+
+_STEP_BAND = 300  # x per step column
+_ITEM_H = 84      # y per for_each item within a column
+_STEP_RUNNERS = {"tool", "agent", "query"}
+_SLUG = __import__("re").compile(r"^[a-z][a-z0-9-]*[a-z0-9]$")
+
+
+def _tmpl(text: str, item: dict) -> str:
+    """`{field}` → item[field]. A parametrised step's label reads per-item."""
+    out = text
+    for k, v in item.items():
+        out = out.replace("{" + str(k) + "}", str(v))
+    return out
+
+
+def _validate_manifest(m: dict, path: str) -> None:
+    def bad(why: str):
+        raise ValueError(f"{os.path.relpath(path, REPO)}: {why}")
+
+    for req in ("id", "label", "blurb", "trigger", "steps"):
+        if req not in m:
+            bad(f"missing required key `{req}`")
+    if not (isinstance(m["id"], str) and _SLUG.match(m["id"])):
+        bad(f"id {m.get('id')!r} is not a slug ([a-z][a-z0-9-])")
+    if m["id"] == "sere":
+        bad("id `sere` is reserved for the code-defined loop")
+    trig = m["trigger"]
+    if not isinstance(trig, dict) or not (trig.get("cadence") or trig.get("event")):
+        bad("trigger needs a `cadence` (cron) or an `event`")
+    params = m.get("params") or {}
+    if not isinstance(params, dict):
+        bad("`params` must be a map of name → list")
+    for pname, items in params.items():
+        if not isinstance(items, list) or not all(isinstance(it, dict) and "id" in it for it in items):
+            bad(f"param `{pname}` must be a list of objects each with an `id`")
+    if not (isinstance(m["steps"], list) and m["steps"]):
+        bad("`steps` must be a non-empty list")
+    seen: set[str] = set()
+    for s in m["steps"]:
+        if not (isinstance(s, dict) and isinstance(s.get("id"), str)):
+            bad("each step needs a string `id`")
+        if s["id"] in seen:
+            bad(f"duplicate step id `{s['id']}`")
+        seen.add(s["id"])
+        if s.get("runner") not in _STEP_RUNNERS:
+            bad(f"step `{s['id']}` runner must be one of {sorted(_STEP_RUNNERS)}")
+        fe = s.get("for_each")
+        if fe is not None and fe not in params:
+            bad(f"step `{s['id']}` for_each `{fe}` is not a declared param")
+
+
+def _load_manifests() -> list[dict]:
+    out = []
+    for path in sorted(glob.glob(os.path.join(LOOPS_DIR, "*.loop.yml"))):
+        m = yaml.safe_load(open(path, encoding="utf-8")) or {}
+        _validate_manifest(m, path)  # a manifest a runner can't execute is refused HERE, not at converge
+        out.append(m)
+    if len({m["id"] for m in out}) != len(out):
+        raise ValueError("two loop manifests declare the same id")
+    return sorted(out, key=lambda m: m["id"])
+
+
+def _manifest_graph(m: dict) -> tuple[list[dict], list[dict]]:
+    """One manifest → its (nodes, edges), each tagged with the loop's id. A
+    for_each step fans: every node of the previous layer wires to every node of
+    this one, so the pipeline reads left-to-right whether a step is 1 or N."""
+    loop = m["id"]
+    params = m.get("params") or {}
+    nodes: list[dict] = []
+    edges: list[dict] = []
+
+    def N(nid, kind, label, x, y, **meta):
+        nodes.append({"id": nid, "kind": kind, "label": label, "loop": loop,
+                      "x": x, "y": y, **meta})
+        return nid
+
+    def E(src, tgt):
+        edges.append({"id": f"{src}=>{tgt}", "source": src, "target": tgt,
+                      "kind": "flow", "loop": loop})
+
+    trig = m["trigger"]
+    cad = trig.get("cadence") or trig.get("event") or "—"
+    prefix = "⏱ " if trig.get("cadence") else "⚡ "
+    prev = [N(f"trigger:{loop}", "trigger", prefix + str(cad), 0, 0,
+              cadence=trig.get("cadence"), event=trig.get("event"))]
+
+    for i, step in enumerate(m["steps"]):
+        x = (i + 1) * _STEP_BAND
+        fe = step.get("for_each")
+        layer: list[str] = []
+        if fe:
+            for j, item in enumerate(params.get(fe, [])):
+                layer.append(N(f"step:{loop}:{step['id']}:{item['id']}", "step",
+                               _tmpl(str(step.get("label", step["id"])), item),
+                               x, j * _ITEM_H, runner=step.get("runner", ""),
+                               param=fe, item=item["id"]))
+        else:
+            layer.append(N(f"step:{loop}:{step['id']}", "step",
+                           str(step.get("label", step["id"])), x, 0,
+                           runner=step.get("runner", "")))
+        for p in prev:
+            for c in layer:
+                E(p, c)
+        prev = layer
+
+    return nodes, edges
 
 
 def build() -> dict:
@@ -166,11 +273,20 @@ def build() -> dict:
                 add("route", route, route)
             edge(aid, rtid, "may-write", "")
 
+    # ── Operational loops from manifests — data, generated into the same graph
+    #    as SERE's code-derived nodes, each carrying its own `loop` tag. ───────
+    manifests = _load_manifests()
+    for m in manifests:
+        mn, me = _manifest_graph(m)
+        nodes.extend(mn)
+        edges.extend(me)
+
     return {
         "version": 2,
-        "generated_from": "files/anatomy/bone/ledger.py",
+        "generated_from": "files/anatomy/bone/ledger.py + files/anatomy/loops/*.loop.yml",
         "engine_actor": ledger.ENGINE_ACTOR,
-        "loops": LOOPS,
+        "loops": [SERE_ENTRY] + [{"id": m["id"], "label": m["label"], "blurb": m["blurb"]}
+                                 for m in manifests],
         "default_loop": DEFAULT_LOOP,
         "nodes": nodes,
         "edges": edges,

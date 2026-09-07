@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generated_from": "files/anatomy/bone/ledger.py",
+  "generated_from": "files/anatomy/bone/ledger.py + files/anatomy/loops/*.loop.yml",
   "engine_actor": "engine:judge-runner",
   "loops": [
     {
@@ -9,9 +9,9 @@
       "blurb": "The estate improving itself: a model proposes a change, code alone judges it against the gate set, and only a pass may land — merge, converge, and rescan happen outside this engine. Doctrine: files/anatomy/bone/ledger.py."
     },
     {
-      "id": "nos-loop",
-      "label": "nos-loop — business logic",
-      "blurb": "The estate doing its actual job for the operator: Cortex/KEAP knowledge, AgentKit agents, Pulse cadence, the notification → inbox path, backup + restore, security scan → remediation queue, identity/SSO, the face. No harness graph exists for this loop yet — it has no ledger.py equivalent to derive from."
+      "id": "news-scout",
+      "label": "news-scout — feed scouting + consolidation",
+      "blurb": "On a daily cadence, fetch the declared external feeds, extract and dedup, then consolidate the signal into the KEAP corpus and hand the operator a digest. The consolidation is the point — raw fetch is easy; corpus-linked knowledge is the loop. GDPR/EU-residency applies to anything stored."
     }
   ],
   "default_loop": "sere",
@@ -213,6 +213,87 @@
       "loop": "sere",
       "x": 1360,
       "y": 92
+    },
+    {
+      "id": "trigger:news-scout",
+      "kind": "trigger",
+      "label": "⏱ 0 7 * * *",
+      "loop": "news-scout",
+      "x": 0,
+      "y": 0,
+      "cadence": "0 7 * * *",
+      "event": null
+    },
+    {
+      "id": "step:news-scout:fetch:lwn",
+      "kind": "step",
+      "label": "fetch LWN.net",
+      "loop": "news-scout",
+      "x": 300,
+      "y": 0,
+      "runner": "tool",
+      "param": "sources",
+      "item": "lwn"
+    },
+    {
+      "id": "step:news-scout:fetch:hn",
+      "kind": "step",
+      "label": "fetch Hacker News",
+      "loop": "news-scout",
+      "x": 300,
+      "y": 84,
+      "runner": "tool",
+      "param": "sources",
+      "item": "hn"
+    },
+    {
+      "id": "step:news-scout:fetch:arxiv-ai",
+      "kind": "step",
+      "label": "fetch arXiv cs.AI",
+      "loop": "news-scout",
+      "x": 300,
+      "y": 168,
+      "runner": "tool",
+      "param": "sources",
+      "item": "arxiv-ai"
+    },
+    {
+      "id": "step:news-scout:fetch:oss-sec",
+      "kind": "step",
+      "label": "fetch oss-security",
+      "loop": "news-scout",
+      "x": 300,
+      "y": 252,
+      "runner": "tool",
+      "param": "sources",
+      "item": "oss-sec"
+    },
+    {
+      "id": "step:news-scout:extract",
+      "kind": "step",
+      "label": "extract + dedup",
+      "loop": "news-scout",
+      "x": 600,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
+      "id": "step:news-scout:consolidate",
+      "kind": "step",
+      "label": "consolidate → KEAP corpus",
+      "loop": "news-scout",
+      "x": 900,
+      "y": 0,
+      "runner": "agent"
+    },
+    {
+      "id": "step:news-scout:digest",
+      "kind": "step",
+      "label": "operator digest → A9",
+      "loop": "news-scout",
+      "x": 1200,
+      "y": 0,
+      "runner": "tool"
     }
   ],
   "edges": [
@@ -344,6 +425,76 @@
       "target": "route:POST /api/v1/events",
       "kind": "may-write",
       "loop": "sere"
+    },
+    {
+      "id": "trigger:news-scout=>step:news-scout:fetch:lwn",
+      "source": "trigger:news-scout",
+      "target": "step:news-scout:fetch:lwn",
+      "kind": "flow",
+      "loop": "news-scout"
+    },
+    {
+      "id": "trigger:news-scout=>step:news-scout:fetch:hn",
+      "source": "trigger:news-scout",
+      "target": "step:news-scout:fetch:hn",
+      "kind": "flow",
+      "loop": "news-scout"
+    },
+    {
+      "id": "trigger:news-scout=>step:news-scout:fetch:arxiv-ai",
+      "source": "trigger:news-scout",
+      "target": "step:news-scout:fetch:arxiv-ai",
+      "kind": "flow",
+      "loop": "news-scout"
+    },
+    {
+      "id": "trigger:news-scout=>step:news-scout:fetch:oss-sec",
+      "source": "trigger:news-scout",
+      "target": "step:news-scout:fetch:oss-sec",
+      "kind": "flow",
+      "loop": "news-scout"
+    },
+    {
+      "id": "step:news-scout:fetch:lwn=>step:news-scout:extract",
+      "source": "step:news-scout:fetch:lwn",
+      "target": "step:news-scout:extract",
+      "kind": "flow",
+      "loop": "news-scout"
+    },
+    {
+      "id": "step:news-scout:fetch:hn=>step:news-scout:extract",
+      "source": "step:news-scout:fetch:hn",
+      "target": "step:news-scout:extract",
+      "kind": "flow",
+      "loop": "news-scout"
+    },
+    {
+      "id": "step:news-scout:fetch:arxiv-ai=>step:news-scout:extract",
+      "source": "step:news-scout:fetch:arxiv-ai",
+      "target": "step:news-scout:extract",
+      "kind": "flow",
+      "loop": "news-scout"
+    },
+    {
+      "id": "step:news-scout:fetch:oss-sec=>step:news-scout:extract",
+      "source": "step:news-scout:fetch:oss-sec",
+      "target": "step:news-scout:extract",
+      "kind": "flow",
+      "loop": "news-scout"
+    },
+    {
+      "id": "step:news-scout:extract=>step:news-scout:consolidate",
+      "source": "step:news-scout:extract",
+      "target": "step:news-scout:consolidate",
+      "kind": "flow",
+      "loop": "news-scout"
+    },
+    {
+      "id": "step:news-scout:consolidate=>step:news-scout:digest",
+      "source": "step:news-scout:consolidate",
+      "target": "step:news-scout:digest",
+      "kind": "flow",
+      "loop": "news-scout"
     }
   ],
   "refusals": [

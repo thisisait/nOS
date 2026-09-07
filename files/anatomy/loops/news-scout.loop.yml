@@ -1,0 +1,55 @@
+# news-scout — a default operational loop, DATA-defined (loop-definition-model,
+# ratified 2026-09-07). This file is the single source for the loop's face graph
+# (tools/loop-graph-gen.py) and, in a later slice, its generated pulse job.
+#
+# The `sources` param drives NODE PARAMETRISATION: the `fetch` step declares
+# itself once with `for_each: sources`, and the generator draws one fetch node
+# per feed — a step declared once, rendered as N. Add a feed, get a node.
+---
+id: news-scout
+label: "news-scout — feed scouting + consolidation"
+blurb: >-
+  On a daily cadence, fetch the declared external feeds, extract and dedup, then
+  consolidate the signal into the KEAP corpus and hand the operator a digest.
+  The consolidation is the point — raw fetch is easy; corpus-linked knowledge is
+  the loop. GDPR/EU-residency applies to anything stored.
+
+trigger:
+  cadence: "0 7 * * *" # daily 07:00
+
+params:
+  sources:
+    - { id: lwn, label: "LWN.net", url: "https://lwn.net/headlines/rss" }
+    - { id: hn, label: "Hacker News", url: "https://news.ycombinator.com/rss" }
+    - {
+        id: arxiv-ai,
+        label: "arXiv cs.AI",
+        url: "http://export.arxiv.org/rss/cs.AI",
+      }
+    - {
+        id: oss-sec,
+        label: "oss-security",
+        url: "https://www.openwall.com/lists/oss-security/rss",
+      }
+
+steps:
+  - id: fetch
+    runner: tool
+    for_each: sources
+    label: "fetch {label}"
+  - id: extract
+    runner: tool
+    label: "extract + dedup"
+  - id: consolidate
+    runner: agent
+    agent: librarian
+    label: "consolidate → KEAP corpus"
+    writes:
+      - target: "keap:corpus"
+        via: "capture rows into the KEAP review queue"
+  - id: digest
+    runner: tool
+    label: "operator digest → A9"
+    writes:
+      - target: "notification:wing-inbox"
+        via: "daily digest notification"

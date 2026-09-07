@@ -120,7 +120,11 @@
 		intent: '#5a4a1e',
 		toggle: '#6e4a12',
 		agent: '#4a2f6e',
-		route: '#26292f'
+		route: '#26292f',
+		// Manifest loops (loop-definition-model): a cadence/event trigger and
+		// the ordered steps a data-defined loop declares.
+		trigger: '#155e63',
+		step: '#39506e'
 	};
 	const EDGE_STYLE: Record<string, string> = {
 		flow: 'stroke:#7fd1a6;stroke-width:2;',

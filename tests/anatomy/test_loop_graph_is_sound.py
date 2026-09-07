@@ -96,5 +96,56 @@ def test_the_refusals_are_carried(committed):
     assert committed["engine_actor"] == "engine:judge-runner"
 
 
+# ── Operational loops from manifests (loop-definition-model) ─────────────────
+
+
+def test_a_manifest_loop_is_registered_and_drawn(committed):
+    """An operational loop declared as a data manifest appears in the catalog
+    AND contributes nodes/edges tagged with its id — the data path beside the
+    code-defined SERE."""
+    ids = {l["id"] for l in committed["loops"]}
+    assert "news-scout" in ids, "the news-scout manifest is not in the loop catalog"
+    assert [n for n in committed["nodes"] if n["loop"] == "news-scout"], \
+        "news-scout is in the catalog but drew no nodes"
+    assert any(e["loop"] == "news-scout" for e in committed["edges"])
+
+
+def test_a_for_each_step_expands_to_one_node_per_item(committed):
+    """Node parametrisation: a step declared ONCE with `for_each` is drawn as
+    one node per param item — the property news-scout exists to exercise."""
+    import yaml
+    m = yaml.safe_load(
+        (REPO / "files/anatomy/loops/news-scout.loop.yml").read_text(encoding="utf-8"))
+    fe_steps = [s for s in m["steps"] if s.get("for_each")]
+    assert fe_steps, "the fixture manifest must exercise at least one for_each step"
+    for s in fe_steps:
+        n_items = len(m["params"][s["for_each"]])
+        drawn = [n for n in committed["nodes"]
+                 if n["loop"] == m["id"]
+                 and n["id"].startswith(f"step:{m['id']}:{s['id']}:")]
+        assert len(drawn) == n_items, (
+            f"step {s['id']} for_each {s['for_each']} has {n_items} items but "
+            f"drew {len(drawn)} nodes — parametrisation is off")
+
+
+def test_an_invalid_manifest_is_refused_at_generation(gen):
+    """A manifest a runner could not execute is refused at GEN time, not left to
+    fail a converge (loop-generator gate)."""
+    with pytest.raises(ValueError):
+        gen._validate_manifest({"id": "x"}, "bad.loop.yml")  # missing required keys
+    with pytest.raises(ValueError):
+        gen._validate_manifest(  # for_each names a param that isn't declared
+            {"id": "x", "label": "l", "blurb": "b",
+             "trigger": {"cadence": "* * * * *"},
+             "steps": [{"id": "s", "runner": "tool", "for_each": "nope"}]},
+            "bad.loop.yml")
+    with pytest.raises(ValueError):
+        gen._validate_manifest(  # `sere` is reserved for the code loop
+            {"id": "sere", "label": "l", "blurb": "b",
+             "trigger": {"cadence": "* * * * *"},
+             "steps": [{"id": "s", "runner": "tool"}]},
+            "bad.loop.yml")
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
