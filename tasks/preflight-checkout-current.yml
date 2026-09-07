@@ -74,11 +74,19 @@
       2026-08-05 exactly this cost a full run: seventeen commits behind, an hour
       spent, everything green, nothing of the work validated.
 
-        cd {{ playbook_dir }} && git pull --ff-only
+        cd {{ playbook_dir }} && tools/deploy-sync.sh
+
+      deploy-sync makes this checkout a clean mirror of {{ _ckt[2] }}: it
+      snapshots the nightly scan output to the scan-data branch, drops it when
+      {{ _ckt[2] }} already carries it, and fast-forwards — the manual
+      stash/pull/pop, done safely and once. Preview with `--dry-run`. Plain
+      `git pull --ff-only` still works when the tree is clean.
 
       {% if _ckt[4] | int > 0 %}
-      NOTE: you are also {{ _ckt[4] }} commit(s) AHEAD, so `--ff-only` will
-      refuse. Push or rebase first — do not merge blindly into a converge.
+      NOTE: you are also {{ _ckt[4] }} commit(s) AHEAD. If that is only the
+      nightly scan's own output, deploy-sync resets past it (preserved on
+      scan-data); if it is real work, deploy-sync REFUSES — push or rebase
+      first. Either way, do not merge blindly into a converge.
       {% endif %}
       {% if _ckt_fetch.rc | default(1) != 0 %}
       NOTE: `git fetch` did not succeed ({{ _ckt_fetch.rc | default('n/a') }}),
