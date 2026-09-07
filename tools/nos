@@ -110,6 +110,12 @@ DTT
   if [ -n "${NOS_DTT_TABLE:-}" ]; then
     NOS_ROADMAP_TABLE_ID="$("$DTT_PY" "$NOS_SRC/tools/dtt-table.py" resolve "$NOS_DTT_TABLE")" || exit $?
     export NOS_ROADMAP_TABLE_ID
+    # A table of your own has its OWN seed files: ~/nos-tables/<table-id>/
+    # (git-init it if you want history), never the estate seed repo — otherwise
+    # `seed` would pour the estate's rows into your project. NOS_DTT_SEED_DIR
+    # overrides (a seed repo per project); NOS_SEED_DIR is left to the roadmap.
+    NOS_SEED_DIR="${NOS_DTT_SEED_DIR:-$HOME/nos-tables/$NOS_ROADMAP_TABLE_ID}"
+    mkdir -p "$NOS_SEED_DIR"; export NOS_SEED_DIR
   fi
   exec "$DTT_PY" "$NOS_SRC/tools/$tool" "$@"
 fi

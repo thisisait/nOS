@@ -70,7 +70,14 @@ SYNC = "--sync" in sys.argv
 # gates read it). Derived from the files, not the table, so it is written on a
 # real run regardless of what the table does; a dry run touches nothing.
 if not DRY_RUN:
-    print(f"index: wrote {write_index(R, _REPO)}")
+    # The public index belongs to the ESTATE roadmap in the nOS checkout; a
+    # personal/project table (dtt-per-user-tables) has no public half, and a
+    # non-maintainer cannot write the checkout anyway.
+    if TABLE in ("roadmap", "2d498264-bc9a-4324-9935-489e5e4d92f3") and os.access(
+            os.path.join(_REPO, "state", "roadmap"), os.W_OK):
+        print(f"index: wrote {write_index(R, _REPO)}")
+    else:
+        print("index: skipped (not the estate roadmap, or the checkout is read-only for you)")
 
 # ── Preflight: does the live table carry the columns this writes? ───────────
 # The live table was created before state/keap-tables/roadmap.table.yml and

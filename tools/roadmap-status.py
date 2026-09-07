@@ -70,8 +70,18 @@ STATUS_ORDER = ["doing", "active", "next", "review", "blocked",
 
 def get(url: str) -> dict:
     req = urllib.request.Request(url, headers=HEADERS, method="GET")
-    with urllib.request.urlopen(req, timeout=10) as r:
-        return json.loads(r.read())
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            d = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode(errors="replace")[:200]
+        if e.code in (403, 404):
+            raise SystemExit(f"CANNOT READ table `{TABLE}`: HTTP {e.code} — it is not visible to you "
+                             f"(your tier, or no grant); the estate roadmap needs tier-managers. {body}")
+        raise SystemExit(f"CANNOT READ table `{TABLE}`: HTTP {e.code} {body}")
+    if not d.get("success", True) or "data" not in d:
+        raise SystemExit(f"CANNOT READ table `{TABLE}`: {d.get('error') or d}")
+    return d
 
 
 def rank(status: str | None) -> tuple[int, str]:

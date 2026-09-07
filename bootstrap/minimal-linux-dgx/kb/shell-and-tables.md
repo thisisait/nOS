@@ -60,7 +60,8 @@ nos dtt tables                                          # what you can see, and 
 nos dtt create-table "Project X"                        # private, roadmap-shaped (columns, view)
 nos dtt --table "Project X" status                      # every verb works on your table
 nos dtt --table "Project X" capture --slug px-1 --title "First task" --track platform --task-type design --status next --body "…"
-NOS_SEED_DIR=~/projects/x/seed nos dtt --table "Project X" seed   # a seed repo per project, if you like
+nos dtt --table "Project X" seed                        # from ~/nos-tables/<table-id>/ — its own seed files
+NOS_DTT_SEED_DIR=~/projects/x/seed nos dtt --table "Project X" seed   # or a seed repo per project
 nos dtt share "Project X" --with user:svp2bj --access read      # or write, or none to revoke
 nos dtt visibility "Project X" shared                   # everyone in the tenant may read
 ```
