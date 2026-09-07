@@ -9,7 +9,7 @@ Wants=network-online.target
 Type=simple
 User=root
 WorkingDirectory=/var/lib/nos-dgx/jupyterhub
-Environment=PATH=/opt/nos-dgx/jupyterhub/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=/opt/nos-dgx/jupyterhub/venv/bin:/opt/nos-dgx/node/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/opt/nos-dgx/jupyterhub/venv/bin/jupyterhub -f /etc/nos/jupyterhub_config.py
 Restart=always
 RestartSec=5

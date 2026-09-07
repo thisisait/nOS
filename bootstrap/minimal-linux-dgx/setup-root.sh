@@ -234,8 +234,22 @@ if [ ! -x "$JH/venv/bin/jupyterhub" ]; then
   "$JH/venv/bin/pip" install -q jupyterhub jupyterlab notebook ipykernel ipywidgets \
     pandas matplotlib requests pyyaml
 fi
+# Node for the Hub's proxy: configurable-http-proxy needs >= 20, Ubuntu's apt
+# nodejs is 18, and the only other Node on this box lives in admin's home
+# (Hermes's private copy) — a root service must not execute a user-writable
+# binary. So: the official arm64 tarball, latest 22.x LTS, root-owned under
+# /opt/nos-dgx/node, on the unit's PATH only.
+NODE_DIR=/opt/nos-dgx/node
+if [ ! -x "$NODE_DIR/bin/node" ]; then
+  tarball="$(curl -fsSL https://nodejs.org/dist/latest-v22.x/SHASUMS256.txt | awk '/linux-arm64.tar.xz/ {print $2}')"
+  curl -fsSL "https://nodejs.org/dist/latest-v22.x/$tarball" -o /tmp/node.tar.xz
+  install -d "$NODE_DIR"
+  tar -xJf /tmp/node.tar.xz -C "$NODE_DIR" --strip-components=1
+  rm -f /tmp/node.tar.xz
+  echo "node $("$NODE_DIR/bin/node" --version) installed at $NODE_DIR"
+fi
 if [ ! -x "$JH/chp/node_modules/.bin/configurable-http-proxy" ]; then
-  npm install --silent --prefix "$JH/chp" configurable-http-proxy
+  PATH="$NODE_DIR/bin:$PATH" "$NODE_DIR/bin/npm" install --silent --prefix "$JH/chp" configurable-http-proxy
 fi
 # The GPU kernel: torch for aarch64 + CUDA 13 (GB10 is sm_121). Best-effort —
 # a missing wheel must not take the Hub down with it; the reader below says.
@@ -243,7 +257,7 @@ if [ "${JUPYTER_TORCH:-1}" = 1 ] && ! "$JH/venv/bin/python" -c 'import torch' 2>
   "$JH/venv/bin/pip" install -q torch --index-url https://download.pytorch.org/whl/cu130 \
     || echo "torch (cu130, aarch64) did not install — Lab works, GPU kernel does not"
 fi
-chown -R root:root "$JH"; chmod -R o+rX,go-w "$JH"
+chown -R root:root "$JH" "$NODE_DIR"; chmod -R o+rX,go-w "$JH" "$NODE_DIR"
 install -m 0644 -o root -g root "$RT/jupyterhub/jupyterhub_config.py" /etc/nos/jupyterhub_config.py
 install -m 0644 "$RT/systemd/jupyterhub.service" /etc/systemd/system/jupyterhub.service
 systemctl daemon-reload
