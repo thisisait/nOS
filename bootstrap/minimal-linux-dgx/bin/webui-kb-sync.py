@@ -162,6 +162,24 @@ def documents():
     return docs
 
 
+def pick_base(ids):
+    """A sane default base model for an assistant that answers from documents.
+
+    Not "the first in the list": on this box that was a 2-bit 'heretic' build.
+    Skip uncensored/abliterated variants and Q2 quantisations, prefer the
+    families that follow instructions and cite well, prefer the one that fits
+    the GPU beside other users (a 120B MXFP4 model takes most of 121 GB).
+    Override with OPENWEBUI_BASE_MODEL in /etc/nos/openwebui.env.
+    """
+    bad = ("heretic", "uncensored", "abliterated", "nsfw", "q2_k", ":q2", "-q2")
+    cands = [i for i in ids if i and ":" in i and not i.startswith(MODEL_ID) and not any(b in i.lower() for b in bad)]
+    for pref in ("qwen3.5", "qwen3", "gemma", "llama", "mistral", "gpt-oss"):
+        for i in cands:
+            if i.lower().startswith(pref):
+                return i
+    return cands[0] if cands else None
+
+
 # ── sync ────────────────────────────────────────────────────────────────────
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -241,7 +259,7 @@ def main():
     # the assistant model
     st, models = api("GET", "/api/models")
     ids = [m.get("id") for m in (models.get("data", []) if isinstance(models, dict) else [])]
-    base = BASE_MODEL or next((i for i in ids if i and ":" in i and not i.startswith(MODEL_ID)), None)
+    base = BASE_MODEL or pick_base(ids)
     if not base:
         print("no base model visible to Open WebUI — is Ollama connected? (Admin → Settings → Connections)"); return 1
     st, kbfull = api("GET", f"/api/v1/knowledge/{kid}")

@@ -440,8 +440,12 @@ say "Open WebUI: the DataTables tool server (mcpo) + the nOS Assistant knowledge
 # WebUI container as http://host.docker.internal:8500, never from the LAN.
 id nos-mcpo >/dev/null 2>&1 || useradd -r -s /usr/sbin/nologin -d /nonexistent -G nos-users nos-mcpo
 MC=/opt/nos-dgx/mcpo
+# mcpo 0.0.20 imports `streamablehttp_client`, which the mcp 2.x SDK renamed;
+# pin the SDK below 2 (mcpo's own floor is >= 1.17) and repair an existing venv.
 if [ ! -x "$MC/venv/bin/mcpo" ]; then
-  python3 -m venv "$MC/venv" && "$MC/venv/bin/pip" install -q --upgrade pip && "$MC/venv/bin/pip" install -q mcpo
+  python3 -m venv "$MC/venv" && "$MC/venv/bin/pip" install -q --upgrade pip && "$MC/venv/bin/pip" install -q mcpo "mcp>=1.17,<2"
+elif ! "$MC/venv/bin/python" -c 'from mcp.client.streamable_http import streamablehttp_client' 2>/dev/null; then
+  "$MC/venv/bin/pip" install -q "mcp>=1.17,<2"
 fi
 chown -R root:root "$MC"; chmod -R o+rX,go-w "$MC"
 if [ ! -f /etc/nos/mcpo.env ]; then
