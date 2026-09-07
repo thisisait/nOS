@@ -48,6 +48,18 @@ daemon, the containers, the Lab and every build together. VS Code Dev
 Containers and PhpStorm's Docker interpreter use that socket unchanged.
 Admin keeps the root daemon (the iiab stack) and the default context.
 
+## The identity outpost (per-user tables from the shell)
+
+`nos-keap-identity.service` (user `nos-identity`, the only holder of the proxy
+secret besides nginx) serves `/run/nos-dgx/keap-identity.sock`: the caller is
+identified by uid (SO_PEERCRED), Linux groups become the tier, and KEAP sees
+the same identity a PAM browser login gives. `/etc/nos/keap.env` exports
+`KEAP_IDENTITY_URL=http+unix://…`, which `tools/keap_api.py` turns into a
+unix-socket transport for every human-door tool; `nos dtt tables |
+create-table | share | visibility` and `nos dtt --table <id|title> <verb>`
+come with it (tools/dtt-table.py). A tier-3 user can now own tables, share
+them, and cannot write the estate roadmap — by KEAP's own rules.
+
 ## The assistant and the tables in Chat
 
 `bin/webui-kb-sync.py` uploads the KB pages, this README, the skill library,

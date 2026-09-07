@@ -51,27 +51,35 @@ python3 /srv/nos/tools/skill-status.py
 
 ## Your own tables (per user, per project)
 
-Yes, you can — in the browser today. KEAP lets every `nos-users` member
-(tier 3) **create their own DataTables** at `https://__HOST__:8443/` (the
-Tables page): a table you create is yours, its **Share scope** is *Private
-(only you + admins)* by default, and you can open it to *Everyone* in the
-tenant. Under the hood KEAP also holds explicit per-person grants
-(`sharedWith: [{principal: "user:<login>", access: "read" | "write"}]`),
-measured on this box: a private table is invisible to another user (404), a
-`read` grant makes it visible and read-only, a `write` grant lets them add rows.
+Every `nos-users` member (tier 3) can **create their own DataTables** — in the
+browser at `https://__HOST__:8443/` (Tables → *Share scope*), and from the
+shell, **as yourself**:
 
-Two honest limits, both roadmap rows:
+```
+nos dtt tables                                          # what you can see, and whose it is
+nos dtt create-table "Project X"                        # private, roadmap-shaped (columns, view)
+nos dtt --table "Project X" status                      # every verb works on your table
+nos dtt --table "Project X" capture --slug px-1 --title "First task" --track platform --task-type design --status next --body "…"
+NOS_SEED_DIR=~/projects/x/seed nos dtt --table "Project X" seed   # a seed repo per project, if you like
+nos dtt share "Project X" --with user:svp2bj --access read      # or write, or none to revoke
+nos dtt visibility "Project X" shared                   # everyone in the tenant may read
+```
 
-- **The shell does not know who you are yet.** `nos dtt` talks to KEAP as the
-  estate admin and only about the shared `roadmap`, so your own table is a
-  browser thing for now. The planned fix (`dtt-per-user-tables`) is an identity
-  socket: the shell login becomes the KEAP login, `nos dtt --table <yours>`,
-  `nos dtt share --with user:<login>`.
-- **Agents see everything.** The agent door (`nos_tables` in chat, MCP in your
-  coding agent) authenticates with an estate token and lists *all* tables,
-  private ones included (`keap-agent-door-honours-sharing`, a KEAP change).
-  Until that lands, do not put anything in a table you would not show to a
-  colleague with the same chat.
+How the shell knows who you are: an **identity outpost** on a unix socket
+identifies the caller by uid (the kernel says who connected), maps your Linux
+groups to the tier (`nos-users` → tier 3, `nos-maintainers` → tier 1) and
+speaks to KEAP on your behalf. No password prompt, no token in your files, and
+the same identity the browser gets through the PAM login — so a table private
+to you is private in both places, and a grant you give is visible in both.
+Consequence you will notice: `nos dtt status` on the shared roadmap now needs
+the tier the roadmap asks for (`tier-managers`); a tier-3 user reads it in
+Chat via the `nos_tables` tool or asks a maintainer to open it.
+
+**Agents still see everything.** The agent door (`nos_tables` in Chat, the
+estate token) lists *all* tables, private ones included, until KEAP row
+`keap-agent-door-honours-sharing` lands. Your own Claude Code / Codex on this
+box uses the identity socket and sees only what you see; the shared Chat tool
+does not. Do not put anything in a table you would not show to a colleague.
 
 ## The skill that teaches an agent the tables
 

@@ -1,0 +1,26 @@
+# /etc/systemd/system/nos-keap-identity.service — the identity outpost:
+# a unix socket in front of KEAP that identifies the caller by uid
+# (SO_PEERCRED) and speaks to KEAP with the proxy secret only it holds.
+[Unit]
+Description=KEAP identity outpost (nos-dgx) — the shell login is the KEAP login
+After=network-online.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=nos-identity
+Group=nos-identity
+EnvironmentFile=/etc/nos/keap-proxy.env
+RuntimeDirectory=nos-dgx
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+ExecStart=/usr/bin/python3 /opt/nos-dgx/identity/keap-identity.py --socket /run/nos-dgx/keap-identity.sock --upstream 127.0.0.1:8091
+Restart=always
+RestartSec=3
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

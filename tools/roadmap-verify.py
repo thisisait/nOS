@@ -59,12 +59,13 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 PROBES = REPO / "state/roadmap-probes.yml"
-KEAP = "http://127.0.0.1:8091"
 #: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
 #: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
 #: non-default loopback publish. Defaults are the operator estate's values.
 TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
-from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
+from keap_api import human_base, human_headers, write_row  # noqa: E402 — sibling helper in tools/
+
+KEAP = human_base()   # the identity outpost when configured, else the loopback publish
 
 #: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once
 #: by keap_api). Without the secret every /api call here 401s since KEAP P1.
@@ -79,18 +80,6 @@ OUTPUT_CAP = 2000
 def _die(msg: str) -> None:
     sys.exit(f"REFUSING: {msg}")
 
-
-def _token() -> str:
-    tok = os.environ.get("KEAP_AGENT_TOKEN_RW", "").strip()
-    if tok:
-        return tok
-    tok = subprocess.run(
-        ["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RW"],
-        capture_output=True, text=True).stdout.strip()
-    if not tok:
-        _die("no KEAP_AGENT_TOKEN_RW in the environment and none readable from "
-             "iiab-keap-1 — is KEAP running?")
-    return tok
 
 
 def _req(method: str, url: str, headers: dict, body=None):
@@ -197,7 +186,6 @@ def main() -> int:
              "--unverifiable (a reason no probe exists).")
 
     human = f"{KEAP}/api/tables/{TABLE}"
-    agent = f"{KEAP}/agent/v1/tables/{TABLE}"
 
     rows = _req("GET", f"{human}/rows?limit=500", HUMAN_HDR)
     if not rows.get("success"):
@@ -257,8 +245,10 @@ def main() -> int:
     # the current value, which is also exactly the "never move the claim" rule
     # this file exists to enforce.
     body = {"slug": args.slug, **patch}
-    res = _req("POST", f"{agent}/rows", {"authorization": f"Bearer {_token()}",
-                                         "content-type": "application/json"}, body)
+    try:
+        res = write_row(TABLE, body)
+    except RuntimeError as e:
+        res = {"success": False, "error": str(e)}
     if not res.get("success"):
         _die(f"writing {args.slug} failed — {res.get('error')}")
     print("\nwritten.")

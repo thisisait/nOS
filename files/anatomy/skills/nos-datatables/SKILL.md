@@ -61,6 +61,23 @@ code that attempted the work.
    Write verbs need the RW token; read verbs the RO token. If a write answers
    401/403, you hold the reader tier — say so, do not retry with another token.
 
+## Your own tables (behind the identity outpost)
+
+Where `KEAP_IDENTITY_URL` is set (a unix socket that identifies the caller by
+uid), every human-door call is made as the Linux user, and the CLI grows:
+
+```
+nos dtt tables                                   # what you can see, and whose it is
+nos dtt create-table "Project X" [--template roadmap] [--visibility private|shared]
+nos dtt --table "Project X" <any verb>           # status, capture, seed, update … on that table
+nos dtt share "Project X" --with user:<login> --access read|write|none
+nos dtt visibility "Project X" shared
+```
+
+A table you were not named on is someone else's even if a door lists it;
+share is the owner's act. Writes to a table you only READ answer 403 — report
+it, do not look for another token.
+
 ## Tokens follow the tier you were given
 
 `KEAP_API_URL`, `KEAP_AGENT_TOKEN_RO` (readers) and additionally

@@ -30,7 +30,7 @@ import subprocess
 import sys
 import urllib.request
 
-from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
+from keap_api import human_base, human_headers, write_row  # noqa: E402 — sibling helper in tools/
 from roadmap_seed_lib import GIT_OWNED, load_rows, seed_dir, write_index  # noqa: E402
 
 _REPO = __import__("os").path.abspath(__import__("os").path.join(
@@ -39,7 +39,7 @@ _REPO = __import__("os").path.abspath(__import__("os").path.join(
 #: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
 #: non-default loopback publish. Defaults are the operator estate's values.
 TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
-BASE = f"{os.environ.get('KEAP_API_URL', 'http://127.0.0.1:8091').rstrip('/')}/api/tables/{TABLE}"
+BASE = f"{human_base()}/api/tables/{TABLE}"
 H = human_headers()  # identity + SEC-02 x-keap-proxy-secret (else /api 401s)
 
 
@@ -176,12 +176,12 @@ AGENT = f"http://127.0.0.1:8091/agent/v1/tables/{TABLE}/rows"
 def agent_write(values):
     if "refs" in values:
         values = {**values, "refs": _refs_wire(values["refs"])}
-    rq = urllib.request.Request(
-        AGENT, data=json.dumps(values).encode(), method="POST",
-        headers={"authorization": f"Bearer {_agent_token()}",
-                 "content-type": "application/json"})
-    with urllib.request.urlopen(rq) as resp:
-        return json.loads(resp.read())
+    # One helper decides the door: the identity outpost (as the caller, human
+    # door, owner/tier/grants apply) or the agent door with the RW bearer.
+    try:
+        return write_row(TABLE, values)
+    except RuntimeError as e:
+        sys.exit(f"REFUSING: writing {values.get('slug')} failed — {e}")
 
 
 for r in fresh:

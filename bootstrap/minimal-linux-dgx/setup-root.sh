@@ -188,7 +188,13 @@ cat > /etc/nos/keap.env <<EOF
 KEAP_API_URL=http://127.0.0.1:8091
 KEAP_AGENT_TOKEN_RO=$KEAP_AGENT_TOKEN_RO
 NOS_ROADMAP_TABLE_ID=roadmap
+# The identity outpost: human-door calls made AS the caller (uid → login → tier).
+KEAP_IDENTITY_URL=http+unix://%2Frun%2Fnos-dgx%2Fkeap-identity.sock
 EOF
+# The outpost alone holds the proxy secret (its own user, its own env file).
+id nos-identity >/dev/null 2>&1 || useradd -r -s /usr/sbin/nologin -d /nonexistent nos-identity
+install -m 0640 -o root -g nos-identity /dev/null /etc/nos/keap-proxy.env
+printf 'KEAP_PROXY_SHARED_SECRET=%s\nNOS_HOST=%s\n' "$KEAP_PROXY_SHARED_SECRET" "$HOST" > /etc/nos/keap-proxy.env
 install -m 0640 -o root -g nos-maintainers /dev/null /etc/nos/keap-rw.env
 cat > /etc/nos/keap-rw.env <<EOF
 KEAP_AGENT_TOKEN_RW=$KEAP_AGENT_TOKEN_RW
@@ -500,6 +506,16 @@ if grep -qE '^OPENWEBUI_API_KEY=.+' /etc/nos/openwebui.env; then
 else
   echo "webui knowledge: no OPENWEBUI_API_KEY in /etc/nos/openwebui.env — the nOS Assistant is not synced yet"
 fi
+
+say "identity outpost: the shell login is the KEAP login (unix socket, SO_PEERCRED)"
+install -d -m 0755 /opt/nos-dgx/identity
+install -m 0755 -o root -g root "$RT/identity/keap-identity.py" /opt/nos-dgx/identity/keap-identity.py
+ID_BOUNCE=0
+put "$RT/systemd/nos-keap-identity.service" /etc/systemd/system/nos-keap-identity.service && ID_BOUNCE=1
+cmp -s "$RT/identity/keap-identity.py" /opt/nos-dgx/identity/keap-identity.py || ID_BOUNCE=1
+systemctl daemon-reload; systemctl enable -q nos-keap-identity
+if [ "$ID_BOUNCE" = 1 ] || ! systemctl is-active -q nos-keap-identity; then systemctl restart nos-keap-identity; sleep 2; fi
+echo "identity outpost: $(systemctl is-active nos-keap-identity) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 --unix-socket /run/nos-dgx/keap-identity.sock http://keap/api/tables || echo no-answer) on /api/tables as root"
 
 say "phase C — stack up, knowledge ingest, tables (as admin)"
 sudo -u "$OPERATOR" -H bash -c '

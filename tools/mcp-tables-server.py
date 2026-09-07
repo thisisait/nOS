@@ -28,8 +28,10 @@ Self-check:  tools/mcp-tables-server.py --selftest   (no KEAP needed).
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
+import socket
 import sys
 import urllib.error
 import urllib.parse
@@ -130,8 +132,110 @@ def _route(args: dict) -> tuple[str, str, dict | None, str | None]:
     return "GET", "", None, f"unknown verb '{verb}'"  # unreachable
 
 
+class _UnixHTTPConnection(http.client.HTTPConnection):
+    """http.client over AF_UNIX; the URL host is the percent-encoded socket path."""
+
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        if isinstance(self.timeout, (int, float)):
+            self.sock.settimeout(self.timeout)
+        self.sock.connect(urllib.parse.unquote(self.host))
+
+
+class _UnixHTTPHandler(urllib.request.AbstractHTTPHandler):
+    def _open(self, req):
+        return self.do_open(_UnixHTTPConnection, req)
+
+
+setattr(_UnixHTTPHandler, "http+unix_open", _UnixHTTPHandler._open)
+_UNIX_INSTALLED = False
+
+
+def _install_unix_opener() -> None:
+    global _UNIX_INSTALLED
+    if not _UNIX_INSTALLED:
+        urllib.request.install_opener(urllib.request.build_opener(_UnixHTTPHandler))
+        _UNIX_INSTALLED = True
+
+
+def _human_call(args: dict) -> tuple[str, bool]:
+    """The same verbs over the HUMAN door, as the caller, through the identity
+    outpost (KEAP_IDENTITY_URL). A per-user Claude Code / Codex then sees
+    exactly that user's tables — private ones, grants, tier — instead of the
+    estate-wide view the agent bearer has. claim/release are agent-door
+    leases and stay there."""
+    verb = args.get("verb", "")
+    if verb not in VERBS:
+        return "verb must be one of: " + ", ".join(VERBS), True
+    table = str(args.get("table") or "").strip()
+    rid = str(args.get("id") or "").strip()
+    base = os.environ["KEAP_IDENTITY_URL"].rstrip("/")
+    hdr = {"Content-Type": "application/json"}   # the outpost decides who we are
+    _install_unix_opener()
+
+    def call(method, path, body=None):
+        data = json.dumps(body).encode() if body is not None else None
+        req = urllib.request.Request(base + path, data=data, method=method, headers=hdr)
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return resp.status, json.loads(resp.read() or b"{}")
+        except urllib.error.HTTPError as exc:
+            try:
+                return exc.code, json.loads(exc.read() or b"{}")
+            except Exception:  # noqa: BLE001
+                return exc.code, {}
+        except urllib.error.URLError as exc:
+            return 0, {"error": f"identity outpost unreachable at {base}: {exc.reason}"}
+
+    def out(st, payload):
+        return f"HTTP {st}\n{json.dumps(payload)}", st == 0 or st >= 400
+
+    if verb == "list-tables":
+        return out(*call("GET", "/api/tables"))
+    if not table:
+        return f"verb '{verb}' needs a `table`", True
+    t = urllib.parse.quote(table, safe="")
+    if verb == "read-rows":
+        limit = int(args.get("limit") or 0)
+        return out(*call("GET", f"/api/tables/{t}/rows" + (f"?limit={limit}" if limit > 0 else "")))
+    if verb in ("get-row", "search-rows"):
+        st, d = call("GET", f"/api/tables/{t}/rows?limit=500")
+        if st != 200:
+            return out(st, d)
+        rows = (d.get("data") or {}).get("rows") or []
+        if verb == "get-row":
+            if not rid:
+                return "verb 'get-row' needs an `id`", True
+            hit = [r for r in rows if r.get("id") == rid or (r.get("values") or {}).get("slug") == rid]
+            return out(200 if hit else 404, {"success": bool(hit), "data": hit[0] if hit else None})
+        q = str(args.get("q") or "").strip().lower()
+        if not q:
+            return "verb 'search-rows' needs a `q`", True
+        hit = [r for r in rows if q in json.dumps(r.get("values") or {}, ensure_ascii=False).lower()]
+        lim = int(args.get("limit") or 0) or 20
+        return out(200, {"success": True, "data": {"rows": hit[:lim], "total": len(hit)}})
+    if verb == "upsert-row":
+        values = args.get("values")
+        if not isinstance(values, dict) or not values:
+            return "verb 'upsert-row' needs a non-empty `values` object", True
+        key = rid or str(values.get("slug") or "")
+        body = {"values": values}
+        if key:
+            body["id"] = key
+        return out(*call("POST", f"/api/tables/{t}/rows", body))
+    if verb == "patch-field":
+        field = str(args.get("field") or "").strip()
+        if not rid or not field:
+            return "verb 'patch-field' needs an `id` and a `field`", True
+        return out(*call("POST", f"/api/tables/{t}/rows", {"id": rid, "values": {field: args.get("value")}}))
+    return (f"verb '{verb}' is an agent-door lease (estate token); behind the identity outpost use "
+            "`nos dtt claim/release` in a shell"), True
+
+
 def _call_keap(args: dict) -> tuple[str, bool]:
     """Dispatch one verb to the KEAP door. Returns (text, is_error)."""
+    if os.environ.get("KEAP_IDENTITY_URL", "").startswith("http+unix://"):
+        return _human_call(args)
     method, path, body, err = _route(args)
     if err is not None:
         return err, True

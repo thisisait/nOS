@@ -36,7 +36,7 @@ http() {  # http <name> <url> <expected-code> [curl-args…]
 }
 
 # ── services ────────────────────────────────────────────────────────────────
-for u in nginx docker ollama jupyterhub backrest mcpo-nos-tables; do unit "$u"; done
+for u in nginx docker ollama jupyterhub backrest mcpo-nos-tables nos-keap-identity; do unit "$u"; done
 unit nos-dgx-backup-verify.timer
 for c in iiab-keap-1 iiab-open-webui-1 iiab-n8n-1; do
   st="$(docker inspect -f '{{.State.Status}}/{{if .State.Health}}{{.State.Health.Status}}{{else}}nohc{{end}}' "$c" 2>/dev/null || true)"
@@ -71,6 +71,8 @@ if [ -n "$ov" ]; then
   row GREEN "ollama api" "$ov · $loaded"
 else row RED "ollama api" "no answer on 172.17.0.1:11434"; fi
 http "mcpo nos_tables"  "http://172.17.0.1:8500/openapi.json" 200
+idc="$(curl -s -o /dev/null -w '%{http_code}' -m 5 --unix-socket /run/nos-dgx/keap-identity.sock http://keap/api/tables 2>/dev/null || echo 000)"
+case "$idc" in 200) row GREEN "identity outpost" "200 as $(id -un) via /run/nos-dgx/keap-identity.sock";; 403) row RED "identity outpost" "403: $(id -un) is not in nos-users";; 000) row RED "identity outpost" "no answer on /run/nos-dgx/keap-identity.sock";; *) row RED "identity outpost" "$idc";; esac
 # the tables themselves, with whatever token this user holds
 if [ -r /etc/nos/keap.env ]; then
   # shellcheck disable=SC1091

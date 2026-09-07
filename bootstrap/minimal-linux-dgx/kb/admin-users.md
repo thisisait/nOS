@@ -33,7 +33,7 @@ sudo -u <login> -H env XDG_RUNTIME_DIR=/run/user/$(id -u <login>) \
 | Tier | Linux group | Gets |
 |---|---|---|
 | 3 · user | `nos-users` | web login, RO token, own rootless Docker, own Lab |
-| 2 · manager | `nos-users` + nginx map | KEAP tables with visibility `tier-managers` (the roadmap) |
+| 2 · manager | `nos-users` + `nos-managers` (Linux group, create it) + nginx map | KEAP tables with visibility `tier-managers` (the roadmap) — the shell (identity outpost) reads the Linux group, the browser reads the nginx map; keep them in step |
 | 1 · admin | `nos-users` + `nos-maintainers` + nginx map | RW token, compose, seed pushes, Hub admin |
 
 KEAP reads the tier from the `X-Authentik-Groups` header nginx sets, and that
