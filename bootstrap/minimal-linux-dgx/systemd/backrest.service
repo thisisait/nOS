@@ -1,0 +1,22 @@
+# /etc/systemd/system/backrest.service — restic web UI for the admin (nginx :8446).
+# Backrest here is a BROWSER and RESTORER over the repository the timer writes;
+# schedule no plans in it, or disable the timer first — one writer per repo.
+[Unit]
+Description=Backrest (nos-dgx) — restic UI over /srv/backup/restic
+RequiresMountsFor=/srv/backup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Environment=BACKREST_PORT=127.0.0.1:9898
+Environment=BACKREST_CONFIG=/etc/nos/backrest/config.json
+Environment=BACKREST_DATA=/var/lib/nos-dgx/backrest
+Environment=BACKREST_RESTIC_COMMAND=/usr/bin/restic
+ExecStart=/opt/nos-dgx/backrest/backrest
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

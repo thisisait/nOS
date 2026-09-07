@@ -1,0 +1,31 @@
+# restic --exclude-file for nos-dgx-backup.sh. One pattern per line.
+# Each developer's rootless Docker store: re-pullable images, GBs.
+/home/*/.local/share/docker
+/home/*/.local/share/containers
+# caches and rebuildable environments
+/home/*/.cache
+/home/*/venvs
+/home/*/.hermes/node
+/home/*/.hermes/hermes-agent
+/home/*/.local/lib/node_modules
+/home/*/.npm
+/home/*/.vscode-server/data/CachedExtensionVSIXs
+/home/*/.cache/JetBrains
+**/node_modules
+**/.venv
+**/__pycache__
+**/.pytest_cache
+# live SQLite files — the WAL-safe snapshots in stage/ carry them instead
+/srv/nos-dgx/keap/data/keap.db
+/srv/nos-dgx/keap/data/keap.db-wal
+/srv/nos-dgx/keap/data/keap.db-shm
+/var/lib/docker/volumes/open-webui/_data/webui.db
+/var/lib/docker/volumes/open-webui/_data/webui.db-wal
+/var/lib/docker/volumes/open-webui/_data/webui.db-shm
+/var/lib/docker/volumes/iiab_n8n_data/_data/database.sqlite
+/var/lib/docker/volumes/iiab_n8n_data/_data/database.sqlite-wal
+/var/lib/docker/volumes/iiab_n8n_data/_data/database.sqlite-shm
+/var/lib/nos-dgx/jupyterhub/jupyterhub.sqlite
+/var/lib/nos-dgx/jupyterhub/jupyterhub.sqlite-journal
+# the Hub's cookie secret is in /var/lib/nos-dgx/jupyterhub and IS backed up; the pid file is noise
+/var/lib/nos-dgx/jupyterhub/jupyterhub.pid

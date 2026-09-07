@@ -41,6 +41,9 @@ green on all ports.
   Open WebUI (self-signup is off). Pick a model from the top-left list.
 - **Notebooks** `https://__HOST__:8445/` — the login form takes your Linux
   credentials and starts *your* JupyterLab in your home directory.
+- **Automation** `https://__HOST__:8447/` — n8n; the owner (admin) invites you
+  by e-mail address inside n8n. Workflows can call the local models
+  (`http://host.docker.internal:11434`) and KEAP's API with your group's token.
 
 ## 4. Your shelf (optional, shell users)
 

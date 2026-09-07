@@ -1,0 +1,5 @@
+# /etc/pam.d/nginx-admin — nginx auth_pam for admin-only surfaces (Backrest):
+# the box's own accounts, restricted to group nos-maintainers.
+auth    required   pam_succeed_if.so user ingroup nos-maintainers quiet_success
+auth    include    common-auth
+account include    common-account

@@ -1,0 +1,12 @@
+# /etc/systemd/system/nos-dgx-backup.service — nightly restic backup (root).
+[Unit]
+Description=nos-dgx nightly backup (restic → /srv/backup)
+RequiresMountsFor=/srv/backup
+ConditionPathIsMountPoint=/srv/backup
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/nos-dgx/backup/nos-dgx-backup.sh
+Nice=10
+IOSchedulingClass=idle

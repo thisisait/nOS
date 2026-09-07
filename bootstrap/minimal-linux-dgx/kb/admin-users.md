@@ -65,6 +65,13 @@ Open WebUI keeps its own users (its bearer token cannot share the
 `Authorization` header with the browser's basic-auth, so it is not behind the
 PAM gate). Admin → *Users* → *Add user* inside Chat.
 
+## n8n accounts
+
+Like Chat, n8n keeps its own users: the first visit to `https://__HOST__:8447/`
+creates the **owner** (make that the admin), then *Settings → Users → Invite*
+by e-mail. Everyone in n8n shares the instance's credentials store, so treat it
+as a team space, not a per-user sandbox.
+
 ## Remove a user
 
 ```

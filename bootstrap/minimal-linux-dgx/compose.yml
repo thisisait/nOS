@@ -71,6 +71,36 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: iiab-n8n-1
+    restart: always
+    ports:
+      - "127.0.0.1:5678:5678"               # nginx upstream (8447)
+    volumes:
+      - n8n_data:/home/node/.n8n            # sqlite db, credentials, workflows
+    environment:
+      N8N_HOST: "__HOST__"
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: "https"
+      N8N_EDITOR_BASE_URL: "https://__HOST__:8447/"
+      WEBHOOK_URL: "https://__HOST__:8447/"
+      N8N_PROXY_HOPS: "1"
+      N8N_SECURE_COOKIE: "true"
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      GENERIC_TIMEZONE: "Europe/Prague"
+      TZ: "Europe/Prague"
+      # Local models from a workflow: the Ollama node → http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - gated_net
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    mem_limit: 2g
+
 networks:
   gated_net:
     name: gated_net
@@ -78,3 +108,4 @@ networks:
 volumes:
   open-webui:
     external: true                          # created by the previous bundle container
+  n8n_data: {}                              # → docker volume iiab_n8n_data

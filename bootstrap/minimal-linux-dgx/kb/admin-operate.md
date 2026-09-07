@@ -40,8 +40,10 @@ by hand — the next run overwrites it.
 
 | Unit | What | Logs |
 |---|---|---|
-| `nginx` | the edge: 443 / 8443 / 8444 / 8445 | `/var/log/nginx/{access,error}.log` |
-| `docker` (root) | the `iiab` stack: `iiab-keap-1`, `iiab-open-webui-1` | `docker logs <name>` |
+| `nginx` | the edge: 443 / 8443 / 8444 / 8445 / 8446 / 8447 | `/var/log/nginx/{access,error}.log` |
+| `docker` (root) | the `iiab` stack: `iiab-keap-1`, `iiab-open-webui-1`, `iiab-n8n-1` | `docker logs <name>` |
+| `nos-dgx-backup.timer` / `-verify.timer` | nightly restic + morning restore drill | `/var/lib/nos-dgx/backup/{backup.log,last.json}` |
+| `backrest` | restic UI on `127.0.0.1:9898` (nginx 8446, maintainers) | `journalctl -u backrest` |
 | `ollama` | model server on `172.17.0.1:11434` | `journalctl -u ollama` |
 | `jupyterhub` | the Hub on `127.0.0.1:8000` | `journalctl -u jupyterhub` (single-user servers log here too) |
 | `user@<uid>` | each user's rootless docker, dev servers | `journalctl --user -M <login>@ -u docker` |
@@ -54,7 +56,8 @@ docker compose -f /srv/nos-dgx/compose.yml up -d   # (as a maintainer) re-apply 
 ```
 
 A stack restart keeps all data: KEAP in `/srv/nos-dgx/keap/data`, Chat in the
-Docker volume `open-webui`.
+Docker volume `open-webui`, n8n in `iiab_n8n_data`. All three are in the nightly
+backup ([Backup and restore](admin-backup.html)).
 
 ## Renaming the host
 

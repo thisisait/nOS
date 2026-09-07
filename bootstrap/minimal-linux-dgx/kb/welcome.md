@@ -16,6 +16,8 @@ people at once, each under their own Linux account.
 | `https://__HOST__:8443/` | **KEAP** — DataTables (roadmap, current-state), knowledge | your Linux password (browser prompt) |
 | `https://__HOST__:8444/` | **Chat** — Open WebUI on the local Ollama models | its own account (the admin invites you) |
 | `https://__HOST__:8445/` | **Notebooks** — JupyterHub, your own Lab, GPU kernel | your Linux password (login form) |
+| `https://__HOST__:8447/` | **Automation** — n8n workflows and webhooks | its own account (the owner invites you) |
+| `https://__HOST__:8446/` | **Backups** — Backrest, browse and restore | admin only |
 | `ssh __HOST__` | your shell, your rootless Docker, the `nos` CLI | SSH |
 
 **One identity.** Your Linux account is the account everywhere except Chat. The
@@ -29,4 +31,6 @@ The `admin` account is the operator. Ask them for an account — see
 [First login](first-login.html).
 
 **What survives a reboot.** Everything: nginx, the KEAP and Chat containers,
-Ollama, JupyterHub and every user's rootless Docker come back on their own.
+Ollama, JupyterHub, n8n and every user's rootless Docker come back on their own.
+A restic backup runs every night to the external disk, and a restore drill
+every morning says whether it is any good ([Backup and restore](admin-backup.html)).

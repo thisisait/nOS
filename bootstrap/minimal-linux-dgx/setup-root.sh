@@ -42,7 +42,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq nginx libnginx-mod-http-auth-pam mkcert libnss3-tools \
   python3-yaml python3-markdown sqlite3 rsync curl git \
-  docker-ce-rootless-extras uidmap passt fuse-overlayfs >/dev/null
+  docker-ce-rootless-extras uidmap passt fuse-overlayfs restic >/dev/null
 
 say "groups + users"
 groupadd -f nos-users
@@ -209,13 +209,14 @@ fi
 
 say "firewall: the three web ports + mDNS (ufw is active on this DGX)"
 if ufw status | grep -q '^Status: active'; then
-  for p in 443 8443 8444 8445; do ufw allow $p/tcp >/dev/null; done
+  for p in 443 8443 8444 8445 8446 8447; do ufw allow $p/tcp >/dev/null; done
   ufw allow 5353/udp >/dev/null
-  ufw status | grep -E '^(443|8443|8444|8445|5353)' | sed 's/^/  /'
+  ufw status | grep -E '^(443|8443|8444|8445|8446|8447|5353)' | sed 's/^/  /'
 fi
 
 say "nginx + PAM"
 install -m 0644 "$RT/nginx/pam-nginx" /etc/pam.d/nginx
+install -m 0644 "$RT/nginx/pam-nginx-admin" /etc/pam.d/nginx-admin
 usermod -aG shadow www-data
 install -m 0644 "$RT/nginx/nos-dgx-tls.conf" /etc/nginx/nos-dgx-tls.conf
 install -m 0644 "$RT/nginx/nos-dgx.conf" /etc/nginx/sites-available/nos-dgx.conf
@@ -307,6 +308,77 @@ systemctl restart jupyterhub
 sleep 4
 echo "jupyterhub: $(systemctl is-active jupyterhub) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://127.0.0.1:8000/hub/login || echo no-answer) on /hub/login"
 echo "torch cuda: $("$JH/venv/bin/python" -c 'import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else "")' 2>&1 | tail -1)"
+
+say "backup disk + restic (nightly writer, morning verifier)"
+BK=/srv/backup
+if [ "${NOS_BACKUP_FORMAT:-}" = yes ] && [ -n "${NOS_BACKUP_DEVICE:-}" ]; then
+  # DESTRUCTIVE, explicit opt-in: wipe the device, ext4, label nos-backup.
+  umount "$NOS_BACKUP_DEVICE" 2>/dev/null || true
+  wipefs -aq "$NOS_BACKUP_DEVICE"
+  mkfs.ext4 -q -L nos-backup "$NOS_BACKUP_DEVICE"
+  echo "formatted $NOS_BACKUP_DEVICE as ext4 (label nos-backup)"
+fi
+BKDEV="$(blkid -L nos-backup 2>/dev/null || true)"
+if [ -n "$BKDEV" ]; then
+  BKUUID="$(blkid -s UUID -o value "$BKDEV")"
+  install -d "$BK"
+  grep -q "$BKUUID" /etc/fstab || echo "UUID=$BKUUID $BK ext4 defaults,nofail,x-systemd.device-timeout=10 0 2" >> /etc/fstab
+  systemctl daemon-reload
+  mountpoint -q "$BK" || mount "$BK"
+  chmod 0700 "$BK"
+  echo "backup disk: $BKDEV on $BK, $(df -h "$BK" | awk 'NR==2{print $4}') free"
+else
+  echo "backup disk: no filesystem labelled nos-backup — the timer will refuse to run (README: NOS_BACKUP_DEVICE + NOS_BACKUP_FORMAT=yes once)"
+fi
+install -d -m 0700 /var/lib/nos-dgx/backup
+if [ ! -f /etc/nos/restic.env ]; then
+  umask 077
+  printf 'RESTIC_REPOSITORY=%s/restic\nRESTIC_PASSWORD=%s\n' "$BK" "$(openssl rand -base64 30 | tr -d '/+=')" > /etc/nos/restic.env
+  umask 022
+  awk -F= '/^RESTIC_PASSWORD/{print $2}' /etc/nos/restic.env > /root/nos-dgx-restic.password; chmod 0600 /root/nos-dgx-restic.password
+  echo "restic key generated → /etc/nos/restic.env (copy: /root/nos-dgx-restic.password — put it in a password manager)"
+fi
+chmod 0600 /etc/nos/restic.env
+if mountpoint -q "$BK"; then
+  # shellcheck disable=SC1091
+  ( . /etc/nos/restic.env; export RESTIC_REPOSITORY RESTIC_PASSWORD
+    [ -f "$RESTIC_REPOSITORY/config" ] || { restic init -q && echo "restic repository initialised at $RESTIC_REPOSITORY"; } )
+fi
+chmod +x "$RT"/backup/*.sh
+for u in nos-dgx-backup.service nos-dgx-backup.timer nos-dgx-backup-verify.service nos-dgx-backup-verify.timer; do
+  install -m 0644 "$RT/systemd/$u" "/etc/systemd/system/$u"
+done
+systemctl daemon-reload
+systemctl enable -q --now nos-dgx-backup.timer nos-dgx-backup-verify.timer
+echo "timers: $(systemctl list-timers --no-legend 'nos-dgx-*' | awk '{print $NF" "$1" "$2}' | paste -sd '·' -)"
+
+say "Backrest (restic UI, maintainers only, nginx :8446)"
+BR=/opt/nos-dgx/backrest
+if [ ! -x "$BR/backrest" ]; then
+  install -d "$BR"
+  curl -fsSL "https://github.com/garethgeorge/backrest/releases/latest/download/backrest_Linux_arm64.tar.gz" | tar -xz -C "$BR" backrest
+  echo "backrest $("$BR/backrest" --version 2>/dev/null | head -1) installed"
+fi
+install -d -m 0700 /etc/nos/backrest /var/lib/nos-dgx/backrest
+if [ ! -f /etc/nos/backrest/config.json ]; then
+  # shellcheck disable=SC1091
+  ( . /etc/nos/restic.env
+    python3 - "$SHORT" "$RESTIC_REPOSITORY" "$RESTIC_PASSWORD" <<'PY' > /etc/nos/backrest/config.json
+import json, sys
+print(json.dumps({"modno": 1, "version": 4, "instance": sys.argv[1],
+  "repos": [{"id": "local", "uri": sys.argv[2], "password": sys.argv[3],
+             "prunePolicy": {"schedule": {"disabled": True}}, "checkPolicy": {"schedule": {"disabled": True}}}],
+  "plans": [], "auth": {"disabled": True}}, indent=1))
+PY
+  )
+  chmod 0600 /etc/nos/backrest/config.json
+fi
+install -m 0644 "$RT/systemd/backrest.service" /etc/systemd/system/backrest.service
+systemctl daemon-reload
+systemctl enable -q backrest
+systemctl restart backrest
+sleep 3
+echo "backrest: $(systemctl is-active backrest) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://127.0.0.1:9898/ || echo no-answer) on /"
 
 say "phase C — stack up, knowledge ingest, tables (as admin)"
 sudo -u admin -H bash -c '

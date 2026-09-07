@@ -19,6 +19,8 @@ nginx playing the outpost.
 | https://<host>.local:8443/ | KEAP — roadmap, current-state, tables | group `nos-users` |
 | https://<host>.local:8444/ | Open WebUI — chat on local models | its own accounts (admin invites; bearer vs basic-auth clash, see nginx conf) |
 | https://<host>.local:8445/ | JupyterHub — one Lab per user, as that Linux user, CUDA kernel | PAM login form, group `nos-users`; `admin` is Hub admin |
+| https://<host>.local:8446/ | Backrest — browse/restore the restic repository | PAM, group `nos-maintainers` |
+| https://<host>.local:8447/ | n8n — automation for everyone | its own accounts (owner invites) |
 | http://127.0.0.1:8091 | KEAP agent door (bearer tokens) | shell users, MCP |
 | http://172.17.0.1:11434 | Ollama API (no auth) | host + containers only |
 
@@ -45,6 +47,21 @@ it alive after logout, and the `user-<uid>.slice` ceiling
 daemon, the containers, the Lab and every build together. VS Code Dev
 Containers and PhpStorm's Docker interpreter use that socket unchanged.
 Admin keeps the root daemon (the iiab stack) and the default context.
+
+## Backups
+
+restic → the external disk (ext4, label `nos-backup`, `/srv/backup` from fstab).
+`nos-dgx-backup.timer` 03:00 (writer, refuses when the disk is not mounted),
+`nos-dgx-backup-verify.timer` 04:30 (reader: restores KEAP's db from the latest
+snapshot, counts roadmap rows against the live table, writes
+`/var/lib/nos-dgx/backup/last.json` — the ONLY success marker). Retention 8
+weekly + 7 daily, prune + 10 % check on Sundays. Backrest (8446) browses the
+same repository and schedules nothing. Key: `/etc/nos/restic.env` + a copy in
+`/root/nos-dgx-restic.password` — keep it in a password manager. Details and
+the rebuild order: `kb/admin-backup.md`.
+
+First-time disk: `NOS_BACKUP_DEVICE=/dev/sdX1 NOS_BACKUP_FORMAT=yes sudo -E bash setup-root.sh`
+formats it (DESTRUCTIVE, explicit opt-in); afterwards the label alone is enough.
 
 ## Layout
 
