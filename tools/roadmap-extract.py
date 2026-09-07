@@ -52,6 +52,10 @@ def _render(v: dict) -> str:
     # identical per-row format — one source for the frontmatter shape.
     fm = {k: v.get(k, "") for k in
           ("slug", "title", "parent", "track", "task_type", "status", "refs", "release")}
+    # A `kind: json` refs column (roadmap.table.yml) comes back as a list; the
+    # file form is the `\u00b7`-separated string roadmap-seed.py splits again.
+    if isinstance(fm["refs"], list):
+        fm["refs"] = " \u00b7 ".join(str(x) for x in fm["refs"])
     fm["when"] = _when(v)
     return lib.render_row_file(fm, v.get("body") or "")
 

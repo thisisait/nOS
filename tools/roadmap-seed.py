@@ -78,10 +78,28 @@ if not DRY_RUN:
 # POST with an unknown key fails in a way easy to write and hard to read. Refuse
 # BEFORE writing, name the missing columns, exit non-zero. Runs under --dry-run
 # too: a rehearsal that skips the check rehearses the wrong run.
-_live_cols = {
-    c.get("key")
-    for c in (req("GET", BASE)["data"].get("schema", {}).get("columns") or [])
-}
+_live_schema = req("GET", BASE)["data"].get("schema", {}).get("columns") or []
+_live_cols = {c.get("key") for c in _live_schema}
+_live_kinds = {c.get("key"): c.get("kind") for c in _live_schema}
+
+
+# `refs` is a `·`-separated string in the seed file (the readable form) but
+# state/keap-tables/roadmap.table.yml declares the column `kind: json`. The
+# operator estate's table predates that definition and holds refs as text,
+# so the mismatch surfaced only on the first estate whose table WAS created
+# from the definition (the DGX, 2026-09-07: `invalid row: refs: expected
+# object/array`). The live kind decides the wire shape; the file keeps its form.
+def _refs_wire(value):
+    if _live_kinds.get("refs") != "json" or not isinstance(value, str):
+        return value
+    return [s.strip() for s in value.split("\u00b7") if s.strip()]
+
+
+def _refs_file(value):
+    """The inverse, for comparing a live row against its file."""
+    if isinstance(value, list):
+        return " \u00b7 ".join(str(v) for v in value)
+    return value or ""
 _need = {k for r in R for k in r}
 _missing = sorted(_need - _live_cols)
 if _live_cols and _missing:
@@ -114,7 +132,8 @@ if SYNC:
         if cur is None:
             continue
         delta = {k: r[k] for k in GIT_OWNED
-                 if k in r and r[k] != (cur["values"].get(k) or "")}
+                 if k in r and r[k] != (_refs_file(cur["values"].get(k)) if k == "refs"
+                                        else (cur["values"].get(k) or ""))}
         if delta:
             drifted.append((r, delta, cur["id"]))
 
@@ -155,6 +174,8 @@ AGENT = f"http://127.0.0.1:8091/agent/v1/tables/{TABLE}/rows"
 
 
 def agent_write(values):
+    if "refs" in values:
+        values = {**values, "refs": _refs_wire(values["refs"])}
     rq = urllib.request.Request(
         AGENT, data=json.dumps(values).encode(), method="POST",
         headers={"authorization": f"Bearer {_agent_token()}",
