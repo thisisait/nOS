@@ -1,0 +1,337 @@
+{
+ "domain": "04.11",
+ "nodes": [
+  {
+   "id": "04.11",
+   "level": 1,
+   "parentId": "04",
+   "name": "Business and Management",
+   "zone": "anchor",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The applied disciplines of running an enterprise: turning an idea into a going concern, accounting for what it does, organising the people and processes that carry it out, and exchanging value with customers and markets. It draws on economics, psychology, law and sociology without being reducible to any of them — economics explains market behaviour in the abstract, business practice is what a person actually does inside a firm to survive in that market.",
+   "cs": "Aplikované obory řízení podniku: proměna nápadu ve fungující podnik, jeho účetní vykazování, organizace lidí a procesů, které jej tvoří, a směna hodnoty se zákazníky a trhy. Čerpá z ekonomie, psychologie, práva i sociologie, aniž by byl na kterýkoli z nich redukovatelný — ekonomie vysvětluje chování trhu v obecné rovině, praxe podnikání je to, co člověk uvnitř firmy skutečně dělá, aby na tomto trhu obstál."
+  },
+  {
+   "id": "04.11.01",
+   "level": 2,
+   "parentId": "04.11",
+   "name": "Entrepreneurship and Small Business",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Starting and running an enterprise from first idea to sustainable operation: opportunity recognition, business models and their validation, the initial choice of legal form, and the cash-flow discipline that decides whether a young firm survives its first years. It differs from established-firm management in one respect above all — resources are scarce enough that most decisions are effectively irreversible.",
+   "cs": "Založení a vedení podniku od prvotního nápadu po udržitelný provoz: rozpoznání příležitosti, obchodní modely a jejich ověření, počáteční volba právní formy a disciplína peněžních toků, která rozhoduje o přežití mladé firmy v prvních letech. Od řízení zavedené firmy se liší především v jednom: zdroje jsou natolik omezené, že většina rozhodnutí je fakticky nevratná."
+  },
+  {
+   "id": "04.11.02",
+   "level": 2,
+   "parentId": "04.11",
+   "name": "Management and Organisation",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "How collective effort is directed towards a purpose: planning, structuring, staffing and controlling an organisation. An applied discipline drawing on economics, psychology and sociology alike, and the operational core around which the other business disciplines in this pack are organised.",
+   "cs": "Jak se společné úsilí směřuje k účelu: plánování, strukturování, obsazování a řízení organizace. Aplikovaný obor čerpající z ekonomie, psychologie i sociologie a provozní jádro, kolem něhož jsou uspořádány ostatní obory podnikání v tomto balíku."
+  },
+  {
+   "id": "04.11.02.01",
+   "level": 3,
+   "parentId": "04.11.02",
+   "name": "Organisational Structure",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Functional, divisional, matrix and network forms, the coordination each supports, and the cost each imposes.",
+   "cs": "Funkční, divizní, maticové a síťové uspořádání, koordinace, kterou každé umožňuje, a náklad, který ukládá."
+  },
+  {
+   "id": "04.11.02.02",
+   "level": 3,
+   "parentId": "04.11.02",
+   "name": "Strategy",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Positioning, resources and capabilities as sources of durable advantage, and the analysis underlying strategic choice.",
+   "cs": "Positioning, zdroje a schopnosti jako zdroje trvalé výhody a analýza, na níž stojí strategická volba."
+  },
+  {
+   "id": "04.11.02.03",
+   "level": 3,
+   "parentId": "04.11.02",
+   "name": "Operations and Process Management",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Designing and improving the flow of work: capacity, bottlenecks, quality and the lean and queueing perspectives.",
+   "cs": "Návrh a zlepšování toku práce: kapacita, úzká místa, kvalita a pohledy štíhlé výroby a teorie front."
+  },
+  {
+   "id": "04.11.02.04",
+   "level": 3,
+   "parentId": "04.11.02",
+   "name": "Human Resource Management",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Recruitment, development, reward and performance, and the tension between organisational and individual interest — the management-theory counterpart to the compliance and day-to-day administrative practice covered under Human Resources and Labour Practice.",
+   "cs": "Nábor, rozvoj, odměňování a výkon a napětí mezi zájmem organizace a jednotlivce — manažersko-teoretický protějšek ke compliance a každodenní administrativní praxi popsané pod Lidskými zdroji a pracovněprávní praxí."
+  },
+  {
+   "id": "04.11.02.05",
+   "level": 3,
+   "parentId": "04.11.02",
+   "name": "Leadership and Motivation",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "What makes direction effective, the main theories of motivation, and the evidence on what they predict.",
+   "cs": "Co činí vedení účinným, hlavní teorie motivace a doklady o tom, co předpovídají."
+  },
+  {
+   "id": "04.11.02.06",
+   "level": 3,
+   "parentId": "04.11.02",
+   "name": "Project Management",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Delivering defined outcomes under constraints of scope, time and cost, and the predictive and adaptive approaches to doing so.",
+   "cs": "Dodání vymezených výsledků při omezeních rozsahu, času a nákladů a prediktivní i adaptivní přístupy k tomu."
+  },
+  {
+   "id": "04.11.02.07",
+   "level": 3,
+   "parentId": "04.11.02",
+   "name": "Risk and Governance",
+   "zone": "votable",
+   "ordinal": 6,
+   "kind": "ext",
+   "en": "Identifying and controlling organisational risk, internal control systems, and the accountability structures above management.",
+   "cs": "Identifikace a řízení organizačních rizik, systémy vnitřní kontroly a struktury odpovědnosti nad vedením."
+  },
+  {
+   "id": "04.11.03",
+   "level": 2,
+   "parentId": "04.11",
+   "name": "Accounting and Financial Reporting",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The measurement and communication of economic activity within an organisation. Distinct from economics — economics explains behaviour, accounting records and reports it — and the discipline within this pack that every other business function ultimately reports through.",
+   "cs": "Měření a sdělování hospodářské činnosti uvnitř organizace. Odlišné od ekonomie — ekonomie vysvětluje chování, účetnictví je zaznamenává a vykazuje — a obor v rámci tohoto balíku, přes který se v konečném důsledku vykazují všechny ostatní obchodní funkce."
+  },
+  {
+   "id": "04.11.03.01",
+   "level": 3,
+   "parentId": "04.11.03",
+   "name": "Double-Entry Bookkeeping",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The accounting equation, debits and credits, and the self-checking property that has kept the method in use for five centuries.",
+   "cs": "Účetní rovnice, má dáti a dal a sebekontrolní vlastnost, díky níž se metoda užívá pět století."
+  },
+  {
+   "id": "04.11.03.02",
+   "level": 3,
+   "parentId": "04.11.03",
+   "name": "Financial Statements",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The balance sheet, income statement and cash-flow statement, what each measures, and why a profitable organisation can still fail.",
+   "cs": "Rozvaha, výsledovka a výkaz peněžních toků, co každý měří a proč může zisková organizace přesto zkrachovat."
+  },
+  {
+   "id": "04.11.03.03",
+   "level": 3,
+   "parentId": "04.11.03",
+   "name": "Recognition and Measurement",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "When a transaction enters the accounts and at what value: accrual versus cash basis, historical cost versus fair value.",
+   "cs": "Kdy transakce vstupuje do účetnictví a v jaké hodnotě: akruální versus hotovostní princip, historická cena versus reálná hodnota."
+  },
+  {
+   "id": "04.11.03.04",
+   "level": 3,
+   "parentId": "04.11.03",
+   "name": "Accounting Standards",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "National and international reporting frameworks, the comparability they aim at, and the judgement they still require.",
+   "cs": "Národní a mezinárodní rámce výkaznictví, srovnatelnost, o niž usilují, a úsudek, který přesto vyžadují."
+  },
+  {
+   "id": "04.11.03.05",
+   "level": 3,
+   "parentId": "04.11.03",
+   "name": "Management Accounting",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Costing, budgeting and variance analysis produced for internal decisions rather than external reporting.",
+   "cs": "Kalkulace, rozpočtování a analýza odchylek vytvářené pro vnitřní rozhodování, nikoli pro externí výkaznictví."
+  },
+  {
+   "id": "04.11.03.06",
+   "level": 3,
+   "parentId": "04.11.03",
+   "name": "Audit and Assurance",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Independent examination of financial statements, materiality, sampling, and the limits of what an audit certifies.",
+   "cs": "Nezávislé přezkoumání účetní závěrky, významnost, výběrové zkoušení a meze toho, co audit stvrzuje."
+  },
+  {
+   "id": "04.11.03.07",
+   "level": 3,
+   "parentId": "04.11.03",
+   "name": "Financial Analysis",
+   "zone": "votable",
+   "ordinal": 6,
+   "kind": "ext",
+   "en": "Ratio, trend and comparative analysis to interpret statements, and the ways figures can be arranged to mislead.",
+   "cs": "Poměrová, trendová a srovnávací analýza k výkladu výkazů a způsoby, jimiž lze čísla uspořádat klamně."
+  },
+  {
+   "id": "04.11.04",
+   "level": 2,
+   "parentId": "04.11",
+   "name": "Marketing and Sales",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "How an organisation identifies what a market wants, communicates an offer, and converts interest into a transaction: segmentation and positioning, the marketing mix, brand and messaging, and the sales process from lead to close. Distinct from advertising alone — pricing, distribution and product decisions are as much a part of it as promotion.",
+   "cs": "Jak organizace zjišťuje, co trh chce, sděluje svou nabídku a proměňuje zájem v transakci: segmentace a positioning, marketingový mix, značka a sdělení a prodejní proces od kontaktu po uzavření obchodu. Nejde jen o reklamu — cena, distribuce a produktová rozhodnutí jsou její součástí stejně jako propagace."
+  },
+  {
+   "id": "04.11.05",
+   "level": 2,
+   "parentId": "04.11",
+   "name": "Human Resources and Labour Practice",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "The compliant, day-to-day practice of employing people: recruitment logistics and hiring decisions, employment contracts and onboarding, payroll and benefits administration, and handling grievances and disputes. The practical, largely rule-bound counterpart to Human Resource Management under Management and Organisation, and the point at which labour law becomes an organisation's daily obligation rather than a legal abstraction.",
+   "cs": "Praxe zaměstnávání lidí v souladu s předpisy, den za dnem: logistika náboru a rozhodování o obsazení, pracovní smlouvy a nástup, mzdová agenda a benefity a řešení stížností a sporů. Praktický a do značné míry pravidly svázaný protějšek k Řízení lidských zdrojů v rámci Managementu a organizace — bod, v němž se pracovní právo stává každodenní povinností organizace, nikoli právní abstrakcí."
+  },
+  {
+   "id": "04.11.06",
+   "level": 2,
+   "parentId": "04.11",
+   "name": "Operations and Service Delivery",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Delivering a product or service repeatedly and reliably: supply and inventory, quality control, capacity planning, and the customer-facing processes — queues, scheduling, service recovery — that determine whether delivery matches what was promised. Applies as much to a one-person service business as to a factory floor.",
+   "cs": "Opakované a spolehlivé dodávání produktu či služby: zásobování a řízení zásob, kontrola kvality, plánování kapacit a procesy směřované k zákazníkovi — fronty, plánování termínů, náprava po selhání služby — které rozhodují o tom, zda dodávka odpovídá tomu, co bylo slíbeno. Platí stejně pro jednoosobní servisní živnost jako pro továrnu."
+  },
+  {
+   "id": "04.11.07",
+   "level": 2,
+   "parentId": "04.11",
+   "name": "Commerce and Trade",
+   "zone": "votable",
+   "ordinal": 6,
+   "kind": "ext",
+   "en": "The exchange of goods and services between organisations and across borders: wholesale and retail structures, distribution channels, import and export procedures, and the contractual and logistical practice of moving goods from producer to buyer. The practical layer beneath the international trade law covered in the law pack.",
+   "cs": "Směna zboží a služeb mezi organizacemi a přes hranice: velkoobchodní a maloobchodní struktury, distribuční kanály, dovozní a vývozní postupy a smluvní i logistická praxe přesunu zboží od výrobce ke kupujícímu. Praktická vrstva pod mezinárodním obchodním právem popsaným v balíku Právo."
+  },
+  {
+   "id": "04.11.08",
+   "level": 2,
+   "parentId": "04.11",
+   "name": "Personal Finance",
+   "zone": "votable",
+   "ordinal": 7,
+   "kind": "ext",
+   "en": "Managing an individual's or household's money: budgeting and saving, debt and credit, insurance against loss, and investing for retirement or other long-term goals. Distinct from corporate finance in scale and stakes, not in its underlying logic — many of the same trade-offs between return, risk and liquidity apply.",
+   "cs": "Hospodaření s penězi jednotlivce nebo domácnosti: rozpočtování a spoření, dluhy a úvěr, pojištění proti ztrátě a investování na důchod či jiné dlouhodobé cíle. Od podnikových financí se liší měřítkem a sázkami, nikoli svou vnitřní logikou — platí mnohé stejné kompromisy mezi výnosem, rizikem a likviditou."
+  }
+ ],
+ "relations": [
+  {
+   "from": "04.11",
+   "to": "04.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.11",
+   "to": "04.06.10",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.11",
+   "to": "04.06.11",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.11.02.01",
+   "to": "02.05.01.04",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.11.02.03",
+   "to": "02.05.02",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.11.02.04",
+   "to": "04.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.11.02.05",
+   "to": "04.09",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.11.02.07",
+   "to": "04.06.10.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.11.03.02",
+   "to": "04.04.08.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.11.03.04",
+   "to": "04.06.10",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.11.03.06",
+   "to": "04.06.10.01",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  }
+ ]
+}

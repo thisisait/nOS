@@ -75,6 +75,20 @@
    "type": "references",
    "explored": null,
    "source": "brief-xref"
+  },
+  {
+   "from": "10.04.01",
+   "to": "06.05.05",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "10.04.02",
+   "to": "07.08.03",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
   }
  ]
 }

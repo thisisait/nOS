@@ -593,6 +593,61 @@
    "cs": "Učení se zesílením trénuje agenty interakcí s prostředím, kde akce vedou signály odměn, což umožňuje autonomní řešení problémů."
   },
   {
+   "id": "02.02.09.06",
+   "level": 3,
+   "parentId": "02.02.09",
+   "name": "Large Language Models",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Transformer-based models trained on massive text corpora to predict and generate language, scaling from foundation pretraining through instruction tuning and RLHF-style alignment to in-context few-shot behaviour. Covers tokenization, attention and scaling laws, and the practical trade-offs between open-weight and hosted proprietary models — the technology underlying most of today's generative AI products, building on the neural-network foundations of the sibling Deep learning node.",
+   "cs": "Modely založené na transformerech trénované na obrovských textových korpusech k předpovídání a generování jazyka, od základního předtrénování přes instrukční doladění a zarovnání typu RLHF až po few-shot chování v kontextu. Zahrnuje tokenizaci, mechanismus pozornosti a škálovací zákony i praktické kompromisy mezi otevřenými a hostovanými proprietárními modely — technologii stojící za většinou dnešních generativních AI produktů, navazující na neuronové základy sesterského uzlu Hluboké učení."
+  },
+  {
+   "id": "02.02.09.07",
+   "level": 3,
+   "parentId": "02.02.09",
+   "name": "Embeddings and Vector Retrieval",
+   "zone": "votable",
+   "ordinal": 6,
+   "kind": "ext",
+   "en": "Representing text, images or other content as dense numerical vectors that place semantically similar items near each other, and the indexing and approximate nearest-neighbour search (HNSW, IVF) that make similarity search fast at scale. The backbone of semantic search, recommendation and retrieval-augmented generation, distinct from the exact-match lookups of the sibling Hash tables node under Algorithms & Data Structures.",
+   "cs": "Reprezentace textu, obrázků či jiného obsahu jako hustých číselných vektorů, které umisťují sémanticky podobné položky blízko sebe, spolu s indexací a přibližným vyhledáváním nejbližších sousedů (HNSW, IVF), jež umožňují rychlé vyhledávání podobnosti ve velkém měřítku. Páteř sémantického vyhledávání, doporučování a generování obohaceného vyhledáváním (RAG); liší se od přesného vyhledávání sesterského uzlu Hašovací tabulky pod Algoritmy a datové struktury."
+  },
+  {
+   "id": "02.02.09.08",
+   "level": 3,
+   "parentId": "02.02.09",
+   "name": "Agents and Orchestration",
+   "zone": "votable",
+   "ordinal": 7,
+   "kind": "ext",
+   "en": "Systems that let a language model call tools, retrieve information and take multi-step actions toward a goal rather than emit a single response: planning loops, tool-calling protocols, memory across steps, and multi-agent coordination. Raises the reliability and evaluation problems of long-horizon autonomous behaviour that a single prompt-response pair never faces, building directly on the sibling Large language models node.",
+   "cs": "Systémy, které jazykovému modelu umožňují volat nástroje, vyhledávat informace a podnikat vícekrokové akce směřující k cíli namísto vydání jediné odpovědi: plánovací smyčky, protokoly volání nástrojů, paměť napříč kroky a koordinace více agentů. Přináší problémy spolehlivosti a hodnocení dlouhodobého autonomního chování, kterým jediná dvojice dotaz–odpověď nikdy nečelí, a přímo navazuje na sesterský uzel Velké jazykové modely."
+  },
+  {
+   "id": "02.02.09.09",
+   "level": 3,
+   "parentId": "02.02.09",
+   "name": "Prompt and Context Engineering",
+   "zone": "votable",
+   "ordinal": 8,
+   "kind": "ext",
+   "en": "The practice of shaping a language model's input — instructions, examples, retrieved context and output format — to reliably steer its behaviour without changing its weights: few-shot prompting, chain-of-thought elicitation, system-prompt design and context-window budgeting. The lightweight counterpart to fine-tuning, and the interface layer every application built on the sibling Large language models node depends on.",
+   "cs": "Praxe utváření vstupu jazykového modelu — instrukcí, příkladů, vyhledaného kontextu a formátu výstupu — tak, aby spolehlivě řídil jeho chování beze změny vah: few-shot promptování, vyvolávání řetězce úvah, návrh systémového promptu a rozpočtování kontextového okna. Odlehčený protějšek dolaďování a vrstva rozhraní, na níž závisí každá aplikace postavená na sesterském uzlu Velké jazykové modely."
+  },
+  {
+   "id": "02.02.09.10",
+   "level": 3,
+   "parentId": "02.02.09",
+   "name": "ML Operations and Evaluation",
+   "zone": "votable",
+   "ordinal": 9,
+   "kind": "ext",
+   "en": "Running machine learning as a production system rather than a research artifact: data and model versioning, training pipelines, deployment and serving, drift monitoring, and benchmark-based evaluation of quality, safety and cost. Applies the discipline of the sibling-domain Reliability engineering and Deployment and delivery nodes of Platform engineering specifically to models whose behaviour can silently degrade as data shifts.",
+   "cs": "Provoz strojového učení jako produkčního systému, nikoli výzkumného artefaktu: verzování dat a modelů, trénovací pipeline, nasazení a obsluha, sledování driftu a hodnocení kvality, bezpečnosti a nákladů pomocí benchmarků. Aplikuje disciplínu uzlů Inženýrství spolehlivosti a Nasazení a dodávka ze sesterské domény Platform engineering konkrétně na modely, jejichž chování se může s posunem dat tiše zhoršovat."
+  },
+  {
    "id": "02.02.10",
    "level": 2,
    "kind": "seed-override",
@@ -1078,6 +1133,20 @@
   },
   {
    "from": "02.02",
+   "to": "02.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.09",
+   "to": "02.02.11",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "02.02.09",
    "to": "02.04",
    "type": "references",
    "explored": null,

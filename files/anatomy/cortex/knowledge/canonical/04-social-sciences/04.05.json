@@ -338,6 +338,83 @@
    "kind": "ext",
    "en": "Organised influence on policy, why some interests organise more easily than others, and the regulation of access.",
    "cs": "Organizovaný vliv na politiku, proč se některé zájmy organizují snáze než jiné, a regulace přístupu."
+  },
+  {
+   "id": "04.05.06",
+   "level": 2,
+   "parentId": "04.05",
+   "name": "Public Administration and Civic Life",
+   "zone": "anchor",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The citizen-facing side of the state: the concrete transactions through which a person deals with authorities, claims entitlements, and exercises rights and duties day to day. Where public policy and administration studies how the machinery works from the inside, this is the same machinery seen from the other side of the counter.",
+   "cs": "Ta strana státu, kterou vidí občan: konkrétní úkony, jimiž člověk jedná s úřady, uplatňuje nároky a den co den vykonává práva a povinnosti. Zatímco veřejná politika a správa zkoumá fungování aparátu zevnitř, zde jde o tentýž aparát viděný z druhé strany přepážky."
+  },
+  {
+   "id": "04.05.06.01",
+   "level": 3,
+   "parentId": "04.05.06",
+   "name": "Interacting with Public Authorities",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The channels through which a citizen submits filings, receives official communication, and proves identity to the state — registries of persons and residence, official mailboxes, and the electronic identification schemes that increasingly stand in for a signature in person.",
+   "cs": "Kanály, jimiž občan podává podání, přijímá úřední komunikaci a prokazuje totožnost vůči státu — evidence obyvatel a pobytu, datové schránky a prostředky elektronické identifikace, které stále častěji nahrazují osobní podpis na přepážce."
+  },
+  {
+   "id": "04.05.06.02",
+   "level": 3,
+   "parentId": "04.05.06",
+   "name": "Licences and Permits",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Authorisations the state requires before a person may drive, practise a trade, build, or hold certain property — the tests and conditions that precede each, and the consequences of acting without one. The driving licence is the paradigm case: near-universal, renewable, and revocable on defined grounds.",
+   "cs": "Oprávnění, která stát vyžaduje předtím, než člověk smí řídit, vykonávat živnost, stavět nebo držet určitý majetek — zkoušky a podmínky, jež každému z nich předcházejí, a důsledky jednání bez něj. Řidičský průkaz je typickým případem: téměř všeobecný, obnovitelný a odejmutelný z vymezených důvodů."
+  },
+  {
+   "id": "04.05.06.03",
+   "level": 3,
+   "parentId": "04.05.06",
+   "name": "Personal Taxation and Filings",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The individual's side of the tax system: what must be reported and by when, which allowances and deductions reduce the amount owed, and the difference between an employer withholding tax and a person filing a return themselves.",
+   "cs": "Strana daňového systému patřící jednotlivci: co a dokdy se musí přiznat, které slevy a odpočty snižují daň a rozdíl mezi srážkou daně zaměstnavatelem a podáním přiznání osobou samostatně."
+  },
+  {
+   "id": "04.05.06.04",
+   "level": 3,
+   "parentId": "04.05.06",
+   "name": "Social Security Interactions",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "How a person registers for, claims, and maintains entitlement to public insurance benefits — sickness, unemployment, pension and family support — including the record-keeping that determines what a working life eventually pays out.",
+   "cs": "Jak se člověk registruje k veřejnému pojištění, uplatňuje nárok na dávky a udržuje si na ně nárok — nemoc, nezaměstnanost, důchod a rodinná podpora — včetně evidence, která nakonec určuje, co odpracovaný život vyplatí."
+  },
+  {
+   "id": "04.05.06.05",
+   "level": 3,
+   "parentId": "04.05.06",
+   "name": "Data Rights and Privacy in Practice",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Data protection as something a person actually does rather than a statute they read: requesting access to one's own records, correcting or erasing them, and knowing which authority to complain to when a holder of personal data will not comply.",
+   "cs": "Ochrana osobních údajů jako věc, kterou člověk skutečně dělá, nikoli jen zákon, který čte: žádost o přístup k vlastním údajům, jejich oprava či výmaz a vědomí, na který úřad se obrátit se stížností, když správce údajů nevyhoví."
+  },
+  {
+   "id": "04.05.06.06",
+   "level": 3,
+   "parentId": "04.05.06",
+   "name": "Civic Participation",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "The ordinary means by which a resident engages the public sphere beyond casting a vote: petitions, public consultations, local assemblies, referenda, and the associations through which individually weak voices combine into an organised one.",
+   "cs": "Běžné prostředky, jimiž se obyvatel zapojuje do veřejného života nad rámec volby: petice, veřejné projednávání, obecní shromáždění, referenda a sdružení, v nichž se jednotlivě slabé hlasy spojují v organizovaný."
   }
  ],
  "relations": [
@@ -442,6 +519,27 @@
   {
    "from": "04.05",
    "to": "04.06",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "04.05.06.05",
+   "to": "04.06.15",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.05.06.04",
+   "to": "04.06.11",
+   "type": "related-concept",
+   "explored": null,
+   "source": "curated-xref"
+  },
+  {
+   "from": "04.05.06",
+   "to": "04.11",
    "type": "references",
    "explored": null,
    "source": "brief-xref"

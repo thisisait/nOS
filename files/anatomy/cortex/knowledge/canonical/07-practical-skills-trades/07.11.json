@@ -1,0 +1,106 @@
+{
+ "domain": "07.11",
+ "nodes": [
+  {
+   "id": "07.11",
+   "level": 1,
+   "parentId": "07",
+   "name": "Communication & Collaboration",
+   "zone": "anchor",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Communication & Collaboration covers the practical skills of exchanging information, persuading, and working productively with other people: clear writing, spoken presentation, negotiation, running a meeting, teaching what you know, and giving and receiving feedback. These are transferable skills that operate across every other discipline and trade rather than belonging to any one of them, learned through practice and feedback rather than through theory alone.",
+   "cs": "Komunikace a spolupráce zahrnuje praktické dovednosti předávání informací, přesvědčování a produktivní práce s dalšími lidmi: srozumitelné psaní, ústní prezentaci, vyjednávání, vedení porady, předávání vlastních znalostí a poskytování i přijímání zpětné vazby. Jde o přenositelné dovednosti, které fungují napříč všemi ostatními obory a řemesly, nikoli o obor patřící jen jednomu z nich, a osvojují se praxí a zpětnou vazbou, nikoli pouze teorií.",
+   "brief": "Communication & Collaboration gathers the practical, teachable skills through which people exchange information and work together toward a shared result: writing that a reader can act on, speech that holds an audience, negotiation that reaches an agreement without wrecking the relationship, and the quieter craft of running a meeting or teaching a colleague something new. Unlike [[05.03]] Linguistics, which studies how language works as a system, this branch is concerned with using language and interaction effectively under real constraints — a deadline, a disagreement, an audience that is not paying attention.\n\nThe skills here draw on [[04.01]] Psychology's account of how people process information, persuade, and resist persuasion, and on [[04.07]] Education's methods for structuring what one person teaches another. They are exercised everywhere else in this taxonomy — a tradesperson writing a quote, an engineer presenting a design, a manager running a retrospective — which is why this branch treats them as a discipline in their own right rather than folding them into any single trade.\n\nMost of what is known here comes from practice, feedback, and observation rather than experiment; [Toastmasters International](https://www.toastmasters.org/) and the [Harvard Negotiation Project's overview of principled negotiation](https://www.pon.harvard.edu/tag/harvard-negotiation-project/) are two long-running practitioner traditions worth consulting directly."
+  },
+  {
+   "id": "07.11.01",
+   "level": 2,
+   "parentId": "07.11",
+   "name": "Writing & Documentation Practice",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The craft of producing text that a reader can act on without asking the author to explain it: structuring an argument, writing procedures and how-tos, editing for clarity, and choosing the right document for the job (email, spec, report, README). Good documentation practice treats the reader's time as the scarce resource and cuts everything that does not serve their next decision.",
+   "cs": "Řemeslo vytváření textu, podle kterého čtenář dokáže jednat, aniž by se musel autora ptát na vysvětlení: strukturování argumentu, psaní postupů a návodů, editace pro srozumitelnost a volba správného typu dokumentu pro danou situaci (e-mail, specifikace, zpráva, README). Dobrá dokumentační praxe považuje čtenářův čas za vzácný zdroj a škrtá vše, co neslouží jeho dalšímu rozhodnutí."
+  },
+  {
+   "id": "07.11.02",
+   "level": 2,
+   "parentId": "07.11",
+   "name": "Rhetoric & Presentation",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The craft of speaking to an audience so that a point lands: structuring a talk around one idea, using evidence and story to support it, controlling pace and delivery, and designing visual aids that support rather than duplicate the spoken word. Classical rhetoric's three appeals — ethos, logos, pathos — still describe most of what makes a presentation persuasive or forgettable.",
+   "cs": "Řemeslo mluvení k publiku tak, aby myšlenka skutečně zapůsobila: stavba projevu kolem jedné hlavní myšlenky, podpora důkazy a příběhem, ovládání tempa a přednesu a návrh vizuálních pomůcek, které mluvené slovo doplňují, nikoli opakují. Tři klasické rétorické apely — ethos, logos, pathos — stále popisují většinu toho, co dělá prezentaci přesvědčivou, nebo naopak zapomenutelnou."
+  },
+  {
+   "id": "07.11.03",
+   "level": 2,
+   "parentId": "07.11",
+   "name": "Negotiation & Persuasion",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Reaching agreement with someone whose interests differ from yours, without either giving away more than necessary or breaking the relationship. Covers preparing a walk-away position (BATNA), separating people from the problem, distinguishing stated positions from underlying interests, and the ethical line between persuasion and manipulation.",
+   "cs": "Dosažení dohody s někým, jehož zájmy se liší od těch vašich, aniž byste ustoupili víc, než je nutné, nebo si zničili vztah. Zahrnuje přípravu nejlepší alternativy k dohodě (BATNA), oddělení lidí od problému, rozlišení mezi deklarovanými pozicemi a skutečnými zájmy a etickou hranici mezi přesvědčováním a manipulací."
+  },
+  {
+   "id": "07.11.04",
+   "level": 2,
+   "parentId": "07.11",
+   "name": "Facilitation & Meetings",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Running a group discussion so that it produces a decision or output instead of just consuming everyone's time: setting an agenda with a clear purpose, keeping the discussion on track, drawing out quiet participants, and closing with explicit decisions and owners. A meeting without a stated purpose or a written outcome is a scheduling failure, not a communication one.",
+   "cs": "Vedení skupinové diskuse tak, aby vyprodukovala rozhodnutí nebo výstup, a nejen spotřebovala čas všech přítomných: sestavení programu s jasným účelem, udržení diskuse na tématu, zapojení tichých účastníků a uzavření s výslovnými rozhodnutími a odpovědnými osobami. Porada bez uvedeného účelu nebo zapsaného výstupu je selhání plánování, nikoli komunikace."
+  },
+  {
+   "id": "07.11.05",
+   "level": 2,
+   "parentId": "07.11",
+   "name": "Teaching & Mentoring Practice",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Transferring a skill or piece of knowledge from one person to another one-on-one or in a small group: assessing what the learner already knows, breaking a skill into practiceable steps, giving feedback that changes behaviour rather than just judging it, and knowing when to demonstrate versus when to let someone struggle productively. Distinct from formal pedagogy in scale and setting, though it borrows the same underlying principles.",
+   "cs": "Předávání dovednosti nebo znalosti z jedné osoby na druhou, individuálně nebo v malé skupině: posouzení toho, co student už umí, rozložení dovednosti na nacvičitelné kroky, poskytování zpětné vazby, která mění chování, a ne jen hodnotí, a poznání, kdy předvést postup a kdy nechat druhého produktivně zápasit sám. Od formální pedagogiky se liší měřítkem a prostředím, i když čerpá ze stejných principů."
+  },
+  {
+   "id": "07.11.06",
+   "level": 2,
+   "parentId": "07.11",
+   "name": "Teamwork & Feedback",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "Working inside a group toward a shared goal: coordinating who does what, surfacing disagreement early instead of letting it fester, and giving and receiving feedback that is specific, timely, and aimed at the work rather than the person. Includes the practical patterns — stand-ups, retrospectives, structured critique — that make ongoing collaboration sustainable rather than exhausting.",
+   "cs": "Práce uvnitř skupiny na společném cíli: koordinace toho, kdo co dělá, včasné vynášení neshod na povrch místo jejich doutnání pod pokličkou a poskytování i přijímání zpětné vazby, která je konkrétní, včasná a míří na práci, nikoli na osobu. Zahrnuje praktické vzorce — krátké denní schůzky, retrospektivy, strukturovanou kritiku — díky nimž je dlouhodobá spolupráce udržitelná, a ne vyčerpávající."
+  }
+ ],
+ "relations": [
+  {
+   "from": "07.11",
+   "to": "05.03",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.11",
+   "to": "04.07",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.11",
+   "to": "04.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}

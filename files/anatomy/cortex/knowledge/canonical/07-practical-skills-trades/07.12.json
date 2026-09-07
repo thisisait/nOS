@@ -1,0 +1,442 @@
+{
+ "domain": "07.12",
+ "nodes": [
+  {
+   "id": "07.12",
+   "level": 1,
+   "parentId": "07",
+   "name": "Home & Family Life",
+   "zone": "anchor",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The practical skills of running a household and sustaining family life: provisioning, maintaining, organising, and coordinating the people and property that make up a home. It treats the home as a system that must be kept running — meals, records, repairs, relationships — rather than a single trade learned once, which is what separates it from the individual craft packs elsewhere in this domain.",
+   "cs": "Praktické dovednosti vedení domácnosti a udržování rodinného života: zajišťování, údržba, organizace a koordinace lidí a majetku, kteří tvoří domov. Pojímá domov jako systém, který je třeba udržovat v chodu — jídlo, evidenci, opravy, vztahy —, nikoli jako jediné řemeslo osvojené jednou provždy, což jej odlišuje od jednotlivých řemeslných balíčků jinde v této doméně."
+  },
+  {
+   "id": "07.12.01",
+   "level": 2,
+   "parentId": "07.12",
+   "name": "Household Management",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The recurring operational work of keeping a home supplied and running: tracking bills and shared expenses, planning meals and provisioning, maintaining household inventories, and scheduling the routine tasks that keep a household functioning day to day. It is the domestic analogue of operations management — the goal is a system that runs predictably, not a single well-executed task.",
+   "cs": "Opakující se provozní práce udržující domácnost zásobenou a v chodu: sledování plateb a sdílených výdajů, plánování jídla a zásobování, vedení domácích zásob a plánování rutinních úkolů, které udržují domácnost v každodenním provozu. Jde o domácí obdobu provozního řízení — cílem je systém fungující předvídatelně, nikoli jednorázově dobře zvládnutý úkol."
+  },
+  {
+   "id": "07.12.01.01",
+   "level": 3,
+   "parentId": "07.12.01",
+   "name": "Household Budgeting and Bill Management",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Tracking household cash flow — income, recurring bills, shared accounts — and keeping payments on schedule. This is the day-to-day cash discipline of running a home, narrower than personal finance as a whole, which covers saving, investing, debt strategy and retirement.",
+   "cs": "Sledování peněžních toků domácnosti — příjmů, opakovaných plateb, sdílených účtů — a udržování plateb v termínu. Jde o každodenní finanční disciplínu chodu domácnosti, užší než osobní finance jako celek, které pokrývají spoření, investování, dluhovou strategii a důchod."
+  },
+  {
+   "id": "07.12.01.02",
+   "level": 3,
+   "parentId": "07.12.01",
+   "name": "Meal Planning and Provisioning",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Planning meals across a week or month, shopping efficiently against that plan, and managing a kitchen's stock so that provisioning is a routine rather than a daily improvisation. Includes accommodating dietary needs and reducing food waste.",
+   "cs": "Plánování jídel na týden či měsíc, efektivní nákup podle tohoto plánu a vedení zásob v kuchyni tak, aby zásobování bylo rutinou, nikoli denní improvizací. Zahrnuje zohlednění stravovacích potřeb a omezení plýtvání potravinami."
+  },
+  {
+   "id": "07.12.01.03",
+   "level": 3,
+   "parentId": "07.12.01",
+   "name": "Household Supplies and Inventory",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Keeping track of what a household consumes and needs — cleaning supplies, toiletries, spare parts, seasonal items — and maintaining a reorder rhythm that avoids both running out and overstocking.",
+   "cs": "Sledování toho, co domácnost spotřebovává a potřebuje — čisticí prostředky, drogerii, náhradní díly, sezónní věci — a udržování rytmu doobjednávání, který zabraňuje jak nedostatku, tak zbytečnému hromadění zásob."
+  },
+  {
+   "id": "07.12.01.04",
+   "level": 3,
+   "parentId": "07.12.01",
+   "name": "Domestic Scheduling and Task Coordination",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Dividing and scheduling the recurring chores of a household among its members, tracking what has and has not been done, and adjusting the division of labour as circumstances change. The coordination problem, not the individual chore, is the skill.",
+   "cs": "Rozdělování a plánování opakujících se domácích prací mezi členy domácnosti, sledování toho, co je a co není hotovo, a úprava dělby práce podle měnících se okolností. Dovedností je zde koordinační problém, nikoli jednotlivá práce sama."
+  },
+  {
+   "id": "07.12.01.05",
+   "level": 3,
+   "parentId": "07.12.01",
+   "name": "Household Safety and Preparedness Basics",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "The baseline safety habits of an occupied home: smoke and carbon-monoxide detection, childproofing and fall prevention, basic first-aid supplies, and knowing where the water, gas and electrical shutoffs are before an emergency requires finding them.",
+   "cs": "Základní bezpečnostní návyky obývaného domova: detekce kouře a oxidu uhelnatého, zabezpečení před dětmi a prevence pádů, základní vybavení první pomoci a znalost umístění hlavních uzávěrů vody, plynu a elektřiny dříve, než je bude třeba najít v nouzi."
+  },
+  {
+   "id": "07.12.02",
+   "level": 2,
+   "parentId": "07.12",
+   "name": "Parenting and Family Life",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The practice of raising children and sustaining a family unit: understanding developmental stages, setting consistent routines and boundaries, and navigating the transitions — new siblings, school, separation, blended households — that reshape a family over time.",
+   "cs": "Praxe výchovy dětí a udržování rodinné jednotky: porozumění vývojovým fázím, nastavení důsledných rutin a hranic a zvládání proměn — narození sourozence, škola, rozchod, sloučené rodiny —, které rodinu v čase přetvářejí."
+  },
+  {
+   "id": "07.12.02.01",
+   "level": 3,
+   "parentId": "07.12.02",
+   "name": "Child Development and Care Basics",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "The broad milestones of physical, cognitive and emotional development from infancy through adolescence, and the everyday care practices — feeding, sleep, health monitoring — that support them at each stage.",
+   "cs": "Široké vývojové milníky tělesného, kognitivního a emočního vývoje od kojeneckého věku po dospívání a každodenní pečovatelské praktiky — stravování, spánek, sledování zdraví —, které je v každé fázi podporují."
+  },
+  {
+   "id": "07.12.02.02",
+   "level": 3,
+   "parentId": "07.12.02",
+   "name": "Parenting Approaches and Discipline",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Contrasting styles of guiding a child's behaviour — authoritative, permissive, and everything between — and the practical techniques for setting limits, handling conflict, and staying consistent under stress.",
+   "cs": "Odlišné styly vedení dětského chování — autoritativní, benevolentní a vše mezi tím — a praktické techniky stanovování hranic, zvládání konfliktů a udržení důslednosti pod tlakem."
+  },
+  {
+   "id": "07.12.02.03",
+   "level": 3,
+   "parentId": "07.12.02",
+   "name": "Family Routines and Rituals",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The recurring structures — mealtimes, bedtimes, weekly rituals — that give children predictability and give a family its shared identity, and how to rebuild them after disruption.",
+   "cs": "Opakující se struktury — společná jídla, večerní rituály, týdenní zvyklosti —, které dětem dávají předvídatelnost a rodině sdílenou identitu, a jak je obnovit po narušení."
+  },
+  {
+   "id": "07.12.02.04",
+   "level": 3,
+   "parentId": "07.12.02",
+   "name": "Co-Parenting and Family Transitions",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Coordinating child-rearing across two households after separation or divorce, and the adjustments — new partners, blended siblings, relocation — that later reshape who is raising a child and how.",
+   "cs": "Koordinace výchovy dětí mezi dvěma domácnostmi po rozchodu či rozvodu a úpravy — noví partneři, sloučení sourozenci, stěhování —, které později přetvářejí, kdo dítě vychovává a jak."
+  },
+  {
+   "id": "07.12.02.05",
+   "level": 3,
+   "parentId": "07.12.02",
+   "name": "Supporting a Child's Education",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "The family's side of schooling: homework support, communication with teachers, and advocating for a child's needs, distinct from the education system itself and the pedagogy it runs on.",
+   "cs": "Rodinná stránka školní docházky: podpora při domácích úkolech, komunikace s učiteli a prosazování potřeb dítěte, odlišné od samotného vzdělávacího systému a pedagogiky, na níž stojí."
+  },
+  {
+   "id": "07.12.03",
+   "level": 2,
+   "parentId": "07.12",
+   "name": "Personal Organisation and Productivity",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Managing one's own time, attention, information and physical space well enough that daily life runs without constant improvisation. It is the individual counterpart to household management — the same discipline applied to a person's own commitments rather than the household's.",
+   "cs": "Řízení vlastního času, pozornosti, informací a fyzického prostoru natolik dobře, aby každodenní život probíhal bez neustálé improvizace. Jde o individuální protějšek řízení domácnosti — tutéž disciplínu uplatněnou na vlastní závazky člověka, nikoli na domácnost."
+  },
+  {
+   "id": "07.12.03.01",
+   "level": 3,
+   "parentId": "07.12.03",
+   "name": "Time Management and Planning Systems",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Methods for deciding what to do and when — calendars, task lists, time-blocking, prioritisation frameworks — and the habit of reviewing and adjusting a plan as commitments shift.",
+   "cs": "Metody rozhodování, co a kdy dělat — kalendáře, seznamy úkolů, časové bloky, prioritizační rámce — a návyk plán průběžně revidovat a upravovat podle měnících se závazků."
+  },
+  {
+   "id": "07.12.03.02",
+   "level": 3,
+   "parentId": "07.12.03",
+   "name": "Digital Life and Information Management",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Keeping personal files, passwords, subscriptions and accounts findable and secure across devices, and pruning the digital accumulation that otherwise makes small tasks — finding a document, cancelling a service — needlessly hard.",
+   "cs": "Udržování osobních souborů, hesel, předplatných a účtů dohledatelných a zabezpečených napříč zařízeními a omezování digitálního hromadění, které jinak zbytečně ztěžuje drobné úkoly — nalezení dokumentu, zrušení služby."
+  },
+  {
+   "id": "07.12.03.03",
+   "level": 3,
+   "parentId": "07.12.03",
+   "name": "Habit Formation and Personal Systems",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "How habits form and break, and the design of small recurring systems — checklists, triggers, defaults — that make a desired behaviour the path of least resistance rather than a matter of willpower.",
+   "cs": "Jak se návyky utvářejí a ruší a návrh drobných opakujících se systémů — kontrolní seznamy, spouštěče, výchozí nastavení —, které z žádoucího chování dělají cestu nejmenšího odporu, nikoli otázku vůle."
+  },
+  {
+   "id": "07.12.03.04",
+   "level": 3,
+   "parentId": "07.12.03",
+   "name": "Decluttering and Physical Organisation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Deciding what to keep, store or discard, and organising a living space so that objects have a place and finding them does not require memory or search.",
+   "cs": "Rozhodování, co ponechat, uložit nebo vyřadit, a organizace obytného prostoru tak, aby věci měly své místo a jejich nalezení nevyžadovalo paměť ani hledání."
+  },
+  {
+   "id": "07.12.03.05",
+   "level": 3,
+   "parentId": "07.12.03",
+   "name": "Goal Setting and Personal Review",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Setting personal goals at a scale longer than a to-do list, and the periodic review — weekly, annual — that checks progress against them and revises direction before drift becomes failure.",
+   "cs": "Stanovování osobních cílů v horizontu delším než seznam úkolů a pravidelné hodnocení — týdenní, roční —, které porovnává pokrok s cíli a upravuje směřování dříve, než se odchylka změní v neúspěch."
+  },
+  {
+   "id": "07.12.04",
+   "level": 2,
+   "parentId": "07.12",
+   "name": "Household Legal and Administrative Practice",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The recurring paperwork of running a household: contracts, records, insurance and the documents that matter when something goes wrong. It is a layperson's practice, not legal expertise — knowing which documents to keep, which to sign carefully, and when to bring in a professional.",
+   "cs": "Opakující se papírování při vedení domácnosti: smlouvy, evidence, pojištění a dokumenty, na kterých záleží, když se něco pokazí. Jde o laickou praxi, nikoli právní odbornost — vědět, které dokumenty uchovávat, které podepisovat obezřetně a kdy přizvat odborníka."
+  },
+  {
+   "id": "07.12.04.01",
+   "level": 3,
+   "parentId": "07.12.04",
+   "name": "Household Records and Documentation",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "What to keep — contracts, receipts for major purchases, warranties, identity documents — and how to organise it so a record is findable years later when it is needed, not just when it was filed.",
+   "cs": "Co uchovávat — smlouvy, doklady o větších nákupech, záruky, identifikační doklady — a jak si to uspořádat, aby byl záznam dohledatelný i po letech, kdy je potřeba, nikoli jen v době, kdy byl založen."
+  },
+  {
+   "id": "07.12.04.02",
+   "level": 3,
+   "parentId": "07.12.04",
+   "name": "Housing Contracts and Tenancy",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Reading and negotiating a lease or purchase contract as a layperson: deposits, notice periods, maintenance responsibilities, and the clauses most likely to cause a later dispute.",
+   "cs": "Čtení a vyjednávání nájemní či kupní smlouvy z pozice laika: kauce, výpovědní lhůty, odpovědnost za údržbu a doložky, které nejčastěji vedou k pozdějšímu sporu."
+  },
+  {
+   "id": "07.12.04.03",
+   "level": 3,
+   "parentId": "07.12.04",
+   "name": "Household Insurance",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Matching insurance cover — property, liability, contents — to what a household actually owns and risks, and understanding the exclusions that make a policy worth less than it appears.",
+   "cs": "Sladění pojistného krytí — majetku, odpovědnosti, domácnosti — s tím, co domácnost skutečně vlastní a čemu je vystavena, a pochopení výluk, kvůli nimž má pojistka nižší hodnotu, než se zdá."
+  },
+  {
+   "id": "07.12.04.04",
+   "level": 3,
+   "parentId": "07.12.04",
+   "name": "Wills and Family Estate Basics",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The basic instruments — a will, beneficiary designations, powers of attorney — that determine what happens to a household's assets and decisions if a member becomes incapacitated or dies, and why postponing them is itself a decision.",
+   "cs": "Základní nástroje — závěť, určení oprávněných osob, plné moci —, které určují, co se stane s majetkem a rozhodováním domácnosti, pokud se člen stane nezpůsobilým nebo zemře, a proč je jejich odkládání samo o sobě rozhodnutím."
+  },
+  {
+   "id": "07.12.04.05",
+   "level": 3,
+   "parentId": "07.12.04",
+   "name": "Household Correspondence and Official Requests",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Managing the steady stream of official letters, notices and forms a household receives, and knowing which require action, which are routine, and which should be escalated to the relevant public authority.",
+   "cs": "Zvládání stálého přílivu úředních dopisů, oznámení a formulářů, které domácnost dostává, a rozlišování, které vyžadují reakci, které jsou rutinní a které je třeba předat příslušnému veřejnému orgánu."
+  },
+  {
+   "id": "07.12.05",
+   "level": 2,
+   "parentId": "07.12",
+   "name": "Home Maintenance Planning",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Planning and scheduling the upkeep of a home before neglect becomes damage: knowing what needs periodic attention, tracking when it was last done, and deciding what to do oneself versus hire out. It sits above the individual trades — the planning layer that decides when construction, plumbing or electrical skill is actually needed.",
+   "cs": "Plánování a rozvržení údržby domova dříve, než se zanedbání promění ve škodu: vědět, co vyžaduje pravidelnou pozornost, sledovat, kdy to bylo naposledy provedeno, a rozhodovat, co zvládnout svépomocí a co zadat odborníkovi. Stojí nad jednotlivými řemesly — je to plánovací vrstva, která rozhoduje, kdy je skutečně potřeba stavební, instalatérská či elektrikářská dovednost."
+  },
+  {
+   "id": "07.12.05.01",
+   "level": 3,
+   "parentId": "07.12.05",
+   "name": "Maintenance Scheduling and Records",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Building a calendar of recurring maintenance tasks — from filter changes to roof inspections — and keeping a record of what was done, by whom, and when it is due again.",
+   "cs": "Sestavení kalendáře opakujících se údržbových úkolů — od výměny filtrů po kontrolu střechy — a vedení záznamu o tom, co bylo provedeno, kým a kdy je úkol splatný znovu."
+  },
+  {
+   "id": "07.12.05.02",
+   "level": 3,
+   "parentId": "07.12.05",
+   "name": "Structural and Exterior Upkeep",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "Recognising early signs of wear in a building's structure and exterior — roofing, foundations, cladding, drainage — that connect directly to the construction skills covered elsewhere, and knowing when a small repair prevents a large one.",
+   "cs": "Rozpoznávání raných příznaků opotřebení konstrukce a vnějšího pláště budovy — střechy, základů, obvodového pláště, odvodnění —, které přímo navazují na stavební dovednosti popsané jinde, a poznání, kdy drobná oprava předejde velké."
+  },
+  {
+   "id": "07.12.05.03",
+   "level": 3,
+   "parentId": "07.12.05",
+   "name": "Plumbing and Home Systems Upkeep",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "Routine checks and minor upkeep of a home's water, heating and drainage systems that connect directly to plumbing skill, and recognising the symptoms that mean a problem has passed the point a homeowner should handle alone.",
+   "cs": "Pravidelné kontroly a drobná údržba vodovodních, topných a odpadních systémů domácnosti, které přímo navazují na instalatérskou dovednost, a rozpoznání příznaků, kdy problém překročil hranici, kterou by majitel měl řešit sám."
+  },
+  {
+   "id": "07.12.05.04",
+   "level": 3,
+   "parentId": "07.12.05",
+   "name": "Seasonal Home Preparation",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "The tasks tied to a change of season — winterising pipes, servicing heating before cold weather, clearing gutters before rain — where timing matters as much as the task itself.",
+   "cs": "Úkoly vázané na střídání ročních období — zazimování potrubí, servis topení před chladným počasím, čištění okapů před deštěm —, kde na načasování záleží stejně jako na samotném úkolu."
+  },
+  {
+   "id": "07.12.05.05",
+   "level": 3,
+   "parentId": "07.12.05",
+   "name": "Hiring and Managing Contractors",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Deciding when a job exceeds a homeowner's own skill, finding and vetting a tradesperson, and managing the job — quotes, scope, payment — so that hiring out work does not simply trade one set of risks for another.",
+   "cs": "Rozhodování, kdy práce přesahuje dovednosti majitele, hledání a prověřování řemeslníka a řízení zakázky — nabídky, rozsah, platba — tak, aby zadání práce navenek jednoduše nevyměnilo jedna rizika za druhá."
+  },
+  {
+   "id": "07.12.06",
+   "level": 2,
+   "parentId": "07.12",
+   "name": "Caring for Family Members",
+   "zone": "votable",
+   "ordinal": 5,
+   "kind": "ext",
+   "en": "The practice of supporting a family member who needs more help than routine parenting or household life requires: an aging parent, a partner or child with a disability, or someone recovering from illness. It carries its own logistics, emotional weight and long-term planning distinct from raising healthy children.",
+   "cs": "Praxe podpory člena rodiny, který potřebuje více pomoci, než vyžaduje běžná výchova nebo chod domácnosti: stárnoucí rodič, partner či dítě se zdravotním postižením, nebo někdo zotavující se z nemoci. Nese vlastní logistiku, emoční zátěž a dlouhodobé plánování odlišné od výchovy zdravých dětí."
+  },
+  {
+   "id": "07.12.06.01",
+   "level": 3,
+   "parentId": "07.12.06",
+   "name": "Elder Care and Aging Parents",
+   "zone": "votable",
+   "ordinal": 0,
+   "kind": "ext",
+   "en": "Assessing an aging relative's changing needs, arranging support — from occasional help to full-time care — and the conversations about independence and safety that become harder to postpone over time.",
+   "cs": "Posuzování měnících se potřeb stárnoucího příbuzného, zajišťování podpory — od příležitostné pomoci až po celodenní péči — a rozhovory o samostatnosti a bezpečnosti, které je časem stále obtížnější odkládat."
+  },
+  {
+   "id": "07.12.06.02",
+   "level": 3,
+   "parentId": "07.12.06",
+   "name": "Caregiving for Illness or Disability",
+   "zone": "votable",
+   "ordinal": 1,
+   "kind": "ext",
+   "en": "The day-to-day logistics of supporting a family member with a chronic illness or disability: medical appointments, medication, adapted routines, and coordinating with the professionals involved in their care.",
+   "cs": "Každodenní logistika podpory člena rodiny s chronickým onemocněním nebo zdravotním postižením: lékařské termíny, medikace, upravené rutiny a koordinace s odborníky zapojenými do jeho péče."
+  },
+  {
+   "id": "07.12.06.03",
+   "level": 3,
+   "parentId": "07.12.06",
+   "name": "Respite and Caregiver Wellbeing",
+   "zone": "votable",
+   "ordinal": 2,
+   "kind": "ext",
+   "en": "The risk of caregiver burnout, and the practical measures — respite care, shared responsibility, support networks — that keep a caregiver capable of sustaining care over years rather than months.",
+   "cs": "Riziko vyčerpání pečující osoby a praktická opatření — odlehčovací péče, sdílená odpovědnost, podpůrné sítě —, díky nimž je pečující osoba schopna péči udržet po léta, nikoli jen po měsíce."
+  },
+  {
+   "id": "07.12.06.04",
+   "level": 3,
+   "parentId": "07.12.06",
+   "name": "End-of-Life Planning and Support",
+   "zone": "votable",
+   "ordinal": 3,
+   "kind": "ext",
+   "en": "Preparing for a family member's decline and death: advance directives, palliative and hospice options, and the practical and emotional work of supporting someone through their final period.",
+   "cs": "Příprava na úbytek sil a úmrtí člena rodiny: dříve vyslovená přání, možnosti paliativní a hospicové péče a praktická i emoční práce spojená s podporou člověka v jeho poslední fázi života."
+  },
+  {
+   "id": "07.12.06.05",
+   "level": 3,
+   "parentId": "07.12.06",
+   "name": "Coordinating Paid and Community Care",
+   "zone": "votable",
+   "ordinal": 4,
+   "kind": "ext",
+   "en": "Working with home-care agencies, community services and public support programmes alongside a family's own caregiving, and managing the handoffs between them as needs change.",
+   "cs": "Spolupráce s agenturami domácí péče, komunitními službami a veřejnými podpůrnými programy vedle vlastní rodinné péče a řízení předávání mezi nimi, jak se potřeby mění."
+  }
+ ],
+ "relations": [
+  {
+   "from": "07.12",
+   "to": "07.01",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.12",
+   "to": "07.04",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.12",
+   "to": "04.05",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  },
+  {
+   "from": "07.12",
+   "to": "04.11.08",
+   "type": "references",
+   "explored": null,
+   "source": "brief-xref"
+  }
+ ]
+}
