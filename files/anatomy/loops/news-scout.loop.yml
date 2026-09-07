@@ -53,3 +53,13 @@ steps:
     writes:
       - target: "notification:wing-inbox"
         via: "daily digest notification"
+
+# The pulse job is GENERATED from this loop (loop-generator, phase 3): the
+# trigger's cadence becomes the schedule and `run` the command. One source —
+# tools/loop-graph-gen.py draws it, tools/discover-pulse-catalog.py schedules
+# it. A loop with a `run` + a `cadence` is scheduled; one without is graph-only.
+run: "{{ playbook_dir }}/tools/loops/news-scout.py --to-keap"
+pulse:
+  category: knowledge
+  max_runtime_s: 600
+  jitter_min: 10

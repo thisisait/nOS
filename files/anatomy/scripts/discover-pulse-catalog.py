@@ -199,7 +199,31 @@ def _scan_sources(playbook_dir: str) -> list[str]:
     return (
         glob.glob(f"{playbook_dir}/files/anatomy/plugins/*/plugin.yml")
         + glob.glob(f"{playbook_dir}/files/anatomy/agents/*/agent.yml")
+        # Operational loops (loop-definition-model): the pulse job is GENERATED
+        # from the manifest, not hand-written — same file tools/loop-graph-gen.py
+        # draws for the face. One source for the loop's picture and its cadence.
+        + glob.glob(f"{playbook_dir}/files/anatomy/loops/*.loop.yml")
     )
+
+
+def _loop_pulse_block(m: dict) -> dict:
+    """A loop manifest → the `pulse: jobs:` shape the catalog already speaks.
+    A loop is SCHEDULED only if it declares both a `cadence` and a `run`; one
+    without (a graph-only loop) contributes no job. `job.name` is the loop id,
+    so its pulse id reads `loop:<id>` (plugin_name is forced to `loop` below)."""
+    cadence = (m.get("trigger") or {}).get("cadence")
+    run = m.get("run")
+    if not (cadence and run):
+        return {}
+    p = m.get("pulse") or {}
+    job = {"name": m["id"], "command": run, "schedule": cadence,
+           "category": p.get("category", "knowledge"),
+           "max_runtime_s": p.get("max_runtime_s", 600),
+           "max_concurrent": 1}
+    for opt in ("jitter_min", "findings_exit_codes", "env", "writes"):
+        if opt in p:
+            job[opt] = p[opt]
+    return {"jobs": [job]}
 
 
 def main() -> int:
@@ -243,17 +267,17 @@ def main() -> int:
                 doc = yaml.safe_load(fh) or {}
         except Exception:
             continue
-        block = doc.get("pulse") or {}
+        is_loop = path.endswith(".loop.yml")
+        block = _loop_pulse_block(doc) if is_loop else (doc.get("pulse") or {})
+        plugin_name = "loop" if is_loop else (
+            doc.get("name") or doc.get("agent_id")
+            or path.split("/")[-1].replace(".yml", ""))
         for job in block.get("jobs") or []:
             expanded = _expand(job, subs)
             _refuse_derived_env(expanded, path.split("/anatomy/")[-1])
             catalog.append({
                 "source": path.split("/anatomy/")[-1],
-                "plugin_name": (
-                    doc.get("name")
-                    or doc.get("agent_id")
-                    or path.split("/")[-1].replace(".yml", "")
-                ),
+                "plugin_name": plugin_name,
                 "job": expanded,
             })
 
