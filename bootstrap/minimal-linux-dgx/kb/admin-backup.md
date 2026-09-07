@@ -46,7 +46,7 @@ sudo systemctl list-timers 'nos-dgx-*'          # next runs
 sudo tail -20 /var/lib/nos-dgx/backup/backup.log
 sudo systemctl start nos-dgx-backup.service     # run one now
 sudo systemctl start nos-dgx-backup-verify.service && cat /var/lib/nos-dgx/backup/last.json
-sudo -E bash -c '. /etc/nos/restic.env; export RESTIC_REPOSITORY RESTIC_PASSWORD; restic snapshots'
+sudo bash -c '. /etc/nos/restic.env; export RESTIC_REPOSITORY RESTIC_PASSWORD RESTIC_CACHE_DIR=/var/cache/nos-dgx-restic; restic snapshots'
 ```
 
 Backrest (8446) shows the same repository; use it to browse and restore a file
@@ -58,7 +58,7 @@ verifier.
 ## Restore one thing
 
 ```
-sudo -E bash -c '. /etc/nos/restic.env; export RESTIC_REPOSITORY RESTIC_PASSWORD
+sudo bash -c '. /etc/nos/restic.env; export RESTIC_REPOSITORY RESTIC_PASSWORD RESTIC_CACHE_DIR=/var/cache/nos-dgx-restic
   restic restore latest --target /tmp/r --include /home/svp2bj/projects/foo'   # a directory
   restic restore latest --target /tmp/r --include /var/lib/nos-dgx/backup/stage/keap.db'   # KEAP db
 ```

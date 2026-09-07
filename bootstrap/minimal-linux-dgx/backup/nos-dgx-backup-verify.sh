@@ -36,6 +36,9 @@ PY
 # shellcheck disable=SC1091
 . /etc/nos/restic.env 2>/dev/null || { emit UNKNOWN "/etc/nos/restic.env unreadable"; exit 0; }
 export RESTIC_REPOSITORY RESTIC_PASSWORD
+# systemd gives no $HOME; restic needs a cache dir or refuses to open the repo.
+export RESTIC_CACHE_DIR=/var/cache/nos-dgx-restic
+install -d -m 0700 "$RESTIC_CACHE_DIR"
 BK_MOUNT="${BK_MOUNT:-/srv/backup}"
 mountpoint -q "$BK_MOUNT" || { emit UNKNOWN "$BK_MOUNT is not a mountpoint — backup disk absent"; exit 0; }
 

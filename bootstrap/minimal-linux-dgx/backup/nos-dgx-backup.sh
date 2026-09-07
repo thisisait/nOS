@@ -27,6 +27,9 @@ export PATH=/usr/local/bin:/usr/bin:/bin
 # shellcheck disable=SC1091
 . /etc/nos/restic.env                    # RESTIC_REPOSITORY, RESTIC_PASSWORD
 export RESTIC_REPOSITORY RESTIC_PASSWORD
+# systemd gives no $HOME; restic needs a cache dir or refuses to open the repo.
+export RESTIC_CACHE_DIR=/var/cache/nos-dgx-restic
+install -d -m 0700 "$RESTIC_CACHE_DIR"
 BK_MOUNT="${BK_MOUNT:-/srv/backup}"
 RT=/srv/nos-dgx
 STAGE=/var/lib/nos-dgx/backup/stage
