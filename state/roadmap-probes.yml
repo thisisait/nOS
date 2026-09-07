@@ -90,6 +90,31 @@ loop-sandbox:
     the row asks whether two named open questions have MIT answers — a
     literature verdict, not an estate fact
 
+# The gate that reads a version-pin-bump's own delta: a major crossing,
+# downgrade, or unreadable pin stamps requires_operator. The ledger function IS
+# the deliverable — and it is the same value-reading oracle loop-verdict-vacuity
+# asked for (the two rows settled together), so both probe it.
+loop-pin-bump-gate: >-
+  grep -q "def pin_bump_needs_operator" files/anatomy/bone/ledger.py
+
+loop-verdict-vacuity: >-
+  grep -q "def pin_bump_needs_operator" files/anatomy/bone/ledger.py
+
+# The driver must READ the stamp, not just the ledger write it. Its refusal
+# line is the deliverable — a column no driver consulted was the whole bug.
+loop-requires-operator: >-
+  grep -q "requires an operator" tools/loop-pr.py
+
+# One reader of "which pulse job is red": the source delegates the SELECTION to
+# red-status.failing_jobs instead of running its own exit_code<>0 query.
+loop-pulse-runs-poison: >-
+  grep -q "_load_failing_jobs" files/anatomy/bone/weaknesses.py
+
+# Phase-1: the seeder forwards the explicit ACL, not only the visibility grade
+# (agent-door refusal is phase-2, its own row).
+dtt-share-model: >-
+  grep -q "sharedWith:" roles/pazny.keap/tasks/seed-face-table.yml
+
 # The deliverable is a grader AGENT, so the probe is that agent's definition —
 # not the word "intent", which the scout's manifest already uses in prose.
 local-llm-intent: >-
