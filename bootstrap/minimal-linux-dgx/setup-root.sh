@@ -319,13 +319,17 @@ if [ "${NOS_BACKUP_FORMAT:-}" = yes ] && [ -n "${NOS_BACKUP_DEVICE:-}" ]; then
   BKREAL="$(readlink -f "$NOS_BACKUP_DEVICE")"
   # Mountpoints may carry spaces/UTF-8 ("/media/admin/Nový svazek"): read them
   # line by line, unescaped (-n, no -r), and unmount by DEVICE, not by path.
+  # No lazy unmount here: a lazily detached filesystem keeps the block
+  # device busy for wipefs as long as any holder (Nautilus) lives. Kill the
+  # holders, unmount for real, or stop and say who is holding it.
   findmnt -no TARGET "$BKREAL" 2>/dev/null | while IFS= read -r mp; do
-    fuser -km -- "$mp" 2>/dev/null || true
+    fuser -km "$mp" 2>/dev/null || true
+    sleep 1
+    umount "$mp" || { echo "REFUSING: $mp still busy:"; fuser -vm "$mp" 2>&1; exit 1; }
   done
-  sleep 1
-  while findmnt -n "$BKREAL" >/dev/null 2>&1; do
-    umount "$BKREAL" 2>/dev/null || umount -l "$BKREAL" || break
-  done
+  if findmnt -n "$BKREAL" >/dev/null 2>&1; then
+    echo "REFUSING: $BKREAL is still mounted"; exit 1
+  fi
   wipefs -aq "$BKREAL"
   mkfs.ext4 -q -L nos-backup "$BKREAL"
   echo "formatted $BKREAL as ext4 (label nos-backup)"
