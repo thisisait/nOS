@@ -17,6 +17,7 @@
 	import { onMount } from 'svelte';
 	import { SvelteFlow, Background, Controls, MiniMap, type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
+	import './graph-theme.css';
 	import { loadTable, tablesUpsertRow } from '$lib/api/tables';
 	import { ApiError } from '$lib/api/client';
 	import { rowsToGraph, reparentPayload } from '$lib/tables/planner';

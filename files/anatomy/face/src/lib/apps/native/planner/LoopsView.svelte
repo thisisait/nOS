@@ -18,6 +18,7 @@
 	import { onMount } from 'svelte';
 	import { SvelteFlow, Background, Controls, MiniMap, type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
+	import './graph-theme.css';
 	import raw from '$lib/anatomy/loop-graph.json';
 	import { loadLoop, type LoopResponse } from '$lib/api/loop';
 	import { StatusNote, Badge } from '$lib/components/ui';

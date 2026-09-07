@@ -1,0 +1,48 @@
+/*
+  Dark-theme the SvelteFlow CHROME for the planner's graphs. The library ships
+  a light default (white minimap, white control buttons, white-boxed edge
+  labels) that is illegible on our #14171c canvas — the operator's finding
+  2026-09-07. These are the framework's global classes, so one shared sheet
+  themes every planner reading (Loops / Routing / Roadmap) consistently; the
+  per-view files import it rather than each re-declaring (and drifting).
+
+  Chrome only — node bodies keep their per-view KIND colours.
+*/
+
+/* Zoom / fit control buttons — dark tile, light glyph. */
+:global(.svelte-flow__controls) {
+	box-shadow: 0 0 0 1px var(--border, #2a2f38);
+	border-radius: 6px;
+	overflow: hidden;
+}
+:global(.svelte-flow__controls-button) {
+	background: var(--panel, #1b1f27);
+	border-bottom: 1px solid var(--border, #2a2f38);
+	fill: var(--fg, #e8ecf3);
+}
+:global(.svelte-flow__controls-button:hover) {
+	background: color-mix(in srgb, var(--panel, #1b1f27) 82%, #ffffff);
+}
+:global(.svelte-flow__controls-button svg) {
+	fill: var(--fg, #e8ecf3);
+}
+
+/* Minimap — dark ground, muted nodes, a subtle (not blinding) viewport mask. */
+:global(.svelte-flow__minimap) {
+	background-color: var(--panel, #1b1f27);
+}
+:global(.svelte-flow__minimap-mask) {
+	fill: color-mix(in srgb, var(--bg, #14171c) 68%, transparent);
+}
+:global(.svelte-flow__minimap-node) {
+	fill: #3a4150;
+	stroke: none;
+}
+
+/* Edge labels — dark box, light text (was grey text in a white box). */
+:global(.svelte-flow__edge-textbg) {
+	fill: var(--panel, #1b1f27);
+}
+:global(.svelte-flow__edge-text) {
+	fill: var(--fg, #e8ecf3);
+}

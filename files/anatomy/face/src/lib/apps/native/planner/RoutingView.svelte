@@ -17,6 +17,7 @@
 <script lang="ts">
 	import { SvelteFlow, Background, Controls, MiniMap, type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
+	import './graph-theme.css';
 	import raw from '$lib/anatomy/routing-graph.json';
 	import { StatusNote } from '$lib/components/ui';
 
