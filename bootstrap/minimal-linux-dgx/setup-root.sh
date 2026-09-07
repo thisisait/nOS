@@ -76,9 +76,11 @@ gpasswd -d tester docker >/dev/null 2>&1 || true
 gpasswd -d tester sudo   >/dev/null 2>&1 || true
 # Humans only (uid >= 1000): service accounts such as nos-mcpo sit in nos-users
 # for the READ token but get no shelf, no linger, no home.
-USERS_ALL="$(for u in $(getent group nos-users | cut -d: -f4 | tr , " "); do [ "$(id -u "$u")" -ge 1000 ] && printf '%s ' "$u"; done)"
+# (`if`, not `[ ] &&`: under set -e a command substitution whose LAST member
+# fails the test ends the whole run — measured, the last member was nos-mcpo.)
+USERS_ALL="$(for u in $(getent group nos-users | cut -d: -f4 | tr , " "); do if [ "$(id -u "$u")" -ge 1000 ]; then printf '%s ' "$u"; fi; done)"
 for u in $(getent group nos-users | cut -d: -f4 | tr , " "); do
-  [ "$(id -u "$u")" -lt 1000 ] && loginctl disable-linger "$u" 2>/dev/null || true
+  if [ "$(id -u "$u")" -lt 1000 ]; then loginctl disable-linger "$u" 2>/dev/null || true; fi
 done
 
 say "developer substrate: linger, per-user ceilings, rootless-docker prerequisites"
