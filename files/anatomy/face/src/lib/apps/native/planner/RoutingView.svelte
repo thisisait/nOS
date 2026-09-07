@@ -80,7 +80,8 @@
 	<header>
 		<strong>Routing</strong>
 		<span class="sub"
-			>capability space · read-only · {graph.agents.length} agents · from agent manifests</span
+			>who may do what, where, touching what · read-only · {graph.agents.length} agents · locus &rarr;
+			agent &rarr; task type &rarr; scope</span
 		>
 		<span class="legend">
 			{#each KIND_LEGEND as k}

@@ -21,12 +21,13 @@
 	import './graph-theme.css';
 	import raw from '$lib/anatomy/loop-graph.json';
 	import { loadLoop, type LoopResponse } from '$lib/api/loop';
-	import { StatusNote, Badge } from '$lib/components/ui';
+	import { StatusNote, Badge, Tabs, type TabSpec } from '$lib/components/ui';
 
 	type LoopNode = {
 		id: string;
 		kind: string;
 		label: string;
+		loop: string;
 		x: number;
 		y: number;
 		disabled?: boolean;
@@ -34,13 +35,32 @@
 		out_of_loop?: boolean;
 		enabled?: boolean | null;
 	};
-	type LoopEdge = { id: string; source: string; target: string; kind: string; label?: string };
+	type LoopEdge = {
+		id: string;
+		source: string;
+		target: string;
+		kind: string;
+		loop: string;
+		label?: string;
+	};
+	type LoopDef = { id: string; label: string; blurb: string };
 	const graph = raw as {
 		nodes: LoopNode[];
 		edges: LoopEdge[];
 		refusals: string[];
 		engine_actor: string;
+		loops: LoopDef[];
+		default_loop: string;
 	};
+
+	// A loop is a SELECTION, not a filter — draw one at a time (roadmap). The
+	// catalog is data (graph.loops), so a future loop is one more list entry,
+	// never a new branch of markup.
+	let selectedLoop = $state(graph.default_loop);
+	const activeLoopDef = $derived(graph.loops.find((l) => l.id === selectedLoop) ?? graph.loops[0]);
+	const loopTabs: TabSpec[] = graph.loops.map((l) => ({ key: l.id, label: l.label }));
+	const loopNodes = $derived(graph.nodes.filter((n) => n.loop === selectedLoop));
+	const loopEdges = $derived(graph.edges.filter((e) => e.loop === selectedLoop));
 
 	let live = $state<LoopResponse | null>(null);
 	let loadErr = $state('');
@@ -134,7 +154,7 @@
 	}
 
 	const nodes = $derived.by<Node[]>(() =>
-		graph.nodes.map((n) => {
+		loopNodes.map((n) => {
 			const c = countFor(n.id);
 			const label = c != null && c > 0 ? `${baseLabel(n)}  ·  ${c}` : baseLabel(n);
 			return {
@@ -147,14 +167,17 @@
 			} as Node;
 		})
 	);
-	const edges: Edge[] = graph.edges.map((e) => ({
-		id: e.id,
-		source: e.source,
-		target: e.target,
-		label: e.label,
-		animated: e.kind === 'flow',
-		style: EDGE_STYLE[e.kind] ?? ''
-	})) as Edge[];
+	const edges = $derived.by<Edge[]>(
+		() =>
+			loopEdges.map((e) => ({
+				id: e.id,
+				source: e.source,
+				target: e.target,
+				label: e.label,
+				animated: e.kind === 'flow',
+				style: EDGE_STYLE[e.kind] ?? ''
+			})) as Edge[]
+	);
 </script>
 
 <div class="loops">
@@ -176,28 +199,47 @@
 		<button class="refresh" onclick={load} aria-label="Reload loop runs">↻</button>
 	</header>
 
-	<div class="flow">
-		<!-- Pan + zoom ONLY (operator's standing rule for the loops layout). The
-		     loop's shape is doctrine, not a thing to select or poke: nodes don't
-		     drag or connect, and elementsSelectable/nodesFocusable off remove the
-		     dead click-to-highlight state a reader would mistake for a control.
-		     A node's detail lives in the Roadmap reading, where a node IS a row. -->
-		<SvelteFlow
-			{nodes}
-			{edges}
-			fitView
-			nodesConnectable={false}
-			nodesDraggable={false}
-			elementsSelectable={false}
-			nodesFocusable={false}
-			edgesFocusable={false}
-			selectionOnDrag={false}
-		>
-			<Background />
-			<Controls showLock={false} />
-			<MiniMap pannable zoomable />
-		</SvelteFlow>
-	</div>
+	<!-- The selector: which loop to draw. This is a VIEW-level choice, not
+	     node-selection — the estate runs more than one loop (SERE vs
+	     nos-loop-proper), and a loop is a selection, not a filter: one is drawn
+	     at a time rather than tangled into a single graph. -->
+	{#if graph.loops.length > 1}
+		<div class="loop-picker">
+			<Tabs tabs={loopTabs} bind:active={selectedLoop} label="Which loop to view" />
+		</div>
+	{/if}
+	{#if activeLoopDef}
+		<p class="blurb">{activeLoopDef.blurb}</p>
+	{/if}
+
+	{#if loopNodes.length === 0}
+		<StatusNote kind="empty" title="No harness graph for this loop yet">
+			{activeLoopDef?.label} has no doctrine module to derive a graph from — see the blurb above.
+		</StatusNote>
+	{:else}
+		<div class="flow">
+			<!-- Pan + zoom ONLY (operator's standing rule for the loops layout). The
+			     loop's shape is doctrine, not a thing to select or poke: nodes don't
+			     drag or connect, and elementsSelectable/nodesFocusable off remove the
+			     dead click-to-highlight state a reader would mistake for a control.
+			     A node's detail lives in the Roadmap reading, where a node IS a row. -->
+			<SvelteFlow
+				{nodes}
+				{edges}
+				fitView
+				nodesConnectable={false}
+				nodesDraggable={false}
+				elementsSelectable={false}
+				nodesFocusable={false}
+				edgesFocusable={false}
+				selectionOnDrag={false}
+			>
+				<Background />
+				<Controls showLock={false} />
+				<MiniMap pannable zoomable />
+			</SvelteFlow>
+		</div>
+	{/if}
 
 	{#if loadErr}
 		<StatusNote kind="error" title="Loop runs unavailable">{loadErr}</StatusNote>
@@ -236,6 +278,17 @@
 		border-radius: 6px;
 		cursor: pointer;
 		padding: 0.15rem 0.5rem;
+	}
+	.loop-picker {
+		padding: 0.4rem 0.75rem 0;
+		flex: 0 0 auto;
+	}
+	.blurb {
+		margin: 0.3rem 0.75rem 0;
+		color: var(--muted, #9aa4b2);
+		font-size: 0.82rem;
+		line-height: 1.4;
+		flex: 0 0 auto;
 	}
 	.flow {
 		flex: 1 1 auto;

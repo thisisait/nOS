@@ -62,32 +62,52 @@ def build() -> dict:
     nodes: list[dict] = []
     edges: list[dict] = []
 
-    # WHERE header nodes (row 0), agents stacked beneath their (first) WHERE.
-    where_x = {w: i * COL_W for i, w in enumerate(wheres)}
+    # Four fixed left-to-right LANES, one per node kind, reading as the sentence
+    # the view IS: WHERE -> WHO (agent) -> CO (task_type) -> KAM (scope).
+    LANE_WHERE, LANE_AGENT, LANE_CO, LANE_KAM = (i * COL_W for i in range(4))
+
+    # Agents are grouped under their WHERE (rows within a group, a blank row
+    # between groups) so the WHERE->WHO grouping reads visually, not just via
+    # the runs-in edge. Row 0 of a group carries the WHERE node itself.
+    row = 0
+    agent_row: dict[str, int] = {}
+    where_row: dict[str, int] = {}
+    for w in wheres:
+        where_row[w] = row
+        group = sorted(name for name, p in parsed.items() if sorted(p.where)[0] == w)
+        for name in group:
+            row += 1
+            agent_row[name] = row
+        row += 2  # blank separator row before the next locus group
+
     for w in wheres:
         nodes.append({"id": f"where:{w}", "kind": "where", "label": w,
-                      "x": where_x[w], "y": 0})
-    per_where: dict[str, int] = {}
-    agent_pos: dict[str, tuple[int, int]] = {}
+                      "x": LANE_WHERE, "y": where_row[w] * ROW_H})
     for name in sorted(parsed):
         p = parsed[name]
         w = sorted(p.where)[0]
-        n = per_where.get(w, 0)
-        per_where[w] = n + 1
-        x, y = where_x[w], (n + 1) * ROW_H
-        agent_pos[name] = (x, y)
         nodes.append({"id": f"agent:{name}", "kind": "agent", "label": name,
-                      "x": x, "y": y, "address": caps[name]})
+                      "x": LANE_AGENT, "y": agent_row[name] * ROW_H, "address": caps[name]})
         edges.append({"source": f"agent:{name}", "target": f"where:{w}", "kind": "runs-in"})
 
-    # Shared CO (task_type) and KAM (scope) columns to the right.
-    base_x = (len(wheres) + 1) * COL_W
-    for i, t in enumerate(task_types):
+    # ponytail: order the CO/KAM lanes by the barycenter (mean row) of the
+    # agents that use each one, one pass, no iterative Sugiyama median-sort —
+    # good enough to untangle a graph this small; revisit with a real
+    # crossing-count minimizer only if the agent roster gets much bigger.
+    def _barycenter(users: list[str]) -> float:
+        return sum(agent_row[u] for u in users) / len(users)
+
+    co_users = {t: sorted(n for n, p in parsed.items() if t in p.co) for t in task_types}
+    kam_users = {s: sorted(n for n, p in parsed.items() if s in p.kam) for s in scopes}
+    task_types_ordered = sorted(task_types, key=lambda t: (_barycenter(co_users[t]), t))
+    scopes_ordered = sorted(scopes, key=lambda s: (_barycenter(kam_users[s]), s))
+
+    for i, t in enumerate(task_types_ordered):
         nodes.append({"id": f"co:{t}", "kind": "task_type", "label": t,
-                      "x": base_x, "y": i * ROW_H})
-    for i, s in enumerate(scopes):
+                      "x": LANE_CO, "y": i * ROW_H})
+    for i, s in enumerate(scopes_ordered):
         nodes.append({"id": f"kam:{s}", "kind": "scope", "label": s,
-                      "x": base_x + COL_W, "y": i * ROW_H})
+                      "x": LANE_KAM, "y": i * ROW_H})
 
     for name, p in parsed.items():
         for t in sorted(p.co):

@@ -48,15 +48,15 @@
       "id": "where:local",
       "kind": "where",
       "label": "local",
-      "x": 300,
-      "y": 0
+      "x": 0,
+      "y": 210
     },
     {
       "id": "agent:conductor",
       "kind": "agent",
       "label": "conductor",
       "x": 300,
-      "y": 70,
+      "y": 280,
       "address": "nos-work://local/agent:conductor/repo.read+wing.read+bone/investigate+review/*"
     },
     {
@@ -64,7 +64,7 @@
       "kind": "agent",
       "label": "curator",
       "x": 300,
-      "y": 140,
+      "y": 350,
       "address": "nos-work://local/agent:curator/repo.read+wing.read+bone+keap+dtt/seed-edit+investigate/*"
     },
     {
@@ -72,7 +72,7 @@
       "kind": "agent",
       "label": "inspektor",
       "x": 300,
-      "y": 210,
+      "y": 420,
       "address": "nos-work://local/agent:inspektor/repo.read+wing.read+bone+internet/investigate+review/*"
     },
     {
@@ -80,14 +80,14 @@
       "kind": "agent",
       "label": "jeff",
       "x": 300,
-      "y": 280,
+      "y": 490,
       "address": "nos-work://local/agent:jeff/wing.read+repo/investigate+design+doc+code-fix/*"
     },
     {
       "id": "agent:jeff-cloud",
       "kind": "agent",
       "label": "jeff-cloud",
-      "x": 0,
+      "x": 300,
       "y": 70,
       "address": "nos-work://ext-cloud/agent:jeff-cloud/wing.read+repo.read/investigate/*"
     },
@@ -96,7 +96,7 @@
       "kind": "agent",
       "label": "librarian",
       "x": 300,
-      "y": 350,
+      "y": 560,
       "address": "nos-work://local/agent:librarian/repo.read+wing+bone+keap+dtt/investigate+seed-edit/*"
     },
     {
@@ -104,7 +104,7 @@
       "kind": "agent",
       "label": "migration-author",
       "x": 300,
-      "y": 420,
+      "y": 630,
       "address": "nos-work://local/agent:migration-author/wing.read+repo+internet/code-fix/*"
     },
     {
@@ -112,7 +112,7 @@
       "kind": "agent",
       "label": "proposer",
       "x": 300,
-      "y": 490,
+      "y": 700,
       "address": "nos-work://local/agent:proposer/repo.read+loop+wing.read/design/*"
     },
     {
@@ -120,7 +120,7 @@
       "kind": "agent",
       "label": "surveyor",
       "x": 300,
-      "y": 560,
+      "y": 770,
       "address": "nos-work://local/agent:surveyor/repo.read+wing+bone/investigate+seed-edit/*"
     },
     {
@@ -128,112 +128,112 @@
       "kind": "agent",
       "label": "upgrade-architect",
       "x": 300,
-      "y": 630,
+      "y": 840,
       "address": "nos-work://local/agent:upgrade-architect/wing.read+repo+internet/design+code-fix/*"
     },
     {
-      "id": "co:code-fix",
+      "id": "co:review",
       "kind": "task_type",
-      "label": "code-fix",
-      "x": 900,
+      "label": "review",
+      "x": 600,
       "y": 0
     },
     {
-      "id": "co:design",
+      "id": "co:investigate",
       "kind": "task_type",
-      "label": "design",
-      "x": 900,
+      "label": "investigate",
+      "x": 600,
       "y": 70
     },
     {
       "id": "co:doc",
       "kind": "task_type",
       "label": "doc",
-      "x": 900,
+      "x": 600,
       "y": 140
-    },
-    {
-      "id": "co:investigate",
-      "kind": "task_type",
-      "label": "investigate",
-      "x": 900,
-      "y": 210
-    },
-    {
-      "id": "co:review",
-      "kind": "task_type",
-      "label": "review",
-      "x": 900,
-      "y": 280
     },
     {
       "id": "co:seed-edit",
       "kind": "task_type",
       "label": "seed-edit",
-      "x": 900,
-      "y": 350
-    },
-    {
-      "id": "kam:bone",
-      "kind": "scope",
-      "label": "bone",
-      "x": 1200,
-      "y": 0
-    },
-    {
-      "id": "kam:dtt",
-      "kind": "scope",
-      "label": "dtt",
-      "x": 1200,
-      "y": 70
-    },
-    {
-      "id": "kam:internet",
-      "kind": "scope",
-      "label": "internet",
-      "x": 1200,
-      "y": 140
-    },
-    {
-      "id": "kam:keap",
-      "kind": "scope",
-      "label": "keap",
-      "x": 1200,
+      "x": 600,
       "y": 210
     },
     {
-      "id": "kam:loop",
-      "kind": "scope",
-      "label": "loop",
-      "x": 1200,
+      "id": "co:code-fix",
+      "kind": "task_type",
+      "label": "code-fix",
+      "x": 600,
       "y": 280
     },
     {
-      "id": "kam:repo",
-      "kind": "scope",
-      "label": "repo",
-      "x": 1200,
+      "id": "co:design",
+      "kind": "task_type",
+      "label": "design",
+      "x": 600,
       "y": 350
     },
     {
       "id": "kam:repo.read",
       "kind": "scope",
       "label": "repo.read",
-      "x": 1200,
+      "x": 900,
+      "y": 0
+    },
+    {
+      "id": "kam:dtt",
+      "kind": "scope",
+      "label": "dtt",
+      "x": 900,
+      "y": 70
+    },
+    {
+      "id": "kam:keap",
+      "kind": "scope",
+      "label": "keap",
+      "x": 900,
+      "y": 140
+    },
+    {
+      "id": "kam:wing.read",
+      "kind": "scope",
+      "label": "wing.read",
+      "x": 900,
+      "y": 210
+    },
+    {
+      "id": "kam:bone",
+      "kind": "scope",
+      "label": "bone",
+      "x": 900,
+      "y": 280
+    },
+    {
+      "id": "kam:internet",
+      "kind": "scope",
+      "label": "internet",
+      "x": 900,
+      "y": 350
+    },
+    {
+      "id": "kam:repo",
+      "kind": "scope",
+      "label": "repo",
+      "x": 900,
       "y": 420
     },
     {
       "id": "kam:wing",
       "kind": "scope",
       "label": "wing",
-      "x": 1200,
+      "x": 900,
       "y": 490
     },
     {
-      "id": "kam:wing.read",
+      "id": "kam:loop",
       "kind": "scope",
-      "label": "wing.read",
-      "x": 1200,
+      "label": "loop",
+      "x": 900,
       "y": 560
     }
   ],

@@ -1,12 +1,26 @@
 {
-  "version": 1,
+  "version": 2,
   "generated_from": "files/anatomy/bone/ledger.py",
   "engine_actor": "engine:judge-runner",
+  "loops": [
+    {
+      "id": "sere",
+      "label": "SERE — self-enhancing loop",
+      "blurb": "The estate improving itself: a model proposes a change, code alone judges it against the gate set, and only a pass may land — merge, converge, and rescan happen outside this engine. Doctrine: files/anatomy/bone/ledger.py."
+    },
+    {
+      "id": "nos-loop",
+      "label": "nos-loop — business logic",
+      "blurb": "The estate doing its actual job for the operator: Cortex/KEAP knowledge, AgentKit agents, Pulse cadence, the notification → inbox path, backup + restore, security scan → remediation queue, identity/SSO, the face. No harness graph exists for this loop yet — it has no ledger.py equivalent to derive from."
+    }
+  ],
+  "default_loop": "sere",
   "nodes": [
     {
       "id": "stage:propose",
       "kind": "stage",
       "label": "propose",
+      "loop": "sere",
       "x": 680,
       "y": 0,
       "note": "a model proposes"
@@ -15,6 +29,7 @@
       "id": "stage:judge",
       "kind": "stage",
       "label": "judge",
+      "loop": "sere",
       "x": 680,
       "y": 92,
       "note": "code runs the gate set"
@@ -23,6 +38,7 @@
       "id": "stage:apply",
       "kind": "stage",
       "label": "apply",
+      "loop": "sere",
       "x": 680,
       "y": 184,
       "out_of_loop": true,
@@ -32,6 +48,7 @@
       "id": "role:evaluator",
       "kind": "role",
       "label": "evaluator (code)",
+      "loop": "sere",
       "x": 340,
       "y": 0
     },
@@ -39,6 +56,7 @@
       "id": "table:loop_judge_runs",
       "kind": "table",
       "label": "loop_judge_runs",
+      "loop": "sere",
       "x": 1020,
       "y": 0
     },
@@ -46,6 +64,7 @@
       "id": "table:loop_verdicts",
       "kind": "table",
       "label": "loop_verdicts",
+      "loop": "sere",
       "x": 1020,
       "y": 92
     },
@@ -53,6 +72,7 @@
       "id": "role:operator",
       "kind": "role",
       "label": "operator",
+      "loop": "sere",
       "x": 340,
       "y": 92
     },
@@ -60,6 +80,7 @@
       "id": "table:loop_forgets",
       "kind": "table",
       "label": "loop_forgets",
+      "loop": "sere",
       "x": 1020,
       "y": 184
     },
@@ -67,6 +88,7 @@
       "id": "role:proposer",
       "kind": "role",
       "label": "proposer (model)",
+      "loop": "sere",
       "x": 340,
       "y": 184
     },
@@ -74,6 +96,7 @@
       "id": "table:loop_proposals",
       "kind": "table",
       "label": "loop_proposals",
+      "loop": "sere",
       "x": 1020,
       "y": 276
     },
@@ -81,6 +104,7 @@
       "id": "role:reader",
       "kind": "role",
       "label": "reader",
+      "loop": "sere",
       "x": 340,
       "y": 276
     },
@@ -88,6 +112,7 @@
       "id": "intent:config-fix",
       "kind": "intent",
       "label": "config-fix",
+      "loop": "sere",
       "x": 0,
       "y": 0,
       "disabled": false,
@@ -97,6 +122,7 @@
       "id": "intent:dependency-bump",
       "kind": "intent",
       "label": "dependency-bump",
+      "loop": "sere",
       "x": 0,
       "y": 92,
       "disabled": false,
@@ -106,6 +132,7 @@
       "id": "intent:gate-add",
       "kind": "intent",
       "label": "gate-add",
+      "loop": "sere",
       "x": 0,
       "y": 184,
       "disabled": false,
@@ -115,6 +142,7 @@
       "id": "intent:harness",
       "kind": "intent",
       "label": "harness",
+      "loop": "sere",
       "x": 0,
       "y": 276,
       "disabled": true,
@@ -124,6 +152,7 @@
       "id": "intent:render-fix",
       "kind": "intent",
       "label": "render-fix",
+      "loop": "sere",
       "x": 0,
       "y": 368,
       "disabled": false,
@@ -133,6 +162,7 @@
       "id": "intent:version-pin-bump",
       "kind": "intent",
       "label": "version-pin-bump",
+      "loop": "sere",
       "x": 0,
       "y": 460,
       "disabled": false,
@@ -142,6 +172,7 @@
       "id": "intent:wiring-fix",
       "kind": "intent",
       "label": "wiring-fix",
+      "loop": "sere",
       "x": 0,
       "y": 552,
       "disabled": false,
@@ -151,6 +182,7 @@
       "id": "toggle:harness_proposals_enabled",
       "kind": "toggle",
       "label": "Harness proposals",
+      "loop": "sere",
       "x": 0,
       "y": 0,
       "enabled": false,
@@ -162,6 +194,7 @@
       "id": "agent:librarian",
       "kind": "agent",
       "label": "librarian",
+      "loop": "sere",
       "x": 1360,
       "y": 0
     },
@@ -169,6 +202,7 @@
       "id": "route:POST /api/v1/events",
       "kind": "route",
       "label": "POST /api/v1/events",
+      "loop": "sere",
       "x": 1700,
       "y": 0
     },
@@ -176,6 +210,7 @@
       "id": "agent:surveyor",
       "kind": "agent",
       "label": "surveyor",
+      "loop": "sere",
       "x": 1360,
       "y": 92
     }
@@ -186,6 +221,7 @@
       "source": "stage:propose",
       "target": "stage:judge",
       "kind": "flow",
+      "loop": "sere",
       "label": "gates run"
     },
     {
@@ -193,104 +229,121 @@
       "source": "stage:judge",
       "target": "stage:apply",
       "kind": "flow",
+      "loop": "sere",
       "label": "pass/fail/indeterminate → act on pass"
     },
     {
       "id": "role:evaluator=>stage:judge",
       "source": "role:evaluator",
       "target": "stage:judge",
-      "kind": "acts"
+      "kind": "acts",
+      "loop": "sere"
     },
     {
       "id": "role:evaluator=>table:loop_judge_runs",
       "source": "role:evaluator",
       "target": "table:loop_judge_runs",
-      "kind": "writes"
+      "kind": "writes",
+      "loop": "sere"
     },
     {
       "id": "role:evaluator=>table:loop_verdicts",
       "source": "role:evaluator",
       "target": "table:loop_verdicts",
-      "kind": "writes"
+      "kind": "writes",
+      "loop": "sere"
     },
     {
       "id": "role:operator=>table:loop_forgets",
       "source": "role:operator",
       "target": "table:loop_forgets",
-      "kind": "writes"
+      "kind": "writes",
+      "loop": "sere"
     },
     {
       "id": "role:proposer=>stage:propose",
       "source": "role:proposer",
       "target": "stage:propose",
-      "kind": "acts"
+      "kind": "acts",
+      "loop": "sere"
     },
     {
       "id": "role:proposer=>table:loop_proposals",
       "source": "role:proposer",
       "target": "table:loop_proposals",
-      "kind": "writes"
+      "kind": "writes",
+      "loop": "sere"
     },
     {
       "id": "intent:config-fix=>stage:propose",
       "source": "intent:config-fix",
       "target": "stage:propose",
-      "kind": "proposes"
+      "kind": "proposes",
+      "loop": "sere"
     },
     {
       "id": "intent:dependency-bump=>stage:propose",
       "source": "intent:dependency-bump",
       "target": "stage:propose",
-      "kind": "proposes"
+      "kind": "proposes",
+      "loop": "sere"
     },
     {
       "id": "intent:gate-add=>stage:propose",
       "source": "intent:gate-add",
       "target": "stage:propose",
-      "kind": "proposes"
+      "kind": "proposes",
+      "loop": "sere"
     },
     {
       "id": "intent:harness=>stage:propose",
       "source": "intent:harness",
       "target": "stage:propose",
-      "kind": "proposes"
+      "kind": "proposes",
+      "loop": "sere"
     },
     {
       "id": "intent:render-fix=>stage:propose",
       "source": "intent:render-fix",
       "target": "stage:propose",
-      "kind": "proposes"
+      "kind": "proposes",
+      "loop": "sere"
     },
     {
       "id": "intent:version-pin-bump=>stage:propose",
       "source": "intent:version-pin-bump",
       "target": "stage:propose",
-      "kind": "proposes"
+      "kind": "proposes",
+      "loop": "sere"
     },
     {
       "id": "intent:wiring-fix=>stage:propose",
       "source": "intent:wiring-fix",
       "target": "stage:propose",
-      "kind": "proposes"
+      "kind": "proposes",
+      "loop": "sere"
     },
     {
       "id": "toggle:harness_proposals_enabled=>intent:harness",
       "source": "toggle:harness_proposals_enabled",
       "target": "intent:harness",
       "kind": "governs",
+      "loop": "sere",
       "label": "off ⇒ refused"
     },
     {
       "id": "agent:librarian=>route:POST /api/v1/events",
       "source": "agent:librarian",
       "target": "route:POST /api/v1/events",
-      "kind": "may-write"
+      "kind": "may-write",
+      "loop": "sere"
     },
     {
       "id": "agent:surveyor=>route:POST /api/v1/events",
       "source": "agent:surveyor",
       "target": "route:POST /api/v1/events",
-      "kind": "may-write"
+      "kind": "may-write",
+      "loop": "sere"
     }
   ],
   "refusals": [

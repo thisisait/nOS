@@ -34,6 +34,34 @@ FACE_TARGET = os.path.join(REPO, "files/anatomy/face/src/lib/anatomy/loop-graph.
 GRANTS = os.path.join(REPO, "docs/plans/rsi-research/artifacts/wing-write-grants.json")
 TOGGLE_SEED = os.path.join(REPO, "state/fixtures/loop-config.seed.yml")
 
+# A loop is a selection, not a filter — draw one at a time (roadmap). The
+# estate runs more than one loop (memory nos-loop-and-sere.md): SERE is the
+# only one ledger.py describes today, so it is the only one with a real graph;
+# nos-loop-proper is listed here so the face has something to select and
+# explain, and stays honestly empty (no nodes/edges) until a doctrine module
+# for it exists to derive from — absence rendered as absence, not a guess.
+DEFAULT_LOOP = "sere"
+LOOPS = [
+    {
+        "id": "sere",
+        "label": "SERE — self-enhancing loop",
+        "blurb": ("The estate improving itself: a model proposes a change, code "
+                   "alone judges it against the gate set, and only a pass may "
+                   "land — merge, converge, and rescan happen outside this "
+                   "engine. Doctrine: files/anatomy/bone/ledger.py."),
+    },
+    {
+        "id": "nos-loop",
+        "label": "nos-loop — business logic",
+        "blurb": ("The estate doing its actual job for the operator: Cortex/KEAP "
+                   "knowledge, AgentKit agents, Pulse cadence, the "
+                   "notification → inbox path, backup + restore, security scan "
+                   "→ remediation queue, identity/SSO, the face. No harness "
+                   "graph exists for this loop yet — it has no ledger.py "
+                   "equivalent to derive from."),
+    },
+]
+
 # Lane x-bands (kind → column); nodes stack vertically within a lane. The flow
 # edges (propose→judge→apply) draw across, so the picture reads left-to-right:
 # what is proposed → who acts → the machinery → what it writes → who may write.
@@ -71,13 +99,14 @@ def build() -> dict:
         nid = f"{kind}:{ident}"
         i = lane_n.get(kind, 0)
         lane_n[kind] = i + 1
-        nodes.append({"id": nid, "kind": kind, "label": label,
+        nodes.append({"id": nid, "kind": kind, "label": label, "loop": DEFAULT_LOOP,
                       "x": _LANE_X.get(kind, 0), "y": i * _ROW_H, **meta})
         return nid
 
     def edge(source: str, target: str, kind: str, label: str = "") -> None:
         edges.append({"id": f"{source}=>{target}", "source": source, "target": target,
-                      "kind": kind, **({"label": label} if label else {})})
+                      "kind": kind, "loop": DEFAULT_LOOP,
+                      **({"label": label} if label else {})})
 
     # ── The three flow stages (apply is OUT of the loop: a pass waits on
     #    merge→converge→rescan, an act the engine does not perform). ──────────
@@ -138,9 +167,11 @@ def build() -> dict:
             edge(aid, rtid, "may-write", "")
 
     return {
-        "version": 1,
+        "version": 2,
         "generated_from": "files/anatomy/bone/ledger.py",
         "engine_actor": ledger.ENGINE_ACTOR,
+        "loops": LOOPS,
+        "default_loop": DEFAULT_LOOP,
         "nodes": nodes,
         "edges": edges,
         # Negative space, rendered as refusals in the estate's style — a harness

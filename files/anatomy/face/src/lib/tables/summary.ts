@@ -7,6 +7,11 @@ export interface TableSummary {
 	slug: string;
 	title: string;
 	rowCount: number;
+	/** KEAP's visibility grade (keap-contracts/visibility.ts), when the source
+	 *  carries one. `'system'` is what the Tables app hides by default — see
+	 *  TablesApp.svelte. Absent for sources that don't return it (fallback
+	 *  probing) — treated as non-system. */
+	visibility?: string;
 }
 
 /** Unwrap a possibly-enveloped `{data}` payload. */
@@ -31,7 +36,8 @@ export function toTableSummaries(raw: unknown): TableSummary[] {
 			return {
 				slug,
 				title: typeof o.title === 'string' && o.title ? o.title : slug,
-				rowCount: typeof o.rowCount === 'number' ? o.rowCount : 0
+				rowCount: typeof o.rowCount === 'number' ? o.rowCount : 0,
+				...(typeof o.visibility === 'string' ? { visibility: o.visibility } : {})
 			} satisfies TableSummary;
 		})
 		.filter((t): t is TableSummary => t !== null)

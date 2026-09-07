@@ -25,18 +25,28 @@
 	let tableErr = $state('');
 	let canCreate = $state(false);
 	let creating = $state(false);
+	// System tables (visibility: system — keap-contracts/visibility.ts) are
+	// hidden by default (tables-system-flag). Tier-1 only may reveal them;
+	// `canShowSystemToggle` mirrors canCreate's own /bff/config pattern above.
+	let canShowSystemToggle = $state(false);
+	let showSystem = $state(false);
+	let visibleTables = $derived(tables.filter((t) => showSystem || t.visibility !== 'system'));
 
 	onMount(async () => {
 		// Non-blocking: whether the New-table button shows (BFF re-enforces the tier).
 		void fetch('/bff/config', { headers: { accept: 'application/json' } })
 			.then((r) => (r.ok ? r.json() : null))
-			.then((b: { canWriteTables?: boolean } | null) => {
+			.then((b: { canWriteTables?: boolean; canViewSystemTables?: boolean } | null) => {
 				canCreate = b?.canWriteTables === true;
+				canShowSystemToggle = b?.canViewSystemTables === true;
 			})
 			.catch(() => {});
 		try {
 			tables = await listTables();
-			if (tables.length > 0) void select(tables[0].slug);
+			// Default selection prefers a non-system table so the initial pick
+			// always matches what's shown (system stays hidden until toggled).
+			const first = tables.find((t) => t.visibility !== 'system') ?? tables[0];
+			if (first) void select(first.slug);
 		} catch (e) {
 			listErr = e instanceof Error ? e.message : 'could not list tables';
 		} finally {
@@ -77,15 +87,21 @@
 				<button class="new" onclick={() => (creating = true)}>＋ New</button>
 			{/if}
 		</div>
+		{#if canShowSystemToggle}
+			<label class="sys-toggle">
+				<input type="checkbox" bind:checked={showSystem} />
+				Show system tables
+			</label>
+		{/if}
 		{#if loadingList}
 			<StatusNote kind="loading" block={false}>loading…</StatusNote>
 		{:else if listErr}
 			<StatusNote kind="error" block={false}>{listErr}</StatusNote>
-		{:else if tables.length === 0}
+		{:else if visibleTables.length === 0}
 			<StatusNote kind="empty" block={false}>No tables in KEAP yet.</StatusNote>
 		{:else}
 			<ul>
-				{#each tables as t (t.slug)}
+				{#each visibleTables as t (t.slug)}
 					<li>
 						<button class="t" class:sel={selected === t.slug} onclick={() => select(t.slug)}>
 							<span class="nm">{t.title}</span>
@@ -150,6 +166,15 @@
 		font-size: 10px;
 		letter-spacing: 0;
 		text-transform: none;
+		cursor: pointer;
+	}
+	.sys-toggle {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 11px;
+		color: var(--muted, #9aa4b2);
+		margin: -4px 4px 8px;
 		cursor: pointer;
 	}
 	.side ul {

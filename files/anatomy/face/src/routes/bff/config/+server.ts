@@ -4,7 +4,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { keapExploreUrl } from '$lib/server/upstream';
-import { canWriteTables } from '$lib/security/tier';
+import { canWriteTables, canViewAnatomy } from '$lib/security/tier';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.identity.authenticated) throw error(401, 'unauthenticated');
@@ -13,6 +13,11 @@ export const GET: RequestHandler = async ({ locals }) => {
 		// Manager+ may create tables / upsert rows. Server-derived from the
 		// edge-trusted identity — the UI only uses it to show/hide the New-table
 		// button; the BFF POST re-enforces it regardless.
-		canWriteTables: canWriteTables(locals.identity.groups)
+		canWriteTables: canWriteTables(locals.identity.groups),
+		// Tier-1 only: whether the Tables app may reveal `visibility: system`
+		// tables (hidden by default — the tables-system-flag roadmap row).
+		// Read-only gate, but a system table's contents are operator/agent
+		// internals, same reasoning as canViewAnatomy.
+		canViewSystemTables: canViewAnatomy(locals.identity.groups)
 	});
 };

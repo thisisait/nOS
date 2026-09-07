@@ -123,13 +123,18 @@ async function knownTableSummaries(): Promise<TableSummary[]> {
 	const out: TableSummary[] = [];
 	for (const slug of KNOWN_CONFIG_TABLES) {
 		try {
-			const def = unwrap<{ id?: string; slug?: string; title?: string; rowCount?: number }>(
-				await keapTableDef(slug)
-			);
+			const def = unwrap<{
+				id?: string;
+				slug?: string;
+				title?: string;
+				rowCount?: number;
+				visibility?: string;
+			}>(await keapTableDef(slug));
 			out.push({
 				slug: (typeof def.id === 'string' && def.id) || slug,
 				title: typeof def.title === 'string' && def.title ? def.title : slug,
-				rowCount: typeof def.rowCount === 'number' ? def.rowCount : 0
+				rowCount: typeof def.rowCount === 'number' ? def.rowCount : 0,
+				...(typeof def.visibility === 'string' ? { visibility: def.visibility } : {})
 			});
 		} catch {
 			/* table absent — skip it */

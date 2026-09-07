@@ -20,9 +20,40 @@
 	import './graph-theme.css';
 	import { loadTable, tablesUpsertRow } from '$lib/api/tables';
 	import { ApiError } from '$lib/api/client';
-	import { rowsToGraph, reparentPayload } from '$lib/tables/planner';
+	import { rowsToGraph, reparentPayload, type PlannerNode } from '$lib/tables/planner';
 	import type { DataTable } from '$lib/contracts';
 	import { StatusNote, Badge } from '$lib/components/ui';
+
+	const HEADER_GAP = 70; // px above the topmost row a track's header floats
+
+	/** One non-interactive label node per track, positioned at that column's x
+	 *  (the min x among its rows — depth-0 rows sit exactly at the column base,
+	 *  deeper ones only indent right) and above the topmost row. Never a row:
+	 *  distinct id namespace, and selectable/draggable/connectable all false so
+	 *  it can't be dragged, reparented, or opened in the detail panel. */
+	function trackHeaders(planned: PlannerNode[]): Node[] {
+		const minX = new Map<string, number>();
+		let minY = 0;
+		for (const n of planned) {
+			const track = n.data.track || 'untracked';
+			const x = n.position.x;
+			if (!minX.has(track) || x < (minX.get(track) as number)) minX.set(track, x);
+			if (n.position.y < minY) minY = n.position.y;
+		}
+		return [...minX.entries()]
+			.sort(([a], [b]) => (a < b ? -1 : 1))
+			.map(([track, x]) => ({
+				id: `__track__${track}`,
+				type: 'default',
+				position: { x, y: minY - HEADER_GAP },
+				data: { label: track },
+				class: 'track-header',
+				draggable: false,
+				selectable: false,
+				connectable: false,
+				deletable: false
+			})) as Node[];
+	}
 
 	// Row status → node colour. Unknown status falls to the neutral slab, never
 	// crashes — a new status the table adds simply renders grey until named here.
@@ -126,7 +157,7 @@
 	function applyGraph(t: DataTable) {
 		const g = rowsToGraph(t);
 		dangling = g.danglingParents;
-		nodes = g.nodes.map((n) => ({
+		const rowNodes = g.nodes.map((n) => ({
 			id: n.id,
 			position: n.position,
 			data: { label: n.data.label },
@@ -137,6 +168,7 @@
 				'font-size:12px;padding:6px 10px;width:240px;' +
 				(n.data.orphanParent ? 'outline:1px dashed #b8863b;' : '')
 		})) as Node[];
+		nodes = [...trackHeaders(g.nodes), ...rowNodes];
 		edges = g.edges.map((e) => ({ id: e.id, source: e.source, target: e.target })) as Edge[];
 		phase = t.rows.length ? 'ok' : 'empty';
 	}
@@ -340,6 +372,24 @@
 	/* Svelte Flow needs a sized parent; the flex child gives it one. */
 	.flow :global(.svelte-flow) {
 		background: var(--bg, #14171c);
+	}
+	/* Column headers: a track name floated above its column. Not a row — no
+	   card chrome, no connection handles, no selection highlight. */
+	.flow :global(.track-header) {
+		background: transparent;
+		border: none;
+		box-shadow: none;
+		padding: 0;
+		color: var(--fg, #e8ecf3);
+		font-size: 0.78rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		white-space: nowrap;
+		pointer-events: none;
+	}
+	.flow :global(.track-header .svelte-flow__handle) {
+		display: none;
 	}
 	.legend {
 		position: absolute;

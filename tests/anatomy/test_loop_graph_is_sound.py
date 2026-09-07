@@ -77,6 +77,18 @@ def test_the_harness_intent_is_present_but_refused(committed):
     assert harness.get("disabled") is True, "harness must render as refused"
 
 
+def test_a_loop_is_a_selection_declared_on_every_node(committed):
+    """Roadmap: "a loop is a selection, not a filter — draw one at a time".
+    Every node/edge is tagged with which loop it belongs to, and the loop
+    catalog (id/label/blurb) is a real top-level list, not hardcoded markup."""
+    loops = committed.get("loops")
+    assert loops and all({"id", "label", "blurb"} <= set(l) for l in loops)
+    ids = {l["id"] for l in loops}
+    assert committed.get("default_loop") in ids
+    assert all(n.get("loop") in ids for n in committed["nodes"])
+    assert all(e.get("loop") in ids for e in committed["edges"])
+
+
 def test_the_refusals_are_carried(committed):
     blob = " ".join(committed["refusals"]).lower()
     assert "post /verdicts" in blob  # Constraint A
