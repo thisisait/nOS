@@ -76,11 +76,12 @@ Consequence you will notice: `nos dtt status` on the shared roadmap now needs
 the tier the roadmap asks for (`tier-managers`); a tier-3 user reads it in
 Chat via the `nos_tables` tool or asks a maintainer to open it.
 
-**Agents still see everything.** The agent door (`nos_tables` in Chat, the
-estate token) lists *all* tables, private ones included, until KEAP row
-`keap-agent-door-honours-sharing` lands. Your own Claude Code / Codex on this
-box uses the identity socket and sees only what you see; the shared Chat tool
-does not. Do not put anything in a table you would not show to a colleague.
+**Who sees what, honestly.** Your own Claude Code / Codex on this box goes
+through the identity socket and sees exactly what you see. The shared Chat tool
+(`nos_tables`) speaks as the service account `nos-mcpo`, tier 2: the roadmap
+and any table shared to the tenant or a tier, **never a private one**. Only an
+estate-token agent door (the Mac estate's MCP, or a box without the outpost)
+still lists private tables — KEAP row `keap-agent-door-honours-sharing`.
 
 ## The skill that teaches an agent the tables
 

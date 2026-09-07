@@ -472,11 +472,20 @@ if [ "$BR_BOUNCE" = 1 ] || ! systemctl is-active -q backrest; then systemctl res
 echo "backrest: $(systemctl is-active backrest) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://127.0.0.1:9898/ || echo no-answer) on /"
 
 say "Open WebUI: the DataTables tool server (mcpo) + the nOS Assistant knowledge"
+MC_BOUNCE=0
 # mcpo wraps the stdio MCP server as an OpenAPI tool server. Its own user, in
 # nos-users only → the wrapper sources the READ token, so chat can read the
 # tables and cannot write them. Bound to docker0 → reachable from the Open
 # WebUI container as http://host.docker.internal:8500, never from the LAN.
-id nos-mcpo >/dev/null 2>&1 || useradd -r -s /usr/sbin/nologin -d /nonexistent -G nos-users nos-mcpo
+# The chat tool speaks through the identity outpost as nos-mcpo: tier 2
+# (nos-managers) sees the shared roadmap and every tier-2/3 table, never a
+# user's private one — the agent-door leak (keap-agent-door-honours-sharing)
+# no longer reaches Chat. A membership change restarts the service.
+groupadd -f nos-managers
+id nos-mcpo >/dev/null 2>&1 || useradd -r -s /usr/sbin/nologin -d /nonexistent -G nos-users,nos-managers nos-mcpo
+MC_GROUPS_BEFORE="$(id -nG nos-mcpo)"
+usermod -aG nos-users,nos-managers nos-mcpo
+[ "$MC_GROUPS_BEFORE" = "$(id -nG nos-mcpo)" ] || MC_BOUNCE=1
 MC=/opt/nos-dgx/mcpo
 # mcpo 0.0.20 imports `streamablehttp_client`, which the mcp 2.x SDK renamed;
 # pin the SDK below 2 (mcpo's own floor is >= 1.17) and repair an existing venv.
@@ -490,7 +499,6 @@ if [ ! -f /etc/nos/mcpo.env ]; then
   umask 077; printf 'MCPO_API_KEY=%s\n' "$(openssl rand -hex 24)" > /etc/nos/mcpo.env; umask 022
 fi
 chown root:nos-mcpo /etc/nos/mcpo.env; chmod 0640 /etc/nos/mcpo.env
-MC_BOUNCE=0
 put "$RT/systemd/mcpo-nos-tables.service" /etc/systemd/system/mcpo-nos-tables.service && MC_BOUNCE=1
 systemctl daemon-reload; systemctl enable -q mcpo-nos-tables
 if [ "$MC_BOUNCE" = 1 ] || ! systemctl is-active -q mcpo-nos-tables; then systemctl restart mcpo-nos-tables; sleep 3; fi

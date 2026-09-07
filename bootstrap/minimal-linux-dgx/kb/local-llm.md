@@ -39,9 +39,10 @@ from. The knowledge is re-synced by the admin's recipe run
 Enable the **nos_tables** tool in the chat (the *+* / tools control next to the
 message box, or ask the assistant with tools on). It is the same door your
 coding agent uses over MCP (`list-tables`, `read-rows`, `get-row`,
-`search-rows`) — read-only from chat on purpose: writes (`upsert-row`,
-`claim-row`…) need a maintainer's token and belong to `nos dtt` in a shell or
-your own agent. Try: *"which roadmap rows are in review?"*
+`search-rows`) as a tier-2 reader (`nos-mcpo` through the identity outpost):
+the roadmap and shared tables, never anyone's private table, and no writes —
+those belong to `nos dtt` in a shell or your own agent. Try: *"which roadmap
+rows are in review?"*
 
 ## Your editor
 

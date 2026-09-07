@@ -1,7 +1,8 @@
 # /etc/systemd/system/mcpo-nos-tables.service — the DataTables MCP server as an
 # OpenAPI tool server for Open WebUI (mcpo wraps the stdio server).
-# Runs as the unprivileged user nos-mcpo (group nos-users): the wrapper sources
-# only /etc/nos/keap.env, so chat users get the READ token and nothing more.
+# Runs as the unprivileged user nos-mcpo (groups nos-users + nos-managers):
+# through the identity outpost it is a TIER-2 reader — the shared roadmap and
+# tier tables, never a user's private table; writes are refused by KEAP.
 # Bound to the docker0 address: reachable from the Open WebUI container as
 # http://host.docker.internal:8500, never from the LAN.
 [Unit]
