@@ -30,8 +30,16 @@ set -euo pipefail
 
 NOS_CLI_VERSION=1
 
+# The env file is a DEFAULT, never an override: a value the caller exported
+# (NOS_SRC, NOS_PY, NOS_SEED_DIR) wins over ~/.nos/nos-cli.env. Measured
+# 2026-09-07: the file clobbered an explicit NOS_SEED_DIR and a probe row was
+# seeded into the estate roadmap from the wrong directory.
+_nos_src_env="${NOS_SRC:-}"; _nos_py_env="${NOS_PY:-}"; _nos_seed_env="${NOS_SEED_DIR:-}"
 # shellcheck disable=SC1091
 [ -f "$HOME/.nos/nos-cli.env" ] && . "$HOME/.nos/nos-cli.env"
+[ -n "$_nos_src_env" ] && NOS_SRC="$_nos_src_env"
+[ -n "$_nos_py_env" ] && NOS_PY="$_nos_py_env"
+[ -n "$_nos_seed_env" ] && NOS_SEED_DIR="$_nos_seed_env"
 NOS_SRC="${NOS_SRC:-$HOME/projects/nOS}"
 
 # ── `nos dtt <verb>` — DataTables ops, not a converge ────────────────────────
