@@ -41,7 +41,7 @@ say "packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq nginx libnginx-mod-http-auth-pam mkcert libnss3-tools \
-  python3-yaml sqlite3 rsync curl git \
+  python3-yaml python3-markdown sqlite3 rsync curl git \
   docker-ce-rootless-extras uidmap passt fuse-overlayfs >/dev/null
 
 say "groups + users"
@@ -101,6 +101,8 @@ for f in nginx/nos-dgx.conf compose.yml www/index.html; do
   sed -i "s/__HOST__/$HOST/g; s/__SHORT__/$SHORT/g" "$RT/$f"
 done
 echo "rendered for host $HOST"
+# The knowledge base: one markdown file per page in kb/, static HTML in www/kb/.
+python3 "$RT/bin/kb-build.py" --src "$RT/kb" --out "$RT/www/kb" --host "$HOST" --short "$SHORT"
 mkdir -p "$RT/keap/data"
 if [ ! -d "$RT/keap/src/.git" ]; then
   sudo -u admin git clone -q --branch "$KEAP_PIN" --depth 1 "$KEAP_REPO" "$RT/keap/src"
