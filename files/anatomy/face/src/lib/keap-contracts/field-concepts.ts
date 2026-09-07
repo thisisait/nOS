@@ -1,5 +1,5 @@
 /**
- * VENDORED from thisisait/nos-keap at v1.44.0 — DO NOT EDIT. A pinned snapshot of
+ * VENDORED from thisisait/nos-keap at v1.45.0 — DO NOT EDIT. A pinned snapshot of
  * KEAP's DataTable schema: the authority the schema-pin gate (schema-pin.test.ts)
  * validates every state/keap-tables/*.table.yml against, so "a definition runs
  * ahead of the pin" is structurally impossible rather than release discipline

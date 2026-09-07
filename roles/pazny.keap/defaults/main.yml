@@ -70,7 +70,15 @@ keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # tuned vector index, context injector v1, K4/K5 loops, OPENAPI gate. Migration
 # 009 is additive/instant. This is the converge that activates the nOS-side
 # share-model consumer wiring + the tables schema-pin gate.
-keap_repo_ref: "v1.44.0"
+# v1.45.0 (verified npm@10 ci clean on the tag): taxonomy T2 revision — new
+# `04.11 Business & Management`, the old 04.04.11/04.04.12 ids RETIRED/re-homed
+# — plus the S2 navigation-hub ranking demotion. NON-STANDARD DESTRUCTIVE
+# CONVERGE — NOT a plain `nos` run: ingest → manual in-container DELETEs (16
+# retired ids) → restart → FULL VECTOR BIG-RESET → recall gates → baseline,
+# per docs/specs/spine-0411-migration.md at the tag. Contracts are byte-
+# identical to v1.44.0 (this bump re-vendors headers only). The 3 cortex-organ
+# mirror files under files/anatomy/cortex/knowledge/ were re-ported at this bump.
+keap_repo_ref: "v1.45.0"
 
 # ── The cortex cutover (KEAP P-5) ────────────────────────────────────────────
 # false ⇒ KEAP answers /agent/v1/validate with its OWN typechecker (the shipped

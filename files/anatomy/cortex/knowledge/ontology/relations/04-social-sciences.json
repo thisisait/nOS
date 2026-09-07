@@ -341,7 +341,7 @@
   {
    "from": "04.04.08",
    "fromKind": "node",
-   "to": "04.04.11",
+   "to": "04.11.03",
    "toKind": "node",
    "type": "prerequisite-for",
    "source": "manual",
@@ -351,19 +351,19 @@
    "createdAt": 1785000000
   },
   {
-   "from": "04.04.11",
+   "from": "04.11.03",
    "fromKind": "node",
    "to": "04.04",
    "toKind": "node",
-   "type": "derived-from",
+   "type": "related-concept",
    "source": "manual",
    "status": "confirmed",
    "confidence": 0.72,
-   "justification": "Accounting and economics share an origin in the measurement of commercial activity, though they separated early and answer different questions.",
+   "justification": "Accounting reads financial statements against valuation concepts economics supplies; after the 04.11 re-home it is a peer discipline related to economics, no longer descended from it.",
    "createdAt": 1785000000
   },
   {
-   "from": "04.04.11",
+   "from": "04.11.03",
    "fromKind": "node",
    "to": "09.05",
    "toKind": "node",
@@ -375,7 +375,7 @@
    "createdAt": 1785000000
   },
   {
-   "from": "04.04.12.03",
+   "from": "04.11.02.03",
    "fromKind": "node",
    "to": "03.05",
    "toKind": "node",
@@ -701,7 +701,7 @@
   {
    "from": "04.06.07.05",
    "fromKind": "node",
-   "to": "04.04.11.06",
+   "to": "04.11.03.06",
    "toKind": "node",
    "type": "causes",
    "source": "manual",
@@ -965,7 +965,7 @@
   {
    "from": "04.06.13.05",
    "fromKind": "node",
-   "to": "04.04.11.06",
+   "to": "04.11.03.06",
    "toKind": "node",
    "type": "requires",
    "source": "manual",

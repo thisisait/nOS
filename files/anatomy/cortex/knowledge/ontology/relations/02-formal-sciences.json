@@ -605,7 +605,7 @@
   {
    "from": "02.02.11.09",
    "fromKind": "node",
-   "to": "04.04.12.01",
+   "to": "04.11.02.01",
    "toKind": "node",
    "type": "analogous-to",
    "source": "manual",
@@ -977,7 +977,7 @@
   {
    "from": "02.05.01",
    "fromKind": "node",
-   "to": "04.04.12.01",
+   "to": "04.11.02.01",
    "toKind": "node",
    "type": "generalizes",
    "source": "manual",
