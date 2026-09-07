@@ -49,6 +49,30 @@ OpenCode, Hermes, OpenClaw). Check what landed with
 python3 /srv/nos/tools/skill-status.py
 ```
 
+## Your own tables (per user, per project)
+
+Yes, you can — in the browser today. KEAP lets every `nos-users` member
+(tier 3) **create their own DataTables** at `https://__HOST__:8443/` (the
+Tables page): a table you create is yours, its **Share scope** is *Private
+(only you + admins)* by default, and you can open it to *Everyone* in the
+tenant. Under the hood KEAP also holds explicit per-person grants
+(`sharedWith: [{principal: "user:<login>", access: "read" | "write"}]`),
+measured on this box: a private table is invisible to another user (404), a
+`read` grant makes it visible and read-only, a `write` grant lets them add rows.
+
+Two honest limits, both roadmap rows:
+
+- **The shell does not know who you are yet.** `nos dtt` talks to KEAP as the
+  estate admin and only about the shared `roadmap`, so your own table is a
+  browser thing for now. The planned fix (`dtt-per-user-tables`) is an identity
+  socket: the shell login becomes the KEAP login, `nos dtt --table <yours>`,
+  `nos dtt share --with user:<login>`.
+- **Agents see everything.** The agent door (`nos_tables` in chat, MCP in your
+  coding agent) authenticates with an estate token and lists *all* tables,
+  private ones included (`keap-agent-door-honours-sharing`, a KEAP change).
+  Until that lands, do not put anything in a table you would not show to a
+  colleague with the same chat.
+
 ## The skill that teaches an agent the tables
 
 `nos-datatables` (in the library your shelf links) is the procedure: the two

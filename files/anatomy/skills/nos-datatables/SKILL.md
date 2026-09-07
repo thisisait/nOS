@@ -98,4 +98,7 @@ not pointed at.
   probe's (`roadmap-verify.py`, `state/roadmap-probes.yml`).
 - Never delete a row. Rows are history; a wrong row is moved to `dropped`.
 - Never write to a table you were not told about; `list-tables` shows more than
-  you are meant to touch (face layouts, business fixtures).
+  you are meant to touch (face layouts, business fixtures, and — until KEAP
+  row `keap-agent-door-honours-sharing` lands — users' PRIVATE tables, which
+  the agent bearer can see but was never granted). Treat a table you were not
+  named as someone else's, whatever the door returns.
