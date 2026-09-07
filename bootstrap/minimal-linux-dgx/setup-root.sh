@@ -313,10 +313,18 @@ say "backup disk + restic (nightly writer, morning verifier)"
 BK=/srv/backup
 if [ "${NOS_BACKUP_FORMAT:-}" = yes ] && [ -n "${NOS_BACKUP_DEVICE:-}" ]; then
   # DESTRUCTIVE, explicit opt-in: wipe the device, ext4, label nos-backup.
-  umount "$NOS_BACKUP_DEVICE" 2>/dev/null || true
-  wipefs -aq "$NOS_BACKUP_DEVICE"
-  mkfs.ext4 -q -L nos-backup "$NOS_BACKUP_DEVICE"
-  echo "formatted $NOS_BACKUP_DEVICE as ext4 (label nos-backup)"
+  # The desktop automounts a plugged disk under /media/<user>/…; a file manager
+  # holding it makes wipefs say "busy", so: find every mountpoint of the REAL
+  # device, kill what holds it, unmount (lazily as a last resort), then format.
+  BKREAL="$(readlink -f "$NOS_BACKUP_DEVICE")"
+  for mp in $(findmnt -rno TARGET "$BKREAL" 2>/dev/null); do
+    fuser -km "$mp" 2>/dev/null || true
+    umount "$mp" 2>/dev/null || umount -l "$mp"
+  done
+  sleep 1
+  wipefs -aq "$BKREAL"
+  mkfs.ext4 -q -L nos-backup "$BKREAL"
+  echo "formatted $BKREAL as ext4 (label nos-backup)"
 fi
 BKDEV="$(blkid -L nos-backup 2>/dev/null || true)"
 if [ -n "$BKDEV" ]; then
