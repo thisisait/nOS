@@ -60,7 +60,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 PROBES = REPO / "state/roadmap-probes.yml"
 KEAP = "http://127.0.0.1:8091"
-TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
+#: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
+#: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
+#: non-default loopback publish. Defaults are the operator estate's values.
+TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
 from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
 
 #: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once

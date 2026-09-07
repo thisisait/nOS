@@ -39,6 +39,7 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -49,8 +50,11 @@ DEF = REPO / "state/keap-tables/roadmap.table.yml"
 
 #: Same table id and forward-auth headers as the seeder. Loopback only — the
 #: agent surface is bound to 127.0.0.1 and the estate's edge never sees this.
-TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
-BASE = f"http://127.0.0.1:8091/api/tables/{TABLE}"
+#: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
+#: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
+#: non-default loopback publish. Defaults are the operator estate's values.
+TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
+BASE = f"{os.environ.get('KEAP_API_URL', 'http://127.0.0.1:8091').rstrip('/')}/api/tables/{TABLE}"
 from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
 
 #: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once

@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -56,7 +57,7 @@ DEF = REPO / "state/keap-tables/roadmap.table.yml"
 
 #: Same loopback door and forward-auth headers as the rest of the family. The
 #: agent surface is bound to 127.0.0.1 and the estate's edge never sees this.
-API = "http://127.0.0.1:8091/api/tables"
+API = f"{os.environ.get('KEAP_API_URL', 'http://127.0.0.1:8091').rstrip('/')}/api/tables"
 from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
 
 #: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once

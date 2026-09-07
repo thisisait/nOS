@@ -34,6 +34,7 @@ import argparse
 import functools
 import importlib.util
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -108,11 +109,17 @@ def _capabilities() -> dict[str, str]:
 
 
 def _live_rows(slug: str = "current-state") -> list[dict]:
-    tok = subprocess.run(
-        ["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RW"],
-        capture_output=True, text=True, timeout=15).stdout.strip()
+    tok = os.environ.get("KEAP_AGENT_TOKEN_RW", "").strip()
+    if not tok:
+        try:
+            tok = subprocess.run(
+                ["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RW"],
+                capture_output=True, text=True, timeout=15).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            tok = ""
+    base = os.environ.get("KEAP_API_URL", "http://127.0.0.1:8091").rstrip("/")
     req = urllib.request.Request(
-        f"http://127.0.0.1:8091/agent/v1/tables/{slug}/rows",
+        f"{base}/agent/v1/tables/{slug}/rows",
         headers={"Authorization": f"Bearer {tok}"})
     d = json.load(urllib.request.urlopen(req, timeout=20))
     data = d.get("data", d)

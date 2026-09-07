@@ -25,6 +25,7 @@ refuses (naming the missing columns) rather than POSTing an unknown key.
 """
 
 import json
+import os
 import subprocess
 import sys
 import urllib.request
@@ -34,8 +35,11 @@ from roadmap_seed_lib import GIT_OWNED, load_rows, seed_dir, write_index  # noqa
 
 _REPO = __import__("os").path.abspath(__import__("os").path.join(
     __import__("os").path.dirname(__file__), ".."))
-TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
-BASE = f"http://127.0.0.1:8091/api/tables/{TABLE}"
+#: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
+#: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
+#: non-default loopback publish. Defaults are the operator estate's values.
+TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
+BASE = f"{os.environ.get('KEAP_API_URL', 'http://127.0.0.1:8091').rstrip('/')}/api/tables/{TABLE}"
 H = human_headers()  # identity + SEC-02 x-keap-proxy-secret (else /api 401s)
 
 

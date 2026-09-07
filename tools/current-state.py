@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -80,9 +81,18 @@ def may_claim(row: dict, principal: str, capabilities: dict[str, str]) -> tuple[
 
 # ── live door I/O ────────────────────────────────────────────────────────────
 def _tok() -> str:
-    return subprocess.run(
-        ["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RW"],
-        capture_output=True, text=True, timeout=15).stdout.strip()
+    # Env first (a shell that exported it, or a host where the caller is not in
+    # the docker group), the running container second — same order as
+    # roadmap-update.py, so every tool resolves the token the same way.
+    tok = os.environ.get("KEAP_AGENT_TOKEN_RW", "").strip()
+    if tok:
+        return tok
+    try:
+        return subprocess.run(
+            ["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RW"],
+            capture_output=True, text=True, timeout=15).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return ""
 
 
 def _get_row(slug: str) -> dict | None:

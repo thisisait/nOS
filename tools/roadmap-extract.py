@@ -28,8 +28,11 @@ from keap_api import human_headers
 import roadmap_seed_lib as lib
 from roadmap_seed_lib import seed_dir  # noqa: F401
 
-TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
-BASE = f"http://127.0.0.1:8091/api/tables/{TABLE}"
+#: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
+#: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
+#: non-default loopback publish. Defaults are the operator estate's values.
+TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
+BASE = f"{os.environ.get('KEAP_API_URL', 'http://127.0.0.1:8091').rstrip('/')}/api/tables/{TABLE}"
 
 def _get_rows() -> list[dict]:
     req = urllib.request.Request(BASE + "/rows?limit=500", headers=human_headers())
