@@ -2,7 +2,7 @@
 # =============================================================================
 # nos-dgx backup VERIFIER — the reader that owns the verdict.
 #
-# Restores the latest nightly snapshot's KEAP database into a scratch dir,
+# Restores the latest snapshot's KEAP database into a scratch dir,
 # counts the roadmap rows in it, asks the LIVE KEAP how many it holds, and
 # writes both plus a verdict to /var/lib/nos-dgx/backup/last.json. Exit 0
 # whatever it finds; an unreadable source is UNKNOWN, never OK. Runs daily at
@@ -42,7 +42,7 @@ install -d -m 0700 "$RESTIC_CACHE_DIR"
 BK_MOUNT="${BK_MOUNT:-/srv/backup}"
 mountpoint -q "$BK_MOUNT" || { emit UNKNOWN "$BK_MOUNT is not a mountpoint — backup disk absent"; exit 0; }
 
-latest="$(restic snapshots --json --latest 1 --tag nightly 2>/dev/null)" || { emit UNKNOWN "repository unreadable at $RESTIC_REPOSITORY"; exit 0; }
+latest="$(restic snapshots --json --latest 1 2>/dev/null)" || { emit UNKNOWN "repository unreadable at $RESTIC_REPOSITORY"; exit 0; }
 read -r sid stime < <(printf '%s' "$latest" | python3 -c 'import json,sys; s=json.load(sys.stdin); print((s[0]["short_id"]+" "+s[0]["time"]) if s else "")')
 [ -n "${sid:-}" ] || { emit UNKNOWN "no nightly snapshot yet"; exit 0; }
 age_h="$(python3 -c "import datetime,sys; t=datetime.datetime.fromisoformat(sys.argv[1].replace('Z','+00:00')); print(int((datetime.datetime.now(datetime.timezone.utc)-t).total_seconds()//3600))" "$stime")"

@@ -376,8 +376,12 @@ for u in nos-dgx-backup.service nos-dgx-backup.timer nos-dgx-backup-verify.servi
   install -m 0644 "$RT/systemd/$u" "/etc/systemd/system/$u"
 done
 systemctl daemon-reload
-systemctl enable -q --now nos-dgx-backup.timer nos-dgx-backup-verify.timer
-echo "timers: $(systemctl list-timers --no-legend 'nos-dgx-*' | awk '{print $NF" "$1" "$2}' | paste -sd '·' -)"
+# The scheduled writer is Backrest's plan (below); the systemd backup timer
+# stays installed for a manual `systemctl start nos-dgx-backup.service` and
+# for a box without Backrest, but DISABLED so the repo has one scheduler.
+systemctl disable -q --now nos-dgx-backup.timer 2>/dev/null || true
+systemctl enable -q --now nos-dgx-backup-verify.timer
+echo "verify timer: $(systemctl list-timers --no-legend 'nos-dgx-backup-verify*' | awk '{print $1" "$2}')"
 
 say "Backrest (restic UI, maintainers only, nginx :8446)"
 BR=/opt/nos-dgx/backrest
@@ -390,17 +394,34 @@ install -d -m 0700 /etc/nos/backrest /var/lib/nos-dgx/backrest
 # Backrest validates that a configured repo carries the repository's own
 # guid (`restic cat config` → id) unless it may auto-initialise; we never let
 # it initialise, so read the guid from the repo the timer writes to.
-if [ ! -f /etc/nos/backrest/config.json ] || ! grep -q '"guid"' /etc/nos/backrest/config.json; then
+if [ ! -f /etc/nos/backrest/config.json ] || ! grep -q '"guid"' /etc/nos/backrest/config.json || ! grep -q '"nightly"' /etc/nos/backrest/config.json; then
   # shellcheck disable=SC1091
   ( . /etc/nos/restic.env; export RESTIC_REPOSITORY RESTIC_PASSWORD
     GUID="$(restic cat config 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' 2>/dev/null || true)"
     [ -n "$GUID" ] || { echo "backrest: repository guid unreadable (disk mounted? restic init done?) — config not written"; exit 0; }
-    python3 - "$SHORT" "$RESTIC_REPOSITORY" "$RESTIC_PASSWORD" "$GUID" <<'PY' > /etc/nos/backrest/config.json
+    python3 - "$SHORT" "$RESTIC_REPOSITORY" "$RESTIC_PASSWORD" "$GUID" "$RT/backup/excludes.txt" <<'PY' > /etc/nos/backrest/config.json
 import json, sys
+excl = [l.strip() for l in open(sys.argv[5], encoding="utf-8") if l.strip() and not l.startswith("#")]
+# The plan mirrors backup/nos-dgx-backup.sh: same paths, same excludes, the
+# staging hook first. Backrest is the ONE scheduled writer; the verifier
+# (nos-dgx-backup-verify.timer) stays an independent reader.
 print(json.dumps({"modno": 1, "version": 4, "instance": sys.argv[1],
   "repos": [{"id": "local", "guid": sys.argv[4], "uri": sys.argv[2], "password": sys.argv[3],
-             "prunePolicy": {"schedule": {"disabled": True}}, "checkPolicy": {"schedule": {"disabled": True}}}],
-  "plans": [], "auth": {"disabled": True}}, indent=1))
+             "env": ["RESTIC_CACHE_DIR=/var/cache/nos-dgx-restic"],
+             "prunePolicy": {"schedule": {"cron": "0 5 * * 0", "clock": "CLOCK_LOCAL"}, "maxUnusedPercent": 10},
+             "checkPolicy": {"schedule": {"cron": "0 6 * * 0", "clock": "CLOCK_LOCAL"}, "readDataSubsetPercent": 10}}],
+  "plans": [{"id": "nightly", "repo": "local",
+             "paths": ["/etc/nos", "/var/lib/nos-dgx/backup/stage", "/srv/nos-dgx/keap/data", "/srv/nos-seed.git",
+                       "/var/lib/nos-dgx/jupyterhub", "/var/lib/docker/volumes/open-webui/_data",
+                       "/var/lib/docker/volumes/iiab_n8n_data/_data", "/home", "/etc/nginx/tls",
+                       "/etc/systemd/system/user-.slice.d"],
+             "excludes": excl,
+             "schedule": {"cron": "0 3 * * *", "clock": "CLOCK_LOCAL"},
+             "retention": {"policyTimeBucketed": {"daily": 7, "weekly": 8}},
+             "backup_flags": ["--one-file-system", "--exclude-caches"],
+             "hooks": [{"conditions": ["CONDITION_SNAPSHOT_START"], "onError": "ON_ERROR_FATAL",
+                        "actionCommand": {"command": "/srv/nos-dgx/backup/nos-dgx-backup-stage.sh"}}]}],
+  "auth": {"disabled": True}}, indent=1))
 PY
   )
   chmod 0600 /etc/nos/backrest/config.json

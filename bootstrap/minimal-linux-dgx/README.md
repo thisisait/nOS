@@ -51,12 +51,12 @@ Admin keeps the root daemon (the iiab stack) and the default context.
 ## Backups
 
 restic → the external disk (ext4, label `nos-backup`, `/srv/backup` from fstab).
-`nos-dgx-backup.timer` 03:00 (writer, refuses when the disk is not mounted),
+Backrest plan `nightly` 03:00 is the writer (its start hook stages SQLite
+snapshots + inventories; the manual `nos-dgx-backup.service` does the same outside the UI),
 `nos-dgx-backup-verify.timer` 04:30 (reader: restores KEAP's db from the latest
 snapshot, counts roadmap rows against the live table, writes
 `/var/lib/nos-dgx/backup/last.json` — the ONLY success marker). Retention 8
-weekly + 7 daily, prune + 10 % check on Sundays. Backrest (8446) browses the
-same repository and schedules nothing. Key: `/etc/nos/restic.env` + a copy in
+weekly + 7 daily, prune + 10 % check on Sundays. Backrest (8446, maintainers) shows the plan, its runs and snapshots. Key: `/etc/nos/restic.env` + a copy in
 `/root/nos-dgx-restic.password` — keep it in a password manager. Details and
 the rebuild order: `kb/admin-backup.md`.
 

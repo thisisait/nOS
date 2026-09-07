@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # =============================================================================
-# nos-dgx nightly backup — restic to the local backup disk. Runs as root from
-# nos-dgx-backup.timer (03:00). It writes NO success marker: the verifier
+# nos-dgx backup — restic to the local backup disk, MANUAL / fallback path.
+# The scheduled nightly run is Backrest's plan `nightly` (same paths, same
+# excludes, same staging hook, visible in the UI); this script exists for
+# `systemctl start nos-dgx-backup.service` by hand and for a box without
+# Backrest. Its timer is installed but DISABLED while the plan exists. It writes NO success marker: the verifier
 # (nos-dgx-backup-verify.sh) restores from the repository and says what it
 # found — a backup that reports its own success is the defect nOS keeps
 # finding (success markers must be written by a reader).
@@ -43,26 +46,7 @@ if ! mountpoint -q "$BK_MOUNT"; then
 fi
 [ -d "$RESTIC_REPOSITORY" ] || { log "REFUSING: repository $RESTIC_REPOSITORY missing (run setup-root.sh)"; exit 75; }
 
-install -d -m 0700 "$STAGE"
-rm -rf "${STAGE:?}"/*
-install -d -m 0700 "$STAGE/etc"
-
-# ── online snapshots of every live SQLite database ───────────────────────────
-snap() {  # snap <live.db> <name>
-  [ -f "$1" ] || { log "skip $2: $1 absent"; return 0; }
-  sqlite3 "$1" ".backup '$STAGE/$2.db'" && log "snapshot $2 ($(du -h "$STAGE/$2.db" | cut -f1))"
-}
-snap /srv/nos-dgx/keap/data/keap.db                          keap
-snap /var/lib/docker/volumes/open-webui/_data/webui.db       webui
-snap /var/lib/docker/volumes/iiab_n8n_data/_data/database.sqlite n8n
-snap /var/lib/nos-dgx/jupyterhub/jupyterhub.sqlite           jupyterhub
-
-# ── inventories: what to pull again, not the blobs ───────────────────────────
-OLLAMA_HOST=http://172.17.0.1:11434 ollama list > "$STAGE/ollama-models.txt" 2>/dev/null || true
-docker image ls --format '{{.Repository}}:{{.Tag}} {{.Size}}' > "$STAGE/docker-images.txt" 2>/dev/null || true
-dpkg --get-selections > "$STAGE/dpkg-selections.txt"
-for f in passwd group shadow gshadow subuid subgid fstab; do cp -p "/etc/$f" "$STAGE/etc/$f"; done
-ls /var/lib/systemd/linger > "$STAGE/linger.txt" 2>/dev/null || true
+"$RT/backup/nos-dgx-backup-stage.sh"
 
 # ── the backup ───────────────────────────────────────────────────────────────
 log "restic backup → $RESTIC_REPOSITORY"
