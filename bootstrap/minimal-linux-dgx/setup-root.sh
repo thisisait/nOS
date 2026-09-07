@@ -509,10 +509,9 @@ fi
 
 say "identity outpost: the shell login is the KEAP login (unix socket, SO_PEERCRED)"
 install -d -m 0755 /opt/nos-dgx/identity
-install -m 0755 -o root -g root "$RT/identity/keap-identity.py" /opt/nos-dgx/identity/keap-identity.py
 ID_BOUNCE=0
 put "$RT/systemd/nos-keap-identity.service" /etc/systemd/system/nos-keap-identity.service && ID_BOUNCE=1
-cmp -s "$RT/identity/keap-identity.py" /opt/nos-dgx/identity/keap-identity.py || ID_BOUNCE=1
+put "$RT/identity/keap-identity.py" /opt/nos-dgx/identity/keap-identity.py 0755 && ID_BOUNCE=1   # compare BEFORE install
 systemctl daemon-reload; systemctl enable -q nos-keap-identity
 if [ "$ID_BOUNCE" = 1 ] || ! systemctl is-active -q nos-keap-identity; then systemctl restart nos-keap-identity; sleep 2; fi
 echo "identity outpost: $(systemctl is-active nos-keap-identity) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 --unix-socket /run/nos-dgx/keap-identity.sock http://keap/api/tables || echo no-answer) on /api/tables as root"
