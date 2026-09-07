@@ -27,9 +27,9 @@ params:
         url: "http://export.arxiv.org/rss/cs.AI",
       }
     - {
-        id: oss-sec,
-        label: "oss-security",
-        url: "https://www.openwall.com/lists/oss-security/rss",
+        id: arxiv-sec,
+        label: "arXiv cs.CR (security)",
+        url: "http://export.arxiv.org/rss/cs.CR",
       }
 
 steps:

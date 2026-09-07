@@ -258,15 +258,15 @@
       "item": "arxiv-ai"
     },
     {
-      "id": "step:news-scout:fetch:oss-sec",
+      "id": "step:news-scout:fetch:arxiv-sec",
       "kind": "step",
-      "label": "fetch oss-security",
+      "label": "fetch arXiv cs.CR (security)",
       "loop": "news-scout",
       "x": 300,
       "y": 252,
       "runner": "tool",
       "param": "sources",
-      "item": "oss-sec"
+      "item": "arxiv-sec"
     },
     {
       "id": "step:news-scout:extract",
@@ -448,9 +448,9 @@
       "loop": "news-scout"
     },
     {
-      "id": "trigger:news-scout=>step:news-scout:fetch:oss-sec",
+      "id": "trigger:news-scout=>step:news-scout:fetch:arxiv-sec",
       "source": "trigger:news-scout",
-      "target": "step:news-scout:fetch:oss-sec",
+      "target": "step:news-scout:fetch:arxiv-sec",
       "kind": "flow",
       "loop": "news-scout"
     },
@@ -476,8 +476,8 @@
       "loop": "news-scout"
     },
     {
-      "id": "step:news-scout:fetch:oss-sec=>step:news-scout:extract",
-      "source": "step:news-scout:fetch:oss-sec",
+      "id": "step:news-scout:fetch:arxiv-sec=>step:news-scout:extract",
+      "source": "step:news-scout:fetch:arxiv-sec",
       "target": "step:news-scout:extract",
       "kind": "flow",
       "loop": "news-scout"
