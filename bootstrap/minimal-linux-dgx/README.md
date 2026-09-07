@@ -48,6 +48,18 @@ daemon, the containers, the Lab and every build together. VS Code Dev
 Containers and PhpStorm's Docker interpreter use that socket unchanged.
 Admin keeps the root daemon (the iiab stack) and the default context.
 
+## The assistant and the tables in Chat
+
+`bin/webui-kb-sync.py` uploads the KB pages, this README, the skill library,
+the live roadmap and the model list into an Open WebUI knowledge base
+("nOS on <host>") and keeps a public model **nOS Assistant** on it; it needs
+an admin API key in `/etc/nos/openwebui.env`. `mcpo-nos-tables.service`
+(user `nos-mcpo`, READ token only) exposes the `nos_tables` MCP server as an
+OpenAPI tool server on `172.17.0.1:8500`; register it once in Open WebUI
+(Admin → Settings → Integrations → OpenAPI server
+`http://host.docker.internal:8500`, bearer = `MCPO_API_KEY` from `/etc/nos/mcpo.env`).
+The `nos-datatables` skill in `files/anatomy/skills/` teaches agents the doors.
+
 ## Backups
 
 restic → the external disk (ext4, label `nos-backup`, `/srv/backup` from fstab).

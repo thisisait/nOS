@@ -433,6 +433,37 @@ systemctl restart backrest
 sleep 3
 echo "backrest: $(systemctl is-active backrest) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://127.0.0.1:9898/ || echo no-answer) on /"
 
+say "Open WebUI: the DataTables tool server (mcpo) + the nOS Assistant knowledge"
+# mcpo wraps the stdio MCP server as an OpenAPI tool server. Its own user, in
+# nos-users only → the wrapper sources the READ token, so chat can read the
+# tables and cannot write them. Bound to docker0 → reachable from the Open
+# WebUI container as http://host.docker.internal:8500, never from the LAN.
+id nos-mcpo >/dev/null 2>&1 || useradd -r -s /usr/sbin/nologin -d /nonexistent -G nos-users nos-mcpo
+MC=/opt/nos-dgx/mcpo
+if [ ! -x "$MC/venv/bin/mcpo" ]; then
+  python3 -m venv "$MC/venv" && "$MC/venv/bin/pip" install -q --upgrade pip && "$MC/venv/bin/pip" install -q mcpo
+fi
+chown -R root:root "$MC"; chmod -R o+rX,go-w "$MC"
+if [ ! -f /etc/nos/mcpo.env ]; then
+  umask 077; printf 'MCPO_API_KEY=%s\n' "$(openssl rand -hex 24)" > /etc/nos/mcpo.env; umask 022
+fi
+chown root:nos-mcpo /etc/nos/mcpo.env; chmod 0640 /etc/nos/mcpo.env
+install -m 0644 "$RT/systemd/mcpo-nos-tables.service" /etc/systemd/system/mcpo-nos-tables.service
+systemctl daemon-reload; systemctl enable -q mcpo-nos-tables; systemctl restart mcpo-nos-tables
+sleep 3
+echo "mcpo: $(systemctl is-active mcpo-nos-tables) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://172.17.0.1:8500/openapi.json || echo no-answer) on /openapi.json"
+# The assistant's knowledge needs an ADMIN API key from Open WebUI (Settings →
+# Account → API keys). Until it is in /etc/nos/openwebui.env the sync just says so.
+if [ ! -f /etc/nos/openwebui.env ]; then
+  install -m 0640 -o root -g nos-maintainers /dev/null /etc/nos/openwebui.env
+  printf '# Admin API key from Open WebUI (Settings → Account → API keys); then: setup-root.sh or bin/webui-kb-sync.py\nOPENWEBUI_API_KEY=\n# OPENWEBUI_BASE_MODEL=qwen3.5:35b   (default: the first Ollama model Open WebUI lists)\n' > /etc/nos/openwebui.env
+fi
+if grep -qE '^OPENWEBUI_API_KEY=.+' /etc/nos/openwebui.env; then
+  NOS_SHORT="$SHORT" NOS_DGX_RT="$RT" NOS_SRC="$SRC" python3 "$RT/bin/webui-kb-sync.py" 2>&1 | tail -n 4 | sed 's/^/  /'
+else
+  echo "webui knowledge: no OPENWEBUI_API_KEY in /etc/nos/openwebui.env — the nOS Assistant is not synced yet"
+fi
+
 say "phase C — stack up, knowledge ingest, tables (as admin)"
 sudo -u admin -H bash -c '
   set -e

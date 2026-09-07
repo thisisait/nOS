@@ -49,6 +49,13 @@ OpenCode, Hermes, OpenClaw). Check what landed with
 python3 /srv/nos/tools/skill-status.py
 ```
 
+## The skill that teaches an agent the tables
+
+`nos-datatables` (in the library your shelf links) is the procedure: the two
+tables, the two doors, the token tiers, the claim-board etiquette, and the one
+hard rule — an agent moves claims, **never** writes a verdict. Your Claude
+Code / Codex / Hermes reads it before touching a row.
+
 ## Your coding agent and the tables (MCP)
 
 Claude Code, Codex and Cursor speak MCP. `nos-user-setup` registers a stdio

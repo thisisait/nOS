@@ -26,6 +26,23 @@ curl -s $OLLAMA_HOST/api/tags | python3 -m json.tool | grep '"name"'
 `https://__HOST__:8444/` is the friendly front end for the same server: model
 picker top-left, documents, chat history per account. Admin creates accounts.
 
+### Ask the machine about itself: the **nOS Assistant**
+
+Pick **nOS Assistant** in the model list. It answers "how do I … here" from
+this knowledge base, the recipe, the nOS skill library, the **live roadmap**
+and the model list — in your language, naming the page it took the answer
+from. The knowledge is re-synced by the admin's recipe run
+(`bin/webui-kb-sync.py`), so it follows the pages you are reading now.
+
+### The DataTables from a chat: the `nos_tables` tool
+
+Enable the **nos_tables** tool in the chat (the *+* / tools control next to the
+message box, or ask the assistant with tools on). It is the same door your
+coding agent uses over MCP (`list-tables`, `read-rows`, `get-row`,
+`search-rows`) — read-only from chat on purpose: writes (`upsert-row`,
+`claim-row`…) need a maintainer's token and belong to `nos dtt` in a shell or
+your own agent. Try: *"which roadmap rows are in review?"*
+
 ## Your editor
 
 Any Ollama-compatible extension (Continue, Cody, the JetBrains AI plugin's
