@@ -26,6 +26,11 @@ KEAP_PIN=v1.44.0            # mirrors default.config.yml keap_version
 SHORT="$(hostname -s)"
 HOST="$SHORT.local"
 MAINTAINERS="admin"
+# Per-user ceilings (systemd user-<uid>.slice): a developer's build, Lab or
+# rootless containers all live in that slice, so one cap covers them all and
+# none of them can starve Ollama/KEAP. 121 GB box: 32G / 10 cores per user.
+NOS_USER_MEM_MAX="${NOS_USER_MEM_MAX:-32G}"
+NOS_USER_CPU_QUOTA="${NOS_USER_CPU_QUOTA:-1000%}"
 # Every member of nos-users gets a shelf — the group is the roster, not this file.
 USERS_ALL=""
 
@@ -36,7 +41,8 @@ say "packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq nginx libnginx-mod-http-auth-pam mkcert libnss3-tools \
-  python3-yaml sqlite3 rsync curl git >/dev/null
+  python3-yaml sqlite3 rsync curl git \
+  docker-ce-rootless-extras uidmap passt fuse-overlayfs >/dev/null
 
 say "groups + users"
 groupadd -f nos-users
@@ -57,6 +63,35 @@ fi
 gpasswd -d tester docker >/dev/null 2>&1 || true
 gpasswd -d tester sudo   >/dev/null 2>&1 || true
 USERS_ALL="$(getent group nos-users | cut -d: -f4 | tr , " ")"
+
+say "developer substrate: linger, per-user ceilings, rootless-docker prerequisites"
+# linger: the user's systemd instance (and with it rootless dockerd, dev
+# servers, JupyterLab kernels) runs without a login session and after logout.
+for u in $USERS_ALL; do loginctl enable-linger "$u"; done
+install -d /etc/systemd/system/user-.slice.d
+cat > /etc/systemd/system/user-.slice.d/50-nos-dgx.conf <<EOF
+# nos-dgx: ceilings for EVERY user slice (setup-root.sh, NOS_USER_MEM_MAX / NOS_USER_CPU_QUOTA)
+[Slice]
+MemoryMax=$NOS_USER_MEM_MAX
+CPUQuota=$NOS_USER_CPU_QUOTA
+EOF
+systemctl daemon-reload
+# Ubuntu 24.04 restricts unprivileged user namespaces to AppArmor-profiled
+# binaries; rootlesskit needs the userns permission or every rootless dockerd
+# dies at start. Idempotent: written only when no profile names the binary.
+if ! grep -rqs '/usr/bin/rootlesskit' /etc/apparmor.d/ 2>/dev/null; then
+  cat > /etc/apparmor.d/usr.bin.rootlesskit <<'EOF'
+abi <abi/4.0>,
+include <tunables/global>
+
+/usr/bin/rootlesskit flags=(unconfined) {
+  userns,
+  include if exists <local/usr.bin.rootlesskit>
+}
+EOF
+  systemctl restart apparmor
+fi
+echo "linger: $(ls /var/lib/systemd/linger | tr '\n' ' ')· slice cap $NOS_USER_MEM_MAX / $NOS_USER_CPU_QUOTA"
 
 say "/srv layout"
 mkdir -p "$RT"
@@ -221,7 +256,11 @@ sqlite3 /var/lib/docker/volumes/open-webui/_data/webui.db \
 
 say "per-user shelves"
 for u in $USERS_ALL; do
-  echo "-- $u"; sudo -u "$u" -H env NOS_SRC="$SRC" "$RT/bin/nos-user-setup" || true
+  uid="$(id -u "$u")"
+  echo "-- $u"
+  sudo -u "$u" -H env NOS_SRC="$SRC" \
+    XDG_RUNTIME_DIR="/run/user/$uid" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
+    "$RT/bin/nos-user-setup" || true
 done
 
 say "JupyterHub (native, root-owned runtime; per-user Labs as the Linux user)"

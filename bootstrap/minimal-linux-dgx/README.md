@@ -33,6 +33,19 @@ A `pre_spawn_hook` hands each Lab the KEAP tokens its user's group may read, so
 works from a cell. The shared kernel carries torch (cu130, aarch64) when the
 wheel installs; users add their own kernels with `python -m ipykernel install --user`.
 
+## Developers: rootless Docker per user (VS Code Remote-SSH, JetBrains Gateway)
+
+Every project carries its own `php:<ver>` image, so the toolchain is
+container-first and nobody joins the `docker` group (root-equivalent). Each
+`nos-users` member gets their **own** daemon: `nos-user-setup` runs
+`dockerd-rootless-setuptool.sh install` (systemd `--user docker.service`,
+socket `/run/user/<uid>/docker.sock`, docker context `rootless`), linger keeps
+it alive after logout, and the `user-<uid>.slice` ceiling
+(`NOS_USER_MEM_MAX` / `NOS_USER_CPU_QUOTA`, default 32G / 10 cores) caps the
+daemon, the containers, the Lab and every build together. VS Code Dev
+Containers and PhpStorm's Docker interpreter use that socket unchanged.
+Admin keeps the root daemon (the iiab stack) and the default context.
+
 ## Layout
 
 ```
