@@ -80,7 +80,10 @@ def get(url: str) -> dict:
                              f"(your tier, or no grant); the estate roadmap needs tier-managers. {body}")
         raise SystemExit(f"CANNOT READ table `{TABLE}`: HTTP {e.code} {body}")
     if not d.get("success", True) or "data" not in d:
-        raise SystemExit(f"CANNOT READ table `{TABLE}`: {d.get('error') or d}")
+        err = str(d.get("error") or d)
+        hint = " — not visible to you (your tier, or no grant); the estate roadmap needs tier-managers" \
+            if "unknown table" in err else ""
+        raise SystemExit(f"CANNOT READ table `{TABLE}`: {err}{hint}")
     return d
 
 
