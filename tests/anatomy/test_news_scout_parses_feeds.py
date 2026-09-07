@@ -58,3 +58,27 @@ def test_dedup_collapses_same_link():
     ]
     out = m.dedup(rows)
     assert [r["source"] for r in out] == ["a", "c"], "same canonical link must collapse; first wins"
+
+
+def test_markdown_capture_strips_html_and_carries_the_link():
+    m = _mod()
+    it = {"source": "hn", "source_label": "HN", "title": "T",
+          "link": "https://x.example/z", "published": "2026",
+          "summary": "<p>hello <a href='#'>world</a></p>"}
+    md = m._as_markdown(it)
+    assert md.startswith("---\n") and 'link: "https://x.example/z"' in md
+    assert "<p>" not in md and "hello world" in md, "html must be stripped from the body"
+
+
+def test_capture_filename_is_deterministic(tmp_path, monkeypatch):
+    """Same link → same file, so tonight's re-run overwrites rather than dupes
+    (the at-least-once/deterministic-key contract keap-consolidate relies on)."""
+    m = _mod()
+    monkeypatch.setenv("KEAP_INBOX", str(tmp_path))
+    it = {"source": "hn", "source_label": "HN", "title": "T",
+          "link": "https://x.example/z", "summary": "s"}
+    m.to_keap([it], lambda *_: None)
+    first = sorted(p.name for p in (tmp_path / "news-scout").glob("*.md"))
+    m.to_keap([it], lambda *_: None)  # re-run
+    second = sorted(p.name for p in (tmp_path / "news-scout").glob("*.md"))
+    assert first == second and len(first) == 1, "a re-run must overwrite, not accumulate"

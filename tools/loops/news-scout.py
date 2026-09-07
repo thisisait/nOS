@@ -27,8 +27,10 @@ declared feeds; reach for feedparser if a feed's dialect defeats it.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -145,18 +147,61 @@ def run(limit: int, only: str | None, log) -> list[dict]:
     return items
 
 
+_TAG = re.compile(r"<[^>]+>")
+
+
+def _inbox() -> str:
+    """The keap-consolidate drop dir. It sweeps ~/keap/inbox and ships a .md's
+    CONTENT as a capture (INLINE_TEXT_EXT), so we write there and reuse the whole
+    intake — deterministic sid + upsert means a re-run overwrites, never dupes."""
+    root = os.environ.get("KEAP_INBOX") or os.path.join(
+        os.environ.get("KEAP_HOME") or os.path.join(os.path.expanduser("~"), "keap"), "inbox")
+    return os.path.join(root, "news-scout")
+
+
+def _as_markdown(it: dict) -> str:
+    body = _TAG.sub("", it.get("summary", "")).strip()
+    fm = {"title": it["title"], "source": it.get("source_label", it["source"]),
+          "link": it["link"], "published": it.get("published", ""),
+          "captured_by": "news-scout"}
+    front = "\n".join(f'{k}: "{str(v)}"' for k, v in fm.items())
+    return f"---\n{front}\n---\n\n# {it['title']}\n\n{body}\n\nSource: {it['link']}\n"
+
+
+def to_keap(items: list[dict], log) -> int:
+    """Drop each item as a deterministic .md into the inbox. Filename keys on the
+    link so tonight's re-run overwrites the same file — idempotent by design."""
+    out_dir = _inbox()
+    os.makedirs(out_dir, exist_ok=True)
+    n = 0
+    for it in items:
+        h = hashlib.sha1(it["link"].encode("utf-8")).hexdigest()[:12]  # noqa: S324 — filename key, not security
+        path = os.path.join(out_dir, f"{it['source']}-{h}.md")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(_as_markdown(it))
+        n += 1
+    log(f"  consolidate: wrote {n} item(s) to {out_dir} "
+        f"(keap-consolidate sweeps them into the corpus review queue)")
+    return n
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--limit", type=int, default=0, help="max items per source (0 = all)")
     ap.add_argument("--source", metavar="ID", help="fetch only this manifest source id")
+    ap.add_argument("--to-keap", action="store_true",
+                    help="drop items as .md into the KEAP inbox instead of printing JSON")
     args = ap.parse_args()
 
     def log(line: str) -> None:
         print(line, file=sys.stderr, flush=True)
 
-    log("news-scout: fetch + extract")
+    log("news-scout: fetch + extract" + (" + consolidate → KEAP" if args.to_keap else ""))
     items = run(args.limit, args.source, log)
-    print(json.dumps(items, ensure_ascii=False, indent=2))
+    if args.to_keap:
+        to_keap(items, log)
+    else:
+        print(json.dumps(items, ensure_ascii=False, indent=2))
     return 0 if items else 1
 
 
