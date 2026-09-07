@@ -317,11 +317,15 @@ if [ "${NOS_BACKUP_FORMAT:-}" = yes ] && [ -n "${NOS_BACKUP_DEVICE:-}" ]; then
   # holding it makes wipefs say "busy", so: find every mountpoint of the REAL
   # device, kill what holds it, unmount (lazily as a last resort), then format.
   BKREAL="$(readlink -f "$NOS_BACKUP_DEVICE")"
-  for mp in $(findmnt -rno TARGET "$BKREAL" 2>/dev/null); do
-    fuser -km "$mp" 2>/dev/null || true
-    umount "$mp" 2>/dev/null || umount -l "$mp"
+  # Mountpoints may carry spaces/UTF-8 ("/media/admin/Nový svazek"): read them
+  # line by line, unescaped (-n, no -r), and unmount by DEVICE, not by path.
+  findmnt -no TARGET "$BKREAL" 2>/dev/null | while IFS= read -r mp; do
+    fuser -km -- "$mp" 2>/dev/null || true
   done
   sleep 1
+  while findmnt -n "$BKREAL" >/dev/null 2>&1; do
+    umount "$BKREAL" 2>/dev/null || umount -l "$BKREAL" || break
+  done
   wipefs -aq "$BKREAL"
   mkfs.ext4 -q -L nos-backup "$BKREAL"
   echo "formatted $BKREAL as ext4 (label nos-backup)"
