@@ -1,10 +1,13 @@
 <!--
-  Planner — two views of the estate's own work (face-planner).
+  Planner — three views of the estate's own work (face-planner).
 
   Roadmap: the roadmap DataTable as an interactive Svelte Flow graph (drag to
-  reparent, RBAC-gated write-back; the DataTable stays source of truth).
+  reparent, RBAC-gated write-back; the DataTable stays source of truth). Select
+  a node for its detail; Esc closes it.
   Loops:   the agentic loop's harness (propose→judge→apply + roles + intents +
-  what it refuses), read-only, compiled from ledger.py.
+  what it refuses), read-only, compiled from ledger.py. Pan + zoom only.
+  Routing: the agent CAPABILITY space (agents→task_types→scopes), read-only,
+  git-derived from the agent manifests. Pan + zoom only.
 
   The shell owns only which view is active; each view fetches/imports its own
   data — same spine as the Anatomy app.

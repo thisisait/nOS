@@ -176,7 +176,22 @@
 	</header>
 
 	<div class="flow">
-		<SvelteFlow {nodes} {edges} fitView nodesConnectable={false} nodesDraggable={false}>
+		<!-- Pan + zoom ONLY (operator's standing rule for the loops layout). The
+		     loop's shape is doctrine, not a thing to select or poke: nodes don't
+		     drag or connect, and elementsSelectable/nodesFocusable off remove the
+		     dead click-to-highlight state a reader would mistake for a control.
+		     A node's detail lives in the Roadmap reading, where a node IS a row. -->
+		<SvelteFlow
+			{nodes}
+			{edges}
+			fitView
+			nodesConnectable={false}
+			nodesDraggable={false}
+			elementsSelectable={false}
+			nodesFocusable={false}
+			edgesFocusable={false}
+			selectionOnDrag={false}
+		>
 			<Background />
 			<Controls showLock={false} />
 			<MiniMap pannable zoomable />

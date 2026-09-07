@@ -89,7 +89,21 @@
 	</header>
 
 	<div class="flow">
-		<SvelteFlow {nodes} {edges} fitView nodesConnectable={false} nodesDraggable={false}>
+		<!-- Pan + zoom ONLY, same as the Loops reading: this is the capability
+		     SPACE (git-derived doctrine), not a thing to select or poke. No
+		     detail panel here — a node is an agent/scope, not a row — so the
+		     dead click-to-highlight state is removed rather than left dangling. -->
+		<SvelteFlow
+			{nodes}
+			{edges}
+			fitView
+			nodesConnectable={false}
+			nodesDraggable={false}
+			elementsSelectable={false}
+			nodesFocusable={false}
+			edgesFocusable={false}
+			selectionOnDrag={false}
+		>
 			<Background />
 			<Controls showLock={false} />
 			<MiniMap pannable zoomable />

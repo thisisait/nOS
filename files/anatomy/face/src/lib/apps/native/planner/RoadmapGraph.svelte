@@ -190,6 +190,13 @@
 	onMount(load);
 </script>
 
+<!-- Esc closes the detail panel — the × button had no keyboard equivalent. -->
+<svelte:window
+	onkeydown={(e) => {
+		if (e.key === 'Escape' && selectedId) selectedId = null;
+	}}
+/>
+
 <div class="planner">
 	<header>
 		<strong>Planner</strong>
