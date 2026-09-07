@@ -38,6 +38,10 @@ DROP = ("x-authentik-", "x-keap-proxy-secret", "connection", "proxy-connection",
 
 
 def tier_groups(login: str) -> str | None:
+    # root is the operator's superuser: it can read the secret and impersonate
+    # anyone anyway, so it is tier 1 here — and dgx-status runs under sudo.
+    if login == "root":
+        return "nos-providers,nos-admins"
     try:
         primary = grp.getgrgid(pwd.getpwnam(login).pw_gid).gr_name
     except KeyError:
