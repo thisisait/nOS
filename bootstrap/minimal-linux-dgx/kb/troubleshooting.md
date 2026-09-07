@@ -29,5 +29,11 @@ curl -s http://172.17.0.1:11434/api/ps
 journalctl -p err -b --no-pager | tail
 ```
 
-A dedicated one-command reader (`dgx-status`) is a roadmap row; until it
-exists, these five lines are it.
+Or the one command that runs every probe and colours it:
+
+```
+dgx-status            # RED / GREEN / UNKNOWN per service, edge port, organ, backup verdict
+dgx-status --json     # the same rows for an agent
+```
+
+It is strictly a reader (exit 0 always); an unreadable source is UNKNOWN, never green.

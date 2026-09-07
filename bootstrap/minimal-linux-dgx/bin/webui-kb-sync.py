@@ -198,9 +198,20 @@ def main():
     docs = documents()
     print(f"{len(docs)} document(s)")
 
-    # knowledge base
-    st, kbs = api("GET", "/api/v1/knowledge/")
-    kb = next((k for k in (kbs if isinstance(kbs, list) else []) if k.get("name") == KB_NAME), None)
+    # knowledge base: the one the state file remembers, else by name — and the
+    # list endpoint answers {"items": [...], "total": n}, not a bare list (the
+    # first version read a bare list, saw nothing, and created a duplicate).
+    kb = None
+    if state.get("knowledge_id"):
+        st, k = api("GET", f"/api/v1/knowledge/{state['knowledge_id']}")
+        kb = k if st == 200 and k.get("id") else None
+    if not kb:
+        st, kbs = api("GET", "/api/v1/knowledge/")
+        items = kbs if isinstance(kbs, list) else (kbs.get("items") or kbs.get("data") or [])
+        same = [k for k in items if k.get("name") == KB_NAME]
+        if len(same) > 1:
+            print(f"WARNING: {len(same)} knowledge bases named {KB_NAME!r}; using the fullest, delete the others in Open WebUI")
+        kb = max(same, key=lambda k: k.get("file_count", len(k.get("files") or []))) if same else None
     if not kb:
         if a.dry_run:
             print(f"[dry] would create knowledge base {KB_NAME!r}")
@@ -212,6 +223,7 @@ def main():
             sys.exit(f"knowledge create failed ({st}): {kb}")
         print(f"created knowledge base {KB_NAME!r} ({kb['id']})")
     kid = kb["id"]
+    state["knowledge_id"] = kid
 
     # files: add / replace / remove
     changed = 0

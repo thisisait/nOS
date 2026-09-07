@@ -4,10 +4,13 @@
 #
 #   sudo bash <nOS checkout>/bootstrap/minimal-linux-dgx/setup-root.sh
 #
-# What it does, in order: packages · groups + users (tester) · /srv layout
-# (runtime checkout, seed repo, config) · secrets in /etc/nos · mkcert TLS ·
-# nginx + PAM · native Ollama as a system service (models migrated from the old
-# bundle volume) · per-user shelves · compose up + knowledge ingest + tables (as admin).
+# What it does, in order: packages · groups + users · developer substrate
+# (linger, slice ceilings, rootless-docker prerequisites) · /srv layout (rendered
+# recipe, KEAP clone + image, runtime checkout, seed repo, KB build) · secrets in
+# /etc/nos · mkcert TLS · mDNS · firewall · nginx + PAM · native Ollama ·
+# per-user shelves · JupyterHub · backup disk + restic + verifier · Backrest ·
+# mcpo + the nOS Assistant knowledge · compose up + KEAP ingest + tables.
+# Services are RELOADED/RESTARTED only when their unit or config changed.
 # =============================================================================
 set -euo pipefail
 
@@ -15,8 +18,12 @@ STAGE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # this recipe dir (boots
 RT=/srv/nos-dgx
 SRC=/srv/nos
 SEED=/srv/nos-seed.git
-DEV_CHECKOUT=/home/admin/projects/nOS
-DEV_BRANCH=feat/minimal-linux-dgx
+# The operator account owns /srv (uid 1000 on this box — KEAP's container runs
+# as uid 1000 and writes keap/data, so keep the operator at uid 1000 or chown
+# keap/data to 1000 yourself). The nOS checkout is the one this script lives in.
+OPERATOR="${NOS_OPERATOR:-admin}"
+DEV_CHECKOUT="$(cd "$STAGE/../.." && pwd)"
+DEV_BRANCH="$(git -C "$DEV_CHECKOUT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo feat/minimal-linux-dgx)"
 KEAP_REPO=https://github.com/thisisait/nos-keap.git
 KEAP_PIN=v1.44.0            # mirrors default.config.yml keap_version
 # The name is read LIVE: rename the box (DGX dashboard → reboot), re-run this
@@ -25,7 +32,7 @@ KEAP_PIN=v1.44.0            # mirrors default.config.yml keap_version
 # and the compose stack restarted with the new origin.
 SHORT="$(hostname -s)"
 HOST="$SHORT.local"
-MAINTAINERS="admin"
+MAINTAINERS="$OPERATOR"
 # Per-user ceilings (systemd user-<uid>.slice): a developer's build, Lab or
 # rootless containers all live in that slice, so one cap covers them all and
 # none of them can starve Ollama/KEAP. 121 GB box: 32G / 10 cores per user.
@@ -35,6 +42,11 @@ NOS_USER_CPU_QUOTA="${NOS_USER_CPU_QUOTA:-1000%}"
 USERS_ALL=""
 
 say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
+# put <src> <dst> [mode] — install, and return 0 only when the content CHANGED,
+# so a service is bounced only when there is a reason to (a recipe re-run must
+# not unload the models or drop every user's notebook connection).
+put() { local m="${3:-0644}"; if [ -f "$2" ] && cmp -s "$1" "$2"; then chmod "$m" "$2"; return 1; fi; install -m "$m" "$1" "$2"; return 0; }
+CHANGED_UNITS=0
 [ "$(id -u)" = 0 ] || { echo "run as root"; exit 1; }
 
 say "packages"
@@ -62,7 +74,12 @@ fi
 # tester: NOT in docker, NOT in sudo — that is the point.
 gpasswd -d tester docker >/dev/null 2>&1 || true
 gpasswd -d tester sudo   >/dev/null 2>&1 || true
-USERS_ALL="$(getent group nos-users | cut -d: -f4 | tr , " ")"
+# Humans only (uid >= 1000): service accounts such as nos-mcpo sit in nos-users
+# for the READ token but get no shelf, no linger, no home.
+USERS_ALL="$(for u in $(getent group nos-users | cut -d: -f4 | tr , " "); do [ "$(id -u "$u")" -ge 1000 ] && printf '%s ' "$u"; done)"
+for u in $(getent group nos-users | cut -d: -f4 | tr , " "); do
+  [ "$(id -u "$u")" -lt 1000 ] && loginctl disable-linger "$u" 2>/dev/null || true
+done
 
 say "developer substrate: linger, per-user ceilings, rootless-docker prerequisites"
 # linger: the user's systemd instance (and with it rootless dockerd, dev
@@ -105,7 +122,7 @@ echo "rendered for host $HOST"
 python3 "$RT/bin/kb-build.py" --src "$RT/kb" --out "$RT/www/kb" --host "$HOST" --short "$SHORT"
 mkdir -p "$RT/keap/data"
 if [ ! -d "$RT/keap/src/.git" ]; then
-  sudo -u admin git clone -q --branch "$KEAP_PIN" --depth 1 "$KEAP_REPO" "$RT/keap/src"
+  sudo -u "$OPERATOR" git clone -q --branch "$KEAP_PIN" --depth 1 "$KEAP_REPO" "$RT/keap/src"
   echo "cloned nos-keap $KEAP_PIN"
 fi
 KEAP_SHA="$(git -C "$RT/keap/src" rev-parse --short HEAD)"
@@ -115,22 +132,23 @@ if ! docker image inspect "$KEAP_TAG" >/dev/null 2>&1; then
   docker build -q -t "$KEAP_TAG" "$RT/keap/src" >/dev/null
 fi
 sed -i "s|image: nos/keap:.*|image: $KEAP_TAG|" "$RT/compose.yml"
-chown -R admin:nos-maintainers "$RT"
+chown -R "$OPERATOR":nos-maintainers "$RT"
 chmod -R g+rwX,o+rX "$RT"
 find "$RT" -type d -exec chmod g+s {} +
 chmod +x "$RT"/bin/* "$RT"/setup-root.sh
 
 if [ ! -d "$SRC/.git" ]; then
-  install -d -o admin -g nos-maintainers -m 2775 "$SRC"
-  sudo -u admin git clone -q -b "$DEV_BRANCH" "$DEV_CHECKOUT" "$SRC"
-  sudo -u admin git -C "$SRC" remote set-url origin https://github.com/thisisait/nOS.git
+  install -d -o "$OPERATOR" -g nos-maintainers -m 2775 "$SRC"
+  sudo -u "$OPERATOR" git clone -q -b "$DEV_BRANCH" "$DEV_CHECKOUT" "$SRC"
+  sudo -u "$OPERATOR" git -C "$SRC" remote set-url origin https://github.com/thisisait/nOS.git
   echo "cloned $DEV_CHECKOUT@$DEV_BRANCH -> $SRC (origin re-pointed to GitHub)"
 else
   echo "$SRC present ($(git -C "$SRC" rev-parse --abbrev-ref HEAD))"
 fi
-chown -R admin:nos-maintainers "$SRC"
+chown -R "$OPERATOR":nos-maintainers "$SRC"
 chmod -R g+rwX,o+rX "$SRC"
 ln -sfn "$SRC/tools/nos" /usr/local/bin/nos
+install -m 0755 -o root -g root "$RT/bin/dgx-status.sh" /usr/local/bin/dgx-status
 # Both /srv repos are owned by admin; git's dubious-ownership guard refuses
 # them for every other user. System-level (/etc/gitconfig) is the one place
 # that reaches all of them without touching a home directory.
@@ -139,11 +157,11 @@ for d in "$SRC" "$SEED"; do
 done
 
 if [ ! -d "$SEED" ]; then
-  install -d -o admin -g nos-maintainers -m 2775 "$SEED"
-  sudo -u admin git init -q --bare --shared=group "$SEED"
+  install -d -o "$OPERATOR" -g nos-maintainers -m 2775 "$SEED"
+  sudo -u "$OPERATOR" git init -q --bare --shared=group "$SEED"
   echo "created bare seed repo $SEED"
 fi
-chown -R admin:nos-maintainers "$SEED"
+chown -R "$OPERATOR":nos-maintainers "$SEED"
 chmod -R g+rwX,o+rX "$SEED"
 
 say "secrets in /etc/nos"
@@ -202,12 +220,15 @@ install -m 0644 "$CAROOT/rootCA.pem" "$RT/www/nos-dgx-rootCA.pem"
 say "mDNS: announce only the physical uplinks (never a docker bridge)"
 # avahi otherwise answers <host>.local with 172.18.0.1 (a bridge) on this
 # box; a LAN client must get the address of the interface it asked on.
-if ! grep -qE '^allow-interfaces=' /etc/avahi/avahi-daemon.conf; then
-  sed -i 's/^\[server\]$/[server]\nallow-interfaces=wlP9s9,enx0c37962a9dc5,enP7s7/' /etc/avahi/avahi-daemon.conf
+PHYS="$(ip -o link show | awk -F': ' '{print $2}' | cut -d@ -f1 | grep -vE '^(lo|docker|br-|veth|virbr|tailscale|tun|wg)' | paste -sd, -)"
+if ! grep -qE "^allow-interfaces=$PHYS\$" /etc/avahi/avahi-daemon.conf; then
+  sed -i '/^allow-interfaces=/d' /etc/avahi/avahi-daemon.conf
+  sed -i "s/^\[server\]\$/[server]\nallow-interfaces=$PHYS/" /etc/avahi/avahi-daemon.conf
   systemctl restart avahi-daemon
 fi
+echo "mDNS on: $PHYS"
 
-say "firewall: the three web ports + mDNS (ufw is active on this DGX)"
+say "firewall: the web ports + mDNS (only if ufw is enabled)"
 if ufw status | grep -q '^Status: active'; then
   for p in 443 8443 8444 8445 8446 8447; do ufw allow $p/tcp >/dev/null; done
   ufw allow 5353/udp >/dev/null
@@ -218,13 +239,13 @@ say "nginx + PAM"
 install -m 0644 "$RT/nginx/pam-nginx" /etc/pam.d/nginx
 install -m 0644 "$RT/nginx/pam-nginx-admin" /etc/pam.d/nginx-admin
 usermod -aG shadow www-data
-install -m 0644 "$RT/nginx/nos-dgx-tls.conf" /etc/nginx/nos-dgx-tls.conf
-install -m 0644 "$RT/nginx/nos-dgx.conf" /etc/nginx/sites-available/nos-dgx.conf
+put "$RT/nginx/nos-dgx-tls.conf" /etc/nginx/nos-dgx-tls.conf || true
+put "$RT/nginx/nos-dgx.conf" /etc/nginx/sites-available/nos-dgx.conf || true
 ln -sfn /etc/nginx/sites-available/nos-dgx.conf /etc/nginx/sites-enabled/nos-dgx.conf
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl enable -q nginx
-systemctl restart nginx
+if systemctl is-active -q nginx; then systemctl reload nginx; else systemctl start nginx; fi
 echo "nginx: $(systemctl is-active nginx)"
 
 say "native Ollama (system service)"
@@ -238,7 +259,8 @@ if ! [ -x /usr/local/bin/ollama ] || ! id ollama >/dev/null 2>&1; then
   curl -fsSL https://ollama.com/install.sh | sh
 fi
 mkdir -p /etc/systemd/system/ollama.service.d
-install -m 0644 "$RT/systemd/ollama-override.conf" /etc/systemd/system/ollama.service.d/nos-dgx.conf
+OLLAMA_BOUNCE=0
+put "$RT/systemd/ollama-override.conf" /etc/systemd/system/ollama.service.d/nos-dgx.conf && OLLAMA_BOUNCE=1
 OLD_VOL=/var/lib/docker/volumes/open-webui-ollama/_data/models
 NEW_MODELS=/usr/share/ollama/.ollama/models
 if [ -d "$OLD_VOL/manifests" ] && [ ! -d "$NEW_MODELS/manifests" ]; then
@@ -249,8 +271,7 @@ fi
 chown -R ollama:ollama /usr/share/ollama
 systemctl daemon-reload
 systemctl enable -q ollama
-systemctl restart ollama
-sleep 2
+if [ "$OLLAMA_BOUNCE" = 1 ] || ! systemctl is-active -q ollama; then systemctl restart ollama; sleep 2; fi
 echo "ollama: $(systemctl is-active ollama) — $(curl -fsS -m 5 http://172.17.0.1:11434/api/version 2>/dev/null || echo 'API not answering yet')"
 
 say "Open WebUI accounts in the existing volume (for the nginx identity map)"
@@ -300,12 +321,12 @@ if [ "${JUPYTER_TORCH:-1}" = 1 ] && ! "$JH/venv/bin/python" -c 'import torch' 2>
     || echo "torch (cu130, aarch64) did not install — Lab works, GPU kernel does not"
 fi
 chown -R root:root "$JH" "$NODE_DIR"; chmod -R o+rX,go-w "$JH" "$NODE_DIR"
-install -m 0644 -o root -g root "$RT/jupyterhub/jupyterhub_config.py" /etc/nos/jupyterhub_config.py
-install -m 0644 "$RT/systemd/jupyterhub.service" /etc/systemd/system/jupyterhub.service
+JH_BOUNCE=0
+put "$RT/jupyterhub/jupyterhub_config.py" /etc/nos/jupyterhub_config.py && JH_BOUNCE=1
+put "$RT/systemd/jupyterhub.service" /etc/systemd/system/jupyterhub.service && JH_BOUNCE=1
 systemctl daemon-reload
 systemctl enable -q jupyterhub
-systemctl restart jupyterhub
-sleep 4
+if [ "$JH_BOUNCE" = 1 ] || ! systemctl is-active -q jupyterhub; then systemctl restart jupyterhub; sleep 4; fi
 echo "jupyterhub: $(systemctl is-active jupyterhub) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://127.0.0.1:8000/hub/login || echo no-answer) on /hub/login"
 echo "torch cuda: $("$JH/venv/bin/python" -c 'import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else "")' 2>&1 | tail -1)"
 
@@ -348,7 +369,8 @@ if [ -n "$BKDEV" ]; then
 else
   echo "backup disk: no filesystem labelled nos-backup — the timer will refuse to run (README: NOS_BACKUP_DEVICE + NOS_BACKUP_FORMAT=yes once)"
 fi
-install -d -m 0700 /var/lib/nos-dgx/backup
+# 0711: last.json (no secrets) is readable by every user via dgx-status; stage/ stays 0700.
+install -d -m 0711 /var/lib/nos-dgx/backup
 # restic: apt ships 0.16, Backrest 1.14 requires >= 0.19.1. One binary for the
 # timer AND the UI, from the upstream release, on /usr/local/bin ahead of apt's.
 RESTIC_WANT=0.19.1
@@ -371,9 +393,12 @@ if mountpoint -q "$BK"; then
   ( . /etc/nos/restic.env; export RESTIC_REPOSITORY RESTIC_PASSWORD
     [ -f "$RESTIC_REPOSITORY/config" ] || { restic init -q && echo "restic repository initialised at $RESTIC_REPOSITORY"; } )
 fi
-chmod +x "$RT"/backup/*.sh
+# Root executes these (units, the Backrest hook): a ROOT-OWNED copy under /opt,
+# never the maintainer-writable tree in /srv.
+install -d -m 0755 /opt/nos-dgx/backup
+for f in "$RT"/backup/*; do install -m 0755 -o root -g root "$f" "/opt/nos-dgx/backup/$(basename "$f")"; done
 for u in nos-dgx-backup.service nos-dgx-backup.timer nos-dgx-backup-verify.service nos-dgx-backup-verify.timer; do
-  install -m 0644 "$RT/systemd/$u" "/etc/systemd/system/$u"
+  put "$RT/systemd/$u" "/etc/systemd/system/$u" || true
 done
 systemctl daemon-reload
 # The scheduled writer is Backrest's plan (below); the systemd backup timer
@@ -394,7 +419,10 @@ install -d -m 0700 /etc/nos/backrest /var/lib/nos-dgx/backrest
 # Backrest validates that a configured repo carries the repository's own
 # guid (`restic cat config` → id) unless it may auto-initialise; we never let
 # it initialise, so read the guid from the repo the timer writes to.
-if [ ! -f /etc/nos/backrest/config.json ] || ! grep -q '"guid"' /etc/nos/backrest/config.json || ! grep -q '"nightly"' /etc/nos/backrest/config.json; then
+# Regenerate when the file is missing, pre-dates the guid or the plan, or still
+# points the hook at the maintainer-writable /srv copy (now /opt, root-owned).
+if [ ! -f /etc/nos/backrest/config.json ] || ! grep -q '"guid"' /etc/nos/backrest/config.json \
+   || ! grep -q '"nightly"' /etc/nos/backrest/config.json || grep -q '/srv/nos-dgx/backup/' /etc/nos/backrest/config.json; then
   # shellcheck disable=SC1091
   ( . /etc/nos/restic.env; export RESTIC_REPOSITORY RESTIC_PASSWORD
     GUID="$(restic cat config 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' 2>/dev/null || true)"
@@ -420,17 +448,19 @@ print(json.dumps({"modno": 1, "version": 4, "instance": sys.argv[1],
              "retention": {"policyTimeBucketed": {"daily": 7, "weekly": 8}},
              "backup_flags": ["--one-file-system", "--exclude-caches"],
              "hooks": [{"conditions": ["CONDITION_SNAPSHOT_START"], "onError": "ON_ERROR_FATAL",
-                        "actionCommand": {"command": "/srv/nos-dgx/backup/nos-dgx-backup-stage.sh"}}]}],
+                        "actionCommand": {"command": "/opt/nos-dgx/backup/nos-dgx-backup-stage.sh"}}]}],
   "auth": {"disabled": True}}, indent=1))
 PY
   )
   chmod 0600 /etc/nos/backrest/config.json
+  BR_CONFIG_WRITTEN=1
 fi
-install -m 0644 "$RT/systemd/backrest.service" /etc/systemd/system/backrest.service
+BR_BOUNCE=0
+put "$RT/systemd/backrest.service" /etc/systemd/system/backrest.service && BR_BOUNCE=1
+[ "${BR_CONFIG_WRITTEN:-0}" = 1 ] && BR_BOUNCE=1
 systemctl daemon-reload
 systemctl enable -q backrest
-systemctl restart backrest
-sleep 3
+if [ "$BR_BOUNCE" = 1 ] || ! systemctl is-active -q backrest; then systemctl restart backrest; sleep 3; fi
 echo "backrest: $(systemctl is-active backrest) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://127.0.0.1:9898/ || echo no-answer) on /"
 
 say "Open WebUI: the DataTables tool server (mcpo) + the nOS Assistant knowledge"
@@ -452,9 +482,10 @@ if [ ! -f /etc/nos/mcpo.env ]; then
   umask 077; printf 'MCPO_API_KEY=%s\n' "$(openssl rand -hex 24)" > /etc/nos/mcpo.env; umask 022
 fi
 chown root:nos-mcpo /etc/nos/mcpo.env; chmod 0640 /etc/nos/mcpo.env
-install -m 0644 "$RT/systemd/mcpo-nos-tables.service" /etc/systemd/system/mcpo-nos-tables.service
-systemctl daemon-reload; systemctl enable -q mcpo-nos-tables; systemctl restart mcpo-nos-tables
-sleep 3
+MC_BOUNCE=0
+put "$RT/systemd/mcpo-nos-tables.service" /etc/systemd/system/mcpo-nos-tables.service && MC_BOUNCE=1
+systemctl daemon-reload; systemctl enable -q mcpo-nos-tables
+if [ "$MC_BOUNCE" = 1 ] || ! systemctl is-active -q mcpo-nos-tables; then systemctl restart mcpo-nos-tables; sleep 3; fi
 echo "mcpo: $(systemctl is-active mcpo-nos-tables) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://172.17.0.1:8500/openapi.json || echo no-answer) on /openapi.json"
 # The assistant's knowledge needs an ADMIN API key from Open WebUI (Settings →
 # Account → API keys). Until it is in /etc/nos/openwebui.env the sync just says so.
@@ -469,7 +500,7 @@ else
 fi
 
 say "phase C — stack up, knowledge ingest, tables (as admin)"
-sudo -u admin -H bash -c '
+sudo -u "$OPERATOR" -H bash -c '
   set -e
   . /etc/profile.d/nos.sh
   docker compose -f /srv/nos-dgx/compose.yml up -d

@@ -7,7 +7,7 @@
 [Unit]
 Description=mcpo → nos_tables (DataTables tool server for Open WebUI)
 After=network-online.target docker.service
-Wants=network-online.target
+Wants=network-online.target docker.service
 
 [Service]
 Type=simple

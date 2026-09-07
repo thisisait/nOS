@@ -46,12 +46,12 @@ if ! mountpoint -q "$BK_MOUNT"; then
 fi
 [ -d "$RESTIC_REPOSITORY" ] || { log "REFUSING: repository $RESTIC_REPOSITORY missing (run setup-root.sh)"; exit 75; }
 
-"$RT/backup/nos-dgx-backup-stage.sh"
+/opt/nos-dgx/backup/nos-dgx-backup-stage.sh
 
 # ── the backup ───────────────────────────────────────────────────────────────
 log "restic backup → $RESTIC_REPOSITORY"
 restic backup --tag nightly --one-file-system --exclude-caches \
-  --exclude-file="$RT/backup/excludes.txt" \
+  --exclude-file=/opt/nos-dgx/backup/excludes.txt \
   /etc/nos "$STAGE" /srv/nos-dgx/keap/data /srv/nos-seed.git \
   /var/lib/nos-dgx/jupyterhub /var/lib/docker/volumes/open-webui/_data \
   /var/lib/docker/volumes/iiab_n8n_data/_data \

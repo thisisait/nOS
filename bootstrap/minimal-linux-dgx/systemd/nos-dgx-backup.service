@@ -7,6 +7,6 @@ After=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/srv/nos-dgx/backup/nos-dgx-backup.sh
+ExecStart=/opt/nos-dgx/backup/nos-dgx-backup.sh
 Nice=10
 IOSchedulingClass=idle

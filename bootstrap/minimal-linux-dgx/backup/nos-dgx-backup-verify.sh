@@ -16,10 +16,10 @@
 set -uo pipefail
 export PATH=/usr/local/bin:/usr/bin:/bin
 OUT=/var/lib/nos-dgx/backup/last.json
-install -d -m 0755 "$(dirname "$OUT")"
+install -d -m 0711 "$(dirname "$OUT")"
 
 emit() {  # emit <verdict> <detail> [snapshot_time] [snapshot_id] [rows_backup] [rows_live] [repo_size]
-  python3 - "$@" <<'PY' > "$OUT.tmp" && mv "$OUT.tmp" "$OUT"
+  python3 - "$@" <<'PY' > "$OUT.tmp" && mv "$OUT.tmp" "$OUT" && chmod 0644 "$OUT"
 import json, sys, datetime
 v = sys.argv[1:] + [""] * 7
 print(json.dumps({

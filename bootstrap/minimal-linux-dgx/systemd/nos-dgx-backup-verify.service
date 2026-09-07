@@ -5,6 +5,6 @@ After=nos-dgx-backup.service
 
 [Service]
 Type=oneshot
-ExecStart=/srv/nos-dgx/backup/nos-dgx-backup-verify.sh
+ExecStart=/opt/nos-dgx/backup/nos-dgx-backup-verify.sh
 Nice=10
 IOSchedulingClass=idle
