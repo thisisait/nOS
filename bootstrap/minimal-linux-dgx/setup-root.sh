@@ -128,6 +128,11 @@ if [ ! -d "$RT/keap/src/.git" ]; then
   sudo -u "$OPERATOR" git clone -q --branch "$KEAP_PIN" --depth 1 "$KEAP_REPO" "$RT/keap/src"
   echo "cloned nos-keap $KEAP_PIN"
 fi
+# Root reads a repo the operator owns: git's dubious-ownership guard lets that
+# through only when SUDO_UID is the owner, i.e. when the OPERATOR ran sudo. Any
+# other maintainer running the recipe needs the system-level exception (same
+# rule as $SRC and $SEED below).
+git config --system --get-all safe.directory 2>/dev/null | grep -qx "$RT/keap/src" || git config --system --add safe.directory "$RT/keap/src"
 KEAP_SHA="$(git -C "$RT/keap/src" rev-parse --short HEAD)"
 KEAP_TAG="nos/keap:${KEAP_PIN#v}-$KEAP_SHA"
 if ! docker image inspect "$KEAP_TAG" >/dev/null 2>&1; then
