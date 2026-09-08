@@ -106,7 +106,7 @@ def sidebar(pages, sections, cur: str, short: str) -> str:
     return "\n".join(out)
 
 
-def page_html(title: str, side: str, main: str, short: str) -> str:
+def page_html(title: str, side: str, main: str, short: str, host: str = "") -> str:
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -124,6 +124,17 @@ def page_html(title: str, side: str, main: str, short: str) -> str:
 {main}
 </main>
 </div>
+<script>
+// Links to this box's other ports follow the host the reader actually used —
+// a laptop that cannot resolve the .local name (mDNS blocked) reads by IP.
+(function () {{
+  var here = location.hostname, name = {json.dumps(host)};
+  if (here === name) return;
+  document.querySelectorAll('a[href^="https://' + name + ':"]').forEach(function (a) {{
+    a.href = a.href.replace('https://' + name + ':', 'https://' + here + ':');
+  }});
+}})();
+</script>
 </body>
 </html>
 """
@@ -156,7 +167,7 @@ def main():
                          f'<small>{html.escape(sub(p["summary"]))}</small></a>')
         parts.append('</div>')
     (out / "index.html").write_text(page_html("Knowledge base", sidebar(pages, sections, "", a.short),
-                                              "\n".join(parts), a.short), encoding="utf-8")
+                                              "\n".join(parts), a.short, a.host), encoding="utf-8")
 
     # pages with prev/next
     sec_title = {s["id"]: s["title"] for s in sections}
@@ -172,7 +183,7 @@ def main():
         main_html = (f'<h1>{html.escape(p["title"])}</h1><p class="meta">{html.escape(sec_title[p["section"]])}</p>'
                      f'{body}{pn}')
         (out / f'{p["slug"]}.html').write_text(page_html(p["title"], sidebar(pages, sections, p["slug"], a.short),
-                                                        main_html, a.short), encoding="utf-8")
+                                                        main_html, a.short, a.host), encoding="utf-8")
     print(f"kb: {len(pages)} page(s) → {out}")
     return 0
 

@@ -23,21 +23,31 @@
   <h1>nOS on __SHORT__</h1>
   <p class="sub">DGX Spark · sign in with your Linux account on this machine.</p>
 
-  <a class="card" href="https://__HOST__:8443/"><b>KEAP</b> — DataTables, roadmap, knowledge<small>port 8443</small></a>
-  <a class="card" href="https://__HOST__:8444/"><b>Chat</b> — Open WebUI on the local models<small>port 8444</small></a>
-  <a class="card" href="https://__HOST__:8445/"><b>Notebooks</b> — JupyterHub, your own Lab as your Linux user, GPU kernel<small>port 8445</small></a>
-  <a class="card" href="https://__HOST__:8447/"><b>Automation</b> — n8n workflows, webhooks, the local models as nodes<small>port 8447</small></a>
+  <a class="card" href="https://__HOST__:8443/" data-port="8443"><b>KEAP</b> — DataTables, roadmap, knowledge<small>port 8443</small></a>
+  <a class="card" href="https://__HOST__:8444/" data-port="8444"><b>Chat</b> — Open WebUI on the local models<small>port 8444</small></a>
+  <a class="card" href="https://__HOST__:8445/" data-port="8445"><b>Notebooks</b> — JupyterHub, your own Lab as your Linux user, GPU kernel<small>port 8445</small></a>
+  <a class="card" href="https://__HOST__:8447/" data-port="8447"><b>Automation</b> — n8n workflows, webhooks, the local models as nodes<small>port 8447</small></a>
   <a class="card" href="/kb/"><b>Knowledge base</b> — first login, remote IDE, rootless Docker, notebooks, admin runbook<small>/kb/</small></a>
 
   <h2>First visit: trust the local certificate authority</h2>
   <ol>
     <li>Download <a href="/nos-dgx-rootCA.pem">nos-dgx-rootCA.pem</a>.</li>
     <li>Import it as a trusted root: macOS Keychain → System → Always Trust; Windows → certmgr → Trusted Root; Firefox → Settings → Certificates → Import; Linux → <code>sudo cp nos-dgx-rootCA.pem /usr/local/share/ca-certificates/nos-dgx.crt &amp;&amp; sudo update-ca-certificates</code>.</li>
-    <li>Use the name <code>__HOST__</code>, not the IP — KEAP's same-origin guard rejects writes from any other origin.</li>
+    <li>Prefer the name <code>__HOST__</code>; by IP (<code>192.168.68.86</code>-style) everything works too when your laptop cannot resolve <code>.local</code> names — the certificate covers both.</li>
   </ol>
 
   <h2>Shell access (ssh)</h2>
   <p><code>ssh &lt;you&gt;@__HOST__</code>, then <code>/srv/nos-dgx/bin/nos-user-setup</code> once. Everything else is in the <a href="/kb/">knowledge base</a>.</p>
 </main>
+<script>
+// A laptop that cannot resolve __HOST__ (mDNS blocked by policy) still reaches
+// this page by IP: keep every card on the host the visitor actually used.
+(function () {
+  var h = location.hostname;
+  document.querySelectorAll('a[data-port]').forEach(function (a) {
+    a.href = 'https://' + h + ':' + a.getAttribute('data-port') + '/';
+  });
+})();
+</script>
 </body>
 </html>

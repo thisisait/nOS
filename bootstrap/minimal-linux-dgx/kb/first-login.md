@@ -16,8 +16,10 @@ passwd
 ```
 
 The name `__HOST__` resolves via mDNS on the same LAN (macOS and Linux out of
-the box, Windows with Bonjour). From another network use the IP the admin gives
-you — it is on the certificate too.
+the box, Windows with Bonjour). A managed corporate laptop often **blocks
+mDNS**: then use the IP the admin gives you everywhere (`https://<ip>/`,
+`https://<ip>:8443/` …) — it is on the certificate, every service accepts it,
+and the links on these pages follow whichever host you used.
 
 ## 2. Trust the local certificate authority (once per device)
 
