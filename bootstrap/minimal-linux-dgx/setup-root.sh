@@ -403,6 +403,10 @@ NEMOCLAW_ENDPOINT_URL=http://127.0.0.1:8000/v1
 NEMOCLAW_MODEL=$NEMOCLAW_MODEL
 NEMOCLAW_COMPATIBLE_AUTH_MODE=none
 NEMOCLAW_POLICY_MODE=suggested
+# direct: every tool in the model context. The default (progressive) hides
+# them behind tool_search, and qwen answers "I have no exec tool" instead
+# of searching. Onboarding and rebuilds read this.
+NEMOCLAW_TOOL_DISCLOSURE=direct
 ENV
   chmod 0644 /etc/nos/nemoclaw.env
   # Onboarding validates the endpoint with a real chat completion, so the model

@@ -48,6 +48,14 @@ of `nemoclaw nos-agent gateway-token --quiet` there. Without the LAN edge, the S
 Maintainers only (`nos-maintainers`): the wrapper's sudo rule is in
 `/etc/sudoers.d/nos-nemoclaw`. A tier-3 user has no door to the agent — by design.
 
+## Its tools
+
+Every OpenClaw tool (exec, files, web fetch, sessions, …) is presented to the
+model directly (`NEMOCLAW_TOOL_DISCLOSURE=direct`). NemoClaw's default hides
+them behind a `tool_search` meta-tool to save context, and a local model then
+tends to say it has no exec tool rather than search for it. Exec runs INSIDE the
+sandbox — the agent cannot touch the host.
+
 ## What it may touch
 
 The sandbox starts with NemoClaw's *suggested* policy: reads and writes stay
