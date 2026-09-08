@@ -46,7 +46,9 @@
 (function () {
   var h = location.hostname;
   document.querySelectorAll('a[data-port]').forEach(function (a) {
-    a.href = 'https://' + h + ':' + a.getAttribute('data-port') + '/';
+    // keep the card's own path (the agent card is /go, not /)
+    var path = new URL(a.getAttribute('href'), location.href).pathname || '/';
+    a.href = 'https://' + h + ':' + a.getAttribute('data-port') + path;
   });
 })();
 </script>
