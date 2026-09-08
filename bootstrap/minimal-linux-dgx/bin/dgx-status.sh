@@ -11,6 +11,9 @@
 # =============================================================================
 set -uo pipefail
 export PATH=/usr/local/bin:/usr/bin:/bin
+# The estate runs on the ROOT daemon; a developer's shell defaults to their
+# rootless context and would report every stack container as absent.
+export DOCKER_HOST=unix:///var/run/docker.sock; unset DOCKER_CONTEXT
 JSON=0; [ "${1:-}" = "--json" ] && JSON=1
 SHORT="$(hostname -s)"; HOST="$SHORT.local"
 CA=/etc/nos/mkcert/rootCA.pem
@@ -77,9 +80,9 @@ http "ollama loopback"  "http://127.0.0.1:8000/api/version" 200
 # (TLS, own CA) — any HTTP answer means it is up; the sandbox is a container on
 # the root daemon. Neither is asked for more than presence: `nemoclaw
 # nos-agent status` is the authoritative check and needs the wrapper.
-gw="$(curl -k -s -o /dev/null -w '%{http_code}' -m 4 https://127.0.0.1:8080/ 2>/dev/null || echo 000)"
+# The gateway speaks mTLS, so an HTTP probe says nothing; a TCP accept does.
 if [ -x /usr/local/bin/nemoclaw ]; then
-  [ "$gw" != 000 ] && row GREEN "openshell gateway" "answers on 127.0.0.1:8080 ($gw)" || row RED "openshell gateway" "no listener on 127.0.0.1:8080 (operator: systemctl --user status nemoclaw-openshell-gateway)"
+  if timeout 3 bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' 2>/dev/null; then row GREEN "openshell gateway" "accepts on 127.0.0.1:8080"; else row RED "openshell gateway" "no listener on 127.0.0.1:8080 (operator: systemctl --user status nemoclaw-openshell-gateway)"; fi
   sb="$(docker ps --format '{{.Names}}' 2>/dev/null | grep -i 'nos-agent\|openshell' | paste -sd, -)"
   if docker ps >/dev/null 2>&1; then
     [ -n "$sb" ] && row GREEN "nemoclaw sandbox" "$sb" || row RED "nemoclaw sandbox" "no sandbox container running (nemoclaw nos-agent status)"
