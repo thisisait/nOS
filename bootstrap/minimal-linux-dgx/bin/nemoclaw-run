@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# /opt/nos-dgx/nemoclaw/run — the NemoClaw CLI as the operator account, with
+# the environment its user-level systemd (the OpenShell gateway), the root-owned
+# Node and the user-local shims need. Root-owned so the sudoers rule for
+# nos-maintainers names a file the operator cannot edit. Invoked by
+# /usr/local/bin/nemoclaw (any maintainer) or directly by the operator.
+set -euo pipefail
+uid="$(id -u)"
+export HOME="${HOME:-$(getent passwd "$uid" | cut -d: -f6)}"
+export PATH="/opt/nos-dgx/node/bin:$HOME/.local/bin:$HOME/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+export XDG_RUNTIME_DIR="/run/user/$uid"
+export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus"
+exec "$HOME/.local/bin/nemoclaw" "$@"

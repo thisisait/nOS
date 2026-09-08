@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# /usr/local/bin/nemoclaw — the ONE NemoClaw on this box. It is owned by the
+# operator account (__OPERATOR__: root docker daemon, linger, /srv owner);
+# every nos-maintainers member drives it through sudo (rule in
+# /etc/sudoers.d/nos-nemoclaw, target /opt/nos-dgx/nemoclaw/run).
+#   nemoclaw nos-agent status          nemoclaw nos-agent connect
+#   nemoclaw nos-agent dashboard-url   nemoclaw nos-agent logs --follow
+if [ "$(id -un)" = "__OPERATOR__" ]; then exec /opt/nos-dgx/nemoclaw/run "$@"; fi
+exec sudo -u "__OPERATOR__" -H /opt/nos-dgx/nemoclaw/run "$@"

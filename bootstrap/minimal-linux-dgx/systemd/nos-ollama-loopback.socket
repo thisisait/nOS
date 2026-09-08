@@ -1,0 +1,16 @@
+# /etc/systemd/system/nos-ollama-loopback.socket — a LOOPBACK door to Ollama.
+# Ollama itself binds the docker0 address (ollama-override.conf) so containers
+# reach it and the LAN cannot. NemoClaw admits an unauthenticated inference
+# endpoint only on 127.0.0.1 (ports 8000/11434/11435) and rewrites it to
+# host.openshell.internal:<port> for the sandbox — which lands on the docker0
+# listener again. Same daemon, same models, one more address; nothing new is
+# exposed (loopback only).
+[Unit]
+Description=Ollama on 127.0.0.1:11434 (nos-dgx loopback door → 172.17.0.1:11434)
+
+[Socket]
+ListenStream=127.0.0.1:11434
+NoDelay=true
+
+[Install]
+WantedBy=sockets.target

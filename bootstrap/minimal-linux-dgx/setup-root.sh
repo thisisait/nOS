@@ -9,7 +9,8 @@
 # recipe, KEAP clone + image, runtime checkout, seed repo, KB build) · secrets in
 # /etc/nos · mkcert TLS · mDNS · firewall · nginx + PAM · native Ollama ·
 # per-user shelves · JupyterHub · backup disk + restic + verifier · Backrest ·
-# mcpo + the nOS Assistant knowledge · compose up + KEAP ingest + tables.
+# NemoClaw (agent sandbox on Ollama) · mcpo + the nOS Assistant knowledge ·
+# compose up + KEAP ingest + tables.
 # Services are RELOADED/RESTARTED only when their unit or config changed.
 # =============================================================================
 set -euo pipefail
@@ -54,7 +55,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq nginx libnginx-mod-http-auth-pam mkcert libnss3-tools \
   python3-yaml python3-markdown sqlite3 rsync curl git \
-  docker-ce-rootless-extras uidmap passt fuse-overlayfs restic >/dev/null
+  docker-ce-rootless-extras uidmap passt fuse-overlayfs restic binutils >/dev/null
 
 say "groups + users"
 groupadd -f nos-users
@@ -338,6 +339,68 @@ if [ "$JH_BOUNCE" = 1 ] || ! systemctl is-active -q jupyterhub; then systemctl r
 echo "jupyterhub: $(systemctl is-active jupyterhub) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://127.0.0.1:8000/hub/login || echo no-answer) on /hub/login"
 echo "torch cuda: $("$JH/venv/bin/python" -c 'import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else "")' 2>&1 | tail -1)"
 
+say "NemoClaw (OpenClaw in an OpenShell sandbox, on the native Ollama, owned by $OPERATOR)"
+# NVIDIA's reference stack for a sandboxed always-on agent: the OpenShell
+# gateway (a host binary, user-level systemd unit of the operator, :8080) runs
+# the agent in a policy-bound container on the ROOT docker daemon; inference is
+# whatever endpoint onboarding registered. NO managed vLLM here — a second 35B
+# model preallocating 90 % of the unified memory would starve Ollama and the
+# Lab kernels. The agent talks to the Ollama that already serves Chat, through
+# the loopback door above (NemoClaw admits an unauthenticated endpoint only on
+# 127.0.0.1) and gets it rewritten to host.openshell.internal:11434 inside the
+# sandbox. Install is idempotent on the sandbox registry; NOS_NEMOCLAW=0 skips.
+NC=/opt/nos-dgx/nemoclaw
+NEMOCLAW_PIN="${NEMOCLAW_PIN:-v0.0.109}"          # what `lkg` resolved to on 2026-09-08
+NEMOCLAW_MODEL="${NEMOCLAW_MODEL:-qwen3.5:35b}"    # the model Chat already runs
+NEMOCLAW_SANDBOX="${NEMOCLAW_SANDBOX:-nos-agent}"
+if [ "${NOS_NEMOCLAW:-1}" = 1 ]; then
+  LB_BOUNCE=0
+  put "$RT/systemd/nos-ollama-loopback.socket" /etc/systemd/system/nos-ollama-loopback.socket && LB_BOUNCE=1
+  put "$RT/systemd/nos-ollama-loopback.service" /etc/systemd/system/nos-ollama-loopback.service && LB_BOUNCE=1
+  systemctl daemon-reload
+  systemctl enable -q nos-ollama-loopback.socket
+  if [ "$LB_BOUNCE" = 1 ]; then systemctl restart nos-ollama-loopback.socket; fi
+  systemctl is-active -q nos-ollama-loopback.socket || systemctl start nos-ollama-loopback.socket
+  echo "ollama loopback: $(systemctl is-active nos-ollama-loopback.socket) — $(curl -fsS -m 5 http://127.0.0.1:11434/api/version 2>/dev/null || echo 'no answer on 127.0.0.1:11434')"
+  install -d -m 0755 "$NC"
+  # The bootstrap installer, fetched ONCE and kept root-owned; the ref it
+  # installs is pinned by NEMOCLAW_INSTALL_TAG below, never the moving `lkg`.
+  [ -f "$NC/nemoclaw.sh" ] || curl -fsSL https://www.nvidia.com/nemoclaw.sh -o "$NC/nemoclaw.sh"
+  install -m 0755 -o root -g root "$RT/bin/nemoclaw-run" "$NC/run"
+  sed "s/__OPERATOR__/$OPERATOR/g" "$RT/bin/nemoclaw" > /usr/local/bin/nemoclaw.new
+  install -m 0755 -o root -g root /usr/local/bin/nemoclaw.new /usr/local/bin/nemoclaw; rm -f /usr/local/bin/nemoclaw.new
+  cat > /etc/sudoers.d/nos-nemoclaw <<SUDO
+# nos-dgx: every maintainer drives the operator's NemoClaw (root-owned runner)
+%nos-maintainers ALL=($OPERATOR) NOPASSWD: $NC/run
+SUDO
+  chmod 0440 /etc/sudoers.d/nos-nemoclaw; visudo -cf /etc/sudoers.d/nos-nemoclaw >/dev/null
+  OP_HOME="$(getent passwd "$OPERATOR" | cut -d: -f6)"; OP_UID="$(id -u "$OPERATOR")"
+  # Onboarding validates the endpoint with a real chat completion, so the model
+  # must be present before it starts.
+  if ! curl -fsS -m 5 http://127.0.0.1:11434/api/tags | grep -q "\"name\":\"$NEMOCLAW_MODEL\""; then
+    echo "pulling $NEMOCLAW_MODEL…"; OLLAMA_HOST=http://127.0.0.1:11434 ollama pull "$NEMOCLAW_MODEL"
+  fi
+  if ! grep -q "\"$NEMOCLAW_SANDBOX\"" "$OP_HOME/.nemoclaw/sandboxes.json" 2>/dev/null; then
+    echo "installing NemoClaw $NEMOCLAW_PIN as $OPERATOR (Node, OpenShell, CLI, sandbox $NEMOCLAW_SANDBOX — several minutes)…"
+    # stdin closed: the installer must never wait on a prompt inside the recipe.
+    sudo -u "$OPERATOR" -H env \
+      PATH="$NODE_DIR/bin:$OP_HOME/.local/bin:/usr/local/bin:/usr/bin:/bin" \
+      XDG_RUNTIME_DIR="/run/user/$OP_UID" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$OP_UID/bus" \
+      NEMOCLAW_INSTALL_REF= NEMOCLAW_INSTALL_TAG="$NEMOCLAW_PIN" \
+      NEMOCLAW_NON_INTERACTIVE=1 NEMOCLAW_ACCEPT_THIRD_PARTY_SOFTWARE=1 NEMOCLAW_NO_EXPRESS=1 \
+      NEMOCLAW_AGENT=openclaw NEMOCLAW_SANDBOX_NAME="$NEMOCLAW_SANDBOX" NEMOCLAW_POLICY_MODE=suggested \
+      NEMOCLAW_PROVIDER=custom NEMOCLAW_ENDPOINT_URL=http://127.0.0.1:11434/v1 \
+      NEMOCLAW_MODEL="$NEMOCLAW_MODEL" NEMOCLAW_COMPATIBLE_AUTH_MODE=none \
+      bash "$NC/nemoclaw.sh" --non-interactive --yes-i-accept-third-party-software < /dev/null 2>&1 \
+      | tee "$NC/install.log" | tail -n 30 | sed 's/^/  /' \
+      || echo "NemoClaw install did not finish — full log: $NC/install.log (re-run the recipe: onboarding resumes)"
+  else
+    echo "sandbox $NEMOCLAW_SANDBOX is registered for $OPERATOR"
+  fi
+  echo "nemoclaw: $(sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" status 2>&1 | grep -v '^\s*$' | head -n 6 | paste -sd' · ' -)"
+  echo "dashboard (from your laptop): ssh -L 18789:127.0.0.1:18789 <you>@$HOST · then: nemoclaw $NEMOCLAW_SANDBOX dashboard-url"
+fi
+
 say "backup disk + restic (nightly writer, morning verifier)"
 BK=/srv/backup
 if [ "${NOS_BACKUP_FORMAT:-}" = yes ] && [ -n "${NOS_BACKUP_DEVICE:-}" ]; then
@@ -547,5 +610,5 @@ sudo -u "$OPERATOR" -H bash -c '
 '
 
 say "done"
-echo "landing https://$HOST/   keap :8443   chat :8444   notebooks :8445"
+echo "landing https://$HOST/   keap :8443   chat :8444   notebooks :8445   agent: nemoclaw $NEMOCLAW_SANDBOX status"
 echo "tester password: /root/nos-tester.initial-password   ·   next: $RT/README.md phase D"

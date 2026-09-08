@@ -38,6 +38,7 @@ http() {  # http <name> <url> <expected-code> [curl-args…]
 # ── services ────────────────────────────────────────────────────────────────
 for u in nginx docker ollama jupyterhub backrest mcpo-nos-tables nos-keap-identity; do unit "$u"; done
 unit nos-dgx-backup-verify.timer
+unit nos-ollama-loopback.socket
 for c in iiab-keap-1 iiab-open-webui-1 iiab-n8n-1; do
   st="$(docker inspect -f '{{.State.Status}}/{{if .State.Health}}{{.State.Health.Status}}{{else}}nohc{{end}}' "$c" 2>/dev/null || true)"
   case "$st" in
@@ -71,6 +72,19 @@ if [ -n "$ov" ]; then
   row GREEN "ollama api" "$ov · $loaded"
 else row RED "ollama api" "no answer on 172.17.0.1:11434"; fi
 http "mcpo nos_tables"  "http://172.17.0.1:8500/openapi.json" 200
+http "ollama loopback"  "http://127.0.0.1:11434/api/version" 200
+# NemoClaw: the OpenShell gateway is the operator's user-level unit on :8080
+# (TLS, own CA) — any HTTP answer means it is up; the sandbox is a container on
+# the root daemon. Neither is asked for more than presence: `nemoclaw
+# nos-agent status` is the authoritative check and needs the wrapper.
+gw="$(curl -k -s -o /dev/null -w '%{http_code}' -m 4 https://127.0.0.1:8080/ 2>/dev/null || echo 000)"
+if [ -x /usr/local/bin/nemoclaw ]; then
+  [ "$gw" != 000 ] && row GREEN "openshell gateway" "answers on 127.0.0.1:8080 ($gw)" || row RED "openshell gateway" "no listener on 127.0.0.1:8080 (operator: systemctl --user status nemoclaw-openshell-gateway)"
+  sb="$(docker ps --format '{{.Names}}' 2>/dev/null | grep -i 'nos-agent\|openshell' | paste -sd, -)"
+  if docker ps >/dev/null 2>&1; then
+    [ -n "$sb" ] && row GREEN "nemoclaw sandbox" "$sb" || row RED "nemoclaw sandbox" "no sandbox container running (nemoclaw nos-agent status)"
+  else row UNKNOWN "nemoclaw sandbox" "docker not readable by $(id -un)"; fi
+fi
 idc="$(curl -s -o /dev/null -w '%{http_code}' -m 5 --unix-socket /run/nos-dgx/keap-identity.sock http://keap/api/tables 2>/dev/null || echo 000)"
 case "$idc" in 200) row GREEN "identity outpost" "200 as $(id -un) via /run/nos-dgx/keap-identity.sock";; 403) row RED "identity outpost" "403: $(id -un) is not in nos-users";; 000) row RED "identity outpost" "no answer on /run/nos-dgx/keap-identity.sock";; *) row RED "identity outpost" "$idc";; esac
 # the tables themselves, with whatever token this user holds
