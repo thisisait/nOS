@@ -20,7 +20,7 @@ memory: the sandbox reaches Ollama through a loopback door
 | sandbox name | `nos-agent` |
 | the CLI (any maintainer) | `nemoclaw …` — `/usr/local/bin/nemoclaw` runs it as the operator via sudo |
 | gateway | operator's user unit `nemoclaw-openshell-gateway`, `127.0.0.1:8080` |
-| dashboard | `http://127.0.0.1:<port>/#token=…` on the DGX — not on the LAN |
+| web UI | `https://__HOST__:8448/` (maintainers, PAM) → the OpenClaw dashboard; first open needs the `#token=…` from `nemoclaw nos-agent dashboard-url --quiet` |
 | install log · pin | `/opt/nos-dgx/nemoclaw/install.log` · `NEMOCLAW_PIN` in the recipe |
 | provider settings | `/etc/nos/nemoclaw.env` (no secrets; the wrapper exports it) |
 
@@ -33,12 +33,21 @@ nemoclaw nos-agent logs --follow
 nemoclaw nos-agent dashboard-url --quiet
 ```
 
-The dashboard refuses any origin but `127.0.0.1`, so from a laptop tunnel it:
+## The web UI
+
+On the DGX (or through the `nemoclaw` wrapper over SSH):
 
 ```
-ssh -L 18789:127.0.0.1:18789 <you>@__HOST__
-# on the DGX: nemoclaw nos-agent dashboard-url --quiet  → open that URL in the tunnelled browser
+nemoclaw nos-agent dashboard-url --quiet
+#  → http://127.0.0.1:18789/#token=XXXX
 ```
+
+Open **`https://__HOST__:8448/#token=XXXX`** (same fragment, our host and port), log in
+with your Linux account (maintainers), and the OpenClaw dashboard appears. The
+browser remembers the token, so later visits are `https://__HOST__:8448/` alone.
+The token is OpenClaw's own gate behind the PAM one; `nemoclaw credentials reset`
+rotates it. Without the LAN edge, the SSH tunnel still works:
+`ssh -L 18789:127.0.0.1:18789 <you>@__HOST__` and the printed URL as is.
 
 Maintainers only (`nos-maintainers`): the wrapper's sudo rule is in
 `/etc/sudoers.d/nos-nemoclaw`. A tier-3 user has no door to the agent — by design.

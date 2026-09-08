@@ -65,6 +65,7 @@ http "web chat"         "https://$HOST:8444/"            200 --cacert "$CA"
 http "web notebooks"    "https://$HOST:8445/hub/login"   200 --cacert "$CA"
 http "web backups(gate)" "https://$HOST:8446/"           401 --cacert "$CA"
 http "web automation"   "https://$HOST:8447/"            200 --cacert "$CA"
+http "web agent (gate)" "https://$HOST:8448/"            401 --cacert "$CA"
 
 # ── the organs behind it ────────────────────────────────────────────────────
 kv="$(curl -s -m 5 http://127.0.0.1:8091/api/health 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin)["data"]; print(d["status"], d["version"])' 2>/dev/null || true)"

@@ -244,9 +244,9 @@ echo "mDNS on: $PHYS"
 
 say "firewall: the web ports + mDNS (only if ufw is enabled)"
 if ufw status | grep -q '^Status: active'; then
-  for p in 443 8443 8444 8445 8446 8447; do ufw allow $p/tcp >/dev/null; done
+  for p in 443 8443 8444 8445 8446 8447 8448; do ufw allow $p/tcp >/dev/null; done
   ufw allow 5353/udp >/dev/null
-  ufw status | grep -E '^(443|8443|8444|8445|8446|8447|5353)' | sed 's/^/  /'
+  ufw status | grep -E '^(443|8443|8444|8445|8446|8447|8448|5353)' | sed 's/^/  /'
 fi
 
 say "nginx + PAM"
@@ -425,7 +425,7 @@ ENV
     echo "sandbox $NEMOCLAW_SANDBOX is registered for $OPERATOR"
   fi
   echo "nemoclaw: $(sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" status 2>&1 | grep -v '^\s*$' | head -n 6 | paste -sd' · ' -)"
-  echo "dashboard (from your laptop): ssh -L 18789:127.0.0.1:18789 <you>@$HOST · then: nemoclaw $NEMOCLAW_SANDBOX dashboard-url"
+  echo "web UI: https://$HOST:8448/ (maintainers) — first open with the #token from: nemoclaw $NEMOCLAW_SANDBOX dashboard-url --quiet"
 fi
 
 say "backup disk + restic (nightly writer, morning verifier)"

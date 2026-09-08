@@ -87,7 +87,8 @@ answers on another interface — 11434 does, so the door is 8000 and JupyterHub'
 hub proxy moved to 8010). The Ollama override gained
 `OLLAMA_CONTEXT_LENGTH=32768` for the agent's prompts. `/usr/local/bin/nemoclaw`
 runs the CLI as the operator for every maintainer (`/etc/sudoers.d/nos-nemoclaw`,
-target `/opt/nos-dgx/nemoclaw/run`); dashboard via `ssh -L 18789:127.0.0.1:18789`.
+target `/opt/nos-dgx/nemoclaw/run`); web UI at **:8448** (PAM maintainers →
+127.0.0.1:18789, plus OpenClaw's own `#token` from `dashboard-url`).
 Pinned: `NEMOCLAW_PIN` (v0.0.109 = `lkg` on 2026-09-08); `NEMOCLAW_MODEL`,
 `NEMOCLAW_SANDBOX`, `NOS_NEMOCLAW=0` (skip). Channels off, no web search.
 User page: `kb/agent-nemoclaw.md`.
