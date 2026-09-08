@@ -22,6 +22,7 @@ memory: the sandbox reaches Ollama through a loopback door
 | gateway | operator's user unit `nemoclaw-openshell-gateway`, `127.0.0.1:8080` |
 | dashboard | `http://127.0.0.1:<port>/#token=…` on the DGX — not on the LAN |
 | install log · pin | `/opt/nos-dgx/nemoclaw/install.log` · `NEMOCLAW_PIN` in the recipe |
+| provider settings | `/etc/nos/nemoclaw.env` (no secrets; the wrapper exports it) |
 
 ## Drive it
 

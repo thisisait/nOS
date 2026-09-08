@@ -380,6 +380,29 @@ if [ "${NOS_NEMOCLAW:-1}" = 1 ]; then
 SUDO
   chmod 0440 /etc/sudoers.d/nos-nemoclaw; visudo -cf /etc/sudoers.d/nos-nemoclaw >/dev/null
   OP_HOME="$(getent passwd "$OPERATOR" | cut -d: -f6)"; OP_UID="$(id -u "$OPERATOR")"
+  # The provider settings: ONE file, read by the installer below and by every
+  # later `nemoclaw` call through /opt/nos-dgx/nemoclaw/run — the Ollama auth
+  # proxy is a detached process the CLI respawns, so it must see the same
+  # environment every time. No secrets in it.
+  # NEMOCLAW_OLLAMA_PROXY_SKIP_BIND_PROBE: NemoClaw fronts a no-auth loopback
+  # endpoint with a token proxy and refuses to start it while the same port
+  # answers on any other interface (#6014) — which 172.17.0.1:11434 does, on
+  # purpose, for Chat / n8n / mcpo. That check guards a boundary this box does
+  # not have (every container reaches Ollama by design); the sandbox itself
+  # stays confined to host.openshell.internal:11435 by its network policy. The
+  # proxy logs a "PROBE SKIPPED" line on every start — that is the audit trail.
+  cat > /etc/nos/nemoclaw.env <<ENV
+# nos-dgx: NemoClaw provider settings — written by setup-root.sh, read by /opt/nos-dgx/nemoclaw/run
+NEMOCLAW_AGENT=openclaw
+NEMOCLAW_SANDBOX_NAME=$NEMOCLAW_SANDBOX
+NEMOCLAW_PROVIDER=custom
+NEMOCLAW_ENDPOINT_URL=http://127.0.0.1:11434/v1
+NEMOCLAW_MODEL=$NEMOCLAW_MODEL
+NEMOCLAW_COMPATIBLE_AUTH_MODE=none
+NEMOCLAW_POLICY_MODE=suggested
+NEMOCLAW_OLLAMA_PROXY_SKIP_BIND_PROBE=1
+ENV
+  chmod 0644 /etc/nos/nemoclaw.env
   # Onboarding validates the endpoint with a real chat completion, so the model
   # must be present before it starts.
   if ! curl -fsS -m 5 http://127.0.0.1:11434/api/tags | grep -q "\"name\":\"$NEMOCLAW_MODEL\""; then
@@ -388,17 +411,18 @@ SUDO
   if ! grep -q "\"$NEMOCLAW_SANDBOX\"" "$OP_HOME/.nemoclaw/sandboxes.json" 2>/dev/null; then
     echo "installing NemoClaw $NEMOCLAW_PIN as $OPERATOR (Node, OpenShell, CLI, sandbox $NEMOCLAW_SANDBOX — several minutes)…"
     # stdin closed: the installer must never wait on a prompt inside the recipe.
+    # --fresh: this branch runs only while NO sandbox is registered, so a stale
+    # session from a failed attempt is never resumed by guess.
+    # shellcheck disable=SC2046
     sudo -u "$OPERATOR" -H env \
       PATH="$NODE_DIR/bin:$OP_HOME/.local/bin:/usr/local/bin:/usr/bin:/bin" \
       XDG_RUNTIME_DIR="/run/user/$OP_UID" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$OP_UID/bus" \
       NEMOCLAW_INSTALL_REF= NEMOCLAW_INSTALL_TAG="$NEMOCLAW_PIN" \
       NEMOCLAW_NON_INTERACTIVE=1 NEMOCLAW_ACCEPT_THIRD_PARTY_SOFTWARE=1 NEMOCLAW_NO_EXPRESS=1 \
-      NEMOCLAW_AGENT=openclaw NEMOCLAW_SANDBOX_NAME="$NEMOCLAW_SANDBOX" NEMOCLAW_POLICY_MODE=suggested \
-      NEMOCLAW_PROVIDER=custom NEMOCLAW_ENDPOINT_URL=http://127.0.0.1:11434/v1 \
-      NEMOCLAW_MODEL="$NEMOCLAW_MODEL" NEMOCLAW_COMPATIBLE_AUTH_MODE=none \
-      bash "$NC/nemoclaw.sh" --non-interactive --yes-i-accept-third-party-software < /dev/null 2>&1 \
+      $(grep -v '^#' /etc/nos/nemoclaw.env | xargs) \
+      bash "$NC/nemoclaw.sh" --non-interactive --yes-i-accept-third-party-software --fresh < /dev/null 2>&1 \
       | tee "$NC/install.log" | tail -n 30 | sed 's/^/  /' \
-      || echo "NemoClaw install did not finish — full log: $NC/install.log (re-run the recipe: onboarding resumes)"
+      || echo "NemoClaw install did not finish — full log: $NC/install.log (re-run the recipe, or as a maintainer: nemoclaw onboard --resume --non-interactive)"
   else
     echo "sandbox $NEMOCLAW_SANDBOX is registered for $OPERATOR"
   fi
@@ -593,8 +617,11 @@ if [ "$ID_BOUNCE" = 1 ] || ! systemctl is-active -q nos-keap-identity; then syst
 echo "identity outpost: $(systemctl is-active nos-keap-identity) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 --unix-socket /run/nos-dgx/keap-identity.sock http://keap/api/tables || echo no-answer) on /api/tables as root"
 
 say "phase C — stack up, knowledge ingest, tables (as admin)"
+# cd /: the operator inherits the caller's cwd, and when another maintainer ran
+# sudo that is a home the operator cannot stat — compose then fails validation.
 sudo -u "$OPERATOR" -H bash -c '
   set -e
+  cd /
   . /etc/profile.d/nos.sh
   docker compose -f /srv/nos-dgx/compose.yml up -d
   s=none
