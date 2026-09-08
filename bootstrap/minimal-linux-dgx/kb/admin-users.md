@@ -7,19 +7,30 @@ summary: Add a developer in three commands, give someone the maintainer tier, re
 
 ## Add a user
 
-```
-sudo useradd -m -s /bin/bash -G nos-users -c "Full Name" <login>
-sudo passwd <login>
-sudo bash /home/admin/projects/nOS/bootstrap/minimal-linux-dgx/setup-root.sh
-```
+**In this order** — the per-user step needs the account to exist, and the
+recipe does the per-user step for every `nos-users` member:
 
-The third line is the whole recipe re-run (idempotent, ~1 min when nothing is
-missing): it enables linger for the new account, runs `nos-user-setup` as them
-(skills, `nos` env, seed clone, **rootless Docker**), and reloads what changed.
-Tell them to `passwd` on first login and to import the CA
-([First login](first-login.html)).
+1. Create the Linux account in group `nos-users` and set a first password:
+   ```
+   sudo useradd -m -s /bin/bash -G nos-users -c "Full Name" <login>
+   sudo passwd <login>
+   ```
+2. Run the recipe (idempotent, ~1 min when nothing else is missing):
+   ```
+   sudo bash /home/admin/projects/nOS/bootstrap/minimal-linux-dgx/setup-root.sh
+   ```
+   For the new account it enables linger, clones the seed repo to
+   `~/nos-seed`, starts their **rootless Docker**, and writes `~/.nos/nos-cli.env`.
+   Expected lines under `-- <login>`: `seed repo: cloned`, `rootless docker:
+   installed`, `rootless docker: OK — daemon answers, rootless`.
+3. Tell them: `passwd` on first login, import the CA
+   ([First login](first-login.html)), and run
+   `/srv/nos-dgx/bin/nos-user-setup` **again after installing an AI harness**
+   (Claude Code, Codex, Hermes…) — skills are linked only into harness
+   directories that exist, so a fresh home shows no `nos-datatables … linked`
+   line yet. That is not an error.
 
-If you only want the per-user half without the full run:
+The same per-user step without the whole recipe (account must exist):
 
 ```
 sudo loginctl enable-linger <login>
@@ -27,6 +38,8 @@ sudo -u <login> -H env XDG_RUNTIME_DIR=/run/user/$(id -u <login>) \
   DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u <login>)/bus \
   /srv/nos-dgx/bin/nos-user-setup
 ```
+
+`Failed to look up user … / sudo: unknown user` means step 1 was skipped.
 
 ## Tiers
 
