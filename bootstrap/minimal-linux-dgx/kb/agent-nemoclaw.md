@@ -56,6 +56,59 @@ them behind a `tool_search` meta-tool to save context, and a local model then
 tends to say it has no exec tool rather than search for it. Exec runs INSIDE the
 sandbox — the agent cannot touch the host.
 
+## What it is for, and what it is not
+
+OpenClaw is an agent: it runs commands, reads and writes files, fetches the
+web, spawns sub-sessions and reports back. Its dashboard is a **chat plus a
+file preview**, not an artifact renderer — "draw me a pinball game" works in
+Chat (Open WebUI renders HTML it receives) and does not work here. The one
+rendering surface OpenClaw has is the **Canvas** tab (A2UI components, HTML,
+charts) driven by the agent's `canvas` tool; the recipe enables that plugin
+(NemoClaw ships without it). Ask for "show it on the canvas" and it has a
+place to draw.
+
+## Inside the sandbox (what the agent learns the hard way)
+
+A session transcript from the first day, so nobody reads them as bugs:
+
+| The agent tried | What happened | Why |
+|---|---|---|
+| write `/usr/local/bin/x.py` | `EACCES` | it is user `sandbox`, not root — write under `/sandbox` (its home and workspace) or `/tmp` |
+| `pip install pygame`, `apt-get install` | fails | no root; pip reaches PyPI (preset) but a windowed library has no display anyway |
+| `python -m http.server` + `curl localhost` | **DENIED** by OpenShell | loopback is refused by policy (SSRF hardening); the sandbox may not listen or call itself |
+| `web_fetch file:///tmp/x.html` | invalid URL | the tool takes http(s) only |
+| shows a file from `/tmp` in the dashboard | "session file not found" | the preview reads the agent's workspace, `/sandbox/.openclaw/workspace` |
+
+Outbound network is only what the policy allows (`nemoclaw nos-agent policy
+list`): package registries, Hugging Face, GitHub for brew, the inference route.
+Everything else is denied and logged; `nemoclaw nos-agent policy add <preset>`
+opens a named door. Files the agent builds for a human to open are the
+[dgx-agent-outputs](../keap/) roadmap row (served at `/out/`, not yet built).
+
+## Models and tool calling
+
+The agent thinks with whatever `NEMOCLAW_MODEL` names in `/etc/nos/nemoclaw.env`
+(Chat's `qwen3.5:35b` at first). Tool calling is where small local models
+differ most: qwen sometimes wraps tool arguments in a string and the call is
+dropped, and with progressive disclosure it looped on `tool_search`. Candidates
+already in Ollama with `tools` capability: `nemotron-3-nano:30b` (NVIDIA's
+own, 24 GB, 1M context — NemoClaw's tuned pairing), `gpt-oss:120b` (best at
+tools, 65 GB). Switching is one command and a restart of the gateway:
+
+```
+nemoclaw nos-agent inference set --provider custom --endpoint-url http://127.0.0.1:8000/v1 --model <ollama tag>
+```
+
+then set `NEMOCLAW_MODEL` in the recipe so a rebuild agrees.
+
+## Reading a session
+
+`nemoclaw nos-agent logs` is the gateway log (tool failures say `[tools] write
+failed: …`). The transcripts live in the sandbox at
+`/sandbox/.openclaw/agents/main/sessions/<id>.jsonl`; read them with
+`nemoclaw nos-agent exec -- <command>`, which runs any command inside the
+sandbox as the agent's user.
+
 ## What it may touch
 
 The sandbox starts with NemoClaw's *suggested* policy: reads and writes stay

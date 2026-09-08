@@ -432,7 +432,14 @@ ENV
   else
     echo "sandbox $NEMOCLAW_SANDBOX is registered for $OPERATOR"
   fi
-  echo "nemoclaw: $(sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" status 2>&1 | grep -v '^\s*$' | head -n 6 | paste -sd' · ' -)"
+  # Canvas: the one surface in the OpenClaw dashboard that RENDERS (A2UI,
+  # HTML); NemoClaw's plugin allowlist ships without it. Applied through the
+  # CLI so the managed config hash stays right; a rebuild keeps openclaw.json.
+  if ! sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" config get 2>/dev/null | grep -q '"canvas"'; then
+    sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" config set --key plugins.allow --value '["nemoclaw","canvas"]' >/dev/null 2>&1 \
+      && sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" config set --key plugins.entries.canvas.enabled --value true --config-accept-new-path --restart 2>&1 | tail -n 1 | sed 's/^/  canvas: /'
+  fi
+  echo "nemoclaw: $(sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" status 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | grep -E 'Model:|Inference:|Phase:' | sed 's/^ *//' | paste -sd' · ' -)"
   # The dashboard token for the /go redirect on :8448 (root:www-data 0640).
   # Rendered from the running sandbox; a rotation is one recipe re-run away.
   TOK="$(sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" gateway-token --quiet 2>/dev/null || true)"
