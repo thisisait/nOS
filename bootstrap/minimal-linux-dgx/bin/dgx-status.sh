@@ -72,7 +72,7 @@ if [ -n "$ov" ]; then
   row GREEN "ollama api" "$ov · $loaded"
 else row RED "ollama api" "no answer on 172.17.0.1:11434"; fi
 http "mcpo nos_tables"  "http://172.17.0.1:8500/openapi.json" 200
-http "ollama loopback"  "http://127.0.0.1:11434/api/version" 200
+http "ollama loopback"  "http://127.0.0.1:8000/api/version" 200
 # NemoClaw: the OpenShell gateway is the operator's user-level unit on :8080
 # (TLS, own CA) — any HTTP answer means it is up; the sandbox is a container on
 # the root daemon. Neither is asked for more than presence: `nemoclaw

@@ -45,7 +45,7 @@ by hand — the next run overwrites it.
 | `nos-dgx-backup.timer` / `-verify.timer` | nightly restic + morning restore drill | `/var/lib/nos-dgx/backup/{backup.log,last.json}` |
 | `backrest` | restic UI on `127.0.0.1:9898` (nginx 8446, maintainers) | `journalctl -u backrest` |
 | `ollama` | model server on `172.17.0.1:11434` | `journalctl -u ollama` |
-| `jupyterhub` | the Hub on `127.0.0.1:8000` | `journalctl -u jupyterhub` (single-user servers log here too) |
+| `jupyterhub` | the Hub on `127.0.0.1:8010` | `journalctl -u jupyterhub` (single-user servers log here too) |
 | `user@<uid>` | each user's rootless docker, dev servers | `journalctl --user -M <login>@ -u docker` |
 
 ```

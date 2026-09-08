@@ -80,9 +80,11 @@ operator's user unit `nemoclaw-openshell-gateway` on `127.0.0.1:8080`, the
 sandbox `nos-agent` a container on the root daemon. Inference is **not** the
 Express install's managed vLLM (a second 35B model preallocating 90 % of the
 unified memory) but the native Ollama that already serves Chat, reached
-through `nos-ollama-loopback.socket` (`127.0.0.1:11434` → `172.17.0.1:11434`;
-NemoClaw admits an unauthenticated endpoint only on loopback and rewrites it
-to `host.openshell.internal:11434` for the sandbox). The Ollama override gained
+through `nos-ollama-loopback.socket` (`127.0.0.1:8000` → `172.17.0.1:11434`;
+NemoClaw admits an unauthenticated endpoint only on loopback ports
+8000/11434/11435, fronts it with a token proxy and refuses one whose port also
+answers on another interface — 11434 does, so the door is 8000 and JupyterHub's
+hub proxy moved to 8010). The Ollama override gained
 `OLLAMA_CONTEXT_LENGTH=32768` for the agent's prompts. `/usr/local/bin/nemoclaw`
 runs the CLI as the operator for every maintainer (`/etc/sudoers.d/nos-nemoclaw`,
 target `/opt/nos-dgx/nemoclaw/run`); dashboard via `ssh -L 18789:127.0.0.1:18789`.

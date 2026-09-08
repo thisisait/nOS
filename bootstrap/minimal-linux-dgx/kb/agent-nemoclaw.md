@@ -13,7 +13,7 @@ routes its model calls. On this box there is **one** of it, owned by the
 operator account, and it thinks with the **same native Ollama** Chat uses
 (`qwen3.5:35b`, see *Local models*). No second model server, no extra GPU
 memory: the sandbox reaches Ollama through a loopback door
-(`127.0.0.1:11434`, rewritten to `host.openshell.internal:11434` inside).
+(`127.0.0.1:8000`, fronted by NemoClaw's token proxy on `host.openshell.internal:11435` inside).
 
 | What | Where |
 |---|---|
@@ -63,4 +63,4 @@ nemoclaw nos-agent status
 
 Re-running the recipe (`sudo bash /srv/nos-dgx/setup-root.sh`) resumes an
 interrupted onboarding; `NOS_NEMOCLAW=0` skips the whole section. Ollama must
-answer on `127.0.0.1:11434` first (`nos-ollama-loopback.socket`).
+answer on `127.0.0.1:8000` first (`nos-ollama-loopback.socket`).

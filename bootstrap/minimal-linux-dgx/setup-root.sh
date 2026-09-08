@@ -341,7 +341,7 @@ put "$RT/systemd/jupyterhub.service" /etc/systemd/system/jupyterhub.service && J
 systemctl daemon-reload
 systemctl enable -q jupyterhub
 if [ "$JH_BOUNCE" = 1 ] || ! systemctl is-active -q jupyterhub; then systemctl restart jupyterhub; sleep 4; fi
-echo "jupyterhub: $(systemctl is-active jupyterhub) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://127.0.0.1:8000/hub/login || echo no-answer) on /hub/login"
+echo "jupyterhub: $(systemctl is-active jupyterhub) — $(curl -s -o /dev/null -w '%{http_code}' -m 5 http://127.0.0.1:8010/hub/login || echo no-answer) on /hub/login"
 echo "torch cuda: $("$JH/venv/bin/python" -c 'import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else "")' 2>&1 | tail -1)"
 
 say "NemoClaw (OpenClaw in an OpenShell sandbox, on the native Ollama, owned by $OPERATOR)"
@@ -366,7 +366,7 @@ if [ "${NOS_NEMOCLAW:-1}" = 1 ]; then
   systemctl enable -q nos-ollama-loopback.socket
   if [ "$LB_BOUNCE" = 1 ]; then systemctl restart nos-ollama-loopback.socket; fi
   systemctl is-active -q nos-ollama-loopback.socket || systemctl start nos-ollama-loopback.socket
-  echo "ollama loopback: $(systemctl is-active nos-ollama-loopback.socket) — $(curl -fsS -m 5 http://127.0.0.1:11434/api/version 2>/dev/null || echo 'no answer on 127.0.0.1:11434')"
+  echo "ollama loopback: $(systemctl is-active nos-ollama-loopback.socket) — $(curl -fsS -m 5 http://127.0.0.1:8000/api/version 2>/dev/null || echo 'no answer on 127.0.0.1:8000')"
   install -d -m 0755 "$NC"
   # The bootstrap installer, fetched ONCE and kept root-owned; the ref it
   # installs is pinned by NEMOCLAW_INSTALL_TAG below, never the moving `lkg`.
@@ -381,32 +381,30 @@ SUDO
   chmod 0440 /etc/sudoers.d/nos-nemoclaw; visudo -cf /etc/sudoers.d/nos-nemoclaw >/dev/null
   OP_HOME="$(getent passwd "$OPERATOR" | cut -d: -f6)"; OP_UID="$(id -u "$OPERATOR")"
   # The provider settings: ONE file, read by the installer below and by every
-  # later `nemoclaw` call through /opt/nos-dgx/nemoclaw/run — the Ollama auth
-  # proxy is a detached process the CLI respawns, so it must see the same
-  # environment every time. No secrets in it.
-  # NEMOCLAW_OLLAMA_PROXY_SKIP_BIND_PROBE: NemoClaw fronts a no-auth loopback
-  # endpoint with a token proxy and refuses to start it while the same port
-  # answers on any other interface (#6014) — which 172.17.0.1:11434 does, on
-  # purpose, for Chat / n8n / mcpo. That check guards a boundary this box does
-  # not have (every container reaches Ollama by design); the sandbox itself
-  # stays confined to host.openshell.internal:11435 by its network policy. The
-  # proxy logs a "PROBE SKIPPED" line on every start — that is the audit trail.
+  # later `nemoclaw` call through /opt/nos-dgx/nemoclaw/run (no secrets).
+  # Why port 8000 and not 11434: NemoClaw fronts a no-auth loopback endpoint
+  # with its own token proxy and refuses to start it while the same port
+  # answers on any other interface (#6014) — 172.17.0.1:11434 does, on purpose,
+  # for Chat / n8n / mcpo. The eligible ports are fixed (8000/11434/11435), the
+  # documented NEMOCLAW_OLLAMA_PROXY_SKIP_BIND_PROBE override never reaches the
+  # proxy from the CLI (its subprocess env is allow-listed), so the door is
+  # the one eligible port nobody else serves: 8000, JupyterHub's hub proxy
+  # having moved to 8010.
   cat > /etc/nos/nemoclaw.env <<ENV
 # nos-dgx: NemoClaw provider settings — written by setup-root.sh, read by /opt/nos-dgx/nemoclaw/run
 NEMOCLAW_AGENT=openclaw
 NEMOCLAW_SANDBOX_NAME=$NEMOCLAW_SANDBOX
 NEMOCLAW_PROVIDER=custom
-NEMOCLAW_ENDPOINT_URL=http://127.0.0.1:11434/v1
+NEMOCLAW_ENDPOINT_URL=http://127.0.0.1:8000/v1
 NEMOCLAW_MODEL=$NEMOCLAW_MODEL
 NEMOCLAW_COMPATIBLE_AUTH_MODE=none
 NEMOCLAW_POLICY_MODE=suggested
-NEMOCLAW_OLLAMA_PROXY_SKIP_BIND_PROBE=1
 ENV
   chmod 0644 /etc/nos/nemoclaw.env
   # Onboarding validates the endpoint with a real chat completion, so the model
   # must be present before it starts.
-  if ! curl -fsS -m 5 http://127.0.0.1:11434/api/tags | grep -q "\"name\":\"$NEMOCLAW_MODEL\""; then
-    echo "pulling $NEMOCLAW_MODEL…"; OLLAMA_HOST=http://127.0.0.1:11434 ollama pull "$NEMOCLAW_MODEL"
+  if ! curl -fsS -m 5 http://127.0.0.1:8000/api/tags | grep -q "\"name\":\"$NEMOCLAW_MODEL\""; then
+    echo "pulling $NEMOCLAW_MODEL…"; OLLAMA_HOST=http://127.0.0.1:8000 ollama pull "$NEMOCLAW_MODEL"
   fi
   if ! grep -q "\"$NEMOCLAW_SANDBOX\"" "$OP_HOME/.nemoclaw/sandboxes.json" 2>/dev/null; then
     echo "installing NemoClaw $NEMOCLAW_PIN as $OPERATOR (Node, OpenShell, CLI, sandbox $NEMOCLAW_SANDBOX — several minutes)…"

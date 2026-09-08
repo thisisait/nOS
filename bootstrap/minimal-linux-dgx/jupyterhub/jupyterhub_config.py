@@ -23,7 +23,7 @@ STATE = "/var/lib/nos-dgx/jupyterhub"  # db, cookie secret, pid — root 0700
 c = get_config()  # noqa: F821 — provided by JupyterHub
 
 # ── bind: loopback only, nginx is the edge ───────────────────────────────────
-c.JupyterHub.bind_url = "http://127.0.0.1:8000"
+c.JupyterHub.bind_url = "http://127.0.0.1:8010"   # 8000 is the loopback door to Ollama (NemoClaw)
 c.JupyterHub.hub_ip = "127.0.0.1"
 c.JupyterHub.hub_port = 8081
 c.ConfigurableHTTPProxy.command = [f"{J}/chp/node_modules/.bin/configurable-http-proxy"]
