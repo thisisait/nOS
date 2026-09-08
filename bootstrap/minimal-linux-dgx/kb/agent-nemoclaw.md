@@ -88,18 +88,22 @@ roadmap row `dgx-agent-outputs` (served at `/out/`, not yet built).
 ## Models and tool calling
 
 The agent thinks with whatever `NEMOCLAW_MODEL` names in `/etc/nos/nemoclaw.env`
-(Chat's `qwen3.5:35b` at first). Tool calling is where small local models
+(`nemotron-3-nano:30b` since 2026-09-08; Chat keeps `qwen3.5:35b` — two
+models loaded side by side fit the 121 GB). Tool calling is where small local models
 differ most: qwen sometimes wraps tool arguments in a string and the call is
 dropped, and with progressive disclosure it looped on `tool_search`. Candidates
 already in Ollama with `tools` capability: `nemotron-3-nano:30b` (NVIDIA's
 own, 24 GB, 1M context — NemoClaw's tuned pairing), `gpt-oss:120b` (best at
-tools, 65 GB). Switching is one command and a restart of the gateway:
+tools, 65 GB). Switching: set `NEMOCLAW_MODEL` in the recipe and re-run it. (Not
+`nemoclaw inference set` — it refuses a no-auth compatible route in both
+directions; the recipe changes the model in OpenClaw's own config, which is
+all the route needs, and restarts the gateway.) A one-off by hand:
 
 ```
-nemoclaw nos-agent inference set --provider custom --endpoint-url http://127.0.0.1:8000/v1 --model <ollama tag>
+nemoclaw nos-agent config set --key agents.defaults.model.primary --value inference/<ollama tag> --restart
 ```
 
-then set `NEMOCLAW_MODEL` in the recipe so a rebuild agrees.
+after the tag is in `models.providers.inference.models` (the recipe adds it).
 
 ## Reading a session
 

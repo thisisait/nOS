@@ -360,7 +360,7 @@ say "NemoClaw (OpenClaw in an OpenShell sandbox, on the native Ollama, owned by 
 # sandbox. Install is idempotent on the sandbox registry; NOS_NEMOCLAW=0 skips.
 NC=/opt/nos-dgx/nemoclaw
 NEMOCLAW_PIN="${NEMOCLAW_PIN:-v0.0.109}"          # what `lkg` resolved to on 2026-09-08
-NEMOCLAW_MODEL="${NEMOCLAW_MODEL:-qwen3.5:35b}"    # the model Chat already runs
+NEMOCLAW_MODEL="${NEMOCLAW_MODEL:-nemotron-3-nano:30b}"   # tools+thinking, NVIDIA's pairing for NemoClaw; Chat keeps qwen3.5:35b
 NEMOCLAW_SANDBOX="${NEMOCLAW_SANDBOX:-nos-agent}"
 if [ "${NOS_NEMOCLAW:-1}" = 1 ]; then
   LB_BOUNCE=0
@@ -431,6 +431,21 @@ ENV
       || echo "NemoClaw install did not finish — full log: $NC/install.log (re-run the recipe, or as a maintainer: nemoclaw onboard --resume --non-interactive)"
   else
     echo "sandbox $NEMOCLAW_SANDBOX is registered for $OPERATOR"
+  fi
+  # Model follows NEMOCLAW_MODEL on an EXISTING sandbox too. `nemoclaw
+  # inference set` cannot touch a no-auth compatible route (it demands
+  # COMPATIBLE_API_KEY, which this route never had), but the route is only the
+  # endpoint — the model name travels in the request body — so the switch is
+  # OpenClaw's own config: add the model to the provider list, make it primary,
+  # restart the gateway. Idempotent on the primary already matching.
+  CUR_PRIMARY="$(sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" config get --key agents.defaults.model.primary 2>/dev/null | tail -n 1 | tr -d '"')"
+  if [ -n "$CUR_PRIMARY" ] && [ "$CUR_PRIMARY" != "inference/$NEMOCLAW_MODEL" ]; then
+    MODELS_JSON="$(sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" config get --key models.providers.inference.models --format json 2>/dev/null | sed -n '/^\[/,$p' \
+      | python3 -c 'import json,sys; L=json.load(sys.stdin); m=sys.argv[1]
+if not any(x.get("id")==m for x in L): L.append({"compat":{"supportsStore":False},"id":m,"name":"inference/"+m,"reasoning":False,"input":["text"],"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0},"contextWindow":131072,"maxTokens":4096})
+print(json.dumps(L))' "$NEMOCLAW_MODEL")"
+    sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" config set --key models.providers.inference.models --value "$MODELS_JSON" >/dev/null 2>&1
+    sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" config set --key agents.defaults.model.primary --value "inference/$NEMOCLAW_MODEL" --restart 2>&1 | tail -n 1 | sed 's/^/  model: /'
   fi
   # Canvas: the one surface in the OpenClaw dashboard that RENDERS (A2UI,
   # HTML); NemoClaw's plugin allowlist ships without it. Applied through the
