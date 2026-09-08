@@ -133,7 +133,7 @@ Groups: `nos-users` (may log in to the web + read tables), `nos-maintainers`
 **A** (done by the session, no root): KEAP image built, repo tools patched,
 this tree staged.
 
-**B** (root, once, idempotent): `sudo bash <checkout>/bootstrap/minimal-linux-dgx/setup-root.sh` — the
+**B** (root, once, idempotent): `sudo bash <checkout>/bootstrap/minimal-linux-dgx/setup-root.sh` — the deploy form; to re-apply the deployed state (add a user, rename, certificate) any maintainer runs `sudo bash /srv/nos-dgx/setup-root.sh`. The
 script's own directory is the source tree; it clones nos-keap at the pin and builds
 the image when missing, so a fresh box needs only Docker + this checkout.
 

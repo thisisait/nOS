@@ -15,10 +15,13 @@ recipe does the per-user step for every `nos-users` member:
    sudo useradd -m -s /bin/bash -G nos-users -c "Full Name" <login>
    sudo passwd <login>
    ```
-2. Run the recipe (idempotent, ~1 min when nothing else is missing):
+2. Run the recipe (idempotent, ~1 min when nothing else is missing) — the
+   deployed copy, which exists whoever installed the box:
    ```
-   sudo bash /home/admin/projects/nOS/bootstrap/minimal-linux-dgx/setup-root.sh
+   sudo bash /srv/nos-dgx/setup-root.sh
    ```
+   Any `nos-maintainers` member with sudo may run it; the recipe switches to
+   the operator account (`admin`) itself where /srv ownership needs it.
    For the new account it enables linger, clones the seed repo to
    `~/nos-seed`, starts their **rootless Docker**, and writes `~/.nos/nos-cli.env`.
    Expected lines under `-- <login>`: `seed repo: cloned`, `rootless docker:

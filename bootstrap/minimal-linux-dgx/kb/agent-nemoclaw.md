@@ -83,7 +83,7 @@ Outbound network is only what the policy allows (`nemoclaw nos-agent policy
 list`): package registries, Hugging Face, GitHub for brew, the inference route.
 Everything else is denied and logged; `nemoclaw nos-agent policy add <preset>`
 opens a named door. Files the agent builds for a human to open are the
-[dgx-agent-outputs](../keap/) roadmap row (served at `/out/`, not yet built).
+roadmap row `dgx-agent-outputs` (served at `/out/`, not yet built).
 
 ## Models and tool calling
 

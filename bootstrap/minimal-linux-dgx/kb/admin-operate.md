@@ -7,11 +7,22 @@ summary: Where everything lives, the services and their logs, re-running the rec
 
 ## The recipe is the source of truth
 
-Everything on this box is produced by **one script** in the nOS checkout:
+Everything on this box is produced by **one script**, `setup-root.sh`. It lives
+in two places, and which one you run says what you mean:
 
 ```
-sudo bash /home/admin/projects/nOS/bootstrap/minimal-linux-dgx/setup-root.sh
+sudo bash /srv/nos-dgx/setup-root.sh                                  # OPERATE: re-apply what is deployed
+sudo bash ~/<your nOS checkout>/bootstrap/minimal-linux-dgx/setup-root.sh   # DEPLOY: push a recipe change
 ```
+
+`/srv/nos-dgx` is the rendered copy of the recipe directory from the last
+deploy — the "what is running" side. Adding a user, renaming the host or
+renewing the certificate needs only that. A change to the recipe is edited in
+a checkout (any maintainer's clone, branch `feat/minimal-linux-dgx`),
+committed, and deployed by running the script **from that checkout**: it
+rsyncs its own directory into `/srv/nos-dgx` first, so the deployed copy is
+never ahead of a commit. The script is self-locating; there is no fixed home
+directory in the path.
 
 It is idempotent: run it after any change to the recipe, after adding a user,
 after renaming the host. It renders the hostname into nginx/compose/landing,
