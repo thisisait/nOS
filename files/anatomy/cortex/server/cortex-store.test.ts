@@ -159,7 +159,10 @@ describe('git materialisation (canonical ingest)', () => {
   });
 
   it('applies every canonical domain file through the ported ingest path', () => {
-    expect(first.materialise.ingest?.applied.length).toBe(107);
+    // 107 → 110 at keap_repo_ref v1.45.0: three new canonical domain files
+    // (04.11 Business, 07.11 Communication, 07.12 Home & Family). A CORPUS
+    // statement — moves with the pin, in the parity commit, never quietly.
+    expect(first.materialise.ingest?.applied.length).toBe(110);
     expect(first.materialise.ingest?.skipped).toEqual([]);
     expect(first.materialise.ingest?.changed).toBe(true);
   });
@@ -250,12 +253,13 @@ describe('git materialisation (canonical ingest)', () => {
   }, 30000);
 
   it('mirrors the ToE concept relations into the generalized store', () => {
-    // 4434 → 4643 at the S2 corpus-parity pin (organ knowledge/ re-synced from
-    // keap_repo_ref v1.34.0: canonical 1750 → 2393 nodes, ontology/relations
-    // 0 → 417 typed edges). This literal is a CORPUS statement, not a port one —
-    // it moves whenever the pin moves, and the move belongs in the parity commit
-    // so the number is never adjusted quietly to make a red suite green.
-    expect(first.facts.toeRelations).toBe(4643);
+    // 4434 → 4643 at the S2 corpus-parity pin (v1.34.0), then 4643 → 4666 at
+    // keap_repo_ref v1.45.0 (+23 typed edges: the 04.04.11/12 → 04.11 Business
+    // re-home repointed 8 ontology edges and the new packs added the rest).
+    // This literal is a CORPUS statement, not a port one — it moves whenever the
+    // pin moves, and the move belongs in the parity commit so the number is
+    // never adjusted quietly to make a red suite green.
+    expect(first.facts.toeRelations).toBe(4666);
   });
 
   it('applies the ontology verb registry without growing the live vocabulary', () => {
@@ -287,13 +291,13 @@ describe('git materialisation (canonical ingest)', () => {
     expect(again.status, again.out).toBe(0);
     expect(again.result!.materialise.ingest?.applied).toEqual([]);
     // The canonical layer and the ontology layer keep separate skip ledgers:
-    // 107 domain files in `skipped`, the verb registry + the typed-edge
-    // partitions in `ontology.skipped`. The 12 `relations:*` entries arrived
-    // with the S2 corpus-parity pin (v1.34.0 populated knowledge/ontology/
-    // relations/, which was empty in git at v1.27.0) — asserted by NAME rather
-    // than by count so a partition silently disappearing is a failure, not a
-    // smaller number nobody reads.
-    expect(again.result!.materialise.ingest?.skipped.length).toBe(107);
+    // 110 domain files in `skipped` (107 → 110 at v1.45.0, +3 new packs), the
+    // verb registry + the typed-edge partitions in `ontology.skipped`. The 12
+    // `relations:*` entries arrived with the S2 corpus-parity pin (v1.34.0
+    // populated knowledge/ontology/relations/, empty in git at v1.27.0) —
+    // asserted by NAME rather than by count so a partition silently disappearing
+    // is a failure, not a smaller number nobody reads.
+    expect(again.result!.materialise.ingest?.skipped.length).toBe(110);
     expect(again.result!.materialise.ingest?.ontology.skipped).toEqual([
       'types',
       'ontology:relations:01-natural-sciences',

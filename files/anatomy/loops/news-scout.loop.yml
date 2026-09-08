@@ -15,22 +15,14 @@ blurb: >-
   the loop. GDPR/EU-residency applies to anything stored.
 
 trigger:
-  cadence: "0 7 * * *" # daily 07:00
+  cadence: "0 7 * * *"  # daily 07:00
 
 params:
   sources:
     - { id: lwn, label: "LWN.net", url: "https://lwn.net/headlines/rss" }
     - { id: hn, label: "Hacker News", url: "https://news.ycombinator.com/rss" }
-    - {
-        id: arxiv-ai,
-        label: "arXiv cs.AI",
-        url: "http://export.arxiv.org/rss/cs.AI",
-      }
-    - {
-        id: arxiv-sec,
-        label: "arXiv cs.CR (security)",
-        url: "http://export.arxiv.org/rss/cs.CR",
-      }
+    - { id: arxiv-ai, label: "arXiv cs.AI", url: "http://export.arxiv.org/rss/cs.AI" }
+    - { id: arxiv-sec, label: "arXiv cs.CR (security)", url: "http://export.arxiv.org/rss/cs.CR" }
 
 steps:
   - id: fetch

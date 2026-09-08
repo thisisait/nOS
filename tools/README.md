@@ -142,6 +142,7 @@ worse than none, because it reads as complete.
 
 - `ci-local.sh` — tools/ci-local.sh — run a command inside a FROZEN venv that reproduces the CI
 - `deploy-from-ci.sh` — host-side deploy wrapper invoked by Wing's
+- `deploy-sync.sh` — make this checkout a clean, current mirror of upstream before a converge (ends the scan-drift reconcile dance).
 - `promote-public.sh` — tools/promote-public.sh — promote a VETTED local change to a PUBLIC GitHub PR.
 - `sync-trunk-to-gitea.sh` — tools/sync-trunk-to-gitea.sh — keep the writable Gitea agent forge's trunk
 - `sync-trunk-to-gitlab.sh` — tools/sync-trunk-to-gitlab.sh — keep the GitLab agent forge's trunk

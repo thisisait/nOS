@@ -382,10 +382,16 @@ def awaiting() -> dict:
         return {"error": f"no ledger at {WING_DB}", "rows": []}
 
     with conn:
-        rows = [dict(r) for r in conn.execute(
-            """
+        # requires_operator is the overlay column loop-requires-operator added.
+        # A minimal or pre-migration loop_proposals lacks it → read it as 0 (not
+        # stamped), the old behaviour. The real wing.db always has it
+        # (ledger.ensure_schema). This reader issues ONLY SELECTs (gated by
+        # test_the_lineage_reader_admits_what_it_cannot_ask), so the fallback is
+        # a second SELECT, never a PRAGMA — try the column, drop to a literal 0.
+        def _awaiting_select(ro_expr):
+            return f"""
             SELECT p.uuid, p.weakness_id, p.intent_class, p.proposer_id,
-                   p.target_paths, p.diff_text, p.requires_operator,
+                   p.target_paths, p.diff_text, {ro_expr},
                    v.result AS verdict, v.created_at AS verdict_at,
                    v.tree_sha AS verdict_tree
               FROM loop_proposals p
@@ -396,7 +402,10 @@ def awaiting() -> dict:
              WHERE v.result IN ('pass', 'indeterminate') OR v.id IS NULL
              ORDER BY COALESCE(v.created_at, p.created_at)
             """
-        )]
+        try:
+            rows = [dict(r) for r in conn.execute(_awaiting_select("p.requires_operator"))]
+        except sqlite3.OperationalError:
+            rows = [dict(r) for r in conn.execute(_awaiting_select("0 AS requires_operator"))]
         # A verdict can be sealed with no proposal attached — `POST /loop/judge`
         # takes an optional `proposal_uuid`, so a bare gate-set run against the
         # working tree seals a real row with `proposal_id IS NULL`. The JOIN
