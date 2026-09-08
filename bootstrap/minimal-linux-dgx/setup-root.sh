@@ -208,6 +208,10 @@ KEAP_AGENT_TOKEN_CAPTURE=$KEAP_AGENT_TOKEN_CAPTURE
 KEAP_PROXY_SHARED_SECRET=$KEAP_PROXY_SHARED_SECRET
 EOF
 install -m 0640 -o root -g www-data /dev/null /etc/nginx/nos-keap-secret.conf
+# The agent's gateway token include must exist before nginx -t; the NemoClaw
+# section fills it in once the sandbox can tell it (empty → /go lands on the
+# OpenClaw login form instead of failing).
+[ -f /etc/nginx/nos-agent-token.conf ] || { install -m 0640 -o root -g www-data /dev/null /etc/nginx/nos-agent-token.conf; printf 'set $nos_agent_token "";\n' > /etc/nginx/nos-agent-token.conf; }
 printf 'proxy_set_header x-keap-proxy-secret "%s";\n' "$KEAP_PROXY_SHARED_SECRET" > /etc/nginx/nos-keap-secret.conf
 install -m 0644 "$RT/profile.d/nos.sh" /etc/profile.d/nos.sh
 
@@ -425,7 +429,20 @@ ENV
     echo "sandbox $NEMOCLAW_SANDBOX is registered for $OPERATOR"
   fi
   echo "nemoclaw: $(sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" status 2>&1 | grep -v '^\s*$' | head -n 6 | paste -sd' · ' -)"
-  echo "web UI: https://$HOST:8448/ (maintainers) — first open with the #token from: nemoclaw $NEMOCLAW_SANDBOX dashboard-url --quiet"
+  # The dashboard token for the /go redirect on :8448 (root:www-data 0640).
+  # Rendered from the running sandbox; a rotation is one recipe re-run away.
+  TOK="$(sudo -u "$OPERATOR" -H "$NC/run" "$NEMOCLAW_SANDBOX" gateway-token --quiet 2>/dev/null || true)"
+  if [ -n "$TOK" ]; then
+    printf 'set $nos_agent_token "%s";\n' "$TOK" > /etc/nginx/nos-agent-token.conf.new
+    chown root:www-data /etc/nginx/nos-agent-token.conf.new; chmod 0640 /etc/nginx/nos-agent-token.conf.new
+    if ! cmp -s /etc/nginx/nos-agent-token.conf.new /etc/nginx/nos-agent-token.conf; then
+      mv /etc/nginx/nos-agent-token.conf.new /etc/nginx/nos-agent-token.conf; nginx -t -q && systemctl reload nginx
+      echo "agent web UI: token rendered for https://$HOST:8448/go"
+    else rm -f /etc/nginx/nos-agent-token.conf.new; fi
+  else
+    echo "agent web UI: no gateway token yet — /go lands on the OpenClaw login form"
+  fi
+  echo "web UI: https://$HOST:8448/go (maintainers)"
 fi
 
 say "backup disk + restic (nightly writer, morning verifier)"

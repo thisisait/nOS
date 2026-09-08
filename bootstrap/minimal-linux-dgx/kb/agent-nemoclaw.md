@@ -20,7 +20,7 @@ memory: the sandbox reaches Ollama through a loopback door
 | sandbox name | `nos-agent` |
 | the CLI (any maintainer) | `nemoclaw …` — `/usr/local/bin/nemoclaw` runs it as the operator via sudo |
 | gateway | operator's user unit `nemoclaw-openshell-gateway`, `127.0.0.1:8080` |
-| web UI | `https://__HOST__:8448/` (maintainers, PAM) → the OpenClaw dashboard; first open needs the `#token=…` from `nemoclaw nos-agent dashboard-url --quiet` |
+| web UI | `https://__HOST__:8448/go` (maintainers, PAM) → the OpenClaw dashboard, token supplied by the edge |
 | install log · pin | `/opt/nos-dgx/nemoclaw/install.log` · `NEMOCLAW_PIN` in the recipe |
 | provider settings | `/etc/nos/nemoclaw.env` (no secrets; the wrapper exports it) |
 
@@ -35,18 +35,14 @@ nemoclaw nos-agent dashboard-url --quiet
 
 ## The web UI
 
-On the DGX (or through the `nemoclaw` wrapper over SSH):
-
-```
-nemoclaw nos-agent dashboard-url --quiet
-#  → http://127.0.0.1:18789/#token=XXXX
-```
-
-Open **`https://__HOST__:8448/#token=XXXX`** (same fragment, our host and port), log in
-with your Linux account (maintainers), and the OpenClaw dashboard appears. The
-browser remembers the token, so later visits are `https://__HOST__:8448/` alone.
-The token is OpenClaw's own gate behind the PAM one; `nemoclaw credentials reset`
-rotates it. Without the LAN edge, the SSH tunnel still works:
+The **Agent** card on the landing page (`https://__HOST__:8448/go`): log in with
+your Linux account (maintainers) and the OpenClaw dashboard opens. Behind the
+PAM gate the edge appends OpenClaw's own gateway token for you — the dashboard
+does not keep it between visits, and the token lives in a root-only nginx
+include the recipe renders from `nemoclaw nos-agent gateway-token`. After a
+token rotation (`nemoclaw credentials reset`), re-run the recipe. Opening
+`https://__HOST__:8448/` directly shows OpenClaw's login form: paste the output
+of `nemoclaw nos-agent gateway-token --quiet` there. Without the LAN edge, the SSH tunnel still works:
 `ssh -L 18789:127.0.0.1:18789 <you>@__HOST__` and the printed URL as is.
 
 Maintainers only (`nos-maintainers`): the wrapper's sudo rule is in
