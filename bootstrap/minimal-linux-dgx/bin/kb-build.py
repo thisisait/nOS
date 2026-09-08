@@ -16,6 +16,7 @@ LAN with no internet, and the pages are plain files nginx already serves.
 """
 import argparse
 import html
+import json
 import pathlib
 import re
 import sys
