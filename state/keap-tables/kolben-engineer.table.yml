@@ -13,6 +13,7 @@ description: >-
   Internal engineering staff at the synthetic Kolben IT fixture. Assignees of
   tickets and authors of time entries. Synthetic people (docs/idea/15).
 driver: libsql
+anchors: ["nos.fixture.kolben"]
 visibility: tier-managers
 schema:
   columns:

@@ -14,6 +14,7 @@ description: >-
   A logged unit of work at the synthetic Kolben IT fixture: ticket, engineer,
   date, hours, whether billable, and a note. The junction table.
 driver: libsql
+anchors: ["nos.fixture.kolben"]
 visibility: tier-managers
 schema:
   columns:

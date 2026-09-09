@@ -40,10 +40,24 @@ def _broken_live() -> set[str]:
         store = yaml.safe_load((pathlib.Path.home() / ".nos" / "secrets.yml")
                                .read_text()) or {}
         tok = str(store.get("keap_agent_token_ro") or "")
+        rw = str(store.get("keap_agent_token_rw") or "")
     except OSError:
-        tok = ""
+        tok = rw = ""
     if not tok:
         pytest.skip("no keap_agent_token_ro — the lint is UNKNOWN here")
+    # GET /agent/v1/lint serves a PERSISTED queue that never recomputes on read;
+    # only POST /lint/run reruns the checks and resolves findings that no longer
+    # reproduce. A correctness gate must assert on FRESH findings, not on a queue
+    # that can be stale-until-swept — reading the stale queue is exactly what
+    # once turned a resolved anchor into a phantom "broken" verdict (2026-09-09).
+    if rw:
+        try:
+            urllib.request.urlopen(urllib.request.Request(
+                f"{KEAP}/agent/v1/lint/run", method="POST", data=b"{}",
+                headers={"Authorization": f"Bearer {rw}",
+                         "content-type": "application/json"}), timeout=30)
+        except (urllib.error.URLError, OSError):
+            pass  # best-effort refresh; the GET below still reports what's there
     req = urllib.request.Request(f"{KEAP}/agent/v1/lint",
                                  headers={"Authorization": f"Bearer {tok}"})
     try:

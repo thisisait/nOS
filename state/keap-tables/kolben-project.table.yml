@@ -13,6 +13,7 @@ description: >-
   A client engagement at the synthetic Kolben IT fixture: who it is for, its
   lifecycle, when it started, and its budget.
 driver: libsql
+anchors: ["nos.fixture.kolben"]
 visibility: tier-managers
 schema:
   columns:

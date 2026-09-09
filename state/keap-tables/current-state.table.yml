@@ -32,6 +32,7 @@ description: >-
   routing-address components, claimed by matching agents. dtt: the parallel-work
   board (plat-active-work-datatable).
 driver: libsql
+anchors: ["nos.loop"]
 visibility: tier-managers
 schema:
   columns:

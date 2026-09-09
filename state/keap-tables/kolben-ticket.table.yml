@@ -22,6 +22,7 @@ description: >-
   assignee, priority, status, open/due dates, and outcome. The SLA-bearing
   object — the point of the whole fixture.
 driver: libsql
+anchors: ["nos.fixture.kolben"]
 visibility: tier-managers
 schema:
   columns:

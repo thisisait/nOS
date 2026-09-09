@@ -183,3 +183,27 @@
   when:
     - install_keap | default(false) | bool
     - install_ears | default(false) | bool
+
+# ── Sweep the persisted lint queue — the LAST post step ──────────────────────
+# GET /agent/v1/lint serves a PERSISTED findings queue (K2) that NEVER recomputes
+# on read; only POST /agent/v1/lint/run reruns the checks and stamps resolved_at
+# on findings that no longer reproduce. Nothing else sweeps it, so a converge
+# that grew a node or reseeded a table left STALE broken-anchor findings behind —
+# a phantom that read as a live defect and cost a full misdiagnosis (2026-09-09).
+# Run it LAST, after every table seed above, so the queue reflects the fully
+# converged estate. Never fatal: it refreshes the queue, it does not gate on it.
+- name: "[pazny.keap] Sweep the KEAP lint queue (recompute persisted findings)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ keap_port | default(8091) }}/agent/v1/lint/run"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ keap_agent_token_rw }}"
+    body_format: json
+    body: {}
+    status_code: 200
+    timeout: 60
+  register: _keap_lint_run
+  failed_when: false
+  changed_when: false
+  when:
+    - install_keap | default(false) | bool

@@ -925,6 +925,11 @@ META_DOMAINS: list[tuple[str, str, str, list[tuple[str, str, str]]]] = [
           "The print-shop fixture domain — machines, materials, print orders and "
           "their job steps. A manufacturing archetype: physical resources "
           "scheduled against orders, distinct from the services nOS runs."),
+         ("nos.fixture.kolben", "kolben",
+          "The Kolben IT fixture domain — an MSP / IT-services shop: engineers, "
+          "projects, tickets and time entries. A services archetype (billable "
+          "time booked against projects and tickets), distinct from the print "
+          "shop's physical resources."),
      ]),
     ("nos.loop", "loop",
      "The estate's agentic loops — SERE, the self-enhancing loop that proposes a "
