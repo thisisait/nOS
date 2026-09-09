@@ -25,7 +25,7 @@
   ansible.builtin.set_fact:
     _caddy_seed: "{{ lookup('file', playbook_dir + '/state/fixtures/caddy.seed.yml') | from_yaml }}"
 
-# Explicit block-style list for the same reason seed-fixture-tables.yml carries
+# Explicit block-style list for the same reason seed-bundle.yml carries
 # one: without jinja2_native a list assembled in a Jinja for-block lands in
 # set_fact as its string repr, and an inline one-liner trips
 # test_config_stock_jinja_only's loop-item filter rule.

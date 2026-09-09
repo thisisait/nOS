@@ -24,7 +24,7 @@
 # two rows in party-address express that without this table growing columns.
 #
 # SEEDING: rows come from state/fixtures/label-printer.seed.yml via
-# roles/pazny.keap/tasks/seed-fixture-tables.yml, gated on
+# roles/pazny.keap/tasks/seed-bundle.yml, gated on
 # keap_seed_business_fixture (default false). Every seeded person is
 # SYNTHETIC — the fixture's one rule, enforced by
 # tests/anatomy/test_fixture_tables_declare_the_business.py.

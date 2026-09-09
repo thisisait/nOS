@@ -206,7 +206,7 @@ def test_every_declared_view_has_something_that_applies_it():
     owns the effect, and neither may claim the other's job.
     """
     # EVERY seeder that routes through seed-face-table.yml, not just the face
-    # one: seed-caddy-tables.yml and seed-fixture-tables.yml use the same single
+    # one: seed-caddy-tables.yml and seed-bundle.yml use the same single
     # implementation (the one task file that forwards `view:`), and a gate that
     # knew only one of the three called an applied table unapplied (2026-09-01).
     seeder = "".join(

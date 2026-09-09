@@ -160,7 +160,9 @@
 # a blank → converge recreates the tenant (the design doc's proof 3). Opt-in:
 # a public nOS install does not grow a label printer unasked.
 - name: "[pazny.keap] Seed the label-printer business fixture DataTables"
-  ansible.builtin.include_tasks: seed-fixture-tables.yml
+  ansible.builtin.include_tasks: seed-bundle.yml
+  vars:
+    _bundle_seed_path: "state/fixtures/label-printer.seed.yml"
   when:
     - install_keap | default(false) | bool
     - keap_seed_business_fixture | default(false) | bool
@@ -169,7 +171,9 @@
 # A synthetic Czech IT-services shop (party spine + kolben-* domain tables)
 # whose core object is a ticket with an SLA deadline. Independent opt-in.
 - name: "[pazny.keap] Seed the Kolben IT business fixture DataTables"
-  ansible.builtin.include_tasks: seed-kolben-fixture-tables.yml
+  ansible.builtin.include_tasks: seed-bundle.yml
+  vars:
+    _bundle_seed_path: "state/fixtures/kolben-it.seed.yml"
   when:
     - install_keap | default(false) | bool
     - keap_seed_kolben_fixture | default(false) | bool

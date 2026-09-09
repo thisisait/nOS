@@ -3,7 +3,7 @@
 #
 # A map keyed by table slug; each value a list of row dicts. Top-to-bottom is
 # DEPENDENCY ORDER (a rowRef target must appear above its referencer) and it
-# equals the ORDER in seed-kolben-fixture-tables.yml + the Kolben fixture gate.
+# equals the ORDER in seed-bundle.yml + the Kolben fixture gate.
 #
 # ROW IDENTITY: a row's `slug` is its KEAP row id (idempotent upsert), so every
 # rowRef VALUE below is a literal target-row slug — never a display string.

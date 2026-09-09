@@ -27,7 +27,7 @@ import yaml
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TABLES_DIR = REPO / "state/keap-tables"
 SEED = REPO / "state/fixtures/kolben-it.seed.yml"
-SEEDER = REPO / "roles/pazny.keap/tasks/seed-kolben-fixture-tables.yml"
+BUNDLE = REPO / "roles/pazny.keap/tasks/seed-bundle.yml"
 CONFIG = REPO / "default.config.yml"
 
 #: Dependency order — must match the seeder's list verbatim. The shared party
@@ -97,16 +97,23 @@ def test_the_junction_is_a_real_junction():
     )
 
 
-def test_the_seeder_walks_the_same_order():
-    text = SEEDER.read_text()
-    declared = re.findall(r'^\s+- slug: "([a-z-]+)"$', text, re.MULTILINE)
-    assert declared == ORDER, (
-        f"seed-kolben-fixture-tables.yml order {declared} != the dependency "
-        "order this gate checks refs against — a different order 400s the converge"
+def test_the_seed_key_order_is_the_dependency_order():
+    # The generalized seeder (seed-bundle.yml) walks the seed's OWN top-level
+    # key order, so the SEED FILE is the order — no wrapper list to drift from
+    # this gate. A different order 400s the converge (KEAP validates refTable
+    # at create).
+    assert list(_seed().keys()) == ORDER, (
+        f"kolben-it.seed.yml key order {list(_seed().keys())} != the dependency "
+        "order this gate checks refs against"
     )
-    assert "{% for" not in text and "{%- for" not in text, (
-        "the seeder builds its table list with a Jinja for-loop — under "
-        "non-native Jinja that is a string, and the loop iterates characters"
+    # The consumer must loop those keys as a REAL list, never a Jinja-rendered
+    # one: without jinja2_native a {% for %}-built list lands in set_fact as its
+    # repr and the include loop iterates CHARACTERS.
+    bundle = BUNDLE.read_text()
+    assert "{% for" not in bundle and "{%- for" not in bundle, (
+        "seed-bundle.yml builds its table list with a Jinja for-loop — under "
+        "non-native Jinja that is a string and the loop iterates characters; "
+        "loop `_bundle_seed.keys() | list` instead"
     )
     flag = yaml.safe_load(CONFIG.read_text()).get("keap_seed_kolben_fixture")
     assert flag is False, (

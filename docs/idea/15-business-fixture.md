@@ -10,7 +10,7 @@ Nine git-owned DataTables (`state/keap-tables/{party,party-tax-identity,
 party-address,party-contact,print-machine,print-material,print-order,
 print-job,print-job-step}.table.yml`), a deterministic synthetic seed
 (`state/fixtures/label-printer.seed.yml`), an idempotent converge seeder
-(`roles/pazny.keap/tasks/seed-fixture-tables.yml`, opt-in via
+(`roles/pazny.keap/tasks/seed-bundle.yml`, opt-in via
 `keap_seed_business_fixture`, default false), and the offline referee
 (`tests/anatomy/test_fixture_tables_declare_the_business.py`).
 

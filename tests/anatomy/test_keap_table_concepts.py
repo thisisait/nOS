@@ -257,11 +257,20 @@ def test_every_definition_is_either_seeded_or_explicitly_excused():
     seeders = sorted((REPO / "roles" / "pazny.keap" / "tasks").glob("seed-*-tables.yml"))
     assert seeders, "no seeder task files found — path drift?"
     src = "\n".join(p.read_text() for p in seeders)
+    # The fixture bundles seed via seed-bundle.yml, which walks each
+    # state/fixtures/<name>.seed.yml's TOP-LEVEL KEYS (seed-bundle-generalize,
+    # 2026-09-09) — there is no literal `slug: "<name>"` line to grep for the
+    # print-*/kolben-*/party* tables any more. A table whose slug is a bundle
+    # key is seeded, exactly as one named in a wrapper's list.
+    bundle_slugs: set[str] = set()
+    for sf in sorted((REPO / "state" / "fixtures").glob("*.seed.yml")):
+        bundle_slugs |= set((yaml.safe_load(sf.read_text()) or {}).keys())
     orphans = sorted(
         name
         for name, _ in _definitions()
         if f'slug: "face-{name}"' not in src
         and f'slug: "{name}"' not in src
+        and name not in bundle_slugs
         and name not in UNSEEDED
     )
     assert not orphans, (

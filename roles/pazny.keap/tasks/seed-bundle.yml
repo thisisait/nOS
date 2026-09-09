@@ -1,0 +1,52 @@
+---
+# =============================================================================
+# pazny.keap/tasks/seed-bundle.yml — ONE parametrized fixture-bundle seeder.
+#
+# Collapses the two byte-identical per-fixture wrappers (seed-fixture-tables.yml
+# = label printer, seed-kolben-fixture-tables.yml = Kolben IT) into a single
+# consumer. They differed only in the seed-file path, the table list, and the
+# var names; the STRUCTURE — load a .seed.yml, walk its keys in dependency
+# order, and run seed-face-table.yml per table — was identical, and one law with
+# two hand-copied implementations is exactly how the estate has drifted before.
+#
+# A BUNDLE is a state/fixtures/<name>.seed.yml whose TOP-LEVEL KEY ORDER *is* the
+# dependency order (party before the domain tables that rowRef it), each key a
+# DataTable slug whose def is state/keap-tables/<slug>.table.yml and whose value
+# is that table's seed rows. This is the deterministic rung of the importer IR
+# (digest-bundle-ir): the same {slug: [rows]} shape an importer emits for its
+# rows-by-slug output. Proving this single consumer is the point of the task.
+#
+# THE ORDER COMES FROM THE SEED, NOT A HAND-BUILT LIST. `_bundle_seed.keys()`
+# from `from_yaml` is a REAL ordered list (YAML mapping order is preserved), so
+# it is looped directly — NEVER a Jinja-for-assembled list, which lands in
+# set_fact as its STRING repr without jinja2_native (the 2.20.6 filter-less
+# trap the old wrappers wrote block-style lists to avoid). The two fixture ORDER
+# gates now assert list(seed.keys()) == ORDER, so the seed file and the gate are
+# one fact with no wrapper text to scrape.
+#
+# REUSES seed-face-table.yml PER TABLE — the estate's one implementation of
+# "create-or-reconcile a DataTable + upsert missing rows by slug". Its loop var
+# is `_face_tbl`; we build that {slug, def, rows} triple from each seed key via
+# `vars:` so the shared consumer is unchanged.
+#
+# Caller passes `_bundle_seed_path` (repo-relative) and its own opt-in flag:
+#   - include_tasks: seed-bundle.yml
+#     vars: { _bundle_seed_path: "state/fixtures/<name>.seed.yml" }
+#     when: <install_keap + the fixture's own default-false flag>
+# =============================================================================
+
+- name: "[pazny.keap] Load the fixture bundle seed (git SoT): {{ _bundle_seed_path }}"
+  ansible.builtin.set_fact:
+    _bundle_seed: "{{ lookup('file', playbook_dir + '/' + _bundle_seed_path) | from_yaml }}"
+
+- name: "[pazny.keap] Seed each bundle DataTable (create/reconcile + upsert missing rows)"
+  ansible.builtin.include_tasks: seed-face-table.yml
+  loop: "{{ _bundle_seed.keys() | list }}"
+  loop_control:
+    loop_var: _bundle_slug
+    label: "{{ _bundle_slug }}"
+  vars:
+    _face_tbl:
+      slug: "{{ _bundle_slug }}"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/' + _bundle_slug + '.table.yml') | from_yaml }}"
+      rows: "{{ _bundle_seed[_bundle_slug] }}"
