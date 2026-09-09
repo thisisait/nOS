@@ -898,6 +898,56 @@ def _domain_doc(domain: str, nodes: list[dict]) -> str:
     return json.dumps(doc, indent=1, ensure_ascii=False) + "\n"
 
 
+# ── Meta nodes: the estate's OWN artifacts (grow, 2026-09-09) ─────────────────
+# The stacks/systems above model what nOS RUNS. These model what nOS IS ABOUT —
+# the DataTables and subsystems the estate keeps on itself. state/keap-tables/
+# *.table.yml anchor here (roadmap → nos.roadmap, party* → nos.fixture.party, …);
+# a table anchored at a node that does not exist is invisible in /explore for as
+# long as it is committed (the [[nos.agents]] class). The KEAP live audit found
+# 12 of 18 tables dangling on these missing nodes; growing them (operator ruling
+# 2026-09-09: grow, not repoint — each names a real subsystem) resolves them,
+# and the business fixtures get a self-model home for the starter trio to come.
+# Each entry is its OWN domain subtree under the root: (id, name, en, children).
+META_DOMAINS: list[tuple[str, str, str, list[tuple[str, str, str]]]] = [
+    ("nos.fixture", "fixture",
+     "The estate's business fixtures — the shared party spine and the domain "
+     "fixtures (a print shop today, the starter trio to come) that model real "
+     "companies for testing and for training the local models. A home for "
+     "fixture DataTables, not their content; the substance lives on the domain "
+     "nodes below and in the tables themselves.",
+     [
+         ("nos.fixture.party", "party",
+          "The shared party spine — people and organisations as first-class rows "
+          "(contacts, addresses, tax identities), deduped and referenced across "
+          "every fixture. Party slugs are ESTATE-GLOBAL: one person is one row, "
+          "whoever references them, so a fixture can never silently fork them."),
+         ("nos.fixture.print", "print",
+          "The print-shop fixture domain — machines, materials, print orders and "
+          "their job steps. A manufacturing archetype: physical resources "
+          "scheduled against orders, distinct from the services nOS runs."),
+     ]),
+    ("nos.loop", "loop",
+     "The estate's agentic loops — SERE, the self-enhancing loop that proposes a "
+     "change, lets code alone judge it, and lands only a pass; and the "
+     "operational loops (news-scout and kin) declared as data manifests. Where "
+     "the estate's own harness lives, distinct from the services it schedules.",
+     []),
+    ("nos.roadmap", "roadmap",
+     "The roadmap — the estate's own work as a governed DataTable: every epic, "
+     "task, fee and decision, with status a CLAIM and verified an independent "
+     "probe's verdict. The estate reasoning about what to build next.",
+     []),
+    ("nos.applications", "applications",
+     "The applications catalog — the manifest apps the estate can run, onboarded "
+     "through the apps_runner GDPR gate. What is installable, as records.",
+     []),
+    ("nos.systems", "systems",
+     "The systems registry — the estate's services as machine-readable records, "
+     "the roster behind the constellation. The self-model's own index.",
+     []),
+]
+
+
 def render_canonical(model: dict) -> dict[str, str]:
     """Return {relative path under canonical/: file body}.
 
@@ -933,6 +983,15 @@ def render_canonical(model: dict) -> dict[str, str]:
                     )
                 )
         files[f"{ROOT_ID}/{stack['node_id']}.json"] = _domain_doc(stack["node_id"], nodes)
+
+    # Meta nodes (the estate's own artifacts) — each its own domain subtree,
+    # ordinal after the stacks so they sort below what nOS runs.
+    base = len(model["stacks"])
+    for ordinal, (dom_id, dom_name, dom_en, children) in enumerate(META_DOMAINS):
+        nodes = [_node(dom_id, dom_name, dom_en, base + ordinal, ROOT_ID)]
+        for i, (cid, cname, cen) in enumerate(children):
+            nodes.append(_node(cid, cname, cen, i, dom_id))
+        files[f"{ROOT_ID}/{dom_id}.json"] = _domain_doc(dom_id, nodes)
 
     return files
 
