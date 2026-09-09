@@ -52,7 +52,7 @@ artifact: state/anatomy-graph.json
 # file as AMENDED AFTER SIGNING and asks for a fresh signature. To re-sign:
 #   python3 tools/apex-sign.py            # prints the diff since the last sign
 #   python3 tools/apex-sign.py --confirm  # writes the new digest
-signed_digest: 9d5ba39625eb2e27cb4b7df5f817b5bf146102404ba44db38bfdc81ef02cb3d6
+signed_digest: 4362710a762a5e2b552716ae59c9b8fc74d54771557fa7f51fcefa2db37e5134
 
 
 # The declared split. The gate recounts the table below and refuses to run
@@ -572,6 +572,8 @@ nodes:
   # needed (D4 freezes the PUBLISHED set; cf. the A20 note below).
   "pulse:discovery:contradiction-scan": withheld
   "pulse:gdpr-breach:breach-deadline-scan": withheld
+  "pulse:gitea:trunk-sync": withheld
+  "pulse:gitlab:trunk-sync": withheld
   "pulse:gitleaks:nightly-scan": withheld
   "pulse:keap:keap-consolidate": withheld
   "pulse:keap:keap-embed-sync": withheld

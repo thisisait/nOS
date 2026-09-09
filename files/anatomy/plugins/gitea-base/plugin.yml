@@ -188,6 +188,29 @@ gdpr:
   processors: []                  # self-hosted; no third-party (Art. 30) processor
   eu_residency: true
 
+# ── Pulse: keep the Gitea agent forge's trunk fresh from GitHub ───────────────
+# Agent-forge mode (gitea_agent_forge=true) makes this a WRITABLE repo, not a
+# pull-mirror, so Gitea does NOT auto-pull GitHub — the trunk sync is an explicit
+# fast-forward push (tools/sync-trunk-to-gitea.sh). nos-push runs it on every
+# push; THIS cadence is the backbone that catches drift between pushes (a GitHub
+# merge outside nos-push, say), so the loop's Gitea base never silently lags —
+# exactly what stalled loop:drive on REM-250 (Gitea dev frozen while origin
+# advanced). A clean no-op in pull-mirror mode (the guard in the tool).
+pulse:
+  jobs:
+    - name: trunk-sync
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/sync-trunk-to-gitea.sh"
+      schedule: "*/20 * * * *"
+      jitter_min: 3
+      max_runtime_s: 120
+      max_concurrent: 1
+      category: platform
+      # exit 1 = Gitea's trunk is AHEAD (an un-promoted agent merge) — a real
+      # signal to promote (promote-public.sh), NOT a job failure, so it is a
+      # finding. exit 2 (misconfig / unprovisioned forge) stays a red failure.
+      findings_exit_codes: [1]
+
 # ── Notification routing (A9 severity → channel) ─────────────────────────────
 # Uniform wiring contract (2026-05-23): harvested by wing-base into
 # notification-routing.json; Bone falls back to this when an emitter POSTs a

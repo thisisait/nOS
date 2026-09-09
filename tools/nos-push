@@ -123,21 +123,43 @@ if [ -z "$token" ] || [ -z "$domain" ]; then
 	exit 0
 fi
 
-# 3. Fire the mirror-sync.
-url="https://${domain}/api/v1/repos/${owner}/${name}/mirror-sync"
-code=$(curl -s -o /dev/null -w '%{http_code}' \
-	-X POST -H "Authorization: token ${token}" \
-	--max-time 5 \
-	"$url" || echo "000")
-
-case "$code" in
-	200|202)
-		echo "→ mirror-sync triggered (Gitea will fetch within seconds)"
-		;;
-	000)
-		echo "→ mirror-sync: Gitea unreachable (network/cert?) — push still ok"
-		;;
-	*)
-		echo "→ mirror-sync: HTTP ${code} from ${url} — push still ok"
-		;;
-esac
+# 3. Sync GitHub → Gitea. Agent-forge mode (gitea_agent_forge=true) is a
+#    WRITABLE repo, NOT a pull-mirror: `mirror-sync` 400s on it (Gitea refuses
+#    it on a non-mirror), and the real GitHub→Gitea sync is a fast-forward push
+#    (tools/sync-trunk-to-gitea.sh). Running it here keeps the agent forge — and
+#    the loop's base — current on every push, and drops the misleading 400 that
+#    masked "no sync is happening at all". Pull-mirror mode keeps the mirror-sync
+#    trigger. The sync tool is a clean no-op in the wrong mode either way.
+#    Gitea is the primary agent forge, GitLab a fully-substitutable heavier alt
+#    (forge-topology doctrine): whichever forge(s) are the installed agent forge
+#    are WRITABLE repos, not pull-mirrors, so each is kept current by a
+#    fast-forward push (its sync tool, a clean no-op when that forge is off).
+#    Only a genuine pull-mirror (NO agent forge) takes the mirror-sync trigger.
+gitea_forge=$(yaml_lookup gitea_agent_forge \
+	"$REPO_DIR/config.yml" "$REPO_DIR/default.config.yml" \
+	"$REPO_DIR/roles/pazny.gitea/defaults/main.yml")
+gitlab_forge=$(yaml_lookup gitlab_agent_forge \
+	"$REPO_DIR/config.yml" "$REPO_DIR/default.config.yml" \
+	"$REPO_DIR/roles/pazny.gitlab/defaults/main.yml")
+synced=0
+sync_forge() { # $1=label  $2=tool
+	if "$SCRIPT_DIR/$2" dev master >/dev/null 2>&1; then
+		echo "→ $1 trunk synced (agent-forge: fast-forward dev + master)"
+	else
+		echo "→ $1 trunk sync deferred — non-fast-forward or forge unreachable; push still ok"
+	fi
+}
+[ "$gitea_forge" = "true" ] && { sync_forge gitea sync-trunk-to-gitea.sh; synced=1; }
+[ "$gitlab_forge" = "true" ] && { sync_forge gitlab sync-trunk-to-gitlab.sh; synced=1; }
+if [ "$synced" -eq 0 ]; then
+	url="https://${domain}/api/v1/repos/${owner}/${name}/mirror-sync"
+	code=$(curl -s -o /dev/null -w '%{http_code}' \
+		-X POST -H "Authorization: token ${token}" \
+		--max-time 5 \
+		"$url" || echo "000")
+	case "$code" in
+		200|202) echo "→ mirror-sync triggered (Gitea will fetch within seconds)" ;;
+		000)     echo "→ mirror-sync: Gitea unreachable (network/cert?) — push still ok" ;;
+		*)       echo "→ mirror-sync: HTTP ${code} from ${url} — push still ok" ;;
+	esac
+fi

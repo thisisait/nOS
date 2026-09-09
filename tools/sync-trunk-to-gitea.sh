@@ -43,6 +43,16 @@ yaml_lookup() {
   return 0
 }
 
+# Only meaningful in AGENT-FORGE mode. In pull-mirror mode Gitea auto-pulls
+# GitHub on its own interval, and a push-sync would be REJECTED (Gitea refuses
+# pushes to a mirror) — so this is a clean no-op there. That makes the tool safe
+# to schedule as a Pulse job and to call from nos-push regardless of mode.
+AGENT_FORGE="$(yaml_lookup gitea_agent_forge config.yml default.config.yml roles/pazny.gitea/defaults/main.yml)"
+if [ "$AGENT_FORGE" != "true" ]; then
+  echo "[sync] gitea_agent_forge is not true — Gitea pull-mirrors GitHub itself; nothing to push (no-op)."
+  exit 0
+fi
+
 TOKEN="${GITEA_TOKEN:-}"
 [ -n "$TOKEN" ] || TOKEN="$(yaml_lookup gitea_api_token credentials.yml config.yml "$HOME/.nos/secrets.yml")"
 DOMAIN="${GITEA_DOMAIN:-}"

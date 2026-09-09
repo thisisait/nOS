@@ -117,6 +117,28 @@ gdpr:
   processors: []
   eu_residency: true
 
+# ── Pulse: keep the GitLab agent forge's trunk fresh from GitHub ──────────────
+# The symmetric twin of gitea-base's trunk-sync (forge-topology doctrine
+# 2026-09-09: Gitea+Woodpecker primary, GitLab a fully-substitutable heavier
+# alt). When GitLab is the installed agent forge it is a WRITABLE repo, not a
+# pull-mirror, so its trunk is kept current by a fast-forward push
+# (tools/sync-trunk-to-gitlab.sh). nos-push runs it on every push; this cadence
+# catches drift between pushes. A clean no-op when GitLab is not the agent forge
+# (the guard in the tool), so present-or-absent GitLab changes nothing.
+pulse:
+  jobs:
+    - name: trunk-sync
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/sync-trunk-to-gitlab.sh"
+      schedule: "*/20 * * * *"
+      jitter_min: 3
+      max_runtime_s: 120
+      max_concurrent: 1
+      category: platform
+      # exit 1 = GitLab's trunk is AHEAD (an un-promoted agent merge) — a
+      # promote signal, not a failure, so a finding; exit 2 stays a red failure.
+      findings_exit_codes: [1]
+
 # ── Notification routing (A9 severity → channel) ─────────────────────────────
 # Uniform wiring contract (2026-05-23): harvested by wing-base into
 # notification-routing.json; Bone falls back to this when an emitter POSTs a
