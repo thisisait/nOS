@@ -75,6 +75,9 @@
 - slug: cortex-lang
   parent: cortex
   track: cortex
+- slug: cortex-query-skill
+  parent: agents-nos-skill
+  track: agents
 - slug: cortex-readers
   parent: cortex
   track: cortex
@@ -87,6 +90,18 @@
 - slug: cortex-vendor-staleness
   parent: ''
   track: cortex
+- slug: digest
+  parent: ''
+  track: digest
+- slug: digest-bundle-ir
+  parent: digest
+  track: digest
+- slug: digest-doctrine
+  parent: digest
+  track: digest
+- slug: digest-selfmodel-node
+  parent: digest
+  track: digest
 - slug: docs-czech-and-fork-residue
   parent: ''
   track: platform
@@ -100,6 +115,9 @@
   parent: ''
   track: platform
 - slug: dtt-access-rules
+  parent: dtt
+  track: platform
+- slug: dtt-capture
   parent: dtt
   track: platform
 - slug: dtt-constitution
@@ -117,12 +135,24 @@
 - slug: dtt-share-model
   parent: dtt
   track: platform
+- slug: dtt-share-phase2-refusal
+  parent: dtt-share-model
+  track: platform
 - slug: dtt-task-types
   parent: dtt
   track: platform
 - slug: ears-app-bundle
   parent: local-llm-voice
   track: platform
+- slug: egress-containment
+  parent: digest
+  track: digest
+- slug: erasure-embeddings-provenance
+  parent: digest
+  track: digest
+- slug: erasure-party-subject
+  parent: digest
+  track: digest
 - slug: ext-contract
   parent: ''
   track: platform
@@ -150,6 +180,15 @@
 - slug: face-planner
   parent: face
   track: face
+- slug: face-planner-editor-svelteflow
+  parent: face-planner
+  track: face
+- slug: face-planner-live-match
+  parent: face-planner
+  track: face
+- slug: face-planner-loops-polish
+  parent: face-planner
+  track: face
 - slug: face-styles
   parent: face
   track: face
@@ -159,6 +198,36 @@
 - slug: face-tree
   parent: face
   track: face
+- slug: fixture-apiary-coop
+  parent: fixtures
+  track: platform
+- slug: fixture-autoskola-semafor
+  parent: fixtures
+  track: platform
+- slug: fixture-halyard-studio
+  parent: fixtures
+  track: platform
+- slug: fixture-kolben-it
+  parent: fixtures
+  track: platform
+- slug: fixture-svj-property
+  parent: fixtures
+  track: platform
+- slug: fixture-vltava-catering
+  parent: fixtures
+  track: platform
+- slug: fixtures
+  parent: dtt
+  track: platform
+- slug: fixtures-expected-schema
+  parent: fixtures
+  track: platform
+- slug: fixtures-recall-leak-gate
+  parent: fixtures
+  track: platform
+- slug: fixtures-service-seed-scope
+  parent: fixtures
+  track: platform
 - slug: fs
   parent: ''
   track: filesystem
@@ -171,9 +240,18 @@
 - slug: fs-s1
   parent: fs
   track: filesystem
+- slug: gdpr-6f-gate
+  parent: digest
+  track: digest
 - slug: gdpr-agent-processors
   parent: rel-011
   track: security
+- slug: gdpr-importer-register
+  parent: digest
+  track: digest
+- slug: importer-spine
+  parent: digest
+  track: digest
 - slug: jeff
   parent: agents
   track: agents
@@ -249,11 +327,23 @@
 - slug: loop-checkpoint-recover
   parent: sere
   track: agents
+- slug: loop-definition-model
+  parent: agents
+  track: agents
 - slug: loop-driver
   parent: sere
   track: agents
 - slug: loop-forget
   parent: sere
+  track: agents
+- slug: loop-generator
+  parent: loop-definition-model
+  track: agents
+- slug: loop-grafana-check
+  parent: loop-definition-model
+  track: agents
+- slug: loop-news-scout
+  parent: loop-definition-model
   track: agents
 - slug: loop-operator-model
   parent: sere
@@ -272,6 +362,9 @@
   track: security
 - slug: loop-reach
   parent: sere
+  track: agents
+- slug: loop-repo-check
+  parent: loop-definition-model
   track: agents
 - slug: loop-requires-operator
   parent: ''
@@ -354,6 +447,9 @@
 - slug: organ-health-carries-a-version
   parent: ''
   track: platform
+- slug: party-resolver
+  parent: digest
+  track: digest
 - slug: planes
   parent: ''
   track: agents
@@ -396,14 +492,23 @@
 - slug: plat-dep-contracts
   parent: plat
   track: platform
+- slug: plat-deploy-sync
+  parent: plat
+  track: platform
 - slug: plat-dev-minimal-profile
   parent: ''
   track: platform
 - slug: plat-enforce-the-declaration
   parent: plat-defaults-derive
   track: platform
+- slug: plat-forge-topology
+  parent: plat
+  track: platform
 - slug: plat-gate-shape
   parent: ''
+  track: platform
+- slug: plat-gitea-forge-sync
+  parent: plat
   track: platform
 - slug: plat-host-daemon-stop
   parent: ''
@@ -438,12 +543,21 @@
 - slug: pulse-lineage
   parent: ''
   track: agents
+- slug: raw-archive-backup
+  parent: digest
+  track: digest
+- slug: raw-archive-store
+  parent: digest
+  track: digest
 - slug: rel-011
   parent: ''
   track: release
 - slug: repo-split-trigger
   parent: ''
   track: platform
+- slug: repos-importer
+  parent: digest
+  track: digest
 - slug: sec
   parent: ''
   track: security
@@ -513,6 +627,9 @@
 - slug: sec-transport-redis
   parent: sec-transport
   track: security
+- slug: seed-bundle-generalize
+  parent: digest
+  track: digest
 - slug: sere
   parent: ''
   track: platform

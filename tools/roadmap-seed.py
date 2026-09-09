@@ -27,6 +27,7 @@ refuses (naming the missing columns) rather than POSTing an unknown key.
 import json
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 
 from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
@@ -159,8 +160,16 @@ def agent_write(values):
         return json.loads(resp.read())
 
 
+# Insert what we can. A row the live table rejects (e.g. an unknown `track`
+# select-option) must not abort the batch and bury its one-line reason under a
+# urllib traceback — collect the slug + the server's own message and report
+# them together at the end, having still landed every valid row.
+failures = []
 for r in fresh:
-    agent_write(r)
+    try:
+        agent_write(r)
+    except urllib.error.HTTPError as e:
+        failures.append((r["slug"], e.read().decode("utf-8", "replace").strip()))
 
 if drifted:
     unkeyed = [r["slug"] for r, _, rid in drifted if rid != r["slug"]]
@@ -169,10 +178,19 @@ if drifted:
                  f"sync would duplicate them: {', '.join(unkeyed)}\n"
                  "  run `tools/keap-reid-rows.py --apply` first.")
     for r, delta, _ in drifted:
-        agent_write({"slug": r["slug"], "title": r["title"],
-                     "status": live_rows[r["slug"]]["values"].get("status"), **delta})
-        print(f"  synced {r['slug']:<24} {', '.join(sorted(delta))}")
+        try:
+            agent_write({"slug": r["slug"], "title": r["title"],
+                         "status": live_rows[r["slug"]]["values"].get("status"), **delta})
+            print(f"  synced {r['slug']:<24} {', '.join(sorted(delta))}")
+        except urllib.error.HTTPError as e:
+            failures.append((r["slug"], e.read().decode("utf-8", "replace").strip()))
 
 after = req("GET", BASE + "/rows?limit=500")["data"]["rows"]
 tops = [x for x in after if not x["values"].get("parent")]
 print(f"seeded: {len(after)} rows | top-level {len(tops)} | nested {len(after)-len(tops)}")
+
+if failures:
+    print(f"\n{len(failures)} row(s) the live table REJECTED (valid rows above still landed):")
+    for slug, body in failures:
+        print(f"  ✗ {slug:<26} {body[:160]}")
+    sys.exit(1)
