@@ -275,3 +275,23 @@ def resolve_party(ref: dict, party_index: dict, *,
                            reason="name matches more than one org — ambiguous")
 
     return _review(reason="no valid key and no unique name — needs review")
+
+
+# ── teardown: the inverse of seed-bundle.yml (cleanup / from-blank / firm removal) ──
+# A bundle seeds in dependency order (party before the domain rows that rowRef it);
+# tearing it down is the SAME list REVERSED — leaf rows first, the party spine last —
+# so onDelete:restrict never refuses a delete whose referrer is still present. The
+# executor still probes each row's referrers (the is-delete-safe check) and RETAINS a
+# row another firm shares, so a firm-scoped teardown of a shared spine is safe by
+# construction. Same primitive serves from-blank test reset AND agency client-removal.
+def teardown_plan(bundle: dict) -> list[tuple[str, str]]:
+    """Return [(table_slug, row_slug), ...] to delete, leaf-first (reverse of the
+    bundle's dependency order). Accepts a full bundle or a raw {slug:[rows]} seed."""
+    det = bundle.get("deterministic", bundle) if isinstance(bundle, dict) else {}
+    plan: list[tuple[str, str]] = []
+    for table in reversed(list(det.keys())):
+        for row in det[table]:
+            slug = row.get("slug") if isinstance(row, dict) else None
+            if slug:
+                plan.append((table, slug))
+    return plan

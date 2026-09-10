@@ -72,3 +72,14 @@ def test_untrusted_bundle_with_provenance_passes():
 def test_unknown_top_level_key_is_flagged():
     errs = ND.check_bundle({"meta": {"trusted": True}, "deterministic": {}, "bogus": 1}, TABLES)
     assert any("bogus" in e for e in errs), errs
+
+
+def test_teardown_plan_is_the_seed_reversed():
+    seed = _seed("kolben-it")
+    plan = ND.teardown_plan(seed)
+    # leaf-first: the last-seeded table is deleted first, the party spine last
+    assert plan[0][0] == list(seed.keys())[-1]      # kolben-time-entry
+    assert plan[-1][0] == list(seed.keys())[0]      # party
+    assert len(plan) == sum(len(rows) for rows in seed.values())   # every row, once
+    # a full bundle envelope works too (deterministic section unwrapped)
+    assert ND.teardown_plan({"meta": {}, "deterministic": seed}) == plan
