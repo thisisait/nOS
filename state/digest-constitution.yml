@@ -1,0 +1,119 @@
+# =============================================================================
+# The digest organ's CONSTITUTION — the non-negotiable invariants, each paired
+# with the JUDGE that enforces it. Consolidates rules that were scattered across
+# the digest-* roadmap rows, the party-resolver three-review synthesis, and the
+# nos_digest source comments into ONE authoritative, machine-checked place.
+#
+# THIS IS NOT PROSE. tests/anatomy/test_digest_constitution.py reads this file
+# and REFUSES it if a rule marked `enforced` names a judge/gate that does not
+# exist — a constitutional rule nothing enforces is the estate's #1 anti-pattern,
+# so here it is a failing gate, not a paragraph. A rule not yet enforceable is
+# marked `pending` with the row that will build its judge; pending is honest,
+# claiming-enforcement-without-a-judge is a bug.
+#
+# judge  = the code that decides (path::symbol, repo-relative)
+# gate   = the test that pins the judge (repo-relative)
+# status = enforced | pending
+# =============================================================================
+
+invariants:
+  - id: gate-before-absorb
+    rule: >-
+      No bundle touches a live KEAP door until it passes the self-check. The
+      gate is the judge; a bad bundle fails here before anything is written.
+    judge: files/anatomy/module_utils/nos_digest.py::check_bundle
+    gate: tests/anatomy/test_nos_digest_bundle_check.py
+    status: enforced
+
+  - id: dependency-order-no-forward-refs
+    rule: >-
+      A bundle's tables are ordered dependency-first; a rowRef never points at a
+      table seeded later. KEAP validates refTable at create, so a forward ref
+      400s the converge.
+    judge: files/anatomy/module_utils/nos_digest.py::check_bundle
+    gate: tests/anatomy/test_nos_digest_bundle_check.py
+    status: enforced
+
+  - id: per-row-provenance
+    rule: >-
+      Every row of an UNTRUSTED (importer) bundle carries provenance
+      {source_id, importer_version, content_hash}. Trusted git-authored fixtures
+      are exempt via meta.trusted.
+    judge: files/anatomy/module_utils/nos_digest.py::check_bundle
+    gate: tests/anatomy/test_nos_digest_bundle_check.py
+    status: enforced
+
+  - id: deterministic-identity
+    rule: >-
+      An org's slug derives deterministically from its IČO (party-ico-<8digit>),
+      never a content hash — so a re-import PATCHes the same row instead of
+      forking it. The store's slug-as-row-id upsert is the backstop.
+    judge: files/anatomy/module_utils/nos_digest.py::org_slug
+    gate: tests/anatomy/test_nos_digest_party_resolver.py
+    status: enforced
+
+  - id: never-auto-merge-on-doubt
+    rule: >-
+      Identity resolution never auto-merges on ambiguity or a fuzzy guess. More
+      than one candidate, or no confident key, returns review — protecting the
+      "never conflate two parties" half of the cardinal invariant.
+    judge: files/anatomy/module_utils/nos_digest.py::resolve_party
+    gate: tests/anatomy/test_nos_digest_party_resolver.py
+    status: enforced
+
+  - id: person-data-redaction
+    rule: >-
+      A person is never resolved by key or by name (a name is not identifying),
+      and a person's CZ-DIČ is rodné číslo — redacted at normalize, never a match
+      key, never stored. Persons always route to review.
+    judge: files/anatomy/module_utils/nos_digest.py::resolve_party
+    gate: tests/anatomy/test_nos_digest_party_resolver.py
+    status: enforced
+
+  - id: synthetic-range-refusal
+    rule: >-
+      The reserved synthetic-fixture IČO range (000001xx) is refused as a match
+      key outside fixture mode — a real document carrying it is a data error.
+    judge: files/anatomy/module_utils/nos_digest.py::resolve_party
+    gate: tests/anatomy/test_nos_digest_party_resolver.py
+    status: enforced
+
+  - id: teardown-fork-free
+    rule: >-
+      Removing a firm's data deletes leaf-first and RETAINS any row a surviving
+      (other-firm) row still references — a firm-scoped teardown of the shared
+      party spine never breaks another firm and never orphans a rowRef.
+    judge: files/anatomy/module_utils/nos_digest.py::teardown_plan
+    gate: tests/anatomy/test_nos_digest_bundle_check.py
+    status: enforced
+
+  # ── pending: the rule stands, but its judge is not built yet (honest) ──────
+  - id: raw-never-touches-knowledge
+    rule: >-
+      Raw source bytes never reach the knowledge system directly. The path is
+      raw-archive → parse → normalize → compose → GATE → absorb; only a gated
+      bundle absorbs, and only through existing doors.
+    judge: ""
+    gate: ""
+    status: pending
+    builds_with: importer-spine
+
+  - id: gdpr-digestion-stage
+    rule: >-
+      GDPR is a stage of digestion, not a bolt-on: normalize minimizes/redacts,
+      every importer registers an Art-30 activity, and what an importer wrote is
+      erasable (past the email-only DSAR subject).
+    judge: ""
+    gate: ""
+    status: pending
+    builds_with: gdpr-importer-register, erasure-party-subject
+
+  - id: declared-egress
+    rule: >-
+      An importer's outbound endpoints are declared in its manifest, registered
+      as Art-30 transfers, and audited; an undeclared egress is flagged. Creds
+      are per-importer scoped, never the whole vault.
+    judge: ""
+    gate: ""
+    status: pending
+    builds_with: egress-containment, party-ares-verify
