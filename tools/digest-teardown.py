@@ -55,15 +55,23 @@ def _json(url: str, headers: dict, method: str = "GET"):
         return json.loads(body) if body else {}
 
 
-def _referrers(table: str, row: str, ro_hdr: dict):
-    """None => the row is already absent; else the list of {fromTable, fromRow,
-    columnKey} rows that point AT this one (the onDelete:restrict back-references)."""
+def _row_exists(table: str, row: str, ro_hdr: dict) -> bool:
+    """The reliable absent-check: the ROW endpoint 404s for a missing row. The
+    referrers endpoint does NOT — it returns 200 [] for a deleted row, so it
+    cannot tell 'absent' from 'present, unreferenced' (measured 2026-09-10)."""
     try:
-        d = _json(f"{AGENT}/{table}/rows/{row}/referrers", ro_hdr)
+        _json(f"{AGENT}/{table}/rows/{row}", ro_hdr)
+        return True
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            return None
+            return False
         raise
+
+
+def _referrers(table: str, row: str, ro_hdr: dict):
+    """The list of {fromTable, fromRow, columnKey} rows that point AT this one
+    (the onDelete:restrict back-references). Only called for a row known present."""
+    d = _json(f"{AGENT}/{table}/rows/{row}/referrers", ro_hdr)
     return (d.get("data") or {}).get("referrers") or []
 
 
@@ -92,14 +100,14 @@ def main() -> int:
 
     for table, row in plan:
         try:
+            if not _row_exists(table, row, ro_hdr):
+                print(f"  · {table}/{row}: already absent")
+                missing += 1
+                continue
             refs = _referrers(table, row, ro_hdr)
         except (urllib.error.URLError, OSError) as exc:
-            print(f"REFUSING: KEAP referrers probe unreadable ({exc}) — not deleting blind", file=sys.stderr)
+            print(f"REFUSING: KEAP probe unreadable ({exc}) — not deleting blind", file=sys.stderr)
             return 2
-        if refs is None:
-            print(f"  · {table}/{row}: already absent")
-            missing += 1
-            continue
         survivors = [r for r in refs if (r.get("fromTable"), r.get("fromRow")) not in planned]
         if survivors:
             who = survivors[0]
