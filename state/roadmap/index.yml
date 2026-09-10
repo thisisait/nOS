@@ -99,10 +99,16 @@
 - slug: digest-bundle-ir
   parent: digest
   track: digest
+- slug: digest-constitution
+  parent: digest
+  track: digest
 - slug: digest-doctrine
   parent: digest
   track: digest
 - slug: digest-selfmodel-node
+  parent: digest
+  track: digest
+- slug: digest-teardown
   parent: digest
   track: digest
 - slug: docs-czech-and-fork-residue
