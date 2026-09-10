@@ -93,6 +93,9 @@
 - slug: digest
   parent: ''
   track: digest
+- slug: digest-bundle-gate
+  parent: digest
+  track: digest
 - slug: digest-bundle-ir
   parent: digest
   track: digest
@@ -447,7 +450,19 @@
 - slug: organ-health-carries-a-version
   parent: ''
   track: platform
+- slug: organs-noun
+  parent: ''
+  track: platform
+- slug: party-ares-verify
+  parent: digest
+  track: digest
+- slug: party-merge
+  parent: digest
+  track: digest
 - slug: party-resolver
+  parent: digest
+  track: digest
+- slug: party-review-rung
   parent: digest
   track: digest
 - slug: planes
