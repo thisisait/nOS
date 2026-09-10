@@ -26,6 +26,8 @@ every deterministic row must carry a _prov{source_id,importer_version,content_ha
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import pathlib
 import re
 import unicodedata
@@ -295,3 +297,72 @@ def teardown_plan(bundle: dict) -> list[tuple[str, str]]:
             if slug:
                 plan.append((table, slug))
     return plan
+
+
+# ── importer-spine: parse → normalize → compose → GATE (the harness) ─────────
+# The reusable spine every importer shares (importer-spine decision, 2026-09-10).
+# An IMPORTER supplies only format knowledge as three stages; the harness owns
+# everything shared — provenance stamping and the gate — so the load-bearing
+# checks (per-row _prov, structure, dependency order) are written ONCE and cannot
+# drift per importer. This is the judge for the `raw-never-touches-knowledge`
+# constitutional rule: only a bundle that PASSES check_bundle is returned to be
+# absorbed; raw records never reach a live door un-gated. It stays a plain
+# function over a duck-typed importer, not a framework (YAGNI).
+#
+# An importer is any object carrying:  source_id, name, version (strings)
+#   parse(raw)      -> list[record]           # format-specific, the only quirky part
+#   normalize(recs) -> list[record]           # party resolution / redaction / folding
+#   compose(recs)   -> {"<table-slug>": [row, ...], ...}   # KEY ORDER = dependency order
+# Rows compose WITHOUT provenance; the harness stamps _prov so an importer cannot
+# forget it.
+
+def _content_hash(obj) -> str:
+    """Stable sha256 of a row's content (canonical JSON, sans _prov)."""
+    payload = {k: v for k, v in obj.items() if k != "_prov"} if isinstance(obj, dict) else obj
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
+    ).hexdigest()
+
+
+def stamp_provenance(deterministic: dict, *, source_id: str, importer_version: str) -> None:
+    """Attach _prov{source_id, importer_version, content_hash} to every row, in
+    place. content_hash is per-row so erasure can walk from a source to exactly
+    the derived rows it produced (the erasure-propagation contract)."""
+    for rows in deterministic.values():
+        for row in rows:
+            if isinstance(row, dict):
+                row["_prov"] = {"source_id": source_id,
+                                "importer_version": importer_version,
+                                "content_hash": _content_hash(row)}
+
+
+def strip_provenance(deterministic: dict) -> dict:
+    """The deterministic section with _prov removed from each row — what actually
+    upserts into a DataTable. _prov is absorbed into audit lineage separately;
+    it is never a table column."""
+    return {t: [{k: v for k, v in r.items() if k != "_prov"} for r in rows]
+            for t, rows in deterministic.items()}
+
+
+def run_importer(importer, raw, tables_dir: str | pathlib.Path) -> tuple[dict, list[str]]:
+    """Run an importer's three stages, stamp provenance, and GATE. Returns
+    (bundle, errors); a non-empty errors list means the bundle is unsafe to
+    absorb and the caller must refuse it. The bundle is untrusted (meta.trusted
+    is False), so every row must carry _prov — which the harness just stamped."""
+    records = importer.parse(raw)
+    records = importer.normalize(records)
+    deterministic = importer.compose(records)
+    raw_bytes = raw if isinstance(raw, (bytes, bytearray)) else str(raw).encode("utf-8")
+    bundle = {
+        "meta": {
+            "source_id": importer.source_id,
+            "importer": importer.name,
+            "importer_version": importer.version,
+            "content_hash": hashlib.sha256(raw_bytes).hexdigest(),
+            "trusted": False,
+        },
+        "deterministic": deterministic,
+    }
+    stamp_provenance(deterministic, source_id=importer.source_id,
+                     importer_version=importer.version)
+    return bundle, check_bundle(bundle, tables_dir)

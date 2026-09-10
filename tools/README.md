@@ -117,6 +117,7 @@ worse than none, because it reads as complete.
 - `devlog-render.py` — devlog-render — static site generator for the nos-core devlog.
 - `roadmap-apply-view.py` — Apply the roadmap definition's `view:` block to the live table.
 - `digest-teardown.py` — Tear a bundle/fixture's rows down leaf-first (inverse of seed-bundle.yml); referrers-gated so shared rows survive. From-blank reset + agency client-data removal. Dry-run by default.
+- `digest-import.py` — The importer-spine round-trip + first reference importer (CSV counterparties → EN-16931 party spine): parse → normalize → GATE → absorb (upsert by deterministic party-ico slug). Dry by default; --absorb writes.
 - `roadmap-apply-columns.py` — Reconcile a NAMED column's shape (kind/options) from the roadmap definition to the live table; per-column, never touches the column set.
 - `roadmap-extract.py` — One-time: live roadmap table → per-row `<slug>.md` files in the PRIVATE seed repo.
 - `roadmap-seed.py` — Seed / --sync the roadmap table from per-row files in the private seed repo (NOS_SEED_DIR).
