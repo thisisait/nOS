@@ -1,0 +1,18 @@
+# /etc/systemd/system/jupyterhub.service — nos-dgx JupyterHub (root: it
+# spawns each user's Lab setuid as that user; the Hub itself binds loopback).
+[Unit]
+Description=JupyterHub (nos-dgx) — per-user Lab behind nginx :8445
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/lib/nos-dgx/jupyterhub
+Environment=PATH=/opt/nos-dgx/jupyterhub/venv/bin:/opt/nos-dgx/node/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/nos-dgx/jupyterhub/venv/bin/jupyterhub -f /etc/nos/jupyterhub_config.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

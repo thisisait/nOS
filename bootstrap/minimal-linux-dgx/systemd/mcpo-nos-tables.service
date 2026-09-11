@@ -1,0 +1,25 @@
+# /etc/systemd/system/mcpo-nos-tables.service — the DataTables MCP server as an
+# OpenAPI tool server for Open WebUI (mcpo wraps the stdio server).
+# Runs as the unprivileged user nos-mcpo (groups nos-users + nos-managers):
+# through the identity outpost it is a TIER-2 reader — the shared roadmap and
+# tier tables, never a user's private table; writes are refused by KEAP.
+# Bound to the docker0 address: reachable from the Open WebUI container as
+# http://host.docker.internal:8500, never from the LAN.
+[Unit]
+Description=mcpo → nos_tables (DataTables tool server for Open WebUI)
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+User=nos-mcpo
+Group=nos-users
+EnvironmentFile=/etc/nos/mcpo.env
+Environment=NOS_SRC=/srv/nos
+Environment=NOS_MCP_AGENT=open-webui
+ExecStart=/opt/nos-dgx/mcpo/venv/bin/mcpo --host 172.17.0.1 --port 8500 --api-key ${MCPO_API_KEY} -- /srv/nos-dgx/bin/nos-tables-mcp
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

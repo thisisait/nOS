@@ -47,9 +47,13 @@ import sys
 import urllib.error
 import urllib.request
 
-KEAP = "http://127.0.0.1:8091"
-TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
-from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
+#: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
+#: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
+#: non-default loopback publish. Defaults are the operator estate's values.
+TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
+from keap_api import human_base, human_headers, write_row
+
+KEAP = human_base()   # the identity outpost when configured, else the loopback publish
 
 #: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once
 #: by keap_api). Without the secret every /api call here 401s since KEAP P1.
@@ -66,18 +70,6 @@ SHIPPED = "shipped"
 def _die(msg: str) -> None:
     sys.exit(f"REFUSING: {msg}")
 
-
-def _token() -> str:
-    tok = os.environ.get("KEAP_AGENT_TOKEN_RW", "").strip()
-    if tok:
-        return tok
-    tok = subprocess.run(
-        ["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RW"],
-        capture_output=True, text=True).stdout.strip()
-    if not tok:
-        _die("no KEAP_AGENT_TOKEN_RW in the environment and none readable from "
-             "iiab-keap-1 — is KEAP running?")
-    return tok
 
 
 def _req(method: str, url: str, headers: dict, body=None):
@@ -118,7 +110,6 @@ def main() -> int:
              "--status/--target/--occurred/--owner/--title")
 
     human = f"{KEAP}/api/tables/{TABLE}"
-    agent = f"{KEAP}/agent/v1/tables/{TABLE}"
 
     table = _req("GET", human, HUMAN_HDR)
     if not table.get("success"):
@@ -156,7 +147,6 @@ def main() -> int:
              f"duplicate them rather than change them: {', '.join(unkeyed)}\n"
              "  run `tools/keap-reid-rows.py --apply` first.")
 
-    agent_hdr = {"authorization": f"Bearer {_token()}", "content-type": "application/json"}
     today = int(datetime.datetime.now().replace(hour=12, minute=0, second=0,
                                                 microsecond=0).timestamp())
     changed = 0
@@ -204,7 +194,10 @@ def main() -> int:
         # The agent door validates the WHOLE row, not the diff, so the required
         # cells ride along unchanged. Everything else is left to the merge.
         body = {"slug": slug, "title": cur.get("title"), **patch}
-        res = _req("POST", f"{agent}/rows", agent_hdr, body)
+        try:
+            res = write_row(TABLE, body)
+        except RuntimeError as e:
+            res = {"success": False, "error": str(e)}
         if not res.get("success"):
             _die(f"writing {slug} failed — {res.get('error')}")
         changed += 1

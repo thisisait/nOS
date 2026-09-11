@@ -1,0 +1,5 @@
+# Section order and titles for the knowledge base sidebar (bin/kb-build.py).
+- { id: start, title: "Start here" }
+- { id: dev,   title: "Developers" }
+- { id: admin, title: "Admin" }
+- { id: tips,  title: "Tips & troubleshooting" }

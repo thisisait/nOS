@@ -39,6 +39,7 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -49,9 +50,12 @@ DEF = REPO / "state/keap-tables/roadmap.table.yml"
 
 #: Same table id and forward-auth headers as the seeder. Loopback only — the
 #: agent surface is bound to 127.0.0.1 and the estate's edge never sees this.
-TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
-BASE = f"http://127.0.0.1:8091/api/tables/{TABLE}"
-from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
+from keap_api import human_base, human_headers  # noqa: E402 — sibling helper in tools/
+#: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
+#: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
+#: non-default loopback publish. Defaults are the operator estate's values.
+TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
+BASE = f"{human_base()}/api/tables/{TABLE}"
 
 #: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once
 #: by keap_api). Without the secret every /api call here 401s since KEAP P1.
@@ -66,8 +70,21 @@ STATUS_ORDER = ["doing", "active", "next", "review", "blocked",
 
 def get(url: str) -> dict:
     req = urllib.request.Request(url, headers=HEADERS, method="GET")
-    with urllib.request.urlopen(req, timeout=10) as r:
-        return json.loads(r.read())
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            d = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode(errors="replace")[:200]
+        if e.code in (403, 404):
+            raise SystemExit(f"CANNOT READ table `{TABLE}`: HTTP {e.code} — it is not visible to you "
+                             f"(your tier, or no grant); the estate roadmap needs tier-managers. {body}")
+        raise SystemExit(f"CANNOT READ table `{TABLE}`: HTTP {e.code} {body}")
+    if not d.get("success", True) or "data" not in d:
+        err = str(d.get("error") or d)
+        hint = " — not visible to you (your tier, or no grant); the estate roadmap needs tier-managers" \
+            if "unknown table" in err else ""
+        raise SystemExit(f"CANNOT READ table `{TABLE}`: {err}{hint}")
+    return d
 
 
 def rank(status: str | None) -> tuple[int, str]:

@@ -1,0 +1,13 @@
+# /etc/systemd/system/nos-ollama-loopback.service — the socket's proxy body.
+[Unit]
+Description=Ollama loopback proxy (nos-dgx)
+Requires=nos-ollama-loopback.socket
+After=nos-ollama-loopback.socket ollama.service
+
+[Service]
+ExecStart=/lib/systemd/systemd-socket-proxyd --connections-max=256 172.17.0.1:11434
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+DynamicUser=yes

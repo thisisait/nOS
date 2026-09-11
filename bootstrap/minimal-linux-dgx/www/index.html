@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nOS on __SHORT__</title>
+<style>
+  :root { color-scheme: light dark; --fg:#1b1b1b; --bg:#f7f7f5; --muted:#666; --card:#fff; --line:#ddd; --accent:#2f6f4f; }
+  @media (prefers-color-scheme: dark) { :root { --fg:#e8e8e4; --bg:#141414; --muted:#9a9a9a; --card:#1e1e1e; --line:#333; --accent:#7fc8a0; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, sans-serif; }
+  main { max-width:720px; margin:0 auto; padding:3rem 1.25rem; }
+  h1 { font-size:1.6rem; margin:0 0 .25rem; } .sub { color:var(--muted); margin:0 0 2rem; }
+  .card { display:block; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:1rem 1.25rem; margin:.75rem 0; text-decoration:none; color:inherit; }
+  .card:hover { border-color:var(--accent); } .card b { color:var(--accent); }
+  .card small { display:block; color:var(--muted); }
+  h2 { font-size:1.05rem; margin:2rem 0 .5rem; }
+  code { background:var(--card); border:1px solid var(--line); border-radius:4px; padding:0 .3em; }
+  ol { padding-left:1.25rem; } li { margin:.25rem 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>nOS on __SHORT__</h1>
+  <p class="sub">DGX Spark · sign in with your Linux account on this machine.</p>
+
+  <a class="card" href="https://__HOST__:8443/" data-port="8443"><b>KEAP</b> — DataTables, roadmap, knowledge<small>port 8443</small></a>
+  <a class="card" href="https://__HOST__:8444/" data-port="8444"><b>Chat</b> — Open WebUI on the local models<small>port 8444</small></a>
+  <a class="card" href="https://__HOST__:8445/" data-port="8445"><b>Notebooks</b> — JupyterHub, your own Lab as your Linux user, GPU kernel<small>port 8445</small></a>
+  <a class="card" href="https://__HOST__:8447/" data-port="8447"><b>Automation</b> — n8n workflows, webhooks, the local models as nodes<small>port 8447</small></a>
+  <a class="card" href="https://__HOST__:8448/go" data-port="8448"><b>Agent</b> — OpenClaw in its NemoClaw sandbox, on the local models (maintainers)<small>port 8448</small></a>
+  <a class="card" href="/kb/"><b>Knowledge base</b> — first login, remote IDE, rootless Docker, notebooks, admin runbook<small>/kb/</small></a>
+
+  <h2>First visit: trust the local certificate authority</h2>
+  <ol>
+    <li>Download <a href="/nos-dgx-rootCA.pem">nos-dgx-rootCA.pem</a>.</li>
+    <li>Import it as a trusted root: macOS Keychain → System → Always Trust; Windows → certmgr → Trusted Root; Firefox → Settings → Certificates → Import; Linux → <code>sudo cp nos-dgx-rootCA.pem /usr/local/share/ca-certificates/nos-dgx.crt &amp;&amp; sudo update-ca-certificates</code>.</li>
+    <li>Prefer the name <code>__HOST__</code>; by IP (<code>192.168.68.86</code>-style) everything works too when your laptop cannot resolve <code>.local</code> names — the certificate covers both.</li>
+  </ol>
+
+  <h2>Shell access (ssh)</h2>
+  <p><code>ssh &lt;you&gt;@__HOST__</code>, then <code>/srv/nos-dgx/bin/nos-user-setup</code> once. Everything else is in the <a href="/kb/">knowledge base</a>.</p>
+</main>
+<script>
+// A laptop that cannot resolve __HOST__ (mDNS blocked by policy) still reaches
+// this page by IP: keep every card on the host the visitor actually used.
+(function () {
+  var h = location.hostname;
+  document.querySelectorAll('a[data-port]').forEach(function (a) {
+    // keep the card's own path (the agent card is /go, not /)
+    var path = new URL(a.getAttribute('href'), location.href).pathname || '/';
+    a.href = 'https://' + h + ':' + a.getAttribute('data-port') + path;
+  });
+})();
+</script>
+</body>
+</html>

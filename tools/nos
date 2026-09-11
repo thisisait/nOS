@@ -30,8 +30,16 @@ set -euo pipefail
 
 NOS_CLI_VERSION=1
 
+# The env file is a DEFAULT, never an override: a value the caller exported
+# (NOS_SRC, NOS_PY, NOS_SEED_DIR) wins over ~/.nos/nos-cli.env. Measured
+# 2026-09-07: the file clobbered an explicit NOS_SEED_DIR and a probe row was
+# seeded into the estate roadmap from the wrong directory.
+_nos_src_env="${NOS_SRC:-}"; _nos_py_env="${NOS_PY:-}"; _nos_seed_env="${NOS_SEED_DIR:-}"
 # shellcheck disable=SC1091
 [ -f "$HOME/.nos/nos-cli.env" ] && . "$HOME/.nos/nos-cli.env"
+[ -n "$_nos_src_env" ] && NOS_SRC="$_nos_src_env"
+[ -n "$_nos_py_env" ] && NOS_PY="$_nos_py_env"
+[ -n "$_nos_seed_env" ] && NOS_SEED_DIR="$_nos_seed_env"
 NOS_SRC="${NOS_SRC:-$HOME/projects/nOS}"
 
 # ── `nos dtt <verb>` — DataTables ops, not a converge ────────────────────────
@@ -43,8 +51,19 @@ NOS_SRC="${NOS_SRC:-$HOME/projects/nOS}"
 # when I am checked out on dev": you never call the file path, you call `nos dtt`.
 if [ "${1:-}" = "dtt" ]; then
   shift
+  # `nos dtt --table <id|title> <verb> …` — every verb on YOUR table (or one
+  # shared with you) instead of the estate roadmap; resolved as the caller
+  # through the identity outpost (tools/dtt-table.py). Env: NOS_DTT_TABLE.
+  if [ "${1:-}" = "--table" ]; then
+    [ -n "${2:-}" ] || { echo "nos dtt --table needs a table id or title" >&2; exit 64; }
+    NOS_DTT_TABLE="$2"; shift 2
+  fi
   verb="${1:-}"; [ $# -gt 0 ] && shift
   case "$verb" in
+    tables)       tool="dtt-table.py"; set -- list "$@" ;;
+    create-table) tool="dtt-table.py"; set -- create "$@" ;;
+    share)        tool="dtt-table.py"; set -- share "$@" ;;
+    visibility)   tool="dtt-table.py"; set -- visibility "$@" ;;
     capture) tool="dtt-capture.py" ;;
     seed)    tool="roadmap-seed.py" ;;
     status)  tool="roadmap-status.py" ;;
@@ -61,6 +80,11 @@ nos dtt <verb> [args] — DataTables ops (run from $NOS_SRC over NOS_SEED_DIR)
   update    move a row's CLAIM (status/target/…)
   verify    write a row's VERDICT (an exit code, never an argument)
   extract   one-time: live table -> per-row seed files
+  tables    the DataTables you can see (yours, shared with you, your tier's)
+  create-table "Title" [--template roadmap] [--visibility private|shared]
+  share <table> --with user:<login> --access read|write|none
+  visibility <table> private|shared|tier-users|…
+  --table <id|title>  before any verb: run it on that table, not the roadmap
   board     the currentState claim board: assignments, claims, who is capable
   claim     claim an assignment (refused unless the match says you are capable)
   release   release a claim
@@ -91,6 +115,16 @@ DTT
     [ -n "$_apy" ] && [ -x "$_apy" ] && "$_apy" -c 'import yaml' >/dev/null 2>&1 && DTT_PY="$_apy"
   fi
   [ -n "$DTT_PY" ] || { echo "nos dtt: found no python3 with PyYAML (the dtt tools need it). Set NOS_PY, or pip install pyyaml." >&2; exit 69; }
+  if [ -n "${NOS_DTT_TABLE:-}" ]; then
+    NOS_ROADMAP_TABLE_ID="$("$DTT_PY" "$NOS_SRC/tools/dtt-table.py" resolve "$NOS_DTT_TABLE")" || exit $?
+    export NOS_ROADMAP_TABLE_ID
+    # A table of your own has its OWN seed files: ~/nos-tables/<table-id>/
+    # (git-init it if you want history), never the estate seed repo — otherwise
+    # `seed` would pour the estate's rows into your project. NOS_DTT_SEED_DIR
+    # overrides (a seed repo per project); NOS_SEED_DIR is left to the roadmap.
+    NOS_SEED_DIR="${NOS_DTT_SEED_DIR:-$HOME/nos-tables/$NOS_ROADMAP_TABLE_ID}"
+    mkdir -p "$NOS_SEED_DIR"; export NOS_SEED_DIR
+  fi
   exec "$DTT_PY" "$NOS_SRC/tools/$tool" "$@"
 fi
 

@@ -64,7 +64,9 @@ def test_the_server_is_stdlib_only():
     and the `mcp` SDK in particular is deliberately not used."""
     src = SERVER.read_text(encoding="utf-8")
     imports = re.findall(r"^\s*(?:import|from)\s+([\w.]+)", src, re.MULTILINE)
-    stdlib_roots = {"json", "os", "sys", "urllib", "__future__"}
+    # http.client + socket: the unix-socket transport to the identity outpost
+    # (dtt-per-user-tables) — still the standard library, still no `mcp` SDK.
+    stdlib_roots = {"json", "os", "sys", "urllib", "__future__", "http", "socket"}
     foreign = [m for m in imports if m.split(".")[0] not in stdlib_roots]
     assert not foreign, (
         f"mcp-tables-server.py imports non-stdlib module(s) {foreign}; the tools/ "
