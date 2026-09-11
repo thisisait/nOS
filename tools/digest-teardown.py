@@ -14,6 +14,8 @@ a shared party row survives even under --confirm.
 
   tools/digest-teardown.py state/fixtures/kolben-it.seed.yml            # plan + delete-safety, no writes
   tools/digest-teardown.py state/fixtures/kolben-it.seed.yml --confirm  # delete the unreferenced rows
+  tools/digest-teardown.py --erase-party party-ico-00000112             # GDPR: a party's whole rowRef footprint
+  tools/digest-teardown.py --erase-party party-ico-00000112 --confirm   # erase it (party row retained, referrers-gated)
 
 Exit 0 done/dry · 1 a delete failed · 2 KEAP unreadable.
 """
@@ -75,22 +77,50 @@ def _referrers(table: str, row: str, ro_hdr: dict):
     return (d.get("data") or {}).get("referrers") or []
 
 
+def _table_rows(table: str, ro_hdr: dict) -> list:
+    """Every row of a table (for the erasure rowRef-closure walk). 404 = no such
+    table here → empty, so a closure over a table this estate lacks is silent."""
+    try:
+        d = _json(f"{AGENT}/{table}/rows", ro_hdr)
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return []
+        raise
+    return (d.get("data") or {}).get("rows") or d.get("rows") or []
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("bundle", help="path to a state/fixtures/<name>.seed.yml (or any bundle)")
+    ap.add_argument("bundle", nargs="?", help="path to a state/fixtures/<name>.seed.yml (or any bundle)")
+    ap.add_argument("--erase-party", metavar="SLUG",
+                    help="erase everything importers wrote about a party (rowRef-DOWN closure); "
+                         "the party row itself is retained (referrers-gated)")
     ap.add_argument("--confirm", action="store_true", help="delete (default is dry-run)")
     args = ap.parse_args()
-
-    path = pathlib.Path(args.bundle)
-    if not path.is_absolute():
-        path = REPO / path
-    seed = yaml.safe_load(path.read_text(encoding="utf-8"))
-    plan = nos_digest.teardown_plan(seed)
-    print(f"teardown plan: {len(plan)} row(s), leaf-first, from {path.name}"
-          f"{'  (DRY RUN)' if not args.confirm else ''}")
+    if bool(args.bundle) == bool(args.erase_party):
+        ap.error("give exactly one of: a bundle path, or --erase-party SLUG")
 
     H = human_headers()
     ro_hdr = {"Authorization": f"Bearer {_ro_token()}", **proxy_header()}
+
+    if args.erase_party:
+        try:
+            seed = nos_digest.erasure_plan(
+                args.erase_party, lambda t: _table_rows(t, ro_hdr), REPO / "state" / "keap-tables")
+        except (urllib.error.URLError, OSError) as exc:
+            print(f"REFUSING: KEAP unreadable ({exc}) — cannot build the erasure closure", file=sys.stderr)
+            return 2
+        source = f"erasure of {args.erase_party}"
+    else:
+        path = pathlib.Path(args.bundle)
+        if not path.is_absolute():
+            path = REPO / path
+        seed = yaml.safe_load(path.read_text(encoding="utf-8"))
+        source = path.name
+
+    plan = nos_digest.teardown_plan(seed)
+    print(f"teardown plan: {len(plan)} row(s), leaf-first, from {source}"
+          f"{'  (DRY RUN)' if not args.confirm else ''}")
     deleted = retained = missing = failed = 0
     # Rows we've decided to remove. A referrer that is itself scheduled for
     # removal does NOT retain its target — this simulates the leaf-first cascade

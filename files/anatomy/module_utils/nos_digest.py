@@ -314,6 +314,58 @@ def teardown_plan(bundle: dict) -> list[tuple[str, str]]:
     return plan
 
 
+# ── erasure: the rowRef-DOWN closure of what importers wrote about a party ────
+# GDPR Art-17 for the digest organ (gdpr-digestion-stage, erasure-party-subject).
+# Given a party, enumerate every row any importer wrote that hangs off it — walk
+# the rowRef graph DOWNWARD from the party across the table defs' refTable edges:
+# party-tax-identity/address/contact (facets), repo → application → package, and
+# any FUTURE derived table (invoice → line, …) with zero rework, because the edge
+# set is READ from the table defs, not hard-coded (the closure auto-covers a table
+# the day it is added). The party ROW itself is never in the closure — it is the
+# root of the walk, not a child, and whether to delete it (a person vs an s.r.o.)
+# is a deliberate downstream decision, not this enumeration's.
+#
+# Enumeration is over the LIVE rowRef graph (where the derived data actually is),
+# NOT a replay of _prov (which is stripped before absorb — never a column). The
+# rowRef graph IS the derivation lineage. The result feeds teardown_plan (leaf-
+# first) + the referrers-gated executor, so a row another surviving party still
+# shares is retained. Pure over an injected table_reader → offline-testable; the
+# CLI wires table_reader to KEAP.
+def erasure_plan(party_slug: str, table_reader, tables_dir: str | pathlib.Path) -> dict:
+    """Return {table_slug: [rows]} — every row transitively referencing party_slug,
+    in dependency order (parents before children, so teardown_plan reverses it to
+    leaf-first). table_reader(table_slug) -> list[row dict]. The party row itself
+    is excluded."""
+    tables_dir = pathlib.Path(tables_dir)
+    incoming: dict[str, list[tuple[str, str]]] = {}   # refTable -> [(table, column_key)]
+    for p in sorted(tables_dir.glob("*.table.yml")):
+        tdef = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        tbl = p.name[: -len(".table.yml")]
+        for col in _rowref_cols(tdef):
+            rt = col.get("refTable")
+            if rt:
+                incoming.setdefault(rt, []).append((tbl, col["key"]))
+
+    result: dict[str, dict] = {}          # table -> {slug: row}, insertion order = dep order
+    queue: list[tuple[str, set]] = [("party", {party_slug})]
+    while queue:
+        ref_table, targets = queue.pop(0)
+        for tbl, col in incoming.get(ref_table, []):
+            matched = [r for r in table_reader(tbl)
+                       if isinstance(r, dict) and r.get(col) in targets and r.get("slug")]
+            if not matched:
+                continue
+            bucket = result.setdefault(tbl, {})
+            fresh = set()
+            for r in matched:
+                if r["slug"] not in bucket:
+                    bucket[r["slug"]] = r
+                    fresh.add(r["slug"])
+            if fresh:
+                queue.append((tbl, fresh))
+    return {t: list(rows.values()) for t, rows in result.items()}
+
+
 # ── importer-spine: parse → normalize → compose → GATE (the harness) ─────────
 # The reusable spine every importer shares (importer-spine decision, 2026-09-10).
 # An IMPORTER supplies only format knowledge as three stages; the harness owns
