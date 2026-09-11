@@ -12,8 +12,10 @@ A BUNDLE is the importer IR (digest-bundle-ir):
     }
 
 check_bundle() is the GATE-before-absorb firebreak: a bundle that fails it must
-touch nothing live. It validates ONLY the deterministic section for now (the rung
-seed-bundle.yml consumes); captures/proposals validation lands with their doors.
+touch nothing live. It validates the deterministic section (the rung seed-bundle.yml
+consumes) and REFUSES a non-empty captures/proposals — those absorb doors are not
+built, so a gate that passed them would greenlight sections it never read. Their
+real validators (and the refusal lifting) land with their doors.
 
 WHY A SHARED FUNCTION (importer-spine decision, 2026-09-10): normalize/provenance/
 gate are written ONCE and reused by every importer, so the load-bearing checks
@@ -65,6 +67,19 @@ def check_bundle(bundle: dict, tables_dir: str | pathlib.Path) -> list[str]:
     unknown = set(bundle) - ALLOWED_TOP
     if unknown:
         errors.append(f"unknown top-level bundle key(s): {sorted(unknown)}")
+
+    # FAIL-CLOSED on sections this gate cannot yet inspect. captures[] and
+    # proposals[] belong to the IR envelope, but check_bundle validates ONLY the
+    # deterministic section — their absorb doors (/ingest/v1/capture, SERE) are
+    # not built. Passing a bundle that carries them GREEN would greenlight
+    # content nothing read: the estate's #1 anti-pattern (a gate you pass without
+    # doing the thing). So a non-empty captures/proposals is REFUSED here until a
+    # real validator for it lands. "gate OK" must never cover an unread section.
+    for section in ("captures", "proposals"):
+        if bundle.get(section):
+            errors.append(
+                f"{section} present but check_bundle cannot yet inspect it — refused "
+                f"(no {section} validator built; see the raw-never-touches-knowledge rule)")
 
     trusted = bool((bundle.get("meta") or {}).get("trusted"))
     det = bundle.get("deterministic")

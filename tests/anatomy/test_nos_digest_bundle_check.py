@@ -74,6 +74,19 @@ def test_unknown_top_level_key_is_flagged():
     assert any("bogus" in e for e in errs), errs
 
 
+def test_captures_or_proposals_are_refused_until_inspectable():
+    # The broken state the fail-closed guard closes: a bundle carrying an
+    # unread section must NOT pass green (estate #1 anti-pattern). A bundle with
+    # ONLY captures used to return [] clean — the worst case, no deterministic
+    # section to trip any other check.
+    for section in ("captures", "proposals"):
+        errs = ND.check_bundle({"meta": {"trusted": True}, section: [{"any": "thing"}]}, TABLES)
+        assert any(section in e and "refused" in e for e in errs), (section, errs)
+    # an EMPTY section is fine — nothing to inspect, nothing to greenlight
+    assert ND.check_bundle({"meta": {"trusted": True}, "deterministic": {}, "captures": []},
+                           TABLES) == []
+
+
 def test_teardown_plan_is_the_seed_reversed():
     seed = _seed("kolben-it")
     plan = ND.teardown_plan(seed)
