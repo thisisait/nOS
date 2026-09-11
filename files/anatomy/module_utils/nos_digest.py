@@ -366,6 +366,73 @@ def erasure_plan(party_slug: str, table_reader, tables_dir: str | pathlib.Path) 
     return {t: list(rows.values()) for t, rows in result.items()}
 
 
+# ── party graph: the kmenová-data (master-data) node and everything wired to it ──
+# The visual-control shaper (data-graph-view). Same rowRef-DOWN walk as erasure_plan,
+# but it RECORDS the edges, not just the rows: the party is the centre (kmenová data),
+# every row that references it — its tax/address/contact facets, its repos/projects/
+# invoices and their children — is a node, every rowRef a labelled edge pointing IN.
+# Pure over an injected table_reader → the same {nodes, edges} a host tool renders to
+# mermaid today and a face Svelte-Flow view (rowsToPartyGraph) consumes later.
+_DISPLAY_FIELDS = ("legal_name", "name", "title", "value", "slug")
+
+
+def _row_label(row: dict) -> str:
+    for f in _DISPLAY_FIELDS:
+        if row.get(f):
+            return str(row[f])
+    return row.get("slug", "?")
+
+
+def party_graph(party_slug: str, table_reader, tables_dir: str | pathlib.Path) -> dict:
+    """Return {'nodes': [{id, table, slug, label}], 'edges': [{from, to, column}]} for
+    the rowRef-DOWN closure around a party. id is '<table>:<slug>'. The party node is
+    the centre; edges point from a referencing row IN to the row it references."""
+    tables_dir = pathlib.Path(tables_dir)
+    incoming: dict[str, list[tuple[str, str]]] = {}
+    for p in sorted(tables_dir.glob("*.table.yml")):
+        tdef = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        tbl = p.name[: -len(".table.yml")]
+        for col in _rowref_cols(tdef):
+            if col.get("refTable"):
+                incoming.setdefault(col["refTable"], []).append((tbl, col["key"]))
+
+    nodes: dict[str, dict] = {}
+    edges: list[dict] = []
+
+    def _node(table: str, row: dict) -> str:
+        nid = f"{table}:{row['slug']}"
+        nodes.setdefault(nid, {"id": nid, "table": table, "slug": row["slug"],
+                               "label": _row_label(row)})
+        return nid
+
+    # the centre: the party row itself (kmenová data)
+    for r in table_reader("party"):
+        if isinstance(r, dict) and r.get("slug") == party_slug:
+            _node("party", r)
+            break
+    else:
+        nodes[f"party:{party_slug}"] = {"id": f"party:{party_slug}", "table": "party",
+                                        "slug": party_slug, "label": party_slug}
+
+    queue: list[tuple[str, set]] = [("party", {party_slug})]
+    walked: set[str] = set()
+    while queue:
+        ref_table, targets = queue.pop(0)
+        for tbl, col in incoming.get(ref_table, []):
+            fresh = set()
+            for r in table_reader(tbl):
+                if not (isinstance(r, dict) and r.get(col) in targets and r.get("slug")):
+                    continue
+                nid = _node(tbl, r)
+                edges.append({"from": nid, "to": f"{ref_table}:{r[col]}", "column": col})
+                if nid not in walked:
+                    walked.add(nid)
+                    fresh.add(r["slug"])
+            if fresh:
+                queue.append((tbl, fresh))
+    return {"nodes": list(nodes.values()), "edges": edges}
+
+
 # ── importer-spine: parse → normalize → compose → GATE (the harness) ─────────
 # The reusable spine every importer shares (importer-spine decision, 2026-09-10).
 # An IMPORTER supplies only format knowledge as three stages; the harness owns

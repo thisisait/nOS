@@ -63,3 +63,15 @@ def test_teardown_of_the_closure_is_leaf_first():
     plan = ND.erasure_plan("party-A", _reader, TABLES)
     order = [t for t, _ in ND.teardown_plan(plan)]
     assert order.index("package") < order.index("application") < order.index("repo")
+
+
+def test_party_graph_centres_on_the_party_and_wires_the_closure():
+    g = ND.party_graph("party-A", _reader, TABLES)
+    ids = {n["id"] for n in g["nodes"]}
+    assert "party:party-A" in ids                              # the kmenová-data centre
+    assert {"repo:repo-A", "application:app-A", "package:pkg-A"} <= ids
+    assert not any(n["slug"].endswith("-B") for n in g["nodes"])   # one party's subgraph only
+    # facet + derived rows wire IN to the party; the chain wires child -> parent
+    assert any(e["to"] == "party:party-A" and e["column"] == "party" for e in g["edges"])
+    assert any(e["from"] == "application:app-A" and e["to"] == "repo:repo-A" for e in g["edges"])
+    assert any(e["from"] == "package:pkg-A" and e["to"] == "application:app-A" for e in g["edges"])
