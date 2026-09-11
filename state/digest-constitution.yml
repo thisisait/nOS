@@ -96,7 +96,11 @@ invariants:
     judge: ""
     gate: ""
     status: pending
-    builds_with: importer-spine
+    # Repointed 2026-09-11 after an independent review: the importer-spine
+    # scaffold landed, but run_importer is a helper, not a chokepoint — the rule
+    # needs a no-bypass static gate + captures/proposals validators + the
+    # raw-archive stage before it can flip to enforced. See digest-absorb-chokepoint.
+    builds_with: digest-absorb-chokepoint
 
   - id: gdpr-digestion-stage
     rule: >-

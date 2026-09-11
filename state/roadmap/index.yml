@@ -93,6 +93,9 @@
 - slug: digest
   parent: ''
   track: digest
+- slug: digest-absorb-chokepoint
+  parent: digest
+  track: digest
 - slug: digest-bundle-gate
   parent: digest
   track: digest
