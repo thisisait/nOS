@@ -50,6 +50,8 @@ _ALLOWED = {
     "files/anatomy/scripts/keap-lint.py":     "calls /agent/v1/lint/run (Bearer); /api/lint is a docstring",
     "files/anatomy/scripts/keap-features-sync.py": "KEAP via /agent (Bearer); /api/embed is Ollama",
     "files/anatomy/scripts/keap-embed-sync.py": "KEAP via /agent (Bearer); /api/embed is Ollama",
+    "tools/mcp-tables-server.py": "human /api goes through the identity outpost socket "
+        "(KEAP_IDENTITY_URL, which injects the secret); the 8091 hits are the agent door (Bearer)",
 }
 
 

@@ -501,8 +501,12 @@ def test_roadmap_write_edge_is_backed_by_code(committed):
     scan = (REPO / "tools" / "discovery-scan.py").read_text(encoding="utf-8")
     seed = (REPO / "tools" / "roadmap-seed.py").read_text(encoding="utf-8")
     import re as _re
-    t_scan = _re.search(r'TABLE = "([0-9a-f-]+)"', scan)
-    t_seed = _re.search(r'TABLE = "([0-9a-f-]+)"', seed)
+    # roadmap-seed.py now resolves the id from NOS_ROADMAP_TABLE_ID with the same
+    # uuid as its default (dtt env-addressing, 2026-09-07); accept the env-wrapped
+    # form so the invariant "both address the SAME table" reads the default uuid.
+    _tbl = r'TABLE = (?:os\.environ\.get\([^,]+,\s*)?"([0-9a-f-]+)"'
+    t_scan = _re.search(_tbl, scan)
+    t_seed = _re.search(_tbl, seed)
     assert t_scan and t_seed and t_scan.group(1) == t_seed.group(1), (
         "discovery-scan.py and roadmap-seed.py address different table uuids — "
         "the 'table:roadmap' target no longer names where the rows go"

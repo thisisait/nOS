@@ -134,6 +134,7 @@ worse than none, because it reads as complete.
 - `keap-fable-bundle.py` — Generate the raw-data bundle for the fable ontology-review pass.
 - `keap-fable-to-bundles.py` — Transform the fable ontology-review output into per-domain import bundles.
 - `dtt-capture.py` — File an idea/plan/spec into dtt as a per-row seed file in the private repo (the /dtt-capture skill's machinery).
+- `dtt-table.py` — Per-user DataTable verbs from the shell (list/create/share/visibility) through the KEAP identity outpost; the `nos dtt` table surface on the DGX recipe.
 - `keap_api.py` — Shared KEAP /api access for host tools: resolves the SEC-02 proxy secret + builds the human headers.
 - `keap-recall-queries.py` — Emit the KEAP recall-query set from the estate's SKILLS.md trigger lines.
 - `keap-reid-rows.py` — Make every row of a KEAP DataTable addressable by its own business key.
