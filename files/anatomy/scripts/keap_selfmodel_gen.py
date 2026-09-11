@@ -950,6 +950,27 @@ META_DOMAINS: list[tuple[str, str, str, list[tuple[str, str, str]]]] = [
      "The systems registry — the estate's services as machine-readable records, "
      "the roster behind the constellation. The self-model's own index.",
      []),
+    ("nos.digest", "digest",
+     "The digest organ's output — a client organisation's own operational memory, "
+     "absorbed from its real sources (git remotes, invoices, statements) into "
+     "governed rows through the gate-before-absorb firebreak. The software-estate "
+     "facet is the first: what the organisation builds and depends on, deduped "
+     "against the shared party spine so a repo's owner is the same row a contract "
+     "references.",
+     [
+         ("nos.digest.repo", "repo",
+          "Source repositories absorbed from a git remote — one row per repo, "
+          "rowRef'd to its owning party, carrying its remote and head commit as "
+          "provenance. What an organisation's code lives in."),
+         ("nos.digest.application", "application",
+          "Deployable applications discovered inside a repo (one repo may hold "
+          "several) — the unit a dependency manifest belongs to, rowRef'd to its "
+          "repo. The monorepo-aware layer between a repo and its packages."),
+         ("nos.digest.package", "package",
+          "Third-party dependencies an application declares (name, version, "
+          "ecosystem, direct-or-transitive), rowRef'd to their application. The "
+          "supply-surface a security or licence question is asked against."),
+     ]),
 ]
 
 

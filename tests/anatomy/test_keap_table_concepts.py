@@ -97,6 +97,12 @@ CONCEPTLESS = {
     "kolben-time-entry.hours": "no measure concept — needs measure.duration (hours logged is a quantity, like print-job.quantity)",
     "current-state.where": "no execution-locus concept — needs deploy.locus (local/eu-cloud/ext-cloud is the nos-work:// WHERE segment, not access.tier)",
     "current-state.kam": "no routing-scope concept — needs routing.scope (the nos-work:// KAM segment: repo/dtt/keap/... a tool-scope set, not a class.*)",
+    "repo.remote": "a git remote URL is the repo's locator, not net.url (a page to fetch) — needs identity.locator",
+    "repo.head_sha": "a commit hash is provenance, not identity.* or a lifecycle — needs vcs.commit",
+    "application.path": "a manifest's directory inside a repo — no path concept exists — needs fs.path",
+    "application.archetype": "the manifest kind that spawned the app (npm/pypi/go) is not class.kind of the app itself — needs class.archetype",
+    "package.version": "a dependency version string is not identity.name — needs identity.version",
+    "package.is_direct": "direct-vs-transitive is a property of the edge to the app, not a class.kind of the package — needs graph.edge_kind",
 }
 
 
@@ -230,6 +236,13 @@ def test_declared_concepts_exist_in_the_vendored_vocabulary():
 UNSEEDED = {
     "apps": "fed by the app generator, not the playbook seeder — wiring it is a decision",
     "systems": "fed by the service registry — same",
+    "repo": "digest OUTPUT — rows come from the repos importer (digest-import-repos.py) "
+            "walking a git remote at runtime, not the playbook seeder. Same split as "
+            "apps/systems: the definition is git-owned, the rows are absorbed live.",
+    "application": "digest output — rows are applications discovered inside a repo by "
+                   "the repos importer, not seeded. Same split as repo.",
+    "package": "digest output — rows are dependencies parsed from a manifest by the "
+               "repos importer, not seeded. Same split as repo.",
     "loop-config": "the one row (harness_proposals_enabled) has NO READER — "
                    "ledger.py refuses `harness` unconditionally. Seeding it puts "
                    "a flippable switch in front of the operator that changes "

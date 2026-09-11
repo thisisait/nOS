@@ -1,0 +1,7 @@
+# Owner ICO 00000177 is NOT in the party spine → resolve_party returns review
+# (repos never mint a party) → this repo is SKIPPED, not absorbed. Proves the
+# safe refusal: an unknown owner does not silently create a counterparty.
+owner: { ico: "00000177", name: "Unknown Vendor (synthetic)" }
+remote: "https://git.kolben.invalid/misc/orphan-tool.git"
+head: "0011223344556677889900112233445566778899"
+country: CZ

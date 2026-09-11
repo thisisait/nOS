@@ -1,0 +1,4 @@
+# synthetic fixture manifest
+fastapi==0.110.0
+pydantic>=2.6.0
+uvicorn

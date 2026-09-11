@@ -1,0 +1,6 @@
+# Synthetic repo fixture (docs/idea/15). Git metadata a live run reads from
+# `git -C`; here it is a sidecar so the round-trip is offline + deterministic.
+owner: { ico: "00000112", name: "Mesto Lipno (synthetic)" }
+remote: "https://git.kolben.invalid/mesto/portal.git"
+head: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+country: CZ

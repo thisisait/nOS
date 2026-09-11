@@ -118,6 +118,8 @@ worse than none, because it reads as complete.
 - `roadmap-apply-view.py` — Apply the roadmap definition's `view:` block to the live table.
 - `digest-teardown.py` — Tear a bundle/fixture's rows down leaf-first (inverse of seed-bundle.yml); referrers-gated so shared rows survive. From-blank reset + agency client-data removal. Dry-run by default.
 - `digest-import.py` — The importer-spine round-trip + first reference importer (CSV counterparties → EN-16931 party spine): parse → normalize → GATE → absorb (upsert by deterministic party-ico slug). Dry by default; --absorb writes.
+- `digest-import-repos.py` — Second digest importer (git repos → repo/application/package chain); owners resolved to the party spine (dedup, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs.
+- `digest_absorb.py` — Shared absorb for digest importers (strip _prov, ensure output table exists, upsert by slug skipping present). Library, not a CLI.
 - `roadmap-apply-columns.py` — Reconcile a NAMED column's shape (kind/options) from the roadmap definition to the live table; per-column, never touches the column set.
 - `roadmap-extract.py` — One-time: live roadmap table → per-row `<slug>.md` files in the PRIVATE seed repo.
 - `roadmap-seed.py` — Seed / --sync the roadmap table from per-row files in the private seed repo (NOS_SEED_DIR).

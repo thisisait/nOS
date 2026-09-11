@@ -1,0 +1,29 @@
+# =============================================================================
+# KEAP DataTable — "Applications" (digest organ output, repos-importer).
+#
+# A deployable application discovered inside a repo — the unit a dependency
+# manifest belongs to. `repo` is a rowRef (onDelete: restrict); one repo may
+# hold several applications (a monorepo), so the application, not the repo, is
+# the parent of packages. `path` is the manifest's directory inside the repo
+# ("" = repo root) so a monorepo's two apps are distinct rows, not a merge.
+#
+# NOT nos.applications: that domain is the estate's OWN installable manifest
+# apps (apps_runner). This is a CLIENT organisation's software, absorbed from
+# its repos — a different noun under nos.digest.
+# =============================================================================
+title: "Applications"
+description: >-
+  Deployable applications discovered inside a repo (one repo may hold several,
+  keyed by path) — the unit a dependency manifest belongs to. The layer between
+  a repo and the packages it depends on.
+driver: libsql
+anchors: ["nos.digest.application"]
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,      label: "Slug",      kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: name,      label: "Name",      kind: text,   role: dimension, required: true, concept: identity.name }
+    - { key: repo,      label: "Repo",      kind: rowRef, role: dimension, required: true,
+        refTable: "repo", refDisplay: "name", onDelete: "restrict", concept: graph.parent }
+    - { key: path,      label: "Path in repo", kind: text, role: attribute }
+    - { key: archetype, label: "Archetype", kind: text,   role: attribute }

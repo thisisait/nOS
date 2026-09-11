@@ -24,24 +24,18 @@ from __future__ import annotations
 import argparse
 import csv
 import io
-import json
-import os
 import pathlib
-import subprocess
 import sys
-import urllib.error
-import urllib.request
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "files" / "anatomy" / "module_utils"))
-from keap_api import proxy_header  # noqa: E402
+from digest_absorb import absorb  # noqa: E402  (shared: strip _prov + upsert by slug)
 import nos_digest  # noqa: E402
 
 TABLES_DIR = REPO / "state" / "keap-tables"
-AGENT = "http://127.0.0.1:8091/agent/v1/tables"
 
 
 class CsvPartyImporter:
@@ -90,65 +84,6 @@ class CsvPartyImporter:
                               "scheme": "ICO", "value": r["ico8"]})
         # KEY ORDER = dependency order: party before the tax rows that rowRef it.
         return {"party": list(parties.values()), "party-tax-identity": taxes}
-
-
-def _rw_token() -> str:
-    tok = os.environ.get("KEAP_AGENT_TOKEN_RW", "").strip()
-    if tok:
-        return tok
-    return subprocess.run(["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RW"],
-                          capture_output=True, text=True).stdout.strip()
-
-
-def _existing_slugs(table: str, hdr: dict) -> set:
-    req = urllib.request.Request(f"{AGENT}/{table}/rows", headers=hdr)
-    try:
-        with urllib.request.urlopen(req, timeout=15) as r:
-            data = json.loads(r.read() or b"{}")
-        # rows nest under `data` ({success, data:{rows:[...]}}) — same envelope
-        # the referrers endpoint uses. Reading top-level `rows` here returns
-        # empty and re-posts every existing row (a false "wrote" count).
-        rows = (data.get("data") or {}).get("rows") or data.get("rows") or []
-        return {row.get("slug") for row in rows}
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return set()
-        raise
-
-
-def _post_row(table: str, row: dict, hdr: dict) -> None:
-    req = urllib.request.Request(f"{AGENT}/{table}/rows", method="POST",
-                                 headers={**hdr, "content-type": "application/json"},
-                                 data=json.dumps(row).encode("utf-8"))
-    with urllib.request.urlopen(req, timeout=15):
-        pass
-
-
-def absorb(bundle: dict) -> int:
-    hdr = {"Authorization": f"Bearer {_rw_token()}", **proxy_header()}
-    det = nos_digest.strip_provenance(bundle["deterministic"])
-    wrote = skipped = 0
-    for table, rows in det.items():   # dependency order (dict preserves it)
-        try:
-            present = _existing_slugs(table, hdr)
-        except (urllib.error.URLError, OSError) as exc:
-            print(f"REFUSING: KEAP unreadable ({exc})", file=sys.stderr)
-            return 2
-        for row in rows:
-            if row["slug"] in present:
-                print(f"  · {table}/{row['slug']}: already present")
-                skipped += 1
-                continue
-            try:
-                _post_row(table, row, hdr)
-                print(f"  + {table}/{row['slug']}")
-                wrote += 1
-            except urllib.error.HTTPError as e:
-                print(f"  FAILED {table}/{row['slug']}: {e.code} {e.read().decode()[:120]}",
-                      file=sys.stderr)
-                return 1
-    print(f"\nabsorbed {wrote} · already present {skipped}")
-    return 0
 
 
 def main() -> int:

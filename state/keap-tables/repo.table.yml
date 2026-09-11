@@ -1,0 +1,30 @@
+# =============================================================================
+# KEAP DataTable — "Repositories" (digest organ output, repos-importer).
+#
+# One row per source repository absorbed from a git remote. `party` is a rowRef
+# into the shared EN-16931 `party` spine — a repo's OWNER is the same row a
+# contract or invoice references, so the digest never forks the counterparty
+# (party-resolver decides the slug; a resolved owner reuses the existing row).
+# `onDelete: restrict` because a repo whose owner vanished is a corrupt record,
+# same rule as party-tax-identity. Provenance lives on the rows the importer
+# stamps (_prov: remote+path = source_id, head commit = content_hash), absorbed
+# into audit lineage, not a column here.
+# =============================================================================
+title: "Repositories"
+description: >-
+  Source repositories absorbed from a git remote by the repos importer — one
+  row per repo, owned by a party, carrying its remote URL and head commit. The
+  root of the software-estate facet (applications and packages rowRef down from
+  here).
+driver: libsql
+anchors: ["nos.digest.repo"]
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,        label: "Slug",        kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: name,        label: "Name",        kind: text,   role: dimension, required: true, concept: identity.name }
+    - { key: party,       label: "Owner",       kind: rowRef, role: dimension, required: true,
+        refTable: "party", refDisplay: "legal_name", onDelete: "restrict", concept: graph.parent }
+    - { key: remote,      label: "Remote URL",  kind: text,   role: dimension, required: true }
+    - { key: head_sha,    label: "Head commit", kind: text,   role: attribute }
+    - { key: description, label: "Description",  kind: text,   role: attribute, concept: identity.description }

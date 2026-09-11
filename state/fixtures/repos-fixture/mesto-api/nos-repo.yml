@@ -1,0 +1,6 @@
+# Same owner as mesto-portal (ICO 00000112) → both repos reuse the ONE resolved
+# party row (cross-source dedup, no fork). Two manifests → two applications.
+owner: { ico: "00000112", name: "Mesto Lipno (synthetic)" }
+remote: "https://git.kolben.invalid/mesto/api.git"
+head: "9f8e7d6c5b4a9f8e7d6c5b4a9f8e7d6c5b4a9f8e"
+country: CZ

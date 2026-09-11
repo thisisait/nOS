@@ -1,0 +1,28 @@
+# =============================================================================
+# KEAP DataTable — "Packages" (digest organ output, repos-importer).
+#
+# A third-party dependency an application declares. `application` is a rowRef
+# (onDelete: restrict). One row per (application, package name) — the version is
+# an attribute, so a bump PATCHes the same row rather than forking it (the
+# deterministic-identity rule, applied one level down from the party spine).
+# This is the supply-surface a security or licence question is asked against.
+# =============================================================================
+title: "Packages"
+description: >-
+  Third-party dependencies an application declares — name, version, ecosystem,
+  and whether it is a direct or transitive dependency. The dependency surface of
+  the software estate, rowRef'd to the application that declares it.
+driver: libsql
+anchors: ["nos.digest.package"]
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,        label: "Slug",        kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: name,        label: "Name",        kind: text,   role: dimension, required: true, concept: identity.name }
+    - { key: application, label: "Application", kind: rowRef, role: dimension, required: true,
+        refTable: "application", refDisplay: "name", onDelete: "restrict", concept: graph.parent }
+    - { key: version,     label: "Version",     kind: text,   role: attribute }
+    - { key: ecosystem,   label: "Ecosystem",   kind: select, role: dimension, required: true, concept: class.kind,
+        options: ["npm", "pypi", "go", "composer", "cargo", "nuget"] }
+    - { key: is_direct,   label: "Direct?",     kind: select, role: attribute,
+        options: ["direct", "transitive"] }
