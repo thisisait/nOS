@@ -18,13 +18,22 @@ import importlib
 import json
 import os
 import pathlib
+import shutil
 import socketserver
 import sys
+import tempfile
 import threading
 import urllib.parse
 import urllib.request
 
 TOOLS = pathlib.Path(__file__).resolve().parents[2] / "tools"
+
+
+def _short_sock() -> pathlib.Path:
+    """A socket path short enough for AF_UNIX (sun_path ≤ ~104 bytes on macOS).
+    pytest's tmp_path lives under a long /private/var/folders/... prefix that
+    overflows the limit, so bind under a short /tmp dir instead."""
+    return pathlib.Path(tempfile.mkdtemp(prefix="nid-", dir="/tmp")) / "s"
 
 
 class _UnixServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
@@ -79,8 +88,8 @@ def test_without_the_outpost_nothing_changes(monkeypatch):
     assert h["X-Authentik-Username"] == "akadmin" and h["x-keap-proxy-secret"] == "not-for-the-wire"
 
 
-def test_behind_the_outpost_the_socket_carries_no_identity(monkeypatch, tmp_path):
-    sock = tmp_path / "id.sock"
+def test_behind_the_outpost_the_socket_carries_no_identity(monkeypatch):
+    sock = _short_sock()
     seen: list[dict] = []
     srv = _serve(str(sock), seen)
     try:
@@ -103,10 +112,11 @@ def test_behind_the_outpost_the_socket_carries_no_identity(monkeypatch, tmp_path
     finally:
         srv.shutdown()
         srv.server_close()
+        shutil.rmtree(sock.parent, ignore_errors=True)
 
 
-def test_write_row_refuses_a_row_without_a_slug(monkeypatch, tmp_path):
-    sock = tmp_path / "id.sock"
+def test_write_row_refuses_a_row_without_a_slug(monkeypatch):
+    sock = _short_sock()
     srv = _serve(str(sock), [])
     try:
         api = _fresh_keap_api(monkeypatch, "http+unix://" + urllib.parse.quote(str(sock), safe=""))
@@ -119,3 +129,4 @@ def test_write_row_refuses_a_row_without_a_slug(monkeypatch, tmp_path):
     finally:
         srv.shutdown()
         srv.server_close()
+        shutil.rmtree(sock.parent, ignore_errors=True)

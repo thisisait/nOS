@@ -679,7 +679,12 @@ sudo -u "$OPERATOR" -H bash -c '
       [ "$(docker inspect -f "{{.State.Health.Status}}" iiab-keap-1)" = healthy ] && break; sleep 3
     done
   fi
-  /srv/nos-dgx/bin/seed-tables.py
+  # roadmap + current-state plus the DIGEST tables: the party spine and the
+  # repos importer output repo/application/package, created EMPTY so the digest
+  # importers tools/digest-import*.py can populate them from the org real
+  # counterparties and git remotes. Rows are NOT seeded here; fixture rows are
+  # gated behind the playbook, and a customer box fills these from its own data.
+  /srv/nos-dgx/bin/seed-tables.py roadmap current-state party party-tax-identity repo application package
 '
 
 say "done"
