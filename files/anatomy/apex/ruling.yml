@@ -645,6 +645,15 @@ nodes:
   "table:print-machine": withheld
   "table:print-material": withheld
   "table:print-order": withheld
+  # The digest organ's output tables (repos importer): repo -> application ->
+  # package. WITHHELD like every table node — a client organisation's software
+  # estate is theirs, never the public front door. Added 2026-09-11 after the
+  # signature; the published set is unchanged (nothing new leaves the machine),
+  # so no re-review is owed and awaiting-operator flags only a routine re-sign
+  # (the loop-config / caddy precedent above).
+  "table:repo": withheld
+  "table:application": withheld
+  "table:package": withheld
   "table:roadmap": withheld
   "table:systems": withheld
   "table:wallpapers": withheld
