@@ -276,10 +276,55 @@ def records_from_agents(agents_dir: str | pathlib.Path) -> list[dict]:
     return out
 
 
+def records_from_importers(importers_dir: str | pathlib.Path) -> list[dict]:
+    """Digest importer manifests (`state/digest-importers/<name>.importer.yml`) → records.
+
+    WHY THIS SWEEP EXISTS (2026-09-11). The digest importers read a company's real
+    data (parties from a CSV, repos + their owners from a git remote) into the
+    knowledge system — a processing activity that egresses PII to an external host
+    (the git remote) yet registered NOWHERE. Same structural omission `records_from_agents`
+    fixed: a producer the register never asked. The declaration lives in a committed
+    per-importer manifest — a full `gdpr:` block beside an `egress:` list — swept like
+    an app manifest (NOT a class attribute: keeps this generator, which runs in CI with
+    no Docker, off the importer runtime's import graph). id convention: `imp_<name>`.
+    """
+    import yaml
+
+    d = pathlib.Path(importers_dir)
+    out: list[dict] = []
+    if not d.is_dir():
+        return out
+    for f in sorted(d.glob("*.importer.yml")):
+        try:
+            m = yaml.safe_load(f.read_text()) or {}
+        except yaml.YAMLError:
+            continue
+        if not isinstance(m, dict):
+            continue
+        gdpr = m.get("gdpr")
+        if not gdpr:
+            continue
+        slug = m.get("name") or f.name[: -len(".importer.yml")]
+        out.append(
+            gdpr_block_to_record(
+                gdpr,
+                record_id=f"imp_{slug}",
+                slug=str(slug),
+                stack=None,
+                tier="importer",
+                display_name=m.get("name"),
+                source_plugin=f"digest-importers/{f.name}",
+            )
+        )
+    out.sort(key=lambda r: r["id"])
+    return out
+
+
 def all_records(repo_root: str | pathlib.Path) -> list[dict]:
-    """Tier-1 + Tier-2 + agent records, the full Article-30 inventory."""
+    """Tier-1 + Tier-2 + agent + digest-importer records, the full Article-30 inventory."""
     repo = pathlib.Path(repo_root)
     recs = records_from_plugins(repo / "files/anatomy/plugins")
     recs += records_from_app_manifests(repo / "apps")
     recs += records_from_agents(repo / "files/anatomy/agents")
+    recs += records_from_importers(repo / "state/digest-importers")
     return recs

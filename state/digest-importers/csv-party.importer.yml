@@ -1,0 +1,40 @@
+# =============================================================================
+# Digest importer manifest — csv-party (the CSV counterparty importer).
+#
+# The Article-30 processing record + egress declaration for tools/digest-import.py.
+# Swept by nos_gdpr.records_from_importers into state/dpa-register.md (id imp_csv-party)
+# and (Track C) read for egress-vs-source auditing. A LOCAL-FILE importer: it reads a
+# CSV off disk and writes party rows to the loopback KEAP door — no outbound network,
+# so egress is empty and there are no third-party processors.
+# =============================================================================
+name: csv-party
+version: "0.1.0"
+source_kind: csv-file
+
+# Outbound endpoints (Track C reads this). Empty = loopback-only (KEAP on 127.0.0.1).
+egress: []
+
+gdpr:
+  purpose: >-
+    Ingest an organisation's own list of counterparties (customers, suppliers,
+    sole traders) from a CSV export into the shared party master-data spine, so
+    the estate can reference one deduplicated party record across its business
+    tables. Processing is limited to identifying and tax-registration data the
+    organisation already holds about its counterparties.
+  legal_basis: legitimate_interests
+  data_categories:
+    - "Organisation identity (legal name, trading name)"
+    - "Company registration / tax identifiers (IČO, VAT/DIČ)"
+    - "Business contact points (email, phone, web) where present in the source"
+  data_subjects:
+    - "The organisation's counterparties — customers and suppliers"
+    - "Sole traders among them (natural persons acting as businesses)"
+  processors: []          # local file → loopback KEAP; no third party
+  transfers_outside_eu: false
+  storage_location: "KEAP DataTables (libsql) on the host — party / party-tax-identity / party-address / party-contact"
+  retention_days: 3650    # kept for the life of the business relationship + statutory accounting horizon
+  notes: >-
+    Reads a local CSV only; no network egress. A person's tax number (CZ DIČ =
+    rodné číslo) is never used as a match key and never stored — party-resolver
+    routes a person to review, orgs resolve by IČO. Erasable via
+    digest-teardown.py --erase-party.

@@ -1,0 +1,46 @@
+# =============================================================================
+# Digest importer manifest — repos (the git-remote software-estate importer).
+#
+# The Article-30 processing record + egress declaration for tools/digest-import-repos.py.
+# Swept by nos_gdpr.records_from_importers into state/dpa-register.md (id imp_repos).
+# UNLIKE csv-party this importer REACHES OUT: to list + clone repositories it talks to a
+# git remote, which may be a self-hosted Gitea (in-estate, no transfer) OR an external
+# host such as GitHub/GitLab.com (a third-party processor, likely outside the EU). The
+# record declares the conservative case so the register never understates a transfer.
+# =============================================================================
+name: repos
+version: "0.1.0"
+source_kind: git-remote
+
+# Outbound endpoints (Track C reads this + cross-checks against literal hosts in source).
+# The remote is operator-configured; declare the class conservatively.
+egress:
+  - endpoint: "the configured git remote (Gitea / GitLab / GitHub API + clone)"
+    party: "the git hosting provider"
+    country: "varies — self-hosted (EU) or a public host (often US)"
+
+gdpr:
+  purpose: >-
+    Inventory an organisation's software estate — repositories, the applications
+    inside them, and their third-party package dependencies — by listing and
+    shallow-cloning from a git remote, so the estate can answer supply-surface,
+    licence and security questions against governed rows. Each repo is attributed
+    to its owning party (resolved against the master-data spine, never minted).
+  legal_basis: legitimate_interests
+  data_categories:
+    - "Repository metadata (name, remote URL, head commit)"
+    - "Dependency manifests (package name, version, ecosystem)"
+    - "Committer/owner identifiers only where a manifest or remote exposes them"
+  data_subjects:
+    - "The organisation whose repositories are inventoried (owning party)"
+    - "Developers named incidentally in repo/commit metadata"
+  processors:
+    - "The configured git hosting provider (e.g. self-hosted Gitea, or GitHub/GitLab.com)"
+  transfers_outside_eu: true    # conservative: a public git host is typically US-based
+  storage_location: "KEAP DataTables (libsql) on the host — repo / application / package"
+  retention_days: 3650
+  notes: >-
+    Egress is to the git remote only; credentials are per-importer scoped
+    (Infisical), never the whole vault (egress-containment). Owner resolution is
+    resolve-only — an unknown owner routes to review, never mints a party.
+    Erasable via digest-teardown.py --erase-party.

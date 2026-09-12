@@ -20,6 +20,7 @@ from __future__ import annotations
 import pathlib
 
 import pytest
+import yaml
 
 # tests/conftest.py adds files/anatomy/ to sys.path.
 from module_utils import load_plugins, nos_gdpr  # type: ignore  # noqa: E402
@@ -181,3 +182,56 @@ def test_controller_block_populates_from_env(monkeypatch):
     blob = "\n".join(_load_tool()._controller_lines())
     assert "Acme Úřad" in blob and "Jan Novák" in blob and "dpo@acme.gov.cz" in blob
     assert "unset —" not in blob
+
+
+# ── digest importer records (imp_): the same Art-30 bar + parity + egress-value ──
+IMPORTERS_DIR = REPO / "state" / "digest-importers"
+
+
+def _importer_records() -> list[dict]:
+    return nos_gdpr.records_from_importers(IMPORTERS_DIR)
+
+
+@pytest.mark.parametrize("rec", _importer_records(), ids=lambda r: r["id"])
+def test_importer_record_is_article30_complete(rec):
+    test_record_is_article30_complete(rec)          # the same completeness bar
+    assert rec["id"].startswith("imp_"), rec["id"]
+    assert UPSERT_COLUMNS.issubset(rec.keys()), sorted(UPSERT_COLUMNS - rec.keys())
+
+
+def test_importer_register_parity():
+    """The 'register can be complete and wrong' guard (agent-processors lesson):
+    every shipped importer has a manifest, and every manifest names a shipped
+    importer — a running importer that egresses PII with no manifest, or a
+    manifest for an importer that no longer runs, both fail."""
+    import importlib.util
+    shipped = set()
+    for f in sorted((REPO / "tools").glob("digest-import*.py")):
+        spec = importlib.util.spec_from_file_location(f.stem.replace("-", "_"), f)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)          # a broken importer fails LOUD here, not silently
+        for obj in vars(mod).values():
+            if isinstance(obj, type) and isinstance(getattr(obj, "name", None), str) \
+                    and callable(getattr(obj, "compose", None)):
+                shipped.add(obj.name)
+    declared = {yaml.safe_load(f.read_text())["name"]
+                for f in IMPORTERS_DIR.glob("*.importer.yml")}
+    assert shipped == declared, (
+        f"importer manifests out of sync — running without a manifest: "
+        f"{sorted(shipped - declared)}; manifest for a non-running importer: "
+        f"{sorted(declared - shipped)}")
+
+
+@pytest.mark.parametrize("f", sorted(IMPORTERS_DIR.glob("*.importer.yml")), ids=lambda f: f.name)
+def test_importer_egress_is_consistent_with_transfers(f):
+    """VALUE guard (the register-asserted-0-processors-while-egressing-nightly bug):
+    a NON-EMPTY egress must own the transfer — transfers_outside_eu true OR at least
+    one named processor. An empty egress must not claim a transfer outside the EU."""
+    m = yaml.safe_load(f.read_text())
+    g = m.get("gdpr") or {}
+    if m.get("egress"):
+        assert g.get("transfers_outside_eu") or (g.get("processors") or []), \
+            f"{f.name}: declares egress but names no processor and no transfer"
+    else:
+        assert not g.get("transfers_outside_eu"), \
+            f"{f.name}: empty egress but claims a transfer outside the EU"

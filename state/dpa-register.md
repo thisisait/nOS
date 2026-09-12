@@ -20,10 +20,10 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 95 (77 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (89)
-- **Transfers outside the EU:** 11 activities
-- **Activities engaging a third-party processor:** 14
+- **Processing activities:** 97 (77 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (91)
+- **Transfers outside the EU:** 12 activities
+- **Activities engaging a third-party processor:** 15
 
 ## Transfers & processors (audit-sensitive subset)
 
@@ -42,6 +42,7 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 | proposer (`agent_proposer`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer. |
 | surveyor (`agent_surveyor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 | upgrade-architect (`agent_upgrade-architect`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| repos (`imp_repos`) | **Yes** | `The configured git hosting provider (e.g. self-hosted Gitea, or GitHub/GitLab.com)` |
 | Loop (`svc_loop`) | **Yes** | `Anthropic (US) — claude CLI backend, authoring proposals when the propose job runs` |
 
 ## Security measures (Art. 32 — platform baseline)
@@ -1172,6 +1173,28 @@ reasoning.
 - **Transfers outside EU:** **Yes**
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### csv-party — `imp_csv-party`
+- **Purpose:** Ingest an organisation's own list of counterparties (customers, suppliers, sole traders) from a CSV export into the shared party master-data spine, so the estate can reference one deduplicated party record across its business tables. Processing is limited to identifying and tax-registration data the organisation already holds about its counterparties.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `The organisation's counterparties — customers and suppliers`; `Sole traders among them (natural persons acting as businesses)`
+- **Data categories:** `Organisation identity (legal name, trading name)`; `Company registration / tax identifiers (IČO, VAT/DIČ)`; `Business contact points (email, phone, web) where present in the source`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 3650 days (~10y)
+- **Storage:** KEAP DataTables (libsql) on the host — party / party-tax-identity / party-address / party-contact
+- **Security measures:** platform baseline (see above)
+
+#### repos — `imp_repos`
+- **Purpose:** Inventory an organisation's software estate — repositories, the applications inside them, and their third-party package dependencies — by listing and shallow-cloning from a git remote, so the estate can answer supply-surface, licence and security questions against governed rows. Each repo is attributed to its owning party (resolved against the master-data spine, never minted).
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `The organisation whose repositories are inventoried (owning party)`; `Developers named incidentally in repo/commit metadata`
+- **Data categories:** `Repository metadata (name, remote URL, head commit)`; `Dependency manifests (package name, version, ecosystem)`; `Committer/owner identifiers only where a manifest or remote exposes them`
+- **Recipients / processors:** `The configured git hosting provider (e.g. self-hosted Gitea, or GitHub/GitLab.com)`
+- **Transfers outside EU:** **Yes**
+- **Retention:** 3650 days (~10y)
+- **Storage:** KEAP DataTables (libsql) on the host — repo / application / package
 - **Security measures:** platform baseline (see above)
 
 #### Alert Relay — `svc_alert-relay`
