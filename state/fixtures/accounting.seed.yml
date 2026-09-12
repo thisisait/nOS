@@ -1,0 +1,24 @@
+# =============================================================================
+# Accounting fixture seed (accounting-knowledge-graph, increment 2).
+#
+# A small CZ chart-of-accounts (synthetic accounts) mapped to the UNIVERSAL
+# reporting skeleton (nos.accounting.*), plus ONE balanced journal entry that
+# nos_accounting.entry_balances validates. Top-to-bottom is dependency order:
+# account → journal-entry → posting (posting rowRefs both). reporting_concept is
+# a taxonomy anchor id (soft link today). No PII: accounts are reference data.
+# The entry has no `source` — the invoice→entry derivation is increment 3.
+# =============================================================================
+account:
+  - { slug: acc-311, code: "311", name: "Odběratelé (pohledávky)", reporting_concept: nos.accounting.asset,     side: debit-normal }
+  - { slug: acc-321, code: "321", name: "Dodavatelé (závazky)",    reporting_concept: nos.accounting.liability, side: credit-normal }
+  - { slug: acc-343, code: "343", name: "DPH (daň na výstupu)",     reporting_concept: nos.accounting.liability, side: credit-normal }
+  - { slug: acc-601, code: "601", name: "Tržby za výrobky",         reporting_concept: nos.accounting.revenue,   side: credit-normal }
+  - { slug: acc-501, code: "501", name: "Spotřeba materiálu",       reporting_concept: nos.accounting.expense,   side: debit-normal }
+
+journal-entry:
+  - { slug: je-demo-001, description: "Vystavená faktura (demo, vyvážená)", date: 1772928000 }
+
+posting:
+  - { slug: post-demo-311, entry: je-demo-001, account: acc-311, direction: debit,  amount: 48400 }
+  - { slug: post-demo-601, entry: je-demo-001, account: acc-601, direction: credit, amount: 40000 }
+  - { slug: post-demo-343, entry: je-demo-001, account: acc-343, direction: credit, amount: 8400 }

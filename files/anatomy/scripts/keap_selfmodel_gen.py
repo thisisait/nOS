@@ -975,6 +975,30 @@ META_DOMAINS: list[tuple[str, str, str, list[tuple[str, str, str]]]] = [
           "payable amount, and both counterparties (seller and buyer) as rowRefs "
           "into the shared party spine. The money axis of the digested estate."),
      ]),
+    ("nos.accounting", "accounting",
+     "The accounting knowledge graph — the chart of accounts as a taxonomy+ontology "
+     "and the ledger that the digested invoices feed. A UNIVERSAL reporting skeleton "
+     "(the five elements below — accounting facts, not any one nation's or vendor's "
+     "scheme) onto which operational accounts (a national osnova + a firm's own "
+     "analytical accounts) map, and to which detailed standards (US-GAAP first, IFRS "
+     "later) are onboarded additively. Reasoning structure, not one firm's books.",
+     [
+         ("nos.accounting.asset", "asset",
+          "Resources the entity controls from which future economic benefit is "
+          "expected — receivables, cash, inventory, equipment. Debit-normal."),
+         ("nos.accounting.liability", "liability",
+          "Present obligations to transfer resources — payables, loans, tax due. "
+          "Credit-normal."),
+         ("nos.accounting.equity", "equity",
+          "The residual interest in the assets after deducting liabilities — capital, "
+          "retained earnings. Credit-normal."),
+         ("nos.accounting.revenue", "revenue",
+          "Increases in economic benefit from ordinary activities — sales, fees. "
+          "Credit-normal."),
+         ("nos.accounting.expense", "expense",
+          "Decreases in economic benefit from ordinary activities — cost of goods, "
+          "wages, depreciation. Debit-normal."),
+     ]),
 ]
 
 

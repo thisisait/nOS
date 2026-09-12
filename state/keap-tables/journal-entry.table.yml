@@ -1,0 +1,23 @@
+# =============================================================================
+# KEAP DataTable — "Journal entries" (accounting knowledge graph).
+#
+# The balancing unit: one entry groups the postings that must sum debit==credit
+# (nos_accounting.entry_balances). `source` optionally rowRefs the invoice that
+# generated it (the digest→ledger tie, increment 3); a manual entry leaves it
+# empty. Postings rowRef this row (restrict).
+# =============================================================================
+title: "Journal entries"
+description: >-
+  Balancing units of the ledger — each groups the postings that must balance
+  (debits == credits). Optionally sourced from an invoice; otherwise a manual
+  entry. The accounting knowledge graph's transaction record.
+driver: libsql
+anchors: ["nos.accounting"]
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,        label: "Slug",        kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: description, label: "Description", kind: text,   role: attribute, concept: identity.description }
+    - { key: date,        label: "Date",        kind: date,   role: attribute, concept: time.occurred_at }
+    - { key: source,      label: "Source invoice", kind: rowRef, role: dimension,
+        refTable: "invoice", refDisplay: "document_number", onDelete: "restrict" }

@@ -2629,6 +2629,11 @@ keap_seed_business_fixture: false
 # does not drag in the label printer; same synthetic-people rule, enforced by
 # tests/anatomy/test_kolben_fixture_declares_the_business.py.
 keap_seed_kolben_fixture: false
+# Accounting fixture (accounting-knowledge-graph): a small CZ chart of accounts
+# mapped to the universal reporting skeleton (nos.accounting.*) + one balanced
+# journal entry (state/fixtures/accounting.seed.yml → account/journal-entry/
+# posting tables). Independent opt-in. Reference data, no PII.
+keap_seed_accounting_fixture: false
 # system regardless of install state) — profiles/all-on.yml sets it true.
 # Optional live embedder for free-text semantic search (stored vectors come
 # from the keap-embed-sync Pulse job regardless). Docker Desktop (Mac):

@@ -655,6 +655,13 @@ nodes:
   "table:application": withheld
   "table:package": withheld
   "table:invoice": withheld
+  # The accounting knowledge graph's ledger tables (accounting-knowledge-graph).
+  # WITHHELD like every table node — a firm's chart of accounts and its books are
+  # theirs, never the public front door. The reporting SKELETON is taxonomy
+  # (nos.accounting.*), not a table, and is governed separately.
+  "table:account": withheld
+  "table:journal-entry": withheld
+  "table:posting": withheld
   "table:roadmap": withheld
   "table:systems": withheld
   "table:wallpapers": withheld

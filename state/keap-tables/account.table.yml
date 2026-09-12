@@ -1,0 +1,32 @@
+# =============================================================================
+# KEAP DataTable — "Accounts" (accounting knowledge graph — the operational COA).
+#
+# The accounts a firm POSTS to: class → group → synthetic (e.g. CZ 311
+# "Odběratelé") → per-firm ANALYTICAL account (311.001 for one customer, party
+# rowRef'd). `parent` is the COA hierarchy (rowRef self, restrict). `reporting_
+# concept` maps the account UP to the universal reporting skeleton (nos.accounting.*)
+# — a text anchor for now; a formal taxonomyRef + a per-standard mapping (US-GAAP,
+# then IFRS) is the increment-4 hardening. `side` is the account's normal balance.
+# Distinct from the reporting TAXONOMY: this is the operational, per-firm ledger.
+# =============================================================================
+title: "Accounts"
+description: >-
+  The operational chart of accounts — the accounts a firm posts to, in a
+  class→group→synthetic→analytical hierarchy, each mapped to a universal
+  reporting concept and (for an analytical account) to a party. The ledger side
+  of the accounting knowledge graph.
+driver: libsql
+anchors: ["nos.accounting"]
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,              label: "Slug",       kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: code,              label: "Code",       kind: text,   role: dimension, required: true }
+    - { key: name,              label: "Name",       kind: text,   role: dimension, required: true, concept: identity.name }
+    - { key: parent,            label: "Parent",     kind: rowRef, role: dimension,
+        refTable: "account", refDisplay: "name", onDelete: "restrict", concept: graph.parent }
+    - { key: reporting_concept, label: "Reports as", kind: text,   role: dimension }
+    - { key: side,              label: "Normal side", kind: select, role: dimension, required: true, concept: class.kind,
+        options: ["debit-normal", "credit-normal"] }
+    - { key: party,             label: "Party",      kind: rowRef, role: dimension,
+        refTable: "party", refDisplay: "legal_name", onDelete: "restrict" }

@@ -106,6 +106,12 @@ CONCEPTLESS = {
     "invoice.buyer": "the counterparty rowRef — graph.parent is claimed once-per-table by seller; needs graph.counterparty (same as kolben-project.client)",
     "invoice.currency": "ISO-4217 code — no currency concept exists — needs class.currency",
     "invoice.payable_amount": "a money total — no money/measure concept exists — needs measure.amount (same as kolben-project.budget)",
+    "account.code": "the ledger code 311 — an identifier, not identity.name — needs identity.code",
+    "account.reporting_concept": "maps the account to a reporting-standard concept (taxonomy anchor) — a soft text link today; upgrade to a taxonomyRef kind + needs class.reporting_concept",
+    "account.party": "the counterparty an analytical account is scoped to — graph.parent is claimed by `parent`; needs graph.counterparty (same as kolben-project.client)",
+    "journal-entry.source": "the invoice that generated the entry — a provenance link, not graph.parent — needs prov.source",
+    "posting.account": "the account this line hits — graph.parent is claimed by `entry`; needs graph.account or graph.counterparty",
+    "posting.amount": "a positive money amount — no money/measure concept exists — needs measure.amount",
 }
 
 

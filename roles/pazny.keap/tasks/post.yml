@@ -178,6 +178,17 @@
     - install_keap | default(false) | bool
     - keap_seed_kolben_fixture | default(false) | bool
 
+# ── Accounting fixture (accounting-knowledge-graph, increment 2) ─────────────
+# A small CZ chart of accounts mapped to the universal reporting skeleton
+# (nos.accounting.*) + one balanced journal entry. Independent opt-in.
+- name: "[pazny.keap] Seed the accounting fixture DataTables"
+  ansible.builtin.include_tasks: seed-bundle.yml
+  vars:
+    _bundle_seed_path: "state/fixtures/accounting.seed.yml"
+  when:
+    - install_keap | default(false) | bool
+    - keap_seed_accounting_fixture | default(false) | bool
+
 # ── Caddy settings + session tables ─────────────────────────────────────────
 # Two tables for the caddy: the committed settings fixture, and
 # an EMPTY session ledger that must exist before the first turn. Gated on

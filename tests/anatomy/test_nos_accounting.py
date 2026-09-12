@@ -45,6 +45,19 @@ def test_a_bad_direction_is_refused():
     assert any("direction" in e for e in errs), errs
 
 
+def test_the_accounting_fixture_is_a_valid_bundle_and_balances():
+    """The increment-2 fixture: a valid trusted bundle (rowRefs resolve in
+    dependency order) whose one journal entry balances under the invariant."""
+    import sys
+    import yaml
+    sys.path.insert(0, str(REPO / "files" / "anatomy" / "module_utils"))
+    import nos_digest
+    seed = yaml.safe_load((REPO / "state" / "fixtures" / "accounting.seed.yml").read_text())
+    assert list(seed.keys()) == ["account", "journal-entry", "posting"]   # dependency order
+    assert nos_digest.check_fixture_seed(seed, REPO / "state" / "keap-tables") == []
+    assert NA.check_entries(seed["posting"]) == []                        # the demo entry balances
+
+
 def test_check_entries_balances_each_entry_and_flags_entryless():
     postings = [{"slug": "a", "entry": "e1", "direction": "debit", "amount": 10},
                 {"slug": "b", "entry": "e1", "direction": "credit", "amount": 9},   # e1 off by 1

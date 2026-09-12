@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 269,
+    "nodes": 272,
     "edges": 289,
     "nodes_pulse": 32,
     "nodes_judge": 5,
@@ -16,7 +16,7 @@
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 55,
-    "nodes_table": 27,
+    "nodes_table": 30,
     "nodes_doctrine": 13,
     "nodes_faceapp": 6,
     "nodes_agent": 14,
@@ -2928,6 +2928,13 @@
         "upstreams": 2
       }
     },
+    "table:account": {
+      "kind": "table",
+      "source": "state/keap-tables/account.table.yml",
+      "title": "Accounts",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Accounts' (state/keap-tables/account.table.yml)"
+    },
     "table:application": {
       "kind": "table",
       "source": "state/keap-tables/application.table.yml",
@@ -2976,6 +2983,13 @@
       "title": "Invoices",
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Invoices' (state/keap-tables/invoice.table.yml)"
+    },
+    "table:journal-entry": {
+      "kind": "table",
+      "source": "state/keap-tables/journal-entry.table.yml",
+      "title": "Journal entries",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Journal entries' (state/keap-tables/journal-entry.table.yml)"
     },
     "table:kolben-engineer": {
       "kind": "table",
@@ -3053,6 +3067,13 @@
       "title": "Party tax identities",
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Party tax identities' (state/keap-tables/party-tax-identity.table.yml)"
+    },
+    "table:posting": {
+      "kind": "table",
+      "source": "state/keap-tables/posting.table.yml",
+      "title": "Postings",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Postings' (state/keap-tables/posting.table.yml)"
     },
     "table:print-job": {
       "kind": "table",
