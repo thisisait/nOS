@@ -122,6 +122,7 @@ worse than none, because it reads as complete.
 - `digest-import-isdoc.py` — Third digest importer (ISDOC e-invoices → invoice facet); seller AND buyer resolved to the party spine (dual resolve, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs.
 - `digest_absorb.py` — Shared absorb for digest importers (strip _prov, ensure output table exists, upsert by slug skipping present). Library, not a CLI.
 - `party-graph.py` — The kmenová-data (master-data) view: walk the live rowRef graph around a party (facets + derived rows) and render it as mermaid; --dump json is the {nodes,edges} a face graph view consumes. Reader only.
+- `keap-semantic-search.py` — Semantic search over the estate's knowledge from the shell: a thin reader over KEAP's hybrid /agent/v1/search/semantic (query embedded + vector_top_k over the libsql embeddings + lexical + graph). Reader only; adds no vectors (no drift). Covers taxonomy/capture/note/object — DataTable rows once KEAP embeds them.
 - `roadmap-apply-columns.py` — Reconcile a NAMED column's shape (kind/options) from the roadmap definition to the live table; per-column, never touches the column set.
 - `roadmap-extract.py` — One-time: live roadmap table → per-row `<slug>.md` files in the PRIVATE seed repo.
 - `roadmap-seed.py` — Seed / --sync the roadmap table from per-row files in the private seed repo (NOS_SEED_DIR).
