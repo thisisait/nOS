@@ -27,25 +27,20 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import pathlib
 import re
-import subprocess
 import sys
 import urllib.error
-import urllib.request
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "files" / "anatomy" / "module_utils"))
-from digest_absorb import absorb  # noqa: E402
-from keap_api import proxy_header  # noqa: E402
+from digest_absorb import absorb, build_party_index  # noqa: E402
 import nos_digest  # noqa: E402
 
 TABLES_DIR = REPO / "state" / "keap-tables"
-AGENT = "http://127.0.0.1:8091/agent/v1/tables"
 
 
 def _slug(*parts: str) -> str:
@@ -183,35 +178,6 @@ class RepoImporter:
         # dependency order: party -> repo -> application -> package
         return {"party": list(parties.values()), "repo": repos,
                 "application": apps, "package": packages}
-
-
-# ── live party index (party-tax-identity ⋈ party) for resolve_party ──────────
-def _ro_token() -> str:
-    tok = os.environ.get("KEAP_AGENT_TOKEN_RO", "").strip()
-    if tok:
-        return tok
-    return subprocess.run(["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RO"],
-                          capture_output=True, text=True).stdout.strip()
-
-
-def _rows(table: str, hdr: dict) -> list[dict]:
-    req = urllib.request.Request(f"{AGENT}/{table}/rows", headers=hdr)
-    with urllib.request.urlopen(req, timeout=15) as r:
-        data = json.loads(r.read() or b"{}")
-    return (data.get("data") or {}).get("rows") or data.get("rows") or []
-
-
-def build_party_index() -> dict:
-    hdr = {"Authorization": f"Bearer {_ro_token()}", **proxy_header()}
-    by_key, by_name = {}, {}
-    for t in _rows("party-tax-identity", hdr):
-        if t.get("scheme") and t.get("value") and t.get("party"):
-            by_key[(t["scheme"], str(t["value"]))] = t["party"]
-    for p in _rows("party", hdr):
-        nm = nos_digest.normalize_org_name(p.get("legal_name") or "")
-        if nm:
-            by_name.setdefault(nm, []).append(p["slug"])
-    return {"by_key": by_key, "by_name": by_name}
 
 
 def main() -> int:

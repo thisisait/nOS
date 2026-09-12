@@ -108,6 +108,9 @@
 - slug: digest-doctrine
   parent: digest
   track: digest
+- slug: digest-review-remediation
+  parent: digest
+  track: platform
 - slug: digest-selfmodel-node
   parent: digest
   track: digest
@@ -261,6 +264,9 @@
 - slug: gdpr-importer-register
   parent: digest
   track: digest
+- slug: importer-isdoc
+  parent: digest
+  track: platform
 - slug: importer-spine
   parent: digest
   track: digest

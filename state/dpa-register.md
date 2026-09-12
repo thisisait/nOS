@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 97 (77 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (91)
+- **Processing activities:** 98 (77 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (92)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 15
 
@@ -1184,6 +1184,17 @@ reasoning.
 - **Transfers outside EU:** No
 - **Retention:** 3650 days (~10y)
 - **Storage:** KEAP DataTables (libsql) on the host — party / party-tax-identity / party-address / party-contact
+- **Security measures:** platform baseline (see above)
+
+#### isdoc — `imp_isdoc`
+- **Purpose:** Ingest an organisation's ISDOC e-invoices into the invoice facet — document number, dates, payable amount, and the seller and buyer as references into the shared party spine — so the estate can answer accounting and cash-flow questions against governed rows. Both counterparties are resolved against the spine, never minted.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `The organisation's invoice counterparties — customers and suppliers`; `Sole traders among them (natural persons acting as businesses)`
+- **Data categories:** `Invoice metadata (document number, issue/due dates, currency, payable amount)`; `Counterparty identity references (IČO of seller and buyer)`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 3650 days (~10y)
+- **Storage:** KEAP DataTables (libsql) on the host — invoice (+ future invoice-line)
 - **Security measures:** platform baseline (see above)
 
 #### repos — `imp_repos`

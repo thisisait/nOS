@@ -224,9 +224,11 @@ def test_importer_register_parity():
 
 @pytest.mark.parametrize("f", sorted(IMPORTERS_DIR.glob("*.importer.yml")), ids=lambda f: f.name)
 def test_importer_egress_is_consistent_with_transfers(f):
-    """VALUE guard (the register-asserted-0-processors-while-egressing-nightly bug):
-    a NON-EMPTY egress must own the transfer — transfers_outside_eu true OR at least
-    one named processor. An empty egress must not claim a transfer outside the EU."""
+    """VALUE guard — manifest SELF-consistency only: a declared non-empty egress
+    must own the transfer (transfers_outside_eu true OR a named processor), and an
+    empty egress must not claim one. It does NOT cross-check the declaration against
+    what the code actually does (a manifest with egress:[] for code that egresses
+    still passes) — that code-vs-manifest audit is Track C (declared-egress, pending)."""
     m = yaml.safe_load(f.read_text())
     g = m.get("gdpr") or {}
     if m.get("egress"):

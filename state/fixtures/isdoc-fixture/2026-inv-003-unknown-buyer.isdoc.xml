@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Buyer ICO 00000199 is NOT in the party spine → resolve_party returns review
+     → the whole invoice is SKIPPED (ISDOC never mints a counterparty). Proves the
+     safe refusal: an unknown party on an invoice does not silently create one. -->
+<Invoice xmlns="http://isdoc.cz/namespace/2013" version="6.0.1">
+  <ID>2026-INV-003</ID>
+  <IssueDate>2026-03-06</IssueDate>
+  <DueDate>2026-03-20</DueDate>
+  <LocalCurrencyCode>CZK</LocalCurrencyCode>
+  <PayableAmount>7900</PayableAmount>
+  <AccountingSupplierParty><Party>
+    <PartyIdentification><ID>00000112</ID></PartyIdentification>
+    <PartyName><Name>Mesto Lipno (synthetic)</Name></PartyName>
+  </Party></AccountingSupplierParty>
+  <AccountingCustomerParty><Party>
+    <PartyIdentification><ID>00000199</ID></PartyIdentification>
+    <PartyName><Name>Neznámý Odběratel (synthetic)</Name></PartyName>
+  </Party></AccountingCustomerParty>
+</Invoice>

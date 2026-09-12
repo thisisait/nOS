@@ -119,6 +119,7 @@ worse than none, because it reads as complete.
 - `digest-teardown.py` — Tear a bundle/fixture's rows down leaf-first (inverse of seed-bundle.yml); referrers-gated so shared rows survive. From-blank reset + agency client-data removal. Dry-run by default.
 - `digest-import.py` — The importer-spine round-trip + first reference importer (CSV counterparties → EN-16931 party spine): parse → normalize → GATE → absorb (upsert by deterministic party-ico slug). Dry by default; --absorb writes.
 - `digest-import-repos.py` — Second digest importer (git repos → repo/application/package chain); owners resolved to the party spine (dedup, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs.
+- `digest-import-isdoc.py` — Third digest importer (ISDOC e-invoices → invoice facet); seller AND buyer resolved to the party spine (dual resolve, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs.
 - `digest_absorb.py` — Shared absorb for digest importers (strip _prov, ensure output table exists, upsert by slug skipping present). Library, not a CLI.
 - `party-graph.py` — The kmenová-data (master-data) view: walk the live rowRef graph around a party (facets + derived rows) and render it as mermaid; --dump json is the {nodes,edges} a face graph view consumes. Reader only.
 - `roadmap-apply-columns.py` — Reconcile a NAMED column's shape (kind/options) from the roadmap definition to the live table; per-column, never touches the column set.

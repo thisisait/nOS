@@ -1,0 +1,34 @@
+# =============================================================================
+# KEAP DataTable — "Invoices" (digest organ output, ISDOC importer).
+#
+# One row per absorbed ISDOC e-invoice HEADER. Both counterparties are rowRefs
+# into the shared party spine — seller AND buyer are the SAME rows a repo owner
+# or a contract references, which is the cross-source dedup a third source
+# proves. `seller` carries graph.parent; `buyer` is the counterparty facet and
+# is conceptless (graph.parent is claimed once per table, same as
+# kolben-project.client / print-order.customer). Lines are a future
+# invoice-line table rowRef'd here (deferred — the header + dual-party resolve
+# is the money axis this slice lands). onDelete: restrict on both — an invoice
+# whose party vanished is a corrupt legal record, not an orphan.
+# =============================================================================
+title: "Invoices"
+description: >-
+  E-invoice headers absorbed from ISDOC by the invoice importer — document
+  number, seller and buyer (both parties in the shared spine), dates and the
+  payable amount. The money axis of the software/services estate; lines are a
+  future sibling table.
+driver: libsql
+anchors: ["nos.digest.invoice"]
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,            label: "Slug",           kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: document_number, label: "Document no.",   kind: text,   role: dimension, required: true, concept: identity.name }
+    - { key: seller,          label: "Seller",         kind: rowRef, role: dimension, required: true,
+        refTable: "party", refDisplay: "legal_name", onDelete: "restrict", concept: graph.parent }
+    - { key: buyer,           label: "Buyer",          kind: rowRef, role: dimension, required: true,
+        refTable: "party", refDisplay: "legal_name", onDelete: "restrict" }
+    - { key: issue_date,      label: "Issued",         kind: date,   role: attribute, concept: time.occurred_at }
+    - { key: due_date,        label: "Due",            kind: date,   role: attribute, concept: time.target }
+    - { key: currency,        label: "Currency",       kind: text,   role: dimension }
+    - { key: payable_amount,  label: "Payable",        kind: number, role: attribute }

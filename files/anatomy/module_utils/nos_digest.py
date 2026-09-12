@@ -232,7 +232,8 @@ def normalize_org_name(name: str) -> str:
 
 def org_slug(ico8: str) -> str:
     """The deterministic org slug — the store backstop. Same IČO → same slug →
-    a re-import PATCHes the row instead of forking it."""
+    a re-import ADDRESSES the same row instead of forking it (it dedups; absorb
+    skips a present slug, so field updates are not propagated yet)."""
     return f"party-ico-{ico8}"
 
 
@@ -314,6 +315,17 @@ def teardown_plan(bundle: dict) -> list[tuple[str, str]]:
     return plan
 
 
+def retained_by_survivors(referrers: list, planned: set) -> list:
+    """teardown-fork-free's load-bearing half: a row is RETAINED when any referrer
+    is NOT itself being removed — a surviving (other-firm) row still needs it, so a
+    firm-scoped teardown never breaks another firm. referrers: [{fromTable, fromRow,
+    ...}] (the KEAP referrers probe); planned: the set of (table, slug) this run is
+    removing. Returns the SURVIVING referrers; non-empty ⇒ retain the row. Pure, so
+    the retention decision — not just teardown_plan's ordering — has a real judge."""
+    return [r for r in referrers
+            if (r.get("fromTable"), r.get("fromRow")) not in planned]
+
+
 # ── erasure: the rowRef-DOWN closure of what importers wrote about a party ────
 # GDPR Art-17 for the digest organ (gdpr-digestion-stage, erasure-party-subject).
 # Given a party, enumerate every row any importer wrote that hangs off it — walk
@@ -331,48 +343,6 @@ def teardown_plan(bundle: dict) -> list[tuple[str, str]]:
 # first) + the referrers-gated executor, so a row another surviving party still
 # shares is retained. Pure over an injected table_reader → offline-testable; the
 # CLI wires table_reader to KEAP.
-def erasure_plan(party_slug: str, table_reader, tables_dir: str | pathlib.Path) -> dict:
-    """Return {table_slug: [rows]} — every row transitively referencing party_slug,
-    in dependency order (parents before children, so teardown_plan reverses it to
-    leaf-first). table_reader(table_slug) -> list[row dict]. The party row itself
-    is excluded."""
-    tables_dir = pathlib.Path(tables_dir)
-    incoming: dict[str, list[tuple[str, str]]] = {}   # refTable -> [(table, column_key)]
-    for p in sorted(tables_dir.glob("*.table.yml")):
-        tdef = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
-        tbl = p.name[: -len(".table.yml")]
-        for col in _rowref_cols(tdef):
-            rt = col.get("refTable")
-            if rt:
-                incoming.setdefault(rt, []).append((tbl, col["key"]))
-
-    result: dict[str, dict] = {}          # table -> {slug: row}, insertion order = dep order
-    queue: list[tuple[str, set]] = [("party", {party_slug})]
-    while queue:
-        ref_table, targets = queue.pop(0)
-        for tbl, col in incoming.get(ref_table, []):
-            matched = [r for r in table_reader(tbl)
-                       if isinstance(r, dict) and r.get(col) in targets and r.get("slug")]
-            if not matched:
-                continue
-            bucket = result.setdefault(tbl, {})
-            fresh = set()
-            for r in matched:
-                if r["slug"] not in bucket:
-                    bucket[r["slug"]] = r
-                    fresh.add(r["slug"])
-            if fresh:
-                queue.append((tbl, fresh))
-    return {t: list(rows.values()) for t, rows in result.items()}
-
-
-# ── party graph: the kmenová-data (master-data) node and everything wired to it ──
-# The visual-control shaper (data-graph-view). Same rowRef-DOWN walk as erasure_plan,
-# but it RECORDS the edges, not just the rows: the party is the centre (kmenová data),
-# every row that references it — its tax/address/contact facets, its repos/projects/
-# invoices and their children — is a node, every rowRef a labelled edge pointing IN.
-# Pure over an injected table_reader → the same {nodes, edges} a host tool renders to
-# mermaid today and a face Svelte-Flow view (rowsToPartyGraph) consumes later.
 _DISPLAY_FIELDS = ("legal_name", "name", "title", "value", "slug")
 
 
@@ -383,12 +353,18 @@ def _row_label(row: dict) -> str:
     return row.get("slug", "?")
 
 
-def party_graph(party_slug: str, table_reader, tables_dir: str | pathlib.Path) -> dict:
-    """Return {'nodes': [{id, table, slug, label}], 'edges': [{from, to, column}]} for
-    the rowRef-DOWN closure around a party. id is '<table>:<slug>'. The party node is
-    the centre; edges point from a referencing row IN to the row it references."""
+def _rowref_closure(party_slug: str, table_reader, tables_dir: str | pathlib.Path):
+    """The ONE rowRef-DOWN walk from a party — erasure_plan and party_graph are both
+    projections of it (one walk, not two). Reads the rowRef edges FROM the table defs
+    (so a future table is covered with no rework) and BFS-collects every row that
+    transitively references the party. Returns (rows_by_table, edges): rows_by_table
+    {table: [rows]} in dependency order (parents before children, so teardown_plan
+    reverses it to leaf-first); edges [{from, to, column}] with ids '<table>:<slug>',
+    each pointing from a referencing row IN to the row it references. The party row
+    itself is never in rows_by_table (it is the walk's root); its id is an edge
+    endpoint. Every edge endpoint is the party root or a row in rows_by_table."""
     tables_dir = pathlib.Path(tables_dir)
-    incoming: dict[str, list[tuple[str, str]]] = {}
+    incoming: dict[str, list[tuple[str, str]]] = {}   # refTable -> [(table, column_key)]
     for p in sorted(tables_dir.glob("*.table.yml")):
         tdef = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
         tbl = p.name[: -len(".table.yml")]
@@ -396,26 +372,9 @@ def party_graph(party_slug: str, table_reader, tables_dir: str | pathlib.Path) -
             if col.get("refTable"):
                 incoming.setdefault(col["refTable"], []).append((tbl, col["key"]))
 
-    nodes: dict[str, dict] = {}
+    rows_by_table: dict[str, dict] = {}   # table -> {slug: row}, insertion order = dep order
     edges: list[dict] = []
-
-    def _node(table: str, row: dict) -> str:
-        nid = f"{table}:{row['slug']}"
-        nodes.setdefault(nid, {"id": nid, "table": table, "slug": row["slug"],
-                               "label": _row_label(row)})
-        return nid
-
-    # the centre: the party row itself (kmenová data)
-    for r in table_reader("party"):
-        if isinstance(r, dict) and r.get("slug") == party_slug:
-            _node("party", r)
-            break
-    else:
-        nodes[f"party:{party_slug}"] = {"id": f"party:{party_slug}", "table": "party",
-                                        "slug": party_slug, "label": party_slug}
-
     queue: list[tuple[str, set]] = [("party", {party_slug})]
-    walked: set[str] = set()
     while queue:
         ref_table, targets = queue.pop(0)
         for tbl, col in incoming.get(ref_table, []):
@@ -423,13 +382,43 @@ def party_graph(party_slug: str, table_reader, tables_dir: str | pathlib.Path) -
             for r in table_reader(tbl):
                 if not (isinstance(r, dict) and r.get(col) in targets and r.get("slug")):
                     continue
-                nid = _node(tbl, r)
-                edges.append({"from": nid, "to": f"{ref_table}:{r[col]}", "column": col})
-                if nid not in walked:
-                    walked.add(nid)
+                edges.append({"from": f"{tbl}:{r['slug']}", "to": f"{ref_table}:{r[col]}",
+                              "column": col})
+                bucket = rows_by_table.setdefault(tbl, {})
+                if r["slug"] not in bucket:
+                    bucket[r["slug"]] = r
                     fresh.add(r["slug"])
             if fresh:
                 queue.append((tbl, fresh))
+    return {t: list(v.values()) for t, v in rows_by_table.items()}, edges
+
+
+def erasure_plan(party_slug: str, table_reader, tables_dir: str | pathlib.Path) -> dict:
+    """{table_slug: [rows]} — every row transitively referencing party_slug, in
+    dependency order (teardown_plan reverses it to leaf-first). The party row itself
+    is excluded. A projection of _rowref_closure (the rows half)."""
+    rows_by_table, _edges = _rowref_closure(party_slug, table_reader, tables_dir)
+    return rows_by_table
+
+
+def party_graph(party_slug: str, table_reader, tables_dir: str | pathlib.Path) -> dict:
+    """{'nodes': [{id, table, slug, label}], 'edges': [{from, to, column}]} for the
+    rowRef closure around a party — the visual-control shaper (data-graph-view /
+    kmenová data). The party node is the centre; edges point from a referencing row
+    IN. A projection of _rowref_closure (rows → labelled nodes + the party root);
+    the same {nodes, edges} a host tool renders to mermaid and a face view consumes."""
+    rows_by_table, edges = _rowref_closure(party_slug, table_reader, tables_dir)
+    label = party_slug
+    for r in table_reader("party"):
+        if isinstance(r, dict) and r.get("slug") == party_slug:
+            label = _row_label(r)
+            break
+    nodes = {f"party:{party_slug}": {"id": f"party:{party_slug}", "table": "party",
+                                     "slug": party_slug, "label": label}}
+    for tbl, rows in rows_by_table.items():
+        for r in rows:
+            nid = f"{tbl}:{r['slug']}"
+            nodes[nid] = {"id": nid, "table": tbl, "slug": r["slug"], "label": _row_label(r)}
     return {"nodes": list(nodes.values()), "edges": edges}
 
 
@@ -460,8 +449,9 @@ def _content_hash(obj) -> str:
 
 def stamp_provenance(deterministic: dict, *, source_id: str, importer_version: str) -> None:
     """Attach _prov{source_id, importer_version, content_hash} to every row, in
-    place. content_hash is per-row so erasure can walk from a source to exactly
-    the derived rows it produced (the erasure-propagation contract)."""
+    place. content_hash is per-row provenance for future audit reconciliation —
+    NOT yet consumed: erasure walks the live rowRef graph (erasure_plan), not
+    _prov. The gate requires it (untrusted-row completeness); it is cheap."""
     for rows in deterministic.values():
         for row in rows:
             if isinstance(row, dict):
@@ -472,8 +462,8 @@ def stamp_provenance(deterministic: dict, *, source_id: str, importer_version: s
 
 def strip_provenance(deterministic: dict) -> dict:
     """The deterministic section with _prov removed from each row — what actually
-    upserts into a DataTable. _prov is absorbed into audit lineage separately;
-    it is never a table column."""
+    upserts into a DataTable. _prov is stripped because it is never a table
+    column; capturing it into an audit-lineage store is not built yet."""
     return {t: [{k: v for k, v in r.items() if k != "_prov"} for r in rows]
             for t, rows in deterministic.items()}
 

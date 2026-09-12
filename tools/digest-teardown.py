@@ -138,7 +138,7 @@ def main() -> int:
         except (urllib.error.URLError, OSError) as exc:
             print(f"REFUSING: KEAP probe unreadable ({exc}) — not deleting blind", file=sys.stderr)
             return 2
-        survivors = [r for r in refs if (r.get("fromTable"), r.get("fromRow")) not in planned]
+        survivors = nos_digest.retained_by_survivors(refs, planned)
         if survivors:
             who = survivors[0]
             print(f"  RETAIN {table}/{row}: referenced by {len(survivors)} surviving row(s) "

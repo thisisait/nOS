@@ -970,6 +970,10 @@ META_DOMAINS: list[tuple[str, str, str, list[tuple[str, str, str]]]] = [
           "Third-party dependencies an application declares (name, version, "
           "ecosystem, direct-or-transitive), rowRef'd to their application. The "
           "supply-surface a security or licence question is asked against."),
+         ("nos.digest.invoice", "invoice",
+          "E-invoice headers absorbed from ISDOC — document number, dates, "
+          "payable amount, and both counterparties (seller and buyer) as rowRefs "
+          "into the shared party spine. The money axis of the digested estate."),
      ]),
 ]
 

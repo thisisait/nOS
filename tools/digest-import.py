@@ -45,8 +45,12 @@ class CsvPartyImporter:
     name = "csv-party"
     version = "0.1.0"
 
-    def __init__(self, source_id: str):
+    def __init__(self, source_id: str, *, fixture_mode: bool = False):
         self.source_id = source_id
+        # fixture_mode mirrors resolve_party: only then is a synthetic-range IČO
+        # (000001xx) usable and the mod-11 checksum bypassed. A real run leaves it
+        # False, so a synthetic or bad-checksum IČO is a data error, not a party.
+        self.fixture_mode = fixture_mode
         self.skipped: list[str] = []
 
     def parse(self, raw: str) -> list[dict]:
@@ -55,11 +59,18 @@ class CsvPartyImporter:
     def normalize(self, records: list[dict]) -> list[dict]:
         out = []
         for r in records:
+            name = (r.get("legal_name") or "?").strip()
             norm = nos_digest.normalize_ico(r.get("ico"))
+            # NEVER echo the raw ico value — a person's CZ-DIČ is rodné číslo
+            # (person-data-redaction); report the length, not the digits.
             if norm is None:
-                # No usable key → not a deterministic party; the review rung
-                # (repos-importer) will handle keyless rows. Skip + report here.
-                self.skipped.append(f"{r.get('legal_name', '?')!r}: no valid IČO ({r.get('ico')!r})")
+                self.skipped.append(f"{name!r}: no valid IČO (len={len(str(r.get('ico') or ''))})")
+                continue
+            if norm["synthetic"] and not self.fixture_mode:
+                self.skipped.append(f"{name!r}: IČO in the reserved synthetic range — a data error outside fixture mode")
+                continue
+            if not self.fixture_mode and not norm["checksum_ok"]:
+                self.skipped.append(f"{name!r}: IČO fails its mod-11 checksum — a data error")
                 continue
             out.append({
                 "ico8": norm["value"],
@@ -92,13 +103,15 @@ def main() -> int:
     ap.add_argument("--source-id", help="provenance source id (default: the file name)")
     ap.add_argument("--absorb", action="store_true", help="upsert into KEAP (default is dry: gate + print)")
     ap.add_argument("--out", help="write the gated bundle YAML here (default stdout, when not absorbing)")
+    ap.add_argument("--fixture-mode", action="store_true",
+                    help="accept synthetic-range IČOs (000001xx) + bypass the checksum — fixture spine only")
     args = ap.parse_args()
 
     path = pathlib.Path(args.csv)
     if not path.is_absolute():
         path = REPO / path
     raw = path.read_text(encoding="utf-8")
-    importer = CsvPartyImporter(args.source_id or path.name)
+    importer = CsvPartyImporter(args.source_id or path.name, fixture_mode=args.fixture_mode)
     bundle, errors = nos_digest.run_importer(importer, raw, TABLES_DIR)
 
     for s in importer.skipped:

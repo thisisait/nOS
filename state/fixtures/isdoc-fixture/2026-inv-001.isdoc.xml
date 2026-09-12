@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic ISDOC fixture (docs/idea/15). Seller + buyer are existing Kolben
+     synthetic parties (ICO 000001xx), so both resolve by_key under fixture_mode. -->
+<Invoice xmlns="http://isdoc.cz/namespace/2013" version="6.0.1">
+  <ID>2026-INV-001</ID>
+  <IssueDate>2026-03-01</IssueDate>
+  <DueDate>2026-03-15</DueDate>
+  <LocalCurrencyCode>CZK</LocalCurrencyCode>
+  <PayableAmount>48400</PayableAmount>
+  <AccountingSupplierParty><Party>
+    <PartyIdentification><ID>00000112</ID></PartyIdentification>
+    <PartyName><Name>Mesto Lipno (synthetic)</Name></PartyName>
+  </Party></AccountingSupplierParty>
+  <AccountingCustomerParty><Party>
+    <PartyIdentification><ID>00000113</ID></PartyIdentification>
+    <PartyName><Name>Petr Svoboda (synthetic)</Name></PartyName>
+  </Party></AccountingCustomerParty>
+</Invoice>

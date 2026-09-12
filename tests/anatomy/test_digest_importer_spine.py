@@ -25,9 +25,23 @@ def _load():
 
 def _bundle():
     nd, mod = _load()
-    imp = mod.CsvPartyImporter("test.csv")
+    imp = mod.CsvPartyImporter("test.csv", fixture_mode=True)   # fixture uses synthetic IČOs
     bundle, errors = nd.run_importer(imp, CSV.read_text(), TABLES)
     return nd, imp, bundle, errors
+
+
+def test_synthetic_ico_is_refused_outside_fixture_mode():
+    """The finding-1 fix: production must NOT accept the reserved synthetic range
+    (that was the 'shape production to the fixture' hole). Without fixture_mode
+    every synthetic-IČO row is skipped, so no party is minted from test data."""
+    nd, mod = _load()
+    imp = mod.CsvPartyImporter("test.csv")          # fixture_mode OFF = production
+    bundle, errors = nd.run_importer(imp, CSV.read_text(), TABLES)
+    assert errors == [], errors
+    assert bundle["deterministic"]["party"] == []   # all synthetic rows refused
+    assert any("synthetic range" in s for s in imp.skipped), imp.skipped
+    # and a rejected value is never echoed verbatim (rodné-číslo redaction)
+    assert not any("00000" in s for s in imp.skipped), imp.skipped
 
 
 def test_gate_passes_and_bundle_is_untrusted_with_prov():

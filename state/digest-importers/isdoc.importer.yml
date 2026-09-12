@@ -1,0 +1,38 @@
+# =============================================================================
+# Digest importer manifest — isdoc (the ISDOC e-invoice importer).
+#
+# Article-30 record + egress declaration for tools/digest-import-isdoc.py, swept
+# by nos_gdpr.records_from_importers (id imp_isdoc). Today it reads *.isdoc.xml
+# off a local directory and writes invoice headers to the loopback KEAP door — no
+# outbound network, so egress is empty. A future ISDS (datová schránka) fetch
+# would ADD an egress + processor here; the manifest is where that lands.
+# =============================================================================
+name: isdoc
+version: "0.1.0"
+source_kind: isdoc-xml
+
+egress: []    # reads local files; loopback-only. ISDS fetch (future) adds egress here.
+
+gdpr:
+  purpose: >-
+    Ingest an organisation's ISDOC e-invoices into the invoice facet — document
+    number, dates, payable amount, and the seller and buyer as references into the
+    shared party spine — so the estate can answer accounting and cash-flow
+    questions against governed rows. Both counterparties are resolved against the
+    spine, never minted.
+  legal_basis: legitimate_interests
+  data_categories:
+    - "Invoice metadata (document number, issue/due dates, currency, payable amount)"
+    - "Counterparty identity references (IČO of seller and buyer)"
+  data_subjects:
+    - "The organisation's invoice counterparties — customers and suppliers"
+    - "Sole traders among them (natural persons acting as businesses)"
+  processors: []
+  transfers_outside_eu: false
+  storage_location: "KEAP DataTables (libsql) on the host — invoice (+ future invoice-line)"
+  retention_days: 3650   # statutory accounting/tax retention horizon (CZ ~10y)
+  notes: >-
+    Reads local ISDOC XML only; no network egress in this slice. An invoice whose
+    seller or buyer does not resolve to a known party is skipped for review — never
+    minted. A sole-trader counterparty is a natural person; its IČO is a business
+    id, not rodné číslo. Erasable via digest-teardown.py --erase-party.

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Reversed parties: svoboda invoices mesto — proves the dual resolve both ways
+     and that two invoices reuse the SAME party rows (cross-source dedup). -->
+<Invoice xmlns="http://isdoc.cz/namespace/2013" version="6.0.1">
+  <ID>2026-INV-002</ID>
+  <IssueDate>2026-03-04</IssueDate>
+  <DueDate>2026-03-18</DueDate>
+  <LocalCurrencyCode>CZK</LocalCurrencyCode>
+  <PayableAmount>12100</PayableAmount>
+  <AccountingSupplierParty><Party>
+    <PartyIdentification><ID>00000113</ID></PartyIdentification>
+    <PartyName><Name>Petr Svoboda (synthetic)</Name></PartyName>
+  </Party></AccountingSupplierParty>
+  <AccountingCustomerParty><Party>
+    <PartyIdentification><ID>00000112</ID></PartyIdentification>
+    <PartyName><Name>Mesto Lipno (synthetic)</Name></PartyName>
+  </Party></AccountingCustomerParty>
+</Invoice>

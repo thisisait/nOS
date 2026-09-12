@@ -103,6 +103,9 @@ CONCEPTLESS = {
     "application.archetype": "the manifest kind that spawned the app (npm/pypi/go) is not class.kind of the app itself — needs class.archetype",
     "package.version": "a dependency version string is not identity.name — needs identity.version",
     "package.is_direct": "direct-vs-transitive is a property of the edge to the app, not a class.kind of the package — needs graph.edge_kind",
+    "invoice.buyer": "the counterparty rowRef — graph.parent is claimed once-per-table by seller; needs graph.counterparty (same as kolben-project.client)",
+    "invoice.currency": "ISO-4217 code — no currency concept exists — needs class.currency",
+    "invoice.payable_amount": "a money total — no money/measure concept exists — needs measure.amount (same as kolben-project.budget)",
 }
 
 
@@ -243,6 +246,8 @@ UNSEEDED = {
                    "the repos importer, not seeded. Same split as repo.",
     "package": "digest output — rows are dependencies parsed from a manifest by the "
                "repos importer, not seeded. Same split as repo.",
+    "invoice": "digest output — rows are e-invoice headers absorbed from ISDOC by the "
+               "invoice importer (digest-import-isdoc.py), not seeded. Same split as repo.",
     "loop-config": "the one row (harness_proposals_enabled) has NO READER — "
                    "ledger.py refuses `harness` unconditionally. Seeding it puts "
                    "a flippable switch in front of the operator that changes "

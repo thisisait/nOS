@@ -38,19 +38,52 @@ def rw_token() -> str:
                           capture_output=True, text=True).stdout.strip()
 
 
-def _existing_slugs(table: str, hdr: dict) -> set:
+def ro_token() -> str:
+    tok = os.environ.get("KEAP_AGENT_TOKEN_RO", "").strip()
+    if tok:
+        return tok
+    return subprocess.run(["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RO"],
+                          capture_output=True, text=True).stdout.strip()
+
+
+def _rows_from_envelope(data: dict) -> list:
+    """Rows out of a KEAP list response. They nest under `data` ({success, data:{
+    rows:[...]}}); reading top-level `rows` on that shape returns [] and made absorb
+    re-post every existing row as a false "wrote". Reads either shape. Pure → tested."""
+    return (data.get("data") or {}).get("rows") or data.get("rows") or []
+
+
+def read_rows(table: str, hdr: dict | None = None) -> list:
+    """Every row of a table (RO). 404 → [] (a table this estate lacks is silent)."""
+    hdr = hdr or {"Authorization": f"Bearer {ro_token()}", **proxy_header()}
     req = urllib.request.Request(f"{AGENT}/{table}/rows", headers=hdr)
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
-            data = json.loads(r.read() or b"{}")
-        # rows nest under `data` ({success, data:{rows:[...]}}); reading top-level
-        # `rows` returns empty and re-posts every existing row (a false "wrote").
-        rows = (data.get("data") or {}).get("rows") or data.get("rows") or []
-        return {row.get("slug") for row in rows}
+            return _rows_from_envelope(json.loads(r.read() or b"{}"))
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            return set()
+            return []
         raise
+
+
+def build_party_index() -> dict:
+    """{by_key: {(scheme, value): party_slug}, by_name: {normname: [slug]}} for
+    resolve_party — party-tax-identity ⋈ party over the live spine. Shared by
+    every importer that resolves counterparties (repos, isdoc, …)."""
+    hdr = {"Authorization": f"Bearer {ro_token()}", **proxy_header()}
+    by_key, by_name = {}, {}
+    for t in read_rows("party-tax-identity", hdr):
+        if t.get("scheme") and t.get("value") and t.get("party"):
+            by_key[(t["scheme"], str(t["value"]))] = t["party"]
+    for p in read_rows("party", hdr):
+        nm = nos_digest.normalize_org_name(p.get("legal_name") or "")
+        if nm:
+            by_name.setdefault(nm, []).append(p["slug"])
+    return {"by_key": by_key, "by_name": by_name}
+
+
+def _existing_slugs(table: str, hdr: dict) -> set:
+    return {row.get("slug") for row in read_rows(table, hdr)}
 
 
 def ensure_table(table: str, hdr: dict) -> None:

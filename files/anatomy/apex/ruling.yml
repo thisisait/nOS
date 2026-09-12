@@ -654,6 +654,7 @@ nodes:
   "table:repo": withheld
   "table:application": withheld
   "table:package": withheld
+  "table:invoice": withheld
   "table:roadmap": withheld
   "table:systems": withheld
   "table:wallpapers": withheld

@@ -27,7 +27,9 @@ digest-import.py clients.csv --absorb   # upsert into KEAP
 ```
 
 Identity is deterministic: the slug is derived from the IČO (`party-ico-<8>`), so
-re-importing the same file **patches** the same rows instead of duplicating them.
+re-importing the same file **addresses the same rows** instead of duplicating them
+(it dedups — a row already present is left as-is; field updates are not propagated
+back yet).
 
 ## Repositories (git)
 
@@ -40,10 +42,13 @@ digest-import-repos.py /path/to/repos             # gate + print
 digest-import-repos.py /path/to/repos --absorb    # upsert into KEAP
 ```
 
-Each repo is a subdirectory; the importer reads its dependency manifests
-(`package.json`, `requirements.txt`, `go.mod`) and its git remote/head. An owner
-it cannot resolve to a known party is **skipped for review** — the importer never
-invents a counterparty.
+Each repo is a subdirectory carrying a small `nos-repo.yml` sidecar (its owner IČO,
+remote and head commit) plus its dependency manifests (`package.json`,
+`requirements.txt`, `go.mod`). The sidecar is needed today because a repo's OWNER
+IČO cannot be read from git — reading remote/head straight from `git -C` is a
+planned convenience, but the owner→party mapping stays explicit. An owner it cannot
+resolve to a known party is **skipped for review** — the importer never invents a
+counterparty.
 
 ## Undo (test freely)
 

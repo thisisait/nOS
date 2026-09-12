@@ -46,8 +46,9 @@ invariants:
   - id: deterministic-identity
     rule: >-
       An org's slug derives deterministically from its IČO (party-ico-<8digit>),
-      never a content hash — so a re-import PATCHes the same row instead of
-      forking it. The store's slug-as-row-id upsert is the backstop.
+      never a content hash — so a re-import ADDRESSES the same row instead of
+      forking it (it dedups; field updates are not propagated yet — absorb skips
+      a present slug). The store's slug-as-row-id is the backstop.
     judge: files/anatomy/module_utils/nos_digest.py::org_slug
     gate: tests/anatomy/test_nos_digest_party_resolver.py
     status: enforced
@@ -61,11 +62,11 @@ invariants:
     gate: tests/anatomy/test_nos_digest_party_resolver.py
     status: enforced
 
-  - id: person-data-redaction
+  - id: person-never-auto-resolved
     rule: >-
-      A person is never resolved by key or by name (a name is not identifying),
-      and a person's CZ-DIČ is rodné číslo — redacted at normalize, never a match
-      key, never stored. Persons always route to review.
+      A person is never resolved by key or by name (a name is not identifying,
+      and a person's CZ-DIČ is rodné číslo — never a match key). A person
+      reference always routes to review, never auto-resolves or auto-mints.
     judge: files/anatomy/module_utils/nos_digest.py::resolve_party
     gate: tests/anatomy/test_nos_digest_party_resolver.py
     status: enforced
@@ -83,11 +84,22 @@ invariants:
       Removing a firm's data deletes leaf-first and RETAINS any row a surviving
       (other-firm) row still references — a firm-scoped teardown of the shared
       party spine never breaks another firm and never orphans a rowRef.
-    judge: files/anatomy/module_utils/nos_digest.py::teardown_plan
-    gate: tests/anatomy/test_nos_digest_bundle_check.py
+    judge: files/anatomy/module_utils/nos_digest.py::retained_by_survivors
+    gate: tests/anatomy/test_nos_digest_erasure.py
     status: enforced
 
   # ── pending: the rule stands, but its judge is not built yet (honest) ──────
+  - id: person-data-redaction
+    rule: >-
+      A person's identifying value (CZ-DIČ = rodné číslo) is redacted at
+      normalize and never stored — never kept as a column, never echoed to a
+      log. (Today only person-never-auto-resolved is enforced; the redaction
+      itself is not built — a rejected value must not reach a log verbatim.)
+    judge: ""
+    gate: ""
+    status: pending
+    builds_with: erasure-party-subject
+
   - id: raw-never-touches-knowledge
     rule: >-
       Raw source bytes never reach the knowledge system directly. The path is

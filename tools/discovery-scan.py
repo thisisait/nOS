@@ -72,7 +72,9 @@ HOST_WRITTEN = [
     "docs/llm/security/scan-state.json",
 ]
 
-TABLE = "2d498264-bc9a-4324-9935-489e5e4d92f3"
+# Same default as roadmap-seed.py; both obey NOS_ROADMAP_TABLE_ID so they address
+# ONE table at runtime, not just by shared default (the graph write-edge gate).
+TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
 KEAP = "http://127.0.0.1:8091"
 BASE = f"{KEAP}/api/tables/{TABLE}"
 from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
