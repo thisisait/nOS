@@ -39,6 +39,11 @@ description: >-
 driver: libsql
 visibility: tier-managers
 anchors: ["nos.fixture.party"]
+# Row projection (keap v1.47.0): each party materializes as a knowledge_object
+# → keap-embed-sync embeds it → semantic search / dedupe over the party spine.
+graph:
+  mode: rows
+  node: { idColumn: slug, labelColumn: legal_name, kind: party }
 
 schema:
   columns:

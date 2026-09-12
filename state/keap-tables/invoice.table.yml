@@ -20,6 +20,13 @@ description: >-
 driver: libsql
 anchors: ["nos.digest.invoice"]
 visibility: tier-managers
+# Row projection (keap v1.47.0): each invoice materializes as a knowledge_object
+# → the existing keap-embed-sync embeds it → semantic search over invoice rows.
+# For "find an invoice" prefer hybrid /search/semantic (lexical leg handles doc
+# numbers); tables/:slug/search is a precision resolver (calibration finding).
+graph:
+  mode: rows
+  node: { idColumn: slug, labelColumn: document_number, kind: invoice }
 schema:
   columns:
     - { key: slug,            label: "Slug",           kind: text,   role: dimension, required: true, concept: identity.slug }

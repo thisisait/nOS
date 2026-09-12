@@ -107,6 +107,8 @@ def ensure_table(table: str, hdr: dict) -> None:
         body["sharedWith"] = d["sharedWith"]
     if d.get("view") is not None:
         body["view"] = d["view"]
+    if d.get("graph") is not None:      # row projection (keap v1.47.0) — same forward law as view
+        body["graph"] = d["graph"]
     req = urllib.request.Request(AGENT, method="POST",
                                  headers={**hdr, "content-type": "application/json"},
                                  data=json.dumps(body).encode("utf-8"))
