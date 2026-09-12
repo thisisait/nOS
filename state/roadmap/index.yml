@@ -399,6 +399,9 @@
 - slug: loop-verdict-vacuity
   parent: ''
   track: agents
+- slug: moderation-drain-loop
+  parent: ''
+  track: cortex
 - slug: notify-body-is-prompt
   parent: ''
   track: platform
