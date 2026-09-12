@@ -56,6 +56,8 @@ def test_amount_and_dates_parsed_and_prov_stamped():
     nd, _imp, bundle, _ = _bundle()
     inv1 = next(i for i in bundle["deterministic"]["invoice"] if i["document_number"] == "2026-INV-001")
     assert inv1["payable_amount"] == 48400.0 and inv1["currency"] == "CZK"
+    assert inv1["net_amount"] == 40000.0 and inv1["vat_amount"] == 8400.0   # TaxTotal breakdown
+    assert round(inv1["net_amount"] + inv1["vat_amount"], 2) == inv1["payable_amount"]
     assert isinstance(inv1["issue_date"], int) and isinstance(inv1["due_date"], int)  # ISO → epoch
     for rows in bundle["deterministic"].values():
         for r in rows:

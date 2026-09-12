@@ -144,9 +144,15 @@ def check_bundle(bundle: dict, tables_dir: str | pathlib.Path) -> list[str]:
                         errors.append(f"{table}/{slug}.{key}: required rowRef is empty")
                     continue
                 if ref_table not in order_idx:
-                    errors.append(
-                        f"{table}/{slug}.{key}: rowRef target table {ref_table!r} "
-                        "is not seeded in this bundle")
+                    # EXTERNAL reference — the target table is not in this bundle, so
+                    # the row it names is a PRE-EXISTING KEAP row (e.g. a derivation
+                    # bundle's posting → an already-seeded account, or entry → invoice).
+                    # KEAP validates refTable at create, so a dangling external ref
+                    # 400s loudly at absorb — not silent. We only own ORDER *within*
+                    # the bundle (the dependency-order rule); an external ref is not
+                    # "seeded later". (A self-contained bundle still catches its own
+                    # missing/forward refs below, because it includes its own tables.)
+                    continue
                 elif order_idx[ref_table] > order_idx[table]:
                     errors.append(
                         f"{table}/{slug}.{key}: FORWARD reference to {ref_table!r} "

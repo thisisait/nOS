@@ -8,6 +8,7 @@
   <DueDate>2026-03-20</DueDate>
   <LocalCurrencyCode>CZK</LocalCurrencyCode>
   <PayableAmount>7900</PayableAmount>
+  <TaxTotal><TaxSubTotal><TaxableAmount>6600</TaxableAmount><TaxAmount>1300</TaxAmount></TaxSubTotal></TaxTotal>
   <AccountingSupplierParty><Party>
     <PartyIdentification><ID>00000112</ID></PartyIdentification>
     <PartyName><Name>Mesto Lipno (synthetic)</Name></PartyName>

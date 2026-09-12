@@ -74,6 +74,21 @@ def test_unknown_top_level_key_is_flagged():
     assert any("bogus" in e for e in errs), errs
 
 
+def test_external_rowref_is_allowed_but_in_bundle_forward_still_caught():
+    """A rowRef to a table NOT in the bundle is an EXTERNAL (pre-existing KEAP)
+    reference — allowed (KEAP validates at absorb), so a derivation bundle can
+    reference an already-seeded account/invoice without re-emitting stubs. But a
+    FORWARD ref within the bundle must still fail — the external path must not
+    mask it."""
+    ext = {"meta": {"trusted": True}, "deterministic": {
+        "posting": [{"slug": "p1", "entry": "je-x", "account": "acc-311", "direction": "debit", "amount": 5}]}}
+    assert ND.check_bundle(ext, TABLES) == [], ND.check_bundle(ext, TABLES)   # both refs external → ok
+    fwd = {"meta": {"trusted": True}, "deterministic": {
+        "posting": [{"slug": "p1", "entry": "je-1", "account": "acc-311", "direction": "debit", "amount": 5}],
+        "journal-entry": [{"slug": "je-1"}]}}                                  # journal-entry AFTER posting
+    assert any("FORWARD" in e for e in ND.check_bundle(fwd, TABLES)), ND.check_bundle(fwd, TABLES)
+
+
 def test_captures_or_proposals_are_refused_until_inspectable():
     # The broken state the fail-closed guard closes: a bundle carrying an
     # unread section must NOT pass green (estate #1 anti-pattern). A bundle with

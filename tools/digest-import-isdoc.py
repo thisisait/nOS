@@ -104,6 +104,10 @@ class IsdocImporter:
                 "due": _localtext(doc, "DueDate"),
                 "currency": _localtext(doc, "LocalCurrencyCode"),
                 "payable": _localtext(doc, "PayableAmount"),
+                # TaxTotal breakdown → net + VAT (single-rate fixture; a multi-rate
+                # invoice would sum across TaxSubTotals — a later refinement).
+                "net": _localtext(doc, "TaxableAmount"),
+                "vat": _localtext(doc, "TaxAmount"),
                 "seller": _party(_local(doc, "AccountingSupplierParty")),
                 "buyer": _party(_local(doc, "AccountingCustomerParty")),
             })
@@ -145,11 +149,12 @@ class IsdocImporter:
                 row["issue_date"] = _epoch(r["issue"])
             if r["due"] and _epoch(r["due"]) is not None:
                 row["due_date"] = _epoch(r["due"])
-            if r["payable"]:
-                try:
-                    row["payable_amount"] = float(r["payable"])
-                except ValueError:
-                    pass
+            for src, col in (("payable", "payable_amount"), ("net", "net_amount"), ("vat", "vat_amount")):
+                if r.get(src):
+                    try:
+                        row[col] = float(r[src])
+                    except ValueError:
+                        pass
             invoices.append(row)
         return {"party": list(parties.values()), "invoice": invoices}
 

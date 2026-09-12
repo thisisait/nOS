@@ -7,6 +7,7 @@
   <DueDate>2026-03-18</DueDate>
   <LocalCurrencyCode>CZK</LocalCurrencyCode>
   <PayableAmount>12100</PayableAmount>
+  <TaxTotal><TaxSubTotal><TaxableAmount>10000</TaxableAmount><TaxAmount>2100</TaxAmount></TaxSubTotal></TaxTotal>
   <AccountingSupplierParty><Party>
     <PartyIdentification><ID>00000113</ID></PartyIdentification>
     <PartyName><Name>Petr Svoboda (synthetic)</Name></PartyName>

@@ -32,3 +32,5 @@ schema:
     - { key: due_date,        label: "Due",            kind: date,   role: attribute, concept: time.target }
     - { key: currency,        label: "Currency",       kind: text,   role: dimension }
     - { key: payable_amount,  label: "Payable",        kind: number, role: attribute }
+    - { key: net_amount,      label: "Net (ex-VAT)",   kind: number, role: attribute }
+    - { key: vat_amount,      label: "VAT",            kind: number, role: attribute }
