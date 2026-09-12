@@ -282,6 +282,9 @@
 - slug: keap-embed-queue-lost-row
   parent: ''
   track: cortex
+- slug: keap-row-vector-search
+  parent: digest
+  track: cortex
 - slug: kpro
   parent: ''
   track: cortex
