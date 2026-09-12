@@ -45,6 +45,31 @@ def test_a_bad_direction_is_refused():
     assert any("direction" in e for e in errs), errs
 
 
+ACCOUNTS = {"311": "acc-311", "601": "acc-601", "343": "acc-343",
+            "321": "acc-321", "501": "acc-501"}
+INVOICE = {"slug": "invoice-x", "document_number": "INV-1",
+           "seller": "party-A", "buyer": "party-B", "net_amount": 40000, "vat_amount": 8400}
+
+
+def test_derive_entry_issued_invoice_from_the_sellers_books():
+    e = NA.derive_entry(INVOICE, "party-A", ACCOUNTS)          # own = seller
+    legs = {(p["account"], p["direction"]): p["amount"] for p in e["postings"]}
+    assert legs == {("acc-311", "debit"): 48400, ("acc-601", "credit"): 40000, ("acc-343", "credit"): 8400}
+    assert NA.entry_balances(e["postings"]) == []              # balanced by construction
+    assert e["entry"]["source"] == "invoice-x"                 # the digest→ledger tie
+
+
+def test_derive_entry_received_invoice_from_the_buyers_books():
+    e = NA.derive_entry(INVOICE, "party-B", ACCOUNTS)          # own = buyer
+    legs = {(p["account"], p["direction"]): p["amount"] for p in e["postings"]}
+    assert legs == {("acc-501", "debit"): 40000, ("acc-343", "debit"): 8400, ("acc-321", "credit"): 48400}
+    assert NA.entry_balances(e["postings"]) == []
+
+
+def test_derive_entry_returns_none_when_not_our_book():
+    assert NA.derive_entry(INVOICE, "party-C", ACCOUNTS) is None   # neither seller nor buyer
+
+
 def test_the_accounting_fixture_is_a_valid_bundle_and_balances():
     """The increment-2 fixture: a valid trusted bundle (rowRefs resolve in
     dependency order) whose one journal entry balances under the invariant."""

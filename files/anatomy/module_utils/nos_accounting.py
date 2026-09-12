@@ -65,6 +65,41 @@ def check_entries(postings: list) -> list[str]:
     return errors
 
 
+def derive_entry(invoice: dict, own_party: str, accounts_by_code: dict) -> dict | None:
+    """Derive ONE balanced journal entry from an invoice, from own_party's books
+    (single-entity: a firm keeps ONE ledger, so the posting depends on whether
+    own_party is the seller or the buyer of this invoice).
+
+    invoice: {slug, seller, buyer, net_amount, vat_amount}.  accounts_by_code:
+    {'311':slug, '601':slug, '343':slug, '321':slug, '501':slug} (KEAP account rows).
+    - own_party is the SELLER → issued invoice: DR 311 gross · CR 601 net · CR 343 vat.
+    - own_party is the BUYER  → received invoice: DR 501 net · DR 343 vat · CR 321 gross.
+    - own_party is neither    → None (not our book).
+    Returns {'entry': row, 'postings': [rows]}, balanced by construction. Amounts are
+    positive; the side is `direction`.  # ponytail: uses the synthetic account (311),
+    not the analytical 311.<party> — analytical accounts are a later refinement.
+    """
+    net = float(invoice.get("net_amount") or 0)
+    vat = float(invoice.get("vat_amount") or 0)
+    gross = round(net + vat, 2)
+    if own_party == invoice.get("seller"):
+        legs = [("311", "debit", gross), ("601", "credit", net), ("343", "credit", vat)]
+    elif own_party == invoice.get("buyer"):
+        legs = [("501", "debit", net), ("343", "debit", vat), ("321", "credit", gross)]
+    else:
+        return None
+    missing = [c for c, _, _ in legs if c not in accounts_by_code]
+    if missing:
+        raise KeyError(f"accounts_by_code missing code(s) {missing} for invoice {invoice.get('slug')}")
+    entry_slug = f"je-{invoice.get('slug')}"
+    postings = [{"slug": f"post-{entry_slug}-{code}", "entry": entry_slug,
+                 "account": accounts_by_code[code], "direction": direction, "amount": amount}
+                for code, direction, amount in legs if amount]   # drop a zero-VAT leg
+    return {"entry": {"slug": entry_slug, "description": f"Auto z faktury {invoice.get('document_number', invoice.get('slug'))}",
+                      "source": invoice.get("slug")},
+            "postings": postings}
+
+
 if __name__ == "__main__":
     balanced = [{"slug": "p1", "direction": "debit", "amount": 48400},
                 {"slug": "p2", "direction": "credit", "amount": 40000},
