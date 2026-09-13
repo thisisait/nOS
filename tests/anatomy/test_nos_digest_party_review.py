@@ -6,6 +6,7 @@ review cannot mint a normal-visibility party. Device identifiers still mint none
 (owner scheme B).
 """
 import importlib.util
+import inspect
 import pathlib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -101,3 +102,61 @@ def test_review_bundle_is_gated_deterministic_not_capture():
     assert party["party_kind"] == "person"
     assert party["slug"].startswith("party-review-")
     assert "party-tax-identity" not in det or not det["party-tax-identity"]
+
+
+
+def test_run_importer_compose_path_calls_compose_party_review():
+    """The pin: review rows are composed at the harness, not copied per CLI."""
+    src = inspect.getsource(ND.run_importer)
+    assert "compose_party_review" in src, src
+    tools = REPO / "tools"
+    for name in ("digest-import.py", "digest-import-isdoc.py", "digest-import-repos.py"):
+        body = (tools / name).read_text(encoding="utf-8")
+        assert "compose_party_review" not in body, name
+
+
+class _HarnessImporter:
+    name = "harness-probe"
+    version = "0"
+    source_id = "probe-batch"
+
+    def __init__(self, reviews):
+        self.party_reviews = reviews
+
+    def parse(self, raw):
+        return []
+
+    def normalize(self, records):
+        return records
+
+    def compose(self, records):
+        return {"party": [{"slug": "party-ico-" + VALID_ICO, "legal_name": "Hit Org",
+                           "party_kind": "org", "country": "CZ"}]}
+
+
+def test_run_importer_review_rows_are_system_hits_stay_normal():
+    reviews = [
+        _item({"kind": "person", "name": "Petr Svoboda", "country": "CZ"}),
+        _item({"kind": "org", "name": "ACME"},
+              index={"by_key": {}, "by_name": {"acme": ["p1", "p2"]}}),
+    ]
+    imp = _HarnessImporter(reviews)
+    bundle, errors = ND.run_importer(imp, "", TABLES)
+    assert errors == [], errors
+    parties = {p["slug"]: p for p in bundle["deterministic"]["party"]}
+    assert parties["party-ico-" + VALID_ICO].get("__visibility") != "system"
+    review_rows = [p for p in parties.values() if p.get("__visibility") == "system"]
+    assert len(review_rows) == 2
+    assert all("review-batch:probe-batch" in (p.get("notes") or "") for p in review_rows)
+
+
+def test_run_importer_device_ids_still_mint_no_party():
+    reviews = [
+        _item({"kind": "person", "name": "Pazny", "udid": "00008020-001A246E0A88002E"}),
+        _item({"kind": "org", "legal_name": "party-device-deadbeef", "ico": VALID_ICO}),
+    ]
+    imp = _HarnessImporter(reviews)
+    imp.compose = lambda records: {}
+    bundle, errors = ND.run_importer(imp, "", TABLES)
+    assert errors == [], errors
+    assert not bundle["deterministic"].get("party")

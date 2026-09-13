@@ -627,6 +627,57 @@ def strip_provenance(deterministic: dict) -> dict:
             for t, rows in deterministic.items()}
 
 
+def note_party_resolve(importer, ref: dict, party_index: dict, **kw) -> dict:
+    """resolve_party and stash review/ambiguous outcomes for the harness rung.
+
+    Importers call this instead of resolve_party so run_importer can compose
+    proposed spine rows once — not a copy of compose_party_review in each CLI.
+    """
+    result = resolve_party(ref, party_index, **kw)
+    if result.get("status") == "review":
+        sink = getattr(importer, "party_reviews", None)
+        if sink is None:
+            importer.party_reviews = []
+            sink = importer.party_reviews
+        sink.append({"ref": ref, "result": result})
+    return result
+
+
+def _party_review_items(importer, records) -> list:
+    items = list(getattr(importer, "party_reviews", None) or [])
+    for rec in records or []:
+        if not isinstance(rec, dict):
+            continue
+        if "ref" in rec and "result" in rec:
+            items.append({"ref": rec["ref"], "result": rec["result"]})
+    return items
+
+
+def _merge_party_review(deterministic: dict, extra: dict) -> None:
+    """Fold review-rung tables into compose output; party stays first."""
+    if not extra:
+        return
+    parties = list(deterministic.get("party") or [])
+    taxes = list(deterministic.get("party-tax-identity") or [])
+    seen_p = {r.get("slug") for r in parties}
+    seen_t = {r.get("slug") for r in taxes}
+    for r in extra.get("party") or []:
+        if r.get("slug") not in seen_p:
+            parties.append(r)
+            seen_p.add(r.get("slug"))
+    for r in extra.get("party-tax-identity") or []:
+        if r.get("slug") not in seen_t:
+            taxes.append(r)
+            seen_t.add(r.get("slug"))
+    rest = {k: v for k, v in deterministic.items() if k not in ("party", "party-tax-identity")}
+    deterministic.clear()
+    if parties:
+        deterministic["party"] = parties
+    if taxes:
+        deterministic["party-tax-identity"] = taxes
+    deterministic.update(rest)
+
+
 def run_importer(importer, raw, tables_dir: str | pathlib.Path) -> tuple[dict, list[str]]:
     """Run an importer's three stages, stamp provenance, and GATE. Returns
     (bundle, errors); a non-empty errors list means the bundle is unsafe to
@@ -635,6 +686,13 @@ def run_importer(importer, raw, tables_dir: str | pathlib.Path) -> tuple[dict, l
     records = importer.parse(raw)
     records = importer.normalize(records)
     deterministic = importer.compose(records)
+    _merge_party_review(
+        deterministic,
+        compose_party_review(
+            _party_review_items(importer, records),
+            batch_id=getattr(importer, "source_id", None) or importer.name,
+        ),
+    )
     raw_bytes = raw if isinstance(raw, (bytes, bytearray)) else str(raw).encode("utf-8")
     bundle = {
         "meta": {

@@ -38,8 +38,12 @@ def test_synthetic_ico_is_refused_outside_fixture_mode():
     imp = mod.CsvPartyImporter("test.csv")          # fixture_mode OFF = production
     bundle, errors = nd.run_importer(imp, CSV.read_text(), TABLES)
     assert errors == [], errors
-    assert bundle["deterministic"]["party"] == []   # all synthetic rows refused
+    parties = bundle["deterministic"].get("party") or []
+    assert not any((p.get("slug") or "").startswith("party-ico-") for p in parties)
     assert any("synthetic range" in s for s in imp.skipped), imp.skipped
+    # keyless name has no IČO → review rung, not a minted org
+    review = [p for p in parties if p.get("__visibility") == "system"]
+    assert len(review) == 1 and "Keyless" in (review[0].get("legal_name") or "")
     # and a rejected value is never echoed verbatim (rodné-číslo redaction)
     assert not any("00000" in s for s in imp.skipped), imp.skipped
 
@@ -57,8 +61,11 @@ def test_repeated_ico_dedups_to_one_deterministic_party():
     _nd, imp, bundle, _ = _bundle()
     parties = bundle["deterministic"]["party"]
     slugs = [p["slug"] for p in parties]
-    assert slugs == ["party-ico-00000120", "party-ico-00000121", "party-ico-00000122"], slugs
-    assert len(slugs) == len(set(slugs))          # the doubled IČO collapsed
+    ico = ["party-ico-00000120", "party-ico-00000121", "party-ico-00000122"]
+    assert slugs[:3] == ico, slugs
+    assert len(set(slugs)) == len(slugs)
+    review = [p for p in parties if p.get("__visibility") == "system"]
+    assert len(review) == 1 and review[0]["slug"].startswith("party-review-")
     assert imp.skipped and "Keyless" in imp.skipped[0]   # keyless row refused, reported
 
 

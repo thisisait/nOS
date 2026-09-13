@@ -36,7 +36,10 @@ def _bundle():
 def test_gate_passes_and_bundle_is_party_then_invoice():
     _nd, _imp, bundle, errors = _bundle()
     assert errors == [], errors
-    assert list(bundle["deterministic"].keys()) == ["party", "invoice"]
+    assert list(bundle["deterministic"].keys())[:1] == ["party"]
+    assert "invoice" in bundle["deterministic"]
+    keys = list(bundle["deterministic"].keys())
+    assert keys.index("party") < keys.index("invoice")
 
 
 def test_dual_resolve_and_unknown_buyer_is_skipped():
@@ -47,8 +50,12 @@ def test_dual_resolve_and_unknown_buyer_is_skipped():
         assert i["seller"] in ("synthetic-mesto-lipno", "synthetic-svoboda-petr")
         assert i["buyer"] in ("synthetic-mesto-lipno", "synthetic-svoboda-petr")
         assert i["seller"] != i["buyer"]
-    parties = {p["slug"] for p in bundle["deterministic"]["party"]}
-    assert parties == {"synthetic-mesto-lipno", "synthetic-svoboda-petr"}   # deduped, not 4
+    parties = {p["slug"]: p for p in bundle["deterministic"]["party"]}
+    assert {"synthetic-mesto-lipno", "synthetic-svoboda-petr"} <= set(parties)
+    hits = [parties["synthetic-mesto-lipno"], parties["synthetic-svoboda-petr"]]
+    assert all(p.get("__visibility") != "system" for p in hits)
+    review = [p for p in parties.values() if p.get("__visibility") == "system"]
+    assert review and all("review-batch:" in (p.get("notes") or "") for p in review)
     assert any("2026-inv-003" in s and "buyer unresolved" in s for s in imp.skipped), imp.skipped
 
 

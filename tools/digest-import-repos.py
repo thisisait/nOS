@@ -107,6 +107,7 @@ class RepoImporter:
         # so a synthetic IČO in real repo metadata is refused as a data error.
         self.fixture_mode = fixture_mode
         self.skipped: list[str] = []
+        self.party_reviews: list[dict] = []
 
     def _repo_meta(self, repo_dir: pathlib.Path) -> dict | None:
         sidecar = repo_dir / "nos-repo.yml"
@@ -141,8 +142,9 @@ class RepoImporter:
         for r in records:
             owner = r["meta"].get("owner") or {}
             ref = {"kind": "org", "ico": owner.get("ico"), "legal_name": owner.get("name")}
-            res = nos_digest.resolve_party(ref, self.party_index, source_authoritative=False,
-                                           fixture_mode=self.fixture_mode)
+            res = nos_digest.note_party_resolve(self, ref, self.party_index,
+                                               source_authoritative=False,
+                                               fixture_mode=self.fixture_mode)
             if res["status"] != "resolved":
                 self.skipped.append(
                     f"{r['repo_name']}: owner unresolved ({res['status']}: {res['reason']}) "

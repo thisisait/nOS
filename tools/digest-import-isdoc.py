@@ -84,6 +84,7 @@ class IsdocImporter:
         self.party_index = party_index
         self.fixture_mode = fixture_mode
         self.skipped: list[str] = []
+        self.party_reviews: list[dict] = []
 
     def parse(self, root) -> list[dict]:
         root = pathlib.Path(root)
@@ -115,8 +116,9 @@ class IsdocImporter:
 
     def _resolve(self, ref_party, role, rec):
         ref = {"kind": "org", "ico": ref_party.get("ico"), "legal_name": ref_party.get("name")}
-        res = nos_digest.resolve_party(ref, self.party_index, source_authoritative=False,
-                                       fixture_mode=self.fixture_mode)
+        res = nos_digest.note_party_resolve(self, ref, self.party_index,
+                                            source_authoritative=False,
+                                            fixture_mode=self.fixture_mode)
         if res["status"] != "resolved":
             self.skipped.append(
                 f"{rec['file']}: {role} unresolved ({res['status']}: {res['reason']}) "

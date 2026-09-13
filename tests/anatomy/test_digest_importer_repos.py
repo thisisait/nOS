@@ -36,13 +36,18 @@ def _bundle():
 def test_gate_passes_the_full_rowref_chain():
     _nd, _imp, bundle, errors = _bundle()
     assert errors == [], errors
-    assert list(bundle["deterministic"].keys()) == ["party", "repo", "application", "package"]
+    keys = list(bundle["deterministic"].keys())
+    assert keys[0] == "party"
+    assert keys[-3:] == ["repo", "application", "package"]
 
 
 def test_two_repos_same_owner_dedup_to_one_party():
     _nd, imp, bundle, _ = _bundle()
     parties = bundle["deterministic"]["party"]
-    assert [p["slug"] for p in parties] == ["synthetic-mesto-lipno"]   # ONE, not two
+    hits = [p for p in parties if p.get("__visibility") != "system"]
+    assert [p["slug"] for p in hits] == ["synthetic-mesto-lipno"]   # ONE, not two
+    review = [p for p in parties if p.get("__visibility") == "system"]
+    assert review and all("review-batch:" in (p.get("notes") or "") for p in review)
     repos = {r["slug"] for r in bundle["deterministic"]["repo"]}
     assert len(repos) == 2                                             # portal + api
     assert all(r["party"] == "synthetic-mesto-lipno" for r in bundle["deterministic"]["repo"])

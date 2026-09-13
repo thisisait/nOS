@@ -52,6 +52,8 @@ class CsvPartyImporter:
         # False, so a synthetic or bad-checksum IČO is a data error, not a party.
         self.fixture_mode = fixture_mode
         self.skipped: list[str] = []
+        self.party_reviews: list[dict] = []
+        self.party_index: dict = {}
 
     def parse(self, raw: str) -> list[dict]:
         return list(csv.DictReader(io.StringIO(raw)))
@@ -64,6 +66,11 @@ class CsvPartyImporter:
             # NEVER echo the raw ico value — a person's CZ-DIČ is rodné číslo
             # (person-data-redaction); report the length, not the digits.
             if norm is None:
+                ref = {"kind": "org",
+                       "legal_name": (r.get("legal_name") or "").strip(),
+                       "name": name,
+                       "country": (r.get("country") or "CZ").strip()}
+                nos_digest.note_party_resolve(self, ref, self.party_index)
                 self.skipped.append(f"{name!r}: no valid IČO (len={len(str(r.get('ico') or ''))})")
                 continue
             if norm["synthetic"] and not self.fixture_mode:
