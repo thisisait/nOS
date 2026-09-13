@@ -795,7 +795,7 @@ homebrew_cask_apps:
 
   # ── Editors / IDE ─────────────────────────────────────────────────────────
   - visual-studio-code   # VS Code – primary editor
-  #- devin-desktop        # Windsurf rebrand (Homebrew token was windsurf)
+  - devin-desktop        # Windsurf rebrand (Homebrew token was windsurf)
   - sublime-text         # Sublime Text – fast editor
 
   # ── Terminals ─────────────────────────────────────────────────────────────
@@ -878,6 +878,11 @@ homebrew_cask_apps:
   # - boring-notch       # boring.notch – notch customization (GitHub, manual)
   # - flux-markdown      # flux-markdown – markdown editor (GitHub, manual)
   # - typewhisper        # TypeWhisper – dictation util (manual install)
+
+# Tokens Homebrew retired. They still appear in `brew outdated --cask` from a
+# leftover Caskroom dir and the sudo upgrade module would fail the whole play.
+homebrew_cask_upgrade_ignore:
+  - windsurf             # renamed to devin-desktop; leftover token has no .app
 
 # ==============================================================================
 # MAC APP STORE

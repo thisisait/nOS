@@ -26,6 +26,7 @@ homebrew_cask_uninstalled_apps: []
 # current. Without this, casks are pinned to their first-install version
 # forever because the install task short-circuits on Caskroom existence.
 homebrew_cask_auto_upgrade: true
+homebrew_cask_upgrade_ignore: []
 
 homebrew_cask_appdir: /Applications
 homebrew_cask_accept_external_apps: false

@@ -290,7 +290,8 @@
       vars:
         _safe_to_upgrade: >-
           {{ (_cask_outdated_before.stdout_lines | default([]))
-             | difference(_cask_running.stdout_lines | default([])) }}
+             | difference(_cask_running.stdout_lines | default([]))
+             | difference(homebrew_cask_upgrade_ignore | default([])) }}
       register: _cask_fast_upgrade
       # Never halt on rc!=0 — pkg-installer casks predictably fail here on
       # sudo, and we recover via the homebrew_cask module loop below.
@@ -328,7 +329,7 @@
         name: "{{ item }}"
         state: latest
         sudo_password: "{{ nos_sudo_password }}"
-      loop: "{{ _cask_outdated_after.stdout_lines | default([]) | difference(_cask_running.stdout_lines | default([])) }}"
+      loop: "{{ _cask_outdated_after.stdout_lines | default([]) | difference(_cask_running.stdout_lines | default([])) | difference(homebrew_cask_upgrade_ignore | default([])) }}"
       register: _cask_sudo_upgrade
       no_log: true
       when:
