@@ -78,7 +78,8 @@ keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # per docs/specs/spine-0411-migration.md at the tag. Contracts are byte-
 # identical to v1.44.0 (this bump re-vendors headers only). The 3 cortex-organ
 # mirror files under files/anatomy/cortex/knowledge/ were re-ported at this bump.
-keap_repo_ref: "v1.47.0"
+# v2.0.0-rc.1 — origin tag 8f71dbfb (Explore RC). Do not pin a branch or raw SHA.
+keap_repo_ref: "v2.0.0-rc.1"
 
 # ── The cortex cutover (KEAP P-5) ────────────────────────────────────────────
 # false ⇒ KEAP answers /agent/v1/validate with its OWN typechecker (the shipped
