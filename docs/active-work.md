@@ -6,40 +6,31 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-09-02 • Big review of the two-week window; first fees paid.
+> Last updated: 2026-09-13.
 
 ## Now (current track)
 
-**2026-09-02 review verdict (6-agent pass over ~490 commits).** Paid same-day:
-speech.py's MUTATING gate that never existed, the `ears_always_listen` no-op
-flag (six surfaces), the menubar badge sampling 60 rows as a count, the
-transcriber thread dying silently, loop-pr's orphaned worktree entries, the
-doctrine README's four missing rows. Open, in priority order:
+1. **CI Integration / master is still a process risk.** Pin `54c62045` exists
+   (linux overlay needs authentik). Do not claim master is green — ask
+   `gh run list --branch master --limit 5`. Dev pushes run the light lane; a
+   `dev→master` PR is the wet-test gate until Integration is proven there.
 
-1. **No green Integration exists for dev HEAD.** Master's red run
-   (`ef2088bc`) was DNS/edge; the fix branch's NEXT run failed on a new
-   preflight (`install_authentik: false` vs 7 forward-auth routes). Dev pushes
-   run the light lane only — the next dev→master PR fails until this is fixed.
-2. **Prune `stop` is ungated on unauthored disablements** (operator call —
-   see Operator to-dos).
-3. **`agentkit.md` doctrine is the most expensive unwritten file:** ~25
-   commits since 08-19 decided ad-hoc what it would pin (tool-mediation, scope
-   vocabulary, backend naming, vault resolution, ceremony satisfaction).
-   Draft it `proposed`, like organs.md.
-4. **Roadmap table undercounts shipped work:** no rows for xAI backend,
+2. **[`docs/doctrine/agentkit.md`](doctrine/agentkit.md) is DRAFTED as proposed**
+   (`1e263377`). It is no longer unwritten. Operator still settles §6 before
+   anything cites the file.
+
+3. **Roadmap table undercounts shipped work:** no rows for xAI backend,
    dev-minimal, host-organ OTel, hub honesty; `ears-app-bundle` row framing
    ("no speech in it") predates a working ASR path.
-5. Doctrine splits owed: loops.md (518 lines) + foreign-properties.md (414)
-   → index + companions; secrets/observability duplicate one paragraph.
 
-**Voice → caddy → AgentKit → cortex, joined 2026-09-01.** Five wires fixed
-(exec spendable, contract-search, `?ref=`, `status: asked`, `style: chat` —
-each with its gate), fee [43](hidden_fees/43-a-tool-with-no-door.md) paid.
-KEAP v1.42.0 is tagged AND pushed (verified 09-02 — the "operator act blocks
-the converge" line here was already stale a day later). **Next:** (1) converge
-— the mint, the KEAP re-seed and the first real `exec` call sit on its far
-side. (2) `caddy-entity-resolve` probe 2 — measure whether cortex's own
-`resolve` verb covers the taxonomy half first.
+4. Doctrine splits owed: loops.md + foreign-properties.md → index + companions;
+   secrets/observability duplicate one paragraph.
+
+**Voice → caddy → AgentKit → cortex.** Five wires gated; fee
+[43](hidden_fees/43-a-tool-with-no-door.md) paid. KEAP SOURCE pin is
+`v2.0.0-rc.1` (`9a86ea09`) — not what is running; ask `tools/estate-status.py`.
+**Next (operator):** converge (mint, KEAP re-seed, first real `exec`);
+`caddy-entity-resolve` probe 2 — whether cortex `resolve` covers the taxonomy half.
 
 ## Open follow-ups
 
@@ -47,22 +38,15 @@ The general fix for the class below — a per-service `verify.yml` hook plus the
 loader change that lets it fail — is in
 [`nos-genome-and-organelles.md`](archive/nos-genome-and-organelles.md) §Thread D.
 
-- **FreeScout has no SSO** (08-02): both `freescout-oauth` sources 404, so the
-  `FREESCOUT_OIDC_*` env is inert. Find a source, or reclassify as forward_auth.
 - **`drift-watch.sh` `exit 0`s regardless of the Bone POST**, swallowing a
   CRITICAL when the HMAC secret is unset. `genome-codegen.py` emits 2 of B1's 4.
-- **Infisical MTI render fix (S-track):** the aggregator still emits an oauth2
-  identity, so the orphan OAuth2Provider sharing the Provider base row with the
-  ProxyProvider reappears on apply; deleting it cascades the base and kills the
-  proxy (live-proven). Fix: suppress oauth2 render for `forward_auth`.
 - **Euro-office: full role swap after first stable** — pilot via `onlyoffice_image`
   flip; rename role+plugin+manifest once stable lands. Documenso stays.
 - **D1 `{{ vars }}` retirement flip** — design LOCKED (O25); the flip needs a
   dedicated pre-2.24 wet-test lane. Hard-breaks on ansible-core 2.24.
-- **Linux wet-test proves nothing yet — `hidden_fees/08` (HIGH).** Infra compose
-  is not rendered on Linux → `up infra` rc=1 → the STRICT probe passes
-  `0/0 ready (stack empty)`. Three pieces: render it (cause undiagnosed — do not
-  guess), make the probe read the bring-up rc, give the smoke an enabled floor.
+- **Linux smoke fail-ratio floor still open** — `hidden_fees/08`. Wait honesty
+  shipped (`3713a926`): wait fails on FAILED/UNKNOWN; Bone-out-of-compose was
+  already closed. Do not re-open a `0/0 ready` story.
 - **KEAP contract v2 — typed skill→service relations (undecided since 07-22).**
   They wait on us for the verb set. Decide against what the generator can derive:
   a verb we cannot populate from the manifest is a verb that ships empty.
@@ -82,14 +66,11 @@ loader change that lets it fail — is in
 
 ## Operator to-dos
 
-- **Hidden fees backlog** — [`docs/hidden_fees/`](hidden_fees/). `ls` is the count;
-  carried forward stale twice ("7", then "16"). 05 + 06 closed.
-  **Open:** 01 disabled-service overrides · 02 DB-blind healthchecks (closed
-  for miniflux only, not the class) · 03 leading-digit slugs · 04 `docs/systems` drift ·
-  **07 messages that outlive their mode** (4 instances paid, class unpaid; carries an
-  UNDETERMINED mechanism, recorded deliberately without a guessed remedy). 07 now owns
-  a wider rule too: *a step that cannot do its job must not exit 0* — three instances
-  (drift hook parsing nothing · its POST 401ing · Linux wet-test `0/0 ready`).
+- **Hidden fees backlog** — [`docs/hidden_fees/`](hidden_fees/). `ls` is the count.
+  **Still operator:** 01 disabled-service overrides · 02 DB-blind healthchecks
+  (closed for miniflux only, not the class) · 03 leading-digit slugs ·
+  04 `docs/systems` drift · **07 messages that outlive their mode** (class unpaid;
+  a step that cannot do its job must not exit 0).
 - **KEAP techNosIdeas row `openworker`: `planned` → `applied`.** Evidenced
   (`agent_questions` shipped `aa8a234c`, 31 answered rows live, gate green).
   `KEAP_AGENT_TOKEN_RO` is read-only by design, so no agent can apply it.
@@ -100,11 +81,11 @@ loader change that lets it fail — is in
   permitted`, blocking the backup DR round-trip verify.
 - **Uptime Kuma: wizard no longer blocking, monitors unproven.** `/api/entry-page`
   answers `entryPage:null` (08-18). Whether any monitor exists is NOT established —
-  the healthcheck is a TCP connect and read `healthy` through nine days of an
-  unfinished wizard. Open `127.0.0.1:3001`, confirm, then `--tags uptime_kuma`.
-- **`s3://backups/2026-08-03/` (14 objects, 351 MB) opens with no key.** Decide
-  whether to delete — unreadable ciphertext reads as a backup. 07-26..08-02 still
-  open with `{prefix}_pw_backup_encryption` (`7f4907ac`).
+  the healthcheck is a TCP connect. Open `127.0.0.1:3001`, confirm, then
+  `--tags uptime_kuma`.
+- **`s3://backups/2026-08-03/` opens with no key.** Decide whether to delete —
+  unreadable ciphertext reads as a backup. 07-26..08-02 still open with
+  `{prefix}_pw_backup_encryption` (`7f4907ac`).
 - One-time (devlog epic Phase C): repo Settings → Pages → Source = GitHub Actions.
 
 ## Deferred (one-liners)
@@ -119,18 +100,14 @@ loader change that lets it fail — is in
 
 ## Snapshot — ask, don't inherit
 
-A 12-row state table stood here; on 2026-08-23 a review found 7 rows stale,
-including "CI green on `dev`" through four days of red (every push since
-08-20: face `graphLayout` sha pin + 2 CI-only pytest fails) — wrong in the
-REASSURING direction. A row is a copied value; the reader is the value. The
-reader roster lives in CLAUDE.md ("The repo is not the running system");
-add to it `gh run list --branch dev --limit 5` for CI and
+A copied state table stood here and went stale in the reassuring direction.
+A row is a copied value; the reader is the value. Roster: CLAUDE.md ("The repo
+is not the running system"); `gh run list --branch dev --limit 5` for CI;
 `tools/rem-status.py` for the queue.
 
-Knowledge, not state, survives: storage lever is `nos_data_root` (NOT
+Knowledge, not state: storage lever is `nos_data_root` (NOT
 `configure_external_storage`); Authentik engine=tofu + reconcile preflight;
-face `forceLayout` determinism is ISA-bound — its sha pin is red AGAIN, so
-"closed by whole-px coordinates" was not the end of it.
+face `forceLayout` determinism is ISA-bound.
 
 ## Update protocol
 
