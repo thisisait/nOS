@@ -1312,8 +1312,15 @@ def _docker_exec(step: dict, registers: dict, ctx: dict) -> dict:
     # Split cmd into argv parts (shell-like)
     argv.extend(cmd.split())
 
+    stdin_raw = step.get("stdin")
+    stdin_data = (
+        _render_string(str(stdin_raw), {**ctx, **registers})
+        if stdin_raw is not None else None
+    )
+
     try:
-        proc = subprocess.run(argv, capture_output=True, text=True, timeout=120)
+        proc = subprocess.run(argv, input=stdin_data, capture_output=True,
+                              text=True, timeout=120)
         rc = proc.returncode
         stdout = proc.stdout or ""
         stderr = proc.stderr or ""

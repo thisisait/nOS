@@ -29,21 +29,27 @@ sequence:
     runner: docker_exec
     container: freescout
     compose_project: b2b
-    cmd: >
-      php artisan freescout:create-user
-      --role=admin
-      --firstName="{{ freescout_admin_first_name | default('Admin') }}"
-      --lastName="{{ freescout_admin_last_name | default('nOS') }}"
-      --email="{{ freescout_admin_email | default(default_admin_email) }}"
-      --password="{{ freescout_admin_password }}"
+    cmd: php artisan tinker
+    stdin: |
+      $u=new App\User();
+      $u->role=App\User::ROLE_ADMIN;
+      $u->first_name="{{ freescout_admin_first_name | default('Admin') }}";
+      $u->last_name="{{ freescout_admin_last_name | default('nOS') }}";
+      $u->email="{{ freescout_admin_email | default(default_admin_email) }}";
+      $u->password=bcrypt("{{ freescout_admin_password }}");
+      $u->invite_state=App\User::INVITE_STATE_ACTIVATED;
+      $u->save();
+      echo "CREATED";
 
   - id: reconverge_admin_password
     when: "_fs_user_check.stdout | trim != '0'"
     runner: docker_exec
     container: freescout
     compose_project: b2b
-    cmd: >
-      php artisan tinker --execute="\$u=App\User::where('email','{{ freescout_admin_email | default(default_admin_email) }}')->first(); if(\$u){\$u->password=bcrypt('{{ freescout_admin_password }}'); \$u->save(); echo 'UPDATED';}"
+    cmd: php artisan tinker
+    stdin: |
+      $u=App\User::where("email","{{ freescout_admin_email | default(default_admin_email) }}")->first();
+      if($u){$u->password=bcrypt("{{ freescout_admin_password }}"); $u->save(); echo "UPDATED";}
     accept_substring_in_stdout: "UPDATED"
 
   # Native OIDC via freescout-oauth: REMOVED here too (fee 49, 2026-09-05).

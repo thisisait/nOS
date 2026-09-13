@@ -55,13 +55,19 @@
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p b2b
     exec -T -w /www/html freescout
-    php artisan freescout:create-user
-    --role=admin
-    --firstName="{{ freescout_admin_first_name }}"
-    --lastName="{{ freescout_admin_last_name }}"
-    --email="{{ freescout_admin_email }}"
-    --password="{{ freescout_admin_password }}"
-    2>&1
+    php artisan tinker
+  args:
+    stdin: |
+      $u=new App\User();
+      $u->role=App\User::ROLE_ADMIN;
+      $u->first_name="{{ freescout_admin_first_name }}";
+      $u->last_name="{{ freescout_admin_last_name }}";
+      $u->email="{{ freescout_admin_email }}";
+      $u->password=bcrypt("{{ freescout_admin_password }}");
+      $u->invite_state=App\User::INVITE_STATE_ACTIVATED;
+      $u->save();
+      echo "CREATED";
+    executable: /bin/bash
   register: _fs_user_create
   when:
     - _fs_ready.status | default(0) in [200, 302, 500]
@@ -77,11 +83,14 @@
 # FreeScout has no dedicated change-password artisan command, we use tinker
 # with App\User::where->update to work for existing users.
 - name: "[pazny.freescout Post] Reconverge admin password (tinker UPDATE)"
-  ansible.builtin.shell: |
-    set -o pipefail
-    {{ docker_bin }} compose -p b2b exec -T freescout \
-      bash -c 'set -o pipefail; cd /www/html && echo "\$u=App\\User::where(\"email\",\"{{ freescout_admin_email }}\")->first(); if(\$u){\$u->password=bcrypt(\"{{ freescout_admin_password }}\"); \$u->save(); echo \"UPDATED\";}" | php artisan tinker 2>/dev/null'
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p b2b
+    exec -T -w /www/html freescout
+    php artisan tinker
   args:
+    stdin: |
+      $u=App\User::where("email","{{ freescout_admin_email }}")->first();
+      if($u){$u->password=bcrypt("{{ freescout_admin_password }}"); $u->save(); echo "UPDATED";}
     executable: /bin/bash
   when:
     - _fs_ready.status | default(0) in [200, 302, 500]
