@@ -1,6 +1,6 @@
 """The DataTable-engine contract must name the measured SYSTEM set.
 
-`docs/doctrine/cross-repo-contracts.md` froze "the 18" on 2026-09-05, when
+`ssot/doctrine/cross-repo-contracts.md` froze "the 18" on 2026-09-05, when
 state/keap-tables/ happened to hold 18 files. The glob is 32 now; bumping that
 blindly to 32 would count fixture/user-shaped defs (print-*, kolben-*) as
 SYSTEM. USER tables are KEAP-born and never in nOS git; the fixtures are a
@@ -23,7 +23,7 @@ import re
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TABLES = REPO / "state" / "keap-tables"
-DOCTRINE = REPO / "docs" / "doctrine" / "cross-repo-contracts.md"
+DOCTRINE = REPO / "ssot" / "doctrine" / "cross-repo-contracts.md"
 DEFAULTS = REPO / "roles" / "pazny.keap" / "defaults" / "main.yml"
 ROADMAP = TABLES / "roadmap.table.yml"
 
