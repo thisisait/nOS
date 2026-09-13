@@ -47,6 +47,25 @@
     _wait_last: "{{ _tick_probe.stdout_lines | default([]) }}"
   when: not (_wait_done | bool)
 
+# PENDING keeps polling. FAILED/UNKNOWN will not become ALL_READY by waiting:
+# 0 containers with N declared services, a missing compose file, or an Exited
+# container. Hidden fee 08: the STRICT wait used to burn the full budget (or,
+# before the probe grew a denominator, print 0/0 ready and pass). Abort here.
+- name: "[Stacks] Abort health-wait on FAILED/UNKNOWN (tick {{ _tick }})"
+  tags: ['stacks', 'core', 'always']
+  ansible.builtin.fail:
+    msg: |
+      Stacks [{{ _wait_stacks | join(', ') }}] will not become ready.
+      Probe marker: {{ _tick_probe.stdout_lines | default([]) | last | default('?') }}.
+      FAILED = a container is down, or bring-up produced no containers the
+      rendered compose declared. UNKNOWN = the compose artifact is missing
+      or unreadable (the measured Linux CI shape: up rc=1, no docker-compose.yml).
+      Waiting out the remaining budget only delays the same verdict.
+        {{ _wait_last | reject('equalto', 'PENDING') | reject('equalto', 'ALL_READY') | list | join('\n        ') }}
+  when:
+    - not (_wait_done | bool)
+    - (_tick_probe.stdout_lines | default([]) | last | default('')) in ['FAILED', 'UNKNOWN']
+
 - name: "[Stacks] Settle {{ stack_wait_tick_interval | default(15) }}s before next tick"
   tags: ['stacks', 'core', 'always']
   ansible.builtin.command: "sleep {{ stack_wait_tick_interval | default(15) | int }}"
