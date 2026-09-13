@@ -205,6 +205,7 @@
         - _cask_result.rc != 0
         - "'already an App' not in _cask_result.stderr"
         - "'already an App' not in _cask_result.stdout"
+        - "'It seems the App source' not in _cask_result.stdout"
       loop: "{{ homebrew_cask_apps }}"
       loop_control:
         label: "{{ item.name | default(item) }}"

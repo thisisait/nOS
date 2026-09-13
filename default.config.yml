@@ -795,7 +795,7 @@ homebrew_cask_apps:
 
   # ── Editors / IDE ─────────────────────────────────────────────────────────
   - visual-studio-code   # VS Code – primary editor
-  - windsurf             # Codeium Windsurf – AI-first IDE
+  - devin-desktop        # Windsurf rebrand (Homebrew token was windsurf)
   - sublime-text         # Sublime Text – fast editor
 
   # ── Terminals ─────────────────────────────────────────────────────────────
