@@ -18,17 +18,17 @@ than kept as a rule that only ever reports its own defeat.)
 
 | Doctrine | Defines | Status |
 |---|---|---|
-| [filesystem.md](filesystem.md) | storage layout, `nos_data_root`, data classes, isolation | ✅ v1 |
-| [observability.md](observability.md) | telemetry/callbacks are best-effort, never gate a run; circuit-breaker, sidecar, secret single-source | ✅ v1 |
-| [secrets.md](secrets.md) | shared-secret single resolved source (`~/.nos/secrets.yml`); no self-ref template to raw consumers; daemon self-heal | ✅ v1 |
+| [filesystem.md](../../ssot/doctrine/filesystem.md) | storage layout, `nos_data_root`, data classes, isolation | ✅ v1 |
+| [observability.md](../../ssot/doctrine/observability.md) | telemetry/callbacks are best-effort, never gate a run; circuit-breaker, sidecar, secret single-source | ✅ v1 |
+| [secrets.md](../../ssot/doctrine/secrets.md) | shared-secret single resolved source (`~/.nos/secrets.yml`); no self-ref template to raw consumers; daemon self-heal | ✅ v1 |
 | [virtiofs.md](../../ssot/doctrine/virtiofs.md) | Docker Desktop VirtioFS bind risk; sockets/locks/mmap-DBs off the bind (tmpfs/named volume); `# VFS-DOCTRINE:` markers; macOS-27 tightening detectable | ✅ v1 |
 | [face.md](face.md) | nOS-face: vendored-in-repo, edge-token identity, SoC→DataTable→user-state, native-over-iframe, XSS/filename/UTF-8 safety, the enforcement triplet | ✅ v1 |
 | [gates.md](../../ssot/doctrine/gates.md) | a gate that can pass without checking is worse than none; missing evidence = FAIL, and a green check pointed at a stale artifact is the same defect from the other side; assert on substance, never on silence | ✅ v1 |
 | [cross-repo-contracts.md](cross-repo-contracts.md) | shared surfaces with a sibling repo: one spec, a producer-owned fixture, **symmetric** gates; peer rules (no hierarchy, objections block a version bump); identity/visibility/removal invariants | ✅ v1 |
-| [workflows.md](workflows.md) | multi-agent fan-out must be **union** or **veto** (selection banned); a chain is not a fan-out; the gate reads evidence, not model trust; discovery files / implementation authorises via a COMMITTED spec, never a status; recursion needs asymmetric judgement + a retro-red ratchet | ✅ v1 |
+| [workflows.md](../../ssot/doctrine/workflows.md) | multi-agent fan-out must be **union** or **veto** (selection banned); a chain is not a fan-out; the gate reads evidence, not model trust; discovery files / implementation authorises via a COMMITTED spec, never a status; recursion needs asymmetric judgement + a retro-red ratchet | ✅ v1 |
 | [foreign-properties.md](foreign-properties.md) | upstream facts we cannot fix, only route around: unrunnable healthchecks, HTTP-until-measured upstreams, the `sslmode` contract belongs to whoever PARSES the string; full measured stories in [../foreign-properties-companion.md](../foreign-properties-companion.md) | ✅ v1 |
 | [four-trees.md](../../ssot/doctrine/four-trees.md) | branch vs checkout vs worktree vs estate: nothing propagates on its own; `config.yml` is a fifth surface that outranks the defaults and is not in git | ✅ v1 |
-| [layers.md](layers.md) | the `layer` axis (L0–L3, derived, `withheld` over guessed) and what the word `tier` may mean | ✅ v1 |
+| [layers.md](../../ssot/doctrine/layers.md) | the `layer` axis (L0–L3, derived, `withheld` over guessed) and what the word `tier` may mean | ✅ v1 |
 | [face-app-tiers.md](face-app-tiers.md) | face-app `form` + build-complexity (F1–F4/H) axes | ✅ v1 |
 | [generative-ui.md](generative-ui.md) | a model FILLS a declarative render contract, never extends one: `TableView` twice at a repo boundary, one narrowing door, an action catalog that stays code; deterministic first, generation design-time; and the two rules a learning loop needs (it may not grade its own offers, and it proposes rather than applies) | ✅ v1 |
 | [loops.md](loops.md) | the sequence axis: SERE + the nOS loop proper — the refusals, the missing-edge ranking, edge gates; the verified Mermaid diagrams and full accounts in [../loops-companion.md](../loops-companion.md) | ✅ v1 |

@@ -35,7 +35,7 @@ written without the other two. A chain wearing a fan-out's clothes.
 
 Retro-red: run against those files as first authored and the Build phase fails.
 
-Doctrine: docs/doctrine/workflows.md (detail: docs/workflow-standard.md)
+Doctrine: ssot/doctrine/workflows.md (detail: docs/workflow-standard.md)
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 WORKFLOWS = REPO / ".claude/workflows"
-DOCTRINE = REPO / "docs/doctrine/workflows.md"
+DOCTRINE = REPO / "ssot/doctrine/workflows.md"
 
 # A declaration is a comment naming the semantics, within reach of the call.
 LEGAL_KINDS = ("union", "veto")
@@ -91,7 +91,7 @@ def _fanouts(path: Path):
 def test_the_doctrine_this_gate_enforces_exists():
     """A gate whose rule lives only in the gate is a rule nobody can read."""
     assert DOCTRINE.is_file(), (
-        "docs/doctrine/workflows.md is gone — this gate enforces a rule "
+        "ssot/doctrine/workflows.md is gone — this gate enforces a rule "
         "that no longer has a written form, which makes it folklore"
     )
     text = DOCTRINE.read_text(encoding="utf-8")
