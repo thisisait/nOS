@@ -37,6 +37,7 @@ than kept as a rule that only ever reports its own defeat.)
 | [ponytail.md](ponytail.md) | the 7-rung ladder answered before code is written; deliberate shortcuts carry a `# ponytail:` marker harvested by `/ponytail-debt` | ✅ v1 |
 | [agentkit.md](agentkit.md) | how an agent runs, spends, and satisfies: one runner door, two scope vocabularies, backend≠provider, vault is a pointer, satisfaction is a gate run — §6 awaits the operator | proposed |
 | [organs.md](organs.md) | four incompatible meanings of "organ" named; proposes the 3-axis fix (`stack`/`organ`/`layer`) — §3 awaits the operator's ruling | proposed |
+| [ssot.md](ssot.md) | constitution citation scheme (`nos-sot:<realm>/<file>#<id>`); unqualified §N is a defect | proposed |
 | table-naming.md | DB table / column naming conventions | planned |
 | taxonomy.md | taxonomy / ontology term definitions (KEAP taxonomy depth levels, node/pillar/block, relations — NOT the service `layer` L0–L3 axis, which layers.md owns) | planned |
 | operator-model.md | the operator's five steps + who may decide what without them | live |
