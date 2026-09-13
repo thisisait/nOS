@@ -56,6 +56,7 @@
     url: "https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v{{ nginx_prometheus_exporter_version }}/nginx-prometheus-exporter_{{ nginx_prometheus_exporter_version }}_darwin_{{ 'arm64' if ansible_facts['machine'] == 'arm64' else 'amd64' }}.tar.gz"
     dest: "/tmp/nginx-prometheus-exporter_{{ nginx_prometheus_exporter_version }}_darwin.tar.gz"
     mode: '0644'
+    checksum: "sha256:{{ nginx_prometheus_exporter_checksums['arm64' if ansible_facts['machine'] == 'arm64' else 'amd64'] }}"
   when: not nginx_exporter_binary_stat.stat.exists
 
 - name: Extract nginx-prometheus-exporter binary  # noqa: command-instead-of-module
@@ -77,6 +78,7 @@
     url: "https://github.com/hipages/php-fpm_exporter/releases/download/v{{ phpfpm_exporter_version }}/php-fpm_exporter_{{ phpfpm_exporter_version }}_darwin_{{ 'arm64' if ansible_facts['machine'] == 'arm64' else 'amd64' }}.tar.gz"
     dest: "/tmp/php-fpm_exporter_{{ phpfpm_exporter_version }}_darwin.tar.gz"
     mode: '0644'
+    checksum: "sha256:{{ phpfpm_exporter_checksums['arm64' if ansible_facts['machine'] == 'arm64' else 'amd64'] }}"
   when:
     - alloy_scrape_phpfpm | default(true)
     - not (phpfpm_exporter_binary_stat.stat.exists | default(false))

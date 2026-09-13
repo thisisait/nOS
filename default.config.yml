@@ -780,6 +780,11 @@ homebrew_installed_packages:
 # provision time, not as a silent Wing daemon segfault. Bump after re-validating
 # on the live host (`frankenphp --version`).
 frankenphp_version: "1.12.4"
+# GitHub release asset SHA256 for the Linux static binary get_url (macOS uses brew).
+# Source: api.github.com/repos/php/frankenphp/releases/tags/v1.12.4 asset digest.
+frankenphp_linux_checksums:
+  aarch64: "1912d7dee869a060afd2de183b9921bcadc82ad47a4650f861b5414888cb6feb"
+  x86_64: "b39c7511483c99faf0d857cc0789b39cc23023038260b31d4b40dd4ae18795dc"
 homebrew_taps:
   - dunglas/frankenphp
   - shivammathur/php
@@ -1677,7 +1682,15 @@ prometheus_port: 9090
 loki_port: 3100
 tempo_version: "2.10.3"           # >=2.10.3 fixes CVE-2026-28377 / REM-036 (was 2.10.0); github.com/grafana/tempo/releases
 nginx_prometheus_exporter_version: "1.4.1"  # github.com/nginxinc/nginx-prometheus-exporter/releases – no Homebrew formula
+# SHA256 from nginx-prometheus-exporter_1.4.1_checksums.txt on the same release.
+nginx_prometheus_exporter_checksums:
+  arm64: "9f6cd277fc9a7ed57398c08ecb34fc8f1a06521a8399f0f20e5f14cb695e68a7"
+  amd64: "871d863a5fa561f46812bc0d96582c51171481d72ecfc12df410ed7b475b3dca"
 phpfpm_exporter_version: "2.2.0"         # github.com/hipages/php-fpm_exporter/releases – no Homebrew formula
+# SHA256 from php-fpm_exporter_2.2.0_checksums.txt on the same release.
+phpfpm_exporter_checksums:
+  arm64: "93bdc79d2a306d5567dbe7af6eba89df94e4f08ff1c781c273b293a4b5931858"
+  amd64: "42cec68addaf34c1303018b1426edb9cc4dea649dfe77d5359cdf832493eb83d"
 tempo_http_port: 3200
 tempo_otlp_grpc_port: 4327    # Tempo internal OTLP gRPC (Alloy → Tempo)
 tempo_otlp_http_port: 4328    # Tempo internal OTLP HTTP (Alloy → Tempo)

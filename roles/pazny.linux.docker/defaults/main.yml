@@ -27,3 +27,7 @@ linux_docker_repo_channel: "stable"
 # Optional: pin a specific docker-ce version (apt-style version spec, e.g.
 # "5:27.3.1-1~ubuntu.24.04~noble"). Empty = latest.
 linux_docker_version: ""
+
+# SHA256 of https://download.docker.com/linux/{ubuntu,debian}/gpg (same key).
+# ponytail: apt key is unversioned; bump when Docker rotates it.
+linux_docker_gpg_checksum: "1500c1f56fa9e26b9b8f42452a553675796ade0807cdce11975eb98170b3a570"
