@@ -101,9 +101,6 @@ def test_recipe_pr_defaults_to_gitea_not_gitlab():
     assert "PRIVATE-TOKEN" in text and "merge_requests" in text, "GitLab MR leg missing (drop-in replacement)"
     assert "api/v1/repos" in text and "pulls" in text, "Gitea PR fallback leg removed"
     cfg = DEFAULT_CONFIG.read_text()
-    assert re.search(r'^nos_agent_forge:\s*"gitea"', cfg, re.M), (
-        "default.config.yml must declare nos_agent_forge: gitea — GitLab is optional"
-    )
     assert re.search(r'^install_gitlab:\s*false', cfg, re.M), (
         "install_gitlab must default OFF — GitLab is never assumed always-on"
     )

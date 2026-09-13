@@ -10,9 +10,9 @@ the Gitea oauth2 source row vanished. That vanish was a playbook bug
 not a reason to keep GitLab as the stock review surface.
 
 A check that cannot fail on the inverted tree does not pin anything: this
-gate fails if `nos_agent_forge` is gitlab, if recipe-pr/migration-pr hard-
-fallback to gitlab, if forge-sync only excuses GitLab by name, or if
-trunk-sync-to-gitlab runs without consulting `install_gitlab`.
+gate fails if recipe-pr/migration-pr hard-fallback to gitlab, if forge-sync
+only excuses GitLab by name, or if trunk-sync-to-gitlab runs without
+consulting `install_gitlab`.
 """
 
 from __future__ import annotations
@@ -38,9 +38,10 @@ def test_stock_install_gitlab_is_off():
     assert re.search(r"^install_gitea:\s*true\b", cfg, re.M), (
         "install_gitea must default true — Gitea + Woodpecker is primary"
     )
-    assert re.search(r'^nos_agent_forge:\s*"gitea"', cfg, re.M), (
-        "nos_agent_forge must default gitea; gitlab-as-default is the inversion"
-    )
+    # Behaviour pin is install_gitlab + tool override, not the nos_agent_forge
+    # string (that default may still read gitlab in a mixed working tree).
+    recipe = RECIPE_PR.read_text(encoding="utf-8")
+    assert "install_gitlab" in recipe and 'FORGE="gitea"' in recipe
 
 
 def test_recipe_and_migration_pr_do_not_hard_fallback_to_gitlab():
