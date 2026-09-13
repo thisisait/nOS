@@ -17,15 +17,17 @@ gitlab_sidekiq_concurrency: 10
 gitlab_mem_limit: "{{ docker_mem_limit_heavy | default('4g') }}"
 gitlab_cpus: "{{ docker_cpus_heavy | default('2.0') }}"
 
-# ── T32.2 (2026-06-10): GitLab agent forge — the local MR review surface ──────
-# The Gitea SSO lockout (oauth2 source row missing → /user/oauth2/authentik
-# 500s; operator can't reach the Gitea UI) moved the operator-facing review
-# surface to GitLab, whose native omniauth OIDC works. When
-# gitlab_agent_forge=true, post-forge.yml ensures the nOS PROJECT exists
+# ── T32.2: GitLab as OPTIONAL agent-forge — drop-in replacement, never addition
+# Gitea + Woodpecker is PRIMARY. Enable this only with install_gitlab: true.
+# The 2026-06 Gitea SSO lockout (oauth2 source missing → /user/oauth2/authentik
+# 500s) was a phantom REST register (`POST /api/v1/admin/identity-providers`,
+# no such Gitea endpoint); the playbook now uses `gitea admin auth add-oauth`.
+# GitLab omniauth OIDC still works as the heavier review surface when opted in.
+# When gitlab_agent_forge=true, post-forge.yml ensures the nOS PROJECT exists
 # (writable, created EMPTY — trunk is pushed from the operator host via
-# tools/sync-trunk-to-gitlab.sh, keeping the loop local) and provisions a PAT
-# for tools/recipe-pr.sh (MR creation), persisted as gitlab_api_token in
-# ~/.nos/secrets.yml. Woodpecker CI stays on Gitea; GitHub stays the trunk.
+# tools/sync-trunk-to-gitlab.sh) and provisions a PAT for tools/recipe-pr.sh,
+# persisted as gitlab_api_token in ~/.nos/secrets.yml. Woodpecker CI stays on
+# Gitea; GitHub stays the public trunk.
 gitlab_agent_forge: false
 gitlab_nos_repo_owner: "root"
 gitlab_nos_repo_name: "nOS"

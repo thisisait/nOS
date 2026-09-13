@@ -795,7 +795,7 @@ homebrew_cask_apps:
 
   # ── Editors / IDE ─────────────────────────────────────────────────────────
   - visual-studio-code   # VS Code – primary editor
-  - devin-desktop        # Windsurf rebrand (Homebrew token was windsurf)
+  #- devin-desktop        # Windsurf rebrand (Homebrew token was windsurf)
   - sublime-text         # Sublime Text – fast editor
 
   # ── Terminals ─────────────────────────────────────────────────────────────
@@ -1865,14 +1865,15 @@ gitlab_signup_enabled: false    # Disables registration of new users
 gitlab_puma_workers: 2          # Worker processes (min 2, with 36 GB feel free to use 4)
 gitlab_sidekiq_concurrency: 10  # Background job threads
 
-# ── T32.2: which LOCAL forge the agent loop targets (tools/recipe-pr.sh) ──────
-# "gitlab" — agents open GitLab MERGE REQUESTS (operator review surface;
-#            native omniauth OIDC works → operator can actually sign in).
-# "gitea"  — legacy PR target (the Gitea oauth2 source row kept vanishing →
-#            SSO 500 → operator locked out of the UI; Gitea keeps Woodpecker).
-# Enable the GitLab side with `gitlab_agent_forge: true` in config.yml — it
-# provisions the nOS project + PAT (pazny.gitlab post-forge.yml).
-nos_agent_forge: "gitlab"
+# ── which LOCAL forge the agent loop targets (tools/recipe-pr.sh) ─────────────
+# Gitea + Woodpecker is PRIMARY. GitLab is an optional drop-in replacement
+# (`install_gitlab: true` + `gitlab_agent_forge: true`), never a second forge
+# the tools assume is always on. The old "gitlab" default was the T32.2
+# inversion: Gitea SSO lockout (phantom REST identity-providers, fixed 2026-06-13
+# via `gitea admin auth add-oauth`) made GitLab the agent forge. Override with
+# --forge, or by flipping install_gitlab; recipe-pr/loop-pr refuse GitLab when
+# that flag is false even if this string still says gitlab.
+nos_agent_forge: "gitea"
 
 # ==============================================================================
 # IIAB – OPEN WEBUI (chat UI for Ollama)
@@ -2606,7 +2607,7 @@ apex_version: "1.30.4-alpine@sha256:97d490c12ba55b4946b01546d1c3ed324e8d41ab1c9f
 
 keap_domain: "keap{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 keap_port: 8091                                # loopback publish; also the AgentKit surface
-keap_version: "2.0.0-rc.1"                          # nos/keap image tag
+keap_version: "2.0.0-rc.1"                      # nos/keap image tag
 # Seed a few illustrative demo data tables (Reading Log / Field Log / Home
 # Inventory, one per share scope) on a fresh install so the TableStore shows
 # real OLAP-shaped content, not an empty grid. Opt-in + once-only (a marker

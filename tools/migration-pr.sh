@@ -16,9 +16,8 @@
 # operator-run step (tools/promote-public.sh) — the agent loop stays off the
 # public internet.
 #
-# FORGE TARGET (T32.2): default comes from `nos_agent_forge` in config.yml /
-# default.config.yml (repo default: "gitlab"). Override per-run with
-# --forge gitea|gitlab.
+# FORGE TARGET: default comes from `nos_agent_forge` (repo default: "gitea").
+# GitLab is optional (`install_gitlab`); override per-run with --forge.
 #
 # DRY-RUN BY DEFAULT (operator doctrine: dry-run default + explicit confirm):
 #   tools/migration-pr.sh <service> <migration-id>             # validate only
@@ -145,7 +144,11 @@ if [ "$MARK_MERGED" = 1 ]; then
   # merge_commit_sha (Gitea). We never reach the public domain (token-bearing).
   if [ -z "$COMMITTED_SHA" ]; then
     [ -n "$FORGE" ] || FORGE="$(yaml_lookup nos_agent_forge config.yml default.config.yml)"
-    [ -n "$FORGE" ] || FORGE="gitlab"
+    [ -n "$FORGE" ] || FORGE="gitea"
+    INSTALL_GL="$(yaml_lookup install_gitlab config.yml default.config.yml)"
+    if [ "$INSTALL_GL" = "false" ]; then
+      FORGE="gitea"
+    fi
     TENANT="$(yaml_lookup tenant_domain config.yml default.config.yml)"
     if [ "$FORGE" = "gitlab" ]; then
       TOKEN="${GITLAB_TOKEN:-}"
@@ -213,7 +216,11 @@ fi
 
 # ── 2. Forge config discovery (mirrors tools/recipe-pr.sh / tools/nos-push) ───
 [ -n "$FORGE" ] || FORGE="$(yaml_lookup nos_agent_forge config.yml default.config.yml)"
-[ -n "$FORGE" ] || FORGE="gitlab"
+[ -n "$FORGE" ] || FORGE="gitea"
+INSTALL_GL="$(yaml_lookup install_gitlab config.yml default.config.yml)"
+if [ "$INSTALL_GL" = "false" ]; then
+  FORGE="gitea"
+fi
 case "$FORGE" in gitlab|gitea) : ;; *) echo "[migration-pr] unknown forge '$FORGE' (gitlab|gitea)"; exit 2 ;; esac
 
 TENANT="$(yaml_lookup tenant_domain config.yml default.config.yml)"

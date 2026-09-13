@@ -34,21 +34,22 @@ proposal's diff at ITS OWN base — current HEAD, never the proposer's declared
 real answer about today's tree, and it is cheap next to the alternative, which is
 landing a patch on the strength of a verdict about a tree that no longer exists.
 
-WHICH FORGE, AND WHY BOTH. The branch goes to Gitea AND GitLab; the merge request
-is opened on GitLab only. That is not redundancy, it is the two halves of a
-review:
+WHICH FORGE. Gitea + Woodpecker is the PRIMARY pair. GitLab is an optional
+drop-in replacement for the review surface (`install_gitlab`), never a second
+forge the loop assumes is always there.
 
   * **Gitea** carries the CI. Woodpecker watches Gitea and `.woodpecker/tests.yml`
     fires on a push to ANY branch, so a branch that never reaches Gitea has no
-    green light to show.
-  * **GitLab** carries the review. It is the operator's MR surface (T32.2 — the
-    Gitea oauth2 source row kept vanishing and locking the operator out of the
-    Gitea UI) and it has NO CI: no `.gitlab-ci.yml`, no runner. An MR there is a
-    conversation, not a test.
+    green light to show. When GitLab is declared off, Gitea is also the PR
+    surface (`_open_gitea_pr`).
+  * **GitLab** is review-only, and only when installed. It has NO CI. An MR
+    there is a conversation, not a test. T32.2 moved review here because the
+    Gitea oauth2 source row vanished (phantom `POST /api/v1/admin/identity-providers`,
+    fixed 2026-06-13 via `gitea admin auth add-oauth`); that is not a reason to
+    keep GitLab as the stock default.
 
-The join between them is the commit sha, which is identical on both because it is
-the same commit. Anything downstream that wants to ask "did this pass?" asks
-Woodpecker for that sha.
+The join between them is the commit sha. Anything downstream that wants to ask
+"did this pass?" asks Woodpecker for that sha.
 
 GITHUB IS NOT IN THIS FILE, deliberately, and the same sentence appears in both
 sibling tools: the agent loop stays off the public internet. `dev → master` and
@@ -129,17 +130,22 @@ class Refused(Exception):
     """A condition the driver will not work around. Message is operator-facing."""
 
 
-def _gitlab_declared_on() -> bool:
-    """install_gitlab, resolved config-over-default — the same read the
-    reviewer gates on. MEASURED 2026-09-03: the operator declared GitLab off
-    on 09-01 (memory pressure) and the loop's landing half died silently —
-    drive judged REM-239/REM-244 and nothing could ever land, because this
-    driver pushed to a forge that no longer exists and opened its MR there.
-    A declared-off forge is a decision: the PR moves to Gitea, which already
-    carries the CI, and comes back to GitLab when the flag does."""
-    flag = _yaml_lookup("install_gitlab", REPO / "config.yml",
+def _forge_installed(name: str) -> bool:
+    """install_<forge>, resolved config-over-default. Missing is OFF for
+    GitLab (the optional heavier alt) and ON for Gitea (the primary). A
+    declared-off GitLab is a decision, not a failure — MEASURED 2026-09-03:
+    the landing half died because this driver pushed to a forge that no
+    longer exists. Gitea carries the CI either way."""
+    flag = _yaml_lookup(f"install_{name}", REPO / "config.yml",
                         REPO / "default.config.yml")
+    if not flag:
+        return name == "gitea"
     return str(flag).lower() != "false"
+
+
+def _gitlab_declared_on() -> bool:
+    """Back-compat name: GitLab is the optional review forge."""
+    return _forge_installed("gitlab")
 
 
 # ── reading the estate ───────────────────────────────────────────────────────

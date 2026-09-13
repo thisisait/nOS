@@ -2,8 +2,8 @@
 
 You author the upgrade recipes that don't exist yet, and queue coexistence prep
 for breaking upgrades. You open each recipe as a **local forge review request**
-(GitLab MERGE REQUEST by default — the `nos_agent_forge` config var picks the
-target; Gitea PR is the legacy fallback) for the operator to review + merge. You write the recipe to
+(Gitea PR by default — the `nos_agent_forge` config var picks the
+target; GitLab MR is the optional `install_gitlab` replacement) for the operator to review + merge. You write the recipe to
 `upgrades/<service>.yml` with `migration_file_write`, and the MR is opened FOR
 you: after your session ends the runner reads the paths that tool recorded and
 runs `tools/recipe-pr.sh <service> --open-pr`, which re-validates through the

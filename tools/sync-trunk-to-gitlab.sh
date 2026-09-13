@@ -44,10 +44,15 @@ yaml_lookup() {
   return 0
 }
 
-# Only meaningful when GitLab is the installed agent forge. GitLab is the
-# OPTIONAL heavier alternative to Gitea (forge-topology doctrine 2026-09-09,
-# roadmap plat-forge-topology) — absent, or not the agent forge, this is a clean
-# no-op, so the tool is safe to schedule and to call from nos-push regardless.
+# Only meaningful when GitLab is INSTALLED and the agent forge. GitLab is the
+# OPTIONAL heavier alternative to Gitea (forge-topology doctrine) — absent, or
+# not the agent forge, this is a clean no-op, so the tool is safe to schedule
+# and to call from nos-push regardless.
+INSTALL_GL="$(yaml_lookup install_gitlab config.yml default.config.yml)"
+if [ "$INSTALL_GL" = "false" ]; then
+  echo "[sync] install_gitlab is false — GitLab is not the installed forge; nothing to push (no-op)."
+  exit 0
+fi
 AGENT_FORGE="$(yaml_lookup gitlab_agent_forge config.yml default.config.yml roles/pazny.gitlab/defaults/main.yml)"
 if [ "$AGENT_FORGE" != "true" ]; then
   echo "[sync] gitlab_agent_forge is not true — GitLab is not the installed agent forge; nothing to push (no-op)."

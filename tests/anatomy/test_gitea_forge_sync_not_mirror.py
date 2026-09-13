@@ -28,7 +28,9 @@ def test_nos_push_runs_trunk_sync_in_agent_forge_mode():
 
 def test_sync_trunk_is_a_clean_noop_off_agent_forge():
     src = (REPO / "tools" / "sync-trunk-to-gitea.sh").read_text(encoding="utf-8")
-    assert "gitea_agent_forge" in src and re.search(r"no-?op", src, re.I), \
+    assert "install_gitea" in src and re.search(r"no-?op", src, re.I), \
+        "sync-trunk must no-op when Gitea is not installed (GitLab-as-replacement)"
+    assert "gitea_agent_forge" in src, \
         "sync-trunk must guard on agent-forge and no-op (not fail) in pull-mirror mode"
 
 
@@ -58,5 +60,5 @@ def test_nos_push_syncs_gitlab_forge_symmetrically():
 
 def test_sync_trunk_gitlab_is_a_clean_noop_off_agent_forge():
     src = (REPO / "tools" / "sync-trunk-to-gitlab.sh").read_text(encoding="utf-8")
-    assert "gitlab_agent_forge" in src and re.search(r"no-?op", src, re.I), \
-        "sync-trunk-to-gitlab must guard on agent-forge and no-op (not fail) otherwise"
+    assert "install_gitlab" in src and "gitlab_agent_forge" in src and re.search(r"no-?op", src, re.I), \
+        "sync-trunk-to-gitlab must no-op unless GitLab is installed AND the agent forge"

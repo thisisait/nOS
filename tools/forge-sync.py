@@ -184,17 +184,17 @@ def read_tips(driver, branch: str) -> dict[str, dict]:
 
     for name in ("gitea", "gitlab"):
         # A forge DECLARED off is a decision, not an unreadable holder.
-        # MEASURED 2026-09-03: install_gitlab false (operator, 09-01) made
-        # every election refuse on "gitlab unreachable", which blocked the
-        # reviewer's promotion step — the whole trunk froze on a holder the
-        # operator had deliberately removed. Excused ≠ ignored: the entry
-        # says so in the report, and flipping the flag restores the seat.
-        if name == "gitlab":
-            flag = driver._yaml_lookup("install_gitlab", REPO / "config.yml",
-                                       REPO / "default.config.yml")
-            if str(flag).lower() == "false":
-                tips[name] = {"sha": None, "error": None, "declared_off": True}
-                continue
+        # MEASURED 2026-09-03: install_gitlab false made every election refuse
+        # on "gitlab unreachable", which blocked the reviewer's promotion —
+        # the trunk froze on a holder the operator had deliberately removed.
+        # Same rule for Gitea (GitLab as drop-in replacement): install_<forge>
+        # false excuses that seat. Excused ≠ ignored; flipping the flag
+        # restores it.
+        flag = driver._yaml_lookup(f"install_{name}", REPO / "config.yml",
+                                   REPO / "default.config.yml")
+        if str(flag).lower() == "false":
+            tips[name] = {"sha": None, "error": None, "declared_off": True}
+            continue
         try:
             forge = driver._forge(name)
         except Exception as exc:  # noqa: BLE001 — Refused or config gap, same answer

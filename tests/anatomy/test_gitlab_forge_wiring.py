@@ -1,14 +1,15 @@
 """Anatomy CI gate — GitLab agent-forge wiring (T32.2, 2026-06-10).
 
-The operator review surface moved Gitea → GitLab (the Gitea oauth2 source row
-kept vanishing → /user/oauth2/authentik 500 → UI lockout; GitLab's omniauth
-OIDC works). This pins the forge contract so its pieces can't drift apart:
+The operator review surface MAY be GitLab (T32.2, optional). Gitea +
+Woodpecker is PRIMARY; GitLab is a drop-in replacement, never assumed
+always-on. This pins the GitLab *wiring* so its pieces can't drift apart
+when an operator opts in:
 
   * pazny.gitlab defaults declare the forge vars (off by default)
   * post.yml includes post-forge.yml gated on gitlab_agent_forge
   * the PAT persists via secrets.yml.j2 (gitlab_api_token)
-  * recipe-pr.sh targets GitLab MRs by default (nos_agent_forge=gitlab) and
-    keeps the Gitea leg as an explicit fallback
+  * recipe-pr.sh targets Gitea by default and keeps the GitLab MR dialect
+    as the install_gitlab=true replacement
   * the trunk-sync twin exists and is FF-only
 """
 
@@ -89,15 +90,22 @@ def test_forge_pat_persisted_in_role_after_mint():
         )
 
 
-def test_recipe_pr_defaults_to_gitlab_mrs():
+def test_recipe_pr_defaults_to_gitea_not_gitlab():
+    """GitLab is optional. Stock default + hard fallback must be Gitea;
+    install_gitlab false must pin the review forge even if nos_agent_forge
+    still says gitlab (the 2026-09-03 landing-half death)."""
     text = RECIPE_PR.read_text()
     assert "nos_agent_forge" in text, "recipe-pr.sh must read the nos_agent_forge config var"
-    assert 'FORGE="gitlab"' in text, "recipe-pr.sh hard fallback must be gitlab"
-    assert "PRIVATE-TOKEN" in text and "merge_requests" in text, "GitLab MR leg missing"
+    assert 'FORGE="gitea"' in text, "recipe-pr.sh hard fallback must be gitea (primary forge)"
+    assert "install_gitlab" in text, "recipe-pr.sh must refuse GitLab when it is declared off"
+    assert "PRIVATE-TOKEN" in text and "merge_requests" in text, "GitLab MR leg missing (drop-in replacement)"
     assert "api/v1/repos" in text and "pulls" in text, "Gitea PR fallback leg removed"
     cfg = DEFAULT_CONFIG.read_text()
-    assert re.search(r'^nos_agent_forge:\s*"gitlab"', cfg, re.M), (
-        "default.config.yml must declare nos_agent_forge: gitlab"
+    assert re.search(r'^nos_agent_forge:\s*"gitea"', cfg, re.M), (
+        "default.config.yml must declare nos_agent_forge: gitea — GitLab is optional"
+    )
+    assert re.search(r'^install_gitlab:\s*false', cfg, re.M), (
+        "install_gitlab must default OFF — GitLab is never assumed always-on"
     )
 
 

@@ -8,11 +8,10 @@
 # SEPARATE, operator-run step (tools/promote-public.sh) — the agent loop stays
 # off the public internet.
 #
-# FORGE TARGET (T32.2, 2026-06-10): default comes from `nos_agent_forge` in
-# config.yml / default.config.yml (repo default: "gitlab" — GitLab MERGE
-# REQUESTS are the operator review surface; the Gitea oauth2 source row kept
-# vanishing → SSO 500 → operator locked out of the Gitea UI). Override per-run
-# with --forge gitea|gitlab.
+# FORGE TARGET: default comes from `nos_agent_forge` (repo default: "gitea" —
+# Gitea + Woodpecker is PRIMARY). GitLab is an optional drop-in replacement
+# (`install_gitlab: true`); when that flag is false this tool will not target
+# GitLab even if nos_agent_forge still says gitlab. Override with --forge.
 #
 # DRY-RUN BY DEFAULT (operator doctrine: dry-run default + explicit confirm):
 #   tools/recipe-pr.sh <service>             # validate only — no git, no push
@@ -112,7 +111,13 @@ yaml_lookup() {
 }
 
 [ -n "$FORGE" ] || FORGE="$(yaml_lookup nos_agent_forge config.yml default.config.yml)"
-[ -n "$FORGE" ] || FORGE="gitlab"
+[ -n "$FORGE" ] || FORGE="gitea"
+# GitLab is optional. A stale nos_agent_forge=gitlab with the container off is
+# the 2026-09-03 landing-half death; Gitea already carries the CI.
+INSTALL_GL="$(yaml_lookup install_gitlab config.yml default.config.yml)"
+if [ "$INSTALL_GL" = "false" ]; then
+  FORGE="gitea"
+fi
 case "$FORGE" in gitlab|gitea) : ;; *) echo "[recipe-pr] unknown forge '$FORGE' (gitlab|gitea)"; exit 2 ;; esac
 
 TENANT="$(yaml_lookup tenant_domain config.yml default.config.yml)"
