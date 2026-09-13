@@ -358,6 +358,51 @@ def consent_capture_satisfied(record: Dict[str, Any]) -> Tuple[bool, str]:
     return True, ""
 
 
+# Art. 14 origin flag required when legal_basis is legitimate_interests.
+# from_subject → Art. 13 (collected from the data subject);
+# not_from_subject → Art. 14 (obtained otherwise; information duty applies).
+DATA_SOURCE_FLAGS = ("from_subject", "not_from_subject")
+
+
+def legitimate_interests_satisfied(record: Dict[str, Any]) -> Tuple[bool, str]:
+    """Honest check that Art. 6(1)(f) carries a balancing test (LIA) + Art. 14 origin.
+
+    Same shape as ``consent_capture_satisfied``: returns ``(ok, reason)`` and
+    is N/A (True, "") for every other legal basis — including ``consent``, so a
+    future device.importer.yml on 6(1)(a) is not forced onto 6f.
+
+    The runner does not call this. CI does: ``tests/anatomy/test_gdpr_6f_gate.py``
+    refuses digest importer (and in-memory app) records that claim
+    ``legitimate_interests`` without both fields.
+
+    Required when ``gdpr.legal_basis == legitimate_interests``:
+        balancing_test: <non-empty LIA prose>
+        data_source: from_subject | not_from_subject
+    """
+    gdpr = record.get("gdpr") or {}
+    if gdpr.get("legal_basis") != "legitimate_interests":
+        return True, ""
+
+    lia = gdpr.get("balancing_test")
+    if not isinstance(lia, str) or not lia.strip():
+        return False, (
+            "legal_basis is 'legitimate_interests' but no gdpr.balancing_test "
+            "(LIA) is declared. Art. 6(1)(f) is not a default — record the "
+            "interest, necessity, and balancing against the data subject's "
+            "rights. Add a gdpr.balancing_test string."
+        )
+
+    ds = gdpr.get("data_source")
+    if ds not in DATA_SOURCE_FLAGS:
+        return False, (
+            "legal_basis is 'legitimate_interests' but gdpr.data_source is "
+            "missing or not in %s. Art. 14 applies when personal data are "
+            "not obtained from the data subject — declare the origin."
+            % (list(DATA_SOURCE_FLAGS),)
+        )
+    return True, ""
+
+
 def gate_eu_residency(
     record: Dict[str, Any],
     extra_eu_registries: Optional[List[str]] = None,

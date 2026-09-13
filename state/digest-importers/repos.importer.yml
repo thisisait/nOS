@@ -27,6 +27,16 @@ gdpr:
     licence and security questions against governed rows. Each repo is attributed
     to its owning party (resolved against the master-data spine, never minted).
   legal_basis: legitimate_interests
+  balancing_test: >-
+    The controller's interest is knowing its own software estate (repos,
+    apps, dependencies) for licence and security questions. Listing and
+    shallow-cloning the organisation's remotes is necessary for that
+    inventory. Developer names appear only where a remote or manifest
+    already exposes them; they are incidental, not a marketing list.
+    Owner resolution never mints a party. A public-host transfer is
+    declared. Developers named in commit metadata reasonably expect
+    that metadata to travel with the repository the organisation operates.
+  data_source: not_from_subject   # Art. 14 — from the git remote, not collected from the subject
   data_categories:
     - "Repository metadata (name, remote URL, head commit)"
     - "Dependency manifests (package name, version, ecosystem)"

@@ -21,6 +21,16 @@ gdpr:
     questions against governed rows. Both counterparties are resolved against the
     spine, never minted.
   legal_basis: legitimate_interests
+  balancing_test: >-
+    The controller's interest is answering its own accounting and cash-flow
+    questions against governed invoice rows. The ISDOC files are already held
+    by the organisation; ingest copies header fields and IČO references
+    already on those documents. Counterparties are resolved, never minted.
+    No marketing. Statutory invoice retention already applies to the source
+    files; the knowledge rows follow the same horizon and are erasable.
+    A sole trader named as seller/buyer has a reasonable expectation that
+    an invoice they issued or received is recorded.
+  data_source: not_from_subject   # Art. 14 — from the controller's ISDOC files, not from the subject
   data_categories:
     - "Invoice metadata (document number, issue/due dates, currency, payable amount)"
     - "Counterparty identity references (IČO of seller and buyer)"
