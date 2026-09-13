@@ -34,6 +34,12 @@ gdpr:
     cache of message metadata for performance — message bodies live on
     the IMAP server (which has its own Article 30 entry).
   legal_basis: "legitimate_interests"
+  balancing_test: >-
+    Controller interest is providing webmail over mail the estate already
+    holds. Roundcube stores prefs, address-book entries and short-term
+    metadata cache only; message bodies stay on IMAP. No marketing; 365-day
+    cache horizon; erasable with the account. End-user access is optional.
+  data_source: from_subject
   data_categories:
     - "email_metadata"           # subjects, headers, flags
     - "address_book_entries"     # contact name + email + phone

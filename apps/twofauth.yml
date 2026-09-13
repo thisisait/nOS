@@ -34,6 +34,11 @@ gdpr:
     a single phone. Replaces a hardware authenticator + paper backup. No
     third-party user data — the operator is the only data subject.
   legal_basis: "legitimate_interests"
+  balancing_test: >-
+    Controller interest is keeping the operator's own TOTP secrets reachable
+    on the LAN instead of a single phone. No third-party subjects; secrets
+    persist until the operator rotates them (retention -1). No marketing.
+  data_source: from_subject
   data_categories:
     - "credentials"            # TOTP shared secrets (encrypted at rest)
     - "authentication_metadata"  # service names, icons, last-use timestamps

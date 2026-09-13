@@ -87,6 +87,8 @@ def _record(meta_overrides=None, gdpr_overrides=None, compose_overrides=None,
         "gdpr": {
             "purpose": "demo processing",
             "legal_basis": "legitimate_interests",
+            "balancing_test": "Controller interest is a local demo index of partner emails already on file; no marketing; erasable.",
+            "data_source": "not_from_subject",
             "data_categories": ["email"],
             "data_subjects": ["partners"],
             "retention_days": 90,

@@ -14,9 +14,12 @@ import yaml
 
 from module_utils.nos_app_parser import (
     DATA_SOURCE_FLAGS,
+    AppParseError,
     consent_capture_satisfied,
     legitimate_interests_satisfied,
+    validate,
 )
+from module_utils import nos_gdpr
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 IMPORTERS_DIR = REPO / "state" / "digest-importers"
@@ -135,3 +138,57 @@ def test_live_6f_importers_declare_lia_and_origin(path: pathlib.Path):
     rec = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     ok, reason = legitimate_interests_satisfied(rec)
     assert ok is True, f"{path.name}: {reason}"
+
+def _app_record(**gdpr_extra):
+    rec = {
+        "meta": {"name": "demo", "version": "1.0", "summary": "demo"},
+        "gdpr": {
+            "purpose": "demo processing",
+            "legal_basis": "legitimate_interests",
+            "data_categories": ["email"],
+            "data_subjects": ["partners"],
+            "retention_days": 90,
+            "processors": [],
+            "transfers_outside_eu": False,
+        },
+        "compose": {"services": {"app": {"image": "ghcr.io/demo/app:1"}}},
+    }
+    rec["gdpr"].update(gdpr_extra)
+    return rec
+
+
+def test_validate_refuses_6f_without_lia():
+    """Live parse path: validate() must refuse 6f with no LIA (runner uses this)."""
+    with pytest.raises(AppParseError) as exc:
+        validate(_app_record())
+    assert any("balancing_test" in v for v in exc.value.violations)
+
+
+def test_validate_accepts_complete_6f():
+    validate(_app_record(
+        balancing_test="Controller interest is a local demo index; limited to partners already on file; erasable.",
+        data_source="not_from_subject",
+    ))
+
+
+def test_art30_forwards_balancing_test():
+    """Art-30 mapper must not drop LIA / origin when the source declared them."""
+    rec = nos_gdpr.gdpr_block_to_record(
+        {
+            "purpose": "ingest counterparties",
+            "legal_basis": "legitimate_interests",
+            "balancing_test": "a real LIA sentence that is non-empty",
+            "data_source": "not_from_subject",
+            "data_categories": ["legal name"],
+            "data_subjects": ["counterparties"],
+            "processors": [],
+            "transfers_outside_eu": False,
+            "retention_days": 3650,
+        },
+        record_id="imp_fixture",
+        slug="fixture",
+        tier="importer",
+    )
+    assert rec.get("balancing_test", "").strip()
+    assert rec.get("data_source") == "not_from_subject"
+

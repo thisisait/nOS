@@ -43,6 +43,12 @@ gdpr:
   #   public_task          — public-interest task (rare)
   #   legitimate_interests — balancing test, document the legitimate interest
   legal_basis: "legitimate_interests"
+  # Required when legal_basis is legitimate_interests (parser validate()).
+  balancing_test: >-
+    Controller interest is operating this app for the estate's own users.
+    Processing is limited to the categories below; no marketing; erasable
+    via DSAR. Document the real LIA before promoting a copy of this template.
+  data_source: from_subject   # from_subject | not_from_subject (Art. 13 / 14)
 
   # Categories of personal data PROCESSED. Be specific.
   # Common values: email, name, ip_address, location, photos, audio,

@@ -42,6 +42,12 @@ gdpr:
     process (audit logs, CVE descriptions, system facts) — Qdrant itself
     does not collect data; it persists what Bone uploads.
   legal_basis: "legitimate_interests"
+  balancing_test: >-
+    Controller interest is a local semantic index of agent outputs, system
+    facts and cybersec metadata the operator already processes. Qdrant
+    stores only what Bone uploads; no marketing; retention 365 days;
+    erasable with the source systems. Subjects are operators of this host.
+  data_source: not_from_subject
   data_categories:
     - "agent_run_metadata"        # conductor / inspektor invocation logs
     - "system_facts"              # Wing systems rows reflected as embeddings

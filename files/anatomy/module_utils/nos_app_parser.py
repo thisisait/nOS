@@ -240,6 +240,12 @@ def validate(record: Dict[str, Any], app_name: Optional[str] = None) -> None:
         if teu is not None and not isinstance(teu, bool):
             violations.append("gdpr.transfers_outside_eu must be a boolean")
 
+        # Art. 6(1)(f) — LIA + Art. 14 origin. Root gate: parse_app_file
+        # and the apps runner call validate(); do not re-check in the runner.
+        ok_6f, reason_6f = legitimate_interests_satisfied(record)
+        if not ok_6f:
+            violations.append(reason_6f)
+
     # ── 4. compose block — minimal structural check ─────────────────────
     compose = record.get("compose") or {}
     if not isinstance(compose, dict):
@@ -371,9 +377,9 @@ def legitimate_interests_satisfied(record: Dict[str, Any]) -> Tuple[bool, str]:
     is N/A (True, "") for every other legal basis — including ``consent``, so a
     future device.importer.yml on 6(1)(a) is not forced onto 6f.
 
-    The runner does not call this. CI does: ``tests/anatomy/test_gdpr_6f_gate.py``
-    refuses digest importer (and in-memory app) records that claim
-    ``legitimate_interests`` without both fields.
+    Called from ``validate()`` so the apps runner cannot deploy a 6f
+    manifest that skipped the LIA. CI also pins the predicate directly
+    (``tests/anatomy/test_gdpr_6f_gate.py``).
 
     Required when ``gdpr.legal_basis == legitimate_interests``:
         balancing_test: <non-empty LIA prose>

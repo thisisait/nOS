@@ -144,6 +144,12 @@ def gdpr_block_to_record(
         "transfers_outside_eu": transfers,
         "storage_location": storage,
         "notes": (gdpr.get("notes") or None),
+        # Forward Art. 6(1)(f) extras when present. Absent on other bases
+        # (and on 6f plugins that have not authored an LIA yet) — do not
+        # invent a balancing test here. The app parser refuses 6f without
+        # these; this mapper only copies, it does not synthesize.
+        "balancing_test": (gdpr.get("balancing_test") or None),
+        "data_source": (gdpr.get("data_source") or None),
         # ── render-only extras (not upserted) ──
         "eu_residency": bool(eu_residency),
         "stack": stack,
