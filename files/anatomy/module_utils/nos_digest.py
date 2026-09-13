@@ -186,8 +186,10 @@ def check_fixture_seed(seed: dict, tables_dir: str | pathlib.Path) -> list[str]:
 # visibility rows, staged with repos-importer) is the ENFORCEMENT mechanism.
 #
 # This module is the PURE core (normalize + checksum + slug + 3-outcome resolve)
-# against an explicit index. ARES verify, the __visibility:system review rung,
-# and merge_party choreography are KEAP-integrated and land with repos-importer.
+# against an explicit index. compose_party_review is the __visibility:system
+# review rung: proposed spine rows, not /ingest/v1/capture. KEAP peels the
+# meta key on POST and appends table_row_history; ARES verify and merge_party
+# stay later.
 
 #: IČO reserved for synthetic fixtures (docs/idea/15): (CZ)?000001\d\d. A real
 #: document carrying this range is a data error, not a match — refused outside
@@ -299,6 +301,90 @@ def resolve_party(ref: dict, party_index: dict, *,
                            reason="name matches more than one org — ambiguous")
 
     return _review(reason="no valid key and no unique name — needs review")
+
+
+#: Row-level grade the review rung stamps. Not a table column — KEAP peels
+#: `__visibility` the way it peels `__id` (agent.ts extractRowSharing).
+REVIEW_VISIBILITY = "system"
+_DEVICE_REF_KEYS = ("device_id", "udid", "imei", "serial", "identifier_hash")
+
+
+def _is_device_ref(ref: dict) -> bool:
+    """Owner scheme B: a device identifier is not party slug material."""
+    if not isinstance(ref, dict):
+        return False
+    if any(ref.get(k) not in (None, "") for k in _DEVICE_REF_KEYS):
+        return True
+    if ref.get("kind") == "device":
+        return True
+    blob = " ".join(str(ref.get(k) or "") for k in ("slug", "name", "legal_name"))
+    return "party-device-" in blob
+
+
+def _batch_slug(batch_id: str) -> str:
+    s = re.sub(r"[^a-z0-9-]+", "-", str(batch_id).lower()).strip("-")
+    return (s or "batch")[:40]
+
+
+def compose_party_review(items: list, *, batch_id: str) -> dict:
+    """Turn resolve_party review outcomes into proposed party-spine rows.
+
+    Clustered by batch_id (autoskola-trio: one batch, many spine rows). Born
+    `__visibility:system` so they are not normal-visibility parties. Device
+    identifiers, synthetic-range data errors, resolved, and create mint nothing.
+    Returns a deterministic mapping (party, then tax when an IČO is the key);
+    never captures[] / proposals[].
+    """
+    parties: list[dict] = []
+    taxes: list[dict] = []
+    seq = 0
+    token = _batch_slug(batch_id)
+    for item in items or []:
+        ref = (item or {}).get("ref") or {}
+        res = (item or {}).get("result") or {}
+        if res.get("status") != "review" or _is_device_ref(ref):
+            continue
+        reason = res.get("reason") or ""
+        if "synthetic range" in reason:
+            continue
+        name = (ref.get("legal_name") or ref.get("name") or "").strip()
+        kind = "person" if ref.get("kind") == "person" else "org"
+        if res.get("matched_by") == "ico" and res.get("slug"):
+            slug = res["slug"]
+        else:
+            if not name and not res.get("candidates"):
+                continue
+            seq += 1
+            slug = f"party-review-{token}-{seq}"
+        if kind == "person" and not name:
+            continue
+        notes = f"review-batch:{batch_id} | {reason}"
+        cands = res.get("candidates") or []
+        if cands:
+            notes += f" | candidates:{','.join(cands)}"
+        row = {
+            "slug": slug,
+            "legal_name": name or slug,
+            "party_kind": kind,
+            "country": (ref.get("country") or "CZ").strip() or "CZ",
+            "notes": notes,
+            "__visibility": REVIEW_VISIBILITY,
+        }
+        parties.append(row)
+        if kind == "org" and res.get("matched_by") == "ico" and res.get("match_value"):
+            taxes.append({
+                "slug": f"tax-{slug}-ico",
+                "party": slug,
+                "scheme": "ICO",
+                "value": res["match_value"],
+                "__visibility": REVIEW_VISIBILITY,
+            })
+    out: dict = {}
+    if parties:
+        out["party"] = parties
+    if taxes:
+        out["party-tax-identity"] = taxes
+    return out
 
 
 # ── teardown: the inverse of seed-bundle.yml (cleanup / from-blank / firm removal) ──
