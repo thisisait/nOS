@@ -7,7 +7,7 @@ test_tofu_authentik_conformance.test_module_never_creates_oauth2_for_forward_aut
 This gate pins the layer ABOVE it: the generated service registry
 (state/tofu-authentik-services.yml) and the generator that writes it. A
 forward_auth / header_oidc service is a PROXY-provider service — it must carry
-NO oauth2 client fields (client_secret / redirect_uris) in its registry row.
+NO oauth2 identity fields (client_id / client_secret / redirect_uris) in its registry row.
 
 Why it matters: the infisical incident (2026-06-02, plugin.yml:38 forward_auth)
 was an orphan OAuth2Provider sharing the ProxyProvider's base Provider row via
@@ -26,7 +26,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 REGISTRY = REPO / "state" / "tofu-authentik-services.yml"
 GENERATOR = REPO / "tools" / "tofu-authentik-gen-registry.py"
 
-OAUTH2_CLIENT_FIELDS = ("client_secret", "redirect_uris")
+OAUTH2_CLIENT_FIELDS = ("client_id", "client_secret", "redirect_uris")
 
 
 def _services() -> list[dict]:
@@ -80,3 +80,45 @@ def test_generator_suppresses_oauth2_fields_for_non_native_oidc():
         for ln in assigns:
             assert src.index(ln) > guard_idx, \
                 f'entry["{f}"] assigned outside the native_oidc guard'
+
+def test_aggregator_strips_oauth2_identity_from_proxy_clients():
+    """The harvested inputs.clients list is what 10-oidc-apps AND the tofu
+    generator consume. A forward_auth / header_oidc row that still carries
+    client_id / client_secret / redirect_uris is an oauth2 identity — the
+    MTI orphan seed. Strip at the aggregator, not per-plugin."""
+    import sys
+    sys.path.insert(0, str(REPO / "files/anatomy"))
+    from module_utils import load_plugins
+
+    plugins = load_plugins.discover(REPO / "files/anatomy/plugins")
+    load_plugins.run_aggregators(plugins, app_manifests=_app_manifests())
+    ab = next(p for p in plugins if p.name == "authentik-base")
+    proxy_modes = {"forward_auth", "header_oidc", "proxy", "proxy_auth"}
+    offenders = []
+    for c in ab.inputs.get("clients") or []:
+        mode = c.get("mode") or c.get("provider_type")
+        if mode not in proxy_modes:
+            continue
+        for f in OAUTH2_CLIENT_FIELDS:
+            if f in c:
+                offenders.append((c.get("slug"), f))
+    assert not offenders, (
+        f"aggregator left oauth2 identity on proxy clients: {offenders}"
+    )
+
+
+def _app_manifests():
+    apps = []
+    root = REPO / "apps"
+    if not root.is_dir():
+        return apps
+    for app_yml in sorted(root.iterdir()):
+        name = app_yml.name
+        if not (name.endswith(".yml") or name.endswith(".yaml")):
+            continue
+        if name.startswith("_") or ".draft" in name:
+            continue
+        parsed = yaml.safe_load(app_yml.read_text()) or {}
+        if isinstance(parsed, dict):
+            apps.append(parsed)
+    return apps

@@ -10,7 +10,6 @@ tofu_authentik_services:
   tier: 1
   enabled: '{{ install_backrest | default(false) }}'
   external_host: https://{{ backrest_domain }}
-  client_id: nos-backrest
 - slug: bookstack
   name: BookStack
   mode: native_oidc
@@ -27,21 +26,18 @@ tofu_authentik_services:
   tier: 3
   enabled: '{{ install_calibreweb | default(false) }}'
   external_host: https://{{ calibreweb_domain }}
-  client_id: nos-calibre-web
 - slug: code-server
   name: code-server
   mode: forward_auth
   tier: 2
   enabled: '{{ install_code_server | default(false) }}'
   external_host: https://{{ code_server_domain }}
-  client_id: nos-code-server
 - slug: documenso
   name: Documenso
   mode: forward_auth
   tier: 2
   enabled: true
   external_host: https://documenso.apps.{{ tenant_domain | default('dev.local') }}
-  client_id: nos-documenso
 - slug: erpnext
   name: ERPNext
   mode: native_oidc
@@ -58,21 +54,18 @@ tofu_authentik_services:
   tier: 3
   enabled: '{{ install_face | default(false) }}'
   external_host: https://{{ face_domain | default('os' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
-  client_id: nos-face
 - slug: firefly
   name: Firefly III
   mode: header_oidc
   tier: 2
   enabled: '{{ install_firefly | default(false) }}'
   external_host: https://{{ firefly_domain | default('firefly' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
-  client_id: nos-firefly
 - slug: freescout
   name: FreeScout
   mode: forward_auth
   tier: 2
   enabled: '{{ install_freescout | default(false) }}'
   external_host: https://{{ freescout_domain }}
-  client_id: nos-freescout
 - slug: gitea
   name: Gitea
   mode: native_oidc
@@ -119,7 +112,6 @@ tofu_authentik_services:
   tier: 1
   enabled: '{{ install_hermes | default(false) }}'
   external_host: https://{{ hermes_domain }}
-  client_id: nos-hermes
 - slug: homeassistant
   name: Home Assistant
   mode: native_oidc
@@ -136,14 +128,12 @@ tofu_authentik_services:
   tier: 1
   enabled: '{{ install_infisical | default(false) }}'
   external_host: https://{{ infisical_domain }}
-  client_id: nos-infisical
 - slug: influxdb
   name: InfluxDB
   mode: forward_auth
   tier: 1
   enabled: '{{ install_influxdb | default(false) }}'
   external_host: https://{{ influxdb_domain }}
-  client_id: nos-influxdb
 - slug: jellyfin
   name: Jellyfin
   mode: native_oidc
@@ -160,28 +150,24 @@ tofu_authentik_services:
   tier: 3
   enabled: '{{ install_keap | default(false) }}'
   external_host: https://{{ keap_domain | default('keap' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
-  client_id: nos-keap
 - slug: kiwix
   name: Kiwix
   mode: forward_auth
   tier: 4
   enabled: '{{ install_kiwix | default(false) }}'
   external_host: https://{{ kiwix_domain }}
-  client_id: nos-kiwix
 - slug: mailpit
   name: Mailpit
   mode: forward_auth
   tier: 1
   enabled: '{{ install_mailpit | default(false) }}'
   external_host: https://{{ mailpit_domain }}
-  client_id: nos-mailpit
 - slug: metabase
   name: Metabase
   mode: forward_auth
   tier: 2
   enabled: '{{ install_metabase | default(false) }}'
   external_host: https://{{ metabase_domain }}
-  client_id: nos-metabase
 - slug: miniflux
   name: Miniflux
   mode: native_oidc
@@ -229,14 +215,12 @@ tofu_authentik_services:
   tier: 3
   enabled: '{{ install_ntfy | default(false) }}'
   external_host: https://{{ ntfy_domain }}
-  client_id: nos-ntfy
 - slug: onlyoffice
   name: ONLYOFFICE
   mode: forward_auth
   tier: 3
   enabled: '{{ install_onlyoffice | default(false) }}'
   external_host: https://{{ onlyoffice_domain }}
-  client_id: nos-onlyoffice
 - slug: open-webui
   name: Open WebUI
   mode: native_oidc
@@ -253,7 +237,6 @@ tofu_authentik_services:
   tier: 1
   enabled: '{{ install_openclaw | default(false) }}'
   external_host: https://{{ openclaw_domain }}
-  client_id: nos-openclaw
 - slug: outline
   name: Outline
   mode: native_oidc
@@ -270,7 +253,6 @@ tofu_authentik_services:
   tier: 2
   enabled: '{{ install_paperclip | default(false) }}'
   external_host: https://{{ paperclip_domain }}
-  client_id: nos-paperclip
 - slug: portainer
   name: Portainer
   mode: native_oidc
@@ -287,28 +269,24 @@ tofu_authentik_services:
   tier: 1
   enabled: '{{ install_qdrant | default(false) }}'
   external_host: https://qdrant.{{ apps_subdomain | default('apps') }}.{{ tenant_domain }}
-  client_id: nos-qdrant
 - slug: roundcube
   name: Roundcube
   mode: forward_auth
   tier: 3
   enabled: true
   external_host: https://roundcube.apps.{{ tenant_domain | default('dev.local') }}
-  client_id: nos-roundcube
 - slug: snappymail
   name: SnappyMail
   mode: forward_auth
   tier: 3
   enabled: '{{ install_snappymail | default(false) }}'
   external_host: https://{{ snappymail_domain }}
-  client_id: nos-snappymail
 - slug: spacetimedb
   name: SpacetimeDB
   mode: forward_auth
   tier: 1
   enabled: '{{ install_spacetimedb | default(false) }}'
   external_host: https://{{ spacetimedb_domain | default('spacetime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
-  client_id: nos-spacetimedb
 - slug: superset
   name: Superset
   mode: native_oidc
@@ -325,14 +303,12 @@ tofu_authentik_services:
   tier: 3
   enabled: true
   external_host: https://twofauth.apps.{{ tenant_domain | default('dev.local') }}
-  client_id: nos-twofauth
 - slug: uptime-kuma
   name: Uptime Kuma
   mode: forward_auth
   tier: 3
   enabled: '{{ install_uptime_kuma | default(false) }}'
   external_host: https://{{ uptime_kuma_domain }}
-  client_id: nos-uptime-kuma
 - slug: vaultwarden
   name: Vaultwarden
   mode: native_oidc
@@ -349,14 +325,12 @@ tofu_authentik_services:
   tier: 1
   enabled: '{{ install_wing | default(false) }}'
   external_host: https://{{ wing_domain }}
-  client_id: nos-wing
 - slug: woodpecker
   name: Woodpecker CI
   mode: forward_auth
   tier: 2
   enabled: '{{ install_woodpecker | default(false) }}'
   external_host: https://{{ woodpecker_domain }}
-  client_id: nos-woodpecker
 - slug: wordpress
   name: WordPress
   mode: native_oidc

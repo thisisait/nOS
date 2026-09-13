@@ -241,6 +241,24 @@ def topological_order(plugins: list[Plugin]) -> list[Plugin]:
 
 # ── Aggregator pattern (V4 SR-1) ─────────────────────────────────────────────
 
+# Strip leftover oauth2 identity off proxy-mode authentik: harvests
+# (schema still requires client_id/secret). Shared chokepoint for
+# 10-oidc-apps and tofu-authentik-gen-registry. MTI: extra OAuth2Provider
+# shares the ProxyProvider base; deleting it kills the live gate.
+_PROXY_AUTH_MODES = frozenset({"forward_auth", "header_oidc", "proxy", "proxy_auth"})
+_OAUTH2_IDENTITY_KEYS = ("client_id", "client_secret", "redirect_uris")
+
+
+def _suppress_oauth2_identity_for_proxy(block: dict, block_path: str) -> dict:
+    if block_path != "authentik":
+        return block
+    mode = block.get("mode") or block.get("provider_type")
+    if mode in _PROXY_AUTH_MODES:
+        for k in _OAUTH2_IDENTITY_KEYS:
+            block.pop(k, None)
+    return block
+
+
 def _deep_render(value, ctx: dict):
     """Recursively render Jinja2 strings in nested dict/list values.
 
@@ -314,13 +332,15 @@ def run_aggregators(plugins: list[Plugin],
                         continue
                     block = p.manifest.get(block_path)
                     if isinstance(block, dict):
-                        if tvars:
-                            block = _deep_render(block, tvars)
+                        # Copy so setdefault / oauth2-strip cannot mutate
+                        # the plugin manifest in place.
+                        block = _deep_render(block, tvars) if tvars else dict(block)
                         # Carry the slug forward even if the manifest's
                         # block omits one (defensive — current schema
                         # requires it for authentik:).
                         block.setdefault("slug", p.name.replace("-base", ""))
                         block.setdefault("plugin_name", p.name)
+                        _suppress_oauth2_identity_for_proxy(block, block_path)
                         harvested.append(block)
             elif from_kind == "consumer_kind":
                 # phi-hub-card-icon-gap: harvest a top-level SCALAR manifest
@@ -379,8 +399,7 @@ def run_aggregators(plugins: list[Plugin],
                 for app in app_manifests:
                     block = app.get(block_path)
                     if isinstance(block, dict):
-                        if tvars:
-                            block = _deep_render(block, tvars)
+                        block = _deep_render(block, tvars) if tvars else dict(block)
                         meta = app.get("meta") or {}
                         nginx = app.get("nginx") or {}
                         block.setdefault("slug", meta.get("name"))
@@ -393,6 +412,7 @@ def run_aggregators(plugins: list[Plugin],
                         if "tier" not in block:
                             tier = nginx.get("rbac_tier")
                             block["tier"] = tier if tier is not None else 2
+                        _suppress_oauth2_identity_for_proxy(block, block_path)
                         harvested.append(block)
             # Multiple aggregates specs that share the same output_var
             # MERGE (Tier-1 plugin clients + Tier-2 app clients land in
