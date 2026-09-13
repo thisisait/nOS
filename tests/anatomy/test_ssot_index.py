@@ -55,3 +55,18 @@ def test_doctrine_is_the_only_ssot_tree():
 def test_dtt_is_not_in_this_repo():
     assert not (REPO / "ssot" / "dtt").exists()
     assert not (REPO / "ssot" / "genome").exists()
+
+
+def test_ssot_stub_keeps_docs_path_as_an_address():
+    import importlib.util
+    import sys
+    spec = importlib.util.spec_from_file_location(
+        "doctrine_cite", REPO / "tools" / "doctrine-cite.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["doctrine_cite"] = mod
+    spec.loader.exec_module(mod)
+    corpus = mod.build_corpus()
+    stub = corpus["docs/doctrine/ssot.md"]
+    live = corpus["ssot/doctrine/ssot.md"]
+    assert live.sections, "ssot/doctrine/ssot.md has no numbered sections"
+    assert stub.sections == live.sections

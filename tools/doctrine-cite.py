@@ -109,7 +109,8 @@ SELF_REFERENTIAL = ("tools/doctrine-cite.py",
 #: (files/anatomy/cortex/docs/specs/*) — first run without it misclassified
 #: every cortex-validate.md §-citation as `wrong` via a header doc it never
 #: meant.
-CORPUS_GLOBS = ("CLAUDE.md", "docs/**/*.md", "files/anatomy/docs/*.md",
+CORPUS_GLOBS = ("CLAUDE.md", "docs/**/*.md", "ssot/**/*.md",
+                "files/anatomy/docs/*.md",
                 "files/anatomy/cortex/docs/**/*.md", "files/anatomy/cortex/README.md")
 
 REMEDIATION_QUEUE = REPO / "docs" / "llm" / "security" / "remediation-queue.json"
@@ -117,7 +118,7 @@ REMEDIATION_QUEUE = REPO / "docs" / "llm" / "security" / "remediation-queue.json
 # ── citation shapes ────────────────────────────────────────────────────────
 
 RE_SECTION = re.compile(r"§\s?([0-9]+(?:\.[0-9a-z]+)*(?:\([a-z]\)|[a-z])?)")
-RE_DOC_PATH = re.compile(r"((?:docs|files/anatomy/docs)/[A-Za-z0-9_./-]+\.md)")
+RE_DOC_PATH = re.compile(r"((?:docs|ssot|files/anatomy/docs)/[A-Za-z0-9_./-]+\.md)")
 RE_DECISION = re.compile(r"DECISION\s+([0-9]+[a-z]?)\b")
 RE_CONSTRAINT = re.compile(r"[Cc]onstraint\s+([A-H])\b")
 RE_M = re.compile(r"\b(M[1-9])\b")
@@ -226,7 +227,29 @@ def build_corpus() -> dict[str, DocIndex]:
         for path in sorted(REPO.glob(pattern)):
             if path.is_file():
                 corpus[str(path.relative_to(REPO))] = index_doc(path)
+    _alias_doctrine_stubs(corpus)
     return corpus
+
+
+def _alias_doctrine_stubs(corpus: dict[str, DocIndex]) -> None:
+    """A docs/doctrine stub that points at ssot/doctrine/X.md keeps the old path
+    as an address: citations still say docs/doctrine/X.md until the warehouse
+    loop rewrites them. Sections come from the live file."""
+    for rel, idx in corpus.items():
+        if not rel.startswith("docs/doctrine/") or not rel.endswith(".md"):
+            continue
+        text = (REPO / rel).read_text(encoding="utf-8", errors="replace")
+        m = re.search(r"ssot/doctrine/([\w.-]+\.md)", text)
+        if not m:
+            continue
+        dest = "ssot/doctrine/" + m.group(1)
+        src = corpus.get(dest)
+        if src is None:
+            continue
+        idx.sections = dict(src.sections)
+        idx.decisions = dict(src.decisions)
+        idx.m_ids = set(src.m_ids)
+        idx.constraints = set(src.constraints)
 
 
 def epic_registry() -> set[str]:
