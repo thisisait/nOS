@@ -111,3 +111,103 @@ def test_teardown_plan_is_the_seed_reversed():
     assert len(plan) == sum(len(rows) for rows in seed.values())   # every row, once
     # a full bundle envelope works too (deterministic section unwrapped)
     assert ND.teardown_plan({"meta": {}, "deterministic": seed}) == plan
+
+
+def _friend_bundle() -> dict:
+    return yaml.safe_load((pathlib.Path(__file__).with_name("friend-iphone-backup.bundle.yml")).read_text())
+
+
+def _stamp(row: dict) -> dict:
+    row = dict(row)
+    row["_prov"] = {"source_id": "src:test", "importer_version": "0.0.0", "content_hash": "abc"}
+    return row
+
+
+def _device_pair(extraction: dict) -> dict:
+    return {
+        "meta": {"source_id": "src:test", "trusted": False},
+        "deterministic": {
+            "device": [_stamp({
+                "slug": "device-friend-iphone",
+                "model": "iPhone 14",
+                "os_family": "ios",
+                "identifier_hash": "sha256:" + ("a" * 64),
+            })],
+            "device-extraction": [_stamp(extraction)],
+        },
+    }
+
+
+def test_friend_iphone_backup_bundle_is_refused():
+    """Pre-fix: check_bundle returned [] for this stamped untrusted third-party
+    extraction and absorb would POST. The gate must refuse (not via resolve_party)."""
+    errs = ND.check_bundle(_friend_bundle(), TABLES)
+    assert errs, "friend-iphone-backup style bundle must not pass check_bundle"
+    blob = " ".join(errs).lower()
+    assert "i\u010do" not in blob and "ico" not in blob and "synthetic range" not in blob, errs
+    assert any("operator_owns_device" in e or "subject_kind" in e or "third" in e.lower() for e in errs), errs
+
+
+def test_device_extraction_attestation_variants_are_refused():
+    base = {
+        "slug": "ext-friend-unattested",
+        "device": "device-friend-iphone",
+        "owner": "Alex Friend",
+        "notes": "",
+        "report_path": "",
+    }
+    variants = [
+        {**base, "subject_kind": "third_party", "operator_owns_device": False},
+        {**base, "subject_kind": "operator_device", "operator_owns_device": False},
+        {**base, "subject_kind": "operator_device"},  # owns missing
+    ]
+    for extra in variants:
+        errs = ND.check_bundle(_device_pair(extra), TABLES)
+        assert errs, extra
+
+
+def test_html_or_zip_in_device_text_columns_is_refused():
+    html = "<!DOCTYPE html><html><head><title>iLEAPP Report</title></head><body><h1>SMS</h1></body></html>"
+    zip_magic = "PK\x03\x04" + "FAKE_ITUNES_BACKUP" * 4
+    for field, payload in (("notes", html), ("report_path", html), ("notes", zip_magic)):
+        extra = {
+            "slug": "ext-dump",
+            "device": "device-friend-iphone",
+            "owner": "Operator",
+            "subject_kind": "operator_device",
+            "operator_owns_device": True,
+            "notes": "",
+            "report_path": "/tmp/ileapp/index.html",
+            field: payload,
+        }
+        errs = ND.check_bundle(_device_pair(extra), TABLES)
+        assert errs, (field, payload[:40])
+
+
+def test_party_keys_in_a_device_bundle_are_refused():
+    b = _device_pair({
+        "slug": "ext-ok",
+        "device": "device-friend-iphone",
+        "owner": "Operator",
+        "subject_kind": "operator_device",
+        "operator_owns_device": True,
+        "notes": "",
+        "report_path": "",
+    })
+    b["deterministic"]["party"] = [_stamp({"slug": "party-device-deadbeef", "legal_name": "Ada Lovelace"})]
+    errs = ND.check_bundle(b, TABLES)
+    assert errs
+    assert any("party" in e for e in errs), errs
+
+
+def test_operator_owned_extraction_without_dump_still_passes():
+    errs = ND.check_bundle(_device_pair({
+        "slug": "ext-ok",
+        "device": "device-friend-iphone",
+        "owner": "Operator",
+        "subject_kind": "operator_device",
+        "operator_owns_device": True,
+        "notes": "operator phone, consented",
+        "report_path": "/tmp/ileapp/index.html",
+    }), TABLES)
+    assert errs == [], errs

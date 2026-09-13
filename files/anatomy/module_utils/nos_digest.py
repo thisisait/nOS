@@ -55,6 +55,72 @@ def _rowref_cols(tdef: dict) -> list[dict]:
             if c.get("kind") == "rowRef"]
 
 
+# Device-family gate (digest-device-doctrine-review SPEC-GAP). Scheme B never
+# calls resolve_party; these checks live on check_bundle so absorb cannot POST.
+_DEVICE_FAMILY = frozenset({"device", "device-extraction"})
+_DEVICE_DUMP_COLS = ("notes", "report_path", "raw_archive_ref")
+_HTML_MARK = re.compile(r"(?is)<!DOCTYPE\s+html|<html[\s>]")
+_ZIP_MAGIC = "PK\x03\x04"
+
+
+def _device_dump_kind(val) -> str | None:
+    if isinstance(val, (bytes, bytearray)):
+        val = val.decode("latin-1", "replace")
+    if not isinstance(val, str) or not val:
+        return None
+    if val.startswith(_ZIP_MAGIC) or _ZIP_MAGIC in val[:64]:
+        return "zip"
+    if _HTML_MARK.search(val):
+        return "html"
+    return None
+
+
+def _check_device_family(bundle: dict, det: dict, errors: list[str]) -> None:
+    tables = set(det)
+    if not tables & _DEVICE_FAMILY:
+        return
+    party_keys = sorted(t for t in tables if t == "party" or t.startswith("party-"))
+    if party_keys:
+        errors.append(
+            f"device bundle must not contain party* keys {party_keys} "
+            "(owner scheme B: owner is text, no party row)")
+    meta = bundle.get("meta") or {}
+    trusted = bool(meta.get("trusted"))
+    fixture_mode = bool(meta.get("fixture_mode"))
+    for r in det.get("device-extraction") or []:
+        if not isinstance(r, dict):
+            continue
+        slug = r.get("slug", "?")
+        if isinstance(r.get("owner"), dict):
+            errors.append(
+                f"device-extraction/{slug}.owner: must be text, not a rowRef")
+        if r.get("operator_owns_device") is not True:
+            errors.append(
+                f"device-extraction/{slug}: operator_owns_device must be true "
+                "(missing or false is a data error — third-party extraction)")
+        kind = r.get("subject_kind")
+        if kind == "third_party" or kind not in ("operator_device", "synthetic_fixture"):
+            errors.append(
+                f"device-extraction/{slug}: subject_kind {kind!r} is not a "
+                "production attestation (operator_device, or synthetic_fixture "
+                "in trusted fixture / fixture_mode)")
+        elif kind == "synthetic_fixture" and not (trusted or fixture_mode):
+            errors.append(
+                f"device-extraction/{slug}: synthetic_fixture only with "
+                "trusted fixture or fixture_mode")
+    for table in ("device", "device-extraction"):
+        for r in det.get(table) or []:
+            if not isinstance(r, dict):
+                continue
+            slug = r.get("slug", "?")
+            for key in _DEVICE_DUMP_COLS:
+                kind = _device_dump_kind(r.get(key))
+                if kind:
+                    errors.append(
+                        f"{table}/{slug}.{key}: {kind} bytes in a text column "
+                        "are refused (path-only for report_path; no HTML/zip dump)")
+
+
 def check_bundle(bundle: dict, tables_dir: str | pathlib.Path) -> list[str]:
     """Return a list of human-facing error strings; empty means the bundle is
     safe to absorb. Deterministic-section only (see module docstring).
@@ -162,6 +228,7 @@ def check_bundle(bundle: dict, tables_dir: str | pathlib.Path) -> list[str]:
                     errors.append(
                         f"{table}/{slug}.{key}: rowRef {val!r} is not a seeded slug "
                         f"of {ref_table!r}")
+    _check_device_family(bundle, det, errors)
     return errors
 
 

@@ -1,0 +1,28 @@
+# Hand-built untrusted device bundle — review digest-device-doctrine-review
+# scenario 1 (friend-iphone-backup). Must NOT pass check_bundle.
+# Not a seed-bundle fixture; never absorb this.
+meta:
+  source_id: friend-iphone-backup.tar.gz
+  trusted: false
+deterministic:
+  device:
+    - slug: device-friend-iphone
+      model: iPhone 14
+      os_family: ios
+      identifier_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      _prov:
+        source_id: friend-iphone-backup.tar.gz
+        importer_version: "0.0.0"
+        content_hash: "abc"
+  device-extraction:
+    - slug: ext-friend-unattested
+      device: device-friend-iphone
+      owner: "Alex Friend"
+      subject_kind: third_party
+      operator_owns_device: false
+      notes: ""
+      report_path: ""
+      _prov:
+        source_id: friend-iphone-backup.tar.gz
+        importer_version: "0.0.0"
+        content_hash: "abc"
