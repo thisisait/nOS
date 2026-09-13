@@ -72,11 +72,23 @@ KEAP = "http://127.0.0.1:8091"
 #:     no grammar                        -> 'Hello! How can I assist you today?'
 #:     options.grammar = root ::= "ZZZ"  -> 'Hello! How can I assist you today?'
 #:
-#: Byte-identical. A grammar passed that way is a knob that reports itself as
-#: set and constrains nothing — the estate's signature defect, and it would have
-#: been invisible here because the SCORE would have moved anyway (a better
-#: prompt also improves it). So constrained runs talk to `llama-server`, which
-#: takes --grammar-file and refuses to start if the grammar does not parse.
+#: RE-MEASURED 2026-09-13, ollama 0.33.3, same model/prompt/sampler, grammar
+#: `root ::= "ZZZ"`. Top-level `grammar` is dropped too — native AND OpenAI:
+#:
+#:     /api/generate options.grammar              -> Hello! …
+#:     /api/generate top-level grammar            -> Hello! …
+#:     /api/chat     top-level grammar            -> Hello! …
+#:     /v1/chat/completions grammar               -> Hello! …
+#:     /v1/chat/completions extra_body.grammar    -> Hello! …
+#:     /v1/chat/completions response_format json  -> JSON (this one IS honored)
+#:
+#: Byte-identical unconstrained answers. A second AgentKit adapter aimed at
+#: /api/generate would not constrain decoding either. `format` / JSON schema
+#: cannot express cortex-lang (a CFG). Constrained runs talk to `llama-server`,
+#: which takes --grammar-file and refuses to start if the grammar does not parse.
+#: Production (OpenAiCompatAdapter → /v1/chat/completions) still sends none —
+#: gate tests/anatomy/test_agentkit_production_sends_cortex_grammar.py, note
+#: docs/plans/ollama-gbnf-openai-compat.md.
 #:
 #: llama-server ships INSIDE the Homebrew ollama formula rather than on PATH.
 LLAMA_SERVER_CANDIDATES = (
