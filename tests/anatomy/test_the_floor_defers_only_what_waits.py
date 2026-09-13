@@ -1,6 +1,6 @@
 """Gate — the security floor's lanes, and the one thing they must never do.
 
-Doctrine: docs/doctrine/security-floor.md.
+Doctrine: ssot/doctrine/security-floor.md.
 
 The roadmap asked for "act on CRITICAL/HIGH, batch the rest to a release
 boundary". Measured 2026-08-22, that rest is not one thing: of 45 pending rows
@@ -33,7 +33,7 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 QUEUE = REPO / "docs/llm/security/remediation-queue.json"
-DOCTRINE = REPO / "docs/doctrine/security-floor.md"
+DOCTRINE = REPO / "ssot/doctrine/security-floor.md"
 
 
 @pytest.fixture(scope="module")
@@ -108,6 +108,6 @@ def test_the_doctrine_records_what_was_refused(rem):
     text = DOCTRINE.read_text(encoding="utf-8")
     for needle in ("refused", "reachability", "phase", "CVSS"):
         assert needle in text, (
-            f"docs/doctrine/security-floor.md no longer records {needle!r} among "
+            f"ssot/doctrine/security-floor.md no longer records {needle!r} among "
             f"the refusals"
         )

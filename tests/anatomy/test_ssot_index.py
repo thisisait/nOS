@@ -57,7 +57,7 @@ def test_dtt_is_not_in_this_repo():
     assert not (REPO / "ssot" / "genome").exists()
 
 
-def test_ssot_stub_keeps_docs_path_as_an_address():
+def _cite():
     import importlib.util
     import sys
     spec = importlib.util.spec_from_file_location(
@@ -65,8 +65,30 @@ def test_ssot_stub_keeps_docs_path_as_an_address():
     mod = importlib.util.module_from_spec(spec)
     sys.modules["doctrine_cite"] = mod
     spec.loader.exec_module(mod)
-    corpus = mod.build_corpus()
+    return mod
+
+
+def test_ssot_stub_keeps_docs_path_as_an_address():
+    corpus = _cite().build_corpus()
     stub = corpus["docs/doctrine/ssot.md"]
     live = corpus["ssot/doctrine/ssot.md"]
     assert live.sections, "ssot/doctrine/ssot.md has no numbered sections"
     assert stub.sections == live.sections
+
+
+def test_every_moved_stub_aliases_the_live_article():
+    """A stub that no longer copies numbered headings is a broken § address."""
+    corpus = _cite().build_corpus()
+    drifted = []
+    for stub_path in sorted((REPO / "docs" / "doctrine").glob("*.md")):
+        text = stub_path.read_text(encoding="utf-8")
+        if "Moved to" not in text:
+            continue
+        rel = stub_path.relative_to(REPO).as_posix()
+        live_rel = f"ssot/doctrine/{stub_path.name}"
+        if live_rel not in corpus:
+            drifted.append(f"{rel} has no {live_rel}")
+            continue
+        if corpus[rel].sections != corpus[live_rel].sections:
+            drifted.append(f"{rel} sections != {live_rel}")
+    assert not drifted, drifted

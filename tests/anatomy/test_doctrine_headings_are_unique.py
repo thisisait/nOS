@@ -1,6 +1,6 @@
 """Anatomy gate — a doctrine heading is an address, so it cannot collide.
 
-Subject: docs/doctrine/ssot.md (PROPOSED) §7. The citation indexer
+Subject: ssot/doctrine/ssot.md. The citation indexer
 (`tools/doctrine-cite.py` `index_doc`) last-write-wins on a repeated section
 number, so two `## 9` headings silently become one address. This gate pins
 docs/doctrine/*.md. A duplicate number outside that tree is not a nos-sot
