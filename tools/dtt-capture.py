@@ -119,6 +119,13 @@ def main() -> int:
     os.unlink(_probe)
 
     d = lib.seed_dir()
+    git_dir = os.path.join(d, ".git")
+    if not os.path.isdir(git_dir) and not os.path.isfile(git_dir):
+        _die(
+            f"{d} is not a git repository. NOS_SEED_DIR must be the private "
+            "seed clone (this estate: ~/projects/nos-seed). A loose directory "
+            "is how a row leaves the public repo and still is not versioned."
+        )
     path = os.path.join(d, f"{args.slug}.md")
     exists = os.path.exists(path)
     if exists and not args.update:

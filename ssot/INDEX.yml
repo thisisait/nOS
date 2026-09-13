@@ -1,0 +1,21 @@
+# The map. A realm is a key. Bytes live at path. Do not copy a realm into a
+# second tree. Tenant constitutions use the same keys; their prefix is not
+# nos-sot; their bytes live in the tenant seed after digest.
+prefix: nos-sot
+realms:
+  doctrine:
+    path: ssot/doctrine
+    in_force: true
+  genome:
+    path: state/genome
+    in_force: true
+  idea:
+    path: docs/idea
+    in_force: false
+  dtt:
+    path: "$NOS_SEED_DIR"
+    in_force: true
+    public: false
+  fee:
+    path: docs/hidden_fees
+    in_force: false

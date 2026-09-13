@@ -22,6 +22,10 @@ import roadmap_seed_lib as lib  # noqa: E402
 
 
 def _run(args, seed_dir):
+    subprocess.run(
+        ["git", "init"], cwd=seed_dir, check=True,
+        capture_output=True, text=True,
+    )
     env = dict(os.environ, NOS_SEED_DIR=str(seed_dir))
     return subprocess.run([sys.executable, _TOOL, *args], env=env,
                           capture_output=True, text=True)
@@ -66,6 +70,17 @@ def test_existing_needs_update_flag(tmp_path):
     # with --update it overwrites
     assert _run(a + ["--update", "--title", "second"], tmp_path).returncode == 0
     assert lib.parse_file(str(tmp_path / "dup.md"))["title"] == "second"
+
+
+def test_non_git_seed_dir_is_refused(tmp_path):
+    env = dict(os.environ, NOS_SEED_DIR=str(tmp_path))
+    r = subprocess.run(
+        [sys.executable, _TOOL, "--slug", "x", "--title", "x",
+         "--track", "platform", "--body", "b"],
+        env=env, capture_output=True, text=True,
+    )
+    assert r.returncode != 0
+    assert "not a git repository" in (r.stderr + r.stdout)
 
 
 def test_skill_exists_and_delegates_to_the_tool():

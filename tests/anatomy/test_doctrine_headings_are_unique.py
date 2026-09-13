@@ -71,15 +71,19 @@ def test_a_duplicate_section_number_fails(tool):
 
 def test_every_doctrine_file_has_unique_headings(tool):
     collisions = []
-    for path in sorted(DOCTRINE.glob("*.md")):
-        text = path.read_text(encoding="utf-8")
-        rel = path.relative_to(REPO)
-        title_dups = _dups(_atx_titles(text))
-        number_dups = _dups(_numbered_ids(tool, text))
-        if title_dups:
-            collisions.append(f"{rel} duplicate titles: {title_dups}")
-        if number_dups:
-            collisions.append(f"{rel} duplicate section numbers: {number_dups}")
+    trees = [DOCTRINE, REPO / "ssot" / "doctrine"]
+    for tree in trees:
+        if not tree.is_dir():
+            continue
+        for path in sorted(tree.glob("*.md")):
+            text = path.read_text(encoding="utf-8")
+            rel = path.relative_to(REPO)
+            title_dups = _dups(_atx_titles(text))
+            number_dups = _dups(_numbered_ids(tool, text))
+            if title_dups:
+                collisions.append(f"{rel} duplicate titles: {title_dups}")
+            if number_dups:
+                collisions.append(f"{rel} duplicate section numbers: {number_dups}")
     assert not collisions, "doctrine heading collisions:\n  " + "\n  ".join(collisions)
 
 
