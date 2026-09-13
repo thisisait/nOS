@@ -26,15 +26,15 @@ portainer_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 #                                            (`docker exec` via Portainer UI).
 #                                            Highest-impact RCE surface if a
 #                                            Portainer XSS / CSRF / OAuth abuse
-#                                            lands. Default true (UI usability);
-#                                            flip to false to remove the surface.
+#                                            lands. Default false (no UI shell);
+#                                            flip to true in config.yml to restore.
 #   portainer_socket_proxy_can_distribution — Pull images from registry via the
 #                                            Portainer UI. Default true; flip
 #                                            to false if you only pull through
 #                                            the docker CLI + Ansible.
 #
-# Set both to false in config.yml to fully close REM-001 with a usability cost
-# (no Portainer shell, no Portainer image-pull); leave at default for normal
-# home-lab use — Swarm + SYSTEM + the rest stays trimmed regardless.
-portainer_socket_proxy_can_exec: true
+# can_exec defaults false so a Portainer session is not docker exec into every
+# container. config.yml may still set true for UI usability. can_distribution
+# stays default true; set false in config.yml to also drop registry-pull.
+portainer_socket_proxy_can_exec: false
 portainer_socket_proxy_can_distribution: true

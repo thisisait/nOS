@@ -56,9 +56,9 @@ services:
       BUILD: 1                                                 # image build from Dockerfile UI
       # EXEC = container shell. Highest-impact RCE surface if Portainer is
       # compromised (CSRF / XSS / OAuth abuse → docker exec on any container).
-      # Operators security-sensitive flip `portainer_socket_proxy_can_exec:
-      # false` in config.yml; loses Portainer's web shell, keeps everything else.
-      EXEC: {{ 1 if (portainer_socket_proxy_can_exec | default(true)) else 0 }}
+      # Default false; flip `portainer_socket_proxy_can_exec: true` in
+      # config.yml to restore Portainer's web shell.
+      EXEC: {{ 1 if (portainer_socket_proxy_can_exec | default(false)) else 0 }}
       # DISTRIBUTION = registry pull from Portainer UI. Off by default-true;
       # operators who pull images via docker CLI / Ansible only can flip
       # `portainer_socket_proxy_can_distribution: false` to remove the

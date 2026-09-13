@@ -368,3 +368,16 @@
         - (authentik_engine | default('blueprint')) == 'tofu'
         - _tofu_destroy_split.unexplained | length == 0
         - _tofu_bad_updates | length == 0
+
+    # Apply rewrites terraform.tfstate* at umask 0644. Live disk was chmod'd
+    # 2026-09-13; this task keeps the pin on the next apply (tfstate holds
+    # Authentik provider secrets).
+    - name: "[tofu-authentik] Pin terraform.tfstate* to 0600"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        mode: "0600"
+      loop: "{{ query('fileglob', _tf_dir ~ '/terraform.tfstate*') }}"
+      when:
+        - (authentik_engine | default('blueprint')) == 'tofu'
+        - _tofu_destroy_split.unexplained | length == 0
+        - _tofu_bad_updates | length == 0

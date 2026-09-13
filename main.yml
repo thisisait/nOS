@@ -493,6 +493,18 @@
         mode: '0700'
       tags: ['always']
 
+    # ansible.cfg log_path creates ~/.nos/ansible.log at 0644 (umask). Recap
+    # and -v traces carry secrets; pin 0600 every run so a recreate cannot
+    # drift back to world-readable.
+    - name: "[Secrets] Pin ~/.nos/ansible.log to 0600"
+      ansible.builtin.file:
+        path: "{{ ansible_facts['env']['HOME'] }}/.nos/ansible.log"
+        state: touch
+        mode: '0600'
+        modification_time: preserve
+        access_time: preserve
+      tags: ['always']
+
     - name: "[Secrets] Check for persisted secrets file"
       ansible.builtin.stat:
         path: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
