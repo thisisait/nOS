@@ -205,7 +205,13 @@
         - _cask_result.rc != 0
         - "'already an App' not in _cask_result.stderr"
         - "'already an App' not in _cask_result.stdout"
-        - "'It seems the App source' not in _cask_result.stdout"
+        # Retired tokens only (homebrew_cask_upgrade_ignore). A global
+        # "App source" skip let any broken cask green the play (Bugbot 2026-09-13).
+        - >-
+          not (
+            (item.name | default(item)) in (homebrew_cask_upgrade_ignore | default([]))
+            and ('It seems the App source' in (_cask_result.stdout | default('')))
+          )
       loop: "{{ homebrew_cask_apps }}"
       loop_control:
         label: "{{ item.name | default(item) }}"
