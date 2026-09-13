@@ -67,9 +67,19 @@ GUARDED = [
 #: Resolved from default.config.yml rather than assumed, because on this estate
 #: it is redirected to external storage and that is the whole finding.
 DATA_ROOT_VAR = "nos_data_root"
+EXTERNAL_ROOT_VAR = "external_storage_root"
 
 #: A snapshot this estate made, as opposed to one macOS made for its own update.
 NOS_SNAPSHOT = re.compile(r"^nos-preconverge-")
+
+#: Restore is a RO mount of the named snapshot plus a copy. It is not a
+#: bootloader rollback (no `bless`, no boot into the snap).
+RECOVERY = (
+    "A snapshot is not a bootloader undo. Restore with "
+    "`mount_apfs -s <snapshot> -o rdonly <device> <mountpoint>` "
+    "then copy the guarded trees back. UNCOVERED paths are not in that net; "
+    "they recover from backup, if at all."
+)
 
 TIMEOUT = 30
 
@@ -82,21 +92,58 @@ def _run(argv: list[str]) -> tuple[int, str]:
     return p.returncode, (p.stdout or p.stderr).strip()
 
 
-def data_root() -> pathlib.Path | None:
-    """What config.yml resolves nos_data_root to, falling back to the default.
-
-    config.yml is gitignored and overrides the committed default; reading only
-    the default would report the wrong volume on exactly the estate this file
-    was written for.
-    """
+def _config_scalar(key: str) -> str | None:
     for path in (REPO / "config.yml", REPO / "default.config.yml"):
         if not path.exists():
             continue
-        m = re.search(rf"^{DATA_ROOT_VAR}:\s*[\"']?([^\"'#\n]+)",
+        m = re.search(rf"^{re.escape(key)}:\s*[\"']?([^\"'#\n]+)",
                       path.read_text(encoding="utf-8"), re.M)
-        if m and "{{" not in m.group(1):
-            return pathlib.Path(m.group(1).strip())
+        if m:
+            return m.group(1).strip()
     return None
+
+
+def _expand_home_jinja(raw: str) -> str | None:
+    """Expand the one HOME token we know; refuse any other Jinja."""
+    if "{{" not in raw:
+        return raw
+    expanded = re.sub(
+        r"\{\{\s*ansible_facts\['env'\]\['HOME'\]\s*\}\}", str(HOME), raw)
+    if "{{" in expanded:
+        return None
+    return expanded
+
+
+def data_root() -> pathlib.Path | None:
+    """nos_data_root from config.yml, then the default, then the live SSD tree.
+
+    config.yml is gitignored and overrides the committed default; reading only
+    the default would report the wrong volume on exactly the estate this file
+    was written for. When the configured path is absent, a mounted
+    `{external_storage_root}/nOS/data` is the running-system answer — the repo
+    is not the estate.
+    """
+    raw = _config_scalar(DATA_ROOT_VAR)
+    parsed = None
+    if raw:
+        expanded = _expand_home_jinja(raw)
+        if expanded:
+            parsed = pathlib.Path(expanded)
+            if parsed.exists():
+                return parsed
+    ext = _config_scalar(EXTERNAL_ROOT_VAR)
+    if ext and "{{" not in ext:
+        live = pathlib.Path(ext) / "nOS" / "data"
+        if live.exists():
+            return live
+    return parsed
+
+
+def rustfs_root() -> pathlib.Path | None:
+    root = data_root()
+    if root is None:
+        return None
+    return root / "platform" / "services" / "rustfs" / "data"
 
 
 def volume_of(path: pathlib.Path) -> dict:
@@ -164,15 +211,68 @@ def prerequisite() -> dict:
                     "by an actual attempt")}
 
 
-def report() -> dict:
+def alternate_path() -> dict:
+    """A snapshot facility that is not Time Machine.
+
+    Stock macOS has none we are willing to claim: `diskutil apfs snapshot` on
+    the SIP-protected Data volume is not an operator path, and inventing one
+    here would be the net this file exists to refuse to fake. Tests inject a
+    positive result; production stays honest.
+    """
+    return {"ok": False, "via": None,
+            "why": "no Time-Machine-independent snapshot path is configured"}
+
+
+def claimable(pre: dict | None = None, alt: dict | None = None) -> dict:
+    """True only when a real snapshot mechanism exists. Never inferred from APFS."""
+    pre = prerequisite() if pre is None else pre
+    alt = alternate_path() if alt is None else alt
+    if pre.get("ok") is True:
+        return {"ok": True, "via": "tmutil-localsnapshot", "why": pre["why"],
+                "prerequisite": pre, "alternate": alt}
+    if alt.get("ok") is True:
+        return {"ok": True, "via": alt.get("via") or "alternate", "why": alt["why"],
+                "prerequisite": pre, "alternate": alt}
+    if pre.get("ok") is None and not alt.get("ok"):
+        return {"ok": None, "via": None, "why": pre.get("why") or "unreadable",
+                "prerequisite": pre, "alternate": alt}
+    why = pre.get("why") or "no snapshot mechanism"
+    if alt.get("why"):
+        why = f"{why}; {alt['why']}"
+    return {"ok": False, "via": None, "why": why,
+            "prerequisite": pre, "alternate": alt}
+
+
+def coverage_rows() -> list[dict]:
     rows = [dict(volume_of(p), holds=holds) for p, holds in GUARDED]
     root = data_root()
     if root is not None:
-        rows.append(dict(volume_of(root), holds="every redirected service data "
-                                                "dir and RustFS backup copy #1",
+        rows.append(dict(volume_of(root),
+                         holds="every redirected service data dir (nos_data_root)",
                          is_data_root=True))
+        rustfs = rustfs_root()
+        if rustfs is not None:
+            rows.append(dict(volume_of(rustfs),
+                             holds="RustFS object store (backup copy #1)",
+                             is_rustfs=True))
+    return rows
+
+
+def split_coverage(rows: list[dict]) -> tuple[list[dict], list[dict]]:
+    covered = [r for r in rows if r.get("snapshottable") is True]
+    uncovered = [r for r in rows if r.get("snapshottable") is not True]
+    return covered, uncovered
+
+
+def report() -> dict:
+    rows = coverage_rows()
+    covered, uncovered = split_coverage(rows)
+    pre = prerequisite()
+    claim = claimable(pre, alternate_path())
     return {"generated_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
-            "prerequisite": prerequisite(), "snapshots": snapshots(), "coverage": rows}
+            "prerequisite": pre, "claimable": claim, "snapshots": snapshots(),
+            "coverage": rows, "covered": covered, "uncovered": uncovered,
+            "recovery": RECOVERY}
 
 
 def main() -> int:
@@ -185,10 +285,16 @@ def main() -> int:
         print(json.dumps(r, indent=2))
         return 0
 
-    pre = r["prerequisite"]
-    mark = {True: "yes", False: "NO", None: "UNKNOWN"}[pre["ok"]]
+    claim = r["claimable"]
+    mark = {True: "yes", False: "NO", None: "UNKNOWN"}[claim["ok"]]
     print(f"pre-converge snapshot capability: {mark}")
-    print(f"  {pre['why']}\n")
+    print(f"  {claim['why']}")
+    pre = r["prerequisite"]
+    tm = {True: "yes", False: "NO", None: "UNKNOWN"}[pre["ok"]]
+    print(f"  Time Machine destination: {tm}")
+    alt = claim["alternate"]
+    print(f"  alternate snapshot path: "
+          f"{'yes — ' + (alt.get('via') or '') if alt.get('ok') else 'NO'}\n")
 
     snaps = r["snapshots"]
     if not snaps["available"]:
@@ -202,20 +308,28 @@ def main() -> int:
         print(f"  macOS system snapshots present: {len(snaps['system'])} "
               "(these are not a net for nOS data)")
 
-    print("\ncoverage, if a snapshot were taken now:")
-    uncovered = []
-    for row in r["coverage"]:
+    print("\ncovered (APFS — in the snapshot IF a net existed):")
+    if not r["covered"]:
+        print("  none")
+    for row in r["covered"]:
+        print(f"  COVERED   {row['path']}")
+        print(f"            {row['holds']}")
+        print(f"            {row['why']}")
+
+    print("\nuncovered (named so nobody reads a snapshot as full coverage):")
+    if not r["uncovered"]:
+        print("  none")
+    for row in r["uncovered"]:
         state = {True: "COVERED  ", False: "UNCOVERED", None: "UNKNOWN  "}[row["snapshottable"]]
         print(f"  {state} {row['path']}")
         print(f"            {row['holds']}")
         print(f"            {row['why']}")
-        if row["snapshottable"] is not True:
-            uncovered.append(row["path"])
 
-    if uncovered:
-        print(f"\n  {len(uncovered)} guarded path(s) NOT covered. A snapshot taken "
+    if r["uncovered"]:
+        print(f"\n  {len(r['uncovered'])} guarded path(s) NOT covered. A snapshot taken "
               "here is a partial net, and the parts it misses are named above — "
               "do not read 'snapshot taken' as 'everything is recoverable'.")
+    print(f"\nrecovery: {r['recovery']}")
     return 0
 
 
