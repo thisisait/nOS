@@ -23,8 +23,7 @@
    dev-minimal, host-organ OTel, hub honesty; `ears-app-bundle` row framing
    ("no speech in it") predates a working ASR path.
 
-4. Doctrine splits owed: loops.md + foreign-properties.md → index + companions;
-   secrets/observability duplicate one paragraph.
+4. Doctrine splits owed: loops.md + foreign-properties.md → index + companions.
 
 **Voice → caddy → AgentKit → cortex.** Five wires gated; fee
 [43](hidden_fees/43-a-tool-with-no-door.md) paid. KEAP SOURCE pin is
@@ -38,8 +37,7 @@ The general fix for the class below — a per-service `verify.yml` hook plus the
 loader change that lets it fail — is in
 [`nos-genome-and-organelles.md`](archive/nos-genome-and-organelles.md) §Thread D.
 
-- **`drift-watch.sh` `exit 0`s regardless of the Bone POST**, swallowing a
-  CRITICAL when the HMAC secret is unset. `genome-codegen.py` emits 2 of B1's 4.
+- **`genome-codegen.py` emits 2 of B1's 4.**
 - **Euro-office: full role swap after first stable** — pilot via `onlyoffice_image`
   flip; rename role+plugin+manifest once stable lands. Documenso stays.
 - **D1 `{{ vars }}` retirement flip** — design LOCKED (O25); the flip needs a
@@ -54,8 +52,8 @@ loader change that lets it fail — is in
   after v0.10" and v0.10 is tagged; removal tasks still carry `tags:['blank','reset']`.
 - **R5 verify misses best-effort teardown.** `failed_when: false` tasks can
   survive a removal silently; the absence assert only stats the path set.
-- **FS doctrine P3** — AgentKit tool-layer FS path-scoping; P1/P1b shipped and the
-  plan header still says "DESIGN (P0) — we are here" (`docs/archive/fs-doctrine.md`).
+- **FS doctrine P3** — AgentKit tool-layer FS path-scoping; P1/P1b shipped
+  (`docs/doctrine/filesystem.md`).
 - **Version-pin drift wave:** counts from `tools/rem-status.py`, never inherited.
   Gitea closed via the agentic recipe path — the template. `validate_record` still
   lacks `security` in `_SEVERITY_VALUES` (schema has it).

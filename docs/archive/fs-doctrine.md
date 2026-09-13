@@ -1,10 +1,12 @@
 # nOS Filesystem Doctrine — unified, structured, isolated storage
 
-> **Status: DESIGN (P0) — review before any implementation.** No live data moves
-> until this is approved. Motivated 2026-07-16: ad-hoc per-service volume paths
-> block safe multi-tenant / multi-user / multi-agent-per-user isolation, and gate
-> the calibre-web→Autocaliweb fix (REM-074) + the Puter→euro-office→KEAP document
-> flow. Design-first (memory `agents-drive-operator-supervises`).
+> **Status: P1/P1b shipped.** Canonical decisions:
+> [`docs/doctrine/filesystem.md`](../doctrine/filesystem.md). This file is the
+> design archive (detail + phasing). P2 (per-user tree) and P3 (isolation +
+> AgentKit path-scoping) remain. Motivated 2026-07-16: ad-hoc per-service volume
+> paths block safe multi-tenant / multi-user / multi-agent-per-user isolation,
+> and gate the calibre-web→Autocaliweb fix (REM-074) + the Puter→euro-office→KEAP
+> document flow.
 
 ## 1. Problem — the current layout is scattered and flat
 
@@ -139,8 +141,8 @@ proper `files/anatomy/migrations/<date>-fs-doctrine.yml` then — not now.)
 
 ## 8. Phasing (revised — no migration)
 
-- **P0 — Design (this doc) + review.** ← we are here. No data moves.
-- **P1 — Resolver + native layout.** Introduce `nos_data_root` (+ `nos_tenant_slug`);
+- **P0 — Design (this doc) + review.** Done. Canonical: `docs/doctrine/filesystem.md`.
+- **P1 — Resolver + native layout.** Shipped (P1 + P1b). Introduce `nos_data_root` (+ `nos_tenant_slug`);
   reclassify all 42 `*_data_dir`/`*_config_dir` defaults under the tree by class. Collapse
   `external-paths.yml` to the single `nos_data_root` knob. Gate `test_fs_doctrine_paths.py`
   (every path resolves under `nos_data_root`, correct class). **Clean role defaults, no
