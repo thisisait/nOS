@@ -38,10 +38,9 @@ def test_stock_install_gitlab_is_off():
     assert re.search(r"^install_gitea:\s*true\b", cfg, re.M), (
         "install_gitea must default true — Gitea + Woodpecker is primary"
     )
-    # Behaviour pin is install_gitlab + tool override, not the nos_agent_forge
-    # string (that default may still read gitlab in a mixed working tree).
-    recipe = RECIPE_PR.read_text(encoding="utf-8")
-    assert "install_gitlab" in recipe and 'FORGE="gitea"' in recipe
+    assert re.search(r'^nos_agent_forge:\s*"gitea"', cfg, re.M), (
+        "nos_agent_forge must default gitea; gitlab-as-default is the inversion"
+    )
 
 
 def test_recipe_and_migration_pr_do_not_hard_fallback_to_gitlab():
