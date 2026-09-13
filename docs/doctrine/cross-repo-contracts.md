@@ -82,15 +82,17 @@ can go red, and its gates are not written. Spec + gates author on the operator's
 go — the store/doors spec **after** the `dtt-share-model` zod, so the visibility
 invariant cites a real module, not a promised one.
 
-**The measurement that made this a re-labelling, not a refactor:** all 18
+**The measurement that made this a re-labelling, not a refactor:** 32
 DataTable DEFINITIONS live in nOS git (`state/keap-tables/*.table.yml`, gated by
-`test_keap_table_concepts.py`); zero are KEAP's; every row-store consumer is
-nOS. KEAP PROVIDES the store, the two doors, row history, ref integrity, and
-card/graph materialisation. The arrow is already backwards — so the honest step
-is publishing the contract, not moving the engine (whose cost — `syncCard`/
-`syncRows`, Authentik-tier visibility, ref integrity, all in KEAP's libsql — is
-not worth paying for legibility alone; the move stays a later, separately-
-triggered decision).
+`test_keap_table_concepts.py`); 23 of them are SYSTEM (estate tables nOS emits);
+9 are fixture/user-shaped (`print-*`, `kolben-*`) — tenant-demo furniture that
+happens to live in git, not KEAP-born USER tables. Zero definitions are KEAP's;
+every row-store consumer is nOS. KEAP PROVIDES the store, the two doors, row
+history, ref integrity, and card/graph materialisation. The arrow is already
+backwards — so the honest step is publishing the contract, not moving the
+engine (whose cost — `syncCard`/`syncRows`, Authentik-tier visibility, ref
+integrity, all in KEAP's libsql — is not worth paying for legibility alone; the
+move stays a later, separately-triggered decision).
 
 **Two halves.** (a) DEFINITIONS `nOS → KEAP`: nOS emits the SYSTEM/code-declared
 `.table.yml`; KEAP loads/validates. Producer nOS. (b) STORE + DOORS `KEAP → nOS`:
@@ -100,27 +102,32 @@ McpTablesTool, dtt-capture, apps_runner, face). Producer KEAP.
 **The three clauses (the objections, kept because each names an incident):**
 
 1. **System vs user tables (definitions scope).** The definitions half covers
-   only the code-declared SYSTEM tables (the 18). USER tables are KEAP-born (the
+   only the code-declared SYSTEM tables (the 23). USER tables are KEAP-born (the
    human door mints them, `POST /api/tables`), never in nOS git, governed by the
    doors half + `dtt-share-model` — and EXPLICITLY outside the definitions
    contract, so a definitions-side gate may never prune a table nOS did not
-   emit. Mirrors the `dtt` §14.3 system/user split.
-2. **Schema-pin gate (highest value).** The definitions-side gate validates the
-   18 `.table.yml` against KEAP's zod schema **at the pinned `keap_repo_ref`** (a
-   vendored schema snapshot pinned to the tag, never dev HEAD). This makes
-   "a definition runs ahead of the pin" structurally impossible instead of a
-   matter of release discipline — the `caddy-sessions` incident (`style: chat`
-   against a schema only an orphan tag carried; a dev-cut release would have
-   400'd the seed and killed the converge, uncaught offline) is what it prevents.
+   emit. The `print-*` / `kolben-*` defs are in git so schema-pin still sees
+   them; they are fixture-shaped, not SYSTEM. Mirrors the `dtt` §14.3
+   system/user split.
+2. **Schema-pin gate (highest value).** The definitions-side gate validates
+   every git-owned `.table.yml` against KEAP's zod schema **at the pinned
+   `keap_repo_ref` (`v2.0.0-rc.1`)** (a vendored schema snapshot pinned to the
+   tag, never dev HEAD). This makes "a definition runs ahead of the pin"
+   structurally impossible instead of a matter of release discipline — the
+   `caddy-sessions` incident (`style: chat` against a schema only an orphan tag
+   carried; a dev-cut release would have 400'd the seed and killed the
+   converge, uncaught offline) is what it prevents.
 3. **Removal = the definition lifecycle, not just `onDelete`.** The contract
    names the reconcile classes — options-only changes reconcile silently;
    destructive changes (dropped column, kind change) 409 and require the
    operator-gated drop-and-recreate ceremony (export rows → delete → re-POST →
    re-insert) — and forces a sentence on what a definition⇄live divergence
-   leaves the system in. The standing counterexample: `roadmap.table.yml` is
-   permanently unappliable (live table has `when`, reconcile 409s on the drop,
-   nothing seeds roadmap, so it is silent forever); the contract makes that
-   either fixed or a recorded known exception.
+   leaves the system in. **Recorded exception:** `roadmap.table.yml` dropped
+   `when` (successors: `target` / `occurred_at`). The live table still has
+   `when`; reconcile 409s on that drop, and nothing seeds roadmap, so the
+   successor definition never lands. Do not drop-and-recreate the live table
+   to close this — that ceremony is operator-gated, not a docs fix. The
+   exception stays until that ceremony runs.
 
 **Invariant triple** (doctrine §"Invariants a contract must carry"): IDENTITY =
 the row `__id` + `assertRowId`, DRIVER-enforced (KEAP `70027be`) — a structural
