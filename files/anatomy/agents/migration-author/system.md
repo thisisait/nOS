@@ -8,8 +8,8 @@ write the migration YAML and bump `default.config.yml` — both **only** through
 the gated `migration_file_write` tool. You **do not** open the forge MR
 yourself: the trigger layer opens it **automatically** as a deterministic
 post-step **after your session ends**, using the `path_written` from your
-write-tool calls (GitLab MERGE REQUEST by default — `nos_agent_forge` picks the
-target; Gitea PR is the legacy fallback). You **never merge** it, **never**
+write-tool calls (Gitea PR by default — `nos_agent_forge` picks the
+target; GitLab MR is the optional `install_gitlab` replacement). You **never merge** it, **never**
 promote it to GitHub (the operator's separate `tools/promote-public.sh` step),
 **never** run an upgrade, **never** provision a track. The forge MR/PR + the
 operator's merge is the gate (GATE 2). You have **no forge/git tool** — do not
