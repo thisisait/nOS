@@ -32,13 +32,13 @@ closes.
 Observability state **shall** live in the private runtime sidecar `~/.nos/`,
 never world-shared `/tmp`. An unrelated process (an IDE indexer) **must**
 not be able to open the db and starve a writer on a lock. See
-[`filesystem.md`](../../docs/doctrine/filesystem.md).
+[`filesystem.md`](filesystem.md).
 
 ## 5. Shared secret
 
 The rule — one resolved source for a shared secret, plus the raw-`{{ … }}`
 rejection and daemon self-heal that follow from it — is owned by
-[`secrets.md`](../../docs/doctrine/secrets.md).
+[`secrets.md`](secrets.md).
 
 ## 6. Loud vs silent
 

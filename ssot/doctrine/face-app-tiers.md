@@ -3,7 +3,7 @@
 > Canonical. This document owns the face-app **build** axis (F1–F4/H) — how
 > an agent picks the build recipe. Companion:
 > [`docs/archive/nos-face.md`](../../docs/archive/nos-face.md) (the face epic)
-> and [`filesystem.md`](../../docs/doctrine/filesystem.md) (the data classes).
+> and [`filesystem.md`](filesystem.md) (the data classes).
 > `form` is the other axis; the genome owns both vocabularies
 > (`docs/idea/13-relations.md` §R3).
 

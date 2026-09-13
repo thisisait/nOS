@@ -8,7 +8,7 @@ export const meta = {
   phases: [
     { title: 'Harvest', detail: 'ssot/ is in the citation corpus; stubs alias sections (sequential, already in tree)' },
     { title: 'Promote', detail: 'union: one live doctrine file per agent; stubs only in docs/doctrine; no README' },
-    { title: 'Judge', detail: 'parent updates README; heading + cite gates; then next batch. docs/ warehouse is not this phase' },
+    { title: 'Judge', detail: 'parent updates README; heading + cite gates. v1 promote landed except agentkit/organs. docs/ warehouse cites articles; it is not this phase' },
   ],
 }
 

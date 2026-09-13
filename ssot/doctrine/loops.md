@@ -87,7 +87,7 @@ finding (7.4), not a style note.
 
 ## 4. Identities — who holds what, who may call what
 
-Three credential channels exist estate-wide (`docs/doctrine/identity.md` §3);
+Three credential channels exist estate-wide (`identity.md` §3);
 the loop's channel is `IDENTITIES` in `files/anatomy/bone/loopauth.py` and it
 is the one drawn in companion §4. All **may** read; none **may** do another's
 job; a 403 across a boundary is the boundary working.

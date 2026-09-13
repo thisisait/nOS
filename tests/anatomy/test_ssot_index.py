@@ -1,9 +1,8 @@
 """ssot/INDEX.yml is the realm map. A folder under ssot/ that is not that map is a copy.
 
-doctrine lives here. genome, dtt, idea, fee keep the paths the INDEX names.
-ssot/genome, ssot/dtt, ssot/idea, ssot/fee must not exist — those realms are
-not owned as trees in this public repo (dtt is private; genome already has a
-home; idea and fee are not in force).
+doctrine lives here. genome, dtt, idea, fee, systems keep the paths the INDEX names.
+ssot/genome, ssot/dtt, ssot/idea, ssot/fee, ssot/systems must not exist — those
+realms are not owned as trees in this public repo.
 """
 from __future__ import annotations
 
@@ -21,10 +20,12 @@ def _index() -> dict:
     return data
 
 
-def test_index_exists_and_names_five_realms():
+def test_index_exists_and_names_the_realms():
     data = _index()
     assert data.get("prefix") == "nos-sot"
-    assert set(data["realms"]) == {"doctrine", "genome", "idea", "dtt", "fee"}
+    assert set(data["realms"]) == {
+        "doctrine", "genome", "systems", "idea", "dtt", "fee",
+    }
 
 
 def test_each_in_repo_realm_path_exists():
@@ -45,16 +46,24 @@ def test_doctrine_is_the_only_ssot_tree():
     assert data["realms"]["genome"]["path"] == "state/genome"
     assert data["realms"]["dtt"]["path"] == "$NOS_SEED_DIR"
     assert data["realms"]["dtt"].get("public") is False
+    assert data["realms"]["systems"]["path"] == "docs/systems"
+    assert data["realms"]["systems"]["in_force"] is False
     copies = [
         p.name for p in (REPO / "ssot").iterdir()
-        if p.is_dir() and p.name in {"genome", "idea", "dtt", "fee"}
+        if p.is_dir() and p.name in {"genome", "idea", "dtt", "fee", "systems"}
     ]
     assert copies == [], f"ssot/ has copied realms {copies}; INDEX path is the location"
+
+
+def test_each_realm_names_who_it_is_for():
+    missing = [n for n, spec in _index()["realms"].items() if not spec.get("for")]
+    assert not missing, f"INDEX realm missing `for:` {missing}"
 
 
 def test_dtt_is_not_in_this_repo():
     assert not (REPO / "ssot" / "dtt").exists()
     assert not (REPO / "ssot" / "genome").exists()
+    assert not (REPO / "ssot" / "systems").exists()
 
 
 def _cite():

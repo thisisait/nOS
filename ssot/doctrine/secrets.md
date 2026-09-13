@@ -4,9 +4,9 @@
 > independent resolutions, so every event POST 401'd.
 
 Shared-secret resolution lives here. Emitter fail-open is
-[`observability.md`](../../docs/doctrine/observability.md). Why
+[`observability.md`](observability.md). Why
 `~/.nos/secrets.yml` is in the private sidecar, never `/tmp`, is
-[`filesystem.md`](../../docs/doctrine/filesystem.md).
+[`filesystem.md`](filesystem.md).
 
 ## 1. One resolved source
 

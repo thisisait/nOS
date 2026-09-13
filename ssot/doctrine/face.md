@@ -3,8 +3,8 @@
 > Canonical decisions for the nOS face (the web-desktop shell). Detail:
 > [`docs/archive/nos-face.md`](../../docs/archive/nos-face.md) +
 > [`docs/archive/nos-face-shell-v2.md`](../../docs/archive/nos-face-shell-v2.md).
-> Companion: [`face-app-tiers.md`](../../docs/doctrine/face-app-tiers.md),
-> [`filesystem.md`](../../docs/doctrine/filesystem.md).
+> Companion: [`face-app-tiers.md`](face-app-tiers.md),
+> [`filesystem.md`](filesystem.md).
 > Numbered headings are the addresses; citations elsewhere keep `§N`.
 
 ## 1. Vendored, not forked

@@ -13,7 +13,7 @@ one in prose only, one proposed.
 |---|---|---|
 | RBAC tier 1–4 | **who may reach a service** | `rbac_tier` in `state/manifest.yml`, `authentik_rbac_tiers`, per-plugin `authentik.tier` |
 | Delivery tier 1–2 | **how a service ships** — full `pazny.*` role vs a manifest in `apps/` | prose only |
-| face-app tier F1–F4 + H | **how complex an agent-built app is**, which selects its build recipe | [`face-app-tiers.md`](../../docs/doctrine/face-app-tiers.md) |
+| face-app tier F1–F4 + H | **how complex an agent-built app is**, which selects its build recipe | [`face-app-tiers.md`](face-app-tiers.md) |
 | (proposed) | **what else breaks when this stops** | nowhere |
 
 The collision was already paid for once: `sso_autologin_min_tier_<N>` in

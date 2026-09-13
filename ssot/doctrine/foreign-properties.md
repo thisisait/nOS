@@ -19,7 +19,7 @@ A rule SHALL earn a section only when all three hold:
    fault, or a green that is not health — rather than an obvious crash.
 
 Everything failing (2) belongs elsewhere: ours-and-fixable is a fix,
-ours-and-remembered is a gate (`docs/doctrine/gates.md`), and a rule about the
+ours-and-remembered is a gate ([`gates.md`](gates.md)), and a rule about the
 operator's own machine is a runbook step (`docs/nos-cli.md`). A section here is
 a **permanent accommodation**, so it MUST name both the accommodation and the
 code that performs it; a paragraph with no performing code is a claim, not
