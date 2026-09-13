@@ -27,8 +27,12 @@ def test_a_loop_with_cadence_and_run_generates_a_job():
     assert jobs and len(jobs) == 1
     j = jobs[0]
     assert j["name"] == m["id"]
-    assert j["command"] == m["run"]  # run → command, verbatim
-    assert j["schedule"] == m["trigger"]["cadence"]  # cadence → schedule
+    assert j["command"] == m["run"]
+    assert " " not in j["command"].split("}}")[-1], (
+        "loop run: is argv0; flags go in args: — a space after the path 400s Wing"
+    )
+    assert j["args"] == m.get("args") == ["--to-keap"]
+    assert j["schedule"] == m["trigger"]["cadence"]
     assert j["category"] == "knowledge" and j["max_concurrent"] == 1
 
 
@@ -46,6 +50,8 @@ def test_discovery_surfaces_the_loop_job_with_tokens_expanded(monkeypatch, capsy
     cat = json.loads(capsys.readouterr().out)
     loop = [c for c in cat if c["plugin_name"] == "loop" and c["job"]["name"] == "news-scout"]
     assert loop, "discover-pulse-catalog did not surface loop:news-scout"
-    cmd = loop[0]["job"]["command"]
-    assert "news-scout.py --to-keap" in cmd
+    job = loop[0]["job"]
+    cmd = job["command"]
+    assert cmd.endswith("tools/loops/news-scout.py")
+    assert job.get("args") == ["--to-keap"]
     assert "{{" not in cmd, "the {{ playbook_dir }} token must be expanded (else pulse execs a literal → rc 127)"

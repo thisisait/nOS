@@ -215,8 +215,12 @@ def _loop_pulse_block(m: dict) -> dict:
     run = m.get("run")
     if not (cadence and run):
         return {}
+    # `run` is argv0 only. Flags belong in `args:` — Wing's command allowlist
+    # takes basename of `command` and 400s if flags ride in the same string
+    # (`news-scout.py --to-keap` failed a converge 2026-09-13).
     p = m.get("pulse") or {}
-    job = {"name": m["id"], "command": run, "schedule": cadence,
+    job = {"name": m["id"], "command": run, "args": list(m.get("args") or []),
+           "schedule": cadence,
            "category": p.get("category", "knowledge"),
            "max_runtime_s": p.get("max_runtime_s", 600),
            "max_concurrent": 1}

@@ -50,7 +50,8 @@ steps:
 # trigger's cadence becomes the schedule and `run` the command. One source —
 # tools/loop-graph-gen.py draws it, tools/discover-pulse-catalog.py schedules
 # it. A loop with a `run` + a `cadence` is scheduled; one without is graph-only.
-run: "{{ playbook_dir }}/tools/loops/news-scout.py --to-keap"
+run: "{{ playbook_dir }}/tools/loops/news-scout.py"
+args: ["--to-keap"]
 pulse:
   category: knowledge
   max_runtime_s: 600
