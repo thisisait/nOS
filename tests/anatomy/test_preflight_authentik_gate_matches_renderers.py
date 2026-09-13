@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -95,7 +96,7 @@ def _fact_expression() -> str:
     raise AssertionError(f"main.yml no longer defines a task named {FACT_TASK!r}")
 
 
-def _render(expression: str) -> dict:
+def _render(expression: str, extra: list[str] | None = None) -> dict:
     probe = REPO / f".preflight-gate-{uuid.uuid4().hex[:8]}.yml"
     out = Path(os.environ.get("TMPDIR", "/tmp")) / f"{probe.stem}.json"
     fact = json.dumps({"_nos_gated_without_authentik": expression})
@@ -105,9 +106,12 @@ def _render(expression: str) -> dict:
         # — correct on the operator's Mac, absent on the Linux pytest runner,
         # where every module fails "interpreter not found". Extra-vars outrank
         # an inventory host var, so this is what makes the probe portable.
+        cmd = ["ansible-playbook", probe.name,
+               "-e", f"ansible_python_interpreter={sys.executable}"]
+        for item in extra or []:
+            cmd.extend(["-e", item])
         run = subprocess.run(
-            ["ansible-playbook", probe.name,
-             "-e", f"ansible_python_interpreter={sys.executable}"],
+            cmd,
             cwd=REPO, capture_output=True, text=True, timeout=300,
             env={**os.environ, "ANSIBLE_PYTHON_INTERPRETER": sys.executable},
         )
@@ -195,4 +199,72 @@ def test_the_dashboard_exemption_is_the_only_one(payload):
     assert "traefik-dashboard" in _rendered_gated(payload), (
         "traefik-dashboard is no longer gated, so the exemption is now dead "
         "code hiding whatever takes its place"
+    )
+
+
+CI = REPO / ".github" / "workflows" / "ci.yml"
+CI_CONFIG = REPO / "tests" / "config.yml"
+
+
+def _linux_edge_extra_vars() -> dict:
+    wf = yaml.safe_load(CI.read_text())
+    job = wf["jobs"]["integration-linux"]
+    step = next(
+        s for s in job["steps"]
+        if "Test the playbook (Linux)" in (s.get("name") or "")
+    )
+    blobs = re.findall(r"-e '(\{.*?\})'", step["run"])
+    assert blobs, (
+        "Linux Integration no longer passes a JSON extra-vars blob; this gate "
+        "cannot see the Traefik overlay that trips the Authentik preflight"
+    )
+    return json.loads(blobs[-1])
+
+
+def _ci_linux_extra() -> list[str]:
+    return [f"@{CI_CONFIG}", json.dumps(_linux_edge_extra_vars())]
+
+
+def test_linux_integration_does_not_publish_forward_auth_without_authentik():
+    """The Linux wet-test copies tests/config.yml then overlays JSON extra-vars.
+
+    Turning Traefik on while leaving Authentik off is the red that followed
+    the edge-fix: Traefik attaches authentik@file and the middleware is
+    undefined. Skip is legitimate only when that overlay actually gates
+    nothing (dashboard exempt).
+    """
+    if shutil.which("ansible-playbook") is None:
+        pytest.skip("ansible-playbook unavailable in this lane")
+    overlay = {**(yaml.safe_load(CI_CONFIG.read_text()) or {}), **_linux_edge_extra_vars()}
+    if not overlay.get("install_traefik"):
+        pytest.skip("Linux Integration extra-vars no longer enable Traefik")
+    if overlay.get("install_authentik"):
+        return
+    payload = _render(_fact_expression(), extra=_ci_linux_extra())
+    refusable = _rendered_gated(payload) - {"traefik-dashboard"}
+    assert not refusable, (
+        "install_authentik is false under the Linux Integration overlay, but "
+        f"{sorted(refusable)} still receive authentik@file. Traefik will 500 "
+        "each of them. Turn Authentik on in tests/config.yml (the honest "
+        "wet-test) or drop the forward-auth routes; do not skip the preflight."
+    )
+
+
+def test_forcing_authentik_off_under_the_linux_overlay_still_gates_routes():
+    """The overlay test is vacuous if the Linux job gates nothing.
+
+    Force the broken combination (Linux extra-vars + authentik false) and
+    demand at least one refusable route — the shape that went red after
+    Traefik was enabled in CI and before tests/config.yml turned Authentik on.
+    """
+    if shutil.which("ansible-playbook") is None:
+        pytest.skip("ansible-playbook unavailable in this lane")
+    extra = _ci_linux_extra() + ["install_authentik=false"]
+    payload = _render(_fact_expression(), extra=extra)
+    refusable = _rendered_gated(payload) - {"traefik-dashboard"}
+    assert refusable, (
+        "the Linux Integration overlay no longer attaches authentik@file to "
+        "any service except the dashboard. The Authentik-on requirement in "
+        "tests/config.yml would then be dead; drop it rather than keep a "
+        "pin that cannot fail."
     )
