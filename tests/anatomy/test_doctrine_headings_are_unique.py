@@ -1,14 +1,14 @@
 """Anatomy gate — a doctrine heading is an address, so it cannot collide.
 
-Subject: docs/doctrine/ssot.md (PROPOSED). The citation indexer
+Subject: docs/doctrine/ssot.md (PROPOSED) §7. The citation indexer
 (`tools/doctrine-cite.py` `index_doc`) last-write-wins on a repeated section
-number, so two `## 9` headings silently become one address. This gate pins the
-constitution files; the known collision in docs/workflow-standard.md is named,
-not repaired.
+number, so two `## 9` headings silently become one address. This gate pins
+docs/doctrine/*.md. A duplicate number outside that tree is not a nos-sot
+address; docs/workflow-standard.md still carries two headings numbered 9.
 
 Retro-red: the checker fails a synthetic duplicate (title and number) and
-fails the live workflow-standard file on number `9`. A check that cannot fail
-on a broken input pins nothing.
+fails the live companion on number `9`. A check that cannot fail on a broken
+input pins nothing.
 """
 from __future__ import annotations
 
@@ -84,12 +84,12 @@ def test_every_doctrine_file_has_unique_headings(tool):
 
 
 def test_workflow_standard_section_nine_is_a_named_collision(tool):
-    """Named in docs/doctrine/ssot.md heading 6. If repaired, delete this test
-    and that paragraph. File on this line: docs/workflow-standard.md.
+    """Companion, not constitution. If the two §9 headings are repaired,
+    delete this test. File on this line: docs/workflow-standard.md.
     """
     text = WORKFLOW_STANDARD.read_text(encoding="utf-8")
     dups = _dups(_numbered_ids(tool, text))
     assert dups.get("9") == 2, (
         "docs/workflow-standard.md no longer has two headings numbered 9 — "
-        "the named collision in docs/doctrine/ssot.md is gone; remove both"
+        "remove this test"
     )

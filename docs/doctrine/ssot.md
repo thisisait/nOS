@@ -1,88 +1,84 @@
 # SSOT — how to cite the constitution
 
-> **PROPOSED, not settled.** This file names a citation scheme the tree already
-> almost has (`tools/doctrine-cite.py`, `doctrine:<doc>#<section>`). It does not
-> invent a second constitution store, a browser, or a parallel ontology. The
-> operator settles this file before anything cites it as live. Sibling of
-> [`agentkit.md`](agentkit.md) in status.
+> **PROPOSED, not settled.** This file names the citation scheme and the
+> destination shape of a law. It does not invent a second constitution store,
+> a browser, or a parallel ontology. The operator settles this file before
+> anything cites it as live. Sibling of [`agentkit.md`](agentkit.md) in status.
 
-Unqualified `§N` is a defect. An agent said "paragraph eight" and the operator
-could not find it: [`loops.md`](loops.md) §8 is an edge-gate rule;
-`docs/workflow-standard.md` has two §9s (`Recursion` and `The checklist`);
-[`../idea/08-lifecycle.md`](../idea/08-lifecycle.md) is a different file.
+## 1. Address
 
-## 1. Citation form
+A citable unit has one address: `nos-sot:<realm>/<file>#<id>`.
+A section number without a realm and a file is not an address.
 
-`nos-sot:<realm>/<file>#<stable-id>` — e.g. `nos-sot:doctrine/loops.md#8`.
+## 2. Realms
 
-| realm | lives at | stable-id |
+| realm | corpus | id |
 |---|---|---|
-| `doctrine` | `docs/doctrine/*.md` | the `##` heading (its section number, when it has one) |
+| `doctrine` | `docs/doctrine/*.md` | the `##` heading's section number, else the heading slug |
 | `idea` | `docs/idea/*.md` | same |
 | `genome` | `state/genome/` | schema path (`entity.schema.json`) |
 | `dtt` | roadmap slugs | the slug (`dtt-constitution`) |
 | `fee` | `docs/hidden_fees/NN-*.md` | the NN (`08`) |
 
-A path outside those five realms is not a `nos-sot:` address. Cite it as a repo
-path, or move it into a realm. `tools/doctrine-cite.py` already harvests `§`
-citations and refuses to guess an unqualified one; `nos-sot:` is the qualified
-form that harvest should grow to emit. Do not stand up a second resolver.
+Organs are not a sixth realm. [`organs.md`](organs.md) is doctrine: the rule
+for the word. The organ *vocabulary* belongs in the genome, the same way
+`axes.layer` already does, once the operator settles organs.md §3.
 
-## 2. Constitution
+A path outside these realms is a repository path, not a `nos-sot:` address.
+`tools/doctrine-cite.py` is the harvest. `nos-sot:` is the qualified form it
+should emit. Do not stand up a second resolver.
 
-The constitution is `docs/doctrine/*.md`. Each `##` heading is the stable-id;
-[`loops.md`](loops.md) already claims section numbers stable. Renaming a number
-is a breaking citation change.
+## 3. Constitution
 
-The signed-row store is the queued roadmap row `nos-sot:dtt/dtt-constitution`
-(constitution-as-dtt, deferred — `docs/plans/datatables-subsystem.md` §14). Do
-not invent a second constitution table beside that row. These files stay the
-source until it lands.
+The constitution is `docs/doctrine/*.md`. Each `##` heading is the id.
+Changing a number is a breaking citation change.
+
+An article is a norm (`shall` / `must` / `may` / `must not`). Incidents,
+measurements, and named exceptions live in a companion, a fee, or the
+devlog — not in the article.
+
+The signed-row store is queued as `nos-sot:dtt/dtt-constitution`. These files
+stay the source until that row lands. Do not invent a second constitution
+table.
 
 [`agentkit.md`](agentkit.md) §6 and [`organs.md`](organs.md) §3 await the
-operator; this file does not settle them.
+operator. This file does not settle them.
 
-## 3. Genome
+## 4. Genome
 
-`state/genome/entity.schema.json` is the machine model. It has facets
-(`identity`, `compliance`, `access`, `cortex`, `face`, `axes`) and almost no
-instances: one organelle schema
-(`state/genome/organelle/data-table.schema.json`). `tools/genome-codegen.py`
-already emits the two live artifacts. Fill instances; do not open a second
-schema family.
+`state/genome/entity.schema.json` is the machine model. Fill instances. Do
+not open a second schema family.
 
-The identity hook is `identity.anchor` (renamed from `taxonomy_anchor` on
-2026-08-07 after that name had zero producers and zero consumers). Re-measure
-it. Do not invent a parallel ontology for doctrine nodes.
+The identity hook is `identity.anchor`. Re-measure it. Do not invent a
+parallel ontology for doctrine nodes.
 
-## 4. KEAP — one node per file
+## 5. Format
 
-One KEAP node per doctrine file, not per sentence. Edges:
+A law that defines a paragraph is one article: stable id, normative text,
+in-force range, optional amendment or repeal of another id.
 
-`doctrine --governs--> surface` (plugin / role / organ)
+Authoring stays Markdown until a genome article schema exists. JSONL and XML
+are projections of that schema, not a second source. XML is a candidate
+because amendments need identity and supersession — not because the corpus
+should be hand-written as tags.
 
-Blast radius is a graph walk, not a paragraph. Today's anatomy-graph doctrine
-edges (`derive_doctrine` in `tools/anatomy-graph-gen.py`) are citation-derived
-per-section addresses (`doctrine:<doc>#<section>`), walked `governed_by`
-(surface → paragraph). That harvest stays a citation index; the KEAP node is
-the file. Same join, coarser node, opposite walk — not a second graph.
+One article = one vector chunk. One doctrine file = one KEAP node. Blast
+radius is the walk `doctrine --governs--> surface`. Do not mint a KEAP node
+per sentence.
 
-## 5. One export, many faces
+Tenant constitutions reuse the article schema and the unique-name rule.
+They do not inherit this estate's articles. Their prefix is not `nos-sot:`.
 
-Wing and the face consume the same export KEAP nodes consume:
-`tools/ssot-index.py` JSONL of `nos-sot:` rows. Named, not built. Do not draw a
-browser from this file. Until that exporter exists,
+## 6. Export
+
+Wing, the face, and KEAP consume one export: `tools/ssot-index.py` JSONL of
+`nos-sot:` rows. Named, not built. Until it exists,
 `tools/doctrine-cite.py --json` is the harvest.
 
-## 6. Heading uniqueness
+## 7. Heading uniqueness
 
-Every ATX heading in a `docs/doctrine/*.md` file is unique inside that file —
-the title text, and the section number when numbered. Gate:
-`tests/anatomy/test_doctrine_headings_are_unique.py`. The citation indexer
-(`index_doc`) last-write-wins on a repeated number, so a collision is silent
-without this gate.
+Every ATX heading in `docs/doctrine/*.md` is unique inside its file — the
+title text, and the section number when numbered. Gate:
+`tests/anatomy/test_doctrine_headings_are_unique.py`.
 
-**Named collision, not in this realm:** `docs/workflow-standard.md` has two
-`## 9` headings (`Recursion`, `The checklist`). Unqualified `§9` is why this
-file exists. Not repaired here — it is not constitution, and inbound checklist
-citations would churn. Cite it by title, or not as `nos-sot:`.
+A duplicate number outside doctrine is not a `nos-sot:` address.
