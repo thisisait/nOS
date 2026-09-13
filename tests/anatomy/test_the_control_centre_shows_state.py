@@ -347,3 +347,64 @@ def test_the_layout_builds_without_touching_other_sessions():
         f"sessions disappeared while building the control centre: "
         f"{sorted(before_names - after_names)}"
     )
+
+
+def test_the_surface_is_a_table_not_a_log_tail():
+    """The TUI is DataTable + re-run readers. A Static of `git log` or a
+    pane whose rows are `reds:` sentences is scrollback with a nicer face."""
+    sys.path.insert(0, str(REPO / "tools"))
+    from cc import contract
+    from cc import panes as registry
+    from cc.app import ControlCentreApp
+
+    src = (REPO / "tools/cc/app.py").read_text(encoding="utf-8")
+    assert "DataTable" in src
+    assert "action_reload" in src
+    assert not re.search(r"tail\s+-[fF]", src)
+
+    known = registry.all_panes()
+    for pane_id in ("red", "agents", "history", "roadmap"):
+        pane = known[pane_id]
+        assert getattr(pane, "COLUMNS", None), f"{pane_id} has no COLUMNS"
+        t = contract.table(pane, demo=True)
+        assert t["ok"], t["error"]
+        assert t["rows"], f"{pane_id} demo produced no rows"
+        dumped = contract.render_text(t, pane.TITLE)
+        assert pane.COLUMNS[0].upper() in dumped.splitlines()[1]
+        assert "UNKNOWN" not in dumped.splitlines()[0] or t["ok"]
+
+
+def test_red_rows_come_from_structured_json_not_prose():
+    sys.path.insert(0, str(REPO / "tools"))
+    from cc.panes import red
+
+    poison = "this prose must never become a row"
+    rows = red.build_rows(red.DEMO)
+    blob = " | ".join(str(v) for r in rows for v in r.values())
+    assert poison not in blob
+    assert red.COLUMNS == ["source", "id", "status", "age", "what"]
+    assert any(r["source"] == "job" and r["id"] == "backup:nightly" for r in rows)
+    assert any(r["source"] == "loop" and r["id"] == "w-1" for r in rows)
+    assert any(r["source"] == "inbox" and r["status"] == "RED" for r in rows)
+
+
+def test_history_marks_the_commit_that_is_head():
+    sys.path.insert(0, str(REPO / "tools"))
+    from cc.panes import history
+
+    assert "head" in history.COLUMNS
+    data, reason = history.fetch()
+    assert reason is None, reason
+    rows = history.build_rows(data)
+    marked = [r for r in rows if r.get("head") == "HEAD"]
+    assert len(marked) == 1, f"HEAD marker count={len(marked)}"
+    assert marked[0]["sha"] == data["head"]
+
+
+def test_agents_table_lists_running_then_recent():
+    sys.path.insert(0, str(REPO / "tools"))
+    from cc.panes import agents
+
+    rows = agents.build_rows(agents.DEMO)
+    assert [r["uuid"] for r in rows[:2]] == ["11aa22bb", "be9d107f"]
+    assert rows[0]["status"] == "running"

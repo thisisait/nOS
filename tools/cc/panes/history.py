@@ -10,14 +10,30 @@ from pathlib import Path
 
 ID, LABEL, TITLE = "history", "History", "recent commits"
 REFRESH = 60
-COLUMNS = ["sha", "age", "who", "subject"]
+COLUMNS = ["head", "sha", "age", "who", "subject"]
 REPO = Path(__file__).resolve().parents[3]
 SEP = "\x1f"
-DEMO = {"rows": [{"sha": "b68ac24", "age": "2 hours ago", "who": "Pázny",
-                  "subject": "fix(wing): send Bone a Bearer"}]}
+DEMO = {"head": "b68ac24",
+        "rows": [{"head": "HEAD", "sha": "b68ac24", "age": "2 hours ago",
+                  "who": "Pázny", "subject": "fix(wing): send Bone a Bearer"}]}
+
+
+def _short_head():
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=15, cwd=REPO)
+    except Exception as e:  # noqa: BLE001
+        return None, f"git rev-parse HEAD failed: {e}"
+    if out.returncode != 0:
+        return None, f"git rev-parse exited {out.returncode}: {out.stderr.strip()[:120]}"
+    return out.stdout.strip(), None
 
 
 def fetch():
+    head, reason = _short_head()
+    if reason:
+        return None, reason
     try:
         out = subprocess.run(
             ["git", "log", "-25", f"--pretty=%h{SEP}%ar{SEP}%an{SEP}%s"],
@@ -30,8 +46,10 @@ def fetch():
     for line in out.stdout.splitlines():
         parts = line.split(SEP)
         if len(parts) == 4:
-            rows.append(dict(zip(COLUMNS, parts)))
-    return {"rows": rows}, None
+            sha, age, who, subject = parts
+            rows.append({"head": "HEAD" if sha == head else "",
+                         "sha": sha, "age": age, "who": who, "subject": subject})
+    return {"head": head, "rows": rows}, None
 
 
 def build_rows(data):
