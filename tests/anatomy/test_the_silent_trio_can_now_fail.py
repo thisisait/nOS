@@ -39,38 +39,83 @@ def test_stack_verify_contains_a_task_that_can_fail():
 
 # ── 47 ───────────────────────────────────────────────────────────────────────
 
-def _run_drift_watch(tmp: pathlib.Path, crit: int, hmac: str) -> int:
-    """Run the real script with a stubbed check that reports `crit` criticals."""
-    stub = tmp / "20-cve-drift-check.sh"
-    stub.write_text("#!/bin/sh\nprintf '{\"pending_critical\": %s, "
-                    "\"pending_high\": 0, \"scan_age_hours\": 1}' " + str(crit) + "\n")
-    stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
-    env = {**os.environ, "NOS_DRIFT_CHECK": str(stub), "PATH": os.environ["PATH"]}
+def _run_drift_watch(
+    tmp: pathlib.Path,
+    *,
+    crit: int = 0,
+    high: int = 0,
+    age_h: int = 1,
+    stale_h: int = 336,
+    hmac: str | None = None,
+    curl_http: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run the real watcher against a stub hook under NOS_REPO."""
+    hook_dir = tmp / "hooks" / "playbook-end.d"
+    hook_dir.mkdir(parents=True)
+    hook = hook_dir / "20-cve-drift-check.sh"
+    payload = (
+        f'{{"pending_critical": {crit}, "pending_high": {high}, '
+        f'"last_full_scan_age_hours": {age_h}}}'
+    )
+    hook.write_text("#!/bin/sh\nprintf '%s\\n' '" + payload + "'\n")
+    hook.chmod(hook.stat().st_mode | stat.S_IEXEC)
+    path = os.environ.get("PATH", "")
+    if curl_http is not None:
+        bindir = tmp / "bin"
+        bindir.mkdir(exist_ok=True)
+        curl = bindir / "curl"
+        curl.write_text("#!/bin/sh\nprintf '%s' '" + curl_http + "'\n")
+        curl.chmod(curl.stat().st_mode | stat.S_IEXEC)
+        path = str(bindir) + os.pathsep + path
+    env = {
+        **os.environ,
+        "NOS_REPO": str(tmp),
+        "DRIFT_STALE_HOURS": str(stale_h),
+        "PATH": path,
+        "BONE_API_URL": "http://127.0.0.1:9",
+    }
     if hmac:
         env["WING_EVENTS_HMAC_SECRET"] = hmac
     else:
         env.pop("WING_EVENTS_HMAC_SECRET", None)
-    r = subprocess.run(["bash", str(REPO / "files/anatomy/scripts/drift-watch.sh")],
-                       capture_output=True, text=True, timeout=60, env=env,
-                       cwd=REPO)
-    return r.returncode
+    return subprocess.run(
+        ["bash", str(REPO / "files/anatomy/scripts/drift-watch.sh")],
+        capture_output=True, text=True, timeout=60, env=env, cwd=REPO,
+    )
 
 
 def test_an_undeliverable_critical_is_not_a_clean_run(tmp_path):
-    src = (REPO / "files/anatomy/scripts/drift-watch.sh").read_text()
-    if "NOS_DRIFT_CHECK" not in src:
-        # The script hardcodes its check path; assert the exit-path shape
-        # instead of running it (fee 47's close in source, comments stripped).
-        body = "\n".join(ln for ln in src.splitlines()
-                         if not ln.lstrip().startswith("#"))
-        assert re.search(r'"critical" \]\] && exit 1', body), (
-            "drift-watch exits 0 on a CRITICAL it could not deliver — fee 07's "
-            "rule, fee 47's file")
-        assert body.count('&& exit 1') >= 2, (
-            "only one undeliverable path refuses; HMAC-unset and POST-failure "
-            "must both")
-        return
-    assert _run_drift_watch(tmp_path, crit=3, hmac="") != 0
+    r = _run_drift_watch(tmp_path, crit=3, hmac="")
+    assert r.returncode != 0, (
+        "drift-watch exits 0 on a CRITICAL it could not deliver — fee 07's "
+        f"rule, fee 47's file\nstdout={r.stdout!r}\nstderr={r.stderr!r}"
+    )
+
+
+def test_an_undeliverable_high_is_not_a_clean_run(tmp_path):
+    """HIGH/stale alert with HMAC unset must not look like a successful watch."""
+    r = _run_drift_watch(tmp_path, age_h=400, hmac="")
+    assert r.returncode != 0, (
+        "drift-watch exits 0 on a HIGH stale alert it could not deliver "
+        "(HMAC unset) — fee 07: a step that cannot do its job must not exit 0"
+        f"\nstdout={r.stdout!r}\nstderr={r.stderr!r}"
+    )
+
+
+def test_within_thresholds_is_still_a_clean_run(tmp_path):
+    r = _run_drift_watch(tmp_path, crit=0, age_h=1, hmac="")
+    assert r.returncode == 0, (
+        "within-threshold metric refresh must stay exit 0"
+        f"\nstdout={r.stdout!r}\nstderr={r.stderr!r}"
+    )
+
+
+def test_an_undeliverable_high_post_is_not_a_clean_run(tmp_path):
+    r = _run_drift_watch(tmp_path, age_h=400, hmac="test-hmac", curl_http="500")
+    assert r.returncode != 0, (
+        "drift-watch exits 0 on a HIGH alert whose Bone POST failed"
+        f"\nstdout={r.stdout!r}\nstderr={r.stderr!r}"
+    )
 
 
 # ── 52 ───────────────────────────────────────────────────────────────────────

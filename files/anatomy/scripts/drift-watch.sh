@@ -18,7 +18,8 @@
 #   WING_EVENTS_HMAC_SECRET   Bone HMAC seed; unset → metric-only, no notify
 #   BONE_API_URL              default http://127.0.0.1:8099 (Bone; 9000 is Wing)
 #   DRIFT_STALE_HOURS         staleness threshold (default 336 = 14 days)
-# Exit 0 always (a watcher must not fail the Pulse runner).
+# Exit 1 when an alert cannot be delivered (HMAC unset or Bone POST
+# not 200/201). Exit 0 when within thresholds (metric refresh only).
 # =============================================================================
 
 set -uo pipefail
@@ -72,10 +73,9 @@ fi
 
 if [[ -z "${WING_EVENTS_HMAC_SECRET:-}" ]]; then
     echo "drift-watch: ALERT (${sev}) but WING_EVENTS_HMAC_SECRET unset — metric-only"
-    # Fee 47: a CRITICAL verdict this watcher cannot DELIVER must not read as a
-    # clean run — fee 07's own rule. Pulse records the non-zero; nothing crashes.
-    [[ "$sev" == "critical" ]] && exit 1
-    exit 0
+    # Fee 07: a verdict this watcher cannot DELIVER must not read as a clean run.
+    # Pulse records the non-zero; nothing crashes. Metric already refreshed.
+    exit 1
 fi
 
 BODY=$(jq -n \
@@ -109,7 +109,7 @@ if [[ "$CODE" == "200" || "$CODE" == "201" ]]; then
     echo "drift-watch: notification emitted (severity=${sev})"
 else
     echo "drift-watch: notification POST HTTP ${CODE} — metric still refreshed" >&2
-    # Fee 47, same rule at the second undeliverable path.
-    [[ "$sev" == "critical" ]] && exit 1
+    # Fee 07, same rule at the second undeliverable path.
+    exit 1
 fi
 exit 0
