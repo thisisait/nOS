@@ -4,9 +4,11 @@ the live door, reused by every importer CLI (digest-import.py, digest-import-rep
 The second importer is what justified extracting this from digest-import.py: absorb
 semantics (strip _prov, upsert by slug in dependency order, skip slugs already
 present so a re-run is a no-op) are identical across importers and must not drift.
-It is NOT the enforcement chokepoint (see the raw-never-touches-knowledge review) —
-each CLI still runs run_importer/check_bundle and refuses on errors BEFORE calling
-this; absorb assumes an already-gated bundle.
+THIS is the importer-surface chokepoint: absorb() runs check_bundle and POSTs
+/rows only when the gate is empty. CLIs still gate first; a caller that skips
+that and hands absorb an ungated bundle is refused here. Other DataTable writers
+(roadmap, MCP) are out of scope — raw-never-touches-knowledge still needs
+raw-archive + captures/proposals validators before that constitution rule flips.
 """
 from __future__ import annotations
 
@@ -133,8 +135,15 @@ def _post_row(table: str, row: dict, hdr: dict) -> None:
 
 def absorb(bundle: dict) -> int:
     """Upsert a gated bundle's deterministic rows by slug, in dependency order,
-    skipping slugs already present. Returns 0 done · 1 a POST failed · 2 KEAP
-    unreadable. _prov is stripped here — it is never a table column."""
+    skipping slugs already present. Returns 0 done · 1 gate refused or a POST
+    failed · 2 KEAP unreadable. _prov is stripped here — it is never a table
+    column. Ungated bundles never reach the live row POST."""
+    errors = nos_digest.check_bundle(bundle, TABLES_DIR)
+    if errors:
+        print("GATE REFUSED the bundle — nothing absorbed:", file=sys.stderr)
+        for e in errors:
+            print(f"  {e}", file=sys.stderr)
+        return 1
     hdr = {"Authorization": f"Bearer {rw_token()}", **proxy_header()}
     det = nos_digest.strip_provenance(bundle["deterministic"])
     wrote = skipped = 0

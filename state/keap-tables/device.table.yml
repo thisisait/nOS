@@ -1,0 +1,21 @@
+# KEAP DataTable — "Devices" (digest family: one physical unit).
+#
+# Wave 1 Lane B (digest-device-tables). A second backup / later LEAPP hangs
+# off the same row via device-extraction. Hash only — never a raw serial.
+# No table-level graph block: these are personal-device facts, not a public
+# knowledge_object projection (docs/plans/digest-device-doctrine.md §8).
+
+title: "Devices"
+description: >-
+  One physical unit the operator owns. Identifiers are hashes only; extraction
+  runs live in device-extraction so a second backup does not mint a second device.
+driver: libsql
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,            label: "Slug",            kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: model,           label: "Model",           kind: text,   role: dimension }
+    - { key: os_family,       label: "OS family",       kind: select, role: dimension, concept: class.kind,
+        options: ["ios", "android", "other"] }
+    - { key: identifier_hash, label: "Identifier hash", kind: text,   role: attribute }
+    - { key: notes,           label: "Notes",           kind: text,   role: attribute, concept: identity.description }

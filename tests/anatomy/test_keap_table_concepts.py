@@ -114,6 +114,17 @@ CONCEPTLESS = {
     "journal-entry.source": "the invoice that generated the entry — a provenance link, not graph.parent — needs prov.source",
     "posting.account": "the account this line hits — graph.parent is claimed by `entry`; needs graph.account or graph.counterparty",
     "posting.amount": "a positive money amount — no money/measure concept exists — needs measure.amount",
+    "device.model": "a hardware model string is not identity.name (party legal name) — needs identity.product",
+    "device.identifier_hash": "hash of a non-secret device id — not identity.name (that poisons person/name queries) — needs identity.hash",
+    "device-extraction.owner": "not identity.name (that would imply a party) — scheme B display label until party-review-rung; needs identity.display",
+    "device-extraction.operator_owns_device": "an attestation flag is not ui.pinned or lifecycle.status — needs consent.attestation",
+    "device-extraction.profile_id": "named deny-default parse profile — not identity.slug of this row — needs digest.profile",
+    "device-extraction.art6_consent_ref": "Wing gdpr_consent pointer — not identity.slug or graph.parent — needs consent.ref",
+    "device-extraction.art9_consent_ref": "same — Art. 9 explicit consent pointer; needs consent.ref",
+    "device-extraction.retain_until": "withdrawal/ISO horizon — not time.target (a plan) or time.occurred_at — needs time.valid_to",
+    "device-extraction.raw_archive_ref": "pointer at raw-archive-store, not this row's identity — needs prov.archive",
+    "device-extraction.report_path": "human HTML path, never ingested — stretching fs.path would mix reports with app paths — needs fs.report_path",
+    "device-extraction.unnamed_skip_count": "count of denied unnamed classes — not a measure of the device — needs measure.skip_count",
 }
 
 

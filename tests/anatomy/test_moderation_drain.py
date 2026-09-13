@@ -55,3 +55,66 @@ def test_nothing_is_auto_approved():
     # the plan has no "approve" list — approving is the operator's, per contract.
     plan = MD.plan_drain(ITEMS)
     assert set(plan) == {"retarget", "human_review", "domains"}
+
+
+# ── prefilter operator draft (new heart; --json dumps this, not plan_drain) ──
+
+PRE_ITEMS = (
+    [{"id": "nos1", "nodeId": "nos.alpha"}]
+    + [{"id": "fill1", "nodeId": "04.beta"}]
+    + [{"id": "over1", "nodeId": "04.gamma", "overwrite": True}]
+    + [{"id": "dead1", "nodeId": "04.delta", "dead-target": True}]
+)
+
+
+def test_prefilter_shape_unverified_and_apply_empty():
+    draft = MD.draft_prefilter(PRE_ITEMS)
+    assert draft["unverified"] is True
+    assert draft["apply"] == []
+    assert draft["reader"] == "GET /agent/v1/promotions?status=proposed"
+    assert draft["queue_n"] == 4
+    assert "approved" not in draft and "blessed" not in draft and "auto_approve" not in draft
+    by_lab = {r["label"]: r for r in draft["ready_for_operator"]}
+    assert [r["label"] for r in draft["ready_for_operator"]] == [
+        "nos", "overwrite", "dead-target", "fill-ok",
+    ]
+    assert by_lab["nos"]["sort_key"] == 0 and by_lab["fill-ok"]["sort_key"] == 4
+    assert "nos1" not in [e["id"] for e in draft["excluded"]]
+
+
+def test_prefilter_nos_stays_in_draft_even_if_labels_say_low_match():
+    labels = {
+        "nos1": {"label": "low-match", "reason": "nope"},
+        "fill1": {"label": "low-match", "reason": "weak"},
+        "fill2": {"label": "attention", "reason": "odd"},
+        "ghost": {"label": "low-match", "reason": "unknown id ignored"},
+    }
+    items = [
+        {"id": "nos1", "nodeId": "nos.alpha"},
+        {"id": "fill1", "nodeId": "04.beta"},
+        {"id": "fill2", "nodeId": "04.gamma"},
+        {"id": "fill3", "nodeId": "04.delta"},
+    ]
+    draft = MD.draft_prefilter(items, labels)
+    assert [e["id"] for e in draft["excluded"]] == ["fill1"]
+    assert draft["excluded"][0]["keap_status"] == "proposed"
+    ready = {r["id"]: r["label"] for r in draft["ready_for_operator"]}
+    assert ready["nos1"] == "nos"
+    assert ready["fill2"] == "attention"
+    assert ready["fill3"] == "fill-ok"
+    assert "ghost" not in ready and "ghost" not in {e["id"] for e in draft["excluded"]}
+
+
+def test_prefilter_skips_overwrite_dead_labels_when_fields_absent():
+    draft = MD.draft_prefilter([{"id": "x", "nodeId": "04.only"}])
+    assert draft["ready_for_operator"] == [
+        {"id": "x", "label": "fill-ok", "sort_key": 4, "nodeId": "04.only"},
+    ]
+
+
+def test_tool_source_never_posts():
+    """HEAD already never POSTed; a substring ban on 'decide'/'bulk' only
+    forbade documenting the operator apply path. Pin the write instead."""
+    src = (REPO / "tools" / "moderation-drain.py").read_text()
+    assert "method=" not in src
+    assert ".Request(" in src  # still GETs the promotions reader

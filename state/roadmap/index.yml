@@ -99,6 +99,9 @@
 - slug: digest-absorb-chokepoint
   parent: digest
   track: digest
+- slug: digest-artifact-modules
+  parent: digest-device
+  track: digest
 - slug: digest-bundle-gate
   parent: digest
   track: digest
@@ -107,6 +110,39 @@
   track: digest
 - slug: digest-constitution
   parent: digest
+  track: digest
+- slug: digest-device
+  parent: digest
+  track: digest
+- slug: digest-device-art9
+  parent: digest-device
+  track: digest
+- slug: digest-device-doctrine
+  parent: digest-device
+  track: digest
+- slug: digest-device-doctrine-review
+  parent: digest-device
+  track: digest
+- slug: digest-device-family
+  parent: digest-device
+  track: digest
+- slug: digest-device-fixture
+  parent: digest-device
+  track: digest
+- slug: digest-device-ileapp-pin
+  parent: digest-device
+  track: digest
+- slug: digest-device-lava
+  parent: digest-device
+  track: digest
+- slug: digest-device-owner
+  parent: digest-device
+  track: digest
+- slug: digest-device-proof
+  parent: digest-device
+  track: digest
+- slug: digest-device-tables
+  parent: digest-device
   track: digest
 - slug: digest-doctrine
   parent: digest

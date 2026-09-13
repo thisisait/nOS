@@ -100,6 +100,16 @@ invariants:
     status: pending
     builds_with: erasure-party-subject
 
+  - id: importer-absorb-chokepoint
+    rule: >-
+      Importer-sourced rows reach KEAP /rows only through digest_absorb.absorb,
+      and absorb POSTs only after check_bundle returns empty. Direct POSTs from
+      digest-import*.py are refused by the static gate. Agent/operator writers
+      (roadmap, MCP, discovery) are a different door and stay out of this judge.
+    judge: tools/digest_absorb.py::absorb
+    gate: tests/anatomy/test_digest_absorb_is_the_chokepoint.py
+    status: enforced
+
   - id: raw-never-touches-knowledge
     rule: >-
       Raw source bytes never reach the knowledge system directly. The path is
@@ -108,11 +118,10 @@ invariants:
     judge: ""
     gate: ""
     status: pending
-    # Repointed 2026-09-11 after an independent review: the importer-spine
-    # scaffold landed, but run_importer is a helper, not a chokepoint — the rule
-    # needs a no-bypass static gate + captures/proposals validators + the
-    # raw-archive stage before it can flip to enforced. See digest-absorb-chokepoint.
-    builds_with: digest-absorb-chokepoint
+    # The importer /rows chokepoint shipped as importer-absorb-chokepoint.
+    # This rule still needs the raw-archive stage + captures/proposals
+    # validators (not just the fail-closed refusal) before it can flip.
+    builds_with: raw-archive-store
 
   - id: gdpr-digestion-stage
     rule: >-

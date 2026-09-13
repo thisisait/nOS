@@ -1,0 +1,10 @@
+# =============================================================================
+# Device digest fixture (digest-device-tables). Synthetic only — fixture_mode
+# class. No PII, no live absorb. Dependency order: device then device-extraction
+# (leaf rowRefs the device). Teardown is the reverse.
+# =============================================================================
+device:
+  - { slug: syn-device-fixture, model: "Fixture Phone", os_family: other, identifier_hash: "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", notes: "synthetic unit, not a real handset" }
+
+device-extraction:
+  - { slug: syn-extract-fixture, device: syn-device-fixture, owner: "Fixture Operator", subject_kind: synthetic_fixture, operator_owns_device: true, profile_id: wave1-deny, art6_consent_ref: "", art9_consent_ref: "", retain_until: "", raw_archive_ref: "", report_path: "", unnamed_skip_count: 0, notes: "declared synthetic extraction" }

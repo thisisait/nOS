@@ -1,0 +1,30 @@
+# KEAP DataTable — "Device extractions" (digest family: one parse run).
+#
+# Wave 1 Lane B. Owner scheme B: text display name, not a party rowRef
+# (docs/plans/digest-device-doctrine.md §4 / §8). onDelete restrict so a
+# device with extractions cannot vanish out from under them.
+
+title: "Device extractions"
+description: >-
+  One parse run of an operator-owned device (or a declared synthetic fixture).
+  Consent refs and retain_until live here; unnamed artifact classes are counted,
+  never stored as rows.
+driver: libsql
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,                  label: "Slug",                 kind: text,    role: dimension, required: true, concept: identity.slug }
+    - { key: device,                label: "Device",               kind: rowRef,  role: dimension, required: true,
+        refTable: "device", refDisplay: "model", onDelete: "restrict", concept: graph.parent }
+    - { key: owner,                 label: "Owner",                kind: text,    role: dimension, required: true }
+    - { key: subject_kind,          label: "Subject kind",         kind: select,  role: dimension, required: true, concept: class.kind,
+        options: ["operator_device", "synthetic_fixture"] }
+    - { key: operator_owns_device,  label: "Operator owns device", kind: boolean, role: dimension, required: true }
+    - { key: profile_id,            label: "Profile",              kind: text,    role: attribute }
+    - { key: art6_consent_ref,      label: "Art. 6 consent",       kind: text,    role: attribute }
+    - { key: art9_consent_ref,      label: "Art. 9 consent",       kind: text,    role: attribute }
+    - { key: retain_until,          label: "Retain until",         kind: text,    role: attribute }
+    - { key: raw_archive_ref,       label: "Raw archive",          kind: text,    role: attribute }
+    - { key: report_path,           label: "Report path",          kind: text,    role: attribute }
+    - { key: unnamed_skip_count,    label: "Unnamed skip count",   kind: number,  role: attribute }
+    - { key: notes,                 label: "Notes",                kind: text,    role: attribute, concept: identity.description }
