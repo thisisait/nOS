@@ -5,6 +5,10 @@
 #
 # Does not declare top-level networks: — iiab_net and {{ stacks_shared_network }}
 # are defined in base templates/stacks/iiab/docker-compose.yml.j2.
+#
+# Object Lock COMPLIANCE is honored on rustfs 1.0.0-rc.1 (live probe 403 on
+# version-delete). The digest raw archive is bucket `raw-archive`, never
+# `backups` — see docs/plans/raw-archive-store.md.
 # =============================================================================
 
 services:
