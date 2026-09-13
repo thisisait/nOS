@@ -85,6 +85,17 @@ def test_validate_record_rejects_bad_severity():
             ]})
 
 
+def test_validate_record_accepts_security_severity():
+    rec = {
+        "id": "x", "title": "t", "severity": "security", "steps": [
+            {"id": "s", "action": {"type": "noop"}}
+        ]}
+    assert validate_record(rec) is True
+    rec["severity"] = "ehh"
+    with pytest.raises(ValueError):
+        validate_record(rec)
+
+
 def test_apply_happy_path(tmp_path, base_ctx):
     rec = _devboxnos_record(tmp_path)
     result = apply(rec, ctx=base_ctx)

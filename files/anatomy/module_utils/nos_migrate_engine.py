@@ -135,7 +135,7 @@ def list_pending(migrations_dir, state, evaluate_gate=True, ctx=None):
 # ``state/schema/migration.schema.json`` is present, we defer to jsonschema
 # for a full check.
 _REQUIRED_FIELDS = ("id", "title", "severity", "steps")
-_SEVERITY_VALUES = {"patch", "minor", "breaking"}
+_SEVERITY_VALUES = {"patch", "minor", "breaking", "security"}
 
 
 def validate_record(record, schema_path=None):
