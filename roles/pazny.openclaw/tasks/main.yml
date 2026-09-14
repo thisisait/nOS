@@ -46,8 +46,9 @@
 # that had just done exactly the right thing, and it would have failed BEFORE
 # the LaunchAgent reload further down that fixes it.
 #
-# Two questions, two checks: the keg is asserted here (did brew install the pin)
-# and the daemon is asserted AFTER the reload (is the estate running it).
+# Two questions, two checks: the linked keg is switched to the pin when a
+# newer keg stole the name, and the daemon is asserted AFTER the reload
+# (is the estate running it).
 # ONE READING, USED BY ALL THREE CHECKS BELOW — and it is the LINKED keg.
 #
 # `brew list --versions ollama` prints EVERY keg brew kept: on this host
@@ -105,6 +106,65 @@
     - ollama_version | default('') | length > 0
     - (_ollama_keg.stdout | default('') | trim) not in ('', ollama_version)
 
+# THE PIN DECIDES. `state: present` will not downgrade a keg brew already
+# linked (operator `brew upgrade`, or a leftover from when this task was
+# `latest`). p=11902: cellar still had 0.33.3, linked was 0.34.0, and the
+# refusal told the operator to re-pin — the recorder failing for being out
+# of date. If the pin keg is still in the cellar, link it. Advancing the
+# pin is `tools/brew-pin-status.py` plus a commit, not a failed converge.
+# `brew link ollama` always links the newest keg, so this uses Homebrew's
+# Keg API on the pin prefix. brew-as-root is refused; this task is become
+# false on purpose.
+- name: "[Ollama] Link the pin keg when a newer keg stole the name"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    PIN="{{ ollama_version }}"
+    CELLAR="$(brew --cellar ollama)"
+    if [ ! -d "${CELLAR}/${PIN}" ]; then
+      echo "missing pin=${PIN}"
+      exit 0
+    fi
+    brew unlink ollama || true
+    brew ruby -e '
+      pin = ENV.fetch("OLLAMA_PIN")
+      f = Formulary.factory("ollama")
+      keg = f.installed_kegs.find { |k| k.version.to_s == pin }
+      abort "no keg #{pin}" if keg.nil?
+      f.installed_kegs.each { |k| k.unlink if k.linked? }
+      keg.link(overwrite: true)
+      puts "linked #{pin}"
+    '
+  args:
+    executable: /bin/bash
+  environment:
+    OLLAMA_PIN: "{{ ollama_version }}"
+    HOMEBREW_NO_AUTO_UPDATE: "1"
+  register: _ollama_relink
+  become: false
+  changed_when: "'linked ' in (_ollama_relink.stdout | default(''))"
+  failed_when: false
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - ollama_version | default('') | length > 0
+    - (_ollama_keg.stdout | default('') | trim) not in ('', ollama_version)
+
+- name: "[Ollama] Re-resolve the LINKED keg after switching to the pin"
+  ansible.builtin.shell: |
+    set -o pipefail
+    bin=$(command -v ollama 2>/dev/null)
+    [ -n "$bin" ] || exit 0
+    python3 -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$bin" 2>/dev/null \
+      | sed -nE 's|.*/Cellar/[^/]+/([^/]+)/.*|\1|p'
+  args:
+    executable: /bin/bash
+  register: _ollama_keg
+  become: false
+  changed_when: false
+  failed_when: false
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - "'linked ' in (_ollama_relink.stdout | default(''))"
+
 - name: "[Ollama] Refuse when the INSTALLED keg is not the pin"
   ansible.builtin.fail:
     msg: |
@@ -113,28 +173,30 @@
         daemon: {{ _ollama_ver.stdout | default('(none)') | trim }}
       {% if (_ollama_shadow.stdout | default('0') | trim | int) > 0 %}
         CAUSE: a third-party tap outranks homebrew/core for the name `ollama`,
-        so `state: latest` has been upgrading within that tap and
-        `brew upgrade ollama` is a NO-OP. Check `brew tap`.
+        so brew lands that tap's keg and `brew upgrade ollama` is a NO-OP.
+        Check `brew tap`.
         Fix (one operator action — models in {{ ollama_models_dir }} survive it):
           brew uninstall ollama && brew untap pazny/local && brew install ollama
       {% elif _ollama_shadow.rc | default(1) != 0 %}
         The shadow probe did not run, so this cannot tell a stale formula from a
         shadowing tap. Check `brew info ollama` for a "shadows" warning BEFORE
-        reaching for `brew upgrade` — under a shadowing tap the upgrade does
-        nothing and looks like it worked.
+        assuming the pin keg can be linked from homebrew/core.
       {% else %}
-        No shadowing tap found. `brew upgrade ollama`, then re-pin
-        ollama_version in default.config.yml if upstream has moved past it.
+        The pin keg was not linkable (gone from the cellar, or brew ruby
+        failed). Restore {{ ollama_version }}; do not bump the record to
+        follow brew. Ask `tools/brew-pin-status.py` before advancing
+        ollama_version — that advance is a commit, not a failed run.
       {% endif %}
   when:
     - nos_pkg_manager == 'homebrew'
     - ollama_version | default('') | length > 0
     - (_ollama_keg.stdout | default('') | trim) not in ('', ollama_version)
     # A FIRST INSTALL IS NOT DRIFT: on a clean host the keg above the record is
-    # the only thing that could have happened. The refusal is for a keg that
-    # moved while this playbook installed nothing. `state: present` reports
-    # changed only on that first install — the module's own result is the
-    # signal, not a marker this task writes about itself.
+    # the only thing that could have happened, and the pin keg is not in the
+    # cellar yet. The refusal is for a keg that moved while this playbook
+    # installed nothing. `state: present` reports changed only on that first
+    # install — the module's own result is the signal, not a marker this task
+    # writes about itself.
     - not (_ollama_install.changed | default(false))
 
 # The half the refusal above deliberately does not cover. Loud, and it does not
@@ -366,21 +428,18 @@
     - "'drift' in (_ollama_drift.stdout | default(''))"
     - "'drift' in (_ollama_drift_after.stdout | default(_ollama_drift.stdout | default('')))"
 
-# A SEPARATE fault with a SEPARATE fix. Nothing is broken here — the estate is
-# coherent, the PIN is simply not what got installed. Saying so is worth a task
-# because `state: latest` means the pin never decided anything, and a pin that
-# cannot lose is a pin that will silently be wrong forever (memory
-# `version-pins-default-config-shadow`, and the ollama tap note that says
-# `state: latest` "to nikdy neukázal").
+# Loud leftover: the pin-switch above ran, or first-install landed a keg
+# the record does not name, and the daemon still does not report the pin.
+# Do not tell the operator to bump the record — the pin decides.
 - name: "[Ollama] Report — brew installed a version the pin does not name"
   ansible.builtin.debug:
     msg: |
-      ollama_version is {{ ollama_version }} but the linked keg is
-      {{ _ollama_keg.stdout | default('?') | trim }}, and the daemon agrees with the KEG, not the pin.
-      Nothing is broken: `state: latest` upgrades regardless of this pin, so the
-      pin is descriptive, not prescriptive. Update default.config.yml to
-      {{ _ollama_keg.stdout | default('?') | trim }} — or make the install version-pinned if the pin is
-      meant to decide.
+      ollama_version is {{ ollama_version }} but the daemon reports
+      {{ _ollama_ver_after.stdout | default('?') | trim }}
+      (linked keg {{ _ollama_keg.stdout | default('?') | trim }}).
+      The pin decides; do not edit the record to follow brew. If the pin
+      keg is missing, restore it. Advancing the pin is
+      `tools/brew-pin-status.py` plus a commit.
   when:
     - nos_pkg_manager == 'homebrew'
     - ollama_version | default('') | length > 0

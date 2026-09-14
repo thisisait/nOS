@@ -68,6 +68,24 @@ def test_the_repair_precedes_the_poll_loop():
         f"changed to end.")
 
 
+def test_the_poll_is_not_a_budget_sized_include_loop():
+    """A looped include_tasks always expands the full timeout (fee 07 A).
+    p=54800: 147s of skipped includes after wave-2 ALL_READY. One include;
+    health-tick.yml re-includes itself while not done."""
+    tasks = _tasks(WAIT)
+    polls = [
+        t for t in tasks
+        if "health-tick.yml" in str(t.get("ansible.builtin.include_tasks", ""))
+    ]
+    assert len(polls) == 1, (
+        f"{WAIT.name} must include health-tick.yml once, not {len(polls)} times"
+    )
+    assert "loop" not in polls[0], (
+        f"{WAIT.name} still loops include_tasks over the wait budget. That "
+        "loop cannot short-circuit; post-ready ticks still cost ~2s each."
+    )
+
+
 def test_the_repair_does_not_also_judge():
     """Two callers, one verdict. The pre-wait call must not fail the play — the
     poll loop immediately after it is what decides whether the repair worked,

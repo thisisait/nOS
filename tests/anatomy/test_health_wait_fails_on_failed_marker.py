@@ -96,3 +96,24 @@ def test_abort_when_keys_off_failed_and_unknown_markers():
     assert "last" in when, (
         f"abort must read the probe's last stdout line (the marker), got: {when!r}"
     )
+
+
+def test_a_ready_tick_does_not_schedule_the_rest_of_the_budget():
+    """p=54800 paid 147s after ALL_READY because wait-stacks-healthy.yml
+    looped include_tasks over the full timeout. Recurse from this file
+    instead: a non-looped `when: not _wait_done` actually stops."""
+    tasks = _tasks()
+    nxt = next(
+        (t for t in tasks if "Next health-wait tick" in _name(t)),
+        None,
+    )
+    assert nxt is not None, (
+        "health-tick.yml must re-include itself for the next tick. A "
+        "range() loop on include_tasks in wait-stacks-healthy.yml always "
+        "runs the full budget (fee 07 A)."
+    )
+    inc = str(nxt.get("ansible.builtin.include_tasks") or nxt.get("include_tasks") or "")
+    assert "health-tick.yml" in inc, f"next tick must include this file, got {inc!r}"
+    when = _flatten_when(nxt.get("when"))
+    assert "_wait_done" in when, f"recursion must stop on ALL_READY, got {when!r}"
+    assert "_wait_ticks_max" in when, f"recursion must keep the timeout ceiling, got {when!r}"

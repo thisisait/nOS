@@ -13,6 +13,15 @@
 # already-running containers, or we start their stack here for the first time.
 # ==============================================================================
 
+# nos-stacks.sh can reach this file without core-up. Snapshot once if missing
+# BEFORE remaining compose registers bloat `vars`. When core-up already set
+# nos_plugin_ctx, leave it — that copy is the cheap one.
+- name: "[Stacks] Snapshot plugin-loader ctx when core-up did not"
+  ansible.builtin.set_fact:
+    nos_plugin_ctx: "{{ vars }}"
+  when: nos_plugin_ctx is not defined
+  tags: ['anatomy', 'anatomy.plugins']
+
 # Flush handlers (other tasks may have modified nginx/alloy config meanwhile).
 - name: "[Stacks] Flush handlers before remaining stack deployment"
   ansible.builtin.meta: flush_handlers
@@ -376,7 +385,7 @@
     plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
     apps_root: "{{ playbook_dir }}/apps"
     agent_profiles_root: "{{ playbook_dir }}/files/anatomy/agents"
-    template_vars: "{{ vars }}"
+    template_vars: "{{ nos_plugin_ctx }}"
     stack_filter:
       - iiab
       - devops

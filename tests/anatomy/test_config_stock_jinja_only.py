@@ -1,15 +1,16 @@
 """Anatomy gate — committed vars-files use STOCK Jinja2 filters only.
 
-WHY: the plugin loader is invoked with `template_vars: "{{ vars }}"`
-(tasks/stacks/core-up.yml et al.). ansible-core's post-2.19 templating engine
-eagerly resolves the ENTIRE play-var namespace during module-arg finalization,
-in a context where ANSIBLE filter plugins are NOT loaded. So any value in a
-vars-file that uses a non-stock filter (regex_replace, regex_search, bool,
-b64encode, hash, …) throws "No filter named '<x>'" and aborts the run — but
-only on a host that reaches the loader (ubuntu CI; macOS skips stacks when
-Docker is absent). That made it a slow-wet-test-only failure. This gate catches
-a reintroduction offline, in the fast Pytest job. See the doctrine note at
-`default.config.yml` `_host_alias_normalized` (hotfix 2026-06-06).
+WHY: the plugin-loader ctx is snapshotted once with `nos_plugin_ctx: "{{ vars }}"`
+(tasks/stacks/core-up.yml, tasks/blank-reset.yml) and later loaders pass that
+fact, not live `vars`. ansible-core's post-2.19 templating engine still eagerly
+resolves the ENTIRE play-var namespace during that ONE finalize, in a context
+where ANSIBLE filter plugins are NOT loaded. So any value in a vars-file that
+uses a non-stock filter (regex_replace, regex_search, bool, b64encode, hash, …)
+throws "No filter named '<x>'" and aborts the run — but only on a host that
+reaches the snapshot (ubuntu CI; macOS skips stacks when Docker is absent).
+That made it a slow-wet-test-only failure. This gate catches a reintroduction
+offline, in the fast Pytest job. See the doctrine note at `default.config.yml`
+`_host_alias_normalized` (hotfix 2026-06-06).
 
 If you legitimately need a transform, express it with Jinja2 core builtins
 (default, trim, length, replace, .endswith()/.startswith(), operators) — NOT an
@@ -65,16 +66,16 @@ def test_vars_files_use_stock_jinja_filters_only():
                 offenders.append(f"{path.name}: `| {filt}` ({n}x)")
     assert not offenders, (
         "Non-stock (ansible) filters in a vars-file value break the "
-        "`template_vars: \"{{ vars }}\"` eager resolution on ubuntu CI. "
+        "`nos_plugin_ctx: \"{{ vars }}\"` eager snapshot on ubuntu CI. "
         "Rewrite with Jinja2 core builtins. Offenders:\n  " + "\n  ".join(offenders)
     )
 
 
 # ── Second {{ vars }}-safety gate: every ref must be defined before core-up ───
 # A var referenced ONLY through `{{ foo | default(<x>) }}` looks safe, but under
-# the eager `template_vars: "{{ vars }}"` resolution a genuinely-undefined var
+# the eager `nos_plugin_ctx: "{{ vars }}"` snapshot a genuinely-undefined var
 # aborts the whole run *despite* the default() guard — it does NOT reproduce in an
-# isolated `{{ vars }}` finalize, only the full-namespace core-up run does. It bit
+# isolated `{{ vars }}` finalize, only the full-namespace snapshot run does. It bit
 # mysqld_exporter_password + the akadmin/oidc seed twins, then app_secrets (whose
 # only definition is the apps_runner role default — which loads AFTER core-up) and
 # tester_password_prefix (defined nowhere). The robust convention: EVERY identifier

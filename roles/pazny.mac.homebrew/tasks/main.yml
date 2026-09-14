@@ -252,28 +252,63 @@
     # whose binary is in `pgrep`'s output get deferred to a manual run.
     - name: "Detect running cask apps"
       ansible.builtin.shell: |
-        # For each outdated cask, look up its installed .app bundle via
-        # `brew info --cask --json` (canonical artifacts list) and pgrep
-        # the bundle name. Falls back to fuzzy match on cask name when
-        # the JSON lookup fails (cask without an .app artifact = skip).
-        set -o pipefail
-        running=()
-        while IFS= read -r cask; do
-          [ -z "$cask" ] && continue
-          # Pull artifact name from brew metadata (handles "Sequel Ace.app"
-          # vs cask "sequel-ace" without heuristics).
-          app=$(brew info --cask --json=v2 "$cask" 2>/dev/null \
-                | python3 -c "import json,sys; d=json.load(sys.stdin); arts=d['casks'][0].get('artifacts',[]); apps=[a for art in arts if isinstance(art,dict) for a in (art.get('app') or []) if isinstance(a,str)]; print(apps[0] if apps else '')" 2>/dev/null || true)
-          [ -z "$app" ] && continue
-          app_name=$(basename "$app" .app)
-          if pgrep -xfi "$app_name" >/dev/null 2>&1 \
-             || pgrep -fi "/Applications/${app}/Contents/MacOS/" >/dev/null 2>&1; then
-            running+=("$cask")
-          fi
-        done <<< "{{ (_cask_outdated_before.stdout_lines | default([])) | join('\n') }}"
-        printf '%s\n' "${running[@]}"
+        python3 - <<'PY'
+        import json, os, subprocess
+        names = [n.strip() for n in os.environ.get("CASK_OUTDATED", "").splitlines() if n.strip()]
+        if not names:
+            raise SystemExit(0)
+        info = subprocess.run(
+            ["brew", "info", "--cask", "--json=v2", *names],
+            capture_output=True, text=True,
+        )
+        try:
+            payload = json.loads(info.stdout or "{}")
+        except json.JSONDecodeError:
+            raise SystemExit(0)
+
+        def first_app(cask):
+            for art in cask.get("artifacts") or []:
+                if not isinstance(art, dict):
+                    continue
+                for a in art.get("app") or []:
+                    if isinstance(a, str) and a:
+                        return a
+            return ""
+
+        by_token = {
+            c.get("token"): c
+            for c in (payload.get("casks") or [])
+            if isinstance(c, dict) and c.get("token")
+        }
+        running = []
+        for name in names:
+            cask = by_token.get(name)
+            if not cask:
+                continue
+            app = first_app(cask)
+            if not app:
+                continue
+            base = os.path.basename(app)
+            if base.lower().endswith(".app"):
+                base = base[:-4]
+            if (
+                subprocess.run(
+                    ["pgrep", "-xfi", base],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                ).returncode == 0
+                or subprocess.run(
+                    ["pgrep", "-fi", f"/Applications/{app}/Contents/MacOS/"],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                ).returncode == 0
+            ):
+                running.append(name)
+        if running:
+            print("\n".join(running))
+        PY
       args:
         executable: /bin/bash
+      environment:
+        CASK_OUTDATED: "{{ (_cask_outdated_before.stdout_lines | default([])) | join('\n') }}"
       register: _cask_running
       changed_when: false
       failed_when: false

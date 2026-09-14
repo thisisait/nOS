@@ -29,13 +29,22 @@
 # registers Authentik blueprint inputs. MUST run BEFORE the existing
 # Authentik blueprint reconverge (P4 pitfall in role-thinning-recipe.md).
 # Empty plugin set is the common case — clean no-op.
+#
+# post_compose must not pass live `vars`; registers from compose-up make eager
+# finalize ~113s. Snapshot is config-sized. The 190-var generator is the 2.24
+# track (tools/loader-vars-report.py).
+- name: "[Core] Snapshot plugin-loader ctx before compose registers bloat vars"
+  ansible.builtin.set_fact:
+    nos_plugin_ctx: "{{ vars }}"
+  tags: ['anatomy', 'anatomy.plugins']
+
 - name: "[Core] Plugin loader — pre_render hook"
   nos_plugin_loader:
     hook: pre_render
     plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
     apps_root: "{{ playbook_dir }}/apps"
     agent_profiles_root: "{{ playbook_dir }}/files/anatomy/agents"
-    template_vars: "{{ vars }}"
+    template_vars: "{{ nos_plugin_ctx }}"
   tags: ['anatomy', 'anatomy.plugins']
 
 # ── Flush handlers - nginx must listen on 443 before HTTPS services are verified ─
@@ -401,7 +410,7 @@
     plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
     apps_root: "{{ playbook_dir }}/apps"
     agent_profiles_root: "{{ playbook_dir }}/files/anatomy/agents"
-    template_vars: "{{ vars }}"
+    template_vars: "{{ nos_plugin_ctx }}"
   tags: ['anatomy', 'anatomy.plugins']
 
 # Re-enumerate overrides after pre_compose hook may have rendered new fragments.
@@ -666,7 +675,7 @@
     plugins_root: "{{ playbook_dir }}/files/anatomy/plugins"
     apps_root: "{{ playbook_dir }}/apps"
     agent_profiles_root: "{{ playbook_dir }}/files/anatomy/agents"
-    template_vars: "{{ vars }}"
+    template_vars: "{{ nos_plugin_ctx }}"
     stack_filter:
       - infra
       - observability

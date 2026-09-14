@@ -161,11 +161,12 @@
         # ── Pre-flight: verify each manifest's images actually exist ─────────
         # Two blanks lost to image typos (ghcr.io/documenso/documenso:1.10.4 —
         # wrong registry; docker.io/twofauth/twofauth — wrong org name from
-        # accidental replace_all rename). `docker manifest inspect` queries
-        # the registry without pulling — cheap, deterministic. Failure here
-        # is more useful than a 60s wait + cascade-aborted compose-up.
+        # accidental replace_all rename). Local cache is a valid resolution —
+        # `docker image inspect` first (fast); `docker manifest inspect` only
+        # for local misses (registry, no pull). Failure here is more useful
+        # than a 60s wait + cascade-aborted compose-up.
         # `failed_when: false` → we COLLECT the list of bad images and fail
-        # in the next task with all offenders at once.
+        # later with all offenders at once.
         - name: "[pazny.apps_runner] Collect every image referenced by Tier-2 manifests"
           ansible.builtin.set_fact:
             _apps_images: "{{ _images_acc | unique | sort }}"
@@ -181,30 +182,21 @@
               {%- endfor -%}
               {{ out }}
 
-        - name: "[pazny.apps_runner] Probe each image with docker manifest inspect (pre-flight)"
-          ansible.builtin.command: "{{ docker_bin | default('docker') }} manifest inspect {{ item }}"
+        - name: "[pazny.apps_runner] Probe each image against local Docker image cache"
+          ansible.builtin.command: "{{ docker_bin | default('docker') }} image inspect {{ item }}"
           loop: "{{ _apps_images | default([]) }}"
-          register: _apps_image_probes
+          register: _apps_image_local_probes
           changed_when: false
           failed_when: false
           check_mode: false
-          # Probes can be slow on cold registry caches; throttle parallelism
-          # only via natural sequential loop here — Docker's own caching
-          # makes the second probe of a layer-shared image fast.
 
-        # Local-cache fallback: when `docker manifest inspect` fails (typically
-        # Docker Hub anonymous rate limit — 100 pulls/6 h per IP — which we
-        # routinely hit during multi-blank dev days), check whether the image
-        # is already pulled locally. If yes, the deploy WILL succeed regardless
-        # of the registry being momentarily unreachable, so refusing the run
-        # is a false alarm. Operator's intent is "verify deploy will work";
-        # local cache is a perfectly valid resolution.
-        - name: "[pazny.apps_runner] Probe failed images against local Docker image cache"
-          ansible.builtin.command: "{{ docker_bin | default('docker') }} image inspect {{ item.item }}"
-          loop: "{{ (_apps_image_probes.results | default([])) | rejectattr('rc', 'equalto', 0) | list }}"
-          loop_control:
-            label: "{{ item.item }}"
-          register: _apps_image_local_probes
+        # Registry only for local misses. `docker manifest inspect` is slow
+        # (cold Hub / ghcr, anonymous 100/6h rate-limit on multi-blank days).
+        # A local hit already proves compose-up will find the image.
+        - name: "[pazny.apps_runner] Probe local-miss images with docker manifest inspect"
+          ansible.builtin.command: "{{ docker_bin | default('docker') }} manifest inspect {{ item }}"
+          loop: "{{ (_apps_image_local_probes.results | default([])) | rejectattr('rc', 'equalto', 0) | map(attribute='item') | list }}"
+          register: _apps_image_probes
           changed_when: false
           failed_when: false
           check_mode: false
@@ -212,21 +204,19 @@
         - name: "[pazny.apps_runner] Identify unreachable images (registry AND local cache miss)"
           ansible.builtin.set_fact:
             _apps_bad_images: >-
-              {{ (_apps_image_local_probes.results | default([]))
+              {{ (_apps_image_probes.results | default([]))
                  | rejectattr('rc', 'equalto', 0)
-                 | map(attribute='item')
                  | map(attribute='item') | list }}
             _apps_local_cache_hits: >-
               {{ (_apps_image_local_probes.results | default([]))
                  | selectattr('rc', 'equalto', 0)
-                 | map(attribute='item')
                  | map(attribute='item') | list }}
 
-        - name: "[pazny.apps_runner] Note images served from local cache (registry probe failed)"
+        - name: "[pazny.apps_runner] Note images served from local cache"
           ansible.builtin.debug:
             msg: >-
-              Local cache fallback: {{ _apps_local_cache_hits | length }}
-              image(s) unreachable on registry but pulled locally — proceeding.
+              Local cache: {{ _apps_local_cache_hits | length }}
+              image(s) already present — skipping registry manifest inspect.
               ({{ _apps_local_cache_hits | join(', ') }})
           when: (_apps_local_cache_hits | default([])) | length > 0
 
@@ -256,7 +246,7 @@
           ansible.builtin.fail:
             msg: |
               {{ _apps_bad_images | length }} Tier-2 image(s) cannot be resolved
-              on the registry.
+              locally or on the registry.
 
               {% for row in _apps_bad_image_owners %}
                 - {{ row.image }}
@@ -274,10 +264,9 @@
                   multi-blank dev days hit this routinely). If the
                   message says "toomanyrequests": run `docker login`
                   to bump the limit to 200/6h, or wait ~10 min. Note:
-                  if the image is already in your LOCAL Docker cache,
-                  this task auto-resolves via `docker image inspect`
-                  fallback — you only see this fail when the registry
-                  miss AND the local cache miss.
+                  local cache is probed first (`docker image inspect`);
+                  you only see this fail on a registry miss AND a
+                  local cache miss.
                 · wrong registry host (e.g. ghcr.io vs docker.io)
 
               Fix the manifest(s) and re-run, or pass

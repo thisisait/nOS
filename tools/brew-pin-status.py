@@ -2,11 +2,9 @@
 """How old is the version brew wants to give us, and is it old enough to adopt?
 
 WHY THIS EXISTS. `roles/pazny.openclaw/tasks/main.yml` installs ollama with
-`state: latest` and then REFUSES the converge when the linked keg is not the
-version `default.config.yml` records. That guard has fired three times, and
-every time the answer was the same: bump the record, re-run. The record follows
-brew, after a failed run, unattended, at whatever hour the converge happened to
-reach that task.
+`state: present` and LINKS the keg `default.config.yml` records. Advancing
+that number is a decision, not a failed converge. This reader says when a
+newer upstream version has aged enough to adopt.
 
 The measurement that names the problem (2026-08-27):
 
@@ -61,8 +59,8 @@ CONFIG = REPO / "default.config.yml"
 #: to. Add a row when a role starts recording a brew version.
 PINNED = {
     "ollama": ("ollama_version",
-               "roles/pazny.openclaw refuses the converge when the linked keg "
-               "is not this value; MLX backend needs >= 0.19"),
+               "roles/pazny.openclaw links this keg (and refuses if it cannot); "
+               "MLX backend needs >= 0.19"),
 }
 
 #: formula -> why it is deliberately NOT lagged.
@@ -242,7 +240,8 @@ def main() -> int:
         print(head)
         if r.get("keg") and r.get("keg") != r.get("pin"):
             print(f"               linked keg is {r['keg']} — the RECORD and the "
-                  "BINARY already disagree; that is the converge's refusal, not this window")
+                  "BINARY already disagree; the next converge will try to link "
+                  "the pin keg, not bump this window")
         if r.get("note"):
             print(f"               {r['note']}")
     if not rows:

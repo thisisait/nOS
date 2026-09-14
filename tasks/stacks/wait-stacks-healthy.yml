@@ -22,6 +22,9 @@
   ansible.builtin.set_fact:
     _wait_done: false
     _wait_last: []
+    _tick: 0
+    # Inclusive last tick index (same count as the old range(0, n+1) loop).
+    _wait_ticks_max: "{{ ((stack_up_wait_timeout | default(540) | int) // (stack_wait_tick_interval | default(15) | int)) }}"
 
 # Re-bind stale config mounts BEFORE the health gate. `template:` renames, and a
 # single-FILE bind mount binds the inode, so the container gets ENOENT — loki's
@@ -47,21 +50,13 @@
     - nos_docker_ready | default(true) | bool
     - _wait_reload.changed | default(false)
 
-# NOTE: NO `when:` on this include — a `when` on a *looped* include_tasks does
-# NOT short-circuit the loop (Ansible evaluates it once at loop-expansion, so a
-# set_fact inside health-tick.yml never skips later items). The loop therefore
-# always iterates the full budget; the early-exit lives INSIDE health-tick.yml
-# (each task gated on `not _wait_done`), so post-ready ticks are silent no-ops.
+# One include, not a budget-sized loop. A `when:` on *looped* include_tasks
+# does not short-circuit (fee 07 A, p=54800: 147s of no-op includes after
+# ALL_READY). health-tick.yml re-includes itself while not done; a non-looped
+# `when:` does short-circuit.
 - name: "[Stacks] Health-wait poll ({{ _wait_stacks | join(', ') }})"
   tags: ['stacks', 'core', 'always']
   ansible.builtin.include_tasks: health-tick.yml
-  loop: "{{ range(0, ((stack_up_wait_timeout | default(540) | int) // (stack_wait_tick_interval | default(15) | int)) + 1) | list }}"
-  loop_control:
-    loop_var: _tick
-    # A `_wait_done` conditional here is DEAD: labels for a looped
-    # include_tasks are templated before any iteration runs (measured
-    # 2026-08-27 — 81 labels, all "tick N/80", 6 probes). See fee 07 A.
-    label: "tick {{ _tick }}/{{ ((stack_up_wait_timeout | default(540) | int) // (stack_wait_tick_interval | default(15) | int)) }} — {{ _wait_stacks | join(',') }}"
 
 - name: "[Stacks] Health-wait result ({{ _wait_stacks | join(', ') }})"
   tags: ['stacks', 'core', 'always']
