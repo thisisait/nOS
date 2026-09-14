@@ -990,8 +990,11 @@
     # ── macOS-only host roles ───────────────────────────────────────────────
     # Gated on Darwin so the playbook is preflight-safe on Linux. Linux
     # siblings live under pazny.linux.* and are wired below.
+    # CLT is brew's prerequisite. Tagged `homebrew` so `--skip-tags homebrew`
+    # (converge-host-skip) skips both; `--tags homebrew` still installs CLT.
     - role: elliotweiser.osx-command-line-tools
       when: ansible_os_family == 'Darwin'
+      tags: ['homebrew']
 
     - role: pazny.mac.homebrew
       when:
