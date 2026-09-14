@@ -56,6 +56,10 @@
     # (homebrew_cask) AND Ansible's native become path (system tasks like
     # /etc/resolver, dnsmasq, network-services).
     ansible_become_password: "{{ nos_sudo_password }}"
+    # Controller python, not Homebrew 3.14. cfg `interpreter_python = auto`
+    # plus become rediscovered 3.14 after escalation (filter-plugin class).
+    # Do not pin /opt/homebrew/bin/python3 here or in inventory.
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
 
     wing_telemetry_enabled: "{{ install_bone | default(false) }}"
     # Bone events ingestion URL — read by the apps_runner post-hook AND
@@ -840,6 +844,7 @@
         sudo launchctl load "$plist" 2>/dev/null
       args:
         executable: /bin/bash
+      become: true
       when: ansible_os_family == 'Darwin'
       failed_when: false
 

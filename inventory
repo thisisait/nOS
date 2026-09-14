@@ -1,4 +1,4 @@
 [all]
-# ansible_python_interpreter: unversioned Homebrew Python (Apple Silicon).
-# For Intel Macs change to: /usr/local/bin/python3
-127.0.0.1  ansible_connection=local  ansible_python_interpreter=/opt/homebrew/bin/python3
+# Interpreter is play-level ansible_playbook_python (main.yml). Do not pin
+# Homebrew python3 here — that is the 3.14 rediscovery trap (converge-become).
+127.0.0.1  ansible_connection=local
