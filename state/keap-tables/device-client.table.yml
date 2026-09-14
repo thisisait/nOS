@@ -1,0 +1,27 @@
+# KEAP DataTable — "Device clients" (pairing registry).
+#
+# Paired callers of the device gateway. This is NOT the digest physical-unit
+# table (`device` / state/keap-tables/device.table.yml) — that header already
+# points here. Hash only — never a raw serial. Unpair is status=revoked
+# (no pairing runtime in this definition).
+# No table-level graph block: pairing rows are household facts, not a public
+# knowledge_object projection.
+
+title: "Device clients"
+description: >-
+  Paired callers of the device gateway. One row per client; unpair is
+  status=revoked. Identifiers are hashes only.
+driver: libsql
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,        label: "Slug",        kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: type,        label: "Type",        kind: select, role: dimension, concept: class.kind,
+        options: ["handheld", "phone", "wearable"] }
+    - { key: owner,       label: "Owner",       kind: text,   role: dimension, concept: access.owner }
+    - { key: fingerprint, label: "Fingerprint", kind: text,   role: attribute }
+    - { key: scopes,      label: "Scopes",      kind: text,   role: attribute }
+    - { key: paired_at,   label: "Paired at",   kind: text,   role: attribute }
+    - { key: last_seen,   label: "Last seen",   kind: text,   role: attribute }
+    - { key: status,      label: "Status",      kind: select, role: dimension, concept: lifecycle.status,
+        options: ["active", "revoked"] }

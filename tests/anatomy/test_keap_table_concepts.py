@@ -116,6 +116,10 @@ CONCEPTLESS = {
     "posting.amount": "a positive money amount — no money/measure concept exists — needs measure.amount",
     "device.model": "a hardware model string is not identity.name (party legal name) — needs identity.product",
     "device.identifier_hash": "hash of a non-secret device id — not identity.name (that poisons person/name queries) — needs identity.hash",
+    "device-client.fingerprint": "hash of a pairing token — not identity.name — needs identity.hash",
+    "device-client.scopes": "granted gateway scopes as text — not access.tier — needs access.scopes",
+    "device-client.paired_at": "ISO pairing instant as text — time.occurred_at is kind date — needs time.paired_at",
+    "device-client.last_seen": "ISO last-seen instant as text — same window pair as paired_at — needs time.last_seen",
     "device-extraction.owner": "not identity.name (that would imply a party) — scheme B display label until party-review-rung; needs identity.display",
     "device-extraction.operator_owns_device": "an attestation flag is not ui.pinned or lifecycle.status — needs consent.attestation",
     "device-extraction.profile_id": "named deny-default parse profile — not identity.slug of this row — needs digest.profile",
@@ -281,6 +285,9 @@ UNSEEDED = {
                "the dtt door, mutated by claims, leases expiring) — git-seeding "
                "ephemeral claim state would let a re-converge wipe a live claim. "
                "Same split as roadmap: the definition is git-owned, the rows are not.",
+    "device-client": "pairing rows are runtime (gateway); git-seeding them would "
+               "let a re-converge wipe live pairs. Same split as current-state: "
+               "the definition is git-owned, the rows are not.",
 }
 
 

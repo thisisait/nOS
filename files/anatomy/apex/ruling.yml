@@ -266,9 +266,9 @@ organs:
   voice:     { title: "The Voice",     tells: "Mail, calls and signals, spoken from home.",   limb: right, order: 4 }
 
 # -----------------------------------------------------------------------------
-# NODE RULINGS — all 274 nodes the artifact carries today. 63 atoms
-# publish; 211 nodes are withheld. Counted 2026-09-14 (was 251/188 in the
-# prose while the table had already grown). +2 table:device* this wave.
+# NODE RULINGS — all 275 nodes the artifact carries today. 63 atoms
+# publish; 212 nodes are withheld. Counted 2026-09-14 (was 251/188 in the
+# prose while the table had already grown). +3 table:device* this wave.
 # For a published atom, the `speaks:` phrase is the ONLY text that leaves
 # for that node — read each one as the sentence a stranger will see.
 # -----------------------------------------------------------------------------
@@ -624,6 +624,10 @@ nodes:
   # unchanged. awaiting-operator will ask for a routine re-sign.
   "table:device": withheld
   "table:device-extraction": withheld
+  # Pairing registry (slug device-client). WITHHELD like every table node —
+  # paired callers of the device gateway are the household's, never the public
+  # front door. Added after the signature; published set unchanged.
+  "table:device-client": withheld
   "table:controls": withheld
   "table:layouts": withheld
   # Q6 loop-config, added 2026-08-29 AFTER the signature. WITHHELD like every

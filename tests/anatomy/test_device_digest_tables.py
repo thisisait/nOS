@@ -46,6 +46,18 @@ _REGISTRY_KEYS = frozenset({
 })
 
 
+def test_device_client_is_the_pairing_registry():
+    pairing = yaml.safe_load((TABLES_DIR / "device-client.table.yml").read_text())
+    assert pairing["visibility"] == "tier-managers"
+    assert "graph" not in pairing
+    keys = {c["key"] for c in pairing["schema"]["columns"]}
+    for col in ("slug", "type", "owner", "fingerprint", "scopes", "paired_at", "last_seen", "status"):
+        assert col in keys, f"device-client missing pairing column {col}"
+    digest = yaml.safe_load((TABLES_DIR / "device.table.yml").read_text())
+    digest_keys = {c["key"] for c in digest["schema"]["columns"]}
+    assert not (digest_keys & {"paired_at", "last_seen", "fingerprint"})
+
+
 def test_digest_device_is_not_the_pairing_registry():
     doc = yaml.safe_load((TABLES_DIR / "device.table.yml").read_text())
     keys = {c["key"] for c in doc["schema"]["columns"]}
