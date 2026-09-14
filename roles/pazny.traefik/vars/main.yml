@@ -75,6 +75,10 @@ traefik_auth_modes:
   # cost the operator a list of "something happened" and never the something.
   # Pinned by tests/anatomy/test_a_notification_is_a_pointer.py.
   ntfy: none
+  # Device BFF: a handheld is a machine caller (RFC 8628). authentik@file 302s
+  # it; the BFF authenticates the Authentik access_token via userinfo. Justification
+  # field below (REM-144). Do not stack forward-auth.
+  device_gateway: none
 
   # ── Native OIDC (Authentik OAuth2 provider) ────────────────────────────────
   grafana: oidc
@@ -225,6 +229,15 @@ traefik_auth_none_justification:
     gate sits upstream of routing — roles/pazny.apex refuses to build or
     serve while the ruling is not status: SIGNED (pinned by
     tests/anatomy/test_apex_serving_is_signature_gated.py).
+  device_gateway: >-
+    A handheld is a machine caller: it holds an Authentik access_token and
+    speaks HTTP, and cannot complete a browser session — authentik@file 302s it
+    (ntfy class, REM-144; same shape as woodpecker). The BFF authenticates the
+    bearer via Authentik userinfo (or GATEWAY_TOKEN host-escape when userinfo is
+    unset); the allowlist is the data boundary (unknown/PII table ids 403
+    without calling KEAP); the process binds 127.0.0.1 and Traefik reaches
+    host:8770. Do not stack authentik@file. Pinned by
+    tests/anatomy/test_device_gateway_is_default_off.py.
 
 # Service ids to skip even if their install flag is on (no Traefik router).
 # These either expose a non-HTTP protocol or are intentionally LAN-only.
@@ -233,7 +246,6 @@ traefik_auth_none_justification:
 traefik_skip_ids:
   - bone             # Bone is on host; published only on 127.0.0.1; reach via Wing UI
   - cortex           # Reasoning organ: pure loopback by design (no route unless explicitly opted in)
-  - device_gateway   # Device BFF: loopback until RFC 8628; authentik@file is the wrong gate
   # REM-144 (CRITICAL, 2026-07-30) + REM-194 (HIGH, 2026-08-12): Traefik's own
   # dashboard/API. The manifest gives this id domain_var + port_var, so the
   # auto-loop would derive a websecure router whose upstream is the Docker
@@ -284,6 +296,7 @@ traefik_extra_routers: []
 traefik_host_services:
   - openclaw
   - hermes
+  - device_gateway
 
 # ── A19 (2026-05-23): container-name routing (fixes IPv6 host-gateway 502) ───
 # Docker Desktop began resolving the `host-gateway` alias (nos-host) to an

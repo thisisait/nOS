@@ -2,10 +2,11 @@
 # pazny.device_gateway — loopback BFF for handheld / phone / wearable clients.
 #
 # Default-OFF (install_device_gateway). Sibling of Hermes as a host launchd
-# daemon, but Traefik is skipped (bone/cortex pattern): a device has no
-# browser session, so authentik@file is the wrong gate. Shared bearer until
-# authentik-device-flow (RFC 8628). No plugin this slice — Art-30 is an
-# operator question (device-gdpr-art30), not an invented legal_basis.
+# daemon. Traefik routes device.<tld> ungated (ntfy class): a device has no
+# browser session, so authentik@file is the wrong gate. The BFF authenticates
+# Authentik RFC 8628 access_tokens via loopback userinfo (host) while the
+# manifest advertises public https://auth.<tld> device/token URLs (handheld).
+# No plugin this slice — Art-30 is an operator question (device-gdpr-art30).
 
 device_gateway_port: 8770
 device_gateway_domain: "device{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"

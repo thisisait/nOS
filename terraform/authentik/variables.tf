@@ -23,3 +23,12 @@ variable "authentik_services" {
   }))
   default = {}
 }
+
+# Escape-hatch OAuth2 device-code client (RFC 8628). Not in authentik_services:
+# that map is generated from plugin authentik: blocks and would mint a
+# confidential authorization_code provider. Default false → tofu is a no-op.
+variable "install_device_gateway" {
+  type        = bool
+  default     = false
+  description = "Mint the public nos-device-gateway OAuth2 client (device_code + refresh_token)."
+}

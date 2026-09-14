@@ -464,7 +464,7 @@ install_dotnet: true              # .NET SDK (C#, F#) + EF CLI
 # ── AI Agent ──────────────────────────────────────────────────────────────────
 install_openclaw: true            # OpenClaw (Inspektor Klepitko, Ollama, no API key)
 install_hermes: false             # Hermes Agent (Nous) – Python daemon, MCP client, cross-channel gateway
-install_device_gateway: false     # Device BFF (loopback GET allowlist). Off until Art-30 + RFC 8628.
+install_device_gateway: false     # Device BFF (RFC 8628). Enable in config.yml; no plugin until Art-30.
 install_opencode: false           # OpenCode AI coding TUI (sst.dev) with local Ollama provider
 
 # ── Skill library (2026-08-27) ────────────────────────────────────────────────
@@ -2360,7 +2360,7 @@ onlyoffice_port: 3015
 influxdb_port: 8086
 mcpo_port: 8765
 hermes_web_port: 18790
-device_gateway_port: 8770               # loopback BFF; Traefik skipped until device-code auth
+device_gateway_port: 8770               # loopback BFF; Traefik host:8770 when install_device_gateway
 mailpit_port: 8025                      # UI port (1025 is SMTP)
 
 # ── Home Assistant ─────────────────────────────────────────────────────────────

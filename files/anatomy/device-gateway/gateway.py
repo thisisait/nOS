@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """nOS device-gateway — loopback BFF for low-power clients.
 
-GET /health, /manifest, /tables/<id>. Allowlist is the security boundary;
-unknown and PII table ids are 403 without calling KEAP. The KEAP agent
-token stays in this process (launchd env). Devices send GATEWAY_TOKEN.
+GET /health (unauthenticated), /manifest and /tables/<id> (Authentik bearer
+or GATEWAY_TOKEN host-escape). Allowlist is the security boundary; unknown
+and PII table ids are 403 without calling KEAP. The KEAP agent token stays
+in this process (launchd env). Devices send an Authentik access_token.
 
-# ponytail: replace GATEWAY_TOKEN with RFC 8628 when authentik-device-flow lands.
+# ponytail: pairing table device-client + per-device revocation is next.
 
-Bind is 127.0.0.1 this slice. Do not LAN-open; Traefik is skipped until
-the device-code gate exists. Forward-auth is the wrong gate (no browser).
+Bind is 127.0.0.1. Traefik reaches this host port; do not LAN-open.
+authentik@file is the wrong gate (no browser).
 """
 from __future__ import annotations
 
 import json
 import os
+import ssl
 import sys
 import time
 import urllib.error
@@ -33,10 +35,16 @@ ALLOWLIST = {
 BIND = "127.0.0.1"
 PORT = int(os.environ.get("GATEWAY_PORT", "8770"))
 TOKEN = os.environ.get("GATEWAY_TOKEN", "")
+# Host→Authentik: loopback HTTP (published authentik_port). Never derive the
+# handheld's device/token URLs from this — 127.0.0.1 is the Mac, not the phone.
+USERINFO = os.environ.get("AUTHENTIK_USERINFO_URL", "").strip()
+# Handheld→Authentik: public issuer base, https://auth.<tld>/application/o
+PUBLIC_O = os.environ.get("AUTHENTIK_PUBLIC_O_BASE", "").strip().rstrip("/")
 KEAP_URL = os.environ.get("KEAP_AGENT_URL", "http://127.0.0.1:8091/agent/v1").rstrip("/")
 KEAP_TOKEN = os.environ.get("KEAP_AGENT_TOKEN_RO", "")
 CACHE_TTL = 30
 _cache: dict[str, tuple[float, list]] = {}
+_ssl = ssl.create_default_context()
 
 
 def table_id_of(path: str) -> str | None:
@@ -53,7 +61,20 @@ def is_allowed(table_id: str) -> bool:
     return table_id in ALLOWLIST
 
 
+def _oidc_base() -> str:
+    """Public OIDC base advertised to devices. Never a loopback userinfo URL."""
+    if PUBLIC_O:
+        return PUBLIC_O
+    u = USERINFO.rstrip("/")
+    if u.startswith("https://") and u.endswith("/userinfo"):
+        return u[: -len("/userinfo")]
+    return ""
+
+
 def manifest() -> dict:
+    base = _oidc_base()
+    device = f"{base}/device/" if base else "/application/o/device/"
+    token = f"{base}/token/" if base else "/application/o/token/"
     return {
         "gateway": "nos-device-gateway",
         "explorers": [
@@ -61,9 +82,18 @@ def manifest() -> dict:
             for k, v in ALLOWLIST.items()
         ],
         "auth": {
-            "mode": "bearer",
-            # ponytail: replace with RFC 8628 when authentik-device-flow lands
-            "note": "shared bearer until authentik device-code + per-device scope",
+            "mode": "rfc8628",
+            "client_id": "nos-device-gateway",
+            "scopes": ["openid", "email", "profile"],
+            "device_authorization": f"POST {device}",
+            "token": f"POST {token}",
+            "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+            "note": (
+                "RFC 8628: POST device_authorization (client_id nos-device-gateway, "
+                "scope openid email profile); show verification_uri from the "
+                "response; poll token until access_token. # ponytail: pairing "
+                "table device-client + per-device revocation is next."
+            ),
         },
     }
 
@@ -104,6 +134,34 @@ def rows_for(table_id: str) -> list:
     return data
 
 
+def _bearer(headers) -> str:
+    header = headers.get("Authorization", "")
+    if header.startswith("Bearer "):
+        return header[7:].strip()
+    return (headers.get("X-Token", "") or "").strip()
+
+
+def _userinfo_ok(access_token: str) -> str:
+    """Return 'ok', 'unauthorized', or 'unavailable'."""
+    req = urllib.request.Request(
+        USERINFO,
+        headers={"Authorization": f"Bearer {access_token}"},
+        method="GET",
+    )
+    kwargs: dict = {"timeout": 10}
+    if USERINFO.startswith("https://"):
+        kwargs["context"] = _ssl
+    try:
+        with urllib.request.urlopen(req, **kwargs) as resp:
+            return "ok" if 200 <= resp.status < 300 else "unauthorized"
+    except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403):
+            return "unauthorized"
+        return "unavailable"
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return "unavailable"
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *_args) -> None:
         return
@@ -116,21 +174,35 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _authed(self) -> bool:
-        if not TOKEN:
+    def _gate(self) -> bool:
+        """True if the request may proceed. Sends 401/503 itself on failure."""
+        got = _bearer(self.headers)
+        if USERINFO:
+            if not got:
+                self._send(401, {"error": "unauthorized"})
+                return False
+            verdict = _userinfo_ok(got)
+            if verdict == "ok":
+                return True
+            if verdict == "unauthorized":
+                self._send(401, {"error": "unauthorized"})
+                return False
+            self._send(503, {"error": "authentik userinfo unavailable"})
             return False
-        header = self.headers.get("Authorization", "")
-        got = header[7:] if header.startswith("Bearer ") else self.headers.get("X-Token", "")
-        return got == TOKEN
+        if not TOKEN:
+            self._send(503, {"error": "gateway token unset"})
+            return False
+        if got != TOKEN:
+            self._send(401, {"error": "unauthorized"})
+            return False
+        return True
 
     def do_GET(self) -> None:  # noqa: N802 — BaseHTTPRequestHandler
         path = self.path.split("?", 1)[0]
         if path == "/health":
             return self._send(200, {"ok": True})
-        if not TOKEN:
-            return self._send(503, {"error": "gateway token unset"})
-        if not self._authed():
-            return self._send(401, {"error": "unauthorized"})
+        if not self._gate():
+            return
         if path == "/manifest":
             return self._send(200, manifest())
         table_id = table_id_of(path)

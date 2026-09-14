@@ -34,5 +34,6 @@
     "authentik_url": "http://127.0.0.1:" ~ (authentik_port | default(9000)),
     "authentik_token": authentik_bootstrap_token,
     "authentik_services": _svcmap,
+    "install_device_gateway": install_device_gateway | default(false) | bool,
   } | to_nice_json
 }}

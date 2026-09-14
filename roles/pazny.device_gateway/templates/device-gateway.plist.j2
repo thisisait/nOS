@@ -21,6 +21,10 @@
         <string>{{ device_gateway_port }}</string>
         <key>GATEWAY_TOKEN</key>
         <string>{{ device_gateway_token }}</string>
+        <key>AUTHENTIK_USERINFO_URL</key>
+        <string>http://127.0.0.1:{{ authentik_port | default(9003) }}/application/o/userinfo/</string>
+        <key>AUTHENTIK_PUBLIC_O_BASE</key>
+        <string>https://{{ authentik_domain }}/application/o</string>
         <key>KEAP_AGENT_URL</key>
         <string>{{ device_gateway_keap_url }}</string>
         <key>KEAP_AGENT_TOKEN_RO</key>

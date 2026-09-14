@@ -16,10 +16,13 @@
 # Re-verify on any Authentik MAJOR upgrade — a renamed slug makes !Find no-op
 # and the brand silently keeps its prior flow.
 #
-# Only flow_authentication is set — every other brand field (branding_title,
-# default_application, …) is left to its own managed blueprint / the UI, since
-# this is a partial update. flow_recovery is intentionally NOT set here yet (the
-# in-browser static-code recovery flow is a follow-up; CLI `ak create_recovery_key`
+# Partial update: flow_authentication (both enforce_mfa states) AND
+# flow_device_code. Authentik 2026.5 Brand field is flow_device_code (UI:
+# "Default code flow"; schema title "Flow device code"). Omitting it strands
+# RFC 8628: device flow only works when the active brand has a Stage
+# Configuration flow set. Other brand fields (branding_title,
+# default_application, flow_recovery, …) stay unmanaged here.
+# flow_recovery is intentionally NOT set yet (CLI `ak create_recovery_key`
 # is the live escape — see docs/break-glass-runbook.md).
 version: 1
 metadata:
@@ -29,6 +32,19 @@ metadata:
     blueprint-version: "1"
 
 entries:
+  # Empty Stage Configuration flow — Authentik docs: no default ships; designation
+  # MUST be stage_configuration; authentication Require authentication =
+  # require_authenticated (FlowAuthenticationRequirement).
+  - model: authentik_flows.flow
+    state: present
+    identifiers:
+      slug: nos-device-code-flow
+    attrs:
+      name: nOS device code
+      title: Device code
+      designation: stage_configuration
+      authentication: require_authenticated
+
   - model: authentik_brands.brand
     state: present
     identifiers:
@@ -39,3 +55,4 @@ entries:
 {% else %}
       flow_authentication: !Find [authentik_flows.flow, [slug, default-authentication-flow]]
 {% endif %}
+      flow_device_code: !Find [authentik_flows.flow, [slug, nos-device-code-flow]]

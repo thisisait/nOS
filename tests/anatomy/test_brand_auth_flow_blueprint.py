@@ -8,6 +8,9 @@ cascade-delete, so an omitted entry would strand the brand on a prior run's flow
   enforce_mfa ON  → flow_authentication routes direct logins through nos-tier1-mfa-flow
   enforce_mfa OFF → resets to the stock default-authentication-flow
 
+Both flag states also emit flow_device_code → nos-device-code-flow (Authentik
+2026.5 Brand field; RFC 8628 requires a Stage Configuration flow on the brand).
+
 CI-safe: renders via the loader jinja env; no Docker / Authentik.
 """
 from __future__ import annotations
@@ -49,11 +52,26 @@ def _flow_slug(brand: dict) -> str:
     return brand["attrs"]["flow_authentication"]["__Find__"][1][1]
 
 
+def _device_flow_slug(brand: dict) -> str:
+    return brand["attrs"]["flow_device_code"]["__Find__"][1][1]
+
+
 def test_always_emits_brand_both_flag_states():
     for flag in (True, False):
         out = _render(flag)
         assert "authentik_brands.brand" in out, f"brand must emit with enforce_mfa={flag}"
+        assert "flow_authentication" in out, f"flow_authentication missing with enforce_mfa={flag}"
+        assert "flow_device_code" in out, f"flow_device_code missing with enforce_mfa={flag}"
+        assert "nos-device-code-flow" in out
+        assert "stage_configuration" in out
+        assert "require_authenticated" in out
         assert "{{" not in out and "{%" not in out, f"unrendered jinja with enforce_mfa={flag}"
+        brand = _brand(flag)
+        assert set(brand["attrs"]) <= {"flow_authentication", "flow_device_code"}, (
+            f"partial update grew extra brand fields with enforce_mfa={flag}: "
+            f"{sorted(brand['attrs'])}"
+        )
+        assert _device_flow_slug(brand) == "nos-device-code-flow"
 
 
 def test_on_routes_through_mfa_flow():
