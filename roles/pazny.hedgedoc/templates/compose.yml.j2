@@ -40,7 +40,7 @@ services:
       #
       # An inert pin that reads as a control is worse than no pin
       # (docs/hidden_fees/23). The control is config.json; that file carries
-      # the whole derivation. Doctrine: docs/doctrine/foreign-properties.md §5.2
+      # the whole derivation. Doctrine: ssot/doctrine/foreign-properties.md §5.2
       # — an ORM in between that discards what it does not know.
       CMD_DB_URL: "postgres://{{ hedgedoc_db_user | default('hedgedoc') }}:{{ (hedgedoc_db_password | default(nos_derived_secrets.hedgedoc)) | urlencode }}@postgresql:5432/{{ hedgedoc_db_name | default('hedgedoc') }}"
       # ── Public URL / protocol ──────────────────────────────────────────────

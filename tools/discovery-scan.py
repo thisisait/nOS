@@ -29,7 +29,7 @@ says how many it skipped, rather than guessing.
 WHAT IT MAY AND MAY NOT DO. It FILES rows into the roadmap. It cannot promote
 them: implementation requires a committed workflow spec naming the row, and
 this tool speaks HTTP to a table and performs no filesystem writes at all. That
-asymmetry is the triage gate — see docs/doctrine/workflows.md §6 and
+asymmetry is the triage gate — see ssot/doctrine/workflows.md §6 and
 tests/anatomy/test_triage_gate_is_a_commit.py.
 
 Usage:  discovery-scan.py [--file] [--json]

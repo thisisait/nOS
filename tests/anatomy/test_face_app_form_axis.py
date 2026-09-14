@@ -1,6 +1,6 @@
 """Anatomy CI gate — the face's two app axes, and the widget that fills one.
 
-WHAT THIS PINS (docs/idea/13-relations.md §R3, docs/doctrine/face-app-tiers.md):
+WHAT THIS PINS (docs/idea/13-relations.md §R3, ssot/doctrine/face-app-tiers.md):
 
   1. `form` — what an app IS on screen: view | utility | widget | frame.
      Exactly one per app, always declared.

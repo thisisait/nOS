@@ -5,7 +5,7 @@ filenames, and identity spoofing, with UTF-8 handled everywhere and the real FS 
 shared user-state safe to manipulate. This gate statically pins those invariants
 over the vendored source (files/anatomy/face/) + the Bone organs (files/anatomy/
 bone/), by regex (no runtime — the stack is pytest+pyyaml). Companion runtime fuzz
-corpus: tests/bone_vfs/. Doctrine: docs/doctrine/face.md.
+corpus: tests/bone_vfs/. Doctrine: ssot/doctrine/face.md.
 """
 
 from __future__ import annotations

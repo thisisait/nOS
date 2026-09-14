@@ -29,3 +29,8 @@ realms:
     path: docs/hidden_fees
     in_force: false
     for: paid lessons
+# Full warehouse originals, not stubs, not law. Promote when the operator
+# settles the remaining axes (agentkit §6; organs sibling of layers).
+proposed:
+  - docs/doctrine/agentkit.md
+  - docs/doctrine/organs.md

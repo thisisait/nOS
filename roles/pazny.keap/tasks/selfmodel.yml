@@ -352,7 +352,7 @@
       {{ _keap_sm_sync.status | default('none') }}) — so the dangling-anchor count
       was never taken. fs-sync only EMITS danglingAnchors when it is non-zero, which
       makes "field absent" and "never counted" look identical; treating that as a
-      pass is exactly the false green docs/doctrine/gates.md exists to refuse.
+      pass is exactly the false green ssot/doctrine/gates.md exists to refuse.
       Check the agent surface: `curl -sS -XPOST -H "Authorization: Bearer <rw>"
       http://127.0.0.1:{{ keap_port | default(8091) }}/agent/v1/fs/sync?wait=1`.
   when:

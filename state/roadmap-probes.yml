@@ -83,7 +83,7 @@ loop-reach:
     history read against the rule, which is a person's job
 
 loop-operator-model: >-
-  test -f docs/doctrine/operator-model.md
+  test -f ssot/doctrine/operator-model.md
 
 loop-sandbox:
   unverifiable: >-

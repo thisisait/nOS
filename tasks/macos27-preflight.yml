@@ -5,7 +5,7 @@
 # WHY: a major macOS jump (e.g. 26 → 27) can silently change three things nOS
 # leans on hard:
 #   • Docker Desktop's Linux VM + VirtioFS bind-mount semantics (sockets,
-#     lock-files, memory-mapped DBs on a bind — see docs/doctrine/virtiofs.md),
+#     lock-files, memory-mapped DBs on a bind — see ssot/doctrine/virtiofs.md),
 #   • launchctl / launchd unit loading for the host daemons (wing/bone/pulse),
 #   • the Docker Desktop app itself needing a rebuild for the new OS.
 # History: the gitlab puma `realdirpath ENOTSUP` loop, the loki scratch-dir
@@ -63,7 +63,7 @@
         • VirtioFS bind-mount semantics (Docker Desktop) — sockets / lock-files /
           mmap'd DBs on a bind can start failing (gitlab puma realdirpath ENOTSUP,
           loki scratch stale handle, external-SSD stale /host_mnt). See
-          docs/doctrine/virtiofs.md — grep the repo for  # VFS-DOCTRINE:  markers.
+          ssot/doctrine/virtiofs.md — grep the repo for  # VFS-DOCTRINE:  markers.
         • launchctl / launchd unit loading for host daemons (wing / bone / pulse).
         • Docker Desktop may need an upgrade built for macOS {{ _macos_running_major }}.
       This is a WARNING, not a failure — the run continues. When macOS

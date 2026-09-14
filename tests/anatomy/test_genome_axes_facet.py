@@ -9,7 +9,7 @@ file existed:
     arrays whose only reader was the type annotation beside them;
   * `layer` — four string literals inside
     `tools/anatomy-graph-gen.py::derive_layers` and prose in
-    `docs/doctrine/layers.md` §3;
+    `ssot/doctrine/layers.md` §3;
   * the anatomy compiler, which harvests the face registry with a regex and
     stamps all three onto nodes, validated **none of them**: `form: 'veiw'`
     compiled into the estate's address space as a fourth form, silently;

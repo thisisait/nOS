@@ -94,7 +94,7 @@ def unproven(items: list[dict]) -> list[dict]:
 #: So the lane is picked by what the row is BLOCKED ON, and severity picks only
 #: what must be noticed now. This is the whole of the severity floor that
 #: survived a four-design panel on 2026-08-22; the rest is recorded as refused
-#: in docs/doctrine/security-floor.md.
+#: in ssot/doctrine/security-floor.md.
 WAITS_FOR_A_TAG = ("version_bump",)
 
 

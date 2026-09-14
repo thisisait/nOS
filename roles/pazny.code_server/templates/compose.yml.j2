@@ -37,7 +37,7 @@ services:
     healthcheck:
       # The probe is http:// against 8443 on purpose — the LSIO image serves
       # PLAIN HTTP there unless `--cert` is passed, which we do not pass.
-      # Doctrine: docs/doctrine/foreign-properties.md §3. Consequence for the
+      # Doctrine: ssot/doctrine/foreign-properties.md §3. Consequence for the
       # edge: code_server must never enter traefik_https_upstream_ids (§3.1).
       test: ["CMD-SHELL", "curl -sf http://localhost:8443/healthz || curl -sf http://localhost:8443/ || exit 1"]
       interval: 30s

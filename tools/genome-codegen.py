@@ -302,7 +302,7 @@ export type AppForm = {_ts_union(g["form"])};
 export const APP_FORMS = {_ts_arr(g["form"])};
 
 /** What an app COST to build. Independent of `form`; nothing derives either
- *  from the other. `docs/doctrine/face-app-tiers.md` owns the axis. */
+ *  from the other. `ssot/doctrine/face-app-tiers.md` owns the axis. */
 export type AppBuild = {_ts_union(g["build"])};
 export const APP_BUILDS = {_ts_arr(g["build"])};
 

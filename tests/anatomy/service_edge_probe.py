@@ -1,7 +1,7 @@
 """Does the estate's CODE perform a service→service dependency? — the probe.
 
 Plan: docs/idea/13-relations.md §R1/§R2
-Doctrine: docs/doctrine/layers.md §4.1 — repair before declare.
+Doctrine: ssot/doctrine/layers.md §4.1 — repair before declare.
 
 WHY THIS IS A MODULE AND NOT A HELPER INSIDE ONE TEST FILE. It is the single
 mechanism behind "repair before declare" for every non-database edge, so it is

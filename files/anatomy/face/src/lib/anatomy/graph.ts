@@ -121,7 +121,7 @@ export interface GraphNode {
 	 *  read were the same rectangle. */
 	dependencySurvey: string | null;
 	/** service only — a `ServiceLayer` from the genome's `axes` facet, or null
-	 *  where the derivation refused to answer (docs/doctrine/layers.md §4.2).
+	 *  where the derivation refused to answer (ssot/doctrine/layers.md §4.2).
 	 *  The vocabulary is NOT spelled here: `state/genome/entity.schema.json`
 	 *  declares it and `tools/anatomy-graph-gen.py::stamp_axes` refuses a value
 	 *  outside it at compile time, so the cast below is a guarantee the

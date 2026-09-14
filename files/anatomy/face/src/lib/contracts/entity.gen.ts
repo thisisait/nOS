@@ -23,7 +23,7 @@ export type AppForm = 'view' | 'utility' | 'widget' | 'frame';
 export const APP_FORMS = ['view', 'utility', 'widget', 'frame'] as const;
 
 /** What an app COST to build. Independent of `form`; nothing derives either
- *  from the other. `docs/doctrine/face-app-tiers.md` owns the axis. */
+ *  from the other. `ssot/doctrine/face-app-tiers.md` owns the axis. */
 export type AppBuild = 'F1' | 'F2' | 'F3' | 'F4' | 'H';
 export const APP_BUILDS = ['F1', 'F2', 'F3', 'F4', 'H'] as const;
 

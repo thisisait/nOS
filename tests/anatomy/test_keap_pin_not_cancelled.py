@@ -12,7 +12,7 @@ nOS constellation is simply absent from the map.
 
 The KEAP side deliberately did NOT retract the tag: rewriting a published tag to
 mean something else is worse than a documented trap. So the trap is made loud on
-this side instead. This is `docs/doctrine/gates.md` applied to itself — a known
+this side instead. This is `ssot/doctrine/gates.md` applied to itself — a known
 hazard that fails silently is exactly the thing that earns a mechanical check
 rather than a comment.
 
@@ -99,7 +99,7 @@ def test_pins_agree_with_each_other():
 # The requirement only bites once nOS actually emits a slug canonical tree, so
 # the gate keys on that tree existing rather than on a flag someone must
 # remember to flip. Dormant until the epic lands, mandatory from that moment —
-# docs/doctrine/gates.md: "a skip must not outlive its reason".
+# ssot/doctrine/gates.md: "a skip must not outlive its reason".
 SELFMODEL_MIN = (1, 21, 0)
 
 

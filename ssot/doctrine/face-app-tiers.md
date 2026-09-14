@@ -7,7 +7,7 @@
 > `form` is the other axis; the genome owns both vocabularies
 > (`docs/idea/13-relations.md` §R3).
 
-## Form — what the thing IS
+## 1. Form — what the thing IS
 
 This document owns ONE axis — **build**, F1–F4/H, the cost of building an
 app — and this section exists to say what it does *not* own.
@@ -59,7 +59,7 @@ and no entry in the window store; `launchNative()` MUST refuse to open one.
 It is mounted by `WidgetLayer` at the desktop root, which is the whole
 distinction the form records.
 
-## Why tiers
+## 2. Why tiers
 
 Every nOS-facing app is **agent-built**. The agent MUST first classify the
 app by **complexity of logic / data / performance** — that classification
@@ -73,7 +73,7 @@ task** (a Pulse job / cron) with no UI — it is still an nOS app, and it is
 still **visible + operable via wing-face** (Wing `/pulse`, `/timeline`,
 `/agents`).
 
-## The tiers — the `build` axis
+## 3. The tiers — the `build` axis
 
 | Tier | Name | Data / logic | Organs used | Recipe | Companion app |
 |---|---|---|---|---|---|
@@ -88,7 +88,7 @@ prefs and F2's DB for its records. Pick the **lowest** tier that covers the
 requirement — the agent's prompt profile SHALL escalate only when a hard
 requirement (a real schema, a second organ, a flow engine) forces it.
 
-## Tier F1 — the reference recipe (built 2026-07-18)
+## 4. Tier F1 — the reference recipe (built 2026-07-18)
 
 The simplest, most common app. **Static UI + the per-user KV store**,
 nothing else:
@@ -112,7 +112,7 @@ reads/writes its namespace. No DB provisioning, no migrations, no GDPR
 compose gate (the data lives in the user's own class-3 tree, already covered
 by the face-base GDPR row).
 
-## Cross-cutting rules (all tiers)
+## 5. Cross-cutting rules (all tiers)
 
 - **Identity is free, never invented.** Apps inherit the Authentik
   forward-auth identity via the face BFF; end users never create accounts or
@@ -131,7 +131,7 @@ by the face-base GDPR row).
   nOS face; headless jobs appear in wing-face. There SHALL be no invisible
   app.
 
-## Roadmap hooks (not built yet)
+## 6. Roadmap hooks (not built yet)
 
 - **M4 agent app-builder** (`nos-face/harness/` is the seed contract): an
   AgentKit `AppScaffoldTool` that, given a tier classification, scaffolds the

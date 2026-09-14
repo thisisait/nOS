@@ -24,7 +24,7 @@ that cannot hear a non-zero exit makes the rule unenforceable for everything
 downstream of it.
 
 WHAT IS DELIBERATELY UNCHANGED. The hook failure is still NON-FATAL. Telemetry
-may never wedge a run — that is settled doctrine (`docs/doctrine/observability.md`,
+may never wedge a run — that is settled doctrine (`ssot/doctrine/observability.md`,
 written after an HMAC desync spilled 258 MB into /tmp and crawled a release
 blank). The change is loudness, not lethality. If this gate is ever read as
 licence to raise from a hook, read that doctrine first.
@@ -118,6 +118,6 @@ def test_the_hook_failure_stays_non_fatal():
         assert forbidden not in block, (
             f"the hook dispatcher now contains `{forbidden.strip()}`. A failing "
             "hook must not be able to fail the run — see "
-            "docs/doctrine/observability.md, written after telemetry crawled a "
+            "ssot/doctrine/observability.md, written after telemetry crawled a "
             "release blank."
         )

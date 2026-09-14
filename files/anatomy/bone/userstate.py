@@ -10,7 +10,7 @@ tree so it is portable, backup-friendly, and per-user isolated:
 `.face/` sits OUTSIDE the fs-sync classes (documents/library/inbox/nOS), so KEAP
 never ingests app state as knowledge.
 
-This is the SIMPLEST nos-app recipe (Tier F1, docs/doctrine/face-app-tiers.md):
+This is the SIMPLEST nos-app recipe (Tier F1, ssot/doctrine/face-app-tiers.md):
 a static UI + a namespaced KV/JSON store, no dedicated DB/schema/migrations.
 
 Data model: rows of (namespace, key, JSON value). Namespaces partition apps

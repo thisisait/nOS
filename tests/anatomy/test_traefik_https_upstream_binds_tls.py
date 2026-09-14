@@ -1,14 +1,14 @@
 """Anatomy gate — an upstream is HTTP until an internal TLS listener is measured.
 
 Subject: `traefik_https_upstream_ids` in roles/pazny.traefik/vars/main.yml.
-Doctrine: docs/doctrine/foreign-properties.md §3 (the upstream fact) and §3.1
+Doctrine: ssot/doctrine/foreign-properties.md §3 (the upstream fact) and §3.1
 (the rule this gate performs).
 
 WHAT THIS GATE IS FOR, said plainly: the list is `[]` today and **empty is the
 current correct answer**, not a gap — every routed upstream in this estate
 terminates TLS at the edge and speaks plain HTTP behind it. So this gate does
 NOT assert a population; a gate that asserted membership of an empty set would
-be asserting on silence (docs/doctrine/gates.md). It exists to refuse a
+be asserting on silence (ssot/doctrine/gates.md). It exists to refuse a
 CARELESS ADDITION, and the refusal is what carries substance while the set is
 empty: `refuse()` is a pure function, exercised here against the exact addition
 that was once live and once broke the edge.
@@ -42,7 +42,7 @@ CODE_SERVER_COMPOSE = REPO / "roles" / "pazny.code_server" / "templates" / "comp
 #:
 #: What counts: the line that makes the listener TLS — a `--cert`/`--key` flag,
 #: an `ssl_certificate`/`certfile` setting, an `https://` bind. What does not
-#: count, ever: the port number (docs/doctrine/foreign-properties.md §3.1).
+#: count, ever: the port number (ssot/doctrine/foreign-properties.md §3.1).
 TLS_EVIDENCE: dict[str, str] = {}
 
 #: Substrings that make a cited line evidence of TLS rather than a mention of it.
@@ -70,7 +70,7 @@ def refuse(ids, evidence: dict[str, str], known_ids: set[str],
                 f"{sid!r}: no measured evidence of an internal TLS listener. "
                 f"Add `path:line` to TLS_EVIDENCE naming the line that makes "
                 f"the listener TLS. A port number is not evidence "
-                f"(docs/doctrine/foreign-properties.md §3.1)")
+                f"(ssot/doctrine/foreign-properties.md §3.1)")
             continue
         path, _, lineno = cite.partition(":")
         target = root / path
@@ -99,7 +99,7 @@ def declared() -> list:
         "services.yml.j2 reads it through `| default([])`, so deleting it does not "
         "break a render — it deletes the decision, and with it the only place the "
         "HTTP-until-measured rule is written down "
-        "(docs/doctrine/foreign-properties.md §3.1)")
+        "(ssot/doctrine/foreign-properties.md §3.1)")
     ids = data["traefik_https_upstream_ids"]
     assert isinstance(ids, list), (
         f"traefik_https_upstream_ids must be a list, got {type(ids).__name__}")
@@ -166,7 +166,7 @@ def test_code_server_is_absent_and_the_reason_still_holds(declared):
         "code_server is in traefik_https_upstream_ids. The LSIO image serves "
         "PLAIN HTTP on 8443 unless --cert is passed; this entry cost a 502/404 "
         "on code.pazny.eu once already "
-        "(docs/doctrine/foreign-properties.md §3)")
+        "(ssot/doctrine/foreign-properties.md §3)")
     compose = CODE_SERVER_COMPOSE.read_text(encoding="utf-8")
     assert "http://localhost:8443" in compose, (
         "the code-server healthcheck no longer probes http:// on 8443 — the "

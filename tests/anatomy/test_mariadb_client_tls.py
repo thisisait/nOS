@@ -14,7 +14,7 @@ Three forks of one framework, three names, and firefly needs a second variable
 before the first one is even consulted. The scoping generalised from whichever
 config it happened to open — the same shortcut that put `no-verify` into Outline
 and `?sslmode=` into HedgeDoc
-(docs/doctrine/foreign-properties.md §5.2).
+(ssot/doctrine/foreign-properties.md §5.2).
 
 So this gate exists to stop the names drifting back together. Copying one of
 these lines to a sibling produces a variable nobody reads: it renders, it

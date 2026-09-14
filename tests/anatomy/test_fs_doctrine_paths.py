@@ -1,4 +1,4 @@
-"""Filesystem doctrine (docs/doctrine/filesystem.md) — path-var invariants.
+"""Filesystem doctrine (ssot/doctrine/filesystem.md) — path-var invariants.
 
 P1 moved service data/config paths OUT of default.config.yml and INTO each role's
 defaults, deriving from a single `nos_data_root`. This gate pins that:

@@ -34,7 +34,7 @@ non-zero is a gate wearing a reader's name.
 THE CARVE-OUT IS PART OF THE DESIGN, not an oversight. `tasks/nginx.yml:34`
 holds `state: latest` ON PURPOSE — REM-134 needs host nginx >= 1.31.3 for
 CVE-2026-42533, so lagging it would re-open a closed finding. A security floor
-outranks a lag window every time (`docs/doctrine/security-floor.md`). Formulae
+outranks a lag window every time (`ssot/doctrine/security-floor.md`). Formulae
 in EXEMPT are listed with their reason and reported as exempt, never silently
 skipped: an exemption nobody can see is indistinguishable from a gap.
 """

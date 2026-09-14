@@ -2,7 +2,7 @@
 
 > **PROPOSED, not settled.** This document names an ambiguity and offers axes;
 > it does not yet own a rule. The operator settles §3 before anything cites it.
-> Sibling of [`layers.md`](layers.md), which did the same for **tier**.
+> Sibling of [`layers.md`](../../ssot/doctrine/layers.md), which did the same for **tier**.
 
 ## 1. The problem
 

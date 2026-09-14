@@ -27,7 +27,7 @@ WHY THE EXISTING SUITE COULD NOT CATCH IT — the part worth remembering:
 
 This file therefore tests the RESOLVER, with the environment manipulated, and
 never a run that brings its own answer. It is the four-trees rule
-(`docs/doctrine/four-trees.md` R2) expressed as code: Bone reads tree 2, and a
+(`ssot/doctrine/four-trees.md` R2) expressed as code: Bone reads tree 2, and a
 module that infers its location from its own file believes it is in tree 2 when
 it is in tree 4.
 """

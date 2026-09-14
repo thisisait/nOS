@@ -20,7 +20,7 @@ roadmap-seed.py parses `--dry-run` — true, checkable, and worth almost nothing
 it generalises to no other file and a proposer can satisfy it without
 understanding why. The property version asks of EVERY tool: is each flag you
 advertise one you actually read? Passing that implies something about the whole
-directory. (docs/doctrine/workflows.md §3: prefer the weakest gate that still
+directory. (ssot/doctrine/workflows.md §3: prefer the weakest gate that still
 fails.)
 
 WHAT IT CANNOT DO: it cannot tell whether the flag's behaviour is correct, only

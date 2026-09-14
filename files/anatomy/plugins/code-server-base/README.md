@@ -36,7 +36,7 @@ proxy layer; the service trusts the upstream session header.
 
 ## Gotcha — LSIO HTTP-only on 8443
 
-Doctrine: docs/doctrine/foreign-properties.md §3 (the fact) and §3.1 (the rule
+Doctrine: ssot/doctrine/foreign-properties.md §3 (the fact) and §3.1 (the rule
 it implies for `traefik_https_upstream_ids`).
 
 The `lscr.io/linuxserver/code-server` image binds **plain HTTP** on

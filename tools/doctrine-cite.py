@@ -96,6 +96,13 @@ SKIP_FILES_PREFIX = ("files/anatomy/docs/", "files/anatomy/cortex/docs/",
                      "files/anatomy/cortex/README.md",
                      "files/anatomy/skills/contracts/",
                      "files/anatomy/face/src/lib/keap-contracts/")
+#: Compiled echoes of harvest already counted at the source. String-replacing
+#: them is a second cite of the same claim; regenerating them here would also
+#: pull unrelated table nodes into a doctrine PR.
+SKIP_FILES = (
+    "state/anatomy-graph.json",
+    "files/anatomy/face/src/lib/anatomy/anatomy-graph.json",
+)
 
 #: This tool and its gate QUOTE citations as data — KNOWN_FINDINGS carries
 #: the phantom REM-088 verbatim, docstrings carry §-examples. Harvesting
@@ -119,6 +126,11 @@ REMEDIATION_QUEUE = REPO / "docs" / "llm" / "security" / "remediation-queue.json
 
 RE_SECTION = re.compile(r"§\s?([0-9]+(?:\.[0-9a-z]+)*(?:\([a-z]\)|[a-z])?)")
 RE_DOC_PATH = re.compile(r"((?:docs|ssot|files/anatomy/docs)/[A-Za-z0-9_./-]+\.md)")
+#: nos-sot:<realm>/<file>#<id> — INDEX maps realm → path. Optional .md.
+#: A fragment without § is still a section cite (ssot.md §1).
+RE_NOS_SOT = re.compile(
+    r"nos-sot:([a-z]+)/([A-Za-z0-9_-]+)(?:\.md)?(?:#([0-9]+(?:\.[0-9a-z]+)*))?"
+)
 RE_DECISION = re.compile(r"DECISION\s+([0-9]+[a-z]?)\b")
 RE_CONSTRAINT = re.compile(r"[Cc]onstraint\s+([A-H])\b")
 RE_M = re.compile(r"\b(M[1-9])\b")
@@ -233,8 +245,8 @@ def build_corpus() -> dict[str, DocIndex]:
 
 def _alias_doctrine_stubs(corpus: dict[str, DocIndex]) -> None:
     """A docs/doctrine stub that points at ssot/doctrine/X.md keeps the old path
-    as an address: citations still say docs/doctrine/X.md until the warehouse
-    loop rewrites them. Sections come from the live file."""
+    as an address for leftover warehouse docs. Harvest cites the live path
+    (ssot.md §3). Sections come from the live file."""
     for rel, idx in corpus.items():
         if not rel.startswith("docs/doctrine/") or not rel.endswith(".md"):
             continue
@@ -311,7 +323,8 @@ def _iter_harvest_files():
             if any(part in SKIP_DIRS for part in f.parts):
                 continue
             rel = str(f.relative_to(REPO))
-            if rel.startswith(SKIP_FILES_PREFIX) or rel in SELF_REFERENTIAL:
+            if rel.startswith(SKIP_FILES_PREFIX) or rel in SELF_REFERENTIAL \
+                    or rel in SKIP_FILES:
                 continue
             yield f
 
@@ -321,6 +334,70 @@ def _iter_harvest_files():
 #: means files/anatomy/cortex/docs/specs/. First run misattributed all of
 #: those to the nOS doc named second on the same line.
 SUBTREE_ROOTS = ("files/anatomy/cortex/",)
+
+
+_REALM_PATHS: dict[str, str] | None = None
+
+
+def realm_paths() -> dict[str, str]:
+    """INDEX.yml `realms.<name>.path`. Stdlib parse — this tool stays import-light."""
+    global _REALM_PATHS
+    if _REALM_PATHS is not None:
+        return _REALM_PATHS
+    paths: dict[str, str] = {}
+    index = REPO / "ssot" / "INDEX.yml"
+    if not index.exists():
+        _REALM_PATHS = paths
+        return paths
+    in_realms = False
+    current: str | None = None
+    for line in index.read_text(encoding="utf-8").splitlines():
+        if line.startswith("realms:"):
+            in_realms = True
+            continue
+        if in_realms and line and not line.startswith((" ", "#")):
+            in_realms = False
+        if not in_realms:
+            continue
+        if m := re.match(r"  ([a-z]+):$", line):
+            current = m.group(1)
+        elif current and (m := re.match(r'\s+path:\s+"?([^"#]+)"?\s*$', line)):
+            paths[current] = m.group(1).strip()
+    _REALM_PATHS = paths
+    return paths
+
+
+def nos_sot_bytes(realm: str, name: str) -> str | None:
+    """nos-sot:doctrine/gates → ssot/doctrine/gates.md. Seed-dir realms skip."""
+    base = realm_paths().get(realm)
+    if not base or base.startswith("$"):
+        return None
+    if not name.endswith(".md"):
+        name = name + ".md"
+    return f"{base}/{name}"
+
+
+def _named_docs(
+    line: str, citing: str, corpus: dict[str, DocIndex]
+) -> tuple[list[str], list[str]]:
+    """Corpus paths named on one line: repo-relative .md and nos-sot: form."""
+    found: list[str] = []
+    missing: list[str] = []
+
+    def _add(raw: str | None) -> None:
+        if not raw:
+            return
+        hit = _corpus_doc(raw, citing, corpus)
+        bucket = found if hit else missing
+        val = hit or raw
+        if val not in bucket:
+            bucket.append(val)
+
+    for m in RE_DOC_PATH.finditer(line):
+        _add(m.group(1))
+    for m in RE_NOS_SOT.finditer(line):
+        _add(nos_sot_bytes(m.group(1), m.group(2)))
+    return found, missing
 
 
 def _corpus_doc(raw: str, citing: str, corpus: dict[str, DocIndex]) -> str | None:
@@ -348,9 +425,9 @@ def _header_docs(lines: list[str], citing: str, corpus: dict[str, DocIndex]) -> 
     guess."""
     out: list[str] = []
     for line in lines[:50]:
-        for m in RE_DOC_PATH.finditer(line):
-            hit = _corpus_doc(m.group(1), citing, corpus)
-            if hit and hit not in out:
+        found, _ = _named_docs(line, citing, corpus)
+        for hit in found:
+            if hit not in out:
                 out.append(hit)
     return out
 
@@ -363,7 +440,7 @@ def harvest(corpus: dict[str, DocIndex]) -> list[Citation]:
             text = f.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        if "§" not in text and not any(
+        if "§" not in text and "nos-sot:" not in text and not any(
                 t in text for t in ("DECISION", "onstraint", "REM-", "SEC-")):
             # cheap pre-filter; M/epic shapes only ever co-occur with these
             # in the measured corpus, and a full regex pass over every file
@@ -392,23 +469,23 @@ def harvest_file(f: Path, rel: str, corpus: dict[str, DocIndex]) -> list[Citatio
         # first-50-lines authorities lack the section; never corpus-wide.
         filedocs: list[str] = []
         for line in lines:
-            for m in RE_DOC_PATH.finditer(line):
-                hit = _corpus_doc(m.group(1), rel, corpus)
-                if hit and hit not in filedocs:
+            found, _ = _named_docs(line, rel, corpus)
+            for hit in found:
+                if hit not in filedocs:
                     filedocs.append(hit)
         for i, line in enumerate(lines, 1):
-            sameline = next((hit for m in RE_DOC_PATH.finditer(line)
-                             if (hit := _corpus_doc(m.group(1), rel, corpus))), None)
+            found, missing = _named_docs(line, rel, corpus)
+            sameline = found[0] if found else None
             # A doc path named on the line but absent from the corpus is a
             # MISSING DOC — recorded, not silently ignored: the devlog gate
             # cited a docs/plans/ design file whose home is now
             # docs/archive/agentic-upgrade-adjustments-design.md §5.4
             # (the 2026-08-02 archive sweep).
-            sameline_missing = next(
-                (m.group(1) for m in RE_DOC_PATH.finditer(line)
-                 if _corpus_doc(m.group(1), rel, corpus) is None), None)
+            sameline_missing = missing[0] if (not found and missing) else None
+            section_keys: list[str] = []
             for m in RE_SECTION.finditer(line):
                 key = _norm_section(m.group(1))
+                section_keys.append(key)
                 # An external standard is not the constitution: "RFC 6749
                 # §4.4.3" resolves against the IETF, not this repo. Named as
                 # its own shape so the corpus classes stay clean.
@@ -419,7 +496,7 @@ def harvest_file(f: Path, rel: str, corpus: dict[str, DocIndex]) -> list[Citatio
 
                 # A citation into a repo we do not own is not a broken link —
                 # it is a different KIND of claim, and this estate already has
-                # a doctrine for it (docs/doctrine/foreign-properties.md: "a
+                # a doctrine for it (ssot/doctrine/foreign-properties.md: "a
                 # gotcha that is someone else's property is doctrine"). Two
                 # such cites in roles/pazny.keap read as `missing-doc` for
                 # months because KEAP's `docs/specs/*` look exactly like ours
@@ -461,6 +538,15 @@ def harvest_file(f: Path, rel: str, corpus: dict[str, DocIndex]) -> list[Citatio
                 else:
                     doc, how = None, "none"
                 out.append(Citation(rel, i, "section", key, doc, how))
+            for m in RE_NOS_SOT.finditer(line):
+                frag = m.group(3)
+                if not frag:
+                    continue
+                key = _norm_section(frag)
+                if key in section_keys:
+                    continue
+                path = nos_sot_bytes(m.group(1), m.group(2))
+                out.append(Citation(rel, i, "section", key, path, "nos-sot"))
             for m in RE_DECISION.finditer(line):
                 out.append(Citation(rel, i, "decision", f"DECISION {m.group(1)}",
                                     None, "registry"))

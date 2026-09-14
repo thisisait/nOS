@@ -100,7 +100,7 @@ keap_cpus: "{{ docker_cpus_light | default(1) }}"
 # ── nOS architecture self-model (KEAP fs-sync tree) ──────────────────────────
 # The playbook writes a deterministic knowledge tree describing nOS's OWN
 # architecture (platform → stack → service) into a doctrine class-2 SHARED dir
-# (docs/doctrine/filesystem.md: "app-managed multi-user content →
+# (ssot/doctrine/filesystem.md: "app-managed multi-user content →
 # tenants/<t>/shared/<svc>/"), then bind-mounts it into KEAP as a reserved
 # fs-sync uid so server/fs-sync.ts (v1.7.0) mirrors it into a standalone "nOS"
 # constellation in /explore and embeds each card into vector space. Generator +

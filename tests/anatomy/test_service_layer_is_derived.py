@@ -1,7 +1,7 @@
 """`layer` — derived from the edges, and refused where the edges are not there.
 
 Plan: docs/idea/13-relations.md §R2
-Doctrine: docs/doctrine/layers.md §3 (the four layers), §4.1 (repair before
+Doctrine: ssot/doctrine/layers.md §3 (the four layers), §4.1 (repair before
 declare), §5 (where the derivation will disagree with intuition).
 
 WHAT R2 IS. `layer` answers one question — *if this stops, what else stops?* —
@@ -138,7 +138,7 @@ def test_traefik_is_the_named_ceiling_and_not_a_substrate_node(committed):
         "be rewritten in the same commit"
     )
     assert not [e for e in committed["edges"] if "traefik" in e["from"] + e["to"]], (
-        "traefik gained edges — re-read docs/doctrine/layers.md §4's ceiling"
+        "traefik gained edges — re-read ssot/doctrine/layers.md §4's ceiling"
     )
 
 

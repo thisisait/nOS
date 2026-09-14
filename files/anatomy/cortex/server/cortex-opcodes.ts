@@ -127,7 +127,7 @@ export type CortexParamType = 'bool' | 'int' | 'string' | 'id' | 'model-uri';
  * WHICH MATTERS, because real tags have colons. The box this was written on
  * serves `qwen2.5-coder:32b`, `nomic-embed-text:latest`, `hermes3:8b`. We own
  * the provider prefix; ollama owns everything after it, and rewriting another
- * system's identifier is what docs/doctrine/foreign-properties.md exists to
+ * system's identifier is what ssot/doctrine/foreign-properties.md exists to
  * stop. So the tail is deliberately permissive: dots, colons, slashes and
  * underscores all survive, because they all appear in real registries.
  *

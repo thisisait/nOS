@@ -98,7 +98,7 @@ def test_an_external_standard_is_not_a_corpus_miss(tool, resolved):
 #:                    FOREIGN_REPOS table and classes them `resolved-external`,
 #:                    alongside RFCs — a citation into property we do not own
 #:                    is a different KIND of claim, not a broken link
-#:                    (docs/doctrine/foreign-properties.md).
+#:                    (ssot/doctrine/foreign-properties.md).
 #:   REM-088 ×3       a phantom id, never persisted (queue runs 087 -> 093).
 #:                    Declared in PHANTOM_REM_IDS with its evidence and given
 #:                    its own `phantom` class, because documenting a phantom

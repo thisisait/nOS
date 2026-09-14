@@ -43,7 +43,7 @@ services:
       # So every value except `disable` means the same thing here — encrypt,
       # do not verify — which is what the role's self-signed cert needs. The
       # driver underneath is node-postgres; the CONTRACT is Outline's. See
-      # docs/doctrine/foreign-properties.md §5.
+      # ssot/doctrine/foreign-properties.md §5.
       PGSSLMODE: "{{ 'require' if (postgresql_ssl_enabled | default(false)) else 'disable' }}"
       REDIS_URL: "redis://:{{ (redis_password | default(nos_derived_secrets.redis)) | urlencode }}@redis:6379"
       URL: "https://{{ outline_domain | default('wiki' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"

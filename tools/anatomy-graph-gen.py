@@ -503,7 +503,7 @@ def _describe(nid: str, n: dict) -> str:
         scopes = ", ".join(n.get("api_scopes") or []) or "no declared BFF scope"
         return (f"nOS-face app '{n['title']}' — form: {n['form']} "
                 f"(what it is on screen), build: {n['build']} (what it cost to "
-                f"build, docs/doctrine/face-app-tiers.md); reads {scopes}")
+                f"build, ssot/doctrine/face-app-tiers.md); reads {scopes}")
     if kind == "table":
         return f"KEAP DataTable definition '{n.get('title')}' ({n['source']})"
     if kind == "doctrine":
@@ -917,7 +917,7 @@ def derive_authentik_hosting(nodes: dict) -> list[dict]:
 # ── harvest: KEAP DataTable definitions ───────────────────────────────────
 
 
-# ── harvest: face apps (the `form` axis, docs/doctrine/face-app-tiers.md) ──
+# ── harvest: face apps (the `form` axis, ssot/doctrine/face-app-tiers.md) ──
 #
 #    Regex over the registry module, the same shape as harvest_weaknesses over
 #    weaknesses.py: the declaration lives in TypeScript, this compiler is
@@ -1525,7 +1525,7 @@ def find_cycle(edges: list[dict], kinds: set[str]) -> list[str] | None:
     return None
 
 
-# ── R2: layer, DERIVED (docs/doctrine/layers.md §3, docs/idea/13-relations.md) ──
+# ── R2: layer, DERIVED (ssot/doctrine/layers.md §3, docs/idea/13-relations.md) ──
 
 
 #: The one place the layer arithmetic is written down. `graphLayout.ts`

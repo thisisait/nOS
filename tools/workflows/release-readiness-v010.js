@@ -28,7 +28,7 @@ const RULES = [
   'If something cannot be measured, SAY SO. A confident wrong number is worse than a stated gap here,',
   'because the release plan will be built on these.',
   '',
-  'THE STANDARD THIS REVIEW APPLIES — it is the estate\'s own, in docs/doctrine/gates.md:',
+  'THE STANDARD THIS REVIEW APPLIES — it is the estate\'s own, in ssot/doctrine/gates.md:',
   '"a check that cannot fail is not a check". Three such were found by hand on 2026-07-27 alone:',
   'a doctrine guard keyed on an env var nothing sets; a coverage gate reading a generator\'s stdout',
   'instead of the store; and an id-diff that manufactured divergence from two truncated pages.',

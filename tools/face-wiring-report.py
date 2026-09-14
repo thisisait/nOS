@@ -3,7 +3,7 @@
 
 The face shell (vendored at files/anatomy/face/) composes Authentik identity, the
 Wing catalog, the Bone VFS/user-state, and KEAP config DataTables. That wiring is
-doctrine (docs/doctrine/face.md) and easy to break silently — a client that reads
+doctrine (ssot/doctrine/face.md) and easy to break silently — a client that reads
 `uid` from the browser, a `{@html}` XSS hole, a config DataTable with a def but no
 seeder, a compose env missing the edge token. This tool makes those legible and
 enforces them. Paired gate: tests/anatomy/test_face_wiring_contract.py +

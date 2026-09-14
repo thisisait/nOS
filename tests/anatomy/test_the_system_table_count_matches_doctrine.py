@@ -1,6 +1,6 @@
 """The DataTable-engine contract must name the measured SYSTEM set.
 
-`ssot/doctrine/cross-repo-contracts.md` froze "the 18" on 2026-09-05, when
+`nos-sot:doctrine/cross-repo-contracts.md` froze "the 18" on 2026-09-05, when
 state/keap-tables/ happened to hold 18 files. The glob is 32 now; bumping that
 blindly to 32 would count fixture/user-shaped defs (print-*, kolben-*) as
 SYSTEM. USER tables are KEAP-born and never in nOS git; the fixtures are a

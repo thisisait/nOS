@@ -12,7 +12,7 @@
 # now a decision (Omarchy's month-behind mirror, mise's MINIMUM_RELEASE_AGE):
 # `tools/brew-pin-status.py` says when a newer version has aged enough, and
 # advancing the pin is a commit. THE COST: a security fix no longer arrives by
-# itself — the carve-out is docs/doctrine/security-floor.md (a CVE advances the
+# itself — the carve-out is ssot/doctrine/security-floor.md (a CVE advances the
 # pin immediately); `tasks/nginx.yml:34` keeps `state: latest` for REM-134.
 - name: "[Ollama] Install Ollama via Homebrew (0.19+ = MLX backend on Apple Silicon)"
   community.general.homebrew:
@@ -511,7 +511,7 @@
 #
 # The remedy is OpenClaw's own (`gateway install --force`), not a hand-written
 # plist: the service file is the vendor's property and its shape is theirs to
-# change (docs/doctrine/foreign-properties.md). We only decide WHEN to ask.
+# change (ssot/doctrine/foreign-properties.md). We only decide WHEN to ask.
 #
 # Idempotent by comparison, not by flag: on a steady estate the two paths agree
 # and nothing here runs.

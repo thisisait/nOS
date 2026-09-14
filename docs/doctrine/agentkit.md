@@ -112,3 +112,22 @@ The tree does **not** agree with itself here. Do not pick in this file.
 | URI first segment | vendor, wire protocol, or adapter name? | Pattern + loader: anthropic, claude, openai, openclaw (`agent.schema.yaml:63`, `AgentLoader.php:402`). Schema **description** still lists `local` (`agent.schema.yaml:64-67`). Factory **header** still says `openai-*` throws and `local-*` is reserved (`Factory.php:14-19`); `fromUri` then implements `openai` as a protocol (`Factory.php:62-67`). Essay `docs/ait-runtime-architecture.md` is a third spelling. |
 | tool FS path-scope | does a tool refuse a path outside the agent's tenant/user tree? | `BashReadOnlyTool` is argv-allowlisted read-only; path-scope is **not** implemented. Named as P3 in `docs/archive/fs-doctrine.md:151-157,175-178`. |
 | BindingResolver gate count | is the law "six gates" or the eight checks the file runs? | Header: six (`BindingResolver.php:14-16`). File: protocol + residency after the six (`BindingResolver.php:68-139`). Register header documents 1–6 (`llm-backends.yml:32-53`). |
+
+The table above is unsettled. The next two headings are addresses for rules
+the tree already enforces. They do not settle the axes.
+
+## 6.3. Scopes follow the manifest
+
+The live Wing token row is a projection of `agent.yml`. A reader compares
+both directions (MISSING / UNDECLARED), the same shape as identity.md.
+Mint tasks whose `--name` has an `agents/<name>/agent.yml` compute
+`--scopes` from that file; they MUST NOT restate them. Wired:
+`tools/identity-status.py`, `tests/anatomy/test_agent_token_scopes_derive.py`.
+
+## 6.4. Provision reconciles absence
+
+`--deactivate` flips `active=0` for a named token. Provision MUST NOT only
+upsert. The 2026-08-26 roster close left retired and parked agents'
+unrestricted tokens live; reconciling absence is what closes that. Wired:
+`files/anatomy/wing/bin/provision-token.php`,
+`roles/pazny.wing/tasks/post.yml`.

@@ -10,7 +10,7 @@ default.config.yml is now the roster; this gate pins that it stays one, that
 its shape is checkable, and that the two consumers that caused the incident
 DERIVE from it.
 
-Doctrine: docs/doctrine/identity.md. Reader: tools/identity-status.py
+Doctrine: ssot/doctrine/identity.md. Reader: tools/identity-status.py
 (pinned separately by test_the_identity_reader_only_reads.py).
 
 WHAT THIS GATE CANNOT DO: it cannot check the REALMS — a declared identity

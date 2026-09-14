@@ -6,7 +6,7 @@
  * apps, config DataTables). Changing a type here ripples across worktrees, so it
  * is deliberately small and stable. Add fields; avoid renaming.
  *
- * Load-bearing doctrine (docs/doctrine/face-app-tiers.md, nos-face-shell-v2.md):
+ * Load-bearing doctrine (ssot/doctrine/face-app-tiers.md, nos-face-shell-v2.md):
  *   SoC (repo defaults) → runtime DataTable (user-addable) → per-user state.
  */
 
@@ -42,7 +42,7 @@
  * a window — the binary had no value for it. `form` is the axis; the boolean
  * was a projection of it onto two points.
  *
- * `build` (F1–F4/H, `docs/doctrine/face-app-tiers.md`) is INDEPENDENT of
+ * `build` (F1–F4/H, `ssot/doctrine/face-app-tiers.md`) is INDEPENDENT of
  * `form` and only loosely correlated: a frame is usually the cheapest thing to
  * build and a view usually is not, but that is a tendency, not a definition.
  * Nothing in this shell derives either axis from the other — pinned by

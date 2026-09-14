@@ -1,6 +1,6 @@
 /**
  * The face app registry — one address space for every app the shell can name,
- * carrying the TWO independent axes (`docs/doctrine/face-app-tiers.md` §Form):
+ * carrying the TWO independent axes (`ssot/doctrine/face-app-tiers.md` §Form):
  *
  *   form  — what the app IS on screen: view | utility | widget | frame
  *   build — what it COSTS to build: F1–F4 / H

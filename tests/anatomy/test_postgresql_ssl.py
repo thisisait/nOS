@@ -87,7 +87,7 @@ def test_compose_wires_ssl_when_enabled():
 #: Every PostgreSQL client this estate renders, with the encrypting sslmode its
 #: driver family requires and WHY that spelling and not the other one.
 #:
-#: Doctrine: docs/doctrine/foreign-properties.md §5 — the word means opposite
+#: Doctrine: ssot/doctrine/foreign-properties.md §5 — the word means opposite
 #: things in the two client families, and that is upstream's, not ours.
 #:
 #: The split is not cosmetic. In libpq, `require` = encrypt, do NOT verify the

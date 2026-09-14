@@ -2,16 +2,19 @@ export const meta = {
   name: 'ssot-promote',
   implements: 'ssot-recite-doctrine',
   description:
-    'Promote docs/doctrine/*.md into ssot/doctrine/ one file at a time. Light reformulation. Section numbers stay. Warehouse cleanup of the rest of docs/ is a later wave.',
+    'RECORD. v1 promote landed 2026-09 (19 articles in ssot/doctrine/). Do not re-run. Remaining warehouse originals: agentkit.md, organs.md (INDEX proposed). Citation policy: ssot/doctrine/ssot.md §5.',
   isolation: 'worktree',
   writes: 'branch',
   phases: [
-    { title: 'Harvest', detail: 'ssot/ is in the citation corpus; stubs alias sections (sequential, already in tree)' },
-    { title: 'Promote', detail: 'union: one live doctrine file per agent; stubs only in docs/doctrine; no README' },
-    { title: 'Judge', detail: 'parent updates README; heading + cite gates. v1 promote landed except agentkit/organs. docs/ warehouse cites articles; it is not this phase' },
+    { title: 'Harvest', detail: 'already in tree: corpus + stub alias + nos-sot: resolver' },
+    { title: 'Promote', detail: 'RECORD — do not fan out again' },
+    { title: 'Judge', detail: 'cite + heading + ssot-index gates. INDEX proposed names what is not law yet' },
   ],
 }
 
+// Historical prompt kept so a later promote of INDEX proposed files copies
+// the same contract. ssot.md §5: mint ## N only when the source had none
+// and no inbound §N. A ## 3 that was 3 stays 3.
 const P = `You are a lazy senior nOS developer.
 
 ISOLATION: git worktree + feat/ssot-promote-<name> off the SHA in this prompt.
@@ -22,13 +25,16 @@ ONE FILE. You receive NAME.md. You write:
 - docs/doctrine/NAME.md (stub only)
 
 Do NOT edit: README.md, INDEX.yml, tools/doctrine-cite.py, other doctrine files,
-docs/llm/security/*, apex ruling.yml, agentkit.md, organs.md.
+docs/llm/security/*, apex ruling.yml, other INDEX proposed files.
 
 STABLE SECTION NUMBERS. A ## 3 that was 3 stays 3. Renaming a number is a
-breaking citation change. Light reformulation: shall/must/may; drop session
-anecdotes ("an agent said"). Keep the rule. Incidents that justify the rule
-may stay as one measured sentence with a path, or move to an already-linked
-companion. Do not invent a new companion. Do not settle proposed files.
+breaking citation change. If the source had no numbered headings and no
+inbound §N, you MAY mint ## N (ssot.md §5). Do not invent a number that
+collides with an existing inbound cite. Number every article unless it has
+zero sub-rules. Light reformulation: shall/must/may; drop session anecdotes.
+Keep the rule. Incidents that justify the rule may stay as one measured
+sentence with a path, or move to an already-linked companion. Do not invent
+a new companion. Do not settle proposed files.
 
 Stub exactly:
 
@@ -41,16 +47,10 @@ Conventional Commits, subject ≤ 50 chars.
 `
 
 phase('Promote')
-
-// FAN-OUT: union. Each agent writes one pair (ssot/doctrine/X + stub).
-// README and the harvester are sequential and owned by the parent.
-const promoted = await parallel([
-  () => agent(`${P}\nNAME.md = ponytail.md`, { label: 'promote-ponytail', phase: 'Promote' }),
-  () => agent(`${P}\nNAME.md = gates.md`, { label: 'promote-gates', phase: 'Promote' }),
-  () => agent(`${P}\nNAME.md = four-trees.md`, { label: 'promote-four-trees', phase: 'Promote' }),
-  () => agent(`${P}\nNAME.md = identity.md`, { label: 'promote-identity', phase: 'Promote' }),
-  () => agent(`${P}\nNAME.md = virtiofs.md`, { label: 'promote-virtiofs', phase: 'Promote' }),
-])
+// RECORD. v1 already wrote the 19 articles. Re-running the five-file fan-out
+// would reproduce a fraction of the tree. INDEX proposed files wait on the
+// operator. `P` above is the contract for that later one-file promote.
+log('v1 promote is a record: ssot/doctrine/*.md (19). INDEX proposed: agentkit, organs.')
 
 phase('Judge')
-log(JSON.stringify(promoted))
+log('gates: test_ssot_index.py test_doctrine_headings_are_unique.py test_doctrine_citations_resolve.py')

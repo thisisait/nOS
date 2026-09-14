@@ -36,7 +36,7 @@ schema:
     - { key: embedding,   label: "Embedding",         kind: vector, role: attribute, dim: 768, concept: machine.embedding }
 
     # ── classification (LeanIX fact-sheet dimensions) ─────────────────────────
-    # face-app complexity tier (docs/doctrine/face-app-tiers.md) — selects the
+    # face-app complexity tier (ssot/doctrine/face-app-tiers.md) — selects the
     # app-gen agent's system-prompt profile.
     - { key: app_tier,    label: "App tier",          kind: select, role: dimension, concept: class.complexity,
         options: ["F1", "F2", "F3", "F4", "H"] }

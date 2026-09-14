@@ -1,5 +1,7 @@
 # ponytail — the ladder this repo builds on
 
+## 1. The ladder
+
 The badge is not decoration. Code SHALL answer `ponytail` before it is written.
 It is a ladder: stop at the first rung that holds.
 
@@ -15,7 +17,7 @@ It is a ladder: stop at the first rung that holds.
 wrong place is not lazy; it is a second bug. The flow MUST be traced first;
 then climb.
 
-## Why this repo, specifically
+## 2. Why this repo, specifically
 
 The estate's worst defects are over-building or under-reading. Each was found
 by reading, not by adding:
@@ -28,7 +30,7 @@ by reading, not by adding:
   asking whether the live key contains the prefix needed no concatenation and
   was strictly broader (rung 6).
 
-## The `ponytail:` marker
+## 3. The `ponytail:` marker
 
 A deliberate simplification with a known ceiling SHALL carry a comment naming
 the ceiling and the upgrade path:
@@ -44,7 +46,7 @@ tags those `no-trigger`.
 The marker is for a corner genuinely cut. Code that is simply small MUST NOT
 carry one, and a repo full of markers is a repo apologising for itself.
 
-## Deliberately not here
+## 4. Deliberately not here
 
 No count of markers, and no "N% lazier" figure. The unbuilt version was never
 written, so there is no baseline to subtract from — and a number carried in a

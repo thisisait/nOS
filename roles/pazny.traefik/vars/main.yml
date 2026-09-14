@@ -248,7 +248,7 @@ traefik_skip_ids:
 # URL gets the https:// prefix and `serversTransport: noverify` so the
 # self-signed dev cert is tolerated.
 #
-# Doctrine: docs/doctrine/foreign-properties.md §3.1 — an upstream is HTTP until
+# Doctrine: ssot/doctrine/foreign-properties.md §3.1 — an upstream is HTTP until
 # measured otherwise, and a port number is not evidence. §3 records why: the
 # LSIO code-server image serves PLAIN HTTP on 8443 unless `--cert` is passed,
 # which nOS does not; the entry that used to sit here made Traefik open a TLS

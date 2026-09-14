@@ -1,7 +1,5 @@
 # SSOT
 
-> **PROPOSED, not settled.**
-
 ## 1. Address
 
 `nos-sot:<realm>/<file>#<id>`
@@ -20,6 +18,12 @@ Never copy a realm into `ssot/<realm>` — that directory is a second tree.
 `in_force: true` is law. `in_force: false` is not.
 A loop promotes a file into `ssot/doctrine/` when it is an article.
 `docs/` is the warehouse the loop empties.
+A stub under `docs/doctrine/` aliases a promoted article until harvest cites
+move. Harvest SHALL name `ssot/doctrine/<file>.md` or
+`nos-sot:doctrine/<file>#<id>`. The stub drops when nothing names it.
+INDEX `proposed:` names warehouse files that are still full originals, not
+stubs. They are not law. Today: `agentkit.md`, `organs.md` — promote when
+the operator settles the remaining axes in those files.
 A **PROPOSED** banner on a file in an in-force realm means that file is not
 law yet. The realm being in force does not settle the banner.
 
@@ -35,6 +39,7 @@ reuse. They MUST NOT copy nOS articles into the tenant tree.
 
 The article address is the numbered heading (`## 3`). Citing code and
 warehouse docs write `§3` plus a path. The article does not repeat the glyph.
+Number every article on promote unless it has zero sub-rules.
 Numbered headings, once published, do not move.
 A heading number MAY be assigned on promote only when the source had none
 and no inbound `§N` existed.

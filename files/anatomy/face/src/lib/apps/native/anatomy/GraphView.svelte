@@ -625,7 +625,7 @@
 	}
 	/* A service nobody has surveyed for upstreams is drawn OPEN. It carries no
 	   `layer` — the derivation refuses to answer from an absence of evidence
-	   (docs/doctrine/layers.md §4.2) — and until this outline existed it was
+	   (ssot/doctrine/layers.md §4.2) — and until this outline existed it was
 	   the same solid rectangle as a service that had been measured. */
 	.node.unsurveyed rect {
 		stroke-dasharray: 3 3;

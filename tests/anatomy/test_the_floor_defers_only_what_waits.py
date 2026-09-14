@@ -1,6 +1,6 @@
 """Gate — the security floor's lanes, and the one thing they must never do.
 
-Doctrine: ssot/doctrine/security-floor.md.
+Doctrine: nos-sot:doctrine/security-floor.md.
 
 The roadmap asked for "act on CRITICAL/HIGH, batch the rest to a release
 boundary". Measured 2026-08-22, that rest is not one thing: of 45 pending rows

@@ -1,7 +1,7 @@
 """Anatomy CI gate — nOS-face wiring contract.
 
 The face shell (vendored at files/anatomy/face/) is wired into nOS by a small set
-of load-bearing contracts documented in docs/doctrine/face.md: forward_auth SSO +
+of load-bearing contracts documented in ssot/doctrine/face.md: forward_auth SSO +
 edge-token trust, the Wing catalog, the Bone VFS/user-state, and the KEAP config
 DataTables. This gate pins that wiring so a future change can't silently break it
 (a client reading uid, a `{@html}` hole, a DataTable def with no seeder, a compose

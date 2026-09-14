@@ -79,7 +79,7 @@ describe('native-app registry', () => {
 	});
 });
 
-// ── the two axes (docs/doctrine/face-app-tiers.md §Form) ────────────────────
+// ── the two axes (ssot/doctrine/face-app-tiers.md §Form) ────────────────────
 
 describe('form + build are two independent axes', () => {
 	it('every built-in declares exactly one form and a build', () => {

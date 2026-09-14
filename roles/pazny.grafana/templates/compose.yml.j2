@@ -212,7 +212,7 @@ services:
       # This probe only executes because redis_exporter_version carries the
       # `-alpine` suffix — upstream's default image went `scratch` (no wget, no
       # shell) and the check then reported the exporter unhealthy while it was
-      # serving :9121. Doctrine: docs/doctrine/foreign-properties.md §2.1.
+      # serving :9121. Doctrine: ssot/doctrine/foreign-properties.md §2.1.
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9121/metrics"]
       interval: 30s
       timeout: 5s

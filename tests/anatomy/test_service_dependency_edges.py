@@ -1,7 +1,7 @@
 """Service→service dependency edges — declared, and equal to what runs.
 
 Plan: docs/idea/13-relations.md §R1/§R2
-Doctrine: docs/doctrine/layers.md §4 — layer is derived, repair before declare.
+Doctrine: ssot/doctrine/layers.md §4 — layer is derived, repair before declare.
 
 THE MEASUREMENT THAT MOTIVATES THIS FILE. On 2026-08-07 the anatomy graph held
 191 nodes and 151 edges and NOT ONE between two of its 63 service nodes. The

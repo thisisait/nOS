@@ -134,7 +134,7 @@ def test_every_fanout_declares_its_semantics(path):
         f"a chain in parallel is a guess followed by a rewrite. Measured "
         f"2026-08-04: 90% of multi-agent spend is context, so every extra agent "
         f"whose output you discard or must reconcile is paid for in full. "
-        f"See docs/doctrine/workflows.md §1."
+        f"See ssot/doctrine/workflows.md §1."
     )
 
 

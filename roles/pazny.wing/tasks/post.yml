@@ -222,8 +222,8 @@
     or 'Updated' in (_wing_token_result.stdout | default(''))
   no_log: true
 
-# Agent token scopes DERIVE from each agent.yml (ruling 3, docs/doctrine/
-# agentkit.md §6.3): the manifest is the authority, this mint a projection.
+# Agent token scopes DERIVE from each agent.yml (ruling 3,
+# docs/doctrine/agentkit.md §6.3): the manifest is the authority, this mint a projection.
 # Measured before wiring: surveyor's literal said wing.read while its
 # manifest (and one measured POST) said wing.write — the d08abc81 gap,
 # and its report writes were riding the announced main-token fallback.

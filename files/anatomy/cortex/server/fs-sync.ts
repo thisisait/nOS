@@ -1,7 +1,7 @@
 /**
  * Filesystem sync — the doctrine-tree half of "documents arrive in KEAP".
  *
- * The nOS filesystem doctrine (nOS docs/doctrine/filesystem.md) gives KEAP a
+ * The nOS filesystem doctrine (nOS ssot/doctrine/filesystem.md) gives KEAP a
  * class-3 FS-native per-user tree: {nos_data_root}/tenants/<t>/users/<uid>/
  * {documents,library,inbox,agents}. Once the role bind-mounts that users/ dir
  * into the container (planned nOS-side work) and points KEAP_USER_FILES_DIR at
