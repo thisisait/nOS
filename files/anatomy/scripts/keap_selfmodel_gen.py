@@ -130,6 +130,7 @@ SYSTEM_NAME = {
     "metabase": "Metabase", "superset": "Superset", "influxdb": "InfluxDB",
     "freepbx": "FreePBX", "qgis-server": "QGIS Server",
     "alloy": "Grafana Alloy", "openclaw": "OpenClaw", "hermes": "Hermes",
+    "device-gateway": "Device gateway",
     "opencode": "OpenCode", "wing": "Wing", "bone": "Bone", "pulse": "Pulse",
     "cortex": "Cortex", "ears": "Ears",
     "iiab-terminal": "IIAB Terminal", "backup": "Backup", "backrest": "Backrest",
@@ -505,6 +506,12 @@ SYSTEM_EN = {
         "Hermes, the cross-channel agent gateway. It bridges outside chat channels such as "
         "Telegram and Discord into the estate's agent runtime, so a conversation elsewhere "
         "reaches the same tools."
+    ),
+    "device-gateway": (
+        "The device gateway, a loopback BFF for a handheld client. It completes RFC 8628 "
+        "device-code at Authentik, then serves a Bearer-gated allowlist of KEAP tables; the "
+        "phone never holds the KEAP token. Unlike Face it is not a desktop, and unlike "
+        "Hermes it does not bridge chat — it is the only organ a handheld is meant to call."
     ),
     "opencode": (
         "OpenCode, the agentic coding helper on the host. It works inside a checked-out "

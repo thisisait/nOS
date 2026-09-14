@@ -120,6 +120,19 @@ RETRYING` is not this fail.
 
 Device login still blocked on the next green past OpenClaw.
 
+### 2026-09-14 `p=64644` — failed at Cortex (~8 min)
+
+```
+ok=524  changed=39  unreachable=0  failed=1  skipped=388
+```
+
+Source: local `dev` @ `5f5185ce` (keg skip-wipe). OpenClaw keg gate held.
+Device-gateway launchd rendered and bootstrapped. Loopback `/health` 200.
+
+**Stop:** `pazny.cortex` `store:materialise` — `keap_selfmodel_gen` has no
+`SYSTEM_EN` for slug `device-gateway` (manifest id `device_gateway`). Taxonomy
+refuses filler. Tofu apply had already passed.
+
 ---
 
 ## Backlog — after green

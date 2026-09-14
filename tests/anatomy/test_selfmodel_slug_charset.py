@@ -163,3 +163,23 @@ def test_a_fake_2fauth_slug_fails_the_gate(tmp_path):
     assert ("role", "2fauth") in bad, f"role slug missed: {bad}"
     assert ("plugin", "2fauth-base") in bad, f"plugin slug missed: {bad}"
     assert ("taxonomy_anchor", "2fauth") in bad, f"taxonomy_anchor missed: {bad}"
+
+
+def test_every_manifest_service_has_handwritten_system_en():
+    """p=64644: cortex store:materialise died — no SYSTEM_EN for device-gateway.
+
+    A new manifest row without prose lands as a generic vector; the generator
+    refuses rather than ship filler. Pin that refusal here so the next organ
+    fails pytest, not a wet converge.
+    """
+    gen = _load_gen()
+    services = yaml.safe_load(MANIFEST.read_text()).get("services") or []
+    missing = [
+        f"{s['id']} → {gen.SLUG_OVERRIDES.get(s['id']) or gen.slugify(s['id'])}"
+        for s in services
+        if (gen.SLUG_OVERRIDES.get(s["id"]) or gen.slugify(s["id"]))
+        not in gen.SYSTEM_EN
+    ]
+    assert not missing, (
+        "keap_selfmodel_gen.SYSTEM_EN has no entry for: " + ", ".join(missing)
+    )
