@@ -4,6 +4,11 @@
 # off the same row via device-extraction. Hash only — never a raw serial.
 # No table-level graph block: these are personal-device facts, not a public
 # knowledge_object projection (docs/plans/digest-device-doctrine.md §8).
+#
+# NOT the device-gateway pairing registry (dtt `devices-table` / slug
+# `device-client`). Pairing columns (paired_at, last_seen, fingerprint,
+# Authentik owner) MUST NOT land here — pin:
+# tests/anatomy/test_device_digest_tables.py::test_digest_device_is_not_the_pairing_registry.
 
 title: "Devices"
 description: >-

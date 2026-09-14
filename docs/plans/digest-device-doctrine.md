@@ -4,6 +4,8 @@
 
 **Noun:** this is a **device digest** / **device importer family**. It is not an organ. `organs-noun` is still next. Do not add a host daemon, a `pazny.ileapp` role, or a Pulse stomach.
 
+**Also not the device-gateway pairing registry.** `state/keap-tables/device.table.yml` is a physical-unit hash row. A Miyoo / phone / wearable that *calls* nOS is a different noun (`device-client`, dtt `devices-table`). Pairing columns (`paired_at`, `last_seen`, `fingerprint`, Authentik owner) on this table would mix a backup digest with a live client. Pin: `test_digest_device_is_not_the_pairing_registry`.
+
 **Does not wait on** `digest-doctrine`. If that row later contradicts this file, `digest-device-doctrine-review` names the bytes — it does not silently rewrite live doctrine.
 
 **Does not staff Wave 2.** No iLEAPP version pin (`digest-device-ileapp-pin`), no LAVA walker, no artifact-module catalog beyond the deny rule.
