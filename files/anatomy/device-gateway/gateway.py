@@ -125,13 +125,21 @@ def _keap_rows(slug: str) -> list:
     return rows
 
 
+def _project(table_id: str, row) -> dict:
+    """ALLOWLIST columns are the device's view, not the full KEAP row."""
+    cols = ALLOWLIST[table_id][2]
+    if not isinstance(row, dict):
+        return {}
+    return {k: row[k] for k in cols if k in row}
+
+
 def rows_for(table_id: str) -> list:
     slug = ALLOWLIST[table_id][0]
     now = time.time()
     hit = _cache.get(table_id)
     if hit and now - hit[0] < CACHE_TTL:
         return hit[1]
-    data = _keap_rows(slug)
+    data = [_project(table_id, row) for row in _keap_rows(slug)]
     _cache[table_id] = (now, data)
     return data
 

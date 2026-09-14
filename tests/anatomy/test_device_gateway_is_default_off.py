@@ -102,6 +102,7 @@ def test_allowlist_excludes_pii_and_includes_roadmap():
     assert "AUTHENTIK_PUBLIC_O_BASE" in src
     assert "_token_is_for_this_client" in src
     assert "azp" in src
+    assert "_project" in src
     assert not re.search(r'BIND\s*=\s*"0\.0\.0\.0"', src)
     assert "PyJWT" not in src and "cryptography" not in src
 
@@ -156,3 +157,23 @@ def test_userinfo_ok_is_not_enough_without_our_azp():
     assert not gw._token_is_for_this_client(mint({"azp": "nos-grafana"}))
     assert not gw._token_is_for_this_client("not-a-jwt")
     assert not gw._token_is_for_this_client("a.b")
+
+
+def test_device_rows_drop_columns_not_on_the_allowlist():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("device_gateway", GATEWAY)
+    gw = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gw)
+    row = {
+        "slug": "x",
+        "status": "next",
+        "track": "platform",
+        "title": "t",
+        "body": "secret prose",
+        "assignee": "akadmin",
+    }
+    out = gw._project("roadmap", row)
+    assert out == {"slug": "x", "status": "next", "track": "platform", "title": "t"}
+    assert "body" not in out and "assignee" not in out
+    assert gw._project("roadmap", "not-a-row") == {}
