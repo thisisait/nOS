@@ -103,6 +103,23 @@ SLOW (none moved vs last green; cask detect did not fire):
 | 23 | Wing GDPR upsert — S7 |
 | 21 | keap caddy-sessions slug scan |
 
+### 2026-09-14 `p=14457` — failed at OpenClaw (~8 min)
+
+```
+ok=477  changed=33  unreachable=0  failed=1  skipped=370
+```
+
+Source: local `dev` @ `2a975bfc` (device gateway + S7). Host + core + tofu
+apply ran; OpenClaw refused; device-gateway role did not.
+
+**Stop:** `pazny.openclaw` keg-vs-daemon refuse. Linked keg **and** daemon
+were 0.34.0 (`tools/brew-pin-status.py` AT-PIN). Message `drift keg=
+srv=0.34.0` — empty keg. Cause: skipped re-resolve still `register:`'d
+`_ollama_keg` and wiped the first resolve. Tofu heartbeat `FAILED -
+RETRYING` is not this fail.
+
+Device login still blocked on the next green past OpenClaw.
+
 ---
 
 ## Backlog — after green
@@ -110,13 +127,16 @@ SLOW (none moved vs last green; cask detect did not fire):
 Ranked. Next pass is measurements, then the smallest structural cut that
 removes a row, not a pile of micro-edits.
 
-### S1. Ollama pin decides — cut in tree 2026-09-14
+### S1. Ollama pin decides — cut in tree 2026-09-14; skip-wipe 2026-09-14
 
 Install was already `present` (2026-08-27). p=11902 failed because brew had
 linked 0.34.0 outside the run while 0.33.3 was still in the cellar, and the
 refuse said re-pin. Cut: Homebrew Keg API links the pin keg; refuse only if
-that cannot. Gate `test_ollama_pin_decides.py`. Next `nos` is the reader —
-fires when linked keg ≠ pin.
+that cannot. Gate `test_ollama_pin_decides.py`.
+
+p=14457: pin matched, skipped re-resolve still registered `_ollama_keg` and
+emptied it; drift gate refused `keg=` vs daemon 0.34.0. Cut: keep first
+resolve unless the pin switch actually linked. Next `nos` is the reader.
 
 ### S2. Health-wait leftover includes — cut in tree 2026-09-14
 

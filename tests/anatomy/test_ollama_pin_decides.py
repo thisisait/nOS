@@ -104,3 +104,36 @@ def test_the_coherent_mismatch_report_does_not_ask_to_edit_the_record():
     assert "state: latest" not in msg, (
         "the leftover debug still describes install as `state: latest`"
     )
+
+
+def test_re_resolve_does_not_clobber_the_linked_keg_register():
+    """Skipped re-resolve overwrote `_ollama_keg` on p=14457.
+
+    Linked keg and daemon were both 0.34.0. The skip still replaced the
+    register, compare saw keg='', printed `drift keg= srv=0.34.0`, and the
+    refuse killed the run. Ansible, not brew.
+    """
+    keg_regs = [
+        str(t.get("name"))
+        for t in tasks()
+        if t.get("register") == "_ollama_keg"
+    ]
+    assert keg_regs == [
+        "[Ollama] Resolve the LINKED ollama keg (not merely an installed one)"
+    ], keg_regs
+    assert named("Re-resolve the LINKED keg").get("register") != "_ollama_keg"
+    assert named("Remember the linked keg").get("ansible.builtin.set_fact")
+
+
+def test_keg_vs_daemon_does_not_treat_an_empty_keg_as_drift():
+    """`[ -n "$keg" ] && equal || echo drift` is true when keg is empty."""
+    for fragment in (
+        "Compare the running daemon against the installed keg",
+        "Re-compare keg and daemon after the reload",
+    ):
+        body = _body(named(fragment))
+        assert "ollama_linked_keg" in body
+        assert "_ollama_keg.stdout" not in body
+        assert '[ -z "$keg" ]' in body
+        assert "unread keg" in body
+        assert '|| echo "drift keg=$keg srv=$srv"' not in body

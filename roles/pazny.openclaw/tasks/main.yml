@@ -148,6 +148,9 @@
     - ollama_version | default('') | length > 0
     - (_ollama_keg.stdout | default('') | trim) not in ('', ollama_version)
 
+# MUST NOT register `_ollama_keg`. A skipped task still replaces the
+# registered result; p=14457 wiped a coherent 0.34.0 keg, then the drift
+# gate refused `keg=` vs daemon 0.34.0. Ansible, not brew.
 - name: "[Ollama] Re-resolve the LINKED keg after switching to the pin"
   ansible.builtin.shell: |
     set -o pipefail
@@ -157,7 +160,7 @@
       | sed -nE 's|.*/Cellar/[^/]+/([^/]+)/.*|\1|p'
   args:
     executable: /bin/bash
-  register: _ollama_keg
+  register: _ollama_keg_after_link
   become: false
   changed_when: false
   failed_when: false
@@ -165,11 +168,16 @@
     - nos_pkg_manager == 'homebrew'
     - "'linked ' in (_ollama_relink.stdout | default(''))"
 
+- name: "[Ollama] Remember the linked keg after an optional pin switch"
+  ansible.builtin.set_fact:
+    ollama_linked_keg: "{{ (_ollama_keg_after_link.stdout | default('') | trim) if (not (_ollama_keg_after_link.skipped | default(true)) and (_ollama_keg_after_link.stdout | default('') | trim) | length > 0) else (_ollama_keg.stdout | default('') | trim) }}"
+  when: nos_pkg_manager == 'homebrew'
+
 - name: "[Ollama] Refuse when the INSTALLED keg is not the pin"
   ansible.builtin.fail:
     msg: |
       the LINKED ollama keg is not the pinned {{ ollama_version }}.
-        linked keg: {{ _ollama_keg.stdout | default('(none)') | trim }}
+        linked keg: {{ ollama_linked_keg | default('(none)') }}
         daemon: {{ _ollama_ver.stdout | default('(none)') | trim }}
       {% if (_ollama_shadow.stdout | default('0') | trim | int) > 0 %}
         CAUSE: a third-party tap outranks homebrew/core for the name `ollama`,
@@ -190,7 +198,7 @@
   when:
     - nos_pkg_manager == 'homebrew'
     - ollama_version | default('') | length > 0
-    - (_ollama_keg.stdout | default('') | trim) not in ('', ollama_version)
+    - (ollama_linked_keg | default('') | trim) not in ('', ollama_version)
     # A FIRST INSTALL IS NOT DRIFT: on a clean host the keg above the record is
     # the only thing that could have happened, and the pin keg is not in the
     # cellar yet. The refusal is for a keg that moved while this playbook
@@ -205,7 +213,7 @@
 - name: "[Ollama] First install landed a version the record does not name"
   ansible.builtin.debug:
     msg: |
-      ollama was installed fresh at {{ _ollama_keg.stdout | default('(none)') | trim }},
+      ollama was installed fresh at {{ ollama_linked_keg | default('(none)') }},
       and default.config.yml records {{ ollama_version }}. That is not drift —
       brew had one version to give. RECORD IT: set ollama_version to the keg
       above and commit, so the next run has something to refuse against.
@@ -214,7 +222,7 @@
   when:
     - nos_pkg_manager == 'homebrew'
     - ollama_version | default('') | length > 0
-    - (_ollama_keg.stdout | default('') | trim) not in ('', ollama_version)
+    - (ollama_linked_keg | default('') | trim) not in ('', ollama_version)
     - _ollama_install.changed | default(false)
 
 - name: "[Ollama] Ensure models directory exists (persistent across --blank)"
@@ -349,9 +357,15 @@
 - name: "[Ollama] Compare the running daemon against the installed keg"
   ansible.builtin.shell: |
     set -o pipefail
-    keg="{{ _ollama_keg.stdout | default('') | trim }}"
+    keg="{{ ollama_linked_keg | default('') }}"
     srv=$(ollama --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-    [ -n "$keg" ] && [ "$keg" = "$srv" ] && echo "same keg=$keg" || echo "drift keg=$keg srv=$srv"
+    if [ -z "$keg" ]; then
+      echo "unread keg srv=${srv:-none}"
+    elif [ "$keg" = "$srv" ]; then
+      echo "same keg=$keg"
+    else
+      echo "drift keg=$keg srv=$srv"
+    fi
   args:
     executable: /bin/bash
   register: _ollama_drift
@@ -382,10 +396,15 @@
 - name: "[Ollama] Re-compare keg and daemon after the reload"
   ansible.builtin.shell: |
     set -o pipefail
-    keg="{{ _ollama_keg.stdout | default('') | trim }}"
+    keg="{{ ollama_linked_keg | default('') }}"
+    if [ -z "$keg" ]; then
+      srv=$(ollama --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+      echo "unread keg srv=${srv:-none}"
+      exit 0
+    fi
     for i in $(seq 1 15); do
       srv=$(ollama --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-      if [ -n "$keg" ] && [ "$keg" = "$srv" ]; then echo "same keg=$keg"; exit 0; fi
+      if [ "$keg" = "$srv" ]; then echo "same keg=$keg"; exit 0; fi
       sleep 2
     done
     echo "drift keg=$keg srv=${srv:-none}"
@@ -436,7 +455,7 @@
     msg: |
       ollama_version is {{ ollama_version }} but the daemon reports
       {{ _ollama_ver_after.stdout | default('?') | trim }}
-      (linked keg {{ _ollama_keg.stdout | default('?') | trim }}).
+      (linked keg {{ ollama_linked_keg | default('?') }}).
       The pin decides; do not edit the record to follow brew. If the pin
       keg is missing, restore it. Advancing the pin is
       `tools/brew-pin-status.py` plus a commit.
