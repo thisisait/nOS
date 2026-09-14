@@ -208,8 +208,13 @@ class TestRenderManifestEndToEnd:
         # Parser after edit — operator replaces TODO sentinels with valid
         # values; the parser must accept (no exception, returns dict).
         text = out_path.read_text()
-        text = text.replace('legal_basis: "TODO"',
-                            'legal_basis: "legitimate_interests"')
+        text = text.replace(
+            'legal_basis: "TODO"',
+            'legal_basis: "legitimate_interests"\n'
+            '  balancing_test: >-\n'
+            '    Operator fixture: estate-local app, no marketing, erasable.\n'
+            '  data_source: from_subject',
+        )
         text = text.replace('- "TODO"', '- "ip_address"')
         out_path.write_text(text)
 

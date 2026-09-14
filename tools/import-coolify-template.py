@@ -429,6 +429,10 @@ gdpr:
   #   consent | contract | legal_obligation | vital_interests
   #   public_task | legitimate_interests
   __LEGAL_BASIS_LINE__
+  # Required when legal_basis is legitimate_interests (parser validate()):
+  # balancing_test: >-
+  #   interest, necessity, balancing against the data subject's rights.
+  # data_source: from_subject   # from_subject | not_from_subject
 
   # TODO Categories of personal data PROCESSED (be specific).
   data_categories:

@@ -64,6 +64,7 @@ worse than none, because it reads as complete.
 - `plugin-wiring-report.py` — Plugin wiring report — capability matrix + contract checks.
 - `permission-status.py` — What macOS will and will not let this estate do, in one place.
 - `nos_work_uri.py` — Parse + match the nos-work:// routing address (dtt-routing-address); the planner's capability/assignment matcher.
+- `raw-archive-probe.py` — Does the S3 endpoint honor Object Lock COMPLIANCE, or only accept the headers?
 - `red-status.py` — What is red on this estate right now.
 - `reload-stale-config.py` — Make a running container read the config the estate rendered for it.
 - `stale-config-status.py` — Containers running config the estate has already replaced.
@@ -179,6 +180,7 @@ worse than none, because it reads as complete.
 - `orchestrator-acceptance.py` — The four-item acceptance test every candidate orchestration host must pass.
 - `pin-latest-scan.py` — What is each image pin missing, measured against its registry.
 - `post-blank.sh` — tools/post-blank.sh — operator-facing post-blank verification runner.
+- `preconverge-snapshot.py` — Take the pre-converge Time Machine snapshot that can be taken; refuse to claim the rest.
 - `scan-state-snapshot.py` — Record the nightly scan's output on its own branch, without touching yours.
 - `tofu-authentik-adopt.sh` — tools/tofu-authentik-adopt.sh — ADR-0001 Phase 1 one-time tenant adoption.
 - `tofu-authentik-gen-registry.py` — ADR-0001 Phase 1 — regenerate the OpenTofu Authentik service registry.

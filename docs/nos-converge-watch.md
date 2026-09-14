@@ -1,10 +1,8 @@
 # nos converge watch
 
 Living ledger. After every `nos`, append a **Recap** and revise the backlog.
-Speed backlog waits on `failed=0`. OpenClaw is past. Apex D4 + fail-fast are
-in this tree (`table:device*` withheld; `build.py --check` in pre_tasks).
-Next `nos` from local `dev` should die in seconds if the ruling cannot serve,
-not at stack-up.
+Latest green: **2026-09-14** `p=54800`. OpenClaw pin and apex D4 fail-fast
+held. Speed backlog (S1–S7) is unblocked.
 
 Tracker: dtt `converge-watch` (`nos dtt capture --slug converge-watch --update`).
 This file is the measurements; the row is the claim.
@@ -77,6 +75,34 @@ SLOW this fragment (cask detect did not fire):
 | 26 | tofu-authentik reconcile preflight summary |
 | 20 | homebrew `file:` on `homebrew_brew_bin_path` |
 
+### 2026-09-14 `p=54800` — green (~22 min)
+
+```
+ok=1589 changed=108 unreachable=0 failed=0 skipped=2286
+```
+
+Source: local `dev` @ `6a7b97fd` + uncommitted CI follow-up (Coolify LIA,
+tools README, roadmap index, pytest ratchet). 18:48:36–19:10:19.
+Baseline 13 Sep: `ok=1584 changed=98 skipped=2284` ~21 min.
+
+**Stop:** `green`. Apex preflight `--check` at 18:48:45; later
+`build.py --require-signed` served. OpenClaw keg=daemon=pin 0.34.0.
+nos-smoke **46/46**. Face 302, apex 200.
+
+SLOW (none moved vs last green; cask detect did not fire):
+
+| s | task |
+|---|---|
+| 147 | health-wait leftover includes (wave-2 tick 2) — S2; 13 Sep was 146 s |
+| 113 | Bone HMAC self-test (fourth consecutive) — S3 |
+| 34 | apps_runner `docker manifest inspect` — S7 |
+| 31 | restic repo initialized — S7 |
+| 28 | apps health-wait leftover tick 0 — S2 |
+| 27 | tofu-authentik reconcile preflight |
+| 27 | mcp_gateway token verify — S7 |
+| 23 | Wing GDPR upsert — S7 |
+| 21 | keap caddy-sessions slug scan |
+
 ---
 
 ## Backlog — after green
@@ -84,34 +110,34 @@ SLOW this fragment (cask detect did not fire):
 Ranked. Next pass is measurements, then the smallest structural cut that
 removes a row, not a pile of micro-edits.
 
-### S1. Ollama recorder fails the run it updates
+### S1. Ollama pin decides — cut in tree 2026-09-14
 
-`state: latest` moves the keg; the pin is a record; the record then refuses.
-Every Homebrew ollama release costs exactly one converge. Either the pin
-**decides** (drop `latest`, install the recorded version) or the record
-**follows** (write the keg back, do not fail). What cannot hold is a recorder
-that fails for being out of date — already named on the `ollama_version` line.
+Install was already `present` (2026-08-27). p=11902 failed because brew had
+linked 0.34.0 outside the run while 0.33.3 was still in the cellar, and the
+refuse said re-pin. Cut: Homebrew Keg API links the pin keg; refuse only if
+that cannot. Gate `test_ollama_pin_decides.py`. Next `nos` is the reader —
+fires when linked keg ≠ pin.
 
-### S2. Health-wait always iterates the full tick budget
+### S2. Health-wait leftover includes — cut in tree 2026-09-14
 
-`tasks/stacks/wait-stacks-healthy.yml`: `when:` on looped `include_tasks` does
-not short-circuit. Inner `not _wait_done` skips probe/sleep; Ansible still
-pays ~80 empty includes per wait (`stack_up_wait_timeout` 1200 → tick N/80).
-This run: ~20 s after observability ALL_READY on tick 0. 13 Sep: 146 s on
-"Record tick 2". Cheapest cut: one task `until: ALL_READY` + `retries`/`delay`,
-or `--wait` on `stack-health-probe.py`. Heartbeat can stay.
+Looped `include_tasks` never short-circuits. Cut: `health-tick.yml`
+re-includes itself while `not _wait_done`. Gate: a ready tick does not
+schedule the rest of the budget. Next `nos` is the reader (p=54800: 147 s
+after wave-2 ALL_READY).
 
-### S3. Bone HMAC self-test = 113 s three times
+### S3. Bone HMAC 113 s was plugin-loader vars — cut in tree 2026-09-14
 
-`roles/pazny.bone/files/hmac_selftest.py` has HTTP timeout 5 s. 113 s is
-Bone/launchd (or the become/python wrap), not HMAC. Measure; reload already
-only on `DESYNC`.
+`hmac_selftest.py` is 0.13 s. The 112.7 s was eager-finalize of live `vars`
+on `nos_plugin_loader` post_compose. Cut: snapshot `nos_plugin_ctx` before
+compose registers bloat it; every loader passes that fact. Gate
+`test_plugin_loader_ctx_is_a_snapshot.py`. Next `nos` is the reader (gap
+between bone post and post_compose).
 
-### S4. Detect running cask apps = 55 s
+### S4. Detect running cask apps — cut in tree 2026-09-14
 
-Per-cask `brew info --cask --json=v2`. One batched `brew info --cask --json=v2
-cask1 cask2 …`. Escape hatch: `homebrew_cask_auto_upgrade: false` in
-`config.yml` for a doctrine-only converge.
+One `brew info --cask --json=v2` for the outdated list, then pgrep. Gate
+`test_cask_detect_is_one_brew_info.py`. Did not fire on p=54800; next `nos`
+with outdated casks is the reader.
 
 ### S5. Global `become = True` + `interpreter_python = auto`
 
@@ -126,19 +152,14 @@ still hit the ollama gate).
 
 ### S7. Smaller
 
-- `docker manifest inspect` sequential (~33 s last green) — local `image inspect` first.
+- `docker manifest inspect` sequential — cut: local `image inspect` first
+  (`test_apps_image_probe_asks_local_first.py`). Next `nos` is the reader.
 - restic "is repo initialized" ~31 s.
 - mcp_gateway token verify ~27 s.
 - keap seed-slug scan ~22 s.
 - Wing GDPR upsert ~22 s.
 - `~/.nos/ansible.log` ~250 MB, no rotation.
 
-Parked until S1–S3 have a builder: do not start a speed epic mid-red.
-
-### S0. Apex D4 must fail in pre_tasks, not at stack-up
-
-Measured p=69097: Ansible `REFUSE unsigned` said SIGNED; `build.py` then
-exit 2 on UNRULED `table:device` / `table:device-extraction`. Those gates
-now run as `build.py --require-signed --check` right after `config.yml` is
-loaded. The two tables are withheld like every other `table:` node
-(published set unchanged; re-sign via `tools/apex-sign.py` when you read it).
+S0 closed on `p=54800`. Pairing registry `table:device-client` landed
+withheld (SYSTEM 23→24). Re-sign via `tools/apex-sign.py` when the operator
+reads the withheld `table:device*` set.

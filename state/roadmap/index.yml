@@ -6,6 +6,9 @@
 - slug: accounting-knowledge-graph
   parent: digest
   track: cortex
+- slug: actor-attribution
+  parent: state-surface
+  track: platform
 - slug: agent-scope-single-authority
   parent: ''
   track: platform
@@ -36,6 +39,9 @@
 - slug: authentik-blueprint-readers
   parent: ''
   track: platform
+- slug: authentik-device-flow
+  parent: device-organ
+  track: platform
 - slug: backup-drill-keap-db
   parent: ''
   track: platform
@@ -60,6 +66,36 @@
 - slug: cc-tui-variants
   parent: cc-app
   track: face
+- slug: compose-hardening
+  parent: sec
+  track: security
+- slug: converge-become
+  parent: converge-speed
+  track: platform
+- slug: converge-cask-detect
+  parent: converge-speed
+  track: platform
+- slug: converge-health-wait
+  parent: converge-speed
+  track: platform
+- slug: converge-hmac-selftest
+  parent: converge-speed
+  track: platform
+- slug: converge-host-skip
+  parent: converge-speed
+  track: platform
+- slug: converge-plugin-vars
+  parent: converge-speed
+  track: platform
+- slug: converge-small-cuts
+  parent: converge-speed
+  track: platform
+- slug: converge-speed
+  parent: plat
+  track: platform
+- slug: converge-watch
+  parent: converge-speed
+  track: platform
 - slug: cortex
   parent: ''
   track: cortex
@@ -93,6 +129,48 @@
 - slug: cortex-vendor-staleness
   parent: ''
   track: cortex
+- slug: device-channel-http
+  parent: device-channels
+  track: platform
+- slug: device-channel-mqtt
+  parent: device-channels
+  track: platform
+- slug: device-channel-sse
+  parent: device-channels
+  track: platform
+- slug: device-channel-upload
+  parent: device-channels
+  track: platform
+- slug: device-channel-websocket
+  parent: device-channels
+  track: platform
+- slug: device-channels
+  parent: device-organ
+  track: platform
+- slug: device-gateway-role
+  parent: device-organ
+  track: platform
+- slug: device-gdpr-art30
+  parent: device-organ
+  track: security
+- slug: device-manifest
+  parent: device-organ
+  track: platform
+- slug: device-organ
+  parent: ''
+  track: platform
+- slug: device-pairing
+  parent: device-organ
+  track: platform
+- slug: device-scopes
+  parent: device-organ
+  track: platform
+- slug: device-user-mgmt
+  parent: device-organ
+  track: face
+- slug: devices-table
+  parent: device-organ
+  track: platform
 - slug: digest
   parent: ''
   track: digest
@@ -303,6 +381,15 @@
 - slug: gdpr-importer-register
   parent: digest
   track: digest
+- slug: genome-codegen-targets
+  parent: v0-10-genome
+  track: cortex
+- slug: handheld-dtt-sso-client
+  parent: device-organ
+  track: face
+- slug: idea-surface-absorb
+  parent: ''
+  track: platform
 - slug: importer-isdoc
   parent: digest
   track: platform
@@ -435,6 +522,9 @@
 - slug: loop-verdict-vacuity
   parent: ''
   track: agents
+- slug: managed-resources-manifest
+  parent: plat
+  track: platform
 - slug: moderation-drain-loop
   parent: ''
   track: cortex
@@ -525,6 +615,9 @@
 - slug: party-review-rung
   parent: digest
   track: digest
+- slug: pg-cutover
+  parent: plat
+  track: platform
 - slug: planes
   parent: ''
   track: agents
@@ -559,7 +652,7 @@
   parent: ''
   track: platform
 - slug: plat-brew-lag
-  parent: plat
+  parent: converge-speed
   track: platform
 - slug: plat-defaults-derive
   parent: plat-organ-identity
@@ -633,6 +726,9 @@
 - slug: repos-importer
   parent: digest
   track: digest
+- slug: scan-output-off-deploy-tree
+  parent: plat-deploy-sync
+  track: security
 - slug: sec
   parent: ''
   track: security
@@ -723,6 +819,36 @@
 - slug: spine-tools-vs-cli-refusal
   parent: w-agentkit-spine
   track: agents
+- slug: ssot-article-schema
+  parent: wave-small-ssot
+  track: platform
+- slug: ssot-index
+  parent: wave-small-ssot
+  track: platform
+- slug: ssot-organs-genome
+  parent: wave-small-ssot
+  track: platform
+- slug: ssot-recite-doctrine
+  parent: wave-small-ssot
+  track: platform
+- slug: ssot-repair-companion-headings
+  parent: wave-small-ssot
+  track: platform
+- slug: ssot-retrieval-benchmark
+  parent: ssot-index
+  track: agents
+- slug: ssot-systems-cite
+  parent: ssot-index
+  track: platform
+- slug: ssot-tenant-prefix
+  parent: wave-small-ssot
+  track: platform
+- slug: ssot-vector
+  parent: wave-small-ssot
+  track: cortex
+- slug: state-surface
+  parent: sere
+  track: agents
 - slug: tables
   parent: ''
   track: cortex
@@ -798,6 +924,9 @@
 - slug: w-vocab
   parent: rel-011
   track: cortex
+- slug: wave-small-ssot
+  parent: dtt
+  track: platform
 - slug: web-apex-rethink
   parent: ''
   track: platform
