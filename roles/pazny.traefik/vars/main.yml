@@ -233,6 +233,7 @@ traefik_auth_none_justification:
 traefik_skip_ids:
   - bone             # Bone is on host; published only on 127.0.0.1; reach via Wing UI
   - cortex           # Reasoning organ: pure loopback by design (no route unless explicitly opted in)
+  - device_gateway   # Device BFF: loopback until RFC 8628; authentik@file is the wrong gate
   # REM-144 (CRITICAL, 2026-07-30) + REM-194 (HIGH, 2026-08-12): Traefik's own
   # dashboard/API. The manifest gives this id domain_var + port_var, so the
   # auto-loop would derive a websecure router whose upstream is the Docker

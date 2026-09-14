@@ -2269,6 +2269,14 @@
         - ansible_os_family == 'Darwin'
       tags: ['hermes', 'ai', 'agent']
 
+    # Device gateway BFF — loopback GET allowlist. Default-OFF. No Traefik
+    # (skip_ids, bone/cortex pattern). Plugin + Art-30 wait on the operator.
+    - name: "Device gateway (pazny.device_gateway role)"
+      ansible.builtin.import_role:
+        name: pazny.device_gateway
+      when: install_device_gateway | default(false)
+      tags: ['device-gateway', 'ai']
+
     # ──────────────────────────────────────────────────────────────────────────
     # OpenCode - AI coding TUI (sst.dev) with local Ollama provider
     # Alternative to Claude Code / Cursor, but open-source and local.

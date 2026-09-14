@@ -266,9 +266,10 @@ organs:
   voice:     { title: "The Voice",     tells: "Mail, calls and signals, spoken from home.",   limb: right, order: 4 }
 
 # -----------------------------------------------------------------------------
-# NODE RULINGS — all 275 nodes the artifact carries today. 63 atoms
-# publish; 212 nodes are withheld. Counted 2026-09-14 (was 251/188 in the
-# prose while the table had already grown). +3 table:device* this wave.
+# NODE RULINGS — all 277 nodes the artifact carries today. 63 atoms
+# publish; 214 nodes are withheld. Counted 2026-09-14 (was 251/188 in the
+# prose while the table had already grown). +3 table:device* then
+# +service:device_gateway + daemon this wave.
 # For a published atom, the `speaks:` phrase is the ONLY text that leaves
 # for that node — read each one as the sentence a stranger will see.
 # -----------------------------------------------------------------------------
@@ -336,6 +337,10 @@ nodes:
 
   "service:openclaw":      { publish: wits, speaks: "an autonomous hand that does the night work" }
   "service:hermes":        { publish: wits, speaks: "a messenger mind that meets you on any channel" }
+  # Device BFF. WITHHELD until the operator authors a speaks: sentence — a
+  # public claim about a household device organ is theirs to sign. Loopback
+  # this slice; published set unchanged.
+  "service:device_gateway": withheld
   "service:opencode":      { publish: wits, speaks: "a mind that writes code beside you" }
   "service:open_webui":    { publish: wits, speaks: "a chat room with the house's own models" }
   "service:mcp_gateway":   { publish: wits, speaks: "one socket where minds plug into tools" }
@@ -517,6 +522,7 @@ nodes:
   "daemon:eu.thisisait.nos.cortex": withheld
   "daemon:eu.thisisait.nos.heartbeat": withheld
   "daemon:eu.thisisait.nos.hermes": withheld
+  "daemon:eu.thisisait.nos.device-gateway": withheld
   "daemon:eu.thisisait.nos.pulse": withheld
   "daemon:eu.thisisait.nos.resume": withheld
   "daemon:eu.thisisait.nos.wing": withheld

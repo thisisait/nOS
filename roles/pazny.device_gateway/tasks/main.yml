@@ -1,0 +1,45 @@
+---
+# pazny.device_gateway — loopback BFF. import_role is gated on
+# install_device_gateway (default false), so this file is a no-op on stock
+# converges. Launchd only this slice; Linux systemd waits on Art-30.
+
+- name: "[pazny.device_gateway] Ensure log directory exists"
+  ansible.builtin.file:
+    path: "{{ device_gateway_log_dir }}"
+    state: directory
+    mode: '0755'
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[pazny.device_gateway] Render launchd plist"
+  ansible.builtin.template:
+    src: device-gateway.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ device_gateway_launchd_label }}.plist"
+    mode: '0600'
+  register: _device_gateway_plist
+  notify: Restart device-gateway
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[pazny.device_gateway] Bootstrap launchd job (idempotent)"
+  ansible.builtin.shell: |
+    set -e
+    PLIST=~/Library/LaunchAgents/{{ device_gateway_launchd_label }}.plist
+    UID_NUM=$(id -u)
+    PLIST_CHANGED={{ 'yes' if (_device_gateway_plist is defined and _device_gateway_plist is changed) else 'no' }}
+    if launchctl print "gui/${UID_NUM}/{{ device_gateway_launchd_label }}" >/dev/null 2>&1; then
+      if [ "$PLIST_CHANGED" = "yes" ]; then
+        launchctl bootout "gui/${UID_NUM}/{{ device_gateway_launchd_label }}" 2>/dev/null || true
+        sleep 1
+        launchctl bootstrap "gui/${UID_NUM}" "$PLIST" || echo "BOOTSTRAP-FAILED rc=$?"
+        echo "reloaded"
+      else
+        echo "already-loaded"
+      fi
+    else
+      launchctl bootstrap gui/${UID_NUM} "$PLIST"
+      echo "bootstrapped"
+    fi
+  register: _device_gateway_bootstrap
+  changed_when: >-
+    'bootstrapped' in _device_gateway_bootstrap.stdout
+    or 'reloaded' in _device_gateway_bootstrap.stdout
+  when: (nos_service_manager | default('launchd')) == 'launchd'

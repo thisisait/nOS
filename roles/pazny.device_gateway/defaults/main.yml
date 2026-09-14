@@ -1,0 +1,16 @@
+---
+# pazny.device_gateway — loopback BFF for handheld / phone / wearable clients.
+#
+# Default-OFF (install_device_gateway). Sibling of Hermes as a host launchd
+# daemon, but Traefik is skipped (bone/cortex pattern): a device has no
+# browser session, so authentik@file is the wrong gate. Shared bearer until
+# authentik-device-flow (RFC 8628). No plugin this slice — Art-30 is an
+# operator question (device-gdpr-art30), not an invented legal_basis.
+
+device_gateway_port: 8770
+device_gateway_domain: "device{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+device_gateway_launchd_label: "eu.thisisait.nos.device-gateway"
+device_gateway_src: "{{ playbook_dir }}/files/anatomy/device-gateway/gateway.py"
+device_gateway_log_dir: "{{ ansible_facts['env']['HOME'] }}/device-gateway/log"
+device_gateway_python: /usr/bin/python3
+device_gateway_keap_url: "http://127.0.0.1:{{ keap_port | default(8091) }}/agent/v1"

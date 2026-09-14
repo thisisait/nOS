@@ -109,11 +109,20 @@
   no_log: true   # Bearer keap_agent_token_rw in header
   changed_when: false
   failed_when: false
+  # caddy-sessions is seeded with no rows on purpose. GET of the live chat
+  # ledger was ~21s (p=54800) to compute a WHERE-guard nobody used.
+  when: (_face_tbl.rows | default([]) | length) > 0
 
 - name: "[pazny.keap] Compute already-seeded row slugs for {{ _face_tbl.slug }}"
   ansible.builtin.set_fact:
     _face_existing_row_slugs: >-
       {{ ((_face_rows_probe.json | default({})).rows | default([])) | map(attribute='slug') | list }}
+  when: (_face_tbl.rows | default([]) | length) > 0
+
+- name: "[pazny.keap] No row WHERE-guard when {{ _face_tbl.slug }} seeds nothing"
+  ansible.builtin.set_fact:
+    _face_existing_row_slugs: []
+  when: (_face_tbl.rows | default([]) | length) == 0
 
 - name: "[pazny.keap] Upsert MISSING system rows into {{ _face_tbl.slug }}"
   ansible.builtin.uri:
@@ -134,5 +143,6 @@
   # Only attempt rows once the table is reachable (probe 200 = pre-existing, or
   # we just created it). Skip the missing-route case entirely.
   when:
-    - item.slug not in _face_existing_row_slugs
+    - (_face_tbl.rows | default([]) | length) > 0
+    - item.slug not in (_face_existing_row_slugs | default([]))
     - (_face_tbl_probe.status | default(0) == 200) or (_face_tbl_create.status | default(0) in [200, 201])

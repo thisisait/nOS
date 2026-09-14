@@ -849,6 +849,19 @@ services:
     domain_var: hermes_domain
     port_var: hermes_web_port
 
+  - id: device_gateway
+    category: agent
+    stack: null
+    install_flag: install_device_gateway
+    version_source: launchd
+    launchd_label: "eu.thisisait.nos.device-gateway"
+    domain_var: device_gateway_domain
+    port_var: device_gateway_port
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ device_gateway_port }}/health"
+      expect_status: 200
+
   - id: opencode
     category: ai
     stack: null

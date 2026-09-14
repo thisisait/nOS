@@ -58,20 +58,36 @@
     mode: '0644'
 
 - name: "[Backup] Check if restic repo is initialized"
-  ansible.builtin.command: restic -r {{ restic_repo }} snapshots
+  # `snapshots` lists every snapshot (~31s on p=54800). `cat config` reads
+  # the one small file that exists iff the repo is initialized.
+  ansible.builtin.command: restic -r {{ restic_repo }} cat config
   environment:
     RESTIC_PASSWORD: "{{ restic_password }}"
   register: restic_repo_check
   changed_when: false
   failed_when: false
 
+- name: "[Backup] Fail if restic password does not match an existing repo"
+  ansible.builtin.fail:
+    msg: >-
+      restic cat config failed with wrong password for {{ restic_repo }} —
+      the repo is initialized; refusing restic init. Fix restic_password.
+  when: >-
+    restic_repo_check.rc != 0
+    and ('wrong password' in (restic_repo_check.stderr | default('') | lower))
+
 - name: "[Backup] Initialize restic repo"
   ansible.builtin.command: restic init -r {{ restic_repo }}
   environment:
     RESTIC_PASSWORD: "{{ restic_password }}"
-  when: restic_repo_check.rc != 0
+  # Uninitialized → rc!=0, no "wrong password". Wrong password is also rc!=0
+  # (`cat config` decrypts the key); init would then no-op on "already exists"
+  # and the backup would fail later. Refuse here.
+  when: >-
+    restic_repo_check.rc != 0
+    and ('wrong password' not in (restic_repo_check.stderr | default('') | lower))
   register: _restic_init
-  # Idempotent: the check (restic snapshots) can return non-zero on a transient
+  # Idempotent: the check (restic cat config) can return non-zero on a transient
   # / lock / external-volume hiccup even when the repo IS initialized; restic
   # init then errors "config file already exists" — benign. Tolerate that;
   # surface anything else (TCC 'operation not permitted' on an external volume,

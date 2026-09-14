@@ -80,3 +80,16 @@ def test_yes_redirects_stdin_and_emits(tmp_path):
     for tok in ("remove=data", "confirm=true", "assume_yes=true",
                 "nos_sudo_password="):
         assert tok in r.stdout, f"-y execution did not pass {tok}"
+
+
+def test_print_cmd_does_not_rotate_under_home_isolation(tmp_path):
+    logdir = tmp_path / ".nos"
+    logdir.mkdir()
+    log = logdir / "ansible.log"
+    log.write_text("untouched\n")
+    env = dict(os.environ, HOME=str(tmp_path), NOS_SRC=str(REPO),
+               NOS_ANSIBLE_LOG_MAX="1")
+    r = _run("--print-cmd", env=env)
+    assert r.returncode == 0, r.stderr
+    assert log.read_text() == "untouched\n"
+    assert not (logdir / "ansible.log.1").exists()

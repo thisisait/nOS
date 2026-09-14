@@ -222,6 +222,22 @@ if [ "$PRINT_CMD" -eq 1 ]; then
   exit 0
 fi
 
+# Rotate the previous run's log BEFORE ansible opens it. ansible.cfg
+# log_path appends for the whole play; truncating mid-run would eat the
+# recap this run is writing. p=54800 left ~/.nos/ansible.log ~250 MB.
+# One rotated copy. Ansible recreates the live file; the playbook pins 0600.
+# After --print-cmd's exit above, so a dry print never touches the log.
+# NOS_ANSIBLE_LOG_MAX is bytes (tests); default 50 MiB.
+_NOS_LOG="${HOME}/.nos/ansible.log"
+_NOS_LOG_MAX="${NOS_ANSIBLE_LOG_MAX:-52428800}"
+if [ -f "$_NOS_LOG" ]; then
+  _nos_log_sz=$(stat -f%z "$_NOS_LOG" 2>/dev/null || stat -c%s "$_NOS_LOG" 2>/dev/null || echo 0)
+  if [ "${_nos_log_sz:-0}" -gt "$_NOS_LOG_MAX" ]; then
+    mv "$_NOS_LOG" "${_NOS_LOG}.1"
+    chmod 600 "${_NOS_LOG}.1" 2>/dev/null || true
+  fi
+fi
+
 cd "$NOS_SRC"
 if [ "$YES" -eq 1 ]; then
   exec "${ARGS[@]}" </dev/null

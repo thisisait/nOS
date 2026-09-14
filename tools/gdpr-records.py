@@ -4,7 +4,7 @@ the human DPA register).
 
 `roles/pazny.wing/tasks/post.yml` runs this to ingest the per-plugin `gdpr:`
 blocks into Wing's live `gdpr_processing` table — one `php bin/upsert-gdpr.php
---id=svc_<name>` per record — giving the `/gdpr` UI parity with the static
+--json=-` over the whole array — giving the `/gdpr` UI parity with the static
 `state/dpa-register.md`. Both surfaces share the canonical mapper in
 `files/anatomy/module_utils/nos_gdpr.py`, so they never diverge.
 

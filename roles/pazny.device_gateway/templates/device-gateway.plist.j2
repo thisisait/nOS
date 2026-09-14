@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ device_gateway_launchd_label }}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ device_gateway_python }}</string>
+        <string>{{ device_gateway_src }}</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>{{ playbook_dir }}/files/anatomy/device-gateway</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>{{ ansible_facts['env']['HOME'] }}</string>
+        <key>PATH</key>
+        <string>{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>GATEWAY_PORT</key>
+        <string>{{ device_gateway_port }}</string>
+        <key>GATEWAY_TOKEN</key>
+        <string>{{ device_gateway_token }}</string>
+        <key>KEAP_AGENT_URL</key>
+        <string>{{ device_gateway_keap_url }}</string>
+        <key>KEAP_AGENT_TOKEN_RO</key>
+        <string>{{ keap_agent_token_ro | default('') }}</string>
+        <key>NOS_SRC</key>
+        <string>{{ nos_main_checkout | default(playbook_dir) }}</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+    <key>StandardOutPath</key>
+    <string>{{ device_gateway_log_dir }}/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{ device_gateway_log_dir }}/launchd.err.log</string>
+</dict>
+</plist>

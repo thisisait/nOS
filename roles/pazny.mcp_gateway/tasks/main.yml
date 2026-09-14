@@ -15,6 +15,35 @@
     - "{{ mcpo_data_dir }}"
     - "{{ mcpo_data_dir }}/data"
 
+# The Grafana SA token is minted once in post.yml and persisted. Reading it
+# here means the compose render already carries it, so stack-up does not
+# recreate mcp-grafana from `placeholder-set-in-post` and post.yml does not
+# mint-a-token / sed / restart every converge (~27s verify on p=54800).
+- name: "[pazny.mcp_gateway] Look for a persisted Grafana SA token"
+  ansible.builtin.stat:
+    path: "{{ mcpo_data_dir }}/.grafana_sa_token"
+  register: _mcp_grafana_tok_stat
+  when: mcp_enable_grafana | default(true)
+
+- name: "[pazny.mcp_gateway] Read the persisted Grafana SA token"
+  ansible.builtin.slurp:
+    src: "{{ mcpo_data_dir }}/.grafana_sa_token"
+  register: _mcp_grafana_tok_file
+  # Slurp fails the role if the file is absent. `stat.exists | default(false)`
+  # also errors when the stat task itself was skipped (`stat` is missing on
+  # the skipped register, and default() does not catch a missing attr).
+  when: >-
+    (mcp_enable_grafana | default(true))
+    and ((_mcp_grafana_tok_stat.stat | default({})).exists | default(false))
+
+- name: "[pazny.mcp_gateway] Prefer the persisted Grafana SA token in the render"
+  ansible.builtin.set_fact:
+    mcp_grafana_sa_token: "{{ _mcp_grafana_tok_file.content | b64decode | trim }}"
+  when: >-
+    (mcp_enable_grafana | default(true))
+    and (_mcp_grafana_tok_file is not skipped)
+    and (_mcp_grafana_tok_file.content | default('') | length > 0)
+
 - name: "[pazny.mcp_gateway] Render mcpo config.json"
   ansible.builtin.template:
     src: mcpo-config.json.j2

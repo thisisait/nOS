@@ -74,58 +74,115 @@
       (_grafana_sa_search.json.serviceAccounts | default([]) | selectattr('name', 'equalto', 'mcp-gateway') | list | first).id | default(0))) | int }}"
   when: mcp_enable_grafana | default(true)
 
+- name: "[mcp_gateway Post] Look for a persisted Grafana SA token"
+  ansible.builtin.stat:
+    path: "{{ mcpo_data_dir }}/.grafana_sa_token"
+  register: _mcp_grafana_tok_stat
+  when: mcp_enable_grafana | default(true)
+
+# Grafana returns the token secret ONCE at POST. If the persist file is gone
+# but a token named mcpo-token still exists, a second POST is 409 with no key
+# — silent, and the compose keep the placeholder. Delete the named leftover
+# first; GET never returns the secret.
+- name: "[mcp_gateway Post] List Grafana SA tokens (only when the persist file is gone)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ grafana_port | default(3000) }}/api/serviceaccounts/{{ _grafana_sa_id }}/tokens"
+    method: GET
+    user: "{{ grafana_admin_user | default('admin') }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: true
+    status_code: [200]
+    timeout: 10
+  register: _grafana_tok_list
+  failed_when: false
+  no_log: true
+  when: >-
+    (mcp_enable_grafana | default(true))
+    and ((_grafana_sa_id | default(0) | int) > 0)
+    and not ((_mcp_grafana_tok_stat.stat | default({})).exists | default(false))
+
+- name: "[mcp_gateway Post] Drop leftover Grafana SA token named mcpo-token"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ grafana_port | default(3000) }}/api/serviceaccounts/{{ _grafana_sa_id }}/tokens/{{ item.id }}"
+    method: DELETE
+    user: "{{ grafana_admin_user | default('admin') }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: true
+    status_code: [200, 204, 404]
+    timeout: 10
+  loop: "{{ (_grafana_tok_list.json | default([])) if ((_grafana_tok_list.json | default([])) | type_debug == 'list') else ((_grafana_tok_list.json | default({})).tokens | default([])) }}"
+  loop_control:
+    label: "{{ item.name | default(item.id) }}"
+  failed_when: false
+  no_log: true
+  when:
+    - mcp_enable_grafana | default(true)
+    - _grafana_tok_list is not skipped
+    - (item.name | default('')) == 'mcpo-token'
+
 - name: "[mcp_gateway Post] Create Grafana SA token for mcpo"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ grafana_port | default(3000) }}/api/serviceaccounts/{{ _grafana_sa_id }}/tokens"
     method: POST
     body_format: json
     body:
-      name: "mcpo-token-{{ ansible_date_time.epoch | default(ansible_facts.date_time.epoch) }}"
+      name: "mcpo-token"
     user: "{{ grafana_admin_user | default('admin') }}"
     password: "{{ grafana_admin_password }}"
     force_basic_auth: true
     status_code: [200, 201]
     timeout: 10
   register: _grafana_token
-  changed_when: _grafana_token.status in [200, 201]
+  changed_when: (_grafana_token.status | default(0)) in [200, 201]
   failed_when: false
   no_log: true
-  when:
-    - mcp_enable_grafana | default(true)
-    - (_grafana_sa_id | default(0) | int) > 0
+  when: >-
+    (mcp_enable_grafana | default(true))
+    and ((_grafana_sa_id | default(0) | int) > 0)
+    and not ((_mcp_grafana_tok_stat.stat | default({})).exists | default(false))
+
+- name: "[mcp_gateway Post] Fail if a mint was required but Grafana returned no key"
+  ansible.builtin.fail:
+    msg: >-
+      Grafana SA token file {{ mcpo_data_dir }}/.grafana_sa_token is missing and
+      POST /tokens did not return a key (status={{ _grafana_token.status | default('n/a') }}).
+      A leftover token named mcpo-token is 409; that leftover must be deleted first.
+  when: >-
+    (mcp_enable_grafana | default(true))
+    and ((_grafana_sa_id | default(0) | int) > 0)
+    and not ((_mcp_grafana_tok_stat.stat | default({})).exists | default(false))
+    and (
+      (_grafana_token is skipped)
+      or ((_grafana_token.json | default({})).key | default('') | length == 0)
+    )
 
 - name: "[mcp_gateway Post] Persist Grafana SA token to file (for compose restart)"
   ansible.builtin.copy:
     dest: "{{ mcpo_data_dir }}/.grafana_sa_token"
-    content: "{{ _grafana_token.json.key }}"
+    content: "{{ (_grafana_token.json | default({})).key }}"
     mode: '0600'
-  when:
-    - mcp_enable_grafana | default(true)
-    - _grafana_token.json.key is defined
+  when: >-
+    (mcp_enable_grafana | default(true))
+    and (_grafana_token is not skipped)
+    and ((_grafana_token.json | default({})).key | default('') | length > 0)
 
-# ── 3. Update compose override s Grafana tokenem + restart ───────────────────
+- name: "[mcp_gateway Post] Use the newly minted Grafana SA token in the override"
+  ansible.builtin.set_fact:
+    mcp_grafana_sa_token: "{{ (_grafana_token.json | default({})).key }}"
+  when: >-
+    (mcp_enable_grafana | default(true))
+    and (_grafana_token is not skipped)
+    and ((_grafana_token.json | default({})).key | default('') | length > 0)
 
-- name: "[mcp_gateway Post] Update mcp-grafana env with real token"
-  # noqa: risky-shell-pipe — the | characters in the sed command are
-  # regex delimiters (s|FOO|BAR|g), not shell pipes; ansible-lint's
-  # rule is conservative and matches | anywhere in the shell block.
-  # No actual pipe semantics here.
-  ansible.builtin.shell: |
-    set -o pipefail
-    if [ -f "{{ mcpo_data_dir }}/.grafana_sa_token" ]; then
-      token=$(cat "{{ mcpo_data_dir }}/.grafana_sa_token")
-      sed -i.bak "s|GRAFANA_SERVICE_ACCOUNT_TOKEN: \".*\"|GRAFANA_SERVICE_ACCOUNT_TOKEN: \"${token}\"|g" \
-        "{{ stacks_dir }}/iiab/overrides/mcp_gateway.yml"
-      rm -f "{{ stacks_dir }}/iiab/overrides/mcp_gateway.yml.bak"
-      echo "UPDATED"
-    else
-      echo "NO_TOKEN"
-    fi
-  args:
-    executable: /bin/bash
-  register: _mcpo_token_update
-  changed_when: "'UPDATED' in _mcpo_token_update.stdout"
-  when: mcp_enable_grafana | default(true)
+- name: "[mcp_gateway Post] Re-render compose override with the minted token"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/mcp_gateway.yml"
+    mode: '0600'
+  when: >-
+    (mcp_enable_grafana | default(true))
+    and (_grafana_token is not skipped)
+    and (_grafana_token is changed)
 
 - name: "[mcp_gateway Post] Restart mcp-grafana to pick up new token"  # noqa: no-handler
   # Inline (not a handler) because the next task in this file probes
@@ -154,7 +211,10 @@
     executable: /bin/bash
   register: _mcpo_restart
   changed_when: "'Started' in (_mcpo_restart.stdout | default('')) or 'Recreated' in (_mcpo_restart.stdout | default(''))"
-  when: _mcpo_token_update is changed
+  when: >-
+    (mcp_enable_grafana | default(true))
+    and (_grafana_token is not skipped)
+    and (_grafana_token is changed)
 
 - name: "[mcp_gateway Post] Verify the token actually reached the container"
   # Written by a READER, per the doctrine in CLAUDE.md: the step above
@@ -175,9 +235,10 @@
   failed_when: >-
     _mcpo_token_live.rc != 0
     or (_mcpo_token_live.stdout | trim) == 'placeholder-set-in-post'
-  when:
-    - mcp_enable_grafana | default(true)
-    - _mcpo_token_update is changed
+  when: >-
+    (mcp_enable_grafana | default(true))
+    and (_grafana_token is not skipped)
+    and (_grafana_token is changed)
 
 # ── 4. Health check mcpo ──────────────────────────────────────────────────────
 
