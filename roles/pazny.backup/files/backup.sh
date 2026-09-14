@@ -34,8 +34,11 @@ VOLUMES=({% for v in backup_volumes_to_dump %}"{{ v }}" {% endfor %})
 # Host-bind service data dirs (gitea/gitlab repos, etc.) — name|path pairs.
 # These hold filesystem state that NO logical DB dump can reconstruct (git
 # repos, uploads). Tarred whole and restored back to the same host path.
-DIR_NAMES=({% for d in backup_dirs_to_dump %}"{{ d.name }}" {% endfor %})
-DIR_PATHS=({% for d in backup_dirs_to_dump %}"{{ d.path }}" {% endfor %})
+# Skip gitlab* when install_gitlab is off: a leftover datadir still `-d`s
+# true, tar then HIGH-fails the night (2026-09-14 dir-gitlab rc=1). Absent
+# is FAILED; disabled-and-left-behind is not a live source.
+DIR_NAMES=({% for d in backup_dirs_to_dump %}{% if not (d.name in ['gitlab', 'gitlab-config'] and not (install_gitlab | default(false) | bool)) %}"{{ d.name }}" {% endif %}{% endfor %})
+DIR_PATHS=({% for d in backup_dirs_to_dump %}{% if not (d.name in ['gitlab', 'gitlab-config'] and not (install_gitlab | default(false) | bool)) %}"{{ d.path }}" {% endif %}{% endfor %})
 
 # Wing SQLite store (security findings, audit hash-chain, agent sessions) — a
 # host file, NOT a container. Dumped with `sqlite3 .dump` for portability.
