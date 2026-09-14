@@ -133,6 +133,23 @@ Device-gateway launchd rendered and bootstrapped. Loopback `/health` 200.
 `SYSTEM_EN` for slug `device-gateway` (manifest id `device_gateway`). Taxonomy
 refuses filler. Tofu apply had already passed.
 
+### 2026-09-14 `p=13240` — green (~18 min)
+
+```
+ok=1273 changed=106 unreachable=0 failed=0 skipped=719
+```
+
+Source: local `dev` @ `6699b900`. 21:24:00–21:42:16. Baseline 13 Sep
+`ok=1584 skipped=2284` ~21 min; last green `p=54800` `ok=1589 skipped=2286`
+~22 min.
+
+**Stop:** `green`. Keg gate held. Cortex materialise accepted `device-gateway`.
+Device-gateway launchd running. Loopback and `https://device.pazny.eu/health`
+both `{"ok": true}` 200.
+
+ok/skipped dropped vs last green — leftover health-wait includes (S2) are
+the likely missing ticks, not a short play.
+
 ---
 
 ## Backlog — after green
