@@ -266,11 +266,11 @@ organs:
   voice:     { title: "The Voice",     tells: "Mail, calls and signals, spoken from home.",   limb: right, order: 4 }
 
 # -----------------------------------------------------------------------------
-# NODE RULINGS — all 251 nodes the artifact carries today. 63 atoms
-# publish; 188 nodes are withheld. (The prose said 208/145 while the table
-# held 250/187 — counted, not copied, 2026-09-01.) For a published atom, the `speaks:`
-# phrase is the ONLY text that leaves for that node — read each one as the
-# sentence a stranger will see.
+# NODE RULINGS — all 274 nodes the artifact carries today. 63 atoms
+# publish; 211 nodes are withheld. Counted 2026-09-14 (was 251/188 in the
+# prose while the table had already grown). +2 table:device* this wave.
+# For a published atom, the `speaks:` phrase is the ONLY text that leaves
+# for that node — read each one as the sentence a stranger will see.
 # -----------------------------------------------------------------------------
 nodes:
   # --- the core -------------------------------------------------------------
@@ -618,6 +618,12 @@ nodes:
   # so the node left the artifact. It was withheld — nothing that ever left the
   # machine changes. Removal recorded here so the D4 shrink is conscious.
   "table:apps": withheld
+  # Device-check bundle tables (2026-09-14, SSOT/graph wave). WITHHELD like
+  # every table node — a device roster and its extractions are the household's,
+  # never the public front door. Added after the signature; published set
+  # unchanged. awaiting-operator will ask for a routine re-sign.
+  "table:device": withheld
+  "table:device-extraction": withheld
   "table:controls": withheld
   "table:layouts": withheld
   # Q6 loop-config, added 2026-08-29 AFTER the signature. WITHHELD like every

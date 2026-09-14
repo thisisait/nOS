@@ -1,7 +1,10 @@
 # nos converge watch
 
 Living ledger. After every `nos`, append a **Recap** and revise the backlog.
-Do not implement the backlog until a run is `failed=0` past OpenClaw.
+Speed backlog waits on `failed=0`. OpenClaw is past. Apex D4 + fail-fast are
+in this tree (`table:device*` withheld; `build.py --check` in pre_tasks).
+Next `nos` from local `dev` should die in seconds if the ruling cannot serve,
+not at stack-up.
 
 Tracker: dtt `converge-watch` (`nos dtt capture --slug converge-watch --update`).
 This file is the measurements; the row is the claim.
@@ -48,6 +51,32 @@ SLOW this fragment (full profile truncated by the fail):
 | 20 | homebrew `file:` on `homebrew_brew_bin_path` (`changed` every run) |
 | 20 | health-wait leftover `include_tasks` after ALL_READY (infra/observability tick 0/80) |
 
+### 2026-09-14 `p=69097` — failed at apex (~10 min)
+
+```
+ok=759  changed=46  unreachable=0  failed=1  skipped=1239
+```
+
+Source: local `dev` @ `aade9c63` (ollama pin 0.34.0). Host + core + tofu +
+OpenClaw + stack compose-up ran; iiab health-wait / face did not.
+
+**Stop:** `pazny.apex` `build.py --require-signed` rc=2. Ruling itself is
+SIGNED (`apex ruling v1 SIGNED by Pázny`). Gate: UNRULED nodes
+`table:device`, `table:device-extraction` (ruling D4: published set frozen).
+Those two landed in the anatomy graph with the SSOT/device-tables wave; apex
+will refuse until they are ruled or the graph drops them.
+
+**OpenClaw:** pin matched; keg-vs-daemon reload ran; model pull ok. S1 still
+open as the *next* brew bump.
+
+SLOW this fragment (cask detect did not fire):
+
+| s | task |
+|---|---|
+| 113 | Bone HMAC self-test (third consecutive run, same number) |
+| 26 | tofu-authentik reconcile preflight summary |
+| 20 | homebrew `file:` on `homebrew_brew_bin_path` |
+
 ---
 
 ## Backlog — after green
@@ -72,7 +101,7 @@ This run: ~20 s after observability ALL_READY on tick 0. 13 Sep: 146 s on
 "Record tick 2". Cheapest cut: one task `until: ALL_READY` + `retries`/`delay`,
 or `--wait` on `stack-health-probe.py`. Heartbeat can stay.
 
-### S3. Bone HMAC self-test = 113 s twice
+### S3. Bone HMAC self-test = 113 s three times
 
 `roles/pazny.bone/files/hmac_selftest.py` has HTTP timeout 5 s. 113 s is
 Bone/launchd (or the become/python wrap), not HMAC. Measure; reload already
@@ -105,3 +134,11 @@ still hit the ollama gate).
 - `~/.nos/ansible.log` ~250 MB, no rotation.
 
 Parked until S1–S3 have a builder: do not start a speed epic mid-red.
+
+### S0. Apex D4 must fail in pre_tasks, not at stack-up
+
+Measured p=69097: Ansible `REFUSE unsigned` said SIGNED; `build.py` then
+exit 2 on UNRULED `table:device` / `table:device-extraction`. Those gates
+now run as `build.py --require-signed --check` right after `config.yml` is
+loaded. The two tables are withheld like every other `table:` node
+(published set unchanged; re-sign via `tools/apex-sign.py` when you read it).

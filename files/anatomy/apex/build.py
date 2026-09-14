@@ -4,6 +4,9 @@
     python3 files/anatomy/apex/build.py            # writes dist/ (PREVIEW)
     open files/anatomy/apex/dist/index.html        # the operator's preview
 
+    # fail-fast (main.yml pre_tasks) — same gates, nothing written:
+    python3 files/anatomy/apex/build.py --require-signed --check
+
     # the converge path (roles/pazny.apex) — refuses an unsigned ruling:
     python3 files/anatomy/apex/build.py --require-signed --out <web root>
 
@@ -19,6 +22,12 @@ purpose — nothing serves it until the operator signs the ruling and the
 pazny.apex role (which always passes --require-signed) converges it into
 the web root. There is no flag to point this at a different ruling file:
 the gate reads the committed ruling or nothing.
+
+--check runs the same gates (signed + UNRULED/STALE/D4) and writes nothing.
+The 2026-09-14 converge spent ~10 min on the host layer and then died at
+stack-up on two new graph nodes; the Ansible assert only looks at
+status: SIGNED, so a coverage miss is invisible until build.py. Preflight
+calls this so a ruling that cannot serve fails before Homebrew.
 """
 
 from __future__ import annotations
@@ -98,20 +107,29 @@ def build(out_dir: Path = DIST) -> Path:
 
 def main(argv: list[str]) -> int:
     require_signed = False
+    check_only = False
     out_dir = DIST
+    out_set = False
     args = list(argv)
     while args:
         arg = args.pop(0)
         if arg == "--require-signed":
             require_signed = True
+        elif arg == "--check":
+            check_only = True
         elif arg == "--out":
             if not args:
                 print("--out needs a directory", file=sys.stderr)
                 return 2
             out_dir = Path(args.pop(0)).expanduser()
+            out_set = True
         else:
             print(f"unknown argument: {arg!r}", file=sys.stderr)
             return 2
+
+    if check_only and out_set:
+        print("--check writes nothing; do not pass --out", file=sys.stderr)
+        return 2
 
     try:
         if require_signed:
@@ -119,6 +137,15 @@ def main(argv: list[str]) -> int:
     except projection.GateError as exc:
         print(f"SERVING REFUSED — THE RULING IS NOT SIGNED:\n{exc}", file=sys.stderr)
         return 4
+
+    if check_only:
+        try:
+            projection.gate(projection.load_artifact(), projection.load_ruling())
+        except projection.GateError as exc:
+            print(f"BUILD HALTED BY THE RULING GATE:\n{exc}", file=sys.stderr)
+            return 2
+        print("ruling check ok; nothing written.")
+        return 0
 
     try:
         out = build(out_dir)

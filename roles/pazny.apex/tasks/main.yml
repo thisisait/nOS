@@ -15,6 +15,10 @@
 # `docker compose up` would happily serve. Belt and braces: the build script
 # itself re-checks the same signature (`build.py --require-signed`, exit 4),
 # so reordering these tasks cannot silently open the door.
+# Coverage (UNRULED / D4) is the OTHER half of the same script (exit 2) and
+# is NOT this assert — it is `build.py --check` in tasks/preflight-apex-ruling.yml
+# so a miss fails before the host layer (measured 2026-09-14: ~10 min then
+# stack-up on two new table: nodes).
 # Gate: tests/anatomy/test_apex_serving_is_signature_gated.py.
 # ==============================================================================
 
@@ -50,7 +54,8 @@
 
 # Deterministic build (ruling decision D3): byte-identical output for the
 # same repo inputs, so re-running is a no-op in content terms. The script
-# re-verifies the signature itself and exits 4 on an unsigned ruling.
+# re-verifies the signature (exit 4) AND the coverage gate (exit 2) — the
+# preflight already ran both with --check; this write path is the brace.
 - name: "[pazny.apex] Build the public site into the web root (signature re-checked)"
   ansible.builtin.command:
     argv:

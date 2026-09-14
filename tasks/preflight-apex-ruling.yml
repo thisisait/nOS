@@ -1,0 +1,24 @@
+# =============================================================================
+# preflight-apex-ruling.yml — fail the converge BEFORE the host layer if the
+# public apex page cannot be served.
+#
+# WHY THIS IS HERE AND NOT ONLY IN pazny.apex. The role's Ansible assert
+# checks status: SIGNED. The ruling GATE that actually halted the 2026-09-14
+# converge (UNRULED nodes, D4, build.py exit 2) runs inside the build, which
+# is called from stack-up — after Homebrew, npm, pip, Bone HMAC, tofu, OpenClaw.
+# An unsigned ruling or a coverage miss must not cost ten minutes of work that
+# cannot land. Same script, --check, nothing written. Belt still in the role.
+# =============================================================================
+
+- name: "[Preflight] Apex ruling must be able to serve (before the host layer)"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - "{{ playbook_dir }}/files/anatomy/apex/build.py"
+      - "--require-signed"
+      - "--check"
+  register: _apex_ruling_preflight
+  changed_when: false
+  check_mode: false
+  when: install_apex | default(false) | bool
+  tags: ['always', 'preflight', 'apex']

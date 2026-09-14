@@ -238,6 +238,13 @@
         - "{{ playbook_dir }}/config.yml"
       tags: ['always']
 
+    # After config.yml so install_apex is the RESOLVED flag. Before Homebrew.
+    # The Ansible assert in pazny.apex only sees status: SIGNED; this runs the
+    # same build.py gates (unsigned → 4, UNRULED/D4 → 2) with --check so a
+    # ruling that cannot serve fails here, not at stack-up.
+    - import_tasks: tasks/preflight-apex-ruling.yml
+      tags: ['always', 'preflight', 'apex']
+
     # The git ref this converge is deploying FROM, computed once and stamped
     # into the host organs (pazny.bone file, pazny.wing plist env) so their
     # /health can answer `repo != running system` — the doctrine this repo is

@@ -221,6 +221,111 @@ def test_build_script_has_no_ruling_override_flag():
     )
 
 
+def _run_check(apex_dir: pathlib.Path, extra: list[str] | None = None):
+    argv = [sys.executable, str(apex_dir / "build.py"), "--require-signed", "--check"]
+    if extra:
+        argv.extend(extra)
+    return subprocess.run(argv, capture_output=True, text=True, timeout=120)
+
+
+def test_check_writes_nothing_on_a_signed_ruling(mirror, tmp_path):
+    ruling_path = mirror / "ruling.yml"
+    doc = yaml.safe_load(ruling_path.read_text())
+    doc["status"] = "SIGNED"
+    doc["signed_by"] = "Mutation Test Signer"
+    ruling_path.write_text(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True))
+
+    r = _run_check(mirror)
+    assert r.returncode == 0, f"--check must pass a signed complete ruling: {r.stderr}"
+    assert "nothing written" in r.stdout
+    assert not (mirror / "dist").exists()
+    assert not (tmp_path / "www").exists()
+
+
+def test_check_refuses_unsigned_without_writing(mirror):
+    ruling_path = mirror / "ruling.yml"
+    doc = yaml.safe_load(ruling_path.read_text())
+    doc["status"] = "PROPOSED"
+    doc["signed_by"] = None
+    ruling_path.write_text(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True))
+
+    r = _run_check(mirror)
+    assert r.returncode == 4, f"expected exit 4, got {r.returncode}: {r.stderr}"
+    assert "NOT SIGNED" in r.stderr
+    assert not (mirror / "dist").exists()
+
+
+def test_check_unsigned_fails_before_coverage(mirror):
+    """A bad signature must exit 4 even when nodes are also unruled."""
+    ruling_path = mirror / "ruling.yml"
+    doc = yaml.safe_load(ruling_path.read_text())
+    doc["status"] = "PROPOSED"
+    doc["signed_by"] = None
+    ruling_path.write_text(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True))
+
+    graph_path = mirror.parents[2] / "state" / "anatomy-graph.json"
+    original = graph_path.read_text()
+    graph = json.loads(original)
+    graph["nodes"]["table:unruled-fixture"] = {
+        "kind": "table", "source": "fixture", "title": "fixture",
+    }
+    graph_path.write_text(json.dumps(graph))
+    try:
+        r = _run_check(mirror)
+        assert r.returncode == 4, f"expected exit 4 (unsigned), got {r.returncode}: {r.stderr}"
+        assert "NOT SIGNED" in r.stderr
+        assert "UNRULED" not in r.stderr
+    finally:
+        graph_path.write_text(original)
+
+
+def test_check_refuses_unruled_nodes_without_writing(mirror):
+    """The 2026-09-14 miss: SIGNED, but D4 coverage fail — Ansible assert passed."""
+    ruling_path = mirror / "ruling.yml"
+    doc = yaml.safe_load(ruling_path.read_text())
+    doc["status"] = "SIGNED"
+    doc["signed_by"] = "Mutation Test Signer"
+    ruling_path.write_text(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True))
+
+    graph_path = mirror.parents[2] / "state" / "anatomy-graph.json"
+    original = graph_path.read_text()
+    graph = json.loads(original)
+    graph["nodes"]["table:unruled-fixture"] = {
+        "kind": "table", "source": "fixture", "title": "fixture",
+    }
+    graph_path.write_text(json.dumps(graph))
+    try:
+        r = _run_check(mirror)
+        assert r.returncode == 2, f"expected exit 2 (UNRULED), got {r.returncode}: {r.stderr}"
+        assert "UNRULED" in r.stderr
+        assert "table:unruled-fixture" in r.stderr
+        assert not (mirror / "dist").exists()
+    finally:
+        graph_path.write_text(original)
+
+
+def test_check_refuses_out_together():
+    r = subprocess.run(
+        [sys.executable, str(APEX / "build.py"), "--require-signed",
+         "--check", "--out", "/tmp/apex-must-not-write"],
+        capture_output=True, text=True, timeout=30,
+    )
+    assert r.returncode == 2
+    assert "--check" in r.stderr and "--out" in r.stderr
+
+
+def test_preflight_runs_apex_check_after_config_before_homebrew():
+    main = (REPO / "main.yml").read_text()
+    pre = (REPO / "tasks" / "preflight-apex-ruling.yml").read_text()
+    assert "import_tasks: tasks/preflight-apex-ruling.yml" in main
+    assert main.index("import_tasks: tasks/preflight-apex-ruling.yml") < main.index("pazny.mac.homebrew")
+    assert main.index("Include playbook configuration overrides") < main.index(
+        "import_tasks: tasks/preflight-apex-ruling.yml"
+    )
+    assert "--check" in pre and "--require-signed" in pre
+    assert "install_apex" in pre
+
+
 # ---------------------------------------------------------------------------
 # 5. the prepared-but-inert route: manifest, auth mode, pin, read-only serve
 # ---------------------------------------------------------------------------
