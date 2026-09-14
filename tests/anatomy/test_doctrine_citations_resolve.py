@@ -89,44 +89,13 @@ def test_an_external_standard_is_not_a_corpus_miss(tool, resolved):
 
 # ── the live tree ──────────────────────────────────────────────────────────
 
-#: The verified residue. EMPTY since 2026-08-18 — all four findings closed,
-#: and each was closed by naming the truth rather than by widening a rule:
-#:   §205             was a LINE-NUMBER wearing a section's syntax ("the plan
-#:                    §205-209") on the same line as a doc it does not live
-#:                    in. Now cites `docs/sso-autologin-plan.md` item 3 by name.
-#:   two KEAP specs   cross-repo by design. The resolver now has a declared
-#:                    FOREIGN_REPOS table and classes them `resolved-external`,
-#:                    alongside RFCs — a citation into property we do not own
-#:                    is a different KIND of claim, not a broken link
-#:                    (ssot/doctrine/foreign-properties.md).
-#:   REM-088 ×3       a phantom id, never persisted (queue runs 087 -> 093).
-#:                    Declared in PHANTOM_REM_IDS with its evidence and given
-#:                    its own `phantom` class, because documenting a phantom
-#:                    requires writing its id — the first attempt just moved
-#:                    the same three findings four lines up the file.
-#:
-#: An empty set is a strong claim and it may not be defended by loosening the
-#: classifier: `phantom` and `resolved-external` are SEPARATE classes and stay
-#: visible in the tally for exactly that reason. A new residue goes here with
-#: the verification note the old four carried.
-KNOWN_FINDINGS: set[tuple[str, str, str, str]] = {
-    # SURFACED, NOT CREATED, 2026-08-31. `files/anatomy/cortex/server/fs-roots.ts`
-    # opens with KEAP's own line "Doctrine guards (see the mapped-folders spec
-    # §3/§12.2)". That spec is in neither this checkout nor ~/keap/src — KEAP's
-    # docs are not vendored — so §12.2 has never been resolvable here.
-    #
-    # It only became VISIBLE when an `nOS S3 DIFF` marker added a qualified
-    # citation to the same file: with a document now named, the resolver had
-    # something to resolve the file's bare sections against, and §12.2 does not
-    # exist in it. Verified by hand: the cited doc
-    # (docs/archive/cortex-corpus-parallel.md) tops out at §3.3, and grepping
-    # both trees for "12.2" finds no heading anywhere.
-    #
-    # Recorded rather than repaired because the address belongs to KEAP: fixing
-    # it means either vendoring the spec or changing upstream's comment, and
-    # neither is a thing to do from inside a citation gate.
-    ("files/anatomy/cortex/server/fs-roots.ts", "section", "12.2", "wrong"),
-}
+#: Residue lives on the tool (`KNOWN_FINDINGS`) so --file JSON can set lint
+#: without the editor copying tuples. Historical close notes stay here:
+#:   §205             was a LINE-NUMBER wearing a section's syntax
+#:   two KEAP specs   FOREIGN_REPOS → resolved-external
+#:   REM-088 ×3       PHANTOM_REM_IDS → phantom
+#: An empty-looking freeze is still a strong claim: a NEW residue goes on
+#: the tool with the verification note, not by loosening the classifier.
 
 #: Measured 2026-08-06 after the self-referential exclusion: 1061 citations,
 #: 929 resolved, 124 unqualified. The floor sits just under the measurement
@@ -141,17 +110,18 @@ def _live_findings(citations):
             if c.status in ("wrong", "missing-doc", "unknown-id", "moved")}
 
 
-def test_the_residue_is_exactly_the_known_findings(resolved):
+def test_the_residue_is_exactly_the_known_findings(resolved, tool):
     citations, _ = resolved
     live = _live_findings(citations)
-    new = live - KNOWN_FINDINGS
+    known = tool.KNOWN_FINDINGS
+    new = live - known
     assert not new, (
         "NEW unresolvable citations — each is a claim about a paragraph that "
         "does not hold; fix the address or, if it is genuinely a new residue "
         "class, add it HERE with the verification note the others carry:\n  "
         + "\n  ".join(map(str, sorted(new)))
     )
-    repaired = KNOWN_FINDINGS - live
+    repaired = known - live
     assert not repaired, (
         "citations in the frozen residue now resolve — good; remove them from "
         "KNOWN_FINDINGS so the freeze keeps matching reality:\n  "
@@ -159,13 +129,13 @@ def test_the_residue_is_exactly_the_known_findings(resolved):
     )
 
 
-def test_moved_docs_do_not_accumulate(resolved):
+def test_moved_docs_do_not_accumulate(resolved, tool):
     """`moved` auto-resolves against the archive/new home, which makes it easy
     to never repair. Zero today (all seven 2026-08-06 finds were repaired at
     the citing site); a moved citation may exist only as a KNOWN_FINDING."""
     citations, _ = resolved
     moved = [c for c in citations if c.status == "moved"
-             and (c.file, c.shape, c.key, c.status) not in KNOWN_FINDINGS]
+             and (c.file, c.shape, c.key, c.status) not in tool.KNOWN_FINDINGS]
     assert not moved, (
         "citations resolving only via a moved doc — repair the citing "
         "address (a pointer fix, not new law):\n  "

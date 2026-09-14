@@ -49,6 +49,7 @@ split is measurable):
 Usage:
     python3 tools/doctrine-cite.py            # human report, counts + worst offenders
     python3 tools/doctrine-cite.py --json     # full citation dump (stdout)
+    python3 tools/doctrine-cite.py --file REL --json  # one file: {citations: [...]} with excerpt
 
 No repo state is written: the committed artifact of this layer is the
 doctrine nodes in state/anatomy-graph.json (anatomy-graph-gen imports this
@@ -108,7 +109,8 @@ SKIP_FILES = (
 #: the phantom REM-088 verbatim, docstrings carry §-examples. Harvesting
 #: them turns every quoted finding into a live finding of itself, forever.
 SELF_REFERENTIAL = ("tools/doctrine-cite.py",
-                    "tests/anatomy/test_doctrine_citations_resolve.py")
+                    "tests/anatomy/test_doctrine_citations_resolve.py",
+                    "tests/anatomy/test_ssot_cite_provider_agrees.py")
 
 #: The constitution corpus. docs/** includes idea, doctrine, archive,
 #: compliance, hidden_fees — archive membership is what powers the `moved`
@@ -157,6 +159,16 @@ FOREIGN_REPOS = {
 #: a fact with a citation; an undeclared one is a lookup that fails forever.
 PHANTOM_REM_IDS = {
     "REM-088": "never persisted; postgresql pin advanced to 16.14, filed COVERED/CLEAN",
+}
+
+#: Verified residue the gate freezes. Moved here so --file JSON can set
+#: ``lint: false`` without the VS Code wrapper copying the tuples.
+#: EMPTY of invented rows — each entry was verified by hand. See the
+#: historical close notes on tests/anatomy/test_doctrine_citations_resolve.py.
+KNOWN_FINDINGS: set[tuple[str, str, str, str]] = {
+    # SURFACED, NOT CREATED, 2026-08-31. fs-roots.ts cites KEAP's
+    # mapped-folders spec §12.2, which is not in this checkout.
+    ("files/anatomy/cortex/server/fs-roots.ts", "section", "12.2", "wrong"),
 }
 RE_SEC = re.compile(r"\b(SEC-[0-9]{2})\b")
 #: Epic ids only where the surrounding text says anatomy/epic — a bare
@@ -309,6 +321,8 @@ class Citation:
     how: str            # sameline|header|self|registry|none
     status: str = ""    # resolved|moved|wrong|missing-doc|unqualified|unknown-id|phantom
     heading: str = ""   # the target heading text, when resolved
+    col: int = 0        # 0-based start on the citing line (--file JSON)
+    end_col: int = 0    # 0-based end on the citing line (--file JSON)
 
 
 def _iter_harvest_files():
@@ -486,12 +500,14 @@ def harvest_file(f: Path, rel: str, corpus: dict[str, DocIndex]) -> list[Citatio
             for m in RE_SECTION.finditer(line):
                 key = _norm_section(m.group(1))
                 section_keys.append(key)
+                span = {"col": m.start(), "end_col": m.end()}
                 # An external standard is not the constitution: "RFC 6749
                 # §4.4.3" resolves against the IETF, not this repo. Named as
                 # its own shape so the corpus classes stay clean.
                 if re.search(r"RFC\s*\d+\s*$", line[:m.start()]):
                     out.append(Citation(rel, i, "external", f"RFC {key}",
-                                        None, "external", status="resolved-external"))
+                                        None, "external", status="resolved-external",
+                                        **span))
                     continue
 
                 # A citation into a repo we do not own is not a broken link —
@@ -509,7 +525,7 @@ def harvest_file(f: Path, rel: str, corpus: dict[str, DocIndex]) -> list[Citatio
                 if foreign:
                     out.append(Citation(rel, i, "external", f"{foreign} §{key}",
                                         FOREIGN_REPOS[foreign], "foreign-repo",
-                                        status="resolved-external"))
+                                        status="resolved-external", **span))
                     continue
 
                 def _has(d: str) -> bool:
@@ -521,7 +537,8 @@ def harvest_file(f: Path, rel: str, corpus: dict[str, DocIndex]) -> list[Citatio
                     # the citation NAMES its doc; the doc is gone. Carry the
                     # raw path so resolve() can try the archive by basename.
                     out.append(Citation(rel, i, "section", key,
-                                        sameline_missing, "sameline-missing"))
+                                        sameline_missing, "sameline-missing",
+                                        **span))
                     continue
                 elif headers and any(_has(h) for h in headers):
                     doc = next(h for h in headers if _has(h))
@@ -537,16 +554,21 @@ def harvest_file(f: Path, rel: str, corpus: dict[str, DocIndex]) -> list[Citatio
                     doc, how = self_doc, "self"
                 else:
                     doc, how = None, "none"
-                out.append(Citation(rel, i, "section", key, doc, how))
+                out.append(Citation(rel, i, "section", key, doc, how, **span))
             for m in RE_NOS_SOT.finditer(line):
                 frag = m.group(3)
+                span = {"col": m.start(), "end_col": m.end()}
+                path = nos_sot_bytes(m.group(1), m.group(2))
                 if not frag:
+                    # file-only address: link the file, no section hover
+                    out.append(Citation(
+                        rel, i, "section", "", path, "nos-sot",
+                        status="resolved" if path else "unqualified", **span))
                     continue
                 key = _norm_section(frag)
                 if key in section_keys:
                     continue
-                path = nos_sot_bytes(m.group(1), m.group(2))
-                out.append(Citation(rel, i, "section", key, path, "nos-sot"))
+                out.append(Citation(rel, i, "section", key, path, "nos-sot", **span))
             for m in RE_DECISION.finditer(line):
                 out.append(Citation(rel, i, "decision", f"DECISION {m.group(1)}",
                                     None, "registry"))
@@ -683,17 +705,146 @@ def run() -> tuple[list[Citation], dict[str, DocIndex]]:
     return citations, corpus
 
 
+def _in_harvest_roots(rel: str) -> bool:
+    if rel == "main.yml":
+        return True
+    return any(rel == r or rel.startswith(r + "/")
+               for r in HARVEST_ROOTS if r != "main.yml")
+
+
+def cite_lint(c: Citation) -> bool:
+    """False = editor must not diagnose (KNOWN_FINDINGS, skip-list, $ realms)."""
+    if (c.file, c.shape, c.key, c.status) in KNOWN_FINDINGS:
+        return False
+    if c.file in SELF_REFERENTIAL or c.file in SKIP_FILES:
+        return False
+    if c.file.startswith(SKIP_FILES_PREFIX):
+        return False
+    if not _in_harvest_roots(c.file):
+        return False
+    if c.how == "nos-sot" and not c.doc:
+        return False
+    return True
+
+
+def _atx_level(line: str) -> int | None:
+    m = re.match(r"^>?\s*(#{1,6})\s+", line)
+    return len(m.group(1)) if m else None
+
+
+def excerpt_for(doc: str | None, key: str,
+                corpus: dict[str, DocIndex]) -> tuple[int | None, str]:
+    """Heading line + body until the next same-or-higher ATX heading, max 600."""
+    if not doc:
+        return None, ""
+    if not key:
+        return 1, ""
+    path = REPO / doc
+    if not path.is_file():
+        return None, ""
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    current_full: str | None = None
+    current_major: str | None = None
+    hit: int | None = None
+    level: int | None = None
+    for i, line in enumerate(lines):
+        if m := RE_HEAD_NUM.match(line):
+            sec = _norm_section(m.group(1))
+            current_major = sec.split(".")[0]
+            current_full = sec
+            if sec == key:
+                hit, level = i, _atx_level(line) or 1
+                break
+            continue
+        if (m := RE_HEAD_LETTER.match(line)) and current_major is not None:
+            if f"{current_major}{m.group(1)}" == key:
+                hit, level = i, _atx_level(line) or 1
+                break
+            continue
+        if (m := RE_HEAD_DECISION.match(line)) and _norm_section(m.group(1)) == key:
+            hit, level = i, _atx_level(line) or 1
+            break
+        if (m := RE_ITEM_BOLD.match(line)) and current_full is not None \
+                and "." not in current_full:
+            if f"{current_full}.{m.group(1)}" == key:
+                return i + 1, lines[i][:600]
+    if hit is None:
+        return None, ""
+    buf = [lines[hit]]
+    for j in range(hit + 1, len(lines)):
+        lv = _atx_level(lines[j])
+        if lv is not None and level is not None and lv <= level:
+            break
+        buf.append(lines[j])
+    return hit + 1, "\n".join(buf).strip()[:600]
+
+
+def file_cite_row(c: Citation, corpus: dict[str, DocIndex]) -> dict:
+    d = asdict(c)
+    if c.status == "resolved" and c.doc:
+        tl, excerpt = excerpt_for(c.doc, c.key, corpus)
+        d["target_line"] = tl
+        d["excerpt"] = excerpt
+    else:
+        d["target_line"] = None
+        d["excerpt"] = ""
+    d["lint"] = cite_lint(c)
+    return d
+
+
+def _full_json_row(c: Citation) -> dict:
+    """Full-tree --json stays a list of harvest fields; no excerpts."""
+    d = asdict(c)
+    d.pop("col", None)
+    d.pop("end_col", None)
+    return d
+
+
+def harvest_rel(rel: str) -> tuple[list[Citation], dict[str, DocIndex]]:
+    path = (REPO / rel).resolve()
+    repo = REPO.resolve()
+    try:
+        path.relative_to(repo)
+    except ValueError as e:
+        raise ValueError("REL must be inside the repo") from e
+    if not path.is_file():
+        raise FileNotFoundError(rel)
+    posix = path.relative_to(repo).as_posix()
+    corpus = build_corpus()
+    citations = harvest_file(path, posix, corpus)
+    resolve(citations, corpus)
+    return citations, corpus
+
+
 # ── report ─────────────────────────────────────────────────────────────────
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="resolve doctrine citations")
     ap.add_argument("--json", action="store_true", help="dump every citation")
+    ap.add_argument("--file", metavar="REL",
+                    help="harvest one repo-relative path")
     args = ap.parse_args()
+
+    if args.file:
+        try:
+            citations, corpus = harvest_rel(args.file)
+        except (ValueError, FileNotFoundError) as e:
+            print(str(e), file=sys.stderr)
+            return 2
+        if args.json:
+            json.dump({"citations": [file_cite_row(c, corpus) for c in citations]},
+                      sys.stdout, indent=1)
+            return 0
+        for c in citations:
+            print(f"{c.status:11s} {c.file}:{c.line}  {c.shape} {c.key}"
+                  + (f"  ({c.doc})" if c.doc else ""))
+        return 0
+
     citations, corpus = run()
 
     if args.json:
-        json.dump([asdict(c) for c in citations], sys.stdout, indent=1)
+        json.dump([_full_json_row(c) for c in citations], sys.stdout, indent=1)
         return 0
 
     by_status: dict[str, int] = {}

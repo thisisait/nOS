@@ -1,0 +1,14 @@
+{
+  "name": "nos-ssot-cite",
+  "displayName": "nOS SSOT cites",
+  "description": "Hover, go-to, and diagnostics for nos-sot: / § cites via doctrine-cite.py --file",
+  "version": "0.0.1",
+  "publisher": "thisisait",
+  "private": true,
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["workspaceContains:ssot/INDEX.yml"],
+  "main": "./extension.js"
+}

@@ -49,7 +49,7 @@ worse than none, because it reads as complete.
 - `cortex-drift.py` — Compare the vendored cortex organ against the KEAP tree it was cut from.
 - `current-state.py` — The claim board's WRITE side: file/claim/release/progress; a claim is refused unless the match says you are capable.
 - `discovery-scan.py` — Discovery: find two representations of one fact that disagree.
-- `doctrine-cite.py` — Resolve every doctrine citation in the estate — or say exactly which do not.
+- `doctrine-cite.py` — Resolve every doctrine citation in the estate — or say exactly which do not. `--file REL --json` is the editor contract (`tools/ssot-cite-vscode/`).
 - `graph-communities.py` — Computed communities vs the declared `stack`/`layer` axes; prints only the disagreement (docs/adr/0002-graphify-borrowings.md §2).
 - `graph-report.py` — What the anatomy graph's SHAPE implies: god nodes, isolated nodes, and which measured edges cite a file that has moved since.
 - `router-status.py` — The WAN router as a declared estate fact: presence probe + intent from state/router.yml; UNKNOWN when it cannot look.
