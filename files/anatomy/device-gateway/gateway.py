@@ -13,6 +13,7 @@ authentik@file is the wrong gate (no browser).
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 import ssl
@@ -35,6 +36,7 @@ ALLOWLIST = {
 BIND = "127.0.0.1"
 PORT = int(os.environ.get("GATEWAY_PORT", "8770"))
 TOKEN = os.environ.get("GATEWAY_TOKEN", "")
+CLIENT_ID = "nos-device-gateway"
 # Host→Authentik: loopback HTTP (published authentik_port). Never derive the
 # handheld's device/token URLs from this — 127.0.0.1 is the Mac, not the phone.
 USERINFO = os.environ.get("AUTHENTIK_USERINFO_URL", "").strip()
@@ -134,6 +136,31 @@ def rows_for(table_id: str) -> list:
     return data
 
 
+def _token_is_for_this_client(access_token: str) -> bool:
+    """Userinfo 200 means Authentik minted the token; azp/aud must still be us.
+
+    A Grafana/Outline access_token also passes userinfo. Read the JWT payload
+    without verifying the signature — userinfo already did that. Opaque tokens
+    fail closed.
+    """
+    parts = access_token.split(".")
+    if len(parts) != 3:
+        return False
+    try:
+        pad = "=" * (-len(parts[1]) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(parts[1] + pad))
+    except (ValueError, json.JSONDecodeError, OSError):
+        return False
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("azp") == CLIENT_ID:
+        return True
+    aud = payload.get("aud")
+    if aud == CLIENT_ID:
+        return True
+    return isinstance(aud, list) and CLIENT_ID in aud
+
+
 def _bearer(headers) -> str:
     header = headers.get("Authorization", "")
     if header.startswith("Bearer "):
@@ -183,6 +210,9 @@ class Handler(BaseHTTPRequestHandler):
                 return False
             verdict = _userinfo_ok(got)
             if verdict == "ok":
+                if not _token_is_for_this_client(got):
+                    self._send(401, {"error": "unauthorized"})
+                    return False
                 return True
             if verdict == "unauthorized":
                 self._send(401, {"error": "unauthorized"})

@@ -100,6 +100,8 @@ def test_allowlist_excludes_pii_and_includes_roadmap():
     assert "RFC 8628" in src
     assert "userinfo" in src.lower()
     assert "AUTHENTIK_PUBLIC_O_BASE" in src
+    assert "_token_is_for_this_client" in src
+    assert "azp" in src
     assert not re.search(r'BIND\s*=\s*"0\.0\.0\.0"', src)
     assert "PyJWT" not in src and "cryptography" not in src
 
@@ -132,3 +134,25 @@ def test_plist_userinfo_is_loopback_and_device_urls_are_public():
     assert "https://{{ authentik_domain }}/application/o/userinfo/" not in text
     assert "AUTHENTIK_PUBLIC_O_BASE" in text
     assert "https://{{ authentik_domain }}/application/o" in text
+
+
+def test_userinfo_ok_is_not_enough_without_our_azp():
+    """A Grafana token also gets userinfo 200; azp/aud must be nos-device-gateway."""
+    import base64
+    import importlib.util
+    import json
+
+    spec = importlib.util.spec_from_file_location("device_gateway", GATEWAY)
+    gw = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gw)
+
+    def mint(payload: dict) -> str:
+        body = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
+        return f"h.{body}.s"
+
+    assert gw._token_is_for_this_client(mint({"azp": "nos-device-gateway"}))
+    assert gw._token_is_for_this_client(mint({"aud": "nos-device-gateway"}))
+    assert gw._token_is_for_this_client(mint({"aud": ["nos-device-gateway", "other"]}))
+    assert not gw._token_is_for_this_client(mint({"azp": "nos-grafana"}))
+    assert not gw._token_is_for_this_client("not-a-jwt")
+    assert not gw._token_is_for_this_client("a.b")
