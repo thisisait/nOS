@@ -189,26 +189,22 @@ One `brew info --cask --json=v2` for the outdated list, then pgrep. Gate
 `test_cask_detect_is_one_brew_info.py`. Did not fire on p=54800; next `nos`
 with outdated casks is the reader.
 
-### S5. Global `become = True` + `interpreter_python = auto`
+### S5. Global `become = True` + `interpreter_python = auto` — cut in tree 2026-09-15
 
-`ansible.cfg`. Every task sudo; become modules run Homebrew Python 3.14,
-controller pyenv 3.13.13. Default become false; pin the interpreter.
+`ansible.cfg` `become = False`; play `ansible_python_interpreter: "{{ ansible_playbook_python }}"`; inventory no longer pins Homebrew python3. Dnsmasq restart and blank brew-stop declare `become: true`. Gate `test_ansible_cfg_is_not_auto_become.py`. Next `nos` is the reader (interpreter in the log, brew prefix, Ollama keg `become: false`).
 
-### S6. Host layer on a source-only bump
+### S6. Host layer on a source-only bump — cut in tree 2026-09-14
 
-CLT / brew / cask / pip / npm always run. A profile or `--skip-tags` for
-organs+stacks would have saved the first ~5–8 min of this SSOT test (and
-still hit the ollama gate).
+CLT tagged `homebrew` so `--skip-tags homebrew` skips Xcode tools with brew. Gate `test_converge_host_skip_tags.py`. Organs/stacks stay off the skip list. Next `nos --skip-tags homebrew,...` is the reader.
 
-### S7. Smaller
+### S7. Smaller — cuts in tree 2026-09-14; next `nos` is the reader
 
-- `docker manifest inspect` sequential — cut: local `image inspect` first
-  (`test_apps_image_probe_asks_local_first.py`). Next `nos` is the reader.
-- restic "is repo initialized" ~31 s.
-- mcp_gateway token verify ~27 s.
-- keap seed-slug scan ~22 s.
-- Wing GDPR upsert ~22 s.
-- `~/.nos/ansible.log` ~250 MB, no rotation.
+- `docker manifest inspect` sequential — local `image inspect` first (`test_apps_image_probe_asks_local_first.py`).
+- restic "is repo initialized" — `cat config`, not `snapshots` (`test_restic_init_check_is_cat_config.py`).
+- mcp_gateway token verify — persist once (`test_mcp_grafana_token_is_not_reminted.py`).
+- keap empty-seed GET — skip when `rows: []` (`test_keap_empty_seed_skips_row_fetch.py`).
+- Wing GDPR upsert — one `--json=-` (`test_gdpr_upsert_is_one_invocation.py`).
+- `~/.nos/ansible.log` rotation in `nos` before ansible opens it (`test_ansible_log_rotates_before_converge.py`).
 
 S0 closed on `p=54800`. Pairing registry `table:device-client` landed
 withheld (SYSTEM 23→24). Re-sign via `tools/apex-sign.py` when the operator
