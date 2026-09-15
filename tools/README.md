@@ -143,6 +143,7 @@ worse than none, because it reads as complete.
 - `dtt-table.py` — Per-user DataTable verbs from the shell (list/create/share/visibility) through the KEAP identity outpost; the `nos dtt` table surface on the DGX recipe.
 - `keap_api.py` — Shared KEAP /api access for host tools: resolves the SEC-02 proxy secret + builds the human headers.
 - `keap-recall-queries.py` — Emit the KEAP recall-query set from the estate's SKILLS.md trigger lines.
+- `cortex-query.py` — Read-only KEAP recall (RO bearer): ranked passages with node ids; wraps keap-semantic-search.py + keap-recall-queries.py; empty recall is a miss.
 - `keap-reid-rows.py` — Make every row of a KEAP DataTable addressable by its own business key.
 - `mcp-tables-server.py` — stdio MCP server giving external agents (Cursor/Codex/Claude Code) the DataTables verb surface.
 

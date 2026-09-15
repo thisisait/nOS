@@ -37,6 +37,23 @@ from keap_api import proxy_header  # noqa: E402
 ENDPOINT = "http://127.0.0.1:8091/agent/v1/search/semantic"
 
 
+def fetch_results(query: str, limit: int = 10, kind: str | None = None) -> list[dict]:
+    """GET /agent/v1/search/semantic. Raises OSError/URLError if KEAP is unreachable.
+
+    An empty list is a real answer (broken token / drained embeddings), not an
+    outage — callers that treat [] as success are the defect cortex-query pins.
+    """
+    params: dict[str, str | int] = {"q": query, "limit": limit}
+    if kind:
+        params["kind"] = kind
+    url = f"{ENDPOINT}?{urllib.parse.urlencode(params)}"
+    hdr = {"Authorization": f"Bearer {ro_token()}", **proxy_header()}
+    req = urllib.request.Request(url, headers=hdr)
+    with urllib.request.urlopen(req, timeout=30) as r:
+        data = json.loads(r.read() or b"{}")
+    return (data.get("data") or {}).get("results") or data.get("results") or []
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("query", help="natural-language query")
@@ -45,27 +62,25 @@ def main() -> int:
     ap.add_argument("--json", action="store_true", help="print raw result JSON")
     args = ap.parse_args()
 
-    params = {"q": args.query, "limit": args.limit}
-    if args.kind:
-        params["kind"] = args.kind
-    url = f"{ENDPOINT}?{urllib.parse.urlencode(params)}"
-    hdr = {"Authorization": f"Bearer {ro_token()}", **proxy_header()}
     try:
-        req = urllib.request.Request(url, headers=hdr)
-        with urllib.request.urlopen(req, timeout=30) as r:
-            data = json.loads(r.read() or b"{}")
+        results = fetch_results(args.query, args.limit, args.kind)
     except (urllib.error.URLError, OSError) as exc:
         print(f"REFUSING: KEAP semantic search unreachable ({exc})", file=sys.stderr)
         return 2
 
-    results = (data.get("data") or {}).get("results") or data.get("results") or []
     if args.json:
         print(json.dumps(results, indent=2, ensure_ascii=False))
         return 0
 
-    legs = (data.get("data") or {}).get("legs") or {}
+    legs: list[str] = []
+    seen: set[str] = set()
+    for r in results:
+        for leg in r.get("legs") or []:
+            if leg not in seen:
+                seen.add(leg)
+                legs.append(leg)
     print(f"“{args.query}” — {len(results)} hit(s)  [legs: "
-          f"{', '.join(k for k, v in legs.items() if v) or 'n/a'}]", file=sys.stderr)
+          f"{', '.join(legs) or 'n/a'}]", file=sys.stderr)
     for r in results:
         kind = r.get("kind", "?")
         name = r.get("name") or r.get("title") or r.get("id", "?")

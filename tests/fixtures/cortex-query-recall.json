@@ -1,0 +1,67 @@
+{
+  "q": "is cortex up",
+  "expect": [
+    "node:nos.host.cortex",
+    "title:check-health"
+  ],
+  "k": 5,
+  "results": [
+    {
+      "kind": "object",
+      "score": 0.03202,
+      "legs": [
+        "lexical",
+        "vector"
+      ],
+      "id": "fs:nos-docs:17784fc243e3b76a",
+      "type": "skill",
+      "title": "check-health",
+      "description": "nOS/host/cortex"
+    },
+    {
+      "kind": "object",
+      "score": 0.02853,
+      "legs": [
+        "lexical",
+        "vector"
+      ],
+      "id": "fs:akadmin:9518f95aa50d8939",
+      "type": "page",
+      "title": "cortex-second-brain-papers.md",
+      "description": "documents/research/technosideas"
+    },
+    {
+      "kind": "capture",
+      "score": 0.01639,
+      "legs": [
+        "vector"
+      ],
+      "id": "dp-140b425d41900756377cafc6",
+      "title": "nOS cortex review and plan.md",
+      "description": "Documents/nOS cortex review and plan.md (140128 B)",
+      "url": null
+    },
+    {
+      "kind": "object",
+      "score": 0.01613,
+      "legs": [
+        "lexical"
+      ],
+      "id": "fs:akadmin:b25267a5c6286368",
+      "type": "page",
+      "title": "Meeting hygiene",
+      "description": "documents/cortex-fixtures/reference"
+    },
+    {
+      "kind": "object",
+      "score": 0.01613,
+      "legs": [
+        "vector"
+      ],
+      "id": "fs:nos-docs:96375d4c5e8e28d4",
+      "type": "page",
+      "title": "Cortex.md",
+      "description": "nOS/host"
+    }
+  ]
+}
