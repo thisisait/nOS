@@ -1,0 +1,26 @@
+---
+# =============================================================================
+# pazny.keap/tasks/seed-device-client-tables.yml — pairing registry schema.
+#
+# device-client is the gateway's pairing table (NOT digest `device`). The
+# definition is git-owned; the ROWS are runtime (pair / unpair). Same empty
+# seed as caddy-sessions: the table must exist before the first pair, and a
+# seeder-written pair would be a device that never paired.
+#
+# Gated on install_device_gateway: a converge without the organ does not grow
+# its furniture. No plugin / Art-30 this slice — schema only.
+# =============================================================================
+
+- name: "[pazny.keap] Assemble the device-client DataTable (schema, no rows)"
+  ansible.builtin.set_fact:
+    _device_client_tables:
+      - slug: "device-client"
+        def: "{{ lookup('file', playbook_dir + '/state/keap-tables/device-client.table.yml') | from_yaml }}"
+        rows: []
+
+- name: "[pazny.keap] Seed the device-client DataTable (create/reconcile, no rows)"
+  ansible.builtin.include_tasks: seed-face-table.yml
+  loop: "{{ _device_client_tables }}"
+  loop_control:
+    loop_var: _face_tbl
+    label: "{{ _face_tbl.slug }}"

@@ -285,9 +285,6 @@ UNSEEDED = {
                "the dtt door, mutated by claims, leases expiring) — git-seeding "
                "ephemeral claim state would let a re-converge wipe a live claim. "
                "Same split as roadmap: the definition is git-owned, the rows are not.",
-    "device-client": "pairing rows are runtime (gateway); git-seeding them would "
-               "let a re-converge wipe live pairs. Same split as current-state: "
-               "the definition is git-owned, the rows are not.",
 }
 
 

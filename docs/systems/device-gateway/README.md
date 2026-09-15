@@ -45,8 +45,9 @@ Allowlisted KEAP tables only (roadmap, current-state, todos-akadmin, repo,
 application, package). `invoice` / `party` / `journal-entry` / `account` are 403.
 Columns are projected. The seeder uses the slug as the KEAP table id; a
 Face-created table keeps a UUID — the gateway then matches `title` (so
-"nOS Roadmap" still serves `/tables/roadmap`). Digest-device / iLEAPP is a
-different noun and is not this organ.
+"nOS Roadmap" still serves `/tables/roadmap`). Pairing registry `device-client`
+is schema-only on converge (`rows: []`); pair/unpair is runtime. Digest-device
+/ iLEAPP is a different noun and is not this organ.
 
 ## Health
 

@@ -199,6 +199,14 @@
     - install_keap | default(false) | bool
     - install_ears | default(false) | bool
 
+# Pairing registry schema (empty). Rows are runtime; a seeder-written pair
+# would be a device that never paired. Gated on the organ's own flag.
+- name: "[pazny.keap] Seed the device-client DataTable (schema, no rows)"
+  ansible.builtin.include_tasks: seed-device-client-tables.yml
+  when:
+    - install_keap | default(false) | bool
+    - install_device_gateway | default(false) | bool
+
 # ── Sweep the persisted lint queue — the LAST post step ──────────────────────
 # GET /agent/v1/lint serves a PERSISTED findings queue (K2) that NEVER recomputes
 # on read; only POST /agent/v1/lint/run reruns the checks and stamps resolved_at

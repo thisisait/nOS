@@ -73,6 +73,18 @@ def test_digest_device_is_not_the_pairing_registry():
     )
 
 
+def test_device_client_schema_is_seeded_with_no_rows():
+    """caddy-sessions shape: table exists before first pair; seeder writes none."""
+    seeder = REPO / "roles" / "pazny.keap" / "tasks" / "seed-device-client-tables.yml"
+    post = REPO / "roles" / "pazny.keap" / "tasks" / "post.yml"
+    text = seeder.read_text(encoding="utf-8")
+    assert 'slug: "device-client"' in text
+    assert "rows: []" in text
+    src = post.read_text(encoding="utf-8")
+    assert "seed-device-client-tables.yml" in src
+    assert "install_device_gateway | default(false)" in src
+
+
 def test_synthetic_fixture_check_bundle_is_empty():
     seed = _seed()
     assert list(seed.keys()) == ["device", "device-extraction"]
