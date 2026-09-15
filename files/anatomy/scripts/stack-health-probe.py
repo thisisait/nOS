@@ -205,6 +205,19 @@ def _expected_service_count(stack: str) -> tuple[int | None, str, list[str]]:
     return len(names), "", sorted(names)
 
 
+#: Unhealthy AND still not a bring-up failure. The :25 healthcheck on
+#: smtp_stalwart is honest — /etc/stalwart is empty, SMTP is unbound, Docker
+#: must not say healthy. The operator also cannot exercise mail (no MX, no
+#: test receiver). Holding the STRICT wait for that listener would stall
+#: every other stack for a surface nobody can test. `_classify` still
+#: returns failed; only the wait denominator admits the name.
+ADMITTED_UNHEALTHY = ("smtp_stalwart",)
+
+
+def _admitted_unhealthy(name: str) -> bool:
+    return any(token in name for token in ADMITTED_UNHEALTHY)
+
+
 def _classify(status: str) -> str:
     """ready | pending | failed, from a `docker ps` Status string."""
     s = status.lower()
@@ -250,12 +263,17 @@ def main(argv: list[str]) -> int:
                 any_failed = True
             continue
         ready_n = 0
-        waiting, failed = [], []
+        waiting, failed, admitted = [], [], []
         for name, status in rows:
             short = name.split("-", 1)[-1] if "-" in name else name
             cls = _classify(status)
             if cls == "ready":
                 ready_n += 1
+            elif cls == "failed" and _admitted_unhealthy(name) and "(unhealthy)" in status.lower():
+                # Wait continues. docker ps still says unhealthy — that is the
+                # admission, not a green stamp.
+                ready_n += 1
+                admitted.append(f"{short}[unhealthy — SMTP not in test scope]")
             elif cls == "pending":
                 tag = "starting" if "health: starting" in status.lower() \
                     else status.split()[0].lower()
@@ -271,6 +289,8 @@ def main(argv: list[str]) -> int:
         line = f"{stack}: {ready_n}/{len(rows)} ready"
         if waiting:
             line += f" (waiting: {', '.join(waiting)})"
+        if admitted:
+            line += f" (admitted: {', '.join(admitted)})"
         if failed:
             line += f" FAILED: {', '.join(failed)}"
         print(line)

@@ -58,6 +58,10 @@ services:
       # port forward actually targets. `/25` is the published SMTP port — :8080
       # answers even when SMTP is unbound (empty /etc/stalwart outranks compose
       # `ports:`). `awk {print $1}`: two networks, bare `hostname -i` is two IPs.
+      # The STRICT wait ADMITS this unhealthy (stack-health-probe
+      # ADMITTED_UNHEALTHY) — mail is not in the testable surface until
+      # /etc/stalwart exists and MX can be exercised. Do not flip the probe
+      # back to :8080 to make the wait pass.
       test: ["CMD", "bash", "-c", ":>/dev/tcp/$(hostname -i | awk '{print $1}')/25"]
       interval: 30s
       timeout: 10s
