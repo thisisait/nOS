@@ -16,6 +16,11 @@ Two layers of defense:
   2. Wing log dir provisioned at mode 0700 by the role.
 
 This gate pins both layers.
+
+plat-gate-shape (2026-09-15): a whole-file substring hunt stayed GREEN
+after the `$keysToHide` merge AND the `hash_equals` cookie gate were
+commented out (debug forced ON). Comments are not the redaction list.
+Read comment-stripped PHP / XML and parse the constant.
 """
 
 from __future__ import annotations
@@ -24,6 +29,40 @@ import pathlib
 import re
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+BOOTING = REPO / "files/anatomy/wing/app/Bootstrap/Booting.php"
+PLIST = REPO / "roles/pazny.wing/templates/wing.plist.j2"
+
+_PHP_BLOCK = re.compile(r"/\*.*?\*/", re.S)
+_PHP_LINE = re.compile(r"//[^\n]*")
+_XML_COMMENT = re.compile(r"<!--.*?-->", re.S)
+
+REQUIRED_SUBSTRINGS = (
+	"token",
+	"secret",
+	"hmac",
+	"jwt",
+	"bearer",
+	"key",  # APP_KEY, NOS_DEPLOY_HMAC_SECRET
+	"credentials",
+)
+
+
+def _php_code(src: str) -> str:
+	return _PHP_LINE.sub("", _PHP_BLOCK.sub("", src))
+
+
+def _xml_code(src: str) -> str:
+	return _XML_COMMENT.sub("", src)
+
+
+def _booting_code() -> str:
+	return _php_code(BOOTING.read_text())
+
+
+def _secret_key_substrings(code: str) -> list[str]:
+	m = re.search(r"SECRET_KEY_SUBSTRINGS\s*=\s*\[(.*?)]\s*;", code, re.S)
+	assert m, "SECRET_KEY_SUBSTRINGS array not found in live PHP"
+	return re.findall(r"'([^']+)'", m.group(1))
 
 
 def test_booting_php_extends_tracy_keys_to_hide():
@@ -31,36 +70,32 @@ def test_booting_php_extends_tracy_keys_to_hide():
 	nOS secret-name substring list AFTER enableTracy() registers the
 	debugger. Tracy reads $keysToHide at dump time, not register time —
 	so the assignment can happen after enableTracy."""
-	src = (REPO / "files/anatomy/wing/app/Bootstrap/Booting.php").read_text()
-	# Must use Tracy\Debugger.
-	assert "use Tracy\\Debugger;" in src
-	# Must extend the existing list (NOT overwrite — Tracy's stock list
+	code = _booting_code()
+	assert re.search(r"use\s+Tracy\\Debugger\s*;", code)
+	# Extend the existing list (NOT overwrite — Tracy's stock list
 	# contains useful defaults like 'password' that we don't want to drop).
-	assert "Debugger::$keysToHide = array_merge(" in src
-	# Must reference a class-level constant or method so the list is
-	# centralized + reviewable.
-	assert "SECRET_KEY_SUBSTRINGS" in src or "secretKeySubstrings()" in src
-	# The list must contain at minimum the nOS-specific anatomy keys.
-	required_substrings = [
-		'token', 'secret', 'hmac', 'jwt', 'bearer',
-		'key',          # APP_KEY, NOS_DEPLOY_HMAC_SECRET
-		'credentials',
-	]
-	for s in required_substrings:
-		assert f"'{s}'" in src, \
-			f"Booting.php SECRET_KEY_SUBSTRINGS must include '{s}' substring"
+	assert re.search(
+		r"Debugger::\$keysToHide\s*=\s*array_merge\s*\(\s*Debugger::\$keysToHide",
+		code,
+	), "must array_merge into Debugger::$keysToHide, not overwrite it"
+	items = _secret_key_substrings(code)
+	missing = [s for s in REQUIRED_SUBSTRINGS if s not in items]
+	assert not missing, (
+		f"SECRET_KEY_SUBSTRINGS is missing {missing} — parsed {items}"
+	)
 
 
 def test_booting_extends_after_enable_tracy():
 	"""The order matters narrowly: enableTracy() must register the
 	debugger BEFORE we assign $keysToHide. Reversed order would assign
 	to a stale class default."""
-	src = (REPO / "files/anatomy/wing/app/Bootstrap/Booting.php").read_text()
-	enable_idx = src.find("enableTracy(")
-	extend_idx = src.find("Debugger::$keysToHide = array_merge")
-	assert enable_idx > 0 and extend_idx > 0
-	assert extend_idx > enable_idx, \
+	code = _booting_code()
+	enable_idx = code.find("enableTracy(")
+	extend = re.search(r"Debugger::\$keysToHide\s*=\s*array_merge", code)
+	assert enable_idx > 0 and extend, "enableTracy() or $keysToHide merge missing"
+	assert extend.start() > enable_idx, (
 		"$keysToHide assignment must come AFTER enableTracy() call"
+	)
 
 
 def test_wing_role_creates_log_dir_at_0700():
@@ -86,14 +121,21 @@ def test_tracy_debug_off_by_default_cookie_gated():
 	traffic — Wing binds loopback so Traefik proxies every request from
 	127.0.0.1 (CF-proxied users included), leaking $_COOKIE/config/SQL dumps.
 	Debug must be OFF by default and gated behind a long secret cookie."""
-	src = (REPO / "files/anatomy/wing/app/Bootstrap/Booting.php").read_text()
-	assert "setDebugMode('127.0.0.1')" not in src, "IP gating is a no-op behind the loopback proxy"
-	assert "WING_TRACY_SECRET" in src, "debug must be gated on the WING_TRACY_SECRET env"
-	assert "tracy-debug" in src, "debug must require a matching tracy-debug cookie"
-	assert "hash_equals(" in src, "cookie compare must be constant-time"
+	code = _booting_code()
+	assert "setDebugMode('127.0.0.1')" not in code, "IP gating is a no-op behind the loopback proxy"
+	assert re.search(r"getenv\(\s*'WING_TRACY_SECRET'\s*\)", code), (
+		"debug must read WING_TRACY_SECRET from the environment"
+	)
+	assert re.search(r"\$_COOKIE\s*\[\s*'tracy-debug'\s*\]", code), (
+		"debug must require a matching tracy-debug cookie"
+	)
+	assert re.search(r"hash_equals\s*\(", code), "cookie compare must be constant-time"
 	# The plist must surface the env (empty default = debug never on).
-	plist = (REPO / "roles/pazny.wing/templates/wing.plist.j2").read_text()
-	assert "WING_TRACY_SECRET" in plist and "wing_tracy_secret | default('')" in plist
+	plist = _xml_code(PLIST.read_text())
+	assert "<key>WING_TRACY_SECRET</key>" in plist, (
+		"plist must declare WING_TRACY_SECRET as a live env key, not a comment"
+	)
+	assert "wing_tracy_secret | default('')" in plist
 
 
 def test_error_presenter_renders_clean_production_page():
@@ -104,7 +146,7 @@ def test_error_presenter_renders_clean_production_page():
 	re-fires during error handling), and emit no Tracy generator."""
 	ep = REPO / "files/anatomy/wing/app/Presenters/ErrorPresenter.php"
 	assert ep.is_file(), "ErrorPresenter.php missing (errorPresenter: Error in common.neon)"
-	src = ep.read_text()
+	src = _php_code(ep.read_text())
 	assert "implements Nette\\Application\\IPresenter" in src, "must implement IPresenter directly"
 	assert "extends BasePresenter" not in src, "must NOT extend BasePresenter (edge guard would re-fire)"
 	# The rendered page must not emit a framework generator meta (the Tracy
