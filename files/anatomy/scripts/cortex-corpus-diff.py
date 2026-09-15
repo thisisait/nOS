@@ -1555,6 +1555,19 @@ def save_state(path: Path, state: dict) -> None:
     path.write_text(json.dumps(state, indent=1))
 
 
+def observation(state: dict, report: dict | None = None) -> str:
+    """Counts, streak, denominator. The notify body is this, not the ask."""
+    nights = len(state.get("nights") or [])
+    disagreements = int(state.get("disagreements") or 0)
+    streak = int(state.get("agreeStreak") or 0)
+    denom = 0 if not report else int(report.get("realUserDocs") or 0)
+    return (
+        f"{nights} nights, {disagreements} disagreements, "
+        f"agree streak {streak}/{NIGHTS_REQUIRED}, "
+        f"denominator {denom} real user document(s)"
+    )
+
+
 def notify(bin_path: str, severity: str, title: str, body: str) -> None:
     """One key for every verdict this harness emits, and one is right.
 
@@ -1699,11 +1712,10 @@ def main(argv: list[str] | None = None) -> int:
                "denominator. Read the run output before calling S2 done.")
     elif state["disagreements"] >= DISAGREEMENTS_ALLOWED:
         notify(notify_bin, "high", "S2 diff: three disagreeing nights — stop adding nights",
-               "S2 reports on the evidence it has; S3 decides. Adding nights past this point is how a parallel run "
-               "becomes permanent furniture.")
+               observation(state, report))
     elif len(state["nights"]) >= NIGHT_CEILING:
         notify(notify_bin, "high", f"S2 diff: {NIGHT_CEILING}-night ceiling reached",
-               "Report whatever the harness has, with its denominator.")
+               observation(state, report))
     return 0
 
 
