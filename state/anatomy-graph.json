@@ -1319,7 +1319,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 5300,
+      "min_work": 5600,
       "argv": [
         "python3",
         "-m",
@@ -1330,7 +1330,7 @@
       "claims": [],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=5300, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=5600, deterministic=True"
     },
     "pulse:alert-relay:relay-firing": {
       "kind": "pulse",

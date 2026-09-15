@@ -237,9 +237,7 @@ pulse:
       max_concurrent: 1
       env:
         REPO_DIR: "{{ playbook_dir }}"
-        # No VULNSCAN_SECURITY_DIR: scan-runner.sh already defaults to
-        # $HOME/.nos/security. A Jinja facts token here survives the catalog
-        # (literal str.replace, no Ansible) and lands in pulse_jobs as braces.
+        VULNSCAN_SECURITY_DIR: "{{ ansible_facts['env']['HOME'] }}/.nos/security"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
         # `claude` (Claude Code) must be on this PATH; adjust if installed elsewhere.
         PATH: "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"

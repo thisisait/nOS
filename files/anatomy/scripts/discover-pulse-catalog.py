@@ -83,6 +83,11 @@ def _build_substitutions() -> dict[str, str]:
         "{{ authentik_domain }}":         _env("NOS_AUTHENTIK_DOMAIN"),
         "{{ tenant_domain }}":            _env("NOS_TENANT_DOMAIN"),
         "{{ global_password_prefix }}":   _env("NOS_GLOBAL_PASSWORD_PREFIX"),
+        # Pulse is a literal str.replace, not Ansible. A facts token in a
+        # manifest (conductor vulnerability-scan) must be named here or it
+        # ships as braces into pulse_jobs. HOME is the operator home at
+        # converge; empty is still a render (the brace gate), not a leftover.
+        "{{ ansible_facts['env']['HOME'] }}": _env("HOME"),
         "{{ wing_api_token }}":           "secret:wing_api_token",
         "{{ conductor_wing_api_token }}": "secret:conductor_wing_api_token",
         "{{ surveyor_wing_api_token }}":   "secret:surveyor_wing_api_token",

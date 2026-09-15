@@ -323,13 +323,15 @@ def _proposals_citing(weakness_id: str) -> list[dict]:
         return [dict(r) for r in conn.execute(
             "SELECT id, uuid, session_uuid FROM loop_proposals "
             "WHERE weakness_id = ? ORDER BY id", (weakness_id,))]
-    except sqlite3.OperationalError as exc:
+    except sqlite3.Error as exc:
         # A LEDGER THAT DOES NOT EXIST YET HOLDS NO PROPOSALS — a fresh estate
         # has no loop_* tables until Bone creates them, pinned by
         # test_a_run_that_proposed_nothing_is_not_success. Anything else (a
         # missing column, a damaged file) is drift the caller must not read as
-        # emptiness.
-        if "no such table" in str(exc):
+        # emptiness. DatabaseError ("file is not a database") is a sibling of
+        # OperationalError, not a subclass — catching only the latter let a
+        # garbage file traceback instead of Unreadable (Woodpecker #108).
+        if isinstance(exc, sqlite3.OperationalError) and "no such table" in str(exc):
             return []
         raise Unreadable(f"the ledger could not be read: {exc}") from exc
     finally:
