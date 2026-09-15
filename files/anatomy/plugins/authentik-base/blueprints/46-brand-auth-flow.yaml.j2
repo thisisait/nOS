@@ -11,17 +11,19 @@
 #   enforce_mfa OFF → reset to the stock default-authentication-flow (byte-
 #                     identical to a non-gov install).
 #
-# Identifier `domain: authentik-default` is the live default brand (verified
-# 2026-06-02: Brand.objects.get(default=True).domain == 'authentik-default').
-# Re-verify on any Authentik MAJOR upgrade — a renamed slug makes !Find no-op
-# and the brand silently keeps its prior flow.
+# Identifier `domain: authentik-default` is Authentik's stock default-brand
+# domain. It never suffix-matches a real Host (auth.<tld>), so the request
+# uses this brand ONLY when `default: true`. Omitting that flag leaves
+# default=False; Authentik then serves the in-memory Brand(domain="fallback")
+# which has no flow_device_code. DeviceEntryView returns empty HTTP 404 —
+# a white page at /device, including after login. Measured 2026-09-15 on
+# 2026.5.2. Re-verify on any Authentik MAJOR upgrade — a renamed slug makes
+# !Find no-op and the brand silently keeps its prior flow.
 #
-# Partial update: flow_authentication (both enforce_mfa states) AND
-# flow_device_code. Authentik 2026.5 Brand field is flow_device_code (UI:
-# "Default code flow"; schema title "Flow device code"). Omitting it strands
-# RFC 8628: device flow only works when the active brand has a Stage
-# Configuration flow set. Other brand fields (branding_title,
-# default_application, flow_recovery, …) stay unmanaged here.
+# Partial update: default, flow_authentication (both enforce_mfa states),
+# AND flow_device_code. Authentik 2026.5 Brand field is flow_device_code (UI:
+# "Default code flow"; schema title "Flow device code"). Other brand fields
+# (branding_title, default_application, flow_recovery, …) stay unmanaged here.
 # flow_recovery is intentionally NOT set yet (CLI `ak create_recovery_key`
 # is the live escape — see docs/break-glass-runbook.md).
 version: 1
@@ -50,6 +52,7 @@ entries:
     identifiers:
       domain: authentik-default
     attrs:
+      default: true
 {% if enforce_mfa | default(false) | bool %}
       flow_authentication: !Find [authentik_flows.flow, [slug, nos-tier1-mfa-flow]]
 {% else %}

@@ -9,6 +9,7 @@ data "authentik_outpost" "embedded" { name = "authentik Embedded Outpost" }
 
 data "authentik_certificate_key_pair" "signing" { name = "authentik Self-signed Certificate" }
 
-data "authentik_property_mapping_provider_scope" "openid"  { scope_name = "openid" }
-data "authentik_property_mapping_provider_scope" "email"   { scope_name = "email" }
-data "authentik_property_mapping_provider_scope" "profile" { scope_name = "profile" }
+data "authentik_property_mapping_provider_scope" "openid"          { scope_name = "openid" }
+data "authentik_property_mapping_provider_scope" "email"           { scope_name = "email" }
+data "authentik_property_mapping_provider_scope" "profile"         { scope_name = "profile" }
+data "authentik_property_mapping_provider_scope" "offline_access"  { scope_name = "offline_access" }

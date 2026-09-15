@@ -85,6 +85,11 @@ PLAYBOOK_AGENTS = {
         "label_var": "hermes_launchd_label",
         "label_default": "eu.thisisait.nos.hermes",
     },
+    "pazny.device_gateway": {
+        "template": "device-gateway.plist.j2",
+        "label_var": "device_gateway_launchd_label",
+        "label_default": "eu.thisisait.nos.device-gateway",
+    },
     "pazny.backup": {
         # Backup creates TWO agents
         "templates": [

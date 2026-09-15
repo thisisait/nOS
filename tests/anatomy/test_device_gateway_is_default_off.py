@@ -102,7 +102,9 @@ def test_allowlist_excludes_pii_and_includes_roadmap():
     assert "AUTHENTIK_PUBLIC_O_BASE" in src
     assert "_token_is_for_this_client" in src
     assert "azp" in src
-    assert "_project" in src
+    assert "offline_access" in src
+    assert "_keap_rows_for" in src
+    assert "_find_keap_id_by_title" in src
     assert not re.search(r'BIND\s*=\s*"0\.0\.0\.0"', src)
     assert "PyJWT" not in src and "cryptography" not in src
 
@@ -177,3 +179,86 @@ def test_device_rows_drop_columns_not_on_the_allowlist():
     assert out == {"slug": "x", "status": "next", "track": "platform", "title": "t"}
     assert "body" not in out and "assignee" not in out
     assert gw._project("roadmap", "not-a-row") == {}
+
+
+def test_keap_rows_follow_title_when_slug_id_is_missing():
+    """Face-created 'nOS Roadmap' is a UUID; GET /tables/roadmap/rows is 404."""
+    import importlib.util
+    import io
+    import urllib.error
+
+    spec = importlib.util.spec_from_file_location("device_gateway", GATEWAY)
+    gw = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gw)
+    gw._id_cache.clear()
+    gw._cache.clear()
+
+    def fake(path: str):
+        if path == "/tables/roadmap/rows":
+            raise urllib.error.HTTPError(
+                "http://keap/tables/roadmap/rows",
+                404,
+                "unknown table",
+                hdrs=None,
+                fp=io.BytesIO(b'{"success":false,"error":"unknown table"}'),
+            )
+        if path == "/tables":
+            return {
+                "success": True,
+                "data": [
+                    {"id": "uuid-road", "title": "nOS Roadmap"},
+                    {"id": "invoice", "title": "Invoices"},
+                ],
+            }
+        if path == "/tables/uuid-road/rows":
+            return {
+                "success": True,
+                "data": {
+                    "rows": [
+                        {
+                            "slug": "x",
+                            "status": "next",
+                            "track": "platform",
+                            "title": "t",
+                            "body": "secret prose",
+                        }
+                    ]
+                },
+            }
+        raise AssertionError(path)
+
+    gw._keap_json = fake
+    rows = gw.rows_for("roadmap")
+    assert rows == [{"slug": "x", "status": "next", "track": "platform", "title": "t"}]
+    assert gw._id_cache["roadmap"] == "uuid-road"
+
+
+def test_keap_rows_use_slug_id_without_listing_tables():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("device_gateway", GATEWAY)
+    gw = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gw)
+    gw._id_cache.clear()
+    gw._cache.clear()
+    calls: list[str] = []
+
+    def fake(path: str):
+        calls.append(path)
+        if path == "/tables/current-state/rows":
+            return {"success": True, "data": {"rows": []}}
+        raise AssertionError(path)
+
+    gw._keap_json = fake
+    assert gw.rows_for("current-state") == []
+    assert calls == ["/tables/current-state/rows"]
+
+
+def test_tofu_maps_offline_access_on_the_device_client_only():
+    data_tf = (REPO / "terraform" / "authentik" / "data.tf").read_text(encoding="utf-8")
+    assert 'scope_name = "offline_access"' in data_tf
+    body = TOFU.read_text(encoding="utf-8")
+    assert "offline_access" in body
+    assert "concat(local._scopes" in body
+    services = (REPO / "terraform" / "authentik" / "services.tf").read_text(encoding="utf-8")
+    assert "offline_access" not in services

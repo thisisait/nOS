@@ -26,7 +26,11 @@ resource "authentik_provider_oauth2" "device_gateway" {
   authentication_flow = data.authentik_flow.authentication.id
   invalidation_flow   = data.authentik_flow.invalidation.id
   signing_key         = data.authentik_certificate_key_pair.signing.id
-  property_mappings   = local._scopes
+  # offline_access is device-only — browser apps in module.service stay the
+  # three OIDC scopes. Without this mapping Authentik mints no refresh_token.
+  property_mappings = concat(local._scopes, [
+    data.authentik_property_mapping_provider_scope.offline_access.id,
+  ])
 
   sub_mode    = "hashed_user_id"
   issuer_mode = "per_provider"

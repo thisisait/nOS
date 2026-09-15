@@ -42,7 +42,7 @@
   when: >-
     (mcp_enable_grafana | default(true))
     and (_mcp_grafana_tok_file is not skipped)
-    and (_mcp_grafana_tok_file.content | default('') | length > 0)
+    and (_mcp_grafana_tok_file.content | default('', true) | length > 0)
 
 - name: "[pazny.mcp_gateway] Render mcpo config.json"
   ansible.builtin.template:

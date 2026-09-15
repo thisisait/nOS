@@ -11,7 +11,8 @@
 device_gateway_port: 8770
 device_gateway_domain: "device{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 device_gateway_launchd_label: "eu.thisisait.nos.device-gateway"
-device_gateway_src: "{{ playbook_dir }}/files/anatomy/device-gateway/gateway.py"
-device_gateway_log_dir: "{{ ansible_facts['env']['HOME'] }}/device-gateway/log"
+device_gateway_runtime_dir: "{{ ansible_facts['env']['HOME'] }}/device-gateway"
+device_gateway_src: "{{ device_gateway_runtime_dir }}/gateway.py"
+device_gateway_log_dir: "{{ device_gateway_runtime_dir }}/log"
 device_gateway_python: /usr/bin/python3
 device_gateway_keap_url: "http://127.0.0.1:{{ keap_port | default(8091) }}/agent/v1"

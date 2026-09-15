@@ -10,7 +10,7 @@
         <string>{{ device_gateway_src }}</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>{{ playbook_dir }}/files/anatomy/device-gateway</string>
+    <string>{{ device_gateway_runtime_dir }}</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>HOME</key>
@@ -30,7 +30,7 @@
         <key>KEAP_AGENT_TOKEN_RO</key>
         <string>{{ keap_agent_token_ro | default('') }}</string>
         <key>NOS_SRC</key>
-        <string>{{ nos_main_checkout | default(playbook_dir) }}</string>
+        <string>{{ nos_main_checkout }}</string>
     </dict>
     <key>RunAtLoad</key>
     <true/>

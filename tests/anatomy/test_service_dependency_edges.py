@@ -104,6 +104,12 @@ REFUSED = {
     ("smtp_stalwart", "authentik"): "SSO — carried by the authentik provider chain",
     ("superset", "authentik"): "SSO — carried by the authentik provider chain",
     ("wing", "authentik"): "SSO — carried by the authentik provider chain",
+    # Handheld BFF calls loopback userinfo. No device-gateway-base plugin until
+    # the operator fills Art-30, so there is no authentik:<slug> graph hop to
+    # walk; tofu lives in terraform/authentik/device_gateway.tf, not the
+    # nos-authentik-app map. A service edge would invent the hop the plugin
+    # is withheld from creating.
+    ("device_gateway", "authentik"): "RFC 8628 userinfo — no plugin until Art-30",
     # ── the exporter class: the conditionality runs the other way ─────────
     # roles/pazny.grafana/templates/compose.yml.j2 ships postgres-, mysqld- and
     # redis-exporter sidecars, each inside `{% if install_<provider> %}`. The

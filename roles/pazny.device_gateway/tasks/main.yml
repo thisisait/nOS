@@ -10,6 +10,14 @@
     mode: '0755'
   when: (nos_service_manager | default('launchd')) == 'launchd'
 
+- name: "[pazny.device_gateway] Sync device-gateway source"
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/anatomy/device-gateway/gateway.py"
+    dest: "{{ device_gateway_src }}"
+    mode: '0644'
+  notify: Restart device-gateway
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
 - name: "[pazny.device_gateway] Render launchd plist"
   ansible.builtin.template:
     src: device-gateway.plist.j2

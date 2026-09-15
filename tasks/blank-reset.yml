@@ -176,6 +176,7 @@
       - "eu.thisisait.nos.pulse.plist"
       - "eu.thisisait.nos.wing.plist"
       - "eu.thisisait.nos.hermes.plist"
+      - "eu.thisisait.nos.device-gateway.plist"
       - "eu.thisisait.nos.ears-listen.plist"
       - "eu.thisisait.nos.heartbeat.plist"
       - "eu.thisisait.nos.resume.plist"

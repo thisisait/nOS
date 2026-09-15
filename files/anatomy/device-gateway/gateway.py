@@ -24,6 +24,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # Handheld prototype ids. invoice/party/journal-entry/account/kolben-* stay out.
+# KEAP id is the seeder slug; a Face-created table is a UUID — title matches.
 ALLOWLIST = {
     "roadmap": ("roadmap", "nOS Roadmap", ["slug", "status", "track", "title"]),
     "current-state": ("current-state", "Claim board", ["slug", "status", "title"]),
@@ -46,6 +47,9 @@ KEAP_URL = os.environ.get("KEAP_AGENT_URL", "http://127.0.0.1:8091/agent/v1").rs
 KEAP_TOKEN = os.environ.get("KEAP_AGENT_TOKEN_RO", "")
 CACHE_TTL = 30
 _cache: dict[str, tuple[float, list]] = {}
+# Face-created tables keep a UUID id; the seeder uses the slug as id. Cache
+# whichever KEAP actually answers for this allowlist key.
+_id_cache: dict[str, str] = {}
 _ssl = ssl.create_default_context()
 
 
@@ -86,31 +90,35 @@ def manifest() -> dict:
         "auth": {
             "mode": "rfc8628",
             "client_id": "nos-device-gateway",
-            "scopes": ["openid", "email", "profile"],
+            "scopes": ["openid", "email", "profile", "offline_access"],
             "device_authorization": f"POST {device}",
             "token": f"POST {token}",
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             "note": (
                 "RFC 8628: POST device_authorization (client_id nos-device-gateway, "
-                "scope openid email profile); show verification_uri from the "
-                "response; poll token until access_token. # ponytail: pairing "
-                "table device-client + per-device revocation is next."
+                "scope openid email profile offline_access); show verification_uri "
+                "from the response; URL-encode the token poll (device_code is not "
+                "form-safe); keep refresh_token. # ponytail: pairing table "
+                "device-client + per-device revocation is next."
             ),
         },
     }
 
 
-def _keap_rows(slug: str) -> list:
+def _keap_json(path: str):
     if not KEAP_TOKEN:
         raise RuntimeError("KEAP_AGENT_TOKEN_RO is unset — fail-closed")
-    url = f"{KEAP_URL}/tables/{slug}/rows"
+    url = f"{KEAP_URL}{path}"
     req = urllib.request.Request(
         url,
         headers={"Authorization": f"Bearer {KEAP_TOKEN}"},
         method="GET",
     )
     with urllib.request.urlopen(req, timeout=15) as resp:
-        payload = json.loads(resp.read().decode())
+        return json.loads(resp.read().decode())
+
+
+def _unwrap_rows(payload) -> list:
     if isinstance(payload, list):
         return payload
     if not isinstance(payload, dict):
@@ -118,11 +126,41 @@ def _keap_rows(slug: str) -> list:
     rows = payload.get("rows")
     if rows is None and isinstance(payload.get("data"), dict):
         rows = payload["data"].get("rows")
-    if rows is None:
-        rows = payload.get("data")
+    if rows is None and isinstance(payload.get("data"), list):
+        rows = payload["data"]
     if not isinstance(rows, list):
         raise RuntimeError("KEAP rows response had no array")
     return rows
+
+
+def _find_keap_id_by_title(title: str) -> str:
+    payload = _keap_json("/tables")
+    tables = payload.get("data") if isinstance(payload, dict) else payload
+    if not isinstance(tables, list):
+        raise RuntimeError("KEAP table list was not an array")
+    for row in tables:
+        if isinstance(row, dict) and row.get("title") == title:
+            rid = row.get("id")
+            if isinstance(rid, str) and rid:
+                return rid
+    raise RuntimeError(f"KEAP has no table titled {title!r}")
+
+
+def _keap_rows_for(table_id: str) -> list:
+    """Rows for an allowlist key. Slug as id, else the live table's title."""
+    slug, title, _ = ALLOWLIST[table_id]
+    kid = _id_cache.get(table_id, slug)
+    try:
+        rows = _unwrap_rows(_keap_json(f"/tables/{kid}/rows"))
+        _id_cache[table_id] = kid
+        return rows
+    except urllib.error.HTTPError as exc:
+        if exc.code != 404:
+            raise
+        _id_cache.pop(table_id, None)
+    rid = _find_keap_id_by_title(title)
+    _id_cache[table_id] = rid
+    return _unwrap_rows(_keap_json(f"/tables/{rid}/rows"))
 
 
 def _project(table_id: str, row) -> dict:
@@ -134,12 +172,11 @@ def _project(table_id: str, row) -> dict:
 
 
 def rows_for(table_id: str) -> list:
-    slug = ALLOWLIST[table_id][0]
     now = time.time()
     hit = _cache.get(table_id)
     if hit and now - hit[0] < CACHE_TTL:
         return hit[1]
-    data = [_project(table_id, row) for row in _keap_rows(slug)]
+    data = [_project(table_id, row) for row in _keap_rows_for(table_id)]
     _cache[table_id] = (now, data)
     return data
 
