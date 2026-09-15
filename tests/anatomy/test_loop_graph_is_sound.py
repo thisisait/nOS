@@ -100,14 +100,19 @@ def test_the_refusals_are_carried(committed):
 
 
 def test_a_manifest_loop_is_registered_and_drawn(committed):
-    """An operational loop declared as a data manifest appears in the catalog
-    AND contributes nodes/edges tagged with its id — the data path beside the
-    code-defined SERE."""
+    """Every *.loop.yml is in the catalog AND drew nodes — a file that is not
+    generated is a second source, which is what loop-generator exists to kill."""
+    import yaml
+    declared = []
+    for path in sorted((REPO / "files/anatomy/loops").glob("*.loop.yml")):
+        declared.append(yaml.safe_load(path.read_text(encoding="utf-8"))["id"])
     ids = {l["id"] for l in committed["loops"]}
-    assert "news-scout" in ids, "the news-scout manifest is not in the loop catalog"
-    assert [n for n in committed["nodes"] if n["loop"] == "news-scout"], \
-        "news-scout is in the catalog but drew no nodes"
-    assert any(e["loop"] == "news-scout" for e in committed["edges"])
+    missing = [i for i in declared if i not in ids]
+    assert not missing, f"loop catalog dropped {missing}"
+    for loop_id in declared:
+        assert [n for n in committed["nodes"] if n["loop"] == loop_id], (
+            f"{loop_id} is in the catalog but drew no nodes")
+        assert any(e["loop"] == loop_id for e in committed["edges"])
 
 
 def test_a_for_each_step_expands_to_one_node_per_item(committed):

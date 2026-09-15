@@ -1,0 +1,32 @@
+# repo-check — proving instance of loop-generator (roadmap loop-repo-check).
+# The pulse job is GENERATED from this file (discover-pulse-catalog.py), and
+# the face graph is drawn from the same file (loop-graph-gen.py). deploy-sync
+# was renamed: the dry-run report is now `tools/forge-sync.py` with no flags.
+---
+id: repo-check
+label: "repo-check — red / estate / forge, report only"
+blurb: >-
+  On a four-hour cadence, read what is red, what the three holders of truth
+  disagree on, and whether the forges would fast-forward. Nothing is applied.
+  The overnight sample is the pulse run log, not a success stamp this loop
+  writes about itself.
+
+trigger:
+  cadence: "17 */4 * * *"
+
+steps:
+  - id: red-status
+    runner: tool
+    label: "red-status — what is red right now"
+  - id: estate-status
+    runner: tool
+    label: "estate-status — host vs checkout vs origin"
+  - id: forge-sync
+    runner: tool
+    label: "forge-sync — trunk holders, dry-run only"
+
+run: "{{ playbook_dir }}/tools/loops/repo-check.py"
+pulse:
+  category: platform
+  max_runtime_s: 180
+  jitter_min: 10

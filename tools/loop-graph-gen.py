@@ -87,8 +87,8 @@ def _grants() -> list[dict]:
 # A loop is a manifest: id/label/blurb + a trigger + ordered steps. A step may
 # be PARAMETRISED — `for_each: <param>` expands it to one node per item in that
 # param list, so a "fetch each source" step is declared once and drawn as N
-# nodes. The face renders the emitted nodes; a future slice generates the pulse
-# job(s) from the same trigger+steps (the OTHER output the model names).
+# nodes. The face renders the emitted nodes; discover-pulse-catalog.py
+# schedules the same trigger+run (the OTHER output the model names).
 
 _STEP_BAND = 300  # x per step column
 _ITEM_H = 84      # y per for_each item within a column

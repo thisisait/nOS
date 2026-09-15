@@ -48,10 +48,25 @@ def test_discovery_surfaces_the_loop_job_with_tokens_expanded(monkeypatch, capsy
     monkeypatch.setenv("NOS_GLOBAL_PASSWORD_PREFIX", "testprefix")
     assert d.main() == 0
     cat = json.loads(capsys.readouterr().out)
-    loop = [c for c in cat if c["plugin_name"] == "loop" and c["job"]["name"] == "news-scout"]
-    assert loop, "discover-pulse-catalog did not surface loop:news-scout"
-    job = loop[0]["job"]
-    cmd = job["command"]
-    assert cmd.endswith("tools/loops/news-scout.py")
-    assert job.get("args") == ["--to-keap"]
-    assert "{{" not in cmd, "the {{ playbook_dir }} token must be expanded (else pulse execs a literal → rc 127)"
+    by_name = {c["job"]["name"]: c["job"] for c in cat if c["plugin_name"] == "loop"}
+    scout = by_name.get("news-scout")
+    assert scout, "discover-pulse-catalog did not surface loop:news-scout"
+    assert scout["command"].endswith("tools/loops/news-scout.py")
+    assert scout.get("args") == ["--to-keap"]
+    assert "{{" not in scout["command"], (
+        "the {{ playbook_dir }} token must be expanded (else pulse execs a literal → rc 127)")
+    check = by_name.get("repo-check")
+    assert check, "discover-pulse-catalog did not surface loop:repo-check"
+    assert check["command"].endswith("tools/loops/repo-check.py")
+    assert check.get("args") in (None, [])
+    assert "--apply" not in (check.get("args") or [])
+    assert check["category"] == "platform"
+
+
+def test_repo_check_pulse_job_is_report_only():
+    d = _disc()
+    m = yaml.safe_load((REPO / "files/anatomy/loops/repo-check.loop.yml").read_text(encoding="utf-8"))
+    j = d._loop_pulse_block(m)["jobs"][0]
+    blob = " ".join([j["command"], *(j.get("args") or [])])
+    assert "--apply" not in blob and "--push-github" not in blob
+    assert {s["id"] for s in m["steps"]} == {"red-status", "estate-status", "forge-sync"}
