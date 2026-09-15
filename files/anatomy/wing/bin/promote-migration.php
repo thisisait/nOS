@@ -225,6 +225,7 @@ function emitEvent(PDO $db, array $payload): void
         'actor_id'     => $payload['actor_id']     ?? null,
         'acted_at'     => $payload['acted_at']     ?? null,
     ];
+    AuditChain::requireIsoTs($values['ts']);
     $actorActionId = $payload['actor_action_id'] ?? null;
 
     $cols = 'ts, run_id, type, playbook, play, task, role, host, duration_ms, changed, '

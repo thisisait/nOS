@@ -130,4 +130,33 @@ final class AuditChain
     {
         return hash_hmac('sha256', $prev . self::canonical($row), $key);
     }
+
+    /**
+     * events.ts is TEXT NOT NULL labelled ISO-8601. The writer used to
+     * HMAC-sign whatever the caller handed it, so live wing.db grew
+     * epoch-as-text and a literal `$(date +%Y-%m-%dT%H:%M:%SZ)` on
+     * conductor_report rows. Chain orders by id — those six rows still
+     * verify; rewriting them would re-sign history. This rejects NEW
+     * garbage. It does not rewrite live wing.db.
+     *
+     * Accepts the two spellings this estate already emits: `...Z` and
+     * `...+00:00` (gmdate('c')), plus a fractional-second form Python
+     * isoformat() produces. Epoch digits and unexpanded shell are not ISO.
+     */
+    public static function isIsoTs(string $ts): bool
+    {
+        return (bool) preg_match(
+            '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/',
+            $ts,
+        );
+    }
+
+    public static function requireIsoTs(string $ts): void
+    {
+        if (self::isIsoTs($ts)) {
+            return;
+        }
+        error_log('audit-chain: refusing insert, invalid ts: ' . $ts);
+        throw new \InvalidArgumentException('invalid ts: ' . $ts);
+    }
 }

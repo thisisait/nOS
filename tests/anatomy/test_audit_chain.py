@@ -132,9 +132,9 @@ def test_python_written_chain_verifies(tmp_path):
     db = _fresh_db(tmp_path)
     _chain_env(db, on=True)
     W = _wing()
-    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "a",
+    W.insert_event({"ts": "2026-05-31T00:00:01Z", "run_id": "r", "type": "task_ok", "task": "a",
                     "result": {"x": 1}, "changed": True, "duration_ms": 5})
-    W.insert_event({"ts": "t2", "run_id": "r", "type": "task_ok", "task": "b"})
+    W.insert_event({"ts": "2026-05-31T00:00:02Z", "run_id": "r", "type": "task_ok", "task": "b"})
     v = _php([str(VERIFY), f"--db={db}"])
     assert v.returncode == 0, v.stderr
     assert "CHAIN-OK" in v.stdout
@@ -144,7 +144,7 @@ def test_worm_allows_actor_action_id_blocks_content_and_delete(tmp_path):
     db = _fresh_db(tmp_path)
     _chain_env(db, on=True)
     W = _wing()
-    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "a"})
+    W.insert_event({"ts": "2026-05-31T00:00:01Z", "run_id": "r", "type": "task_ok", "task": "a"})
     con = sqlite3.connect(db)
     # actor_action_id-only UPDATE: ALLOWED
     con.execute("UPDATE events SET actor_action_id='aa1' WHERE id=1")
@@ -170,7 +170,7 @@ def test_legacy_null_rows_freely_mutable(tmp_path):
     # chain OFF insert -> row_hash NULL
     _chain_env(db, on=False)
     W = _wing()
-    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "a"})
+    W.insert_event({"ts": "2026-05-31T00:00:01Z", "run_id": "r", "type": "task_ok", "task": "a"})
     con = sqlite3.connect(db)
     con.execute("UPDATE events SET task='edited' WHERE id=1")  # triggers dormant on NULL row_hash
     con.execute("DELETE FROM events WHERE id=1")
@@ -182,8 +182,8 @@ def test_offline_tamper_is_detected(tmp_path):
     db = _fresh_db(tmp_path)
     _chain_env(db, on=True)
     W = _wing()
-    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "a"})
-    W.insert_event({"ts": "t2", "run_id": "r", "type": "task_ok", "task": "b"})
+    W.insert_event({"ts": "2026-05-31T00:00:01Z", "run_id": "r", "type": "task_ok", "task": "a"})
+    W.insert_event({"ts": "2026-05-31T00:00:02Z", "run_id": "r", "type": "task_ok", "task": "b"})
     con = sqlite3.connect(db)
     con.execute("DROP TRIGGER events_worm_update")  # simulate an offline attacker
     con.execute("UPDATE events SET task='HACKED' WHERE id=1")
@@ -262,13 +262,13 @@ def test_toggle_off_then_on_verifies(tmp_path):
     db = _fresh_db(tmp_path)
     _chain_env(db, on=True)
     W = _wing()
-    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "chained1"})
+    W.insert_event({"ts": "2026-05-31T00:00:01Z", "run_id": "r", "type": "task_ok", "task": "chained1"})
     _chain_env(db, on=False)
-    W.insert_event({"ts": "t2", "run_id": "r", "type": "task_ok", "task": "unsigned"})
+    W.insert_event({"ts": "2026-05-31T00:00:02Z", "run_id": "r", "type": "task_ok", "task": "unsigned"})
     b = _php([str(BACKFILL), f"--data-dir={db.parent}"])
     assert b.returncode == 0, b.stderr
     _chain_env(db, on=True)
-    W.insert_event({"ts": "t3", "run_id": "r", "type": "task_ok", "task": "chained2"})
+    W.insert_event({"ts": "2026-05-31T00:00:03Z", "run_id": "r", "type": "task_ok", "task": "chained2"})
     v = _php([str(VERIFY), f"--db={db}"])
     assert v.returncode == 0, v.stderr
 
@@ -314,7 +314,7 @@ def test_verify_writes_verdict_when_flag_set(tmp_path):
     db = _fresh_db(tmp_path)
     _chain_env(db, on=True)
     W = _wing()
-    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "a"})
+    W.insert_event({"ts": "2026-05-31T00:00:01Z", "run_id": "r", "type": "task_ok", "task": "a"})
     v = _php([str(VERIFY), f"--db={db}", "--write-verdict"])
     assert v.returncode == 0, v.stderr
     con = sqlite3.connect(db)
@@ -342,7 +342,7 @@ def test_verify_without_flag_leaves_verdict_untouched(tmp_path):
     db = _fresh_db(tmp_path)
     _chain_env(db, on=True)
     W = _wing()
-    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "a"})
+    W.insert_event({"ts": "2026-05-31T00:00:01Z", "run_id": "r", "type": "task_ok", "task": "a"})
     v = _php([str(VERIFY), f"--db={db}"])
     assert v.returncode == 0
     con = sqlite3.connect(db)
@@ -355,7 +355,7 @@ def test_flag_off_is_noop(tmp_path):
     db = _fresh_db(tmp_path)
     _chain_env(db, on=False)
     W = _wing()
-    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "plain"})
+    W.insert_event({"ts": "2026-05-31T00:00:01Z", "run_id": "r", "type": "task_ok", "task": "plain"})
     con = sqlite3.connect(db)
     rh = con.execute("SELECT row_hash FROM events").fetchone()[0]
     con.close()
@@ -430,13 +430,13 @@ def _gapped_db(tmp_path):
     db = _fresh_db(tmp_path)
     _chain_env(db, on=True)
     W = _wing()
-    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "signed1"})
-    W.insert_event({"ts": "t2", "run_id": "r", "type": "task_ok", "task": "signed2"})
+    W.insert_event({"ts": "2026-05-31T00:00:01Z", "run_id": "r", "type": "task_ok", "task": "signed1"})
+    W.insert_event({"ts": "2026-05-31T00:00:02Z", "run_id": "r", "type": "task_ok", "task": "signed2"})
     _chain_env(db, on=False)
-    W.insert_event({"ts": "t3", "run_id": "r", "type": "task_ok", "task": "gap1"})
-    W.insert_event({"ts": "t4", "run_id": "r", "type": "task_ok", "task": "gap2"})
+    W.insert_event({"ts": "2026-05-31T00:00:03Z", "run_id": "r", "type": "task_ok", "task": "gap1"})
+    W.insert_event({"ts": "2026-05-31T00:00:04Z", "run_id": "r", "type": "task_ok", "task": "gap2"})
     _chain_env(db, on=True)
-    W.insert_event({"ts": "t5", "run_id": "r", "type": "task_ok", "task": "signed3"})
+    W.insert_event({"ts": "2026-05-31T00:00:05Z", "run_id": "r", "type": "task_ok", "task": "signed3"})
     con = sqlite3.connect(db)
     resumed = con.execute(
         "SELECT MAX(id) FROM events WHERE row_hash IS NOT NULL").fetchone()[0]
@@ -531,7 +531,7 @@ def test_a_numeric_payload_field_signs_verifiably(tmp_path):
     db = _fresh_db(tmp_path)
     _chain_env(db, on=True)
     W = _wing()
-    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": 0})
+    W.insert_event({"ts": "2026-05-31T00:00:01Z", "run_id": "r", "type": "task_ok", "task": 0})
     v = _php([str(VERIFY), f"--db={db}", "--json"])
     assert v.returncode == 0, (
         f"an int-typed TEXT field broke the chain at write time: {v.stdout}{v.stderr}"
@@ -571,9 +571,9 @@ def test_the_verifier_retries_the_historical_int_typing_strictly(tmp_path):
     db = _fresh_db(tmp_path)
     _chain_env(db, on=True)
     W = _wing()
-    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "a"})
+    W.insert_event({"ts": "2026-05-31T00:00:01Z", "run_id": "r", "type": "task_ok", "task": "a"})
     _int_typed_row(db)
-    W.insert_event({"ts": "t3", "run_id": "r", "type": "task_ok", "task": "b"})
+    W.insert_event({"ts": "2026-05-31T00:00:03Z", "run_id": "r", "type": "task_ok", "task": "b"})
 
     v = _php([str(VERIFY), f"--db={db}", "--json"])
     assert v.returncode == 0, (
@@ -591,7 +591,7 @@ def test_the_retype_retry_is_round_trip_strict(tmp_path):
     db = _fresh_db(tmp_path)
     _chain_env(db, on=True)
     W = _wing()
-    W.insert_event({"ts": "t1", "run_id": "r", "type": "task_ok", "task": "a"})
+    W.insert_event({"ts": "2026-05-31T00:00:01Z", "run_id": "r", "type": "task_ok", "task": "a"})
     rid = _int_typed_row(db)
     con = sqlite3.connect(db)
     # WORM permits only actor_action_id updates on chained rows — simulate the
@@ -616,3 +616,77 @@ def test_the_retype_retry_is_round_trip_strict(tmp_path):
         f"'00' was accepted by the retype retry — the round-trip guard is "
         f"gone and the retry is now a second canonicalization: {v.stdout}"
     )
+
+
+# ── writer ts shape (2026-09-15) ─────────────────────────────────────────────
+#
+# MEASURED LIVE: wing.db held ISO, epoch-as-text, and one literal
+# `$(date +%Y-%m-%dT%H:%M:%SZ)` on agent conductor_report rows. The chain
+# orders by id so those six rows still verify; rewriting them would re-sign
+# history and look like tampering. This gate stops NEW garbage at the writer.
+# It does not rewrite live wing.db.
+
+
+def _php_require_ts(tmp_path, ts: str):
+    harness = tmp_path / "require_ts.php"
+    harness.write_text(
+        "<?php declare(strict_types=1); require getenv('AC');\n"
+        "try { \\App\\Model\\AuditChain::requireIsoTs($argv[1]); echo 'ok'; }\n"
+        "catch (InvalidArgumentException $e) { fwrite(STDERR, $e->getMessage()); exit(2); }\n"
+    )
+    return _php([str(harness), ts])
+
+
+def test_the_writer_rejects_a_garbage_timestamp(tmp_path, caplog):
+    """T0: a caller-supplied non-ISO ts must not reach events.ts.
+
+    MEASURED LIVE: six conductor_report rows in wing.db carried ISO, epoch-
+    as-text, and a literal `$(date +%Y-%m-%dT%H:%M:%SZ)`. Chain orders by
+    id so integrity still holds; rewriting those rows would re-sign history
+    and look like tampering. This gate stops NEW garbage. It does not
+    rewrite live wing.db.
+    """
+    import logging
+    db = _fresh_db(tmp_path)
+    _chain_env(db, on=True)
+    W = _wing()
+    garbage = ("$(date +%Y-%m-%dT%H:%M:%SZ)", "1234567890")
+    with caplog.at_level(logging.WARNING):
+        for ts in garbage:
+            with pytest.raises(ValueError, match="invalid ts"):
+                W.insert_event({"ts": ts, "run_id": "r", "type": "task_ok", "task": "a"})
+            r = _php_require_ts(tmp_path, ts)
+            assert r.returncode == 2, r.stdout + r.stderr
+            assert "invalid ts" in r.stderr
+    con = sqlite3.connect(db)
+    n = con.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+    con.close()
+    assert n == 0, "a rejected write must not stamp a row"
+    assert "invalid ts" in caplog.text, "rejected writes must log why"
+
+
+def test_a_valid_iso_ts_is_signed_into_the_chain(tmp_path):
+    """T1: the chain still signs content; a well-formed ts is hashed, not dropped."""
+    db = _fresh_db(tmp_path)
+    _chain_env(db, on=True)
+    W = _wing()
+    W.insert_event({"ts": "2026-05-31T00:00:00Z", "run_id": "r", "type": "task_ok", "task": "signed"})
+    ok = _php_require_ts(tmp_path, "2026-05-31T00:00:00Z")
+    assert ok.returncode == 0 and "ok" in ok.stdout, ok.stderr
+    plus = _php_require_ts(tmp_path, "2026-05-31T00:00:00+00:00")
+    assert plus.returncode == 0, plus.stderr
+    v = _php([str(VERIFY), f"--db={db}", "--json"])
+    assert v.returncode == 0, v.stdout + v.stderr
+    con = sqlite3.connect(db)
+    ts, rh, prev = con.execute("SELECT ts, row_hash, prev_hash FROM events").fetchone()
+    con.close()
+    assert ts == "2026-05-31T00:00:00Z"
+    assert rh and len(rh) == 64
+    assert prev == W._GENESIS
+    key = hmac.new(SECRET.encode(), W._CHAIN_LABEL, hashlib.sha256).hexdigest()
+    expected = hmac.new(
+        key.encode(),
+        (prev + W._canonical({"ts": ts, "run_id": "r", "type": "task_ok", "task": "signed"})).encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    assert rh == expected, "row_hash must cover the ISO ts the writer stored"

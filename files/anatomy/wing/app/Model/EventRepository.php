@@ -288,6 +288,8 @@ final class EventRepository
 			}
 		}
 
+		AuditChain::requireIsoTs($row['ts']);
+
 		// Default-OFF: when WING_AUDIT_CHAIN_ENABLED!='1' or no secret, take the
 		// byte-identical legacy insert (prev_hash/row_hash NULL). Chain ON:
 		// serialize the tail read + sign inside one write txn so prev_hash can't

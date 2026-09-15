@@ -25,6 +25,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -55,6 +56,20 @@ def _chain_key() -> str | None:
 def _canonical(values: dict[str, Any]) -> str:
     ordered = {f: values.get(f) for f in _CANON_FIELDS}
     return json.dumps(ordered, separators=(",", ":"), ensure_ascii=False)
+
+
+# Mirror of AuditChain::isIsoTs — same pattern as _canonical vs PHP.
+# ponytail: leave the six live malformed rows; chain orders by id.
+_ISO_TS = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
+)
+
+
+def _require_iso_ts(ts: str) -> None:
+    if _ISO_TS.match(ts):
+        return
+    _log.warning("refusing insert, invalid ts: %s", ts)
+    raise ValueError(f"invalid ts: {ts}")
 
 
 # Default fallback path mirrors files/anatomy/bone/events.py's default
@@ -166,6 +181,7 @@ def insert_event(payload: dict[str, Any]) -> int:
     for _f, _v in values.items():
         if _f not in ("duration_ms", "changed") and _v is not None and not isinstance(_v, str):
             values[_f] = str(_v)
+    _require_iso_ts(values["ts"])
     key = _chain_key()
     chain_on = os.getenv("WING_AUDIT_CHAIN_ENABLED") == "1" and key is not None
 
