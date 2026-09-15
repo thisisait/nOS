@@ -1,7 +1,7 @@
 # nos converge watch
 
 Living ledger. After every `nos`, append a **Recap** and revise the backlog.
-Latest green: **2026-09-14** `p=54800`. OpenClaw pin and apex D4 fail-fast
+Latest green: **2026-09-15** `p=32933`. OpenClaw pin and apex D4 fail-fast
 held. Speed backlog (S1–S7) is unblocked.
 
 Tracker: dtt `converge-watch` (`nos dtt capture --slug converge-watch --update`).
@@ -150,6 +150,25 @@ both `{"ok": true}` 200.
 ok/skipped dropped vs last green — leftover health-wait includes (S2) are
 the likely missing ticks, not a short play.
 
+### 2026-09-15 `p=32933` — green (~18.5 min)
+
+```
+ok=1271 changed=104 unreachable=0 failed=0 skipped=725
+```
+
+Source: local `dev` @ `8de64840`. 15:53:26–16:11:57. Same band as `p=13240`
+(~18 min); still well under the 13 Sep ~21 min baseline.
+
+**Stop:** `green`. Tofu apply ran. Device-gateway copied to `~/device-gateway`
+and the launchd handler restarted (`WorkingDirectory` runtime). KEAP seeded
+`device-client` schema with no rows (empty-seed skip fired). Loopback and
+`https://device.pazny.eu/health` 200. KEAP `GET /tables/device-client` 200.
+`/device` is the Authentik auth flow (302 → default-authentication), not a
+white 404.
+
+Pairing runtime (handheld QR after this apply) is still the operator's next
+reader — this recap does not close that.
+
 ---
 
 ## Backlog — after green
@@ -202,7 +221,7 @@ CLT tagged `homebrew` so `--skip-tags homebrew` skips Xcode tools with brew. Gat
 - `docker manifest inspect` sequential — local `image inspect` first (`test_apps_image_probe_asks_local_first.py`).
 - restic "is repo initialized" — `cat config`, not `snapshots` (`test_restic_init_check_is_cat_config.py`).
 - mcp_gateway token verify — persist once (`test_mcp_grafana_token_is_not_reminted.py`).
-- keap empty-seed GET — skip when `rows: []` (`test_keap_empty_seed_skips_row_fetch.py`).
+- keap empty-seed GET — skip when `rows: []` (`test_keap_empty_seed_skips_row_fetch.py`). Reader: `p=32933` device-client "No row WHERE-guard".
 - Wing GDPR upsert — one `--json=-` (`test_gdpr_upsert_is_one_invocation.py`).
 - `~/.nos/ansible.log` rotation in `nos` before ansible opens it (`test_ansible_log_rotates_before_converge.py`).
 
