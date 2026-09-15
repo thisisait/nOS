@@ -222,6 +222,49 @@ def nos_prune_plan(disabled, on_disk_flags, overrides, containers):
     }
 
 
+#: Same line shape harvest_daemons uses in tools/anatomy-graph-gen.py.
+_LAUNCHD_LABEL = re.compile(
+    r'^(\w+):\s*"(eu\.thisisait\.nos\.[a-z.\-]+)"'
+)
+
+
+def nos_host_daemon_plan(graph):
+    """Join anatomy-graph daemon nodes to install_* via the declaring role.
+
+    The graph is the roster — a label not in it is dropped, even if a role
+    still declares it. The role directory supplies the flag
+    (`pazny.backrest` → `install_backrest`); no hand list of daemons.
+    Heartbeat/resume live in templates/ with no pazny.* role, so they have
+    no install_* and are not in this plan.
+    """
+    nodes = (graph or {}).get("nodes") or {}
+    graph_labels = {
+        nid.split(":", 1)[1]
+        for nid, n in nodes.items()
+        if isinstance(n, dict) and n.get("kind") == "daemon" and ":" in nid
+    }
+    repo = Path(__file__).resolve().parents[1]
+    rows, seen = [], set()
+    for path in sorted((repo / "roles").glob("*/defaults/main.yml")):
+        role = path.parent.parent.name
+        if not role.startswith("pazny."):
+            continue
+        flag = "install_" + role.split(".", 1)[1]
+        for line in path.read_text(encoding="utf-8").splitlines():
+            m = _LAUNCHD_LABEL.match(line.strip())
+            if not m or "legacy" in m.group(1):
+                continue
+            label = m.group(2)
+            if label not in graph_labels or label in seen:
+                continue
+            seen.add(label)
+            rows.append({"label": label, "install_flag": flag})
+    return rows
+
+
 class FilterModule(object):
     def filters(self):
-        return {"nos_prune_plan": nos_prune_plan}
+        return {
+            "nos_prune_plan": nos_prune_plan,
+            "nos_host_daemon_plan": nos_host_daemon_plan,
+        }

@@ -21,6 +21,7 @@ act, and stop is reversible. Authored-only discipline applies to DELETION only.
 from __future__ import annotations
 
 import importlib.util
+import json
 import pathlib
 import re
 import sys
@@ -31,7 +32,9 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 TASK = REPO / "tasks" / "stacks" / "prune-disabled.yml"
 FILTER = REPO / "filter_plugins" / "nos_prune_guard.py"
 CONFIG = REPO / "default.config.yml"
+GRAPH = REPO / "state" / "anatomy-graph.json"
 GATE = "uninstall_disabled_services"
+BACKREST = "eu.thisisait.nos.backrest"
 
 
 def _tasks() -> list[dict]:
@@ -109,3 +112,60 @@ def test_the_flag_is_declared_and_defaults_to_false():
     assert m.group(1) == "false", "deletion defaults on; it must be deliberate"
     assert not re.search(r"^prune_disabled_overrides:", cfg, re.M), (
         "the retired name is declared again — two flags for one decision")
+
+
+def _daemon_plan():
+    spec = importlib.util.spec_from_file_location("prune_guard", FILTER)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["prune_guard"] = mod
+    spec.loader.exec_module(mod)
+    return mod.nos_host_daemon_plan
+
+
+def test_host_daemon_bootout_is_not_gated():
+    """install_backrest: false only skipped the role. The leftover LaunchAgent
+    kept answering. Same split as docker stop: bootout is reversible and
+    ungated; only plist deletion waits for uninstall_disabled_services."""
+    boot = [t for t in _tasks() if "bootout" in [str(a) for a in _argv(t)]]
+    assert boot, (
+        "nothing runs `launchctl bootout` for a host daemon that is off. "
+        "install_*: false only skips the role, so a leftover LaunchAgent "
+        "keeps answering — the backrest case")
+    when = str(boot[0].get("when", ""))
+    assert GATE not in when, (
+        f"the host-daemon bootout is gated on {GATE}. Stopping is reversible; "
+        f"putting it behind the deletion flag leaves the declaration unenforced")
+    text = TASK.read_text(encoding="utf-8")
+    assert "anatomy-graph.json" in text and "nos_host_daemon_plan" in text, (
+        "the bootout loop is not enumerated from the anatomy graph")
+    assert BACKREST not in text, (
+        "a launchd label is hard-coded in prune-disabled.yml — that is a hand "
+        "list. Enumerate daemon nodes from state/anatomy-graph.json")
+
+
+def test_host_daemon_plist_deletion_stays_gated():
+    plist = [t for t in _tasks()
+             if (t.get("ansible.builtin.file") or {}).get("state") == "absent"
+             and "LaunchAgents" in str((t.get("ansible.builtin.file") or {}).get("path", ""))]
+    assert plist, "no plist removal for a disabled host daemon"
+    for t in plist:
+        assert GATE in str(t.get("when", "")), (
+            f"plist deletion is not gated on {GATE}: {t.get('name')!r}")
+
+
+def test_host_daemon_plan_is_the_graph_not_a_hand_list():
+    graph = json.loads(GRAPH.read_text(encoding="utf-8"))
+    plan = _daemon_plan()(graph)
+    labels = {r["label"] for r in plan}
+    assert BACKREST in labels, "the measured victim is missing from the plan"
+    assert all(r["install_flag"].startswith("install_") for r in plan)
+    graph_labels = {
+        nid.split(":", 1)[1]
+        for nid, n in graph["nodes"].items()
+        if n.get("kind") == "daemon"
+    }
+    assert labels <= graph_labels, "plan invented a daemon the graph does not carry"
+    dropped = dict(graph["nodes"])
+    dropped.pop(f"daemon:{BACKREST}", None)
+    assert BACKREST not in {r["label"] for r in _daemon_plan()({"nodes": dropped})}, (
+        "removing the node from the graph still stops it — that is a hand list")

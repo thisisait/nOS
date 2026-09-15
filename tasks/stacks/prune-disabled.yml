@@ -251,6 +251,67 @@
   when: (_prune_plan.stop | default([]) | length) > 0
   tags: ['stacks', 'core', 'always']
 
+# ── Host daemons: same split as containers ────────────────────────────────
+# A declared-off LaunchAgent is not a skipped role. install_backrest: false
+# used to skip pazny.backrest and leave the job loaded. Roster is the
+# anatomy-graph daemon nodes, joined to install_* by the declaring role.
+- name: "[Stacks] Host daemons the anatomy graph already declared"
+  ansible.builtin.set_fact:
+    _host_daemons: >-
+      {{ lookup('file', playbook_dir ~ '/state/anatomy-graph.json')
+         | from_json | nos_host_daemon_plan }}
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Reset the host-daemon stop accumulator"
+  ansible.builtin.set_fact:
+    _host_daemon_stop: []
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Which graph daemons have install_* false right now"
+  ansible.builtin.set_fact:
+    _host_daemon_stop: "{{ _host_daemon_stop + [item] }}"
+  loop: "{{ _host_daemons }}"
+  loop_control:
+    label: "{{ item.label }} ({{ item.install_flag }})"
+  when: not (lookup('vars', item.install_flag, default=false) | bool)
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Boot out host daemons whose install flag is off"
+  ansible.builtin.command:
+    argv:
+      - launchctl
+      - bootout
+      - "gui/{{ ansible_facts['user_uid'] }}/{{ item.label }}"
+  loop: "{{ _host_daemon_stop }}"
+  loop_control:
+    label: "{{ item.label }} ({{ item.install_flag }}=false)"
+  register: _daemon_bootout
+  changed_when: _daemon_bootout.rc == 0
+  failed_when: false
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Log which host daemons were asked to stop"
+  ansible.builtin.debug:
+    msg: >-
+      bootout {{ item.label }} because {{ item.install_flag }} resolved false
+  loop: "{{ _host_daemon_stop }}"
+  loop_control:
+    label: "{{ item.label }}"
+  tags: ['stacks', 'core', 'always']
+
+- name: "[Stacks] Remove plists of disabled host daemons"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ item.label }}.plist"
+    state: absent
+  loop: "{{ _host_daemon_stop }}"
+  loop_control:
+    label: "{{ item.label }}"
+  when:
+    - uninstall_disabled_services | default(false) | bool
+    - (nos_service_manager | default('launchd')) == 'launchd'
+  tags: ['stacks', 'core', 'always']
+
 - name: "[Stacks] REFUSE a prune whose disablements are not authored on disk"
   ansible.builtin.fail:
     msg: >-
