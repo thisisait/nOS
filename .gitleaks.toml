@@ -34,6 +34,10 @@ description = "Verified false positives — docblocks, test fixtures, docs place
 #    a scan of git HISTORY cannot be fixed by editing the working tree — the
 #    2026-08-05 commit keeps its copy for ever. Anchored to the whole value so
 #    a real secret cannot merely contain the word.
+# 5e) pulse.test.ts WING_EVENTS_HMAC_SECRET (re-inspected 2026-09-15) — the
+#    literal FAKE_hmac_secret_for_tests_only_not_a_real_value_0000000000000000.
+#    Self-declaring fixture, not a credential. Covered by the FAKE_ regex;
+#    a real-shaped HMAC must still fire (test_gitleaks_scan_command.py).
 # 5) GHSA advisory identifiers (GHSA-xxxx-xxxx-xxxx) cited across
 #    docs/llm/security/ + remediation-queue.json — public GitHub Security
 #    Advisory IDs, not credentials. Format-anchored (lowercase base32), so it
