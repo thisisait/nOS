@@ -187,7 +187,7 @@ def test_the_forge_declares_and_installs_what_the_gates_need():
     step = _woodpecker_pytest_step()
     declared = {t.strip() for t in
                 str((step.get("environment") or {}).get("NOS_TEST_PROVIDES", "")).split(",") if t.strip()}
-    assert {"git", "ansible-playbook", "php", "jq", "sqlite3", WING_VENDOR} <= declared, (
+    assert {"git", "ansible-playbook", "php", "jq", "sqlite3", "node", WING_VENDOR} <= declared, (
         f"forge pytest step declares only {sorted(declared)} — a tool removed "
         "from the declaration is a hundred gates quietly demoted to skips on "
         "the ONLY CI the pzny branch ever reaches"
@@ -198,7 +198,7 @@ def test_the_forge_declares_and_installs_what_the_gates_need():
         "(tools/ci-freeze.env) — the removal-ladder gates would run against "
         "whatever version drifts in, or abort on the contract"
     )
-    for tool in ("php-cli", "jq", "sqlite3", "git"):
+    for tool in ("php-cli", "jq", "sqlite3", "git", "nodejs"):
         assert tool in cmds, f"declared tooling '{tool}' has no install line — the contract would abort every run"
 
 

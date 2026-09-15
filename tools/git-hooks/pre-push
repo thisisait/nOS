@@ -43,7 +43,11 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 			fi
 			# Annotated tags push the TAG OBJECT sha; gh knows only commits.
 			commit=$(git rev-parse "${local_sha}^{commit}" 2>/dev/null || echo "")
-			verdict=$("${NOS_TAG_GATE_GH:-gh}" run list --commit "$commit" --limit 20 					--json name,status,conclusion 2>/dev/null 				| python3 -c '
+			_py=$(command -v python3 2>/dev/null || command -v python || true)
+			if [[ -z "$_py" ]]; then
+				verdict="UNKNOWN: no python to parse gh JSON"
+			else
+			verdict=$("${NOS_TAG_GATE_GH:-gh}" run list --commit "$commit" --limit 20 					--json name,status,conclusion 2>/dev/null 				| "$_py" -c '
 import json, sys
 try:
     runs = json.load(sys.stdin)
@@ -61,6 +65,7 @@ elif not green:
 else:
     print("GREEN")
 ' ) || verdict="UNKNOWN: the gh probe itself failed"
+			fi
 			if [[ "$verdict" != "GREEN" ]]; then
 				cat >&2 <<-EOF
 					✖ pre-push refused: $tag on commit $commit is not provably green.

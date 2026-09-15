@@ -69,10 +69,22 @@ COLLECTION_FIRST = ("pipeline", "parallel")
 
 
 def node_check(path: pathlib.Path) -> list[str]:
-    """Valid JavaScript at all? Necessary, nowhere near sufficient."""
+    """Valid JavaScript at all? Necessary, nowhere near sufficient.
+
+    Workflow scripts are a function body (top-level `return` is how they
+    finish). `node --check` on the file as a script is a different grammar
+    and refuses every script that actually returns. Demote `export` and wrap
+    so the check matches the runtime, not Node's script mode.
+    """
+    src = path.read_text(encoding="utf-8")
+    demoted = re.sub(r"^export\s+", "", src, flags=re.M)
+    wrapped = "async function __workflow() {\n" + demoted + "\n}\n"
     try:
-        out = subprocess.run(["node", "--check", str(path)],
-                             capture_output=True, text=True, timeout=30)
+        out = subprocess.run(
+            ["node", "--check"],
+            input=wrapped,
+            capture_output=True, text=True, timeout=30,
+        )
     except (OSError, subprocess.SubprocessError) as exc:
         # An absent node is UNKNOWN, not a pass — say so rather than stay quiet.
         return [f"could not run `node --check` ({exc}); syntax is UNVERIFIED"]

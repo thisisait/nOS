@@ -37,6 +37,14 @@ def test_the_guard_actually_holds(tmp_path):
     no explicit dir, the named file must not appear."""
     home = tmp_path / "home"
     (home / ".nos" / "metrics" / "textfile").mkdir(parents=True)
+    # The hook exits before the textfile write when the notebook is absent.
+    # Production reads ~/.nos/security (not the checkout); seed both files
+    # so the opt-in half actually reaches the write.
+    sec = home / ".nos" / "security"
+    sec.mkdir(parents=True)
+    (sec / "scan-state.json").write_text(
+        '{"last_full_scan":"2026-09-01T00:00:00Z","components":{}}', encoding="utf-8")
+    (sec / "remediation-queue.json").write_text('{"items":[]}', encoding="utf-8")
     env = {"PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
            "HOME": str(home), "NOS_REPO": str(REPO),
            "PYTEST_CURRENT_TEST": "gate::test"}

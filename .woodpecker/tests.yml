@@ -49,7 +49,7 @@ steps:
       # never on PATH, so until it was declared (2026-08-29) a composer step
       # that silently did nothing would have demoted every PHP behavioural
       # gate to a skip while the run stayed green.
-      NOS_TEST_PROVIDES: git,ansible-playbook,php,jq,sqlite3,files/anatomy/wing/vendor/autoload.php
+      NOS_TEST_PROVIDES: git,ansible-playbook,php,jq,sqlite3,node,files/anatomy/wing/vendor/autoload.php
     commands:
       # pytest + pyyaml = anatomy test runner + yaml-based gates
       # httpx + pytest-asyncio = Pulse daemon test fixtures (test_pulse_daemon.py
@@ -81,7 +81,8 @@ steps:
       #   ansible-playbook harnesses against tasks/run-mode.yml and
       #   tasks/removal-verify.yml — the fail-closed removal ladder. They are
       #   the last gates that should ever be allowed to quietly not run.
-      - apt-get update -qq && apt-get install -y -qq --no-install-recommends git php-cli php-sqlite3 php-xml php-mbstring jq sqlite3
+      - apt-get update -qq && apt-get install -y -qq --no-install-recommends git php-cli php-sqlite3 php-xml php-mbstring jq sqlite3 nodejs
+      - command -v node >/dev/null || ln -sf "$(command -v nodejs)" /usr/local/bin/node
       - git config --global --add safe.directory "$CI_WORKSPACE"
       - . tools/ci-freeze.env && pip install --quiet --no-cache-dir pytest pytest-asyncio pyyaml httpx jinja2 jsonschema requests fastapi textual "markdown==3.10.2" "$NOS_ANSIBLE_CORE"
       # Install pulse as editable so its package imports resolve in test

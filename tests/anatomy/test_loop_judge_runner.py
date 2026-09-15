@@ -1061,7 +1061,7 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 #: merged in one afternoon (the voice/caddy arc and the ops/security arc), and
 #: the collection gate caught the sum. Nothing about the suite is wrong; the
 #: number that certifies it was measured before half of it existed:
-#:   pytest tests/anatomy -q  → "5390 passed, 66 skipped in 351s"  (post-merge)
+#:   pytest tests/anatomy -q  → "5724 passed, 125 skipped in 241s"  (Woodpecker #107)
 #:
 #: THE GATE IS DOING ITS JOB EACH TIME. Three re-derivations in a month is not
 #: churn — it is the only mechanism that notices the suite outgrowing the
@@ -1069,7 +1069,7 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 MEASURED_WORK = {
     "ansible-lint": 1500,
     "genome-codegen": 2,
-    "pytest-anatomy": 5390,
+    "pytest-anatomy": 5724,
     "cortex-corpus-diff": 1,
 }
 

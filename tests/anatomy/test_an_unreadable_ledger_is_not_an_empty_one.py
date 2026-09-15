@@ -103,14 +103,13 @@ def test_an_unopenable_ledger_raises_rather_than_answering(tmp_path, monkeypatch
     """
     db = tmp_path / "wing.db"
     _ledger(db)
-    db.chmod(0o000)
+    # chmod 000 does not block root (Woodpecker's pytest image). Bytes that
+    # are not a SQLite header do: is_file() is true, connect raises.
+    db.write_bytes(b"this is not a sqlite database")
     m = _mod()
     monkeypatch.setenv("WING_DB_PATH", str(db))
-    try:
-        with pytest.raises(m.Unreadable) as exc:
-            m._proposals_citing("rem:R-1")
-    finally:
-        db.chmod(0o644)
+    with pytest.raises(m.Unreadable) as exc:
+        m._proposals_citing("rem:R-1")
     # The message now comes from tools/_ledger_open.py, which says WHY in its
     # own words ("unreadable: ...", or that it refused a snapshot over a live
     # WAL). What matters is that a reason travels with the refusal.

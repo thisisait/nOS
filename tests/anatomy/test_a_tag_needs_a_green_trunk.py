@@ -16,6 +16,7 @@ import json
 import pathlib
 import stat
 import subprocess
+import sys
 
 import pytest
 
@@ -36,9 +37,10 @@ def _run(tmp: pathlib.Path, runs, ref="refs/tags/v9.9-test", env=None,
     sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO,
                          capture_output=True, text=True).stdout.strip()
     line = f"{ref} {sha} {ref} {'0' * 40}\n"
+    py_dir = str(pathlib.Path(sys.executable).resolve().parent)
     return subprocess.run(["bash", str(HOOK), "origin", "url"], input=line,
                           cwd=REPO, capture_output=True, text=True, timeout=60,
-                          env={"PATH": "/usr/bin:/bin", "HOME": str(tmp),
+                          env={"PATH": f"{py_dir}:/usr/bin:/bin", "HOME": str(tmp),
                                "NOS_TAG_GATE_GH": str(stub), **(env or {})})
 
 

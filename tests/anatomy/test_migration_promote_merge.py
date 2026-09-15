@@ -99,7 +99,8 @@ spl_autoload_register(function ($class) {
         eval('namespace App\\\\Model; final class AuditChain {'
             . ' const GENESIS="g";'
             . ' public static function chainKey(){return null;}'
-            . ' public static function rowHash($p,$r,$k){return hash_hmac("sha256",$p,$k);} }');
+            . ' public static function rowHash($p,$r,$k){return hash_hmac("sha256",$p,$k);}'
+            . ' public static function requireIsoTs($ts){} }');
     }
 });
 """
