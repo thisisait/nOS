@@ -97,6 +97,7 @@
   register: restore_ls
   changed_when: false
   failed_when: false
+  check_mode: false  # fee 36: skipped-under---check stdout invents "no backups"
   no_log: true
 
 - name: "[Restore] Bail if no backups exist at the requested date"
