@@ -30,7 +30,7 @@ The embedded PostgreSQL holds only transient document-server state; the real doc
 
 - **SSO bucket:** `forward_auth` (Authentik `authentik@file` middleware). RBAC tier **3** (user).
 - **Two-layer model:** the Authentik forward-auth gate protects only the **UI** part (`/welcome`, admin). The **API** endpoints (`/healthcheck`, document conversion, command service) are reachable **without** Authentik and are secured by **JWT signing** instead.
-- **JWT:** `onlyoffice_jwt_enabled: true`, header `Authorization`, `JWT_IN_BODY: true`. The secret `onlyoffice_jwt_secret` (`default.credentials.yml`, auto-generated on removal-reset) MUST be shared with every host app that embeds the editor. There is no per-user login and no admin account here.
+- **JWT:** `onlyoffice_jwt_enabled: true`, header `Authorization`, `JWT_IN_BODY: true`. The secret `onlyoffice_jwt_secret` (`default.credentials.yml`, auto-generated on removal-reset) must be shared with every host app that embeds the editor. There is no per-user login and no admin account here.
 
 ## Health Check
 
