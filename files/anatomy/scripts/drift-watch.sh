@@ -25,6 +25,8 @@
 set -uo pipefail
 
 NOS_REPO="${NOS_REPO:-$(cd "$(dirname "$0")/../../.." && pwd)}"
+# Live notebook, not the checkout. Missing file -> hook skips (UNKNOWN, not green).
+export NOS_SECURITY_DIR="${NOS_SECURITY_DIR:-${VULNSCAN_SECURITY_DIR:-${HOME:-/nonexistent}/.nos/security}}"
 HOOK="${NOS_REPO}/hooks/playbook-end.d/20-cve-drift-check.sh"
 BONE_URL="${BONE_API_URL:-http://127.0.0.1:8099}"
 STALE_H="${DRIFT_STALE_HOURS:-336}"
@@ -51,7 +53,7 @@ crit=$(echo "$SNAP" | jq -r '(.pending_critical // .counts.pending_critical // 0
 high=$(echo "$SNAP" | jq -r '(.pending_high // .counts.pending_high // 0)')
 age_h=$(echo "$SNAP" | jq -r '(.last_full_scan_age_hours // -1)')
 
-echo "drift-watch: scan_age_h=${age_h} pending_critical=${crit} pending_high=${high} (stale>${STALE_H}h)"
+echo "drift-watch: notebook=${NOS_SECURITY_DIR} scan_age_h=${age_h} pending_critical=${crit} pending_high=${high} (stale>${STALE_H}h)"
 
 # Decide whether to alert + at what severity.
 sev=""; title=""
@@ -82,7 +84,7 @@ BODY=$(jq -n \
     --arg sev "$sev" --arg title "$title" \
     --arg crit "$crit" --arg high "$high" --arg age "$age_h" \
     '{severity: $sev, title: $title,
-      body: ("Pending: " + $crit + " critical, " + $high + " high. Last full scan " + $age + "h ago. Source: docs/llm/security/remediation-queue.json."),
+      body: ("Pending: " + $crit + " critical, " + $high + " high. Last full scan " + $age + "h ago. Source: runtime ~/.nos/security/remediation-queue.json."),
       origin_plugin: "security-drift", actor_id: "pulse:drift-watch",
       # The drift verdict is a SNAPSHOT of the queue, so a newer one makes
       # the older false by construction. Four unread rows each said "1

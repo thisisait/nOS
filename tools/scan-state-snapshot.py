@@ -74,23 +74,15 @@ import sys
 import tempfile
 from pathlib import Path
 
-# The checkout whose files are recorded. Defaults to the one this tool lives
-# in; `--repo` points it elsewhere.
-#
-# The flag is not a convenience. The scan runs from `playbook_dir` — the
-# operator's main checkout — while an agent doing repository work sits in a
-# worktree, and the tool only exists on the branch that worktree is on. On
-# 2026-08-05 that produced exactly the deadlock it was written to prevent: the
-# recorder could not be run from the checkout that had the data, and could not
-# read the data from the checkout that had the recorder. Worktrees share one
-# object store and one ref namespace, so recording ACROSS them is correct and
-# lands on the same branch either way; only the file content has to come from
-# the right tree.
 REPO = Path(__file__).resolve().parents[1]
 BRANCH = "scan-data"
 
-# The allow-list. This tool can commit these paths and nothing else — that is
-# what makes it safe to run unattended in a tree somebody is working in.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from nos_security import live_path, security_dir  # noqa: E402
+
+# Git paths on the orphan branch. Source bytes come from the runtime notebook.
+# Literal allow-list — this tool can commit these paths and nothing else
+# (test_scan_snapshot_cannot_touch_your_tree pins the literal).
 TRACKED = [
     "docs/llm/security/remediation-queue.json",
     "docs/llm/security/scan-state.json",
@@ -256,12 +248,11 @@ def status(branch: str, base: str) -> int:
     at_risk = False
 
     for rel in TRACKED:
-        live_path = REPO / rel
-        if not live_path.is_file():
-            print(f"  {rel}: ABSENT from the working tree", file=sys.stderr)
-            at_risk = True
+        notebook = live_path(rel)
+        if not notebook.is_file():
+            print(f"  {rel}: ABSENT from the runtime notebook ({security_dir()})")
             continue
-        live = live_path.read_text(encoding="utf-8")
+        live = notebook.read_text(encoding="utf-8")
         incoming = blob(f"{base}:{rel}")
         if incoming is None:
             verdicts.append(f"  {rel}: not present at {base} — pulling cannot overwrite it")
@@ -322,7 +313,7 @@ def status(branch: str, base: str) -> int:
             verdicts.append(f"      replaced   {k}: {live_rows[k].get('status','?')} → "
                             f"{incoming_rows[k].get('status','?')}")
 
-    print(f"working tree {REPO} vs {base}:")
+    print(f"runtime notebook {security_dir()} vs {base}:")
     for line in verdicts:
         print(line)
 
@@ -368,8 +359,8 @@ def main() -> int:
     ap.add_argument("--promote", action="store_true",
                     help="copy the branch's state into the working tree (no staging)")
     ap.add_argument("--status", nargs="?", const="dev", metavar="BASE",
-                    help="does the dirty working tree carry anything BASE (default dev) "
-                         "lacks? exit 0 safe to discard, 3 it does")
+                    help="does the runtime notebook carry anything BASE (default dev) "
+                         "lacks? exit 0 base holds every row, 3 it does not")
     ap.add_argument("--dry-run", action="store_true",
                     help="report what would be recorded; move no ref")
     ap.add_argument("--push", metavar="REMOTE",
@@ -394,16 +385,19 @@ def main() -> int:
               f"leave that worktree showing every file as deleted.", file=sys.stderr)
         return 1
 
-    missing = [r for r in TRACKED if not (REPO / r).is_file()]
+    missing = [r for r in TRACKED if not live_path(r).is_file()]
     if missing:
-        print(f"[-] declared file(s) absent from this checkout: {missing}", file=sys.stderr)
+        if len(missing) == len(TRACKED):
+            print(f"no runtime notebook at {security_dir()} — nothing to record")
+            return 0
+        print(f"[-] declared file(s) absent from the runtime notebook: {missing}", file=sys.stderr)
         return 2
 
     ref = f"refs/heads/{args.branch}"
     parent = git("rev-parse", "-q", "--verify", ref, check=False) or None
 
     before = counts_at(args.branch, TRACKED[0]) if parent else {}
-    after = counts(REPO / TRACKED[0])
+    after = counts(live_path(TRACKED[0]))
 
     with tempfile.TemporaryDirectory() as tmp:
         env = {**dict(__import__("os").environ), "GIT_INDEX_FILE": f"{tmp}/index"}
@@ -411,7 +405,7 @@ def main() -> int:
             git("read-tree", f"{args.branch}^{{tree}}", env=env)
         changed = []
         for rel in TRACKED:
-            blob = git("hash-object", "-w", "--path", rel, str(REPO / rel))
+            blob = git("hash-object", "-w", "--path", rel, str(live_path(rel)))
             # Only the declared paths reach the index. There is no add -A here.
             git("update-index", "--add", "--cacheinfo", f"100644,{blob},{rel}", env=env)
             prev = git("rev-parse", "-q", "--verify", f"{args.branch}:{rel}",

@@ -2,26 +2,19 @@
 # deploy-sync — make THIS checkout a clean, current mirror of its upstream,
 # safely, before a converge. Ends the recurring pre-converge reconcile dance.
 #
-# THE ANNOYANCE THIS REMOVES. The nightly security scan writes
-# remediation-queue.json + scan-state.json into the working tree and nothing
-# commits them — by design (tools/scan-state-snapshot.py: the dirt is scan
-# output `dev` has not been given yet). But the DEPLOY checkout — the one you
-# converge from — is the same tree, so that by-design dirt, plus any local
-# scan-state commit, collides with the converge preflight's need for a clean
-# origin/dev (tasks/preflight-checkout-current.yml). And it re-collides on every
-# origin advance, so each converge became: stash / pull / pop, or promote, by
-# hand. The preflight is a look-never-touch gate and must stay one; this is the
-# explicit "prepare the checkout" step that gate presumes you already ran.
+# THE ANNOYANCE THIS REMOVES. The nightly scan used to write
+# remediation-queue.json + scan-state.json into the DEPLOY working tree.
+# The live notebook is now ~/.nos/security/; git copies are the last promotion.
+# This tool still snapshots the runtime notebook onto scan-data, and still
+# discards leftover git dirt on those two promotion paths (they are never
+# precious once the runtime notebook is recorded).
 #
 # WHAT IT DOES, in order, refusing on ANY doubt rather than clobbering:
 #   1. fetch; read this checkout's position vs @{upstream}.
-#   2. snapshot the current scan output onto the scan-data orphan branch, so
-#      nothing the scan produced is lost whatever step 3/4 drops.
+#   2. snapshot the runtime notebook onto the scan-data orphan branch.
 #   3. DIRTY tree: a changed path that is NOT one of the two scan files -> STOP
-#      (this tool only ever discards scan output). If the scan files are dirty,
-#      `scan-state-snapshot --status` decides: DISCARDABLE (upstream already
-#      carries >= them) -> drop them; PRECIOUS (upstream is missing findings) ->
-#      STOP and tell you to promote + push first.
+#      (this tool only ever discards leftover scan promotion dirt). If only
+#      those files are dirty, drop them — the live notebook is ~/.nos/security.
 #   4. AHEAD of upstream: commits ahead that touch ONLY the scan paths are scan
 #      drift (their content is on scan-data) -> reset to upstream. A commit that
 #      touches anything else is real work -> STOP, push it first.
@@ -80,19 +73,9 @@ if [ -n "$DIRTY" ]; then
 		[ "$keep" = 1 ] || refuse "working-tree change to '$p' is not scan output — commit or stash it yourself, then re-run"
 	done <<<"$DIRTY"
 
-	# Only scan files are dirty. Are they precious (upstream lacks them)?
-	set +e
-	python3 "$SCRIPT_DIR/scan-state-snapshot.py" --status "${UP#*/}" >/dev/null 2>&1
-	st=$?
-	set -e
-	if [ "$st" = 3 ]; then
-		refuse "the working tree holds scan findings $UP does not — promote them first:
-    tools/scan-state-snapshot.py --promote   # then review + commit + push to $UP
-  (they are safe on the scan-data branch meanwhile)" 3
-	elif [ "$st" != 0 ]; then
-		refuse "scan-state-snapshot --status could not decide ($st) — resolve by hand rather than risk discarding findings" 3
-	fi
-	would "git checkout -- ${SCAN_PATHS[*]}   (drop scan dirt; superseded by $UP)"
+	# Leftover git dirt on the promotion paths. Live notebook is runtime;
+	# snapshot already recorded it. Safe to drop.
+	would "git checkout -- ${SCAN_PATHS[*]}   (drop leftover scan dirt; live notebook is ~/.nos/security)"
 	[ "$DRY" = 1 ] || git checkout -- "${SCAN_PATHS[@]}"
 fi
 

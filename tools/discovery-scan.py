@@ -59,18 +59,12 @@ CONFIG = REPO / "default.config.yml"
 
 sys.path.insert(0, str(REPO / "tools"))
 from nos_identity import layer_paths, resolve_flag  # noqa: E402
+from nos_security import GIT_REL, queue_path, security_dir  # noqa: E402
 
-QUEUE = REPO / "docs/llm/security/remediation-queue.json"
 CLAUDE_MD = REPO / "CLAUDE.md"
 
-# Repo files that a NIGHTLY JOB writes and no job commits. Every one of these is
-# a fact the estate produced about itself, living in a working tree that git
-# considers dirty — one `git checkout` from gone, and invisible to anyone
-# reading the branch.
-HOST_WRITTEN = [
-    "docs/llm/security/remediation-queue.json",
-    "docs/llm/security/scan-state.json",
-]
+# Live notebook filenames, recorded in git under these promotion paths.
+HOST_WRITTEN = list(GIT_REL)
 
 # Same default as roadmap-seed.py; both obey NOS_ROADMAP_TABLE_ID so they address
 # ONE table at runtime, not just by shared default (the graph write-edge gate).
@@ -311,7 +305,10 @@ def image_tag(image: str) -> str | None:
 
 
 def queue_items() -> list[dict]:
-    data = json.loads(QUEUE.read_text(encoding="utf-8"))
+    path = queue_path()
+    if not path.is_file():
+        return []
+    data = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(data, list):
         return data
     return data.get("items", data.get("remediations", []))
@@ -617,12 +614,9 @@ def probe_queue_vs_running(images: dict[str, str], res: ScanResult) -> None:
 def probe_artefact_vs_repo(res: ScanResult) -> None:
     """A finding that exists only in a working tree has not been recorded.
 
-    The nightly security scan writes its results INTO the repository —
-    remediation-queue.json and scan-state.json — and nothing commits them. So
-    the estate's own knowledge of its exposure accumulates as an uncommitted
-    diff in whichever checkout the scan happened to run from. It is invisible
-    to anyone reading the branch, it does not reach CI, and a single
-    `git checkout` erases weeks of scanning.
+    The nightly security scan writes its results into ~/.nos/security/.
+    Git copies under docs/llm/security/ are the last promotion. A runtime
+    notebook that matches no git ref has not been recorded.
 
     This is not hypothetical. On 2026-08-05 the main checkout carried 165 rows
     while `origin/dev` carried 152: thirteen findings, including two HIGH, that
@@ -637,9 +631,9 @@ def probe_artefact_vs_repo(res: ScanResult) -> None:
     guess.
     """
     for rel in HOST_WRITTEN:
-        path = REPO / rel
+        path = security_dir() / Path(rel).name
         if not path.is_file():
-            res.skip("host-written artefact absent from this checkout")
+            res.skip("runtime security notebook absent")
             continue
         baselines = scan_artefact_baselines(rel)
         if not baselines:

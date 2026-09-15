@@ -13,13 +13,17 @@
 
 set -euo pipefail
 
-SECURITY_DIR="${VULNSCAN_SECURITY_DIR:-$(dirname "$0")/../docs/llm/security}"
+SECURITY_DIR="${VULNSCAN_SECURITY_DIR:-${NOS_SECURITY_DIR:-${HOME}/.nos/security}}"
 REPO_DIR="${VULNSCAN_REPO_DIR:-$(dirname "$0")/..}"
 BATCH_SIZE="${VULNSCAN_BATCH_SIZE:-5}"
 STATE_FILE="${SECURITY_DIR}/scan-state.json"
 PROMPT_FILE="${REPO_DIR}/files/vuln-scan/scan-prompt.md"
 LOG_FILE="${SECURITY_DIR}/scan.log"
 LOCK_FILE="/tmp/nos-vulnscan.lock"
+
+# Live notebook is ~/.nos/security (or $VULNSCAN_SECURITY_DIR). Git copies
+# under docs/llm/security/ are the last promotion, not this writer's target.
+mkdir -p "$SECURITY_DIR"
 
 # Track G/seed: structured event emit. SCAN_RUN_ID threads through the
 # whole batch so wing.db can aggregate per-batch finding counts under one
@@ -56,7 +60,7 @@ echo $$ > "$LOCK_FILE"
 # ── Preflight ─────────────────────────────────────────────────────────────────
 
 if [ ! -f "$STATE_FILE" ]; then
-    log "ERROR: scan-state.json not found at $STATE_FILE"
+    log "ERROR: scan-state.json not found at $STATE_FILE (runtime notebook, not the checkout)"
     exit 1
 fi
 
@@ -71,6 +75,7 @@ if ! command -v jq &>/dev/null; then
 fi
 
 log "=== NOS Vulnerability Scan started ==="
+log "scan writer target: $SECURITY_DIR"
 log "Batch size: $BATCH_SIZE"
 
 # ── Select batch (oldest_first strategy) ──────────────────────────────────────
@@ -152,7 +157,8 @@ emit_event "scan.batch_started" "$(jq -nc \
     --argjson batch_size "$BATCH_SIZE" \
     --arg probe "$PROBE_NAME" \
     --argjson cycle "$SCAN_CYCLE" \
-    '{components:$components, batch_size:$batch_size, attack_probe:$probe, scan_cycle:$cycle}'
+    --arg security_dir "$SECURITY_DIR" \
+    '{components:$components, batch_size:$batch_size, attack_probe:$probe, scan_cycle:$cycle, security_dir:$security_dir}'
 )" >> "$LOG_FILE"
 
 # ── Dispatch Claude Code ──────────────────────────────────────────────────────
@@ -217,7 +223,8 @@ if [ "$SCAN_RC" -ne 0 ]; then
     done
     emit_event "scan.batch_failed" "$(jq -nc \
         --argjson components "$BATCH_JSON" --argjson rc "$SCAN_RC" \
-        '{components:$components, exit_code:$rc}')" >> "$LOG_FILE"
+        --arg security_dir "$SECURITY_DIR" \
+        '{components:$components, exit_code:$rc, security_dir:$security_dir}')" >> "$LOG_FILE"
     log "=== NOS Vulnerability Scan FAILED ==="
     exit 1
 fi
@@ -280,7 +287,8 @@ emit_event "scan.batch_done" "$(jq -nc \
     --argjson duration_s "$SCAN_DURATION" \
     --argjson pending_after "$PENDING_AFTER" \
     --argjson cycle_complete "$([ "$PENDING" -eq 0 ] && echo true || echo false)" \
-    '{components:$components, duration_s:$duration_s, pending_total_after:$pending_after, cycle_complete:$cycle_complete}'
+    --arg security_dir "$SECURITY_DIR" \
+    '{components:$components, duration_s:$duration_s, pending_total_after:$pending_after, cycle_complete:$cycle_complete, security_dir:$security_dir}'
 )" >> "$LOG_FILE"
 
 log "=== NOS Vulnerability Scan finished ==="

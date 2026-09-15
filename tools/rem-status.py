@@ -13,10 +13,11 @@ half — after it, `CLAUDE.md` names the command and keeps only the part that is
 knowledge rather than state (why a row was hard, what class of blindness the
 queue has).
 
-It reads the file and nothing else: no network, no Docker, no daemon. For "is a
-pending row already fixed on the running estate", that is
-`tools/discovery-scan.py`, which compares against `docker ps` and files a
-roadmap row — a different question with a different cost.
+It reads the live notebook (`~/.nos/security/remediation-queue.json`, overridable
+via NOS_SECURITY_DIR / VULNSCAN_SECURITY_DIR) and nothing else: no network, no
+Docker, no daemon. A missing file is UNKNOWN, not a zero tally. Git copies under
+`docs/llm/security/` are the last promotion, not this reader. For "is a pending
+row already fixed on the running estate", that is `tools/discovery-scan.py`.
 
 Usage:
     tools/rem-status.py            # the tally, and every pending HIGH/CRITICAL
@@ -35,16 +36,23 @@ import json
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
-QUEUE = REPO / "docs/llm/security/remediation-queue.json"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from nos_security import queue_path  # noqa: E402
 
 #: Worst first. Anything not in this list sorts last under its own name, so a
 #: severity the scanner invents tomorrow is visible rather than dropped.
 SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
 
 
-def load() -> list[dict]:
-    raw = json.loads(QUEUE.read_text(encoding="utf-8"))
+def load() -> list[dict] | None:
+    """Live queue, or None when the runtime notebook is absent.
+
+    None is UNKNOWN, never an empty tally. Absence is not zero findings.
+    """
+    path = queue_path()
+    if not path.is_file():
+        return None
+    raw = json.loads(path.read_text(encoding="utf-8"))
     return raw["items"] if isinstance(raw, dict) and "items" in raw else raw
 
 
@@ -146,7 +154,18 @@ def main() -> int:
                     help="pending rows split by what each is waiting for")
     args = ap.parse_args()
 
+    path = queue_path()
     items = load()
+    if items is None:
+        msg = f"UNKNOWN: live queue absent at {path} — not green"
+        if args.json:
+            json.dump({"file": str(path), "status": "UNKNOWN",
+                       "reason": "runtime_queue_absent"}, sys.stdout, indent=1)
+            print()
+        else:
+            print(msg)
+        return 0
+
     pending = [i for i in items if i.get("status") == "pending"]
     by_status = collections.Counter(i.get("status") for i in items)
     by_sev = collections.Counter(i.get("severity") for i in pending)
@@ -155,7 +174,7 @@ def main() -> int:
     if args.json:
         json.dump(
             {
-                "file": str(QUEUE.relative_to(REPO)),
+                "file": str(path),
                 "total": len(items),
                 "by_status": dict(by_status),
                 "pending_by_severity": dict(by_sev),
@@ -173,7 +192,7 @@ def main() -> int:
         print()
         return 0
 
-    print(f"{QUEUE.relative_to(REPO)} — cycle {cycle}, {len(items)} rows")
+    print(f"{path} — cycle {cycle}, {len(items)} rows")
     print("  " + " · ".join(f"{n} {s}" for s, n in by_status.most_common()))
     sev = " · ".join(
         f"{by_sev.get(s, 0)} {s}" for s in SEVERITY_ORDER if by_sev.get(s)

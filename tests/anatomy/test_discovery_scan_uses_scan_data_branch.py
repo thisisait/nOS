@@ -74,7 +74,11 @@ def _run_probe(mod, monkeypatch, disk_text, sd_text, head_text):
         def read_text(self, encoding="utf-8"):
             return disk_text
 
-    monkeypatch.setattr(mod, "REPO", type("R", (), {"__truediv__": lambda self, o: _P()})())
+    class _Dir:
+        def __truediv__(self, o):
+            return _P()
+
+    monkeypatch.setattr(mod, "security_dir", lambda: _Dir())
     res = mod.ScanResult()
     mod.probe_artefact_vs_repo(res)
     return res

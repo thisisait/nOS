@@ -93,7 +93,9 @@ def test_the_hook_emits_parseable_json_against_the_real_state() -> None:
         ["bash", str(HOOK)],
         capture_output=True,
         text=True,
-        env={"NOS_REPO": str(REPO), "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin"},
+        env={"NOS_REPO": str(REPO),
+             "NOS_SECURITY_DIR": str(REPO / "docs" / "llm" / "security"),
+             "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin"},
     )
     assert proc.stdout.strip(), (
         "the hook printed nothing. drift-watch.sh treats empty stdout as 'produced no JSON' "
