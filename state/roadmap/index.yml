@@ -849,6 +849,9 @@
 - slug: state-surface
   parent: sere
   track: agents
+- slug: swarm-2026-09-15
+  parent: plat
+  track: platform
 - slug: tables
   parent: ''
   track: cortex
