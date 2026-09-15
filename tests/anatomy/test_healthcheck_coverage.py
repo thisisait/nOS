@@ -46,7 +46,7 @@ FIXED = {
     "freescout": "curl / (nfrastack image ships curl)",
     "superset": "curl /health (image ships curl)",
     "hedgedoc": "node /status DB-aware probe (fee 02, 2026-08-18; was bash TCP :3000)",
-    "smtp_stalwart": "bash TCP :8080 (webadmin root can 401/redirect; TCP is protocol-agnostic)",
+    "smtp_stalwart": "bash TCP hostname -i:25 (published SMTP, not container-localhost :8080)",
 }
 
 # Deliberately health-blind, with reason. Class prefix documents why.

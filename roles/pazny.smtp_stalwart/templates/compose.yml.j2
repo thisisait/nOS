@@ -52,10 +52,13 @@ services:
       - {{ stalwart_tls_cert_key }}:/certs/key.pem:ro
 {% endif %}
     healthcheck:
-      # Stalwart image ships curl+bash but the webadmin root can 401/redirect;
-      # a TCP liveness on the management HTTP port (:8080) is protocol-agnostic
-      # and comes up alongside the SMTP/IMAP listeners.
-      test: ["CMD", "bash", "-c", ":>/dev/tcp/127.0.0.1/8080"]
+      # NOT `127.0.0.1`. A probe of container-localhost :8080 (webadmin) is how
+      # this service reported healthy for 3 days while host :25 had nothing
+      # listening behind Docker's proxy. `hostname -i` is the address Docker's
+      # port forward actually targets. `/25` is the published SMTP port — :8080
+      # answers even when SMTP is unbound (empty /etc/stalwart outranks compose
+      # `ports:`). `awk {print $1}`: two networks, bare `hostname -i` is two IPs.
+      test: ["CMD", "bash", "-c", ":>/dev/tcp/$(hostname -i | awk '{print $1}')/25"]
       interval: 30s
       timeout: 10s
       retries: 3
