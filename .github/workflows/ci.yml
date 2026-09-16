@@ -697,7 +697,7 @@ jobs:
 
       - name: Upload the rendered Traefik dynamic config.
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: traefik-dynamic-linux
           path: ~/stacks/infra/traefik/conf.d/
