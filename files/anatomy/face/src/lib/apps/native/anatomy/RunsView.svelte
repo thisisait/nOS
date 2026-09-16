@@ -460,9 +460,8 @@
 				<h3>Replay</h3>
 				<p class="hint">
 					A time cursor over the loaded window. Wing's <code>since/until</code>
-					are asked for; the BFF turns a PK-keyed map into an array (Nette
-					Selection json-encodes objects) so the table is not empty against a
-					healthy API.
+					are asked for; the BFF turns a PK-keyed map into an array (Nette Selection json-encodes objects)
+					so the table is not empty against a healthy API.
 				</p>
 				<select bind:value={replayJob} onchange={() => void loadReplay()}>
 					<option value="">choose a job…</option>
