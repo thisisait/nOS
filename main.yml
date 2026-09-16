@@ -1389,6 +1389,8 @@
         upgrade_architect_wing_api_token: "{% if '_pw_' in (upgrade_architect_wing_api_token | default('')) and upgrade_architect_wing_api_token != nos_derived_secrets.wing_upgrade_architect %}{{ nos_derived_secrets.wing_upgrade_architect }}{% else %}{{ upgrade_architect_wing_api_token | default(nos_derived_secrets.wing_upgrade_architect) }}{% endif %}"
         librarian_wing_api_token: "{% if '_pw_' in (librarian_wing_api_token | default('')) and librarian_wing_api_token != nos_derived_secrets.wing_librarian %}{{ nos_derived_secrets.wing_librarian }}{% else %}{{ librarian_wing_api_token | default(nos_derived_secrets.wing_librarian) }}{% endif %}"
         jeff_wing_api_token: "{% if '_pw_' in (jeff_wing_api_token | default('')) and jeff_wing_api_token != nos_derived_secrets.wing_jeff %}{{ nos_derived_secrets.wing_jeff }}{% else %}{{ jeff_wing_api_token | default(nos_derived_secrets.wing_jeff) }}{% endif %}"
+        rustfs_access_key: "{% if '_pw_' in (rustfs_access_key | default('')) and rustfs_access_key != nos_derived_secrets.rustfs_access %}{{ nos_derived_secrets.rustfs_access }}{% else %}{{ rustfs_access_key | default(nos_derived_secrets.rustfs_access) }}{% endif %}"
+        rustfs_secret_key: "{% if '_pw_' in (rustfs_secret_key | default('')) and rustfs_secret_key != nos_derived_secrets.rustfs_secret %}{{ nos_derived_secrets.rustfs_secret }}{% else %}{{ rustfs_secret_key | default(nos_derived_secrets.rustfs_secret) }}{% endif %}"
       no_log: true
       tags: ['always']
 
@@ -1751,6 +1753,14 @@
         # changed>0. Now persisted + lazy: generate once (placeholder/short ->
         # random), persist to ~/.nos/secrets.yml, reuse. Entropy forms unchanged.
         vaultwarden_admin_token: "{% if '_pw_' in (vaultwarden_admin_token | default('')) or (vaultwarden_admin_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -base64 48') }}{% else %}{{ vaultwarden_admin_token }}{% endif %}"
+        # REM-249: RustFS S3 keys ARE the access control (traefik mode none —
+        # signed requests cannot pass a forward-auth gate) and they were
+        # scheme-v1 concatenations. The judged loop patch aliased the same
+        # weak secret as MINIO_ROOT_PASSWORD; that is a no-op. Mint once,
+        # persist, reuse. Rotation invalidates existing S3 clients until
+        # they re-read ~/.nos/secrets.yml (backup_target_* inherit these vars).
+        rustfs_access_key: "{% if '_pw_' in (rustfs_access_key | default('')) or (rustfs_access_key | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 16') }}{% else %}{{ rustfs_access_key }}{% endif %}"
+        rustfs_secret_key: "{% if '_pw_' in (rustfs_secret_key | default('')) or (rustfs_secret_key | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ rustfs_secret_key }}{% endif %}"
         paperclip_auth_secret: "{% if '_pw_' in (paperclip_auth_secret | default('')) or (paperclip_auth_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ paperclip_auth_secret }}{% endif %}"
         outline_utils_secret: "{% if '_pw_' in (outline_utils_secret | default('')) or (outline_utils_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ outline_utils_secret }}{% endif %}"
         hedgedoc_session_secret: "{% if '_pw_' in (hedgedoc_session_secret | default('')) or (hedgedoc_session_secret | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ hedgedoc_session_secret }}{% endif %}"
