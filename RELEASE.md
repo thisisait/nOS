@@ -2,7 +2,69 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.10-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.11-beta`.
+
+---
+
+## v0.12-beta (2026-09-16)
+
+> **Doctrine is a tree; the loop has a face; a proving instance runs.**
+> 607 commits since `v0.11-beta` (1107 files, +94k/−22k).
+> v0.11 closed propose → judge → drive → review so no step writes its own
+> outcome. v0.12 makes that loop *generated and visible*, and the doctrine
+> that lived as drafts becomes a cited `ssot/` tree. Overnight, repo-check
+> ran five times at exit 0. Anatomy replay was empty because Wing emitted a
+> PK-keyed map; Face already knew that class for jobs.
+
+### Single source of truth, as a path
+
+- **`ssot/` articles** promoted from `docs/doctrine` drafts: layers, identity,
+  filesystem, gates, secrets, observability, face, loops, operator-model,
+  foreign-properties, virtiofs, workflows, generative-ui — INDEX + citation
+  rules + `doctrine-cite --file` (IDE wrap). A cite that cannot resolve is a
+  broken build.
+- Constitution is a path, not a memory.
+
+### Loops — generated, reviewed, proven
+
+- Pulse jobs harvested from `files/anatomy/loops/*.loop.yml` (same catalog as
+  plugins). Face draws the same files. news-scout: fetch → extract → KEAP.
+- **repo-check** is the proving instance (four-hour, red / estate / forge,
+  report-only). Gitea is the agent-loop default when GitLab is off.
+- `loop:propose` rc=3 is **findings** when declared; `loop:review` rc=0 with
+  zero merges is a CI refusal, not a broken reviewer.
+- **Replay:** Nette Selection keys `pulse_runs` by UUID; JSON was an object;
+  Face spread it as an array. `array_values` at Wing; `asKeyedList` at the
+  BFF (same class as `pulse_jobs`).
+- **CI join:** conductor HOME token is `NOS_HOME` from wing `post.yml`, not
+  a process inherit. That was the `Missing: HOME` pytest red on `dev`.
+
+### Face planner
+
+- Roadmap as Svelte Flow (slices 1–4), loops view from the ledger, routing
+  graph, live-run overlay on SERE stages. One loop at a time. Overlay does
+  not invent RSI.
+
+### AgentKit
+
+- Five rulings (2026-09-02) written down. MiniMax armed for bound ceremonies;
+  code-authoring stays on the default backend. DataTables verb surface;
+  read-only cortex-query skill.
+
+### Local CI and honesty
+
+- Woodpecker pytest reds landed. `tools/ci-local.sh` remains the frozen
+  GitHub-runner mirror. SMTP healthcheck still probes published `:25`;
+  STRICT wait admits unbound smtp rather than lying the probe to `:8080`.
+- `tools/forge-sync.py` is the only tool that fast-forwards refs among
+  local / GitHub / Gitea.
+
+### Still open (named, not restated as done)
+
+- GitHub Integration on `master` is not claimed green. Signed-commit ruleset
+  still bypassed. REM-249/250 wait on Woodpecker. Email untestable.
+  upgrade-architect:recipe-author paused, never ran. Four v0.11 `-beta`
+  drop criteria remain unmet.
 
 ---
 

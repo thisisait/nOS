@@ -6,14 +6,14 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-09-13.
+> Last updated: 2026-09-16.
 
 ## Now (current track)
 
-1. **CI Integration / master is still a process risk.** Pin `54c62045` exists
-   (linux overlay needs authentik). Do not claim master is green — ask
-   `gh run list --branch master --limit 5`. Dev pushes run the light lane; a
-   `dev→master` PR is the wet-test gate until Integration is proven there.
+1. **v0.12-beta cut in flight.** nos p=30490 recap `failed=0` (ok=1290
+   changed=98); Wing/Bone at `7c129676`. Tag waits on `tools/ci-local.sh`
+   + forge-sync to origin. Do not claim master is green — ask
+   `gh run list --branch master --limit 5`.
 
 2. **[`docs/doctrine/agentkit.md`](doctrine/agentkit.md) is DRAFTED as proposed**
    (`1e263377`). It is no longer unwritten. Operator still settles §6 before
