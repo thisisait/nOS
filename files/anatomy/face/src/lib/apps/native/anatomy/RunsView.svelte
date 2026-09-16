@@ -17,10 +17,7 @@
   are enumerated ON the screen — what this surface will not do is part of
   what it shows. Everything else is read-only.
 
-  NAMED MISSING (each becomes live on the converge that redeploys its owner):
-    - pulse_runs time-window params (Wing `since`/`until`) — replay beyond the
-      last 25 runs per job needs them; the cursor below is honest about its
-      window.
+    NAMED MISSING (each becomes live on the converge that redeploys its owner):
     - the deployed Wing lags the repo generally; the loop ledger reads are
       BONE surfaces and ship with the Bone restart instead.
 -->
@@ -463,9 +460,9 @@
 				<h3>Replay</h3>
 				<p class="hint">
 					A time cursor over the loaded window. Wing's <code>since/until</code>
-					window params exist in the repo as of 2026-08-06 and this screen asks for them — but the DEPLOYED
-					Wing honours them only after its next converge; until then it answers the unwindowed default
-					and the count below is honest about what actually loaded.
+					are asked for; the BFF turns a PK-keyed map into an array (Nette
+					Selection json-encodes objects) so the table is not empty against a
+					healthy API.
 				</p>
 				<select bind:value={replayJob} onchange={() => void loadReplay()}>
 					<option value="">choose a job…</option>

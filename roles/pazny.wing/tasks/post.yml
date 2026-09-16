@@ -473,6 +473,13 @@
     # the task, for nothing. Removed rather than left as harmless: an unused
     # secret in flight is still a secret in flight.
     NOS_PLAYBOOK_DIR: "{{ nos_main_checkout }}"
+    # conductor vulnerability-scan: VULNSCAN_SECURITY_DIR is
+    # {{ ansible_facts['env']['HOME'] }}/.nos/security. The catalog is
+    # str.replace, so the facts token needs a NOS_* value here — inheriting
+    # the subprocess HOME is how it happened to render, and how the join
+    # gate (test_plugin_manifest_vars_defined) went red: it reads exports,
+    # not the process environment.
+    NOS_HOME: "{{ ansible_facts['env']['HOME'] }}"
     NOS_AUTHENTIK_DOMAIN: "{{ authentik_domain | default('auth.' ~ (tenant_domain | default('dev.local'))) }}"
     NOS_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
     NOS_GLOBAL_PASSWORD_PREFIX: "{{ global_password_prefix }}"

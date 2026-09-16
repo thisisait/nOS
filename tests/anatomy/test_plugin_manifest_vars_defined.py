@@ -144,3 +144,22 @@ def test_the_cortex_fanout_join_is_intact_end_to_end() -> None:
         "string is what makes the consolidator degrade to a single target instead of "
         "POSTing captures at a port nothing binds"
     )
+
+
+def test_the_home_facts_token_is_a_nos_export() -> None:
+    """`_env("HOME")` is a process inherit, not a join. CI went red on it.
+
+    The conductor vulnerability-scan token is Ansible facts HOME. The catalog
+    must pull NOS_HOME from post.yml the same way every other token does —
+    otherwise the gate that caught the empty-string class cannot see it.
+    """
+    catalog = CATALOG.read_text()
+    names = re.findall(r'"\{\{[^"]*?\}\}"\s*:\s*_env\(\s*"([A-Z0-9_]+)"', catalog)
+    assert "NOS_HOME" in names, "the HOME facts token lost its NOS_HOME substitution"
+    assert "HOME" not in names, (
+        "the catalog reads process HOME again — that is how the join gate "
+        "reported Missing: HOME while the live catalog still rendered"
+    )
+    assert re.search(r"^\s*NOS_HOME:", WING_POST.read_text(), re.M), (
+        "roles/pazny.wing/tasks/post.yml no longer exports NOS_HOME"
+    )

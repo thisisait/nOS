@@ -19,7 +19,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { pulseJobs, pulseRunSummary, pulseRuns, wingApiConfigured } from '$lib/server/upstream';
-import { projectSnapshot } from '$lib/anatomy/pulse';
+import { asKeyedList, projectSnapshot } from '$lib/anatomy/pulse';
 import { canViewAnatomy } from '$lib/security/tier';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
@@ -48,13 +48,13 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		const until = url.searchParams.get('until') ?? undefined;
 		try {
 			const runs = (await pulseRuns(jobId, since || until ? 200 : 25, since, until)) as {
-				runs?: unknown[];
+				runs?: unknown;
 			};
 			return json({
 				configured: true,
 				jobId,
 				window: { since: since ?? null, until: until ?? null },
-				runs: runs.runs ?? []
+				runs: asKeyedList(runs.runs)
 			});
 		} catch (e) {
 			return json({

@@ -437,7 +437,11 @@ final class PulseRepository
 		if ($until !== null && $until !== '') {
 			$sel->where('fired_at <= ?', $until);
 		}
-		return array_map(fn($r) => $r->toArray(), iterator_to_array($sel->fetchAll()));
+		// Nette Selection is keyed by primary key (run_id UUID). json_encode
+		// then emits an OBJECT, and a Face caller that spreads `runs` as an
+		// array gets TypeError / empty replay against a healthy API — the
+		// same class as pulse_jobs, which the snapshot already Object.values.
+		return array_values(array_map(fn($r) => $r->toArray(), iterator_to_array($sel->fetchAll())));
 	}
 
 	/**

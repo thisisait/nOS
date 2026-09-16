@@ -4,7 +4,7 @@
  *  and the daemon remains the only executor. Every other action stays in
  *  Wing UI, where the tier gates already are. */
 import { bffGet, bffPost } from './client';
-import type { PulseSnapshot } from '$lib/anatomy/pulse';
+import { asKeyedList, type PulseSnapshot } from '$lib/anatomy/pulse';
 import type { WingSnapshot } from '$lib/anatomy/wing';
 import type { BoneSnapshot } from '$lib/anatomy/bone';
 
@@ -43,8 +43,8 @@ export async function loadRuns(
 	const params: Record<string, string> = { job_id: jobId };
 	if (since) params.since = since;
 	if (until) params.until = until;
-	const r = await bffGet<{ runs?: PulseRunRow[]; error?: string }>('/bff/pulse', params);
-	return { runs: r.runs ?? [], error: r.error };
+	const r = await bffGet<{ runs?: unknown; error?: string }>('/bff/pulse', params);
+	return { runs: asKeyedList<PulseRunRow>(r.runs), error: r.error };
 }
 
 /** §4b run-now. 202 = the REQUEST was recorded; the run itself appears in the

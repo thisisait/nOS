@@ -109,3 +109,28 @@ def test_the_runs_window_is_canonicalised_not_trusted():
     )
     repo_fn = _fn(REPOSITORY, "listRuns")
     assert "fired_at >= ?" in repo_fn and "fired_at <= ?" in repo_fn
+
+
+def test_list_runs_is_a_json_array_not_a_pk_map():
+    """Nette Selection is keyed by run_id; json_encode of that is an OBJECT.
+
+    Anatomy replay spread `runs` as an array and went empty against a healthy
+    API — the same class as pulse_jobs, which the Face snapshot already
+    Object.values. array_values is the contract; a lagging Wing still needs
+    the Face coerce, pinned separately.
+    """
+    repo_fn = _code(_fn(REPOSITORY, "listRuns"))
+    assert "array_values" in repo_fn, (
+        "listRuns lost array_values — Wing would again emit a PK-keyed object "
+        "and Face replay would spread it as if it were a list"
+    )
+
+
+def test_the_face_bff_coerces_a_runs_map():
+    """A Wing that still emits the PK map must not empty the replay table."""
+    repo = Path(__file__).resolve().parents[2]
+    bff = (repo / "files/anatomy/face/src/routes/bff/pulse/+server.ts").read_text(encoding="utf-8")
+    assert "asKeyedList" in bff, (
+        "the Pulse BFF no longer coerces runs — a PK-keyed Wing payload would "
+        "reach [...r.runs] in the browser and throw"
+    )

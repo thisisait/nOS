@@ -233,6 +233,18 @@ export interface PulseSnapshot {
 }
 
 /**
+ * Wing's Nette Selection is keyed by primary key, so `json_encode` of
+ * `pulse_jobs` and `pulse_runs` is an OBJECT. The jobs snapshot already
+ * accepted both shapes; runs did not, and Anatomy replay spread the object
+ * as if it were an array — TypeError / empty table against a healthy API.
+ */
+export function asKeyedList<T>(raw: unknown): T[] {
+	if (Array.isArray(raw)) return raw as T[];
+	if (raw && typeof raw === 'object') return Object.values(raw as Record<string, T>);
+	return [];
+}
+
+/**
  * Project the two upstream payloads into one snapshot.
  *
  * `jobs` arrives from Wing as a MAP keyed by job id, not an array. Accepting
@@ -250,9 +262,7 @@ export function projectSnapshot(
 		window_hours?: number;
 		summaries?: Record<string, RawSummary>;
 	};
-	const rawJobs: RawJob[] = Array.isArray(jp.jobs)
-		? (jp.jobs as RawJob[])
-		: Object.values((jp.jobs ?? {}) as Record<string, RawJob>);
+	const rawJobs: RawJob[] = asKeyedList<RawJob>(jp.jobs);
 	const summaries = sp.summaries ?? {};
 
 	const jobs = rawJobs

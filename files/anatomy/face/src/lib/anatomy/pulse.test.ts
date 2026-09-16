@@ -8,6 +8,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+	asKeyedList,
 	projectJob,
 	projectSnapshot,
 	graceSeconds,
@@ -212,6 +213,20 @@ describe('the snapshot', () => {
 		const snap = projectSnapshot({}, {}, NOW);
 		expect(snap.jobs).toEqual([]);
 		expect(snap.counts.total).toBe(0);
+	});
+});
+
+describe('a PK-keyed map is a list', () => {
+	// MEASURED 2026-09-16: GET /pulse_runs?job_id=loop:propose returned
+	// {runs: { "<uuid>": {run_id, ...}, ... }} because Nette Selection keys
+	// by primary key. Anatomy replay did [...r.runs] and threw.
+	it('Object.values a map, passes an array through, empty on junk', () => {
+		const a = { run_id: 'a', fired_at: 't' };
+		const b = { run_id: 'b', fired_at: 'u' };
+		expect(asKeyedList({ a, b })).toEqual([a, b]);
+		expect(asKeyedList([a, b])).toEqual([a, b]);
+		expect(asKeyedList(null)).toEqual([]);
+		expect(asKeyedList(undefined)).toEqual([]);
 	});
 });
 

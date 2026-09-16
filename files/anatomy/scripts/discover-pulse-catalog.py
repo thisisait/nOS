@@ -85,9 +85,11 @@ def _build_substitutions() -> dict[str, str]:
         "{{ global_password_prefix }}":   _env("NOS_GLOBAL_PASSWORD_PREFIX"),
         # Pulse is a literal str.replace, not Ansible. A facts token in a
         # manifest (conductor vulnerability-scan) must be named here or it
-        # ships as braces into pulse_jobs. HOME is the operator home at
-        # converge; empty is still a render (the brace gate), not a leftover.
-        "{{ ansible_facts['env']['HOME'] }}": _env("HOME"),
+        # ships as braces into pulse_jobs. NOS_HOME is the operator home at
+        # converge (wing post.yml); empty is still a render (the brace gate),
+        # not a leftover. A bare HOME inherit from the catalog process is how
+        # the join gate went red: it reads NOS_* exports, not the process env.
+        "{{ ansible_facts['env']['HOME'] }}": _env("NOS_HOME"),
         "{{ wing_api_token }}":           "secret:wing_api_token",
         "{{ conductor_wing_api_token }}": "secret:conductor_wing_api_token",
         "{{ surveyor_wing_api_token }}":   "secret:surveyor_wing_api_token",
