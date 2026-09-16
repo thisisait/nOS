@@ -63,6 +63,26 @@ def test_discovery_surfaces_the_loop_job_with_tokens_expanded(monkeypatch, capsy
     assert check["category"] == "platform"
 
 
+def test_anatomy_graph_harvests_generated_loop_jobs():
+    """The pulse catalog already globs *.loop.yml; anatomy-graph-gen.py did not.
+    Face Runs replay walks anatomy pulse nodes, so loop:news-scout was
+    scheduled and invisible on that screen at once."""
+    spec = importlib.util.spec_from_file_location(
+        "anatomy_graph_gen", REPO / "tools/anatomy-graph-gen.py")
+    gen = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gen)
+    nodes, raw, writes = {}, [], []
+    gen.harvest_pulse(nodes, raw, writes)
+    for loop_id in ("news-scout", "repo-check"):
+        nid = f"pulse:loop:{loop_id}"
+        assert nid in nodes, (
+            f"{nid} missing from anatomy harvest — JOB_SOURCES is still "
+            "plugins+agents only. Runs replay cannot pick the generated job."
+        )
+        assert nodes[nid]["kind"] == "pulse"
+        assert nodes[nid]["source"].endswith(f"loops/{loop_id}.loop.yml")
+
+
 def test_repo_check_pulse_job_is_report_only():
     d = _disc()
     m = yaml.safe_load((REPO / "files/anatomy/loops/repo-check.loop.yml").read_text(encoding="utf-8"))

@@ -135,10 +135,12 @@ You are the NOS Security Auditor. This is a scheduled iterative scan.
    - Document specific attack vectors and their feasibility
    - Rate each vector: exploitable / theoretical / mitigated
 
-3. **Output**: Append findings to existing files in $SECURITY_DIR/:
-   - Update remediation-queue.json with new items
+3. **Output**: Write ONLY under $SECURITY_DIR (also the process cwd):
+   - Update remediation-queue.json with new pending items (finding fields only)
    - Update scan-state.json timestamps for scanned components
-   - If critical finding: prepend to 2026-04-08-vuln-report.md
+   - If critical finding: prepend to $SECURITY_DIR/2026-04-08-vuln-report.md
+   - MUST NOT write resolved_by, resolved_at, resolution, or dispositions.json
+   - MUST NOT write anywhere under the git checkout ($REPO_DIR)
 
 ### Rules:
 - Do NOT fabricate CVE IDs
@@ -146,6 +148,7 @@ You are the NOS Security Auditor. This is a scheduled iterative scan.
 - Mark confidence level (high/medium/low)
 - Read existing findings first to avoid duplicates
 - Update scan-state.json component timestamps after scanning
+- Read the estate at $REPO_DIR; cwd is $SECURITY_DIR
 PROMPT_EOF
 
 # ── Emit scan.batch_started event ────────────────────────────────────────────
@@ -188,13 +191,21 @@ if ! nos_agent_lock_acquire "vulnscan:${SCAN_RUN_ID}" 600 cli; then
 fi
 trap 'nos_agent_lock_release; cleanup' EXIT
 
-log "Dispatching Claude Code scan..."
+log "Dispatching Claude Code scan (cwd=$SECURITY_DIR)..."
 SCAN_STARTED_AT=$(date +%s)
 
+# Confine relative writes to the runtime notebook. REPO_DIR stays readable
+# via the env Pulse already sets; cwd is what a model without an absolute
+# path will dirty. --dangerously-skip-permissions does not choose a tree.
 SCAN_RC=0
-claude --dangerously-skip-permissions -p - < "$PROMPT_FILE" \
-    --output-format text \
-    2>>"$LOG_FILE" || SCAN_RC=$?
+(
+    cd "$SECURITY_DIR" || exit 1
+    export REPO_DIR="${VULNSCAN_REPO_DIR:-$REPO_DIR}"
+    export SECURITY_DIR
+    claude --dangerously-skip-permissions -p - < "$PROMPT_FILE" \
+        --output-format text \
+        2>>"$LOG_FILE"
+) || SCAN_RC=$?
 rm -f "$PROMPT_FILE"
 
 # ── Update scan state ─────────────────────────────────────────────────────────

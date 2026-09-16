@@ -4,9 +4,9 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 277,
-    "edges": 289,
-    "nodes_pulse": 32,
+    "nodes": 279,
+    "edges": 291,
+    "nodes_pulse": 34,
     "nodes_judge": 5,
     "nodes_gateset": 5,
     "nodes_weakness": 7,
@@ -21,7 +21,7 @@
     "nodes_faceapp": 6,
     "nodes_agent": 14,
     "edges_data": 203,
-    "edges_trigger": 39,
+    "edges_trigger": 41,
     "edges_temporal": 5,
     "edges_mutex": 21,
     "edges_governed_by": 21,
@@ -1682,6 +1682,21 @@
       "anchor": "02.02.06",
       "description": "Pulse scheduled job (platform): runs loop-pr.py on cron `10 6 * * *`"
     },
+    "pulse:loop:news-scout": {
+      "kind": "pulse",
+      "source": "files/anatomy/loops/news-scout.loop.yml",
+      "schedule": "0 7 * * *",
+      "jitter_min": 10,
+      "max_runtime_s": 600,
+      "category": "knowledge",
+      "paused": false,
+      "findings_exit_codes": null,
+      "command_name": "news-scout.py",
+      "claims": [],
+      "runs_agent": null,
+      "anchor": "09",
+      "description": "Pulse scheduled job (knowledge): runs news-scout.py on cron `0 7 * * *`"
+    },
     "pulse:loop:propose": {
       "kind": "pulse",
       "source": "files/anatomy/plugins/loop-base/plugin.yml",
@@ -1699,6 +1714,21 @@
       "runs_agent": null,
       "anchor": "02.02.09",
       "description": "Pulse scheduled job (agents): runs loop-propose.py on cron `30 1 * * *` — exits [1, 3] mean findings, not failure"
+    },
+    "pulse:loop:repo-check": {
+      "kind": "pulse",
+      "source": "files/anatomy/loops/repo-check.loop.yml",
+      "schedule": "17 */4 * * *",
+      "jitter_min": 10,
+      "max_runtime_s": 180,
+      "category": "platform",
+      "paused": false,
+      "findings_exit_codes": null,
+      "command_name": "repo-check.py",
+      "claims": [],
+      "runs_agent": null,
+      "anchor": "02.02.06",
+      "description": "Pulse scheduled job (platform): runs repo-check.py on cron `17 */4 * * *`"
     },
     "pulse:loop:review": {
       "kind": "pulse",
@@ -5530,7 +5560,23 @@
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:loop:news-scout",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:loop:propose",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:loop:repo-check",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
       "derived": "daemon-dispatch",

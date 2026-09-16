@@ -21,6 +21,13 @@
 	import './graph-theme.css';
 	import raw from '$lib/anatomy/loop-graph.json';
 	import { loadLoop, type LoopResponse } from '$lib/api/loop';
+	import { loadPulse } from '$lib/api/pulse';
+	import {
+		countForSereNode,
+		ledgerOverlayApplies,
+		pulseJobForLoop
+	} from '$lib/anatomy/loop-overlay';
+	import type { PulseJobView } from '$lib/anatomy/pulse';
 	import { StatusNote, Badge, Tabs, type TabSpec } from '$lib/components/ui';
 
 	type LoopNode = {
@@ -63,6 +70,7 @@
 	const loopEdges = $derived(graph.edges.filter((e) => e.loop === selectedLoop));
 
 	let live = $state<LoopResponse | null>(null);
+	let pulseJobs = $state<PulseJobView[] | undefined>(undefined);
 	let loadErr = $state('');
 	let loading = $state(true);
 
@@ -71,46 +79,31 @@
 		try {
 			live = await loadLoop();
 			loadErr = live.error ?? '';
+			const pulse = await loadPulse();
+			pulseJobs = pulse.configured ? pulse.jobs : undefined;
+			if (!loadErr && pulse.error) loadErr = pulse.error;
 		} catch (e) {
 			loadErr = e instanceof Error ? e.message : String(e);
 			live = null;
+			pulseJobs = undefined;
 		} finally {
 			loading = false;
 		}
 	}
 	onMount(load);
 
-	// Proposals per intent_class, and the verdict tally — derived from the live
-	// snapshot, empty when unconfigured/unloaded.
-	const byIntent = $derived.by(() => {
-		const m = new Map<string, number>();
-		for (const p of live?.proposals ?? []) m.set(p.intent_class, (m.get(p.intent_class) ?? 0) + 1);
-		return m;
-	});
 	const tally = $derived.by(() => {
 		const t = { pass: 0, fail: 0, indeterminate: 0 } as Record<string, number>;
 		for (const v of live?.verdicts ?? []) if (v.result in t) t[v.result]++;
 		return t;
 	});
 	const configured = $derived(live?.configured === true);
+	const sereSelected = $derived(ledgerOverlayApplies(selectedLoop));
+	const pulseJob = $derived(pulseJobForLoop(selectedLoop, pulseJobs));
 
 	/** Live count for a node, or null when the overlay has nothing to say. */
 	function countFor(id: string): number | null {
-		if (!configured || !live) return null;
-		const c = live.counts;
-		switch (id) {
-			case 'stage:propose':
-			case 'table:loop_proposals':
-				return c?.proposals ?? 0;
-			case 'stage:judge':
-			case 'table:loop_judge_runs':
-				return c?.judgeRuns ?? 0;
-			case 'stage:apply':
-			case 'table:loop_verdicts':
-				return c?.verdicts ?? 0;
-		}
-		if (id.startsWith('intent:')) return byIntent.get(id.slice('intent:'.length)) ?? 0;
-		return null;
+		return countForSereNode(id, selectedLoop, live);
 	}
 
 	const KIND_BG: Record<string, string> = {
@@ -187,18 +180,24 @@
 <div class="loops">
 	<header>
 		<strong>Loops</strong>
-		<span class="sub">the harness · read-only · from ledger.py</span>
+		<span class="sub">the harness · read-only</span>
 		{#if loading}
 			<span class="sub">loading runs…</span>
-		{:else if configured}
+		{:else if sereSelected && configured}
 			<Badge tone="ok">✓ {tally.pass}</Badge>
 			{#if tally.fail}<Badge tone="bad">✗ {tally.fail}</Badge>{/if}
 			{#if tally.indeterminate}<Badge tone="warn">? {tally.indeterminate}</Badge>{/if}
 			<span class="sub"
 				>{live?.counts?.proposals ?? 0} proposals · {live?.counts?.judgeRuns ?? 0} runs</span
 			>
+		{:else if pulseJob}
+			<Badge
+				tone={pulseJob.state === 'ok' ? 'ok' : pulseJob.state === 'failing' ? 'bad' : 'neutral'}
+				>{pulseJob.state}</Badge
+			>
+			<span class="sub">{pulseJob.id}{pulseJob.neverRan ? ' · never ran' : ''}</span>
 		{:else}
-			<Badge tone="neutral">no live runs</Badge>
+			<Badge tone="neutral">no live overlay</Badge>
 		{/if}
 		<button class="refresh" onclick={load} aria-label="Reload loop runs">↻</button>
 	</header>
