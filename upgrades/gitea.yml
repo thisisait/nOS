@@ -252,13 +252,14 @@ recipes:
 
   - id: "gitea-1.27-current"
     from_regex: "^1\\.27\\."
-    to: "1.27.2"           # == installed
+    to: "1.27.3"           # == installed
     severity: security
     changelog_url: "https://blog.gitea.com/"
     notes: |
-      At-target forward coverage for the 1.27 line. In-branch patch bumps on the
-      same sqlite engine; forward-only migrations on first boot, same generous
-      health window as the 1.25→1.26 and 1.26→1.27 tracks.
+      At-target forward coverage for the 1.27 line. REM-244 hop 1.27.2 → 1.27.3
+      (2026-08-29 advisory wave; twenty of twenty-two name 1.27.2). In-branch
+      patch bumps on the same sqlite engine; forward-only migrations on first
+      boot, same generous health window as the 1.25→1.26 and 1.26→1.27 tracks.
       Why this exists: with only ^1\.25\. and ^1\.26\. authored, an estate that
       had already applied REM-137 read as "no upgrade path" — which is exactly
       the state REM-178 warns about, where a recorded fix version below what the
