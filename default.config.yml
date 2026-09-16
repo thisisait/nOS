@@ -2340,10 +2340,13 @@ nodered_timezone: "Europe/Prague"
 nodered_flows_file: "flows.json"
 nodered_enable_safe_mode: "false"
 nodered_enable_projects: "true"
-# Native OIDC opt-in (β1.B 2026-05-05 — passport-openidconnect path).
-# When true, the compose template wires NODERED_OIDC_* env + mounts the
-# mkcert root CA; otherwise Traefik forward-auth gates the service.
-nodered_native_oidc_enabled: false
+# Native OIDC (β1.B 2026-05-05 — passport-openidconnect path).
+# Traefik mode is native_oidc: there is NO authentik@file on this route.
+# A literal false here outranks the role default and leaves adminAuth off,
+# so /settings and /flows answer 200 at the public hostname (REM-256).
+# Follow install_authentik. Stock Jinja only (`default`) — this file is
+# walked by the eager `{{ vars }}` snapshot.
+nodered_native_oidc_enabled: "{{ install_authentik | default(false) }}"
 authentik_oidc_nodered_client_id: "nos-nodered"
 authentik_oidc_nodered_client_secret: "{{ nos_derived_secrets.oidc_nodered }}"
 ntfy_port: 2586
