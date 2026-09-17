@@ -6,25 +6,27 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-09-16.
+> Last updated: 2026-09-17.
 
 ## Now (current track)
 
-1. **v0.12-beta is tagged.** Next workload, not a recut. Ask
-   `gh run list --branch master --limit 5` — do not inherit CI colour.
+1. **First always-on PoC: `git-origin-watcher`** (dtt, parent
+   `loop-definition-model`) on DGX Spark / Qwen3 8B. Slice 1 is reader-only
+   (npm+composer graph). Constraint A: model proposes, judges authorize.
+   Do not re-research agent memory — rows `work-corpus-not-seed`,
+   `cortex-rows`, `keap-row-vector-search`, `fs-project-tree`,
+   `share-grants-agents`, `rsi-ops-loop`.
 
-2. **REM-249 / REM-250 SOURCE landed; live on next nos.** RustFS S3 keys
-   mint+persist (do **not** land the judged `MINIO_ROOT_PASSWORD` alias).
-   FreeScout pin `2.2.8` (CHANGELOG claims app 1.8.238 — UNVERIFIED until
-   `tools/app-version.py`). Rotation breaks existing S3 clients until they
-   re-read `~/.nos/secrets.yml`. Remaining HIGH: `tools/rem-status.py`.
+2. **SOURCE pins await the operator `nos`.** Ask `tools/estate-status.py`
+   and `tools/rem-status.py`. Do **not** land the judged `MINIO_ROOT_PASSWORD`
+   alias for REM-249 (mint+persist already shipped). RustFS rotation breaks
+   S3 clients until they re-read `~/.nos/secrets.yml`.
 
 3. **[`docs/doctrine/agentkit.md`](doctrine/agentkit.md) is DRAFTED as proposed**
    (`1e263377`). Operator still settles §6 before anything cites the file.
 
-4. **Roadmap table undercounts shipped work** + doctrine splits owed
-   (loops.md + foreign-properties.md → index + companions). Capture via
-   `nos dtt`, do not invent rows here.
+4. **Do not pick `loop-steps-match-run`.** Graph-follows-run vs
+   runner-follows-graph is still queued design.
 
 **Voice → caddy → AgentKit → cortex.** Five wires gated; fee
 [43](hidden_fees/43-a-tool-with-no-door.md) paid. KEAP SOURCE pin is
