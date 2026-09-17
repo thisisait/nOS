@@ -6,7 +6,7 @@
 # default.credentials.yml — centralized for prefix rotation.
 # ==============================================================================
 
-miniflux_version: "2.2.19"
+miniflux_version: "2.3.3"               # REM-155
 miniflux_domain: "rss{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 miniflux_port: 3011
 miniflux_db_name: "miniflux"

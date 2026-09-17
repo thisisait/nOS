@@ -1388,7 +1388,7 @@ sublime_package_control:
 # ==============================================================================
 
 mariadb_root_password: "{{ nos_derived_secrets.mariadb }}"   # OVERRIDE in credentials.yml!
-mariadb_version: "11.8.8"               # REM-102: CVE-2026-49261 (CVSS 10.0 RCE via wsrep_notify_cmd — not reachable single-node, patched anyway) + prior CVE-2026-32710 + CVE-2026-3494 (both patched in 11.8.6); 11.4.10 crashed FK ALTER on Apple Silicon
+mariadb_version: "11.8.9"               # REM-246: 11.8.9 patch. Prior REM-102 CVE-2026-49261 at 11.8.8. [swept 11.8.8 2026-09-17]
 mariadb_port: 3306
 # ── Server-side TLS material on disk (REM-217, rungs 1 and 2) ───────────────
 # MariaDB reports have_ssl=YES with ssl_cert EMPTY, because 11.x generates
@@ -1676,7 +1676,7 @@ shell_aliases:
 grafana_port: 3000
 prometheus_port: 9090
 loki_port: 3100
-tempo_version: "2.10.3"           # >=2.10.3 fixes CVE-2026-28377 / REM-036 (was 2.10.0); github.com/grafana/tempo/releases
+tempo_version: "2.10.8"           # REM-232: head of 2.10. Prior REM-036 CVE-2026-28377 at 2.10.3. [swept 2.10.3 2026-09-17]
 nginx_prometheus_exporter_version: "1.4.1"  # github.com/nginxinc/nginx-prometheus-exporter/releases – no Homebrew formula
 # SHA256 from nginx-prometheus-exporter_1.4.1_checksums.txt on the same release.
 nginx_prometheus_exporter_checksums:
@@ -1700,7 +1700,7 @@ grafana_domain: "grafana{{ _host_alias_seg | default('') }}.{{ tenant_domain | d
 observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname in Grafana labels
 
 # ── Docker image versions (observability + devops) ───────────────────────────
-grafana_version: "12.4.9"               # REM-226: CVE-2026-17183, fixed in-branch 12.4.9
+grafana_version: "12.4.10"              # REM-252: 12.4.10 in-branch. Prior REM-226 CVE-2026-17183 at 12.4.9. [swept 12.4.9 2026-09-17]
                                         # (v12.4.9 release body carries a literal `### Security`
                                         # section naming it; verified at the tag, not inferred from
                                         # the five-release 2026-08-18 wave). Same minor as the
@@ -3217,7 +3217,7 @@ nos_infisical_projects:
 # Each nOS tenant has their own vault for personal passwords.
 # ==============================================================================
 
-vaultwarden_version: "1.37.1"            # CVE pins + S2 freshness sweep 2026-06-10 (patch line) [swept 1.37.0 2026-08-06]
+vaultwarden_version: "1.37.3"            # REM-261: 1.37.3 security fixes. [swept 1.37.1 2026-09-17]
 vaultwarden_domain: "pass{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 vaultwarden_port: 8062
 vaultwarden_signups_allowed: false                 # Admin creates accounts
