@@ -1,0 +1,14 @@
+{
+  "record": {
+    "id": "2026-INV-202",
+    "currency": "CZK",
+    "payable": 5000,
+    "seller": {"ico": "00000112", "name": "Mesto Lipno (synthetic)"},
+    "buyer": {"ico": "00000113", "name": "Petr Svoboda (synthetic)"}
+  },
+  "fields": {
+    "id":      {"value": "2026-INV-202", "confidence": 0.90, "source": "text-model"},
+    "payable": {"value": 5000,           "confidence": 0.40, "source": "text-model"}
+  },
+  "verified": true
+}
