@@ -78,6 +78,31 @@ gdpr:
   processors: []
   transfers_outside_eu: false
 
+# ── SSO source-of-truth: the aggregator harvest ─────────────────────────────
+# `nginx.auth: oidc` below only picks the Traefik label shape (no forward-auth
+# middleware — the app gates itself). The Authentik OAuth2Provider/Application
+# only gets created because THIS block exists: load_plugins.run_aggregators's
+# `from: app_manifest` source reads apps/*.yml's top-level `authentik:` key
+# (module_utils/load_plugins.py:~385) into authentik-base's inputs.clients —
+# the exact same path documenso/qdrant/roundcube/twofauth use. Omitting this
+# block (as an earlier draft of this manifest did) means Authentik never
+# provisions a provider for espocrm at all — not a manual-click gap, a missing
+# object. mode: native_oidc (not forward_auth) renders an OAuth2Provider,
+# matching the "own login screen with an OIDC button" SSO tier docs/tier2-
+# app-onboarding.md and the SSO trichotomy call for a service with per-user
+# state and a real built-in OIDC client (EspoCRM core since v7.3).
+authentik:
+  mode: native_oidc
+  client_id: nos-espocrm
+  client_secret: "{{ nos_derived_secrets.oidc_espocrm }}"
+  slug: espocrm
+  name: 'EspoCRM'
+  enabled: true
+  redirect_uris:
+    - "https://espocrm.apps.{{ tenant_domain | default('dev.local') }}/oauth-callback.php"
+  launch_url: "https://espocrm.apps.{{ tenant_domain | default('dev.local') }}"
+  tier: 2   # manager-tier, matches nginx.rbac_tier below
+
 # ── Compose fragment ─────────────────────────────────────────────────────────
 # Two services, mirroring documenso.yml's proven shape: app + embedded DB,
 # both wired via magic tokens only (no Jinja anywhere below).
@@ -149,11 +174,13 @@ compose:
     espocrm_db:
 
 # ── SSO: native_oidc via EspoCRM's own built-in OIDC client ─────────────────
-# auth=oidc pushes an OAuth2Provider entry into authentik_oidc_apps (see
-# nos_apps_render.py:_authentik_entry) rather than a forward-auth gate.
-# Operator still configures EspoCRM's side (Administration -> Authentication
-# -> OIDC) with the client_id/secret Authentik provisions, and enables the
-# OIDC login button.
+# auth=oidc picks the no-forward-auth Traefik label shape (the app gates
+# itself, same as every other native_oidc service). Hands-off end to end:
+# the `authentik:` block above provisions the OAuth2Provider; apps_runner's
+# post-hook (roles/pazny.apps_runner/tasks/post.yml, "EspoCRM hands-off OIDC
+# config") then PUTs the client_id/secret + Authentik endpoints into
+# EspoCRM's own Settings entity via its REST API — no Administration ->
+# Authentication -> OIDC click required. See that task for the mechanism.
 #
 # oidc_callback: EspoCRM's docs (https://docs.espocrm.com/administration/oidc/)
 # name `oauth-callback.php` at the site root — verify on first login, this is

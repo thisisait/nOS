@@ -153,6 +153,101 @@
         - _apps_has_authentik_consumers
       tags: ['apps']
 
+    # ── Hook 3.5: EspoCRM hands-off OIDC config (bespoke, single Tier-2 app) ─
+    # Tier-2 manifests get NO generic post-start API-call hook by design
+    # (docs/tier2-app-onboarding.md) — this is a deliberate, named exception
+    # for exactly one app, not a new apps_runner capability.
+    #
+    # EspoCRM's OIDC client (Administration -> Authentication -> OIDC) has no
+    # env-var / entrypoint wiring upstream — it's a row on the Settings
+    # singleton entity, normally hand-typed into the admin UI. That entity is
+    # reachable at `PUT /api/v1/Settings` (Espo\Controllers\Settings::
+    # putActionUpdate — literally the same call the UI makes, any
+    # effective-admin session; verified against espocrm/espocrm develop
+    # branch source 2026-09-20: Settings.php + entityDefs/Settings.json for
+    # the field list — oidcClientId/oidcClientSecret/oidcAuthorizationEndpoint
+    # /oidcTokenEndpoint/oidcUserInfoEndpoint/oidcJwksEndpoint/oidcLogoutUrl/
+    # oidcScopes/oidcUsernameClaim/oidcCreateUser/oidcFallback/
+    # oidcAllowRegularUserFallback/oidcAllowAdminUser/authenticationMethod).
+    # The bootstrap admin (ESPOCRM_ADMIN_USERNAME/PASSWORD, first-admin-only
+    # per apps/espocrm.yml's header) authenticates ONE PUT here; every other
+    # user then signs in via the "Sign in with Authentik" OIDC button — no
+    # manual Administration click. `oidcAllowAdminUser: true` keeps the admin
+    # a local-login break-glass (pure-SSO doctrine: no bypass for anyone
+    # ELSE); `oidcAllowRegularUserFallback: false` closes it for everyone
+    # else. Authentik's per-application endpoint shape
+    # (auth.<tld>/application/o/{authorize,token,userinfo}/ +
+    # auth.<tld>/application/o/<slug>/{jwks,end-session}/) is the same one
+    # the outpost/blueprint renders for every other native_oidc client —
+    # not EspoCRM-specific, just Authentik's URL convention.
+    #
+    # client_id/client_secret here MUST match apps/espocrm.yml's `authentik:`
+    # block byte-for-byte (nos-espocrm / nos_derived_secrets.oidc_espocrm) —
+    # that block is what makes the aggregator actually provision the
+    # OAuth2Provider Authentik-side; this task only tells EspoCRM which
+    # provider to trust. Drift between the two is gated by
+    # tests/anatomy/test_espocrm_oidc_autowiring.py.
+    - name: "[Apps Post] Find the espocrm app entry (if onboarded)"
+      ansible.builtin.set_fact:
+        _apps_espocrm: >-
+          {{ (_apps_render.apps | selectattr('id', 'equalto', 'espocrm') | list + [{}]) | first }}
+
+    - name: "[Apps Post] EspoCRM hands-off OIDC config"
+      when:
+        - (_apps_espocrm.id | default('')) == 'espocrm'
+        - (_apps_espocrm.auth_mode | default('')) == 'oidc'
+        - install_authentik | default(false) | bool
+      block:
+        - name: "[Apps Post] Resolve EspoCRM OIDC settings payload"
+          ansible.builtin.set_fact:
+            _espocrm_auth_base: "https://auth.{{ tenant_domain | default('dev.local') }}/application/o"
+            _espocrm_admin_password: >-
+              {{ (_apps_render.generated_secrets.espocrm | default({})).PASSWORD_ADMIN | default('') }}
+          no_log: true
+
+        - name: "[Apps Post] PUT /api/v1/Settings — EspoCRM native OIDC, hands-off"
+          ansible.builtin.uri:
+            url: "https://{{ _apps_espocrm.fqdn }}/api/v1/Settings"
+            method: PUT
+            user: "admin"
+            password: "{{ _espocrm_admin_password }}"
+            force_basic_auth: true
+            body_format: json
+            body:
+              authenticationMethod: "Oidc"
+              oidcClientId: "nos-espocrm"
+              oidcClientSecret: "{{ nos_derived_secrets.oidc_espocrm }}"
+              oidcAuthorizationEndpoint: "{{ _espocrm_auth_base }}/authorize/"
+              oidcTokenEndpoint: "{{ _espocrm_auth_base }}/token/"
+              oidcUserInfoEndpoint: "{{ _espocrm_auth_base }}/userinfo/"
+              oidcJwksEndpoint: "{{ _espocrm_auth_base }}/espocrm/jwks/"
+              oidcLogoutUrl: "{{ _espocrm_auth_base }}/espocrm/end-session/"
+              oidcScopes: ["profile", "email"]
+              oidcUsernameClaim: "preferred_username"
+              oidcCreateUser: true
+              oidcFallback: true
+              oidcAllowRegularUserFallback: false
+              oidcAllowAdminUser: true
+            status_code: [200]
+          register: _espocrm_oidc_put
+          # Apps-up already waited for the container --wait healthy, but the
+          # v10 entrypoint's first-boot install (data/config.php write) can
+          # still trail the healthcheck by a few seconds on a cold blank —
+          # retry rather than fail the whole apps-up on a race.
+          retries: 5
+          delay: 10
+          until: _espocrm_oidc_put.status | default(0) == 200
+          failed_when: false
+          changed_when: _espocrm_oidc_put.status | default(0) == 200
+          no_log: true
+
+        - name: "[Apps Post] Warn if EspoCRM OIDC config PUT did not land"
+          ansible.builtin.debug:
+            msg: >-
+              EspoCRM hands-off OIDC config FAILED (status={{ _espocrm_oidc_put.status | default('n/a') }}).
+              Operator must configure Administration -> Authentication -> OIDC by hand this run.
+          when: (_espocrm_oidc_put.status | default(0)) != 200
+
     # ── Hook 4: Bone HMAC-signed app.deployed events ────────────────────────
     # The Bone /api/v1/events endpoint accepts batch payloads {events: [...]},
     # signed with HMAC-SHA256 over the body using wing_events_hmac_secret.
