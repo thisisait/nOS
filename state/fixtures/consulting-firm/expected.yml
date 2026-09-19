@@ -1,0 +1,64 @@
+# =============================================================================
+# Consulting-firm fixture — answer key (consulting-firm-deployment epic, D2).
+#
+# The answer-key convention this fixture ESTABLISHES for a
+# state/fixtures/<name>/ dual-intake directory (fixtures-expected-schema has
+# zero prior instances):
+#
+#   documents:  docnum -> seller/buyer/net/vat(per-rate)/payable/currency/dates
+#               (the ISDOC ground truth — what a correct importer produces).
+#   crosscheck: docnum -> agree|mismatch (ISDOC PayableAmount vs the sibling
+#               .image.txt "Castka k uhrade" line; a future importer's
+#               cross-check judge is graded against this).
+#   books:      client -> journal-entry slugs + balanced:true (each client's
+#               own ledger, from consulting-firm.seed.yml).
+#   isolation:  client -> the account slugs its postings may touch (its own
+#               311-<client>/321-<client> analytical pair + the shared class
+#               spine). Any OTHER client's analytical account appearing on a
+#               posting whose entry belongs to this client is the isolation
+#               invariant's violation shape.
+# =============================================================================
+
+documents:
+  2026-ALFA-001: { seller: synthetic-client-alfa, buyer: synthetic-alfa-customer, net: 1500, vat: 270,
+                   vat_breakdown: [ { rate: 21, base: 1000, vat: 210 }, { rate: 12, base: 500, vat: 60 } ],
+                   payable: 1770, currency: CZK, issue_date: "2026-03-01", due_date: "2026-03-15" }
+  2026-ALFA-002: { seller: synthetic-alfa-vendor, buyer: synthetic-client-alfa, net: 2000, vat: 420,
+                   vat_breakdown: [ { rate: 21, base: 2000, vat: 420 } ],
+                   payable: 2420, currency: CZK, issue_date: "2026-04-01", due_date: "2026-04-15" }
+  2026-BETA-001: { seller: synthetic-client-beta, buyer: synthetic-beta-customer, net: 3000, vat: 630,
+                   vat_breakdown: [ { rate: 21, base: 3000, vat: 630 } ],
+                   payable: 3630, currency: CZK, issue_date: "2026-03-01", due_date: "2026-03-15" }
+  2026-BETA-002: { seller: synthetic-beta-vendor, buyer: synthetic-client-beta, net: 1200, vat: 252,
+                   vat_breakdown: [ { rate: 21, base: 1200, vat: 252 } ],
+                   payable: 1452, currency: CZK, issue_date: "2026-04-01", due_date: "2026-04-15" }
+  2026-GAMA-001: { seller: synthetic-client-gama, buyer: synthetic-gama-customer, net: 800, vat: 168,
+                   vat_breakdown: [ { rate: 21, base: 800, vat: 168 } ],
+                   payable: 968, currency: CZK, issue_date: "2026-03-01", due_date: "2026-03-15" }
+  2026-GAMA-002: { seller: synthetic-gama-vendor, buyer: synthetic-client-gama, net: 500, vat: 105,
+                   vat_breakdown: [ { rate: 21, base: 500, vat: 105 } ],
+                   payable: 605, currency: CZK, issue_date: "2026-04-01", due_date: "2026-04-15" }
+
+crosscheck:
+  2026-ALFA-001: agree      # multi-rate unit; image.txt matches the ISDOC payable (1770)
+  2026-ALFA-002: agree
+  2026-BETA-001: mismatch   # PLANTED: image.txt says 3600, ISDOC PayableAmount is 3630
+  2026-BETA-002: agree
+  2026-GAMA-001: agree
+  2026-GAMA-002: agree
+
+books:
+  synthetic-client-alfa:
+    entries: [je-alfa-001, je-alfa-002]
+    balanced: true
+  synthetic-client-beta:
+    entries: [je-beta-001, je-beta-002]
+    balanced: true
+  synthetic-client-gama:
+    entries: [je-gama-001, je-gama-002]
+    balanced: true
+
+isolation:
+  synthetic-client-alfa: [acc-311-alfa, acc-321-alfa, acc-311, acc-321, acc-343, acc-601, acc-501]
+  synthetic-client-beta: [acc-311-beta, acc-321-beta, acc-311, acc-321, acc-343, acc-601, acc-501]
+  synthetic-client-gama: [acc-311-gama, acc-321-gama, acc-311, acc-321, acc-343, acc-601, acc-501]

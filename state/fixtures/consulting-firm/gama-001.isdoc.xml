@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Consulting-firm fixture (D2), client Gama (OSVC/person), ISSUED (Gama =
+     seller). -->
+<Invoice xmlns="http://isdoc.cz/namespace/2013" version="6.0.1">
+  <ID>2026-GAMA-001</ID>
+  <IssueDate>2026-03-01</IssueDate>
+  <DueDate>2026-03-15</DueDate>
+  <LocalCurrencyCode>CZK</LocalCurrencyCode>
+  <PayableAmount>968</PayableAmount>
+  <TaxTotal><TaxSubTotal><VATRate>21</VATRate><TaxableAmount>800</TaxableAmount><TaxAmount>168</TaxAmount></TaxSubTotal></TaxTotal>
+  <AccountingSupplierParty><Party>
+    <PartyIdentification><ID>00000133</ID></PartyIdentification>
+    <PartyName><Name>Petra Gamova (synthetic)</Name></PartyName>
+  </Party></AccountingSupplierParty>
+  <AccountingCustomerParty><Party>
+    <PartyIdentification><ID>00000138</ID></PartyIdentification>
+    <PartyName><Name>Gama Odberatel s.r.o. (synthetic)</Name></PartyName>
+  </Party></AccountingCustomerParty>
+</Invoice>

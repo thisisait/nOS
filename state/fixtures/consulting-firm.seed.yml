@@ -1,0 +1,162 @@
+# =============================================================================
+# Consulting-firm fixture seed (consulting-firm-deployment epic, D2).
+#
+# Tenancy = MODEL C (operator 2026-09-19): the consultant is the sole USER;
+# each client firm is DATA, never a controller/tenant column. Isolation is
+# proven at the data layer only — each client's books balance independently
+# and no posting bridges two clients' analytical accounts. A per-client ACCESS
+# layer is a later epic (docs/idea/17: "no tenant column, ever").
+#
+# ICO RANGE: (CZ)?000001{30..49} — grepped free across the whole tree before
+# use (TAKEN: 100-101 label-printer, 110-113 kolben, 112/113 also referenced by
+# repos-fixture + isdoc-fixture, 120-122 repos-importer CSV, 177, 199). This
+# fixture uses 130-139 (10 parties), leaving 140-149 free for a future sibling.
+#
+# SHAPE: 1 processor (the consultant) + 3 client firms (2 s.r.o. org + 1 OSVC
+# person) + each client's own counterparty (a customer it sells to, a vendor
+# it buys from). Dependency order below is the seed-bundle order (party leads;
+# a rowRef target must appear above its referencer):
+#   party -> party-tax-identity -> party-address -> party-contact ->
+#   account -> invoice -> journal-entry -> posting
+#
+# ACCOUNTS: 311/321/343/601/601/501 are the SHARED class spine (same slugs as
+# accounting.seed.yml, idempotent re-seed). Each client gets its OWN analytical
+# 311-<client> / 321-<client> account (account.party = that client, parent =
+# the shared 311/321) — the isolation invariant (test_consulting_firm_fixture_
+# declares_the_business.py) resolves via THIS rowRef, never the code string.
+#
+# PER CLIENT: >=2 invoices — one ISSUED (client = seller) and one RECEIVED
+# (client = buyer), each book_owner = that client (the D1 column, a
+# data-organization rowRef, not RBAC) — and >=2 balanced journal entries whose
+# postings hit ONLY that client's analytical accounts + the shared spine.
+# Entries are authored in nos_accounting.derive_entry's exact leg shape (DR 311
+# gross / CR 601 net / CR 343 vat when selling; DR 501 net / DR 343 vat / CR
+# 321 gross when buying) so a future importer regenerates identical rows.
+#
+# state/fixtures/consulting-firm/ carries the dual-intake documents (ISDOC +
+# plain-text OCR stand-in) — see that directory's own files for the planted
+# multi-rate-VAT invoice and the one planted image-vs-ISDOC discrepancy.
+#
+# SYNTHETIC BY RULE (same as every other fixture): party slugs start
+# `synthetic-`, emails end `.invalid`, phones start `+420 000`, tax ids match
+# (CZ)?000001\d\d. Dates are fixed epoch seconds.
+# =============================================================================
+
+# ── The party spine (processor + 3 clients + their own counterparties) ──────
+party:
+  - { slug: synthetic-consulting-firm, legal_name: "Synthetic Consulting s.r.o. (synthetic)", trading_name: "Synthetic Consulting", party_kind: org, country: CZ, notes: "synthetic processor / bookkeeping firm" }
+  - { slug: synthetic-client-alfa, legal_name: "Alfa Rizeni s.r.o. (synthetic)", trading_name: "Alfa Rizeni", party_kind: org, country: CZ, notes: "synthetic client 1 (s.r.o.)" }
+  - { slug: synthetic-client-beta, legal_name: "Beta Sluzby s.r.o. (synthetic)", trading_name: "Beta Sluzby", party_kind: org, country: CZ, notes: "synthetic client 2 (s.r.o.)" }
+  - { slug: synthetic-client-gama, legal_name: "Petra Gamova (synthetic)", party_kind: person, country: CZ, notes: "synthetic client 3 (OSVC / sole trader)" }
+  - { slug: synthetic-alfa-customer, legal_name: "Alfa Odberatel a.s. (synthetic)", party_kind: org, country: CZ, notes: "synthetic counterparty — Alfa's customer" }
+  - { slug: synthetic-alfa-vendor, legal_name: "Alfa Dodavatel s.r.o. (synthetic)", party_kind: org, country: CZ, notes: "synthetic counterparty — Alfa's vendor" }
+  - { slug: synthetic-beta-customer, legal_name: "Beta Odberatel a.s. (synthetic)", party_kind: org, country: CZ, notes: "synthetic counterparty — Beta's customer" }
+  - { slug: synthetic-beta-vendor, legal_name: "Beta Dodavatel s.r.o. (synthetic)", party_kind: org, country: CZ, notes: "synthetic counterparty — Beta's vendor" }
+  - { slug: synthetic-gama-customer, legal_name: "Gama Odberatel s.r.o. (synthetic)", party_kind: org, country: CZ, notes: "synthetic counterparty — Gama's customer" }
+  - { slug: synthetic-gama-vendor, legal_name: "Gama Dodavatel s.r.o. (synthetic)", party_kind: org, country: CZ, notes: "synthetic counterparty — Gama's vendor" }
+
+party-tax-identity:
+  - { slug: tax-consulting-firm-ico, party: synthetic-consulting-firm, scheme: ICO, value: "00000130" }
+  - { slug: tax-consulting-firm-vat, party: synthetic-consulting-firm, scheme: VAT, value: "CZ00000130", valid_from: 1767225600 }
+  - { slug: tax-client-alfa-ico, party: synthetic-client-alfa, scheme: ICO, value: "00000131" }
+  - { slug: tax-client-alfa-vat, party: synthetic-client-alfa, scheme: VAT, value: "CZ00000131", valid_from: 1767225600 }
+  - { slug: tax-client-beta-ico, party: synthetic-client-beta, scheme: ICO, value: "00000132" }
+  - { slug: tax-client-beta-vat, party: synthetic-client-beta, scheme: VAT, value: "CZ00000132", valid_from: 1767225600 }
+  - { slug: tax-client-gama-ico, party: synthetic-client-gama, scheme: ICO, value: "00000133" }
+  - { slug: tax-client-gama-vat, party: synthetic-client-gama, scheme: VAT, value: "CZ00000133", valid_from: 1767225600 }
+  - { slug: tax-alfa-customer-ico, party: synthetic-alfa-customer, scheme: ICO, value: "00000134" }
+  - { slug: tax-alfa-vendor-ico, party: synthetic-alfa-vendor, scheme: ICO, value: "00000135" }
+  - { slug: tax-beta-customer-ico, party: synthetic-beta-customer, scheme: ICO, value: "00000136" }
+  - { slug: tax-beta-vendor-ico, party: synthetic-beta-vendor, scheme: ICO, value: "00000137" }
+  - { slug: tax-gama-customer-ico, party: synthetic-gama-customer, scheme: ICO, value: "00000138" }
+  - { slug: tax-gama-vendor-ico, party: synthetic-gama-vendor, scheme: ICO, value: "00000139" }
+
+party-address:
+  - { slug: addr-consulting-firm-billing, party: synthetic-consulting-firm, purpose: billing, street: "Uctovni 1 (synthetic)", city: "Praha", postcode: "110 00", subdivision: "CZ010", country: CZ }
+  - { slug: addr-client-alfa-billing, party: synthetic-client-alfa, purpose: billing, street: "Alfa 1 (synthetic)", city: "Brno", postcode: "602 00", subdivision: "CZ064", country: CZ }
+  - { slug: addr-client-beta-billing, party: synthetic-client-beta, purpose: billing, street: "Beta 2 (synthetic)", city: "Ostrava", postcode: "702 00", subdivision: "CZ080", country: CZ }
+  - { slug: addr-client-gama-billing, party: synthetic-client-gama, purpose: billing, street: "Gama 3 (synthetic)", city: "Plzen", postcode: "301 00", subdivision: "CZ032", country: CZ }
+
+party-contact:
+  - { slug: contact-consulting-firm-email, party: synthetic-consulting-firm, kind: email, value: "office@synthetic-consulting.invalid", role: "primary" }
+  - { slug: contact-consulting-firm-phone, party: synthetic-consulting-firm, kind: phone, value: "+420 000 000 130" }
+  - { slug: contact-client-alfa-email, party: synthetic-client-alfa, kind: email, value: "office@alfa-rizeni.invalid", role: "primary" }
+  - { slug: contact-client-alfa-phone, party: synthetic-client-alfa, kind: phone, value: "+420 000 000 131" }
+  - { slug: contact-client-beta-email, party: synthetic-client-beta, kind: email, value: "office@beta-sluzby.invalid", role: "primary" }
+  - { slug: contact-client-beta-phone, party: synthetic-client-beta, kind: phone, value: "+420 000 000 132" }
+  - { slug: contact-client-gama-email, party: synthetic-client-gama, kind: email, value: "petra@gamova.invalid", role: "primary" }
+  - { slug: contact-client-gama-phone, party: synthetic-client-gama, kind: phone, value: "+420 000 000 133" }
+
+# ── Accounts: shared class spine (accounting.seed.yml slugs, re-seeded
+#    idempotently) + one 311/321 analytical pair PER CLIENT ─────────────────
+account:
+  - { slug: acc-311, code: "311", name: "Odběratelé (pohledávky)", reporting_concept: nos.accounting.asset,     side: debit-normal }
+  - { slug: acc-321, code: "321", name: "Dodavatelé (závazky)",    reporting_concept: nos.accounting.liability, side: credit-normal }
+  - { slug: acc-343, code: "343", name: "DPH (daň na výstupu)",     reporting_concept: nos.accounting.liability, side: credit-normal }
+  - { slug: acc-601, code: "601", name: "Tržby za výrobky",         reporting_concept: nos.accounting.revenue,   side: credit-normal }
+  - { slug: acc-501, code: "501", name: "Spotřeba materiálu",       reporting_concept: nos.accounting.expense,   side: debit-normal }
+  - { slug: acc-311-alfa, code: "311-alfa", name: "Odběratelé — Alfa Rizeni (analytický)", parent: acc-311, reporting_concept: nos.accounting.asset,     side: debit-normal,  party: synthetic-client-alfa }
+  - { slug: acc-321-alfa, code: "321-alfa", name: "Dodavatelé — Alfa Rizeni (analytický)", parent: acc-321, reporting_concept: nos.accounting.liability, side: credit-normal, party: synthetic-client-alfa }
+  - { slug: acc-311-beta, code: "311-beta", name: "Odběratelé — Beta Sluzby (analytický)", parent: acc-311, reporting_concept: nos.accounting.asset,     side: debit-normal,  party: synthetic-client-beta }
+  - { slug: acc-321-beta, code: "321-beta", name: "Dodavatelé — Beta Sluzby (analytický)", parent: acc-321, reporting_concept: nos.accounting.liability, side: credit-normal, party: synthetic-client-beta }
+  - { slug: acc-311-gama, code: "311-gama", name: "Odběratelé — Petra Gamova (analytický)", parent: acc-311, reporting_concept: nos.accounting.asset,     side: debit-normal,  party: synthetic-client-gama }
+  - { slug: acc-321-gama, code: "321-gama", name: "Dodavatelé — Petra Gamova (analytický)", parent: acc-321, reporting_concept: nos.accounting.liability, side: credit-normal, party: synthetic-client-gama }
+
+# ── Invoices: per client, one ISSUED (client=seller) + one RECEIVED
+#    (client=buyer), each book_owner = that client ──────────────────────────
+invoice:
+  - { slug: inv-alfa-001, document_number: "2026-ALFA-001", seller: synthetic-client-alfa, buyer: synthetic-alfa-customer,
+      issue_date: 1772323200, due_date: 1773532800, currency: CZK, payable_amount: 1770, net_amount: 1500, vat_amount: 270,
+      vat_breakdown: [ { rate: 21, base: 1000, vat: 210 }, { rate: 12, base: 500, vat: 60 } ], book_owner: synthetic-client-alfa }
+  - { slug: inv-alfa-002, document_number: "2026-ALFA-002", seller: synthetic-alfa-vendor, buyer: synthetic-client-alfa,
+      issue_date: 1775001600, due_date: 1776211200, currency: CZK, payable_amount: 2420, net_amount: 2000, vat_amount: 420,
+      vat_breakdown: [ { rate: 21, base: 2000, vat: 420 } ], book_owner: synthetic-client-alfa }
+  - { slug: inv-beta-001, document_number: "2026-BETA-001", seller: synthetic-client-beta, buyer: synthetic-beta-customer,
+      issue_date: 1772323200, due_date: 1773532800, currency: CZK, payable_amount: 3630, net_amount: 3000, vat_amount: 630,
+      vat_breakdown: [ { rate: 21, base: 3000, vat: 630 } ], book_owner: synthetic-client-beta }
+  - { slug: inv-beta-002, document_number: "2026-BETA-002", seller: synthetic-beta-vendor, buyer: synthetic-client-beta,
+      issue_date: 1775001600, due_date: 1776211200, currency: CZK, payable_amount: 1452, net_amount: 1200, vat_amount: 252,
+      vat_breakdown: [ { rate: 21, base: 1200, vat: 252 } ], book_owner: synthetic-client-beta }
+  - { slug: inv-gama-001, document_number: "2026-GAMA-001", seller: synthetic-client-gama, buyer: synthetic-gama-customer,
+      issue_date: 1772323200, due_date: 1773532800, currency: CZK, payable_amount: 968, net_amount: 800, vat_amount: 168,
+      vat_breakdown: [ { rate: 21, base: 800, vat: 168 } ], book_owner: synthetic-client-gama }
+  - { slug: inv-gama-002, document_number: "2026-GAMA-002", seller: synthetic-gama-vendor, buyer: synthetic-client-gama,
+      issue_date: 1775001600, due_date: 1776211200, currency: CZK, payable_amount: 605, net_amount: 500, vat_amount: 105,
+      vat_breakdown: [ { rate: 21, base: 500, vat: 105 } ], book_owner: synthetic-client-gama }
+
+# ── Journal entries: one PER invoice, source-linked, in derive_entry's leg
+#    shape (own_party=seller -> DR 311/CR 601/CR 343; own_party=buyer -> DR
+#    501/DR 343/CR 321) with the client's OWN analytical 311/321 account ────
+journal-entry:
+  - { slug: je-alfa-001, description: "Vystavena faktura 2026-ALFA-001 (Alfa Rizeni, vicesazbove DPH)", date: 1772323200, source: inv-alfa-001 }
+  - { slug: je-alfa-002, description: "Prijata faktura 2026-ALFA-002 (Alfa Rizeni)", date: 1775001600, source: inv-alfa-002 }
+  - { slug: je-beta-001, description: "Vystavena faktura 2026-BETA-001 (Beta Sluzby)", date: 1772323200, source: inv-beta-001 }
+  - { slug: je-beta-002, description: "Prijata faktura 2026-BETA-002 (Beta Sluzby)", date: 1775001600, source: inv-beta-002 }
+  - { slug: je-gama-001, description: "Vystavena faktura 2026-GAMA-001 (Petra Gamova)", date: 1772323200, source: inv-gama-001 }
+  - { slug: je-gama-002, description: "Prijata faktura 2026-GAMA-002 (Petra Gamova)", date: 1775001600, source: inv-gama-002 }
+
+posting:
+  # Alfa — issued (Alfa = seller): DR 311-alfa 1770 / CR 601 1500 / CR 343 270
+  - { slug: post-je-alfa-001-311, entry: je-alfa-001, account: acc-311-alfa, direction: debit,  amount: 1770 }
+  - { slug: post-je-alfa-001-601, entry: je-alfa-001, account: acc-601,      direction: credit, amount: 1500 }
+  - { slug: post-je-alfa-001-343, entry: je-alfa-001, account: acc-343,      direction: credit, amount: 270 }
+  # Alfa — received (Alfa = buyer): DR 501 2000 / DR 343 420 / CR 321-alfa 2420
+  - { slug: post-je-alfa-002-501, entry: je-alfa-002, account: acc-501,      direction: debit,  amount: 2000 }
+  - { slug: post-je-alfa-002-343, entry: je-alfa-002, account: acc-343,      direction: debit,  amount: 420 }
+  - { slug: post-je-alfa-002-321, entry: je-alfa-002, account: acc-321-alfa, direction: credit, amount: 2420 }
+  # Beta — issued (Beta = seller): DR 311-beta 3630 / CR 601 3000 / CR 343 630
+  - { slug: post-je-beta-001-311, entry: je-beta-001, account: acc-311-beta, direction: debit,  amount: 3630 }
+  - { slug: post-je-beta-001-601, entry: je-beta-001, account: acc-601,      direction: credit, amount: 3000 }
+  - { slug: post-je-beta-001-343, entry: je-beta-001, account: acc-343,      direction: credit, amount: 630 }
+  # Beta — received (Beta = buyer): DR 501 1200 / DR 343 252 / CR 321-beta 1452
+  - { slug: post-je-beta-002-501, entry: je-beta-002, account: acc-501,      direction: debit,  amount: 1200 }
+  - { slug: post-je-beta-002-343, entry: je-beta-002, account: acc-343,      direction: debit,  amount: 252 }
+  - { slug: post-je-beta-002-321, entry: je-beta-002, account: acc-321-beta, direction: credit, amount: 1452 }
+  # Gama — issued (Gama = seller): DR 311-gama 968 / CR 601 800 / CR 343 168
+  - { slug: post-je-gama-001-311, entry: je-gama-001, account: acc-311-gama, direction: debit,  amount: 968 }
+  - { slug: post-je-gama-001-601, entry: je-gama-001, account: acc-601,      direction: credit, amount: 800 }
+  - { slug: post-je-gama-001-343, entry: je-gama-001, account: acc-343,      direction: credit, amount: 168 }
+  # Gama — received (Gama = buyer): DR 501 500 / DR 343 105 / CR 321-gama 605
+  - { slug: post-je-gama-002-501, entry: je-gama-002, account: acc-501,      direction: debit,  amount: 500 }
+  - { slug: post-je-gama-002-343, entry: je-gama-002, account: acc-343,      direction: debit,  amount: 105 }
+  - { slug: post-je-gama-002-321, entry: je-gama-002, account: acc-321-gama, direction: credit, amount: 605 }

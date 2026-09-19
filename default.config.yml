@@ -2650,6 +2650,13 @@ keap_seed_kolben_fixture: false
 # journal entry (state/fixtures/accounting.seed.yml → account/journal-entry/
 # posting tables). Independent opt-in. Reference data, no PII.
 keap_seed_accounting_fixture: false
+# Consulting-firm fixture (consulting-firm-deployment epic, D2): 1 processor +
+# 3 client firms (2 s.r.o. + 1 OSVC), each with its own analytical 311/321
+# account pair, dual-intake invoices (ISDOC + image) and a balanced book
+# (state/fixtures/consulting-firm.seed.yml). MODEL C — data isolation only, no
+# controller/tenant column. Independent opt-in. Synthetic people only,
+# enforced by tests/anatomy/test_consulting_firm_fixture_declares_the_business.py.
+keap_seed_consulting_fixture: false
 # system regardless of install state) — profiles/all-on.yml sets it true.
 # Optional live embedder for free-text semantic search (stored vectors come
 # from the keap-embed-sync Pulse job regardless). Docker Desktop (Mac):

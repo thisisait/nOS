@@ -189,6 +189,18 @@
     - install_keap | default(false) | bool
     - keap_seed_accounting_fixture | default(false) | bool
 
+# ── Consulting-firm fixture (consulting-firm-deployment epic, D2) ───────────
+# 1 processor + 3 client firms, each with its own analytical 311/321 account
+# pair, dual-intake invoices (ISDOC + image) and a balanced book. Independent
+# opt-in — MODEL C data isolation, no controller/tenant column.
+- name: "[pazny.keap] Seed the consulting-firm fixture DataTables"
+  ansible.builtin.include_tasks: seed-bundle.yml
+  vars:
+    _bundle_seed_path: "state/fixtures/consulting-firm.seed.yml"
+  when:
+    - install_keap | default(false) | bool
+    - keap_seed_consulting_fixture | default(false) | bool
+
 # ── Caddy settings + session tables ─────────────────────────────────────────
 # Two tables for the caddy: the committed settings fixture, and
 # an EMPTY session ledger that must exist before the first turn. Gated on

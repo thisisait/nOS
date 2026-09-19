@@ -1,0 +1,9 @@
+FAKTURA (OCR extract, plain-text stand-in)
+Doklad c.: 2026-BETA-002
+Datum vystaveni: 2026-04-01
+Datum splatnosti: 2026-04-15
+Mena: CZK
+Zaklad 21%: 1200  DPH 21%: 252
+Castka k uhrade: 1452
+Dodavatel ICO: 00000137 (Beta Dodavatel s.r.o.)
+Odberatel ICO: 00000132 (Beta Sluzby s.r.o.)

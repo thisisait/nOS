@@ -1,0 +1,11 @@
+FAKTURA (OCR extract, plain-text stand-in — # ponytail: swap for a rendered
+PDF when the invoice-vision-intake JSON sidecar is the live format)
+Doklad c.: 2026-ALFA-001
+Datum vystaveni: 2026-03-01
+Datum splatnosti: 2026-03-15
+Mena: CZK
+Zaklad 21%: 1000  DPH 21%: 210
+Zaklad 12%: 500   DPH 12%: 60
+Castka k uhrade: 1770
+Dodavatel ICO: 00000131 (Alfa Rizeni s.r.o.)
+Odberatel ICO: 00000134 (Alfa Odberatel a.s.)

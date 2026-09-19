@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Consulting-firm fixture (D2), client Alfa, ISSUED (Alfa = seller). The
+     PLANTED multi-rate-VAT unit: two TaxSubTotal entries (21% + 12%). Both
+     parties are seeded synthetic ICOs (00000131/00000134) so they resolve
+     by_key under fixture_mode. book_owner (invoice.table.yml) = Alfa. -->
+<Invoice xmlns="http://isdoc.cz/namespace/2013" version="6.0.1">
+  <ID>2026-ALFA-001</ID>
+  <IssueDate>2026-03-01</IssueDate>
+  <DueDate>2026-03-15</DueDate>
+  <LocalCurrencyCode>CZK</LocalCurrencyCode>
+  <PayableAmount>1770</PayableAmount>
+  <TaxTotal>
+    <TaxSubTotal><VATRate>21</VATRate><TaxableAmount>1000</TaxableAmount><TaxAmount>210</TaxAmount></TaxSubTotal>
+    <TaxSubTotal><VATRate>12</VATRate><TaxableAmount>500</TaxableAmount><TaxAmount>60</TaxAmount></TaxSubTotal>
+  </TaxTotal>
+  <AccountingSupplierParty><Party>
+    <PartyIdentification><ID>00000131</ID></PartyIdentification>
+    <PartyName><Name>Alfa Rizeni s.r.o. (synthetic)</Name></PartyName>
+  </Party></AccountingSupplierParty>
+  <AccountingCustomerParty><Party>
+    <PartyIdentification><ID>00000134</ID></PartyIdentification>
+    <PartyName><Name>Alfa Odberatel a.s. (synthetic)</Name></PartyName>
+  </Party></AccountingCustomerParty>
+</Invoice>

@@ -1,0 +1,9 @@
+FAKTURA (OCR extract, plain-text stand-in)
+Doklad c.: 2026-GAMA-001
+Datum vystaveni: 2026-03-01
+Datum splatnosti: 2026-03-15
+Mena: CZK
+Zaklad 21%: 800  DPH 21%: 168
+Castka k uhrade: 968
+Dodavatel ICO: 00000133 (Petra Gamova)
+Odberatel ICO: 00000138 (Gama Odberatel s.r.o.)

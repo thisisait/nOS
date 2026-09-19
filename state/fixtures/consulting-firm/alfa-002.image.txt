@@ -1,0 +1,9 @@
+FAKTURA (OCR extract, plain-text stand-in)
+Doklad c.: 2026-ALFA-002
+Datum vystaveni: 2026-04-01
+Datum splatnosti: 2026-04-15
+Mena: CZK
+Zaklad 21%: 2000  DPH 21%: 420
+Castka k uhrade: 2420
+Dodavatel ICO: 00000135 (Alfa Dodavatel s.r.o.)
+Odberatel ICO: 00000131 (Alfa Rizeni s.r.o.)

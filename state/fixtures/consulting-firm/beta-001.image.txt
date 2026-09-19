@@ -1,0 +1,11 @@
+FAKTURA (OCR extract, plain-text stand-in)
+Doklad c.: 2026-BETA-001
+Datum vystaveni: 2026-03-01
+Datum splatnosti: 2026-03-15
+Mena: CZK
+Zaklad 21%: 3000  DPH 21%: 630
+Castka k uhrade: 3600
+# PLANTED DISCREPANCY: OCR misread 3630 as 3600 — the crosscheck's positive
+# control (expected.yml: crosscheck["2026-BETA-001"] = mismatch).
+Dodavatel ICO: 00000132 (Beta Sluzby s.r.o.)
+Odberatel ICO: 00000136 (Beta Odberatel a.s.)
