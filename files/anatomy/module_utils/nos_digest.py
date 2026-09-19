@@ -65,11 +65,11 @@ _ZIP_MAGIC = "PK\x03\x04"
 #: Magic only caught HTML/zip; plain-text `sms.tsv\t+420…` or `heartRate\t72`
 #: slipped through as "notes". A tab, a handful of newlines, or an over-cap
 #: length is a smuggled dump, not a note. ponytail: char cap + delimiter
-#: heuristic; a real class needs a NAMED profile (§3), never a notes blob.
+#: heuristic; a real class needs a NAMED profile, never a notes blob.
 _DEVICE_TEXT_MAX = 1024
 #: Special-category (Art. 9) signals — health / messages / precise location.
 #: Their presence in a free-text device column IS a special-category class
-#: surfacing outside the named-profile path; §2 demands Art. 9(2)(a) consent
+#: surfacing outside the named-profile path; the consent rule demands Art. 9(2)(a) consent
 #: (a non-empty art9_consent_ref) before it may exist at all.
 _ART9_SIGNAL = re.compile(
     r"(?i)\b(heart[\s_-]?rate|bpm|blood[\s_-]?(?:pressure|glucose|oxygen)|spo2"
@@ -98,7 +98,8 @@ def _device_dump_kind(val) -> str | None:
 
 def device_family_basis_satisfied(manifest: dict) -> tuple[bool, str]:
     """Device-family importer MUST be Art. 6(1)(a) consent + retention -1
-    (digest-device-doctrine §2). N/A (True, "") for every non-device importer,
+    (the digest-device consent rule: consent + retention -1). N/A (True, "")
+    for every non-device importer,
     keyed on the importer NAME being in the device family — so a device.importer
     cloned from csv-party (legitimate_interests / retention 3650) is REFUSED even
     though it passes ``legitimate_interests_satisfied`` (the 6f gate) green."""
@@ -110,13 +111,13 @@ def device_family_basis_satisfied(manifest: dict) -> tuple[bool, str]:
     if basis != "consent":
         return False, (
             f"device-family importer {name!r} must be legal_basis: consent "
-            f"(Art. 6(1)(a)), not {basis!r} — device-doctrine §2 (a person's "
+            f"(Art. 6(1)(a)), not {basis!r} — a person's "
             "device extraction is never legitimate_interests)")
     if gdpr.get("retention_days") != -1:
         return False, (
             f"device-family importer {name!r} must set retention_days: -1 "
             f"(until consent withdrawn), not {gdpr.get('retention_days')!r} — "
-            "device-doctrine §2 (no ten-year accounting horizon on device rows)")
+            "(no ten-year accounting horizon on device rows)")
     return True, ""
 
 
@@ -166,12 +167,12 @@ def _check_device_family(bundle: dict, det: dict, errors: list[str]) -> None:
                     errors.append(
                         f"{table}/{slug}.{key}: {kind} content in a text column "
                         "is refused (path-only for report_path; no HTML/zip/TSV "
-                        "dump — a named class needs a profile, §3)")
+                        "dump — a named class needs a profile)")
                 if isinstance(val, str) and _ART9_SIGNAL.search(val) and not art9_ref:
                     errors.append(
                         f"{table}/{slug}.{key}: special-category (Art. 9) content "
                         "with empty art9_consent_ref — Art. 9(2)(a) consent must be "
-                        "on the row before a special-category class may exist (§2)")
+                        "on the row before a special-category class may exist")
 
 
 def check_bundle(bundle: dict, tables_dir: str | pathlib.Path) -> list[str]:
