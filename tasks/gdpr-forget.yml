@@ -148,13 +148,18 @@
 
 # ── Executor: container_exec (email-keyed one-liners) ────────────────────────
 - name: "[GDPR forget] container_exec — resolve container + run delete"
+  # LITERAL block + the ps -q on ONE line: a folded (>-) scalar kept the
+  # newlines before the more-indented --filter lines, and a newline INSIDE
+  # $(...) is a command separator — so the substitution ran "docker ps -q"
+  # unfiltered (every container) then "--filter ...: command not found",
+  # leaving CID as every container id on the host (same bug as the ntfy/
+  # paperclip restart handlers, root-caused 2026-09-19). On a GDPR erasure
+  # path that means the wrong container. Keep the substitution on one line.
   ansible.builtin.shell:
-    cmd: >-
-      set -o pipefail;
-      CID=$(docker ps -q
-        --filter "label=com.docker.compose.project={{ item.stack }}"
-        --filter "label=com.docker.compose.service={{ item.service }}" | head -1);
-      if [ -z "$CID" ]; then echo "SKIP {{ item.id }}: no running container"; exit 0; fi;
+    cmd: |
+      set -o pipefail
+      CID=$(docker ps -q --filter "label=com.docker.compose.project={{ item.stack }}" --filter "label=com.docker.compose.service={{ item.service }}" | head -1)
+      if [ -z "$CID" ]; then echo "SKIP {{ item.id }}: no running container"; exit 0; fi
       docker exec "$CID" {{ item.command }}
     executable: /bin/bash
   loop: "{{ _forget_plan | default([]) | selectattr('method', 'eq', 'container_exec') | list }}"

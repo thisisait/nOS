@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 98 (77 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (92)
+- **Processing activities:** 99 (77 core services, 5 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (6), legal_obligation (1), legitimate_interests (92)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 15
 
@@ -624,6 +624,20 @@ contracts with counter-parties who agree to electronic execution.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
+- **Storage:** 'apps' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
+#### Espocrm — `app_espocrm`
+- **Purpose:** Record and manage the consulting firm's client relationships: contact
+details, deals/opportunities, activities, and client communications.
+Necessary to deliver and administer the firm's contracted consulting
+services to its clients.
+- **Legal basis (Art. 6):** `contract`
+- **Data subjects:** `clients`; `client_contacts`; `end_users`
+- **Data categories:** `name`; `email`; `phone_number`; `company_affiliation`; `deal_financial_data`; `communication_content`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 1095 days (~3y)
 - **Storage:** 'apps' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 

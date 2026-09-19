@@ -1,0 +1,155 @@
+---
+# ============================================================================
+# EspoCRM — FOSS CRM for the consulting-firm epic. Tier-2 manifest app.
+#
+# Survey + GO/NO-GO: /Users/pazny/.claude/jobs/0976b01f/tmp/SURVEY-foss-crm.md
+# Verdict: native OIDC is a CORE, free (AGPL-3.0) EspoCRM feature since v7.3
+# (Administration -> Authentication -> OIDC), not an enterprise-gated
+# extension. Cleared the estate's pure-SSO hard constraint outright.
+#
+# Upstream:  https://github.com/espocrm/espocrm
+# License:   AGPL-3.0
+# Image:     docker.io/espocrm/espocrm (official, multi-arch incl. arm64v8).
+#            Tag verified live against Docker Hub 2026-09-19 — 10.0.8 is the
+#            current stable line (pushed 2026-09-08); re-check before a
+#            far-future converge.
+# OIDC docs: https://docs.espocrm.com/administration/oidc/
+#
+# ── DB: dedicated embedded MariaDB, magic tokens only ───────────────────────
+# Tier-2 manifests get NO DB-prep post-hook (docs/tier2-app-onboarding.md:
+# "no bespoke post-start API calls... no DB-prep tasks"), so reusing the
+# shared infra MariaDB would need either a bespoke role (out of scope — this
+# is a manifest app on purpose) or Jinja inside the compose: block, which is
+# UNPROVEN on this render path (apps-compose-override.yml.j2's
+# `{{ k }}: {{ v | to_json }}` — whether Ansible recursively re-templates a
+# nested `{{ }}` literal there is uncertain, and an undefined var would abort
+# the whole apps-stack render). Follow the ACTUAL proven Tier-2 precedent
+# instead: documenso.yml embeds its own Postgres; this embeds its own
+# MariaDB. $SERVICE_USER_DB / $SERVICE_PASSWORD_DB are magic tokens the
+# nos_apps_render resolver substitutes consistently everywhere they appear
+# in this file (module_utils/nos_app_parser.py:resolve_tokens) and records
+# in `generated_secrets` — zero Jinja in the compose block.
+#
+# ── Party-spine TODO — DO NOT BUILD NOW ─────────────────────────────────────
+# nOS's `party` table is the single source of truth for parties/contacts.
+# EspoCRM ships its own Contact/Account model — for v1 this is DELIBERATELY
+# a second, disconnected contact store (standalone CRM, no sync). A later,
+# SEPARATE task must build a party-spine sync (EspoCRM Contact <-> party
+# table, spine as system of record, EspoCRM never forks a second truth).
+# Do not wire that here.
+# ============================================================================
+
+meta:
+  name: "espocrm"
+  version: "10.0.8"
+  summary: "Open-source CRM (contacts, deals, activities) for the consulting-firm pilot."
+  homepage: "https://www.espocrm.com/"
+  category: "b2b"
+  ports: [80]
+  tags: ["self-hosted", "crm", "b2b", "consulting"]
+
+# ── GDPR Article 30 — processor-side framing ────────────────────────────────
+# The consulting firm is the CONTROLLER of its own client relationship data;
+# EspoCRM is the tool, hosted and operated by the firm itself (self-hosted,
+# no third-party processor). legal_basis=contract: the whole point of a CRM
+# is administering the firm's contractual relationship with each client
+# (deals, activities, communications tied to a live or prospective contract).
+gdpr:
+  purpose: |
+    Record and manage the consulting firm's client relationships: contact
+    details, deals/opportunities, activities, and client communications.
+    Necessary to deliver and administer the firm's contracted consulting
+    services to its clients.
+  legal_basis: "contract"
+  data_categories:
+    - "name"
+    - "email"
+    - "phone_number"
+    - "company_affiliation"
+    - "deal_financial_data"      # opportunity/quote values
+    - "communication_content"    # logged calls/emails/notes
+  data_subjects:
+    - "clients"                  # the consulting firm's contracted clients
+    - "client_contacts"          # named individuals at each client
+    - "end_users"                # firm staff using the CRM (flips TLS gate on)
+  # Placeholder — operator must tune to the firm's actual contract/accounting
+  # retention policy (Czech commercial-law horizons can exceed this).
+  retention_days: 1095
+  processors: []
+  transfers_outside_eu: false
+
+# ── Compose fragment ─────────────────────────────────────────────────────────
+# Two services, mirroring documenso.yml's proven shape: app + embedded DB,
+# both wired via magic tokens only (no Jinja anywhere below).
+compose:
+  services:
+    espocrm:
+      image: "docker.io/espocrm/espocrm:10.0.8-apache"
+      container_name: espocrm
+      restart: unless-stopped
+      depends_on:
+        espocrm-db:
+          condition: service_healthy
+      expose:
+        - "80"
+      environment:
+        - "ESPOCRM_DATABASE_HOST=espocrm-db"
+        - "ESPOCRM_DATABASE_PORT=3306"
+        - "ESPOCRM_DATABASE_NAME=espocrm"
+        - "ESPOCRM_DATABASE_USER=$SERVICE_USER_DB"
+        - "ESPOCRM_DATABASE_PASSWORD=$SERVICE_PASSWORD_DB"
+        - "ESPOCRM_SITE_URL=https://$SERVICE_FQDN_ESPOCRM/"
+        # First-admin bootstrap only — SSO (below) is how everyone else
+        # signs in; this is not a standing local-login bypass.
+        - "ESPOCRM_ADMIN_USERNAME=admin"
+        - "ESPOCRM_ADMIN_PASSWORD=$SERVICE_PASSWORD_ADMIN"
+      volumes:
+        - espocrm_app:/var/www/html
+      healthcheck:
+        test: ["CMD-SHELL", "curl -sf http://127.0.0.1/ || exit 1"]
+        interval: 30s
+        timeout: 10s
+        retries: 10
+        start_period: 60s
+      mem_limit: 1g
+      cpus: 1.0
+
+    espocrm-db:
+      image: "docker.io/mariadb:11.8.8"
+      container_name: espocrm-db
+      restart: unless-stopped
+      environment:
+        - "MARIADB_DATABASE=espocrm"
+        - "MARIADB_USER=$SERVICE_USER_DB"
+        - "MARIADB_PASSWORD=$SERVICE_PASSWORD_DB"
+        - "MARIADB_ROOT_PASSWORD=$SERVICE_PASSWORD_DBROOT"
+      volumes:
+        - espocrm_db:/var/lib/mysql
+      healthcheck:
+        test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
+        interval: 10s
+        timeout: 5s
+        retries: 10
+      mem_limit: 512m
+      cpus: 0.5
+
+  # Volumes namespace: espocrm_*. Unique across all Tier-2 pilots
+  # (documenso_*, tfa_*, rcube_*).
+  volumes:
+    espocrm_app:
+    espocrm_db:
+
+# ── SSO: native_oidc via EspoCRM's own built-in OIDC client ─────────────────
+# auth=oidc pushes an OAuth2Provider entry into authentik_oidc_apps (see
+# nos_apps_render.py:_authentik_entry) rather than a forward-auth gate.
+# Operator still configures EspoCRM's side (Administration -> Authentication
+# -> OIDC) with the client_id/secret Authentik provisions, and enables the
+# OIDC login button.
+#
+# oidc_callback: EspoCRM's docs (https://docs.espocrm.com/administration/oidc/)
+# name `oauth-callback.php` at the site root — verify on first login, this is
+# runtime-checkable, not converge-blocking.
+nginx:
+  auth: "oidc"
+  oidc_callback: "/oauth-callback.php"
+  rbac_tier: 2   # manager-tier — same bucket as the other CRM/pipeline tools

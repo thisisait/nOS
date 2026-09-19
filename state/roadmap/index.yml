@@ -6,6 +6,9 @@
 - slug: accounting-knowledge-graph
   parent: digest
   track: cortex
+- slug: accounting-v1-double-entry
+  parent: consulting-firm-deployment
+  track: cortex
 - slug: actor-attribution
   parent: state-surface
   track: platform
@@ -66,9 +69,18 @@
 - slug: cc-tui-variants
   parent: cc-app
   track: face
+- slug: client-facing-plain-language
+  parent: ''
+  track: face
 - slug: compose-hardening
   parent: sec
   track: security
+- slug: constitution-llm-legible
+  parent: ''
+  track: platform
+- slug: consulting-firm-deployment
+  parent: ''
+  track: platform
 - slug: converge-become
   parent: converge-speed
   track: platform
@@ -82,6 +94,9 @@
   parent: converge-speed
   track: platform
 - slug: converge-host-skip
+  parent: converge-speed
+  track: platform
+- slug: converge-plugin-vars
   parent: converge-speed
   track: platform
 - slug: converge-small-cuts
@@ -144,6 +159,9 @@
 - slug: device-channels
   parent: device-organ
   track: platform
+- slug: device-gateway-authz-policy
+  parent: ''
+  track: security
 - slug: device-gateway-role
   parent: device-organ
   track: platform
@@ -174,6 +192,9 @@
 - slug: digest-absorb-chokepoint
   parent: digest
   track: digest
+- slug: digest-artifact-modules
+  parent: digest-device
+  track: digest
 - slug: digest-bundle-gate
   parent: digest
   track: digest
@@ -182,6 +203,42 @@
   track: digest
 - slug: digest-constitution
   parent: digest
+  track: digest
+- slug: digest-device
+  parent: digest
+  track: digest
+- slug: digest-device-art9
+  parent: digest-device
+  track: digest
+- slug: digest-device-doctrine
+  parent: digest-device
+  track: digest
+- slug: digest-device-doctrine-review
+  parent: digest-device
+  track: digest
+- slug: digest-device-family
+  parent: digest-device
+  track: digest
+- slug: digest-device-fixture
+  parent: digest-device
+  track: digest
+- slug: digest-device-ileapp-pin
+  parent: digest-device
+  track: digest
+- slug: digest-device-lava
+  parent: digest-device
+  track: digest
+- slug: digest-device-owner
+  parent: digest-device
+  track: digest
+- slug: digest-device-proof
+  parent: digest-device
+  track: digest
+- slug: digest-device-tables
+  parent: digest-device
+  track: digest
+- slug: digest-device-wave2-gates
+  parent: digest-device
   track: digest
 - slug: digest-doctrine
   parent: digest
@@ -297,6 +354,9 @@
 - slug: fixture-autoskola-semafor
   parent: fixtures
   track: platform
+- slug: fixture-consulting-firm
+  parent: consulting-firm-deployment
+  track: platform
 - slug: fixture-halyard-studio
   parent: fixtures
   track: platform
@@ -342,6 +402,9 @@
 - slug: gdpr-agent-processors
   parent: rel-011
   track: security
+- slug: gdpr-consulting-processor
+  parent: ''
+  track: security
 - slug: gdpr-importer-register
   parent: digest
   track: digest
@@ -362,6 +425,21 @@
   track: platform
 - slug: importer-spine
   parent: digest
+  track: digest
+- slug: invoice-multi-rate-vat
+  parent: consulting-firm-deployment
+  track: digest
+- slug: invoice-structured-extractor
+  parent: invoice-vision-intake
+  track: cortex
+- slug: invoice-vision-intake
+  parent: consulting-firm-deployment
+  track: digest
+- slug: invoice-vision-model-pin
+  parent: consulting-firm-deployment
+  track: agents
+- slug: isdoc-vision-crosscheck
+  parent: consulting-firm-deployment
   track: digest
 - slug: jeff
   parent: agents
@@ -504,12 +582,18 @@
 - slug: loop-verdict-vacuity
   parent: ''
   track: agents
+- slug: loops-maintenance-pause
+  parent: ''
+  track: agents
 - slug: managed-resources-manifest
   parent: plat
   track: platform
 - slug: moderation-drain-loop
   parent: ''
   track: cortex
+- slug: multitenant-client-isolation
+  parent: ''
+  track: platform
 - slug: notify-body-is-prompt
   parent: ''
   track: platform
@@ -702,6 +786,9 @@
 - slug: rel-011
   parent: ''
   track: release
+- slug: rem-queue-commit-256-260-261
+  parent: ''
+  track: security
 - slug: repo-split-trigger
   parent: ''
   track: platform
@@ -822,6 +909,12 @@
 - slug: ssot-article-schema
   parent: wave-small-ssot
   track: platform
+- slug: ssot-cite-adopters-or-amend
+  parent: ''
+  track: platform
+- slug: ssot-cite-editor
+  parent: ssot-index
+  track: platform
 - slug: ssot-index
   parent: wave-small-ssot
   track: platform
@@ -858,6 +951,9 @@
 - slug: tables-system-flag
   parent: face
   track: face
+- slug: tester-hardware-readiness
+  parent: consulting-firm-deployment
+  track: release
 - slug: v0-1
   parent: ''
   track: release

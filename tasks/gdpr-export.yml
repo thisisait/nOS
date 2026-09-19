@@ -176,18 +176,23 @@
 # wp user get is user-object-only. The executor below stays so a future
 # verified read-only email-keyed export drops in with zero task changes.)
 - name: "[GDPR export] container_exec — resolve container + capture export"
+  # LITERAL block + the ps -q on ONE line: a folded (>-) scalar kept the
+  # newlines before the more-indented --filter lines, and a newline INSIDE
+  # $(...) is a command separator — so the substitution ran "docker ps -q"
+  # unfiltered (every container) then "--filter ...: command not found",
+  # leaving CID as every container id on the host (same bug as the ntfy/
+  # paperclip restart handlers, root-caused 2026-09-19). On a GDPR export
+  # path that means the wrong container. Keep the substitution on one line.
   ansible.builtin.shell:
-    cmd: >-
-      set -o pipefail;
-      CID=$(docker ps -q
-        --filter "label=com.docker.compose.project={{ item.stack }}"
-        --filter "label=com.docker.compose.service={{ item.service }}" | head -1);
-      if [ -z "$CID" ]; then echo "SKIP {{ item.id }}: no running container"; exit 0; fi;
-      T="{{ _export_dir }}/.{{ item.id }}.tmp";
+    cmd: |
+      set -o pipefail
+      CID=$(docker ps -q --filter "label=com.docker.compose.project={{ item.stack }}" --filter "label=com.docker.compose.service={{ item.service }}" | head -1)
+      if [ -z "$CID" ]; then echo "SKIP {{ item.id }}: no running container"; exit 0; fi
+      T="{{ _export_dir }}/.{{ item.id }}.tmp"
       if docker exec "$CID" {{ item.command }} > "$T"; then
-        mv "$T" "{{ _export_dir }}/{{ item.id }}.json";
+        mv "$T" "{{ _export_dir }}/{{ item.id }}.json"
       else
-        echo "FAIL {{ item.id }}: export command exited non-zero"; rm -f "$T"; exit 1;
+        echo "FAIL {{ item.id }}: export command exited non-zero"; rm -f "$T"; exit 1
       fi
     executable: /bin/bash
   loop: "{{ _export_plan | default([]) | selectattr('method', 'eq', 'container_exec') | list }}"
