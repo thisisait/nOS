@@ -591,6 +591,11 @@ nodes:
   "pulse:loop:drive": withheld
   "pulse:loop:propose": withheld
   "pulse:loop:review": withheld
+  # 2026-09 loop weakness sources (loop-base plugin) — internal cadence jobs
+  # feeding the propose→judge loop. WITHHELD like every other pulse:loop:* node
+  # (D3); publishes nothing, D4's frozen set untouched.
+  "pulse:loop:news-scout": withheld
+  "pulse:loop:repo-check": withheld
   "pulse:librarian:brief-taxonomy": withheld
   "pulse:librarian:describe-taxonomy": withheld
   "pulse:librarian:judge-lint-queue": withheld
