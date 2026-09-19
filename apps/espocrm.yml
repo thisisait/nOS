@@ -103,8 +103,15 @@ compose:
         # signs in; this is not a standing local-login bypass.
         - "ESPOCRM_ADMIN_USERNAME=admin"
         - "ESPOCRM_ADMIN_PASSWORD=$SERVICE_PASSWORD_ADMIN"
+      # EspoCRM 10 changed the volume layout: mounting the whole /var/www/html
+      # (the 8.x way) shadows the image's app code — incl. install/entry.php —
+      # so first-run 500s ("LEGACY INSTALLATION METHOD DETECTED" in the log,
+      # measured 2026-09-19). v10 wants ONLY these three mutable subdirs mounted;
+      # the app code stays from the image and the entrypoint auto-installs.
       volumes:
-        - espocrm_app:/var/www/html
+        - espocrm_custom:/var/www/html/custom
+        - espocrm_data:/var/www/html/data
+        - espocrm_client_custom:/var/www/html/client/custom
       healthcheck:
         test: ["CMD-SHELL", "curl -sf http://127.0.0.1/ || exit 1"]
         interval: 30s
@@ -136,7 +143,9 @@ compose:
   # Volumes namespace: espocrm_*. Unique across all Tier-2 pilots
   # (documenso_*, tfa_*, rcube_*).
   volumes:
-    espocrm_app:
+    espocrm_custom:
+    espocrm_data:
+    espocrm_client_custom:
     espocrm_db:
 
 # ── SSO: native_oidc via EspoCRM's own built-in OIDC client ─────────────────
