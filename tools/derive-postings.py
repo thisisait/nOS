@@ -33,6 +33,22 @@ import nos_digest  # noqa: E402
 TABLES_DIR = REPO / "state" / "keap-tables"
 
 
+def build_accounts_by_code(account_rows: list) -> dict:
+    """{'311': slug, ...} PLUS, for every analytical account (one whose `party`
+    is set), a composite '<parent's code>.<party>' entry — e.g. an account row
+    {code: '311-alfa', parent: acc-311, party: synthetic-client-alfa} adds
+    '311.synthetic-client-alfa'. Pure — shared by the live CLI and the offline
+    end-to-end acceptance test, so both build the map identically."""
+    by_slug = {r["slug"]: r for r in account_rows if r.get("slug")}
+    accounts_by_code = {r["code"]: r["slug"] for r in account_rows if r.get("code")}
+    for r in account_rows:
+        party, parent = r.get("party"), r.get("parent")
+        parent_code = by_slug.get(parent, {}).get("code") if parent else None
+        if party and parent_code:
+            accounts_by_code[f"{parent_code}.{party}"] = r["slug"]
+    return accounts_by_code
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--own-party", required=True, help="the party whose books to post (seller or buyer)")
@@ -41,7 +57,7 @@ def main() -> int:
     args = ap.parse_args()
 
     try:
-        accounts = {r.get("code"): r.get("slug") for r in read_rows("account") if r.get("code")}
+        accounts = build_accounts_by_code(read_rows("account"))
         invoices = read_rows("invoice")
     except (urllib.error.URLError, OSError) as exc:
         print(f"REFUSING: KEAP unreadable ({exc})", file=sys.stderr)

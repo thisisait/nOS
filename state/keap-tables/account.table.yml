@@ -18,6 +18,9 @@ description: >-
 driver: libsql
 anchors: ["nos.accounting"]
 visibility: tier-managers
+graph:
+  mode: rows
+  node: { idColumn: slug, labelColumn: name, kind: account }
 schema:
   columns:
     - { key: slug,              label: "Slug",       kind: text,   role: dimension, required: true, concept: identity.slug }
