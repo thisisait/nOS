@@ -1,0 +1,90 @@
+name: invoice-vision-ocr
+version: 1
+description: >-
+  Stage A of the local invoice extractor (invoice-structured-extractor unit).
+  ONE vision-model call that reads an invoice scan/PDF page and emits its
+  visible text + layout as JSON — nothing else. Stage B (invoice-extract)
+  turns this text into the constrained ISDOC record dict. Kept as its own
+  agent because the two calls have different jobs (read pixels vs. emit a
+  typed record) and, structurally, different declared backends to audit:
+  an undeclared vision stage is the actual cloud-egress path for the
+  highest-value target (invoice IMAGES), so it gets its own gdpr block
+  rather than inheriting Stage B's.
+
+model:
+  # Vision-capable local model. Which model id NOS_LOCAL_MODEL actually names
+  # is an operator/config.yml choice (state/llm-backends.yml model_env) — this
+  # agent only pins the TIER and the backend; it does not pick the model.
+  primary: openai-local-sonnet
+  backend: ollama
+
+system_prompt_path: system.md
+
+mode: one_shot
+one_shot:
+  # Wraps free OCR text as {"text": "..."} — still Ollama's native
+  # structured-output `format` param (ollama_version: "0.34.0",
+  # default.config.yml:1235), just a one-field schema. No Outlines/XGrammar
+  # (ponytail rung 5: the backend already does constrained JSON decoding).
+  schema_path: one-shot.schema.json
+
+audit:
+  capability_scopes:
+    - llm.one_shot
+  pii_classification: high
+
+vault:
+  required_credentials:
+    - scope: ollama-local
+      optional: true
+
+metadata:
+  ait_phase: invoice-pipeline
+  ceremony_role: vision-ocr-stage
+  runner_status: unproven
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: "The OCR call completed; the text may be partial or garbled — that is Stage B's confidence problem, not this stage's."
+  exit_1: "Does not emit exit 1 for a bad read; a schema-invalid answer is exit 0 with stop_reason one_shot_failed."
+  exit_2: "Binding, auth or runner error — nothing was read."
+
+gdpr:
+  purpose: >-
+    Reading an invoice scan/PDF's visible text and layout on-device, as the
+    first stage of the local invoice-extraction pipeline. The image is the
+    highest-value target for cloud egress in this pipeline, which is why
+    this stage carries its own residency declaration rather than inheriting
+    Stage B's.
+  legal_basis: legitimate_interests
+  data_categories: [invoice_document_images]
+  data_subjects: [clients, counterparties]
+  retention_days: 0
+  processors:
+    - name: on-device (operator's own hardware)
+      role: >-
+        Vision-model inference on this host via ollama's OpenAI-compatible
+        surface on loopback. No third party: the image never leaves the
+        machine.
+      country: "CZ — this host"
+      safeguard: "Not applicable. No transfer occurs."
+  eu_residency: true
+  # THE CLAIM ONLY A LOCAL BACKEND CAN CARRY (BindingResolver gate 8): with
+  # this false, the resolver refuses any non-EU backend for THIS stage and
+  # refuses to degrade to the default when ollama is disarmed — an invoice
+  # image never has a cloud fallback path.
+  transfers_outside_eu: false
+  notes: |
+    Output is free text + layout, not the ISDOC record — Stage B
+    (invoice-extract) does the constrained-schema decode.
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox]
+  on_medium:   []
+  on_low:      []
+  on_info:     []
+
+capabilities: []
+
+task_types: [investigate]

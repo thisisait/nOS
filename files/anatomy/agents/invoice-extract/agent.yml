@@ -1,0 +1,86 @@
+name: invoice-extract
+version: 1
+description: >-
+  Stage B of the local invoice extractor (invoice-structured-extractor unit).
+  ONE call that turns Stage A's (invoice-vision-ocr) OCR text into the ISDOC
+  record dict, UNDER CONSTRAINED DECODING against
+  state/schema/isdoc-record.schema.yaml via Ollama's native structured-output
+  `format` param — the model cannot emit a shape the schema forbids. Bounded
+  fields (currency, vat_breakdown[].rate) are classification; party fields
+  (seller/buyer ico+name) are candidates only — nos_digest.resolve_party
+  RESOLVES them against the live spine downstream, this stage never mints a
+  party. Per-field confidence (from logprobs) is written into the
+  .extract.json sidecar alongside this record — see
+  state/schema/isdoc-extract-sidecar.schema.yaml and
+  tools/invoice_extract.py::build_sidecar.
+
+model:
+  primary: openai-local-sonnet
+  backend: ollama
+
+system_prompt_path: system.md
+
+mode: one_shot
+one_shot:
+  schema_path: one-shot.schema.json
+
+audit:
+  capability_scopes:
+    - llm.one_shot
+  pii_classification: high
+
+vault:
+  required_credentials:
+    - scope: ollama-local
+      optional: true
+
+metadata:
+  ait_phase: invoice-pipeline
+  ceremony_role: extract-stage
+  runner_status: unproven
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: >-
+    The one call completed. The record may be schema-valid but low-confidence
+    on some fields — that is data for the operator-verify rung
+    (VisionImporter.parse()), not a run failure.
+  exit_1: "Does not emit exit 1; a schema-invalid answer is exit 0 with stop_reason one_shot_failed."
+  exit_2: "Binding, auth or runner error — nothing was extracted."
+
+gdpr:
+  purpose: >-
+    Extracting a typed ISDOC record from Stage A's OCR text, entirely
+    on-device, so an invoice image never needs to leave the host to become a
+    structured digest-organ row.
+  legal_basis: legitimate_interests
+  data_categories: [invoice_document_text]
+  data_subjects: [clients, counterparties]
+  retention_days: 0
+  processors:
+    - name: on-device (operator's own hardware)
+      role: >-
+        LLM inference on this host via ollama's OpenAI-compatible surface on
+        loopback, constrained to the ISDOC record schema. No third party.
+      country: "CZ — this host"
+      safeguard: "Not applicable. No transfer occurs."
+  eu_residency: true
+  # Both invoice-pipeline stages declare this — an undeclared stage would be
+  # the actual egress path (see invoice-vision-ocr's own note); gate 8 makes
+  # ollama the only reachable backend for EACH stage independently.
+  transfers_outside_eu: false
+  notes: |
+    seller/buyer here are RAW candidates (ico/name as read); resolution
+    against the live party spine happens in the importer
+    (tools/digest-import-vision.py), never in this agent.
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox]
+  on_medium:   []
+  on_low:      []
+  on_info:     []
+
+capabilities: []
+
+task_types: [investigate]

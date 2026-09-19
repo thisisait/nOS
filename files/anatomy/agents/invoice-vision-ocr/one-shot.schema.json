@@ -1,0 +1,11 @@
+{
+  "$comment": "Stage A's output is free OCR text, not a typed record — this schema exists only to route the answer through Ollama's native structured-output `format` param (still no new lib, ponytail rung 5) rather than free-form completion. `required` is empty for the same reason ops-extract's is: an empty/illegible page is a legal answer.",
+  "type": "object",
+  "required": [],
+  "properties": {
+    "text": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
