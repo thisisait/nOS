@@ -46,9 +46,17 @@
 # Exit 2 on refusal, matching pulse-run-agent.sh's existing contract. NOT 0:
 # a run that could not do its job must not report success, or the night the
 # lock is permanently stuck reads as a quiet estate.
+#
+# Return 3 = MAINTENANCE PAUSE. If the operator has paused the SERE loops
+# (`nos loops pause` -> the sentinel below), acquire returns 3 BEFORE taking any
+# slot. This is neither a refusal (2) nor a success (0): the run did not happen
+# and that is intentional. Callers skip as a HOLD and say so; red-status renders
+# it apart from red and from green. The sentinel lives under ~/.nos so it toggles
+# live with no converge; NOS_LOOPS_PAUSED_FILE overrides its path (tests).
 
 NOS_AGENT_LOCK="${NOS_AGENT_LOCK_DIR:-${HOME:-/nonexistent}/.nos/agent-run.lock}"
 NOS_AGENT_LOCK_SLOTS="${NOS_AGENT_LOCK_SLOTS:-3}"
+NOS_LOOPS_PAUSED_FILE="${NOS_LOOPS_PAUSED_FILE:-${HOME:-/nonexistent}/.nos/loops-paused}"
 NOS_AGENT_LOCK_HELD=()
 
 nos_agent_lock_release() {
@@ -92,6 +100,15 @@ nos_agent_lock_acquire() {
     local wait_s="${2:-0}"
     local kind="${3:-cli}"
     local want=1 waited=0 got i
+
+    # Maintenance pause (return 3), decided BEFORE any slot is taken so a paused
+    # loop never touches the mutex. Checked live each acquire — the sentinel is a
+    # runtime file, so pause/resume needs no converge.
+    if [[ -f "$NOS_LOOPS_PAUSED_FILE" ]]; then
+        echo "PAUSED: SERE loops are paused for maintenance ($NOS_LOOPS_PAUSED_FILE) —" \
+             "${kind}:${label} skipped. Resume with: nos loops resume" >&2
+        return 3
+    fi
 
     [[ "$kind" == "cli" ]] && want="$NOS_AGENT_LOCK_SLOTS"
 

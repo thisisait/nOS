@@ -184,10 +184,21 @@ emit_event "scan.batch_started" "$(jq -nc \
 # works because the launchd job overrides it.
 # shellcheck source=../anatomy/scripts/agent-run-lock.sh
 source "$(dirname "$0")/../anatomy/scripts/agent-run-lock.sh"
-if ! nos_agent_lock_acquire "vulnscan:${SCAN_RUN_ID}" 600 cli; then
+_lock_rc=0
+nos_agent_lock_acquire "vulnscan:${SCAN_RUN_ID}" 600 cli || _lock_rc=$?
+if [ "$_lock_rc" -ne 0 ] && [ "$_lock_rc" -ne 3 ]; then
     log "ERROR: another claude-CLI agent holds the agent-run lock — scan not dispatched"
     emit_event "scan.batch_refused" '{"reason":"agent-run lock held"}' >> "$LOG_FILE"
     exit 2
+fi
+if [ "$_lock_rc" -eq 3 ]; then
+    # Maintenance pause: an intentional operator hold. Leave scan-state.json
+    # UNTOUCHED (stamping "scanned" here would be the fabricated-freshness defect
+    # this file already carries a comment against) and skip cleanly — the paused
+    # marker is the honest record, not a scan_failed.
+    log "PAUSED: SERE loops paused for maintenance — scan not dispatched"
+    emit_event "scan.batch_paused" '{"reason":"loops paused for maintenance"}' >> "$LOG_FILE"
+    exit 0
 fi
 trap 'nos_agent_lock_release; cleanup' EXIT
 

@@ -192,6 +192,12 @@ final class EventRepository
 		// planned_by}. Twin of Bone's events.py — pinned by
 		// test_devlog_event_types.py.
 		'upgrade_unqueued',
+		// ── SERE-loop maintenance pause (`nos loops pause|resume`) ──────────
+		// The operator's live hold on the agent runtime — a best-effort audit
+		// event from the nos CLI (actor_id=operator:<login>, source='nos-cli';
+		// result_json {reason}). Twin of Bone's events.py VALID_TYPES, else the
+		// Bone POST 400s and the pause leaves no audit trace.
+		'loops_paused', 'loops_resumed',
 	];
 
 	public function __construct(

@@ -100,7 +100,16 @@ fi
 # terminal. The 02:00 scan waits instead, because nobody is watching it.
 # shellcheck source=agent-run-lock.sh
 source "$(dirname "${BASH_SOURCE[0]}")/agent-run-lock.sh"
-nos_agent_lock_acquire "$AGENT_NAME" 0 cli || exit 2
+_lock_rc=0
+nos_agent_lock_acquire "$AGENT_NAME" 0 cli || _lock_rc=$?
+if [ "$_lock_rc" -ne 0 ] && [ "$_lock_rc" -ne 3 ]; then exit 2; fi   # lock refused
+if [ "$_lock_rc" -eq 3 ]; then
+    # Maintenance pause: an intentional operator hold, not a failure. Skip BEFORE
+    # opening an agent_run_start event (no session to orphan) and carry the hold
+    # out in exit 3 so red-status renders it apart from red and from a quiet run.
+    echo "PAUSED: SERE loops paused for maintenance — ${AGENT_NAME} run skipped (intentional hold)" >&2
+    exit 3
+fi
 
 # ── HMAC helper ───────────────────────────────────────────────────────────────
 
