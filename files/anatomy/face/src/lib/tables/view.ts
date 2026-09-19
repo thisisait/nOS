@@ -386,6 +386,51 @@ export function matchPredicate(row: DataTableRow, p: RowPredicate): boolean {
 export const matchRow = (row: DataTableRow, when: RowPredicate[]): boolean =>
 	when.length > 0 && when.every((p) => matchPredicate(row, p));
 
+// ── rowRef legibility (D5 client-filter-view) ────────────────────────────────
+//
+// A `kind:rowRef` cell holds another table's row id (e.g. a party slug). Facet
+// options and grid cells rendered that id verbatim — "which client's books"
+// asked the consultant to recognise an opaque slug, not a name. This decorates
+// each row with `<key>__ref`, the display value a column's `refDisplay` names
+// on the referenced row, so a renderer can show it without knowing rowRef
+// exists. Pure: the BFF does the fetching (`refRows` is already-loaded data),
+// this just joins.
+
+/** `column key -> referenced rows`, for every rowRef column that has one. */
+export type RefRowsByColumn = Record<string, DataTableRow[]>;
+
+export function decorateRowRefs(
+	rows: DataTableRow[],
+	columns: ColumnSpec[],
+	refRows: RefRowsByColumn
+): DataTableRow[] {
+	const rowRefCols = columns.filter(
+		(c) => c.kind === 'rowRef' && c.refDisplay && refRows[c.key]?.length
+	);
+	if (!rowRefCols.length) return rows;
+	// id -> display, per column, built once rather than per row.
+	const maps = new Map<string, Map<string, string>>();
+	for (const c of rowRefCols) {
+		const m = new Map<string, string>();
+		for (const r of refRows[c.key]) {
+			const id = r.id ?? r.slug;
+			const disp = r[c.refDisplay as string];
+			if (id != null && typeof disp === 'string' && disp) m.set(String(id), disp);
+		}
+		maps.set(c.key, m);
+	}
+	return rows.map((row) => {
+		const extra: DataTableRow = { ...row };
+		for (const c of rowRefCols) {
+			const raw = row[c.key];
+			if (raw == null) continue;
+			const disp = maps.get(c.key)?.get(String(raw));
+			if (disp) extra[`${c.key}__ref`] = disp;
+		}
+		return extra;
+	});
+}
+
 // ── The generative half ──────────────────────────────────────────────────────
 
 /**

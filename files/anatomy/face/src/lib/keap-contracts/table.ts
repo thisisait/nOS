@@ -516,7 +516,11 @@ export function validateViewMeta(
   // of every distinct value in the table. The kinds below are the ones that
   // hold a bounded vocabulary; `text` is permitted because the roadmap's
   // `track` is one and a `select` was not available when it was authored.
-  const FACETABLE = ['select', 'text', 'boolean', 'user', 'taxonomyRef'];
+  // `rowRef` joined 2026-09 (D5 client-filter-view): a rowRef facet (e.g.
+  // invoice.book_owner -> party) is bounded by the number of referenced rows,
+  // same low-cardinality shape as a select — the client picker is exactly
+  // the use case this list exists for.
+  const FACETABLE = ['select', 'text', 'boolean', 'user', 'taxonomyRef', 'rowRef'];
   (view.facets ?? []).forEach((c, i) => {
     const k = byKey.get(c)?.kind;
     if (k && !FACETABLE.includes(k)) {

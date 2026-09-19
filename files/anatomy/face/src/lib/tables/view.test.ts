@@ -6,6 +6,7 @@ import {
 	timelineSections,
 	formatWhen,
 	inboxHref,
+	decorateRowRefs,
 	VIEW_ACTIONS
 } from './view';
 import type { ColumnSpec, DataTable } from '$lib/contracts';
@@ -270,6 +271,38 @@ describe('inboxHref', () => {
 		expect(inboxHref('https://wing.dev.local', { id: '1', session_uuid: '  ' })).toBeNull();
 		expect(inboxHref('', { id: '1', session_uuid: 'u' })).toBeNull();
 		expect(inboxHref('javascript:alert(1)', { id: '1', session_uuid: 'u' })).toBeNull();
+	});
+});
+
+describe('decorateRowRefs', () => {
+	// D5 client-filter-view legibility fix: a rowRef facet showed the raw
+	// party slug ("synthetic-client-alfa") — the consultant needs the name.
+	const bookOwnerCol = {
+		key: 'book_owner',
+		label: 'Book owner',
+		kind: 'rowRef',
+		refTable: 'party',
+		refDisplay: 'legal_name'
+	} as ColumnSpec;
+
+	it('adds <key>__ref from the referenced table, leaving the raw value untouched', () => {
+		const rows = [{ id: 'inv-1', book_owner: 'client-alfa' }];
+		const party = [{ id: 'client-alfa', slug: 'client-alfa', legal_name: 'Alfa s.r.o.' }];
+		const out = decorateRowRefs(rows, [bookOwnerCol], { book_owner: party });
+		expect(out[0].book_owner).toBe('client-alfa');
+		expect(out[0].book_owner__ref).toBe('Alfa s.r.o.');
+	});
+
+	it('is a no-op when the ref table has no matching row (raw id keeps showing)', () => {
+		const rows = [{ id: 'inv-1', book_owner: 'unknown-party' }];
+		const party = [{ id: 'client-alfa', slug: 'client-alfa', legal_name: 'Alfa s.r.o.' }];
+		const out = decorateRowRefs(rows, [bookOwnerCol], { book_owner: party });
+		expect(out[0].book_owner__ref).toBeUndefined();
+	});
+
+	it('is a no-op when no refRows were supplied for the column at all', () => {
+		const rows = [{ id: 'inv-1', book_owner: 'client-alfa' }];
+		expect(decorateRowRefs(rows, [bookOwnerCol], {})).toEqual(rows);
 	});
 });
 

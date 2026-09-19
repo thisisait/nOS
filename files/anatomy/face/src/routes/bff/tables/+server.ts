@@ -20,7 +20,8 @@ import {
 } from '$lib/server/upstream';
 import { canWriteTables } from '$lib/security/tier';
 import { toTableSummaries, type TableSummary } from '$lib/tables/summary';
-import { narrowView } from '$lib/tables/view';
+import { narrowView, decorateRowRefs } from '$lib/tables/view';
+import { postTableAudit } from '$lib/server/audit';
 import type { DataTable, DataTableRow, ColumnSpec } from '$lib/contracts';
 import { FACE_LAYOUTS, FACE_WALLPAPERS, FACE_CONTROLS } from '$lib/server/defaults';
 
@@ -107,7 +108,9 @@ function mapColumns(def: unknown): ColumnSpec[] {
 				required: col.required === true,
 				role: typeof col.role === 'string' ? col.role : undefined,
 				dim: typeof col.dim === 'number' ? col.dim : undefined,
-				unit: typeof col.unit === 'string' ? col.unit : undefined
+				unit: typeof col.unit === 'string' ? col.unit : undefined,
+				refTable: typeof col.refTable === 'string' ? col.refTable : undefined,
+				refDisplay: typeof col.refDisplay === 'string' ? col.refDisplay : undefined
 			} as ColumnSpec;
 		})
 		.filter((c): c is ColumnSpec => c !== null);
@@ -206,6 +209,42 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			} catch {
 				/* keep fallback columns */
 			}
+			// rowRef legibility (D5): resolve id -> refDisplay so a facet/grid shows
+			// a client's name, not its slug. One fetch per DISTINCT refTable (a
+			// table with seller/buyer/book_owner all -> party fetches party once).
+			// Best-effort: a failed lookup just leaves the raw id showing, same as
+			// today — never blocks the read path.
+			const refTables = [
+				...new Set(
+					table.columns
+						.filter((c) => c.kind === 'rowRef' && c.refTable && c.refDisplay)
+						.map((c) => c.refTable as string)
+				)
+			];
+			if (refTables.length) {
+				const refRows: Record<string, DataTableRow[]> = {};
+				await Promise.all(
+					refTables.map(async (t) => {
+						try {
+							const rd = unwrap<{ rows?: DataTableRow[] }>(
+								await keapTableRows(t, locals.identity.uid)
+							);
+							refRows[t] = rd.rows ?? (Array.isArray(rd) ? (rd as DataTableRow[]) : []);
+						} catch {
+							/* leave raw ids showing for this table */
+						}
+					})
+				);
+				const byColumn: Record<string, DataTableRow[]> = {};
+				for (const c of table.columns) {
+					if (c.kind === 'rowRef' && c.refTable && refRows[c.refTable]) {
+						byColumn[c.key] = refRows[c.refTable];
+					}
+				}
+				if (Object.keys(byColumn).length) {
+					table.rows = decorateRowRefs(table.rows, table.columns, byColumn);
+				}
+			}
 			return json(table);
 		} catch (e) {
 			if (!(e instanceof UpstreamError)) throw e;
@@ -231,12 +270,17 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const slug = (body.slug ?? '').trim();
 	if (!SLUG_RE.test(slug)) throw error(400, 'invalid table slug');
 
-	// TODO audit: emit a Bone audit event (actor = identity.uid, action = table write)
-	// once the shell has a Bone audit hook. KEAP already records the write server-side.
 	try {
 		if (body.op === 'upsertRow') {
 			if (!body.row || typeof body.row !== 'object') throw error(400, 'row object required');
-			return json(unwrap(await keapUpsertRow(slug, body.row)));
+			const result = json(unwrap(await keapUpsertRow(slug, body.row)));
+			// Audit-only: fire-and-forget, never blocks or fails the write it's
+			// auditing (postTableAudit swallows its own errors). row_id is the
+			// natural key every table upserts by — KEAP's own response envelope
+			// shape varies more than the request body does.
+			const rowId = String((body.row as Record<string, unknown>).slug ?? (body.row as Record<string, unknown>).id ?? '');
+			void postTableAudit(locals.identity.uid, slug, rowId);
+			return result;
 		}
 		if (body.op === 'createTable') {
 			const { op: _op, ...tableBody } = body;

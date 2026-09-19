@@ -54,3 +54,11 @@ schema:
     - { key: vat_breakdown,   label: "VAT breakdown",  kind: json,   role: attribute }
     - { key: book_owner,      label: "Book owner",     kind: rowRef, role: dimension, required: false,
         refTable: "party", refDisplay: "legal_name", onDelete: "restrict" }
+# client-filter-view (D5 unit 3): book_owner is the single legible per-client
+# key (seller/buyer alone would only ever show HALF a client's invoices — the
+# ones where the client is the counterparty, not on the seller column, are
+# the exact case a single-column facet would drop). Isolation itself is still
+# proven by the analytical 311.<party> accounts (D2/D4), not by this facet —
+# this is a data-organization convenience, not an RBAC/tenant boundary.
+view:
+  facets: [book_owner]

@@ -65,6 +65,15 @@
 	const cellOf = (row: DataTableRow, key: string): string =>
 		row[key] === null || row[key] === undefined ? '' : String(row[key]);
 
+	/** A facet's displayed label for one row's value — the BFF-resolved
+	 *  `<key>__ref` (a rowRef's refDisplay, e.g. a client's legal_name) when
+	 *  present, else the raw cell. `picked[key]` still stores the raw value
+	 *  (cellOf), so filtering is unaffected — only the option TEXT changes. */
+	const labelOf = (row: DataTableRow, key: string): string => {
+		const ref = row[`${key}__ref`];
+		return typeof ref === 'string' && ref ? ref : cellOf(row, key);
+	};
+
 	/** Rows passing every facet ABOVE `level` — what level `level`'s counts are
 	 *  computed over, and what makes the second level a refinement of the first. */
 	function upTo(level: number): DataTableRow[] {
@@ -74,16 +83,22 @@
 		);
 	}
 
-	/** Value → count, for one facet, over the rows the levels above left. A value
-	 *  with no rows is not offered: a filter that can only empty the list is not
-	 *  a choice, it is a trap. */
-	function optionsFor(level: number, key: string): [string, number][] {
+	/** Value → [count, label], for one facet, over the rows the levels above
+	 *  left. A value with no rows is not offered: a filter that can only empty
+	 *  the list is not a choice, it is a trap. */
+	function optionsFor(level: number, key: string): [string, number, string][] {
 		const tally = new Map<string, number>();
+		const labels = new Map<string, string>();
 		for (const r of upTo(level)) {
 			const v = cellOf(r, key);
-			if (v) tally.set(v, (tally.get(v) ?? 0) + 1);
+			if (v) {
+				tally.set(v, (tally.get(v) ?? 0) + 1);
+				if (!labels.has(v)) labels.set(v, labelOf(r, key));
+			}
 		}
-		return [...tally].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+		return [...tally]
+			.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+			.map(([value, n]) => [value, n, labels.get(value) ?? value]);
 	}
 
 	const rows = $derived(view ? upTo(view.facets.length) : ordered);
@@ -305,8 +320,8 @@
 						<span class="facet-label">{f.label}</span>
 						<select bind:value={picked[f.key]}>
 							<option value="">All ({upTo(level).length})</option>
-							{#each opts as [value, n] (value)}
-								<option {value}>{value} ({n})</option>
+							{#each opts as [value, n, label] (value)}
+								<option {value}>{label} ({n})</option>
 							{/each}
 						</select>
 					</label>

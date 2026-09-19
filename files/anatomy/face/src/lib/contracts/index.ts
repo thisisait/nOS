@@ -179,6 +179,7 @@ export type ColumnKind =
 	| 'user'
 	| 'taxonomyRef'
 	| 'objectRef'
+	| 'rowRef'
 	| 'file'
 	| 'vector';
 
@@ -193,6 +194,12 @@ export interface ColumnSpec {
 	/** vector column dimensionality (Pulse-generated brain-embedding). */
 	dim?: number;
 	unit?: string;
+	/** kind:rowRef only — the table this column's value is a row id into. */
+	refTable?: string;
+	/** kind:rowRef only — which column of `refTable` is the human-readable
+	 *  label (e.g. `legal_name`), resolved by the BFF into `<key>__ref` on
+	 *  each row so a facet/grid can show a name instead of a raw slug. */
+	refDisplay?: string;
 }
 
 /** A DataTable row as the shell sees it: an id + a flat bag of cell values. */

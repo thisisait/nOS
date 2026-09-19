@@ -33,3 +33,9 @@ schema:
         options: ["debit-normal", "credit-normal"] }
     - { key: party,             label: "Party",      kind: rowRef, role: dimension,
         refTable: "party", refDisplay: "legal_name", onDelete: "restrict" }
+# client-filter-view (D5 unit 3): filter the analytical accounts by the party
+# they're scoped to. journal-entry carries NO party column of its own (only
+# `source` -> invoice, and postings -> account -> party indirectly) — a facet
+# would have nothing to name there, so this table is the one that gets it.
+view:
+  facets: [party]
