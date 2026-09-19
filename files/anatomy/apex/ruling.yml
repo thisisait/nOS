@@ -474,6 +474,11 @@ nodes:
   "agent:proposer": withheld
   "agent:surveyor": withheld
   "agent:upgrade-architect": withheld
+  # 2026-09 consulting-firm digest epic (D1) — local schema-constrained
+  # invoice extraction agents. WITHHELD like every other agent:* node above;
+  # publishes nothing, D4's frozen set untouched.
+  "agent:invoice-extract": withheld
+  "agent:invoice-vision-ocr": withheld
 
   # --- withheld: tool grants and LLM backends (2026-08-29) ------------------
   # Capability resources on the agents' side of the graph. The tool ids name
@@ -676,6 +681,11 @@ nodes:
   "table:application": withheld
   "table:package": withheld
   "table:invoice": withheld
+  # D5 review sinks for the invoice-extract pipeline (pending-invoice-verify,
+  # invoice-review). WITHHELD like every table node — a client firm's invoice
+  # data and review queue are theirs, never the public front door.
+  "table:pending-invoice-verify": withheld
+  "table:invoice-review": withheld
   # The accounting knowledge graph's ledger tables (accounting-knowledge-graph).
   # WITHHELD like every table node — a firm's chart of accounts and its books are
   # theirs, never the public front door. The reporting SKELETON is taxonomy
