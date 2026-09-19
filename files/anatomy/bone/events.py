@@ -203,6 +203,16 @@ VALID_TYPES = {
     #   upgrade_unqueued — UpgradesPresenter::actionCancelPlanned; uses upgrade_id;
     #     result_json {service, recipe_id, target_version, planned_by}.
     "upgrade_unqueued",
+    # ── D5 table-write-audit (consulting-surface-wiring, 2026-09) ───────────
+    # SPINE-WIDE, not epic-specific: closes bff/tables' pre-existing
+    # `// TODO audit` — every KEAP DataTable write through the face BFF now
+    # emits this. actor_id = the edge-trusted identity.uid (never a bearer
+    # subject); result_json {slug, row_id}. HMAC-signed straight from the
+    # SvelteKit server (files/anatomy/face/src/lib/server/audit.ts), same
+    # signer shape as callback_plugins/wing_telemetry.py. Twin rule
+    # (NON-NEGOTIABLE, one commit): also in Wing's EventRepository::
+    # VALID_TYPES, else a replay/forward of this row 400s.
+    "table.upsert",
 }
 
 

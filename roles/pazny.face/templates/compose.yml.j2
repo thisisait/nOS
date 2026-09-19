@@ -64,6 +64,14 @@ services:
       # of that. Minted in main.yml, already handed to Bone itself at
       # roles/pazny.bone/tasks/main.yml:276.
       BONE_LOOP_JUDGE_TOKEN: "{{ loop_judge_token | default('') }}"
+      # D5 table-write-audit: bff/tables' upsertRow path HMAC-signs a
+      # `table.upsert` event straight to Bone's event ingestion (the same
+      # WING_EVENTS_HMAC_SECRET every Ansible run already signs with — see
+      # callback_plugins/wing_telemetry.py). Empty secret -> the BFF's audit
+      # POST is a silent no-op, same degrade as every other optional wiring
+      # here; the write itself is never blocked by it.
+      NOS_BONE_EVENTS_URL: "http://host.docker.internal:{{ bone_port | default(8099) }}/api/v1/events"
+      WING_EVENTS_HMAC_SECRET: "{{ wing_events_hmac_secret | default('') }}"
       NOS_TENANT_DOMAIN: "{{ tenant_domain | default('dev.local') }}"
       # KEAP config-DataTable source of truth (SoT + repo/user-state fallback).
       # Points at the agent-bearer /agent/v1/tables surface (keap ≥ v1.12.0) with

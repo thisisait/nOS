@@ -192,6 +192,11 @@ final class EventRepository
 		// planned_by}. Twin of Bone's events.py — pinned by
 		// test_devlog_event_types.py.
 		'upgrade_unqueued',
+		// ── D5 table-write-audit (consulting-surface-wiring, 2026-09) ───────
+		// Twin of Bone's events.py — every KEAP DataTable write through the
+		// face BFF (routes/bff/tables/+server.ts) emits this; result_json
+		// {slug, row_id}, actor_id = the edge-trusted identity.uid.
+		'table.upsert',
 	];
 
 	public function __construct(
