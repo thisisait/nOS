@@ -4,8 +4,8 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 279,
-    "edges": 291,
+    "nodes": 283,
+    "edges": 293,
     "nodes_pulse": 34,
     "nodes_judge": 5,
     "nodes_gateset": 5,
@@ -16,11 +16,11 @@
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 55,
-    "nodes_table": 33,
+    "nodes_table": 35,
     "nodes_doctrine": 13,
     "nodes_faceapp": 6,
-    "nodes_agent": 14,
-    "edges_data": 203,
+    "nodes_agent": 16,
+    "edges_data": 205,
     "edges_trigger": 41,
     "edges_temporal": 5,
     "edges_mutex": 21,
@@ -88,6 +88,30 @@
       ],
       "anchor": "02.02.09",
       "description": "Agent ceremony 'inspektor' (pentest-survey), mode=None, runner_status=deferred — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+    },
+    "agent:invoice-extract": {
+      "kind": "agent",
+      "source": "files/anatomy/agents/invoice-extract/agent.yml",
+      "charter": "extract-stage",
+      "runner_status": "unproven",
+      "primary_model": "openai-local-sonnet",
+      "backend": "ollama",
+      "backend_declared": true,
+      "tools": [],
+      "anchor": "02.02.09",
+      "description": "Agent ceremony 'invoice-extract' (extract-stage), mode=None, runner_status=unproven — primary openai-local-sonnet on backend ollama"
+    },
+    "agent:invoice-vision-ocr": {
+      "kind": "agent",
+      "source": "files/anatomy/agents/invoice-vision-ocr/agent.yml",
+      "charter": "vision-ocr-stage",
+      "runner_status": "unproven",
+      "primary_model": "openai-local-sonnet",
+      "backend": "ollama",
+      "backend_declared": true,
+      "tools": [],
+      "anchor": "02.02.09",
+      "description": "Agent ceremony 'invoice-vision-ocr' (vision-ocr-stage), mode=None, runner_status=unproven — primary openai-local-sonnet on backend ollama"
     },
     "agent:jeff": {
       "kind": "agent",
@@ -3053,6 +3077,13 @@
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Invoices' (state/keap-tables/invoice.table.yml)"
     },
+    "table:invoice-review": {
+      "kind": "table",
+      "source": "state/keap-tables/invoice-review.table.yml",
+      "title": "Invoice review",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Invoice review' (state/keap-tables/invoice-review.table.yml)"
+    },
     "table:journal-entry": {
       "kind": "table",
       "source": "state/keap-tables/journal-entry.table.yml",
@@ -3136,6 +3167,13 @@
       "title": "Party tax identities",
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Party tax identities' (state/keap-tables/party-tax-identity.table.yml)"
+    },
+    "table:pending-invoice-verify": {
+      "kind": "table",
+      "source": "state/keap-tables/pending-invoice-verify.table.yml",
+      "title": "Pending invoice verify",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Pending invoice verify' (state/keap-tables/pending-invoice-verify.table.yml)"
     },
     "table:posting": {
       "kind": "table",
@@ -3834,6 +3872,22 @@
       "to": "agent:surveyor",
       "kind": "data",
       "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "resource:backend-ollama",
+      "to": "agent:invoice-extract",
+      "kind": "data",
+      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "resource:backend-ollama",
+      "to": "agent:invoice-vision-ocr",
+      "kind": "data",
+      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
