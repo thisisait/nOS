@@ -108,6 +108,8 @@ CONCEPTLESS = {
     "invoice.payable_amount": "a money total — no money/measure concept exists — needs measure.amount (same as kolben-project.budget)",
     "invoice.net_amount": "the ex-VAT total — no money/measure concept exists — needs measure.amount",
     "invoice.vat_amount": "the VAT total — no money/measure concept exists — needs measure.amount",
+    "invoice.vat_breakdown": "per-rate {rate,base,vat} rows — no money/measure concept exists — needs measure.amount (same as invoice.net_amount)",
+    "invoice.book_owner": "the client this import run is FOR — a counterparty rowRef, graph.parent already claimed by seller — needs graph.counterparty (same as invoice.buyer)",
     "account.code": "the ledger code 311 — an identifier, not identity.name — needs identity.code",
     "account.reporting_concept": "maps the account to a reporting-standard concept (taxonomy anchor) — a soft text link today; upgrade to a taxonomyRef kind + needs class.reporting_concept",
     "account.party": "the counterparty an analytical account is scoped to — graph.parent is claimed by `parent`; needs graph.counterparty (same as kolben-project.client)",
@@ -271,6 +273,9 @@ UNSEEDED = {
                "repos importer, not seeded. Same split as repo.",
     "invoice": "digest output — rows are e-invoice headers absorbed from ISDOC by the "
                "invoice importer (digest-import-isdoc.py), not seeded. Same split as repo.",
+    "invoice-review": "digest output — rows are ISDOC-vs-vision mismatches composed by "
+               "nos_digest.compose_invoice_review (isdoc-vision-crosscheck unit), not "
+               "seeded. Same split as invoice/repo.",
     "loop-config": "the one row (harness_proposals_enabled) has NO READER — "
                    "ledger.py refuses `harness` unconditionally. Seeding it puts "
                    "a flippable switch in front of the operator that changes "

@@ -10,6 +10,16 @@
 # invoice-line table rowRef'd here (deferred — the header + dual-party resolve
 # is the money axis this slice lands). onDelete: restrict on both — an invoice
 # whose party vanished is a corrupt legal record, not an orphan.
+#
+# vat_breakdown (multi-rate-vat unit, 2026-09): a real Czech invoice mixes VAT
+# rates — one {rate,base,vat} entry per TaxSubTotal; net_amount/vat_amount stay
+# the SUMS across it, so every existing consumer (D3 posting, crosscheck)
+# keeps reading a single number and only a rate-aware reader opens the json.
+#
+# book_owner (invoice-vision-intake unit, 2026-09): which CLIENT this import
+# run is FOR — a DATA-ORGANIZATION attribute, not a tenant/RBAC column (Model
+# C: the consultant is the sole user, isolation stays with the analytical
+# 311.<party> accounts, D5). Optional — a firm's own AP invoices carry none.
 # =============================================================================
 title: "Invoices"
 description: >-
@@ -41,3 +51,6 @@ schema:
     - { key: payable_amount,  label: "Payable",        kind: number, role: attribute }
     - { key: net_amount,      label: "Net (ex-VAT)",   kind: number, role: attribute }
     - { key: vat_amount,      label: "VAT",            kind: number, role: attribute }
+    - { key: vat_breakdown,   label: "VAT breakdown",  kind: json,   role: attribute }
+    - { key: book_owner,      label: "Book owner",     kind: rowRef, role: dimension, required: false,
+        refTable: "party", refDisplay: "legal_name", onDelete: "restrict" }
