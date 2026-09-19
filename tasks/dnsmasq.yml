@@ -64,7 +64,7 @@
       cache-size=1000
 
       # REM-154: reject upstream answers in RFC1918/loopback (measured:
-      # dig @127.0.0.1 localtest.me → 127.0.0.1). address=/.{{ tenant }}/ is
+      # dig @127.0.0.1 localtest.me → 127.0.0.1). address=/.<tenant_domain>/ is
       # local, not forwarded — do NOT set rebind-localhost-ok, that re-opens
       # the relay.
       stop-dns-rebind
