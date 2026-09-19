@@ -69,6 +69,7 @@ worse than none, because it reads as complete.
 - `reload-stale-config.py` — Make a running container read the config the estate rendered for it.
 - `stale-config-status.py` — Containers running config the estate has already replaced.
 - `nos_security.py` — Resolve the live security notebook (`~/.nos/security`), not the git promotion copy.
+- `rem-dispose.py` — Write a REM disposition into the operator's `~/.nos/security` notebook; never touches the scanner's queue.
 - `rem-status.py` — What the security queue says, right now.
 - `roadmap-status.py` — What the roadmap says, right now.
 - `skill-status.py` — What is on the shelf, who should be holding it, and who actually is.
