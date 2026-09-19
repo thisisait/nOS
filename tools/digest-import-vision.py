@@ -67,6 +67,28 @@ class VisionImporter(IsdocImporter):
     name = "isdoc-vision"
     version = "0.1.0"
 
+    def __init__(self, *args, pending_verify: dict[str, str] | None = None, **kwargs):
+        """``pending_verify``: {sidecar_id: resolution} — the D5 verify-write-back
+        read. Injectable for offline tests; ``None`` means "look it up from
+        KEAP's pending-invoice-verify table on first use" (main() path), and a
+        network failure there degrades to {} — same as "no row", i.e. held,
+        the safe default (nothing about parse()'s existing behaviour changes)."""
+        super().__init__(*args, **kwargs)
+        self._pending_verify = pending_verify
+
+    def _pending_resolution(self, sidecar_id: str) -> str | None:
+        if self._pending_verify is None:
+            try:
+                import digest_absorb
+                self._pending_verify = {
+                    r["sidecar_id"]: r.get("resolution")
+                    for r in digest_absorb.read_rows("pending-invoice-verify")
+                    if r.get("sidecar_id")
+                }
+            except Exception:  # noqa: BLE001 — unreachable KEAP == no pending rows == held
+                self._pending_verify = {}
+        return self._pending_verify.get(sidecar_id)
+
     def parse(self, root) -> list[dict]:
         root = pathlib.Path(root)
         out = []
@@ -84,9 +106,21 @@ class VisionImporter(IsdocImporter):
             low = sorted(k for k, v in fields.items()
                         if not isinstance(v, dict) or v.get("confidence", 0) < CONFIDENCE_FLOOR)
             verified = sidecar.get("verified") is True
+            # D5 verify-write-back: a consultant's PRIOR decision on this exact
+            # sidecar (keyed on the filename — the join key, stable even when
+            # `record` has no id). approved -> treat as verified regardless of
+            # raw confidence; rejected -> a DURABLE tombstone, never re-offered
+            # (checked before the raw verified/low-confidence gate below, so a
+            # rejected sidecar stays out across every future run, not just one).
+            resolution = self._pending_resolution(f.name)
+            if resolution == "rejected":
+                self.skipped.append(f"{f.name}: rejected in pending-invoice-verify — permanent tombstone")
+                continue
+            if resolution == "approved":
+                verified, low = True, []
             # THE OPERATOR-VERIFY RUNG: unverified OR any field under the floor
             # never becomes a record — no auto-pass on partial confidence.
-            if not verified or low:
+            elif not verified or low:
                 reason = "not operator-verified" if not verified else f"low-confidence field(s) {low}"
                 self.skipped.append(
                     f"{f.name}: {reason} (floor {CONFIDENCE_FLOOR}) — operator-verify rung, "

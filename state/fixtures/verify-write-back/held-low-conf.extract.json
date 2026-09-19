@@ -1,0 +1,18 @@
+{
+  "record": {
+    "id": "2026-INV-301",
+    "issue": "2026-06-01",
+    "due": "2026-06-15",
+    "currency": "CZK",
+    "payable": 4840,
+    "net": 4000,
+    "vat": 840,
+    "seller": {"ico": "00000112", "name": "Mesto Lipno (synthetic)"},
+    "buyer": {"ico": "00000113", "name": "Petr Svoboda (synthetic)"}
+  },
+  "fields": {
+    "id":      {"value": "2026-INV-301", "confidence": 0.98, "source": "text-model"},
+    "payable": {"value": 4840,           "confidence": 0.30, "source": "text-model"}
+  },
+  "verified": true
+}
