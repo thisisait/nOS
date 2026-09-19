@@ -1,0 +1,53 @@
+# The vision extraction SIDECAR (<doc>.extract.json) — the ONLY artifact
+# VisionImporter.parse() reads (invoice-vision-intake unit,
+# tools/digest-import-vision.py). Per FIELD: {value, confidence, source}. The
+# top-level `verified` is the operator-verify rung — nos_digest's docstring
+# says a party-review rung "lands with repos-importer", which has NOT shipped
+# (grep: zero hits); there is no equivalent rung for a whole INVOICE either,
+# so this sidecar's own verified flag + confidence_floor together ARE the
+# rung, structurally identical to the unknown-buyer skip: an unverified or
+# low-confidence sidecar never becomes a `record`, it becomes a skipped[]
+# entry with a reason.
+#
+# CONFIDENCE FLOOR = 0.85 (`confidence_floor` below — the ONE place this
+# number is spelled; tools/digest-import-vision.py reads it from this file at
+# import time rather than repeating the literal, so the floor cannot drift
+# between the doc and the code that enforces it).
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://nos.thisisait.eu/schema/isdoc-extract-sidecar.yaml"
+title: "ISDOC vision extraction sidecar (.extract.json)"
+type: object
+confidence_floor: 0.85
+required: [record, fields, verified]
+additionalProperties: false
+properties:
+  record:
+    description: "The ISDOC record dict this sidecar decoded — isdoc-record.schema.yaml's shape."
+    type: object
+  fields:
+    type: object
+    description: >-
+      Per-field {value, confidence, source} — one entry per non-null key in
+      `record` (dotted for a nested key, e.g. "seller.ico"). Bounded fields
+      (currency, vat_breakdown[].rate, seller/buyer via IČO resolve) carry a
+      classification logprob; unbounded fields (amounts, dates, doc id) carry
+      the decode confidence of the constrained format.
+    additionalProperties:
+      type: object
+      required: [value, confidence, source]
+      additionalProperties: false
+      properties:
+        value: {}
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        source:
+          type: string
+          enum: ["vlm", "text-model"]
+  verified:
+    type: boolean
+    description: >-
+      The operator-verify rung. false (or every field's confidence below
+      confidence_floor) blocks absorb structurally: VisionImporter.parse()
+      appends such a sidecar to self.skipped and it never reaches `record`.
