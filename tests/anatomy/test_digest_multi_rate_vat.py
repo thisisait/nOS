@@ -53,3 +53,18 @@ def test_per_rate_breakdown_is_carried_and_sums_match_the_totals():
     assert rates == {21: (1000.0, 210.0), 12: (500.0, 60.0)}
     assert round(sum(r["base"] for r in breakdown), 2) == inv["net_amount"]
     assert round(sum(r["vat"] for r in breakdown), 2) == inv["vat_amount"]
+
+
+def test_payable_amount_rounds_2dp_same_as_net_and_vat_siblings():
+    """LAND-WITH-EDITS fix: payable_amount used to skip round(...,2) while
+    net_amount/vat_amount didn't — an inconsistency that can false-mismatch
+    the crosscheck's payable compare on a real multi-decimal invoice.
+    2026-INV-102 carries 3-decimal PayableAmount/TaxableAmount/TaxAmount."""
+    _nd, _imp, bundle, errors = _bundle()
+    assert errors == [], errors
+    inv = next(i for i in bundle["deterministic"]["invoice"] if i["document_number"] == "2026-INV-102")
+    assert inv["payable_amount"] == round(1234.567, 2) == 1234.57
+    assert inv["net_amount"] == round(1000.567, 2) == 1000.57
+    assert inv["vat_amount"] == round(234.000, 2) == 234.0
+    # same round(...,2) path as net/vat — no float drift, no separate rounding rule
+    assert round(inv["net_amount"] + inv["vat_amount"], 2) == inv["payable_amount"]

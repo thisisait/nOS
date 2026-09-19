@@ -201,7 +201,7 @@ class IsdocImporter:
                 row["due_date"] = _epoch(r["due"])
             if r.get("payable"):
                 try:
-                    row["payable_amount"] = float(r["payable"])
+                    row["payable_amount"] = round(float(r["payable"]), 2)
                 except ValueError:
                     pass
             if r.get("net") is not None:
