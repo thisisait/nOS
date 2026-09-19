@@ -326,6 +326,39 @@ def records_from_importers(importers_dir: str | pathlib.Path) -> list[dict]:
     return out
 
 
+def controller_records(parties: list[dict]) -> list[dict]:
+    """Per-CLIENT Article-30 records derived from live party rows.
+
+    RUNTIME ONLY — never call this from `all_records()`. A consulting firm is
+    a PROCESSOR for each client's data (Art-30(2), processing on their
+    behalf) and the CONTROLLER for its own (Art-30(1)). Committing a client's
+    identity into `state/dpa-register.md` would leak PII into public git
+    history, so this mapper is pure over injected party dicts and the caller
+    (a future live-only Wing/DTT surface) is responsible for never writing
+    its output to a committed file. Parties without role 'client'/'own_firm'
+    are ignored (the role column is optional/soft — see party.table.yml).
+    """
+    out: list[dict] = []
+    for p in parties or []:
+        role = p.get("role")
+        if role not in ("client", "own_firm"):
+            continue
+        slug = str(p.get("slug", ""))
+        art30_role = "controller" if role == "own_firm" else "processor"
+        rec = gdpr_block_to_record(
+            {},
+            record_id=f"party_{slug}",
+            slug=slug,
+            stack=None,
+            tier="party",
+            display_name=p.get("legal_name"),
+            source_plugin=f"party:{slug}",
+        )
+        rec["art30_role"] = art30_role
+        out.append(rec)
+    return out
+
+
 def all_records(repo_root: str | pathlib.Path) -> list[dict]:
     """Tier-1 + Tier-2 + agent + digest-importer records, the full Article-30 inventory."""
     repo = pathlib.Path(repo_root)

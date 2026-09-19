@@ -55,3 +55,12 @@ schema:
     # ISO 3166-1 alpha-2, the EN 16931 country code form.
     - { key: country,      label: "Country",       kind: text,   role: dimension, required: true }
     - { key: notes,        label: "Notes",         kind: text,   role: attribute, concept: identity.description }
+    # OPTIONAL (D4, GDPR Art-30 consulting-firm mapper). Soft attribute, no
+    # default, no required flag — existing seeds omit it and still parse.
+    # 'client' -> the firm processes this party's books FOR them (Art-30(2)
+    # processor); 'own_firm' -> the firm's own controller record (Art-30(1));
+    # 'counterparty' (or absent) -> a plain business partner, not a GDPR row.
+    # Consumed only by module_utils/nos_gdpr.controller_records() — a
+    # RUNTIME-only mapper, never merged into the committed DPA register.
+    - { key: role,         label: "Role",          kind: select, role: attribute,
+        options: ["counterparty", "client", "own_firm"] }
