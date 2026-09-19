@@ -29,6 +29,8 @@
         <string>{{ device_gateway_keap_url }}</string>
         <key>KEAP_AGENT_TOKEN_RO</key>
         <string>{{ keap_agent_token_ro | default('') }}</string>
+        <key>GATEWAY_ALLOWED_GROUPS</key>
+        <string>{{ ((authentik_rbac_tiers | default([]) | selectattr('tier', 'equalto', 2) | list | first) | default({'groups': ['nos-providers', 'nos-admins', 'nos-managers']})).groups | join(',') }}</string>
         <key>NOS_SRC</key>
         <string>{{ nos_main_checkout }}</string>
     </dict>
