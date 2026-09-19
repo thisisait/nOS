@@ -191,6 +191,36 @@ final class KeapCortexClient
     }
 
     /**
+     * One row from a KEAP table, matched by its `slug` column.
+     *
+     * KEAP's agent surface has no single-row-by-slug route (only a full
+     * `/rows` list and a `/search` that ranks rather than exact-matches) — so
+     * this reads the table whole and filters, same as tools/digest_absorb.py's
+     * `read_rows()` does Python-side. Fine for a small table like `party`;
+     * NOT a pattern to reach for on a large one.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function tableRowBySlug(string $table, string $slug): ?array
+    {
+        if ($slug === '') {
+            return null;
+        }
+        $res = $this->request('GET', '/agent/v1/tables/' . rawurlencode($table) . '/rows');
+        $body = $res['body'] ?? null;
+        $rows = (is_array($body) ? ($body['data']['rows'] ?? $body['rows'] ?? null) : null);
+        if (!is_array($rows)) {
+            return null;
+        }
+        foreach ($rows as $row) {
+            if (is_array($row) && ($row['slug'] ?? null) === $slug) {
+                return $row;
+            }
+        }
+        return null;
+    }
+
+    /**
      * @param array<string,mixed>|null $json
      * @return array{status:int,body:mixed}|null
      */

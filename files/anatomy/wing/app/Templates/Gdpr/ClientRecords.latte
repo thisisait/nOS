@@ -1,0 +1,51 @@
+{block title}Art-30 — {$partySlug}{/block}
+
+{block content}
+<link rel="stylesheet" href="/assets/migrations.css?v={$basePath}">
+
+<div class="coex-page-header">
+	<div>
+		<h2>GDPR — Article 30, per-client (live)</h2>
+		<div class="sub">
+			Computed from the party row on every load — nothing here is persisted.
+			Not part of the committed register (<a href="/gdpr">/gdpr</a>); a
+			consulting firm is the PROCESSOR for a client's data, the CONTROLLER
+			for its own.
+		</div>
+	</div>
+</div>
+
+{if $party === null}
+	<div class="coex-empty">No party found for slug <code>{$partySlug}</code>.</div>
+{elseif $record === null}
+	<div class="coex-empty">
+		<code>{$party['legal_name'] ?? $partySlug}</code> is not a client or the
+		operating firm (role: <code>{$party['role'] ?? '—'}</code>) — no Art-30
+		record applies.
+	</div>
+{else}
+	<table class="data-table" style="width:100%;border-collapse:collapse">
+		<tbody>
+			<tr><th style="text-align:left">Id</th><td><code>{$record['id']}</code></td></tr>
+			<tr><th style="text-align:left">Name</th><td>{$record['name']}</td></tr>
+			<tr><th style="text-align:left">Art-30 role</th><td>{$record['art30_role']}</td></tr>
+			<tr><th style="text-align:left">Purpose</th><td>{$record['purpose']}</td></tr>
+			<tr><th style="text-align:left">EU residency</th><td>{$record['eu_residency'] ? 'yes' : 'no'}</td></tr>
+			<tr><th style="text-align:left">Transfers outside EU</th><td>{$record['transfers_outside_eu'] ? 'yes' : 'no'}</td></tr>
+			<tr><th style="text-align:left">Storage location</th><td>{$record['storage_location']}</td></tr>
+			<tr>
+				<th style="text-align:left">Security measures</th>
+				<td>
+					<ul>
+						{foreach $record['security_measures'] as $m}<li>{$m}</li>{/foreach}
+					</ul>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+{/if}
+
+<p style="margin-top:32px;font-size:12px;color:var(--text2)">
+	Reference: <a href="https://gdpr-info.eu/art-30-gdpr/" target="_blank">GDPR Article 30</a>
+</p>
+{/block}
