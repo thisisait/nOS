@@ -12,11 +12,17 @@ description: >-
   rather than inheriting Stage B's.
 
 model:
-  # Vision-capable local model. Which model id NOS_LOCAL_MODEL actually names
-  # is an operator/config.yml choice (state/llm-backends.yml model_env) — this
-  # agent only pins the TIER and the backend; it does not pick the model.
-  primary: openai-local-sonnet
+  # `vision` (2026-09-20) is a dedicated tier — not a size, an INPUT
+  # CAPABILITY word — so it sits beside haiku/sonnet/opus in
+  # state/llm-backends.yml's ollama.model_env rather than borrowing sonnet's
+  # slot. Chosen model: qwen2.5vl:7b (Ollama library tag `qwen2.5vl:7b`;
+  # runner-up minicpm-v:8b). Neither has been pulled on this host yet — the
+  # operator sets `ollama_vision_model` in config.yml once it is.
+  primary: openai-local-vision
   backend: ollama
+  # A page image is a few hundred tokens of vision embedding plus a short
+  # transcription; double the text-tier default headroom for a dense page.
+  max_output_tokens: 4096
 
 system_prompt_path: system.md
 
@@ -35,12 +41,21 @@ audit:
 
 vault:
   required_credentials:
+    # The local backend resolves an empty token by design (BindingResolver
+    # gate 7) — there is nobody to show a key to.
     - scope: ollama-local
       optional: true
 
 metadata:
   ait_phase: invoice-pipeline
   ceremony_role: vision-ocr-stage
+  # UNPROVEN, and honestly so on two axes: (1) qwen2.5vl:7b has not been
+  # pulled on this host, so no run has ever happened; (2) AgentKit's one_shot
+  # transport (Message / OpenAiCompatAdapter::translateMessages / OneShot)
+  # carries a text prompt only today — there is no image content-block path
+  # yet, so a real image call needs that transport built first. This agent.yml
+  # + the registry/binding wiring is the config half; the transport is the
+  # open follow-up.
   runner_status: unproven
 
 exit_code_semantics:

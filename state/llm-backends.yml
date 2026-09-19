@@ -166,6 +166,17 @@ backends:
       haiku: NOS_LOCAL_SMALL_MODEL
       sonnet: NOS_LOCAL_MODEL
       opus: null
+      # `vision` (2026-09-20, D1 invoice-vision path) is a FOURTH tier word,
+      # not a size — it names an INPUT CAPABILITY (image-taking) rather than a
+      # cost/quality rung, so it sits beside haiku/sonnet/opus rather than
+      # inside sizes_b. BindingResolver's tier regex was widened to match it
+      # (tests/anatomy/test_the_effective_model_is_decided_where_it_is_read.py
+      # TIERS tuple, same file). Chosen model: qwen2.5vl:7b (Ollama library
+      # tag `qwen2.5vl:7b`; see files/anatomy/agents/invoice-vision-ocr/
+      # agent.yml for the reasoning + runner-up). The operator pulls it and
+      # sets `ollama_vision_model` in config.yml — this row only names the env
+      # var the binding reads.
+      vision: NOS_LOCAL_VISION_MODEL
     sizes_b:
       8: hermes3:8b
       14: qwen3:14b

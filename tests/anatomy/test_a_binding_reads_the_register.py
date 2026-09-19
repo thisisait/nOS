@@ -137,8 +137,13 @@ def test_the_registry_is_well_formed_and_fail_closed():
                 "arm and then fail at session open with no secret to resolve"
             )
         tiers = b.get("model_env")
-        assert isinstance(tiers, dict) and set(tiers) == {"haiku", "sonnet", "opus"}, (
-            f"backend {name!r} must map exactly the three tiers the agents pin"
+        # `vision` (2026-09-20, D1 invoice-vision path) is OPTIONAL — an
+        # input-capability tier only `ollama` maps today — so it is allowed
+        # beside the three required cost/quality tiers without forcing every
+        # backend to declare a tier it does not serve.
+        assert isinstance(tiers, dict) and set(tiers) - {"vision"} == {"haiku", "sonnet", "opus"}, (
+            f"backend {name!r} must map exactly the three required tiers the "
+            "agents pin, plus optionally `vision`"
         )
         assert tiers["opus"] is None, (
             f"backend {name!r} maps the opus tier to {tiers['opus']!r}. "

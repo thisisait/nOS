@@ -146,8 +146,13 @@ final class BindingResolver
 		// carve-out follows the tier, not the provider. A tail with no tier
 		// word refuses too: a model the tiers cannot name cannot be remapped
 		// by a tier table, and guessing would route it silently.
+		//
+		// `vision` (2026-09-20) joined the word list for the D1 invoice-vision
+		// path: it names an INPUT CAPABILITY, not a cost/quality rung, but the
+		// same tier mechanism carries it — a backend either maps `vision` in
+		// its model_env or the agent refuses here, same as any other tier.
 		$tail = substr($agent->modelPrimaryUri, (int) strpos($agent->modelPrimaryUri, '-') + 1);
-		$tier = preg_match('/\b(haiku|sonnet|opus)\b/', $tail, $m) ? $m[1] : $tail;
+		$tier = preg_match('/\b(haiku|sonnet|opus|vision)\b/', $tail, $m) ? $m[1] : $tail;
 		$modelEnvByTier = (array) ($spec['model_env'] ?? []);
 		if (!array_key_exists($tier, $modelEnvByTier) || $modelEnvByTier[$tier] === null) {
 			throw new BindingRefused(

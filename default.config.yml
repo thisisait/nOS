@@ -1197,6 +1197,13 @@ xai_small_model: ""            # -> NOS_XAI_SMALL_MODEL     (haiku tier)
 ollama_enabled: false
 ollama_model: ""               # -> NOS_LOCAL_MODEL         (sonnet tier)
 ollama_small_model: ""         # -> NOS_LOCAL_SMALL_MODEL   (haiku tier)
+# vision tier — a document/image-input model, distinct from the text tiers
+# above (BindingResolver's tier regex now also matches `vision`). Chosen
+# 2026-09-20 for the D1 invoice-vision path: qwen2.5vl:7b (Ollama library tag
+# `qwen2.5vl:7b`, ~6GB at q4_K_M). The operator pulls it — this file only
+# names the id `ollama list` must show. See files/anatomy/agents/
+# invoice-vision-ocr/agent.yml for the consumer.
+ollama_vision_model: ""        # -> NOS_LOCAL_VISION_MODEL  (vision tier)
 
 # THE PIN THAT DID NOT EXIST, AND WHAT ITS ABSENCE COST (added 2026-08-08).
 #

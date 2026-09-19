@@ -271,6 +271,8 @@
         <string>{{ ollama_model | default('') }}</string>
         <key>NOS_LOCAL_SMALL_MODEL</key>
         <string>{{ ollama_small_model | default('') }}</string>
+        <key>NOS_LOCAL_VISION_MODEL</key>
+        <string>{{ ollama_vision_model | default('') }}</string>
     </dict>
 
     <!-- launchd respawns on crash; ThrottleInterval prevents tight loops
