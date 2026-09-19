@@ -197,6 +197,12 @@ final class EventRepository
 		// face BFF (routes/bff/tables/+server.ts) emits this; result_json
 		// {slug, row_id}, actor_id = the edge-trusted identity.uid.
 		'table.upsert',
+		// ── SERE-loop maintenance pause (`nos loops pause|resume`) ──────────
+		// The operator's live hold on the agent runtime — a best-effort audit
+		// event from the nos CLI (actor_id=operator:<login>, source='nos-cli';
+		// result_json {reason}). Twin of Bone's events.py VALID_TYPES, else the
+		// Bone POST 400s and the pause leaves no audit trace.
+		'loops_paused', 'loops_resumed',
 	];
 
 	public function __construct(

@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import sqlite3
 import subprocess
@@ -54,6 +55,15 @@ from datetime import datetime, timedelta, timezone
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 WING_DB = pathlib.Path.home() / "wing" / "app" / "data" / "wing.db"
+#: The runtime sentinel `nos loops pause` writes. Its presence is a HOLD, not a
+#: red and not a green — an operator paused the SERE agent loops on purpose.
+#: NOS_LOOPS_PAUSED_FILE overrides the path (must match agent-run-lock.sh).
+LOOPS_PAUSED_FILE = pathlib.Path(
+    os.environ.get("NOS_LOOPS_PAUSED_FILE",
+                   str(pathlib.Path.home() / ".nos" / "loops-paused")))
+#: The exit code agent-run-lock.sh returns when the loops are paused; a pulse
+#: run recorded with it is a hold, never a failure.
+PAUSED_EXIT = 3
 SCAN_STATE = REPO / "docs/llm/security/scan-state.json"
 #: Read to re-decide a `security-drift` notification's own claim — see
 #: `_still_holds`. A file, like every other source here.
@@ -161,6 +171,12 @@ def failing_jobs(conn: sqlite3.Connection) -> list[dict]:
         if row["job_id"] in seen:
             continue
         seen.add(row["job_id"])
+        # ponytail: exit 3 is reserved estate-wide for the maintenance-pause hold
+        # (agent-run-lock.sh returns it; the runners carry it out). A held run is
+        # not a failure — paused_runs() surfaces it. Reserve a distinct code per
+        # job only if 3 ever means something else for one.
+        if row["exit_code"] == PAUSED_EXIT:
+            continue
         # Declared findings code → the job worked. Unparseable declaration is
         # NOT read as "no codes declared": that would silently restore the old
         # behaviour, so it falls through to reporting the job, which is the
@@ -195,6 +211,59 @@ def failing_jobs(conn: sqlite3.Connection) -> list[dict]:
             }
         )
     return out
+
+
+def paused_runs(conn: sqlite3.Connection) -> list[dict]:
+    """Loop runs whose most recent run was skipped by the maintenance pause.
+
+    A HOLD, not a red: the run did not happen and that was intentional
+    (agent-run-lock.sh returns PAUSED_EXIT, the runner carries it out). Kept apart
+    from `failing_jobs` so a pause never reads as breakage.
+    """
+    rows = conn.execute(
+        """
+        SELECT r.job_id, r.fired_at, r.exit_code
+          FROM pulse_runs r
+          JOIN (SELECT job_id, MAX(fired_at) AS latest
+                  FROM pulse_runs GROUP BY job_id) m
+            ON r.job_id = m.job_id AND r.fired_at = m.latest
+         WHERE r.exit_code = 3
+         ORDER BY r.fired_at DESC
+        """
+    ).fetchall()
+    seen: set[str] = set()
+    out = []
+    for row in rows:
+        if row["job_id"] in seen:
+            continue
+        seen.add(row["job_id"])
+        out.append({
+            "job": row["job_id"],
+            "fired_at": row["fired_at"],
+            "age": _age(_parse_iso(row["fired_at"])),
+        })
+    return out
+
+
+def loops_paused() -> dict | None:
+    """The maintenance-pause sentinel, or None when the loops are running.
+
+    None is the healthy default here, NOT an unreadable source — so collect()
+    stores it directly and never files it under sources_missing. The sentinel is
+    a few `key: value` lines written by `nos loops pause` (since + optional
+    reason).
+    """
+    if not LOOPS_PAUSED_FILE.is_file():
+        return None
+    raw = LOOPS_PAUSED_FILE.read_text(encoding="utf-8", errors="replace")
+    reason, since = "", None
+    for line in raw.splitlines():
+        if line.startswith("reason:"):
+            reason = line[len("reason:"):].strip()
+        elif line.startswith("since:"):
+            since = line[len("since:"):].strip()
+    return {"paused": True, "reason": reason, "since": since,
+            "age": _age(_parse_iso(since))}
 
 
 def overdue_jobs(conn: sqlite3.Connection) -> list[dict]:
@@ -674,6 +743,7 @@ def collect() -> dict:
         report["sources_read"].append(str(WING_DB))
         with conn:
             report["failing_jobs"] = failing_jobs(conn)
+            report["paused_runs"] = paused_runs(conn)
             report["overdue_jobs"] = overdue_jobs(conn)
             report["inbox"] = unread_inbox(conn)
             report["audit_chain"] = audit_chain(conn)
@@ -694,6 +764,10 @@ def collect() -> dict:
         else:
             report["sources_read"].append(str(path))
             report[label] = value
+
+    # Not a red source: None means "loops running", the healthy default, so it
+    # never becomes an UNKNOWN. Its presence is a HOLD, reported by hold_lines().
+    report["loops_paused"] = loops_paused()
     return report
 
 
@@ -838,6 +912,22 @@ def reds(report: dict) -> list[str]:
     return out
 
 
+def hold_lines(report: dict) -> list[str]:
+    """Intentional holds — distinct from red and from healthy. A pause is an
+    operator's deliberate act, so it is neither news to act on nor silence."""
+    out: list[str] = []
+    lp = report.get("loops_paused")
+    if lp and lp.get("paused"):
+        reason = f" — {lp['reason']}" if lp.get("reason") else ""
+        since = f", since {lp['age']}" if lp.get("since") else ""
+        out.append(f"loops paused (maintenance){reason}{since}")
+    for r in report.get("paused_runs", []):
+        out.append(
+            f"{r['job']} last run skipped — loops paused (maintenance) ({r['age']})"
+        )
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--json", action="store_true", help="emit the full report")
@@ -846,13 +936,21 @@ def main() -> int:
 
     report = collect()
     lines = reds(report)
+    holds = hold_lines(report)
     report["red_count"] = len(lines)
     report["reds"] = lines
+    report["hold_count"] = len(holds)
+    report["holds"] = holds
 
     if args.json:
         json.dump(report, sys.stdout, indent=2, sort_keys=True)
         sys.stdout.write("\n")
         return 0
+
+    if holds:
+        print(f"{len(holds)} on hold (intentional):")
+        for line in holds:
+            print(f"  ⏸ {line}")
 
     if not lines:
         print("nothing red — every source read and every one green")

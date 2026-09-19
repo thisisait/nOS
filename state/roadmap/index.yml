@@ -6,6 +6,9 @@
 - slug: accounting-knowledge-graph
   parent: digest
   track: cortex
+- slug: accounting-v1-double-entry
+  parent: consulting-firm-deployment
+  track: cortex
 - slug: actor-attribution
   parent: state-surface
   track: platform
@@ -66,9 +69,18 @@
 - slug: cc-tui-variants
   parent: cc-app
   track: face
+- slug: client-facing-plain-language
+  parent: ''
+  track: face
 - slug: compose-hardening
   parent: sec
   track: security
+- slug: constitution-llm-legible
+  parent: ''
+  track: platform
+- slug: consulting-firm-deployment
+  parent: ''
+  track: platform
 - slug: converge-become
   parent: converge-speed
   track: platform
@@ -147,6 +159,9 @@
 - slug: device-channels
   parent: device-organ
   track: platform
+- slug: device-gateway-authz-policy
+  parent: ''
+  track: security
 - slug: device-gateway-role
   parent: device-organ
   track: platform
@@ -220,6 +235,9 @@
   parent: digest-device
   track: digest
 - slug: digest-device-tables
+  parent: digest-device
+  track: digest
+- slug: digest-device-wave2-gates
   parent: digest-device
   track: digest
 - slug: digest-doctrine
@@ -336,6 +354,9 @@
 - slug: fixture-autoskola-semafor
   parent: fixtures
   track: platform
+- slug: fixture-consulting-firm
+  parent: consulting-firm-deployment
+  track: platform
 - slug: fixture-halyard-studio
   parent: fixtures
   track: platform
@@ -366,6 +387,9 @@
 - slug: fs-peruser
   parent: fs
   track: filesystem
+- slug: fs-project-tree
+  parent: fs
+  track: filesystem
 - slug: fs-s0
   parent: fs
   track: filesystem
@@ -378,12 +402,18 @@
 - slug: gdpr-agent-processors
   parent: rel-011
   track: security
+- slug: gdpr-consulting-processor
+  parent: ''
+  track: security
 - slug: gdpr-importer-register
   parent: digest
   track: digest
 - slug: genome-codegen-targets
   parent: v0-10-genome
   track: cortex
+- slug: git-origin-watcher
+  parent: loop-definition-model
+  track: agents
 - slug: handheld-dtt-sso-client
   parent: device-organ
   track: face
@@ -395,6 +425,21 @@
   track: platform
 - slug: importer-spine
   parent: digest
+  track: digest
+- slug: invoice-multi-rate-vat
+  parent: consulting-firm-deployment
+  track: digest
+- slug: invoice-structured-extractor
+  parent: invoice-vision-intake
+  track: cortex
+- slug: invoice-vision-intake
+  parent: consulting-firm-deployment
+  track: digest
+- slug: invoice-vision-model-pin
+  parent: consulting-firm-deployment
+  track: agents
+- slug: isdoc-vision-crosscheck
+  parent: consulting-firm-deployment
   track: digest
 - slug: jeff
   parent: agents
@@ -471,8 +516,14 @@
 - slug: local-llm-voice-rating
   parent: local-llm-voice
   track: agents
+- slug: loop-anatomy-harvests-manifests
+  parent: loop-generator
+  track: agents
 - slug: loop-checkpoint-recover
   parent: sere
+  track: agents
+- slug: loop-coherence
+  parent: loop-definition-model
   track: agents
 - slug: loop-definition-model
   parent: agents
@@ -495,6 +546,9 @@
 - slug: loop-operator-model
   parent: sere
   track: agents
+- slug: loop-overlay-joins-selected
+  parent: face-loop-view
+  track: face
 - slug: loop-pin-bump-gate
   parent: ''
   track: security
@@ -519,7 +573,16 @@
 - slug: loop-sandbox
   parent: sere
   track: agents
+- slug: loop-state-authority
+  parent: loop-definition-model
+  track: agents
+- slug: loop-steps-match-run
+  parent: loop-definition-model
+  track: agents
 - slug: loop-verdict-vacuity
+  parent: ''
+  track: agents
+- slug: loops-maintenance-pause
   parent: ''
   track: agents
 - slug: managed-resources-manifest
@@ -528,6 +591,9 @@
 - slug: moderation-drain-loop
   parent: ''
   track: cortex
+- slug: multitenant-client-isolation
+  parent: ''
+  track: platform
 - slug: notify-body-is-prompt
   parent: ''
   track: platform
@@ -720,14 +786,32 @@
 - slug: rel-011
   parent: ''
   track: release
+- slug: rem-queue-commit-256-260-261
+  parent: ''
+  track: security
 - slug: repo-split-trigger
   parent: ''
   track: platform
 - slug: repos-importer
   parent: digest
   track: digest
+- slug: rsi-days-after-blank
+  parent: rsi-evals
+  track: agents
+- slug: rsi-evals
+  parent: agents
+  track: agents
+- slug: rsi-ops-loop
+  parent: rsi-evals
+  track: agents
+- slug: scan-dispositions-sidecar
+  parent: sec-queue-authorship
+  track: security
 - slug: scan-output-off-deploy-tree
   parent: plat-deploy-sync
+  track: security
+- slug: scan-writer-cwd
+  parent: scan-output-off-deploy-tree
   track: security
 - slug: sec
   parent: ''
@@ -816,11 +900,20 @@
 - slug: sere-hosts
   parent: sere
   track: platform
+- slug: share-grants-agents
+  parent: dtt-share-model
+  track: platform
 - slug: spine-tools-vs-cli-refusal
   parent: w-agentkit-spine
   track: agents
 - slug: ssot-article-schema
   parent: wave-small-ssot
+  track: platform
+- slug: ssot-cite-adopters-or-amend
+  parent: ''
+  track: platform
+- slug: ssot-cite-editor
+  parent: ssot-index
   track: platform
 - slug: ssot-index
   parent: wave-small-ssot
@@ -858,6 +951,9 @@
 - slug: tables-system-flag
   parent: face
   track: face
+- slug: tester-hardware-readiness
+  parent: consulting-firm-deployment
+  track: release
 - slug: v0-1
   parent: ''
   track: release
@@ -948,6 +1044,9 @@
 - slug: wing-tenants
   parent: ''
   track: platform
+- slug: work-corpus-not-seed
+  parent: cortex
+  track: cortex
 - slug: workflow-build-fanout-verdict
   parent: ''
   track: platform

@@ -20,10 +20,10 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 101 (77 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (5), legal_obligation (1), legitimate_interests (95)
+- **Processing activities:** 99 (77 core services, 5 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (6), legal_obligation (1), legitimate_interests (92)
 - **Transfers outside the EU:** 12 activities
-- **Activities engaging a third-party processor:** 17
+- **Activities engaging a third-party processor:** 15
 
 ## Transfers & processors (audit-sensitive subset)
 
@@ -31,8 +31,6 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 |---|---|---|
 | conductor (`agent_conductor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 | curator (`agent_curator`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
-| invoice-extract (`agent_invoice-extract`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback, constrained to the ISDOC record schema. No third party. · safeguard: Not applicable. No transfer occurs. |
-| invoice-vision-ocr (`agent_invoice-vision-ocr`) | No | **on-device (operator's own hardware)** (CZ — this host) — Vision-model inference on this host via ollama's OpenAI-compatible surface on loopback. No third party: the image never leaves the machine. · safeguard: Not applicable. No transfer occurs. |
 | jeff (`agent_jeff`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. No third party sees the prompt, so there is no processor in the Article-28 sense; this entry says so rather than leaving the field blank. · safeguard: Not applicable. No transfer occurs, which is stronger than any safeguard could describe. |
 | jeff-cloud (`agent_jeff-cloud`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this agent. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support. |
 | librarian (`agent_librarian`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer. |
@@ -629,6 +627,20 @@ contracts with counter-parties who agree to electronic execution.
 - **Storage:** 'apps' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
+#### Espocrm — `app_espocrm`
+- **Purpose:** Record and manage the consulting firm's client relationships: contact
+details, deals/opportunities, activities, and client communications.
+Necessary to deliver and administer the firm's contracted consulting
+services to its clients.
+- **Legal basis (Art. 6):** `contract`
+- **Data subjects:** `clients`; `client_contacts`; `end_users`
+- **Data categories:** `name`; `email`; `phone_number`; `company_affiliation`; `deal_financial_data`; `communication_content`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 1095 days (~3y)
+- **Storage:** 'apps' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
 #### Qdrant — `app_qdrant`
 - **Purpose:** Hosts vector embeddings + payload metadata for the nOS agentic platform:
 semantic search over agent outputs, system metadata, and cybersec
@@ -1040,28 +1052,6 @@ transferred.
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
-#### invoice-extract — `agent_invoice-extract`
-- **Purpose:** Extracting a typed ISDOC record from Stage A's OCR text, entirely on-device, so an invoice image never needs to leave the host to become a structured digest-organ row.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `clients`; `counterparties`
-- **Data categories:** `invoice_document_text`
-- **Recipients / processors:** **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback, constrained to the ISDOC record schema. No third party. · safeguard: Not applicable. No transfer occurs.
-- **Transfers outside EU:** No
-- **Retention:** transient (not persisted)
-- **Storage:** host service (non-Docker / launchd)
-- **Security measures:** platform baseline (see above)
-
-#### invoice-vision-ocr — `agent_invoice-vision-ocr`
-- **Purpose:** Reading an invoice scan/PDF's visible text and layout on-device, as the first stage of the local invoice-extraction pipeline. The image is the highest-value target for cloud egress in this pipeline, which is why this stage carries its own residency declaration rather than inheriting Stage B's.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `clients`; `counterparties`
-- **Data categories:** `invoice_document_images`
-- **Recipients / processors:** **on-device (operator's own hardware)** (CZ — this host) — Vision-model inference on this host via ollama's OpenAI-compatible surface on loopback. No third party: the image never leaves the machine. · safeguard: Not applicable. No transfer occurs.
-- **Transfers outside EU:** No
-- **Retention:** transient (not persisted)
-- **Storage:** host service (non-Docker / launchd)
-- **Security measures:** platform baseline (see above)
-
 #### jeff — `agent_jeff`
 - **Purpose:** Assisting the operator with the estate: reading Wing state, answering questions, and proposing work as typed chains. Estate operation under legitimate interest, Art. 6(1)(f). Inputs are whatever the operator says or types, which is why the local twin exists at all.
 - **Legal basis (Art. 6):** `legitimate_interests`
@@ -1212,17 +1202,6 @@ reasoning.
 
 #### isdoc — `imp_isdoc`
 - **Purpose:** Ingest an organisation's ISDOC e-invoices into the invoice facet — document number, dates, payable amount, and the seller and buyer as references into the shared party spine — so the estate can answer accounting and cash-flow questions against governed rows. Both counterparties are resolved against the spine, never minted.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `The organisation's invoice counterparties — customers and suppliers`; `Sole traders among them (natural persons acting as businesses)`
-- **Data categories:** `Invoice metadata (document number, issue/due dates, currency, payable amount)`; `Counterparty identity references (IČO of seller and buyer)`
-- **Recipients / processors:** —
-- **Transfers outside EU:** No
-- **Retention:** 3650 days (~10y)
-- **Storage:** KEAP DataTables (libsql) on the host — invoice (+ future invoice-line)
-- **Security measures:** platform baseline (see above)
-
-#### isdoc-vision — `imp_isdoc-vision`
-- **Purpose:** Ingest vision-extracted invoice sidecars (structured fields produced from scanned/photographed invoices by the invoice-extract agent) into the same invoice facet the ISDOC importer writes — document number, dates, payable amount, and the seller and buyer as references into the shared party spine. Both counterparties are resolved against the spine, never minted. An unverified or low-confidence extraction is held for review and never becomes an invoice row.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `The organisation's invoice counterparties — customers and suppliers`; `Sole traders among them (natural persons acting as businesses)`
 - **Data categories:** `Invoice metadata (document number, issue/due dates, currency, payable amount)`; `Counterparty identity references (IČO of seller and buyer)`

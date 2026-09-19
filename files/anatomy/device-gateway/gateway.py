@@ -38,6 +38,18 @@ BIND = "127.0.0.1"
 PORT = int(os.environ.get("GATEWAY_PORT", "8770"))
 TOKEN = os.environ.get("GATEWAY_TOKEN", "")
 CLIENT_ID = "nos-device-gateway"
+# Authorization: every exposed table is visibility tier-managers, so a valid
+# token is not enough — the user must hold a manager-tier (or above) group.
+# Rendered from authentik_rbac_tiers tier-2 in the plist; default mirrors
+# default.config.yml. Group names come from userinfo (profile scope), the
+# VERIFIED source — never the unverified JWT payload. Empty ⇒ fail closed.
+ALLOWED_GROUPS = {
+    g.strip()
+    for g in os.environ.get(
+        "GATEWAY_ALLOWED_GROUPS", "nos-providers,nos-admins,nos-managers"
+    ).split(",")
+    if g.strip()
+}
 # Host→Authentik: loopback HTTP (published authentik_port). Never derive the
 # handheld's device/token URLs from this — 127.0.0.1 is the Mac, not the phone.
 USERINFO = os.environ.get("AUTHENTIK_USERINFO_URL", "").strip()
@@ -213,8 +225,12 @@ def _bearer(headers) -> str:
     return (headers.get("X-Token", "") or "").strip()
 
 
-def _userinfo_ok(access_token: str) -> str:
-    """Return 'ok', 'unauthorized', or 'unavailable'."""
+def _userinfo(access_token: str) -> tuple[str, dict]:
+    """Return (verdict, claims). verdict is 'ok'|'unauthorized'|'unavailable'.
+
+    Authentik signs the userinfo body, so its `groups` (profile scope) is the
+    verified source for authorization — unlike the unverified JWT read for azp.
+    """
     req = urllib.request.Request(
         USERINFO,
         headers={"Authorization": f"Bearer {access_token}"},
@@ -225,13 +241,27 @@ def _userinfo_ok(access_token: str) -> str:
         kwargs["context"] = _ssl
     try:
         with urllib.request.urlopen(req, **kwargs) as resp:
-            return "ok" if 200 <= resp.status < 300 else "unauthorized"
+            if not (200 <= resp.status < 300):
+                return "unauthorized", {}
+            try:
+                claims = json.loads(resp.read().decode())
+            except (ValueError, json.JSONDecodeError):
+                claims = {}
+            return "ok", claims if isinstance(claims, dict) else {}
     except urllib.error.HTTPError as exc:
         if exc.code in (401, 403):
-            return "unauthorized"
-        return "unavailable"
+            return "unauthorized", {}
+        return "unavailable", {}
     except (urllib.error.URLError, TimeoutError, OSError):
-        return "unavailable"
+        return "unavailable", {}
+
+
+def _has_allowed_group(claims: dict) -> bool:
+    """True if userinfo carries a manager-tier (or above) group. Fail closed."""
+    groups = claims.get("groups")
+    if not isinstance(groups, list):
+        return False
+    return any(g in ALLOWED_GROUPS for g in groups)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -253,10 +283,13 @@ class Handler(BaseHTTPRequestHandler):
             if not got:
                 self._send(401, {"error": "unauthorized"})
                 return False
-            verdict = _userinfo_ok(got)
+            verdict, claims = _userinfo(got)
             if verdict == "ok":
                 if not _token_is_for_this_client(got):
                     self._send(401, {"error": "unauthorized"})
+                    return False
+                if not _has_allowed_group(claims):
+                    self._send(403, {"error": "forbidden — manager tier required"})
                     return False
                 return True
             if verdict == "unauthorized":

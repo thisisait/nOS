@@ -23,11 +23,15 @@
 # the project is half-assembled, and the label filter is already the idiom used
 # by the first task in tasks/post.yml.
 - name: Restart ntfy
-  ansible.builtin.shell: >
-    set -o pipefail;
-    cid=$({{ docker_bin }} ps -q
-      --filter "label=com.docker.compose.project=iiab"
-      --filter "label=com.docker.compose.service=ntfy");
+  # LITERAL block + the ps -q on ONE line: a folded (>) scalar kept the newlines
+  # before the more-indented --filter lines, and a newline INSIDE $(...) is a
+  # command separator — so $(docker ps -q \n --filter \n --filter) ran THREE
+  # commands ("--filter: command not found") and cid became every container id →
+  # docker restart on garbage → 404 (root-caused 2026-09-19). Keep the whole
+  # substitution on one physical line.
+  ansible.builtin.shell: |
+    set -o pipefail
+    cid=$({{ docker_bin }} ps -q --filter "label=com.docker.compose.project=iiab" --filter "label=com.docker.compose.service=ntfy")
     if [ -n "$cid" ]; then {{ docker_bin }} restart "$cid"; else echo "ntfy not running"; fi
   args:
     executable: /bin/bash

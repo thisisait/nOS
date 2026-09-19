@@ -6,24 +6,27 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-09-16.
+> Last updated: 2026-09-17.
 
 ## Now (current track)
 
-1. **v0.12-beta cut in flight.** nos p=30490 recap `failed=0` (ok=1290
-   changed=98); Wing/Bone at `7c129676`. Tag waits on `tools/ci-local.sh`
-   + forge-sync to origin. Do not claim master is green — ask
-   `gh run list --branch master --limit 5`.
+1. **First always-on PoC: `git-origin-watcher`** (dtt, parent
+   `loop-definition-model`) on DGX Spark / Qwen3 8B. Slice 1 is reader-only
+   (npm+composer graph). Constraint A: model proposes, judges authorize.
+   Do not re-research agent memory — rows `work-corpus-not-seed`,
+   `cortex-rows`, `keap-row-vector-search`, `fs-project-tree`,
+   `share-grants-agents`, `rsi-ops-loop`.
 
-2. **[`docs/doctrine/agentkit.md`](doctrine/agentkit.md) is DRAFTED as proposed**
-   (`1e263377`). It is no longer unwritten. Operator still settles §6 before
-   anything cites the file.
+2. **SOURCE pins await the operator `nos`.** Ask `tools/estate-status.py`
+   and `tools/rem-status.py`. Do **not** land the judged `MINIO_ROOT_PASSWORD`
+   alias for REM-249 (mint+persist already shipped). RustFS rotation breaks
+   S3 clients until they re-read `~/.nos/secrets.yml`.
 
-3. **Roadmap table undercounts shipped work:** no rows for xAI backend,
-   dev-minimal, host-organ OTel, hub honesty; `ears-app-bundle` row framing
-   ("no speech in it") predates a working ASR path.
+3. **[`docs/doctrine/agentkit.md`](doctrine/agentkit.md) is DRAFTED as proposed**
+   (`1e263377`). Operator still settles §6 before anything cites the file.
 
-4. Doctrine splits owed: loops.md + foreign-properties.md → index + companions.
+4. **Do not pick `loop-steps-match-run`.** Graph-follows-run vs
+   runner-follows-graph is still queued design.
 
 **Voice → caddy → AgentKit → cortex.** Five wires gated; fee
 [43](hidden_fees/43-a-tool-with-no-door.md) paid. KEAP SOURCE pin is

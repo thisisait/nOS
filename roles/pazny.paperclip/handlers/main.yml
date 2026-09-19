@@ -14,11 +14,14 @@
 # Restart by CONTAINER via the compose labels: no knowledge of how many override
 # files were assembled, and no silence.
 - name: Restart paperclip
-  ansible.builtin.shell: >
-    set -o pipefail;
-    cid=$({{ docker_bin }} ps -q
-      --filter "label=com.docker.compose.project=devops"
-      --filter "label=com.docker.compose.service=paperclip");
+  # LITERAL block + the ps -q on ONE line: a folded (>) scalar kept the newlines
+  # before the more-indented --filter lines, and a newline INSIDE $(...) is a
+  # command separator — so the substitution ran three commands and cid became
+  # every container id → docker restart on garbage → 404 (same bug as ntfy,
+  # root-caused 2026-09-19). Keep the whole substitution on one physical line.
+  ansible.builtin.shell: |
+    set -o pipefail
+    cid=$({{ docker_bin }} ps -q --filter "label=com.docker.compose.project=devops" --filter "label=com.docker.compose.service=paperclip")
     if [ -n "$cid" ]; then {{ docker_bin }} restart "$cid"; else echo "paperclip not running"; fi
   args:
     executable: /bin/bash

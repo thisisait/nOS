@@ -178,3 +178,37 @@ def test_the_writer_logs_the_runtime_path_it_wrote():
     # A success stamp written by the writer is the defect this estate forbids.
     # rem-status.py is the reader.
     assert "write_ok" not in src and 'status = "written"' not in src
+
+
+PROMPT = REPO / "files/vuln-scan/scan-prompt.md"
+
+
+def test_the_committed_prompt_does_not_aim_writes_at_the_checkout():
+    """scan-prompt.md is unused at runtime (the runner mktemps a heredoc) but
+    Claude with skip-permissions still reads the committed file. A write
+    instruction pointing at docs/llm/security/ is how dest stays dirty after
+    the Pulse env already aimed at ~/.nos/security."""
+    src = PROMPT.read_text(encoding="utf-8")
+    assert "docs/llm/security" not in src, (
+        "scan-prompt.md still names docs/llm/security as a write target — the "
+        "model follows that even when SECURITY_DIR is ~/.nos/security"
+    )
+
+
+def test_the_runtime_prompt_writes_the_report_inside_security_dir():
+    src = RUNNER.read_text(encoding="utf-8")
+    assert "cd \"$SECURITY_DIR\"" in src, (
+        "claude is not confined to SECURITY_DIR — relative writes land in "
+        "Pulse's WorkingDirectory / the deploy checkout"
+    )
+    assert "$SECURITY_DIR/2026-04-08-vuln-report.md" in src, (
+        "the markdown report has no directory — deploy-sync treats it as "
+        "real dirt because it is not in SCAN_PATHS"
+    )
+    assert "MUST NOT write resolved_by" in src, (
+        "the scan prompt must forbid writing disposition fields — that is "
+        "sec-queue-authorship / scan-dispositions-sidecar"
+    )
+    # The git promotion path must not appear as a write target in the runner.
+    write_half = src[src.index("Build dynamic prompt"):]
+    assert "docs/llm/security" not in write_half

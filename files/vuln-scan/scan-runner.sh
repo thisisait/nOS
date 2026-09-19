@@ -135,10 +135,12 @@ You are the NOS Security Auditor. This is a scheduled iterative scan.
    - Document specific attack vectors and their feasibility
    - Rate each vector: exploitable / theoretical / mitigated
 
-3. **Output**: Append findings to existing files in $SECURITY_DIR/:
-   - Update remediation-queue.json with new items
+3. **Output**: Write ONLY under $SECURITY_DIR (also the process cwd):
+   - Update remediation-queue.json with new pending items (finding fields only)
    - Update scan-state.json timestamps for scanned components
-   - If critical finding: prepend to 2026-04-08-vuln-report.md
+   - If critical finding: prepend to $SECURITY_DIR/2026-04-08-vuln-report.md
+   - MUST NOT write resolved_by, resolved_at, resolution, or dispositions.json
+   - MUST NOT write anywhere under the git checkout ($REPO_DIR)
 
 ### Rules:
 - Do NOT fabricate CVE IDs
@@ -146,6 +148,7 @@ You are the NOS Security Auditor. This is a scheduled iterative scan.
 - Mark confidence level (high/medium/low)
 - Read existing findings first to avoid duplicates
 - Update scan-state.json component timestamps after scanning
+- Read the estate at $REPO_DIR; cwd is $SECURITY_DIR
 PROMPT_EOF
 
 # ── Emit scan.batch_started event ────────────────────────────────────────────
@@ -181,20 +184,39 @@ emit_event "scan.batch_started" "$(jq -nc \
 # works because the launchd job overrides it.
 # shellcheck source=../anatomy/scripts/agent-run-lock.sh
 source "$(dirname "$0")/../anatomy/scripts/agent-run-lock.sh"
-if ! nos_agent_lock_acquire "vulnscan:${SCAN_RUN_ID}" 600 cli; then
+_lock_rc=0
+nos_agent_lock_acquire "vulnscan:${SCAN_RUN_ID}" 600 cli || _lock_rc=$?
+if [ "$_lock_rc" -ne 0 ] && [ "$_lock_rc" -ne 3 ]; then
     log "ERROR: another claude-CLI agent holds the agent-run lock — scan not dispatched"
     emit_event "scan.batch_refused" '{"reason":"agent-run lock held"}' >> "$LOG_FILE"
     exit 2
 fi
+if [ "$_lock_rc" -eq 3 ]; then
+    # Maintenance pause: an intentional operator hold. Leave scan-state.json
+    # UNTOUCHED (stamping "scanned" here would be the fabricated-freshness defect
+    # this file already carries a comment against) and skip cleanly — the paused
+    # marker is the honest record, not a scan_failed.
+    log "PAUSED: SERE loops paused for maintenance — scan not dispatched"
+    emit_event "scan.batch_paused" '{"reason":"loops paused for maintenance"}' >> "$LOG_FILE"
+    exit 0
+fi
 trap 'nos_agent_lock_release; cleanup' EXIT
 
-log "Dispatching Claude Code scan..."
+log "Dispatching Claude Code scan (cwd=$SECURITY_DIR)..."
 SCAN_STARTED_AT=$(date +%s)
 
+# Confine relative writes to the runtime notebook. REPO_DIR stays readable
+# via the env Pulse already sets; cwd is what a model without an absolute
+# path will dirty. --dangerously-skip-permissions does not choose a tree.
 SCAN_RC=0
-claude --dangerously-skip-permissions -p - < "$PROMPT_FILE" \
-    --output-format text \
-    2>>"$LOG_FILE" || SCAN_RC=$?
+(
+    cd "$SECURITY_DIR" || exit 1
+    export REPO_DIR="${VULNSCAN_REPO_DIR:-$REPO_DIR}"
+    export SECURITY_DIR
+    claude --dangerously-skip-permissions -p - < "$PROMPT_FILE" \
+        --output-format text \
+        2>>"$LOG_FILE"
+) || SCAN_RC=$?
 rm -f "$PROMPT_FILE"
 
 # ── Update scan state ─────────────────────────────────────────────────────────

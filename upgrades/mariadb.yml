@@ -120,7 +120,7 @@ recipes:
 
   - id: "mariadb-11-current"
     from_regex: "^11\\."
-    to: "11.8.8"           # == installed (was 11.8.6, BEHIND the pin)
+    to: "11.8.9"           # == installed (REM-246; was 11.8.8)
     severity: security
     changelog_url: "https://mariadb.com/kb/en/release-notes/"
     notes: |

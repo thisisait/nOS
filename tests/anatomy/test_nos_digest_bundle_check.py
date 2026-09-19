@@ -211,3 +211,51 @@ def test_operator_owned_extraction_without_dump_still_passes():
         "report_path": "/tmp/ileapp/index.html",
     }), TABLES)
     assert errs == [], errs
+
+
+# ── Wave-2 gate: free-text special-category smuggling (importer not yet built) ──
+
+def _operator_extraction(**extra) -> dict:
+    base = {
+        "slug": "ext-smuggle",
+        "device": "device-friend-iphone",
+        "owner": "Operator",
+        "subject_kind": "operator_device",
+        "operator_owns_device": True,
+        "notes": "",
+        "report_path": "",
+    }
+    base.update(extra)
+    return _device_pair(base)
+
+
+def test_plaintext_tsv_special_category_in_notes_is_refused():
+    """The exact smuggling the HTML/zip magic missed: a TSV of messages / a
+    heart-rate reading pasted into device-extraction.notes as PLAIN TEXT. No
+    magic bytes, so pre-fix check_bundle returned [] and absorb would POST."""
+    for payload in (
+        "sms.tsv\t+420123456789\tmeet at the clinic",
+        "heartRate\t72",
+    ):
+        errs = ND.check_bundle(_operator_extraction(notes=payload), TABLES)
+        assert errs, payload
+        blob = " ".join(errs).lower()
+        assert "tsv" in blob or "art. 9" in blob or "special-category" in blob, errs
+
+
+def test_special_category_note_needs_art9_consent_ref():
+    """A tab-free, short note that still names a special-category class (health)
+    must carry art9_consent_ref — empty is refused, non-empty passes."""
+    errs = ND.check_bundle(_operator_extraction(notes="resting heart rate reviewed"), TABLES)
+    assert any("art9" in e or "Art. 9" in e for e in errs), errs
+
+    ok = ND.check_bundle(_operator_extraction(
+        notes="sleep tracker export reviewed",
+        art9_consent_ref="consent:art9:2026-09-19",
+    ), TABLES)
+    assert ok == [], ok
+
+
+def test_oversized_free_text_is_refused():
+    errs = ND.check_bundle(_operator_extraction(notes="x" * 2000), TABLES)
+    assert any("oversized" in e for e in errs), errs

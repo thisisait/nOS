@@ -5,6 +5,7 @@
 #   nos [-y] [--remove=none|data|deep|all] [--confirm] [--leave]
 #       [--print-cmd] [-h|--help] [--version] [ansible-args...]
 #   nos dtt <capture|seed|status|update|verify|extract> [args]   (DataTables ops)
+#   nos loops <pause|resume|status> [--reason "..."]   (live SERE-loop pause)
 #
 # `nos dtt` runs the DataTables tools from $NOS_SRC over the PRIVATE seed repo
 # (NOS_SEED_DIR) — an installed nos reaches them from any shell/branch/cwd, so
@@ -126,6 +127,90 @@ DTT
     mkdir -p "$NOS_SEED_DIR"; export NOS_SEED_DIR
   fi
   exec "$DTT_PY" "$NOS_SRC/tools/$tool" "$@"
+fi
+
+# ── `nos loops <pause|resume|status>` — live SERE-loop pause switch ───────────
+# Pause the AGENT RUNTIME at its single chokepoint (agent-run-lock.sh) so the
+# operator can hold the loops before a converge — instead of hand-unloading the
+# resident model — and resume after. The sentinel is a RUNTIME file under
+# ~/.nos, so this toggles LIVE with no converge. NOS_LOOPS_PAUSED_FILE overrides
+# the path (must match agent-run-lock.sh + red-status.py).
+_loops_audit() {   # <event_type> <reason> — best-effort Bone audit event, never blocks
+  local etype="$1" reason="${2:-}"
+  local t; for t in jq openssl curl; do command -v "$t" >/dev/null 2>&1 || return 0; done
+  local secret="${WING_EVENTS_HMAC_SECRET:-}"
+  if [ -z "$secret" ] && [ -f "$HOME/.nos/secrets.yml" ]; then
+    # ponytail: third copy of the read-secret+HMAC-POST shape (nos-notify.sh,
+    # lib-jsonl.sh, here). Extract a shared shell emitter only if a fourth appears.
+    secret="$(grep -E '^wing_events_hmac_secret:' "$HOME/.nos/secrets.yml" 2>/dev/null \
+              | head -1 | sed -E 's/^[^:]+:[[:space:]]*//; s/^["'"'"']//; s/["'"'"']$//' || true)"
+  fi
+  [ -z "$secret" ] && return 0
+  local url="${BONE_URL:-http://127.0.0.1:${BONE_PORT:-8099}}/api/v1/events"
+  local ts_iso body ts sig
+  ts_iso="$(date -u +%FT%TZ)"
+  body="$(jq -a --sort-keys -nc --arg ts "$ts_iso" --arg type "$etype" \
+    --arg actor "operator:$(id -un 2>/dev/null || echo operator)" --arg reason "$reason" \
+    '{ts:$ts, type:$type, source:"nos-cli", actor_id:$actor, result:{reason:$reason}}' || true)"
+  [ -z "$body" ] && return 0
+  ts="$(date +%s)"
+  sig="$(printf '%s.%s' "$ts" "$body" | openssl dgst -sha256 -hmac "$secret" | awk '{print $NF}')"
+  curl -sS -o /dev/null -m 5 -X POST \
+    -H "X-Wing-Timestamp: $ts" -H "X-Wing-Signature: $sig" \
+    -H "Content-Type: application/json" -d "$body" "$url" >/dev/null 2>&1 || true
+  return 0
+}
+
+if [ "${1:-}" = "loops" ]; then
+  shift
+  _lp="${NOS_LOOPS_PAUSED_FILE:-$HOME/.nos/loops-paused}"
+  sub="${1:-status}"; [ $# -gt 0 ] && shift
+  case "$sub" in
+    pause)
+      reason=""
+      while [ $# -gt 0 ]; do
+        case "$1" in
+          --reason)   reason="${2:-}"; shift 2 ;;
+          --reason=*) reason="${1#--reason=}"; shift ;;
+          *) echo "nos loops pause: unknown arg '$1' (only --reason)" >&2; exit 64 ;;
+        esac
+      done
+      mkdir -p "$(dirname "$_lp")"
+      { printf 'since: %s\n' "$(date -u +%FT%TZ)"
+        [ -n "$reason" ] && printf 'reason: %s\n' "$reason"; } > "$_lp"
+      echo "loops PAUSED for maintenance — agent runs (Pulse agents + vuln scan) will skip."
+      echo "  sentinel: $_lp"
+      [ -n "$reason" ] && echo "  reason:   $reason"
+      echo "  resume with: nos loops resume"
+      _loops_audit "loops_paused" "$reason" || true
+      exit 0 ;;
+    resume)
+      if [ -f "$_lp" ]; then
+        rm -f "$_lp"
+        echo "loops RESUMED — agent runs fire on schedule again."
+        _loops_audit "loops_resumed" "" || true
+      else
+        echo "loops were not paused (no sentinel at $_lp)."
+      fi
+      exit 0 ;;
+    status)
+      if [ -f "$_lp" ]; then
+        echo "loops: PAUSED (maintenance)"
+        sed 's/^/  /' "$_lp"
+      else
+        echo "loops: running (not paused)"
+      fi
+      exit 0 ;;
+    -h|--help)
+      cat >&2 <<'LOOPS'
+nos loops <pause|resume|status> — pause/resume the SERE agent loops (live, no converge)
+  pause [--reason "..."]  write the runtime sentinel; agent runs skip as an intentional hold
+  resume                  remove the sentinel; runs fire again
+  status                  paused/running + reason + since (default)
+LOOPS
+      exit 0 ;;
+    *) echo "nos loops: unknown verb '$sub' (pause|resume|status)" >&2; exit 64 ;;
+  esac
 fi
 
 usage() {

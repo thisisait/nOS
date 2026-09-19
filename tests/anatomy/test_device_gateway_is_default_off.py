@@ -254,6 +254,73 @@ def test_keap_rows_use_slug_id_without_listing_tables():
     assert calls == ["/tables/current-state/rows"]
 
 
+def _load_gw():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("device_gateway", GATEWAY)
+    gw = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gw)
+    return gw
+
+
+def _mint(payload: dict) -> str:
+    import base64
+    import json
+
+    body = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
+    return f"h.{body}.s"
+
+
+def test_has_allowed_group_gates_on_manager_tier():
+    """RETRO-RED core: guest/empty groups refused, manager+ allowed."""
+    gw = _load_gw()
+    assert gw._has_allowed_group({"groups": ["nos-managers"]})
+    assert gw._has_allowed_group({"groups": ["nos-admins", "nos-users"]})
+    assert not gw._has_allowed_group({"groups": ["nos-guests"]})
+    assert not gw._has_allowed_group({"groups": ["nos-users"]})
+    assert not gw._has_allowed_group({})  # no groups claim ⇒ fail closed
+    assert not gw._has_allowed_group({"groups": "nos-managers"})  # not a list
+
+
+def test_guest_tier_is_refused_manager_tables():
+    """RETRO-RED: a VALID Authentik token for a guest-tier user must be 403.
+
+    Every exposed table is visibility tier-managers. A minted-for-us token
+    (azp ok, userinfo ok) but guest groups must not pass _gate. Fails on the
+    pre-authz tree (no group check → _gate returned True); passes after.
+    """
+    gw = _load_gw()
+    gw.USERINFO = "https://auth.example/application/o/userinfo/"
+    tok = _mint({"azp": "nos-device-gateway", "groups": ["nos-guests"]})
+
+    class FakeHandler:
+        def __init__(self, token):
+            self.headers = {"Authorization": f"Bearer {token}"}
+            self.sent = []
+
+        def _send(self, code, obj):
+            self.sent.append((code, obj))
+
+    # userinfo says the token is genuine; its groups are guest-only.
+    gw._userinfo = lambda _t: ("ok", {"groups": ["nos-guests"]})
+    guest = FakeHandler(tok)
+    assert gw.Handler._gate(guest) is False
+    assert guest.sent and guest.sent[0][0] == 403
+
+    # a manager on the same path is admitted.
+    gw._userinfo = lambda _t: ("ok", {"groups": ["nos-managers"]})
+    mgr = FakeHandler(_mint({"azp": "nos-device-gateway", "groups": ["nos-managers"]}))
+    assert gw.Handler._gate(mgr) is True
+    assert mgr.sent == []
+
+
+def test_plist_renders_allowed_groups_from_tier_config():
+    text = PLIST.read_text(encoding="utf-8")
+    assert "GATEWAY_ALLOWED_GROUPS" in text
+    assert "authentik_rbac_tiers" in text
+    assert "equalto', 2" in text  # manager tier, not a hardcoded guess
+
+
 def test_tofu_maps_offline_access_on_the_device_client_only():
     data_tf = (REPO / "terraform" / "authentik" / "data.tf").read_text(encoding="utf-8")
     assert 'scope_name = "offline_access"' in data_tf

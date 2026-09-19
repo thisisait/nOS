@@ -126,7 +126,7 @@
     fi
     brew unlink ollama || true
     brew ruby -e '
-      pin = ENV.fetch("OLLAMA_PIN")
+      pin = ENV.fetch("HOMEBREW_OLLAMA_PIN")
       f = Formulary.factory("ollama")
       keg = f.installed_kegs.find { |k| k.version.to_s == pin }
       abort "no keg #{pin}" if keg.nil?
@@ -136,8 +136,13 @@
     '
   args:
     executable: /bin/bash
+  # `brew ruby` SCRUBS the environment — only HOMEBREW_*-prefixed vars reach the
+  # subprocess. A plain OLLAMA_PIN vanished, ENV.fetch raised KeyError, the ruby
+  # aborted printing nothing, changed_when stayed false, and this relink silently
+  # no-op'd EVERY run — the drift never healed (root-caused 2026-09-19). Prefix
+  # the var so it survives the scrub.
   environment:
-    OLLAMA_PIN: "{{ ollama_version }}"
+    HOMEBREW_OLLAMA_PIN: "{{ ollama_version }}"
     HOMEBREW_NO_AUTO_UPDATE: "1"
   register: _ollama_relink
   become: false
@@ -146,7 +151,10 @@
   when:
     - nos_pkg_manager == 'homebrew'
     - ollama_version | default('') | length > 0
-    - (_ollama_keg.stdout | default('') | trim) not in ('', ollama_version)
+    # Fire on ANY linked keg that is not the pin — INCLUDING '' (nothing linked),
+    # so a host left unlinked (e.g. a half-done manual brew fix) self-heals here
+    # instead of needing a manual `brew link`.
+    - (_ollama_keg.stdout | default('') | trim) != ollama_version
 
 # MUST NOT register `_ollama_keg`. A skipped task still replaces the
 # registered result; p=14457 wiped a coherent 0.34.0 keg, then the drift
@@ -172,6 +180,23 @@
   ansible.builtin.set_fact:
     ollama_linked_keg: "{{ (_ollama_keg_after_link.stdout | default('') | trim) if (not (_ollama_keg_after_link.skipped | default(true)) and (_ollama_keg_after_link.stdout | default('') | trim) | length > 0) else (_ollama_keg.stdout | default('') | trim) }}"
   when: nos_pkg_manager == 'homebrew'
+
+# DETERMINISM: the version record + gate above only DETECT drift. Without a brew
+# pin, any `brew upgrade` (manual, or pulled in as another formula's dependency)
+# silently moves the ollama keg — which is exactly how 0.34.2 landed on top of
+# the 0.34.0 pin. `brew pin` is Homebrew's own lock; it stops `brew upgrade` from
+# wandering off the pinned version. The record stays the source of truth; this
+# just keeps brew from contradicting it behind our backs. become:false —
+# brew-as-root is refused.
+- name: "[Ollama] Pin the formula in brew so an upgrade can't move the keg"
+  ansible.builtin.command: brew pin ollama
+  register: _ollama_brew_pin
+  become: false
+  changed_when: "'already pinned' not in (_ollama_brew_pin.stderr | default(''))"
+  failed_when: false
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - ollama_version | default('') | length > 0
 
 - name: "[Ollama] Refuse when the INSTALLED keg is not the pin"
   ansible.builtin.fail:

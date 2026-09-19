@@ -100,6 +100,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import importlib.util
 import json
 import re
 import sys
@@ -371,6 +372,59 @@ def harvest_pulse(nodes: dict, raw_edges: list, raw_writes: list) -> None:
                     raw_edges.append((nid, dep, str(path.relative_to(REPO))))
                 for w in job.get("writes") or []:
                     raw_writes.append((nid, w, str(path.relative_to(REPO))))
+    harvest_loop_manifests(nodes, raw_edges, raw_writes)
+
+
+def harvest_loop_manifests(nodes: dict, raw_edges: list, raw_writes: list) -> None:
+    """Pulse jobs generated from files/anatomy/loops/*.loop.yml.
+
+    discover-pulse-catalog.py already globs these. This harvest is the third
+    consumer the loop-generator promised (catalog + loop-graph + anatomy-graph).
+    Owner is `loop` so node ids match Wing job ids (`loop:<id>`).
+    """
+    spec = importlib.util.spec_from_file_location(
+        "discover_pulse_catalog",
+        REPO / "files" / "anatomy" / "scripts" / "discover-pulse-catalog.py",
+    )
+    disc = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(disc)
+    loops_dir = REPO / "files" / "anatomy" / "loops"
+    if not loops_dir.is_dir():
+        return
+    for path in sorted(loops_dir.glob("*.loop.yml")):
+        try:
+            doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError:
+            continue
+        if not isinstance(doc, dict):
+            continue
+        for job in (disc._loop_pulse_block(doc).get("jobs") or []):
+            if not (isinstance(job, dict) and job.get("name")):
+                continue
+            nid = f"pulse:loop:{job['name']}"
+            cmd = str(job.get("command") or "")
+            rel = str(path.relative_to(REPO))
+            claims = sorted(set(job.get("claims") or []))
+            if any(cmd.endswith(s) for s in AGENT_LOCK_COMMANDS):
+                claims = sorted(set(claims) | {AGENT_LOCK_RESOURCE})
+            nodes[nid] = {
+                "kind": "pulse",
+                "source": rel,
+                "schedule": job.get("schedule"),
+                "jitter_min": job.get("jitter_min", 0),
+                "max_runtime_s": job.get("max_runtime_s", 300),
+                "category": job.get("category"),
+                "paused": bool(job.get("paused", False)),
+                "findings_exit_codes": job.get("findings_exit_codes"),
+                "command_name": cmd.rsplit("/", 1)[-1] or None,
+                "claims": claims,
+                "runs_agent": _dispatched_agent(job),
+            }
+            for dep in job.get("depends_on") or []:
+                raw_edges.append((nid, dep, rel))
+            for w in job.get("writes") or []:
+                raw_writes.append((nid, w, rel))
 
 
 # ── harvest: judges + gate sets ───────────────────────────────────────────

@@ -205,16 +205,17 @@ recipes:
 # (patterns ^2\.1\. and ^2\.2\. are disjoint, so order is not load-bearing).
   - id: "freescout-2.2-current"
     from_regex: "^2\\.2\\."
-    to: "2.2.5"            # == installed
+    to: "2.2.8"            # == installed
     severity: patch
     changelog_url: "https://github.com/nfrastack/docker-freescout/releases"
     notes: |
-      At-target forward coverage for the 2.2.x line reached by the applied
-      REM-218 hop. Same nfrastack org, same PHP 8.3 base — a patch bump inside
-      2.2 is a plain tag swap; Laravel migrations run on first boot.
-      NOTE: the app version behind this image tag is claimed 1.8.235 and is
-      UNVERIFIED until a converge — confirm with `tools/app-version.py` before
-      trusting a CVE claim keyed on the app version rather than the image tag.
+      At-target forward coverage for the 2.2.x line. REM-250 hop 2.2.5 → 2.2.8
+      (nfrastack CHANGELOG claims app 1.8.238, clearing the 2026-08-29 GHSA
+      wave). Same org, same PHP 8.5 base — a patch bump inside 2.2 is a plain
+      tag swap; Laravel migrations run on first boot.
+      NOTE: the app version behind this image tag is UNVERIFIED until a
+      converge — confirm with `tools/app-version.py` before trusting a CVE
+      claim keyed on the app version rather than the image tag.
     coexistence_supported: false
     requires: { min_disk_free_gb: 2, service_healthy: true }
     reset:

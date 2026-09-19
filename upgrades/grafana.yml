@@ -168,7 +168,7 @@ recipes:
 
   - id: "grafana-12-current"
     from_regex: "^12\\."
-    to: "12.4.9"           # == installed (was 12.4.2, BEHIND the pin)
+    to: "12.4.10"          # == installed (REM-252; was 12.4.9)
     severity: security
     changelog_url: "https://grafana.com/docs/grafana/latest/release-notes/"
     notes: |

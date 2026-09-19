@@ -27,6 +27,7 @@ services:
       ADMIN_USERNAME: "admin"
       ADMIN_PASSWORD: "{{ miniflux_admin_password | default(nos_derived_secrets.miniflux_admin) }}"
       BASE_URL: "https://{{ miniflux_domain | default('rss' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+      HTTPS: "1"                        # REM-237: BASE_URL is https; without this, cookies stay insecure
       LISTEN_ADDR: ":8080"
       LOG_LEVEL: "info"
       METRICS_COLLECTOR: "1"

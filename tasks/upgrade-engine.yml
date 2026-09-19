@@ -384,6 +384,13 @@
     else
       cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo unknown
     fi
+  # Cross-platform task (both the Darwin and Linux branches run from the SAME
+  # shell invocation), yet nothing pinned the interpreter. ansible.builtin.shell
+  # defaults to /bin/sh — dash on Ubuntu — and dash has no `pipefail`; `set -o
+  # pipefail` is a special-builtin syntax error there, which POSIX mandates
+  # exits the whole script before line 1 runs. Pin bash explicitly.
+  args:
+    executable: /bin/bash
   register: _nos_boot_id
   changed_when: false
   check_mode: false
@@ -521,6 +528,13 @@
       else
         echo "WARN: reboot_required notification POST returned HTTP $code"
       fi
+  # No os_family gate on this task — it runs on Linux too, where
+  # ansible.builtin.shell's default interpreter (/bin/sh) is dash, which has
+  # no `pipefail` and treats `set -o pipefail` as a fatal special-builtin
+  # error before line 1 executes. Pin bash explicitly (mirrors the boot-id
+  # capture task above, same root cause).
+  args:
+    executable: /bin/bash
   loop: "{{ _reboot_jobs | default([]) }}"
   loop_control:
     label: "{{ item.service | default('?') }}:{{ item.recipe_id | default('?') }}"

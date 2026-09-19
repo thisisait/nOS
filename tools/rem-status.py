@@ -37,7 +37,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from nos_security import queue_path  # noqa: E402
+from nos_security import load_queue_items, queue_path  # noqa: E402
 
 #: Worst first. Anything not in this list sorts last under its own name, so a
 #: severity the scanner invents tomorrow is visible rather than dropped.
@@ -45,15 +45,12 @@ SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
 
 
 def load() -> list[dict] | None:
-    """Live queue, or None when the runtime notebook is absent.
+    """Live queue joined with dispositions.json, or None when absent.
 
     None is UNKNOWN, never an empty tally. Absence is not zero findings.
+    The generated notebook can lose resolved_by overnight; the sidecar keeps it.
     """
-    path = queue_path()
-    if not path.is_file():
-        return None
-    raw = json.loads(path.read_text(encoding="utf-8"))
-    return raw["items"] if isinstance(raw, dict) and "items" in raw else raw
+    return load_queue_items()
 
 
 #: A row is CLOSED when it stops being work. Each of these is a claim that

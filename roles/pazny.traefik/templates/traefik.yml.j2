@@ -31,6 +31,14 @@ entryPoints:
   websecure:
     address: ":443"
     http:
+      # REM-251 GHSA-rf44-j88r-hh8c: Go canonicalizes header names on dashes
+      # only, so X.Authentik.Username survives ForwardAuth replacement and
+      # lands in PHP/CGI/WSGI as HTTP_X_AUTHENTIK_USERNAME. Default is keep.
+      # delete (not reject) — a 400 on every aliasing client header would
+      # break legitimate X_Request_Id style names; firefly/KEAP are the
+      # header_oidc backends this is for. v3.7.13 also stops the trailer
+      # bypass (GHSA-v67p-phpq-fc8x) that made 3.7.12 incomplete.
+      aliasHeadersStrategy: delete
       tls:
         options: "modern@file"
       # ── Path-traversal hardening (REM-LOW Traefik) ────────────────────────

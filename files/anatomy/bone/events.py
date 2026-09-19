@@ -213,6 +213,13 @@ VALID_TYPES = {
     # (NON-NEGOTIABLE, one commit): also in Wing's EventRepository::
     # VALID_TYPES, else a replay/forward of this row 400s.
     "table.upsert",
+    # ── SERE-loop maintenance pause (`nos loops pause|resume`) ──────────────
+    # The operator's live hold on the agent runtime — a best-effort audit event
+    # from the nos CLI (actor_id=operator:<login>, source='nos-cli'; result_json
+    # {reason}). Twin rule (NON-NEGOTIABLE): also in Wing's
+    # EventRepository::VALID_TYPES, else the Bone POST 400s and the pause leaves
+    # no audit trace.
+    "loops_paused", "loops_resumed",
 }
 
 

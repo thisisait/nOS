@@ -1388,7 +1388,7 @@ sublime_package_control:
 # ==============================================================================
 
 mariadb_root_password: "{{ nos_derived_secrets.mariadb }}"   # OVERRIDE in credentials.yml!
-mariadb_version: "11.8.8"               # REM-102: CVE-2026-49261 (CVSS 10.0 RCE via wsrep_notify_cmd — not reachable single-node, patched anyway) + prior CVE-2026-32710 + CVE-2026-3494 (both patched in 11.8.6); 11.4.10 crashed FK ALTER on Apple Silicon
+mariadb_version: "11.8.9"               # REM-246 patch; carries CVE-2026-49261 + CVE-2026-32710 + CVE-2026-3494 (all fixed <=11.8.8). [swept 11.8.8 2026-09-17]
 mariadb_port: 3306
 # ── Server-side TLS material on disk (REM-217, rungs 1 and 2) ───────────────
 # MariaDB reports have_ssl=YES with ssl_cert EMPTY, because 11.x generates
@@ -1676,7 +1676,7 @@ shell_aliases:
 grafana_port: 3000
 prometheus_port: 9090
 loki_port: 3100
-tempo_version: "2.10.3"           # >=2.10.3 fixes CVE-2026-28377 / REM-036 (was 2.10.0); github.com/grafana/tempo/releases
+tempo_version: "2.10.8"           # REM-232: head of 2.10. Prior REM-036 CVE-2026-28377 at 2.10.3. [swept 2.10.3 2026-09-17]
 nginx_prometheus_exporter_version: "1.4.1"  # github.com/nginxinc/nginx-prometheus-exporter/releases – no Homebrew formula
 # SHA256 from nginx-prometheus-exporter_1.4.1_checksums.txt on the same release.
 nginx_prometheus_exporter_checksums:
@@ -1700,7 +1700,7 @@ grafana_domain: "grafana{{ _host_alias_seg | default('') }}.{{ tenant_domain | d
 observability_hostname: "{{ ansible_facts['hostname'] }}"  # Hostname in Grafana labels
 
 # ── Docker image versions (observability + devops) ───────────────────────────
-grafana_version: "12.4.9"               # REM-226: CVE-2026-17183, fixed in-branch 12.4.9
+grafana_version: "12.4.10"              # REM-252: 12.4.10 in-branch. Prior REM-226 CVE-2026-17183 at 12.4.9. [swept 12.4.9 2026-09-17]
                                         # (v12.4.9 release body carries a literal `### Security`
                                         # section naming it; verified at the tag, not inferred from
                                         # the five-release 2026-08-18 wave). Same minor as the
@@ -1710,7 +1710,7 @@ prometheus_version: "v3.13.2"   # synced to role default (cleared version-pin sh
 loki_version: "3.7.6"           # synced to role default (cleared version-pin shadow) [swept 3.7.2 2026-08-06]
 
 # Gitea Docker
-gitea_version: "1.27.2"                 # REM-213: 2FA bypass + persistent ATO via OpenID linking (CVSS 8.8) and WebAuthn bypass on OAuth2 sign-in (8.1); 1.27.2 released 2026-08-13, one day before the advisory wave. Prior REM-099: 1.25.x EOL — CVE-2026-27771 pkg-registry reads, CVE-2026-22874 SSRF, OAuth2 scope bypass; exactly 1.26.4 (1.26.3 regression). Migration 2026-07-09-gitea-1-25-5-to-1-26-4 [swept 1.27.0 2026-08-06]
+gitea_version: "1.27.3"                 # REM-244: 2026-08-29 advisory wave (20 of 22 name 1.27.2). 1.27.3 same day. Prior REM-213: 1.27.2. Prior REM-099: 1.25.x EOL. [swept 1.27.2 2026-09-16]
 
 # ── Grafana ───────────────────────────────────────────────────────────────────
 grafana_admin_user: "admin"
@@ -1835,7 +1835,7 @@ n8n_port: 5678
 # 2.32.7 is the queue's number and sits above that floor, with six days of soak;
 # 2.34.2 shipped today and buys nothing — no advisory has been published since
 # 2026-07-22. Same-major, migrate-on-start. arm64 tag confirmed on the registry.
-n8n_version: "2.35.7"  # [swept 2.34.2 2026-08-11] REM-229: clears the <2.35.4 floor
+n8n_version: "2.37.10"  # REM-253: 2026-09-02 wave, nineteen GHSAs, floor <2.37.7. Head of 2.37. [swept 2.35.7 2026-09-16]
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
 n8n_admin_email: "{{ default_admin_email }}"
@@ -2281,7 +2281,7 @@ coexistence_secondary_ttl_days: 7
 # Backward compatibility – old monolithic compose dir (will be removed after migration)
 
 # ── Traefik ────────────────────────────────────────────────────────────────────
-traefik_image_version: "v3.7.10"        # REM-145 GHSA-3ccp-42pg-hgv6 (CWE-444 CONNECT response poisoning); REM-127 CVE-2026-54763/54764 [swept v3.6.24 2026-08-06]
+traefik_image_version: "v3.7.13"        # REM-251 GHSA-rf44-j88r-hh8c (aliasHeadersStrategy, floor v3.7.12) + GHSA-v67p-phpq-fc8x trailer bypass (patched v3.7.13). Prior REM-145 CONNECT poisoning. [swept v3.7.10 2026-09-16]
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8082            # 8080=cadvisor, 8081=tileserver, 8090=freescout — 8082 is the first free slot
@@ -2340,10 +2340,13 @@ nodered_timezone: "Europe/Prague"
 nodered_flows_file: "flows.json"
 nodered_enable_safe_mode: "false"
 nodered_enable_projects: "true"
-# Native OIDC opt-in (β1.B 2026-05-05 — passport-openidconnect path).
-# When true, the compose template wires NODERED_OIDC_* env + mounts the
-# mkcert root CA; otherwise Traefik forward-auth gates the service.
-nodered_native_oidc_enabled: false
+# Native OIDC (β1.B 2026-05-05 — passport-openidconnect path).
+# Traefik mode is native_oidc: there is NO authentik@file on this route.
+# A literal false here outranks the role default and leaves adminAuth off,
+# so /settings and /flows answer 200 at the public hostname (REM-256).
+# Follow install_authentik. Stock Jinja only (`default`) — this file is
+# walked by the eager `{{ vars }}` snapshot.
+nodered_native_oidc_enabled: "{{ install_authentik | default(false) }}"
 authentik_oidc_nodered_client_id: "nos-nodered"
 authentik_oidc_nodered_client_secret: "{{ nos_derived_secrets.oidc_nodered }}"
 ntfy_port: 2586
@@ -2467,7 +2470,7 @@ freescout_port: 8090
 #
 # Check it with `tools/app-version.py`, which asks the application. Until a
 # converge runs, the claim below is UNVERIFIED and the reader will say so.
-freescout_version: "2.2.5"               # nfrastack; app 1.8.235 — VERIFIED 2026-08-27 by `tools/app-version.py` (asked the app, not the notes)
+freescout_version: "2.2.8"               # nfrastack; CHANGELOG claims app 1.8.238 (REM-250). UNVERIFIED until `tools/app-version.py`
 freescout_db_name: "freescout"
 freescout_db_user: "freescout"
 freescout_db_password: "{{ nos_derived_secrets.freescout }}"
@@ -3221,7 +3224,7 @@ nos_infisical_projects:
 # Each nOS tenant has their own vault for personal passwords.
 # ==============================================================================
 
-vaultwarden_version: "1.37.1"            # CVE pins + S2 freshness sweep 2026-06-10 (patch line) [swept 1.37.0 2026-08-06]
+vaultwarden_version: "1.37.3"            # REM-261: 1.37.3 security fixes. [swept 1.37.1 2026-09-17]
 vaultwarden_domain: "pass{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 vaultwarden_port: 8062
 vaultwarden_signups_allowed: false                 # Admin creates accounts
