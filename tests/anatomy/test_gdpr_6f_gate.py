@@ -20,6 +20,7 @@ from module_utils.nos_app_parser import (
     validate,
 )
 from module_utils import nos_gdpr
+from module_utils.nos_digest import device_family_basis_satisfied
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 IMPORTERS_DIR = REPO / "state" / "digest-importers"
@@ -138,6 +139,64 @@ def test_live_6f_importers_declare_lia_and_origin(path: pathlib.Path):
     rec = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     ok, reason = legitimate_interests_satisfied(rec)
     assert ok is True, f"{path.name}: {reason}"
+
+# ── Wave-2 gate: device-family legal basis (importer not yet built) ──
+# digest-device-doctrine §2: the device family is Art. 6(1)(a) consent + retention
+# -1, NEVER 6(1)(f). The 6f gate accepts a consent basis as N/A and would also
+# wave through a device importer CLONED from csv-party — so it cannot catch this.
+
+
+def _device_importer(**gdpr_extra) -> dict:
+    gdpr = {"legal_basis": "consent", "retention_days": -1}
+    gdpr.update(gdpr_extra)
+    return {"name": "device", "gdpr": gdpr}
+
+
+def test_device_importer_cloned_from_csv_party_is_refused():
+    """The exact clone the doctrine names: legitimate_interests + 3650, with a
+    real LIA so the 6f gate is GREEN. device_family_basis_satisfied must refuse."""
+    clone = _device_importer(
+        legal_basis="legitimate_interests",
+        retention_days=3650,
+        balancing_test="a real LIA sentence that is non-empty",
+        data_source="not_from_subject",
+    )
+    # The hole: the 6f gate is satisfied by the clone.
+    assert legitimate_interests_satisfied(clone) == (True, "")
+    # The new gate closes it.
+    ok, reason = device_family_basis_satisfied(clone)
+    assert ok is False
+    assert "consent" in reason
+
+
+def test_device_importer_with_wrong_retention_is_refused():
+    ok, reason = device_family_basis_satisfied(_device_importer(retention_days=3650))
+    assert ok is False
+    assert "retention_days" in reason
+
+
+def test_consented_device_importer_passes():
+    assert device_family_basis_satisfied(_device_importer()) == (True, "")
+
+
+def test_non_device_importer_is_not_forced_onto_consent():
+    rec = {"name": "csv-party",
+           "gdpr": {"legal_basis": "legitimate_interests", "retention_days": 3650}}
+    assert device_family_basis_satisfied(rec) == (True, "")
+
+
+@pytest.mark.parametrize(
+    "path",
+    sorted(IMPORTERS_DIR.glob("*.importer.yml")),
+    ids=lambda p: p.name,
+)
+def test_live_device_importers_are_consent_and_lifetime(path: pathlib.Path):
+    """When a builder lands state/digest-importers/device.importer.yml, this pins
+    it to §2. Non-device importers are N/A (True)."""
+    rec = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    ok, reason = device_family_basis_satisfied(rec)
+    assert ok is True, f"{path.name}: {reason}"
+
 
 def _app_record(**gdpr_extra):
     rec = {

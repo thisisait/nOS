@@ -61,6 +61,21 @@ _DEVICE_FAMILY = frozenset({"device", "device-extraction"})
 _DEVICE_DUMP_COLS = ("notes", "report_path", "raw_archive_ref")
 _HTML_MARK = re.compile(r"(?is)<!DOCTYPE\s+html|<html[\s>]")
 _ZIP_MAGIC = "PK\x03\x04"
+#: A free-text device column is a human note or a path — never a data table.
+#: Magic only caught HTML/zip; plain-text `sms.tsv\t+420…` or `heartRate\t72`
+#: slipped through as "notes". A tab, a handful of newlines, or an over-cap
+#: length is a smuggled dump, not a note. ponytail: char cap + delimiter
+#: heuristic; a real class needs a NAMED profile (§3), never a notes blob.
+_DEVICE_TEXT_MAX = 1024
+#: Special-category (Art. 9) signals — health / messages / precise location.
+#: Their presence in a free-text device column IS a special-category class
+#: surfacing outside the named-profile path; §2 demands Art. 9(2)(a) consent
+#: (a non-empty art9_consent_ref) before it may exist at all.
+_ART9_SIGNAL = re.compile(
+    r"(?i)\b(heart[\s_-]?rate|bpm|blood[\s_-]?(?:pressure|glucose|oxygen)|spo2"
+    r"|steps?|sleep|menstrual|health(?:kit)?|medical|diagnos|sms|imessage"
+    r"|whatsapp|call[\s_-]?log|latitude|longitude"
+    r"|significant[\s_-]?location|geo(?:location)?)\b")
 
 
 def _device_dump_kind(val) -> str | None:
@@ -72,7 +87,37 @@ def _device_dump_kind(val) -> str | None:
         return "zip"
     if _HTML_MARK.search(val):
         return "html"
+    if "\t" in val:
+        return "tsv"
+    if val.count("\n") >= 3:
+        return "table"
+    if len(val) > _DEVICE_TEXT_MAX:
+        return "oversized"
     return None
+
+
+def device_family_basis_satisfied(manifest: dict) -> tuple[bool, str]:
+    """Device-family importer MUST be Art. 6(1)(a) consent + retention -1
+    (digest-device-doctrine §2). N/A (True, "") for every non-device importer,
+    keyed on the importer NAME being in the device family — so a device.importer
+    cloned from csv-party (legitimate_interests / retention 3650) is REFUSED even
+    though it passes ``legitimate_interests_satisfied`` (the 6f gate) green."""
+    name = (manifest or {}).get("name")
+    if name not in _DEVICE_FAMILY:
+        return True, ""
+    gdpr = (manifest or {}).get("gdpr") or {}
+    basis = gdpr.get("legal_basis")
+    if basis != "consent":
+        return False, (
+            f"device-family importer {name!r} must be legal_basis: consent "
+            f"(Art. 6(1)(a)), not {basis!r} — device-doctrine §2 (a person's "
+            "device extraction is never legitimate_interests)")
+    if gdpr.get("retention_days") != -1:
+        return False, (
+            f"device-family importer {name!r} must set retention_days: -1 "
+            f"(until consent withdrawn), not {gdpr.get('retention_days')!r} — "
+            "device-doctrine §2 (no ten-year accounting horizon on device rows)")
+    return True, ""
 
 
 def _check_device_family(bundle: dict, det: dict, errors: list[str]) -> None:
@@ -113,12 +158,20 @@ def _check_device_family(bundle: dict, det: dict, errors: list[str]) -> None:
             if not isinstance(r, dict):
                 continue
             slug = r.get("slug", "?")
+            art9_ref = str(r.get("art9_consent_ref") or "").strip()
             for key in _DEVICE_DUMP_COLS:
-                kind = _device_dump_kind(r.get(key))
+                val = r.get(key)
+                kind = _device_dump_kind(val)
                 if kind:
                     errors.append(
-                        f"{table}/{slug}.{key}: {kind} bytes in a text column "
-                        "are refused (path-only for report_path; no HTML/zip dump)")
+                        f"{table}/{slug}.{key}: {kind} content in a text column "
+                        "is refused (path-only for report_path; no HTML/zip/TSV "
+                        "dump — a named class needs a profile, §3)")
+                if isinstance(val, str) and _ART9_SIGNAL.search(val) and not art9_ref:
+                    errors.append(
+                        f"{table}/{slug}.{key}: special-category (Art. 9) content "
+                        "with empty art9_consent_ref — Art. 9(2)(a) consent must be "
+                        "on the row before a special-category class may exist (§2)")
 
 
 def check_bundle(bundle: dict, tables_dir: str | pathlib.Path) -> list[str]:
