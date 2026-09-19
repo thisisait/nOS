@@ -1388,7 +1388,7 @@ sublime_package_control:
 # ==============================================================================
 
 mariadb_root_password: "{{ nos_derived_secrets.mariadb }}"   # OVERRIDE in credentials.yml!
-mariadb_version: "11.8.9"               # REM-246: 11.8.9 patch. Prior REM-102 CVE-2026-49261 at 11.8.8. [swept 11.8.8 2026-09-17]
+mariadb_version: "11.8.9"               # REM-246 patch; carries CVE-2026-49261 + CVE-2026-32710 + CVE-2026-3494 (all fixed <=11.8.8). [swept 11.8.8 2026-09-17]
 mariadb_port: 3306
 # ── Server-side TLS material on disk (REM-217, rungs 1 and 2) ───────────────
 # MariaDB reports have_ssl=YES with ssl_cert EMPTY, because 11.x generates

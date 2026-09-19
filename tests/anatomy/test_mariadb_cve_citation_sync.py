@@ -31,8 +31,10 @@ README = os.path.join(ROOT, "roles", "pazny.mariadb", "README.md")
 # The release that carries all cited fixes. REM-031 (CVE-2026-32710) +
 # REM-067 (CVE-2026-3494, 11.8.x-branch audit-log bypass) land in 11.8.6;
 # REM-102 bumps to 11.8.8 to also carry CVE-2026-49261 (wsrep_notify_cmd RCE,
-# not reachable single-node but patched anyway).
-PINNED_VERSION = "11.8.8"
+# not reachable single-node but patched anyway); REM-246 bumps to 11.8.9
+# (six replication / perf-schema CVEs — standalone here, so theoretical), a
+# patch-level move within 11.8 that keeps all three cited fixes closed.
+PINNED_VERSION = "11.8.9"
 
 # Every CVE the pinned release is cited as closing. Adding a CVE here forces it
 # into all three sites; orphaning it in any site fails the gate.
