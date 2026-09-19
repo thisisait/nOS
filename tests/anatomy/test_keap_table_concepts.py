@@ -131,6 +131,8 @@ CONCEPTLESS = {
     "device-extraction.raw_archive_ref": "pointer at raw-archive-store, not this row's identity — needs prov.archive",
     "device-extraction.report_path": "human HTML path, never ingested — stretching fs.path would mix reports with app paths — needs fs.report_path",
     "device-extraction.unnamed_skip_count": "count of denied unnamed classes — not a measure of the device — needs measure.skip_count",
+    "party.role": "the Art-30 relationship to THIS firm (client/own_firm/counterparty) — "
+                  "class.kind is claimed by party_kind (org/individual); needs class.relationship",
 }
 
 
@@ -290,6 +292,11 @@ UNSEEDED = {
                "the dtt door, mutated by claims, leases expiring) — git-seeding "
                "ephemeral claim state would let a re-converge wipe a live claim. "
                "Same split as roadmap: the definition is git-owned, the rows are not.",
+    "pending-invoice-verify": "review-sink for a consultant's approve/reject decision "
+               "(consulting-surface-wiring D5 unit 1) — rows are written by the operator "
+               "through face's TablesApp upsert path, then read back by "
+               "VisionImporter.parse() (D5 unit 2). Same split as invoice-review: the "
+               "definition is git-owned, the rows are a live human decision, not seeded.",
 }
 
 
