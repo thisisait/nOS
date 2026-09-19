@@ -1034,7 +1034,7 @@ class CallbackModule(CallbackBase):
             # fail the same way would have been just as silent.
             #
             # Deliberately still non-fatal: telemetry must never wedge a run
-            # (`docs/doctrine/observability.md`). Loud, not fatal — a hook that
+            # (`nos-sot:doctrine/observability`). Loud, not fatal — a hook that
             # cannot do its job must not read as one that did.
             if proc.returncode != 0:
                 tail = (proc.stderr or proc.stdout or "").strip().splitlines()

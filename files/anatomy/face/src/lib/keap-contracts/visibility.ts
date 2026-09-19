@@ -37,7 +37,7 @@
  * implicit ROLE — the owner always reads and writes — not a grade),
  * 'public' → shared, 'tier-<n>' → the three tier grades.
  *
- * PRINCIPALS — the ACL vocabulary (nOS docs/doctrine/identity.md §6):
+ * PRINCIPALS — the ACL vocabulary (nos-sot:doctrine/identity#6):
  *   user:<canonicalUid>   canonical slug of the USERNAME (server/uid.ts) —
  *                         NEVER the Authentik uid, which is random and
  *                         regenerates on a tenant blank (identity.ts:83-87)

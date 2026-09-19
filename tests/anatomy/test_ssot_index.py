@@ -151,3 +151,48 @@ def test_harvest_cites_promoted_articles_at_ssot_path():
         and c.doc.rsplit("/", 1)[-1] in promoted
     ]
     assert not leftover, leftover
+
+
+#: Trees doctrine-cite deliberately skips (SKIP_FILES_PREFIX / vendored ports)
+#: are blind to the harvest gate above — that is how visibility.ts's stub-path
+#: cite to the identity article survived promotion. Files that name a stub
+#: path as DATA, not as a live cite, are allowed:
+#:   - the stub-alias gate + proposed list (this file)
+#:   - frozen published devlog history (content_hash-pinned)
+#:   - the frozen cross-repo negotiation record
+_STUB_PATH_ALLOW = {
+    "tests/anatomy/test_ssot_index.py",
+    "state/devlog-bundle.jsonl",
+    "files/anatomy/cortex/docs/specs/nos-selfmodel-keap-contract.md",
+}
+
+
+def test_code_does_not_cite_promoted_stub_paths():
+    """Every code cite to a promoted article names ssot/doctrine/<file>.md or
+    nos-sot:doctrine/<file>#id — never the warehouse stub, which would keep the
+    stub load-bearing forever (nos-sot:doctrine/ssot.md#3). Covers the trees the
+    harvester skips; retro-red on the old `docs/doctrine/<file>.md` form."""
+    import re
+    promoted = {p.stem for p in (REPO / "ssot" / "doctrine").glob("*.md")}
+    pat = re.compile(r"docs/doctrine/([a-z0-9-]+)\.md")
+    suffixes = {".py", ".yml", ".yaml", ".sh", ".php", ".ts", ".svelte", ".j2",
+                ".md", ".cfg", ".neon", ".sql", ".js", ".latte", ".json"}
+    skip_dirs = {"node_modules", ".svelte-kit", "build", "dist", "vendor"}
+    offenders = []
+    for root in ("files", "tools", "tasks", "roles", "state", "tests",
+                 "callback_plugins", "main.yml"):
+        base = REPO / root
+        files = [base] if base.is_file() else base.rglob("*")
+        for f in files:
+            if not f.is_file() or f.suffix not in suffixes:
+                continue
+            if any(part in skip_dirs for part in f.parts):
+                continue
+            rel = f.relative_to(REPO).as_posix()
+            if rel in _STUB_PATH_ALLOW:
+                continue
+            for i, line in enumerate(f.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+                for name in pat.findall(line):
+                    if name in promoted:
+                        offenders.append(f"{rel}:{i} docs/doctrine/{name}.md")
+    assert not offenders, offenders
