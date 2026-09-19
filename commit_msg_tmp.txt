@@ -1,9 +1,0 @@
-chore(consolidation): housekeeping pre-dev-merge checkpoint
-
-- state/digest-importers/isdoc-vision.importer.yml: Art-30 manifest
-  for the D1 vision importer (parity gate needed it)
-- regen state/anatomy-graph.json + dpa-register.md, re-pin face
-  graphLayout after the new invoice-extract agent node
-- fix SYSTEM/total table counts in cross-repo-contracts.md (26/35)
-- tools/README.md: index the 3 tools the epic added
-- new gate: Art-30 PHP<->Python controller_records() parity
