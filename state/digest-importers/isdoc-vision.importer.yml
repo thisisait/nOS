@@ -1,0 +1,54 @@
+# =============================================================================
+# Digest importer manifest — isdoc-vision (the vision-extracted invoice importer).
+#
+# Article-30 record + egress declaration for tools/digest-import-vision.py, swept
+# by nos_gdpr.records_from_importers (id imp_isdoc-vision). VisionImporter
+# subclasses IsdocImporter and overrides ONLY parse(): it globs *.extract.json
+# sidecars (the invoice-structured-extractor unit's output) instead of ISDOC XML,
+# then reuses normalize()/compose()/_resolve() verbatim — same record shape, same
+# dual-party resolve, same book_owner stamping, same loopback-only egress as the
+# isdoc manifest above. A sidecar with verified!=True, or any field below the
+# schema's confidence_floor, is skipped in parse() itself and never reaches
+# absorb — never a candidate record.
+# =============================================================================
+name: isdoc-vision
+version: "0.1.0"
+source_kind: vision-extract-json
+
+egress: []    # reads local *.extract.json sidecars; loopback-only. No network egress.
+
+gdpr:
+  purpose: >-
+    Ingest vision-extracted invoice sidecars (structured fields produced from
+    scanned/photographed invoices by the invoice-extract agent) into the same
+    invoice facet the ISDOC importer writes — document number, dates, payable
+    amount, and the seller and buyer as references into the shared party spine.
+    Both counterparties are resolved against the spine, never minted. An
+    unverified or low-confidence extraction is held for review and never
+    becomes an invoice row.
+  legal_basis: legitimate_interests
+  balancing_test: >-
+    Same balancing test as the isdoc importer: the controller's interest is
+    answering its own accounting and cash-flow questions against governed
+    invoice rows, sourced from documents already held by the organisation.
+    The vision path adds no new data category over the ISDOC path — it only
+    changes the input format (photographed/scanned document vs. structured
+    XML) — and the confidence/verification floor is a stricter admission bar
+    than the ISDOC path's unknown-party skip, not a looser one.
+  data_source: not_from_subject   # Art. 14 — from the controller's own invoice documents, not from the subject
+  data_categories:
+    - "Invoice metadata (document number, issue/due dates, currency, payable amount)"
+    - "Counterparty identity references (IČO of seller and buyer)"
+  data_subjects:
+    - "The organisation's invoice counterparties — customers and suppliers"
+    - "Sole traders among them (natural persons acting as businesses)"
+  processors: []
+  transfers_outside_eu: false
+  storage_location: "KEAP DataTables (libsql) on the host — invoice (+ future invoice-line)"
+  retention_days: 3650   # statutory accounting/tax retention horizon (CZ ~10y)
+  notes: >-
+    Reads local *.extract.json sidecars only; no network egress. A sidecar
+    below CONFIDENCE_FLOOR or with verified!=True is appended to self.skipped
+    in parse() and never becomes a candidate record — structurally identical
+    to IsdocImporter's unknown-party skip. Erasable via
+    digest-teardown.py --erase-party (same invoice facet as isdoc).
