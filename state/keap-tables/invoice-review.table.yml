@@ -1,0 +1,27 @@
+# =============================================================================
+# KEAP DataTable — "Invoice review" (isdoc-vision-crosscheck unit, digest organ).
+#
+# NEW visibility: tier-managers facet — there is no compose_party_review to
+# mirror here (that rung is __visibility:system on the PARTY table, and lands
+# with repos-importer which has NOT shipped); this is the minimal review sink
+# the crosscheck unit needs, built from scratch. One row per invoice whose
+# ISDOC and vision-extracted records DISAGREE on a compliance-relevant field
+# (payable, currency, seller ICO, seller name, document number) beyond
+# tolerance — nos_digest.invoice_cross_check() detects, compose_invoice_review()
+# writes the row. A mismatching invoice is DROPPED from the deterministic
+# invoice[] bundle and routed here instead: DETECT + SURFACE only, nothing here
+# auto-resolves or auto-absorbs.
+# =============================================================================
+title: "Invoice review"
+description: >-
+  ISDOC-vs-vision-extract mismatches (isdoc-vision-crosscheck unit) — one row
+  per invoice whose two sources disagree beyond tolerance on a compliance
+  field. The invoice itself never absorbs while it sits here.
+driver: libsql
+visibility: tier-managers
+anchors: ["nos.digest.invoice-review"]
+schema:
+  columns:
+    - { key: slug,            label: "Slug",            kind: text, role: dimension, required: true, concept: identity.slug }
+    - { key: document_number, label: "Document no.",    kind: text, role: dimension, required: true, concept: identity.name }
+    - { key: mismatches,      label: "Mismatches",      kind: json, role: attribute, concept: evidence.observation }

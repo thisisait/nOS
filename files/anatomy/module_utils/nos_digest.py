@@ -678,6 +678,94 @@ def _merge_party_review(deterministic: dict, extra: dict) -> None:
     deterministic.update(rest)
 
 
+# ── isdoc-vision-crosscheck: DETECT + SURFACE, never auto-resolve ────────────
+# Two independently-extracted records of the same invoice (ISDOC XML vs a
+# vision extraction) can disagree — a scanned total mis-OCR'd, a supplier ICO
+# transposed. invoice_cross_check is the pure field-level comparator;
+# reconcile_invoices partitions a batch so a mismatching invoice never reaches
+# deterministic invoice[] (DROPPED, routed to invoice-review instead); a clean
+# match, or an invoice with no vision extract at all, absorbs unchanged.
+# compose_invoice_review is the minimal review sink this needs — there is no
+# compose_party_review to mirror (that rung lands with repos-importer, not
+# shipped) — a NEW __visibility: tier-managers facet (invoice-review.table.yml).
+
+#: Compliance-relevant fields compared field-by-field. Amounts use amount_tol
+#: (relative) with a fixed 1-haler/1-cent floor (money path: 2dp, no float
+#: drift); everything else is an exact post-normalize compare.
+def _amounts_mismatch(a, b, amount_tol: float) -> bool:
+    if a is None or b is None:
+        return a != b
+    a, b = float(a), float(b)
+    return abs(a - b) > max(0.01, amount_tol * max(abs(a), abs(b)))
+
+
+def invoice_cross_check(isdoc_row: dict, vision_extract: dict, amount_tol: float = 0.01) -> list[dict]:
+    """Field-level disagreements between an ISDOC record and a vision-extracted
+    record (both the isdoc-record.schema.yaml dict shape). Returns
+    [{field, isdoc_value, vision_value}, ...] — empty means clean. Pure;
+    never auto-resolves, only reports."""
+    out: list[dict] = []
+    if _amounts_mismatch(isdoc_row.get("payable"), vision_extract.get("payable"), amount_tol):
+        out.append({"field": "payable", "isdoc_value": isdoc_row.get("payable"),
+                    "vision_value": vision_extract.get("payable")})
+    a_cur, b_cur = isdoc_row.get("currency"), vision_extract.get("currency")
+    if (a_cur or None) != (b_cur or None):
+        out.append({"field": "currency", "isdoc_value": a_cur, "vision_value": b_cur})
+    a_id, b_id = isdoc_row.get("id"), vision_extract.get("id")
+    if (a_id or None) != (b_id or None):
+        out.append({"field": "document_number", "isdoc_value": a_id, "vision_value": b_id})
+    for role in ("seller", "buyer"):
+        a_ref, b_ref = isdoc_row.get(role) or {}, vision_extract.get(role) or {}
+        a_ico, b_ico = normalize_ico(a_ref.get("ico")), normalize_ico(b_ref.get("ico"))
+        a_val = a_ico["value"] if a_ico else a_ref.get("ico")
+        b_val = b_ico["value"] if b_ico else b_ref.get("ico")
+        if (a_val or None) != (b_val or None):
+            out.append({"field": f"{role}.ico", "isdoc_value": a_ref.get("ico"),
+                        "vision_value": b_ref.get("ico")})
+        a_name, b_name = normalize_org_name(a_ref.get("name") or ""), normalize_org_name(b_ref.get("name") or "")
+        if a_name and b_name and a_name != b_name:
+            out.append({"field": f"{role}.name", "isdoc_value": a_ref.get("name"),
+                        "vision_value": b_ref.get("name")})
+    return out
+
+
+def reconcile_invoices(isdoc_records: list[dict], vision_records: list[dict],
+                       amount_tol: float = 0.01) -> tuple[list[dict], list[dict]]:
+    """Partition an ISDOC batch against a vision batch, matched by `id`.
+    Returns (clean, review_items): clean = ISDOC records with no vision extract
+    OR a within-tolerance match (absorb unchanged); review_items =
+    [{document_number, mismatches}] for every match that disagrees — those
+    ISDOC records are DROPPED from clean, never a silent absorb."""
+    by_id = {v.get("id"): v for v in vision_records if v.get("id")}
+    clean, review_items = [], []
+    for rec in isdoc_records:
+        vision = by_id.get(rec.get("id"))
+        if vision is None:
+            clean.append(rec)
+            continue
+        mismatches = invoice_cross_check(rec, vision, amount_tol)
+        if mismatches:
+            review_items.append({"document_number": rec.get("id"), "mismatches": mismatches})
+        else:
+            clean.append(rec)
+    return clean, review_items
+
+
+def compose_invoice_review(review_items: list[dict], *, batch_id: str) -> dict:
+    """review_items ([{document_number, mismatches}]) -> {"invoice-review": [row]},
+    one row per mismatching invoice — never captures[] / proposals[]."""
+    token = _batch_slug(batch_id)
+    rows = []
+    for item in review_items or []:
+        doc = item.get("document_number") or "?"
+        rows.append({
+            "slug": f"invoice-review-{token}-{_batch_slug(doc)}",
+            "document_number": doc,
+            "mismatches": item.get("mismatches") or [],
+        })
+    return {"invoice-review": rows} if rows else {}
+
+
 def run_importer(importer, raw, tables_dir: str | pathlib.Path) -> tuple[dict, list[str]]:
     """Run an importer's three stages, stamp provenance, and GATE. Returns
     (bundle, errors); a non-empty errors list means the bundle is unsafe to
