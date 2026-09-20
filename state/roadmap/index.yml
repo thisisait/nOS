@@ -540,6 +540,12 @@
 - slug: kpro-table-access
   parent: kpro
   track: cortex
+- slug: ledger-constitution
+  parent: ledger-organ
+  track: platform
+- slug: ledger-organ
+  parent: ''
+  track: platform
 - slug: ledger-payload-bound
   parent: ''
   track: platform
