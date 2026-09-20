@@ -37,6 +37,7 @@ than kept as a rule that only ever reports its own defeat.)
 | [ponytail.md](../../ssot/doctrine/ponytail.md) | the 7-rung ladder answered before code is written; deliberate shortcuts carry a `# ponytail:` marker harvested by `/ponytail-debt` | ✅ v1 |
 | [agentkit.md](agentkit.md) | how an agent runs, spends, and satisfies: one runner door, two scope vocabularies, backend≠provider, vault is a pointer, satisfaction is a gate run — §6 awaits the operator | proposed |
 | [organs.md](organs.md) | four incompatible meanings of "organ" named; proposes the 3-axis fix (`stack`/`organ`/`layer`) — §3 awaits the operator's ruling | proposed |
+| [ledger.md](ledger.md) | the firm's books as the existing public organ `ledger`, not a fifth host daemon; KEAP tables SoT, Espo join, Digest is the stomach | proposed |
 | [ssot.md](../../ssot/doctrine/ssot.md) | address + INDEX map; in-force articles live under `ssot/doctrine/` | live |
 | table-naming.md | DB table / column naming conventions | planned |
 | taxonomy.md | taxonomy / ontology term definitions (KEAP taxonomy depth levels, node/pillar/block, relations — NOT the service `layer` L0–L3 axis, which layers.md owns) | planned |
