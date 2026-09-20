@@ -147,10 +147,39 @@ $try('request_wire', function () use ($binding, $toolCallsResponse) {
         'call_id' => $assistant['tool_calls'][0]['id'] ?? null,
         'result_id' => $toolMsg['tool_call_id'] ?? null,
         'seedless' => !str_contains($rawBody, 'seed'),
+        'no_response_format' => !isset($body['response_format']),
         // response translation, same round trip
         'stop' => $resp->stopReason,
         'blocks' => $resp->contentBlocks,
         'tokens' => [$resp->tokensInput, $resp->tokensOutput],
+    ];
+});
+
+$try('response_format_when_schema_set', function () use ($binding) {
+    $history = [];
+    $http = clientWith([new Response(200, [], json_encode([
+        'choices' => [['message' => ['content' => '{"id":"A-1"}'], 'finish_reason' => 'stop']],
+        'usage' => ['prompt_tokens' => 3, 'completion_tokens' => 4],
+    ]))], $history);
+    $schema = [
+        '$comment' => 'must not reach the wire',
+        '$schema' => 'http://json-schema.org/draft-07/schema#',
+        'title' => 'ISDOC record dict',
+        'type' => 'object',
+        'properties' => ['id' => ['type' => 'string']],
+        'additionalProperties' => false,
+    ];
+    $a = (new OpenAiCompatAdapter($http, 'openai-x', $binding))->withResponseSchema($schema);
+    $a->send('', [Message::userText('hi')]);
+    $body = json_decode((string) $history[0]['request']->getBody(), true);
+    $rf = $body['response_format'] ?? null;
+    return [
+        'type' => $rf['type'] ?? null,
+        'name' => $rf['json_schema']['name'] ?? null,
+        'strict' => $rf['json_schema']['strict'] ?? null,
+        'has_comment' => isset($rf['json_schema']['schema']['$comment']),
+        'has_id_prop' => isset($rf['json_schema']['schema']['properties']['id']),
+        'additional' => $rf['json_schema']['schema']['additionalProperties'] ?? null,
     ];
 });
 
@@ -230,6 +259,11 @@ def test_the_request_carries_the_verified_wire_shape(verdicts):
         "a seed key appeared — the naming splits by vendor (seed vs "
         "random_seed); sending one by default meets the split by accident"
     )
+    assert v["no_response_format"] is True, (
+        "response_format appeared on a call that was not given a schema — "
+        "Mistral/vLLM would 400, and a default format would constrain every "
+        "openai-* agent, not just one_shot extractors"
+    )
 
 
 def test_the_foreign_tool_id_is_sanitised_consistently(verdicts):
@@ -267,6 +301,20 @@ def test_errors_classify_like_the_night_needs(verdicts):
         "blamed on the fallback, finding 3's exact failure shape"
     )
     assert "transient" in verdicts["http_500_is_transient"]
+
+
+def test_response_format_carries_the_schema_and_strips_meta(verdicts):
+    """invoice-extract's contract is Ollama structured output. Measured
+    2026-09-20 the schema never left the process: OneShot validated after
+    the fact, the model invented invoice_number, against() refused.
+    withResponseSchema is the wire half."""
+    v = verdicts["response_format_when_schema_set"]
+    assert v["type"] == "json_schema"
+    assert v["name"] == "ISDOC_record_dict", f"schema name not sanitised: {v['name']!r}"
+    assert v["strict"] is True
+    assert v["has_comment"] is False, "$comment reached llama.cpp's grammar compiler"
+    assert v["has_id_prop"] is True
+    assert v["additional"] is False
 
 
 def test_unbound_openai_refuses_with_a_pointer(verdicts):

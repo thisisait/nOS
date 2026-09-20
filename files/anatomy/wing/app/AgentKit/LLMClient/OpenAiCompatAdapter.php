@@ -72,6 +72,24 @@ final class OpenAiCompatAdapter implements LLMClientInterface
 		return $this->binding->name;
 	}
 
+	/**
+	 * JSON Schema for OpenAI-compat `response_format` (Ollama structured
+	 * outputs). Not on LLMClientInterface — other adapters have no equivalent
+	 * wire field; OneShot ducks this method. Absent = the body stays what it
+	 * was (no response_format), so a Mistral/vLLM call is unchanged.
+	 *
+	 * @param array<mixed> $schema
+	 */
+	public function withResponseSchema(array $schema): self
+	{
+		$copy = clone $this;
+		$copy->responseSchema = $schema;
+		return $copy;
+	}
+
+	/** @var array<mixed>|null */
+	private ?array $responseSchema = null;
+
 	public function send(
 		string $systemPrompt,
 		array $messages,
@@ -91,6 +109,24 @@ final class OpenAiCompatAdapter implements LLMClientInterface
 				static fn (ToolSchema $t) => $t->toOpenAiArray(),
 				$tools,
 			);
+		}
+		if ($this->responseSchema !== null && $this->responseSchema !== []) {
+			// Ollama 0.5+ / OpenAI json_schema. Native /api/chat spells this
+			// `format:`; the OpenAI surface this adapter speaks maps it here.
+			// Strip $-meta so llama.cpp's grammar compiler is not asked to
+			// honour a comment. Name must be [A-Za-z0-9_-] on OpenAI's wire.
+			$schema = $this->responseSchema;
+			unset($schema['$comment'], $schema['$schema'], $schema['$id']);
+			$title = (string) ($this->responseSchema['title'] ?? 'one_shot');
+			$name = preg_replace('/[^A-Za-z0-9_-]/', '_', $title) ?: 'one_shot';
+			$body['response_format'] = [
+				'type' => 'json_schema',
+				'json_schema' => [
+					'name' => $name,
+					'strict' => true,
+					'schema' => $schema,
+				],
+			];
 		}
 
 		try {

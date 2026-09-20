@@ -57,6 +57,7 @@ final class CountingStub implements App\\AgentKit\\LLMClient\\LLMClientInterface
 {{
     public int $calls = 0;
     public array $toolsSeen = [];
+    public string $systemSeen = '';
     public function __construct(
         private string $stopReason,
         private array $blocks,
@@ -66,6 +67,33 @@ final class CountingStub implements App\\AgentKit\\LLMClient\\LLMClientInterface
     {{
         $this->calls++;
         $this->toolsSeen = $tools;
+        $this->systemSeen = $s;
+        return new LLMResponse($this->stopReason, $this->blocks, 11, 7);
+    }}
+}}
+
+/** Same as CountingStub plus a wire-schema spy. Not a subclass — CountingStub is final. */
+final class SchemaSpyStub implements App\\AgentKit\\LLMClient\\LLMClientInterface
+{{
+    public int $calls = 0;
+    public array $toolsSeen = [];
+    public string $systemSeen = '';
+    public bool $schemaSet = false;
+    public function __construct(
+        private string $stopReason,
+        private array $blocks,
+    ) {{}}
+    public function identifier(): string {{ return 'openclaw-stub-1b'; }}
+    public function withResponseSchema(array $schema): self
+    {{
+        $this->schemaSet = true;
+        return $this;
+    }}
+    public function send(string $s, array $m, array $tools = [], int $max = 4096): LLMResponse
+    {{
+        $this->calls++;
+        $this->toolsSeen = $tools;
+        $this->systemSeen = $s;
         return new LLMResponse($this->stopReason, $this->blocks, 11, 7);
     }}
 }}
@@ -113,12 +141,76 @@ def test_one_shot_makes_exactly_one_call(tmp_path):
     got = php("""
         $c = new CountingStub('end_turn', text('{"invoice_no":"A-1","total":42.5,"currency":"EUR"}'));
         $r = OneShot::run($c, shotAgent(SCHEMA), 'extract this');
-        echo json_encode(['calls' => $c->calls, 'tools' => $c->toolsSeen, 'r' => $r]);
+        echo json_encode(['calls' => $c->calls, 'tools' => $c->toolsSeen,
+                          'system' => $c->systemSeen, 'r' => $r]);
     """, tmp_path)
     assert got["calls"] == 1, f"one_shot made {got['calls']} model calls, not one"
     assert got["tools"] == [], "one_shot offered tools — an invitation to a second call"
     assert got["r"]["verdict"] == "valid"
     assert got["r"]["chain"]["invoice_no"] == "A-1"
+    assert '"invoice_no"' in got["system"], (
+        "one_shot did not put the schema in the system prompt — the model never "
+        "sees the legal keys and invents aliases the post-hoc reader then refuses "
+        "(measured 2026-09-20: invoice-extract emitted invoice_number/number)"
+    )
+
+
+def test_text_one_shot_asks_the_adapter_for_response_format(tmp_path):
+    """Stage B (invoice-extract) needs the Ollama grammar or it invents keys."""
+    got = php("""
+        $c = new SchemaSpyStub('end_turn', text('{"invoice_no":"A-1","total":42.5,"currency":"EUR"}'));
+        OneShot::run($c, shotAgent(SCHEMA), 'extract this');
+        echo json_encode(['set' => $c->schemaSet]);
+    """, tmp_path)
+    assert got["set"] is True, "text one_shot did not call withResponseSchema"
+
+
+def test_vision_one_shot_does_not_put_json_schema_on_the_wire(tmp_path):
+    """Stage A (invoice-vision-ocr): qwen2.5vl:7b under json_schema emitted
+    raw newlines inside {"text":...} and json_decode failed. Schema stays in
+    the prompt; the grammar does not."""
+    img = REPO / "state/fixtures/consulting-firm/images/alfa-001.jpg"
+    got = php(f"""
+        $c = new SchemaSpyStub('end_turn', text('{{"invoice_no":"A-1","total":1}}'));
+        OneShot::run($c, shotAgent(SCHEMA), 'read', imagePath: '{img}');
+        echo json_encode(['set' => $c->schemaSet]);
+    """, tmp_path)
+    assert got["set"] is False, "vision one_shot put json_schema on the wire"
+
+
+def test_a_text_only_wrap_with_raw_newlines_is_still_the_ocr(tmp_path):
+    """qwen2.5vl:7b emits {"text": "..."} with REAL newlines inside the
+    string. json_decode fails; the payload is still the OCR. A typed extract
+    schema must NOT get this recovery."""
+    ocr_schema = {
+        "type": "object",
+        "required": [],
+        "properties": {"text": {"type": "string"}},
+        "additionalProperties": False,
+    }
+    got = php(f"""
+        $ocr = json_decode({json.dumps(json.dumps(ocr_schema))}, true);
+        $raw = <<<'TXT'
+{{"text": "line1
+line2"}}
+TXT;
+        $c = new CountingStub('end_turn', text($raw));
+        $r = OneShot::run($c, shotAgent($ocr), 'read');
+        echo json_encode($r);
+    """, tmp_path)
+    assert got["verdict"] == "valid", got
+    assert got["chain"]["text"] == "line1\nline2"
+
+    got2 = php("""
+        $raw = <<<'TXT'
+{"text": "line1
+line2"}
+TXT;
+        $c = new CountingStub('end_turn', text($raw));
+        $r = OneShot::run($c, shotAgent(SCHEMA), 'extract this');
+        echo json_encode($r);
+    """, tmp_path)
+    assert got2["verdict"] == "failed", "typed schema recovered a text wrap as valid"
 
 
 def test_a_tool_use_stop_reason_does_not_start_a_loop(tmp_path):

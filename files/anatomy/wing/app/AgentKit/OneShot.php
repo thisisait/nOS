@@ -32,10 +32,30 @@ final class OneShot
 	public static function run(LLMClientInterface $llm, Agent $agent, string $prompt, ?string $imagePath = null): array
 	{
 		$message = $imagePath !== null ? Message::userImage($imagePath, $prompt) : Message::userText($prompt);
+		$system = $agent->systemPrompt ?? '';
+		if ($agent->oneShotSchema !== [] && $imagePath === null) {
+			// Ollama's own structured-outputs doc: put the schema IN the
+			// prompt as well as on the wire. Measured 2026-09-20: without
+			// this, invoice-extract invented invoice_number/number and
+			// OneShot::against refused `key is not in the schema` — the
+			// schema was only a post-hoc reader, never shown to the model.
+			$system .= "\n\nJSON Schema — emit an object matching this schema exactly, no other keys:\n"
+				. json_encode($agent->oneShotSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+			// Duck-typed: OpenAiCompatAdapter carries Ollama/OpenAI
+			// response_format; other adapters have no equivalent field and
+			// keep the LLMClientInterface at identifier()+send().
+			// VISION (imagePath set) is unchanged from the proven OCR path:
+			// putting json_schema on the wire OR in the prompt made
+			// qwen2.5vl:7b emit {"text": "..."} with raw newlines, so
+			// json_decode failed (Stage A had been one_shot_valid).
+			if (method_exists($llm, 'withResponseSchema')) {
+				$llm = $llm->withResponseSchema($agent->oneShotSchema);
+			}
+		}
 		// Tools are withheld on purpose: an offered tool schema is an
 		// invitation to a second round trip, and there is no second round.
 		$resp = $llm->send(
-			$agent->systemPrompt ?? '',
+			$system,
 			[$message],
 			[],
 			$agent->maxOutputTokens,
@@ -71,6 +91,18 @@ final class OneShot
 		}
 		$decoded = json_decode($text, true);
 		if (!is_array($decoded)) {
+			// Stage A (invoice-vision-ocr) is a one-field {text:string} wrap
+			// around free OCR. qwen2.5vl:7b routinely emits the wrapper with
+			// RAW newlines inside the string, which json_decode refuses —
+			// measured 2026-09-20, the same page that had been one_shot_valid
+			// as escaped JSON. The payload is still the OCR; recover it.
+			// MUST NOT run for a typed record schema (invoice-extract): a
+			// key-inventing extract is a real failure, not a wrap to unwrap.
+			$recovered = self::recoverTextOnly($text, $schema);
+			if ($recovered !== null) {
+				$chain = ['text' => $recovered];
+				return null;
+			}
 			return 'emitted chain is not JSON: ' . substr($text, 0, 120);
 		}
 		$error = self::against($decoded, $schema, '$');
@@ -159,5 +191,41 @@ final class OneShot
 			// A misspelt type word must fail loudly, not wave the chain through.
 			default => false,
 		};
+	}
+
+	/**
+	 * True when the schema is exactly the Stage-A wrap: one optional `text`
+	 * string field. Anything richer (invoice-extract's ISDOC record) is not.
+	 *
+	 * @param array<mixed> $schema
+	 */
+	private static function isTextOnlySchema(array $schema): bool
+	{
+		$props = $schema['properties'] ?? null;
+		if (!is_array($props) || array_keys($props) !== ['text']) {
+			return false;
+		}
+		return ($props['text']['type'] ?? null) === 'string';
+	}
+
+	/**
+	 * Pull the OCR payload out of a `{"text": "..."}` wrap whose interior
+	 * is not legal JSON (raw newlines). Null if this is not that wrap.
+	 *
+	 * @param array<mixed> $schema
+	 */
+	private static function recoverTextOnly(string $raw, array $schema): ?string
+	{
+		if (!self::isTextOnlySchema($schema)) {
+			return null;
+		}
+		if (preg_match('/^\s*\{\s*"text"\s*:\s*"(.*)"\s*\}\s*$/s', $raw, $m) === 1) {
+			return str_replace(['\\n', '\\t', '\\"', '\\\\'], ["\n", "\t", '"', '\\'], $m[1]);
+		}
+		// Bare OCR with no wrapper at all — still the payload.
+		if ($raw !== '' && $raw[0] !== '{' && $raw[0] !== '[') {
+			return $raw;
+		}
+		return null;
 	}
 }
