@@ -22,3 +22,22 @@ def test_account_payload_carries_the_join_key():
     assert p["name"] == "Buyer s.r.o."
     assert "nos:party:party-ico-25596641" in p["description"]
     assert p["type"] == "Customer"
+
+
+def test_auth_headers_prefer_api_key(monkeypatch):
+    mod = _load()
+    monkeypatch.setenv("ESPO_API_KEY", "k")
+    monkeypatch.setenv("ESPO_API_USER", "admin")
+    h = mod.espo_auth_headers()
+    assert h["X-Api-Key"] == "k"
+    assert "Authorization" not in h
+
+
+def test_auth_headers_use_bootstrap_admin_password(monkeypatch):
+    mod = _load()
+    monkeypatch.delenv("ESPO_API_KEY", raising=False)
+    monkeypatch.setenv("ESPO_ADMIN_PASSWORD", "secret")
+    monkeypatch.setenv("ESPO_API_USER", "admin")
+    h = mod.espo_auth_headers()
+    assert h["Authorization"].startswith("Basic ")
+    assert "X-Api-Key" not in h

@@ -121,6 +121,22 @@ def ensure_table(table: str, hdr: dict) -> None:
         if e.code == 409:
             raise SystemExit(f"KEAP refused {table} schema (409): a column drop/kind change "
                              f"the def asks for conflicts with existing rows — {e.read().decode()[:160]}")
+        raw = e.read().decode()
+        # Live KEAP 2.0.0-rc.1 still refuses rowRef facets; face's contract already
+        # allows them (book_owner / party). Drop the view so COLUMNS still land —
+        # a 400 here used to abort the whole absorb as "KEAP unreadable".
+        if e.code == 400 and "facets" in raw and body.get("view"):
+            body.pop("view")
+            req2 = urllib.request.Request(AGENT, method="POST",
+                                          headers={**hdr, "content-type": "application/json"},
+                                          data=json.dumps(body).encode("utf-8"))
+            try:
+                with urllib.request.urlopen(req2, timeout=15):
+                    return
+            except urllib.error.HTTPError as e2:
+                if e2.code != 404:
+                    raise
+                return
         if e.code != 404:   # 404 = agent route absent; rows POST will report it
             raise
 
@@ -151,6 +167,9 @@ def absorb(bundle: dict) -> int:
         try:
             ensure_table(table, hdr)
             present = _existing_slugs(table, hdr)
+        except urllib.error.HTTPError as exc:
+            print(f"REFUSING: {table} schema HTTP {exc.code}", file=sys.stderr)
+            return 1
         except (urllib.error.URLError, OSError) as exc:
             print(f"REFUSING: KEAP unreadable ({exc})", file=sys.stderr)
             return 2
