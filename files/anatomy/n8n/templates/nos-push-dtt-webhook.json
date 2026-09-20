@@ -1,0 +1,61 @@
+{
+  "name": "nOS PUSH · KEAP DTT → webhook",
+  "meta": {
+    "templateCredsSetupRequired": true,
+    "nos": {
+      "id": "nos-push-dtt-webhook",
+      "direction": "push"
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "timezone": "Europe/Prague" },
+  "pinData": {},
+  "nodes": [
+    {
+      "id": "nos-push-hook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "nos-push-dtt",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nos-dtt-push",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "nos-push-fetch",
+      "name": "Fetch DTT rows",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.keapBase }}/agent/v1/tables/{{ $json.table }}/rows",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      }
+    },
+    {
+      "id": "nos-push-out",
+      "name": "Push callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Webhook').item.json.callback }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Fetch DTT rows", "type": "main", "index": 0 }]] },
+    "Fetch DTT rows": { "main": [[{ "node": "Push callback", "type": "main", "index": 0 }]] }
+  }
+}

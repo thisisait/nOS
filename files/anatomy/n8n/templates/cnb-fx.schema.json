@@ -1,0 +1,10 @@
+{
+  "slug": "cnb-fx",
+  "columns": [
+    {"key": "slug", "required": true},
+    {"key": "date", "required": true},
+    {"key": "currency", "required": true},
+    {"key": "amount", "required": true},
+    {"key": "rate", "required": true}
+  ]
+}

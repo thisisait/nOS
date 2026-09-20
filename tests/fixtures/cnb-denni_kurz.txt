@@ -1,0 +1,5 @@
+20.09.2026 #184
+země|měna|množství|kód|kurz
+EMU|euro|1|EUR|24,330
+USA|dolar|1|USD|20,150
+Japonsko|jen|100|JPY|13,456

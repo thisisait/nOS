@@ -1,0 +1,85 @@
+{
+  "name": "nOS PULL · ČNB FX → KEAP DTT",
+  "meta": {
+    "templateCredsSetupRequired": true,
+    "nos": {
+      "id": "nos-pull-cnb-fx",
+      "direction": "pull",
+      "table": "cnb-fx"
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "timezone": "Europe/Prague" },
+  "pinData": {},
+  "nodes": [
+    {
+      "id": "nos-pull-schedule",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "30 14 * * 1-5" }] }
+      }
+    },
+    {
+      "id": "nos-pull-cnb",
+      "name": "Fetch CNB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0],
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.cnb.cz/cs/financni-trhy/devizovy-trh/kurzy-devizoveho-trhu/kurzy-devizoveho-trhu/denni_kurz.txt",
+        "options": { "response": { "response": { "responseFormat": "text" } } }
+      }
+    },
+    {
+      "id": "nos-pull-schema",
+      "name": "Fetch DTT schema",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 0],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.keapBase }}/agent/v1/tables/cnb-fx",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      }
+    },
+    {
+      "id": "nos-pull-format",
+      "name": "Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 0],
+      "parameters": {
+        "jsCode": "const text = String($('Fetch CNB').first().json.data || $('Fetch CNB').first().json);\nconst schemaDoc = $input.first().json;\nconst cols = (schemaDoc.columns) || (schemaDoc.data && schemaDoc.data.schema && schemaDoc.data.schema.columns) || (schemaDoc.schema && schemaDoc.schema.columns) || [];\nconst keys = cols.map(c => c.key);\nconst required = cols.filter(c => c.required).map(c => c.key);\nconst lines = text.split(/\\n/).map(s => s.trim()).filter(Boolean);\nconst dateParts = lines[0].split(/\\s+/)[0].split('.');\nconst date = `${dateParts[2]}-${dateParts[1].padStart(2,'0')}-${dateParts[0].padStart(2,'0')}`;\nconst hi = lines.findIndex(l => l.startsWith('země|') || l.startsWith('zeme|'));\nconst rows = [];\nfor (const ln of lines.slice(hi + 1)) {\n  const p = ln.split('|');\n  const amount = Number(p[2]);\n  const code = String(p[3]).trim().toUpperCase();\n  const rate = Number(String(p[4]).replace(',', '.').replace(/ /g,'')) / amount;\n  const raw = { slug: `${date}-${code}`, date, currency: code, amount: 1, rate: Math.round(rate * 1e6) / 1e6 };\n  for (const k of required) { if (!(k in raw)) throw new Error('missing ' + k); }\n  rows.push(Object.fromEntries(keys.filter(k => k in raw).map(k => [k, raw[k]])));\n}\nreturn rows.map(json => ({ json }));"
+      }
+    },
+    {
+      "id": "nos-pull-upsert",
+      "name": "Upsert DTT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.keapBase }}/agent/v1/tables/cnb-fx/rows",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Schedule": { "main": [[{ "node": "Fetch CNB", "type": "main", "index": 0 }]] },
+    "Fetch CNB": { "main": [[{ "node": "Fetch DTT schema", "type": "main", "index": 0 }]] },
+    "Fetch DTT schema": { "main": [[{ "node": "Format", "type": "main", "index": 0 }]] },
+    "Format": { "main": [[{ "node": "Upsert DTT", "type": "main", "index": 0 }]] }
+  }
+}
