@@ -57,6 +57,9 @@
 - slug: authentik-device-flow
   parent: device-organ
   track: platform
+- slug: backoffice-organ
+  parent: ''
+  track: platform
 - slug: backup-drill-keap-db
   parent: ''
   track: platform
@@ -541,7 +544,7 @@
   parent: kpro
   track: cortex
 - slug: ledger-constitution
-  parent: ledger-organ
+  parent: backoffice-organ
   track: platform
 - slug: ledger-organ
   parent: ''
@@ -863,6 +866,9 @@
   track: platform
 - slug: plat-v07
   parent: plat
+  track: platform
+- slug: praxis-pack
+  parent: backoffice-organ
   track: platform
 - slug: prom-rules-never-reload
   parent: ''
