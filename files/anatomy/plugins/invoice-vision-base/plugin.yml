@@ -12,8 +12,9 @@
 # It closes the "reader with no writer" gap (adversarial review #2 / dtt
 # verify-writeback-needs-writer): VisionImporter.parse() READS that table but
 # nothing WROTE it, so a held sidecar was an inert file nobody could see. This
-# job is the writer. It never books: an operator approves rows, and the next
-# `digest-import-vision --absorb` honours it (the table's batch semantics).
+# job is the writer. It never books: tools/invoice-verify.py is the approve
+# producer (HMAC-audited), and the next `digest-import-vision --absorb` honours
+# it (the table's batch semantics). Scheduled absorb is still open.
 #
 # Not a Docker service — a host-side Python sweep, same shape as discovery.
 # =============================================================================

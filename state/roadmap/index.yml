@@ -12,12 +12,24 @@
 - slug: actor-attribution
   parent: state-surface
   track: platform
+- slug: agent-ff-onto-dev-helper
+  parent: agent-landing-zero-command-operator
+  track: platform
+- slug: agent-landing-zero-command-operator
+  parent: ''
+  track: platform
 - slug: agent-scope-single-authority
+  parent: ''
+  track: platform
+- slug: agent-tests-must-not-reach-live-infra
   parent: ''
   track: platform
 - slug: agentkit-baseline-gate-attribution
   parent: ''
   track: platform
+- slug: agentkit-multimodal-oneshot-transport
+  parent: local-vision-model-7b
+  track: agents
 - slug: agentkit-xai-backend
   parent: ''
   track: platform
@@ -48,6 +60,12 @@
 - slug: backup-drill-keap-db
   parent: ''
   track: platform
+- slug: bff-table-read-tier-gate
+  parent: consulting-firm-deployment
+  track: security
+- slug: brew-deps-deterministic-pin
+  parent: ''
+  track: platform
 - slug: caddy
   parent: jeff
   track: agents
@@ -69,9 +87,18 @@
 - slug: cc-tui-variants
   parent: cc-app
   track: face
+- slug: client-data-training-opt-in
+  parent: consulting-firm-deployment
+  track: security
 - slug: client-facing-plain-language
   parent: ''
   track: face
+- slug: client-offboarding-mechanic
+  parent: consulting-firm-deployment
+  track: security
+- slug: codexis-authentik-oidc
+  parent: consulting-firm-deployment
+  track: platform
 - slug: compose-hardening
   parent: sec
   track: security
@@ -81,6 +108,18 @@
 - slug: consulting-firm-deployment
   parent: ''
   track: platform
+- slug: consulting-firm-test-readiness-2026-09-20
+  parent: consulting-firm-deployment
+  track: platform
+- slug: consulting-firm-week1-sequence
+  parent: consulting-firm-deployment
+  track: platform
+- slug: consulting-surface-wiring
+  parent: consulting-firm-deployment
+  track: face
+- slug: consulting-uc-evals
+  parent: consulting-firm-deployment
+  track: agents
 - slug: converge-become
   parent: converge-speed
   track: platform
@@ -204,6 +243,9 @@
 - slug: digest-constitution
   parent: digest
   track: digest
+- slug: digest-crosscheck-orchestration
+  parent: consulting-firm-deployment
+  track: digest
 - slug: digest-device
   parent: digest
   track: digest
@@ -303,6 +345,12 @@
 - slug: erasure-party-subject
   parent: digest
   track: digest
+- slug: espocrm-autowiring-organelle
+  parent: consulting-firm-deployment
+  track: platform
+- slug: espocrm-oidc-hands-off
+  parent: consulting-firm-deployment
+  track: platform
 - slug: ext-contract
   parent: ''
   track: platform
@@ -381,6 +429,12 @@
 - slug: fixtures-service-seed-scope
   parent: fixtures
   track: platform
+- slug: foss-crm-and-wordpress-cms
+  parent: consulting-firm-deployment
+  track: platform
+- slug: from-blank-fixture-marker-orphan
+  parent: consulting-firm-deployment
+  track: platform
 - slug: fs
   parent: ''
   track: filesystem
@@ -408,6 +462,9 @@
 - slug: gdpr-importer-register
   parent: digest
   track: digest
+- slug: gdpr-tier2-apps-export-erasure
+  parent: consulting-firm-deployment
+  track: security
 - slug: genome-codegen-targets
   parent: v0-10-genome
   track: cortex
@@ -417,6 +474,9 @@
 - slug: handheld-dtt-sso-client
   parent: device-organ
   track: face
+- slug: harden-verify-rung-empty-fields
+  parent: consulting-firm-deployment
+  track: digest
 - slug: idea-surface-absorb
   parent: ''
   track: platform
@@ -427,14 +487,23 @@
   parent: digest
   track: digest
 - slug: invoice-multi-rate-vat
-  parent: consulting-firm-deployment
+  parent: ''
   track: digest
+- slug: invoice-payable-reconcile-guard
+  parent: consulting-firm-deployment
+  track: platform
+- slug: invoice-realworld-cases
+  parent: consulting-firm-deployment
+  track: platform
 - slug: invoice-structured-extractor
   parent: invoice-vision-intake
   track: cortex
 - slug: invoice-vision-intake
   parent: consulting-firm-deployment
   track: digest
+- slug: invoice-vision-intake-pulse-job
+  parent: consulting-firm-deployment
+  track: platform
 - slug: invoice-vision-model-pin
   parent: consulting-firm-deployment
   track: agents
@@ -446,6 +515,9 @@
   track: agents
 - slug: keap-anchor-merge-never-heals
   parent: ''
+  track: cortex
+- slug: keap-demo-seed-proxy-auth
+  parent: consulting-firm-deployment
   track: cortex
 - slug: keap-embed-queue-lost-row
   parent: ''
@@ -516,6 +588,9 @@
 - slug: local-llm-voice-rating
   parent: local-llm-voice
   track: agents
+- slug: local-vision-model-7b
+  parent: consulting-firm-deployment
+  track: cortex
 - slug: loop-anatomy-harvests-manifests
   parent: loop-generator
   track: agents
@@ -591,8 +666,14 @@
 - slug: moderation-drain-loop
   parent: ''
   track: cortex
+- slug: multi-firm-distribution-hardening
+  parent: ''
+  track: platform
 - slug: multitenant-client-isolation
   parent: ''
+  track: platform
+- slug: n8n-loop-templates
+  parent: consulting-firm-deployment
   track: platform
 - slug: notify-body-is-prompt
   parent: ''
@@ -663,6 +744,9 @@
 - slug: obs-uncommitted-scan-state
   parent: ''
   track: security
+- slug: oneshot-logprobs-for-field-confidence
+  parent: local-vision-model-7b
+  track: agents
 - slug: organ-health-carries-a-version
   parent: ''
   track: platform
@@ -675,6 +759,9 @@
 - slug: party-merge
   parent: digest
   track: digest
+- slug: party-onboarding-from-invoice
+  parent: consulting-firm-deployment
+  track: platform
 - slug: party-resolver
   parent: digest
   track: digest
@@ -903,6 +990,9 @@
 - slug: share-grants-agents
   parent: dtt-share-model
   track: platform
+- slug: sign-before-origin-primitive
+  parent: agent-landing-zero-command-operator
+  track: platform
 - slug: spine-tools-vs-cli-refusal
   parent: w-agentkit-spine
   track: agents
@@ -939,6 +1029,9 @@
 - slug: ssot-vector
   parent: wave-small-ssot
   track: cortex
+- slug: standardize-digest-outputs-and-storage
+  parent: consulting-firm-deployment
+  track: filesystem
 - slug: state-surface
   parent: sere
   track: agents
@@ -954,6 +1047,45 @@
 - slug: tester-hardware-readiness
   parent: consulting-firm-deployment
   track: release
+- slug: uc-approve-held-invoice
+  parent: consulting-firm-deployment
+  track: digest
+- slug: uc-backup-restore-client-data
+  parent: consulting-firm-deployment
+  track: platform
+- slug: uc-browse-client-books
+  parent: consulting-firm-deployment
+  track: face
+- slug: uc-crm-login-and-contact
+  parent: consulting-firm-deployment
+  track: platform
+- slug: uc-fraud-crosscheck
+  parent: consulting-firm-deployment
+  track: digest
+- slug: uc-from-blank-rebuild
+  parent: consulting-firm-deployment
+  track: release
+- slug: uc-gdpr-art30-per-client
+  parent: consulting-firm-deployment
+  track: security
+- slug: uc-gdpr-erasure-export
+  parent: consulting-firm-deployment
+  track: security
+- slug: uc-invoice-isdoc-to-entry
+  parent: consulting-firm-deployment
+  track: digest
+- slug: uc-multi-rate-vat
+  parent: consulting-firm-deployment
+  track: digest
+- slug: uc-onboard-new-client
+  parent: consulting-firm-deployment
+  track: digest
+- slug: uc-per-client-isolation
+  parent: consulting-firm-deployment
+  track: digest
+- slug: uc-vision-read-invoice
+  parent: consulting-firm-deployment
+  track: cortex
 - slug: v0-1
   parent: ''
   track: release
@@ -993,8 +1125,23 @@
 - slug: v0-9
   parent: ''
   track: release
+- slug: verify-writeback-needs-writer
+  parent: consulting-firm-deployment
+  track: platform
 - slug: virtiofs-statfs-wrong-volume
   parent: ''
+  track: platform
+- slug: vision-bench-loop
+  parent: consulting-firm-deployment
+  track: platform
+- slug: vision-fixture-image-generator
+  parent: consulting-firm-deployment
+  track: platform
+- slug: vision-pipeline-pdf-raster
+  parent: consulting-firm-deployment
+  track: platform
+- slug: vision-pipeline-uses-run-agent-sh
+  parent: consulting-firm-deployment
   track: platform
 - slug: w-agentkit-spine
   parent: rel-011
@@ -1029,6 +1176,9 @@
 - slug: web-apex-rethink
   parent: ''
   track: platform
+- slug: wet-test-gate-before-autodeploy
+  parent: agent-landing-zero-command-operator
+  track: platform
 - slug: wing-events-chain-aware-retention
   parent: ''
   track: platform
@@ -1041,9 +1191,15 @@
 - slug: wing-map
   parent: ''
   track: platform
+- slug: wing-neon-getenv-false-crashes-cli
+  parent: consulting-firm-deployment
+  track: platform
 - slug: wing-tenants
   parent: ''
   track: platform
+- slug: wordpress-client-portal
+  parent: consulting-firm-deployment
+  track: face
 - slug: work-corpus-not-seed
   parent: cortex
   track: cortex

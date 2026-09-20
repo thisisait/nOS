@@ -12,6 +12,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import pathlib
+import shutil
 
 import pytest
 
@@ -96,7 +97,10 @@ def test_stage_a_reads_the_text_field_out_of_run_agents_chain(monkeypatch):
     text = mod.run_stage_a("/tmp/page.png")
     assert text == "INVOICE 2026-INV-401 ..."
     assert "--agent=invoice-vision-ocr" in seen["cmd"]
-    assert "--image=/tmp/page.png" in seen["cmd"]
+    # Deployed run-agent.php cwd is ~/wing — a relative path 404s as
+    # Message::userImage cannot read. The pipeline resolves first.
+    image_arg = next(a for a in seen["cmd"] if a.startswith("--image="))
+    assert pathlib.Path(image_arg.split("=", 1)[1]).is_absolute()
 
 
 def test_stage_b_feeds_stage_as_text_as_its_prompt(monkeypatch):
@@ -125,3 +129,33 @@ def test_a_stage_with_no_chain_refuses_rather_than_forging_a_sidecar(monkeypatch
         mod.run_stage_a("/tmp/page.png")
     with pytest.raises(RuntimeError, match="no chain"):
         mod.run_stage_b("some text")
+
+
+def test_ensure_image_passthrough_non_pdf(tmp_path):
+    mod = _load()
+    img = tmp_path / "scan.jpg"
+    img.write_bytes(b"not-an-image")
+    assert mod.ensure_image(str(img), str(tmp_path)) == str(img)
+
+
+def test_ensure_image_pdf_missing_pdftoppm_is_loud(monkeypatch, tmp_path):
+    mod = _load()
+    pdf = tmp_path / "invoice.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
+    monkeypatch.setattr(mod.shutil, "which", lambda _n: None)
+    with pytest.raises(RuntimeError, match="pdftoppm"):
+        mod.ensure_image(str(pdf), str(tmp_path))
+
+
+def test_ensure_image_rasterizes_a_fixture_pdf(tmp_path):
+    """Pins vision-pipeline-pdf-raster: a real accountant PDF becomes a PNG.
+
+    Skip when poppler is absent — the missing-binary path is the test above;
+    this one proves the raster, not the error message."""
+    if shutil.which("pdftoppm") is None:
+        pytest.skip("pdftoppm (poppler) not on PATH")
+    mod = _load()
+    pdf = REPO / "state" / "fixtures" / "vision-fixture" / "fa-aurora.pdf"
+    out = pathlib.Path(mod.ensure_image(str(pdf), str(tmp_path)))
+    assert out.suffix == ".png"
+    assert out.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"

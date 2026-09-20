@@ -91,7 +91,11 @@ def ensure_image(path: str, workdir: str) -> str:
 
 
 def run_stage_a(image_path: str) -> str:
-    """invoice-vision-ocr one_shot: image in, free OCR text out."""
+    """invoice-vision-ocr one_shot: image in, free OCR text out.
+
+    The deployed run-agent.php cwd is the Wing tree, so a relative path
+    cannot be read — resolve to absolute here, not at the caller."""
+    image_path = str(pathlib.Path(image_path).resolve())
     summary = _run_agent(["--agent=invoice-vision-ocr", f"--image={image_path}"])
     if summary.get("chain") is None:
         raise RuntimeError(f"stage A (invoice-vision-ocr) produced no chain: {summary.get('chain_error')}")

@@ -15,11 +15,10 @@ This closes the "reader with no writer" gap (adversarial review #2 / dtt
 verify-writeback-needs-writer): VisionImporter.parse() READS pending-invoice-verify
 but nothing WROTE it, so a below-floor sidecar existed only as an inert file. Now
 the sweep populates the queue. Booking stays a later, deliberate step: an operator
-approves rows (resolution=approved), and a `digest-import-vision --absorb` run
-honors it (the table's own batch semantics — approval posts nothing by itself).
-That absorb run is itself manual/unscheduled today — this job fills the queue; it
-does NOT book. Closing the loop (an approve producer + a scheduled absorb) is
-verify-writeback-needs-writer.
+approves rows via tools/invoice-verify.py (resolution=approved, HMAC-audited),
+and a `digest-import-vision --absorb` run honors it (the table's own batch
+semantics — approval posts nothing by itself). That absorb run is itself
+manual/unscheduled today — this job fills the queue; it does NOT book.
 
 Idempotent: an image whose sidecar already exists is not re-extracted; a queue row
 whose slug already exists is not re-posted. Read-only w.r.t. the invoice/party
