@@ -135,7 +135,10 @@ def main() -> int:
     hdr = {"Authorization": f"Bearer {digest_absorb.rw_token()}", **proxy_header()}
     try:
         digest_absorb.ensure_table(TABLE, hdr)
-        present = {r.get("slug") for r in digest_absorb.read_rows(TABLE)}
+        present = {r.get("slug") for r in digest_absorb.read_rows(TABLE, hdr)}
+    except urllib.error.HTTPError as exc:
+        print(f"REFUSING: {TABLE} schema HTTP {exc.code}", file=sys.stderr)
+        return 2
     except (urllib.error.URLError, OSError) as exc:
         print(f"REFUSING: KEAP unreadable ({exc})", file=sys.stderr)
         return 2

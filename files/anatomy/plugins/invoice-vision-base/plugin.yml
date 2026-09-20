@@ -78,8 +78,9 @@ pulse:
       findings_exit_codes: [1]
       writes:
         - target: "table:pending-invoice-verify"
-          via: "one row per held vision sidecar, upserted by slug via the KEAP
-            agent RW door (tools/invoice-vision-intake.py verify_row + digest_absorb._post_row)"
+          via: "one row per held vision sidecar, upserted by slug via
+            digest_absorb.ensure_table + _post_row (KEAP agent RW door). Never
+            invoice/posting — booking is invoice-verify + digest-import-vision --absorb."
           measured: "2026-09-20"
       env:
         # The RW token decides WHICH DOOR the queue rows come through (agent door

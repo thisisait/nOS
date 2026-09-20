@@ -101,6 +101,32 @@ def reconcile_invoice(invoice: dict) -> list[str]:
     return errors
 
 
+def own_party_for_invoice(invoice: dict, accounts_by_code: dict,
+                         fallback: str | None = None) -> str | None:
+    """Whose book this invoice posts into. Model C: book_owner, else the unique
+    seller/buyer that owns a 311/321 analytical account, else `fallback` when
+    that party is on the invoice. Never the counterparty just because they
+    appear as buyer/seller — that is the wrong book."""
+    seller, buyer = invoice.get("seller"), invoice.get("buyer")
+    sides = {p for p in (seller, buyer) if p}
+    stamped = invoice.get("book_owner")
+    if stamped in sides:
+        return stamped
+    analytical = set()
+    for key in accounts_by_code:
+        if not isinstance(key, str) or "." not in key:
+            continue
+        code, _, party = key.partition(".")
+        if code in ("311", "321") and party:
+            analytical.add(party)
+    hits = [p for p in (seller, buyer) if p in analytical]
+    if len(hits) == 1:
+        return hits[0]
+    if fallback in sides:
+        return fallback
+    return None
+
+
 def _resolve_account(code: str, party: str | None, accounts_by_code: dict) -> str | None:
     """The one analytical-vs-synthetic decision: try `<code>.<party>` (a
     per-client analytical account, e.g. '311.synthetic-client-alfa') before
@@ -218,6 +244,8 @@ if __name__ == "__main__":
     e2 = derive_entry(inv, "alfa", analytical)
     assert next(p for p in e2["postings"] if p["direction"] == "debit")["account"] == "acc-311-alfa", \
         "an analytical 311.<party> account must be preferred over the synthetic one"
+    assert own_party_for_invoice(inv, analytical, fallback="customer") == "alfa", \
+        "a counterparty fallback must not steal a client that owns 311/321"
 
     # reconcile_invoice: the tautology-breaker (the CRITICAL from adversarial review #2)
     ok = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1210}

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import importlib.util
 import pathlib
 import re
 import sys
@@ -29,7 +30,8 @@ import yaml
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "files" / "anatomy" / "module_utils"))
-from digest_absorb import absorb, build_party_index  # noqa: E402
+from digest_absorb import absorb, build_party_index, read_rows  # noqa: E402
+import nos_accounting  # noqa: E402
 import nos_digest  # noqa: E402
 import raw_archive  # noqa: E402
 
@@ -271,8 +273,15 @@ class IsdocImporter:
                 row["document_kind"] = r["document_kind"]
             if r.get("vat_regime"):
                 row["vat_regime"] = r["vat_regime"]
-            if self.book_owner_slug:
+            # Run-level book_owner is the client this inbox is FOR. Stamp it
+            # only when that party is seller or buyer — a mixed directory plus
+            # --book-owner-ico must not claim a foreign client's invoices.
+            if self.book_owner_slug and self.book_owner_slug in (r["seller_slug"], r["buyer_slug"]):
                 row["book_owner"] = self.book_owner_slug
+            elif self.book_owner_slug:
+                self.skipped.append(
+                    f"{r['file']}: book-owner {self.book_owner_slug} is neither "
+                    "seller nor buyer — not stamping (wrong book)")
             # provenance-keep unit: source is stamped by the CLASS (isdoc vs
             # vision, never per-record), verified/overall_confidence read
             # from the record when the source populated them (vision only —
@@ -322,6 +331,28 @@ def main() -> int:
         for e in errors:
             print(f"  ✗ {e}", file=sys.stderr)
         return 1
+
+    try:
+        account_rows = read_rows("account")
+    except (urllib.error.URLError, OSError):
+        account_rows = []
+    if account_rows:
+        spec = importlib.util.spec_from_file_location(
+            "derive_postings", REPO / "tools" / "derive-postings.py")
+        derive_mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(derive_mod)
+        accounts = derive_mod.build_accounts_by_code(account_rows)
+        _entries, postings, _skipped_je, _routed, reports = derive_mod.attach_ledger(
+            bundle, accounts, own_party=importer.book_owner_slug)
+        for r in reports:
+            print(r, file=sys.stderr)
+        ledger_errors = nos_digest.check_bundle(bundle, TABLES_DIR) + [
+            f"balance: {e}" for e in nos_accounting.check_entries(postings)]
+        if ledger_errors:
+            print("GATE REFUSED the ledger — nothing absorbed:", file=sys.stderr)
+            for e in ledger_errors:
+                print(f"  ✗ {e}", file=sys.stderr)
+            return 1
 
     n = sum(len(v) for v in bundle["deterministic"].values())
     print(f"gate OK: {n} row(s) across {len(bundle['deterministic'])} table(s)"

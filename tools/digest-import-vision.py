@@ -64,6 +64,12 @@ def _load_isdoc_importer():
 IsdocImporter = _load_isdoc_importer()
 
 
+def index_pending(rows) -> dict:
+    """Join key is sidecar_id (filename), never slug. Shared by the KEAP
+    read and injectable fake rows so parse() cannot silently match the PK."""
+    return {r["sidecar_id"]: r.get("resolution") for r in rows if r.get("sidecar_id")}
+
+
 class VisionImporter(IsdocImporter):
     """Vision-extracted invoices → the invoice facet. Overrides ONLY parse();
     normalize/compose/_resolve (dual-party resolve, book_owner) are inherited."""
@@ -73,24 +79,22 @@ class VisionImporter(IsdocImporter):
     #: provenance-keep unit: rows this importer composes are OCR-sourced.
     source_kind = "vision"
 
-    def __init__(self, *args, pending_verify: dict[str, str] | None = None, **kwargs):
-        """``pending_verify``: {sidecar_id: resolution} — the D5 verify-write-back
-        read. Injectable for offline tests; ``None`` means "look it up from
-        KEAP's pending-invoice-verify table on first use" (main() path), and a
-        network failure there degrades to {} — same as "no row", i.e. held,
-        the safe default (nothing about parse()'s existing behaviour changes)."""
+    def __init__(self, *args, pending_verify: dict[str, str] | list | None = None, **kwargs):
+        """``pending_verify``: {sidecar_id: resolution} or a list of pending
+        rows (indexed by sidecar_id, never slug). ``None`` looks the table
+        up from KEAP on first use; a network failure degrades to {} (held)."""
         super().__init__(*args, **kwargs)
-        self._pending_verify = pending_verify
+        if isinstance(pending_verify, list):
+            self._pending_verify = index_pending(pending_verify)
+        else:
+            self._pending_verify = pending_verify
 
     def _pending_resolution(self, sidecar_id: str) -> str | None:
         if self._pending_verify is None:
             try:
                 import digest_absorb
-                self._pending_verify = {
-                    r["sidecar_id"]: r.get("resolution")
-                    for r in digest_absorb.read_rows("pending-invoice-verify")
-                    if r.get("sidecar_id")
-                }
+                self._pending_verify = index_pending(
+                    digest_absorb.read_rows("pending-invoice-verify"))
             except Exception:  # noqa: BLE001 — unreachable KEAP == no pending rows == held
                 self._pending_verify = {}
         return self._pending_verify.get(sidecar_id)

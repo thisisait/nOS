@@ -123,10 +123,13 @@ def ensure_table(table: str, hdr: dict) -> None:
                              f"the def asks for conflicts with existing rows — {e.read().decode()[:160]}")
         raw = e.read().decode()
         # Live KEAP 2.0.0-rc.1 still refuses rowRef facets; face's contract already
-        # allows them (book_owner / party). Drop the view so COLUMNS still land —
-        # a 400 here used to abort the whole absorb as "KEAP unreadable".
-        if e.code == 400 and "facets" in raw and body.get("view"):
-            body.pop("view")
+        # allows them (book_owner / party). Drop view AND graph so COLUMNS still
+        # land — a 400 here used to abort the whole absorb as "KEAP unreadable",
+        # and pending-invoice-verify ships graph (no view), so dropping view alone
+        # never retried that table.
+        if e.code == 400 and "facets" in raw and (body.get("view") or body.get("graph")):
+            body.pop("view", None)
+            body.pop("graph", None)
             req2 = urllib.request.Request(AGENT, method="POST",
                                           headers={**hdr, "content-type": "application/json"},
                                           data=json.dumps(body).encode("utf-8"))

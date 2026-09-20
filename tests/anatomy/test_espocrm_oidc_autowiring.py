@@ -67,6 +67,20 @@ def test_espocrm_embedded_mariadb_is_1189():
     assert "mariadb:11.8.8" not in text
 
 
+def test_espocrm_gdpr_block_complete():
+    """Kuma/Wing post-hooks are generic for every Tier-2 app; this pins the
+    Espo-specific leftover: the manifest still carries a complete Art-30
+    block so upsert-gdpr.php has something to ingest."""
+    from module_utils.nos_app_parser import REQUIRED_GDPR
+
+    gdpr = _manifest().get("gdpr")
+    assert isinstance(gdpr, dict)
+    for key in REQUIRED_GDPR:
+        assert key in gdpr, f"apps/espocrm.yml gdpr missing {key}"
+    assert gdpr["legal_basis"] == "contract"
+    assert gdpr["transfers_outside_eu"] is False
+
+
 def test_espocrm_declares_authentik_block():
     record = _manifest()
     auth = record.get("authentik")

@@ -49,9 +49,13 @@ def build_accounts_by_code(account_rows: list) -> dict:
     return accounts_by_code
 
 
-def derive_bundle_parts(invoices: list, own_party: str, accounts: dict):
-    """Split invoice rows into balanced journal-entry/posting parts for own_party's
-    book. Each invoice is (a) skipped if not our book, (b) routed aside + reported
+def derive_bundle_parts(invoices: list, own_party: str | None, accounts: dict):
+    """Split invoice rows into balanced journal-entry/posting parts.
+
+    own_party is a FALLBACK (the CLI --own-party). Per invoice, the book is
+    nos_accounting.own_party_for_invoice: stamped book_owner if that party is
+    on the invoice, else the unique analytical-311/321 holder, else fallback.
+    Each invoice is (a) skipped if not our book, (b) routed aside + reported
     if it does not reconcile against its own PayableAmount — a dropped/mis-summed
     line or a credit note (nos_accounting.reconcile_invoice), so one bad doc never
     poisons the batch — else (c) derived. Returns (entries, postings, skipped,
@@ -65,16 +69,42 @@ def derive_bundle_parts(invoices: list, own_party: str, accounts: dict):
             reports += [f"route-aside {inv.get('slug')}: {e}" for e in recon]
             routed += 1
             continue
+        party = nos_accounting.own_party_for_invoice(inv, accounts, fallback=own_party)
+        if not party:
+            skipped += 1                     # not our book
+            continue
+        if not inv.get("book_owner"):
+            inv["book_owner"] = party
         try:
-            derived = nos_accounting.derive_entry(inv, own_party, accounts)
+            derived = nos_accounting.derive_entry(inv, party, accounts)
         except KeyError as exc:
             reports.append(f"skip {inv.get('slug')}: {exc}")
             continue
         if derived is None:
-            skipped += 1                     # not our book (own_party is neither party)
+            skipped += 1                     # not our book (party is neither seller nor buyer)
             continue
         entries.append(derived["entry"])
         postings.extend(derived["postings"])
+    return entries, postings, skipped, routed, reports
+
+
+def attach_ledger(bundle: dict, accounts: dict, own_party: str | None = None):
+    """Fold derived journal-entry + posting into an already-gated invoice bundle
+    (ISDOC → ledger, one absorb). Re-stamps _prov so the untrusted gate still
+    holds. Returns (entries, postings, skipped, routed, reports)."""
+    det = bundle.setdefault("deterministic", {})
+    invoices = det.get("invoice") or []
+    entries, postings, skipped, routed, reports = derive_bundle_parts(
+        invoices, own_party, accounts)
+    if entries:
+        det["journal-entry"] = list(det.get("journal-entry") or []) + entries
+        det["posting"] = list(det.get("posting") or []) + postings
+    meta = bundle.get("meta") or {}
+    nos_digest.stamp_provenance(
+        det,
+        source_id=meta.get("source_id") or "derive",
+        importer_version=meta.get("importer_version") or "0.1.0",
+    )
     return entries, postings, skipped, routed, reports
 
 

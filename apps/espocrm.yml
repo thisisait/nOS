@@ -34,6 +34,14 @@
 # nOS `party` remains SoT. Espo Account.description carries `nos:party:<slug>`
 # written by tools/espo-party-sync.py (bootstrap admin, no custom entity).
 # Contact/Lead stay Espo's own store — do not fork a second party table.
+#
+# ── Organelles already generic vs skipped ───────────────────────────────────
+# Kuma + Wing ingest: apps_runner post.yml maps kuma_monitor / registry_entry
+# for every rendered app — no Espo-specific hook.
+# Notification + plugin observability: NOT harvested from apps/*.yml.
+# authentik-base is the only aggregator with `from: app_manifest`; wing-base
+# notification harvest is consumer_block + agent_profile only. A notification:
+# key here would be dead YAML. Do not invent files/anatomy/plugins/espocrm-base.
 # ============================================================================
 
 meta:
