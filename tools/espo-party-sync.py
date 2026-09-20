@@ -10,7 +10,7 @@ apps_runner OIDC PUT uses). Override with ESPO_URL / ESPO_API_KEY /
 ESPO_ADMIN_PASSWORD only when you are not on the estate.
 
   tools/espo-party-sync.py              # dry-run
-  tools/espo-party-sync.py --write      # POST Account rows
+  tools/espo-party-sync.py --write      # POST new / PUT existing Account rows
 
 Needs KEAP_AGENT_TOKEN_RO (or the container) to read party rows.
 """
@@ -88,6 +88,24 @@ def _espo_post(base: str, path: str, hdr: dict, body: dict) -> dict:
         return json.loads(r.read() or b"{}")
 
 
+def _espo_put(base: str, path: str, hdr: dict, body: dict) -> dict:
+    req = urllib.request.Request(
+        base.rstrip("/") + path, data=json.dumps(body).encode(),
+        headers=hdr, method="PUT")
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read() or b"{}")
+
+
+def upsert_account(base: str, hdr: dict, body: dict, existing: list) -> str:
+    """POST a new Account or PUT the first row that already carries the join tag."""
+    if existing:
+        aid = existing[0].get("id")
+        _espo_put(base, f"/api/v1/Account/{aid}", hdr, body)
+        return f"put:{aid}"
+    _espo_post(base, "/api/v1/Account", hdr, body)
+    return "post"
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--dry-run", action="store_true", default=True)
@@ -117,11 +135,8 @@ def main(argv: list[str] | None = None) -> int:
                 f"&where[0][attribute]=description&where[0][value]={q}",
                 hdr)
             rows = existing.get("list") or []
-            if rows:
-                print(f"  · {body['name']}: already {rows[0].get('id')}")
-                continue
-            _espo_post(base, "/api/v1/Account", hdr, body)
-            print(f"  + {body['name']}")
+            action = upsert_account(base, hdr, body, rows)
+            print(f"  + {body['name']}: {action}")
             wrote += 1
         except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
             print(f"  FAIL {body['name']}: {exc}", file=sys.stderr)

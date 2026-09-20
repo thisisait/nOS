@@ -105,3 +105,32 @@ def test_auth_headers_use_bootstrap_admin_password(monkeypatch):
     h = mod.espo_auth_headers()
     assert h["Authorization"].startswith("Basic ")
     assert "X-Api-Key" not in h
+
+
+def test_upsert_account_puts_when_join_tag_already_exists():
+    mod = _load()
+    calls = []
+
+    def put(_base, path, _hdr, body):
+        calls.append(("PUT", path, body["name"]))
+        return {}
+
+    def post(_base, path, _hdr, body):
+        calls.append(("POST", path, body["name"]))
+        return {}
+
+    mod._espo_put = put
+    mod._espo_post = post
+    body = {"name": "Buyer s.r.o.", "description": "nos:party:party-ico-1", "type": "Customer"}
+    assert mod.upsert_account("https://e", {}, body, [{"id": "a1"}]) == "put:a1"
+    assert calls == [("PUT", "/api/v1/Account/a1", "Buyer s.r.o.")]
+
+
+def test_upsert_account_posts_when_new():
+    mod = _load()
+    calls = []
+    mod._espo_put = lambda *_a: calls.append("PUT")
+    mod._espo_post = lambda *_a: calls.append("POST") or {}
+    body = {"name": "New Co", "description": "nos:party:new", "type": "Partner"}
+    assert mod.upsert_account("https://e", {}, body, []) == "post"
+    assert calls == ["POST"]

@@ -25,6 +25,9 @@ PG_USER="{{ backup_postgresql_user }}"
 PG_PASSWORD="{{ backup_postgresql_password }}"
 DO_POSTGRES="{{ 'true' if backup_databases_postgresql else 'false' }}"
 
+ESPOCRM_DB_CONTAINER="{{ backup_espocrm_db_container | default('espocrm-db') }}"
+ESPOCRM_VOLUMES=({% for v in backup_espocrm_volumes | default([]) %}"{{ v }}" {% endfor %})
+
 AUTHENTIK_URL="{{ backup_authentik_url }}"
 AUTHENTIK_TOKEN="{{ backup_authentik_token }}"
 DO_AUTHENTIK="{{ 'true' if backup_authentik_blueprints else 'false' }}"
@@ -371,6 +374,75 @@ run_postgres() {
         log "postgresql: FAILED (rc=${rc})"
         status_append "postgres" 0 "${dur}" 0
     fi
+}
+
+run_espocrm() {
+    # Embedded apps MariaDB is invisible to infra mariadb-dump --all-databases.
+    # Skip (do not fail the night) when praxis/apps is off.
+    if [[ -z "$(docker ps -q -f "name=^${ESPOCRM_DB_CONTAINER}$" -f status=running)" ]]; then
+        log "espocrm: ${ESPOCRM_DB_CONTAINER} not running — skip"
+        return 0
+    fi
+    local date_str key start dur rc size pw vol
+    date_str="$(date -u +%Y-%m-%d)"
+    key="${date_str}/espocrm.sql.gz${ENC_SUFFIX}"
+    if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/espocrm.sql.gz"; then
+        log "espocrm: today's dump already exists, skipping"
+        status_append "espocrm" 0 0 1
+        return 0
+    fi
+    pw="$(docker exec "${ESPOCRM_DB_CONTAINER}" printenv MARIADB_ROOT_PASSWORD | tr -d '\r')"
+    if [[ -z "${pw}" ]]; then
+        log "espocrm: MARIADB_ROOT_PASSWORD empty — recording as FAILED"
+        status_append "espocrm" 0 0 0
+        return 0
+    fi
+    log "espocrm: dumping via docker exec ${ESPOCRM_DB_CONTAINER}"
+    start=$(now_ms)
+    docker exec -i "${ESPOCRM_DB_CONTAINER}" \
+        mariadb-dump \
+          --single-transaction --quick --routines --triggers \
+          -uroot -p"${pw}" \
+          --databases espocrm \
+      | gzip -c \
+      | encrypt_stream \
+      | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
+    rc=$?
+    dur=$(( $(now_ms) - start ))
+    if [[ "${rc}" -eq 0 ]]; then
+        size=$(s3_size "${key}")
+        log "espocrm: OK (${size} bytes in ${dur}ms) → s3://${S3_BUCKET}/${key}"
+        status_append "espocrm" "${size}" "${dur}" 1
+    else
+        log "espocrm: FAILED (rc=${rc})"
+        status_append "espocrm" 0 "${dur}" 0
+    fi
+    for vol in "${ESPOCRM_VOLUMES[@]+"${ESPOCRM_VOLUMES[@]}"}"; do
+        [[ -z "${vol}" ]] && continue
+        docker volume inspect "${vol}" >/dev/null 2>&1 || continue
+        key="${date_str}/volume-${vol}.tar.gz${ENC_SUFFIX}"
+        if [[ "${OVERWRITE_SAME_DAY}" != "true" ]] && already_exists_today "${date_str}/volume-${vol}.tar.gz"; then
+            log "volume/${vol}: today's dump already exists, skipping"
+            status_append "volume-${vol}" 0 0 1
+            continue
+        fi
+        log "volume/${vol}: tar-gz via ${ALPINE_IMAGE}"
+        start=$(now_ms)
+        docker run --rm -v "${vol}:/data:ro" "${ALPINE_IMAGE}" \
+            sh -c 'cd /data && tar -czf - .' \
+          | encrypt_stream \
+          | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
+        rc=$?
+        dur=$(( $(now_ms) - start ))
+        if [[ "${rc}" -eq 0 ]]; then
+            size=$(s3_size "${key}")
+            log "volume/${vol}: OK (${size} bytes in ${dur}ms)"
+            status_append "volume-${vol}" "${size}" "${dur}" 1
+        else
+            log "volume/${vol}: FAILED (rc=${rc})"
+            status_append "volume-${vol}" 0 "${dur}" 0
+        fi
+    done
 }
 
 run_volumes() {
@@ -982,6 +1054,7 @@ main() {
 
     run_mariadb
     run_postgres
+    run_espocrm
     run_volumes
     run_dirs
     run_wing_db

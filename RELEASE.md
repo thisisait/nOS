@@ -60,9 +60,15 @@ These are wired in the tree. They are not live proof that a photo became a booke
 - **REM-249** stays operator-gated (RustFS key rotation breaks S3 clients
   until they re-read `~/.nos/secrets.yml`). Do not land it from these notes.
 - **n8n invoice glue** is later.
-- **Client portal pages** are not created live.
+- **Client portal pages** are not created live. WordPress is still a gated CMS,
+  not an owner-scoped document desk.
+- A second manager can still read every `book_owner` (Model C is one consultant;
+  there is no row-level client assignment).
+- Offboard still does not delete live KEAP rows; embeddings vs Art-17 unsolved.
+- Invoice lines and integer minor-units are still deferred (prototype ledger).
 - Nightly copy #1 now tars `dir-tenants` (`nos_data_root/tenants`, including
-  `incoming/` PDFs). That is SOURCE wiring, not a restore drill.
+  `incoming/` PDFs) and dumps `espocrm.sql.gz` when `espocrm-db` is running.
+  That is SOURCE wiring, not a restore drill.
 - GitHub Integration on `master` is not claimed green. Signed-commit ruleset
   still bypassed. Four v0.11 `-beta` drop criteria remain unmet.
 

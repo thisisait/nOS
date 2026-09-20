@@ -256,6 +256,17 @@ def test_special_category_note_needs_art9_consent_ref():
     assert ok == [], ok
 
 
+def test_unbalanced_postings_fail_the_bundle_gate():
+    """Absorb used to POST if check_bundle passed even when entry_balances would fail."""
+    seed = copy.deepcopy(_seed("consulting-firm"))
+    assert seed.get("posting"), "consulting-firm fixture lost postings"
+    row = dict(seed["posting"][0])
+    row["amount"] = float(row["amount"]) + 1
+    seed["posting"][0] = row
+    errs = ND.check_fixture_seed(seed, TABLES)
+    assert any("balance" in e for e in errs), errs
+
+
 def test_oversized_free_text_is_refused():
     errs = ND.check_bundle(_operator_extraction(notes="x" * 2000), TABLES)
     assert any("oversized" in e for e in errs), errs

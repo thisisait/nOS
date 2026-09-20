@@ -332,6 +332,53 @@
                           | map(attribute='stat.size') | list | first | default(0))
         }] }}"
 
+# 5a2. EspoCRM embedded MariaDB (not infra-mariadb) ----------------------------
+
+- name: "[Restore][espocrm] Replay SQL dump into espocrm-db"
+  when:
+    - restore_plan | selectattr('source', 'equalto', 'espocrm') | list | length > 0
+    - not ansible_check_mode
+  block:
+    - name: "[Restore][espocrm] Ensure espocrm-db is running"
+      ansible.builtin.command: docker ps --filter "name=espocrm-db" --format "{% raw %}{{.Names}}{% endraw %}"
+      register: espo_db_ps
+      changed_when: false
+
+    - name: "[Restore][espocrm] Fail if espocrm-db is not running"
+      ansible.builtin.fail:
+        msg: "espocrm-db is not running. Bring up the apps stack before restoring Espo."
+      when: "'espocrm-db' not in espo_db_ps.stdout"
+
+    - name: "[Restore][espocrm] Resolve dump file + start time"
+      ansible.builtin.set_fact:
+        espo_t0: "{{ lookup('pipe', 'date +%s') }}"
+        espo_file: >-
+          {{ restore_plan | selectattr('source', 'equalto', 'espocrm')
+             | map(attribute='file') | list | last }}
+
+    - name: "[Restore][espocrm] Pipe gunzip'd dump into espocrm-db"
+      ansible.builtin.shell: |
+        set -o pipefail
+        pw=$(docker exec espocrm-db printenv MARIADB_ROOT_PASSWORD | tr -d '\r')
+        gunzip -c {{ restore_workdir }}/{{ espo_file }} \
+          | docker exec -i espocrm-db mariadb -uroot -p"${pw}"
+      args:
+        executable: /bin/bash
+      register: espo_restore
+      no_log: true
+      changed_when: espo_restore.rc == 0
+
+    - name: "[Restore][espocrm] Append to summary"
+      ansible.builtin.set_fact:
+        restore_summary: "{{ restore_summary + [{
+          'source': 'espocrm',
+          'status': 'ok',
+          'duration_s': ((lookup('pipe', 'date +%s') | int) - (espo_t0 | int)),
+          'size_bytes': (restore_stats.results
+                          | selectattr('item.source','equalto','espocrm')
+                          | map(attribute='stat.size') | list | first | default(0))
+        }] }}"
+
 # 5b. PostgreSQL ---------------------------------------------------------------
 
 - name: "[Restore][postgres] Replay pg_dumpall into infra-postgresql-1"

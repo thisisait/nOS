@@ -32,9 +32,15 @@ import hashlib
 import json
 import pathlib
 import re
+import sys
 import unicodedata
 
 import yaml
+
+_MOD_DIR = pathlib.Path(__file__).resolve().parent
+if str(_MOD_DIR) not in sys.path:
+    sys.path.insert(0, str(_MOD_DIR))
+import nos_accounting  # noqa: E402  — posting balance at the same firebreak as check_bundle
 
 #: The only top-level sections a bundle may carry.
 ALLOWED_TOP = {"meta", "deterministic", "captures", "proposals"}
@@ -282,6 +288,10 @@ def check_bundle(bundle: dict, tables_dir: str | pathlib.Path) -> list[str]:
                     errors.append(
                         f"{table}/{slug}.{key}: rowRef {val!r} is not a seeded slug "
                         f"of {ref_table!r}")
+    postings = det.get("posting")
+    if (isinstance(det.get("journal-entry"), list) and det.get("journal-entry")
+            and isinstance(postings, list)):
+        errors.extend(nos_accounting.check_entries(postings))
     _check_device_family(bundle, det, errors)
     return errors
 

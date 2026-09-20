@@ -93,6 +93,15 @@ backup_tofu_state_dir: "{{ playbook_dir }}/terraform/authentik"
 # ls`; e.g. authentik_media if present). DB *_data volumes are NOT needed.
 backup_volumes_to_dump: []
 
+# Embedded EspoCRM MariaDB (apps stack) is NOT infra-mariadb. Dump it when the
+# container is running; skip when praxis/apps is off. Mutables are named volumes
+# (not the mysql datadir — that is the dump). Compose project is `-p apps`.
+backup_espocrm_db_container: "espocrm-db"
+backup_espocrm_volumes:
+  - apps_espocrm_custom
+  - apps_espocrm_data
+  - apps_espocrm_client_custom
+
 # Host-bind service data dirs (filesystem state NO DB dump can reconstruct).
 # gitea/gitlab hold git REPOS on disk — covered by NEITHER the DB dumps nor the
 # named-volume list before this. name → restore target path (derived from the
