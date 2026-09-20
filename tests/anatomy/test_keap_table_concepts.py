@@ -377,3 +377,15 @@ def test_keap_table_seeder_reconciles():
             "definition asks for a destructive change, and an unlisted status "
             "fails with a bare HTTP error instead of the authoring diagnosis"
         )
+        name = str(t.get("name") or "")
+        if "Retry" in name and "without view" in name:
+            body = t["ansible.builtin.uri"].get("body") or {}
+            assert "view" not in body, (
+                "the facet-pin retry must omit view so COLUMNS still land on "
+                "KEAP 2.0.0-rc.1 (rowRef facets 400)"
+            )
+        else:
+            assert 400 in codes, (
+                f"task {t.get('name')!r} does not accept 400 — live KEAP refuses "
+                "rowRef facets and the consulting-firm seed died on `account`"
+            )

@@ -68,7 +68,11 @@
     # 409 = the definition asks for something destructive (a dropped column or a
     # changed kind). That is an AUTHORING error in the .table.yml, not a
     # transient — it is surfaced by the next task rather than silently tolerated.
-    status_code: [200, 201, 404, 409]
+    # 400 = live KEAP (2.0.0-rc.1) still refuses rowRef facets the face contract
+    # already allows. Retry below drops `view` so COLUMNS still land — same
+    # chokepoint as tools/digest_absorb.py. A 400 that is not that still fails
+    # the retry (retry does not accept 400).
+    status_code: [200, 201, 400, 404, 409]
   register: _face_tbl_create
   no_log: true   # Bearer keap_agent_token_rw in header
   # A reconcile that changed nothing still answers 200, so this reports changed
@@ -77,6 +81,35 @@
   # in Jinja and would drift from it. Idempotence of EFFECT is asserted by
   # KEAP's table-schema-reconcile.test.ts.
   changed_when: _face_tbl_create.status | default(0) in [200, 201]
+
+- name: "[pazny.keap] Retry DataTable {{ _face_tbl.slug }} without view (rowRef facet pin-lag)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ keap_port | default(8091) }}/agent/v1/tables"
+    method: POST
+    headers:
+      authorization: "Bearer {{ keap_agent_token_rw }}"
+      content-type: "application/json"
+    body_format: json
+    body:
+      slug: "{{ _face_tbl.slug }}"
+      title: "{{ _face_tbl.def.title }}"
+      description: "{{ _face_tbl.def.description | default('') }}"
+      driver: "{{ _face_tbl.def.driver | default('libsql') }}"
+      visibility: "{{ _face_tbl.def.visibility | default('tier-users') }}"
+      sharedWith: "{{ _face_tbl.def.sharedWith | default(omit) }}"
+      anchors: "{{ _face_tbl.def.anchors | default([]) }}"
+      columns: "{{ _face_tbl.def.schema.columns }}"
+      graph: "{{ _face_tbl.def.graph | default(omit) }}"
+    status_code: [200, 201, 404, 409]
+  register: _face_tbl_retry
+  no_log: true
+  when: _face_tbl_create.status | default(0) == 400
+  changed_when: _face_tbl_retry.status | default(0) in [200, 201]
+
+- name: "[pazny.keap] Keep the no-view reconcile when the facet pin refused"
+  ansible.builtin.set_fact:
+    _face_tbl_create: "{{ _face_tbl_retry }}"
+  when: _face_tbl_create.status | default(0) == 400
 
 - name: "[pazny.keap] Fail when the DataTable definition asks for a destructive change"
   ansible.builtin.fail:

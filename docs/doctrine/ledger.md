@@ -1,10 +1,9 @@
 # Ledger — the firm's books, not a fifth brain
 
-> **PROPOSED, not settled.** This file names a purpose that every tenant
-> already needs. It does **not** add a host daemon. The operator settles §5
-> before anything cites this file as law. Sibling of
-> [`organs.md`](organs.md) (the four meanings of "organ") and of Digest
-> (the stomach: intake). Promote to `ssot/doctrine/ledger.md` only after §5.
+> **PROPOSED, not settled.** Warehouse slug stays `ledger.md` until the
+> public organ is renamed. Sibling of [`organs.md`](organs.md) and of
+> Digest (the stomach: intake). Promote to `ssot/doctrine/` only after
+> the name in §5.1 is picked — not before.
 
 ## 1. The organ already exists — do not mint a daemon
 
@@ -38,6 +37,8 @@ leave off.
 
 A tenant may disable ERPNext or Firefly and still have KEAP books + Espo.
 They may not disable the SoT tables and call the estate "a firm OS".
+**Default blank (settled 2026-09-20):** Espo + KEAP tables on; Firefly and
+ERPNext stay off. Heavier books are opt-in, not the core.
 
 ## 3. One SoT, many projections
 
@@ -52,9 +53,10 @@ They may not disable the SoT tables and call the estate "a firm OS".
 - **Model C**: client isolation is analytical 311/321 (and `book_owner`
   on the invoice), not a database per client.
 - Apex **withholds** `table:invoice`, `table:party`, `table:posting`, …
-  on purpose: a client's books are not the public front door. The organ's
-  *published* atoms are capabilities (ERPNext, Firefly, FreeScout), not
-  rows.
+  on purpose: a client's books are not the public front door. Published
+  atoms are capabilities, not rows. Firefly/ERPNext stay unpublished as
+  defaults-off; FreeScout remains the customer desk in this organ until
+  a rename.
 
 ## 4. Doors (the wiring that must stay honest)
 
@@ -69,11 +71,23 @@ They may not disable the SoT tables and call the estate "a firm OS".
 A release that ships Books without absorb, or Espo without the join tag,
 or vision that writes `invoice` directly, is not this organ.
 
-## 5. Awaits the operator
+## 5. Name, defaults, commons (operator 2026-09-20)
 
-1. Keep the public name **ledger**, or retitle the apex organ (not a new
-   host organ either way)?
-2. Default-on for a blank: Espo + KEAP tables (yes/no); Firefly (yes/no);
-   ERPNext stays parked?
-3. WordPress client portal: `commons` or `ledger`?
-4. Promote this file when 1–3 are answered — not before.
+1. **Name — still open.** `ledger` collides with every accounting product
+   and with Firefly's own vocabulary. Apex key stays `ledger` until a
+   rename; working candidates (pick one, then rename apex + this file):
+   - **folio** — the bound account-book; unused in apex
+   - **comptoir** — the merchant's counting desk
+   - **praxis** — the consulting practice, not the books alone
+   Not a fifth host daemon under any of those names.
+2. **Settled:** Firefly and ERPNext off on a blank. Espo + KEAP tables
+   are the core books/CRM.
+3. **Settled:** the client/user portal lives in **commons** (universal
+   base; a deployment fills it with what that firm needs). WordPress is
+   that portal when the firm wants a CMS, not a second ledger.
+4. **Config builder:** there is no clickable `config.yml` generator in
+   this tree. Closest surfaces: `profiles/{all-on,gov-local,dev-minimal}.yml`
+   (YAML, not a wizard); queued DTT `face-app-builder` (tenant apps, not
+   `install_*` flags); `docs/overview.html` (map, not a picker). A
+   first-onboard static chooser that emits `config.yml` is new work —
+   it belongs next to commons, not inside this organ.
