@@ -26,6 +26,7 @@
 	let err = $state('');
 	let busy = $state('');
 	let espo = $state<HubApp | null>(null);
+	let bookOwner = $state('');
 
 	onMount(async () => {
 		try {
@@ -80,6 +81,25 @@
 			return res === 'pending' || res === '';
 		})
 	);
+
+	const owners = $derived(
+		[
+			...new Set(
+				[
+					...(invoices?.rows ?? []).map((r) => cell(r, 'book_owner')),
+					...(parties?.rows ?? []).map((r) => cell(r, 'slug'))
+				].filter(Boolean)
+			)
+		].sort()
+	);
+
+	const shownInvoices = $derived(
+		(invoices?.rows ?? []).filter((r) => !bookOwner || cell(r, 'book_owner') === bookOwner)
+	);
+
+	const shownParties = $derived(
+		(parties?.rows ?? []).filter((r) => !bookOwner || cell(r, 'slug') === bookOwner)
+	);
 </script>
 
 <div class="books">
@@ -87,6 +107,15 @@
 	{#if err}
 		<StatusNote kind="error">{err}</StatusNote>
 	{/if}
+	<label class="owner">
+		<span>book_owner</span>
+		<select bind:value={bookOwner}>
+			<option value="">All books</option>
+			{#each owners as owner (owner)}
+				<option value={owner}>{owner}</option>
+			{/each}
+		</select>
+	</label>
 	<div class="body" role="tabpanel">
 		{#if active === 'queue'}
 			{#if !queue}
@@ -120,12 +149,13 @@
 			{:else}
 				<table>
 					<thead>
-						<tr><th>Number</th><th>Seller</th><th>Buyer</th><th>Payable</th><th>Kind</th></tr>
+						<tr><th>Number</th><th>Book</th><th>Seller</th><th>Buyer</th><th>Payable</th><th>Kind</th></tr>
 					</thead>
 					<tbody>
-						{#each invoices.rows as row (row.id)}
+						{#each shownInvoices as row (row.id)}
 							<tr>
 								<td>{cell(row, 'document_number')}</td>
+								<td>{cell(row, 'book_owner')}</td>
 								<td>{cell(row, 'seller__ref') || cell(row, 'seller')}</td>
 								<td>{cell(row, 'buyer__ref') || cell(row, 'buyer')}</td>
 								<td>{cell(row, 'payable_amount')}</td>
@@ -151,7 +181,7 @@
 						<tr><th>Name</th><th>Role</th><th>Slug</th></tr>
 					</thead>
 					<tbody>
-						{#each parties.rows as row (row.id)}
+						{#each shownParties as row (row.id)}
 							<tr>
 								<td>{cell(row, 'legal_name')}</td>
 								<td>{cell(row, 'role') || 'counterparty'}</td>
@@ -198,5 +228,14 @@
 	}
 	code {
 		font-size: 11px;
+	}
+	.owner {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 12px;
+	}
+	.owner select {
+		font: inherit;
 	}
 </style>

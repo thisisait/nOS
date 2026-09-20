@@ -20,6 +20,8 @@ from module_utils import nos_gdpr  # type: ignore  # noqa: E402
 REPO = pathlib.Path(__file__).resolve().parents[2]
 MAP_PATH = REPO / "state" / "gdpr-erasure-map.yml"
 PLUGINS_ROOT = REPO / "files" / "anatomy" / "plugins"
+APPS_DIR = REPO / "apps"
+APP_IDS_SKIPPED = {"app_qdrant"}
 
 VALID_METHODS = {"authentik_api", "container_exec", "manual"}
 
@@ -29,7 +31,9 @@ def _entries() -> list[dict]:
 
 
 def _register_ids() -> set[str]:
-    return {r["id"] for r in nos_gdpr.records_from_plugins(PLUGINS_ROOT)}
+    ids = {r["id"] for r in nos_gdpr.records_from_plugins(PLUGINS_ROOT)}
+    ids |= {r["id"] for r in nos_gdpr.records_from_app_manifests(APPS_DIR)}
+    return ids
 
 
 def test_map_loads_with_services():
@@ -40,7 +44,7 @@ def test_map_loads_with_services():
 def test_ids_unique_and_svc_prefixed():
     ids = [e["id"] for e in _entries()]
     assert len(ids) == len(set(ids)), "duplicate erasure-map id"
-    assert all(i.startswith("svc_") for i in ids)
+    assert all(i.startswith("svc_") or i.startswith("app_") for i in ids)
 
 
 def test_every_map_id_is_a_real_service():
@@ -71,14 +75,18 @@ def test_entry_is_well_formed(entry):
 def _inscope_expected() -> set[str]:
     """Every per-user-PII service that MUST carry an Art-17 erasure entry: gdpr
     plugins with authentik.mode in {native_oidc, header_oidc} plus the AT-proto
-    (svc_bluesky-pds) + authentik anchors. forward_auth services are access
-    gates with no per-user state, so they are intentionally out of scope."""
+    (svc_bluesky-pds) + authentik anchors, plus every Tier-2 app gdpr record
+    except app_qdrant (residual svc_qdrant). Plugin forward_auth stays out of
+    scope; app forward_auth with a gdpr block is in scope."""
     ids = {"svc_authentik", "svc_bluesky-pds"}
     for f in PLUGINS_ROOT.glob("*/plugin.yml"):
         d = yaml.safe_load(f.read_text()) or {}
         a = d.get("authentik") or {}
         if a.get("mode") in ("native_oidc", "header_oidc") and d.get("gdpr"):
             ids.add("svc_" + f.parent.name.removesuffix("-base"))
+    for rec in nos_gdpr.records_from_app_manifests(APPS_DIR):
+        if rec["id"] not in APP_IDS_SKIPPED:
+            ids.add(rec["id"])
     return ids
 
 

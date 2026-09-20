@@ -1806,6 +1806,10 @@ install_qdrant: false
 # on an undefined var (the `| default({})` below does not save it). See CLAUDE.md
 # `{{ vars }}` gotcha + test_config_stock_jinja_only.py.
 app_secrets: {}
+# Play-level hoist of the apps_runner skip switch so Art-15/17 maps can
+# `lookup('vars', 'apps_runner_enabled')` outside the role. Role default is
+# the same true; operators set false in config.yml to skip the whole catalog.
+apps_runner_enabled: true
 qdrant_api_key: "{{ (app_secrets | default({})).get('qdrant', {}).get('PASSWORD_API', '') }}"
 qdrant_api_key_ro: "{{ (app_secrets | default({})).get('qdrant', {}).get('PASSWORD_RO_API', '') }}"
 qdrant_url: "http://127.0.0.1:{{ qdrant_port | default(6333) }}"

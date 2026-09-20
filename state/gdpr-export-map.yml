@@ -5,31 +5,35 @@
 # per-subject EXPORT. Centralized on purpose: an export reaches into the same
 # per-user stores an erasure does, so a single reviewable list beats scattering
 # ad-hoc dumps across 20 plugins. Keys (`id`) match the DPA register /
-# gdpr_processing rows (svc_<name>); `flag` is the install toggle the service is
-# gated on (`always` = part of an always-on stack).
+# gdpr_processing rows (`svc_<plugin>` or `app_<manifest>`); `flag` is the
+# install toggle (`always` = always-on stack; `apps_runner_enabled` for
+# Tier-2 manifests).
 #
 # COVERAGE = 21 per-user-PII service plugins (native_oidc + header_oidc carrying
 # a gdpr: block) + 2 anchors (svc_authentik identity + svc_bluesky-pds AT-proto)
-# = 23 entries. This is byte-for-byte the per-user-PII set the erasure map
-# covers (erasure-minus-the-6-residual-stores) — Art-15 access mirrors Art-17
-# erasure. forward_auth services are access gates with no per-user state, so
-# they are intentionally out of scope; the backend/residual stores (Redis
-# sessions, Qdrant embeddings, RustFS backups, wing.db, Loki/Tempo) that the
-# erasure map additionally reaches are NOT extracted by a single-subject access
-# export, so they are intentionally absent here (including them would imply
-# coverage we cannot evidence).
+# + 4 Tier-2 apps with a gdpr: block (espocrm, documenso, twofauth, roundcube;
+# app_qdrant is the same residual store as svc_qdrant and stays on the erasure
+# residual list only) = 27 entries. This is byte-for-byte the per-user-PII set
+# the erasure map covers (erasure-minus-the-6-residual-stores) — Art-15 access
+# mirrors Art-17 erasure. Plugin forward_auth services remain out of scope;
+# Tier-2 apps that keep per-user PII behind a forward_auth gate are in scope.
+# The backend/residual stores (Redis sessions, Qdrant embeddings, RustFS
+# backups, wing.db, Loki/Tempo) that the erasure map additionally reaches are
+# NOT extracted by a single-subject access export, so they are intentionally
+# absent here (including them would imply coverage we cannot evidence).
 #
 # ── LEGAL BASIS / request_type (Art-15 vs Art-20) ───────────────────────────
 # Art-15 (right of ACCESS) applies to ALL personal data under ANY lawful basis
 # → this feature records request_type='access' for the run (universally valid).
 # Art-20 (data PORTABILITY) applies ONLY to subject-PROVIDED data processed
 # under consent 6(1)(a) or contract 6(1)(b). Per this repo's plugin manifests
-# the ONLY contract-basis services are erpnext, gitea, vaultwarden (none are
-# consent; the other 18 are legitimate_interests). `portability_eligible: true`
-# tags those three so the operator and the CI gate know portability is a valid
+# the contract-basis services include erpnext, gitea, vaultwarden, plus
+# app_espocrm and app_documenso (none are consent; the rest are
+# legitimate_interests). `portability_eligible: true` tags those so the
+# operator and the CI gate know portability is a valid
 # additional framing for them — but the DSAR row stays request_type='access'
 # (the always-true right), never the false 'portability' on a legitimate-
-# interests store. NOTE: even for the 3 contract services Art-20 covers only
+# interests store. NOTE: even for the contract services Art-20 covers only
 # subject-PROVIDED data, not platform-derived/observed data (e.g. gitea commit
 # metadata) — that subset is an operator judgement, documented per entry.
 #
@@ -229,3 +233,36 @@ services:
     method: manual
     note: "Resolve did from @<handle>.bsky.<tld>, then com.atproto.sync.getRepo
            (CAR export of the subject's repo) via the PDS admin/auth token."
+
+  # ── Tier-2 apps (app_<name> — DPA records_from_app_manifests) ────────────
+  - id: app_espocrm
+    flag: apps_runner_enabled
+    method: manual
+    portability_eligible: true
+    note: "Espo REST as bootstrap admin: GET /api/v1/Contact, /Lead, /Account
+           with where emailAddress equals the subject. Include Account rows
+           whose description carries nos:party:<slug> for that subject's
+           party. Promote to container_exec once a live email filter is
+           verified."
+
+  - id: app_documenso
+    flag: apps_runner_enabled
+    method: manual
+    portability_eligible: true
+    note: "Signer/recipient PII in the embedded Postgres (documenso-db).
+           Operator dump by email from Recipient / User tables. Unverified
+           live — method:manual until a read-only SQL one-liner is proven."
+
+  - id: app_twofauth
+    flag: apps_runner_enabled
+    method: manual
+    note: "2FAuth SQLite user + TOTP rows. Match the subject email in the
+           users table via docker exec twofauth; do not dump other operators'
+           secrets. Unverified live — method:manual."
+
+  - id: app_roundcube
+    flag: apps_runner_enabled
+    method: manual
+    note: "Roundcube session/cache plus the subject's IMAP mailbox (the
+           mailbox itself is the Art-15 store). Export the matching
+           identities row; mailbox export is the IMAP admin path."

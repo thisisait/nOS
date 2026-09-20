@@ -30,13 +30,10 @@
 # in this file (module_utils/nos_app_parser.py:resolve_tokens) and records
 # in `generated_secrets` — zero Jinja in the compose block.
 #
-# ── Party-spine TODO — DO NOT BUILD NOW ─────────────────────────────────────
-# nOS's `party` table is the single source of truth for parties/contacts.
-# EspoCRM ships its own Contact/Account model — for v1 this is DELIBERATELY
-# a second, disconnected contact store (standalone CRM, no sync). A later,
-# SEPARATE task must build a party-spine sync (EspoCRM Contact <-> party
-# table, spine as system of record, EspoCRM never forks a second truth).
-# Do not wire that here.
+# ── Party join (v1) ─────────────────────────────────────────────────────────
+# nOS `party` remains SoT. Espo Account.description carries `nos:party:<slug>`
+# written by tools/espo-party-sync.py (bootstrap admin, no custom entity).
+# Contact/Lead stay Espo's own store — do not fork a second party table.
 # ============================================================================
 
 meta:
@@ -147,7 +144,7 @@ compose:
       cpus: 1.0
 
     espocrm-db:
-      image: "docker.io/mariadb:11.8.8"
+      image: "docker.io/mariadb:11.8.9"
       container_name: espocrm-db
       restart: unless-stopped
       environment:

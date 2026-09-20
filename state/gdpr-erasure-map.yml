@@ -4,15 +4,18 @@
 # ONE audited file for every destructive per-subject deletion. Centralized on
 # purpose: erasure commands are irreversible, so a single reviewable list beats
 # scattering `rm`-equivalents across 20 plugins. Keys (`id`) match the DPA
-# register / gdpr_processing rows (svc_<name>); `flag` is the install toggle the
-# service is gated on (`always` = part of an always-on stack).
+# register / gdpr_processing rows (`svc_<plugin>` or `app_<manifest>`); `flag`
+# is the install toggle (`always` = always-on; `apps_runner_enabled` for
+# Tier-2 manifests).
 #
-# Coverage = every service that stores PER-USER data (native_oidc + header_oidc
-# + AT-proto identity), PLUS the backend/residual stores that retain DERIVED
-# subject data beyond those per-service deletes (Redis sessions, Qdrant
-# embeddings, RustFS backups, wing.db agent tables, Loki/Tempo) — see the
-# "Backend stores & residual reach" section. forward_auth services are access
-# gates with no per-user state, so they are intentionally absent.
+# Coverage = every plugin that stores PER-USER data (native_oidc + header_oidc
+# + AT-proto identity) + four Tier-2 apps with a gdpr: block (espocrm,
+# documenso, twofauth, roundcube; app_qdrant stays as residual svc_qdrant),
+# PLUS the backend/residual stores that retain DERIVED subject data beyond
+# those per-service deletes (Redis sessions, Qdrant embeddings, RustFS
+# backups, wing.db agent tables, Loki/Tempo) — see the "Backend stores &
+# residual reach" section. Plugin forward_auth services remain absent;
+# Tier-2 apps that keep per-user PII behind a forward_auth gate are in scope.
 #
 # method:
 #   authentik_api  — the identity anchor. Deletes the Authentik user, revoking
@@ -160,6 +163,35 @@ services:
     flag: install_bluesky_pds
     method: manual
     note: "pdsadmin account delete <did> (resolve did from @<handle>.bsky.<tld>)."
+
+  # ── Tier-2 apps (app_<name> — DPA records_from_app_manifests) ────────────
+  - id: app_espocrm
+    flag: apps_runner_enabled
+    method: manual
+    note: "DELETE Contact/Lead rows whose emailAddress equals the subject.
+           For Account rows joined only by nos:party:<slug>, drop the join
+           tag then delete the Account if no other legitimate contacts remain.
+           Operator-run Espo UI or REST — do not auto-run."
+
+  - id: app_documenso
+    flag: apps_runner_enabled
+    method: manual
+    note: "Delete Recipient/User rows for the subject in documenso-db. Signed
+           documents may be Art-17(3)(b) legal-claim retention — review before
+           DROP. Unverified live — method:manual."
+
+  - id: app_twofauth
+    flag: apps_runner_enabled
+    method: manual
+    note: "Delete the matching 2FAuth user (and their TOTP secrets) via the
+           admin UI or SQLite. Unverified live — method:manual."
+
+  - id: app_roundcube
+    flag: apps_runner_enabled
+    method: manual
+    note: "Drop the Roundcube identities/session row; mailbox erasure is the
+           IMAP/Stalwart path (already covered if svc_stalwart/mail is in
+           plan). Unverified live — method:manual."
 
   # ── Backend stores & residual reach (Art. 17 — beyond per-service deletes) ─
   # These hold DERIVED / RESIDUAL subject data the per-service deletes above do

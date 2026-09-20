@@ -28,6 +28,9 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 MAP_PATH = REPO / "state" / "gdpr-export-map.yml"
 ERASURE_PATH = REPO / "state" / "gdpr-erasure-map.yml"
 PLUGINS_ROOT = REPO / "files" / "anatomy" / "plugins"
+APPS_DIR = REPO / "apps"
+# Same residual store as svc_qdrant — do not duplicate as app_qdrant.
+APP_IDS_SKIPPED = {"app_qdrant"}
 EXPORT_TASK = REPO / "tasks" / "gdpr-export.yml"
 
 VALID_METHODS = {"authentik_api", "container_exec", "manual"}
@@ -49,13 +52,21 @@ def _entries() -> list[dict]:
 
 
 def _register_ids() -> set[str]:
-    return {r["id"] for r in nos_gdpr.records_from_plugins(PLUGINS_ROOT)}
+    ids = {r["id"] for r in nos_gdpr.records_from_plugins(PLUGINS_ROOT)}
+    ids |= {r["id"] for r in nos_gdpr.records_from_app_manifests(APPS_DIR)}
+    return ids
 
 
 def _plugin_legal_basis(svc_id: str) -> str | None:
-    """Lawful basis for a svc_<name> id from its plugin gdpr block (anchors
-    svc_authentik / svc_bluesky-pds have no per-service consent/contract basis
-    -> None, i.e. access-only)."""
+    """Lawful basis from the plugin gdpr block or the Tier-2 app manifest.
+    Anchors svc_authentik / svc_bluesky-pds have no consent/contract basis
+    -> None, i.e. access-only."""
+    if svc_id.startswith("app_"):
+        p = APPS_DIR / f"{svc_id.removeprefix('app_')}.yml"
+        if not p.is_file():
+            return None
+        d = yaml.safe_load(p.read_text()) or {}
+        return (d.get("gdpr") or {}).get("legal_basis")
     name = svc_id.removeprefix("svc_")
     p = PLUGINS_ROOT / f"{name}-base" / "plugin.yml"
     if not p.is_file():
@@ -72,7 +83,7 @@ def test_map_loads_with_services():
 def test_ids_unique_and_svc_prefixed():
     ids = [e["id"] for e in _entries()]
     assert len(ids) == len(set(ids)), "duplicate export-map id"
-    assert all(i.startswith("svc_") for i in ids)
+    assert all(i.startswith("svc_") or i.startswith("app_") for i in ids)
 
 
 def test_every_map_id_is_a_real_service():
@@ -149,15 +160,18 @@ def test_authentik_executor_writes_single_match_not_envelope():
 def _inscope_expected() -> set[str]:
     """Every per-user-PII service that MUST carry an Art-15 export entry: gdpr
     plugins with authentik.mode in {native_oidc, header_oidc} plus the AT-proto
-    (svc_bluesky-pds) + authentik anchors. Byte-for-byte the erasure-map's
-    in-scope set (21 service plugins + 2 anchors = 23) — access mirrors erasure.
-    forward_auth services are access gates with no per-user state -> out of scope."""
+    (svc_bluesky-pds) + authentik anchors, plus every Tier-2 app gdpr record
+    except app_qdrant (residual svc_qdrant). Plugin forward_auth stays out of
+    scope; app forward_auth with a gdpr block is in scope (per-user PII)."""
     ids = {"svc_authentik", "svc_bluesky-pds"}
     for f in PLUGINS_ROOT.glob("*/plugin.yml"):
         d = yaml.safe_load(f.read_text()) or {}
         a = d.get("authentik") or {}
         if a.get("mode") in ("native_oidc", "header_oidc") and d.get("gdpr"):
             ids.add("svc_" + f.parent.name.removesuffix("-base"))
+    for rec in nos_gdpr.records_from_app_manifests(APPS_DIR):
+        if rec["id"] not in APP_IDS_SKIPPED:
+            ids.add(rec["id"])
     return ids
 
 
