@@ -48,6 +48,10 @@ def _rows():
             {"slug": "je-alfa", "source": "inv-alfa"},
             {"slug": "je-beta", "source": "inv-beta"},
         ],
+        "invoice-line": [
+            {"slug": "line-alfa", "invoice": "inv-alfa"},
+            {"slug": "line-beta", "invoice": "inv-beta"},
+        ],
         "posting": [
             {"slug": "p-alfa-1", "entry": "je-alfa", "account": "acc-311-alfa"},
             {"slug": "p-beta-1", "entry": "je-beta", "account": "acc-311-beta"},
@@ -90,6 +94,8 @@ def test_dry_run_prints_plan_and_exits_0(tmp_path):
     assert ("invoice", "inv-alfa") in keap
     assert ("invoice", "inv-beta") not in keap
     assert ("journal-entry", "je-alfa") in keap
+    assert ("invoice-line", "line-alfa") in keap
+    assert ("invoice-line", "line-beta") not in keap
     assert ("posting", "p-alfa-1") in keap
     assert ("account", "acc-311-alfa") in keap
     assert ("account", "acc-311") not in keap
@@ -128,18 +134,25 @@ def test_bad_slug_refuses():
     assert mod.main(["a"]) == 2
 
 
-def test_confirm_stub_rmtree_skips_git_fixtures(tmp_path, monkeypatch):
+def test_confirm_rmtree_and_keap_delete(tmp_path, monkeypatch):
     mod = _load()
     live = _tree(tmp_path, ALFA)
     fixture = REPO / "state" / "fixtures"
     monkeypatch.setenv("NOS_OFFBOARD_CONFIRM", ALFA)
+    deleted = []
+    monkeypatch.setattr(mod, "delete_row", lambda t, s: deleted.append((t, s)))
     rows_path = tmp_path / "rows.json"
-    rows_path.write_text(json.dumps({"invoice": [], "party": [{"slug": ALFA}]}), encoding="utf-8")
+    rows_path.write_text(json.dumps(_rows()), encoding="utf-8")
     rc = mod.main([ALFA, "--confirm", ALFA, "--data-root", str(tmp_path),
                    "--rows-json", str(rows_path)])
     assert rc == 0
     assert not (live / "incoming").exists()
     assert fixture.is_dir()
+    assert ("invoice", "inv-alfa") in deleted
+    assert ("invoice-line", "line-alfa") in deleted
+    assert ("posting", "p-alfa-1") in deleted
+    assert ("invoice", "inv-beta") not in deleted
+    assert deleted.index(("posting", "p-alfa-1")) < deleted.index(("invoice", "inv-alfa"))
     planned = mod.plan(ALFA, {}, data_root=REPO / "state" / "fixtures")
     assert planned["filesystem"] == []
 
@@ -162,6 +175,6 @@ def test_party_last_when_no_foreign_refs():
     assert deletes[-1]["table"] == "party" and deletes[-1]["slug"] == ALFA
     tables = [s["table"] for s in deletes]
     assert tables.index("posting") < tables.index("journal-entry") < tables.index("invoice")
-    assert "live KEAP DELETE not proven" in planned["unsolved"]
+    assert "live KEAP DELETE not proven" not in planned["unsolved"]
     assert any("Art-17" in u for u in planned["unsolved"])
     assert planned["audit_post"]["body"]["request_type"] == "erase"

@@ -21,7 +21,8 @@ import {
 	keapWriteConfigured,
 	UpstreamError
 } from '$lib/server/upstream';
-import { canReadTable, canWriteTables } from '$lib/security/tier';
+import { canReadTable, canWriteTables, canViewAnatomy } from '$lib/security/tier';
+import { BOOK_SCOPED, filterBookRows, mayWriteBookRow, type Row } from '$lib/security/bookScope';
 import { toTableSummaries, type TableSummary } from '$lib/tables/summary';
 import { narrowView, decorateRowRefs } from '$lib/tables/view';
 import { postTableAudit } from '$lib/server/audit';
@@ -138,7 +139,29 @@ function mayReadTable(
 	return isFaceConfigTable(slug) || canReadTable(visibility, groups);
 }
 
-function readableSummaries(
+async function fetchLiveRows(slug: string, uid: string): Promise<DataTableRow[]> {
+	const rowsData = unwrap<{ rows?: DataTableRow[] }>(await keapTableRows(slug, uid));
+	const live = rowsData.rows ?? (Array.isArray(rowsData) ? (rowsData as DataTableRow[]) : []);
+	return withStableIds(live);
+}
+
+async function scopeContext(uid: string, groups: readonly string[] | undefined, slug: string) {
+	const access = await fetchLiveRows('book-access', uid).catch(() => [] as DataTableRow[]);
+	const needInv =
+		slug === 'invoice-line' ||
+		slug === 'journal-entry' ||
+		slug === 'posting' ||
+		slug === 'party' ||
+		slug === 'pending-invoice-verify';
+	const invoices = needInv
+		? await fetchLiveRows('invoice', uid).catch(() => [] as DataTableRow[])
+		: [];
+	const journals =
+		slug === 'posting'
+			? await fetchLiveRows('journal-entry', uid).catch(() => [] as DataTableRow[])
+			: [];
+	return { access, invoices, journals, groups, uid };
+}
 	tables: TableSummary[],
 	groups: readonly string[] | undefined
 ): TableSummary[] {
@@ -239,6 +262,20 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 				rowsData.rows ?? (Array.isArray(rowsData) ? (rowsData as DataTableRow[]) : []);
 			table.rows = withStableIds(liveRows);
 			table.source = 'keap';
+			if (BOOK_SCOPED.has(slug) && !canViewAnatomy(groups)) {
+				const ctx = await scopeContext(locals.identity.uid, groups, slug);
+				const invoices = slug === 'invoice' ? table.rows : ctx.invoices;
+				const journals = slug === 'journal-entry' ? table.rows : ctx.journals;
+				table.rows = filterBookRows({
+					slug,
+					rows: table.rows,
+					uid: locals.identity.uid,
+					groups,
+					access: ctx.access,
+					invoices,
+					journals
+				}) as DataTableRow[];
+			}
 			// rowRef: skip a refTable the caller cannot read (do not load party for a guest).
 			const refTables = [
 				...new Set(
@@ -303,6 +340,27 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
 		if (body.op === 'upsertRow') {
 			if (!body.row || typeof body.row !== 'object') throw error(400, 'row object required');
+			if (BOOK_SCOPED.has(slug)) {
+				const ctx = await scopeContext(
+					locals.identity.uid,
+					locals.identity.groups,
+					slug
+				);
+				const invoices =
+					slug === 'invoice' ? ([body.row] as DataTableRow[]) : ctx.invoices;
+				if (
+					!mayWriteBookRow({
+						slug,
+						row: body.row as Row,
+						uid: locals.identity.uid,
+						groups: locals.identity.groups,
+						access: ctx.access,
+						invoices
+					})
+				) {
+					throw error(403, 'this book is not assigned to you');
+				}
+			}
 			const result = json(unwrap(await keapUpsertRow(slug, body.row)));
 			// Audit-only: fire-and-forget, never blocks or fails the write it's
 			// auditing (postTableAudit swallows its own errors). row_id is the

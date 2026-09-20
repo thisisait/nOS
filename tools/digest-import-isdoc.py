@@ -3,9 +3,9 @@
 
 Proves a third source on the same spine and the seller/buyer DUAL party resolve:
 each invoice header attributes to TWO parties, both resolved against the live spine
-(never minted). Walks a directory of *.isdoc.xml, reads the invoice header + both
-PartyIdentification IČOs, and emits {party: [stubs], invoice: [headers]} through
-run_importer. Lines are deferred — the header + dual resolve is the money axis.
+(never minted). Walks a directory of *.isdoc.xml, reads the invoice header + InvoiceLine (or
+synthesizes one line per TaxSubTotal) + both PartyIdentification IČOs, and
+emits {party, invoice, invoice-line} through run_importer.
 
   tools/digest-import-isdoc.py state/fixtures/isdoc-fixture --fixture-mode
   tools/digest-import-isdoc.py state/fixtures/isdoc-fixture --fixture-mode --absorb
@@ -86,6 +86,34 @@ def _num(text) -> float | None:
         return round(float(text), 2)
     except (TypeError, ValueError):
         return None
+
+
+def _invoice_lines(doc) -> list[dict]:
+    """ISDOC InvoiceLine children. Namespace-agnostic; a header-only fixture
+    yields [] so compose can synthesize from TaxSubTotal."""
+    out = []
+    for el in doc.iter():
+        if el.tag.split("}")[-1] != "InvoiceLine":
+            continue
+        lid = _localtext(el, "ID") or str(len(out) + 1)
+        qty = _num(_localtext(el, "InvoicedQuantity")) or 1.0
+        net = _num(_localtext(el, "LineExtensionAmount"))
+        if net is None:
+            unit = _num(_localtext(el, "UnitPrice"))
+            if unit is not None:
+                net = round(unit * qty, 2)
+        rate = _num(_localtext(el, "VATRate")) or _num(_localtext(el, "Percent"))
+        vat = _num(_localtext(el, "LineExtensionAmountTaxInclusive"))
+        if vat is not None and net is not None:
+            vat = round(vat - net, 2)
+        elif net is not None and rate is not None:
+            vat = round(net * rate / 100.0, 2)
+        desc = _localtext(el, "Description") or ""
+        entry = {"id": lid, "qty": qty, "description": desc, "net": net, "vat": vat}
+        if rate is not None:
+            entry["vat_rate"] = rate
+        out.append(entry)
+    return out
 
 
 def _tax_subtotals(doc) -> list[dict]:
@@ -182,6 +210,7 @@ class IsdocImporter:
                 "vat_regime": regime,
                 "seller": _party(_local(doc, "AccountingSupplierParty")),
                 "buyer": _party(_local(doc, "AccountingCustomerParty")),
+                "lines": _invoice_lines(doc),
             })
         return out
 
@@ -294,7 +323,40 @@ class IsdocImporter:
             if r.get("raw_archive_ref"):
                 row["raw_archive_ref"] = r["raw_archive_ref"]
             invoices.append(row)
-        return {"party": list(parties.values()), "invoice": invoices}
+        line_rows = []
+        for rec, inv in zip(records, invoices):
+            parsed = list(rec.get("lines") or [])
+            if not parsed:
+                for i, sub in enumerate(inv.get("vat_breakdown") or [], 1):
+                    parsed.append({
+                        "id": str(i), "qty": 1,
+                        "description": f"VAT {sub.get('rate', '')}%".strip(),
+                        "net": sub.get("base"), "vat": sub.get("vat"),
+                        "vat_rate": sub.get("rate"),
+                    })
+            if not parsed and inv.get("net_amount") is not None:
+                parsed.append({
+                    "id": "1", "qty": 1, "description": "",
+                    "net": inv["net_amount"], "vat": inv.get("vat_amount"),
+                })
+            for i, ln in enumerate(parsed, 1):
+                if ln.get("net") is None:
+                    continue
+                row = {
+                    "slug": _slug("line", inv["slug"], ln.get("id") or i),
+                    "invoice": inv["slug"],
+                    "line_no": i,
+                    "description": ln.get("description") or "",
+                    "quantity": ln.get("qty") or 1,
+                    "net_amount": round(float(ln["net"]), 2),
+                }
+                if ln.get("vat_rate") is not None:
+                    row["vat_rate"] = ln["vat_rate"]
+                if ln.get("vat") is not None:
+                    row["vat_amount"] = round(float(ln["vat"]), 2)
+                line_rows.append(row)
+        return {"party": list(parties.values()), "invoice": invoices,
+                "invoice-line": line_rows}
 
 
 def main() -> int:

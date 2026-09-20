@@ -39,7 +39,7 @@ def test_gate_passes_and_bundle_is_party_then_invoice():
     assert list(bundle["deterministic"].keys())[:1] == ["party"]
     assert "invoice" in bundle["deterministic"]
     keys = list(bundle["deterministic"].keys())
-    assert keys.index("party") < keys.index("invoice")
+    assert keys.index("party") < keys.index("invoice") < keys.index("invoice-line")
 
 
 def test_dual_resolve_and_unknown_buyer_is_skipped():
@@ -65,6 +65,9 @@ def test_amount_and_dates_parsed_and_prov_stamped():
     assert inv1["payable_amount"] == 48400.0 and inv1["currency"] == "CZK"
     assert inv1["net_amount"] == 40000.0 and inv1["vat_amount"] == 8400.0   # TaxTotal breakdown
     assert round(inv1["net_amount"] + inv1["vat_amount"], 2) == inv1["payable_amount"]
+    lines = bundle["deterministic"]["invoice-line"]
+    of1 = [ln for ln in lines if ln["invoice"] == inv1["slug"]]
+    assert of1 and round(sum(ln["net_amount"] for ln in of1), 2) == inv1["net_amount"]
     assert isinstance(inv1["issue_date"], int) and isinstance(inv1["due_date"], int)  # ISO → epoch
     for rows in bundle["deterministic"].values():
         for r in rows:

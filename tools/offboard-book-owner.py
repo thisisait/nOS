@@ -5,9 +5,9 @@ Parallel to email-keyed tasks/gdpr-forget.yml: dry-run by default, prints an
 audited plan, mutates nothing unless --confirm equals the slug (or
 NOS_OFFBOARD_CONFIRM does). A typo cannot wipe Alfa while naming Beta.
 
-Live KEAP/Espo are not called. Confirm is a stub: filesystem rmtree only on a
-data-root outside this git checkout; KEAP steps are listed DELETE bodies.
-Trained-model Art-17 (embeddings) is unsolved.
+Confirm rmtree's the inbox (outside this git checkout) and DELETEs planned
+KEAP rows via keap_api.delete_row (human door; agent v1 has no row DELETE).
+Espo Account DELETE stays operator-run. Trained-model Art-17 is unsolved.
 
   tools/offboard-book-owner.py synthetic-client-alfa
   tools/offboard-book-owner.py synthetic-client-alfa --confirm synthetic-client-alfa
@@ -88,6 +88,8 @@ def _match_rows(table: str, match: str, owner: str, rows: dict,
         return [r["slug"] for r in bucket if r.get("book_owner") == owner]
     if match == "source_invoice":
         return [r["slug"] for r in bucket if r.get("source") in invoices]
+    if match == "parent_invoice":
+        return [r["slug"] for r in bucket if r.get("invoice") in invoices]
     if match == "posting_for_owner":
         return [r["slug"] for r in bucket
                 if r.get("entry") in journals or r.get("account") in accounts]
@@ -145,7 +147,7 @@ def audit_body(owner: str, dry: bool) -> dict:
         "status": "received" if dry else "in-progress",
         "subject": owner,
         "notes": ("Dry-run: book_owner offboard plan logged, no deletion."
-                  if dry else "Confirmed stub: filesystem only; KEAP DELETE not executed."),
+                  if dry else "Confirmed: filesystem rmtree + KEAP DELETE; Espo remains manual."),
         "source": "offboard-book-owner",
     }
 
@@ -188,9 +190,39 @@ def plan(owner: str, rows: dict, data_root: pathlib.Path | None = None,
                  "note": (espo.get("note") or "").replace("<slug>", owner)},
         "audit_post": {"url": "http://127.0.0.1:8099/api/v1/events",
                        "body": audit_body(owner, dry=True)},
-        "unsolved": ["live KEAP DELETE not proven",
-                     "trained-model Art-17 (embeddings) unsolved"],
+        "unsolved": ["trained-model Art-17 (embeddings) unsolved"],
     }
+
+
+def delete_row(table: str, slug: str) -> None:
+    """Human-door DELETE. Tests monkeypatch this — never hit live KEAP in pytest."""
+    sys.path.insert(0, str(REPO / "tools"))
+    import keap_api  # noqa: E402
+    keap_api.delete_row(table, slug)
+
+
+def execute_keap(planned: dict) -> list[tuple[str, str]]:
+    done = []
+    for step in planned.get("keap") or []:
+        if step.get("method") != "DELETE":
+            continue
+        delete_row(step["table"], step["slug"])
+        done.append((step["table"], step["slug"]))
+    return done
+
+
+def load_live_rows(spec: dict | None = None) -> dict:
+    spec = spec or load_map()
+    sys.path.insert(0, str(REPO / "tools"))
+    from digest_absorb import read_rows  # noqa: E402
+    out: dict = {}
+    tables = [s["table"] for s in (spec.get("keap_delete_order") or [])]
+    for table in tables:
+        try:
+            out[table] = read_rows(table)
+        except Exception:
+            out[table] = []
+    return out
 
 
 def apply_fs(planned: dict, repo: pathlib.Path = REPO) -> list[str]:
@@ -224,28 +256,34 @@ def main(argv: list[str] | None = None) -> int:
     if token == "__mismatch__":
         print("REFUSING: --confirm and NOS_OFFBOARD_CONFIRM disagree", file=sys.stderr)
         return 2
+    if token is not None and token != args.slug:
+        print(f"REFUSING: confirm {token!r} is not slug {args.slug!r}", file=sys.stderr)
+        return 2
 
     rows = {}
     if args.rows_json:
         rows = json.loads(pathlib.Path(args.rows_json).read_text(encoding="utf-8"))
+    else:
+        rows = load_live_rows()
     root = pathlib.Path(args.data_root) if args.data_root else None
     planned = plan(args.slug, rows, data_root=root)
 
     dry = token is None
-    if not dry and token != args.slug:
-        print(f"REFUSING: confirm {token!r} is not slug {args.slug!r}", file=sys.stderr)
-        return 2
 
-    planned["mode"] = "DRY-RUN" if dry else "CONFIRM-STUB"
+    planned["mode"] = "DRY-RUN" if dry else "CONFIRM"
     planned["audit_post"]["body"] = audit_body(args.slug, dry=dry)
     json.dump(planned, sys.stdout, indent=2)
     sys.stdout.write("\n")
     if dry:
         return 0
-    # Confirm stub: filesystem only. No KEAP/Espo HTTP.
     apply_fs(planned)
-    print("CONFIRM-STUB: filesystem rmtree done; KEAP DELETE listed not executed; "
-          "Espo remains manual.", file=sys.stderr)
+    try:
+        execute_keap(planned)
+    except Exception as exc:
+        print(f"REFUSING: KEAP DELETE failed ({exc})", file=sys.stderr)
+        return 1
+    print("CONFIRM: filesystem rmtree + KEAP DELETE done; Espo remains manual.",
+          file=sys.stderr)
     return 0
 
 

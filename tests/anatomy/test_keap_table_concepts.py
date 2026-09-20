@@ -116,6 +116,12 @@ CONCEPTLESS = {
     "invoice.verified": "the sidecar's own operator-verify flag, not an independent check (evidence.verification is select-kind, for that) — needs evidence.verified (boolean)",
     "invoice.overall_confidence": "the floor a vision extract cleared, min across its per-field confidences — no confidence concept exists — needs evidence.confidence",
     "invoice.raw_archive_ref": "pointer at raw-archive-store, not this row's identity — needs prov.archive (same gap named at device-extraction.raw_archive_ref)",
+    "invoice-line.line_no": "ordinal within the parent invoice — no identity.ordinal — needs identity.line_no",
+    "invoice-line.quantity": "no measure concept — needs measure.quantity (same as print-job.quantity)",
+    "invoice-line.net_amount": "a money amount — no money/measure concept — needs measure.amount",
+    "invoice-line.vat_rate": "a percent — no rate concept — needs measure.rate",
+    "invoice-line.vat_amount": "a money amount — no money/measure concept — needs measure.amount",
+    "book-access.book_owner": "the client book this principal may read — graph.parent would claim access nests under the party — needs graph.counterparty",
     "account.code": "the ledger code 311 — an identifier, not identity.name — needs identity.code",
     "account.reporting_concept": "maps the account to a reporting-standard concept (taxonomy anchor) — a soft text link today; upgrade to a taxonomyRef kind + needs class.reporting_concept",
     "account.party": "the counterparty an analytical account is scoped to — graph.parent is claimed by `parent`; needs graph.counterparty (same as kolben-project.client)",
@@ -139,6 +145,7 @@ CONCEPTLESS = {
     "device-extraction.unnamed_skip_count": "count of denied unnamed classes — not a measure of the device — needs measure.skip_count",
     "party.role": "the Art-30 relationship to THIS firm (client/own_firm/counterparty) — "
                   "class.kind is claimed by party_kind (org/individual); needs class.relationship",
+    "party.training_opt_in": "client-train consent flag — not consent.ref (that is a Wing pointer) — needs consent.opt_in",
 }
 
 

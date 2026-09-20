@@ -101,6 +101,54 @@ def reconcile_invoice(invoice: dict) -> list[str]:
     return errors
 
 
+def lines_cover_invoices(invoices: list, lines: list) -> list[str]:
+    """Every invoice header in the bundle must have invoice-line rows whose
+    net (and vat, when both sides state it) sum to the header. A header
+    without lines is refused — the commercial document is the lines."""
+    errors: list[str] = []
+    if not isinstance(invoices, list) or not isinstance(lines, list):
+        return ["invoice-line: invoices/lines are not lists"]
+    by_inv: dict[str, list] = {}
+    for ln in lines:
+        if not isinstance(ln, dict):
+            errors.append("an invoice-line is not a mapping")
+            continue
+        inv = ln.get("invoice")
+        if not inv:
+            errors.append(f"{ln.get('slug', '?')}: invoice-line has no invoice rowRef")
+            continue
+        by_inv.setdefault(inv, []).append(ln)
+    for inv in invoices:
+        if not isinstance(inv, dict):
+            continue
+        slug = inv.get("slug") or "?"
+        group = by_inv.get(slug) or []
+        if not group:
+            errors.append(f"{slug}: no invoice-line rows")
+            continue
+        net = vat = 0.0
+        for ln in group:
+            try:
+                net += float(ln.get("net_amount") or 0)
+            except (TypeError, ValueError):
+                errors.append(f"{ln.get('slug', '?')}: net_amount is not a number")
+                continue
+            if ln.get("vat_amount") is not None:
+                try:
+                    vat += float(ln["vat_amount"])
+                except (TypeError, ValueError):
+                    errors.append(f"{ln.get('slug', '?')}: vat_amount is not a number")
+        if inv.get("net_amount") is not None and round(net, 2) != round(float(inv["net_amount"]), 2):
+            errors.append(
+                f"{slug}: line net {round(net, 2)} != header net {round(float(inv['net_amount']), 2)}")
+        if (inv.get("vat_amount") is not None
+                and any(ln.get("vat_amount") is not None for ln in group)
+                and round(vat, 2) != round(float(inv["vat_amount"]), 2)):
+            errors.append(
+                f"{slug}: line vat {round(vat, 2)} != header vat {round(float(inv['vat_amount']), 2)}")
+    return errors
+
+
 def own_party_for_invoice(invoice: dict, accounts_by_code: dict,
                          fallback: str | None = None) -> str | None:
     """Whose book this invoice posts into. Model C: book_owner, else the unique
@@ -261,4 +309,10 @@ if __name__ == "__main__":
     assert any("reconcile" in e for e in reconcile_invoice(rounding)), "unstated rounding must be routed aside"
     stated = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1211, "rounding_amount": 1}
     assert reconcile_invoice(stated) == [], reconcile_invoice(stated)
+    assert lines_cover_invoices(
+        [{"slug": "inv-x", "net_amount": 1500, "vat_amount": 270}],
+        [{"slug": "l1", "invoice": "inv-x", "net_amount": 1000, "vat_amount": 210},
+         {"slug": "l2", "invoice": "inv-x", "net_amount": 500, "vat_amount": 60}]) == []
+    assert any("no invoice-line" in e for e in lines_cover_invoices(
+        [{"slug": "inv-x", "net_amount": 1}], []))
     print("nos_accounting self-check OK")

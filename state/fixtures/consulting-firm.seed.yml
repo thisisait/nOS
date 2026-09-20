@@ -124,6 +124,16 @@ invoice:
       issue_date: 1775001600, due_date: 1776211200, currency: CZK, payable_amount: 605, net_amount: 500, vat_amount: 105,
       vat_breakdown: [ { rate: 21, base: 500, vat: 105 } ], book_owner: synthetic-client-gama }
 
+# ── Invoice lines: at least one per header; alfa-001 is the multi-rate pair
+invoice-line:
+  - { slug: line-inv-alfa-001-1, invoice: inv-alfa-001, line_no: 1, description: "Advisory 21%", quantity: 1, net_amount: 1000, vat_rate: 21, vat_amount: 210 }
+  - { slug: line-inv-alfa-001-2, invoice: inv-alfa-001, line_no: 2, description: "Advisory 12%", quantity: 1, net_amount: 500, vat_rate: 12, vat_amount: 60 }
+  - { slug: line-inv-alfa-002-1, invoice: inv-alfa-002, line_no: 1, description: "Received services", quantity: 1, net_amount: 2000, vat_rate: 21, vat_amount: 420 }
+  - { slug: line-inv-beta-001-1, invoice: inv-beta-001, line_no: 1, description: "Issued services", quantity: 1, net_amount: 3000, vat_rate: 21, vat_amount: 630 }
+  - { slug: line-inv-beta-002-1, invoice: inv-beta-002, line_no: 1, description: "Received services", quantity: 1, net_amount: 1200, vat_rate: 21, vat_amount: 252 }
+  - { slug: line-inv-gama-001-1, invoice: inv-gama-001, line_no: 1, description: "Issued services", quantity: 1, net_amount: 800, vat_rate: 21, vat_amount: 168 }
+  - { slug: line-inv-gama-002-1, invoice: inv-gama-002, line_no: 1, description: "Received services", quantity: 1, net_amount: 500, vat_rate: 21, vat_amount: 105 }
+
 # ── Journal entries: one PER invoice, source-linked, in derive_entry's leg
 #    shape (own_party=seller -> DR 311/CR 601/CR 343; own_party=buyer -> DR
 #    501/DR 343/CR 321) with the client's OWN analytical 311/321 account ────
@@ -163,3 +173,6 @@ posting:
 
 # Schema only — rows are live HMAC/Books decisions, never git-seeded.
 pending-invoice-verify: []
+
+# Empty = Model C (every manager sees every book). First live assignment locks it.
+book-access: []

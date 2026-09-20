@@ -39,9 +39,11 @@ ORDER = [
     "party-contact",
     "account",
     "invoice",
+    "invoice-line",
     "journal-entry",
     "posting",
     "pending-invoice-verify",
+    "book-access",
 ]
 
 CLIENTS = ["synthetic-client-alfa", "synthetic-client-beta", "synthetic-client-gama"]
@@ -107,6 +109,14 @@ def test_the_seed_resolves_against_itself():
             for key, col in cols.items():
                 if col.get("required") and key != "slug":
                     assert key in row, f"{t}/{row['slug']} missing required {key!r}"
+
+
+def test_every_invoice_has_lines_that_sum_to_the_header():
+    na = _nos_accounting()
+    seed = _seed()
+    assert na.lines_cover_invoices(seed["invoice"], seed["invoice-line"]) == []
+    covered = {ln["invoice"] for ln in seed["invoice-line"]}
+    assert covered == {i["slug"] for i in seed["invoice"]}
 
 
 def test_every_invoice_carries_book_owner():

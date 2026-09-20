@@ -1,0 +1,22 @@
+# KEAP DataTable — "Book access" (praxis growth: a second manager).
+#
+# Model C is one consultant. Empty table = every manager sees every book
+# (the sole-user default). The first assignment row locks the door: a
+# manager whose Authentik uid is not listed sees no client books. Admins
+# (nos-admins / nos-providers) still see all. Isolation is enforced in the
+# Face BFF (filterBookRows), never only in the browser.
+
+title: "Book access"
+description: >-
+  Which Authentik principal may read which client's book (book_owner party).
+  Empty means Model C (all managers). Once any row exists, unassigned
+  managers see none of the client books.
+driver: libsql
+anchors: ["nos.digest.invoice"]
+visibility: tier-managers
+schema:
+  columns:
+    - { key: slug,       label: "Slug",       kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: principal,  label: "Principal",  kind: text,   role: dimension, required: true, concept: access.owner }
+    - { key: book_owner, label: "Book owner", kind: rowRef, role: dimension, required: true,
+        refTable: "party", refDisplay: "legal_name", onDelete: "restrict" }

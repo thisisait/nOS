@@ -1,0 +1,31 @@
+# KEAP DataTable — "Invoice lines" (digest organ output).
+#
+# One row per commercial line (ISDOC InvoiceLine) under an invoice header.
+# graph.parent is the invoice; onDelete restrict so a header cannot vanish
+# while its lines remain. Quantity × unit is not stored — net_amount is the
+# line's money (same 2dp float as the header until integer minor units land).
+# When the XML has no InvoiceLine, the importer synthesizes one row per
+# TaxSubTotal so the header never absorbs without lines.
+
+title: "Invoice lines"
+description: >-
+  Commercial lines of an absorbed e-invoice — description, quantity, net and
+  VAT per line, nested under the invoice header. The header totals must equal
+  the sum of these rows (nos_accounting.lines_cover_invoices).
+driver: libsql
+anchors: ["nos.digest.invoice"]
+visibility: tier-managers
+graph:
+  mode: rows
+  node: { idColumn: slug, labelColumn: description, kind: invoice-line }
+schema:
+  columns:
+    - { key: slug,         label: "Slug",        kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: invoice,      label: "Invoice",     kind: rowRef, role: dimension, required: true,
+        refTable: "invoice", refDisplay: "document_number", onDelete: "restrict", concept: graph.parent }
+    - { key: line_no,      label: "Line no.",    kind: number, role: dimension, required: true }
+    - { key: description,  label: "Description", kind: text,   role: attribute, concept: identity.description }
+    - { key: quantity,     label: "Quantity",    kind: number, role: attribute }
+    - { key: net_amount,   label: "Net (ex-VAT)", kind: number, role: attribute, required: true }
+    - { key: vat_rate,     label: "VAT rate",    kind: number, role: attribute }
+    - { key: vat_amount,   label: "VAT",         kind: number, role: attribute }

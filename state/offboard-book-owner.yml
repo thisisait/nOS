@@ -2,9 +2,9 @@
 # Book-owner offboard map — consumed by tools/offboard-book-owner.py
 # =============================================================================
 # Parallel to state/gdpr-erasure-map.yml, keyed on a FIRM slug (book_owner),
-# not an email. Leaf-first so onDelete:restrict can succeed once a live
-# executor exists. This file is the audited list; the CLI is dry-run by
-# default. Live KEAP DELETE is NOT proven (confirm is a stub).
+# not an email. Leaf-first so onDelete:restrict can succeed. Confirm runs
+# KEAP DELETE through tools/keap_api.delete_row (human door). Espo stays
+# operator-run. Trained-model Art-17 (embeddings) is unsolved.
 #
 # Isolation is book_owner (Model C), not seller/buyer: an invoice on another
 # client's books that merely names this party as counterparty stays.
@@ -15,9 +15,13 @@ keap_delete_order:
     match: posting_for_owner
   - table: journal-entry
     match: source_invoice
+  - table: invoice-line
+    match: parent_invoice
   - table: pending-invoice-verify
     match: sidecar_or_fields
   - table: invoice
+    match: book_owner
+  - table: book-access
     match: book_owner
   - table: party-tax-identity
     match: party

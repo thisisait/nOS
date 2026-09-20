@@ -96,6 +96,7 @@ def test_isdoc_fixtures_derive_into_each_clients_analytical_311_321():
     )
     assert ND.check_bundle(bundle, TABLES) == []
     assert NA.check_entries(det["posting"]) == []
+    assert NA.lines_cover_invoices(det["invoice"], det["invoice-line"]) == []
 
     account_party = {a["slug"]: a.get("party") for a in seed["account"]}
     by_slug = {i["slug"]: i for i in invoices}
@@ -156,5 +157,5 @@ def test_absorb_posts_ledger_only_through_digest_absorb(monkeypatch):
     monkeypatch.setattr(DA, "proxy_header", lambda: {})
     assert DA.absorb(bundle) == 0
     tables = {t for t, _ in posts}
-    assert {"invoice", "journal-entry", "posting"} <= tables
-    assert all(t in ("party", "invoice", "journal-entry", "posting") for t, _ in posts)
+    assert {"invoice", "invoice-line", "journal-entry", "posting"} <= tables
+    assert all(t in ("party", "invoice", "invoice-line", "journal-entry", "posting") for t, _ in posts)

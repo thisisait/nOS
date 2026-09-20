@@ -17,6 +17,7 @@ def test_books_loads_the_praxis_tables_and_does_not_upsert_invoices():
     for table in (
         "pending-invoice-verify",
         "invoice",
+        "invoice-line",
         "journal-entry",
         "party",
     ):

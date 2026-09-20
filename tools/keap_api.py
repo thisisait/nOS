@@ -179,6 +179,26 @@ def write_row(table: str, values: dict) -> dict:
         raise RuntimeError(f"HTTP {exc.code}: {exc.read().decode(errors='replace')[:300]}") from None
 
 
+def delete_row(table: str, row_id: str) -> None:
+    """DELETE one row on the human door (`DELETE /api/tables/<t>/rows/<id>`).
+
+    Agent v1 has no row DELETE (KEAP 2.0). 404 is success (already gone).
+    `row_id` is the KEAP row id, which the digest upserts as the slug.
+    """
+    rid = str(row_id or "").strip()
+    if not rid:
+        raise RuntimeError("delete_row: empty row id")
+    url = f"{human_base()}/api/tables/{urllib.parse.quote(table, safe='')}/rows/{urllib.parse.quote(rid, safe='')}"
+    req = urllib.request.Request(url, method="DELETE", headers=human_headers())
+    try:
+        with urllib.request.urlopen(req, timeout=30):
+            return
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return
+        raise RuntimeError(f"HTTP {exc.code}: {exc.read().decode(errors='replace')[:300]}") from None
+
+
 if __name__ == "__main__":
     # Self-check: report whether the estate is enforcing, without printing the
     # secret. `--check` exits 0 if a secret resolved, 1 otherwise.

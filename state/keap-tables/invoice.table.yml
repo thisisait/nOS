@@ -6,9 +6,8 @@
 # or a contract references, which is the cross-source dedup a third source
 # proves. `seller` carries graph.parent; `buyer` is the counterparty facet and
 # is conceptless (graph.parent is claimed once per table, same as
-# kolben-project.client / print-order.customer). Lines are a future
-# invoice-line table rowRef'd here (deferred — the header + dual-party resolve
-# is the money axis this slice lands). onDelete: restrict on both — an invoice
+# kolben-project.client / print-order.customer). Lines live in invoice-line
+# (graph.parent = this header). onDelete: restrict on both — an invoice
 # whose party vanished is a corrupt legal record, not an orphan.
 #
 # vat_breakdown (multi-rate-vat unit, 2026-09): a real Czech invoice mixes VAT
@@ -45,8 +44,8 @@ title: "Invoices"
 description: >-
   E-invoice headers absorbed from ISDOC by the invoice importer — document
   number, seller and buyer (both parties in the shared spine), dates and the
-  payable amount. The money axis of the software/services estate; lines are a
-  future sibling table.
+  payable amount. The money axis of the software/services estate; commercial
+  lines live in the invoice-line sibling (header totals must equal line sums).
 driver: libsql
 anchors: ["nos.digest.invoice"]
 visibility: tier-managers

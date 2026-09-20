@@ -8,6 +8,13 @@
   <LocalCurrencyCode>CZK</LocalCurrencyCode>
   <PayableAmount>48400</PayableAmount>
   <TaxTotal><TaxSubTotal><TaxableAmount>40000</TaxableAmount><TaxAmount>8400</TaxAmount></TaxSubTotal></TaxTotal>
+  <InvoiceLine>
+    <ID>1</ID>
+    <InvoicedQuantity>1</InvoicedQuantity>
+    <LineExtensionAmount>40000</LineExtensionAmount>
+    <ClassifiedTaxCategory><Percent>21</Percent></ClassifiedTaxCategory>
+    <Item><Description>Consulting (synthetic)</Description></Item>
+  </InvoiceLine>
   <AccountingSupplierParty><Party>
     <PartyIdentification><ID>00000112</ID></PartyIdentification>
     <PartyName><Name>Mesto Lipno (synthetic)</Name></PartyName>

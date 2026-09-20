@@ -292,6 +292,13 @@ def check_bundle(bundle: dict, tables_dir: str | pathlib.Path) -> list[str]:
     if (isinstance(det.get("journal-entry"), list) and det.get("journal-entry")
             and isinstance(postings, list)):
         errors.extend(nos_accounting.check_entries(postings))
+    invoices = det.get("invoice")
+    if isinstance(invoices, list) and invoices:
+        lines = det.get("invoice-line")
+        if not isinstance(lines, list):
+            errors.append("invoice rows require invoice-line rows")
+        else:
+            errors.extend(nos_accounting.lines_cover_invoices(invoices, lines))
     _check_device_family(bundle, det, errors)
     return errors
 

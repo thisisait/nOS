@@ -25,6 +25,7 @@
 	let invoices = $state<DataTable | null>(null);
 	let journals = $state<DataTable | null>(null);
 	let parties = $state<DataTable | null>(null);
+	let lines = $state<DataTable | null>(null);
 	let err = $state('');
 	let busy = $state('');
 	let espo = $state<HubApp | null>(null);
@@ -32,17 +33,19 @@
 
 	onMount(async () => {
 		try {
-			const [q, i, j, p, hub] = await Promise.all([
+			const [q, i, j, p, ln, hub] = await Promise.all([
 				loadTable('pending-invoice-verify'),
 				loadTable('invoice'),
 				loadTable('journal-entry'),
 				loadTable('party'),
+				loadTable('invoice-line'),
 				hubApps().catch(() => [] as HubApp[])
 			]);
 			queue = q;
 			invoices = i;
 			journals = j;
 			parties = p;
+			lines = ln;
 			espo = hub.find((a) => a.slug === 'espocrm') ?? null;
 		} catch (e) {
 			err = e instanceof Error ? e.message : 'could not load books';
@@ -102,6 +105,10 @@
 	);
 
 	const invoiceSlugs = $derived(new Set(shownInvoices.map((r) => String(r.id))));
+
+	const shownLines = $derived(
+		(lines?.rows ?? []).filter((r) => invoiceSlugs.has(cell(r, 'invoice')))
+	);
 
 	const shownJournals = $derived(
 		(journals?.rows ?? []).filter((r) => {
@@ -178,6 +185,24 @@
 						{/each}
 					</tbody>
 				</table>
+				{#if shownLines.length}
+					<table>
+						<thead>
+							<tr><th>Invoice</th><th>#</th><th>Description</th><th>Net</th><th>VAT</th></tr>
+						</thead>
+						<tbody>
+							{#each shownLines as row (row.id)}
+								<tr>
+									<td>{cell(row, 'invoice')}</td>
+									<td>{cell(row, 'line_no')}</td>
+									<td>{cell(row, 'description')}</td>
+									<td>{cell(row, 'net_amount')}</td>
+									<td>{cell(row, 'vat_amount')}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				{/if}
 			{/if}
 		{:else if active === 'journals'}
 			{#if !journals}
