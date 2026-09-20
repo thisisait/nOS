@@ -20,6 +20,26 @@
 # run is FOR — a DATA-ORGANIZATION attribute, not a tenant/RBAC column (Model
 # C: the consultant is the sole user, isolation stays with the analytical
 # 311.<party> accounts, D5). Optional — a firm's own AP invoices carry none.
+#
+# source / verified / overall_confidence (provenance-keep unit, 2026-09-20):
+# today parse()/absorb DROP per-field {confidence, source} at the door — an
+# absorbed row looks identical whether it came from deterministic ISDOC or a
+# 0.86-confidence vision extract. These three columns are the row-level
+# survivors (the full per-field breakdown stays disposable in
+# pending-invoice-verify.fields, never resurrected here): `source` is which
+# IMPORTER produced the row (isdoc = deterministic XML, always verified;
+# vision = OCR'd sidecar, gated by CONFIDENCE_FLOOR before it ever reaches
+# here); `overall_confidence` is the MIN across the sidecar's per-field
+# confidences (the floor this row actually cleared), null for isdoc rows —
+# there is nothing to have been unconfident about; `verified` mirrors the
+# sidecar's operator-verify flag (isdoc rows are always true — deterministic
+# XML has no verify rung).
+#
+# raw_archive_ref (raw-archive-store unit, 2026-09-20): same name/shape as
+# device-extraction.raw_archive_ref — a pointer at the immutable RustFS
+# Object Lock archive (files/anatomy/module_utils/raw_archive.py), key
+# raw/invoice/<content-hash>. Null when the archive was unreachable/disabled
+# at import time (fail-open — raw-archive sits before parse(), never a gate).
 # =============================================================================
 title: "Invoices"
 description: >-
@@ -54,6 +74,11 @@ schema:
     - { key: vat_breakdown,   label: "VAT breakdown",  kind: json,   role: attribute }
     - { key: book_owner,      label: "Book owner",     kind: rowRef, role: dimension, required: false,
         refTable: "party", refDisplay: "legal_name", onDelete: "restrict" }
+    - { key: source,             label: "Source",             kind: select, role: dimension, required: false,
+        options: ["isdoc", "vision"], concept: prov.source }
+    - { key: verified,           label: "Verified",           kind: boolean, role: attribute }
+    - { key: overall_confidence, label: "Overall confidence", kind: number, role: attribute }
+    - { key: raw_archive_ref,    label: "Raw archive",        kind: text,   role: attribute }
 # client-filter-view (D5 unit 3): book_owner is the single legible per-client
 # key (seller/buyer alone would only ever show HALF a client's invoices — the
 # ones where the client is the counterparty, not on the seller column, are

@@ -31,8 +31,14 @@ sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "files" / "anatomy" / "module_utils"))
 from digest_absorb import absorb, build_party_index  # noqa: E402
 import nos_digest  # noqa: E402
+import raw_archive  # noqa: E402
 
 TABLES_DIR = REPO / "state" / "keap-tables"
+#: raw-archive-store unit: the Art-30 retention horizon this importer's own
+#: manifest already declares — read once here, not re-typed as a literal.
+RETENTION_DAYS = yaml.safe_load(
+    (REPO / "state" / "digest-importers" / "isdoc.importer.yml").read_text(encoding="utf-8")
+)["gdpr"]["retention_days"]
 
 
 def _slug(*parts: str) -> str:
@@ -107,9 +113,12 @@ class IsdocImporter:
 
     name = "isdoc"
     version = "0.1.0"
+    #: provenance-keep unit: which source produced a row (invoice.source).
+    #: Deterministic XML — never a verify rung, so always verified.
+    source_kind = "isdoc"
 
     def __init__(self, source_id: str, party_index: dict, *, fixture_mode: bool = False,
-                 book_owner_ico: str | None = None):
+                 book_owner_ico: str | None = None, book_owner_slug_hint: str | None = None):
         self.source_id = source_id
         self.party_index = party_index
         self.fixture_mode = fixture_mode
@@ -121,6 +130,12 @@ class IsdocImporter:
         # stays with the analytical accounts, docs/idea comment in the wf def).
         self.book_owner_ico = book_owner_ico
         self.book_owner_slug: str | None = None
+        # storage-subdir unit: the slug nos_digest.infer_book_owner_slug() read
+        # off the import root's directory name (None for a flat/fixture root).
+        # normalize() cross-checks this against --book-owner-ico so the CLI
+        # flag and the directory the operator ran against cannot silently
+        # drift — and lets a dir-only invocation skip the flag entirely.
+        self.book_owner_slug_hint = book_owner_slug_hint
 
     def parse(self, root) -> list[dict]:
         root = pathlib.Path(root)
@@ -136,8 +151,13 @@ class IsdocImporter:
                 self.skipped.append(f"{f.name}: no invoice ID")
                 continue
             subtotals = _tax_subtotals(doc)
+            # raw-archive-store unit: archive the ORIGINAL ISDOC XML bytes
+            # before deriving anything from them. Fail-open by construction
+            # (raw_archive.archive_put returns None when unreachable/disabled)
+            # — never blocks the import; raw bytes never enter the bundle IR.
+            raw_ref = raw_archive.archive_put("invoice", f.read_bytes(), retain_days=RETENTION_DAYS)
             out.append({
-                "file": f.name, "id": inv_id,
+                "file": f.name, "id": inv_id, "raw_archive_ref": raw_ref,
                 "issue": _localtext(doc, "IssueDate"),
                 "due": _localtext(doc, "DueDate"),
                 "currency": _localtext(doc, "LocalCurrencyCode"),
@@ -170,11 +190,35 @@ class IsdocImporter:
                 self, {"kind": "org", "ico": self.book_owner_ico}, self.party_index,
                 source_authoritative=False, fixture_mode=self.fixture_mode)
             if res["status"] == "resolved":
-                self.book_owner_slug = res["slug"]
+                slug = res["slug"]
+                # storage-subdir unit: --book-owner-ico and the import
+                # directory's <book_owner-slug> leaf must agree — a mismatch
+                # is refused wholesale (never guess which one is right).
+                if self.book_owner_slug_hint and self.book_owner_slug_hint != slug:
+                    self.skipped.append(
+                        f"book-owner drift: --book-owner-ico resolves to {slug!r} but the "
+                        f"import directory says {self.book_owner_slug_hint!r} — fix one, "
+                        "refusing the whole run rather than guess which is correct")
+                    return []
+                self.book_owner_slug = slug
             else:
                 self.skipped.append(
                     f"book-owner IČO {self.book_owner_ico}: {res['status']} "
                     f"({res['reason']}) — resolve-only, routed to review; rows carry no book_owner")
+        elif self.book_owner_slug_hint and self.book_owner_slug is None:
+            # dir-only invocation (no --book-owner-ico): the slug the directory
+            # names must already be a KNOWN party — never minted from a folder
+            # name. known_slugs is the same spine note_party_resolve reads.
+            known_slugs = set(self.party_index.get("by_key", {}).values())
+            for slugs in self.party_index.get("by_name", {}).values():
+                known_slugs.update(slugs)
+            if self.book_owner_slug_hint in known_slugs:
+                self.book_owner_slug = self.book_owner_slug_hint
+            else:
+                self.skipped.append(
+                    f"book-owner slug {self.book_owner_slug_hint!r} inferred from the import "
+                    "directory is not a known party — resolve-only, routed to review; rows "
+                    "carry no book_owner")
         out = []
         for r in records:
             seller = self._resolve(r["seller"], "seller", r)
@@ -212,6 +256,17 @@ class IsdocImporter:
                 row["vat_breakdown"] = r["vat_breakdown"]
             if self.book_owner_slug:
                 row["book_owner"] = self.book_owner_slug
+            # provenance-keep unit: source is stamped by the CLASS (isdoc vs
+            # vision, never per-record), verified/overall_confidence read
+            # from the record when the source populated them (vision only —
+            # see VisionImporter.parse()); isdoc rows are always verified,
+            # with no confidence to have been unconfident about.
+            row["source"] = self.source_kind
+            row["verified"] = r.get("verified", True)
+            if r.get("overall_confidence") is not None:
+                row["overall_confidence"] = r["overall_confidence"]
+            if r.get("raw_archive_ref"):
+                row["raw_archive_ref"] = r["raw_archive_ref"]
             invoices.append(row)
         return {"party": list(parties.values()), "invoice": invoices}
 
@@ -239,7 +294,8 @@ def main() -> int:
         return 2
 
     importer = IsdocImporter(args.source_id or root.name, index, fixture_mode=args.fixture_mode,
-                             book_owner_ico=args.book_owner_ico)
+                             book_owner_ico=args.book_owner_ico,
+                             book_owner_slug_hint=nos_digest.infer_book_owner_slug(root))
     bundle, errors = nos_digest.run_importer(importer, str(root), TABLES_DIR)
 
     for s in importer.skipped:

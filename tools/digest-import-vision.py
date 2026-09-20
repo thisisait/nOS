@@ -38,8 +38,12 @@ sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "files" / "anatomy" / "module_utils"))
 from digest_absorb import absorb, build_party_index  # noqa: E402
 import nos_digest  # noqa: E402
+import raw_archive  # noqa: E402
 
 TABLES_DIR = REPO / "state" / "keap-tables"
+RETENTION_DAYS = yaml.safe_load(
+    (REPO / "state" / "digest-importers" / "isdoc-vision.importer.yml").read_text(encoding="utf-8")
+)["gdpr"]["retention_days"]
 SIDECAR_SCHEMA = yaml.safe_load(
     (REPO / "state" / "schema" / "isdoc-extract-sidecar.schema.yaml").read_text(encoding="utf-8"))
 #: The ONE place this number is spelled — read from the schema doc, not
@@ -66,6 +70,8 @@ class VisionImporter(IsdocImporter):
 
     name = "isdoc-vision"
     version = "0.1.0"
+    #: provenance-keep unit: rows this importer composes are OCR-sourced.
+    source_kind = "vision"
 
     def __init__(self, *args, pending_verify: dict[str, str] | None = None, **kwargs):
         """``pending_verify``: {sidecar_id: resolution} — the D5 verify-write-back
@@ -105,6 +111,13 @@ class VisionImporter(IsdocImporter):
                 continue
             low = sorted(k for k, v in fields.items()
                         if not isinstance(v, dict) or v.get("confidence", 0) < CONFIDENCE_FLOOR)
+            # provenance-keep unit: the row-level survivor is the MIN across every
+            # field's confidence — the floor this sidecar actually cleared — not
+            # the full per-field breakdown (that stays disposable, in
+            # pending-invoice-verify.fields for the ones that needed review).
+            confidences = [v.get("confidence") for v in fields.values()
+                          if isinstance(v, dict) and isinstance(v.get("confidence"), (int, float))]
+            overall_confidence = round(min(confidences), 4) if confidences else None
             verified = sidecar.get("verified") is True
             # D5 verify-write-back: a consultant's PRIOR decision on this exact
             # sidecar (keyed on the filename — the join key, stable even when
@@ -133,6 +146,15 @@ class VisionImporter(IsdocImporter):
             rec["file"] = f.name
             rec.setdefault("seller", {})
             rec.setdefault("buyer", {})
+            rec["verified"] = verified
+            rec["overall_confidence"] = overall_confidence
+            # raw-archive-store unit: archives the SIDECAR itself — the true
+            # originating image/PDF lives in incoming/, one directory over,
+            # and this importer never reads it (design ceiling: archiving the
+            # real original needs wiring through the invoice-vision-ocr agent
+            # that PRODUCES this sidecar, not this importer).
+            rec["raw_archive_ref"] = raw_archive.archive_put(
+                "invoice", f.read_bytes(), retain_days=RETENTION_DAYS)
             out.append(rec)
         return out
 
@@ -160,7 +182,8 @@ def main() -> int:
         return 2
 
     importer = VisionImporter(args.source_id or root.name, index, fixture_mode=args.fixture_mode,
-                              book_owner_ico=args.book_owner_ico)
+                              book_owner_ico=args.book_owner_ico,
+                              book_owner_slug_hint=nos_digest.infer_book_owner_slug(root))
     bundle, errors = nos_digest.run_importer(importer, str(root), TABLES_DIR)
 
     for s in importer.skipped:
