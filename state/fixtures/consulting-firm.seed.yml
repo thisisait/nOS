@@ -160,3 +160,6 @@ posting:
   - { slug: post-je-gama-002-501, entry: je-gama-002, account: acc-501,      direction: debit,  amount: 500 }
   - { slug: post-je-gama-002-343, entry: je-gama-002, account: acc-343,      direction: debit,  amount: 105 }
   - { slug: post-je-gama-002-321, entry: je-gama-002, account: acc-321-gama, direction: credit, amount: 605 }
+
+# Schema only — rows are live HMAC/Books decisions, never git-seeded.
+pending-invoice-verify: []

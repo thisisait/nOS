@@ -88,6 +88,14 @@ def test_published_set_is_the_ruled_63_in_13(artifact, ruling):
     assert doc["counts"] == {"organs": 13, "atoms": 63, "veins": 14}
 
 
+def test_the_firm_desk_organ_is_backoffice(ruling):
+    organs = ruling["organs"]
+    assert "backoffice" in organs
+    assert "ledger" not in organs
+    assert organs["backoffice"]["title"] == "The Backoffice"
+    assert organs["backoffice"]["limb"] == "left"
+
+
 # ---------------------------------------------------------------------------
 # 2+3. mutation-verify the field gate, both directions
 # ---------------------------------------------------------------------------

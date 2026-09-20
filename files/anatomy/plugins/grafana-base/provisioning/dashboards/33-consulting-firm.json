@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "Consulting-firm invoice intake: verify HMAC events, vision/extract AgentKit sessions, Pulse intake-sweep. KEAP row counts live in face Books, not wing.db.",
+  "description": "Praxis pack inside backoffice: verify HMAC events, vision/extract AgentKit sessions, Pulse intake-sweep. KEAP row counts live in face Books, not wing.db.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -129,12 +129,12 @@
   ],
   "refresh": "30s",
   "schemaVersion": 39,
-  "tags": ["nos", "auto-provisioned", "consulting"],
+  "tags": ["nos", "auto-provisioned", "backoffice", "praxis"],
   "templating": {"list": []},
   "time": {"from": "now-7d", "to": "now"},
   "timepicker": {},
   "timezone": "",
-  "title": "nOS / Consulting firm (invoice intake)",
+  "title": "nOS / Backoffice (praxis intake)",
   "uid": "nos-consulting-firm",
   "version": 1,
   "weekStart": ""

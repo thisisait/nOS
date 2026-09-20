@@ -1,22 +1,20 @@
 # Backoffice — the firm's desk, not a fifth brain
 
-> **PROPOSED, not settled.** Apex still publishes the constellation as
-> `ledger` until a signed rename. This file is the name that won:
-> **backoffice** is the public organ; **praxis** is a pack inside it,
-> not a second organ. Sibling of [`organs.md`](organs.md) and of Digest
-> (the stomach: intake). Promote after the apex key moves.
+> **PROPOSED, not settled** only for promote-to-ssot. The names are
+> settled: **backoffice** is the public organ; **praxis** is a pack
+> inside it, not a second organ and not a host daemon. Sibling of
+> [`organs.md`](organs.md) and of Digest (the stomach: intake).
 
 ## 1. Two names, one daemon refusal
 
-Apex today: **The Ledger** — *"Business runs on its own books."*
-(`organs.ledger`). That grouping is too small (books) and too collided
-(Firefly, every ERP). The organ is the **backoffice**: CRM, invoices,
-double-entry, a customer desk, optional heavier books and analytics.
+Apex publishes **The Backoffice** — *"CRM, books and a customer desk, at home."*
+(`organs.backoffice`). CRM, invoices, double-entry, a customer desk,
+optional heavier books and analytics.
 
 **Praxis** is not a 14th constellation and not `files/anatomy/praxis/`.
-It is the default **practice pack** inside backoffice — the professional-
-services fixture (Espo + KEAP tables + invoice doors). A florist or a
-workshop later gets a different pack; they still live under backoffice.
+It is the default **practice pack** inside backoffice — Espo + KEAP
+tables + invoice doors. A florist or a workshop later gets a different
+pack; they still live under backoffice.
 
 That is meaning **public organ** in [`organs.md`](organs.md) §1. It is
 not Bone · Wing · Pulse · Cortex, and not a new launchd unit.
@@ -71,14 +69,14 @@ A release that ships Books without absorb, or Espo without the join tag,
 or vision that writes `invoice` directly, is not praxis and not
 backoffice.
 
-## 5. Settled / still owed (operator 2026-09-20)
+## 5. Settled (operator 2026-09-20)
 
-1. **Settled:** public organ = **backoffice**; **praxis** = pack inside
-   it. Apex key `ledger` and this warehouse slug move together, after
-   this `nos` run, with a re-sign (`tools/apex-sign.py --confirm`).
-2. **Settled:** Firefly and ERPNext off on a blank.
-3. **Settled:** client/user portal lives in **commons**. WordPress is
-   that portal when the firm wants a CMS, not a second backoffice.
+1. Public organ = **backoffice**; **praxis** = pack. Apex key moved
+   from `ledger` (re-signed). Promote this file when ssot harvest next
+   recites doctrine.
+2. Firefly and ERPNext off on a blank.
+3. Client/user portal lives in **commons**. WordPress is that portal
+   when the firm wants a CMS, not a second backoffice.
 4. **Config builder:** none in this tree. YAML `profiles/*`, queued
    `face-app-builder` (apps, not `install_*`), `docs/overview.html`.
    A first-onboard chooser that emits `config.yml` is new work beside

@@ -298,11 +298,6 @@ UNSEEDED = {
                "the dtt door, mutated by claims, leases expiring) — git-seeding "
                "ephemeral claim state would let a re-converge wipe a live claim. "
                "Same split as roadmap: the definition is git-owned, the rows are not.",
-    "pending-invoice-verify": "review-sink for a consultant's approve/reject decision "
-               "(consulting-surface-wiring D5 unit 1) — rows are written by the operator "
-               "through face's TablesApp upsert path, then read back by "
-               "VisionImporter.parse() (D5 unit 2). Same split as invoice-review: the "
-               "definition is git-owned, the rows are a live human decision, not seeded.",
 }
 
 

@@ -14,7 +14,7 @@ and no two of them enumerate the same set.
 | the anatomy metaphor | Bones · Wings · Pulse · Cortex, plus Veins/Tendons/Nerves | CLAUDE.md prose only — **no machine surface** |
 | host-native | runs under launchd/systemd rather than in a container | `stack: null` in `state/manifest.yml` (13 services) |
 | `nos.host.*` | derived from the row above | KEAP taxonomy, via `keap_selfmodel_gen.py` |
-| public organ | a metaphorical grouping shown to strangers: spine · wits · archive · senses · voice · ledger · forge · reflexes · gatehouse · commons | `publish:` in `files/anatomy/apex/ruling.yml` (10 groups) |
+| public organ | a metaphorical grouping shown to strangers: spine · wits · archive · senses · voice · backoffice · forge · reflexes · gatehouse · commons | `publish:` in `files/anatomy/apex/ruling.yml` |
 
 The fourth spans both halves of the second: `publish: spine` holds Wing and Bone
 (host) while `publish: archive` holds container services. So "organ" is a

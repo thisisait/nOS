@@ -41,6 +41,7 @@ ORDER = [
     "invoice",
     "journal-entry",
     "posting",
+    "pending-invoice-verify",
 ]
 
 CLIENTS = ["synthetic-client-alfa", "synthetic-client-beta", "synthetic-client-gama"]

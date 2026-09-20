@@ -52,7 +52,7 @@ artifact: state/anatomy-graph.json
 # file as AMENDED AFTER SIGNING and asks for a fresh signature. To re-sign:
 #   python3 tools/apex-sign.py            # prints the diff since the last sign
 #   python3 tools/apex-sign.py --confirm  # writes the new digest
-signed_digest: 21f9f382e0eee3822480650679d93d35d953f849af6e9edeaf2494f07342b772
+signed_digest: f782b490dc946fb0589a602f6da1811ec9968de78590f953ac4492fa25e5ddb4
 
 
 # The declared split. The gate recounts the table below and refuses to run
@@ -258,7 +258,7 @@ organs:
   keel:      { title: "The Keel",      tells: "Copied nightly. Restore, proven.",             limb: core,  order: 5 }
   archive:   { title: "The Archive",   tells: "Where knowledge is preserved and grown.",      limb: left,  order: 1 }
   forge:     { title: "The Forge",     tells: "Software made, tested and landed at home.",    limb: left,  order: 2 }
-  ledger:    { title: "The Ledger",    tells: "Business runs on its own books.",              limb: left,  order: 3 }
+  backoffice: { title: "The Backoffice", tells: "CRM, books and a customer desk, at home.", limb: left,  order: 3 }
   commons:   { title: "The Commons",   tells: "Daily work and daily life, shared.",           limb: left,  order: 4 }
   senses:    { title: "The Senses",    tells: "The system watches itself.",                   limb: right, order: 1 }
   wits:      { title: "The Wits",      tells: "Autonomous minds with bounded hands.",         limb: right, order: 2 }
@@ -314,11 +314,11 @@ nodes:
   "service:code_server":   { publish: forge, speaks: "a workshop reachable from any screen" }
   "service:paperclip":     { publish: forge, speaks: "a clipboard where working material is kept" }
 
-  "service:erpnext":       { publish: ledger, speaks: "orders, stock and invoices in one book" }
-  "service:freescout":     { publish: ledger, speaks: "every customer conversation answered from one desk" }
-  "service:firefly":       { publish: ledger, speaks: "where the money is watched" }
-  "service:metabase":      { publish: ledger, speaks: "questions asked of the numbers, answered in charts" }
-  "service:superset":      { publish: ledger, speaks: "heavier analytics for heavier questions" }
+  "service:erpnext":       { publish: backoffice, speaks: "orders, stock and invoices in one book" }
+  "service:freescout":     { publish: backoffice, speaks: "every customer conversation answered from one desk" }
+  "service:firefly":       { publish: backoffice, speaks: "where the money is watched" }
+  "service:metabase":      { publish: backoffice, speaks: "questions asked of the numbers, answered in charts" }
+  "service:superset":      { publish: backoffice, speaks: "heavier analytics for heavier questions" }
 
   "service:nextcloud":     { publish: commons, speaks: "files, calendars and people in one shared home" }
   "service:onlyoffice":    { publish: commons, speaks: "office documents, edited together in the browser" }

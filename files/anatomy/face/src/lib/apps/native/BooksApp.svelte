@@ -17,11 +17,13 @@
 	const tabs: TabSpec[] = [
 		{ key: 'queue', label: 'Queue' },
 		{ key: 'invoices', label: 'Invoices' },
+		{ key: 'journals', label: 'Journals' },
 		{ key: 'parties', label: 'Parties' }
 	];
 	let active = $state('queue');
 	let queue = $state<DataTable | null>(null);
 	let invoices = $state<DataTable | null>(null);
+	let journals = $state<DataTable | null>(null);
 	let parties = $state<DataTable | null>(null);
 	let err = $state('');
 	let busy = $state('');
@@ -30,14 +32,16 @@
 
 	onMount(async () => {
 		try {
-			const [q, i, p, hub] = await Promise.all([
+			const [q, i, j, p, hub] = await Promise.all([
 				loadTable('pending-invoice-verify'),
 				loadTable('invoice'),
+				loadTable('journal-entry'),
 				loadTable('party'),
 				hubApps().catch(() => [] as HubApp[])
 			]);
 			queue = q;
 			invoices = i;
+			journals = j;
 			parties = p;
 			espo = hub.find((a) => a.slug === 'espocrm') ?? null;
 		} catch (e) {
@@ -95,6 +99,16 @@
 
 	const shownInvoices = $derived(
 		(invoices?.rows ?? []).filter((r) => !bookOwner || cell(r, 'book_owner') === bookOwner)
+	);
+
+	const invoiceSlugs = $derived(new Set(shownInvoices.map((r) => String(r.id))));
+
+	const shownJournals = $derived(
+		(journals?.rows ?? []).filter((r) => {
+			if (!bookOwner) return true;
+			const src = cell(r, 'source') || cell(r, 'source__ref');
+			return invoiceSlugs.has(src);
+		})
 	);
 
 	const shownParties = $derived(
@@ -160,6 +174,25 @@
 								<td>{cell(row, 'buyer__ref') || cell(row, 'buyer')}</td>
 								<td>{cell(row, 'payable_amount')}</td>
 								<td>{cell(row, 'document_kind') || 'invoice'}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			{/if}
+		{:else if active === 'journals'}
+			{#if !journals}
+				<StatusNote kind="loading">Loading journal entries…</StatusNote>
+			{:else}
+				<table>
+					<thead>
+						<tr><th>Slug</th><th>Description</th><th>Source</th></tr>
+					</thead>
+					<tbody>
+						{#each shownJournals as row (row.id)}
+							<tr>
+								<td>{cell(row, 'slug') || row.id}</td>
+								<td>{cell(row, 'description')}</td>
+								<td>{cell(row, 'source__ref') || cell(row, 'source')}</td>
 							</tr>
 						{/each}
 					</tbody>
