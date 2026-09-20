@@ -1,0 +1,42 @@
+# =============================================================================
+# profiles/praxis.yml — first consulting-firm Mac (still beta)
+# =============================================================================
+#
+# Purpose: the practice pack inside backoffice for one consulting-firm host.
+# Firefly + ERPNext stay off (heavier books are a different pack). WordPress
+# is the commons portal. Espo is already apps/espocrm.yml — this overlay
+# only keeps the apps_runner on so that manifest actually deploys. The
+# consulting-firm KEAP fixture is ON HERE ONLY; default.config.yml keeps
+# keap_seed_consulting_fixture: false so a public blank does not grow a
+# synthetic tenant unasked.
+#
+# Usage:
+#   nos -e @profiles/praxis.yml
+#   nos --remove=data --confirm -e @profiles/praxis.yml   # full wipe + reinstall
+#
+# This is an overlay, not an all-on catalogue: it names the consulting-firm
+# deltas and pins Firefly/ERPNext off so another extra-vars file cannot
+# quietly turn them back on. It does NOT touch your gitignored config.yml /
+# credentials.yml — `-e @file` vars outrank vars_files but layer on top,
+# leaving your secret overrides intact.
+#
+# LEFT AT DEFAULT (already on, required by the pack):
+#   - install_authentik, install_keap, install_pulse, install_mariadb
+#   - install_n8n  — already true; ČNB/DTT after approve, not a second SoT
+# Vision Pulse (invoice-vision-base) is a catalog job, not a service flag.
+# ollama_enabled defaults false, so it is armed here with the D1 VLM id;
+# the operator still pulls `qwen2.5vl:7b` (`ollama pull`).
+# =============================================================================
+
+# ── Heavier books stay off ───────────────────────────────────────────────────
+install_firefly: false
+install_erpnext: false            # experimental anyway; pin so an overlay cannot enable it
+
+# ── Praxis pack ──────────────────────────────────────────────────────────────
+install_wordpress: true           # commons portal (not a second backoffice)
+keap_seed_consulting_fixture: true
+apps_runner_enabled: true         # EspoCRM lives in apps/espocrm.yml
+
+# ── Vision Pulse needs a local VLM (defaults leave this unarmed) ─────────────
+ollama_enabled: true
+ollama_vision_model: "qwen2.5vl:7b"

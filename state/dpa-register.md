@@ -602,12 +602,16 @@ max-file 3).
 - **Security measures:** platform baseline (see above)
 
 #### Wordpress — `svc_wordpress`
-- **Purpose:** Hosts the operator's WordPress site. Stores posts, pages, comments,
-user accounts, and OIDC session data. Public-facing content may be
-reachable to anonymous visitors (legitimate interests basis).
+- **Purpose:** Hosts the operator's gated WordPress client portal (and any public
+pages they still publish). Stores posts, pages, comments, user
+accounts, OIDC session data, contact-form submissions, and shareable
+statements/PDFs for clients. Ceiling: statements, shareable PDFs,
+and a contact form — the portal, not the books. Public-facing
+content may still be reachable to anonymous visitors (legitimate
+interests basis).
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`; `end_users`; `anonymous_visitors`
-- **Data categories:** `blog_content`; `comments`; `user_accounts`; `oauth_session_data`; `email`
+- **Data subjects:** `operators`; `end_users`; `clients`; `anonymous_visitors`
+- **Data categories:** `blog_content`; `comments`; `user_accounts`; `oauth_session_data`; `email`; `contact_form_submissions`; `shareable_documents`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)

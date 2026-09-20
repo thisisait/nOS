@@ -13,8 +13,8 @@
 # verify-writeback-needs-writer): VisionImporter.parse() READS that table but
 # nothing WROTE it, so a held sidecar was an inert file nobody could see. This
 # job is the writer. It never books: tools/invoice-verify.py is the approve
-# producer (HMAC-audited), and the next `digest-import-vision --absorb` honours
-# it (the table's batch semantics). Scheduled absorb is still open.
+# producer (HMAC-audited). absorb-approved then runs digest-import-vision
+# --absorb, which honours the table (parse() skips pending/rejected).
 #
 # Not a Docker service — a host-side Python sweep, same shape as discovery.
 # =============================================================================
@@ -60,8 +60,12 @@ requires:
 # is introduced — only {{ playbook_dir }} (mapped+fed) and keap_agent_token_rw
 # (already mapped), so the pulse-catalog render test stays green.
 #
-# 05:20 UTC: after the security chain, before vision-bench (05:31), so a freshly
-# swept queue is what the benchmark and the operator see in the morning.
+# 05:20 UTC intake: after the security chain, before vision-bench (05:31), so a
+# freshly swept queue is what the benchmark and the operator see in the morning.
+# 17:20 UTC absorb-approved: same daily cadence, twelve hours later — not stacked
+# on the VLM window; same-day HMAC approvals still book that night. Pulse cannot
+# glob; digest-import-vision.py with no root walks extracts/. parse() is the
+# unverified skip, so --absorb is enough (no --absorb-approved-only flag).
 # =============================================================================
 
 pulse:
@@ -85,6 +89,30 @@ pulse:
       env:
         # The RW token decides WHICH DOOR the queue rows come through (agent door
         # = upsertable slugs), same rule as discovery. Already-mapped token.
+        KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+
+    - name: absorb-approved
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/digest-import-vision.py"
+      args: ["--absorb"]
+      schedule: "20 17 * * *"
+      jitter_min: 10
+      max_runtime_s: 300       # HTTP upsert, not VLM — tighter than intake-sweep
+      max_concurrent: 1
+      category: knowledge
+      writes:
+        - target: "table:invoice"
+          via: "digest_absorb after VisionImporter.parse() honours
+            pending-invoice-verify (approved only; pending/rejected stay skipped).
+            Inherited compose also emits journal-entry + posting."
+          measured: "2026-09-20"
+        - target: "table:journal-entry"
+          via: "digest_absorb (IsdocImporter.compose → derive_postings, inherited)"
+          measured: "2026-09-20"
+        - target: "table:posting"
+          via: "digest_absorb (IsdocImporter.compose → derive_postings, inherited)"
+          measured: "2026-09-20"
+      env:
         KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
 
 # =============================================================================
@@ -111,7 +139,7 @@ notification:
         $findings_md
 
         Vision-extracted from scans/PDFs and held in the pending-invoice-verify
-        queue. Approve or reject each; the next import run books the approved ones.
+        queue. Approve or reject each; absorb-approved books the approved ones.
     sweep_blocked:
       title: "Invoice vision sweep could not run"
       body: |

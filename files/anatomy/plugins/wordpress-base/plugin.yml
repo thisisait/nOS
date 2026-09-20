@@ -88,9 +88,13 @@ lifecycle:
 
 gdpr:
   purpose: |
-    Hosts the operator's WordPress site. Stores posts, pages, comments,
-    user accounts, and OIDC session data. Public-facing content may be
-    reachable to anonymous visitors (legitimate interests basis).
+    Hosts the operator's gated WordPress client portal (and any public
+    pages they still publish). Stores posts, pages, comments, user
+    accounts, OIDC session data, contact-form submissions, and shareable
+    statements/PDFs for clients. Ceiling: statements, shareable PDFs,
+    and a contact form — the portal, not the books. Public-facing
+    content may still be reachable to anonymous visitors (legitimate
+    interests basis).
   legal_basis: legitimate_interests
   data_categories:
     - blog_content
@@ -98,9 +102,12 @@ gdpr:
     - user_accounts
     - oauth_session_data
     - email
+    - contact_form_submissions
+    - shareable_documents
   data_subjects:
     - operators
     - end_users
+    - clients
     - anonymous_visitors
   retention_days: 365
   processors: []
@@ -112,7 +119,7 @@ ui-extension:
     icon: globe
     url: "https://{{ wordpress_domain }}"
     tier: 4
-    description: "Public website / blog"
+    description: "Gated client portal: statements, PDFs, contact form (not the books)"
     health_check: "https://{{ wordpress_domain }}/wp-login.php"
 
 # ── Notification routing (A9 severity → channel) ─────────────────────────────

@@ -525,6 +525,7 @@ install_influxdb: false           # InfluxDB 2.x – time-series DB [Docker]
 # ── IIAB – self-hosted knowledge & productivity services ──────────────────────
 # Requires: install_nginx: true, install_php: true
 install_mariadb: true            # MariaDB database (required for WordPress + Nextcloud)
+# Commons portal for the consulting-firm pack: profiles/praxis.yml sets this true.
 install_wordpress: false          # WordPress CMS            [requires: mariadb, php, nginx]
 install_nextcloud: true          # Nextcloud – self-hosted cloud  [requires: mariadb, php, nginx]
 install_kiwix: true              # Kiwix – offline Wikipedia, Gutenberg, ZIM  [requires: Docker]
@@ -2670,6 +2671,7 @@ keap_seed_accounting_fixture: false
 # (state/fixtures/consulting-firm.seed.yml). MODEL C — data isolation only, no
 # controller/tenant column. Independent opt-in. Synthetic people only,
 # enforced by tests/anatomy/test_consulting_firm_fixture_declares_the_business.py.
+# profiles/praxis.yml is the only committed overlay that turns this on.
 keap_seed_consulting_fixture: false
 # system regardless of install state) — profiles/all-on.yml sets it true.
 # Optional live embedder for free-text semantic search (stored vectors come
@@ -3296,6 +3298,10 @@ backup_dirs_to_dump:
   - { name: "n8n", path: "{{ n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n') }}" }
   - { name: "nodered", path: "{{ nodered_data_dir | default(ansible_facts['env']['HOME'] + '/nodered/data') }}" }
   - { name: "authentik", path: "{{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}" }
+  # Invoice PDFs and extracts live under tenants/.../inbox/accounting/*/incoming
+  # (and extracts/). KEAP sqlite is not those files. Alpine bind-mounts the
+  # tree (same VirtioFS path as gitea) so launchd TCC cannot drop them.
+  - { name: "tenants", path: "{{ nos_data_root }}/tenants" }
 backup_databases_mariadb: true
 backup_databases_postgresql: true
 # A9 result notification (W6.1): backup outcome → Wing inbox (fail=high,

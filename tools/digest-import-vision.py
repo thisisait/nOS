@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import pathlib
 import sys
 import urllib.error
@@ -163,9 +164,49 @@ class VisionImporter(IsdocImporter):
         return out
 
 
+def discover_extracts(root: pathlib.Path) -> list[pathlib.Path]:
+    """Pulse cannot glob. Walks tenants/*/.../accounting/*/extracts."""
+    return sorted(p for p in root.glob(
+        "tenants/*/users/*/inbox/accounting/*/extracts") if p.is_dir())
+
+
+def _roots(root_arg: str | None) -> list[pathlib.Path]:
+    if root_arg:
+        root = pathlib.Path(root_arg)
+        return [root if root.is_absolute() else REPO / root]
+    return discover_extracts(pathlib.Path(
+        os.environ.get("NOS_DATA_ROOT") or pathlib.Path.home() / "nos"))
+
+
+def _run_one(root: pathlib.Path, args, index) -> int:
+    importer = VisionImporter(args.source_id or root.name, index, fixture_mode=args.fixture_mode,
+                              book_owner_ico=args.book_owner_ico,
+                              book_owner_slug_hint=nos_digest.infer_book_owner_slug(root))
+    bundle, errors = nos_digest.run_importer(importer, str(root), TABLES_DIR)
+    for s in importer.skipped:
+        print(f"skip {s}", file=sys.stderr)
+    if errors:
+        print("GATE REFUSED the bundle — nothing absorbed:", file=sys.stderr)
+        for e in errors:
+            print(f"  ✗ {e}", file=sys.stderr)
+        return 1
+    n = sum(len(v) for v in bundle["deterministic"].values())
+    print(f"gate OK: {n} row(s) across {len(bundle['deterministic'])} table(s)"
+          f"{'  (DRY)' if not args.absorb else ''}", file=sys.stderr)
+    if args.absorb:
+        return 0 if n == 0 else absorb(bundle)
+    text = yaml.safe_dump(bundle, sort_keys=False, allow_unicode=True)
+    out = args.out and (REPO / args.out if not pathlib.Path(args.out).is_absolute()
+                        else pathlib.Path(args.out))
+    out.write_text(text) if out else print(text)
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("root", help="a directory of *.extract.json vision sidecars")
+    ap.add_argument("root", nargs="?",
+                    help="a directory of *.extract.json vision sidecars; "
+                         "omit to walk every per-client extracts/ (Pulse absorb-approved)")
     ap.add_argument("--source-id")
     ap.add_argument("--absorb", action="store_true", help="upsert into KEAP (default dry)")
     ap.add_argument("--out", help="write the gated bundle YAML here (default stdout, dry)")
@@ -176,39 +217,26 @@ def main() -> int:
                          "stamped as invoice.book_owner; resolved, never minted)")
     args = ap.parse_args()
 
-    root = pathlib.Path(args.root)
-    if not root.is_absolute():
-        root = REPO / root
+    roots = _roots(args.root)
+    if not roots:
+        print("no extracts/ dirs — nothing to absorb", file=sys.stderr)
+        return 0
+    if args.out and len(roots) > 1:
+        print("REFUSING: --out with multiple extracts/ dirs; pass one root", file=sys.stderr)
+        return 2
     try:
         index = build_party_index()
     except (urllib.error.URLError, OSError) as exc:
         print(f"REFUSING: cannot build party index from KEAP ({exc})", file=sys.stderr)
         return 2
 
-    importer = VisionImporter(args.source_id or root.name, index, fixture_mode=args.fixture_mode,
-                              book_owner_ico=args.book_owner_ico,
-                              book_owner_slug_hint=nos_digest.infer_book_owner_slug(root))
-    bundle, errors = nos_digest.run_importer(importer, str(root), TABLES_DIR)
-
-    for s in importer.skipped:
-        print(f"skip {s}", file=sys.stderr)
-    if errors:
-        print("GATE REFUSED the bundle — nothing absorbed:", file=sys.stderr)
-        for e in errors:
-            print(f"  ✗ {e}", file=sys.stderr)
-        return 1
-
-    n = sum(len(v) for v in bundle["deterministic"].values())
-    print(f"gate OK: {n} row(s) across {len(bundle['deterministic'])} table(s)"
-          f"{'  (DRY)' if not args.absorb else ''}", file=sys.stderr)
-
-    if args.absorb:
-        return absorb(bundle)
-    text = yaml.safe_dump(bundle, sort_keys=False, allow_unicode=True)
-    out = args.out and (REPO / args.out if not pathlib.Path(args.out).is_absolute()
-                        else pathlib.Path(args.out))
-    out.write_text(text) if out else print(text)
-    return 0
+    worst = 0
+    for root in roots:
+        rc = _run_one(root, args, index)
+        if rc == 2:
+            return 2
+        worst = max(worst, rc)
+    return worst
 
 
 if __name__ == "__main__":

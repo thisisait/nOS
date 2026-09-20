@@ -2,7 +2,63 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.11-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.12-beta`.
+
+---
+
+## v0.13-beta (2026-09-20)
+
+> **A consulting firm gets a backoffice in SOURCE: CRM, books doors, a commons portal.**
+> 70 commits since `v0.12-beta` (224 files, +12k/−0.3k). Still `-beta`. No tag in this cut.
+> v0.12 made the loop generated and visible. v0.13 names the public organ
+> **backoffice** and ships the first **praxis** pack — Espo, KEAP tables,
+> ISDOC + vision intake, HMAC Books approve — as doors in the tree. This
+> checkout is not what the estate is serving; a git ref is not a converge.
+
+### Backoffice is the organ; praxis is a pack
+
+- Apex publishes **The Backoffice** (*CRM, books and a customer desk, at home.*).
+  Praxis is not a 14th constellation and not a host daemon: it is the default
+  practice pack inside that organ — Espo + KEAP tables + invoice doors for
+  the consulting-firm pilot. Firefly and ERPNext stay opt-in, still under
+  backoffice.
+- **Commons** is the user portal (WordPress when the firm wants a CMS). It is
+  not a second backoffice. Client portal pages are not created live here.
+
+### Praxis doors (SOURCE)
+
+These are wired in the tree. They are not live proof that a photo became a booked row.
+
+- **Espo OIDC PUT** — aggregator-wired native OIDC; apps_runner PUT after start.
+  Party join is `nos:party:<slug>` on the Account, not a second party store.
+- **Books HMAC queue** — Face Books + `invoice-verify` resolve
+  `pending-invoice-verify`. They do not insert `invoice` / `posting` behind
+  absorb. A model does not book.
+- **ISDOC** — `book_owner` plus the ledger (analytical 311/321, multi-rate 343).
+  Isolation is those columns, not a database per client.
+- **Vision intake queue** — Pulse sweep writes held sidecars into
+  `pending-invoice-verify`. The importer's `parse()` is the verify rung.
+- **Real-world ISDOC fixtures** under `state/fixtures/isdoc-realworld/`:
+  rounding, PDP, dobropis (credit note).
+- n8n ČNB / DTT templates exist as export *after* approve, never as a second
+  SoT. Glue that drives invoices from n8n is later.
+- **Scheduled absorb** — Pulse `absorb-approved` runs `digest-import-vision
+  --absorb` after HMAC approve (SOURCE door). Not evidence the estate absorbed
+  anything.
+
+### Still open (named, not restated as done)
+
+- **photo→booked** is not proven live. Repo ≠ running system.
+- **UC10** (fraud / ISDOC-vs-vision crosscheck walkthrough) is blocked.
+- **UC13** (from-blank rebuild) is unrun.
+- **REM-249** stays operator-gated (RustFS key rotation breaks S3 clients
+  until they re-read `~/.nos/secrets.yml`). Do not land it from these notes.
+- **n8n invoice glue** is later.
+- **Client portal pages** are not created live.
+- Nightly copy #1 now tars `dir-tenants` (`nos_data_root/tenants`, including
+  `incoming/` PDFs). That is SOURCE wiring, not a restore drill.
+- GitHub Integration on `master` is not claimed green. Signed-commit ruleset
+  still bypassed. Four v0.11 `-beta` drop criteria remain unmet.
 
 ---
 
