@@ -50,6 +50,40 @@ planned convenience, but the owner→party mapping stays explicit. An owner it c
 resolve to a known party is **skipped for review** — the importer never invents a
 counterparty.
 
+## Invoices (ISDOC + vision)
+
+Two more importers ship: `digest-import-isdoc.py` (deterministic ISDOC e-invoice
+XML) and `digest-import-vision.py` (vision-extracted `.extract.json` sidecars,
+gated by an operator-verify + confidence-floor rung). Both compose the SAME
+`invoice` row shape, each stamping which one produced it
+(`invoice.source: isdoc|vision`, plus `verified`/`overall_confidence` for the
+vision path — a row keeps its own provenance instead of looking identical
+regardless of source).
+
+**Storage convention — one root, a subdirectory per client (Model C: clients
+are DATA, never a separate tenant):**
+
+```
+{nos_data_root}/tenants/<tenant>/users/<uid>/inbox/accounting/<book_owner-slug>/
+├── incoming/    # operator-supplied originals: *.isdoc.xml, rendered PDF/image
+├── extracts/    # invoice-vision-ocr agent output: <doc-id>.extract.json
+└── processed/   # moved here by hand after a successful --absorb run
+```
+
+`<book_owner-slug>` is the resolved party slug — organization only, never an
+RBAC/tenant boundary. Point either importer at `incoming/` or `extracts/` and
+it reads the slug straight off the directory name:
+
+```
+digest-import-isdoc.py  .../accounting/synthetic-client-alfa/incoming
+digest-import-vision.py .../accounting/synthetic-client-alfa/extracts
+```
+
+`--book-owner-ico` is still accepted and now cross-checked against the
+directory: if both are given and disagree, the run refuses outright rather
+than guess which one is right. Given only the directory, the slug must
+already be a known party (never minted from a folder name).
+
 ## Undo (test freely)
 
 Any bundle is reversible, leaf-first, and a row another table still needs is

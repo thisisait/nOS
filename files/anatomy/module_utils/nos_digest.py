@@ -681,6 +681,26 @@ def strip_provenance(deterministic: dict) -> dict:
             for t, rows in deterministic.items()}
 
 
+#: storage-subdir unit (2026-09-20): the invoice import-inbox layout is
+#: {nos_data_root}/tenants/<t>/users/<uid>/inbox/accounting/<book_owner-slug>/
+#: {incoming,extracts,processed}/ (ssot/doctrine/filesystem.md class 3, KEAP
+#: inbox precedent) — Model C: the slug is a data-organization label inside
+#: the consultant's ONE tenant, never a per-client tenant/RBAC boundary.
+BOOK_OWNER_LEAVES = ("incoming", "extracts", "processed")
+
+
+def infer_book_owner_slug(root: str | pathlib.Path) -> str | None:
+    """The book_owner-slug an importer `root` sits under, IF `root` follows
+    the documented .../accounting/<slug>/{incoming,extracts,processed} shape
+    — else None (a flat/ad-hoc root, e.g. a fixture directory, names nothing).
+    Purely a filename read — never resolves or mints; that's the importer's
+    job, comparing this against --book-owner-ico so the two cannot drift."""
+    p = pathlib.Path(root)
+    if p.name in BOOK_OWNER_LEAVES and p.parent.name:
+        return p.parent.name
+    return None
+
+
 def note_party_resolve(importer, ref: dict, party_index: dict, **kw) -> dict:
     """resolve_party and stash review/ambiguous outcomes for the harness rung.
 
