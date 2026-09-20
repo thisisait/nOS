@@ -9,7 +9,7 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.12
 ## v0.13-beta (2026-09-20)
 
 > **A consulting firm gets a backoffice in SOURCE: CRM, books doors, a commons portal.**
-> 70 commits since `v0.12-beta` (224 files, +12k/−0.3k). Still `-beta`. No tag in this cut.
+> 72 commits since `v0.12-beta` (239 files, +13k/−0.4k). Still `-beta`. No tag in this cut.
 > v0.12 made the loop generated and visible. v0.13 names the public organ
 > **backoffice** and ships the first **praxis** pack — Espo, KEAP tables,
 > ISDOC + vision intake, HMAC Books approve — as doors in the tree. This
@@ -45,6 +45,12 @@ These are wired in the tree. They are not live proof that a photo became a booke
 - **Scheduled absorb** — Pulse `absorb-approved` runs `digest-import-vision
   --absorb` after HMAC approve (SOURCE door). Not evidence the estate absorbed
   anything.
+- **Face BFF reads** fail closed on table visibility (guests do not get
+  `invoice`/`party`). KEAP's agent RO bearer is still ungated.
+- **Offboard** is a dry-run planner keyed on `book_owner` (`tools/offboard-book-owner.py`).
+  Live KEAP delete is not proven. Espo stays a manual join-tag step.
+- **Training** is `party.training_opt_in` default false. Art-7 capture is still
+  unwired. No invoice train Pulse job.
 
 ### Still open (named, not restated as done)
 
