@@ -48,7 +48,7 @@ schema:
     - { key: work,        label: "Work",        kind: text,   role: dimension, concept: graph.parent }
     # ── the nos-work:// NEED components (WHO is always * on an assignment) ─────
     - { key: task_type,   label: "Task type",   kind: select, role: dimension, required: true, concept: class.kind,
-        options: ["investigate", "code-fix", "seed-edit", "review", "design", "doc", "security-remediation", "converge"] }
+        options: ["investigate", "code-fix", "seed-edit", "review", "design", "doc", "security-remediation", "converge", "use-case"] }
     - { key: where,       label: "Where",       kind: select, role: dimension,
         options: ["local", "eu-cloud", "ext-cloud", "any"] }
     # KAM is what the WORK needs to touch, NOT the runtime scope of the artifact

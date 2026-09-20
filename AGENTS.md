@@ -70,3 +70,9 @@ machine-readable source of this table is
 - **tools**: `nos`, `ansible-playbook main.yml`, `tools/nos-smoke.py`
 - **writes**: live · **operator-run**
 - **done**: PLAY RECAP failed=0 AND nos-smoke passes; the change is now actually serving.
+
+### `use-case` — A live use-case walkthrough / acceptance test of an end-to-end workflow, recorded with steps + expected + actual result.
+
+- **tools**: `read`, `the running estate (UI, API, CLI)`, `edit`
+- **writes**: docs · **agent-run**
+- **done**: a recorded walkthrough with steps + expected + actual result, actual matching expected or a filed defect.

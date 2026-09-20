@@ -95,3 +95,10 @@ task_types:
     writes: live
     needs_operator: true    # sudo + vars_prompt; only the operator runs a converge
     done: PLAY RECAP failed=0 AND nos-smoke passes; the change is now actually serving.
+
+  use-case:
+    summary: A live use-case walkthrough / acceptance test of an end-to-end workflow, recorded with steps + expected + actual result.
+    tools: [read, "the running estate (UI, API, CLI)", edit]
+    writes: docs
+    needs_operator: false
+    done: a recorded walkthrough with steps + expected + actual result, actual matching expected or a filed defect.
