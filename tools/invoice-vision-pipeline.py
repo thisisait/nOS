@@ -28,8 +28,10 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import shutil
 import subprocess
 import sys
+import tempfile
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 WING = REPO / "files" / "anatomy" / "wing"
@@ -53,6 +55,28 @@ def _run_agent(args: list[str]) -> dict:
     if out.returncode not in (0, 1):
         raise RuntimeError(f"run-agent {args[0]} failed (exit {out.returncode}): {out.stderr[-500:]}")
     return json.loads(out.stdout)
+
+
+def ensure_image(path: str, workdir: str) -> str:
+    """A VLM takes an image, not a PDF — but accountants hand PDFs. If given a
+    PDF, rasterize its FIRST page to a PNG (pdftoppm, poppler) inside workdir and
+    return that; otherwise return the path unchanged. Raises if pdftoppm is
+    missing or fails, so a silent no-extract never masquerades as a bad model.
+    ponytail: first page only — a multi-page invoice's later pages are dropped;
+    loop over `pdfinfo -f`'s page count when multi-page invoices actually bite."""
+    p = pathlib.Path(path)
+    if p.suffix.lower() != ".pdf":
+        return path
+    if shutil.which("pdftoppm") is None:
+        raise RuntimeError("pdftoppm (poppler) not found — needed to rasterize a PDF invoice for the VLM")
+    stem = str(pathlib.Path(workdir) / "page")
+    r = subprocess.run(
+        ["pdftoppm", "-png", "-r", "200", "-singlefile", "-f", "1", "-l", "1", str(p), stem],
+        capture_output=True, text=True,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(f"pdftoppm failed on {path} (exit {r.returncode}): {r.stderr[-300:]}")
+    return f"{stem}.png"
 
 
 def run_stage_a(image_path: str) -> str:
@@ -103,11 +127,15 @@ def build_pipeline_sidecar(record: dict) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("image", help="path to the invoice scan/PDF page")
+    ap.add_argument("image", help="path to the invoice scan (image) or PDF — a PDF is rasterized to page 1")
     ap.add_argument("--out", required=True, help="path to write the .extract.json sidecar")
     args = ap.parse_args()
 
-    ocr_text = run_stage_a(args.image)
+    workdir = tempfile.mkdtemp(prefix="nos-vision-")
+    try:
+        ocr_text = run_stage_a(ensure_image(args.image, workdir))
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
     record = run_stage_b(ocr_text)
     sidecar = build_pipeline_sidecar(record)
 

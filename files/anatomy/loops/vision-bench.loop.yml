@@ -1,0 +1,38 @@
+---
+# vision-bench — invoice vision-extraction accuracy, measured on a cadence.
+#
+# An OPERATIONAL loop (nos-loop family: business logic, the work the estate does —
+# not SERE self-improvement). The manifest is the source; tools/loops/vision-bench.py
+# runs the steps. discover-pulse-catalog.py schedules it as pulse job `loop:vision-bench`;
+# tools/loop-graph-gen.py draws it in the face graph.
+#
+# It MEASURES and REPORTS; it changes nothing (no absorb, no prompt/model edit).
+# Driving prompt/model changes FROM this score is the `harness` proposal kind,
+# which is deliberately DISABLED (state/fixtures/loop-config.seed.yml) — so this
+# ships as a measuring loop, not a self-improving one.
+id: vision-bench
+label: "vision-bench — invoice extraction accuracy vs the rendered ground truth"
+blurb: >-
+  Daily, run the vision pipeline over the consulting-firm fixture images and score
+  each extracted field against what the image was rendered from
+  (state/fixtures/consulting-firm/*.image.txt), plus the ISDOC cross-check control.
+  Reports per-field accuracy and per-doc spread; a score below floor is a finding,
+  not a crash. Prerequisites, or it reports it cannot run: run tools/gen-invoice-images.py
+  once to render the images, and have qwen2.5vl:7b pulled + ollama armed.
+trigger:
+  cadence: "31 5 * * *"            # daily 05:31 UTC, clear of the security + KEAP chains
+steps:
+  - id: extract
+    runner: tool
+    label: "run the vision pipeline over each fixture image"
+  - id: score
+    runner: tool
+    label: "per-field accuracy + cross-check vs the rendered ground truth (code oracle)"
+run: "{{ playbook_dir }}/tools/loops/vision-bench.py"
+# flags go in args:, NEVER in run: (a flag in run: 400s the Wing catalog). Defaults
+# (repeat=3, threshold=0.85, fixture=consulting-firm) need no args.
+pulse:
+  category: knowledge
+  max_runtime_s: 900              # 6 images x 3 repeats of VLM OCR is slow — budget wide
+  jitter_min: 10
+  findings_exit_codes: [3]        # rc=3 == pooled accuracy below floor (a finding, not a crash)

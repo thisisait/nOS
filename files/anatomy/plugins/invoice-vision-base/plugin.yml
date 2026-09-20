@@ -1,0 +1,131 @@
+# =============================================================================
+# invoice-vision-base — the scheduled sweep that turns invoice IMAGES into a
+# reviewable queue.
+#
+# An accountant is handed PDFs and scans, not ISDOC XML. This job sweeps each
+# client's intake dir on a cadence, runs the vision pipeline (rasterize -> VLM
+# OCR -> extract -> .extract.json sidecar), and — because every pipeline sidecar
+# is verified:false + confidence 0.0 by fail-safe design — UPSERTS a
+# `pending-invoice-verify` row per held sidecar so the consultant has a real
+# queue to act on.
+#
+# It closes the "reader with no writer" gap (adversarial review #2 / dtt
+# verify-writeback-needs-writer): VisionImporter.parse() READS that table but
+# nothing WROTE it, so a held sidecar was an inert file nobody could see. This
+# job is the writer. It never books: an operator approves rows, and the next
+# `digest-import-vision --absorb` honours it (the table's batch semantics).
+#
+# Not a Docker service — a host-side Python sweep, same shape as discovery.
+# =============================================================================
+
+name: invoice-vision-base
+version: 0.1.0
+description: |
+  Sweeps every per-client invoice intake dir
+  (nos_data_root/tenants/*/users/*/inbox/accounting/*/incoming) on a cadence:
+  rasterize -> VLM OCR -> extract -> .extract.json sidecar, then upserts a
+  pending-invoice-verify row for each HELD sidecar (verified:false or any field
+  below CONFIDENCE_FLOOR).
+
+  Fail-safe by construction: a pipeline sidecar never auto-books; it lands in
+  the operator-verify queue. Requires qwen2.5vl:7b pulled + ollama armed, or the
+  job reports it could not run rather than reporting a clean sweep.
+
+license: MIT
+
+type:
+  - scheduled-job
+
+# =============================================================================
+# REQUIRES
+# =============================================================================
+
+requires:
+  variables:
+    - playbook_dir           # repo root → tools/invoice-vision-intake.py
+
+# =============================================================================
+# PULSE JOB
+#
+# Verdict = pulse_runs.exit_code (tools/invoice-vision-intake.py):
+#   0  swept; nothing held (all sidecars verified + above floor — rare, since
+#      the pipeline stamps confidence 0.0 by design until logprobs land)
+#   1  swept; N invoices await operator verify (a finding, filed as queue rows)
+#   2  could not run — no intake dir, or every extraction failed (qwen2.5vl:7b
+#      not pulled / ollama not armed). NOT "clean" — nothing was extracted.
+#
+# The intake dir is discovered by the script (Pulse cannot glob) from ~/nos, or
+# NOS_DATA_ROOT if the env carries a non-default data root. No new catalog token
+# is introduced — only {{ playbook_dir }} (mapped+fed) and keap_agent_token_rw
+# (already mapped), so the pulse-catalog render test stays green.
+#
+# 05:20 UTC: after the security chain, before vision-bench (05:31), so a freshly
+# swept queue is what the benchmark and the operator see in the morning.
+# =============================================================================
+
+pulse:
+  jobs:
+    - name: intake-sweep
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/invoice-vision-intake.py"
+      schedule: "20 5 * * *"
+      jitter_min: 10
+      max_runtime_s: 900       # VLM OCR over a batch of images is slow — budget wide
+      max_concurrent: 1
+      category: knowledge
+      # exit 1 = invoices await operator verify — the job's purpose, not a crash.
+      findings_exit_codes: [1]
+      writes:
+        - target: "table:pending-invoice-verify"
+          via: "one row per held vision sidecar, upserted by slug via the KEAP
+            agent RW door (tools/invoice-vision-intake.py verify_row + digest_absorb._post_row)"
+      env:
+        # The RW token decides WHICH DOOR the queue rows come through (agent door
+        # = upsertable slugs), same rule as discovery. Already-mapped token.
+        KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+
+# =============================================================================
+# NOTIFICATION (A9 canonical severity shape)
+#
+# Invoices awaiting verify are `medium`: routine bookkeeping backlog, not an
+# incident. A sweep that could not run at all is `high` — the pipeline is down.
+#
+# KNOWN GAP (stated, not implied): the sweep records its verdict in pulse_runs
+# and files queue rows; it does not itself POST to Bone's notification endpoint,
+# so these routes are declared, not yet exercised.
+# =============================================================================
+
+notification:
+  on_critical: [wing-inbox, ntfy, mail]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+  templates:
+    invoices_awaiting_verify:
+      title: "$count invoice(s) awaiting your verification"
+      body: |
+        $findings_md
+
+        Vision-extracted from scans/PDFs and held in the pending-invoice-verify
+        queue. Approve or reject each; the next import run books the approved ones.
+    sweep_blocked:
+      title: "Invoice vision sweep could not run"
+      body: |
+        The sweep exited 2 — no intake dir, or every extraction failed. If the
+        latter, check that qwen2.5vl:7b is pulled and ollama is armed. $detail
+
+# =============================================================================
+# GDPR
+# =============================================================================
+
+gdpr:
+  purpose: "Extract structured invoice data from client scans/PDFs into a review queue"
+  legal_basis: contract
+  data_categories:
+    - financial_records       # invoice amounts, VAT, dates
+    - business_identifiers    # seller/buyer IČO + legal name
+  data_subjects: [clients, counterparties]
+  retention_days: 3650        # accounting-document horizon (matches the ISDOC importer)
+  processors: []              # local only: ollama on loopback + KEAP on loopback
+  eu_residency: true

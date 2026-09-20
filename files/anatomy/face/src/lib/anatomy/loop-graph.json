@@ -17,6 +17,11 @@
       "id": "repo-check",
       "label": "repo-check — red / estate / forge, report only",
       "blurb": "On a four-hour cadence, read what is red, what the three holders of truth disagree on, and whether the forges would fast-forward. Nothing is applied. The overnight sample is the pulse run log, not a success stamp this loop writes about itself."
+    },
+    {
+      "id": "vision-bench",
+      "label": "vision-bench — invoice extraction accuracy vs the rendered ground truth",
+      "blurb": "Daily, run the vision pipeline over the consulting-firm fixture images and score each extracted field against what the image was rendered from (state/fixtures/consulting-firm/*.image.txt), plus the ISDOC cross-check control. Reports per-field accuracy and per-doc spread; a score below floor is a finding, not a crash. Prerequisites, or it reports it cannot run: run tools/gen-invoice-images.py once to render the images, and have qwen2.5vl:7b pulled + ollama armed."
     }
   ],
   "default_loop": "sere",
@@ -336,6 +341,34 @@
       "x": 900,
       "y": 0,
       "runner": "tool"
+    },
+    {
+      "id": "trigger:vision-bench",
+      "kind": "trigger",
+      "label": "⏱ 31 5 * * *",
+      "loop": "vision-bench",
+      "x": 0,
+      "y": 0,
+      "cadence": "31 5 * * *",
+      "event": null
+    },
+    {
+      "id": "step:vision-bench:extract",
+      "kind": "step",
+      "label": "run the vision pipeline over each fixture image",
+      "loop": "vision-bench",
+      "x": 300,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
+      "id": "step:vision-bench:score",
+      "kind": "step",
+      "label": "per-field accuracy + cross-check vs the rendered ground truth (code oracle)",
+      "loop": "vision-bench",
+      "x": 600,
+      "y": 0,
+      "runner": "tool"
     }
   ],
   "edges": [
@@ -558,6 +591,20 @@
       "target": "step:repo-check:forge-sync",
       "kind": "flow",
       "loop": "repo-check"
+    },
+    {
+      "id": "trigger:vision-bench=>step:vision-bench:extract",
+      "source": "trigger:vision-bench",
+      "target": "step:vision-bench:extract",
+      "kind": "flow",
+      "loop": "vision-bench"
+    },
+    {
+      "id": "step:vision-bench:extract=>step:vision-bench:score",
+      "source": "step:vision-bench:extract",
+      "target": "step:vision-bench:score",
+      "kind": "flow",
+      "loop": "vision-bench"
     }
   ],
   "refusals": [
