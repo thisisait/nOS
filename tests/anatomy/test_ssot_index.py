@@ -117,7 +117,7 @@ def test_index_names_unpromoted_proposed_files():
     named = list(data.get("proposed") or [])
     assert named == [
         "docs/doctrine/agentkit.md",
-        "docs/doctrine/ledger.md",
+        "docs/doctrine/backoffice.md",
         "docs/doctrine/organs.md",
     ]
     for rel in named:

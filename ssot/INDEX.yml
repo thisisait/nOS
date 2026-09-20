@@ -31,8 +31,8 @@ realms:
     for: paid lessons
 # Full warehouse originals, not stubs, not law. Promote when the operator
 # settles the remaining axes (agentkit §6; organs sibling of layers;
-# ledger §5).
+# backoffice §5 apex rename).
 proposed:
   - docs/doctrine/agentkit.md
-  - docs/doctrine/ledger.md
+  - docs/doctrine/backoffice.md
   - docs/doctrine/organs.md

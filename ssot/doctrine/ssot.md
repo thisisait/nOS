@@ -22,7 +22,7 @@ A stub under `docs/doctrine/` aliases a promoted article until harvest cites
 move. Harvest SHALL name `ssot/doctrine/<file>.md` or
 `nos-sot:doctrine/<file>#<id>`. The stub drops when nothing names it.
 INDEX `proposed:` names warehouse files that are still full originals, not
-stubs. They are not law. Today: `agentkit.md`, `ledger.md`, `organs.md` —
+stubs. They are not law. Today: `agentkit.md`, `backoffice.md`, `organs.md` —
 promote when the operator settles the remaining axes in those files.
 A **PROPOSED** banner on a file in an in-force realm means that file is not
 law yet. The realm being in force does not settle the banner.
