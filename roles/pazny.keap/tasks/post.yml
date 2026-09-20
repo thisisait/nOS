@@ -47,20 +47,39 @@
     creates: "{{ keap_data_dir | default(nos_data_root + '/platform/services/keap/data') }}/.fixtures-seeded"
   register: _keap_seed
   changed_when: "'created' in (_keap_seed.stdout | default(''))"
-  failed_when:
-    - _keap_seed.rc is defined
-    - _keap_seed.rc != 0
+  # TOLERANT: the demo seed is opt-in illustrative data, not load-bearing, and
+  # its upstream script (deploy/seed-fixtures.mjs) does not send the SEC-02
+  # x-keap-proxy-secret, so a KEAP that enforces the proxy rejects it with
+  # "request did not come through the proxy". A broken DEMO must never fail the
+  # converge (nor a from-blank) — the fix is KEAP-side (keap-seed-through-proxy).
+  failed_when: false
   when: keap_seed_fixtures | default(true) | bool
 
-- name: "[pazny.keap] Mark fixtures as seeded (skip on later converges)"
+- name: "[pazny.keap] Warn if the demo seed did not succeed (grid stays empty)"
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: the KEAP demo seed exited rc={{ _keap_seed.rc | default('?') }}
+      ({{ (_keap_seed.stderr | default('')) | trim | truncate(160) }}). Demo tables
+      stay empty; this does NOT block the converge. Likely the proxy-secret gap —
+      see dtt keap-seed-through-proxy. Real content (knowledge + fixtures) is unaffected.
+  when:
+    - keap_seed_fixtures | default(true) | bool
+    - _keap_seed is not skipped
+    - (_keap_seed.rc | default(1)) != 0
+
+# Mark ONLY on real success — a reader-writes-the-marker, never the attempting
+# code on failure. If the seed failed (rc!=0) the marker is NOT written, so the
+# next converge retries it (and marks once KEAP is fixed). This is the very
+# self-reporting anti-pattern the estate got burned by; the gate keeps it honest.
+- name: "[pazny.keap] Mark fixtures as seeded (only after a successful seed)"
   ansible.builtin.file:
     path: "{{ keap_data_dir | default(nos_data_root + '/platform/services/keap/data') }}/.fixtures-seeded"
     state: touch
     mode: '0644'
   when:
     - keap_seed_fixtures | default(true) | bool
-    - _keap_seed is defined
     - _keap_seed is not skipped
+    - (_keap_seed.rc | default(1)) == 0
 
 # ── Knowledge ingest (git SoT → live DB, idempotent) ─────────────────────────
 # The WHOLE of knowledge/ is bind-mounted RO from the clone — not just canonical.

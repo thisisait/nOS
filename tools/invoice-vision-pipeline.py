@@ -18,10 +18,11 @@ pipeline-produced sidecar below CONFIDENCE_FLOOR (isdoc-extract-sidecar
 .schema.yaml) on top of build_sidecar()'s own verified:false, so it always
 lands in VisionImporter's operator-verify queue and never auto-absorbs.
 
-Does NOT run a real model — shells to bin/run-agent.php, which needs a pulled
-qwen2.5vl:7b and a live ollama binding to do anything but fail. Exit 2 if
-either stage's chain is empty (schema-invalid / no chain), matching
-run-agent.php's own exit code for that case.
+Does NOT run a real model — shells to tools/run-agent.sh (which sources the
+running Wing daemon's env and runs the deployed run-agent.php), which needs a
+pulled qwen2.5vl:7b armed in the daemon (ollama_vision_model) and a live ollama
+binding to do anything but fail. Exit 2 if either stage's chain is empty
+(schema-invalid / no chain), matching run-agent's own exit code for that case.
 """
 from __future__ import annotations
 
@@ -34,26 +35,36 @@ import sys
 import tempfile
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
-WING = REPO / "files" / "anatomy" / "wing"
-RUN_AGENT = WING / "bin" / "run-agent.php"
+#: THE bridge to the live estate. bin/run-agent.php on the SOURCE tree cannot
+#: work from a shell — the daemon's env (audit-chain key, NOS_REPO_ROOT, the
+#: model tier ids, tokens, the deployed wing.db path) is in the launchd plist and
+#: a terminal inherits none of it, so a direct `php bin/run-agent.php` dies on a
+#: DI TypeError / "Table agent_sessions does not exist" / an UnchainedAuditWrite
+#: refusal (all measured 2026-09-20). tools/run-agent.sh reads the RUNNING job's
+#: env via `launchctl print` and runs the DEPLOYED bin/run-agent.php. This is the
+#: only correct entry point from CLI, Pulse, or a loop. NOS_LOCAL_VISION_MODEL is
+#: NOT caller-overridable there — it must be armed in the daemon (ollama_vision_model
+#: in config.yml + a wing converge).
+RUN_AGENT = REPO / "tools" / "run-agent.sh"
 
 sys.path.insert(0, str(REPO / "tools"))
 import invoice_extract  # noqa: E402
 
 
 def _run_agent(args: list[str]) -> dict:
-    """One `php bin/run-agent.php` call, JSON summary parsed. List args, not
-    a shell string — a prompt full of newlines/quotes (Stage A's OCR text)
-    must never round-trip through a shell."""
+    """One `tools/run-agent.sh` call, JSON summary parsed. run-agent.sh sources
+    the daemon env and runs the deployed run-agent.php; its STDOUT is the summary
+    JSON and nothing else. List args, not a shell string — a prompt full of
+    newlines/quotes (Stage A's OCR text) must never round-trip through a shell."""
     out = subprocess.run(
-        ["php", str(RUN_AGENT), *args], cwd=WING,
-        capture_output=True, text=True, timeout=300,
+        [str(RUN_AGENT), *args],
+        capture_output=True, text=True, timeout=600,   # VLM OCR + the run-agent lock
     )
     # exit 0 = idle/satisfied, 1 = a schema-invalid one_shot chain (still a
-    # completed run, caller decides what that means); only 2 (config error)
-    # and anything else are unparseable failures.
+    # completed run, caller decides what that means); 2 (config error / Wing not
+    # loaded / lock) and anything else are unparseable failures.
     if out.returncode not in (0, 1):
-        raise RuntimeError(f"run-agent {args[0]} failed (exit {out.returncode}): {out.stderr[-500:]}")
+        raise RuntimeError(f"run-agent.sh {args[0]} failed (exit {out.returncode}): {out.stderr[-500:]}")
     return json.loads(out.stdout)
 
 
