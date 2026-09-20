@@ -4,8 +4,8 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 283,
-    "edges": 293,
+    "nodes": 284,
+    "edges": 294,
     "nodes_pulse": 34,
     "nodes_judge": 5,
     "nodes_gateset": 5,
@@ -15,12 +15,12 @@
     "nodes_resource": 19,
     "nodes_repo": 4,
     "nodes_tofu": 1,
-    "nodes_authentik": 55,
+    "nodes_authentik": 56,
     "nodes_table": 35,
     "nodes_doctrine": 13,
     "nodes_faceapp": 6,
     "nodes_agent": 16,
-    "edges_data": 205,
+    "edges_data": 206,
     "edges_trigger": 41,
     "edges_temporal": 5,
     "edges_mutex": 21,
@@ -106,12 +106,12 @@
       "source": "files/anatomy/agents/invoice-vision-ocr/agent.yml",
       "charter": "vision-ocr-stage",
       "runner_status": "unproven",
-      "primary_model": "openai-local-sonnet",
+      "primary_model": "openai-local-vision",
       "backend": "ollama",
       "backend_declared": true,
       "tools": [],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'invoice-vision-ocr' (vision-ocr-stage), mode=None, runner_status=unproven — primary openai-local-sonnet on backend ollama"
+      "description": "Agent ceremony 'invoice-vision-ocr' (vision-ocr-stage), mode=None, runner_status=unproven — primary openai-local-vision on backend ollama"
     },
     "agent:jeff": {
       "kind": "agent",
@@ -342,6 +342,17 @@
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
       "description": "Authentik native_oidc client 'nos-erpnext' (RBAC tier 2) — gates service:erpnext; provider+application managed by OpenTofu from the committed registry"
+    },
+    "authentik:espocrm": {
+      "kind": "authentik",
+      "source": "state/tofu-authentik-services.yml",
+      "mode": "native_oidc",
+      "tier": 2,
+      "client_id": "nos-espocrm",
+      "service": null,
+      "managed_by": "tofu:authentik-state",
+      "anchor": "02.02.08",
+      "description": "Authentik native_oidc client 'nos-espocrm' (RBAC tier 2) — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry"
     },
     "authentik:face": {
       "kind": "authentik",
@@ -4246,6 +4257,14 @@
     {
       "from": "service:authentik",
       "to": "authentik:erpnext",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:authentik",
+      "to": "authentik:espocrm",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting",
