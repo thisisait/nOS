@@ -82,9 +82,9 @@ written. Spec + gates author on the operator's go — the store/doors spec
 **after** the `dtt-share-model` zod, so the visibility invariant cites a
 real module, not a promised one.
 
-**The measurement that made this a re-labelling, not a refactor:** 35
+**The measurement that made this a re-labelling, not a refactor:** 37
 DataTable DEFINITIONS live in nOS git (`state/keap-tables/*.table.yml`, gated
-by `test_keap_table_concepts.py`); 26 of them are SYSTEM (estate tables nOS
+by `test_keap_table_concepts.py`); 28 of them are SYSTEM (estate tables nOS
 emits); 9 are fixture/user-shaped (`print-*`, `kolben-*`) — tenant-demo
 furniture that happens to live in git, not KEAP-born USER tables. Zero
 definitions are KEAP's; every row-store consumer is nOS. KEAP PROVIDES the
@@ -103,7 +103,7 @@ McpTablesTool, dtt-capture, apps_runner, face). Producer KEAP.
 **The three clauses (the objections, kept because each names an incident):**
 
 1. **System vs user tables (definitions scope).** The definitions half covers
-   only the code-declared SYSTEM tables (the 26). USER tables are KEAP-born (the
+   only the code-declared SYSTEM tables (the 28). USER tables are KEAP-born (the
    human door mints them, `POST /api/tables`), never in nOS git, governed by the
    doors half + `dtt-share-model` — and EXPLICITLY outside the definitions
    contract, so a definitions-side gate MUST NOT prune a table nOS did not

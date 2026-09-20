@@ -218,7 +218,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const slug = url.searchParams.get('slug') ?? '';
 	if (!SLUG_RE.test(slug)) return json({ error: 'unknown table' }, { status: 404 });
 
-	const canWrite = canWriteTables(groups) && keapWriteConfigured();
+	const canWrite = canWriteTables(locals.identity.groups) && keapWriteConfigured();
 	const table: DataTable = {
 		slug,
 		title: slug,

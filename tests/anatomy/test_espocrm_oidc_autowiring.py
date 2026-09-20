@@ -60,7 +60,7 @@ def test_espocrm_manifest_still_parses():
 
 
 def test_espocrm_embedded_mariadb_is_1189():
-    """REM-266: the apps-stack MariaDB must track the infra pin (11.8.9),
+    """The apps-stack MariaDB must track the infra pin (11.8.9),
     not a leftover 11.8.8 tag the shared role already left."""
     text = MANIFEST_PATH.read_text()
     assert "docker.io/mariadb:11.8.9" in text

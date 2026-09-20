@@ -52,7 +52,7 @@ artifact: state/anatomy-graph.json
 # file as AMENDED AFTER SIGNING and asks for a fresh signature. To re-sign:
 #   python3 tools/apex-sign.py            # prints the diff since the last sign
 #   python3 tools/apex-sign.py --confirm  # writes the new digest
-signed_digest: f782b490dc946fb0589a602f6da1811ec9968de78590f953ac4492fa25e5ddb4
+signed_digest: f2eee7cd50aa09ba4104a8c6ee8469b3da5612cbfdf77f319342cc303ac7382d
 
 
 # The declared split. The gate recounts the table below and refuses to run
@@ -589,6 +589,7 @@ nodes:
   "pulse:gitlab:trunk-sync": withheld
   "pulse:gitleaks:nightly-scan": withheld
   "pulse:invoice-vision:intake-sweep": withheld
+  "pulse:invoice-vision:absorb-approved": withheld
   "pulse:keap:keap-consolidate": withheld
   "pulse:keap:keap-embed-sync": withheld
   "pulse:keap:keap-features-sync": withheld
@@ -685,6 +686,8 @@ nodes:
   "table:application": withheld
   "table:package": withheld
   "table:invoice": withheld
+  "table:invoice-line": withheld
+  "table:book-access": withheld
   # D5 review sinks for the invoice-extract pipeline (pending-invoice-verify,
   # invoice-review). WITHHELD like every table node — a client firm's invoice
   # data and review queue are theirs, never the public front door.
