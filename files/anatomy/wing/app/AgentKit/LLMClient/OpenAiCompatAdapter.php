@@ -190,10 +190,21 @@ final class OpenAiCompatAdapter implements LLMClientInterface
 			$texts = [];
 			$toolCalls = [];
 			$toolResults = [];
+			$images = [];
 			foreach ($msg->content as $block) {
 				$type = is_array($block) ? ($block['type'] ?? '') : '';
 				if ($type === 'text') {
 					$texts[] = (string) ($block['text'] ?? '');
+				} elseif ($type === 'image') {
+					// Anthropic-shaped in (Message::userImage*), OpenAI-shaped
+					// out — a base64 data URI in an `image_url` part, the
+					// vision shape Ollama's OpenAI-compatible endpoint
+					// documents (docs.ollama.com/api/openai-compatibility).
+					$source = is_array($block['source'] ?? null) ? $block['source'] : [];
+					$images[] = [
+						'media_type' => (string) ($source['media_type'] ?? 'image/png'),
+						'data' => (string) ($source['data'] ?? ''),
+					];
 				} elseif ($type === 'tool_use') {
 					$toolCalls[] = [
 						'id' => $this->wireId((string) ($block['id'] ?? '')),
@@ -235,7 +246,23 @@ final class OpenAiCompatAdapter implements LLMClientInterface
 				foreach ($toolResults as $r) {
 					$out[] = $r;
 				}
-				if ($texts !== []) {
+				if ($images !== []) {
+					// A vision turn's content is an ARRAY of parts, not a
+					// plain string — mixing the two is the drop bug this
+					// adapter used to have (images fell out of `$texts`
+					// silently). Text parts first, then each image.
+					$parts = [];
+					foreach ($texts as $t) {
+						$parts[] = ['type' => 'text', 'text' => $t];
+					}
+					foreach ($images as $img) {
+						$parts[] = [
+							'type' => 'image_url',
+							'image_url' => ['url' => "data:{$img['media_type']};base64,{$img['data']}"],
+						];
+					}
+					$out[] = ['role' => 'user', 'content' => $parts];
+				} elseif ($texts !== []) {
 					$out[] = ['role' => 'user', 'content' => implode("\n", $texts)];
 				}
 			}

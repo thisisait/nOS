@@ -219,6 +219,10 @@ final class Runner
 	 *                UUID immediately and the operator can poll
 	 *                /api/v1/agent-sessions/<uuid> straight away. NULL =
 	 *                self-allocate (Pulse / direct CLI / webhook paths).
+	 * @param ?string $imagePath  one_shot only (D1 invoice-vision path): a
+	 *                page image attached to the single call. Loop/outcome
+	 *                agents ignore it — a multi-turn image conversation is
+	 *                not a need this estate has yet, so it is not built.
 	 * @return RunResult
 	 */
 	public function run(
@@ -229,6 +233,7 @@ final class Runner
 		?string $triggerId = null,
 		?string $actorId = null,
 		?string $sessionUuid = null,
+		?string $imagePath = null,
 	): RunResult {
 		$agent = $this->loader->load($agentName);
 		$tools = $this->tools->forAgent($agent);
@@ -403,7 +408,7 @@ final class Runner
 				// ONE call, no retry: a retried send is a second call, and the
 				// number of calls is the measurement. A transient failure is
 				// not a measurement — it falls through to `terminated`.
-				$result = OneShot::run($llm, $agent, $initialPrompt);
+				$result = OneShot::run($llm, $agent, $initialPrompt, $imagePath);
 				$totalIn = $result['tokens_input'];
 				$totalOut = $result['tokens_output'];
 				$this->sessionTokensIn += $totalIn;

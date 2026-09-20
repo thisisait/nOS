@@ -15,10 +15,17 @@ namespace App\AgentKit\LLMClient;
  *   ['type' => 'text', 'text' => '...']
  *   ['type' => 'tool_use', 'id' => 'toolu_...', 'name' => '...', 'input' => [...]]
  *   ['type' => 'tool_result', 'tool_use_id' => 'toolu_...', 'content' => '...', 'is_error' => bool]
+ *   ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => 'image/png', 'data' => '...']]
  *
  * This shape is borrowed verbatim from Anthropic's Messages API because it's
  * already the de-facto industry shape (OpenAI's Chat Completions and most
- * tool-calling LLMs map to it cleanly).
+ * tool-calling LLMs map to it cleanly). The image block is Anthropic's own
+ * wire shape for the same reason: AnthropicAdapter::send() passes
+ * `$msg->content` straight through, so a block shaped for Anthropic needs no
+ * adapter change there; OpenAiCompatAdapter::translateMessages() is the one
+ * that re-encodes it (base64 data URI in an `image_url` part — the OpenAI
+ * vision content-block shape Ollama's OpenAI-compatible endpoint documents,
+ * https://docs.ollama.com/api/openai-compatibility).
  */
 final class Message
 {
@@ -40,6 +47,49 @@ final class Message
 	public static function assistantText(string $text): self
 	{
 		return new self('assistant', [['type' => 'text', 'text' => $text]]);
+	}
+
+	/**
+	 * A user turn carrying an image (e.g. an invoice scan) plus an optional
+	 * caption/prompt. Bytes in, not a path — the caller (OneShot) owns
+	 * reading the file, so this stays testable with a stub adapter and no
+	 * filesystem.
+	 */
+	public static function userImageBytes(string $bytes, string $mediaType, ?string $prompt = null): self
+	{
+		$blocks = [];
+		if ($prompt !== null && trim($prompt) !== '') {
+			$blocks[] = ['type' => 'text', 'text' => $prompt];
+		}
+		$blocks[] = [
+			'type' => 'image',
+			'source' => ['type' => 'base64', 'media_type' => $mediaType, 'data' => base64_encode($bytes)],
+		];
+		return new self('user', $blocks);
+	}
+
+	/** Reads $path off disk and infers media_type from its extension. */
+	public static function userImage(string $path, ?string $prompt = null): self
+	{
+		$bytes = @file_get_contents($path);
+		if ($bytes === false) {
+			throw new \RuntimeException("Message::userImage: cannot read {$path}");
+		}
+		return self::userImageBytes($bytes, self::mediaTypeFor($path), $prompt);
+	}
+
+	private static function mediaTypeFor(string $path): string
+	{
+		return match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+			'jpg', 'jpeg' => 'image/jpeg',
+			'png' => 'image/png',
+			'gif' => 'image/gif',
+			'webp' => 'image/webp',
+			default => throw new \InvalidArgumentException(
+				"Message::userImage: unsupported image extension in {$path} "
+				. '(supported: jpg, jpeg, png, gif, webp)'
+			),
+		};
 	}
 
 	/**

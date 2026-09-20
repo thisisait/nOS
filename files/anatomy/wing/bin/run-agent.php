@@ -5,11 +5,14 @@ declare(strict_types=1);
 /**
  * Wing CLI: run an AgentKit agent end to end.
  *
- *   php bin/run-agent.php --agent=conductor [--prompt=...] [--vault=...] [--trigger=pulse] [--trigger-id=...] [--session-uuid=...]
+ *   php bin/run-agent.php --agent=conductor [--prompt=...] [--vault=...] [--trigger=pulse] [--trigger-id=...] [--session-uuid=...] [--image=...]
  *
  *   [--actor=ID]                 actor_id written onto the session (must match
  *                                the bearer token's name when spawned from the
  *                                API surface).
+ *   [--image=PATH]               one_shot only: a page image (invoice scan)
+ *                                attached to the single model call — the D1
+ *                                invoice-vision path (invoice-vision-ocr).
  *
  * Exit codes:
  *   0  session ended idle / outcome satisfied
@@ -87,6 +90,7 @@ try {
 		triggerId: $opts['trigger-id'] ?? null,
 		actorId: $opts['actor'] ?? null,
 		sessionUuid: $opts['session-uuid'] ?? null,
+		imagePath: $opts['image'] ?? null,
 	);
 } catch (AgentLoadException $exc) {
 	fwrite(STDERR, "agent.yml load error: {$exc->getMessage()}\n");

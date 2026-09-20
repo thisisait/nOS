@@ -23,15 +23,20 @@ use App\AgentKit\LLMClient\Message;
 final class OneShot
 {
 	/**
+	 * @param ?string $imagePath a page image (invoice scan/PDF page) to
+	 *        attach to the single call — the D1 invoice-vision path
+	 *        (invoice-vision-ocr). Null keeps every existing text-only
+	 *        one_shot agent byte-identical.
 	 * @return array{verdict: string, chain: ?array<mixed>, error: ?string, raw: string, stop_reason: string, tokens_input: int, tokens_output: int}
 	 */
-	public static function run(LLMClientInterface $llm, Agent $agent, string $prompt): array
+	public static function run(LLMClientInterface $llm, Agent $agent, string $prompt, ?string $imagePath = null): array
 	{
+		$message = $imagePath !== null ? Message::userImage($imagePath, $prompt) : Message::userText($prompt);
 		// Tools are withheld on purpose: an offered tool schema is an
 		// invitation to a second round trip, and there is no second round.
 		$resp = $llm->send(
 			$agent->systemPrompt ?? '',
-			[Message::userText($prompt)],
+			[$message],
 			[],
 			$agent->maxOutputTokens,
 		);
