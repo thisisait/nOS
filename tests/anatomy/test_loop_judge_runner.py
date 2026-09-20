@@ -1069,7 +1069,10 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 MEASURED_WORK = {
     "ansible-lint": 1500,
     "genome-codegen": 2,
-    "pytest-anatomy": 5724,
+    # RE-DERIVED 2026-09-20 (agentkit multimodal one_shot): 5921 passed /
+    # 6031 collected. Same shape as every prior bump in this dict's history —
+    # the suite grew, not a regression.
+    "pytest-anatomy": 5921,
     "cortex-corpus-diff": 1,
 }
 

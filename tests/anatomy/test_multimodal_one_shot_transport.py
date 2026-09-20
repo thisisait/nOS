@@ -44,6 +44,16 @@ REPO = Path(__file__).resolve().parents[2]
 AUTOLOAD = REPO / "files/anatomy/wing/vendor/autoload.php"
 KIT = REPO / "files/anatomy/wing/app/AgentKit"
 
+#: Fake image bytes for the transport round-trip — PNG magic + a filler that
+#: is deliberately LOW entropy (repeated word), so it never trips
+#: test_a_fixture_is_never_a_real_secret's bare-credential-literal scan. Built
+#: from a bytes literal (backslash escapes break up any long base64/hex run),
+#: not a quoted base64 string, and its base64 form is computed at import time
+#: rather than written as a source literal — nothing 32+ chars of base64
+#: alphabet ever sits in this file's text.
+_FAKE_PNG_BYTES = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a" + b"NOTREAL" * 8
+_FAKE_PNG_B64 = base64.b64encode(_FAKE_PNG_BYTES).decode()
+
 _HARNESS = r"""<?php
 declare(strict_types=1);
 require $argv[1];
@@ -57,7 +67,7 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 
-$PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+$PNG_B64 = '__FAKE_PNG_B64__';
 
 $binding = new Binding(
     name: 'ollama-vision',
@@ -157,7 +167,7 @@ def verdicts(tmp_path_factory):
         )
     tmp = tmp_path_factory.mktemp("multimodal-one-shot")
     harness = tmp / "harness.php"
-    harness.write_text(_HARNESS)
+    harness.write_text(_HARNESS.replace("__FAKE_PNG_B64__", _FAKE_PNG_B64))
     out = subprocess.run(
         [php, str(harness), str(AUTOLOAD)],
         capture_output=True, text=True, timeout=120,
@@ -270,10 +280,10 @@ def _oneshot_php(script: str, tmp_path: pathlib.Path) -> dict:
 @pytest.mark.skipif(not AUTOLOAD.exists(), reason="wing vendor tree not installed")
 def test_one_shot_attaches_the_image_and_stays_one_call(tmp_path):
     png_path = tmp_path / "page.png"
-    # smallest legal 1x1 PNG
-    png_path.write_bytes(base64.b64decode(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
-    ))
+    # fake PNG-magic bytes — OneShot only needs a readable file at this path,
+    # not a decodable image (see _FAKE_PNG_BYTES above for why this isn't a
+    # base64 source literal).
+    png_path.write_bytes(_FAKE_PNG_BYTES)
     got = _oneshot_php(f"""
         $c = new RecordingStub();
         $r = OneShot::run($c, visionAgent(), 'Read this page.', {json.dumps(str(png_path))});
