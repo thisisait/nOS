@@ -84,6 +84,26 @@ def test_build_accounts_by_code_derives_composite_keys_from_the_parent():
     assert m["311.synthetic-client-alfa"] == "acc-311-alfa"
 
 
+# ── route-aside: one bad doc must not poison the batch (adversarial review #2) ─
+
+def test_derive_bundle_parts_routes_an_unreconciled_invoice_aside():
+    """derive_entry balances by construction, so a dropped/mis-summed VAT line
+    would absorb silently. derive_bundle_parts reconciles each invoice against
+    its own PayableAmount FIRST: the bad doc is routed aside + reported, the good
+    ones still book — one bad doc never poisons the whole batch."""
+    accounts = {"311": "acc-311", "601": "acc-601", "343": "acc-343"}
+    good = {"slug": "inv-good", "document_number": "G-1", "seller": "party-A", "buyer": "party-B",
+            "net_amount": 1000, "vat_amount": 210, "payable_amount": 1210}
+    poisoned = {"slug": "inv-bad", "document_number": "B-1", "seller": "party-A", "buyer": "party-B",
+                "net_amount": 1000, "vat_amount": 210, "payable_amount": 1310}   # a VAT line vanished
+    entries, postings, skipped, routed, reports = DP.derive_bundle_parts(
+        [good, poisoned], "party-A", accounts)
+    assert routed == 1 and skipped == 0, (routed, skipped)
+    assert [e["source"] for e in entries] == ["inv-good"], "only the reconciled invoice may book"
+    assert any("route-aside inv-bad" in r for r in reports), reports
+    assert NA.check_entries(postings) == []                      # what remains still balances
+
+
 # ── (4) end-to-end acceptance over the D2 fixture, per client book ─────────
 
 def _fixture():
@@ -136,5 +156,6 @@ if __name__ == "__main__":
     test_fallback_to_synthetic_never_raises()
     test_multirate_invoice_posts_one_343_leg_per_rate()
     test_build_accounts_by_code_derives_composite_keys_from_the_parent()
+    test_derive_bundle_parts_routes_an_unreconciled_invoice_aside()
     test_end_to_end_every_clients_book_balances_with_no_cross_client_bridge()
     print("accounting-v1-double-entry acceptance OK")

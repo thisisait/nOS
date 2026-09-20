@@ -34,6 +34,9 @@
 # Opt-in (keap_seed_fixtures) + once-only (the `creates` marker), matching
 # KEAP's "empty state is real state" doctrine. The seed script is itself
 # idempotent (fixed fixture ids), so a re-run without the marker is safe too.
+# The marker lives under keap_data_dir (NOT keap_home) so remove=data wipes it
+# WITH the DB it guards — else it outlives the data and a from-blank reconverge
+# skips the seed and shows an empty grid (adversarial review #2).
 # Runs here — after the stack-up health-wait — so the container is healthy and
 # its loopback API is answering before we exec the seed.
 
@@ -41,7 +44,7 @@
   ansible.builtin.command:
     cmd: >-
       {{ docker_bin }} exec iiab-keap-1 node deploy/seed-fixtures.mjs
-    creates: "{{ keap_home }}/.fixtures-seeded"
+    creates: "{{ keap_data_dir | default(nos_data_root + '/platform/services/keap/data') }}/.fixtures-seeded"
   register: _keap_seed
   changed_when: "'created' in (_keap_seed.stdout | default(''))"
   failed_when:
@@ -51,7 +54,7 @@
 
 - name: "[pazny.keap] Mark fixtures as seeded (skip on later converges)"
   ansible.builtin.file:
-    path: "{{ keap_home }}/.fixtures-seeded"
+    path: "{{ keap_data_dir | default(nos_data_root + '/platform/services/keap/data') }}/.fixtures-seeded"
     state: touch
     mode: '0644'
   when:

@@ -65,6 +65,40 @@ def check_entries(postings: list) -> list[str]:
     return errors
 
 
+def reconcile_invoice(invoice: dict) -> list[str]:
+    """Cross-check a parsed invoice against its OWN stated total before it is
+    booked. Returns [] if consistent, else human-facing errors.
+
+    This is the guard the double-entry invariant cannot give: derive_entry
+    balances by CONSTRUCTION (gross := net+vat), so a dropped or mis-summed VAT
+    line still balances — only the document's own PayableAmount can catch it.
+    ponytail: rounding-line invoices (net+vat != payable by a <Rounding>) and
+    credit notes (negative amounts) are REFUSED here, not booked — booking them
+    correctly is invoice-realworld-cases. Fail-safe: the caller skips + reports
+    the flagged invoice, so one bad doc never poisons the batch."""
+    errors: list[str] = []
+    vals: dict = {}
+    for k in ("net_amount", "vat_amount", "payable_amount"):
+        v = invoice.get(k)
+        if v is None:
+            continue
+        try:
+            vals[k] = float(v)
+        except (TypeError, ValueError):
+            errors.append(f"{k} is not a number ({v!r})")
+    for k, v in vals.items():
+        if v < 0:
+            errors.append(f"{k} is negative ({v}) — credit notes are not booked yet "
+                          "(invoice-realworld-cases); routed aside, not absorbed")
+    net, vat, payable = vals.get("net_amount"), vals.get("vat_amount"), vals.get("payable_amount")
+    if payable is not None and net is not None and vat is not None and not errors:
+        if round(net + vat, 2) != round(payable, 2):
+            errors.append(f"does not reconcile: net {round(net, 2)} + vat {round(vat, 2)} "
+                          f"= {round(net + vat, 2)} != stated payable {round(payable, 2)} "
+                          "(a dropped/mis-summed line or an unbooked rounding) — routed aside")
+    return errors
+
+
 def _resolve_account(code: str, party: str | None, accounts_by_code: dict) -> str | None:
     """The one analytical-vs-synthetic decision: try `<code>.<party>` (a
     per-client analytical account, e.g. '311.synthetic-client-alfa') before
@@ -162,4 +196,15 @@ if __name__ == "__main__":
     e2 = derive_entry(inv, "alfa", analytical)
     assert next(p for p in e2["postings"] if p["direction"] == "debit")["account"] == "acc-311-alfa", \
         "an analytical 311.<party> account must be preferred over the synthetic one"
+
+    # reconcile_invoice: the tautology-breaker (the CRITICAL from adversarial review #2)
+    ok = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1210}
+    assert reconcile_invoice(ok) == [], reconcile_invoice(ok)
+    dropped = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1310}  # a VAT line vanished
+    assert any("reconcile" in e for e in reconcile_invoice(dropped)), "dropped line must be caught"
+    credit_note = {"net_amount": -1000, "vat_amount": -210, "payable_amount": -1210}
+    assert any("negative" in e for e in reconcile_invoice(credit_note)), "credit note must be routed aside"
+    assert reconcile_invoice({"net_amount": 1000, "vat_amount": 210}) == [], "no payable stated -> nothing to reconcile against"
+    rounding = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1211}  # +1 CZK <Rounding>, unbooked
+    assert any("reconcile" in e for e in reconcile_invoice(rounding)), "unbooked rounding must be routed aside, not silently mis-booked"
     print("nos_accounting self-check OK")

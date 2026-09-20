@@ -83,6 +83,35 @@ def test_the_accounting_fixture_is_a_valid_bundle_and_balances():
     assert NA.check_entries(seed["posting"]) == []                        # the demo entry balances
 
 
+def test_reconcile_catches_a_dropped_vat_line():
+    """The tautology-breaker (adversarial review #2, CRITICAL): derive_entry
+    balances by construction, so only the document's own PayableAmount catches a
+    dropped/mis-summed VAT line."""
+    dropped = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1310}   # a line vanished
+    assert any("reconcile" in e for e in NA.reconcile_invoice(dropped)), NA.reconcile_invoice(dropped)
+
+
+def test_reconcile_passes_a_consistent_invoice():
+    assert NA.reconcile_invoice({"net_amount": 1000, "vat_amount": 210, "payable_amount": 1210}) == []
+
+
+def test_reconcile_is_a_noop_without_a_stated_payable():
+    """Older rows carry no payable_amount — reconcile must not false-positive."""
+    assert NA.reconcile_invoice({"net_amount": 1000, "vat_amount": 210}) == []
+
+
+def test_reconcile_routes_a_credit_note_aside():
+    cn = {"net_amount": -1000, "vat_amount": -210, "payable_amount": -1210}
+    assert any("negative" in e for e in NA.reconcile_invoice(cn)), NA.reconcile_invoice(cn)
+
+
+def test_reconcile_routes_an_unbooked_rounding_line_aside():
+    """A <Rounding> line makes net+vat != payable; until it is booked
+    (invoice-realworld-cases) such an invoice is routed aside, never mis-booked."""
+    rounding = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1211}
+    assert any("reconcile" in e for e in NA.reconcile_invoice(rounding))
+
+
 def test_check_entries_balances_each_entry_and_flags_entryless():
     postings = [{"slug": "a", "entry": "e1", "direction": "debit", "amount": 10},
                 {"slug": "b", "entry": "e1", "direction": "credit", "amount": 9},   # e1 off by 1

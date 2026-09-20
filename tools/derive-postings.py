@@ -49,6 +49,38 @@ def build_accounts_by_code(account_rows: list) -> dict:
     return accounts_by_code
 
 
+def derive_bundle_parts(invoices: list, own_party: str, accounts: dict):
+    """Split invoice rows into balanced journal-entry/posting parts for own_party's
+    book. Each invoice is (a) skipped if not our book, (b) routed aside + reported
+    if it does not reconcile against its own PayableAmount — a dropped/mis-summed
+    line or a credit note (nos_accounting.reconcile_invoice), so one bad doc never
+    poisons the batch — else (c) derived. Returns (entries, postings, skipped,
+    routed, reports). Pure over its inputs, so the money loop is unit-testable
+    without a live KEAP."""
+    entries, postings, reports = [], [], []
+    skipped = routed = 0
+    for inv in invoices:
+        try:
+            derived = nos_accounting.derive_entry(inv, own_party, accounts)
+        except KeyError as exc:
+            reports.append(f"skip {inv.get('slug')}: {exc}")
+            continue
+        if derived is None:
+            skipped += 1                     # not our book (own_party is neither party)
+            continue
+        # reconcile against the invoice's OWN stated total BEFORE it can absorb —
+        # derive_entry balances by construction, so this is the only thing that
+        # catches a dropped/mis-summed VAT line (adversarial review #2, CRITICAL).
+        recon = nos_accounting.reconcile_invoice(inv)
+        if recon:
+            reports += [f"route-aside {inv.get('slug')}: {e}" for e in recon]
+            routed += 1
+            continue
+        entries.append(derived["entry"])
+        postings.extend(derived["postings"])
+    return entries, postings, skipped, routed, reports
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--own-party", required=True, help="the party whose books to post (seller or buyer)")
@@ -63,18 +95,9 @@ def main() -> int:
         print(f"REFUSING: KEAP unreadable ({exc})", file=sys.stderr)
         return 2
 
-    entries, postings, skipped = [], [], 0
-    for inv in invoices:
-        try:
-            derived = nos_accounting.derive_entry(inv, args.own_party, accounts)
-        except KeyError as exc:
-            print(f"skip {inv.get('slug')}: {exc}", file=sys.stderr)
-            continue
-        if derived is None:
-            skipped += 1                     # not our book (own_party is neither party)
-            continue
-        entries.append(derived["entry"])
-        postings.extend(derived["postings"])
+    entries, postings, skipped, routed, reports = derive_bundle_parts(invoices, args.own_party, accounts)
+    for r in reports:
+        print(r, file=sys.stderr)
 
     bundle = {"meta": {"source_id": f"derive:{args.own_party}", "importer": "derive-postings",
                        "importer_version": "0.1.0", "trusted": True},
@@ -89,7 +112,8 @@ def main() -> int:
         return 1
 
     print(f"gate OK: {len(entries)} entr(ies), {len(postings)} posting(s) — all balanced "
-          f"(skipped {skipped} not-our-book){'  (DRY)' if not args.absorb else ''}", file=sys.stderr)
+          f"(skipped {skipped} not-our-book, routed aside {routed} unreconciled)"
+          f"{'  (DRY)' if not args.absorb else ''}", file=sys.stderr)
     if args.absorb:
         return absorb(bundle)
     text = yaml.safe_dump(bundle, sort_keys=False, allow_unicode=True)
