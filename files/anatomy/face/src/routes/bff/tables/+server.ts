@@ -162,6 +162,8 @@ async function scopeContext(uid: string, groups: readonly string[] | undefined, 
 			: [];
 	return { access, invoices, journals, groups, uid };
 }
+
+function readableSummaries(
 	tables: TableSummary[],
 	groups: readonly string[] | undefined
 ): TableSummary[] {

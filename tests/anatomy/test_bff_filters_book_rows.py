@@ -12,7 +12,11 @@ BFF = REPO / "files/anatomy/face/src/routes/bff/tables/+server.ts"
 SCOPE = REPO / "files/anatomy/face/src/lib/security/bookScope.ts"
 
 
-def test_bff_calls_filter_book_rows_on_get_and_write():
+def test_readable_summaries_still_has_a_function_header():
+    """iiab compose-up died on Unexpected ']': scopeContext's `}` ate the
+    `function readableSummaries(` line. Pytest never runs vite; this pin does."""
+    src = BFF.read_text(encoding="utf-8")
+    assert "function readableSummaries(" in src
     src = BFF.read_text(encoding="utf-8")
     assert "filterBookRows" in src
     assert "mayWriteBookRow" in src
