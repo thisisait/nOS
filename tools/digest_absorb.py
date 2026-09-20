@@ -36,16 +36,22 @@ def rw_token() -> str:
     tok = os.environ.get("KEAP_AGENT_TOKEN_RW", "").strip()
     if tok:
         return tok
-    return subprocess.run(["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RW"],
-                          capture_output=True, text=True).stdout.strip()
+    try:
+        return subprocess.run(["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RW"],
+                              capture_output=True, text=True).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return ""
 
 
 def ro_token() -> str:
     tok = os.environ.get("KEAP_AGENT_TOKEN_RO", "").strip()
     if tok:
         return tok
-    return subprocess.run(["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RO"],
-                          capture_output=True, text=True).stdout.strip()
+    try:
+        return subprocess.run(["docker", "exec", "iiab-keap-1", "printenv", "KEAP_AGENT_TOKEN_RO"],
+                              capture_output=True, text=True).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return ""
 
 
 def _rows_from_envelope(data: dict) -> list:
