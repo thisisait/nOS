@@ -50,6 +50,11 @@ steps:
       # that silently did nothing would have demoted every PHP behavioural
       # gate to a skip while the run stayed green.
       NOS_TEST_PROVIDES: git,ansible-playbook,php,jq,sqlite3,node,files/anatomy/wing/vendor/autoload.php
+      # Docker workspace is world-writable → ansible.cfg is ignored. Same
+      # env pins as ansible-syntax so nos_apps_render resolves in pytest.
+      ANSIBLE_LIBRARY: files/anatomy/library
+      ANSIBLE_MODULE_UTILS: files/anatomy/module_utils
+      ANSIBLE_ROLES_PATH: ./roles
     commands:
       # pytest + pyyaml = anatomy test runner + yaml-based gates
       # httpx + pytest-asyncio = Pulse daemon test fixtures (test_pulse_daemon.py
