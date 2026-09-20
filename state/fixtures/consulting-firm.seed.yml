@@ -45,9 +45,9 @@
 # ── The party spine (processor + 3 clients + their own counterparties) ──────
 party:
   - { slug: synthetic-consulting-firm, legal_name: "Synthetic Consulting s.r.o. (synthetic)", trading_name: "Synthetic Consulting", party_kind: org, country: CZ, notes: "synthetic processor / bookkeeping firm" }
-  - { slug: synthetic-client-alfa, legal_name: "Alfa Rizeni s.r.o. (synthetic)", trading_name: "Alfa Rizeni", party_kind: org, country: CZ, notes: "synthetic client 1 (s.r.o.)" }
-  - { slug: synthetic-client-beta, legal_name: "Beta Sluzby s.r.o. (synthetic)", trading_name: "Beta Sluzby", party_kind: org, country: CZ, notes: "synthetic client 2 (s.r.o.)" }
-  - { slug: synthetic-client-gama, legal_name: "Petra Gamova (synthetic)", party_kind: person, country: CZ, notes: "synthetic client 3 (OSVC / sole trader)" }
+  - { slug: synthetic-client-alfa, legal_name: "Alfa Rizeni s.r.o. (synthetic)", trading_name: "Alfa Rizeni", party_kind: org, country: CZ, notes: "synthetic client 1 (s.r.o.)", training_opt_in: false }
+  - { slug: synthetic-client-beta, legal_name: "Beta Sluzby s.r.o. (synthetic)", trading_name: "Beta Sluzby", party_kind: org, country: CZ, notes: "synthetic client 2 (s.r.o.)", training_opt_in: false }
+  - { slug: synthetic-client-gama, legal_name: "Petra Gamova (synthetic)", party_kind: person, country: CZ, notes: "synthetic client 3 (OSVC / sole trader)", training_opt_in: false }
   - { slug: synthetic-alfa-customer, legal_name: "Alfa Odberatel a.s. (synthetic)", party_kind: org, country: CZ, notes: "synthetic counterparty — Alfa's customer" }
   - { slug: synthetic-alfa-vendor, legal_name: "Alfa Dodavatel s.r.o. (synthetic)", party_kind: org, country: CZ, notes: "synthetic counterparty — Alfa's vendor" }
   - { slug: synthetic-beta-customer, legal_name: "Beta Odberatel a.s. (synthetic)", party_kind: org, country: CZ, notes: "synthetic counterparty — Beta's customer" }

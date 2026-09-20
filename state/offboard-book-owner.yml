@@ -1,0 +1,42 @@
+# =============================================================================
+# Book-owner offboard map — consumed by tools/offboard-book-owner.py
+# =============================================================================
+# Parallel to state/gdpr-erasure-map.yml, keyed on a FIRM slug (book_owner),
+# not an email. Leaf-first so onDelete:restrict can succeed once a live
+# executor exists. This file is the audited list; the CLI is dry-run by
+# default. Live KEAP DELETE is NOT proven (confirm is a stub).
+#
+# Isolation is book_owner (Model C), not seller/buyer: an invoice on another
+# client's books that merely names this party as counterparty stays.
+# =============================================================================
+
+keap_delete_order:
+  - table: posting
+    match: posting_for_owner
+  - table: journal-entry
+    match: source_invoice
+  - table: pending-invoice-verify
+    match: sidecar_or_fields
+  - table: invoice
+    match: book_owner
+  - table: party-tax-identity
+    match: party
+  - table: party-address
+    match: party
+  - table: party-contact
+    match: party
+  - table: account
+    match: analytical_311_321
+  - table: party
+    match: slug
+    last: true
+
+filesystem:
+  glob: tenants/*/users/*/inbox/accounting/<slug>/{incoming,extracts,processed}
+
+espo:
+  method: manual
+  marker: "nos:party:<slug>"
+  note: >-
+    Espo Account joined by nos:party:<slug> in description. espo-party-sync.py
+    upserts only (POST); no verified Account DELETE. Operator-run UI/REST.

@@ -64,3 +64,6 @@ schema:
     # RUNTIME-only mapper, never merged into the committed DPA register.
     - { key: role,         label: "Role",          kind: select, role: attribute,
         options: ["counterparty", "client", "own_firm"] }
+    # OPTIONAL (v1 contract). Default OUT: omitted or false = never a training
+    # corpus. Per book_owner, withdrawable. Existing seeds omit it and parse.
+    - { key: training_opt_in, label: "Training opt-in", kind: boolean, role: attribute }

@@ -81,3 +81,8 @@ backoffice.
    `face-app-builder` (apps, not `install_*`), `docs/overview.html`.
    A first-onboard chooser that emits `config.yml` is new work beside
    commons, not a 15th organ.
+5. **Client-data training:** optional, default OUT, per `book_owner`
+   (`party.training_opt_in`), withdrawable. Pipeline off until
+   offboarding can honour Art-17 against a model. Art-7 capture is
+   still unwired (`gdpr-consent-map.yml` `capture_wired: false`).
+   No LoRA, no hosted trainer.

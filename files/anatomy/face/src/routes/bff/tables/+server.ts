@@ -1,10 +1,13 @@
-/** BFF · config DataTables (KEAP SoT + fallback + gated WRITE).
+/** BFF · config DataTables (KEAP SoT + fallback + gated READ/WRITE).
  *
  * KEAP's agent surface (`/agent/v1/tables`, loopback bearer) is the source of
- * truth. Reads are open to any authenticated user (RO token); when KEAP is
- * unconfigured/down we serve vendored repo-default (SoC) rows so the desktop
- * stays usable. WRITES (upsert row / create table) are RBAC-gated to manager+
- * tiers here — the browser never gets the RW token and can't set its own tier.
+ * truth. Reads honour the table's visibility grade against edge-trusted
+ * `identity.groups` (fail closed). Face config tables (face-layouts etc.) stay
+ * readable to any authenticated caller — they are not client books. When KEAP
+ * is unconfigured/down we serve vendored repo-default (SoC) rows for those
+ * config tables so the desktop stays usable. WRITES (upsert row / create table)
+ * are RBAC-gated to manager+ tiers here — the browser never gets the RW token
+ * and can't set its own tier.
  */
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
@@ -18,7 +21,7 @@ import {
 	keapWriteConfigured,
 	UpstreamError
 } from '$lib/server/upstream';
-import { canWriteTables } from '$lib/security/tier';
+import { canReadTable, canWriteTables } from '$lib/security/tier';
 import { toTableSummaries, type TableSummary } from '$lib/tables/summary';
 import { narrowView, decorateRowRefs } from '$lib/tables/view';
 import { postTableAudit } from '$lib/server/audit';
@@ -122,6 +125,26 @@ function mapColumns(def: unknown): ColumnSpec[] {
 // config-table slugs via the working per-slug route so the Tables sidebar fills.
 const KNOWN_CONFIG_TABLES = ['face-layouts', 'face-wallpapers', 'face-controls'];
 
+function isFaceConfigTable(slug: string): boolean {
+	return (KNOWN_CONFIG_TABLES as readonly string[]).includes(slug);
+}
+
+/** Config catalog: any authenticated caller. Everything else: visibility grade. */
+function mayReadTable(
+	slug: string,
+	visibility: string | undefined,
+	groups: readonly string[] | undefined
+): boolean {
+	return isFaceConfigTable(slug) || canReadTable(visibility, groups);
+}
+
+function readableSummaries(
+	tables: TableSummary[],
+	groups: readonly string[] | undefined
+): TableSummary[] {
+	return tables.filter((t) => mayReadTable(t.slug, t.visibility, groups));
+}
+
 async function knownTableSummaries(): Promise<TableSummary[]> {
 	const out: TableSummary[] = [];
 	for (const slug of KNOWN_CONFIG_TABLES) {
@@ -147,27 +170,32 @@ async function knownTableSummaries(): Promise<TableSummary[]> {
 }
 
 export const GET: RequestHandler = async ({ url, locals }) => {
-	// op=list → the Tables app's sidebar (all tables in KEAP).
+	const groups = locals.identity.groups;
+
+	// op=list → the Tables app's sidebar (tables this caller may read).
 	if (url.searchParams.get('op') === 'list') {
 		if (!keapConfigured()) return json({ tables: [], source: 'fallback' });
 		try {
-			return json({ tables: toTableSummaries(await keapListTables()), source: 'keap' });
+			return json({
+				tables: readableSummaries(toTableSummaries(await keapListTables()), groups),
+				source: 'keap'
+			});
 		} catch (e) {
 			if (e instanceof UpstreamError) {
 				// KEAP list-all needs forward-auth (a KEAP gap) — probe known slugs.
-				return json({ tables: await knownTableSummaries(), source: 'known-slugs' });
+				return json({
+					tables: readableSummaries(await knownTableSummaries(), groups),
+					source: 'known-slugs'
+				});
 			}
 			throw e;
 		}
 	}
 
 	const slug = url.searchParams.get('slug') ?? '';
-	// Reads are open to any authenticated user for any well-formed slug — KEAP's
-	// RO token is the real authority on what's readable. Repo-fallback rows exist
-	// only for the vendored config tables.
 	if (!SLUG_RE.test(slug)) return json({ error: 'unknown table' }, { status: 404 });
 
-	const canWrite = canWriteTables(locals.identity.groups) && keapWriteConfigured();
+	const canWrite = canWriteTables(groups) && keapWriteConfigured();
 	const table: DataTable = {
 		slug,
 		title: slug,
@@ -176,6 +204,31 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		source: 'fallback',
 		canWrite
 	};
+
+	const forbid = () => {
+		throw error(403, 'DataTable reads require the table\'s visibility tier.');
+	};
+
+	let def: { view?: DataTable['view']; visibility?: string } | undefined;
+	if (keapConfigured()) {
+		try {
+			def = unwrap<{ view?: DataTable['view']; visibility?: string }>(await keapTableDef(slug));
+		} catch (e) {
+			if (!(e instanceof UpstreamError)) throw e;
+		}
+	}
+	const vis = typeof def?.visibility === 'string' ? def.visibility : undefined;
+	if (!mayReadTable(slug, vis, groups)) forbid();
+
+	if (def) {
+		const cols = mapColumns(def);
+		if (cols.length > 0) table.columns = cols;
+		if (def.view) {
+			const { view, dropped } = narrowView(def.view, table.columns);
+			if (view) table.view = view;
+			if (dropped.length) table.viewDropped = dropped;
+		}
+	}
 
 	if (keapConfigured()) {
 		try {
@@ -186,34 +239,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 				rowsData.rows ?? (Array.isArray(rowsData) ? (rowsData as DataTableRow[]) : []);
 			table.rows = withStableIds(liveRows);
 			table.source = 'keap';
-			// Best-effort column enrichment from the table def (non-fatal on failure).
-			try {
-				const def = unwrap<{ view?: DataTable['view'] }>(await keapTableDef(slug));
-				const cols = mapColumns(def);
-				if (cols.length > 0) table.columns = cols;
-				// The render style rides the same def fetch — one call, and a
-				// table that declares no style simply has no key.
-				//
-				// NARROWED, not assigned. This is the ONE seam where a view block
-				// enters the shell, so an author's block and a model's proposal
-				// pass the same check: a facet or predicate naming a column this
-				// table does not have is dropped whole and reported, never
-				// coerced. Narrowing against `table.columns` — the columns that
-				// were just resolved above — is the point; the block and the
-				// schema it renders come from the same fetch.
-				if (def && typeof def === 'object' && def.view) {
-					const { view, dropped } = narrowView(def.view, table.columns);
-					if (view) table.view = view;
-					if (dropped.length) table.viewDropped = dropped;
-				}
-			} catch {
-				/* keep fallback columns */
-			}
-			// rowRef legibility (D5): resolve id -> refDisplay so a facet/grid shows
-			// a client's name, not its slug. One fetch per DISTINCT refTable (a
-			// table with seller/buyer/book_owner all -> party fetches party once).
-			// Best-effort: a failed lookup just leaves the raw id showing, same as
-			// today — never blocks the read path.
+			// rowRef: skip a refTable the caller cannot read (do not load party for a guest).
 			const refTables = [
 				...new Set(
 					table.columns
@@ -226,6 +252,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 				await Promise.all(
 					refTables.map(async (t) => {
 						try {
+							const rdef = unwrap<{ visibility?: string }>(await keapTableDef(t));
+							const rvis =
+								typeof rdef.visibility === 'string' ? rdef.visibility : undefined;
+							if (!mayReadTable(t, rvis, groups)) return;
 							const rd = unwrap<{ rows?: DataTableRow[] }>(
 								await keapTableRows(t, locals.identity.uid)
 							);
