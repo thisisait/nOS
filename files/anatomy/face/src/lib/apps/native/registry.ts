@@ -237,6 +237,17 @@ export function registerBuiltinNativeApps(): void {
 		defaultSize: { w: 1040, h: 700 },
 		apiScopes: ['config']
 	});
+	registerNativeApp({
+		slug: 'books',
+		title: 'Books',
+		icon: '📒',
+		form: 'view',
+		build: 'F2',
+		component: () => import('./BooksApp.svelte'),
+		defaultSize: { w: 960, h: 640 },
+		apiScopes: ['tables'],
+		stateNamespace: 'app.books'
+	});
 	// The first WIDGET. Small by contract — it is mounted by <WidgetLayer />
 	// on the desktop, never opened as a window (launchNative refuses it).
 	registerNativeApp({

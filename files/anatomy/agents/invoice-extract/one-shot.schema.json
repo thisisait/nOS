@@ -27,6 +27,9 @@
         }
       }
     },
+    "rounding": { "type": "number" },
+    "document_kind": { "type": "string", "enum": ["invoice", "credit_note"] },
+    "vat_regime": { "type": "string", "enum": ["standard", "reverse_charge"] },
     "seller": {
       "type": "object",
       "additionalProperties": false,

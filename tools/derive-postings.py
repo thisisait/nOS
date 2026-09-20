@@ -60,6 +60,11 @@ def derive_bundle_parts(invoices: list, own_party: str, accounts: dict):
     entries, postings, reports = [], [], []
     skipped = routed = 0
     for inv in invoices:
+        recon = nos_accounting.reconcile_invoice(inv)
+        if recon:
+            reports += [f"route-aside {inv.get('slug')}: {e}" for e in recon]
+            routed += 1
+            continue
         try:
             derived = nos_accounting.derive_entry(inv, own_party, accounts)
         except KeyError as exc:
@@ -67,14 +72,6 @@ def derive_bundle_parts(invoices: list, own_party: str, accounts: dict):
             continue
         if derived is None:
             skipped += 1                     # not our book (own_party is neither party)
-            continue
-        # reconcile against the invoice's OWN stated total BEFORE it can absorb —
-        # derive_entry balances by construction, so this is the only thing that
-        # catches a dropped/mis-summed VAT line (adversarial review #2, CRITICAL).
-        recon = nos_accounting.reconcile_invoice(inv)
-        if recon:
-            reports += [f"route-aside {inv.get('slug')}: {e}" for e in recon]
-            routed += 1
             continue
         entries.append(derived["entry"])
         postings.extend(derived["postings"])

@@ -161,6 +161,7 @@ provisioning:
       - 30-collab.json
       - 31-home-lab.json
       - 32-finance.json
+      - 33-consulting-firm.json
       - 90-security.json
       - 91-backups.json
       - 99-playbook.json

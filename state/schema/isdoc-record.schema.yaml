@@ -66,6 +66,15 @@ properties:
         rate: { type: number, description: "VAT rate percentage, e.g. 21." }
         base: { type: number, description: "TaxableAmount for this rate." }
         vat:  { type: number, description: "TaxAmount for this rate." }
+  rounding:
+    type: number
+    description: "PayableRoundingAmount — 0 or omitted when the document has none."
+  document_kind:
+    type: string
+    enum: ["invoice", "credit_note"]
+  vat_regime:
+    type: string
+    enum: ["standard", "reverse_charge"]
   seller:
     type: object
     additionalProperties: false

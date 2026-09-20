@@ -52,7 +52,7 @@ artifact: state/anatomy-graph.json
 # file as AMENDED AFTER SIGNING and asks for a fresh signature. To re-sign:
 #   python3 tools/apex-sign.py            # prints the diff since the last sign
 #   python3 tools/apex-sign.py --confirm  # writes the new digest
-signed_digest: 5b9566983237e3a0a500db8b787fa3fb1b4d084bc1fdd4475d54a0f8f58a2265
+signed_digest: 21f9f382e0eee3822480650679d93d35d953f849af6e9edeaf2494f07342b772
 
 
 # The declared split. The gate recounts the table below and refuses to run
@@ -552,6 +552,7 @@ nodes:
   # --- withheld: face apps, gate sets, judges --------------------------------
   "faceapp:anatomy": withheld
   "faceapp:anatomy-widget": withheld
+  "faceapp:books": withheld
   "faceapp:files": withheld
   "faceapp:keap-explore": withheld
   "faceapp:planner": withheld
@@ -587,6 +588,7 @@ nodes:
   "pulse:gitea:trunk-sync": withheld
   "pulse:gitlab:trunk-sync": withheld
   "pulse:gitleaks:nightly-scan": withheld
+  "pulse:invoice-vision:intake-sweep": withheld
   "pulse:keap:keap-consolidate": withheld
   "pulse:keap:keap-embed-sync": withheld
   "pulse:keap:keap-features-sync": withheld
@@ -602,6 +604,7 @@ nodes:
   # (D3); publishes nothing, D4's frozen set untouched.
   "pulse:loop:news-scout": withheld
   "pulse:loop:repo-check": withheld
+  "pulse:loop:vision-bench": withheld
   "pulse:librarian:brief-taxonomy": withheld
   "pulse:librarian:describe-taxonomy": withheld
   "pulse:librarian:judge-lint-queue": withheld

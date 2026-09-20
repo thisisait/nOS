@@ -151,6 +151,14 @@ class IsdocImporter:
                 self.skipped.append(f"{f.name}: no invoice ID")
                 continue
             subtotals = _tax_subtotals(doc)
+            rounding = _num(_localtext(doc, "PayableRoundingAmount")) or _num(_localtext(doc, "RoundingAmount"))
+            dtype = (_localtext(doc, "DocumentType") or "").lower()
+            kind = "credit_note" if ("381" in dtype or "credit" in dtype or "dobropis" in dtype) else "invoice"
+            vat_app = (_localtext(doc, "VATApplicable") or "true").strip().lower()
+            regime = "reverse_charge" if vat_app in ("false", "0", "no") else "standard"
+            payable = _num(_localtext(doc, "PayableAmount"))
+            if payable is not None and payable < 0:
+                kind = "credit_note"
             # raw-archive-store unit: archive the ORIGINAL ISDOC XML bytes
             # before deriving anything from them. Fail-open by construction
             # (raw_archive.archive_put returns None when unreachable/disabled)
@@ -167,6 +175,9 @@ class IsdocImporter:
                 "net": round(sum(s["base"] for s in subtotals), 2) if subtotals else None,
                 "vat": round(sum(s["vat"] for s in subtotals), 2) if subtotals else None,
                 "vat_breakdown": subtotals,
+                "rounding": rounding,
+                "document_kind": kind,
+                "vat_regime": regime,
                 "seller": _party(_local(doc, "AccountingSupplierParty")),
                 "buyer": _party(_local(doc, "AccountingCustomerParty")),
             })
@@ -254,6 +265,12 @@ class IsdocImporter:
                 row["vat_amount"] = round(r["vat"], 2)
             if r.get("vat_breakdown"):
                 row["vat_breakdown"] = r["vat_breakdown"]
+            if r.get("rounding") is not None:
+                row["rounding_amount"] = round(float(r["rounding"]), 2)
+            if r.get("document_kind"):
+                row["document_kind"] = r["document_kind"]
+            if r.get("vat_regime"):
+                row["vat_regime"] = r["vat_regime"]
             if self.book_owner_slug:
                 row["book_owner"] = self.book_owner_slug
             # provenance-keep unit: source is stamped by the CLASS (isdoc vs

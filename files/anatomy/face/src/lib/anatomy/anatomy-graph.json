@@ -4,9 +4,9 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 284,
-    "edges": 294,
-    "nodes_pulse": 34,
+    "nodes": 287,
+    "edges": 297,
+    "nodes_pulse": 36,
     "nodes_judge": 5,
     "nodes_gateset": 5,
     "nodes_weakness": 7,
@@ -18,10 +18,10 @@
     "nodes_authentik": 56,
     "nodes_table": 35,
     "nodes_doctrine": 13,
-    "nodes_faceapp": 6,
+    "nodes_faceapp": 7,
     "nodes_agent": 16,
-    "edges_data": 206,
-    "edges_trigger": 41,
+    "edges_data": 207,
+    "edges_trigger": 43,
     "edges_temporal": 5,
     "edges_mutex": 21,
     "edges_governed_by": 21,
@@ -1171,6 +1171,19 @@
       "anchor": "02.02.04",
       "description": "nOS-face app 'Anatomy at a glance' — form: widget (what it is on screen), build: F1 (what it cost to build, ssot/doctrine/face-app-tiers.md); reads pulse"
     },
+    "faceapp:books": {
+      "kind": "faceapp",
+      "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
+      "title": "Books",
+      "api_scopes": [
+        "tables"
+      ],
+      "form": "view",
+      "build": "F2",
+      "hosted_by": "service:face",
+      "anchor": "02.02.04",
+      "description": "nOS-face app 'Books' — form: view (what it is on screen), build: F2 (what it cost to build, ssot/doctrine/face-app-tiers.md); reads tables"
+    },
     "faceapp:files": {
       "kind": "faceapp",
       "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
@@ -1354,7 +1367,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 5600,
+      "min_work": 5900,
       "argv": [
         "python3",
         "-m",
@@ -1365,7 +1378,7 @@
       "claims": [],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=5600, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=5900, deterministic=True"
     },
     "pulse:alert-relay:relay-firing": {
       "kind": "pulse",
@@ -1591,6 +1604,23 @@
       "anchor": "02.02.08",
       "description": "Pulse scheduled job (security): runs run-gitleaks.sh on cron `0 3 * * *` — exits [1] mean findings, not failure"
     },
+    "pulse:invoice-vision:intake-sweep": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/invoice-vision-base/plugin.yml",
+      "schedule": "20 5 * * *",
+      "jitter_min": 10,
+      "max_runtime_s": 900,
+      "category": "knowledge",
+      "paused": false,
+      "findings_exit_codes": [
+        1
+      ],
+      "command_name": "invoice-vision-intake.py",
+      "claims": [],
+      "runs_agent": null,
+      "anchor": "09",
+      "description": "Pulse scheduled job (knowledge): runs invoice-vision-intake.py on cron `20 5 * * *` — exits [1] mean findings, not failure"
+    },
     "pulse:keap:keap-consolidate": {
       "kind": "pulse",
       "source": "files/anatomy/plugins/keap-base/plugin.yml",
@@ -1779,6 +1809,23 @@
       "runs_agent": null,
       "anchor": "02.02.06",
       "description": "Pulse scheduled job (platform): runs loop-review.py on cron `50 6 * * *`"
+    },
+    "pulse:loop:vision-bench": {
+      "kind": "pulse",
+      "source": "files/anatomy/loops/vision-bench.loop.yml",
+      "schedule": "31 5 * * *",
+      "jitter_min": 10,
+      "max_runtime_s": 900,
+      "category": "knowledge",
+      "paused": false,
+      "findings_exit_codes": [
+        3
+      ],
+      "command_name": "vision-bench.py",
+      "claims": [],
+      "runs_agent": null,
+      "anchor": "09",
+      "description": "Pulse scheduled job (knowledge): runs vision-bench.py on cron `31 5 * * *` — exits [3] mean findings, not failure"
     },
     "pulse:npm-supply-chain:daily-ioc-scan": {
       "kind": "pulse",
@@ -3739,6 +3786,15 @@
       "evidence": "measured"
     },
     {
+      "from": "pulse:invoice-vision:intake-sweep",
+      "to": "table:pending-invoice-verify",
+      "kind": "data",
+      "via": "one row per held vision sidecar, upserted by slug via the KEAP agent RW door (tools/invoice-vision-intake.py verify_row + digest_absorb._post_row)",
+      "measured": "2026-09-20",
+      "declared": "writes",
+      "evidence": "measured"
+    },
+    {
       "from": "pulse:keap:keap-consolidate",
       "to": "pulse:cortex:cortex-fs-sync",
       "kind": "data",
@@ -5569,6 +5625,14 @@
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:invoice-vision:intake-sweep",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:keap:keap-consolidate",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
@@ -5658,6 +5722,14 @@
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:loop:review",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:loop:vision-bench",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
       "derived": "daemon-dispatch",

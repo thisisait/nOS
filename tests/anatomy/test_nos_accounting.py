@@ -106,10 +106,48 @@ def test_reconcile_routes_a_credit_note_aside():
 
 
 def test_reconcile_routes_an_unbooked_rounding_line_aside():
-    """A <Rounding> line makes net+vat != payable; until it is booked
-    (invoice-realworld-cases) such an invoice is routed aside, never mis-booked."""
+    """A <Rounding> line without rounding_amount still routes aside."""
     rounding = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1211}
     assert any("reconcile" in e for e in NA.reconcile_invoice(rounding))
+
+
+def test_reconcile_accepts_a_stated_rounding():
+    stated = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1211, "rounding_amount": 1}
+    assert NA.reconcile_invoice(stated) == []
+
+
+def test_derive_entry_books_rounding_on_548():
+    accounts = {**ACCOUNTS, "548": "acc-548"}
+    inv = {**INVOICE, "payable_amount": 48401, "rounding_amount": 1}
+    e = NA.derive_entry(inv, "party-A", accounts)
+    legs = {(p["account"], p["direction"]): p["amount"] for p in e["postings"]}
+    assert legs[("acc-311", "debit")] == 48401
+    assert legs[("acc-548", "credit")] == 1
+    assert NA.entry_balances(e["postings"]) == []
+
+
+def test_derive_entry_flips_a_credit_note():
+    accounts = ACCOUNTS
+    inv = {**INVOICE, "document_kind": "credit_note", "payable_amount": 48400}
+    e = NA.derive_entry(inv, "party-A", accounts)
+    legs = {(p["account"], p["direction"]): p["amount"] for p in e["postings"]}
+    assert legs[("acc-311", "credit")] == 48400
+    assert legs[("acc-601", "debit")] == 40000
+    assert NA.entry_balances(e["postings"]) == []
+
+
+def test_derive_entry_buyer_reverse_charge_self_assesses_343():
+    accounts = ACCOUNTS
+    inv = {"slug": "invoice-pdp", "document_number": "PDP-1",
+           "seller": "party-A", "buyer": "party-B",
+           "net_amount": 1000, "vat_amount": 0, "payable_amount": 1000,
+           "vat_regime": "reverse_charge",
+           "vat_breakdown": [{"rate": 21, "base": 1000, "vat": 0}]}
+    e = NA.derive_entry(inv, "party-B", accounts)
+    vat = [p for p in e["postings"] if p["account"] == "acc-343"]
+    assert {p["direction"] for p in vat} == {"debit", "credit"}
+    assert all(p["amount"] == 210 for p in vat)
+    assert NA.entry_balances(e["postings"]) == []
 
 
 def test_check_entries_balances_each_entry_and_flags_entryless():

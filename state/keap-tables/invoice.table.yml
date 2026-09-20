@@ -72,6 +72,11 @@ schema:
     - { key: net_amount,      label: "Net (ex-VAT)",   kind: number, role: attribute }
     - { key: vat_amount,      label: "VAT",            kind: number, role: attribute }
     - { key: vat_breakdown,   label: "VAT breakdown",  kind: json,   role: attribute }
+    - { key: rounding_amount, label: "Rounding",       kind: number, role: attribute }
+    - { key: document_kind,   label: "Document kind",  kind: select, role: dimension,
+        options: ["invoice", "credit_note"] }
+    - { key: vat_regime,      label: "VAT regime",     kind: select, role: dimension,
+        options: ["standard", "reverse_charge"] }
     - { key: book_owner,      label: "Book owner",     kind: rowRef, role: dimension, required: false,
         refTable: "party", refDisplay: "legal_name", onDelete: "restrict" }
     - { key: source,             label: "Source",             kind: select, role: dimension, required: false,

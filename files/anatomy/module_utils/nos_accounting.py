@@ -72,13 +72,12 @@ def reconcile_invoice(invoice: dict) -> list[str]:
     This is the guard the double-entry invariant cannot give: derive_entry
     balances by CONSTRUCTION (gross := net+vat), so a dropped or mis-summed VAT
     line still balances — only the document's own PayableAmount can catch it.
-    ponytail: rounding-line invoices (net+vat != payable by a <Rounding>) and
-    credit notes (negative amounts) are REFUSED here, not booked — booking them
-    correctly is invoice-realworld-cases. Fail-safe: the caller skips + reports
-    the flagged invoice, so one bad doc never poisons the batch."""
+    Credit-note negatives are legal when document_kind=credit_note. Rounding is
+    legal when payable == net + vat + rounding_amount. Anything else is routed
+    aside so one bad doc never poisons the batch."""
     errors: list[str] = []
     vals: dict = {}
-    for k in ("net_amount", "vat_amount", "payable_amount"):
+    for k in ("net_amount", "vat_amount", "payable_amount", "rounding_amount"):
         v = invoice.get(k)
         if v is None:
             continue
@@ -86,16 +85,19 @@ def reconcile_invoice(invoice: dict) -> list[str]:
             vals[k] = float(v)
         except (TypeError, ValueError):
             errors.append(f"{k} is not a number ({v!r})")
+    kind = invoice.get("document_kind") or "invoice"
     for k, v in vals.items():
-        if v < 0:
-            errors.append(f"{k} is negative ({v}) — credit notes are not booked yet "
+        if v < 0 and kind != "credit_note":
+            errors.append(f"{k} is negative ({v}) — credit notes need document_kind=credit_note "
                           "(invoice-realworld-cases); routed aside, not absorbed")
     net, vat, payable = vals.get("net_amount"), vals.get("vat_amount"), vals.get("payable_amount")
+    rnd = vals.get("rounding_amount") or 0.0
     if payable is not None and net is not None and vat is not None and not errors:
-        if round(net + vat, 2) != round(payable, 2):
+        if round(net + vat + rnd, 2) != round(payable, 2):
             errors.append(f"does not reconcile: net {round(net, 2)} + vat {round(vat, 2)} "
-                          f"= {round(net + vat, 2)} != stated payable {round(payable, 2)} "
-                          "(a dropped/mis-summed line or an unbooked rounding) — routed aside")
+                          f"+ rounding {round(rnd, 2)} = {round(net + vat + rnd, 2)} "
+                          f"!= stated payable {round(payable, 2)} "
+                          "(a dropped/mis-summed line or an unstated rounding) — routed aside")
     return errors
 
 
@@ -134,17 +136,37 @@ def derive_entry(invoice: dict, own_party: str, accounts_by_code: dict) -> dict 
     net = float(invoice.get("net_amount") or 0)
     vat = float(invoice.get("vat_amount") or 0)
     gross = round(net + vat, 2)
+    payable = invoice.get("payable_amount")
+    payable = round(float(payable), 2) if payable is not None else gross
+    rnd_raw = invoice.get("rounding_amount")
+    rnd = round(float(rnd_raw), 2) if rnd_raw is not None else 0.0
     breakdown = invoice.get("vat_breakdown") or []
     vat_amounts = [round(float(b["vat"]), 2) for b in breakdown if b.get("vat")] if breakdown else ([vat] if vat else [])
+    reverse = (invoice.get("vat_regime") == "reverse_charge") or (
+        vat == 0 and any(b.get("rate") for b in breakdown))
+    vat_self = 0.0
+    if reverse:
+        vat_amounts = []
+        vat_self = round(sum(
+            round(float(b.get("base") or 0) * float(b.get("rate") or 0) / 100.0, 2)
+            for b in breakdown), 2)
     if own_party == invoice.get("seller"):
-        legs = [("311", "debit", gross), ("601", "credit", net)] + \
+        legs = [("311", "debit", payable), ("601", "credit", net)] + \
             [("343", "credit", amt) for amt in vat_amounts]
+        if rnd:
+            legs.append(("548", "credit" if rnd > 0 else "debit", abs(rnd)))
     elif own_party == invoice.get("buyer"):
         legs = [("501", "debit", net)] + \
             [("343", "debit", amt) for amt in vat_amounts] + \
-            [("321", "credit", gross)]
+            [("321", "credit", payable)]
+        if rnd:
+            legs.append(("548", "debit" if rnd > 0 else "credit", abs(rnd)))
+        if vat_self:
+            legs += [("343", "debit", vat_self), ("343", "credit", vat_self)]
     else:
         return None
+    if (invoice.get("document_kind") or "invoice") == "credit_note":
+        legs = [(c, "credit" if d == "debit" else "debit", a) for c, d, a in legs]
     codes = {code for code, _, _ in legs}
     missing = [c for c in codes if _resolve_account(c, own_party, accounts_by_code) is None]
     if missing:
@@ -203,8 +225,12 @@ if __name__ == "__main__":
     dropped = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1310}  # a VAT line vanished
     assert any("reconcile" in e for e in reconcile_invoice(dropped)), "dropped line must be caught"
     credit_note = {"net_amount": -1000, "vat_amount": -210, "payable_amount": -1210}
-    assert any("negative" in e for e in reconcile_invoice(credit_note)), "credit note must be routed aside"
+    assert any("negative" in e for e in reconcile_invoice(credit_note)), "unsigned credit note must be routed aside"
+    cn_ok = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1210, "document_kind": "credit_note"}
+    assert reconcile_invoice(cn_ok) == [], reconcile_invoice(cn_ok)
     assert reconcile_invoice({"net_amount": 1000, "vat_amount": 210}) == [], "no payable stated -> nothing to reconcile against"
-    rounding = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1211}  # +1 CZK <Rounding>, unbooked
-    assert any("reconcile" in e for e in reconcile_invoice(rounding)), "unbooked rounding must be routed aside, not silently mis-booked"
+    rounding = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1211}
+    assert any("reconcile" in e for e in reconcile_invoice(rounding)), "unstated rounding must be routed aside"
+    stated = {"net_amount": 1000, "vat_amount": 210, "payable_amount": 1211, "rounding_amount": 1}
+    assert reconcile_invoice(stated) == [], reconcile_invoice(stated)
     print("nos_accounting self-check OK")

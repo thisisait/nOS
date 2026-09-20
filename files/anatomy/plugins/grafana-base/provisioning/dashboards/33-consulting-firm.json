@@ -1,0 +1,141 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "-- Grafana --"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Consulting-firm invoice intake: verify HMAC events, vision/extract AgentKit sessions, Pulse intake-sweep. KEAP row counts live in face Books, not wing.db.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "stat",
+      "id": 1,
+      "title": "Invoice verify audits (7d)",
+      "description": "HMAC table.upsert events from invoice-verify CLI and the face Books queue. Empty is an empty table, not a green panel.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS n FROM events WHERE type = 'table.upsert' AND ts >= datetime('now', '-7 days')",
+          "queryText": "SELECT COUNT(*) AS n FROM events WHERE type = 'table.upsert' AND ts >= datetime('now', '-7 days')",
+          "timeColumns": []
+        }
+      ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "id": 2,
+      "title": "Vision/extract sessions (7d)",
+      "description": "AgentKit sessions for invoice-vision-ocr and invoice-extract.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS n FROM agent_sessions WHERE agent_name IN ('invoice-vision-ocr', 'invoice-extract') AND started_at >= datetime('now', '-7 days')",
+          "queryText": "SELECT COUNT(*) AS n FROM agent_sessions WHERE agent_name IN ('invoice-vision-ocr', 'invoice-extract') AND started_at >= datetime('now', '-7 days')",
+          "timeColumns": []
+        }
+      ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "id": 3,
+      "title": "Intake-sweep declared",
+      "description": "Whether pulse_jobs still lists invoice-vision-base:intake-sweep. Zero means the catalog lost the job.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS n FROM pulse_jobs WHERE id = 'invoice-vision-base:intake-sweep' AND removed_at IS NULL",
+          "queryText": "SELECT COUNT(*) AS n FROM pulse_jobs WHERE id = 'invoice-vision-base:intake-sweep' AND removed_at IS NULL",
+          "timeColumns": []
+        }
+      ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Intake-sweep runs (24h)",
+      "description": "pulse_runs for the intake sweep. A declared job with zero runs has gone quiet.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT COUNT(*) AS n FROM pulse_runs WHERE job_id = 'invoice-vision-base:intake-sweep' AND fired_at >= datetime('now', '-24 hours')",
+          "queryText": "SELECT COUNT(*) AS n FROM pulse_runs WHERE job_id = 'invoice-vision-base:intake-sweep' AND fired_at >= datetime('now', '-24 hours')",
+          "timeColumns": []
+        }
+      ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto"}
+    },
+    {
+      "type": "table",
+      "id": 5,
+      "title": "Recent invoice-pipeline sessions",
+      "description": "Last 50 AgentKit sessions for the two invoice one-shot agents.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 4},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT started_at, agent_name, status, outcome_result, tokens_input, tokens_output FROM agent_sessions WHERE agent_name IN ('invoice-vision-ocr', 'invoice-extract') ORDER BY started_at DESC LIMIT 50",
+          "queryText": "SELECT started_at, agent_name, status, outcome_result, tokens_input, tokens_output FROM agent_sessions WHERE agent_name IN ('invoice-vision-ocr', 'invoice-extract') ORDER BY started_at DESC LIMIT 50",
+          "timeColumns": []
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": 6,
+      "title": "Recent table.upsert events",
+      "description": "Approve/onboard path (CLI + face BFF) writes this type.",
+      "datasource": {"type": "frser-sqlite-datasource", "uid": "wing_sqlite"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 14},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "table",
+          "rawQueryText": "SELECT ts, source, actor_id, type FROM events WHERE type = 'table.upsert' ORDER BY ts DESC LIMIT 50",
+          "queryText": "SELECT ts, source, actor_id, type FROM events WHERE type = 'table.upsert' ORDER BY ts DESC LIMIT 50",
+          "timeColumns": []
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["nos", "auto-provisioned", "consulting"],
+  "templating": {"list": []},
+  "time": {"from": "now-7d", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "nOS / Consulting firm (invoice intake)",
+  "uid": "nos-consulting-firm",
+  "version": 1,
+  "weekStart": ""
+}

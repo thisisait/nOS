@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 102 (77 core services, 5 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (6), legal_obligation (1), legitimate_interests (95)
+- **Processing activities:** 103 (78 core services, 5 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (7), legal_obligation (1), legitimate_interests (95)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 17
 
@@ -1472,6 +1472,17 @@ Anthropic (US) — update transfers_outside_eu + processors accordingly.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** transient (not persisted)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Invoice Vision — `svc_invoice-vision`
+- **Purpose:** Extract structured invoice data from client scans/PDFs into a review queue
+- **Legal basis (Art. 6):** `contract`
+- **Data subjects:** `clients`; `counterparties`
+- **Data categories:** `financial_records`; `business_identifiers`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 3650 days (~10y)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 

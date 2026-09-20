@@ -130,6 +130,7 @@ worse than none, because it reads as complete.
 - `invoice-vision-pipeline.py` — joins the two invoice-pipeline one_shot agents end to end: invoice-vision-ocr (image → OCR text) feeds invoice-extract (text → ISDOC record) via two `run-agent.php` calls, then writes the `.extract.json` sidecar. Every field is stamped confidence=0.0 (no logprobs in this transport yet), so a pipeline sidecar always lands in the operator-verify queue.
 - `invoice-vision-intake.py` — Pulse sweep: extract incoming images, upsert pending-invoice-verify for held sidecars. Does not book.
 - `invoice-verify.py` — approve / reject / onboard a pending-invoice-verify row (HMAC table.upsert). Batch: POSTs KEAP; the next digest-import-vision --absorb honours it.
+- `espo-party-sync.py` — KEAP party spine → EspoCRM Account; join key `nos:party:<slug>` in description. Dry-run default; `--write` needs ESPO_URL + API user/key.
 - `cnb-dtt.py` — parse ČNB denni_kurz.txt and project onto a DTT schema; optional --push to KEAP. Oracle for the n8n ČNB templates.
 - `derive-postings.py` — The invoice→ledger tie: reads invoices + accounts from KEAP, derives one BALANCED journal entry per invoice from --own-party's books (double-entry, gated). Dry by default; --absorb writes.
 - `keap-apply-view.py` — Apply a KEAP table definition's `view:` block to the live table for the digest OUTPUT tables (invoice, account) — same refuse-before-write / verify-by-reading discipline as roadmap-apply-view.py, kept separate since those UNSEEDED tables are importer-populated, not playbook-seeded.

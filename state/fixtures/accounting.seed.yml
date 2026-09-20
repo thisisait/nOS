@@ -13,7 +13,7 @@ account:
   - { slug: acc-321, code: "321", name: "Dodavatelé (závazky)",    reporting_concept: nos.accounting.liability, side: credit-normal }
   - { slug: acc-343, code: "343", name: "DPH (daň na výstupu)",     reporting_concept: nos.accounting.liability, side: credit-normal }
   - { slug: acc-601, code: "601", name: "Tržby za výrobky",         reporting_concept: nos.accounting.revenue,   side: credit-normal }
-  - { slug: acc-501, code: "501", name: "Spotřeba materiálu",       reporting_concept: nos.accounting.expense,   side: debit-normal }
+  - { slug: acc-548, code: "548", name: "Ostatní provozní náklady (zaokrouhlení)", reporting_concept: nos.accounting.expense, side: debit-normal }
 
 journal-entry:
   - { slug: je-demo-001, description: "Vystavená faktura (demo, vyvážená)", date: 1772928000 }

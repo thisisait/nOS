@@ -80,6 +80,7 @@ pulse:
         - target: "table:pending-invoice-verify"
           via: "one row per held vision sidecar, upserted by slug via the KEAP
             agent RW door (tools/invoice-vision-intake.py verify_row + digest_absorb._post_row)"
+          measured: "2026-09-20"
       env:
         # The RW token decides WHICH DOOR the queue rows come through (agent door
         # = upsertable slugs), same rule as discovery. Already-mapped token.
