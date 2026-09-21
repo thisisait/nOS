@@ -57,14 +57,22 @@ def coerce_fields(fields):
     raise ValueError(f"fields must be a dict or JSON string, got {type(fields).__name__}")
 
 
-def decision_values(row: dict, resolution: str, actor: str, when: str) -> dict:
+def decision_values(row: dict, resolution: str, actor: str, when: str | int) -> dict:
     if resolution not in ("approved", "rejected"):
         raise ValueError(f"resolution must be approved|rejected, got {resolution!r}")
     out = dict(row)
     out["resolution"] = resolution
     out["resolved_by"] = actor
-    out["resolved_at"] = when
+    out["resolved_at"] = _epoch_seconds(when)
     return out
+
+
+def _epoch_seconds(when: str | int) -> int:
+    """KEAP date columns on this table want epoch seconds, not ISO dates."""
+    if isinstance(when, (int, float)):
+        return int(when)
+    d = dt.date.fromisoformat(str(when)[:10])
+    return int(dt.datetime(d.year, d.month, d.day, tzinfo=dt.timezone.utc).timestamp())
 
 
 def party_from_fields(fields: dict, side: str = "seller") -> tuple[dict, dict]:
@@ -112,8 +120,23 @@ def audit_payload(slug: str, resolution: str, actor: str) -> dict:
     }
 
 
+def hmac_secret() -> str:
+    """Env first, then ~/.nos/secrets.yml (CLI has no launchd env)."""
+    env = os.environ.get("WING_EVENTS_HMAC_SECRET", "").strip()
+    if env:
+        return env
+    secrets = pathlib.Path.home() / ".nos" / "secrets.yml"
+    if not secrets.is_file():
+        return ""
+    for line in secrets.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line.startswith("wing_events_hmac_secret:"):
+            return line.split(":", 1)[1].strip().strip('"').strip("'")
+    return ""
+
+
 def emit_audit(slug: str, resolution: str, actor: str) -> bool:
-    secret = os.environ.get("WING_EVENTS_HMAC_SECRET", "").strip()
+    secret = hmac_secret()
     if not secret:
         print("WARN: WING_EVENTS_HMAC_SECRET unset — KEAP write has no Bone audit", file=sys.stderr)
         return False
@@ -139,7 +162,8 @@ def _row(slug: str) -> dict:
 
 
 def _write(row: dict) -> None:
-    digest_absorb._post_row(TABLE, row, _hdr())
+    body = {k: v for k, v in row.items() if not str(k).startswith("__")}
+    digest_absorb._post_row(TABLE, body, _hdr())
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -713,13 +713,44 @@ def resolve_data_root(repo: pathlib.Path, environ: dict | None = None) -> pathli
     env = (environ if environ is not None else os.environ).get("NOS_DATA_ROOT", "").strip()
     if env:
         return pathlib.Path(env).expanduser()
-    cfg = repo / "config.yml"
-    if cfg.is_file():
-        data = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
-        v = data.get("nos_data_root") if isinstance(data, dict) else None
-        if isinstance(v, str) and v.strip() and "{{" not in v:
-            return pathlib.Path(v.strip()).expanduser()
+    data = _config_yml(repo)
+    v = data.get("nos_data_root")
+    if isinstance(v, str) and v.strip() and "{{" not in v:
+        return pathlib.Path(v.strip()).expanduser()
     return pathlib.Path.home() / "nos"
+
+
+def _config_yml(repo: pathlib.Path) -> dict:
+    cfg = repo / "config.yml"
+    if not cfg.is_file():
+        return {}
+    data = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
+    return data if isinstance(data, dict) else {}
+
+
+def resolve_tenant_slug(repo: pathlib.Path, root: pathlib.Path) -> str | None:
+    v = _config_yml(repo).get("nos_tenant_slug")
+    if isinstance(v, str) and v.strip() and "{{" not in v:
+        return v.strip()
+    tenants = root / "tenants"
+    if not tenants.is_dir():
+        return None
+    names = sorted(p.name for p in tenants.iterdir() if p.is_dir())
+    return names[0] if len(names) == 1 else None
+
+
+def ensure_accounting_inboxes(root: pathlib.Path, tenant: str, uids: list[str],
+                              owners: list[str]) -> list[pathlib.Path]:
+    """Create incoming/extracts/processed for each book_owner under each uid."""
+    made: list[pathlib.Path] = []
+    for uid in uids:
+        for owner in owners:
+            base = root / "tenants" / tenant / "users" / uid / "inbox" / "accounting" / owner
+            for leaf in BOOK_OWNER_LEAVES:
+                d = base / leaf
+                d.mkdir(parents=True, exist_ok=True)
+                made.append(d)
+    return made
 
 
 def infer_book_owner_slug(root: str | pathlib.Path) -> str | None:

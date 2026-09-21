@@ -3,7 +3,7 @@
 # One row per commercial line (ISDOC InvoiceLine) under an invoice header.
 # graph.parent is the invoice; onDelete restrict so a header cannot vanish
 # while its lines remain. Quantity × unit is not stored — net_amount is the
-# line's money (same 2dp float as the header until integer minor units land).
+# line's money (JSON number; consulting-firm seed uses integers).
 # When the XML has no InvoiceLine, the importer synthesizes one row per
 # TaxSubTotal so the header never absorbs without lines.
 

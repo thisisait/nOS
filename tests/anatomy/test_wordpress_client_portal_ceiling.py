@@ -77,3 +77,14 @@ def test_wordpress_base_does_not_write_the_books():
         "wordpress-base names a books write surface "
         f"{hits} — WP is the portal, not pending-invoice-verify / journals / posting"
     )
+
+
+def test_post_hooks_create_portal_pages_not_books():
+    role = (REPO / "roles/pazny.wordpress/tasks/post.yml").read_text(encoding="utf-8")
+    hook = (PLUGIN_DIR / "hooks/post_compose.yml").read_text(encoding="utf-8")
+    for src in (role, hook):
+        assert "--post_name=statements" in src or "--name={{ item.slug }}" in src
+        assert "statements" in src and "contact" in src
+        assert "wp post create" in src
+        for token in BOOK_WRITE_TOKENS:
+            assert token not in src

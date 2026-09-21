@@ -78,7 +78,14 @@ def verify_row(sidecar_name: str, sidecar: dict) -> dict:
             "fields": sidecar.get("fields") or {}, "resolution": "pending"}
 
 
-def _extract_one(image: pathlib.Path, out: pathlib.Path) -> bool:
+def park_incoming(img: pathlib.Path) -> pathlib.Path:
+    """incoming/ is the work queue — a finished extract leaves the original in processed/."""
+    dest_dir = img.parent.parent / "processed"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / img.name
+    if dest.exists():
+        dest = dest_dir / f"{img.stem}-dup{img.suffix}"
+    return img.rename(dest)
     if out.exists():
         return True                                    # idempotent — already extracted
     r = subprocess.run([sys.executable, str(PIPELINE), str(image), "--out", str(out)],
@@ -116,6 +123,22 @@ def main(argv: list[str] | None = None) -> int:
             return 2
     else:
         root = pathlib.Path(args.root) if args.root else nos_digest.resolve_data_root(REPO)
+        tenant = nos_digest.resolve_tenant_slug(REPO, root)
+        users = root / "tenants" / tenant / "users" if tenant else None
+        uids = sorted(p.name for p in users.iterdir() if p.is_dir()) if users and users.is_dir() else []
+        if tenant and not uids:
+            uids = ["akadmin"]
+        elif "akadmin" in uids:
+            uids = ["akadmin"]
+        owners: list[str] = []
+        try:
+            owners = sorted({r.get("book_owner") for r in digest_absorb.read_rows("invoice")
+                             if r.get("book_owner")})
+        except Exception as exc:
+            print(f"WARN: cannot list invoice book_owner ({exc}) — not creating inbox leaves",
+                  file=sys.stderr)
+        if tenant and uids and owners:
+            nos_digest.ensure_accounting_inboxes(root, tenant, uids, owners)
         incomings = discover_intakes(root)
         walked = str(root)
         if not incomings:
@@ -138,6 +161,7 @@ def main(argv: list[str] | None = None) -> int:
         extract_dirs.add(extracts)
         if _extract_one(img, extracts / f"{img.stem}.extract.json"):
             extracted += 1
+            park_incoming(img)
     if extracted == 0:
         print("REFUSING: every extraction failed — is qwen2.5vl:7b pulled and ollama armed?", file=sys.stderr)
         return 2

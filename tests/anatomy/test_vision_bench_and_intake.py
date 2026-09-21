@@ -70,3 +70,14 @@ def test_intake_verify_row_shape():
     assert row["slug"] == "piv-2026-beta-001-extract-json"
     assert row["resolution"] == "pending"
     assert row["fields"] == {"x": {"confidence": 0.0}}
+
+
+def test_pulse_absorb_does_not_enable_fixture_mode():
+    """Nightly absorb must not book 000001xx IČOs into the live books."""
+    import yaml
+    plugin = yaml.safe_load(
+        (REPO / "files/anatomy/plugins/invoice-vision-base/plugin.yml").read_text())
+    jobs = {j["name"]: j for j in plugin["pulse"]["jobs"]}
+    args = jobs["absorb-approved"].get("args") or []
+    assert "--absorb" in args
+    assert "--fixture-mode" not in args

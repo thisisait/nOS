@@ -18,3 +18,9 @@ wordpress_table_prefix: "wp_"
 wordpress_admin_user: "admin"
 wordpress_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 wordpress_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+# Gated client portal (commons). Idempotent wp post create in post.yml.
+# Ceiling: statements / PDFs / contact — not KEAP books.
+wordpress_portal_pages:
+  - { slug: statements, title: "Statements", content: "Account statements for this firm. This is the client portal, not the books." }
+  - { slug: documents, title: "Documents", content: "Shareable PDFs. This is the client portal, not the books." }
+  - { slug: contact, title: "Contact", content: "Contact the firm. This is the client portal, not the books." }

@@ -38,6 +38,7 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "files" / "anatomy" / "module_utils"))
 from digest_absorb import absorb, build_party_index  # noqa: E402
+import invoice_extract  # noqa: E402
 import nos_digest  # noqa: E402
 import raw_archive  # noqa: E402
 
@@ -147,7 +148,7 @@ class VisionImporter(IsdocImporter):
             if not record.get("id"):
                 self.skipped.append(f"{f.name}: verified sidecar has no invoice id")
                 continue
-            rec = dict(record)
+            rec = invoice_extract.lift_ico_on_record(dict(record))
             rec["file"] = f.name
             rec.setdefault("seller", {})
             rec.setdefault("buyer", {})

@@ -95,6 +95,8 @@ pulse:
     - name: absorb-approved
       runner: subprocess
       command: "{{ playbook_dir }}/tools/digest-import-vision.py"
+      # No --fixture-mode: synthetic 000001xx IČOs stay out of the live books.
+      # A real client IČO books; the consulting-firm fixture photos do not.
       args: ["--absorb"]
       schedule: "20 17 * * *"
       jitter_min: 10

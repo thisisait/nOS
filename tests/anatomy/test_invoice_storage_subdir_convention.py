@@ -109,6 +109,25 @@ def test_resolve_data_root_prefers_env_then_config_yml(tmp_path):
     assert nos_digest.resolve_data_root(empty, {}) == pathlib.Path.home() / "nos"
 
 
+def test_ensure_accounting_inboxes_makes_the_three_leaves(tmp_path):
+    nos_digest.ensure_accounting_inboxes(
+        tmp_path, "pazny", ["akadmin"], ["synthetic-client-alfa"])
+    base = tmp_path / "tenants/pazny/users/akadmin/inbox/accounting/synthetic-client-alfa"
+    for leaf in ("incoming", "extracts", "processed"):
+        assert (base / leaf).is_dir()
+
+
+def test_json_from_agent_stdout_skips_a_prefix():
+    spec = importlib.util.spec_from_file_location(
+        "invoice_vision_pipeline_json", REPO / "tools" / "invoice-vision-pipeline.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod.json_from_agent_stdout('noise\n{"chain": {"text": "x"}}') == {"chain": {"text": "x"}}
+    assert mod.ocr_text_from_agent("Doklad c.: 2026-ALFA-001\nIČO 00000131") == (
+        "Doklad c.: 2026-ALFA-001\nIČO 00000131")
+    assert mod.ocr_text_from_agent('{"chain": {"text": "hello from json"}}') == "hello from json"
+
+
 def test_intake_idle_when_root_exists_without_incoming(tmp_path):
     """RETRO-RED: Pulse nightly rc=2 because ~/nos was missing on an SSD estate."""
     spec = importlib.util.spec_from_file_location(
@@ -117,3 +136,18 @@ def test_intake_idle_when_root_exists_without_incoming(tmp_path):
     spec.loader.exec_module(mod)
     assert mod.main(["--root", str(tmp_path)]) == 0
     assert mod.main(["--root", str(tmp_path / "missing")]) == 2
+
+
+def test_park_incoming_moves_the_original_out_of_the_queue(tmp_path):
+    spec = importlib.util.spec_from_file_location(
+        "invoice_vision_intake_park", REPO / "tools" / "invoice-vision-intake.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    incoming = tmp_path / "incoming"
+    incoming.mkdir()
+    img = incoming / "alfa-001.jpg"
+    img.write_bytes(b"x")
+    dest = mod.park_incoming(img)
+    assert not img.exists()
+    assert dest == tmp_path / "processed" / "alfa-001.jpg"
+    assert dest.read_bytes() == b"x"

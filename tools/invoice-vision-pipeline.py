@@ -65,7 +65,25 @@ def _run_agent(args: list[str]) -> dict:
     # loaded / lock) and anything else are unparseable failures.
     if out.returncode not in (0, 1):
         raise RuntimeError(f"run-agent.sh {args[0]} failed (exit {out.returncode}): {out.stderr[-500:]}")
-    return json.loads(out.stdout)
+    return json_from_agent_stdout(out.stdout, out.stderr)
+
+
+def json_from_agent_stdout(stdout: str, stderr: str = "") -> dict:
+    """run-agent.sh promises JSON on stdout; PHP deprecations or lock chatter
+    still leak. Decode the first object, never the whole stream."""
+    s = (stdout or "").strip()
+    i = s.find("{")
+    if i < 0:
+        raise RuntimeError(
+            f"run-agent produced no JSON (stdout {stdout[:180]!r} stderr {stderr[-180:]!r})")
+    try:
+        obj, _ = json.JSONDecoder().raw_decode(s[i:])
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"run-agent stdout is not JSON: {exc} (stdout {stdout[:180]!r})") from exc
+    if not isinstance(obj, dict):
+        raise RuntimeError(f"run-agent JSON is not an object: {type(obj).__name__}")
+    return obj
 
 
 def ensure_image(path: str, workdir: str) -> str:
@@ -90,16 +108,40 @@ def ensure_image(path: str, workdir: str) -> str:
     return f"{stem}.png"
 
 
+def ocr_text_from_agent(stdout: str, stderr: str = "") -> str:
+    """JSON chain.text when the agent kept the contract; else the raw dump."""
+    try:
+        summary = json_from_agent_stdout(stdout, stderr)
+    except RuntimeError:
+        text = (stdout or "").strip()
+        if len(text) >= 20:
+            return text
+        raise
+    if summary.get("chain") is None:
+        raise RuntimeError(
+            f"stage A (invoice-vision-ocr) produced no chain: {summary.get('chain_error')}")
+    chain = summary["chain"]
+    if isinstance(chain, str):
+        return chain
+    if isinstance(chain, dict) and chain.get("text"):
+        return chain["text"]
+    raise RuntimeError(f"stage A chain has no text: {type(chain).__name__}")
+
+
 def run_stage_a(image_path: str) -> str:
     """invoice-vision-ocr one_shot: image in, free OCR text out.
 
     The deployed run-agent.php cwd is the Wing tree, so a relative path
     cannot be read — resolve to absolute here, not at the caller."""
     image_path = str(pathlib.Path(image_path).resolve())
-    summary = _run_agent(["--agent=invoice-vision-ocr", f"--image={image_path}"])
-    if summary.get("chain") is None:
-        raise RuntimeError(f"stage A (invoice-vision-ocr) produced no chain: {summary.get('chain_error')}")
-    return summary["chain"]["text"]
+    out = subprocess.run(
+        [str(RUN_AGENT), "--agent=invoice-vision-ocr", f"--image={image_path}"],
+        capture_output=True, text=True, timeout=600,
+    )
+    if out.returncode not in (0, 1):
+        raise RuntimeError(
+            f"run-agent.sh invoice-vision-ocr failed (exit {out.returncode}): {out.stderr[-500:]}")
+    return ocr_text_from_agent(out.stdout, out.stderr)
 
 
 def run_stage_b(ocr_text: str) -> dict:
@@ -151,7 +193,7 @@ def main() -> int:
         ocr_text = run_stage_a(ensure_image(args.image, workdir))
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
-    record = run_stage_b(ocr_text)
+    record = invoice_extract.lift_ico_on_record(run_stage_b(ocr_text))
     sidecar = build_pipeline_sidecar(record)
 
     out = pathlib.Path(args.out)

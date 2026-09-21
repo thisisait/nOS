@@ -182,6 +182,25 @@
   changed_when: true
   failed_when: false
 
+# ── Client portal pages (commons ceiling: statements / PDFs / contact) ──
+# Idempotent: create only when the slug is absent. Not the books.
+- name: "[pazny.wordpress Post] Ensure client portal pages"
+  ansible.builtin.shell: >
+    existing=$({{ docker_bin }} compose -p iiab exec -T wordpress
+    wp post list --allow-root --post_type=page --name={{ item.slug }} --format=ids);
+    if [ -z "$existing" ]; then
+      {{ docker_bin }} compose -p iiab exec -T wordpress
+      wp post create --allow-root --post_type=page --post_status=publish
+      --post_name={{ item.slug }} --post_title={{ item.title | quote }}
+      --post_content={{ item.content | quote }};
+    fi
+  loop: "{{ wordpress_portal_pages | default([]) }}"
+  loop_control:
+    label: "{{ item.slug }}"
+  register: _wp_portal_pages
+  changed_when: "'Created post' in (_wp_portal_pages.stdout | default(''))"
+  when: _wp_container.stdout | default('') | length > 0
+
 # ── Devlog bot + Application Password (docs/devlog/README.md) ───────────
 # Role-only — see SCOPE NOTE in the header.
 - name: "[pazny.wordpress Post] Provision devlog bot + app password"

@@ -79,6 +79,33 @@ def validate_record(record: dict, schema: dict | None = None) -> list[str]:
     return errors
 
 
+_ICO_IN_NAME = re.compile(r"(?:I[ČC]O|ICO)\s*(\d{8})", re.I)
+
+
+def lift_ico_from_party_name(party: dict) -> dict:
+    """VLM often jams 'IČO 00000131' into seller.name and omits seller.ico."""
+    if not isinstance(party, dict):
+        return party
+    out = dict(party)
+    if out.get("ico"):
+        return out
+    m = _ICO_IN_NAME.search(str(out.get("name") or ""))
+    if not m:
+        return out
+    out["ico"] = m.group(1)
+    out["name"] = _ICO_IN_NAME.sub("", str(out.get("name") or "")).strip(" \n,;")
+    return out
+
+
+def lift_ico_on_record(record: dict) -> dict:
+    rec = dict(record)
+    if isinstance(rec.get("seller"), dict):
+        rec["seller"] = lift_ico_from_party_name(rec["seller"])
+    if isinstance(rec.get("buyer"), dict):
+        rec["buyer"] = lift_ico_from_party_name(rec["buyer"])
+    return rec
+
+
 def build_sidecar(record: dict, fields: dict) -> dict:
     """Assemble the .extract.json sidecar shape. verified is ALWAYS False at
     extraction time — set here, never left to the caller — because the

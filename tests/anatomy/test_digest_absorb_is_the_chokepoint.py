@@ -40,6 +40,26 @@ def test_absorb_source_calls_check_bundle_before_post():
     assert fn.find("check_bundle") < fn.find("_post_row")
 
 
+def test_post_row_strips_keap_private_columns(monkeypatch):
+    import json
+    posted = []
+    da = _da()
+
+    def fake_urlopen(req, timeout=15):
+        posted.append(json.loads(req.data))
+
+        class _R:
+            def __enter__(self):
+                return self
+            def __exit__(self, *a):
+                return False
+        return _R()
+
+    monkeypatch.setattr(da.urllib.request, "urlopen", fake_urlopen)
+    da._post_row("pending-invoice-verify", {"slug": "x", "__sharing": {}, "__id": "1"}, {})
+    assert posted == [{"slug": "x"}]
+
+
 def test_ungated_bundle_does_not_post(monkeypatch):
     da = _da()
     posts = []

@@ -108,7 +108,13 @@ def _run_pipeline(image: pathlib.Path) -> dict | None:
         if r.returncode != 0 or not out.exists():
             print(f"  pipeline failed on {image.name} (exit {r.returncode}): {r.stderr[-200:]}", file=sys.stderr)
             return None
-        return json.loads(out.read_text()).get("record", {})
+        raw = out.read_text(encoding="utf-8")
+        i = raw.find("{")
+        if i < 0:
+            print(f"  pipeline sidecar is not JSON on {image.name}", file=sys.stderr)
+            return None
+        rec = json.JSONDecoder().raw_decode(raw[i:])[0]
+        return rec.get("record", {}) if isinstance(rec, dict) else None
 
 
 def main() -> int:

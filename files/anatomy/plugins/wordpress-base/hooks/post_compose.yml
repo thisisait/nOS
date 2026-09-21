@@ -110,3 +110,36 @@ sequence:
     compose_project: iiab
     cmd: wp plugin is-active daggerhart-openid-connect-generic --allow-root
     register: _wp_oidc_verify
+
+  - id: ensure_portal_page_statements
+    when: "_wp_container.state == 'running'"
+    runner: docker_exec
+    container: wordpress
+    compose_project: iiab
+    cmd: >
+      bash -lc 'ids=$(wp post list --allow-root --post_type=page --name=statements --format=ids);
+      [ -n "$ids" ] || wp post create --allow-root --post_type=page --post_status=publish
+      --post_name=statements --post_title=Statements
+      --post_content="Account statements for this firm. This is the client portal, not the books."'
+
+  - id: ensure_portal_page_documents
+    when: "_wp_container.state == 'running'"
+    runner: docker_exec
+    container: wordpress
+    compose_project: iiab
+    cmd: >
+      bash -lc 'ids=$(wp post list --allow-root --post_type=page --name=documents --format=ids);
+      [ -n "$ids" ] || wp post create --allow-root --post_type=page --post_status=publish
+      --post_name=documents --post_title=Documents
+      --post_content="Shareable PDFs. This is the client portal, not the books."'
+
+  - id: ensure_portal_page_contact
+    when: "_wp_container.state == 'running'"
+    runner: docker_exec
+    container: wordpress
+    compose_project: iiab
+    cmd: >
+      bash -lc 'ids=$(wp post list --allow-root --post_type=page --name=contact --format=ids);
+      [ -n "$ids" ] || wp post create --allow-root --post_type=page --post_status=publish
+      --post_name=contact --post_title=Contact
+      --post_content="Contact the firm. This is the client portal, not the books."'

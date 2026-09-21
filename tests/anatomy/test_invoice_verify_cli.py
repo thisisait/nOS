@@ -43,7 +43,7 @@ def test_decision_values_stamps_approved_and_refuses_pending():
     out = mod.decision_values(ROW, "approved", "pazny", "2026-09-20")
     assert out["resolution"] == "approved"
     assert out["resolved_by"] == "pazny"
-    assert out["resolved_at"] == "2026-09-20"
+    assert out["resolved_at"] == 1789862400
     assert out["slug"] == ROW["slug"]
     with pytest.raises(ValueError, match="approved|rejected"):
         mod.decision_values(ROW, "pending", "pazny", "2026-09-20")
@@ -94,8 +94,19 @@ def test_audit_payload_is_table_upsert_hmac_shape():
 def test_emit_audit_unset_secret_is_best_effort(monkeypatch, capsys):
     mod = _load()
     monkeypatch.delenv("WING_EVENTS_HMAC_SECRET", raising=False)
+    monkeypatch.setattr(mod, "hmac_secret", lambda: "")
     assert mod.emit_audit("piv-x", "approved", "pazny") is False
     assert "WING_EVENTS_HMAC_SECRET unset" in capsys.readouterr().err
+
+
+def test_hmac_secret_reads_secrets_yml_when_env_empty(monkeypatch, tmp_path):
+    mod = _load()
+    monkeypatch.delenv("WING_EVENTS_HMAC_SECRET", raising=False)
+    nos = tmp_path / ".nos"
+    nos.mkdir()
+    (nos / "secrets.yml").write_text('wing_events_hmac_secret: "from-yml"\n', encoding="utf-8")
+    monkeypatch.setattr(mod.pathlib.Path, "home", staticmethod(lambda: tmp_path))
+    assert mod.hmac_secret() == "from-yml"
 
 
 def test_approve_dry_run_does_not_write(monkeypatch, capsys):

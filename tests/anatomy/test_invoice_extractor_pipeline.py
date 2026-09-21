@@ -98,3 +98,18 @@ def test_stage_b_schema_reuses_the_frozen_isdoc_record_contract_verbatim():
                          .read_text(encoding="utf-8"))
     assert set(stage_b["properties"]) == set(frozen["properties"])
     assert stage_b["required"] == frozen["required"] == []
+
+
+def test_lift_ico_from_mashed_party_name():
+    """A VLM that jammed IČO into seller.name still books via ICO lookup."""
+    import sys
+    sys.path.insert(0, str(REPO / "tools"))
+    import invoice_extract
+    rec = invoice_extract.lift_ico_on_record({
+        "seller": {"name": "Alfa Rizeni s.r.o.\nIČO 00000131"},
+        "buyer": {"name": "Pazny s.r.o. ICO 00000134"},
+    })
+    assert rec["seller"]["ico"] == "00000131"
+    assert rec["buyer"]["ico"] == "00000134"
+    assert "IČO" not in rec["seller"]["name"]
+    assert "ICO" not in rec["buyer"]["name"]

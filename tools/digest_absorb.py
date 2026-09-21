@@ -151,9 +151,10 @@ def ensure_table(table: str, hdr: dict) -> None:
 
 
 def _post_row(table: str, row: dict, hdr: dict) -> None:
+    body = {k: v for k, v in row.items() if not str(k).startswith("__")}
     req = urllib.request.Request(f"{AGENT}/{table}/rows", method="POST",
                                  headers={**hdr, "content-type": "application/json"},
-                                 data=json.dumps(row).encode("utf-8"))
+                                 data=json.dumps(body).encode("utf-8"))
     with urllib.request.urlopen(req, timeout=15):
         pass
 
