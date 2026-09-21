@@ -47,6 +47,10 @@ ORDER = [
 ]
 
 CLIENTS = ["synthetic-client-alfa", "synthetic-client-beta", "synthetic-client-gama"]
+#: IČOs copied off state/fixtures/vision-fixture/*.pdf — not the 000001xx
+#: reserved range. Live absorb without --fixture-mode uses name (Hejsek /
+#: Firma, checksum fail) or IČO (Apple, checksum ok).
+VISION_PDF_TAX = {"87654321", "28897501", "45126489"}
 
 
 def _def(slug: str) -> dict:
@@ -274,6 +278,8 @@ def test_the_people_are_synthetic_by_measurement():
         if r["kind"] == "web" and not v.endswith(".invalid"):
             problems.append(f"contact {r['slug']}: url {v!r} resolves")
     for r in seed["party-tax-identity"]:
+        if r["value"] in VISION_PDF_TAX:
+            continue
         if not re.fullmatch(r"(CZ)?000001\d\d", r["value"]):
             problems.append(f"tax {r['slug']}: {r['value']!r} outside the synthetic range")
     assert not problems, (
@@ -291,7 +297,11 @@ def test_ico_range_is_130_to_139_and_documented():
     fixture's seeded tax ids to prove no collision (org_slug() is
     deterministic on the ICO — a collision silently aliases a party)."""
     seed = _seed()
-    used = {int(re.search(r"(\d{2})$", r["value"]).group(1)) for r in seed["party-tax-identity"]}
+    used = set()
+    for r in seed["party-tax-identity"]:
+        m = re.search(r"^000001(\d\d)$", r["value"])
+        if m:
+            used.add(int(m.group(1)))
     assert used and max(used) <= 39 and min(used) >= 30, f"ICO range drifted: {sorted(used)}"
 
     other_seeds = [
@@ -309,3 +319,38 @@ def test_ico_range_is_130_to_139_and_documented():
             if m and int(m.group(1)) in used:
                 collisions.append(f"{path.name}: {row['value']!r} collides with the consulting-firm range")
     assert not collisions, "ICO range collides with an existing fixture:\n  " + "\n  ".join(collisions)
+
+
+def test_hejsek_is_the_vision_pdf_client():
+    """Printed IČO 87654321 is checksum-invalid; live absorb matches legal_name."""
+    seed = _seed()
+    hejsek = next(p for p in seed["party"] if p["slug"] == "synthetic-client-hejsek")
+    assert hejsek["legal_name"] == "Bořivoj Hejsek"
+    assert hejsek["party_kind"] == "org"
+    assert hejsek.get("training_opt_in") is False
+    icos = {r["party"]: r["value"] for r in seed["party-tax-identity"] if r["scheme"] == "ICO"}
+    assert icos["synthetic-client-hejsek"] == "87654321"
+    assert icos["synthetic-hejsek-apple"] == "28897501"
+    assert icos["synthetic-hejsek-firma"] == "45126489"
+    spec = importlib.util.spec_from_file_location(
+        "nos_digest", REPO / "files/anatomy/module_utils/nos_digest.py")
+    nd = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(nd)
+    assert nd.normalize_ico("87654321")["checksum_ok"] is False
+    assert nd.normalize_ico("28897501")["checksum_ok"] is True
+    index = {
+        "by_key": {("ICO", v): p for p, v in icos.items()},
+        "by_name": {
+            nd.normalize_org_name("Bořivoj Hejsek"): ["synthetic-client-hejsek"],
+            nd.normalize_org_name("Apple Czech s.r.o."): ["synthetic-hejsek-apple"],
+            nd.normalize_org_name("Firma s.r.o."): ["synthetic-hejsek-firma"],
+        },
+    }
+    seller = nd.resolve_party(
+        {"kind": "org", "ico": "87654321", "legal_name": "Bořivoj Hejsek"},
+        index, fixture_mode=False)
+    assert seller["status"] == "resolved" and seller["matched_by"] == "legal_name"
+    buyer = nd.resolve_party(
+        {"kind": "org", "ico": "28897501", "legal_name": "Apple Czech s.r.o."},
+        index, fixture_mode=False)
+    assert buyer["status"] == "resolved" and buyer["matched_by"] == "ico"

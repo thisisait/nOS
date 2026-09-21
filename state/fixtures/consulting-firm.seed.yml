@@ -39,7 +39,10 @@
 #
 # SYNTHETIC BY RULE (same as every other fixture): party slugs start
 # `synthetic-`, emails end `.invalid`, phones start `+420 000`, tax ids match
-# (CZ)?000001\d\d. Dates are fixed epoch seconds.
+# (CZ)?000001\d\d — EXCEPT the vision-fixture PDF parties below: their IČOs
+# are copied from state/fixtures/vision-fixture/*.pdf (Hejsek 87654321 fails
+# the Czech checksum so live absorb matches legal_name; Apple 28897501 is
+# checksum-ok as printed on fa-aurora.pdf). Dates are fixed epoch seconds.
 # =============================================================================
 
 # ── The party spine (processor + 3 clients + their own counterparties) ──────
@@ -54,6 +57,13 @@ party:
   - { slug: synthetic-beta-vendor, legal_name: "Beta Dodavatel s.r.o. (synthetic)", party_kind: org, country: CZ, notes: "synthetic counterparty — Beta's vendor" }
   - { slug: synthetic-gama-customer, legal_name: "Gama Odberatel s.r.o. (synthetic)", party_kind: org, country: CZ, notes: "synthetic counterparty — Gama's customer" }
   - { slug: synthetic-gama-vendor, legal_name: "Gama Dodavatel s.r.o. (synthetic)", party_kind: org, country: CZ, notes: "synthetic counterparty — Gama's vendor" }
+  # vision-fixture PDFs (fa-aurora / fa-orion / fa-phoenix / fa-vega): seller
+  # as printed. legal_name has no "(synthetic)" suffix — resolve_party name
+  # match is exact after fold. party_kind org so IČO/name resolve runs (a
+  # person ref is always review).
+  - { slug: synthetic-client-hejsek, legal_name: "Bořivoj Hejsek", party_kind: org, country: CZ, notes: "vision-fixture PDF seller (printed IČO 87654321)", training_opt_in: false }
+  - { slug: synthetic-hejsek-apple, legal_name: "Apple Czech s.r.o.", party_kind: org, country: CZ, notes: "vision-fixture fa-aurora.pdf buyer (printed IČO 28897501)" }
+  - { slug: synthetic-hejsek-firma, legal_name: "Firma s.r.o.", party_kind: org, country: CZ, notes: "vision-fixture fa-orion/phoenix/vega.pdf buyer (printed IČO 45126489)" }
 
 party-tax-identity:
   - { slug: tax-consulting-firm-ico, party: synthetic-consulting-firm, scheme: ICO, value: "00000130" }
@@ -70,12 +80,16 @@ party-tax-identity:
   - { slug: tax-beta-vendor-ico, party: synthetic-beta-vendor, scheme: ICO, value: "00000137" }
   - { slug: tax-gama-customer-ico, party: synthetic-gama-customer, scheme: ICO, value: "00000138" }
   - { slug: tax-gama-vendor-ico, party: synthetic-gama-vendor, scheme: ICO, value: "00000139" }
+  - { slug: tax-hejsek-ico, party: synthetic-client-hejsek, scheme: ICO, value: "87654321" }
+  - { slug: tax-hejsek-apple-ico, party: synthetic-hejsek-apple, scheme: ICO, value: "28897501" }
+  - { slug: tax-hejsek-firma-ico, party: synthetic-hejsek-firma, scheme: ICO, value: "45126489" }
 
 party-address:
   - { slug: addr-consulting-firm-billing, party: synthetic-consulting-firm, purpose: billing, street: "Uctovni 1 (synthetic)", city: "Praha", postcode: "110 00", subdivision: "CZ010", country: CZ }
   - { slug: addr-client-alfa-billing, party: synthetic-client-alfa, purpose: billing, street: "Alfa 1 (synthetic)", city: "Brno", postcode: "602 00", subdivision: "CZ064", country: CZ }
   - { slug: addr-client-beta-billing, party: synthetic-client-beta, purpose: billing, street: "Beta 2 (synthetic)", city: "Ostrava", postcode: "702 00", subdivision: "CZ080", country: CZ }
   - { slug: addr-client-gama-billing, party: synthetic-client-gama, purpose: billing, street: "Gama 3 (synthetic)", city: "Plzen", postcode: "301 00", subdivision: "CZ032", country: CZ }
+  - { slug: addr-hejsek-billing, party: synthetic-client-hejsek, purpose: billing, street: "Hopsinkova 28", city: "Praha", postcode: "100 00", subdivision: "CZ010", country: CZ }
 
 party-contact:
   - { slug: contact-consulting-firm-email, party: synthetic-consulting-firm, kind: email, value: "office@synthetic-consulting.invalid", role: "primary" }
@@ -86,6 +100,8 @@ party-contact:
   - { slug: contact-client-beta-phone, party: synthetic-client-beta, kind: phone, value: "+420 000 000 132" }
   - { slug: contact-client-gama-email, party: synthetic-client-gama, kind: email, value: "petra@gamova.invalid", role: "primary" }
   - { slug: contact-client-gama-phone, party: synthetic-client-gama, kind: phone, value: "+420 000 000 133" }
+  - { slug: contact-hejsek-email, party: synthetic-client-hejsek, kind: email, value: "borivoj@hejsek.invalid", role: "primary" }
+  - { slug: contact-hejsek-phone, party: synthetic-client-hejsek, kind: phone, value: "+420 000 000 140" }
 
 # ── Accounts: shared class spine (accounting.seed.yml slugs, re-seeded
 #    idempotently) + one 311/321 analytical pair PER CLIENT ─────────────────
