@@ -550,12 +550,14 @@ install_homeassistant: false      # Home Assistant – home automation          
 install_rustfs: true             # RustFS – S3-compatible object storage (drop-in MinIO)   [Docker]
 
 # ── B2B stack (CRM/ERP/helpdesk/chat/wiki) ──────────────────────────────────
+install_espocrm: false              # RETIRED CRM (tofu tombstone). Keep false so Authentik destroy is authored; do not delete the flag until state has no module.service["espocrm"].
 install_erpnext: false            # ⚠️  EXPERIMENTAL / NON-WORKING — see roles/pazny.erpnext/README.md (parked for rework, hard-blocked at role-load: requires erpnext_experimental_override: true to attempt enable)
 install_freescout: true          # FreeScout – helpdesk / ticketing                    [requires: MariaDB]
 install_outline: true            # Outline – team wiki / knowledge base                [requires: PostgreSQL, Redis Docker]
 install_hedgedoc: false           # HedgeDoc – collaborative markdown [Docker, requires: PostgreSQL]
 install_bookstack: false          # BookStack – wiki platform [Docker, requires: MariaDB]
 install_firefly: false            # Firefly III – personal finance [Docker, requires: MariaDB, Redis]
+install_dolibarr: false           # Dolibarr ERP/CRM desk [Docker, MariaDB, ARM64]. Praxis pack ON. KEAP tables = books fallback when this is off. SSO is forward_auth until OIDC module is proven in post.yml.
 install_onlyoffice: false         # ONLYOFFICE Document Server [Docker]
 
 # ── VoIP stack (telecommunications) ──────────────────────────────────────────
@@ -1481,6 +1483,7 @@ mariadb_databases:
   - name: "asterisk"
   - name: "bookstack"
   - name: "firefly"
+  - name: "dolibarr"
 
 mariadb_users:
   - name: "wordpress"
@@ -1504,6 +1507,9 @@ mariadb_users:
   - name: "firefly"
     password: "{{ firefly_db_password | default(nos_derived_secrets.firefly) }}"
     priv: "firefly.*:ALL"
+  - name: "dolibarr"
+    password: "{{ dolibarr_db_password | default(nos_derived_secrets.dolibarr) }}"
+    priv: "dolibarr.*:ALL"
   # mysqld-exporter (observability stack) — scraped by Grafana Alloy on the
   # observability_net via stacks_shared_network. Needs the three "slave"/monitoring
   # privileges that Percona/MariaDB's stock exporter queries require. Host "%" so
@@ -2330,6 +2336,7 @@ nodered_domain: "nodered{{ _host_alias_seg }}.{{ tenant_domain | default('dev.lo
 hedgedoc_domain: "hedgedoc{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 bookstack_domain: "bookstack{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 firefly_domain: "firefly{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
+dolibarr_domain: "doli{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 # NOTE: hostnames match the Traefik file-provider's manifest-id fallback
 # (state/manifest.yml id=onlyoffice, id=influxdb) so URLs are consistent
 # whether Traefik resolves via domain_var or via id-suffix. Earlier OIDC
@@ -2367,10 +2374,13 @@ code_server_port: 3009                  # container 8443 (HTTPS) — Traefik ups
 hedgedoc_port: 3012
 bookstack_port: 3013
 firefly_port: 3014
+dolibarr_port: 3016
 # Data dirs promoted from role defaults so the upgrade engine can resolve them
 # in play scope (recipes reference these for backup/restore steps).
 firefly_upload_dir: "{{ nos_data_root }}/platform/services/firefly/upload"
 firefly_export_dir: "{{ nos_data_root }}/platform/services/firefly/export"
+dolibarr_data_dir: "{{ nos_data_root }}/platform/services/dolibarr/documents"
+dolibarr_custom_dir: "{{ nos_data_root }}/platform/services/dolibarr/custom"
 onlyoffice_port: 3015
 influxdb_port: 8086
 mcpo_port: 8765
@@ -2873,6 +2883,7 @@ authentik_app_tiers:
   ntfy: 3                 # aligned to plugin authentik.tier (was 2)
   nodered: 2
   firefly: 2
+  dolibarr: 2
   miniflux: 3
   mailpit: 1                # aligned to plugin authentik.tier (was 2)
   hedgedoc: 3
@@ -3302,6 +3313,8 @@ backup_dirs_to_dump:
   # (and extracts/). KEAP sqlite is not those files. Alpine bind-mounts the
   # tree (same VirtioFS path as gitea) so launchd TCC cannot drop them.
   - { name: "tenants", path: "{{ nos_data_root }}/tenants" }
+  - { name: "dolibarr-documents", path: "{{ dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents') }}" }
+  - { name: "dolibarr-custom", path: "{{ dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom') }}" }
 backup_databases_mariadb: true
 backup_databases_postgresql: true
 # A9 result notification (W6.1): backup outcome → Wing inbox (fail=high,

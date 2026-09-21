@@ -140,6 +140,7 @@ traefik_auth_modes:
   # admin UI is gated"; the user DB did not exist, which is the other half of
   # why this had to change.
   firefly: proxy
+  dolibarr: proxy           # forward_auth gate; native_oidc only after post.yml proves the module
   keap: proxy               # header_oidc — outpost must stay in path to inject
                             # X-Authentik-* identity headers (firefly pattern)
   face: proxy               # forward_auth — outpost injects X-Authentik-* which
@@ -340,6 +341,7 @@ traefik_container_upstreams:
   hedgedoc:      { port: 3000 }
   bookstack:     { port: 80 }
   firefly:       { port: 8080 }
+  dolibarr:      { port: 80 }
   onlyoffice:    { port: 80 }
   ntfy:          { port: 80 }
   keap:          { port: 8080 }

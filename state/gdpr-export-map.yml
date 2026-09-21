@@ -11,7 +11,8 @@
 #
 # COVERAGE = 21 per-user-PII service plugins (native_oidc + header_oidc carrying
 # a gdpr: block) + 2 anchors (svc_authentik identity + svc_bluesky-pds AT-proto)
-# + 4 Tier-2 apps with a gdpr: block (espocrm, documenso, twofauth, roundcube;
+# + 3 Tier-2 apps with a gdpr: block (documenso, twofauth, roundcube;
+# EspoCRM retired to apps/espocrm.yml.draft 2026-09-21;
 # app_qdrant is the same residual store as svc_qdrant and stays on the erasure
 # residual list only) = 27 entries. This is byte-for-byte the per-user-PII set
 # the erasure map covers (erasure-minus-the-6-residual-stores) — Art-15 access
@@ -28,7 +29,7 @@
 # Art-20 (data PORTABILITY) applies ONLY to subject-PROVIDED data processed
 # under consent 6(1)(a) or contract 6(1)(b). Per this repo's plugin manifests
 # the contract-basis services include erpnext, gitea, vaultwarden, plus
-# app_espocrm and app_documenso (none are consent; the rest are
+# app_documenso (none are consent; the rest are
 # legitimate_interests). `portability_eligible: true` tags those so the
 # operator and the CI gate know portability is a valid
 # additional framing for them — but the DSAR row stays request_type='access'
@@ -220,6 +221,13 @@ services:
            PAT); financial data export via the subject's own data-export
            endpoint."
 
+  - id: svc_dolibarr
+    flag: install_dolibarr
+    method: manual
+    portability_eligible: true   # lawful basis = contract (Art. 6(1)(b))
+    note: "Admin Users + thirdparties by email; REST GET /users and
+           /thirdparties when a live API token is proven. Unverified live."
+
   - id: svc_keap
     flag: install_keap
     method: manual
@@ -235,16 +243,6 @@ services:
            (CAR export of the subject's repo) via the PDS admin/auth token."
 
   # ── Tier-2 apps (app_<name> — DPA records_from_app_manifests) ────────────
-  - id: app_espocrm
-    flag: apps_runner_enabled
-    method: manual
-    portability_eligible: true
-    note: "Espo REST as bootstrap admin: GET /api/v1/Contact, /Lead, /Account
-           with where emailAddress equals the subject. Include Account rows
-           whose description carries nos:party:<slug> for that subject's
-           party. Promote to container_exec once a live email filter is
-           verified."
-
   - id: app_documenso
     flag: apps_runner_enabled
     method: manual

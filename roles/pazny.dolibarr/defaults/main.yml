@@ -1,0 +1,21 @@
+---
+# pazny.dolibarr — install-only. SSO / Traefik / GDPR live in dolibarr-base.
+#
+# Image: dolibarr/dolibarr (GPLv3+, linux/arm64). OpenID Connect is a module,
+# not env-complete — plugin authentik.mode stays forward_auth until a post.yml
+# path proves native_oidc (FreeScout lesson).
+
+dolibarr_version: "21.0.4"
+dolibarr_domain: "doli{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+dolibarr_port: 3016
+dolibarr_db_name: "dolibarr"
+dolibarr_db_user: "dolibarr"
+dolibarr_db_host: "127.0.0.1"
+dolibarr_tz: "Europe/Prague"
+dolibarr_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+dolibarr_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+dolibarr_admin_login: "admin"
+dolibarr_country: "CZ"
+dolibarr_enable_modules: "Societe,Facture,Propale,Agenda"
+dolibarr_upload_max: "32M"
+dolibarr_post_max: "32M"

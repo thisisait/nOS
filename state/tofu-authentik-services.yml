@@ -38,6 +38,12 @@ tofu_authentik_services:
   tier: 2
   enabled: true
   external_host: https://documenso.apps.{{ tenant_domain | default('dev.local') }}
+- slug: dolibarr
+  name: Dolibarr
+  mode: forward_auth
+  tier: 2
+  enabled: '{{ install_dolibarr | default(false) }}'
+  external_host: https://{{ dolibarr_domain | default('doli' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
 - slug: erpnext
   name: ERPNext
   mode: native_oidc
@@ -48,16 +54,6 @@ tofu_authentik_services:
   client_secret: '{{ nos_derived_secrets.oidc_erpnext }}'
   redirect_uris:
   - https://{{ erpnext_domain | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/api/method/frappe.integrations.oauth2_logins.custom?provider=Authentik
-- slug: espocrm
-  name: EspoCRM
-  mode: native_oidc
-  tier: 2
-  enabled: true
-  external_host: https://espocrm.apps.{{ tenant_domain | default('dev.local') }}
-  client_id: nos-espocrm
-  client_secret: '{{ nos_derived_secrets.oidc_espocrm }}'
-  redirect_uris:
-  - https://espocrm.apps.{{ tenant_domain | default('dev.local') }}/oauth-callback.php
 - slug: face
   name: nOS
   mode: forward_auth

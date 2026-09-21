@@ -1,0 +1,73 @@
+# =============================================================================
+# crm-hydrate-base — backoffice hydrator organelle (not the Dolibarr container).
+#
+# Espo and Firefly shipped a compose fragment and stopped. The organs never
+# learned the desk. This plugin is the missing tendon: Pulse fires Digest,
+# Digest absorbs into KEAP party tables, Cortex/embed-sync can index those
+# rows, agents read nos-datatables. Bone does not hydrate. Dolibarr REST is
+# not an agent API. Invoice/posting stay on ISDOC + vision + HMAC — copying
+# llx_facture or Firefly journals into those tables would fork the books.
+# =============================================================================
+
+name: crm-hydrate-base
+version: 0.1.0
+description: |
+  Pulse job that runs tools/digest-import-doli.py --absorb: open Dolibarr
+  thirdparties (IČO) through the digest gate into party / party-tax-identity.
+  Idle (exit 0) when the desk container is absent.
+license: MIT
+
+type:
+  - scheduled-job
+
+requires:
+  feature_flag: install_dolibarr
+  plugin:
+    - dolibarr-base
+  variables:
+    - playbook_dir
+
+pulse:
+  jobs:
+    - name: hydrate-parties
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/digest-import-doli.py"
+      args: ["--absorb"]
+      schedule: "40 4 * * *"
+      jitter_min: 10
+      max_runtime_s: 180
+      max_concurrent: 1
+      category: knowledge
+      writes:
+        - target: "table:party"
+          via: "digest_absorb after DoliPartyImporter (llx_societe → party). Skip existing slugs."
+          measured: "2026-09-21"
+        - target: "table:party-tax-identity"
+          via: "digest_absorb IČO tax facet (scheme ICO) rowRef party"
+          measured: "2026-09-21"
+      env:
+        KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+gdpr:
+  purpose: |
+    Scheduled projection of CRM counterparties from the estate MariaDB
+    Dolibarr schema into KEAP DataTables so organs share one party noun.
+    Stores nothing itself; retention is the party spine / imp_doli-party.
+  legal_basis: contract
+  data_categories:
+    - company_affiliation
+    - name
+  data_subjects:
+    - clients
+    - client_contacts
+  retention_days: 0
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false

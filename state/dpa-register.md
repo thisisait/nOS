@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 103 (78 core services, 5 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (7), legal_obligation (1), legitimate_interests (95)
+- **Processing activities:** 105 (80 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (9), legal_obligation (1), legitimate_interests (95)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 17
 
@@ -633,20 +633,6 @@ contracts with counter-parties who agree to electronic execution.
 - **Storage:** 'apps' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Espocrm — `app_espocrm`
-- **Purpose:** Record and manage the consulting firm's client relationships: contact
-details, deals/opportunities, activities, and client communications.
-Necessary to deliver and administer the firm's contracted consulting
-services to its clients.
-- **Legal basis (Art. 6):** `contract`
-- **Data subjects:** `clients`; `client_contacts`; `end_users`
-- **Data categories:** `name`; `email`; `phone_number`; `company_affiliation`; `deal_financial_data`; `communication_content`
-- **Recipients / processors:** —
-- **Transfers outside EU:** No
-- **Retention:** 1095 days (~3y)
-- **Storage:** 'apps' compose stack on host (Docker volumes)
-- **Security measures:** platform baseline (see above)
-
 #### Qdrant — `app_qdrant`
 - **Purpose:** Hosts vector embeddings + payload metadata for the nOS agentic platform:
 semantic search over agent outputs, system metadata, and cybersec
@@ -792,6 +778,19 @@ user accounts, and the OIDC session link.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
+- **Storage:** 'b2b' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
+#### Dolibarr — `svc_dolibarr`
+- **Purpose:** Firm CRM and commercial records (third parties, quotes, invoices) for
+contracted consulting delivery. Authentik forward-auth gates staff access
+at Traefik. Booked facts still absorb into KEAP tables when that door runs.
+- **Legal basis (Art. 6):** `contract`
+- **Data subjects:** `clients`; `client_contacts`; `end_users`
+- **Data categories:** `name`; `email`; `phone_number`; `company_affiliation`; `financial_records`; `communication_content`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 3650 days (~10y)
 - **Storage:** 'b2b' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
@@ -1228,6 +1227,17 @@ reasoning.
 - **Storage:** KEAP DataTables (libsql) on the host — party / party-tax-identity / party-address / party-contact
 - **Security measures:** platform baseline (see above)
 
+#### doli-party — `imp_doli-party`
+- **Purpose:** Project open Dolibarr thirdparties (IČO-keyed organisations) into the shared party spine so agents, Cortex recall, Digest absorb and Face Books share one counterparty noun. The desk remains Dolibarr; KEAP holds the governed projection. No marketing.
+- **Legal basis (Art. 6):** `contract`
+- **Data subjects:** `The organisation's counterparties — customers and suppliers`; `Sole traders among them (natural persons acting as businesses)`
+- **Data categories:** `Organisation identity (legal name, trading name)`; `Company registration identifiers (IČO)`; `Country code (ISO 3166-1 alpha-2)`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 3650 days (~10y)
+- **Storage:** KEAP DataTables (libsql) on the host — party / party-tax-identity
+- **Security measures:** platform baseline (see above)
+
 #### isdoc — `imp_isdoc`
 - **Purpose:** Ingest an organisation's ISDOC e-invoices into the invoice facet — document number, dates, payable amount, and the seller and buyer as references into the shared party spine — so the estate can answer accounting and cash-flow questions against governed rows. Both counterparties are resolved against the spine, never minted.
 - **Legal basis (Art. 6):** `legitimate_interests`
@@ -1344,6 +1354,19 @@ container logs for security monitoring of a public endpoint.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Crm Hydrate — `svc_crm-hydrate`
+- **Purpose:** Scheduled projection of CRM counterparties from the estate MariaDB
+Dolibarr schema into KEAP DataTables so organs share one party noun.
+Stores nothing itself; retention is the party spine / imp_doli-party.
+- **Legal basis (Art. 6):** `contract`
+- **Data subjects:** `clients`; `client_contacts`
+- **Data categories:** `company_affiliation`; `name`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 

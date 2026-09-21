@@ -1,0 +1,56 @@
+# pazny.dolibarr — compose override (b2b). No top-level networks.
+# Official image listens on :80. Shared infra MariaDB — not an embedded db.
+
+services:
+  dolibarr:
+    image: dolibarr/dolibarr:{{ dolibarr_version }}
+    restart: unless-stopped
+    ports:
+{% if services_lan_access | default(false) %}
+      - "{{ dolibarr_port | default(3016) }}:80"
+{% else %}
+      - "127.0.0.1:{{ dolibarr_port | default(3016) }}:80"
+{% endif %}
+    volumes:
+      - {{ dolibarr_data_dir }}:/var/www/documents
+      - {{ dolibarr_custom_dir }}:/var/www/html/custom
+    environment:
+      DOLI_INSTALL_AUTO: "1"
+      DOLI_PROD: "1"
+      DOLI_INIT_DEMO: "0"
+      DOLI_DB_TYPE: "mysqli"
+      DOLI_DB_HOST: "{% if install_mariadb | default(false) %}mariadb{% else %}{{ dolibarr_db_host | default('127.0.0.1') }}{% endif %}"
+      DOLI_DB_HOST_PORT: "3306"
+      DOLI_DB_NAME: "{{ dolibarr_db_name }}"
+      DOLI_DB_USER: "{{ dolibarr_db_user }}"
+      DOLI_DB_PASSWORD: "{{ dolibarr_db_password }}"
+      # Official image has no CA knob. DOLI_DB_SSL=true + self-signed MariaDB
+      # fails PHP verify; docker-run.sh mysql init is plaintext either way.
+      DOLI_DB_SSL: "false"
+      DOLI_URL_ROOT: "https://{{ dolibarr_domain | default('doli' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+      DOLI_ADMIN_LOGIN: "{{ dolibarr_admin_login | default('admin') }}"
+      DOLI_ADMIN_PASSWORD: "{{ dolibarr_admin_password }}"
+      DOLI_COMPANY_NAME: "{{ instance_org | default('nOS', true) }}"
+      DOLI_COMPANY_COUNTRYCODE: "{{ dolibarr_country | default('CZ') }}"
+      DOLI_ENABLE_MODULES: "{{ dolibarr_enable_modules | default('Societe,Facture,Propale,Agenda') }}"
+      DOLI_CRON: "1"
+      DOLI_CRON_KEY: "{{ dolibarr_cron_key }}"
+      PHP_INI_DATE_TIMEZONE: "{{ dolibarr_tz | default('Europe/Prague') }}"
+      PHP_INI_UPLOAD_MAX_FILESIZE: "{{ dolibarr_upload_max | default('32M') }}"
+      PHP_INI_POST_MAX_SIZE: "{{ dolibarr_post_max | default('32M') }}"
+    healthcheck:
+      test: ["CMD-SHELL", "php -r \"exit((@file_get_contents('http://127.0.0.1/')===false)?1:0);\""]
+      interval: 30s
+      timeout: 10s
+      retries: 8
+      start_period: 180s
+    networks:
+      - b2b_net
+      - gated_b2b_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ dolibarr_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ dolibarr_cpus | default(docker_cpus_standard | default('1.0')) }}

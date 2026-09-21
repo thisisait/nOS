@@ -1,0 +1,34 @@
+# Digest importer — doli-party (Dolibarr thirdparties → KEAP party spine).
+#
+# Hydrator organelle for the backoffice pack. Swept by
+# nos_gdpr.records_from_importers (id imp_doli-party). Reads the estate's own
+# MariaDB schema (loopback docker exec); no vendor REST, no egress.
+name: doli-party
+version: "0.1.0"
+source_kind: dolibarr-mariadb
+
+egress: []
+
+gdpr:
+  purpose: >-
+    Project open Dolibarr thirdparties (IČO-keyed organisations) into the
+    shared party spine so agents, Cortex recall, Digest absorb and Face
+    Books share one counterparty noun. The desk remains Dolibarr; KEAP
+    holds the governed projection. No marketing.
+  legal_basis: contract
+  data_source: not_from_subject
+  data_categories:
+    - "Organisation identity (legal name, trading name)"
+    - "Company registration identifiers (IČO)"
+    - "Country code (ISO 3166-1 alpha-2)"
+  data_subjects:
+    - "The organisation's counterparties — customers and suppliers"
+    - "Sole traders among them (natural persons acting as businesses)"
+  processors: []
+  transfers_outside_eu: false
+  storage_location: "KEAP DataTables (libsql) on the host — party / party-tax-identity"
+  retention_days: 3650
+  notes: >-
+    Join marker nos:doli:<rowid> in party.notes. Rows without a valid IČO are
+    skipped, never minted. Absorb skips slugs already present (digest
+    constitution). Erasable via digest-teardown.py --erase-party.

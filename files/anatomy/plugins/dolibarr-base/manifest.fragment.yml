@@ -1,0 +1,10 @@
+slug: dolibarr
+role: pazny.dolibarr
+feature_flag: install_dolibarr
+auth: proxy
+authentik:
+  mode: forward_auth
+  slug: dolibarr
+  tier: 2
+domain_var: dolibarr_domain
+port_var: dolibarr_port

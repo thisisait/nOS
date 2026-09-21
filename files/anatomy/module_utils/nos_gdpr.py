@@ -198,7 +198,7 @@ def records_from_app_manifests(apps_dir: str | pathlib.Path) -> list[dict]:
     if not d.is_dir():
         return out
     for f in sorted(d.glob("*.yml")):
-        if f.name.startswith("_") or f.name.endswith(".draft"):
+        if f.name.startswith("_") or f.name.endswith(".draft") or ".draft" in f.name:
             continue
         try:
             m = yaml.safe_load(f.read_text()) or {}

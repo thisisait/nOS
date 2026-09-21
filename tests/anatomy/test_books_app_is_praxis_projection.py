@@ -28,3 +28,4 @@ def test_books_loads_the_praxis_tables_and_does_not_upsert_invoices():
     assert "tablesUpsertRow('posting'" not in src
     assert "key: 'journals'" in src
     assert "nos:party:" in src
+    assert "slug === 'dolibarr'" in src

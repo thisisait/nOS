@@ -1,0 +1,109 @@
+# =============================================================================
+# dolibarr-base — CRM desk (GPLv3+). Role keeps image/DB/volumes.
+#
+# SSO: forward_auth until OpenID Connect is proven in post.yml (no native
+# claim without a live consumer — FreeScout). Per-user CRM identity is the
+# target; this gate is honest access control, not header provisioning.
+# =============================================================================
+
+name: dolibarr-base
+version: 0.1.0
+description: |
+  Dolibarr ERP/CRM — relationship desk for the backoffice pack.
+  KEAP party/invoice tables remain the books fallback when install_dolibarr
+  is off. Agents read tables (mcp-tables / db:), not this vendor's REST.
+upstream: https://www.dolibarr.org/
+license: GPL-3.0-or-later
+
+type:
+  - service
+  - ui-extension
+
+_NOS_PLUGIN: "dolibarr-base"
+
+requires:
+  role: pazny.dolibarr
+  feature_flag: install_dolibarr
+  variables:
+    - dolibarr_port
+    - dolibarr_domain
+    - tenant_domain
+    - host_alias
+
+depends_on:
+  - upstream: "service:mariadb"
+    kind: data
+    via: >-
+      DOLI_DB_HOST=mariadb + schema `dolibarr`
+      (roles/pazny.dolibarr/templates/compose.yml.j2)
+    measured: "2026-09-21"
+
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-dolibarr
+  client_secret: "{{ nos_derived_secrets.oidc_dolibarr }}"
+  slug: dolibarr
+  name: 'Dolibarr'
+  enabled: "{{ install_dolibarr | default(false) }}"
+  launch_url: "https://{{ dolibarr_domain | default('doli' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  tier: 2
+
+compose_extension:
+  template: templates/dolibarr-base.compose.yml.j2
+  target_stack: b2b
+  target_service: dolibarr
+  hardening_refs: []
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ dolibarr_port }}/"
+        timeout: 300
+        accept_any_2xx_3xx_4xx: true
+
+observability:
+  loki:
+    labels:
+      app: dolibarr
+      stack: b2b
+      tier: "2"
+
+gdpr:
+  purpose: |
+    Firm CRM and commercial records (third parties, quotes, invoices) for
+    contracted consulting delivery. Authentik forward-auth gates staff access
+    at Traefik. Booked facts still absorb into KEAP tables when that door runs.
+  legal_basis: contract
+  data_categories:
+    - name
+    - email
+    - phone_number
+    - company_affiliation
+    - financial_records
+    - communication_content
+  data_subjects:
+    - clients
+    - client_contacts
+    - end_users
+  retention_days: 3650
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+
+ui-extension:
+  hub_card:
+    title: "Dolibarr"
+    icon: briefcase
+    url: "https://{{ dolibarr_domain }}"
+    tier: 2
+    description: "CRM / ERP desk (books fallback remains KEAP tables)"
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []

@@ -1,0 +1,25 @@
+---
+# Rendered into {{ stacks_dir }}/b2b/overrides/dolibarr.yml before compose up.
+
+- name: "[pazny.dolibarr] Ensure data directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ dolibarr_data_dir }}"
+    - "{{ dolibarr_custom_dir }}"
+
+- name: "[pazny.dolibarr] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/b2b/overrides/dolibarr.yml"
+    mode: "0600"
+  notify: Restart dolibarr
+
+- name: "[pazny.dolibarr] Print installation info"
+  ansible.builtin.debug:
+    msg: |
+      Dolibarr → https://{{ dolibarr_domain }} (127.0.0.1:{{ dolibarr_port }})
+      DB {{ dolibarr_db_name }} @ mariadb. SSO: Authentik forward_auth (gate).
+      Documents: {{ dolibarr_data_dir }}

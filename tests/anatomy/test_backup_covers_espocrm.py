@@ -10,7 +10,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 BACKUP_SH = REPO / "roles" / "pazny.backup" / "files" / "backup.sh"
 BACKUP_DEFAULTS = REPO / "roles" / "pazny.backup" / "defaults" / "main.yml"
-MANIFEST = REPO / "apps" / "espocrm.yml"
+MANIFEST = REPO / "apps" / "espocrm.yml.draft"
 
 
 def test_espocrm_dump_is_a_named_backup_source():

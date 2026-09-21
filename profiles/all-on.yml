@@ -89,6 +89,7 @@ install_outline: true
 install_hedgedoc: true
 install_bookstack: true
 install_firefly: true
+install_dolibarr: true           # CRM desk; praxis pack ON. ARM64 official image.
 install_onlyoffice: true
 
 # ── engineering stack ────────────────────────────────────────────────────────

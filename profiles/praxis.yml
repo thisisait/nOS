@@ -4,8 +4,10 @@
 #
 # Purpose: the practice pack inside backoffice for one consulting-firm host.
 # Firefly + ERPNext stay off (heavier books are a different pack). WordPress
-# is the commons portal. Espo is already apps/espocrm.yml — this overlay
-# only keeps the apps_runner on so that manifest actually deploys. The
+# is the commons portal. EspoCRM is retired (`apps/espocrm.yml.draft`);
+# Dolibarr is the CRM SoT (`install_dolibarr`). Face/KEAP books stay the
+# fallback if a tenant refuses Dolibarr.
+# apps_runner stays on for the remaining Tier-2 pilots. The
 # consulting-firm KEAP fixture is ON HERE ONLY; default.config.yml keeps
 # keap_seed_consulting_fixture: false so a public blank does not grow a
 # synthetic tenant unasked.
@@ -31,11 +33,12 @@
 # ── Heavier books stay off ───────────────────────────────────────────────────
 install_firefly: false
 install_erpnext: false            # experimental anyway; pin so an overlay cannot enable it
+install_dolibarr: true            # CRM desk; KEAP party/invoice remain the books fallback
 
 # ── Praxis pack ──────────────────────────────────────────────────────────────
 install_wordpress: true           # commons portal (not a second backoffice)
 keap_seed_consulting_fixture: true
-apps_runner_enabled: true         # EspoCRM lives in apps/espocrm.yml
+apps_runner_enabled: true         # remaining Tier-2 pilots (not Espo)
 
 # ── Vision Pulse needs a local VLM (defaults leave this unarmed) ─────────────
 ollama_enabled: true

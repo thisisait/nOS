@@ -1516,7 +1516,8 @@
         (install_freescout | default(false)) or
         (install_freepbx | default(false)) or
         (install_bookstack | default(false)) or
-        (install_firefly | default(false))
+        (install_firefly | default(false)) or
+        (install_dolibarr | default(false))
       tags: ['always']
 
     - name: Auto-enable PostgreSQL for services that require it

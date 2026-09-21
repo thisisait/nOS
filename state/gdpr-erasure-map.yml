@@ -9,8 +9,8 @@
 # Tier-2 manifests).
 #
 # Coverage = every plugin that stores PER-USER data (native_oidc + header_oidc
-# + AT-proto identity) + four Tier-2 apps with a gdpr: block (espocrm,
-# documenso, twofauth, roundcube; app_qdrant stays as residual svc_qdrant),
+# + AT-proto identity) + three Tier-2 apps with a gdpr: block (
+# documenso, twofauth, roundcube; EspoCRM retired 2026-09-21; app_qdrant stays as residual svc_qdrant),
 # PLUS the backend/residual stores that retain DERIVED subject data beyond
 # those per-service deletes (Redis sessions, Qdrant embeddings, RustFS
 # backups, wing.db agent tables, Loki/Tempo) — see the "Backend stores &
@@ -154,6 +154,13 @@ services:
     method: manual
     note: "Admin → Users → delete; or DELETE /api/v1/users/:id (admin PAT)."
 
+  - id: svc_dolibarr
+    flag: install_dolibarr
+    method: manual
+    note: "Thirdparties/users: Dolibarr admin Users → delete; REST DELETE
+           /users/{id} once a live API token is proven. Commercial records may
+           be Art-17(3)(b) retention — review before DROP. Unverified live."
+
   - id: svc_keap
     flag: install_keap
     method: manual
@@ -165,14 +172,6 @@ services:
     note: "pdsadmin account delete <did> (resolve did from @<handle>.bsky.<tld>)."
 
   # ── Tier-2 apps (app_<name> — DPA records_from_app_manifests) ────────────
-  - id: app_espocrm
-    flag: apps_runner_enabled
-    method: manual
-    note: "DELETE Contact/Lead rows whose emailAddress equals the subject.
-           For Account rows joined only by nos:party:<slug>, drop the join
-           tag then delete the Account if no other legitimate contacts remain.
-           Operator-run Espo UI or REST — do not auto-run."
-
   - id: app_documenso
     flag: apps_runner_enabled
     method: manual

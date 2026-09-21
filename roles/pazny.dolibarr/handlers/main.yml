@@ -1,0 +1,6 @@
+---
+- name: Restart dolibarr
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p b2b
+    restart dolibarr
+  failed_when: false

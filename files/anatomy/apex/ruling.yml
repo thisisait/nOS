@@ -52,7 +52,7 @@ artifact: state/anatomy-graph.json
 # file as AMENDED AFTER SIGNING and asks for a fresh signature. To re-sign:
 #   python3 tools/apex-sign.py            # prints the diff since the last sign
 #   python3 tools/apex-sign.py --confirm  # writes the new digest
-signed_digest: f2eee7cd50aa09ba4104a8c6ee8469b3da5612cbfdf77f319342cc303ac7382d
+signed_digest: d98d5144afe03c4981ce8c045ae3572b58368ccc45b386546a5242605aa14fe6
 
 
 # The declared split. The gate recounts the table below and refuses to run
@@ -317,6 +317,10 @@ nodes:
   "service:erpnext":       { publish: backoffice, speaks: "orders, stock and invoices in one book" }
   "service:freescout":     { publish: backoffice, speaks: "every customer conversation answered from one desk" }
   "service:firefly":       { publish: backoffice, speaks: "where the money is watched" }
+  # CRM desk (2026-09-21). WITHHELD until the operator authors a speaks:
+  # sentence — a public claim about the firm's desk is theirs to sign.
+  # Pulse hydrator and Authentik client stay withheld with their families.
+  "service:dolibarr": withheld
   "service:metabase":      { publish: backoffice, speaks: "questions asked of the numbers, answered in charts" }
   "service:superset":      { publish: backoffice, speaks: "heavier analytics for heavier questions" }
 
@@ -377,8 +381,8 @@ nodes:
   "authentik:calibre-web": withheld
   "authentik:code-server": withheld
   "authentik:documenso": withheld
+  "authentik:dolibarr": withheld
   "authentik:erpnext": withheld
-  "authentik:espocrm": withheld
   "authentik:face": withheld
   "authentik:firefly": withheld
   "authentik:freescout": withheld
@@ -578,6 +582,7 @@ nodes:
   "pulse:conductor:vulnerability-scan": withheld
   "pulse:cortex:cortex-corpus-diff": withheld
   "pulse:cortex:cortex-fs-sync": withheld
+  "pulse:crm-hydrate:hydrate-parties": withheld
   # 2026-08-26 roster close: five withheld pulse rows left the artifact
   # (curator-sweep, promote-migration — agents PARKED; drift-scan,
   # triage-open-findings, upgrade-advise — agents RETIRED). All were

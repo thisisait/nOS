@@ -20,17 +20,39 @@ import argparse
 import base64
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.error
-import urllib.parse
 import urllib.request
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[1] / "tools"))
 import digest_absorb  # noqa: E402
 
 MARKER = "nos:party:"
+# Exact join slug: `contains nos:party:alfa` must not also hit `…alfa-customer`.
+JOIN_SLUG_RE = re.compile(rf"(?:^|\n){re.escape(MARKER)}([a-z0-9-]+)(?:\n|$)")
+ICO_IN_NAME = re.compile(r"(?<!\d)\d{8}(?!\d)")
 ESPO_CONTAINER = os.environ.get("ESPO_CONTAINER", "espocrm")
+
+
+def join_slug_from_description(desc: str) -> str | None:
+    m = JOIN_SLUG_RE.search(desc or "")
+    return m.group(1) if m else None
+
+
+def index_accounts_by_slug(rows: list) -> dict:
+    out: dict = {}
+    for r in rows:
+        slug = join_slug_from_description(r.get("description") or "")
+        if slug:
+            out[slug] = r
+    return out
+
+
+def skip_espo_party(party: dict) -> bool:
+    """Vision mash put the IČO into legal_name; the real party already exists."""
+    return bool(ICO_IN_NAME.search(party.get("legal_name") or ""))
 
 
 def account_payload(party: dict) -> dict:
@@ -106,13 +128,30 @@ def upsert_account(base: str, hdr: dict, body: dict, existing: list) -> str:
     return "post"
 
 
+def list_accounts(base: str, hdr: dict) -> list:
+    rows: list = []
+    offset = 0
+    while True:
+        data = _espo_get(base, f"/api/v1/Account?maxSize=200&offset={offset}", hdr)
+        chunk = data.get("list") or []
+        rows.extend(chunk)
+        total = data.get("total")
+        if not chunk or (isinstance(total, int) and len(rows) >= total) or len(chunk) < 200:
+            break
+        offset += 200
+    return rows
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--dry-run", action="store_true", default=True)
     p.add_argument("--write", action="store_true", help="actually POST to Espo")
     args = p.parse_args(argv)
     write = args.write
-    parties = [r for r in digest_absorb.read_rows("party") if r.get("slug")]
+    parties = [
+        r for r in digest_absorb.read_rows("party")
+        if r.get("slug") and not skip_espo_party(r)
+    ]
     payloads = [account_payload(r) for r in parties]
     if not write:
         json.dump({"would_upsert": len(payloads), "accounts": payloads}, sys.stdout, indent=2)
@@ -124,18 +163,17 @@ def main(argv: list[str] | None = None) -> int:
         print("REFUSING: no Espo URL/admin — container env empty and no ESPO_* override",
               file=sys.stderr)
         return 2
+    try:
+        by_slug = index_accounts_by_slug(list_accounts(base, hdr))
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
+        print(f"REFUSING: cannot list Espo Accounts: {exc}", file=sys.stderr)
+        return 2
     wrote = 0
     for body in payloads:
-        marker = MARKER + body["description"].rsplit(MARKER, 1)[-1]
-        q = urllib.parse.quote(marker)
+        slug = join_slug_from_description(body["description"])
+        hit = by_slug.get(slug) if slug else None
         try:
-            existing = _espo_get(
-                base,
-                f"/api/v1/Account?where[0][type]=contains"
-                f"&where[0][attribute]=description&where[0][value]={q}",
-                hdr)
-            rows = existing.get("list") or []
-            action = upsert_account(base, hdr, body, rows)
+            action = upsert_account(base, hdr, body, [hit] if hit else [])
             print(f"  + {body['name']}: {action}")
             wrote += 1
         except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:

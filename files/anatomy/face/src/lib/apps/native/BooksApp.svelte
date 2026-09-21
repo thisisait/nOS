@@ -1,9 +1,8 @@
 <!--
   Books — consulting-firm accounting in face (queue, invoices, parties).
 
-  Tables stay SoT. This is a projection: approve/reject writes pending-invoice-verify
-  through the same BFF upsert TablesApp uses (HMAC table.upsert). Espo relationships
-  are a join key in Account.description (`nos:party:<slug>`), opened as a hub frame.
+  Tables stay the books fallback. CRM SoT is Dolibarr (role not yet in-tree).
+  Espo hub tiles remain only while a leftover container is still catalogued.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -28,7 +27,7 @@
 	let lines = $state<DataTable | null>(null);
 	let err = $state('');
 	let busy = $state('');
-	let espo = $state<HubApp | null>(null);
+	let crm = $state<HubApp | null>(null);
 	let bookOwner = $state('');
 
 	onMount(async () => {
@@ -46,7 +45,7 @@
 			journals = j;
 			parties = p;
 			lines = ln;
-			espo = hub.find((a) => a.slug === 'espocrm') ?? null;
+			crm = hub.find((a) => a.slug === 'dolibarr') ?? hub.find((a) => a.slug === 'espocrm') ?? null;
 		} catch (e) {
 			err = e instanceof Error ? e.message : 'could not load books';
 		}
@@ -75,10 +74,10 @@
 		}
 	}
 
-	function openEspo() {
-		if (!espo) return;
-		if (!focusApp(espo.slug)) {
-			openWindow({ app: espo.slug, title: espo.title, w: 720, h: 480, url: espo.url, embed: espo.embed });
+	function openCrm() {
+		if (!crm) return;
+		if (!focusApp(crm.slug)) {
+			openWindow({ app: crm.slug, title: crm.title, w: 720, h: 480, url: crm.url, embed: crm.embed });
 		}
 	}
 
@@ -228,10 +227,10 @@
 				<StatusNote kind="loading">Loading parties…</StatusNote>
 			{:else}
 				<p class="hint">
-					Espo Account.description carries <code>nos:party:&lt;slug&gt;</code>
-					after <code>tools/espo-party-sync.py --write</code>.
-					{#if espo}
-						<button type="button" onclick={openEspo}>Open EspoCRM</button>
+					KEAP <code>party</code> is the books fallback while Dolibarr
+					is the CRM SoT (opt-out: these tables only).
+					{#if crm}
+						<button type="button" onclick={openCrm}>Open CRM</button>
 					{/if}
 				</p>
 				<table>

@@ -47,7 +47,8 @@
          install_freescout | default(false) or
          install_freepbx | default(false) or
          install_bookstack | default(false) or
-         install_firefly | default(false) }}
+         install_firefly | default(false) or
+         install_dolibarr | default(false) }}
     install_postgresql: >-
       {{ install_postgresql | default(false) or
          install_authentik | default(false) or
@@ -198,6 +199,10 @@
         (install_firefly | default(false)) | ternary(
           [firefly_upload_dir | default(ansible_facts['env']['HOME'] + '/firefly/upload'),
            firefly_export_dir | default(ansible_facts['env']['HOME'] + '/firefly/export')], [])
+        +
+        (install_dolibarr | default(false)) | ternary(
+          [dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents'),
+           dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom')], [])
         +
         (install_hedgedoc | default(false)) | ternary(
           [hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads')], [])

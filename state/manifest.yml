@@ -730,6 +730,24 @@ services:
     oidc: proxy                             # REMOTE_USER guard via Authentik proxy outpost (nginx auth_request)
     rbac_tier: 2
 
+  - id: dolibarr
+    category: crm
+    stack: b2b
+    install_flag: install_dolibarr
+    version_var: dolibarr_version
+    version_source: docker_image
+    image: dolibarr/dolibarr
+    domain_var: dolibarr_domain
+    port_var: dolibarr_port
+    data_path_var: dolibarr_data_dir
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ dolibarr_port }}/"
+      expect_status: 200
+      timeout_sec: 15
+    oidc: proxy
+    rbac_tier: 2
+
   - id: onlyoffice
     category: collaboration
     stack: b2b

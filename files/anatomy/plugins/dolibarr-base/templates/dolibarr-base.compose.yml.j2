@@ -1,0 +1,9 @@
+{# Traefik file-provider owns the router. Docker provider must skip. #}
+services:
+  dolibarr:
+    labels:
+      - "traefik.enable=false"
+{% if install_authentik | default(false) %}
+    extra_hosts:
+      - "{{ authentik_domain }}:host-gateway"
+{% endif %}

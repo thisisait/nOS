@@ -78,6 +78,8 @@
       nodered: "{{ nodered_data_dir | default(ansible_facts['env']['HOME'] + '/nodered/data') }}"
       authentik: "{{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}"
       tenants: "{{ nos_data_root }}/tenants"
+      dolibarr-documents: "{{ dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents') }}"
+      dolibarr-custom: "{{ dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom') }}"
 
 - name: "[Restore] Prepare AWS environment block"
   ansible.builtin.set_fact:

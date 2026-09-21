@@ -79,7 +79,7 @@ def test_at_least_one_pilot_present():
     names = sorted(p.stem for p in PILOTS)
     # We expect at minimum twofauth + roundcube + documenso. Plane is
     # explicitly .draft until further notice.
-    expected_subset = {"twofauth", "roundcube", "documenso", "espocrm"}
+    expected_subset = {"twofauth", "roundcube", "documenso"}
     assert expected_subset.issubset(set(names)), (
         "expected at least {} live in apps/, found {}".format(
             sorted(expected_subset), names

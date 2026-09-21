@@ -1,6 +1,11 @@
 ---
 # ============================================================================
-# EspoCRM — FOSS CRM for the consulting-firm epic. Tier-2 manifest app.
+# RETIRED 2026-09-21 — CRM SoT moves to Dolibarr (role + dolibarr-base plugin).
+# apps_runner skips `*.draft`. Face/KEAP party+invoice tables remain the
+# fallback if a tenant refuses Dolibarr. Do not promote this file back to
+# apps/espocrm.yml without reversing that SoT decision.
+#
+# EspoCRM — historical Tier-2 manifest (OIDC + embedded MariaDB pattern).
 #
 # Survey + GO/NO-GO: /Users/pazny/.claude/jobs/0976b01f/tmp/SURVEY-foss-crm.md
 # Verdict: native OIDC is a CORE, free (AGPL-3.0) EspoCRM feature since v7.3

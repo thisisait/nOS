@@ -26,5 +26,6 @@ def test_the_praxis_profile_pins_the_consulting_firm_pack():
     prof = yaml.safe_load(PROFILE.read_text(encoding="utf-8")) or {}
     assert prof.get("install_firefly") is False
     assert prof.get("install_erpnext") is False
+    assert prof.get("install_dolibarr") is True
     assert prof.get("install_wordpress") is True
     assert prof.get("keap_seed_consulting_fixture") is True

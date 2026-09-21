@@ -16,6 +16,24 @@ def _load():
     return mod
 
 
+def test_join_slug_is_exact_not_a_prefix_of_a_longer_slug():
+    mod = _load()
+    rows = [
+        {"id": "short", "description": "nos:party:synthetic-client-alfa"},
+        {"id": "long", "description": "VAT\nnos:party:synthetic-client-alfa-customer"},
+    ]
+    idx = mod.index_accounts_by_slug(rows)
+    assert idx["synthetic-client-alfa"]["id"] == "short"
+    assert idx["synthetic-client-alfa-customer"]["id"] == "long"
+    assert mod.join_slug_from_description("notes\nnos:party:party-ico-1") == "party-ico-1"
+
+
+def test_skip_espo_party_when_ico_was_mashed_into_the_name():
+    mod = _load()
+    assert mod.skip_espo_party({"legal_name": "Alfa Řízení s.r.o. 25596641"})
+    assert not mod.skip_espo_party({"legal_name": "Bořivoj Hejsek", "tax_id": "87654321"})
+
+
 def test_join_tag_format_is_nos_party_slug():
     mod = _load()
     assert mod.MARKER == "nos:party:"
@@ -134,3 +152,9 @@ def test_upsert_account_posts_when_new():
     body = {"name": "New Co", "description": "nos:party:new", "type": "Partner"}
     assert mod.upsert_account("https://e", {}, body, []) == "post"
     assert calls == ["POST"]
+
+
+def test_keap_pulse_does_not_schedule_retired_espo_sync():
+    text = (REPO / "files/anatomy/plugins/keap-base/plugin.yml").read_text()
+    assert "keap-espo-party-sync" not in text
+    assert "espocrm:Account" not in text
