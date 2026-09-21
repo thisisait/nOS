@@ -14,6 +14,9 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.12
 > **backoffice** and ships the first **praxis** pack — Espo, KEAP tables,
 > ISDOC + vision intake, HMAC Books approve — as doors in the tree. This
 > checkout is not what the estate is serving; a git ref is not a converge.
+> **Extended 2026-09-21, same cut (still no tag):** the desk vendor pivots
+> Espo → Dolibarr, every external n8n pull lands under one lintable pack
+> contract, and four silent-green holes the doors had are closed.
 
 ### Backoffice is the organ; praxis is a pack
 
@@ -52,9 +55,76 @@ These are wired in the tree. They are not live proof that a photo became a booke
 - **Training** is `party.training_opt_in` default false. Art-7 capture is still
   unwired. No invoice train Pulse job.
 
+### Dolibarr is the desk; Espo is a tombstone (2026-09-21)
+
+- **`roles/pazny.dolibarr`** (b2b stack, official image, shared infra MariaDB —
+  not an embedded db) + `dolibarr-base` plugin. SSO is **forward_auth** until
+  OIDC is proven in `post.yml` — the FreeScout rule: no native claim without a
+  live consumer. KEAP party/invoice tables stay the books fallback when
+  `install_dolibarr` is off; agents read tables, never vendor REST.
+- **`DOLI_CRON=0` single-container fix** — `DOLI_CRON=1` turns the container
+  into a cron-only worker (upstream `docker-run.sh` runs `cron -f`, never
+  execs apache, and skips DB auto-install; measured on first live bring-up).
+  Upstream's shape is a second cron container; ours is Pulse.
+- **Hydrator is `digest-import-doli.py`** — Dolibarr thirdparties (IČO
+  required) → KEAP party / party-tax-identity through the digest gate,
+  reading the MariaDB schema directly. Bone is not a hydrator.
+- **EspoCRM retired.** `espocrm-retire-base` is an Authentik tombstone (no
+  container) held until the tofu destroy; its GDPR-map rows and apex ruling
+  row leave in the same commit as the plugin.
+- Operator docs land under `docs/systems/dolibarr/` (README, AGENTS, SKILLS).
+
+### n8n packs — one contract for every external pull (2026-09-21)
+
+- **`docs/doctrine/n8n-packs.md`** — one pack = one YAML + one graph JSON
+  under `files/anatomy/n8n/packs/` (ARES registry, ČNB FX ship first). n8n
+  owns the hops; Pulse is not the clock.
+- **`tools/n8n-pack.py`** is the whole contract in one tool: `lint` (CI gate),
+  `sync` (post.yml harvester — upsert graphs, inject the `nos-keap-rw`
+  credential; `active` and `meta` are read-only on the public API, so the
+  live join key is the rendered NAME and activation stays the operator's),
+  `watch` (Pulse **exec-watch** reader: staleness vs cron, UNKNOWN when n8n
+  is unreachable), and `encryption-key`.
+- **REM-202 closed at the root:** `N8N_ENCRYPTION_KEY` is adopt-or-mint
+  managed and rendered into compose.
+- `ares-verify-base` (the old webhook Pulse clock, `tools/n8n-fire.py`) is
+  **slated for deletion** once `exec-watch` is seen reporting live.
+
+### Vision bench and the one bridge (2026-09-21)
+
+- **`tools/gen-invoice-images.py`** renders JPEG intake matching the seeded
+  party spine; the **vision-bench loop** measures per-field extraction
+  accuracy against it (planted ISDOC-vs-image mismatch as positive control).
+- **`tools/run-agent.sh` is the sole CLI bridge** to the deployed agent
+  runtime — a terminal inherits none of the daemon's launchd env.
+- Accounting: `nos_accounting.reconcile_invoice` breaks the derive-entry
+  tautology per invoice; `derive_bundle_parts` routes a bad doc aside
+  instead of poisoning the bundle.
+
+### Silent greens closed (2026-09-21)
+
+- **n8n owner setup** — `post.yml` now POSTs `/rest/owner/setup` (the
+  `/api/v1/owner*` spellings were 404 with `failed_when: false` swallowing
+  it: the owner was NEVER created while converge stayed green) and ends in a
+  loud assert fed by reader statuses.
+- **`judges.py` interpreter probe** runs with the SANDBOX cwd — a pyenv shim
+  answers `--version` per the cwd's `.python-version`, so the probe had
+  recorded an interpreter the gate never ran; the cache key carries the cwd.
+- **cc-selftest tmux isolation** — `$TMUX` defeats `TMUX_TMPDIR`: run from
+  inside tmux and the selftest reached the operator's live server. The suite
+  now strips `TMUX`/`TMUX_PANE`.
+- **Apex:** the new nodes are ruled **withheld** (espocrm residual client,
+  ares-verify clocks, exec-watch, `table:party-registry-status`), and the
+  declared n8n→KEAP edge adds one public vein (**14 → 15**), pinned in
+  `test_apex_public_projection.py`.
+
 ### Still open (named, not restated as done)
 
 - **photo→booked** is not proven live. Repo ≠ running system.
+- **Dolibarr OIDC is not proven** — forward_auth stands until `post.yml`
+  has a live consumer; `service:dolibarr` publishes nothing.
+- **`exec-watch` has not been seen reporting live**; `ares-verify-base`
+  and `n8n-fire.py` are still in the tree, by the deletion-ordering rule.
 - **UC10** (fraud / ISDOC-vs-vision crosscheck walkthrough) is blocked.
 - **UC13** (from-blank rebuild) is unrun.
 - **REM-249** stays operator-gated (RustFS key rotation breaks S3 clients

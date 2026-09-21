@@ -384,22 +384,26 @@ def upsert_workflow(
         if meta.get("id") == pack["id"] or wf.get("name") == rendered.get("name"):
             match = wf
             break
+    # `active` AND `meta` are READ-ONLY on the public API (400 "request/body/
+    # <field> is read-only", both measured 2026-09-21). A created workflow is
+    # inactive by default and an update never touches activation — exactly the
+    # contract (activation is the operator's; content is git's). meta being
+    # unwritable means LIVE workflows never carry meta.nos.id: the live join
+    # key is the RENDERED NAME (deterministic, git-owned, overwritten on every
+    # sync); meta.nos.id stays the GIT-side contract key the lint gate pins.
     body = {
         "name": rendered["name"],
         "nodes": rendered["nodes"],
         "connections": rendered["connections"],
         "settings": rendered.get("settings") or {},
         "staticData": rendered.get("staticData"),
-        "meta": rendered.get("meta") or {},
     }
     if match:
         wid = match["id"]
-        body["active"] = bool(match.get("active"))
         status, payload = api("PUT", base, f"/api/v1/workflows/{wid}", api_key, body)
         if status not in (200, 201):
             raise SystemExit(f"n8n PUT workflow failed: {status} {payload}")
         return
-    body["active"] = False
     status, payload = api("POST", base, "/api/v1/workflows", api_key, body)
     if status not in (200, 201):
         raise SystemExit(f"n8n POST workflow failed: {status} {payload}")
@@ -461,11 +465,16 @@ def cmd_watch(args: argparse.Namespace) -> int:
         print(f"UNKNOWN: n8n unreachable ({status})", file=sys.stderr)
         return 1
     workflows = unwrap(payload) or []
+    # The live join key is the rendered NAME — the public API refuses to write
+    # `meta` (read-only, measured 2026-09-21), so a synced workflow never
+    # carries meta.nos.id. The meta check stays first for any workflow that
+    # gained it another way (UI import of the git template).
+    by_name = {load_workflow(p)["name"]: pid for pid, p in packs.items()}
     findings: list[str] = []
     now = datetime.now(timezone.utc)
     for wf in workflows:
         meta = (wf.get("meta") or {}).get("nos") or {}
-        pid = meta.get("id")
+        pid = meta.get("id") or by_name.get(wf.get("name"))
         if pid not in packs:
             continue
         if not wf.get("active"):

@@ -1,7 +1,13 @@
 ---
 # ==============================================================================
 # pazny.n8n/tasks/post.yml — auto-register owner user
-# Since v1.0, n8n uses /api/v1/owner/setup for the first account (owner = admin).
+# Owner setup is POST /rest/owner/setup (internal REST). The /api/v1/owner*
+# spellings this file used until 2026-09-21 have been 404 on every modern n8n
+# — and `failed_when: false` swallowed it, so the owner was NEVER created
+# (measured: user row with empty email, isInstanceOwnerSetUp=false) while the
+# converge stayed green. The check is now an attempted LOGIN (a reader that
+# proves the credential), and the file ends in an assert: one of the three
+# legs must land or the task fails loudly.
 # Called from tasks/stacks/stack-up.yml AFTER `docker compose -p iiab up`.
 #
 # Reconverge leg for state-declarative idempotence: session-based password
@@ -22,37 +28,10 @@
     wait_delay: 10
     wait_hard_fail: false
 
-- name: "[pazny.n8n Post] Check if owner already exists"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/api/v1/owner"
-    method: GET
-    timeout: 10
-    status_code: [200, 401, 403, 404]
-  register: _n8n_owner_check
-  failed_when: false
-  when: _n8n_ready.status | default(0) == 200
-
-- name: "[pazny.n8n Post] Setup owner account (first-run only)"
-  ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/api/v1/owner/setup"
-    method: POST
-    body_format: json
-    body:
-      email: "{{ n8n_admin_email | default(default_admin_email) }}"
-      password: "{{ n8n_admin_password | default(nos_derived_secrets.n8n) }}"
-      firstName: "{{ n8n_admin_firstname | default('Admin') }}"
-      lastName: "{{ n8n_admin_lastname | default('nOS') }}"
-    status_code: [200, 201]
-    timeout: 10
-  register: _n8n_setup
-  when:
-    - _n8n_ready.status | default(0) == 200
-    - _n8n_owner_check.status | default(0) != 200
-  changed_when: _n8n_setup.status | default(0) in [200, 201]
-  failed_when: false
-  no_log: true
-
-# ── Admin password reconverge (state-declarative UPDATE) ──────────────
+# The converged check IS a login: the only reader that proves the credential
+# works (an owner-exists flag says nothing about WHICH password the owner has,
+# and /rest/settings' showSetupOnFirstLoad reads false even pre-setup —
+# measured 2026-09-21).
 - name: "[pazny.n8n Post] Login with current password (converged check)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/rest/login"
@@ -64,11 +43,30 @@
     status_code: [200, 401]
     timeout: 10
   register: _n8n_login_new
+  when: _n8n_ready.status | default(0) == 200
+  changed_when: false
+  no_log: true
+
+# 400 = "instance owner already setup" (some OTHER credential logs in) — the
+# previous-password reconverge leg below is the handler. Any other non-200 is
+# a real transport/validation failure and fails HERE, not three tasks later.
+- name: "[pazny.n8n Post] Setup owner account (first-run only)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ n8n_port | default(5678) }}/rest/owner/setup"
+    method: POST
+    body_format: json
+    body:
+      email: "{{ n8n_admin_email | default(default_admin_email) }}"
+      password: "{{ n8n_admin_password | default(nos_derived_secrets.n8n) }}"
+      firstName: "{{ n8n_admin_firstname | default('Admin') }}"
+      lastName: "{{ n8n_admin_lastname | default('nOS') }}"
+    status_code: [200, 400]
+    timeout: 10
+  register: _n8n_setup
   when:
     - _n8n_ready.status | default(0) == 200
-    - _n8n_owner_check.status | default(0) == 200
-  changed_when: false
-  failed_when: false
+    - _n8n_login_new.status | default(0) == 401
+  changed_when: _n8n_setup.status | default(0) == 200
   no_log: true
 
 - name: "[pazny.n8n Post] Login with previous password (for reconverge)"
@@ -85,6 +83,7 @@
   when:
     - _n8n_ready.status | default(0) == 200
     - _n8n_login_new.status | default(0) != 200
+    - _n8n_setup.status | default(0) != 200
   changed_when: false
   failed_when: false
   no_log: true
@@ -107,6 +106,24 @@
   changed_when: _n8n_pw_reset.status | default(0) in [200, 204]
   failed_when: false
   no_log: true
+
+# Success is asserted by a READER (the login/setup/reset statuses), never
+# implied by attempting code — the pre-2026-09-21 file was the textbook
+# self-reporting shape and hid a never-created owner for months.
+- name: "[pazny.n8n Post] Owner credential must land (no silent green)"
+  ansible.builtin.assert:
+    that:
+      - >-
+        _n8n_login_new.status | default(0) == 200
+        or _n8n_setup.status | default(0) == 200
+        or _n8n_pw_reset.status | default(0) in [200, 204]
+    fail_msg: >-
+      n8n owner is unreachable by every leg: current-password login,
+      /rest/owner/setup, and the previous-prefix password reset all failed.
+      The owner exists with a credential this playbook does not derive —
+      inspect `sqlite3 database.sqlite 'SELECT email FROM user'` in the n8n
+      volume and reconcile manually (or blank n8n data).
+  when: _n8n_ready.status | default(0) == 200
 
 - name: "[pazny.n8n Post] Sync n8n packs (inactive; inject KEAP cred)"
   ansible.builtin.command:
