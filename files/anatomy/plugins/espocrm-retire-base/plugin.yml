@@ -1,0 +1,57 @@
+# =============================================================================
+# espocrm-retire-base — Authentik tombstone, not a CRM.
+#
+# Espo is retired (apps/espocrm.yml.draft). Live OpenTofu state still holds
+# module.service["espocrm"] until a converge DESTROYS it. The destroy guard
+# only authorises that when the registry still lists slug `espocrm` with
+# enabled resolving off. `.draft` is skipped by the tofu harvest, so this
+# composition plugin is the declaration: install_espocrm: false, no compose.
+# After the SSO objects are gone, this file can leave with the flag.
+# =============================================================================
+
+name: espocrm-retire-base
+version: 0.1.0
+description: |
+  Tombstone Authentik client for retired EspoCRM so OpenTofu may destroy
+  leftover provider+application. No container. Agents must not call Espo.
+license: MIT
+
+type:
+  - composition
+
+requires:
+  variables:
+    - tenant_domain
+
+authentik:
+  mode: native_oidc
+  client_id: nos-espocrm
+  client_secret: "{{ nos_derived_secrets.oidc_espocrm }}"
+  slug: espocrm
+  name: 'EspoCRM'
+  enabled: "{{ install_espocrm | default(false) }}"
+  redirect_uris:
+    - "https://espocrm.apps.{{ tenant_domain | default('dev.local') }}/oauth-callback.php"
+  launch_url: "https://espocrm.apps.{{ tenant_domain | default('dev.local') }}"
+  tier: 2
+
+notification:
+  on_critical: [wing-inbox]
+  on_high:     [wing-inbox]
+  on_medium:   []
+  on_low:      []
+  on_info:     []
+
+gdpr:
+  purpose: |
+    Residual Authentik OAuth2 client for a retired CRM desk, held only until
+    OpenTofu destroys the live objects. This plugin stores no CRM rows.
+  legal_basis: contract
+  data_categories:
+    - name
+  data_subjects:
+    - operators
+  retention_days: 0
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false

@@ -1,10 +1,8 @@
 """Anatomy gate — EspoCRM is retired as CRM SoT; leftover wiring stays gated.
 
-The live Authentik harvest must NOT include slug espocrm (manifest is
-apps/espocrm.yml.draft). The apps_runner OIDC PUT remains, no-op unless
-an espocrm app entry is rendered. Draft file still parses and still
-matches the post-hook client_id so the historical contract cannot drift
-if someone accidentally promotes the draft.
+The live harvest keeps slug espocrm via espocrm-retire-base (enabled off) so
+OpenTofu can destroy leftover Authentik objects. apps/espocrm.yml.draft still
+parses. The apps_runner OIDC PUT is a no-op unless an espocrm app is rendered.
 """
 
 from __future__ import annotations
@@ -90,8 +88,9 @@ def test_espocrm_registered_in_secret_registry():
     assert 'service: "espocrm"' in text.split("oidc_espocrm:", 1)[1].split("\n", 1)[0]
 
 
-def test_espocrm_is_not_harvested_by_the_authentik_aggregator():
-    """Draft manifests are skipped; live harvest must not keep provisioning Espo."""
+def test_espocrm_tombstone_is_harvested_disabled():
+    """Draft is skipped; espocrm-retire-base must still list slug espocrm with
+    enabled off so the tofu destroy guard can attribute leftover state."""
     import load_plugins as lp
     importlib.reload(lp)
 
@@ -107,16 +106,20 @@ def test_espocrm_is_not_harvested_by_the_authentik_aggregator():
     fake_vars = {
         "nos_derived_secrets": {"oidc_espocrm": "FAKE-SECRET-FOR-TEST"},
         "tenant_domain": "test.local",
+        "install_espocrm": False,
     }
     lp.run_aggregators(plugins, app_manifests=apps, template_vars=fake_vars)
 
     authentik_plugin = next(p for p in plugins if p.name == "authentik-base")
     clients = authentik_plugin.inputs.get("clients") or []
     espocrm_clients = [c for c in clients if c.get("slug") == "espocrm"]
-    assert not espocrm_clients, (
-        "espocrm is retired (apps/espocrm.yml.draft) but still harvested into "
-        "authentik-base inputs.clients"
+    assert len(espocrm_clients) == 1, (
+        "retired Espo must stay in the Authentik harvest as a disabled "
+        "tombstone (espocrm-retire-base); dropping the slug makes tofu "
+        "destroy un-authored"
     )
+    enabled = espocrm_clients[0].get("enabled")
+    assert enabled in (False, "False", "false", 0, "0"), enabled
 
 
 def _find_task(tasks: list, name: str) -> dict:

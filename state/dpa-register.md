@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 105 (80 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (9), legal_obligation (1), legitimate_interests (95)
+- **Processing activities:** 106 (81 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (10), legal_obligation (1), legitimate_interests (95)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 17
 
@@ -1378,6 +1378,18 @@ Stores nothing itself; retention is the party spine / imp_doli-party.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Espocrm Retire — `svc_espocrm-retire`
+- **Purpose:** Residual Authentik OAuth2 client for a retired CRM desk, held only until
+OpenTofu destroys the live objects. This plugin stores no CRM rows.
+- **Legal basis (Art. 6):** `contract`
+- **Data subjects:** `operators`
+- **Data categories:** `name`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
