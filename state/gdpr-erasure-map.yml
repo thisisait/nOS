@@ -58,6 +58,14 @@ services:
     note: "wp user delete <subject> --reassign=0 --yes"
 
   # ── Manual (documented step printed in the plan; not auto-run) ───────────
+  - id: svc_espocrm-retire
+    flag: always
+    method: manual
+    note: "Residual Authentik OAuth2 client for the retired EspoCRM desk; the
+           plugin stores no per-subject rows. Erasure is fully satisfied by the
+           svc_authentik delete above; drop this entry when OpenTofu destroys
+           the client and the plugin leaves the tree."
+
   - id: svc_nextcloud
     flag: install_nextcloud
     method: manual

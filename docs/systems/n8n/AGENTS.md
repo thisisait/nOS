@@ -11,9 +11,9 @@ agent credential for it.
 
 - API base: `https://{n8n_domain}/api/v1/`, or `http://127.0.0.1:5678/api/v1/` from the
   host (loopback publish — peer containers cannot reach it).
-- **Auth: `X-N8N-API-KEY`, human-minted in the n8n UI (Settings → n8n API).** There is no
-  `openclaw-bot` account and no `~/agents/tokens/n8n.token` — neither exists anywhere in
-  the repo; both were template fictions this doc previously repeated.
+- **Auth: `X-N8N-API-KEY`, playbook-minted into `~/.nos/secrets.yml` as
+  `n8n_api_key`.** post.yml logs in once to mint it; Pulse `n8n-base:exec-watch`
+  and pack sync use that key. Do not invent `~/agents/tokens/n8n.token`.
 - Filesystem-only state in `/home/node/.n8n` ← `~/n8n` on the host (`database.sqlite`,
   workflow definitions, encrypted credentials) — no external DB.
 - Human access is `native_oidc` (Authentik OAuth2 client `nos-n8n`), RBAC tier 2, with a
@@ -27,9 +27,9 @@ agent credential for it.
 
 ### Capabilities
 
-- None wired for agents. **nOS provisions no n8n API key and no service account.** The
-  public REST API exists upstream but its key must be minted by a human in the n8n UI
-  (Settings → n8n API); nothing in the repo creates, stores, or references one.
+- None wired for agents besides pack sync. **nOS mints `n8n_api_key` into
+  `~/.nos/secrets.yml`.** Pack graphs stay `active: false` until the operator
+  clicks Activate.
 - The only playbook-managed credential is the OWNER account
   (`{{ n8n_admin_email }}` / `{global_password_prefix}_pw_n8n`), created by
   `roles/pazny.n8n/tasks/post.yml`. It is an operator credential, not an agent identity.

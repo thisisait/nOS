@@ -30,7 +30,11 @@ services:
 {% if (n8n_ssrf_blocked_ip_ranges | default('default')) != 'default' %}
       N8N_SSRF_BLOCKED_IP_RANGES: "{{ n8n_ssrf_blocked_ip_ranges }}"
 {% endif %}
-{% if (n8n_ssrf_allowed_hostnames | default('')) | length > 0 %}
+{% if install_keap | default(false) | bool %}
+      # Pack KEAP writes hit https://{{ keap_domain }}/agent/v1 (public name,
+      # often 127.0.0.1 via extra_hosts). Defaults stay empty; this is the pack path.
+      N8N_SSRF_ALLOWED_HOSTNAMES: "{{ keap_domain }}{{ (',' ~ n8n_ssrf_allowed_hostnames) if (n8n_ssrf_allowed_hostnames | default('')) | length > 0 else '' }}"
+{% elif (n8n_ssrf_allowed_hostnames | default('')) | length > 0 %}
       N8N_SSRF_ALLOWED_HOSTNAMES: "{{ n8n_ssrf_allowed_hostnames }}"
 {% endif %}
 {% if (n8n_ssrf_allowed_ip_ranges | default('')) | length > 0 %}
@@ -49,6 +53,13 @@ services:
       N8N_AUTH_OIDC_CLIENT_SECRET: "{{ nos_derived_secrets.oidc_n8n }}"
       N8N_AUTH_OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/n8n/"
       N8N_AUTH_OIDC_ALLOWED_GROUPS: ""
+{% endif %}
+{% if install_authentik | default(false) or (install_keap | default(false) | bool) %}
     extra_hosts:
+{% if install_authentik | default(false) %}
       - "{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}:host-gateway"
+{% endif %}
+{% if install_keap | default(false) | bool %}
+      - "{{ keap_domain }}:host-gateway"
+{% endif %}
 {% endif %}

@@ -27,6 +27,7 @@ Do not curl Dolibarr, Espo, or Firefly. Do not invent a second party table.
 | Dolibarr | CRM desk (when `install_dolibarr`) | humans in the browser, Authentik gate |
 | `party` / `invoice` / `posting` | governed facts | digest absorb |
 | `digest-import-doli.py` | hydrator organelle | Pulse `crm-hydrate:hydrate-parties` |
+| ARES / nespolehlivý plátce | n8n workflow | Pulse `ares-verify` POSTs webhook; n8n hops; not a Python hydrator |
 | Face Books | projection + HMAC verify | not a store |
 | KEAP explore | optional embed of party rows (`graph.mode: rows` on the table; hide iframe via `face_keap_explore_url: ""`) | not a second SoT |
 

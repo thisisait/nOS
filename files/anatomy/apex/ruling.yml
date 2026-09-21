@@ -52,7 +52,7 @@ artifact: state/anatomy-graph.json
 # file as AMENDED AFTER SIGNING and asks for a fresh signature. To re-sign:
 #   python3 tools/apex-sign.py            # prints the diff since the last sign
 #   python3 tools/apex-sign.py --confirm  # writes the new digest
-signed_digest: d98d5144afe03c4981ce8c045ae3572b58368ccc45b386546a5242605aa14fe6
+signed_digest: a964a227e18d050e620c8db63e3d4c63946b91f4cbd66eeff03e87fd1f5df712
 
 
 # The declared split. The gate recounts the table below and refuses to run
@@ -383,6 +383,10 @@ nodes:
   "authentik:documenso": withheld
   "authentik:dolibarr": withheld
   "authentik:erpnext": withheld
+  # Residual OAuth2 client of the RETIRED EspoCRM desk (espocrm-retire-base),
+  # held only until OpenTofu destroys it. WITHHELD like every authentik:* node;
+  # remove this row in the commit that drops the retire plugin (D4 shrink).
+  "authentik:espocrm": withheld
   "authentik:face": withheld
   "authentik:firefly": withheld
   "authentik:freescout": withheld
@@ -574,6 +578,12 @@ nodes:
 
   # --- withheld: scheduled jobs (when the house is busy stays home, D3) ------
   "pulse:alert-relay:relay-firing": withheld
+  # ARES registry clock (ares-verify-base) — WITHHELD like every pulse:* node
+  # (D3). SLATED FOR DELETION with the plugin once `pulse:n8n:exec-watch` is
+  # seen reporting live (docs/doctrine/n8n-packs.md §7); remove these two rows
+  # in the same commit so the D4 vanish-halt is a conscious shrink.
+  "pulse:ares-verify:registry-daily": withheld
+  "pulse:ares-verify:registry-new": withheld
   "pulse:authentik-tofu-drift:tofu-drift-plan": withheld
   "pulse:backup:backup-restore-drill": withheld
   "pulse:conductor:scan-state-record": withheld
@@ -614,6 +624,10 @@ nodes:
   "pulse:librarian:brief-taxonomy": withheld
   "pulse:librarian:describe-taxonomy": withheld
   "pulse:librarian:judge-lint-queue": withheld
+  # n8n pack watcher (n8n-base) — the Pulse READER over every n8n pack's
+  # executions (docs/doctrine/n8n-packs.md §4). WITHHELD like every pulse:*
+  # node (D3); it publishes nothing and the frozen set is untouched.
+  "pulse:n8n:exec-watch": withheld
   "pulse:npm-supply-chain:daily-ioc-scan": withheld
   # A20, added 2026-08-17 AFTER the signature. WITHHELD, and that is why no
   # re-signature is needed: D4 freezes the PUBLISHED set, and this publishes
@@ -693,6 +707,10 @@ nodes:
   "table:invoice": withheld
   "table:invoice-line": withheld
   "table:book-access": withheld
+  # ARES / nespolehlivý-plátce registry status per party (n8n ARES pack fills
+  # it). WITHHELD like every table node — whose counterparties the estate
+  # watches is the firm's business, never the public front door.
+  "table:party-registry-status": withheld
   # D5 review sinks for the invoice-extract pipeline (pending-invoice-verify,
   # invoice-review). WITHHELD like every table node — a client firm's invoice
   # data and review queue are theirs, never the public front door.

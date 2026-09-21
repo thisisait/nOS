@@ -72,6 +72,7 @@ Firefly and ERPNext off. KEAP tables stay the books fallback.
 | invoice-vision Pulse | photo/PDF | `pending-invoice-verify` |
 | HMAC `invoice-verify` / Books approve | held row | absorb books it |
 | `digest-import-doli` (Pulse `crm-hydrate:hydrate-parties`) | open thirdparties with IČO | KEAP `party` projection |
+| n8n ARES/ADIS (Pulse `ares-verify:registry-*`) | IČO on the spine | `party-registry-status` (exists + nespolehlivý plátce) |
 | n8n ČNB / DTT | after approve | export, never a second SoT |
 
 A release that ships Books without absorb, or Dolibarr as a second
@@ -85,6 +86,7 @@ The desk container is replaceable FOSS. The pack is the tendons:
 | organelle | organ | artifact |
 |---|---|---|
 | hydrator | Digest + Pulse | `crm-hydrate-base`, `tools/digest-import-doli.py`, `imp_doli-party` |
+| registry check | Pulse + n8n (reflexes) | `ares-verify-base` → webhook `nos-ares-registry` → ARES + ADIS → `party-registry-status` |
 | party spine | Cortex / KEAP | `state/keap-tables/party.table.yml` (`graph.mode: rows`) |
 | agent procedure | nos-lang / skills | `files/anatomy/skills/nos-backoffice/SKILL.md` |
 | HMAC events | Bone | digest absorb already posts through the KEAP agent door |

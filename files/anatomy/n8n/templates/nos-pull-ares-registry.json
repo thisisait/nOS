@@ -1,0 +1,163 @@
+{
+  "name": "nOS PULL · ARES+ADIS → party-registry-status",
+  "meta": {
+    "templateCredsSetupRequired": false,
+    "nos": {
+      "id": "nos-pull-ares-registry",
+      "direction": "pull",
+      "table": "party-registry-status",
+      "clock": "n8n-schedule"
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "timezone": "Europe/Prague" },
+  "pinData": {},
+  "nodes": [
+    {
+      "id": "nos-pack-note",
+      "name": "nOS note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -220],
+      "parameters": {
+        "content": "Pack graph (meta.nos.id). Content is git and reverts on nos. Activate is yours. A variant belongs in a copy without meta.nos.id. Webhook nos-ares-registry remains for on-create until Pulse fire is retired.",
+        "height": 160,
+        "width": 340
+      }
+    },
+    {
+      "id": "nos-ares-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "nos-ares-registry",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nos-ares-registry",
+        "responseMode": "lastNode"
+      }
+    },
+    {
+      "id": "nos-ares-schedule",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 200],
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "10 5 * * *" }] }
+      }
+    },
+    {
+      "id": "nos-ares-tax",
+      "name": "Fetch IČOs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.keapBase }}/agent/v1/tables/party-tax-identity/rows",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      }
+    },
+    {
+      "id": "nos-ares-have",
+      "name": "Fetch status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 0],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.keapBase }}/agent/v1/tables/party-registry-status/rows",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      }
+    },
+    {
+      "id": "nos-ares-select",
+      "name": "Select IČOs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 0],
+      "parameters": {
+        "jsCode": "let hook = { body: { scope: 'all' } };\ntry { hook = $('Webhook').first().json || hook; } catch (e) {}\nconst scope = (hook.body && hook.body.scope) || hook.scope || 'all';\nconst want = String((hook.body && hook.body.ico) || hook.ico || '').replace(/\\D/g,'').padStart(8,'0');\nconst taxBody = $('Fetch IČOs').first().json;\nconst haveBody = $('Fetch status').first().json;\nconst tax = (taxBody.data && taxBody.data.rows) || taxBody.rows || [];\nconst have = new Set(((haveBody.data && haveBody.data.rows) || haveBody.rows || []).map(r => String(r.ico || '').padStart(8,'0')));\nconst out = [];\nfor (const t of tax) {\n  if (String(t.scheme || '').toUpperCase() !== 'ICO') continue;\n  const ico = String(t.value || '').replace(/\\D/g,'').padStart(8,'0');\n  if (!/^\\d{8}$/.test(ico) || ico === '00000000') continue;\n  if (!t.party) continue;\n  if (scope === 'ico' && ico !== want) continue;\n  if (scope === 'missing' && have.has(ico)) continue;\n  out.push({ json: { ico, party: t.party } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "nos-ares-get",
+      "name": "Fetch ARES",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 0],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/{{ $json.ico }}",
+        "options": {
+          "response": { "response": { "responseFormat": "json" } }
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "nos-ares-adis",
+      "name": "Fetch ADIS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "https://adisrws.mfcr.cz/dpr/axis2/services/rozhraniCRPDPH.rozhraniCRPDPHSOAP",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Content-Type", "value": "text/xml; charset=utf-8" }]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/xml; charset=utf-8",
+        "body": "=<?xml version=\"1.0\" encoding=\"utf-8\"?><soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Body><getStatusNespolehlivySubjektRozsireny xmlns=\"http://adis.mfcr.cz/rozhraniCRPDPH/\"><dic>{{ ($json.dic || $json.data && $json.data.dic || '').toString().replace(/^CZ/i,'').replace(/\\D/g,'') }}</dic></getStatusNespolehlivySubjektRozsireny></soapenv:Body></soapenv:Envelope>",
+        "options": { "response": { "response": { "responseFormat": "text" } } }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "nos-ares-format",
+      "name": "Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 0],
+      "parameters": {
+        "jsCode": "const sel = $('Select IČOs').item.json;\nconst ares = $('Fetch ARES').item.json || {};\nconst adisRaw = String(($('Fetch ADIS').item.json && ($('Fetch ADIS').item.json.data || $('Fetch ADIS').item.json)) || '');\nconst found = !!(ares.obchodniJmeno || ares.dic || (ares.data && (ares.data.obchodniJmeno || ares.data.dic)));\nconst src = ares.data && (ares.data.obchodniJmeno || ares.data.dic) ? ares.data : ares;\nlet vat = 'not_payer';\nif (found && src.dic) {\n  const m = adisRaw.toUpperCase().match(/STATUS=\"(ANO|NE)\"/) || adisRaw.toUpperCase().match(/>(ANO|NE)</);\n  vat = (m && m[1] === 'ANO') ? 'unreliable' : (m && m[1] === 'NE') ? 'reliable' : 'unknown';\n}\nconst day = new Date(); day.setUTCHours(0,0,0,0);\nconst row = { slug: 'reg-ico-' + sel.ico, party: sel.party, ico: sel.ico, ares_found: found, vat_reliability: found ? vat : 'not_payer', checked_at: Math.floor(day.getTime()/1000) };\nif (found && src.obchodniJmeno) row.legal_name_ares = src.obchodniJmeno;\nif (found && src.dic) row.dic = src.dic;\nreturn [{ json: row }];"
+      }
+    },
+    {
+      "id": "nos-ares-upsert",
+      "name": "Upsert DTT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1680, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.keapBase }}/agent/v1/tables/party-registry-status/rows",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Fetch IČOs", "type": "main", "index": 0 }]] },
+    "Schedule": { "main": [[{ "node": "Fetch IČOs", "type": "main", "index": 0 }]] },
+    "Fetch IČOs": { "main": [[{ "node": "Fetch status", "type": "main", "index": 0 }]] },
+    "Fetch status": { "main": [[{ "node": "Select IČOs", "type": "main", "index": 0 }]] },
+    "Select IČOs": { "main": [[{ "node": "Fetch ARES", "type": "main", "index": 0 }]] },
+    "Fetch ARES": { "main": [[{ "node": "Fetch ADIS", "type": "main", "index": 0 }]] },
+    "Fetch ADIS": { "main": [[{ "node": "Format", "type": "main", "index": 0 }]] },
+    "Format": { "main": [[{ "node": "Upsert DTT", "type": "main", "index": 0 }]] }
+  }
+}

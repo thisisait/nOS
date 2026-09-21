@@ -43,6 +43,7 @@ ORDER = [
     "journal-entry",
     "posting",
     "pending-invoice-verify",
+    "party-registry-status",
     "book-access",
 ]
 

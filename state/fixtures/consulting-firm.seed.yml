@@ -190,5 +190,8 @@ posting:
 # Schema only — rows are live HMAC/Books decisions, never git-seeded.
 pending-invoice-verify: []
 
+# Schema only — rows come from Pulse→n8n ARES/ADIS, never git-seeded.
+party-registry-status: []
+
 # Empty = Model C (every manager sees every book). First live assignment locks it.
 book-access: []

@@ -756,15 +756,19 @@ def _executable_present(
 
 
 #: `<resolved> --version` is stable for a given binary within a process
-#: lifetime, and ansible-lint's answer takes seconds — cache it. CEILING,
-#: stated: a pyenv SHIM's version can depend on env/cwd, so the cache key is
-#: the resolved path only; two judge envs resolving to the SAME shim would
-#: share one probe. Today's filter changes WHICH path resolves, not what a
-#: fixed path answers, so the key is honest for every measured case.
-_VERSION_CACHE: dict[str, str | None] = {}
+#: lifetime, and ansible-lint's answer takes seconds — cache it. The CEILING
+#: this comment used to state ("a pyenv SHIM's version can depend on env/cwd,
+#: key is the resolved path only") was reached 2026-09-21: the pyenv global
+#: moved off the repo pin and the probe — which inherited the CALLER's cwd —
+#: recorded 3.13.15 for a gate that actually ran 3.13.13 inside the sandbox
+#: (its .python-version governs the shim there). The probe now runs in the
+#: same cwd the gate will, and the cache key carries that cwd.
+_VERSION_CACHE: dict[tuple[str, str], str | None] = {}
 
 
-def probe_interpreter(resolved: str, env: Mapping[str, str]) -> str | None:
+def probe_interpreter(
+    resolved: str, env: Mapping[str, str], cwd: str | None = None
+) -> str | None:
     """What `<resolved> --version` says, probed from a REAL subprocess.
 
     A4's defect: `identity()` recorded the LITERAL argv ("python3"), so the
@@ -774,9 +778,16 @@ def probe_interpreter(resolved: str, env: Mapping[str, str]) -> str | None:
     probe is evidence read out of a subprocess, never a caller's claim
     (constraint B); a tool that does not speak `--version` records None,
     honestly, rather than a guess.
+
+    `cwd` must be the directory the gate itself will run in (the sandbox): a
+    pyenv shim answers `--version` per the cwd's `.python-version`, so probing
+    from anywhere else records an interpreter the gate never ran (measured
+    2026-09-21 — in-process vs subprocess harness disagreed by exactly the
+    pyenv-global-vs-repo-pin delta).
     """
-    if resolved in _VERSION_CACHE:
-        return _VERSION_CACHE[resolved]
+    key = (resolved, cwd or "")
+    if key in _VERSION_CACHE:
+        return _VERSION_CACHE[key]
     try:
         proc = subprocess.run(  # noqa: S603 — resolved from committed argv
             [resolved, "--version"],
@@ -785,6 +796,7 @@ def probe_interpreter(resolved: str, env: Mapping[str, str]) -> str | None:
             timeout=60,
             check=False,
             env=dict(env),
+            cwd=cwd,
         )
         lines = [
             ln.strip()
@@ -794,7 +806,7 @@ def probe_interpreter(resolved: str, env: Mapping[str, str]) -> str | None:
         value = lines[0] if proc.returncode == 0 and lines else None
     except (OSError, subprocess.SubprocessError):
         value = None
-    _VERSION_CACHE[resolved] = value
+    _VERSION_CACHE[key] = value
     return value
 
 
@@ -1348,8 +1360,12 @@ def _run_one(
         return _skipped(spec, gate_set, f"{why} — not run")
 
     # Evidence about WHAT will run, measured before it runs (A4). The probe is
-    # a real subprocess of the resolved binary, never a caller's claim.
-    interpreter = probe_interpreter(resolved, env) if resolved else None
+    # a real subprocess of the resolved binary, never a caller's claim — and it
+    # runs in the SANDBOX cwd, the same cwd the gate gets, so a pyenv shim
+    # answers for the tree under judgment, not for whoever asked.
+    interpreter = (
+        probe_interpreter(resolved, env, cwd=str(sandbox)) if resolved else None
+    )
 
     # ── Exclusive resource (M7) ─────────────────────────────────────────────
     if spec.exclusive_resource:

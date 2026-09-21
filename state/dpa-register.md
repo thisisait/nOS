@@ -20,10 +20,10 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 106 (81 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (10), legal_obligation (1), legitimate_interests (95)
+- **Processing activities:** 107 (82 core services, 4 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (10), legal_obligation (1), legitimate_interests (96)
 - **Transfers outside the EU:** 12 activities
-- **Activities engaging a third-party processor:** 17
+- **Activities engaging a third-party processor:** 18
 
 ## Transfers & processors (audit-sensitive subset)
 
@@ -45,6 +45,7 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 | surveyor (`agent_surveyor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 | upgrade-architect (`agent_upgrade-architect`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
 | repos (`imp_repos`) | **Yes** | `The configured git hosting provider (e.g. self-hosted Gitea, or GitHub/GitLab.com)` |
+| Ares Verify (`svc_ares-verify`) | No | `Ministerstvo financí ČR (ARES)`; `Generální finanční ředitelství (ADIS)` |
 | Loop (`svc_loop`) | **Yes** | `Anthropic (US) — claude CLI backend, authoring proposals when the propose job runs` |
 
 ## Security measures (Art. 32 — platform baseline)
@@ -1343,6 +1344,19 @@ container logs for security monitoring of a public endpoint.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 30 days
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Ares Verify — `svc_ares-verify`
+- **Purpose:** Look up counterparties already on the party spine (IČO) in ARES and the
+GFŘ unreliable-VAT-payer register so AP can refuse a missing subject or
+an unreliable payer. Pulse fires n8n; n8n calls the public CZ endpoints.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `clients`; `client_contacts`
+- **Data categories:** `company_affiliation`; `name`
+- **Recipients / processors:** `Ministerstvo financí ČR (ARES)`; `Generální finanční ředitelství (ADIS)`
+- **Transfers outside EU:** No
+- **Retention:** 3650 days (~10y)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 

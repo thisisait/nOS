@@ -107,3 +107,23 @@
   changed_when: _n8n_pw_reset.status | default(0) in [200, 204]
   failed_when: false
   no_log: true
+
+- name: "[pazny.n8n Post] Sync n8n packs (inactive; inject KEAP cred)"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - "{{ playbook_dir }}/tools/n8n-pack.py"
+      - sync
+      - "--packs={{ playbook_dir }}/files/anatomy/n8n/packs"
+      - "--url=http://127.0.0.1:{{ n8n_port | default(5678) }}"
+      - "--secrets={{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+      - "--email={{ n8n_admin_email | default(default_admin_email) }}"
+      - "--keap-base=https://{{ keap_domain }}"
+  environment:
+    N8N_PASSWORD: "{{ n8n_admin_password | default(nos_derived_secrets.n8n) }}"
+    KEAP_TOKEN: "{{ keap_agent_token_rw | default('') }}"
+    KEAP_BASE: "https://{{ keap_domain }}"
+  when:
+    - _n8n_ready.status | default(0) == 200
+    - install_keap | default(false) | bool
+  no_log: true

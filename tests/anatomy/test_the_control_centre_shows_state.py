@@ -245,6 +245,14 @@ def test_the_layout_builds_without_touching_other_sessions():
     tmux_tmpdir = tempfile.mkdtemp(prefix="nosccT", dir="/tmp")
     env = dict(os.environ, NOS_CC_SESSION="nos-cc-selftest",
                TMUX_TMPDIR=tmux_tmpdir)
+    # $TMUX DEFEATS TMUX_TMPDIR (measured 2026-09-21): run this suite from
+    # inside a tmux pane and every bare `tmux` in the built script follows the
+    # inherited $TMUX socket to the OPERATOR'S live server — the selftest
+    # session lands there, the private server answers [], and the red reads
+    # like a build failure. The isolation must strip the client-side pointers,
+    # not just point TMUX_TMPDIR somewhere private.
+    env.pop("TMUX", None)
+    env.pop("TMUX_PANE", None)
     iso = ["tmux", "-L", "default"]          # resolved inside TMUX_TMPDIR
     before = subprocess.run(["tmux", "ls"], capture_output=True, text=True).stdout
 

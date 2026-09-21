@@ -145,6 +145,9 @@ CONCEPTLESS = {
     "device-extraction.unnamed_skip_count": "count of denied unnamed classes — not a measure of the device — needs measure.skip_count",
     "party.role": "the Art-30 relationship to THIS firm (client/own_firm/counterparty) — "
                   "class.kind is claimed by party_kind (org/individual); needs class.relationship",
+    "party-registry-status.ico": "a tax identifier is not identity.name; needs identity.registration",
+    "party-registry-status.ares_found": "boolean existence in ARES — not evidence.verification (that is select) — needs evidence.found",
+    "party-registry-status.dic": "DIČ from ARES — same registration gap as party-tax-identity.value",
     "party.training_opt_in": "client-train consent flag — not consent.ref (that is a Wing pointer) — needs consent.opt_in",
 }
 

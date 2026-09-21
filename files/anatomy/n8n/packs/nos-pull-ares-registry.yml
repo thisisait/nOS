@@ -1,0 +1,33 @@
+id: nos-pull-ares-registry
+table: party-registry-status
+clock: n8n-schedule
+cron: "10 5 * * *"
+workflow: ../templates/nos-pull-ares-registry.json
+requires: [install_n8n, install_keap]
+keap_write: true
+activate: operator
+egress:
+  - host: ares.gov.cz
+    country: CZ
+    processor: "Ministerstvo financí ČR (ARES)"
+  - host: adisrws.mfcr.cz
+    country: CZ
+    processor: "Generální finanční ředitelství (ADIS)"
+gdpr:
+  purpose: |
+    Look up counterparties already on the party spine (IČO) in ARES and the
+    GFŘ unreliable-VAT-payer register so AP can refuse a missing subject or
+    an unreliable payer. n8n Schedule is the clock; Pulse only watches.
+  legal_basis: legitimate_interests
+  data_categories:
+    - company_affiliation
+    - name
+  data_subjects:
+    - clients
+    - client_contacts
+  retention_days: 3650
+  processors:
+    - "Ministerstvo financí ČR (ARES)"
+    - "Generální finanční ředitelství (ADIS)"
+  eu_residency: true
+  transfers_outside_eu: false

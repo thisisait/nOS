@@ -21,6 +21,23 @@
     - "{{ n8n_data_dir }}"
     - "{{ ansible_facts['env']['HOME'] }}/agents/log"
 
+- name: "[pazny.n8n] Resolve N8N_ENCRYPTION_KEY (REM-202 adopt-or-mint)"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - "{{ playbook_dir }}/tools/n8n-pack.py"
+      - encryption-key
+      - "--secrets={{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+      - "--config={{ n8n_data_dir }}/config"
+  register: _n8n_enc
+  changed_when: "'minted' in (_n8n_enc.stderr | default(''))"
+  no_log: true
+
+- name: "[pazny.n8n] Expose encryption key to compose"
+  ansible.builtin.set_fact:
+    n8n_encryption_key: "{{ _n8n_enc.stdout | trim }}"
+  no_log: true
+
 - name: "[pazny.n8n] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2

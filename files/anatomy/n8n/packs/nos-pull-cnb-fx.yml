@@ -1,0 +1,26 @@
+id: nos-pull-cnb-fx
+table: cnb-fx
+clock: n8n-schedule
+cron: "30 14 * * 1-5"
+workflow: ../templates/nos-pull-cnb-fx.json
+requires: [install_n8n, install_keap]
+keap_write: true
+activate: operator
+egress:
+  - host: www.cnb.cz
+    country: CZ
+    processor: "Česká národní banka"
+gdpr:
+  purpose: |
+    Pull the ČNB daily FX list into the KEAP cnb-fx DataTable so books
+    conversion uses the estate spine, not a spreadsheet.
+  legal_basis: legitimate_interests
+  data_categories:
+    - financial
+  data_subjects:
+    - operators
+  retention_days: 3650
+  processors:
+    - "Česká národní banka"
+  eu_residency: true
+  transfers_outside_eu: false

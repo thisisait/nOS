@@ -4,9 +4,9 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 292,
-    "edges": 306,
-    "nodes_pulse": 38,
+    "nodes": 297,
+    "edges": 313,
+    "nodes_pulse": 41,
     "nodes_judge": 5,
     "nodes_gateset": 5,
     "nodes_weakness": 7,
@@ -15,21 +15,21 @@
     "nodes_resource": 19,
     "nodes_repo": 4,
     "nodes_tofu": 1,
-    "nodes_authentik": 56,
-    "nodes_table": 37,
+    "nodes_authentik": 57,
+    "nodes_table": 38,
     "nodes_doctrine": 13,
     "nodes_faceapp": 7,
     "nodes_agent": 16,
-    "edges_data": 214,
-    "edges_trigger": 45,
+    "edges_data": 218,
+    "edges_trigger": 48,
     "edges_temporal": 5,
     "edges_mutex": 21,
     "edges_governed_by": 21,
-    "edges_service_dependency": 37,
+    "edges_service_dependency": 38,
     "services_survey_declared": 28,
     "services_survey_not_surveyed": 36,
     "services_survey_no_manifest": 5,
-    "edges_service_dependency_unenforced": 13,
+    "edges_service_dependency_unenforced": 14,
     "services_layer_L0": 3,
     "services_layer_L1": 5,
     "services_layer_L2": 20,
@@ -353,6 +353,17 @@
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
       "description": "Authentik native_oidc client 'nos-erpnext' (RBAC tier 2) — gates service:erpnext; provider+application managed by OpenTofu from the committed registry"
+    },
+    "authentik:espocrm": {
+      "kind": "authentik",
+      "source": "state/tofu-authentik-services.yml",
+      "mode": "native_oidc",
+      "tier": 2,
+      "client_id": "nos-espocrm",
+      "service": null,
+      "managed_by": "tofu:authentik-state",
+      "anchor": "02.02.08",
+      "description": "Authentik native_oidc client 'nos-espocrm' (RBAC tier 2) — no manifest service (Tier-2 app or excluded install); provider+application managed by OpenTofu from the committed registry"
     },
     "authentik:face": {
       "kind": "authentik",
@@ -1367,7 +1378,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 5900,
+      "min_work": 6100,
       "argv": [
         "python3",
         "-m",
@@ -1378,7 +1389,7 @@
       "claims": [],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=5900, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=6100, deterministic=True"
     },
     "pulse:alert-relay:relay-firing": {
       "kind": "pulse",
@@ -1394,6 +1405,36 @@
       "runs_agent": null,
       "anchor": "02.02.06",
       "description": "Pulse scheduled job (platform): runs prometheus-alert-relay.py on cron `*/15 * * * *`"
+    },
+    "pulse:ares-verify:registry-daily": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/ares-verify-base/plugin.yml",
+      "schedule": "10 5 * * *",
+      "jitter_min": 10,
+      "max_runtime_s": 600,
+      "category": "knowledge",
+      "paused": false,
+      "findings_exit_codes": null,
+      "command_name": "n8n-fire.py",
+      "claims": [],
+      "runs_agent": null,
+      "anchor": "09",
+      "description": "Pulse scheduled job (knowledge): runs n8n-fire.py on cron `10 5 * * *`"
+    },
+    "pulse:ares-verify:registry-new": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/ares-verify-base/plugin.yml",
+      "schedule": "7,22,37,52 * * * *",
+      "jitter_min": 5,
+      "max_runtime_s": 180,
+      "category": "knowledge",
+      "paused": false,
+      "findings_exit_codes": null,
+      "command_name": "n8n-fire.py",
+      "claims": [],
+      "runs_agent": null,
+      "anchor": "09",
+      "description": "Pulse scheduled job (knowledge): runs n8n-fire.py on cron `7,22,37,52 * * * *`"
     },
     "pulse:authentik-tofu-drift:tofu-drift-plan": {
       "kind": "pulse",
@@ -1856,6 +1897,23 @@
       "runs_agent": null,
       "anchor": "09",
       "description": "Pulse scheduled job (knowledge): runs vision-bench.py on cron `31 5 * * *` — exits [3] mean findings, not failure"
+    },
+    "pulse:n8n:exec-watch": {
+      "kind": "pulse",
+      "source": "files/anatomy/plugins/n8n-base/plugin.yml",
+      "schedule": "15 * * * *",
+      "jitter_min": 5,
+      "max_runtime_s": 60,
+      "category": "knowledge",
+      "paused": false,
+      "findings_exit_codes": [
+        1
+      ],
+      "command_name": "n8n-pack.py",
+      "claims": [],
+      "runs_agent": null,
+      "anchor": "09",
+      "description": "Pulse scheduled job (knowledge): runs n8n-pack.py on cron `15 * * * *` — exits [1] mean findings, not failure"
     },
     "pulse:npm-supply-chain:daily-ioc-scan": {
       "kind": "pulse",
@@ -2572,7 +2630,7 @@
       "layer": "L1",
       "layer_basis": {
         "height": 2,
-        "dependents": 1,
+        "dependents": 2,
         "upstreams": 2
       }
     },
@@ -2689,7 +2747,7 @@
       "layer_basis": {
         "height": 0,
         "dependents": 0,
-        "upstreams": 2
+        "upstreams": 3
       }
     },
     "service:nextcloud": {
@@ -3279,6 +3337,13 @@
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Party contact points' (state/keap-tables/party-contact.table.yml)"
     },
+    "table:party-registry-status": {
+      "kind": "table",
+      "source": "state/keap-tables/party-registry-status.table.yml",
+      "title": "Party registry status",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Party registry status' (state/keap-tables/party-registry-status.table.yml)"
+    },
     "table:party-tax-identity": {
       "kind": "table",
       "source": "state/keap-tables/party-tax-identity.table.yml",
@@ -3825,6 +3890,24 @@
       "via": "60 s poll of /bff/pulse, a PROJECTION (never a proxy) of Wing's pulse_jobs + run summary; joined onto the pulse: nodes on screen so a scheduled job's real state colours its dot (src/routes/bff/pulse/+server.ts → $lib/server/upstream.pulseJobs)",
       "derived": "face-bff-projection",
       "evidence": "derived"
+    },
+    {
+      "from": "pulse:ares-verify:registry-daily",
+      "to": "table:party-registry-status",
+      "kind": "data",
+      "via": "n8n nos-pull-ares-registry (ARES + ADIS). Pulse is the clock.",
+      "measured": "2026-09-21",
+      "declared": "writes",
+      "evidence": "measured"
+    },
+    {
+      "from": "pulse:ares-verify:registry-new",
+      "to": "table:party-registry-status",
+      "kind": "data",
+      "via": "n8n nos-pull-ares-registry --scope=missing (on-create lag after hydrate).",
+      "measured": "2026-09-21",
+      "declared": "writes",
+      "evidence": "measured"
     },
     {
       "from": "pulse:conductor:scan-state-record",
@@ -4441,6 +4524,14 @@
     },
     {
       "from": "service:authentik",
+      "to": "authentik:espocrm",
+      "kind": "data",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
+      "derived": "authentik-hosting",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:authentik",
       "to": "authentik:face",
       "kind": "data",
       "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
@@ -4887,6 +4978,16 @@
       "via": "the Grafana service account + token minted against the estate's own Grafana at http://127.0.0.1:{{ grafana_port }} (roles/pazny.mcp_gateway/tasks/post.yml:34-90) and handed to the mcp-grafana sidecar as GRAFANA_SERVICE_ACCOUNT_TOKEN (roles/pazny.mcp_gateway/templates/compose.yml.j2:70-71)",
       "enforced_by": null,
       "unenforced": "Grafana rides `install_observability`, which no block ties to install_mcp_gateway. The observability stack is brought up first by tasks/stacks/core-up.yml, so in practice it is there — but a bring-up ORDER is not an enable guarantee, and the token task is `failed_when: false` like the psql one.",
+      "evidence": "measured"
+    },
+    {
+      "from": "service:keap",
+      "to": "service:n8n",
+      "kind": "data",
+      "measured": "2026-09-21",
+      "via": "n8n packs write KEAP DataTables over the agent API: post.yml's pack sync (tools/n8n-pack.py sync) injects the nos-keap-rw credential from keap_agent_token_rw and renders https://{{ keap_domain }} into every keap_write pack graph (docs/doctrine/n8n-packs.md §3)",
+      "enforced_by": null,
+      "unenforced": "Both sync and the pack graphs are gated on install_keap (post.yml when: + pack requires:); with KEAP off, keap_write packs are skipped at sync and nothing imports them, so no runtime failure surfaces.",
       "evidence": "measured"
     },
     {
@@ -5643,6 +5744,22 @@
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:ares-verify:registry-daily",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:ares-verify:registry-new",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:authentik-tofu-drift:tofu-drift-plan",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
@@ -5868,6 +5985,14 @@
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:loop:vision-bench",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "daemon:eu.thisisait.nos.pulse",
+      "to": "pulse:n8n:exec-watch",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
       "derived": "daemon-dispatch",

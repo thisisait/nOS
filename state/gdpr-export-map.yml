@@ -80,6 +80,18 @@ services:
   # container. The operator runs the printed step and drops the result into the
   # bundle dir. WordPress is manual on purpose (see header: wp user get is
   # user-object-only; full Art-15 needs authored content too).
+  - id: svc_espocrm-retire
+    flag: always
+    method: manual
+    # portability_eligible because the plugin's lawful basis is `contract`
+    # (the gate's converse rule) — vacuously portable: there is no
+    # subject-provided data here beyond the Authentik user object.
+    portability_eligible: true
+    note: "Residual Authentik OAuth2 client for the retired EspoCRM desk; the
+           plugin stores no per-subject rows. The svc_authentik read above is
+           the complete Art-15 answer for it; drop this entry when OpenTofu
+           destroys the client and the plugin leaves the tree."
+
   - id: svc_wordpress
     flag: install_wordpress
     method: manual

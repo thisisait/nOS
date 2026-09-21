@@ -85,7 +85,12 @@ def test_declared_split_is_6_9_70(ruling):
 
 def test_published_set_is_the_ruled_63_in_13(artifact, ruling):
     doc = P.project(artifact, ruling)
-    assert doc["counts"] == {"organs": 13, "atoms": 63, "veins": 14}
+    # 2026-09-21: veins 14 → 15 — the declared n8n→keap depends_on edge
+    # (n8n packs write KEAP DataTables, docs/doctrine/n8n-packs.md) crosses
+    # two published organs, so one new anonymous organ-pair vein appears on
+    # the page. Atoms unchanged; a vein bump is a public-surface decision
+    # and lands with the same commit that re-signs the ruling.
+    assert doc["counts"] == {"organs": 13, "atoms": 63, "veins": 15}
 
 
 def test_the_firm_desk_organ_is_backoffice(ruling):

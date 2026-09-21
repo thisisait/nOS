@@ -1,0 +1,84 @@
+# =============================================================================
+# ares-verify-base — Pulse clock for the n8n ARES/ADIS workflow.
+#
+# n8n owns the hops. Pulse fire remains until n8n-base:exec-watch is seen live
+# (docs/doctrine/n8n-packs.md §7 order). The graph clock is n8n Schedule.
+# =============================================================================
+
+name: ares-verify-base
+version: 0.1.0
+description: |
+  Pulse jobs that POST n8n webhook nos-ares-registry: daily --scope=all
+  (every IČO on the party spine) and every 15 minutes --scope=missing
+  (new thirdparties after crm-hydrate). n8n looks up ARES + nespolehlivý
+  plátce DPH and upserts party-registry-status. Idle when n8n is down.
+license: MIT
+
+type:
+  - scheduled-job
+
+requires:
+  feature_flag: install_n8n
+  plugin:
+    - n8n-base
+  variables:
+    - playbook_dir
+
+pulse:
+  jobs:
+    - name: registry-daily
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/n8n-fire.py"
+      args:
+        - "--url=http://127.0.0.1:5678/webhook/nos-ares-registry"
+        - "--scope=all"
+      schedule: "10 5 * * *"
+      jitter_min: 10
+      max_runtime_s: 600
+      max_concurrent: 1
+      category: knowledge
+      writes:
+        - target: "table:party-registry-status"
+          via: "n8n nos-pull-ares-registry (ARES + ADIS). Pulse is the clock."
+          measured: "2026-09-21"
+    - name: registry-new
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/n8n-fire.py"
+      args:
+        - "--url=http://127.0.0.1:5678/webhook/nos-ares-registry"
+        - "--scope=missing"
+      schedule: "7,22,37,52 * * * *"
+      jitter_min: 5
+      max_runtime_s: 180
+      max_concurrent: 1
+      category: knowledge
+      writes:
+        - target: "table:party-registry-status"
+          via: "n8n nos-pull-ares-registry --scope=missing (on-create lag after hydrate)."
+          measured: "2026-09-21"
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+gdpr:
+  purpose: |
+    Look up counterparties already on the party spine (IČO) in ARES and the
+    GFŘ unreliable-VAT-payer register so AP can refuse a missing subject or
+    an unreliable payer. Pulse fires n8n; n8n calls the public CZ endpoints.
+  legal_basis: legitimate_interests
+  data_categories:
+    - company_affiliation
+    - name
+  data_subjects:
+    - clients
+    - client_contacts
+  retention_days: 3650
+  processors:
+    - "Ministerstvo financí ČR (ARES)"
+    - "Generální finanční ředitelství (ADIS)"
+  eu_residency: true
+  transfers_outside_eu: false

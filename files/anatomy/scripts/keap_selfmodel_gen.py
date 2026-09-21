@@ -126,6 +126,7 @@ SYSTEM_NAME = {
     "paperclip": "Paperclip", "code-server": "code-server",
     "erpnext": "ERPNext", "freescout": "FreeScout", "outline": "Outline",
     "hedgedoc": "HedgeDoc", "bookstack": "BookStack", "firefly": "Firefly III",
+    "dolibarr": "Dolibarr",
     "onlyoffice": "ONLYOFFICE",
     "metabase": "Metabase", "superset": "Superset", "influxdb": "InfluxDB",
     "freepbx": "FreePBX", "qgis-server": "QGIS Server",
@@ -460,6 +461,12 @@ SYSTEM_EN = {
         "Firefly III, the personal finance ledger. It tracks accounts, budgets and "
         "transactions for a household — a smaller and different problem from the business "
         "resource planner in the same stack."
+    ),
+    "dolibarr": (
+        "Dolibarr, the firm's relationship desk: counterparties, quotes and commercial "
+        "records in one GPLv3 application. It is the CRM when installed; booked invoices "
+        "and postings still land in KEAP tables through digest, not in this desk, and it "
+        "is not the household ledger or the heavy ERP beside it."
     ),
     "onlyoffice": (
         "ONLYOFFICE Document Server, the embedded editing engine. Other applications open a "

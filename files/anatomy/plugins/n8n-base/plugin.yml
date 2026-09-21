@@ -16,6 +16,7 @@ license: SUSTAINABLE-USE-1.0   # n8n upstream; manifest is repo-licensed
 
 type:
   - service
+  - scheduled-job
 
 # =============================================================================
 # REQUIRES
@@ -44,6 +45,18 @@ depends_on:
       No auto-enable block turns Mailpit on for n8n. With it off, SMTP fails
       per-message inside n8n; the container stays healthy and the converge
       reports nothing.
+  - upstream: "service:keap"
+    kind: data
+    via: >-
+      n8n packs write KEAP DataTables over the agent API: post.yml's pack sync
+      (tools/n8n-pack.py sync) injects the nos-keap-rw credential from
+      keap_agent_token_rw and renders https://{{ keap_domain }} into every
+      keap_write pack graph (docs/doctrine/n8n-packs.md §3)
+    measured: "2026-09-21"
+    unenforced: >-
+      Both sync and the pack graphs are gated on install_keap (post.yml when:
+      + pack requires:); with KEAP off, keap_write packs are skipped at sync
+      and nothing imports them, so no runtime failure surfaces.
 
 # =============================================================================
 # AUTHENTIK — native OIDC client
@@ -129,3 +142,24 @@ ui-extension:
     tier: 2
     description: Workflow automation
     health_check: "https://{{ n8n_domain }}"
+
+# One Pulse reader for every n8n pack (docs/doctrine/n8n-packs.md §4).
+# Does not fire workflows. ares-verify-base stays until this job is seen live.
+pulse:
+  jobs:
+    - name: exec-watch
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/n8n-pack.py"
+      args:
+        - watch
+        - "--packs={{ playbook_dir }}/files/anatomy/n8n/packs"
+        - "--url=http://127.0.0.1:5678"
+        - "--secrets={{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+      schedule: "15 * * * *"
+      jitter_min: 5
+      max_runtime_s: 60
+      max_concurrent: 1
+      category: knowledge
+      findings_exit_codes: [1]
+      env:
+        N8N_API_KEY: "secret:n8n_api_key"

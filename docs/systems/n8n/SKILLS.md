@@ -1,22 +1,20 @@
 # n8n — Skills
 
-> Callable actions for n8n's public REST API. The credential mechanism is real but is
-> **not provisioned by nOS** — read Authentication first. Three cards are flagged as
-> unverified rather than silently deleted.
+> Callable actions for n8n's public REST API. The API key is playbook-minted
+> (`n8n_api_key` in `~/.nos/secrets.yml`). Three cards below stay flagged.
 
 ## Authentication
 
-- **Method:** API key header `X-N8N-API-KEY` — human-minted, NOT provisioned by nOS
-- **Where the key comes from:** a human creates it in the n8n UI (Settings → n8n API).
-  The playbook does not mint, store, or inject one.
-- **No service account.** `openclaw-bot` does not exist; nothing in the repo creates an
-  n8n user beyond the owner account.
-- **No token file.** `~/agents/tokens/n8n.token` does not exist — no task writes it, no
-  code reads it, and the directory is not provisioned anywhere in nOS.
-- **The only playbook-managed credential** is the OWNER account created by
-  `roles/pazny.n8n/tasks/post.yml` via `POST /api/v1/owner/setup`:
-  `{{ n8n_admin_email }}` (default `admin@{tenant_domain}`) /
-  `{global_password_prefix}_pw_n8n`. That is an operator login, not an agent identity.
+- **Method:** API key header `X-N8N-API-KEY` — minted by `pazny.n8n` post.yml
+  into `~/.nos/secrets.yml` (`n8n_api_key`). Pulse `exec-watch` reads `secret:n8n_api_key`.
+- **Where the key comes from:** the playbook, via owner login then
+  `POST /rest/api-keys`. A human UI mint is not required.
+- **No service account.** Nothing in the repo creates an n8n user beyond the
+  owner account.
+- **No token file.** `~/agents/tokens/n8n.token` does not exist.
+- **The owner account** is still created by `POST /api/v1/owner/setup`.
+- **Packs:** `files/anatomy/n8n/packs/*.yml` — post.yml upserts graphs inactive
+  and injects `nos-keap-rw`. Activate in the UI. Doctrine: `docs/doctrine/n8n-packs.md`.
 - **Base URL:** `https://{n8n_domain}` (default `https://n8n.dev.local`), or
   `http://127.0.0.1:5678` from the host (loopback publish; peer containers cannot reach
   it).
@@ -25,9 +23,11 @@
 
 ## Endpoints verified against repo source
 
-Only these are exercised by nOS itself (`roles/pazny.n8n/tasks/post.yml`): `GET /healthz`,
-`GET /api/v1/owner`, `POST /api/v1/owner/setup`, `POST /rest/login`,
-`POST /rest/change-password`. Everything below is upstream surface.
+Only these are exercised by nOS itself (`roles/pazny.n8n/tasks/post.yml` +
+`tools/n8n-pack.py`): `GET /healthz`, `GET /api/v1/owner`, `POST /api/v1/owner/setup`,
+`POST /rest/login`, `POST /rest/change-password`, `POST /rest/api-keys`,
+`GET|POST|PUT /api/v1/workflows`, `GET|POST|PATCH /api/v1/credentials`,
+`GET /api/v1/executions`. Everything below is still the human/agent surface.
 
 ---
 

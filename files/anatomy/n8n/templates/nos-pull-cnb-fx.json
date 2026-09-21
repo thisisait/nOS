@@ -1,17 +1,30 @@
 {
   "name": "nOS PULL · ČNB FX → KEAP DTT",
   "meta": {
-    "templateCredsSetupRequired": true,
+    "templateCredsSetupRequired": false,
     "nos": {
       "id": "nos-pull-cnb-fx",
       "direction": "pull",
-      "table": "cnb-fx"
+      "table": "cnb-fx",
+      "clock": "n8n-schedule"
     }
   },
   "active": false,
   "settings": { "executionOrder": "v1", "timezone": "Europe/Prague" },
   "pinData": {},
   "nodes": [
+    {
+      "id": "nos-pack-note",
+      "name": "nOS note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -220],
+      "parameters": {
+        "content": "Pack graph (meta.nos.id). Content is git and reverts on nos. Activate is yours. A variant belongs in a copy without meta.nos.id.",
+        "height": 140,
+        "width": 320
+      }
+    },
     {
       "id": "nos-pull-schedule",
       "name": "Schedule",

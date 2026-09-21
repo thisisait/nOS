@@ -1069,10 +1069,11 @@ def test_every_judge_that_mutates_the_worktree_says_so():
 MEASURED_WORK = {
     "ansible-lint": 1500,
     "genome-codegen": 2,
-    # RE-DERIVED 2026-09-20 (agentkit multimodal one_shot): 5921 passed /
-    # 6031 collected. Same shape as every prior bump in this dict's history —
-    # the suite grew, not a regression.
-    "pytest-anatomy": 5921,
+    # RE-DERIVED 2026-09-21 — the collection gate FIRED (6240 collected against
+    # the 5921 record) after the Dolibarr onboarding + n8n-packs batch grew the
+    # suite. Fresh run: "6126 passed, 114 skipped" of 6240 collected. Same
+    # shape as every prior bump — growth, not a regression.
+    "pytest-anatomy": 6126,
     "cortex-corpus-diff": 1,
 }
 

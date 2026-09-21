@@ -72,8 +72,9 @@ def test_oracle_refuses_a_schema_the_parser_cannot_fill():
 def test_pull_template_is_cnb_then_schema_then_upsert():
     wf = _wf(PULL)
     assert wf["meta"]["nos"]["direction"] == "pull"
+    assert wf["meta"]["nos"]["clock"] == "n8n-schedule"
     nodes = _nodes(wf)
-    assert set(nodes) == {"Schedule", "Fetch CNB", "Fetch DTT schema", "Format", "Upsert DTT"}
+    assert set(nodes) >= {"Schedule", "Fetch CNB", "Fetch DTT schema", "Format", "Upsert DTT"}
     assert nodes["Fetch CNB"]["parameters"]["url"] == CNB_URL
     schema_url = nodes["Fetch DTT schema"]["parameters"]["url"]
     upsert_url = nodes["Upsert DTT"]["parameters"]["url"]

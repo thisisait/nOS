@@ -18,7 +18,11 @@ description: >-
   reject decision. Read by VisionImporter.parse() on the NEXT import run
   (batch semantics) — resolution never posts anything by itself.
 driver: libsql
-anchors: ["nos.digest.pending-invoice-verify"]
+# nos.digest.pending-invoice-verify never existed in the live taxonomy — the
+# KEAP lint reported it broken (gate test_table_anchors_resolve). Anchored to
+# the invoice node like invoice/invoice-line/book-access; mint a dedicated
+# node first if this queue ever deserves its own branch.
+anchors: ["nos.digest.invoice"]
 visibility: tier-managers
 graph:
   mode: rows
