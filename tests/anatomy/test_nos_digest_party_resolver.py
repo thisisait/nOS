@@ -74,11 +74,17 @@ def test_synthetic_ico_refused_outside_fixture_mode():
     assert r["status"] == "resolved" and r["slug"] == "synthetic-x"
 
 
-def test_bad_checksum_ico_is_not_a_key():
-    # a real (non-synthetic) IČO that fails checksum must NOT match on the key path
-    idx = {"by_key": {("ICO", BAD_CHECKSUM): "should-not-hit"}, "by_name": {}}
+def test_bad_checksum_unknown_ico_is_not_a_key():
+    idx = {"by_key": {}, "by_name": {}}
     r = ND.resolve_party({"kind": "org", "ico": BAD_CHECKSUM}, idx)
     assert r["status"] == "review" and r["slug"] is None
+
+
+def test_bad_checksum_known_spine_ico_resolves():
+    """Printed 87654321 is checksum-invalid; the seed still owns that key."""
+    idx = {"by_key": {("ICO", "87654321"): "synthetic-client-hejsek"}, "by_name": {}}
+    r = ND.resolve_party({"kind": "org", "ico": "87654321"}, idx)
+    assert r["status"] == "resolved" and r["slug"] == "synthetic-client-hejsek"
 
 
 def test_name_fallback_resolves_unique_and_flags_ambiguous():

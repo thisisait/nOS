@@ -349,7 +349,7 @@ def test_hejsek_is_the_vision_pdf_client():
     seller = nd.resolve_party(
         {"kind": "org", "ico": "87654321", "legal_name": "Bořivoj Hejsek"},
         index, fixture_mode=False)
-    assert seller["status"] == "resolved" and seller["matched_by"] == "legal_name"
+    assert seller["status"] == "resolved" and seller["matched_by"] == "ico"
     buyer = nd.resolve_party(
         {"kind": "org", "ico": "28897501", "legal_name": "Apple Czech s.r.o."},
         index, fixture_mode=False)

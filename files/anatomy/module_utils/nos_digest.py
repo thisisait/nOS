@@ -413,20 +413,23 @@ def resolve_party(ref: dict, party_index: dict, *,
         if norm["synthetic"] and not fixture_mode:
             return _review(match_value=norm["value"],
                            reason="IČO in reserved synthetic range outside fixture mode")
+        key = ("ICO", norm["value"])
+        hit = by_key.get(key)
+        if hit:
+            # A spine IČO is identifying even when the printed check digit is
+            # wrong (vision-fixture Hejsek 87654321). Unknown checksum-fail
+            # still falls through to name — never mint from a bad digit.
+            return {"status": "resolved", "slug": hit, "matched_by": "ico",
+                    "match_value": norm["value"], "candidates": [hit]}
         usable = norm["synthetic"] if fixture_mode else norm["checksum_ok"]
         if usable:
-            key = ("ICO", norm["value"])
-            hit = by_key.get(key)
-            if hit:
-                return {"status": "resolved", "slug": hit, "matched_by": "ico",
-                        "match_value": norm["value"], "candidates": [hit]}
             slug = org_slug(norm["value"])
             if source_authoritative:
                 return {"status": "create", "slug": slug, "matched_by": "ico",
                         "match_value": norm["value"], "candidates": []}
             return _review(slug=slug, matched_by="ico", match_value=norm["value"],
                            reason="valid IČO, new org, non-authoritative source → confirm")
-        # a real IČO that fails its checksum is NOT a key — fall through to name.
+        # unknown IČO that fails its checksum is NOT a key — fall through to name.
 
     name = ref.get("legal_name") or ref.get("name")
     if name:
