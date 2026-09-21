@@ -174,8 +174,7 @@ def _roots(root_arg: str | None) -> list[pathlib.Path]:
     if root_arg:
         root = pathlib.Path(root_arg)
         return [root if root.is_absolute() else REPO / root]
-    return discover_extracts(pathlib.Path(
-        os.environ.get("NOS_DATA_ROOT") or pathlib.Path.home() / "nos"))
+    return discover_extracts(nos_digest.resolve_data_root(REPO))
 
 
 def _run_one(root: pathlib.Path, args, index) -> int:

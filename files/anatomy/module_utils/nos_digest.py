@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import pathlib
 import re
 import sys
@@ -704,6 +705,21 @@ def strip_provenance(deterministic: dict) -> dict:
 #: inbox precedent) — Model C: the slug is a data-organization label inside
 #: the consultant's ONE tenant, never a per-client tenant/RBAC boundary.
 BOOK_OWNER_LEAVES = ("incoming", "extracts", "processed")
+
+
+def resolve_data_root(repo: pathlib.Path, environ: dict | None = None) -> pathlib.Path:
+    """Runtime nos_data_root. Env wins; else config.yml (the estate override);
+    else ~/nos. default.config.yml is Jinja — not a path we can walk."""
+    env = (environ if environ is not None else os.environ).get("NOS_DATA_ROOT", "").strip()
+    if env:
+        return pathlib.Path(env).expanduser()
+    cfg = repo / "config.yml"
+    if cfg.is_file():
+        data = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
+        v = data.get("nos_data_root") if isinstance(data, dict) else None
+        if isinstance(v, str) and v.strip() and "{{" not in v:
+            return pathlib.Path(v.strip()).expanduser()
+    return pathlib.Path.home() / "nos"
 
 
 def infer_book_owner_slug(root: str | pathlib.Path) -> str | None:

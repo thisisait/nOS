@@ -24,9 +24,10 @@ Idempotent: an image whose sidecar already exists is not re-extracted; a queue r
 whose slug already exists is not re-posted. Read-only w.r.t. the invoice/party
 tables — it only ever writes pending-invoice-verify.
 
-Exit: 0 swept, nothing held · 1 swept, N invoices need operator verify (a finding,
-declared in the plugin's findings_exit_codes) · 2 could not run (no intake dir, or
-every extraction failed — e.g. qwen2.5vl:7b not pulled / ollama not armed).
+Exit: 0 swept, nothing held, or the data root exists but has no incoming/
+dirs yet · 1 swept, N invoices need operator verify (a finding,
+declared in the plugin's findings_exit_codes) · 2 could not run (data
+root missing, or every extraction failed — e.g. qwen2.5vl:7b not pulled).
 """
 from __future__ import annotations
 
@@ -44,6 +45,7 @@ sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "files" / "anatomy" / "module_utils"))
 import digest_absorb  # noqa: E402  (reuse the ONE KEAP write path)
 from keap_api import proxy_header  # noqa: E402
+import nos_digest  # noqa: E402
 import yaml  # noqa: E402
 
 PIPELINE = REPO / "tools" / "invoice-vision-pipeline.py"
@@ -95,28 +97,37 @@ def discover_intakes(root: pathlib.Path) -> list[pathlib.Path]:
     return sorted(p for p in root.glob("tenants/*/users/*/inbox/accounting/*/incoming") if p.is_dir())
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--intake", default=None,
                     help="a single dir with incoming/ (images) + extracts/ (sidecars); "
                          "default walks every per-client incoming/ under the tenants tree")
-    ap.add_argument("--root", default=os.environ.get("NOS_DATA_ROOT") or str(pathlib.Path.home() / "nos"),
-                    help="data root to walk for per-client incoming/ dirs (NOS_DATA_ROOT or ~/nos). "
-                         "ponytail: honours a non-default nos_data_root only via NOS_DATA_ROOT env")
-    args = ap.parse_args()
+    ap.add_argument("--root", default=None,
+                    help="data root to walk for per-client incoming/ dirs "
+                         "(default: NOS_DATA_ROOT, else config.yml nos_data_root, else ~/nos)")
+    args = ap.parse_args(argv)
 
     if args.intake:
         d = pathlib.Path(args.intake)
         incomings = [d / "incoming" if (d / "incoming").is_dir() else d]
+        walked = str(d)
+        if not incomings:
+            print(f"REFUSING: no intake incoming/ dirs under {walked}", file=sys.stderr)
+            return 2
     else:
-        incomings = discover_intakes(pathlib.Path(args.root))
-    if not incomings:
-        print(f"REFUSING: no intake incoming/ dirs under {args.intake or args.root}", file=sys.stderr)
-        return 2
+        root = pathlib.Path(args.root) if args.root else nos_digest.resolve_data_root(REPO)
+        incomings = discover_intakes(root)
+        walked = str(root)
+        if not incomings:
+            if root.is_dir():
+                print(f"no intake incoming/ dirs under {root} — nothing to sweep", file=sys.stderr)
+                return 0
+            print(f"REFUSING: data root does not exist: {root}", file=sys.stderr)
+            return 2
 
     imgs = [(inc, p) for inc in incomings for p in sorted(inc.glob("*")) if p.suffix.lower() in IMAGE_EXT]
     if not imgs:
-        print(f"no intake images under {args.intake or args.root} — nothing to sweep", file=sys.stderr)
+        print(f"no intake images under {walked} — nothing to sweep", file=sys.stderr)
         return 0
 
     extract_dirs = set()

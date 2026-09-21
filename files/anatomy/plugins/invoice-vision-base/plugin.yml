@@ -52,11 +52,12 @@ requires:
 #   0  swept; nothing held (all sidecars verified + above floor — rare, since
 #      the pipeline stamps confidence 0.0 by design until logprobs land)
 #   1  swept; N invoices await operator verify (a finding, filed as queue rows)
-#   2  could not run — no intake dir, or every extraction failed (qwen2.5vl:7b
+#   2  could not run — data root missing, or every extraction failed (qwen2.5vl:7b
 #      not pulled / ollama not armed). NOT "clean" — nothing was extracted.
+#      A live root with zero incoming/ dirs is exit 0 (idle), not 2.
 #
-# The intake dir is discovered by the script (Pulse cannot glob) from ~/nos, or
-# NOS_DATA_ROOT if the env carries a non-default data root. No new catalog token
+# The intake dir is discovered by the script (Pulse cannot glob) from
+# NOS_DATA_ROOT, else config.yml nos_data_root, else ~/nos. No new catalog token
 # is introduced — only {{ playbook_dir }} (mapped+fed) and keap_agent_token_rw
 # (already mapped), so the pulse-catalog render test stays green.
 #

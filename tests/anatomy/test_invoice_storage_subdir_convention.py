@@ -98,3 +98,22 @@ def test_import_index_is_untouched_by_the_hint_path():
                              book_owner_slug_hint="synthetic-svoboda-petr")
     nos_digest.run_importer(imp, str(VISION_FIXTURE), TABLES)
     assert INDEX == before
+
+
+def test_resolve_data_root_prefers_env_then_config_yml(tmp_path):
+    (tmp_path / "config.yml").write_text("nos_data_root: /Volumes/SSD1TB/nOS/data\n", encoding="utf-8")
+    assert nos_digest.resolve_data_root(tmp_path, {}) == pathlib.Path("/Volumes/SSD1TB/nOS/data")
+    assert nos_digest.resolve_data_root(tmp_path, {"NOS_DATA_ROOT": "/tmp/x"}) == pathlib.Path("/tmp/x")
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    assert nos_digest.resolve_data_root(empty, {}) == pathlib.Path.home() / "nos"
+
+
+def test_intake_idle_when_root_exists_without_incoming(tmp_path):
+    """RETRO-RED: Pulse nightly rc=2 because ~/nos was missing on an SSD estate."""
+    spec = importlib.util.spec_from_file_location(
+        "invoice_vision_intake_idle", REPO / "tools" / "invoice-vision-intake.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod.main(["--root", str(tmp_path)]) == 0
+    assert mod.main(["--root", str(tmp_path / "missing")]) == 2
