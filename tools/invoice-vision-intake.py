@@ -86,6 +86,9 @@ def park_incoming(img: pathlib.Path) -> pathlib.Path:
     if dest.exists():
         dest = dest_dir / f"{img.stem}-dup{img.suffix}"
     return img.rename(dest)
+
+
+def _extract_one(image: pathlib.Path, out: pathlib.Path) -> bool:
     if out.exists():
         return True                                    # idempotent — already extracted
     r = subprocess.run([sys.executable, str(PIPELINE), str(image), "--out", str(out)],
