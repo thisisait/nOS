@@ -33,13 +33,22 @@ services:
       DOLI_COMPANY_NAME: "{{ instance_org | default('nOS', true) }}"
       DOLI_COMPANY_COUNTRYCODE: "{{ dolibarr_country | default('CZ') }}"
       DOLI_ENABLE_MODULES: "{{ dolibarr_enable_modules | default('Societe,Facture,Propale,Agenda') }}"
-      DOLI_CRON: "1"
+      # DOLI_CRON=1 turns THIS container into a cron-only worker: upstream
+      # docker-run.sh runs `cron -f` and never execs apache, AND skips the DB
+      # auto-install (measured 2026-09-21, first live bring-up — unhealthy,
+      # nothing on :80). Upstream's shape is a second cron container; ours is
+      # Pulse. Key stays for a future Pulse job hitting cron_run_jobs.php.
+      DOLI_CRON: "0"
       DOLI_CRON_KEY: "{{ dolibarr_cron_key }}"
       PHP_INI_DATE_TIMEZONE: "{{ dolibarr_tz | default('Europe/Prague') }}"
       PHP_INI_UPLOAD_MAX_FILESIZE: "{{ dolibarr_upload_max | default('32M') }}"
       PHP_INI_POST_MAX_SIZE: "{{ dolibarr_post_max | default('32M') }}"
     healthcheck:
-      test: ["CMD-SHELL", "php -r \"exit((@file_get_contents('http://127.0.0.1/')===false)?1:0);\""]
+      # php -r file_get_contents cannot probe here — the image's CLI php has
+      # no http wrapper ("no suitable wrapper", measured 2026-09-21). curl IS
+      # in the image; a healthcheck must be able to RUN in its image
+      # (docs/doctrine/foreign-properties.md §2).
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://127.0.0.1/"]
       interval: 30s
       timeout: 10s
       retries: 8
