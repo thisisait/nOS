@@ -1,7 +1,11 @@
-"""Dolibarr is a role+plugin CRM desk; SSO is honest forward_auth.
+"""Dolibarr is a role+plugin CRM desk; SSO is native OIDC with a proven consumer.
 
 RETRO-RED: before pazny.dolibarr / dolibarr-base landed these paths
 did not exist. Espo harvest stays off (`apps/espocrm.yml.draft`).
+2026-09-21: forward_auth → native_oidc — the consumer the FreeScout rule
+demanded is core's openid_connect handler, armed by pazny.dolibarr post.yml
+(module const + MAIN_AUTHENTICATION_OIDC_* + the SSO admin user) with
+DOLI_AUTH chaining the handlers in conf.php.
 """
 
 from __future__ import annotations
@@ -24,16 +28,29 @@ REGISTRY = REPO / "files/anatomy/secrets/registry.yml"
 MANIFEST = REPO / "state/manifest.yml"
 
 
-def test_dolibarr_plugin_is_forward_auth_until_oidc_is_proven():
+def test_dolibarr_plugin_is_native_oidc_with_the_proven_consumer():
     man = yaml.safe_load(PLUGIN.read_text(encoding="utf-8"))
     assert man["name"] == "dolibarr-base"
     assert man["requires"]["feature_flag"] == "install_dolibarr"
     assert man["requires"]["role"] == "pazny.dolibarr"
-    assert man["authentik"]["mode"] == "forward_auth"
+    assert man["authentik"]["mode"] == "native_oidc"
     assert man["authentik"]["slug"] == "dolibarr"
+    # the consumer's callback, exactly as core/lib/openid_connect.lib.php
+    # derives it (DOL_MAIN_URL_ROOT + /core/modules/openid_connect/callback.php)
+    assert any(u.endswith("/core/modules/openid_connect/callback.php")
+               for u in man["authentik"]["redirect_uris"])
     assert man["gdpr"]["legal_basis"] == "contract"
     ups = [d["upstream"] for d in man.get("depends_on") or []]
     assert "service:mariadb" in ups
+    # the three legs of the consumer: conf.php chain (compose env), module
+    # const + OIDC constants + SSO admin user (post.yml), post wired in stack-up
+    assert 'DOLI_AUTH: "openid_connect,dolibarr"' in COMPOSE.read_text(encoding="utf-8")
+    post = (REPO / "roles/pazny.dolibarr/tasks/post.yml").read_text(encoding="utf-8")
+    for const in ("MAIN_MODULE_OPENIDCONNECT", "MAIN_AUTHENTICATION_OIDC_AUTHORIZE_URL",
+                  "MAIN_AUTHENTICATION_OIDC_CLIENT_SECRET", "MAIN_AUTHENTICATION_OIDC_LOGIN_CLAIM"):
+        assert const in post, f"post.yml lost {const}"
+    assert "dolibarr_sso_admin_login" in post
+    assert "assert" in post, "the no-silent-green reader is gone"
 
 
 def test_dolibarr_compose_uses_shared_mariadb_not_an_embedded_db():
@@ -76,11 +93,11 @@ def test_dolibarr_is_wired_through_stack_traefik_manifest_and_mariadb_autodep():
     assert "pazny.dolibarr" in stack
     assert "install_dolibarr" in stack
     tv = yaml.safe_load(TRAEFIK.read_text(encoding="utf-8"))
-    assert tv["traefik_auth_modes"]["dolibarr"] == "proxy"
+    assert tv["traefik_auth_modes"]["dolibarr"] == "oidc"
     man = yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))
     row = next(s for s in man["services"] if s["id"] == "dolibarr")
     assert row["install_flag"] == "install_dolibarr"
-    assert row["oidc"] == "proxy"
+    assert row["oidc"] == "native"
     main = MAIN.read_text(encoding="utf-8")
     assert "install_dolibarr" in main
     secrets = REGISTRY.read_text(encoding="utf-8")

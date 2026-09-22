@@ -103,5 +103,11 @@ def test_push_template_is_webhook_then_dtt_then_callback():
 
 
 def test_ssrf_defaults_still_do_not_allowlist_keap():
+    """Superseded contract, restated (n8n packs, 2026-09-21): the DEFAULT
+    allowlist stays empty — no blanket re-open — while the KEAP re-open lives
+    only in the compose extension, keyed on install_keap and scoped to the
+    host-gateway CIDRs, never a whole range. The pre-pack version of this gate
+    pinned an allowlist var that turned out to be lookup-phase-only anyway
+    (see test_n8n_packs.test_ssrf_defaults_stay_empty_but_keap_pack_path_allowlists)."""
     defaults = (REPO / "roles/pazny.n8n/defaults/main.yml").read_text()
-    assert 'n8n_ssrf_allowed_hostnames: ""' in defaults
+    assert 'n8n_ssrf_allowed_ip_ranges: ""' in defaults

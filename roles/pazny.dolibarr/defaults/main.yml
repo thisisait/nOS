@@ -1,9 +1,10 @@
 ---
 # pazny.dolibarr — install-only. SSO / Traefik / GDPR live in dolibarr-base.
 #
-# Image: dolibarr/dolibarr (GPLv3+, linux/arm64). OpenID Connect is a module,
-# not env-complete — plugin authentik.mode stays forward_auth until a post.yml
-# path proves native_oidc (FreeScout lesson).
+# Image: dolibarr/dolibarr (GPLv3+, linux/arm64). Native OIDC since
+# 2026-09-21: tasks/post.yml arms core's openid_connect module (const +
+# MAIN_AUTHENTICATION_OIDC_* + the SSO admin user) — the proven consumer the
+# FreeScout rule demanded.
 
 dolibarr_version: "21.0.4"
 dolibarr_domain: "doli{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
@@ -15,6 +16,11 @@ dolibarr_tz: "Europe/Prague"
 dolibarr_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 dolibarr_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 dolibarr_admin_login: "admin"
+# The SSO admin: an llx_user row with THIS login and admin=1 is ensured by
+# post.yml, because core's OIDC handler only SELECTs by login == the email
+# claim — no auto-create upstream. Default = the estate's admin email; a
+# real operator overrides with their Authentik email in config.yml.
+dolibarr_sso_admin_login: "{{ default_admin_email }}"
 dolibarr_country: "CZ"
 dolibarr_enable_modules: "Societe,Facture,Propale,Agenda"
 dolibarr_upload_max: "32M"

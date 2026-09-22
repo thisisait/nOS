@@ -745,7 +745,7 @@ services:
       url_template: "http://localhost:{{ dolibarr_port }}/"
       expect_status: 200
       timeout_sec: 15
-    oidc: proxy
+    oidc: native
     rbac_tier: 2
 
   - id: onlyoffice

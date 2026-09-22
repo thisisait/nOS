@@ -34,8 +34,12 @@ DOLI_CONTAINER = os.environ.get("DOLI_CONTAINER", "b2b-dolibarr-1")
 MARIADB_CONTAINER = os.environ.get("MARIADB_CONTAINER", "infra-mariadb-1")
 JOIN = "nos:doli:"
 
+# Dolibarr 21 has no `idprof1` column — the legacy idprof1/2/3 became
+# siren/siret/ape in llx_societe (measured against the live 21.0.4 schema,
+# 2026-09-21: "Unknown column 's.idprof1'"). CZ "Prof id 1" (IČO) lands in
+# `siren`; the parse side keeps the idprof1 KEY for --from-json fixtures.
 _SQL = (
-    "SELECT s.rowid, s.nom, IFNULL(s.name_alias,''), IFNULL(s.idprof1,''), "
+    "SELECT s.rowid, s.nom, IFNULL(s.name_alias,''), '', "
     "IFNULL(s.siren,''), IFNULL(c.code,'CZ') "
     "FROM llx_societe s LEFT JOIN llx_c_country c ON c.rowid=s.fk_pays "
     "WHERE s.status=1"

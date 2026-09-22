@@ -41,4 +41,7 @@ def test_no_invented_webhook_auth_env():
 def test_defaults_enable_ssrf_protection():
     src = DEFAULTS.read_text()
     assert "n8n_ssrf_protection: true" in src, "n8n_ssrf_protection must default true"
-    assert "n8n_ssrf_allowed_hostnames" in src, "the allowlist escape-hatch var must exist"
+    # IP ranges, not hostnames — the hostname allowlist covers only the lookup
+    # phase; the connect-time validator sees a bare IP (measured 2026-09-21).
+    assert "n8n_ssrf_allowed_ip_ranges" in src, "the allowlist escape-hatch var must exist"
+    assert "n8n_ssrf_allowed_hostnames" not in src, "lookup-phase-only env — use IP ranges"

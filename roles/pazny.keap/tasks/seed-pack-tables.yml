@@ -1,0 +1,25 @@
+---
+# =============================================================================
+# pazny.keap/tasks/seed-pack-tables.yml — reconcile the n8n pack DataTables.
+#
+# The pack graphs (docs/doctrine/n8n-packs.md) UPSERT rows; nothing on the n8n
+# side may create a TABLE — the spine is nOS's. Committed defs were live-missing
+# until 2026-09-21 ("unknown table" was the first thing a pack write met).
+# Reuses the face per-table seeder (rows: [] — packs write rows, the playbook
+# writes shape; the loop var name `_face_tbl` is the seeder's own). Lives as a
+# `seed-*-tables.yml` file so test_keap_table_concepts' seeder discovery glob
+# sees it — an inline loop in post.yml was invisible to that gate.
+# =============================================================================
+
+- name: "[pazny.keap] Reconcile n8n pack DataTables (cnb-fx, party-registry-status)"
+  ansible.builtin.include_tasks: seed-face-table.yml
+  loop:
+    - slug: "cnb-fx"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/cnb-fx.table.yml') | from_yaml }}"
+      rows: []
+    - slug: "party-registry-status"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-registry-status.table.yml') | from_yaml }}"
+      rows: []
+  loop_control:
+    loop_var: _face_tbl
+    label: "{{ _face_tbl.slug }}"

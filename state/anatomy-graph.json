@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 297,
+    "nodes": 298,
     "edges": 313,
     "nodes_pulse": 41,
     "nodes_judge": 5,
@@ -16,7 +16,7 @@
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 57,
-    "nodes_table": 38,
+    "nodes_table": 39,
     "nodes_doctrine": 13,
     "nodes_faceapp": 7,
     "nodes_agent": 16,
@@ -335,13 +335,13 @@
     "authentik:dolibarr": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
-      "mode": "forward_auth",
+      "mode": "native_oidc",
       "tier": 2,
-      "client_id": null,
+      "client_id": "nos-dolibarr",
       "service": "dolibarr",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik forward_auth client 'None' (RBAC tier 2) — gates service:dolibarr; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik native_oidc client 'nos-dolibarr' (RBAC tier 2) — gates service:dolibarr; provider+application managed by OpenTofu from the committed registry"
     },
     "authentik:erpnext": {
       "kind": "authentik",
@@ -3204,6 +3204,13 @@
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Caddy sessions' (state/keap-tables/caddy-sessions.table.yml)"
     },
+    "table:cnb-fx": {
+      "kind": "table",
+      "source": "state/keap-tables/cnb-fx.table.yml",
+      "title": "ČNB FX rates",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'ČNB FX rates' (state/keap-tables/cnb-fx.table.yml)"
+    },
     "table:controls": {
       "kind": "table",
       "source": "state/keap-tables/controls.table.yml",
@@ -3527,7 +3534,7 @@
       "from": "authentik:dolibarr",
       "to": "service:dolibarr",
       "kind": "data",
-      "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
+      "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
       "derived": "tofu-authentik-registry",
       "evidence": "derived"
     },
@@ -4510,7 +4517,7 @@
       "from": "service:authentik",
       "to": "authentik:dolibarr",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting",
       "evidence": "derived"
     },

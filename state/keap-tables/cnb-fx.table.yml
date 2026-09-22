@@ -1,0 +1,29 @@
+# =============================================================================
+# KEAP DataTable — ČNB daily FX list (reference data, not a booked fact).
+#
+# One row per (date, currency); the n8n ČNB pack overwrites/extends daily.
+# Books conversion reads THIS spine, never a spreadsheet. Writer: n8n
+# `nOS PULL · ČNB FX → KEAP DTT` (files/anatomy/n8n/templates/nos-pull-cnb-fx
+# .json); oracle the gate scores: tools/cnb-dtt.py. Column set is pinned by
+# files/anatomy/n8n/templates/cnb-fx.schema.json (the graph fetches the LIVE
+# schema before formatting — keep the two aligned).
+#
+# anchors: [] deliberately — no taxonomy node exists for FX reference data
+# yet; mint one before anchoring (a broken anchor is invisible in explore,
+# gate test_table_anchors_resolve).
+# =============================================================================
+title: "ČNB FX rates"
+description: >-
+  Daily CZK exchange-rate list from the Czech National Bank (denní kurz).
+  One row per date and currency; `rate` is CZK per `amount` units of
+  `currency`. Filled by the n8n ČNB pack on its schedule.
+driver: libsql
+visibility: tier-managers
+anchors: []
+schema:
+  columns:
+    - { key: slug,     label: "Slug",     kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: date,     label: "Date",     kind: date,   role: dimension, required: true, concept: time.occurred_at }
+    - { key: currency, label: "Currency", kind: text,   role: dimension, required: true }
+    - { key: amount,   label: "Amount",   kind: number, role: attribute, required: true }
+    - { key: rate,     label: "Rate (CZK)", kind: number, role: measure, required: true }

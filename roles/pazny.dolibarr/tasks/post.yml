@@ -1,0 +1,99 @@
+---
+# ==============================================================================
+# pazny.dolibarr/tasks/post.yml — arm core's OpenID Connect login (native SSO).
+#
+# The live consumer behind dolibarr-base's `mode: native_oidc`: Dolibarr core
+# ships an Authorization-Code handler (core/login/functions_openid_connect.php)
+# that activates on three legs, all owned here:
+#   1. conf.php auth chain — DOLI_AUTH="openid_connect,dolibarr" (compose env).
+#   2. llx_const — MAIN_MODULE_OPENIDCONNECT=1 (the handler's only module
+#      check, source line 45) + the five MAIN_AUTHENTICATION_OIDC_* constants.
+#   3. llx_user — a row whose login == the `email` claim, admin=1. The handler
+#      only SELECTs by login (no auto-create upstream), so without this row
+#      SSO authenticates against Authentik and then finds nobody.
+# Idempotent: consts INSERT..ON DUPLICATE KEY UPDATE; user INSERT..SELECT
+# WHERE NOT EXISTS. Verification is a READER at the end: the login page must
+# actually offer the OIDC entry URL (no silent green — the n8n owner lesson).
+# ==============================================================================
+
+- name: "[pazny.dolibarr Post] Upsert OpenID Connect constants (llx_const)"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - -i
+      - "{{ mariadb_container | default('infra-mariadb-1') }}"
+      - sh
+      - -c
+      - >-
+        mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" {{ dolibarr_db_name }} -e
+        "INSERT INTO llx_const (name, value, type, visible, note, entity)
+         VALUES ('{{ item.name }}', '{{ item.value }}', 'chaine', 0,
+                 'nOS playbook (pazny.dolibarr post.yml)', 1)
+         ON DUPLICATE KEY UPDATE value='{{ item.value }}'"
+  loop:
+    - { name: "MAIN_MODULE_OPENIDCONNECT",              value: "1" }
+    - { name: "MAIN_AUTHENTICATION_OIDC_AUTHORIZE_URL", value: "https://{{ authentik_domain }}/application/o/authorize/" }
+    - { name: "MAIN_AUTHENTICATION_OIDC_TOKEN_URL",     value: "https://{{ authentik_domain }}/application/o/token/" }
+    - { name: "MAIN_AUTHENTICATION_OIDC_USERINFO_URL",  value: "https://{{ authentik_domain }}/application/o/userinfo/" }
+    - { name: "MAIN_AUTHENTICATION_OIDC_CLIENT_ID",     value: "nos-dolibarr" }
+    - { name: "MAIN_AUTHENTICATION_OIDC_CLIENT_SECRET", value: "{{ nos_derived_secrets.oidc_dolibarr }}" }
+    - { name: "MAIN_AUTHENTICATION_OIDC_SCOPES",        value: "openid profile email" }
+    - { name: "MAIN_AUTHENTICATION_OIDC_LOGIN_CLAIM",   value: "email" }
+  loop_control:
+    label: "{{ item.name }}"
+  register: _doli_const
+  # ON DUPLICATE KEY UPDATE gives no changed/unchanged signal worth parsing;
+  # the reader below asserts the EFFECT, this task claims nothing.
+  changed_when: false
+  no_log: true   # CLIENT_SECRET in argv
+  when: install_dolibarr | default(false) | bool
+
+- name: "[pazny.dolibarr Post] Ensure the SSO admin user (login == email claim)"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - -i
+      - "{{ mariadb_container | default('infra-mariadb-1') }}"
+      - sh
+      - -c
+      - >-
+        mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" {{ dolibarr_db_name }} -e
+        "INSERT INTO llx_user (datec, login, admin, statut, entity, employee)
+         SELECT NOW(), '{{ dolibarr_sso_admin_login }}', 1, 1, 1, 0
+         WHERE NOT EXISTS
+           (SELECT 1 FROM llx_user WHERE login='{{ dolibarr_sso_admin_login }}')"
+  register: _doli_sso_user
+  changed_when: false   # the reader below is the truth; SQL echo carries no signal
+  when: install_dolibarr | default(false) | bool
+
+# ── Readers (no silent green) ────────────────────────────────────────────────
+- name: "[pazny.dolibarr Post] Read back: module + user actually landed"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - -i
+      - "{{ mariadb_container | default('infra-mariadb-1') }}"
+      - sh
+      - -c
+      - >-
+        mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" {{ dolibarr_db_name }} -N -e
+        "SELECT (SELECT value FROM llx_const WHERE name='MAIN_MODULE_OPENIDCONNECT' AND entity=1),
+                (SELECT COUNT(*) FROM llx_user WHERE login='{{ dolibarr_sso_admin_login }}' AND admin=1 AND statut=1)"
+  register: _doli_oidc_read
+  changed_when: false
+  when: install_dolibarr | default(false) | bool
+
+- name: "[pazny.dolibarr Post] OIDC wiring must land (no silent green)"
+  ansible.builtin.assert:
+    that:
+      - _doli_oidc_read.stdout is search('^1\t1')
+    fail_msg: >-
+      Dolibarr OIDC wiring did not land (read back:
+      '{{ _doli_oidc_read.stdout | default('') }}' — expected module const 1
+      and one active admin user '{{ dolibarr_sso_admin_login }}'). The SSO
+      button will silently not appear; inspect llx_const / llx_user in the
+      {{ dolibarr_db_name }} schema.
+  when: install_dolibarr | default(false) | bool

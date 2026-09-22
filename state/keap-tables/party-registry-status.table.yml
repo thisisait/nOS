@@ -16,7 +16,12 @@ description: >-
   Czech IČO on the party spine. One row per IČO, overwritten on each run.
 driver: libsql
 visibility: tier-managers
-anchors: ["nos.digest.party-registry-status"]
+# nos.digest.party-registry-status never existed in the live taxonomy — the
+# lint flagged it the moment the table went live (2026-09-21, gate
+# test_table_anchors_resolve; taxonomy nodes are KEAP-repo canonical, not
+# mintable from here). Anchored to the party spine node this table is a facet
+# of; mint the dedicated node KEAP-side before re-anchoring.
+anchors: ["nos.fixture.party"]
 graph:
   mode: rows
   node: { idColumn: slug, labelColumn: ico, kind: party-registry-status }

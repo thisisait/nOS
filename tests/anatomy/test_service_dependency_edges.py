@@ -90,6 +90,9 @@ REFUSED = {
     # as surveyed), so the chain is complete and the layer derivation walks it.
     # A parallel service edge would be padding, which this graph refuses.
     ("bookstack", "authentik"): "SSO — carried by the authentik provider chain",
+    # dolibarr joined the class 2026-09-21 (native_oidc flip: post.yml writes
+    # the MAIN_AUTHENTICATION_OIDC_*_URL consts pointing at authentik_domain)
+    ("dolibarr", "authentik"): "SSO — carried by the authentik provider chain",
     ("erpnext", "authentik"): "SSO — carried by the authentik provider chain",
     # freescout row DELETED 2026-09-03 (fee 49): the OIDC env that made the
     # sweep see the pair was removed with the dead module wiring; the edge

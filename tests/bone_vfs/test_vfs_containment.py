@@ -121,3 +121,40 @@ def test_no_token_401(client):
 def test_wrong_token_403(client):
     r = client.get("/api/v1/vfs/list", params={"uid": "alice", "path": "documents"}, headers={"Authorization": "Bearer nope"})
     assert r.status_code == 403
+
+
+# ── Lazy home skeleton (ssot/doctrine/filesystem.md §3, minted on first touch) ─────────────
+
+def test_first_touch_mints_the_doctrine_skeleton(client, auth, vfs_env):
+    """A never-seen uid gets the class-3 home on its first authenticated call —
+    documents/, library/, inbox/accounting/, agents/ — because nothing else in
+    the estate creates them (measured 2026-09-21: the invite flow provisions a
+    mailbox and an Infisical folder, never a filesystem; the accounting intake
+    glob matched zero dirs on every install)."""
+    _, users = vfs_env
+    assert not (users / "carol").exists()
+    r = client.get("/api/v1/vfs/list", params={"uid": "carol", "path": ""}, headers=auth)
+    assert r.status_code == 200
+    for sub in ("documents", "library", "inbox/accounting", "agents"):
+        assert (users / "carol" / sub).is_dir(), sub
+    # inbox/accounting is the PARENT only — the per-client (book_owner) leaf
+    # is a client-onboarding act, not a skeleton guess
+    assert list((users / "carol" / "inbox" / "accounting").iterdir()) == []
+
+
+def test_skeleton_never_repairs_an_existing_home(client, auth, vfs_env):
+    """An existing home is the user's own: a deleted subdir stays deleted —
+    the mint is first-touch-only, not a per-request reconciler."""
+    _, users = vfs_env
+    # alice exists (fixture) with only documents/ — no skeleton back-fill
+    client.get("/api/v1/vfs/list", params={"uid": "alice", "path": ""}, headers=auth)
+    assert not (users / "alice" / "library").exists()
+
+
+def test_invalid_uid_still_mints_nothing(client, auth, vfs_env):
+    _, users = vfs_env
+    before = sorted(p.name for p in users.iterdir())
+    for uid in ("../evil", ".hidden", ".."):
+        r = client.get("/api/v1/vfs/list", params={"uid": uid, "path": ""}, headers=auth)
+        assert r.status_code == 400
+    assert sorted(p.name for p in users.iterdir()) == before

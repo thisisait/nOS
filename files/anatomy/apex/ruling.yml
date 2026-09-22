@@ -52,7 +52,7 @@ artifact: state/anatomy-graph.json
 # file as AMENDED AFTER SIGNING and asks for a fresh signature. To re-sign:
 #   python3 tools/apex-sign.py            # prints the diff since the last sign
 #   python3 tools/apex-sign.py --confirm  # writes the new digest
-signed_digest: a964a227e18d050e620c8db63e3d4c63946b91f4cbd66eeff03e87fd1f5df712
+signed_digest: db0a46d93123f05165e52f35f5dc4dee0d7025c07bed2f9139af3d5d38d072af
 
 
 # The declared split. The gate recounts the table below and refuses to run
@@ -711,6 +711,10 @@ nodes:
   # it). WITHHELD like every table node — whose counterparties the estate
   # watches is the firm's business, never the public front door.
   "table:party-registry-status": withheld
+  # ČNB daily FX reference table (n8n ČNB pack fills it). WITHHELD like every
+  # table node — the rates are public data, but which spine the estate keeps
+  # and refreshes is its own business, never the public front door.
+  "table:cnb-fx": withheld
   # D5 review sinks for the invoice-extract pipeline (pending-invoice-verify,
   # invoice-review). WITHHELD like every table node — a client firm's invoice
   # data and review queue are theirs, never the public front door.

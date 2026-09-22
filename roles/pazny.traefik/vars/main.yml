@@ -140,7 +140,10 @@ traefik_auth_modes:
   # admin UI is gated"; the user DB did not exist, which is the other half of
   # why this had to change.
   firefly: proxy
-  dolibarr: proxy           # forward_auth gate; native_oidc only after post.yml proves the module
+  dolibarr: oidc            # native OIDC since 2026-09-21 — core openid_connect
+                            # module armed by pazny.dolibarr post.yml; stacking
+                            # authentik@file on top would double-login + 302
+                            # the OIDC callback (test_forward_auth_does_not_stack)
   keap: proxy               # header_oidc — outpost must stay in path to inject
                             # X-Authentik-* identity headers (firefly pattern)
   face: proxy               # forward_auth — outpost injects X-Authentik-* which

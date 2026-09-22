@@ -1,9 +1,16 @@
 # =============================================================================
 # dolibarr-base — CRM desk (GPLv3+). Role keeps image/DB/volumes.
 #
-# SSO: forward_auth until OpenID Connect is proven in post.yml (no native
-# claim without a live consumer — FreeScout). Per-user CRM identity is the
-# target; this gate is honest access control, not header provisioning.
+# SSO: native_oidc since 2026-09-21 — the live consumer the FreeScout rule
+# demanded is Dolibarr core's openid_connect login handler (Authorization
+# Code flow; core/login/functions_openid_connect.php), armed by
+# roles/pazny.dolibarr/tasks/post.yml: module const + the five
+# MAIN_AUTHENTICATION_OIDC_* constants + an admin user whose login equals
+# the email claim (no auto-create upstream — the handler only SELECTs
+# llx_user by login). DOLI_AUTH="openid_connect,dolibarr" chains the
+# handlers: the OIDC callback authenticates, a posted form falls through to
+# the local handler (that chain is upstream's own flow contract, not a
+# break-glass hack).
 # =============================================================================
 
 name: dolibarr-base
@@ -39,14 +46,19 @@ depends_on:
     measured: "2026-09-21"
 
 authentik:
-  mode: forward_auth
-  provider_type: forward_auth
+  mode: native_oidc
   client_id: nos-dolibarr
   client_secret: "{{ nos_derived_secrets.oidc_dolibarr }}"
   slug: dolibarr
   name: 'Dolibarr'
   enabled: "{{ install_dolibarr | default(false) }}"
+  redirect_uris:
+    - "https://{{ dolibarr_domain | default('doli' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/core/modules/openid_connect/callback.php"
   launch_url: "https://{{ dolibarr_domain | default('doli' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  scopes:
+    - openid
+    - profile
+    - email
   tier: 2
 
 compose_extension:

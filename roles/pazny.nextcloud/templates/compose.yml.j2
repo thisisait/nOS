@@ -20,6 +20,13 @@ services:
     volumes:
       - {{ nextcloud_dir }}:/var/www/html
       - {{ nextcloud_data_dir }}:/data
+      # Class-3 bridge (ssot/doctrine/filesystem.md): the per-user doctrine
+      # tree, so the euro-office/OnlyOffice connector can edit the SAME bytes
+      # the face Files app and Bone VFS serve, and KEAP fs-sync ingests the
+      # result per-user. Wired as a per-user Local external storage in
+      # post.yml (files_external, $user placeholder) — the mount alone shows
+      # nothing. Stays inside nos_data_root (ssot/doctrine/filesystem.md §6).
+      - {{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/users:/nos-user-files
 {% if mariadb_ssl_enabled and install_mariadb %}
       # REM-217 rung 3. Nextcloud has no env knob for this — the option that
       # USES this file is set post-start via `occ config:system:set

@@ -69,10 +69,32 @@ def test_compose_carries_managed_encryption_key():
 
 
 def test_ssrf_defaults_stay_empty_but_keap_pack_path_allowlists():
-    assert 'n8n_ssrf_allowed_hostnames: ""' in DEFAULTS.read_text(encoding="utf-8")
+    """The KEAP pack path re-opens the host-gateway addresses through the guard.
+
+    IP RANGES, not hostnames — and the reason is read from the shipped source,
+    not guessed (both measured 2026-09-21): N8N_SSRF_ALLOWED_HOSTNAMES exists
+    but covers only the lookup phase; the connect-time validator sees a bare
+    IP (ssrf-protection.service.js validateConnectionHost), so a
+    hostname-only allowlist still blocked the pack write. And the lookup
+    phase validates EVERY resolved address, so the /etc/hosts IPv6
+    host-gateway row blocks a v4-only range list — the default must carry
+    both families. This gate refuses the hostname-only spelling because it
+    is INSUFFICIENT, not fictional."""
+    defaults = DEFAULTS.read_text(encoding="utf-8")
+    assert 'n8n_ssrf_allowed_ip_ranges: ""' in defaults
+    # GLOBAL, not a role default: the plugin loader renders the compose
+    # extension without role defaults in scope (a role-scoped var came out "").
+    config = (REPO / "default.config.yml").read_text(encoding="utf-8")
+    assert "n8n_host_gateway_cidr" in config
+    assert "n8n_host_gateway_cidr:" not in defaults, "must be global-only (loader scope)"
     ext = COMPOSE_EXT.read_text(encoding="utf-8")
-    assert "install_keap" in ext and "keap_domain" in ext
-    assert "N8N_SSRF_ALLOWED_HOSTNAMES" in ext
+    assert "install_keap" in ext and "n8n_host_gateway_cidr" in ext
+    assert "N8N_SSRF_ALLOWED_IP_RANGES" in ext
+    assert "N8N_SSRF_ALLOWED_HOSTNAMES" not in ext, (
+        "hostname allowlist is lookup-phase only — the connect-time IP "
+        "validator ignores it; use IP ranges")
+    # both address families, or the /etc/hosts v6 row re-blocks the pack path
+    assert "192.168.65.254/32" in config and "::254/128" in config
 
 
 def test_n8n_base_watch_is_not_a_clock():

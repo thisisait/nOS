@@ -384,3 +384,76 @@
   # and between no_log, `changed_when: false` and `failed_when: false` the task
   # could not report the corrupted value by construction. It stayed invisible
   # through every run until Nextcloud's Files page started throwing a 500.
+
+# ── Class-3 bridge: per-user doctrine tree as external storage ───────────────
+# READER NOTE: occ --output=json escapes slashes (\/nos-user-files\/$user),
+# so the predicates match the two tokens separately — the literal path is
+# never in the JSON (first live run failed its own read-back on exactly that).
+# Pairs with the /nos-user-files bind in compose.yml.j2: without this the
+# mount shows nothing; without the mount this points at a void. NC's `$user`
+# placeholder makes it ONE mount definition for every user (no per-user
+# loop). CEILING, stated: NC substitutes $user with ITS user id — equality
+# with the Bone/face canonical uid holds only while the OIDC username
+# Nextcloud receives folds to the same slug (App\Security\CanonicalUid ==
+# face uid.ts; the invite-provisioning gate pins the fold).
+- name: "[pazny.nextcloud Post] Check nOS user-files external storage exists"
+  ansible.builtin.command:
+    argv: [docker, compose, -p, iiab, exec, -T, -u, www-data, nextcloud, php, occ, files_external:list, --output=json]
+  register: _nc_ext_list
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - _nc_current_dbpass.stdout | default('') | trim != '__NC_NOT_INSTALLED__'
+
+- name: "[pazny.nextcloud Post] Enable files_external app"
+  ansible.builtin.command:
+    argv: [docker, compose, -p, iiab, exec, -T, -u, www-data, nextcloud, php, occ, app:enable, files_external]
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - _nc_current_dbpass.stdout | default('') | trim != '__NC_NOT_INSTALLED__'
+    - "not ('nos-user-files' in (_nc_ext_list.stdout | default('')) and '$user' in (_nc_ext_list.stdout | default('')))"
+
+- name: "[pazny.nextcloud Post] Create per-user nOS files mount ($user placeholder)"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -p
+      - iiab
+      - exec
+      - -T
+      - -u
+      - www-data
+      - nextcloud
+      - php
+      - occ
+      - files_external:create
+      - "nOS files"
+      - local
+      - "null::null"
+      - -c
+      - "datadir=/nos-user-files/$user"
+  register: _nc_ext_create
+  changed_when: _nc_ext_create.rc | default(1) == 0
+  check_mode: false
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - _nc_current_dbpass.stdout | default('') | trim != '__NC_NOT_INSTALLED__'
+    - "not ('nos-user-files' in (_nc_ext_list.stdout | default('')) and '$user' in (_nc_ext_list.stdout | default('')))"
+
+- name: "[pazny.nextcloud Post] Read back: the mount is registered (no silent green)"
+  ansible.builtin.command:
+    argv: [docker, compose, -p, iiab, exec, -T, -u, www-data, nextcloud, php, occ, files_external:list, --output=json]
+  register: _nc_ext_verify
+  changed_when: false
+  failed_when:
+    - "not ('nos-user-files' in (_nc_ext_verify.stdout | default('')) and '$user' in (_nc_ext_verify.stdout | default('')))"
+  check_mode: false
+  when:
+    - _nc_container.stdout | default('') | length > 0
+    - _nc_current_dbpass.stdout | default('') | trim != '__NC_NOT_INSTALLED__'

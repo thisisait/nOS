@@ -177,6 +177,13 @@
   ansible.builtin.include_tasks: seed-face-tables.yml
   when: install_keap | default(false) | bool
 
+# ── n8n pack DataTables (docs/doctrine/n8n-packs.md) ─────────────────────────
+- name: "[pazny.keap] Seed n8n pack DataTables (cnb-fx, party-registry-status)"
+  ansible.builtin.include_tasks: seed-pack-tables.yml
+  when:
+    - install_keap | default(false) | bool
+    - install_n8n | default(false) | bool
+
 # ── Label-printer business fixture (w-fixture increment 1) ───────────────────
 # Nine EN 16931 + print-shop DataTables with synthetic seed rows, git-owned so
 # a blank → converge recreates the tenant (the design doc's proof 3). Opt-in:

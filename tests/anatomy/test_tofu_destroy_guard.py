@@ -207,6 +207,48 @@ def test_the_filter_fails_closed_on_everything_it_cannot_attribute():
         assert out["unexplained"][0]["why"], f"{label} refuses without saying why"
 
 
+def test_a_provider_mode_flip_is_an_authored_destroy():
+    """Flipping a plugin's authentik.mode (forward_auth → native_oidc) plans
+    delete(proxy provider + outpost attachment) + create(oauth2 provider) in
+    the SAME service module. The first live flip (dolibarr, 2026-09-21) hit
+    the ENABLED refusal — a guard asking the operator to override it for a
+    change the registry itself authors. The pair IS the authorship."""
+    mod = _load()
+    registry = [{"slug": "dolibarr", "enabled": "True"}]
+    changes = [
+        _rc("authentik_provider_proxy", ["delete"], {}, {},
+            address='module.service["dolibarr"].authentik_provider_proxy.this[0]'),
+        _rc("authentik_outpost_provider_attachment", ["delete"], {}, {},
+            address='module.service["dolibarr"].authentik_outpost_provider_attachment.embedded[0]'),
+        _rc("authentik_provider_oauth2", ["create"], {}, {},
+            address='module.service["dolibarr"].authentik_provider_oauth2.this[0]'),
+    ]
+    out = mod.nos_tofu_destroy_split(changes, registry)
+    assert out["unexplained"] == [], out["unexplained"]
+    assert len(out["declared_off"]) == 2
+    assert all("provider-mode flip" in d["why"] for d in out["declared_off"])
+
+
+def test_a_provider_delete_without_a_flip_counterpart_still_refuses():
+    """Fail-closed half: the SAME delete with no cross-kind create in the plan
+    is not a flip — an enabled service losing its provider stays refused, and
+    an application delete never rides a flip's coat-tails."""
+    mod = _load()
+    registry = [{"slug": "dolibarr", "enabled": "True"}]
+    bare = mod.nos_tofu_destroy_split(
+        [_rc("authentik_provider_proxy", ["delete"], {}, {},
+             address='module.service["dolibarr"].authentik_provider_proxy.this[0]')],
+        registry)
+    assert len(bare["unexplained"]) == 1
+    with_app = mod.nos_tofu_destroy_split(
+        [_rc("authentik_application", ["delete"], {}, {},
+             address='module.service["dolibarr"].authentik_application.this'),
+         _rc("authentik_provider_oauth2", ["create"], {}, {},
+             address='module.service["dolibarr"].authentik_provider_oauth2.this[0]')],
+        registry)
+    assert len(with_app["unexplained"]) == 1, "application delete is not flip debris"
+
+
 def test_a_replace_counts_as_a_destroy():
     """A replace is delete+create. superset's provider planned exactly that."""
     mod = _load()

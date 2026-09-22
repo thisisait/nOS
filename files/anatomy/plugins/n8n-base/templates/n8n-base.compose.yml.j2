@@ -25,19 +25,23 @@ services:
       # covers all RFC-1918 + loopback → every nOS peer (shared_net 172.30/16,
       # iiab_net 172.20/16 ⊂ 172.16/12, infra postgres/redis/portainer/prometheus).
       # Closes the unauth SSRF internal-net scan (REM-043), the SEC-02 amplifier.
-      # Re-open specific internal targets via n8n_ssrf_allowed_hostnames.
+      # Re-open specific internal targets via n8n_ssrf_allowed_ip_ranges (CIDRs,
+      # both families). n8n's hostname-allowlist env exists but is NOT enough:
+      # it covers only the lookup phase, while the connect-time validator sees
+      # a bare IP (validateConnectionHost) — and lookup validates EVERY
+      # resolved address, so an /etc/hosts IPv6 row blocks a v4-only list.
+      # Read from the shipped source, measured 2026-09-21.
       N8N_SSRF_PROTECTION_ENABLED: "true"
 {% if (n8n_ssrf_blocked_ip_ranges | default('default')) != 'default' %}
       N8N_SSRF_BLOCKED_IP_RANGES: "{{ n8n_ssrf_blocked_ip_ranges }}"
 {% endif %}
 {% if install_keap | default(false) | bool %}
-      # Pack KEAP writes hit https://{{ keap_domain }}/agent/v1 (public name,
-      # often 127.0.0.1 via extra_hosts). Defaults stay empty; this is the pack path.
-      N8N_SSRF_ALLOWED_HOSTNAMES: "{{ keap_domain }}{{ (',' ~ n8n_ssrf_allowed_hostnames) if (n8n_ssrf_allowed_hostnames | default('')) | length > 0 else '' }}"
-{% elif (n8n_ssrf_allowed_hostnames | default('')) | length > 0 %}
-      N8N_SSRF_ALLOWED_HOSTNAMES: "{{ n8n_ssrf_allowed_hostnames }}"
-{% endif %}
-{% if (n8n_ssrf_allowed_ip_ranges | default('')) | length > 0 %}
+      # Pack KEAP writes hit https://{{ keap_domain }}/agent/v1, which the
+      # extra_hosts below pin to host-gateway — PRIVATE addresses (v4 + v6)
+      # the default block set covers, so the guard re-opens exactly those
+      # (n8n_host_gateway_cidr, default.config.yml — global, loader-scoped).
+      N8N_SSRF_ALLOWED_IP_RANGES: "{{ n8n_host_gateway_cidr }}{{ (',' ~ n8n_ssrf_allowed_ip_ranges) if (n8n_ssrf_allowed_ip_ranges | default('')) | length > 0 else '' }}"
+{% elif (n8n_ssrf_allowed_ip_ranges | default('')) | length > 0 %}
       N8N_SSRF_ALLOWED_IP_RANGES: "{{ n8n_ssrf_allowed_ip_ranges }}"
 {% endif %}
 {% endif %}

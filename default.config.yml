@@ -1856,6 +1856,19 @@ n8n_port: 5678
 n8n_version: "2.37.10"  # REM-253: 2026-09-02 wave, nineteen GHSAs, floor <2.37.7. Head of 2.37. [swept 2.35.7 2026-09-16]
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
 n8n_timezone: "Europe/Prague"
+# Where extra_hosts' `host-gateway` lands — BOTH families, CSV of CIDRs. The
+# n8n pack path (https://keap.<tld> pinned to host-gateway) must be re-opened
+# through n8n's SSRF guard via IP RANGES: the hostname allowlist env exists
+# but covers only the lookup phase — the connect-time validator sees a bare
+# IP (ssrf-protection.service.js validateConnectionHost) — and the lookup
+# phase validates EVERY resolved address, so the /etc/hosts IPv6 row (ULA ⊂
+# the default blocked set) blocks a v4-only allowlist. Both addresses
+# measured in the container's /etc/hosts on Docker Desktop for Mac
+# (2026-09-21). GLOBAL (not a role default) because the plugin loader renders
+# n8n-base's compose extension without the role's defaults in scope — a
+# role-scoped var rendered "" there. Linux bridge is typically 172.17.0.1 —
+# override on a Linux host.
+n8n_host_gateway_cidr: "192.168.65.254/32,fdc4:f303:9324::254/128"
 n8n_admin_email: "{{ default_admin_email }}"
 n8n_admin_password: "{{ nos_derived_secrets.n8n }}"
 n8n_admin_firstname: "Admin"

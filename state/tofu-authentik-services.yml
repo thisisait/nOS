@@ -40,10 +40,14 @@ tofu_authentik_services:
   external_host: https://documenso.apps.{{ tenant_domain | default('dev.local') }}
 - slug: dolibarr
   name: Dolibarr
-  mode: forward_auth
+  mode: native_oidc
   tier: 2
   enabled: '{{ install_dolibarr | default(false) }}'
   external_host: https://{{ dolibarr_domain | default('doli' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
+  client_id: nos-dolibarr
+  client_secret: '{{ nos_derived_secrets.oidc_dolibarr }}'
+  redirect_uris:
+  - https://{{ dolibarr_domain | default('doli' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/core/modules/openid_connect/callback.php
 - slug: erpnext
   name: ERPNext
   mode: native_oidc

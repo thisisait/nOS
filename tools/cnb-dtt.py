@@ -16,6 +16,7 @@ import argparse
 import json
 import sys
 import urllib.request
+import datetime as _dt
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -43,7 +44,11 @@ def parse_cnb(text: str) -> list[dict]:
         rate = _czech_float(parts[4]) / amount
         rows.append({
             "slug": f"{date}-{code}",
-            "date": date,
+            # estate date columns hold EPOCH SECONDS (the digest importers'
+            # _epoch convention; KEAP refuses ISO — measured 2026-09-21). The
+            # slug keeps the ISO spelling for readability.
+            "date": int(_dt.datetime.strptime(date, "%Y-%m-%d")
+                        .replace(tzinfo=_dt.timezone.utc).timestamp()),
             "currency": code,
             "amount": 1,
             "rate": round(rate, 6),

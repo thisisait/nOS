@@ -28,6 +28,11 @@ services:
       # fails PHP verify; docker-run.sh mysql init is plaintext either way.
       DOLI_DB_SSL: "false"
       DOLI_URL_ROOT: "https://{{ dolibarr_domain | default('doli' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+      # Handler CHAIN, upstream's own contract (functions_openid_connect.php:
+      # a posted form is "Not an OpenID Connect flow" and falls through to the
+      # dolibarr handler; the OIDC callback authenticates). conf.php renders
+      # from this env on container start.
+      DOLI_AUTH: "openid_connect,dolibarr"
       DOLI_ADMIN_LOGIN: "{{ dolibarr_admin_login | default('admin') }}"
       DOLI_ADMIN_PASSWORD: "{{ dolibarr_admin_password }}"
       DOLI_COMPANY_NAME: "{{ instance_org | default('nOS', true) }}"
@@ -47,7 +52,7 @@ services:
       # php -r file_get_contents cannot probe here — the image's CLI php has
       # no http wrapper ("no suitable wrapper", measured 2026-09-21). curl IS
       # in the image; a healthcheck must be able to RUN in its image
-      # (docs/doctrine/foreign-properties.md §2).
+      # (ssot/doctrine/foreign-properties.md §2).
       test: ["CMD-SHELL", "curl -fsS -o /dev/null http://127.0.0.1/"]
       interval: 30s
       timeout: 10s

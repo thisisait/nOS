@@ -317,10 +317,14 @@ def test_users_presenter_sanitizes_error_messages():
 
 
 def test_users_presenter_no_localpart_dot_dot():
-	"""Local-part with `..` is rejected at the presenter level too, so
-	the InfisicalClient/StalwartProvisioner regexes are belt-and-suspenders."""
+	"""Local-part `..` cannot survive the presenter. Until 2026-09-21 that was
+	a str_contains guard; now it is STRUCTURAL — CanonicalUid::fold collapses
+	every non-[a-z0-9] run (dots included) to a single dash, so no dotted
+	spelling reaches InfisicalClient/StalwartProvisioner at all. The vector
+	gate below proves `a..b--c` → `a-b-c` by executing the fold."""
 	src = PRESENTER.read_text()
-	assert "str_contains($localPart, '..')" in src
+	assert "CanonicalUid::fold($localPart)" in src
+	assert ("a..b--c", "a-b-c") in UID_VECTORS
 
 
 # ── Schema + idempotent ALTER ────────────────────────────────────────────
@@ -597,3 +601,53 @@ def test_stalwart_compose_cert_mounts_are_top_level():
 	# New (fixed) pattern must be present (gated on public TLD as before):
 	assert ":/certs/cert.pem:ro" in src
 	assert ":/certs/key.pem:ro" in src
+
+
+# ── ONE uid spelling (App\Security\CanonicalUid == face slugifyUid) ──────────
+
+CANONICAL_PHP = REPO / "files/anatomy/wing/app/Security/CanonicalUid.php"
+
+#: The agreement vectors — each pair must hold in BOTH implementations.
+#: uid.ts's own docblock declares itself "THE CANONICAL CONTRACT"; this gate
+#: EXECUTES the PHP half against it rather than grepping for a comment
+#: (detectors read artifacts, not prose). `jan.novak` is the measured incident:
+#: Infisical filed `jan.novak`, face/Bone filed `jan-novak` — one human, two
+#: identities (2026-09-21).
+UID_VECTORS = [
+	("jan.novak", "jan-novak"),
+	("Jan_Novak", "jan-novak"),
+	("Pázny", "pazny"),
+	("a..b--c", "a-b-c"),
+	("--x--", "x"),
+]
+
+
+def test_canonical_uid_php_matches_the_ts_contract():
+	if shutil.which("php") is None:
+		pytest.skip("php not on PATH — CI pytest-only image; local dev runs the lint")
+	assert CANONICAL_PHP.is_file()
+	code = (
+		f"require {str(CANONICAL_PHP)!r};"
+		"foreach (json_decode(stream_get_contents(STDIN)) as $v)"
+		"  echo App\\Security\\CanonicalUid::fold($v), \"\\n\";"
+	)
+	import json
+	r = subprocess.run(["php", "-r", code], input=json.dumps([v for v, _ in UID_VECTORS]),
+	                   capture_output=True, text=True)
+	assert r.returncode == 0, r.stderr
+	got = r.stdout.splitlines()
+	assert got == [want for _, want in UID_VECTORS], (
+		f"PHP fold disagrees with the uid.ts contract: {list(zip([v for v, _ in UID_VECTORS], got))}"
+	)
+	# and the TS half still carries the same rules this gate encodes
+	ts = (REPO / "files/anatomy/face/src/lib/security/uid.ts").read_text(encoding="utf-8")
+	for marker in ("[^a-z0-9]+", "slice(0, 64)", "toLowerCase()"):
+		assert marker in ts, f"uid.ts lost the {marker!r} rule the vectors assume"
+
+
+def test_invite_local_part_routes_through_the_canonical_fold():
+	src = PRESENTER.read_text(encoding="utf-8")
+	assert "CanonicalUid::fold" in src, (
+		"UsersPresenter no longer folds the invite local-part — Infisical/"
+		"Stalwart would again spell the user differently than face/Bone"
+	)

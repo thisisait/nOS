@@ -152,6 +152,26 @@ def nos_tofu_destroy_split(resource_changes, registry):
             ],
         }
 
+    # ── Provider-mode flips are AUTHORED destroys (2026-09-21) ──────────────
+    # Flipping a plugin's `authentik.mode` (forward_auth ↔ native_oidc) plans
+    # a DELETE of one provider kind and a CREATE of the other inside the same
+    # service module (plus the outpost attachment that only exists for proxy).
+    # The first such flip (dolibarr) hit the ENABLED refusal below — asking
+    # the operator to override a guard for a change the registry itself
+    # authors. Attribution rule: a per-service delete of an
+    # `authentik_provider_*` / outpost-attachment resource is explained when
+    # the SAME service creates a DIFFERENT provider kind in the SAME plan.
+    provider_creates = {}
+    for rc in resource_changes:
+        if not isinstance(rc, dict):
+            continue
+        if "create" not in ((rc.get("change") or {}).get("actions") or []):
+            continue
+        m = _SERVICE_KEY.search(rc.get("address", ""))
+        rtype = str(rc.get("type") or "")
+        if m and rtype.startswith("authentik_provider_"):
+            provider_creates.setdefault(m.group(1), set()).add(rtype)
+
     for rc in resource_changes:
         if not isinstance(rc, dict):
             continue
@@ -167,6 +187,12 @@ def nos_tofu_destroy_split(resource_changes, registry):
             })
             continue
         slug = match.group(1)
+        rtype = str(rc.get("type") or "")
+        flip_kinds = provider_creates.get(slug, set()) - {rtype}
+        is_flip_debris = (
+            rtype.startswith("authentik_provider_")
+            or rtype == "authentik_outpost_provider_attachment"
+        ) and flip_kinds
         if slug not in enabled_by_slug:
             unexplained.append({
                 "address": address, "service": slug,
@@ -176,6 +202,13 @@ def nos_tofu_destroy_split(resource_changes, registry):
             declared_off.append({
                 "address": address, "service": slug,
                 "why": "install flag for `{}` resolves off".format(slug),
+            })
+        elif is_flip_debris:
+            declared_off.append({
+                "address": address, "service": slug,
+                "why": "provider-mode flip for `{}` — the same plan creates {} "
+                       "(authored by the plugin's authentik.mode)".format(
+                           slug, ", ".join(sorted(flip_kinds))),
             })
         else:
             unexplained.append({

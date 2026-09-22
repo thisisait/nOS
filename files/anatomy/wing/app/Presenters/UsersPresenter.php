@@ -377,7 +377,12 @@ final class UsersPresenter extends BasePresenter
 		if (!preg_match('/^[a-z0-9][a-z0-9._-]{0,62}$/', $localPart)) {
 			return;
 		}
-		if (str_contains($localPart, '..')) {
+		// ONE uid spelling estate-wide (App\Security\CanonicalUid — the PHP
+		// half of face's slugifyUid contract). Before this fold, `jan.novak@…`
+		// provisioned Infisical `jan.novak` + a dotted mailbox while face/Bone
+		// filed the person under `jan-novak` — one human, two identities.
+		$localPart = \App\Security\CanonicalUid::fold($localPart);
+		if ($localPart === '') {
 			return;
 		}
 		// Mailbox lives on the operator's configured mail domain (TENANT_DOMAIN

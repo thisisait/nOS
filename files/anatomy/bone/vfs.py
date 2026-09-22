@@ -78,10 +78,28 @@ def require_vfs_token(authorization: str = Header(None)) -> None:
         raise HTTPException(status_code=403, detail="invalid VFS token")
 
 
+#: The class-3 home skeleton (ssot/doctrine/filesystem.md §3): minted LAZILY on
+#: the first authenticated touch, HERE, because Bone is the only component that
+#: (a) holds the uid pinned from the edge-trusted Authentik header, (b) runs
+#: host-native against the doctrine tree, and (c) fires on first login rather
+#: than on a converge — an Ansible task or a Wing-invite hook would miss every
+#: user created by any other route. Until 2026-09-21 NOTHING created these dirs:
+#: an invited user got an Infisical folder and a mailbox and an empty phantom
+#: home, and the accounting intake glob (tools/invoice-vision-intake.py over
+#: inbox/accounting/*/incoming) matched zero directories on every install.
+#: `inbox/accounting/` is the parent only — the per-client (book_owner) leaf is
+#: a client-onboarding act, not a user-skeleton guess.
+_SKELETON = ("documents", "library", "inbox/accounting", "agents")
+
+
 def _user_root(uid: str) -> Path:
     if not uid or "/" in uid or uid in (".", "..") or uid.startswith("."):
         raise HTTPException(status_code=400, detail="invalid uid")
-    return (_data_root() / "tenants" / _tenant_slug() / "users" / uid).resolve()
+    root = (_data_root() / "tenants" / _tenant_slug() / "users" / uid).resolve()
+    if not root.is_dir():
+        for sub in _SKELETON:
+            (root / sub).mkdir(parents=True, exist_ok=True)
+    return root
 
 
 def _resolve(uid: str, relpath: str, *, must_exist: bool = False) -> Path:
