@@ -1530,7 +1530,10 @@ wordpress_db_user: "wordpress"
 wordpress_db_password: "{{ nos_derived_secrets.wordpress }}"
 wordpress_db_host: "127.0.0.1"          # ignored if install_mariadb=true (uses 'mariadb' from iiab_net)
 wordpress_table_prefix: "wp_"
-wordpress_version: "7.0.4"              # wp2shell fix — the image lag that pinned 6.9.4 is over.
+wordpress_version: "7.1.2"              # CVE-2026-87902 (9.2, unauth LFI->RCE).
+# The live container already RAN 7.1.2 (WP auto-updates in the volume) while the
+# image said 7.0.4 — a force-recreate would have restored vulnerable files under
+# a 7.1.2 database. No 7.0.x image exists past 7.0.4, so this branch hop IS the fix.
 # ── wp2shell (CVE-2026-63030 + CVE-2026-60137), disclosed 2026-07-17 ──────────
 # Unauth RCE via /wp-json/batch/v1/: a REST batch-route confusion chained with a
 # core SQLi. Upstream fixed both the same day in 6.8.6 / 6.9.5 / 7.0.2, and for

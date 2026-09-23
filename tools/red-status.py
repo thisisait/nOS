@@ -719,19 +719,30 @@ def ci_runs() -> dict | None:
     return branches
 
 
+#: Manifests that are test INPUT, not shipped dependencies. GitHub scans every
+#: package.json it finds; state/fixtures/ holds fake repos the importer READS.
+#: On 2026-09-23 they carried 33 of 39 open alerts including ALL FOUR HIGH —
+#: one naming a SvelteKit bug the shell is already several versions past.
+FIXTURE_MANIFEST_PREFIX = "state/fixtures/"
+
+
 def dependabot() -> dict | None:
-    """Open Dependabot alerts, counted by severity."""
+    """Open Dependabot alerts by severity — what we SHIP, fixtures counted apart."""
     alerts = _gh("api", "repos/:owner/:repo/dependabot/alerts?state=open&per_page=100",
                  "--jq", '[.[] | {sev: .security_advisory.severity, '
-                         'pkg: .dependency.package.name}]')
+                         'pkg: .dependency.package.name, '
+                         'manifest: .dependency.manifest_path}]')
     if alerts is None:
         return None
+    ours = [a for a in alerts
+            if not (a.get("manifest") or "").startswith(FIXTURE_MANIFEST_PREFIX)]
     counts: dict[str, int] = {}
-    for a in alerts:
+    for a in ours:
         counts[a["sev"]] = counts.get(a["sev"], 0) + 1
-    top = sorted({a["pkg"] for a in alerts
+    top = sorted({a["pkg"] for a in ours
                   if a["sev"] in ("critical", "high")})
-    return {"counts": counts, "serious_packages": top}
+    return {"counts": counts, "serious_packages": top,
+            "fixture_alerts": len(alerts) - len(ours)}
 
 
 def collect() -> dict:
@@ -906,6 +917,11 @@ def reds(report: dict) -> list[str]:
         line = f"{sum(dep['counts'].values())} open Dependabot alert(s): {tally}"
         if dep["serious_packages"]:
             line += " — critical/high in " + ", ".join(dep["serious_packages"][:6])
+        # Say what was set aside. A number that quietly shrank is the same defect
+        # as a number that was quietly wrong.
+        if dep.get("fixture_alerts"):
+            line += (f" (+{dep['fixture_alerts']} against {FIXTURE_MANIFEST_PREFIX}"
+                     "** — test input, not shipped)")
         out.append(line)
     for missing in report.get("sources_missing", []):
         out.append(f"source unreadable, so its state is UNKNOWN not green: {missing}")
