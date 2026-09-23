@@ -161,6 +161,40 @@ _loops_audit() {   # <event_type> <reason> — best-effort Bone audit event, nev
   return 0
 }
 
+if [ "${1:-}" = "models" ]; then
+  shift
+  _ol="${OLLAMA_HOST:-http://127.0.0.1:11434}"
+  # Fetch and render are separated on purpose: sharing one error path is how a
+  # broken renderer comes to report "ollama did not answer".
+  if ! _ps="$(curl -sS -m 5 "$_ol/api/ps" 2>/dev/null)"; then
+    echo "models: UNKNOWN — ollama at $_ol did not answer" >&2; exit 2
+  fi
+  _names="$(printf '%s' "$_ps" | jq -r '.models[]?.name')"
+  case "${1:-status}" in
+    status)
+      if [ -z "$_names" ]; then echo "models: none resident"; exit 0; fi
+      printf '%s' "$_ps" | jq -r '.models[]
+        | "  \(.name)  \(((.size // 0) / 1000000000 * 10 | round) / 10) GB  until \(.expires_at[0:19])"'
+      exit 0 ;;
+    unload)
+      # keep_alive 0 drops the model as the request completes. Ollama has no
+      # unload-all, so ask per resident model; the list is never long.
+      if [ -z "$_names" ]; then echo "models: none resident — nothing to unload."; exit 0; fi
+      _rc=0
+      for _m in $_names; do
+        if curl -sS -m 60 -o /dev/null -X POST "$_ol/api/generate" \
+             -H 'Content-Type: application/json' \
+             --data "$(jq -nc --arg m "$_m" '{model:$m, keep_alive:0}')" 2>/dev/null; then
+          echo "  unloaded $_m"
+        else
+          echo "  FAILED to unload $_m" >&2; _rc=1
+        fi
+      done
+      exit "$_rc" ;;
+    *) echo "nos models: unknown subcommand '$1' (status | unload)" >&2; exit 64 ;;
+  esac
+fi
+
 if [ "${1:-}" = "loops" ]; then
   shift
   _lp="${NOS_LOOPS_PAUSED_FILE:-$HOME/.nos/loops-paused}"

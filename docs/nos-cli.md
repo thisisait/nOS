@@ -91,6 +91,35 @@ nos dtt extract [--write]            # one-time: live table -> per-row seed file
   (title/parent/track/refs/body); `update`/`verify` move status/verdict. Never
   rewrite a filed row to change its status.
 
+## `nos models` — what ollama holds, and handing it back
+
+Reads and unloads local models. Neither verb converges anything; `unload` is the
+only one that changes state, and what it changes is memory, not data.
+
+```
+nos models             # what is resident, its size, and when ollama would drop it
+nos models unload      # hand it all back NOW (keep_alive 0, per resident model)
+```
+
+**Why this exists.** Nothing in nOS sets ollama's `keep_alive`, so its default
+keeps a model resident for five minutes after the last call. On this host that
+is not a detail — a resident 14.9 GB model took the KEAP API from 0.09 s to
+25 s, timed out a digest absorb so its queue row was never filed, and on
+2026-09-23 aborted two converges for reasons that had nothing to do with what
+they were converging: Grafana was reported unhealthy while `docker ps` said
+healthy-32h (it was slow, not broken), and an Authentik verify timed out at 30 s.
+
+**Why a verb and not a shorter timer.** A short global `keep_alive` looks like
+the obvious fix and is the wrong one: the invoice pipeline calls the same model
+once per page, and reloading 14.9 GB between pages costs more than the residency
+does. Only the caller knows when the *work* is finished, so unloading is an act,
+not a timeout. Run it after a loop, or before a converge you need to trust.
+
+- `status` exits 2 and says **UNKNOWN** if ollama does not answer — an
+  unreachable ollama is never reported as "none resident".
+- Fetch and render are separate calls on purpose: the first version shared one
+  error path and reported "ollama did not answer" about an ollama that had.
+
 ## Flag → extra-var mapping
 
 | CLI | emits | note |

@@ -64,7 +64,16 @@ LOOPS_PAUSED_FILE = pathlib.Path(
 #: The exit code agent-run-lock.sh returns when the loops are paused; a pulse
 #: run recorded with it is a hold, never a failure.
 PAUSED_EXIT = 3
-SCAN_STATE = REPO / "docs/llm/security/scan-state.json"
+#: The scanner's LIVE notebook — scan-runner.sh's own target, and the only file
+#: that answers "did the scan run". The git copy below is the last PROMOTION of
+#: it. On 2026-09-23 they were 16 days and 9 cycles apart, and reading the git
+#: one made red-status report a stopped scanner that was running that morning.
+SCAN_STATE = pathlib.Path(
+    os.environ.get("NOS_SECURITY_DIR", str(pathlib.Path.home() / ".nos" / "security"))
+) / "scan-state.json"
+#: What a fresh checkout would believe. Its lag is a real fact and a DIFFERENT
+#: one — reported separately, never as the scanner's age.
+SCAN_STATE_PROMOTED = REPO / "docs/llm/security/scan-state.json"
 #: Read to re-decide a `security-drift` notification's own claim — see
 #: `_still_holds`. A file, like every other source here.
 REMEDIATION_QUEUE = REPO / "docs/llm/security/remediation-queue.json"
@@ -547,13 +556,25 @@ def security_scan() -> dict | None:
         if isinstance(comp, dict) and comp.get("status") == "scan_failed"
     )
     last = _parse_iso(data.get("last_full_scan"))
-    return {
+    out = {
         "last_full_scan": data.get("last_full_scan"),
         "age": _age(last),
         "stale": last is None or last < _now() - SCAN_STALE_AFTER,
         "scan_failed": failed,
         "cycle": data.get("scan_cycle"),
     }
+    # The promotion lag, as its own fact. Absent file = never promoted, which is
+    # reported rather than skipped.
+    if SCAN_STATE_PROMOTED.is_file():
+        promoted = json.loads(SCAN_STATE_PROMOTED.read_text(encoding="utf-8"))
+        pub = _parse_iso(promoted.get("last_full_scan"))
+        out["promoted_cycle"] = promoted.get("scan_cycle")
+        out["promoted_age"] = _age(pub)
+        out["promotion_behind"] = (
+            out["cycle"] is not None and out["promoted_cycle"] is not None
+            and out["promoted_cycle"] < out["cycle"]
+        )
+    return out
 
 
 def backups() -> dict | None:
@@ -828,6 +849,12 @@ def reds(report: dict) -> list[str]:
         )
     elif scan and scan.get("stale"):
         out.append(f"security scan stale — last full scan {scan['age']}")
+    if scan and scan.get("promotion_behind"):
+        out.append(
+            f"security notebook not promoted — the scanner is at cycle {scan['cycle']} "
+            f"({scan['age']}), the committed copy at {scan['promoted_cycle']} "
+            f"({scan['promoted_age']}); a fresh checkout reads the older one"
+        )
     bk = report.get("backups")
     if bk and bk.get("failed"):
         out.append(f"backup sources failed: {', '.join(str(f) for f in bk['failed'])}")
