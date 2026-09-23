@@ -281,16 +281,21 @@ because three of them were confidently answering about something else.
   That is SOURCE wiring, not a restore drill.
 - GitHub Integration on `master` is not claimed green. Signed-commit ruleset
   still bypassed. Four v0.11 `-beta` drop criteria remain unmet.
-- **n8n answers the public internet ungated** (REM-276, scan cycle 64,
-  verified over real DNS). Its own session auth holds — `/rest/workflows`,
-  `/rest/credentials`, `/rest/users` all 401 — so this is an auth-posture
-  downgrade, not data exposure. The cause is a hand-written claim nobody
-  checks: `traefik_auth_modes['n8n'] = oidc` asserts the app gates itself,
-  while its unauthenticated `/rest/settings` reports OIDC as an inert
-  Enterprise feature. **Three of three** audited `oidc` classifications have
-  now been false (REM-144, REM-192, REM-276). The fix is a path split, not a
-  blanket gate — `/webhook/` exists for machine callers — so it lands with the
-  operator's n8n activation, where both halves get tested at once.
+- ~~n8n answers the public internet ungated~~ **CLOSED the same day**, and
+  the recommended remediation deliberately did not ship. The cause was a
+  hand-written claim nobody checks: `traefik_auth_modes['n8n'] = oidc` asserts
+  the app gates itself, while its unauthenticated `/rest/settings` reports OIDC
+  as an inert Enterprise feature — **three of three** audited `oidc`
+  classifications have now been false. The flip needed BOTH halves: changing
+  the mode alone asks the outpost for a proxy provider the plugin never
+  declared, turning 200 into 404 (measured). With the plugin flipped to
+  `forward_auth`, n8n 302s into the outpost and answers 302 inside the strict
+  smoke. What did NOT ship is the open `/webhook/` lane the scan recommended:
+  nothing needs it (our clock posts to 127.0.0.1 over loopback) and the one
+  webhook that exists carries no auth, so publishing that prefix would have
+  handed the internet an unauthenticated trigger that writes to the knowledge
+  base — a worse hole than the one being closed. `traefik_machine_lanes`
+  generalises the old hardcoded keap lane; n8n's list is empty on purpose.
 - **REM-275**: sixth n8n advisory wave, floor 2.39.10 against a 2.37.10 pin;
   sixteen GHSA-only records dated 2026-09-16, one of which decrypts any
   instance credential with no ownership check.

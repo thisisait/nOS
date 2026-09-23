@@ -13,16 +13,21 @@
 1. **The v0.13-beta cut** (dtt `rel-013`). Invoice identity is closed in
    SOURCE *and live*: the operator's teardown + re-import ran, and
    `tools/invoice-identity-scan.py` reads clean (6 rows, every id derived).
-   Ceremony steps 4–6 are done — `tools/ci-local.sh` rc=0 on the frozen 2.21
-   mirror, docs pass landed, devlog written. **Operator, what is left:**
-   step 3 (full `nos` converge to `failed=0`, then `tools/nos-smoke.py
-   --strict` — it needs the sudo prompt) and step 7 (dev→master
-   `gh pr merge --rebase --admin`, re-sync, tag). Ceremony order lives in the
-   dtt row, not here.
-   **Two HIGHs found the same day, neither shipped:** REM-276 (n8n answers the
-   public internet ungated; the fix is a path split that must land WITH the
-   operator's workflow activation so `/webhook/` is tested) and REM-275 (n8n
-   floor 2.39.10 vs a 2.37.10 pin).
+   **Steps 1–6 are done and measured.** Full converge `failed=0`
+   (ok=1389 changed=124) + `nos-smoke --strict` 47/47 on 2026-09-23 19:31;
+   `tools/ci-local.sh` rc=0 on the frozen 2.21 mirror; docs pass and devlog
+   landed. **Only step 7 is left, and it is the operator's:** `merge-base` ==
+   `master` tip is VERIFIED, so a rebase-merge is a fast-forward — but dev is
+   **1205 commits** ahead and `gh pr merge --rebase` already refused at 188
+   (v0.10), so the release-scale path is `git push origin origin/dev:master`,
+   then re-sync dev, tag, `gh release`.
+   **Open on n8n:** the edge gate SHIPPED and is live (200 → 302 into the
+   outpost), and the machine-lane mechanism ships with n8n's list EMPTY on
+   purpose — the clock is loopback and the one webhook has no auth. REM-275
+   (floor 2.39.10 vs the 2.37.10 pin) is untouched.
+   **Not promoted, deliberately:** the security notebook is at cycle 65 and the
+   committed copy at 55. Promoting publishes still-pending criticals to a
+   public repo; that is an operator decision, not a tidy-up.
 
 2. **First always-on PoC: `git-origin-watcher`** (dtt, parent
    `loop-definition-model`) on DGX Spark / Qwen3 8B. Slice 1 is reader-only

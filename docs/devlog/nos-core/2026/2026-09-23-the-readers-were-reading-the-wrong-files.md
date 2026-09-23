@@ -129,8 +129,25 @@ automatically is still open.
 against a floor of 0.85 — now that one Pulse run may hold many agent sessions
 instead of colliding on a single uuid. That is measured.
 
-Not measured: the full converge to `failed=0`, and the smoke run. Two HIGH
-findings from scan cycle 64 stand open by choice — n8n answers the public
-internet ungated (REM-276), because its remediation is a path split that must
-be tested alongside the operator's workflow activation rather than landed blind
-the evening before, and REM-275's advisory floor sits above the current pin.
+Measured later the same evening: the full converge ran `failed=0` (ok=1389,
+changed=124) and `nos-smoke.py --strict` returned 47/47 — with n8n answering
+`302` inside that sweep, so the new edge gate survives a full converge and not
+just the targeted one. Both pack workflows are published, and the ARES clock
+that had been hitting a dead webhook twice an hour now records `HTTP 200`.
+
+One finding shipped and its recommended remediation did not, which is the more
+useful half of the story. The scan proposed gating n8n while leaving `/webhook/`
+open for machine callers. Two measurements said no: nothing needs the opening —
+our own clock posts to `127.0.0.1:5678` over loopback, never through Traefik —
+and the only webhook that exists is `{httpMethod: POST, path:
+nos-ares-registry, credentials: null}`. Publishing that prefix would have handed
+the internet an unauthenticated trigger, at a guessable path, that fans out to
+ARES/ADIS and writes to the knowledge base. Shipping a remediation verbatim
+because a scanner wrote it would have opened a worse hole than the one it
+closed. The lane mechanism ships; n8n's list is empty, with both measurements
+recorded beside it.
+
+Still open: REM-275's advisory floor sits above the current n8n pin, and the
+security notebook is at cycle 65 while the committed copy is at 55 — promoting
+it would publish still-pending criticals to a public repository, which is an
+operator's decision and not a tidy-up.
