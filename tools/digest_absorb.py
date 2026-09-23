@@ -31,6 +31,25 @@ import nos_digest  # noqa: E402
 AGENT = "http://127.0.0.1:8091/agent/v1/tables"
 TABLES_DIR = REPO / "state" / "keap-tables"
 
+#: A KEAP call's deadline. Not a constant because the host budget is not one:
+#: with a 14B model resident the API answers in ~25s instead of ~0.1s
+#: (measured), and a flat 15s made every digest tool fail while the vision
+#: pipeline's own model was still warm — the sweep that had JUST extracted a
+#: document could not file it.
+_TIMEOUT_S = float(os.environ.get("NOS_KEAP_TIMEOUT_S", "15"))
+
+
+def _open(req, timeout: float | None = None):
+    """urlopen with ONE retry at a doubled deadline. Slow is not down: the
+    retry rescues a loaded host, and a genuinely unreachable KEAP still raises
+    — the caller's refusal is unchanged."""
+    first = timeout or _TIMEOUT_S
+    try:
+        return urllib.request.urlopen(req, timeout=first)
+    except TimeoutError:
+        return urllib.request.urlopen(req, timeout=first * 2)
+
+
 
 def rw_token() -> str:
     tok = os.environ.get("KEAP_AGENT_TOKEN_RW", "").strip()
@@ -66,7 +85,7 @@ def read_rows(table: str, hdr: dict | None = None) -> list:
     hdr = hdr or {"Authorization": f"Bearer {ro_token()}", **proxy_header()}
     req = urllib.request.Request(f"{AGENT}/{table}/rows", headers=hdr)
     try:
-        with urllib.request.urlopen(req, timeout=15) as r:
+        with _open(req) as r:
             return _rows_from_envelope(json.loads(r.read() or b"{}"))
     except urllib.error.HTTPError as e:
         if e.code == 404:
@@ -121,7 +140,7 @@ def ensure_table(table: str, hdr: dict) -> None:
                                  headers={**hdr, "content-type": "application/json"},
                                  data=json.dumps(body).encode("utf-8"))
     try:
-        with urllib.request.urlopen(req, timeout=15):
+        with _open(req):
             pass
     except urllib.error.HTTPError as e:
         if e.code == 409:
@@ -140,7 +159,7 @@ def ensure_table(table: str, hdr: dict) -> None:
                                           headers={**hdr, "content-type": "application/json"},
                                           data=json.dumps(body).encode("utf-8"))
             try:
-                with urllib.request.urlopen(req2, timeout=15):
+                with _open(req2):
                     return
             except urllib.error.HTTPError as e2:
                 if e2.code != 404:
@@ -155,7 +174,7 @@ def _post_row(table: str, row: dict, hdr: dict) -> None:
     req = urllib.request.Request(f"{AGENT}/{table}/rows", method="POST",
                                  headers={**hdr, "content-type": "application/json"},
                                  data=json.dumps(body).encode("utf-8"))
-    with urllib.request.urlopen(req, timeout=15):
+    with _open(req):
         pass
 
 

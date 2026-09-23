@@ -1,5 +1,5 @@
 {
-  "accuracy": 0.95,
+  "accuracy": 0.9667,
   "runs": 6,
   "repeat": 1,
   "threshold": 0.85,
@@ -8,7 +8,7 @@
     "buyer.ico": 0.833,
     "currency": 1.0,
     "due": 1.0,
-    "id": 0.833,
+    "id": 1.0,
     "issue": 1.0,
     "net": 1.0,
     "payable": 1.0,
@@ -31,7 +31,7 @@
     },
     "beta-001": {
       "runs": [
-        0.9
+        1.0
       ],
       "spread": 0.0
     },

@@ -14,6 +14,11 @@
       "blurb": "On a daily cadence, fetch the declared external feeds, extract and dedup, then consolidate the signal into the KEAP corpus and hand the operator a digest. The consolidation is the point — raw fetch is easy; corpus-linked knowledge is the loop. GDPR/EU-residency applies to anything stored."
     },
     {
+      "id": "pipeline-exercise",
+      "label": "pipeline-exercise — a degraded document through intake, verify, absorb",
+      "blurb": "Nightly, take the least-tried (document, degradation) cell — crumpled, stained, low-resolution, skewed, shadowed, JPEG-mangled — render it, sweep it into the verify queue, approve or reject it against the rendered truth, absorb, and assert what the books now hold: one row per document, the DERIVED identity, a balanced entry. Then remove that cycle's rows. Prerequisites, or it reports it cannot run: tools/gen-invoice-images.py once, qwen2.5vl:7b pulled, ollama armed, KEAP reachable."
+    },
+    {
       "id": "repo-check",
       "label": "repo-check — red / estate / forge, report only",
       "blurb": "On a four-hour cadence, read what is red, what the three holders of truth disagree on, and whether the forges would fast-forward. Nothing is applied. The overnight sample is the pulse run log, not a success stamp this loop writes about itself."
@@ -306,6 +311,43 @@
       "runner": "tool"
     },
     {
+      "id": "trigger:pipeline-exercise",
+      "kind": "trigger",
+      "label": "⏱ 47 2 * * *",
+      "loop": "pipeline-exercise",
+      "x": 0,
+      "y": 0,
+      "cadence": "47 2 * * *",
+      "event": null
+    },
+    {
+      "id": "step:pipeline-exercise:plan",
+      "kind": "step",
+      "label": "pick the thinnest (document, degradation) cell",
+      "loop": "pipeline-exercise",
+      "x": 300,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
+      "id": "step:pipeline-exercise:exercise",
+      "kind": "step",
+      "label": "render → sweep → verify → absorb (the estate's own doors)",
+      "loop": "pipeline-exercise",
+      "x": 600,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
+      "id": "step:pipeline-exercise:assert",
+      "kind": "step",
+      "label": "identity, uniqueness, balance — then tear the cycle's rows out",
+      "loop": "pipeline-exercise",
+      "x": 900,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
       "id": "trigger:repo-check",
       "kind": "trigger",
       "label": "⏱ 17 */4 * * *",
@@ -570,6 +612,27 @@
       "target": "step:news-scout:digest",
       "kind": "flow",
       "loop": "news-scout"
+    },
+    {
+      "id": "trigger:pipeline-exercise=>step:pipeline-exercise:plan",
+      "source": "trigger:pipeline-exercise",
+      "target": "step:pipeline-exercise:plan",
+      "kind": "flow",
+      "loop": "pipeline-exercise"
+    },
+    {
+      "id": "step:pipeline-exercise:plan=>step:pipeline-exercise:exercise",
+      "source": "step:pipeline-exercise:plan",
+      "target": "step:pipeline-exercise:exercise",
+      "kind": "flow",
+      "loop": "pipeline-exercise"
+    },
+    {
+      "id": "step:pipeline-exercise:exercise=>step:pipeline-exercise:assert",
+      "source": "step:pipeline-exercise:exercise",
+      "target": "step:pipeline-exercise:assert",
+      "kind": "flow",
+      "loop": "pipeline-exercise"
     },
     {
       "id": "trigger:repo-check=>step:repo-check:red-status",

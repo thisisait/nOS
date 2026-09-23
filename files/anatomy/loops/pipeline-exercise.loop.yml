@@ -1,0 +1,51 @@
+---
+# pipeline-exercise — drive the WHOLE invoice pipeline with varied documents.
+#
+# An OPERATIONAL loop (nos-loop family). vision-bench measures the MODEL; this
+# measures everything after it — the queue, the verdict, absorb, and what the
+# books then hold. The 2026-09-23 duplicate (one document booked twice, both
+# copies balanced) was invisible to every balance check and would have been a
+# cycle-one finding here.
+#
+# It SIMULATES and RECORDS; it never judges. Every verdict comes from the code
+# oracle (the text each image was rendered from), never from a model.
+#
+# Each cycle books into KEAP and then tears out exactly the rows it booked — a
+# bundle of the slugs it knows, not a whole-table reset, so a cycle can run
+# beside real rows without touching them.
+id: pipeline-exercise
+label: "pipeline-exercise — a degraded document through intake, verify, absorb"
+blurb: >-
+  Nightly, take the least-tried (document, degradation) cell — crumpled,
+  stained, low-resolution, skewed, shadowed, JPEG-mangled — render it, sweep it
+  into the verify queue, approve or reject it against the rendered truth,
+  absorb, and assert what the books now hold: one row per document, the DERIVED
+  identity, a balanced entry. Then remove that cycle's rows. Prerequisites, or
+  it reports it cannot run: tools/gen-invoice-images.py once, qwen2.5vl:7b
+  pulled, ollama armed, KEAP reachable.
+trigger:
+  cadence: "47 2 * * *"            # nightly 02:47 UTC, clear of security + KEAP
+steps:
+  - id: plan
+    runner: tool
+    label: "pick the thinnest (document, degradation) cell"
+  - id: exercise
+    runner: tool
+    label: "render → sweep → verify → absorb (the estate's own doors)"
+  - id: assert
+    runner: tool
+    label: "identity, uniqueness, balance — then tear the cycle's rows out"
+run: "{{ playbook_dir }}/tools/loops/pipeline-exercise.py"
+# MEASURED 2026-09-23, not guessed: a full vision-bench pass over 6 fixture
+# images took 20 min wall clock on this host — ~3.3 min per document for the
+# two agent stages. A cycle adds sweep/verify/absorb/teardown on top, so four
+# cycles is ~16-20 min. The operator's "at least 20 cycles" is therefore a
+# COVERAGE target the matrix accumulates across nights, NEVER one run: 20
+# cycles in a single job would be ~90 minutes and would die on max_runtime_s,
+# exactly the way vision-bench's repeat=3 did.
+args: ["--cycles", "4"]
+pulse:
+  category: knowledge
+  max_runtime_s: 1800             # 4 cycles x ~4 min measured + slack
+  jitter_min: 10
+  findings_exit_codes: [3]        # rc=3 == a cycle's assertions failed

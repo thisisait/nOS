@@ -1,0 +1,49 @@
+{
+  "cycles": [
+    {
+      "n": 1,
+      "doc": "beta-002",
+      "degrade": "crumple",
+      "seed": 1,
+      "reason": "operator-named",
+      "wall_clock_s": 143.0,
+      "book_owner": "synthetic-client-beta",
+      "accuracy": 1.0,
+      "verdict": "approve",
+      "queued": true,
+      "source_path": "inbox/accounting/synthetic-client-beta/processed/beta-002.crumple.1.jpg",
+      "fields": {
+        "id": true,
+        "issue": true,
+        "due": true,
+        "currency": true,
+        "payable": true,
+        "net": true,
+        "vat": true,
+        "seller.ico": true,
+        "buyer.ico": true,
+        "rates": true
+      },
+      "absorb_rc": 0,
+      "books": {
+        "booked": 1,
+        "identity_ok": true,
+        "balanced": true,
+        "slugs": [
+          "invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002"
+        ],
+        "ok": true,
+        "detail": ""
+      },
+      "ok": true,
+      "detail": "",
+      "created": [],
+      "teardown": "deleted 1 \u00b7 retained 0 \u00b7 absent 0"
+    }
+  ],
+  "held": 1,
+  "findings": [],
+  "could_not_run": [],
+  "coverage_cells": 42,
+  "cells_visited": 1
+}
