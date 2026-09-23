@@ -118,9 +118,91 @@ These are wired in the tree. They are not live proof that a photo became a booke
   declared n8n→KEAP edge adds one public vein (**14 → 15**), pinned in
   `test_apex_public_projection.py`.
 
+### The desk opens, and the queue shows what it asks you to sign (2026-09-23)
+
+Same cut, still no tag. Three of these are LIVE-measured on this estate; the
+rest are tree.
+
+- **Dolibarr native OIDC is live** — the authorize button lands an Authentik
+  session in the desk. Two v21 traps closed on the way: `DOLI_CRON=1` builds a
+  cron-only container (no apache, no schema), and v21 greys the whole top menu
+  for an admin with **zero `llx_user_rights` rows** — a SQL-minted SSO admin
+  gets every `llx_rights_def` granted, or the desk looks broken while the login
+  works. `post.yml` ends in a reader-fed assert, not a hopeful `failed_when`.
+- **n8n packs proven live** — ČNB rates and ARES party rows reached KEAP
+  through the pack contract. Two API facts cost a cycle each and are now in the
+  tool: `active` and `meta` are **read-only** on the public workflow API (the
+  live join key is the rendered NAME), and n8n's SSRF guard validates at
+  *connect* time as well as lookup, so the host gateway needs
+  `N8N_SSRF_ALLOWED_IP_RANGES` — with the IPv6 row, because lookup validates
+  EVERY resolved address.
+- **Class-3 user homes** — Bone mints
+  `tenants/<slug>/users/<uid>/{documents,library,inbox/accounting,agents}` on
+  first authenticated touch (first-touch only; it never repairs), one canonical
+  uid spelling shared by Wing (`CanonicalUid::fold`) and face (`slugifyUid`),
+  and Nextcloud mounts the same tree per user via `files_external`. One live
+  mount, not a fleet.
+- **The verify queue shows the SOURCE** (operator, 2026-09-23: *"není možné se
+  podívat co vlastně schvaluji — to je přeci nepřípustné"*). A pending row
+  carries `source_path`, Books renders the original PDF/JPEG **beside** the
+  extracted fields, and the verdict buttons live only in that detail view — an
+  approve you cannot reach without seeing the document. Approve itself was
+  broken in two measured ways (the echo carried `__`-metadata columns;
+  `resolved_at` wants epoch seconds) and is fixed.
+- **face `ui/Modal`** — one overlay surface (md/lg/xl clamped to 94vw, 88vh
+  panel with a scrolling body, sticky header/footer, Esc/scrim/aria) replaces
+  the tables editor's hand-rolled 460px wrapper that overflowed small windows.
+  Books rows (invoice / journal / party) now open a detail modal with their
+  lines and postings, and the confusing second invoice table is gone.
+- **Dock** — 21.6% slimmer bar, 14 pinned slots plus a trailing All-apps
+  expander that opens a Launchpad overlay. The pin list is DATA (`face-dock`
+  config table with a vendored fallback), and `splitDock` never backfills a
+  missing pin: a disabled service leaves a visible gap rather than a silent
+  promotion.
+
+### One invoice, one row, one ledger (2026-09-23)
+
+Found by looking at the live Books table, not by a test: document
+**2026-BETA-002 stood twice** — `inv-beta-002` from the hand-written
+consulting-firm fixture, `invoice-<seller>-<no>` from the importers — and one
+level down the live book carried **16 journal entries for 10 invoices**,
+because the fixture SEEDED a ledger while an ISDOC import of the same documents
+DERIVED its own. Both halves balanced. A balance check cannot see a
+duplication: two copies of a correct document are individually correct.
+
+- `nos_digest.invoice_slug(book_owner, seller, document_number)` is THE
+  derivation, and `check_bundle` refuses any invoice whose slug is not it — so
+  no producer can mint its own id into absorb. Both importers share
+  `IsdocImporter.compose`, so one edit covers ISDOC and vision.
+- `derive-postings` **re-keys** an unbooked invoice (and its lines) at the
+  moment the analytical 311/321 holder names its book — that stamp is where the
+  fork was minted.
+- The fixture's invoices *and* its ledger are re-keyed to the derived spelling
+  (`je-<invoice>`, `post-<entry>-<code>[-n]`, alfa-001's 343 leg split per
+  rate), so seeding and importing land on the SAME rows.
+- `tools/digest-teardown.py --tables T1,T2` resets every LIVE row of named
+  tables — a seed file can only tear down what it wrote, and half the money
+  rows are importer output no fixture lists. This is the from-blank primitive
+  the pipeline exercise loop will need.
+- Gate: `tests/anatomy/test_invoice_identity.py` (9 cases — helper, absorb
+  gate, every seed fixture, the importer, and the ledger row-for-row).
+
 ### Still open (named, not restated as done)
 
-- **photo→booked** is not proven live. Repo ≠ running system.
+- **The live money rows still carry the pre-identity ids** (85 rows). The
+  reset is operator-gated and must run BEFORE the next keap converge, or the
+  re-seed adds six more forks beside the old ones.
+- **The party spine forks too**: 2026-ALFA-PHOTO-001 stands twice because one
+  row names `party-ico-00000131` and the other `synthetic-client-alfa` — the
+  same firm under a resolver-minted and a fixture-authored slug. Invoice
+  identity cannot collapse that one; see the dtt row
+  `party-identity-fixture-vs-resolver`.
+- **photo→booked IS proven live now** (2026-09-23): a photographed invoice
+  reached `pending-invoice-verify`, was approved against its rendered source,
+  and absorbed into `invoice` + a balanced `journal-entry` — measured on this
+  estate, twice (`2026-ALFA-PHOTO-001`, `2025-0457`). What is NOT proven is the
+  same path from a blank, and the row it produced carried the forked party
+  spelling above. Repo ≠ running system still holds for everything else here.
 - **Dolibarr OIDC is not proven** — forward_auth stands until `post.yml`
   has a live consumer; `service:dolibarr` publishes nothing.
 - **`exec-watch` has not been seen reporting live**; `ares-verify-base`
