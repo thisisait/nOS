@@ -62,7 +62,11 @@
 		busy = String(row.id);
 		err = '';
 		try {
-			const next: Record<string, unknown> = { ...row, resolution, resolved_at: new Date().toISOString().slice(0, 10) };
+			const next: Record<string, unknown> = {
+				...row,
+				resolution,
+				resolved_at: new Date().toISOString().slice(0, 10)
+			};
 			delete next.id;
 			if (!next.slug) next.slug = row.id;
 			await tablesUpsertRow('pending-invoice-verify', next);
@@ -77,7 +81,14 @@
 	function openCrm() {
 		if (!crm) return;
 		if (!focusApp(crm.slug)) {
-			openWindow({ app: crm.slug, title: crm.title, w: 720, h: 480, url: crm.url, embed: crm.embed });
+			openWindow({
+				app: crm.slug,
+				title: crm.title,
+				w: 720,
+				h: 480,
+				url: crm.url,
+				embed: crm.embed
+			});
 		}
 	}
 
@@ -141,7 +152,9 @@
 			{#if !queue}
 				<StatusNote kind="loading">Loading the verify queue…</StatusNote>
 			{:else if pending.length === 0}
-				<StatusNote kind="empty">No held invoices. Intake writes this queue; absorb books approved ones.</StatusNote>
+				<StatusNote kind="empty"
+					>No held invoices. Intake writes this queue; absorb books approved ones.</StatusNote
+				>
 			{:else}
 				<table>
 					<thead>
@@ -154,8 +167,16 @@
 								<td>{cell(row, 'resolution') || 'pending'}</td>
 								<td>
 									{#if queue.canWrite}
-										<button type="button" disabled={busy === row.id} onclick={() => resolveRow(row, 'approved')}>Approve</button>
-										<button type="button" disabled={busy === row.id} onclick={() => resolveRow(row, 'rejected')}>Reject</button>
+										<button
+											type="button"
+											disabled={busy === row.id}
+											onclick={() => resolveRow(row, 'approved')}>Approve</button
+										>
+										<button
+											type="button"
+											disabled={busy === row.id}
+											onclick={() => resolveRow(row, 'rejected')}>Reject</button
+										>
 									{/if}
 								</td>
 							</tr>
@@ -169,7 +190,10 @@
 			{:else}
 				<table>
 					<thead>
-						<tr><th>Number</th><th>Book</th><th>Seller</th><th>Buyer</th><th>Payable</th><th>Kind</th></tr>
+						<tr
+							><th>Number</th><th>Book</th><th>Seller</th><th>Buyer</th><th>Payable</th><th>Kind</th
+							></tr
+						>
 					</thead>
 					<tbody>
 						{#each shownInvoices as row (row.id)}
@@ -222,32 +246,30 @@
 					</tbody>
 				</table>
 			{/if}
+		{:else if !parties}
+			<StatusNote kind="loading">Loading parties…</StatusNote>
 		{:else}
-			{#if !parties}
-				<StatusNote kind="loading">Loading parties…</StatusNote>
-			{:else}
-				<p class="hint">
-					KEAP <code>party</code> is the books fallback while Dolibarr
-					is the CRM SoT (opt-out: these tables only).
-					{#if crm}
-						<button type="button" onclick={openCrm}>Open CRM</button>
-					{/if}
-				</p>
-				<table>
-					<thead>
-						<tr><th>Name</th><th>Role</th><th>Slug</th></tr>
-					</thead>
-					<tbody>
-						{#each shownParties as row (row.id)}
-							<tr>
-								<td>{cell(row, 'legal_name')}</td>
-								<td>{cell(row, 'role') || 'counterparty'}</td>
-								<td><code>nos:party:{cell(row, 'slug') || row.id}</code></td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			{/if}
+			<p class="hint">
+				KEAP <code>party</code> is the books fallback while Dolibarr is the CRM SoT (opt-out: these
+				tables only).
+				{#if crm}
+					<button type="button" onclick={openCrm}>Open CRM</button>
+				{/if}
+			</p>
+			<table>
+				<thead>
+					<tr><th>Name</th><th>Role</th><th>Slug</th></tr>
+				</thead>
+				<tbody>
+					{#each shownParties as row (row.id)}
+						<tr>
+							<td>{cell(row, 'legal_name')}</td>
+							<td>{cell(row, 'role') || 'counterparty'}</td>
+							<td><code>nos:party:{cell(row, 'slug') || row.id}</code></td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		{/if}
 	</div>
 </div>
@@ -271,7 +293,8 @@
 		border-collapse: collapse;
 		font-size: 13px;
 	}
-	th, td {
+	th,
+	td {
 		text-align: left;
 		padding: 6px 8px;
 		border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);

@@ -29,10 +29,16 @@ steps:
     runner: tool
     label: "per-field accuracy + cross-check vs the rendered ground truth (code oracle)"
 run: "{{ playbook_dir }}/tools/loops/vision-bench.py"
-# flags go in args:, NEVER in run: (a flag in run: 400s the Wing catalog). Defaults
-# (repeat=3, threshold=0.85, fixture=consulting-firm) need no args.
+# flags go in args:, NEVER in run: (a flag in run: 400s the Wing catalog).
+# --repeat 1 is a MEASURED budget, not a preference: one full pass over the 6
+# fixture images took ~13 min of wall clock on this host (2026-09-23), so the
+# default repeat=3 blew every sane max_runtime and the scheduled run died
+# rc=2 daily while a hand run passed. First real numbers at repeat=1:
+# pooled 0.95, crosscheck 1.0 — spread measurement (repeat>1) returns when a
+# faster VLM lands, not by wishing the budget bigger.
+args: ["--repeat", "1"]
 pulse:
   category: knowledge
-  max_runtime_s: 900              # 6 images x 3 repeats of VLM OCR is slow — budget wide
+  max_runtime_s: 1800             # 6 images x 1 repeat measured ~13 min + slack
   jitter_min: 10
   findings_exit_codes: [3]        # rc=3 == pooled accuracy below floor (a finding, not a crash)

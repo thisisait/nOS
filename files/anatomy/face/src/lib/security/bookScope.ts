@@ -61,7 +61,9 @@ export function filterBookRows(opts: {
 	const invoices = opts.invoices ?? [];
 	const journals = opts.journals ?? [];
 	const invSlugs = new Set(
-		invoices.filter((i) => owners.has(cell(i, 'book_owner'))).map((i) => cell(i, 'slug') || cell(i, 'id'))
+		invoices
+			.filter((i) => owners.has(cell(i, 'book_owner')))
+			.map((i) => cell(i, 'slug') || cell(i, 'id'))
 	);
 	const jeSlugs = new Set(
 		journals

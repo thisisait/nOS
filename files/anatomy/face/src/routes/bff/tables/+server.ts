@@ -231,7 +231,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	};
 
 	const forbid = () => {
-		throw error(403, 'DataTable reads require the table\'s visibility tier.');
+		throw error(403, "DataTable reads require the table's visibility tier.");
 	};
 
 	let def: { view?: DataTable['view']; visibility?: string } | undefined;
@@ -292,8 +292,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 					refTables.map(async (t) => {
 						try {
 							const rdef = unwrap<{ visibility?: string }>(await keapTableDef(t));
-							const rvis =
-								typeof rdef.visibility === 'string' ? rdef.visibility : undefined;
+							const rvis = typeof rdef.visibility === 'string' ? rdef.visibility : undefined;
 							if (!mayReadTable(t, rvis, groups)) return;
 							const rd = unwrap<{ rows?: DataTableRow[] }>(
 								await keapTableRows(t, locals.identity.uid)
@@ -343,13 +342,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		if (body.op === 'upsertRow') {
 			if (!body.row || typeof body.row !== 'object') throw error(400, 'row object required');
 			if (BOOK_SCOPED.has(slug)) {
-				const ctx = await scopeContext(
-					locals.identity.uid,
-					locals.identity.groups,
-					slug
-				);
-				const invoices =
-					slug === 'invoice' ? ([body.row] as DataTableRow[]) : ctx.invoices;
+				const ctx = await scopeContext(locals.identity.uid, locals.identity.groups, slug);
+				const invoices = slug === 'invoice' ? ([body.row] as DataTableRow[]) : ctx.invoices;
 				if (
 					!mayWriteBookRow({
 						slug,
@@ -368,7 +362,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			// auditing (postTableAudit swallows its own errors). row_id is the
 			// natural key every table upserts by — KEAP's own response envelope
 			// shape varies more than the request body does.
-			const rowId = String((body.row as Record<string, unknown>).slug ?? (body.row as Record<string, unknown>).id ?? '');
+			const rowId = String(
+				(body.row as Record<string, unknown>).slug ?? (body.row as Record<string, unknown>).id ?? ''
+			);
 			void postTableAudit(locals.identity.uid, slug, rowId);
 			return result;
 		}
