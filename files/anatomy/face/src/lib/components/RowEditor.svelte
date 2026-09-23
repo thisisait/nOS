@@ -77,12 +77,10 @@
 	}
 </script>
 
-<div class="editor glass" role="dialog" aria-label={isEdit ? 'Edit row' : 'Add row'} tabindex="-1">
-	<header class="eh">
-		<strong>{isEdit ? 'Edit row' : 'Add row'} · {table.title}</strong>
-		<button class="x" aria-label="Cancel" onclick={oncancel}>✕</button>
-	</header>
-
+<!-- Chrome (title, ✕, scrim, sizing, scrolling) belongs to ui/Modal — this is
+     only the FORM. It used to carry its own dialog header + 460px cap + inner
+     52vh scroll, which is exactly the overflow the shared Modal replaced. -->
+<div class="editor">
 	<div class="fields">
 		{#each cols as col (col.key)}
 			<label class="field">
@@ -136,34 +134,23 @@
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
-		padding: 14px;
-		border-radius: 12px;
-		font-size: 13px;
-		max-width: 460px;
-	}
-	.eh {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-	.x {
-		background: none;
-		border: none;
-		color: var(--muted, #9aa4b2);
-		cursor: pointer;
 		font-size: 13px;
 	}
+	/* Short fields flow into columns on a wide modal; long-form ones (JSON,
+	   prose body) span the full row below. Width and scrolling are Modal's. */
 	.fields {
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
-		max-height: 52vh;
-		overflow: auto;
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 10px 14px;
 	}
 	.field {
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
+		min-width: 0;
+	}
+	.field:has(textarea) {
+		grid-column: 1 / -1;
 	}
 	.lbl {
 		color: var(--muted, #9aa4b2);

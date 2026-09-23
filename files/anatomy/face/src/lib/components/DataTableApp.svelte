@@ -18,6 +18,7 @@
 	import { loadTable, tablesUpsertRow } from '$lib/api/tables';
 	import { ApiError } from '$lib/api/client';
 	import RowEditor from './RowEditor.svelte';
+	import { Modal } from '$lib/components/ui';
 	import {
 		resolveView,
 		orderRows,
@@ -525,8 +526,11 @@
 	</div>
 
 	{#if editing}
-		<div class="scrim" role="presentation" onclick={() => (editing = null)}></div>
-		<div class="modal">
+		<Modal
+			title="{editing.row ? 'Edit row' : 'Add row'} · {data.title}"
+			size="lg"
+			onclose={() => (editing = null)}
+		>
 			<RowEditor
 				table={data}
 				row={editing.row}
@@ -536,7 +540,7 @@
 				onsubmit={save}
 				oncancel={() => (editing = null)}
 			/>
-		</div>
+		</Modal>
 	{/if}
 {/if}
 
@@ -906,17 +910,5 @@
 		color: var(--muted, #9aa4b2);
 	}
 
-	.scrim {
-		position: fixed;
-		inset: 0;
-		z-index: 200000;
-		background: rgba(0, 0, 0, 0.4);
-	}
-	.modal {
-		position: fixed;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		z-index: 200001;
-	}
+	/* scrim + centering moved to ui/Modal (2026-09-23) — one overlay surface. */
 </style>

@@ -22,6 +22,7 @@ export { default as StatusNote } from './StatusNote.svelte';
 export { default as Badge } from './Badge.svelte';
 export { default as StateDot } from './StateDot.svelte';
 export { default as Panel } from './Panel.svelte';
+export { default as Modal } from './Modal.svelte';
 export { default as Tabs, type TabSpec } from './Tabs.svelte';
 export { default as Icon } from './Icon.svelte';
 export { graphemes, clampGlyphs, monogram, appGlyph } from './glyph';

@@ -11,7 +11,7 @@
 	import { hubApps } from '$lib/api/hub';
 	import { ApiError } from '$lib/api/client';
 	import type { DataTable, DataTableRow, HubApp } from '$lib/contracts';
-	import { Tabs, StatusNote, type TabSpec } from '$lib/components/ui';
+	import { Tabs, StatusNote, Modal, type TabSpec } from '$lib/components/ui';
 	import { openWindow, focusApp } from '$lib/stores/desktop';
 
 	const tabs: TabSpec[] = [
@@ -26,6 +26,10 @@
 	let journals = $state<DataTable | null>(null);
 	let parties = $state<DataTable | null>(null);
 	let lines = $state<DataTable | null>(null);
+	let postings = $state<DataTable | null>(null);
+	/* One row's detail, in the shared Modal. Kind picks what rides along:
+	   an invoice brings its lines, a journal its postings, a party its cells. */
+	let detail = $state<{ kind: 'invoice' | 'journal' | 'party'; row: DataTableRow } | null>(null);
 	let err = $state('');
 	let busy = $state('');
 	let crm = $state<HubApp | null>(null);
@@ -33,12 +37,13 @@
 
 	onMount(async () => {
 		try {
-			const [q, i, j, p, ln, hub] = await Promise.all([
+			const [q, i, j, p, ln, po, hub] = await Promise.all([
 				loadTable('pending-invoice-verify'),
 				loadTable('invoice'),
 				loadTable('journal-entry'),
 				loadTable('party'),
 				loadTable('invoice-line'),
+				loadTable('posting').catch(() => null),
 				hubApps().catch(() => [] as HubApp[])
 			]);
 			queue = q;
@@ -46,6 +51,7 @@
 			journals = j;
 			parties = p;
 			lines = ln;
+			postings = po;
 			crm = hub.find((a) => a.slug === 'dolibarr') ?? hub.find((a) => a.slug === 'espocrm') ?? null;
 		} catch (e) {
 			err = e instanceof Error ? e.message : 'could not load books';
@@ -83,7 +89,11 @@
 			return {
 				key,
 				value: typeof d.value === 'object' ? JSON.stringify(d.value) : String(d.value ?? ''),
-				confidence: d.confidence === undefined ? '' : String(d.confidence)
+				/* 0 is the pipeline's honest "no per-field confidence yet" (the
+				   transport carries no logprobs) — showing a zero everywhere
+				   reads as "everything is wrong", so it renders as n/a. */
+				confidence:
+					d.confidence === undefined || Number(d.confidence) === 0 ? 'n/a' : String(d.confidence)
 			};
 		});
 	}
@@ -100,12 +110,16 @@
 		busy = String(row.id);
 		err = '';
 		try {
-			const next: Record<string, unknown> = {
-				...row,
-				resolution,
-				resolved_at: new Date().toISOString().slice(0, 10)
-			};
-			delete next.id;
+			/* Strip the server's own row metadata (__sharing, __id, …) — echoing
+			   it back is "unknown column"; and estate date columns hold EPOCH
+			   SECONDS, never an ISO string (both measured on the first live
+			   Approve, 2026-09-23). */
+			const next: Record<string, unknown> = {};
+			for (const [k, v] of Object.entries(row)) {
+				if (!k.startsWith('__') && k !== 'id') next[k] = v;
+			}
+			next.resolution = resolution;
+			next.resolved_at = Math.floor(Date.now() / 1000);
 			if (!next.slug) next.slug = row.id;
 			await tablesUpsertRow('pending-invoice-verify', next);
 			queue = await loadTable('pending-invoice-verify');
@@ -154,10 +168,6 @@
 
 	const invoiceSlugs = $derived(new Set(shownInvoices.map((r) => String(r.id))));
 
-	const shownLines = $derived(
-		(lines?.rows ?? []).filter((r) => invoiceSlugs.has(cell(r, 'invoice')))
-	);
-
 	const shownJournals = $derived(
 		(journals?.rows ?? []).filter((r) => {
 			if (!bookOwner) return true;
@@ -169,6 +179,51 @@
 	const shownParties = $derived(
 		(parties?.rows ?? []).filter((r) => !bookOwner || cell(r, 'slug') === bookOwner)
 	);
+
+	/* ── Detail helpers (the modal's content) ─────────────────────────────── */
+
+	/** Every business cell of a row, for a generic key/value detail. */
+	function rowCells(row: DataTableRow): { key: string; value: string }[] {
+		return Object.entries(row)
+			.filter(
+				([k, v]) => !k.startsWith('__') && k !== 'id' && v !== null && v !== '' && v !== undefined
+			)
+			.map(([key, v]) => ({ key, value: typeof v === 'object' ? JSON.stringify(v) : String(v) }));
+	}
+
+	const detailLines = $derived(
+		detail?.kind === 'invoice'
+			? (lines?.rows ?? []).filter((r) => cell(r, 'invoice') === String(detail?.row.id))
+			: []
+	);
+
+	const detailPostings = $derived(
+		detail?.kind === 'journal'
+			? (postings?.rows ?? []).filter((r) => cell(r, 'entry') === String(detail?.row.id))
+			: []
+	);
+
+	/** Double-entry at a glance: the debit and credit sums the reader can
+	 *  compare without trusting anyone's "balanced" claim. */
+	const postingSums = $derived(
+		detailPostings.reduce(
+			(acc, r) => {
+				const amt = Number(cell(r, 'amount')) || 0;
+				if (cell(r, 'direction') === 'debit') acc.debit += amt;
+				else acc.credit += amt;
+				return acc;
+			},
+			{ debit: 0, credit: 0 }
+		)
+	);
+
+	function detailTitle(): string {
+		if (!detail) return '';
+		if (detail.kind === 'invoice')
+			return `Invoice ${cell(detail.row, 'document_number') || detail.row.id}`;
+		if (detail.kind === 'journal') return `Journal ${cell(detail.row, 'slug') || detail.row.id}`;
+		return cell(detail.row, 'legal_name') || String(detail.row.id);
+	}
 </script>
 
 <div class="books">
@@ -247,6 +302,10 @@
 														{/each}
 													</tbody>
 												</table>
+												<p class="hint">
+													Conf. n/a = the extractor does not report per-field confidence yet; the
+													image beside is the evidence.
+												</p>
 												{#if queue.canWrite}
 													<div class="verdict">
 														<button
@@ -282,8 +341,11 @@
 						>
 					</thead>
 					<tbody>
+						<!-- The flat invoice-line table that used to sit under this one
+						     ("proč jsou tam dvě tabulky") moved into the row's detail
+						     modal — lines belong to AN invoice, not to the tab. -->
 						{#each shownInvoices as row (row.id)}
-							<tr>
+							<tr class="click" onclick={() => (detail = { kind: 'invoice', row })}>
 								<td>{cell(row, 'document_number')}</td>
 								<td>{cell(row, 'book_owner')}</td>
 								<td>{cell(row, 'seller__ref') || cell(row, 'seller')}</td>
@@ -294,24 +356,6 @@
 						{/each}
 					</tbody>
 				</table>
-				{#if shownLines.length}
-					<table>
-						<thead>
-							<tr><th>Invoice</th><th>#</th><th>Description</th><th>Net</th><th>VAT</th></tr>
-						</thead>
-						<tbody>
-							{#each shownLines as row (row.id)}
-								<tr>
-									<td>{cell(row, 'invoice')}</td>
-									<td>{cell(row, 'line_no')}</td>
-									<td>{cell(row, 'description')}</td>
-									<td>{cell(row, 'net_amount')}</td>
-									<td>{cell(row, 'vat_amount')}</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				{/if}
 			{/if}
 		{:else if active === 'journals'}
 			{#if !journals}
@@ -323,7 +367,7 @@
 					</thead>
 					<tbody>
 						{#each shownJournals as row (row.id)}
-							<tr>
+							<tr class="click" onclick={() => (detail = { kind: 'journal', row })}>
 								<td>{cell(row, 'slug') || row.id}</td>
 								<td>{cell(row, 'description')}</td>
 								<td>{cell(row, 'source__ref') || cell(row, 'source')}</td>
@@ -348,7 +392,7 @@
 				</thead>
 				<tbody>
 					{#each shownParties as row (row.id)}
-						<tr>
+						<tr class="click" onclick={() => (detail = { kind: 'party', row })}>
 							<td>{cell(row, 'legal_name')}</td>
 							<td>{cell(row, 'role') || 'counterparty'}</td>
 							<td><code>nos:party:{cell(row, 'slug') || row.id}</code></td>
@@ -359,6 +403,79 @@
 		{/if}
 	</div>
 </div>
+
+{#if detail}
+	<Modal
+		title={detailTitle()}
+		size={detail.kind === 'party' ? 'md' : 'lg'}
+		onclose={() => (detail = null)}
+	>
+		{#if detail.kind === 'invoice'}
+			<div class="cells">
+				{#each rowCells(detail.row) as c (c.key)}
+					<div class="cellrow"><span class="k">{c.key}</span><span class="v">{c.value}</span></div>
+				{/each}
+			</div>
+			{#if detailLines.length}
+				<h4>Lines</h4>
+				<table>
+					<thead>
+						<tr><th>#</th><th>Description</th><th>Net</th><th>VAT</th></tr>
+					</thead>
+					<tbody>
+						{#each detailLines as row (row.id)}
+							<tr>
+								<td>{cell(row, 'line_no')}</td>
+								<td>{cell(row, 'description')}</td>
+								<td>{cell(row, 'net_amount')}</td>
+								<td>{cell(row, 'vat_amount')}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			{:else}
+				<p class="hint">No lines for this invoice.</p>
+			{/if}
+		{:else if detail.kind === 'journal'}
+			<div class="cells">
+				{#each rowCells(detail.row) as c (c.key)}
+					<div class="cellrow"><span class="k">{c.key}</span><span class="v">{c.value}</span></div>
+				{/each}
+			</div>
+			<h4>Postings</h4>
+			{#if !postings}
+				<p class="hint">posting table not readable at this tier.</p>
+			{:else if detailPostings.length === 0}
+				<p class="hint">No postings reference this entry.</p>
+			{:else}
+				<table>
+					<thead>
+						<tr><th>Account</th><th>Direction</th><th>Amount</th></tr>
+					</thead>
+					<tbody>
+						{#each detailPostings as row (row.id)}
+							<tr>
+								<td>{cell(row, 'account__ref') || cell(row, 'account')}</td>
+								<td>{cell(row, 'direction')}</td>
+								<td>{cell(row, 'amount')}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+				<p class="hint" class:err={postingSums.debit !== postingSums.credit}>
+					Σ debit {postingSums.debit} · Σ credit {postingSums.credit}
+					{postingSums.debit === postingSums.credit ? '— balanced' : '— NOT BALANCED'}
+				</p>
+			{/if}
+		{:else}
+			<div class="cells">
+				{#each rowCells(detail.row) as c (c.key)}
+					<div class="cellrow"><span class="k">{c.key}</span><span class="v">{c.value}</span></div>
+				{/each}
+			</div>
+		{/if}
+	</Modal>
+{/if}
 
 <style>
 	.books {
@@ -429,5 +546,39 @@
 	}
 	tr.detail td {
 		background: rgba(128, 128, 128, 0.08);
+	}
+	tr.click {
+		cursor: pointer;
+	}
+	tr.click:hover td {
+		background: rgba(128, 128, 128, 0.1);
+	}
+	.cells {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 6px 16px;
+		margin-bottom: 10px;
+	}
+	.cellrow {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+	.cellrow .k {
+		font-size: 11px;
+		color: var(--muted, #9aa4b2);
+	}
+	.cellrow .v {
+		overflow-wrap: anywhere;
+	}
+	h4 {
+		margin: 12px 0 6px;
+		font-size: 12px;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--muted, #9aa4b2);
+	}
+	.hint.err {
+		color: #ff8080;
 	}
 </style>
