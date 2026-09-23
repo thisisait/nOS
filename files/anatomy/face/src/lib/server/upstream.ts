@@ -114,11 +114,18 @@ export const vfs = {
 	},
 	/** Streamed upload → Bone POST /upload (raw body, capped upstream). Returns
 	 *  the raw upstream Response so the caller can surface Bone's status/body. */
-	async upload(uid: string, path: string, filename: string, body: BodyInit): Promise<Response> {
+	async upload(
+		uid: string,
+		path: string,
+		filename: string,
+		body: BodyInit,
+		overwrite = false
+	): Promise<Response> {
 		const u = new URL(VFS_BASE() + '/upload');
 		u.searchParams.set('uid', uid);
 		u.searchParams.set('path', path);
 		u.searchParams.set('filename', filename);
+		if (overwrite) u.searchParams.set('overwrite', 'true');
 		return fetch(u, {
 			method: 'POST',
 			headers: { authorization: `Bearer ${VFS_TOKEN()}` },

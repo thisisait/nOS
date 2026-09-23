@@ -45,6 +45,7 @@
 		vfsDownloadUrl,
 		type VfsEntry
 	} from '$lib/api/vfs';
+	import { ApiError } from '$lib/api/client';
 	import { crumbs, joinPath, parentPath, basename } from './paths';
 	import { openFilePicker } from './file-picker/service';
 	import {
@@ -224,22 +225,21 @@
 	}
 
 	// ── Uploads (device picker + camera) ────────────────────────────────────
-	async function putFiles(files: File[], nameFor: (f: File, taken: string[]) => string) {
-		if (files.length === 0) return;
+	/** Upload a decided batch. Each item carries the name it lands under and
+	 *  whether replacing was ASKED for — Bone answers 409 otherwise, so a
+	 *  confirm() the caller never forwards is a dialog that changes nothing. */
+	async function putFiles(items: { file: File; name: string; overwrite: boolean }[]) {
+		if (items.length === 0) return;
 		busy = true;
 		err = '';
 		const failed: string[] = [];
-		// Track names as we go so two shots in one batch cannot collide.
-		const taken = entries.map((e) => e.name);
 		try {
 			// Sequential — one file at a time keeps memory + the Bone stream sane.
-			for (const file of files) {
-				const name = nameFor(file, taken);
-				taken.push(name);
+			for (const it of items) {
 				try {
-					await vfsUpload(cwd, file, name);
+					await vfsUpload(cwd, it.file, it.name, it.overwrite);
 				} catch (ex) {
-					failed.push(`${file.name}: ${ex instanceof Error ? ex.message : 'upload failed'}`);
+					failed.push(`${it.file.name}: ${uploadError(ex, it.file)}`);
 				}
 			}
 			if (failed.length) err = failed.join('; ');
@@ -249,6 +249,17 @@
 		}
 	}
 
+	/** Name the refusal. A body over the shell's cap dies mid-stream and arrives
+	 *  as a bare 500, which told the operator nothing about a photo that simply
+	 *  did not fit. */
+	function uploadError(ex: unknown, file: File): string {
+		const msg = ex instanceof Error ? ex.message : 'upload failed';
+		if (ex instanceof ApiError && (ex.status === 413 || ex.status === 500)) {
+			return `${formatSize(file.size)} — too large for the upload limit (${msg})`;
+		}
+		return msg;
+	}
+
 	async function onUpload(e: Event) {
 		const input = e.currentTarget as HTMLInputElement;
 		const files = Array.from(input.files ?? []);
@@ -256,10 +267,13 @@
 		// An upload onto an existing name OVERWRITES it in Bone (`open("wb")`),
 		// so ask per clashing file rather than losing one silently.
 		const here = new Set(entries.map((x) => x.name));
-		const go = files.filter(
-			(f) => !here.has(f.name) || confirm(`"${f.name}" already exists here. Overwrite it?`)
-		);
-		await putFiles(go, (f) => f.name);
+		const items = [];
+		for (const file of files) {
+			const clash = here.has(file.name);
+			if (clash && !confirm(`"${file.name}" already exists here. Overwrite it?`)) continue;
+			items.push({ file, name: file.name, overwrite: clash });
+		}
+		await putFiles(items);
 	}
 
 	async function onCapture(e: Event) {
@@ -268,7 +282,13 @@
 		input.value = '';
 		// A camera hands over `image.jpg` every time — date-stamp it and never
 		// overwrite, so a second shot is a second document.
-		await putFiles(files, (f, taken) => uniqueName(cameraName(new Date(), f.name), taken));
+		const taken = entries.map((x) => x.name);
+		const items = files.map((file) => {
+			const name = uniqueName(cameraName(new Date(), file.name), taken);
+			taken.push(name);
+			return { file, name, overwrite: false };
+		});
+		await putFiles(items);
 	}
 </script>
 

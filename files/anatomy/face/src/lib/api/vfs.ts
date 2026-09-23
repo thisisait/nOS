@@ -60,11 +60,19 @@ export async function vfsDelete(path: string): Promise<void> {
  *  body to the BFF, which proxies it to Bone's capped streaming /upload. The
  *  filename defaults to the File's own; pass `name` to store it under another
  *  (a camera hands every shot over as `image.jpg`). Bone basenames it. */
-export async function vfsUpload(dir: string, file: File, name = file.name): Promise<VfsEntry> {
+export async function vfsUpload(
+	dir: string,
+	file: File,
+	name = file.name,
+	overwrite = false
+): Promise<VfsEntry> {
 	const u = new URL('/bff/vfs', location.origin);
 	u.searchParams.set('op', 'upload');
 	u.searchParams.set('path', dir);
 	u.searchParams.set('filename', name);
+	// Bone answers 409 unless replacing is ASKED for. The caller has already put
+	// that question to the operator; this is how the answer reaches Bone.
+	if (overwrite) u.searchParams.set('overwrite', 'true');
 	const r = await fetch(u, { method: 'POST', body: file });
 	if (!r.ok) throw new ApiError(r.status, (await r.text()) || r.statusText);
 	return (await r.json()) as VfsEntry;

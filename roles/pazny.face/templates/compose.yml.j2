@@ -32,6 +32,9 @@ services:
       HOST: "0.0.0.0"
       PORT: "{{ face_internal_port | default(5090) }}"
       NODE_ENV: "production"
+      # Incoming-body cap (see face_upload_max_bytes). Without it adapter-node
+      # kills any upload over 512 KB — i.e. every photograph.
+      BODY_SIZE_LIMIT: "{{ face_upload_max_bytes | default(134217728) }}"
       # Edge-trust: believe X-Authentik-* ONLY with this token (anti-spoof).
       FACE_EDGE_TOKEN: "{{ face_edge_token }}"
       FACE_EDGE_TOKEN_HEADER: "x-face-edge-token"

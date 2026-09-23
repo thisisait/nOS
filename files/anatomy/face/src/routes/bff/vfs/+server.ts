@@ -52,7 +52,8 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
 			const path = url.searchParams.get('path') ?? 'documents';
 			const filename = url.searchParams.get('filename') ?? 'upload.bin';
 			if (!request.body) throw error(400, 'empty upload body');
-			const res = await vfs.upload(uid, path, filename, request.body);
+			const overwrite = url.searchParams.get('overwrite') === 'true';
+			const res = await vfs.upload(uid, path, filename, request.body, overwrite);
 			const text = await res.text();
 			if (!res.ok) throw error(res.status, text || res.statusText);
 			return new Response(text || '{}', {

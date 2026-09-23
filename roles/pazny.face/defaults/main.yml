@@ -36,3 +36,9 @@ face_cpus: "{{ docker_cpus_light | default(1) }}"
 # Internal container port the SvelteKit node server binds (adapter-node PORT).
 # NOT operator-facing — Traefik reaches the container on this port via Docker DNS.
 face_internal_port: 5090
+
+# adapter-node's incoming-body cap. Its default is 512 KB, and over the cap
+# it errors the request stream MID-PIPE, so a photo upload surfaced as a bare
+# 500 rather than a refusal. Matched to Bone's own `_MAX_UPLOAD_BYTES`
+# (files/anatomy/bone/vfs.py) so exactly one component owns the ceiling.
+face_upload_max_bytes: 134217728
