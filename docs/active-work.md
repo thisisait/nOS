@@ -6,26 +6,35 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-09-17.
+> Last updated: 2026-09-23.
 
 ## Now (current track)
 
-1. **First always-on PoC: `git-origin-watcher`** (dtt, parent
+1. **The consulting-firm desk, then the v0.13-beta cut** (dtt `rel-013`).
+   Invoice identity is closed in SOURCE (`invoice_slug`, absorb gate, ledger
+   one-per-invoice, `tools/invoice-identity-scan.py`). **Operator, first and
+   destructive:** the live money rows still carry pre-identity ids —
+   `tools/digest-teardown.py --tables invoice,invoice-line,journal-entry,posting`
+   (dry) then `--confirm`, BEFORE the next keap converge, or the re-seed forks
+   them again. Then converge, re-run the vision intake, and the scanner must
+   read clean. Ceremony order lives in the dtt row, not here.
+
+2. **First always-on PoC: `git-origin-watcher`** (dtt, parent
    `loop-definition-model`) on DGX Spark / Qwen3 8B. Slice 1 is reader-only
    (npm+composer graph). Constraint A: model proposes, judges authorize.
    Do not re-research agent memory — rows `work-corpus-not-seed`,
    `cortex-rows`, `keap-row-vector-search`, `fs-project-tree`,
    `share-grants-agents`, `rsi-ops-loop`.
 
-2. **SOURCE pins await the operator `nos`.** Ask `tools/estate-status.py`
+3. **SOURCE pins await the operator `nos`.** Ask `tools/estate-status.py`
    and `tools/rem-status.py`. Do **not** land the judged `MINIO_ROOT_PASSWORD`
    alias for REM-249 (mint+persist already shipped). RustFS rotation breaks
    S3 clients until they re-read `~/.nos/secrets.yml`.
 
-3. **[`docs/doctrine/agentkit.md`](doctrine/agentkit.md) is DRAFTED as proposed**
+4. **[`docs/doctrine/agentkit.md`](doctrine/agentkit.md) is DRAFTED as proposed**
    (`1e263377`). Operator still settles §6 before anything cites the file.
 
-4. **Do not pick `loop-steps-match-run`.** Graph-follows-run vs
+5. **Do not pick `loop-steps-match-run`.** Graph-follows-run vs
    runner-follows-graph is still queued design.
 
 **Voice → caddy → AgentKit → cortex.** Five wires gated; fee
