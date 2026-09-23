@@ -43,6 +43,19 @@ OWNER_SCOPES = [
     "credential:list",
     "execution:read",
     "execution:list",
+    # Publishing scopes. Added 2026-09-23: POST /workflows/{id}/activate had
+    # been answering a bare 403, and that was read as "the public API cannot
+    # activate". It was a scope we never requested — and not the one anybody
+    # would guess. This n8n build has NO `workflow:activate`; its vocabulary
+    # (read out of the shipped bundle) spells the capability `workflow:enable`
+    # / `workflow:disable`, with `publish`/`unpublish` beside it, which is also
+    # why the editor's button says PUBLISH and the word "Activate" is not in
+    # the UI at all. Activation stays a manual operator act by POLICY
+    # (docs/doctrine/n8n-packs.md, `activate: operator`) — these scopes exist
+    # so a future `n8n_auto_activate_packs` is a decision rather than a wall,
+    # and so the 403 stops being explained by the wrong cause.
+    "workflow:enable",
+    "workflow:disable",
 ]
 
 
@@ -514,8 +527,13 @@ def cmd_watch(args: argparse.Namespace) -> int:
         seen.add(pid)
         if not wf.get("active"):
             # Not a finding by itself: `activate: operator` means this consent
-            # has not been given yet (and the public API cannot give it — POST
-            # /activate answered 403 for the estate's key, measured 2026-09-23).
+            # has not been given yet. (The 403 the estate's key gets from POST
+            # /activate is a MISSING SCOPE, not an API limit — see OWNER_SCOPES;
+            # an existing key keeps the scopes it was minted with, so re-mint
+            # to pick the new ones up. The manual step is policy regardless.)
+            # In the UI the control is called PUBLISH, in the workflow editor's
+            # top-right — this build ships no button named "Activate", and the
+            # list view has no toggle at all.
             # It IS a finding when something else is already firing this
             # workflow, because that clock can only ever hit a dead webhook.
             note = f"{pid}: INACTIVE (activate: {packs[pid].get('activate', 'operator')})"

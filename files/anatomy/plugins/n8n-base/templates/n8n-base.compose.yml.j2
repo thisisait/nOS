@@ -50,14 +50,13 @@ services:
       # the un-rendered mount never created.
       NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
 {% endif %}
-{% if install_authentik | default(false) %}
-      # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
-      N8N_AUTH_OIDC_ENABLED: "true"
-      N8N_AUTH_OIDC_CLIENT_ID: "nos-n8n"
-      N8N_AUTH_OIDC_CLIENT_SECRET: "{{ nos_derived_secrets.oidc_n8n }}"
-      N8N_AUTH_OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/n8n/"
-      N8N_AUTH_OIDC_ALLOWED_GROUPS: ""
-{% endif %}
+{# No OIDC env block. N8N_AUTH_OIDC_* are ENTERPRISE-only variable names and
+   this is the CE image, so the five vars that used to render here were inert —
+   including N8N_AUTH_OIDC_CLIENT_SECRET, a real secret sitting in a live
+   container's environment that nothing read (measured 2026-09-23 with
+   `docker exec iiab-n8n-1 env`). Same shape as the FreeScout removal, fee 49.
+   SSO for n8n is the Authentik forward_auth gate on the router; see the
+   authentik: block in plugin.yml. #}
 {% if install_authentik | default(false) or (install_keap | default(false) | bool) %}
     extra_hosts:
 {% if install_authentik | default(false) %}

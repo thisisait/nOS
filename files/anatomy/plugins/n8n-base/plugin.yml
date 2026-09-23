@@ -59,24 +59,35 @@ depends_on:
       and nothing imports them, so no runtime failure surfaces.
 
 # =============================================================================
-# AUTHENTIK — native OIDC client
+# AUTHENTIK — forward_auth gate
+#
+# Was native_oidc until 2026-09-23. It never worked and could not:
+# n8n's OIDC login is a LICENSED Enterprise feature, and this is the CE build.
+# Its own unauthenticated /rest/settings says so — enterprise.oidc false,
+# sso.oidc.loginEnabled false, authenticationMethod "email" — while the claim
+# suppressed authentik@file on the router, so n8n answered 200 to the public
+# internet over real DNS. Third `oidc` classification audited, third found
+# false — the two before it were FreeScout and the 2026-08-11 audit.
+#
+# forward_auth, not header_oidc: n8n has no header-login path either, so the
+# Authentik session is a GATE and n8n keeps its own email/password login behind
+# it. That is a double login and it is the honest option available on CE.
+#
+# Machine callers are unaffected: the Pulse clock posts to 127.0.0.1:5678 over
+# loopback (ares-verify-base), never through Traefik. If a genuinely external
+# webhook ever needs in, that is a `traefik_machine_lanes` entry — and the
+# webhook must authenticate its own callers first (see the n8n comment there).
 # =============================================================================
 
 authentik:
-  mode: native_oidc
+  mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
+  provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
   client_id: nos-n8n
   client_secret: "{{ nos_derived_secrets.oidc_n8n }}"
   slug: n8n
   name: 'n8n'
   enabled: "{{ install_n8n | default(false) }}"
-  redirect_uris:
-    - "https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/rest/oauth2-credential/callback"
-    - "https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/rest/oidc/callback"
   launch_url: "https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
-  scopes:
-    - openid
-    - profile
-    - email
   tier: 2   # manager — workflow author, integrations / secrets
 
 # =============================================================================

@@ -555,13 +555,13 @@
     "authentik:n8n": {
       "kind": "authentik",
       "source": "state/tofu-authentik-services.yml",
-      "mode": "native_oidc",
+      "mode": "forward_auth",
       "tier": 2,
-      "client_id": "nos-n8n",
+      "client_id": null,
       "service": "n8n",
       "managed_by": "tofu:authentik-state",
       "anchor": "02.02.08",
-      "description": "Authentik native_oidc client 'nos-n8n' (RBAC tier 2) — gates service:n8n; provider+application managed by OpenTofu from the committed registry"
+      "description": "Authentik forward_auth client 'None' (RBAC tier 2) — gates service:n8n; provider+application managed by OpenTofu from the committed registry"
     },
     "authentik:nextcloud": {
       "kind": "authentik",
@@ -3703,7 +3703,7 @@
       "from": "authentik:n8n",
       "to": "service:n8n",
       "kind": "data",
-      "via": "SSO gate (mode=native_oidc) — provider+application applied by tofu from the registry row",
+      "via": "SSO gate (mode=forward_auth) — provider+application applied by tofu from the registry row",
       "derived": "tofu-authentik-registry",
       "evidence": "derived"
     },
@@ -4694,7 +4694,7 @@
       "from": "service:authentik",
       "to": "authentik:n8n",
       "kind": "data",
-      "via": "provider+application object hosted by Authentik (mode=native_oidc) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
+      "via": "provider+application object hosted by Authentik (mode=forward_auth) — applied into the running service by tofu:authentik-state from state/tofu-authentik-services.yml",
       "derived": "authentik-hosting",
       "evidence": "derived"
     },

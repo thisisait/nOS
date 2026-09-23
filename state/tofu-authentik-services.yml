@@ -200,15 +200,10 @@ tofu_authentik_services:
   - https://{{ miniflux_domain }}/oauth2/oidc/callback
 - slug: n8n
   name: n8n
-  mode: native_oidc
+  mode: forward_auth
   tier: 2
   enabled: '{{ install_n8n | default(false) }}'
   external_host: https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
-  client_id: nos-n8n
-  client_secret: '{{ nos_derived_secrets.oidc_n8n }}'
-  redirect_uris:
-  - https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/rest/oauth2-credential/callback
-  - https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/rest/oidc/callback
 - slug: nextcloud
   name: Nextcloud
   mode: native_oidc

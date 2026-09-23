@@ -88,22 +88,27 @@ http:
 {% else %}
       middlewares: {{ (['security-headers@file', 'compress@file'] + _extra_mw) | to_json }}
 {% endif %}
-{% if s.id == 'keap' %}
-    # Machine lane for the agent API (docs/doctrine/n8n-packs.md §3): /agent/v1
-    # is bearer-authenticated by KEAP itself (scope-split tokens; 401 without),
-    # while authentik@file 302s every machine caller — measured 2026-09-21: the
-    # n8n pack write followed the redirect into Authentik's HTML and reported
-    # success. No keap-proxy@file either: without the outpost hop there are no
-    # X-Authentik-* identity headers to vouch for (SEC-02 trusts them only WITH
-    # the secret), and KEAP must see this lane as anonymous-bearer, not proxied.
-    # Longer rule ⇒ higher default Traefik priority than the plain keap router.
-    keap-agent:
-      rule: "Host(`{{ _host }}`) && PathPrefix(`/agent/v1`)"
+{# ── Machine lanes ────────────────────────────────────────────────────────
+   A path prefix that must reach the service WITHOUT authentik@file, because
+   the caller is a machine and the gate 302s it into Authentik's HTML. Declared
+   per service in `traefik_machine_lanes` (roles/pazny.traefik/vars/main.yml),
+   which carries the per-entry rationale — each one is public surface, so each
+   one is a decision someone wrote down. A longer rule means a higher default
+   Traefik priority than the plain host router, so no explicit priority is set.
+
+   These lanes carry NO identity middleware at all: without the outpost hop
+   there are no X-Authentik-* headers to vouch for, and a backend that trusts
+   those headers (SEC-02) must see this lane as anonymous, never as proxied.
+   The service behind a lane therefore has to authenticate the caller ITSELF.
+#}
+{% for _lane in (traefik_machine_lanes | default({})).get(s.id, []) %}
+    {{ _router }}-{{ _lane.name }}:
+      rule: "Host(`{{ _host }}`) && PathPrefix({{ _lane.prefixes | map('regex_replace', '^(.*)$', '`\\1`') | join(', ') }})"
       entryPoints: ["websecure"]
-      service: "keap"
+      service: "{{ _router }}"
       tls: {}
       middlewares: ["security-headers@file", "compress@file"]
-{% endif %}
+{% endfor %}
 {% endif %}
 {% endif %}
 {% endif %}

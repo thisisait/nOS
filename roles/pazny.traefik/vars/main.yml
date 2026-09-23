@@ -33,6 +33,39 @@
 #     provider for that Host header → 404 from outpost (not Traefik!)
 #   - proxy service marked as 'oidc' → Traefik just forwards anonymous
 #     traffic to the upstream → service shows its own (un-gated) login.
+# ── Machine lanes ───────────────────────────────────────────────────────────
+# Path prefixes that bypass authentik@file because the caller is a machine and
+# the gate 302s it. EVERY entry here is public surface reachable without an
+# Authentik session, so every entry states who calls it and what authenticates
+# them INSTEAD — a lane whose backend does not authenticate its own callers is
+# an open door, not a lane.
+traefik_machine_lanes:
+  keap:
+    - name: agent
+      prefixes: ["/agent/v1"]
+      # KEAP's own scope-split bearer tokens; 401 without one. Measured
+      # 2026-09-21: behind the gate the n8n pack write followed the redirect
+      # into Authentik's HTML and reported success. No keap-proxy@file either:
+      # without the outpost hop there are no X-Authentik-* headers to vouch
+      # for, and SEC-02 trusts them only WITH the secret, so KEAP must see
+      # this lane as anonymous-bearer rather than proxied.
+
+  # n8n: DELIBERATELY EMPTY, decided 2026-09-23 while gating the n8n edge.
+  # The obvious lane would be /webhook/, and it must not be opened yet:
+  #   - nothing needs it. tools/n8n-fire.py posts to 127.0.0.1:5678 over
+  #     loopback (ares-verify-base/plugin.yml), never through Traefik, and the
+  #     packs' other clock is n8n's own Schedule node — internal.
+  #   - the one webhook that exists has NO auth. The ARES node is
+  #     {httpMethod: POST, path: nos-ares-registry, credentials: null}, so an
+  #     open prefix would hand the internet an unauthenticated trigger, at a
+  #     guessable path, that fans out to ARES/ADIS and writes
+  #     party-registry-status.
+  # Before adding a lane here: give that webhook header auth, then list ONLY
+  # the production prefix (/webhook/) — /webhook-test/ and /form-test/ are
+  # editor-only and belong behind the gate.
+  n8n: []
+
+
 traefik_auth_modes:
   # ── No auth (public or self-managed) ───────────────────────────────────────
   authentik: none           # IS the auth provider
@@ -84,7 +117,14 @@ traefik_auth_modes:
   grafana: oidc
   gitea: oidc
   gitlab: oidc
-  n8n: oidc
+  # n8n: was `oidc` until 2026-09-23. n8n CE has NO OIDC — its own
+  # unauthenticated /rest/settings reports enterprise.oidc false,
+  # sso.oidc.loginEnabled false, authenticationMethod "email" — so the gate was
+  # suppressed on the strength of a licensed feature this build does not have,
+  # and n8n answered 200 to the public internet. Third of three `oidc`
+  # classifications audited, third found false. Nothing we run loses
+  # the gate: the Pulse clock posts over loopback, not through Traefik.
+  n8n: proxy
   nextcloud: oidc
   open_webui: oidc
   outline: oidc
