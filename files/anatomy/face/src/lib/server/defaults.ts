@@ -103,6 +103,34 @@ export const FACE_WALLPAPERS: WallpaperSpec[] = [
 	}
 ];
 
+/** One pinned dock slot. `slug` is a dock key (native registry slug, or
+ *  `control-panel`); `order` is the left-to-right bar position. */
+export interface DockPinSpec {
+	slug: string;
+	order: number;
+	system: boolean;
+}
+
+/** Built-in dock pin order — 14 pinned apps; the 15th bar slot is the expander
+ *  that opens the full app list. Mirror of `$lib/apps/pinned.ts DEFAULT_PINNED`
+ *  (the client cannot import `$lib/server`); `pinned.test.ts` pins the parity. */
+export const FACE_DOCK: DockPinSpec[] = [
+	'files',
+	'tables',
+	'anatomy',
+	'planner',
+	'keap-explore',
+	'books',
+	'control-panel',
+	'authentik',
+	'grafana',
+	'code_server',
+	'n8n',
+	'wing',
+	'nextcloud',
+	'dolibarr'
+].map((slug, i) => ({ slug, order: i + 1, system: true }));
+
 /** Built-in control-panel surfaces. Clicking a row opens a window hosting the
  *  surface (a rawDataTable initially, a bespoke editor later). */
 export const FACE_CONTROLS: ControlEntry[] = [

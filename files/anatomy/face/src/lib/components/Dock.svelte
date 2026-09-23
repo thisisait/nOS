@@ -3,6 +3,11 @@
   Control Panel, hub services); there is no separate taskbar. A running app shows
   a small count badge; hovering it opens a window switcher with live thumbnails.
 
+  Slots: the bar is a fixed 15 at default scaling — 14 pinned apps (pin order
+  from `$lib/apps/pinned`, SoC default overridable by the `face-dock` table)
+  plus a trailing expander. Every other app lives in the expander's overlay
+  (a <Modal size="xl"> grid) and launches from there exactly as a tile does.
+
   Click behaviour:
     • 0 open windows → launch the app;
     • ≥1 open windows → focus one (a minimised window first, else the back-most,
@@ -18,6 +23,9 @@
 	import { toPng } from 'html-to-image';
 	import type { WindowModel } from '$lib/contracts';
 	import Icon from './ui/Icon.svelte';
+	import Modal from './ui/Modal.svelte';
+	import { onMount } from 'svelte';
+	import { splitDock, loadPinned, pinnedSlugs } from '$lib/apps/pinned';
 
 	export interface DockApp {
 		/** Matches WindowModel.app (or, for Control Panel, use `isControlPanel`). */
@@ -29,6 +37,19 @@
 	}
 
 	let { apps = [] as DockApp[] }: { apps?: DockApp[] } = $props();
+
+	// 14 pinned tiles + the expander; everything else fills the overlay.
+	const split = $derived(splitDock(apps, $pinnedSlugs));
+	let listOpen = $state(false);
+
+	// Pin order from the `face-dock` config table (vendored default until it
+	// resolves; a failure keeps the default — see loadPinned).
+	onMount(() => void loadPinned());
+
+	function launchFromList(app: DockApp) {
+		listOpen = false;
+		onClick(app);
+	}
 
 	function winsFor(app: DockApp): WindowModel[] {
 		return $windows.filter((w) =>
@@ -101,7 +122,7 @@
 </script>
 
 <nav class="dock glass" aria-label="Dock">
-	{#each apps as app (app.key)}
+	{#each split.bar as app (app.key)}
 		{@const n = winsFor(app).length}
 		<button
 			class="tile"
@@ -125,7 +146,38 @@
 	{#if apps.length === 0}
 		<span class="muted">no apps in catalog</span>
 	{/if}
+	<button
+		class="tile"
+		title="All apps"
+		aria-haspopup="dialog"
+		aria-expanded={listOpen}
+		onclick={() => (listOpen = true)}
+		onmouseenter={() => (panel = null)}
+	>
+		<span class="ico"><Icon icon="▦" title="All apps" size={22} labelled={false} /></span>
+		<span class="lbl">All apps</span>
+		<span class="run"></span>
+	</button>
 </nav>
+
+{#if listOpen}
+	<Modal title="All apps" size="xl" onclose={() => (listOpen = false)}>
+		{#if split.rest.length === 0}
+			<p class="muted">Every app in the catalog is pinned to the dock.</p>
+		{:else}
+			<div class="grid">
+				{#each split.rest as app (app.key)}
+					<button class="cell" onclick={() => launchFromList(app)}>
+						<span class="ico"
+							><Icon icon={app.icon} title={app.title} size={26} labelled={false} /></span
+						>
+						<span class="cell-lbl">{app.title}</span>
+					</button>
+				{/each}
+			</div>
+		{/if}
+	</Modal>
+{/if}
 
 {#if panel && panelWins.length > 0}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -164,8 +216,8 @@
 		left: 50%;
 		transform: translateX(-50%);
 		display: flex;
-		gap: 10px;
-		padding: 10px 14px;
+		gap: 8px;
+		padding: 8px 11px;
 		align-items: flex-end;
 		max-width: 92vw;
 		overflow-x: auto;
@@ -179,13 +231,14 @@
 		gap: 3px;
 		background: none;
 		border: none;
-		width: 64px;
+		width: 50px;
 		cursor: pointer;
+		color: var(--fg);
 	}
 	.ico {
 		position: relative;
-		width: 46px;
-		height: 46px;
+		width: 36px;
+		height: 36px;
 		display: grid;
 		place-items: center;
 		border-radius: 12px;
@@ -214,12 +267,12 @@
 		box-shadow: 0 0 0 2px rgba(12, 14, 22, 0.9);
 	}
 	.lbl {
-		font-size: 11px;
+		font-size: 10px;
 		color: var(--muted);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		max-width: 64px;
+		max-width: 50px;
 	}
 	.run {
 		width: 4px;
@@ -232,6 +285,37 @@
 	}
 	.muted {
 		color: var(--muted);
+	}
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+		gap: 10px;
+	}
+	.cell {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+		padding: 12px 6px;
+		background: rgba(255, 255, 255, 0.04);
+		border: 1px solid var(--glass-brd);
+		border-radius: 12px;
+		color: var(--fg);
+		cursor: pointer;
+	}
+	.cell:hover {
+		background: rgba(90, 150, 255, 0.18);
+	}
+	.cell .ico {
+		width: 44px;
+		height: 44px;
+	}
+	.cell-lbl {
+		font-size: 12px;
+		max-width: 100%;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 	.switcher {
 		position: fixed;

@@ -27,7 +27,7 @@ import { toTableSummaries, type TableSummary } from '$lib/tables/summary';
 import { narrowView, decorateRowRefs } from '$lib/tables/view';
 import { postTableAudit } from '$lib/server/audit';
 import type { DataTable, DataTableRow, ColumnSpec } from '$lib/contracts';
-import { FACE_LAYOUTS, FACE_WALLPAPERS, FACE_CONTROLS } from '$lib/server/defaults';
+import { FACE_LAYOUTS, FACE_WALLPAPERS, FACE_CONTROLS, FACE_DOCK } from '$lib/server/defaults';
 
 // Config tables with vendored repo-default rows (the SoC fallback when KEAP is
 // unreachable) live in `repoDefaults`/`FALLBACK_COLUMNS` below; any other valid
@@ -60,6 +60,10 @@ const FALLBACK_COLUMNS: Record<string, ColumnSpec[]> = {
 			options: ['wallpaper', 'layouts', 'identity', 'storage', 'rawDataTable']
 		},
 		{ key: 'table', label: 'Table (for rawDataTable)', kind: 'text' }
+	],
+	'face-dock': [
+		{ key: 'slug', label: 'App key', kind: 'text', required: true },
+		{ key: 'order', label: 'Bar position', kind: 'number', required: true }
 	]
 };
 
@@ -85,7 +89,8 @@ function withStableIds(rows: DataTableRow[]): DataTableRow[] {
 const repoDefaults: Record<string, DataTableRow[]> = {
 	'face-layouts': toRows(FACE_LAYOUTS),
 	'face-wallpapers': toRows(FACE_WALLPAPERS),
-	'face-controls': toRows(FACE_CONTROLS)
+	'face-controls': toRows(FACE_CONTROLS),
+	'face-dock': toRows(FACE_DOCK)
 };
 
 /** KEAP agent responses may be enveloped `{success,data}` or bare — unwrap. */
@@ -124,7 +129,7 @@ function mapColumns(def: unknown): ColumnSpec[] {
 // list-all endpoint currently requires forward-auth identity (401 on the bearer)
 // even though GET /agent/v1/tables/:slug accepts it. Until then, probe the known
 // config-table slugs via the working per-slug route so the Tables sidebar fills.
-const KNOWN_CONFIG_TABLES = ['face-layouts', 'face-wallpapers', 'face-controls'];
+const KNOWN_CONFIG_TABLES = ['face-layouts', 'face-wallpapers', 'face-controls', 'face-dock'];
 
 function isFaceConfigTable(slug: string): boolean {
 	return (KNOWN_CONFIG_TABLES as readonly string[]).includes(slug);
