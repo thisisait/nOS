@@ -1886,7 +1886,7 @@
       "source": "files/anatomy/loops/vision-bench.loop.yml",
       "schedule": "31 5 * * *",
       "jitter_min": 10,
-      "max_runtime_s": 900,
+      "max_runtime_s": 1800,
       "category": "knowledge",
       "paused": false,
       "findings_exit_codes": [
