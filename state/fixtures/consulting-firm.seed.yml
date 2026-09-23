@@ -154,38 +154,39 @@ invoice-line:
 #    shape (own_party=seller -> DR 311/CR 601/CR 343; own_party=buyer -> DR
 #    501/DR 343/CR 321) with the client's OWN analytical 311/321 account ────
 journal-entry:
-  - { slug: je-alfa-001, description: "Vystavena faktura 2026-ALFA-001 (Alfa Rizeni, vicesazbove DPH)", date: 1772323200, source: invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001 }
-  - { slug: je-alfa-002, description: "Prijata faktura 2026-ALFA-002 (Alfa Rizeni)", date: 1775001600, source: invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002 }
-  - { slug: je-beta-001, description: "Vystavena faktura 2026-BETA-001 (Beta Sluzby)", date: 1772323200, source: invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001 }
-  - { slug: je-beta-002, description: "Prijata faktura 2026-BETA-002 (Beta Sluzby)", date: 1775001600, source: invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002 }
-  - { slug: je-gama-001, description: "Vystavena faktura 2026-GAMA-001 (Petra Gamova)", date: 1772323200, source: invoice-synthetic-client-gama-synthetic-client-gama-2026-gama-001 }
-  - { slug: je-gama-002, description: "Prijata faktura 2026-GAMA-002 (Petra Gamova)", date: 1775001600, source: invoice-synthetic-client-gama-synthetic-gama-vendor-2026-gama-002 }
+  - { slug: je-invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001, description: "Vystavena faktura 2026-ALFA-001 (Alfa Rizeni, vicesazbove DPH)", date: 1772323200, source: invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001 }
+  - { slug: je-invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002, description: "Prijata faktura 2026-ALFA-002 (Alfa Rizeni)", date: 1775001600, source: invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002 }
+  - { slug: je-invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001, description: "Vystavena faktura 2026-BETA-001 (Beta Sluzby)", date: 1772323200, source: invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001 }
+  - { slug: je-invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002, description: "Prijata faktura 2026-BETA-002 (Beta Sluzby)", date: 1775001600, source: invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002 }
+  - { slug: je-invoice-synthetic-client-gama-synthetic-client-gama-2026-gama-001, description: "Vystavena faktura 2026-GAMA-001 (Petra Gamova)", date: 1772323200, source: invoice-synthetic-client-gama-synthetic-client-gama-2026-gama-001 }
+  - { slug: je-invoice-synthetic-client-gama-synthetic-gama-vendor-2026-gama-002, description: "Prijata faktura 2026-GAMA-002 (Petra Gamova)", date: 1775001600, source: invoice-synthetic-client-gama-synthetic-gama-vendor-2026-gama-002 }
 
 posting:
   # Alfa — issued (Alfa = seller): DR 311-alfa 1770 / CR 601 1500 / CR 343 270
-  - { slug: post-je-alfa-001-311, entry: je-alfa-001, account: acc-311-alfa, direction: debit,  amount: 1770 }
-  - { slug: post-je-alfa-001-601, entry: je-alfa-001, account: acc-601,      direction: credit, amount: 1500 }
-  - { slug: post-je-alfa-001-343, entry: je-alfa-001, account: acc-343,      direction: credit, amount: 270 }
+  - { slug: post-je-invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001-311, entry: je-invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001, account: acc-311-alfa, direction: debit,  amount: 1770 }
+  - { slug: post-je-invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001-601, entry: je-invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001, account: acc-601,      direction: credit, amount: 1500 }
+  - { slug: post-je-invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001-343-1, entry: je-invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001, account: acc-343,      direction: credit, amount: 210 }
+  - { slug: post-je-invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001-343-2, entry: je-invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001, account: acc-343,      direction: credit, amount: 60 }
   # Alfa — received (Alfa = buyer): DR 501 2000 / DR 343 420 / CR 321-alfa 2420
-  - { slug: post-je-alfa-002-501, entry: je-alfa-002, account: acc-501,      direction: debit,  amount: 2000 }
-  - { slug: post-je-alfa-002-343, entry: je-alfa-002, account: acc-343,      direction: debit,  amount: 420 }
-  - { slug: post-je-alfa-002-321, entry: je-alfa-002, account: acc-321-alfa, direction: credit, amount: 2420 }
+  - { slug: post-je-invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002-501, entry: je-invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002, account: acc-501,      direction: debit,  amount: 2000 }
+  - { slug: post-je-invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002-343, entry: je-invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002, account: acc-343,      direction: debit,  amount: 420 }
+  - { slug: post-je-invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002-321, entry: je-invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002, account: acc-321-alfa, direction: credit, amount: 2420 }
   # Beta — issued (Beta = seller): DR 311-beta 3630 / CR 601 3000 / CR 343 630
-  - { slug: post-je-beta-001-311, entry: je-beta-001, account: acc-311-beta, direction: debit,  amount: 3630 }
-  - { slug: post-je-beta-001-601, entry: je-beta-001, account: acc-601,      direction: credit, amount: 3000 }
-  - { slug: post-je-beta-001-343, entry: je-beta-001, account: acc-343,      direction: credit, amount: 630 }
+  - { slug: post-je-invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001-311, entry: je-invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001, account: acc-311-beta, direction: debit,  amount: 3630 }
+  - { slug: post-je-invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001-601, entry: je-invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001, account: acc-601,      direction: credit, amount: 3000 }
+  - { slug: post-je-invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001-343, entry: je-invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001, account: acc-343,      direction: credit, amount: 630 }
   # Beta — received (Beta = buyer): DR 501 1200 / DR 343 252 / CR 321-beta 1452
-  - { slug: post-je-beta-002-501, entry: je-beta-002, account: acc-501,      direction: debit,  amount: 1200 }
-  - { slug: post-je-beta-002-343, entry: je-beta-002, account: acc-343,      direction: debit,  amount: 252 }
-  - { slug: post-je-beta-002-321, entry: je-beta-002, account: acc-321-beta, direction: credit, amount: 1452 }
+  - { slug: post-je-invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002-501, entry: je-invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002, account: acc-501,      direction: debit,  amount: 1200 }
+  - { slug: post-je-invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002-343, entry: je-invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002, account: acc-343,      direction: debit,  amount: 252 }
+  - { slug: post-je-invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002-321, entry: je-invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002, account: acc-321-beta, direction: credit, amount: 1452 }
   # Gama — issued (Gama = seller): DR 311-gama 968 / CR 601 800 / CR 343 168
-  - { slug: post-je-gama-001-311, entry: je-gama-001, account: acc-311-gama, direction: debit,  amount: 968 }
-  - { slug: post-je-gama-001-601, entry: je-gama-001, account: acc-601,      direction: credit, amount: 800 }
-  - { slug: post-je-gama-001-343, entry: je-gama-001, account: acc-343,      direction: credit, amount: 168 }
+  - { slug: post-je-invoice-synthetic-client-gama-synthetic-client-gama-2026-gama-001-311, entry: je-invoice-synthetic-client-gama-synthetic-client-gama-2026-gama-001, account: acc-311-gama, direction: debit,  amount: 968 }
+  - { slug: post-je-invoice-synthetic-client-gama-synthetic-client-gama-2026-gama-001-601, entry: je-invoice-synthetic-client-gama-synthetic-client-gama-2026-gama-001, account: acc-601,      direction: credit, amount: 800 }
+  - { slug: post-je-invoice-synthetic-client-gama-synthetic-client-gama-2026-gama-001-343, entry: je-invoice-synthetic-client-gama-synthetic-client-gama-2026-gama-001, account: acc-343,      direction: credit, amount: 168 }
   # Gama — received (Gama = buyer): DR 501 500 / DR 343 105 / CR 321-gama 605
-  - { slug: post-je-gama-002-501, entry: je-gama-002, account: acc-501,      direction: debit,  amount: 500 }
-  - { slug: post-je-gama-002-343, entry: je-gama-002, account: acc-343,      direction: debit,  amount: 105 }
-  - { slug: post-je-gama-002-321, entry: je-gama-002, account: acc-321-gama, direction: credit, amount: 605 }
+  - { slug: post-je-invoice-synthetic-client-gama-synthetic-gama-vendor-2026-gama-002-501, entry: je-invoice-synthetic-client-gama-synthetic-gama-vendor-2026-gama-002, account: acc-501,      direction: debit,  amount: 500 }
+  - { slug: post-je-invoice-synthetic-client-gama-synthetic-gama-vendor-2026-gama-002-343, entry: je-invoice-synthetic-client-gama-synthetic-gama-vendor-2026-gama-002, account: acc-343,      direction: debit,  amount: 105 }
+  - { slug: post-je-invoice-synthetic-client-gama-synthetic-gama-vendor-2026-gama-002-321, entry: je-invoice-synthetic-client-gama-synthetic-gama-vendor-2026-gama-002, account: acc-321-gama, direction: credit, amount: 605 }
 
 # Schema only — rows are live HMAC/Books decisions, never git-seeded.
 pending-invoice-verify: []

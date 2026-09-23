@@ -106,3 +106,30 @@ def test_the_importer_derives_the_same_identity():
     inv = bundle["invoice"][0]
     assert inv["slug"] == nos_digest.invoice_slug("book", "vendor", "2026-1")
     assert inv["book_owner"] == "book"
+
+
+def test_the_fixture_ledger_is_what_derive_entry_would_derive():
+    """The same duplication one level down: the consulting-firm fixture seeded a
+    hand-written book (je-alfa-001) while an ISDOC import of the SAME documents
+    derived its own (je-<invoice>), so the live ledger carried 16 entries for 10
+    invoices. One producer, one spelling — the seeded rows must BE the derived
+    rows, amounts included."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "derive_postings", REPO / "tools" / "derive-postings.py")
+    DP = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(DP)
+    import nos_accounting
+
+    seed = yaml.safe_load((REPO / "state" / "fixtures" / "consulting-firm.seed.yml")
+                          .read_text(encoding="utf-8"))
+    accounts = DP.build_accounts_by_code(seed["account"])
+    seeded_entries = {r["slug"] for r in seed["journal-entry"]}
+    seeded_postings = {(r["slug"], r["entry"], r["account"], r["direction"], float(r["amount"]))
+                       for r in seed["posting"]}
+    for inv in seed["invoice"]:
+        derived = nos_accounting.derive_entry(inv, inv["book_owner"], accounts)
+        assert derived["entry"]["slug"] in seeded_entries, inv["slug"]
+        for p in derived["postings"]:
+            key = (p["slug"], p["entry"], p["account"], p["direction"], float(p["amount"]))
+            assert key in seeded_postings, f"{inv['slug']}: fixture is missing {key}"

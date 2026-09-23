@@ -16,6 +16,12 @@ a shared party row survives even under --confirm.
   tools/digest-teardown.py state/fixtures/kolben-it.seed.yml --confirm  # delete the unreferenced rows
   tools/digest-teardown.py --erase-party party-ico-00000112             # GDPR: a party's whole rowRef footprint
   tools/digest-teardown.py --erase-party party-ico-00000112 --confirm   # erase it (party row retained, referrers-gated)
+  tools/digest-teardown.py --tables invoice,invoice-line,journal-entry,posting   # from-blank: the money rows, whatever wrote them
+
+The third mode exists because a seed file can only tear down what a seed file
+WROTE: half the live ledger is importer output and derive-postings entries that
+no fixture lists, and those are exactly the rows a pipeline test must reset
+between runs. Name the tables in DEPENDENCY order; the plan reverses it.
 
 Exit 0 done/dry · 1 a delete failed · 2 KEAP unreadable.
 """
@@ -95,10 +101,15 @@ def main() -> int:
     ap.add_argument("--erase-party", metavar="SLUG",
                     help="erase everything importers wrote about a party (rowRef-DOWN closure); "
                          "the party row itself is retained (referrers-gated)")
+    ap.add_argument("--tables", metavar="T1,T2",
+                    help="every LIVE row of these tables, named in DEPENDENCY order "
+                         "(the plan reverses it): the from-blank reset for rows no seed "
+                         "file lists — importer output, derived ledger")
     ap.add_argument("--confirm", action="store_true", help="delete (default is dry-run)")
     args = ap.parse_args()
-    if bool(args.bundle) == bool(args.erase_party):
-        ap.error("give exactly one of: a bundle path, or --erase-party SLUG")
+    modes = [bool(args.bundle), bool(args.erase_party), bool(args.tables)]
+    if sum(modes) != 1:
+        ap.error("give exactly one of: a bundle path, --erase-party SLUG, or --tables T1,T2")
 
     H = human_headers()
     ro_hdr = {"Authorization": f"Bearer {_ro_token()}", **proxy_header()}
@@ -111,6 +122,15 @@ def main() -> int:
             print(f"REFUSING: KEAP unreadable ({exc}) — cannot build the erasure closure", file=sys.stderr)
             return 2
         source = f"erasure of {args.erase_party}"
+    elif args.tables:
+        tables = [t.strip() for t in args.tables.split(",") if t.strip()]
+        try:
+            seed = {t: [{"slug": r["slug"]} for r in _table_rows(t, ro_hdr) if r.get("slug")]
+                    for t in tables}
+        except (urllib.error.URLError, OSError) as exc:
+            print(f"REFUSING: KEAP unreadable ({exc}) — cannot list the tables", file=sys.stderr)
+            return 2
+        source = f"live rows of {', '.join(tables)}"
     else:
         path = pathlib.Path(args.bundle)
         if not path.is_absolute():
