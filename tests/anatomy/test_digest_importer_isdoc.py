@@ -74,7 +74,11 @@ def test_amount_and_dates_parsed_and_prov_stamped():
             assert nd.PROV_REQUIRED <= set(r["_prov"]), r
 
 
-def test_deterministic_slug_is_seller_plus_document():
+def test_deterministic_slug_is_the_derived_identity():
+    """(book_owner, seller, document_number) — nos_digest.invoice_slug. This
+    import carries no run-level book owner, so the book reads `unbooked` until
+    derive-postings finds the analytical account and re-keys it (identity unit,
+    2026-09-23; was seller+document, which forked against a booked import)."""
     _nd, _imp, bundle, _ = _bundle()
     inv1 = next(i for i in bundle["deterministic"]["invoice"] if i["document_number"] == "2026-INV-001")
-    assert inv1["slug"] == "invoice-synthetic-mesto-lipno-2026-inv-001"
+    assert inv1["slug"] == "invoice-unbooked-synthetic-mesto-lipno-2026-inv-001"

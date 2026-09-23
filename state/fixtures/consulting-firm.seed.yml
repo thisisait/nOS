@@ -121,45 +121,45 @@ account:
 # ── Invoices: per client, one ISSUED (client=seller) + one RECEIVED
 #    (client=buyer), each book_owner = that client ──────────────────────────
 invoice:
-  - { slug: inv-alfa-001, document_number: "2026-ALFA-001", seller: synthetic-client-alfa, buyer: synthetic-alfa-customer,
+  - { slug: invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001, document_number: "2026-ALFA-001", seller: synthetic-client-alfa, buyer: synthetic-alfa-customer,
       issue_date: 1772323200, due_date: 1773532800, currency: CZK, payable_amount: 1770, net_amount: 1500, vat_amount: 270,
       vat_breakdown: [ { rate: 21, base: 1000, vat: 210 }, { rate: 12, base: 500, vat: 60 } ], book_owner: synthetic-client-alfa }
-  - { slug: inv-alfa-002, document_number: "2026-ALFA-002", seller: synthetic-alfa-vendor, buyer: synthetic-client-alfa,
+  - { slug: invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002, document_number: "2026-ALFA-002", seller: synthetic-alfa-vendor, buyer: synthetic-client-alfa,
       issue_date: 1775001600, due_date: 1776211200, currency: CZK, payable_amount: 2420, net_amount: 2000, vat_amount: 420,
       vat_breakdown: [ { rate: 21, base: 2000, vat: 420 } ], book_owner: synthetic-client-alfa }
-  - { slug: inv-beta-001, document_number: "2026-BETA-001", seller: synthetic-client-beta, buyer: synthetic-beta-customer,
+  - { slug: invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001, document_number: "2026-BETA-001", seller: synthetic-client-beta, buyer: synthetic-beta-customer,
       issue_date: 1772323200, due_date: 1773532800, currency: CZK, payable_amount: 3630, net_amount: 3000, vat_amount: 630,
       vat_breakdown: [ { rate: 21, base: 3000, vat: 630 } ], book_owner: synthetic-client-beta }
-  - { slug: inv-beta-002, document_number: "2026-BETA-002", seller: synthetic-beta-vendor, buyer: synthetic-client-beta,
+  - { slug: invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002, document_number: "2026-BETA-002", seller: synthetic-beta-vendor, buyer: synthetic-client-beta,
       issue_date: 1775001600, due_date: 1776211200, currency: CZK, payable_amount: 1452, net_amount: 1200, vat_amount: 252,
       vat_breakdown: [ { rate: 21, base: 1200, vat: 252 } ], book_owner: synthetic-client-beta }
-  - { slug: inv-gama-001, document_number: "2026-GAMA-001", seller: synthetic-client-gama, buyer: synthetic-gama-customer,
+  - { slug: invoice-synthetic-client-gama-synthetic-client-gama-2026-gama-001, document_number: "2026-GAMA-001", seller: synthetic-client-gama, buyer: synthetic-gama-customer,
       issue_date: 1772323200, due_date: 1773532800, currency: CZK, payable_amount: 968, net_amount: 800, vat_amount: 168,
       vat_breakdown: [ { rate: 21, base: 800, vat: 168 } ], book_owner: synthetic-client-gama }
-  - { slug: inv-gama-002, document_number: "2026-GAMA-002", seller: synthetic-gama-vendor, buyer: synthetic-client-gama,
+  - { slug: invoice-synthetic-client-gama-synthetic-gama-vendor-2026-gama-002, document_number: "2026-GAMA-002", seller: synthetic-gama-vendor, buyer: synthetic-client-gama,
       issue_date: 1775001600, due_date: 1776211200, currency: CZK, payable_amount: 605, net_amount: 500, vat_amount: 105,
       vat_breakdown: [ { rate: 21, base: 500, vat: 105 } ], book_owner: synthetic-client-gama }
 
 # ── Invoice lines: at least one per header; alfa-001 is the multi-rate pair
 invoice-line:
-  - { slug: line-inv-alfa-001-1, invoice: inv-alfa-001, line_no: 1, description: "Advisory 21%", quantity: 1, net_amount: 1000, vat_rate: 21, vat_amount: 210 }
-  - { slug: line-inv-alfa-001-2, invoice: inv-alfa-001, line_no: 2, description: "Advisory 12%", quantity: 1, net_amount: 500, vat_rate: 12, vat_amount: 60 }
-  - { slug: line-inv-alfa-002-1, invoice: inv-alfa-002, line_no: 1, description: "Received services", quantity: 1, net_amount: 2000, vat_rate: 21, vat_amount: 420 }
-  - { slug: line-inv-beta-001-1, invoice: inv-beta-001, line_no: 1, description: "Issued services", quantity: 1, net_amount: 3000, vat_rate: 21, vat_amount: 630 }
-  - { slug: line-inv-beta-002-1, invoice: inv-beta-002, line_no: 1, description: "Received services", quantity: 1, net_amount: 1200, vat_rate: 21, vat_amount: 252 }
-  - { slug: line-inv-gama-001-1, invoice: inv-gama-001, line_no: 1, description: "Issued services", quantity: 1, net_amount: 800, vat_rate: 21, vat_amount: 168 }
-  - { slug: line-inv-gama-002-1, invoice: inv-gama-002, line_no: 1, description: "Received services", quantity: 1, net_amount: 500, vat_rate: 21, vat_amount: 105 }
+  - { slug: line-invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001-1, invoice: invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001, line_no: 1, description: "Advisory 21%", quantity: 1, net_amount: 1000, vat_rate: 21, vat_amount: 210 }
+  - { slug: line-invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001-2, invoice: invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001, line_no: 2, description: "Advisory 12%", quantity: 1, net_amount: 500, vat_rate: 12, vat_amount: 60 }
+  - { slug: line-invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002-1, invoice: invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002, line_no: 1, description: "Received services", quantity: 1, net_amount: 2000, vat_rate: 21, vat_amount: 420 }
+  - { slug: line-invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001-1, invoice: invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001, line_no: 1, description: "Issued services", quantity: 1, net_amount: 3000, vat_rate: 21, vat_amount: 630 }
+  - { slug: line-invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002-1, invoice: invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002, line_no: 1, description: "Received services", quantity: 1, net_amount: 1200, vat_rate: 21, vat_amount: 252 }
+  - { slug: line-invoice-synthetic-client-gama-synthetic-client-gama-2026-gama-001-1, invoice: invoice-synthetic-client-gama-synthetic-client-gama-2026-gama-001, line_no: 1, description: "Issued services", quantity: 1, net_amount: 800, vat_rate: 21, vat_amount: 168 }
+  - { slug: line-invoice-synthetic-client-gama-synthetic-gama-vendor-2026-gama-002-1, invoice: invoice-synthetic-client-gama-synthetic-gama-vendor-2026-gama-002, line_no: 1, description: "Received services", quantity: 1, net_amount: 500, vat_rate: 21, vat_amount: 105 }
 
 # ── Journal entries: one PER invoice, source-linked, in derive_entry's leg
 #    shape (own_party=seller -> DR 311/CR 601/CR 343; own_party=buyer -> DR
 #    501/DR 343/CR 321) with the client's OWN analytical 311/321 account ────
 journal-entry:
-  - { slug: je-alfa-001, description: "Vystavena faktura 2026-ALFA-001 (Alfa Rizeni, vicesazbove DPH)", date: 1772323200, source: inv-alfa-001 }
-  - { slug: je-alfa-002, description: "Prijata faktura 2026-ALFA-002 (Alfa Rizeni)", date: 1775001600, source: inv-alfa-002 }
-  - { slug: je-beta-001, description: "Vystavena faktura 2026-BETA-001 (Beta Sluzby)", date: 1772323200, source: inv-beta-001 }
-  - { slug: je-beta-002, description: "Prijata faktura 2026-BETA-002 (Beta Sluzby)", date: 1775001600, source: inv-beta-002 }
-  - { slug: je-gama-001, description: "Vystavena faktura 2026-GAMA-001 (Petra Gamova)", date: 1772323200, source: inv-gama-001 }
-  - { slug: je-gama-002, description: "Prijata faktura 2026-GAMA-002 (Petra Gamova)", date: 1775001600, source: inv-gama-002 }
+  - { slug: je-alfa-001, description: "Vystavena faktura 2026-ALFA-001 (Alfa Rizeni, vicesazbove DPH)", date: 1772323200, source: invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001 }
+  - { slug: je-alfa-002, description: "Prijata faktura 2026-ALFA-002 (Alfa Rizeni)", date: 1775001600, source: invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002 }
+  - { slug: je-beta-001, description: "Vystavena faktura 2026-BETA-001 (Beta Sluzby)", date: 1772323200, source: invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001 }
+  - { slug: je-beta-002, description: "Prijata faktura 2026-BETA-002 (Beta Sluzby)", date: 1775001600, source: invoice-synthetic-client-beta-synthetic-beta-vendor-2026-beta-002 }
+  - { slug: je-gama-001, description: "Vystavena faktura 2026-GAMA-001 (Petra Gamova)", date: 1772323200, source: invoice-synthetic-client-gama-synthetic-client-gama-2026-gama-001 }
+  - { slug: je-gama-002, description: "Prijata faktura 2026-GAMA-002 (Petra Gamova)", date: 1775001600, source: invoice-synthetic-client-gama-synthetic-gama-vendor-2026-gama-002 }
 
 posting:
   # Alfa — issued (Alfa = seller): DR 311-alfa 1770 / CR 601 1500 / CR 343 270

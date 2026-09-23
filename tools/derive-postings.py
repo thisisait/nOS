@@ -94,6 +94,26 @@ def attach_ledger(bundle: dict, accounts: dict, own_party: str | None = None):
     holds. Returns (entries, postings, skipped, routed, reports)."""
     det = bundle.setdefault("deterministic", {})
     invoices = det.get("invoice") or []
+    # identity (invoice-identity-cross-source, 2026-09-23): the BOOK is part of
+    # an invoice's identity, and this is where an unbooked invoice learns its
+    # book — from the analytical 311/321 holder, not from the import run. Re-key
+    # it here, or the same document forks the moment it is imported with a book.
+    for inv in invoices:
+        if inv.get("book_owner"):
+            continue
+        party = nos_accounting.own_party_for_invoice(inv, accounts, fallback=own_party)
+        if not party:
+            continue
+        inv["book_owner"] = party
+        old = inv["slug"]
+        new = nos_digest.invoice_slug(party, inv.get("seller"), inv.get("document_number"))
+        if new == old:
+            continue
+        inv["slug"] = new
+        for ln in det.get("invoice-line") or []:
+            if ln.get("invoice") == old:
+                ln["invoice"] = new
+                ln["slug"] = ln["slug"].replace(old, new, 1)
     entries, postings, skipped, routed, reports = derive_bundle_parts(
         invoices, own_party, accounts)
     if entries:

@@ -278,9 +278,22 @@ class IsdocImporter:
             for slug, ref in ((r["seller_slug"], r["seller"]), (r["buyer_slug"], r["buyer"])):
                 parties.setdefault(slug, {"slug": slug, "legal_name": ref.get("name") or slug,
                                           "party_kind": "org", "country": "CZ"})
-            row = {"slug": _slug("invoice", r["seller_slug"], r["id"]),
+            # Run-level book_owner is the client this inbox is FOR. Stamp it
+            # only when that party is seller or buyer — a mixed directory plus
+            # --book-owner-ico must not claim a foreign client's invoices. It
+            # is decided BEFORE the slug because it is part of the identity.
+            book_owner = None
+            if self.book_owner_slug and self.book_owner_slug in (r["seller_slug"], r["buyer_slug"]):
+                book_owner = self.book_owner_slug
+            elif self.book_owner_slug:
+                self.skipped.append(
+                    f"{r['file']}: book-owner {self.book_owner_slug} is neither "
+                    "seller nor buyer — not stamping (wrong book)")
+            row = {"slug": nos_digest.invoice_slug(book_owner, r["seller_slug"], r["id"]),
                    "document_number": r["id"], "seller": r["seller_slug"], "buyer": r["buyer_slug"],
                    "currency": r["currency"] or "CZK"}
+            if book_owner:
+                row["book_owner"] = book_owner
             if r["issue"] and _epoch(r["issue"]) is not None:
                 row["issue_date"] = _epoch(r["issue"])
             if r["due"] and _epoch(r["due"]) is not None:
@@ -302,15 +315,6 @@ class IsdocImporter:
                 row["document_kind"] = r["document_kind"]
             if r.get("vat_regime"):
                 row["vat_regime"] = r["vat_regime"]
-            # Run-level book_owner is the client this inbox is FOR. Stamp it
-            # only when that party is seller or buyer — a mixed directory plus
-            # --book-owner-ico must not claim a foreign client's invoices.
-            if self.book_owner_slug and self.book_owner_slug in (r["seller_slug"], r["buyer_slug"]):
-                row["book_owner"] = self.book_owner_slug
-            elif self.book_owner_slug:
-                self.skipped.append(
-                    f"{r['file']}: book-owner {self.book_owner_slug} is neither "
-                    "seller nor buyer — not stamping (wrong book)")
             # provenance-keep unit: source is stamped by the CLASS (isdoc vs
             # vision, never per-record), verified/overall_confidence read
             # from the record when the source populated them (vision only —

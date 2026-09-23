@@ -300,6 +300,21 @@ def check_bundle(bundle: dict, tables_dir: str | pathlib.Path) -> list[str]:
             errors.append("invoice rows require invoice-line rows")
         else:
             errors.extend(nos_accounting.lines_cover_invoices(invoices, lines))
+        # Identity gate (invoice-identity-cross-source unit): a producer that
+        # mints its own invoice id books the same document twice across
+        # sources. The slug IS the identity — derived, never chosen.
+        for r in invoices:
+            if not isinstance(r, dict):
+                continue
+            try:
+                want = invoice_slug(r.get("book_owner"), r.get("seller"), r.get("document_number"))
+            except ValueError as e:
+                errors.append(f"invoice/{r.get('slug')}: {e}")
+                continue
+            if r.get("slug") != want:
+                errors.append(
+                    f"invoice/{r.get('slug')}: slug is not the derived identity "
+                    f"(expected {want!r}) — a chosen invoice id forks the document")
     _check_device_family(bundle, det, errors)
     return errors
 
@@ -382,6 +397,39 @@ def org_slug(ico8: str) -> str:
     a re-import ADDRESSES the same row instead of forking it (it dedups; absorb
     skips a present slug, so field updates are not propagated yet)."""
     return f"party-ico-{ico8}"
+
+
+#: An invoice row id longer than KEAP's assertRowId cap is folded, never
+#: truncated blind — a blind cut collides two documents into one row.
+_SLUG_CAP = 128
+
+
+def invoice_slug(book_owner, seller: str, document_number: str) -> str:
+    """THE invoice identity — (book_owner, seller, document_number), one
+    spelling for every producer.
+
+    Found live 2026-09-23: the same document stood twice in the Books app
+    (`inv-beta-002` from the hand-written consulting-firm fixture, and
+    `invoice-<seller>-<number>` from the importers) with the ledger balanced
+    on BOTH — a balance check cannot see a duplication. Identity in the row
+    id is what makes a second source UPSERT instead of fork, the same
+    backstop org_slug() is for parties.
+
+    Why book_owner is part of it and not just (seller, number): an invoice
+    between two clients of the same accounting firm belongs to TWO books, each
+    with its own journal entry, so one row per book is correct. An invoice
+    absorbed before its book is known (mixed directory, foreign counterparty)
+    keys as `unbooked` — visibly not a book row.
+    """
+    seller, document_number = str(seller or "").strip(), str(document_number or "").strip()
+    if not (seller and document_number):
+        raise ValueError("invoice identity needs seller AND document_number")
+    parts = ("invoice", str(book_owner or "unbooked"), seller, document_number)
+    slug = re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", "-".join(parts).lower()).strip("-"))
+    if len(slug) > _SLUG_CAP:
+        tail = "-" + _content_hash(parts)[:12]
+        slug = slug[:_SLUG_CAP - len(tail)].rstrip("-") + tail
+    return slug
 
 
 def _review(slug=None, matched_by=None, match_value=None, candidates=None, reason=""):
