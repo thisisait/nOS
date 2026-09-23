@@ -27,6 +27,7 @@ DRY / read-only: writes only the report; absorbs nothing into KEAP.
 from __future__ import annotations
 
 import argparse
+import collections
 import json
 import pathlib
 import subprocess
@@ -98,6 +99,15 @@ def crosscheck(record: dict, isdoc_payable) -> str:
     return "agree" if _num(record.get("payable")) == _num(isdoc_payable) else "mismatch"
 
 
+#: What the pipeline actually said when it failed. A run that scores nothing
+#: used to end on a GUESS ("is qwen2.5vl:7b pulled?"), and for weeks that guess
+#: hid the real cause: every call after the first in a pulse run died on
+#: `UNIQUE constraint failed: agent_sessions.uuid` (run-agent.sh adopted the
+#: run id as the session uuid; fixed 2026-09-23). A reader that guesses sends
+#: its reader at the wrong thing — so the refusal quotes the failure instead.
+_FAILURES: list[str] = []
+
+
 def _run_pipeline(image: pathlib.Path) -> dict | None:
     """One image through invoice-vision-pipeline.py -> the extracted record dict.
     Returns None if the pipeline fails (model unarmed / no chain)."""
@@ -107,6 +117,7 @@ def _run_pipeline(image: pathlib.Path) -> dict | None:
                            capture_output=True, text=True)
         if r.returncode != 0 or not out.exists():
             print(f"  pipeline failed on {image.name} (exit {r.returncode}): {r.stderr[-200:]}", file=sys.stderr)
+            _FAILURES.append((r.stderr or r.stdout or "").strip()[-300:])
             return None
         raw = out.read_text(encoding="utf-8")
         i = raw.find("{")
@@ -168,8 +179,14 @@ def main() -> int:
                     xhits += 1
 
     if ran == 0:
-        print("REFUSING: the vision pipeline produced no records — is qwen2.5vl:7b pulled and ollama armed?",
-              file=sys.stderr)
+        print("REFUSING: the vision pipeline produced no records.", file=sys.stderr)
+        if _FAILURES:
+            common = collections.Counter(_FAILURES).most_common(1)[0]
+            print(f"  it failed {common[1]}/{len(_FAILURES)} time(s) with, verbatim:", file=sys.stderr)
+            print("  " + common[0].replace("\n", "\n  "), file=sys.stderr)
+        else:
+            print("  the pipeline said nothing — is qwen2.5vl:7b pulled and ollama armed?",
+                  file=sys.stderr)
         return 2
 
     accuracy = round(hits / total, 4) if total else 0.0

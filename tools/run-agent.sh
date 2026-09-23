@@ -282,11 +282,30 @@ trap 'nos_agent_lock_release; rm -f "$SUMMARY_FILE"' EXIT
 #
 # Guarded on the UUID shape because bin/run-agent.php refuses anything else,
 # and only when the caller has not already chosen one.
+#
+# ONE RUN CAN HOLD MANY AGENTS (measured 2026-09-23). A uuid is unique; a pulse
+# run is not one agent. The invoice vision pipeline runs two agents per page
+# over six pages inside ONE run, and every call after the first died on
+# `UNIQUE constraint failed: agent_sessions.uuid` — loop:vision-bench had been
+# rc=2 on every image for weeks while blaming ollama. So the FIRST agent of a
+# run adopts its uuid (the single-agent job keeps its zero-hop lineage) and the
+# rest self-allocate; `--trigger-id` keeps every one of them linked to the run.
+# shellcheck source=../files/anatomy/scripts/agent-session-claim.sh
+source "$REPO_ROOT/files/anatomy/scripts/agent-session-claim.sh"
 if [[ -n "${PULSE_RUN_ID:-}" ]] \
-   && [[ "$PULSE_RUN_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]] \
-   && [[ ! " ${PASSTHRU[*]} " == *" --session-uuid="* ]]; then
-    PASSTHRU+=("--session-uuid=$PULSE_RUN_ID")
-    echo "[run-agent] session uuid adopted from PULSE_RUN_ID — the run and the session are one row" >&2
+   && [[ "$PULSE_RUN_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+    if [[ ! " ${PASSTHRU[*]} " == *" --trigger-id="* ]]; then
+        PASSTHRU+=("--trigger-id=$PULSE_RUN_ID")
+    fi
+    if [[ ! " ${PASSTHRU[*]} " == *" --session-uuid="* ]]; then
+        if nos_agent_session_claim "$PULSE_RUN_ID"; then
+            PASSTHRU+=("--session-uuid=$PULSE_RUN_ID")
+            echo "[run-agent] session uuid adopted from PULSE_RUN_ID — the run and the session are one row" >&2
+        else
+            echo "[run-agent] PULSE_RUN_ID is already spent by an earlier agent in this run —" >&2
+            echo "[run-agent] self-allocating a session uuid, linked by trigger-id." >&2
+        fi
+    fi
 fi
 
 cd "$WING_APP"

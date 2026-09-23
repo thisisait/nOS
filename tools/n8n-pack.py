@@ -452,6 +452,33 @@ def parse_when(value: Any) -> datetime | None:
     return dt
 
 
+def pack_webhook_paths(pack: dict[str, Any]) -> set[str]:
+    """The webhook paths this pack's workflow answers on (a workflow can carry
+    both a Schedule and a Webhook trigger — the ARES one does)."""
+    wf = load_workflow(pack)
+    return {
+        str((n.get("parameters") or {}).get("path") or "")
+        for n in wf.get("nodes") or []
+        if str(n.get("type") or "").endswith(".webhook")
+    } - {""}
+
+
+def pack_has_external_clock(pack: dict[str, Any]) -> bool:
+    """Is a Pulse job already firing this pack's webhook? DISCOVERED by reading
+    the plugin manifests and the pack's own trigger nodes — a list spelled out
+    here would rot the moment a plugin is added or removed."""
+    paths = pack_webhook_paths(pack)
+    if not paths:
+        return False
+    for manifest in sorted((REPO / "files" / "anatomy" / "plugins").glob("*/plugin.yml")):
+        body = manifest.read_text(encoding="utf-8", errors="ignore")
+        if "n8n-fire" not in body:
+            continue
+        if any(p in body for p in paths):
+            return True
+    return False
+
+
 def cmd_watch(args: argparse.Namespace) -> int:
     secrets_path = Path(args.secrets)
     api_key = os.environ.get("N8N_API_KEY") or read_secret(secrets_path, "n8n_api_key")
@@ -472,13 +499,32 @@ def cmd_watch(args: argparse.Namespace) -> int:
     by_name = {load_workflow(p)["name"]: pid for pid, p in packs.items()}
     findings: list[str] = []
     now = datetime.now(timezone.utc)
+    #: WHAT THE WATCHER SAW, always printed. Measured 2026-09-23: `watch`
+    #: skipped every inactive workflow SILENTLY and exited 0, so for two days
+    #: it reported green while BOTH pack workflows were off and the ARES Pulse
+    #: clock 404'd at the dead webhook twice a day. A watcher that looked at
+    #: nothing must not read the same as a watcher that looked and found
+    #: nothing — so state goes to stdout whatever it is.
+    seen: set[str] = set()
     for wf in workflows:
         meta = (wf.get("meta") or {}).get("nos") or {}
         pid = meta.get("id") or by_name.get(wf.get("name"))
         if pid not in packs:
             continue
+        seen.add(pid)
         if not wf.get("active"):
+            # Not a finding by itself: `activate: operator` means this consent
+            # has not been given yet (and the public API cannot give it — POST
+            # /activate answered 403 for the estate's key, measured 2026-09-23).
+            # It IS a finding when something else is already firing this
+            # workflow, because that clock can only ever hit a dead webhook.
+            note = f"{pid}: INACTIVE (activate: {packs[pid].get('activate', 'operator')})"
+            if pack_has_external_clock(packs[pid]):
+                findings.append(note + " — but a Pulse clock fires it; that clock 404s")
+            else:
+                print(note)
             continue
+        print(f"{pid}: active")
         pack = packs[pid]
         wid = wf.get("id")
         st, ex = api(
@@ -515,6 +561,10 @@ def cmd_watch(args: argparse.Namespace) -> int:
         slack = period_seconds(cron) * 2
         if last_ok is None or (now - last_ok).total_seconds() > slack:
             findings.append(f"{pid}: stale")
+    for pid in sorted(set(packs) - seen):
+        # A pack in git that n8n has never heard of: the sync never ran here, or
+        # the rendered name drifted from the live one (the name IS the join key).
+        findings.append(f"{pid}: ABSENT from n8n — sync never ran, or the name drifted")
     if findings:
         for line in findings:
             print(line, file=sys.stderr)
