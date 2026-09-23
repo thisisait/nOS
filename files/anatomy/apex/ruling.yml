@@ -621,6 +621,11 @@ nodes:
   "pulse:loop:news-scout": withheld
   "pulse:loop:repo-check": withheld
   "pulse:loop:vision-bench": withheld
+  # 2026-09-23 pipeline-exercise (the invoice pipeline rehearsal, manifest
+  # files/anatomy/loops/pipeline-exercise.loop.yml). WITHHELD like every
+  # other pulse:loop:* node (D3); publishes nothing, D4's frozen set is
+  # untouched.
+  "pulse:loop:pipeline-exercise": withheld
   "pulse:librarian:brief-taxonomy": withheld
   "pulse:librarian:describe-taxonomy": withheld
   "pulse:librarian:judge-lint-queue": withheld
