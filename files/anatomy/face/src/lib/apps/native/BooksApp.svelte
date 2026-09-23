@@ -469,12 +469,16 @@
 		flex-direction: column;
 		height: 100%;
 		min-height: 0;
+		/* min-width too: without it a flex item is min-width:auto and the wide
+		   table below widens the app instead of scrolling in `.body`. */
+		min-width: 0;
 		padding: 8px 12px;
 		gap: 8px;
 	}
 	.body {
 		flex: 1 1 auto;
 		min-height: 0;
+		min-width: 0;
 		overflow: auto;
 	}
 	table {

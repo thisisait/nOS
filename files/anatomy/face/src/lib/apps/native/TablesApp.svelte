@@ -221,6 +221,24 @@
 		min-width: 0;
 		overflow: auto;
 	}
+	/* Narrow (a phone, or a narrow window on a desktop): a 200px sidebar
+	   beside the grid leaves the table ~170px, so the list moves above the
+	   content. Same width FilesApp already stacks its preview pane at — one
+	   decision, not two numbers. */
+	@media (max-width: 640px) {
+		.tables {
+			flex-direction: column;
+		}
+		.side {
+			width: auto;
+			max-height: 28vh;
+			border-right: none;
+			border-bottom: 1px solid var(--glass-brd, rgba(255, 255, 255, 0.1));
+			padding-right: 0;
+			padding-bottom: 8px;
+		}
+	}
+
 	.muted {
 		color: var(--muted, #9aa4b2);
 		font-size: 13px;

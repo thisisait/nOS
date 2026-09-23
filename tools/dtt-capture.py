@@ -50,6 +50,29 @@ def _known_task_types() -> set[str]:
         return set()
 
 
+def _live_statuses() -> set[str]:
+    """What the LIVE roadmap table accepts, or an empty set when KEAP cannot be
+    read (offline capture is a supported case, so this never raises)."""
+    try:
+        import json
+        import urllib.request
+
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from keap_api import human_base, human_headers  # noqa: PLC0415
+
+        table = os.environ.get("NOS_ROADMAP_TABLE_ID",
+                               "2d498264-bc9a-4324-9935-489e5e4d92f3")
+        req = urllib.request.Request(f"{human_base()}/api/tables/{table}",
+                                     headers=human_headers())
+        with urllib.request.urlopen(req, timeout=5) as r:
+            data = json.loads(r.read()).get("data") or {}
+        cols = {c["key"]: c for c in (data.get("schema", {}).get("columns")
+                                      or data.get("columns") or [])}
+        return set(cols.get("status", {}).get("options") or [])
+    except Exception:  # noqa: BLE001 — offline is a supported case, never a crash
+        return set()
+
+
 def _declared_statuses() -> set[str]:
     try:
         spec = yaml.safe_load(open(_TABLE_DEF, encoding="utf-8")) or {}
@@ -87,10 +110,23 @@ def main() -> int:
                  f"  known: {', '.join(sorted(known))}\n"
                  "  adding a type is a PROPOSAL through the loop, not an ad-hoc value.")
     if args.status:
-        declared = _declared_statuses()
-        if declared and args.status not in declared:
-            _die(f"status {args.status!r} is not declared in roadmap.table.yml.\n"
-                 f"  declared: {', '.join(sorted(declared))}")
+        # TWO doors, one answer. The git definition declares 11 statuses; the
+        # LIVE table accepts 7 (its definition has never been applied), and a
+        # write is judged against the live one. Validating here against the
+        # declaration alone wrote five files that `nos dtt seed` then refused
+        # with an HTTP 400 mid-batch — the cost landed on the operator, not on
+        # the author (measured 2026-09-23). Ask the live table first; fall back
+        # to the declaration when KEAP is unreachable, because capture must
+        # work offline.
+        live = _live_statuses()
+        allowed, where = (live, "the live table") if live else (
+            _declared_statuses(), "roadmap.table.yml")
+        if allowed and args.status not in allowed:
+            _die(f"status {args.status!r} is not accepted by {where}.\n"
+                 f"  it accepts: {', '.join(sorted(allowed))}"
+                 + ("" if live else
+                    "\n  (KEAP is unreachable, so this is the DECLARED set — the live "
+                    "table may accept fewer; `nos dtt seed` is judged against it.)"))
 
     body = args.body
     if body is None and args.body_file:

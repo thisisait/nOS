@@ -180,6 +180,9 @@
 - slug: cortex-s3-ann-experiment
   parent: ''
   track: cortex
+- slug: cortex-store-test-hook-timeout
+  parent: ''
+  track: cortex
 - slug: cortex-vendor-staleness
   parent: ''
   track: cortex
@@ -300,6 +303,12 @@
 - slug: docs-czech-and-fork-residue
   parent: ''
   track: platform
+- slug: dolibarr-module-init
+  parent: ''
+  track: platform
+- slug: dolibarr-native-oidc
+  parent: ''
+  track: platform
 - slug: dry-run-evidence
   parent: ''
   track: platform
@@ -354,6 +363,9 @@
 - slug: espocrm-oidc-hands-off
   parent: consulting-firm-deployment
   track: platform
+- slug: espocrm-retire-cleanup
+  parent: ''
+  track: platform
 - slug: ext-contract
   parent: ''
   track: platform
@@ -375,8 +387,20 @@
 - slug: face-conversation
   parent: face-collab
   track: face
+- slug: face-document-viewer
+  parent: ''
+  track: face
+- slug: face-files-explorer
+  parent: ''
+  track: face
 - slug: face-loop-view
   parent: face
+  track: face
+- slug: face-menubar-pinned-apps
+  parent: ''
+  track: face
+- slug: face-mobile-shell
+  parent: ''
   track: face
 - slug: face-planner
   parent: face
@@ -453,6 +477,9 @@
 - slug: fs-s1
   parent: fs
   track: filesystem
+- slug: fs-user-home-bridge
+  parent: ''
+  track: filesystem
 - slug: gdpr-6f-gate
   parent: digest
   track: digest
@@ -489,6 +516,9 @@
 - slug: importer-spine
   parent: digest
   track: digest
+- slug: invoice-identity-cross-source
+  parent: ''
+  track: platform
 - slug: invoice-multi-rate-vat
   parent: ''
   track: digest
@@ -684,6 +714,12 @@
 - slug: n8n-loop-templates
   parent: consulting-firm-deployment
   track: platform
+- slug: n8n-packs-contract
+  parent: ''
+  track: platform
+- slug: n8n-packs-never-activated
+  parent: ''
+  track: platform
 - slug: notify-body-is-prompt
   parent: ''
   track: platform
@@ -765,6 +801,9 @@
 - slug: party-ares-verify
   parent: digest
   track: digest
+- slug: party-identity-fixture-vs-resolver
+  parent: consulting-firm-deployment
+  track: platform
 - slug: party-merge
   parent: digest
   track: digest
@@ -780,6 +819,12 @@
 - slug: pg-cutover
   parent: plat
   track: platform
+- slug: pipeline-exercise-loop-build
+  parent: ''
+  track: agents
+- slug: pipeline-exercise-loop-prompt
+  parent: ''
+  track: agents
 - slug: planes
   parent: ''
   track: agents
@@ -867,6 +912,9 @@
 - slug: plat-v07
   parent: plat
   track: platform
+- slug: post-start-silent-green-sweep
+  parent: ''
+  track: platform
 - slug: praxis-pack
   parent: backoffice-organ
   track: platform
@@ -883,6 +931,9 @@
   parent: digest
   track: digest
 - slug: rel-011
+  parent: ''
+  track: release
+- slug: rel-013
   parent: ''
   track: release
 - slug: rem-queue-commit-256-260-261
@@ -1008,6 +1059,9 @@
 - slug: spine-tools-vs-cli-refusal
   parent: w-agentkit-spine
   track: agents
+- slug: sso-admin-auto-provision
+  parent: ''
+  track: platform
 - slug: ssot-article-schema
   parent: wave-small-ssot
   track: platform
@@ -1137,6 +1191,9 @@
 - slug: v0-9
   parent: ''
   track: release
+- slug: verify-queue-in-dolibarr
+  parent: ''
+  track: platform
 - slug: verify-writeback-needs-writer
   parent: consulting-firm-deployment
   track: platform

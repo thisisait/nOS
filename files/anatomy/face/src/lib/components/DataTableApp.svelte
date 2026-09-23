@@ -552,6 +552,10 @@
 		font-size: 13px;
 		/* The offer's offsetParent. Nothing else depends on it. */
 		position: relative;
+		/* A flex item defaults to min-width:auto, so a wide table pushed this
+		   column past the viewport instead of scrolling inside `.scroll` —
+		   which made that overflow-x rule inert on a phone. */
+		min-width: 0;
 	}
 
 	/* ── facets + highlights + offer ───────────────────────────────────── */
@@ -693,6 +697,7 @@
 	   longer has its own private amber. */
 	.scroll {
 		overflow-x: auto;
+		max-width: 100%;
 	}
 	table {
 		border-collapse: collapse;
