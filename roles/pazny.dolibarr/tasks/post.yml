@@ -68,6 +68,31 @@
   changed_when: false   # the reader below is the truth; SQL echo carries no signal
   when: install_dolibarr | default(false) | bool
 
+# Dolibarr 21 greys the TOP MENU by per-user rights even for admin=1 — the
+# SQL-minted SSO admin logged in fine and saw only Home/Tools, every business
+# menu disabled (measured 2026-09-23, first live desk visit). Grant every
+# DEFINED right to the SSO admin: rights are re-derived from llx_rights_def,
+# so a module (de)activation before this run is picked up idempotently.
+- name: "[pazny.dolibarr Post] Grant all defined rights to the SSO admin"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - -i
+      - "{{ mariadb_container | default('infra-mariadb-1') }}"
+      - sh
+      - -c
+      - >-
+        mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" {{ dolibarr_db_name }} -e
+        "INSERT INTO llx_user_rights (entity, fk_user, fk_id)
+         SELECT 1, u.rowid, d.id
+         FROM llx_user u JOIN llx_rights_def d
+         WHERE u.login='{{ dolibarr_sso_admin_login }}'
+           AND NOT EXISTS (SELECT 1 FROM llx_user_rights r
+                           WHERE r.fk_user=u.rowid AND r.fk_id=d.id)"
+  changed_when: false   # the reader below asserts the effect
+  when: install_dolibarr | default(false) | bool
+
 # ── Readers (no silent green) ────────────────────────────────────────────────
 - name: "[pazny.dolibarr Post] Read back: module + user actually landed"
   ansible.builtin.command:
@@ -81,7 +106,9 @@
       - >-
         mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" {{ dolibarr_db_name }} -N -e
         "SELECT (SELECT value FROM llx_const WHERE name='MAIN_MODULE_OPENIDCONNECT' AND entity=1),
-                (SELECT COUNT(*) FROM llx_user WHERE login='{{ dolibarr_sso_admin_login }}' AND admin=1 AND statut=1)"
+                (SELECT COUNT(*) FROM llx_user WHERE login='{{ dolibarr_sso_admin_login }}' AND admin=1 AND statut=1),
+                (SELECT COUNT(*) FROM llx_user_rights r JOIN llx_user u ON u.rowid=r.fk_user
+                  WHERE u.login='{{ dolibarr_sso_admin_login }}')"
   register: _doli_oidc_read
   changed_when: false
   when: install_dolibarr | default(false) | bool
@@ -89,11 +116,14 @@
 - name: "[pazny.dolibarr Post] OIDC wiring must land (no silent green)"
   ansible.builtin.assert:
     that:
-      - _doli_oidc_read.stdout is search('^1\t1')
+      - _doli_oidc_read.stdout is search('^1\t1\t')
+      - (_doli_oidc_read.stdout.split('\t') | last | int) > 0
     fail_msg: >-
       Dolibarr OIDC wiring did not land (read back:
-      '{{ _doli_oidc_read.stdout | default('') }}' — expected module const 1
-      and one active admin user '{{ dolibarr_sso_admin_login }}'). The SSO
-      button will silently not appear; inspect llx_const / llx_user in the
+      '{{ _doli_oidc_read.stdout | default('') }}' — expected module const 1,
+      one active admin user '{{ dolibarr_sso_admin_login }}', and a NON-ZERO
+      rights count for them: v21 greys the whole top menu by per-user rights
+      even for admin=1, so a rights-less SSO admin logs in to Home/Tools and
+      nothing else). Inspect llx_const / llx_user / llx_user_rights in the
       {{ dolibarr_db_name }} schema.
   when: install_dolibarr | default(false) | bool
