@@ -10,14 +10,19 @@
 
 ## Now (current track)
 
-1. **The consulting-firm desk, then the v0.13-beta cut** (dtt `rel-013`).
-   Invoice identity is closed in SOURCE (`invoice_slug`, absorb gate, ledger
-   one-per-invoice, `tools/invoice-identity-scan.py`). **Operator, first and
-   destructive:** the live money rows still carry pre-identity ids —
-   `tools/digest-teardown.py --tables invoice,invoice-line,journal-entry,posting`
-   (dry) then `--confirm`, BEFORE the next keap converge, or the re-seed forks
-   them again. Then converge, re-run the vision intake, and the scanner must
-   read clean. Ceremony order lives in the dtt row, not here.
+1. **The v0.13-beta cut** (dtt `rel-013`). Invoice identity is closed in
+   SOURCE *and live*: the operator's teardown + re-import ran, and
+   `tools/invoice-identity-scan.py` reads clean (6 rows, every id derived).
+   Ceremony steps 4–6 are done — `tools/ci-local.sh` rc=0 on the frozen 2.21
+   mirror, docs pass landed, devlog written. **Operator, what is left:**
+   step 3 (full `nos` converge to `failed=0`, then `tools/nos-smoke.py
+   --strict` — it needs the sudo prompt) and step 7 (dev→master
+   `gh pr merge --rebase --admin`, re-sync, tag). Ceremony order lives in the
+   dtt row, not here.
+   **Two HIGHs found the same day, neither shipped:** REM-276 (n8n answers the
+   public internet ungated; the fix is a path split that must land WITH the
+   operator's workflow activation so `/webhook/` is tested) and REM-275 (n8n
+   floor 2.39.10 vs a 2.37.10 pin).
 
 2. **First always-on PoC: `git-origin-watcher`** (dtt, parent
    `loop-definition-model`) on DGX Spark / Qwen3 8B. Slice 1 is reader-only

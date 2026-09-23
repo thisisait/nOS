@@ -187,11 +187,64 @@ duplication: two copies of a correct document are individually correct.
 - Gate: `tests/anatomy/test_invoice_identity.py` (9 cases — helper, absorb
   gate, every seed fixture, the importer, and the ledger row-for-row).
 
+### The readers were reading the wrong files (2026-09-23, later)
+
+Same cut, still no tag. A day spent on the instruments rather than the estate,
+because three of them were confidently answering about something else.
+
+- **The camera button had never stored a photograph.** `adapter-node` caps an
+  incoming body at 512 KB by default, and over the cap it does not refuse — it
+  ERRORS the request stream the BFF is mid-way through piping to Bone, so the
+  browser got a bare 500 with no size in it. Measured live: 100 KB → 200,
+  2 MB → 500; every phone photo is 2–5 MB. `BODY_SIZE_LIMIT` now matches Bone's
+  own `_MAX_UPLOAD_BYTES`, and `test_face_upload_cap.py` reads both numbers out
+  of their real artifacts rather than trusting the comment that says they agree.
+  The explorer also asked "overwrite?" and never forwarded the answer, so Bone
+  409'd the file the operator had just agreed to replace.
+- **WordPress ran three releases ahead of its own pin.** `docker inspect` said
+  `wordpress:7.0.4`; `php -r echo $wp_version` in the same container said
+  `7.1.2`. WP auto-updates inside the volume, so the site served was patched and
+  the IMAGE was the exposure — any `--force-recreate` would have restored 7.0.4
+  files under a 7.1.2 database, reopening CVE-2026-87902 (CVSS 9.2,
+  unauthenticated LFI→RCE, range 4.7.0–7.1.1) until the auto-updater noticed
+  again. `register_argc_argv` is On in the official PHP images, so the RCE
+  precondition holds here. No 7.0.x image exists past 7.0.4; the branch hop to
+  7.1.2 IS the fix, converged and verified image == code.
+- **"Security scan stale — 16 d" was about the git copy.** `red-status` read
+  `docs/llm/security/scan-state.json` (cycle 55) and reported its age as the
+  scanner's, while the writer's own target `~/.nos/security/scan-state.json`
+  read cycle 64, thirteen hours old — and `scan-runner.sh` states which is which
+  in its header. Sixteen days of false red, whose real cost is that it taught
+  its reader to skim the line. The promotion lag is now its own red, because a
+  fresh checkout genuinely does read the older notebook.
+- **The scanner had found the WordPress drift on 2026-09-15** and filed REM-255
+  — LOW, correctly, because on that day 7.1 was strictly newer than 7.0.4 and
+  there was no exposure. CVE-2026-87902 landed on that range a week later and
+  nothing re-graded the row. Severities are assigned once, against the
+  advisories that existed then, and decay silently in the unsafe direction.
+- **33 of 39 Dependabot alerts were a test fixture**, including all four HIGH —
+  one of them naming a SvelteKit bug the shell is several versions past. The
+  reader now counts what we ship apart from what we keep as input, and prints
+  both: dropping 33 rows silently is the same defect wearing a fix.
+- **`nos models` / `nos models unload`** — nothing here had ever set ollama's
+  `keep_alive`, so its five-minute default hands a 14.9 GB resident to whatever
+  runs next. That residency has now damaged three consumers: the KEAP API
+  (0.09 s → 25 s), a digest absorb whose queue row was therefore never filed,
+  and on this day two converges that aborted for reasons unrelated to what they
+  were converging — Grafana reported unhealthy while `docker ps` said
+  healthy-32h (slow, not broken), and an Authentik verify timed out at 30 s.
+- **The pipeline-exercise loop** rehearses plan → render → sweep → verify →
+  absorb → assert → teardown against generated documents, and found three real
+  defects in its own first runs. `loop:vision-bench` is green again on a live
+  run (accuracy 0.965 over 17 runs, floor 0.85) now that one pulse run may hold
+  many agent sessions instead of colliding on a single uuid.
+
 ### Still open (named, not restated as done)
 
-- **The live money rows still carry the pre-identity ids** (85 rows). The
-  reset is operator-gated and must run BEFORE the next keap converge, or the
-  re-seed adds six more forks beside the old ones.
+- ~~The live money rows still carry the pre-identity ids~~ **DONE
+  (2026-09-23)**: the operator ran the teardown and the re-import;
+  `tools/invoice-identity-scan.py` now reads *"6 invoice row(s) live — clean,
+  one row per document, every id derived"*.
 - **The party spine forks too**: 2026-ALFA-PHOTO-001 stands twice because one
   row names `party-ico-00000131` and the other `synthetic-client-alfa` — the
   same firm under a resolver-minted and a fixture-authored slug. Invoice
@@ -228,6 +281,19 @@ duplication: two copies of a correct document are individually correct.
   That is SOURCE wiring, not a restore drill.
 - GitHub Integration on `master` is not claimed green. Signed-commit ruleset
   still bypassed. Four v0.11 `-beta` drop criteria remain unmet.
+- **n8n answers the public internet ungated** (REM-276, scan cycle 64,
+  verified over real DNS). Its own session auth holds — `/rest/workflows`,
+  `/rest/credentials`, `/rest/users` all 401 — so this is an auth-posture
+  downgrade, not data exposure. The cause is a hand-written claim nobody
+  checks: `traefik_auth_modes['n8n'] = oidc` asserts the app gates itself,
+  while its unauthenticated `/rest/settings` reports OIDC as an inert
+  Enterprise feature. **Three of three** audited `oidc` classifications have
+  now been false (REM-144, REM-192, REM-276). The fix is a path split, not a
+  blanket gate — `/webhook/` exists for machine callers — so it lands with the
+  operator's n8n activation, where both halves get tested at once.
+- **REM-275**: sixth n8n advisory wave, floor 2.39.10 against a 2.37.10 pin;
+  sixteen GHSA-only records dated 2026-09-16, one of which decrypts any
+  instance credential with no ownership check.
 
 ---
 
