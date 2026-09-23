@@ -36,3 +36,7 @@ schema:
         options: ["pending", "approved", "rejected"] }
     - { key: resolved_by, label: "Resolved by",  kind: text,   role: attribute, concept: access.owner }
     - { key: resolved_at, label: "Resolved at",  kind: date,   role: attribute, concept: time.occurred_at }
+    # The evidence the approver looks at: user-root-relative VFS path of the
+    # parked original (inbox/accounting/<client>/processed/<img>). Approve
+    # without the source next to it is a rubber stamp (operator, 2026-09-23).
+    - { key: source_path, label: "Source",       kind: text,   role: attribute, concept: fs.path }

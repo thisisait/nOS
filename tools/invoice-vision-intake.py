@@ -71,11 +71,31 @@ def _slug(name: str) -> str:
     return "piv-" + re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", name.lower())).strip("-")
 
 
-def verify_row(sidecar_name: str, sidecar: dict) -> dict:
+def verify_row(sidecar_name: str, sidecar: dict, source_path: str = "") -> dict:
     """The pending-invoice-verify row for a held sidecar. sidecar_id is the STABLE
-    JOIN KEY VisionImporter.parse() looks up by (the sidecar filename). Pure."""
+    JOIN KEY VisionImporter.parse() looks up by (the sidecar filename).
+    source_path is the USER-ROOT-RELATIVE path of the parked original (Bone VFS
+    coordinates) so the approve surface can show WHAT is being approved —
+    a queue row without the evidence next to it is a rubber stamp (operator,
+    2026-09-23). Pure."""
     return {"slug": _slug(sidecar_name), "sidecar_id": sidecar_name,
-            "fields": sidecar.get("fields") or {}, "resolution": "pending"}
+            "fields": sidecar.get("fields") or {}, "resolution": "pending",
+            "source_path": source_path}
+
+
+def source_rel(sc_path: pathlib.Path) -> str:
+    """User-root-relative path of the parked original for this sidecar:
+    inbox/accounting/<client>/processed/<stem>.<ext>. Empty string when the
+    original is not there (deleted by hand, or a pre-source_path sweep) — the
+    UI then says so instead of showing a broken image. ponytail: the viewer's
+    own tree is assumed (Model C, one consultant); a second manager viewing
+    another user's queue row gets a 404 from the VFS, not a leak."""
+    client_dir = sc_path.parent.parent
+    stem = sc_path.name[: -len(".extract.json")]
+    for p in sorted((client_dir / "processed").glob(f"{stem}.*")):
+        if p.suffix.lower() in (".pdf", ".jpg", ".jpeg", ".png"):
+            return str(pathlib.Path("inbox/accounting") / client_dir.name / "processed" / p.name)
+    return ""
 
 
 def park_incoming(img: pathlib.Path) -> pathlib.Path:
@@ -152,11 +172,16 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
     imgs = [(inc, p) for inc in incomings for p in sorted(inc.glob("*")) if p.suffix.lower() in IMAGE_EXT]
-    if not imgs:
-        print(f"no intake images under {walked} — nothing to sweep", file=sys.stderr)
+    # No new images is NOT "nothing to do": existing extracts/ still need the
+    # queue pass — a sidecar whose row was never queued (a killed run), or a
+    # pre-source_path row awaiting backfill. The early return here was measured
+    # skipping the backfill on the first empty-incoming sweep (2026-09-23).
+    extract_dirs = {inc.parent / "extracts" for inc in incomings
+                    if (inc.parent / "extracts").is_dir()}
+    if not imgs and not extract_dirs:
+        print(f"no intake images or extracts under {walked} — nothing to sweep", file=sys.stderr)
         return 0
 
-    extract_dirs = set()
     extracted = 0
     for inc, img in imgs:
         extracts = inc.parent / "extracts"
@@ -165,7 +190,7 @@ def main(argv: list[str] | None = None) -> int:
         if _extract_one(img, extracts / f"{img.stem}.extract.json"):
             extracted += 1
             park_incoming(img)
-    if extracted == 0:
+    if imgs and extracted == 0:
         print("REFUSING: every extraction failed — is qwen2.5vl:7b pulled and ollama armed?", file=sys.stderr)
         return 2
 
@@ -173,7 +198,8 @@ def main(argv: list[str] | None = None) -> int:
     hdr = {"Authorization": f"Bearer {digest_absorb.rw_token()}", **proxy_header()}
     try:
         digest_absorb.ensure_table(TABLE, hdr)
-        present = {r.get("slug") for r in digest_absorb.read_rows(TABLE, hdr)}
+        present_rows = digest_absorb.read_rows(TABLE, hdr)
+        present = {r.get("slug") for r in present_rows}
     except urllib.error.HTTPError as exc:
         print(f"REFUSING: {TABLE} schema HTTP {exc.code}", file=sys.stderr)
         return 2
@@ -188,9 +214,23 @@ def main(argv: list[str] | None = None) -> int:
         if not is_held(sidecar):
             continue
         held += 1
-        row = verify_row(sc_path.name, sidecar)
+        row = verify_row(sc_path.name, sidecar, source_rel(sc_path))
         if row["slug"] in present:
-            print(f"  · {row['slug']}: already queued")
+            # Backfill: pre-source_path rows were approve-blind. POST is an
+            # upsert by slug (the ARES pack overwrites its rows the same way),
+            # and resolution is NOT resent — a live approved/rejected verdict
+            # must never be reset by a re-sweep.
+            live = next((r for r in present_rows if r.get("slug") == row["slug"]), {})
+            if row["source_path"] and not live.get("source_path"):
+                try:
+                    digest_absorb._post_row(
+                        TABLE, {**live, "slug": row["slug"],
+                                "source_path": row["source_path"]}, hdr)
+                    print(f"  ~ {row['slug']}: backfilled source_path")
+                except urllib.error.HTTPError as e:
+                    print(f"  FAILED backfill {row['slug']}: {e.code}", file=sys.stderr)
+            else:
+                print(f"  · {row['slug']}: already queued")
             continue
         try:
             digest_absorb._post_row(TABLE, row, hdr)

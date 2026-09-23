@@ -65,11 +65,29 @@ def test_intake_held_gate_matches_the_importer_contract():
 
 
 def test_intake_verify_row_shape():
-    row = IV.verify_row("2026-BETA-001.extract.json", {"verified": False, "fields": {"x": {"confidence": 0.0}}})
+    row = IV.verify_row("2026-BETA-001.extract.json", {"verified": False, "fields": {"x": {"confidence": 0.0}}},
+                        "inbox/accounting/client-a/processed/2026-BETA-001.jpg")
     assert row["sidecar_id"] == "2026-BETA-001.extract.json"   # the stable join key parse() looks up by
     assert row["slug"] == "piv-2026-beta-001-extract-json"
     assert row["resolution"] == "pending"
     assert row["fields"] == {"x": {"confidence": 0.0}}
+    # the evidence next to the approve control — a row without it is a rubber stamp
+    assert row["source_path"] == "inbox/accounting/client-a/processed/2026-BETA-001.jpg"
+    assert IV.verify_row("x.extract.json", {"fields": {}})["source_path"] == ""
+
+
+def test_source_rel_finds_the_parked_original(tmp_path):
+    client = tmp_path / "users" / "u1" / "inbox" / "accounting" / "client-a"
+    (client / "processed").mkdir(parents=True)
+    (client / "extracts").mkdir()
+    sc = client / "extracts" / "beta-002.extract.json"
+    sc.write_text("{}", encoding="utf-8")
+    assert IV.source_rel(sc) == ""                     # no original parked yet
+    (client / "processed" / "beta-002.jpg").write_bytes(b"jpg")
+    assert IV.source_rel(sc) == "inbox/accounting/client-a/processed/beta-002.jpg"
+    # a stray non-image next to it never wins
+    (client / "processed" / "beta-002.txt").write_text("x")
+    assert IV.source_rel(sc).endswith(".jpg")
 
 
 def test_pulse_absorb_does_not_enable_fixture_mode():

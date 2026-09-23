@@ -7,6 +7,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { loadTable, tablesUpsertRow } from '$lib/api/tables';
+	import { vfsDownloadUrl } from '$lib/api/vfs';
 	import { hubApps } from '$lib/api/hub';
 	import { ApiError } from '$lib/api/client';
 	import type { DataTable, DataTableRow, HubApp } from '$lib/contracts';
@@ -55,6 +56,43 @@
 		const v = row[key];
 		if (v === null || v === undefined) return '';
 		return String(v);
+	}
+
+	/* The slug of the row whose evidence is open. Approve/Reject live ONLY in
+	   the open detail: a verdict without the source next to it is a rubber
+	   stamp (operator, 2026-09-23). */
+	let openSlug = $state('');
+
+	interface FieldRow {
+		key: string;
+		value: string;
+		confidence: string;
+	}
+	function fieldRows(row: DataTableRow): FieldRow[] {
+		let f: unknown = row.fields;
+		if (typeof f === 'string') {
+			try {
+				f = JSON.parse(f);
+			} catch {
+				return [];
+			}
+		}
+		if (!f || typeof f !== 'object') return [];
+		return Object.entries(f as Record<string, unknown>).map(([key, v]) => {
+			const d = v && typeof v === 'object' ? (v as Record<string, unknown>) : { value: v };
+			return {
+				key,
+				value: typeof d.value === 'object' ? JSON.stringify(d.value) : String(d.value ?? ''),
+				confidence: d.confidence === undefined ? '' : String(d.confidence)
+			};
+		});
+	}
+
+	function sourceKind(path: string): 'image' | 'pdf' | 'none' {
+		if (!path) return 'none';
+		const p = path.toLowerCase();
+		if (p.endsWith('.pdf')) return 'pdf';
+		return 'image';
 	}
 
 	async function resolveRow(row: DataTableRow, resolution: 'approved' | 'rejected') {
@@ -162,24 +200,72 @@
 					</thead>
 					<tbody>
 						{#each pending as row (row.id)}
+							{@const slug = cell(row, 'slug') || String(row.id)}
+							{@const src = cell(row, 'source_path')}
 							<tr>
 								<td>{cell(row, 'sidecar_id') || row.id}</td>
 								<td>{cell(row, 'resolution') || 'pending'}</td>
 								<td>
-									{#if queue.canWrite}
-										<button
-											type="button"
-											disabled={busy === row.id}
-											onclick={() => resolveRow(row, 'approved')}>Approve</button
-										>
-										<button
-											type="button"
-											disabled={busy === row.id}
-											onclick={() => resolveRow(row, 'rejected')}>Reject</button
-										>
-									{/if}
+									<button type="button" onclick={() => (openSlug = openSlug === slug ? '' : slug)}
+										>{openSlug === slug ? 'Close' : 'Review'}</button
+									>
 								</td>
 							</tr>
+							{#if openSlug === slug}
+								<!-- The verify surface: source NEXT TO the extraction, and the
+								     verdict buttons only here — approving what you cannot see
+								     is a rubber stamp. -->
+								<tr class="detail">
+									<td colspan="3">
+										<div class="review">
+											<div class="source">
+												{#if sourceKind(src) === 'image'}
+													<img src={vfsDownloadUrl(src)} alt="original invoice {slug}" />
+												{:else if sourceKind(src) === 'pdf'}
+													<object
+														data={vfsDownloadUrl(src)}
+														type="application/pdf"
+														title="original invoice {slug}"
+														><a href={vfsDownloadUrl(src)}>Open the original PDF</a></object
+													>
+												{:else}
+													<StatusNote kind="empty"
+														>No source recorded for this row (a pre-source_path sweep) — re-run the
+														intake sweep to backfill, or verify against the file in the client's
+														processed/ folder before deciding.</StatusNote
+													>
+												{/if}
+											</div>
+											<div class="extract">
+												<table>
+													<thead>
+														<tr><th>Field</th><th>Extracted</th><th>Conf.</th></tr>
+													</thead>
+													<tbody>
+														{#each fieldRows(row) as f (f.key)}
+															<tr><td>{f.key}</td><td>{f.value}</td><td>{f.confidence}</td></tr>
+														{/each}
+													</tbody>
+												</table>
+												{#if queue.canWrite}
+													<div class="verdict">
+														<button
+															type="button"
+															disabled={busy === row.id}
+															onclick={() => resolveRow(row, 'approved')}>Approve</button
+														>
+														<button
+															type="button"
+															disabled={busy === row.id}
+															onclick={() => resolveRow(row, 'rejected')}>Reject</button
+														>
+													</div>
+												{/if}
+											</div>
+										</div>
+									</td>
+								</tr>
+							{/if}
 						{/each}
 					</tbody>
 				</table>
@@ -317,5 +403,31 @@
 	}
 	.owner select {
 		font: inherit;
+	}
+	.review {
+		display: flex;
+		gap: 12px;
+		align-items: flex-start;
+	}
+	.review .source {
+		flex: 1 1 55%;
+		min-width: 0;
+	}
+	.review .source img,
+	.review .source object {
+		max-width: 100%;
+		height: auto;
+		min-height: 320px;
+		border: 1px solid rgba(128, 128, 128, 0.4);
+	}
+	.review .extract {
+		flex: 1 1 45%;
+		min-width: 0;
+	}
+	.review .verdict {
+		margin-top: 10px;
+	}
+	tr.detail td {
+		background: rgba(128, 128, 128, 0.08);
 	}
 </style>
