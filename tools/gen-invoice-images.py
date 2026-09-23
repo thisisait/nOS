@@ -16,6 +16,8 @@ is a FIXTURE generator, dev-time; not wired into a converge.
 
   tools/gen-invoice-images.py                         # -> <fixture>/images/*.jpg
   tools/gen-invoice-images.py --out /tmp/inv --dpi 150
+  tools/gen-invoice-images.py --only inv-beta-002 --degrade crumple,shadow \
+      --seed 7 --suffix                               # a degraded carry of the SAME data
 
 ponytail: TTF fonts are resolved from a candidate list (macOS Supplemental +
 common Linux paths); if none are found it falls back to PIL's bitmap font (ugly,
@@ -25,10 +27,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import pathlib
+import random
 import sys
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from invoice_fixture import parse_image_txt  # noqa: E402
@@ -160,12 +164,142 @@ def render(rec: dict, fonts: list, dpi: int) -> Image.Image:
     return img
 
 
+# ── degradation (pipeline-exercise unit, 2026-09-23) ─────────────────────────
+# A degraded render carries the SAME DATA — only worse. That is the whole point:
+# the ground truth stays the .image.txt the clean render used, so the code oracle
+# can still score a crumpled, stained, 150-dpi photo of the same invoice.
+#
+# Deterministic in (doc id, profile list, seed): a cycle that fails is
+# re-renderable from its record alone. PIL only — no new dependency.
+#: Applied in this order whatever order the caller lists them: you crumple the
+#: paper, THEN light it, THEN photograph it. Reversing that looks like a filter
+#: stack rather than a document.
+DEGRADE_ORDER = ("crumple", "skew", "shadow", "stains", "lowres", "jpeg")
+DEGRADE_PROFILES = ("clean",) + DEGRADE_ORDER + ("combo",)
+
+
+def _rng(doc_id: str, profile: str, seed: int) -> random.Random:
+    return random.Random(f"{doc_id}|{profile}|{seed}")
+
+
+def _crumple(img, r):
+    """Mesh warp over a grid, plus faint fold lines. Offsets stay small — a fold
+    that displaces a glyph by 20px is not a crumpled invoice, it is a shredded one."""
+    W, H = img.size
+    gx, gy = 6, 8
+    jitter = max(2, int(min(W, H) * 0.006))
+    mesh = []
+    for i in range(gx):
+        for j in range(gy):
+            x0, x1 = W * i // gx, W * (i + 1) // gx
+            y0, y1 = H * j // gy, H * (j + 1) // gy
+            d = [r.randint(-jitter, jitter) for _ in range(8)]
+            mesh.append(((x0, y0, x1, y1),
+                         (x0 + d[0], y0 + d[1], x0 + d[2], y1 + d[3],
+                          x1 + d[4], y1 + d[5], x1 + d[6], y0 + d[7])))
+    img = img.transform(img.size, Image.MESH, mesh, Image.BILINEAR, fillcolor="white")
+    fold = Image.new("L", img.size, 0)
+    fd = ImageDraw.Draw(fold)
+    for _ in range(r.randint(2, 4)):
+        y = r.randint(int(H * 0.1), int(H * 0.9))
+        fd.line([(0, y + r.randint(-8, 8)), (W, y + r.randint(-8, 8))],
+                fill=r.randint(18, 34), width=max(2, H // 400))
+    fold = fold.filter(ImageFilter.GaussianBlur(radius=max(2, H // 300)))
+    return Image.composite(Image.new("RGB", img.size, (90, 90, 90)), img, fold)
+
+
+def _shadow(img, r):
+    """A hand holding a phone casts a gradient, not a uniform dim."""
+    W, H = img.size
+    horizontal = r.random() < 0.5
+    span = W if horizontal else H
+    # Full 0..255 ramp, then blend — a ramp quantised to the darkness level
+    # itself bands visibly at A4 size (measured on the first render).
+    ramp = Image.new("L", (span, 1))
+    ramp.putdata([int(255 * k / max(1, span - 1)) for k in range(span)])
+    if r.random() < 0.5:
+        ramp = ramp.transpose(Image.FLIP_LEFT_RIGHT)
+    grad = ramp.resize((W, H) if horizontal else (H, W))
+    if not horizontal:
+        grad = grad.transpose(Image.ROTATE_90)
+    shaded = Image.composite(Image.new("RGB", (W, H), (35, 35, 40)), img, grad)
+    return Image.blend(img, shaded, r.uniform(0.22, 0.40))
+
+
+def _stains(img, r):
+    W, H = img.size
+    over = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    od = ImageDraw.Draw(over)
+    tones = [(120, 80, 40), (90, 60, 30), (40, 40, 90)]
+    for _ in range(r.randint(2, 5)):
+        cx, cy = r.randint(0, W), r.randint(0, H)
+        rx, ry = r.randint(W // 20, W // 7), r.randint(H // 25, H // 9)
+        od.ellipse([cx - rx, cy - ry, cx + rx, cy + ry],
+                   fill=(*r.choice(tones), r.randint(28, 62)))
+    over = over.filter(ImageFilter.GaussianBlur(radius=max(2, W // 250)))
+    return Image.alpha_composite(img.convert("RGBA"), over).convert("RGB")
+
+
+def _lowres(img, r):
+    f = r.uniform(0.40, 0.60)
+    small = img.resize((max(1, int(img.width * f)), max(1, int(img.height * f))), Image.BILINEAR)
+    return small.resize(img.size, Image.BILINEAR)
+
+
+def _jpeg(img, r):
+    buf = io.BytesIO()
+    img.save(buf, "JPEG", quality=r.randint(25, 40))
+    buf.seek(0)
+    return Image.open(buf).convert("RGB")
+
+
+def _skew(img, r):
+    return img.rotate(r.uniform(-4.0, 4.0), resample=Image.BILINEAR, fillcolor="white")
+
+
+_DEGRADERS = {"crumple": _crumple, "skew": _skew, "shadow": _shadow,
+              "stains": _stains, "lowres": _lowres, "jpeg": _jpeg}
+
+
+def degrade(img, profiles, doc_id: str, seed: int):
+    """Apply the named profiles in DEGRADE_ORDER. 'clean' is a no-op (the control
+    every batch carries); 'combo' expands to 2-3 of the real ones."""
+    wanted = set()
+    for p in profiles:
+        if p == "clean":
+            continue
+        if p == "combo":
+            wanted |= set(_rng(doc_id, "combo", seed).sample(list(DEGRADE_ORDER),
+                                                             _rng(doc_id, "combo-n", seed).randint(2, 3)))
+        elif p in _DEGRADERS:
+            wanted.add(p)
+        else:
+            raise ValueError(f"unknown degradation profile {p!r} — have {DEGRADE_PROFILES}")
+    for name in DEGRADE_ORDER:
+        if name in wanted:
+            img = _DEGRADERS[name](img, _rng(doc_id, name, seed))
+    return img
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--src", default=str(FIXTURE), help="fixture dir with *.image.txt")
     ap.add_argument("--out", default=str(FIXTURE / "images"), help="output dir for *.jpg")
     ap.add_argument("--dpi", type=int, default=150)
+    ap.add_argument("--degrade", default="clean",
+                    help=f"comma-separated: {', '.join(DEGRADE_PROFILES)} (data is preserved; "
+                         "only the carrying is made worse)")
+    ap.add_argument("--seed", type=int, default=0, help="degradation seed (re-render a failing cycle)")
+    ap.add_argument("--only", help="render just this fixture slug")
+    ap.add_argument("--suffix", action="store_true",
+                    help="name the file <slug>.<profiles>.<seed>.jpg instead of overwriting the clean render")
     args = ap.parse_args()
+    profiles = [p.strip() for p in args.degrade.split(",") if p.strip()]
+    unknown = [p for p in profiles if p not in DEGRADE_PROFILES]
+    if unknown:
+        print(f"REFUSING: unknown degradation profile(s) {unknown} — have {list(DEGRADE_PROFILES)}",
+              file=sys.stderr)
+        return 1
 
     fonts = resolve_fonts()
     if not fonts:
@@ -183,8 +317,11 @@ def main() -> int:
             print(f"skip {t.name}: no Doklad c.", file=sys.stderr)
             continue
         slug = t.name.replace(".image.txt", "")
-        img = render(rec, fonts, args.dpi)
-        dst = out / f"{slug}.jpg"
+        if args.only and slug != args.only:
+            continue
+        img = degrade(render(rec, fonts, args.dpi), profiles, rec["id"], args.seed)
+        tag = f".{'-'.join(profiles)}.{args.seed}" if args.suffix else ""
+        dst = out / f"{slug}{tag}.jpg"
         img.save(dst, "JPEG", quality=88)
         print(f"{dst.name}  ({img.size[0]}x{img.size[1]}, {rec['id']}, payable {rec['payable']})")
     return 0
