@@ -245,6 +245,14 @@ def vfs_move(body: dict = Body(...), _=Depends(require_vfs_token)) -> dict:
         raise HTTPException(status_code=400, detail="src and dst are required")
     source = _resolve(uid, src, must_exist=True)
     dest = _resolve(uid, _checked_relpath(dst))
+    # A MOVE NEVER DESTROYS ITS DESTINATION unless asked (2026-09-23). /copy
+    # below has always refused a clash with 409; /move used shutil.move, which
+    # replaces — so moving invoice.jpg into a folder that already had one lost a
+    # document with no error and nothing to undo it. The Files explorer guards
+    # this client-side, but that guard is TOCTOU and protects only that caller.
+    # Overwriting is now a deliberate act: `overwrite: true`.
+    if dest.exists() and not bool(body.get("overwrite", False)):
+        raise HTTPException(status_code=409, detail="destination exists")
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(source), str(dest))
     return {"ok": True, **_entry(uid, dest)}
@@ -289,6 +297,7 @@ async def vfs_upload(
     uid: str = Query(...),
     path: str = Query("documents"),
     filename: str = Query(...),
+    overwrite: bool = Query(False),
     _=Depends(require_vfs_token),
 ) -> dict:
     # Raw-body upload (streamed, capped) → <path>/<filename>. Streaming avoids
@@ -297,6 +306,11 @@ async def vfs_upload(
     target = _resolve(uid, f"{path.rstrip('/')}/{fname}" if path else fname)
     if target.is_dir():
         raise HTTPException(status_code=400, detail="path is a directory")
+    # Same law as /move and /copy: `open("wb")` truncates, and a phone that
+    # hands every shot over as image.jpg would have overwritten yesterday's
+    # document on the second upload. Replacing is allowed, but only on request.
+    if target.exists() and not overwrite:
+        raise HTTPException(status_code=409, detail="destination exists")
     target.parent.mkdir(parents=True, exist_ok=True)
     written = 0
     with target.open("wb") as fh:

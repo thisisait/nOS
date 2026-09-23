@@ -2156,6 +2156,13 @@ paths:
         schema:
           title: Filename
           type: string
+      - in: query
+        name: overwrite
+        required: false
+        schema:
+          default: false
+          title: Overwrite
+          type: boolean
       - in: header
         name: authorization
         required: false
