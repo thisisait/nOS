@@ -103,7 +103,7 @@ final class OneShot
 				$chain = ['text' => $recovered];
 				return null;
 			}
-			return 'emitted chain is not JSON: ' . substr($text, 0, 120);
+			return self::whyNotJson($text);
 		}
 		$error = self::against($decoded, $schema, '$');
 		if ($error !== null) {
@@ -113,6 +113,29 @@ final class OneShot
 
 		return null;
 	}
+
+	/**
+	 * Why json_decode refused, with enough of the string to act on.
+	 *
+	 * The head alone is useless here: every observed failure starts as valid
+	 * JSON. The decoder's own error plus the offset names the cause, and the
+	 * TAIL distinguishes the three that look alike from the front — a response
+	 * cut off at the token limit, a trailing <think> block, and a second object
+	 * appended after the first.
+	 */
+	private static function whyNotJson(string $text): string
+	{
+		$reason = json_last_error_msg();
+		$len = strlen($text);
+		$head = substr($text, 0, 120);
+		$out = "emitted chain is not JSON ({$reason}; {$len} bytes): {$head}";
+		if ($len > 240) {
+			$out .= ' …TAIL… ' . substr($text, -120);
+		}
+
+		return $out;
+	}
+
 
 	/**
 	 * JSON Schema subset — type / required / properties / items / enum.
