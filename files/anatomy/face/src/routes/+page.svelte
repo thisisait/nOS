@@ -2,9 +2,10 @@
 	import { onMount } from 'svelte';
 	import { windows, openWindow, focusApp } from '$lib/stores/desktop';
 	import Window from '$lib/components/Window.svelte';
-	import NativeHost from '$lib/components/NativeHost.svelte';
-	import ServiceFrame from '$lib/components/ServiceFrame.svelte';
+	import WindowBody from '$lib/components/WindowBody.svelte';
 	import Dock, { type DockApp } from '$lib/components/Dock.svelte';
+	import MobileShell from '$lib/components/MobileShell.svelte';
+	import { layoutMode, initLayoutMode, usesWindows } from '$lib/layout/mode';
 	import TileDivider from '$lib/wm/TileDivider.svelte';
 	import { applyTiling, clearTiling } from '$lib/wm/tiling';
 	import CommandPalette, { type PaletteAction } from '$lib/palette/CommandPalette.svelte';
@@ -18,14 +19,12 @@
 	import { initWindowCache } from '$lib/state/window-cache'; // G4
 	import { initWallpaper, activeWallpaper, safeBackground } from '$lib/state/wallpaper'; // G4
 	import { openControlPanel } from '$lib/apps/control-panel/ControlPanel.svelte'; // G4
-	import ControlPanelSurface from '$lib/apps/control-panel/ControlPanelSurface.svelte'; // G4
-	import { isControlPanelWindow, CP_GRID_APP } from '$lib/apps/control-panel/surfaces'; // G4
+	import { CP_GRID_APP } from '$lib/apps/control-panel/surfaces'; // G4
 	import {
 		registerBuiltinNativeApps,
 		registerHubFrames,
 		appsOfForm,
 		launchNative,
-		appForm,
 		initFilePickerBridge
 	} from '$lib/apps/native'; // G5
 	import FilePicker from '$lib/apps/native/file-picker/FilePicker.svelte'; // G5
@@ -46,7 +45,12 @@
 	// Reactive desktop background from the active wallpaper (validated).
 	const bg = $derived(safeBackground($activeWallpaper));
 
+	// One decision, one place: `$lib/layout/mode` owns the breakpoint. Below it
+	// the shell has no window manager at all — see MobileShell for why.
+	const windowed = $derived(usesWindows($layoutMode));
+
 	onMount(() => {
+		const stopMode = initLayoutMode();
 		initWindowManager(); // G3: register SnapEngine + load face-layouts
 		initWallpaper(); // G4: restore saved wallpaper
 		initWindowCache(); // G4: usePersistence + restore geometry for this viewport
@@ -72,6 +76,7 @@
 		return () => {
 			stopBridge?.();
 			stopKeys();
+			stopMode();
 		};
 	});
 
@@ -183,61 +188,51 @@
 </script>
 
 <div class="desktop" style={bg ? `background:${bg}` : ''}>
-	<!-- macOS-style menubar: transparent + all content right-aligned + click-through
-	     (pointer-events:none) so a maximized/top-snapped window's titlebar + its
-	     top-LEFT controls stay visible AND draggable underneath the bar. -->
-	<header class="menubar">
-		<strong>nOS</strong>
-		<span class="spacer"></span>
-		<!-- Ambient system awareness. Tier-1 only; everyone else sees nothing,
-		     which is deliberate — job failures are operator information. -->
-		<MenubarStatus onopen={openAnatomy} />
-		{#if data.identity.authenticated}
-			<span class="user">{data.identity.username}</span>
-		{:else}
-			<span class="user muted">not signed in</span>
-		{/if}
-		<Clock />
-	</header>
-
-	{#each $windows as win (win.id)}
-		<Window {win}>
-			{#if isControlPanelWindow(win.app)}
-				<ControlPanelSurface {win} />
-			{:else if appForm(win.app) === 'view' || appForm(win.app) === 'utility'}
-				<!-- The two component-backed window forms. `appForm` returns null
-				     for an unregistered slug — a restored window whose hub entry
-				     has not arrived yet falls through to its own url below,
-				     rather than being guessed into the wrong renderer. -->
-				<NativeHost app={win.app} />
-			{:else if win.url}
-				<ServiceFrame url={win.url} title={win.title} embed={win.embed} />
+	{#if windowed}
+		<!-- macOS-style menubar: transparent + all content right-aligned + click-through
+		     (pointer-events:none) so a maximized/top-snapped window's titlebar + its
+		     top-LEFT controls stay visible AND draggable underneath the bar. -->
+		<header class="menubar">
+			<strong>nOS</strong>
+			<span class="spacer"></span>
+			<!-- Ambient system awareness. Tier-1 only; everyone else sees nothing,
+			     which is deliberate — job failures are operator information. -->
+			<MenubarStatus onopen={openAnatomy} />
+			{#if data.identity.authenticated}
+				<span class="user">{data.identity.username}</span>
 			{:else}
-				<div class="placeholder">
-					<p>{win.title}</p>
-					<p class="muted">
-						This service has no launch URL yet. It will open here once its catalog entry is wired.
-					</p>
-				</div>
+				<span class="user muted">not signed in</span>
 			{/if}
-		</Window>
-	{/each}
+			<Clock />
+		</header>
 
-	<!-- G3: snap/tiling overlay (renders only while a window is dragged) -->
-	<SnapOverlay />
-	<!-- Live split gutter (renders only while a split pair is active) -->
-	<TileDivider />
-	<!-- G5: file-picker host (invisible until openFilePicker / the bridge fires) -->
+		{#each $windows as win (win.id)}
+			<Window {win}><WindowBody {win} /></Window>
+		{/each}
+
+		<!-- G3: snap/tiling overlay (renders only while a window is dragged) -->
+		<SnapOverlay />
+		<!-- Live split gutter (renders only while a split pair is active) -->
+		<TileDivider />
+
+		<!-- Desktop widgets (form=widget): small surfaces that are not windows. -->
+		<WidgetLayer identity={data.identity} />
+
+		<!-- Ctrl+Space (hold 2s): launcher + actions + local-LLM ask. -->
+		<CommandPalette actions={paletteActions} />
+
+		<!-- Unified dock: every app + running badges + hover window-switcher. -->
+		<Dock apps={dockApps} />
+	{:else}
+		<!-- Phone: one full-screen app at a time. No dock, no widgets, no
+		     palette — each of those is a pointer-and-space affordance, and a
+		     broken one is worse than an absent one. -->
+		<MobileShell apps={dockApps} identity={data.identity} />
+	{/if}
+
+	<!-- G5: file-picker host (invisible until openFilePicker / the bridge fires).
+	     Both modes: it is a service, not desktop furniture. -->
 	<FilePicker />
-
-	<!-- Desktop widgets (form=widget): small surfaces that are not windows. -->
-	<WidgetLayer identity={data.identity} />
-
-	<!-- Ctrl+Space (hold 2s): launcher + actions + local-LLM ask. -->
-	<CommandPalette actions={paletteActions} />
-
-	<!-- Unified dock: every app + running badges + hover window-switcher. -->
-	<Dock apps={dockApps} />
 </div>
 
 <style>
@@ -269,9 +264,5 @@
 	}
 	.muted {
 		color: var(--muted);
-	}
-	.placeholder {
-		display: grid;
-		gap: 8px;
 	}
 </style>

@@ -140,7 +140,10 @@
 	   prose body) span the full row below. Width and scrolling are Modal's. */
 	.fields {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		/* min(): below 220px of room the track collapses to the container
+		   instead of overflowing it — a narrow desktop window and a 390px
+		   phone are the same case. */
+		grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
 		gap: 10px 14px;
 	}
 	.field {

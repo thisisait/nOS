@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_PINNED, DOCK_SLOTS, splitDock, rowsToPinned } from './pinned';
+import { DEFAULT_PINNED, DOCK_SLOTS, MOBILE_DOCK_SLOTS, splitDock, rowsToPinned } from './pinned';
 import { FACE_DOCK } from '$lib/server/defaults';
 
 const app = (key: string, title = key) => ({ key, title });
@@ -26,6 +26,11 @@ describe('dock slots', () => {
 		const { bar, rest } = splitDock([app('files'), app('zulip')]);
 		expect(bar.map((a) => a.key)).toEqual(['files']);
 		expect(rest.map((a) => a.key)).toEqual(['zulip']);
+	});
+
+	it('the phone bar is the SAME pin order, four deep — not a second list', () => {
+		const { bar } = splitDock(catalog, DEFAULT_PINNED, MOBILE_DOCK_SLOTS);
+		expect(bar.map((a) => a.key)).toEqual([...DEFAULT_PINNED].slice(0, MOBILE_DOCK_SLOTS - 1));
 	});
 
 	it('extra pins beyond the bar overflow into the overlay', () => {

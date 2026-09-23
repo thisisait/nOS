@@ -181,9 +181,23 @@ def test_the_dead_hubapp_native_flag_is_gone():
 
 
 def test_the_form_axis_is_the_shells_render_switch():
-    """The desktop root must branch on `form`, not on a resurrected binary."""
+    """The shell must branch on `form`, not on a resurrected binary.
+
+    The switch itself may live in a component the shell renders — it moved into
+    WindowBody.svelte on 2026-09-23 so the desktop and the mobile shell share
+    one body — so this FOLLOWS the delegation rather than pinning a filename,
+    the same way test_agent_run_lock.py follows the mutex into its own file.
+    What it refuses is a shell that decides the body some other way."""
     page = PAGE.read_text(encoding="utf-8")
-    assert "appForm(win.app)" in page, "+page.svelte does not decide the window body from `form`"
+    sources = {"+page.svelte": page}
+    for name in re.findall(r"<([A-Z][A-Za-z]*)\b", _code(page)):
+        target = FACE / "lib" / "components" / f"{name}.svelte"
+        if target.exists():
+            sources[name] = target.read_text(encoding="utf-8")
+    deciders = [where for where, src in sources.items() if "appForm(win.app)" in _code(src)]
+    assert deciders, (
+        "neither +page.svelte nor any component it renders decides the window "
+        "body from `form` — a binary is back, or the switch has no home")
 
 
 # ── 5: `widget` is non-empty, by something that is really there ───────────

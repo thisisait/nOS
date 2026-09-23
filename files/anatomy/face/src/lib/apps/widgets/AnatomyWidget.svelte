@@ -300,7 +300,7 @@
 
 <style>
 	.widget {
-		width: 420px;
+		width: min(420px, calc(100vw - 32px));
 		padding: 10px 12px 8px;
 		display: grid;
 		gap: 6px;

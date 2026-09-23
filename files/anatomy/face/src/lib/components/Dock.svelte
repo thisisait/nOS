@@ -288,7 +288,7 @@
 	}
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(min(108px, 100%), 1fr));
 		gap: 10px;
 	}
 	.cell {

@@ -144,6 +144,9 @@
 		padding: 0 12px;
 		cursor: grab;
 		user-select: none;
+		/* A pointer drag on a touch screen is otherwise claimed by the
+		   browser's own pan gesture halfway through the move. */
+		touch-action: none;
 		border-bottom: 1px solid var(--glass-brd);
 	}
 	.lights {
@@ -198,5 +201,17 @@
 		width: 16px;
 		height: 16px;
 		cursor: nwse-resize;
+		touch-action: none;
+	}
+	/* A 16px corner is a mouse target. A finger needs the whole corner. */
+	@media (pointer: coarse) {
+		.grip {
+			width: 30px;
+			height: 30px;
+		}
+		.light {
+			width: 30px;
+			height: 30px;
+		}
 	}
 </style>

@@ -7,11 +7,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { loadTable, tablesUpsertRow } from '$lib/api/tables';
-	import { vfsDownloadUrl } from '$lib/api/vfs';
 	import { hubApps } from '$lib/api/hub';
 	import { ApiError } from '$lib/api/client';
 	import type { DataTable, DataTableRow, HubApp } from '$lib/contracts';
 	import { Tabs, StatusNote, Modal, type TabSpec } from '$lib/components/ui';
+	import DocViewer from '$lib/components/DocViewer.svelte';
 	import { openWindow, focusApp } from '$lib/stores/desktop';
 
 	const tabs: TabSpec[] = [
@@ -96,13 +96,6 @@
 					d.confidence === undefined || Number(d.confidence) === 0 ? 'n/a' : String(d.confidence)
 			};
 		});
-	}
-
-	function sourceKind(path: string): 'image' | 'pdf' | 'none' {
-		if (!path) return 'none';
-		const p = path.toLowerCase();
-		if (p.endsWith('.pdf')) return 'pdf';
-		return 'image';
 	}
 
 	async function resolveRow(row: DataTableRow, resolution: 'approved' | 'rejected') {
@@ -274,15 +267,8 @@
 									<td colspan="3">
 										<div class="review">
 											<div class="source">
-												{#if sourceKind(src) === 'image'}
-													<img src={vfsDownloadUrl(src)} alt="original invoice {slug}" />
-												{:else if sourceKind(src) === 'pdf'}
-													<object
-														data={vfsDownloadUrl(src)}
-														type="application/pdf"
-														title="original invoice {slug}"
-														><a href={vfsDownloadUrl(src)}>Open the original PDF</a></object
-													>
+												{#if src}
+													<DocViewer path={src} alt="original invoice {slug}" />
 												{:else}
 													<StatusNote kind="empty"
 														>No source recorded for this row (a pre-source_path sweep) — re-run the
@@ -496,6 +482,10 @@
 		border-collapse: collapse;
 		font-size: 13px;
 	}
+	/* Wide content scrolls inside its own container; the shell never does. */
+	.body table {
+		min-width: max-content;
+	}
 	th,
 	td {
 		text-align: left;
@@ -523,22 +513,18 @@
 	}
 	.review {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 12px;
 		align-items: flex-start;
 	}
+	/* The source must stay readable beside the extraction, and below ~300px
+	   of column it is not — so the pair wraps rather than shrinking. */
 	.review .source {
-		flex: 1 1 55%;
+		flex: 1 1 300px;
 		min-width: 0;
 	}
-	.review .source img,
-	.review .source object {
-		max-width: 100%;
-		height: auto;
-		min-height: 320px;
-		border: 1px solid rgba(128, 128, 128, 0.4);
-	}
 	.review .extract {
-		flex: 1 1 45%;
+		flex: 1 1 260px;
 		min-width: 0;
 	}
 	.review .verdict {
@@ -555,7 +541,7 @@
 	}
 	.cells {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
 		gap: 6px 16px;
 		margin-bottom: 10px;
 	}

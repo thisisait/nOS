@@ -133,7 +133,7 @@
 	}
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(min(120px, 100%), 1fr));
 		gap: 12px;
 	}
 	.swatch {

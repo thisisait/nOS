@@ -18,6 +18,11 @@ import { loadTable } from '$lib/api/tables';
 /** Total bar slots at default scaling: 14 pinned + 1 expander. */
 export const DOCK_SLOTS = 15;
 
+/** Slots on a phone's bottom bar: 4 pinned + the Home key. Same `splitDock`,
+ *  same pin order — the mobile shell does NOT keep a second list. Four is what
+ *  fits at 390px with a 48px target and the safe-area gutter. */
+export const MOBILE_DOCK_SLOTS = 5;
+
 /** Repo-default pin order: the native face apps first, then the services the
  *  operator reaches for daily. Keys are dock keys: a native registry slug,
  *  `control-panel`, or a hub key — which is the Wing systems `id`, NOT the

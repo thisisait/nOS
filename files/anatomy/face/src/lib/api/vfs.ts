@@ -58,12 +58,13 @@ export async function vfsDelete(path: string): Promise<void> {
 
 /** Upload a browser File into `dir` (from-device picker mode). Streams the raw
  *  body to the BFF, which proxies it to Bone's capped streaming /upload. The
- *  filename is taken from the File; Bone basenames it. */
-export async function vfsUpload(dir: string, file: File): Promise<VfsEntry> {
+ *  filename defaults to the File's own; pass `name` to store it under another
+ *  (a camera hands every shot over as `image.jpg`). Bone basenames it. */
+export async function vfsUpload(dir: string, file: File, name = file.name): Promise<VfsEntry> {
 	const u = new URL('/bff/vfs', location.origin);
 	u.searchParams.set('op', 'upload');
 	u.searchParams.set('path', dir);
-	u.searchParams.set('filename', file.name);
+	u.searchParams.set('filename', name);
 	const r = await fetch(u, { method: 'POST', body: file });
 	if (!r.ok) throw new ApiError(r.status, (await r.text()) || r.statusText);
 	return (await r.json()) as VfsEntry;
