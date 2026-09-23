@@ -129,6 +129,7 @@ worse than none, because it reads as complete.
 - `gen-invoice-images.py` — render those stand-ins as JPEG intake whose data matches the seeded party spine.
 - `invoice-vision-pipeline.py` — joins the two invoice-pipeline one_shot agents end to end: invoice-vision-ocr (image → OCR text) feeds invoice-extract (text → ISDOC record) via two `run-agent.php` calls, then writes the `.extract.json` sidecar. Every field is stamped confidence=0.0 (no logprobs in this transport yet), so a pipeline sidecar always lands in the operator-verify queue.
 - `invoice-vision-intake.py` — Pulse sweep: extract incoming images, upsert pending-invoice-verify for held sidecars. Does not book.
+- `invoice-identity-scan.py` — READER over the live invoice table: duplicates (same book/seller/document), twins (one document in two books) and drift (a slug that is not the derived identity). rc=3 on findings, UNKNOWN when KEAP is unreadable. Blind to a duplicate hiding behind a party fork — says so.
 - `invoice-verify.py` — approve / reject / onboard a pending-invoice-verify row (HMAC table.upsert). Batch: POSTs KEAP; the next digest-import-vision --absorb honours it.
 - `offboard-book-owner.py` — Erase one client's book (book_owner slug): dry-run plan, `--confirm` rmtree inbox + KEAP DELETE leaf-first. Espo Account stays operator-run.
 - `espo-party-sync.py` — KEAP party spine → EspoCRM Account; join key `nos:party:<slug>` in description. Dry-run default; `--write` autowires Espo's bootstrap admin from the running container (same credential the OIDC PUT uses).
