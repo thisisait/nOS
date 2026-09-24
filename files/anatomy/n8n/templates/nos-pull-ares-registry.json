@@ -123,7 +123,7 @@
         0
       ],
       "parameters": {
-        "jsCode": "let hook = { body: { scope: 'all' } };\ntry { hook = $('Webhook').first().json || hook; } catch (e) {}\nconst scope = (hook.body && hook.body.scope) || hook.scope || 'all';\nconst want = String((hook.body && hook.body.ico) || hook.ico || '').replace(/\\D/g,'').padStart(8,'0');\nconst taxBody = $('Fetch IČOs').first().json;\nconst haveBody = $('Fetch status').first().json;\nconst tax = (taxBody.data && taxBody.data.rows) || taxBody.rows || [];\nconst have = new Set(((haveBody.data && haveBody.data.rows) || haveBody.rows || []).map(r => String(r.ico || '').padStart(8,'0')));\nconst out = [];\nfor (const t of tax) {\n  if (String(t.scheme || '').toUpperCase() !== 'ICO') continue;\n  const ico = String(t.value || '').replace(/\\D/g,'').padStart(8,'0');\n  if (!/^\\d{8}$/.test(ico) || ico === '00000000') continue;\n  if (!t.party) continue;\n  if (scope === 'ico' && ico !== want) continue;\n  if (scope === 'missing' && have.has(ico)) continue;\n  out.push({ json: { ico, party: t.party } });\n}\nreturn out;"
+        "jsCode": "let hook = { body: { scope: 'all' } };\ntry { hook = $('Webhook').first().json || hook; } catch (e) {}\nconst scope = (hook.body && hook.body.scope) || hook.scope || 'all';\nconst want = String((hook.body && hook.body.ico) || hook.ico || '').replace(/\\D/g,'').padStart(8,'0');\nconst taxBody = $('Fetch IČOs').first().json;\nconst haveBody = $('Fetch status').first().json;\nconst tax = (taxBody.data && taxBody.data.rows) || taxBody.rows || [];\nconst have = new Set(((haveBody.data && haveBody.data.rows) || haveBody.rows || []).map(r => String(r.ico || '').padStart(8,'0')));\nconst out = [];\nfor (const t of tax) {\n  if (String(t.scheme || '').toUpperCase() !== 'ICO') continue;\n  const ico = String(t.value || '').replace(/\\D/g,'').padStart(8,'0');\n  if (!/^\\d{8}$/.test(ico) || ico === '00000000') continue;\n  if (!t.party) continue;\n  if (scope === 'ico' && ico !== want) continue;\n  if (scope === 'missing' && have.has(ico)) continue;\n  out.push({ json: { ico, party: t.party } });\n}\n// An empty selection is an OUTCOME, not an error. Returning [] here\n// left this node last-executed with no data, and `responseMode:\n// lastNode` then answered the caller 500 — so a run that correctly\n// found nothing to do reported as a failure, every 15 minutes.\nif (out.length === 0) {\n  return [{ json: { noop: true, scope,\n    reason: 'every ICO party already carries a registry status' } }];\n}\nreturn out;\n"
       }
     },
     {
@@ -221,6 +221,67 @@
           }
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "noop-guard",
+              "leftValue": "={{ $json.noop }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b7f1c2d4-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
+      "name": "Anything to verify?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "status",
+              "value": "noop",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "reason",
+              "value": "={{ $json.reason }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c8e2d3f5-2b3c-4d4e-9f0a-1b2c3d4e5f60",
+      "name": "Nothing to verify",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1080,
+        220
+      ]
     }
   ],
   "connections": {
@@ -272,7 +333,7 @@
       "main": [
         [
           {
-            "node": "Fetch ARES",
+            "node": "Anything to verify?",
             "type": "main",
             "index": 0
           }
@@ -306,6 +367,24 @@
         [
           {
             "node": "Upsert DTT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything to verify?": {
+      "main": [
+        [
+          {
+            "node": "Fetch ARES",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing to verify",
             "type": "main",
             "index": 0
           }
