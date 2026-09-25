@@ -22,6 +22,8 @@
 #   nos_init                  "launchd" | "systemd" | "none"
 #   nos_user_systemctl        "systemctl --user" | ~/.local/bin/nos-proc
 #   nos_kernel_ipv6           false only on a Linux kernel without IPv6
+#   nos_is_container          true when the kernel is someone else's (docker/lxc/…)
+#   nos_is_wsl                true on Windows' WSL2 (Linux path, Microsoft kernel)
 #   nos_docker_bin            /usr/local/bin/docker | /usr/bin/docker
 #   nos_homebrew_prefix       /opt/homebrew | "" (empty on Linux)
 #
@@ -118,6 +120,23 @@
   ansible.builtin.set_fact:
     nos_kernel_ipv6: "{{ (_nos_ipv6_stat.stat.exists | default(true)) if ansible_os_family != 'Darwin' else true }}"
 
+# What KIND of host this is, so host-level work that only means something on a
+# real machine gates itself instead of asking the operator for a toggle.
+#   nos_is_container  the kernel belongs to someone else (docker/podman/lxc —
+#                     measured: the Claude cloud sandbox reports `docker`).
+#                     ufw, sysctl, auditd, apparmor, chrony act on THAT kernel.
+#   nos_is_wsl        Windows via WSL2 — Ubuntu userland on Microsoft's kernel.
+#                     nOS on Windows IS the Linux path (docs/cross-platform.md).
+- name: "[platform] Host kind (container / WSL)"
+  ansible.builtin.set_fact:
+    nos_is_container: >-
+      {{ ansible_os_family != 'Darwin'
+         and ((ansible_facts['virtualization_role'] | default('')) == 'guest')
+         and (((ansible_facts['virtualization_type'] | default(''))
+               in ['docker', 'podman', 'lxc', 'container', 'containerd', 'openvz', 'systemd-nspawn'])
+              or ('container' in (ansible_facts['virtualization_tech_guest'] | default([])))) }}
+    nos_is_wsl: "{{ ansible_os_family != 'Darwin' and ('microsoft' in (ansible_facts['kernel'] | default('') | lower)) }}"
+
 - name: "[platform] Compute derived nginx vhost paths + point docker_bin at the platform binary"
   ansible.builtin.set_fact:
     nos_nginx_sites_available: "{{ nos_nginx_etc_dir }}/sites-available"
@@ -163,6 +182,8 @@
        Package manager:  {{ nos_pkg_manager }}
        Service manager:  {{ nos_service_manager }}
        Init system:      {{ nos_init }}
+       Host kind:        {{ 'container' if nos_is_container else ('wsl2' if nos_is_wsl else 'machine') }}
+       Kernel IPv6:      {{ nos_kernel_ipv6 }}
        nginx etc:        {{ nos_nginx_etc_dir }}
        systemd user:     {{ nos_systemd_user_dir }}
       ────────────────────────────────────────────────────────────────────

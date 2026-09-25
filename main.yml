@@ -1075,10 +1075,13 @@
     # `install_hardening: false`. Decision O5 (2026-04-26) noted that
     # surprise-on-deploy is acceptable for a security-positioned product;
     # operators who don't want it set the flag in config.yml.
+    # A container's kernel is its host's: ufw/sysctl/auditd/apparmor/chrony
+    # would harden (or fail to touch) a machine nOS does not own.
     - role: pazny.linux.hardening
       when:
         - ansible_os_family in ['Debian']
         - install_hardening | default(true)
+        - not (nos_is_container | default(false) | bool)
       tags: ['hardening', 'linux', 'security']
 
   tasks:
