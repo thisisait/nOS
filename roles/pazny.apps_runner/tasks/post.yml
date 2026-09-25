@@ -459,6 +459,11 @@
       loop_control:
         loop_var: event
         label: "{{ event.app_id }}"
+      # An append-only event log grows on every run by design (each event is
+      # timestamped); recording that a converge happened is not a change to
+      # the estate. Reported `changed` every run until 2026-09-25 (cloud e2e
+      # idempotence tier).
+      changed_when: false
       when:
         - _apps_bone_batch is defined
         - (_apps_bone_batch.events | default([])) | length > 0

@@ -12,17 +12,23 @@
 # creates the mount point.
 # ==============================================================================
 
+# Modes MATCH the plugin loader's SEC-1 render (load_plugins._render_file:
+# files 0600, parent dir 0700). They used to be 0640/0755 here, so every
+# converge flipped them (role) and flipped them back (plugin) — three
+# `changed` per run on a steady estate (cloud e2e idempotence tier,
+# 2026-09-25). The container never read these via the mount on Linux anyway;
+# the handler applies them with `-u root` (see handlers/main.yml).
 - name: "[pazny.authentik Blueprints] Ensure directory"
   ansible.builtin.file:
     path: "{{ stacks_dir }}/infra/authentik/blueprints"
     state: directory
-    mode: '0755'
+    mode: '0700'
 
 - name: "[pazny.authentik Blueprints] Render admin + groups"
   ansible.builtin.template:
     src: "blueprints/00-admin-groups.yaml.j2"
     dest: "{{ stacks_dir }}/infra/authentik/blueprints/00-admin-groups.yaml"
-    mode: '0640'
+    mode: '0600'
   notify: Reapply authentik blueprints
 
 # 10-oidc-apps.yaml is authoritative-rendered by authentik-base plugin
@@ -43,5 +49,5 @@
   ansible.builtin.template:
     src: "blueprints/30-agent-clients.yaml.j2"
     dest: "{{ stacks_dir }}/infra/authentik/blueprints/30-agent-clients.yaml"
-    mode: '0640'
+    mode: '0600'
   notify: Reapply authentik blueprints

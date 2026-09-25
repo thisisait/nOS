@@ -457,6 +457,12 @@
     up -d --build --remove-orphans
     {{ _docker_compose_pull | default('') }} 2>&1
   register: _core_infra_result
+  # A steady stack prints only "Container <x> Running"; anything created,
+  # recreated, started or built is a real change. Without this the task was
+  # `changed` on every converge (cloud e2e idempotence tier, 2026-09-25).
+  changed_when: >-
+    (_core_infra_result.rc | default(1)) == 0 and
+    (_core_infra_result.stdout | default('')) is search('(Creat|Recreat|Start|Built|Pulled|Remov)')
   failed_when: false
   check_mode: false
   when: _core_infra_enabled | bool
@@ -545,6 +551,12 @@
     up -d --build --remove-orphans
     {{ _docker_compose_pull | default('') }} 2>&1
   register: _core_obs_result
+  # A steady stack prints only "Container <x> Running"; anything created,
+  # recreated, started or built is a real change. Without this the task was
+  # `changed` on every converge (cloud e2e idempotence tier, 2026-09-25).
+  changed_when: >-
+    (_core_obs_result.rc | default(1)) == 0 and
+    (_core_obs_result.stdout | default('')) is search('(Creat|Recreat|Start|Built|Pulled|Remov)')
   failed_when: false
   check_mode: false
   when: _core_observability_enabled | bool

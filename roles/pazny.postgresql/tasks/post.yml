@@ -26,7 +26,12 @@
     exec -T postgresql psql -U {{ postgresql_root_user | default('postgres') }}
     -d template1 -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
   register: _pg_pgcrypto_tpl
-  changed_when: "'CREATE EXTENSION' in (_pg_pgcrypto_tpl.stdout | default(''))"
+  # psql prints "CREATE EXTENSION" for IF NOT EXISTS whether or not it created
+  # anything; the no-op is the NOTICE on stderr. Every re-converge reported a
+  # change here (measured: cloud e2e idempotence tier, 2026-09-25).
+  changed_when:
+    - "'CREATE EXTENSION' in (_pg_pgcrypto_tpl.stdout | default(''))"
+    - "'already exists' not in (_pg_pgcrypto_tpl.stderr | default(''))"
   failed_when: false
   when:
     - _pg_ready.rc | default(1) == 0
@@ -208,7 +213,12 @@
   loop_control:
     label: "pgcrypto: {{ item }}"
   register: _pg_pgcrypto_per_db
-  changed_when: "'CREATE EXTENSION' in (_pg_pgcrypto_per_db.stdout | default(''))"
+  # psql prints "CREATE EXTENSION" for IF NOT EXISTS whether or not it created
+  # anything; the no-op is the NOTICE on stderr. Every re-converge reported a
+  # change here (measured: cloud e2e idempotence tier, 2026-09-25).
+  changed_when:
+    - "'CREATE EXTENSION' in (_pg_pgcrypto_per_db.stdout | default(''))"
+    - "'already exists' not in (_pg_pgcrypto_per_db.stderr | default(''))"
   failed_when: false
   when:
     - _pg_ready.rc | default(1) == 0
