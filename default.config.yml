@@ -2783,6 +2783,11 @@ iiab_terminal_bin_path: "{{ homebrew_prefix }}/bin/iiab-terminal"
 # Central login for all services. PostgreSQL + Redis from the infra stack.
 # ==============================================================================
 
+# Registry path only; the tag is authentik_version. Upstream publishes the SAME
+# image to ghcr.io and Docker Hub (`authentik/server`). A sandbox whose egress
+# refuses ghcr blob storage (a Claude cloud session) flips this in
+# profiles/cloud-e2e.yml — docs/cloud-e2e.md §Registries.
+authentik_image: "ghcr.io/goauthentik/server"
 authentik_version: "2026.5.2"                      # supersedes 2025.12.4 CVE-2026-25227 pin; current latest (2026-05)
 authentik_domain: "auth{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 authentik_port: 9003                               # 9000 = PHP-FPM, 9001 = RustFS, 9002 = Portainer

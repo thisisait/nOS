@@ -84,10 +84,11 @@
       ansible.builtin.file:
         path: "{{ _mkcert_caroot_dir }}"
         state: directory
-        owner: "{{ ansible_facts['env']['USER'] }}"
+        owner: "{{ ansible_facts['user_id'] }}"
         # macOS users belong to the `staff` group; on Linux the operator's
-        # primary group conventionally matches the username (Ubuntu/Debian).
-        group: "{{ 'staff' if ansible_os_family == 'Darwin' else ansible_facts['env']['USER'] }}"
+        # primary group is read from facts (user_gid) — never from $USER, which
+        # a container / cloud sandbox does not set (docs/cloud-e2e.md).
+        group: "{{ 'staff' if ansible_os_family == 'Darwin' else ansible_facts['user_gid'] }}"
         recurse: true
       become: true
 

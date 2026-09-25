@@ -16,7 +16,7 @@
 services:
   # ── Authentik – SSO / Identity Provider ──────────────────────────────────────
   authentik-server:
-    image: ghcr.io/goauthentik/server:{{ authentik_version }}
+    image: {{ authentik_image }}:{{ authentik_version }}
     command: server
     restart: unless-stopped
     ports:
@@ -94,7 +94,7 @@ services:
     cpus: {{ docker_cpus_standard | default('1.0') }}
 
   authentik-worker:
-    image: ghcr.io/goauthentik/server:{{ authentik_version }}
+    image: {{ authentik_image }}:{{ authentik_version }}
     command: worker
     restart: unless-stopped
     volumes:

@@ -15,7 +15,7 @@
 # Toggle — flip to true once Pulse first-run blank lands clean.
 install_pulse: false
 
-pulse_user: "{{ ansible_facts['env']['USER'] }}"
+pulse_user: "{{ ansible_facts['user_id'] }}"
 pulse_home: "{{ ansible_facts['env']['HOME'] }}/pulse"
 pulse_venv: "{{ pulse_home }}/venv"
 pulse_log_dir: "{{ pulse_home }}/log"

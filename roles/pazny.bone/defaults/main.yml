@@ -17,7 +17,7 @@ bone_port: 8099
 bone_domain: "api{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 
 # ── Host launchd shape (Anatomy A3a) ────────────────────────────────────────
-bone_user: "{{ ansible_facts['env']['USER'] }}"
+bone_user: "{{ ansible_facts['user_id'] }}"
 bone_runtime_dir: "{{ ansible_facts['env']['HOME'] }}/bone"
 bone_venv: "{{ bone_runtime_dir }}/venv"
 bone_log_dir: "{{ bone_runtime_dir }}/log"

@@ -40,6 +40,7 @@ model, no live daemon.
 from __future__ import annotations
 
 import importlib.util
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -211,10 +212,17 @@ def test_pick_hands_over_the_worst_fixable_weakness(entry):
         "here, whatever its title happens to say")
 
 
-def test_the_ledger_distinguishes_withheld_from_unseen(monkeypatch):
+def test_the_ledger_distinguishes_withheld_from_unseen(monkeypatch, tmp_path):
     """`uncommitted-evidence` vs `unknown-weakness`: the first refusal's text
     was literally false during the deadlock ('not reported by any weakness
-    source' about a weakness the source was reporting loudly)."""
+    source' about a weakness the source was reporting loudly).
+
+    Hermetic: the ledger opens a THROWAWAY wing.db. It used to open the host's
+    ~/wing/app/data/wing.db, so it passed only on a converged machine and went
+    red on every fresh one (a cloud session, a new contributor's laptop)."""
+    db = tmp_path / "wing.db"
+    sqlite3.connect(str(db)).close()
+    monkeypatch.setenv("WING_DB_PATH", str(db))
     sys.path.insert(0, str(BONE))
     try:
         import ledger  # noqa: PLC0415
