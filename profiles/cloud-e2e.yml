@@ -36,7 +36,11 @@ install_pulse: true
 install_wing: true
 install_cortex: true
 install_face: true
-install_keap: true
+# KEAP's image build (thisisait/nos-keap Dockerfile) runs `apt-get update` on
+# Debian bookworm; the sandbox egress refuses deb.debian.org and every Debian
+# mirror (measured 2026-09-25 — archive.ubuntu.com passes, Debian does not).
+# A network fact, not an nOS one: on by default everywhere else.
+install_keap: false
 install_backup: false
 install_ears: false
 install_openclaw: false
