@@ -111,6 +111,12 @@
       - "--exclude=__pycache__"
       - "--exclude=.pytest_cache"
       - "--exclude=Dockerfile"        # not needed at runtime in host mode
+      # The git-ref stamp below is written INTO this dir after the sync
+      # (atomic rename → new dir mtime), so the next sync "fixed" the dir's
+      # time back, reported changed and restarted Bone on EVERY converge
+      # (cloud idempotence tier, 2026-09-25). Dir times carry nothing here.
+      # -O exists in rsync >= 2.6.4 and in macOS's openrsync.
+      - "--omit-dir-times"
   notify: Restart bone
 
 # Provenance stamp — read by main.py's /api/health as `git_ref`. Written into
