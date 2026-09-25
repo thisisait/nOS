@@ -11,7 +11,8 @@ error naming one image; with it, it arrives in seconds naming every one.
     tools/cloud/registry-reach.py --all        # every service, enabled or not
     tools/cloud/registry-reach.py --pull       # actually pull (warms the cache)
 
-Which services: state/manifest.yml `install_flag`, resolved against
+Which services: state/manifest.yml `install_flag` (plus apps/*.yml when
+apps_runner_enabled, minus apps_skip), resolved against
 default.config.yml < config.yml < --profile < -e (the playbook's precedence for
 these files). Which image: the role's own templates/compose*.j2 `image:` lines,
 rendered against role defaults + those vars — the template, not the manifest's
@@ -287,6 +288,28 @@ def main() -> int:
                     unresolved.append(f"{row['id']}: {expr}")
                     continue
                 wanted.setdefault(img, []).append(row["id"])
+
+    # Base stack files carry images of their own (infra: the docker socket
+    # proxy) — pulled whenever that stack comes up at all.
+    for base in sorted((REPO / "templates" / "stacks").glob("*/docker-compose.yml.j2")):
+        for expr in IMAGE_RE.findall(base.read_text()):
+            img = top.render(expr.strip().strip("\"'"))
+            if img and "{{" not in str(img):
+                wanted.setdefault(img, []).append(f"stack:{base.parent.name}")
+
+    # Tier-2 manifest apps (apps_runner): literal images, gated by the runner
+    # switch and apps_skip — the same discovery the role does.
+    if a.all or truthy(top.value("apps_runner_enabled")):
+        skip = set(top.vars.get("apps_skip") or []) if not a.all else set()
+        for m in sorted((REPO / "apps").glob("*.yml")):
+            if m.name.startswith("_") or m.stem in skip:
+                continue
+            enabled_ids.append(f"app:{m.stem}")
+            for expr in IMAGE_RE.findall(m.read_text()):
+                img = expr.strip().strip("\"'")
+                if img.startswith("docker.io/"):
+                    img = img[len("docker.io/"):]
+                wanted.setdefault(img, []).append(f"app:{m.stem}")
 
     print(f"enabled services with an image: {len(enabled_ids)} — {', '.join(sorted(enabled_ids))}")
     bad = 0
