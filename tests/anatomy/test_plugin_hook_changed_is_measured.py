@@ -61,13 +61,28 @@ def test_the_module_uses_it():
     assert 'r["note"] != "no-op"' not in mod
 
 
-def test_render_collapses_trailing_newlines_like_ansible(tmp_path):
-    """The loader and the role both write 00-admin-groups/30-agent-clients.
-    A template ending in `{% endfor %}\\n` must not gain a blank last line
-    here that Ansible's template does not write."""
-    src = tmp_path / "t.j2"
-    src.write_text("a:\n{% for x in [1] %}\n  - {{ x }}\n{% endfor %}\n")
-    dest = tmp_path / "out.yaml"
-    load_plugins._render_file(src, dest, {})
-    assert dest.read_text().endswith("- 1\n") and not dest.read_text().endswith("\n\n")
-    assert load_plugins._render_file(src, dest, {}) is False   # steady
+def test_ansible_parity_render_drops_the_final_newline(tmp_path):
+    """Ansible's template drops the template's final newline; the loader keeps
+    it. For a file BOTH write (authentik 00/30 blueprints) the loader must
+    match, or each converge rewrites it twice. Both measured endings:"""
+    cases = {
+        "a:\n{% for x in [1] %}\n  - {{ x }}\n{% endfor %}\n": "a:\n\n  - 1\n",
+        "{% if true %}\n{% for x in [1] %}\n  k: {{ x }}\n{% endfor %}\n{% else %}\nno\n{% endif %}\n":
+            "\n\n  k: 1\n\n",
+    }
+    for i, (tpl, want) in enumerate(cases.items()):
+        src = tmp_path / f"t{i}.j2"
+        src.write_text(tpl)
+        dest = tmp_path / f"o{i}.yaml"
+        load_plugins._render_file(src, dest, {}, ansible_parity=True)
+        assert dest.read_text() == want, repr(dest.read_text())
+        assert load_plugins._render_file(src, dest, {}, ansible_parity=True) is False
+    # default (every other plugin) is unchanged: keeps the final newline
+    load_plugins._render_file(src, tmp_path / "keep.yaml", {})
+    assert (tmp_path / "keep.yaml").read_text() == want + "\n"
+
+
+def test_authentik_blueprints_opt_into_parity():
+    import yaml as _y
+    m = _y.safe_load((REPO / "files/anatomy/plugins/authentik-base/plugin.yml").read_text())
+    assert m["provisioning"]["blueprints"].get("ansible_parity") is True

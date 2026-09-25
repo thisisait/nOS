@@ -749,7 +749,8 @@ def _render_string(s: str, ctx: dict) -> str:
     return _jinja_env().from_string(s).render(**ctx)
 
 
-def _render_file(src: pathlib.Path, dest: pathlib.Path, ctx: dict) -> bool:
+def _render_file(src: pathlib.Path, dest: pathlib.Path, ctx: dict,
+                 ansible_parity: bool = False) -> bool:
     """Render src (Jinja2 template) → dest. Returns True if dest changed.
 
     Security (SEC-1, 2026-05-23): rendered overrides routinely contain
@@ -766,15 +767,16 @@ def _render_file(src: pathlib.Path, dest: pathlib.Path, ctx: dict) -> bool:
     the next docker compose up.
     """
     src_text = src.read_text()
-    rendered = _jinja_env().from_string(src_text).render(**ctx)
-    # One trailing newline, like Ansible's `template` writes. A template ending
-    # in `{% endfor %}\n` rendered here as "...\n\n" and as "...\n" by the
-    # role-side copy of the same authentik blueprints, so the two writers
-    # undid each other on every converge (cloud e2e idempotence tier,
-    # 2026-09-25). Semantically neutral for YAML/compose; compose's config hash
-    # does not see it, so no container is recreated by the normalisation.
-    if rendered.endswith("\n\n"):
-        rendered = rendered.rstrip("\n") + "\n"
+    env = _jinja_env()
+    if ansible_parity:
+        # Byte-parity with Ansible's `template` module (trim_blocks off at the
+        # role call site; Ansible drops the template's final newline, i.e.
+        # keep_trailing_newline=False). Opt-in per render_dir spec — for
+        # files a role ALSO writes, where any byte difference makes the two
+        # writers undo each other every converge (authentik 00/30 blueprints,
+        # cloud e2e idempotence tier, 2026-09-25).
+        env.keep_trailing_newline = False
+    rendered = env.from_string(src_text).render(**ctx)
     dest.parent.mkdir(parents=True, exist_ok=True)
     # Also lock the parent dir to 0700 — if it already exists with a
     # looser mode (legacy install pre-SEC-1), this re-tightens it.
@@ -1076,7 +1078,8 @@ def _dispatch_action(plugin: Plugin, action: str, param,
                 continue
             out_name = sf.name[:-3] if sf.name.endswith(".j2") else sf.name
             df = dst_dir / out_name
-            if _render_file(sf, df, ctx):
+            if _render_file(sf, df, ctx,
+                            ansible_parity=bool(spec.get("ansible_parity"))):
                 rendered += 1
             else:
                 skipped += 1

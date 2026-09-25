@@ -112,6 +112,9 @@ provisioning:
   blueprints:
     source_dir: blueprints
     target_dir: "{{ stacks_dir }}/infra/authentik/blueprints"
+    # roles/pazny.authentik/tasks/blueprints.yml writes 00 + 30 too; render
+    # byte-identically to Ansible's template or the two writers flip-flop.
+    ansible_parity: true
 
 # ── Reload semantics (2026-08-31) ────────────────────────────────────────────
 # Consumed by tools/reload-stale-config.py, which restarts any container whose
