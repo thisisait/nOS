@@ -121,9 +121,11 @@ python_version: "3.13"
 node_global_packages:
   - typescript
 
+# No `ansible` here: CI puts the frozen controller venv first on PATH, so the
+# bare `pip3` in tasks/extra-packages.yml IS that venv's pip — listing ansible
+# upgraded ansible-core past tools/ci-freeze.env mid-run (2.21.0 -> 2.21.4).
 pip_packages:
   - name: virtualenv
-  - name: ansible
 
 go_packages: []
 

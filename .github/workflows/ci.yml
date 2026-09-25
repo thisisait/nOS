@@ -540,6 +540,16 @@ jobs:
           ANSIBLE_FORCE_COLOR: '1'
           ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
 
+      # The venv is on PATH, so any playbook pip task lands in it. Pin must hold.
+      - name: Assert the frozen ansible-core survived the run.
+        if: ${{ !cancelled() }}
+        run: |
+          . tools/ci-freeze.env
+          want="${NOS_ANSIBLE_CORE#ansible-core==}"
+          got=$("$RUNNER_TEMP/nosvenv/bin/python" -c 'import importlib.metadata as m; print(m.version("ansible-core"))')
+          [ "$got" = "$want" ] || { echo "::error::controller venv ansible-core drifted: $got != pinned $want"; exit 1; }
+          echo "ansible-core $got == pin"
+
   # v0.4 cross-platform wet-test. GitHub ubuntu runners ship Docker + passwordless
   # sudo, so this ACTUALLY exercises the Linux path: the pazny.linux.* roles
   # (apt / docker / nginx / hardening), systemd --user daemons, and the
@@ -678,6 +688,16 @@ jobs:
         env:
           ANSIBLE_FORCE_COLOR: '1'
           ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
+
+      # The venv is on PATH, so any playbook pip task lands in it. Pin must hold.
+      - name: Assert the frozen ansible-core survived the run.
+        if: ${{ !cancelled() }}
+        run: |
+          . tools/ci-freeze.env
+          want="${NOS_ANSIBLE_CORE#ansible-core==}"
+          got=$("$RUNNER_TEMP/nosvenv/bin/python" -c 'import importlib.metadata as m; print(m.version("ansible-core"))')
+          [ "$got" = "$want" ] || { echo "::error::controller venv ansible-core drifted: $got != pinned $want"; exit 1; }
+          echo "ansible-core $got == pin"
 
       # The 404 layer was undiagnosable from the run log (2026-09-02, run
       # 33651218229): the blueprint apply swallows its exit code, the outpost's
