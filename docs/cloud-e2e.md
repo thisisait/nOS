@@ -203,15 +203,22 @@ committed manifest.
 
 ## Status
 
-**Green end to end, 2026-09-25** (Claude cloud session, `profiles/cloud-e2e.yml`):
+**Green end to end with the host organs, 2026-09-25** (Claude cloud session,
+`profiles/cloud-e2e.yml`: substrate + Authentik + Traefik + Tier-2 apps +
+Bone / Pulse / Wing / Cortex under `nos-proc` + nOS face):
 
 | Tier | Result |
 |---|---|
 | `static` | pytest suite green (≈7 000 gates; `tests/wet` excluded — see below) |
-| `preflight` | 9/9 images reachable (Docker Hub via `mirror.gcr.io`) |
-| `converge` | `failed=0` from a `reset` sandbox (≈25 min cold, images cached) |
-| `smoke` | 6/6 OK — Authentik, Traefik, documenso / qdrant / roundcube via forward-auth |
+| `preflight` | every enabled image reachable (Docker Hub via `mirror.gcr.io`) |
+| `converge` | `failed=0` from a `reset` sandbox (ok=511) |
+| `smoke` | 9/9 OK — Authentik, Traefik, face, Tier-2 apps via forward-auth |
 | `idempotence` | `changed=0` on the steady estate |
+
+One honest caveat for reading the idempotence tier: Bone stamps the git ref it
+was deployed from (`~/bone/DEPLOYED_REF`) and restarts when it moves, so a
+commit — or a pull — between two converges shows `changed=2` by design. Run
+the tier on an unchanged checkout.
 
 `tests/wet` is left out of `static` on purpose: it asserts the OPERATOR's
 blank estate (the twofauth/roundcube/documenso pilot trio included), and the
