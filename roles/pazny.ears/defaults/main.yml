@@ -33,7 +33,7 @@ ears_log_dir: "{{ ears_runtime_dir }}/log"
 
 # Same interpreter split as pazny.bone: the operator's pyenv shim on macOS, the
 # system interpreter on Linux (tasks/python.yml apt-installs python3-venv).
-ears_python: "{{ (ansible_facts['env']['HOME'] ~ '/.pyenv/shims/python3') if ansible_os_family == 'Darwin' else '/usr/bin/python3' }}"
+ears_python: "{{ (ansible_facts['env']['HOME'] ~ '/.pyenv/shims/python3') if ansible_os_family == 'Darwin' else (ansible_facts['python']['executable'] | default('/usr/bin/python3', true)) }}"
 
 # The ear. parakeet-tdt-0.6b-v3 is the model that can hear Czech — 25 European
 # languages with automatic detection — which SpeechTranscriber (42 locales, no

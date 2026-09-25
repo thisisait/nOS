@@ -44,4 +44,4 @@ pulse_api_token: "{{ wing_api_token }}"
 
 # Python interpreter. macOS: the operator's pyenv shim. Linux: the system
 # interpreter (tasks/python.yml apt-installs python3-venv for it).
-pulse_python: "{{ (ansible_facts['env']['HOME'] ~ '/.pyenv/shims/python3') if ansible_os_family == 'Darwin' else '/usr/bin/python3' }}"
+pulse_python: "{{ (ansible_facts['env']['HOME'] ~ '/.pyenv/shims/python3') if ansible_os_family == 'Darwin' else (ansible_facts['python']['executable'] | default('/usr/bin/python3', true)) }}"

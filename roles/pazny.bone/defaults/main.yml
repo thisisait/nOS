@@ -24,7 +24,7 @@ bone_log_dir: "{{ bone_runtime_dir }}/log"
 bone_launchd_label: "eu.thisisait.nos.bone"
 # macOS: the operator's pyenv shim (Bone runs under their pyenv ansible).
 # Linux: the system interpreter (tasks/python.yml apt-installs python3-venv for it).
-bone_python: "{{ (ansible_facts['env']['HOME'] ~ '/.pyenv/shims/python3') if ansible_os_family == 'Darwin' else '/usr/bin/python3' }}"
+bone_python: "{{ (ansible_facts['env']['HOME'] ~ '/.pyenv/shims/python3') if ansible_os_family == 'Darwin' else (ansible_facts['python']['executable'] | default('/usr/bin/python3', true)) }}"
 
 # Mount paths (now real host paths, not bind-mount targets). State lives
 # outside the playbook tree so a `git clean` can never wipe migration
