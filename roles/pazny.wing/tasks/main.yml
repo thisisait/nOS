@@ -65,18 +65,22 @@
 
 - name: "[pazny.wing] Ensure runtime directories exist"
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ item.path }}"
     state: directory
-    mode: '0755'
+    mode: "{{ item.mode | default('0755') }}"
   loop:
-    - "{{ wing_runtime_dir }}"
-    - "{{ wing_app_dir }}"
-    - "{{ wing_data_dir }}"
-    - "{{ wing_app_dir }}/temp"
-    - "{{ wing_runtime_dir }}/repos"
-    - "{{ wing_runtime_dir }}/patches"
-    - "{{ wing_runtime_dir }}/caddy-data"
-    - "{{ wing_runtime_dir }}/caddy-config"
+    - { path: "{{ wing_runtime_dir }}" }
+    - { path: "{{ wing_app_dir }}" }
+    # 0700: holds wing.db, and the plugin loader (load_plugins._render_file)
+    # locks every render's parent to 0700 — a 0755 here fought it each run.
+    - { path: "{{ wing_data_dir }}", mode: '0700' }
+    - { path: "{{ wing_app_dir }}/temp" }
+    - { path: "{{ wing_runtime_dir }}/repos" }
+    - { path: "{{ wing_runtime_dir }}/patches" }
+    - { path: "{{ wing_runtime_dir }}/caddy-data" }
+    - { path: "{{ wing_runtime_dir }}/caddy-config" }
+  loop_control:
+    label: "{{ item.path }}"
 
 # SEC-2 (2026-05-23): the log directory holds Tracy's exception-*.html
 # dumps which CAN contain partial env-block fragments even with the

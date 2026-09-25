@@ -52,15 +52,20 @@
 
 - name: "[pazny.bone] Ensure runtime directories exist"
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ item.path }}"
     state: directory
-    mode: '0755'
+    mode: "{{ item.mode | default('0755') }}"
   loop:
-    - "{{ bone_runtime_dir }}"
-    - "{{ bone_log_dir }}"
-    - "{{ bone_state_dir }}"
-    - "{{ bone_registry_dir }}"
-    - "{{ bone_wing_db_dir }}"
+    - { path: "{{ bone_runtime_dir }}" }
+    - { path: "{{ bone_log_dir }}" }
+    # 0700: ~/.nos holds secrets.yml (SEC-4; pazny.state_manager, nos-cli and
+    # main.yml all create it 0700) and wing.db's dir is 0700 in pazny.wing.
+    # A 0755 here re-opened both on every run and reported `changed` twice.
+    - { path: "{{ bone_state_dir }}", mode: '0700' }
+    - { path: "{{ bone_registry_dir }}" }
+    - { path: "{{ bone_wing_db_dir }}", mode: '0700' }
+  loop_control:
+    label: "{{ item.path }}"
 
 # ── Service-registry placeholder (unchanged from container era) ──────────────
 

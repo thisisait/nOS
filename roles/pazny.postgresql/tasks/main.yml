@@ -16,7 +16,9 @@
   ansible.builtin.file:
     path: "{{ postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data') }}"
     state: directory
-    mode: '0755'
+    # 0700 = what the postgres entrypoint sets on EVERY start; anything else
+    # is re-flipped by the next restart (tasks/stacks/core-up.yml agrees).
+    mode: '0700'
 
 - name: "[pazny.postgresql] Ensure certs directory exists (REM-009 SSL)"
   ansible.builtin.file:
