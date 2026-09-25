@@ -36,7 +36,12 @@
       ansible.builtin.find:
         paths: "{{ apps_dir }}"
         patterns: ["*.yml", "*.yaml"]
-        excludes: ["_*", "*.draft", "*.draft.yml", "*.draft.yaml"]
+        # apps_skip: manifest ids an estate declines without editing the
+        # committed manifest (default.config.yml; the cloud profile skips
+        # twofauth, whose upstream nginx binds [::] on an IPv6-less kernel).
+        excludes: "{{ ['_*', '*.draft', '*.draft.yml', '*.draft.yaml']
+                      + (apps_skip | default([]) | map('regex_replace', '$', '.yml') | list)
+                      + (apps_skip | default([]) | map('regex_replace', '$', '.yaml') | list) }}"
         file_type: file
       register: _apps_manifests
       check_mode: false

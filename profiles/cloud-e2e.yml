@@ -24,6 +24,12 @@ install_nginx: false
 # ghcr's blob host (pkg-containers.githubusercontent.com) is refused here.
 authentik_image: authentik/server
 
+# ── Tier-2 apps (apps_runner) — documenso, qdrant, roundcube stay in ────────
+# 2FAuth's upstream nginx listens on [::]:8000; this kernel has no IPv6, so
+# the container can never become healthy here. Not an nOS defect to fix in
+# the lane — skipped by name, visibly.
+apps_skip: [twofauth]
+
 # ── Host organs — off until their no-init path is proven in this lane ────────
 install_bone: false
 install_pulse: false

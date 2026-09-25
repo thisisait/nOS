@@ -1820,6 +1820,9 @@ app_secrets: {}
 # `lookup('vars', 'apps_runner_enabled')` outside the role. Role default is
 # the same true; operators set false in config.yml to skip the whole catalog.
 apps_runner_enabled: true
+# Tier-2 manifest ids to leave out of this estate (apps/<id>.yml stays
+# committed; the runner just does not discover it). Default: none.
+apps_skip: []
 qdrant_api_key: "{{ (app_secrets | default({})).get('qdrant', {}).get('PASSWORD_API', '') }}"
 qdrant_api_key_ro: "{{ (app_secrets | default({})).get('qdrant', {}).get('PASSWORD_RO_API', '') }}"
 qdrant_url: "http://127.0.0.1:{{ qdrant_port | default(6333) }}"
