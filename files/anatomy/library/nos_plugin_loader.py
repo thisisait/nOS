@@ -182,7 +182,8 @@ def main() -> None:
     except Exception as e:                                # noqa: BLE001
         module.fail_json(msg=f"hook {hook!r} aborted: {e}")
         return
-    changed = any(r["status"] == "ok" and r["note"] != "no-op" for r in results)
+    changed = any(r["status"] == "ok" and load_plugins.note_changed(r["note"])
+                  for r in results)
     failed = [r for r in results if r["status"] == "failed"]
     if failed:
         module.fail_json(

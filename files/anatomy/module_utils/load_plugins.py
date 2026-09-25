@@ -31,6 +31,7 @@ import enum
 import glob as _glob
 import json
 import os
+import re
 import pathlib
 import subprocess
 import sys
@@ -832,6 +833,37 @@ def _wait_health(url: str, timeout: int = 60, interval: float = 2.0,
     raise RuntimeError(f"wait_health timeout after {timeout}s @ {url}: {last_err}")
 
 
+# One action summary fragment -> did it change the host? Every _dispatch_action
+# return shape is listed; an unrecognised fragment counts as a change (the
+# safe direction — a false `changed` is noise, a false `ok` hides a write).
+# Before 2026-09-25 the module called ANY note other than "no-op" a change, so
+# "render_dir: 0 rendered / 7 unchanged" and a bare wait_health reported
+# `changed` on every converge (cloud e2e idempotence tier).
+_NOTE_UNCHANGED = re.compile(
+    r"(:unchanged -> |:exists$|:absent$|:preserved\(|:skipped|REFUSED|:ERROR:"
+    r"|^wait_health:|^unknown:|^skipped malformed action|^no-op$"
+    r"|:empty sequence$)")
+_NOTE_COUNT = re.compile(
+    r"^(?:render_dir|copy_dir):.*?:(\d+) (?:rendered|copied) /"
+    r"|^copy_dashboards:.*?:(\d+)/\d+ updated"
+    r"|^replay_api_calls:(?:.*?:)?(\d+) executed /")
+
+
+def note_changed(note: str) -> bool:
+    """True iff a _run_actions summary reports a host change."""
+    for frag in (note or "no-op").split(", "):
+        frag = frag.strip()
+        m = _NOTE_COUNT.search(frag)
+        if m:
+            if int(next(g for g in m.groups() if g is not None)) > 0:
+                return True
+            continue
+        if _NOTE_UNCHANGED.search(frag):
+            continue
+        return True
+    return False
+
+
 def _run_actions(plugin: Plugin, hook: str, actions: list,
                  template_vars: dict) -> str:
     """Execute the action list for one plugin/hook.
@@ -918,8 +950,9 @@ def _dispatch_action(plugin: Plugin, action: str, param,
     """Single-action dispatcher. Returns a one-line summary fragment."""
     if action == "ensure_dir":
         path = pathlib.Path(_render_string(str(param), ctx))
+        existed = path.is_dir()
         path.mkdir(parents=True, exist_ok=True)
-        return f"ensure_dir:{path}"
+        return f"ensure_dir:{path}:{'exists' if existed else 'created'}"
 
     if action == "remove_dir":
         import shutil
@@ -933,9 +966,10 @@ def _dispatch_action(plugin: Plugin, action: str, param,
         if not _is_safe_destructive_path(rendered):
             return f"remove_dir:REFUSED unsafe path {rendered!r}"
         path = pathlib.Path(rendered)
-        if path.is_dir():
+        existed = path.is_dir()
+        if existed:
             shutil.rmtree(path, ignore_errors=True)
-        return f"remove_dir:{path}"
+        return f"remove_dir:{path}:{'removed' if existed else 'absent'}"
 
     if action == "remove_file":
         # File-level cleanup (post_blank). Use this when a plugin's render
@@ -947,9 +981,10 @@ def _dispatch_action(plugin: Plugin, action: str, param,
         if not _is_safe_destructive_path(rendered):
             return f"remove_file:REFUSED unsafe path {rendered!r}"
         path = pathlib.Path(rendered)
-        if path.is_file():
+        existed = path.is_file()
+        if existed:
             path.unlink()
-        return f"remove_file:{path}"
+        return f"remove_file:{path}:{'removed' if existed else 'absent'}"
 
     if action == "render":
         # `param` is a dotted path into the manifest (e.g.

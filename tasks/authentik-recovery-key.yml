@@ -65,9 +65,9 @@
 - name: "[Recovery] Persist offline break-glass secret to ~/.nos/secrets.yml"
   # Idempotent append/maintain. The regexp keys off the var NAME so a value
   # rotation rewrites the same line in place (no duplicate keys). Runs AFTER
-  # the main secrets.yml.j2 render (which does not carry this key), so the
-  # template can never clobber it. mode 0600 — owner-only, matching the main
-  # persist step.
+  # the main secrets.yml.j2 render, which carries an already-loaded value
+  # through (it used to omit it, deleting the line every run for this task
+  # to re-add). mode 0600 — owner-only, matching the main persist step.
   ansible.builtin.lineinfile:
     path: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
     regexp: '^authentik_recovery_break_glass_secret:'

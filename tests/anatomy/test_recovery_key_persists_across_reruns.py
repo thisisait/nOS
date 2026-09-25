@@ -23,8 +23,9 @@ playbook, no Authentik, no Docker):
      guard untouched) → stable across re-runs.
   3. The whole thing is BLUEPRINT-FREE: no `recoverytoken`, no blueprint seed
      (that would be unsatisfiable per the plan).
-  4. main.yml imports the task AFTER the secrets.yml.j2 render so the template
-     re-render cannot clobber the appended key.
+  4. main.yml imports the task AFTER the secrets.yml.j2 render, and the
+     template carries an existing value through (so neither writer undoes the
+     other — the pre-2026-09-25 shape flip-flopped on every run).
   5. Functional: simulate two consecutive runs over a temp secrets.yml and
      assert the persisted secret is byte-identical the second time.
 """
@@ -150,15 +151,23 @@ def test_main_gates_and_orders_the_import():
         "the recovery-key import must be gated behind install_authentik"
 
 
-def test_main_secrets_template_does_not_carry_the_key():
-    """The break-glass key is appended by lineinfile, NOT by the main template
-    (we must not edit it). If it ever lands in the template too, the two write
-    paths would race — this gate keeps the contract honest."""
+def test_main_secrets_template_carries_the_key_through():
+    """The lineinfile OWNS the key (generates it, rewrites it on rotation);
+    the main template only CARRIES the already-loaded value through.
+
+    This gate used to assert the opposite ("the two write paths would race").
+    Measured 2026-09-25 (cloud e2e idempotence tier): the race was the
+    ABSENCE — the template render deleted the line, the lineinfile re-added
+    it, and both reported `changed` on every converge. Carrying the same value
+    through makes the lineinfile a no-op on a steady estate. The guard mirrors
+    the generate-if-absent test, so a `_pw_`/short placeholder is never
+    persisted by the template.
+    """
     text = SECRETS_TMPL.read_text()
-    assert VAR not in text, (
-        f"{VAR} must NOT be in secrets.yml.j2 — it is owned by the lineinfile "
-        "persist in tasks/authentik-recovery-key.yml"
-    )
+    assert f"{VAR}: \"{{{{ {VAR} }}}}\"" in text, "template must carry the loaded value"
+    guard = text[text.index("{% if", text.index("break-glass")):text.index(f"{VAR}: ")]
+    assert "length >= 32" in guard and "'_pw_' not in" in guard, \
+        "carry only a real secret — the same guard the generator uses"
 
 
 # --- Functional: simulate two consecutive runs and assert stability ---------
