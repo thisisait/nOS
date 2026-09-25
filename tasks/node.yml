@@ -53,6 +53,11 @@
     version: "{{ nvm_git_version | default('v0.40.8') }}"
     depth: 1
     update: false
+  register: _nvm_clone
+  # A GitHub 429 is a cooldown, not a blip (roles/pazny.hermes/tasks/main.yml).
+  until: _nvm_clone is succeeded
+  retries: 5
+  delay: 30
   when: nos_pkg_manager in ['apt', 'dnf']
 
 - name: "[node] Install Node.js via nvm (Linux)"
