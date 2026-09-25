@@ -39,5 +39,17 @@ esac
 NOS_MODULE_PYTHON="$(nos_find_module_python)"
 export NOS_MODULE_PYTHON
 export ANSIBLE_PYTHON_INTERPRETER="${NOS_MODULE_PYTHON}"
+# The estate's own names must never leave the box. The sandbox routes every
+# HTTPS request through an egress proxy (HTTPS_PROXY), whose NO_PROXY knows
+# nothing of *.dev.local — so nos-smoke asked the PROXY for auth.dev.local and
+# got 403 (measured 2026-09-25). Tenant domain from NOS_E2E_TLD, default dev.local.
+_nos_tld="${NOS_E2E_TLD:-dev.local}"
+for _v in NO_PROXY no_proxy; do
+  case ",$(eval echo "\${$_v:-}")," in
+    *",.${_nos_tld},"*) ;;
+    *) eval "export $_v=\"\${$_v:+\${$_v},}.${_nos_tld},${_nos_tld}\"" ;;
+  esac
+done
+unset _nos_tld _v
 export NOS_TEST_PROVIDES="git,ansible-playbook,php,composer,jq,sqlite3,openssl,files/anatomy/wing/vendor/autoload.php"
 unset _nos_repo
