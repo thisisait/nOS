@@ -92,7 +92,7 @@
   ansible.builtin.shell:
     cmd: >-
       set -o pipefail;
-      printf '%s' "$NOS_DSAR_JSON" | php bin/record-dsar.php --json=-
+      printf '%s' "$NOS_DSAR_JSON" | {{ wing_php_cli }} bin/record-dsar.php --json=-
     chdir: "{{ wing_app_dir }}"
     executable: /bin/bash
   environment:

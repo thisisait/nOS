@@ -79,14 +79,12 @@
       # opped (failed_when: false), so Wing's systems table never picked
       # up Tier-2 app entries from apps_runner — /hub showed stale data
       # after every apps onboarding. Mirrors pazny.wing/tasks/post.yml's
-      # canonical host-native pattern (cmd: php bin/X.php, chdir).
+      # canonical host-native pattern (cmd: <wing_php_cli> bin/X.php, chdir).
       ansible.builtin.command:
-        cmd: php bin/ingest-registry.php --registry={{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json
+        cmd: "{{ wing_php_cli }} bin/ingest-registry.php --registry={{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json"
         chdir: "{{ wing_app_dir }}"
       register: _apps_wing_ingest
-      changed_when: >
-        'Ingested' in (_apps_wing_ingest.stdout | default(''))
-        and 'Ingested 0' not in (_apps_wing_ingest.stdout | default(''))
+      changed_when: "'digest-changed=1' in (_apps_wing_ingest.stdout | default(''))"
       failed_when: false
       when: install_wing | default(true) | bool
 
@@ -393,7 +391,9 @@
         timeout: 10
       register: _apps_bone_post
       failed_when: false
-      changed_when: _apps_bone_post.status | default(0) in [200, 201, 202, 204]
+      # An audit EVENT, appended on every converge like the callback's own
+      # telemetry — the estate did not change because it was reported.
+      changed_when: false
       no_log: true
       when:
         - install_bone | default(true) | bool
@@ -530,7 +530,7 @@
         cmd: >-
           set -o pipefail;
           printf '%s' "$NOS_GDPR_JSON"
-          | php bin/upsert-gdpr.php --id=app_{{ item.id }} --json=-
+          | {{ wing_php_cli }} bin/upsert-gdpr.php --id=app_{{ item.id }} --json=-
         chdir: "{{ wing_app_dir }}"
         executable: /bin/bash
       environment:
@@ -551,7 +551,9 @@
       loop_control:
         label: "{{ item.id }}"
       register: _apps_gdpr_upserts
-      changed_when: "'OK upserted' in (_apps_gdpr_upserts.stdout | default(''))"
+      # Every row is rewritten every run; digest-changed says whether that
+      # changed anything (App\Model\TableDigest).
+      changed_when: "'digest-changed=1' in (_apps_gdpr_upserts.stdout | default(''))"
       failed_when: false
       when: install_wing | default(true) | bool
 

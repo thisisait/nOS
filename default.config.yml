@@ -952,6 +952,11 @@ wing_domain: "wing{{ _host_alias_seg | default('') }}.{{ tenant_domain | default
 # rendered upstream URL was `http://nos-host:0` and wing.<tld> 502'd
 # at the Traefik upstream layer (C11, 2026-05-08).
 wing_port: 9000
+# The PHP CLI that runs Wing's bin/*.php from Ansible. macOS: Homebrew php(-zts).
+# Linux: ~/.local/bin/nos-php (pazny.wing), a shim over `frankenphp php-cli` — a fresh Ubuntu has
+# no `php`, and the bare `php` these tasks used failed there behind
+# failed_when: false (the CI runner and the cloud sandbox both ship a php).
+wing_php_cli: "{{ 'php' if ansible_os_family == 'Darwin' else (ansible_facts['env']['HOME'] ~ '/.local/bin/nos-php') }}"
 wing_home: "{{ ansible_facts['env']['HOME'] }}/wing"
 wing_app_dir: "{{ wing_home }}/app"
 wing_data_dir: "{{ wing_app_dir }}/data"

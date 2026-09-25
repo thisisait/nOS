@@ -18,14 +18,14 @@
 
 - name: "[pazny.wing] Initialize SQLite database schema (idempotent)"
   ansible.builtin.command:
-    cmd: php bin/init-db.php --data-dir={{ wing_data_dir }}
+    cmd: "{{ wing_php_cli }} bin/init-db.php --data-dir={{ wing_data_dir }}"
     chdir: "{{ wing_app_dir }}"
   register: _wing_initdb
   changed_when: "'Created' in (_wing_initdb.stdout | default(''))"
 
 - name: "[pazny.wing] Migrate components → systems (idempotent)"
   ansible.builtin.command:
-    cmd: php bin/migrate-systems.php --data-dir={{ wing_data_dir }}
+    cmd: "{{ wing_php_cli }} bin/migrate-systems.php --data-dir={{ wing_data_dir }}"
     chdir: "{{ wing_app_dir }}"
   register: _wing_migrate_sys
   changed_when: >
@@ -37,7 +37,7 @@
 - name: "[pazny.wing] Detect whether legacy JSON migration is still needed"
   ansible.builtin.command:
     argv:
-      - php
+      - "{{ wing_php_cli }}"
       - -r
       - >-
         $db = new SQLite3('{{ wing_data_dir }}/wing.db');
@@ -62,7 +62,7 @@
 
 - name: "[pazny.wing] Run legacy JSON → SQLite import (only if no rows yet AND markdown sources exist)"
   ansible.builtin.command:
-    cmd: php bin/migrate.php --json-dir={{ wing_json_source }} --data-dir={{ wing_data_dir }}
+    cmd: "{{ wing_php_cli }} bin/migrate.php --json-dir={{ wing_json_source }} --data-dir={{ wing_data_dir }}"
     chdir: "{{ wing_app_dir }}"
   register: _wing_migrate
   when:
@@ -73,12 +73,12 @@
 
 - name: "[pazny.wing] Ingest service-registry.json into systems table"
   ansible.builtin.command:
-    cmd: php bin/ingest-registry.php --registry={{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json
+    cmd: "{{ wing_php_cli }} bin/ingest-registry.php --registry={{ ansible_facts['env']['HOME'] }}/projects/default/service-registry.json"
     chdir: "{{ wing_app_dir }}"
   register: _wing_ingest
-  changed_when: >
-    'Ingested' in (_wing_ingest.stdout | default(''))
-    and 'Ingested 0' not in (_wing_ingest.stdout | default(''))
+  # The script counts rows it WROTE (all of them, every run); digest-changed
+  # compares the table before/after (App\Model\TableDigest).
+  changed_when: "'digest-changed=1' in (_wing_ingest.stdout | default(''))"
 
 # ── Security-research re-sync (idempotent) ───────────────────────────────────
 # bin/migrate.php is a ONE-SHOT bootstrap: once systems.source='components_db'
@@ -102,7 +102,7 @@
 
 - name: "[pazny.wing] Re-sync remediation-queue.json → remediation_items (idempotent upsert)"
   ansible.builtin.command:
-    cmd: php bin/ingest-remediation.php --json={{ wing_json_source }}/remediation-queue.json
+    cmd: "{{ wing_php_cli }} bin/ingest-remediation.php --json={{ wing_json_source }}/remediation-queue.json"
     chdir: "{{ wing_app_dir }}"
   register: _wing_rem_ingest
   # Idempotent: the script prints "changed=N" (real inserts/updates via the
@@ -118,7 +118,7 @@
 
 - name: "[pazny.wing] Re-sync pentest-journal.json → pentest_* tables (idempotent upsert)"
   ansible.builtin.command:
-    cmd: php bin/ingest-pentest.php --json={{ wing_json_source }}/pentest-journal.json
+    cmd: "{{ wing_php_cli }} bin/ingest-pentest.php --json={{ wing_json_source }}/pentest-journal.json"
     chdir: "{{ wing_app_dir }}"
   register: _wing_pentest_ingest
   # Idempotent: keyed on the script's "changed=N" (targets+findings real diffs;
@@ -132,7 +132,7 @@
 # synced live by Api\EventsPresenter on ingest.
 - name: "[pazny.wing] Backfill agent_sessions from historical agent_run events"
   ansible.builtin.command:
-    cmd: php bin/backfill-agent-sessions.php
+    cmd: "{{ wing_php_cli }} bin/backfill-agent-sessions.php"
     chdir: "{{ wing_app_dir }}"
   register: _wing_session_backfill
   changed_when: "'now holds 0' not in (_wing_session_backfill.stdout | default(''))"
@@ -143,7 +143,7 @@
 # when the chain is enabled; lets the verifier accept a chain OFF->ON boundary.
 - name: "[pazny.wing] Record audit-chain enable anchor (idempotent)"
   ansible.builtin.command:
-    cmd: php bin/backfill-event-chain.php --data-dir={{ wing_data_dir }}
+    cmd: "{{ wing_php_cli }} bin/backfill-event-chain.php --data-dir={{ wing_data_dir }}"
     chdir: "{{ wing_app_dir }}"
   register: _wing_chain_anchor
   changed_when: "'now holds 0' not in (_wing_chain_anchor.stdout | default(''))"
@@ -155,10 +155,10 @@
 # upstream version calls. Idempotent (truncate + reinsert).
 - name: "[pazny.wing] Ingest upgrade recipes into upgrade_recipes table"
   ansible.builtin.command:
-    cmd: php bin/ingest-upgrade-recipes.php --recipes-dir={{ playbook_dir }}/upgrades --data-dir={{ wing_data_dir }}
+    cmd: "{{ wing_php_cli }} bin/ingest-upgrade-recipes.php --recipes-dir={{ playbook_dir }}/upgrades --data-dir={{ wing_data_dir }}"
     chdir: "{{ wing_app_dir }}"
   register: _wing_recipe_ingest
-  changed_when: "'loaded 0 recipe' not in (_wing_recipe_ingest.stdout | default(''))"
+  changed_when: "'digest-changed=1' in (_wing_recipe_ingest.stdout | default(''))"
   failed_when: false
 
 # ── GDPR Article 30 register — Tier-1 core services (C3, 2026-05-25) ──────────
@@ -186,13 +186,13 @@
     cmd: >-
       set -o pipefail;
       printf '%s' "$NOS_GDPR_JSON"
-      | php bin/upsert-gdpr.php --json=-
+      | {{ wing_php_cli }} bin/upsert-gdpr.php --json=-
     chdir: "{{ wing_app_dir }}"
     executable: /bin/bash
   environment:
     NOS_GDPR_JSON: "{{ _gdpr_records_raw.stdout }}"
   register: _gdpr_tier1_upserts
-  changed_when: "'OK upserted' in (_gdpr_tier1_upserts.stdout | default(''))"
+  changed_when: "'digest-changed=1' in (_gdpr_tier1_upserts.stdout | default(''))"
   failed_when: false
 
 # ── API token reconverge ─────────────────────────────────────────────────────
@@ -202,7 +202,7 @@
 - name: "[pazny.wing] Reconverge API token — ansible-provisioned (operator)"
   ansible.builtin.command:
     argv:
-      - php
+      - "{{ wing_php_cli }}"
       - "{{ wing_app_dir }}/bin/provision-token.php"
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ wing_api_token }}
@@ -226,7 +226,7 @@
 - name: "[pazny.wing] Reconverge API token — conductor (A8 Claude Code agent)"
   ansible.builtin.command:
     argv:
-      - php
+      - "{{ wing_php_cli }}"
       - "{{ wing_app_dir }}/bin/provision-token.php"
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ conductor_wing_api_token }}
@@ -264,7 +264,7 @@
 - name: "[pazny.wing] Reconverge API token — cortex executor (all three axes)"
   ansible.builtin.command:
     argv:
-      - php
+      - "{{ wing_php_cli }}"
       - "{{ wing_app_dir }}/bin/provision-token.php"
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ cortex_executor_token }}
@@ -302,7 +302,7 @@
 - name: "[pazny.wing] Reconverge API token — jeff (the caddy; cortex axes)"
   ansible.builtin.command:
     argv:
-      - php
+      - "{{ wing_php_cli }}"
       - "{{ wing_app_dir }}/bin/provision-token.php"
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ jeff_wing_api_token }}
@@ -324,7 +324,7 @@
   # the api_tokens row so its report events authenticate.
   ansible.builtin.command:
     argv:
-      - php
+      - "{{ wing_php_cli }}"
       - "{{ wing_app_dir }}/bin/provision-token.php"
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ librarian_wing_api_token }}
@@ -344,7 +344,7 @@
 - name: "[pazny.wing] Deactivate tokens of retired/parked agents (ruling 4)"
   ansible.builtin.command:
     argv:
-      - php
+      - "{{ wing_php_cli }}"
       - "{{ wing_app_dir }}/bin/provision-token.php"
       - --db={{ wing_data_dir }}/wing.db
       - --name={{ item }}
@@ -364,7 +364,7 @@
   # that names the symptom and not the five declarations a new agent needs.
   ansible.builtin.command:
     argv:
-      - php
+      - "{{ wing_php_cli }}"
       - "{{ wing_app_dir }}/bin/provision-token.php"
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ surveyor_wing_api_token }}
@@ -386,7 +386,7 @@
   # Authentik client (nos-upgrade-architect) is in authentik_agent_clients.
   ansible.builtin.command:
     argv:
-      - php
+      - "{{ wing_php_cli }}"
       - "{{ wing_app_dir }}/bin/provision-token.php"
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ upgrade_architect_wing_api_token }}
@@ -406,7 +406,7 @@
 - name: "[pazny.wing] Reconverge API token — openclaw (B1: A8 agent, wing-side provisioning)"
   ansible.builtin.command:
     argv:
-      - php
+      - "{{ wing_php_cli }}"
       - "{{ wing_app_dir }}/bin/provision-token.php"
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ openclaw_wing_api_token }}
@@ -603,7 +603,9 @@
   retries: 3
   delay: 5
   until: _pulse_jobs_reg.status in [200, 201]
-  changed_when: _pulse_jobs_reg.status == 201
+  # Wing answers `changed` (row differs ignoring updated_at); the status is
+  # 201 for every upsert. Older Wing without the key → fall back to 201.
+  changed_when: (_pulse_jobs_reg.json | default({})).changed | default(_pulse_jobs_reg.status == 201)
   no_log: true
 
 # ── Local .env for Playwright + Wing ─────────────────────────────────────────

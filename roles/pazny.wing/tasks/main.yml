@@ -176,6 +176,19 @@
   delay: 10
   when: ansible_os_family != 'Darwin'
 
+# `nos-php` — a one-line shim so Ansible (and argv-shaped tasks) can say ONE
+# word for "the PHP CLI" on Linux, where that is `frankenphp php-cli` and no
+# `php` exists on a fresh host. wing_php_cli points here (default.config.yml).
+- name: "[pazny.wing] (Linux) Install the nos-php CLI shim"
+  ansible.builtin.copy:
+    dest: "{{ ansible_facts['env']['HOME'] }}/.local/bin/nos-php"
+    mode: '0755'
+    content: |
+      #!/bin/sh
+      # Rendered by pazny.wing — PHP CLI = the FrankenPHP binary Wing runs on.
+      exec "{{ _wing_frankenphp_bin }}" php-cli "$@"
+  when: ansible_os_family != 'Darwin'
+
 - name: "[pazny.wing] Stat frankenphp binary"
   ansible.builtin.stat:
     path: "{{ _wing_frankenphp_bin }}"
