@@ -1,0 +1,215 @@
+# =============================================================================
+# Caddy entity-collision bench — fixture + answer key.
+# Roadmap row: caddy-entity-collision-bench (parent: caddy-entity-resolve).
+#
+# WHY THIS EXISTS: caddy-entity-resolve's worst failure is not a miss, it is a
+# CONFIDENT WRONG SINGLE MATCH — a report built from the wrong client's books.
+# This file is a hand-written set of deliberately confusable consulting-firm
+# entity scenarios so that failure shape can be counted instead of argued.
+#
+# SCOPE: every candidate id sits in `tax:` or `rel:` only — the two namespaces
+# 02-cortex-lang declares `resolved` and therefore the only two the resolver
+# may query broadly without becoming the enumeration oracle that document
+# refuses. No `kg:` / `ent:` ids appear here, on purpose.
+#
+# SYNTHETIC BY RULE (same discipline as consulting-firm.seed.yml): slugs start
+# `synthetic-`, tax ids match (CZ)?000001\d\d and use the 140-149 block, which
+# consulting-firm.seed.yml's header left free and which was grepped free
+# across the tree before use. Nothing here is a real client.
+#
+# SCHEMA (one entry per case):
+#   id          stable case slug (also the bench's report key)
+#   query       the spoken/typed turn, as a human would say it
+#   candidates  every entity the resolver could plausibly land on, each
+#               { id, label, note } — id is `tax:...` or `rel:...`
+#   truth       EITHER a single candidate id (one right answer exists and a
+#               human could pick it from the query alone)
+#               OR the literal `ambiguous` (a human could NOT disambiguate
+#               from this query either — the resolver MUST surface top-N and
+#               stop; silently picking one is the defect shape)
+#   expect_top_n  required when truth == ambiguous: the candidate ids that
+#               must ALL appear in the surfaced top-N. A top-N that drops one
+#               of these has hidden a live possibility.
+#   why         one line on what makes this case confusable (for the human
+#               reading a failure report, not consumed by the checker)
+#
+# GRADED BY: tools/caddy-entity-collision-check.py (code oracle, three
+# buckets; WRONG single match is the only one that gates a release).
+# =============================================================================
+
+cases:
+
+  # ── near-duplicate person names ────────────────────────────────────────────
+  - id: zdepa-bare-surname
+    query: "priprav vyuctovani pro Pepu Zdepu"
+    candidates:
+      - { id: "tax:party/synthetic-pepa-zdepa", label: "Pepa Zdepa (synthetic)", note: "OSVC, client since 2019, ICO 00000140" }
+      - { id: "tax:party/synthetic-pepa-zdepa-ml", label: "Pepa Zdepa ml. (synthetic)", note: "OSVC, son, client since 2024, ICO 00000141" }
+    truth: ambiguous
+    expect_top_n: [ "tax:party/synthetic-pepa-zdepa", "tax:party/synthetic-pepa-zdepa-ml" ]
+    why: "father and son, identical spoken name; the turn carries no year, no ICO, no 'ml.'"
+
+  - id: zdepa-explicit-junior
+    query: "faktury Pepy Zdepy mladsiho za kveten"
+    candidates:
+      - { id: "tax:party/synthetic-pepa-zdepa", label: "Pepa Zdepa (synthetic)", note: "father" }
+      - { id: "tax:party/synthetic-pepa-zdepa-ml", label: "Pepa Zdepa ml. (synthetic)", note: "son" }
+    truth: "tax:party/synthetic-pepa-zdepa-ml"
+    why: "'mladsiho' is the disambiguator spelled out; committing to the father here is the gating failure"
+
+  - id: gamova-diacritics-stripped
+    query: "kolik dluzi Gamova"
+    candidates:
+      - { id: "tax:party/synthetic-client-gama", label: "Petra Gamova (synthetic)", note: "OSVC client, legal_name carries no diacritics" }
+      - { id: "tax:party/synthetic-gama-customer", label: "Gama Odberatel s.r.o. (synthetic)", note: "Petra's customer, shares the 'Gama' token" }
+    truth: "tax:party/synthetic-client-gama"
+    why: "a person surname and an unrelated company share a stem; token overlap alone points the wrong way"
+
+  - id: initials-only
+    query: "otevri knihu P.G."
+    candidates:
+      - { id: "tax:party/synthetic-client-gama", label: "Petra Gamova (synthetic)", note: "P.G." }
+      - { id: "tax:party/synthetic-pavel-gross", label: "Pavel Gross (synthetic)", note: "P.G., OSVC, ICO 00000142" }
+    truth: ambiguous
+    expect_top_n: [ "tax:party/synthetic-client-gama", "tax:party/synthetic-pavel-gross" ]
+    why: "initials are a lossy key; two live clients collapse onto them"
+
+  # ── same person as jednatel of two SROs ────────────────────────────────────
+  - id: jednatel-two-sros
+    query: "firma Jana Nováka"
+    candidates:
+      - { id: "tax:party/synthetic-novak-stavby", label: "Novak Stavby s.r.o. (synthetic)", note: "jednatel Jan Novak, ICO 00000143" }
+      - { id: "tax:party/synthetic-novak-servis", label: "Novak Servis s.r.o. (synthetic)", note: "jednatel Jan Novak, ICO 00000144" }
+    truth: ambiguous
+    expect_top_n: [ "tax:party/synthetic-novak-stavby", "tax:party/synthetic-novak-servis" ]
+    why: "one natural person, two companies; 'his firm' is genuinely underspecified"
+
+  - id: jednatel-edge-named
+    query: "kdo je jednatel Novak Servisu"
+    candidates:
+      - { id: "rel:jednatel-of/synthetic-jan-novak--synthetic-novak-servis", label: "Jan Novak -> Novak Servis s.r.o.", note: "statutory body edge" }
+      - { id: "rel:jednatel-of/synthetic-jan-novak--synthetic-novak-stavby", label: "Jan Novak -> Novak Stavby s.r.o.", note: "statutory body edge" }
+    truth: "rel:jednatel-of/synthetic-jan-novak--synthetic-novak-servis"
+    why: "the rel: edge is disambiguated by the named company, not by the person"
+
+  - id: jednatel-person-vs-company
+    query: "Novak"
+    candidates:
+      - { id: "tax:party/synthetic-jan-novak", label: "Jan Novak (synthetic)", note: "natural person, jednatel of two SROs" }
+      - { id: "tax:party/synthetic-novak-stavby", label: "Novak Stavby s.r.o. (synthetic)", note: "" }
+      - { id: "tax:party/synthetic-novak-servis", label: "Novak Servis s.r.o. (synthetic)", note: "" }
+    truth: ambiguous
+    expect_top_n:
+      - "tax:party/synthetic-jan-novak"
+      - "tax:party/synthetic-novak-stavby"
+      - "tax:party/synthetic-novak-servis"
+    why: "bare surname spans a person and both of his companies; this is the default-N=3 case"
+
+  # ── client renamed mid-year ────────────────────────────────────────────────
+  - id: rename-old-name-still-spoken
+    query: "danove priznani pro Alfa Rizeni"
+    candidates:
+      - { id: "tax:party/synthetic-client-alfa", label: "Alfa Consulting s.r.o. (synthetic)", note: "renamed 2026-06-01, former name 'Alfa Rizeni s.r.o.', ICO unchanged 00000131" }
+      - { id: "tax:party/synthetic-alfa-vendor", label: "Alfa Dodavatel s.r.o. (synthetic)", note: "unrelated, shares the 'Alfa' token" }
+    truth: "tax:party/synthetic-client-alfa"
+    why: "a rename does not create a second entity; the old name must resolve to the surviving node"
+
+  - id: rename-freed-name-reused
+    query: "kdo je Alfa Rizeni s.r.o."
+    candidates:
+      - { id: "tax:party/synthetic-client-alfa", label: "Alfa Consulting s.r.o. (synthetic)", note: "was 'Alfa Rizeni s.r.o.' until 2026-06-01" }
+      - { id: "tax:party/synthetic-alfa-rizeni-new", label: "Alfa Rizeni s.r.o. (synthetic)", note: "unrelated firm registered 2026-08, ICO 00000145" }
+    truth: ambiguous
+    expect_top_n: [ "tax:party/synthetic-client-alfa", "tax:party/synthetic-alfa-rizeni-new" ]
+    why: "the freed name was reused by a stranger; the exact string is now correct for two entities"
+
+  - id: rename-with-period-qualifier
+    query: "obraty Alfy za prvni ctvrtleti 2026, jeste pod starym nazvem"
+    candidates:
+      - { id: "tax:party/synthetic-client-alfa", label: "Alfa Consulting s.r.o. (synthetic)", note: "the renamed continuing entity" }
+      - { id: "tax:party/synthetic-alfa-rizeni-new", label: "Alfa Rizeni s.r.o. (synthetic)", note: "did not exist in Q1 2026" }
+    truth: "tax:party/synthetic-client-alfa"
+    why: "the period excludes the namesake that was not yet registered — a date is a disambiguator"
+
+  - id: merged-entity-old-name
+    query: "ucetnictvi Kolben IT"
+    candidates:
+      - { id: "tax:party/synthetic-kolben-group", label: "Kolben Group s.r.o. (synthetic)", note: "absorbed Kolben IT s.r.o. 2026-04-01; successor" }
+      - { id: "tax:party/synthetic-kolben-it", label: "Kolben IT s.r.o. (synthetic)", note: "dissolved by merger 2026-04-01, books closed" }
+    truth: "tax:party/synthetic-kolben-group"
+    why: "a dissolved predecessor is a real node but the wrong book to open; recency of the string is a trap"
+
+  # ── subsidiary vs parent, overlapping name ─────────────────────────────────
+  - id: parent-vs-subsidiary-bare
+    query: "posli rozvahu Beta Sluzby"
+    candidates:
+      - { id: "tax:party/synthetic-client-beta", label: "Beta Sluzby s.r.o. (synthetic)", note: "parent, ICO 00000132" }
+      - { id: "tax:party/synthetic-beta-cz", label: "Beta Sluzby CZ s.r.o. (synthetic)", note: "100% subsidiary, ICO 00000146, separate books" }
+    truth: ambiguous
+    expect_top_n: [ "tax:party/synthetic-client-beta", "tax:party/synthetic-beta-cz" ]
+    why: "the parent's full name is a strict prefix of the subsidiary's; a prefix match silently prefers the parent"
+
+  - id: parent-vs-subsidiary-qualified
+    query: "rozvaha Beta Sluzby CZ"
+    candidates:
+      - { id: "tax:party/synthetic-client-beta", label: "Beta Sluzby s.r.o. (synthetic)", note: "parent" }
+      - { id: "tax:party/synthetic-beta-cz", label: "Beta Sluzby CZ s.r.o. (synthetic)", note: "subsidiary" }
+    truth: "tax:party/synthetic-beta-cz"
+    why: "the 'CZ' token is the whole disambiguator; dropping it lands on the parent's books"
+
+  - id: consolidation-edge
+    query: "kdo vlastni Beta Sluzby CZ"
+    candidates:
+      - { id: "rel:owns/synthetic-client-beta--synthetic-beta-cz", label: "Beta Sluzby s.r.o. owns Beta Sluzby CZ s.r.o.", note: "100%" }
+      - { id: "rel:owns/synthetic-beta-cz--synthetic-beta-sub2", label: "Beta Sluzby CZ s.r.o. owns Beta Nemovitosti s.r.o.", note: "direction reversed" }
+    truth: "rel:owns/synthetic-client-beta--synthetic-beta-cz"
+    why: "both edges mention the same company; only the DIRECTION answers the question"
+
+  # ── legal form / trading name collisions ───────────────────────────────────
+  - id: legal-form-collision
+    query: "faktury pro Gama Odberatel"
+    candidates:
+      - { id: "tax:party/synthetic-gama-customer", label: "Gama Odberatel s.r.o. (synthetic)", note: "ICO 00000138" }
+      - { id: "tax:party/synthetic-gama-odberatel-as", label: "Gama Odberatel a.s. (synthetic)", note: "unrelated firm, ICO 00000147" }
+    truth: ambiguous
+    expect_top_n: [ "tax:party/synthetic-gama-customer", "tax:party/synthetic-gama-odberatel-as" ]
+    why: "identical base name, different legal form; the turn omitted the form"
+
+  - id: trading-name-vs-legal-name
+    query: "otevri Synthetic Consulting"
+    candidates:
+      - { id: "tax:party/synthetic-consulting-firm", label: "Synthetic Consulting s.r.o. (synthetic)", note: "trading_name 'Synthetic Consulting' — the processor, our own firm" }
+      - { id: "tax:party/synthetic-consulting-praha", label: "Synthetic Consulting Praha s.r.o. (synthetic)", note: "a client, ICO 00000148" }
+    truth: "tax:party/synthetic-consulting-firm"
+    why: "an exact trading_name hit beats a longer legal_name that merely contains the string"
+
+  - id: osvc-vs-own-sro
+    query: "danove doklady Petry Gamove"
+    candidates:
+      - { id: "tax:party/synthetic-client-gama", label: "Petra Gamova (synthetic)", note: "OSVC — a natural person's own tax file" }
+      - { id: "tax:party/synthetic-gamova-sro", label: "Gamova s.r.o. (synthetic)", note: "her company, ICO 00000149, separate books" }
+    truth: "tax:party/synthetic-client-gama"
+    why: "a person named in the genitive is the person, not her s.r.o. — the two must never share a ledger"
+
+  - id: ico-pins-it
+    query: "klient s ICO 00000146"
+    candidates:
+      - { id: "tax:party/synthetic-client-beta", label: "Beta Sluzby s.r.o. (synthetic)", note: "ICO 00000132" }
+      - { id: "tax:party/synthetic-beta-cz", label: "Beta Sluzby CZ s.r.o. (synthetic)", note: "ICO 00000146" }
+    truth: "tax:party/synthetic-beta-cz"
+    why: "an exact identifier in the turn removes all ambiguity; surfacing top-N here is over-caution, not safety"
+
+  - id: bare-brand-token-spans-four
+    query: "Alfa"
+    candidates:
+      - { id: "tax:party/synthetic-client-alfa", label: "Alfa Consulting s.r.o. (synthetic)", note: "client" }
+      - { id: "tax:party/synthetic-alfa-rizeni-new", label: "Alfa Rizeni s.r.o. (synthetic)", note: "unrelated" }
+      - { id: "tax:party/synthetic-alfa-customer", label: "Alfa Odberatel a.s. (synthetic)", note: "counterparty" }
+      - { id: "tax:party/synthetic-alfa-vendor", label: "Alfa Dodavatel s.r.o. (synthetic)", note: "counterparty" }
+    truth: ambiguous
+    expect_top_n:
+      - "tax:party/synthetic-client-alfa"
+      - "tax:party/synthetic-alfa-rizeni-new"
+      - "tax:party/synthetic-alfa-customer"
+      - "tax:party/synthetic-alfa-vendor"
+    why: "four live entities on one token — and four exceeds the default N=3, so the surface itself is under test"
