@@ -21,6 +21,7 @@
 #   nos_service_manager       "launchd" | "systemd-user" | "systemd-system"
 #   nos_init                  "launchd" | "systemd" | "none"
 #   nos_user_systemctl        "systemctl --user" | ~/.local/bin/nos-proc
+#   nos_kernel_ipv6           false only on a Linux kernel without IPv6
 #   nos_docker_bin            /usr/local/bin/docker | /usr/bin/docker
 #   nos_homebrew_prefix       /opt/homebrew | "" (empty on Linux)
 #
@@ -102,6 +103,20 @@
     nos_user_systemctl: >-
       {{ (ansible_facts['env']['HOME'] ~ '/.local/bin/nos-proc')
          if nos_init == 'none' else 'systemctl --user' }}
+
+# A kernel built without IPv6 (measured: the Claude cloud sandbox has no
+# /proc/sys/net/ipv6) makes every container that binds `[::]` die at start —
+# docker-socket-proxy's HAProxy crash-looped, and the STRICT health-wait held
+# the whole infra stack on it. Linux-only probe; macOS keeps the default true.
+- name: "[platform] Probe kernel IPv6 support (Linux)"
+  ansible.builtin.stat:
+    path: /proc/sys/net/ipv6
+  register: _nos_ipv6_stat
+  when: ansible_os_family != 'Darwin'
+
+- name: "[platform] Record kernel IPv6 support"
+  ansible.builtin.set_fact:
+    nos_kernel_ipv6: "{{ (_nos_ipv6_stat.stat.exists | default(true)) if ansible_os_family != 'Darwin' else true }}"
 
 - name: "[platform] Compute derived nginx vhost paths + point docker_bin at the platform binary"
   ansible.builtin.set_fact:

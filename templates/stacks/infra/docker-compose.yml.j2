@@ -35,6 +35,11 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
+{% if not (nos_kernel_ipv6 | default(true) | bool) %}
+      # No IPv6 in this kernel (tasks/_platform.yml): HAProxy's default
+      # `[::]:2375 v4v6` bind cannot be created and the proxy crash-loops.
+      DISABLE_IPV6: 1
+{% endif %}
       # Read-only API access for Traefik service discovery + Portainer monitoring
       CONTAINERS: 1
       IMAGES: 1
