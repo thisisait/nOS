@@ -39,7 +39,14 @@ $container = App\Bootstrap\Booting::boot()->createContainer();
 /** @var App\Model\SystemRepository $repo */
 $repo = $container->getByType(App\Model\SystemRepository::class);
 
+$pdo = $container->getByType(Nette\Database\Explorer::class)->getConnection()->getPdo();
+// health_* are the probe's columns, not this ingest's (TableDigest).
+$probe = ['health_status', 'health_http_code', 'health_ms'];
+$before = App\Model\TableDigest::of($pdo, 'systems', $probe);
+
 $result = $repo->ingestRegistry($registryPath);
+
+$changed = App\Model\TableDigest::of($pdo, 'systems', $probe) !== $before ? 1 : 0;
 
 $merged = $result['merged'] ?? 0;
 $orphans = $result['orphans_swept'] ?? 0;
@@ -47,3 +54,4 @@ $staleDom = $result['stale_domains_swept'] ?? 0;
 $dropouts = $result['registry_dropouts_swept'] ?? 0;
 echo "Ingested {$result['imported']} systems, created {$result['stacks_created']} stack parents, merged $merged duplicates, swept $orphans install_* orphans + $staleDom stale-domain rows + $dropouts registry dropouts\n";
 echo "Registry: $registryPath\n";
+echo "digest-changed={$changed}\n";

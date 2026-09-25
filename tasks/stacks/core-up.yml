@@ -122,10 +122,12 @@
   ansible.builtin.file:
     path: "{{ item.path }}"
     state: directory
-    mode: '0755'
+    mode: "{{ item.mode | default('0755') }}"
   loop:
     - { path: "{{ mariadb_data_dir | default(ansible_facts['env']['HOME'] + '/mariadb/data') }}", enabled: "{{ install_mariadb | default(false) }}" }
-    - { path: "{{ postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data') }}", enabled: "{{ install_postgresql | default(false) }}" }
+    # 0700: the postgres entrypoint chmods PGDATA to 0700 on EVERY start, so a
+    # 0755 here flipped it back each converge after any restart (idempotence).
+    - { path: "{{ postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data') }}", enabled: "{{ install_postgresql | default(false) }}", mode: '0700' }
     - { path: "{{ redis_data_dir | default(ansible_facts['env']['HOME'] + '/redis/data') }}", enabled: "{{ redis_docker | default(false) }}" }
     - { path: "{{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}", enabled: "{{ install_authentik | default(false) }}" }
     - { path: "{{ infisical_data_dir | default(ansible_facts['env']['HOME'] + '/infisical') }}", enabled: "{{ install_infisical | default(false) }}" }

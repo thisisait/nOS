@@ -82,8 +82,15 @@ final class PulsePresenter extends BaseApiPresenter
 			//   3. each arg must match a strict regex banning whitespace
 			//      + every shell metacharacter.
 			$this->validatePulseCommand((string) $body['command'], $body['args'] ?? []);
+			// `changed` answers the converge's question — did this declaration
+			// move anything? The upsert rewrites every row on every run (and
+			// stamps updated_at), so the 201 alone reported `changed` for the
+			// whole catalog forever (cloud e2e idempotence, 2026-09-25).
+			$jobId = sprintf('%s:%s', $body['plugin_name'], $body['job_name']);
+			$before = $this->pulse->getJob($jobId);
 			$job = $this->pulse->upsertJob($body);
-			$this->sendCreated(['accepted' => true, 'job' => $job]);
+			$strip = static fn(?array $r): ?array => $r === null ? null : array_diff_key($r, ['updated_at' => 1]);
+			$this->sendCreated(['accepted' => true, 'changed' => $strip($before) != $strip($job), 'job' => $job]);
 			return;
 		}
 

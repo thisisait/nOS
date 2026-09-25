@@ -127,6 +127,8 @@ try {
 
 /** @var App\Model\GdprRepository $repo */
 $repo = $container->getByType(App\Model\GdprRepository::class);
+$pdo = $container->getByType(Nette\Database\Explorer::class)->getConnection()->getPdo();
+$before = App\Model\TableDigest::of($pdo, 'gdpr_processing');
 
 $copyKeys = [
     'name', 'purpose', 'legal_basis', 'data_categories', 'data_subjects',
@@ -178,4 +180,5 @@ foreach ($records as $i => $row) {
     echo "OK upserted gdpr_processing.{$rowId}\n";
 }
 
+echo 'digest-changed=' . (App\Model\TableDigest::of($pdo, 'gdpr_processing') !== $before ? 1 : 0) . "\n";
 exit(0);

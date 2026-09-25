@@ -237,16 +237,37 @@
     - not (_cortex_root_is_removable | bool)
     - not (_cortex_data_root.stat.isdir | default(false))
 
+# writtenAt records when the sentinel's FACTS were written, so a converge
+# that finds the same tenant / volume / root keeps the old stamp. Re-stamping
+# on every run made this task `changed` forever (cloud e2e idempotence tier,
+# 2026-09-25) — on every platform.
+- name: "[pazny.cortex] Read the current mount sentinel"
+  ansible.builtin.slurp:
+    src: "{{ cortex_mount_sentinel_path }}"
+  register: _cortex_sentinel_prev
+  failed_when: false
+  when: cortex_fs_enabled | bool
+
 - name: "[pazny.cortex] Write the mount sentinel"
+  vars:
+    _sentinel_prev: >-
+      {{ ((_cortex_sentinel_prev.content | default('', true) | b64decode) or '{}') | from_json }}
   ansible.builtin.copy:
     dest: "{{ cortex_mount_sentinel_path }}"
     mode: '0644'
     content: |
+      {% set f = {'tenant': nos_tenant_slug,
+                  'volumeUuid': (_cortex_volume_uuid | default('')) or None,
+                  'dataRoot': nos_data_root} %}
+      {% set same = _sentinel_prev.writtenAt is defined
+                    and _sentinel_prev.tenant | default('') == f.tenant
+                    and _sentinel_prev.volumeUuid | default('') == f.volumeUuid
+                    and _sentinel_prev.dataRoot | default('') == f.dataRoot %}
       {{ {
-           'tenant': nos_tenant_slug,
-           'volumeUuid': (_cortex_volume_uuid | default('')) or None,
-           'writtenAt': ansible_date_time.iso8601,
-           'dataRoot': nos_data_root,
+           'tenant': f.tenant,
+           'volumeUuid': f.volumeUuid,
+           'writtenAt': (_sentinel_prev.writtenAt if same else ansible_date_time.iso8601),
+           'dataRoot': f.dataRoot,
          } | to_nice_json }}
   when: cortex_fs_enabled | bool
 

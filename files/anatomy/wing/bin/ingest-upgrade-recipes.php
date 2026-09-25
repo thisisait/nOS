@@ -36,6 +36,8 @@ if (!is_file($dbPath)) {
 $db = new PDO('sqlite:' . $dbPath);
 $db->setAttribute(PDO::ATTR_TIMEOUT, 5); // seconds; prevents 'database is locked' under concurrent writers (scout HIGH 2026-07-15)
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+// `id` is AUTOINCREMENT — the DELETE+reinsert below renumbers it every run.
+$before = App\Model\TableDigest::of($db, 'upgrade_recipes', ['id']);
 $db->exec('DELETE FROM upgrade_recipes');
 
 $ins = $db->prepare(
@@ -90,3 +92,5 @@ foreach (glob(rtrim($recipesDir, '/') . '/*.yml') ?: [] as $file) {
 }
 
 echo "ingest-upgrade-recipes: loaded {$count} recipe(s) from {$recipesDir}.\n";
+$changed = App\Model\TableDigest::of($db, 'upgrade_recipes', ['id']) !== $before ? 1 : 0;
+echo "digest-changed={$changed}\n";
