@@ -184,3 +184,15 @@ def test_apps_skip_reaches_the_renderer():
     assert 'skip: "{{ apps_skip | default([]) }}"' in role
     mod = (REPO / "files/anatomy/library/nos_apps_render.py").read_text()
     assert 'p["skip"]' in mod
+
+
+def test_duplicated_blueprints_render_with_the_loaders_whitespace():
+    """00-admin-groups and 30-agent-clients are written twice per converge —
+    by the role (Ansible template, trim_blocks ON by default) and by the
+    authentik-base plugin loader (plain Jinja, trim_blocks OFF). Identical
+    templates, different bytes: each writer undid the other on every run."""
+    import yaml as _y
+    tasks = _y.safe_load((REPO / "roles/pazny.authentik/tasks/blueprints.yml").read_text())
+    renders = [t["ansible.builtin.template"] for t in tasks if "ansible.builtin.template" in t]
+    assert renders and all(r.get("trim_blocks") is False for r in renders)
+    assert all(r.get("mode") == "0600" for r in renders), "SEC-1 mode, as the loader writes"

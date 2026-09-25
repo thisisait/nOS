@@ -29,6 +29,11 @@
     src: "blueprints/00-admin-groups.yaml.j2"
     dest: "{{ stacks_dir }}/infra/authentik/blueprints/00-admin-groups.yaml"
     mode: '0600'
+    # The plugin loader renders the SAME file with trim_blocks off (its Jinja
+    # env, load_plugins._jinja_env); Ansible's default is on. Different
+    # whitespace around `{% for %}` = two writers undoing each other on every
+    # converge (cloud e2e idempotence tier, 2026-09-25). Match the loader.
+    trim_blocks: false
   notify: Reapply authentik blueprints
 
 # 10-oidc-apps.yaml is authoritative-rendered by authentik-base plugin
@@ -50,4 +55,9 @@
     src: "blueprints/30-agent-clients.yaml.j2"
     dest: "{{ stacks_dir }}/infra/authentik/blueprints/30-agent-clients.yaml"
     mode: '0600'
+    # The plugin loader renders the SAME file with trim_blocks off (its Jinja
+    # env, load_plugins._jinja_env); Ansible's default is on. Different
+    # whitespace around `{% for %}` = two writers undoing each other on every
+    # converge (cloud e2e idempotence tier, 2026-09-25). Match the loader.
+    trim_blocks: false
   notify: Reapply authentik blueprints
