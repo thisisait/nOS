@@ -30,13 +30,13 @@ authentik_image: authentik/server
 # the lane — skipped by name, visibly.
 apps_skip: [twofauth]
 
-# ── Host organs — off until their no-init path is proven in this lane ────────
-install_bone: false
-install_pulse: false
-install_wing: false
-install_cortex: false
-install_face: false
-install_keap: false
+# ── Host organs — systemd user units, run by nos-proc (nos_init == none) ────
+install_bone: true
+install_pulse: true
+install_wing: true
+install_cortex: true
+install_face: true
+install_keap: true
 install_backup: false
 install_ears: false
 install_openclaw: false
@@ -77,7 +77,7 @@ install_mas_apps: false
 install_metabase: false
 install_n8n: false
 install_nextcloud: false
-install_node: false
+install_node: true
 install_observability: false
 install_openwebui: false
 install_os_resume: false
