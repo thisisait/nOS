@@ -4,7 +4,9 @@
 # Tiers, cheapest first; each prints a verdict line and keeps its full log under
 # ~/.nos/e2e/<tier>.log (an LLM reads the verdict, a human opens the log):
 #
-#   static       syntax-check + the pytest suite (the CI `pytest` job's scope)
+#   static       syntax-check + the pytest suite (the CI `pytest` job's scope;
+#                tests/wet is excluded — it asserts the OPERATOR's blank estate,
+#                pilot trio included, and CI only ever skips it for lack of one)
 #   preflight    docker answers + every image the profile needs is PULLABLE
 #   converge     ansible-playbook main.yml -e @profiles/cloud-e2e.yml
 #                (the playbook ends in its own STRICT smoke — tasks/post-smoke.yml)
@@ -78,6 +80,7 @@ tier_static() {
   fi
   .ci-venv/bin/python -m pytest tests/ \
     --ignore=tests/wing-api --ignore=tests/wing-frontend --ignore=tests/e2e \
+    --ignore=tests/wet \
     -q -p no:cacheprovider -n "${NOS_E2E_JOBS:-auto}" </dev/null >>"$log" 2>&1
   local rc=$?
   local line; line="$(grep -E '^[0-9]+ (passed|failed)|[0-9]+ passed' "$log" | tail -1)"

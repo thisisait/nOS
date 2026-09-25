@@ -174,4 +174,51 @@ committed manifest.
 
 ## Status
 
-<!-- CONVERGE-STATUS -->
+**Green end to end, 2026-09-25** (Claude cloud session, `profiles/cloud-e2e.yml`):
+
+| Tier | Result |
+|---|---|
+| `static` | pytest suite green (≈7 000 gates; `tests/wet` excluded — see below) |
+| `preflight` | 9/9 images reachable (Docker Hub via `mirror.gcr.io`) |
+| `converge` | `failed=0` from a `reset` sandbox (≈25 min cold, images cached) |
+| `smoke` | 6/6 OK — Authentik, Traefik, documenso / qdrant / roundcube via forward-auth |
+| `idempotence` | `changed=0` on the steady estate |
+
+`tests/wet` is left out of `static` on purpose: it asserts the OPERATOR's
+blank estate (the twofauth/roundcube/documenso pilot trio included), and the
+CI `pytest` job only ever skips it for lack of an estate. After a cloud
+converge it would run against a different estate and report that difference
+as failure.
+
+### Idempotence was never measured on the stack layer before
+
+The macOS Integration lane has an idempotence check, but it runs host-only
+(`nos_allow_no_docker=true`); the Linux lane has none. The first cloud run
+found **twelve** tasks `changed` on a steady estate. All fixed:
+
+| Task | Cause | Fix |
+|---|---|---|
+| pgcrypto ×2 | psql prints `CREATE EXTENSION` for an `IF NOT EXISTS` no-op | read the NOTICE on stderr |
+| authentik blueprint dir + 2 renders | role wrote 0640/0755, plugin loader SEC-1 0600/0700 | role matches SEC-1 |
+| same 2 renders, content | role (Ansible) vs loader (plain Jinja): `trim_blocks`, final newline | role `trim_blocks: false`; loader `ansible_parity` on those files |
+| `secrets.yml` persist + break-glass lineinfile | template omitted the key the lineinfile owns → delete / re-add | template carries the loaded value |
+| infra / observability `compose up` | no `changed_when` | changed only on create/start/build |
+| plugin `pre_compose` / `post_compose` | any note ≠ "no-op" counted | `note_changed()` reads the counts |
+| `app.deployed` event mirror | log append | `changed_when: false` |
+
+Gates: `test_plugin_hook_changed_is_measured.py`,
+`test_recovery_key_persists_across_reruns.py` (contract inverted, with the
+evidence), `test_cloud_e2e_contract.py`.
+
+### Also found by the lane (IPv6-less kernel, cold boot)
+
+- **Authentik worker silently idle.** Default listeners `[::]:9000/9300`;
+  on a kernel without IPv6 the Rust worker logs "gracefully shutting down
+  worker" and never spawns its task processes — while its healthcheck stays
+  green. Not one blueprint, not even authentik's own default flows, applied.
+  `AUTHENTIK_LISTEN__*=0.0.0.0` when `nos_kernel_ipv6` is false.
+- **Authentik server cold boot ≈155 s** vs the image's 60 s start period →
+  `unhealthy` → STRICT probe abort. `start_period: 300s`.
+- **`apps_skip` never reached the renderer** (the discovery `find` is only a
+  "manifests exist?" check).
+- **apps post wrote into `~/projects/default` before anything created it.**

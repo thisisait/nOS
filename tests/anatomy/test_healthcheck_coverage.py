@@ -52,7 +52,6 @@ FIXED = {
 # Deliberately health-blind, with reason. Class prefix documents why.
 HEALTH_BLIND = {
     # ── BAKED: image already ships a HEALTHCHECK (runtime health present) ──────
-    "authentik-server": "BAKED: image bakes HEALTHCHECK `ak healthcheck` (worker overrides it in-compose)",
     "vaultwarden": "BAKED: image bakes HEALTHCHECK `/healthcheck.sh`",
     "uptime-kuma": "BAKED: image bakes `extra/healthcheck` — does NOT distinguish setup-wizard from app; the converge-time /api/entry-page check in roles/pazny.uptime_kuma/tasks/monitors.yml owns that half",
     "keap": "BAKED: image bakes HEALTHCHECK `wget /api/health` (built from source; see compose header)",
