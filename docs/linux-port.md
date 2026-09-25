@@ -44,8 +44,8 @@ Cross-platform variables live in `tasks/_platform.yml` (imported in `pre_tasks`)
 
 | Concern | Status | Workaround |
 |---|---|---|
-| `tasks/php.yml` | macOS-only (Homebrew) | **STALE WORKAROUND** — Wing reverted to a HOST FrankenPHP launchd daemon in A3.5, so host PHP *is* needed again when `install_wing: true`. Linux needs an apt `php8.3-*` + FrankenPHP path. Until then, set `install_wing: false` on Linux. |
-| `tasks/node.yml`, `tasks/python.yml`, `tasks/golang.yml`, `tasks/dotnet.yml`, `tasks/bun.yml` | macOS-only | Skip via `install_node: false` etc. on Linux for now. apt + asdf siblings come in Track C+. |
+| `tasks/php.yml` | macOS-only (Homebrew) | Not needed on Linux: Wing runs the FrankenPHP single binary, and Ansible reaches PHP through `wing_php_cli` → `~/.local/bin/nos-php` (2026-09-25). |
+| `tasks/golang.yml`, `tasks/dotnet.yml`, `tasks/bun.yml` | macOS-only (Homebrew) | Skipped by fact on Linux — no toggle needed. `tasks/node.yml` (nvm at `nvm_git_version`) and `tasks/python.yml` (apt) are cross-platform since 2026-09-25. |
 | `pazny.openclaw` (launchd plist) | macOS-only | Skip with `install_openclaw: false`. systemd-user equivalent is a follow-up. |
 | `pazny.dotfiles` | macOS-only | Skip. Linux dotfile management is operator-side. |
 | MLX backend for Ollama | macOS-only by design | Use Ollama's CUDA / CPU backend on Linux; nOS doesn't enforce MLX. |

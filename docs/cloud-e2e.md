@@ -162,11 +162,40 @@ meets. Fixed here because every fresh machine would have hit them:
 Gates: `tests/anatomy/test_cloud_e2e_contract.py` (all of the above that can
 be pinned offline) and `test_nos_proc_runs_the_unit_contract.py`.
 
+### Host organs on a fresh Linux (2026-09-25, second pass)
+
+Turning Bone / Pulse / Wing / Cortex / face on found a second layer — every
+item a fresh Ubuntu (or WSL2) would hit, most hidden on CI because the GitHub
+runner image ships the missing tool:
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| bone `synchronize`: no `rsync` | `pazny.linux.apt` was a stub | installs `linux_apt_base_packages` (rsync, unzip, sqlite3, acl, …) |
+| pulse: "requires a different Python: 3.11" | venvs hardcoded `/usr/bin/python3` | the discovered interpreter (`ansible_facts.python.executable`) |
+| cortex: Node < 22 | Linux had no Node path (apt ships 18) | nvm cloned at `nvm_git_version` |
+| wing: `getcomposer.org` 403 | one download source | rescue → Composer's GitHub release |
+| wing: composer "Could not authenticate against github.com" | Composer 2.10 dropped dist→source fallback | rescue → `--prefer-source` (same locked commits) |
+| face: `npm ci` "Exit handler never called" | TLS-intercepting egress, CA unknown in the build | `nos_build_ca_bundle` → BuildKit secret, never a layer |
+| Pulse job registration 400 | SEC-8 allowlist knew `/Users/`, `/home/` — not `/root/` | + the daemon's own `$HOME` (Wing and the runner) |
+| Wing Pulse jobs exit 127 on Linux | manifests say `/opt/homebrew/bin/php` | catalog re-points them via `NOS_PHP_ARGV` |
+| 23 wing/apps/gdpr tasks silently failing | bare `php` (none on a fresh host), `failed_when: false` | `wing_php_cli` → `~/.local/bin/nos-php` shim |
+
+And, from the idempotence tier with organs on — **these affect macOS too**:
+three Wing ingest scripts, the Pulse upsert, the cortex mount sentinel and
+the `app.deployed` mirror reported `changed` on every run (they now compare
+before/after — `App\Model\TableDigest`, the upsert's `changed` key);
+`~/.nos`, `wing.db`'s dir and PGDATA each had two writers disagreeing on the
+mode; the Bone sync restarted Bone every converge over a directory mtime.
+
+KEAP stays off in the lane: its Dockerfile (nos-keap) `apt-get`s from Debian,
+and the sandbox refuses every Debian mirror. A network fact, not an nOS one.
+
 ## The profile
 
-`profiles/cloud-e2e.yml` — the smallest estate that still proves the
-topology: L0 (PostgreSQL, Redis), Authentik, Traefik as the edge, plus the
-Tier-2 apps runner (documenso, qdrant, roundcube; `apps_skip: [twofauth]`).
+`profiles/cloud-e2e.yml` — L0 (PostgreSQL, Redis), Authentik, Traefik as the
+edge, the Tier-2 apps runner (documenso, qdrant, roundcube; `apps_skip:
+[twofauth]`), and the host organs Bone, Pulse, Wing, Cortex (under `nos-proc`)
+plus nOS face.
 Every host-only macOS concern is off; so is every service whose image the
 default policy refuses. Grow it one service at a time, running `preflight`
 first. Tier-2 app skips go in `apps_skip` (new, default `[]`), not in the
