@@ -1876,12 +1876,14 @@
       "max_runtime_s": 180,
       "category": "platform",
       "paused": false,
-      "findings_exit_codes": null,
+      "findings_exit_codes": [
+        3
+      ],
       "command_name": "repo-check.py",
       "claims": [],
       "runs_agent": null,
       "anchor": "02.02.06",
-      "description": "Pulse scheduled job (platform): runs repo-check.py on cron `17 */4 * * *`"
+      "description": "Pulse scheduled job (platform): runs repo-check.py on cron `17 */4 * * *` — exits [3] mean findings, not failure"
     },
     "pulse:loop:review": {
       "kind": "pulse",

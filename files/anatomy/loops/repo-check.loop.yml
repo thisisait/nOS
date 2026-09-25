@@ -24,9 +24,16 @@ steps:
   - id: forge-sync
     runner: tool
     label: "forge-sync — trunk holders, dry-run only"
+  - id: wording-coverage
+    runner: tool
+    label: "caddy wording coverage — every opcode+operand pair speakable"
 
 run: "{{ playbook_dir }}/tools/loops/repo-check.py"
 pulse:
   category: platform
   max_runtime_s: 180
   jitter_min: 10
+  # 3 = a GATE step found something (today: a wording.yml regression). The three
+  # readers never escalate — they exit 0 whatever they find — so a non-zero from
+  # this loop is always the gate, never "a reader saw red".
+  findings_exit_codes: [3]

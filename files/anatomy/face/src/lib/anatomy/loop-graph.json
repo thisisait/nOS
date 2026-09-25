@@ -385,6 +385,15 @@
       "runner": "tool"
     },
     {
+      "id": "step:repo-check:wording-coverage",
+      "kind": "step",
+      "label": "caddy wording coverage — every opcode+operand pair speakable",
+      "loop": "repo-check",
+      "x": 1200,
+      "y": 0,
+      "runner": "tool"
+    },
+    {
       "id": "trigger:vision-bench",
       "kind": "trigger",
       "label": "⏱ 31 5 * * *",
@@ -652,6 +661,13 @@
       "id": "step:repo-check:estate-status=>step:repo-check:forge-sync",
       "source": "step:repo-check:estate-status",
       "target": "step:repo-check:forge-sync",
+      "kind": "flow",
+      "loop": "repo-check"
+    },
+    {
+      "id": "step:repo-check:forge-sync=>step:repo-check:wording-coverage",
+      "source": "step:repo-check:forge-sync",
+      "target": "step:repo-check:wording-coverage",
       "kind": "flow",
       "loop": "repo-check"
     },

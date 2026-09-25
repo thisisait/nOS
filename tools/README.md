@@ -164,6 +164,10 @@ worse than none, because it reads as complete.
 - `cortex-query.py` — Read-only KEAP recall (RO bearer): ranked passages with node ids; wraps keap-semantic-search.py + keap-recall-queries.py; empty recall is a miss.
 - `keap-reid-rows.py` — Make every row of a KEAP DataTable addressable by its own business key.
 - `mcp-tables-server.py` — stdio MCP server giving external agents (Cursor/Codex/Claude Code) the DataTables verb surface.
+- `caddy-wording-coverage.py` — can the verbaliser SPEAK every opcode+operand pair the registry allows? Static, no model, no KEAP; exit 0 iff 100%.
+- `caddy-entity-collision-check.py` — three-bucket grader for entity-resolution collisions. Defaults to a STUB resolver: it tests the GRADER, not resolution quality.
+- `report-chain-synth-gen.py` — synthesize report-prepare training chains from SCHEMA ALONE (keap-tables + relation ontology + frozen opcodes), so the expected.yml needs no live model.
+- `test_report_chain_synth_gen.py` — the generator's own validator, runnable standalone; gated in CI by tests/anatomy/test_report_chain_synth_is_gated.py.
 
 ## Release, CI, git
 - `forge-sync.py` — The trunk's four holders, and the only tool that moves refs between them.

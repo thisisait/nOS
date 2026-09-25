@@ -18,12 +18,26 @@ import sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-# Step id → argv0 relative to the repo. Must match repo-check.loop.yml step ids.
+# Step id → (argv0 relative to the repo, is_gate). Must match the manifest's
+# step ids.
+#
+# READERS (is_gate False) exit 0 whatever they find; their code is logged and
+# passed through, never escalated — that is the promise in the docstring above.
+#
+# A GATE exits non-zero to MEAN something. caddy-wording-coverage's own
+# docstring: "Exit 0 iff coverage is 100%". Treating it as a reader would leave
+# a wording regression as an rc=1 line in a log nobody opens, so a failing gate
+# makes this loop return 3 and the manifest declares that a FINDING.
 STEPS = (
-    ("red-status", "tools/red-status.py"),
-    ("estate-status", "tools/estate-status.py"),
-    ("forge-sync", "tools/forge-sync.py"),
+    ("red-status", "tools/red-status.py", False),
+    ("estate-status", "tools/estate-status.py", False),
+    ("forge-sync", "tools/forge-sync.py", False),
+    ("wording-coverage", "tools/caddy-wording-coverage.py", True),
 )
+
+#: Exit code meaning "a gate step reported a finding" (manifest:
+#: findings_exit_codes).
+FINDINGS = 3
 
 _FORBIDDEN = ("--apply", "--push-github")
 
@@ -35,7 +49,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     py = sys.executable
     spawned = 0
-    for sid, rel in STEPS:
+    findings: list[str] = []
+    for sid, rel, is_gate in STEPS:
         path = os.path.join(REPO, rel)
         print(f"\n===== {sid} =====", flush=True)
         if not os.path.isfile(path):
@@ -47,8 +62,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{sid} could not start: {exc}", file=sys.stderr)
             return 2
         print(f"----- {sid} rc={proc.returncode} -----", flush=True)
+        if is_gate and proc.returncode != 0:
+            findings.append(f"{sid} (rc={proc.returncode})")
         spawned += 1
-    return 0 if spawned == len(STEPS) else 2
+    if spawned != len(STEPS):
+        return 2
+    if findings:
+        print(f"\nFINDING: gate step(s) reported: {', '.join(findings)}", flush=True)
+        return FINDINGS
+    return 0
 
 
 if __name__ == "__main__":

@@ -83,10 +83,23 @@ def test_anatomy_graph_harvests_generated_loop_jobs():
         assert nodes[nid]["source"].endswith(f"loops/{loop_id}.loop.yml")
 
 
+#: The three READERS repo-check was born with. Each exits 0 whatever it finds;
+#: none may quietly disappear. Steps BEYOND these are allowed — `wording-coverage`
+#: was added 2026-09-25 — but only if they cannot write (asserted below).
+_REPO_CHECK_READERS = {"red-status", "estate-status", "forge-sync"}
+
+#: Flags that would make any step of this loop change something.
+_WRITE_FLAGS = ("--apply", "--push-github", "--confirm", "--write", "--force")
+
+
 def test_repo_check_pulse_job_is_report_only():
     d = _disc()
     m = yaml.safe_load((REPO / "files/anatomy/loops/repo-check.loop.yml").read_text(encoding="utf-8"))
     j = d._loop_pulse_block(m)["jobs"][0]
     blob = " ".join([j["command"], *(j.get("args") or [])])
-    assert "--apply" not in blob and "--push-github" not in blob
-    assert {s["id"] for s in m["steps"]} == {"red-status", "estate-status", "forge-sync"}
+    for flag in _WRITE_FLAGS:
+        assert flag not in blob, f"repo-check is report-only; {flag} is in its pulse command"
+    ids = {s["id"] for s in m["steps"]}
+    assert _REPO_CHECK_READERS <= ids, (
+        f"a reader vanished from repo-check: {sorted(_REPO_CHECK_READERS - ids)}"
+    )
