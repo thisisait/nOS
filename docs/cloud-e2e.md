@@ -42,6 +42,8 @@ full log to `~/.nos/e2e/<tier>.log`. Extra arguments go to ansible:
 | `/usr/bin/python3` → 3.11 via alternatives; `python3-apt` is built for **3.12** | every `apt:` task fails on the venv python | `env.sh` picks the python that imports `apt_pkg` |
 | stdout/stderr of the agent's shell are **non-blocking** | `ansible` refuses to start ("requires blocking IO") | `e2e.sh` writes every run to a log file |
 | egress via a policy proxy: Docker Hub, GitHub, PyPI, apt, packagist **open**; `galaxy.ansible.com`, ghcr **blob storage** (`pkg-containers.githubusercontent.com`), `quay.io`, `lscr.io` **403** | collections and ~11 images unreachable | §Registries, §Galaxy |
+| kernel built **without IPv6** (no `/proc/sys/net/ipv6`) | any container binding `[::]` dies at start: docker-socket-proxy (ours to fix), 2FAuth's upstream nginx (not) | `nos_kernel_ipv6` → `DISABLE_IPV6=1`; `apps_skip: [twofauth]` |
+| image ships **PPAs** (deadsnakes, ondrej/php) the proxy refuses | `apt-get update` warns; Ansible `apt update_cache` **fails** once the 1 h cache lapses (the second converge) | `bootstrap.sh` renames unreachable sources to `*.nos-cloud-disabled` (sandbox only) |
 | egress IP is **shared** — Docker Hub anonymous budget measured 24/100 before the first pull | pulls fail with `toomanyrequests` | `mirror.gcr.io` registry mirror |
 
 ## No init system
@@ -136,12 +138,39 @@ longer equals `tools/ci-freeze.env`. The CI Integration jobs have the same
 shape (venv on `$GITHUB_PATH`, `ansible` in `tests/config.yml`'s
 `pip_packages`) — filed as a follow-up, not changed here.
 
+## Bugs this lane found that were not about the cloud
+
+A disposable, unconfigured Linux box is exactly the "fresh operator" nOS rarely
+meets. Fixed here because every fresh machine would have hit them:
+
+- **A checkout without `config.yml` could not converge.** The preflight YAML
+  validator loads each config file into `_preflight_throwaway`; the last one
+  loaded (`default.credentials.yml` when no overrides exist) left ~100
+  unrendered `{{ global_password_prefix }}_pw_*` templates riding
+  `{{ vars }}`, and core-up's eager snapshot aborted with
+  `'global_password_prefix' is undefined`. CI never saw it — it copies
+  `tests/config.yml` in first. The throwaway is now emptied after validation.
+- **An estate with no `iiab` service failed stack-up.** `iiab` is always in
+  the stack list; compose on a stack with no overrides exits 1 (`no service
+  selected`). Compose-up now loops `_up_stacks` (stacks with ≥1 override);
+  host-organ post gates keep reading `_remaining_stacks`.
+- **`$USER`-derived owners** (`tls-certs.yml`, `bone_user`, `pulse_user`) →
+  facts `user_id` / `user_gid`.
+- **A ledger test read the host's `~/wing/app/data/wing.db`** — green only
+  on a converged machine. Now hermetic.
+
+Gates: `tests/anatomy/test_cloud_e2e_contract.py` (all of the above that can
+be pinned offline) and `test_nos_proc_runs_the_unit_contract.py`.
+
 ## The profile
 
 `profiles/cloud-e2e.yml` — the smallest estate that still proves the
-topology: L0 (PostgreSQL, Redis), Authentik, Traefik as the edge. Every
-host-only macOS concern is off; so is every service whose image the default
-policy refuses. Grow it one service at a time, running `preflight` first.
+topology: L0 (PostgreSQL, Redis), Authentik, Traefik as the edge, plus the
+Tier-2 apps runner (documenso, qdrant, roundcube; `apps_skip: [twofauth]`).
+Every host-only macOS concern is off; so is every service whose image the
+default policy refuses. Grow it one service at a time, running `preflight`
+first. Tier-2 app skips go in `apps_skip` (new, default `[]`), not in the
+committed manifest.
 
 ## Status
 
