@@ -59,6 +59,16 @@ services:
       # slots are reserved for SUPERUSER". 0 = close after each request.
       AUTHENTIK_POSTGRESQL__CONN_MAX_AGE: "{{ authentik_pg_conn_max_age | default(0) }}"
       AUTHENTIK_POSTGRESQL__CONN_HEALTH_CHECKS: "true"
+{% if not (nos_kernel_ipv6 | default(true) | bool) %}
+      # Kernel without IPv6 (tasks/_platform.yml): authentik's default listeners
+      # are "[::]:9000" / "[::]:9300". The server falls back; the Rust WORKER
+      # logs "gracefully shutting down worker" and never spawns its Python
+      # task processes — while its healthcheck stays green. No blueprint
+      # (not even authentik's own default flows) is ever applied. Measured
+      # 2026-09-25, cloud e2e lane.
+      AUTHENTIK_LISTEN__HTTP: "0.0.0.0:9000"
+      AUTHENTIK_LISTEN__METRICS: "0.0.0.0:9300"
+{% endif %}
       AUTHENTIK_WEB__WORKERS: "{{ authentik_web_workers | default(2) }}"
       AUTHENTIK_WEB__THREADS: "{{ authentik_web_threads | default(4) }}"
       AUTHENTIK_BOOTSTRAP_PASSWORD: "{{ authentik_bootstrap_password }}"
@@ -122,6 +132,16 @@ services:
       AUTHENTIK_POSTGRESQL__CONN_HEALTH_CHECKS: "true"
       AUTHENTIK_WORKER__PROCESSES: "{{ authentik_worker_processes | default(1) }}"
       AUTHENTIK_WORKER__THREADS: "{{ authentik_worker_threads | default(2) }}"
+{% if not (nos_kernel_ipv6 | default(true) | bool) %}
+      # Kernel without IPv6 (tasks/_platform.yml): authentik's default listeners
+      # are "[::]:9000" / "[::]:9300". The server falls back; the Rust WORKER
+      # logs "gracefully shutting down worker" and never spawns its Python
+      # task processes — while its healthcheck stays green. No blueprint
+      # (not even authentik's own default flows) is ever applied. Measured
+      # 2026-09-25, cloud e2e lane.
+      AUTHENTIK_LISTEN__HTTP: "0.0.0.0:9000"
+      AUTHENTIK_LISTEN__METRICS: "0.0.0.0:9300"
+{% endif %}
 {% if install_mailpit | default(false) %}
       # ── SMTP relay → Mailpit (worker sends most emails) ────────────────────
       AUTHENTIK_EMAIL__HOST: "host.docker.internal"
