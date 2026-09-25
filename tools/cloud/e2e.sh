@@ -143,7 +143,14 @@ tier_reset() {
   [ -x "$HOME/.local/bin/nos-proc" ] && for u in "$HOME"/.config/systemd/user/*.service; do
     [ -e "$u" ] && "$HOME/.local/bin/nos-proc" stop "$(basename "$u")"
   done
-  rm -rf "$HOME/stacks" "$HOME/.nos/state.yml"
+  # The data a converge created, so the next one meets a FRESH machine: bind-
+  # mounted service data (~/nos), rendered stacks, the persisted secret store
+  # and the prefix state. Leaving the store while wiping the data is the
+  # half-reset that produced "password authentication failed for user
+  # authentik" here (measured). ≈ `nos --remove=data`, without the prompts.
+  rm -rf "$HOME/stacks" "$HOME/nos" "$HOME/projects/default" \
+         "$HOME/.nos/state.yml" "$HOME/.nos/secrets.yml" "$HOME/.nos/proc" \
+         "$REPO/.ansible-prefix-state"
   pass reset "images kept (re-pull is the slow part)"
 }
 
