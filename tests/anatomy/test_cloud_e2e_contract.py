@@ -174,3 +174,13 @@ def test_an_empty_stack_is_not_brought_up():
     tail = up[fire:]
     assert 'loop: "{{ _remaining_stacks }}"' not in tail, "compose-up must loop _up_stacks"
     assert "'iiab' in (_remaining_stacks" in tail, "host-organ post gates must not lose iiab"
+
+
+def test_apps_skip_reaches_the_renderer():
+    """The discovery `find` only answers "any manifests?"; nos_apps_render
+    lists apps_dir itself. A skip wired into the find alone rendered the app
+    anyway (measured: twofauth kept coming up after apps_skip: [twofauth])."""
+    role = (REPO / "roles/pazny.apps_runner/tasks/main.yml").read_text()
+    assert 'skip: "{{ apps_skip | default([]) }}"' in role
+    mod = (REPO / "files/anatomy/library/nos_apps_render.py").read_text()
+    assert 'p["skip"]' in mod

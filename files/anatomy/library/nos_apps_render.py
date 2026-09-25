@@ -517,6 +517,8 @@ def main():
             eu_registries=dict(type="list", elements="str", default=[]),
             strict=dict(type="bool", default=False),
             traefik_network=dict(type="str", default="shared_net"),
+            # apps_skip: manifest ids (file stems) this estate declines.
+            skip=dict(type="list", elements="str", default=[]),
         ),
         supports_check_mode=True,
     )
@@ -536,6 +538,8 @@ def main():
         if fname.startswith("_"):  # skip templates
             continue
         if fname.endswith((".draft", ".draft.yml", ".draft.yaml")):
+            continue
+        if os.path.splitext(fname)[0] in set(p["skip"]):
             continue
         path = os.path.join(apps_dir, fname)
         app, secrets, viol = _process_one(

@@ -95,6 +95,7 @@
             eu_registries: "{{ apps_eu_registries | default([]) }}"
             strict: "{{ apps_strict | default(false) | bool }}"
             traefik_network: "{{ apps_traefik_network }}"
+            skip: "{{ apps_skip | default([]) }}"
           register: _apps_render
 
         # ── Defensive 0-app warning ──────────────────────────────────────────
