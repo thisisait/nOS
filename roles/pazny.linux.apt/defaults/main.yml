@@ -2,7 +2,7 @@
 # ==============================================================================
 # pazny.linux.apt — Debian/Ubuntu package management (Linux sibling of pazny.mac.homebrew)
 #
-# Status: STUB. Phase 1 of Linux port — scaffolding only, no real tasks yet.
+# Status: installs linux_apt_base_packages + linux_apt_packages (2026-09-25).
 # Plan: mirror pazny.mac.homebrew's variable shape so config.yml can declare
 # packages once with cross-platform semantics:
 #
@@ -12,15 +12,29 @@
 #
 # ==============================================================================
 
-# Packages installed via `apt-get install`. Each entry is either a string
-# (just the package name) or a dict with `name` + optional `state`.
+# Executables the playbook invokes on the host (synchronize → rsync, get_url/
+# unarchive → curl/unzip, wing.db probes → sqlite3, secrets → openssl, become
+# to another user → acl). Present on macOS by default; absent on a minimal image.
+linux_apt_base_packages:
+  - acl
+  - ca-certificates
+  - curl
+  - git
+  - jq
+  - openssl
+  - rsync
+  - sqlite3
+  - tar
+  - unzip
+
+# The operator's own packages, installed on top (package names, strings).
 linux_apt_packages: []
 
 # Packages explicitly removed.
 linux_apt_uninstalled_packages: []
 
 # Run `apt-get upgrade` for everything currently installed (mirrors
-# homebrew_upgrade_all_packages on macOS). Default true so the box stays
+# homebrew_upgrade_all_packages on macOS). NOT YET READ by tasks/main.yml. Default true so the box stays
 # current — every blank/run pulls latest patch versions.
 linux_apt_upgrade_all_packages: true
 

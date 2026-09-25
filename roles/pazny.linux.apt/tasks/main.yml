@@ -1,22 +1,34 @@
 ---
 # ==============================================================================
-# pazny.linux.apt — STUB tasks for the Linux package manager.
+# pazny.linux.apt — the host prerequisites a Linux converge shells out to.
 #
-# Phase 1 of the cross-platform port. The real implementation lands in a
-# follow-up commit once the macOS path is verified to still work after the
-# OS-conditional refactor in main.yml.
+# macOS ships rsync/curl/unzip/sqlite3 in the base system and Homebrew covers
+# the rest; a minimal Ubuntu (a container, a cloud image, WSL2) does not. The
+# first measured casualty: pazny.bone's `synchronize` died with "Failed to find
+# required executable rsync" on the cloud sandbox (2026-09-25) — the CI runner
+# image happens to carry rsync, so the Linux wet-test never saw it.
 #
-# What goes here eventually:
-#   * apt update + apt-key for third-party repos (Docker, Tailscale, …)
-#   * apt install for linux_apt_packages
-#   * apt remove for linux_apt_uninstalled_packages
-#   * apt upgrade-all loop with snapshot-before / report-after, mirroring
-#     pazny.mac.homebrew's outdated → upgrade → report flow
+#   linux_apt_base_packages   what the PLAYBOOK itself needs (not operator taste)
+#   linux_apt_packages        the operator's own list, on top
+#
+# Upgrade-all / third-party repos stay unimplemented: an unattended dist
+# upgrade is not something a converge should do by default.
 # ==============================================================================
 
-- name: "[pazny.linux.apt] STUB — Linux port not yet wired"
-  ansible.builtin.debug:
-    msg: |
-      pazny.linux.apt is a Phase-1 scaffolding stub.
-      No packages will be installed on this run.
-  when: ansible_os_family in ['Debian', 'RedHat']
+- name: "[pazny.linux.apt] Install playbook prerequisites + operator packages"
+  ansible.builtin.apt:
+    name: "{{ (linux_apt_base_packages + (linux_apt_packages | default([]))) | unique }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+  when: ansible_os_family == 'Debian'
+
+- name: "[pazny.linux.apt] Remove operator-declared packages"
+  ansible.builtin.apt:
+    name: "{{ linux_apt_uninstalled_packages }}"
+    state: absent
+  become: true
+  when:
+    - ansible_os_family == 'Debian'
+    - linux_apt_uninstalled_packages | default([]) | length > 0
