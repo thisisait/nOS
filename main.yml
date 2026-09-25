@@ -236,6 +236,20 @@
       when: item.stat.exists | default(false)
       tags: ['always', 'preflight']
 
+    # Empty the throwaway once it has done its job. It holds the LAST file the
+    # loop loaded — on a checkout with no config.yml/credentials.yml that is
+    # default.credentials.yml, i.e. ~100 unrendered `{{ global_password_prefix
+    # }}_pw_*` templates riding `{{ vars }}`. core-up's eager snapshot
+    # (`nos_plugin_ctx: "{{ vars }}"`) then aborted with "'global_password_prefix'
+    # is undefined" (measured 2026-09-25, first cloud-sandbox converge: a fresh
+    # clone cannot converge). CI never saw it: it copies tests/config.yml in
+    # first, so the throwaway ended on a template-free file.
+    # Gate: tests/anatomy/test_cloud_e2e_contract.py::test_preflight_throwaway_is_emptied
+    - name: "[Preflight] Drop the validation throwaway (keeps it out of {{ '{{ vars }}' }})"
+      ansible.builtin.set_fact:
+        _preflight_throwaway: {}
+      tags: ['always', 'preflight']
+
     - name: Include playbook configuration overrides.
       include_vars: "{{ item }}"
       with_fileglob:
@@ -745,7 +759,7 @@
         # Linux: systemd --user re-reads EnvironmentFile on restart (no
         # bootout/bootstrap dance needed for rotated secrets).
         export XDG_RUNTIME_DIR="/run/user/${UID_NUM}"
-        systemctl --user restart "${LABEL}.service"
+        {{ nos_user_systemctl | default('systemctl --user') }} restart "${LABEL}.service"
         {% else %}
         PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
         launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true

@@ -70,6 +70,18 @@
         name: docker
         enabled: true
         state: started
+      when: (nos_init | default('systemd')) == 'systemd'
+
+    # No init system (tasks/_platform.yml → nos_init == 'none'): nothing here
+    # can own dockerd's lifetime, so the playbook does not pretend to. The
+    # daemon must already answer — tools/cloud/bootstrap.sh starts it in a
+    # Claude cloud session. The verify step below is what fails if it does not.
+    - name: "[linux.docker] No init system — dockerd must already be running"
+      ansible.builtin.debug:
+        msg: >-
+          nos_init=none: not starting docker.service (no systemd). Expecting a
+          dockerd started outside the playbook (tools/cloud/bootstrap.sh).
+      when: (nos_init | default('systemd')) == 'none'
 
     - name: "[linux.docker] Add {{ linux_docker_user }} to docker group"
       ansible.builtin.user:

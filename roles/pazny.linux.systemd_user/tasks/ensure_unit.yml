@@ -56,6 +56,7 @@
   register: _su_linger
   changed_when: "'already enabled' not in (_su_linger.stderr | default(''))"
   failed_when: false
+  when: (nos_init | default('systemd')) == 'systemd'
 
 - name: "[systemd_user] Render unit {{ _su_unit_file }}"
   ansible.builtin.template:
@@ -71,7 +72,9 @@
     daemon_reload: true
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ _su_uid }}"
-  when: _su_render is changed
+  when:
+    - _su_render is changed
+    - (nos_init | default('systemd')) == 'systemd'
 
 # su_enable=false renders the unit but does NOT enable/start it — used for a
 # timer-driven oneshot .service (the .timer enables it; the service itself must
@@ -94,4 +97,35 @@
   failed_when:
     - (su_type | default('service')) != 'timer'
     - _su_enable_start is failed
-  when: su_enable | default(true) | bool
+  when:
+    - su_enable | default(true) | bool
+    - (nos_init | default('systemd')) == 'systemd'
+
+# ── No init system (nos_init == 'none', tasks/_platform.yml) ─────────────────
+# Same rendered unit, read by nos-proc instead of systemd. A timer is reported
+# NOT-SCHEDULED by nos-proc itself — absent, never quietly green.
+- name: "[systemd_user] (no init) Install nos-proc"
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/anatomy/scripts/nos-proc.py"
+    dest: "{{ nos_user_systemctl }}"
+    mode: '0755'
+  when: (nos_init | default('systemd')) == 'none'
+
+- name: "[systemd_user] (no init) Start {{ _su_unit_file }}"
+  ansible.builtin.command:
+    argv:
+      - "{{ nos_user_systemctl }}"
+      - "{{ 'restart' if (_su_render is changed and (su_type | default('service')) == 'service') else 'start' }}"
+      - "{{ _su_unit_file }}"
+  register: _su_proc_start
+  changed_when: _su_render is changed
+  when:
+    - su_enable | default(true) | bool
+    - (nos_init | default('systemd')) == 'none'
+
+- name: "[systemd_user] (no init) Report {{ _su_unit_file }}"
+  ansible.builtin.debug:
+    msg: "{{ _su_proc_start.stdout }}"
+  when:
+    - (nos_init | default('systemd')) == 'none'
+    - (_su_proc_start.stdout | default('')) | length > 0

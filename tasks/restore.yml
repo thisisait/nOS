@@ -528,7 +528,7 @@
       ansible.builtin.command: >-
         {{ ('launchctl bootout gui/' ~ wing_uid ~ '/' ~ wing_label)
            if (nos_service_manager | default('launchd')) == 'launchd'
-           else ('systemctl --user stop ' ~ wing_label) }}
+           else ((nos_user_systemctl | default('systemctl --user')) ~ ' stop ' ~ wing_label) }}
       changed_when: true
       failed_when: false
 
@@ -580,7 +580,7 @@
       ansible.builtin.command: >-
         {{ ('launchctl bootstrap gui/' ~ wing_uid ~ ' ' ~ ansible_facts['env']['HOME'] ~ '/Library/LaunchAgents/' ~ wing_label ~ '.plist')
            if (nos_service_manager | default('launchd')) == 'launchd'
-           else ('systemctl --user start ' ~ wing_label) }}
+           else ((nos_user_systemctl | default('systemctl --user')) ~ ' start ' ~ wing_label) }}
       changed_when: true
       failed_when: false
 

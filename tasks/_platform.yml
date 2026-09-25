@@ -19,6 +19,8 @@
 #   nos_nginx_sites_enabled   {{ nos_nginx_etc_dir }}/sites-enabled
 #   nos_systemd_user_dir      ~/Library/LaunchAgents | ~/.config/systemd/user
 #   nos_service_manager       "launchd" | "systemd-user" | "systemd-system"
+#   nos_init                  "launchd" | "systemd" | "none"
+#   nos_user_systemctl        "systemctl --user" | ~/.local/bin/nos-proc
 #   nos_docker_bin            /usr/local/bin/docker | /usr/bin/docker
 #   nos_homebrew_prefix       /opt/homebrew | "" (empty on Linux)
 #
@@ -80,6 +82,27 @@
     nos_docker_bin: "/usr/bin/docker"
   when: nos_platform == 'redhat'
 
+# A Linux host whose PID 1 is not systemd — a container, a cloud agent sandbox
+# (Claude Code on the web runs `process_api` as PID 1), WSL1. The unit CONTRACT
+# does not change: roles still render the same ~/.config/systemd/user/*.service
+# files through pazny.linux.systemd_user. What changes is who reads them —
+# `nos-proc` (files/anatomy/scripts/nos-proc.py), a repo-owned supervisor that
+# honours ExecStart / Environment / EnvironmentFile / WorkingDirectory /
+# Restart. Timers are NOT scheduled there and it says so on every start.
+# docs/cloud-e2e.md §No init system.
+- name: "[platform] Detect the init system (systemd vs none)"
+  ansible.builtin.set_fact:
+    nos_init: >-
+      {{ 'launchd' if (nos_service_manager | default('')) == 'launchd'
+         else ('systemd' if (ansible_facts['service_mgr'] | default('systemd')) == 'systemd'
+               else 'none') }}
+
+- name: "[platform] The user-scope service control command"
+  ansible.builtin.set_fact:
+    nos_user_systemctl: >-
+      {{ (ansible_facts['env']['HOME'] ~ '/.local/bin/nos-proc')
+         if nos_init == 'none' else 'systemctl --user' }}
+
 - name: "[platform] Compute derived nginx vhost paths + point docker_bin at the platform binary"
   ansible.builtin.set_fact:
     nos_nginx_sites_available: "{{ nos_nginx_etc_dir }}/sites-available"
@@ -124,6 +147,7 @@
        Detected:         {{ nos_platform }}
        Package manager:  {{ nos_pkg_manager }}
        Service manager:  {{ nos_service_manager }}
+       Init system:      {{ nos_init }}
        nginx etc:        {{ nos_nginx_etc_dir }}
        systemd user:     {{ nos_systemd_user_dir }}
       ────────────────────────────────────────────────────────────────────

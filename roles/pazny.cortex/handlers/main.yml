@@ -21,5 +21,16 @@
     name: "{{ cortex_launchd_label }}"
     scope: user
     state: restarted
-  when: (nos_service_manager | default('launchd')) == 'systemd-user'
+  when:
+    - (nos_service_manager | default('launchd')) == 'systemd-user'
+    - (nos_init | default('systemd')) == 'systemd'
+  listen: Restart cortex
+
+# No init system: nos-proc re-reads the unit's Environment= on restart too.
+- name: Restart cortex (nos-proc)
+  ansible.builtin.command:
+    argv: ["{{ nos_user_systemctl }}", "restart", "{{ cortex_launchd_label }}.service"]
+  when:
+    - (nos_service_manager | default('launchd')) == 'systemd-user'
+    - (nos_init | default('systemd')) == 'none'
   listen: Restart cortex

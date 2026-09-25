@@ -30,7 +30,7 @@
   ansible.builtin.shell: |
     {% if (nos_service_manager | default('launchd')) == 'systemd-user' %}
     export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-    systemctl --user restart "{{ bone_launchd_label | default('eu.thisisait.nos.bone') }}.service"
+    {{ nos_user_systemctl | default('systemctl --user') }} restart "{{ bone_launchd_label | default('eu.thisisait.nos.bone') }}.service"
     {% else %}
     LABEL="{{ bone_launchd_label | default('eu.thisisait.nos.bone') }}"
     PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"

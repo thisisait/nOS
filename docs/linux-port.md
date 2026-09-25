@@ -52,6 +52,13 @@ Cross-platform variables live in `tasks/_platform.yml` (imported in `pre_tasks`)
 
 ## Host daemons (launchd → systemd --user)
 
+> **No systemd at all (containers, cloud agent sandboxes — 2026-09-25):**
+> `tasks/_platform.yml` derives `nos_init` (`systemd` | `none`) from
+> `ansible_facts['service_mgr']`. On `none` the same unit files are rendered
+> and `files/anatomy/scripts/nos-proc.py` supervises them (`nos_user_systemctl`
+> is the swap point for every restart handler). Timers are reported
+> NOT-SCHEDULED, never green. See [cloud-e2e.md](cloud-e2e.md) §No init system.
+
 The anatomy daemons run as **host services**, not containers (A3.5/A3a/A4).
 On macOS that's a `launchd` plist + `launchctl bootstrap`; on Linux it's a
 systemd `--user` unit. The abstraction lives in **`pazny.linux.systemd_user`**:
