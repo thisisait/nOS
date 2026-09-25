@@ -99,23 +99,38 @@ _BUILTINS = {
 }
 
 
-def _uses_vars_in_code(path: pathlib.Path) -> bool:
-    """`{{ vars }}` in a VALUE, not in a comment.
+#: A Jinja literal-string expression: `{{ '…' }}` or `{{ "…" }}`. Inside one,
+#: `{{ vars }}` is TEXT being printed, not a namespace being resolved.
+_JINJA_LITERAL = re.compile(r"""\{\{\s*(['"]).*?\1\s*\}\}""", re.S)
 
-    The first version of this matched the raw text and reported
-    tasks/pre-migrate.yml as an eager consumer AFTER that file had been fixed —
-    because the comment explaining the fix quotes `{{ vars }}` four times. A
-    detector that reads prose is the same mistake this gate exists to catch,
-    one layer up.
+
+def _resolves_vars(line: str) -> bool:
+    """Does this line actually snapshot the `{{ vars }}` namespace?
+
+    Three things have now been mistaken for a resolve, all of them prose:
+
+      1. a COMMENT quoting `{{ vars }}` — the first version of this gate
+         reported tasks/pre-migrate.yml as an eager consumer AFTER it had been
+         fixed, because the comment explaining the fix quotes it four times;
+      2. a trailing ` # …` comment on a code line;
+      3. (2026-09-25) a Jinja-ESCAPED literal inside a task NAME —
+         `{{ '{{ vars }}' }}` prints the text and resolves nothing, but it put
+         the computed eager boundary 1113 lines too early and turned four
+         consecutive dev CI runs red.
+
+    A detector that reads prose is the same mistake this gate exists to catch,
+    one layer up. Both callers ask this one question so the next spelling is
+    fixed once.
     """
-    for line in path.read_text().splitlines():
-        stripped = line.lstrip()
-        if stripped.startswith("#"):
-            continue
-        code = line.split(" #", 1)[0]
-        if "{{ vars }}" in code:
-            return True
-    return False
+    if line.lstrip().startswith("#"):
+        return False
+    code = line.split(" #", 1)[0]
+    return "{{ vars }}" in _JINJA_LITERAL.sub("", code)
+
+
+def _uses_vars_in_code(path: pathlib.Path) -> bool:
+    """`{{ vars }}` resolved in a VALUE — not quoted, not commented."""
+    return any(_resolves_vars(line) for line in path.read_text().splitlines())
 
 
 def _first_eager_consumer() -> tuple[int, str]:
@@ -145,7 +160,7 @@ def _first_eager_consumer() -> tuple[int, str]:
     main = (REPO / "main.yml").read_text().splitlines()
     hits: list[tuple[int, str]] = []
     for n, line in enumerate(main, 1):
-        if "{{ vars }}" in line.split(" #", 1)[0] and not line.lstrip().startswith("#"):
+        if _resolves_vars(line):
             hits.append((n, "main.yml itself"))
         m = re.search(r"(?:import_tasks|include_tasks):\s*\"?([\w./-]+\.yml)", line)
         if m:

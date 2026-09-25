@@ -31,13 +31,17 @@ PROFILE="${NOS_E2E_PROFILE:-profiles/cloud-e2e.yml}"
 LOGS="${HOME}/.nos/e2e"
 mkdir -p "$LOGS"
 TIER="${1:-}"; shift || true
+# macOS ships bash 3.2, where "${EXTRA[@]}" on an EMPTY array under `set -u`
+# is an unbound-variable ERROR — and EXTRA is empty for `e2e.sh reset`, the
+# very call the disposability guard exists for. Expand through the
+# `${a[@]+…}` idiom everywhere below, never bare.
 EXTRA=("$@")
 
 say()  { printf '[e2e] %s\n' "$*"; }
 pass() { printf '[e2e] PASS %-11s %s\n' "$1" "${2:-}"; }
 fail() { printf '[e2e] FAIL %-11s %s\n' "$1" "${2:-}"; }
 
-for a in "${EXTRA[@]}"; do
+for a in ${EXTRA[@]+"${EXTRA[@]}"}; do
   case "$a" in
     *remove=*|*confirm=true*|*blank=*|*flush=*|*uninstall=*)
       fail guard "removal token '$a' refused — use \`$0 reset\` in a sandbox"; exit 2 ;;
@@ -56,7 +60,7 @@ playbook() {
       -e allow_weak_prefix=true \
       -e ansible_python_interpreter="$NOS_MODULE_PYTHON" \
       -e @"$PROFILE" \
-      "$@" "${EXTRA[@]}" </dev/null >"$log" 2>&1
+      "$@" ${EXTRA[@]+"${EXTRA[@]}"} </dev/null >"$log" 2>&1
 }
 
 recap() { grep -A2 '^PLAY RECAP' "$1" | grep -E 'ok=' | head -1 | sed 's/^ *//'; }
@@ -87,7 +91,7 @@ tier_preflight() {
   if ! docker info >/dev/null 2>&1; then
     fail preflight "docker does not answer — run tools/cloud/bootstrap.sh"; return 1
   fi
-  .ci-venv/bin/python tools/cloud/registry-reach.py --profile "$PROFILE" "${EXTRA[@]}" \
+  .ci-venv/bin/python tools/cloud/registry-reach.py --profile "$PROFILE" ${EXTRA[@]+"${EXTRA[@]}"} \
     >"$log" 2>&1
   local rc=$?
   if [ $rc -eq 0 ]; then pass preflight "$(tail -1 "$log")"; else

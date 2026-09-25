@@ -1,65 +1,54 @@
 {
-  "accuracy": 0.9647,
-  "runs": 17,
-  "repeat": 3,
+  "accuracy": 0.9833,
+  "runs": 6,
+  "repeat": 1,
   "threshold": 0.85,
   "crosscheck_accuracy": 1.0,
   "per_field": {
-    "buyer.ico": 0.882,
+    "buyer.ico": 0.833,
     "currency": 1.0,
     "due": 1.0,
-    "id": 0.882,
+    "id": 1.0,
     "issue": 1.0,
     "net": 1.0,
     "payable": 1.0,
     "rates": 1.0,
-    "seller.ico": 0.882,
+    "seller.ico": 1.0,
     "vat": 1.0
   },
   "per_doc": {
     "alfa-001": {
       "runs": [
-        0.9,
-        0.9,
-        1.0
+        0.9
       ],
-      "spread": 0.1
+      "spread": 0.0
     },
     "alfa-002": {
       "runs": [
-        1.0,
-        1.0,
         1.0
       ],
       "spread": 0.0
     },
     "beta-001": {
       "runs": [
-        1.0,
         1.0
       ],
       "spread": 0.0
     },
     "beta-002": {
       "runs": [
-        1.0,
-        1.0,
         1.0
       ],
       "spread": 0.0
     },
     "gama-001": {
       "runs": [
-        0.8,
-        0.8,
         1.0
       ],
-      "spread": 0.2
+      "spread": 0.0
     },
     "gama-002": {
       "runs": [
-        1.0,
-        1.0,
         1.0
       ],
       "spread": 0.0
