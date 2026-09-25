@@ -95,6 +95,14 @@ services:
     networks:
       - infra_net
       - {{ stacks_shared_network }}
+    healthcheck:
+      # The image default (start_period 60s, 3 x 30s retries) marks the SERVER
+      # unhealthy at ~150s — and a cold first boot on a 4-vCPU sandbox runs its
+      # migrations for ~155s (measured 2026-09-25: unhealthy 12:01:32, healthy
+      # 12:02:03). The STRICT probe aborts on unhealthy, so the whole converge
+      # failed on a server that was one check from green. start_period only
+      # forgives failures; the first passing check still turns it healthy.
+      start_period: 300s
     logging:
       driver: "json-file"
       options:
