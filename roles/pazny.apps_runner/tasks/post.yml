@@ -55,6 +55,15 @@
         apps_extra_services: >-
           {{ _apps_render.apps | map(attribute='registry_entry') | list }}
 
+    # First converge on a fresh machine: this runs BEFORE tasks/service-registry.yml
+    # (which owns the directory) and before openclaw, so nothing has made it yet
+    # (measured 2026-09-25, cloud e2e lane, openclaw off).
+    - name: "[Apps Post] Ensure the service-registry directory exists"
+      ansible.builtin.file:
+        path: "{{ openclaw_projects_dir | default(ansible_facts['env']['HOME'] + '/projects') }}/default"
+        state: directory
+        mode: '0755'
+
     - name: "[Apps Post] Re-render service-registry.json with Tier-2 entries"
       ansible.builtin.template:
         src: "{{ playbook_dir }}/templates/service-registry.json.j2"
