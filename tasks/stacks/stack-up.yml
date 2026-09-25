@@ -191,6 +191,28 @@
         )
       }}
 
+# A stack whose every service is off has a base file with `services: {}` and
+# no overrides, and `docker compose up` on it exits 1 ("no service selected").
+# `iiab` is unconditionally in the list above, so any estate that enables
+# nothing there — the cloud e2e profile, measured 2026-09-25 — failed the
+# fail-fast assert below for a stack with nothing to start. Drop empty stacks
+# here, visibly. (Orphan cleanup of a just-emptied stack is prune-disabled's
+# job; an `up` on it never could remove them — it errors first.)
+- name: "[Stacks] Drop stacks with no enabled service (nothing to bring up)"
+  tags: ['stacks', 'always']
+  ansible.builtin.set_fact:
+    _empty_stacks: "{{ _remaining_stacks | reject('in', _stack_overrides_map | dict2items | selectattr('value') | map(attribute='key') | list) | list }}"
+    # A NEW name, not a rewrite of _remaining_stacks: post-start gates below
+    # read `'iiab' in _remaining_stacks` for host organs (wing, uptime-kuma
+    # monitors) whose presence does not depend on an iiab container.
+    _up_stacks: "{{ _remaining_stacks | select('in', _stack_overrides_map | dict2items | selectattr('value') | map(attribute='key') | list) | list }}"
+
+- name: "[Stacks] Report skipped empty stacks"
+  tags: ['stacks', 'always']
+  ansible.builtin.debug:
+    msg: "No enabled service in: {{ _empty_stacks | join(', ') }} — not brought up."
+  when: _empty_stacks | length > 0
+
 # ── Start remaining stacks (parallel) ───────────────────────────────────────
 # START phase only: `up -d` (NO --wait) does the image pull/build + container
 # create/start and returns WITHOUT blocking on health. Firing them async +
@@ -209,7 +231,7 @@
     --progress plain
     up -d --build --remove-orphans
     {{ _docker_compose_pull | default('') }} 2>&1
-  loop: "{{ _remaining_stacks }}"
+  loop: "{{ _up_stacks }}"
   async: "{{ (stack_up_wait_timeout | default(540) | int) + 120 }}"
   poll: 0
   register: _stack_jobs
@@ -281,7 +303,7 @@
     --progress plain
     up -d --build --remove-orphans
     {{ _docker_compose_pull | default('') }} 2>&1
-  loop: "{{ _remaining_stacks }}"
+  loop: "{{ _up_stacks }}"
   register: _stack_seq
   # A19 (2026-05-23): retry transient `up -d` failures (rc != 0) before the
   # fail-fast assert. Docker Desktop's virtiofs intermittently fails NESTED
@@ -372,8 +394,8 @@
   tags: ['stacks', 'always']
   ansible.builtin.include_tasks: wait-stacks-healthy.yml
   vars:
-    _wait_stacks: "{{ _remaining_stacks }}"
-  when: _remaining_stacks | default([]) | length > 0
+    _wait_stacks: "{{ _up_stacks }}"
+  when: _up_stacks | default([]) | length > 0
 
 # ── Plugin loader — post_compose for all non-core stacks ────────────────────
 # Runs AFTER the health-wait so every stack is confirmed HEALTHY (not just
@@ -529,7 +551,7 @@
         +
         ((_core_observability_enabled | default(true)) | ternary(['observability'], []))
         +
-        _remaining_stacks
+        (_up_stacks | default(_remaining_stacks))
       }}
 
 - name: "[Stacks] Show running containers across all stacks"

@@ -159,3 +159,18 @@ def test_preflight_throwaway_is_emptied():
     reset = main.find("_preflight_throwaway: {}", loop)
     snapshot = main.find("tasks/stacks/core-up.yml", loop)
     assert loop < reset < snapshot, "the throwaway must be emptied before core-up"
+
+
+def test_an_empty_stack_is_not_brought_up():
+    """`iiab` is always in _remaining_stacks; with nothing enabled there,
+    `docker compose up` exits 1 ("no service selected") and the fail-fast
+    assert failed a converge that had nothing to start (cloud profile,
+    2026-09-25). Compose-up loops read _up_stacks; host-organ post gates keep
+    reading _remaining_stacks."""
+    up = (REPO / "tasks" / "stacks" / "stack-up.yml").read_text()
+    drop = up.index("_up_stacks: \"{{ _remaining_stacks | select('in'")
+    fire = up.index("Fire docker compose up -d per stack")
+    assert drop < fire
+    tail = up[fire:]
+    assert 'loop: "{{ _remaining_stacks }}"' not in tail, "compose-up must loop _up_stacks"
+    assert "'iiab' in (_remaining_stacks" in tail, "host-organ post gates must not lose iiab"
