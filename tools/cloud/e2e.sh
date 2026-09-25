@@ -154,6 +154,10 @@ tier_reset() {
   rm -rf "$HOME/stacks" "$HOME/nos" "$HOME/projects/default" \
          "$HOME/.nos/state.yml" "$HOME/.nos/secrets.yml" "$HOME/.nos/proc" \
          "$REPO/.ansible-prefix-state"
+  # Host organs' runtime trees (venvs, wing.db, cortex store). Tools the
+  # converge installs (~/.nvm, ~/.local/bin/{frankenphp,composer.phar}) stay:
+  # re-downloading them proves nothing about nOS.
+  rm -rf "$HOME/bone" "$HOME/pulse" "$HOME/wing" "$HOME/cortex"
   pass reset "images kept (re-pull is the slow part)"
 }
 
