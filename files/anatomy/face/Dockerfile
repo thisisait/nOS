@@ -7,7 +7,11 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci || npm install
+# nos_build_ca (optional BuildKit secret): a TLS-intercepting proxy's CA,
+# trusted for this download step only — it never lands in a layer.
+RUN --mount=type=secret,id=nos_build_ca,required=false \
+    if [ -s /run/secrets/nos_build_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/nos_build_ca; fi; \
+    npm ci || npm install
 COPY . .
 RUN npm run build && npm prune --omit=dev
 

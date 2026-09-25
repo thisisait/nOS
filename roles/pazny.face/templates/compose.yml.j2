@@ -22,6 +22,12 @@ services:
     build:
       context: {{ face_src_dir | default(ansible_facts['env']['HOME'] + '/face/src') }}
       dockerfile: Dockerfile
+{% if nos_build_ca_bundle | default('', true) | length > 0 %}
+      # BUILD-time trust only (a BuildKit secret, never a layer): see
+      # nos_build_ca_bundle in default.config.yml.
+      secrets:
+        - nos_build_ca
+{% endif %}
     image: nos/face:{{ face_version }}
     restart: unless-stopped
     ports:
@@ -113,3 +119,9 @@ services:
         max-file: "3"
     mem_limit: {{ face_mem_limit | default(docker_mem_limit_light) }}
     cpus: {{ face_cpus | default(docker_cpus_light) }}
+{% if nos_build_ca_bundle | default('', true) | length > 0 %}
+
+secrets:
+  nos_build_ca:
+    file: {{ nos_build_ca_bundle }}
+{% endif %}

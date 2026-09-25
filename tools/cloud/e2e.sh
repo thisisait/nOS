@@ -50,6 +50,12 @@ for a in ${EXTRA[@]+"${EXTRA[@]}"}; do
   esac
 done
 
+# The sandbox's egress intercepts TLS; its CA (SSL_CERT_FILE) is what an image
+# build must trust to reach npm/PyPI. Passed as nos_build_ca_bundle — a
+# BuildKit secret, never a layer. Empty on a host with plain egress.
+BUILD_CA="${NOS_BUILD_CA_BUNDLE:-${SSL_CERT_FILE:-}}"
+[ -n "$BUILD_CA" ] && [ ! -s "$BUILD_CA" ] && BUILD_CA=""
+
 # ansible-playbook from the frozen venv, BY PATH, with the venv OFF $PATH: the
 # playbook's own tasks shell out to `pip3` / `python3`, and those must reach the
 # host's tools, never the controller venv (the incident: bootstrap.sh, step 2).
@@ -62,6 +68,7 @@ playbook() {
       -e allow_weak_prefix=true \
       -e ansible_python_interpreter="$NOS_MODULE_PYTHON" \
       -e @"$PROFILE" \
+      ${BUILD_CA:+-e nos_build_ca_bundle="$BUILD_CA"} \
       "$@" ${EXTRA[@]+"${EXTRA[@]}"} </dev/null >"$log" 2>&1
 }
 

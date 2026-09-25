@@ -985,6 +985,12 @@ wing_audit_chain_enabled: false
 node_nvm_version: "lts/*"   # or specific: "22", "20"
 nvm_git_version: "v0.40.8"   # Linux: nvm cloned from github.com/nvm-sh/nvm at this tag (macOS: Homebrew nvm)
 
+# PEM bundle trusted while nOS BUILDS its own images (face today), never baked
+# into them — a BuildKit secret on the download steps. For a TLS-intercepting
+# egress: a corporate proxy, or the Claude cloud sandbox (tools/cloud/e2e.sh
+# passes its bundle). Empty = the image's own trust store only.
+nos_build_ca_bundle: ""
+
 # ── npm supply-chain posture ────────────────────────────────────────────────
 # `--ignore-scripts` on every npm install this playbook performs.
 #
