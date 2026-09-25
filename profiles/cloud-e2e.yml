@@ -1,0 +1,90 @@
+# =============================================================================
+# profiles/cloud-e2e.yml — the estate a Claude cloud sandbox can prove end to end
+#
+#   tools/cloud/e2e.sh converge          (docs/cloud-e2e.md)
+#
+# The smallest topology that is still REAL: L0 substrate, the SSO organ, the
+# edge. Chosen against what the sandbox measurably is (2026-09-25): Ubuntu 24.04
+# container, root, no systemd, ~16 GB, egress that reaches Docker Hub (via
+# mirror.gcr.io) and GitHub but refuses Galaxy, ghcr blob storage, quay, lscr.
+# Grow it one service at a time — `tools/cloud/e2e.sh preflight` first; a
+# service whose image the sandbox cannot pull is refused by
+# test_cloud_e2e_contract.py::test_profile_pulls_nothing_the_sandbox_refuses.
+# Every key must be declared in default.config.yml
+# (test_a_profile_only_sets_flags_that_exist.py).
+# =============================================================================
+
+# ── L0 substrate + SSO + edge ────────────────────────────────────────────────
+install_postgresql: true
+redis_docker: true
+install_authentik: true
+install_traefik: true
+install_nginx: false
+# Same upstream image as ghcr.io/goauthentik/server, served from Docker Hub —
+# ghcr's blob host (pkg-containers.githubusercontent.com) is refused here.
+authentik_image: authentik/server
+
+# ── Host organs — off until their no-init path is proven in this lane ────────
+install_bone: false
+install_pulse: false
+install_wing: false
+install_cortex: false
+install_face: false
+install_keap: false
+install_backup: false
+install_ears: false
+install_openclaw: false
+install_hermes: false
+install_opencode: false
+
+# ── Nothing the playbook installs into the controller's PATH ─────────────────
+# `pip3` in tasks/extra-packages.yml is whatever PATH resolves; measured: it
+# installed `ansible` into the frozen venv. e2e.sh strips the venv from PATH
+# too; this is the belt to that brace.
+pip_packages: []
+node_global_packages: []
+
+# ── macOS-only / host-convenience concerns ───────────────────────────────────
+configure_dotfiles: false
+configure_macos_defaults: false
+configure_osx: false
+configure_power_management: false
+configure_terminal: false
+enable_ssh: false
+install_bluesky_pds: false
+install_bun: false
+install_calibreweb: false
+install_cask_apps: false
+install_claude_cli: false
+install_dnsmasq: false
+install_dotnet: false
+install_freescout: false
+install_gitea: false
+install_golang: false
+install_hardening: false
+install_homebrew_packages: false
+install_infisical: false
+install_kiwix: false
+install_mailpit: false
+install_mariadb: false
+install_mas_apps: false
+install_metabase: false
+install_n8n: false
+install_nextcloud: false
+install_node: false
+install_observability: false
+install_openwebui: false
+install_os_resume: false
+install_outline: false
+install_paperclip: false
+install_php: false
+install_portainer: false
+install_python: true
+install_rustfs: false
+install_shell_extras: false
+install_superset: false
+install_tailscale: false
+install_uptime_kuma: false
+install_vaultwarden: false
+install_watchtower: false
+services_lan_access: false

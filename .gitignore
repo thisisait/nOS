@@ -38,6 +38,11 @@ _credentials.yml
 .claude/*
 !.claude/skills/
 !.claude/plugins/
+# The cloud SessionStart hook is tracked for the same reason as the skills: a
+# session that clones the repo must find it (docs/cloud-e2e.md). settings.json
+# holds only that hook registration — personal settings go in settings.local.json.
+!.claude/settings.json
+!.claude/hooks/
 !.claude/workflows/
 __pycache__/
 *.pyc

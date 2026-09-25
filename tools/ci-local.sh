@@ -80,6 +80,13 @@ export ANSIBLE_PYTHON_INTERPRETER="${VENV}/bin/python"
 # Galaxy deps from the FROZEN lock (falls back to requirements.yml if absent).
 GALAXY_SRC="${REPO_ROOT}/requirements.lock.yml"
 [ -f "$GALAXY_SRC" ] || GALAXY_SRC="${REPO_ROOT}/requirements.yml"
+# A sandbox whose egress refuses galaxy.ansible.com (a Claude cloud session:
+# 403 on CONNECT) installs the SAME pins from their GitHub repos instead —
+# tools/cloud/galaxy-git-sources.yml says where, the lock still says what.
+if [ "$REFRESH_LOCK" = 0 ] && ! "${VENV}/bin/python" "${REPO_ROOT}/tools/cloud/galaxy-install.py" --probe; then
+  echo "[ci-local] galaxy.ansible.com unreachable — installing the lock from git"
+  "${VENV}/bin/python" "${REPO_ROOT}/tools/cloud/galaxy-install.py" --source git
+else
 echo "[ci-local] ansible-galaxy install -r $(basename "$GALAXY_SRC")  (ANSIBLE_HOME=.ci-venv/ansible-home)"
 for attempt in 1 2 3 4 5 6; do
   if out="$("${VENV}/bin/ansible-galaxy" install -r "$GALAXY_SRC" 2>&1)"; then
@@ -97,6 +104,7 @@ for attempt in 1 2 3 4 5 6; do
     exit 1
   fi
 done
+fi
 
 if [ "$REFRESH_LOCK" = 1 ]; then
   echo "[ci-local] resolved toolchain — update requirements.lock.yml + tools/ci-freeze.env to match:"

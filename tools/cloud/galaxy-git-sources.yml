@@ -1,0 +1,37 @@
+# tools/cloud/galaxy-git-sources.yml — where each requirements.lock.yml pin lives
+# on GitHub, for a sandbox whose egress refuses galaxy.ansible.com (a Claude
+# cloud session: 403 on CONNECT). Consumed by tools/cloud/galaxy-install.py.
+#
+# The lock stays the single source of VERSIONS; this file only says WHERE.
+# Every lock entry must have a row here — gate:
+# tests/anatomy/test_cloud_e2e_contract.py::test_every_lock_pin_has_a_git_source
+#
+# `deps:` — collections a lock entry needs that the lock itself does not name
+# (community.docker's galaxy.yml `dependencies:`). Every git install runs with
+# --no-deps, because resolving dependencies means asking Galaxy — the host we
+# cannot reach — so the lock + these rows must be the COMPLETE closure. Pin
+# them here: a dependency is a pin like any other.
+
+collections:
+  community.general:
+    git: https://github.com/ansible-collections/community.general.git
+  community.docker:
+    git: https://github.com/ansible-collections/community.docker.git
+    deps:
+      - name: community.library_inventory_filtering_v1
+        git: https://github.com/ansible-collections/community.library_inventory_filtering.git
+        version: "1.1.5"
+  community.mysql:
+    git: https://github.com/ansible-collections/community.mysql.git
+  ansible.posix:
+    git: https://github.com/ansible-collections/ansible.posix.git
+  geerlingguy.mac:
+    # The repo's galaxy.yml carries a stale `version:` (reports 1.2.0 at tag
+    # 5.0.0). The tag is what is pinned; the reported number is cosmetic.
+    git: https://github.com/geerlingguy/ansible-collection-mac.git
+
+roles:
+  elliotweiser.osx-command-line-tools:
+    git: https://github.com/elliotweiser/ansible-osx-command-line-tools.git
+  geerlingguy.dotfiles:
+    git: https://github.com/geerlingguy/ansible-role-dotfiles.git
