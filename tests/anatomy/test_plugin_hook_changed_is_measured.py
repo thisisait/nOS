@@ -59,3 +59,15 @@ def test_the_module_uses_it():
     mod = (REPO / "files/anatomy/library/nos_plugin_loader.py").read_text()
     assert "load_plugins.note_changed(" in mod
     assert 'r["note"] != "no-op"' not in mod
+
+
+def test_render_collapses_trailing_newlines_like_ansible(tmp_path):
+    """The loader and the role both write 00-admin-groups/30-agent-clients.
+    A template ending in `{% endfor %}\\n` must not gain a blank last line
+    here that Ansible's template does not write."""
+    src = tmp_path / "t.j2"
+    src.write_text("a:\n{% for x in [1] %}\n  - {{ x }}\n{% endfor %}\n")
+    dest = tmp_path / "out.yaml"
+    load_plugins._render_file(src, dest, {})
+    assert dest.read_text().endswith("- 1\n") and not dest.read_text().endswith("\n\n")
+    assert load_plugins._render_file(src, dest, {}) is False   # steady

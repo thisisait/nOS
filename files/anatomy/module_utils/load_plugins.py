@@ -767,6 +767,14 @@ def _render_file(src: pathlib.Path, dest: pathlib.Path, ctx: dict) -> bool:
     """
     src_text = src.read_text()
     rendered = _jinja_env().from_string(src_text).render(**ctx)
+    # One trailing newline, like Ansible's `template` writes. A template ending
+    # in `{% endfor %}\n` rendered here as "...\n\n" and as "...\n" by the
+    # role-side copy of the same authentik blueprints, so the two writers
+    # undid each other on every converge (cloud e2e idempotence tier,
+    # 2026-09-25). Semantically neutral for YAML/compose; compose's config hash
+    # does not see it, so no container is recreated by the normalisation.
+    if rendered.endswith("\n\n"):
+        rendered = rendered.rstrip("\n") + "\n"
     dest.parent.mkdir(parents=True, exist_ok=True)
     # Also lock the parent dir to 0700 — if it already exists with a
     # looser mode (legacy install pre-SEC-1), this re-tightens it.
