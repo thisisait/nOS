@@ -346,17 +346,33 @@
   failed_when: _wing_composer_validate.rc != 0
   when: _wing_lock_stat.stat.exists
 
+# Composer 2.10 stopped falling back from a failed dist (zip) download to a
+# git clone of the same commit — `source-fallback` defaults false and is
+# deprecated. Where GitHub's zip endpoint refuses anonymous downloads (measured:
+# the Claude cloud sandbox, 403 on codeload/api zipballs, 2026-09-25) but git
+# works, the rescue asks for exactly what 2.8 did implicitly: the same locked
+# commits, fetched as source.
 - name: "[pazny.wing] Run composer install (vendor missing or lock newer)"
-  ansible.builtin.command:
-    cmd: "{{ _wing_composer_cmd }} install --no-dev --optimize-autoloader --no-interaction"
-    chdir: "{{ wing_app_dir }}"
-  register: _wing_composer
-  changed_when: "'Nothing to install' not in (_wing_composer.stdout | default('')) or _wing_composer.rc != 0"
   when: >
     not _wing_autoload_stat.stat.exists
     or (_wing_lock_stat.stat.exists
         and _wing_autoload_stat.stat.mtime < _wing_lock_stat.stat.mtime)
-  notify: Restart wing
+  block:
+    - name: "[pazny.wing] composer install (dist)"
+      ansible.builtin.command:
+        cmd: "{{ _wing_composer_cmd }} install --no-dev --optimize-autoloader --no-interaction"
+        chdir: "{{ wing_app_dir }}"
+      register: _wing_composer
+      changed_when: "'Nothing to install' not in (_wing_composer.stdout | default('')) or _wing_composer.rc != 0"
+      notify: Restart wing
+  rescue:
+    - name: "[pazny.wing] composer install (source — dist download refused)"
+      ansible.builtin.command:
+        cmd: "{{ _wing_composer_cmd }} install --no-dev --optimize-autoloader --no-interaction --prefer-source"
+        chdir: "{{ wing_app_dir }}"
+      register: _wing_composer
+      changed_when: true
+      notify: Restart wing
 
 # ── DB schema BEFORE the daemon serves (ordering fix, 2026-05-26) ─────────────
 # Pre-this, init-db ran only in post.yml (stack-up phase, minutes later). But
