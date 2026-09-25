@@ -33,6 +33,29 @@ say() { printf '[cloud-bootstrap] %s\n' "$*"; }
 
 [ "$(uname -s)" = "Linux" ] || { say "not Linux — nothing to do (macOS uses tools/ci-local.sh)"; exit 0; }
 
+# ── 0. apt sources the egress refuses (sandbox only) ────────────────────────
+# The cloud image ships PPAs (deadsnakes, ondrej/php) on launchpadcontent.net,
+# which the proxy answers 403. `apt-get update` shrugs that off as a warning;
+# Ansible's apt `update_cache` does not — it fails the run ("Failed to update
+# apt cache after 5 retries"), but only once the 1 h cache_valid_time lapses,
+# so it bites the SECOND converge of a session (measured 2026-09-25). A source
+# the sandbox cannot reach is renamed to *.nos-cloud-disabled — reversible,
+# and only where the machine is declared disposable.
+if { [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] || [ "${NOS_E2E_SANDBOX:-}" = "1" ]; } \
+   && [ "$(id -u)" = 0 ] && [ -d /etc/apt/sources.list.d ]; then
+  for src in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+    [ -f "$src" ] || continue
+    for url in $(grep -hoE 'https?://[^ ]+' "$src" | sort -u); do
+      code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$url" || true)"
+      if [ "$code" = "000" ] || [ "$code" = "403" ]; then
+        mv "$src" "${src}.nos-cloud-disabled"
+        say "apt source unreachable ($url → ${code}) — disabled ${src##*/}"
+        break
+      fi
+    done
+  done
+fi
+
 # ── 1. apt ──────────────────────────────────────────────────────────────────
 APT_PKGS=(sqlite3 python3-yaml python3-jsonschema python3-jinja2 python3-apt jq curl git)
 missing=()
