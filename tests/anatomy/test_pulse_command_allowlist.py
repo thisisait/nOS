@@ -268,3 +268,61 @@ def test_real_plugin_manifests_pass_validator(playbook_dir):
 				f"Live plugin manifest {path.relative_to(REPO)} declares "
 				f"banned basename '{basename}' (shell interpreter)"
 			)
+
+
+def test_the_daemons_own_home_is_allowed_on_both_sides():
+	"""`/root` (a container, a server install) is an operator home too.
+	MEASURED 2026-09-25: the cloud sandbox runs as root and every host-script
+	job 400'd at registration. Both enforcement points add $HOME — and only
+	that one home, not `/` or an empty string."""
+	src = PRESENTER.read_text()
+	assert "function allowedCommandPrefixes" in src
+	assert "$this->allowedCommandPrefixes()" in src
+	assert "rtrim($home, '/') !== ''" in src, "HOME=/ must not allow every path"
+
+	import importlib.util
+	import os
+	runner = REPO / "files/anatomy/pulse/pulse/runners/subprocess.py"
+	import sys
+	spec = importlib.util.spec_from_file_location("_pulse_subprocess", runner)
+	mod = importlib.util.module_from_spec(spec)
+	sys.modules[spec.name] = mod  # dataclasses resolve their module by name
+	try:
+		spec.loader.exec_module(mod)
+	finally:
+		sys.modules.pop(spec.name, None)
+	old = os.environ.get("HOME")
+	try:
+		os.environ["HOME"] = "/root"
+		mod.validate_command("/root/.local/bin/frankenphp", ["php-cli", "/root/wing/app/bin/x.php"])
+		for bad in ("/", ""):
+			os.environ["HOME"] = bad
+			with pytest.raises(mod.CommandRejected):
+				mod.validate_command("/etc/evil", [])
+	finally:
+		if old is None:
+			os.environ.pop("HOME", None)
+		else:
+			os.environ["HOME"] = old
+
+
+def test_linux_php_jobs_are_repointed_at_frankenphp():
+	"""/opt/homebrew/bin/php does not exist on Linux: every Wing PHP job would
+	exit 127 per tick. The catalog rewrites argv0 from NOS_PHP_ARGV."""
+	import importlib.util
+	import os
+	spec = importlib.util.spec_from_file_location("_pulse_catalog2", CATALOG)
+	mod = importlib.util.module_from_spec(spec)
+	spec.loader.exec_module(mod)
+	job = {"command": "/opt/homebrew/bin/php", "args": ["/h/wing/app/bin/a.php"]}
+	os.environ["NOS_PHP_ARGV"] = "/home/u/.local/bin/frankenphp php-cli"
+	try:
+		out = mod._platform_php(job)
+		assert out["command"] == "/home/u/.local/bin/frankenphp"
+		assert out["args"] == ["php-cli", "/home/u/wing/app/bin/a.php".replace("/home/u/", "/h/")]
+		os.environ["NOS_PHP_ARGV"] = ""
+		assert mod._platform_php(job) == job, "macOS: left as authored"
+	finally:
+		os.environ.pop("NOS_PHP_ARGV", None)
+	post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
+	assert "NOS_PHP_ARGV:" in post

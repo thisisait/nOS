@@ -499,6 +499,8 @@
     # with "Could not open input file" 1× per minute.
     NOS_WING_HOME: "{{ wing_home }}"
     NOS_WING_APP_DIR: "{{ wing_app_dir }}"
+    # Linux: Wing's PHP is `frankenphp php-cli`, not /opt/homebrew/bin/php.
+    NOS_PHP_ARGV: "{{ '' if ansible_os_family == 'Darwin' else (ansible_facts['env']['HOME'] ~ '/.local/bin/frankenphp php-cli') }}"
     # A9 mail/ntfy dispatch (2026-05-26 fix): Ansible renders these conditional
     # values HERE (full var context) — the catalog can't render Jinja, so
     # wing-base/plugin.yml carries bare tokens that map to these NOS_* vars.

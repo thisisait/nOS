@@ -237,6 +237,25 @@ def _loop_pulse_block(m: dict) -> dict:
     return {"jobs": [job]}
 
 
+#: The argv0 manifests write for "run a Wing PHP script" — the macOS binary.
+_MANIFEST_PHP = "/opt/homebrew/bin/php"
+
+
+def _platform_php(job: dict) -> dict:
+    """Re-point a manifest's PHP job at THIS host's interpreter.
+
+    On Linux Wing's PHP is the FrankenPHP single binary (`frankenphp php-cli
+    <script>`); `/opt/homebrew/bin/php` does not exist there, so every Wing
+    Pulse job would exit 127 on each tick. NOS_PHP_ARGV (space-separated,
+    rendered by pazny.wing) is the host's argv prefix; empty = macOS, left
+    as authored.
+    """
+    argv = _env("NOS_PHP_ARGV").split()
+    if not argv or job.get("command") != _MANIFEST_PHP:
+        return job
+    return {**job, "command": argv[0], "args": argv[1:] + list(job.get("args") or [])}
+
+
 def main() -> int:
     playbook_dir = _env("NOS_PLAYBOOK_DIR")
     if not playbook_dir:
@@ -285,6 +304,7 @@ def main() -> int:
             or path.split("/")[-1].replace(".yml", ""))
         for job in block.get("jobs") or []:
             expanded = _expand(job, subs)
+            expanded = _platform_php(expanded)
             _refuse_derived_env(expanded, path.split("/anatomy/")[-1])
             catalog.append({
                 "source": path.split("/anatomy/")[-1],

@@ -37,6 +37,21 @@ _SECRET_KEY_RE = re.compile(
 _BANNED_ENV_RE = re.compile(r"^(DYLD_|LD_|PYTHONPATH$|PATH$|IFS$|BASH_ENV$|ENV$)")
 
 
+def _allowed_prefixes() -> tuple[str, ...]:
+    """The static prefixes + the running user's OWN home.
+
+    `/Users/` and `/home/` cover an operator home on macOS and on most Linux
+    hosts; they do not cover root's (`/root`), where a container or a server
+    install runs — measured 2026-09-25: every host-script job was refused on
+    the cloud sandbox. The daemon's own HOME is the same trust boundary those
+    two prefixes stand for. Mirrors PulsePresenter::allowedCommandPrefixes.
+    """
+    home = os.environ.get("HOME", "")
+    if home.startswith("/") and home.rstrip("/"):
+        return _ALLOWED_PREFIXES + (home.rstrip("/") + "/",)
+    return _ALLOWED_PREFIXES
+
+
 class CommandRejected(ValueError):
     """Raised when a job command/args fail the execution-boundary allowlist."""
 
@@ -45,7 +60,7 @@ def validate_command(command: str, args: list[str]) -> None:
     """Mirror of PulsePresenter::validatePulseCommand. Raises CommandRejected."""
     if not command or command[0] != "/":
         raise CommandRejected("command must be an absolute path")
-    if not any(command.startswith(p) for p in _ALLOWED_PREFIXES):
+    if not any(command.startswith(p) for p in _allowed_prefixes()):
         raise CommandRejected("command path not in Pulse allowlist")
     basename = os.path.basename(command)
     if basename in _BANNED_BASENAMES:

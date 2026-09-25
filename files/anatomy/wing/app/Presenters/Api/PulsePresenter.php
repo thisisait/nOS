@@ -458,6 +458,25 @@ final class PulsePresenter extends BaseApiPresenter
 	 */
 	private const ARG_REGEX = '/^[a-zA-Z0-9._@\/:=,+~-]{0,512}$/';
 
+	/**
+	 * The static prefixes + the running user's OWN home. `/Users/` and
+	 * `/home/` stand for an operator home; root's (`/root`, a container or a
+	 * server install) was refused — every host-script job 400'd on the cloud
+	 * sandbox (2026-09-25). The daemon's HOME is the same trust boundary.
+	 * Mirrors pulse/runners/subprocess.py::_allowed_prefixes.
+	 *
+	 * @return list<string>
+	 */
+	private function allowedCommandPrefixes(): array
+	{
+		$prefixes = self::ALLOWED_COMMAND_PREFIXES;
+		$home = getenv('HOME');
+		if (is_string($home) && str_starts_with($home, '/') && rtrim($home, '/') !== '') {
+			$prefixes[] = rtrim($home, '/') . '/';
+		}
+		return $prefixes;
+	}
+
 	private function validatePulseCommand(string $command, mixed $args): void
 	{
 		if ($command === '') {
@@ -467,7 +486,7 @@ final class PulsePresenter extends BaseApiPresenter
 			$this->sendError('command must be an absolute path', 400);
 		}
 		$inPrefix = false;
-		foreach (self::ALLOWED_COMMAND_PREFIXES as $prefix) {
+		foreach ($this->allowedCommandPrefixes() as $prefix) {
 			if (str_starts_with($command, $prefix)) {
 				$inPrefix = true;
 				break;
