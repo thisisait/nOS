@@ -983,6 +983,7 @@ wing_audit_chain_enabled: false
 # ==============================================================================
 
 node_nvm_version: "lts/*"   # or specific: "22", "20"
+nvm_git_version: "v0.40.8"   # Linux: nvm cloned from github.com/nvm-sh/nvm at this tag (macOS: Homebrew nvm)
 
 # ── npm supply-chain posture ────────────────────────────────────────────────
 # `--ignore-scripts` on every npm install this playbook performs.

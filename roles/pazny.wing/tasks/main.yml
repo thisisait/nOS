@@ -299,13 +299,25 @@
     path: "{{ _wing_composer_phar }}"
   register: _composer_stat
 
-- name: "[pazny.wing] Download composer.phar (official installer)"
-  ansible.builtin.get_url:
-    url: "https://getcomposer.org/composer-stable.phar"
-    dest: "{{ _wing_composer_phar }}"
-    mode: '0755'
-    force: false
+# Two official sources for the same artefact: getcomposer.org, then Composer's
+# own GitHub release. An egress policy that refuses getcomposer.org (measured:
+# the Claude cloud sandbox, 2026-09-25) still reaches GitHub.
+- name: "[pazny.wing] Download composer.phar (official, with GitHub fallback)"
   when: not _composer_stat.stat.exists
+  block:
+    - name: "[pazny.wing] Download composer.phar from getcomposer.org"
+      ansible.builtin.get_url:
+        url: "https://getcomposer.org/composer-stable.phar"
+        dest: "{{ _wing_composer_phar }}"
+        mode: '0755'
+        force: false
+  rescue:
+    - name: "[pazny.wing] Download composer.phar from the Composer GitHub release"
+      ansible.builtin.get_url:
+        url: "https://github.com/composer/composer/releases/latest/download/composer.phar"
+        dest: "{{ _wing_composer_phar }}"
+        mode: '0755'
+        force: false
 
 - name: "[pazny.wing] Stat vendor/autoload.php"
   ansible.builtin.stat:

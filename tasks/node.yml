@@ -42,6 +42,37 @@
     NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
   when: nos_pkg_manager == 'homebrew'
 
+# ── Linux: the same nvm, from its own git tag (no Homebrew there) ────────────
+# Ubuntu 24.04's apt nodejs is 18; the Cortex organ needs >= 22 (package.json
+# engines) and the macOS path already means "nvm default". nvm itself is a
+# shell script — cloned at a pinned tag, it downloads Node from nodejs.org.
+- name: "[node] Clone nvm (Linux)"
+  ansible.builtin.git:
+    repo: https://github.com/nvm-sh/nvm.git
+    dest: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+    version: "{{ nvm_git_version | default('v0.40.8') }}"
+    depth: 1
+    update: false
+  when: nos_pkg_manager in ['apt', 'dnf']
+
+- name: "[node] Install Node.js via nvm (Linux)"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    . "$NVM_DIR/nvm.sh"
+    if nvm ls '{{ node_nvm_version | default('lts/*') }}' >/dev/null 2>&1; then
+      echo present
+    else
+      nvm install '{{ node_nvm_version | default('lts/*') }}' >/dev/null && echo installed
+    fi
+    nvm alias default '{{ node_nvm_version | default('lts/*') }}' >/dev/null
+  args:
+    executable: /bin/bash
+  register: _node_nvm_linux
+  changed_when: "'installed' in _node_nvm_linux.stdout"
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  when: nos_pkg_manager in ['apt', 'dnf']
+
 - name: Install global npm packages
   ansible.builtin.shell: |
     export NVM_DIR="$HOME/.nvm"
