@@ -369,9 +369,19 @@
     # is the entire import mechanism here — there is no package install.
     - kuma2.py
 
+# One spec file PER CALLER. monitors.yml runs twice per converge — Tier-1
+# from stack-up, then Tier-1 + apps from the apps_runner hook — and both wrote
+# monitors.spec.json, so the file flipped between the two contents and
+# reported changed twice on every run (cloud e2e idempotence tier,
+# 2026-09-26). Each call now owns a stable file.
+- name: "[pazny.uptime_kuma] Which spec file this call owns"
+  ansible.builtin.set_fact:
+    _kuma_spec_path: >-
+      {{ uptime_kuma_data_dir }}/monitors{{ '.apps' if (_kuma_manifest_apps | default([]) | length) > 0 else '' }}.spec.json
+
 - name: "[pazny.uptime_kuma] Write spec file (JSON) for setup-monitors.py"
   ansible.builtin.copy:
-    dest: "{{ uptime_kuma_data_dir }}/monitors.spec.json"
+    dest: "{{ _kuma_spec_path }}"
     content: "{{ _kuma_spec | to_nice_json }}"
     mode: '0600'
   no_log: true
@@ -416,7 +426,7 @@
       - "--password"
       - "{{ uptime_kuma_admin_password }}"
       - "--config"
-      - "{{ uptime_kuma_data_dir }}/monitors.spec.json"
+      - "{{ _kuma_spec_path }}"
       - "--timeout"
       - "{{ uptime_kuma_api_timeout | default(45) }}"
       - "-v"

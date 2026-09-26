@@ -259,6 +259,10 @@
       - "--exclude=tests/playwright-report/"
       - "--exclude=tests/test-results/"
       - "--exclude=tests/.env"
+      # Dir times carry nothing here; a checkout/pull that only touched a
+      # directory's mtime re-synced it, cleared the DI cache and restarted
+      # Wing (cloud e2e idempotence tier, 2026-09-26). Same as pazny.bone.
+      - "--omit-dir-times"
   delegate_to: "{{ inventory_hostname }}"
   register: _wing_app_sync
   notify: Restart wing
