@@ -103,11 +103,36 @@
     wait_hard_fail: false
   when: _portainer_restart is changed
 
+# Portainer >= 2.45 guards admin init with a one-time setup token printed to
+# its log at START ("setup_token=<hex>"); without the X-Setup-Token header the
+# init answers "Invalid or missing setup token", no admin is created, and the
+# OAuth wiring below is skipped for want of a JWT (measured: cloud lane,
+# 2026-09-26 — a fresh install on ANY platform). The token of the CURRENT
+# start is the last one in the log. Kept (rather than --no-setup-token) so the
+# init window stays closed to other local callers.
+- name: "[pazny.portainer Post] Read the setup token of this start"
+  ansible.builtin.shell: >-
+    set -o pipefail;
+    {{ docker_bin | default('docker') }} logs infra-portainer-1 2>&1
+    | grep -oE 'setup_token=[0-9a-f]+' | tail -1 | cut -d= -f2
+  args:
+    executable: /bin/bash
+  register: _portainer_setup_token
+  changed_when: false
+  failed_when: false
+  no_log: true
+  when:
+    - _portainer_ready.status | default(0) in [200, 303]
+    - _portainer_admin_check.status | default(0) in [404, 303]
+
 - name: "[pazny.portainer Post] Create admin user via API"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/users/admin/init"
     method: POST
     body_format: json
+    headers:
+      # Empty header on a pre-2.45 Portainer (no token logged) is ignored.
+      X-Setup-Token: "{{ _portainer_setup_token.stdout | default('') | trim }}"
     body:
       Username: "admin"
       Password: "{{ portainer_admin_password | default(nos_derived_secrets.portainer) }}"
