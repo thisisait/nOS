@@ -18,7 +18,19 @@
     mode: '0750'
   loop:
     - "{{ nextcloud_dir }}"
-    - "{{ nextcloud_data_dir }}"
+
+# The data dir is mounted at /data and written by www-data (33) directly — the
+# entrypoint takes over /var/www/html, never /data. Operator-owned 0750 made
+# the installer loop "Cannot create or write into the data directory /data"
+# on Linux (cloud lane, 2026-09-26). macOS: file sharing maps ownership.
+- name: "[pazny.nextcloud] Ensure the data directory exists, owned by www-data"
+  ansible.builtin.file:
+    path: "{{ nextcloud_data_dir }}"
+    state: directory
+    mode: '0750'
+    owner: "{{ omit if ansible_os_family == 'Darwin' else nextcloud_www_uid | default(33) }}"
+    group: "{{ omit if ansible_os_family == 'Darwin' else nextcloud_www_uid | default(33) }}"
+  become: "{{ ansible_os_family != 'Darwin' }}"
 
 # The overlay below renders into config/ BEFORE the first compose up — on a
 # fresh machine nothing has created it yet. Measured 2026-09-26 on the cloud
