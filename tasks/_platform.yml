@@ -24,6 +24,7 @@
 #   nos_kernel_ipv6           false only on a Linux kernel without IPv6
 #   nos_is_container          true when the kernel is someone else's (docker/lxc/…)
 #   nos_is_wsl                true on Windows' WSL2 (Linux path, Microsoft kernel)
+#   nos_container_user        '' (macOS) | '<uid>:<gid>' — non-root images on Linux
 #   nos_docker_bin            /usr/local/bin/docker | /usr/bin/docker
 #   nos_homebrew_prefix       /opt/homebrew | "" (empty on Linux)
 #
@@ -127,6 +128,20 @@
 #                     ufw, sysctl, auditd, apparmor, chrony act on THAT kernel.
 #   nos_is_wsl        Windows via WSL2 — Ubuntu userland on Microsoft's kernel.
 #                     nOS on Windows IS the Linux path (docs/cross-platform.md).
+# The uid:gid a NON-ROOT image must run as to use the operator's bind mounts.
+# nOS writes configs 0600 / dirs 0700 (SEC-1) owned by the operator; an image
+# whose USER is its own uid (Loki/Tempo 10001, Grafana 472, Prometheus nobody)
+# then cannot read them on Linux — measured on the cloud lane, 2026-09-26:
+# the whole observability stack crash-looped on "permission denied". Docker
+# Desktop's file sharing hides this on macOS, so it stays EMPTY there and the
+# rendered compose is byte-identical. Templates use it as
+#   {% if nos_container_user %}user: "{{ nos_container_user }}"{% endif %}
+- name: "[platform] Container uid:gid for bind-mount owners (Linux)"
+  ansible.builtin.set_fact:
+    nos_container_user: >-
+      {{ '' if ansible_os_family == 'Darwin'
+         else (ansible_facts['user_uid'] | string) ~ ':' ~ (ansible_facts['user_gid'] | string) }}
+
 - name: "[platform] Host kind (container / WSL)"
   ansible.builtin.set_fact:
     nos_is_container: >-

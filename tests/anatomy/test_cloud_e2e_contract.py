@@ -196,3 +196,25 @@ def test_duplicated_blueprints_render_with_the_loaders_whitespace():
     renders = [t["ansible.builtin.template"] for t in tasks if "ansible.builtin.template" in t]
     assert renders and all(r.get("trim_blocks") is False for r in renders)
     assert all(r.get("mode") == "0600" for r in renders), "SEC-1 mode, as the loader writes"
+
+
+#: Images whose Dockerfile USER is not root and that bind-mount operator-owned
+#: paths (measured 2026-09-26 with `docker image inspect`). Adding a non-root
+#: image with a bind mount means adding it here AND giving it the block.
+NON_ROOT_BIND_MOUNT_ROLES = ("loki", "tempo", "grafana", "prometheus",
+                             "n8n", "outline", "rustfs", "superset", "infisical")
+
+
+def test_non_root_images_run_as_the_mount_owner_on_linux():
+    """nOS writes configs 0600 / dirs 0700 owned by the operator (SEC-1). An
+    image running as its own uid cannot read them on Linux: the whole
+    observability stack crash-looped on "permission denied" (cloud lane,
+    2026-09-26). macOS hides it (Docker Desktop file sharing), so the fact is
+    empty there and the render stays byte-identical."""
+    missing = [r for r in NON_ROOT_BIND_MOUNT_ROLES
+               if 'user: "{{ nos_container_user }}"'
+               not in (REPO / f"roles/pazny.{r}/templates/compose.yml.j2").read_text()]
+    assert not missing, f"non-root images without the Linux user override: {missing}"
+    plat = (REPO / "tasks/_platform.yml").read_text()
+    assert "nos_container_user:" in plat
+    assert "'' if ansible_os_family == 'Darwin'" in plat, "macOS must render no user:"

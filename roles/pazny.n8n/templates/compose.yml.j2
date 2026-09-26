@@ -7,6 +7,10 @@
 services:
   n8n:
     image: n8nio/n8n:{{ n8n_version }}
+{% if nos_container_user | default('') | length > 0 %}
+    # Linux: run as the owner of the 0600/0700 bind mounts (tasks/_platform.yml).
+    user: "{{ nos_container_user }}"
+{% endif %}
     restart: unless-stopped
     ports:
 {% if services_lan_access | default(false) %}
