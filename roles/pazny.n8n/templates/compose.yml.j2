@@ -23,6 +23,11 @@ services:
     environment:
       N8N_HOST: "{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       N8N_PORT: "5678"
+{% if not (nos_kernel_ipv6 | default(true)) %}
+      # n8n binds "::" by default; a kernel without IPv6 makes that fatal
+      # ("n8n's address '::' is not available") — cloud lane, 2026-09-26.
+      N8N_LISTEN_ADDRESS: "0.0.0.0"
+{% endif %}
       N8N_PROTOCOL: https
       WEBHOOK_URL: "https://{{ n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/"
       GENERIC_TIMEZONE: "{{ n8n_timezone | default('Europe/Prague') }}"

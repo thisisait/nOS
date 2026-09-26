@@ -29,8 +29,11 @@ services:
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
 {% endif %}
     environment:
-      USER_UID: "{{ ansible_facts['user_uid'] }}"
-      USER_GID: "{{ ansible_facts['user_gid'] }}"
+      # Gitea refuses to run as root ("Gitea is not supposed to be run as
+      # root"). An operator who IS root (a container, a server) falls back to
+      # the image's own `git` user, 1000:1000 — cloud lane, 2026-09-26.
+      USER_UID: "{{ ansible_facts['user_uid'] if (ansible_facts['user_uid'] | int) != 0 else 1000 }}"
+      USER_GID: "{{ ansible_facts['user_gid'] if (ansible_facts['user_uid'] | int) != 0 else 1000 }}"
       GITEA__server__DOMAIN: "{{ gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       GITEA__server__ROOT_URL: "https://{{ gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
       GITEA__server__SSH_PORT: "{{ gitea_ssh_port | default(2222) }}"

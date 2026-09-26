@@ -84,3 +84,14 @@ def test_template_is_valid_jinja2_and_yaml():
     # _render() raises on bad Jinja2; safe_load raises on bad YAML.
     block = _nextcloud_block()
     assert "image" in block, "rendered Nextcloud service block looks malformed"
+
+
+def test_no_sysctls_on_a_kernel_without_ipv6():
+    """runc refuses to start a container whose sysctl key does not exist:
+    `open sysctl net.ipv6.conf.all.disable_ipv6 file` (cloud lane, 2026-09-26).
+    With nos_kernel_ipv6 false there is nothing to disable."""
+    import yaml
+    from jinja2 import Environment
+    out = Environment().from_string(COMPOSE.read_text()).render(**{**_STUB, "nos_kernel_ipv6": False})
+    block = yaml.safe_load(out)["services"]["nextcloud"]
+    assert "sysctls" not in block

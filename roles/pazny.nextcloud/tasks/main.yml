@@ -21,14 +21,20 @@
     - "{{ nextcloud_data_dir }}"
 
 # The overlay below renders into config/ BEFORE the first compose up — on a
-# fresh machine nothing has created it yet (the image's entrypoint does, on
-# first start). Measured 2026-09-26 on the cloud lane: "Destination directory
-# …/nextcloud/config does not exist". No `mode`: the entrypoint takes the
-# directory over (www-data) and a mode here would fight it every converge.
-- name: "[pazny.nextcloud] Ensure the config directory exists (first run)"
+# fresh machine nothing has created it yet. Measured 2026-09-26 on the cloud
+# lane, twice: first "Destination directory …/nextcloud/config does not
+# exist"; then, once created by us, the installer failed "Cannot write into
+# config directory" — the entrypoint does NOT take over a directory it finds,
+# and it runs as www-data (uid/gid 33 in the Debian image). Linux: owned by 33.
+# macOS: Docker Desktop's file sharing maps ownership, so no chown (and no
+# become) there. No `mode`: Nextcloud manages what it writes inside.
+- name: "[pazny.nextcloud] Ensure the config directory exists, writable by www-data"
   ansible.builtin.file:
     path: "{{ nextcloud_dir }}/config"
     state: directory
+    owner: "{{ omit if ansible_os_family == 'Darwin' else nextcloud_www_uid | default(33) }}"
+    group: "{{ omit if ansible_os_family == 'Darwin' else nextcloud_www_uid | default(33) }}"
+  become: "{{ ansible_os_family != 'Darwin' }}"
 
 - name: "[pazny.nextcloud] Render database-TLS config overlay"
   # Rendered BEFORE compose up, into the bind-mounted config dir, so the value

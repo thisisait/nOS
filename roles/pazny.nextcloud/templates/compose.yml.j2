@@ -76,7 +76,7 @@ services:
     # → "Could not reach the OpenID Connect provider" at login (live 2026-06-14,
     # the SSO redirect that survived a blank). NC speaks IPv4 to everything
     # (mariadb/redis/connector/auth host-gateway), so dropping IPv6 is safe.
-{% if nos_kernel_ipv6 | default(true) | bool %}
+{% if nos_kernel_ipv6 | default(true) %}
     # A kernel WITHOUT IPv6 has no such sysctl, and runc refuses to start the
     # container over it ("open sysctl net.ipv6.conf.all.disable_ipv6 file") —
     # measured on the cloud lane, 2026-09-26. There is nothing to disable there.
