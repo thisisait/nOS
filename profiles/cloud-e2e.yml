@@ -22,7 +22,6 @@
 # ghcr's blob host (pkg-containers.githubusercontent.com) and lscr.io are
 # refused by the sandbox egress; both vendors publish the same image to Hub.
 authentik_image: authentik/server
-calibreweb_image: linuxserver/calibre-web
 
 # ── NETWORK: no Docker Hub copy exists, and the blob host is refused ─────────
 # Flip back on once the environment allows pkg-containers.githubusercontent.com.
@@ -30,6 +29,14 @@ install_openwebui: false       # ghcr.io/open-webui/open-webui
 install_kiwix: false           # ghcr.io/kiwix/kiwix-serve
 install_paperclip: false       # ghcr.io/paperclipai/paperclip
 install_bluesky_pds: false     # ghcr.io/bluesky-social/pds
+
+# ── NETWORK: calibre-web downloads calibredb AT CONTAINER START ──────────────
+# DOCKER_MODS=linuxserver/mods:universal-calibre is fetched from lscr.io on
+# every start ("OFFLINE: … not found in modcache, skipping"), then the post
+# task finds no calibredb. The sandbox refuses lscr.io and its containers do
+# not trust the egress CA. (calibreweb_image points at Hub for the image
+# itself — the mod is the part that cannot come.)
+install_calibreweb: false
 
 # ── NETWORK: KEAP's image build apt-gets from Debian ─────────────────────────
 # deb.debian.org and every Debian mirror answer 403 (archive.ubuntu.com
