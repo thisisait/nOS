@@ -26,6 +26,7 @@ cannot mean anything. The playbook gates on the fact and skips; the operator's
 | `nos_kernel_ipv6` | true · false | IPv4 listeners (authentik, socket proxy) |
 | `nos_is_container` | true · false | `pazny.linux.hardening` (the kernel is the host's) |
 | `nos_is_wsl` | true · false | reported; WSL2 is the Linux path |
+| `nos_container_user` | '' (macOS) · `<uid>:<gid>` | `user:` on non-root images with operator-owned bind mounts |
 | `nos_docker_ready` | true · false | the whole compose layer |
 
 ## What each platform runs

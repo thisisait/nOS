@@ -192,27 +192,32 @@ and the sandbox refuses every Debian mirror. A network fact, not an nOS one.
 
 ## The profile
 
-`profiles/cloud-e2e.yml` — L0 (PostgreSQL, Redis), Authentik, Traefik as the
-edge, the Tier-2 apps runner (documenso, qdrant, roundcube; `apps_skip:
-[twofauth]`), and the host organs Bone, Pulse, Wing, Cortex (under `nos-proc`)
-plus nOS face.
-Every host-only macOS concern is off; so is every service whose image the
-default policy refuses. Grow it one service at a time, running `preflight`
-first. Tier-2 app skips go in `apps_skip` (new, default `[]`), not in the
-committed manifest.
+`profiles/cloud-e2e.yml` is **the default config** minus what the sandbox
+cannot hold. Platform differences are facts (`docs/cross-platform.md`), so the
+profile carries no macOS/host toggles at all. What it does carry, each block
+labelled in the file:
+
+| Why | Keys | Lift it by |
+|---|---|---|
+| NETWORK: ghcr blob host refused | `authentik_image` (Hub mirror); `install_openwebui/kiwix/paperclip/bluesky_pds: false` | allowing `pkg-containers.githubusercontent.com` |
+| NETWORK: Debian mirrors refused (KEAP build) | `install_keap: false` | allowing `deb.debian.org` |
+| NETWORK: App Store at run time (Nextcloud `user_oidc`) | `install_nextcloud: false` | allowing `apps.nextcloud.com` |
+| NETWORK: LSIO mod at container start (calibredb) | `install_calibreweb: false` | allowing `lscr.io` — or an image with calibre built in |
+| KERNEL: no IPv6 | `apps_skip: [twofauth]` | a kernel with IPv6 |
+| DISK: ~37 GB write allowance | `apps_skip: [documenso, roundcube]` | a larger session disk |
+| CONTROLLER belt | `pip_packages: []`, `node_global_packages: []` | — (keeps the frozen venv frozen) |
 
 ## Status
 
-**Green end to end with the host organs, 2026-09-25** (Claude cloud session,
-`profiles/cloud-e2e.yml`: substrate + Authentik + Traefik + Tier-2 apps +
-Bone / Pulse / Wing / Cortex under `nos-proc` + nOS face):
+**Green end to end on the default config, 2026-09-26** (≈30 services:
+infra + observability + iiab/devops/b2b/data stacks, SSO, host organs):
 
 | Tier | Result |
 |---|---|
 | `static` | pytest suite green (≈7 000 gates; `tests/wet` excluded — see below) |
 | `preflight` | every enabled image reachable (Docker Hub via `mirror.gcr.io`) |
-| `converge` | `failed=0` from a `reset` sandbox (ok=511) |
-| `smoke` | 9/9 OK — Authentik, Traefik, face, Tier-2 apps via forward-auth |
+| `converge` | `failed=0` |
+| `smoke` | 21/21 OK |
 | `idempotence` | `changed=0` on the steady estate |
 
 One honest caveat for reading the idempotence tier: Bone stamps the git ref it
@@ -225,6 +230,26 @@ blank estate (the twofauth/roundcube/documenso pilot trio included), and the
 CI `pytest` job only ever skips it for lack of an estate. After a cloud
 converge it would run against a different estate and report that difference
 as failure.
+
+### What the default config found (2026-09-26, third pass)
+
+Every row below would hit a fresh Linux host (most also a fresh Mac, marked):
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Loki/Tempo/Grafana/Prometheus crash-loop "permission denied" | SEC-1 writes 0600/0700 as the operator; images run as their own uid | `nos_container_user` → `user:` on 9 non-root images (Linux only) |
+| Grafana crash-loop (plugin install fatal) | `GF_INSTALL_PLUGINS` fetched grafana.com at EVERY start | plugin provisioned once from its GitHub release, sha256-pinned (all platforms) |
+| nextcloud: config dir missing, then not writable, then /data not writable | pre-rendered overlay before first start; www-data owns nothing | dirs created and owned by 33 on Linux |
+| nextcloud won't start | IPv6 `sysctls` on a kernel without IPv6 | gated on `nos_kernel_ipv6` |
+| n8n "address '::' is not available" | IPv6-only bind | `N8N_LISTEN_ADDRESS=0.0.0.0` without IPv6 |
+| gitea "not supposed to be run as root" | operator uid 0 → `USER_UID=0` | root falls back to the image's `git` 1000 |
+| gitea Authentik source never created | rootful image never runs `update-ca-certificates` | `SSL_CERT_DIR` adds the mkcert mount (**macOS too**) |
+| Portainer SSO off after a fresh install | 2.45 requires `X-Setup-Token` on admin init | token read from the container log (**macOS too**) |
+| `user_oidc` download failure reported CHANGED | `failed_when: false` | fails where it fails |
+| smoke UNREACH openclaw on Linux | row ignored main.yml's Darwin gate | `nos_is_macos` in the row |
+| awscli reinstalled every run; tofu never found | `command -v` via the command module (no `/usr/bin/command` on Ubuntu) | shell |
+| grafana/gitea admin pw reset + restart every run | no "does it already log in?" | login probe first (**macOS too**) |
+| kuma spec, stack dirs, superset init, gitea OAuth rotation, Wing sync | two writers / no measurable delta | one writer, fingerprints, `--omit-dir-times` (**macOS too**) |
 
 ### Idempotence was never measured on the stack layer before
 
