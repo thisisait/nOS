@@ -15,7 +15,9 @@
   ansible.builtin.file:
     path: "{{ freescout_data_dir }}"
     state: directory
-    mode: '0755'
+    # 0750 = what the image's init sets on start; 0755 here flipped it back
+    # every converge (cloud e2e idempotence tier, 2026-09-26).
+    mode: '0750'
 
 - name: "[pazny.freescout] Render compose override fragment"
   ansible.builtin.template:

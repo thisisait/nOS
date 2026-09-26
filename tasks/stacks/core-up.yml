@@ -305,6 +305,10 @@
   ansible.builtin.file:
     path: "{{ loki_storage_path | default(stacks_dir + '/observability/loki/data') }}/tsdb-shipper-active/scratch"
     state: absent
+  # VirtioFS is Docker Desktop's; on Linux the bind is a plain directory and
+  # deleting a live Loki's scratch dir only reported `changed` every converge
+  # (cloud e2e idempotence tier, 2026-09-26).
+  when: ansible_os_family == 'Darwin'
 
 # Track Q1 (2026-05-04): Prometheus / Loki / Tempo / recording-rules config
 # rendering moved to the plugin loader. The loader's pre_compose hook (further
