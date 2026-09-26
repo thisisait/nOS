@@ -34,7 +34,10 @@
     {{ docker_bin }} compose -p data
     exec -T superset superset init
   register: _superset_init
-  changed_when: _superset_init.rc == 0
+  # `superset init` re-syncs roles/permissions and says nothing about whether
+  # any moved; rc==0 reported CHANGED on every converge (cloud e2e idempotence
+  # tier, 2026-09-26). A sync that cannot report a delta claims none.
+  changed_when: false
   failed_when: false
   when:
     - _superset_db.rc | default(1) == 0

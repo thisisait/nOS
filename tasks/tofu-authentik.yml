@@ -10,8 +10,13 @@
 # Cross-platform: OpenTofu via brew (macOS) / apt or release tarball (Linux).
 # OpenTofu, NEVER Terraform (BSL conflicts with the nOS all-FOSS principle).
 
+# shell, not command: `command -v` is a shell builtin. macOS ships a
+# /usr/bin/command wrapper, Ubuntu does not — via the command module this
+# reported "tofu not installed" on every Linux host whatever was on PATH.
 - name: "[tofu-authentik] Resolve tofu binary"
-  ansible.builtin.command: "command -v tofu"
+  ansible.builtin.shell: "command -v tofu"
+  args:
+    executable: /bin/bash
   register: _tofu_bin
   changed_when: false
   failed_when: false

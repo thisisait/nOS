@@ -37,7 +37,13 @@
 # Skipped entirely when `aws` is already on PATH, so a re-run is changed=0 and
 # an operator who installed it their own way is left alone.
 - name: "[backup] (Linux) Check for an existing aws CLI"
-  ansible.builtin.command: command -v aws
+  # shell, not command: `command -v` is a shell BUILTIN — Ubuntu ships no
+  # /usr/bin/command, so via the command module this was rc!=0 on every run
+  # and AWS CLI was re-downloaded and reinstalled each converge (cloud e2e
+  # idempotence tier, 2026-09-26).
+  ansible.builtin.shell: command -v aws
+  args:
+    executable: /bin/bash
   register: _backup_aws_present
   changed_when: false
   failed_when: false
@@ -245,7 +251,12 @@
       # is the right "disable-if-present" idiom.
       ansible.builtin.command: "{{ nos_user_systemctl | default('systemctl --user') }} disable --now {{ backup_legacy_launchd_label }}.{{ item }}"
       loop: ['timer', 'service']
-      changed_when: true
+      register: _backup_legacy_disable
+      # Was `changed_when: true`: a unit that no longer exists (the normal
+      # case after the rename) reported changed on every converge.
+      changed_when: >-
+        _backup_legacy_disable.rc == 0
+        and 'Removed' in (_backup_legacy_disable.stdout | default('') ~ _backup_legacy_disable.stderr | default(''))
       failed_when: false
 
     - name: "[backup] (Linux) Remove legacy unit files"

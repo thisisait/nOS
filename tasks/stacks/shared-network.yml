@@ -35,11 +35,14 @@
     - "'already exists' not in (_gated_nets.stderr | default(''))"
   check_mode: false
 
+# No `mode`: the plugin loader locks every directory it renders into to 0700
+# (SEC-1, load_plugins._render_file), so a 0755 here flipped these dirs back
+# and forth and reported `changed` on every converge — macOS included (cloud
+# e2e idempotence tier, 2026-09-26). Creation is this task's only job.
 - name: "[Stacks] Ensure stack directories exist"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    mode: '0755'
   loop:
     - "{{ stacks_dir }}/infra"
     - "{{ stacks_dir }}/observability"

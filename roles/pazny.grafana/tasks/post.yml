@@ -30,6 +30,26 @@
   when: _grafana_container.stdout | default('') | length > 0
   failed_when: false
 
+# Ask before resetting. The reset ran on EVERY converge, reported changed and
+# fired "Restart grafana" each time — on every platform (cloud e2e idempotence
+# tier, 2026-09-26). The current password logging in means there is nothing
+# to reconverge; only a 401 does.
+- name: "[pazny.grafana Post] Does the declared admin password already log in?"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ grafana_port | default(3000) }}/api/user"
+    user: "{{ grafana_admin_user | default('admin') }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: true
+    status_code: [200, 401]
+    timeout: 5
+  register: _grafana_pw_probe
+  when:
+    - _grafana_container.stdout | default('') | length > 0
+    - _grafana_health.status | default(0) == 200
+  failed_when: false
+  check_mode: false
+  no_log: true
+
 - name: "[pazny.grafana Post] Reconverge admin password (grafana-cli reset-admin-password)"
   ansible.builtin.shell: |
     {{ docker_bin }} compose -p observability exec -T grafana \
@@ -38,6 +58,7 @@
   when:
     - _grafana_container.stdout | default('') | length > 0
     - _grafana_health.status | default(0) == 200
+    - (_grafana_pw_probe.status | default(-1)) != 200
   changed_when: "'Admin password changed successfully' in (_grafana_pw_reset.stdout | default(''))"
   failed_when: false
   check_mode: false

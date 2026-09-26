@@ -94,6 +94,24 @@
   no_log: true
   notify: Restart gitea
 
+# The source's secret cannot be read back from Gitea, so the rotation ran
+# update-oauth on EVERY converge and reported changed (cloud e2e idempotence
+# tier, 2026-09-26). A sha256 of what was last written (secret + discovery
+# URL) lets it run only when the declaration moved. The stamp holds no secret.
+- name: "[Authentik->Gitea] Fingerprint the declared source"
+  ansible.builtin.set_fact:
+    _gitea_oauth_fp: >-
+      {{ (nos_derived_secrets.oidc_gitea ~ '|' ~ (authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))))) | hash('sha256') }}
+  when: install_gitea | default(false)
+  no_log: true
+
+- name: "[Authentik->Gitea] Read the last-written fingerprint"
+  ansible.builtin.slurp:
+    src: "{{ ansible_facts['env']['HOME'] }}/.nos/gitea-oauth-source.sha256"
+  register: _gitea_oauth_fp_prev
+  failed_when: false
+  when: install_gitea | default(false)
+
 - name: "[Authentik->Gitea] Rotate Authentik source secret (reconverge)"
   ansible.builtin.command:
     argv:
@@ -121,9 +139,19 @@
     - install_gitea | default(false)
     - _gitea_running.rc | default(1) == 0
     - (_gitea_ak_id.stdout | default('') | trim) != ''
+    - (_gitea_oauth_fp_prev.content | default('', true) | b64decode | trim) != _gitea_oauth_fp
   changed_when: _gitea_oauth_update.rc == 0
   failed_when: false
   no_log: true
+
+- name: "[Authentik->Gitea] Record the fingerprint of what Gitea now holds"
+  ansible.builtin.copy:
+    dest: "{{ ansible_facts['env']['HOME'] }}/.nos/gitea-oauth-source.sha256"
+    content: "{{ _gitea_oauth_fp }}\n"
+    mode: '0600'
+  when:
+    - install_gitea | default(false)
+    - (_gitea_oauth_create.rc | default(1) == 0) or (_gitea_oauth_update.rc | default(1) == 0)
 
 - name: "[Authentik->Gitea] Verify the Authentik OAuth2 source is registered"
   ansible.builtin.command: >

@@ -81,11 +81,14 @@
 # Idempotent - without this, template tasks may fail or (worse) write the render
 # into a directory that Docker meanwhile creates as a bind mount source.
 
+# No `mode`: the plugin loader locks every directory it renders into to 0700
+# (SEC-1, load_plugins._render_file), so a 0755 here flipped these dirs back
+# and forth and reported `changed` on every converge — macOS included (cloud
+# e2e idempotence tier, 2026-09-26). Creation is this task's only job.
 - name: "[Core] Ensure infra and observability subdirectories exist"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    mode: '0755'
   loop:
     - "{{ stacks_dir }}/infra"
     - "{{ stacks_dir }}/infra/overrides"

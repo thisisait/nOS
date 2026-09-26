@@ -76,6 +76,26 @@
 # overwritne password nepodminene. Toto je UPDATE leg state-declarative
 # idempotence: blank+prefix rotation, non-blank edit credentials.yml,
 # both paths pick up the new password on every run.
+# Ask before changing. change-password ran on EVERY converge, reported
+# changed and restarted Gitea each time — on every platform (cloud e2e
+# idempotence tier, 2026-09-26). A 200 with the declared password means
+# there is nothing to reconverge.
+- name: "[pazny.gitea Post] Does the declared admin password already log in?"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/user"
+    user: "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
+    password: "{{ gitea_admin_password }}"
+    force_basic_auth: true
+    status_code: [200, 401, 403]
+    timeout: 5
+  register: _gitea_pw_probe
+  when:
+    - _gitea_container.stdout | default('') | length > 0
+    - _gitea_admin_exists.rc | default(0) == 0
+  failed_when: false
+  check_mode: false
+  no_log: true
+
 - name: "[pazny.gitea Post] Reconverge admin password (state-declarative UPDATE)"
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p devops
@@ -86,6 +106,7 @@
   when:
     - _gitea_container.stdout | default('') | length > 0
     - _gitea_admin_exists.rc | default(0) == 0
+    - (_gitea_pw_probe.status | default(-1)) != 200
   changed_when: true
   failed_when: false
   check_mode: false
