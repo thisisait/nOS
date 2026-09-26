@@ -17,6 +17,12 @@ services:
       dockerfile: Dockerfile
       args:
         BASE: "apache/superset:{{ superset_version | default('6.0.0-dev') }}"
+{% if nos_build_ca_bundle | default('', true) | length > 0 %}
+      # BUILD-time trust only (BuildKit secret, never a layer) — see
+      # nos_build_ca_bundle in default.config.yml.
+      secrets:
+        - nos_build_ca
+{% endif %}
     image: nos/superset:{{ superset_version }}
     restart: unless-stopped
     ports:
@@ -58,3 +64,9 @@ services:
         max-file: "5"
     mem_limit: {{ superset_mem_limit | default(docker_mem_limit_standard) }}
     cpus: {{ docker_cpus_standard | default('1.0') }}
+{% if nos_build_ca_bundle | default('', true) | length > 0 %}
+
+secrets:
+  nos_build_ca:
+    file: {{ nos_build_ca_bundle }}
+{% endif %}

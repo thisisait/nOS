@@ -19,7 +19,11 @@ USER root
 # Install directly into Superset's venv (/app/.venv) so the already-active
 # Python interpreter sees the new packages. `uv pip install --system` would
 # target the system interpreter which Superset does not use.
-RUN /app/.venv/bin/pip install --no-cache-dir \
+# nos_build_ca (optional BuildKit secret): a TLS-intercepting proxy's CA,
+# trusted for this download only — it never lands in a layer.
+RUN --mount=type=secret,id=nos_build_ca,required=false \
+    if [ -s /run/secrets/nos_build_ca ]; then export PIP_CERT=/run/secrets/nos_build_ca; fi; \
+    /app/.venv/bin/pip install --no-cache-dir \
         "authlib>=1.3" \
  && rm -rf /root/.cache/pip /root/.cache/uv
 USER superset

@@ -1,100 +1,48 @@
 # =============================================================================
-# profiles/cloud-e2e.yml — the estate a Claude cloud sandbox can prove end to end
+# profiles/cloud-e2e.yml — nOS DEFAULT CONFIG inside a Claude cloud sandbox
 #
 #   tools/cloud/e2e.sh converge          (docs/cloud-e2e.md)
 #
-# The smallest topology that is still REAL: L0 substrate, the SSO organ, the
-# edge. Chosen against what the sandbox measurably is (2026-09-25): Ubuntu 24.04
-# container, root, no systemd, ~16 GB, egress that reaches Docker Hub (via
-# mirror.gcr.io) and GitHub but refuses Galaxy, ghcr blob storage, quay, lscr.
-# Grow it one service at a time — `tools/cloud/e2e.sh preflight` first; a
-# service whose image the sandbox cannot pull is refused by
-# test_cloud_e2e_contract.py::test_profile_pulls_nothing_the_sandbox_refuses.
+# The goal is that this file is (almost) EMPTY: the estate a cloud session
+# proves is the estate `default.config.yml` describes. Platform differences —
+# macOS-only settings, Homebrew, launchd, a container's kernel, no systemd —
+# are resolved by FACTS in tasks/_platform.yml, never by a toggle here
+# (docs/cross-platform.md). What remains below is the NETWORK the sandbox
+# sits behind, measured 2026-09-25, and one safety belt for the controller.
+# Each line says which of the two it is; a line that is neither does not
+# belong here.
+#
 # Every key must be declared in default.config.yml
-# (test_a_profile_only_sets_flags_that_exist.py).
+# (test_a_profile_only_sets_flags_that_exist.py); every enabled image must be
+# pullable here (test_cloud_e2e_contract.py::test_profile_pulls_nothing_the_sandbox_refuses).
 # =============================================================================
 
-# ── L0 substrate + SSO + edge ────────────────────────────────────────────────
-install_postgresql: true
-redis_docker: true
-install_authentik: true
-install_traefik: true
-install_nginx: false
-# Same upstream image as ghcr.io/goauthentik/server, served from Docker Hub —
-# ghcr's blob host (pkg-containers.githubusercontent.com) is refused here.
+# ── NETWORK: same upstream images, served from Docker Hub ────────────────────
+# ghcr's blob host (pkg-containers.githubusercontent.com) and lscr.io are
+# refused by the sandbox egress; both vendors publish the same image to Hub.
 authentik_image: authentik/server
+calibreweb_image: linuxserver/calibre-web
 
-# ── Tier-2 apps (apps_runner) — documenso, qdrant, roundcube stay in ────────
-# 2FAuth's upstream nginx listens on [::]:8000; this kernel has no IPv6, so
-# the container can never become healthy here. Not an nOS defect to fix in
-# the lane — skipped by name, visibly.
+# ── NETWORK: no Docker Hub copy exists, and the blob host is refused ─────────
+# Flip back on once the environment allows pkg-containers.githubusercontent.com.
+install_openwebui: false       # ghcr.io/open-webui/open-webui
+install_kiwix: false           # ghcr.io/kiwix/kiwix-serve
+install_paperclip: false       # ghcr.io/paperclipai/paperclip
+install_bluesky_pds: false     # ghcr.io/bluesky-social/pds
+
+# ── NETWORK: KEAP's image build apt-gets from Debian ─────────────────────────
+# deb.debian.org and every Debian mirror answer 403 (archive.ubuntu.com
+# passes). Flip back on once the environment allows deb.debian.org.
+install_keap: false
+
+# ── KERNEL: no IPv6 in the sandbox ───────────────────────────────────────────
+# 2FAuth's upstream nginx listens on [::]:8000 only; it can never become
+# healthy on a kernel without IPv6. Skipped by name, visibly.
 apps_skip: [twofauth]
 
-# ── Host organs — systemd user units, run by nos-proc (nos_init == none) ────
-install_bone: true
-install_pulse: true
-install_wing: true
-install_cortex: true
-install_face: true
-# KEAP's image build (thisisait/nos-keap Dockerfile) runs `apt-get update` on
-# Debian bookworm; the sandbox egress refuses deb.debian.org and every Debian
-# mirror (measured 2026-09-25 — archive.ubuntu.com passes, Debian does not).
-# A network fact, not an nOS one: on by default everywhere else.
-install_keap: false
-install_backup: false
-install_ears: false
-install_openclaw: false
-install_hermes: false
-install_opencode: false
-
-# ── Nothing the playbook installs into the controller's PATH ─────────────────
-# `pip3` in tasks/extra-packages.yml is whatever PATH resolves; measured: it
-# installed `ansible` into the frozen venv. e2e.sh strips the venv from PATH
-# too; this is the belt to that brace.
+# ── CONTROLLER safety belt ───────────────────────────────────────────────────
+# The global pip/npm tasks run whichever pip3/npm is first on PATH; measured,
+# pip installed `ansible` into the frozen controller venv (2.21.0 → 2.21.4).
+# e2e.sh strips the venv from PATH too; this is the belt to that brace.
 pip_packages: []
 node_global_packages: []
-
-# ── macOS-only / host-convenience concerns ───────────────────────────────────
-configure_dotfiles: false
-configure_macos_defaults: false
-configure_osx: false
-configure_power_management: false
-configure_terminal: false
-enable_ssh: false
-install_bluesky_pds: false
-install_bun: false
-install_calibreweb: false
-install_cask_apps: false
-install_claude_cli: false
-install_dnsmasq: false
-install_dotnet: false
-install_freescout: false
-install_gitea: false
-install_golang: false
-install_hardening: false
-install_homebrew_packages: false
-install_infisical: false
-install_kiwix: false
-install_mailpit: false
-install_mariadb: false
-install_mas_apps: false
-install_metabase: false
-install_n8n: false
-install_nextcloud: false
-install_node: true
-install_observability: false
-install_openwebui: false
-install_os_resume: false
-install_outline: false
-install_paperclip: false
-install_php: false
-install_portainer: false
-install_python: true
-install_rustfs: false
-install_shell_extras: false
-install_superset: false
-install_tailscale: false
-install_uptime_kuma: false
-install_vaultwarden: false
-install_watchtower: false
-services_lan_access: false
