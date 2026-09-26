@@ -158,9 +158,12 @@ tier_reset() {
   # and the prefix state. Leaving the store while wiping the data is the
   # half-reset that produced "password authentication failed for user
   # authentik" here (measured). ≈ `nos --remove=data`, without the prompts.
-  rm -rf "$HOME/stacks" "$HOME/nos" "$HOME/projects/default" \
+  rm -rf "$HOME/stacks" "$HOME/nos" "$HOME/projects" \
          "$HOME/.nos/state.yml" "$HOME/.nos/secrets.yml" "$HOME/.nos/proc" \
          "$REPO/.ansible-prefix-state"
+  # ~/projects holds nextcloud_dir / wordpress_dir and the service registry —
+  # a stale nextcloud/config there made the "fresh" converge meet an estate
+  # that believed it was installed (measured 2026-09-26).
   # Host organs' runtime trees (venvs, wing.db, cortex store). Tools the
   # converge installs (~/.nvm, ~/.local/bin/{frankenphp,composer.phar}) stay:
   # re-downloading them proves nothing about nOS.
