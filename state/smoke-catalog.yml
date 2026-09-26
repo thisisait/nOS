@@ -116,8 +116,8 @@ smoke_endpoints:
   - id: openclaw
     url: "http://127.0.0.1:{{ openclaw_gateway_port | default(18789) }}/"
     expect: [200, 401, 403]
-    when: "install_openclaw | default(false)"
-    note: "OpenClaw is a host launchd agent — direct loopback (no Traefik route)"
+    when: "install_openclaw | default(false) and nos_is_macos | default(false)"
+    note: "OpenClaw is a host launchd agent — direct loopback (no Traefik route); Darwin-gated in main.yml"
 
   - id: bluesky_pds
     # Bluesky PDS still uses its legacy nginx vhost on bsky.dev.lan; not yet

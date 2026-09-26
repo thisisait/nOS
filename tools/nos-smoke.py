@@ -928,6 +928,11 @@ def main() -> int:
         vars_dict, REPO / "config.yml",
         manifest=load_yaml(REPO / "state" / "manifest.yml"),
     )
+    # Host-platform fact for catalog `when:` rows, mirroring main.yml's own
+    # `ansible_os_family == 'Darwin'` gates: OpenClaw is installed ONLY on
+    # macOS, so on Linux its install flag (default true) must not summon a
+    # probe for a daemon the playbook never started (cloud lane, 2026-09-26).
+    vars_dict.setdefault("nos_is_macos", sys.platform == "darwin")
 
     # ── Track F: apply CLI overrides BEFORE helper computation ───────────────
     # These mirror Ansible -e flags. Without them, the subprocess can't see
