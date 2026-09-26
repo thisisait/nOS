@@ -29,6 +29,14 @@ services:
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
 {% endif %}
     environment:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+      # The ROOTFUL gitea/gitea image does not run update-ca-certificates, so
+      # the mount above never reached the trust store: add-oauth failed
+      # "x509: certificate signed by unknown authority" and the Authentik
+      # source was never created (cloud lane, 2026-09-26). Go reads every cert
+      # in each SSL_CERT_DIR entry — the system dir stays, mkcert's is added.
+      SSL_CERT_DIR: "/etc/ssl/certs:/usr/local/share/ca-certificates"
+{% endif %}
       # Gitea refuses to run as root ("Gitea is not supposed to be run as
       # root"). An operator who IS root (a container, a server) falls back to
       # the image's own `git` user, 1000:1000 — cloud lane, 2026-09-26.
