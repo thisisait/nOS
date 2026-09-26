@@ -20,6 +20,16 @@
     - "{{ nextcloud_dir }}"
     - "{{ nextcloud_data_dir }}"
 
+# The overlay below renders into config/ BEFORE the first compose up — on a
+# fresh machine nothing has created it yet (the image's entrypoint does, on
+# first start). Measured 2026-09-26 on the cloud lane: "Destination directory
+# …/nextcloud/config does not exist". No `mode`: the entrypoint takes the
+# directory over (www-data) and a mode here would fight it every converge.
+- name: "[pazny.nextcloud] Ensure the config directory exists (first run)"
+  ansible.builtin.file:
+    path: "{{ nextcloud_dir }}/config"
+    state: directory
+
 - name: "[pazny.nextcloud] Render database-TLS config overlay"
   # Rendered BEFORE compose up, into the bind-mounted config dir, so the value
   # is present the first time the container reads it. Nextcloud merges every
