@@ -8,7 +8,8 @@
 # macOS-only settings, Homebrew, launchd, a container's kernel, no systemd —
 # are resolved by FACTS in tasks/_platform.yml, never by a toggle here
 # (docs/cross-platform.md). What remains below is the NETWORK the sandbox
-# sits behind, measured 2026-09-25, and one safety belt for the controller.
+# sits behind, measured 2026-09-25, the sandbox's disk, and one safety belt
+# for the controller.
 # Each line says which of the two it is; a line that is neither does not
 # belong here.
 #
@@ -35,10 +36,15 @@ install_bluesky_pds: false     # ghcr.io/bluesky-social/pds
 # passes). Flip back on once the environment allows deb.debian.org.
 install_keap: false
 
-# ── KERNEL: no IPv6 in the sandbox ───────────────────────────────────────────
-# 2FAuth's upstream nginx listens on [::]:8000 only; it can never become
-# healthy on a kernel without IPv6. Skipped by name, visibly.
-apps_skip: [twofauth]
+# ── KERNEL + DISK ────────────────────────────────────────────────────────────
+# twofauth: its upstream nginx listens on [::]:8000 only; it can never become
+#   healthy on a kernel without IPv6.
+# documenso, roundcube: the session's disk allowance (~37 GB written) does not
+#   hold every default image (~30 GB) plus data; measured 2026-09-26, the
+#   converge died "No space left on device". These two Tier-2 apps (~4 GB with
+#   documenso's own postgres) are the lane's cut — they are already proven by
+#   the Tier-2 wet-test (tests/wet) and by earlier runs of this lane.
+apps_skip: [twofauth, documenso, roundcube]
 
 # ── CONTROLLER safety belt ───────────────────────────────────────────────────
 # The global pip/npm tasks run whichever pip3/npm is first on PATH; measured,
