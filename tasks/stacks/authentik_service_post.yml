@@ -205,8 +205,17 @@
   when:
     - install_nextcloud | default(false)
     - _nc_running.stdout | default('') | trim == 'true'
-  failed_when: false
-  changed_when: "'already installed' not in (_nc_user_oidc_install.stdout | default(''))"
+  # Was failed_when:false + changed on anything but "already installed": an
+  # App Store the host cannot reach ("Could not download app user_oidc, it was
+  # not found on the appstore") reported CHANGED, and the run failed three
+  # tasks later at the provider verify, far from its cause (cloud lane,
+  # 2026-09-26). Now the download failure is the failure.
+  failed_when: >-
+    _nc_user_oidc_install.rc != 0
+    and 'already installed' not in (_nc_user_oidc_install.stdout | default('') ~ _nc_user_oidc_install.stderr | default(''))
+  changed_when: >-
+    _nc_user_oidc_install.rc == 0
+    and 'already installed' not in (_nc_user_oidc_install.stdout | default(''))
 
 - name: "[Authentik->Nextcloud] Enable user_oidc app"
   ansible.builtin.command: >

@@ -10,7 +10,7 @@
 # (docs/cross-platform.md). What remains below is the NETWORK the sandbox
 # sits behind, measured 2026-09-25, the sandbox's disk, and one safety belt
 # for the controller.
-# Each line says which of the two it is; a line that is neither does not
+# Each block says which of these it is; a line that is none of them does not
 # belong here.
 #
 # Every key must be declared in default.config.yml
@@ -37,6 +37,12 @@ install_bluesky_pds: false     # ghcr.io/bluesky-social/pds
 # not trust the egress CA. (calibreweb_image points at Hub for the image
 # itself — the mod is the part that cannot come.)
 install_calibreweb: false
+
+# ── NETWORK: Nextcloud installs its SSO app from the App Store at run time ───
+# user_oidc comes from apps.nextcloud.com (`occ app:install`), which the
+# sandbox egress refuses; without it the Authentik OIDC wiring cannot exist.
+# Flip back on once the environment allows apps.nextcloud.com.
+install_nextcloud: false
 
 # ── NETWORK: KEAP's image build apt-gets from Debian ─────────────────────────
 # deb.debian.org and every Debian mirror answer 403 (archive.ubuntu.com
