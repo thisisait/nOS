@@ -21,6 +21,68 @@
     state: directory
     mode: '0755'
 
+# ── frser-sqlite-datasource, provisioned from the HOST (2026-09-26) ─────────
+# Was GF_INSTALL_PLUGINS: Grafana fetched it from grafana.com on EVERY
+# container start, and Grafana 12's installer treats a failed fetch as fatal —
+# so an egress that refuses grafana.com (measured: the Claude cloud sandbox;
+# equally an air-gapped estate) crash-looped Grafana and failed the STRICT
+# health-wait. The same signed release (MANIFEST.txt inside) now comes from the
+# plugin's GitHub release, checksum-pinned, once; Grafana finds it installed.
+- name: "[pazny.grafana] Provision the SQLite datasource plugin"
+  when: (install_wing | default(install_php | default(true))) or (install_keap | default(false))
+  vars:
+    _gp_dir: "{{ grafana_data_dir | default(stacks_dir + '/observability/grafana/data') }}/plugins"
+    _gp_stamp: "{{ grafana_data_dir | default(stacks_dir + '/observability/grafana/data') }}/plugins/frser-sqlite-datasource/.nos-version-{{ grafana_sqlite_plugin_version }}"
+  block:
+    - name: "[pazny.grafana] Is this plugin version already provisioned?"
+      ansible.builtin.stat:
+        path: "{{ _gp_stamp }}"
+      register: _grafana_plugin_stamp
+
+    - name: "[pazny.grafana] Fetch + unpack frser-sqlite-datasource"
+      when: not _grafana_plugin_stamp.stat.exists
+      block:
+        - name: "[pazny.grafana] Ensure the plugins directory exists"
+          ansible.builtin.file:
+            path: "{{ _gp_dir }}"
+            state: directory
+            mode: '0755'
+
+        - name: "[pazny.grafana] Download the plugin release (checksum-pinned)"
+          ansible.builtin.get_url:
+            url: "https://github.com/fr-ser/grafana-sqlite-datasource/releases/download/v{{ grafana_sqlite_plugin_version }}/frser-sqlite-datasource-{{ grafana_sqlite_plugin_version }}.zip"
+            dest: "{{ _gp_dir }}/frser-sqlite-datasource.zip"
+            checksum: "sha256:{{ grafana_sqlite_plugin_sha256 }}"
+            mode: '0644'
+            timeout: 120
+          register: _grafana_plugin_dl
+          until: _grafana_plugin_dl is succeeded
+          retries: 3
+          delay: 20
+
+        - name: "[pazny.grafana] Remove a previous plugin version"
+          ansible.builtin.file:
+            path: "{{ _gp_dir }}/frser-sqlite-datasource"
+            state: absent
+
+        - name: "[pazny.grafana] Unpack the plugin"
+          ansible.builtin.unarchive:
+            src: "{{ _gp_dir }}/frser-sqlite-datasource.zip"
+            dest: "{{ _gp_dir }}"
+            remote_src: true
+
+        - name: "[pazny.grafana] Stamp the provisioned version"
+          ansible.builtin.copy:
+            dest: "{{ _gp_stamp }}"
+            content: "{{ grafana_sqlite_plugin_version }}\n"
+            mode: '0644'
+
+        - name: "[pazny.grafana] Drop the downloaded archive"
+          ansible.builtin.file:
+            path: "{{ _gp_dir }}/frser-sqlite-datasource.zip"
+            state: absent
+      notify: Restart grafana
+
 # REM-217 rung 3, the sixth client. Rendered whether or not mariadb_ssl_enabled
 # resolves true, because the compose block mounts it only under that gate — a
 # file with no mount is inert, and a mount with no file makes Docker invent a

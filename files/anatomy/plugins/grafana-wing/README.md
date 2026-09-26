@@ -15,8 +15,8 @@ wing.db  ──(bind-mount, ro)──►  /var/lib/grafana/wing/wing.db
 
 The Grafana container already mounts Wing's data dir read-only (see
 `roles/pazny.grafana/templates/compose.yml.j2`, gated on `install_wing`), and
-the `frser-sqlite-datasource` plugin is installed via `GF_INSTALL_PLUGINS`
-(`files/anatomy/plugins/grafana-base/templates/grafana-base.compose.yml.j2`).
+the `frser-sqlite-datasource` plugin is provisioned by `pazny.grafana` from its GitHub release
+(`grafana_sqlite_plugin_version`, `roles/pazny.grafana/tasks/main.yml`).
 The only missing link was the **datasource registration** — this plugin
 supplies it.
 

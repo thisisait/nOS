@@ -59,6 +59,10 @@ gitea_data_dir: "{{ nos_data_root }}/platform/services/gitea/data"
 gitlab_config_dir: "{{ nos_data_root }}/platform/services/gitlab/config"
 gitlab_data_dir: "{{ nos_data_root }}/platform/services/gitlab/data"
 grafana_data_dir: "{{ nos_data_root }}/platform/services/grafana/data"
+# frser-sqlite-datasource (Wing + KEAP SQLite datasources), provisioned by
+# pazny.grafana from github.com/fr-ser/grafana-sqlite-datasource releases.
+grafana_sqlite_plugin_version: "4.0.6"
+grafana_sqlite_plugin_sha256: "e5ce2354dd26ba9bea56b37f9ed4050cc917a46b858a0a191e1cafda382bf18a"
 hedgedoc_data_dir: "{{ nos_data_root }}/platform/services/hedgedoc/data"
 # Rendered config.json — HedgeDoc's database TLS, which its connection URL
 # cannot express (doctrine/foreign-properties.md §5.2). Separate from data/

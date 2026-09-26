@@ -42,10 +42,13 @@ services:
       # dashboards always provision together. The prior grafana_dashboards-
       # length gate was wrong: it conflated "operator wants community
       # dashboards" with "install the sqlite plugin", so an empty list left
-      # the wing_sqlite panels dark. Pinned to 4.0.6 for deterministic
-      # installs; the plugin is Grafana-signed (ships MANIFEST.txt), so no
-      # GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS is needed.
-      GF_INSTALL_PLUGINS: "frser-sqlite-datasource 4.0.6"
+      # the wing_sqlite panels dark. The plugin is Grafana-signed (ships
+      # MANIFEST.txt), so no GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS is needed.
+      # It is PROVISIONED BY pazny.grafana into <data>/plugins from its GitHub
+      # release (grafana_sqlite_plugin_version) — no GF_INSTALL_PLUGINS, so the
+      # container never reaches grafana.com at start (an egress refusal there
+      # crash-looped Grafana 12, whose installer failure is fatal).
+      _NOS_SQLITE_PLUGIN: "{{ grafana_sqlite_plugin_version | default('4.0.6') }}"
 {% endif %}
 {% if install_authentik | default(false) %}
       # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
