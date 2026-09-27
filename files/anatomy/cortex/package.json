@@ -3,7 +3,7 @@
 	"private": true,
 	"version": "0.1.0",
 	"type": "module",
-	"description": "Cortex \u2014 the nOS reasoning organ. Verbatim port of KEAP v1.27.0's cortex-* modules (ontology typecheck, late binding, onto1 digest) as a standalone loopback daemon.",
+	"description": "Cortex — the nOS reasoning organ. Verbatim port of KEAP v1.27.0's cortex-* modules (ontology typecheck, late binding, onto1 digest) as a standalone loopback daemon.",
 	"engines": {
 		"node": ">=22"
 	},
@@ -32,10 +32,10 @@
 		"@playwright/test": "^1.61.1",
 		"@types/express": "^4.17.21",
 		"@types/node": "^22.5.5",
-		"esbuild": "^0.24.0",
+		"esbuild": "^0.25.12",
 		"tsx": "^4.19.0",
 		"typescript": "^5.5.3",
-		"vitest": "^4.1.9"
+		"vitest": "^4.1.11"
 	},
 	"overrides": {
 		"qs": "^6.16.0",
