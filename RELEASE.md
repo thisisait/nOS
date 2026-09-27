@@ -6,17 +6,26 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.12
 
 ---
 
-## v0.13-beta (2026-09-20)
+## v0.13-beta (2026-09-20 … 2026-09-27)
 
-> **A consulting firm gets a backoffice in SOURCE: CRM, books doors, a commons portal.**
-> 72 commits since `v0.12-beta` (239 files, +13k/−0.4k). Still `-beta`. No tag in this cut.
+> **A consulting firm gets a backoffice: CRM, books, invoice intake, a commons portal.**
+> 184 commits since `v0.12-beta` (477 files, +29.7k/−0.9k). Still `-beta`.
 > v0.12 made the loop generated and visible. v0.13 names the public organ
-> **backoffice** and ships the first **praxis** pack — Espo, KEAP tables,
-> ISDOC + vision intake, HMAC Books approve — as doors in the tree. This
-> checkout is not what the estate is serving; a git ref is not a converge.
-> **Extended 2026-09-21, same cut (still no tag):** the desk vendor pivots
-> Espo → Dolibarr, every external n8n pull lands under one lintable pack
-> contract, and four silent-green holes the doors had are closed.
+> **backoffice** and ships the first **praxis** pack — Dolibarr as the desk,
+> KEAP tables, ISDOC + vision intake, HMAC Books approve.
+>
+> The cut opened on 2026-09-20 describing doors in the tree, and closed a week
+> later with several of them measured on a live estate: a photographed invoice
+> reached a balanced ledger, the desk's OIDC button lands a session, and the
+> whole thing converges `failed=0` with smoke 47/47 strict. The from-blank
+> path (UC13) is still unrun, and that is named below rather than implied by
+> the green.
+>
+> Three things changed shape mid-cut and are recorded as such: the desk vendor
+> pivoted Espo → Dolibarr, an invoice identity defect was found by reading the
+> live Books table rather than by a test, and a batch of cross-platform work
+> arrived from a cloud sandbox lane that had to be checked for what it leaked
+> into the macOS path.
 
 ### Backoffice is the organ; praxis is a pack
 
