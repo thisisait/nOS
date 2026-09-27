@@ -51,9 +51,16 @@
           - 172.16.0.0/12
           - 192.168.0.0/16
       {% if (homeassistant_login_attempts_threshold | default(10) | int) > 0 %}
-        # REM-168: ip_ban_enabled is True upstream ALREADY and bans nothing —
-        # ban.py leaves process_wrong_login before counting whenever the
-        # threshold is < 1. This positive number is the switch.
+        # HOW THE FEATURE ARMS (REM-168): ip_ban_enabled is True upstream
+        # ALREADY and bans nothing on its own — ban.py returns from
+        # process_wrong_login before counting whenever login_attempts_threshold
+        # is < 1. The positive threshold below is the real switch; this boolean
+        # is belt to its braces.
+        #
+        # It stays ON. It is the only thing bounding the bcrypt-per-failed-login
+        # cost described in default.config.yml, and since 2026-09-27 the ban
+        # finally lands on the CLIENT rather than the proxy — see
+        # traefik_forwarded_trusted_ips.
         ip_ban_enabled: true
         login_attempts_threshold: {{ homeassistant_login_attempts_threshold | default(10) | int }}
       {% endif %}

@@ -22,6 +22,13 @@ global:
 entryPoints:
   web:
     address: ":80"
+{% if traefik_forwarded_trusted_ips | default([]) | length > 0 %}
+    # Preserve the client X-Forwarded-For these peers send instead of
+    # replacing it with their own address (vars/main.yml explains why the
+    # list is ingress plumbing and not Cloudflare's ranges).
+    forwardedHeaders:
+      trustedIPs: {{ traefik_forwarded_trusted_ips | to_json }}
+{% endif %}
     http:
       redirections:
         entryPoint:
@@ -30,6 +37,13 @@ entryPoints:
           permanent: true
   websecure:
     address: ":443"
+{% if traefik_forwarded_trusted_ips | default([]) | length > 0 %}
+    # Preserve the client X-Forwarded-For these peers send instead of
+    # replacing it with their own address (vars/main.yml explains why the
+    # list is ingress plumbing and not Cloudflare's ranges).
+    forwardedHeaders:
+      trustedIPs: {{ traefik_forwarded_trusted_ips | to_json }}
+{% endif %}
     http:
       # REM-251 GHSA-rf44-j88r-hh8c: Go canonicalizes header names on dashes
       # only, so X.Authentik.Username survives ForwardAuth replacement and

@@ -364,6 +364,27 @@ traefik_host_services:
 # rest against the row. Ceiling: only 7 rows carry a single container_name;
 # woodpecker/authentik are multi-container and stay hand-written.
 traefik_host_gateway_ip: "192.168.65.254"   # Docker Desktop host gateway (IPv4); override per host
+
+# ── Who may set X-Forwarded-For (2026-09-27) ────────────────────────────────
+# An entrypoint with no trustedIPs OVERWRITES the incoming XFF with its peer,
+# so Cloudflare's real-client header was being thrown away and every backend
+# saw the ingress address. Home Assistant then banned it after three AI
+# crawlers failed auth — and that address is every proxied caller, so it
+# locked out the operator for eighteen hours.
+#
+# These are INGRESS PLUMBING addresses, not clients. Measured on this host:
+# Docker Desktop NATs published ports to 192.168.65.1 before Traefik sees
+# them, so trusting Cloudflare's published ranges would have changed nothing
+# — Traefik never meets a Cloudflare IP. On Linux the same role is played by
+# the docker bridge (172.16/12) when userland-proxy rewrites the source.
+#
+# Widening this trusts those peers to state the client honestly. That governs
+# ATTRIBUTION only — logs, bans, rate limits. Nothing here authorizes by IP.
+traefik_forwarded_trusted_ips:
+  - "127.0.0.1/32"
+  - "::1/128"
+  - "192.168.65.0/24"   # Docker Desktop ingress NAT (macOS)
+  - "172.16.0.0/12"     # docker bridge networks (Linux)
 traefik_container_upstreams:
   apex:          { port: 80 }   # gated_net only (SEC-02 posture; calibre-web precedent)
   grafana:       { port: 3000 }

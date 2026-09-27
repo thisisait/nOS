@@ -2454,15 +2454,28 @@ homeassistant_auth_oidc_version: "1.1.1"
 # username to keep timing constant. The container is capped at 1.0 CPU, so
 # ~4.8 anonymous requests per second saturate it. One client, one thread.
 #
-# 10, not 5: HA writes bans to ip_bans.yaml and they persist until an operator
-# edits that file, so too low a number turns a fat-fingered password into a
-# lockout. Recovery is `docker exec iiab-homeassistant-1 rm /config/ip_bans.yaml`
-# plus a restart. Set 0 to disable the ban entirely (upstream's own -1 shape).
+# 100 since 2026-09-27, and the reason 10 was wrong is not that it was too
+# small — it is that it was SHARED. Until the Traefik forwardedHeaders fix,
+# every caller reached HA as the ingress address 192.168.65.1, so ten attempts
+# were one budget for the whole internet AND the operator. Three AI crawlers
+# (ChatGLM, Grok, GPTBot) spent it in nineteen minutes on 2026-09-26 by polling
+# /api/config, and the ban landed on the proxy — i.e. on everybody — for
+# eighteen hours, visible only as a non-fatal smoke row.
+#
+# The budget is now PER CLIENT (verified: a probe claiming 203.0.113.77 is
+# attributed to 203.0.113.77, where it used to read 192.168.65.1). So it can be
+# generous without being weak: 100 bounds one source at ~21 CPU-seconds of
+# bcrypt before the ban, well inside what a 1.0-CPU container absorbs, while
+# sitting far above any plausible accidental count.
+#
+# Bans persist in ip_bans.yaml until someone edits it. Recovery is
+# `docker exec iiab-homeassistant-1 rm /config/ip_bans.yaml` plus a restart.
+# Set 0 to disable the ban entirely (upstream's own -1 shape).
 #
 # HONEST LIMIT: this bounds ONE source. A distributed flood still costs a
 # bcrypt per attempt until it is banned, and the complementary fix is a
 # rateLimit middleware on the router (REM-169), which nothing declares yet.
-homeassistant_login_attempts_threshold: 10
+homeassistant_login_attempts_threshold: 100
 authentik_oidc_homeassistant_client_id: "nos-homeassistant"
 authentik_oidc_homeassistant_client_secret: "{{ nos_derived_secrets.oidc_homeassistant }}"
 
