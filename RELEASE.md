@@ -239,6 +239,51 @@ because three of them were confidently answering about something else.
   run (accuracy 0.965 over 17 runs, floor 0.85) now that one pulse run may hold
   many agent sessions instead of colliding on a single uuid.
 
+### Cross-platform, and the edge that was throwing the client away (2026-09-25..27)
+
+Same cut, still no tag. A cloud-sandbox lane drove a batch of Linux and
+idempotence fixes; the macOS estate had to be checked for what leaked into the
+shared path, and one thing had been broken here for eighteen hours without
+anyone being told.
+
+- **The Linux fixes do not touch macOS.** Nine compose templates now emit
+  `user: "{{ nos_container_user }}"`, every one behind
+  `{% if nos_container_user | length > 0 %}`, and the fact resolves `''` on
+  Darwin — so the rendered compose is byte-identical. Nextcloud's ownership
+  tasks `omit` and skip `become` on Darwin; gitea's `USER_UID` fallback only
+  fires for a root operator. Verified per template rather than assumed.
+- **dev CI had failed 16 consecutive runs** with every other job green: one
+  `ansible-lint` key-order violation, `name → when → block → notify` where the
+  basic profile wants `notify` before `block`. Behaviour identical; a
+  block-level notify fires on the block's changes either way.
+- **Home Assistant answered 403 for eighteen hours** and only a non-fatal smoke
+  row said so. Three AI crawlers (ChatGLM, Grok, GPTBot) polled `/api/config`,
+  each rejection counted as a failed login, and at the threshold HA banned
+  `192.168.65.1` — the address *every* proxied caller wears. It banned the
+  operator.
+- **The obvious fix would have done nothing.** Trusting Cloudflare's ranges
+  assumes Traefik meets a Cloudflare IP; its own access log reads
+  `ClientHost=192.168.65.1` for public requests too, because Docker Desktop
+  NATs published ports before Traefik sees them. An entrypoint with no
+  `forwardedHeaders.trustedIPs` *overwrites* the incoming `X-Forwarded-For`
+  with its peer, so Cloudflare's real-client header was discarded at the door.
+  `traefik_forwarded_trusted_ips` names the ingress plumbing instead. Verified
+  end to end: a probe claiming `203.0.113.77` is now attributed to
+  `203.0.113.77`, where it read `192.168.65.1` twenty minutes earlier — and it
+  survived a subsequent full converge.
+- **The ban stays armed; its budget became per-client.** `10` was not too small,
+  it was SHARED — one budget for the whole internet *and* the operator. Turning
+  the ban off was the first plan and was wrong: `test_the_login_ban_can_actually_ban.py`
+  records that ~4.8 anonymous requests/second saturate HA's 1.0 CPU through
+  cost-12 bcrypt, so it is a DoS bound, not brute-force theatre. Threshold 100
+  bounds one source at ~21 CPU-seconds before the ban. The REM-168 gate is
+  untouched and green — it asserts a *positive* threshold.
+- **The ARES pull stopped failing because it succeeded.** `--scope=missing`
+  correctly found nothing left to do, the flow ended on an empty node, and
+  `responseMode: lastNode` had no body to return — so n8n answered 500 four
+  times an hour. The selection now emits a `noop` sentinel routed to a terminal
+  node; live since the converge, `rc=0`.
+
 ### Still open (named, not restated as done)
 
 - ~~The live money rows still carry the pre-identity ids~~ **DONE

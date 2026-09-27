@@ -13,20 +13,19 @@
 1. **The v0.13-beta cut** (dtt `rel-013`). Invoice identity is closed in
    SOURCE *and live*: the operator's teardown + re-import ran, and
    `tools/invoice-identity-scan.py` reads clean (6 rows, every id derived).
-   **Steps 1–6 are done and measured.** Full converge `failed=0`
-   (ok=1389 changed=124) + `nos-smoke --strict` 47/47 on 2026-09-23 19:31;
-   `tools/ci-local.sh` rc=0 on the frozen 2.21 mirror; docs pass and devlog
-   landed. **Only step 7 is left, and it is the operator's:** `merge-base` ==
-   `master` tip is VERIFIED, so a rebase-merge is a fast-forward — but dev is
-   **1205 commits** ahead and `gh pr merge --rebase` already refused at 188
-   (v0.10), so the release-scale path is `git push origin origin/dev:master`,
-   then re-sync dev, tag, `gh release`.
-   **Open on n8n:** the edge gate SHIPPED and is live (200 → 302 into the
-   outpost), and the machine-lane mechanism ships with n8n's list EMPTY on
-   purpose — the clock is loopback and the one webhook has no auth. REM-275
-   (floor 2.39.10 vs the 2.37.10 pin) is untouched.
-   **Not promoted, deliberately:** the security notebook is at cycle 65 and the
-   committed copy at 55. Promoting publishes still-pending criticals to a
+   **Steps 1–6 are done and measured**, re-measured 2026-09-27: full converge
+   `failed=0` (ok=1393 changed=82) + `nos-smoke --strict` 47/47;
+   `tools/ci-local.sh` rc=0 on the frozen 2.21 mirror; ansible-lint 0 failures;
+   dev CI green. **Only step 7 is left, and it is the operator's:**
+   `merge-base(origin/master, origin/dev)` == `origin/master` tip is VERIFIED,
+   so a rebase-merge is a fast-forward. dev is **183** commits ahead — an
+   earlier note here said 1205, which was this file's author measuring against
+   a stale LOCAL `master`; `origin/master` has not moved since v0.12-beta.
+   `gh pr merge --rebase` refused at 188 commits once (v0.10), so 183 may or
+   may not go through; `git push origin origin/dev:master` is the fallback that
+   produces byte-identical history. Then re-sync dev, tag, `gh release`.
+   **Not promoted, deliberately:** the security notebook is at cycle **69** and
+   the committed copy at 55. Promoting publishes still-pending criticals to a
    public repo; that is an operator decision, not a tidy-up.
 
 2. **First always-on PoC: `git-origin-watcher`** (dtt, parent
