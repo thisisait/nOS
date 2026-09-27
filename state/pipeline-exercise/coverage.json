@@ -7,5 +7,13 @@
   "alfa-001|skew": 1,
   "alfa-001|stains": 1,
   "alfa-002|clean": 1,
+  "alfa-002|crumple": 1,
+  "alfa-002|jpeg": 1,
+  "alfa-002|lowres": 1,
+  "alfa-002|shadow": 1,
+  "alfa-002|skew": 1,
+  "alfa-002|stains": 1,
+  "beta-001|clean": 1,
+  "beta-001|crumple": 1,
   "beta-002|crumple": 3
 }

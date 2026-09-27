@@ -41,6 +41,7 @@
 
     - name: "[pazny.grafana] Fetch + unpack frser-sqlite-datasource"
       when: not _grafana_plugin_stamp.stat.exists
+      notify: Restart grafana
       block:
         - name: "[pazny.grafana] Ensure the plugins directory exists"
           ansible.builtin.file:
@@ -81,7 +82,6 @@
           ansible.builtin.file:
             path: "{{ _gp_dir }}/frser-sqlite-datasource.zip"
             state: absent
-      notify: Restart grafana
 
 # REM-217 rung 3, the sixth client. Rendered whether or not mariadb_ssl_enabled
 # resolves true, because the compose block mounts it only under that gate — a

@@ -2,110 +2,16 @@
   "cycles": [
     {
       "n": 1,
-      "doc": "alfa-001",
-      "degrade": "shadow",
+      "doc": "alfa-002",
+      "degrade": "skew",
       "seed": 1,
       "reason": "thinnest cell (0 prior visit(s))",
-      "wall_clock_s": 99.0,
-      "book_owner": "synthetic-client-alfa",
-      "accuracy": 0.9,
-      "verdict": "reject",
-      "queued": true,
-      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-001.shadow.1.jpg",
-      "fields": {
-        "id": true,
-        "issue": true,
-        "due": false,
-        "currency": true,
-        "payable": true,
-        "net": true,
-        "vat": true,
-        "seller.ico": true,
-        "buyer.ico": true,
-        "rates": true
-      },
-      "absorb_rc": 0,
-      "books": {
-        "booked": 1,
-        "identity_ok": null,
-        "balanced": null,
-        "slugs": [
-          "invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001"
-        ],
-        "ok": false,
-        "detail": "a rejected document reached the books"
-      },
-      "ok": false,
-      "detail": "a rejected document reached the books",
-      "created": [],
-      "teardown": "deleted 1 \u00b7 retained 0 \u00b7 absent 0"
-    },
-    {
-      "n": 2,
-      "doc": "alfa-001",
-      "degrade": "skew",
-      "seed": 2,
-      "reason": "thinnest cell (0 prior visit(s))",
-      "wall_clock_s": 113.0,
+      "wall_clock_s": 110.5,
       "book_owner": "synthetic-client-alfa",
       "accuracy": 1.0,
       "verdict": "approve",
       "queued": true,
-      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-001.skew.2.jpg",
-      "fields": {
-        "id": true,
-        "issue": true,
-        "due": true,
-        "currency": true,
-        "payable": true,
-        "net": true,
-        "vat": true,
-        "seller.ico": true,
-        "buyer.ico": true,
-        "rates": true
-      },
-      "absorb_rc": 0,
-      "books": {
-        "booked": 1,
-        "identity_ok": true,
-        "balanced": true,
-        "slugs": [
-          "invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001"
-        ],
-        "ok": true,
-        "detail": ""
-      },
-      "ok": true,
-      "detail": "",
-      "created": [],
-      "teardown": "deleted 1 \u00b7 retained 0 \u00b7 absent 0"
-    },
-    {
-      "n": 3,
-      "doc": "alfa-001",
-      "degrade": "stains",
-      "seed": 3,
-      "reason": "thinnest cell (0 prior visit(s))",
-      "wall_clock_s": 423.1,
-      "book_owner": "synthetic-client-alfa",
-      "fields": null,
-      "ok": false,
-      "stage": "sweep",
-      "detail": "stains.3.jpg (exit 1): 03-01\",\n  \"due\": \"2026-03-15\",\n  \"currency\": \"CZK\",\n  \"payable\": 1770.00,\n   \u2026TAIL\u2026 el a.s. I\u010cO 00000134 1 000.00 210.00 12 % 500.00 60.00 \u010c\u00e1stka k \u00fahrad\u011b 1 770.00 CZK ODBERATEL Alfa Odberatel a.s. I\n\nREFUSING: every extraction failed \u2014 is qwen2.5vl:7b pulled and ollama armed?",
-      "env": true
-    },
-    {
-      "n": 4,
-      "doc": "alfa-002",
-      "degrade": "clean",
-      "seed": 4,
-      "reason": "thinnest cell (0 prior visit(s))",
-      "wall_clock_s": 118.8,
-      "book_owner": "synthetic-client-alfa",
-      "accuracy": 1.0,
-      "verdict": "approve",
-      "queued": true,
-      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-002.clean.4.jpg",
+      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-002.skew.1.jpg",
       "fields": {
         "id": true,
         "issue": true,
@@ -133,26 +39,23 @@
       "detail": "",
       "created": [],
       "teardown": "deleted 1 \u00b7 retained 0 \u00b7 absent 0"
-    }
-  ],
-  "held": 2,
-  "findings": [
+    },
     {
-      "n": 1,
-      "doc": "alfa-001",
-      "degrade": "shadow",
-      "seed": 1,
+      "n": 2,
+      "doc": "alfa-002",
+      "degrade": "stains",
+      "seed": 2,
       "reason": "thinnest cell (0 prior visit(s))",
-      "wall_clock_s": 99.0,
+      "wall_clock_s": 120.9,
       "book_owner": "synthetic-client-alfa",
-      "accuracy": 0.9,
-      "verdict": "reject",
+      "accuracy": 1.0,
+      "verdict": "approve",
       "queued": true,
-      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-001.shadow.1.jpg",
+      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-002.stains.2.jpg",
       "fields": {
         "id": true,
         "issue": true,
-        "due": false,
+        "due": true,
         "currency": true,
         "payable": true,
         "net": true,
@@ -164,10 +67,90 @@
       "absorb_rc": 0,
       "books": {
         "booked": 1,
+        "identity_ok": true,
+        "balanced": true,
+        "slugs": [
+          "invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002"
+        ],
+        "ok": true,
+        "detail": ""
+      },
+      "ok": true,
+      "detail": "",
+      "created": [],
+      "teardown": "deleted 1 \u00b7 retained 0 \u00b7 absent 0"
+    },
+    {
+      "n": 3,
+      "doc": "beta-001",
+      "degrade": "clean",
+      "seed": 3,
+      "reason": "thinnest cell (0 prior visit(s))",
+      "wall_clock_s": 107.3,
+      "book_owner": "synthetic-client-beta",
+      "accuracy": 1.0,
+      "verdict": "approve",
+      "queued": true,
+      "source_path": "inbox/accounting/synthetic-client-beta/processed/beta-001.clean.3.jpg",
+      "fields": {
+        "id": true,
+        "issue": true,
+        "due": true,
+        "currency": true,
+        "payable": true,
+        "net": true,
+        "vat": true,
+        "seller.ico": true,
+        "buyer.ico": true,
+        "rates": true
+      },
+      "absorb_rc": 0,
+      "books": {
+        "booked": 1,
+        "identity_ok": true,
+        "balanced": true,
+        "slugs": [
+          "invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001"
+        ],
+        "ok": true,
+        "detail": ""
+      },
+      "ok": true,
+      "detail": "",
+      "created": [],
+      "teardown": "deleted 1 \u00b7 retained 0 \u00b7 absent 0"
+    },
+    {
+      "n": 4,
+      "doc": "beta-001",
+      "degrade": "crumple",
+      "seed": 4,
+      "reason": "thinnest cell (0 prior visit(s))",
+      "wall_clock_s": 135.3,
+      "book_owner": "synthetic-client-beta",
+      "accuracy": 0.6,
+      "verdict": "reject",
+      "queued": true,
+      "source_path": "inbox/accounting/synthetic-client-beta/processed/beta-001.crumple.4.jpg",
+      "fields": {
+        "id": false,
+        "issue": true,
+        "due": true,
+        "currency": true,
+        "payable": true,
+        "net": true,
+        "vat": false,
+        "seller.ico": false,
+        "buyer.ico": true,
+        "rates": false
+      },
+      "absorb_rc": 0,
+      "books": {
+        "booked": 1,
         "identity_ok": null,
         "balanced": null,
         "slugs": [
-          "invoice-synthetic-client-alfa-synthetic-client-alfa-2026-alfa-001"
+          "invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001"
         ],
         "ok": false,
         "detail": "a rejected document reached the books"
@@ -178,22 +161,50 @@
       "teardown": "deleted 1 \u00b7 retained 0 \u00b7 absent 0"
     }
   ],
-  "could_not_run": [
+  "held": 3,
+  "findings": [
     {
-      "n": 3,
-      "doc": "alfa-001",
-      "degrade": "stains",
-      "seed": 3,
+      "n": 4,
+      "doc": "beta-001",
+      "degrade": "crumple",
+      "seed": 4,
       "reason": "thinnest cell (0 prior visit(s))",
-      "wall_clock_s": 423.1,
-      "book_owner": "synthetic-client-alfa",
-      "fields": null,
+      "wall_clock_s": 135.3,
+      "book_owner": "synthetic-client-beta",
+      "accuracy": 0.6,
+      "verdict": "reject",
+      "queued": true,
+      "source_path": "inbox/accounting/synthetic-client-beta/processed/beta-001.crumple.4.jpg",
+      "fields": {
+        "id": false,
+        "issue": true,
+        "due": true,
+        "currency": true,
+        "payable": true,
+        "net": true,
+        "vat": false,
+        "seller.ico": false,
+        "buyer.ico": true,
+        "rates": false
+      },
+      "absorb_rc": 0,
+      "books": {
+        "booked": 1,
+        "identity_ok": null,
+        "balanced": null,
+        "slugs": [
+          "invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001"
+        ],
+        "ok": false,
+        "detail": "a rejected document reached the books"
+      },
       "ok": false,
-      "stage": "sweep",
-      "detail": "stains.3.jpg (exit 1): 03-01\",\n  \"due\": \"2026-03-15\",\n  \"currency\": \"CZK\",\n  \"payable\": 1770.00,\n   \u2026TAIL\u2026 el a.s. I\u010cO 00000134 1 000.00 210.00 12 % 500.00 60.00 \u010c\u00e1stka k \u00fahrad\u011b 1 770.00 CZK ODBERATEL Alfa Odberatel a.s. I\n\nREFUSING: every extraction failed \u2014 is qwen2.5vl:7b pulled and ollama armed?",
-      "env": true
+      "detail": "a rejected document reached the books",
+      "created": [],
+      "teardown": "deleted 1 \u00b7 retained 0 \u00b7 absent 0"
     }
   ],
+  "could_not_run": [],
   "coverage_cells": 42,
-  "cells_visited": 9
+  "cells_visited": 17
 }
