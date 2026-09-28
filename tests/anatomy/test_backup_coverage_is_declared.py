@@ -25,12 +25,17 @@ CLASSES = {"dump", "db", "derived", "store", "never", "unbacked"}
 
 
 def _state():
-    env = blank_gate._jinja()
-    ctx = blank_gate._config_ctx(env)
-    dirs = blank_gate._dir_vars(ctx)
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text())
-    backed = {env.from_string(d["path"]).render(ctx).rstrip("/") for d in cfg["backup_dirs_to_dump"]}
-    return dirs, backed, cfg["backup_coverage"]
+    env = blank_gate.managed.jinja()
+    ctx = blank_gate.managed.config_ctx(env)
+    backed, cov = blank_gate.managed.backup_sets(env, ctx)
+    return blank_gate.managed.dir_vars(ctx), backed, cov
+
+
+def test_the_reader_reports_no_undeclared_dir():
+    """tools/managed-status.py is the one table; UNDECLARED in it is exactly
+    what the two gates above refuse, so the reader and the gates agree."""
+    rows = blank_gate.managed.table()
+    assert rows and not [r for r in rows if "UNDECLARED" in (r["blank"], r["backup"])]
 
 
 def test_every_dir_var_is_backed_up_or_declared():
