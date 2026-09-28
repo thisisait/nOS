@@ -157,3 +157,24 @@ def test_the_reconciler_adds_the_plan_to_a_daemon_that_predates_it(tmp_path: Pat
     assert cfg["plans"][0]["paths"] == ["/ui"], "a UI-owned plan was rewritten"
     assert [r["id"] for r in cfg["repos"]] == ["offsite"] and cfg["auth"]["disabled"] is False
     assert run().strip() == "UNCHANGED"
+
+
+def test_the_dir_arrays_render_in_lockstep() -> None:
+    """DIR_NAMES / DIR_PATHS / DIR_EMPTY_OK are parallel bash arrays indexed by
+    one `i`; a filter applied to one and not the others silently pairs a name
+    with the wrong path or verdict. Rendered with the gitlab skip active."""
+    import subprocess
+    text = _env().from_string(BACKUP.read_text(encoding="utf-8")).render(
+        backup_dirs_to_dump=[
+            {"name": "gitea", "path": "/g"},
+            {"name": "gitlab", "path": "/gl"},           # skipped: install_gitlab off
+            {"name": "outline", "path": "/o", "empty_ok": True},
+        ],
+        install_gitlab=False,
+        backup_encryption_enabled=False, backup_overwrite_same_day=True,
+        backup_retention_daily=7, backup_retention_weekly=4, backup_retention_monthly=6,
+    )
+    defs = text.rsplit('\nmain "$@"', 1)[0]
+    out = subprocess.run(["bash", "-c", defs + '\necho "${#DIR_NAMES[@]} ${#DIR_PATHS[@]} ${#DIR_EMPTY_OK[@]} ${DIR_NAMES[1]} ${DIR_PATHS[1]} ${DIR_EMPTY_OK[1]}"'],
+                         capture_output=True, text=True, check=True).stdout.split()
+    assert out == ["2", "2", "2", "outline", "/o", "true"], out

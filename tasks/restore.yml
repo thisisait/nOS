@@ -80,6 +80,16 @@
       tenants: "{{ nos_data_root }}/tenants"
       dolibarr-documents: "{{ dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents') }}"
       dolibarr-custom: "{{ dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom') }}"
+      bookstack: "{{ bookstack_data_dir | default(ansible_facts['env']['HOME'] + '/bookstack') }}"
+      firefly-upload: "{{ firefly_upload_dir | default(ansible_facts['env']['HOME'] + '/firefly/upload') }}"
+      freescout: "{{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout') }}"
+      hedgedoc: "{{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}"
+      outline: "{{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline') }}"
+      paperclip: "{{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}"
+      uptime-kuma: "{{ uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma') }}"
+      homeassistant: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}"
+      openwebui: "{{ openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui') }}"
+      wordpress-uploads: "{{ wordpress_dir | default(ansible_facts['env']['HOME'] + '/projects/wordpress') }}/wp-content/uploads"
 
 - name: "[Restore] Prepare AWS environment block"
   ansible.builtin.set_fact:
