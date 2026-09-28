@@ -1158,6 +1158,9 @@
 - slug: ssot-vector
   parent: wave-small-ssot
   track: cortex
+- slug: stalwart-never-left-bootstrap
+  parent: ''
+  track: platform
 - slug: standardize-digest-outputs-and-storage
   parent: consulting-firm-deployment
   track: filesystem

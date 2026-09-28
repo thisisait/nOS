@@ -93,59 +93,18 @@ def test_blank_dirs_expression_is_jinja_parseable():
         pytest.fail(f"_blank_dirs Jinja expression is not parseable: {exc}")
 
 
-DIR_VAR = re.compile(r"^([a-z0-9_]+_(?:data_dir|config_dir|cache_dir|certs_dir|books_dir|dir)):\s*(.*)$", re.M)
-FAKE_HOME = "/H"
+import importlib.util as _ilu
+_spec = _ilu.spec_from_file_location("managed_status", REPO_ROOT / "tools/managed-status.py")
+managed = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(managed)
+_jinja, _config_ctx, _dir_vars, _covered = managed.jinja, managed.config_ctx, managed.dir_vars, managed.covered
 
 
-def _jinja():
-    jinja2 = pytest.importorskip("jinja2")
-    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
-    env.filters["ternary"] = lambda c, a, b: a if c else b
-    env.filters["bool"] = lambda v: str(v).lower() in ("1", "true", "yes")
-    return env
-
-
-def _config_ctx(env) -> dict:
-    """default.config.yml with every install_* ON and the Jinja resolved, so a
-    dir var like `{{ nos_data_root }}/platform/...` becomes a real path."""
-    raw = yaml.safe_load((REPO_ROOT / "default.config.yml").read_text()) or {}
-    ctx = {k: v for k, v in raw.items() if isinstance(v, (str, int, bool))}
-    ctx.update({k: True for k in ctx if k.startswith("install_")})
-    ctx["ansible_facts"] = {"env": {"HOME": FAKE_HOME}, "machine": "arm64"}
-    for _ in range(6):  # nested refs settle in a few passes
-        for k, v in list(ctx.items()):
-            if isinstance(v, str) and "{{" in v:
-                try:
-                    ctx[k] = env.from_string(v).render(ctx)
-                except Exception:
-                    pass
-    return ctx
-
-
-def _dir_vars(ctx) -> dict[str, str]:
-    text = (REPO_ROOT / "default.config.yml").read_text()
-    out = {}
-    for name, _ in DIR_VAR.findall(text):
-        v = ctx.get(name)
-        if isinstance(v, str) and v.startswith("/") and "{{" not in v:
-            out[name] = v.rstrip("/")
-    return out
-
-
-def _levels(env, ctx) -> tuple[set[str], set[str], dict[str, dict]]:
-    facts = {}
-    for t in _plays(REMOVAL_SET_PATH):
-        facts.update(t.get("ansible.builtin.set_fact") or t.get("set_fact") or {})
-    data = {r.rstrip("/") for r in yaml.safe_load(env.from_string(facts["_blank_dirs"]).render(ctx)) or []}
-    all_ = {env.from_string(x).render(ctx).rstrip("/") for x in facts["_uninstall_source"]}
-    keep = {k["var"]: k for k in facts["_removal_keep"]}
+def _levels(env, ctx):
+    data, all_, keep = managed.removal_levels(env, ctx)
     assert all(k.get("why") and k.get("level") in ("all", "never") for k in keep.values()), (
         "every _removal_keep entry needs level: all|never and a why")
     return data, all_, keep
-
-
-def _covered(path: str, removed: set[str]) -> bool:
-    return any(path == r or path.startswith(r + "/") for r in removed)
 
 
 def test_every_dir_var_is_removed_by_blank_or_declared_kept():
