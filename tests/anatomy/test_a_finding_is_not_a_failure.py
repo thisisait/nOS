@@ -75,8 +75,8 @@ def test_the_declaration_is_matched_as_a_whole_code() -> None:
                      (job, codes))
         for code in (1, 3, 11, 13):
             conn.execute("INSERT INTO pulse_runs (run_id, job_id, fired_at, "
-                         "finished_at, exit_code) VALUES (?, ?, '2026-08-29', "
-                         "'2026-08-29', ?)", (f"{job}-{code}", job, code))
+                         "finished_at, exit_code) VALUES (?, ?, date('now'), "
+                         "date('now'), ?)", (f"{job}-{code}", job, code))
 
     title, query = next((t, q) for t, q in _queries() if "findings_exit_codes" in q
                         and "GROUP BY r.job_id" in q)
