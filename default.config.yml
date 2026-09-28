@@ -3391,6 +3391,81 @@ backup_dirs_to_dump:
   - { name: "tenants", path: "{{ nos_data_root }}/tenants" }
   - { name: "dolibarr-documents", path: "{{ dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents') }}" }
   - { name: "dolibarr-custom", path: "{{ dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom') }}" }
+# Every `*_dir` var in this file that backup_dirs_to_dump does NOT cover, with
+# the class that says why — reconciled by tests/anatomy/test_backup_coverage_is_declared.py,
+# so a new service cannot be silently absent from the backup set (the removal
+# set has the same rule: `_removal_keep` in tasks/removal-set.yml).
+#   dump     — the state is captured by a logical dump backup.sh already takes
+#   db       — the service keeps its state in MariaDB/PostgreSQL (dumped); the dir is cache/config
+#   derived  — rendered by a converge or regenerable; nothing to restore
+#   store    — the backup target itself
+#   never    — operator-owned content nOS does not manage
+#   unbacked — REAL GAP, named: files no dump covers. Move the var into
+#              backup_dirs_to_dump to close it (size/consistency is the operator's call).
+backup_coverage:
+  mariadb_data_dir:            { class: dump, why: "mariadb.sql.gz — all databases" }
+  postgresql_data_dir:         { class: dump, why: "postgres.sql.gz — pg_dumpall" }
+  erpnext_data_dir:            { class: dump, why: "sites in a named volume; DB in mariadb.sql.gz (parked service)" }
+  wing_app_dir:                { class: dump, why: "wing-db.sql.gz — sqlite3 .dump of wing.db" }
+  wing_data_dir:               { class: dump, why: "wing-db.sql.gz — sqlite3 .dump of wing.db" }
+  keap_data_dir:               { class: dump, why: "keap-db.gz — online .backup; /user-files are under tenants (dir-tenants)" }
+  bookstack_data_dir:          { class: unbacked, why: "page images + attachments (uploads/, files/); DB rows are in mariadb.sql.gz" }
+  firefly_upload_dir:          { class: unbacked, why: "transaction attachments; ledger rows are in mariadb.sql.gz" }
+  firefly_export_dir:          { class: derived, why: "export scratch" }
+  freescout_data_dir:          { class: unbacked, why: "ticket attachments; conversations are in mariadb.sql.gz" }
+  hedgedoc_data_dir:           { class: unbacked, why: "note uploads; notes are in postgres.sql.gz" }
+  hedgedoc_config_dir:         { class: derived, why: "rendered config" }
+  outline_data_dir:            { class: unbacked, why: "FILE_STORAGE=local — every attachment; documents are in postgres.sql.gz" }
+  paperclip_data_dir:          { class: unbacked, why: "uploads; records are in postgres.sql.gz" }
+  openwebui_data_dir:          { class: unbacked, why: "webui.db (chats, users) + uploads — no DB dump covers it" }
+  uptime_kuma_data_dir:        { class: unbacked, why: "kuma.db — every monitor + history; the converge re-creates monitors, not history" }
+  homeassistant_config_dir:    { class: unbacked, why: "configuration.yaml + home-assistant_v2.db (recorder)" }
+  grafana_data_dir:            { class: unbacked, why: "grafana.db — users/alert state; dashboards + datasources are provisioned from git" }
+  woodpecker_data_dir:         { class: unbacked, why: "woodpecker.sqlite — pipeline history; repos re-activate on converge" }
+  bluesky_pds_data_dir:        { class: unbacked, why: "PDS sqlite + account repos (federation not live)" }
+  code_server_workspace_dir:   { class: unbacked, why: "user code the browser IDE edits in place" }
+  code_server_data_dir:        { class: derived, why: "editor settings + extensions" }
+  stalwart_data_dir:           { class: unbacked, why: "EVERY MAILBOX — the one real mail store; move it into backup_dirs_to_dump the day Stalwart is on" }
+  influxdb_data_dir:           { class: unbacked, why: "metrics TSDB — observability history, accepted loss" }
+  influxdb_config_dir:         { class: derived, why: "rendered config" }
+  qgis_data_dir:               { class: unbacked, why: "GIS projects (opt-in service)" }
+  freepbx_data_dir:            { class: unbacked, why: "parked service (vendor-abandoned image)" }
+  spacetimedb_data_dir:        { class: unbacked, why: "parked service" }
+  spacetimedb_keys_dir:        { class: unbacked, why: "parked service" }
+  infisical_data_dir:          { class: db, why: "secrets live in postgres.sql.gz" }
+  metabase_data_dir:           { class: db, why: "app db in postgres.sql.gz; dir holds plugins" }
+  superset_data_dir:           { class: db, why: "app db in postgres.sql.gz" }
+  onlyoffice_data_dir:         { class: derived, why: "document server cache" }
+  onlyoffice_db_dir:           { class: derived, why: "embedded cluster, seeded blank-safe (euro-office pilot)" }
+  onlyoffice_lib_dir:          { class: derived, why: "document server cache" }
+  onlyoffice_logs_dir:         { class: derived, why: "logs" }
+  ntfy_data_dir:               { class: derived, why: "message cache + attachments with TTL" }
+  portainer_data_dir:          { class: derived, why: "portainer.db — endpoints + OAuth re-registered by the converge" }
+  snappymail_data_dir:         { class: derived, why: "rendered config" }
+  mcpo_data_dir:               { class: derived, why: "rendered config" }
+  mailpit_data_dir:            { class: derived, why: "dev SMTP sink" }
+  watchtower_data_dir:         { class: derived, why: "image-poll state" }
+  jellyfin_cache_dir:          { class: derived, why: "transcode/metadata cache" }
+  jellyfin_movies_dir:         { class: never, why: "operator media library" }
+  jellyfin_shows_dir:          { class: never, why: "operator media library" }
+  jellyfin_music_dir:          { class: never, why: "operator media library" }
+  rustfs_data_dir:             { class: store, why: "copy #1 object store — the backup target, not a source" }
+  stacks_dir:                  { class: derived, why: "rendered compose files" }
+  tls_cert_dir:                { class: derived, why: "mkcert/ACME re-issues" }
+  traefik_config_dir:          { class: derived, why: "rendered dynamic config" }
+  redis_data_dir:              { class: derived, why: "cache" }
+  mariadb_certs_dir:           { class: derived, why: "re-issued by the role" }
+  postgresql_certs_dir:        { class: derived, why: "re-issued by the role" }
+  nextcloud_dir:               { class: derived, why: "app checkout; user files are under tenants, DB in mariadb.sql.gz" }
+  wordpress_dir:               { class: unbacked, why: "wp-content/uploads — media; posts are in mariadb.sql.gz" }
+  openclaw_base_dir:           { class: never, why: "is $HOME" }
+  openclaw_agents_dir:         { class: never, why: "~/agents user content" }
+  openclaw_projects_dir:       { class: never, why: "~/projects user content" }
+  openclaw_log_dir:            { class: never, why: "agent logs under ~/agents" }
+  pi_config_dir:               { class: derived, why: "rendered agent config" }
+  iiab_terminal_config_dir:    { class: derived, why: "rendered config" }
+  node_exporter_textfile_dir:  { class: derived, why: "metrics scratch" }
+
 backup_databases_mariadb: true
 backup_databases_postgresql: true
 # A9 result notification (W6.1): backup outcome → Wing inbox (fail=high,
