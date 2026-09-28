@@ -1,6 +1,8 @@
 # =============================================================================
 # profiles/cloud-e2e.yml — nOS DEFAULT CONFIG inside a Claude cloud sandbox
 #
+# axis: environment
+#
 #   tools/cloud/e2e.sh converge          (docs/cloud-e2e.md)
 #
 # The goal is that this file is (almost) EMPTY: the estate a cloud session

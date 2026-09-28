@@ -1,0 +1,81 @@
+---
+# =============================================================================
+# profiles/flash.yml — nOS on a medium that cannot take sustained random writes
+#
+# axis: constraint
+# composes-with: any use-case profile (praxis, dev-minimal). Apply this LAST:
+#   `nos -e @profiles/praxis.yml -e @profiles/flash.yml`
+#   Later extra-vars win, so the constraint always overrides the want.
+#
+# WHAT A CONSTRAINT PROFILE MAY DO, and this is the invariant the gate pins:
+# it may only SUBTRACT. A constraint describes what the hardware cannot do;
+# the moment one turns a service ON it is expressing a want, and wants belong
+# to a use-case profile. Composing then stops being order-independent in the
+# way that matters — you could no longer reason about `X + flash` without
+# reading flash first.
+#
+# THE MEASUREMENT BEHIND IT (2026-09-27, this host):
+# A 128 GB USB3 flash drive has capacity to spare — the dev-minimal image set
+# measures 11.8 GB, and a full estate's DATA is 21 GB. Capacity was never the
+# problem. Sustained random writes are: consumer flash has no DRAM cache, poor
+# random-4K IOPS, no meaningful wear levelling, and usually no TRIM over USB
+# mass storage. The write-heavy tenants are the observability trio —
+# Prometheus was 6.4 GB and Loki 1.5 GB on this estate, both writing
+# continuously rather than on demand.
+#
+# So this profile removes the continuous writers, not the big ones. Firefly is
+# 1060 MB and stays, because it writes when an operator does something.
+# =============================================================================
+
+# ── The continuous writers ───────────────────────────────────────────────────
+# Grafana + Prometheus + Loki + Tempo + Alloy, as one flag. ~1.8 GB of images
+# and, far more important, an append every scrape interval forever.
+install_observability: false
+install_influxdb: false          # second time-series store; same objection
+
+# Uptime Kuma polls every monitor on a timer and writes each result.
+install_uptime_kuma: false
+
+# ── Heavy JVM/analytics tenants ──────────────────────────────────────────────
+# Not write-pressure so much as RAM and image size on a machine chosen for
+# being small: metabase 1083 MB, superset comparable, both JVM-ish heaps.
+install_metabase: false
+install_superset: false
+
+# ── Media and corpora ────────────────────────────────────────────────────────
+# These are the services whose DATA, not image, fills a stick: a Kiwix ZIM or
+# a Jellyfin library is tens of gigabytes and is not what a portable estate is
+# for. Calibre-Web's library is small but arrives with the same argument.
+install_kiwix: false
+install_jellyfin: false
+install_offline_maps: false
+install_calibreweb: false
+
+# ── Forge and CI ─────────────────────────────────────────────────────────────
+# GitLab alone is 3789 MB (dev-minimal cuts it for the same reason). Woodpecker
+# clones, builds and writes caches — a CI runner is the opposite of what a
+# write-limited medium wants. Gitea stays: it is 267 MB and the forge KEAP and
+# the loop actually read from.
+install_gitlab: false
+install_woodpecker: false
+install_code_server: false
+
+# ── Rebuildable bulk ─────────────────────────────────────────────────────────
+# RustFS is where backups land; on a portable estate the backup target should
+# be somewhere else by definition, or it is not a backup.
+install_rustfs: false
+
+# ── What deliberately STAYS ──────────────────────────────────────────────────
+# Nothing is enabled here — see the invariant above. Stated so the next reader
+# does not have to diff two files to learn the intent:
+#   keap + cortex   the knowledge layer, the reason to carry an estate at all
+#   authentik       SSO is not optional; forward-auth is the access model
+#   postgres/maria  the stores those need
+#   traefik         the edge
+#   face + wing     the surfaces
+#   bone/pulse      the host organs
+#   gitea           267 MB, and the loop reads from it
+#
+# If the medium is an SSD in a USB enclosure rather than flash, do NOT use this
+# profile — an SSD has the IOPS and the wear levelling, and observability is
+# worth having. This profile is a statement about the MEDIUM.

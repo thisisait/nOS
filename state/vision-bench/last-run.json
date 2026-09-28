@@ -1,11 +1,11 @@
 {
-  "accuracy": 0.95,
+  "accuracy": 0.9667,
   "runs": 6,
   "repeat": 1,
   "threshold": 0.85,
   "crosscheck_accuracy": 1.0,
   "per_field": {
-    "buyer.ico": 0.667,
+    "buyer.ico": 0.833,
     "currency": 1.0,
     "due": 1.0,
     "id": 1.0,
@@ -19,7 +19,7 @@
   "per_doc": {
     "alfa-001": {
       "runs": [
-        0.9
+        1.0
       ],
       "spread": 0.0
     },

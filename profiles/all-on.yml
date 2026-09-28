@@ -1,5 +1,7 @@
 # =============================================================================
 # profiles/all-on.yml — "enable every known-good service" test profile
+#
+# axis: service-set
 # =============================================================================
 #
 # Purpose: flip on every wired service so a single blank run exercises the
