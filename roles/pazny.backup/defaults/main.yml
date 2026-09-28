@@ -134,6 +134,9 @@ backup_home_dir: "{{ ansible_facts['env']['HOME'] }}/.nos"
 backup_status_file: "{{ backup_home_dir }}/backup-status.json"
 backup_log_file: "{{ backup_home_dir }}/backup.log"
 backup_script_path: "{{ backup_home_dir }}/backup.sh"
+# Plaintext staging of every dump (fixed names, overwritten nightly) — the
+# restic source Backrest's `nos-dumps` plan snapshots. roles/pazny.backrest reads it.
+backup_staging_dir: "{{ ansible_facts['env']['HOME'] }}/backups/staging"
 
 # ── Restore drill (backup-verify.sh) ──────────────────────────────────────
 # A backup nobody has restored is a hypothesis. The drill fetches the newest

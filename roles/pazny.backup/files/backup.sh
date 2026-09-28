@@ -94,6 +94,10 @@ OPENSSL_BIN=""
 ENC_SUFFIX=""
 
 STATUS_FILE="{{ backup_status_file }}"
+# Plaintext staging copy of every dump, one fixed name per source, overwritten
+# nightly — the restic/Backrest source (docs/backup-architecture.md, increment 1
+# of BACKUP-DESIGN 2026-09-28). Same trust domain as the source data; 0700.
+STAGING_DIR="{{ backup_staging_dir }}"
 LOG_FILE="{{ backup_log_file }}"
 OVERWRITE_SAME_DAY="{{ 'true' if backup_overwrite_same_day else 'false' }}"
 
@@ -156,18 +160,35 @@ setup_encryption() {
 
 # Stream filter: AES-256 when enabled, passthrough otherwise. Used as the last
 # pipe stage before `aws s3 cp -`. Decryption mirror lives in tasks/restore.yml.
+# Arg 1 (optional): the S3 key. Its basename, minus ENC_SUFFIX, is ALSO written
+# plaintext to STAGING_DIR as `<name>.part`; status_append promotes it to
+# `<name>` on success and drops it on failure, so a half-written dump never
+# reaches a restic snapshot.
 encrypt_stream() {
+    local stage="/dev/null"
+    if [[ -n "${1:-}" ]]; then
+        stage="${1##*/}"
+        stage="${STAGING_DIR}/${stage%"${ENC_SUFFIX}"}.part"
+        mkdir -p "${STAGING_DIR}" && chmod 700 "${STAGING_DIR}"
+    fi
     if [[ "${ENCRYPT}" == "true" ]]; then
-        "${OPENSSL_BIN}" enc -aes-256-cbc -md sha512 -pbkdf2 -iter 100000 \
+        tee "${stage}" | "${OPENSSL_BIN}" enc -aes-256-cbc -md sha512 -pbkdf2 -iter 100000 \
             -salt -pass env:NOS_BACKUP_PASS
     else
-        cat
+        tee "${stage}"
     fi
 }
 
 # Append a source entry to the status JSON. Args: name size_bytes duration_ms success(0/1)
 status_append() {
     local name="$1" size="$2" duration="$3" success="$4"
+    # Staged copy follows the verdict: keep on success, drop on failure. Every
+    # S3 key is `<name>.<ext>`, so the glob below is exact per source.
+    local part
+    for part in "${STAGING_DIR}/${name}".*.part; do
+        [[ -e "${part}" ]] || continue
+        if [[ "${success}" == "1" ]]; then mv -f "${part}" "${part%.part}"; else rm -f "${part}"; fi
+    done
     python3 - <<PY
 import json, os, time
 path = os.path.expanduser("${STATUS_FILE}")
@@ -328,7 +349,7 @@ run_mariadb() {
           "-u${MARIADB_USER}" \
           "-p${MARIADB_PASSWORD}" \
       | gzip -c \
-      | encrypt_stream \
+      | encrypt_stream "${key}" \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
     rc=$?
     dur=$(( $(now_ms) - start ))
@@ -361,7 +382,7 @@ run_postgres() {
     docker exec -i -e "PGPASSWORD=${PG_PASSWORD}" "${PG_CONTAINER}" \
         pg_dumpall -U "${PG_USER}" \
       | gzip -c \
-      | encrypt_stream \
+      | encrypt_stream "${key}" \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
     rc=$?
     dur=$(( $(now_ms) - start ))
@@ -405,7 +426,7 @@ run_espocrm() {
           -uroot -p"${pw}" \
           --databases espocrm \
       | gzip -c \
-      | encrypt_stream \
+      | encrypt_stream "${key}" \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
     rc=$?
     dur=$(( $(now_ms) - start ))
@@ -430,7 +451,7 @@ run_espocrm() {
         start=$(now_ms)
         docker run --rm -v "${vol}:/data:ro" "${ALPINE_IMAGE}" \
             sh -c 'cd /data && tar -czf - .' \
-          | encrypt_stream \
+          | encrypt_stream "${key}" \
           | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
         rc=$?
         dur=$(( $(now_ms) - start ))
@@ -467,7 +488,7 @@ run_volumes() {
         start=$(now_ms)
         docker run --rm -v "${vol}:/data:ro" "${ALPINE_IMAGE}" \
             sh -c 'cd /data && tar -czf - .' \
-          | encrypt_stream \
+          | encrypt_stream "${key}" \
           | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
         rc=$?
         dur=$(( $(now_ms) - start ))
@@ -507,7 +528,7 @@ run_authentik() {
     if curl -fsS -H "Authorization: Bearer ${AUTHENTIK_TOKEN}" \
             -H "Accept: application/json" \
             "${AUTHENTIK_URL}/api/v3/managed/blueprints/" > "${tmp}"; then
-        encrypt_stream < "${tmp}" \
+        encrypt_stream "${key}" < "${tmp}" \
           | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
         rc=$?
     else
@@ -560,7 +581,7 @@ run_wing_db() {
     start=$(now_ms)
     sqlite3 "${WING_DB_PATH}" .dump \
       | gzip -c \
-      | encrypt_stream \
+      | encrypt_stream "${key}" \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
     rc=$?
     dur=$(( $(now_ms) - start ))
@@ -694,7 +715,7 @@ run_keap_db() {
             log "keap-db: ${vout}"
             docker exec "${KEAP_CONTAINER}" cat "${ctmp}" \
               | gzip -c \
-              | encrypt_stream \
+              | encrypt_stream "${key}" \
               | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
             rc=$?
             docker exec "${KEAP_CONTAINER}" rm -f "${ctmp}" "${cjs}" "${cvjs}" >/dev/null 2>&1 || true
@@ -760,7 +781,7 @@ run_keap_db() {
         return 0
     fi
     gzip -c "${tmp}" \
-      | encrypt_stream \
+      | encrypt_stream "${key}" \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
     rc=$?
     rm -f "${tmp}"
@@ -805,7 +826,7 @@ run_nos_state() {
     start=$(now_ms)
     # shellcheck disable=SC2086  # intentional word-split of the file list
     tar -czf - -C "${NOS_STATE_DIR}" ${present} \
-      | encrypt_stream \
+      | encrypt_stream "${key}" \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
     rc=$?
     dur=$(( $(now_ms) - start ))
@@ -852,7 +873,7 @@ run_tofu_state() {
     start=$(now_ms)
     # shellcheck disable=SC2086  # intentional word-split of the file list
     tar -czf - -C "${TOFU_STATE_DIR}" ${present} \
-      | encrypt_stream \
+      | encrypt_stream "${key}" \
       | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
     rc=$?
     dur=$(( $(now_ms) - start ))
@@ -939,7 +960,7 @@ run_dirs() {
         tar_list="$(mktemp -t nosbackup)"
         docker run --rm -v "${path}:/data:ro" "${ALPINE_IMAGE}" \
             sh -c 'cd /data && tar -czvf - .' 2>"${tar_list}" \
-          | encrypt_stream \
+          | encrypt_stream "${key}" \
           | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
         rc=$?
         tar_members=$(grep -c '^\./' "${tar_list}" 2>/dev/null || echo 0)

@@ -28,6 +28,16 @@
       "paths": ["{{ rustfs_data_dir | default(ansible_facts['env']['HOME'] + '/rustfs') }}"],
       "schedule": { "cron": "0 4 * * *", "clock": "CLOCK_LOCAL" },
       "retention": { "policyTimeBucketed": { "daily": {{ backup_retention_daily | default(7) }}, "weekly": {{ backup_retention_weekly | default(4) }}, "monthly": {{ backup_retention_monthly | default(12) }} } }
+    },
+    {
+      "id": "nos-dumps",
+      "_comment": "backup.sh tees every logical dump (plaintext, fixed names) into the staging dir; this plan is what makes them browsable + restorable per file in the UI. One snapshot per run, tagged by run kind; the path already says which service.",
+      "repo": "offsite",
+      "paths": ["{{ backup_staging_dir | default(ansible_facts['env']['HOME'] + '/backups/staging') }}"],
+      "excludes": ["*.part"],
+      "backup_flags": ["--tag", "run=nightly"],
+      "schedule": { "cron": "30 4 * * *", "clock": "CLOCK_LOCAL" },
+      "retention": { "policyTimeBucketed": { "daily": {{ backup_retention_daily | default(7) }}, "weekly": {{ backup_retention_weekly | default(4) }}, "monthly": {{ backup_retention_monthly | default(12) }} } }
     }
   ]
 {% endif %}

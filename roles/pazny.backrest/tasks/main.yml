@@ -84,6 +84,22 @@
   changed_when: "'CHANGED' in (_backrest_auth.stdout | default(''))"
   no_log: true
 
+# install_backrest skips tasks/backup.yml (main.yml), but a skipped import does
+# not UNLOAD the legacy off-site agent it once installed — two writers on one
+# restic repo at 04:00. Evict it here: bootout, then unlink the plist that fires it.
+- name: "[pazny.backrest] Evict the legacy off-site restic agent (Backrest owns copy #2)"
+  ansible.builtin.shell: |
+    LABEL="{{ restic_launchd_label | default('eu.thisisait.nos.backup.offsite') }}"
+    PLIST=~/Library/LaunchAgents/${LABEL}.plist
+    [[ -f "$PLIST" ]] || { echo "absent"; exit 0; }
+    launchctl bootout "gui/$(id -u)/${LABEL}" 2>/dev/null || true
+    unlink "$PLIST" && echo "evicted"
+  args:
+    executable: /bin/bash
+  register: _backrest_evict
+  changed_when: "'evicted' in _backrest_evict.stdout"
+  when: ansible_facts['os_family'] == 'Darwin'
+
 - name: "[pazny.backrest] Render launchd plist"
   ansible.builtin.template:
     src: backrest.plist.j2
