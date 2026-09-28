@@ -1,6 +1,8 @@
 # =============================================================================
 # profiles/dev-minimal.yml — the estate that develops nOS, and nothing else
 #
+# axis: service-set
+#
 #   nos -e @profiles/dev-minimal.yml
 #
 # MEASURED 2026-09-01 (`docker stats`): 60 containers / 14.2 GiB  ->  30 / 3.8.

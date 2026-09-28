@@ -1,5 +1,7 @@
 # =============================================================================
 # profiles/gov-local.yml — sovereignty-hardened "local-only" overlay
+#
+# axis: policy
 # =============================================================================
 #
 # Purpose: collapse the residual external-egress + accept-risk surface so the

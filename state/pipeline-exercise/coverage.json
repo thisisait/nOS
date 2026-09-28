@@ -15,5 +15,9 @@
   "alfa-002|stains": 1,
   "beta-001|clean": 1,
   "beta-001|crumple": 1,
+  "beta-001|jpeg": 1,
+  "beta-001|lowres": 1,
+  "beta-001|shadow": 1,
+  "beta-001|skew": 1,
   "beta-002|crumple": 3
 }
