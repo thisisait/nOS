@@ -82,7 +82,7 @@ ALPINE_IMAGE="{{ backup_alpine_image }}"
 # Deliberately a MEMBER count, not a byte size — tar pads to a 10240-byte
 # minimum, so an empty archive and a three-small-file archive weigh the same
 # and a size floor would withdraw real backups.
-EMPTY_ARCHIVE_MEMBERS=1
+EMPTY_ARCHIVE_MEMBERS=0   # counted in FILES (see run_dirs); a tree of bare dirs is 0
 
 RETAIN_DAILY={{ backup_retention_daily }}
 RETAIN_WEEKLY={{ backup_retention_weekly }}
@@ -183,12 +183,18 @@ encrypt_stream() {
 # Append a source entry to the status JSON. Args: name size_bytes duration_ms success(0/1)
 status_append() {
     local name="$1" size="$2" duration="$3" success="$4"
-    # Staged copy follows the verdict: keep on success, drop on failure. Every
-    # S3 key is `<name>.<ext>`, so the glob below is exact per source.
+    # Staged copy follows the verdict: keep on success, drop on failure — the
+    # .part AND yesterday's promoted copy, so the next restic snapshot does not
+    # carry a stale file as if it were tonight's (restic history keeps the old
+    # one). Every S3 key is `<name>.<ext>`, so the glob is exact per source.
     local part
-    for part in "${STAGING_DIR}/${name}".*.part; do
+    for part in "${STAGING_DIR}/${name}".*; do
         [[ -e "${part}" ]] || continue
-        if [[ "${success}" == "1" ]]; then mv -f "${part}" "${part%.part}"; else rm -f "${part}"; fi
+        if [[ "${success}" == "1" ]]; then
+            [[ "${part}" == *.part ]] && mv -f "${part}" "${part%.part}"
+        else
+            rm -f "${part}"
+        fi
     done
     python3 - <<PY
 import json, os, time
@@ -971,7 +977,15 @@ run_dirs() {
           | encrypt_stream "${key}" \
           | aws "${AWS_OPTS[@]}" s3 cp - "s3://${S3_BUCKET}/${key}"
         rc=$?
-        tar_members=$(grep -c '^\./' "${tar_list}" 2>/dev/null || echo 0)
+        # FILES only: an archive of bare directories (stalwart's etc/ + var/,
+        # untouched since 2026-07-22 because the server never left bootstrap
+        # mode) counted 3 members and passed as "OK 144 bytes". A store with
+        # no file in it holds nothing to restore, whatever its tree looks like.
+        # No `|| echo 0`: grep -c PRINTS 0 and exits 1 on no match, so the
+        # fallback appended a second 0 and `-le` choked on "0\n0" — which is
+        # how stalwart's file-less archive passed as OK on 2026-09-28.
+        tar_members=$(grep -c '^\./.*[^/]$' "${tar_list}" 2>/dev/null)
+        tar_members=${tar_members:-0}
         rm -f "${tar_list}"
         dur=$(( $(now_ms) - start ))
 
@@ -981,7 +995,7 @@ run_dirs() {
             # STILL tar to nothing — a per-subdirectory permission failure that
             # tar reports as a delayed error. `./` alone is one member, so an
             # archive at or under that captured no content whatever its size.
-            if [[ "${tar_members}" -le "${EMPTY_ARCHIVE_MEMBERS}" ]]; then
+            if [[ "${tar_members}" -le "${EMPTY_ARCHIVE_MEMBERS}" && "${DIR_EMPTY_OK[$i]}" != "true" ]]; then
                 log "dir/${name}: archive holds ${tar_members} member(s) — nothing was captured. Withdrawing the object and recording as FAILED."
                 aws "${AWS_OPTS[@]}" s3 rm "s3://${S3_BUCKET}/${key}" >/dev/null 2>&1 || true
                 status_append "dir-${name}" 0 "${dur}" 0

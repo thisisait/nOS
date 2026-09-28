@@ -90,6 +90,12 @@
       homeassistant: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}"
       openwebui: "{{ openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui') }}"
       wordpress-uploads: "{{ wordpress_dir | default(ansible_facts['env']['HOME'] + '/projects/wordpress') }}/wp-content/uploads"
+      stalwart: "{{ stalwart_data_dir | default(ansible_facts['env']['HOME'] + '/stalwart') }}"
+      grafana: "{{ grafana_data_dir | default(ansible_facts['env']['HOME'] + '/grafana') }}"
+      woodpecker: "{{ woodpecker_data_dir | default(ansible_facts['env']['HOME'] + '/woodpecker') }}"
+      influxdb: "{{ influxdb_data_dir | default(ansible_facts['env']['HOME'] + '/influxdb') }}"
+      bluesky-pds: "{{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}"
+      code-server-workspace: "{{ code_server_workspace_dir | default(ansible_facts['env']['HOME'] + '/code-server/workspace') }}"
 
 - name: "[Restore] Prepare AWS environment block"
   ansible.builtin.set_fact:

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -84,12 +85,18 @@ def test_a_dump_is_staged_and_promoted_on_success(rendered: Path) -> None:
 
 
 def test_a_failed_dump_never_reaches_staging(rendered: Path) -> None:
+    """...and a failure also evicts yesterday's promoted copy: stalwart's
+    stale 144-byte tar sat in staging after the run that withdrew it."""
+    staging = rendered.parent / "staging"
+    staging.mkdir(exist_ok=True)
+    (staging / "dir-gitea.tar.gz").write_bytes(b"yesterday")
+    (staging / "dir-gitea-config.tar.gz").write_bytes(b"sibling")
     _run(rendered, '''
         printf 'half' | encrypt_stream "2026-09-28/dir-gitea.tar.gz" > /dev/null
         status_append dir-gitea 0 1 0
     ''')
-    staging = rendered.parent / "staging"
-    assert not (staging / "dir-gitea.tar.gz").exists()
+    assert not (staging / "dir-gitea.tar.gz").exists(), "a failed source left a stale promoted copy"
+    assert (staging / "dir-gitea-config.tar.gz").read_bytes() == b"sibling", "the glob reached a sibling"
     assert not list(staging.glob("*.part")), "a failed dump left a .part behind"
 
 
@@ -178,3 +185,29 @@ def test_the_dir_arrays_render_in_lockstep() -> None:
     out = subprocess.run(["bash", "-c", defs + '\necho "${#DIR_NAMES[@]} ${#DIR_PATHS[@]} ${#DIR_EMPTY_OK[@]} ${DIR_NAMES[1]} ${DIR_PATHS[1]} ${DIR_EMPTY_OK[1]}"'],
                          capture_output=True, text=True, check=True).stdout.split()
     assert out == ["2", "2", "2", "outline", "/o", "true"], out
+
+
+def test_a_directories_only_archive_counts_as_empty() -> None:
+    """The member count that decides "captured nothing" must count FILES: a
+    tree of bare directories listed 3 members and passed (stalwart, 2026-09-28)."""
+    text = BACKUP.read_text(encoding="utf-8")
+    m = re.search(r"tar_members=\$\(grep -c '([^']+)'", text)
+    assert m, "the tar member count moved — re-point this gate"
+    pat = m.group(1)
+    listing = ["./", "./etc/", "./var/"]
+    assert sum(bool(re.match(pat, ln)) for ln in listing) == 0, pat
+    assert sum(bool(re.match(pat, ln)) for ln in listing + ["./var/db.sqlite"]) == 1, pat
+
+
+def test_the_member_count_is_a_number_when_nothing_matches(rendered: Path) -> None:
+    """Runs the counting lines lifted from run_dirs against a dirs-only
+    listing: the result must be the integer 0, not "0\\n0" (grep -c prints 0
+    AND exits 1; an `|| echo 0` fallback doubled it and `-le` choked)."""
+    import subprocess
+    text = BACKUP.read_text(encoding="utf-8")
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip().startswith("tar_members=")]
+    assert len(lines) == 2, lines
+    script = 'tar_list=$(mktemp); printf "./\\n./etc/\\n./var/\\n" > "$tar_list"\n' + "\n".join(lines) + \
+             '\n[[ "$tar_members" -le 0 ]] && echo "empty:$tar_members"'
+    out = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
+    assert out.stdout.strip() == "empty:0" and out.stderr == "", (out.stdout, out.stderr)
