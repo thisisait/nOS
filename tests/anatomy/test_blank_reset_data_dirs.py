@@ -39,58 +39,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 REMOVAL_SET_PATH = REPO_ROOT / "tasks" / "removal-set.yml"
 BLANK_RESET_PATH = REPO_ROOT / "tasks" / "blank-reset.yml"
 
-# ── REQUIRED contract ────────────────────────────────────────────────────
-# install_<svc> flags whose service bind-mounts a PERSISTENT HOST directory
-# (volumes: - <host_dir>:<container_path> in the role compose template).
-# Each MUST appear in the _blank_dirs ternary soup or its data orphans on blank.
-#
-# Excluded by design (documented, NOT a gap):
-#   - install_erpnext   → erpnext_data_dir DEPRECATED since P0.1 (named volume,
-#                         cleaned by `docker volume prune -f -a`).
-#   - install_miniflux  → stateless container, state lives in PostgreSQL.
-#   - install_iiab_terminal → host config under {{ homebrew_prefix }}/etc, kept
-#                         alongside Homebrew packages per blank doctrine.
-REQUIRED_BIND_MOUNT_FLAGS = {
-    "install_wordpress",
-    "install_nextcloud",
-    "install_n8n",
-    "install_kiwix",
-    "install_gitea",
-    "install_gitlab",
-    "install_jellyfin",
-    "install_openwebui",
-    "install_uptime_kuma",
-    "install_portainer",
-    "install_woodpecker",
-    "install_calibreweb",
-    "install_homeassistant",
-    "install_rustfs",
-    "install_freescout",
-    "install_outline",
-    "install_metabase",
-    "install_superset",
-    "install_bluesky_pds",
-    "install_paperclip",
-    "install_authentik",
-    "install_infisical",
-    "install_vaultwarden",
-    "install_ntfy",
-    "install_nodered",
-    "install_influxdb",
-    "install_code_server",
-    "install_bookstack",
-    "install_firefly",
-    "install_hedgedoc",
-    "install_onlyoffice",
-    "install_mcp_gateway",
-    "install_snappymail",
-    "install_spacetimedb",
-    # KEAP /data is DERIVED (libsql mirror) — blank wipes it so KEAP re-syncs
-    # from the PRESERVED user-file source (blank=preserve-source split, 2026-07-19).
-    # Was an unguarded gap: keap had a data_dir but no _blank_dirs clause, so a
-    # blank left KEAP re-mirroring stale data. See blank-uninstall-managed-resources.md.
-    "install_keap",
-}
+# The contract is no longer a hand list here. A set a test can be edited to
+# satisfy is not a gate; the required set is DERIVED from default.config.yml
+# (every `*_dir` var) and reconciled against what removal-set.yml removes at
+# some level or declares kept (`_removal_keep`, with a reason each).
 
 
 def _extract_blank_dirs_expr() -> str:
@@ -141,23 +93,101 @@ def test_blank_dirs_expression_is_jinja_parseable():
         pytest.fail(f"_blank_dirs Jinja expression is not parseable: {exc}")
 
 
-def test_every_bind_mount_service_is_wiped():
-    """Core gate: each REQUIRED bind-mount flag must appear in _blank_dirs.
+DIR_VAR = re.compile(r"^([a-z0-9_]+_(?:data_dir|config_dir|cache_dir|certs_dir|books_dir|dir)):\s*(.*)$", re.M)
+FAKE_HOME = "/H"
 
-    A missing flag means that service's host directory orphans on blank=true.
-    """
+
+def _jinja():
+    jinja2 = pytest.importorskip("jinja2")
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    env.filters["ternary"] = lambda c, a, b: a if c else b
+    env.filters["bool"] = lambda v: str(v).lower() in ("1", "true", "yes")
+    return env
+
+
+def _config_ctx(env) -> dict:
+    """default.config.yml with every install_* ON and the Jinja resolved, so a
+    dir var like `{{ nos_data_root }}/platform/...` becomes a real path."""
+    raw = yaml.safe_load((REPO_ROOT / "default.config.yml").read_text()) or {}
+    ctx = {k: v for k, v in raw.items() if isinstance(v, (str, int, bool))}
+    ctx.update({k: True for k in ctx if k.startswith("install_")})
+    ctx["ansible_facts"] = {"env": {"HOME": FAKE_HOME}, "machine": "arm64"}
+    for _ in range(6):  # nested refs settle in a few passes
+        for k, v in list(ctx.items()):
+            if isinstance(v, str) and "{{" in v:
+                try:
+                    ctx[k] = env.from_string(v).render(ctx)
+                except Exception:
+                    pass
+    return ctx
+
+
+def _dir_vars(ctx) -> dict[str, str]:
+    text = (REPO_ROOT / "default.config.yml").read_text()
+    out = {}
+    for name, _ in DIR_VAR.findall(text):
+        v = ctx.get(name)
+        if isinstance(v, str) and v.startswith("/") and "{{" not in v:
+            out[name] = v.rstrip("/")
+    return out
+
+
+def _levels(env, ctx) -> tuple[set[str], set[str], dict[str, dict]]:
+    facts = {}
+    for t in _plays(REMOVAL_SET_PATH):
+        facts.update(t.get("ansible.builtin.set_fact") or t.get("set_fact") or {})
+    data = {r.rstrip("/") for r in yaml.safe_load(env.from_string(facts["_blank_dirs"]).render(ctx)) or []}
+    all_ = {env.from_string(x).render(ctx).rstrip("/") for x in facts["_uninstall_source"]}
+    keep = {k["var"]: k for k in facts["_removal_keep"]}
+    assert all(k.get("why") and k.get("level") in ("all", "never") for k in keep.values()), (
+        "every _removal_keep entry needs level: all|never and a why")
+    return data, all_, keep
+
+
+def _covered(path: str, removed: set[str]) -> bool:
+    return any(path == r or path.startswith(r + "/") for r in removed)
+
+
+def test_every_dir_var_is_removed_by_blank_or_declared_kept():
+    """The reconciliation, at the DATA level — the one a blank runs. Rendered,
+    not grepped: every `*_dir` var in default.config.yml resolves to a path,
+    and that path is under something remove=data deletes, or it is in
+    `_removal_keep` with the level that does remove it and a reason.
+
+    Written against the broken state first: 7 bind-mount dirs (stalwart,
+    mailpit, watchtower, hedgedoc config, calibreweb config, both certs dirs)
+    survived every blank — all under nos_data_root, which only remove=all
+    takes, so a gate that merged the levels was blind to them (the first draft
+    of this one was). The calibreweb clause also wiped a literal path the var
+    had left behind. The old hand list here was green throughout."""
+    env = _jinja()
+    ctx = _config_ctx(env)
+    dirs = _dir_vars(ctx)
+    assert len(dirs) > 40, f"the resolver lost the config: only {len(dirs)} dir vars rendered"
+    data, all_, keep = _levels(env, ctx)
+    orphans = {k: v for k, v in dirs.items() if not _covered(v, data) and k not in keep}
+    assert not orphans, (
+        "these default.config.yml dirs survive remove=data and are not declared "
+        "in tasks/removal-set.yml `_removal_keep`:\n  "
+        + "\n  ".join(f"{k} = {v}" for k, v in sorted(orphans.items()))
+    )
+    stale = sorted(k for k in keep if k in dirs and _covered(dirs[k], data))
+    assert not stale, f"declared kept but remove=data takes them — drop from _removal_keep: {stale}"
+    wrong_level = sorted(k for k, e in keep.items() if k in dirs
+                         and (e["level"] == "all") != _covered(dirs[k], all_))
+    assert not wrong_level, f"_removal_keep level disagrees with what remove=all removes: {wrong_level}"
+
+
+def test_the_removal_set_names_no_dir_the_config_does_not_have():
+    """A clause referencing a var default.config.yml no longer defines wipes
+    the fallback literal, i.e. usually nothing (calibreweb did exactly that)."""
     body = _extract_blank_dirs_expr()
-    referenced = set(re.findall(r"install_[a-z0-9_]+", body))
-
-    missing = sorted(REQUIRED_BIND_MOUNT_FLAGS - referenced)
-    if missing:
-        pytest.fail(
-            "tasks/removal-set.yml `_blank_dirs` is missing a wipe clause for "
-            "these bind-mount services (their host data dir orphans on blank=true):"
-            "\n  - " + "\n  - ".join(missing)
-            + "\n\nAdd a `(<flag> | default(false)) | ternary([<dir>...], [])` "
-            "clause for each in the _blank_dirs set_fact."
-        )
+    cfg = (REPO_ROOT / "default.config.yml").read_text()
+    role_defaults = "".join(p.read_text() for p in (REPO_ROOT / "roles").glob("*/defaults/main.yml"))
+    referenced = set(re.findall(r"\b([a-z0-9_]+_dir)\b", body))
+    unknown = sorted(v for v in referenced
+                     if not re.search(rf"^{v}:", cfg, re.M) and not re.search(rf"^{v}:", role_defaults, re.M))
+    assert not unknown, f"_blank_dirs references dir vars nothing defines: {unknown}"
 
 
 def test_external_paths_included_before_blank_dirs():
