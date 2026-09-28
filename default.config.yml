@@ -3391,6 +3391,22 @@ backup_dirs_to_dump:
   - { name: "tenants", path: "{{ nos_data_root }}/tenants" }
   - { name: "dolibarr-documents", path: "{{ dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents') }}" }
   - { name: "dolibarr-custom", path: "{{ dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom') }}" }
+  # 2026-09-28 — the ten cheap holes backup_coverage named: file-only stores
+  # no DB dump covers (attachments, uploads, three SQLite apps). Same torn-window
+  # honesty as vaultwarden/n8n for kuma.db / webui.db / home-assistant_v2.db.
+  # empty_ok: an attachment store with no uploads yet IS empty; backup.sh records
+  # it as success/0 bytes instead of FAILED (the in-container count already
+  # rules out the unreadable-mount case that made "empty" a failure elsewhere).
+  - { name: "bookstack", empty_ok: true, path: "{{ bookstack_data_dir | default(ansible_facts['env']['HOME'] + '/bookstack') }}" }
+  - { name: "firefly-upload", empty_ok: true, path: "{{ firefly_upload_dir | default(ansible_facts['env']['HOME'] + '/firefly/upload') }}" }
+  - { name: "freescout", empty_ok: true, path: "{{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout') }}" }
+  - { name: "hedgedoc", empty_ok: true, path: "{{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}" }
+  - { name: "outline", empty_ok: true, path: "{{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline') }}" }
+  - { name: "paperclip", empty_ok: true, path: "{{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}" }
+  - { name: "uptime-kuma", path: "{{ uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma') }}" }
+  - { name: "homeassistant", path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}" }
+  - { name: "openwebui", path: "{{ openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui') }}" }
+  - { name: "wordpress-uploads", empty_ok: true, path: "{{ wordpress_dir | default(ansible_facts['env']['HOME'] + '/projects/wordpress') }}/wp-content/uploads" }
 # Every `*_dir` var in this file that backup_dirs_to_dump does NOT cover, with
 # the class that says why — reconciled by tests/anatomy/test_backup_coverage_is_declared.py,
 # so a new service cannot be silently absent from the backup set (the removal
@@ -3409,17 +3425,8 @@ backup_coverage:
   wing_app_dir:                { class: dump, why: "wing-db.sql.gz — sqlite3 .dump of wing.db" }
   wing_data_dir:               { class: dump, why: "wing-db.sql.gz — sqlite3 .dump of wing.db" }
   keap_data_dir:               { class: dump, why: "keap-db.gz — online .backup; /user-files are under tenants (dir-tenants)" }
-  bookstack_data_dir:          { class: unbacked, why: "page images + attachments (uploads/, files/); DB rows are in mariadb.sql.gz" }
-  firefly_upload_dir:          { class: unbacked, why: "transaction attachments; ledger rows are in mariadb.sql.gz" }
   firefly_export_dir:          { class: derived, why: "export scratch" }
-  freescout_data_dir:          { class: unbacked, why: "ticket attachments; conversations are in mariadb.sql.gz" }
-  hedgedoc_data_dir:           { class: unbacked, why: "note uploads; notes are in postgres.sql.gz" }
   hedgedoc_config_dir:         { class: derived, why: "rendered config" }
-  outline_data_dir:            { class: unbacked, why: "FILE_STORAGE=local — every attachment; documents are in postgres.sql.gz" }
-  paperclip_data_dir:          { class: unbacked, why: "uploads; records are in postgres.sql.gz" }
-  openwebui_data_dir:          { class: unbacked, why: "webui.db (chats, users) + uploads — no DB dump covers it" }
-  uptime_kuma_data_dir:        { class: unbacked, why: "kuma.db — every monitor + history; the converge re-creates monitors, not history" }
-  homeassistant_config_dir:    { class: unbacked, why: "configuration.yaml + home-assistant_v2.db (recorder)" }
   grafana_data_dir:            { class: unbacked, why: "grafana.db — users/alert state; dashboards + datasources are provisioned from git" }
   woodpecker_data_dir:         { class: unbacked, why: "woodpecker.sqlite — pipeline history; repos re-activate on converge" }
   bluesky_pds_data_dir:        { class: unbacked, why: "PDS sqlite + account repos (federation not live)" }
@@ -3457,7 +3464,7 @@ backup_coverage:
   mariadb_certs_dir:           { class: derived, why: "re-issued by the role" }
   postgresql_certs_dir:        { class: derived, why: "re-issued by the role" }
   nextcloud_dir:               { class: derived, why: "app checkout; user files are under tenants, DB in mariadb.sql.gz" }
-  wordpress_dir:               { class: unbacked, why: "wp-content/uploads — media; posts are in mariadb.sql.gz" }
+  wordpress_dir:               { class: derived, why: "app checkout; wp-content/uploads is in the set (wordpress-uploads), posts in mariadb.sql.gz" }
   openclaw_base_dir:           { class: never, why: "is $HOME" }
   openclaw_agents_dir:         { class: never, why: "~/agents user content" }
   openclaw_projects_dir:       { class: never, why: "~/projects user content" }

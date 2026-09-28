@@ -42,6 +42,7 @@ VOLUMES=({% for v in backup_volumes_to_dump %}"{{ v }}" {% endfor %})
 # is FAILED; disabled-and-left-behind is not a live source.
 DIR_NAMES=({% for d in backup_dirs_to_dump %}{% if not (d.name in ['gitlab', 'gitlab-config'] and not (install_gitlab | default(false) | bool)) %}"{{ d.name }}" {% endif %}{% endfor %})
 DIR_PATHS=({% for d in backup_dirs_to_dump %}{% if not (d.name in ['gitlab', 'gitlab-config'] and not (install_gitlab | default(false) | bool)) %}"{{ d.path }}" {% endif %}{% endfor %})
+DIR_EMPTY_OK=({% for d in backup_dirs_to_dump %}{% if not (d.name in ['gitlab', 'gitlab-config'] and not (install_gitlab | default(false) | bool)) %}"{{ 'true' if (d.empty_ok | default(false) | bool) else 'false' }}" {% endif %}{% endfor %})
 
 # Wing SQLite store (security findings, audit hash-chain, agent sessions) — a
 # host file, NOT a container. Dumped with `sqlite3 .dump` for portability.
@@ -928,6 +929,13 @@ run_dirs() {
         src_entries=$(docker run --rm -v "${path}:/data:ro" "${ALPINE_IMAGE}" \
                         sh -c 'ls -A /data 2>/dev/null | wc -l' 2>/dev/null | tr -d ' ')
         if [[ -z "${src_entries}" || "${src_entries}" -eq 0 ]]; then
+            # An attachment store with no uploads yet is empty because it is
+            # empty (the container count above rules out an unreadable mount).
+            if [[ "${DIR_EMPTY_OK[$i]}" == "true" ]]; then
+                log "dir/${name}: ${path} is empty — nothing to upload yet (empty_ok)"
+                status_append "dir-${name}" 0 0 1
+                continue
+            fi
             log "dir/${name}: ${path} reads as EMPTY from a container too — recording as FAILED, uploading nothing"
             status_append "dir-${name}" 0 0 0
             continue

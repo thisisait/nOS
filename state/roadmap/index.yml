@@ -63,6 +63,18 @@
 - slug: backup-drill-keap-db
   parent: ''
   track: platform
+- slug: backup-nas-restic-copy
+  parent: backup-restic-store
+  track: platform
+- slug: backup-restic-store
+  parent: ''
+  track: platform
+- slug: backup-s3-leg-retire
+  parent: backup-restic-store
+  track: platform
+- slug: backup-unbacked-attachments
+  parent: backup-restic-store
+  track: platform
 - slug: bff-table-read-tier-gate
   parent: consulting-firm-deployment
   track: security
@@ -72,6 +84,9 @@
 - slug: caddy
   parent: jeff
   track: agents
+- slug: caddy-entity-collision-bench
+  parent: caddy-entity-resolve
+  track: cortex
 - slug: caddy-entity-resolve
   parent: jeff
   track: cortex
@@ -81,6 +96,15 @@
 - slug: caddy-exec-tool
   parent: jeff
   track: cortex
+- slug: caddy-gate8-routing-bench
+  parent: jeff
+  track: security
+- slug: caddy-operator-rating-coverage
+  parent: jeff
+  track: agents
+- slug: caddy-wording-coverage-bench
+  parent: jeff
+  track: agents
 - slug: cc-app
   parent: face
   track: face
@@ -128,6 +152,9 @@
   track: platform
 - slug: converge-cask-detect
   parent: converge-speed
+  track: platform
+- slug: converge-fails-under-local-model-load
+  parent: ''
   track: platform
 - slug: converge-health-wait
   parent: converge-speed
@@ -186,6 +213,9 @@
 - slug: cortex-vendor-staleness
   parent: ''
   track: cortex
+- slug: dependabot-alerts-are-mostly-a-fixture
+  parent: ''
+  track: security
 - slug: device-channel-http
   parent: device-channels
   track: platform
@@ -351,6 +381,9 @@
 - slug: egress-containment
   parent: digest
   track: digest
+- slug: empty-is-not-a-failure-ares
+  parent: ''
+  track: platform
 - slug: erasure-embeddings-provenance
   parent: digest
   track: digest
@@ -501,12 +534,18 @@
 - slug: git-origin-watcher
   parent: loop-definition-model
   track: agents
+- slug: ha-ip-ban-bans-the-proxy
+  parent: ''
+  track: security
 - slug: handheld-dtt-sso-client
   parent: device-organ
   track: face
 - slug: harden-verify-rung-empty-fields
   parent: consulting-firm-deployment
   track: digest
+- slug: host-disk-pressure
+  parent: ''
+  track: platform
 - slug: idea-surface-absorb
   parent: ''
   track: platform
@@ -558,6 +597,9 @@
 - slug: keap-row-vector-search
   parent: digest
   track: cortex
+- slug: keap-slow-under-model-load
+  parent: ''
+  track: platform
 - slug: kpro
   parent: ''
   track: cortex
@@ -599,6 +641,9 @@
   track: cortex
 - slug: local-llm-intent
   parent: local-llm
+  track: agents
+- slug: local-llm-intent-report-case
+  parent: local-llm-intent
   track: agents
 - slug: local-llm-ladder
   parent: local-llm-model
@@ -700,7 +745,7 @@
   parent: ''
   track: agents
 - slug: managed-resources-manifest
-  parent: plat
+  parent: ''
   track: platform
 - slug: moderation-drain-loop
   parent: ''
@@ -711,6 +756,9 @@
 - slug: multitenant-client-isolation
   parent: ''
   track: platform
+- slug: n8n-edge-ungated-path-split
+  parent: ''
+  track: security
 - slug: n8n-loop-templates
   parent: consulting-firm-deployment
   track: platform
@@ -789,6 +837,12 @@
 - slug: obs-uncommitted-scan-state
   parent: ''
   track: security
+- slug: oidc-classification-is-a-claim-nobody-checks
+  parent: ''
+  track: security
+- slug: ollama-residency-as-a-pausable-resource
+  parent: ''
+  track: platform
 - slug: oneshot-logprobs-for-field-confidence
   parent: local-vision-model-7b
   track: agents
@@ -942,6 +996,12 @@
 - slug: repo-split-trigger
   parent: ''
   track: platform
+- slug: report-chain-planning-bench
+  parent: local-llm-bench
+  track: agents
+- slug: report-chain-synthetic-training-data
+  parent: consulting-uc-evals
+  track: agents
 - slug: repos-importer
   parent: digest
   track: digest
@@ -1031,6 +1091,9 @@
   track: security
 - slug: sec-transport-redis
   parent: sec-transport
+  track: security
+- slug: security-scan-staleness-missed-a-live-critical
+  parent: ''
   track: security
 - slug: seed-bundle-generalize
   parent: digest
@@ -1269,6 +1332,9 @@
 - slug: wordpress-client-portal
   parent: consulting-firm-deployment
   track: face
+- slug: wordpress-cve-2026-87902
+  parent: ''
+  track: security
 - slug: work-corpus-not-seed
   parent: cortex
   track: cortex
