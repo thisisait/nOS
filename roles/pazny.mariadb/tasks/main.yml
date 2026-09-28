@@ -11,6 +11,9 @@
 # only AFTER compose up (DB must be running before the users are created).
 # ==============================================================================
 
+- name: "[pazny.mariadb] Reconcile the healthcheck login (a restored mysql.user breaks it)"
+  ansible.builtin.include_tasks: healthcheck-user.yml
+
 - name: "[pazny.mariadb] Ensure data directory exists"
   ansible.builtin.file:
     path: "{{ mariadb_data_dir | default(ansible_facts['env']['HOME'] + '/mariadb/data') }}"
