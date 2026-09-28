@@ -73,11 +73,22 @@
 # and Docker Desktop forwards it to the host loopback (REM-214 read the whole
 # config, hook commands included, from inside devops-gitea-1). config.json is
 # seed-once + daemon-owned, so the LIVE file is what has to be reconciled.
-- name: "[pazny.backrest] Enable local auth in the live config"
+# The same render, ALWAYS written beside the live file: seed-once means a
+# daemon that predates a plan (the July spike's config had none) never gets it.
+# The reconciler below adds every repo/plan id the live file lacks — and only those.
+- name: "[pazny.backrest] Render the seed beside the live config (merge source)"
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ backrest_config_path }}.seed"
+    mode: "0600"
+  no_log: true
+
+- name: "[pazny.backrest] Enable local auth + add absent repos/plans in the live config"
   ansible.builtin.command:
     argv: ["python3", "{{ role_path }}/files/enable-auth.py",
            "--config", "{{ backrest_config_path }}",
-           "--user", "{{ backrest_admin_username }}"]
+           "--user", "{{ backrest_admin_username }}",
+           "--seed", "{{ backrest_config_path }}.seed"]
     # Over stdin, not argv — the password must not be visible in `ps`.
     stdin: "{{ backrest_admin_password }}"
   register: _backrest_auth
@@ -111,16 +122,20 @@
   ansible.builtin.shell: |
     PLIST=~/Library/LaunchAgents/{{ backrest_launchd_label }}.plist
     UID_NUM=$(id -u)
+    set -e
     if launchctl print "gui/${UID_NUM}/{{ backrest_launchd_label }}" >/dev/null 2>&1; then
       launchctl kickstart -k "gui/${UID_NUM}/{{ backrest_launchd_label }}"
       echo "already-loaded"
     else
+      # A label left DISABLED (launchctl disable / unload -w, measured 2026-09-28
+      # after the 09-02 spike) makes bootstrap fail rc=5; without `set -e` the
+      # old task still printed "bootstrapped" and the wait task took the blame.
+      launchctl enable "gui/${UID_NUM}/{{ backrest_launchd_label }}"
       launchctl bootstrap "gui/${UID_NUM}" "$PLIST"
       echo "bootstrapped"
     fi
   register: _backrest_bootstrap
   changed_when: "'bootstrapped' in _backrest_bootstrap.stdout"
-  failed_when: false
   when: (nos_service_manager | default('launchd')) == 'launchd'
 
 # ── Linux: systemd --user simple service (counterpart of the launchd plist) ──
