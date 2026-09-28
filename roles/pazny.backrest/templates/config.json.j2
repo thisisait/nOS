@@ -10,6 +10,9 @@
       "id": "offsite",
       "uri": "{{ restic_repo }}",
       "password": "{{ restic_password }}",
+{% if (restic_s3_access_key | default('')) | length > 0 %}
+      "env": ["AWS_ACCESS_KEY_ID={{ restic_s3_access_key }}", "AWS_SECRET_ACCESS_KEY={{ restic_s3_secret_key }}"],
+{% endif %}
       "autoInitialize": true,
       "prunePolicy": { "schedule": { "maxFrequencyDays": 7 }, "maxUnusedPercent": 10 },
       "checkPolicy": { "schedule": { "maxFrequencyDays": 30 }, "readDataSubsetPercent": 5 },
