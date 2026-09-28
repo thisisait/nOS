@@ -1,0 +1,32 @@
+---
+# The image's healthcheck.sh logs in as `healthcheck@localhost` with the random
+# password it wrote to /var/lib/mysql/.my-healthcheck.cnf at FIRST init. A
+# `mariadb-dump --all-databases` carries mysql.user, so replaying one (restore)
+# overwrites that user with the OLD instance's hash: the daemon serves every
+# query and the container stays `unhealthy` for ever, which aborts core-up's
+# STRICT health-wait before post.yml could touch it. Measured 2026-09-28, the
+# morning after the first real restore. Included pre-wait (main.yml) and right
+# after the replay (tasks/restore.yml); changed only when the login was broken.
+# Probe = the compose test verbatim: `--connect` alone exits 0 on a refused login.
+- name: "[pazny.mariadb] healthcheck user matches .my-healthcheck.cnf"
+  ansible.builtin.shell: |
+    set -o pipefail
+    C=infra-mariadb-1
+    docker ps --format '{{ "{{" }}.Names{{ "}}" }}' | grep -qx "$C" || { echo "no-container"; exit 0; }
+    docker exec "$C" healthcheck.sh --connect --innodb_initialized >/dev/null 2>&1 && { echo "ok"; exit 0; }
+    docker exec -e ROOT_PW="$ROOT_PW" "$C" sh -c '
+      pw=$(sed -n "s/^password=//p" /var/lib/mysql/.my-healthcheck.cnf)
+      [ -n "$pw" ] || { echo "no-cnf"; exit 1; }
+      mariadb -uroot -p"$ROOT_PW" -e "
+        ALTER USER healthcheck@localhost IDENTIFIED BY '"'"'$pw'"'"',
+                   healthcheck@'"'"'127.0.0.1'"'"' IDENTIFIED BY '"'"'$pw'"'"',
+                   healthcheck@'"'"'::1'"'"' IDENTIFIED BY '"'"'$pw'"'"';"
+    ' && docker exec "$C" healthcheck.sh --connect --innodb_initialized && echo "resynced"
+  args:
+    executable: /bin/bash
+  environment:
+    ROOT_PW: "{{ mariadb_root_password | default(nos_derived_secrets.mariadb) }}"
+  register: _mariadb_hc
+  changed_when: "'resynced' in _mariadb_hc.stdout"
+  no_log: true
+  when: not ansible_check_mode

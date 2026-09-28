@@ -340,6 +340,11 @@
       no_log: true
       changed_when: maria_restore.rc == 0
 
+    - name: "[Restore][mariadb] The dump carried mysql.user — re-sync the healthcheck login"
+      ansible.builtin.include_role:
+        name: pazny.mariadb
+        tasks_from: healthcheck-user.yml
+
     - name: "[Restore][mariadb] Append to summary"
       ansible.builtin.set_fact:
         restore_summary: "{{ restore_summary + [{
