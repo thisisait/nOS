@@ -348,9 +348,32 @@ watchtower_mode: "notify"                 # notify | apply (per-host opt-in)
 
 # ── Provider Access ──────────────────────────────────────────────────────────
 
-# ── Backup (Restic) ──────────────────────────────────────────────────────────
+# ── Backup copy #2 — the restic STORE (local disk OR S3-compatible) ──────────
+# Copy #1 = install_backup: backup.sh dumps every service nightly (03:00) and
+# ALSO tees each dump plaintext into backup_staging_dir (roles/pazny.backup).
+# Copy #2 = a restic repository holding those dumps: dedup, native AES, retention,
+# `restic check`, per-file browse + restore. Two orchestrators, pick ONE:
+#   install_backrest: true   → Backrest daemon owns the repo + schedule + UI
+#                              (preferred; roles/pazny.backrest, plan nos-dumps)
+#   configure_backup: true   → legacy launchd `restic backup` of restic_backup_paths
+#                              (tasks/backup.yml; skipped when Backrest is on)
+# The TARGET is a value, not an architecture — restic reads all of these:
+#   restic_repo: "/Volumes/Backup/restic"                     # external SSD
+#   restic_repo: "s3:http://127.0.0.1:9010/nos-restic"        # local RustFS
+#   restic_repo: "s3:https://nas.lan:9000/nos-restic"         # S3 on the NAS
+#   restic_repo: "s3:s3.eu-central-003.backblazeb2.com/x"     # off-site bucket
+#   restic_repo: "sftp:user@nas:/backup/mac-studio"
+# Trade-off, named: a restic repo is MUTABLE by anyone holding the key. The S3
+# Object-Lock immutability copy #1 has does not carry over until the repo sits
+# behind an append-only rest-server (or the bucket's own lock). Leave both
+# orchestrators off until restic_repo points at a MOUNTED disk / reachable host.
 configure_backup: false
-restic_repo: ""                           # "/Volumes/Backup/restic" | "s3:endpoint/bucket" | "sftp:user@host:/path"
+restic_repo: ""
+# S3-compatible targets only (restic_repo starts with "s3:"): the key pair the
+# repo is opened with. Empty = not an S3 target. Exported as AWS_ACCESS_KEY_ID /
+# AWS_SECRET_ACCESS_KEY to whichever orchestrator runs restic.
+restic_s3_access_key: ""
+restic_s3_secret_key: ""
 # P2 REVERTED FOR RESTIC, 2026-08-03, and the reason is worth reading before
 # anyone "fixes" this back.
 #
@@ -377,7 +400,7 @@ restic_excludefile: "{{ ansible_facts['env']['HOME'] }}/backups/.resticignore"
 restic_keep_daily: 7
 restic_keep_weekly: 4
 restic_keep_monthly: 6
-restic_backup_schedule_hour: 4            # Hour of off-site mirror (staggered after RustFS copy #1 at 03:00)
+restic_backup_schedule_hour: 4            # legacy orchestrator only; Backrest plans carry their own cron (staggered after copy #1 at 03:00)
 # Off-site agent label — de-collided from the RustFS copy-#1 agent
 # (eu.thisisait.nos.backup.rustfs). Both shared eu.thisisait.nos.backup before,
 # writing the SAME plist path → enabling both silently disabled one.
@@ -498,7 +521,7 @@ nos_skill_consumers:
   - { id: openclaw, kind: agent, dir: "{{ ansible_facts['env']['HOME'] }}/.openclaw/skills" }
 install_pi_agents: false          # PI agent framework + pi-autoresearch extension (pi.dev)
 install_backup: true             # pazny.backup — nightly DB + volumes + blueprints → RustFS (launchd agent)
-install_backrest: false          # pazny.backrest — restic UI + scheduler as a host launchd daemon (off-site orchestrator + restore UI); opt-in
+install_backrest: false          # pazny.backrest — restic store orchestrator + browse/restore UI (host launchd daemon); needs restic_repo
 install_wing: true           # Wing Security Dashboard + Hub (Nette PHP + SQLite) [requires: php, nginx]
 
 # ── macOS system configuration ────────────────────────────────────────────────
@@ -2208,11 +2231,7 @@ dnsmasq_additional_addresses: []          # Additional custom DNS records
 restic_backup_paths:
   - "{{ rustfs_data_dir }}"     # RustFS bucket dir = canonical copy #1 object store
 
-# Restic repository – an off-site, operator-rotated external medium:
-# restic_repo: "/Volumes/Backup/restic"          # external USB/SSD (recommended)
-# restic_repo: "s3:s3.us-east-005.backblazeb2.com/bucket-name"
-# restic_repo: "sftp:user@nas:/backup/mac-studio"
-# Leave configure_backup:false until restic_repo points at a MOUNTED disk.
+# Repository target + orchestrator choice: see the "Backup copy #2" block above.
 
 # ==============================================================================
 # EXTERNAL STORAGE – move data directories to a secondary SSD

@@ -118,3 +118,16 @@ def test_backrest_seed_has_the_dumps_plan() -> None:
     assert "*.part" in plan["excludes"]
     assert "run=nightly" in plan["backup_flags"]
     assert plan["repo"] in {r["id"] for r in cfg["repos"]}
+    assert "env" not in cfg["repos"][0], "no S3 creds configured, none may be rendered"
+
+
+def test_backrest_seed_passes_s3_credentials_to_an_s3_target() -> None:
+    text = _env().from_string(BACKREST.read_text(encoding="utf-8")).render(
+        restic_repo="s3:https://nas.lan:9000/nos-restic", restic_password="x",
+        restic_s3_access_key="AK", restic_s3_secret_key="SK",
+        backrest_home="/h", backrest_instance="i",
+        ansible_facts={"env": {"HOME": "/home/u"}},
+    )
+    repo = json.loads(text)["repos"][0]
+    assert repo["uri"].startswith("s3:")
+    assert set(repo["env"]) == {"AWS_ACCESS_KEY_ID=AK", "AWS_SECRET_ACCESS_KEY=SK"}

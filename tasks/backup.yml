@@ -172,6 +172,10 @@
       # ~/agents/backup-run.sh. 0600 on purpose: this is copy #2's decryption key.
       export RESTIC_PASSWORD={{ restic_password | quote }}
       export RESTIC_REPOSITORY={{ restic_repo | quote }}
+      {% if (restic_s3_access_key | default('')) | length > 0 -%}
+      export AWS_ACCESS_KEY_ID={{ restic_s3_access_key | quote }}
+      export AWS_SECRET_ACCESS_KEY={{ restic_s3_secret_key | quote }}
+      {% endif %}
     dest: "{{ ansible_facts['env']['HOME'] }}/.nos/restic.env"
     mode: '0600'
   no_log: true
