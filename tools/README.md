@@ -66,6 +66,7 @@ worse than none, because it reads as complete.
 - `nos_work_uri.py` — Parse + match the nos-work:// routing address (dtt-routing-address); the planner's capability/assignment matcher.
 - `raw-archive-probe.py` — Does the S3 endpoint honor Object Lock COMPLIANCE, or only accept the headers?
 - `red-status.py` — What is red on this estate right now.
+- `backup-coverage.py` — What the backup set does NOT cover, and why (from `backup_coverage` in default.config.yml; `--all` for every class).
 - `reload-stale-config.py` — Make a running container read the config the estate rendered for it.
 - `stale-config-status.py` — Containers running config the estate has already replaced.
 - `nos_security.py` — Resolve the live security notebook (`~/.nos/security`), not the git promotion copy.
