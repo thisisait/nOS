@@ -131,3 +131,29 @@ def test_backrest_seed_passes_s3_credentials_to_an_s3_target() -> None:
     repo = json.loads(text)["repos"][0]
     assert repo["uri"].startswith("s3:")
     assert set(repo["env"]) == {"AWS_ACCESS_KEY_ID=AK", "AWS_SECRET_ACCESS_KEY=SK"}
+
+
+def test_the_reconciler_adds_the_plan_to_a_daemon_that_predates_it(tmp_path: Path) -> None:
+    """Seed-once never reaches an existing daemon (the July spike's config had 0
+    plans). enable-auth.py --seed must add absent repo/plan ids and leave the
+    UI-owned rest alone; a second run is UNCHANGED."""
+    import subprocess
+    seed = _env().from_string(BACKREST.read_text(encoding="utf-8")).render(
+        restic_repo="/tmp/repo", restic_password="x", backrest_home="/h",
+        backrest_instance="i", backup_staging_dir="/s",
+        ansible_facts={"env": {"HOME": "/home/u"}},
+    )
+    (tmp_path / "seed.json").write_text(seed)
+    live = tmp_path / "config.json"
+    live.write_text(json.dumps({"version": 6, "instance": "i", "auth": {"disabled": True},
+                                "plans": [{"id": "mine", "repo": "offsite", "paths": ["/ui"]}]}))
+    script = REPO / "roles/pazny.backrest/files/enable-auth.py"
+    run = lambda: subprocess.run(["python3", str(script), "--config", str(live), "--seed",
+                                  str(tmp_path / "seed.json")], input="pw", text=True,
+                                 capture_output=True, check=True).stdout
+    assert run().startswith("CHANGED")
+    cfg = json.loads(live.read_text())
+    assert [p["id"] for p in cfg["plans"]] == ["mine", "nos-offsite", "nos-dumps"]
+    assert cfg["plans"][0]["paths"] == ["/ui"], "a UI-owned plan was rewritten"
+    assert [r["id"] for r in cfg["repos"]] == ["offsite"] and cfg["auth"]["disabled"] is False
+    assert run().strip() == "UNCHANGED"
