@@ -80,6 +80,9 @@
         +
         [postgresql_data_dir | default(ansible_facts['env']['HOME'] + '/postgresql/data')]
         +
+        [mariadb_certs_dir | default(nos_data_root + '/platform/services/mariadb/certs'),
+         postgresql_certs_dir | default(nos_data_root + '/platform/services/postgresql/certs')]
+        +
         [redis_data_dir | default(ansible_facts['env']['HOME'] + '/redis/data')]
         +
         (install_wordpress | default(false)) | ternary(
@@ -128,7 +131,7 @@
           [woodpecker_data_dir | default(ansible_facts['env']['HOME'] + '/woodpecker')], [])
         +
         (install_calibreweb | default(false)) | ternary(
-          [ansible_facts['env']['HOME'] + '/calibre-web/config'], [])
+          [calibreweb_config_dir | default(ansible_facts['env']['HOME'] + '/calibre-web/config')], [])
         +
         (install_homeassistant | default(false)) | ternary(
           [homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant')], [])
@@ -205,7 +208,17 @@
            dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom')], [])
         +
         (install_hedgedoc | default(false)) | ternary(
-          [hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads')], [])
+          [hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads'),
+           hedgedoc_config_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/config')], [])
+        +
+        (install_mailpit | default(false)) | ternary(
+          [mailpit_data_dir | default(ansible_facts['env']['HOME'] + '/mailpit')], [])
+        +
+        (install_watchtower | default(false)) | ternary(
+          [watchtower_data_dir | default(ansible_facts['env']['HOME'] + '/watchtower')], [])
+        +
+        (install_smtp_stalwart | default(false)) | ternary(
+          [stalwart_data_dir | default(ansible_facts['env']['HOME'] + '/stalwart')], [])
         +
         (install_onlyoffice | default(false)) | ternary(
           [onlyoffice_data_dir | default(ansible_facts['env']['HOME'] + '/onlyoffice/data'),
@@ -241,6 +254,27 @@
 # UNGATED here (they exist iff the daemon ran) so remove=all is complete regardless
 # of the current install_* flags. `~/agents` + `~/projects` are NOT wiped wholesale
 # (they hold user content) — only the anatomy-owned children.
+# The declared EXEMPTIONS from the data level — every `*_dir` var in
+# default.config.yml that a blank (remove=data) leaves in place, each with the
+# level that does remove it (`all`, i.e. with nos_data_root) or `never`, and the
+# reason. The gate (test_blank_reset_data_dirs.py) renders every dir var and
+# refuses one that the data level neither removes nor this list explains: a
+# service added later cannot simply be absent from the set (docs/hidden_fees/01).
+- name: "[Removal-set] Declare what the data level keeps (reconciled by the gate)"
+  ansible.builtin.set_fact:
+    _removal_keep:
+      - { var: calibreweb_books_dir, level: all, why: "user content — the tenant's shared library is SOURCE, not derived state" }
+      - { var: erpnext_data_dir, level: all, why: "P0.1: sites live in a named volume (compose down -v); the var only names site_config.json" }
+      - { var: node_exporter_textfile_dir, level: all, why: "under ~/.nos, the runtime side-car; blank keeps it, uninstall takes it" }
+      - { var: jellyfin_movies_dir, level: never, why: "operator media library under ~/media — never nOS-owned" }
+      - { var: jellyfin_shows_dir, level: never, why: "operator media library under ~/media — never nOS-owned" }
+      - { var: jellyfin_music_dir, level: never, why: "operator media library under ~/media — never nOS-owned" }
+      - { var: openclaw_base_dir, level: never, why: "is $HOME itself" }
+      - { var: openclaw_agents_dir, level: never, why: "~/agents holds user content; only anatomy-owned children (hermes) are removed" }
+      - { var: openclaw_projects_dir, level: never, why: "~/projects holds user content — this checkout included" }
+      - { var: openclaw_log_dir, level: never, why: "under ~/agents (see openclaw_agents_dir)" }
+      - { var: iiab_terminal_config_dir, level: never, why: "under homebrew_prefix/etc, kept with the brew packages (deep removes caches, not formulae)" }
+
 - name: "[Removal-set] Resolve source paths (level: all)"
   ansible.builtin.set_fact:
     _uninstall_source:
