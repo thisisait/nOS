@@ -122,6 +122,8 @@ def test_the_plan_allow_lists_the_estate_and_a_converge_lifts_a_self_ban():
     names = [t["name"] for t in tasks]
     lift = names.index("[pazny.smtp_stalwart] Lift bans on estate-internal addresses")
     assert names.index("[pazny.smtp_stalwart] Apply the plan (idempotent upserts)") < lift < len(names) - 1
+    restart = names.index("[pazny.smtp_stalwart] Restart so the in-memory ban list forgets the host")
+    assert lift < restart < len(names) - 1, "the restart must follow the unban and precede the fatal banner reader"
     # Run the filter itself against a public and a private ban: only the private id may be lifted.
     src = tasks[lift]["ansible.builtin.shell"]
     py = src.split("python3 -c '", 1)[1].split("\n')", 1)[0]

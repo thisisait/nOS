@@ -80,7 +80,17 @@ if [[ $REBUILD -eq 1 ]] && tmux has-session -t "=$SESSION" 2>/dev/null; then
 fi
 
 if tmux has-session -t "=$SESSION" 2>/dev/null; then
-    if [[ $ATTACH -eq 1 ]]; then
+    # A mouse selection ends in tmux's own buffer, never the macOS clipboard: this
+# terminal does not honour OSC 52, so a dragged selection in a pane could not
+# be pasted anywhere (measured 2026-09-29). `copy-command` is a SERVER option
+# (tmux ≥3.2) and the one thing here that reaches the operator's other
+# sessions; it only changes where a copy lands.
+if command -v pbcopy >/dev/null 2>&1; then
+    tmux set-option -s copy-command pbcopy \
+        || echo "warning: could not set copy-command" >&2
+fi
+
+if [[ $ATTACH -eq 1 ]]; then
         exec tmux attach -t "=$SESSION"
     fi
     echo "$SESSION already exists — attach with: tmux attach -t $SESSION"
