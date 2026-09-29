@@ -7,12 +7,10 @@
 # (Gitea push → Woodpecker pipeline run) and surfaces the repo in the
 # Woodpecker UI.
 #
-# woodpecker_api_token (Woodpecker UI → User Settings → Personal Access
-# Tokens) is OAuth-derived and therefore CANNOT exist on a fresh blank — no
-# user has logged in yet. So on a blank run this activation is SKIPPED
-# gracefully (not a hard fail): the operator provisions the PAT after first
-# login and re-runs `--tags woodpecker`. The Woodpecker↔Gitea OAuth2 app
-# itself IS autowired on the blank (post-oauth.yml), so login works.
+# woodpecker_api_token is OAuth-derived; since 2026-09-29 the role mints it
+# itself (tools/woodpecker-token.py walks the Gitea grant over loopback), so
+# a blank activates the repo in one run. The Woodpecker↔Gitea OAuth2 app is
+# autowired first (post-oauth.yml), which is what makes that walk possible.
 #
 # Gitea forge-id discovery uses Gitea Admin Basic auth over 127.0.0.1 (NOT
 # gitea_api_token / public domain — A19, 2026-05-24; see gitea post-repo.yml).
@@ -25,29 +23,81 @@
 # active; we treat that as success.
 # ==============================================================================
 
-- name: "[pazny.woodpecker Post Repo] Skip activation — no API token yet (blank-safe)"
+# ── The PAT, without a browser (2026-09-29) ────────────────────────────────
+# The token the UI shows is a JWT signed with the user's hash: no expiry,
+# same value every call. The UI gets it by logging in through Gitea and
+# POSTing /api/user/token; tools/woodpecker-token.py walks that same OAuth
+# grant over loopback. A persisted token outlives the database that issued
+# it (a blank regenerates the hash), so it is PROBED first, never trusted.
+- name: "[pazny.woodpecker Post Repo] Resolve loopback API base"
+  ansible.builtin.set_fact:
+    _woodpecker_api: "http://127.0.0.1:{{ woodpecker_port | default(8060) }}"
+
+- name: "[pazny.woodpecker Post Repo] Probe the persisted PAT"
+  no_log: true   # Bearer header embeds woodpecker_api_token
+  ansible.builtin.uri:
+    url: "{{ _woodpecker_api }}/api/user"
+    headers:
+      Authorization: "Bearer {{ woodpecker_api_token }}"
+    status_code: [200, 401, 403]
+    return_content: true
+  register: _woodpecker_pat_probe
+  failed_when: false
+  changed_when: false
+  when: woodpecker_api_token | default('') | length > 0
+
+- name: "[pazny.woodpecker Post Repo] Mint the PAT by walking the Gitea OAuth grant"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - "{{ playbook_dir }}/tools/woodpecker-token.py"
+      - "--user={{ gitea_admin_user }}"
+      - "--woodpecker={{ _woodpecker_api }}"
+      - "--gitea=http://127.0.0.1:{{ gitea_port | default(3003) }}"
+      - "--gitea-public=https://{{ gitea_domain }}"
+      - "--woodpecker-public=https://{{ woodpecker_domain }}"
+  environment:
+    GITEA_PASSWORD: "{{ gitea_admin_password }}"
+  register: _woodpecker_mint
+  failed_when: false
+  changed_when: _woodpecker_mint.rc == 0
+  no_log: true   # stdout IS the token
+  when: >-
+    (woodpecker_api_token | default('') | length == 0)
+    or (_woodpecker_pat_probe.status | default(0)) != 200
+    or _woodpecker_pat_probe.json is not defined
+
+- name: "[pazny.woodpecker Post Repo] Adopt the minted PAT for this run"
+  ansible.builtin.set_fact:
+    woodpecker_api_token: "{{ _woodpecker_mint.stdout | trim }}"
+  no_log: true
+  when: (_woodpecker_mint.rc | default(1)) == 0
+
+# lineinfile, not a template re-render — same reason as post-oauth.yml.
+- name: "[pazny.woodpecker Post Repo] Persist the PAT into ~/.nos/secrets.yml"
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+    regexp: "^woodpecker_api_token:"
+    line: 'woodpecker_api_token: "{{ woodpecker_api_token }}"'
+    create: true
+    mode: '0600'
+  no_log: true
+  when: (_woodpecker_mint.rc | default(1)) == 0
+
+- name: "[pazny.woodpecker Post Repo] The mint did not reach a token"
   ansible.builtin.debug:
     msg: >-
-      woodpecker_api_token is empty — skipping nOS repo activation. The
-      Woodpecker PAT is OAuth-derived and cannot exist on a fresh blank.
-      After first login provision it (User Settings → Personal Access Tokens)
-      and re-run: ansible-playbook main.yml --tags woodpecker
-  when: woodpecker_api_token | default('') | length == 0
+      woodpecker-token.py could not walk the Gitea OAuth grant
+      ({{ _woodpecker_mint.stderr | default('') | trim }}). Activation is
+      skipped below; the manual path still works (Woodpecker → User Settings →
+      Personal Access Tokens → woodpecker_api_token in credentials.yml).
+  when:
+    - _woodpecker_mint is not skipped
+    - (_woodpecker_mint.rc | default(1)) != 0
 
 - name: "[pazny.woodpecker Post Repo] Activate nOS repo (token present)"
   when: woodpecker_api_token | default('') | length > 0
   block:
-    # Reach Woodpecker over its loopback-published port, NOT the public domain.
-    # The Bearer-token API endpoints are host-agnostic, so a loopback call works
-    # exactly like the Gitea calls below — and it does NOT depend on the host
-    # being able to resolve woodpecker_domain (a public subdomain that may have
-    # no DNS record on a local/CF-DNS-only tenant → the run died here with
-    # "nodename nor servname provided" on 2026-07-17). Loopback also bypasses the
-    # CloudFlare edge, matching the local-first-forge doctrine.
-    - name: "[pazny.woodpecker Post Repo] Resolve loopback API base"
-      ansible.builtin.set_fact:
-        _woodpecker_api: "http://127.0.0.1:{{ woodpecker_port | default(8060) }}"
-
     - name: "[pazny.woodpecker Post Repo] Discover Gitea forge_remote_id"
       no_log: true   # Basic-auth embeds gitea_admin_password (SEC-18 gap)
       ansible.builtin.uri:
@@ -109,9 +159,9 @@
           established host the PAT has expired or been revoked, and while it is
           the Gitea repo has no webhook, so no push starts a pipeline and every
           merge request opens with no CI behind it.
-          Re-issue: log in to Woodpecker → User Settings → Personal Access
-          Tokens → set woodpecker_api_token, then re-run
-          `ansible-playbook main.yml --tags woodpecker`.
+          The role mints the PAT itself on the next run; if that keeps
+          failing, the manual path is Woodpecker → User Settings → Personal
+          Access Tokens → woodpecker_api_token, then `--tags woodpecker`.
           Verify with: tools/loop-pr.py (it reports the Gitea webhook count).
       when: not (_woodpecker_pat_ok | bool)
 
@@ -142,7 +192,17 @@
       when:
         - _woodpecker_pat_ok | bool
         - (_woodpecker_repo_check.json.id | default(0)) == 0
+      register: _woodpecker_activate
       changed_when: true
+
+    # The run that activates the repo is the run that must seed its secrets
+    # (post-secrets.yml): the lookup above answered 404 on that run, so the
+    # id has to come from the activation response instead (2026-09-29).
+    - name: "[pazny.woodpecker Post Repo] Resolve the repo id (looked up, or just activated)"
+      ansible.builtin.set_fact:
+        _woodpecker_repo_id: >-
+          {{ (_woodpecker_repo_check.json.id | default(0)) or (_woodpecker_activate.json.id | default(0)) }}
+      when: _woodpecker_pat_ok | bool
 
     # ACTIVE IN WOODPECKER IS NOT THE SAME AS WIRED TO THE FORGE. The webhook
     # lives in the Gitea repo, and the agent-forge conversion RECREATES that

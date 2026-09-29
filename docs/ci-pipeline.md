@@ -81,8 +81,11 @@ The autowiring is **off by default**. To turn it on:
 
    ```yaml
    gitea_api_token: "<paste>"
-   woodpecker_api_token: "<paste>"
    ```
+
+   `woodpecker_api_token` needs no paste since 2026-09-29: the role mints it
+   (`tools/woodpecker-token.py` walks the Gitea OAuth grant over loopback)
+   and persists it in `~/.nos/secrets.yml`. Set it only to override.
 
 4. **Flip the autowire toggles**:
 
