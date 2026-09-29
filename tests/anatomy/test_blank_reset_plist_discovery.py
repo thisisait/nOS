@@ -38,6 +38,9 @@ ROLES_DIR = REPO_ROOT / "roles"
 LEGACY_CLEANUP_PATTERNS = {
     # hermes ran under com.hermes.agent before migrating to eu.thisisait.nos.hermes
     "com.hermes.agent.plist",
+    # nos-gateway was renamed device-gateway; hosts still carry the disabled plist
+    # (2026-09-29 exit audit).
+    "eu.thisisait.nos-gateway.plist.disabled",
 }
 
 # Provisioned at RUNTIME by a CLI (not a role `.plist.j2`), but legitimately

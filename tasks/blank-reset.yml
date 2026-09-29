@@ -185,6 +185,7 @@
       - "eu.thisisait.nos.backup.offsite.plist"
       - "eu.thisisait.nos.backrest.plist"
       - "eu.thisisait.nos.acme-renew.plist"
+      - "eu.thisisait.nos-gateway.plist.disabled"
   register: _blank_plists
 
 - name: "[BLANK] Unload LaunchAgents"
@@ -264,17 +265,31 @@
   changed_when: false
 
 # ── 6. dnsmasq - reset ──────────────────────────────────────────────────
-- name: "[BLANK] Remove dnsmasq dev.local config"
+- name: "[BLANK] Resolve the domains nOS handed to dnsmasq"
+  ansible.builtin.set_fact:
+    _nos_dns_domains: >-
+      {{ ([dnsmasq_dev_domain | default('dev.local'), 'dev.local']
+          + ([(bluesky_pds_hostname | default('bsky.dev.lan')).split('.', 1)[1]]
+             if '.' in (bluesky_pds_hostname | default('bsky.dev.lan')) else []))
+         | unique }}
+
+# The regexp was the literal `dev\.local` while the estate had moved to its
+# tenant domain: a blank left `address=/.<tld>/<lan-ip>` behind, and a leave
+# kept pointing the tenant domain at a machine that no longer serves it
+# (2026-09-29 exit audit). Every domain nOS hands dnsmasq, by name.
+- name: "[BLANK] Remove dnsmasq lines for every nOS domain"
   ansible.builtin.lineinfile:
     path: "{{ homebrew_prefix }}/etc/dnsmasq.conf"
-    regexp: "dev\\.local"
+    regexp: "/\\.?{{ item | regex_escape }}/"
     state: absent
+  loop: "{{ _nos_dns_domains }}"
   failed_when: false
 
-- name: "[BLANK] Remove macOS resolver for dev.local"
+- name: "[BLANK] Remove macOS resolvers for every nOS domain"
   ansible.builtin.file:
-    path: "/etc/resolver/{{ dnsmasq_dev_domain | default('dev.local') }}"
+    path: "/etc/resolver/{{ item }}"
     state: absent
+  loop: "{{ _nos_dns_domains }}"
   become: true
   failed_when: false
 
