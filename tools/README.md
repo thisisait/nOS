@@ -66,6 +66,7 @@ worse than none, because it reads as complete.
 - `nos_work_uri.py` — Parse + match the nos-work:// routing address (dtt-routing-address); the planner's capability/assignment matcher.
 - `raw-archive-probe.py` — Does the S3 endpoint honor Object Lock COMPLIANCE, or only accept the headers?
 - `red-status.py` — What is red on this estate right now.
+- `profile-builder-build.py` — Build the static profile builder (`_site/profile-builder/index.html` on release tags): parameters → one profile per axis → editable service list → a tailored config.yml. Data from default.config.yml + profiles/, page in tools/profile-builder/.
 - `managed-status.py` — Every managed dir: what a blank does to it × what the backup does with it, one table from the artifacts (`--gaps`, `--json`; the cc pane `managed`).
 - `reload-stale-config.py` — Make a running container read the config the estate rendered for it.
 - `stale-config-status.py` — Containers running config the estate has already replaced.

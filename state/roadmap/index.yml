@@ -972,6 +972,9 @@
 - slug: praxis-pack
   parent: backoffice-organ
   track: platform
+- slug: profile-builder
+  parent: ''
+  track: platform
 - slug: prom-rules-never-reload
   parent: ''
   track: platform
