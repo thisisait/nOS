@@ -185,14 +185,13 @@
 # ── Client portal pages (commons ceiling: statements / PDFs / contact) ──
 # Idempotent: create only when the slug is absent. Not the books.
 - name: "[pazny.wordpress Post] Ensure client portal pages"
-  ansible.builtin.shell: >
-    existing=$({{ docker_bin }} compose -p iiab exec -T wordpress
-    wp post list --allow-root --post_type=page --name={{ item.slug }} --format=ids);
+  # Literal block on purpose: a folded `>` keeps the newlines of more-indented
+  # lines, so the `if` body ran as four commands ("wp: command not found",
+  # blank 2026-09-29). Gate: test_wordpress_portal_pages_task_runs.py
+  ansible.builtin.shell: |
+    existing=$({{ docker_bin }} compose -p iiab exec -T wordpress wp post list --allow-root --post_type=page --name={{ item.slug }} --format=ids)
     if [ -z "$existing" ]; then
-      {{ docker_bin }} compose -p iiab exec -T wordpress
-      wp post create --allow-root --post_type=page --post_status=publish
-      --post_name={{ item.slug }} --post_title={{ item.title | quote }}
-      --post_content={{ item.content | quote }};
+      {{ docker_bin }} compose -p iiab exec -T wordpress wp post create --allow-root --post_type=page --post_status=publish --post_name={{ item.slug }} --post_title={{ item.title | quote }} --post_content={{ item.content | quote }}
     fi
   loop: "{{ wordpress_portal_pages | default([]) }}"
   loop_control:
