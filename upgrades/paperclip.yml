@@ -13,7 +13,7 @@ notes: |
 recipes:
   - id: "paperclip-sha-bump"
     from_regex: "^(sha-|v|latest).*"
-    to: "sha-b9a80dc"
+    to: "sha-d554c47"
     severity: minor
     notes: |
       Rolling sha-bump. Paperclip self-migrates its PG schema on boot

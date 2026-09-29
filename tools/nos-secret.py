@@ -22,7 +22,7 @@ Two verbs, deliberately small:
 
 Post-blank UX (docs/secrets-p1-hkdf.md §10): credentials are 43-char random
 strings; this is where the operator reads e.g. their akadmin login:
-`tools/nos-secret.py akadmin`.
+`tools/nos-secret.py authentik_admin` (the leaf akadmin boots with).
 
 STRICTLY A READER of ~/.nos/secrets.yml + the committed registry. It writes
 nothing and derives locally — the master never leaves this host.
