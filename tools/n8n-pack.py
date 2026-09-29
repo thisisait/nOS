@@ -43,17 +43,11 @@ OWNER_SCOPES = [
     "credential:list",
     "execution:read",
     "execution:list",
-    # Publishing scopes. Added 2026-09-23: POST /workflows/{id}/activate had
-    # been answering a bare 403, and that was read as "the public API cannot
-    # activate". It was a scope we never requested — and not the one anybody
-    # would guess. This n8n build has NO `workflow:activate`; its vocabulary
-    # (read out of the shipped bundle) spells the capability `workflow:enable`
-    # / `workflow:disable`, with `publish`/`unpublish` beside it, which is also
-    # why the editor's button says PUBLISH and the word "Activate" is not in
-    # the UI at all. Activation stays a manual operator act by POLICY
-    # (docs/doctrine/n8n-packs.md, `activate: operator`) — these scopes exist
-    # so a future `n8n_auto_activate_packs` is a decision rather than a wall,
-    # and so the 403 stops being explained by the wrong cause.
+    # Publishing, both spellings: 2026-09-23 read `enable`/`disable` out of a
+    # bundle, the 2.37.10 server offers `activate`/`deactivate` and refuses
+    # unknown names with 400. mint_api_key keeps what the server lists.
+    "workflow:activate",
+    "workflow:deactivate",
     "workflow:enable",
     "workflow:disable",
 ]
@@ -284,11 +278,17 @@ def n8n_login(base: str, email: str, password: str) -> str:
 
 
 def mint_api_key(base: str, cookie: str) -> str:
+    status, payload, _ = http_json("GET", f"{base}/rest/api-keys/scopes", cookie=cookie)
+    offered = set(unwrap(payload) or []) if status == 200 else set(OWNER_SCOPES)
+    scopes = [s for s in OWNER_SCOPES if s in offered]
+    dropped = [s for s in OWNER_SCOPES if s not in offered]
+    if dropped:
+        print(f"n8n api-key: server does not offer {dropped}", file=sys.stderr)
     status, payload, _ = http_json(
         "POST",
         f"{base}/rest/api-keys",
         cookie=cookie,
-        body={"label": "nOS playbook", "expiresAt": None, "scopes": OWNER_SCOPES},
+        body={"label": "nOS playbook", "expiresAt": None, "scopes": scopes},
     )
     if status not in (200, 201):
         raise SystemExit(f"n8n api-key mint failed: {status} {payload}")
@@ -422,6 +422,26 @@ def upsert_workflow(
         raise SystemExit(f"n8n POST workflow failed: {status} {payload}")
 
 
+def api_key_is_live(base: str, api_key: str) -> bool:
+    status, _ = api("GET", base, "/api/v1/workflows?limit=1", api_key)
+    return status == 200
+
+
+def ensure_api_key(base: str, secrets_path: Path, email: str, password: str) -> str:
+    """A persisted key outlives the database that issued it (blank 2026-09-29:
+    secrets.yml kept the old key, the fresh n8n answered 401). Trust the
+    reader, not the file: probe, and re-mint when the server disowns it."""
+    api_key = read_secret(secrets_path, "n8n_api_key")
+    if api_key and api_key_is_live(base, api_key):
+        return api_key
+    if not email or not password:
+        raise SystemExit("n8n sync needs N8N_EMAIL+N8N_PASSWORD to mint the API key")
+    cookie = n8n_login(base, email, password)
+    api_key = mint_api_key(base, cookie)
+    upsert_secret(secrets_path, "n8n_api_key", api_key)
+    return api_key
+
+
 def cmd_sync(args: argparse.Namespace) -> int:
     secrets_path = Path(args.secrets)
     base = args.url.rstrip("/")
@@ -429,13 +449,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
     password = os.environ.get("N8N_PASSWORD") or ""
     keap_base = (os.environ.get("KEAP_BASE") or args.keap_base or "").rstrip("/")
     keap_token = os.environ.get("KEAP_TOKEN") or ""
-    api_key = read_secret(secrets_path, "n8n_api_key")
-    if not api_key:
-        if not email or not password:
-            raise SystemExit("n8n sync needs N8N_EMAIL+N8N_PASSWORD to mint the API key")
-        cookie = n8n_login(base, email, password)
-        api_key = mint_api_key(base, cookie)
-        upsert_secret(secrets_path, "n8n_api_key", api_key)
+    api_key = ensure_api_key(base, secrets_path, email, password)
     cred_id = None
     if keap_token:
         cred_id = upsert_keap_cred(base, api_key, keap_token)
