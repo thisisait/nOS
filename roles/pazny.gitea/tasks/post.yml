@@ -157,6 +157,11 @@
     # so this guard, one of only TWO fail: statements in all 31 post.yml files,
     # could never fire. Removed 2026-08-01; stdout is the only real signal.
     - "'authentik' not in (_gitea_idp_guard.stdout | default(''))"
+    # A FULL run registers the source LATER in this same play
+    # (authentik_service_post.yml, whose Verify fails loud on absence), so on
+    # a blank this guard fired before the wiring it demands (2026-09-29).
+    # It exists for tag-restricted runs that skip that file.
+    - "'all' not in (ansible_run_tags | default(['all']))"
 
 # ── A16 (2026-05-17): autowire nOS repo + GitHub pull-mirror ──────────────
 - name: "[pazny.gitea Post] Wire nOS repo + GitHub pull-mirror"
