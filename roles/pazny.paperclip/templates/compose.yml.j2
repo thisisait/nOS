@@ -86,7 +86,14 @@ services:
       # malformed (curl exit 3). The first draft of this check did exactly that
       # and replaced a BLIND healthcheck with a BROKEN one — green for the wrong
       # reason, then red for the wrong reason.
-      test: ["CMD-SHELL", "curl -sf -H 'Host: {{ paperclip_domain }}' http://$(hostname -i | awk '{print $1}'):3100/ || exit 1"]
+      # `-f` is NOT here on purpose. Before post.yml registers the hostname the
+      # app answers 403 "Hostname ... is not allowed" — an HTTP answer from the
+      # published interface, i.e. exactly the reachability this check exists to
+      # prove. `curl -sf` read that 403 as down, the STRICT wait aborted, and
+      # post.yml (which registers the hostname) never ran: the first blank after
+      # the Host header landed never came up (2026-09-29). The hostname is
+      # proven by post.yml's own verify; here only an HTTP status counts.
+      test: ["CMD-SHELL", "case $(curl -s -o /dev/null -w '%{http_code}' -H 'Host: {{ paperclip_domain }}' http://$(hostname -i | awk '{print $1}'):3100/) in 200|30[0-9]|401|403) exit 0;; *) exit 1;; esac"]
       interval: 15s
       timeout: 5s
       retries: 10
