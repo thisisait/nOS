@@ -152,3 +152,20 @@ def test_the_role_does_not_pretend_yaml_still_governs() -> None:
         "migrated. That single fact is what makes a correct-looking "
         "configuration.yaml render irrelevant, and it cost five days."
     )
+
+
+def test_the_promotion_restarts_now_and_a_reader_checks_the_proxy(tasks) -> None:
+    """2026-09-29: promote notified a restart, the play died in a later role,
+    the handler never fired, the next converge had nothing pending — HA served
+    the old stable config for hours. The restart must be flushed right after
+    the promotion, and a forwarded request must be answered, not 400'd."""
+    names = [t.get("name", "") for t in tasks]
+    promote = next(i for i, n in enumerate(names) if "Promote the pending" in n)
+    flush = next(i for i, t in enumerate(tasks) if t.get("ansible.builtin.meta") == "flush_handlers")
+    restart = next(i for i, n in enumerate(names) if "Restart so the runtime reads the store" in n)
+    reader = next(i for i, n in enumerate(names) if "proxy must be trusted" in n)
+    assert promote < flush < restart < reader
+    assert "== 400" in " ".join(tasks[restart]["when"]), "a 400 with nothing pending is the restart's only trigger"
+    probe = tasks[reader]["ansible.builtin.uri"]
+    assert "X-Forwarded-For" in probe["headers"] and 400 not in probe["status_code"]
+    assert tasks[reader].get("failed_when") is None, "the reader must be allowed to fail"
