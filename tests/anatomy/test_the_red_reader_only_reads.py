@@ -342,3 +342,23 @@ def test_the_inbox_line_separates_superseded_from_unverifiable():
             f"the inbox red no longer distinguishes its three populations "
             f"({phrase!r} is gone) — the first version said 9 'still hold' when "
             "all nine were merely unverifiable")
+
+
+def test_a_wing_db_without_a_schema_is_unknown_not_a_traceback(tmp_path):
+    """After a blank, wing.db exists as an empty file until pazny.wing runs in
+    stack-up; both readers crashed on `no such table` in the control centre
+    (2026-09-29) — a traceback where the pane needed the word UNKNOWN."""
+    import json
+    import os
+
+    (tmp_path / "wing" / "app" / "data").mkdir(parents=True)
+    (tmp_path / "wing" / "app" / "data" / "wing.db").write_bytes(b"")
+    env = dict(os.environ, HOME=str(tmp_path))
+    red = subprocess.run([sys.executable, str(TOOL), "--json"], capture_output=True,
+                         text=True, cwd=REPO, env=env, timeout=60)
+    assert red.returncode == 0, red.stderr[-800:]
+    report = json.loads(red.stdout)
+    assert any("wing.db" in m for m in report["sources_missing"]), report["sources_missing"]
+    agents = subprocess.run([sys.executable, str(REPO / "tools" / "agent-status.py")],
+                            capture_output=True, text=True, cwd=REPO, env=env, timeout=60)
+    assert agents.returncode == 0 and "UNKNOWN" in agents.stdout, (agents.stdout, agents.stderr[-400:])

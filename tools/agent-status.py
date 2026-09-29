@@ -88,6 +88,13 @@ def collect(limit: int) -> dict:
     if conn is None:
         return {"error": f"wing.db UNKNOWN — {how}", "running": [], "recent": []}
 
+    try:
+        return _collect(conn, limit)
+    except sqlite3.Error as exc:
+        return {"error": f"wing.db UNKNOWN — {exc}", "running": [], "recent": []}
+
+
+def _collect(conn, limit: int) -> dict:
     with conn:
         rows = [dict(r) for r in conn.execute(
             """
