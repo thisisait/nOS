@@ -75,6 +75,8 @@ def _task_files() -> list[pathlib.Path]:
 def _is_executed(text: str, at: int) -> bool:
     """Is this `up` inside a shell/command block rather than a message?"""
     head = text[:at]
+    if head.rsplit("\n", 1)[-1].lstrip().startswith("#"):
+        return False   # a comment naming `up -d` after a shell task is prose
     last_exec = max((head.rfind(tok) for tok in EXECUTORS), default=-1)
     if last_exec < 0:
         return False

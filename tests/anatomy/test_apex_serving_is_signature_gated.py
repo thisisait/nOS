@@ -318,7 +318,7 @@ def test_preflight_runs_apex_check_after_config_before_homebrew():
     main = (REPO / "main.yml").read_text()
     pre = (REPO / "tasks" / "preflight-apex-ruling.yml").read_text()
     assert "import_tasks: tasks/preflight-apex-ruling.yml" in main
-    assert main.index("import_tasks: tasks/preflight-apex-ruling.yml") < main.index("pazny.mac.homebrew")
+    assert main.index("import_tasks: tasks/preflight-apex-ruling.yml") < main.index("role: pazny.mac.homebrew")
     assert main.index("Include playbook configuration overrides") < main.index(
         "import_tasks: tasks/preflight-apex-ruling.yml"
     )
