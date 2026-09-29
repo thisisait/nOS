@@ -221,6 +221,70 @@
     - (_ha_http_store.rc | default(1)) == 0
     - (((_ha_http_store.stdout | default('{}') | from_json).data | default({})).pending | default(None)) is not none
 
+# The promotion above NOTIFIES a restart, and a notify only fires when the play
+# reaches its end: on 2026-09-29 the play died at a later role, the handler
+# never ran, and the next converge found nothing pending — HA kept serving the
+# old stable config (400 behind a green healthcheck) with a correct store on
+# disk. So: probe the runtime, restart when it disagrees with the store, and
+# let a reader give the verdict.
+#
+# The probe: HA's forwarded middleware answers 400 to any request carrying
+# X-Forwarded-For from a peer it does not trust; the host reaches the container
+# from the Docker gateway, which the http: block lists. That is the route's
+# exact symptom, measured from the host without the edge in the way.
+- name: "[pazny.homeassistant Post] Does the runtime trust a forwarded request?"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ homeassistant_port }}/"
+    headers:
+      X-Forwarded-For: "203.0.113.9"
+    status_code: [200, 302, 400]
+    follow_redirects: none
+  register: _ha_forwarded_before
+  failed_when: false
+  when: not ansible_check_mode
+
+- name: "[pazny.homeassistant Post] Restart now, before anything downstream can fail"
+  ansible.builtin.meta: flush_handlers
+
+- name: "[pazny.homeassistant Post] Restart so the runtime reads the store it ignored"
+  ansible.builtin.command: "{{ docker_bin }} compose -p iiab restart homeassistant"
+  changed_when: true
+  when:
+    - not ansible_check_mode
+    - (_ha_forwarded_before.status | default(0)) == 400
+    - not (_ha_promote is defined and _ha_promote is changed)
+    - not (_ha_migration_reset is defined and _ha_migration_reset is changed)
+
+- name: "[pazny.homeassistant Post] Wait for API after the restart"
+  ansible.builtin.include_role:
+    name: pazny._common_tasks
+    tasks_from: wait_for_api.yml
+  vars:
+    wait_name: "[pazny.homeassistant Post]"
+    wait_url: "http://127.0.0.1:{{ homeassistant_port }}/"
+    wait_status_codes: [200, 302]
+    wait_register_as: _ha_ready_again
+    wait_retries: 20
+    wait_delay: 10
+    wait_hard_fail: true
+  when: >-
+    (_ha_forwarded_before.status | default(0)) == 400
+    or (_ha_promote is defined and _ha_promote is changed)
+    or (_ha_migration_reset is defined and _ha_migration_reset is changed)
+
+- name: "[pazny.homeassistant Post] The proxy must be trusted (a forwarded request is not 400)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ homeassistant_port }}/"
+    headers:
+      X-Forwarded-For: "203.0.113.9"
+    status_code: [200, 302]
+    follow_redirects: none
+  register: _ha_forwarded
+  retries: 6
+  delay: 5
+  until: _ha_forwarded.status | default(0) in [200, 302]
+  when: not ansible_check_mode
+
 - name: "[pazny.homeassistant Post] REFUSE if the migration reset did not run"
   # The reset carries failed_when:false so a converge survives an HA that is
   # still starting. This makes the outcome legible: a reset that silently did
