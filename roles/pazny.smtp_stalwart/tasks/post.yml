@@ -152,6 +152,24 @@
         up -d --force-recreate --no-deps smtp_stalwart
       changed_when: true
 
+# The store can say "allowed" while the running server still drops the host:
+# the ban list is held in memory and v0.16 has no reload endpoint (measured
+# 2026-09-29 — bans lifted, allow-list stored, still no banner). One probe;
+# no greeting → one restart, and the fatal reader below is the verdict.
+- name: "[pazny.smtp_stalwart] Does the host get a greeting?"
+  ansible.builtin.shell: |
+    (sleep 1; printf 'QUIT\r\n') | nc -w 3 127.0.0.1 {{ stalwart_port_smtp }} 2>/dev/null | head -1
+  args:
+    executable: /bin/bash
+  register: _stalwart_greeting
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.smtp_stalwart] Restart so the in-memory ban list forgets the host"
+  ansible.builtin.command: "{{ docker_bin }} compose -p infra restart smtp_stalwart"
+  when: not (_stalwart_greeting.stdout | default('')).startswith('220')
+  changed_when: true
+
 # The reader that proves the effect. The applies above report what they
 # ATTEMPTED; a 220 banner on the published SMTP port is the server serving.
 # Fatal on purpose: a mail server nobody can EHLO is the ten-week silence again.
