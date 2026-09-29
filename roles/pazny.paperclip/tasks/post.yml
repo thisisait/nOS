@@ -36,6 +36,27 @@
   failed_when: false
   when: "'exists' not in (_paperclip_config_check.stdout | default(''))"
 
+# `onboard --yes` writes config.json as local_trusted (its quickstart default)
+# while the container runs authenticated via PAPERCLIP_DEPLOYMENT_MODE. The
+# SERVER honours the env; the CLI honours the FILE — so `auth bootstrap-ceo`
+# answered "Deployment mode is local_trusted. Bootstrap CEO invite is only
+# required for authenticated mode", exit 0, and no invite was ever created:
+# an instance nobody could log in to, on every blank since the role shipped
+# (measured 2026-09-29). Align the file with the env before the CLI reads it.
+- name: "[pazny.paperclip Post] Align config.json with the mode the server runs under"
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p devops exec -T paperclip node -e '
+    const fs = require("fs"); const p = "/paperclip/instances/default/config.json";
+    const c = JSON.parse(fs.readFileSync(p, "utf8")); const s = c.server || (c.server = {});
+    const want = {deploymentMode: "authenticated", exposure: "private", bind: "lan"};
+    let changed = false;
+    for (const [k, v] of Object.entries(want)) { if (s[k] !== v) { s[k] = v; changed = true; } }
+    if (changed) { fs.writeFileSync(p, JSON.stringify(c, null, 2) + "\n"); console.log("ALIGNED"); }
+    else { console.log("aligned"); }'
+  register: _paperclip_align
+  changed_when: "'ALIGNED' in (_paperclip_align.stdout | default(''))"
+  notify: Restart paperclip
+
 # Paperclip closes TCP without an HTTP response if the Host header is not in
 # BETTER_AUTH_TRUSTED_ORIGINS / allowed hostnames. 127.0.0.1 is not in them,
 # so we must (a) wait only for the TCP port (fastest, reliable signal
@@ -143,9 +164,21 @@
     - _paperclip_bootstrap.rc != 0
     - "'already exists' not in (_paperclip_bootstrap.stdout | default(''))"
 
+# The invite is a one-time secret printed once; a debug line in a 900-task
+# run is where it went to die. Keep it where the operator's other secrets are.
+- name: "[pazny.paperclip Post] Keep the CEO invite URL for the operator (~/.nos)"
+  ansible.builtin.copy:
+    dest: "{{ ansible_facts['env']['HOME'] }}/.nos/paperclip-ceo-invite.txt"
+    content: "{{ _paperclip_bootstrap.stdout_lines | select('search', 'https?://') | join('\n') }}\n"
+    mode: '0600'
+  no_log: true
+  when:
+    - _paperclip_bootstrap is defined
+    - _paperclip_bootstrap.changed | default(false)
+
 - name: "[pazny.paperclip Post] Bootstrap CEO invite URL"
   ansible.builtin.debug:
-    msg: "{{ _paperclip_bootstrap.stdout_lines | default(['No invite generated']) | select('search', 'Invite URL') | list | first | default('Check paperclip logs for invite URL') }}"
+    msg: "CEO invite written to ~/.nos/paperclip-ceo-invite.txt — open it once, it creates the first admin."
   when:
     - _paperclip_bootstrap is defined
     - _paperclip_bootstrap.changed | default(false)
