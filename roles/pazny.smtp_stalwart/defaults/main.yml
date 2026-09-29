@@ -82,3 +82,17 @@ stalwart_authentik_oidc: false
 # resolve to one cert). Path resolved from default.config.yml's ssl_cert_*.
 stalwart_tls_cert_path: "{{ ssl_cert_path }}"
 stalwart_tls_cert_key:  "{{ ssl_cert_key }}"
+
+# ── Declarative first boot (2026-09-29) ────────────────────────────────────
+# No wizard. config.json names the store; plan.ndjson is applied through the
+# official CLI image against the management listener (recovery listener on the
+# first boot). Everything below is a plan input, nothing is typed into a UI.
+# Digest, not tag: the cli has its own release line (1.0.13 on 2026-09-29).
+stalwart_cli_image: "ghcr.io/stalwartlabs/cli@sha256:9a1e07307d6f890a193322c4b737fc0868405f0f8486a19922cbf362f43884fd"
+stalwart_dkim_selector: "nos-ed25519"
+# Stalwart publishes MX/SPF/DKIM/DMARC/… itself through a DnsServer object —
+# with the same Cloudflare token pazny.acme already holds. Off when the token is
+# absent: the Domain then carries dnsManagement Manual and the zone file is
+# readable in the admin UI.
+stalwart_dns_automatic: "{{ (acme_provider | default('')) == 'cloudflare' and (acme_cloudflare_api_token | default('') | length) > 0 }}"
+stalwart_applied_marker: "{{ stalwart_data_dir }}/etc/.nos-applied"

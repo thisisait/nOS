@@ -74,18 +74,17 @@ def test_smtp_stalwart_healthcheck_probes_the_published_address():
     )
 
 
-def test_the_strict_wait_admits_unhealthy_smtp_without_calling_it_ready():
-    """Mail is not in the testable surface. The wait must not stall the estate
-    for :25, and `_classify` must still call the container failed — otherwise
-    we have dressed absence up as calm again."""
+def test_the_strict_wait_no_longer_admits_smtp():
+    """The admission hid a server that had never left bootstrap mode for ten
+    weeks (2026-09-28). Since the role boots declaratively and proves a 220
+    banner in post.yml, an unhealthy smtp_stalwart fails the bring-up."""
     mod = _probe_mod("nos_stack_health_probe_smtp")
-    assert "smtp_stalwart" in mod.ADMITTED_UNHEALTHY
+    assert mod.ADMITTED_UNHEALTHY == ()
     assert mod._classify("Up 3 days (unhealthy)") == "failed"
-    assert mod._admitted_unhealthy("infra-smtp_stalwart-1")
-    assert not mod._admitted_unhealthy("infra-mariadb-1")
+    assert not mod._admitted_unhealthy("infra-smtp_stalwart-1")
 
 
-def test_admitted_smtp_does_not_fail_the_bring_up(capsys, monkeypatch):
+def test_unhealthy_smtp_fails_the_bring_up(capsys, monkeypatch):
     mod = _probe_mod("nos_stack_health_probe_smtp_main")
     monkeypatch.setattr(mod, "_docker_ps", lambda _stack: [
         ("infra-mariadb-1", "Up 3 days (healthy)"),
@@ -94,9 +93,8 @@ def test_admitted_smtp_does_not_fail_the_bring_up(capsys, monkeypatch):
     rc = mod.main(["infra"])
     out = capsys.readouterr().out
     assert rc == 0
-    assert "ALL_READY" in out
-    assert "admitted:" in out and "smtp_stalwart" in out
-    assert "FAILED:" not in out
+    assert "FAILED" in out and "smtp_stalwart" in out
+    assert "ALL_READY" not in out and "admitted:" not in out
 
 
 def test_a_different_unhealthy_service_still_fails_the_bring_up(capsys, monkeypatch):

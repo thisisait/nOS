@@ -1,0 +1,141 @@
+---
+# ==============================================================================
+# pazny.smtp_stalwart/tasks/post.yml — apply the declarative plan, then PROVE
+# the server serves mail. Called from core-up.yml after `compose up infra`,
+# before the STRICT health wait (like mariadb/postgresql post-start).
+#
+# First boot: the container is in recovery mode (compose, marker absent), so
+# only the management listener answers. bootstrap-plan (admin account) + plan
+# are applied, the marker is written, the container is recreated normally.
+# Later converges: one idempotent `apply` against the running server.
+# ==============================================================================
+
+# Frozen BEFORE anything below rewrites the marker: a block's `when` is
+# re-evaluated per task, so a condition on the marker's stat skipped the
+# recreate the moment the marker was written (measured 2026-09-29).
+- name: "[pazny.smtp_stalwart] Freeze the first-boot verdict"
+  ansible.builtin.set_fact:
+    _stalwart_first_boot: "{{ not (_stalwart_marker.stat.exists | default(false)) }}"
+
+- name: "[pazny.smtp_stalwart] Wait for the management listener on 127.0.0.1:{{ stalwart_port_admin }}"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ stalwart_port_admin }}/"
+    status_code: [200, 301, 302, 401, 404]
+  register: _stalwart_mgmt
+  retries: 30
+  delay: 2
+  until: _stalwart_mgmt.status in [200, 301, 302, 401, 404]
+
+# The official CLI image, on the infra network, reads the plans from the etc
+# dir. STALWART_USER/PASSWORD = the recovery admin on the first boot (honoured
+# whenever the env var is set) and the permanent admin thereafter — same value.
+- name: "[pazny.smtp_stalwart] Apply the bootstrap plan (first boot only — the admin account)"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin }}"
+      - run
+      - --rm
+      - --network
+      - infra_infra_net
+      - -v
+      - "{{ stalwart_data_dir }}/etc:/work:ro"
+      - -w
+      - /work
+      - -e
+      - STALWART_URL=http://smtp_stalwart:8080
+      - -e
+      - "STALWART_USER={{ stalwart_admin_username }}"
+      - -e
+      - "STALWART_PASSWORD={{ stalwart_admin_password }}"
+      - "{{ stalwart_cli_image }}"
+      - apply
+      - --file
+      - bootstrap-plan.ndjson
+      - --json
+  when: _stalwart_first_boot | bool
+  register: _stalwart_bootstrap_apply
+  no_log: true
+  changed_when: true
+
+- name: "[pazny.smtp_stalwart] Apply the plan (idempotent upserts)"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin }}"
+      - run
+      - --rm
+      - --network
+      - infra_infra_net
+      - -v
+      - "{{ stalwart_data_dir }}/etc:/work:ro"
+      - -w
+      - /work
+      - -e
+      - STALWART_URL=http://smtp_stalwart:8080
+      - -e
+      - "STALWART_USER={{ stalwart_admin_username }}"
+      - -e
+      - "STALWART_PASSWORD={{ stalwart_admin_password }}"
+      - "{{ stalwart_cli_image }}"
+      - apply
+      - --file
+      - plan.ndjson
+      - --json
+  register: _stalwart_apply
+  no_log: true
+  # An upsert always writes, so the summary says `"updated":10` on every
+  # converge (measured 2026-09-29). Only `created` > 0 is a change.
+  changed_when: "_stalwart_apply.stdout is regex('\"created\":[1-9]')"
+
+- name: "[pazny.smtp_stalwart] First boot: leave recovery mode (marker + recreate)"
+  when: _stalwart_first_boot | bool
+  block:
+    - name: "[pazny.smtp_stalwart] Write the applied marker"
+      ansible.builtin.copy:
+        dest: "{{ stalwart_applied_marker }}"
+        content: "applied {{ ansible_date_time.iso8601 }}\n"
+        mode: '0600'
+
+    - name: "[pazny.smtp_stalwart] Re-read the marker so the compose render drops recovery mode"
+      ansible.builtin.stat:
+        path: "{{ stalwart_applied_marker }}"
+      register: _stalwart_marker
+
+    - name: "[pazny.smtp_stalwart] Re-render the compose override without STALWART_RECOVERY_MODE"
+      ansible.builtin.template:
+        src: compose.yml.j2
+        dest: "{{ stacks_dir }}/infra/overrides/smtp_stalwart.yml"
+        mode: '0600'
+
+    - name: "[pazny.smtp_stalwart] Collect infra overrides"
+      ansible.builtin.find:
+        paths: "{{ stacks_dir }}/infra/overrides"
+        patterns: "*.yml"
+        file_type: file
+      register: _stalwart_infra_overrides
+
+    - name: "[pazny.smtp_stalwart] Recreate smtp_stalwart in normal mode"
+      ansible.builtin.shell: >
+        {{ docker_bin }} compose
+        -f "{{ stacks_dir }}/infra/docker-compose.yml"
+        {% for f in _stalwart_infra_overrides.files | sort(attribute='path') %}-f "{{ f.path }}" {% endfor %}
+        -p infra
+        up -d --force-recreate --no-deps smtp_stalwart
+      changed_when: true
+
+# The reader that proves the effect. The applies above report what they
+# ATTEMPTED; a 220 banner on the published SMTP port is the server serving.
+# Fatal on purpose: a mail server nobody can EHLO is the ten-week silence again.
+- name: "[pazny.smtp_stalwart] SMTP answers on 127.0.0.1:{{ stalwart_port_smtp }} (220 banner)"
+  ansible.builtin.shell: |
+    set -o pipefail
+    for i in $(seq 1 30); do
+      banner=$( (sleep 1; printf 'QUIT\r\n') | nc -w 3 127.0.0.1 {{ stalwart_port_smtp }} 2>/dev/null | head -1)
+      case "$banner" in 220*) echo "$banner"; exit 0;; esac
+      sleep 2
+    done
+    echo "no 220 banner on :{{ stalwart_port_smtp }} after 60s (last: '${banner}')" >&2
+    exit 1
+  args:
+    executable: /bin/bash
+  register: _stalwart_ehlo
+  changed_when: false

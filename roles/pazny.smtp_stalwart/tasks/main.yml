@@ -30,6 +30,41 @@
     - "{{ stalwart_data_dir }}/etc"
     - "{{ stalwart_data_dir }}/var"
 
+# ── Declarative first boot: the store, the DKIM key, the plans ─────────────
+# With config.json present the server leaves bootstrap mode. On the FIRST
+# boot (marker absent) compose starts it in recovery mode — only the
+# management listener is up — and tasks/post.yml applies the plans, then
+# recreates the container normally. Every later converge is one idempotent
+# apply against the running server.
+- name: "[pazny.smtp_stalwart] Render config.json (the store — nothing else lives here)"
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ stalwart_data_dir }}/etc/config.json"
+    mode: '0600'
+
+- name: "[pazny.smtp_stalwart] Generate the DKIM ed25519 key once"
+  ansible.builtin.command:
+    cmd: openssl genpkey -algorithm ed25519 -out "{{ stalwart_data_dir }}/etc/dkim-ed25519.key"
+    creates: "{{ stalwart_data_dir }}/etc/dkim-ed25519.key"
+
+- name: "[pazny.smtp_stalwart] DKIM key readable by the stalwart user (uid 2000) only"
+  ansible.builtin.file:
+    path: "{{ stalwart_data_dir }}/etc/dkim-ed25519.key"
+    mode: '0644'
+
+- name: "[pazny.smtp_stalwart] Render the plans"
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "{{ stalwart_data_dir }}/etc/{{ item }}"
+    mode: '0600'
+  loop: [plan.ndjson, bootstrap-plan.ndjson]
+  no_log: true   # the DNS token and the admin secret are in them
+
+- name: "[pazny.smtp_stalwart] Is this the first boot? (marker written by post.yml after a verified apply)"
+  ansible.builtin.stat:
+    path: "{{ stalwart_applied_marker }}"
+  register: _stalwart_marker
+
 - name: "[pazny.smtp_stalwart] Render compose override fragment"
   ansible.builtin.template:
     src: compose.yml.j2
