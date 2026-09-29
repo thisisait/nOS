@@ -97,3 +97,29 @@ def test_the_cli_is_pinned_by_digest_and_the_effect_is_read_not_assumed():
     core = (REPO / "tasks/stacks/core-up.yml").read_text()
     assert core.index("pazny.smtp_stalwart post-start") < core.index("Wait for INFRA stack healthy"), (
         "the apply must run before the STRICT wait, or a first boot in recovery mode can never pass it")
+
+
+def test_the_plan_allow_lists_the_estate_and_a_converge_lifts_a_self_ban():
+    """Stalwart banned the Docker Desktop gateway (192.168.65.1) for "port
+    scanning" two minutes after its first boot — permanently — and the host's
+    banner probe hung (2026-09-29). Every host-originated connection carries
+    that one address, so the plan must allow the estate's own space and the
+    post-start must lift a ban already written (the plan cannot undo one)."""
+    import ipaddress
+    import subprocess
+    objs = _render("plan.ndjson.j2")
+    allowed = [ipaddress.ip_network(v["address"]) for o in objs if o["object"] == "AllowedIp"
+               for v in o["value"].values()]
+    for ip in ("127.0.0.1", "192.168.65.1", "172.20.0.1", "::1"):
+        assert any(ipaddress.ip_address(ip) in n for n in allowed), f"{ip} not allow-listed"
+    tasks = yaml.safe_load((ROLE / "tasks/post.yml").read_text())
+    names = [t["name"] for t in tasks]
+    lift = names.index("[pazny.smtp_stalwart] Lift bans on estate-internal addresses")
+    assert names.index("[pazny.smtp_stalwart] Apply the plan (idempotent upserts)") < lift < len(names) - 1
+    # Run the filter itself against a public and a private ban: only the private id may be lifted.
+    src = tasks[lift]["ansible.builtin.shell"]
+    py = src.split("python3 -c '", 1)[1].split("\n')", 1)[0]
+    rows = '[{"id":"pub","address":"8.8.8.8"},{"id":"gw","address":"192.168.65.1"}]'
+    out = subprocess.run(["python3", "-c", py], input=rows, capture_output=True, text=True, check=True).stdout
+    assert out.strip() == "gw", out
+    assert "STALWART_PASSWORD {{" in src and "no_log" not in src and tasks[lift]["no_log"] is True
