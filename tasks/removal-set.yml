@@ -273,7 +273,7 @@
       - { var: openclaw_agents_dir, level: never, why: "~/agents holds user content; only anatomy-owned children (hermes) are removed" }
       - { var: openclaw_projects_dir, level: never, why: "~/projects holds user content — this checkout included" }
       - { var: openclaw_log_dir, level: never, why: "under ~/agents (see openclaw_agents_dir)" }
-      - { var: iiab_terminal_config_dir, level: never, why: "under homebrew_prefix/etc, kept with the brew packages (deep removes caches, not formulae)" }
+      - { var: iiab_terminal_config_dir, level: all, why: "under homebrew_prefix/etc but written by nOS, not a formula — a leave takes it with the home user (2026-09-29 exit audit)" }
 
 - name: "[Removal-set] Resolve source paths (level: all)"
   ansible.builtin.set_fact:
@@ -307,6 +307,22 @@
       # the blank allowlist, the dir/binary are uninstall-only.
       - "{{ backrest_home | default(ansible_facts['env']['HOME'] + '/backrest') }}"
       - "{{ backrest_bin | default(ansible_facts['env']['HOME'] + '/.local/bin/backrest') }}"
+      # ── found by the 2026-09-29 exit audit: role-owned, listed nowhere ──
+      - "{{ device_gateway_runtime_dir | default(ansible_facts['env']['HOME'] + '/device-gateway') }}"
+      - "{{ ears_runtime_dir | default(ansible_facts['env']['HOME'] + '/ears') }}"
+      - "{{ face_home | default(ansible_facts['env']['HOME'] + '/face') }}"
+      - "{{ acme_home | default(ansible_facts['env']['HOME'] + '/.acme.sh') }}"
+      # backup.log + the PLAINTEXT dump staging; the restic repo is the survivor.
+      - "{{ ansible_facts['env']['HOME'] }}/backups"
+      - "{{ ansible_facts['env']['HOME'] }}/restore-temp"
+      - "{{ ansible_facts['env']['HOME'] }}/gitlab-logs"
+      - "{{ ansible_facts['env']['HOME'] }}/projects/default"
+      # ~/agents stays (user content); these two are rendered by nOS, and
+      # backup-run.sh carries the off-site copy's decryption key.
+      - "{{ ansible_facts['env']['HOME'] }}/agents/backup-run.sh"
+      - "{{ ansible_facts['env']['HOME'] }}/agents/onboard.sh"
+      - "{{ iiab_terminal_config_dir | default(homebrew_prefix + '/etc/iiab-terminal') }}"
+      - "{{ iiab_terminal_bin_path | default(homebrew_prefix + '/bin/iiab-terminal') }}"
 
 - name: "[Removal-set] Stat data-level paths (existence for the report)"
   ansible.builtin.stat:

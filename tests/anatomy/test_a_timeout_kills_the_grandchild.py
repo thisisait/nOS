@@ -38,6 +38,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import shutil
 import tempfile
 import time
 
@@ -68,7 +69,7 @@ def _alive(pid: int) -> bool:
     return True
 
 
-def test_the_timeout_reaches_a_backgrounded_grandchild(tmp_path) -> None:
+def test_the_timeout_reaches_a_backgrounded_grandchild(tmp_path, request) -> None:
     mod = _runner()
     pidfile = tmp_path / "grandchild.pid"
     # The shape of tools/run-agent.sh: a wrapper that starts the real work as a
@@ -85,7 +86,9 @@ def test_the_timeout_reaches_a_backgrounded_grandchild(tmp_path) -> None:
     # The allowlist demands an absolute path under /Users/ or /home/ whose
     # basename looks like a tool. tmp_path on macOS is /var/folders/... , so
     # copy the interpreter invocation into a wrapper the allowlist accepts.
-    shim = pathlib.Path(tempfile.mkdtemp(dir=pathlib.Path.home())) / "pulsekilltest.py"
+    shim_dir = pathlib.Path(tempfile.mkdtemp(dir=pathlib.Path.home()))
+    request.addfinalizer(lambda: shutil.rmtree(shim_dir, ignore_errors=True))  # 241 were left in ~ by 2026-09-29
+    shim = shim_dir / "pulsekilltest.py"
     shim.write_text(script.read_text())
     os.chmod(shim, 0o755)
 
