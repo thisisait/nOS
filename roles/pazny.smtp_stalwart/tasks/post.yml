@@ -158,6 +158,7 @@
 # no greeting → one restart, and the fatal reader below is the verdict.
 - name: "[pazny.smtp_stalwart] Does the host get a greeting?"
   ansible.builtin.shell: |
+    set -o pipefail
     (sleep 1; printf 'QUIT\r\n') | nc -w 3 127.0.0.1 {{ stalwart_port_smtp }} 2>/dev/null | head -1
   args:
     executable: /bin/bash
