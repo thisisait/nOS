@@ -78,6 +78,11 @@ jobs:
       - name: Render the devlog
         run: python3 tools/devlog-render.py --out _site
 
+      # The profile builder: a static page built from default.config.yml +
+      # profiles/ at release time, so what it offers is what this tag ships.
+      - name: Render the profile builder
+        run: python3 tools/profile-builder-build.py --out _site/profile-builder
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
