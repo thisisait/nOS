@@ -32,6 +32,12 @@ services:
       # PUBLIC_URL — Stalwart uses this for self-referencing links in the
       # webadmin UI + OIDC callback paths. Traefik fronts the same host.
       STALWART_PUBLIC_URL: "https://{{ stalwart_domain }}"
+{% if not (_stalwart_marker.stat.exists | default(false)) %}
+      # First boot only: management listener alone, so tasks/post.yml can
+      # apply the plans before any mail port is up. post.yml drops this by
+      # recreating the container once the marker is written.
+      STALWART_RECOVERY_MODE: "1"
+{% endif %}
     volumes:
       # v0.16 layout — config + data are two top-level dirs (was 3 dirs
       # under a single tree pre-rewrite). Host paths kept under

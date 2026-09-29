@@ -538,6 +538,13 @@
     - _core_infra_enabled | bool
   tags: ['postgresql', 'database']
 
+- name: "[Core] pazny.smtp_stalwart post-start (declarative plan apply + SMTP banner proof)"
+  ansible.builtin.include_role: { name: pazny.smtp_stalwart, tasks_from: post.yml, apply: { tags: ['smtp', 'stalwart', 'mail', 'infra'] } }
+  when:
+    - install_smtp_stalwart | default(false)
+    - _core_infra_enabled | bool
+  tags: ['smtp', 'stalwart', 'mail', 'infra']
+
 # ── DB users/dbs now exist → wait for the FULL infra stack to go healthy ────
 # (authentik/infisical can now authenticate to Postgres). In-stream heartbeat.
 - name: "[Core] Wait for INFRA stack healthy (in-stream heartbeat)"

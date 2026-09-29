@@ -1,0 +1,15 @@
+{#- The declarative, IDEMPOTENT half: every line is an upsert keyed on a natural
+    field, so `stalwart-cli apply` reports created/updated/unchanged and a
+    re-converge is changed=0. Cross-references use the map keys (#key).
+    Secrets and one-shot objects (the admin account) live in bootstrap-plan.
+    TLS: Stalwart issues its own Let's Encrypt cert (Dns01 through the same
+    DnsServer) — the Certificate object has no label to upsert on, and a
+    server that renews itself beats a bind-mounted file it never re-reads. -#}
+{% if stalwart_dns_automatic | bool -%}
+{"@type":"upsert","object":"DnsServer","matchOn":["description"],"value":{"dns":{"@type":"Cloudflare","description":"nos-cloudflare","secret":{"@type":"Value","secret":{{ acme_cloudflare_api_token | to_json }}}}}}
+{"@type":"upsert","object":"AcmeProvider","matchOn":["directory"],"value":{"acme":{"directory":{{ ('https://acme-staging-v02.api.letsencrypt.org/directory' if (acme_staging | default(false) | bool) else 'https://acme-v02.api.letsencrypt.org/directory') | to_json }},"challengeType":"Dns01","contact":{{ "{" }}{{ ('postmaster@' ~ tenant_domain) | to_json }}:true{{ "}" }},"renewBefore":"R23"}}}
+{% endif -%}
+{"@type":"upsert","object":"Domain","matchOn":["name"],"value":{"dom":{"name":{{ tenant_domain | to_json }},"description":"nOS tenant domain","dkimManagement":{"@type":"Automatic"},"certificateManagement":{% if stalwart_dns_automatic | bool %}{"@type":"Automatic","acmeProviderId":"#acme","subjectAlternativeNames":{{ "{" }}{{ stalwart_domain | to_json }}:true{{ "}" }}}{% else %}{"@type":"Manual"}{% endif %},"dnsManagement":{% if stalwart_dns_automatic | bool %}{"@type":"Automatic","dnsServerId":"#dns","origin":{{ tenant_domain | to_json }}}{% else %}{"@type":"Manual"}{% endif %}}}}
+{"@type":"upsert","object":"DkimSignature","matchOn":["selector"],"value":{"dkim":{"@type":"Dkim1Ed25519Sha256","domainId":"#dom","selector":{{ stalwart_dkim_selector | to_json }},"privateKey":{"@type":"File","filePath":"/etc/stalwart/dkim-ed25519.key"},"stage":"active"}}}
+{"@type":"upsert","object":"NetworkListener","matchOn":["name"],"value":{"smtp":{"name":"smtp","protocol":"smtp","bind":{"[::]:25":true}},"submission":{"name":"submission","protocol":"smtp","bind":{"[::]:587":true}},"submissions":{"name":"submissions","protocol":"smtp","bind":{"[::]:465":true},"tlsImplicit":true},"imaps":{"name":"imaps","protocol":"imap","bind":{"[::]:993":true},"tlsImplicit":true},"management":{"name":"management","protocol":"http","bind":{"[::]:8080":true}}}}
+{"@type":"update","object":"SystemSettings","value":{"defaultHostname":{{ stalwart_domain | to_json }},"defaultDomainId":"#dom"}}

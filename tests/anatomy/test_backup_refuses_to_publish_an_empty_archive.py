@@ -111,10 +111,12 @@ def test_the_directory_is_read_from_inside_a_container():
         "the sidecar no longer uses ALPINE_IMAGE — the restore extractor pins "
         "that same tag, and a divergence is a latent restore drift"
     )
-    assert re.search(r"grep -c '\^\\\\\./'", fn) or "grep -c '^\\./'" in fn, (
-        "the member count no longer filters for tar's own `./...` lines. "
+    assert "grep -c '^\\./.*[^/]$'" in fn, (
+        "the member count no longer filters for tar's own `./...` FILE lines. "
         "Docker writes to the same stderr, so an unfiltered count would let an "
-        "empty archive past the threshold on any run that emitted a warning."
+        "empty archive past the threshold on any run that emitted a warning; "
+        "and a count that includes directories let stalwart's file-less tree "
+        "(./ ./etc/ ./var/) pass as 'OK 144 bytes' on 2026-09-28."
     )
 
 
@@ -140,9 +142,10 @@ def test_emptiness_is_counted_not_weighed():
     body = SCRIPT.read_text(encoding="utf-8")
     m = re.search(r"^EMPTY_ARCHIVE_MEMBERS=(\d+)", body, re.M)
     assert m, "EMPTY_ARCHIVE_MEMBERS is not declared beside the other constants"
-    assert int(m.group(1)) == 1, (
-        "`tar -C path .` emits `./` as its first member, so 1 is the exact "
-        "boundary between 'captured nothing' and 'captured something'"
+    assert int(m.group(1)) == 0, (
+        "the count is FILES since 2026-09-28 (a tree of bare directories is "
+        "0), so 0 is the exact boundary between 'captured nothing' and "
+        "'captured something'"
     )
     assert "EMPTY_ARCHIVE_CEILING" not in body, (
         "a byte-size floor is back. Size cannot distinguish an empty archive "

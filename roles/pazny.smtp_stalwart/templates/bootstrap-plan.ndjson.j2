@@ -1,0 +1,5 @@
+{#- ONE-SHOT, applied only on the first boot (marker .nos-applied absent): the
+    permanent administrator. A clear secret is hashed on create; re-applying
+    would re-hash and report `updated` every converge, so it is not in plan.ndjson. -#}
+{"@type":"upsert","object":"Domain","matchOn":["name"],"value":{"dom":{"name":{{ tenant_domain | to_json }}}}}
+{"@type":"upsert","object":"Account","matchOn":["name"],"value":{"admin":{"@type":"User","name":{{ stalwart_admin_username | to_json }},"description":"nOS administrator","domainId":"#dom","credentials":{"0":{"@type":"Password","secret":{{ stalwart_admin_password | to_json }}}},"roles":{"@type":"Admin"},"permissions":{"@type":"Inherit"},"memberGroupIds":{},"quotas":{},"aliases":{},"encryptionAtRest":{"@type":"Disabled"}}}}

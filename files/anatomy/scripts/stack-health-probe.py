@@ -211,7 +211,13 @@ def _expected_service_count(stack: str) -> tuple[int | None, str, list[str]]:
 #: test receiver). Holding the STRICT wait for that listener would stall
 #: every other stack for a surface nobody can test. `_classify` still
 #: returns failed; only the wait denominator admits the name.
-ADMITTED_UNHEALTHY = ("smtp_stalwart",)
+# EMPTY since 2026-09-29. smtp_stalwart sat here from 2026-09-15 as "SMTP not in
+# test scope" — and the server had in fact never left bootstrap mode (no
+# config since 07-22). An admission is a red the estate agrees not to see.
+# The role now boots declaratively and post.yml proves a 220 banner before
+# this wait runs, so an unhealthy mail server is a failed bring-up like any
+# other. Add a name here only with the measurement that says why.
+ADMITTED_UNHEALTHY: tuple[str, ...] = ()
 
 
 def _admitted_unhealthy(name: str) -> bool:
