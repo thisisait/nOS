@@ -112,6 +112,12 @@ def test_the_plan_allow_lists_the_estate_and_a_converge_lifts_a_self_ban():
                for v in o["value"].values()]
     for ip in ("127.0.0.1", "192.168.65.1", "172.20.0.1", "::1"):
         assert any(ipaddress.ip_address(ip) in n for n in allowed), f"{ip} not allow-listed"
+    # The server stores a single host WITHOUT its /32 or /128: "::1/128" was
+    # upserted, matched nothing, and the create hit primaryKeyViolation on the
+    # second converge (2026-09-29). Write it the way the server keys it.
+    raw = [v["address"] for o in objs if o["object"] == "AllowedIp" for v in o["value"].values()]
+    for a in raw:
+        assert ipaddress.ip_network(a).num_addresses > 1 or "/" not in a, f"{a}: a host address must carry no prefix"
     tasks = yaml.safe_load((ROLE / "tasks/post.yml").read_text())
     names = [t["name"] for t in tasks]
     lift = names.index("[pazny.smtp_stalwart] Lift bans on estate-internal addresses")
