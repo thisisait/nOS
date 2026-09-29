@@ -99,6 +99,21 @@
     - import_tasks: tasks/_platform.yml
       tags: ['always', 'platform']
 
+    # ── A removal DRY RUN needs no sudo (2026-09-29) ───────────────────────
+    # `nos --remove=data` prints the inventory and stops — but the host roles
+    # below run first and pazny.mac.homebrew's first task is `become`, so the
+    # dry run died on "sudo: a password is required" before it said anything.
+    # A reader that needs root is not a reader. Derived HERE (run-mode.yml's
+    # full derivation runs after the roles); every host role skips on it.
+    - name: "[Run-mode] Is this a removal dry run? (inventory only — skip the host roles)"
+      ansible.builtin.set_fact:
+        nos_dry_removal: >-
+          {{ (remove | default('none') in ['data', 'deep', 'all']
+              or blank | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1])
+             and confirm | default(false) not in [true, 'true', 'True', 'yes', 'y', '1', 1]
+             and assume_yes | default(false) not in [true, 'true', 'True', 'yes', 'y', '1', 1] }}
+      tags: ['always']
+
     # ── macOS 27 forward-compat preflight (loud, non-fatal) ───────────────
     # Flags an above-ceiling macOS (VirtioFS/launchctl/Docker regression watch)
     # and an under-floor Docker Desktop, so a big OS bump can't silently break
@@ -1012,22 +1027,28 @@
     # CLT is brew's prerequisite. Tagged `homebrew` so `--skip-tags homebrew`
     # (converge-host-skip) skips both; `--tags homebrew` still installs CLT.
     - role: elliotweiser.osx-command-line-tools
-      when: ansible_os_family == 'Darwin'
+      when:
+        - not (nos_dry_removal | default(false) | bool)
+        - ansible_os_family == 'Darwin'
       tags: ['homebrew']
 
     - role: pazny.mac.homebrew
       when:
+        - not (nos_dry_removal | default(false) | bool)
         - ansible_os_family == 'Darwin'
         - install_homebrew_packages | default(true)
       tags: ['homebrew']
 
     # Dotfiles is OS-portable (drops files into $HOME); no OS gate needed.
     - role: pazny.dotfiles
-      when: configure_dotfiles | default(true)
+      when:
+        - not (nos_dry_removal | default(false) | bool)
+        - configure_dotfiles | default(true)
       tags: ['dotfiles']
 
     - role: pazny.mac.mas
       when:
+        - not (nos_dry_removal | default(false) | bool)
         - ansible_os_family == 'Darwin'
         - install_mas_apps | default(false)
         - (mas_installed_apps | length > 0) or (mas_installed_app_ids | default([]) | length > 0)
@@ -1035,6 +1056,7 @@
 
     - role: pazny.mac.dock
       when:
+        - not (nos_dry_removal | default(false) | bool)
         - ansible_os_family == 'Darwin'
         - configure_dock | default(false)
       tags: ['dock']
@@ -1046,12 +1068,14 @@
     # is LIVE (consumed by pazny.bone/pulse/backup for systemd --user units).
     - role: pazny.linux.apt
       when:
+        - not (nos_dry_removal | default(false) | bool)
         - ansible_os_family in ['Debian', 'RedHat']
         - install_linux_packages | default(true)
       tags: ['apt', 'packages']
 
     - role: pazny.linux.systemd_user
       when:
+        - not (nos_dry_removal | default(false) | bool)
         - ansible_os_family in ['Debian', 'RedHat']
       tags: ['systemd']
 
@@ -1061,12 +1085,14 @@
     # (e.g. "I'll bring my own docker") get clean skips.
     - role: pazny.linux.docker
       when:
+        - not (nos_dry_removal | default(false) | bool)
         - ansible_os_family in ['Debian']
         - install_docker | default(true)
       tags: ['docker', 'linux']
 
     - role: pazny.linux.nginx
       when:
+        - not (nos_dry_removal | default(false) | bool)
         - ansible_os_family in ['Debian']
         - install_nginx | default(true)
       tags: ['nginx', 'linux']
@@ -1079,6 +1105,7 @@
     # would harden (or fail to touch) a machine nOS does not own.
     - role: pazny.linux.hardening
       when:
+        - not (nos_dry_removal | default(false) | bool)
         - ansible_os_family in ['Debian']
         - install_hardening | default(true)
         - not (nos_is_container | default(false) | bool)
