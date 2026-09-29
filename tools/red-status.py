@@ -772,14 +772,19 @@ def collect() -> dict:
     if conn is None:
         report["sources_missing"].append(str(WING_DB))
     else:
-        report["sources_read"].append(str(WING_DB))
-        with conn:
-            report["failing_jobs"] = failing_jobs(conn)
-            report["paused_runs"] = paused_runs(conn)
-            report["overdue_jobs"] = overdue_jobs(conn)
-            report["inbox"] = unread_inbox(conn)
-            report["audit_chain"] = audit_chain(conn)
-            report["orphaned_sessions"] = orphaned_sessions(conn)
+        try:
+            with conn:
+                report["failing_jobs"] = failing_jobs(conn)
+                report["paused_runs"] = paused_runs(conn)
+                report["overdue_jobs"] = overdue_jobs(conn)
+                report["inbox"] = unread_inbox(conn)
+                report["audit_chain"] = audit_chain(conn)
+                report["orphaned_sessions"] = orphaned_sessions(conn)
+            report["sources_read"].append(str(WING_DB))
+        except sqlite3.Error as exc:
+            # A wing.db with no schema (after a blank, before pazny.wing runs)
+            # is a source the reader could not read: UNKNOWN, not a traceback.
+            report["sources_missing"].append(f"{WING_DB} ({exc})")
         conn.close()
 
     for label, path, fn in (
