@@ -333,8 +333,9 @@ This stage, passed, is what a non-beta release claim stands on.
 
 ### What a blank does NOT restore, because nothing declares it
 
-- `woodpecker_api_token` — an OAuth-derived PAT a human mints in the UI; the
-  new server DB does not know the old token. Until re-minted,
+- `woodpecker_api_token` — an OAuth-derived PAT; the new server DB does not
+  know the old token. Since 2026-09-29 the role probes it and re-mints it
+  itself (`tools/woodpecker-token.py`), so this holds only until the next converge. Until re-minted,
   `tools/loop-review.py` reads CI as INDETERMINATE and the agent-row sweep
   skips (both say so rather than passing).
 - Gitea/GitLab PATs of the same shape (`gitea_api_token` re-mints only via
