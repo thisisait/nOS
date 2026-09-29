@@ -86,6 +86,36 @@
   # converge (measured 2026-09-29). Only `created` > 0 is a change.
   changed_when: "_stalwart_apply.stdout is regex('\"created\":[1-9]')"
 
+# Stalwart auto-bans an address after 30 "port scanning" connections a day,
+# forever, and the host reaches the published ports through ONE address (the
+# Docker Desktop gateway, 192.168.65.1): on 2026-09-29 it banned the operator's
+# own machine two minutes after first boot and every host-side probe hung.
+# The plan allow-lists the estate's address space; this lifts bans already
+# written, so a converge heals a server that banned its host before the plan.
+- name: "[pazny.smtp_stalwart] Lift bans on estate-internal addresses"
+  ansible.builtin.shell: |
+    set -o pipefail
+    CLI="{{ docker_bin }} run --rm --network infra_infra_net -e STALWART_URL=http://smtp_stalwart:8080 -e STALWART_USER={{ stalwart_admin_username }} -e STALWART_PASSWORD {{ stalwart_cli_image }}"
+    IDS=$($CLI query BlockedIp --json | python3 -c '
+    import ipaddress, json, sys
+    raw = sys.stdin.read().strip()
+    try:
+        rows = json.loads(raw) if raw else []
+    except ValueError:
+        rows = [json.loads(ln) for ln in raw.splitlines() if ln.strip()]
+    rows = rows if isinstance(rows, list) else [rows]
+    print(",".join(r["id"] for r in rows if ipaddress.ip_network(r["address"], strict=False).is_private))
+    ')
+    [ -n "$IDS" ] || { echo "none"; exit 0; }
+    $CLI delete BlockedIp --ids "$IDS" >/dev/null && echo "lifted $IDS"
+  args:
+    executable: /bin/bash
+  environment:
+    STALWART_PASSWORD: "{{ stalwart_admin_password }}"
+  register: _stalwart_unban
+  changed_when: "'lifted' in _stalwart_unban.stdout"
+  no_log: true
+
 - name: "[pazny.smtp_stalwart] First boot: leave recovery mode (marker + recreate)"
   when: _stalwart_first_boot | bool
   block:
