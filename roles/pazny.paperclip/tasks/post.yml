@@ -169,7 +169,7 @@
 - name: "[pazny.paperclip Post] Keep the CEO invite URL for the operator (~/.nos)"
   ansible.builtin.copy:
     dest: "{{ ansible_facts['env']['HOME'] }}/.nos/paperclip-ceo-invite.txt"
-    content: "{{ _paperclip_bootstrap.stdout_lines | select('search', 'https?://') | join('\n') }}\n"
+    content: "{{ _paperclip_bootstrap.stdout_lines | select('search', 'Invite URL') | join('\n') }}\n"
     mode: '0600'
   no_log: true
   when:

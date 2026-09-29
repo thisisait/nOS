@@ -48,4 +48,4 @@ def test_the_snippet_aligns_a_quickstart_config_once(tmp_path):
 def test_the_invite_is_kept_not_only_printed():
     keep = next(t for t in _tasks() if "Keep the CEO invite URL" in t["name"])
     assert keep["no_log"] is True and keep["ansible.builtin.copy"]["mode"] == "0600"
-    assert re.search(r"https\?://", keep["ansible.builtin.copy"]["content"])
+    assert "Invite URL" in keep["ansible.builtin.copy"]["content"]
