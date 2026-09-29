@@ -80,7 +80,10 @@
 - name: "[pazny.pulse] Detect a daemon older than the code it runs"
   ansible.builtin.shell: |
     set -euo pipefail
-    PID=$(launchctl print "gui/$(id -u)/{{ pulse_launchd_label }}" 2>/dev/null | awk '/pid = /{print $3}')
+    # A label launchd does not know (after a blank booted it out) exits 113,
+    # and under pipefail that killed the whole task — the first blank after
+    # this probe shipped ended here, 2026-09-29. Unknown label = not running.
+    PID=$(launchctl print "gui/$(id -u)/{{ pulse_launchd_label }}" 2>/dev/null | awk '/pid = /{print $3}' || true)
     # Not running at all: the bootstrap task below starts it with current code.
     [ -n "${PID:-}" ] || { echo FRESH; exit 0; }
     STARTED=$(ps -o lstart= -p "$PID" | sed 's/^ *//' \

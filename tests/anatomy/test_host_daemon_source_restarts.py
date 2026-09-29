@@ -224,3 +224,21 @@ def test_the_notified_handlers_exist():
                 if hook not in defined:
                     offenders.append(f"{role}: notify {hook!r} has no handler ({sorted(defined)})")
     assert not offenders, "\n  ".join(["dangling notify targets:"] + offenders)
+
+
+def test_the_pulse_staleness_probe_survives_an_unloaded_label(tmp_path):
+    """After a blank boots the label out, `launchctl print` exits 113. The
+    probe runs under `set -euo pipefail`, so that exit code ended the FIRST
+    blank after the probe shipped (2026-09-29, failed=1 at pazny.pulse).
+    Run the script with a launchctl stub that behaves that way: FRESH, rc 0."""
+    import subprocess
+    import yaml
+    tasks = yaml.safe_load((REPO / "roles" / "pazny.pulse" / "tasks" / "main.yml").read_text())
+    task = next(t for t in tasks if t.get("name", "").endswith("older than the code it runs"))
+    script = task["ansible.builtin.shell"].replace("{{ pulse_launchd_label }}", "x").replace("{{ pulse_venv }}", str(tmp_path))
+    stub = tmp_path / "launchctl"
+    stub.write_text("#!/bin/sh\nexit 113\n")
+    stub.chmod(0o755)
+    out = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
+                         env={"PATH": f"{tmp_path}:/usr/bin:/bin"})
+    assert (out.returncode, out.stdout.strip()) == (0, "FRESH"), (out.returncode, out.stdout, out.stderr)
