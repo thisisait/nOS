@@ -1281,7 +1281,9 @@ ollama_vision_model: ""        # -> NOS_LOCAL_VISION_MODEL  (vision tier)
 # commit — not a failed converge. Security-floor.md still advances immediately
 # on a CVE. Last adopt: 0.34.0 on 2026-09-14 (TOO-FRESH the same afternoon;
 # keg was already linked). Previous: 0.33.3 09-05, 0.33.2 09-03, 0.33.0 08-27.
-ollama_version: "0.34.0"
+# 0.35.0 on 2026-09-30: TOO-FRESH (2 days), adopted by operator decision —
+# /v1/systemone decision models (dtt local-decision-tev1) need >= 0.35.
+ollama_version: "0.35.0"
 
 # Run openclaw as a launchd daemon (always running, autorestart)
 openclaw_install_daemon: true
