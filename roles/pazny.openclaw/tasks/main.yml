@@ -115,6 +115,37 @@
 # `brew link ollama` always links the newest keg, so this uses Homebrew's
 # Keg API on the pin prefix. brew-as-root is refused; this task is become
 # false on purpose.
+# A pin ABOVE the cellar was a dead end: the relink below prints "missing pin"
+# and the refusal fails the run, so every advance so far needed someone to run
+# `brew upgrade` by hand first (and `brew pin` blocks exactly that). When
+# homebrew-core's stable IS the pin, land it here; when it is not, say so and
+# let the refusal speak. Gate: test_ollama_pin_is_installed_not_assumed.py
+- name: "[Ollama] Install the pin keg when the cellar lacks it"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    PIN="{{ ollama_version }}"
+    [ -d "$(brew --cellar ollama)/${PIN}" ] && { echo "present ${PIN}"; exit 0; }
+    brew update --quiet >/dev/null 2>&1 || true
+    STABLE="$(brew info --json=v2 ollama | python3 -c 'import json,sys;print(json.load(sys.stdin)["formulae"][0]["versions"]["stable"])')"
+    if [ "${STABLE}" != "${PIN}" ]; then
+      echo "unavailable pin=${PIN} core=${STABLE}"
+      exit 0
+    fi
+    brew unpin ollama >/dev/null 2>&1 || true
+    brew upgrade ollama
+    brew pin ollama
+    echo "installed ${PIN}"
+  args:
+    executable: /bin/bash
+  register: _ollama_pin_install
+  become: false
+  changed_when: "'installed ' in (_ollama_pin_install.stdout | default(''))"
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - ollama_version | default('') | length > 0
+    - (_ollama_keg.stdout | default('') | trim) != ollama_version
+    - (_ollama_shadow.stdout | default('0') | trim | int) == 0
+
 - name: "[Ollama] Link the pin keg when a newer keg stole the name"
   ansible.builtin.shell: |
     set -euo pipefail
