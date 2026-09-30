@@ -37,7 +37,7 @@ def test_every_dtt_verb_maps_to_a_real_tool():
 def test_dtt_branch_is_before_the_converge_exec():
     src = _src()
     dtt = src.find('= "dtt" ]')
-    conv = src.find("exec \"${ARGS[@]}\"")
+    conv = src.find('"${ARGS[@]}" </dev/null')   # the converge run line (no exec since the askpass trap)
     assert 0 < dtt < conv, (
         "the `nos dtt` branch must run and exit BEFORE the ansible-playbook exec "
         "— a dtt call must never fall through into a converge")
