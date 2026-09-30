@@ -30,6 +30,99 @@
     label: "{{ item }}"
   become: true
 
+# ── Host layer (macOS) — what a leave must not leave behind ──────────────────
+# The 2026-09-29 exit audit read the machine before a leave and found the
+# removal set covered directories only: brew service registrations (dnsmasq
+# as a ROOT daemon, still answering the tenant domain on :53), the mkcert
+# root CA trusted in the System keychain with its key on disk, the `home`
+# SSH account with its sshd Match block, and brew-bin symlinks into removed
+# trees. The reader at the end refuses a leave that kept any of them.
+- name: "[Remove:host] Host layer"
+  when: ansible_facts['os_family'] == 'Darwin'
+  block:
+    - name: "[Remove:host] Unregister the brew services nOS started"
+      ansible.builtin.shell: |
+        for svc in dnsmasq grafana-alloy nginx "php@{{ php_version | default('8.3') }}"; do
+          for plist in "$HOME/Library/LaunchAgents/homebrew.mxcl.${svc}.plist" "/Library/LaunchDaemons/homebrew.mxcl.${svc}.plist"; do
+            [ -f "$plist" ] || continue
+            launchctl bootout system "$plist" 2>/dev/null || launchctl bootout "gui/{{ ansible_facts['user_uid'] }}" "$plist" 2>/dev/null || true
+            rm -f "$plist" && echo "removed $plist"
+          done
+        done
+      args:
+        executable: /bin/bash
+      environment:
+        HOME: "{{ ansible_facts['env']['HOME'] }}"
+      become: true
+      register: _rm_brew_services
+      changed_when: "'removed' in _rm_brew_services.stdout"
+
+    - name: "[Remove:host] Where is the mkcert CA?"
+      ansible.builtin.command: "{{ homebrew_prefix }}/bin/mkcert -CAROOT"
+      register: _rm_caroot
+      changed_when: false
+      failed_when: false
+
+    - name: "[Remove:host] Untrust the mkcert root CA, then delete its key"
+      ansible.builtin.shell: |
+        [ -f "$CAROOT/rootCA.pem" ] || { echo "absent"; exit 0; }
+        "{{ homebrew_prefix }}/bin/mkcert" -uninstall && rm -rf "$CAROOT" && echo "removed"
+      environment:
+        CAROOT: "{{ _rm_caroot.stdout | trim }}"
+      become: true
+      register: _rm_mkcert
+      changed_when: "'removed' in _rm_mkcert.stdout"
+      when: (_rm_caroot.stdout | default('') | trim | length) > 0
+
+    - name: "[Remove:host] Drop the iiab-terminal sshd Match block"
+      ansible.builtin.blockinfile:
+        path: /etc/ssh/sshd_config
+        marker: "# {mark} ANSIBLE MANAGED - iiab-terminal"
+        state: absent
+      become: true
+
+    - name: "[Remove:host] Delete the iiab-terminal account (and /Users/<it>)"
+      ansible.builtin.shell: |
+        id "{{ iiab_terminal_user | default('home') }}" >/dev/null 2>&1 || { echo "absent"; exit 0; }
+        sysadminctl -deleteUser "{{ iiab_terminal_user | default('home') }}" && echo "removed"
+      become: true
+      register: _rm_home_user
+      changed_when: "'removed' in _rm_home_user.stdout"
+
+    - name: "[Remove:host] Drop brew-bin symlinks into removed trees"
+      ansible.builtin.shell: |
+        find "{{ nos_cli_install_dir }}" -maxdepth 1 -type l ! -exec test -e {} \; -print 2>/dev/null |
+        while read -r link; do
+          case "$(readlink "$link")" in "$HOME"/*) rm -f "$link" && echo "removed $link";; esac
+        done
+      args:
+        executable: /bin/bash
+      environment:
+        HOME: "{{ ansible_facts['env']['HOME'] }}"
+      register: _rm_links
+      changed_when: "'removed' in _rm_links.stdout"
+
+    # The reader: the tasks above report what they attempted; this asks the OS.
+    - name: "[Remove:host] Read back the host layer"
+      ansible.builtin.shell: |
+        left=""
+        for p in "$HOME"/Library/LaunchAgents/eu.thisisait.nos* \
+                 "$HOME"/Library/LaunchAgents/homebrew.mxcl.{dnsmasq,grafana-alloy,nginx}.plist \
+                 /Library/LaunchDaemons/homebrew.mxcl.{dnsmasq,grafana-alloy,nginx}.plist; do
+          [ -e "$p" ] && left="$left plist:$p"
+        done
+        security find-certificate -c mkcert /Library/Keychains/System.keychain >/dev/null 2>&1 && left="$left mkcert-ca-trusted"
+        id "{{ iiab_terminal_user | default('home') }}" >/dev/null 2>&1 && left="$left user:{{ iiab_terminal_user | default('home') }}"
+        grep -q "ANSIBLE MANAGED - iiab-terminal" /etc/ssh/sshd_config && left="$left sshd-match-block"
+        echo "LEFT:${left:- none}"
+      args:
+        executable: /bin/bash
+      environment:
+        HOME: "{{ ansible_facts['env']['HOME'] }}"
+      register: _rm_host_left
+      changed_when: false
+      failed_when: "_rm_host_left.stdout | trim != 'LEFT: none'"
+
 - name: "[Remove:source] Done"
   ansible.builtin.debug:
     msg: |

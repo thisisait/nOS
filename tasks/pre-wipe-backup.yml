@@ -84,10 +84,15 @@
   no_log: true
   tags: ['blank', 'reset']
 
+# The staging dir rides along: it holds the SAME fresh dumps in plaintext,
+# restorable with one `restic restore`. From RustFS alone the 2026-09-29 KEAP
+# dump had to be rebuilt by hand from 49 bitrot-framed parts (2026-09-30).
 - name: "[Pre-wipe] SYNCHRONOUS off-site snapshot of copy #1 (survives the wipe)"
   ansible.builtin.command: >-
     restic -r {{ restic_repo }} backup
     {{ rustfs_data_dir | default(ansible_facts['env']['HOME'] + '/rustfs') }}
+    {{ backup_staging_dir | default(ansible_facts['env']['HOME'] + '/backups/staging') }}
+    --exclude '*.part'
     --tag pre-wipe --tag remove-{{ remove }}
   register: _prewipe_snapshot
   changed_when: "'snapshot' in (_prewipe_snapshot.stdout | default(''))"

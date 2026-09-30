@@ -90,3 +90,21 @@ def test_inventory_warns_on_missing_offsite_repo() -> None:
     assert "KEAP captures" in txt, "removal inventory does not mention KEAP captures"
     assert "PERMANENTLY LOST" in txt, "inventory must warn of permanent loss when repo unset"
     assert "restic_repo" in txt, "inventory warning must reference restic_repo"
+
+
+def test_the_pre_wipe_snapshot_carries_the_plaintext_staging_dir():
+    """2026-09-30: the fresh pre-blank KEAP dump existed only as 49 bitrot-framed
+    RustFS parts in the snapshot; the plaintext staging copy of the same dump
+    was never snapshotted. Render the command and read its paths."""
+    import jinja2, yaml
+    tasks = yaml.safe_load(PREWIPE_PATH.read_text(encoding="utf-8"))
+    snap = next(t for t in tasks if "SYNCHRONOUS off-site snapshot" in t.get("name", ""))
+    cmd = jinja2.Environment().from_string(snap["ansible.builtin.command"]).render(
+        restic_repo="/r", rustfs_data_dir="/rustfs", backup_staging_dir="/home/u/backups/staging",
+        remove="all", ansible_facts={"env": {"HOME": "/home/u"}})
+    argv = cmd.split()
+    assert "/rustfs" in argv and "/home/u/backups/staging" in argv, argv
+    assert "'*.part'" in argv, "a half-written dump must not enter the survivor"
+    names = [t.get("name", "") for t in tasks]
+    refresh = next(i for i, n in enumerate(names) if "Refresh copy #1" in n)
+    assert refresh < names.index(snap["name"]), "the fresh dump must precede the snapshot"
