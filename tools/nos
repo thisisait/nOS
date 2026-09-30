@@ -348,6 +348,10 @@ fi
 # After --print-cmd's exit above, so a dry print never touches the log.
 # NOS_ANSIBLE_LOG_MAX is bytes (tests); default 50 MiB.
 _NOS_LOG="${HOME}/.nos/ansible.log"
+# ansible.cfg logs here, and Ansible will not create the directory: on a fresh
+# host, and after a leave took ~/.nos, it logged nothing ("not writeable and we
+# cannot create it", 2026-09-30). A converge is what owns the side-car.
+mkdir -p "${HOME}/.nos" && chmod 700 "${HOME}/.nos"
 _NOS_LOG_MAX="${NOS_ANSIBLE_LOG_MAX:-52428800}"
 if [ -f "$_NOS_LOG" ]; then
   _nos_log_sz=$(stat -f%z "$_NOS_LOG" 2>/dev/null || stat -c%s "$_NOS_LOG" 2>/dev/null || echo 0)

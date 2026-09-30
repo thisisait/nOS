@@ -115,3 +115,16 @@ def test_the_leave_removes_the_askpass_before_end_play():
     names = [t.get("name", "") for t in play["tasks"]]
     rm = names.index("[Run-mode] Leave — remove the sudo askpass helper first")
     assert rm + 1 == names.index("[Run-mode] Leave — end the play after removal (no reconverge)")
+
+
+def test_the_log_directory_exists_before_ansible_runs(tmp_path):
+    """Ansible does not create log_path's directory; after a leave (or on a
+    fresh host) the run logged nothing. The stub checks at its own start."""
+    stub = tmp_path / "ansible-playbook"
+    stub.write_text('#!/bin/sh\n[ -d "$HOME/.nos" ] && echo LOGDIR-OK\nexit 0\n')
+    stub.chmod(stub.stat().st_mode | statmod.S_IEXEC)
+    home = tmp_path / "home"; home.mkdir()
+    env = dict(os.environ, PATH=f"{tmp_path}:{os.environ['PATH']}", HOME=str(home), NOS_SRC=str(REPO))
+    r = subprocess.run([NOS, "--tags", "openclaw"], env=env, capture_output=True, text=True, timeout=30)
+    assert "LOGDIR-OK" in r.stdout, r.stdout + r.stderr
+    assert oct((home / ".nos").stat().st_mode & 0o777) == "0o700"
