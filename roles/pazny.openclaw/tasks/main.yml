@@ -205,11 +205,14 @@
   failed_when: false
   when:
     - nos_pkg_manager == 'homebrew'
-    - "'linked ' in (_ollama_relink.stdout | default(''))"
+    - "('linked ' in (_ollama_relink.stdout | default(''))) or ('installed ' in (_ollama_pin_install.stdout | default('')))"
 
 - name: "[Ollama] Remember the linked keg after an optional pin switch"
   ansible.builtin.set_fact:
-    ollama_linked_keg: "{{ (_ollama_keg_after_link.stdout | default('') | trim) if (not (_ollama_keg_after_link.skipped | default(true)) and (_ollama_keg_after_link.stdout | default('') | trim) | length > 0) else (_ollama_keg.stdout | default('') | trim) }}"
+    # An EXECUTED result carries no `skipped` key, so `.skipped | default(true)`
+    # read every re-resolve as skipped and the stale pre-install keg won: the
+    # 0.35.0 adopt (2026-09-30) was refused while 0.35.0 was the linked keg.
+    ollama_linked_keg: "{{ (_ollama_keg_after_link.stdout | default('') | trim) if ((_ollama_keg_after_link.skipped | default(false)) is false and (_ollama_keg_after_link.stdout | default('') | trim) | length > 0) else (_ollama_keg.stdout | default('') | trim) }}"
   when: nos_pkg_manager == 'homebrew'
 
 # DETERMINISM: the version record + gate above only DETECT drift. Without a brew

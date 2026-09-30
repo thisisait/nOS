@@ -67,3 +67,24 @@ def test_a_pin_core_does_not_offer_is_reported_not_forced(tmp_path: Path) -> Non
 
 def test_a_shadowing_tap_skips_the_install() -> None:
     assert any("_ollama_shadow" in w for w in _task()["when"])
+
+
+def _remember(after: dict, before: str) -> str:
+    tasks = yaml.safe_load(ROLE.read_text(encoding="utf-8"))
+    expr = next(t for t in tasks if t.get("name") == "[Ollama] Remember the linked keg after an optional pin switch")["ansible.builtin.set_fact"]["ollama_linked_keg"]
+    env = jinja2.Environment()
+    return env.from_string(expr).render(_ollama_keg_after_link=after, _ollama_keg={"stdout": before}).strip()
+
+
+def test_an_executed_re_resolve_wins_over_the_stale_reading() -> None:
+    """2026-09-30: 0.35.0 was linked, the refusal said 0.34.0 — an executed
+    result has no `skipped` key and the old default read it as skipped."""
+    assert _remember({"stdout": "0.35.0\n", "rc": 0}, "0.34.0") == "0.35.0"
+    assert _remember({"skipped": True}, "0.34.0") == "0.34.0"
+    assert _remember({"stdout": "", "rc": 0}, "0.34.0") == "0.34.0"
+
+
+def test_the_re_resolve_also_follows_an_install() -> None:
+    tasks = yaml.safe_load(ROLE.read_text(encoding="utf-8"))
+    t = next(t for t in tasks if t.get("name") == "[Ollama] Re-resolve the LINKED keg after switching to the pin")
+    assert any("_ollama_pin_install" in w for w in t["when"])
