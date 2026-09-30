@@ -875,6 +875,78 @@ def emit_jsonl(path: pathlib.Path, run_id: str, results: list[ProbeResult]) -> N
 # Main
 # ---------------------------------------------------------------------------
 
+def load_vars(host_alias: str | None = None, tenant_domain: str | None = None,
+              apps_subdomain: str | None = None) -> dict:
+    """The resolved variables every estate reader probes against: defaults,
+    the operator's config.yml, the run's own state.yml, CLI-style overrides,
+    the domain helpers the lite resolver cannot compute. Shared by
+    nos-smoke and tools/e2e-plan.py so the two never read two configs."""
+    # ── Load Ansible-style variables ───────────────────────────────────────
+    vars_dict = merge_config(
+        REPO / "default.config.yml",
+        REPO / "config.yml",      # gitignored operator override
+    )
+    apply_runtime_estate(
+        vars_dict, REPO / "config.yml",
+        manifest=load_yaml(REPO / "state" / "manifest.yml"),
+    )
+    # Host-platform fact for catalog `when:` rows, mirroring main.yml's own
+    # `ansible_os_family == 'Darwin'` gates: OpenClaw is installed ONLY on
+    # macOS, so on Linux its install flag (default true) must not summon a
+    # probe for a daemon the playbook never started (cloud lane, 2026-09-26).
+    vars_dict.setdefault("nos_is_macos", sys.platform == "darwin")
+
+    # ── Track F: apply CLI overrides BEFORE helper computation ───────────────
+    # These mirror Ansible -e flags. Without them, the subprocess can't see
+    # the operator's per-blank overrides (host_alias=lab etc.) and probes
+    # the wrong hosts. nos_smoke_strict=true then fails the playbook for
+    # what is fundamentally a smoke-config drift.
+    if host_alias is not None:
+        vars_dict["host_alias"] = host_alias
+    if tenant_domain is not None:
+        vars_dict["tenant_domain"] = tenant_domain
+    if apps_subdomain is not None:
+        vars_dict["apps_subdomain"] = apps_subdomain
+
+    # ── Track F: pre-compute domain composition helpers ──────────────────────
+    # default.config.yml defines `_host_alias_seg`, `_host_alias_normalized`,
+    # and `_acme_zone` via Jinja expressions with conditionals + length filters
+    # (e.g. `{{ '.' + x if (x | length > 0) else '' }}`) that the lightweight
+    # resolver below cannot parse. If we leave them as raw Jinja strings, the
+    # downstream `<svc>_domain` lookup expands them via lite-resolver to the
+    # raw text — producing literal '{{...}}' in URLs that curl rejects with
+    # 'InvalidURL: control characters'. Pre-computing them here as concrete
+    # values keeps the resolver narrow while honouring host_alias.
+    _host_alias_raw = vars_dict.get("host_alias", "") or ""
+    if not isinstance(_host_alias_raw, str):
+        _host_alias_raw = ""
+    _host_alias_norm = _host_alias_raw.strip(".")
+    vars_dict["_host_alias_normalized"] = _host_alias_norm
+    vars_dict["_host_alias_seg"] = f".{_host_alias_norm}" if _host_alias_norm else ""
+
+    _tenant_domain_raw = vars_dict.get("tenant_domain", "dev.local") or "dev.local"
+    # Names under the tenant domain are served by THIS host's edge, so a DNS
+    # blip on one of them earns a loopback retry rather than a DEAD verdict.
+    set_tenant_suffix(_tenant_domain_raw)
+    _acme_zone = (
+        f"{_host_alias_norm}.{_tenant_domain_raw}" if _host_alias_norm
+        else _tenant_domain_raw
+    )
+    vars_dict["_acme_zone"] = _acme_zone
+
+    _apps_subdomain_raw = vars_dict.get("apps_subdomain", "apps") or "apps"
+    if not isinstance(_apps_subdomain_raw, str):
+        _apps_subdomain_raw = "apps"
+    vars_dict["_apps_subdomain_normalized"] = _apps_subdomain_raw.strip(".")
+
+    # Self-substitute Jinja inside vars (e.g. wing_domain: "wing.{{ tenant_domain }}")
+    for k, v in list(vars_dict.items()):
+        if isinstance(v, str) and "{{" in v:
+            vars_dict[k] = resolve_jinja_lite(v, vars_dict)
+
+    return vars_dict
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--tier", type=int, choices=[1, 2, 3], help="filter by tier")
@@ -919,68 +991,7 @@ def main() -> int:
                         "When unset, exit code is the raw failed count (min 127).")
     args = p.parse_args()
 
-    # ── Load Ansible-style variables ───────────────────────────────────────
-    vars_dict = merge_config(
-        REPO / "default.config.yml",
-        REPO / "config.yml",      # gitignored operator override
-    )
-    apply_runtime_estate(
-        vars_dict, REPO / "config.yml",
-        manifest=load_yaml(REPO / "state" / "manifest.yml"),
-    )
-    # Host-platform fact for catalog `when:` rows, mirroring main.yml's own
-    # `ansible_os_family == 'Darwin'` gates: OpenClaw is installed ONLY on
-    # macOS, so on Linux its install flag (default true) must not summon a
-    # probe for a daemon the playbook never started (cloud lane, 2026-09-26).
-    vars_dict.setdefault("nos_is_macos", sys.platform == "darwin")
-
-    # ── Track F: apply CLI overrides BEFORE helper computation ───────────────
-    # These mirror Ansible -e flags. Without them, the subprocess can't see
-    # the operator's per-blank overrides (host_alias=lab etc.) and probes
-    # the wrong hosts. nos_smoke_strict=true then fails the playbook for
-    # what is fundamentally a smoke-config drift.
-    if args.host_alias is not None:
-        vars_dict["host_alias"] = args.host_alias
-    if args.tenant_domain is not None:
-        vars_dict["tenant_domain"] = args.tenant_domain
-    if args.apps_subdomain is not None:
-        vars_dict["apps_subdomain"] = args.apps_subdomain
-
-    # ── Track F: pre-compute domain composition helpers ──────────────────────
-    # default.config.yml defines `_host_alias_seg`, `_host_alias_normalized`,
-    # and `_acme_zone` via Jinja expressions with conditionals + length filters
-    # (e.g. `{{ '.' + x if (x | length > 0) else '' }}`) that the lightweight
-    # resolver below cannot parse. If we leave them as raw Jinja strings, the
-    # downstream `<svc>_domain` lookup expands them via lite-resolver to the
-    # raw text — producing literal '{{...}}' in URLs that curl rejects with
-    # 'InvalidURL: control characters'. Pre-computing them here as concrete
-    # values keeps the resolver narrow while honouring host_alias.
-    _host_alias_raw = vars_dict.get("host_alias", "") or ""
-    if not isinstance(_host_alias_raw, str):
-        _host_alias_raw = ""
-    _host_alias_norm = _host_alias_raw.strip(".")
-    vars_dict["_host_alias_normalized"] = _host_alias_norm
-    vars_dict["_host_alias_seg"] = f".{_host_alias_norm}" if _host_alias_norm else ""
-
-    _tenant_domain_raw = vars_dict.get("tenant_domain", "dev.local") or "dev.local"
-    # Names under the tenant domain are served by THIS host's edge, so a DNS
-    # blip on one of them earns a loopback retry rather than a DEAD verdict.
-    set_tenant_suffix(_tenant_domain_raw)
-    _acme_zone = (
-        f"{_host_alias_norm}.{_tenant_domain_raw}" if _host_alias_norm
-        else _tenant_domain_raw
-    )
-    vars_dict["_acme_zone"] = _acme_zone
-
-    _apps_subdomain_raw = vars_dict.get("apps_subdomain", "apps") or "apps"
-    if not isinstance(_apps_subdomain_raw, str):
-        _apps_subdomain_raw = "apps"
-    vars_dict["_apps_subdomain_normalized"] = _apps_subdomain_raw.strip(".")
-
-    # Self-substitute Jinja inside vars (e.g. wing_domain: "wing.{{ tenant_domain }}")
-    for k, v in list(vars_dict.items()):
-        if isinstance(v, str) and "{{" in v:
-            vars_dict[k] = resolve_jinja_lite(v, vars_dict)
+    vars_dict = load_vars(args.host_alias, args.tenant_domain, args.apps_subdomain)
 
     # ── Load manifest + smoke catalog (static + runtime) ───────────────────
     # state/smoke-catalog.yml         — checked-in, edited by humans
