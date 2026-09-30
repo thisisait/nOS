@@ -46,18 +46,19 @@
   changed_when: false
   when: woodpecker_api_token | default('') | length > 0
 
-- name: "[pazny.woodpecker Post Repo] Mint the PAT by walking the Gitea OAuth grant"
+# As an SSO identity, the way a person gets it: Authentik → Gitea's "Sign in
+# with Authentik" → Woodpecker's grant. The local-form path died with 403 the
+# day the gitea-base extension really hid the form (2026-09-30).
+- name: "[pazny.woodpecker Post Repo] Mint the PAT through SSO"
   ansible.builtin.command:
-    argv:
-      - python3
-      - "{{ playbook_dir }}/tools/woodpecker-token.py"
-      - "--user={{ gitea_admin_user }}"
-      - "--woodpecker={{ _woodpecker_api }}"
-      - "--gitea=http://127.0.0.1:{{ gitea_port | default(3003) }}"
-      - "--gitea-public=https://{{ gitea_domain }}"
-      - "--woodpecker-public=https://{{ woodpecker_domain }}"
+    argv: "{{ ['python3', playbook_dir ~ '/tools/woodpecker-token.py',
+               '--user=' ~ woodpecker_ci_identity,
+               '--auth-host=' ~ authentik_domain,
+               '--gitea-public=https://' ~ gitea_domain,
+               '--woodpecker-public=https://' ~ woodpecker_domain]
+              + (['--insecure'] if (tenant_domain_is_local | default(true) | bool) else []) }}"
   environment:
-    GITEA_PASSWORD: "{{ gitea_admin_password }}"
+    SSO_PASSWORD: "{{ authentik_bootstrap_password }}"
   register: _woodpecker_mint
   failed_when: false
   changed_when: _woodpecker_mint.rc == 0
@@ -98,6 +99,21 @@
 - name: "[pazny.woodpecker Post Repo] Activate nOS repo (token present)"
   when: woodpecker_api_token | default('') | length > 0
   block:
+    # The CI identity activates the repo, so it must administer it in Gitea.
+    # Its Gitea account exists from the mint's SSO walk (auto-registration).
+    - name: "[pazny.woodpecker Post Repo] Make the CI identity a repo admin in Gitea"
+      no_log: true   # Basic-auth embeds gitea_admin_password
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ gitea_port | default(3003) }}/api/v1/repos/{{ woodpecker_nos_repo_owner }}/{{ woodpecker_nos_repo_name }}/collaborators/{{ woodpecker_ci_identity }}"
+        method: PUT
+        headers:
+          Authorization: "Basic {{ (gitea_admin_user ~ ':' ~ gitea_admin_password) | b64encode }}"
+        body_format: json
+        body: {permission: admin}
+        status_code: [204]
+      changed_when: false
+      when: woodpecker_ci_identity != woodpecker_nos_repo_owner
+
     - name: "[pazny.woodpecker Post Repo] Discover Gitea forge_remote_id"
       no_log: true   # Basic-auth embeds gitea_admin_password (SEC-18 gap)
       ansible.builtin.uri:
