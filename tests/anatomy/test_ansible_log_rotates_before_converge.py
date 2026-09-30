@@ -21,7 +21,7 @@ def test_nos_rotates_ansible_log_before_exec_not_on_print_cmd():
     # First "ansible.log" can live in the header comment and would lie about
     # order. Pin the rotate assignment, which is the actual mv source.
     rotate_at = text.index('_NOS_LOG="${HOME}/.nos/ansible.log"')
-    exec_at = text.index('exec "${ARGS[@]}"')
+    exec_at = text.index('"${ARGS[@]}" </dev/null')   # the run line (no exec since the askpass trap)
     assert print_at < rotate_at < exec_at, (
         "rotation must run after --print-cmd exits and before ansible-playbook exec"
     )

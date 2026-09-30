@@ -1554,6 +1554,15 @@
 
     # Membership idiom on the RAW var — meta: filter-less rule (see the
     # comment in tasks/run-mode.yml's dry-run stop).
+    # end_play skips post_tasks, where the askpass helper (the sudo password)
+    # is normally removed — remove it before leaving.
+    - name: "[Run-mode] Leave — remove the sudo askpass helper first"
+      ansible.builtin.file:
+        path: "{{ ansible_facts['env']['HOME'] }}/.ansible_askpass"
+        state: absent
+      when: leave | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
+      tags: ['always']
+
     - name: "[Run-mode] Leave — end the play after removal (no reconverge)"
       ansible.builtin.meta: end_play
       when: leave | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
