@@ -65,6 +65,15 @@ def _inspect(ref: str) -> tuple[str, list[str]] | None:
     return img_id, json.loads(digests or "[]")
 
 
+def _by_ref_or_id(ref: str, img_id: str) -> tuple[str, list[str]] | None:
+    """A digest-pinned ref loads ANONYMOUS: `docker load` restores the content
+    under its id, but only a registry pull sets the repo digest, so the name
+    never resolves (2026-09-30: mcp-grafana refused while its layers sat in
+    the store). For those, the id is the proof; compose then fetches only the
+    manifest, not the layers."""
+    return _inspect(ref) or (_inspect(img_id) if "@" in ref else None)
+
+
 def _local_refs() -> list[str]:
     """Tagged images by tag; an image kept only by digest (a compose ref pinned
     `name:tag@sha256:…` lands untagged) by its repo digest — skipping those
@@ -119,7 +128,7 @@ def load(root: Path) -> int:
     loaded = present = 0
     refused: list[str] = []
     for ref, e in sorted(lock["images"].items()):
-        info = _inspect(ref)
+        info = _by_ref_or_id(ref, e["id"])
         if info and info[0] == e["id"]:
             present += 1
             continue
@@ -129,7 +138,7 @@ def load(root: Path) -> int:
             print(f"REFUSED {ref}: tar missing or checksum differs from the lock", file=sys.stderr)
             continue
         _docker("load", "-i", str(tar))
-        after = _inspect(ref)
+        after = _by_ref_or_id(ref, e["id"])
         if not after or after[0] != e["id"]:
             refused.append(ref)
             print(f"REFUSED {ref}: loaded, but the daemon reports a different image id", file=sys.stderr)

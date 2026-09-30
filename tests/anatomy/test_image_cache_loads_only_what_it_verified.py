@@ -30,13 +30,16 @@ if a[:2] == ["image", "ls"]:
 elif a[:2] == ["image", "inspect"]:
     x = a[-1]
     if x == "sha256:dangling": print(x + "|[]"); sys.exit(0)
-    hit = [(r, i) for r, i in s["images"].items() if x in (r, i)]
+    hit = [(r, i) for r, i in s["images"].items() if x in (r, i) and not (r.startswith("<anon>") and x == r)]
     if not hit: sys.exit(1)
     r, i = hit[0]; print(i + "|" + json.dumps(digests(r, i)))
 elif a[0] == "save":
     ref = a[-1]; open(a[2], "w").write(json.dumps({"ref": ref, "id": s["images"][ref]}))
 elif a[0] == "load":
-    d = json.load(open(a[2])); s["images"][d["ref"]] = d["id"]; s["loads"] = s.get("loads", 0) + 1; save()
+    d = json.load(open(a[2]))
+    # like the real daemon: a digest-pinned image comes back ANONYMOUS
+    key = ("<anon>" + d["id"]) if "@" in d["ref"] else d["ref"]
+    s["images"][key] = d["id"]; s["loads"] = s.get("loads", 0) + 1; save()
 '''
 
 
@@ -71,7 +74,11 @@ def test_a_pruned_daemon_gets_its_images_back(tmp_path: Path) -> None:
     Path(env["FAKE_STATE"]).write_text(json.dumps({"images": {}}))       # the leave prunes everything
     r = _run(env, root, "load")
     assert r.returncode == 0, r.stderr
-    assert _state(env)["images"] == imgs
+    after = _state(env)["images"]
+    assert after["grafana/grafana:12"] == "sha256:aaa" and after["ghcr.io/x/y:1"] == "sha256:bbb"
+    assert "sha256:ddd" in after.values(), "the digest-pinned image was not loaded"
+    assert "REFUSED" not in r.stderr, r.stderr
+    assert _run(env, root, "load").stdout.strip().endswith("0 refused"), "a second load re-read an anonymous image"
 
 
 def test_a_present_image_is_not_reloaded_and_seed_is_idempotent(tmp_path: Path) -> None:
