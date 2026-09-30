@@ -105,7 +105,9 @@ lifecycle:
   pre_compose:
     - render_compose_extension: compose_extension
   post_compose:
-    - wait_health: "https://127.0.0.1:{{ vaultwarden_port }}/alive"
+    # Plain HTTP: TLS ends at Traefik; https on the loopback port timed out
+    # (WRONG_VERSION_NUMBER) and marked the plugin degraded every run.
+    - wait_health: "http://127.0.0.1:{{ vaultwarden_port }}/alive"
     # Future post-A8: rotate admin_token via /admin/config API; today
     # operator does it through `global_password_prefix` rotation +
     # `ansible-playbook --tags vaultwarden`.
