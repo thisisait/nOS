@@ -267,3 +267,9 @@ notification:
 # GDPR Article 30 row (SHIPPED)                | gdpr (tendon)
 # Wing /hub card (SHIPPED)                      | ui-extension (tendon)
 # REM-002 hardening (SHIPPED)                   | compose_extension env
+
+# ── e2e: CI is wired to the forge — the repo is active and Gitea carries the hook
+e2e:
+  probes:
+    - {name: gitea-repo-has-the-woodpecker-hook, url: "http://127.0.0.1:{{ gitea_port }}/api/v1/repos/{{ gitea_admin_user }}/{{ woodpecker_nos_repo_name | default('nOS') }}/hooks", auth: {basic: {user: "{{ gitea_admin_user }}", secret: gitea}}, expect: {json_any: {"": {field: config.url, contains: "{{ woodpecker_domain }}"}}}, when: "{{ install_woodpecker_autowire_nos | default(false) }}"}
+    - {name: repo-active-in-woodpecker, url: "http://127.0.0.1:{{ woodpecker_port }}/api/repos/lookup/{{ gitea_admin_user }}/{{ woodpecker_nos_repo_name | default('nOS') }}", auth: {bearer: woodpecker_api_token}, expect: {json_equals: {active: true}}, when: "{{ install_woodpecker_autowire_nos | default(false) }}"}

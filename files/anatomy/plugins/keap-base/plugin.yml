@@ -316,3 +316,9 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+# ── e2e: the agent surface answers, and a proxied agent read works
+e2e:
+  probes:
+    - {name: agent-surface-healthy, url: "http://127.0.0.1:{{ keap_port }}/agent/v1/health", auth: {bearer: keap_agent_token_ro}, expect: {json_equals: {success: true, data.status: OK}}}
+    - {name: agent-recall-through-the-proxy, url: "http://127.0.0.1:{{ keap_port }}/agent/v1/search/semantic?q=backup&limit=1", auth: {bearer: keap_agent_token_ro, keap_proxy: true}, expect: {json_equals: {success: true}, json_min_len: {data.results: 1}}}

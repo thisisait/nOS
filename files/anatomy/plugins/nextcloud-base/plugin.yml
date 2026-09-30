@@ -178,3 +178,13 @@ ui-extension:
     tier: 3
     description: Self-hosted cloud — files, calendar, contacts
     health_check: "https://{{ nextcloud_domain }}"
+
+# ── e2e: "Sign in with Authentik" reaches Nextcloud as the tester
+e2e:
+  probes:
+    - name: sso-lands-as-the-tester
+      auth: tester
+      sso_start: "https://{{ nextcloud_domain }}/apps/user_oidc/login/1"
+      url: "https://{{ nextcloud_domain }}/ocs/v2.php/cloud/user?format=json"
+      send_headers: {OCS-APIRequest: "true"}
+      expect: {status: [200], contains_tester: true}

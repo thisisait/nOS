@@ -111,3 +111,22 @@ def test_a_flow_interface_goes_through_the_executor_to_a_code():
     w = sso_walk.walk(s, "https://auth.example.test/if/flow/consent/?next=x", AUTH,
                       stop_at_code_for="app.example.test")
     assert w.outcome == sso_walk.CODE
+
+
+def test_every_declared_probe_renders_to_a_runnable_shape():
+    """Each plugin e2e probe, rendered against the defaults, has a known kind,
+    a URL (or host/port) with no Jinja left, and an auth the runner knows."""
+    probes = [(r["slug"], p) for r in _plan() for p in r["probes"]]
+    assert len(probes) >= 20, len(probes)
+    for slug, p in probes:
+        kind = p.get("kind", "http")
+        assert kind in ("http", "tcp"), (slug, p)
+        text = str(p.get("url") or "") + str(p.get("host", "")) + str(p.get("port", ""))
+        assert "{{" not in text and text, (slug, p["name"], text)
+        if kind == "http":
+            assert "://" in p["url"] and "." in p["url"].split("://", 1)[1].split("/")[0], (slug, p["url"])
+        auth = p.get("auth", "anon")
+        assert auth in ("anon", "tester") or (isinstance(auth, dict) and set(auth) <= {
+            "bearer", "headers", "basic", "keap_proxy"}), (slug, auth)
+        if p.get("sso_start"):
+            assert auth == "tester" and "://" in p["sso_start"], (slug, p["name"])

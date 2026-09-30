@@ -223,3 +223,12 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+# ── e2e: a new SSO user lands logged in, not on a manual account-link page
+e2e:
+  probes:
+    - name: sso-creates-and-logs-in-the-tester
+      auth: tester
+      sso_start: "https://{{ gitea_domain }}/user/oauth2/authentik"
+      url: "https://{{ gitea_domain }}/user/settings"
+      expect: {status: [200], contains_tester: true}

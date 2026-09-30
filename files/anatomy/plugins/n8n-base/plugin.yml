@@ -174,3 +174,9 @@ pulse:
       findings_exit_codes: [1]
       env:
         N8N_API_KEY: "secret:n8n_api_key"
+
+# ── e2e: the packs landed, with the KEAP credential they write through
+e2e:
+  probes:
+    - {name: packs-present, url: "http://127.0.0.1:{{ n8n_port }}/api/v1/workflows?limit=100", auth: {headers: {X-N8N-API-KEY: n8n_api_key}}, expect: {json_min_len: {data: 2}}, when: "{{ install_keap | default(false) }}"}
+    - {name: keap-credential-present, url: "http://127.0.0.1:{{ n8n_port }}/api/v1/credentials", auth: {headers: {X-N8N-API-KEY: n8n_api_key}}, expect: {json_any: {data: {field: name, contains: nos-keap-rw}}}, when: "{{ install_keap | default(false) }}"}

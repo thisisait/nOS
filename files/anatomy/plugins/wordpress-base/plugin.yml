@@ -134,3 +134,10 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+# ── e2e: the client portal pages exist (post.yml creates them on first install)
+e2e:
+  probes:
+    - {name: portal-statements-page, url: "https://{{ wordpress_domain }}/statements/", follow: true, expect: {status: [200], contains: Statements}}
+    - {name: portal-documents-page, url: "https://{{ wordpress_domain }}/documents/", follow: true, expect: {status: [200], contains: Documents}}
+    - {name: portal-contact-page, url: "https://{{ wordpress_domain }}/contact/", follow: true, expect: {status: [200], contains: Contact}}

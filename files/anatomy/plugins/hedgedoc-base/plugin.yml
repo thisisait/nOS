@@ -106,3 +106,13 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+# ── e2e: SSO reaches HedgeDoc as the tester
+e2e:
+  probes:
+    - name: sso-lands-as-the-tester
+      auth: tester
+      sso_start: "https://{{ hedgedoc_domain }}/auth/oauth2"
+      url: "https://{{ hedgedoc_domain }}/me"
+      # /me carries the display name, not the username
+      expect: {status: [200], json_equals: {status: ok}, contains: "E2E Tester"}
