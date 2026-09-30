@@ -66,8 +66,19 @@ def _inspect(ref: str) -> tuple[str, list[str]] | None:
 
 
 def _local_refs() -> list[str]:
-    out = _docker("image", "ls", "--format", "{{.Repository}}:{{.Tag}}").stdout.split()
-    return sorted({r for r in out if "<none>" not in r})
+    """Tagged images by tag; an image kept only by digest (a compose ref pinned
+    `name:tag@sha256:…` lands untagged) by its repo digest — skipping those
+    left mcp-grafana and apex's nginx out of the first seed (2026-09-30)."""
+    refs = set()
+    for line in _docker("image", "ls", "--format", "{{.ID}}|{{.Repository}}|{{.Tag}}").stdout.splitlines():
+        img_id, repo, tag = line.split("|")
+        if repo != "<none>" and tag != "<none>":
+            refs.add(f"{repo}:{tag}")
+            continue
+        info = _inspect(img_id)
+        if info and info[1]:
+            refs.add(info[1][0])
+    return sorted(refs)
 
 
 def _tar_name(ref: str) -> str:
