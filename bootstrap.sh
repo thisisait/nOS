@@ -23,11 +23,15 @@ bash "$DIR/03-ansible.sh"
 bash "$DIR/04-galaxy.sh"
 bash "$DIR/05-config.sh"
 
+# ansible.cfg logs to ~/.nos/ansible.log and Ansible never creates the
+# directory, so a first run straight after bootstrap would log nothing.
+mkdir -p "$HOME/.nos" && chmod 700 "$HOME/.nos"
+
 echo ""
 echo -e "\033[1;32m╔══════════════════════════════════════════════════════╗\033[0m"
 echo -e "\033[1;32m║  Bootstrap complete!                                 ║\033[0m"
 echo -e "\033[1;32m╚══════════════════════════════════════════════════════╝\033[0m"
 echo ""
 echo "  Run the playbook:"
-echo "  ansible-playbook main.yml -K"
+echo "  ansible-playbook main.yml     # asks for sudo once; installs the \`nos\` CLI"
 echo ""
