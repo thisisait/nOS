@@ -60,7 +60,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     w = walk(s, f"{wp}/authorize", a.auth_host, verify=verify)
     if w.outcome != REACHED or not any(c.name == "user_sess" for c in s.cookies):
-        print(f"woodpecker grant: {w.outcome} at {w.url}, no session", file=sys.stderr)
+        hint = (" — Gitea asks for consent: the OAuth app lacks skip_secondary_authorization"
+                if "/login/oauth/authorize" in w.url else "")
+        print(f"woodpecker grant: {w.outcome} at {w.url}, no session{hint}", file=sys.stderr)
         return 1
 
     cfg = s.get(f"{wp}/web-config.js", timeout=20).text

@@ -56,7 +56,8 @@
     _wp_oauth_matches: >-
       {{ (woodpecker_gitea_client | default('') | length) > 0
          and (woodpecker_gitea_secret | default('') | length) > 0
-         and _wp_oauth_app.client_id | default('') == woodpecker_gitea_client }}
+         and _wp_oauth_app.client_id | default('') == woodpecker_gitea_client
+         and (_wp_oauth_app.skip_secondary_authorization | default(false) | bool) }}
   when: _wp_oauth_apps.status | default(0) == 200
 
 - name: "[pazny.woodpecker OAuth] Delete the stale app (client_id no longer matches)"
@@ -84,6 +85,10 @@
     body:
       name: "Woodpecker CI"
       confidential_client: true
+      # First-party app: no consent screen, or the SSO PAT mint (post-repo.yml)
+      # stops at Gitea's "Authorize" on every fresh app. An app without the flag
+      # counts as stale above and is replaced (PATCH would rotate the secret).
+      skip_secondary_authorization: true
       redirect_uris:
         - "https://{{ woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/authorize"
     status_code: [201]
