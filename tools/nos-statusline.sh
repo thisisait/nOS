@@ -37,7 +37,10 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CACHE="${NOS_STATUSLINE_CACHE:-${HOME}/.nos/statusline}"
 TTL=45            # seconds; older than this and the bare call recomputes
 
-mkdir -p "$(dirname "$CACHE")" 2>/dev/null || true
+# No mkdir: ~/.nos is the estate's side-car, and a status bar that creates it
+# resurrected it after every leave (2026-09-30). No side-car, no estate —
+# cache in a private temp file instead.
+[ -d "$(dirname "$CACHE")" ] || CACHE="${TMPDIR:-/tmp}/nos-statusline.$(id -u)"
 
 refresh() {
     cd "$REPO_ROOT" 2>/dev/null || { printf 'nos: no repo\n'; return 0; }
