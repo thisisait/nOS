@@ -38,7 +38,7 @@ def _wing_app_dir() -> Path:
 
 def _wing_db_path() -> Path:
     """Production wing.db location. Override via ``WING_DATA_DIR`` env."""
-    data_dir = os.environ.get("WING_DATA_DIR") or os.path.expanduser("~/wing/data")
+    data_dir = os.environ.get("WING_DATA_DIR") or os.path.expanduser("~/wing/app/data")
     return Path(data_dir) / "wing.db"
 
 
