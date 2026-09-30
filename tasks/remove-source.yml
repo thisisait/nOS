@@ -42,8 +42,9 @@
   block:
     - name: "[Remove:host] Unregister the brew services nOS started"
       ansible.builtin.shell: |
-        for svc in dnsmasq grafana-alloy nginx "php@{{ php_version | default('8.3') }}"; do
-          for plist in "$HOME/Library/LaunchAgents/homebrew.mxcl.${svc}.plist" "/Library/LaunchDaemons/homebrew.mxcl.${svc}.plist"; do
+        # Both prefixes: Homebrew 7 formulae ship sh.brew.<svc>, older homebrew.mxcl.
+        for svc in dnsmasq grafana-alloy nginx redis ollama "php@{{ php_version | default('8.3') }}"; do
+          for plist in "$HOME"/Library/LaunchAgents/{homebrew.mxcl,sh.brew}."${svc}".plist /Library/LaunchDaemons/{homebrew.mxcl,sh.brew}."${svc}".plist; do
             [ -f "$plist" ] || continue
             launchctl bootout system "$plist" 2>/dev/null || launchctl bootout "gui/{{ ansible_facts['user_uid'] }}" "$plist" 2>/dev/null || true
             rm -f "$plist" && echo "removed $plist"
@@ -125,8 +126,8 @@
         set -o pipefail
         left=""
         for p in "$HOME"/Library/LaunchAgents/eu.thisisait.nos* \
-                 "$HOME"/Library/LaunchAgents/homebrew.mxcl.{dnsmasq,grafana-alloy,nginx}.plist \
-                 /Library/LaunchDaemons/homebrew.mxcl.{dnsmasq,grafana-alloy,nginx}.plist; do
+                 "$HOME"/Library/LaunchAgents/{homebrew.mxcl,sh.brew}.{dnsmasq,grafana-alloy,nginx,redis,ollama}.plist \
+                 /Library/LaunchDaemons/{homebrew.mxcl,sh.brew}.{dnsmasq,grafana-alloy,nginx,redis,ollama}.plist; do
           [ -e "$p" ] && left="$left plist:$p"
         done
         security find-certificate -a -c "mkcert " /Library/Keychains/System.keychain 2>/dev/null \

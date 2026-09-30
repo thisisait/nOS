@@ -321,12 +321,12 @@
 - name: "[Ollama] Disable brew-managed Ollama service (replaced by user LaunchAgent)"
   ansible.builtin.shell: |
     # Stop brew service (gracefully via launchctl, not `brew services stop`)
-    plist="$HOME/Library/LaunchAgents/homebrew.mxcl.ollama.plist"
-    if [ -f "$plist" ]; then
-      launchctl unload "$plist" 2>/dev/null || true
-      # Presun do backup (kdyby user chtel vratit)
-      mv "$plist" "$plist.disabled" 2>/dev/null || true
-    fi
+    for plist in "$HOME/Library/LaunchAgents/homebrew.mxcl.ollama.plist" "$HOME/Library/LaunchAgents/sh.brew.ollama.plist"; do
+      if [ -f "$plist" ]; then     # Homebrew 7 names it sh.brew.ollama
+        launchctl unload "$plist" 2>/dev/null || true
+        mv "$plist" "$plist.disabled" 2>/dev/null || true   # kept, in case it is wanted back
+      fi
+    done
     # Kill any running instance (brew or our own wrapper)
     launchctl unload "$HOME/Library/LaunchAgents/com.ollama.agent.plist" 2>/dev/null || true
     pkill -f 'ollama serve' 2>/dev/null || true

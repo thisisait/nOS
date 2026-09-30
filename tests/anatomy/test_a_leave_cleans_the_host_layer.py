@@ -48,7 +48,7 @@ def test_privileged_binaries_are_called_by_absolute_path() -> None:
 def test_the_reader_asks_about_everything_the_block_removes() -> None:
     reader = _task("Read back the host layer")
     script = reader["ansible.builtin.shell"]
-    for probe in ("homebrew.mxcl.", "eu.thisisait.nos", "mkcert", "id \"", "ANSIBLE MANAGED - iiab-terminal"):
+    for probe in ("homebrew.mxcl", "sh.brew", "eu.thisisait.nos", "mkcert", "id \"", "ANSIBLE MANAGED - iiab-terminal"):
         assert probe in script, probe
     assert "LEFT: none" in reader["failed_when"]
 
@@ -100,3 +100,44 @@ esac
 def test_the_reader_waits_out_directory_services() -> None:
     reader = _task("Read back the host layer")
     assert reader.get("retries", 0) >= 3 and "LEFT: none" in reader["until"]
+
+
+def _stubs(tmp_path: Path, log: Path) -> Path:
+    bindir = tmp_path / "stubbin"
+    bindir.mkdir(exist_ok=True)
+    for name in ("launchctl", "sudo"):
+        (bindir / name).write_text(f'#!/bin/bash\necho "{name} $*" >> "{log}"\n'
+                                   + ('shift 0; exec "$@"\n' if name == "sudo" else "exit 0\n"))
+    for name in ("security", "id"):
+        (bindir / name).write_text("#!/bin/bash\nexit 1\n")
+    for f in bindir.iterdir():
+        f.chmod(0o755)
+    return bindir
+
+
+def test_brew_svc_finds_a_homebrew_7_plist(tmp_path: Path) -> None:
+    """Homebrew 7 formulae ship sh.brew.<svc>; brew-svc.sh looked only for
+    homebrew.mxcl.<svc> and a leave left alloy listening (2026-09-30)."""
+    home = tmp_path / "home"
+    (home / "Library/LaunchAgents").mkdir(parents=True)
+    plist = home / "Library/LaunchAgents/sh.brew.grafana-alloy.plist"
+    plist.write_text("<plist/>")
+    log = tmp_path / "calls.log"
+    bindir = _stubs(tmp_path, log)
+    r = subprocess.run(["/bin/bash", str(REPO / "files/brew-svc.sh"), "stop", "grafana-alloy"],
+                       capture_output=True, text=True,
+                       env={**os.environ, "HOME": str(home), "PATH": f"{bindir}:/usr/bin:/bin"})
+    assert r.returncode == 0, r.stderr
+    assert f"launchctl unload {plist}" in log.read_text(), log.read_text()
+
+
+def test_the_reader_names_a_homebrew_7_plist_left_behind(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    (home / "Library/LaunchAgents").mkdir(parents=True)
+    (home / "Library/LaunchAgents/sh.brew.grafana-alloy.plist").write_text("<plist/>")
+    bindir = _stubs(tmp_path, tmp_path / "calls.log")
+    script = jinja2.Environment().from_string(_task("Read back the host layer")["ansible.builtin.shell"]).render(
+        iiab_terminal_user="home-e2e-none")
+    r = subprocess.run(["/bin/bash", "-c", script], capture_output=True, text=True,
+                       env={**os.environ, "HOME": str(home), "PATH": f"{bindir}:/usr/bin:/bin"})
+    assert "sh.brew.grafana-alloy.plist" in r.stdout, r.stdout
