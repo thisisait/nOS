@@ -53,9 +53,7 @@ services:
       USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS: "true"
 {% endif %}
 {% if anthropic_api_key is defined and (anthropic_api_key | length) > 0 %}
-      # ── Anthropic Claude konektor (OpenAI-compat endpoint) ─────────────────
-      # Pristup k claude-opus/sonnet pres native OpenAI-compatible API.
-      # Multi-provider: drzi puvodni OpenAI + pridava Anthropic vedle.
+      # Anthropic via its OpenAI-compatible endpoint, beside the OpenAI one.
       OPENAI_API_BASE_URLS: "https://api.openai.com/v1;https://api.anthropic.com/v1"
       OPENAI_API_KEYS: "{{ openai_api_key | default('sk-placeholder') }};{{ anthropic_api_key }}"
       ENABLE_OPENAI_API: "true"
@@ -65,7 +63,9 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 60s
+      # First boot downloads the embedding model from HuggingFace (~2 min
+      # measured 2026-09-30); a 60s window turned that into "unhealthy".
+      start_period: 300s
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
