@@ -67,6 +67,7 @@ def testers(auth_host, verify_tls):
                                            authentik_domain=auth_host, ignore_tls=not verify_tls)
         return sessions[tier]
 
+    get.username = lambda tier: getattr(made.get(tier), "username", None)
     try:
         yield get
     finally:

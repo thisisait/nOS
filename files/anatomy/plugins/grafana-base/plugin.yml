@@ -301,3 +301,23 @@ notification:
 # │   └── provision-failed.ntfy
 # └── tests/
 #     └── test_compose_extension_renders.py               # plugin schema + render parity
+
+# ── e2e: what "wired" means for Grafana (tests/e2e/estate/test_effect_probes.py)
+e2e:
+  probes:
+    - name: sso-lands-as-the-tester
+      auth: tester
+      sso_start: "https://{{ grafana_domain }}/login/generic_oauth"
+      url: "https://{{ grafana_domain }}/api/user"
+      expect: {status: [200], contains_tester: true}
+    - name: an-admin-tester-is-grafana-admin
+      auth: tester
+      tier: 1
+      sso_start: "https://{{ grafana_domain }}/login/generic_oauth"
+      url: "https://{{ grafana_domain }}/api/user/orgs"
+      expect: {status: [200], json_equals: {"0.role": "Admin"}}
+    - {name: loki-datasource-healthy, url: "http://127.0.0.1:{{ grafana_port }}/api/datasources/uid/loki/health", auth: {basic: {user: admin, secret: grafana}}, expect: {json_equals: {status: OK}}}
+    - {name: prometheus-datasource-healthy, url: "http://127.0.0.1:{{ grafana_port }}/api/datasources/uid/prometheus/health", auth: {basic: {user: admin, secret: grafana}}, expect: {json_equals: {status: OK}}}
+    - {name: tempo-datasource-healthy, url: "http://127.0.0.1:{{ grafana_port }}/api/datasources/uid/tempo/health", auth: {basic: {user: admin, secret: grafana}}, expect: {json_equals: {status: OK}}}
+    - {name: wing-datasource-healthy, url: "http://127.0.0.1:{{ grafana_port }}/api/datasources/uid/wing_sqlite/health", auth: {basic: {user: admin, secret: grafana}}, expect: {json_equals: {status: OK}}}
+    - {name: keap-datasource-healthy, url: "http://127.0.0.1:{{ grafana_port }}/api/datasources/uid/keap_sqlite/health", auth: {basic: {user: admin, secret: grafana}}, expect: {json_equals: {status: OK}}, when: "{{ install_keap | default(false) }}"}

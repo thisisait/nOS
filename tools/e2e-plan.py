@@ -14,6 +14,7 @@ journey can never be written for a service the configuration does not run.
 from __future__ import annotations
 
 import argparse
+import getpass
 import importlib.util
 import json
 import sys
@@ -40,9 +41,14 @@ def _env(vars_: dict) -> jinja2.Environment:
 
 def _render(env: jinja2.Environment, value):
     if isinstance(value, str):
-        out = env.from_string(value).render()
-        # Values that are themselves templates (wing_domain: "wing.{{ tenant_domain }}").
-        return env.from_string(out).render() if "{{" in out else out
+        # Values are templates of templates: gitea_admin_user → nos_primary_admin
+        # → ansible_facts.user_id is three deep. Render to a fixed point.
+        out = value
+        for _ in range(5):
+            if "{{" not in out:
+                break
+            out = env.from_string(out).render()
+        return out
     if isinstance(value, list):
         return [_render(env, v) for v in value]
     if isinstance(value, dict):
@@ -82,6 +88,11 @@ def _host(url) -> str:
 
 def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict]:
     vars_ = {**_role_defaults(), **(smoke.load_vars() if vars_ is None else vars_)}
+    # The facts the playbook would have: gitea_admin_user is nos_primary_admin
+    # is ansible_facts.user_id, so without them the repo owner rendered "".
+    vars_.setdefault("ansible_facts", {"user_id": getpass.getuser(),
+                                       "env": {"HOME": str(Path.home())},
+                                       "os_family": "Darwin" if sys.platform == "darwin" else "Debian"})
     env = _env(vars_)
     edge, domains = _edge_modes(), _manifest_domains()
     rows = []

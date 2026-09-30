@@ -155,3 +155,9 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+# ── e2e: the host gets an SMTP greeting (the 2026-09-29 ban on the gateway IP)
+e2e:
+  enabled: "{{ install_smtp_stalwart | default(false) }}"
+  probes:
+    - {name: host-gets-a-greeting, kind: tcp, host: 127.0.0.1, port: "{{ stalwart_port_smtp }}", expect: {banner_prefix: "220"}}

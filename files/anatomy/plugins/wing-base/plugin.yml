@@ -392,3 +392,11 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+# ── e2e: Wing's own view of the estate has nothing down
+e2e:
+  probes:
+    - name: hub-health-all-up
+      url: "http://127.0.0.1:{{ wing_port }}/api/v1/hub/health"
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {status: [200], json_all: {probes: {field: status, in: [up], name: id}}}

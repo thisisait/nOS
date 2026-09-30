@@ -223,3 +223,9 @@ pulse:
         # restatement class on exactly that pair.
         NOS_NOTIFY_ORIGIN: "cortex"
         NOS_NOTIFY_ACTOR: "pulse:cortex-corpus-diff"
+
+# ── e2e: the reasoning organ is up and speaks the cortex contract
+e2e:
+  enabled: "{{ install_cortex | default(false) }}"
+  probes:
+    - {name: organ-healthy, url: "http://127.0.0.1:{{ cortex_port }}/health", expect: {json_equals: {success: true, data.status: OK}}}
