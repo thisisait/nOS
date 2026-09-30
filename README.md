@@ -1,70 +1,69 @@
-# nOS — the engine behind AIT
+# nOS
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![built with ponytail](https://img.shields.io/badge/built%20with-ponytail-ff69b4?style=flat-square)](docs/doctrine/ponytail.md)
 
-> **One stack. Forty services. Zero SaaS bills.**
+> **Your own cloud, on the machine on your desk.**
 >
-> `nOS` is the open-source integration engine behind [**This is AIT — Agentic IT**](https://thisisait.eu).
-> An Ansible playbook that orchestrates 78 roles, wires 40+ FOSS services together through one SSO,
-> and turns an Apple Silicon Mac — or an Ubuntu 24.04 LTS host — into a reproducible, self-hosted, self-managing cloud.
+> nOS is an Ansible playbook that orchestrates 78 roles to turn one Apple Silicon Mac,
+> or an Ubuntu 24.04 host, into a complete self-hosted stack: about 55 open-source services behind one sign-in,
+> one secrets vault, one observability stack and one backup, plus local AI agents that
+> run on your own hardware. Everything is FOSS and every byte of data stays on the box.
+
+nOS is the open-source reference implementation behind
+[**This is AIT — Agentic IT**](https://thisisait.eu).
 
 <p align="center">
   <a href="https://thisisait.eu">thisisait.eu</a> ·
   <a href="#quick-start">Quick start</a> ·
-  <a href="#the-stack">Stack</a> ·
-  <a href="#architecture">Architecture</a> ·
-  <a href="#sso--rbac">SSO &amp; RBAC</a> ·
-  <a href="#configuration">Configuration</a>
+  <a href="#what-you-get">What you get</a> ·
+  <a href="#how-it-is-built">How it is built</a> ·
+  <a href="#how-it-is-tested">How it is tested</a> ·
+  <a href="#status-and-limits">Status</a>
 </p>
 
 ---
 
-## What it is
+## Why it exists
 
-`nOS` is the reference implementation of **AIT — Agentic IT**: a new category of self-hosted, agentic,
-open-source infrastructure that collapses the SaaS stack back onto a single machine on your desk.
+A small team today rents a document wiki, a git forge, a password manager, an identity
+provider, monitoring, file sync, automation and a chat assistant from eight different
+vendors, each with its own login and its own copy of the team's data. nOS puts the FOSS
+equivalents on one machine the team owns and wires them together so they behave like
+one system:
 
-- **One command** wipes a Mac, installs 40+ services, integrates them, and secures them.
-- **One SSO** (Authentik) fronts every app — OIDC where possible, forward-auth where not.
-- **One vault** (Infisical) owns every secret. Per-tenant personal vaults via Vaultwarden.
-- **One agent** (OpenClaw + Ollama MLX) runs DevOps tasks locally, no API key required.
-- **One command** again brings everything back on a fresh box — `nos --remove=data --confirm`, ~20 minutes.
-
-This is not a homelab hobby. It's what replaces Notion + GitHub + 1Password + Vercel +
-Grafana Cloud + Auth0 + Slack + Zoom for a developer or a small team.
+- **One sign-in.** Authentik fronts every service, with per-user identity wherever the
+  service supports it.
+- **One place for secrets.** Every credential is derived from a single master key kept
+  on the host. Infisical holds infrastructure secrets, Vaultwarden holds personal ones.
+- **One view of the system.** Metrics, logs and traces from every service land in
+  Grafana, Prometheus, Loki and Tempo.
+- **One backup.** Every database and data directory is dumped nightly into an encrypted
+  S3 store (RustFS). Optionally, a restic repository with the Backrest UI lets you browse
+  and restore single files.
+- **One command to rebuild.** `nos --remove=data --confirm` wipes the estate and
+  reinstalls it from zero. That rebuild is how the project tests itself.
 
 ---
 
-## What it replaces
+## Status and limits
 
-| You're paying for | You could self-host | via nOS role |
-|---|---|---|
-| Notion / Confluence | Outline, HedgeDoc, BookStack | `pazny.outline`, `pazny.hedgedoc`, `pazny.bookstack` |
-| GitHub / GitLab.com | Gitea, GitLab CE + Woodpecker CI | `pazny.gitea`, `pazny.gitlab`, `pazny.woodpecker` |
-| 1Password / LastPass | Vaultwarden (personal) + Infisical (infra) | `pazny.vaultwarden`, `pazny.infisical` |
-| Auth0 / Okta | Authentik (OIDC + forward-auth + RBAC) | `pazny.authentik` |
-| Grafana Cloud / Datadog | Grafana + Prometheus + Loki + Tempo + Alloy | `pazny.grafana`, `pazny.prometheus`, `pazny.loki`, `pazny.tempo` |
-| ChatGPT / Claude.ai | Open WebUI + Ollama (MLX on Apple Silicon) | `pazny.open_webui`, `pazny.openclaw` |
-| Slack / Discord | Hermes cross-channel gateway (optional) | `pazny.hermes` |
-| Dropbox / Google Drive | Nextcloud + OnlyOffice | `pazny.nextcloud`, `pazny.onlyoffice` |
-| Zapier / Make | n8n + Node-RED | `pazny.n8n`, `pazny.nodered` |
-| Linear / Jira | ERPNext, FreeScout | `pazny.erpnext`, `pazny.freescout` |
-| QuickBooks | Firefly III | `pazny.firefly` |
-| Metabase Cloud | Metabase, Superset | `pazny.metabase`, `pazny.superset` |
-| Netflix / Plex Pass | Jellyfin | `pazny.jellyfin` |
-| Portainer Business | Portainer CE | `pazny.portainer` |
+nOS is **beta** (latest tag `v0.13-beta`) and has one primary maintainer who works with
+coding agents. It runs daily on the maintainer's Mac Studio. Read this before you rely
+on it:
 
-Hardware and electricity not included. A Mac Mini M4 pays for itself in under a year for a typical power user.
+- **Reference platform:** macOS on Apple Silicon (M1 or newer). Intel Macs are not supported.
+- **Also supported:** Ubuntu 24.04 LTS. A standing CI job runs the full playbook on a
+  Linux runner and checks that the services come up. The local AI agents (OpenClaw,
+  Hermes) are macOS-only for now. See [docs/linux-port.md](docs/linux-port.md).
+- **Recommended hardware:** 36 GB RAM and a 1 TB external SSD for service data.
+- **Known rough edges:** ERPNext's first migration is unreliable and it is left out of the
+  full test profile. Bluesky PDS federation needs public DNS. Jellyfin and Open WebUI can
+  restart a few times on their first database init.
 
 ---
 
 ## Quick start
-
-> **Reference platform:** macOS on Apple Silicon (M1+). Intel Macs are not supported.
-> **Also supported:** Ubuntu 24.04 LTS — the full playbook is wet-tested end-to-end by a
-> standing `Integration (ubuntu-24.04)` CI job (run with `install_openclaw: false` /
-> `install_hermes: false`; those agents stay macOS-only for now — see [docs/linux-port.md](docs/linux-port.md)).
-> **Recommended:** 36 GB RAM, 1 TB external SSD (nOS tiers heavy data onto it automatically).
 
 ### 1. Bootstrap
 
@@ -74,472 +73,216 @@ cd ~/nOS
 ./bootstrap.sh      # Xcode CLT → Homebrew → Ansible → Galaxy roles → config scaffolding
 ```
 
-### 2. Configure
+### 2. Choose what to install
 
-Bootstrap creates two gitignored files — `config.yml` and `credentials.yml`. Edit both:
+Bootstrap creates two gitignored files, `config.yml` and `credentials.yml`. `config.yml`
+holds your choices: which services to install (`install_<service>: true|false`), your
+domain (`tenant_domain`), and where data lives.
 
-```bash
-$EDITOR config.yml          # feature toggles: which services to install
-$EDITOR credentials.yml     # set global_password_prefix, override per-service secrets
-```
+The profile builder writes a `config.yml` for you from a few questions and a choice of
+profiles. It is published with each release; until then, build it locally with
+`tools/profile-builder-build.py --out /tmp/pb` and open `/tmp/pb/index.html`. Committed
+profiles live in [`profiles/`](profiles/):
 
-Passwords follow the pattern `{global_password_prefix}_pw_{service}`. Override any you care
-about in `credentials.yml`; the rest are derived. Generator: `openssl rand -hex 32`.
+| Profile | What it is for |
+|---|---|
+| `dev-minimal.yml` | Only what developing nOS itself needs |
+| `all-on.yml` | Every known-good service, sequential bring-up, generous health budget |
+| `gov-local.yml` | Enforced MFA, at-rest encryption gate, encrypted backups, tamper-evident audit log |
+| `praxis.yml` | A small consulting firm's Mac (beta) |
 
 ### 3. Run
 
 ```bash
-# Full install (sudo prompt via vars_prompt — no -K needed)
-# (installs the `nos` CLI — subsequent runs are just `nos`)
-ansible-playbook main.yml
-
-# Clean reinstall — wipes ALL data and secrets, prompts for a new prefix, rebuilds from scratch
-# (without --confirm this is a DRY RUN: prints the removal inventory and stops)
-nos --remove=data --confirm
-
-# Run a single stack
-nos --tags "stacks,observability"
-
-# Everything-on robust test — enable every known-good service (incl. face + KEAP),
-# sequential bring-up + 1200s health budget. Add --remove=data --confirm for a from-scratch run.
-nos --remove=data --confirm -e @profiles/all-on.yml
-
-# WIP: Maximal compliance - gov. ready
-# (enforced MFA, at-rest FileVault/LUKS gate, backup-crypto, tamper-evident audit hash-chain, breach-notification)
-nos --remove=data --confirm -e @profiles/all-on.yml -e @profiles/gov-local.yml
+ansible-playbook main.yml       # first run; asks for sudo once, installs the `nos` CLI
+nos                             # every run after that
 ```
 
-A full first run takes **~20 minutes** on an M4 Pro with fast internet.
+The first run downloads many gigabytes of images. Plan for well over twenty minutes, and
+more if GitLab is enabled.
 
-`nos` is the operator entry point (installed by the playbook into your PATH). The
-removal ladder is `--remove=none|data|deep|all`; without `--confirm`/`-y` a removal
-is a **dry run** that prints the resolved inventory and stops. Legacy
-`-e blank=true`/`-e flush=deep`/`-e uninstall=true` still work via a compatibility
-shim (deprecated). Full reference: [docs/nos-cli.md](docs/nos-cli.md).
+### 4. Log in
 
-### Stack bring-up tuning
-
-Stacks come up with `docker compose up -d` (non-blocking), then an **in-stream
-health-wait heartbeat** (`tasks/stacks/wait-stacks-healthy.yml` →
-`files/anatomy/scripts/stack-health-probe.py`) polls every container until it
-reports healthy. Each ~15s tick prints a per-stack readiness line into the main
-`ansible.log` — e.g. `iiab: 17/18 ready (waiting: jellyfin[starting])` — so a
-long bring-up no longer freezes the log. The wait is **STRICT**: every container
-must reach healthy, no tolerance escape hatch. Slow services just need a generous
-timeout.
-
-| Var | Default | What it does |
-|---|---|---|
-| `stack_up_parallel` | `true` | Bring wave-2 stacks up concurrently. Set `false` to bring them up one at a time — required for a cold blank that enables everything (parallel pulls/builds saturate the Docker daemon and blow the per-stack timeout). |
-| `stack_up_wait_timeout` | `540` | Per-stack health budget in seconds. Bump to 900–1200 for cold-blank heavy sets (GitLab/OnlyOffice cold init is slow). |
-| `stack_wait_tick_interval` | `15` | Seconds between health-poll ticks (heartbeat freshness vs task-count noise). |
-
-### Testing the full catalogue
-
-`profiles/all-on.yml` is a committed test profile that enables every known-good
-service (excludes `erpnext` / `freepbx` / `spacetimedb`), forces sequential
-bring-up, and sets a 1200s per-stack timeout:
+Credentials are 43-character random strings derived from one master key in
+`~/.nos/secrets.yml`. Read one on the host itself:
 
 ```bash
-nos -e @profiles/all-on.yml                            # everything on
-nos --remove=data --confirm -e @profiles/all-on.yml    # full wipe + reinstall
+tools/nos-secret.py authentik_admin     # the Authentik admin (akadmin) password
+tools/nos-secret.py --status            # which scheme is active, names only
 ```
 
-`-e @profiles/all-on.yml` layers on top of your gitignored `config.yml` /
-`credentials.yml` without touching secret overrides.
+A value you set in `credentials.yml` always wins over the derived one. Hosts installed
+before the v2 scheme keep `<prefix>_pw_<service>` passwords until their next rebuild.
 
-### Autonomous (sudo-free) stack runs
-
-`tools/nos-stacks.sh` brings the Docker stack layer up **without sudo and
-without the interactive prompt** — for agent / CI-driven dev. The compose-up
-flow carries zero `become:` tasks, and `-e nos_sudo_password=''` skips the
-`vars_prompt`:
-
-```bash
-tools/nos-stacks.sh                 # all stacks (core + wave-2)
-tools/nos-stacks.sh woodpecker      # render + recreate one service (A17)
-tools/nos-stacks.sh observability   # one stack
-```
-
-It refuses every removal token (`remove=…`/`confirm=true`, legacy
-`blank=true`/`flush=`/`uninstall=` — that path needs sudo + a human).
-
-### Known first-run notes
-
-- **GitLab cold init is slow** (~12 min to first healthy) but converges under
-  the strict health-wait — give it a generous `stack_up_wait_timeout`.
+Every service lives at `<service>.<tenant_domain>`. Start at `auth.<tenant_domain>`.
 
 ---
 
-## The stack
+## What you get
 
-Every Docker service is owned by an Ansible role under `roles/pazny.*`. Services are
-grouped into **8 Docker Compose stacks** that boot in dependency order.
+Services are grouped into Docker Compose stacks. `infra` and `observability` always come
+up first; the rest only if you enable them.
 
-| Stack | Role count | Services |
-|---|---|---|
-| **infra** (always on, always first) | 9 | MariaDB, PostgreSQL, Redis, Portainer, Traefik, Authentik (server + worker), Infisical, Bluesky PDS |
-| **observability** (always on, always second) | 4 | Grafana, Prometheus, Loki, Tempo (+ Alloy as unified collector on the host) |
-| **iiab** — Internet-in-a-Box & productivity | 12 | WordPress, Nextcloud, n8n, Kiwix, Jellyfin, Open WebUI, Uptime Kuma, Calibre-Web, Home Assistant, RustFS, Vaultwarden |
-| **devops** | 5 | Gitea, Woodpecker CI, GitLab CE, Paperclip, code-server |
-| **b2b** | 7 | ERPNext, FreeScout, Outline, HedgeDoc, BookStack, Firefly III, OnlyOffice |
-| **voip** | 1 | FreePBX (Asterisk) |
-| **engineering** | 1 | QGIS Server |
-| **data** | 2 | Metabase, Apache Superset |
-
-Non-Docker services installed directly on the host: **OpenClaw** (launchd agent daemon),
-**Wing** (Nette PHP security dashboard), **Bone** (local management REST bridge),
-**IIAB Terminal** (Python Textual TUI over SSH).
-
----
-
-## Architecture
-
-### Compose-override pattern
-
-Each role owns a single Docker Compose fragment that is merged into its stack at runtime:
-
-```
-roles/pazny.<service>/
-  defaults/main.yml          # version, port, data_dir, mem_limit
-  tasks/main.yml             # render override file into ~/stacks/<stack>/overrides/
-  tasks/post.yml             # (optional) API calls, DB init, admin bootstrap
-  templates/compose.yml.j2   # service definition — no top-level networks:
-  handlers/main.yml          # (optional) restart handler
-```
-
-Stack orchestrators (`tasks/stacks/core-up.yml`, `stack-up.yml`) discover overrides with
-`ansible.builtin.find` and pass them as `-f` flags to `docker compose up`:
-
-```bash
-docker compose \
-  -f ~/stacks/iiab/docker-compose.yml \
-  -f ~/stacks/iiab/overrides/wordpress.yml \
-  -f ~/stacks/iiab/overrides/nextcloud.yml \
-  ... \
-  up iiab -d
-```
-
-Bring-up is non-blocking (`up -d`); a separate in-stream health-wait heartbeat
-then polls every container to healthy (see *Stack bring-up tuning* below).
-
-**Result:** each service stays in its own role, but the stack sees one merged compose. Add a
-service by creating a role — no hand-edits to the base stack template.
-
-### Boot order
-
-1. **Password prefix prompt** (on a confirmed removal — `nos --remove=… --confirm`)
-2. **Blank reset** — wipes Docker, data dirs, external SSD paths
-3. **Auto-enable dependencies** — flips on MariaDB/PostgreSQL/Redis based on which services are on
-4. **Auto-generate secrets** — Outline, Bluesky, Authentik bootstrap token, Infisical, Vaultwarden, Paperclip
-5. **Host-level roles** — Xcode CLT → Homebrew → dotfiles → Mac App Store → Dock
-6. **Host tasks** — macOS defaults, SSH, language runtimes (PHP, Node, Python, Go, .NET, Bun), Nginx, external storage tiering
-7. **Core stacks up** — `infra` + `observability` (always required, always first)
-8. **Post-start core** — Authentik blueprints + OIDC app provisioning, Infisical init, PDS bootstrap, Portainer admin + OAuth
-9. **Remaining stacks up** — `iiab`, `devops`, `b2b`, `voip`, `engineering`, `data`
-10. **Post-start services** — admin users, DB migrations, OIDC wiring, onboarding
-11. **Tier-2 apps stack** — `pazny.apps_runner` discovers `apps/<name>.yml` manifests,
-    validates them (GDPR Article 30 + TLS / SSO / EU-residency gates), renders
-    a merged compose override, brings the apps stack up, fires observability
-    hooks. See [docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.md).
-12. **Post-provision** — stack health verification, service registry
-
-**Invariant:** post-start tasks can assume MariaDB, PostgreSQL, Authentik, Infisical,
-Grafana, Loki, and Tempo are already online.
-
-### Reverse proxy
-
-Traefik in a container is the default edge proxy (binds 80/443) as of C1
-(2026-04-29). Two providers: **file** (auto-derived from `state/manifest.yml`
-for the 50+ existing Tier-1 services) and **docker** (auto-emitted labels
-for Tier-2 apps_runner manifests). Authentik forward-auth wires through
-the `authentik@file` middleware. Host nginx is opt-in via
-`install_nginx: true` and lives behind the same `tasks/nginx.yml`. See
-[docs/traefik-primary-proxy.md](docs/traefik-primary-proxy.md).
-
-### State & Migration Framework
-
-Long-lived installs get a first-class answer to "what's running, how do I safely change
-it, and how do I roll back". Four surfaces: declarative state
-(`state/manifest.yml` + `~/.nos/state.yml`), global migrations
-(`migrations/*.yml`, auto-applied in `pre_tasks`), per-service upgrade recipes
-(`upgrades/*.yml`, including `pg_upgrade` / `mariadb-upgrade` / Grafana
-dashboard-preserving patterns), and dual-version coexistence for zero-downtime major
-upgrades. Every action emits structured events to Wing
-(`/migrations`, `/upgrades`, `/timeline`, `/coexistence` views).
-
-See [files/anatomy/docs/framework-overview.md](files/anatomy/docs/framework-overview.md) for the operator tour,
-and [files/anatomy/docs/framework-plan.md](files/anatomy/docs/framework-plan.md) for the authoritative spec.
-
-### Notifications
-
-Every service plugin carries a canonical A9 notification-routing block
-(`on_critical` / `on_high` / `on_medium` / `on_low` / `on_info` → channels
-`wing-inbox` | `ntfy` | `mail`) — uniform across all 55 plugins. The `wing-base`
-aggregator harvests them into a routing sidecar that Bone reads at insert time,
-fanning events out to the Wing inbox, ntfy push, and SMTP (Stalwart, with a
-daily digest at a configurable severity floor). See
-[files/anatomy/docs/notification-fanout.md](files/anatomy/docs/notification-fanout.md).
-
----
-
-## SSO & RBAC
-
-Single sign-on is not optional in `nOS` — most services are fronted by Authentik at
-`auth.<tld>` (default `auth.dev.local`). Each Tier-1 plugin under
-`files/anatomy/plugins/<svc>-base/plugin.yml` carries its own `authentik:` block;
-the `authentik-base` aggregator harvests them into `inputs.clients` and the plugin
-loader renders them into the live Authentik blueprint at deploy time. Post-start
-tasks auto-provision OIDC providers and applications for every enabled service.
-
-### Integration modes
-
-| Mode | Services | How |
-|---|---|---|
-| **Native OIDC (env)** | Grafana, Outline, Open WebUI, n8n, GitLab, Vaultwarden | OIDC env vars in the compose override |
-| **Native OIDC (API/CLI)** | Gitea, Nextcloud, Portainer | Admin API / `occ` / PUT `/api/settings` |
-| **Proxy auth** (forward-auth) | Uptime Kuma, Calibre-Web, Home Assistant, Jellyfin, Kiwix, WordPress, ERPNext, FreeScout, Infisical, Paperclip, Superset, nOS face, Metabase | Nginx `auth_request` + Authentik embedded outpost |
-| **Identity bridge** | Bluesky PDS | Authentik → PDS auto-provisions `@user.bsky.<tld>` accounts |
-| **No SSO** | FreePBX, QGIS | Service owns its own auth |
-
-Proxy auth *gates access* but each service still renders its own login. Native OIDC gives
-you a real "Sign in with Authentik" button.
-
-### RBAC tiers
-
-Four access tiers, bound to Authentik groups via expression policies. Every app's tier is
-declared in `authentik_app_tiers`; users are added to the corresponding `nos-*` group
-(installs provisioned before 2026-04-22 use the legacy `devboxnos-*` prefix — rename the groups in Authentik or run `nos --remove=data --confirm` to regenerate).
-
-| Tier | Role | Scope | Example services |
-|---|---|---|---|
-| 1 | **admin** | Infra, secrets, monitoring | Portainer, Infisical, Grafana, Wing, InfluxDB |
-| 2 | **manager** | Dev tools, analytics, automation | Gitea, GitLab, n8n, Superset, Metabase, Paperclip, ERPNext, FreeScout |
-| 3 | **user** | Employee productivity | Nextcloud, Outline, Open WebUI, nOS face, Vaultwarden, Uptime Kuma, Home Assistant, Calibre-Web |
-| 4 | **guest** | Public/content | Kiwix, Jellyfin, WordPress |
-
----
-
-## Configuration
-
-### Layering
-
-Four files, later overrides earlier:
-
-```
-default.config.yml        ← all variables with defaults                (committed)
-default.credentials.yml   ← all secrets as {{ prefix }}_pw_*  templates (committed)
-config.yml                ← your feature toggles                        (gitignored)
-credentials.yml           ← your secret overrides                       (gitignored)
-```
-
-### Installation queue
-
-The top of `default.config.yml` is a flat list of ~78 boolean toggles — comment out
-anything you don't want:
-
-```yaml
-install_nginx: true
-install_openclaw: true            # AI agent + Ollama MLX
-install_observability: true       # LGTM stack (required for audit trail)
-
-install_wordpress: false
-install_nextcloud: true
-install_gitea: true
-install_gitlab: false             # heavy (~4 GB RAM); only enable if you need CI at scale
-install_open_webui: true
-# ... 70 more
-```
-
-### Version policy
-
-```bash
-ansible-playbook main.yml                              # stable (default, CVE-patched)
-ansible-playbook main.yml -e version_policy=latest     # track upstream latest
-ansible-playbook main.yml -e version_policy=lts        # LTS branches where available
-./security-update.sh                                   # security-only pull
-```
-
-Per-service override: set `{service}_version` in `config.yml`.
-
-### Instance identity
-
-Every `nOS` box has a unique identity so a provider (e.g. [thisisait.eu](https://thisisait.eu)) can manage a fleet:
-
-```yaml
-instance_name: "nos"                 # unique slug
-instance_tld: "dev.local"            # every service lives at <service>.<tld>
-instance_role: "standalone"          # standalone | headquarters | factory | office | division
-instance_parent: ""                  # slug of parent box for hierarchy
-```
-
----
-
-## Tags & selective runs
-
-```bash
-ansible-playbook main.yml --tags "TAG[,TAG…]"
-```
-
-| Tag | What runs |
+| Stack | Services |
 |---|---|
-| `stacks` | All Docker stacks |
-| `core`, `infra`, `observability` | Core stacks only |
-| `nginx` | Nginx + vhosts + mkcert certs |
-| `php`, `node`, `python`, `go`, `dotnet`, `bun` | Single language runtime |
-| `openclaw`, `hermes`, `ai` | AI agents |
-| `wing`, `security` | Wing security dashboard |
-| `iiab-terminal`, `ssh` | SSH + ForceCommand TUI |
-| `bone`, `api` | Local FastAPI (structure / state / dispatcher) |
-| `dnsmasq`, `dns`, `network` | `*.<tld>` resolver |
-| `tailscale` | VPN |
-| `external-storage`, `storage` | Tier data onto `/Volumes/*` |
-| `macos-defaults`, `osx` | Finder / Dock / keyboard / screenshot prefs |
-| `backup` | Restic backup config |
-| `heartbeat`, `fleet` | Fleet reporting daemon |
-| `blank`, `reset` | Blank-wipe tasks (fire only on a confirmed removal — `nos --remove=… --confirm`; legacy `-e blank=true` still works, deprecated) |
+| **infra** | MariaDB, PostgreSQL, Redis, Traefik, Authentik, Infisical, Portainer, Stalwart mail, Bluesky PDS |
+| **observability** | Grafana, Prometheus, Loki, Tempo, InfluxDB (Alloy runs on the host as the collector) |
+| **iiab** | Nextcloud, WordPress, n8n, Node-RED, Open WebUI, MCP gateway, Vaultwarden, Uptime Kuma, ntfy, Miniflux, Calibre-Web, Kiwix, offline maps, Jellyfin, Home Assistant, RustFS, KEAP, nOS face |
+| **devops** | Gitea, Woodpecker CI, GitLab CE, Paperclip, code-server |
+| **b2b** | Outline, HedgeDoc, BookStack, OnlyOffice, Dolibarr, Firefly III, FreeScout, ERPNext |
+| **data** | Metabase, Apache Superset |
+| **voip**, **engineering** | FreePBX, QGIS Server |
+| **apps** | Manifest apps from [`apps/`](apps/): Documenso, 2FAuth, Qdrant, Roundcube |
 
-Dry run: `--check`. Syntax only: `ansible-playbook main.yml --syntax-check`.
+On the host, outside Docker, nOS runs its own small organs:
 
----
-
-## External storage
-
-If `configure_external_storage: true` and an SSD is mounted at `external_storage_root`
-(default `/Volumes/SSD1TB`), heavy data directories are bind-mounted onto it — GitLab,
-Ollama models, observability databases, media libraries, Docker Desktop disk image location,
-language caches:
-
-```
-/Volumes/SSD1TB/
-├── cache/{npm,pip,composer,homebrew}/
-├── docker/                 # Docker Desktop disk image (manual move via Settings)
-├── gitea/  gitlab/  woodpecker/
-├── ollama/models/          # ~17 GB per LLM
-├── observability/{prometheus,loki,tempo}/
-├── media/  jellyfin/
-├── kiwix/  maps/           # ZIMs + MBTiles
-├── nextcloud-data/  wordpress/  calibre/
-└── n8n/  openwebui/  portainer/  uptime-kuma/
-```
-
-A removal run (`nos --remove=… --confirm`, legacy `blank=true`) honors these paths —
-it wipes the real data, not just empty `~/service` fallback directories.
+- **Bone:** a local FastAPI bridge between playbook runs and the event store.
+- **Wing:** the operator dashboard, covering security findings, migrations, upgrades,
+  the audit timeline and agent sessions.
+- **Pulse:** the scheduler for recurring jobs.
+- **Cortex:** a loopback reasoning daemon that validates agent pipelines against KEAP,
+  the knowledge store.
+- **OpenClaw and Hermes:** AI agents backed by Ollama with the MLX backend, so models run
+  on the Mac's GPU with no API key.
+- **Backrest** (optional): the UI over the restic backup repository.
 
 ---
 
-## Adding a new service
+## How it is built
 
-**Tier-1 (full role + plugin):**
+### One role per service, one plugin per integration
 
-1. Scaffold the role under `roles/pazny.<service>/` following the compose-override pattern.
-2. Wire it into the right stack orchestrator (`tasks/stacks/core-up.yml` or `stack-up.yml`)
-   with `include_role` — remember both `apply: { tags: […] }` **and** `tags: […]` on the
-   task so `--tags` filtering works.
-3. Add `install_<service>: false` to `default.config.yml`.
-4. Create `files/anatomy/plugins/<service>-base/plugin.yml` with an `authentik:` block
-   (mirror an existing sibling such as `grafana-base/plugin.yml`). The plugin loader
-   harvests it into the Authentik blueprint automatically.
-5. Add a row to `state/manifest.yml` with `domain_var` + `port_var` so Traefik's
-   file-provider auto-routes the service.
+Every Docker service is owned by an Ansible role under `roles/pazny.<service>/`. The role
+renders one Compose fragment into `~/stacks/<stack>/overrides/`, and the stack is brought
+up with every fragment merged. A service is added by adding a role, never by editing a
+shared file.
 
-**Tier-2 (manifest-only — no role):** drop a YAML at `apps/<service>.yml` and re-run the
-playbook. See [docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.md) for the
-GDPR-gated manifest schema and Coolify import flow.
+How a service is wired to the rest (its SSO client, notification routing, dashboards,
+scheduled jobs, backup coverage) is declared in its plugin manifest,
+`files/anatomy/plugins/<service>-base/plugin.yml`. Aggregators read those manifests and
+render the Authentik configuration, the notification routes and the Grafana
+provisioning. [files/anatomy/docs/plugin-wiring-capabilities.md](files/anatomy/docs/plugin-wiring-capabilities.md)
+lists which manifest blocks have a live consumer.
 
-The full doctrine for both paths lives in [CLAUDE.md](CLAUDE.md) §Adding a new
-Docker service.
+Long-tail apps that do not need a role are a single YAML manifest in `apps/`. The runner
+refuses a manifest without a complete GDPR Article 30 block. See
+[docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.md).
 
----
+### Sign-in
 
-## Manual steps macOS can't automate
+Authentik serves `auth.<tenant_domain>`. Each service is in one of three modes:
 
-| # | What | Why |
+| Mode | What the user sees | Examples |
 |---|---|---|
-| 1 | `tailscale up` | Interactive browser login |
-| 2 | System Settings → Keyboard → Modifier Keys → Caps Lock → Escape | Per-keyboard, not scriptable |
-| 3 | System Settings → Privacy & Security → Full Disk Access → add Terminal / Ghostty | SIP-protected |
-| 4 | Docker Desktop → Settings → Resources → Disk image location → `/Volumes/SSD1TB/docker/` | GUI-only |
+| **Native OIDC** | "Sign in with Authentik" inside the app, with a per-user account | Grafana, Gitea, GitLab, Nextcloud, Outline, Open WebUI, n8n, Vaultwarden, WordPress |
+| **Header SSO** | No login screen; the app trusts identity headers from the proxy | Firefly III, KEAP |
+| **Forward auth** | Authentik gates the route; the app has no per-user state | Uptime Kuma, Kiwix, Paperclip, Wing, code-server, Metabase |
 
-mkcert CA install and `*.<tld>` DNS are automated via `dnsmasq` + `/etc/resolver/<tld>`.
+Four RBAC tiers (admin, manager, user, guest) map to Authentik groups; each plugin
+declares its tier. The full account is in [docs/sso-and-attribution.md](docs/sso-and-attribution.md).
 
----
+### Edge and TLS
 
-## Project layout
+Traefik binds 80 and 443 and routes every service from one generated file. Local domains
+get mkcert certificates; public domains get Let's Encrypt certificates through a DNS
+challenge. See [docs/traefik-primary-proxy.md](docs/traefik-primary-proxy.md).
 
-```
-nOS/
-├── main.yml                         # entry point: handlers + imports
-├── bootstrap.sh  bootstrap/         # Xcode CLT → Homebrew → Ansible → config scaffolding
-├── default.config.yml               # all variables (committed)
-├── default.credentials.yml          # secret templates (committed)
-├── config.yml  credentials.yml      # your overrides (gitignored)
-├── requirements.yml                 # Galaxy role dependencies
-├── inventory                        # Ansible inventory (localhost)
-├── security-update.sh               # security-only image pull
-│
-├── roles/pazny.<service>/           # 74 roles, one per service
-│   ├── defaults/  tasks/  handlers/  templates/  meta/
-│   └── templates/compose.yml.j2     # compose-override fragment
-│
-├── tasks/
-│   ├── stacks/
-│   │   ├── core-up.yml              # infra + observability (always first)
-│   │   ├── stack-up.yml             # iiab, devops, b2b, voip, engineering, data
-│   │   ├── authentik_service_post.yml
-│   │   ├── bluesky_pds_bridge.yml
-│   │   ├── external-paths.yml       # honor /Volumes/SSD1TB overrides
-│   │   └── shared-network.yml
-│   ├── blank-reset.yml              # wipes Docker, data, configs
-│   ├── nginx.yml  php.yml  node.yml  python.yml  golang.yml  dotnet.yml  bun.yml
-│   ├── observability.yml            # Alloy + scrape targets
-│   ├── macos-defaults.yml  osx.yml
-│   ├── backup.yml  heartbeat.yml  vulnerability-scan.yml
-│   ├── system-services.yml  tailscale.yml  dnsmasq.yml
-│   ├── external-storage.yml  power-management.yml
-│   └── service-registry.yml  export-state.yml  import-state.yml
-│
-├── templates/
-│   ├── stacks/{infra,observability,iiab,devops,b2b,voip,engineering,data}/
-│   │   └── docker-compose.yml.j2    # base stack (services: {} + networks)
-│   └── nginx/sites-available/       # 53 vhosts
-│
-├── files/                           # static assets (configs, dashboards, icons)
-├── docs/                            # architecture notes, fleet-architecture.md
-└── tests/
-```
+### State, upgrades and removal
+
+- `state/manifest.yml` declares what should exist, and `~/.nos/state.yml` records what
+  does.
+- Per-service upgrade recipes live in `upgrades/`.
+- Global migrations live in `files/anatomy/migrations/`.
+- Major version changes can run side by side before cutover.
+
+The operator tour is [files/anatomy/docs/framework-overview.md](files/anatomy/docs/framework-overview.md).
+
+Removal is a ladder: `nos --remove=data|deep|all`. Without `--confirm` it is a dry run
+that prints exactly what it would delete. See [docs/nos-cli.md](docs/nos-cli.md).
+
+### Agents
+
+AgentKit, inside Wing, is the agent runtime. Every model call is recorded with its session,
+tokens and an OpenTelemetry span, and an agent's success is decided by a gate run, never by
+the model's own claim. See [docs/ait-runtime-architecture.md](docs/ait-runtime-architecture.md).
 
 ---
 
-## Known tech debt
+## How it is tested
 
-- `ansible_env` → `ansible_facts.env` migration needed before Ansible-core 2.24
-- Bluesky PDS federation needs public DNS to be fully functional (account bridge works locally)
-- ERPNext first-run migration sometimes fails; `erpnext_post.yml` has an auto-retry
-- Jellyfin / Open WebUI may restart-loop on first DB init until data regenerates — expected
-- Mattermost removed (no ARM64 FOSS image)
+The rule the project runs on: **a check that can be satisfied by editing the check is not a
+check.** Three layers, each with its own job:
+
+1. **Shape: pytest gates** (`tests/anatomy/`, several thousand tests). They render the
+   templates and run the scripts, often against a deliberately broken state, rather than
+   grepping for text.
+2. **Effect: `--tags verify`.** Readers on the live host ask each service whether the
+   wiring landed.
+3. **End to end: `tools/nos-smoke.py --strict`.** It hits every route through the real
+   edge.
+
+On top of those sits the **from-blank rebuild**. The most recent one, on 2026-09-29, found
+ten defects that every gate had passed on the running estate. Each was fixed with a gate
+that fails on the broken version.
+
+```bash
+tools/ci-local.sh                         # the CI toolchain, frozen, on your machine
+python3 -m pytest tests/anatomy -q        # the gate suite
+tools/red-status.py                       # what is red on this host right now
+```
+
+---
+
+## Everyday commands
+
+```bash
+nos                                   # converge everything that is enabled
+nos --tags authentik,anatomy,gitea    # one area (tags inherit into roles)
+tools/nos-stacks.sh woodpecker        # render and recreate one service, no sudo
+nos --remove=data                     # dry run of a rebuild: prints the inventory
+nos --remove=data --confirm           # wipe and reinstall from zero
+tools/nos-cc.sh                       # terminal control centre: live state, one tmux session
+```
+
+The source you cloned is not the running system. nOS runs from `~/stacks`, launchd
+agents and data directories, and only a converge moves changes across. Ask the host
+what it is running rather than reading the repo:
+
+```bash
+tools/estate-status.py                # host vs local checkout vs origin
+tools/estate-status.py --config tenant_domain    # a resolved value, not the default
+```
+
+---
+
+## Manual steps macOS cannot automate
+
+| What | Why |
+|---|---|
+| `tailscale up` | Interactive browser login |
+| Full Disk Access for your terminal | Protected by SIP |
+| Docker Desktop disk image location on the external SSD | GUI-only setting |
 
 ---
 
 ## Contributing
 
-The repo is public. The category isn't written yet. Help us define it.
+- Issues with real traces are the most useful thing you can send: the failing task,
+  `docker compose logs`, `ansible-playbook -vv`.
+- Commits follow Conventional Commits with a subject of 50 characters or fewer.
+- Branches: `feat/<name>` or `fix/<name>` merge into `dev`, and `dev` reaches `master`
+  only through a pull request. Release tags are cut from `master`.
+- A change that fixes a defect ships with the gate that would have caught it.
 
-- Star the repo → it's how open source gets found
-- File issues with real traces — `docker compose logs`, `ansible-playbook -vv`
-- PRs follow Conventional Commits (`feat:`, `fix:`, `refactor:`…). No `Co-Authored-By`, no `--author`. Subject ≤ 50 chars, body bullets ≤ 6 lines.
-- **Branch model:** `feat/<name>` → `dev` (FF from CLI) → `master` (PR + FF only, locked on GitHub + local Gitea mirror). Tags `v<semver>` cut from `master`. Don't push directly to `master`.
+[CLAUDE.md](CLAUDE.md) is the working contract for agents and humans alike. History and
+design narratives live in the [devlog](docs/devlog/README.md).
 
 ---
 
-## Origin & license
-
-Main inspiration: [IIAB - internet in a box](https://github.com/iiab/iiab)
+## Origin and license
 
 Forked from [geerlingguy/mac-dev-playbook](https://github.com/geerlingguy/mac-dev-playbook)
-by [Jeff Geerling](https://www.jeffgeerling.com/), author of
-[Ansible for DevOps](https://www.ansiblefordevops.com/).
+by [Jeff Geerling](https://www.jeffgeerling.com/). Inspired by
+[Internet-in-a-Box](https://github.com/iiab/iiab).
 
-MIT Licensed. Sent from my Mac Studio. **Built by humans, maintained by agents.**
-
-Website: [thisisait.eu](https://thisisait.eu)
+MIT licensed, see [LICENSE](LICENSE). Built by humans, maintained by agents.
