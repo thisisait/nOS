@@ -38,7 +38,7 @@ services:
       # SET UNCONDITIONALLY (true/false), for the SAME reason as
       # ENABLE_BASIC_AUTHENTICATION above: Gitea persists env-set keys into
       # app.ini and NEVER resets a key when its env var is later removed. The old
-      # `{% if autologin %}` render left a stale `false` in app.ini after
+      # conditional (if-autologin) render left a stale `false` in app.ini after
       # autologin was turned back off → passkey-only lockout that no re-converge
       # could clear. Emitting an explicit value every render makes a recreate
       # rewrite the app.ini line to match the current autologin state, so
@@ -48,4 +48,8 @@ services:
       # exist before the form is locked (the gitea_admin_api post_setup
       # provisions it on converge) — else the only login path is OIDC and a
       # broken Authentik = lockout. See docs/break-glass-runbook.md.
+      # A first SSO login CREATES the account. Without it a new person landed on
+      # /user/link_account and had to register by hand (e2e probe, 2026-09-30),
+      # against the zero-manual-registration onboarding doctrine.
+      GITEA__oauth2_client__ENABLE_AUTO_REGISTRATION: "true"
       GITEA__service__ENABLE_PASSWORD_SIGNIN_FORM: "{{ 'false' if (sso_autologin_gitea | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool else 'true' }}"

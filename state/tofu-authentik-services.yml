@@ -214,6 +214,7 @@ tofu_authentik_services:
   client_secret: '{{ nos_derived_secrets.oidc_nextcloud }}'
   redirect_uris:
   - https://{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/apps/user_oidc/code
+  - https://{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/index.php/apps/user_oidc/code
 - slug: nodered
   name: Node-RED
   mode: native_oidc
