@@ -193,6 +193,12 @@ def main() -> None:
             plugins_skipped=[],
         )
         return
+    # A degraded plugin used to vanish into hook_results: gitea-base's
+    # compose extension did not render from 2026-06-09 to 2026-09-30 (a Jinja
+    # tag inside a YAML comment) and every converge was green. Say it.
+    for r in results:
+        if r["status"] == "degraded":
+            module.warn(f"plugin {r['plugin']} DEGRADED in hook {hook!r}: {r['note']}")
     module.exit_json(
         changed=changed,
         plugins_loaded=[p.name for p in plugins],

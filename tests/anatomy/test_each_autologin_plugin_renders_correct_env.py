@@ -68,6 +68,15 @@ def _supports_yes_plugins() -> list[tuple[str, dict, pathlib.Path]]:
     return out
 
 
+def _render(src: str, autologin: bool) -> str:
+    import sys
+    sys.path.insert(0, str(REPO / "files/anatomy/module_utils"))
+    import load_plugins
+    # Authentik on: the OIDC block itself is gated on install_authentik.
+    return load_plugins._jinja_env().from_string(src).render(
+        sso_autologin=autologin, install_authentik=True)
+
+
 def test_each_autologin_plugin_renders_correct_env():
     plugins = _supports_yes_plugins()
     if not plugins:
@@ -92,14 +101,23 @@ def test_each_autologin_plugin_renders_correct_env():
             failures.append(f"{name}: compose-extension template missing at {tmpl}")
             continue
         src = tmpl.read_text()
-        if token not in src:
+        # RENDER it both ways with the loader's own environment. The old test
+        # looked for the text "{% if" — satisfied for four months by a Jinja
+        # tag inside a YAML comment in gitea-base, which broke the template.
+        # Gated means the token's line differs between autologin on and off
+        # ({% if %} omission and an inline ternary both qualify).
+        on = _render(src, True)
+        off = _render(src, False)
+        lines_on = [ln.strip() for ln in on.splitlines() if token in ln]
+        lines_off = [ln.strip() for ln in off.splitlines() if token in ln]
+        if not lines_on:
             failures.append(
                 f"{name}: documented force-OIDC env {token!r} absent from "
-                f"compose-extension template")
-        elif "{% if" not in src:
+                f"the compose extension rendered with autologin ON")
+        elif lines_on == lines_off:
             failures.append(
-                f"{name}: force-OIDC env {token!r} present but not behind a "
-                f"`{{% if %}}` autologin gate (would always render)")
+                f"{name}: force-OIDC env {token!r} renders identically with "
+                f"autologin on and off — not gated")
     assert not failures, (
         "supports:yes autologin plugins not rendering the documented "
         "force-OIDC env behind the autologin gate:\n"

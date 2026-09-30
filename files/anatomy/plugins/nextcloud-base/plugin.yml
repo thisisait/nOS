@@ -92,6 +92,9 @@ authentik:
   enabled: "{{ install_nextcloud | default(false) }}"
   redirect_uris:
     - "https://{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/apps/user_oidc/code"
+    # user_oidc builds its callback WITH index.php unless pretty URLs are on:
+    # "Redirect URI Error" for every SSO login (e2e probe, 2026-09-30).
+    - "https://{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/index.php/apps/user_oidc/code"
   launch_url: "https://{{ nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
   scopes:
     - openid

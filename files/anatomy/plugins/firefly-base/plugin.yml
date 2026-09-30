@@ -111,10 +111,11 @@ lifecycle:
   pre_compose:
     - render_compose_extension: compose_extension
   post_compose:
+    # `/` is header-SSO: with no X-Authentik-Username the guard answers 500 by
+    # design, so the probe timed out and marked the plugin degraded every run.
     - wait_health:
-        url: "http://127.0.0.1:{{ firefly_port }}/"
+        url: "http://127.0.0.1:{{ firefly_port }}/health"
         timeout: 60
-        accept_any_2xx_3xx_4xx: true   # forward-auth returns 401/302; that's healthy
 
 # =============================================================================
 # OBSERVABILITY — Loki labels (forward-auth has no /metrics natively)

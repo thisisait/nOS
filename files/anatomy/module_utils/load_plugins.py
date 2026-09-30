@@ -1254,6 +1254,10 @@ def _eval_condition(expr: str, registers: dict, ctx: dict) -> bool:
     """
     import jinja2
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    # The Ansible filter shim, as _jinja_env has it: without it `| bool` —
+    # the example this docstring gives — raised, and gitea/nextcloud/portainer
+    # post_compose api_calls silently never ran (surfaced 2026-09-30).
+    _register_ansible_filters(env)
     merged = dict(ctx)
     merged.update(registers)
     try:

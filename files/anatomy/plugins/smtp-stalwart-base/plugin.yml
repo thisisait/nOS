@@ -74,16 +74,12 @@ requires:
 lifecycle:
   pre_compose: []
   post_compose:
-    # Stalwart's webadmin lives on internal :8080 inside the container;
-    # the role doesn't publish that port to the host (Traefik is the
-    # entry point). Use the SMTP port (25) as a TCP-level liveness
-    # probe — accept_any_2xx_3xx_4xx so the SMTP greeting banner
-    # ("220 …") doesn't trip the HTTP probe path. The loader's
-    # wait_health TCP fallback handles the non-HTTP case.
+    # The webadmin is published on stalwart_port_admin; its liveness route
+    # answers 200. The old probe spoke HTTP to SMTP :25 on the promise of a
+    # TCP fallback the loader never had: 90 s timeout, degraded, every run.
     - wait_health:
-        url: "http://127.0.0.1:{{ stalwart_port_smtp | default(25) }}/"
+        url: "http://127.0.0.1:{{ stalwart_port_admin | default(8088) }}/healthz/live"
         timeout: 90
-        accept_any_2xx_3xx_4xx: true
   post_blank: []
 
 # =============================================================================
