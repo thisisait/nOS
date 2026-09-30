@@ -69,6 +69,7 @@
       # cert too — only this host's (`mkcert <user>@<hostname>`), never another
       # mkcert CA the operator keeps.
       ansible.builtin.shell: |
+        set -o pipefail
         KC=/Library/Keychains/System.keychain
         if [ -f "$CAROOT/rootCA.pem" ]; then
           "{{ homebrew_prefix }}/bin/mkcert" -uninstall
@@ -106,10 +107,11 @@
 
     - name: "[Remove:host] Drop brew-bin symlinks into removed trees"
       ansible.builtin.shell: |
+        set -o pipefail
         find "{{ nos_cli_install_dir }}" -maxdepth 1 -type l ! -exec test -e {} \; -print 2>/dev/null |
         while read -r link; do
           case "$(readlink "$link")" in "$HOME"/*) rm -f "$link" && echo "removed $link";; esac
-        done
+        done || true
       args:
         executable: /bin/bash
       environment:
@@ -120,6 +122,7 @@
     # The reader: the tasks above report what they attempted; this asks the OS.
     - name: "[Remove:host] Read back the host layer"
       ansible.builtin.shell: |
+        set -o pipefail
         left=""
         for p in "$HOME"/Library/LaunchAgents/eu.thisisait.nos* \
                  "$HOME"/Library/LaunchAgents/homebrew.mxcl.{dnsmasq,grafana-alloy,nginx}.plist \
