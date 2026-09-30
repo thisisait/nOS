@@ -3437,6 +3437,7 @@ backup_dirs_to_dump:
 #   unbacked — REAL GAP, named: files no dump covers. Move the var into
 #              backup_dirs_to_dump to close it (size/consistency is the operator's call).
 backup_coverage:
+  artifact_cache_dir:          { class: derived, why: "verified image tars — re-pullable, checksummed, survives every removal" }
   mariadb_data_dir:            { class: dump, why: "mariadb.sql.gz — all databases" }
   postgresql_data_dir:         { class: dump, why: "postgres.sql.gz — pg_dumpall" }
   erpnext_data_dir:            { class: dump, why: "sites in a named volume; DB in mariadb.sql.gz (parked service)" }
