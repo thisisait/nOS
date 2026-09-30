@@ -358,8 +358,14 @@ if [ -f "$_NOS_LOG" ]; then
 fi
 
 cd "$NOS_SRC"
+# The playbook writes ~/.ansible_askpass (the sudo password, in plaintext) and
+# removes it in post_tasks, which a failed run and a --leave end_play never
+# reach: on 2026-09-30 it outlived both. The CLI outlives the playbook, so it
+# removes the file whatever the outcome (not exec: nothing would run after).
+trap 'rm -f "${HOME}/.ansible_askpass"' EXIT
 if [ "$YES" -eq 1 ]; then
-  exec "${ARGS[@]}" </dev/null
+  "${ARGS[@]}" </dev/null
 else
-  exec "${ARGS[@]}"
+  "${ARGS[@]}"
 fi
+exit $?

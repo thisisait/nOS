@@ -93,3 +93,25 @@ def test_print_cmd_does_not_rotate_under_home_isolation(tmp_path):
     assert r.returncode == 0, r.stderr
     assert log.read_text() == "untouched\n"
     assert not (logdir / "ansible.log.1").exists()
+
+
+def test_a_failed_run_leaves_no_askpass_behind(tmp_path):
+    """The playbook writes ~/.ansible_askpass (the sudo password, plaintext)
+    and deletes it in post_tasks — skipped by a failure or a --leave end_play.
+    On 2026-09-30 it outlived both. The CLI must remove it, keep the rc."""
+    stub = tmp_path / "ansible-playbook"
+    stub.write_text('#!/bin/sh\nprintf "#!/bin/bash\\necho secret\\n" > "$HOME/.ansible_askpass"\nexit 2\n')
+    stub.chmod(stub.stat().st_mode | statmod.S_IEXEC)
+    env = dict(os.environ, PATH=f"{tmp_path}:{os.environ['PATH']}",
+               HOME=str(tmp_path), NOS_SRC=str(REPO))
+    r = subprocess.run([NOS, "--tags", "openclaw"], env=env, capture_output=True, text=True, timeout=30)
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert not (tmp_path / ".ansible_askpass").exists(), "the sudo password outlived the run"
+
+
+def test_the_leave_removes_the_askpass_before_end_play():
+    import yaml
+    play = yaml.safe_load((REPO / "main.yml").read_text(encoding="utf-8"))[0]
+    names = [t.get("name", "") for t in play["tasks"]]
+    rm = names.index("[Run-mode] Leave — remove the sudo askpass helper first")
+    assert rm + 1 == names.index("[Run-mode] Leave — end the play after removal (no reconverge)")
