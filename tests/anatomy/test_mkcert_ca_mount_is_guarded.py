@@ -225,3 +225,14 @@ def test_the_gate_actually_found_the_ca_surface():
         "than three means the mount regex stopped matching and the env-var "
         "side of the rule is no longer checked at all"
     )
+
+
+def test_the_ca_is_copied_only_where_it_is_mounted():
+    """The copy into shared-certs ran on a public TLD, where tls-certs.yml
+    mints no CA: the first rebuild after the 2026-09-30 leave died on
+    'rootCA.pem not found'. The copy carries the consumers' guard."""
+    import yaml
+    tasks = yaml.safe_load((REPO / "tasks/stacks/core-up.yml").read_text(encoding="utf-8"))
+    copy = next(t for t in tasks if t.get("name") == "[Core] Copy mkcert root CA to shared-certs")
+    when = " ".join(copy["when"])
+    assert "tenant_domain_is_local" in when and "install_authentik" in when, when

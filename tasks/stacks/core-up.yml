@@ -60,12 +60,21 @@
   check_mode: false
   failed_when: false
 
+# Same guard as every consumer of the CA (test_mkcert_ca_mount_is_guarded):
+# a public TLD gets its cert from ACME and tls-certs.yml never mints a local
+# CA, so `mkcert -CAROOT` names a directory that does not exist. The copy
+# only ever passed because a CA from the estate's local-TLD era sat on disk;
+# the first rebuild after the leave removed it died here (2026-09-30).
 - name: "[Core] Create shared certs directory for containers"
   ansible.builtin.file:
     path: "{{ stacks_dir }}/shared-certs"
     state: directory
     mode: '0755'
-  when: _mkcert_caroot.rc | default(1) == 0
+  when: &core_needs_local_ca
+    - _mkcert_caroot.rc | default(1) == 0
+    - _mkcert_caroot.stdout | default('') | trim | length > 0
+    - install_authentik | default(false) | bool
+    - tenant_domain_is_local | default(true) | bool
 
 - name: "[Core] Copy mkcert root CA to shared-certs"
   ansible.builtin.copy:
@@ -73,9 +82,7 @@
     dest: "{{ stacks_dir }}/shared-certs/rootCA.pem"
     mode: '0644'
     remote_src: true
-  when:
-    - _mkcert_caroot.rc | default(1) == 0
-    - _mkcert_caroot.stdout | default('') | trim | length > 0
+  when: *core_needs_local_ca
 
 # ── Ensure stack subdirectories exist ───────────────────────────────────────
 # Idempotent - without this, template tasks may fail or (worse) write the render
