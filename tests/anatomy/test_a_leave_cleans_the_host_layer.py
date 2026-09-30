@@ -67,3 +67,36 @@ def test_the_symlink_sweep_takes_only_dangling_links_into_home(tmp_path: Path) -
                        env={**os.environ, "HOME": str(home)})
     assert r.returncode == 0, r.stderr
     assert sorted(p.name for p in bindir.iterdir()) == ["alive-home", "gone-elsewhere"]
+
+
+def test_the_cert_sweep_takes_only_this_hosts_mkcert_ca(tmp_path: Path) -> None:
+    """mkcert -uninstall leaves the certificate; the sweep deletes it, and only
+    the one whose label names this host. Runs the task under a fake `security`."""
+    bindir = tmp_path / "bin"; bindir.mkdir()
+    log = tmp_path / "deleted.log"
+    (bindir / "security").write_text(f"""#!/bin/bash
+case "$1" in
+  find-certificate) cat <<'OUT'
+SHA-1 hash: AAAA
+    "labl"<blob>="mkcert root@thishost.local (System Administrator)"
+SHA-1 hash: BBBB
+    "labl"<blob>="mkcert alice@otherbox.local (Alice)"
+OUT
+  ;;
+  delete-certificate) echo "$3" >> "{log}";;
+esac
+""")
+    (bindir / "hostname").write_text("#!/bin/bash\necho thishost.local\n")
+    for f in bindir.iterdir():
+        f.chmod(0o755)
+    script = jinja2.Environment().from_string(_task("Untrust the mkcert root CA")["ansible.builtin.shell"]).render(
+        homebrew_prefix=str(tmp_path / "nobrew"))
+    r = subprocess.run(["/bin/bash", "-c", script], capture_output=True, text=True,
+                       env={**os.environ, "PATH": f"{bindir}:/usr/bin:/bin", "CAROOT": str(tmp_path / "gone")})
+    assert r.returncode == 0, r.stderr
+    assert log.read_text().split() == ["AAAA"], "deleted another host's CA, or not this one"
+
+
+def test_the_reader_waits_out_directory_services() -> None:
+    reader = _task("Read back the host layer")
+    assert reader.get("retries", 0) >= 3 and "LEFT: none" in reader["until"]
