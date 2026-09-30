@@ -133,10 +133,12 @@
 - name: "[BLANK] Stop Homebrew services (direct launchctl)"
   ansible.builtin.shell: |
     for svc in nginx "php@{{ php_version | default('8.3') }}" dnsmasq grafana-alloy ollama; do
-      plist="$HOME/Library/LaunchAgents/homebrew.mxcl.${svc}.plist"
-      [ -f "$plist" ] && launchctl unload "$plist" 2>/dev/null
-      plist="/Library/LaunchDaemons/homebrew.mxcl.${svc}.plist"
-      [ -f "$plist" ] && sudo launchctl unload "$plist" 2>/dev/null
+      for pfx in homebrew.mxcl sh.brew; do    # Homebrew 7 formulae: sh.brew.<svc>
+        plist="$HOME/Library/LaunchAgents/${pfx}.${svc}.plist"
+        [ -f "$plist" ] && launchctl unload "$plist" 2>/dev/null
+        plist="/Library/LaunchDaemons/${pfx}.${svc}.plist"
+        [ -f "$plist" ] && sudo launchctl unload "$plist" 2>/dev/null
+      done
     done
     pkill -f "nginx: master" 2>/dev/null || true
     pkill -f "php-fpm: master" 2>/dev/null || true
@@ -168,6 +170,8 @@
       - "com.ollama.agent.plist"
       - "com.ollama.agent.plist.disabled"
       - "homebrew.mxcl.ollama.plist.disabled"
+      - "sh.brew.ollama.plist"                  # Homebrew 7 name for the brew service
+      - "sh.brew.ollama.plist.disabled"         # …as parked by pazny.openclaw
       # Anatomy host daemons (eu.thisisait.nos.*) — each role renders its plist
       # into ~/Library/LaunchAgents; without these a blank leaves stale plists
       # pointing at wiped data dirs (gated by test_blank_reset_plist_discovery).

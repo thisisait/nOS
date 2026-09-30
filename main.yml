@@ -868,7 +868,8 @@
 
     - name: Restart alloy
       ansible.builtin.shell: |
-        plist="$HOME/Library/LaunchAgents/homebrew.mxcl.grafana-alloy.plist"
+        plist="$HOME/Library/LaunchAgents/sh.brew.grafana-alloy.plist"   # Homebrew 7 name
+        [ -f "$plist" ] || plist="$HOME/Library/LaunchAgents/homebrew.mxcl.grafana-alloy.plist"
         [ -f "$plist" ] && launchctl unload "$plist" 2>/dev/null
         sleep 1
         [ -f "$plist" ] && launchctl load "$plist" 2>/dev/null
@@ -2047,11 +2048,13 @@
     - name: Stop Homebrew Redis if Docker Redis is enabled (port conflict)
       ansible.builtin.shell: |
         {{ playbook_dir }}/files/brew-svc.sh stop redis 2>/dev/null || true
-        launchctl bootout gui/$(id -u)/homebrew.mxcl.redis 2>/dev/null || true
-        launchctl unload ~/Library/LaunchAgents/homebrew.mxcl.redis.plist 2>/dev/null || true
+        for pfx in homebrew.mxcl sh.brew; do   # Homebrew 7 ships sh.brew.redis
+          launchctl bootout gui/$(id -u)/${pfx}.redis 2>/dev/null || true
+          launchctl unload ~/Library/LaunchAgents/${pfx}.redis.plist 2>/dev/null || true
+        done
         pkill -9 -f "redis-server" 2>/dev/null || true
         sleep 2
-        rm -f ~/Library/LaunchAgents/homebrew.mxcl.redis.plist 2>/dev/null || true
+        rm -f ~/Library/LaunchAgents/homebrew.mxcl.redis.plist ~/Library/LaunchAgents/sh.brew.redis.plist 2>/dev/null || true
       when: redis_docker | default(false) | bool
       failed_when: false
       changed_when: false

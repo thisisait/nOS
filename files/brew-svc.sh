@@ -20,9 +20,15 @@ custom_plist_for() {
   esac
 }
 
-# plist locations (user vs system)
-USER_PLIST="$HOME/Library/LaunchAgents/homebrew.mxcl.${SVC}.plist"
-SYS_PLIST="/Library/LaunchDaemons/homebrew.mxcl.${SVC}.plist"
+# plist locations (user vs system). Each formula names its own plist:
+# Homebrew 7 formulae ship sh.brew.<svc> (alloy, ollama, redis), older ones
+# homebrew.mxcl.<svc> (dnsmasq). The old-only lookup missed sh.brew.* and a
+# leave left alloy listening on three ports (2026-09-30).
+USER_PLIST=""; SYS_PLIST=""
+for pfx in sh.brew homebrew.mxcl; do
+  [ -z "$USER_PLIST" ] && [ -f "$HOME/Library/LaunchAgents/${pfx}.${SVC}.plist" ] && USER_PLIST="$HOME/Library/LaunchAgents/${pfx}.${SVC}.plist"
+  [ -z "$SYS_PLIST" ] && [ -f "/Library/LaunchDaemons/${pfx}.${SVC}.plist" ] && SYS_PLIST="/Library/LaunchDaemons/${pfx}.${SVC}.plist"
+done
 CUSTOM_PLIST="$(custom_plist_for "$SVC")"
 
 do_stop() {
