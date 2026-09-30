@@ -191,3 +191,14 @@ def test_the_activating_run_also_knows_the_repo_id() -> None:
     assert render(_woodpecker_repo_check={}, _woodpecker_activate={}) == "0"
     secrets = (REPO / "roles/pazny.woodpecker/tasks/post-secrets.yml").read_text(encoding="utf-8")
     assert "_woodpecker_repo_id" in secrets and "_woodpecker_repo_check" not in secrets
+
+
+def test_the_oauth_app_skips_the_consent_screen():
+    """A fresh blank created the app with consent on; the SSO mint stopped at
+    Gitea's "Authorize" page and activation was skipped (2026-09-30)."""
+    import yaml
+    tasks = yaml.safe_load((REPO / "roles/pazny.woodpecker/tasks/post-oauth.yml").read_text())
+    create = next(t for t in tasks if "Create 'Woodpecker CI'" in t.get("name", ""))
+    assert create["ansible.builtin.uri"]["body"]["skip_secondary_authorization"] is True
+    match = next(t for t in tasks if "is the one in use" in t.get("name", ""))
+    assert "skip_secondary_authorization" in match["ansible.builtin.set_fact"]["_wp_oauth_matches"]
