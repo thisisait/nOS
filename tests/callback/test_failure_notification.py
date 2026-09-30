@@ -34,8 +34,11 @@ def _activated_plugin(gt, monkeypatch, tmp_path):
 class FakeStats:
     def __init__(self, failed=0, unreachable=0, ok=5):
         self.processed = {"localhost": 1}
+        # Ansible's AggregateStats.summarize() says `failures`, not `failed`.
+        # This fixture said `failed` — the same slip as the callback — so the
+        # gate passed while a real failed run never raised the notification.
         self._summary = {
-            "ok": ok, "changed": 1, "failed": failed, "skipped": 0,
+            "ok": ok, "changed": 1, "failures": failed, "skipped": 0,
             "unreachable": unreachable, "rescued": 0, "ignored": 0,
         }
 

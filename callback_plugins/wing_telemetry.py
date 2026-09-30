@@ -243,6 +243,50 @@ def extract_tagged_id(task_name, pattern):
     return token or None
 
 
+def leaving_estate(extra_vars=None) -> bool:
+    """True for `nos --remove=all … --leave`: the run deletes ~/.nos and must
+    not write it back. The 2026-09-30 leave recreated ~/.nos with this
+    callback's JSONL and SQLite fallback after the removal had taken it."""
+    if extra_vars is None:
+        try:
+            from ansible import context
+            extra_vars = context.CLIARGS.get("extra_vars", ()) or ()
+        except Exception:  # noqa: BLE001
+            return False
+    kv = {}
+    for item in extra_vars:
+        item = str(item).strip()
+        if item.startswith("{"):
+            try:
+                kv.update(json.loads(item))
+            except ValueError:
+                pass
+        elif not item.startswith("@"):
+            for tok in item.split():
+                if "=" in tok:
+                    k, v = tok.split("=", 1)
+                    kv[k] = v.strip("'\"")
+    truthy = str(kv.get("leave", "")).lower() in ("true", "yes", "y", "1")
+    return str(kv.get("remove", "")) == "all" and truthy
+
+
+def recap_from_stats(stats) -> dict:
+    """PLAY RECAP totals. Ansible's summarize() names the failed count
+    `failures`; reading `failed` made every recap report 0, and the
+    playbook-end notify hook announced failed runs as green (2026-09-30)."""
+    recap = {"ok": 0, "changed": 0, "failed": 0, "skipped": 0,
+             "unreachable": 0, "rescued": 0, "ignored": 0}
+    try:
+        hosts = sorted(stats.processed.keys())
+    except AttributeError:
+        hosts = []
+    for h in hosts:
+        s = stats.summarize(h)
+        for k in recap:
+            recap[k] += int(s.get("failures" if k == "failed" else k, 0))
+    return recap
+
+
 def load_hmac_secret_fallback(secrets_path="~/.nos/secrets.yml"):
     """Best-effort read of the HMAC secret from ``~/.nos/secrets.yml``.
 
@@ -358,6 +402,10 @@ class HTTPTransport(object):
 
 class TransportError(Exception):
     """Raised when the HTTP transport fails after exhausting retries."""
+
+
+class _SkipLocalWrite(Exception):
+    """A leave writes nothing under the ~/.nos it is removing."""
 
 
 class SQLiteFallback(object):
@@ -610,6 +658,7 @@ class CallbackModule(CallbackBase):
         # Monitor / a CI watcher) can react without polling the Bone HTTP
         # endpoint. Always written, even when telemetry is otherwise inactive
         # (the JSONL has no HMAC requirement — it's a local file).
+        self._leaving = leaving_estate()
         self._jsonl_path = os.path.expanduser(os.path.expandvars(
             os.environ.get("NOS_PLAYBOOK_JSONL_PATH",
                            "~/.nos/events/playbook.jsonl")))
@@ -670,6 +719,8 @@ class CallbackModule(CallbackBase):
         return play_vars
 
     def _finalize_activation(self, play_vars):
+        if getattr(self, "_leaving", False):
+            return      # the estate (Bone, wing.db, ~/.nos) is what this run removes
         was_active = self._active
         if self._activated_by_env:
             self._active = True
@@ -962,6 +1013,8 @@ class CallbackModule(CallbackBase):
         """
         # ── 1. Append JSONL (best-effort) ──────────────────────────────────
         try:
+            if self._leaving:
+                raise _SkipLocalWrite()
             d = os.path.dirname(self._jsonl_path)
             if d and not os.path.isdir(d):
                 os.makedirs(d, exist_ok=True)
@@ -973,6 +1026,8 @@ class CallbackModule(CallbackBase):
                 os.chmod(self._jsonl_path, 0o600)
             except OSError:
                 pass
+        except _SkipLocalWrite:
+            pass
         except Exception as exc:  # noqa: BLE001
             sys.stderr.write(
                 "[wing_telemetry] JSONL append failed (%s): %s\n"
@@ -1227,17 +1282,7 @@ class CallbackModule(CallbackBase):
     def v2_playbook_on_stats(self, stats):
         # Recap aggregation runs whether or not telemetry is active — the
         # cross-tool lifecycle hook below needs the numbers regardless.
-        recap = {"ok": 0, "changed": 0, "failed": 0,
-                 "skipped": 0, "unreachable": 0,
-                 "rescued": 0, "ignored": 0}
-        try:
-            hosts = sorted(stats.processed.keys())
-        except AttributeError:
-            hosts = []
-        for h in hosts:
-            s = stats.summarize(h)
-            for k in recap:
-                recap[k] += int(s.get(k, 0))
+        recap = recap_from_stats(stats)
         duration_ms = None
         if self._playbook_started_at is not None:
             duration_ms = int(
