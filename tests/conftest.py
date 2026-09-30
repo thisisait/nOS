@@ -24,3 +24,8 @@ _ANATOMY = os.path.join(_REPO_ROOT, "files", "anatomy")
 for _p in (_REPO_ROOT, _ANATOMY):
     if _p not in sys.path:
         sys.path.insert(0, _p)
+
+# A test's playbook run must not write the operator's ~/.nos/ansible.log:
+# after a leave it recreated ~/.nos, and its expected fatals read as a failed run.
+os.environ.setdefault("ANSIBLE_LOG_PATH", os.path.join(
+    os.environ.get("TMPDIR", "/tmp"), "nos-pytest-ansible.log"))
