@@ -35,3 +35,7 @@ woodpecker_agent_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 install_woodpecker_autowire_nos: false
 woodpecker_nos_repo_owner: "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
 woodpecker_nos_repo_name: "nOS"
+
+# The Authentik identity CI acts as (mints the PAT, activates the repo).
+# akadmin: seeded on every blank and on the Woodpecker admin allowlist.
+woodpecker_ci_identity: akadmin
