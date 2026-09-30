@@ -20,6 +20,7 @@ every blank. Only the token is printed, on stdout.
 from __future__ import annotations
 
 import argparse
+import html
 import os
 import re
 import sys
@@ -59,10 +60,19 @@ def main(argv: list[str] | None = None) -> int:
         print("gitea SSO landed on link_account — enable oauth2_client auto registration", file=sys.stderr)
         return 1
     w = walk(s, f"{wp}/authorize", a.auth_host, verify=verify)
+    if w.outcome == REACHED and urlparse(w.url).path == "/login/oauth/authorize":
+        # Gitea asks once per user+app, whatever the app's flags (1.27.3
+        # oauth2_provider.go:336 skips only when a grant exists). Consent, as the
+        # user would, and only to an app that redirects back to this Woodpecker.
+        r = s.get(w.url, timeout=20, verify=verify)
+        form = dict(re.findall(r'<input type="hidden" name="(\w+)" value="([^"]*)"', r.text))
+        if urlparse(html.unescape(form.get("redirect_uri", ""))).netloc != urlparse(wp).netloc:
+            print(f"gitea consent is for {form.get('redirect_uri')!r}, not {wp}", file=sys.stderr)
+            return 1
+        form = {k: html.unescape(v) for k, v in form.items()} | {"granted": "true"}
+        s.post(f"{gitea}/login/oauth/grant", data=form, headers={"Origin": gitea}, timeout=20, verify=verify)
     if w.outcome != REACHED or not any(c.name == "user_sess" for c in s.cookies):
-        hint = (" — Gitea asks for consent: the OAuth app lacks skip_secondary_authorization"
-                if "/login/oauth/authorize" in w.url else "")
-        print(f"woodpecker grant: {w.outcome} at {w.url}, no session{hint}", file=sys.stderr)
+        print(f"woodpecker grant: {w.outcome} at {w.url}, no session", file=sys.stderr)
         return 1
 
     cfg = s.get(f"{wp}/web-config.js", timeout=20).text
