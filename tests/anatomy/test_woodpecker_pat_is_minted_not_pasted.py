@@ -10,6 +10,7 @@ fake servers — Authentik, Gitea, Woodpecker — and checks the role's order.
 """
 from __future__ import annotations
 
+import html
 import http.server
 import json
 import subprocess
@@ -51,7 +52,7 @@ class _Base(http.server.BaseHTTPRequestHandler):
 
 
 HOSTS: dict = {}
-STATE = {"broken_wp": False, "password": "pw"}
+STATE = {"broken_wp": False, "password": "pw", "granted": False, "consent_to": None}
 
 
 class Auth(_Base):
@@ -86,10 +87,24 @@ class Gitea(_Base):
         if p == "/login/oauth/authorize":
             if "i_like_gitea" not in self.cookies():
                 return self.send(303, headers=[("Location", "/user/login")])
+            if not STATE["granted"]:  # Gitea asks once per user+app (1.27.3)
+                ru = html.escape(STATE["consent_to"] or q["redirect_uri"])
+                return self.send(200, (f'<form method="post" action="/login/oauth/grant">'
+                                       f'<input type="hidden" name="state" value="{q["state"]}">'
+                                       f'<input type="hidden" name="redirect_uri" value="{ru}">').encode())
             return self.send(303, headers=[("Location", f"{q['redirect_uri']}?code=g1&state={q['state']}")])
         if p == "/" and "i_like_gitea" in self.cookies():
             return self.send(200, b"gitea home")
         return self.send(404)
+
+
+    def do_POST(self):
+        form = {k: v[0] for k, v in parse_qs(self.rfile.read(int(self.headers["Content-Length"])).decode()).items()}
+        if self.path == "/login/oauth/grant" and form.get("granted") == "true" \
+                and self.headers.get("Origin") == f"http://{HOSTS['gitea']}":
+            STATE["granted"] = True
+            return self.send(303, headers=[("Location", f"{form['redirect_uri']}?code=g1&state={form['state']}")])
+        return self.send(403)
 
 
 class Woodpecker(_Base):
@@ -119,8 +134,8 @@ class Woodpecker(_Base):
         return self.send(401)
 
 
-def _run(password="pw", broken_wp=False):
-    STATE.update(broken_wp=broken_wp)
+def _run(password="pw", broken_wp=False, consent_to=None):
+    STATE.update(broken_wp=broken_wp, granted=False, consent_to=consent_to)
     servers = []
     for name, h in (("auth", Auth), ("gitea", Gitea), ("wp", Woodpecker)):
         srv, host = _serve(h)
@@ -141,6 +156,16 @@ def test_the_sso_walk_prints_the_token_and_nothing_else() -> None:
     r = _run()
     assert r.returncode == 0, r.stderr
     assert r.stdout == "tok123\n" and r.stderr == ""
+
+
+def test_the_first_grant_is_consented_once() -> None:
+    """A fresh blank's app has no grant; Gitea shows "Authorize" (2026-09-30)."""
+    assert _run().returncode == 0 and STATE["granted"]
+
+
+def test_consent_is_never_given_to_another_redirect() -> None:
+    r = _run(consent_to="http://evil.example/cb")
+    assert r.returncode == 1 and r.stdout == "" and not STATE["granted"]
 
 
 def test_a_refused_authentik_login_prints_no_token() -> None:
@@ -191,14 +216,3 @@ def test_the_activating_run_also_knows_the_repo_id() -> None:
     assert render(_woodpecker_repo_check={}, _woodpecker_activate={}) == "0"
     secrets = (REPO / "roles/pazny.woodpecker/tasks/post-secrets.yml").read_text(encoding="utf-8")
     assert "_woodpecker_repo_id" in secrets and "_woodpecker_repo_check" not in secrets
-
-
-def test_the_oauth_app_skips_the_consent_screen():
-    """A fresh blank created the app with consent on; the SSO mint stopped at
-    Gitea's "Authorize" page and activation was skipped (2026-09-30)."""
-    import yaml
-    tasks = yaml.safe_load((REPO / "roles/pazny.woodpecker/tasks/post-oauth.yml").read_text())
-    create = next(t for t in tasks if "Create 'Woodpecker CI'" in t.get("name", ""))
-    assert create["ansible.builtin.uri"]["body"]["skip_secondary_authorization"] is True
-    match = next(t for t in tasks if "is the one in use" in t.get("name", ""))
-    assert "skip_secondary_authorization" in match["ansible.builtin.set_fact"]["_wp_oauth_matches"]
