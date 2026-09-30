@@ -58,7 +58,7 @@ def testers(auth_host, verify_tls):
             pytest.skip(failed[tier])
         if tier not in sessions:
             try:
-                made[tier] = provision_tester(TIERS[tier])
+                made[tier] = provision_tester(TIERS[tier], persistent=True)
             except Exception as exc:  # noqa: BLE001 — no Authentik admin path = cannot run
                 failed[tier] = f"cannot provision a tier-{tier} tester: {exc}"
                 pytest.skip(failed[tier])

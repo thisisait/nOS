@@ -79,6 +79,7 @@ class TesterIdentity:
     group_pk: str
     wing_token: WingToken
     created_at: float = field(default_factory=time.time)
+    persistent: bool = False
 
     @property
     def authorization_header(self) -> dict[str, str]:
@@ -95,8 +96,13 @@ def _random_password() -> str:
     return secrets.token_urlsafe(32)
 
 
+def persistent_username(tier: str) -> str:
+    return f"{USERNAME_PREFIX}{tier}"
+
+
 def provision_tester(tier: str,
-                     admin: AuthentikAdmin | None = None) -> TesterIdentity:
+                     admin: AuthentikAdmin | None = None,
+                     persistent: bool = False) -> TesterIdentity:
     """Create one ephemeral SSO + Wing identity in the requested RBAC tier.
 
     Sequence (each is independently logged so a partial failure leaves
@@ -128,9 +134,25 @@ def provision_tester(tier: str,
             "applied 00-admin-groups.yaml.j2 blueprint?"
         )
 
-    # Step 2: create user
-    username = _random_username()
+    # Step 2: create user — or wake the tier's persistent one. A fresh random
+    # user per run left an account in EVERY app it signed in to (Gitea,
+    # Grafana, Nextcloud… auto-register on SSO; 2026-09-30: 10 in one day).
+    # A persistent tester per tier keeps its app accounts; between runs it is
+    # parked (inactive, out of its group), so nobody can log in as it.
     password = _random_password()
+    if persistent:
+        username = persistent_username(tier)
+        existing = admin.get_user_by_username(username)
+        if existing is not None:
+            admin.set_user_password(existing.pk, password)
+            admin.set_user_active(existing.pk, True)
+            admin.add_user_to_group(group.pk, existing.pk)
+            token = mint_token(WING_TOKEN_NAME_PREFIX + username)
+            return TesterIdentity(username=username, password=password, email=existing.email,
+                                  tier=tier, group_name=group_name, user_pk=existing.pk,
+                                  group_pk=group.pk, wing_token=token, persistent=True)
+    else:
+        username = _random_username()
     # The email domain must be a DOMAIN, not a host/IP: NOS_HOST is often
     # 127.0.0.1 (the loopback the API is reached on), and Authentik's email
     # validator 400-rejects user@127.0.0.1. The tenant TLD is TENANT_DOMAIN.
@@ -177,6 +199,7 @@ def provision_tester(tier: str,
         user_pk=user.pk,
         group_pk=group.pk,
         wing_token=token,
+        persistent=persistent,
     )
 
 
@@ -211,11 +234,16 @@ def teardown_tester(identity: TesterIdentity,
                        identity.username, exc)
 
     try:
-        admin.delete_user(identity.user_pk)
-        logger.info("teardown: deleted Authentik user pk=%d username=%s tier=%s",
-                    identity.user_pk, identity.username, identity.tier)
+        if getattr(identity, "persistent", False):
+            admin.set_user_active(identity.user_pk, False)
+            logger.info("teardown: parked persistent tester %s (inactive, out of %s)",
+                        identity.username, identity.group_name)
+        else:
+            admin.delete_user(identity.user_pk)
+            logger.info("teardown: deleted Authentik user pk=%d username=%s tier=%s",
+                        identity.user_pk, identity.username, identity.tier)
     except AuthentikAdminError as exc:
-        logger.warning("teardown: Authentik DELETE failed for %s: %s",
+        logger.warning("teardown: Authentik teardown failed for %s: %s",
                        identity.username, exc)
 
     try:
@@ -255,6 +283,8 @@ def sweep_orphans(max_age_seconds: int = 3600,
         # at the call site here — three independent checks (server filter,
         # list_users_by_prefix client filter, this final assertion) before
         # we touch DELETE. If ANY of them break, the others still hold.
+        if user.username in {persistent_username(t) for t in TIER_TO_GROUP}:
+            continue   # a parked persistent tester is kept on purpose
         if not user.username.startswith(USERNAME_PREFIX):
             logger.error(
                 "orphan-sweep: REFUSING to delete user=%s — does not match "

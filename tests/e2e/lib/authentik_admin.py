@@ -239,6 +239,10 @@ class AuthentikAdmin:
             json_body={"password": password},
         )
 
+    def set_user_active(self, user_pk: int, active: bool) -> None:
+        """PATCH /core/users/<pk>/ is_active — a persistent tester is parked, not deleted."""
+        self._request("PATCH", f"/core/users/{user_pk}/", json_body={"is_active": active})
+
     def delete_user(self, user_pk: int) -> bool:
         """DELETE /core/users/<pk>/. Returns True if deleted (404 also returns True
         — idempotent teardown)."""

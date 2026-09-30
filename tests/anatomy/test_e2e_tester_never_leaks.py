@@ -57,3 +57,30 @@ def test_a_failed_token_mint_deletes_the_user(monkeypatch):
 def test_the_default_wing_data_dir_is_the_deployed_one():
     src = (REPO / "tests/e2e/lib/wing_token_admin.py").read_text(encoding="utf-8")
     assert '"~/wing/app/data"' in src
+
+
+class _PersistentAdmin(FakeAdmin):
+    def __init__(self, existing: bool):
+        super().__init__()
+        self.existing = existing
+
+    def get_user_by_username(self, username):
+        if self.existing:
+            return type("U", (), {"pk": 9, "username": username, "email": "t@x"})()
+        return None
+
+    def set_user_active(self, pk, active):
+        self.calls.append(f"active={active}")
+
+
+def test_a_persistent_tester_is_reused_and_parked_not_deleted(monkeypatch):
+    """A random tester per run left an app account behind in every app it
+    signed in to; the persistent one keeps one name per tier and is parked."""
+    monkeypatch.setattr(ti, "mint_token", lambda name: type("T", (), {"name": name})())
+    monkeypatch.setattr(ti, "revoke_token", lambda name: 1)
+    admin = _PersistentAdmin(existing=True)
+    ident = ti.provision_tester("manager", admin=admin, persistent=True)
+    assert ident.username == "nos-tester-e2e-manager" and ident.persistent
+    assert "active=True" in admin.calls and admin.users == {}, "an existing tester was recreated"
+    ti.teardown_tester(ident, admin=admin)
+    assert admin.calls[-1] == "active=False" and "delete" not in admin.calls
