@@ -2524,6 +2524,19 @@
     - import_tasks: tasks/service-registry.yml
       tags: ['service-registry', 'registry']
 
+    # Keep the verified image cache current (only images not yet cached are saved).
+    - name: "[Cache] Seed the verified image cache"
+      ansible.builtin.command:
+        argv: ["python3", "{{ playbook_dir }}/tools/nos-image-cache.py", "--root", "{{ artifact_cache_dir }}", "seed"]
+      environment:
+        NOS_DOCKER_BIN: "{{ docker_bin }}"
+      register: _image_cache_seed
+      changed_when: "'saved ' in (_image_cache_seed.stdout | default(''))"
+      when:
+        - artifact_cache_seed | default(false) | bool
+        - nos_docker_ready | default(true) | bool
+      tags: ['cache', 'image-cache']
+
     # ──────────────────────────────────────────────────────────────────────────
     # Devlog – sync the committed nos-core bundle into WordPress
     # (docs/devlog/README.md; repo is SoT, WP side is disposable presentation)
