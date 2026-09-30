@@ -187,6 +187,7 @@ worse than none, because it reads as complete.
 ## Provisioning, secrets, identity
 - `fetch-authentik-bootstrap-token.py` — Retrieve the ``nos-api`` Authentik token and persist it to secrets.yml.
 - `woodpecker-token.py` — Mint the Woodpecker personal token by walking the Gitea OAuth grant over loopback.
+- `e2e-plan.py` — What the estate promises a user, rendered from the manifests — the E2E plan.
 - `nos-image-cache.py` — A verified local cache of container images, so a rebuild does not re-pull.
 - `nos-secret.py` — nos-secret — the operator's reader for the derived credential map (P1).
 

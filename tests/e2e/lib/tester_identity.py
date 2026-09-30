@@ -152,15 +152,21 @@ def provision_tester(tier: str,
         },
     )
 
-    # Step 3: password
-    admin.set_user_password(user.pk, password)
-
-    # Step 4: group membership
-    admin.add_user_to_group(group.pk, user.pk)
-
-    # Step 5: Wing token
-    token_name = WING_TOKEN_NAME_PREFIX + username
-    token = mint_token(token_name)
+    # Steps 3-5 roll the user back on failure: a wrong wing.db path failed
+    # the token mint 73 times on 2026-09-30 and left 73 live accounts, two of
+    # them superusers (nos-providers). Gate: test_e2e_tester_never_leaks.py
+    try:
+        admin.set_user_password(user.pk, password)
+        admin.add_user_to_group(group.pk, user.pk)
+        token_name = WING_TOKEN_NAME_PREFIX + username
+        token = mint_token(token_name)
+    except BaseException:
+        try:
+            admin.remove_user_from_group(group.pk, user.pk)
+        except Exception:  # noqa: BLE001 — membership may not exist yet
+            pass
+        admin.delete_user(user.pk)
+        raise
 
     return TesterIdentity(
         username=username,
