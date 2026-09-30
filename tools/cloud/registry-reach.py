@@ -239,6 +239,65 @@ def probe(image: str, pull: bool, mirrors: list[str]) -> tuple[bool, str]:
     return True, "manifest ok"
 
 
+MEM_RE = re.compile(r"^\s*mem_limit:\s*(.+?)\s*$", re.MULTILINE)
+
+
+def _render_all(r: Resolver, exprs: list[str]) -> tuple[list[str], list[str]]:
+    ok, bad = [], []
+    for expr in exprs:
+        v = r.render(expr.strip().strip("\"'"))
+        if not v or "{{" in str(v) or str(v).endswith(":") or " " in str(v):
+            bad.append(expr)
+        else:
+            ok.append(str(v))
+    return ok, bad
+
+
+def discover(vars_: dict, all_: bool = False) -> list[dict]:
+    """What compose would pull, per service: the role's own compose*.j2
+    `image:` and `mem_limit:` lines rendered against role defaults + vars_.
+    One row per manifest service (flag = its install_*), per base stack
+    (flag None, pulled whenever the stack comes up) and per apps/*.yml
+    (flag apps_runner_enabled). all_=True lists disabled ones too."""
+    top = Resolver(vars_)
+    out: list[dict] = []
+    for row in yaml.safe_load(MANIFEST.read_text())["services"]:
+        flag = row.get("install_flag")
+        role = REPO / "roles" / f"pazny.{row['id']}"
+        if not flag or not role.is_dir():
+            continue
+        if not all_ and not truthy(top.value(flag)):
+            continue
+        local = load(role / "defaults" / "main.yml")
+        local.update(vars_)                       # vars_files outrank role defaults
+        r = Resolver(local)
+        images, unresolved, mems = [], [], []
+        for tpl in sorted((role / "templates").glob("compose*.j2")):
+            text = tpl.read_text()
+            exprs = [e.strip().strip("\"'") for e in IMAGE_RE.findall(text)]
+            images += [e.split(":", 1)[0] for e in exprs if e.split("/", 1)[0] in LOCAL_NAMESPACES]
+            ok, bad = _render_all(r, [e for e in exprs if e.split("/", 1)[0] not in LOCAL_NAMESPACES])
+            images += ok
+            unresolved += bad
+            mems += _render_all(r, MEM_RE.findall(text))[0]
+        out.append({"id": row["id"], "flag": flag, "category": row.get("category"),
+                    "images": images, "unresolved": unresolved, "mem_limits": mems})
+    for base in sorted((REPO / "templates" / "stacks").glob("*/docker-compose.yml.j2")):
+        ok, _ = _render_all(top, IMAGE_RE.findall(base.read_text()))
+        out.append({"id": f"stack:{base.parent.name}", "flag": None, "category": "stack",
+                    "images": ok, "unresolved": [], "mem_limits": []})
+    if all_ or truthy(top.value("apps_runner_enabled")):
+        skip = set(top.vars.get("apps_skip") or []) if not all_ else set()
+        for m in sorted((REPO / "apps").glob("*.yml")):
+            if m.name.startswith("_") or m.stem in skip:
+                continue
+            text = m.read_text()
+            imgs = [e.strip().strip("\"'").removeprefix("docker.io/") for e in IMAGE_RE.findall(text)]
+            out.append({"id": f"app:{m.stem}", "flag": "apps_runner_enabled", "category": "app",
+                        "images": imgs, "unresolved": [], "mem_limits": [e.strip() for e in MEM_RE.findall(text)]})
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--profile", default=None)
@@ -260,56 +319,14 @@ def main() -> int:
     if a.profile:
         vars_.update(load(REPO / a.profile))
     vars_.update(parse_extra(a.extra))
-    top = Resolver(vars_)
 
-    rows = yaml.safe_load(MANIFEST.read_text())["services"]
+    services = discover(vars_, a.all)
     wanted: dict[str, list[str]] = {}   # image -> [service ids]
-    unresolved: list[str] = []
-    enabled_ids = []
-    for row in rows:
-        flag = row.get("install_flag")
-        role = REPO / "roles" / f"pazny.{row['id']}"
-        if not flag or not role.is_dir():
-            continue
-        if not a.all and not truthy(top.value(flag)):
-            continue
-        enabled_ids.append(row["id"])
-        local = load(role / "defaults" / "main.yml")
-        local.update(vars_)                       # vars_files outrank role defaults
-        r = Resolver(local)
-        for tpl in sorted((role / "templates").glob("compose*.j2")):
-            for expr in IMAGE_RE.findall(tpl.read_text()):
-                expr = expr.strip().strip('"\'')
-                if expr.split("/", 1)[0] in LOCAL_NAMESPACES:
-                    wanted.setdefault(expr.split(":", 1)[0], []).append(row["id"])
-                    continue
-                img = r.render(expr)
-                if not img or "{{" in str(img) or img.endswith(":") or " " in img:
-                    unresolved.append(f"{row['id']}: {expr}")
-                    continue
-                wanted.setdefault(img, []).append(row["id"])
-
-    # Base stack files carry images of their own (infra: the docker socket
-    # proxy) — pulled whenever that stack comes up at all.
-    for base in sorted((REPO / "templates" / "stacks").glob("*/docker-compose.yml.j2")):
-        for expr in IMAGE_RE.findall(base.read_text()):
-            img = top.render(expr.strip().strip("\"'"))
-            if img and "{{" not in str(img):
-                wanted.setdefault(img, []).append(f"stack:{base.parent.name}")
-
-    # Tier-2 manifest apps (apps_runner): literal images, gated by the runner
-    # switch and apps_skip — the same discovery the role does.
-    if a.all or truthy(top.value("apps_runner_enabled")):
-        skip = set(top.vars.get("apps_skip") or []) if not a.all else set()
-        for m in sorted((REPO / "apps").glob("*.yml")):
-            if m.name.startswith("_") or m.stem in skip:
-                continue
-            enabled_ids.append(f"app:{m.stem}")
-            for expr in IMAGE_RE.findall(m.read_text()):
-                img = expr.strip().strip("\"'")
-                if img.startswith("docker.io/"):
-                    img = img[len("docker.io/"):]
-                wanted.setdefault(img, []).append(f"app:{m.stem}")
+    unresolved = [f"{s['id']}: {e}" for s in services for e in s["unresolved"]]
+    enabled_ids = [s["id"] for s in services if s["flag"]]
+    for s in services:
+        for img in s["images"]:
+            wanted.setdefault(img, []).append(s["id"])
 
     print(f"enabled services with an image: {len(enabled_ids)} — {', '.join(sorted(enabled_ids))}")
     bad = 0
