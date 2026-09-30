@@ -113,6 +113,34 @@
              and confirm | default(false) not in [true, 'true', 'True', 'yes', 'y', '1', 1]
              and assume_yes | default(false) not in [true, 'true', 'True', 'yes', 'y', '1', 1] }}
       tags: ['always']
+    # ── D4: a -y removal needs a sudo path, asked BEFORE the host roles ────
+    # It lived in run-mode.yml, which runs in `tasks:`, after `roles:`. So on
+    # 2026-09-30 `nos --remove=all -y --leave` never reached it: the first
+    # task of pazny.mac.homebrew escalated and died on "sudo: a password is
+    # required". The check that promised "refuse up-front, never mid-run"
+    # came second. Same probe, same message, now first.
+    - name: "[Run-mode] Probe passwordless sudo (non-interactive removal preflight)"
+      ansible.builtin.command: sudo -n true
+      register: _nos_sudo_probe
+      changed_when: false
+      failed_when: false
+      when: &nos_yes_removal
+        - remove | default('none') in ['data', 'deep', 'all'] or blank | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
+        - assume_yes | default(false) in [true, 'true', 'True', 'yes', 'y', '1', 1]
+      tags: ['always']
+    - name: "[Run-mode] Refuse non-interactive removal without a sudo path (D4)"
+      ansible.builtin.assert:
+        that:
+          - (nos_sudo_password | default('') | length > 0) or ((_nos_sudo_probe.rc | default(1)) == 0)
+        fail_msg: >-
+          Non-interactive removal (-y) has no sudo path: the become password is
+          empty and `sudo -n true` failed (no NOPASSWD rule, no cached ticket).
+          The run escalates from its first host role and would die there or
+          mid-wipe. Provide one of: a NOPASSWD sudoers rule, a live sudo ticket
+          (`sudo -v` first), or -e nos_sudo_password=<real> (nos -y never
+          clobbers an explicit one). Or run interactively: --confirm instead of -y.
+      when: *nos_yes_removal
+      tags: ['always']
 
     # ── macOS 27 forward-compat preflight (loud, non-fatal) ───────────────
     # Flags an above-ceiling macOS (VirtioFS/launchctl/Docker regression watch)

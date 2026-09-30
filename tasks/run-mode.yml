@@ -196,28 +196,8 @@
 # preflight every -y removal died MID-WIPE on "Incorrect sudo password" —
 # after compose-down/prune, before secrets removal and verify. Fail closed,
 # BEFORE the removal-set import.
-- name: "[Run-mode] Probe passwordless sudo (non-interactive removal preflight)"
-  ansible.builtin.command: sudo -n true
-  register: _nos_sudo_probe
-  changed_when: false
-  failed_when: false
-  when: nos_assume_yes and nos_removing
-  tags: ['always']
-
-- name: "[Run-mode] Refuse non-interactive removal without a sudo path (D4)"
-  ansible.builtin.assert:
-    that:
-      - (not nos_assume_yes)
-        or (not nos_removing)
-        or (nos_sudo_password | default('') | length > 0)
-        or ((_nos_sudo_probe.rc | default(1)) == 0)
-    fail_msg: >-
-      Non-interactive removal (-y) has no sudo path: the become password is
-      empty and `sudo -n true` failed (no NOPASSWD rule, no cached ticket).
-      The removal phase escalates and would die mid-wipe. Provide one of:
-      a NOPASSWD sudoers rule, a live sudo ticket (`sudo -v` first), or
-      -e nos_sudo_password=<real> (nos -y never clobbers an explicit one).
-  tags: ['always']
+# D4 (the -y sudo-path refusal) moved to main.yml pre_tasks on 2026-09-30:
+# here it ran after `roles:`, and the first host role needed sudo first.
 
 # ── 5. Removal inventory + dry-run gate (D2) ─────────────────────────────────
 # SIBLING path (not `tasks/removal-set.yml`): resolves next to this file in
