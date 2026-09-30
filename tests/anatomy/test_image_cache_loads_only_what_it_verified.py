@@ -21,12 +21,18 @@ import json, sys, os
 st = os.environ["FAKE_STATE"]; s = json.load(open(st))
 a = sys.argv[1:]
 def save(): json.dump(s, open(st, "w"))
+def digests(ref, i): return [ref] if "@" in ref else [ref.rsplit(":", 1)[0] + "@sha256:" + i[7:]]
 if a[:2] == ["image", "ls"]:
-    print("\n".join(list(s["images"]) + ["<none>:<none>"]))
+    for ref, i in s["images"].items():
+        if "@" in ref: print(f"{i}|{ref.split('@')[0]}|<none>")
+        else: repo, tag = ref.rsplit(":", 1); print(f"{i}|{repo}|{tag}")
+    print("sha256:dangling|<none>|<none>")
 elif a[:2] == ["image", "inspect"]:
-    ref = a[-1]
-    if ref not in s["images"]: sys.exit(1)
-    print(s["images"][ref] + "|" + json.dumps([ref.split(":")[0] + "@sha256:" + s["images"][ref][7:]]))
+    x = a[-1]
+    if x == "sha256:dangling": print(x + "|[]"); sys.exit(0)
+    hit = [(r, i) for r, i in s["images"].items() if x in (r, i)]
+    if not hit: sys.exit(1)
+    r, i = hit[0]; print(i + "|" + json.dumps(digests(r, i)))
 elif a[0] == "save":
     ref = a[-1]; open(a[2], "w").write(json.dumps({"ref": ref, "id": s["images"][ref]}))
 elif a[0] == "load":
@@ -54,16 +60,18 @@ def _state(env: dict) -> dict:
 
 def test_a_pruned_daemon_gets_its_images_back(tmp_path: Path) -> None:
     root = tmp_path / "cache"
-    env = _env(tmp_path, {"grafana/grafana:12": "sha256:aaa", "ghcr.io/x/y:1": "sha256:bbb"})
+    imgs = {"grafana/grafana:12": "sha256:aaa", "ghcr.io/x/y:1": "sha256:bbb",
+            "grafana/mcp-grafana@sha256:ddd": "sha256:ddd"}          # digest-only, no tag
+    env = _env(tmp_path, imgs)
     assert _run(env, root, "seed").returncode == 0
     lock = json.loads((root / "images/images.lock.json").read_text())
-    assert set(lock["images"]) == {"grafana/grafana:12", "ghcr.io/x/y:1"}
+    assert set(lock["images"]) == set(imgs), "a digest-only image was skipped, or a dangling one taken"
     assert all(len(e["sha256"]) == 64 for e in lock["images"].values())
 
     Path(env["FAKE_STATE"]).write_text(json.dumps({"images": {}}))       # the leave prunes everything
     r = _run(env, root, "load")
     assert r.returncode == 0, r.stderr
-    assert _state(env)["images"] == {"grafana/grafana:12": "sha256:aaa", "ghcr.io/x/y:1": "sha256:bbb"}
+    assert _state(env)["images"] == imgs
 
 
 def test_a_present_image_is_not_reloaded_and_seed_is_idempotent(tmp_path: Path) -> None:
