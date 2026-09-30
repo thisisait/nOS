@@ -19,6 +19,16 @@
 # takes hours and is not needed for either use case above.
 # ==============================================================================
 
+# Save what the prune below would destroy, when the operator keeps a cache.
+- name: "[FLUSH:DEEP] Seed the image cache before the prune"
+  ansible.builtin.command:
+    argv: ["python3", "{{ playbook_dir }}/tools/nos-image-cache.py", "--root", "{{ artifact_cache_dir }}", "seed"]
+  environment:
+    NOS_DOCKER_BIN: "{{ docker_bin }}"
+  register: _flush_image_seed
+  changed_when: "'saved ' in (_flush_image_seed.stdout | default(''))"
+  when: artifact_cache_seed | default(false) | bool
+
 - name: "[FLUSH:DEEP] Prune ALL Docker images"
   ansible.builtin.shell: "{{ docker_bin }} image prune -af 2>&1 || true"
   register: _flush_image_prune

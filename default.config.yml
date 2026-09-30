@@ -39,6 +39,12 @@ apps_subdomain: "apps"                    # Subdomain segment for Tier-2 apps (C
 # in its ROLE default (not here) — see the doctrine. Point at an SSD by setting
 # this one var; ~/.nos stays the runtime sidecar (never persistent data).
 nos_data_root: "{{ ansible_facts['env']['HOME'] }}/nos"
+# Verified image cache (tools/nos-image-cache.py): a SIBLING of nos_data_root,
+# never inside it, so no removal level takes it (declared `never` in
+# tasks/removal-set.yml). Converge loads from it whenever its lock exists;
+# filling it writes one tar per image (~70 GB for a full estate), so that is opt-in.
+artifact_cache_dir: "{{ nos_data_root.rsplit('/', 1)[0] }}/nos-cache"
+artifact_cache_seed: false
 # Short per-tenant slug for the on-disk tree (full domain kept as tenant_domain).
 nos_tenant_slug: "{{ (tenant_domain | default('dev.local')).split('.')[0] }}"
 

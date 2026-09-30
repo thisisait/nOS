@@ -455,6 +455,34 @@
 # without blocking on health. The health-wait below then reports readiness
 # tick-by-tick into the log instead of freezing it for ~9 min (A: in-stream
 # heartbeat, 2026-05-23). rc still catches compose CONFIG errors here.
+# The verified image cache: a rebuild after a leave loads the tars instead of
+# re-pulling ~70 GB (Docker Hub rate-limits per IP). A refused tar (checksum
+# differs from its lock) is left for compose to pull, and named below.
+- name: "[Core] Is there an image cache lock?"
+  tags: ['core', 'always']
+  ansible.builtin.stat:
+    path: "{{ artifact_cache_dir }}/images/images.lock.json"
+  register: _image_cache_lock
+
+- name: "[Core] Load cached images the daemon lacks"
+  tags: ['core', 'always']
+  ansible.builtin.command:
+    argv: ["python3", "{{ playbook_dir }}/tools/nos-image-cache.py", "--root", "{{ artifact_cache_dir }}", "load"]
+  environment:
+    NOS_DOCKER_BIN: "{{ docker_bin }}"
+  register: _image_cache_load
+  changed_when: "'loaded ' in (_image_cache_load.stdout | default(''))"
+  failed_when: false
+  when: _image_cache_lock.stat.exists | default(false)
+
+- name: "[Core] Image cache: what was refused (compose will pull these)"
+  tags: ['core', 'always']
+  ansible.builtin.debug:
+    msg: "{{ (_image_cache_load.stderr_lines | default([])) + [(_image_cache_load.stdout_lines | default(['']))[-1]] }}"
+  when:
+    - _image_cache_load is not skipped
+    - (_image_cache_load.rc | default(0)) != 0
+
 - name: "[Core] Start INFRA stack (docker compose up -d)"
   tags: ['core', 'always']
   ansible.builtin.shell: >
