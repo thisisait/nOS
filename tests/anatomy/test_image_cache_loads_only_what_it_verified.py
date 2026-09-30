@@ -17,13 +17,33 @@ REPO = Path(__file__).resolve().parents[2]
 TOOL = REPO / "tools/nos-image-cache.py"
 
 FAKE = r'''#!/usr/bin/env python3
-import json, sys, os
+import json, sys, os, io, hashlib, tarfile
 st = os.environ["FAKE_STATE"]; s = json.load(open(st))
 a = sys.argv[1:]
 def save(): json.dump(s, open(st, "w"))
 def digests(ref, i): return [ref] if "@" in ref else [ref.rsplit(":", 1)[0] + "@sha256:" + i[7:]]
-if a[:2] == ["image", "ls"]:
+def oci_tar(path, ref, img_id, hollow):
+    blobs = {}
+    def put(obj):
+        b = obj if isinstance(obj, bytes) else json.dumps(obj).encode()
+        d = "sha256:" + hashlib.sha256(b).hexdigest(); blobs[d] = b; return d, len(b)
+    layer = put(b"layer-" + ref.encode())
+    cfg = put({"architecture": "arm64", "ref": ref})
+    man = put({"config": {"digest": cfg[0]}, "layers": [{"digest": layer[0]}]})
+    idx = put({"manifests": [{"digest": man[0], "platform": {"os": "linux", "architecture": "arm64"}}]})
+    if hollow:                      # what docker save did for home-assistant
+        blobs.pop(cfg[0]); blobs.pop(layer[0])
+    with tarfile.open(path, "w") as t:
+        def add(name, b):
+            ti = tarfile.TarInfo(name); ti.size = len(b); t.addfile(ti, io.BytesIO(b))
+        for d, b in blobs.items(): add("blobs/sha256/" + d[7:], b)
+        add("index.json", json.dumps({"manifests": [{"digest": idx[0]}]}).encode())
+        add("fake.json", json.dumps({"ref": ref, "id": img_id}).encode())
+if a[:1] == ["version"]:
+    print("arm64")
+elif a[:2] == ["image", "ls"]:
     for ref, i in s["images"].items():
+        if ref.startswith("<anon>"): continue
         if "@" in ref: print(f"{i}|{ref.split('@')[0]}|<none>")
         else: repo, tag = ref.rsplit(":", 1); print(f"{i}|{repo}|{tag}")
     print("sha256:dangling|<none>|<none>")
@@ -34,10 +54,9 @@ elif a[:2] == ["image", "inspect"]:
     if not hit: sys.exit(1)
     r, i = hit[0]; print(i + "|" + json.dumps(digests(r, i)))
 elif a[0] == "save":
-    ref = a[-1]; open(a[2], "w").write(json.dumps({"ref": ref, "id": s["images"][ref]}))
+    ref = a[-1]; oci_tar(a[2], ref, s["images"][ref], ref in s.get("hollow", []))
 elif a[0] == "load":
-    d = json.load(open(a[2]))
-    # like the real daemon: a digest-pinned image comes back ANONYMOUS
+    with tarfile.open(a[2]) as t: d = json.load(t.extractfile("fake.json"))
     key = ("<anon>" + d["id"]) if "@" in d["ref"] else d["ref"]
     s["images"][key] = d["id"]; s["loads"] = s.get("loads", 0) + 1; save()
 '''
@@ -90,12 +109,26 @@ def test_a_present_image_is_not_reloaded_and_seed_is_idempotent(tmp_path: Path) 
     assert _state(env).get("loads", 0) == 0
 
 
+def test_a_hollow_save_is_never_locked(tmp_path: Path) -> None:
+    """docker save wrote home-assistant's manifest with no config and no
+    layers, exit 0 (2026-09-30). Seed must not pin it; load never sees it."""
+    root = tmp_path / "cache"
+    env = _env(tmp_path, {"homeassistant/home-assistant:2026.8.1": "sha256:hhh", "redis:7": "sha256:ccc"})
+    st = json.loads(Path(env["FAKE_STATE"]).read_text()); st["hollow"] = ["homeassistant/home-assistant:2026.8.1"]
+    Path(env["FAKE_STATE"]).write_text(json.dumps(st))
+    r = _run(env, root, "seed")
+    assert "INCOMPLETE homeassistant/home-assistant:2026.8.1" in r.stderr, r.stderr
+    lock = json.loads((root / "images/images.lock.json").read_text())
+    assert set(lock["images"]) == {"redis:7"}
+    assert not list((root / "images").glob("homeassistant*"))
+
+
 def test_a_tampered_tar_is_refused_not_loaded(tmp_path: Path) -> None:
     root = tmp_path / "cache"
     env = _env(tmp_path, {"redis:7": "sha256:ccc"})
     _run(env, root, "seed")
     tar = next((root / "images").glob("*.tar"))
-    tar.write_text(json.dumps({"ref": "redis:7", "id": "sha256:evil"}))
+    tar.write_bytes(tar.read_bytes() + b"tamper")
     Path(env["FAKE_STATE"]).write_text(json.dumps({"images": {}}))
     r = _run(env, root, "load")
     assert r.returncode == 1 and "REFUSED redis:7" in r.stderr
