@@ -103,3 +103,23 @@ def test_n8n_base_watch_is_not_a_clock():
     assert "n8n-fire.py" not in text
     assert "secret:n8n_api_key" in text
     assert "ares-verify-base" in (REPO / "files/anatomy/plugins/ares-verify-base/plugin.yml").read_text()
+
+
+def test_a_persisted_secret_is_never_world_readable(tmp_path, monkeypatch):
+    """write_text-then-chmod left the key 0644 for the window between them."""
+    import os
+    import stat
+    mod = _mod()
+    seen = []
+    real_open = os.open
+    def spy(path, flags, mode=0o777, *a, **k):
+        seen.append(mode)
+        return real_open(path, flags, mode, *a, **k)
+    monkeypatch.setattr(mod.os, "open", spy)
+    old = os.umask(0o022)
+    try:
+        mod.upsert_secret(tmp_path / "s" / "secrets.yml", "k", "v")
+    finally:
+        os.umask(old)
+    assert seen == [0o600]
+    assert stat.S_IMODE((tmp_path / "s" / "secrets.yml").stat().st_mode) == 0o600

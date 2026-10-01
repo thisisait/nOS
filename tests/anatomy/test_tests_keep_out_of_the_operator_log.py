@@ -1,7 +1,6 @@
 """Gate: pytest's ansible runs log to a temp file, never ~/.nos/ansible.log."""
 import os
 import subprocess
-import sys
 
 
 def test_the_log_path_is_redirected():

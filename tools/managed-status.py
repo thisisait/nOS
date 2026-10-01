@@ -50,8 +50,8 @@ def config_ctx(env) -> dict:
             if isinstance(v, str) and "{{" in v:
                 try:
                     ctx[k] = env.from_string(v).render(ctx)
-                except Exception:
-                    pass
+                except Exception:  # noqa: BLE001 — an unrenderable var stays as written
+                    continue
     return ctx
 
 
