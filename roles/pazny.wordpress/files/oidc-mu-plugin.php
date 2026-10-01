@@ -30,6 +30,9 @@ add_action('init', function () {
     $ep_userinfo   = getenv('WP_OIDC_ENDPOINT_USERINFO') ?: '';
     $ep_token      = getenv('WP_OIDC_ENDPOINT_TOKEN') ?: '';
     $ep_logout     = getenv('WP_OIDC_ENDPOINT_LOGOUT') ?: '';
+    // 3.11 validates `iss`; unset, it guesses the host from endpoint_login and
+    // refuses Authentik's per-app issuer — every SSO login failed (2026-10-01).
+    $issuer        = getenv('WP_OIDC_ISSUER') ?: '';
     $scope         = getenv('WP_OIDC_SCOPE') ?: 'openid profile email';
     $login_type    = getenv('WP_OIDC_LOGIN_TYPE') ?: 'auto'; // auto | button
     $identity_key  = getenv('WP_OIDC_IDENTITY_KEY') ?: 'preferred_username';
@@ -49,6 +52,7 @@ add_action('init', function () {
         'endpoint_userinfo'         => $ep_userinfo,
         'endpoint_token'            => $ep_token,
         'endpoint_end_session'      => $ep_logout,
+        'issuer'                    => $issuer,
         'identity_key'              => $identity_key,
         'no_sslverify'              => 0,
         'http_request_timeout'      => 5,
