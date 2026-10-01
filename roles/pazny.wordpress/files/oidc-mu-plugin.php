@@ -60,7 +60,9 @@ add_action('init', function () {
         'alternate_redirect_uri'    => 0,
         'nickname_key'              => 'preferred_username',
         'email_format'              => '{email}',
-        'displayname_format'        => '{given_name} {family_name}',
+        // Authentik's profile scope sends `name`, never family_name: the
+        // two-part format failed every login with incomplete-user-claim.
+        'displayname_format'        => '{name}',
         'identify_with_username'    => 1,
         'state_time_limit'          => 180,
         'token_refresh_enable'      => 1,
