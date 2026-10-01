@@ -15,15 +15,31 @@
     path: "{{ item }}"
     state: directory
     mode: '0755'
-  loop:
-    - "{{ jellyfin_config_dir }}"
-    - "{{ jellyfin_cache_dir }}"
-    - "{{ jellyfin_movies_dir }}"
-    - "{{ jellyfin_shows_dir }}"
-    - "{{ jellyfin_music_dir }}"
-    - "{{ jellyfin_config_dir }}/plugins"
-    - "{{ jellyfin_config_dir }}/plugins/configurations"
-    - "{{ ansible_facts['env']['HOME'] }}/agents/log"
+  loop: "{{ [jellyfin_config_dir, jellyfin_cache_dir, jellyfin_config_dir ~ '/plugins',
+             jellyfin_config_dir ~ '/plugins/configurations', ansible_facts['env']['HOME'] ~ '/agents/log']
+            + (_jf_media | map(attribute='src') | reject('match', '/Volumes/') | list) }}"
+
+# Jellyfin's library picker browses the CONTAINER: a host path it was never
+# given reads as "invalid" (2026-10-01, /Volumes/SSD1TB/...). Extra dirs mount
+# read-only at the SAME path, so the picker takes what Finder shows. A dir on
+# a removable disk is never created — mounted when present, named when not.
+- name: "[pazny.jellyfin] Which media libraries are present"
+  ansible.builtin.stat:
+    path: "{{ item.src }}"
+  loop: "{{ _jf_media }}"
+  register: _jf_media_stat
+
+- name: "[pazny.jellyfin] Mount only the libraries that exist"
+  ansible.builtin.set_fact:
+    _jf_media_mounts: "{{ _jf_media_stat.results | selectattr('stat.isdir', 'defined')
+                          | selectattr('stat.isdir') | map(attribute='item') | list }}"
+
+- name: "[pazny.jellyfin] A media library is not reachable"
+  ansible.builtin.debug:
+    msg: "Jellyfin library {{ item.item.src }} is missing (disk unplugged?) — not mounted this run."
+  loop: "{{ _jf_media_stat.results | rejectattr('item', 'in', _jf_media_mounts) | list }}"
+  loop_control:
+    label: "{{ item.item.src }}"
 
 # ─── Native OIDC via jellyfin-plugin-sso ─────────────────────────────────────
 # Plugin download is host-side (before first container start) so Jellyfin picks

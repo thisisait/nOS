@@ -2126,6 +2126,9 @@ jellyfin_cache_dir: "{{ nos_data_root }}/platform/services/jellyfin/cache"
 jellyfin_movies_dir: "{{ ansible_facts['env']['HOME'] }}/media/movies"   # Override to your library
 jellyfin_shows_dir: "{{ ansible_facts['env']['HOME'] }}/media/shows"
 jellyfin_music_dir: "{{ ansible_facts['env']['HOME'] }}/media/music"
+# More libraries, e.g. ["/Volumes/SSD1TB/Filmy"]. Each mounts read-only at the
+# SAME path inside the container, so Jellyfin's picker accepts the host path.
+jellyfin_extra_media_dirs: []
 
 # ==============================================================================
 # IIAB – UPTIME KUMA (monitoring dashboard)

@@ -13,6 +13,14 @@ jellyfin_lan_access: true                           # true = port dostupny z LAN
 jellyfin_movies_dir: "{{ ansible_facts['env']['HOME'] }}/media/movies"
 jellyfin_shows_dir: "{{ ansible_facts['env']['HOME'] }}/media/shows"
 jellyfin_music_dir: "{{ ansible_facts['env']['HOME'] }}/media/music"
+# The mounts this role renders: the three defaults, then each of
+# jellyfin_extra_media_dirs at its own path (default.config.yml).
+_jf_media: >-
+  {% set out = [{'src': jellyfin_movies_dir, 'dst': '/media/movies'},
+                {'src': jellyfin_shows_dir, 'dst': '/media/shows'},
+                {'src': jellyfin_music_dir, 'dst': '/media/music'}] %}{%
+  for d in jellyfin_extra_media_dirs | default([]) %}{% set p = d | regex_replace('/+$', '') %}{%
+  set _ = out.append({'src': p, 'dst': p}) %}{% endfor %}{{ out }}
 
 jellyfin_admin_user: "admin"
 jellyfin_language: "en-US"
