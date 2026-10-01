@@ -9,7 +9,7 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.13
 ## v0.14-beta (2026-09-27 … 2026-10-01)
 
 > **The estate leaves cleanly, comes back, and every account is already there.**
-> 82 commits since `v0.13-beta` (211 files, +8.6k/−1.7k). Still `-beta`.
+> ~100 commits since `v0.13-beta` (211 files, +8.6k/−1.7k). Still `-beta`.
 > Measured on this Mac: blank → leave (`--remove=all --leave`) → exit audit →
 > rebuild → converge `failed=0`, smoke 47/47 strict, E2E 270 passed.
 
@@ -48,6 +48,13 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.13
   browses the container); a library on an unplugged disk is skipped, named.
 - Inbox after install: empty_ok backup stores, gitleaks history acks (now in
   `.gitleaksignore`), an inactive n8n workflow's clock — no longer alarms.
+
+### Security
+- Firefly III 6.2.21 → 6.7.6 through the upgrade recipe (REM-260 + the
+  2026-09-14 advisory the queue's 6.6.6 target missed).
+- Seven queue rows reconciled against the live estate with evidence
+  (nodered SSO, traefik aliasHeadersStrategy, rustfs v2 keys, four pins).
+- KEAP v2.0.1: lint resolves `keaptable:` refs (111 false mediums gone).
 
 ### Known open
 - Admin rights inside apps beyond Grafana; six apps cannot pre-create
