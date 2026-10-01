@@ -117,9 +117,12 @@ def test_a_users_private_data_stays_private(svc, probe, users, auth_host, verify
         heads[u["name"]] = dict(probe.get("send_headers") or {})
         if probe.get("csrf"):
             c = probe["csrf"]
-            heads[u["name"]][c["header"]] = _dig(s.get(c["url"], headers=heads[u["name"]], timeout=20,
-                                                       verify=verify_tls).json(), c["path"])
-    tokens = {"marker": f"nos-e2e-{uuid.uuid4().hex[:12]}"}
+            heads[u["name"]][c["header"]] = (s.cookies.get(c["cookie"]) if "cookie" in c else  # Outline
+                                             _dig(s.get(c["url"], headers=heads[u["name"]], timeout=20,
+                                                        verify=verify_tls).json(), c["path"]))
+    # marker names the object (it may echo in a 404); secret is its CONTENT,
+    # the only thing whose presence in a peer's answer is a leak.
+    tokens = {"marker": f"nos-e2e-{uuid.uuid4().hex[:12]}", "secret": f"nos-e2e-secret-{uuid.uuid4().hex}"}
     if probe.get("owner"):
         tokens["owner"] = _dig(sa.get(probe["owner"]["url"], headers=heads[a["name"]], timeout=20,
                                       verify=verify_tls).json(), probe["owner"]["path"])
@@ -129,10 +132,10 @@ def test_a_users_private_data_stays_private(svc, probe, users, auth_host, verify
         tokens["id"] = _dig(w.json(), probe["id_path"])
     try:
         own = _call(sa, probe["read"], tokens, heads[a["name"]], verify_tls)
-        assert own.status_code in probe["read"]["status"] and tokens["marker"] in own.text, (
+        assert own.status_code in probe["read"]["status"] and tokens["secret"] in own.text, (
             f"control failed: {a['name']} cannot read back its own marker ({own.status_code})")
         other = _call(sb, probe["read"], tokens, heads[b["name"]], verify_tls)
-        assert other.status_code in probe["peer"]["status"] and tokens["marker"] not in other.text, (
+        assert other.status_code in probe["peer"]["status"] and tokens["secret"] not in other.text, (
             f"{b['name']} got {a['name']}'s private data from {svc['slug']}: {other.status_code} {other.text[:160]!r}")
     finally:
         if probe.get("cleanup"):

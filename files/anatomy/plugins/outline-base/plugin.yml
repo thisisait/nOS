@@ -170,7 +170,8 @@ e2e:
   isolation:
     - name: a-draft-stays-with-its-author
       sso_start: true
-      write: {method: POST, url: "https://{{ outline_domain }}/api/documents.create", body: {title: "@marker@", text: "@marker@"}, status: [200]}
+      csrf: {cookie: csrfToken, header: x-csrf-token}
+      write: {method: POST, url: "https://{{ outline_domain }}/api/documents.create", body: {title: "@marker@", text: "@secret@"}, status: [200]}
       id_path: data.id
       read: {method: POST, url: "https://{{ outline_domain }}/api/documents.info", body: {id: "@id@"}, status: [200]}
       peer: {status: [403, 404]}
