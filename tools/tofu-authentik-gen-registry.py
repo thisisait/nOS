@@ -110,6 +110,15 @@ def main() -> int:
             entry["redirect_uris"] = c.get("redirect_uris") or []
         services.append(entry)
 
+    # A slug whose block was REMOVED stays as a disabled tombstone: the tofu
+    # destroy-guard refuses deleting an un-registered slug, but applies the
+    # delete of one whose `enabled` is off — the same path as install_*: false.
+    # ponytail: tombstones accumulate; prune once every estate has applied.
+    prior = (yaml.safe_load(OUT.read_text()) or {}).get("tofu_authentik_services", []) if OUT.is_file() else []
+    for old in prior:
+        if old.get("slug") not in seen_slugs:
+            services.append({**old, "enabled": False, "retired": True})
+
     services.sort(key=lambda e: e["slug"])
     OUT.parent.mkdir(parents=True, exist_ok=True)
     with OUT.open("w") as fh:

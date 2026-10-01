@@ -229,14 +229,16 @@ tofu_authentik_services:
   name: ntfy
   mode: forward_auth
   tier: 3
-  enabled: '{{ install_ntfy | default(false) }}'
+  enabled: false
   external_host: https://{{ ntfy_domain }}
+  retired: true
 - slug: onlyoffice
   name: ONLYOFFICE
   mode: forward_auth
   tier: 3
-  enabled: '{{ install_onlyoffice | default(false) }}'
+  enabled: false
   external_host: https://{{ onlyoffice_domain }}
+  retired: true
 - slug: open-webui
   name: Open WebUI
   mode: native_oidc
@@ -345,8 +347,9 @@ tofu_authentik_services:
   name: Woodpecker CI
   mode: forward_auth
   tier: 2
-  enabled: '{{ install_woodpecker | default(false) }}'
+  enabled: false
   external_host: https://{{ woodpecker_domain }}
+  retired: true
 - slug: wordpress
   name: WordPress
   mode: native_oidc

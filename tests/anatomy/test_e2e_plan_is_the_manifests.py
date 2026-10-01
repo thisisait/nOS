@@ -46,7 +46,7 @@ def test_every_authentik_block_becomes_a_row():
 def test_enabled_rows_resolve_and_carry_the_edge():
     rows = {r["slug"]: r for r in _plan()}
     assert rows["paperclip"]["launch_url"] == "https://paperclip.example.test"
-    assert rows["paperclip"]["edge"] == "proxy" and rows["ntfy"]["edge"] == "none"
+    assert rows["paperclip"]["edge"] == "proxy" and "ntfy" not in rows  # no SSO claim, no row
     assert rows["gitea"]["mode"] == "native_oidc" and rows["gitea"]["redirect_uri"].startswith("https://git.")
     assert "qdrant" in rows and rows["qdrant"]["launch_url"].startswith("https://qdrant.apps.")
     assert not any("{{" in str(r["launch_url"]) for r in rows.values())

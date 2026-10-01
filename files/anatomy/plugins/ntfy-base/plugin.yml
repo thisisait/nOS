@@ -44,22 +44,12 @@ requires:
     - host_alias
 
 # =============================================================================
-# AUTHENTIK — proxy / forward-auth gate (Tier 3 = user)
+# AUTHENTIK — none (operator decision 2026-10-01)
 # =============================================================================
-# This service has NO native OIDC support — Authentik gates access at
-# the Traefik layer via the `authentik@file` middleware. RBAC tier
-# determines which Authentik group expression policy applies.
-
-authentik:
-  mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
-  provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
-  client_id: nos-ntfy
-  client_secret: "{{ nos_derived_secrets.oidc_ntfy }}"
-  slug: ntfy
-  name: 'ntfy'
-  enabled: "{{ install_ntfy | default(false) }}"
-  launch_url: "https://{{ ntfy_domain }}"
-  tier: 3
+# A phone cannot pass forward-auth, so the edge carries no gate
+# (traefik_auth_modes: none) and ntfy enforces its own deny-all user DB.
+# The block that claimed forward_auth was removed; the tofu registry keeps
+# a disabled tombstone so the provider is retired, not refused.
 
 # =============================================================================
 # COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)

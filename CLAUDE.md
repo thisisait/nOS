@@ -297,9 +297,9 @@ Central SSO via Authentik at `auth.<tld>` (default `auth.dev.local`). OIDC provi
   - Firefly III (β1.A 2026-05-05), KEAP/cortex (`X-Authentik-uid`-keyed per-user rows, 2026-07-10)
 
 - **`forward_auth`** — pure access gate. Authentik session = "you're in"; service has no per-user state. Same Authentik provider object as header_oidc.
-  - Uptime Kuma, Calibre-Web, Kiwix, Paperclip, Wing, code-server, ntfy, InfluxDB (OSS), ONLYOFFICE, Mailpit, Metabase, SpacetimeDB, OpenClaw, Hermes, Qdrant, SnappyMail, Dolibarr, Woodpecker (route gate on top of Gitea-OAuth app-auth)
+  - Uptime Kuma, Calibre-Web, Kiwix, Paperclip, Wing, code-server, InfluxDB (OSS), Mailpit, Metabase, SpacetimeDB, OpenClaw, Hermes, Qdrant, SnappyMail, Dolibarr
 
-- **No SSO:** FreePBX, QGIS
+- **No SSO:** FreePBX, QGIS, ntfy (own deny-all user DB — a phone cannot pass forward-auth), ONLYOFFICE (JWT-signed server-to-server). **Woodpecker** logs in via Gitea OAuth2 (Gitea is native_oidc), no edge gate. All three dropped a forward_auth claim the edge never enforced (2026-10-01, `test_a_removed_sso_block_retires_its_provider.py`).
 - **AT Protocol identity:** Bluesky PDS (the Authentik→PDS bridge auto-provisions `@user.bsky.<tld>` accounts)
 
 The trichotomy makes the runtime semantics legible: native_oidc and header_oidc both grant true SSO with per-user identity; forward_auth is access control without per-user state. See `docs/native-sso-survey.md` for the full audit (verdicts, costs, edge cases) and `docs/upstream-pr-opportunities.md` for the FOSS contributions that would let nOS flip individual forward_auth services to native_oidc (rather than maintaining local sidecars / forks / hacks).

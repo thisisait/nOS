@@ -44,22 +44,12 @@ requires:
     - host_alias
 
 # =============================================================================
-# AUTHENTIK — proxy / forward-auth gate (Tier 3 = user)
+# AUTHENTIK — none (operator decision 2026-10-01)
 # =============================================================================
-# This service has NO native OIDC support — Authentik gates access at
-# the Traefik layer via the `authentik@file` middleware. RBAC tier
-# determines which Authentik group expression policy applies.
-
-authentik:
-  mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
-  provider_type: forward_auth                 # schema-canonical (state/schema/plugin.schema.json)
-  client_id: nos-onlyoffice
-  client_secret: "{{ nos_derived_secrets.oidc_onlyoffice }}"
-  slug: onlyoffice
-  name: 'ONLYOFFICE'
-  enabled: "{{ install_onlyoffice | default(false) }}"
-  launch_url: "https://{{ onlyoffice_domain }}"
-  tier: 3
+# DocServer is called by Nextcloud/BookStack/Outline, not by people; every
+# request is JWT-signed (traefik_auth_modes: none).
+# The block that claimed forward_auth was removed; the tofu registry keeps
+# a disabled tombstone so the provider is retired, not refused.
 
 # =============================================================================
 # COMPOSE-EXTENSION — Traefik labels (forward-auth middleware)
