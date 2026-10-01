@@ -199,3 +199,20 @@ def test_gitleaks_quiets_the_fake_hmac_fixture_and_still_fires_on_a_real_shape(t
     assert any((f.get("Secret") or "") == minted for f in without), (
         "real-shaped HMAC silent even with an empty allowlist; detector is broken"
     )
+
+
+def test_acknowledged_findings_live_in_the_repo_not_in_wing_db():
+    """A blank wipes wing.db, so an acknowledgement stored there re-raised the
+    same two historic findings on every fresh install (2026-10-01). Each
+    .gitleaksignore fingerprint carries its reason; the job reads the file."""
+    import re as _re
+    from pathlib import Path as _P
+    repo = _P(__file__).resolve().parents[2]
+    lines = (repo / ".gitleaksignore").read_text().splitlines()
+    fps = [i for i, ln in enumerate(lines) if ln and not ln.startswith("#")]
+    assert fps, "no acknowledged finding — then delete the file"
+    for i in fps:
+        assert _re.fullmatch(r"[0-9a-f]{40}:[^:]+:[a-z0-9-]+:\d+", lines[i]), lines[i]
+        assert i > 0 and lines[i - 1].startswith("#"), f"{lines[i]}: an acknowledgement needs its reason above it"
+    job = (repo / "files/anatomy/plugins/gitleaks/skills/run-gitleaks.sh").read_text()
+    assert '--gitleaks-ignore-path="$SCAN_DIR"' in job
