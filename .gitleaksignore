@@ -1,0 +1,10 @@
+# Acknowledged findings, by fingerprint (commit:file:rule:line). Each is closed;
+# without this file every blank re-raised them — the acknowledgement lived in
+# wing.db, which a blank wipes (2026-10-01). A NEW leak never belongs here.
+#
+# Fixture: "adopted-from-volume-key-32xx" is a made-up encryptionKey in a test.
+557266f3f67ec12fb8d82205888319886ea7d45e:tests/anatomy/test_n8n_packs.py:generic-api-key:37
+# Real leak, closed: bone_secret committed 2026-08-05 (2a3cf7ba, 42a1224c).
+# Rotated — hash-compared 2026-10-01: neither bone_secret nor
+# wing_events_hmac_secret matches the leaked value. History keeps it forever.
+710be43520fbe987c4274f3a009b3d9889cfc8ca:files/anatomy/face/src/lib/anatomy/pulse.test.ts:generic-api-key:29
