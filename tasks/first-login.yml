@@ -5,7 +5,7 @@
 # apps create users only at a first SSO login; before this, an app a person
 # never opened had no account for them. A failed walk fails the run. An entry
 # whose enabled_by toggle is off has no account; apps above an identity's
-# tier are skipped (RBAC refuses them by design).
+# tier are skipped (RBAC refuses them by design). nos_extra_identities walk too.
 - name: "[Identities] Create every declared account in every SSO app"
   ansible.builtin.command:
     argv: "{{ ['python3', playbook_dir ~ '/tools/nos-first-login.py', '--auth-host=' ~ authentik_domain]
@@ -15,6 +15,8 @@
       {% set out = [] %}{% for i in nos_identities if 'authentik' in (i.realms | default([]))
       and (i.enabled_by is not defined or (lookup('vars', i.enabled_by, default=false) | bool)) %}{%
       set _ = out.append({'name': i.name, 'tier': i.tier, 'password': lookup('vars', i.password_var)}) %}{%
+      endfor %}{% for i in nos_extra_identities | default([]) %}{%
+      set _ = out.append({'name': i.name, 'tier': i.tier, 'password': nos_extra_identity_passwords[i.name]}) %}{%
       endfor %}{{ out | to_json }}
   register: _first_login
   changed_when: false

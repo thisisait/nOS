@@ -24,7 +24,7 @@ n8n_ssrf_allowed_ip_ranges: ""          # CSV allowlist of internal CIDRs to re-
 # scope — a role-scoped var rendered "" there (measured 2026-09-21).
 n8n_domain: "n8n{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
-n8n_timezone: "Europe/Prague"
+n8n_timezone: "{{ nos_timezone | default('Europe/Prague') }}"
 n8n_admin_firstname: "Admin"
 n8n_admin_lastname: "nOS"
 n8n_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"

@@ -2,6 +2,7 @@
 # profiles/dev-minimal.yml — the estate that develops nOS, and nothing else
 #
 # axis: service-set
+# plain: The lean set used to develop nOS itself — about a quarter of the memory of everything.
 #
 #   nos -e @profiles/dev-minimal.yml
 #

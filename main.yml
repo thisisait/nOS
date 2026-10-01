@@ -1435,6 +1435,70 @@
         _nos_secret_map: "consumed — see nos_derived_secrets/nos_secret_scheme facts"
       tags: ['always']
 
+    # ── nos_extra_identities (the profile builder's People step): refused here,
+    # loudly, before a blueprint sees them; then one password per person, a
+    # user-scope leaf keyed by name (a dynamic name has no registry row).
+    # Gate: tests/anatomy/test_extra_identities_are_accounts.py.
+    - name: "[Identities] Every extra person is well-formed"
+      ansible.builtin.assert:
+        that:
+          - (item.name | default('') | string | regex_search('^[a-z]([a-z0-9._-]{0,61}[a-z0-9])?$')) is not none
+          - (item.email | default('') | string | regex_search('^[^@ ]+@[^@ ]+[.][^@ ]+$')) is not none
+          - (item.tier | default(0) | int) in [1, 2, 3, 4]
+        fail_msg: >-
+          nos_extra_identities: {{ item }} needs a lowercase name (letters, digits, . _ -,
+          starting with a letter), an e-mail, and a tier 1-4 (1 admin, 2 manager, 3 user, 4 guest).
+        quiet: true
+      loop: "{{ nos_extra_identities | default([]) }}"
+      tags: ['always']
+
+    - name: "[Identities] No extra person collides with a declared account"
+      ansible.builtin.assert:
+        that:
+          - (_xn | map('regex_replace', '[^a-z0-9]+', '-') | unique | list | length) == (_xn | length)
+          - (_xn | map('regex_replace', '[^a-z0-9]+', '-') | select('in', _taken) | list | length) == 0
+          - (_xe | unique | list | length) == (_xe | length)
+          - (_xe | select('in', nos_identities | map(attribute='email') | map('lower') | list) | list | length) == 0
+        fail_msg: >-
+          nos_extra_identities: two people share a name or an e-mail, or one reuses a
+          declared account's (akadmin, the operator, the tester, the test users). Names
+          that differ only in . _ - share one secret subtree, so they count as the same.
+        quiet: true
+      vars:
+        _xn: "{{ nos_extra_identities | default([]) | map(attribute='name') | list }}"
+        _xe: "{{ nos_extra_identities | default([]) | map(attribute='email') | map('lower') | list }}"
+        _taken: "{{ nos_identities | map(attribute='name') | map('regex_replace', '[^a-z0-9]+', '-') | list }}"
+      tags: ['always']
+
+    - name: "[Identities] Derive each extra person's password (user scope)"
+      nos_secret_map:
+        mode: user_leaf
+        scheme: "{{ nos_secret_scheme }}"
+        master: "{{ nos_secret_master | default('') }}"
+        prefix: "{{ global_password_prefix }}"
+        username: "{{ item.name }}"
+        service: "nos-identity"
+        purpose: "password"
+        v1_suffix: "identity_{{ item.name }}"
+      register: _nos_extra_leaves
+      loop: "{{ nos_extra_identities | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+      no_log: true
+      tags: ['always']
+
+    - name: "[Identities] Expose the extra people's passwords"
+      ansible.builtin.set_fact:
+        nos_extra_identity_passwords: "{{ dict(_nos_extra_leaves.results | default([]) | map(attribute='item.name')
+                                          | zip(_nos_extra_leaves.results | default([]) | map(attribute='value'))) }}"
+      no_log: true
+      tags: ['always']
+
+    - name: "[Identities] Drop the registered leaves duplicate"
+      ansible.builtin.set_fact:
+        _nos_extra_leaves: "consumed — see nos_extra_identity_passwords"
+      tags: ['always']
+
     # ── Store-shadow reconcile. ~/.nos/secrets.yml persists the map-backed
     # names below so Pulse `secret:<name>` refs resolve (list shrank in the
     # 2026-08-26 roster close) — and include_vars loads them

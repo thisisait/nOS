@@ -12,7 +12,7 @@
 
 calibreweb_port: 8083
 calibreweb_domain: "books{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-calibreweb_timezone: "Europe/Prague"
+calibreweb_timezone: "{{ nos_timezone | default('Europe/Prague') }}"
 
 # Default linuxserver image login = admin / admin123. Post.yml resetuje
 # na `{{ global_password_prefix }}_pw_calibreweb`.

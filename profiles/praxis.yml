@@ -2,6 +2,7 @@
 # profiles/praxis.yml — first consulting-firm Mac (still beta)
 #
 # axis: use-case
+# plain: A small consulting firm: customer records, a client portal and office tools.
 # =============================================================================
 #
 # Purpose: the practice pack inside backoffice for one consulting-firm host.

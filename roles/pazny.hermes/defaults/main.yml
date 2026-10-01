@@ -115,7 +115,7 @@ hermes_mcp_servers:
 hermes_git_repository: "{{ playbook_dir }}"
 # Was hard-coded Europe/Prague in the args above; an operator elsewhere had no
 # way to change it without editing a role default.
-hermes_timezone: "Europe/Prague"
+hermes_timezone: "{{ nos_timezone | default('Europe/Prague') }}"
 
 # ── Web UI / API ──────────────────────────────────────────────────────────────
 

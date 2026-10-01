@@ -11,6 +11,7 @@ Declared sources (the repo):
   • nos_identities        default.config.yml (+ config.yml override) — humans
                           and service accounts, per-realm membership; an
                           entry whose `enabled_by` toggle is off is left out
+  • nos_extra_identities  config.yml — the operator's own people (realm authentik)
   • authentik_agent_clients — machine OIDC clients (counted, not re-typed)
   • Bone loopauth.IDENTITIES — the loop's token identities (counted)
 
@@ -92,6 +93,10 @@ def declared_roster() -> tuple[list[dict], dict]:
     for entry in merged.get("nos_identities", []) or []:
         if isinstance(entry, dict) and entry.get("name") and enabled(entry, merged, ctx):
             roster.append({**entry, "name": _resolve(entry["name"], ctx)})
+    # The operator's extra people: Authentik users the blueprint creates, kind user.
+    for entry in merged.get("nos_extra_identities", []) or []:
+        if isinstance(entry, dict) and entry.get("name"):
+            roster.append({"kind": "user", "realms": ["authentik"], **entry})
     return roster, merged
 
 

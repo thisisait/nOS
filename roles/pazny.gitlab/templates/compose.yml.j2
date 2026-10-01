@@ -41,7 +41,7 @@ services:
         postgres_exporter['enable'] = false
         gitlab_exporter['enable'] = false
         gitlab_rails['gitlab_signup_enabled'] = false
-        gitlab_rails['time_zone'] = 'Europe/Prague'
+        gitlab_rails['time_zone'] = '{{ gitlab_timezone | default("Europe/Prague") }}'
         # Whitelist the Docker bridge so the host-side readiness probe (NAT'd
         # to the bridge gateway, e.g. 172.21.0.1) reaches /-/readiness instead
         # of GitLab 404'ing it. Without this the pazny.gitlab post-check 404s

@@ -2,7 +2,7 @@
   "mcpServers": {
 {% set servers = [] %}
 {% if mcp_enable_time | default(true) %}
-{%   set _ = servers.append('    "time": {\n      "command": "uvx",\n      "args": ["mcp-server-time", "--local-timezone=Europe/Prague"]\n    }') %}
+{%   set _ = servers.append('    "time": {\n      "command": "uvx",\n      "args": ["mcp-server-time", "--local-timezone=' ~ (nos_timezone | default('Europe/Prague')) ~ '"]\n    }') %}
 {% endif %}
 {% if mcp_enable_memory | default(true) %}
 {%   set _ = servers.append('    "memory": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-memory"],\n      "env": { "MEMORY_FILE_PATH": "/data/memory.json" }\n    }') %}

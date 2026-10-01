@@ -14,6 +14,6 @@ freepbx_rtp_start: 10000                 # RTP media start port
 freepbx_rtp_end: 10100                   # RTP media end port
 freepbx_db_name: "asterisk"
 freepbx_db_user: "asterisk"
-freepbx_timezone: "Europe/Prague"
+freepbx_timezone: "{{ nos_timezone | default('Europe/Prague') }}"
 freepbx_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 freepbx_cpus: "{{ docker_cpus_standard | default('1.0') }}"

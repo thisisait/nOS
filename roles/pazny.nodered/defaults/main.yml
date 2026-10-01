@@ -15,7 +15,7 @@
 nodered_version: "4.1.14-20"
 nodered_domain: "nodered{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 nodered_port: 1880                                    # Node-RED default
-nodered_timezone: "Europe/Prague"
+nodered_timezone: "{{ nos_timezone | default('Europe/Prague') }}"
 nodered_uid: 1000                                     # default UID v nodered/node-red image
 nodered_gid: 1000
 nodered_enable_safe_mode: "false"

@@ -13,6 +13,8 @@ global_password_prefix: "changeme"
 # ==============================================================================
 
 instance_name: "nos"                # Unique instance name (lowercase, no spaces)
+# One clock for the estate: every service timezone below derives from it.
+nos_timezone: "Europe/Prague"       # IANA name, e.g. Europe/London, America/New_York
 
 # ── Domain composition (Track F decomposition, 2026-05) ──────────────────────
 # Three vars compose every nOS hostname. Defaults reproduce today's flat layout
@@ -207,6 +209,11 @@ nos_identities:
   - {name: dave, kind: user, tier: 4, email: "dave@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
      password_var: nos_test_dave_password, enabled_by: nos_test_users_enabled}
 nos_test_users_enabled: false   # the alice/bob/carol/dave entries above
+# Your own extra people, [{name, email, tier 1-4}] (the profile builder's People
+# step writes it). Each gets an Authentik user in its tier's group and its app
+# accounts from the first-login walk; the password is derived per name in
+# main.yml — read it with tools/nos-secret.py --user <name> nos-identity password.
+nos_extra_identities: []
 
 # ── TLD class detection (drives mkcert vs ACME, dnsmasq vs real DNS) ─────────
 # tenant_domain_is_local: true  → use mkcert + dnsmasq + /etc/resolver (dev mode)
@@ -980,7 +987,6 @@ php_memory_limit: "256M"
 php_upload_max_filesize: "64M"
 php_post_max_size: "64M"
 php_max_execution_time: 300
-php_date_timezone: "Europe/Prague"
 
 php_extensions:
   - "php@{{ php_version }}-redis"
@@ -1929,7 +1935,7 @@ n8n_port: 5678
 # 2026-07-22. Same-major, migrate-on-start. arm64 tag confirmed on the registry.
 n8n_version: "2.37.10"  # REM-253: 2026-09-02 wave, nineteen GHSAs, floor <2.37.7. Head of 2.37. [swept 2.35.7 2026-09-16]
 n8n_data_dir: "{{ ansible_facts['env']['HOME'] }}/n8n"
-n8n_timezone: "Europe/Prague"
+n8n_timezone: "{{ nos_timezone }}"
 # Where extra_hosts' `host-gateway` lands — BOTH families, CSV of CIDRs. The
 # n8n pack path (https://keap.<tld> pinned to host-gateway) must be re-opened
 # through n8n's SSRF guard via IP RANGES: the hostname allowlist env exists
@@ -1979,7 +1985,7 @@ gitlab_domain: "gitlab{{ _host_alias_seg | default('') }}.{{ tenant_domain | def
 gitlab_http_port: 8929          # Internal HTTP port (nginx handles SSL, forwards here)
 gitlab_ssh_port: 2224           # Git SSH (22=system, 2222=Gitea → Gitlab on 2224)
 gitlab_version: "18.11.9-ce.0"  # REM-159: 18.11.8 was withdrawn upstream; 18.11.9 is the terminal 18.11.x build
-gitlab_timezone: "Europe/Prague"
+gitlab_timezone: "{{ nos_timezone }}"
 gitlab_signup_enabled: false    # Disables registration of new users
 gitlab_puma_workers: 2          # Worker processes (min 2, with 36 GB feel free to use 4)
 gitlab_sidekiq_concurrency: 10  # Background job threads
@@ -2156,7 +2162,7 @@ calibreweb_port: 8083
 # that refuses lscr.io flips this (docs/cloud-e2e.md §Registries).
 calibreweb_image: "lscr.io/linuxserver/calibre-web"
 calibreweb_version: "0.6.27"   # lscr.io/linuxserver/calibre-web (REM-195: security release)
-calibreweb_timezone: "Europe/Prague"
+calibreweb_timezone: "{{ nos_timezone }}"
 
 # ==============================================================================
 # IIAB – SNAPPYMAIL (webmail frontend)
@@ -2442,7 +2448,7 @@ nodered_port: 1880
 # made operator overrides invisible to nos-smoke + config introspection.
 nodered_uid: 1000
 nodered_gid: 1000
-nodered_timezone: "Europe/Prague"
+nodered_timezone: "{{ nos_timezone }}"
 nodered_flows_file: "flows.json"
 nodered_enable_safe_mode: "false"
 nodered_enable_projects: "true"
@@ -2479,7 +2485,7 @@ mailpit_port: 8025                      # UI port (1025 is SMTP)
 homeassistant_version: "2026.8.1"     # CVE-2026-34205 (CVSS 9.7 Supervisor bypass) [swept 2026.8.0 2026-08-11]
 homeassistant_port: 8123
 homeassistant_domain: "home{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-homeassistant_timezone: "Europe/Prague"
+homeassistant_timezone: "{{ nos_timezone }}"
 # true = privileged + network_mode: host → mDNS/Bonjour auto-discovery
 # Warning (macOS): host mode reaches into the Docker VM network, not the Mac's physical network.
 # Full Bonjour/mDNS on Mac requires a native HA install or host networking
@@ -2598,7 +2604,7 @@ freescout_db_user: "freescout"
 freescout_db_password: "{{ nos_derived_secrets.freescout }}"
 freescout_admin_email: "{{ default_admin_email }}"
 freescout_admin_password: "{{ nos_derived_secrets.freescout }}"
-freescout_timezone: "Europe/Prague"
+freescout_timezone: "{{ nos_timezone }}"
 freescout_admin_first_name: "Admin"
 freescout_admin_last_name: "nOS"
 authentik_oidc_freescout_client_id: "nos-freescout"
@@ -2633,7 +2639,7 @@ freepbx_version: "latest"   # ⚠️  VENDOR-BLOCKED (REM-014/046): tiredofit/fr
 freepbx_db_name: "asterisk"
 freepbx_db_user: "asterisk"
 freepbx_db_password: "{{ nos_derived_secrets.freepbx }}"
-freepbx_timezone: "Europe/Prague"
+freepbx_timezone: "{{ nos_timezone }}"
 
 # ==============================================================================
 # ENGINEERING – QGIS SERVER (GIS map server)
@@ -2654,7 +2660,7 @@ metabase_version: "v0.63.10"     # REM-198 CRITICAL GHSA-r495-55cx-fjh7 — the 
 metabase_db_name: "metabase"
 metabase_db_user: "metabase"
 metabase_db_password: "{{ nos_derived_secrets.metabase }}"
-metabase_timezone: "Europe/Prague"
+metabase_timezone: "{{ nos_timezone }}"
 metabase_admin_email: "{{ default_admin_email }}"
 metabase_admin_password: "{{ nos_derived_secrets.metabase_admin }}"
 metabase_admin_first_name: "Admin"

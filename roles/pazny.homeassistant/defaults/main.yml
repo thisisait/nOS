@@ -9,7 +9,7 @@
 
 homeassistant_port: 8123
 homeassistant_domain: "home{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-homeassistant_timezone: "Europe/Prague"
+homeassistant_timezone: "{{ nos_timezone | default('Europe/Prague') }}"
 
 # true = privileged + network_mode: host -> mDNS/Bonjour auto-discovery
 # Note (macOS): host mode reaches the Docker VM network, not the physical Mac network.
