@@ -57,6 +57,7 @@ authentik:
   client_id: nos-superset
   client_secret: "{{ nos_derived_secrets.oidc_superset }}"
   slug: superset
+  first_login: "https://{{ superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/login/authentik"   # Flask-AppBuilder; not yet walked live
   name: 'Superset'
   enabled: "{{ install_superset | default(false) }}"
   redirect_uris:

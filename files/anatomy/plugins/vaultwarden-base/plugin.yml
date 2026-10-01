@@ -57,6 +57,7 @@ authentik:
   client_id: nos-vaultwarden
   client_secret: "{{ nos_derived_secrets.oidc_vaultwarden }}"
   slug: vaultwarden
+  first_login_blocked: "an account needs a master password only its person may choose"
   name: 'Vaultwarden'
   enabled: "{{ install_vaultwarden | default(false) }}"
   redirect_uris:

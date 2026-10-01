@@ -164,6 +164,7 @@ default_admin_email: "admin@{{ tenant_domain | default('dev.local') }}"  # Fallb
 # and demotes this account to kind:user — that flip is an operator act with a
 # written runbook, never a silent default change.
 nos_primary_admin: "{{ ansible_facts['user_id'] }}"
+nos_operator_email: "{{ nos_primary_admin }}@{{ tenant_domain | default('dev.local') }}"
 
 nos_identities:
   # The SSO root. Seeded by the Authentik blueprint (00-admin-groups.yaml.j2)
@@ -174,13 +175,16 @@ nos_identities:
     tier: 1
     email: "{{ default_admin_email }}"
     realms: [authentik, woodpecker]
-  # The local Gitea admin (created by `gitea admin user create` in
-  # roles/pazny.gitea/tasks/post.yml) and historical Woodpecker admin.
+    password_var: authentik_bootstrap_password   # tasks/first-login.yml
+  # The operator's own account: an Authentik admin from the first install
+  # (00-admin-groups blueprint), the local Gitea admin, historical Woodpecker
+  # admin. Own email: apps that key on email would merge it with akadmin.
   - name: "{{ nos_primary_admin }}"
     kind: operator
     tier: 1
-    email: "{{ default_admin_email }}"
-    realms: [gitea, woodpecker]
+    email: "{{ nos_operator_email }}"
+    realms: [authentik, gitea, woodpecker]
+    password_var: nos_operator_password
   # The ephemeral E2E tester (docs/e2e-tester-identity.md) — a service
   # account a human never uses interactively.
   - name: "{{ nos_tester_username | default('nos-tester') }}"
@@ -188,6 +192,7 @@ nos_identities:
     tier: 1
     email: "tester@{{ tenant_domain | default('dev.local') }}"
     realms: [authentik]
+    password_var: nos_tester_password
 
 # ── TLD class detection (drives mkcert vs ACME, dnsmasq vs real DNS) ─────────
 # tenant_domain_is_local: true  → use mkcert + dnsmasq + /etc/resolver (dev mode)

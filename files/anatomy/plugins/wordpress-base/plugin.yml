@@ -51,6 +51,7 @@ authentik:
   client_id: nos-wordpress
   client_secret: "{{ nos_derived_secrets.oidc_wordpress }}"
   slug: wordpress
+  first_login: "https://{{ wordpress_domain }}/wp-login.php"   # the app's own "Sign in with Authentik" start
   name: 'WordPress'
   enabled: "{{ install_wordpress | default(false) }}"
   redirect_uris:

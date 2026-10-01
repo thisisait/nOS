@@ -62,6 +62,7 @@ authentik:
   client_id: nos-nodered
   client_secret: "{{ nos_derived_secrets.oidc_nodered }}"
   slug: nodered
+  first_login_blocked: "the editor has no per-user accounts to create"
   name: 'Node-RED'
   enabled: "{{ install_nodered | default(false) }}"
   redirect_uris:

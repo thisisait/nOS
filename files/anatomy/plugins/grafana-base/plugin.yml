@@ -64,6 +64,7 @@ authentik:
   client_id: nos-grafana
   client_secret: "{{ nos_derived_secrets.oidc_grafana }}"
   slug: grafana
+  first_login: "https://{{ grafana_domain }}/login/generic_oauth"   # the app's own "Sign in with Authentik" start
   name: 'Grafana'
   enabled: "{{ install_observability | default(false) }}"
   redirect_uris:
@@ -307,13 +308,13 @@ e2e:
   probes:
     - name: sso-lands-as-the-tester
       auth: tester
-      sso_start: "https://{{ grafana_domain }}/login/generic_oauth"
+      sso_start: true
       url: "https://{{ grafana_domain }}/api/user"
       expect: {status: [200], contains_tester: true}
     - name: an-admin-tester-is-grafana-admin
       auth: tester
       tier: 1
-      sso_start: "https://{{ grafana_domain }}/login/generic_oauth"
+      sso_start: true
       url: "https://{{ grafana_domain }}/api/user/orgs"
       expect: {status: [200], json_equals: {"0.role": "Admin"}}
     - {name: loki-datasource-healthy, url: "http://127.0.0.1:{{ grafana_port }}/api/datasources/uid/loki/health", auth: {basic: {user: admin, secret: grafana}}, expect: {json_equals: {status: OK}}}

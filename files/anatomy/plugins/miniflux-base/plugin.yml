@@ -57,6 +57,7 @@ authentik:
   client_id: nos-miniflux
   client_secret: "{{ nos_derived_secrets.oidc_miniflux }}"
   slug: miniflux
+  first_login: "https://{{ miniflux_domain }}/oauth2/oidc/redirect"   # the app's own "Sign in with Authentik" start
   name: 'Miniflux'
   enabled: "{{ install_miniflux | default(false) }}"
   redirect_uris:

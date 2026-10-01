@@ -57,6 +57,7 @@ authentik:
   client_id: nos-portainer
   client_secret: "{{ nos_derived_secrets.oidc_portainer }}"
   slug: portainer
+  first_login_blocked: "the OAuth start URL is built client-side by the Angular app"
   name: 'Portainer'
   enabled: "{{ install_portainer | default(false) }}"
   redirect_uris:

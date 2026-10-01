@@ -39,6 +39,7 @@ authentik:
   client_id: nos-jellyfin
   client_secret: "{{ nos_derived_secrets.oidc_jellyfin }}"
   slug: jellyfin
+  first_login_blocked: "the SSO-Auth provider config is wiped on load — /sso/OID/start 400s (roles/pazny.jellyfin/tasks/post.yml, deferred)"
   name: 'Jellyfin'
   enabled: "{{ install_jellyfin | default(false) }}"
   redirect_uris:

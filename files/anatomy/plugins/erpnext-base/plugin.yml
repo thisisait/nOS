@@ -79,6 +79,7 @@ authentik:
   client_id: nos-erpnext
   client_secret: "{{ nos_derived_secrets.oidc_erpnext }}"
   slug: erpnext
+  first_login: "https://{{ erpnext_domain | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/login"   # link button with state; not yet walked live
   name: 'ERPNext'
   enabled: "{{ install_erpnext | default(false) }}"
   redirect_uris:

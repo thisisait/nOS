@@ -51,6 +51,7 @@ authentik:
   client_id: nos-bookstack
   client_secret: "{{ nos_derived_secrets.oidc_bookstack }}"
   slug: bookstack
+  first_login: "https://{{ bookstack_domain }}/login"   # the app's own "Sign in with Authentik" start
   name: 'BookStack'
   enabled: "{{ install_bookstack | default(false) }}"
   redirect_uris:
