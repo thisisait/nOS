@@ -102,7 +102,8 @@ def test_probe(svc, probe, testers, verify_tls, auth_host):
     tier = int(probe.get("tier") or svc["tier"] or 4)
     sess = testers(tier) if auth == "tester" else requests.Session()
     if probe.get("sso_start"):
-        w = walk(sess, probe["sso_start"], auth_host, verify=verify_tls)
+        start = svc["first_login"] if probe["sso_start"] is True else probe["sso_start"]
+        w = walk(sess, start, auth_host, verify=verify_tls)
         assert w.outcome == REACHED, (f"{svc['slug']} · {probe['name']}: SSO start {w.outcome} at {w.url} "
                                       f"({w.status})\n  " + "\n  ".join(w.trail))
     headers, basic = _headers(auth)

@@ -42,6 +42,7 @@ authentik:
   client_id: nos-openwebui
   client_secret: "{{ nos_derived_secrets.oidc_openwebui }}"
   slug: open-webui
+  first_login: "https://{{ openwebui_domain }}/oauth/oidc/login"   # the app's own "Sign in with Authentik" start
   name: 'Open WebUI'
   enabled: "{{ install_openwebui | default(false) }}"
   redirect_uris:
@@ -121,6 +122,6 @@ e2e:
   probes:
     - name: sso-lands-as-the-tester
       auth: tester
-      sso_start: "https://{{ openwebui_domain }}/oauth/oidc/login"
+      sso_start: true
       url: "https://{{ openwebui_domain }}/api/v1/auths/"
       expect: {status: [200], contains_tester: true}

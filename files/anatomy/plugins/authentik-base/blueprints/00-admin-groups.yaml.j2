@@ -41,6 +41,21 @@ entries:
       groups:
         - !Find [authentik_core.group, [name, nos-admins]]
 
+  # ── The operator's own account (nos_identities) — admin from the first install
+  - model: authentik_core.user
+    state: present
+    identifiers:
+      username: "{{ nos_primary_admin }}"
+    attrs:
+      name: "{{ nos_primary_admin }}"
+      email: "{{ nos_operator_email }}"
+      password: "{{ nos_operator_password }}"
+      is_active: true
+      path: "users"
+      type: "internal"
+      groups:
+        - !Find [authentik_core.group, [name, nos-admins]]
+
   # ── API token for the PDS bridge and other automation ──────────────────────
   # The bridge script (bluesky_pds_bridge.yml) looks up the token by identifier
   # 'nos-api'; without it the PDS bridge skips with "token=missing".

@@ -122,6 +122,10 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
             "client_id": r.get("client_id"),
             "redirect_uri": redirects[0] if redirects else None,
             "launch_url": launch,
+            # Where a first SSO login creates the account: the app's own button,
+            # or for header_oidc the launch URL (the proxy headers provision).
+            "first_login": r.get("first_login") or (launch if r.get("mode") == "header_oidc" else None),
+            "first_login_blocked": r.get("first_login_blocked"),
             "edge": edge.get(key, "proxy"),
             "enabled": enabled,
             "probes": _render(env, e2e.get("probes") or []),
@@ -149,7 +153,8 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
                      "mode": r.get("mode") if r.get("mode") in MODES else None,
                      "tier": int(r["tier"]) if str(r.get("tier", "")).isdigit() else None,
                      "client_id": r.get("client_id"), "redirect_uri": (r.get("redirect_uris") or [None])[0],
-                     "launch_url": r.get("launch_url"), "edge": "proxy", "enabled": enabled, "probes": []})
+                     "launch_url": r.get("launch_url"), "first_login": r.get("first_login"),
+                     "edge": "proxy", "enabled": enabled, "probes": []})
     for row in rows:
         row["unresolved"] = [k for k in ("launch_url", "redirect_uri")
                              if (row[k] is None and k == "launch_url") or

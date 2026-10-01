@@ -115,6 +115,8 @@
         "scopes":        {"type": "array", "items": {"type": "string"}},
         "redirect_uris": {"type": "array", "items": {"type": "string"}},
         "launch_url":    {"type": "string"},
+        "first_login":   {"type": "string", "description": "The app's own 'Sign in with Authentik' start; tools/nos-first-login.py walks it for every declared identity so accounts exist from the first install (header_oidc defaults to launch_url)."},
+        "first_login_blocked": {"type": "string", "description": "Why no first_login can create an account here. Every native_oidc/header_oidc plugin carries one of the two (test_every_declared_account_exists_from_install.py)."},
         "autologin": {
           "type": "object",
           "additionalProperties": false,

@@ -52,4 +52,8 @@ services:
       # /user/link_account and had to register by hand (e2e probe, 2026-09-30),
       # against the zero-manual-registration onboarding doctrine.
       GITEA__oauth2_client__ENABLE_AUTO_REGISTRATION: "true"
+      # The operator is BOTH the local Gitea admin and an Authentik user of the
+      # same name (nos_identities): link by username instead of the link page.
+      # Safe while Authentik usernames are admin-issued (no public enrollment).
+      GITEA__oauth2_client__ACCOUNT_LINKING: "auto"
       GITEA__service__ENABLE_PASSWORD_SIGNIN_FORM: "{{ 'false' if (sso_autologin_gitea | default(sso_autologin_min_tier_2 | default(sso_autologin | default(false)))) | bool else 'true' }}"

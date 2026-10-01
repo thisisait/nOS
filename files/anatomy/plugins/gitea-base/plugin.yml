@@ -78,6 +78,7 @@ authentik:
   client_id: nos-gitea
   client_secret: "{{ nos_derived_secrets.oidc_gitea }}"
   slug: gitea
+  first_login: "https://{{ gitea_domain }}/user/oauth2/authentik"   # the app's own "Sign in with Authentik" start
   name: 'Gitea'
   enabled: "{{ install_gitea | default(false) }}"
   redirect_uris:
@@ -229,6 +230,6 @@ e2e:
   probes:
     - name: sso-creates-and-logs-in-the-tester
       auth: tester
-      sso_start: "https://{{ gitea_domain }}/user/oauth2/authentik"
+      sso_start: true
       url: "https://{{ gitea_domain }}/user/settings"
       expect: {status: [200], contains_tester: true}

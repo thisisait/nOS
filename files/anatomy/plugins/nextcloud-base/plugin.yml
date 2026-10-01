@@ -88,6 +88,7 @@ authentik:
   client_id: nos-nextcloud
   client_secret: "{{ nos_derived_secrets.oidc_nextcloud }}"
   slug: nextcloud
+  first_login: "https://{{ nextcloud_domain }}/apps/user_oidc/login/1"   # the app's own "Sign in with Authentik" start
   name: 'Nextcloud'
   enabled: "{{ install_nextcloud | default(false) }}"
   redirect_uris:
@@ -187,7 +188,7 @@ e2e:
   probes:
     - name: sso-lands-as-the-tester
       auth: tester
-      sso_start: "https://{{ nextcloud_domain }}/apps/user_oidc/login/1"
+      sso_start: true
       url: "https://{{ nextcloud_domain }}/ocs/v2.php/cloud/user?format=json"
       send_headers: {OCS-APIRequest: "true"}
       expect: {status: [200], contains_tester: true}

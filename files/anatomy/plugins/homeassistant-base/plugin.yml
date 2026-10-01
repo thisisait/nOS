@@ -61,6 +61,7 @@ authentik:
   client_id: nos-homeassistant
   client_secret: "{{ nos_derived_secrets.oidc_homeassistant }}"
   slug: homeassistant
+  first_login_blocked: "auth_oidc finishes the login in the Home Assistant frontend (JavaScript)"
   name: 'Home Assistant'
   enabled: "{{ install_homeassistant | default(false) }}"
   redirect_uris:

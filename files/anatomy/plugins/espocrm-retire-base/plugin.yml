@@ -28,6 +28,7 @@ authentik:
   client_id: nos-espocrm
   client_secret: "{{ nos_derived_secrets.oidc_espocrm }}"
   slug: espocrm
+  first_login_blocked: "retired plugin"
   name: 'EspoCRM'
   enabled: "{{ install_espocrm | default(false) }}"
   redirect_uris:

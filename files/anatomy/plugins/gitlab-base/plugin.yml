@@ -47,6 +47,7 @@ authentik:
   client_id: nos-gitlab
   client_secret: "{{ nos_derived_secrets.oidc_gitlab }}"
   slug: gitlab
+  first_login: "https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/users/sign_in"   # POST button (OmniAuth); not yet walked live
   name: 'GitLab'
   enabled: "{{ install_gitlab | default(false) }}"
   redirect_uris:

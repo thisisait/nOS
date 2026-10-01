@@ -1,0 +1,29 @@
+---
+# Every declared identity (nos_identities, realm authentik) gets its account in
+# every SSO app on the FIRST install: tools/nos-first-login.py logs it in once
+# and walks each enabled plugin's authentik.first_login. Native/header OIDC
+# apps create users only at a first SSO login; before this, an app a person
+# never opened had no account for them. A failed walk fails the run.
+- name: "[Identities] Create every declared account in every SSO app"
+  ansible.builtin.command:
+    argv: "{{ ['python3', playbook_dir ~ '/tools/nos-first-login.py', '--auth-host=' ~ authentik_domain]
+              + (['--insecure'] if (tenant_domain_is_local | default(true) | bool) else []) }}"
+  environment:
+    NOS_FIRST_LOGIN: >-
+      {% set out = [] %}{% for i in nos_identities if 'authentik' in (i.realms | default([])) %}{%
+      set _ = out.append({'name': i.name, 'password': lookup('vars', i.password_var)}) %}{%
+      endfor %}{{ out | to_json }}
+  register: _first_login
+  changed_when: false
+  failed_when: false
+  no_log: true   # env carries the passwords
+
+- name: "[Identities] Accounts per app"
+  ansible.builtin.debug:
+    msg: "{{ _first_login.stdout_lines | default([]) + (_first_login.stderr_lines | default([])) }}"
+
+- name: "[Identities] Every declared account reached its app"
+  ansible.builtin.assert:
+    that: _first_login.rc | default(1) == 0
+    fail_msg: "A declared identity could not sign in to an app — see the FAIL lines above."
+    quiet: true
