@@ -128,7 +128,7 @@
 - name: "[pazny.n8n Post] Sync n8n packs (inactive; inject KEAP cred)"
   ansible.builtin.command:
     argv:
-      - python3
+      - "{{ ansible_playbook_python }}"   # carries PyYAML; bare python3 may not
       - "{{ playbook_dir }}/tools/n8n-pack.py"
       - sync
       - "--packs={{ playbook_dir }}/files/anatomy/n8n/packs"

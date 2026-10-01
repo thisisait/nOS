@@ -1,0 +1,15 @@
+---
+# Host tools that act through SSO (tools/nos_sso.py: nos-first-login,
+# woodpecker-token) need `requests`; a fresh host's python3 has none — the
+# Linux wet-test failed the account walk on ModuleNotFoundError (2026-10-01).
+# Own venv, own pip (PEP 668 on Homebrew Python), same shape as Bone's.
+- name: "[Tools] Create the host-tools venv"
+  ansible.builtin.command:
+    cmd: "{{ ansible_playbook_python }} -m venv {{ nos_tools_venv }}"
+    creates: "{{ nos_tools_python }}"
+
+- name: "[Tools] Install host-tool deps into it"
+  ansible.builtin.command:
+    cmd: "{{ nos_tools_venv }}/bin/pip install --quiet --disable-pip-version-check -r {{ playbook_dir }}/tools/requirements.txt"
+  register: _nos_tools_pip
+  changed_when: _nos_tools_pip.stdout | trim != ""

@@ -154,7 +154,7 @@
     # warming healthchecks, and 502 is in the accepted-codes list anyway.
     - name: "[Apps] Inline smoke — probe Tier-2 endpoints"
       ansible.builtin.command:
-        cmd: "python3 {{ playbook_dir }}/tools/nos-smoke.py --tier 2 --no-jsonl"
+        cmd: "{{ ansible_playbook_python }} {{ playbook_dir }}/tools/nos-smoke.py --tier 2 --no-jsonl"
         chdir: "{{ playbook_dir }}"
       register: _apps_smoke_inline
       changed_when: false
