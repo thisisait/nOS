@@ -1626,7 +1626,9 @@ wordpress_harden_unauth_surface: true   # REM-114: mu-plugin disables XML-RPC + 
 wordpress_port: 8084                    # Local container port (nginx proxy)
 wordpress_admin_user: "admin"
 wordpress_admin_password: "{{ nos_derived_secrets.wordpress_admin }}"
-wordpress_admin_email: "{{ default_admin_email }}"
+# Break-glass local admin, NOT the SSO admin: sharing akadmin's address made
+# WordPress refuse to create akadmin at its first SSO login (email taken).
+wordpress_admin_email: "wordpress-admin@{{ tenant_domain | default('dev.local') }}"
 
 # ── Devlog platform (docs/devlog/README.md) ──────────────────────────────────
 # WordPress presents the nOS devlog: nos-core namespace is repo-committed and

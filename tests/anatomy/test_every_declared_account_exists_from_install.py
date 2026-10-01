@@ -65,3 +65,11 @@ def test_the_run_walks_them_and_never_prints_a_password():
     assert post.index("tasks/post-smoke.yml") < post.index("tasks/first-login.yml")  # smoke always reports
     walk = yaml.safe_load((REPO / "tasks/first-login.yml").read_text())[0]
     assert walk["no_log"] is True and "password_var" in walk["environment"]["NOS_FIRST_LOGIN"]
+
+
+def test_a_break_glass_admin_does_not_share_the_sso_admins_email():
+    """WordPress refused to create akadmin at its first SSO login: the local
+    `admin` already held default_admin_email (2026-10-01)."""
+    assert "default_admin_email" not in str(CFG["wordpress_admin_email"])
+    post = (REPO / "roles/pazny.wordpress/tasks/post.yml").read_text()
+    assert "--user_email={{ wordpress_admin_email" in post, "an existing install must be moved too"
