@@ -60,7 +60,7 @@
     --title="Dev WordPress"
     --admin_user="{{ wordpress_admin_user | default('admin') }}"
     --admin_password="{{ wordpress_admin_password }}"
-    --admin_email="{{ wordpress_admin_email | default(default_admin_email) }}"
+    --admin_email="{{ wordpress_admin_email }}"
     --skip-email
   when:
     - _wp_container.stdout | default('') | length > 0
@@ -79,6 +79,8 @@
     exec -T wordpress wp user update
     {{ wordpress_admin_user | default('admin') }}
     --user_pass={{ wordpress_admin_password | quote }}
+    --user_email={{ wordpress_admin_email | quote }}
+    --skip-email
     --allow-root
   when:
     - _wp_container.stdout | default('') | length > 0
