@@ -171,9 +171,10 @@ def test_every_isolation_probe_renders_to_a_runnable_shape():
         assert r["tier"] and r["first_login"], r["slug"]
         for step in ("write", "read"):
             assert "://" in p[step]["url"] and "{{" not in p[step]["url"], (r["slug"], step)
-            assert "@marker@" in json.dumps(p["write"]) and p[step]["status"], (r["slug"], step)
+            # the leak check reads @secret@ (the content), never the object's name
+            assert "@secret@" in json.dumps(p["write"]) and p[step]["status"], (r["slug"], step)
         assert p["peer"]["status"] and not set(p["peer"]["status"]) & set(p["read"]["status"]), (
             f"{r['slug']}: the peer may get the owner's status — only the body would tell them apart")
         used = re.findall(r"@(\w+)@", json.dumps(p))
-        assert set(used) <= {"marker", "owner", "id"}, used
+        assert set(used) <= {"marker", "secret", "owner", "id"}, used
         assert ("owner" not in used or p.get("owner")) and ("id" not in used or p.get("id_path")), r["slug"]
