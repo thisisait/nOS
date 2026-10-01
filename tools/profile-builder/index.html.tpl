@@ -96,7 +96,7 @@ function blocked(data, key) {
   const x = data.services[key];
   return data.offline && x && !x.offline_ok ? "not in this offline build (" + x.missing.join(", ") + ")" : "";
 }
-function mergeFlags(data, picks, mailId, manual) {
+function layers(data, picks, mailId, manual) {
   // default → service-set → use-case → policy → environment → constraint → mail → your toggles.
   // An untouched mail choice (null) overrides nothing, so a profile's mail flags survive.
   const on = {};
@@ -107,6 +107,40 @@ function mergeFlags(data, picks, mailId, manual) {
   for (const [k, v] of Object.entries(manual || {})) if (k in on) on[k] = !!v;
   for (const k of Object.keys(on)) if (blocked(data, k)) on[k] = false;   // an offline build cannot run it
   return on;
+}
+function title(data, key) { return (data.flags.find(f => f.key === key) || {}).title || key.replace(/^install_/, "").replace(/_/g, " "); }
+function consumerOn(data, c, on, kn, s) {
+  if (c.flag) return !!on[c.flag];
+  if (c.people) return (s.people || []).some(p => given((p.name || "").trim()));
+  if (c.field) return !!fieldValue(data, s.picks, s.fields, c.field);
+  return Object.values(s.picks || {}).includes(c.profile) && !!kn[c.knob];
+}
+function consumerName(data, c) {
+  return c.flag ? title(data, c.flag) : c.people ? "the people you added" : c.field ? "the test accounts" : `the ${c.profile} profile (${c.knob})`;
+}
+function settle(data, s) {
+  // The rules the estate declares (tools/profile-builder/rules.py), applied after every layer:
+  // auto — nOS turns the provider on itself; silent — turned on here unless YOU turned it off,
+  // then it blocks. Returns the flags, what was turned on and why, and what is left unmet.
+  const on = layers(data, s.picks, s.mail, s.manual), kn = knobs(data, s.picks, s.fields), notes = [];
+  const has = u => u in on ? !!on[u] : !!kn[u];
+  const needs = data.rules.filter(r => r.cls !== "refused");
+  for (let changed = true, n = 0; changed && n < 20; n++) {
+    changed = false;
+    for (const r of needs) {
+      if (!consumerOn(data, r.consumer, on, kn, s) || r.upstream.some(has)) continue;
+      const u = r.upstream.find(u => !blocked(data, u) && (r.cls === "auto" || (s.manual || {})[u] !== false));
+      if (u === undefined) continue;
+      on[u] = true; changed = true;
+      notes.push({key: u, cls: r.cls, source: r.source});
+    }
+  }
+  const live = needs.filter(r => consumerOn(data, r.consumer, on, kn, s));
+  for (const n of notes) n.by = [...new Set(live.filter(r => r.upstream.includes(n.key)).map(r => consumerName(data, r.consumer)))].join(", ");
+  return {on, kn, notes, unmet: live.filter(r => !r.upstream.some(has))};
+}
+function mergeFlags(data, picks, mailId, manual, s) {
+  return settle(data, {fields: {}, people: [], ...(s || {}), picks, mail: mailId, manual}).on;
 }
 function mailOf(data, on) {
   const o = data.mail.options.find(o => Object.entries(o.flags).every(([k, v]) => !!on[k] === v));
@@ -160,7 +194,48 @@ const CHECKS = {
   slug: v => /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(v) ? "" : "Lowercase letters, digits and dashes only.",
   email: v => EMAIL_RE.test(v) ? "" : "That does not look like an e-mail address.",
   username: v => NAME_RE.test(v) ? "" : "Start with a lowercase letter; then lowercase letters, digits, dot, dash or underscore; end with a letter or digit.",
+  acme_token: v => /^\S+$/.test(v) ? "" : "A token has no spaces.",
 };
+function fieldActive(data, s, on, f) {
+  return !f.when || (f.when.startsWith("install_") ? !!on[f.when] : !!fieldValue(data, s.picks, s.fields, f.when));
+}
+function stepOf(data, key) {
+  const st = data.steps.find(x => x.fields.some(f => f.key === key));
+  if (st) return st.id;
+  if (key === "tenant_domain_is_local" || key in data.derived) return "domain";
+  return data.mail.options.some(o => key in o.flags) ? "backup" : "services";
+}
+function refusedProblems(data, s, st) {
+  // main.yml and the roles refuse these combinations outright; the words come from the rule's literals.
+  const domain = fieldValue(data, s.picks, s.fields, "tenant_domain") || "";
+  const field = v => stepFields(data).find(f => f.key === v);
+  const val = v => v in st.on ? !!st.on[v] : v in data.derived ? (data.derived[v] === "local") === isLocalDomain(data, domain)
+    : v in st.kn ? !!st.kn[v] : given((s.fields || {})[v]);
+  const words = ([v, want]) => v in data.derived ? ((data.derived[v] === "local") === want ? "your domain stays on this machine" : "your domain is public")
+    : field(v) && field(v).type !== "bool" ? (want ? `${field(v).label.replace(/\s*\(.*\)$/, "")} is given` : `no ${field(v).label.replace(/\s*\(.*\)$/, "")} is given`)
+    : `${title(data, v)} is ${want ? "on" : "off"}`;
+  const P = [];
+  for (const r of data.rules.filter(r => r.cls === "refused")) {
+    if (!r.all.every(([v, want]) => val(v) === want)) continue;
+    const via = r.any.filter(val);
+    if (r.any.length && !via.length) continue;
+    const said = [...new Set(r.all.map(words))].join(", ");
+    const key = (r.all.find(([v]) => field(v)) || r.all.find(([v]) => stepOf(data, v) !== "services") || r.all[0] || [via[0]])[0];
+    const gated = via.map(v => r.labels[v] || title(data, v)).join(", ");
+    P.push({step: stepOf(data, key), key, msg: `nOS would refuse to start: ${said}${via.length ? ` — and ${gated} sign in through it` : ""} (“${r.why}”). Change one of these.`});
+  }
+  return P;
+}
+function unmetProblems(data, st) {
+  const by = {};
+  for (const r of st.unmet) for (const u of r.upstream.slice(0, 1)) (by[u] = by[u] || new Set()).add(consumerName(data, r.consumer));
+  return Object.entries(by).map(([u, cs]) => {
+    const names = [...cs].join(", "), up = title(data, u), why = blocked(data, u), many = cs.size > 1;
+    const need = many ? "need" : "needs", them = many ? "those" : names;
+    return {step: "services", key: u, msg: why ? `${names} ${need} ${up}, which is ${why}. Turn ${them} off.`
+      : `${names} ${need} ${up}, which you turned off. Turn ${up} back on, or turn ${them} off.`};
+  });
+}
 function prefixProblem(data, v) {
   if (!given(v)) return "Choose a master password, or press Generate. nOS refuses to start without one.";
   if (data.prefix_rule.refused.includes(v) || v.length < data.prefix_rule.min) return `At least ${data.prefix_rule.min} characters, and not "changeme".`;
@@ -180,17 +255,17 @@ function emails(data, s) {
 function problems(data, s) {
   // Everything that would make `nos` refuse this config, as {step, key, msg}. Defaults are trusted;
   // what you typed is checked. The playbook asserts the same rules again (main.yml, Identities).
-  const P = [], on = mergeFlags(data, s.picks, s.mail, s.manual);
-  const active = f => !f.when || (f.when.startsWith("install_") ? !!on[f.when] : !!fieldValue(data, s.picks, s.fields, f.when));
-  for (const st of data.steps) for (const f of st.fields) {
-    if (!f.check || !active(f)) continue;
+  const P = [], st = settle(data, s), on = st.on;
+  for (const x of data.steps) for (const f of x.fields) {
+    if (!f.check || !fieldActive(data, s, on, f)) continue;
     const v = (s.fields || {})[f.key];
     let msg = "";
     if (f.check === "prefix") msg = prefixProblem(data, v);
     else if (f.check === "repo" && !given(v)) msg = "Say where the second copy goes, or turn it off.";
     else if (given(v)) msg = CHECKS[f.check](String(v).trim());
-    if (msg) P.push({step: st.id, key: f.key, msg});
+    if (msg) P.push({step: x.id, key: f.key, msg});
   }
+  P.push(...refusedProblems(data, s, st), ...unmetProblems(data, st));
   const em = emails(data, s);
   if (em.operator === em.system) P.push({step: "accounts", key: "nos_operator_email", msg: "Your e-mail must differ from the system e-mail."});
   const me = fieldValue(data, s.picks, s.fields, "nos_primary_admin");
@@ -221,6 +296,7 @@ function renderConfig(data, s, on) {
   }
   for (const f of stepFields(data)) {                   // your answer outranks a profile's knob, written once
     if (f.secret || f.key.startsWith("install_")) continue;   // secret → credentials.yml; install_* → services
+    if (!fieldActive(data, s, on, f)) continue;               // a hidden answer (backup off) is not a choice
     const v = (s.fields || {})[f.key];
     if (given(v)) { vals[f.key] = typeof v === "string" ? v.trim() : v; delete from[f.key]; }
   }
@@ -239,12 +315,17 @@ function renderConfig(data, s, on) {
   for (const f of data.flags) if (!f.auto && on[f.key] !== !!f.default) L.push(`${f.key}: ${on[f.key]}`);
   return L.join("\n") + "\n";
 }
-function renderCredentials(data, prefix) {
+function renderCredentials(data, prefix, fields) {
   if (prefixProblem(data, prefix)) return "";
-  return ["# credentials.yml — written by the nOS profile builder. Keep it private (chmod 600).",
-          `global_password_prefix: ${JSON.stringify(prefix)}`, ""].join("\n");
+  const L = ["# credentials.yml — written by the nOS profile builder. Keep it private (chmod 600).",
+             `global_password_prefix: ${JSON.stringify(prefix)}`];
+  for (const f of stepFields(data)) {
+    const v = (fields || {})[f.key];
+    if (f.secret && f.check !== "prefix" && given(v)) L.push(`${f.key}: ${JSON.stringify(String(v).trim())}`);
+  }
+  return L.concat("").join("\n");
 }
-if (typeof module !== "undefined") module.exports = { isLocalDomain, fieldValue, knobs, blocked, mergeFlags, mailOf, estimate, nearest, problems, renderConfig, renderCredentials };
+if (typeof module !== "undefined") module.exports = { isLocalDomain, fieldValue, knobs, blocked, mergeFlags, settle, mailOf, estimate, nearest, problems, renderConfig, renderCredentials };
 </script>
 <script>
 const DATA = JSON.parse(document.getElementById("data").textContent);
@@ -253,7 +334,8 @@ let current = 0;
 const $ = q => document.querySelector(q);
 const esc = v => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const gb = b => (b / 2 ** 30).toFixed(1) + " GB";
-const on = () => mergeFlags(DATA, state.picks, state.mail, state.manual);
+const settled = () => settle(DATA, state);
+const on = () => settled().on;
 const kn = () => knobs(DATA, state.picks, state.fields);
 const val = k => fieldValue(DATA, state.picks, state.fields, k);
 const tierLabel = t => (DATA.accounts.tiers.find(x => x.tier === +t) || {}).label || "?";
@@ -295,7 +377,7 @@ function fieldHtml(f) {
   const type = f.type === "password" ? "password" : "text";
   const extra = f.type === "timezone" ? ` list="tzlist" autocomplete="off"` : f.check === "email" ? ` inputmode="email" autocomplete="email"` : ` autocomplete="off"`;
   let after = "";
-  if (f.type === "password") after = `<button type="button" class="ghost small" data-gen="${f.key}">Generate</button><button type="button" class="ghost small" data-show="${f.key}" aria-pressed="false">Show</button>`;
+  if (f.type === "password") after = `${f.check === "prefix" ? `<button type="button" class="ghost small" data-gen="${f.key}">Generate</button>` : ""}<button type="button" class="ghost small" data-show="${f.key}" aria-pressed="false">Show</button>`;
   if (f.type === "timezone" && BROWSER_TZ && BROWSER_TZ !== v) after = `<button type="button" class="ghost small" data-tz>Use this computer's: ${esc(BROWSER_TZ)}</button>`;
   const dl = f.type === "timezone" && TZ_LIST.length ? `<datalist id="tzlist">${TZ_LIST.map(z => `<option value="${z}">`).join("")}</datalist>` : "";
   return wrap(`<label for="${id}">${f.label}</label><div class="row"><input type="${type}" id="${id}" data-k="${f.key}" value="${esc(v)}" placeholder="${esc(placeholderFor(f))}" aria-describedby="h-${f.key} e-${f.key}"${extra} spellcheck="false">${after}</div>${dl}${hint}`);
@@ -308,6 +390,9 @@ function showProblems() {
     const e = document.getElementById("e-" + p.key); if (e) e.textContent = p.msg;
     const i = document.getElementById("f-" + p.key); if (i) i.setAttribute("aria-invalid", "true");
   }
+  const mn = document.getElementById("mailnotes");
+  if (mn) mn.innerHTML = notesHtml(n => DATA.mail.options.some(o => n.key in o.flags)) +
+    P.filter(p => p.step === "backup" && !document.getElementById("e-" + p.key)).map(p => `<p class="err">${esc(p.msg)}</p>`).join("");
   for (const f of DATA.steps.flatMap(x => x.fields)) if (f.when) {
     const w = document.getElementById("w-" + f.key);
     if (w) w.hidden = !(f.when.startsWith("install_") ? on()[f.when] : val(f.when));
@@ -320,13 +405,13 @@ function drawFields(i) {
   if (st.id === "domain") html += `<div class="note" id="domnote" aria-live="polite"></div>`;
   if (st.id === "backup") {
     const cur = state.mail || mailOf(DATA, on());
-    html += `<div class="f"><label for="mail">${DATA.mail.label}</label><select id="mail">${cur ? "" : `<option value="" selected>As your service choices set it</option>`}${DATA.mail.options.map(o => `<option value="${o.id}" ${o.id === cur ? "selected" : ""}>${o.label}</option>`).join("")}</select></div>`;
+    html += `<div class="f"><label for="mail">${DATA.mail.label}</label><select id="mail">${cur ? "" : `<option value="" selected>As your service choices set it</option>`}${DATA.mail.options.map(o => `<option value="${o.id}" ${o.id === cur ? "selected" : ""}>${o.label}</option>`).join("")}</select><div id="mailnotes"></div></div>`;
   }
   if (st.id === "accounts") html += accountsHtml();
   box.innerHTML = html;
   box.oninput = box.onchange = e => {
     const t = e.target, k = t.dataset.k;
-    if (t.id === "mail") { state.mail = t.value || null; return; }
+    if (t.id === "mail") { state.mail = t.value || null; showProblems(); return; }
     if (t.dataset.p !== undefined) { state.people[+t.dataset.p][t.dataset.pk] = t.value; showProblems(); return; }
     if (!k) return;
     if (t.type === "checkbox") { if (k.startsWith("install_")) state.manual[k] = t.checked; else state.fields[k] = t.checked; }
@@ -372,6 +457,15 @@ function domNote() {
     ? `<b>${esc(d)}</b> stays on this machine: nOS makes its own certificate and answers the names itself. No internet or DNS settings needed. Your browser will ask once to trust the certificate.`
     : `<b>${esc(d)}</b> is a public domain: nOS asks Let's Encrypt for a certificate through Cloudflare. Put a Cloudflare API token with <i>Zone:DNS:Edit</i> into <code>credentials.yml</code> as <code>acme_cloudflare_api_token</code>, and point the domain at this machine when you are ready to open it up.`;
 }
+function notesHtml(filter) {
+  // What the rules turned on for you, and why — never silently.
+  const ns = settled().notes.filter(filter || (() => true));
+  return ns.length ? `<div class="note" aria-live="polite"><b>Turned on for you:</b><ul>${ns.map(n => `<li><b>${esc(title(DATA, n.key))}</b> — ${esc(n.by)} ${n.by.includes(",") ? "need" : "needs"} it${n.cls === "auto" ? " (nOS turns it on itself)" : ""}.</li>`).join("")}</ul></div>` : "";
+}
+function unmetHtml() {
+  const P = problems(DATA, state).filter(p => p.step === "services");
+  return P.length ? `<div class="note bad" role="alert"><ul>${P.map(p => `<li>${esc(p.msg)}</li>`).join("")}</ul></div>` : "";
+}
 function estHtml(e) {
   const img = e.image_bytes === null ? `<b>?</b><small>downloads — <span class="assumed">unknown</span>: this page was built without an image cache</small>`
     : `<b>${gb(e.image_bytes)}</b><small>downloads — <span class="measured">measured</span> from the image cache</small>`;
@@ -394,7 +488,7 @@ function drawServices(i) {
     }).join("") +
     `<h3>Services — <span class="count" id="count" aria-live="polite">${Object.values(cur).filter(Boolean).length} on</span></h3>` +
     (DATA.offline ? `<div class="note warn">This page was built from an offline image cache: a service whose download is not in it is switched off and cannot be turned on.</div>` : "") +
-    `<div id="estimate">${estHtml(estimate(DATA, cur, kn()))}</div><div id="flags"></div>`;
+    `<div id="estimate">${estHtml(estimate(DATA, cur, kn()))}</div><div id="svcnotes"></div><div id="flags"></div>`;
   const box = $("#b" + i);
   box.innerHTML = html;
   drawFlags();
@@ -407,19 +501,21 @@ function drawServices(i) {
   box.onclick = ev => { const b = ev.target.closest("[data-pick]"); if (b) { state.picks[b.dataset.pick] = b.dataset.id; drawServices(i); } };
 }
 function drawFlags() {
-  const cur = on();
+  const st = settled(), cur = st.on;
   let html = "";
   for (const g of DATA.groups) {
     const fs = DATA.flags.filter(f => f.group === g);
     if (!fs.length) continue;
     html += `<fieldset><legend>${esc(g)}</legend>` + fs.map(f => {
       const b = blocked(DATA, f.key), x = DATA.services[f.key];
-      const why = f.auto ? "nOS decides this from your answers" : (b ? "" : (cur[f.key] !== !!f.default ? "changed from the default" : ""));
+      const n = st.notes.find(x => x.key === f.key), forced = n && n.cls === "auto";
+      const why = f.auto ? "nOS decides this from your answers" : b ? "" : n ? `turned on: ${n.by} ${n.by.includes(",") ? "need" : "needs"} it` : (cur[f.key] !== !!f.default ? "changed from the default" : "");
       const est = x ? (x.host ? "on the computer" : `${(x.mem_bytes / 2 ** 20) | 0} MB`) : "";
-      return `<label class="flag${f.auto ? " auto" : ""}${b ? " off" : ""}"><input type="checkbox" data-k="${f.key}" ${f.auto || b ? "disabled" : ""} ${cur[f.key] ? "checked" : ""}><span><b>${esc(f.title)}</b>${f.plain ? ` <small>— ${esc(f.plain)}</small>` : ""} <code>${f.key}</code> <span class="why">${why}</span>${b ? `<span class="blocked">${esc(b)}</span>` : ""}</span><span class="est">${est}</span></label>`;
+      return `<label class="flag${f.auto ? " auto" : ""}${b ? " off" : ""}"><input type="checkbox" data-k="${f.key}" ${f.auto || b || forced ? "disabled" : ""} ${cur[f.key] ? "checked" : ""}><span><b>${esc(f.title)}</b>${f.plain ? ` <small>— ${esc(f.plain)}</small>` : ""} <code>${f.key}</code> <span class="why">${why}</span>${b ? `<span class="blocked">${esc(b)}</span>` : ""}</span><span class="est">${est}</span></label>`;
     }).join("") + `</fieldset>`;
   }
   $("#flags").innerHTML = html;
+  $("#svcnotes").innerHTML = unmetHtml() + notesHtml();
   $("#count").textContent = Object.values(cur).filter(Boolean).length + " on";
   $("#estimate").innerHTML = estHtml(estimate(DATA, cur, kn()));
 }
@@ -432,15 +528,15 @@ function download(name, text) {
 }
 function drawReview(i) {
   const cur = on(), e = estimate(DATA, cur, kn()), P = problems(DATA, state);
-  const yaml = renderConfig(DATA, state, cur), creds = renderCredentials(DATA, state.fields.global_password_prefix || "");
+  const yaml = renderConfig(DATA, state, cur), creds = renderCredentials(DATA, state.fields.global_password_prefix || "", state.fields);
   const stepNo = id => DATA.steps.findIndex(x => x.id === id);
   $("#b" + i).innerHTML = (P.length ? `<div class="note bad" role="alert"><b>Fix these first:</b><ul>${P.map(p => `<li>${esc(p.msg)} <button type="button" class="ghost small" data-go="${stepNo(p.step)}">Go to step ${stepNo(p.step) + 1}</button></li>`).join("")}</ul></div>` : "") +
-    estHtml(e) +
+    notesHtml() + estHtml(e) +
     `<details><summary>Per service</summary><div class="scroll"><table><tr><th scope="col">service</th><th scope="col">memory</th><th scope="col">download</th><th scope="col">data (guess)</th></tr>` +
     e.rows.map(r => `<tr><td>${r.ids.join(", ")}</td><td class="n">${r.host ? "on the computer" : gb(r.mem_bytes)}</td><td class="n">${r.image_bytes === null ? "?" : gb(r.image_bytes)}</td><td class="n">${r.data_gb} GB</td></tr>`).join("") + `</table></div></details>` +
     `<h3>What to do with the files</h3><ol><li>Download both files below.</li><li>Put them in your nOS folder, next to <code>default.config.yml</code>.</li><li>In a terminal there, run <code>nos</code>.</li></ol>
     <p class="hint"><code>credentials.yml</code> holds your master password, so it is not shown here. Keep it private.</p>
-    <div class="bar"><button type="button" class="go" id="dl" ${P.length ? "disabled" : ""}>Download config.yml</button><button type="button" class="go" id="dlc" ${P.length || !creds ? "disabled" : ""}>Download credentials.yml</button><button type="button" class="ghost" id="cp">Copy config.yml</button><span id="cpmsg" role="status"></span></div>
+    <div class="bar"><button type="button" class="go" id="dl" ${P.length ? "disabled" : ""}>Download config.yml</button><button type="button" class="go" id="dlc" ${P.length || !creds ? "disabled" : ""}>Download credentials.yml</button><button type="button" class="ghost" id="cp" ${P.length ? "disabled" : ""}>Copy config.yml</button><span id="cpmsg" role="status"></span></div>
     <h3>config.yml</h3><pre id="out" tabindex="0">${esc(yaml)}</pre>`;
   $("#dl").onclick = () => download("config.yml", yaml);
   $("#dlc").onclick = () => download("credentials.yml", creds);

@@ -80,6 +80,12 @@ jobs:
       - name: Render the devlog
         run: python3 tools/devlog-render.py --out _site
 
+      # A builder that can write a config nOS refuses must never ship: every
+      # profile combination and toggle runs through the page's own JS (node,
+      # preinstalled on ubuntu runners; absent = this step fails, never skips).
+      - name: Sweep the profile builder for contradictions
+        run: node --version && python3 tools/profile-builder-build.py --sweep
+
       # The profile builder: a static page built from default.config.yml +
       # profiles/ at release time, so what it offers is what this tag ships.
       - name: Render the profile builder

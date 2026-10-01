@@ -48,9 +48,11 @@ def test_the_data_is_the_artifacts_not_a_list():
     assert {p["id"] for p in data["profiles"]} == axes_on_disk
     assert all(p["axis"] in data["axes"] and p["axis"] in data["axis_questions"] for p in data["profiles"])
     every_var = set(re.findall(r"^([a-z_]+):", CONFIG_TEXT, re.M))
+    secrets = set(re.findall(r"^([a-z_]+):", (REPO / "default.credentials.yml").read_text(), re.M))
     for step in data["steps"]:
         for f in step["fields"]:
-            assert f["key"] in every_var, f"step field {f['key']} is not a variable default.config.yml declares"
+            assert f["key"] in (every_var | secrets if f.get("secret") else every_var), \
+                f"step field {f['key']} is not a variable default.config.yml (a secret: default.credentials.yml) declares"
             assert f["hint"], f"{f['key']} has no plain-language line"
             assert f.get("when") in (None, *every_var), f"{f['key']}: `when` names no declared variable"
     assert [s["id"] for s in data["steps"]] == ["machine", "domain", "owner", "services", "backup", "accounts", "review"]

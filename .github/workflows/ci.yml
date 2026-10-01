@@ -132,7 +132,7 @@ jobs:
       # of nine assertions in the tool-scope gate — every one that actually
       # calls a tool — skipped on every run here. Declared, so a failed or
       # deleted `composer install` aborts instead of going quietly green.
-      NOS_TEST_PROVIDES: git,ansible-playbook,php,composer,jq,sqlite3,openssl,files/anatomy/wing/vendor/autoload.php
+      NOS_TEST_PROVIDES: git,ansible-playbook,php,composer,jq,sqlite3,openssl,node,files/anatomy/wing/vendor/autoload.php
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v7

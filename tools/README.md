@@ -191,6 +191,7 @@ worse than none, because it reads as complete.
 - `e2e-plan.py` — What the estate promises a user, rendered from the manifests — the E2E plan.
 - `nos-image-cache.py` — A verified local cache of container images, so a rebuild does not re-pull.
 - `nos-first-login.py` — Signs every declared identity in to every SSO app once, so its account exists from install.
+- `outline-roles.py` — Makes Outline's admins exactly Authentik's tier-1 people (Outline takes no role from OIDC).
 - `nos-secret.py` — nos-secret — the operator's reader for the derived credential map (P1).
 
 - `anatomy-graph-gen.py` — Compile the anatomy graph — every declared actor and edge, one address space.

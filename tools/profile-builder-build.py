@@ -5,6 +5,7 @@ config.yml (and, if asked, a one-line credentials.yml) before the first `nos` ru
     tools/profile-builder-build.py --out _site/profile-builder   # pages.yml
     tools/profile-builder-build.py --out ~/nos-profile-builder && open ~/nos-profile-builder/index.html
     tools/profile-builder-build.py --out DIR --image-lock <cache>/images/images.lock.json [--config config.yml]
+    tools/profile-builder-build.py --sweep     # every combination through the page's JS; exit 1 on a contradiction
 
 The page is one self-contained file (no server, no network): it works from file://.
 
@@ -21,6 +22,8 @@ Everything the page knows comes from the artifacts, at build time:
                        which services an OFFLINE build can run at all
   --config             the operator's config.yml: image overrides (euro-office for
                        onlyoffice) resolve before the lock is consulted
+  tools/profile-builder/rules.py   the contradiction rules, derived from main.yml,
+                       the roles, plugin manifests and profiles (auto / refused / silent)
 The page itself (tools/profile-builder/index.html.tpl) is plain HTML + JS with
 no dependencies; the build only substitutes __DATA__.
 """
@@ -44,6 +47,9 @@ TPL = REPO / "tools/profile-builder/index.html.tpl"
 _spec = importlib.util.spec_from_file_location("registry_reach", REPO / "tools/cloud/registry-reach.py")
 reach = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(reach)
+_rspec = importlib.util.spec_from_file_location("profile_builder_rules", REPO / "tools/profile-builder/rules.py")
+rules = importlib.util.module_from_spec(_rspec)
+_rspec.loader.exec_module(rules)
 
 FLAG = re.compile(r"^(install_[a-z0-9_]+):\s*(.+?)\s*(?:#\s*(.*))?$")
 AXES = ["service-set", "use-case", "policy", "environment", "constraint"]
@@ -97,6 +103,8 @@ STEPS = [
          "hint": "Every service gets its own name under it, e.g. files.dev.local. A name ending in .local, .lan or .test stays on this machine. A real domain you own gets proper certificates through Cloudflare."},
         {"key": "install_tailscale", "label": "Reach it from anywhere with Tailscale", "type": "bool",
          "hint": "A private network between your own devices. You sign in once in the browser after the first run."},
+        {"key": "acme_cloudflare_api_token", "label": "Cloudflare API token (public domain only)", "type": "password", "secret": True, "check": "acme_token",
+         "hint": "Only for a domain you own: a token with Zone:DNS:Edit, so nOS can get its certificates. It goes into credentials.yml, never into config.yml."},
         {"key": "tailscale_hostname", "label": "Tailscale name of this machine", "type": "text", "placeholder": "mac-studio.tailnet-abc.ts.net",
          "hint": "Optional. Shown on the home page as the remote address."},
         {"key": "services_lan_access", "label": "Let other devices on your home or office network connect", "type": "bool",
@@ -123,7 +131,7 @@ STEPS = [
         {"key": "restic_repo", "label": "Where the second copy goes", "type": "text", "check": "repo", "when": "install_backrest",
          "placeholder": "/Volumes/Backup/restic  or  s3:https://nas.lan:9000/nos-restic",
          "hint": "A folder on another disk, or a storage bucket (your own NAS or off-site). Bucket keys go into credentials.yml."},
-        {"key": "backup_encryption_enabled", "label": "Encrypt the backups", "type": "bool",
+        {"key": "backup_encryption_enabled", "label": "Encrypt the backups", "type": "bool", "when": "install_backup",
          "hint": "Scrambled with a key before anything is written. Keep the master password safe: it unlocks them."},
     ]},
     {"id": "accounts", "title": "People", "blurb": "Who can sign in. Every account below is created on the first run, with its own account in every app.", "fields": [
@@ -308,24 +316,35 @@ def build(lock_path: Path | None = None, config_path: Path | None = None) -> dic
     flag_default = {f["key"]: f["default"] for f in fl}
     mail = {**MAIL, "default": next((o["id"] for o in MAIL["options"]
                                      if all(flag_default.get(k) == v for k, v in o["flags"].items())), None)}
+    page_vars = {f["key"] for f in fl if not f["auto"]} | set(knob_defaults) | {k for p in profs for k in p["knobs"]} \
+        | {f["key"] for s in STEPS for f in s["fields"]}
+    checked = {f["key"] for s in STEPS for f in s["fields"] if f.get("check") and f["check"] != "acme_token"}
+    ref = rules.refusals(page_vars, checked)
+    derived = rules.auto_rules() + rules.silent_rules([(p["id"], k) for p in profs for k in p["knobs"]])
     return {"axes": AXES, "axis_questions": AXIS_QUESTIONS, "steps": STEPS, "defaults": defaults(profs),
             "knob_defaults": knob_defaults, "mail": mail, "flags": fl, "groups": [g for g, _ in GROUPS] + [HOST_GROUP],
             "profiles": profs, "services": svcs, "accounts": accounts(), "prefix_rule": PREFIX_RULE,
             "offline": lock is not None, "assumptions": DATA_GB_ASSUMED,
-            "local_suffixes": [".local", ".lan", ".test", ".localhost"]}
+            "local_suffixes": rules.local_suffixes(), "derived": ref["derived"],
+            "rules": derived + ref["rules"], "rules_oracle": ref["oracle"], "rules_skipped": ref["skipped"]}
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", required=True)
+    ap.add_argument("--out")
     ap.add_argument("--image-lock", default=None, help="images.lock.json of a nos-image-cache; marks an OFFLINE build")
     ap.add_argument("--config", default=None, help="an operator config.yml whose image overrides the offline list honours")
     ap.add_argument("--json", action="store_true", help="print the data, build nothing")
+    ap.add_argument("--sweep", action="store_true", help="run every combination through the page's JS; exit 1 on a contradiction it lets through")
     a = ap.parse_args()
     data = build(a.image_lock, a.config)
+    if a.sweep:
+        return rules.main(data)
     if a.json:
         print(json.dumps(data, indent=1, ensure_ascii=False))
         return 0
+    if not a.out:
+        ap.error("--out is required to build the page")
     out = Path(a.out).expanduser()
     out.mkdir(parents=True, exist_ok=True)
     html = TPL.read_text().replace("__DATA__", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
