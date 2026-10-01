@@ -2,7 +2,52 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.12-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.13-beta`.
+
+---
+
+## v0.14-beta (2026-09-27 … 2026-10-01)
+
+> **The estate leaves cleanly, comes back, and every account is already there.**
+> 82 commits since `v0.13-beta` (211 files, +8.6k/−1.7k). Still `-beta`.
+> Measured on this Mac: blank → leave (`--remove=all --leave`) → exit audit →
+> rebuild → converge `failed=0`, smoke 47/47 strict, E2E 270 passed.
+
+### Transitions are tested, not only steady state
+- ~30 defects a converged estate hid, each fixed with a gate that went red
+  first: mkcert CA on a public TLD, Stalwart banning its own host, Paperclip
+  invite never created, homeassistant store never restarted into, telemetry
+  counting a failed run as `failed=0`, the sudo askpass outliving a run.
+- The leave takes what the exit audit found: resolvers, the keychain cert,
+  the `home` user, the sshd block, brew services under Homebrew 7's
+  `sh.brew.*` names; staging survives.
+
+### E2E generated from the config
+- `tools/e2e-plan.py` + `tests/e2e/estate/`: per-tier tester journeys (reach
+  and refusal) and plugin `e2e:` probes that walk the app's own SSO button.
+- Found and fixed: dead gitea compose extension, loader conditions without
+  Ansible filters, three plugins claiming a gate the edge lacks (ntfy,
+  onlyoffice, woodpecker — retired via tofu tombstones), WordPress SSO
+  (issuer, family_name, shared admin e-mail), loader `docker_exec` keeping
+  quotes (Nextcloud's OIDC secret).
+
+### Accounts from install
+- The operator is an Authentik admin from the first run; akadmin, the
+  operator and the tester get app accounts via `tools/nos-first-login.py`.
+- RBAC test users behind `nos_test_users_enabled` (`profiles/test-users.yml`);
+  live: tier reach/refusal and per-user isolation in Nextcloud and Outline.
+- `nos_extra_identities` from the builder's People step; a person's password
+  is set once and theirs afterwards.
+
+### Also
+- Verified image cache (`tools/nos-image-cache.py`) a rebuild loads from.
+- Backups: every data dir has a verdict; dumps staged for restic/Backrest.
+- Profile builder v3: one `nos_timezone`, People step, a real credentials.yml.
+- Ollama 0.35.0; Woodpecker PAT minted through SSO; MIT license, README.
+
+### Known open
+- Admin rights inside apps beyond Grafana; six apps cannot pre-create
+  accounts (`first_login_blocked`); `secrets.yml` at rest (dtt `secrets-at-rest`).
 
 ---
 
