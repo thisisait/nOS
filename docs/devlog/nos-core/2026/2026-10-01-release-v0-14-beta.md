@@ -3,7 +3,7 @@ id: 2026-10-01-release-v0-14-beta
 title: "v0.14-beta — the estate leaves cleanly, comes back, and every account is already there"
 date: 2026-10-01
 namespace: nos-core
-summary: "82 commits after v0.13-beta. A blank, a full leave and a rebuild on this Mac found ~30 defects a converged estate had hidden; each is fixed with a gate. E2E now logs in as testers generated from the config and walks what the plugins say is wired; accounts for the admin, the operator, the tester and RBAC test users exist from install. Converged failed=0, smoke 47/47 strict, E2E 270 passed."
+summary: "92 commits after v0.13-beta. A blank, a full leave and a rebuild on this Mac found ~30 defects a converged estate had hidden; each is fixed with a gate. E2E now logs in as testers generated from the config and walks what the plugins say is wired; accounts for the admin, the operator, the tester and RBAC test users exist from install. Converged failed=0, smoke 47/47 strict, E2E 270 passed."
 tags: [release, blank, leave, e2e, identities, rbac, profile-builder, backup, image-cache]
 release: v0.14-beta
 actors: [pazny]
