@@ -14,7 +14,9 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 CFG = yaml.safe_load((REPO / "default.config.yml").read_text())
 CREDS = yaml.safe_load((REPO / "default.credentials.yml").read_text())
-IDS = [i for i in CFG["nos_identities"] if "authentik" in i.get("realms", [])]
+# Always-on identities; toggled ones (enabled_by) are pinned by
+# test_toggled_identities_are_gated_accounts.py.
+IDS = [i for i in CFG["nos_identities"] if "authentik" in i.get("realms", []) and not i.get("enabled_by")]
 spec = importlib.util.spec_from_file_location("first_login", REPO / "tools/nos-first-login.py")
 fl = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fl)
@@ -60,6 +62,6 @@ def test_a_logout_form_is_not_a_login_button():
 def test_the_run_walks_them_and_never_prints_a_password():
     main = (REPO / "main.yml").read_text()
     post = main[main.index("  post_tasks:"):]
-    assert post.index("tasks/first-login.yml") < post.index("tasks/post-smoke.yml")
+    assert post.index("tasks/post-smoke.yml") < post.index("tasks/first-login.yml")  # smoke always reports
     walk = yaml.safe_load((REPO / "tasks/first-login.yml").read_text())[0]
     assert walk["no_log"] is True and "password_var" in walk["environment"]["NOS_FIRST_LOGIN"]

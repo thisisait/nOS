@@ -2690,13 +2690,14 @@
       ansible.builtin.import_tasks: tasks/verify-authentik-apps.yml
       tags: ['always', 'verify']
 
+    - name: "[Smoke] Run post-run smoke check"
+      ansible.builtin.import_tasks: tasks/post-smoke.yml
+      tags: ['always', 'smoke']
+
+    # After smoke: a failed account walk must not hide the smoke verdict.
     - name: "[Identities] Declared accounts exist in every SSO app"
       ansible.builtin.import_tasks: tasks/first-login.yml
       when:
         - install_authentik | default(false) | bool
         - nos_docker_ready | default(true) | bool
       tags: ['identities']
-
-    - name: "[Smoke] Run post-run smoke check"
-      ansible.builtin.import_tasks: tasks/post-smoke.yml
-      tags: ['always', 'smoke']
