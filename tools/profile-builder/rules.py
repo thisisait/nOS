@@ -187,7 +187,7 @@ def silent_rules(profile_knobs: list[tuple[str, str]]) -> list[dict]:
         if not flag:
             continue
         for dep in d.get("depends_on") or []:
-            if dep.get("unenforced"):
+            if dep.get("unenforced") and not dep.get("optional"):   # optional: degrades, never required
                 add({"flag": flag}, svc.get(dep["upstream"].removeprefix("service:")),
                     f"{name}/plugin.yml depends_on {dep['upstream']}", dep["unenforced"])
         if req.get("peer_service") in svc:

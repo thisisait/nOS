@@ -620,7 +620,7 @@ install_hedgedoc: false           # HedgeDoc – collaborative markdown [Docker,
 install_bookstack: false          # BookStack – wiki platform [Docker, requires: MariaDB]
 install_firefly: false            # Firefly III – personal finance [Docker, requires: MariaDB, Redis]
 install_dolibarr: false           # Dolibarr ERP/CRM desk [Docker, MariaDB, ARM64]. Praxis pack ON. KEAP tables = books fallback when this is off. SSO is forward_auth until OIDC module is proven in post.yml.
-install_onlyoffice: false         # ONLYOFFICE Document Server [Docker]
+install_onlyoffice: true          # ONLYOFFICE Document Server [Docker] — Nextcloud's Edit needs it (builder edge, 2026-10-01)
 
 # ── VoIP stack (telecommunications) ──────────────────────────────────────────
 install_freepbx: false            # FreePBX + Asterisk – PBX / call center              [Docker]

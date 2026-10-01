@@ -44,7 +44,7 @@ _NOS_PLUGIN: "backup-base"
 
 requires:
   role: pazny.backup
-  feature_flag: configure_backup
+  feature_flag: install_backup   # pazny.backup is imported under install_backup (main.yml)
 
 # =============================================================================
 # NOTIFICATION — A9 canonical severity routing

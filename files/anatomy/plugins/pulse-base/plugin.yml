@@ -36,6 +36,8 @@ type:
 requires:
   role: pazny.wing
   feature_flag: install_pulse
+  # Wing's post.yml registers the jobs; they only matter with Pulse running.
+  role_flag_differs: "rendered by pazny.wing, meaningful only under install_pulse"
 
 # Aggregator declarations — harvest pulse: blocks from peers + agents.
 # Both sources merge into inputs.jobs (X.3 made multi-source merge work).

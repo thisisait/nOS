@@ -84,6 +84,9 @@ depends_on:
       install_wing. With it absent the relay job runs and finds no alerts,
       which is indistinguishable from a quiet estate — the alert path's own
       absence-as-calm, recorded here rather than fixed here.
+    # Wing works without it — only the alert relay idles. flash drops
+    # observability by design, so the builder must not turn it back on.
+    optional: "the alert relay idles; every other Wing view works"
 
 authentik:
   mode: forward_auth                          # nOS doctrine label (provider_type below = canonical)
