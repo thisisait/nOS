@@ -86,3 +86,35 @@ def test_pulse_fires_n8n_not_a_python_hydrator():
     assert jobs["registry-new"]["args"][-1] == "--scope=missing"
     assert FIRE.is_file()
     assert not (REPO / "tools" / "digest-import-ares.py").exists()
+
+
+def _fire_against(code: int, body: bytes) -> int:
+    import http.server, subprocess, sys, threading
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            self.rfile.read(int(self.headers.get("Content-Length", 0)))
+            self.send_response(code)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        return subprocess.run([sys.executable, str(FIRE), f"--url=http://127.0.0.1:{srv.server_port}/webhook/x"],
+                              capture_output=True).returncode
+    finally:
+        srv.shutdown()
+
+
+def test_an_inactive_workflow_is_idle_not_a_failure():
+    """Activation is the operator's consent; each 15-minute tick had raised a
+    failure into the inbox (2026-10-01). Other errors still fail."""
+    unregistered = b'{"code":404,"message":"The requested webhook \\"POST x\\" is not registered."}'
+    assert _fire_against(404, unregistered) == 0
+    assert _fire_against(404, b'{"message":"Not Found"}') == 2
+    assert _fire_against(500, b"boom") == 2
