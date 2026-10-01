@@ -112,8 +112,11 @@ def _render(status: dict | None, now: float) -> str:
             name = _escape_label(src.get("name", "unknown"))
             size = src.get("size_bytes")
             if isinstance(size, (int, float)):
+                # empty_ok: a store with nothing uploaded yet is empty by
+                # declaration; the alert rule reads the label (05-backup.yml).
+                ok = "true" if src.get("empty_ok") else "false"
                 lines.append(
-                    f'nos_backup_source_size_bytes{{source="{name}"}} '
+                    f'nos_backup_source_size_bytes{{source="{name}",empty_ok="{ok}"}} '
                     f"{int(size)}"
                 )
         lines.append("")
