@@ -44,6 +44,10 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.13
 - Backups: every data dir has a verdict; dumps staged for restic/Backrest.
 - Profile builder v3: one `nos_timezone`, People step, a real credentials.yml.
 - Ollama 0.35.0; Woodpecker PAT minted through SSO; MIT license, README.
+- Jellyfin: `jellyfin_extra_media_dirs` mount at their host path (the picker
+  browses the container); a library on an unplugged disk is skipped, named.
+- Inbox after install: empty_ok backup stores, gitleaks history acks (now in
+  `.gitleaksignore`), an inactive n8n workflow's clock — no longer alarms.
 
 ### Known open
 - Admin rights inside apps beyond Grafana; six apps cannot pre-create

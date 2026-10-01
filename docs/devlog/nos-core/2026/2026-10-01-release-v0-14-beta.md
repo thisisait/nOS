@@ -56,7 +56,10 @@ while the derivable initial one still works, every run names it.
 A verified image cache a rebuild loads from (no re-pull, no rate-limit ban);
 backups staged for restic/Backrest with every data dir carrying a verdict; the
 profile builder v3 with a People step and a credentials.yml it actually writes;
-Ollama 0.35; MIT license and a rewritten README.
+Ollama 0.35; MIT license and a rewritten README. Jellyfin libraries mount at
+their host path, and the inbox a fresh install opens to no longer carries
+alarms for stores that are empty by declaration, historic gitleaks findings
+already closed, or a clock firing a workflow the operator has not activated.
 
 ## Not yet
 
