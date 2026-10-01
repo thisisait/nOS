@@ -11,6 +11,8 @@ are the only list). Apps without a first_login are NAMED, never skipped silently
       tools/nos-first-login.py --auth-host auth.example [--insecure]
 
 Prints one line per identity × app; exit 1 if any declared walk failed.
+"own_password": true marks a person whose password is theirs after the first
+sign-in: a refused login is not a failure, an accepted one is named.
 Passwords come only from the environment and are never printed.
 """
 from __future__ import annotations
@@ -85,9 +87,17 @@ def main(argv: list[str] | None = None) -> int:
         try:
             sess = login(name, ident["password"], a.auth_host, verify=verify, scheme="https")
         except Exception as exc:  # noqa: BLE001
+            if ident.get("own_password"):
+                print(f"-     {name}: signs in with their own password now; app accounts came from the first walk")
+                continue
             print(f"FAIL  {name}: authentik login refused ({exc})")
             failed += 1
             continue
+        if ident.get("own_password"):
+            # The initial password is derivable from the secret master: a
+            # temporary key, not the person's. Say so until they change it.
+            print(f"!     {name}: still on the INITIAL password — they should change it at "
+                  f"https://{a.auth_host}/if/user/#/settings")
         for r in apps:
             if not r.get("first_login"):
                 continue

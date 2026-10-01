@@ -72,7 +72,11 @@ def _render_users(tmp: Path, people: list[dict], passwords: dict | None = None) 
     plugin = lp.Plugin.from_manifest_file(PLUGIN / "plugin.yml")
     lp._run_actions(plugin, "pre_compose", [{"render_dir": "provisioning.blueprints"}], _ctx(tmp, people, passwords))
     doc = yaml.load((tmp / "infra/authentik/blueprints/00-admin-groups.yaml").read_text(), _Loader)
-    return {e["identifiers"]["username"]: e for e in doc["entries"] if e["model"] == "authentik_core.user"}
+    out: dict = {}
+    for e in doc["entries"]:
+        if e["model"] == "authentik_core.user":
+            out.setdefault(e["identifiers"]["username"], []).append(e)
+    return out
 
 
 def test_the_roster_extension_is_declared_empty():
@@ -83,9 +87,12 @@ def test_each_person_is_active_in_their_tier_group_with_the_derived_password(tmp
     users = _render_users(tmp_path, PEOPLE)
     assert "akadmin" in users and "op" in users, "positive control: the always-on accounts vanished"
     for p in PEOPLE:
-        a = users[p["name"]]["attrs"]
-        assert a["is_active"] is True and a["password"] == f"pw-{p['name']}", p["name"]
-        assert a["email"] == p["email"].lower()
+        create, keep = users[p["name"]]
+        # Set ONCE: the person owns the password after the first sign-in.
+        assert create["state"] == "created" and create["attrs"]["password"] == f"pw-{p['name']}", p["name"]
+        a = keep["attrs"]
+        assert keep["state"] == "present" and "password" not in a, "a re-applied password undoes the person's own"
+        assert a["is_active"] is True and a["email"] == p["email"].lower()
         assert a["groups"] == [("Find", ["authentik_core.group", ["name", _tier_group(p["tier"])]])], a["groups"]
         assert a["attributes"] == {"declared_by": "nos_extra_identities"}
     assert _tier_group(1) == "nos-admins" and _tier_group(3) == "nos-users", "tier → group meaning moved"
@@ -167,7 +174,9 @@ def test_the_first_login_walk_carries_them_with_tier_and_password():
     ctx["lookup"] = lp.vars_lookup(ctx)
     walked = {x["name"]: x for x in json.loads(lp._jinja_env().from_string(task["environment"]["NOS_FIRST_LOGIN"]).render(**ctx))}
     for p in PEOPLE:
-        assert walked[p["name"]] == {"name": p["name"], "tier": p["tier"], "password": f"pw-{p['name']}"}
+        assert walked[p["name"]] == {"name": p["name"], "tier": p["tier"], "password": f"pw-{p['name']}",
+                                     "own_password": True}
+    assert "own_password" not in walked["akadmin"], "a system account's refused login stays a failure"
     assert "akadmin" in walked, "positive control: the declared roster is still walked"
 
 
@@ -197,3 +206,20 @@ def test_what_the_page_writes_is_what_the_blueprint_renders(tmp_path):
     assert _accepts(people, tmp_path), "the playbook would refuse what the page wrote"
     users = _render_users(tmp_path, people)
     assert {p["name"] for p in PEOPLE} <= set(users)
+
+
+def test_a_persons_own_password_is_not_a_failure_but_the_initial_one_is_named(monkeypatch, capsys):
+    fl = _mod("fl", "tools/nos-first-login.py")
+    monkeypatch.setattr(fl, "_plan", lambda: [])
+    def login(name, *a, **k):
+        if name in ("petr", "akadmin"):
+            raise RuntimeError("refused")
+        return object()
+    monkeypatch.setattr(fl, "login", login)
+    monkeypatch.setenv("NOS_FIRST_LOGIN", json.dumps([{"name": "petr", "password": "x", "own_password": True},
+                                                      {"name": "jana", "password": "x", "own_password": True}]))
+    assert fl.main(["--auth-host", "auth.x"]) == 0
+    out = capsys.readouterr().out
+    assert "petr: signs in with their own password" in out and "jana: still on the INITIAL password" in out
+    monkeypatch.setenv("NOS_FIRST_LOGIN", json.dumps([{"name": "akadmin", "password": "x"}]))
+    assert fl.main(["--auth-host", "auth.x"]) == 1
