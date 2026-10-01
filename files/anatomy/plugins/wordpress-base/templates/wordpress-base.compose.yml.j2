@@ -34,6 +34,7 @@ services:
       WP_OIDC_ENDPOINT_USERINFO: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/userinfo/"
       WP_OIDC_ENDPOINT_TOKEN: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/token/"
       WP_OIDC_ENDPOINT_LOGOUT: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/wordpress/end-session/"
+      WP_OIDC_ISSUER: "https://{{ authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/application/o/wordpress/"
       WP_OIDC_SCOPE: "openid profile email"
 {% if (sso_autologin_wordpress | default(sso_autologin_min_tier_4 | default(sso_autologin | default(false)))) | bool %}
       # ── SSO autologin (force-OIDC) — sso-autologin-plan.md Batch 2 ──────────
