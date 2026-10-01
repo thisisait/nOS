@@ -9,7 +9,7 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.13
 ## v0.14-beta (2026-09-27 … 2026-10-01)
 
 > **The estate leaves cleanly, comes back, and every account is already there.**
-> ~100 commits since `v0.13-beta` (211 files, +8.6k/−1.7k). Still `-beta`.
+> 92 commits since `v0.13-beta` (211 files, +8.6k/−1.7k). Still `-beta`.
 > Measured on this Mac: blank → leave (`--remove=all --leave`) → exit audit →
 > rebuild → converge `failed=0`, smoke 47/47 strict, E2E 270 passed.
 
