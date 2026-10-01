@@ -113,7 +113,7 @@ McpTablesTool, dtt-capture, apps_runner, face). Producer KEAP.
    system/user split.
 2. **Schema-pin gate (highest value).** The definitions-side gate validates
    every git-owned `.table.yml` against KEAP's zod schema **at the pinned
-   `keap_repo_ref` (`v2.0.0-rc.1`)** (a vendored schema snapshot pinned to the
+   `keap_repo_ref` (`v2.0.1`)** (a vendored schema snapshot pinned to the
    tag, never dev HEAD). This makes "a definition runs ahead of the pin"
    structurally impossible instead of a matter of release discipline — the
    `caddy-sessions` incident (`style: chat` against a schema only an orphan tag
