@@ -6,51 +6,31 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-09-23.
+> Last updated: 2026-10-01.
 
 ## Now (current track)
 
-1. **The v0.13-beta cut** (dtt `rel-013`). Invoice identity is closed in
-   SOURCE *and live*: the operator's teardown + re-import ran, and
-   `tools/invoice-identity-scan.py` reads clean (6 rows, every id derived).
-   **Steps 1–6 are done and measured**, re-measured 2026-09-27: full converge
-   `failed=0` (ok=1393 changed=82) + `nos-smoke --strict` 47/47;
-   `tools/ci-local.sh` rc=0 on the frozen 2.21 mirror; ansible-lint 0 failures;
-   dev CI green. **Only step 7 is left, and it is the operator's:**
-   `merge-base(origin/master, origin/dev)` == `origin/master` tip is VERIFIED,
-   so a rebase-merge is a fast-forward. dev is **183** commits ahead — an
-   earlier note here said 1205, which was this file's author measuring against
-   a stale LOCAL `master`; `origin/master` has not moved since v0.12-beta.
-   `gh pr merge --rebase` refused at 188 commits once (v0.10), so 183 may or
-   may not go through; `git push origin origin/dev:master` is the fallback that
-   produces byte-identical history. Then re-sync dev, tag, `gh release`.
-   **Not promoted, deliberately:** the security notebook is at cycle **69** and
-   the committed copy at 55. Promoting publishes still-pending criticals to a
-   public repo; that is an operator decision, not a tidy-up.
-
-2. **First always-on PoC: `git-origin-watcher`** (dtt, parent
-   `loop-definition-model`) on DGX Spark / Qwen3 8B. Slice 1 is reader-only
-   (npm+composer graph). Constraint A: model proposes, judges authorize.
-   Do not re-research agent memory — rows `work-corpus-not-seed`,
-   `cortex-rows`, `keap-row-vector-search`, `fs-project-tree`,
-   `share-grants-agents`, `rsi-ops-loop`.
-
-3. **SOURCE pins await the operator `nos`.** Ask `tools/estate-status.py`
-   and `tools/rem-status.py`. Do **not** land the judged `MINIO_ROOT_PASSWORD`
-   alias for REM-249 (mint+persist already shipped). RustFS rotation breaks
-   S3 clients until they re-read `~/.nos/secrets.yml`.
-
-4. **[`docs/doctrine/agentkit.md`](doctrine/agentkit.md) is DRAFTED as proposed**
-   (`1e263377`). Operator still settles §6 before anything cites the file.
-
-5. **Do not pick `loop-steps-match-run`.** Graph-follows-run vs
-   runner-follows-graph is still queued design.
-
-**Voice → caddy → AgentKit → cortex.** Five wires gated; fee
-[43](hidden_fees/43-a-tool-with-no-door.md) paid. KEAP SOURCE pin is
-`v2.0.0-rc.1` (`9a86ea09`) — not what is running; ask `tools/estate-status.py`.
-**Next (operator):** converge (mint, KEAP re-seed, first real `exec`);
-`caddy-entity-resolve` probe 2 — whether cortex `resolve` covers the taxonomy half.
+1. **v0.14-beta is cut (2026-10-01, `a0b8dd96`).** dev is ahead with what the
+   tag's CI found: Linux account walk (host-tools venv, loopback for local-TLD
+   names), Pages deps, the profile builder's contradiction sweep (93 derived
+   rules, 65,280 states, 0 leaks), tier-1 admin rights in apps (`nos_roles`
+   claim, Outline reconcile), KEAP v2.0.1, KEAP+cortex in the Linux wet-test.
+   **Next cut `v0.14.1-beta`** once a dev→master PR's Linux integration is green;
+   the tag also publishes the builder (pages.yml sweeps it first).
+2. **Redis leaf rotated in SOURCE (`auth-password-r2`).** Not live until ONE
+   converge that covers redis AND its consumers (`nos`, or `nos-stacks.sh
+   core,stacks`). A single-service leg in between renders the new value against
+   the old server.
+3. **AgentKit fallback** (dtt `agent-fallback-dead`): every agent's fallback was
+   a dead OpenClaw URI. In progress: a BOUND fallback to local Ollama, checked
+   against each agent's GDPR record, plus OpenClaw's chat-completions endpoint
+   on loopback.
+4. **Datastore TLS** (dtt `sec-transport-enforce`): research plan landed; eight
+   operator decisions (D1 MariaDB or Redis first … D8). Do not start before D1.
+5. **Identities:** accounts exist from install for every declared identity;
+   tier-1 is admin in gitea/nextcloud/grafana/openwebui/outline. Open: an e2e
+   tester's Outline role lags one converge (its account is born mid-run); six
+   apps carry `first_login_blocked` with their reason.
 
 ## Open follow-ups
 
