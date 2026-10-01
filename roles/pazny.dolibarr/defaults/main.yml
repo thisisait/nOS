@@ -12,7 +12,7 @@ dolibarr_port: 3016
 dolibarr_db_name: "dolibarr"
 dolibarr_db_user: "dolibarr"
 dolibarr_db_host: "127.0.0.1"
-dolibarr_tz: "Europe/Prague"
+dolibarr_tz: "{{ nos_timezone | default('Europe/Prague') }}"
 dolibarr_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 dolibarr_cpus: "{{ docker_cpus_standard | default('1.0') }}"
 dolibarr_admin_login: "admin"

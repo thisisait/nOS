@@ -280,8 +280,9 @@ def discover(vars_: dict, all_: bool = False) -> list[dict]:
             images += ok
             unresolved += bad
             mems += _render_all(r, MEM_RE.findall(text))[0]
+        # one ref per image: ERPNext's six containers share one image (mems stay per container)
         out.append({"id": row["id"], "flag": flag, "category": row.get("category"),
-                    "images": images, "unresolved": unresolved, "mem_limits": mems})
+                    "images": list(dict.fromkeys(images)), "unresolved": unresolved, "mem_limits": mems})
     for base in sorted((REPO / "templates" / "stacks").glob("*/docker-compose.yml.j2")):
         ok, _ = _render_all(top, IMAGE_RE.findall(base.read_text()))
         out.append({"id": f"stack:{base.parent.name}", "flag": None, "category": "stack",

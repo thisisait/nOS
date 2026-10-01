@@ -2,6 +2,7 @@
 # profiles/all-on.yml — "enable every known-good service" test profile
 #
 # axis: service-set
+# plain: Every service nOS can run, all at once — for testing; needs a big machine.
 # =============================================================================
 #
 # Purpose: flip on every wired service so a single blank run exercises the

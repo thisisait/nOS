@@ -77,6 +77,27 @@ entries:
         - !Find [authentik_core.group, [name, "{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', u.tier | int) | first).groups | last }}"]]
 {% endfor %}
 
+  # ── The operator's extra people (nos_extra_identities): same shape as the
+  # toggled ones; the password is the per-name leaf main.yml derives, and a
+  # missing one fails the render rather than creating a passwordless account.
+{% for u in nos_extra_identities | default([]) %}
+  - model: authentik_core.user
+    state: present
+    identifiers:
+      username: "{{ u.name }}"
+    attrs:
+      name: "{{ u.name }}"
+      email: "{{ u.email | lower }}"
+      password: "{{ nos_extra_identity_passwords[u.name] | mandatory('no derived password for ' ~ u.name) }}"
+      is_active: true
+      path: "users"
+      type: "internal"
+      attributes:
+        declared_by: nos_extra_identities
+      groups:
+        - !Find [authentik_core.group, [name, "{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', u.tier | int) | first).groups | last }}"]]
+{% endfor %}
+
   # ── API token for the PDS bridge and other automation ──────────────────────
   # The bridge script (bluesky_pds_bridge.yml) looks up the token by identifier
   # 'nos-api'; without it the PDS bridge skips with "token=missing".

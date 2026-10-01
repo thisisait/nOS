@@ -19,7 +19,7 @@ firefly_db_name: "firefly"
 firefly_db_user: "firefly"
 firefly_db_host: "127.0.0.1"    # ignored when install_mariadb=true (uses 'mariadb' on b2b_net instead)
 firefly_site_owner: "{{ default_admin_email }}"
-firefly_tz: "Europe/Prague"
+firefly_tz: "{{ nos_timezone | default('Europe/Prague') }}"
 firefly_default_language: "en_US"
 firefly_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 firefly_cpus: "{{ docker_cpus_standard | default('1.0') }}"

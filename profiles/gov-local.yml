@@ -2,6 +2,7 @@
 # profiles/gov-local.yml — sovereignty-hardened "local-only" overlay
 #
 # axis: policy
+# plain: Stricter rules: encrypted disk and backups, a second factor at every sign-in, a tamper-evident audit log, nothing leaving the machine.
 # =============================================================================
 #
 # Purpose: collapse the residual external-egress + accept-risk surface so the

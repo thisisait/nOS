@@ -22,6 +22,6 @@ bookstack_db_user: "bookstack"
 bookstack_db_host: "127.0.0.1"                          # ignored when install_mariadb=true (uses 'mariadb' on b2b_net instead)
 bookstack_puid: 1000
 bookstack_pgid: 1000
-bookstack_tz: "{{ timezone | default('Europe/Prague') }}"
+bookstack_tz: "{{ nos_timezone | default('Europe/Prague') }}"
 bookstack_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
 bookstack_cpus: "{{ docker_cpus_standard | default('1.0') }}"

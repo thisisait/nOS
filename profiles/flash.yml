@@ -3,6 +3,7 @@
 # profiles/flash.yml — nOS on a medium that cannot take sustained random writes
 #
 # axis: constraint
+# plain: Running from a USB stick or other flash drive: turns off the services that write to disk all the time.
 # composes-with: any use-case profile (praxis, dev-minimal). Apply this LAST:
 #   `nos -e @profiles/praxis.yml -e @profiles/flash.yml`
 #   Later extra-vars win, so the constraint always overrides the want.
