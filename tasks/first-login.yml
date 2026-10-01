@@ -10,7 +10,7 @@
 # accepted = still on a password the master derives (named, every run).
 - name: "[Identities] Create every declared account in every SSO app"
   ansible.builtin.command:
-    argv: "{{ ['python3', playbook_dir ~ '/tools/nos-first-login.py', '--auth-host=' ~ authentik_domain]
+    argv: "{{ [nos_tools_python, playbook_dir ~ '/tools/nos-first-login.py', '--auth-host=' ~ authentik_domain]
               + (['--insecure'] if (tenant_domain_is_local | default(true) | bool) else []) }}"
   environment:
     NOS_FIRST_LOGIN: >-

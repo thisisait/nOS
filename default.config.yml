@@ -168,6 +168,9 @@ default_admin_email: "admin@{{ tenant_domain | default('dev.local') }}"  # Fallb
 # written runbook, never a silent default change.
 nos_primary_admin: "{{ ansible_facts['user_id'] }}"
 nos_operator_email: "{{ nos_primary_admin }}@{{ tenant_domain | default('dev.local') }}"
+# Venv for host tools that need more than the stdlib (tasks/tools-venv.yml).
+nos_tools_venv: "{{ ansible_facts['env']['HOME'] }}/.nos/tools-venv"
+nos_tools_python: "{{ nos_tools_venv }}/bin/python"
 
 nos_identities:
   # The SSO root. Seeded by the Authentik blueprint (00-admin-groups.yaml.j2)

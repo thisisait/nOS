@@ -24,7 +24,7 @@
 - name: "[pazny.n8n] Resolve N8N_ENCRYPTION_KEY (REM-202 adopt-or-mint)"
   ansible.builtin.command:
     argv:
-      - python3
+      - "{{ ansible_playbook_python }}"   # carries PyYAML; bare python3 may not
       - "{{ playbook_dir }}/tools/n8n-pack.py"
       - encryption-key
       - "--secrets={{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"

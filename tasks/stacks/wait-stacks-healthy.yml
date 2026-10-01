@@ -33,7 +33,9 @@
 # Repair here, verdict below and at the end of main.yml. See foreign-properties §8.
 - name: "[Stacks] Re-bind any container whose rendered config was replaced"
   tags: ['stacks', 'core', 'always']
-  ansible.builtin.command: "{{ playbook_dir }}/tools/reload-stale-config.py --apply"
+  # Through the interpreter Ansible runs on (it guarantees PyYAML); the shebang's
+  # bare python3 may lack it, and failed_when: false would hide that.
+  ansible.builtin.command: "{{ ansible_playbook_python }} {{ playbook_dir }}/tools/reload-stale-config.py --apply"
   register: _wait_reload
   changed_when: "'restarted ' in _wait_reload.stdout"
   failed_when: false

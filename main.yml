@@ -2326,6 +2326,10 @@
         - not (nos_allow_no_docker | default(false) | bool)
       tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
 
+    - name: "[Tools] Host-tools venv (requests for the SSO tools)"
+      ansible.builtin.import_tasks: tasks/tools-venv.yml
+      tags: ['always']
+
     - import_tasks: tasks/stacks/core-up.yml
       when: nos_docker_ready | default(true)
       tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
