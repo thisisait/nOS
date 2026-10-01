@@ -61,6 +61,12 @@ def landed(w, start: str, page: str = "", auth_host: str = "") -> bool:
             and not (page and sso_button(page, auth_host, w.url)))
 
 
+def within_tier(ident: dict, row: dict) -> bool:
+    """RBAC: tier 1 reaches every app, tier 4 only tier-4 apps. An identity
+    walked into an app above its tier is refused by design, not a failure."""
+    return not (ident.get("tier") and row.get("tier")) or int(ident["tier"]) <= int(row["tier"])
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--auth-host", required=True)
@@ -84,6 +90,9 @@ def main(argv: list[str] | None = None) -> int:
             continue
         for r in apps:
             if not r.get("first_login"):
+                continue
+            if not within_tier(ident, r):
+                print(f"-     {name} → {r['slug']}: a tier-{ident['tier']} identity may not open a tier-{r['tier']} app")
                 continue
             w = walk(sess, r["first_login"], a.auth_host, verify=verify)
             page = sess.get(w.url, timeout=20, verify=verify).text if w.outcome == REACHED else ""

@@ -21,11 +21,20 @@ sys.path.insert(0, str(REPO / "tests/e2e"))
 TIERS = {1: "provider", 2: "manager", 3: "user", 4: "guest"}
 
 
-def load_plan() -> list[dict]:
+def _plan_module():
     spec = importlib.util.spec_from_file_location("e2e_plan", REPO / "tools/e2e-plan.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return mod.plan()
+    return mod
+
+
+def load_plan() -> list[dict]:
+    return _plan_module().plan()
+
+
+def load_identities() -> list[dict]:
+    """nos_identities resolved; entries whose enabled_by toggle is off are absent."""
+    return _plan_module().identities()
 
 
 @pytest.fixture(scope="session")

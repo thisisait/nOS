@@ -9,7 +9,8 @@ asked is UNKNOWN — never green.
 
 Declared sources (the repo):
   • nos_identities        default.config.yml (+ config.yml override) — humans
-                          and service accounts, per-realm membership
+                          and service accounts, per-realm membership; an
+                          entry whose `enabled_by` toggle is off is left out
   • authentik_agent_clients — machine OIDC clients (counted, not re-typed)
   • Bone loopauth.IDENTITIES — the loop's token identities (counted)
 
@@ -89,9 +90,18 @@ def declared_roster() -> tuple[list[dict], dict]:
     )
     roster = []
     for entry in merged.get("nos_identities", []) or []:
-        if isinstance(entry, dict) and entry.get("name"):
+        if isinstance(entry, dict) and entry.get("name") and enabled(entry, merged, ctx):
             roster.append({**entry, "name": _resolve(entry["name"], ctx)})
     return roster, merged
+
+
+def enabled(entry: dict, merged: dict, ctx: dict) -> bool:
+    """An entry gated by `enabled_by` is declared only while that toggle
+    resolves true — off, its leftover realm account reads UNDECLARED."""
+    gate = entry.get("enabled_by")
+    if not gate:
+        return True
+    return _resolve(merged.get(gate, False), ctx).strip().lower() in ("true", "yes", "1", "on")
 
 
 def _port(merged: dict, key: str, default: int) -> int:

@@ -7,6 +7,7 @@ and the probe that asked for it fails naming the key, not the value.
 """
 from __future__ import annotations
 
+import re
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -38,3 +39,11 @@ def secret(key: str) -> str | None:
     if entry and master and store.get("nos_secret_scheme") == "v2":
         return derive.estate_leaf(derive.master_bytes(str(master)), entry["service"], entry["purpose"])
     return None
+
+
+def identity_password(password_var: str) -> str | None:
+    """A nos_identities password_var: persisted under that name, else the
+    registry leaf its default.credentials.yml declaration derives from."""
+    m = re.search(rf'^{re.escape(password_var)}:\s*"\{{\{{ nos_derived_secrets\.([a-z0-9_]+) \}}\}}"',
+                  (REPO / "default.credentials.yml").read_text(), re.M)
+    return secret(password_var) or (secret(m.group(1)) if m else None)

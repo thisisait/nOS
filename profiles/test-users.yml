@@ -1,0 +1,24 @@
+---
+# =============================================================================
+# profiles/test-users.yml — RBAC and multi-user test personas
+#
+# axis: use-case
+# =============================================================================
+#
+# Purpose: four test accounts, one per RBAC tier below admin (alice manager, bob + carol user, dave guest), for RBAC and per-user storage tests.
+#
+# The accounts are declared in default.config.yml `nos_identities` (entries
+# with `enabled_by: nos_test_users_enabled`); this flips the one toggle. The
+# Authentik blueprint then creates them active, each in its tier's group, and
+# the end-of-run first-login walk gives them their app accounts. Passwords
+# are derived (nos_test_<name>_password in default.credentials.yml).
+#
+# Usage:
+#   nos -e @profiles/test-users.yml
+#   cd tests/e2e && python3 -m pytest estate/test_rbac_users.py -o addopts=""
+#
+# Turning it off later does NOT delete the accounts — tools/identity-status.py
+# lists them as UNDECLARED until an operator removes them in Authentik.
+# =============================================================================
+
+nos_test_users_enabled: true

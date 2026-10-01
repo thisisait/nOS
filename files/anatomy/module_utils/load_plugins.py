@@ -884,7 +884,8 @@ def _run_actions(plugin: Plugin, hook: str, actions: list,
     Ansible module wrapper, typically operator's ``vars``).
 
     The ctx passed to every action is an augmented copy of ``template_vars``
-    with two additional keys exposed by the loader:
+    with three additional keys exposed by the loader (``lookup`` is
+    ``vars_lookup`` — Ansible's ``lookup('vars', …)`` only):
 
     - ``inputs``           — this plugin's aggregated harvest (set by
                               ``run_aggregators`` for source plugins).
@@ -893,7 +894,7 @@ def _run_actions(plugin: Plugin, hook: str, actions: list,
                               can reference static metadata without an
                               extra round-trip through the operator vars.
 
-    Both names are reserved — operator vars with the same names get
+    All three names are reserved — operator vars with the same names get
     shadowed inside action ctx (collision is intentional: aggregator
     plugins MUST see their harvest under a stable key).
     """
@@ -903,6 +904,7 @@ def _run_actions(plugin: Plugin, hook: str, actions: list,
     # over the harvested ``inputs.clients`` list.
     ctx["inputs"] = dict(plugin.inputs)
     ctx["plugin_manifest"] = plugin.manifest
+    ctx["lookup"] = vars_lookup(template_vars)
     summary: list[str] = []
     for raw in actions:
         if not isinstance(raw, dict) or len(raw) != 1:
@@ -916,6 +918,25 @@ def _run_actions(plugin: Plugin, hook: str, actions: list,
             summary.append(f"{action}:ERROR:{e}")
             raise
     return ", ".join(summary) if summary else "no-op"
+
+
+_NO_DEFAULT = object()
+
+
+def vars_lookup(tvars: dict):
+    """Ansible's `lookup('vars', name, default=…)` and nothing else: a blueprint
+    reads a var NAMED by data (nos_identities password_var/enabled_by) with the
+    same expression the role-side Ansible copy renders, so the two stay
+    byte-identical. Any other lookup kind is refused, not guessed."""
+    def lookup(kind, name, default=_NO_DEFAULT):
+        if kind != "vars":
+            raise ValueError(f"lookup({kind!r}) is not available in a plugin render")
+        if name in tvars:
+            return tvars[name]
+        if default is _NO_DEFAULT:
+            raise KeyError(f"lookup('vars', {name!r}): undefined")
+        return default
+    return lookup
 
 
 def _is_safe_destructive_path(rendered: str) -> bool:

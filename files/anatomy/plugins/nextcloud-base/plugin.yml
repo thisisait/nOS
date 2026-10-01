@@ -192,3 +192,15 @@ e2e:
       url: "https://{{ nextcloud_domain }}/ocs/v2.php/cloud/user?format=json"
       send_headers: {OCS-APIRequest: "true"}
       expect: {status: [200], contains_tester: true}
+  # Per-user storage (tests/e2e/estate/test_rbac_users.py): A writes a file,
+  # B — a peer at the same tier — asks for it at A's own WebDAV path.
+  isolation:
+    - name: a-file-stays-with-its-owner
+      sso_start: true
+      csrf: {url: "https://{{ nextcloud_domain }}/csrftoken", path: token, header: requesttoken}
+      owner: {url: "https://{{ nextcloud_domain }}/ocs/v2.php/cloud/user?format=json", path: ocs.data.id}
+      send_headers: {OCS-APIRequest: "true"}
+      write: {method: PUT, url: "https://{{ nextcloud_domain }}/remote.php/dav/files/@owner@/@marker@.txt", body: "@marker@", status: [201, 204]}
+      read: {method: GET, url: "https://{{ nextcloud_domain }}/remote.php/dav/files/@owner@/@marker@.txt", status: [200]}
+      peer: {status: [401, 403, 404]}
+      cleanup: {method: DELETE, url: "https://{{ nextcloud_domain }}/remote.php/dav/files/@owner@/@marker@.txt"}
