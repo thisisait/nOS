@@ -1,0 +1,14 @@
+---
+# One claim every app can map: nos_roles = the role(s) a person's Authentik
+# groups grant (tier 1 admin · 2 manager · 3 user · 4 guest), derived from
+# authentik_rbac_tiers. Gitea takes one admin group and the tier-1 tester sat in
+# the other tier-1 group, so it was no admin (e2e probe, 2026-10-01). Both the
+# tofu provider wiring and the blueprint path render this one expression.
+- name: "[Identities] Derive the nos_roles claim expression"
+  ansible.builtin.set_fact:
+    nos_roles_expression: |-
+      {% set ns = namespace(prev=[], m={}) %}{% for t in authentik_rbac_tiers | sort(attribute='tier') %}{%
+         for g in t.groups if g not in ns.prev %}{% set _ = ns.m.update({g: {1: 'admin', 2: 'manager', 3: 'user', 4: 'guest'}[t.tier | int]}) %}{% endfor %}{%
+         set ns.prev = t.groups %}{% endfor %}roles = {{ ns.m | to_json }}
+      names = {g.name for g in request.user.ak_groups.all()}
+      return {"nos_roles": sorted({r for g, r in roles.items() if g in names})}

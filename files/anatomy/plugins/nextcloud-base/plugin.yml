@@ -192,6 +192,8 @@ e2e:
       url: "https://{{ nextcloud_domain }}/ocs/v2.php/cloud/user?format=json"
       send_headers: {OCS-APIRequest: "true"}
       expect: {status: [200], contains_tester: true}
+    - {name: tier-1-is-nextcloud-admin, auth: tester, tier: 1, sso_start: true, url: "https://{{ nextcloud_domain }}/ocs/v2.php/cloud/users?format=json", send_headers: {OCS-APIRequest: "true"}, expect: {status: [200]}}
+    - {name: tier-3-is-not-nextcloud-admin, auth: tester, tier: 3, sso_start: true, url: "https://{{ nextcloud_domain }}/ocs/v2.php/cloud/users?format=json", send_headers: {OCS-APIRequest: "true"}, expect: {status: [401, 403]}}
   # Per-user storage (tests/e2e/estate/test_rbac_users.py): A writes a file,
   # B — a peer at the same tier — asks for it at A's own WebDAV path.
   isolation:

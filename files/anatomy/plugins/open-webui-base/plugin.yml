@@ -125,3 +125,5 @@ e2e:
       sso_start: true
       url: "https://{{ openwebui_domain }}/api/v1/auths/"
       expect: {status: [200], contains_tester: true}
+    - {name: tier-1-is-openwebui-admin, auth: tester, tier: 1, sso_start: true, url: "https://{{ openwebui_domain }}/api/v1/auths/", expect: {status: [200], json_equals: {role: admin}}}
+    - {name: tier-3-is-not-openwebui-admin, auth: tester, tier: 3, sso_start: true, url: "https://{{ openwebui_domain }}/api/v1/auths/", expect: {status: [200], json_equals: {role: user}}}

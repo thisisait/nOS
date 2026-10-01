@@ -66,9 +66,8 @@ def test_gitea_external_only_registration():
     # registers via the `gitea admin auth add-oauth` CLI (no REST endpoint
     # exists at any version) — 2026-06-13 SSO audit fix.
     hook = (REPO / "files/anatomy/plugins/gitea-base/hooks/post_compose.yml").read_text()
-    assert "--group-claim-name groups" in hook, "Gitea OIDC source must read the groups claim"
-    assert "--admin-group" in hook and "selectattr('tier', 'equalto', 1)" in hook, \
-        "admin_group must derive from the tier-1 group set"
+    assert "--group-claim-name nos_roles" in hook and "--admin-group admin" in hook, \
+        "Gitea maps the nos_roles claim; its 'admin' value derives from the tier-1 group set"
     assert "add-oauth" in hook and "path: /api/v1/admin/identity-providers" not in hook, \
         "Gitea must register via the CLI, not the non-existent REST endpoint"
 

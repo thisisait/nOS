@@ -35,3 +35,24 @@
     that: _first_login.rc | default(1) == 0
     fail_msg: "A declared identity could not sign in to an app — see the FAIL lines above."
     quiet: true
+
+# Outline takes no role from OIDC; its first sign-in became admin — a tier-3
+# tester on 2026-10-01. Now that the accounts exist, its admins are made
+# exactly Authentik's tier-1 people (tools/outline-roles.py).
+- name: "[Identities] Outline admins are the tier-1 people"
+  ansible.builtin.command:
+    argv: "{{ [nos_tools_python, playbook_dir ~ '/tools/outline-roles.py',
+               '--authentik=http://127.0.0.1:' ~ (authentik_port | default(9003))]
+              + (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | map(attribute='groups') | first
+                 | map('regex_replace', '^', '--group=') | list) }}"
+  environment:
+    AUTHENTIK_TOKEN: "{{ authentik_bootstrap_token }}"
+  register: _outline_roles
+  changed_when: "' set ' in _outline_roles.stdout"
+  when: install_outline | default(false) | bool
+  no_log: true   # env carries the API token
+
+- name: "[Identities] Outline role changes"
+  ansible.builtin.debug:
+    msg: "{{ (_outline_roles.stdout_lines | default([])) | map('regex_replace', '[^ ]+@', '…@') | list }}"
+  when: install_outline | default(false) | bool

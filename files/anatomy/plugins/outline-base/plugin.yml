@@ -166,6 +166,10 @@ e2e:
       method: POST
       url: "https://{{ outline_domain }}/api/auth.info"
       expect: {status: [200], contains_tester: true}
+    # No tier-1 positive probe: Outline takes no role from OIDC, and the tester's
+    # account is born at this run's first sign-in, after the converge's role
+    # reconcile (tools/outline-roles.py, gated offline). The negative holds now.
+    - {name: tier-3-is-not-outline-admin, auth: tester, tier: 3, sso_start: true, method: POST, url: "https://{{ outline_domain }}/api/auth.info", expect: {status: [200], json_equals: {data.user.role: member}}}
   # A draft is private to its author: B, a peer at the same tier, asks for it by id.
   isolation:
     - name: a-draft-stays-with-its-author

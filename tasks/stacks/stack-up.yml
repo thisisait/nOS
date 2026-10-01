@@ -461,8 +461,13 @@
 - { name: "[Stacks] pazny.gitlab post", ansible.builtin.include_role: { name: pazny.gitlab, tasks_from: post.yml, apply: { tags: ['gitlab'] } }, when: "install_gitlab | default(false)", tags: ['gitlab'] }
 
 # ── Authentik OIDC: service-side configuration (Gitea API, Nextcloud occ) ───
+# Tagged like the services it wires: untagged, a `--tags gitea` leg never
+# re-ran the source update (nos_roles admin mapping sat unapplied, 2026-10-01).
 - name: "[Stacks] Authentik service-side OIDC post-setup"
-  ansible.builtin.include_tasks: "tasks/stacks/authentik_service_post.yml"
+  ansible.builtin.include_tasks:
+    file: "tasks/stacks/authentik_service_post.yml"
+    apply: { tags: ['authentik', 'gitea', 'nextcloud'] }
+  tags: ['authentik', 'gitea', 'nextcloud']
   when:
     - install_authentik | default(false)
 

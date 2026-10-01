@@ -35,5 +35,6 @@
     "authentik_token": authentik_bootstrap_token,
     "authentik_services": _svcmap,
     "install_device_gateway": install_device_gateway | default(false) | bool,
+    "nos_roles_expression": nos_roles_expression | default(""),
   } | to_nice_json
 }}
