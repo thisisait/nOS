@@ -28,7 +28,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from nos_sso import REACHED, login, walk  # noqa: E402
+from nos_sso import REACHED, login, loopback_for_unresolvable, walk  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -44,6 +44,8 @@ def main(argv: list[str] | None = None) -> int:
         print("SSO_PASSWORD is empty", file=sys.stderr)
         return 2
     verify = not a.insecure
+    if a.insecure:            # a local TLD: no DNS on Linux, the edge is on loopback
+        loopback_for_unresolvable()
     gitea, wp = a.gitea_public.rstrip("/"), a.woodpecker_public.rstrip("/")
 
     try:

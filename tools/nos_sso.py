@@ -85,6 +85,30 @@ def walk(sess: requests.Session, url: str, auth_host: str, verify: bool = True,
     return Walk(STUCK, url, None, trail + ["too many hops"])
 
 
+def loopback_for_unresolvable() -> None:
+    """Local TLDs on Linux have no resolver (/etc/resolver is macOS-only), so
+    auth.dev.local failed DNS in the wet-test while the edge on 127.0.0.1
+    served it — nos-smoke retries the same way. A name that does not resolve
+    connects to 127.0.0.1; Host and SNI keep the name, so routing is tested."""
+    import socket
+
+    import urllib3.util.connection as uc
+    if getattr(uc.create_connection, "_nos_loopback", False):
+        return
+    original = uc.create_connection
+
+    def create_connection(address, *args, **kwargs):
+        host, port = address
+        try:
+            socket.getaddrinfo(host, port)
+        except socket.gaierror:
+            address = ("127.0.0.1", port)
+        return original(address, *args, **kwargs)
+
+    create_connection._nos_loopback = True
+    uc.create_connection = create_connection
+
+
 def login(username: str, password: str, auth_host: str, verify: bool = True,
           flow_slug: str = "default-authentication-flow", timeout: float = 20,
           scheme: str = "https") -> requests.Session:
