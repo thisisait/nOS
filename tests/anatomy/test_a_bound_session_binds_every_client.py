@@ -81,13 +81,15 @@ def test_no_agent_declares_a_grader_while_the_grader_is_built_unbound():
 
 
 def test_every_fallback_is_a_provider_that_refuses_binding_anyway():
-    """The fallback is always built unbound (Runner.php:796). That is safe only
-    while no fallback names a provider a binding COULD have reached."""
-    bindable = ("anthropic-", "claude-")
+    """An UNBOUND fallback (no fallback_backend) is safe only while it names a
+    provider a binding could not have reached. Since 2026-10-01 every fallback
+    is bound, so this holds vacuously — and bites the first unbound one."""
+    bindable = ("anthropic-", "claude-", "openai-", "openclaw-")
     offenders = {
         n: m["fallback"]
         for n, m in _agent_models().items()
-        if m.get("fallback") and str(m["fallback"]).startswith(bindable)
+        if m.get("fallback") and not m.get("fallback_backend")
+        and str(m["fallback"]).startswith(bindable)
     }
     assert not offenders, (
         f"agent(s) declare a bindable fallback: {offenders}. `serveFallback` "
@@ -106,12 +108,12 @@ def test_the_call_sites_this_gate_describes_still_look_like_this():
         f"expected at least 3 fromUri call sites in Runner, found {len(calls)}; "
         "the shape this gate reasons about has changed."
     )
-    bound = [c for c in calls if "binding" in c]
-    assert len(bound) == 1, (
+    bound = [c for c in calls if "binding" in c.lower()]
+    assert len(bound) == 2, (
         f"{len(bound)} of {len(calls)} fromUri call sites now pass a binding "
-        "(was 1 of 3 on 2026-08-15). If the grader and fallback are bound now, "
-        "delete this file — its reason to exist is gone. If MORE are unbound, "
-        "the split it guards against has grown."
+        "(primary + the declared fallback_backend since 2026-10-01; the grader "
+        "is still unbound). If the grader is bound now, retire its tripwire; "
+        "if FEWER are bound, the fallback can answer unbound again."
     )
 
 
@@ -133,10 +135,10 @@ def test_a_bound_session_refuses_a_bindable_fallback():
         "the session no longer records which binding serves it, so the "
         "fallback cannot be held to it."
     )
-    body = src[src.index("private function serveFallback("):]
+    body = src[src.index("private function fallbackClient("):]
     body = body[: body.index("\n\tprivate function ", 1)]
     assert "$this->activeBinding !== null" in body, (
-        "serveFallback no longer checks whether the session is bound; a bound "
+        "fallbackClient no longer checks whether the session is bound; a bound "
         "agent can silently fall back to the default backend again."
     )
     assert "isBindableUri" in body, (

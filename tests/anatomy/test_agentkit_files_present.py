@@ -36,7 +36,7 @@ SHIPPED = [
     AK / "AgentLoader.php",
     AK / "LLMClient" / "LLMClientInterface.php",
     AK / "LLMClient" / "AnthropicAdapter.php",
-    AK / "LLMClient" / "OpenClawAdapter.php",
+    AK / "LLMClient" / "OpenAiCompatAdapter.php",
     AK / "Vault" / "CredentialResolver.php",
     AK / "Telemetry" / "OtelExporter.php",
     AK / "Tools" / "McpWingTool.php",

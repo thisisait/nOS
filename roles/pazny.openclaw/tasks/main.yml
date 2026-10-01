@@ -737,6 +737,55 @@
   changed_when: false
   failed_when: false
 
+# OpenAI-compatible HTTP API (2026-10-01). Measured: 2026.7.1 answered 404 on
+# /v1/chat/completions, so AgentKit's openclaw-* provider had no wire at all.
+# The token is OPERATOR-grade (upstream docs/gateway/openai-http-api.md), so the
+# bind is re-asserted loopback FIRST and the enable only runs after it held.
+# Gate: tests/anatomy/test_openclaw_http_api_is_loopback_only.py.
+- name: "[OpenClaw] Serve the OpenAI HTTP API on loopback only"
+  ansible.builtin.shell: |
+    set -e
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default >/dev/null
+    if [ "$(openclaw config get gateway.bind 2>/dev/null)" != "loopback" ]; then
+      openclaw config set gateway.bind '"loopback"' --strict-json; echo CHANGED
+    fi
+    want={{ 'true' if (openclaw_http_api_enabled | bool) else 'false' }}
+    if [ "$(openclaw config get gateway.http.endpoints.chatCompletions.enabled 2>/dev/null)" != "$want" ]; then
+      openclaw config set gateway.http.endpoints.chatCompletions.enabled "$want" --strict-json; echo CHANGED
+    fi
+  args:
+    executable: /bin/zsh
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  register: _oc_http_api
+  changed_when: "'CHANGED' in _oc_http_api.stdout"
+  when: _oc_config.stat.exists or (_oc_onboard.rc | default(1)) == 0
+
+# The gateway token, copied into ~/.nos/secrets.yml for the `openclaw` backend
+# row (nos:openclaw_gateway_token). OpenClaw mints it; nOS never rotates it.
+- name: "[OpenClaw] Read the gateway token"
+  ansible.builtin.slurp:
+    src: "{{ ansible_facts['env']['HOME'] }}/.openclaw/openclaw.json"
+  register: _oc_config_raw
+  failed_when: false
+  no_log: true
+
+- name: "[OpenClaw] Persist the gateway token into ~/.nos/secrets.yml (in-role)"
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+    regexp: '^openclaw_gateway_token:'
+    line: 'openclaw_gateway_token: "{{ _oc_token }}"'
+    create: true
+    mode: '0600'
+  vars:
+    _oc_token: "{{ (_oc_config_raw.content | b64decode | from_json).get('gateway', {}).get('auth', {}).get('token', '') }}"
+  when:
+    - _oc_config_raw.content is defined
+    - _oc_token | length > 0
+  no_log: true
+
 # Idempotent model upgrade: onboarding is skipped if the config exists, but the user
 # could change openclaw_model. Forcibly updating `agents.defaults.model.primary`
 # so that the playbook can upgrade/downgrade the model without the user having to wipe.

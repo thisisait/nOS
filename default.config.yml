@@ -1272,7 +1272,9 @@ xai_small_model: ""            # -> NOS_XAI_SMALL_MODEL     (haiku tier)
 # The knee is 14B and the ceiling is this machine, not the weights.
 ollama_enabled: false
 ollama_model: ""               # -> NOS_LOCAL_MODEL         (sonnet tier)
-ollama_small_model: ""         # -> NOS_LOCAL_SMALL_MODEL   (haiku tier)
+# hermes3:8b: the bound FALLBACK of every hosted-primary agent (2026-10-01) —
+# tool-capable, and small enough that KEAP keeps answering (14B starves it).
+ollama_small_model: "hermes3:8b"  # -> NOS_LOCAL_SMALL_MODEL (haiku tier)
 # vision tier — a document/image-input model, distinct from the text tiers
 # above (BindingResolver's tier regex now also matches `vision`). Chosen
 # 2026-09-20 for the D1 invoice-vision path: qwen2.5vl:7b (Ollama library tag
@@ -1323,6 +1325,8 @@ ollama_version: "0.35.0"
 openclaw_install_daemon: true
 openclaw_domain: "claw{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 openclaw_gateway_port: 18789
+# AgentKit backend row `openclaw` (state/llm-backends.yml) — prepared, not armed.
+openclaw_backend_enabled: false
 
 # Agent name (persona)
 openclaw_agent_name: "Inspektor Klepítko"

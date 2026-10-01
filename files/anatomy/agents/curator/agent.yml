@@ -32,7 +32,11 @@ model:
   # `anthropic-*` = SDK adapter (tool schemas). Ruling 1 admits it: no code.
   primary: anthropic-claude-sonnet-4-5
   backend: minimax
-  fallback: openclaw-qwen2.5-coder:32b
+  # Bound to the local ollama row (2026-10-01): the unbound openclaw fallback
+  # 404'd, so every transient primary error was a hard failure. haiku tier
+  # = ollama_small_model (hermes3:8b) — a resident 14B starves KEAP.
+  fallback: openai-local-haiku
+  fallback_backend: ollama
 
 system_prompt_path: system.md
 
@@ -108,6 +112,10 @@ gdpr:
       role: "LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print)"
       country: "US"
       safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
+    - name: "on-device (operator's own hardware)"
+      role: "FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt."
+      country: "CZ — this host"
+      safeguard: "Not applicable. No transfer occurs."
   eu_residency: false
   transfers_outside_eu: true
 

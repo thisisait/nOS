@@ -497,6 +497,9 @@ nodes:
   "resource:backend-minimax": withheld
   "resource:backend-mistral-eu": withheld
   "resource:backend-ollama": withheld
+  # 2026-10-01 openclaw row (the gateway's OpenAI surface). Withheld like
+  # every backend row; NOT signed here — the signature is the operator's.
+  "resource:backend-openclaw": withheld
   "resource:backend-xai": withheld
   # The human channel a caddy holds (2026-08-31). Withheld with every other
   # tool node: which questions an agent may ask its operator is estate

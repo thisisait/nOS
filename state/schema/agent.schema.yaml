@@ -56,6 +56,10 @@ properties:
     additionalProperties: false
     required:
       - primary
+    # A fallback is always bound, and a binding names what it serves.
+    dependencies:
+      fallback: [fallback_backend]
+      fallback_backend: [fallback]
     properties:
       primary:
         type: string
@@ -84,8 +88,18 @@ properties:
         pattern: "^(anthropic|claude|openai|openclaw)-[A-Za-z0-9._:/-]{1,96}$"
         description: |
           Fallback URI used when primary fails (rate-limited, network error,
-          model unavailable). The protocol is platform-agnostic so an
-          openclaw fallback for an anthropic primary is safe.
+          model unavailable). Always BOUND: it requires fallback_backend, and
+          the tail is the TIER the backend's model_env maps (openai-local-haiku).
+      fallback_backend:
+        type: string
+        pattern: "^[a-z][a-z0-9-]{0,30}$"
+        description: |
+          The state/llm-backends.yml row that serves model.fallback, through the
+          same BindingResolver gates as model.backend — never the default row,
+          and never degraded when disarmed. The agent's own gdpr.processors must
+          name the row's processor_match (an `ollama` fallback needs an
+          "on-device" entry); App\AgentKit\AgentLoader refuses it at load
+          otherwise. Gate: tests/anatomy/test_a_fallback_is_bound_to_its_record.py.
       max_output_tokens:
         type: integer
         minimum: 256

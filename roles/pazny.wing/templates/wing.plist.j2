@@ -249,7 +249,7 @@
              open); NEVER the API key — that stays in ~/.nos/secrets.yml,
              resolved as nos:minimax_api_key at session open. -->
         <key>NOS_ARMED_BACKENDS</key>
-        <string>{{ (('minimax ' if minimax_enabled | default(false) | bool else '') ~ ('mistral-eu ' if mistral_enabled | default(false) | bool else '') ~ ('xai ' if xai_enabled | default(false) | bool else '') ~ ('ollama' if ollama_enabled | default(false) | bool else '')) | trim }}</string>
+        <string>{{ (('minimax ' if minimax_enabled | default(false) | bool else '') ~ ('mistral-eu ' if mistral_enabled | default(false) | bool else '') ~ ('xai ' if xai_enabled | default(false) | bool else '') ~ ('ollama ' if ollama_enabled | default(false) | bool else '') ~ ('openclaw' if openclaw_backend_enabled | default(false) | bool else '')) | trim }}</string>
         <key>NOS_MINIMAX_MODEL</key>
         <string>{{ minimax_model | default('') }}</string>
         <key>NOS_MINIMAX_SMALL_MODEL</key>
@@ -273,6 +273,10 @@
         <string>{{ ollama_small_model | default('') }}</string>
         <key>NOS_LOCAL_VISION_MODEL</key>
         <string>{{ ollama_vision_model | default('') }}</string>
+        <!-- openclaw: the gateway's AGENT TARGET, not a model id (its OpenAI
+             surface routes `model` to an agent). Token stays in secrets.yml. -->
+        <key>NOS_OPENCLAW_AGENT</key>
+        <string>openclaw/default</string>
     </dict>
 
     <!-- launchd respawns on crash; ThrottleInterval prevents tight loops

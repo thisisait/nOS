@@ -17,7 +17,8 @@ description: |
 
 model:
   primary: claude-sonnet
-  fallback: openclaw-qwen2.5-coder:32b
+  # No fallback (2026-10-01): a fallback is bound, and a deferred agent's
+  # record (processors: []) is truthful only while nothing serves it.
 
 system_prompt_path: system.md
 

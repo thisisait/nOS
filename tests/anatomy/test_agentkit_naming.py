@@ -127,10 +127,10 @@ def test_llm_client_protocol_is_minimal():
     )
 
 
-def test_anthropic_and_openclaw_adapters_implement_interface():
+def test_anthropic_and_openai_compat_adapters_implement_interface():
     """Both adapters declare `implements LLMClientInterface`. Without this
     Factory::fromUri can't return a typed value."""
-    for adapter in ("AnthropicAdapter.php", "OpenClawAdapter.php"):
+    for adapter in ("AnthropicAdapter.php", "OpenAiCompatAdapter.php"):
         path = WING_APP / "AgentKit" / "LLMClient" / adapter
         if not path.is_file():
             pytest.skip(f"{adapter} not present yet")

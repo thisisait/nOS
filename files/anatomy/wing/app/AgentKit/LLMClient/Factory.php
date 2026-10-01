@@ -14,9 +14,8 @@ use GuzzleHttp\Client as HttpClient;
  * URI scheme: `<provider>-<model-id>`. Provider determines adapter:
  *   anthropic-* → AnthropicAdapter (needs ANTHROPIC_API_KEY)
  *   claude-*    → ClaudeCliAdapter (the local `claude` binary, no API key)
- *   openclaw-*  → OpenClawAdapter  (HTTP to OPENCLAW_BASE_URL)
- *   openai-*    → reserved (not yet implemented; throws)
- *   local-*     → reserved (not yet implemented; throws)
+ *   openai-*    → OpenAiCompatAdapter (bound only: a registry row names the endpoint)
+ *   openclaw-*  → OpenAiCompatAdapter (bound only: the gateway's /v1/chat/completions)
  *
  * The factory is the ONLY place that touches secrets — everywhere else
  * we pass the LLMClientInterface around. CredentialResolver feeds the
@@ -42,14 +41,14 @@ final class Factory
 	 *          CLI adapter's tools refusal.
 	 *          `claude` — the env contract the CLI honours; tool-less
 	 *          ceremonies only, by that adapter's own refusal.
-	 *        `openclaw` still refuses: its gateway speaks neither mechanism,
-	 *        and an argument visible in the source and absent from the
-	 *        behaviour is the MapHandler defect this factory will not ship.
+	 *        `openai` / `openclaw` — OpenAiCompatAdapter, bound only. OpenClaw
+	 *        2026.7.1 answers 404 on /v1/messages; its gateway's OpenAI surface
+	 *        is the one it actually serves (2026-10-01).
 	 */
 	public function fromUri(string $modelUri, ?Binding $binding = null): LLMClientInterface
 	{
 		[$provider, ] = $this->splitUri($modelUri);
-		if ($binding !== null && !in_array($provider, ['claude', 'anthropic', 'openai'], true)) {
+		if ($binding !== null && !in_array($provider, ['claude', 'anthropic', 'openai', 'openclaw'], true)) {
 			throw new \InvalidArgumentException(
 				"backend binding '{$binding->name}' offered to provider "
 				. "'{$provider}', which speaks neither the ANTHROPIC_* env "
@@ -74,7 +73,7 @@ final class Factory
 			// the abstract, is why agent_sessions held 3 rows and
 			// agent_iterations held 0.
 			'claude'    => $this->buildClaudeCli($modelUri, $binding),
-			'openclaw'  => $this->buildOpenClaw($modelUri),
+			'openclaw'  => $this->buildOpenAiCompat($modelUri, $binding),
 			default     => throw new \InvalidArgumentException(
 				"LLM provider '{$provider}' not yet supported (URI: {$modelUri})"
 			),
@@ -155,9 +154,9 @@ final class Factory
 	{
 		if ($binding === null) {
 			throw new \RuntimeException(
-				"openai-* names a protocol, not a vendor default — this estate has "
-				. 'no default OpenAI endpoint. Give the agent a model.backend whose '
-				. 'registry row speaks protocol openai (state/llm-backends.yml).'
+				"{$modelUri}: openai-/openclaw-* name a protocol, not a vendor default "
+				. '— this estate has no default endpoint. Give the agent a model.backend '
+				. '(or fallback_backend) whose registry row speaks protocol openai.'
 			);
 		}
 		$http = new HttpClient([
@@ -167,16 +166,5 @@ final class Factory
 			'timeout' => (float) (getenv('NOS_OPENAI_COMPAT_TIMEOUT_S') ?: 600),
 		]);
 		return new OpenAiCompatAdapter($http, $modelUri, $binding);
-	}
-
-	private function buildOpenClaw(string $modelUri): OpenClawAdapter
-	{
-		$baseUrl = getenv('OPENCLAW_BASE_URL') ?: 'http://127.0.0.1:18789';
-		$timeout = (float) (getenv('OPENCLAW_TIMEOUT') ?: 120);
-		$http = new HttpClient([
-			'http_errors' => true,
-			'timeout' => $timeout,
-		]);
-		return new OpenClawAdapter($http, $modelUri, $baseUrl, $timeout);
 	}
 }
