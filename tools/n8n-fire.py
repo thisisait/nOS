@@ -7,7 +7,7 @@ no quotes): --url= and --scope= are one token each.
   tools/n8n-fire.py --url=http://127.0.0.1:5678/webhook/nos-ares-registry --scope=all
   tools/n8n-fire.py --url=http://127.0.0.1:5678/webhook/nos-ares-registry --scope=missing
 
-Exit 0 posted or idle (n8n down) · 2 webhook answered 4xx/5xx (inactive workflow).
+Exit 0 posted or idle (n8n down, workflow not active) · 2 webhook answered another 4xx/5xx.
 """
 from __future__ import annotations
 
@@ -39,6 +39,14 @@ def fire(url: str, scope: str, ico: str = "") -> int:
             print(f"n8n-fire: {url} scope={scope} HTTP {resp.status}", file=sys.stderr)
             return 0
     except urllib.error.HTTPError as e:
+        body = e.read().decode(errors="replace")
+        if e.code == 404 and "is not registered" in body:
+            # Workflow not active: activation is the operator's consent. The
+            # pack watcher (n8n-base exec-watch) names it once; every tick of
+            # this clock had raised its own failure (2026-10-01 inbox).
+            print("n8n-fire: idle (workflow not active — activation pending; n8n-pack watch reports it)",
+                  file=sys.stderr)
+            return 0
         print(f"n8n-fire: HTTP {e.code} (import+activate the template?)", file=sys.stderr)
         return 2
     except (urllib.error.URLError, OSError, TimeoutError) as e:
