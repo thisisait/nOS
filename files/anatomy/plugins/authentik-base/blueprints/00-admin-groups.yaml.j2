@@ -56,6 +56,27 @@ entries:
       groups:
         - !Find [authentik_core.group, [name, nos-admins]]
 
+  # ── Toggled identities (nos_identities with enabled_by, e.g. the RBAC test
+  # users): rendered only while their toggle is true, in ONE group — the one
+  # their tier adds in authentik_rbac_tiers (tier 2 = nos-managers, ...).
+{% for u in nos_identities | default([]) if u.enabled_by is defined and (lookup('vars', u.enabled_by, default=false) | bool) %}
+  - model: authentik_core.user
+    state: present
+    identifiers:
+      username: "{{ u.name }}"
+    attrs:
+      name: "{{ u.name }}"
+      email: "{{ u.email }}"
+      password: "{{ lookup('vars', u.password_var) }}"
+      is_active: true
+      path: "users"
+      type: "internal"
+      attributes:
+        enabled_by: "{{ u.enabled_by }}"
+      groups:
+        - !Find [authentik_core.group, [name, "{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', u.tier | int) | first).groups | last }}"]]
+{% endfor %}
+
   # ── API token for the PDS bridge and other automation ──────────────────────
   # The bridge script (bluesky_pds_bridge.yml) looks up the token by identifier
   # 'nos-api'; without it the PDS bridge skips with "token=missing".

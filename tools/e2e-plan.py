@@ -86,14 +86,27 @@ def _host(url) -> str:
     return (str(url or "").split("://", 1)[-1].split("/", 1)[0]).strip()
 
 
-def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict]:
+def _resolved(vars_: dict | None) -> tuple[dict, jinja2.Environment]:
     vars_ = {**_role_defaults(), **(smoke.load_vars() if vars_ is None else vars_)}
     # The facts the playbook would have: gitea_admin_user is nos_primary_admin
     # is ansible_facts.user_id, so without them the repo owner rendered "".
     vars_.setdefault("ansible_facts", {"user_id": getpass.getuser(),
                                        "env": {"HOME": str(Path.home())},
                                        "os_family": "Darwin" if sys.platform == "darwin" else "Debian"})
-    env = _env(vars_)
+    return vars_, _env(vars_)
+
+
+def identities(vars_: dict | None = None) -> list[dict]:
+    """nos_identities as this config resolves them. An entry whose enabled_by
+    toggle is off has no account anywhere, so it is not returned."""
+    vars_, env = _resolved(vars_)
+    return [_render(env, i) for i in vars_.get("nos_identities") or []
+            if isinstance(i, dict) and (not i.get("enabled_by")
+                                        or _truthy(_render(env, vars_.get(i["enabled_by"], False))))]
+
+
+def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict]:
+    vars_, env = _resolved(vars_)
     edge, domains = _edge_modes(), _manifest_domains()
     rows = []
     for path in sorted(PLUGINS.glob("*-base/plugin.yml")):
@@ -129,6 +142,7 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
             "edge": edge.get(key, "proxy"),
             "enabled": enabled,
             "probes": _render(env, e2e.get("probes") or []),
+            "isolation": _render(env, e2e.get("isolation") or []),
         })
     # Manifest apps (apps/*.yml) carry their own authentik: block and were
     # invisible to a plugin-only walk: documenso, twofauth, roundcube, and the
@@ -154,7 +168,7 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
                      "tier": int(r["tier"]) if str(r.get("tier", "")).isdigit() else None,
                      "client_id": r.get("client_id"), "redirect_uri": (r.get("redirect_uris") or [None])[0],
                      "launch_url": r.get("launch_url"), "first_login": r.get("first_login"),
-                     "edge": "proxy", "enabled": enabled, "probes": []})
+                     "edge": "proxy", "enabled": enabled, "probes": [], "isolation": []})
     for row in rows:
         row["unresolved"] = [k for k in ("launch_url", "redirect_uri")
                              if (row[k] is None and k == "launch_url") or

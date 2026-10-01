@@ -3,15 +3,18 @@
 # every SSO app on the FIRST install: tools/nos-first-login.py logs it in once
 # and walks each enabled plugin's authentik.first_login. Native/header OIDC
 # apps create users only at a first SSO login; before this, an app a person
-# never opened had no account for them. A failed walk fails the run.
+# never opened had no account for them. A failed walk fails the run. An entry
+# whose enabled_by toggle is off has no account; apps above an identity's
+# tier are skipped (RBAC refuses them by design).
 - name: "[Identities] Create every declared account in every SSO app"
   ansible.builtin.command:
     argv: "{{ ['python3', playbook_dir ~ '/tools/nos-first-login.py', '--auth-host=' ~ authentik_domain]
               + (['--insecure'] if (tenant_domain_is_local | default(true) | bool) else []) }}"
   environment:
     NOS_FIRST_LOGIN: >-
-      {% set out = [] %}{% for i in nos_identities if 'authentik' in (i.realms | default([])) %}{%
-      set _ = out.append({'name': i.name, 'password': lookup('vars', i.password_var)}) %}{%
+      {% set out = [] %}{% for i in nos_identities if 'authentik' in (i.realms | default([]))
+      and (i.enabled_by is not defined or (lookup('vars', i.enabled_by, default=false) | bool)) %}{%
+      set _ = out.append({'name': i.name, 'tier': i.tier, 'password': lookup('vars', i.password_var)}) %}{%
       endfor %}{{ out | to_json }}
   register: _first_login
   changed_when: false

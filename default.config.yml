@@ -155,7 +155,8 @@ default_admin_email: "admin@{{ tenant_domain | default('dev.local') }}"  # Fallb
 #
 # Fields: name (account username), kind (operator|user|service|agent),
 # tier (RBAC 1-4, see authentik_rbac_tiers), email, realms (where the
-# account must exist: authentik|gitea|gitlab|woodpecker|wing).
+# account must exist: authentik|gitea|gitlab|woodpecker|wing), password_var,
+# enabled_by (optional: a bool var; the entry exists only while it is true).
 # ==============================================================================
 
 # The local forge/OS-side admin. TODAY this defaults to the OS username so a
@@ -193,6 +194,19 @@ nos_identities:
     email: "tester@{{ tenant_domain | default('dev.local') }}"
     realms: [authentik]
     password_var: nos_tester_password
+  # RBAC + multi-user test personas, one group each (the one their tier adds
+  # in authentik_rbac_tiers). Two at tier 3 so isolation has a peer to fail
+  # against. Off by default; profiles/test-users.yml turns them on. Turning it
+  # off later leaves the accounts in Authentik — identity-status names them.
+  - {name: alice, kind: user, tier: 2, email: "alice@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
+     password_var: nos_test_alice_password, enabled_by: nos_test_users_enabled}
+  - {name: bob, kind: user, tier: 3, email: "bob@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
+     password_var: nos_test_bob_password, enabled_by: nos_test_users_enabled}
+  - {name: carol, kind: user, tier: 3, email: "carol@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
+     password_var: nos_test_carol_password, enabled_by: nos_test_users_enabled}
+  - {name: dave, kind: user, tier: 4, email: "dave@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
+     password_var: nos_test_dave_password, enabled_by: nos_test_users_enabled}
+nos_test_users_enabled: false   # the alice/bob/carol/dave entries above
 
 # ── TLD class detection (drives mkcert vs ACME, dnsmasq vs real DNS) ─────────
 # tenant_domain_is_local: true  → use mkcert + dnsmasq + /etc/resolver (dev mode)
