@@ -18,7 +18,7 @@ notes: |
 recipes:
   - id: "firefly-minor-or-patch"
     from_regex: "^version-6\\."
-    to: "version-6.2.21"
+    to: "version-6.7.6"
     severity: patch
     notes: |
       In-place bump within the 6.x line. Backup the DB + upload/export
