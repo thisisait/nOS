@@ -33,6 +33,7 @@ import json
 import os
 import re
 import pathlib
+import shlex
 import subprocess
 import sys
 import typing as t
@@ -1380,8 +1381,9 @@ def _docker_exec(step: dict, registers: dict, ctx: dict) -> dict:
     if user:
         argv.extend(["-u", str(user)])
     argv.append(container)
-    # Split cmd into argv parts (shell-like)
-    argv.extend(cmd.split())
+    # Shell-like split. str.split() kept the quotes: nextcloud stored its
+    # OIDC secret as '"…"' and every SSO login failed (2026-10-01).
+    argv.extend(shlex.split(cmd))
 
     stdin_raw = step.get("stdin")
     stdin_data = (
