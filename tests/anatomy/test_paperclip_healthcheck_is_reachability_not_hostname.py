@@ -21,7 +21,7 @@ TPL = REPO / "roles/pazny.paperclip/templates/compose.yml.j2"
 
 def _test_cmd() -> str:
     env = jinja2.Environment(undefined=jinja2.Undefined)
-    env.filters["urlencode"] = lambda v: str(v)
+    env.filters["urlencode"] = str
     text = env.from_string(TPL.read_text()).render(paperclip_domain="paperclip.example.eu", paperclip_version="v", paperclip_port=3100)
     svc = next(iter(yaml.safe_load(text)["services"].values()))
     kind, cmd = svc["healthcheck"]["test"]

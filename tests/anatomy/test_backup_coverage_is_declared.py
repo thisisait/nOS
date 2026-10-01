@@ -14,7 +14,6 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
-import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 _spec = importlib.util.spec_from_file_location("blank_gate", REPO / "tests/anatomy/test_blank_reset_data_dirs.py")

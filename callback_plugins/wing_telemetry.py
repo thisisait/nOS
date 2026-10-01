@@ -260,7 +260,7 @@ def leaving_estate(extra_vars=None) -> bool:
             try:
                 kv.update(json.loads(item))
             except ValueError:
-                pass
+                pass  # not JSON: a malformed -e value is ansible's to refuse, not ours
         elif not item.startswith("@"):
             for tok in item.split():
                 if "=" in tok:
@@ -1027,7 +1027,7 @@ class CallbackModule(CallbackBase):
             except OSError:
                 pass
         except _SkipLocalWrite:
-            pass
+            pass  # a leave writes no ~/.nos (leaving_estate)
         except Exception as exc:  # noqa: BLE001
             sys.stderr.write(
                 "[wing_telemetry] JSONL append failed (%s): %s\n"

@@ -187,7 +187,11 @@ def upsert_secret(path: Path, key: str, value: str) -> None:
         if text and not text.endswith("\n"):
             text += "\n"
         text += line + "\n"
-    path.write_text(text, encoding="utf-8")
+    # 0600 from the first byte: write_text-then-chmod left the secret
+    # world-readable for the window between them (umask 022).
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(text)
     os.chmod(path, 0o600)
 
 
