@@ -1073,10 +1073,10 @@ MEASURED_WORK = {
     # the 5921 record) after the Dolibarr onboarding + n8n-packs batch grew the
     # suite. Fresh run: "6126 passed, 114 skipped" of 6240 collected. Same
     # shape as every prior bump — growth, not a regression.
-    # RE-DERIVED 2026-09-30 — fired at 6529 collected vs 6126 (blank/leave/
-    # rebuild batch). Fresh run: 6403 passed, 124 skipped, 2 failed — both
-    # fixed in the same diff (ratchet + dtt-dispatch anchor), so 6405.
-    "pytest-anatomy": 6405,
+    # RE-DERIVED 2026-10-01 — fired at 6763 collected vs 6405 (identities +
+    # test users batch). Fresh run: 6635 passed, 127 skipped, 1 failed (this
+    # ratchet), so 6636.
+    "pytest-anatomy": 6636,
     "cortex-corpus-diff": 1,
 }
 
