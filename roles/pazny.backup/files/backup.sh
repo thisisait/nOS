@@ -180,9 +180,9 @@ encrypt_stream() {
     fi
 }
 
-# Append a source entry to the status JSON. Args: name size_bytes duration_ms success(0/1)
+# Append a source entry to the status JSON. Args: name size_bytes duration_ms success(0/1) [empty_ok]
 status_append() {
-    local name="$1" size="$2" duration="$3" success="$4"
+    local name="$1" size="$2" duration="$3" success="$4" empty_ok="${5:-0}"
     # Staged copy follows the verdict: keep on success, drop on failure — the
     # .part AND yesterday's promoted copy, so the next restic snapshot does not
     # carry a stale file as if it were tonight's (restic history keeps the old
@@ -211,6 +211,7 @@ s["sources"].append({
     "size_bytes": int("${size}" or 0),
     "duration_ms": int("${duration}" or 0),
     "success": bool(int("${success}" or 0)),
+    "empty_ok": bool(int("${empty_ok}" or 0)),
     "timestamp": int(time.time()),
 })
 with open(path, "w") as f:
@@ -939,7 +940,7 @@ run_dirs() {
             # empty (the container count above rules out an unreadable mount).
             if [[ "${DIR_EMPTY_OK[$i]}" == "true" ]]; then
                 log "dir/${name}: ${path} is empty — nothing to upload yet (empty_ok)"
-                status_append "dir-${name}" 0 0 1
+                status_append "dir-${name}" 0 0 1 1
                 continue
             fi
             log "dir/${name}: ${path} reads as EMPTY from a container too — recording as FAILED, uploading nothing"

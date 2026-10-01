@@ -122,7 +122,12 @@ groups:
 
       # ── Suspiciously empty backup ───────────────────────────────────────────
       - alert: NosWarningBackupSourceEmpty
-        expr: nos_backup_source_size_bytes == 0
+        # empty_ok stores (no uploads yet) fired on every fresh install: 4 of
+        # them on 2026-10-01. They alert only when data they HAD is gone.
+        expr: |
+          nos_backup_source_size_bytes{empty_ok!="true"} == 0
+          or (nos_backup_source_size_bytes{empty_ok="true"} == 0
+              and max_over_time(nos_backup_source_size_bytes{empty_ok="true"}[7d]) > 0)
         for: 1h
         labels:
           severity: warning
