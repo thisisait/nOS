@@ -85,9 +85,8 @@ install_offline_maps: false     #   118 MiB (tileserver)
 install_rustfs: false           # backup target — see the note below
 install_nodered: false
 install_snappymail: false
-# Tier-2 apps (documenso, 2fauth, qdrant, roundcube) are NOT set here — they
-# toggle via meta.enabled in apps/<name>.yml; install_qdrant is apps_runner's
-# dynamic fact, not an operator flag.
+# Tier-2 apps (documenso, 2fauth, roundcube) are NOT set here — they
+# toggle via meta.enabled in apps/<name>.yml.
 install_miniflux: false
 install_ntfy: false             # A9 falls back to wing-inbox
 install_kiwix: false

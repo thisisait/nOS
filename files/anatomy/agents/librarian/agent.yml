@@ -15,8 +15,8 @@ description: |
   embeddings substrate — is GONE: KEAP's libSQL vector corpus is live
   (790 taxonomy nodes embedded, keap-embed-sync Pulse job keeps it
   current) and reachable via the mcp-keap tool. What remains is the
-  runner itself (Pulse job + ceremony wiring). Qdrant is no longer a
-  prerequisite; it stays reserved for a future agent-outputs corpus.
+  runner itself (Pulse job + ceremony wiring). Qdrant was retired
+  2026-10-02; KEAP's libSQL vectors are the only retrieval path.
   The Authentik client `nos-librarian` is pre-provisioned and reserved.
 
 model:

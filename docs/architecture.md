@@ -80,7 +80,7 @@ spacetimedb) and forces sequential bring-up.
 | **infra** | MariaDB, PostgreSQL, Redis, Portainer, Traefik, Bluesky PDS, Authentik (server + worker), Infisical |
 | **observability** | Grafana, Prometheus, Loki, Tempo, InfluxDB |
 | **iiab** | WordPress, Nextcloud, n8n, Node-RED, Kiwix, offline maps, Jellyfin, Open WebUI, MCP Gateway, Uptime Kuma, Calibre-Web, Home Assistant, RustFS, KEAP, Vaultwarden, ntfy, Miniflux |
-| **apps** | manifest apps run by `pazny.apps_runner` (Documenso, 2FAuth, Qdrant, Roundcube, …) |
+| **apps** | manifest apps run by `pazny.apps_runner` (Documenso, 2FAuth, Roundcube, …) |
 | **devops** | Gitea, Woodpecker CI, GitLab, Paperclip, code-server |
 | **b2b** | ERPNext, FreeScout, Outline, HedgeDoc, BookStack, Firefly III, Dolibarr, OnlyOffice |
 | **voip** | FreePBX (Asterisk) |

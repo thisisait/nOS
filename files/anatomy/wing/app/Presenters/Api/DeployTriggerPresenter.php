@@ -81,7 +81,7 @@ final class DeployTriggerPresenter extends BaseApiPresenter
 		'kiwix', 'mcp_gateway', 'mcpgateway', 'n8n', 'nodered',
 		'face', 'vaultwarden', 'ntfy', 'miniflux',
 		'rustfs', 'uptime_kuma', 'uptimekuma', 'documenso', 'twofauth',
-		'qdrant', 'roundcube',
+		'roundcube',
 		// Tier-2 apps runner
 		'apps',
 		// Infra service roles (still no host-sudo)

@@ -71,6 +71,6 @@ if __name__ == "__main__":  # self-check: the three hops no guess can make
                        ("install_offline_maps", "tileserver")):
         row = by_flag(flag)
         assert row and fragment_stem(row) == stem, (flag, row)
-    assert fragment_stem(by_flag("install_qdrant")) is None
+    assert fragment_stem({"id": "x", "stack": "apps", "fragment": None}) is None
     assert fragment_stem(by_flag("install_gitea")) == "gitea"
     print("ok")

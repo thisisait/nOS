@@ -85,7 +85,7 @@ loader change that lets it fail — is in
 - OpenClaw (Ollama/CUDA) + Hermes runtimes on Linux — `docs/linux-port.md`.
 - Host-nginx per-service vhosts on Linux (Traefik is the Linux edge).
 - Fleet provisioning (p2p/server-client/mesh) — `docs/archive/fleet-review-2026q2.md`.
-- Inspektor + Librarian runners (contract-only; need trivy/grype resp. Qdrant).
+- Inspektor + Librarian runners (contract-only; need trivy/grype resp. the KEAP corpus).
 - ansible-core 2.24 jump (~4h once upstream ships stable) — CLAUDE.md tech debt.
 - Agent actor_id naming normalization across the two upgrade agents.
 - Architect at-target recipe drafts (freescout/gitlab/grafana).

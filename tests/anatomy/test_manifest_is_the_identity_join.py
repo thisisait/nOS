@@ -82,5 +82,6 @@ def test_the_stem_reaches_a_prune_plan():
 def test_a_service_with_no_fragment_of_its_own_says_so():
     # Tier-2 apps merge into apps/overrides/auto.yml; a stem here would name a
     # file that never exists, and a prune keyed on it would silently do nothing.
-    assert fragment_stem(by_flag("install_qdrant")) is None
-    assert fragment_path(by_flag("install_qdrant")) is None
+    row = {"id": "merged", "stack": "apps", "fragment": None}
+    assert fragment_stem(row) is None
+    assert fragment_path(row) is None

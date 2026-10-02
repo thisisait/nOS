@@ -159,7 +159,7 @@ observability:
 #   • DSAR worker (D8 framework) reads `dsar_endpoint` for user-erasure
 #   • Wing /gdpr surfaces the row with appropriate severity
 #
-# Compare with portainer-base / qdrant-base (data_subjects: operators) — the
+# Compare with portainer-base (data_subjects: operators) — the
 # same plugin schema accommodates both shapes; the runtime gates differ.
 
 gdpr:

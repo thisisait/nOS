@@ -66,10 +66,10 @@ def _prom_jobs(install_nginx: bool) -> list[str]:
 
 def _alloy(**overrides) -> str:
     base = dict(
-        install_gitea=True, alloy_scrape_qdrant=True, install_firefly=True,
-        install_influxdb=True, gitea_port=3003, qdrant_port=6333,
+        install_gitea=True, install_firefly=True,
+        install_influxdb=True, gitea_port=3003,
         firefly_port=3014, influxdb_port=8086,
-        gitea_metrics_token="GITEA-TOKEN", qdrant_api_key_ro="QDRANT-RO",
+        gitea_metrics_token="GITEA-TOKEN",
         global_password_prefix="p",
     )
     base.update(overrides)
@@ -116,7 +116,6 @@ def test_both_scrape_paths_agree_that_the_exporters_are_optional():
     "job, var, value",
     [
         ("gitea", "gitea_metrics_token", "GITEA-TOKEN"),
-        ("qdrant", "qdrant_api_key_ro", "QDRANT-RO"),
     ],
 )
 def test_the_authenticated_endpoints_are_scraped_with_a_credential(job, var, value):
@@ -135,17 +134,6 @@ def test_the_authenticated_endpoints_are_scraped_with_a_credential(job, var, val
         f"the {job} scrape's bearer_token does not come from {var} — it "
         f"rendered to something else, so the credential is not the one the "
         f"service was configured with"
-    )
-
-
-def test_qdrant_is_scraped_with_the_read_only_key():
-    """A scraper reads. Handing it the full API key would give the metrics
-    path write authority it has no use for."""
-    rendered = _alloy(qdrant_api_key="FULL-KEY", qdrant_api_key_ro="RO-KEY")
-    block = rendered[rendered.find('prometheus.scrape "qdrant"'):]
-    block = block[: block.find("\n}") + 2]
-    assert "RO-KEY" in block and "FULL-KEY" not in block, (
-        "the qdrant scrape carries the full API key instead of the read-only one"
     )
 
 

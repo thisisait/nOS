@@ -144,7 +144,6 @@ provisioning:
       - 21-wiki.json
       - 22-ai-agents.json
       - 23-chat.json
-      - 24-qdrant.json
       # The loop as its own tables record it (2026-08-29). Sibling of
       # 22-ai-agents: that one is the daemons, this one is the ledger.
       - 25-loop.json

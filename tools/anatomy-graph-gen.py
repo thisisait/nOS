@@ -770,7 +770,7 @@ def harvest_authentik(nodes: dict) -> None:
             continue
         slug = str(row["slug"])
         # Registry slugs use dashes; manifest service ids use underscores
-        # (calibre-web → service:calibre_web). Tier-2 apps (documenso, qdrant,
+        # (calibre-web → service:calibre_web). Tier-2 apps (documenso,
         # roundcube, …) have no manifest row at all — `service: null` states
         # that, rather than an edge to a node that does not exist.
         service = next((c for c in (slug, slug.replace("-", "_"))

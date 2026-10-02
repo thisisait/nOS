@@ -156,8 +156,8 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
             "isolation": _render(env, e2e.get("isolation") or []),
         })
     # Manifest apps (apps/*.yml) carry their own authentik: block and were
-    # invisible to a plugin-only walk: documenso, twofauth, roundcube, and the
-    # launch URL qdrant-base leaves out. Same rendering, same edge rule.
+    # invisible to a plugin-only walk: documenso, twofauth, roundcube.
+    # Same rendering, same edge rule.
     by_slug = {r["slug"]: r for r in rows}
     skip = set(vars_.get("apps_skip") or [])
     for path in sorted((REPO / "apps").glob("*.yml")):

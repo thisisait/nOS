@@ -48,7 +48,6 @@ def test_enabled_rows_resolve_and_carry_the_edge():
     assert rows["paperclip"]["launch_url"] == "https://paperclip.example.test"
     assert rows["paperclip"]["edge"] == "proxy" and rows["ntfy"]["mode"] is None  # e2e-only row, no SSO claim
     assert rows["gitea"]["mode"] == "native_oidc" and rows["gitea"]["redirect_uri"].startswith("https://git.")
-    assert "qdrant" in rows and rows["qdrant"]["launch_url"].startswith("https://qdrant.apps.")
     assert not any("{{" in str(r["launch_url"]) for r in rows.values())
 
 

@@ -285,8 +285,9 @@ tofu_authentik_services:
   name: Qdrant
   mode: forward_auth
   tier: 1
-  enabled: '{{ install_qdrant | default(false) }}'
+  enabled: false
   external_host: https://qdrant.{{ apps_subdomain | default('apps') }}.{{ tenant_domain }}
+  retired: true
 - slug: roundcube
   name: Roundcube
   mode: forward_auth

@@ -148,7 +148,7 @@ services:
 {% endif %}
     networks:
       # SEC-02: Traefik-only gated_net (no iiab_net / shared_net). KEAP has no
-      # container-side deps — Qdrant/embeddings go through host-side Bone.
+      # container-side deps — host-side calls go through Bone.
       - gated_net
     logging:
       driver: "json-file"

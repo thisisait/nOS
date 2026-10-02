@@ -48,7 +48,7 @@ Port note: Alloy's `4317`/`4318` are the **public** OTLP receivers apps send to.
 
 | Signal | Source (collected by Alloy) | Destination |
 |--------|-----------------------------|-------------|
-| Metrics | host (unix exporter), cAdvisor, exporters (postgres/mysqld/redis/blackbox/qdrant), nginx/php-fpm | Prometheus (remote_write) |
+| Metrics | host (unix exporter), cAdvisor, exporters (postgres/mysqld/redis/blackbox), nginx/php-fpm | Prometheus (remote_write) |
 | Logs | Docker container stdout/stderr, nginx/php-fpm/agent logs | Loki (`loki.write`) |
 | Traces | OTLP from apps on `:4317`/`:4318` | Tempo (OTLP gRPC `:4327`) |
 

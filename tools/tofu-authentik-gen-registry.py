@@ -75,7 +75,7 @@ def main() -> int:
         if not slug:
             continue
         # Dedupe by slug — a service can appear via BOTH a Tier-1 plugin and a
-        # Tier-2 app manifest (qdrant does). Aggregation order is plugins
+        # Tier-2 app manifest. Aggregation order is plugins
         # first, so the plugin block wins; the tfvars map would otherwise
         # silently keep the LAST entry.
         if slug in seen_slugs:

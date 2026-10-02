@@ -204,8 +204,8 @@ exists in the repo — `DecisionRecorder.link_precedents` writes typed
 PRECEDENT_FOR/CAUSED edges — but ancestry there is caller-asserted, and it is
 not what the headline functions read.) This estate already holds the stronger
 lineage half: `actor_action_id` is live and *recorded*. The search half — the
-Qdrant/librarian corpus (docs/rag-architecture.md) — is designed but not
-shipped (Librarian is contract-only), so the honest statement is: take the
+librarian corpus over KEAP's libSQL vectors (docs/rag-architecture.md) — is
+designed but not shipped (Librarian is contract-only), so the honest statement is: take the
 schema and the PROV-O export, keep our lineage, and build our own search.
 
 **What must not come with it.** In that design `record_decision()` is a data

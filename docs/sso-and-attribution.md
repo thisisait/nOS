@@ -34,7 +34,7 @@ Authoritative: each plugin's `authentik.mode` in
   Jellyfin (SSO-Auth plugin), Superset (`OAUTH_PROVIDERS`).
 - **`header_oidc`:** Firefly III, KEAP (`X-Authentik-uid`-keyed per-user rows).
 - **`forward_auth`:** Uptime Kuma, Calibre-Web, Kiwix, Paperclip, Wing, code-server, ntfy,
-  InfluxDB, ONLYOFFICE, Mailpit, Metabase, SpacetimeDB, OpenClaw, Hermes, Qdrant,
+  InfluxDB, ONLYOFFICE, Mailpit, Metabase, SpacetimeDB, OpenClaw, Hermes,
   SnappyMail, Dolibarr, FreeScout (native path removed 2026-09-03, fee 49), Woodpecker
   (route gate on top of its Gitea-OAuth app login).
 - **No SSO:** FreePBX, QGIS. **AT Protocol identity:** Bluesky PDS (the Authentik→PDS

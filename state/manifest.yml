@@ -823,18 +823,6 @@ services:
     port_var: influxdb_port
     data_path_var: influxdb_data_dir
 
-  # Tier-2 manifest app (apps/qdrant.yml): apps_runner merges every Tier-2
-  # service into apps/overrides/auto.yml, so this row owns no fragment stem.
-  - id: qdrant
-    category: database
-    stack: apps
-    install_flag: install_qdrant
-    fragment: null
-    version_source: docker_image
-    image: qdrant/qdrant
-    container_name: qdrant
-    port_var: qdrant_port
-
   # ------------------------------------------------------- ai / gateway addons
   - id: mcp_gateway
     category: ai

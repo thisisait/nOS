@@ -7,7 +7,7 @@ fields. Uses line-surgery (add lines just after `slug:` inside the
 
 Source of truth for the slug → (display name, install_flag) map is
 authentik_oidc_apps in default.config.yml as of 2026-05-05; mappings
-that aren't in the central list (qdrant, woodpecker) get a fallback.
+that aren't in the central list (woodpecker) get a fallback.
 """
 from __future__ import annotations
 
@@ -56,7 +56,6 @@ META: dict[str, tuple[str, str]] = {
     "onlyoffice":    ("ONLYOFFICE",      "install_onlyoffice"),
     "mailpit":       ("Mailpit",         "install_mailpit"),
     # net coverage (no central entry):
-    "qdrant":        ("Qdrant",          "install_qdrant"),
     "woodpecker":    ("Woodpecker CI",   "install_woodpecker"),
 }
 

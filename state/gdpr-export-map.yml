@@ -12,13 +12,12 @@
 # COVERAGE = 21 per-user-PII service plugins (native_oidc + header_oidc carrying
 # a gdpr: block) + 2 anchors (svc_authentik identity + svc_bluesky-pds AT-proto)
 # + 3 Tier-2 apps with a gdpr: block (documenso, twofauth, roundcube;
-# EspoCRM retired to apps/espocrm.yml.draft 2026-09-21;
-# app_qdrant is the same residual store as svc_qdrant and stays on the erasure
-# residual list only) = 27 entries. This is byte-for-byte the per-user-PII set
-# the erasure map covers (erasure-minus-the-6-residual-stores) — Art-15 access
+# EspoCRM retired to apps/espocrm.yml.draft 2026-09-21; Qdrant retired
+# 2026-10-02) = 27 entries. This is byte-for-byte the per-user-PII set
+# the erasure map covers (erasure-minus-the-5-residual-stores) — Art-15 access
 # mirrors Art-17 erasure. Plugin forward_auth services remain out of scope;
 # Tier-2 apps that keep per-user PII behind a forward_auth gate are in scope.
-# The backend/residual stores (Redis sessions, Qdrant embeddings, RustFS
+# The backend/residual stores (Redis sessions, RustFS
 # backups, wing.db, Loki/Tempo) that the erasure map additionally reaches are
 # NOT extracted by a single-subject access export, so they are intentionally
 # absent here (including them would imply coverage we cannot evidence).

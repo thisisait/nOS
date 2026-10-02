@@ -132,7 +132,7 @@ up first; the rest only if you enable them.
 | **b2b** | Outline, HedgeDoc, BookStack, OnlyOffice, Dolibarr, Firefly III, FreeScout, ERPNext |
 | **data** | Metabase, Apache Superset |
 | **voip**, **engineering** | FreePBX, QGIS Server |
-| **apps** | Manifest apps from [`apps/`](apps/): Documenso, 2FAuth, Qdrant, Roundcube |
+| **apps** | Manifest apps from [`apps/`](apps/): Documenso, 2FAuth, Roundcube |
 
 On the host, outside Docker, nOS runs its own small organs:
 

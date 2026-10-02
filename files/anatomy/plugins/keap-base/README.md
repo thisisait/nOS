@@ -26,6 +26,6 @@ Pulse keeps time; the cortex holds the curated knowledge map:
 | Traefik | file provider row (`state/manifest.yml`) + `traefik_container_upstreams: keap: {port: 8080}` |
 | Health | Docker HEALTHCHECK + `wait_health` on `/api/health` |
 
-Planned (Phase 6): `KeapTool.php` AgentKit tool (`mcp-keap`) + optional
-`keap_knowledge` Qdrant collection synced through Bone's embeddings proxy —
-the first real corpus for the deferred `librarian` agent.
+Planned (Phase 6): `KeapTool.php` AgentKit tool (`mcp-keap`). Vector search
+lives in KEAP's own libSQL store (`keap-embed-sync`) — the corpus for the
+`librarian` agent; the former Qdrant path was retired 2026-10-02.

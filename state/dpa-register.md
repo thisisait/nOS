@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 107 (82 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (95)
+- **Processing activities:** 105 (81 core services, 3 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (93)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 17
 
@@ -633,21 +633,6 @@ contracts with counter-parties who agree to electronic execution.
 - **Storage:** 'apps' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Qdrant — `app_qdrant`
-- **Purpose:** Hosts vector embeddings + payload metadata for the nOS agentic platform:
-semantic search over agent outputs, system metadata, and cybersec
-intelligence. Embeddings are derived from text the operator chose to
-process (audit logs, CVE descriptions, system facts) — Qdrant itself
-does not collect data; it persists what Bone uploads.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`
-- **Data categories:** `agent_run_metadata`; `system_facts`; `cybersec_metadata`
-- **Recipients / processors:** —
-- **Transfers outside EU:** No
-- **Retention:** 365 days (~1y)
-- **Storage:** 'apps' compose stack on host (Docker volumes)
-- **Security measures:** platform baseline (see above)
-
 #### Roundcube — `app_roundcube`
 - **Purpose:** Web frontend over the operator's IMAP/SMTP mail server. Roundcube
 itself stores only UI prefs, address book entries, and a short-term
@@ -673,24 +658,6 @@ third-party user data — the operator is the only data subject.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
-- **Storage:** 'apps' compose stack on host (Docker volumes)
-- **Security measures:** platform baseline (see above)
-
-#### Qdrant — `svc_qdrant`
-- **Purpose:** Qdrant is the vector database backing agent memory and advisory retrieval.
-It stores agent prompt-context embeddings (which may include operator data),
-advisory text (CVE summaries, vendor advisories), and vector metadata
-(collection names, point ids, payload schemas), in order to provide
-semantic memory and retrieval for the platform's AI agents (legitimate
-interest in research / agent operation, not contract-bound, Art. 6(1)(f)).
-Subjects are operators and automated agent systems; Bone redacts operator
-email before upsert. Points expire on a ~365-day nightly Pulse rebuild.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`; `automated_systems`
-- **Data categories:** `agent_prompt_context`; `advisory_text`; `vector_metadata`
-- **Recipients / processors:** —
-- **Transfers outside EU:** No
-- **Retention:** 365 days (~1y)
 - **Storage:** 'apps' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 

@@ -35,7 +35,6 @@
 | **mailpit** | `axllent/mailpit` | `forward_auth` | Dev SMTP capture; multi-user OIDC is out of scope upstream. | ✅ **Stay proxy permanently** |
 | **spacetimedb** | DB binary protocol | `forward_auth` | No end-user web UI. | ✅ **Stay proxy permanently** |
 | **openclaw** | host launchd | `forward_auth` | Local LLM gateway; admin-only surface. Second-login: gateway token → elimination = **header-provision-patch** (teach the nOS-owned gateway to trust forward-auth headers). | ✅ Tier-1 admin proxy |
-| **qdrant** | `qdrant/qdrant:v1.13.x` | `forward_auth` | Vector DB; no per-user state. | ✅ **Stay proxy permanently** |
 | **snappymail** | `djmaze/snappymail-docker` | `forward_auth` | Webmail; IMAP account = identity inside the app. | ✅ Tier-3 proxy (correct mode) |
 | **woodpecker** | `woodpeckerci/server:v3.x` | `forward_auth` (over Gitea-OAuth app-auth) | App-level auth is Gitea OAuth (transitively Authentik via Gitea native-OIDC) — **no password second-login**, but the user clicks through the intermediate Gitea OAuth consent. No `WOODPECKER_OIDC_*` / trusted-proxy env exists upstream to drop it → elimination = **needs-upstream**. | ✅ Working as designed |
 
@@ -140,7 +139,6 @@ proxy-auth gate IS the right answer.
 - **onlyoffice** — B2B JWT (DocServer is a render backend, not an end-user app)
 - **spacetimedb** — DB binary protocol, no UI
 - **influxdb (OSS)** — Enterprise-gated, not policy decision (could move if licensing pivots)
-- **qdrant** — vector DB, no per-user state
 
 For these, document the reason in the plugin manifest's
 `_NOS_PROXY_REASON` sentinel so future audits don't try to "fix" them.

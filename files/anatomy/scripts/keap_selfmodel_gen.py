@@ -136,7 +136,7 @@ SYSTEM_NAME = {
     "cortex": "Cortex", "ears": "Ears",
     "iiab-terminal": "IIAB Terminal", "backup": "Backup", "backrest": "Backrest",
     "tailscale": "Tailscale",
-    "spacetimedb": "SpacetimeDB", "qdrant": "Qdrant",
+    "spacetimedb": "SpacetimeDB",
 }
 
 ROOT_EN = (
@@ -237,12 +237,6 @@ SYSTEM_EN = {
         "clients subscribe to queries over WebSocket and receive changes as they commit. "
         "Unlike the SQL stores beside it, it has no admin UI and no passwords — identity "
         "is a JWT, and authorisation is written inside the module."
-    ),
-    "qdrant": (
-        "Qdrant, the vector database: it stores embeddings and answers similarity "
-        "queries. It is the only store in the estate searched by MEANING rather than by "
-        "key or by SQL predicate, and everything in it is derived — re-embeddable from "
-        "the canonical rows elsewhere."
     ),
     "redis": (
         "Redis, the shared in-memory key-value store. It holds sessions, locks, hot "
@@ -593,11 +587,6 @@ CREDENTIAL_EN = {
         "A bearer JWT — either signed by the estate's own ECDSA keypair or issued by "
         "Authentik. Unlike every issued API token beside it, holding a valid one grants "
         "nothing by itself: the module decides what that identity may do."
-    ),
-    "qdrant": (
-        "The Qdrant API key, in two grades — one read-write, one read-only. A single "
-        "shared string per grade, carrying no person's identity, so a write is "
-        "attributable only to the integration that made it."
     ),
     "authentik": (
         "The Authentik API token. An issued administrative secret scoped to the identity "

@@ -102,9 +102,6 @@ install_qgis_server: true
 install_metabase: true
 install_superset: true
 
-# ── Tier-2 apps (manifest-driven) ────────────────────────────────────────────
-install_qdrant: true             # now feature_flag-gated (see qdrant-base/plugin.yml)
-
 # ── KEAP catalog: mirror the ENTIRE nOS self-model (not just installed) ───────
 
 # ── non-Docker host agents / daemons ──────────────────────────────────────────

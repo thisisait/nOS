@@ -118,29 +118,6 @@ prometheus.scrape "influxdb" {
 }
 {% endif %}
 
-{% if alloy_scrape_qdrant | default(false) %}
-// Qdrant (Tier-2 vector DB) — collections, query latency, memmap RSS.
-//
-// /metrics REQUIRES the API key. The comment here said the opposite —
-// "unauthenticated by design ... metrics are exempt" — and the scrape sent no
-// credential, so it collected 401s from 2026-07-26 until 2026-08-06 while
-// asserting in prose that it could not. Measured against the live container:
-// no header 401, `api-key:` 200, `Authorization: Bearer` 200.
-//
-// The READ-ONLY key, not the full one: a scraper reads. Both are minted by
-// apps/qdrant.yml; qdrant_api_key_ro carries the read-only half.
-prometheus.scrape "qdrant" {
-  targets = [{
-    __address__ = "localhost:{{ qdrant_port | default(6333) }}",
-  }]
-  bearer_token = "{{ qdrant_api_key_ro }}"
-  forward_to  = [prometheus.remote_write.default.receiver]
-  job_name    = "qdrant"
-  metrics_path = "/metrics"
-  scrape_interval = "30s"
-}
-{% endif %}
-
 {% if install_gitea | default(false) %}
 // Gitea — repo / user / org gauges + Go process metrics.
 //

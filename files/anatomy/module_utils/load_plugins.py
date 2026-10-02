@@ -207,8 +207,8 @@ def topological_order(plugins: list[Plugin]) -> list[Plugin]:
         #
         # Read BOTH shapes. This looked only at a top-level `observability.scrape`,
         # but no manifest has ever used that spelling — the one declarer
-        # (qdrant-base) nests it as `observability.prometheus.scrape`, which is
-        # also the path its own lifecycle hook names
+        # (qdrant-base, retired) nested it as `observability.prometheus.scrape`,
+        # which is also the path its own lifecycle hook named
         # (`register_prometheus_scrape: observability.prometheus.scrape`). So the
         # edge fired for 0 of 41 observability-declaring plugins: dead code that
         # read like a working dependency.
@@ -392,8 +392,8 @@ def run_aggregators(plugins: list[Plugin],
                 # 2026-05-17: aggregator now reads `tier` from
                 # `authentik.tier` first (forward-compat), then falls back
                 # to `nginx.rbac_tier` (where every existing apps/*.yml
-                # actually stores it today — see apps/qdrant.yml +
-                # apps/twofauth.yml), then defaults to 2. This retires the
+                # actually stores it today — see apps/twofauth.yml),
+                # then defaults to 2. This retires the
                 # need for `apps_runner/tasks/post.yml` to do its own
                 # `authentik_app_tiers` set_fact extension — the value
                 # lands inside the harvested block where 20-rbac-policies
@@ -1583,7 +1583,7 @@ def _main(argv: list[str]) -> int:
         # Exit non-zero ONLY on `failed` plugins (real runtime crashes
         # that would also break the blank). Schema errors + degraded
         # state are reported but non-blocking — known-draft plugins
-        # (portainer/qdrant/vaultwarden/woodpecker) carry preexisting
+        # (portainer/vaultwarden/woodpecker) carry preexisting
         # drift that Phase 1 cleans up; degraded state often comes
         # from missing ansible_facts in this standalone smoke (real
         # blank fills them via setup module).

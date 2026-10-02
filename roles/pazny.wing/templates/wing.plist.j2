@@ -130,16 +130,9 @@
         <key>NOS_DEPLOY_LOG_DIR</key>
         <string>{{ ansible_facts['env']['HOME'] }}/.nos/deploys</string>
 
-        <!-- Qdrant — Tier-2 vector DB at apps/qdrant.yml. Empty when
-             install_qdrant=false; QdrantClient.php returns 503 in that case. -->
-        <key>QDRANT_URL</key>
-        <string>{{ ('http://127.0.0.1:' + (qdrant_port | default(6333) | string)) if (install_qdrant | default(false)) else '' }}</string>
-        <key>QDRANT_API_KEY_RO</key>
-        <string>{{ qdrant_api_key_ro | default('') }}</string>
-
 {% if install_authentik | default(false) %}
         <!-- Authentik OIDC issuer — Wing presenters can mint operator JWTs
-             for cross-service calls (Bone, Qdrant via Bone). -->
+             for cross-service calls (Bone). -->
         <key>AUTHENTIK_OIDC_ISSUER</key>
         <string>https://{{ authentik_domain }}/</string>
         <!-- W3 (2026-05-17): bare domain used by BasePresenter for the
