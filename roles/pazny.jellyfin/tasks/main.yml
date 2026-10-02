@@ -90,13 +90,9 @@
     - not (_jf_sso_installed.stat.exists | default(false))
   notify: Restart jellyfin
 
-- name: "[pazny.jellyfin] Render SSO-Auth plugin configuration (XML)"
-  ansible.builtin.template:
-    src: SSO-Auth.xml.j2
-    dest: "{{ jellyfin_config_dir }}/plugins/configurations/SSO-Auth.xml"
-    mode: '0600'
-  when: install_authentik | default(false)
-  notify: Restart jellyfin
+# The SSO-Auth provider is NOT rendered as XML: v4 deserializes an empty
+# <PortOverride /> (int?) as a format error and wipes OidConfigs. post.yml
+# writes it through the plugin's own API and reads it back.
 
 # Linux routes via Traefik; host-nginx per-service vhosts are macOS-only.
 - name: "[pazny.jellyfin] Enable nginx vhost"

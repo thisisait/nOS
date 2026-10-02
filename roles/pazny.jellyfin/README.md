@@ -14,7 +14,7 @@ Two invocation modes from `tasks/stacks/stack-up.yml`:
    - Prints a post-install note
    - Renders `templates/compose.yml.j2` into `{{ stacks_dir }}/iiab/overrides/jellyfin.yml`
    - Notifies `Restart jellyfin` when the override changes
-   - **(Native OIDC)** Downloads [`jellyfin-plugin-sso`](https://github.com/9p4/jellyfin-plugin-sso) v{{ jellyfin_sso_plugin_version }} into `{{ jellyfin_config_dir }}/plugins/SSO-Auth_<version>.0/` and renders the Authentik OIDC config as `SSO-Auth.xml` in the plugin's config folder (gated on `install_authentik`)
+   - **(Native OIDC)** Downloads [`jellyfin-plugin-sso`](https://github.com/9p4/jellyfin-plugin-sso) v{{ jellyfin_sso_plugin_version }} into `{{ jellyfin_config_dir }}/plugins/SSO-Auth_<version>.0/` and post.yml writes the Authentik provider through the plugin API (`/sso/OID/Add`), then reads it back (gated on `install_authentik`)
 
 2. **Post (`tasks/post.yml`)** — runs *after* `docker compose -p iiab up`:
    - Waits for `/health` to return 200
