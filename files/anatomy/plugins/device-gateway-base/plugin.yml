@@ -31,8 +31,8 @@ requires:
     - tenant_domain
 
 # =============================================================================
-# GDPR — Article 30 register row. Numbers marked CONFIRM are proposals the
-# operator signs in docs/compliance/devices.md; the gate refuses an empty block.
+# GDPR — Article 30 register row. Every number was CONFIRMED by the operator on
+# 2026-10-02 (docs/compliance/devices.md); the gate refuses an empty block.
 # =============================================================================
 gdpr:
   purpose: |
@@ -46,7 +46,7 @@ gdpr:
     (client IP, path, status, user agent; no headers, no bodies).
     The gateway itself persists nothing: a 30-second in-memory cache of
     projected rows and a suppressed request log.
-  legal_basis: contract            # Art. 6(1)(b) — the user asks for the pairing. CONFIRM (alt: consent)
+  legal_basis: contract            # Art. 6(1)(b) — the user asks for the pairing. CONFIRMED 2026-10-02 (alt: consent)
   data_categories:
     - device_pairing_registry      # device-client row: owner, kind, hash fingerprint, scopes, timestamps, status
     - oauth_tokens                 # Authentik RFC 8628 grant + access (10 min) + refresh (30 d, rotating)
@@ -56,7 +56,7 @@ gdpr:
     - operators
   # Interpreted as: a device-client row lives until unpair, then 30 days after
   # revoked_at. Access log follows loki_retention (31 d). Tokens follow the
-  # Authentik validity in device_gateway.tf. CONFIRM 30.
+  # Authentik validity in device_gateway.tf. CONFIRMED 30, 2026-10-02.
   retention_days: 30
   processors: []
   eu_residency: true

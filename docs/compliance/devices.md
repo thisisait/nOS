@@ -1,8 +1,8 @@
 # Devices — what they are and what data may exist
 
-**Status:** proposal, 2026-10-02. Every number marked **CONFIRM** is a proposal
-the operator signs by leaving it in place; change it here AND in the register
-row (`files/anatomy/plugins/device-gateway-base/plugin.yml`), the gate ties the two.
+**Status:** CONFIRMED by the operator, 2026-10-02 (all seven decisions below,
+as written). Change a number here AND in the register row
+(`files/anatomy/plugins/device-gateway-base/plugin.yml`); the gate ties the two.
 
 Grounded in what the code stores today. Pinned by
 `tests/anatomy/test_device_gateway_art30.py`.
@@ -29,16 +29,16 @@ What a device client can do today: `GET /health`, `GET /manifest`,
 `GET /tables/<id>` for six allowlisted, column-projected KEAP tables
 (roadmap, current-state, todos-akadmin, repo, application, package).
 No push, no upload, no write. A guest- or user-tier account is refused (403):
-only manager tier and above can pair today — **CONFIRM** that this stays until
+only manager tier and above can pair today — **CONFIRMED 2026-10-02** that this stays until
 per-device revocation (`device-pairing`) ships.
 
 ## 2. Data that may exist, per place
 
 | Where | Fields | Purpose | Basis | Retention |
 |---|---|---|---|---|
-| `device-client` row (KEAP) | `slug`, `type`, `owner` (Authentik username), `fingerprint` (**hash**), `scopes`, `paired_at`, `last_seen` (**day precision**, overwritten), `status`, `revoked_at` | know which device belongs to whom, revoke it | contract, Art. 6(1)(b) — **CONFIRM** | until unpair, then **30 days** after `revoked_at` — **CONFIRM** |
-| Authentik (infra) | device-code grant, access token, refresh token | authenticate the device | contract | access **10 min**, refresh **30 days**, rotates on every use — **CONFIRM** |
-| Traefik access log → Loki | client IP, path, status, user agent (no headers, no bodies) | security, debugging | legitimate interest (estate log, `svc_loki`) | `loki_retention`, **31 days** — **CONFIRM** |
+| `device-client` row (KEAP) | `slug`, `type`, `owner` (Authentik username), `fingerprint` (**hash**), `scopes`, `paired_at`, `last_seen` (**day precision**, overwritten), `status`, `revoked_at` | know which device belongs to whom, revoke it | contract, Art. 6(1)(b) — **CONFIRMED 2026-10-02** | until unpair, then **30 days** after `revoked_at` — **CONFIRMED 2026-10-02** |
+| Authentik (infra) | device-code grant, access token, refresh token | authenticate the device | contract | access **10 min**, refresh **30 days**, rotates on every use — **CONFIRMED 2026-10-02** |
+| Traefik access log → Loki | client IP, path, status, user agent (no headers, no bodies) | security, debugging | legitimate interest (estate log, `svc_loki`) | `loki_retention`, **31 days** — **CONFIRMED 2026-10-02** |
 | Gateway process | 30-second in-memory row cache | performance | — | not persisted |
 
 Today the registry holds **zero rows**: nothing writes `device-client` yet
@@ -62,7 +62,7 @@ A column named like any of these on `device-client` fails the gate.
 - **Processors:** none. Gateway, KEAP, Authentik and Loki run on this host.
 - **EU residency:** yes; no transfer outside the EU. If the tenant domain is
   fronted by a CDN edge, that edge sees the TLS endpoint and must be declared
-  as a processor before the gateway is exposed through it — **CONFIRM** n/a.
+  as a processor before the gateway is exposed through it — **CONFIRMED 2026-10-02** n/a.
 
 ## 5. Unpair, leave, DSAR
 
@@ -91,7 +91,7 @@ A column named like any of these on `device-client` fails the gate.
 - `GATEWAY_TOKEN` (host curl escape) is dead on a converged estate: the plist
   always sets `AUTHENTIK_USERINFO_URL`, which takes the branch first.
 - Before any tier below manager is admitted: per-device revocation and a
-  scope model (`device-scopes`) must exist. **CONFIRM** this ordering.
+  scope model (`device-scopes`) must exist. **CONFIRMED 2026-10-02** this ordering.
 
 ## 7. Where the code and the policy disagree today
 

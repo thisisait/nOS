@@ -126,6 +126,7 @@ def test_policy_doc_matches_the_register_row():
     g = _plugin()["gdpr"]
     assert f"**{g['retention_days']} days**" in text, "doc retention must equal retention_days"
     assert g["legal_basis"] in text
-    assert "CONFIRM" in text, "proposals the operator has not signed must say so"
+    # Signed 2026-10-02: the page must say WHO confirmed it and WHEN.
+    assert "CONFIRMED by the operator" in text, "an unsigned proposal must not read as policy"
     readme = (REPO / "docs/systems/device-gateway/README.md").read_text(encoding="utf-8")
     assert "docs/compliance/devices.md" in readme
