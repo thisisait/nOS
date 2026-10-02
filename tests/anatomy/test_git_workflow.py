@@ -1,6 +1,7 @@
 """Anatomy gates for the git workflow doctrine (2026-05-17).
 
-CLAUDE.md §Git Workflow + README.md §Contributing pin the three-tier
+CLAUDE.md §Git Workflow (summary), docs/git-and-release.md (detail) +
+README.md §Contributing pin the three-tier
 branch model (feat → dev → master) + the pzny local-cross-feature
 branch + the pre-push hook that enforces both server-side rules
 locally. These gates catch silent drift in the doctrine docs and the
@@ -13,6 +14,8 @@ import pathlib
 import stat
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+# Detail moved out of CLAUDE.md 2026-10-02; CLAUDE.md keeps the summary.
+GIT_DOC = REPO / "docs" / "git-and-release.md"
 
 
 def test_claude_md_describes_three_tier_branch_model():
@@ -23,7 +26,10 @@ def test_claude_md_describes_three_tier_branch_model():
 	assert "PR-only" in src
 	assert "GitHub" in src and "Gitea" in src
 	# The 2026-04-16 "never resurrect dev" rule is explicitly superseded.
-	assert "superseded" in src.lower() or "no longer" in src.lower()
+	doc = GIT_DOC.read_text()
+	assert "superseded" in doc.lower() or "no longer" in doc.lower()
+	# CLAUDE.md must still send a reader to the detail.
+	assert "docs/git-and-release.md" in src
 
 
 def test_readme_links_to_branch_model():
@@ -36,11 +42,11 @@ def test_readme_links_to_branch_model():
 
 def test_claude_md_documents_branch_protection_setup():
 	"""The `master` PR-only + fast-forward-only + branch-lock rule is a
-	GitHub repo-settings operation, not a workflow file. CLAUDE.md must
+	GitHub repo-settings operation, not a workflow file. docs/git-and-release.md must
 	document the one-time setup steps + a verification command so a fresh
 	operator (or a fork) cannot silently skip it and let direct pushes to
 	master through. Pins the master-branch-protection-not-documented gap."""
-	src = (REPO / "CLAUDE.md").read_text()
+	src = GIT_DOC.read_text()
 	# A dedicated setup subsection exists.
 	assert "Branch protection" in src
 	# It names the GitHub repo-settings surface, not a workflow file.

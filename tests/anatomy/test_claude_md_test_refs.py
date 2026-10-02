@@ -14,6 +14,11 @@ This gate pins the relocation-proof citation style: every `tests/anatomy/
 in that file. Trips if a contract bullet cites a gate that has moved, been
 renamed, or never existed — or if a future edit re-introduces a bare,
 un-findable test name in this block.
+
+MOVED 2026-10-02: the AgentKit contract block left CLAUDE.md for
+docs/ait-runtime-architecture.md. The gate now reads both: every qualified
+reference in either must resolve, and the two contract gates must be cited
+qualified somewhere in the pair (in practice the AgentKit doc).
 """
 from __future__ import annotations
 
@@ -23,6 +28,12 @@ import re
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 CLAUDE_MD = REPO / "CLAUDE.md"
+AGENTKIT_DOC = REPO / "docs" / "ait-runtime-architecture.md"
+DOCS = (CLAUDE_MD, AGENTKIT_DOC)
+
+
+def _text() -> str:
+    return "\n".join(p.read_text(encoding="utf-8") for p in DOCS)
 ANATOMY_TESTS = REPO / "tests" / "anatomy"
 
 # Capture `tests/anatomy/<file>.py::<func>` citations (qualified pytest nodeids).
@@ -47,10 +58,10 @@ def _test_funcs_in(path: pathlib.Path) -> set[str]:
 
 
 def test_qualified_test_refs_resolve():
-    """Every `tests/anatomy/<file>.py::<func>` cited in CLAUDE.md exists on disk."""
-    text = CLAUDE_MD.read_text(encoding="utf-8")
+    """Every `tests/anatomy/<file>.py::<func>` cited in CLAUDE.md or the AgentKit doc exists."""
+    text = _text()
     refs = _QUALIFIED_REF.findall(text)
-    assert refs, "CLAUDE.md must cite anatomy gates in qualified <file>.py::<func> form"
+    assert refs, "CLAUDE.md / AgentKit doc must cite anatomy gates in qualified <file>.py::<func> form"
 
     offenders: list[str] = []
     for filename, func in refs:
@@ -63,7 +74,7 @@ def test_qualified_test_refs_resolve():
                 f"{filename}::{func} — function not found in {filename}"
             )
     assert not offenders, (
-        "CLAUDE.md cites anatomy gate(s) that do not resolve — a gate moved, "
+        "CLAUDE.md / AgentKit doc cites anatomy gate(s) that do not resolve — a gate moved, "
         "was renamed, or the citation is wrong:\n  " + "\n  ".join(offenders)
     )
 
@@ -75,7 +86,7 @@ def test_agentkit_contract_gates_are_qualified():
     `test_all_agentkit_tables_declared` mention (no file) is un-findable. Each
     must appear at least once as `tests/anatomy/<file>.py::<func>`.
     """
-    text = CLAUDE_MD.read_text(encoding="utf-8")
+    text = _text()
     qualified = {func for _, func in _QUALIFIED_REF.findall(text)}
     missing = [name for name in _MUST_BE_QUALIFIED if name not in qualified]
     assert not missing, (

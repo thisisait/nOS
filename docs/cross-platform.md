@@ -29,6 +29,17 @@ cannot mean anything. The playbook gates on the fact and skips; the operator's
 | `nos_container_user` | '' (macOS) · `<uid>:<gid>` | `user:` on non-root images with operator-owned bind mounts |
 | `nos_docker_ready` | true · false | the whole compose layer |
 
+### macOS: Apple Silicon, and `homebrew_prefix` is ISA-bound
+
+Target is ARM64 (M1+) with Docker Desktop for Mac (not Colima/Lima); Ollama 0.19+ runs
+the native MLX backend. `homebrew_prefix` is **ISA-bound, not die-variant-bound**:
+`default.config.yml` resolves it via `ansible_facts['machine'] == 'arm64'` →
+`/opt/homebrew`, else `/usr/local`. Homebrew keys its prefix on the instruction set, so
+every Apple Silicon family — M1, M2, M3, M4 (incl. Pro/Max/Ultra), M5+ — reports `arm64`
+and shares `/opt/homebrew`; there is no per-die path to add. The `/usr/local` branch is
+the Intel fallback, out of scope after macOS 27. Pinned by
+`tests/anatomy/test_homebrew_prefix_isa_bound.py`.
+
 ## What each platform runs
 
 | Layer | macOS (Apple Silicon) | Linux (Ubuntu 24.04) | Windows |

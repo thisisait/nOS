@@ -22,6 +22,52 @@ The blueprint's default-expression chain used to accept all of them
 silently — pre-2026-05-17 cleanup. Now `mode:` and `provider_type:` MUST
 be one of the canonical four.
 
+### Bucket membership (snapshot, moved from CLAUDE.md 2026-10-02)
+
+Authoritative: each plugin's `authentik.mode` in
+`files/anatomy/plugins/<svc>-base/plugin.yml`. This list is a reading aid and can lag.
+
+- **`native_oidc`, env-driven:** Grafana, Outline, Open WebUI, n8n, GitLab (omniauth),
+  Vaultwarden, WordPress, Infisical, Miniflux, HedgeDoc, BookStack, Node-RED.
+- **`native_oidc`, file/API-driven:** Gitea (Admin API), Nextcloud (`occ`), Portainer
+  (`PUT /api/settings`), ERPNext (Frappe Social Login Key), Home Assistant (auth_oidc),
+  Jellyfin (SSO-Auth plugin), Superset (`OAUTH_PROVIDERS`).
+- **`header_oidc`:** Firefly III, KEAP (`X-Authentik-uid`-keyed per-user rows).
+- **`forward_auth`:** Uptime Kuma, Calibre-Web, Kiwix, Paperclip, Wing, code-server, ntfy,
+  InfluxDB, ONLYOFFICE, Mailpit, Metabase, SpacetimeDB, OpenClaw, Hermes, Qdrant,
+  SnappyMail, Dolibarr, FreeScout (native path removed 2026-09-03, fee 49), Woodpecker
+  (route gate on top of its Gitea-OAuth app login).
+- **No SSO:** FreePBX, QGIS. **AT Protocol identity:** Bluesky PDS (the Authentik→PDS
+  bridge provisions `@user.bsky.<tld>`).
+
+A `200` on a native_oidc route is not an SSO bypass — the service shows its own
+"Sign in with Authentik" button. Stacking `authentik@file` on top is a double login that
+also 302s machine callers; `tests/anatomy/test_forward_auth_does_not_stack.py` refuses it.
+Upstream changes that would flip forward_auth services to native: [upstream-pr-opportunities.md](upstream-pr-opportunities.md).
+Cookie domain `.<tld>` shares the session across subdomains; the embedded outpost binds
+every header_oidc + forward_auth provider.
+
+## RBAC tiers
+
+Four tiers bound to Authentik groups by expression policies (`authentik_rbac_tiers` +
+`authentik_app_tiers` in `default.config.yml`). The per-service tier is each plugin's
+`authentik.tier`; `authentik_app_tiers` is the manifest-app fallback. Examples:
+
+| Tier | Groups | e.g. |
+|---|---|---|
+| 1 admin | `nos-providers`, `nos-admins` | Portainer, Infisical, Grafana, Wing |
+| 2 manager | + `nos-managers` | Gitea, GitLab, n8n, Superset, Metabase, Paperclip |
+| 3 user | + `nos-users` | Nextcloud, Outline, Open WebUI, nOS face, Vaultwarden |
+| 4 guest | + `nos-guests` | Kiwix, Jellyfin, WordPress |
+
+Group names are configurable via `authentik_rbac_tiers`. Installs provisioned before
+2026-04-22 carry the old `devboxnos-*` group names, `com.devboxnos.*` launchd ids and
+`~/.devboxnos/`; rename the groups in Authentik (and `launchctl bootout` the old plists)
+or run `nos --remove=data --confirm` to regenerate.
+
+The word `tier` means RBAC and nothing else; the dependency axis is `layer`
+([doctrine/layers.md](doctrine/layers.md)).
+
 ## Live state (2026-05-17 audit)
 
 20 services declare an Authentik client; **all 17 currently installed

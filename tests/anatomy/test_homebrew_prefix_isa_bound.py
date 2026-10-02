@@ -20,7 +20,8 @@ import re
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 CONFIG = REPO / "default.config.yml"
-CLAUDE = REPO / "CLAUDE.md"
+# The note moved out of CLAUDE.md 2026-10-02 into the platform doc.
+CLAUDE = REPO / "docs" / "cross-platform.md"
 
 
 def _homebrew_prefix_value() -> str:
@@ -62,10 +63,10 @@ def test_claude_md_documents_isa_binding():
     """The Apple Silicon Constraints doctrine must state the ISA-binding so the
     'add variant detection' finding stays explicitly closed."""
     txt = CLAUDE.read_text()
-    assert "ISA-bound" in txt, "CLAUDE.md must document homebrew_prefix as ISA-bound"
+    assert "ISA-bound" in txt, "docs/cross-platform.md must document homebrew_prefix as ISA-bound"
     assert "test_homebrew_prefix_isa_bound.py" in txt, (
-        "CLAUDE.md Apple Silicon note must point at this gate"
+        "docs/cross-platform.md Apple Silicon note must point at this gate"
     )
     # the note must name the die families it covers, so the claim is auditable
     for die in ("M1", "M5"):
-        assert die in txt, f"CLAUDE.md ISA note should name the {die} family it covers"
+        assert die in txt, f"docs/cross-platform.md ISA note should name the {die} family it covers"

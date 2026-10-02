@@ -115,8 +115,8 @@ KNOWN_SPLITS = {
         "host": "2.20.5", "pin": "2.21.0",
         "why": "the operator's daily driver stays 2.20.5; 2.21.0 is the frozen "
                "CI mirror (the GitHub runner's filter-load path needs a 2.21 "
-               "symbol). Reasoning: tools/ci-freeze.env header + CLAUDE.md "
-               "'Known Tech Debt'.",
+               "symbol). Reasoning: tools/ci-freeze.env header + docs/git-and-release.md "
+               "§Frozen integration toolchain.",
     },
 }
 

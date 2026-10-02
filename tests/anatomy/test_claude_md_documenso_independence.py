@@ -18,7 +18,8 @@ from __future__ import annotations
 import pathlib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-CLAUDE_MD = REPO / "CLAUDE.md"
+# Moved out of CLAUDE.md 2026-10-02 into the OnlyOffice system doc.
+CLAUDE_MD = REPO / "docs" / "systems" / "onlyoffice" / "README.md"
 
 # Provenance paths the footnote cites — must stay real (no dead breadcrumbs).
 CITED_PATHS = (
@@ -33,7 +34,7 @@ def _footnote() -> str:
     marker = "OnlyOffice (euro-office) vs Documenso"
     idx = text.find(marker)
     assert idx != -1, (
-        "CLAUDE.md must carry the OnlyOffice/Documenso independence footnote "
+        "docs/systems/onlyoffice/README.md must carry the OnlyOffice/Documenso independence footnote "
         f"(marker '{marker}' not found)"
     )
     # Footnote is a single blockquote paragraph; grab to the next blank line.
