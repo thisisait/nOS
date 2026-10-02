@@ -10,23 +10,16 @@
 
 ## Now (current track)
 
-1. **v0.14-beta is cut (2026-10-01, `a0b8dd96`).** dev is ahead with what the
-   tag's CI found: Linux account walk (host-tools venv, loopback for local-TLD
-   names), Pages deps, the profile builder's contradiction sweep (93 derived
-   rules, 65,280 states, 0 leaks), tier-1 admin rights in apps (`nos_roles`
-   claim, Outline reconcile), KEAP v2.0.1, KEAP+cortex in the Linux wet-test.
-   **Next cut `v0.14.1-beta`** once a dev→master PR's Linux integration is green;
-   the tag also publishes the builder (pages.yml sweeps it first).
-2. **Redis leaf rotated in SOURCE (`auth-password-r2`).** Not live until ONE
-   converge that covers redis AND its consumers (`nos`, or `nos-stacks.sh
-   core,stacks`). A single-service leg in between renders the new value against
-   the old server.
-3. **AgentKit fallback** (dtt `agent-fallback-dead`): every agent's fallback was
-   a dead OpenClaw URI. In progress: a BOUND fallback to local Ollama, checked
-   against each agent's GDPR record, plus OpenClaw's chat-completions endpoint
-   on loopback.
-4. **Datastore TLS** (dtt `sec-transport-enforce`): research plan landed; eight
-   operator decisions (D1 MariaDB or Redis first … D8). Do not start before D1.
+1. **Next cut is v0.15-beta** (dtt `rel-015` holds the MUST list and order).
+   v0.14.1 was skipped by the operator. dev is ahead of v0.14-beta with the
+   Linux account walk, Pages deps, the builder sweep, tier-1 admin rights, KEAP
+   v2.0.1, the bound AgentKit fallback and the Cloudflare origin door (off).
+2. **Redis leaf rotation is LIVE** (converged 2026-10-01; requirepass == new
+   leaf, hash-compared; smoke 47/47, E2E 277 green).
+3. **Datastore TLS is POSTPONED** by the operator. The research is kept in dtt
+   (`sec-transport-enforce`, `sec-transport-study`) for when it resumes.
+4. **Roadmap reconciled 2026-10-02:** 205 open rows checked against the code;
+   96 closed with evidence, 5 folded, epics with all children done closed.
 5. **Identities:** accounts exist from install for every declared identity;
    tier-1 is admin in gitea/nextcloud/grafana/openwebui/outline. Open: an e2e
    tester's Outline role lags one converge (its account is born mid-run); six

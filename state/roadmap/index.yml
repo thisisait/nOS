@@ -12,6 +12,9 @@
 - slug: actor-attribution
   parent: state-surface
   track: platform
+- slug: agent-fallback-dead
+  parent: ''
+  track: platform
 - slug: agent-ff-onto-dev-helper
   parent: agent-landing-zero-command-operator
   track: platform
@@ -78,6 +81,9 @@
 - slug: bff-table-read-tier-gate
   parent: consulting-firm-deployment
   track: security
+- slug: blank-keeps-nextcloud-user-files
+  parent: managed-resources-manifest
+  track: platform
 - slug: brew-deps-deterministic-pin
   parent: ''
   track: platform
@@ -213,6 +219,9 @@
 - slug: cortex-vendor-staleness
   parent: ''
   track: cortex
+- slug: csv-party-importer-leaks-id
+  parent: digest-review-remediation
+  track: security
 - slug: dependabot-alerts-are-mostly-a-fixture
   parent: ''
   track: security
@@ -375,9 +384,30 @@
 - slug: dtt-task-types
   parent: dtt
   track: platform
+- slug: e2e-config-journeys
+  parent: e2e-lifecycle
+  track: release
+- slug: e2e-effect-probes
+  parent: e2e-lifecycle
+  track: release
+- slug: e2e-exit-audit
+  parent: e2e-lifecycle
+  track: release
+- slug: e2e-lifecycle
+  parent: ''
+  track: release
+- slug: e2e-macos-lifecycle
+  parent: e2e-lifecycle
+  track: release
+- slug: e2e-restore-drill
+  parent: e2e-lifecycle
+  track: release
 - slug: ears-app-bundle
-  parent: local-llm-voice
+  parent: local-llm
   track: platform
+- slug: edge-claims-vs-traefik
+  parent: e2e-lifecycle
+  track: security
 - slug: egress-containment
   parent: digest
   track: digest
@@ -385,7 +415,7 @@
   parent: ''
   track: platform
 - slug: erasure-embeddings-provenance
-  parent: digest
+  parent: erasure-party-subject
   track: digest
 - slug: erasure-party-subject
   parent: digest
@@ -549,6 +579,9 @@
 - slug: idea-surface-absorb
   parent: ''
   track: platform
+- slug: identities-from-install
+  parent: ''
+  track: release
 - slug: importer-isdoc
   parent: digest
   track: platform
@@ -568,7 +601,7 @@
   parent: consulting-firm-deployment
   track: platform
 - slug: invoice-structured-extractor
-  parent: invoice-vision-intake
+  parent: consulting-firm-deployment
   track: cortex
 - slug: invoice-vision-intake
   parent: consulting-firm-deployment
@@ -594,6 +627,9 @@
 - slug: keap-embed-queue-lost-row
   parent: ''
   track: cortex
+- slug: keap-lint-disabled-refs
+  parent: ''
+  track: platform
 - slug: keap-row-vector-search
   parent: digest
   track: cortex
@@ -624,6 +660,9 @@
 - slug: ledger-payload-bound
   parent: ''
   track: platform
+- slug: local-decision-tev1
+  parent: local-llm
+  track: agents
 - slug: local-llm
   parent: ''
   track: cortex
@@ -751,7 +790,7 @@
   parent: ''
   track: cortex
 - slug: multi-firm-distribution-hardening
-  parent: ''
+  parent: agent-landing-zero-command-operator
   track: platform
 - slug: multitenant-client-isolation
   parent: ''
@@ -767,6 +806,9 @@
   track: platform
 - slug: n8n-packs-never-activated
   parent: ''
+  track: platform
+- slug: nextcloud-sso-state-lost
+  parent: e2e-lifecycle
   track: platform
 - slug: notify-body-is-prompt
   parent: ''
@@ -844,7 +886,7 @@
   parent: ''
   track: platform
 - slug: oneshot-logprobs-for-field-confidence
-  parent: local-vision-model-7b
+  parent: consulting-firm-deployment
   track: agents
 - slug: organ-health-carries-a-version
   parent: ''
@@ -859,7 +901,7 @@
   parent: consulting-firm-deployment
   track: platform
 - slug: party-merge
-  parent: digest
+  parent: party-identity-fixture-vs-resolver
   track: digest
 - slug: party-onboarding-from-invoice
   parent: consulting-firm-deployment
@@ -966,14 +1008,23 @@
 - slug: plat-v07
   parent: plat
   track: platform
+- slug: portable-ssd-offline-replication
+  parent: ''
+  track: platform
 - slug: post-start-silent-green-sweep
   parent: ''
   track: platform
 - slug: praxis-pack
   parent: backoffice-organ
   track: platform
+- slug: prewipe-fresh-keap-dump
+  parent: backup-restic-store
+  track: platform
 - slug: profile-builder
   parent: ''
+  track: platform
+- slug: profile-builder-v3
+  parent: profile-builder
   track: platform
 - slug: prom-rules-never-reload
   parent: ''
@@ -991,6 +1042,9 @@
   parent: ''
   track: release
 - slug: rel-013
+  parent: ''
+  track: release
+- slug: rel-015
   parent: ''
   track: release
 - slug: rem-queue-commit-256-260-261
@@ -1077,6 +1131,9 @@
 - slug: sec-transport
   parent: sec
   track: security
+- slug: sec-transport-enforce
+  parent: sec-transport
+  track: security
 - slug: sec-transport-hedgedoc
   parent: sec-transport
   track: security
@@ -1094,6 +1151,12 @@
   track: security
 - slug: sec-transport-redis
   parent: sec-transport
+  track: security
+- slug: sec-transport-study
+  parent: sec-transport
+  track: security
+- slug: secrets-at-rest
+  parent: ''
   track: security
 - slug: security-scan-staleness-missed-a-live-critical
   parent: ''
@@ -1129,7 +1192,7 @@
   parent: ''
   track: platform
 - slug: ssot-article-schema
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: platform
 - slug: ssot-cite-adopters-or-amend
   parent: ''
@@ -1138,28 +1201,28 @@
   parent: ssot-index
   track: platform
 - slug: ssot-index
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: platform
 - slug: ssot-organs-genome
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: platform
 - slug: ssot-recite-doctrine
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: platform
 - slug: ssot-repair-companion-headings
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: platform
 - slug: ssot-retrieval-benchmark
-  parent: ssot-index
+  parent: ssot-cite-adopters-or-amend
   track: agents
 - slug: ssot-systems-cite
   parent: ssot-index
   track: platform
 - slug: ssot-tenant-prefix
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: platform
 - slug: ssot-vector
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: cortex
 - slug: stalwart-never-left-bootstrap
   parent: ''
@@ -1182,6 +1245,9 @@
 - slug: tester-hardware-readiness
   parent: consulting-firm-deployment
   track: release
+- slug: tls-modern-never-applied
+  parent: sec
+  track: security
 - slug: uc-approve-held-invoice
   parent: consulting-firm-deployment
   track: digest
