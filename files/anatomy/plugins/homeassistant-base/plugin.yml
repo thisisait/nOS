@@ -148,3 +148,9 @@ ui-extension:
     tier: 3
     description: Home automation hub
     health_check: "https://{{ homeassistant_domain }}"
+
+e2e:
+  probes:
+    - name: auth-oidc-provider-listed
+      url: https://{{ homeassistant_domain | default('home' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/auth/providers
+      expect: {json_any: {providers: {field: type, contains: auth_oidc}}}

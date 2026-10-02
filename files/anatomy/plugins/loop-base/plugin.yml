@@ -148,3 +148,11 @@ gdpr:
     Only the `propose` job involves a model; `drive` and `review` are
     deterministic local tools. The transfer declaration mirrors the agent
     ceremonies' records (see pulse-base gdpr notes, 2026-08-13 clarification).
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) and (install_bone | default(false)) }}"
+  probes:
+    - name: propose-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.loop:propose.id": "loop:propose"}}

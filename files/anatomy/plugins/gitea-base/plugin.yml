@@ -228,6 +228,9 @@ notification:
 # ── e2e: a new SSO user lands logged in, not on a manual account-link page
 e2e:
   probes:
+    - name: oidc-start-reaches-authentik
+      url: https://{{ gitea_domain }}/user/oauth2/authentik
+      expect: {status: [302, 303, 307], location_contains: "{{ authentik_domain }}/application/o/authorize"}
     - name: sso-creates-and-logs-in-the-tester
       auth: tester
       sso_start: true

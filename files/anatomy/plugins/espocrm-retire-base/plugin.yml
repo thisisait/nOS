@@ -56,3 +56,8 @@ gdpr:
   processors: []
   eu_residency: true
   transfers_outside_eu: false
+
+e2e_none: >-
+  tombstone: no container runs; the only wiring is an Authentik client kept so
+  OpenTofu can destroy it, observable only in tofu state
+  (tools/tofu-authentik-reconcile.sh --preflight), not from any URL

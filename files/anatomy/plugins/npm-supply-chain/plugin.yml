@@ -135,3 +135,11 @@ gdpr:
   retention_days: 365
   processors: []              # list fetched read-only; nothing is sent outbound
   eu_residency: true
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) }}"
+  probes:
+    - name: daily-ioc-scan-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.npm-supply-chain:daily-ioc-scan.id": "npm-supply-chain:daily-ioc-scan"}}

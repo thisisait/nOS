@@ -152,6 +152,21 @@
         {"required": ["client_id", "client_secret", "tier"]}
       ]
     },
+    "e2e": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What 'wired' means after start, probed on the live estate (tests/e2e/estate/test_effect_probes.py; rendered by tools/e2e-plan.py). Required, or e2e_none, on every plugin with post-start wiring — tests/anatomy/test_post_start_wiring_is_probed.py.",
+      "properties": {
+        "enabled":   {"type": "string", "description": "Jinja bool; defaults to authentik.enabled, so a plugin without an authentik block must set it."},
+        "probes":    {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["name"]}},
+        "isolation": {"type": "array"}
+      }
+    },
+    "e2e_none": {
+      "type": "string",
+      "minLength": 40,
+      "description": "Why no outside probe can observe this plugin's post-start wiring, and which reader proves it instead. Refused when TODO-shaped or when e2e.probes is also present."
+    },
     "observability": {
       "type": "object",
       "additionalProperties": true,

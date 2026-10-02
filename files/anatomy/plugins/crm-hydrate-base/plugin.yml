@@ -71,3 +71,11 @@ gdpr:
   processors: []
   eu_residency: true
   transfers_outside_eu: false
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) and (install_dolibarr | default(false)) }}"
+  probes:
+    - name: hydrate-parties-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.crm-hydrate:hydrate-parties.id": "crm-hydrate:hydrate-parties"}}

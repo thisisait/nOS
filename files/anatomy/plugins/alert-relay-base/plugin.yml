@@ -116,3 +116,11 @@ gdpr:
   retention_days: 365               # matches the wing.db notifications retention
   processors: []                    # loopback only: Prometheus :9090 → Bone :8099, no external transfer
   eu_residency: true
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) }}"
+  probes:
+    - name: relay-firing-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.alert-relay:relay-firing.id": "alert-relay:relay-firing"}}

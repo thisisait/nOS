@@ -93,6 +93,17 @@ def _resolved(vars_: dict | None) -> tuple[dict, jinja2.Environment]:
     vars_.setdefault("ansible_facts", {"user_id": getpass.getuser(),
                                        "env": {"HOME": str(Path.home())},
                                        "os_family": "Darwin" if sys.platform == "darwin" else "Debian"})
+    # A templated var seen from INSIDE another template is its raw text, so
+    # `if tenant_domain_is_local` was always truthy; pin bool-valued ones first.
+    env = _env(vars_)
+    for k, v in list(vars_.items()):
+        if isinstance(v, str) and "{{" in v:
+            try:
+                out = _render(env, v)
+            except jinja2.TemplateError:     # Ansible-only filters: leave as is
+                continue
+            if out in ("True", "False"):
+                vars_[k] = out == "True"
     return vars_, _env(vars_)
 
 
@@ -109,7 +120,7 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
     vars_, env = _resolved(vars_)
     edge, domains = _edge_modes(), _manifest_domains()
     rows = []
-    for path in sorted(PLUGINS.glob("*-base/plugin.yml")):
+    for path in sorted(PLUGINS.glob("*/plugin.yml")):      # discovery, gitleaks carry no -base
         doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         ak = doc.get("authentik") or {}
         e2e = doc.get("e2e") or {}

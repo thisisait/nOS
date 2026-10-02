@@ -346,3 +346,9 @@ notification:
 # └── tests/
 #     ├── test_collection_bootstrap.py         # idempotency (PUT twice = 200 + noop)
 #     └── test_bone_routes_register.py
+
+e2e:
+  probes:
+    - name: anonymous-is-sent-to-authentik
+      url: https://qdrant.{{ apps_subdomain | default('apps') }}.{{ tenant_domain }}/
+      expect: {status: [302], location_contains: "{{ authentik_domain }}/application/o/authorize"}

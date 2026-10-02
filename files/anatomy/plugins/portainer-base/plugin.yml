@@ -335,3 +335,9 @@ notification:
 # └── tests/
 #     ├── test_admin_reconverge_idempotent.py
 #     └── test_socket_proxy_surface_baseline.py  # diff against REM-001 baseline
+
+e2e:
+  probes:
+    - name: oauth-is-the-auth-method
+      url: https://{{ portainer_domain }}/api/settings/public
+      expect: {json_equals: {AuthenticationMethod: 3}, contains: "{{ authentik_domain }}/application/o/authorize"}

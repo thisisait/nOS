@@ -252,3 +252,9 @@ notification:
 # └── tests/
 #     ├── test_blank_preserves_vault_by_default.py
 #     └── test_dsar_erase_endpoint.py
+
+e2e:
+  probes:
+    - name: sso-prevalidate-issues-a-token
+      url: https://{{ vaultwarden_domain }}/identity/sso/prevalidate
+      expect: {status: [200], contains: '"token"'}

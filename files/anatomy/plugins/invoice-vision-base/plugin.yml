@@ -163,3 +163,11 @@ gdpr:
   retention_days: 3650        # accounting-document horizon (matches the ISDOC importer)
   processors: []              # local only: ollama on loopback + KEAP on loopback
   eu_residency: true
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) }}"
+  probes:
+    - name: intake-sweep-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.invoice-vision:intake-sweep.id": "invoice-vision:intake-sweep"}}

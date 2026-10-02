@@ -164,3 +164,13 @@ ui-extension:
     tier: 2
     description: DevOps platform — repos, CI/CD, registry
     health_check: "https://{{ gitlab_domain }}"
+
+e2e:
+  probes:
+    - name: login-page-offers-authentik
+      url: https://{{ gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/users/sign_in
+      expect: {status: [200], contains: "/users/auth/openid_connect"}
+    - name: trunk-sync-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.gitlab:trunk-sync.id": "gitlab:trunk-sync"}}

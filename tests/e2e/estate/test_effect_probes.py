@@ -4,8 +4,8 @@ A plugin's `e2e.probes` sit beside the wiring they verify (plugin.yml) and are
 rendered by tools/e2e-plan.py against the resolved config; only enabled
 services and probes whose `when` renders true run. Kinds:
   http — method, url, auth (anon | tester | bearer / header / basic from a
-         named secret | keap_proxy), expect {status, contains, json paths,
-         contains_tester}; `sso_start` makes a tester walk the app's OWN
+         named secret | keap_proxy), expect {status, contains, location_contains,
+         json paths, contains_tester}; `sso_start` makes a tester walk the app's OWN
          "Sign in with Authentik" first, so the app half of SSO is exercised
   tcp  — host, port, expect {banner_prefix}
 Secrets are read by name (lib/estate_secrets) and never printed.
@@ -116,6 +116,8 @@ def test_probe(svc, probe, testers, verify_tls, auth_host):
         problems.append(f"status {r.status_code}")
     if exp.get("contains") and str(exp["contains"]) not in r.text:
         problems.append(f"body lacks {exp['contains']!r}")
+    if exp.get("location_contains") and str(exp["location_contains"]) not in r.headers.get("location", ""):
+        problems.append(f"Location {r.headers.get('location', '')[:80]!r} lacks {exp['location_contains']!r}")
     if exp.get("contains_tester"):
         who = getattr(testers, "username", lambda t: None)(tier)
         if not who or who not in r.text:

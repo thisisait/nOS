@@ -306,6 +306,9 @@ notification:
 # ── e2e: what "wired" means for Grafana (tests/e2e/estate/test_effect_probes.py)
 e2e:
   probes:
+    - name: oidc-start-reaches-authentik
+      url: https://{{ grafana_domain }}/login/generic_oauth
+      expect: {status: [302, 303, 307], location_contains: "{{ authentik_domain }}/application/o/authorize"}
     - name: sso-lands-as-the-tester
       auth: tester
       sso_start: true

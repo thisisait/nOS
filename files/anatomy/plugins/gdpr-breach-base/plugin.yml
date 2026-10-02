@@ -75,3 +75,11 @@ gdpr:
   retention_days: -1                # permanent legal record
   processors: []
   eu_residency: true
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) }}"
+  probes:
+    - name: breach-deadline-scan-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.gdpr-breach:breach-deadline-scan.id": "gdpr-breach:breach-deadline-scan"}}

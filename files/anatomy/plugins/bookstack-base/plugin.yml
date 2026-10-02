@@ -125,3 +125,9 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+e2e:
+  probes:
+    - name: login-page-offers-authentik
+      url: https://{{ bookstack_domain }}/login
+      expect: {status: [200], contains: "/oidc/login"}

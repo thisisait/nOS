@@ -93,3 +93,8 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+e2e_none: >-
+  no HTTP surface: post.yml enables pgcrypto and drops/creates databases inside
+  the container, readable only as the superuser over the wire protocol; every
+  consumer's own probe (grafana, outline, n8n, ...) is the proof its database exists
