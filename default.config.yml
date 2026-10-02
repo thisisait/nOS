@@ -526,7 +526,7 @@ install_dotnet: true              # .NET SDK (C#, F#) + EF CLI
 # ── AI Agent ──────────────────────────────────────────────────────────────────
 install_openclaw: true            # OpenClaw (Inspektor Klepitko, Ollama, no API key)
 install_hermes: false             # Hermes Agent (Nous) – Python daemon, MCP client, cross-channel gateway
-install_device_gateway: false     # Device BFF (RFC 8628). Enable in config.yml; no plugin until Art-30.
+install_device_gateway: false     # Device BFF (RFC 8628). Enable in config.yml; Art-30 gate docs/compliance/devices.md.
 install_opencode: false           # OpenCode AI coding TUI (sst.dev) with local Ollama provider
 
 # ── Skill library (2026-08-27) ────────────────────────────────────────────────

@@ -21,9 +21,9 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 ## Summary
 
 - **Processing activities:** 107 (82 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (10), legal_obligation (1), legitimate_interests (96)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (95)
 - **Transfers outside the EU:** 12 activities
-- **Activities engaging a third-party processor:** 18
+- **Activities engaging a third-party processor:** 17
 
 ## Transfers & processors (audit-sensitive subset)
 
@@ -45,7 +45,6 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 | surveyor (`agent_surveyor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
 | upgrade-architect (`agent_upgrade-architect`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
 | repos (`imp_repos`) | **Yes** | `The configured git hosting provider (e.g. self-hosted Gitea, or GitHub/GitLab.com)` |
-| Ares Verify (`svc_ares-verify`) | No | `Ministerstvo financí ČR (ARES)`; `Generální finanční ředitelství (ADIS)` |
 | Loop (`svc_loop`) | **Yes** | `Anthropic (US) — claude CLI backend, authoring proposals when the propose job runs` |
 
 ## Security measures (Art. 32 — platform baseline)
@@ -1347,19 +1346,6 @@ container logs for security monitoring of a public endpoint.
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
-#### Ares Verify — `svc_ares-verify`
-- **Purpose:** Look up counterparties already on the party spine (IČO) in ARES and the
-GFŘ unreliable-VAT-payer register so AP can refuse a missing subject or
-an unreliable payer. Pulse fires n8n; n8n calls the public CZ endpoints.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `clients`; `client_contacts`
-- **Data categories:** `company_affiliation`; `name`
-- **Recipients / processors:** `Ministerstvo financí ČR (ARES)`; `Generální finanční ředitelství (ADIS)`
-- **Transfers outside EU:** No
-- **Retention:** 3650 days (~10y)
-- **Storage:** host service (non-Docker / launchd)
-- **Security measures:** platform baseline (see above)
-
 #### Authentik Tofu Drift — `svc_authentik-tofu-drift`
 - **Purpose:** Detect configuration drift between the live Authentik SSO tenant and its OpenTofu-managed desired state; notify the operator with the plan summary
 - **Legal basis (Art. 6):** `legitimate_interests`
@@ -1383,6 +1369,26 @@ Stores nothing itself; retention is the party spine / imp_doli-party.
 - **Retention:** transient (not persisted)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
+
+#### Device Gateway — `svc_device-gateway`
+- **Purpose:** Let a user's own paired device (handheld, phone, wearable) read the nOS
+tables that user may already see in the browser, without sharing the
+estate KEAP token. Processing: (1) the pairing registry row per device
+(table device-client: owner username, device kind, a hash fingerprint,
+scopes, paired_at, last_seen at day precision, status, revoked_at);
+(2) the Authentik device-code grant and its access / refresh tokens;
+(3) the Traefik edge access log line for device.<tld> requests
+(client IP, path, status, user agent; no headers, no bodies).
+The gateway itself persists nothing: a 30-second in-memory cache of
+projected rows and a suppressed request log.
+- **Legal basis (Art. 6):** `contract`
+- **Data subjects:** `end_users`; `operators`
+- **Data categories:** `device_pairing_registry`; `oauth_tokens`; `edge_access_log`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 30 days
+- **Storage:** KEAP libsql table device-client (iiab stack, host volume); Authentik PostgreSQL (infra stack); Loki (observability stack). Gateway process holds no file state.
+- **Security measures:** `TLS in transit (Traefik edge; wildcard cert)`; `Gateway binds 127.0.0.1; only Traefik reaches it`; `Bearer verified against Authentik userinfo; azp/aud must be nos-device-gateway`; `Authorization: userinfo groups must hold a tier-2 (manager) group; fail closed`; `Table allowlist + column projection; PII/financial tables are 403 before KEAP is called`; `Refresh token rotates on every use (threshold = validity); access token 10 min`; `Identifiers are hashes only — never a raw serial / IMEI / UDID / MAC`; `Disk encryption at rest is operator-provisioned (FileVault / LUKS)`
 
 #### Discovery — `svc_discovery`
 - **Purpose:** Consistency checking between declared configuration and observed runtime state

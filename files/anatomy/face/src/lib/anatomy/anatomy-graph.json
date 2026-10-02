@@ -4,9 +4,9 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 300,
-    "edges": 314,
-    "nodes_pulse": 42,
+    "nodes": 298,
+    "edges": 310,
+    "nodes_pulse": 40,
     "nodes_judge": 5,
     "nodes_gateset": 5,
     "nodes_weakness": 7,
@@ -20,15 +20,15 @@
     "nodes_doctrine": 13,
     "nodes_faceapp": 7,
     "nodes_agent": 16,
-    "edges_data": 218,
-    "edges_trigger": 49,
+    "edges_data": 216,
+    "edges_trigger": 47,
     "edges_temporal": 5,
     "edges_mutex": 21,
     "edges_governed_by": 21,
     "edges_service_dependency": 38,
     "services_survey_declared": 28,
-    "services_survey_not_surveyed": 36,
-    "services_survey_no_manifest": 5,
+    "services_survey_not_surveyed": 37,
+    "services_survey_no_manifest": 4,
     "edges_service_dependency_unenforced": 14,
     "services_layer_L0": 3,
     "services_layer_L1": 5,
@@ -1406,36 +1406,6 @@
       "anchor": "02.02.06",
       "description": "Pulse scheduled job (platform): runs prometheus-alert-relay.py on cron `*/15 * * * *`"
     },
-    "pulse:ares-verify:registry-daily": {
-      "kind": "pulse",
-      "source": "files/anatomy/plugins/ares-verify-base/plugin.yml",
-      "schedule": "10 5 * * *",
-      "jitter_min": 10,
-      "max_runtime_s": 600,
-      "category": "knowledge",
-      "paused": false,
-      "findings_exit_codes": null,
-      "command_name": "n8n-fire.py",
-      "claims": [],
-      "runs_agent": null,
-      "anchor": "09",
-      "description": "Pulse scheduled job (knowledge): runs n8n-fire.py on cron `10 5 * * *`"
-    },
-    "pulse:ares-verify:registry-new": {
-      "kind": "pulse",
-      "source": "files/anatomy/plugins/ares-verify-base/plugin.yml",
-      "schedule": "7,22,37,52 * * * *",
-      "jitter_min": 5,
-      "max_runtime_s": 180,
-      "category": "knowledge",
-      "paused": false,
-      "findings_exit_codes": null,
-      "command_name": "n8n-fire.py",
-      "claims": [],
-      "runs_agent": null,
-      "anchor": "09",
-      "description": "Pulse scheduled job (knowledge): runs n8n-fire.py on cron `7,22,37,52 * * * *`"
-    },
     "pulse:authentik-tofu-drift:tofu-drift-plan": {
       "kind": "pulse",
       "source": "files/anatomy/plugins/authentik-tofu-drift-base/plugin.yml",
@@ -2401,11 +2371,11 @@
       "stack": null,
       "category": "agent",
       "install_flag": "install_device_gateway",
-      "dependency_survey": "no-manifest",
+      "dependency_survey": "not-surveyed",
       "anchor": "02.02.09",
       "description": "Docker service 'device_gateway' (agent) in the None compose stack, toggled by install_device_gateway",
       "layer": null,
-      "layer_withheld": "dependency_survey=no-manifest — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:dolibarr": {
       "kind": "service",
@@ -3926,24 +3896,6 @@
       "via": "60 s poll of /bff/pulse, a PROJECTION (never a proxy) of Wing's pulse_jobs + run summary; joined onto the pulse: nodes on screen so a scheduled job's real state colours its dot (src/routes/bff/pulse/+server.ts → $lib/server/upstream.pulseJobs)",
       "derived": "face-bff-projection",
       "evidence": "derived"
-    },
-    {
-      "from": "pulse:ares-verify:registry-daily",
-      "to": "table:party-registry-status",
-      "kind": "data",
-      "via": "n8n nos-pull-ares-registry (ARES + ADIS). Pulse is the clock.",
-      "measured": "2026-09-21",
-      "declared": "writes",
-      "evidence": "measured"
-    },
-    {
-      "from": "pulse:ares-verify:registry-new",
-      "to": "table:party-registry-status",
-      "kind": "data",
-      "via": "n8n nos-pull-ares-registry --scope=missing (on-create lag after hydrate).",
-      "measured": "2026-09-21",
-      "declared": "writes",
-      "evidence": "measured"
     },
     {
       "from": "pulse:conductor:scan-state-record",
@@ -5773,22 +5725,6 @@
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:alert-relay:relay-firing",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:ares-verify:registry-daily",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:ares-verify:registry-new",
       "kind": "trigger",
       "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
       "derived": "daemon-dispatch",

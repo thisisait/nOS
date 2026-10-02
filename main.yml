@@ -2449,7 +2449,28 @@
       tags: ['hermes', 'ai', 'agent']
 
     # Device gateway BFF — loopback bind, Traefik device.<tld> ungated (ntfy
-    # class, RFC 8628). Default-OFF. No plugin until Art-30.
+    # class, RFC 8628). Default-OFF. Art-30 is the deploy gate: the register
+    # row lives in device-gateway-base/plugin.yml and docs/compliance/devices.md.
+    - name: "[Art-30] Refuse the device gateway without a complete gdpr block"
+      vars:
+        _dg_gdpr: "{{ ((lookup('file', playbook_dir + '/files/anatomy/plugins/device-gateway-base/plugin.yml', errors='ignore') or '{}') | from_yaml).gdpr | default({}) }}"
+      ansible.builtin.assert:
+        that:
+          - (_dg_gdpr.purpose | default('') | trim | length) > 0
+          - _dg_gdpr.legal_basis | default('') in ['consent', 'contract', 'legal_obligation', 'vital_interests', 'public_task', 'legitimate_interests']
+          - (_dg_gdpr.data_categories | default([]) | length) > 0
+          - (_dg_gdpr.data_subjects | default([]) | length) > 0
+          - _dg_gdpr.retention_days is defined
+          - (_dg_gdpr.retention_days | int) != 0
+          - _dg_gdpr.processors is defined
+          - _dg_gdpr.transfers_outside_eu is defined
+        fail_msg: >-
+          install_device_gateway is true but files/anatomy/plugins/device-gateway-base/plugin.yml
+          carries no complete gdpr: block — Art-30 is the deploy gate (docs/compliance/devices.md).
+        quiet: true
+      when: install_device_gateway | default(false)
+      tags: ['device-gateway', 'ai']
+
     - name: "Device gateway (pazny.device_gateway role)"
       ansible.builtin.import_role:
         name: pazny.device_gateway

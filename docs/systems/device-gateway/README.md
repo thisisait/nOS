@@ -24,9 +24,11 @@ Values from `roles/pazny.device_gateway/`, `files/anatomy/device-gateway/gateway
 ## Why it is off by default
 
 A LAN-open device BFF is a new processing of identifiers. The GDPR Art-30 row
-(`device-gdpr-art30`) is an operator question — do not invent `legal_basis`.
-There is no `device-gateway-base` plugin until that row is filled. This estate
-may opt in via `config.yml`; forks stay off.
+is `files/anatomy/plugins/device-gateway-base/plugin.yml`; the policy behind it
+(what a device is, which data may exist, retention, unpair / DSAR, security
+floor) is [docs/compliance/devices.md](../../compliance/devices.md). `main.yml`
+refuses `install_device_gateway: true` without a complete `gdpr:` block. This
+estate may opt in via `config.yml`; forks stay off.
 
 ## Authentication
 
