@@ -444,7 +444,7 @@
           {%- set ns = namespace(need=_routers | dict2items
                                  | selectattr('value.middlewares', 'defined')
                                  | selectattr('value.middlewares', 'contains', 'authentik@file')
-                                 | map(attribute='key') | list) -%}
+                                 | map(attribute='key') | reject('match', '.*-origin$') | list) -%}
           {#- Tier-2: nos_apps_render walks apps/ itself; mirror ITS file filter
               (main():534-539) — .yml and .yaml, no `_` template, no `.draft`. -#}
           {%- if apps_runner_enabled | default(true) | bool -%}

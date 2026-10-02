@@ -96,6 +96,7 @@
             strict: "{{ apps_strict | default(false) | bool }}"
             traefik_network: "{{ apps_traefik_network }}"
             skip: "{{ apps_skip | default([]) }}"
+            origin_pull: "{{ traefik_origin_pull_enabled | default(false) | bool }}"
           register: _apps_render
 
         # ── Defensive 0-app warning ──────────────────────────────────────────

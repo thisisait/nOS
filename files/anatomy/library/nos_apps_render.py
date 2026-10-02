@@ -195,7 +195,8 @@ def _auth_mode(record):
     return mode
 
 
-def _traefik_labels(app_name, fqdn, port, auth_mode, traefik_network):
+def _traefik_labels(app_name, fqdn, port, auth_mode, traefik_network,
+                    origin_pull=False):
     """Standard Traefik Docker-provider labels for a Tier-2 app."""
     name_safe = app_name.replace("_", "-")
     labels = [
@@ -216,6 +217,16 @@ def _traefik_labels(app_name, fqdn, port, auth_mode, traefik_network):
             "traefik.http.routers.{}.middlewares=security-headers@file,compress@file"
             .format(name_safe)
         )
+    if origin_pull:
+        # Twin on the mTLS-only Cloudflare origin-pull door; auth stays identical.
+        r = "traefik.http.routers.{}".format(name_safe)
+        o = "traefik.http.routers.{}-origin".format(name_safe)
+        labels += [
+            "{}.rule=Host(`{}`)".format(o, fqdn),
+            "{}.entrypoints=websecure-origin".format(o),
+            "{}.tls.options=origin-pull@file".format(o),
+            "{}.service={}".format(o, name_safe),
+        ] + [o + lbl[len(r):] for lbl in labels if lbl.startswith(r + ".middlewares=")]
     return labels
 
 
@@ -414,7 +425,7 @@ def _app_traefik_network(record, default_net, app_name):
 
 def _process_one(path, tenant_domain, apps_subdomain, secret_seed,
                  extra_eu_registries, strict, traefik_network,
-                 host_alias=""):
+                 host_alias="", origin_pull=False):
     """Return ({app dict OR None}, {generated secrets OR {}}, [violations])."""
     name = os.path.splitext(os.path.basename(path))[0]
     try:
@@ -491,7 +502,8 @@ def _process_one(path, tenant_domain, apps_subdomain, secret_seed,
         "compose": compose_resolved,
         "traefik_labels": _traefik_labels(
             name, fqdn, port, auth_mode,
-            _app_traefik_network(record, traefik_network, name)),
+            _app_traefik_network(record, traefik_network, name),
+            origin_pull=origin_pull),
         "registry_entry": _registry_entry(name, record, fqdn),
         "wing_system": _wing_system(name, record, fqdn, auth_mode, rbac_tier),
         "authentik_entry": authentik,
@@ -519,6 +531,8 @@ def main():
             traefik_network=dict(type="str", default="shared_net"),
             # apps_skip: manifest ids (file stems) this estate declines.
             skip=dict(type="list", elements="str", default=[]),
+            # Twin every router onto websecure-origin (traefik_origin_pull_enabled).
+            origin_pull=dict(type="bool", default=False),
         ),
         supports_check_mode=True,
     )
@@ -551,6 +565,7 @@ def main():
             extra_eu_registries=p["eu_registries"],
             strict=p["strict"],
             traefik_network=p["traefik_network"],
+            origin_pull=p["origin_pull"],
         )
         if app is not None:
             apps.append(app)

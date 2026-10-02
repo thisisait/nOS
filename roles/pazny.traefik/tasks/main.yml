@@ -26,6 +26,17 @@
     - install_nginx | default(false) | bool
     - install_traefik | default(true) | bool
 
+# A local TLD has no Cloudflare in front of it: the door would admit nobody.
+- name: "[pazny.traefik] Refuse origin-pull mTLS on a local TLD"
+  ansible.builtin.assert:
+    that:
+      - not (tenant_domain_is_local | default(true) | bool)
+    fail_msg: >-
+      traefik_origin_pull_enabled is true but tenant_domain {{ tenant_domain | default('') }}
+      is local. Cloudflare Authenticated Origin Pulls needs a public, CF-proxied zone.
+      Set traefik_origin_pull_enabled: false.
+  when: traefik_origin_pull_enabled | default(false) | bool
+
 # ── Host directory tree ──────────────────────────────────────────────────────
 - name: "[pazny.traefik] Ensure config + dynamic + log directories exist"
   ansible.builtin.file:
@@ -66,6 +77,31 @@
     src: dynamic/tls.yml.j2
     dest: "{{ traefik_dynamic_dir }}/tls.yml"
     mode: '0644'
+
+# Origin-pull door: CA beside traefik.yml (/etc/traefik, already mounted :ro)
+# and the TLS option + TCP catch-all in conf.d. Off removes both.
+- name: "[pazny.traefik] Vendor the Cloudflare origin-pull CA"
+  ansible.builtin.copy:
+    src: cloudflare-origin-pull-ca.crt
+    dest: "{{ traefik_config_dir }}/cloudflare-origin-pull-ca.crt"
+    mode: '0644'
+  when: traefik_origin_pull_enabled | default(false) | bool
+
+- name: "[pazny.traefik] Render origin-pull TLS option + catch-all"
+  ansible.builtin.template:
+    src: dynamic/origin-pull.yml.j2
+    dest: "{{ traefik_dynamic_dir }}/origin-pull.yml"
+    mode: '0644'
+  when: traefik_origin_pull_enabled | default(false) | bool
+
+- name: "[pazny.traefik] Remove origin-pull config when disabled"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ traefik_dynamic_dir }}/origin-pull.yml"
+    - "{{ traefik_config_dir }}/cloudflare-origin-pull-ca.crt"
+  when: not (traefik_origin_pull_enabled | default(false) | bool)
 
 - name: "[pazny.traefik] Render Tier-1 services (auto-derived from manifest + install_* flags)"
   ansible.builtin.template:

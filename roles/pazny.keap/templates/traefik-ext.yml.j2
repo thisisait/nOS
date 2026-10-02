@@ -20,15 +20,20 @@
 # PathPrefix makes this rule longer (= higher default priority) than the plain
 # Host() SSO router in services.yml; priority pinned anyway.
 # =============================================================================
+{# Origin-pull twin (traefik_origin_pull_enabled): same route on websecure-origin.
+   Without it this path falls to the gated keap router there. #}
+{% set _doors = [('', 'websecure', {})] + ([('-origin', 'websecure-origin', {'options': 'origin-pull@file'})] if traefik_origin_pull_enabled | default(false) | bool else []) %}
 http:
   routers:
-    keap-ext:
+{% for _sfx, _ep, _tls in _doors %}
+    keap-ext{{ _sfx }}:
       rule: "Host(`{{ keap_domain }}`) && PathPrefix(`/ext/v1`)"
-      entryPoints: ["websecure"]
+      entryPoints: ["{{ _ep }}"]
       service: "keap"
       priority: 200
-      tls: {}
+      tls: {{ _tls | to_json }}
       middlewares: ["keap-ext-ratelimit@file", "security-headers@file"]
+{% endfor %}
 
   middlewares:
     keap-ext-ratelimit:

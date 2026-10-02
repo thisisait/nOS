@@ -2406,6 +2406,10 @@ traefik_image_version: "v3.7.13"        # REM-251 GHSA-rf44-j88r-hh8c (aliasHead
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8082            # 8080=cadvisor, 8081=tileserver, 8090=freescout — 8082 is the first free slot
+# Cloudflare Authenticated Origin Pulls: a second, mTLS-only door. :443 is untouched;
+# the router forwards WAN 443 here instead. Runbook: docs/traefik-primary-proxy.md.
+traefik_origin_pull_enabled: false
+traefik_origin_pull_port: 8443
 traefik_domain: "traefik{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 traefik_log_level: "INFO"               # DEBUG / INFO / WARN / ERROR
 # traefik_dynamic_dir / traefik_certs_dir live in roles/pazny.traefik/defaults

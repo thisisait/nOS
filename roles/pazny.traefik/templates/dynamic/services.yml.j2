@@ -29,6 +29,10 @@
 # those are Traefik's own entry points, routing back into them would loop
 # forever and Traefik would return 404 to the original request.
 
+{# Every websecure router gets an `-origin` twin on websecure-origin when
+   traefik_origin_pull_enabled: same rule, service and middlewares, but
+   tls.options origin-pull@file. Off = one door, byte-identical render. #}
+{% set _doors = [('', 'websecure', {})] + ([('-origin', 'websecure-origin', {'options': 'origin-pull@file'})] if traefik_origin_pull_enabled | default(false) | bool else []) %}
 http:
   routers:
 {% for s in nos_manifest.services | default([]) %}
@@ -53,11 +57,6 @@ http:
 {% set _host = lookup('vars', s.domain_var, default=(s.id | replace('_', '-')) ~ (_host_alias_seg | default('')) ~ '.' ~ tenant_domain) %}
 {% set _auth = traefik_auth_modes.get(s.id, 'proxy') %}
 {% set _router = s.id | replace('_', '-') %}
-    {{ _router }}:
-      rule: "Host(`{{ _host }}`)"
-      entryPoints: ["websecure"]
-      service: "{{ _router }}"
-      tls: {}
 {# SEC-6 (2026-05-23): wing router gets the wing-edge@file middleware
    that injects X-Wing-Edge-Token. Wing's BasePresenter rejects requests
    without it (closing the direct-loopback bypass class). #}
@@ -83,11 +82,18 @@ http:
 {% if s.id in ['onlyoffice', 'euro_office'] %}
 {% set _extra_mw = _extra_mw + ['docserver-nocache@file'] %}
 {% endif %}
+{% for _sfx, _ep, _tls in _doors %}
+    {{ _router }}{{ _sfx }}:
+      rule: "Host(`{{ _host }}`)"
+      entryPoints: ["{{ _ep }}"]
+      service: "{{ _router }}"
+      tls: {{ _tls | to_json }}
 {% if _auth == 'proxy' %}
       middlewares: {{ (['authentik@file', 'security-headers@file', 'compress@file'] + _extra_mw) | to_json }}
 {% else %}
       middlewares: {{ (['security-headers@file', 'compress@file'] + _extra_mw) | to_json }}
 {% endif %}
+{% endfor %}
 {# ── Machine lanes ────────────────────────────────────────────────────────
    A path prefix that must reach the service WITHOUT authentik@file, because
    the caller is a machine and the gate 302s it into Authentik's HTML. Declared
@@ -102,12 +108,14 @@ http:
    The service behind a lane therefore has to authenticate the caller ITSELF.
 #}
 {% for _lane in (traefik_machine_lanes | default({})).get(s.id, []) %}
-    {{ _router }}-{{ _lane.name }}:
+{% for _sfx, _ep, _tls in _doors %}
+    {{ _router }}-{{ _lane.name }}{{ _sfx }}:
       rule: "Host(`{{ _host }}`) && PathPrefix({{ _lane.prefixes | map('regex_replace', '^(.*)$', '`\\1`') | join(', ') }})"
-      entryPoints: ["websecure"]
+      entryPoints: ["{{ _ep }}"]
       service: "{{ _router }}"
-      tls: {}
+      tls: {{ _tls | to_json }}
       middlewares: ["security-headers@file", "compress@file"]
+{% endfor %}
 {% endfor %}
 {% endif %}
 {% endif %}
@@ -123,16 +131,18 @@ http:
     # WARNING: skipping extra router '{{ r.id }}' — already defined as a
     # manifest entry. Remove it from traefik_extra_routers in vars/main.yml.
 {% else %}
-    {{ r.id | replace('_', '-') }}:
+{% for _sfx, _ep, _tls in _doors %}
+    {{ r.id | replace('_', '-') }}{{ _sfx }}:
       rule: "Host(`{{ r.host }}`)"
-      entryPoints: ["websecure"]
+      entryPoints: ["{{ _ep }}"]
       service: "{{ r.id | replace('_', '-') }}"
-      tls: {}
+      tls: {{ _tls | to_json }}
 {% if r.auth | default('proxy') == 'proxy' %}
       middlewares: ["authentik@file", "security-headers@file", "compress@file"]
 {% else %}
       middlewares: ["security-headers@file", "compress@file"]
 {% endif %}
+{% endfor %}
 {% endif %}
 {% endfor %}
 
@@ -143,12 +153,14 @@ http:
 {# Docker host-gateway), and `traefik` stays in traefik_skip_ids so the manifest #}
 {# auto-loop emits nothing for it. Gate: test_traefik_api_not_insecure.py.       #}
 {% if traefik_dashboard_route_enabled | default(true) | bool %}
-    traefik-dashboard:
+{% for _sfx, _ep, _tls in _doors %}
+    traefik-dashboard{{ _sfx }}:
       rule: "Host(`{{ traefik_domain }}`)"
-      entryPoints: ["websecure"]
+      entryPoints: ["{{ _ep }}"]
       service: "api@internal"
       middlewares: ["authentik@file", "security-headers@file", "compress@file"]
-      tls: {}
+      tls: {{ _tls | to_json }}
+{% endfor %}
 {% endif %}
 
   services:

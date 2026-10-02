@@ -16,6 +16,10 @@ services:
       # Edge — public on every interface
       - "{{ traefik_http_port | default(80) }}:80"
       - "{{ traefik_https_port | default(443) }}:443"
+{% if traefik_origin_pull_enabled | default(false) | bool %}
+      # Cloudflare origin-pull door: mTLS required. The WAN 443 forward lands here.
+      - "{{ traefik_origin_pull_port | default(8443) }}:8443"
+{% endif %}
       # /ping liveness — host-local only. Container :8080 serves ONLY /ping now
       # (REM-194: api.insecure is false; the API is no longer on :8080). The
       # dashboard moves to the opt-in SSO router (traefik_dashboard_route_enabled).
