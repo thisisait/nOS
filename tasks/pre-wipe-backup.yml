@@ -151,4 +151,3 @@
     quiet: true
   when: prewipe_snapshot_required | default(true) | bool
   tags: ['blank', 'reset']
-
