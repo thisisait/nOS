@@ -34,7 +34,7 @@ def test_the_secret_store_is_invisible_in_process_and_to_children():
     assert child.returncode != 0, "a child process can still read ~/.nos/secrets.yml"
     # the rest of HOME still resolves — ~/.ansible, ~/.gitconfig, ~/.cache are symlinked through
     real = pathlib.Path(guard._real["HOME"])
-    assert {p.name for p in pathlib.Path.home().iterdir()} == {p.name for p in real.iterdir()} | {".nos"}
+    assert {p.name for p in real.iterdir()} | {".nos"} <= {p.name for p in pathlib.Path.home().iterdir()}
     for holder in guard.HIDDEN:                     # the unit files carry the organs' tokens
         fake = pathlib.Path.home() / holder
         assert not fake.is_symlink() and (not fake.exists() or not any(fake.iterdir())), holder

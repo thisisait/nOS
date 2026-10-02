@@ -206,7 +206,7 @@
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/sso/OID/Get"
     headers: &jf_sso_hdr
-      Authorization: 'MediaBrowser Token="{{ _jf_sso_auth.json.AccessToken | default('') }}"'
+      Authorization: "MediaBrowser Token=\"{{ _jf_sso_auth.json.AccessToken | default('') }}\""
     timeout: 10
   register: _jf_sso_get
   when: _jf_sso_auth.json.AccessToken is defined

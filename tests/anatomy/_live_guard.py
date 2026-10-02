@@ -69,7 +69,9 @@ def _farm(real: pathlib.Path, fake: pathlib.Path, hidden: tuple[str, ...]) -> No
 
 
 def _fake_home(real: pathlib.Path) -> pathlib.Path:
-    home = pathlib.Path(tempfile.mkdtemp(prefix="nos-pytest-home-"))
+    # Not under /tmp: HOME-derived paths must stay private (test_circuit_breaker).
+    (real / ".cache").mkdir(exist_ok=True)
+    home = pathlib.Path(tempfile.mkdtemp(prefix="nos-pytest-home-", dir=real / ".cache"))
     atexit.register(shutil.rmtree, home, True)
     _farm(real, home, HIDDEN)
     return home
