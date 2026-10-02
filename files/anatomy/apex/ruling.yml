@@ -581,12 +581,6 @@ nodes:
 
   # --- withheld: scheduled jobs (when the house is busy stays home, D3) ------
   "pulse:alert-relay:relay-firing": withheld
-  # ARES registry clock (ares-verify-base) — WITHHELD like every pulse:* node
-  # (D3). SLATED FOR DELETION with the plugin once `pulse:n8n:exec-watch` is
-  # seen reporting live (docs/doctrine/n8n-packs.md §7); remove these two rows
-  # in the same commit so the D4 vanish-halt is a conscious shrink.
-  "pulse:ares-verify:registry-daily": withheld
-  "pulse:ares-verify:registry-new": withheld
   "pulse:authentik-tofu-drift:tofu-drift-plan": withheld
   "pulse:backup:backup-restore-drill": withheld
   "pulse:conductor:scan-state-record": withheld
