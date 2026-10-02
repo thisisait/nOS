@@ -1,4 +1,4 @@
-"""Anatomy CI gate — a committed table's anchor is not a known-broken node.
+"""Estate probe — a committed table's anchor is not a known-broken node.
 
 Two committed keap-tables once anchored [[nos.agents]], which existed nowhere,
 and the KEAP lint reported it nightly for as long as they were there — the
@@ -22,7 +22,9 @@ import urllib.request
 import pytest
 import yaml
 
-REPO = pathlib.Path(__file__).resolve().parents[2]
+from lib.estate_secrets import secret
+
+REPO = pathlib.Path(__file__).resolve().parents[3]
 KEAP = "http://127.0.0.1:8091"
 
 
@@ -36,13 +38,7 @@ def _committed_anchors() -> dict[str, list[str]]:
 
 
 def _broken_live() -> set[str]:
-    try:
-        store = yaml.safe_load((pathlib.Path.home() / ".nos" / "secrets.yml")
-                               .read_text()) or {}
-        tok = str(store.get("keap_agent_token_ro") or "")
-        rw = str(store.get("keap_agent_token_rw") or "")
-    except OSError:
-        tok = rw = ""
+    tok, rw = secret("keap_agent_token_ro") or "", secret("keap_agent_token_rw") or ""
     if not tok:
         pytest.skip("no keap_agent_token_ro — the lint is UNKNOWN here")
     # GET /agent/v1/lint serves a PERSISTED queue that never recomputes on read;

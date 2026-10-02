@@ -4,8 +4,8 @@ MEASURED 2026-10-02 on the dev box, before tests/anatomy/_live_guard.py:
 `Path.home()/.nos/secrets.yml` readable, `docker inspect iiab-rustfs-1` rc 0
 with the bucket keys in its output, `connect(127.0.0.1:9000)` answered by the
 live Wing. That is the path the 2026-09-20 RustFS incident took (7 objects,
-Object-Lock COMPLIANCE, 3650 days) — and two anatomy gates still walk part of
-it today: test_table_anchors_resolve POSTs /agent/v1/lint/run to the live KEAP
+Object-Lock COMPLIANCE, 3650 days) — and an anatomy gate walked part of
+it until 2026-10-02: test_table_anchors_resolve POSTed /agent/v1/lint/run to the live KEAP
 with the RW token. Every assertion below is RED on that state and green only
 because the boundary holds for the test and for the children it spawns.
 """
