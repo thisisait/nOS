@@ -145,7 +145,9 @@ role, or a new organ.
 
 ## 7. What to delete / fold once this is built
 
-- `ares-verify-base` Pulse fire + `tools/n8n-fire.py` (clock in the wrong organ).
+- ~~`ares-verify-base` Pulse fire + `tools/n8n-fire.py` (clock in the wrong organ).~~
+  DONE 2026-10-02: both packs active, the watcher saw an ARES execution, then
+  both were deleted and their Pulse ids retired (`wing_pulse_retired_jobs`).
 - ČNB: keep the JSON; drop “import by hand”; same harvester; keep
   `tools/cnb-dtt.py` as oracle.
 - ARES: same. `party-registry-status` table stays in nOS (the spine is

@@ -102,7 +102,11 @@ def test_n8n_base_watch_is_not_a_clock():
     assert "exec-watch" in text
     assert "n8n-fire.py" not in text
     assert "secret:n8n_api_key" in text
-    assert "ares-verify-base" in (REPO / "files/anatomy/plugins/ares-verify-base/plugin.yml").read_text()
+    # The Pulse clock is gone (2026-10-02) and its ids are retired, or Wing keeps
+    # firing a deleted script every 15 minutes.
+    assert not (REPO / "files/anatomy/plugins/ares-verify-base").exists()
+    retired = (REPO / "roles/pazny.wing/defaults/main.yml").read_text()
+    assert '"ares-verify:registry-daily"' in retired and '"ares-verify:registry-new"' in retired
 
 
 def test_a_persisted_secret_is_never_world_readable(tmp_path, monkeypatch):

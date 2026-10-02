@@ -14,9 +14,7 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TOOL = REPO / "tools" / "ares-dtt.py"
-FIRE = REPO / "tools" / "n8n-fire.py"
 PULL = REPO / "files/anatomy/n8n/templates/nos-pull-ares-registry.json"
-PLUGIN = REPO / "files/anatomy/plugins/ares-verify-base/plugin.yml"
 ARES = REPO / "tests/fixtures/ares-registry.json"
 ADIS = REPO / "tests/fixtures/ares-adis-unreliable.xml"
 SECRETISH = re.compile(r"(sk-|Bearer [A-Za-z0-9._-]{12,}|_pw_|api[_-]?key\s*[:=])", re.I)
@@ -73,48 +71,7 @@ def test_pull_template_is_webhook_then_ares_adis_upsert():
     assert not PRIVATE.search(blob)
 
 
-def test_pulse_fires_n8n_not_a_python_hydrator():
-    man = yaml.safe_load(PLUGIN.read_text(encoding="utf-8"))
-    assert "scheduled-job" in man["type"]
-    assert man["requires"]["feature_flag"] == "install_n8n"
-    jobs = {j["name"]: j for j in man["pulse"]["jobs"]}
-    assert set(jobs) == {"registry-daily", "registry-new"}
-    daily = jobs["registry-daily"]
-    assert daily["command"].endswith("tools/n8n-fire.py")
-    assert "--scope=all" in daily["args"]
-    assert "webhook/nos-ares-registry" in daily["args"][0]
-    assert jobs["registry-new"]["args"][-1] == "--scope=missing"
-    assert FIRE.is_file()
-    assert not (REPO / "tools" / "digest-import-ares.py").exists()
-
-
-def _fire_against(code: int, body: bytes) -> int:
-    import http.server, subprocess, sys, threading
-
-    class H(http.server.BaseHTTPRequestHandler):
-        def log_message(self, *a):
-            pass
-
-        def do_POST(self):
-            self.rfile.read(int(self.headers.get("Content-Length", 0)))
-            self.send_response(code)
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-
-    srv = http.server.HTTPServer(("127.0.0.1", 0), H)
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    try:
-        return subprocess.run([sys.executable, str(FIRE), f"--url=http://127.0.0.1:{srv.server_port}/webhook/x"],
-                              capture_output=True).returncode
-    finally:
-        srv.shutdown()
-
-
-def test_an_inactive_workflow_is_idle_not_a_failure():
-    """Activation is the operator's consent; each 15-minute tick had raised a
-    failure into the inbox (2026-10-01). Other errors still fail."""
-    unregistered = b'{"code":404,"message":"The requested webhook \\"POST x\\" is not registered."}'
-    assert _fire_against(404, unregistered) == 0
-    assert _fire_against(404, b'{"message":"Not Found"}') == 2
-    assert _fire_against(500, b"boom") == 2
+def test_the_pack_carries_its_own_clock():
+    """The ARES pull is scheduled inside n8n (deleted Pulse clock, 2026-10-02)."""
+    wf = json.loads((REPO / "files/anatomy/n8n/templates/nos-pull-ares-registry.json").read_text())
+    assert any(n["type"] == "n8n-nodes-base.scheduleTrigger" for n in wf["nodes"])
