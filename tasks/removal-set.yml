@@ -100,6 +100,9 @@
         (install_offline_maps | default(false)) | ternary(
           [maps_data_dir | default(ansible_facts['env']['HOME'] + '/maps')], [])
         +
+        (install_geolibre | default(false)) | ternary(
+          [geolibre_data_dir | default(ansible_facts['env']['HOME'] + '/geolibre')], [])
+        +
         (install_traefik | default(false)) | ternary(
           [traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik')], [])
         +
@@ -277,6 +280,7 @@
       - { var: openclaw_base_dir, level: never, why: "is $HOME itself" }
       - { var: openclaw_agents_dir, level: never, why: "~/agents holds user content; only anatomy-owned children (hermes) are removed" }
       - { var: openclaw_projects_dir, level: never, why: "~/projects holds user content — this checkout included" }
+      - { var: nos_atlas_src_dir, level: never, why: "the nos-atlas dev checkout under ~/projects; the role only copies its dist/ out" }
       - { var: openclaw_log_dir, level: never, why: "under ~/agents (see openclaw_agents_dir)" }
       - { var: iiab_terminal_config_dir, level: all, why: "under homebrew_prefix/etc but written by nOS, not a formula — a leave takes it with the home user (2026-09-29 exit audit)" }
 

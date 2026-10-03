@@ -86,6 +86,12 @@ tofu_authentik_services:
   tier: 2
   enabled: '{{ install_freescout | default(false) }}'
   external_host: https://{{ freescout_domain }}
+- slug: geolibre
+  name: Atlas
+  mode: forward_auth
+  tier: 3
+  enabled: '{{ install_geolibre | default(false) }}'
+  external_host: https://{{ geolibre_domain }}
 - slug: gitea
   name: Gitea
   mode: native_oidc

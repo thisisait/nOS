@@ -377,6 +377,24 @@ services:
     port_var: maps_port
     data_path_var: maps_data_dir
 
+  - id: geolibre
+    category: gis
+    stack: iiab
+    install_flag: install_geolibre
+    version_var: geolibre_version
+    version_source: docker_image
+    image: ghcr.io/opengeos/geolibre
+    domain_var: geolibre_domain
+    port_var: geolibre_port
+    data_path_var: geolibre_data_dir
+    oidc: proxy
+    rbac_tier: 3
+    health_check:
+      type: http
+      url_template: "http://127.0.0.1:{port}/healthz"
+      expect_status: 200
+      timeout_sec: 5
+
   - id: jellyfin
     category: media
     stack: iiab

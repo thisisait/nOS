@@ -188,6 +188,7 @@ traefik_auth_modes:
   calibre_web: proxy
   mikopbx: proxy            # PBX admin UI; no OIDC/header auth in MikoPBX core (docs/systems/mikopbx)
   kiwix: proxy
+  geolibre: proxy           # atlas.<tenant>; static web GIS, no app login
   paperclip: proxy
   wing: proxy
   code_server: proxy

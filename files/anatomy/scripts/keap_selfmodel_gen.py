@@ -127,6 +127,7 @@ SYSTEM_NAME = {
     "erpnext": "ERPNext", "freescout": "FreeScout", "outline": "Outline",
     "hedgedoc": "HedgeDoc", "bookstack": "BookStack", "firefly": "Firefly III",
     "nos-forum": "nos-forum",
+    "geolibre": "GeoLibre",
     "dolibarr": "Dolibarr",
     "onlyoffice": "ONLYOFFICE",
     "metabase": "Metabase", "superset": "Superset", "influxdb": "InfluxDB",
@@ -330,6 +331,11 @@ SYSTEM_EN = {
     "offline-maps": (
         "The offline map tile server. It serves vector and raster tiles out of local "
         "MBTiles archives, so a map renders without calling any hosted tile provider."
+    ),
+    "geolibre": (
+        "GeoLibre, the browser GIS at atlas. It opens and styles layers in the visitor's "
+        "browser and hosts the nos-atlas plugin that draws KEAP as a planet; it shows maps, "
+        "where the offline map server only supplies the tiles."
     ),
     "jellyfin": (
         "Jellyfin, the media library server. It catalogues film, television and music "

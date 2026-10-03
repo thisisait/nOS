@@ -1,0 +1,6 @@
+---
+# pazny.geolibre — GeoLibre (static web GIS) + the nos-atlas plugin drop-in.
+# Install flag, image pin, port, domain and source dir live in default.config.yml only.
+
+geolibre_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+geolibre_cpus: "{{ docker_cpus_light | default('0.5') }}"

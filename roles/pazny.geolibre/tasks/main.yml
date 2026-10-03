@@ -1,0 +1,39 @@
+---
+# ==============================================================================
+# pazny.geolibre/tasks/main.yml — render phase, BEFORE `docker compose -p iiab up`.
+# The nos-atlas bundle is COPIED out of the dev checkout into geolibre_data_dir;
+# the container mounts the copy read-only, never ~/projects. Building the bundle
+# (npm run build in nos-atlas) is not this role's job.
+# ==============================================================================
+
+- name: "[pazny.geolibre] Ensure the plugin directory exists"
+  ansible.builtin.file:
+    path: "{{ geolibre_data_dir }}/plugins/nos-atlas"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.geolibre] Look for the built nos-atlas bundle"
+  ansible.builtin.stat:
+    path: "{{ nos_atlas_src_dir }}/dist/nos-atlas/plugin.json"
+  register: _geolibre_atlas_dist
+
+- name: "[pazny.geolibre] Copy the nos-atlas bundle into the data dir"
+  ansible.builtin.copy:
+    src: "{{ nos_atlas_src_dir }}/dist/nos-atlas/"
+    dest: "{{ geolibre_data_dir }}/plugins/nos-atlas/"
+    mode: preserve
+  when: _geolibre_atlas_dist.stat.exists
+
+- name: "[pazny.geolibre] nos-atlas bundle missing, GeoLibre serves without it"
+  ansible.builtin.debug:
+    msg: >-
+      {{ nos_atlas_src_dir }}/dist/nos-atlas/plugin.json not found — run `npm run build`
+      in nos-atlas, then re-run `--tags geolibre`. GeoLibre itself still comes up.
+  when: not _geolibre_atlas_dist.stat.exists
+
+- name: "[pazny.geolibre] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/geolibre.yml"
+    mode: '0600'
+  notify: Restart geolibre
