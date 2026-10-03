@@ -1,0 +1,30 @@
+---
+# pazny.mikopbx — install-only. SSO / Traefik / GDPR live in mikopbx-base.
+#
+# Image: mikopbx/mikopbx (GPL-3.0, multi-arch, Asterisk 22 + SQLite + Redis
+# inside — no infra DB). Version pin and ports live in default.config.yml.
+#
+# First boot reads WEB_ADMIN_PASSWORD / SIP_PORT / RTP_PORT_* from env ONCE
+# (DockerCloud provisioning marks itself done); every later change is pushed
+# through the REST API by tasks/post.yml and read back there.
+
+mikopbx_domain: "pbx{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+mikopbx_port: 8088
+mikopbx_sip_port: 5060
+mikopbx_rtp_start: 10000
+mikopbx_rtp_end: 10100
+mikopbx_lan_access: "{{ services_lan_access | default(false) }}"
+mikopbx_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+mikopbx_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+mikopbx_admin_login: "admin"
+mikopbx_pbx_name: "nOS PBX"
+mikopbx_timezone: "{{ nos_timezone | default('Europe/Prague') }}"
+# The address SIP phones can actually reach. Docker Desktop (macOS) proxies
+# every published UDP packet from the bridge gateway, so Asterisk must
+# advertise THIS address in SDP, never the container's own (measured
+# 2026-10-03: c=172.17.0.3 → no audio; c=<host> → echo test returns audio).
+mikopbx_external_ip: "{{ ansible_facts['default_ipv4']['address'] | default('') }}"
+# Declared estate: extensions and SIP trunks, provisioned by post.yml.
+# A phone registers as number/secret; the secret is derived per number.
+mikopbx_extensions: []     # - { number: "201", name: "Alice", email: "" }
+mikopbx_providers: []      # - { name: "my-sip-provider", host: "sip.example.com", username: "u", secret: "s", port: 5060 }

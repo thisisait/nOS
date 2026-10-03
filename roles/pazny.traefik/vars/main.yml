@@ -171,6 +171,7 @@ traefik_auth_modes:
   metabase: proxy
   uptime_kuma: proxy
   calibre_web: proxy
+  mikopbx: proxy            # PBX admin UI; no OIDC/header auth in MikoPBX core (docs/systems/mikopbx)
   kiwix: proxy
   paperclip: proxy
   wing: proxy

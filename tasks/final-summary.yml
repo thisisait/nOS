@@ -72,6 +72,9 @@
       {% if install_bluesky_pds | default(false) %}
         Bluesky PDS      https://{{ bluesky_pds_hostname }}            -> goat CLI (admin auto-provisioned)
       {% endif %}
+      {% if install_mikopbx | default(false) %}
+        MikoPBX          https://{{ mikopbx_domain }}                 -> admin / nos-secret mikopbx_admin (behind Authentik)
+      {% endif %}
 
       ── INTERNAL SERVICES (no direct login) ───────────────────────────────────
 

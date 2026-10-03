@@ -86,6 +86,7 @@
 # ── Engineering / Data stack ────────────────────────────────────────────────
 - name: "[External SSD] Override Engineering/Data paths"
   ansible.builtin.set_fact:
+    mikopbx_data_dir: "{{ external_storage_root }}/mikopbx"
     qgis_data_dir: "{{ external_storage_root }}/qgis"
     metabase_data_dir: "{{ external_storage_root }}/metabase"
     superset_data_dir: "{{ external_storage_root }}/superset"

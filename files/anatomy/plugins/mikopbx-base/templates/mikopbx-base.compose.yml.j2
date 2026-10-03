@@ -1,0 +1,5 @@
+{# Traefik file-provider owns the router. Docker provider must skip. #}
+services:
+  mikopbx:
+    labels:
+      - "traefik.enable=false"

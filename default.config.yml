@@ -61,6 +61,7 @@ calibreweb_books_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/
 calibreweb_config_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/calibreweb/config"
 code_server_data_dir: "{{ nos_data_root }}/platform/services/code_server/data"
 erpnext_data_dir: "{{ nos_data_root }}/platform/services/erpnext/data"
+mikopbx_data_dir: "{{ nos_data_root }}/platform/services/mikopbx"
 freescout_data_dir: "{{ nos_data_root }}/platform/services/freescout/data"
 gitea_data_dir: "{{ nos_data_root }}/platform/services/gitea/data"
 gitlab_config_dir: "{{ nos_data_root }}/platform/services/gitlab/config"
@@ -621,6 +622,8 @@ install_firefly: false            # Firefly III – personal finance [Docker, re
 install_dolibarr: false           # Dolibarr ERP/CRM desk [Docker, MariaDB, ARM64]. Praxis pack ON. KEAP tables = books fallback when this is off. SSO is forward_auth until OIDC module is proven in post.yml.
 install_onlyoffice: true          # ONLYOFFICE Document Server [Docker] — Nextcloud's Edit needs it (builder edge, 2026-10-01)
 
+# ── VoIP stack (telecommunications) ──────────────────────────────────────────
+install_mikopbx: false            # MikoPBX – Asterisk 22 PBX (extensions, trunks)      [Docker]
 
 # ── Engineering stack (HW/CAD/GIS) ───────────────────────────────────────────
 install_qgis_server: false        # QGIS Server – GIS map server                        [Docker]
@@ -2614,6 +2617,26 @@ outline_secret_key: "{{ global_password_prefix }}_pw_outline_secret"
 outline_utils_secret: "{{ global_password_prefix }}_pw_outline_utils"
 
 # ==============================================================================
+# VOIP – MIKOPBX (Asterisk 22 PBX; SQLite + Redis inside, no infra DB)
+# SSO: Authentik forward_auth gate; PBX admin password derived. Calls on macOS
+# need NAT pinned through the API — docs/systems/mikopbx/README.md.
+# ==============================================================================
+
+mikopbx_version: "2026.3.40"           # mikopbx/mikopbx, multi-arch (Asterisk 22.8.2 inside)
+mikopbx_domain: "pbx{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+mikopbx_port: 8088                     # Web UI + REST API (loopback publish)
+mikopbx_sip_port: 5060                 # SIP signaling (UDP+TCP), published port
+mikopbx_rtp_start: 10000               # RTP media range — Docker Desktop makes one proxy per port, keep it small
+mikopbx_rtp_end: 10100
+mikopbx_lan_access: "{{ services_lan_access | default(false) }}"   # true = SIP/RTP on 0.0.0.0 so LAN phones can reach the PBX
+mikopbx_external_ip: "{{ ansible_facts['default_ipv4']['address'] | default('') }}"   # address phones reach; advertised in SDP
+mikopbx_admin_login: "admin"
+mikopbx_pbx_name: "nOS PBX"
+mikopbx_timezone: "{{ nos_timezone }}"
+mikopbx_extensions: []                 # - { number: "301", name: "Alice", email: "", secret: "" }   secret optional (derived)
+mikopbx_providers: []                  # - { name: "provider", host: "sip.example", username: "u", secret: "s", port: 5060 }
+
+# ==============================================================================
 # ENGINEERING – QGIS SERVER (GIS map server)
 # ==============================================================================
 
@@ -3398,6 +3421,9 @@ backup_dirs_to_dump:
   - { name: "tenants", path: "{{ nos_data_root }}/tenants" }
   - { name: "dolibarr-documents", path: "{{ dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents') }}" }
   - { name: "dolibarr-custom", path: "{{ dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom') }}" }
+  # MikoPBX: cf/ holds the whole config in SQLite (same torn-window honesty as
+  # kuma.db), storage/ the recordings + voicemail. One source, one restore target.
+  - { name: "mikopbx", path: "{{ mikopbx_data_dir | default(ansible_facts['env']['HOME'] + '/mikopbx') }}" }
   # 2026-09-28 — the ten cheap holes backup_coverage named: file-only stores
   # no DB dump covers (attachments, uploads, three SQLite apps). Same torn-window
   # honesty as vaultwarden/n8n for kuma.db / webui.db / home-assistant_v2.db.

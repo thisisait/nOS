@@ -1,0 +1,60 @@
+# pazny.mikopbx — compose override (voip). No top-level networks.
+# Official image, Asterisk 22 + SQLite + Redis inside; listens on :80 (web),
+# :5060 udp/tcp (SIP), RTP range below. No shared infra DB.
+#
+# Env is read by MikoPBX's DockerCloud provisioning ON FIRST BOOT ONLY (it
+# stamps CLOUD_PROVISIONING=1 in /cf and skips afterwards, measured
+# 2026-10-03); tasks/post.yml re-asserts ports/NAT/password via REST on every
+# converge, so a config.yml change still lands without a wipe.
+
+services:
+  mikopbx:
+    image: mikopbx/mikopbx:{{ mikopbx_version }}
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN            # fail2ban / iptables inside the container
+    ports:
+      - "127.0.0.1:{{ mikopbx_port | default(8088) }}:80"
+{% if mikopbx_lan_access | default(false) | bool %}
+      - "{{ mikopbx_sip_port | default(5060) }}:5060/udp"
+      - "{{ mikopbx_sip_port | default(5060) }}:5060/tcp"
+      - "{{ mikopbx_rtp_start | default(10000) }}-{{ mikopbx_rtp_end | default(10100) }}:{{ mikopbx_rtp_start | default(10000) }}-{{ mikopbx_rtp_end | default(10100) }}/udp"
+{% else %}
+      - "127.0.0.1:{{ mikopbx_sip_port | default(5060) }}:5060/udp"
+      - "127.0.0.1:{{ mikopbx_sip_port | default(5060) }}:5060/tcp"
+      - "127.0.0.1:{{ mikopbx_rtp_start | default(10000) }}-{{ mikopbx_rtp_end | default(10100) }}:{{ mikopbx_rtp_start | default(10000) }}-{{ mikopbx_rtp_end | default(10100) }}/udp"
+{% endif %}
+    volumes:
+      - {{ mikopbx_data_dir }}/cf:/cf
+      - {{ mikopbx_data_dir }}/storage:/storage
+    environment:
+      PBX_NAME: "{{ mikopbx_pbx_name | default('nOS PBX') }}"
+      WEB_ADMIN_LOGIN: "{{ mikopbx_admin_login | default('admin') }}"
+      WEB_ADMIN_PASSWORD: "{{ mikopbx_admin_password }}"
+      SIP_PORT: "5060"
+      EXTERNAL_SIP_PORT: "{{ mikopbx_sip_port | default(5060) }}"
+      RTP_PORT_FROM: "{{ mikopbx_rtp_start | default(10000) }}"
+      RTP_PORT_TO: "{{ mikopbx_rtp_end | default(10100) }}"
+      ENABLE_USE_NAT: "1"
+      PBX_TIMEZONE: "{{ mikopbx_timezone | default('Europe/Prague') }}"
+      # The container cannot manage host iptables in bridge mode; Traefik +
+      # Authentik gate the web UI, SIP exposure is the ports: block above.
+      PBX_FIREWALL_ENABLED: "0"
+      PBX_FAIL2BAN_ENABLED: "0"
+    healthcheck:
+      # PUBLIC endpoint (ResourceSecurity system_ping); curl is in the image.
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://127.0.0.1/pbxcore/api/v3/system:ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 6
+      start_period: 120s
+    networks:
+      - voip_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ mikopbx_mem_limit | default(docker_mem_limit_standard) }}
+    cpus: {{ mikopbx_cpus | default(docker_cpus_standard | default('1.0')) }}

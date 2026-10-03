@@ -151,6 +151,9 @@
         (install_outline | default(false)) | ternary(
           [outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data')], [])
         +
+        (install_mikopbx | default(false)) | ternary(
+          [mikopbx_data_dir | default(ansible_facts['env']['HOME'] + '/mikopbx')], [])
+        +
         (install_qgis_server | default(false)) | ternary(
           [qgis_data_dir | default(ansible_facts['env']['HOME'] + '/qgis')], [])
         +

@@ -1,0 +1,27 @@
+---
+# Rendered into {{ stacks_dir }}/voip/overrides/mikopbx.yml before compose up.
+
+- name: "[pazny.mikopbx] Ensure data directories exist"
+  ansible.builtin.file:
+    path: "{{ mikopbx_data_dir }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - cf          # /cf      — config + SQLite (mikopbx.db), the whole PBX state
+    - storage     # /storage — recordings, voicemail, CDR exports
+
+- name: "[pazny.mikopbx] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/voip/overrides/mikopbx.yml"
+    mode: "0600"
+  notify: Restart mikopbx
+
+- name: "[pazny.mikopbx] Print installation info"
+  ansible.builtin.debug:
+    msg: |
+      MikoPBX → https://{{ mikopbx_domain }} (127.0.0.1:{{ mikopbx_port }})
+      SIP {{ 'LAN' if mikopbx_lan_access | bool else '127.0.0.1' }}:{{ mikopbx_sip_port }}/udp+tcp,
+      RTP {{ mikopbx_rtp_start }}-{{ mikopbx_rtp_end }}/udp, advertised address {{ mikopbx_external_ip }}.
+      SSO: Authentik forward_auth (gate); PBX admin login {{ mikopbx_admin_login }} behind it.
+      Data: {{ mikopbx_data_dir }}

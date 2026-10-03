@@ -1,0 +1,125 @@
+# =============================================================================
+# mikopbx-base — PBX (GPL-3.0). Role keeps image/ports/volumes/provisioning.
+#
+# SSO: forward_auth — the ONE honest single-login path MikoPBX offers today.
+# Measured 2026-10-03 from mikopbx/Core source: the web UI validates only the
+# single WebAdminLogin/WebAdminPassword pair (CredentialsValidator) plus a
+# password-based module hook; the REST layer reads `Authorization: Bearer` and
+# `X-Api-Key` only (PBXCoreREST/Http/Request.php) — no Remote-User header, no
+# OIDC/SAML in core, LDAP login only via the PAID ModuleUsersUI (a second
+# password prompt, not SSO). The one OIDC module in the wild
+# (davidjaksa/ModuleAuthentikSSO, one author, one commit) rides core's
+# one-time `sessionToken` login path; it is a reviewed opt-in follow-up
+# (docs/systems/mikopbx/README.md §SSO), not something to vendor blind.
+#
+# Ceiling, stated plainly: Authentik gates the door; behind it the PBX still
+# asks for ITS admin password (derived, nos_derived_secrets.mikopbx_admin).
+# Phones never see Authentik — SIP is digest auth per extension by design.
+# =============================================================================
+
+name: mikopbx-base
+version: 0.1.0
+description: |
+  MikoPBX — Asterisk 22 PBX for the estate's phones: extensions, one or more
+  SIP trunks, voicemail, call recordings and CDR. SQLite + Redis live inside
+  the container; no infra DB. SIP/RTP are published UDP ports, web UI is a
+  Traefik route behind Authentik forward-auth.
+upstream: https://github.com/mikopbx/Core
+license: GPL-3.0
+
+type:
+  - service
+  - ui-extension
+
+_NOS_PLUGIN: "mikopbx-base"
+
+requires:
+  role: pazny.mikopbx
+  feature_flag: install_mikopbx
+  variables:
+    - mikopbx_port
+    - mikopbx_domain
+    - tenant_domain
+    - host_alias
+
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-mikopbx
+  client_secret: "{{ nos_derived_secrets.oidc_mikopbx }}"
+  slug: mikopbx
+  name: 'MikoPBX'
+  enabled: "{{ install_mikopbx | default(false) }}"
+  launch_url: "https://{{ mikopbx_domain | default('pbx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
+  tier: 1
+
+compose_extension:
+  template: templates/mikopbx-base.compose.yml.j2
+  target_stack: voip
+  target_service: mikopbx
+  hardening_refs: []
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ mikopbx_port }}/pbxcore/api/v3/system:ping"
+        timeout: 300
+        accept_any_2xx_3xx_4xx: false
+
+observability:
+  loki:
+    labels:
+      app: mikopbx
+      stack: voip
+      tier: "1"
+
+gdpr:
+  purpose: |
+    Operator-hosted telephony: call routing between declared extensions and
+    SIP trunks, voicemail, optional call recording, call detail records (CDR)
+    for billing and troubleshooting. Authentik forward-auth gates the admin
+    UI; phones authenticate per extension with SIP digest credentials.
+  legal_basis: legitimate_interests
+  data_categories:
+    - name
+    - email
+    - phone_number
+    - call_detail_records
+    - voicemail_audio
+    - call_recordings
+    - sip_credentials
+  data_subjects:
+    - operators
+    - end_users
+    - callers
+  retention_days: 365   # CDR + voicemail + recordings live in /storage; prune by operator policy
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+
+ui-extension:
+  hub_card:
+    title: "MikoPBX"
+    icon: phone
+    url: "https://{{ mikopbx_domain }}"
+    tier: 1
+    description: "Phone system — extensions, trunks, voicemail, recordings"
+
+# ── Notification routing (A9 severity → channel) ─────────────────────────────
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+e2e:
+  probes:
+    - name: anonymous-is-sent-to-authentik
+      url: https://{{ mikopbx_domain | default('pbx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/admin-cabinet/
+      expect: {status: [302], location_contains: "{{ authentik_domain }}/application/o/authorize"}
+    - name: pbx-core-answers-on-loopback
+      url: http://127.0.0.1:{{ mikopbx_port }}/pbxcore/api/v3/system:ping
+      expect: {status: [200]}

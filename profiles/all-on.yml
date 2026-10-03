@@ -25,6 +25,8 @@
 #   - install_erpnext      — hard-blocked behind erpnext_experimental_override,
 #                            non-working on first blank (see roles/pazny.erpnext)
 #   - install_spacetimedb  — BSL 1.1 license (internal-SaaS use only), not FOSS
+#   - install_mikopbx      — publishes SIP/RTP UDP ports; not yet proven on a
+#                            live converge (docs/systems/mikopbx/README.md)
 # Re-enable any of those manually if you specifically want to test them.
 # =============================================================================
 

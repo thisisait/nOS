@@ -1,0 +1,6 @@
+---
+- name: Restart mikopbx
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p voip
+    restart mikopbx
+  failed_when: false

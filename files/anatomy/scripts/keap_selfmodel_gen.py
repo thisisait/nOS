@@ -129,7 +129,7 @@ SYSTEM_NAME = {
     "dolibarr": "Dolibarr",
     "onlyoffice": "ONLYOFFICE",
     "metabase": "Metabase", "superset": "Superset", "influxdb": "InfluxDB",
-    "qgis-server": "QGIS Server",
+    "mikopbx": "MikoPBX", "qgis-server": "QGIS Server",
     "alloy": "Grafana Alloy", "openclaw": "OpenClaw", "hermes": "Hermes",
     "device-gateway": "Device gateway",
     "opencode": "OpenCode", "wing": "Wing", "bone": "Bone", "pulse": "Pulse",
@@ -476,7 +476,13 @@ SYSTEM_EN = {
         "estate's own instrumentation. It is a write target, distinct from the scrape-driven "
         "metrics store in observability."
     ),
-    # ── engineering ──
+    # ── voip / engineering ──
+    "mikopbx": (
+        "MikoPBX, the estate's phone system: Asterisk 22 packaged with its own web "
+        "admin, SQLite and Redis in one container. It registers SIP phones as extensions, "
+        "routes calls out through SIP trunks and keeps voicemail, recordings and call "
+        "detail records — the maintained successor to the abandoned FreePBX image."
+    ),
     "qgis-server": (
         "QGIS Server, the OGC geospatial map service. It publishes WMS, WFS and WCS layers "
         "rendered from QGIS project files, for clients that speak the standard mapping "

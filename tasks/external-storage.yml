@@ -77,7 +77,8 @@
     # B2B (erpnext_data_dir deprecated - named volume, see P0.1 commit 3b88162)
     - "{{ freescout_data_dir }}"
     - "{{ outline_data_dir }}"
-    # Engineering / Data
+    # VoIP / Engineering / Data
+    - "{{ mikopbx_data_dir }}"
     - "{{ qgis_data_dir }}"
     - "{{ metabase_data_dir }}"
     - "{{ superset_data_dir }}"
