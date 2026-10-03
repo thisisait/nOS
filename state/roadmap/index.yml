@@ -819,6 +819,9 @@
 - slug: nextcloud-sso-state-lost
   parent: e2e-lifecycle
   track: platform
+- slug: nos-atlas
+  parent: gis-property
+  track: platform
 - slug: nos-forum
   parent: ''
   track: platform
