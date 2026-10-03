@@ -21,6 +21,9 @@
 - slug: agent-landing-zero-command-operator
   parent: ''
   track: platform
+- slug: agent-runtime-least-privilege
+  parent: workload-allowlist
+  track: security
 - slug: agent-scope-single-authority
   parent: ''
   track: platform
@@ -330,6 +333,9 @@
 - slug: digest-doctrine
   parent: digest
   track: digest
+- slug: digest-drift-red
+  parent: workload-allowlist
+  track: security
 - slug: digest-review-remediation
   parent: digest
   track: platform
@@ -339,6 +345,9 @@
 - slug: digest-teardown
   parent: digest
   track: digest
+- slug: docker-sock-behind-proxy
+  parent: workload-allowlist
+  track: security
 - slug: docs-czech-and-fork-residue
   parent: ''
   track: platform
@@ -909,6 +918,9 @@
 - slug: organs-noun
   parent: ''
   track: platform
+- slug: orphan-extension-exclusion
+  parent: workload-allowlist
+  track: platform
 - slug: party-ares-verify
   parent: digest
   track: digest
@@ -1047,6 +1059,9 @@
 - slug: pulse-lineage
   parent: ''
   track: agents
+- slug: pulse-prefix-allowlist
+  parent: workload-allowlist
+  track: security
 - slug: qdrant-base-undispatched-actions
   parent: plat
   track: platform
@@ -1311,6 +1326,9 @@
 - slug: uc-vision-read-invoice
   parent: consulting-firm-deployment
   track: cortex
+- slug: undeclared-status
+  parent: workload-allowlist
+  track: security
 - slug: v0-1
   parent: ''
   track: release
@@ -1440,3 +1458,6 @@
 - slug: workflow-build-fanout-verdict
   parent: ''
   track: platform
+- slug: workload-allowlist
+  parent: ''
+  track: security
