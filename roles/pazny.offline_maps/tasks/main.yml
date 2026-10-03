@@ -47,11 +47,10 @@
     mode: '0644'
     timeout: 600
 
+# tar, not unarchive: unarchive needs GNU tar for .tar.gz and macOS ships bsdtar.
 - name: "[pazny.offline_maps] Unpack glyphs to {{ maps_cache_dir }}/fonts"
-  ansible.builtin.unarchive:
-    src: "{{ maps_cache_dir }}/ofm-fonts.tar.gz"
-    dest: "{{ maps_cache_dir }}"
-    remote_src: true
+  ansible.builtin.command:  # noqa: command-instead-of-module
+    argv: [tar, -xzf, "{{ maps_cache_dir }}/ofm-fonts.tar.gz", -C, "{{ maps_cache_dir }}"]
     creates: "{{ maps_cache_dir }}/ofm/Noto Sans Regular"
 
 - name: "[pazny.offline_maps] Expose glyphs under the path the config names"
