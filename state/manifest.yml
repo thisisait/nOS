@@ -759,6 +759,25 @@ services:
     port_var: onlyoffice_port
     data_path_var: onlyoffice_data_dir
 
+  # --------------------------------------------------------------- voip stack
+  - id: mikopbx
+    category: pbx
+    stack: voip
+    install_flag: install_mikopbx
+    version_var: mikopbx_version
+    version_source: docker_image
+    image: mikopbx/mikopbx
+    domain_var: mikopbx_domain
+    port_var: mikopbx_port
+    data_path_var: mikopbx_data_dir
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ mikopbx_port }}/pbxcore/api/v3/system:ping"
+      expect_status: 200
+      timeout_sec: 10
+    oidc: proxy                             # Authentik forward-auth at Traefik; PBX admin login stays behind it
+    rbac_tier: 1
+
   # --------------------------------------------------------- engineering stack
   - id: qgis_server
     category: gis

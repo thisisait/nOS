@@ -365,6 +365,7 @@ nodes:
   "service:snappymail":    { publish: voice, speaks: "a window onto the mailbox" }
   "service:ntfy":          { publish: voice, speaks: "a tap on the shoulder when something matters" }
   "service:wordpress":     { publish: voice, speaks: "the public word, published from home" }
+  "service:mikopbx":       { publish: voice, speaks: "a telephone switchboard of one's own" }
 
   # --- withheld: the page's own server (a page must not narrate itself) -----
   # service:apex serves THIS site. Publishing it would name the serving
@@ -380,6 +381,7 @@ nodes:
   "authentik:code-server": withheld
   "authentik:documenso": withheld
   "authentik:dolibarr": withheld
+  "authentik:mikopbx": withheld
   "authentik:erpnext": withheld
   # Residual OAuth2 client of the RETIRED EspoCRM desk (espocrm-retire-base),
   # held only until OpenTofu destroys it. WITHHELD like every authentik:* node;

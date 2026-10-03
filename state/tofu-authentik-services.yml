@@ -188,6 +188,12 @@ tofu_authentik_services:
   tier: 2
   enabled: '{{ install_metabase | default(false) }}'
   external_host: https://{{ metabase_domain }}
+- slug: mikopbx
+  name: MikoPBX
+  mode: forward_auth
+  tier: 1
+  enabled: '{{ install_mikopbx | default(false) }}'
+  external_host: https://{{ mikopbx_domain | default('pbx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
 - slug: miniflux
   name: Miniflux
   mode: native_oidc
