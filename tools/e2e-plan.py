@@ -154,6 +154,7 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
             "enabled": enabled,
             "probes": _render(env, e2e.get("probes") or []),
             "isolation": _render(env, e2e.get("isolation") or []),
+            "app": bool(ak),     # e2e-only plugins (backup, alert-relay) have no URL to open
         })
     # Manifest apps (apps/*.yml) carry their own authentik: block and were
     # invisible to a plugin-only walk: documenso, twofauth, roundcube.
@@ -179,10 +180,10 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
                      "tier": int(r["tier"]) if str(r.get("tier", "")).isdigit() else None,
                      "client_id": r.get("client_id"), "redirect_uri": (r.get("redirect_uris") or [None])[0],
                      "launch_url": r.get("launch_url"), "first_login": r.get("first_login"),
-                     "edge": "proxy", "enabled": enabled, "probes": [], "isolation": []})
+                     "edge": "proxy", "enabled": enabled, "probes": [], "isolation": [], "app": True})
     for row in rows:
         row["unresolved"] = [k for k in ("launch_url", "redirect_uri")
-                             if (row[k] is None and k == "launch_url") or
+                             if (row[k] is None and k == "launch_url" and row["app"]) or
                              (row[k] is not None and "." not in _host(row[k]))]
     return rows
 
