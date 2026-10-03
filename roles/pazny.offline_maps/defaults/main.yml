@@ -1,24 +1,9 @@
 ---
 # pazny.offline_maps — tileserver-gl serving a Planetiler-built base map.
-# Pins and the region live in default.config.yml; these are role fallbacks.
+# Region, pins, cache dir and asset URLs live in default.config.yml only.
 
 maps_port: 8070
 maps_domain: "maps{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-
-# Planetiler `--area` name (Geofabrik slug). The built PMTiles lands in
-# {{ maps_cache_dir }}/planetiler/<region>.pmtiles and survives every removal level.
-maps_region: "czech-republic"
-maps_languages: "cs,en,de,sk,pl"
-maps_planetiler_version: "0.10.2"
-maps_planetiler_java_opts: "-Xmx6g"
-maps_cache_dir: "{{ artifact_cache_dir | default(ansible_facts['env']['HOME'] ~ '/nos-cache') }}/maps"
-
-# Glyphs + sprites the vendored OpenFreeMap style expects (ODbL/BSD assets).
-maps_fonts_url: "https://assets.openfreemap.com/fonts/ofm.tar.gz"
-maps_sprites_url: "https://tiles.openfreemap.org/sprites/ofm_f384"
-
-# Extra operator archives: {url, dest} into maps_data_dir, served by basename.
-maps_mbtiles_files: []
 
 tileserver_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
 tileserver_cpus: "{{ docker_cpus_light | default('0.5') }}"

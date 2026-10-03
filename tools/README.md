@@ -59,6 +59,7 @@ worse than none, because it reads as complete.
 - `identity-status.py` — identity-status — the declared account roster vs what each realm holds.
 - `loader-vars-report.py` — D1 scoping tool (2026-06-11) — the plugin-loader variable contract.
 - `loop-status.py` — Which weakness sources actually produce proposals, and what came of them.
+- `maps-style-vendor.py` — Vendor an OpenFreeMap style for the offline tileserver: every source, sprite and glyph made local, labels `name:cs`.
 - `nos_identity.py` — The manifest row is the only place a service's spellings meet.
 - `npm-ioc-scan.py` — Cross-check every installed npm package against a published IOC list.
 - `plugin-wiring-report.py` — Plugin wiring report — capability matrix + contract checks.

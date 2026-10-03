@@ -19,17 +19,16 @@
 
 - **App-level auth:** none — tileserver-gl has no native login.
 - **SSO bucket:** `forward_auth`. Access is gated at the Traefik edge by the `authentik@file` middleware; a valid Authentik session is "you're in". There is no per-user identity inside the service.
-- The forward-auth gate is why the health probe accepts 401/302 as healthy (the redirect to Authentik is the gate working).
 
-## Content (MBTiles)
+## Content
 
-- The role auto-downloads one init fixture so the server starts with valid data: the tileserver-gl **Zurich demo** (~2 MB, `maps_init_mbtiles_url`). It is proof-of-life only.
-- Operators add real archives via `maps_mbtiles_files` (a list of URLs) or by dropping `.mbtiles` files into the data dir. Without at least one `.mbtiles` file tileserver-gl logs "No valid data input" and serves an empty map.
+- **Base map:** Planetiler builds OpenMapTiles PMTiles for `maps_region` (default `czech-republic`) into `maps_cache_dir` once; served as dataset `basemap` with the vendored `liberty` style (labels in Czech). Details and measured build cost: `roles/pazny.offline_maps/README.md`.
+- Extra archives: `maps_mbtiles_files` (a list of `{url, dest}`) or `.pmtiles`/`.mbtiles` dropped into the data dir; each is served by basename.
 
 ## Health Check
 
-- **Endpoint:** `GET /` (the web map viewer root).
-- **Expected:** any `2xx`/`3xx`/`4xx` — behind forward-auth an unauthenticated probe returns `401`/`302`, which still proves the server is live (plugin `wait_health`, `accept_any_2xx_3xx_4xx: true`).
+- **Endpoint:** `GET http://127.0.0.1:<maps_port>/styles/liberty/style.json` (loopback, no forward-auth).
+- **Expected:** `200` only. The e2e probes also read `/data/basemap.json` back; an empty tileserver is red.
 
 ## Dependencies
 

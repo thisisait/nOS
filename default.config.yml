@@ -1710,24 +1710,26 @@ kiwix_zim_files: []
 #   dest: "wikipedia_cs_mini.zim"        # ~500 MB
 
 # ==============================================================================
-# IIAB – OFFLINE MAPS (tileserver-gl + MBTiles)
+# IIAB – OFFLINE MAPS (tileserver-gl + a Planetiler-built base map)
 # ==============================================================================
 
 maps_domain: "maps{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 maps_port: 8081                               # 8080 taken by Traefik dashboard
 maps_tileserver_version: "v5.6.0"                  # Docker image tag (maptiler/tileserver-gl). Pinned from floating latest (REM-117 reproducibility shadow; v5.6.0 verified on Docker Hub). tileserver-gl is CVE-clean in-window.
 
-# Init MBTiles — small file downloaded automatically so tileserver starts.
-# Default: Zurich demo (~2 MB) from tileserver-gl test fixtures — proof of life.
-# Set to "" to disable; replace with Czech Republic or other region for real use.
-maps_init_mbtiles_url: "https://raw.githubusercontent.com/maptiler/tileserver-gl/master/test_fixtures/zurich_switzerland.mbtiles"
-maps_init_mbtiles_dest: "zurich_switzerland.mbtiles"
+# Base map: Planetiler builds OpenMapTiles PMTiles from the Geofabrik extract
+# once, into maps_cache_dir (survives every removal level). Region = Geofabrik slug.
+maps_region: "czech-republic"
+maps_languages: "cs,en,de,sk,pl"               # name:* tags kept in the tiles
+maps_planetiler_version: "0.10.2"              # ghcr.io/onthegomap/planetiler
+maps_planetiler_java_opts: "-Xmx3g"            # 6g was OOM-killed beside ~10 GB of estate; CZ measured in roles/pazny.offline_maps/README.md
+maps_cache_dir: "{{ artifact_cache_dir }}/maps"
+# Glyphs + sprites the vendored OpenFreeMap style expects (OFL fonts, BSD sprites).
+maps_fonts_url: "https://assets.openfreemap.com/fonts/ofm.tar.gz"
+maps_sprites_url: "https://tiles.openfreemap.org/sprites/ofm_f384"
 
-# Additional MBTiles files to download (empty = do not download automatically)
-# Free Czech Republic source (no registration): https://openfreemap.org/
+# Extra operator archives ({url, dest} into maps_data_dir), served by basename.
 maps_mbtiles_files: []
-# - url: "https://openfreemap.org/..."   # operator fills in after checking openfreemap.org
-#   dest: "czech-republic.mbtiles"
 
 # ==============================================================================
 # SHELL EXTRAS – Starship + aliases
@@ -3482,6 +3484,7 @@ backup_dirs_to_dump:
 #              backup_dirs_to_dump to close it (size/consistency is the operator's call).
 backup_coverage:
   artifact_cache_dir:          { class: derived, why: "verified image tars — re-pullable, checksummed, survives every removal" }
+  maps_cache_dir:              { class: derived, why: "Planetiler PMTiles + OSM sources, glyphs, sprites — rebuildable from open data" }
   mariadb_data_dir:            { class: dump, why: "mariadb.sql.gz — all databases" }
   postgresql_data_dir:         { class: dump, why: "postgres.sql.gz — pg_dumpall" }
   erpnext_data_dir:            { class: dump, why: "sites in a named volume; DB in mariadb.sql.gz (parked service)" }

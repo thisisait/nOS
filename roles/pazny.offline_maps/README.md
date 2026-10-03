@@ -1,62 +1,66 @@
 # pazny.offline_maps
 
-Ansible role for the complete **offline maps subsystem** (tileserver-gl + MBTiles) in the nOS `iiab` stack.
-
-Part of [nOS](../../README.md) Wave 2.2 role extraction (iiab-content unit).
-
-> **Naming note:** the role is named `pazny.offline_maps` (not `pazny.tileserver`) because it owns the full offline-maps subsystem — MBTiles download, tileserver-gl config render, nginx vhost, and the Docker compose service. The compose service itself is still called `tileserver`.
+The offline-maps subsystem of the `iiab` stack: tileserver-gl serving one
+OpenMapTiles base map that Planetiler builds locally from OpenStreetMap, plus a
+vendored OpenFreeMap style. No hosted tile provider is called at view time.
+The compose service is still named `tileserver`.
 
 ## What it does
 
-Single invocation from `tasks/stacks/stack-up.yml`, runs *before* `docker compose -p iiab up`:
+Runs from `tasks/stacks/stack-up.yml` before `docker compose -p iiab up`:
 
-- Creates `{{ maps_data_dir }}` and a `fonts/` subdirectory on the host
-- Seeds `config.json` with a tileserver-gl configuration (references `/data/*.mbtiles` inside the container)
-- Downloads any MBTiles listed in `maps_mbtiles_files`
-- Renders and enables the nginx reverse-proxy vhost
-- Drops a `download-maps.sh` helper script for operator use
-- Renders `templates/compose.yml.j2` into `{{ stacks_dir }}/iiab/overrides/tileserver.yml`
-- Notifies `Restart offline_maps` when the override changes (handler targets compose service `tileserver`)
+1. Builds `{{ maps_cache_dir }}/planetiler/{{ maps_region }}.pmtiles` with a
+   one-shot `ghcr.io/onthegomap/planetiler` container (`creates:` — once per region).
+   Sources (Geofabrik extract, water polygons, Natural Earth) stay under
+   `planetiler/data/sources`.
+2. Fetches the OpenFreeMap glyphs (`ofm.tar.gz`, linked as `fonts/`) and sprites
+   into the cache.
+3. Copies `files/styles/*.json` into `{{ maps_data_dir }}/styles/` and renders
+   `config.json` (dataset `basemap` + every `*.pmtiles`/`*.mbtiles` found in the data dir).
+4. Renders the nginx vhost (macOS) and the compose override.
 
-There is no post-start task — tileserver-gl serves MBTiles statically with no setup wizard.
+Nothing hides a failure: a map that does not arrive fails the play
+(gate `tests/anatomy/test_offline_maps_serves_a_basemap.py`).
 
-**Historical note:** the legacy `tasks/iiab/maps.yml` also installed `tileserver-gl` globally via npm and wrote a launchd plist to run it on the host. That path is dead once the Docker compose service takes over — this role drops the npm/launchd logic and relies entirely on the Docker container.
+`maps_cache_dir` lives under `artifact_cache_dir`, so no removal level deletes
+the base map; `remove=data` only drops `maps_data_dir` (styles + config).
 
-## Requirements
+## Style
 
-- Docker Desktop for Mac (ARM64)
-- `iiab_net` Docker network (declared in the base iiab compose file)
-- At least one `.mbtiles` file on disk (role can download via `maps_mbtiles_files`)
+`files/styles/liberty.json` is OpenFreeMap "liberty" rewritten by
+`tools/maps-style-vendor.py`: the source becomes `pmtiles://{basemap}`, the
+hosted hillshade is dropped, labels prefer `name:cs`. Re-run the tool to refresh.
 
-## Variables
+## Variables (default.config.yml)
 
-| Variable | Default | Description |
+| Variable | Default | |
 |---|---|---|
-| `maps_tileserver_version` | `latest` | `maptiler/tileserver-gl` image tag |
-| `maps_port` | `8070` | Host port (bound to `127.0.0.1`) |
-| `maps_domain` | `maps.dev.local` | Used by the nginx vhost |
-| `maps_data_dir` | `~/maps` | Host bind mount for MBTiles + config.json |
-| `maps_mbtiles_files` | `[]` | Optional list of `{url, dest}` dicts for pre-download |
-| `tileserver_mem_limit` | `docker_mem_limit_light` | Defaults to `512m` |
-| `tileserver_cpus` | `docker_cpus_light` | Defaults to `0.5` |
+| `maps_region` | `czech-republic` | Geofabrik slug passed to `--area` |
+| `maps_languages` | `cs,en,de,sk,pl` | `name:*` tags kept |
+| `maps_planetiler_version` | `0.10.2` | image tag |
+| `maps_planetiler_java_opts` | `-Xmx3g` | JVM heap for the build |
+| `maps_cache_dir` | `{{ artifact_cache_dir }}/maps` | survives every removal |
+| `maps_fonts_url`, `maps_sprites_url` | OpenFreeMap assets | fetched once |
+| `maps_mbtiles_files` | `[]` | extra `{url, dest}` archives into the data dir |
 
-## Usage
+## Measured build (Czech Republic)
 
-From `tasks/stacks/stack-up.yml`:
+Measured 2026-10-03 on an M-series Mac (Docker VM 16.5 GiB, 13 CPUs, the estate
+running beside it at ~9.8 GiB), planetiler 0.10.2, `--languages=cs,en,de,sk,pl`:
 
-```yaml
-- name: "[Stack] Offline maps render + dirs (pazny.offline_maps role)"
-  ansible.builtin.include_role:
-    name: pazny.offline_maps
-  when: install_offline_maps | default(false)
-```
+| | |
+|---|---|
+| Downloads (first run only) | ~2.4 GB: Geofabrik CZ extract ~0.95 GB, water polygons 0.93 GB, Natural Earth 0.43 GB, lake centerlines 0.08 GB — ~4 min at 4–11 MB/s |
+| Build (sources cached) | 4 min 14 s wall (19 min CPU), 258 s end to end |
+| Peak container RAM | 3.16 GiB with `-Xmx3g` |
+| Output | `czech-republic.pmtiles` 652 MB (z0–14, 1.9 GB of features) |
 
-## Rollback
+`-Xmx6g` was SIGKILLed (rc 137) in the encode phase twice: heap plus mmap'd temp
+files exceeded what the VM had left beside the estate. 3 GiB is enough for CZ.
+Served by tileserver-gl v5.6.0 at ~220 MiB RSS: style, TileJSON, vector tiles,
+glyphs, sprites and server-side raster render all 200 (throwaway container).
 
-Revert the commit that introduced this role and:
+## Licences
 
-1. Restore the `tileserver` service block in `templates/stacks/iiab/docker-compose.yml.j2`
-2. Restore `tasks/iiab/maps.yml` (with legacy npm + launchd logic)
-3. Restore the `import_tasks` call in `main.yml`
-
-The override file at `~/stacks/iiab/overrides/tileserver.yml` becomes dead — delete it manually.
+Map data © OpenStreetMap contributors (ODbL); OpenMapTiles schema (BSD/CC-BY);
+OpenFreeMap style/sprites (BSD), Noto fonts (OFL).

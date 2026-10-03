@@ -7,9 +7,9 @@
 # imperatives.
 #
 # tileserver-gl serves vector + raster MBTiles offline (Wikipedia-style
-# offline-first content delivery — cf. iiab stack mission). Default
-# fixture is the tileserver-gl Zurich demo (~2 MB); operators replace
-# it with their own MBTiles via `maps_mbtiles_files`.
+# offline-first content delivery — cf. iiab stack mission). The base map
+# is built by Planetiler for `maps_region`; the e2e probes read the style
+# and the dataset back, so an empty tileserver is red.
 #
 # SSO posture: forward_auth at the Traefik layer. tileserver-gl has no
 # native OIDC. No `authentik:` block here (Track Q5 doctrine).
@@ -40,11 +40,21 @@ requires:
 lifecycle:
   post_compose:
     - wait_health:
-        url: "http://127.0.0.1:{{ maps_port | default(8070) }}/"
-        timeout: 60
-        accept_any_2xx_3xx_4xx: true   # forward-auth returns 401/302; that's healthy
+        # Loopback port bypasses forward-auth, so only a served style is healthy.
+        url: "http://127.0.0.1:{{ maps_port | default(8070) }}/styles/liberty/style.json"
+        timeout: 120
   post_blank:
-    - remove_dir: "{{ ansible_facts['env']['HOME'] }}/maps"
+    - remove_dir: "{{ maps_data_dir }}"
+
+e2e:
+  enabled: "{{ install_offline_maps | default(false) }}"
+  probes:
+    - name: liberty-style-is-served
+      url: http://127.0.0.1:{{ maps_port }}/styles/liberty/style.json
+      expect: {status: [200]}
+    - name: basemap-tilejson-is-served
+      url: http://127.0.0.1:{{ maps_port }}/data/basemap.json
+      expect: {status: [200]}
 
 observability:
   loki:
@@ -78,7 +88,7 @@ ui-extension:
     icon: map
     url: "https://{{ maps_domain }}/"
     tier: 3
-    description: "Offline vector + raster map tiles (MBTiles)"
+    description: "Offline base map (OpenStreetMap, Planetiler-built)"
     health_check: "/"
 
 # ── Notification routing (A9 severity → channel) ─────────────────────────────
