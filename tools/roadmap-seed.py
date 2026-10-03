@@ -31,7 +31,7 @@ import sys
 import urllib.error
 import urllib.request
 
-from keap_api import human_base, human_headers, write_row  # noqa: E402 — sibling helper in tools/
+from keap_api import human_base, human_headers, paged, write_row  # noqa: E402 — sibling helper in tools/
 from roadmap_seed_lib import GIT_OWNED, load_rows, seed_dir, write_index  # noqa: E402
 
 _REPO = __import__("os").path.abspath(__import__("os").path.join(
@@ -128,7 +128,7 @@ if not _live_cols:
 # --sync reconciles the git-owned half for existing rows; without it this is
 # purely additive.
 live_rows = {r["values"].get("slug"): r
-             for r in req("GET", BASE + "/rows?limit=500")["data"]["rows"]}
+             for r in paged(lambda u: req("GET", u), BASE + "/rows")["data"]["rows"]}
 existing = set(live_rows)
 fresh = [r for r in R if r["slug"] not in existing]
 skipped = len(R) - len(fresh)
@@ -217,7 +217,7 @@ if drifted:
         except urllib.error.HTTPError as e:
             failures.append((r["slug"], e.read().decode("utf-8", "replace").strip()))
 
-after = req("GET", BASE + "/rows?limit=500")["data"]["rows"]
+after = paged(lambda u: req("GET", u), BASE + "/rows")["data"]["rows"]
 tops = [x for x in after if not x["values"].get("parent")]
 print(f"seeded: {len(after)} rows | top-level {len(tops)} | nested {len(after)-len(tops)}")
 

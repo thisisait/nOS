@@ -51,7 +51,7 @@ import urllib.request
 #: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
 #: non-default loopback publish. Defaults are the operator estate's values.
 TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
-from keap_api import human_base, human_headers, write_row
+from keap_api import human_base, human_headers, paged, write_row
 
 KEAP = human_base()   # the identity outpost when configured, else the loopback publish
 
@@ -130,7 +130,7 @@ def main() -> int:
                  f"  (state/keap-tables/roadmap.table.yml declares more; the "
                  f"definition has never been applied — see the 409 it returns.)")
 
-    rows = _req("GET", f"{human}/rows?limit=500", HUMAN_HDR)
+    rows = paged(lambda u: _req("GET", u, HUMAN_HDR), f"{human}/rows")
     if not rows.get("success"):
         _die(f"cannot read rows — {rows.get('error')}")
     by_slug = {r["values"].get("slug"): r for r in rows["data"]["rows"]}

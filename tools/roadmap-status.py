@@ -50,7 +50,7 @@ DEF = REPO / "state/keap-tables/roadmap.table.yml"
 
 #: Same table id and forward-auth headers as the seeder. Loopback only — the
 #: agent surface is bound to 127.0.0.1 and the estate's edge never sees this.
-from keap_api import human_base, human_headers  # noqa: E402 — sibling helper in tools/
+from keap_api import human_base, human_headers, paged  # noqa: E402 — sibling helper in tools/
 #: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
 #: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
 #: non-default loopback publish. Defaults are the operator estate's values.
@@ -113,7 +113,7 @@ def main() -> int:
 
     try:
         table = get(BASE)["data"]
-        rows = [r.get("values", r) for r in get(BASE + "/rows?limit=500")["data"]["rows"]]
+        rows = [r.get("values", r) for r in paged(get, BASE + "/rows")["data"]["rows"]]
     except (urllib.error.URLError, OSError, KeyError, ValueError) as exc:
         # Absence must never render as calm. An empty roadmap and an unreachable
         # one look identical on stdout, and only one of them is good news.

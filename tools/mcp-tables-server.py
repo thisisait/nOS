@@ -203,6 +203,14 @@ def _human_call(args: dict) -> tuple[str, bool]:
         if st != 200:
             return out(st, d)
         rows = (d.get("data") or {}).get("rows") or []
+        cursor = (d.get("data") or {}).get("nextCursor")
+        while cursor:  # /rows caps a page at 500 — walk the cursor (keap_api.paged)
+            st, d = call("GET", f"/api/tables/{t}/rows?limit=500&cursor={urllib.parse.quote(str(cursor))}")
+            page = (d.get("data") or {}).get("rows") or [] if st == 200 else []
+            if not page:
+                break
+            rows += page
+            cursor = (d.get("data") or {}).get("nextCursor")
         if verb == "get-row":
             if not rid:
                 return "verb 'get-row' needs an `id`", True

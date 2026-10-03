@@ -206,3 +206,25 @@ if __name__ == "__main__":
     got = bool(proxy_secret())
     print(f"proxy-secret {'RESOLVED (len=%d)' % len(proxy_secret()) if got else 'UNSET'}")
     sys.exit(0 if got or "--check" not in sys.argv else 1)
+
+
+def paged(fetch, rows_url: str, limit: int = 500) -> dict:
+    """GET every row of a table through `nextCursor`, in the caller's own fetch.
+
+    `/rows` caps a page at 500 (limit=1000 is a 400). Readers that asked for one
+    page saw a 508-row roadmap as 500 and roadmap-seed would re-insert the rest
+    (2026-10-03). Returns the first response with ALL rows in data.rows.
+    """
+    first = fetch(f"{rows_url}?limit={limit}")
+    data = first.get("data") or {}
+    rows, cursor = list(data.get("rows") or []), data.get("nextCursor")
+    while cursor and len(rows) < 100_000:
+        page = (fetch(f"{rows_url}?limit={limit}&cursor={urllib.parse.quote(str(cursor))}")
+                .get("data") or {})
+        if not page.get("rows"):
+            break
+        rows += page["rows"]
+        cursor = page.get("nextCursor")
+    data["rows"] = rows
+    data.pop("nextCursor", None)
+    return first
