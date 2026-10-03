@@ -1522,6 +1522,12 @@ install_postgis: false
 postgis_version: "3.6.4"
 postgis_sha256: "ed8dc6679f1e06f7b113592b04cde2a7e00f1b1e681294c8ca2204058990cec6"   # download.osgeo.org tarball (md5 matches upstream .md5)
 geo_db_name: "geo"
+# Open cadastral data loaded monthly into the geo db (tools/geo-load.py, Pulse geo:geo-load).
+# VÚSC kraj codes: 35 Jihočeský, 19 Praha, 27 Středočeský, 43 Plzeňský, 51 Karlovarský,
+# 60 Ústecký, 78 Liberecký, 86 Královéhradecký, 94 Pardubický, 108 Vysočina,
+# 116 Jihomoravský, 124 Olomoucký, 132 Moravskoslezský, 141 Zlínský.
+geo_regions: [35]
+geo_cache_dir: "{{ artifact_cache_dir }}/geo"
 postgresql_port: 5432
 postgresql_root_user: "postgres"
 postgresql_root_password: "{{ nos_derived_secrets.postgresql }}"
@@ -3490,6 +3496,7 @@ backup_dirs_to_dump:
 #              backup_dirs_to_dump to close it (size/consistency is the operator's call).
 backup_coverage:
   artifact_cache_dir:          { class: derived, why: "verified image tars — re-pullable, checksummed, survives every removal" }
+  geo_cache_dir:               { class: derived, why: "RÚIAN/INSPIRE downloads — re-fetchable open data; the loaded tables are in pg_dumpall" }
   maps_cache_dir:              { class: derived, why: "Planetiler PMTiles + OSM sources, glyphs, sprites — rebuildable from open data" }
   mariadb_data_dir:            { class: dump, why: "mariadb.sql.gz — all databases" }
   postgresql_data_dir:         { class: dump, why: "postgres.sql.gz — pg_dumpall (incl. the PostGIS geo db; restore replays into the same image)" }

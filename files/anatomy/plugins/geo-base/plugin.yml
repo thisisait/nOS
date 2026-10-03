@@ -1,0 +1,69 @@
+# =============================================================================
+# geo-base — the open-data loader organelle for the PostGIS `geo` database.
+#
+# Monthly Pulse job: RÚIAN address points + INSPIRE parcels/buildings for the
+# configured kraje into geo.ruian_adm / geo.inspire_cp / geo.inspire_bu
+# (EPSG:5514). The loader never reports success; tools/geo-status.py counts.
+# It idles (exit 0) where there is no geo database.
+# =============================================================================
+
+name: geo-base
+version: 0.1.0
+description: |
+  Pulse job running tools/geo-load.py: ČÚZK open data (RÚIAN CSV, INSPIRE
+  CP/BU GML) for `geo_regions` into PostGIS, conditional downloads into
+  `geo_cache_dir`, staged + swapped per layer.
+license: MIT
+
+type:
+  - scheduled-job
+
+requires:
+  feature_flag: install_postgis
+  variables:
+    - playbook_dir
+    - geo_cache_dir
+    - geo_region_codes
+
+pulse:
+  jobs:
+    - name: geo-load
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/geo-load.py"
+      args: ["--regions", "{{ geo_region_codes }}", "--cache-dir", "{{ geo_cache_dir }}"]
+      # RÚIAN publishes the month-end state in the first days of the month.
+      schedule: "30 3 6 * *"
+      jitter_min: 30
+      max_runtime_s: 7200
+      max_concurrent: 1
+      category: knowledge
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+gdpr:
+  purpose: |
+    Loads public ČÚZK cadastral open data (address points, parcel and building
+    geometry) into the local PostGIS database so business sites can be placed
+    on a map. No owner data: INSPIRE CP/BU and RÚIAN address points carry no
+    names, but an address point can be a natural person's home address.
+  legal_basis: legitimate_interests
+  data_categories:
+    - public_geodata
+  data_subjects:
+    - residents                    # address points, no names or owners
+  retention_days: 0
+  processors: []
+  eu_residency: true
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) and (install_postgis | default(false)) }}"
+  probes:
+    - name: geo-load-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.geo:geo-load.id": "geo:geo-load"}}

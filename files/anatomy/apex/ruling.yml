@@ -596,6 +596,9 @@ nodes:
   "pulse:cortex:cortex-corpus-diff": withheld
   "pulse:cortex:cortex-fs-sync": withheld
   "pulse:crm-hydrate:hydrate-parties": withheld
+  # geo-base (2026-10-03): open-data loader. WITHHELD: which kraje the firm
+  # maps is its own business.
+  "pulse:geo:geo-load": withheld
   # 2026-08-26 roster close: five withheld pulse rows left the artifact
   # (curator-sweep, promote-migration — agents PARKED; drift-scan,
   # triage-open-findings, upgrade-advise — agents RETIRED). All were

@@ -1422,6 +1422,20 @@ OpenTofu destroys the live objects. This plugin stores no CRM rows.
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
+#### Geo — `svc_geo`
+- **Purpose:** Loads public ČÚZK cadastral open data (address points, parcel and building
+geometry) into the local PostGIS database so business sites can be placed
+on a map. No owner data: INSPIRE CP/BU and RÚIAN address points carry no
+names, but an address point can be a natural person's home address.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `residents`
+- **Data categories:** `public_geodata`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
 #### Gitleaks — `svc_gitleaks`
 - **Purpose:** Secret detection in operator-managed source repositories (nOS repo)
 - **Legal basis (Art. 6):** `legitimate_interests`

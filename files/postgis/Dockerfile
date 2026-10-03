@@ -21,5 +21,5 @@ RUN --mount=type=secret,id=nos_build_ca,required=false set -eux; \
     cd /usr/src/postgis; \
     ./configure --without-gui --without-sfcgal; \
     make -j"$(nproc)" with_llvm=no; make install with_llvm=no; \
-    apk add --no-cache --virtual .postgis-rundeps gdal gdal-tools geos proj proj-data json-c libxml2 pcre2 protobuf-c libstdc++; \
+    apk add --no-cache --virtual .postgis-rundeps gdal gdal-tools gdal-driver-pg geos proj proj-data json-c libxml2 pcre2 protobuf-c libstdc++; \
     cd /; rm -rf /usr/src/postgis /tmp/postgis.tar.gz; apk del .build-deps
