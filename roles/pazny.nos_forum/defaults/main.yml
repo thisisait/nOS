@@ -1,0 +1,5 @@
+---
+# pazny.nos_forum — paths, toggles and the version pin live in default.config.yml
+# (a pin and a path are declared once). Only role-private knobs here.
+nos_forum_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+nos_forum_cpus: "{{ docker_cpus_standard | default('1.0') }}"

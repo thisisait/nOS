@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 106 (82 core services, 3 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (94)
+- **Processing activities:** 107 (83 core services, 3 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (95)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 17
 
@@ -483,6 +483,22 @@ Authentik-authenticated principals reach the service.
 - **Retention:** 365 days (~1y)
 - **Storage:** 'iiab' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
+
+#### Nos Forum — `svc_nos-forum`
+- **Purpose:** Let estate users talk: text channels and a minimalist forum (categories,
+topics, posts) inside servers they create or are invited to. Stores the
+messages, posts, reactions and read markers users write, their forum
+profile (username, display name, presence) and their server/channel
+memberships. Identity comes from Authentik; forum-web keeps the OIDC
+tokens only in an encrypted session cookie.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `end_users`; `operators`
+- **Data categories:** `message_content`; `forum_posts`; `reactions_and_read_markers`; `profile_username_display_name`; `presence_status`; `memberships_and_roles`; `oauth_session_data`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 365 days (~1y)
+- **Storage:** SpacetimeDB database nos-forum (spacetimedb_data_dir); forum-web is stateless in v0.1 (session = encrypted cookie in the browser).
+- **Security measures:** `Native OIDC (Authentik, code + PKCE); the module re-checks issuer and audience of every token`; `Private channels: row-level security in SpacetimeDB, gated by an integration test that a non-member never receives a row`; `Session cookie AES-256-GCM, httpOnly, SameSite=Lax, Secure`; `Disk encryption at rest is operator-provisioned (FileVault)`
 
 #### Ntfy — `svc_ntfy`
 - **Purpose:** Operator-hosted pub/sub HTTP push notifications server. Forward-auth gate ensures only

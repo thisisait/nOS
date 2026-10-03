@@ -346,6 +346,24 @@ services:
     oidc: proxy
     rbac_tier: 4
 
+  - id: nos_forum
+    category: collaboration
+    stack: iiab
+    install_flag: install_nos_forum
+    version_var: nos_forum_version
+    version_source: docker_image
+    image: ghcr.io/pazny/nos-forum-web
+    domain_var: nos_forum_domain
+    port_var: nos_forum_port
+    data_path_var: nos_forum_data_dir
+    oidc: native
+    rbac_tier: 4
+    health_check:
+      type: http
+      url_template: "http://127.0.0.1:{port}/health"
+      expect_status: 200
+      timeout_sec: 5
+
   - id: offline_maps
     category: gis
     stack: iiab

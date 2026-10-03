@@ -65,6 +65,20 @@ traefik_machine_lanes:
   # editor-only and belong behind the gate.
   n8n: []
 
+  # nos-forum: the browser's SpacetimeDB WebSocket. Caller = the forum app in a
+  # browser; SpacetimeDB authenticates it itself (Authentik id_token, checked
+  # against the module's issuer + audience). No outpost hop is possible on a WS
+  # upgrade, and SEC-02 headers mean nothing to SpacetimeDB. allow_paths keeps
+  # this to the two endpoints the SDK uses — not the publish/sql/admin API.
+  nos_forum:
+    - name: stdb
+      prefixes: ["/stdb"]
+      upstream: {svc: spacetimedb, port: 3000}
+      strip_prefix: true
+      allow_paths:
+        - "/v1/identity/websocket-token"
+        - "/v1/database/nos-forum/subscribe"   # the database name is fixed: one forum per estate
+
 
 traefik_auth_modes:
   # ── No auth (public or self-managed) ───────────────────────────────────────
@@ -140,6 +154,7 @@ traefik_auth_modes:
                             # (Audit 2026-06-13 flagged BYPASS; re-judged: app
                             # auth is the gate here, route-gating is wrong.)
   hedgedoc: oidc
+  nos_forum: oidc           # native OIDC broker in forum-web; /stdb lane = SpacetimeDB checks the JWT itself
   bookstack: oidc
   superset: oidc            # SUPERSET_AUTH_TYPE=AUTH_OAUTH
   homeassistant: oidc       # Auth provider plugin
@@ -404,6 +419,7 @@ traefik_container_upstreams:
   jellyfin:      { port: 8096 }
   miniflux:      { port: 8080 }
   hedgedoc:      { port: 3000 }
+  nos_forum:     { port: 5091 }
   bookstack:     { port: 80 }
   firefly:       { port: 8080 }
   dolibarr:      { port: 80 }

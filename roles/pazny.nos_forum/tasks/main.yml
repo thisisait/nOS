@@ -1,0 +1,46 @@
+---
+# ==============================================================================
+# pazny.nos_forum/tasks/main.yml — render phase, BEFORE `docker compose up iiab`.
+# Spec: github.com/pazny/nos-forum docs/spec/nos-integration.md, section 3.
+# One image carries forum-web AND module.wasm, so web and module cannot drift;
+# post.yml publishes the wasm from the image into SpacetimeDB.
+# ==============================================================================
+
+- name: "[pazny.nos_forum] Refuse calls in v0.1"
+  ansible.builtin.fail:
+    msg: "nos_forum_calls_enabled is a v0.2 toggle — v0.1 ships no LiveKit, no /rtc lane."
+  when: nos_forum_calls_enabled | default(false) | bool
+
+- name: "[pazny.nos_forum] Ensure data + owner-CLI directories exist (0700)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0700'
+  loop:
+    - "{{ nos_forum_data_dir }}"
+    - "{{ nos_forum_data_dir }}/cli"
+    - "{{ nos_forum_data_dir }}/module"
+
+# No release is published yet (open question Q12): a local checkout builds the
+# image under the same tag the compose file runs, so the rest of the role is
+# identical for a built and a pulled image.
+- name: "[pazny.nos_forum] Build the image from the local checkout"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    before=$({{ docker_bin }} image inspect -f '{{ '{{' }}.Id{{ '}}' }}' "{{ nos_forum_image }}:{{ nos_forum_version }}" 2>/dev/null || true)
+    {{ docker_bin }} build -q -t "{{ nos_forum_image }}:{{ nos_forum_version }}" "{{ nos_forum_src_dir }}" >/dev/null
+    after=$({{ docker_bin }} image inspect -f '{{ '{{' }}.Id{{ '}}' }}' "{{ nos_forum_image }}:{{ nos_forum_version }}")
+    [ "$before" = "$after" ] || echo "rebuilt"
+  args:
+    executable: /bin/bash
+  register: _nos_forum_build
+  changed_when: "'rebuilt' in _nos_forum_build.stdout"
+  when: nos_forum_src_dir | default('') | length > 0
+  notify: Restart nos-forum
+
+- name: "[pazny.nos_forum] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/nos_forum.yml"
+    mode: '0600'
+  notify: Restart nos-forum

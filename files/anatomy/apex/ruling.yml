@@ -374,6 +374,11 @@ nodes:
   # the word from every emitted file. Withheld, deliberately and forever.
   "service:apex": withheld
 
+  # --- withheld: nos-forum, pending the operator's ruling (2026-10-03) -------
+  # Added with the role, default-off. Whether the forum becomes a public atom
+  # (and what it `speaks:`) is a signature decision, not a generator commit.
+  "service:nos_forum": withheld
+
   # --- withheld: SSO clients (the map of who gates what stays home) ---------
   "authentik:backrest": withheld
   "authentik:bookstack": withheld
@@ -382,6 +387,7 @@ nodes:
   "authentik:documenso": withheld
   "authentik:dolibarr": withheld
   "authentik:mikopbx": withheld
+  "authentik:nos-forum": withheld
   "authentik:erpnext": withheld
   # Residual OAuth2 client of the RETIRED EspoCRM desk (espocrm-retire-base),
   # held only until OpenTofu destroys it. WITHHELD like every authentik:* node;

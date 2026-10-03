@@ -235,6 +235,9 @@
           [spacetimedb_data_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/data'),
            spacetimedb_keys_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/keys')], [])
         +
+        (install_nos_forum | default(false)) | ternary(
+          [nos_forum_data_dir | default(ansible_facts['env']['HOME'] + '/nos_forum/data')], [])
+        +
         (install_mcp_gateway | default(false)) | ternary(
           [mcpo_data_dir | default(ansible_facts['env']['HOME'] + '/mcpo')], [])
         +

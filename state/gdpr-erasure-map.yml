@@ -252,6 +252,19 @@ services:
            deletion; rely on the Tempo retention horizon (traces age out).
            Minimise PII in span attributes."
 
+  # ── nos-forum (iiab; policy docs/compliance/nos-forum.md) ─────────────────
+  - id: svc_nos-forum
+    flag: install_nos_forum
+    method: manual
+    note: "v0.1 has no forget CLI. As the module owner (the CLI in
+           nos_forum_data_dir/cli, see roles/pazny.nos_forum/tasks/post.yml):
+           sql \"SELECT identity FROM user WHERE username = '<u>'\" →
+           call set_config service_identity <owner-hex> (once) → call
+           erase_subject <identity-hex>. Tombstones the subject's messages and
+           posts (author → erased identity), deletes reactions, read markers,
+           memberships and the user row; refuses while the subject owns a
+           server (transfer first). The Authentik user delete above ends login."
+
   # ── Device gateway (host organ; policy docs/compliance/devices.md) ──────────
   - id: svc_device-gateway
     flag: install_device_gateway

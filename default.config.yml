@@ -95,6 +95,7 @@ ntfy_data_dir: "{{ nos_data_root }}/platform/services/ntfy/data"
 onlyoffice_data_dir: "{{ nos_data_root }}/platform/services/onlyoffice/data"
 openwebui_data_dir: "{{ nos_data_root }}/platform/services/openwebui/data"
 outline_data_dir: "{{ nos_data_root }}/platform/services/outline/data"
+nos_forum_data_dir: "{{ nos_data_root }}/platform/services/nos_forum/data"
 paperclip_data_dir: "{{ nos_data_root }}/platform/services/paperclip/data"
 portainer_data_dir: "{{ nos_data_root }}/platform/services/portainer/data"
 postgresql_data_dir: "{{ nos_data_root }}/platform/services/postgresql/data"
@@ -600,6 +601,7 @@ install_openwebui: true          # Open WebUI – chat UI for Ollama            
 install_mcp_gateway: false        # mcpo – MCP-to-OpenAPI proxy for OpenWebUI  [Docker, requires: Open WebUI]
 install_portainer: true          # Portainer CE – Docker management UI        [requires: Docker]
 install_spacetimedb: false       # SpacetimeDB Standalone – realtime DB (BSL 1.1, internal-SaaS use only) [Docker]
+install_nos_forum: false         # nos-forum – chat + forum on SpacetimeDB, native OIDC [Docker, requires: SpacetimeDB, Authentik]
 install_jellyfin: false           # Jellyfin – media server                    [requires: Docker]
 install_uptime_kuma: true        # Uptime Kuma – monitoring dashboard         [requires: Docker]
 install_calibreweb: true         # Calibre-Web – ebook server                [requires: Docker, calibre]
@@ -2099,6 +2101,22 @@ spacetimedb_install_host_cli: true      # install `spacetime` binary on host so 
 spacetimedb_dev_db: "dev"               # logical dev DB name printed in onboarding hint
 
 # ==============================================================================
+# IIAB – NOS-FORUM (chat + forum on SpacetimeDB; github.com/pazny/nos-forum, AGPL-3.0)
+# Spec: nos-forum docs/spec/nos-integration.md. v0.1 = text chat + forum, no calls.
+# ==============================================================================
+nos_forum_version: "v0.1.0"             # image tag; the image carries module.wasm, published by the role
+nos_forum_image: "ghcr.io/pazny/nos-forum-web"
+# Local checkout: set to build the image from source instead of pulling (no release is published yet).
+nos_forum_src_dir: ""
+nos_forum_domain: "forum{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+nos_forum_port: 5091                    # forum-web, 127.0.0.1 only; Traefik reaches it on the shared net
+nos_forum_retention_days: 365           # Art-30 horizon; NOT enforced in v0.1 (no archiver yet)
+nos_forum_calls_enabled: false          # v0.2: LiveKit + /rtc lane. Must stay false in v0.1
+nos_forum_media_host: "home"            # home | vps | tailscale — where the v0.2 SFU runs (a home SFU cannot sit behind Cloudflare)
+nos_forum_cloudflare_turn: false        # v0.2: Cloudflare Realtime TURN credentials handed to clients
+nos_forum_cloudflare_turn_key_id: ""    # Cloudflare dashboard → Realtime → TURN; the token is an operator secret
+
+# ==============================================================================
 # IIAB – JELLYFIN (media server)
 # ==============================================================================
 
@@ -3475,8 +3493,9 @@ backup_coverage:
   code_server_data_dir:        { class: derived, why: "editor settings + extensions" }
   influxdb_config_dir:         { class: derived, why: "rendered config" }
   qgis_data_dir:               { class: unbacked, why: "GIS projects (opt-in service)" }
-  spacetimedb_data_dir:        { class: unbacked, why: "parked service" }
-  spacetimedb_keys_dir:        { class: unbacked, why: "parked service" }
+  spacetimedb_data_dir:        { class: unbacked, why: "nos-forum hot state; no dump path yet (nos-forum open question Q11)" }
+  spacetimedb_keys_dir:        { class: unbacked, why: "JWT signing keys; rotation orphans every identity" }
+  nos_forum_data_dir:          { class: unbacked, why: "module-owner CLI token; losing it = cannot republish the module (Q11)" }
   infisical_data_dir:          { class: db, why: "secrets live in postgres.sql.gz" }
   metabase_data_dir:           { class: db, why: "app db in postgres.sql.gz; dir holds plugins" }
   superset_data_dir:           { class: db, why: "app db in postgres.sql.gz" }

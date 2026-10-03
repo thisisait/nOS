@@ -93,6 +93,7 @@
 - { name: "[Stacks] pazny.offline_maps render", ansible.builtin.include_role: { name: pazny.offline_maps, apply: { tags: ['maps'] } }, when: "install_offline_maps | default(false)", tags: ['maps'] }
 - { name: "[Stacks] pazny.keap render", ansible.builtin.include_role: { name: pazny.keap, apply: { tags: ['keap'] } }, when: "install_keap | default(false)", tags: ['keap'] }
 - { name: "[Stacks] pazny.face render", ansible.builtin.include_role: { name: pazny.face, apply: { tags: ['face'] } }, when: "install_face | default(false)", tags: ['face'] }
+- { name: "[Stacks] pazny.nos_forum render", ansible.builtin.include_role: { name: pazny.nos_forum, apply: { tags: ['nos_forum', 'iiab'] } }, when: "install_nos_forum | default(false)", tags: ['nos_forum', 'iiab'] }
 - { name: "[Stacks] pazny.vaultwarden render", ansible.builtin.include_role: { name: pazny.vaultwarden, apply: { tags: ['vaultwarden'] } }, when: "install_vaultwarden | default(false)", tags: ['vaultwarden'] }
 - { name: "[Stacks] pazny.ntfy render", ansible.builtin.include_role: { name: pazny.ntfy, apply: { tags: ['ntfy'] } }, when: "install_ntfy | default(false)", tags: ['ntfy'] }
 - { name: "[Stacks] pazny.miniflux render", ansible.builtin.include_role: { name: pazny.miniflux, apply: { tags: ['miniflux'] } }, when: "install_miniflux | default(false)", tags: ['miniflux'] }
@@ -445,6 +446,7 @@
 - { name: "[Stacks] pazny.homeassistant post", ansible.builtin.include_role: { name: pazny.homeassistant, tasks_from: post.yml, apply: { tags: ['homeassistant'] } }, when: "install_homeassistant | default(false)", tags: ['homeassistant'] }
 - { name: "[Stacks] pazny.calibre_web post", ansible.builtin.include_role: { name: pazny.calibre_web, tasks_from: post.yml, apply: { tags: ['calibreweb'] } }, when: "install_calibreweb | default(false)", tags: ['calibreweb'] }
 - { name: "[Stacks] pazny.keap post", ansible.builtin.include_role: { name: pazny.keap, tasks_from: post.yml, apply: { tags: ['keap'] } }, when: "install_keap | default(false)", tags: ['keap'] }
+- { name: "[Stacks] pazny.nos_forum post", ansible.builtin.include_role: { name: pazny.nos_forum, tasks_from: post.yml, apply: { tags: ['nos_forum', 'iiab'] } }, when: "install_nos_forum | default(false)", tags: ['nos_forum', 'iiab'] }
 - { name: "[Stacks] pazny.ntfy post", ansible.builtin.include_role: { name: pazny.ntfy, tasks_from: post.yml, apply: { tags: ['ntfy'] } }, when: "install_ntfy | default(false)", tags: ['ntfy'] }
 - { name: "[Stacks] pazny.wing post", ansible.builtin.include_role: { name: pazny.wing, tasks_from: post.yml, apply: { tags: ['wing', 'security'] } }, when: "install_wing | default(true) and 'iiab' in (_remaining_stacks | default([]))", tags: ['wing', 'security'] }
 # Kuma's monitors are Tier-1 state derived from state/manifest.yml, but until

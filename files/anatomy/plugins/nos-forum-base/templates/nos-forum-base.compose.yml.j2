@@ -1,0 +1,25 @@
+# =============================================================================
+# nos-forum-base — compose-extension fragment (native OIDC client of forum-web).
+# Rendered into {{ stacks_dir }}/iiab/overrides/nos-forum-base.yml.
+# =============================================================================
+
+services:
+  nos-forum:
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+    # mkcert CA conditional — local TLDs only.
+    volumes:
+      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
+{% endif %}
+    environment:
+      _NOS_PLUGIN: "nos-forum-base"
+{% if install_authentik | default(false) %}
+      OIDC_ISSUER: "https://{{ authentik_domain }}/application/o/nos-forum/"
+      OIDC_CLIENT_ID: "nos-forum"
+      OIDC_CLIENT_SECRET: "{{ nos_derived_secrets.oidc_nos_forum }}"
+{% if tenant_domain_is_local | default(true) | bool %}
+      NODE_EXTRA_CA_CERTS: "/usr/local/share/ca-certificates/mkcert-ca.crt"
+{% endif %}
+    # OIDC discovery + token exchange hairpin to Traefik on the host, as hedgedoc does.
+    extra_hosts:
+      - "{{ authentik_domain }}:host-gateway"
+{% endif %}

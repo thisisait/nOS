@@ -231,6 +231,16 @@ tofu_authentik_services:
   client_secret: '{{ nos_derived_secrets.oidc_nodered }}'
   redirect_uris:
   - https://{{ nodered_domain | default('nodered' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/auth/strategy/callback
+- slug: nos-forum
+  name: Forum
+  mode: native_oidc
+  tier: 4
+  enabled: '{{ install_nos_forum | default(false) }}'
+  external_host: https://{{ nos_forum_domain }}
+  client_id: nos-forum
+  client_secret: '{{ nos_derived_secrets.oidc_nos_forum }}'
+  redirect_uris:
+  - https://{{ nos_forum_domain }}/auth/callback
 - slug: ntfy
   name: ntfy
   mode: forward_auth

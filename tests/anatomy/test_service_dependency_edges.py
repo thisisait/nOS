@@ -107,6 +107,11 @@ REFUSED = {
     ("smtp_stalwart", "authentik"): "SSO — carried by the authentik provider chain",
     ("superset", "authentik"): "SSO — carried by the authentik provider chain",
     ("wing", "authentik"): "SSO — carried by the authentik provider chain",
+    ("nos_forum", "authentik"): "SSO — carried by the authentik provider chain",
+    # SpacetimeDB fetches Authentik's JWKS to verify nos-forum id_tokens (the
+    # extra_hosts hairpin is gated on install_nos_forum). The trust it extends
+    # is authentik:nos-forum's, already in the chain via service:nos_forum.
+    ("spacetimedb", "authentik"): "JWKS for nos-forum tokens — carried by authentik:nos-forum",
     # Handheld BFF calls loopback userinfo. No device-gateway-base plugin until
     # the operator fills Art-30, so there is no authentik:<slug> graph hop to
     # walk; tofu lives in terraform/authentik/device_gateway.tf, not the

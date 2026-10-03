@@ -126,6 +126,7 @@ SYSTEM_NAME = {
     "paperclip": "Paperclip", "code-server": "code-server",
     "erpnext": "ERPNext", "freescout": "FreeScout", "outline": "Outline",
     "hedgedoc": "HedgeDoc", "bookstack": "BookStack", "firefly": "Firefly III",
+    "nos-forum": "nos-forum",
     "dolibarr": "Dolibarr",
     "onlyoffice": "ONLYOFFICE",
     "metabase": "Metabase", "superset": "Superset", "influxdb": "InfluxDB",
@@ -442,6 +443,11 @@ SYSTEM_EN = {
     "outline": (
         "Outline, the team wiki. Structured collections of long-lived documents with search "
         "and permissions; it targets curated internal knowledge rather than ad-hoc drafting."
+    ),
+    "nos-forum": (
+        "nos-forum, the estate's chat and forum. Servers hold text channels and a small "
+        "forum of categories, topics and posts; rows live in SpacetimeDB and stream live, "
+        "so it is conversation, not the drafting of a shared document."
     ),
     "hedgedoc": (
         "HedgeDoc, the real-time collaborative markdown pad. Several people type into the "

@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: nos_forum
+  namespace: pazny
+  author: Pázny
+  description: nos-forum (chat + forum on SpacetimeDB) in a compose override (nOS iiab stack)
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# No role dependencies — SpacetimeDB (infra stack) and Authentik are up before iiab.
+dependencies: []
+
+collections: []

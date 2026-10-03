@@ -1,0 +1,149 @@
+# =============================================================================
+# nos-forum-base — chat + forum on SpacetimeDB (github.com/pazny/nos-forum).
+# Native OIDC: forum-web is the confidential client (code + PKCE) and hands the
+# id_token to the browser, which presents it to SpacetimeDB; the module checks
+# iss/aud itself. Spec: nos-forum docs/spec/nos-integration.md. RBAC tier 4.
+# Gate: tests/anatomy/test_nos_forum_art30.py.
+# =============================================================================
+
+name: nos-forum-base
+version: 0.1.0
+description: |
+  Wiring layer for nos-forum: Authentik native-OIDC client, the SpacetimeDB
+  dependency, GDPR Article 30 row, /hub card, e2e probes.
+upstream: https://github.com/pazny/nos-forum
+license: AGPL-3.0
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.nos_forum
+  feature_flag: install_nos_forum
+  variables:
+    - nos_forum_domain
+    - nos_forum_port
+    - tenant_domain
+    - host_alias
+    - authentik_domain
+
+depends_on:
+  - upstream: "service:spacetimedb"
+    kind: data
+    via: >-
+      STDB_URL=http://spacetimedb:3000 (roles/pazny.nos_forum/templates/compose.yml.j2)
+      and the module publish in roles/pazny.nos_forum/tasks/post.yml — every
+      chat and forum row lives in the nos-forum SpacetimeDB database
+    measured: "2026-10-03"
+    unenforced: >-
+      No auto-enable block ties install_spacetimedb to install_nos_forum; the
+      converge refuses the pair instead (main.yml "[nos-forum] Refuse … without SpacetimeDB"), so
+      the operator turns SpacetimeDB on knowingly (BSL 1.1).
+
+authentik:
+  mode: native_oidc
+  provider_type: oauth2
+  client_id: nos-forum
+  client_secret: "{{ nos_derived_secrets.oidc_nos_forum }}"
+  slug: nos-forum
+  first_login: "https://{{ nos_forum_domain }}/auth/login"
+  name: 'Forum'
+  enabled: "{{ install_nos_forum | default(false) }}"
+  redirect_uris:
+    - "https://{{ nos_forum_domain }}/auth/callback"
+  launch_url: "https://{{ nos_forum_domain }}"
+  # No offline_access: estate doctrine keeps it device-only (terraform/authentik/
+  # device_gateway.tf), so no refresh_token — after the 10-minute id_token a
+  # reconnect re-runs the (silent, SSO-session) login. Open question Q17.
+  scopes:
+    - openid
+    - email
+    - profile
+  tier: 4
+
+compose_extension:
+  template: templates/nos-forum-base.compose.yml.j2
+  target_stack: iiab
+  target_service: nos-forum
+
+lifecycle:
+  pre_compose:
+    - render_compose_extension: compose_extension
+  post_compose:
+    - wait_health: "http://127.0.0.1:{{ nos_forum_port }}/health"
+
+gdpr:
+  purpose: |
+    Let estate users talk: text channels and a minimalist forum (categories,
+    topics, posts) inside servers they create or are invited to. Stores the
+    messages, posts, reactions and read markers users write, their forum
+    profile (username, display name, presence) and their server/channel
+    memberships. Identity comes from Authentik; forum-web keeps the OIDC
+    tokens only in an encrypted session cookie.
+  legal_basis: legitimate_interests   # Art. 6(1)(f) — communication tool the users join and post to themselves
+  balancing_test: >-
+    Every row is something the user typed or chose (a message, a post, a
+    membership). Nothing is profiled, nothing leaves the host, and private
+    channels are filtered in the database itself (row-level security), so a
+    non-member never receives their rows.
+  data_source: the users themselves, and Authentik (sub, email, name, groups claims)
+  data_categories:
+    - message_content
+    - forum_posts
+    - reactions_and_read_markers
+    - profile_username_display_name
+    - presence_status
+    - memberships_and_roles
+    - oauth_session_data
+  data_subjects:
+    - end_users
+    - operators
+  retention_days: 365
+  processors: []                    # all on this host; v0.2 media (LiveKit/TURN) will add a row
+  eu_residency: true
+  transfers_outside_eu: false
+  storage_location: >-
+    SpacetimeDB database nos-forum (spacetimedb_data_dir); forum-web is
+    stateless in v0.1 (session = encrypted cookie in the browser).
+  security_measures:
+    - "Native OIDC (Authentik, code + PKCE); the module re-checks issuer and audience of every token"
+    - "Private channels: row-level security in SpacetimeDB, gated by an integration test that a non-member never receives a row"
+    - "Session cookie AES-256-GCM, httpOnly, SameSite=Lax, Secure"
+    - "Disk encryption at rest is operator-provisioned (FileVault)"
+  notes: >-
+    retention_enforced: false — v0.1 has no archiver/retention worker; rows
+    stay until a user or moderator deletes them (messages are tombstoned).
+    Known limit: any registered user can read the pseudonymous membership graph
+    (nos-forum spec 02, "Known limit"; open question Q15). Erasure / export:
+    state/gdpr-erasure-map.yml, state/gdpr-export-map.yml (manual in v0.1).
+
+ui-extension:
+  hub_card:
+    title: "Forum"
+    icon: message-square-text
+    url: "https://{{ nos_forum_domain }}"
+    tier: 4
+    description: "Chat channels and a forum"
+    health_check: "https://{{ nos_forum_domain }}/health"
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+e2e:
+  probes:
+    - name: health-through-the-edge
+      url: "https://{{ nos_forum_domain }}/health"
+      expect: {status: [200], contains: '"stdb":"ok"'}
+    - name: oidc-start-reaches-authentik
+      url: "https://{{ nos_forum_domain }}/auth/login"
+      expect: {status: [302, 303, 307], location_contains: "{{ authentik_domain }}/application/o/authorize"}
+    - name: sso-lands-as-the-tester
+      auth: tester
+      sso_start: true
+      url: "https://{{ nos_forum_domain }}/auth/me"
+      expect: {status: [200], contains: '"authenticated":true'}

@@ -1,0 +1,6 @@
+---
+- name: Restart nos-forum
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    restart nos-forum
+  failed_when: false

@@ -106,15 +106,26 @@ http:
    there are no X-Authentik-* headers to vouch for, and a backend that trusts
    those headers (SEC-02) must see this lane as anonymous, never as proxied.
    The service behind a lane therefore has to authenticate the caller ITSELF.
+
+   Optional keys (nos-forum, 2026-10-03): `upstream: {svc, port}` sends the lane
+   to a DIFFERENT container (its own `<router>-<lane>` service); `strip_prefix`
+   removes the prefix before it (`<router>-<lane>-strip@file`); `allow_paths`
+   narrows the lane to exact post-strip paths, so it is not a whole-API door.
 #}
 {% for _lane in (traefik_machine_lanes | default({})).get(s.id, []) %}
+{% if _lane.allow_paths is defined %}
+{%   set _match = '(' ~ (_lane.allow_paths | map('regex_replace', '^(.*)$', 'Path(`' ~ _lane.prefixes[0] ~ '\\1`)') | join(' || ')) ~ ')' %}
+{% else %}
+{%   set _match = 'PathPrefix(' ~ (_lane.prefixes | map('regex_replace', '^(.*)$', '`\\1`') | join(', ')) ~ ')' %}
+{% endif %}
+{% set _lane_mw = ([_router ~ '-' ~ _lane.name ~ '-strip'] if _lane.strip_prefix | default(false) else []) + ['security-headers@file', 'compress@file'] %}
 {% for _sfx, _ep, _tls in _doors %}
     {{ _router }}-{{ _lane.name }}{{ _sfx }}:
-      rule: "Host(`{{ _host }}`) && PathPrefix({{ _lane.prefixes | map('regex_replace', '^(.*)$', '`\\1`') | join(', ') }})"
+      rule: "Host(`{{ _host }}`) && {{ _match }}"
       entryPoints: ["{{ _ep }}"]
-      service: "{{ _router }}"
+      service: "{{ (_router ~ '-' ~ _lane.name) if _lane.upstream is defined else _router }}"
       tls: {{ _tls | to_json }}
-      middlewares: ["security-headers@file", "compress@file"]
+      middlewares: {{ _lane_mw | to_json }}
 {% endfor %}
 {% endfor %}
 {% endif %}
@@ -199,6 +210,12 @@ http:
 {% if _is_https %}
         serversTransport: "noverify@file"
 {% endif %}
+{% for _lane in (traefik_machine_lanes | default({})).get(s.id, []) if _lane.upstream is defined %}
+    {{ _router }}-{{ _lane.name }}:
+      loadBalancer:
+        servers:
+          - url: "http://{{ _lane.upstream.svc }}:{{ _lane.upstream.port }}"
+{% endfor %}
 {% endif %}
 {% endif %}
 {% endif %}
@@ -212,3 +229,18 @@ http:
           - url: "{{ r.upstream }}"
 {% endif %}
 {% endfor %}
+{# ── stripPrefix middlewares for machine lanes that declare strip_prefix ── #}
+{% set _strip_lanes = [] %}
+{% for _sid, _lanes in (traefik_machine_lanes | default({})).items() %}
+{% for _lane in _lanes if _lane.strip_prefix | default(false) %}
+{% set _ = _strip_lanes.append((_sid | replace('_', '-'), _lane)) %}
+{% endfor %}
+{% endfor %}
+{% if _strip_lanes %}
+  middlewares:
+{% for _r, _lane in _strip_lanes %}
+    {{ _r }}-{{ _lane.name }}-strip:
+      stripPrefix:
+        prefixes: {{ _lane.prefixes | to_json }}
+{% endfor %}
+{% endif %}

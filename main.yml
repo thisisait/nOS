@@ -2614,6 +2614,45 @@
     # (service-specific pre-stack tasks are now in roles/pazny.*/tasks/main.yml,
     #  called from tasks/stacks/stack-up.yml before compose up)
 
+    # nos-forum lives in iiab but its rows live in SpacetimeDB (infra, BSL 1.1)
+    # and its logins in Authentik; refuse rather than auto-enable a BSL service.
+    # Two fail tasks (not one assert) so the profile builder can carry them as rules.
+    - name: "[nos-forum] Refuse install_nos_forum without SpacetimeDB"
+      ansible.builtin.fail:
+        msg: "install_nos_forum needs install_spacetimedb: true — every forum row lives in SpacetimeDB."
+      when:
+        - install_nos_forum | default(false) | bool
+        - not (install_spacetimedb | default(false) | bool)
+      tags: ['nos_forum', 'iiab']
+
+    - name: "[nos-forum] Refuse install_nos_forum without Authentik"
+      ansible.builtin.fail:
+        msg: "install_nos_forum needs install_authentik: true — forum-web has no local login."
+      when:
+        - install_nos_forum | default(false) | bool
+        - not (install_authentik | default(false) | bool)
+      tags: ['nos_forum', 'iiab']
+
+    - name: "[Art-30] Refuse nos-forum without a complete gdpr block"
+      vars:
+        _forum_gdpr: "{{ ((lookup('file', playbook_dir + '/files/anatomy/plugins/nos-forum-base/plugin.yml', errors='ignore') or '{}') | from_yaml).gdpr | default({}) }}"
+      ansible.builtin.assert:
+        that:
+          - (_forum_gdpr.purpose | default('') | trim | length) > 0
+          - _forum_gdpr.legal_basis | default('') in ['consent', 'contract', 'legal_obligation', 'vital_interests', 'public_task', 'legitimate_interests']
+          - (_forum_gdpr.data_categories | default([]) | length) > 0
+          - (_forum_gdpr.data_subjects | default([]) | length) > 0
+          - _forum_gdpr.retention_days is defined
+          - (_forum_gdpr.retention_days | int) != 0
+          - _forum_gdpr.processors is defined
+          - _forum_gdpr.transfers_outside_eu is defined
+        fail_msg: >-
+          install_nos_forum is true but files/anatomy/plugins/nos-forum-base/plugin.yml
+          carries no complete gdpr: block — Art-30 is the deploy gate (docs/compliance/nos-forum.md).
+        quiet: true
+      when: install_nos_forum | default(false)
+      tags: ['nos_forum', 'iiab']
+
     # ──────────────────────────────────────────────────────────────────────────
     # Docker stacks - deploy compose files and start all stacks
     # ──────────────────────────────────────────────────────────────────────────
