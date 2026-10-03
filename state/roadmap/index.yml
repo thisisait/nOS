@@ -1107,6 +1107,9 @@
 - slug: rsi-ops-loop
   parent: rsi-evals
   track: agents
+- slug: santa-monitor
+  parent: workload-allowlist
+  track: security
 - slug: scan-dispositions-sidecar
   parent: sec-queue-authorship
   track: security
