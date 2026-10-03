@@ -164,6 +164,7 @@
     su_environment:
       HOME: "{{ ansible_facts['env']['HOME'] }}"
       PATH: "{{ pulse_venv }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+      NOS_REPO_ROOT: "{{ nos_main_checkout }}"
       WING_API_BASE: "{{ pulse_wing_api_base }}"
       WING_API_TOKEN: "{{ pulse_api_token }}"
       PULSE_TICK_INTERVAL_S: "{{ pulse_tick_interval_s | string }}"

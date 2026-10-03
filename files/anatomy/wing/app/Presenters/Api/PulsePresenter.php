@@ -436,9 +436,16 @@ final class PulsePresenter extends BaseApiPresenter
 	private const ALLOWED_COMMAND_PREFIXES = [
 		'/opt/homebrew/bin/',     // Homebrew-installed CLIs (gitleaks, trivy, php, …)
 		'/usr/local/bin/',        // legacy/system-managed CLIs
-		'/Users/',                // host-owned scripts on macOS (wing/app/bin, plugins/<x>/skills/)
-		'/home/',                 // host-owned scripts on Linux (playbook_dir = /home/<user>/…)
 	];
+
+	/** Under NOS_REPO_ROOT. Until 2026-10-03 all of /Users/ and /home/ passed. */
+	private const REPO_TREES = ['tools/', 'files/anatomy/scripts/', 'files/anatomy/plugins/', 'files/vuln-scan/'];
+
+	/** Under HOME: wing/app/bin scripts, ~/.nos/backup-verify.sh, Linux frankenphp. */
+	private const HOME_TREES = ['wing/', '.nos/', '.local/bin/'];
+
+	/** An interpreter runs its first positional arg, so that arg is the real command. */
+	private const INTERPRETER_REGEX = '/^(php|frankenphp|python[0-9.]*|node|ruby|perl)$/';
 
 	/**
 	 * Shell-interpreter basenames that take inline scripts via -c and
@@ -465,23 +472,41 @@ final class PulsePresenter extends BaseApiPresenter
 	 */
 	private const ARG_REGEX = '/^[a-zA-Z0-9._@\/:=,+~-]{0,512}$/';
 
+	private static function root(string $var): string
+	{
+		$v = rtrim((string) getenv($var), '/');
+		return str_starts_with($v, '/') ? $v . '/' : '';
+	}
+
 	/**
-	 * The static prefixes + the running user's OWN home. `/Users/` and
-	 * `/home/` stand for an operator home; root's (`/root`, a container or a
-	 * server install) was refused — every host-script job 400'd on the cloud
-	 * sandbox (2026-09-25). The daemon's HOME is the same trust boundary.
-	 * Mirrors pulse/runners/subprocess.py::_allowed_prefixes.
+	 * Repo trees under NOS_REPO_ROOT + home trees under HOME; unset → none.
+	 * Mirrors pulse/runners/subprocess.py::_script_trees.
 	 *
 	 * @return list<string>
 	 */
+	private function scriptTrees(): array
+	{
+		$out = [];
+		$repo = self::root('NOS_REPO_ROOT');
+		$home = self::root('HOME');
+		foreach ($repo !== '' ? self::REPO_TREES : [] as $t) {
+			$out[] = $repo . $t;
+		}
+		foreach ($home !== '' ? self::HOME_TREES : [] as $t) {
+			$out[] = $home . $t;
+		}
+		return $out;
+	}
+
+	/** @return list<string> */
 	private function allowedCommandPrefixes(): array
 	{
-		$prefixes = self::ALLOWED_COMMAND_PREFIXES;
-		$home = getenv('HOME');
-		if (is_string($home) && str_starts_with($home, '/') && rtrim($home, '/') !== '') {
-			$prefixes[] = rtrim($home, '/') . '/';
-		}
-		return $prefixes;
+		return array_merge(self::ALLOWED_COMMAND_PREFIXES, $this->scriptTrees());
+	}
+
+	private static function hasDotSegment(string $path): bool
+	{
+		return str_contains($path . '/', '/../') || str_contains($path, '/./');
 	}
 
 	private function validatePulseCommand(string $command, mixed $args): void
@@ -491,6 +516,9 @@ final class PulsePresenter extends BaseApiPresenter
 		}
 		if ($command[0] !== '/') {
 			$this->sendError('command must be an absolute path', 400);
+		}
+		if (self::hasDotSegment($command)) {
+			$this->sendError('command path must be normalised (no . or .. segments)', 400);
 		}
 		$inPrefix = false;
 		foreach ($this->allowedCommandPrefixes() as $prefix) {
@@ -532,6 +560,20 @@ final class PulsePresenter extends BaseApiPresenter
 						400,
 					);
 				}
+			}
+		}
+		if (preg_match(self::INTERPRETER_REGEX, $basename)) {
+			$rest = array_values(array_filter(is_array($args) ? $args : [], fn ($a) => $a !== 'php-cli'));
+			$script = (string) ($rest[0] ?? '');
+			$ok = !self::hasDotSegment($script);
+			if ($ok) {
+				$ok = false;
+				foreach ($this->scriptTrees() as $tree) {
+					$ok = $ok || str_starts_with($script, $tree);
+				}
+			}
+			if (!$ok) {
+				$this->sendError("{$basename} must run a script from the Pulse trees", 400);
 			}
 		}
 	}

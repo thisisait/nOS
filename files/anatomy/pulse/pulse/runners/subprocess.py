@@ -22,7 +22,13 @@ import time
 # spawns the process, so the allowlist holds regardless of who wrote the
 # pulse_jobs row (direct SQLite, agents, a future create-path) — not just the
 # one PHP create endpoint. Keep in lockstep with the PHP constants.
-_ALLOWED_PREFIXES = ("/opt/homebrew/bin/", "/usr/local/bin/", "/Users/", "/home/")
+# Until 2026-10-03 the prefixes were `/Users/` + `/home/`: ~/Downloads/x.py
+# passed. Now only the trees the catalog renders jobs into (workload-allowlist).
+_SYSTEM_PREFIXES = ("/opt/homebrew/bin/", "/usr/local/bin/")
+_REPO_TREES = ("tools/", "files/anatomy/scripts/", "files/anatomy/plugins/", "files/vuln-scan/")
+_HOME_TREES = ("wing/", ".nos/", ".local/bin/")
+#: An interpreter runs its first positional arg, so that arg is the real command.
+_INTERPRETER_RE = re.compile(r"^(php|frankenphp|python[0-9.]*|node|ruby|perl)$")
 _BANNED_BASENAMES = frozenset(
     ("sh", "bash", "zsh", "dash", "csh", "ksh", "fish", "sudo", "su", "env"))
 _BASENAME_RE = re.compile(r"^[a-z][a-zA-Z0-9._-]{0,63}$")
@@ -37,19 +43,20 @@ _SECRET_KEY_RE = re.compile(
 _BANNED_ENV_RE = re.compile(r"^(DYLD_|LD_|PYTHONPATH$|PATH$|IFS$|BASH_ENV$|ENV$)")
 
 
-def _allowed_prefixes() -> tuple[str, ...]:
-    """The static prefixes + the running user's OWN home.
+def _root(var: str) -> str:
+    v = os.environ.get(var, "").rstrip("/")
+    return v + "/" if v.startswith("/") else ""
 
-    `/Users/` and `/home/` cover an operator home on macOS and on most Linux
-    hosts; they do not cover root's (`/root`), where a container or a server
-    install runs — measured 2026-09-25: every host-script job was refused on
-    the cloud sandbox. The daemon's own HOME is the same trust boundary those
-    two prefixes stand for. Mirrors PulsePresenter::allowedCommandPrefixes.
-    """
-    home = os.environ.get("HOME", "")
-    if home.startswith("/") and home.rstrip("/"):
-        return _ALLOWED_PREFIXES + (home.rstrip("/") + "/",)
-    return _ALLOWED_PREFIXES
+
+def _script_trees() -> tuple[str, ...]:
+    """Repo trees under NOS_REPO_ROOT + home trees under HOME. Unset → none."""
+    repo, home = _root("NOS_REPO_ROOT"), _root("HOME")
+    return tuple([repo + t for t in _REPO_TREES if repo] + [home + t for t in _HOME_TREES if home])
+
+
+def _allowed_prefixes() -> tuple[str, ...]:
+    """Mirrors PulsePresenter::allowedCommandPrefixes."""
+    return _SYSTEM_PREFIXES + _script_trees()
 
 
 class CommandRejected(ValueError):
@@ -60,6 +67,8 @@ def validate_command(command: str, args: list[str]) -> None:
     """Mirror of PulsePresenter::validatePulseCommand. Raises CommandRejected."""
     if not command or command[0] != "/":
         raise CommandRejected("command must be an absolute path")
+    if "/../" in command + "/" or "/./" in command:
+        raise CommandRejected("command path must be normalised (no . or .. segments)")
     if not any(command.startswith(p) for p in _allowed_prefixes()):
         raise CommandRejected("command path not in Pulse allowlist")
     basename = os.path.basename(command)
@@ -70,6 +79,12 @@ def validate_command(command: str, args: list[str]) -> None:
     for i, arg in enumerate(args or []):
         if not isinstance(arg, str) or not _ARG_RE.match(arg):
             raise CommandRejected(f"args[{i}] contains banned characters")
+    if _INTERPRETER_RE.match(basename):
+        rest = [a for a in (args or []) if a != "php-cli"]  # frankenphp's subcommand
+        script = rest[0] if rest else ""
+        if ("/../" in script + "/" or "/./" in script
+                or not any(script.startswith(t) for t in _script_trees())):
+            raise CommandRejected(f"{basename} must run a script from the Pulse trees, got {script!r}")
 
 
 def _safe_env(job_env: dict[str, str] | None) -> dict[str, str]:

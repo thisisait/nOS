@@ -57,7 +57,7 @@ def _allowed_prefixes() -> tuple[str, ...]:
 	return prefixes
 
 
-def _catalog_substitutions(playbook_dir: str) -> dict[str, str]:
+def _catalog_substitutions(playbook_dir: str, extra: dict[str, str] | None = None) -> dict[str, str]:
 	"""The REAL token→value map, imported from the catalog script.
 
 	Imported rather than mirrored on purpose: a mirrored list is a second
@@ -77,7 +77,8 @@ def _catalog_substitutions(playbook_dir: str) -> dict[str, str]:
 
 	spec = importlib.util.spec_from_file_location("_pulse_catalog", CATALOG)
 	mod = importlib.util.module_from_spec(spec)
-	os.environ["NOS_PLAYBOOK_DIR"] = playbook_dir
+	env = {"NOS_PLAYBOOK_DIR": playbook_dir, **(extra or {})}
+	os.environ.update(env)
 	try:
 		spec.loader.exec_module(mod)
 		subs = getattr(mod, "_build_substitutions", None)
@@ -87,7 +88,8 @@ def _catalog_substitutions(playbook_dir: str) -> dict[str, str]:
 		)
 		return subs()
 	finally:
-		del os.environ["NOS_PLAYBOOK_DIR"]
+		for k in env:
+			del os.environ[k]
 
 
 def test_pulse_presenter_has_validate_command():
@@ -109,15 +111,27 @@ def test_pulse_command_requires_absolute_path():
 	assert "command must be an absolute path" in src
 	# Must also check the prefix allowlist.
 	assert "ALLOWED_COMMAND_PREFIXES" in src
-	# Must contain the canonical safe prefixes — incl. host-home on BOTH
-	# platforms (/Users on macOS, /home on Linux; playbook_dir-rooted scripts).
-	for prefix in ("/opt/homebrew/bin/", "/usr/local/bin/", "/Users/", "/home/"):
-		assert f"'{prefix}'" in src, f"ALLOWED_COMMAND_PREFIXES must include {prefix}"
-
-	# Python runner must stay in lockstep with the PHP presenter.
-	runner = (REPO / "files/anatomy/pulse/pulse/runners/subprocess.py").read_text()
+	# Since 2026-10-03 a whole home is NOT a prefix (workload-allowlist):
+	# ~/Downloads/x.py passed both sides until then.
 	for prefix in ("/Users/", "/home/"):
-		assert f'"{prefix}"' in runner, f"subprocess._ALLOWED_PREFIXES must include {prefix}"
+		assert f"'{prefix}'" not in src, f"ALLOWED_COMMAND_PREFIXES must not include {prefix}"
+
+
+def _php_list(name: str) -> tuple[str, ...]:
+	m = re.search(rf"const {name}\s*=\s*\[(.*?)\];", PRESENTER.read_text(), re.DOTALL)
+	assert m, f"PulsePresenter::{name} not found"
+	return tuple(re.findall(r"'([^']+)'", m.group(1)))
+
+
+def test_runner_and_presenter_declare_the_same_trees():
+	"""Lockstep, parsed from both artifacts: the PHP gate at registration and the
+	Python gate at exec must allow exactly the same thing."""
+	run = _runner()
+	assert _php_list("ALLOWED_COMMAND_PREFIXES") == run._SYSTEM_PREFIXES
+	assert _php_list("REPO_TREES") == run._REPO_TREES
+	assert _php_list("HOME_TREES") == run._HOME_TREES
+	m = re.search(r"INTERPRETER_REGEX = '/(.+?)/';", PRESENTER.read_text())
+	assert m and m.group(1) == run._INTERPRETER_RE.pattern
 
 
 def test_pulse_basename_banned_for_shell_interpreters():
@@ -215,7 +229,7 @@ def test_pulse_tokens_are_bare_not_filtered():
 	"/Users/operator/projects/nOS",   # macOS estate placement
 	"/home/operator/projects/nOS",    # Linux estate placement
 ])
-def test_real_plugin_manifests_pass_validator(playbook_dir):
+def test_real_plugin_manifests_pass_validator(playbook_dir, monkeypatch):
 	"""Critical: the validator must accept commands that LIVE plugin
 	manifests already register. Otherwise the next plugin-loader run
 	breaks operator's working install.
@@ -227,7 +241,14 @@ def test_real_plugin_manifests_pass_validator(playbook_dir):
 	for wherever this particular checkout is mounted (the forge CI mounts
 	at /w, which is not, and must never be treated as, a supported estate
 	placement)."""
-	subs = _catalog_substitutions(playbook_dir)
+	import yaml
+	home = playbook_dir.rsplit("/projects/", 1)[0]
+	subs = _catalog_substitutions(playbook_dir, {
+		"NOS_HOME": home, "NOS_WING_HOME": f"{home}/wing", "NOS_WING_APP_DIR": f"{home}/wing/app",
+		"NOS_BACKUP_VERIFY_SCRIPT": f"{home}/.nos/backup-verify.sh"})
+	run = _runner()
+	monkeypatch.setenv("HOME", home)
+	monkeypatch.setenv("NOS_REPO_ROOT", playbook_dir)
 	plugin_files = list((REPO / "files/anatomy/plugins").rglob("plugin.yml"))
 	# Find every `command:` value under a `jobs:` block.
 	for path in plugin_files:
@@ -235,6 +256,8 @@ def test_real_plugin_manifests_pass_validator(playbook_dir):
 		# Look for `jobs:` followed by `- name:` and `command:`.
 		if "jobs:" not in src:
 			continue
+		jobs = ((yaml.safe_load(src) or {}).get("pulse") or {}).get("jobs") or []
+		job_args = {str(j.get("command", "")).strip(): j.get("args") or [] for j in jobs}
 		# Iterate over each command line.
 		for m in re.finditer(r"command:\s*[\"']?([^\"'\n]+)[\"']?", src):
 			cmd = m.group(1).strip()
@@ -252,58 +275,91 @@ def test_real_plugin_manifests_pass_validator(playbook_dir):
 			cmd_rendered = cmd
 			for token, value in subs.items():
 				cmd_rendered = cmd_rendered.replace(token, value or "/Users/pazny/x")
-			# Prefix check, PARSED from the PHP rather than mirrored — see
-			# _allowed_prefixes() for what mirroring it cost.
-			allowed = cmd_rendered.startswith(_allowed_prefixes())
-			assert allowed, (
-				f"Live plugin manifest {path.relative_to(REPO)} declares "
-				f"command={cmd_rendered!r} which would be REJECTED by "
-				f"PulsePresenter::validatePulseCommand. Either tighten "
-				f"the manifest OR extend ALLOWED_COMMAND_PREFIXES."
-			)
-			basename = cmd_rendered.rsplit("/", 1)[-1]
-			banned = ("sh", "bash", "zsh", "dash", "csh", "ksh",
-			          "fish", "sudo", "su", "env")
-			assert basename not in banned, (
-				f"Live plugin manifest {path.relative_to(REPO)} declares "
-				f"banned basename '{basename}' (shell interpreter)"
-			)
+			args = [str(a) for a in job_args.get(cmd, [])]
+			for token, value in subs.items():
+				args = [a.replace(token, value or "/Users/pazny/x") for a in args]
+			try:
+				run.validate_command(cmd_rendered, args)
+			except run.CommandRejected as exc:
+				pytest.fail(
+					f"Live plugin manifest {path.relative_to(REPO)} declares "
+					f"command={cmd_rendered!r} args={args!r}, REJECTED by the "
+					f"runner ({exc}). Move the script into a Pulse tree or extend "
+					f"REPO_TREES/HOME_TREES on BOTH sides."
+				)
 
 
-def test_the_daemons_own_home_is_allowed_on_both_sides():
-	"""`/root` (a container, a server install) is an operator home too.
-	MEASURED 2026-09-25: the cloud sandbox runs as root and every host-script
-	job 400'd at registration. Both enforcement points add $HOME — and only
-	that one home, not `/` or an empty string."""
-	src = PRESENTER.read_text()
-	assert "function allowedCommandPrefixes" in src
-	assert "$this->allowedCommandPrefixes()" in src
-	assert "rtrim($home, '/') !== ''" in src, "HOME=/ must not allow every path"
-
+def _runner():
 	import importlib.util
-	import os
-	runner = REPO / "files/anatomy/pulse/pulse/runners/subprocess.py"
 	import sys
-	spec = importlib.util.spec_from_file_location("_pulse_subprocess", runner)
+	spec = importlib.util.spec_from_file_location(
+		"_pulse_subprocess", REPO / "files/anatomy/pulse/pulse/runners/subprocess.py")
 	mod = importlib.util.module_from_spec(spec)
 	sys.modules[spec.name] = mod  # dataclasses resolve their module by name
 	try:
 		spec.loader.exec_module(mod)
 	finally:
 		sys.modules.pop(spec.name, None)
-	old = os.environ.get("HOME")
-	try:
-		os.environ["HOME"] = "/root"
-		mod.validate_command("/root/.local/bin/frankenphp", ["php-cli", "/root/wing/app/bin/x.php"])
-		for bad in ("/", ""):
-			os.environ["HOME"] = bad
-			with pytest.raises(mod.CommandRejected):
-				mod.validate_command("/etc/evil", [])
-	finally:
-		if old is None:
-			os.environ.pop("HOME", None)
-		else:
-			os.environ["HOME"] = old
+	return mod
+
+
+def test_the_daemons_own_home_is_allowed_on_both_sides(monkeypatch):
+	"""`/root` (a container, a server install) is an operator home too.
+	MEASURED 2026-09-25: the cloud sandbox runs as root and every host-script
+	job 400'd at registration. Both sides root HOME_TREES at $HOME — and
+	HOME=/ or empty roots nothing."""
+	src = PRESENTER.read_text()
+	assert "$this->allowedCommandPrefixes()" in src
+	assert "self::root('HOME')" in src and "self::root('NOS_REPO_ROOT')" in src
+	run = _runner()
+	monkeypatch.setenv("HOME", "/root")
+	run.validate_command("/root/.local/bin/frankenphp", ["php-cli", "/root/wing/app/bin/x.php"])
+	for bad in ("/", ""):
+		monkeypatch.setenv("HOME", bad)
+		with pytest.raises(run.CommandRejected):
+			run.validate_command("/etc/evil", [])
+
+
+REPO_ROOT = "/Users/op/projects/nOS"
+
+
+@pytest.mark.parametrize("command,args", [
+	("/Users/op/Downloads/x.py", []),                                    # a planted script
+	("/Users/op/projects/nOS/tools/../../../Downloads/x.py", []),         # traversal out of a tree
+	("/Users/op/projects/other/tools/x.py", []),                         # a different checkout
+	("/opt/homebrew/bin/python3", ["/Users/op/Downloads/x.py"]),         # interpreter, planted script
+	("/opt/homebrew/bin/python3", ["-m", "pip", "install", "evil"]),     # interpreter, no script
+	("/opt/homebrew/bin/php", ["/Users/op/wing/../Downloads/x.php"]),     # traversal in the script
+	("/Users/op/.local/bin/frankenphp", ["php-cli", "/tmp/x.php"]),
+])
+def test_a_command_outside_the_trees_is_refused(command, args, monkeypatch):
+	run = _runner()
+	monkeypatch.setenv("HOME", "/Users/op")
+	monkeypatch.setenv("NOS_REPO_ROOT", REPO_ROOT)
+	with pytest.raises(run.CommandRejected):
+		run.validate_command(command, args)
+
+
+@pytest.mark.parametrize("command,args", [
+	(f"{REPO_ROOT}/tools/red-status.py", []),
+	(f"{REPO_ROOT}/files/anatomy/plugins/gitleaks/skills/scan.sh", []),
+	("/opt/homebrew/bin/php", ["/Users/op/wing/app/bin/breach-scan.php"]),
+	("/Users/op/.nos/backup-verify.sh", []),
+	("/opt/homebrew/bin/gitleaks", ["detect", "--no-git"]),
+])
+def test_a_declared_command_runs(command, args, monkeypatch):
+	run = _runner()
+	monkeypatch.setenv("HOME", "/Users/op")
+	monkeypatch.setenv("NOS_REPO_ROOT", REPO_ROOT)
+	run.validate_command(command, args)
+
+
+def test_repo_trees_need_the_daemons_to_know_the_checkout():
+	"""NOS_REPO_ROOT unset = no repo tree = every repo job refused. Both daemons get it."""
+	assert "<key>NOS_REPO_ROOT</key>" in (REPO / "roles/pazny.pulse/templates/pulse.plist.j2").read_text()
+	assert "NOS_REPO_ROOT:" in (REPO / "roles/pazny.pulse/tasks/main.yml").read_text()
+	assert "<key>NOS_REPO_ROOT</key>" in (REPO / "roles/pazny.wing/templates/wing.plist.j2").read_text()
+	assert "\nNOS_REPO_ROOT=" in (REPO / "roles/pazny.wing/templates/wing.env.j2").read_text()
 
 
 def test_linux_php_jobs_are_repointed_at_frankenphp():
