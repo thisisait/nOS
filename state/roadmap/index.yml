@@ -1041,6 +1041,9 @@
 - slug: post-start-silent-green-sweep
   parent: ''
   track: platform
+- slug: pr-threat-review-agent
+  parent: workload-allowlist
+  track: security
 - slug: praxis-pack
   parent: backoffice-organ
   track: platform
