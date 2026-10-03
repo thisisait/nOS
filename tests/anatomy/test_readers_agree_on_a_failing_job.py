@@ -36,7 +36,7 @@ def _red_status():
 RS = _red_status()
 
 SCHEMA = """
-CREATE TABLE pulse_jobs (id TEXT PRIMARY KEY, findings_exit_codes TEXT);
+CREATE TABLE pulse_jobs (id TEXT PRIMARY KEY, findings_exit_codes TEXT, removed_at TEXT);
 CREATE TABLE pulse_runs (run_id TEXT PRIMARY KEY, job_id TEXT, fired_at TEXT,
                          exit_code INT, duration_ms INT, stdout_tail TEXT);
 """
@@ -46,7 +46,9 @@ def _ledger(runs, jobs=()):
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
-    conn.executemany("INSERT INTO pulse_jobs VALUES (?,?)", jobs)
+    # every run's job is in the catalog unless the test says otherwise
+    jobs = list(jobs) + [(j, None) for j in {r[1] for r in runs} - {j[0] for j in jobs}]
+    conn.executemany("INSERT INTO pulse_jobs (id, findings_exit_codes) VALUES (?,?)", jobs)
     conn.executemany(
         "INSERT INTO pulse_runs VALUES (?,?,?,?,?,?)",
         [(rid, jid, at, rc, 1, "boom") for rid, jid, at, rc in runs],

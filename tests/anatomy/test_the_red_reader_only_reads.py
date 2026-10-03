@@ -209,13 +209,13 @@ def test_a_declared_findings_exit_code_is_not_a_failure(tmp_path, monkeypatch):
     with sqlite3.connect(db) as seed:
         seed.execute("CREATE TABLE pulse_runs (job_id TEXT, fired_at TEXT, "
                      "exit_code INT, duration_ms INT, stdout_tail TEXT)")
-        seed.execute("CREATE TABLE pulse_jobs (id TEXT, findings_exit_codes TEXT)")
+        seed.execute("CREATE TABLE pulse_jobs (id TEXT, findings_exit_codes TEXT, removed_at TEXT)")
         seed.executemany("INSERT INTO pulse_runs VALUES (?,?,?,?,?)", [
             ("finder:scan",  "2026-08-20T06:44:00+00:00", 1, 10, "filed 1 new row"),
             ("broken:job",   "2026-08-20T06:44:00+00:00", 1, 10, "ERROR: it broke"),
             ("undeclared:j", "2026-08-20T06:44:00+00:00", 1, 10, "ERROR: no decl"),
         ])
-        seed.executemany("INSERT INTO pulse_jobs VALUES (?,?)", [
+        seed.executemany("INSERT INTO pulse_jobs (id, findings_exit_codes) VALUES (?,?)", [
             ("finder:scan", "[1]"),
             ("broken:job", "[3]"),
             ("undeclared:j", None),
@@ -253,10 +253,10 @@ def test_an_unparseable_findings_declaration_still_reports(tmp_path):
     with sqlite3.connect(db) as seed:
         seed.execute("CREATE TABLE pulse_runs (job_id TEXT, fired_at TEXT, "
                      "exit_code INT, duration_ms INT, stdout_tail TEXT)")
-        seed.execute("CREATE TABLE pulse_jobs (id TEXT, findings_exit_codes TEXT)")
+        seed.execute("CREATE TABLE pulse_jobs (id TEXT, findings_exit_codes TEXT, removed_at TEXT)")
         seed.execute("INSERT INTO pulse_runs VALUES "
                      "('j','2026-08-20T06:44:00+00:00',1,10,'ERROR: x')")
-        seed.execute("INSERT INTO pulse_jobs VALUES ('j','not json at all')")
+        seed.execute("INSERT INTO pulse_jobs (id, findings_exit_codes) VALUES ('j','not json at all')")
 
     spec = importlib.util.spec_from_file_location("_red_unparseable", TOOL)
     mod = importlib.util.module_from_spec(spec)

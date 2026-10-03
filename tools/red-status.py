@@ -167,6 +167,8 @@ def failing_jobs(conn: sqlite3.Connection) -> list[dict]:
             ON r.job_id = m.job_id AND r.fired_at = m.latest
           LEFT JOIN pulse_jobs j ON j.id = r.job_id
          WHERE r.exit_code IS NOT NULL AND r.exit_code <> 0
+           -- a retired job's last failure is history, not state (ares-verify, 2026-10-03)
+           AND j.id IS NOT NULL AND j.removed_at IS NULL
          ORDER BY r.fired_at DESC
         """
     ).fetchall()

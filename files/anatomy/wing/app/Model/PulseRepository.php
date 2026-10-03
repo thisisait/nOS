@@ -501,7 +501,8 @@ final class PulseRepository
 			   SELECT job_id, exit_code, fired_at, ROW_NUMBER() OVER (
 			     PARTITION BY job_id ORDER BY fired_at DESC, run_id DESC) rn
 			     FROM pulse_runs)
-			  WHERE rn = 1 AND exit_code IS NOT NULL AND exit_code != 0',
+			  WHERE rn = 1 AND exit_code IS NOT NULL AND exit_code != 0
+			    AND job_id IN (SELECT id FROM pulse_jobs WHERE removed_at IS NULL)',
 		);
 		$out = [];
 		foreach ($latest as $row) {

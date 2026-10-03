@@ -78,7 +78,7 @@ def test_alert_weaknesses_declare_uncommittable_evidence(monkeypatch):
 def test_pulse_weaknesses_declare_uncommittable_evidence(tmp_path, monkeypatch):
     db = tmp_path / "wing.db"
     conn = sqlite3.connect(db)
-    conn.execute("CREATE TABLE pulse_jobs (id TEXT, findings_exit_codes TEXT)")
+    conn.execute("CREATE TABLE pulse_jobs (id TEXT, findings_exit_codes TEXT, removed_at TEXT)")
     # The real pulse_runs (and red-status.failing_jobs, now the selection —
     # loop-pulse-runs-poison) carry stdout_tail/duration_ms; carry them here.
     conn.execute(
@@ -87,6 +87,7 @@ def test_pulse_weaknesses_declare_uncommittable_evidence(tmp_path, monkeypatch):
     conn.execute(
         "INSERT INTO pulse_runs VALUES ('cortex:cortex-fs-sync', 7,"
         " '2026-09-03T04:00:00+00:00', 'boom', 'boom', 10)")
+    conn.execute("INSERT INTO pulse_jobs (id) VALUES ('cortex:cortex-fs-sync')")
     conn.commit()
     conn.close()
     monkeypatch.setenv("WING_DB_PATH", str(db))
