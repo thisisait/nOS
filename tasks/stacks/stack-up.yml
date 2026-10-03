@@ -192,6 +192,26 @@
         )
       }}
 
+# A plugin fragment whose role fragment is not on disk yet names a service no
+# file defines, and compose then refuses the whole stack (iiab, 2026-10-03).
+- name: "[Stacks] Exclude orphan compose extensions (no base defines the service)"
+  tags: ['stacks', 'always']
+  ansible.builtin.set_fact:
+    _orphan_split: "{{ _stack_overrides_map | nos_split_orphans(stacks_dir) }}"
+
+- name: "[Stacks] Merge only fragments whose services are defined"
+  tags: ['stacks', 'always']
+  ansible.builtin.set_fact:
+    _stack_overrides_map: "{{ _orphan_split.keep }}"
+
+- name: "[Stacks] REPORT — orphan compose extensions left out of `up`"
+  tags: ['stacks', 'always']
+  ansible.builtin.debug:
+    msg: >-
+      Not merged (their service has no image/build in any fragment):
+      {{ _orphan_split.orphans | join(', ') }}. tools/red-status.py names them too.
+  when: _orphan_split.orphans | length > 0
+
 # A stack whose every service is off has a base file with `services: {}` and
 # no overrides, and `docker compose up` on it exits 1 ("no service selected").
 # `iiab` is unconditionally in the list above, so any estate that enables

@@ -78,6 +78,7 @@ SCAN_STATE_PROMOTED = REPO / "docs/llm/security/scan-state.json"
 #: `_still_holds`. A file, like every other source here.
 REMEDIATION_QUEUE = REPO / "docs/llm/security/remediation-queue.json"
 BACKUP_STATUS = pathlib.Path.home() / ".nos" / "backup-status.json"
+STACKS_DIR = pathlib.Path(os.environ.get("NOS_STACKS_DIR", str(pathlib.Path.home() / "stacks")))
 
 # Backup freshness only. Job lateness is measured against each job's own
 # schedule instead — see `overdue_jobs` for why a flat threshold is wrong.
@@ -768,6 +769,21 @@ def dependabot() -> dict | None:
             "fixture_alerts": len(alerts) - len(ours)}
 
 
+def orphan_extensions() -> list[str] | None:
+    """Override fragments whose service no fragment defines — the converge
+    leaves them out of `up`; this names them. Same function as the converge."""
+    if not STACKS_DIR.is_dir():
+        return None
+    import importlib.util  # noqa: PLC0415 — sibling helper, not a package
+
+    spec = importlib.util.spec_from_file_location(
+        "_nos_prune_guard", REPO / "filter_plugins" / "nos_prune_guard.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return [p for d in sorted(STACKS_DIR.iterdir()) if (d / "overrides").is_dir()
+            for p in mod.stack_orphans(d)]
+
+
 def collect() -> dict:
     report: dict = {"generated_at": _now().isoformat(), "sources_read": [], "sources_missing": []}
     conn = _connect()
@@ -792,6 +808,7 @@ def collect() -> dict:
     for label, path, fn in (
         ("security_scan", SCAN_STATE, security_scan),
         ("backups", BACKUP_STATUS, backups),
+        ("orphan_extensions", STACKS_DIR, orphan_extensions),
         ("loop_verdicts", REPO / "tools" / "loop-status.py", stalled_verdicts),
         ("restore_drill", pathlib.Path.home() / ".nos" / "backup-verify.json", restore_drill),
         ("ci", pathlib.Path("gh run list"), ci_runs),
@@ -867,6 +884,8 @@ def reds(report: dict) -> list[str]:
         out.append(f"backup sources failed: {', '.join(str(f) for f in bk['failed'])}")
     elif bk and bk.get("stale"):
         out.append(f"backup stale — newest source {bk['age']}")
+    for frag in report.get("orphan_extensions") or []:
+        out.append(f"compose extension without its service, left out of `up`: {frag}")
     for job in report.get("overdue_jobs", []):
         out.append(
             f"{job['job']} was due {job['due_at']} and did not fire "

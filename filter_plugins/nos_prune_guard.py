@@ -262,9 +262,52 @@ def nos_host_daemon_plan(graph):
     return rows
 
 
+# ── Orphan compose extensions (2026-10-03) ─────────────────────────────────
+# A plugin fragment (core-up pre_compose) can land before its role's base
+# fragment (stack-up), and compose then refuses the WHOLE project: `service
+# "nos-forum" has neither an image nor a build context` took 22 healthy iiab
+# services down. A fragment naming a service no file defines is excluded.
+_DEFINES = ("image", "build", "extends")
+
+
+def _services(doc):
+    svc = (doc or {}).get("services") if isinstance(doc, dict) else None
+    return svc if isinstance(svc, dict) else {}
+
+
+def orphan_fragments(docs):
+    """docs: {path: parsed compose} incl. the base file -> orphan paths, sorted."""
+    defined = {name for d in docs.values() for name, body in _services(d).items()
+               if isinstance(body, dict) and any(k in body for k in _DEFINES)}
+    return sorted(p for p, d in docs.items() if set(_services(d)) - defined)
+
+
+def stack_orphans(stack_dir):
+    """Read <stack>/docker-compose.yml + overrides/*.yml from disk."""
+    import yaml  # noqa: PLC0415 — Ansible ships it; the reader host has it
+    root = Path(stack_dir)
+    files = [root / "docker-compose.yml", *sorted((root / "overrides").glob("*.yml"))]
+    docs = {}
+    for f in files:
+        if f.is_file():
+            try:
+                docs[str(f)] = yaml.safe_load(f.read_text(encoding="utf-8"))
+            except yaml.YAMLError:
+                continue  # compose names an unparsable file itself
+    return [p for p in orphan_fragments(docs) if "/overrides/" in p]
+
+
+def nos_split_orphans(found, stacks_dir):
+    """{stack: [find file dicts]} -> {'keep': same shape, 'orphans': [paths]}."""
+    orphans = [p for stack in found for p in stack_orphans(Path(stacks_dir) / stack)]
+    keep = {k: [f for f in v if f.get("path") not in orphans] for k, v in found.items()}
+    return {"keep": keep, "orphans": orphans}
+
+
 class FilterModule(object):
     def filters(self):
         return {
             "nos_prune_plan": nos_prune_plan,
             "nos_host_daemon_plan": nos_host_daemon_plan,
+            "nos_split_orphans": nos_split_orphans,
         }

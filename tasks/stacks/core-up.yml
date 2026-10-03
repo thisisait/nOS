@@ -448,6 +448,30 @@
   register: _observability_overrides
   check_mode: false
 
+# Same exclusion as stack-up: a plugin fragment without its role's base
+# fragment would refuse the whole core stack.
+- name: "[Core] Exclude orphan compose extensions (no base defines the service)"
+  tags: ['core', 'always']
+  ansible.builtin.set_fact:
+    _core_orphan_split: >-
+      {{ {'infra': _infra_overrides.files | default([]),
+          'observability': _observability_overrides.files | default([])}
+         | nos_split_orphans(stacks_dir) }}
+
+- name: "[Core] Merge only fragments whose services are defined"
+  tags: ['core', 'always']
+  ansible.builtin.set_fact:
+    _infra_overrides: "{{ {'files': _core_orphan_split.keep.infra} }}"
+    _observability_overrides: "{{ {'files': _core_orphan_split.keep.observability} }}"
+
+- name: "[Core] REPORT — orphan compose extensions left out of `up`"
+  tags: ['core', 'always']
+  ansible.builtin.debug:
+    msg: >-
+      Not merged (their service has no image/build in any fragment):
+      {{ _core_orphan_split.orphans | join(', ') }}. tools/red-status.py names them too.
+  when: _core_orphan_split.orphans | length > 0
+
 # ── External-volume mount preflight (macOS / Docker Desktop) ────────────────
 # Catch a stale VM /host_mnt reference (external disk remounted after Docker
 # Desktop started) in ~5s BEFORE `up -d`, self-healing on blank — instead of a
