@@ -1056,6 +1056,9 @@
 - slug: raw-archive-store
   parent: digest
   track: digest
+- slug: red-status-reboot-required
+  parent: ''
+  track: security
 - slug: rel-011
   parent: ''
   track: release
