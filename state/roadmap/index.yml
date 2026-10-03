@@ -405,6 +405,9 @@
 - slug: ears-app-bundle
   parent: local-llm
   track: platform
+- slug: ears-art30
+  parent: sec
+  track: security
 - slug: edge-claims-vs-traefik
   parent: e2e-lifecycle
   track: security
@@ -618,6 +621,9 @@
 - slug: jeff
   parent: agents
   track: agents
+- slug: jellyfin-sso-provider-missing
+  parent: identities-from-install
+  track: platform
 - slug: keap-anchor-merge-never-heals
   parent: ''
   track: cortex
@@ -1032,6 +1038,9 @@
 - slug: pulse-lineage
   parent: ''
   track: agents
+- slug: qdrant-base-undispatched-actions
+  parent: plat
+  track: platform
 - slug: raw-archive-backup
   parent: digest
   track: digest
