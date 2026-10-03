@@ -60,6 +60,20 @@ e2e:
       url: https://{{ geolibre_domain }}/
       expect: {status: [302], location_contains: "{{ authentik_domain }}/application/o/authorize"}
 
+# Regenerates the nos-atlas planet + buildings from a read-only reader snapshot
+# into the copy GeoLibre serves (plugins/nos-atlas/data). Off → empty dir → no-op.
+pulse:
+  jobs:
+    - name: atlas-refresh
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/atlas-refresh.py"
+      args: ["--data-dir", "{{ geolibre_data_dir }}", "--atlas-src", "{{ nos_atlas_src_dir }}"]
+      schedule: "40 * * * *"
+      jitter_min: 5
+      max_runtime_s: 600
+      max_concurrent: 1
+      category: platform
+
 observability:
   loki:
     labels:
