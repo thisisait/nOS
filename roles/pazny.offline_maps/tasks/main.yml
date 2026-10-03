@@ -53,9 +53,11 @@
     argv: [tar, -xzf, "{{ maps_cache_dir }}/ofm-fonts.tar.gz", -C, "{{ maps_cache_dir }}"]
     creates: "{{ maps_cache_dir }}/ofm/Noto Sans Regular"
 
+# Relative: the cache is bind-mounted at /cache, where an absolute host target
+# does not exist (tileserver restarted 33x, 2026-10-03).
 - name: "[pazny.offline_maps] Expose glyphs under the path the config names"
   ansible.builtin.file:
-    src: "{{ maps_cache_dir }}/ofm"
+    src: ofm
     dest: "{{ maps_cache_dir }}/fonts"
     state: link
 
