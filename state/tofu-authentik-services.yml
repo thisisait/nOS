@@ -326,8 +326,9 @@ tofu_authentik_services:
   name: SpacetimeDB
   mode: forward_auth
   tier: 1
-  enabled: '{{ install_spacetimedb | default(false) }}'
+  enabled: false
   external_host: https://{{ spacetimedb_domain | default('spacetime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
+  retired: true
 - slug: superset
   name: Superset
   mode: native_oidc

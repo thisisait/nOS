@@ -27,7 +27,7 @@ def _authored_slugs() -> set:
 
 
 def test_the_three_are_tombstoned():
-    assert {"ntfy", "onlyoffice", "woodpecker"} <= {e["slug"] for e in TOMBS}
+    assert {"ntfy", "onlyoffice", "woodpecker", "spacetimedb"} <= {e["slug"] for e in TOMBS}
 
 
 def test_a_tombstone_is_disabled_and_unauthored():

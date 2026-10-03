@@ -25,8 +25,8 @@
 name: spacetimedb-base
 version: 0.1.0
 description: |
-  Wiring layer for SpacetimeDB realtime DB: Authentik forward-auth gate
-  for the HTTP admin surface (/admin), GDPR Article 30 row, /hub deep-link.
+  Wiring layer for SpacetimeDB realtime DB: no edge surface (reached only
+  through the nos-forum /stdb lane), GDPR Article 30 row.
   Module-level RBAC happens inside operator WASM modules via
   ctx.sender.identity — out of nOS plugin scope.
 upstream: https://spacetimedb.com/
@@ -34,7 +34,6 @@ license: BSL-1.1   # SpacetimeDB upstream; manifest is repo-licensed
 
 type:
   - service
-  - ui-extension
 
 _NOS_PLUGIN: "spacetimedb-base"
 
@@ -52,19 +51,12 @@ requires:
     - host_alias
 
 # =============================================================================
-# AUTHENTIK — forward_auth (proxy gate; no per-user state in service)
+# AUTHENTIK — none: no edge surface at all
 # =============================================================================
-
-authentik:
-  mode: forward_auth
-  provider_type: forward_auth
-  client_id: nos-spacetimedb
-  client_secret: "{{ nos_derived_secrets.oidc_spacetimedb }}"
-  slug: spacetimedb
-  name: 'SpacetimeDB'
-  enabled: "{{ install_spacetimedb | default(false) }}"
-  launch_url: "https://{{ spacetimedb_domain | default('spacetime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
-  tier: 1   # admin — DB control plane, narrow audience
+# REM-144 took the edge router away (traefik_skip_ids), so the forward_auth
+# claim here gated nothing and the e2e probe 404'd (2026-10-03). The only
+# browser path is the nos-forum lane, two SDK endpoints, SpacetimeDB checking
+# the id_token itself. The tofu registry keeps a disabled tombstone.
 
 # No compose_extension — Traefik file-provider derives the forward_auth
 # middleware attachment from state/manifest.yml's auth_mode column.
@@ -129,19 +121,6 @@ gdpr:
   processors: []
   eu_residency: true
 
-# =============================================================================
-# UI-EXTENSION — Wing /hub deep-link card
-# =============================================================================
-
-ui-extension:
-  hub_card:
-    title: "SpacetimeDB"
-    icon: database
-    url: "https://{{ spacetimedb_domain | default('spacetime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}"
-    tier: 1
-    description: "Realtime DB control plane"
-    health_check: "https://{{ spacetimedb_domain | default('spacetime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/admin"
-
 # ── Notification routing (A9 severity → channel) ─────────────────────────────
 # Uniform wiring contract (2026-05-23): harvested by wing-base into
 # notification-routing.json; Bone falls back to this when an emitter POSTs a
@@ -156,7 +135,11 @@ notification:
   on_info:     []
 
 e2e:
+  enabled: "{{ install_spacetimedb | default(false) }}"
   probes:
-    - name: anonymous-is-sent-to-authentik
+    - name: no-public-edge
       url: https://{{ spacetimedb_domain | default('spacetime' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/
-      expect: {status: [302], location_contains: "{{ authentik_domain }}/application/o/authorize"}
+      expect: {status: [404]}
+    - name: forum-lane-refuses-the-sql-api
+      url: https://{{ nos_forum_domain | default('forum.' ~ (tenant_domain | default('dev.local'))) }}/stdb/v1/database/nos-forum/sql
+      expect: {status: [302], location_contains: "/auth/login"}

@@ -33,11 +33,12 @@ Authoritative: each plugin's `authentik.mode` in
   (`PUT /api/settings`), ERPNext (Frappe Social Login Key), Home Assistant (auth_oidc),
   Jellyfin (SSO-Auth plugin), Superset (`OAUTH_PROVIDERS`).
 - **`header_oidc`:** Firefly III, KEAP (`X-Authentik-uid`-keyed per-user rows).
-- **`forward_auth`:** Uptime Kuma, Calibre-Web, Kiwix, Paperclip, Wing, code-server, ntfy,
-  InfluxDB, ONLYOFFICE, Mailpit, Metabase, SpacetimeDB, OpenClaw, Hermes,
-  SnappyMail, Dolibarr, FreeScout (native path removed 2026-09-03, fee 49), Woodpecker
-  (route gate on top of its Gitea-OAuth app login).
-- **No SSO:** QGIS. **AT Protocol identity:** Bluesky PDS (the Authentik→PDS
+- **`forward_auth`:** Uptime Kuma, Calibre-Web, Kiwix, Paperclip, Wing, code-server,
+  InfluxDB, Mailpit, Metabase, OpenClaw, Hermes, SnappyMail, Dolibarr, FreeScout
+  (native path removed 2026-09-03, fee 49), GeoLibre.
+- **No SSO:** QGIS, ntfy (own deny-all user DB), ONLYOFFICE (JWT-signed server-to-server),
+  Woodpecker (Gitea OAuth2 login), SpacetimeDB (no edge at all; the forum's `/stdb` lane
+  passes two SDK endpoints and SpacetimeDB checks the id_token). **AT Protocol identity:** Bluesky PDS (the Authentik→PDS
   bridge provisions `@user.bsky.<tld>`).
 
 A `200` on a native_oidc route is not an SSO bypass — the service shows its own
