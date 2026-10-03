@@ -148,7 +148,8 @@ class Pg:
         return [l.split()[1] for l in r.stdout.decode().splitlines() if l.startswith("SKIP ")]
 
 
-def load_gml(pg: Pg, files: list[Path], table: str, ddl: str, select: str, finish: str, nlt: str, sig: str) -> list[str]:
+def load_gml(pg: Pg, files: list[Path], table: str, ddl: str, select: str, finish: str, nlt: str, sig: str,
+             index: str) -> list[str]:
     staging = f"_{table}_load"
     pg.sql(f"DROP TABLE IF EXISTS geo.{staging};")
     skipped: list[str] = []
@@ -158,6 +159,7 @@ def load_gml(pg: Pg, files: list[Path], table: str, ddl: str, select: str, finis
     pg.sql(f"""BEGIN;
 CREATE TABLE IF NOT EXISTS geo.{table} ({ddl});
 CREATE INDEX IF NOT EXISTS {table}_geom ON geo.{table} USING gist (geom);
+{index}
 TRUNCATE geo.{table};
 INSERT INTO geo.{table} {finish.format(staging=f'geo.{staging}')};
 DROP TABLE geo.{staging};
@@ -250,20 +252,22 @@ def main() -> int:
                "local_id text, ku_kod int, parcel_no text, ncr text, area_m2 bigint, geom geometry(MultiPolygon, 5514)",
                "SELECT localId AS local_id, label AS parcel_no, nationalCadastralReference AS ncr, "
                "areaValue AS area_m2 FROM CadastralParcel",
-               "SELECT local_id, split_part(ncr, '-', 1)::int, parcel_no, ncr, area_m2, geom FROM {staging}"),
+               "SELECT local_id, split_part(ncr, '-', 1)::int, parcel_no, ncr, area_m2, geom FROM {staging}",
+               "CREATE INDEX IF NOT EXISTS inspire_cp_parcel ON geo.inspire_cp (ku_kod, parcel_no);"),
         "bu": ("inspire_bu", BU_URL, obce, "GEOMETRY",
                "kod_so bigint, local_id text, units int, floors text, geom geometry(Geometry, 5514)",
                "SELECT localId AS local_id, numberOfBuildingUnits AS units, "
                "numberOfFloorsAboveGround AS floors FROM Building",
-               "SELECT substr(local_id, 4)::bigint, local_id, units, floors, geom FROM {staging}"),
+               "SELECT substr(local_id, 4)::bigint, local_id, units, floors, geom FROM {staging}",
+               "CREATE INDEX IF NOT EXISTS inspire_bu_kod_so ON geo.inspire_bu (kod_so);"),
     }
-    for key, (table, url, codes, nlt, ddl, select, finish) in gml.items():
+    for key, (table, url, codes, nlt, ddl, select, finish, index) in gml.items():
         if key not in layers:
             continue
         files = {url.format(c): cache / key / f"{c}.zip" for c in codes}
         new = fetch_all(files)
         if new or not pg.current(table, sig(codes)):
-            skipped = load_gml(pg, sorted(files.values()), table, ddl, select, finish, nlt, sig(codes))
+            skipped = load_gml(pg, sorted(files.values()), table, ddl, select, finish, nlt, sig(codes), index)
             print(f"{table}: {new} new of {len(files)} files, reloaded"
                   + (f"; {len(skipped)} without the layer, skipped: {' '.join(skipped)}" if skipped else ""))
         else:

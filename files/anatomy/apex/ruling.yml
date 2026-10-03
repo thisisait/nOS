@@ -596,9 +596,10 @@ nodes:
   "pulse:cortex:cortex-corpus-diff": withheld
   "pulse:cortex:cortex-fs-sync": withheld
   "pulse:crm-hydrate:hydrate-parties": withheld
-  # geo-base (2026-10-03): open-data loader. WITHHELD: which kraje the firm
-  # maps is its own business.
+  # geo-base (2026-10-03): open-data loader + party-site projection. WITHHELD:
+  # where the firm's sites are and which kraje it maps is its own business.
   "pulse:geo:geo-load": withheld
+  "pulse:geo:project-sites": withheld
   # 2026-08-26 roster close: five withheld pulse rows left the artifact
   # (curator-sweep, promote-migration — agents PARKED; drift-scan,
   # triage-open-findings, upgrade-advise — agents RETIRED). All were
@@ -722,6 +723,9 @@ nodes:
   # it). WITHHELD like every table node — whose counterparties the estate
   # watches is the firm's business, never the public front door.
   "table:party-registry-status": withheld
+  # Party sites (geo). WITHHELD like every table node — a sole trader's site
+  # is a person's address.
+  "table:party-site": withheld
   # ČNB daily FX reference table (n8n ČNB pack fills it). WITHHELD like every
   # table node — the rates are public data, but which spine the estate keeps
   # and refreshes is its own business, never the public front door.

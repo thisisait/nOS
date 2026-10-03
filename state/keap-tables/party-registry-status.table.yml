@@ -36,4 +36,6 @@ schema:
     - { key: dic,              label: "DIČ",               kind: text,   role: attribute }
     - { key: vat_reliability,  label: "VAT reliability",   kind: select, role: dimension, required: true, concept: lifecycle.status,
         options: ["reliable", "unreliable", "not_payer", "unknown"] }
+    # ARES sidlo.kodAdresnihoMista — the registered seat as a RÚIAN address point.
+    - { key: sidlo_ruian_adm,  label: "Seat RÚIAN ADM",    kind: number, role: attribute }
     - { key: checked_at,       label: "Checked at",        kind: date,   role: attribute, concept: time.occurred_at }

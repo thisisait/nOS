@@ -43,7 +43,8 @@ MUTATING_TOKENS = (
 # Keep this residual set in sync with test_gdpr_erasure_map.py
 # (test_backend_store_residual_reach_documented). These backend/derived stores
 # are reached by Art-17 erasure but NOT extracted by an Art-15 access export.
-RESIDUAL_STORES = {"svc_redis", "svc_rustfs", "svc_wing", "svc_loki", "svc_tempo"}
+# svc_geo: geo.party_site is a nightly projection of KEAP rows — its Art-15 copy is KEAP's.
+RESIDUAL_STORES = {"svc_redis", "svc_rustfs", "svc_wing", "svc_loki", "svc_tempo", "svc_geo"}
 
 
 def _entries() -> list[dict]:

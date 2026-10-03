@@ -40,6 +40,13 @@ def test_oracle_projects_fixture_onto_registry_row():
     assert row["ares_found"] is True
     assert row["vat_reliability"] == "unreliable"
     assert row["legal_name_ares"] == "Alfa s.r.o."
+    # The seat as a RÚIAN address point — the geo projection's join key.
+    assert row["sidlo_ruian_adm"] == 21700184
+
+
+def test_graph_carries_the_seat_address_point_like_the_oracle():
+    code = _nodes(_wf())["Format"]["parameters"]["jsCode"]
+    assert "sidlo.kodAdresnihoMista" in code and "row.sidlo_ruian_adm" in code
 
 
 def test_oracle_treats_missing_ares_as_not_a_payer():

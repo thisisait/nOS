@@ -14,7 +14,7 @@ import json
 import subprocess
 import sys
 
-LAYERS = ("ruian_adm", "inspire_cp", "inspire_bu")
+LAYERS = ("ruian_adm", "inspire_cp", "inspire_bu", "party_site")
 
 
 def _psql(container: str, db: str, sql: str) -> str | None:

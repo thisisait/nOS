@@ -184,6 +184,13 @@
     - install_keap | default(false) | bool
     - install_n8n | default(false) | bool
 
+# ── Maps & GIS: party-site (projected nightly into PostGIS by geo-base) ──────
+- name: "[pazny.keap] Seed geo DataTables (party-site)"
+  ansible.builtin.include_tasks: seed-geo-tables.yml
+  when:
+    - install_keap | default(false) | bool
+    - install_postgis | default(false) | bool
+
 # ── Label-printer business fixture (w-fixture increment 1) ───────────────────
 # Nine EN 16931 + print-shop DataTables with synthetic seed rows, git-owned so
 # a blank → converge recreates the tenant (the design doc's proof 3). Opt-in:

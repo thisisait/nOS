@@ -1,0 +1,32 @@
+# =============================================================================
+# KEAP DataTable — party sites (maps & GIS P0).
+#
+# Where a party physically is: one row per site, rowRef'd to its party. The
+# location is given by Czech registry keys, never by drawn coordinates — a
+# RÚIAN address point, a parcel (KÚ + parcel number) and optionally a building
+# (kód stavebního objektu). PostGIS resolves the keys to geometry: the nightly
+# projection (tools/geo-project-sites.py) copies these rows one-way into
+# geo.party_site; erasure reaches it (state/gdpr-erasure-map.yml svc_geo-base).
+# A sole trader (OSVČ) is a natural person, so a site row is personal data.
+# =============================================================================
+title: "Party sites"
+description: >-
+  Physical sites per party (hq | branch | factory | warehouse | parcel),
+  located by RÚIAN address point and/or cadastral parcel (KÚ code + parcel
+  number) and optionally a building. Entered by the operator; projected
+  nightly into PostGIS for the map.
+driver: libsql
+visibility: tier-managers
+anchors: ["nos.fixture.party"]
+schema:
+  columns:
+    - { key: slug,      label: "Slug",            kind: text,   role: dimension, required: true, concept: identity.slug }
+    - { key: party,     label: "Party",           kind: rowRef, role: dimension, required: true,
+        refTable: "party", refDisplay: "legal_name", onDelete: "restrict", concept: graph.parent }
+    - { key: kind,      label: "Kind",            kind: select, role: dimension, required: true, concept: class.kind,
+        options: ["hq", "branch", "factory", "warehouse", "parcel"] }
+    - { key: ruian_adm, label: "RÚIAN ADM",       kind: number, role: attribute }
+    - { key: ku_kod,    label: "KÚ code",         kind: number, role: dimension }
+    - { key: parcel_no, label: "Parcel number",   kind: text,   role: attribute }
+    - { key: kod_so,    label: "Building (kód SO)", kind: number, role: attribute }
+    - { key: note,      label: "Note",            kind: text,   role: attribute, concept: identity.description }

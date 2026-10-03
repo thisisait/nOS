@@ -205,6 +205,15 @@ services:
   # not reach. All `manual`: the deletions are broad (FLUSHDB drops every
   # session, not one subject's), so auto-running them on a per-subject run
   # would over-delete. The dry-run plan prints these so the reach is auditable.
+  - id: svc_geo
+    flag: install_postgis
+    method: manual
+    note: "PostGIS projection geo.party_site (a sole trader's site is a person's
+           address). Keyed by party, not email: tools/digest-teardown.py
+           --erase-party <party-slug> --confirm erases the KEAP party-site rows
+           AND geo.party_site at once; the nightly projection then cannot
+           recreate them. RÚIAN/INSPIRE layers hold no subject data."
+
   - id: svc_redis
     # `redis_docker`, not `install_redis`: the latter is declared in no config
     # layer, so this row was never once in a plan.

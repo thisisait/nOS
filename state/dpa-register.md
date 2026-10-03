@@ -1424,12 +1424,16 @@ OpenTofu destroys the live objects. This plugin stores no CRM rows.
 
 #### Geo — `svc_geo`
 - **Purpose:** Loads public ČÚZK cadastral open data (address points, parcel and building
-geometry) into the local PostGIS database so business sites can be placed
-on a map. No owner data: INSPIRE CP/BU and RÚIAN address points carry no
-names, but an address point can be a natural person's home address.
+geometry) into the local PostGIS database, and projects the parties' sites
+(operator-entered party-site rows, ARES registered seats) onto it so they
+can be placed on a map. Open data carries no names or owners; the
+projection carries party slugs and registry keys — a sole trader's (OSVČ)
+site is a natural person's address. KEAP is the source of truth; the
+projection is rewritten nightly and erased with the party
+(state/gdpr-erasure-map.yml svc_geo).
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `residents`
-- **Data categories:** `public_geodata`
+- **Data subjects:** `clients`; `residents`
+- **Data categories:** `public_geodata`; `company_affiliation`; `postal_address`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** transient (not persisted)
