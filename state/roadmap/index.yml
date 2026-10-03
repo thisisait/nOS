@@ -1407,6 +1407,9 @@
 - slug: wet-test-gate-before-autodeploy
   parent: agent-landing-zero-command-operator
   track: platform
+- slug: wing-db-ro-open-needs-shm
+  parent: ''
+  track: platform
 - slug: wing-events-chain-aware-retention
   parent: ''
   track: platform
