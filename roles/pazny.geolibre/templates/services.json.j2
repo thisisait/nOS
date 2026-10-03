@@ -1,0 +1,1 @@
+{{ {'services': geolibre_layers | selectattr('enabled') | list} | tojson }}

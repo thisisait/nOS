@@ -1755,6 +1755,44 @@ geolibre_image: "ghcr.io/opengeos/geolibre"
 geolibre_version: "v3.2.0@sha256:7c43f124f306d7c00c66660faf73eced043d6ddd749a06afb055ed223e79cebe"   # image label v3.2.0, rev aa28b2a; the digest nos-atlas was tested against
 nos_atlas_src_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nos-atlas"   # dist/nos-atlas is COPIED into geolibre_data_dir; build it there (npm run build)
 
+# GeoLibre Browser layer catalog (rendered to GEOLIBRE_SERVICES_FILE; schema = GeoLibre
+# docker/entrypoint.sh). Free, keyless services only; `licence_url` is the source checked.
+# GeoLibre shows no per-service attribution, so the required credit rides in `name`.
+# ČÚZK services verified 2026-10-03: capabilities Fees/AccessConstraints = none, EPSG:3857.
+geolibre_layers:
+  - id: nos-basemap
+    name: "nOS basemap — Liberty (© OpenStreetMap contributors)"
+    category: Basemaps
+    kind: xyz
+    enabled: "{{ install_offline_maps }}"
+    fields: {url: "https://{{ maps_domain }}/styles/liberty/{z}/{x}/{y}.png", tileSize: "256", shortUrl: false}
+    licence: "Own tileserver (pazny.offline_maps). Data © OpenStreetMap contributors, ODbL 1.0."
+    licence_url: "https://www.openstreetmap.org/copyright"
+  - id: cuzk-katastralni-mapa
+    name: "Katastrální mapa (ČÚZK – on-line)"
+    category: ČÚZK
+    kind: wms
+    enabled: true
+    fields: {endpoint: "https://services.cuzk.gov.cz/wms/local-km-wms.asp", layers: "KN", styles: "", format: "image/png", transparent: true, tileSize: "256", version: "1.3.0"}
+    licence: "ČÚZK network services: free, no registration, commercial use allowed; credit 'ČÚZK – on-line'."
+    licence_url: "https://www.cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-sitovych-sluzeb-CUZK.aspx"
+  - id: cuzk-ortofoto
+    name: "Ortofoto ČR (ČÚZK – on-line)"
+    category: ČÚZK
+    kind: wms
+    enabled: true
+    fields: {endpoint: "https://ags.cuzk.gov.cz/arcgis1/services/ORTOFOTO/MapServer/WMSServer", layers: "0", styles: "", format: "image/png", transparent: false, tileSize: "256", version: "1.3.0"}
+    licence: "ČÚZK network services: free, no registration, commercial use allowed; credit 'ČÚZK – on-line'."
+    licence_url: "https://www.cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-sitovych-sluzeb-CUZK.aspx"
+  - id: cuzk-ruian
+    name: "RÚIAN — budovy a adresní místa (ČÚZK – on-line)"
+    category: ČÚZK
+    kind: wms
+    enabled: true
+    fields: {endpoint: "https://ags.cuzk.gov.cz/arcgis/services/RUIAN/MapServer/WMSServer", layers: "StavebniObjekt,AdresniMisto", styles: "", format: "image/png", transparent: true, tileSize: "256", version: "1.3.0"}
+    licence: "ČÚZK network services: free, no registration, commercial use allowed; credit 'ČÚZK – on-line'."
+    licence_url: "https://www.cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-sitovych-sluzeb-CUZK.aspx"
+
 # ==============================================================================
 # SHELL EXTRAS – Starship + aliases
 # ==============================================================================

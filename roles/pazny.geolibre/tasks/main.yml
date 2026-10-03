@@ -6,11 +6,14 @@
 # (npm run build in nos-atlas) is not this role's job.
 # ==============================================================================
 
-- name: "[pazny.geolibre] Ensure the plugin directory exists"
+- name: "[pazny.geolibre] Ensure the plugin and catalog directories exist"
   ansible.builtin.file:
-    path: "{{ geolibre_data_dir }}/plugins/nos-atlas"
+    path: "{{ item }}"
     state: directory
     mode: '0755'
+  loop:
+    - "{{ geolibre_data_dir }}/plugins/nos-atlas"
+    - "{{ geolibre_data_dir }}/catalog"
 
 - name: "[pazny.geolibre] Look for the built nos-atlas bundle"
   ansible.builtin.stat:
@@ -30,6 +33,13 @@
       {{ nos_atlas_src_dir }}/dist/nos-atlas/plugin.json not found — run `npm run build`
       in nos-atlas, then re-run `--tags geolibre`. GeoLibre itself still comes up.
   when: not _geolibre_atlas_dist.stat.exists
+
+- name: "[pazny.geolibre] Render the layer catalog (GEOLIBRE_SERVICES_FILE, from geolibre_layers)"
+  ansible.builtin.template:
+    src: services.json.j2
+    dest: "{{ geolibre_data_dir }}/catalog/services.json"
+    mode: '0644'
+  notify: Restart geolibre
 
 - name: "[pazny.geolibre] Render compose override fragment"
   ansible.builtin.template:
