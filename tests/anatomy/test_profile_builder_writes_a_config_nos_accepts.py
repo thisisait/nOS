@@ -78,7 +78,7 @@ def test_one_timezone_every_service_derives_from_it():
     cfg = yaml.safe_load(CONFIG_TEXT)
     assert cfg["nos_timezone"] == "Europe/Prague"
     tz_keys = [k for k in cfg if re.search(r"_(timezone|tz)$", k) and k != "nos_timezone"]
-    assert len(tz_keys) >= 8 and all(cfg[k] == "{{ nos_timezone }}" for k in tz_keys), tz_keys
+    assert len(tz_keys) >= 7 and all(cfg[k] == "{{ nos_timezone }}" for k in tz_keys), tz_keys
     literal = []
     for p in list(REPO.glob("roles/*/defaults/main.yml")) + list(REPO.glob("roles/*/templates/*.j2")):
         for ln in p.read_text().splitlines():
@@ -179,12 +179,12 @@ def test_problems_refuse_what_nos_would_refuse():
 def test_nearest_profile_follows_answers_and_a_contradiction_silences_it():
     res = _node('''
       const s = {fields: {enforce_mfa: true}, picks: {}, manual: {}, mail: null};
-      const clash = {fields: {enforce_mfa: true}, picks: {}, manual: {install_freepbx: true}, mail: null};
+      const clash = {fields: {enforce_mfa: true, backup_encryption_enabled: false}, picks: {}, manual: {}, mail: null};
       console.log(JSON.stringify({hit: nearest(DATA, s), clash: nearest(DATA, clash), picked: nearest(DATA, {...s, picks: {policy: "gov-local"}}),
         none: nearest(DATA, {fields: {}, picks: {}, manual: {}, mail: null})}));
     ''')
     assert {"axis": "policy", "id": "gov-local", "agree": ["enforce_mfa"]} in res["hit"]
-    assert not any(x["id"] == "gov-local" for x in res["clash"]), "gov-local turns freepbx off; you turned it on"
+    assert not any(x["id"] == "gov-local" for x in res["clash"]), "gov-local encrypts backups; you turned that off"
     assert not any(x["id"] == "gov-local" for x in res["picked"]), "a picked profile is not suggested again"
     assert res["none"] == [], "no answers, no suggestion"
 

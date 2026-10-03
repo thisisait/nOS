@@ -32,7 +32,7 @@ OUT = REPO / "state/dpa-register.md"
 
 # Stack display order — infra/observability first (always-on), then the rest.
 STACK_ORDER = ["infra", "observability", "iiab", "apps", "devops",
-               "b2b", "voip", "engineering", "data"]
+               "b2b", "engineering", "data"]
 
 
 def _stack_key(rec: dict) -> tuple:

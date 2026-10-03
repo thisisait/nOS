@@ -3,7 +3,7 @@
 # TIER-2 APPS STACK — apps_runner orchestrator
 #
 # Runs AFTER tasks/stacks/stack-up.yml (Tier-1 stacks online: infra, observability,
-# iiab, devops, b2b, voip, engineering, data). This file:
+# iiab, devops, b2b, engineering, data). This file:
 #
 #   1. Renders apps/<name>.yml manifests via pazny.apps_runner main.yml
 #      → discovers manifests, parses + gates them (TLS / SSO / EU residency),

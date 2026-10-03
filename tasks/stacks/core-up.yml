@@ -8,7 +8,7 @@
 #   - observability - Grafana, Prometheus, Loki, Tempo
 #
 # Runs ALWAYS first of all docker compose stacks - before any
-# iiab/devops/b2b/voip/data/engineering task runs. All other
+# iiab/devops/b2b/data/engineering task runs. All other
 # roles can then assume DB/IAM/Vault/observability are listening
 # and just inject their configs and notify handlers to restart.
 #
@@ -113,7 +113,6 @@
     - "{{ stacks_dir }}/iiab/overrides"
     - "{{ stacks_dir }}/devops/overrides"
     - "{{ stacks_dir }}/b2b/overrides"
-    - "{{ stacks_dir }}/voip/overrides"
     - "{{ stacks_dir }}/engineering/overrides"
     - "{{ stacks_dir }}/data/overrides"
     # Tier-2 apps stack (apps_runner) — apps_runner main.yml writes the merged
@@ -759,6 +758,6 @@
        Bluesky PDS:   {{ 'configured' if (install_bluesky_pds | default(false)) else 'disabled' }}
        SpacetimeDB:   {{ 'configured' if (install_spacetimedb | default(false)) else 'disabled' }}
 
-      Remaining stacks (iiab/devops/b2b/voip/data/engineering) will come up
+      Remaining stacks (iiab/devops/b2b/data/engineering) will come up
       later via tasks/stacks/stack-up.yml after service-side tasks have
       injected their configs.

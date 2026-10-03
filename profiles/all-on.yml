@@ -24,8 +24,6 @@
 # DELIBERATELY EXCLUDED (scope = "all known-good"):
 #   - install_erpnext      — hard-blocked behind erpnext_experimental_override,
 #                            non-working on first blank (see roles/pazny.erpnext)
-#   - install_freepbx      — tiredofit image abandoned 2022; unfixable CRITICAL
-#                            CVEs (REM-014/046); operators accept-risk only
 #   - install_spacetimedb  — BSL 1.1 license (internal-SaaS use only), not FOSS
 # Re-enable any of those manually if you specifically want to test them.
 # =============================================================================

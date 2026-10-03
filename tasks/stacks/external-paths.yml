@@ -83,10 +83,9 @@
     ntfy_data_dir: "{{ external_storage_root }}/ntfy/data"
     nodered_data_dir: "{{ external_storage_root }}/nodered/data"
 
-# ── VoIP / Engineering / Data stack ─────────────────────────────────────────
-- name: "[External SSD] Override VoIP/Engineering/Data paths"
+# ── Engineering / Data stack ────────────────────────────────────────────────
+- name: "[External SSD] Override Engineering/Data paths"
   ansible.builtin.set_fact:
-    freepbx_data_dir: "{{ external_storage_root }}/freepbx"
     qgis_data_dir: "{{ external_storage_root }}/qgis"
     metabase_data_dir: "{{ external_storage_root }}/metabase"
     superset_data_dir: "{{ external_storage_root }}/superset"

@@ -61,7 +61,6 @@ calibreweb_books_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/
 calibreweb_config_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/calibreweb/config"
 code_server_data_dir: "{{ nos_data_root }}/platform/services/code_server/data"
 erpnext_data_dir: "{{ nos_data_root }}/platform/services/erpnext/data"
-freepbx_data_dir: "{{ nos_data_root }}/platform/services/freepbx/data"
 freescout_data_dir: "{{ nos_data_root }}/platform/services/freescout/data"
 gitea_data_dir: "{{ nos_data_root }}/platform/services/gitea/data"
 gitlab_config_dir: "{{ nos_data_root }}/platform/services/gitlab/config"
@@ -622,8 +621,6 @@ install_firefly: false            # Firefly III – personal finance [Docker, re
 install_dolibarr: false           # Dolibarr ERP/CRM desk [Docker, MariaDB, ARM64]. Praxis pack ON. KEAP tables = books fallback when this is off. SSO is forward_auth until OIDC module is proven in post.yml.
 install_onlyoffice: true          # ONLYOFFICE Document Server [Docker] — Nextcloud's Edit needs it (builder edge, 2026-10-01)
 
-# ── VoIP stack (telecommunications) ──────────────────────────────────────────
-install_freepbx: false            # FreePBX + Asterisk – PBX / call center              [Docker]
 
 # ── Engineering stack (HW/CAD/GIS) ───────────────────────────────────────────
 install_qgis_server: false        # QGIS Server – GIS map server                        [Docker]
@@ -1559,7 +1556,6 @@ mariadb_databases:
   - name: "nextcloud"
   - name: "freescout"
   - name: "erpnext"
-  - name: "asterisk"
   - name: "bookstack"
   - name: "firefly"
   - name: "dolibarr"
@@ -1577,9 +1573,6 @@ mariadb_users:
   - name: "erpnext"
     password: "{{ erpnext_admin_password | default(nos_derived_secrets.erpnext) }}"
     priv: "erpnext.*:ALL"
-  - name: "asterisk"
-    password: "{{ freepbx_db_password | default(nos_derived_secrets.freepbx) }}"
-    priv: "asterisk.*:ALL"
   - name: "bookstack"
     password: "{{ bookstack_db_password | default(nos_derived_secrets.bookstack) }}"
     priv: "bookstack.*:ALL"
@@ -2336,6 +2329,7 @@ uninstall_disabled_services: false
 nos_retired_services:
   - puter
   - qdrant     # 2026-10-02: KEAP's libSQL vectors are the retrieval path
+  - freepbx    # 2026-10-03: tiredofit image gone from Docker Hub, CRITICALs unfixable
 
 # ── External-volume mount preflight (macOS / Docker Desktop) ─────────────────
 # When nos_data_root is redirected onto an external disk (/Volumes/<disk>), an
@@ -2618,23 +2612,6 @@ outline_db_user: "outline"
 outline_db_password: "{{ nos_derived_secrets.outline }}"
 outline_secret_key: "{{ global_password_prefix }}_pw_outline_secret"
 outline_utils_secret: "{{ global_password_prefix }}_pw_outline_utils"
-
-# ==============================================================================
-# VOIP – FREEPBX + ASTERISK (PBX / call center)
-# Requires: install_mariadb: true
-# ==============================================================================
-
-freepbx_domain: "pbx{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-freepbx_port: 8088                     # Web UI
-freepbx_sip_port: 5060                 # SIP signaling (UDP+TCP)
-freepbx_iax_port: 4569                 # IAX2 protocol
-freepbx_rtp_start: 10000              # RTP media start port
-freepbx_rtp_end: 10100                # RTP media end port
-freepbx_version: "latest"   # ⚠️  VENDOR-BLOCKED (REM-014/046): tiredofit/freepbx Docker image abandoned upstream 2022-04-30; latest published tag is 5.2.0 (2022). No maintained ARM64 FOSS alternative. CRITICAL CVEs (CVSS 10.0/9.3) UNFIXABLE in this image — operators running freepbx accept the risk. Track docs/llm/security/remediation-queue.json items REM-014/046 for status changes.
-freepbx_db_name: "asterisk"
-freepbx_db_user: "asterisk"
-freepbx_db_password: "{{ nos_derived_secrets.freepbx }}"
-freepbx_timezone: "{{ nos_timezone }}"
 
 # ==============================================================================
 # ENGINEERING – QGIS SERVER (GIS map server)
@@ -3471,7 +3448,6 @@ backup_coverage:
   code_server_data_dir:        { class: derived, why: "editor settings + extensions" }
   influxdb_config_dir:         { class: derived, why: "rendered config" }
   qgis_data_dir:               { class: unbacked, why: "GIS projects (opt-in service)" }
-  freepbx_data_dir:            { class: unbacked, why: "parked service (vendor-abandoned image)" }
   spacetimedb_data_dir:        { class: unbacked, why: "parked service" }
   spacetimedb_keys_dir:        { class: unbacked, why: "parked service" }
   infisical_data_dir:          { class: db, why: "secrets live in postgres.sql.gz" }

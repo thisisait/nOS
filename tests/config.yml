@@ -71,7 +71,6 @@ redis_docker: true
 install_erpnext: false
 install_freescout: false
 install_outline: false
-install_freepbx: false
 install_qgis_server: false
 install_metabase: false
 install_superset: false

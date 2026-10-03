@@ -37,7 +37,6 @@ VERSION_KEY_SUFFIXES = ("_version", "_image_version", "_tag")
 EXCEPTIONS = {
     # Moved here with the pin itself when the 38 shadows were deleted.
     ("default.config.yml", "dotfiles_repo_version"): "git repo branch ref (dotfiles), not a Docker image tag",
-    ("default.config.yml", "freepbx_version"): "excluded service (abandoned image, unfixable CVEs)",
     ("default.config.yml", "face_version"): "nos/face is built locally from the vendored tree; the tag names a local build, not a registry pull",
     # qgis_version LEFT this list the same day it joined it. It was listed as
     # "UNPINNED, pin it on a supervised converge" and then digest-pinned to the

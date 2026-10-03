@@ -271,7 +271,7 @@ def _references() -> dict[str, set[str]]:
         if not path.is_file() or path.suffix not in {".yml", ".yaml", ".j2"}:
             continue
         rel = str(path.relative_to(REPO))
-        if rel.startswith((".git/", ".ci-venv/", "tests/")):
+        if rel.startswith((".git/", ".ci-venv/", ".claude/", "tests/")):  # .claude/ holds sibling worktrees
             continue
         try:
             text = path.read_text(encoding="utf-8")

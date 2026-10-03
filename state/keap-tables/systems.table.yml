@@ -32,7 +32,7 @@ schema:
     # ── classification (LeanIX dimensions) ────────────────────────────────────
     - { key: category,    label: "Category",          kind: text,   role: dimension, concept: class.category }
     - { key: stack,       label: "Stack",             kind: select, role: dimension, concept: class.group,
-        options: ["infra", "observability", "iiab", "apps", "devops", "b2b", "voip", "engineering", "data"] }
+        options: ["infra", "observability", "iiab", "apps", "devops", "b2b", "engineering", "data"] }
     - { key: kind,        label: "Kind",              kind: select, role: dimension, concept: class.kind,
         options: ["service", "backend", "host_daemon"] }
     - { key: rbac_tier,   label: "RBAC tier",         kind: select, role: dimension, concept: access.tier,

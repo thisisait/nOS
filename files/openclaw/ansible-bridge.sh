@@ -45,7 +45,7 @@ case "${1:-help}" in
         ;;
     status)
         # Show running Docker containers across all stacks
-        for stack in infra observability iiab devops b2b voip engineering data; do
+        for stack in infra observability iiab devops b2b engineering data; do
             COMPOSE="$HOME/stacks/$stack/docker-compose.yml"
             if [ -f "$COMPOSE" ]; then
                 echo "=== $stack ==="

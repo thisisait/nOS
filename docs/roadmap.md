@@ -51,8 +51,7 @@ retention enforcement stay a profile-gated post-1.0 track) and NOT full Linux
 parity (OpenClaw, Hermes and fleet provisioning are post-1.0).
 
 1. **Security floor** — zero CRITICAL/HIGH pending on a fresh full scan
-   (`tools/rem-status.py`). Vendor-blocked FreePBX is a documented accept-risk
-   with `install_freepbx: false` by default.
+   (`tools/rem-status.py`).
 2. **Reproducible blank** — `nos --remove=data --confirm` installs the known-good
    profile end-to-end `failed=0`, every container healthy, on a genuinely clean
    host. This is the core nOS invariant and must be re-proven at the RC.

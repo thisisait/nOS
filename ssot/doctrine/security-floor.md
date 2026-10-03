@@ -141,6 +141,6 @@ Ask `tools/rem-status.py` (tally + pending HIGH/CRITICAL, `--all` for every row)
 - **A GHSA with no CVE id** is the recurring blind spot: "no new CVE past the pin" was
   true and wrong by six days (metabase), and the same gap produced the n8n and authentik
   waves. Scan the vendor's advisory endpoint, not the CVE feed.
-- **Vendor-blocked:** FreePBX REM-014/046/113 (image abandoned upstream 2022 — CRITICALs
-  unfixable, risk accepted) and Ollama REM-126 (no upstream fix). REM-064 (Open WebUI,
+- **Vendor-blocked:** Ollama REM-126 (no upstream fix). FreePBX (REM-014/046/113/130)
+  was retired 2026-10-03 instead of carried. REM-064 (Open WebUI,
   admin-only RCE) is `wontfix`.

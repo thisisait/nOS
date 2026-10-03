@@ -227,7 +227,7 @@
          - {{ r.item }}{{ '  [exists]' if r.stat.exists else '  [absent]' }}
       {% endfor %}
          - docker: compose down -v per stack (iiab observability infra apps
-           devops b2b voip engineering data) + volume/network prune
+           devops b2b engineering data) + volume/network prune
          - regenerates exactly 7 keys: infisical_encryption_key,
            infisical_auth_secret, outline_secret_key, firefly_app_key,
            bookstack_app_key, onlyoffice_jwt_secret, influxdb_admin_token.

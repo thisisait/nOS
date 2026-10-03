@@ -96,7 +96,6 @@ install_watchtower: false
 install_mailpit: false
 install_superset: false
 install_erpnext: false
-install_freepbx: false
 install_qgis_server: false
 install_spacetimedb: false
 

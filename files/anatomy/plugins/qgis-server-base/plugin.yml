@@ -10,7 +10,7 @@
 # Mac it runs via Rosetta emulation (`platform: linux/amd64`).
 #
 # SSO posture: NO SSO (per CLAUDE.md trichotomy — QGIS is in the
-# "No SSO" bucket alongside FreePBX). The OGC endpoints (WMS GetMap,
+# "No SSO" bucket). The OGC endpoints (WMS GetMap,
 # WFS GetFeature) are stateless and authenticated only at the Traefik
 # perimeter (network-level access control). No `authentik:` block.
 # =============================================================================

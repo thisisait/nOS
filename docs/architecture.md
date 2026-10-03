@@ -70,7 +70,7 @@ container must reach healthy. Tuning vars in `default.config.yml`:
 | `stack_up_wait_timeout` | `540` | per-stack health budget, seconds (all-on profile: 1200) |
 | `stack_wait_tick_interval` | `15` | heartbeat cadence, seconds |
 
-`profiles/all-on.yml` enables every known-good service (excludes erpnext / freepbx /
+`profiles/all-on.yml` enables every known-good service (excludes erpnext /
 spacetimedb) and forces sequential bring-up.
 
 ## Docker stacks (compose projects in `~/stacks/`)
@@ -83,7 +83,6 @@ spacetimedb) and forces sequential bring-up.
 | **apps** | manifest apps run by `pazny.apps_runner` (Documenso, 2FAuth, Roundcube, …) |
 | **devops** | Gitea, Woodpecker CI, GitLab, Paperclip, code-server |
 | **b2b** | ERPNext, FreeScout, Outline, HedgeDoc, BookStack, Firefly III, Dolibarr, OnlyOffice |
-| **voip** | FreePBX (Asterisk) |
 | **engineering** | QGIS Server |
 | **data** | Metabase, Apache Superset |
 

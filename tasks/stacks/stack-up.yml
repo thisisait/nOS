@@ -5,7 +5,7 @@
 # This file starts EVERYTHING except core stacks (infra, observability). Core
 # stacks are brought up up-front in tasks/stacks/core-up.yml - before service-side
 # tasks - so MariaDB / Postgres / Authentik / Grafana / Prometheus / Loki
-# / Tempo are online before iiab/devops/b2b/voip/data/engineering
+# / Tempo are online before iiab/devops/b2b/data/engineering
 # roles start rendering their configs.
 #
 # Other service tasks (nextcloud, gitea, kiwix...) run here POST factum -
@@ -47,13 +47,6 @@
     dest: "{{ stacks_dir }}/b2b/docker-compose.yml"
     mode: '0644'
   when: install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false) or install_hedgedoc | default(false) or install_bookstack | default(false) or install_firefly | default(false) or install_dolibarr | default(false) or install_onlyoffice | default(false)
-
-- name: "[Stacks] Deploy voip compose"
-  ansible.builtin.template:
-    src: "stacks/voip/docker-compose.yml.j2"
-    dest: "{{ stacks_dir }}/voip/docker-compose.yml"
-    mode: '0644'
-  when: install_freepbx | default(false)
 
 - name: "[Stacks] Deploy engineering compose"
   ansible.builtin.template:
@@ -116,8 +109,7 @@
 - { name: "[Stacks] pazny.dolibarr render", ansible.builtin.include_role: { name: pazny.dolibarr, apply: { tags: ['dolibarr'] } }, when: "install_dolibarr | default(false)", tags: ['dolibarr'] }
 - { name: "[Stacks] pazny.onlyoffice render", ansible.builtin.include_role: { name: pazny.onlyoffice, apply: { tags: ['onlyoffice'] } }, when: "install_onlyoffice | default(false)", tags: ['onlyoffice'] }
 
-# VoIP / Engineering / Data roles
-- { name: "[Stacks] pazny.freepbx render", ansible.builtin.include_role: { name: pazny.freepbx, apply: { tags: ['freepbx'] } }, when: "install_freepbx | default(false)", tags: ['freepbx'] }
+# Engineering / Data roles
 - { name: "[Stacks] pazny.qgis_server render", ansible.builtin.include_role: { name: pazny.qgis_server, apply: { tags: ['qgis'] } }, when: "install_qgis_server | default(false)", tags: ['qgis'] }
 - { name: "[Stacks] pazny.metabase render", ansible.builtin.include_role: { name: pazny.metabase, apply: { tags: ['metabase'] } }, when: "install_metabase | default(false)", tags: ['metabase'] }
 - { name: "[Stacks] pazny.superset render", ansible.builtin.include_role: { name: pazny.superset, apply: { tags: ['superset'] } }, when: "install_superset | default(false)", tags: ['superset'] }
@@ -145,8 +137,6 @@
         ((install_gitea | default(false) or install_woodpecker | default(false) or install_gitlab | default(false) or install_paperclip | default(false) or install_code_server | default(false)) | ternary(['devops'], []))
         +
         ((install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false) or install_hedgedoc | default(false) or install_bookstack | default(false) or install_firefly | default(false) or install_dolibarr | default(false) or install_onlyoffice | default(false)) | ternary(['b2b'], []))
-        +
-        ((install_freepbx | default(false)) | ternary(['voip'], []))
         +
         ((install_qgis_server | default(false)) | ternary(['engineering'], []))
         +
@@ -400,7 +390,7 @@
 # ── Plugin loader — post_compose for all non-core stacks ────────────────────
 # Runs AFTER the health-wait so every stack is confirmed HEALTHY (not just
 # started). Complements the core-up.yml post_compose (infra + observability);
-# handles iiab / devops / b2b / data / voip / engineering / apps / host plugins.
+# handles iiab / devops / b2b / data / engineering / apps / host plugins.
 # Plugins without a resolvable stack are also included here (safe default).
 - name: "[Stacks] Plugin loader — post_compose hook (iiab / devops / b2b / data / …)"
   nos_plugin_loader:
@@ -414,7 +404,6 @@
       - devops
       - b2b
       - data
-      - voip
       - engineering
       - apps
       - host

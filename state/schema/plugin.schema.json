@@ -96,7 +96,7 @@
       "additionalProperties": true,
       "properties": {
         "template":       {"type": "string", "description": "Path under plugin dir to a docker-compose extension Jinja template."},
-        "target_stack":   {"type": "string", "enum": ["infra", "observability", "iiab", "devops", "b2b", "voip", "engineering", "data", "apps"]},
+        "target_stack":   {"type": "string", "enum": ["infra", "observability", "iiab", "devops", "b2b", "engineering", "data", "apps"]},
         "target_service": {"type": "string", "description": "MUST match the role's compose template service name (V3 P2)."},
         "hardening_refs": {"type": "array", "items": {"type": "string"}, "description": "REM-* IDs from docs/llm/security/scan-state.json that this compose extension implements (e.g. ['REM-001'] for portainer socket-proxy least-privilege)."}
       }

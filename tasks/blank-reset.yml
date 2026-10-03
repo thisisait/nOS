@@ -100,7 +100,6 @@
     - apps
     - devops
     - b2b
-    - voip
     - engineering
     - data
   failed_when: false

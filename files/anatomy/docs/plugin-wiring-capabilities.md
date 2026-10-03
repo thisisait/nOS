@@ -75,8 +75,8 @@ normalized to the canonical shape on 2026-05-23.
 - **authentik → unchanged (38/55).** The 17 "missing" are all correct-by-design:
   infra daemons with no login surface (mariadb, postgresql, redis, alloy, loki,
   tempo, prometheus, traefik, watchtower, smtp-stalwart), the IdP itself
-  (authentik-base), AT-proto identity (bluesky-pds), no-SSO doctrine (freepbx,
-  qgis-server), and API/S3 surfaces where forward-auth would break the API
+  (authentik-base), AT-proto identity (bluesky-pds), no-SSO doctrine
+  (qgis-server), and API/S3 surfaces where forward-auth would break the API
   contract (mcp-gateway, rustfs, offline-maps). Blanket-filling would have
   broken the blank run.
 - **observability → unchanged (38/55).** `metrics`/`dashboard` have no aggregator

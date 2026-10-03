@@ -759,18 +759,6 @@ services:
     port_var: onlyoffice_port
     data_path_var: onlyoffice_data_dir
 
-  # --------------------------------------------------------------- voip stack
-  - id: freepbx
-    category: pbx
-    stack: voip
-    install_flag: install_freepbx
-    version_var: freepbx_version
-    version_source: docker_image
-    image: tiredofit/freepbx
-    port_var: freepbx_port
-    data_path_var: freepbx_data_dir
-    oidc: none
-
   # --------------------------------------------------------- engineering stack
   - id: qgis_server
     category: gis

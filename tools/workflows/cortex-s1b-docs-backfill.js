@@ -97,7 +97,7 @@ const GROUPS = [
   { key: 'devops', svcs: ['gitlab', 'woodpecker', 'paperclip', 'code-server'] },
   { key: 'iiab-a', svcs: ['face', 'keap', 'miniflux', 'nodered'] },
   { key: 'iiab-b', svcs: ['ntfy', 'snappymail', 'mailpit', 'watchtower'] },
-  { key: 'data-voip-vpn', svcs: ['influxdb', 'freepbx', 'tailscale'] },
+  { key: 'data-voip-vpn', svcs: ['influxdb', 'tailscale'] },
   { key: 'storage-misc', svcs: ['backrest', 'backup', 'offline-maps', 'qgis-server', 'mcp-gateway', 'smtp-stalwart'] },
 ]
 const authored = await parallel(GROUPS.map((g) => () => agent([RULES, '', CONTRACT, '',

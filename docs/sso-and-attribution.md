@@ -37,7 +37,7 @@ Authoritative: each plugin's `authentik.mode` in
   InfluxDB, ONLYOFFICE, Mailpit, Metabase, SpacetimeDB, OpenClaw, Hermes,
   SnappyMail, Dolibarr, FreeScout (native path removed 2026-09-03, fee 49), Woodpecker
   (route gate on top of its Gitea-OAuth app login).
-- **No SSO:** FreePBX, QGIS. **AT Protocol identity:** Bluesky PDS (the Authentik→PDS
+- **No SSO:** QGIS. **AT Protocol identity:** Bluesky PDS (the Authentik→PDS
   bridge provisions `@user.bsky.<tld>`).
 
 A `200` on a native_oidc route is not an SSO bypass — the service shows its own

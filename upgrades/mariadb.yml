@@ -33,7 +33,7 @@ recipes:
     reset:
       scope: stack
       estimated_sec: 120
-      affected_services: [mariadb, wordpress, nextcloud, bookstack, firefly, erpnext, freescout, freepbx]
+      affected_services: [mariadb, wordpress, nextcloud, bookstack, firefly, erpnext, freescout]
       reason: >-
         Major 10->11 stops/restarts the shared infra MariaDB (compose
         stop->image bump->up + mariadb-upgrade), forcing all consumers to

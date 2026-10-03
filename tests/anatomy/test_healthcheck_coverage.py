@@ -64,7 +64,6 @@ HEALTH_BLIND = {
     "woodpecker-server": "BLIND: distroless Go image (no shell/curl/wget)",
     "woodpecker-agent": "BLIND: distroless Go image, headless (no HTTP surface)",
     "kiwix": "BLIND: dual-mode entrypoint idles (sleep infinity) when no ZIM present, so any probe would false-fail a no-content deploy and break the STRICT wait",
-    "freepbx": "BLIND: vendor-abandoned image (REM-014/046/113), opt-in supervised voip stack",
     "erpnext-configurator": "BLIND: one-shot (restart:\"no\", exits 0) — a healthcheck on an exiting service is meaningless",
     "erpnext-backend": "BLIND: erpnext parked + excluded from all-on (heavy Frappe); worker has no HTTP surface",
     "erpnext-frontend": "BLIND: erpnext parked + excluded from all-on (heavy Frappe)",

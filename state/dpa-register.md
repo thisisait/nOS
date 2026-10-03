@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 105 (81 core services, 3 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (93)
+- **Processing activities:** 104 (80 core services, 3 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (92)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 17
 
@@ -840,26 +840,6 @@ document revisions, comments, user accounts, and OIDC session data.
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
 - **Storage:** 'b2b' compose stack on host (Docker volumes)
-- **Security measures:** platform baseline (see above)
-
-### voip stack
-
-#### Freepbx — `svc_freepbx`
-- **Purpose:** FreePBX/Asterisk is the self-hosted telephony PBX. It processes call
-detail records (caller/callee numbers, duration, codec), voicemail
-recordings, SIP/IAX extension credentials (hashed), and operator-authored
-dialplan routing rules, in order to provide and operate telephony for the
-organisation (legitimate interest in running the phone system,
-Art. 6(1)(f)). Subjects include PBX admins, extension owners, and external
-callers whose numbers appear in CDRs. CDRs rotate on a ~90-day horizon;
-voicemail retention follows operator policy.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`; `extension_users`; `external_callers`
-- **Data categories:** `call_metadata`; `voicemail_recordings`; `extension_credentials`; `dialplan_state`
-- **Recipients / processors:** —
-- **Transfers outside EU:** No
-- **Retention:** 90 days
-- **Storage:** 'voip' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
 ### engineering stack

@@ -1660,7 +1660,6 @@
         (install_nextcloud | default(false)) or
         (install_erpnext | default(false)) or
         (install_freescout | default(false)) or
-        (install_freepbx | default(false)) or
         (install_bookstack | default(false)) or
         (install_firefly | default(false)) or
         (install_dolibarr | default(false))

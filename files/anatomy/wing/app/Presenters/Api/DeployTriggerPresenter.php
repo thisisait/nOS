@@ -75,7 +75,7 @@ final class DeployTriggerPresenter extends BaseApiPresenter
 		'gitea', 'woodpecker', 'gitlab', 'paperclip', 'code-server',
 		'erpnext', 'freescout', 'outline', 'hedgedoc', 'bookstack',
 		'firefly', 'onlyoffice',
-		'freepbx', 'qgis', 'metabase', 'superset',
+		'qgis', 'metabase', 'superset',
 		'wordpress', 'nextcloud', 'jellyfin', 'open_webui', 'openwebui',
 		'home_assistant', 'homeassistant', 'calibre_web', 'calibreweb',
 		'kiwix', 'mcp_gateway', 'mcpgateway', 'n8n', 'nodered',

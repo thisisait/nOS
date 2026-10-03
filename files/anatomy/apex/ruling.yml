@@ -239,7 +239,7 @@ forbidden_marks:
    mariadb, postgres, postgresql, redis, restic, keap, kiwix, calibre,
    nextcloud, onlyoffice, jellyfin, grafana, prometheus, loki, influxdb,
    gitea, gitlab, woodpecker, erpnext, freescout, firefly, metabase,
-   superset, wordpress, freepbx, asterisk, stalwart, snappymail, miniflux,
+   superset, wordpress, stalwart, snappymail, miniflux,
    hedgedoc, bookstack, portainer, watchtower, kuma, rustfs, backrest,
    openclaw, ollama, mailpit, ntfy, n8n, nodered, homeassistant, qgis,
    docker, ansible, launchd]
@@ -266,7 +266,7 @@ organs:
   voice:     { title: "The Voice",     tells: "Mail, calls and signals, spoken from home.",   limb: right, order: 4 }
 
 # -----------------------------------------------------------------------------
-# NODE RULINGS — all 277 nodes the artifact carries today. 63 atoms
+# NODE RULINGS — all 277 nodes the artifact carries today. 62 atoms
 # publish; 214 nodes are withheld. Counted 2026-09-14 (was 251/188 in the
 # prose while the table had already grown). +3 table:device* then
 # +service:device_gateway + daemon this wave.
@@ -365,7 +365,6 @@ nodes:
   "service:snappymail":    { publish: voice, speaks: "a window onto the mailbox" }
   "service:ntfy":          { publish: voice, speaks: "a tap on the shoulder when something matters" }
   "service:wordpress":     { publish: voice, speaks: "the public word, published from home" }
-  "service:freepbx":       { publish: voice, speaks: "a telephone switchboard of one's own" }
 
   # --- withheld: the page's own server (a page must not narrate itself) -----
   # service:apex serves THIS site. Publishing it would name the serving

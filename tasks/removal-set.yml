@@ -45,7 +45,6 @@
          install_nextcloud | default(false) or
          install_erpnext | default(false) or
          install_freescout | default(false) or
-         install_freepbx | default(false) or
          install_bookstack | default(false) or
          install_firefly | default(false) or
          install_dolibarr | default(false) }}
@@ -151,9 +150,6 @@
         +
         (install_outline | default(false)) | ternary(
           [outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data')], [])
-        +
-        (install_freepbx | default(false)) | ternary(
-          [freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx')], [])
         +
         (install_qgis_server | default(false)) | ternary(
           [qgis_data_dir | default(ansible_facts['env']['HOME'] + '/qgis')], [])
