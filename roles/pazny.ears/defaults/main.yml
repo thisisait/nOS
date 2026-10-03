@@ -54,7 +54,7 @@ ears_asr_model: "mlx-community/parakeet-tdt-0.6b-v3"
 # reported LISTENING. The English spellings are not a nicety; they are the
 # same phrase after a decision this estate does not control.
 # COMMA-SEPARATED VARIANTS, and this default is the one that reaches the
-# daemon: the plist renders THIS, not the settings fixture. They disagreed
+# daemon: ~/ears/listener.env renders THIS, not the settings fixture. They disagreed
 # for a day (fixture had the variants, this had one spelling), which is the
 # single-spelling failure ears-listen.py documents — silent, and looking
 # like a hearing problem.
@@ -125,10 +125,16 @@ ears_input_device: ":0"
 # microphone is a slow visible loop rather than a hot one.
 ears_throttle_seconds: 60
 
-# How long a transcript is kept. The operator's horizon, enforced by the
+# WHETHER A TRANSCRIPT IS KEPT AT ALL. Off (operator decision 2026-10-03): the
+# listener transcribes what follows the wake phrase, hands the text to the caddy
+# in memory, and writes no file — not "writes then deletes". The caddy's session
+# ledger leaves its transcript column empty too. On: ~/ears/turns/ day-files,
+# and ears_retention_days applies. Art-30 row: files/anatomy/plugins/ears-base.
+ears_keep_transcripts: false
+# How long a KEPT transcript lives. The operator's horizon, enforced by the
 # listener itself (no second scheduler to half-wire) and read back by
 # tools/caddy-status.py, which reports the age of the OLDEST surviving file so a
 # retention that stops firing shows up as a number instead of as silence.
-# Mirrored in gdpr.retention_days of both caddy agent definitions — a horizon in
-# one place and not the other is a register that lies.
+# The register (ears-base + both caddy agents) must say 0 while transcripts are
+# off and this number once they are on; test_the_ears_are_wired.py ties them.
 ears_retention_days: 90

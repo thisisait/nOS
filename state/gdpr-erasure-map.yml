@@ -263,3 +263,15 @@ services:
            RFC 8628 grant; for unpair-only, revoke the user's nos-device-gateway
            tokens in Authentik (Directory > Tokens / consents). Edge access log
            lines age out with loki_retention (31 d) — see svc_loki."
+
+  # ── Ears (host organ; policy docs/compliance/ears.md) ──────────────────────
+  - id: svc_ears
+    flag: install_ears
+    method: manual
+    note: "Nothing to erase by default: transcripts are not kept
+           (ears_keep_transcripts: false) and audio is never at rest. When kept:
+           delete the subject's lines (or the day-files) under ~/ears/turns/
+           turns-YYYY-MM-DD.jsonl; the listener prunes the rest at
+           ears_retention_days. The caddy's ledger (KEAP table caddy-sessions)
+           carries the transcript column only while transcripts are kept —
+           delete those rows via the KEAP agent API."

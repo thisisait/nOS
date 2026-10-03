@@ -27,10 +27,14 @@ turns that into a visible slow restart loop rather than a healthy-looking deaf
 process.
 
 AUDIO IS NEVER STORED. A segment becomes a temporary wav inside one function
-call and is deleted in the `finally`. Transcripts are kept for
-EARS_RETENTION_DAYS (90) and pruned by this process — with the oldest surviving
+call and is deleted in the `finally`. TRANSCRIPTS ARE NOT STORED EITHER, by
+default (operator decision 2026-10-03): a finished turn goes to its consumer in
+memory (argv of the detached caddy) and no file is written. Only with
+EARS_KEEP_TRANSCRIPTS=1 (ears_keep_transcripts: true) does ~/ears/turns/ exist,
+kept EARS_RETENTION_DAYS and pruned by this process — with the oldest surviving
 file reported by tools/caddy-status.py, so a retention that stops firing is
-visible rather than assumed.
+visible rather than assumed. Both knobs arrive through ~/ears/listener.env,
+which the role renders; the environment still wins over the file.
 
 ONE SWITCH, AND IT IS THE WINDOW. Listening starts as a deliberate Terminal
 session (`s` in nos-cc) and stops when the window closes — there is no launchd
@@ -70,6 +74,28 @@ CHUNK_BYTES = RATE * 2 * CHUNK_MS // 1000
 HOME = pathlib.Path(os.environ.get("EARS_HOME", pathlib.Path.home() / "ears"))
 TURNS_DIR = HOME / "turns"
 STATE_FILE = HOME / "state.json"
+
+
+def load_listener_env(home: pathlib.Path = HOME) -> dict[str, str]:
+    """The role's rendered settings (KEY=VALUE), applied as env DEFAULTS.
+
+    Before this file existed the role's ears_* vars reached no process: the
+    launchd plist that carried them was removed and the Terminal session
+    starts the listener bare. setdefault, so a real environment still wins."""
+    loaded: dict[str, str] = {}
+    path = home / "listener.env"
+    if not path.is_file():
+        return loaded
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        loaded[key.strip()] = os.environ.setdefault(key.strip(), value.strip())
+    return loaded
+
+
+load_listener_env()
 
 DEFAULT_MODEL = os.environ.get("EARS_ASR_MODEL", "mlx-community/parakeet-tdt-0.6b-v3")
 DEFAULT_WAKE = os.environ.get("EARS_WAKE_PHRASE", "hej jeffe")
@@ -114,6 +140,9 @@ DEFAULT_SILENCE = float(os.environ.get("EARS_SILENCE_SECONDS", "7"))
 #: and needs no pattern at all.
 WAKE_PATTERN = os.environ.get("EARS_WAKE_PATTERN", r"\b[hn][eěy]\S{0,3}(\s\S{0,3}){0,2}(ef|če)")
 RETENTION_DAYS = int(os.environ.get("EARS_RETENTION_DAYS", "90"))
+#: Off by default: a turn is handed over and forgotten. Only when on does
+#: ~/ears/turns/ exist and RETENTION_DAYS mean anything.
+KEEP_TRANSCRIPTS = os.environ.get("EARS_KEEP_TRANSCRIPTS", "0") == "1"
 
 # ponytail: energy VAD, not silero — silero is MIT and 2 MB but wants torch,
 # ~2.5 GB of dependency for it. The ceiling that comment named was hit on day
@@ -151,8 +180,8 @@ INPUT_GAIN = float(os.environ.get("EARS_INPUT_GAIN", "8"))
 #: How many recent segments the daemon keeps IN STATE for the operator to read.
 #:
 #: A ROLLING WINDOW, NOT RETENTION. These live only in state.json, are
-#: overwritten as they age out, and never reach ~/ears/turns/ — which still
-#: holds only ADDRESSED turns, for 90 days. The window exists because "the ear
+#: overwritten as they age out, and never reach ~/ears/turns/ — which exists
+#: only with KEEP_TRANSCRIPTS, for ADDRESSED turns. The window exists because "the ear
 #: heard 14 segments and none matched" told the operator the phrase was wrong
 #: and could not tell them WHAT it wrote, and that gap cost three
 #: fixes aimed at the wrong layer. Set 0 to keep nothing.
@@ -312,6 +341,10 @@ def _write_state(**fields) -> None:
 
 
 def _append_turn(text: str, now: float) -> None:
+    """Write the turn down — only when transcripts are kept. Not "write then
+    delete": in the default mode this function touches no file."""
+    if not KEEP_TRANSCRIPTS:
+        return
     TURNS_DIR.mkdir(parents=True, exist_ok=True)
     day = dt.datetime.fromtimestamp(now).strftime("%Y-%m-%d")
     line = json.dumps({"at": int(now), "turn": text}, ensure_ascii=False)
@@ -445,11 +478,12 @@ def cmd_file(args) -> int:
 
 
 def _run_loop(args, daemon: bool) -> int:
-    removed = prune(args.retention)
+    # Existing files in a mode that writes none are the operator's to delete.
+    removed = prune(args.retention) if KEEP_TRANSCRIPTS else []
     _write_state(mode="daemon" if daemon else "foreground", mic_ok=None,
                  started=int(time.time()), pruned=len(removed), turns_today=0,
                  model=args.model, wake=args.wake, retention_days=args.retention,
-                 gain=args.gain)
+                 keep_transcripts=KEEP_TRANSCRIPTS, gain=args.gain)
 
     # ORDER IS LOAD-BEARING: the model (and its ~600 MB first-run download)
     # resolves BEFORE the microphone opens, so the wait costs no audio. Per
@@ -532,7 +566,7 @@ def _run_loop(args, daemon: bool) -> int:
                              last_segment_age=(round(now - last_segment_at)
                                                if last_segment_at else None))
                 last_beat = now
-            if now - last_prune >= 3600:
+            if KEEP_TRANSCRIPTS and now - last_prune >= 3600:
                 prune(args.retention)
                 last_prune = now
 

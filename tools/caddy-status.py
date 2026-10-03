@@ -20,10 +20,12 @@ THE FIVE SOURCES, and each is read rather than inferred:
                                              whether it is HEARING anything;
                                              a denied microphone leaves a
                                              perfectly healthy-looking process
-  * `~/ears/turns/`                        — the last turns, and the age of the
+  * `~/ears/listener.env` + `~/ears/turns/` — whether transcripts are kept at
+                                             all (off by default), and if so
+                                             the last turns and the age of the
                                              OLDEST file, which is the only
-                                             thing that proves the 90-day
-                                             retention sweep still fires
+                                             thing that proves the retention
+                                             sweep still fires
 
 It acts on nothing: no seeding, no arming, no session. Exit 0 always, including
 when everything is unknown — reporting IS its job, and an unreadable source is
@@ -104,6 +106,7 @@ def _declared_backend(agent: str) -> str:
 EARS_HOME = pathlib.Path.home() / "ears"
 TURNS_DIR = EARS_HOME / "turns"
 STATE_FILE = EARS_HOME / "state.json"
+LISTENER_ENV = EARS_HOME / "listener.env"
 LISTENER_LABEL = "eu.thisisait.nos.ears-listen"
 #: A heartbeat older than this means the process is gone or wedged. The daemon
 #: writes one every 15 s, so three minutes is not a race — it is a verdict.
@@ -199,10 +202,27 @@ def _listener() -> dict:
     }
 
 
+def _keep_transcripts() -> bool | None:
+    """The role's rendered switch (ears_keep_transcripts). None = not rendered."""
+    if not LISTENER_ENV.is_file():
+        return None
+    for line in LISTENER_ENV.read_text(encoding="utf-8").splitlines():
+        if line.startswith("EARS_KEEP_TRANSCRIPTS="):
+            return line.split("=", 1)[1].strip() == "1"
+    return None
+
+
 def _transcripts(limit: int = 5) -> dict:
     """Recent turns, and the age of the OLDEST file — which is what proves the
     retention sweep is still running. A horizon nobody reads back is how this
     estate ended up with one measured in days that could never fire."""
+    kept = _keep_transcripts()
+    if kept is False:
+        # Off by default (2026-10-03): nothing is written, so an absent dir is
+        # the designed state. Files left from before are reported, never touched.
+        leftover = len(list(TURNS_DIR.glob("turns-*.jsonl"))) if TURNS_DIR.is_dir() else 0
+        return {"readable": True, "kept": False, "files": leftover, "recent": [],
+                "oldest_days": None, "detail": "not kept (ears_keep_transcripts: false)"}
     if not TURNS_DIR.is_dir():
         return {"readable": False, "detail": f"no {TURNS_DIR}", "recent": [], "files": 0}
     files = sorted(TURNS_DIR.glob("turns-*.jsonl"))
@@ -220,6 +240,7 @@ def _transcripts(limit: int = 5) -> dict:
     oldest = min((p.stat().st_mtime for p in files), default=None)
     return {
         "readable": True,
+        "kept": True,
         "files": len(files),
         "oldest_days": round((time.time() - oldest) / 86400, 1) if oldest else None,
         "recent": recent,
@@ -384,6 +405,11 @@ def build_rows(data: dict) -> list[dict]:
     tr = data["transcripts"]
     if not tr["readable"]:
         rows.append({"state": "UNKNOWN", "part": "transcripts", "detail": tr["detail"]})
+    elif not tr.get("kept", True):
+        rows.append({"state": "READY", "part": "transcripts",
+                     "detail": tr["detail"] + (f" — {tr['files']} day-file(s) left from "
+                                               f"before, the operator's to delete"
+                                               if tr["files"] else "")})
     else:
         horizon = ear.get("retention_days") or 90
         # The oldest file IS the retention check: the writer prunes, and this is

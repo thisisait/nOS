@@ -49,6 +49,12 @@ import speech  # noqa: E402  (same directory, synced together)
 
 HOME = pathlib.Path(os.environ.get("EARS_HOME", pathlib.Path.home() / "ears"))
 TURNS_DIR = HOME / "turns"
+# The listener's rendered settings; ears_keep_transcripts decides whether the
+# session ledger may hold what was said (default: no — the text is transient).
+for _line in (HOME / "listener.env").read_text().splitlines() if (HOME / "listener.env").is_file() else []:
+    if "=" in _line and not _line.startswith("#"):
+        os.environ.setdefault(_line.split("=", 1)[0].strip(), _line.split("=", 1)[1].strip())
+KEEP_TRANSCRIPTS = os.environ.get("EARS_KEEP_TRANSCRIPTS", "0") == "1"
 def _repo_root() -> pathlib.Path:
     """Where the playbook lives, at RUNTIME.
 
@@ -338,8 +344,9 @@ def cmd_rate(args) -> int:
 def cmd_run(args) -> int:
     turn = args.turn or (last_turn() if args.last else None)
     if not turn:
-        print("nothing to run: pass --turn, or --last with a heard turn",
-              file=sys.stderr)
+        print("nothing to run: pass --turn, or --last with a heard turn"
+              + ("" if KEEP_TRANSCRIPTS else
+                 " (none kept: ears_keep_transcripts is false)"), file=sys.stderr)
         return 2
 
     gaps = []
@@ -372,7 +379,7 @@ def cmd_run(args) -> int:
     # declares and nothing ever wrote.
     open_gap = record_session({
         "slug": slug, "started": int(started), "mode": mode, "model": agent,
-        "status": "running", "transcript": turn[:500],
+        "status": "running", "transcript": turn[:500] if KEEP_TRANSCRIPTS else "",
     })
     if open_gap:
         gaps.append(open_gap)
@@ -439,9 +446,9 @@ def cmd_run(args) -> int:
             status = "asked"
     gap = record_session({
         "slug": slug, "started": int(started), "mode": mode, "model": agent,
-        "status": status, "summary": (prose or turn)[:200],
+        "status": status, "summary": (prose or (turn if KEEP_TRANSCRIPTS else ""))[:200],
         "session_uuid": uuid_match.group(0) if uuid_match else "",
-        "chain": chain or "", "transcript": turn[:500],
+        "chain": chain or "", "transcript": turn[:500] if KEEP_TRANSCRIPTS else "",
     })
     if gap:
         gaps.append(gap)

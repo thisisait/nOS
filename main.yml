@@ -2520,6 +2520,30 @@
     # install_ears defaulting true would have failed the Linux integration
     # wet-test that runs this whole playbook. Caught before the first push;
     # the Linux ear needs a different model and is not this role.
+    # Art-30 is the deploy gate (docs/compliance/ears.md). retention_days 0 is
+    # the honest default (transcripts are not kept), so unlike the device
+    # gateway the number may be zero — but it must be declared.
+    - name: "[Art-30] Refuse the ears without a complete gdpr block"
+      vars:
+        _ears_gdpr: "{{ ((lookup('file', playbook_dir + '/files/anatomy/plugins/ears-base/plugin.yml', errors='ignore') or '{}') | from_yaml).gdpr | default({}) }}"
+      ansible.builtin.assert:
+        that:
+          - (_ears_gdpr.purpose | default('') | trim | length) > 0
+          - _ears_gdpr.legal_basis | default('') in ['consent', 'contract', 'legal_obligation', 'vital_interests', 'public_task', 'legitimate_interests']
+          - (_ears_gdpr.data_categories | default([]) | length) > 0
+          - "'bystanders' in (_ears_gdpr.data_subjects | default([]))"
+          - _ears_gdpr.retention_days is defined
+          - _ears_gdpr.processors is defined
+          - _ears_gdpr.transfers_outside_eu is defined
+        fail_msg: >-
+          install_ears is true but files/anatomy/plugins/ears-base/plugin.yml
+          carries no complete gdpr: block — Art-30 is the deploy gate (docs/compliance/ears.md).
+        quiet: true
+      when:
+        - install_ears | default(false)
+        - ansible_os_family == 'Darwin'
+      tags: ['ears', 'anatomy']
+
     - name: "Ears — the speech organ: hears, asks the caddy, reads the answer back (pazny.ears role)"
       ansible.builtin.import_role:
         name: pazny.ears

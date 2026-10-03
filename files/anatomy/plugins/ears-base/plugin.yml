@@ -1,0 +1,90 @@
+# =============================================================================
+# ears-base — Article 30 record for the speech organ (2026-10-03)
+#
+# This plugin is the Art-30 entry and nothing else: no authentik block, no
+# compose, no lifecycle (the role is a host venv + a Terminal session). Policy:
+# docs/compliance/ears.md. Gate: tests/anatomy/test_ears_art30.py.
+# =============================================================================
+
+name: ears-base
+version: 0.1.0
+description: |
+  Ears — the host microphone listener (parakeet-mlx, on-device ASR). A wake
+  phrase opens a turn, a submit phrase or silence closes it, the text goes to
+  the caddy in memory. This manifest carries the GDPR Article 30 record for
+  the audio stream, the transient transcript and the optional transcript files.
+upstream: https://github.com/pazny-develop/nOS
+license: AGPL-3.0
+
+type:
+  - service
+
+_NOS_PLUGIN: "ears-base"
+
+requires:
+  role: pazny.ears
+  feature_flag: install_ears
+  variables:
+    - ears_runtime_dir
+    - ears_keep_transcripts
+    - ears_retention_days
+
+# =============================================================================
+# GDPR — Article 30 register row. Operator decision 2026-10-03: no transcripts
+# by default. The gate ties retention_days to ears_keep_transcripts.
+# =============================================================================
+gdpr:
+  purpose: |
+    Let the operator address the estate by voice. Processing: (1) the
+    microphone stream, captured through ffmpeg and transcribed on this host by
+    mlx-community/parakeet-tdt-0.6b-v3 (parakeet-mlx); a speech segment is a
+    temporary wav for the duration of one transcribe call and is deleted in
+    the same call. (2) The transcript of a turn — only what follows the wake
+    phrase — handed to the caddy as a process argument and not written down.
+    Speech that is not addressed to the caddy is counted, never stored.
+    (3) Optional: with ears_keep_transcripts: true, day-files of addressed
+    turns under ~/ears/turns/ for ears_retention_days.
+  legal_basis: legitimate_interests   # Art. 6(1)(f) — estate operation by the operator who owns the room
+  balancing_test: >-
+    The microphone is a deliberate Terminal window the operator opens and
+    closes; nothing listens by itself. Only the wake-phrase-addressed segment
+    becomes text, nothing leaves the host, and the default stores nothing —
+    so a bystander's words are at most transcribed in memory and dropped.
+  data_source: the host microphone, when the operator opens the session
+  data_categories:
+    - audio_stream_transient        # never at rest; one temp wav per segment, deleted in-call
+    - operator_speech_transcripts   # transient by default; files only when ears_keep_transcripts
+  data_subjects:
+    - operators
+    - bystanders                    # anyone in earshot of the host while the session is open
+  # 0 = transient: the default keeps nothing. With ears_keep_transcripts: true
+  # the horizon is ears_retention_days (roles/pazny.ears/defaults), enforced by
+  # the listener itself and read back by tools/caddy-status.py.
+  retention_days: 0
+  processors: []                    # on-device ASR; no third party hears or reads anything
+  eu_residency: true
+  transfers_outside_eu: false
+  storage_location: >-
+    Host only. ~/ears/state.json (counters, no text); ~/ears/turns/ exists
+    only when ears_keep_transcripts is true. The ASR model is a local file
+    under the Hugging Face cache.
+  security_measures:
+    - "Listening is a visible Terminal window; closing it stops the microphone"
+    - "Only the segment after the wake phrase becomes a turn; unaddressed speech is counted, not stored"
+    - "Audio exists as one temp file per segment, deleted in the transcribe call's finally"
+    - "ears_dump_segments is 0 — the wav diagnostic is off unless the operator turns it on"
+    - "No network path: ASR runs on-device, the turn travels as argv to a local process"
+    - "Disk encryption at rest is operator-provisioned (FileVault)"
+  notes: >-
+    retention_enforced: by the listener (prune on start and hourly) — only
+    relevant when ears_keep_transcripts is true. The caddy (agents jeff /
+    jeff-cloud) receives the text and writes its session ledger with the
+    transcript column empty while transcripts are off. Erasure / export:
+    state/gdpr-erasure-map.yml, state/gdpr-export-map.yml.
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []

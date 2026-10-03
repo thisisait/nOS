@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 105 (81 core services, 3 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (93)
+- **Processing activities:** 106 (82 core services, 3 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (94)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 17
 
@@ -1049,7 +1049,7 @@ transferred.
 - **Data categories:** `operator_authored_prompts`; `estate_health_telemetry`; `operator_speech_transcripts`
 - **Recipients / processors:** **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. No third party sees the prompt, so there is no processor in the Article-28 sense; this entry says so rather than leaving the field blank. · safeguard: Not applicable. No transfer occurs, which is stronger than any safeguard could describe.
 - **Transfers outside EU:** No
-- **Retention:** 90 days
+- **Retention:** transient (not persisted)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
@@ -1060,7 +1060,7 @@ transferred.
 - **Data categories:** `operator_authored_prompts`; `estate_health_telemetry`; `operator_speech_transcripts`
 - **Recipients / processors:** **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this agent. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.
 - **Transfers outside EU:** **Yes**
-- **Retention:** 90 days
+- **Retention:** transient (not persisted)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
@@ -1363,6 +1363,25 @@ projected rows and a suppressed request log.
 - **Retention:** 365 days (~1y)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
+
+#### Ears — `svc_ears`
+- **Purpose:** Let the operator address the estate by voice. Processing: (1) the
+microphone stream, captured through ffmpeg and transcribed on this host by
+mlx-community/parakeet-tdt-0.6b-v3 (parakeet-mlx); a speech segment is a
+temporary wav for the duration of one transcribe call and is deleted in
+the same call. (2) The transcript of a turn — only what follows the wake
+phrase — handed to the caddy as a process argument and not written down.
+Speech that is not addressed to the caddy is counted, never stored.
+(3) Optional: with ears_keep_transcripts: true, day-files of addressed
+turns under ~/ears/turns/ for ears_retention_days.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `bystanders`
+- **Data categories:** `audio_stream_transient`; `operator_speech_transcripts`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
+- **Storage:** Host only. ~/ears/state.json (counters, no text); ~/ears/turns/ exists only when ears_keep_transcripts is true. The ASR model is a local file under the Hugging Face cache.
+- **Security measures:** `Listening is a visible Terminal window; closing it stops the microphone`; `Only the segment after the wake phrase becomes a turn; unaddressed speech is counted, not stored`; `Audio exists as one temp file per segment, deleted in the transcribe call's finally`; `ears_dump_segments is 0 — the wav diagnostic is off unless the operator turns it on`; `No network path: ASR runs on-device, the turn travels as argv to a local process`; `Disk encryption at rest is operator-provisioned (FileVault)`
 
 #### Espocrm Retire — `svc_espocrm-retire`
 - **Purpose:** Residual Authentik OAuth2 client for a retired CRM desk, held only until

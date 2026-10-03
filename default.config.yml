@@ -662,7 +662,8 @@ install_ears: true               # Jeff – speech ingress + assistant tables [A
 # agent has none (roles/pazny.ears/tasks/main.yml "NO LAUNCHD JOB"). Closing
 # the window stops the recording. A reboot-proof always-listen ear waits on a
 # real signing identity: roadmap row `ears-app-bundle`.
-# Transcripts: ~/jeff/turns/, pruned at ears_retention_days (90).
+# Transcripts: NOT kept by default (ears_keep_transcripts: false, role default);
+# set true to keep ~/ears/turns/ for ears_retention_days (90). Art-30: ears-base.
 
 # ── AI orchestration ──────────────────────────────────────────────────────────
 install_paperclip: true          # Paperclip – multi-agent orchestration platform [requires: PostgreSQL]

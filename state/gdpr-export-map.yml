@@ -287,3 +287,15 @@ services:
            agent API or the Face table. Tokens: list the subject's
            nos-device-gateway grants in Authentik. The gateway itself holds no
            per-subject data; access-log lines are not per-subject extractable."
+
+  # ── Ears (host organ; policy docs/compliance/ears.md) ──────────────────────
+  - id: svc_ears
+    flag: install_ears
+    method: manual
+    portability_eligible: false   # lawful basis = legitimate interests
+    note: "Nothing to export by default: transcripts are not kept
+           (ears_keep_transcripts: false). When kept: ~/ears/turns/
+           turns-YYYY-MM-DD.jsonl (one JSON line per addressed turn: at, turn),
+           and the caddy-sessions rows (transcript, summary, chain) via the
+           KEAP RO agent API. No per-subject key — the operator identifies
+           the subject's turns by content and time."

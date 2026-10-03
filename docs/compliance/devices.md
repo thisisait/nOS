@@ -21,9 +21,9 @@ Supported device-client kinds are exactly the table enum: `handheld`, `phone`,
 devices under this policy until the enum grows and this page is amended.
 
 The **ear** (`roles/pazny.ears`, the Mac's own microphone) is not a device
-client. It is a host organ; audio is never stored, transcripts live 90 days in
-`~/ears/turns/`. It has **no Art-30 row today** — named here so it is not
-mistaken for covered. (Finding, out of scope for this page.)
+client. It is a host organ with its own row (`svc_ears`, policy
+`docs/compliance/ears.md`): audio is never stored and, since 2026-10-03,
+transcripts are not kept by default.
 
 What a device client can do today: `GET /health`, `GET /manifest`,
 `GET /tables/<id>` for six allowlisted, column-projected KEAP tables
