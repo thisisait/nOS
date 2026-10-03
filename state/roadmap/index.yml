@@ -531,6 +531,9 @@
 - slug: fixtures-service-seed-scope
   parent: fixtures
   track: platform
+- slug: forum-token-in-access-log
+  parent: nos-forum
+  track: security
 - slug: foss-crm-and-wordpress-cms
   parent: consulting-firm-deployment
   track: platform
@@ -573,6 +576,9 @@
 - slug: genome-codegen-targets
   parent: v0-10-genome
   track: cortex
+- slug: geolibre-atlas-serve
+  parent: nos-atlas
+  track: platform
 - slug: gis-property
   parent: ''
   track: platform
