@@ -100,6 +100,7 @@
     - infra
     - devops
     - b2b
+    - voip
     - engineering
     - data
   failed_when: false
@@ -258,6 +259,7 @@
     - iiab
     - devops
     - b2b
+    - voip
     - engineering
     - data
   failed_when: false

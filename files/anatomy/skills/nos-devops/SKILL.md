@@ -40,7 +40,7 @@ by an Ansible playbook. The playbook = single source of truth.
 ### 1. Health check all stacks
 
 ```bash
-for stack in infra observability iiab devops b2b data engineering; do
+for stack in infra observability iiab devops b2b data engineering voip; do
   echo "=== $stack ==="
   docker compose -p "$stack" ps 2>/dev/null | grep -v "healthy\|Up"
 done

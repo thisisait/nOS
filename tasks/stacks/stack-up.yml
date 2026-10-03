@@ -5,7 +5,7 @@
 # This file starts EVERYTHING except core stacks (infra, observability). Core
 # stacks are brought up up-front in tasks/stacks/core-up.yml - before service-side
 # tasks - so MariaDB / Postgres / Authentik / Grafana / Prometheus / Loki
-# / Tempo are online before iiab/devops/b2b/data/engineering
+# / Tempo are online before iiab/devops/b2b/voip/data/engineering
 # roles start rendering their configs.
 #
 # Other service tasks (nextcloud, gitea, kiwix...) run here POST factum -
@@ -400,7 +400,7 @@
 # ── Plugin loader — post_compose for all non-core stacks ────────────────────
 # Runs AFTER the health-wait so every stack is confirmed HEALTHY (not just
 # started). Complements the core-up.yml post_compose (infra + observability);
-# handles iiab / devops / b2b / data / engineering / apps / host plugins.
+# handles iiab / devops / b2b / data / voip / engineering / apps / host plugins.
 # Plugins without a resolvable stack are also included here (safe default).
 - name: "[Stacks] Plugin loader — post_compose hook (iiab / devops / b2b / data / …)"
   nos_plugin_loader:
@@ -414,6 +414,7 @@
       - devops
       - b2b
       - data
+      - voip
       - engineering
       - apps
       - host

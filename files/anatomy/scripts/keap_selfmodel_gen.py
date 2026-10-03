@@ -104,7 +104,7 @@ HOST_STACK = "host"  # bucket for manifest services with stack: null (host-nativ
 # opens, then the specialist stacks; unknown stacks sort alphabetically after.
 STACK_ORDER = [
     "infra", "observability", "iiab", "apps", "devops", "b2b", "data",
-    "engineering", "host",
+    "engineering", "voip", "host",
 ]
 
 # fs-sync mirrors a markdown file's TITLE from its FILENAME basename — there is
@@ -199,6 +199,12 @@ STACK_EN = {
         "domain tooling that is off by default and carries no dependency on the rest "
         "of the estate. It is separate so that specialist workloads can be enabled on "
         "one tenant without adding weight, or attack surface, to any other."
+    ),
+    "voip": (
+        "The voip compose stack: the real-time boundary of the estate. It is the only "
+        "project holding services that speak to the outside telephone network on their "
+        "own protocols and ports, which is why it is isolated from everything routed "
+        "through the ordinary web edge."
     ),
     "host": (
         "Host-native systems: the parts of nOS that run directly on the machine under "
@@ -1210,6 +1216,7 @@ ANCHOR_BY_STACK = {
     "iiab": "02.02.07.04",           # Web Technologies
     "apps": "02.02.07.04",           # Web Technologies
     "engineering": "02.02",          # Computer Science (generic)
+    "voip": "02.02.07",              # Computer Networks
     "host": "02.02.06",              # Operating Systems
 }
 

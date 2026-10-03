@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 104 (80 core services, 3 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (92)
+- **Processing activities:** 105 (81 core services, 3 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (93)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 17
 
@@ -840,6 +840,22 @@ document revisions, comments, user accounts, and OIDC session data.
 - **Transfers outside EU:** No
 - **Retention:** 365 days (~1y)
 - **Storage:** 'b2b' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
+### voip stack
+
+#### Mikopbx — `svc_mikopbx`
+- **Purpose:** Operator-hosted telephony: call routing between declared extensions and
+SIP trunks, voicemail, optional call recording, call detail records (CDR)
+for billing and troubleshooting. Authentik forward-auth gates the admin
+UI; phones authenticate per extension with SIP digest credentials.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `end_users`; `callers`
+- **Data categories:** `name`; `email`; `phone_number`; `call_detail_records`; `voicemail_audio`; `call_recordings`; `sip_credentials`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 365 days (~1y)
+- **Storage:** 'voip' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
 ### engineering stack

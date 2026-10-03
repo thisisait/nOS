@@ -55,6 +55,7 @@
     - "{{ stacks_dir }}/devops"
     - "{{ stacks_dir }}/devops/gitea"
     - "{{ stacks_dir }}/b2b"
+    - "{{ stacks_dir }}/voip"
     - "{{ stacks_dir }}/engineering"
     - "{{ stacks_dir }}/data"
     - "{{ ansible_facts['env']['HOME'] }}/observability/dashboards"

@@ -185,6 +185,7 @@ body.nav-open { overflow: hidden; }
 .hub-stack[data-stack="b2b"] .hub-stack-title { border-left-color: var(--purple); }
 .hub-stack[data-stack="data"] .hub-stack-title { border-left-color: var(--yellow); }
 .hub-stack[data-stack="native"] .hub-stack-title { border-left-color: var(--accent); }
+.hub-stack[data-stack="voip"] .hub-stack-title { border-left-color: #e879f9; }
 .hub-stack[data-stack="engineering"] .hub-stack-title { border-left-color: #a3e635; }
 .hub-stack.hidden { display: none; }
 .hub-mono { font-family: 'SF Mono', 'Fira Code', monospace; }
