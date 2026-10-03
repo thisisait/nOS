@@ -61,7 +61,7 @@ e2e:
       expect: {status: [302], location_contains: "{{ authentik_domain }}/application/o/authorize"}
 
 # Regenerates the nos-atlas planet + buildings from a read-only reader snapshot
-# into the copy GeoLibre serves (plugins/nos-atlas/data). Off → empty dir → no-op.
+# into plugins/nos-atlas/live (nos-atlas "nOS job contract"). Off → empty dir → no-op.
 pulse:
   jobs:
     - name: atlas-refresh

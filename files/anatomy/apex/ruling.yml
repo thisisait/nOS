@@ -602,6 +602,8 @@ nodes:
   # where the firm's sites are and which kraje it maps is its own business.
   "pulse:geo:geo-load": withheld
   "pulse:geo:project-sites": withheld
+  # geolibre-base (2026-10-03): atlas data refresh. WITHHELD like the geo rows.
+  "pulse:geolibre:atlas-refresh": withheld
   # 2026-08-26 roster close: five withheld pulse rows left the artifact
   # (curator-sweep, promote-migration — agents PARKED; drift-scan,
   # triage-open-findings, upgrade-advise — agents RETIRED). All were

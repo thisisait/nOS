@@ -62,6 +62,7 @@ worse than none, because it reads as complete.
 - `geo-load.py` — Load ČÚZK open data (RÚIAN address points, INSPIRE parcels + buildings) for the configured kraje into PostGIS `geo`; staged + swapped per layer.
 - `geo-status.py` — READER: rows per geo layer counted back from PostGIS, last load beside it; UNKNOWN when unreachable.
 - `geo-project-sites.py` — Nightly one-way projection of KEAP party-site rows (+ ARES seats) into PostGIS `geo.party_site`; `--erase-party` for GDPR (called by digest-teardown).
+- `atlas-refresh.py` — Pulse job: nos-atlas "nOS job contract" (read-only reader snapshot → generator) into GeoLibre's `plugins/nos-atlas/live`.
 - `_geo_db.py` — The shared "is there a geo database here" check: absent idles, a stopped container is an outage.
 - `maps-style-vendor.py` — Vendor an OpenFreeMap style for the offline tileserver: every source, sprite and glyph made local, labels `name:cs`.
 - `nos_identity.py` — The manifest row is the only place a service's spellings meet.

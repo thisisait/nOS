@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import sqlite3
 from pathlib import Path
 
 import jinja2
@@ -133,19 +132,26 @@ def _tool():
     return mod
 
 
-def test_refresh_snapshot_never_carries_command_args_or_env(tmp_path):
-    db = tmp_path / "wing.db"
-    c = sqlite3.connect(db)
-    c.execute("CREATE TABLE pulse_jobs (id TEXT, plugin_name TEXT, job_name TEXT, command TEXT,"
-              " args_json TEXT, env_json TEXT, schedule TEXT, paused INT)")
-    c.execute("CREATE TABLE pulse_runs (job_id TEXT, fired_at TEXT, exit_code INT, duration_ms INT,"
-              " stdout_tail TEXT)")
-    c.execute("INSERT INTO pulse_jobs VALUES ('j','p','n','/x','[\"a\"]','{\"T\":\"s\"}','* * * * *',0)")
-    c.execute("INSERT INTO pulse_runs VALUES ('j','2999-01-01T00:00:00+00:00',0,5,'secret?')")
-    c.commit()
-    jobs, runs = _tool().pulse_tables(c)
-    assert jobs == [{"id": "j", "plugin_name": "p", "job_name": "n", "schedule": "* * * * *", "paused": 0}]
-    assert runs == [{"job_id": "j", "fired_at": "2999-01-01T00:00:00+00:00", "exit_code": 0, "duration_ms": 5}]
+def test_refresh_runs_the_nos_atlas_job_contract(tmp_path, monkeypatch):
+    """nos-atlas README "nOS job contract": snapshot script, then build.ts --out <root>/live."""
+    atlas = tmp_path / "nos-atlas"
+    (atlas / "fixtures").mkdir(parents=True)
+    (atlas / "fixtures/keap-taxonomy.json").write_text("{}")
+    tool = _tool()
+    calls = []
+
+    class Done:
+        returncode, stdout, stderr = 0, "", ""
+
+    monkeypatch.setattr(tool.subprocess, "run", lambda argv, **kw: calls.append((argv, kw)) or Done())
+    assert tool.main(["--data-dir", str(tmp_path / "data"), "--atlas-src", str(atlas)]) == 0
+    (snap, kw1), (gen, kw2) = calls
+    assert all(isinstance(x, str) for x in snap + gen), "argv lists, never a shell string"
+    assert kw1["cwd"] == kw2["cwd"] == atlas
+    assert snap[1] == "scripts/snapshot-from-readers.mjs" and snap[snap.index("--nos") + 1] == str(REPO)
+    assert gen[1] == "src/generator/build.ts"
+    assert gen[gen.index("--snapshot") + 1] == snap[snap.index("--out") + 1]
+    assert gen[gen.index("--out") + 1] == str(tmp_path / "data/plugins/nos-atlas/live")
 
 
 def test_refresh_is_a_noop_when_geolibre_is_off(capsys):

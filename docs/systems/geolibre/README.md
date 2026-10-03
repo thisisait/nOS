@@ -10,6 +10,8 @@ Upstream: github.com/opengeos/GeoLibre (MIT). Plugin source: `~/projects/nos-atl
 | Container | `iiab-geolibre-1`, `127.0.0.1:8072` (`geolibre_port`) |
 | Edge | Traefik + Authentik forward-auth, tier 3 |
 | Data | `geolibre_data_dir/plugins/nos-atlas`, a copy of nos-atlas `dist/`, mounted read-only |
+| Layers | `geolibre_layers` → Browser panel catalog (tileserver basemap, ČÚZK KM/ortofoto/RÚIAN) |
+| Refresh | Pulse `geolibre:atlas-refresh`, hourly → `plugins/nos-atlas/live` |
 | Enable | `install_geolibre: true` in `config.yml`, then `nos --tags geolibre` |
 
 ## First visit
