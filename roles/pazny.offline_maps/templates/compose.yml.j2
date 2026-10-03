@@ -19,6 +19,7 @@ services:
       - "127.0.0.1:{{ maps_port | default(8070) }}:8080"
     volumes:
       - {{ maps_data_dir }}:/data
+      - {{ maps_cache_dir }}:/cache:ro
     networks:
       - iiab_net
       - {{ stacks_shared_network }}

@@ -1,0 +1,20 @@
+{
+  "options": {
+    "paths": {
+      "root": "/data",
+      "fonts": "/cache/fonts",
+      "sprites": "/cache/sprites",
+      "styles": "/data/styles",
+      "mbtiles": "/data",
+      "pmtiles": "/data"
+    },
+    "serveAllStyles": false
+  },
+  "styles": {
+    "liberty": { "style": "liberty.json" }
+  },
+  "data": {
+    "basemap": { "pmtiles": "/cache/planetiler/{{ maps_region }}.pmtiles" }{% for f in _maps_extra_files %},
+    "{{ f.rsplit('.', 1)[0] }}": { "{{ 'pmtiles' if f.endswith('.pmtiles') else 'mbtiles' }}": "{{ f }}" }{% endfor %}
+  }
+}

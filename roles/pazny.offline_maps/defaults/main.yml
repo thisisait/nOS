@@ -1,28 +1,23 @@
 ---
-# ==============================================================================
-# pazny.offline_maps — tileserver-gl + MBTiles offline maps (iiab compose stack)
-#
-# Role name `offline_maps` odrazi celou offline-maps subsystemu:
-#   - Docker service `tileserver` (compose override)
-#   - MBTiles download (maps_mbtiles_files list)
-#   - tileserver-gl config.json render
-#
-# Centralized variables staysji v default.config.yml (nginx vhost
-# render, blank-reset path resolver).
-# ==============================================================================
+# pazny.offline_maps — tileserver-gl serving a Planetiler-built base map.
+# Pins and the region live in default.config.yml; these are role fallbacks.
 
-maps_port: 8070                                     # Docker host port (compose template default)
+maps_port: 8070
 maps_domain: "maps{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 
-# Init MBTiles — small file downloaded automatically so tileserver starts.
-# Without at least one .mbtiles file tileserver-gl logs "No valid data input"
-# and serves an empty tile map. Set to "" to disable auto-download.
-# Zurich demo (~2 MB) is the tileserver-gl reference fixture — proof of life only.
-# Replace with Czech Republic (see download-maps.sh) for a real local map.
-maps_init_mbtiles_url: "https://raw.githubusercontent.com/maptiler/tileserver-gl/master/test_fixtures/zurich_switzerland.mbtiles"
-maps_init_mbtiles_dest: "zurich_switzerland.mbtiles"
+# Planetiler `--area` name (Geofabrik slug). The built PMTiles lands in
+# {{ maps_cache_dir }}/planetiler/<region>.pmtiles and survives every removal level.
+maps_region: "czech-republic"
+maps_languages: "cs,en,de,sk,pl"
+maps_planetiler_version: "0.10.2"
+maps_planetiler_java_opts: "-Xmx6g"
+maps_cache_dir: "{{ artifact_cache_dir | default(ansible_facts['env']['HOME'] ~ '/nos-cache') }}/maps"
 
-# Additional MBTiles files to download (empty = do not download automatically)
+# Glyphs + sprites the vendored OpenFreeMap style expects (ODbL/BSD assets).
+maps_fonts_url: "https://assets.openfreemap.com/fonts/ofm.tar.gz"
+maps_sprites_url: "https://tiles.openfreemap.org/sprites/ofm_f384"
+
+# Extra operator archives: {url, dest} into maps_data_dir, served by basename.
 maps_mbtiles_files: []
 
 tileserver_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
