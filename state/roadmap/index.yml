@@ -564,6 +564,9 @@
 - slug: genome-codegen-targets
   parent: v0-10-genome
   track: cortex
+- slug: gis-property
+  parent: ''
+  track: platform
 - slug: git-origin-watcher
   parent: loop-definition-model
   track: agents
@@ -1257,6 +1260,9 @@
 - slug: tester-hardware-readiness
   parent: consulting-firm-deployment
   track: release
+- slug: tileserver-serves-nothing
+  parent: gis-property
+  track: platform
 - slug: tls-modern-never-applied
   parent: sec
   track: security
