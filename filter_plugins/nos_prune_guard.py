@@ -222,20 +222,47 @@ def nos_prune_plan(disabled, on_disk_flags, overrides, containers):
     }
 
 
-#: Same line shape harvest_daemons uses in tools/anatomy-graph-gen.py.
-_LAUNCHD_LABEL = re.compile(
-    r'^(\w+):\s*"(eu\.thisisait\.nos\.[a-z.\-]+)"'
-)
+_LAUNCHD_VAR = re.compile(r'^(\w+):\s*"([\w.\-]+)"')
+_NOS = "eu.thisisait.nos."
 
 
-def nos_host_daemon_plan(graph):
-    """Join anatomy-graph daemon nodes to install_* via the declaring role.
+def launchd_declarations(repo=None):
+    """Every launchd label the repo declares, once: an `eu.thisisait.nos.*`
+    value or any `<x>_launchd_label` var, in role defaults or default.config.yml.
+    Flag: the role (`pazny.backrest` -> install_backrest), else `install_<x>` if
+    declared. Domain: `<x>_launchd_domain`, default gui. Shared with
+    tools/anatomy-graph-gen.py harvest_daemons, so roster and plan agree."""
+    repo = Path(repo) if repo else Path(__file__).resolve().parents[1]
+    cfg = repo / "default.config.yml"
+    flags = set(re.findall(r"^(install_\w+):", cfg.read_text(encoding="utf-8"), re.M))
+    sources = [(p, "install_" + p.parent.parent.name.split(".", 1)[1])
+               for p in sorted(repo.glob("roles/*/defaults/main.yml"))
+               if p.parent.parent.name.startswith("pazny.")] + [(cfg, None)]
+    rows = {}
+    for path, role_flag in sources:
+        text = path.read_text(encoding="utf-8")
+        domains = dict(re.findall(r'^(\w+)_launchd_domain:\s*"(\w+)"', text, re.M))
+        for line in text.splitlines():
+            m = _LAUNCHD_VAR.match(line.strip())
+            if not m or "legacy" in m.group(1):
+                continue
+            var, label = m.groups()
+            if not (label.startswith(_NOS) or var.endswith("_launchd_label")):
+                continue
+            x = var.removesuffix("_launchd_label")
+            flag = role_flag or (f"install_{x}" if f"install_{x}" in flags else None)
+            rows.setdefault(label, {"label": label, "install_flag": flag,
+                                    "domain": domains.get(x, "gui")})
+    return list(rows.values())
+
+
+def nos_host_daemon_plan(graph, domain=None):
+    """Join anatomy-graph daemon nodes to install_* via their declaration.
 
     The graph is the roster — a label not in it is dropped, even if a role
-    still declares it. The role directory supplies the flag
-    (`pazny.backrest` → `install_backrest`); no hand list of daemons.
-    Heartbeat/resume live in templates/ with no pazny.* role, so they have
-    no install_* and are not in this plan.
+    still declares it. No hand list of daemons. Heartbeat/resume live in
+    templates/ with no install_*, so they are not in this plan. `domain`
+    narrows to gui (the sudo-free stack layer) or system (needs become).
     """
     nodes = (graph or {}).get("nodes") or {}
     graph_labels = {
@@ -243,23 +270,9 @@ def nos_host_daemon_plan(graph):
         for nid, n in nodes.items()
         if isinstance(n, dict) and n.get("kind") == "daemon" and ":" in nid
     }
-    repo = Path(__file__).resolve().parents[1]
-    rows, seen = [], set()
-    for path in sorted((repo / "roles").glob("*/defaults/main.yml")):
-        role = path.parent.parent.name
-        if not role.startswith("pazny."):
-            continue
-        flag = "install_" + role.split(".", 1)[1]
-        for line in path.read_text(encoding="utf-8").splitlines():
-            m = _LAUNCHD_LABEL.match(line.strip())
-            if not m or "legacy" in m.group(1):
-                continue
-            label = m.group(2)
-            if label not in graph_labels or label in seen:
-                continue
-            seen.add(label)
-            rows.append({"label": label, "install_flag": flag})
-    return rows
+    return [r for r in launchd_declarations()
+            if r["install_flag"] and r["label"] in graph_labels
+            and domain in (None, r["domain"])]
 
 
 # ── Orphan compose extensions (2026-10-03) ─────────────────────────────────

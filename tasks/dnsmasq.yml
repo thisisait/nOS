@@ -117,7 +117,7 @@
 # ── Ensure the dnsmasq LaunchDaemon is INSTALLED and RUNNING ─────────────────
 # CRITICAL (root-caused 2026-07-18): the "Restart dnsmasq" handler only
 # launchctl-unload/loads an EXISTING plist at
-# /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist — but that plist is created
+# /Library/LaunchDaemons/<dnsmasq_launchd_label>.plist — but that plist is created
 # only by `brew services start`, which nothing else ran. On a fresh blank the
 # plist never existed, the handler hit its `[ ! -f "$plist" ]` guard, WARNed to
 # stderr, and exited — so dnsmasq NEVER started. *.<tenant_domain> then didn't
@@ -133,8 +133,8 @@
 # the plist it reloads now exists.
 - name: "[dnsmasq] Install the dnsmasq system LaunchDaemon plist"
   ansible.builtin.copy:
-    src: "{{ homebrew_prefix }}/opt/dnsmasq/homebrew.mxcl.dnsmasq.plist"
-    dest: /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist
+    src: "{{ homebrew_prefix }}/opt/dnsmasq/{{ dnsmasq_launchd_label }}.plist"
+    dest: "/Library/LaunchDaemons/{{ dnsmasq_launchd_label }}.plist"
     remote_src: true
     owner: root
     group: wheel
@@ -144,7 +144,7 @@
   notify: Restart dnsmasq
 
 - name: "[dnsmasq] Bootstrap (start) the dnsmasq LaunchDaemon"
-  ansible.builtin.command: launchctl bootstrap system /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist
+  ansible.builtin.command: launchctl bootstrap {{ dnsmasq_launchd_domain }} /Library/LaunchDaemons/{{ dnsmasq_launchd_label }}.plist
   become: true
   register: _dnsmasq_boot
   # bootstrap of an already-loaded service returns rc 5 ("already bootstrapped"

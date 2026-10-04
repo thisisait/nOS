@@ -255,11 +255,12 @@
 # A declared-off LaunchAgent is not a skipped role. install_backrest: false
 # used to skip pazny.backrest and leave the job loaded. Roster is the
 # anatomy-graph daemon nodes, joined to install_* by the declaring role.
+# gui only: root LaunchDaemons are booted out from main.yml (needs become).
 - name: "[Stacks] Host daemons the anatomy graph already declared"
   ansible.builtin.set_fact:
     _host_daemons: >-
       {{ lookup('file', playbook_dir ~ '/state/anatomy-graph.json')
-         | from_json | nos_host_daemon_plan }}
+         | from_json | nos_host_daemon_plan('gui') }}
   tags: ['stacks', 'core', 'always']
 
 - name: "[Stacks] Reset the host-daemon stop accumulator"

@@ -37,7 +37,7 @@ def test_declared_labels_come_from_the_graph_and_the_templates(tmp_path, monkeyp
     monkeypatch.setattr(mod, "GRAPH", graph)
     labels = mod.declared_labels()
     assert "eu.thisisait.nos.bone" in labels and "grafana" not in labels
-    assert "com.ollama.agent" in labels, "pazny.openclaw writes it from a literal-Label template"
+    assert "eu.thisisait.nos.heartbeat" in labels, "a literal-Label template declares its label"
 
 
 def test_an_undeclared_plist_and_a_stray_nos_label_are_named():

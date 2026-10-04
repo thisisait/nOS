@@ -18,6 +18,10 @@ openclaw_log_dir: "{{ ansible_facts['env']['HOME'] }}/agents/log"        # struc
 # OpenClaw configuration (~/.openclaw/)
 openclaw_config_dir: "~/.openclaw"
 
+# launchd labels this role starts (bootout when install_openclaw is false).
+openclaw_gateway_launchd_label: "ai.openclaw.gateway"   # written by `openclaw gateway install`
+ollama_launchd_label: "com.ollama.agent"                # templates/com.ollama.agent.plist.j2
+
 # ─────────────────────────────────────────────────────────────────────────────
 # OLLAMA + MLX (Apple Silicon native, Ollama 0.20+)
 # ─────────────────────────────────────────────────────────────────────────────

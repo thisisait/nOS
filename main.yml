@@ -868,7 +868,7 @@
 
     - name: Restart alloy
       ansible.builtin.shell: |
-        plist="$HOME/Library/LaunchAgents/sh.brew.grafana-alloy.plist"   # Homebrew 7 name
+        plist="$HOME/Library/LaunchAgents/{{ observability_launchd_label }}.plist"   # Homebrew 7 name
         [ -f "$plist" ] || plist="$HOME/Library/LaunchAgents/homebrew.mxcl.grafana-alloy.plist"
         [ -f "$plist" ] && launchctl unload "$plist" 2>/dev/null
         sleep 1
@@ -892,7 +892,7 @@
       # makes a missing plist visible (no restart attempted) instead of
       # masking it behind `2>/dev/null`.
       ansible.builtin.shell: |
-        plist="/Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist"
+        plist="/Library/LaunchDaemons/{{ dnsmasq_launchd_label }}.plist"
         if [ ! -f "$plist" ]; then
           echo "WARN: dnsmasq plist not found at $plist — Homebrew formula path may have changed; skipping restart" >&2
           exit 0
@@ -2431,6 +2431,26 @@
         - install_dnsmasq | default(true)
         - (tenant_domain_is_local | default(true) | bool)
           or (dnsmasq_force_local_domains | default(false) | bool)
+      tags: ['dnsmasq', 'dns', 'network']
+
+    # The stack layer boots out declared-off daemons in gui/<uid> without sudo
+    # (tasks/stacks/prune-disabled.yml); a root LaunchDaemon (dnsmasq) is out
+    # of its reach. Same roster, system domain, here where become is allowed.
+    - name: "[Host daemons] Boot out declared-off root LaunchDaemons"
+      ansible.builtin.command:
+        argv: [launchctl, bootout, "system/{{ item.label }}"]
+      loop: >-
+        {{ lookup('file', playbook_dir ~ '/state/anatomy-graph.json')
+           | from_json | nos_host_daemon_plan('system') }}
+      loop_control:
+        label: "{{ item.label }} ({{ item.install_flag }}=false)"
+      become: true
+      register: _system_daemon_bootout
+      changed_when: _system_daemon_bootout.rc == 0
+      failed_when: false
+      when:
+        - ansible_os_family == 'Darwin'
+        - not (lookup('vars', item.install_flag, default=false) | bool)
       tags: ['dnsmasq', 'dns', 'network']
 
     # ──────────────────────────────────────────────────────────────────────────

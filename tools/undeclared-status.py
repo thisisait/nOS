@@ -185,14 +185,15 @@ def judge_launchd(loaded: dict, plists: dict, declared: set[str]) -> list[dict]:
     return out
 
 
-def judge_ports(rows: list[dict], declared: set[int], daemon_pids: set[int]) -> list[dict]:
+def judge_ports(rows: list[dict], declared: set[int], daemon_pids: set[int],
+                daemon_exes: frozenset[str] = frozenset()) -> list[dict]:
     out, seen = [], set()
     for r in sorted(rows, key=lambda r: r["port"]):
         exe = r.get("exe") or "?"
         docker = pathlib.Path(exe).name in DOCKER_BINS
         if exe.startswith(SYSTEM_PATHS) or (LOOPBACK.match(r["addr"]) and not docker):
             continue
-        if r["port"] in declared or {r["pid"], r.get("ppid")} & daemon_pids:
+        if r["port"] in declared or {r["pid"], r.get("ppid")} & daemon_pids or exe in daemon_exes:
             continue
         if (r["port"], exe) not in seen:
             seen.add((r["port"], exe))
@@ -202,17 +203,19 @@ def judge_ports(rows: list[dict], declared: set[int], daemon_pids: set[int]) -> 
 
 def collect() -> dict:
     report: dict = {"sources_missing": []}
-    labels, loaded = declared_labels(), loaded_labels()
+    labels, loaded, plists = declared_labels(), loaded_labels(), plist_files()
     if labels is None or loaded is None:
         report["sources_missing"].append("launchd (launchctl list / state/anatomy-graph.json)")
     else:
-        report["launchd"] = judge_launchd(loaded, plist_files(), labels)
+        report["launchd"] = judge_launchd(loaded, plists, labels)
     ports, rows = declared_ports(), listeners()
     if ports is None or rows is None or labels is None or loaded is None:
         report["sources_missing"].append(f"listening ports (netstat / {STACKS_DIR})")
     else:
         pids = {p for lbl, p in loaded.items() if lbl in labels and p}
-        report["ports"] = judge_ports(rows, ports, pids)
+        # A root daemon's pid is not in a user `launchctl list`; its program path is.
+        exes = frozenset(v["program"] for lbl, v in plists.items() if lbl in labels)
+        report["ports"] = judge_ports(rows, ports, pids, exes)
     cron = crontab()
     if cron is None:
         report["sources_missing"].append("crontab -l")

@@ -582,6 +582,8 @@ enable_remote_management: false   # Apple Remote Desktop (ARD) – full manageme
 
 # ── Observability – Grafana LGTM stack ────────────────────────────────────────
 install_observability: true       # Grafana + Prometheus + Loki + Tempo + Alloy
+# The host half of install_observability is Homebrew's Alloy agent (the formula names it).
+observability_launchd_label: "sh.brew.grafana-alloy"
 # REM-107: Alloy OTLP receiver bind. 127.0.0.1 = loopback-only (on-host apps only —
 # the secure default; Alloy is a HOST process, so 0.0.0.0 exposed 4317/4318 to the
 # LAN/Tailscale unauthenticated). Set 0.0.0.0 ONLY for cross-host telemetry, then
@@ -2322,6 +2324,8 @@ pmset_ttyskeepawake: 1                 # TTY session prevents sleep
 # (tested on macOS 27) and is the reference the restart handler's
 # plist-existence guard hardens around. Bump when a newer release is verified.
 dnsmasq_version: "2.91"                    # known-good Homebrew dnsmasq (macOS 27 validated)
+dnsmasq_launchd_label: "homebrew.mxcl.dnsmasq"  # the formula's plist, run as root
+dnsmasq_launchd_domain: "system"           # root LaunchDaemon: bootout needs become, not gui/<uid>
 dnsmasq_dev_domain: "{{ tenant_domain | default('dev.local') }}"  # Auto-tracks tenant_domain (Track F)
 dnsmasq_dev_address: "127.0.0.1"          # Target for *.dev.local from localhost
 dnsmasq_port: 53                          # DNS port (53 = default)

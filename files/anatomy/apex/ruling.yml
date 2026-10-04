@@ -552,6 +552,12 @@ nodes:
   "daemon:eu.thisisait.nos.pulse": withheld
   "daemon:eu.thisisait.nos.resume": withheld
   "daemon:eu.thisisait.nos.wing": withheld
+  # 2026-10-04: vendor daemons the converge starts, now on the roster
+  # (added AFTER the signature; the published set is unchanged).
+  "daemon:ai.openclaw.gateway": withheld
+  "daemon:com.ollama.agent": withheld
+  "daemon:homebrew.mxcl.dnsmasq": withheld
+  "daemon:sh.brew.grafana-alloy": withheld
 
   # --- withheld: doctrine paragraphs (internal law) --------------------------
   "doctrine:docs/archive/cortex-corpus-parallel.md#2.1": withheld

@@ -328,7 +328,7 @@
       fi
     done
     # Kill any running instance (brew or our own wrapper)
-    launchctl unload "$HOME/Library/LaunchAgents/com.ollama.agent.plist" 2>/dev/null || true
+    launchctl unload "$HOME/Library/LaunchAgents/{{ ollama_launchd_label }}.plist" 2>/dev/null || true
     pkill -f 'ollama serve' 2>/dev/null || true
     sleep 1
     echo "DONE"
@@ -345,16 +345,16 @@
     timeout: 15
   failed_when: false
 
-- name: "[Ollama] Deploy persistent user LaunchAgent (com.ollama.agent)"
+- name: "[Ollama] Deploy persistent user LaunchAgent (ollama)"
   ansible.builtin.template:
-    src: com.ollama.agent.plist.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.ollama.agent.plist"
+    src: ollama-agent.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ ollama_launchd_label }}.plist"
     mode: '0644'
   when: nos_service_manager == 'launchd'
 
-- name: "[Ollama] Load user LaunchAgent (com.ollama.agent)"
+- name: "[Ollama] Load user LaunchAgent (ollama)"
   ansible.builtin.command: >
-    launchctl load "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.ollama.agent.plist"
+    launchctl load "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ ollama_launchd_label }}.plist"
   register: ollama_svc
   changed_when: true
   failed_when: >
@@ -435,8 +435,8 @@
 - name: "[Ollama] Reload the daemon so it execs the installed binary"
   ansible.builtin.shell: |
     set -o pipefail
-    L="{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.ollama.agent.plist"
-    launchctl bootout "gui/$(id -u)/com.ollama.agent" 2>/dev/null || true
+    L="{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ ollama_launchd_label }}.plist"
+    launchctl bootout "gui/$(id -u)/{{ ollama_launchd_label }}" 2>/dev/null || true
     sleep 2
     launchctl bootstrap "gui/$(id -u)" "$L" || echo "BOOTSTRAP-FAILED rc=$?"
   args:
@@ -499,8 +499,8 @@
         {{ _ollama_drift.stdout | default('(not measured)') | trim }}
         daemon now: {{ _ollama_ver_after.stdout | default('(none)') | trim }}
       The reload above should have fixed it. By hand:
-        launchctl bootout gui/$(id -u)/com.ollama.agent
-        launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ollama.agent.plist
+        launchctl bootout gui/$(id -u)/{{ ollama_launchd_label }}
+        launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/{{ ollama_launchd_label }}.plist
   when:
     - nos_service_manager == 'launchd'
     - "'drift' in (_ollama_drift.stdout | default(''))"
@@ -655,7 +655,7 @@
 
 - name: "[OpenClaw] Which openclaw does the gateway service actually launch"
   ansible.builtin.shell: |
-    plist="$HOME/Library/LaunchAgents/ai.openclaw.gateway.plist"
+    plist="$HOME/Library/LaunchAgents/{{ openclaw_gateway_launchd_label }}.plist"
     [ -f "$plist" ] || exit 0
     python3 -c '
     import plistlib, sys
