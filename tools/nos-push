@@ -11,6 +11,11 @@
 #   tools/nos-push origin dev            # → git push origin dev
 #   tools/nos-push --force-with-lease    # → git push --force-with-lease
 #   tools/nos-push --skip-sync           # → git push only; no mirror trigger
+#   tools/nos-push --strict              # refuse when prepush-score reaches 70
+#
+# Before every push, tools/prepush-score.py scores the push range (signals +
+# a small local model). Advisory: it prints and records, it never blocks —
+# unless --strict, where a score at the threshold or a scorer crash refuses.
 #
 # Configuration (auto-discovered from this clone):
 #   * gitea_api_token   — from <repo>/credentials.yml::gitea_api_token
@@ -32,15 +37,29 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 SKIP_SYNC=0
+STRICT=0
+REMOTE=""
 GIT_ARGS=()
 for arg in "$@"; do
 	case "$arg" in
 		--skip-sync) SKIP_SYNC=1 ;;
-		*) GIT_ARGS+=("$arg") ;;
+		--strict) STRICT=1 ;;
+		-*) GIT_ARGS+=("$arg") ;;
+		*) [ -z "$REMOTE" ] && REMOTE="$arg"; GIT_ARGS+=("$arg") ;;
 	esac
 done
+REMOTE="${REMOTE:-origin}"  # git push's first positional argument is the remote
 
-# 1. Run the git push first; abort everything if it fails.
+# 0. Score what this push carries (ssot/doctrine/session-threat-model.md).
+if [ "$STRICT" -eq 1 ]; then
+	python3 "$SCRIPT_DIR/prepush-score.py" --remote "$REMOTE" --strict \
+		|| { echo "→ push refused by prepush-score --strict"; exit 3; }
+else
+	python3 "$SCRIPT_DIR/prepush-score.py" --remote "$REMOTE" \
+		|| echo "→ prepush-score failed (advisory) — pushing anyway"
+fi
+
+# 1. Run the git push; abort everything if it fails.
 #    Empty array expansion in bash produces a literal '' arg, which git
 #    rejects as "bad repository". Branch on array size to avoid it.
 if [ "${#GIT_ARGS[@]}" -gt 0 ]; then

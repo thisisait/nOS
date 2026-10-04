@@ -181,6 +181,7 @@ worse than none, because it reads as complete.
 - `test_report_chain_synth_gen.py` — the generator's own validator, runnable standalone; gated in CI by tests/anatomy/test_report_chain_synth_is_gated.py.
 
 ## Release, CI, git
+- `prepush-score.py` — Score what a push would carry before `nos-push` pushes it: deterministic signals (file:line) per threat-checklist section 1-6, then a small local Ollama model's per-aspect scores (UNAVAILABLE on failure, never a number); bar chart, checker+prompt SHA-256, one JSONL line in `~/.nos/events/prepush-scores.jsonl`. Advisory; `--strict` refuses at 70.
 - `forge-sync.py` — The trunk's four holders, and the only tool that moves refs between them.
 - `migration-pr.sh` — tools/migration-pr.sh — validate an authored migration record + its version
 - `recipe-pr.sh` — tools/recipe-pr.sh — validate an upgrade recipe and (optionally) open a PR/MR
