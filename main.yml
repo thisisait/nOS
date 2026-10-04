@@ -2474,24 +2474,28 @@
           or (dnsmasq_force_local_domains | default(false) | bool)
       tags: ['dnsmasq', 'dns', 'network']
 
-    # The stack layer boots out declared-off daemons in gui/<uid> without sudo
-    # (tasks/stacks/prune-disabled.yml); a root LaunchDaemon (dnsmasq) is out
-    # of its reach. Same roster, system domain, here where become is allowed.
-    - name: "[Host daemons] Boot out declared-off root LaunchDaemons"
-      ansible.builtin.command:
-        argv: [launchctl, bootout, "system/{{ item.label }}"]
+    # Root LaunchDaemons (dnsmasq): prune-disabled.yml's gui rule, system domain,
+    # become. Authored off only (_on_disk_flags; unread = none). dnsmasq takes the
+    # resolver files tasks/dnsmasq.yml wrote ("-> dnsmasq"), or every *.<tld>
+    # keeps asking a dead 127.0.0.1:53 (review 2026-10-04).
+    - name: "[Host daemons] Retire declared-off root LaunchDaemons"
+      ansible.builtin.shell: |
+        launchctl bootout system/{{ item.label | quote }} || true
+        {% if item.install_flag == 'install_dnsmasq' %}
+        for f in /etc/resolver/*; do
+          if grep -q -- '-> dnsmasq' "$f" 2>/dev/null; then rm -f -- "$f" || exit 1; fi
+        done
+        {% endif %}
       loop: >-
         {{ lookup('file', playbook_dir ~ '/state/anatomy-graph.json')
            | from_json | nos_host_daemon_plan('system') }}
       loop_control:
         label: "{{ item.label }} ({{ item.install_flag }}=false)"
       become: true
-      register: _system_daemon_bootout
-      changed_when: _system_daemon_bootout.rc == 0
-      failed_when: false
       when:
         - ansible_os_family == 'Darwin'
         - not (lookup('vars', item.install_flag, default=false) | bool)
+        - (_on_disk_flags | default({}))[item.install_flag] | default(none) is sameas false
       tags: ['dnsmasq', 'dns', 'network']
 
     # ──────────────────────────────────────────────────────────────────────────

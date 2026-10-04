@@ -257,11 +257,29 @@
   when: (_prune_plan.stop | default([]) | length) > 0
   tags: ['stacks', 'core', 'always']
 
-# ── Host daemons: same split as containers ────────────────────────────────
-# A declared-off LaunchAgent is not a skipped role. install_backrest: false
-# used to skip pazny.backrest and leave the job loaded. Roster is the
-# anatomy-graph daemon nodes, joined to install_* by the declaring role.
-# gui only: root LaunchDaemons are booted out from main.yml (needs become).
+- name: "[Stacks] REFUSE a prune whose disablements are not authored on disk"
+  ansible.builtin.fail:
+    msg: >-
+      Refusing to prune. {{ _prune_plan.unauthored_destructive | length }} service(s)
+      resolve install_*: false for this run but are ENABLED in the on-disk config
+      (default.config.yml + config.yml), and each owns a compose fragment —
+      {{ _prune_plan.unauthored_destructive | join(', ') }}.
+      A disablement that outranks config.yml (extra-vars, `-e @<file>`) is a
+      flag for one command, not a declaration, and pruning acts on it
+      PERMANENTLY: it deletes compose fragments and removes running containers.
+      On 2026-09-01 that combination destroyed 33 containers on this estate.
+      Declare it in config.yml and this passes. Nothing is stopped less
+      either way: every service off at run time is STOPPED regardless of
+      this flag, which now guards only deletion.
+  when:
+    - uninstall_disabled_services | default(false) | bool
+    - (_prune_plan.unauthored_destructive | default([]) | length) > 0
+  tags: ['stacks', 'core', 'always']
+
+# ── Host daemons: AUTHORED off only, and only after the refusal ──────────
+# A declared-off LaunchAgent is not a skipped role (install_backrest: false left
+# the job loaded). Roster = anatomy-graph daemon nodes; a one-off -e stops none
+# (review 2026-10-04). gui only: root LaunchDaemons are main.yml's (become).
 - name: "[Stacks] Host daemons the anatomy graph already declared"
   ansible.builtin.set_fact:
     _host_daemons: >-
@@ -274,13 +292,15 @@
     _host_daemon_stop: []
   tags: ['stacks', 'core', 'always']
 
-- name: "[Stacks] Which graph daemons have install_* false right now"
+- name: "[Stacks] Which graph daemons are off now AND declared off on disk"
   ansible.builtin.set_fact:
     _host_daemon_stop: "{{ _host_daemon_stop + [item] }}"
   loop: "{{ _host_daemons }}"
   loop_control:
     label: "{{ item.label }} ({{ item.install_flag }})"
-  when: not (lookup('vars', item.install_flag, default=false) | bool)
+  when:
+    - not (lookup('vars', item.install_flag, default=false) | bool)
+    - (_on_disk_flags | default({}))[item.install_flag] | default(none) is sameas false
   tags: ['stacks', 'core', 'always']
 
 - name: "[Stacks] Boot out host daemons whose install flag is off"
@@ -301,7 +321,7 @@
 - name: "[Stacks] Log which host daemons were asked to stop"
   ansible.builtin.debug:
     msg: >-
-      bootout {{ item.label }} because {{ item.install_flag }} resolved false
+      bootout {{ item.label }} because {{ item.install_flag }} is declared false on disk
   loop: "{{ _host_daemon_stop }}"
   loop_control:
     label: "{{ item.label }}"
@@ -317,25 +337,6 @@
   when:
     - uninstall_disabled_services | default(false) | bool
     - (nos_service_manager | default('launchd')) == 'launchd'
-  tags: ['stacks', 'core', 'always']
-
-- name: "[Stacks] REFUSE a prune whose disablements are not authored on disk"
-  ansible.builtin.fail:
-    msg: >-
-      Refusing to prune. {{ _prune_plan.unauthored_destructive | length }} service(s)
-      resolve install_*: false for this run but are ENABLED in the on-disk config
-      (default.config.yml + config.yml), and each owns a compose fragment —
-      {{ _prune_plan.unauthored_destructive | join(', ') }}.
-      A disablement that outranks config.yml (extra-vars, `-e @<file>`) is a
-      flag for one command, not a declaration, and pruning acts on it
-      PERMANENTLY: it deletes compose fragments and removes running containers.
-      On 2026-09-01 that combination destroyed 33 containers on this estate.
-      Declare it in config.yml and this passes. Nothing is stopped less
-      either way: every service off at run time is STOPPED regardless of
-      this flag, which now guards only deletion.
-  when:
-    - uninstall_disabled_services | default(false) | bool
-    - (_prune_plan.unauthored_destructive | default([]) | length) > 0
   tags: ['stacks', 'core', 'always']
 
 - name: "[Stacks] Note un-authored disablements that would destroy nothing"

@@ -93,7 +93,7 @@ def test_the_stack_layer_bootout_is_gui_only_and_system_has_become():
     play = yaml.safe_load((REPO / "main.yml").read_text(encoding="utf-8"))
     tasks = [t for p in play for t in (p.get("tasks") or [])]
     system = [t for t in tasks if "nos_host_daemon_plan('system')" in str(t)]
-    boot = [t for t in system if "bootout" in str(t.get("ansible.builtin.command"))]
+    boot = [t for t in system if "bootout" in str(t.get("ansible.builtin.command") or t.get("ansible.builtin.shell"))]
     assert boot and boot[0].get("become") is True, (
         "no become-d `launchctl bootout system/<label>` for a declared-off root daemon")
 
