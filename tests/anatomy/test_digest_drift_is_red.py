@@ -149,3 +149,21 @@ def test_the_converge_records_after_handlers_on_every_compose_pass():
     # every locally built image the roles declare carries a --src
     for repo in ("nos/keap=", "nos/face=", "nos/superset=", "nos/postgis=", "{{ nos_forum_image }}="):
         assert any(repo in a for a in argv), f"{repo} has no --src: its source commit goes unrecorded"
+
+
+def test_a_container_gone_between_ps_and_inspect_is_retried(monkeypatch):
+    """A Pulse/backup container exiting mid-read failed the whole inspect, the
+    recorder exited 1 and the converge failed. One fresh `ps` absorbs it."""
+    rd = _load(READER, "_digest_status_race")
+    calls = {"ps": 0}
+
+    def fake(*args):
+        if args[0] == "ps":
+            calls["ps"] += 1
+            return "a b" if calls["ps"] == 1 else "a"
+        if args[0] == "inspect":
+            return None if "b" in args else "/infra-redis-1\tsha256:1\tredis:7"
+        return 'sha256:1\t["redis@sha256:x"]'
+
+    monkeypatch.setattr(rd, "_docker", fake)
+    assert rd.snapshot()["infra-redis-1"]["image_id"] == "sha256:1"

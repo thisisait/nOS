@@ -49,7 +49,14 @@ def _docker(*args: str) -> str | None:
 
 
 def snapshot() -> dict | None:
-    """name -> {image, image_id, repo_digests, source: None}; None = cannot ask."""
+    """name -> {image, image_id, repo_digests, source: None}; None = cannot ask.
+
+    A container that exits between `ps` and `inspect` fails the whole inspect
+    (short-lived Pulse/backup runs); one retry takes a fresh `ps`."""
+    return _snapshot() or _snapshot()
+
+
+def _snapshot() -> dict | None:
     ids = _docker("ps", "-q", "--no-trunc")
     if ids is None:
         return None
