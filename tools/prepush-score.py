@@ -315,6 +315,12 @@ def ask_model(report: dict, model: str, call=None) -> dict:
                                                           if str(row["reason"]).strip() else "")}
     except Exception as exc:  # noqa: BLE001 — every failure is the same answer: no score
         return {"model": model, "status": "UNAVAILABLE", "why": redact(f"{type(exc).__name__}: {exc}")[:160]}
+    # 0 against strong evidence is a model that did not read it, not a verdict
+    # (hermes3:8b, 2026-10-04: all zeros against 62 signals, shown as "ok").
+    ignored = [a for a, _ in ASPECTS if report["det"].get(a, 0) >= 40 and scores[a]["score"] == 0]
+    if ignored:
+        return {"model": model, "status": "UNAVAILABLE",
+                "why": f"model scored 0 where signals are >=40 ({', '.join(ignored)}) — evidence ignored"}
     return {"model": model, "status": "ok", "scores": scores}
 
 

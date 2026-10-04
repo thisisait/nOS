@@ -161,3 +161,14 @@ def test_the_scorer_never_prints_or_records_a_secret(repo, tmp_path, capsys, mon
     assert FAKE_SECRET not in out
     assert FAKE_SECRET not in log.read_text()
     assert re.search(r"secrets", out)
+
+
+def test_a_model_scoring_zero_against_strong_signals_is_not_a_score(repo):
+    """hermes3:8b, 2026-10-04: 0 on all six aspects against 62 signals, printed as a verdict."""
+    mod = _tool()
+    base, head = _commit(repo, {"tools/prepush-score.py": "# changed\n"})
+    report = mod.collect(repo, base, head)
+    assert report["det"]["session"] >= 40
+    zeros = json.dumps({a: {"score": 0, "reason": "fine"} for a, _ in mod.ASPECTS})
+    result = mod.ask_model(report, "stub:1b", call=lambda m, p: zeros)
+    assert result["status"] == "UNAVAILABLE" and "evidence ignored" in result["why"]
