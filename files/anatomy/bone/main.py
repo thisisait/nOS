@@ -39,6 +39,14 @@ PLAYBOOK_DIR = os.getenv("PLAYBOOK_DIR", os.path.expanduser("~/nOS"))
 VERSION_FILE = os.path.join(PLAYBOOK_DIR, "VERSION")
 BOOT_TIME = time.time()
 
+# Held for Bone's lifetime: keeps wing.db's WAL sidecars on disk so `mode=ro`
+# readers (Grafana datasource, tools/) never hit CANTOPEN. See clients/wing.py.
+try:
+    from clients import wing as _wing_anchor_mod
+    WING_WAL_ANCHOR = _wing_anchor_mod.anchor_wal()
+except Exception:  # noqa: BLE001 — no wing.db yet must not stop Bone serving
+    WING_WAL_ANCHOR = None
+
 #: The git ref this Bone was DEPLOYED from, stamped by pazny.bone at converge
 #: into Bone's OWN runtime dir — read relative to this file, NOT from
 #: PLAYBOOK_DIR, so it is the deploy-time provenance and does not drift when the
