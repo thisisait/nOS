@@ -247,8 +247,7 @@ pulse:
         REPO_DIR: "{{ playbook_dir }}"
         VULNSCAN_SECURITY_DIR: "{{ ansible_facts['env']['HOME'] }}/.nos/security"
         WING_EVENTS_HMAC_SECRET: "{{ bone_secret }}"
-        # `claude` (Claude Code) must be on this PATH; adjust if installed elsewhere.
-        PATH: "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+        # No PATH: a job may not set it (Pulse drops it); the daemon's PATH has claude.
 
 # nos-work:// CO segment (dtt-routing-address) — authored; see agent-capability.py
 task_types: [investigate, review]

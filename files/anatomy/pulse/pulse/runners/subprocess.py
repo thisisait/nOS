@@ -24,23 +24,43 @@ import time
 # one PHP create endpoint. Keep in lockstep with the PHP constants.
 # Until 2026-10-03 the prefixes were `/Users/` + `/home/`: ~/Downloads/x.py
 # passed. Now only the trees the catalog renders jobs into (workload-allowlist).
-_SYSTEM_PREFIXES = ("/opt/homebrew/bin/", "/usr/local/bin/")
+# Until 2026-10-04 all of /opt/homebrew/bin/ + /usr/local/bin/ passed too, so any
+# wrapper (docker, gtimeout, uv, pip3) ran a planted payload: binaries are NAMED.
+_SYSTEM_BINARIES = ("/opt/homebrew/bin/php",)
+_HOME_BINARIES = (".local/bin/frankenphp",)  # Linux Wing PHP
 _REPO_TREES = ("tools/", "files/anatomy/scripts/", "files/anatomy/plugins/", "files/vuln-scan/")
-_HOME_TREES = ("wing/", ".nos/", ".local/bin/")
+_HOME_TREES = ("wing/", ".nos/")
 #: An interpreter runs its first positional arg, so that arg is the real command.
 _INTERPRETER_RE = re.compile(r"^(php|frankenphp|python[0-9.]*|node|ruby|perl)$")
-_BANNED_BASENAMES = frozenset(
-    ("sh", "bash", "zsh", "dash", "csh", "ksh", "fish", "sudo", "su", "env"))
+#: Shells, and wrappers that exec another program. Naming one here is not enough
+#: to allow it: it must also be added to _SYSTEM_BINARIES with a reason.
+_BANNED_BASENAMES = frozenset((
+    "bash", "bun", "bunx", "csh", "dash", "docker", "env", "fish", "gtimeout", "ksh",
+    "nohup", "npm", "npx", "pip", "pip3", "sh", "su", "sudo", "timeout", "uv", "uvx",
+    "xargs", "zsh"))
 _BASENAME_RE = re.compile(r"^[a-z][a-zA-Z0-9._-]{0,63}$")
 _ARG_RE = re.compile(r"^[a-zA-Z0-9._@/:=,+~-]{0,512}$")
 
 # ── SEC M-PULSE2: child-env scoping ──────────────────────────────────────────
-# Strip secrets from the inherited env (a job must not be able to read/exfil
-# WING_API_TOKEN, ANTHROPIC_API_KEY, *_SECRET, …) and refuse job-supplied
-# loader/PATH overrides (DYLD_*/LD_*/PYTHONPATH → allowlisted-binary hijack).
+# Inherited env minus secrets; a job's OWN env is an allow-list of the keys
+# declared jobs set (derived, pinned by test_pulse_command_allowlist) + the
+# daemon's. The deny-list it replaced missed NODE_OPTIONS, PHP_INI_SCAN_DIR, PS4.
 _SECRET_KEY_RE = re.compile(
     r"(SECRET|TOKEN|PASSWORD|CREDENTIAL|ANTHROPIC|HMAC|_KEY$|API_KEY)", re.I)
-_BANNED_ENV_RE = re.compile(r"^(DYLD_|LD_|PYTHONPATH$|PATH$|IFS$|BASH_ENV$|ENV$)")
+_JOB_ENV_KEYS = frozenset((
+    "BONE_API_URL", "CORTEX_AGENT_TOKEN_CAPTURE", "CORTEX_AGENT_TOKEN_RO", "CORTEX_AGENT_TOKEN_RW",
+    "CORTEX_API_URL", "DISPATCH_BATCH_LIMIT", "DISPATCH_DIGEST_FLUSH", "DISPATCH_MAIL_DIGEST_FLOOR",
+    "DRIFT_STALE_HOURS", "GITLEAKS_MIN_SEVERITY", "KEAP_AGENT_TOKEN_CAPTURE", "KEAP_AGENT_TOKEN_RO",
+    "KEAP_AGENT_TOKEN_RW", "KEAP_API_URL", "MAIL_FROM", "MAIL_HOST", "MAIL_PASSWORD", "MAIL_PORT",
+    "MAIL_RECIPIENT", "MAIL_TLS_MODE", "MAIL_TLS_VERIFY", "MAIL_USERNAME", "N8N_API_KEY",
+    "NOS_AGENT_CLIENT_ID", "NOS_AGENT_CLIENT_SECRET", "NOS_AGENT_NAME", "NOS_AGENT_PROFILE",
+    "NOS_AGENT_TASK", "NOS_AUTHENTIK_URL", "NOS_CONSOLIDATE_DB_EXCLUDE", "NOS_CONSOLIDATE_FS_ROOTS",
+    "NOS_COST_TALLY_FLOOR_USD", "NOS_COST_TALLY_WINDOW_H", "NOS_MARIADB_ROOT_PASSWORD",
+    "NOS_NOTIFY_ACTOR", "NOS_NOTIFY_BIN", "NOS_NOTIFY_ORIGIN", "NOS_REPO", "NOS_SCAN_DIR",
+    "NOS_TOFU_DIR", "NTFY_PUBLISH_PASSWORD", "NTFY_PUBLISH_USER", "NTFY_URL", "OLLAMA_URL",
+    "PROMETHEUS_URL", "REPO_DIR", "VULNSCAN_SECURITY_DIR", "WING_API_TOKEN", "WING_API_URL",
+    "WING_DATA_DIR", "WING_DB_PATH", "WING_EVENTS_HMAC_SECRET", "WING_EVENTS_HMAC_SECRET_RETIRED"))
+_DAEMON_ENV_KEYS = frozenset(("PULSE_RUN_ID", "TRACEPARENT"))
 
 
 def _root(var: str) -> str:
@@ -54,9 +74,10 @@ def _script_trees() -> tuple[str, ...]:
     return tuple([repo + t for t in _REPO_TREES if repo] + [home + t for t in _HOME_TREES if home])
 
 
-def _allowed_prefixes() -> tuple[str, ...]:
-    """Mirrors PulsePresenter::allowedCommandPrefixes."""
-    return _SYSTEM_PREFIXES + _script_trees()
+def _allowed_binaries() -> tuple[str, ...]:
+    """Exact paths. Mirrors PulsePresenter::allowedBinaries."""
+    home = _root("HOME")
+    return _SYSTEM_BINARIES + tuple(home + b for b in _HOME_BINARIES if home)
 
 
 class CommandRejected(ValueError):
@@ -69,11 +90,11 @@ def validate_command(command: str, args: list[str]) -> None:
         raise CommandRejected("command must be an absolute path")
     if "/../" in command + "/" or "/./" in command:
         raise CommandRejected("command path must be normalised (no . or .. segments)")
-    if not any(command.startswith(p) for p in _allowed_prefixes()):
+    if command not in _allowed_binaries() and not any(command.startswith(t) for t in _script_trees()):
         raise CommandRejected("command path not in Pulse allowlist")
     basename = os.path.basename(command)
     if basename in _BANNED_BASENAMES:
-        raise CommandRejected(f"command basename {basename!r} is banned (shell interpreter)")
+        raise CommandRejected(f"command basename {basename!r} is banned (shell or exec wrapper)")
     if not _BASENAME_RE.match(basename):
         raise CommandRejected("command basename malformed")
     for i, arg in enumerate(args or []):
@@ -88,12 +109,10 @@ def validate_command(command: str, args: list[str]) -> None:
 
 
 def _safe_env(job_env: dict[str, str] | None) -> dict[str, str]:
-    """Inherited env minus secrets + the job env minus loader/PATH overrides."""
+    """Inherited env minus secrets + the job env's allow-listed keys."""
     base = {k: v for k, v in os.environ.items() if not _SECRET_KEY_RE.search(k)}
-    for k, v in (job_env or {}).items():
-        if _BANNED_ENV_RE.match(k):
-            continue
-        base[k] = v
+    allowed = _JOB_ENV_KEYS | _DAEMON_ENV_KEYS
+    base.update({k: v for k, v in (job_env or {}).items() if k in allowed})
     return base
 
 

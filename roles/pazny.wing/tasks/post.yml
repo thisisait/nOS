@@ -210,7 +210,8 @@
       # Ruling 4 close-out: every consumer of this token WRITES (Pulse run
       # start/finish, telemetry callback), so wing.write is its honest class —
       # declared, not grandfathered. permits() grants reads to writers.
-      - --scopes=wing.write
+      # pulse.write: the catalog upsert below; no agent row may hold it.
+      - --scopes=wing.write,pulse.write
     chdir: "{{ wing_app_dir }}"
   register: _wing_token_result
   changed_when: >
