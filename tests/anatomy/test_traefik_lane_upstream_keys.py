@@ -50,3 +50,12 @@ def test_red_without_the_keys():
 def test_forum_off_renders_no_forum_router():
     http = _doc(install_nos_forum=False)
     assert "nos-forum-stdb" not in http["routers"] and "nos-forum-stdb" not in http["services"]
+
+
+def test_stdb_lane_keeps_its_token_out_of_the_access_log():
+    # The subscribe URL carries ?token=<60 s SpacetimeDB JWT with email/groups>; Traefik's
+    # JSON access log records RequestPath with the query (200 rows in Loki, 2026-10-03).
+    routers = _doc(traefik_origin_pull_enabled=True)["routers"]
+    for name in ("nos-forum-stdb", "nos-forum-stdb-origin"):
+        assert routers[name].get("observability", {}).get("accessLogs") is False, name
+    assert "observability" not in routers["keap-agent"], "the opt-out stays scoped to the lane"

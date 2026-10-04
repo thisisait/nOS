@@ -78,6 +78,9 @@ traefik_machine_lanes:
       allow_paths:
         - "/v1/identity/websocket-token"
         - "/v1/database/nos-forum/subscribe"   # the database name is fixed: one forum per estate
+      # The SDK swaps the id_token (POST header) for a 60 s SpacetimeDB JWT that rides
+      # ?token= on subscribe, carrying email + groups; RequestPath logs the query in full.
+      access_log: false
 
 
 traefik_auth_modes:

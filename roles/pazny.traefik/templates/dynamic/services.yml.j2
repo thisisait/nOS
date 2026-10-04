@@ -110,7 +110,8 @@ http:
    Optional keys (nos-forum, 2026-10-03): `upstream: {svc, port}` sends the lane
    to a DIFFERENT container (its own `<router>-<lane>` service); `strip_prefix`
    removes the prefix before it (`<router>-<lane>-strip@file`); `allow_paths`
-   narrows the lane to exact post-strip paths, so it is not a whole-API door.
+   narrows the lane to exact post-strip paths, so it is not a whole-API door;
+   `access_log: false` drops the lane from the access log (a credential in its URL).
 #}
 {% for _lane in (traefik_machine_lanes | default({})).get(s.id, []) %}
 {% if _lane.allow_paths is defined %}
@@ -126,6 +127,9 @@ http:
       service: "{{ (_router ~ '-' ~ _lane.name) if _lane.upstream is defined else _router }}"
       tls: {{ _tls | to_json }}
       middlewares: {{ _lane_mw | to_json }}
+{% if not (_lane.access_log | default(true)) %}
+      observability: {accessLogs: false}
+{% endif %}
 {% endfor %}
 {% endfor %}
 {% endif %}
