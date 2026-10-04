@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Advisory threat review on every PR. The checklist is one file in the repo
+# (docs/review/threat-checklist.md); this config only points at it.
+language: "en-US"
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  path_instructions:
+    - path: "**"
+      instructions: |
+        Review this change against docs/review/threat-checklist.md, all five
+        sections. Report each hit with file and line; say "no findings" per
+        section otherwise. Advisory only: never approve or request changes.
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "docs/review/threat-checklist.md"
