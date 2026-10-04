@@ -784,6 +784,26 @@ def orphan_extensions() -> list[str] | None:
             for p in mod.stack_orphans(d)]
 
 
+def _digest_report() -> dict:
+    import importlib.util  # noqa: PLC0415 — sibling reader, not a package
+
+    spec = importlib.util.spec_from_file_location(
+        "_digest_status", REPO / "tools" / "digest-status.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.collect()
+
+
+def digest_drift() -> dict | None:
+    """Images that changed under a container without a converge — the record
+    is the converge's, the verdict `tools/digest-status.py`'s. None = UNKNOWN."""
+    try:
+        report = _digest_report()
+    except Exception:  # noqa: BLE001 — any failure is the same answer: cannot ask
+        return None
+    return None if "unknown" in report else report
+
+
 def collect() -> dict:
     report: dict = {"generated_at": _now().isoformat(), "sources_read": [], "sources_missing": []}
     conn = _connect()
@@ -811,6 +831,8 @@ def collect() -> dict:
         ("orphan_extensions", STACKS_DIR, orphan_extensions),
         ("loop_verdicts", REPO / "tools" / "loop-status.py", stalled_verdicts),
         ("restore_drill", pathlib.Path.home() / ".nos" / "backup-verify.json", restore_drill),
+        ("digest_drift", pathlib.Path("tools/digest-status.py (~/.nos/workload-digests.json + docker)"),
+         digest_drift),
         ("ci", pathlib.Path("gh run list"), ci_runs),
         ("dependabot", pathlib.Path("gh api dependabot/alerts"), dependabot),
     ):
@@ -884,6 +906,15 @@ def reds(report: dict) -> list[str]:
         out.append(f"backup sources failed: {', '.join(str(f) for f in bk['failed'])}")
     elif bk and bk.get("stale"):
         out.append(f"backup stale — newest source {bk['age']}")
+    drift = (report.get("digest_drift") or {}).get("drift") or []
+    if drift:
+        out.append(
+            f"{len(drift)} container(s) run an image the last converge did not record "
+            f"({report['digest_drift'].get('recorded_at')}): "
+            + ", ".join(f"{d['container']} {d['recorded_id'][7:19]}→{d['live_id'][7:19]}"
+                        for d in drift[:6])
+            + " — tools/digest-status.py"
+        )
     for frag in report.get("orphan_extensions") or []:
         out.append(f"compose extension without its service, left out of `up`: {frag}")
     for job in report.get("overdue_jobs", []):

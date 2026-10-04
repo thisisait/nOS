@@ -42,6 +42,7 @@ worse than none, because it reads as complete.
 - `agent-token-status.py` — agent-token-status — can each declared agent client mint a token RIGHT NOW.
 - `anatomy-measure-margins.py` — Measure the nightly chain's temporal margins, and restamp the declared edges.
 - `app-version.py` — What each container actually RUNS, against what the pin says it bundles.
+- `digest-status.py` — READER: image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker.
 - `awaiting-operator.py` — What is waiting for a HUMAN right now, across every source that asks for one.
 - `caddy-status.py` — Can the caddy answer, is the ear listening, and what did it hear.
 - `brew-pin-status.py` — How old is the version brew wants to give us, and is it old enough to adopt?
@@ -75,6 +76,7 @@ worse than none, because it reads as complete.
 - `profile-builder-build.py` — Build the static profile builder (`_site/profile-builder/index.html` on release tags): seven steps (this computer incl. one timezone, web address, organisation & security, services with a RAM/disk estimate and a nearest-profile hint, backup & mail, people — the operator, test users, `nos_extra_identities` — and download) → a tailored config.yml plus a one-line credentials.yml for the password prefix. Data from default.config.yml + profiles/ + state/manifest.yml categories + plugin hub_cards + each role's compose (via registry-reach's discover()); `--image-lock` marks an OFFLINE build, `--config` resolves it against an operator config.yml. One self-contained file: test locally with `tools/profile-builder-build.py --out ~/nos-profile-builder && open ~/nos-profile-builder/index.html`. Page in tools/profile-builder/.
 - `managed-status.py` — Every managed dir: what a blank does to it × what the backup does with it, one table from the artifacts (`--gaps`, `--json`; the cc pane `managed`).
 - `reload-stale-config.py` — Make a running container read the config the estate rendered for it.
+- `digest-record.py` — main.yml post_task: writes the record digest-status.py reads (image ref, ID, repo digests, source commit of local builds).
 - `stale-config-status.py` — Containers running config the estate has already replaced.
 - `nos_security.py` — Resolve the live security notebook (`~/.nos/security`), not the git promotion copy.
 - `rem-dispose.py` — Write a REM disposition into the operator's `~/.nos/security` notebook; never touches the scanner's queue.
