@@ -113,3 +113,19 @@ def test_the_replacement_worker_unregisters_and_clears_caches():
     out = subprocess.run(["node", "-e", harness, str(ROLE / "files/sw.js")],
                          capture_output=True, text=True, check=True).stdout
     assert json.loads(out) == ["unregister", "delete shell", "navigate https://atlas/x"]
+
+
+def test_only_the_worker_path_is_reachable_without_a_sign_in():
+    """The self-removing worker is useless behind the gate: an expired sign-in
+    made /sw.js 302 too, so the cached shell never learned it should go
+    (2026-10-04). Exactly /sw.js is ungated — nothing else on the atlas host."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent))
+    from test_origin_pull_is_a_second_door import SERVICES, render  # type: ignore
+    routers = yaml.safe_load(render(SERVICES))["http"]["routers"]
+    atlas = {k: v for k, v in routers.items() if k.startswith("geolibre")}
+    open_ = {k: v for k, v in atlas.items() if "authentik@file" not in v["middlewares"]}
+    assert open_, "no ungated /sw.js lane — the worker cannot reach a signed-out browser"
+    for name, r in open_.items():
+        assert r["rule"].endswith("&& (Path(`/sw.js`))"), f"{name} opens more than /sw.js: {r['rule']}"
+        assert r["service"] == "geolibre"

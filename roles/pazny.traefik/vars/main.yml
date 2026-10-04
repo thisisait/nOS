@@ -87,6 +87,11 @@ traefik_machine_lanes:
   # forward_single cookie rides each tile fetch; tiles.<tenant> would 302 them all.
   # `flag` renders the lane only while install_martin is on.
   geolibre:
+    # Ungated, exactly /sw.js: the self-removing worker must reach a browser
+    # whose sign-in expired, or the cached shell hides the login (2026-10-04).
+    - name: sw
+      prefixes: ["/sw.js"]
+      allow_paths: [""]
     - name: tiles
       prefixes: ["/tiles"]
       upstream: {svc: martin, port: 3000}
