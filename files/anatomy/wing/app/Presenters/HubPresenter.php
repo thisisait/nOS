@@ -164,9 +164,10 @@ final class HubPresenter extends BasePresenter
 		// tile names its own scope alongside the breakdown — until 2026-09-01
 		// the "wing.db only" label rendered only in the zero branch, i.e. never
 		// when anyone was reading it.
-		$failing = $this->pulse->failingJobs();
+		$verdicts = $this->pulse->latestVerdicts();
+		$this->template->estateDrift = $verdicts['findings'];
 		$this->template->estateRed = [
-			'jobs'    => $failing,
+			'jobs'    => $verdicts['failing'],
 			'unread'  => $this->notifications->countUnread('operator'),
 		];
 		$this->template->stats = $stats;

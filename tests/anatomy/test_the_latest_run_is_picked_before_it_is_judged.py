@@ -1,4 +1,4 @@
-"""Anatomy CI gate — `failingJobs` picks the latest run, then asks if it failed.
+"""Anatomy CI gate — `latestVerdicts` (was failingJobs) picks the latest run, then asks if it failed.
 
 MEASURED 2026-09-02. The query filtered `exit_code != 0` in the WHERE, i.e.
 BEFORE `GROUP BY job_id HAVING run_id = MAX(run_id)`, so the tie-break ranged
@@ -26,10 +26,10 @@ PHP = REPO / "files/anatomy/wing/app/Model/PulseRepository.php"
 
 def _sql() -> str:
     src = PHP.read_text(encoding="utf-8")
-    body = re.search(r"public function failingJobs\(\).*?\n\t\}", src, re.S)
-    assert body, "failingJobs is gone from PulseRepository"
+    body = re.search(r"public function latestVerdicts\(\).*?\n\t\}", src, re.S)
+    assert body, "latestVerdicts is gone from PulseRepository"
     q = re.search(r"query\(\s*'(.*?)',", body.group(0), re.S)
-    assert q, "failingJobs no longer issues a literal query"
+    assert q, "latestVerdicts no longer issues a literal query"
     return q.group(1)
 
 

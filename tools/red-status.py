@@ -174,7 +174,7 @@ def failing_jobs(conn: sqlite3.Connection) -> list[dict]:
         """
     ).fetchall()
     out = []
-    # ONE ROW PER JOB. Wing's PulseRepository::failingJobs() breaks a fired_at
+    # ONE ROW PER JOB. Wing's PulseRepository::latestVerdicts() breaks a fired_at
     # tie (GROUP BY … HAVING MAX(run_id)); this query did not, so two runs
     # stamped the same second made the two readers of one column disagree by
     # exactly one job. `ORDER BY fired_at DESC` above puts the newest first.

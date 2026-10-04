@@ -46,6 +46,17 @@
 			{if $redCount > 0}{count($estateRed['jobs'])} job(s), {$estateRed['unread']} unread · {/if}wing.db only
 		</div>
 	</div>
+	{* DRIFT — a declared findings code (tofu-drift, discovery-scan): known
+	   disagreement, amber. Not red (nothing broke), not green (it is not agreed). *}
+	{var $driftCount = count($estateDrift)}
+	<div class="stat" style="border-left:3px solid {if $driftCount > 0}var(--orange){else}var(--border){/if}">
+		<div class="label">Estate drift</div>
+		<div class="value" style="color:{if $driftCount > 0}var(--orange){else}var(--text2){/if}">{$driftCount}</div>
+		<div class="sub" title="{foreach $estateDrift as $j}{$j['job_id']} rc={$j['exit_code']}
+{/foreach}">
+			{if $driftCount > 0}{$driftCount} job(s) found, not broken · {/if}wing.db only
+		</div>
+	</div>
 	<div class="stat" style="border-left:3px solid {if $stats['findings'] > 0}var(--orange){else}var(--border){/if}">
 		<div class="label">Findings</div>
 		<div class="value" style="color:{if $stats['findings'] > 0}var(--orange){else}var(--text2){/if}">{$stats['findings']}</div>

@@ -1,7 +1,7 @@
 """Two readers, one column, and they must not differ by a job.
 
 `pulse_jobs.findings_exit_codes` is read by Wing
-(`PulseRepository::failingJobs()`) and by `tools/red-status.py::failing_jobs`.
+(`PulseRepository::latestVerdicts()`) and by `tools/red-status.py::failing_jobs`.
 Wing collapses a fired_at tie (`GROUP BY r.job_id HAVING r.run_id =
 MAX(r.run_id)`); red-status did not, so two runs stamped in the same second
 made one reader say N and the other N+1 about the same estate. That is the
@@ -63,7 +63,7 @@ def test_a_fired_at_tie_reports_one_job_not_two():
     jobs = [r["job"] for r in RS.failing_jobs(conn)]
     assert jobs == ["loop:review"], (
         f"a fired_at tie produced {jobs} — red-status counts a job twice where "
-        f"Wing's failingJobs() counts it once"
+        f"Wing's latestVerdicts() counts it once"
     )
 
 
