@@ -61,6 +61,12 @@ def test_config_publishes_only_the_declared_geo_sources():
     assert {t["schema"] for t in pg["tables"].values()} == {"geo"}
     assert all(t.get("properties") for t in pg["tables"].values()), "list the columns a tile carries"
     assert pg["connection_string"] == "${MARTIN_PG_URL}", "the DSN (password) stays out of the file"
+    # martin expands ${VAR} only in a PLAIN scalar; quoted, it parsed the literal (2026-10-04 crash loop)
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    root = yaml.compose(env.from_string((ROLE / "templates/config.yaml.j2").read_text()).render())
+    pgnode = next(v for k, v in root.value if k.value == "postgres")
+    dsn = next(v for k, v in pgnode.value if k.value == "connection_string")
+    assert dsn.style is None, f"connection_string is {dsn.style!r}-quoted: martin will not expand it"
     assert cfg["route_prefix"] == "/tiles" and cfg["cors"] is False
 
 

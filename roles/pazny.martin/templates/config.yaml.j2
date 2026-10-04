@@ -12,7 +12,8 @@ web_ui: disable
 # A layer geo-load has not loaded yet is skipped with a warning, not a crash loop.
 on_invalid: warn
 postgres:
-  connection_string: "${MARTIN_PG_URL}"
+  # Unquoted: martin expands ${VAR} only in plain YAML scalars (crash loop 2026-10-04).
+  connection_string: ${MARTIN_PG_URL}
   auto_publish: false
   pool_size: 4
   tables:
