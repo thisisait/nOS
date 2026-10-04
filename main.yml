@@ -1098,6 +1098,13 @@
         - install_santa | default(false) | bool
       tags: ['santa']
 
+    - role: pazny.mac.agent_user
+      when:
+        - not (nos_dry_removal | default(false) | bool)
+        - ansible_os_family == 'Darwin'
+        - agents_separate_user | default(false) | bool
+      tags: ['agent_user']
+
     # ── Linux-only host roles ───────────────────────────────────────────────
     # Activate on Debian/RedHat families. v0.4-beta cross-platform shipped
     # 2026-05-31 with a standing Ubuntu-24.04 CI wet-test (the full playbook is

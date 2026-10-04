@@ -268,6 +268,7 @@
 - name: "[Removal-set] Declare what the data level keeps (reconciled by the gate)"
   ansible.builtin.set_fact:
     _removal_keep:
+      - { var: agents_libexec_dir, level: never, why: "pazny.mac.agent_user host files (claude copy, launcher); no level removes the agent user or its sudoers rule yet — open" }
       - { var: artifact_cache_dir, level: never, why: "the verified image cache a rebuild loads from instead of re-pulling — survives every level by design (tools/nos-image-cache.py)" }
       - { var: geo_cache_dir, level: never, why: "under artifact_cache_dir — open-data downloads the monthly loader re-uses (If-Modified-Since)" }
       - { var: maps_cache_dir, level: never, why: "under artifact_cache_dir — the Planetiler base map takes ~10 min and GBs of downloads to rebuild" }

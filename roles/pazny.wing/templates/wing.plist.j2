@@ -184,6 +184,11 @@
              (reason repo_root), never writes to the wrong place. -->
         <key>NOS_REPO_ROOT</key>
         <string>{{ nos_main_checkout }}</string>
+{% if agents_separate_user | default(false) | bool %}
+        <!-- Agents' claude runs as {{ agents_user }} (pazny.mac.agent_user). -->
+        <key>NOS_CLAUDE_BIN</key>
+        <string>{{ agents_claude_wrapper }}</string>
+{% endif %}
 
         <!-- SSO autologin custom preloader (Batch 5). HubPresenter reads these
              via getenv(): the splash route is dormant unless the flag is "1",

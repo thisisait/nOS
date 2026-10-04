@@ -71,8 +71,10 @@ _die() { echo "ERROR: $*" >&2; exit 2; }
 [[ -z "$WING_EVENTS_HMAC_SECRET" ]] && _die "WING_EVENTS_HMAC_SECRET is not set"
 [[ -z "$TASK_PROMPT" ]]          && _die "NOS_AGENT_TASK (or NOS_CONDUCTOR_TASK) is not set"
 
-if ! command -v claude &>/dev/null; then
-    _die "claude CLI not found in PATH"
+# NOS_CLAUDE_BIN: the agent-user wrapper when agents_separate_user is on (pazny.mac.agent_user).
+CLAUDE_BIN="${NOS_CLAUDE_BIN:-claude}"
+if ! command -v "$CLAUDE_BIN" &>/dev/null; then
+    _die "claude CLI not found: $CLAUDE_BIN"
 fi
 if ! command -v curl &>/dev/null; then
     _die "curl not found in PATH"
@@ -367,7 +369,7 @@ CLAUDE_JSON=$(
     WING_API_TOKEN="$WING_API_TOKEN" \
     NOS_AUTHENTIK_TOKEN="$AUTHENTIK_TOKEN" \
     NOS_RUN_ID="$RUN_ID" \
-    claude "${CLAUDE_ARGS[@]}" "$TASK_PROMPT" 2>"$CLAUDE_ERR"
+    "$CLAUDE_BIN" "${CLAUDE_ARGS[@]}" "$TASK_PROMPT" 2>"$CLAUDE_ERR"
 ) || CLAUDE_EXIT=$?
 
 # Extract .result (human text) + .usage tokens. On any parse failure (claude

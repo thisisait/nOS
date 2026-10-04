@@ -42,6 +42,11 @@
         <!-- The runner allows job scripts only under this checkout's trees. -->
         <key>NOS_REPO_ROOT</key>
         <string>{{ nos_main_checkout }}</string>
+{% if agents_separate_user | default(false) | bool %}
+        <!-- pulse-run-agent.sh spawns claude as {{ agents_user }} (pazny.mac.agent_user). -->
+        <key>NOS_CLAUDE_BIN</key>
+        <string>{{ agents_claude_wrapper }}</string>
+{% endif %}
         <key>WING_API_BASE</key>
         <string>{{ pulse_wing_api_base }}</string>
         <key>WING_API_TOKEN</key>

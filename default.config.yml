@@ -507,6 +507,13 @@ install_santa: false              # Santa exec telemetry; reader: tools/santa-st
 santa_version: "2026.8"           # github.com/northpolesec/santa release (Apache-2.0)
 santa_pkg_sha256: "0aaa970c7ddc63fe6a55c3144c825acb7f6bfa9cb15bcba1bffcaf2b5efc952a"
 
+# Agents (claude CLI children of AgentKit / pulse-run-agent.sh) run as a separate,
+# non-admin macOS user that cannot read ~/.nos. Off = agents run as the operator, as today.
+agents_separate_user: false
+agents_user: "nos-agent"
+agents_libexec_dir: "/usr/local/libexec/nos-agent"
+agents_claude_wrapper: "{{ agents_libexec_dir }}/nos-agent-claude"
+
 # ── Languages / runtimes ──────────────────────────────────────────────────────
 # PHP at the host level is no longer needed by default — Track A (2026-04-26)
 # moved Wing's PHP-FPM into a container and Composer runs inside that
@@ -3566,6 +3573,7 @@ backup_dirs_to_dump:
 #   unbacked — REAL GAP, named: files no dump covers. Move the var into
 #              backup_dirs_to_dump to close it (size/consistency is the operator's call).
 backup_coverage:
+  agents_libexec_dir:          { class: derived, why: "root-owned claude copy + launcher, rendered by pazny.mac.agent_user" }
   artifact_cache_dir:          { class: derived, why: "verified image tars — re-pullable, checksummed, survives every removal" }
   geo_cache_dir:               { class: derived, why: "RÚIAN/INSPIRE downloads — re-fetchable open data; the loaded tables are in pg_dumpall" }
   maps_cache_dir:              { class: derived, why: "Planetiler PMTiles + OSM sources, glyphs, sprites — rebuildable from open data" }

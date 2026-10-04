@@ -1,0 +1,154 @@
+---
+# Agents as their own non-admin macOS user (epic workload-allowlist, row
+# agent-runtime-least-privilege). Own primary group, not staff, so the operator's
+# 0750 home is not even traversable. Wing/Pulse pick the wrapper up via
+# NOS_CLAUDE_BIN only when agents_separate_user is on.
+
+- name: "Agent user | Preconditions"
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == 'Darwin'
+      - agents_user is match('^[a-z][a-z0-9-]{1,30}$')
+      - agents_user != agents_operator_user
+    fail_msg: "pazny.mac.agent_user is macOS-only and needs a distinct, plain user name."
+  tags: ['agent_user']
+
+- name: "Agent user | STOP — the agent has no Claude credential yet"
+  ansible.builtin.fail:
+    msg: |
+      agents_separate_user is on but agents_claude_oauth_token is empty. The agent user
+      cannot reuse your Claude login (it lives in your keychain). As yourself, run:
+        claude setup-token
+      put the printed token in credentials.yml as  agents_claude_oauth_token: "<token>"
+      and re-run: ansible-playbook main.yml --tags agent_user,wing,pulse
+  when: agents_claude_oauth_token | length == 0
+  tags: ['agent_user']
+
+- name: "Agent user | UID {{ agents_user_uid }} is free or already ours"
+  ansible.builtin.command:
+    argv: [/usr/bin/dscl, ., -search, /Users, UniqueID, "{{ agents_user_uid }}"]
+  register: agents_uid_owner
+  changed_when: false
+  failed_when: >-
+    agents_uid_owner.stdout | trim | length > 0
+    and not (agents_uid_owner.stdout | trim).startswith(agents_user)
+  tags: ['agent_user']
+
+- name: "Agent user | Group {{ agents_user }}"
+  ansible.builtin.group:
+    name: "{{ agents_user }}"
+    gid: "{{ agents_user_uid }}"
+  become: true
+  tags: ['agent_user']
+
+- name: "Agent user | Hidden, non-admin user {{ agents_user }}"
+  ansible.builtin.user:
+    name: "{{ agents_user }}"
+    uid: "{{ agents_user_uid }}"
+    group: "{{ agents_user }}"
+    groups: []
+    append: false
+    home: "{{ agents_user_home }}"
+    create_home: false
+    shell: /bin/bash
+    hidden: true
+  become: true
+  tags: ['agent_user']
+
+- name: "Agent user | Home and worktree root, owner-only"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ agents_user }}"
+    group: "{{ agents_user }}"
+    mode: "0700"
+  loop: ["{{ agents_user_home }}", "{{ agents_worktrees_dir }}"]
+  become: true
+  tags: ['agent_user']
+
+- name: "Agent user | Claude credential (agent-owned, 0400)"
+  ansible.builtin.copy:
+    content: "{{ agents_claude_oauth_token }}"
+    dest: "{{ agents_user_home }}/.claude-oauth-token"
+    owner: "{{ agents_user }}"
+    group: "{{ agents_user }}"
+    mode: "0400"
+  no_log: true
+  become: true
+  tags: ['agent_user']
+
+- name: "Agent user | Root-owned libexec"
+  ansible.builtin.file:
+    path: "{{ agents_libexec_dir }}"
+    state: directory
+    owner: root
+    group: wheel
+    mode: "0755"
+  become: true
+  tags: ['agent_user']
+
+- name: "Agent user | Resolve the operator's claude binary"
+  ansible.builtin.stat:
+    path: "{{ agents_claude_source }}"
+    follow: false
+  register: agents_claude_stat
+  failed_when: not agents_claude_stat.stat.exists
+  tags: ['agent_user']
+
+# A root-owned copy: the agent can run it but not replace it (weekly upgrades land
+# on the next converge, not through the agent's own auto-updater).
+- name: "Agent user | Root-owned claude copy"
+  ansible.builtin.copy:
+    src: "{{ agents_claude_stat.stat.lnk_source if agents_claude_stat.stat.islnk else agents_claude_source }}"
+    remote_src: true
+    dest: "{{ agents_libexec_dir }}/claude"
+    owner: root
+    group: wheel
+    mode: "0755"
+  become: true
+  tags: ['agent_user']
+
+- name: "Agent user | Launcher and wrapper"
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: wheel
+    mode: "0755"
+  loop:
+    - {src: claude-as-agent.sh.j2, dest: "{{ agents_launcher }}"}
+    - {src: nos-agent-claude.sh.j2, dest: "{{ agents_claude_wrapper }}"}
+  become: true
+  tags: ['agent_user']
+
+- name: "Agent user | sudoers rule (visudo-validated)"
+  ansible.builtin.template:
+    src: nos-agent.sudoers.j2
+    dest: "/private/etc/sudoers.d/{{ agents_user }}"
+    owner: root
+    group: wheel
+    mode: "0440"
+    validate: "/usr/sbin/visudo -cf %s"
+  become: true
+  tags: ['agent_user']
+
+# Effect gate: the agent user must not be able to read what the launcher forbids,
+# and must be in neither admin nor staff.
+- name: "Agent user | VERIFY — forbidden paths are unreadable as {{ agents_user }}"
+  ansible.builtin.command:
+    argv: [/usr/bin/sudo, -n, -u, "{{ agents_user }}", /bin/test, -r, "{{ item }}"]
+  loop: "{{ agents_forbidden_paths }}"
+  register: agents_read_probe
+  changed_when: false
+  failed_when: agents_read_probe.rc == 0
+  become: true
+  tags: ['agent_user', 'verify']
+
+- name: "Agent user | VERIFY — not in admin or staff"
+  ansible.builtin.command:
+    argv: [/usr/sbin/dsmemberutil, checkmembership, -U, "{{ agents_user }}", -G, "{{ item }}"]
+  loop: [admin, staff]
+  register: agents_group_probe
+  changed_when: false
+  failed_when: "'is not a member' not in agents_group_probe.stdout"
+  tags: ['agent_user', 'verify']

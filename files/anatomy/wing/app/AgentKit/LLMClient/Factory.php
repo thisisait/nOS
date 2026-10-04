@@ -115,6 +115,8 @@ final class Factory
 	private function buildClaudeCli(string $modelUri, ?Binding $binding = null): ClaudeCliAdapter
 	{
 		[, $model] = $this->splitUri($modelUri);
+		// agents_separate_user on: NOS_CLAUDE_BIN is the nos-agent wrapper, whose launcher
+		// drops bypassPermissions for dontAsk + an allow-list (pazny.mac.agent_user).
 		$binary = getenv('NOS_CLAUDE_BIN') ?: 'claude';
 		$timeout = (int) (getenv('NOS_CLAUDE_TIMEOUT_S') ?: 900);
 		return new ClaudeCliAdapter($modelUri, $model, $binary, $timeout, $binding);
