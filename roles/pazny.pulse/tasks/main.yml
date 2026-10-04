@@ -169,6 +169,7 @@
       WING_API_TOKEN: "{{ pulse_api_token }}"
       PULSE_TICK_INTERVAL_S: "{{ pulse_tick_interval_s | string }}"
       PULSE_MAX_CONCURRENT: "{{ pulse_max_concurrent | string }}"
+      WING_DB_PATH: "{{ pulse_wing_db_path }}"
       PULSE_STATE_DIR: "{{ pulse_state_dir }}"
       PULSE_LOG_PATH: "{{ pulse_log_dir }}/pulse.log"
       PULSE_DRY_RUN: "{{ '1' if (pulse_dry_run | bool) else '0' }}"

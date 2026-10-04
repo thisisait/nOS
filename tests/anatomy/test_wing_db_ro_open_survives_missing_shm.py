@@ -93,3 +93,52 @@ def test_bone_holds_the_anchor_at_module_level():
         and all(isinstance(t, ast.Name) and t.id.isupper() for t in n.targets)
     ]
     assert held, "bone/main.py no longer holds clients.wing.anchor_wal() in a global"
+
+
+# ── Pulse: the second anchor (2026-10-04) ────────────────────────────────────
+# A Bone restart dropped the only anchor; Wing's next last-close deleted the
+# sidecars. Pulse holds its own, so a gap needs both daemons down at once.
+PULSE = REPO / "files/anatomy/pulse"
+
+
+def _pulse_main():
+    sys.path.insert(0, str(PULSE))
+    try:
+        for name in [m for m in list(sys.modules) if m == "pulse" or m.startswith("pulse.")]:
+            del sys.modules[name]
+        return importlib.import_module("pulse.__main__")
+    finally:
+        sys.path.remove(str(PULSE))
+
+
+def test_pulse_anchor_keeps_ro_readers_open(tmp_path):
+    db = _wal_db_without_sidecars(tmp_path)
+    anchor = _pulse_main().anchor_wing_wal(str(db))
+    try:
+        c = sqlite3.connect(db)
+        c.execute("INSERT INTO events(t) VALUES ('b')")
+        c.commit()
+        c.close()
+        assert _ro_count(db) == 2
+    finally:
+        anchor.close()
+    assert db.with_name("wing.db-shm").exists(), "the Pulse anchor's close removed -shm"
+
+
+def test_pulse_anchor_never_creates_a_missing_wing_db(tmp_path):
+    db = tmp_path / "wing.db"
+    assert _pulse_main().anchor_wing_wal(str(db)) is None
+    assert _pulse_main().anchor_wing_wal(None) is None
+    assert not db.exists(), "Pulse created an empty wing.db before Wing's init-db"
+
+
+def test_pulse_holds_the_anchor_and_knows_the_path():
+    tree = ast.parse((PULSE / "pulse/__main__.py").read_text(encoding="utf-8"))
+    main = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "main")
+    held = [n for n in ast.walk(main) if isinstance(n, ast.Assign)
+            and isinstance(n.value, ast.Call) and getattr(n.value.func, "id", "") == "anchor_wing_wal"]
+    assert held, "pulse main() does not hold anchor_wing_wal() for the daemon's lifetime"
+    plist = (REPO / "roles/pazny.pulse/templates/pulse.plist.j2").read_text(encoding="utf-8")
+    unit = (REPO / "roles/pazny.pulse/tasks/main.yml").read_text(encoding="utf-8")
+    assert "<key>WING_DB_PATH</key>" in plist and "WING_DB_PATH:" in unit, (
+        "Pulse is not told where wing.db is (plist + systemd unit)")
