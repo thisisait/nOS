@@ -37,12 +37,13 @@ VOLUMES=({% for v in backup_volumes_to_dump %}"{{ v }}" {% endfor %})
 # Host-bind service data dirs (gitea/gitlab repos, etc.) — name|path pairs.
 # These hold filesystem state that NO logical DB dump can reconstruct (git
 # repos, uploads). Tarred whole and restored back to the same host path.
-# Skip a dir whose service flag is off: a leftover datadir HIGH-failed the night
-# (dir-gitlab 2026-09-14), a never-created one too (dir-mikopbx 2026-10-04).
-# Absent with the flag ON is still FAILED. Each entry carries its own `flag`.
-DIR_NAMES=({% for d in backup_dirs_to_dump %}{% if d.flag is not defined or (lookup('vars', d.flag, default=false) | bool) %}"{{ d.name }}" {% endif %}{% endfor %})
-DIR_PATHS=({% for d in backup_dirs_to_dump %}{% if d.flag is not defined or (lookup('vars', d.flag, default=false) | bool) %}"{{ d.path }}" {% endif %}{% endfor %})
-DIR_EMPTY_OK=({% for d in backup_dirs_to_dump %}{% if d.flag is not defined or (lookup('vars', d.flag, default=false) | bool) %}"{{ 'true' if (d.empty_ok | default(false) | bool) else 'false' }}" {% endif %}{% endfor %})
+# Each entry carries its service `flag` (DIR_ENABLED). Off AND absent is skipped
+# (dir-mikopbx 2026-10-04); off but present is still backed up — its data would
+# otherwise age out of retention silently (review 2026-10-04). On + absent = FAILED.
+DIR_NAMES=({% for d in backup_dirs_to_dump %}"{{ d.name }}" {% endfor %})
+DIR_PATHS=({% for d in backup_dirs_to_dump %}"{{ d.path }}" {% endfor %})
+DIR_EMPTY_OK=({% for d in backup_dirs_to_dump %}"{{ 'true' if (d.empty_ok | default(false) | bool) else 'false' }}" {% endfor %})
+DIR_ENABLED=({% for d in backup_dirs_to_dump %}"{{ 'true' if (d.flag is not defined or (lookup('vars', d.flag, default=false) | bool)) else 'false' }}" {% endfor %})
 
 # Wing SQLite store (security findings, audit hash-chain, agent sessions) — a
 # host file, NOT a container. Dumped with `sqlite3 .dump` for portability.
@@ -905,6 +906,10 @@ run_dirs() {
         name="${DIR_NAMES[$i]}"
         path="${DIR_PATHS[$i]}"
         [[ -z "${name}" || -z "${path}" ]] && continue
+        if [[ ! -d "${path}" && "${DIR_ENABLED[$i]}" == "false" ]]; then
+            log "dir/${name}: service off and ${path} absent — nothing to back up"
+            continue
+        fi
         if [[ ! -d "${path}" ]]; then
             # Enabled but absent = FAILED, never a silent skip. An unmounted SSD
             # or a moved nos_data_root would otherwise drop gitea/gitlab out of

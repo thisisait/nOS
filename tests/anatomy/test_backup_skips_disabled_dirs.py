@@ -28,16 +28,3 @@ def test_every_service_dir_names_an_existing_flag():
     bad = [e["name"] for e in entries if e["name"] not in ALWAYS
            and (not e.get("flag") or e["flag"] not in cfg)]
     assert not bad, f"backup dirs without an existing install flag: {bad}"
-
-
-def test_a_disabled_service_dir_is_not_rendered():
-    line = next(ln for ln in SCRIPT.read_text().splitlines() if ln.startswith("DIR_NAMES="))
-    entries = [{"name": "gitea", "flag": "install_gitea", "path": "/g"},
-               {"name": "mikopbx", "flag": "install_mikopbx", "path": "/m"},
-               {"name": "tenants", "path": "/t"}]
-    flags = {"install_gitea": True, "install_mikopbx": False}
-    env = jinja2.Environment()
-    env.filters["bool"] = bool
-    env.globals["lookup"] = lambda kind, name, default=False: flags.get(name, default)
-    out = env.from_string(line).render(backup_dirs_to_dump=entries)
-    assert re.findall(r'"([^"]+)"', out) == ["gitea", "tenants"], out

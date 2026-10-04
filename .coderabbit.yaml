@@ -10,7 +10,7 @@ reviews:
   path_instructions:
     - path: "**"
       instructions: |
-        Review this change against docs/review/threat-checklist.md, all five
+        Review this change against docs/review/threat-checklist.md, all six
         sections. Report each hit with file and line; say "no findings" per
         section otherwise. Advisory only: never approve or request changes.
 knowledge_base:
