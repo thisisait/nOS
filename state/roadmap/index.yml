@@ -999,6 +999,9 @@
 - slug: pipeline-exercise-loop-prompt
   parent: ''
   track: agents
+- slug: pipeline-exercise-verdicts
+  parent: ''
+  track: platform
 - slug: planes
   parent: ''
   track: agents
@@ -1152,6 +1155,9 @@
 - slug: repos-importer
   parent: digest
   track: digest
+- slug: review-v015-followups
+  parent: ''
+  track: security
 - slug: rsi-days-after-blank
   parent: rsi-evals
   track: agents

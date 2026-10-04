@@ -6,14 +6,14 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-10-01.
+> Last updated: 2026-10-04.
 
 ## Now (current track)
 
-1. **Next cut is v0.15-beta** (dtt `rel-015` holds the MUST list and order).
-   v0.14.1 was skipped by the operator. dev is ahead of v0.14-beta with the
-   Linux account walk, Pages deps, the builder sweep, tier-1 admin rights, KEAP
-   v2.0.1, the bound AgentKit fallback and the Cloudflare origin door (off).
+1. **v0.15-beta is being cut** (2026-10-04, `RELEASE.md`). After it: the
+   ~30 review follow-ups (dtt `review-v015-followups`), the `default.config.yml`
+   split by domain (`default-config-split`), the immune-system children and
+   `containerized-core` (host bridge first). Jellyfin SSO waits for the blank.
 2. **Redis leaf rotation is LIVE** (converged 2026-10-01; requirepass == new
    leaf, hash-compared; smoke 47/47, E2E 277 green).
 3. **Datastore TLS is POSTPONED** by the operator. The research is kept in dtt
