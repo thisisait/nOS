@@ -32,7 +32,7 @@ from datetime import datetime, timedelta, timezone
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import resolve_flag  # noqa: E402
+from nos_identity import layer_paths, resolve_flag  # noqa: E402
 
 LOG = pathlib.Path(os.environ.get("NOS_SANTA_LOG", "/var/db/santa/santa.log"))
 SANTACTL = os.environ.get("NOS_SANTACTL", "/usr/local/bin/santactl")
@@ -57,6 +57,23 @@ def declared_trees() -> tuple[str, ...]:
             + tuple(repo + t for t in mod._REPO_TREES) + tuple(home + t for t in mod._HOME_TREES))
 
 
+def ni_default(name: str) -> list:
+    """A list var from the config layers, last layer wins."""
+    import yaml  # noqa: PLC0415 — only this reader path needs it
+    value: list = []
+    for p in layer_paths():
+        doc = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        if isinstance(doc, dict) and isinstance(doc.get(name), list):
+            value = doc[name]
+    return value
+
+
+def dev_trees() -> tuple[str, ...]:
+    """santa_dev_toolchain_trees from the config layers, under $HOME."""
+    home = str(pathlib.Path.home()).rstrip("/") + "/"
+    return tuple(home + str(t).lstrip("/") for t in ni_default("santa_dev_toolchain_trees"))
+
+
 def parse(line: str) -> dict | None:
     m = LINE_RE.match(line.rstrip("\n"))
     if not m:
@@ -69,8 +86,9 @@ def parse(line: str) -> dict | None:
     return fields
 
 
-def judge(lines, trees: tuple[str, ...], since: datetime) -> dict:
+def judge(lines, trees: tuple[str, ...], since: datetime, dev: tuple[str, ...] = ()) -> dict:
     outside: dict[str, dict] = {}
+    toolchain: dict[str, int] = {}
     denied: list[dict] = []
     for line in lines:
         ev = parse(line)
@@ -79,7 +97,9 @@ def judge(lines, trees: tuple[str, ...], since: datetime) -> dict:
         path = ev.get("path", "")
         if ev.get("decision", "").startswith("DENY"):
             denied.append({"path": path, "ts": ev["ts"].isoformat(), "reason": ev.get("reason", "")})
-        if path and not path.startswith(trees):
+        if path and dev and path.startswith(dev):
+            toolchain[path] = toolchain.get(path, 0) + 1
+        elif path and not path.startswith(trees):
             row = outside.setdefault(path, {"path": path, "count": 0, "users": set(),
                                             "teamid": ev.get("teamid", ""), "last": ""})
             row["count"] += 1
@@ -88,7 +108,8 @@ def judge(lines, trees: tuple[str, ...], since: datetime) -> dict:
     rows = sorted(outside.values(), key=lambda r: (-r["count"], r["path"]))
     for r in rows:
         r["users"] = sorted(r["users"])
-    return {"outside": rows, "denied": denied}
+    return {"outside": rows, "denied": denied,
+            "dev_toolchain": [{"path": p, "count": c} for p, c in sorted(toolchain.items(), key=lambda x: -x[1])]}
 
 
 def _tail(path: pathlib.Path) -> list[str]:
@@ -112,7 +133,7 @@ def collect(hours: int = 24, now: datetime | None = None) -> dict:
     except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError):
         report["sources_missing"].append(f"{SANTACTL} status --json")
     try:
-        report.update(judge(_tail(LOG), declared_trees(), now - timedelta(hours=hours)))
+        report.update(judge(_tail(LOG), declared_trees(), now - timedelta(hours=hours), dev_trees()))
     except OSError as exc:
         report["sources_missing"].append(f"{LOG} ({exc.strerror or exc})")
     return report
@@ -152,6 +173,10 @@ def main() -> int:
     print(f"santa: mode {report.get('mode', 'UNKNOWN')}")
     for r in report.get("outside", []):
         print(f"  {r['count']:>6}  {r['path']}  users={','.join(r['users'])} team={r['teamid'] or '-'} last={r['last']}")
+    dev = report.get("dev_toolchain") or []
+    if dev:
+        print(f"  dev toolchain (santa_dev_toolchain_trees, not red): "
+              + ", ".join(f"{d['path']} ×{d['count']}" for d in dev[:5]) + (" …" if len(dev) > 5 else ""))
     for d in report.get("denied", []):
         print(f"  DENY    {d['path']} ({d['reason']}) {d['ts']}")
     for m in report["sources_missing"]:

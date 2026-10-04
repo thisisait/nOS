@@ -177,3 +177,11 @@ shell_aliases:
     command: "npm run"
   - alias: br
     command: "bun run"
+
+# ── DEV TOOLCHAIN (Santa) ────────────────────────────────────────────────────
+# The operator's own interpreters and CLIs, under $HOME. Santa reports them as
+# the dev toolchain — neither nOS nor a stranger. Relative to $HOME.
+santa_dev_toolchain_trees:
+  - .pyenv/versions/
+  - .nvm/versions/
+  - .local/share/claude/versions/

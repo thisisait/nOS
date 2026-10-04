@@ -48,6 +48,19 @@ def test_the_reader_judges_against_the_declared_trees():
     assert [d["path"] for d in got["denied"]] == ["/usr/bin/true"]
 
 
+def test_the_dev_toolchain_is_its_own_set_not_red():
+    """2026-10-04: pyenv python ×2264, claude, nvm node read as 3 strangers on the
+    first live day. They are declared (santa_dev_toolchain_trees), shown apart."""
+    mod = _reader()
+    home = str(Path.home())
+    dev = tuple(f"{home}/{t}" for t in mod.ni_default("santa_dev_toolchain_trees"))
+    lines = [_line(f"{home}/.pyenv/versions/3.13.13/bin/python3.13"), _line(f"{home}/.cargo/bin/evil")]
+    got = mod.judge(lines, mod.declared_trees(), NOW - timedelta(hours=24), dev)
+    assert [r["path"] for r in got["outside"]] == [f"{home}/.cargo/bin/evil"]
+    assert [d["path"] for d in got["dev_toolchain"]] == [f"{home}/.pyenv/versions/3.13.13/bin/python3.13"]
+    assert all(d.startswith(f"{home}/") for d in mod.dev_trees()), "dev trees resolve under $HOME"
+
+
 @pytest.fixture
 def estate(tmp_path, monkeypatch):
     mod = _reader()
