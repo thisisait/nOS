@@ -26,6 +26,8 @@ while [ $# -gt 0 ]; do
 done
 
 export HOME={{ agents_user_home | quote }}
+# Profiles say $WING_API_TOKEN; here it is the agent's own row or nothing.
+export WING_API_TOKEN="${NOS_AGENT_WING_TOKEN:-}"
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin
 export DISABLE_AUTOUPDATER=1
 if [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ] && [ -r "$HOME/.claude-oauth-token" ]; then

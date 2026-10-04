@@ -139,9 +139,34 @@ def test_sudoers_validates_and_grants_exactly_the_launcher(tmp_path):
     assert rules == [f"operator ALL=({ctx['agents_user']}) NOPASSWD: {ctx['agents_launcher']}"], rules
     keep = re.search(r'env_keep = "([^"]*)"', text).group(1).split()
     assert keep == ctx["agents_env_keep"]
-    leaked = [k for k in keep if re.search(r"CLIENT_SECRET|PASSWORD|_KEY$|BONE_SECRET", k)]
+    # Any credential-shaped name must be one scoped to the agent itself. The old
+    # regex named only what was absent, so the operator's Wing bearer and the
+    # HMAC key that signs the audit chain passed it (review 2026-10-04).
+    leaked = [k for k in keep if re.search(r"TOKEN(_|$)|SECRET|HMAC|PASSWORD|_KEY$", k) and k not in AGENT_SCOPED]
     assert not leaked, f"sudo would carry {leaked} into the agent"
     assert "env_reset" in text and "SETENV" not in text
+
+
+#: Credentials minted for the agent alone: its Wing row, its Authentik grant,
+#: KEAP read-only, and the backend binding's bearer.
+AGENT_SCOPED = {"NOS_AGENT_WING_TOKEN", "NOS_AUTHENTIK_TOKEN", "KEAP_AGENT_TOKEN_RO", "ANTHROPIC_AUTH_TOKEN"}
+
+
+@pytest.mark.parametrize("agent_token", ["agent-own", ""])
+def test_the_agent_presents_only_its_own_wing_token(launcher, agent_token):
+    """WING_API_TOKEN in the agent is its own row or nothing, never the operator's."""
+    script, secret, ctx = launcher
+    fake = Path(ctx["agents_libexec_dir"]) / "claude"
+    fake.write_text('#!/bin/bash\nprintf "%s" "${WING_API_TOKEN:-}"\n')
+    secret.chmod(0o000)
+    try:
+        out = subprocess.run([str(script), "--print"], capture_output=True, text=True, timeout=20,
+                             env={**os.environ, "WING_API_TOKEN": "operator-bearer",
+                                  "NOS_AGENT_WING_TOKEN": agent_token})
+    finally:
+        secret.chmod(0o600)
+    assert out.returncode == 0, out.stderr
+    assert out.stdout == agent_token, f"the agent saw WING_API_TOKEN={out.stdout!r}"
 
 
 def test_the_user_is_neither_admin_nor_staff():
