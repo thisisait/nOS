@@ -292,7 +292,7 @@ notification:
 # ├── templates/
 # │   └── grafana-base.compose.yml.j2                     # vessel: OIDC + plugin install env
 # ├── provisioning/
-# │   ├── datasources/all.yml.j2                          # MOVED from files/observability/...
+# │   ├── datasources/                                    # per-source files live in grafana-<source> plugins
 # │   └── dashboards/
 # │       ├── all.yml.j2                                  # MOVED
 # │       └── [17 dashboard JSONs]                        # MOVED
