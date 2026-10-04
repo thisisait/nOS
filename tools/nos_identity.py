@@ -23,7 +23,14 @@ MANIFEST = REPO / "state" / "manifest.yml"
 #: In ansible precedence order, LOWEST first. A role default is a real
 #: declaration and a reader that skips it answers "declared in no layer" about
 #: a variable that is declared — `keap_repo_ref` lives only in role defaults.
-CONFIG_LAYERS = ("roles/*/defaults/main.yml", "default.config.yml", "config.yml")
+CONFIG_LAYERS = ("roles/*/defaults/main.yml", "config.d/*.yml", "default.config.yml", "config.yml")
+
+
+def default_layers() -> list[Path]:
+    """The committed defaults in load order: config.d/*.yml (lexical), then the
+    remainder. main.yml vars_files lists the same files (gate:
+    test_config_d_is_one_layer_set). Every variable lives in exactly one."""
+    return [*sorted((REPO / "config.d").glob("*.yml")), REPO / "default.config.yml"]
 #: The synthetic test identities (alice/bob/carol/dave): declared ONLY in the
 #: profile, switched by one flag. main.yml adopts the same roster the same way.
 SYNTHETIC_PROFILE = REPO / "profiles" / "test-users.yml"
@@ -33,8 +40,21 @@ SYNTHETIC_FLAG = "nos_test_users_enabled"
 def layer_paths() -> list[Path]:
     """The layers that exist, LOWEST precedence first. One list, every reader."""
     return [p for p in (*sorted((REPO / "roles").glob("*/defaults/main.yml")),
-                        REPO / "default.config.yml", REPO / "config.yml")
+                        *default_layers(), REPO / "config.yml")
             if p.exists()]
+
+
+def default_config_text() -> str:
+    """The defaults as ONE text, for readers that regex the declarations."""
+    return "\n".join(p.read_text(encoding="utf-8") for p in default_layers())
+
+
+def default_config() -> dict:
+    """The defaults as ONE mapping (no override layer), unrendered."""
+    out: dict = {}
+    for p in default_layers():
+        out.update(yaml.safe_load(p.read_text(encoding="utf-8")) or {})
+    return out
 
 
 def resolve_flag(flag: str) -> list[tuple[str, str]]:
@@ -96,4 +116,5 @@ if __name__ == "__main__":  # self-check: the three hops no guess can make
     assert fragment_stem({"id": "x", "stack": "apps", "fragment": None}) is None
     assert fragment_stem(by_flag("install_gitea")) == "gitea"
     assert {i["kind"] for i in synthetic_identities()} == {"synthetic"}
+    assert "macos_dock_autohide" in default_config() and "global_password_prefix" in default_config()
     print("ok")

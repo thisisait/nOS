@@ -28,6 +28,7 @@ defect, not a style warning.
 from __future__ import annotations
 
 import pathlib
+import sys
 
 import pytest
 import yaml
@@ -36,7 +37,10 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 
 # The committed config layer — the two files every install reads. Operator
 # overrides (config.yml, credentials.yml) are gitignored and not gated here.
-COMMITTED_CONFIG = ("default.config.yml", "default.credentials.yml")
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
+
+COMMITTED_CONFIG = (*(str(p.relative_to(REPO)) for p in ni.default_layers()), "default.credentials.yml")
 
 
 class _DuplicateKey(Exception):

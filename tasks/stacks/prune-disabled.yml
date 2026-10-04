@@ -120,7 +120,10 @@
   # per-name `lookup('vars', …)` touches only the flags this task is about.
   ansible.builtin.set_fact:
     _flag_candidates: >-
-      {{ lookup('file', playbook_dir ~ '/default.config.yml')
+      {%- set _t = [] -%}
+      {%- for _p in (lookup('fileglob', playbook_dir ~ '/config.d/*.yml', wantlist=True) | sort) + [playbook_dir ~ '/default.config.yml'] -%}
+      {%- set _ = _t.append(lookup('file', _p)) -%}{%- endfor -%}
+      {{ (_t | join('\n'))
          | regex_findall('^install_([a-z0-9_]+):', multiline=True)
          | difference(_auto_enabled)
          | difference(_manifest_apps.files | default([]) | map(attribute='path')
@@ -164,7 +167,9 @@
   ansible.builtin.set_fact:
     _on_disk_flags: >-
       {%- set _f = lookup('fileglob', playbook_dir ~ '/config.yml', wantlist=True) -%}
-      {%- set _base = lookup('file', playbook_dir ~ '/default.config.yml') | from_yaml -%}
+      {%- set _base = {} -%}
+      {%- for _p in (lookup('fileglob', playbook_dir ~ '/config.d/*.yml', wantlist=True) | sort) + [playbook_dir ~ '/default.config.yml'] -%}
+      {%- set _base = _base | combine(lookup('file', _p) | from_yaml) -%}{%- endfor -%}
       {%- set _over = (lookup('file', _f[0]) | from_yaml) if _f else {} -%}
       {{ (_base | combine(_over | default({}, true))) | dict2items
          | selectattr('key', 'match', '^install_') | items2dict }}

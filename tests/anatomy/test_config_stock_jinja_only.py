@@ -20,16 +20,17 @@ from __future__ import annotations
 
 import pathlib
 import re
+import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 
 # Files whose values stay LAZY (`{{ }}` strings) until referenced, so they are
 # walked by the `{{ vars }}` eager resolver. default.credentials.yml is included
 # because it is a committed vars_files entry loaded the same way.
-VARS_FILES = [
-    REPO / "default.config.yml",
-    REPO / "default.credentials.yml",
-]
+sys.path.insert(0, str(REPO / "tools"))
+from nos_identity import default_layers  # noqa: E402
+
+VARS_FILES = [*default_layers(), REPO / "default.credentials.yml"]
 
 # Jinja2 CORE builtins (always present, even when ansible filter plugins are
 # not loaded). Anything NOT here is an ansible filter plugin and is forbidden.

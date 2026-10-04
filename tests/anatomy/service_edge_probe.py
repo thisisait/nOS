@@ -92,6 +92,13 @@ _JINJA_COMMENT = re.compile(r"\{#.*?#\}", re.S)
 _FULL_LINE_YAML_COMMENT = re.compile(r"^[ \t]*#[^\n]*$", re.M)
 
 
+def _default_layers():
+    import sys
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity
+    return nos_identity.default_layers()
+
+
 def _blank(text: str) -> str:
     """Same length, same newlines, no content — offsets and line numbers survive."""
     return re.sub(r"[^\n]", " ", text)
@@ -113,7 +120,7 @@ def config_layer_keys() -> frozenset[str]:
     """
     keys: set[str] = set()
     sources = [
-        REPO / "default.config.yml",
+        *_default_layers(),
         REPO / "default.credentials.yml",
         REPO / "tests" / "config.yml",
     ]

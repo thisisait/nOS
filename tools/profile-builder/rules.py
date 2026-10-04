@@ -24,6 +24,8 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "files/anatomy/module_utils"))
 import load_plugins as lp  # noqa: E402
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 PLUGINS = REPO / "files/anatomy/plugins"
 ROLES = REPO / "roles"
@@ -45,7 +47,7 @@ def _y(p: Path):
 
 @lru_cache(None)
 def _cfg() -> dict:
-    return {**(_y(REPO / "default.credentials.yml") or {}), **(_y(REPO / "default.config.yml") or {})}
+    return {**(_y(REPO / "default.credentials.yml") or {}), **ni.default_config()}
 
 
 @lru_cache(None)

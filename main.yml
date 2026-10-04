@@ -14,7 +14,11 @@
   #   ansible-playbook main.yml --tags preflight --check
   # but any sudo task (dnsmasq, /etc/resolver, system-services) will then fail.
 
+  # The defaults are one layer set: config.d/*.yml in lexical order, then the
+  # remainder default.config.yml (tools/nos_identity.default_layers, pinned by
+  # test_config_d_is_one_layer_set). A variable lives in exactly one of them.
   vars_files:
+    - config.d/10-host-desktop.yml
     - default.config.yml
     - default.credentials.yml
 
@@ -276,6 +280,7 @@
       ansible.builtin.stat:
         path: "{{ item }}"
       loop:
+        - "{{ playbook_dir }}/config.d/10-host-desktop.yml"
         - "{{ playbook_dir }}/default.config.yml"
         - "{{ playbook_dir }}/default.credentials.yml"
         - "{{ playbook_dir }}/config.yml"

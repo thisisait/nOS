@@ -28,12 +28,15 @@ WHAT THIS PINS, and why each part:
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 PROFILES = sorted((REPO / "profiles").glob("*.yml"))
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 AXES = {"use-case", "policy", "service-set", "environment", "constraint"}
 
@@ -42,7 +45,7 @@ AXES = {"use-case", "policy", "service-set", "environment", "constraint"}
 #: overlay is applied.
 def _declared() -> set[str]:
     names: set[str] = set()
-    for p in [REPO / "default.config.yml", REPO / "default.credentials.yml",
+    for p in [*ni.default_layers(), REPO / "default.credentials.yml",
               *(REPO / "roles").glob("*/defaults/main.yml")]:
         if p.is_file():
             names |= set(re.findall(r"^([a-z_][a-z0-9_]*):", p.read_text(encoding="utf-8"), re.M))

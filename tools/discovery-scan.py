@@ -55,10 +55,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-CONFIG = REPO / "default.config.yml"
 
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import layer_paths, resolve_flag  # noqa: E402
+from nos_identity import default_config_text, layer_paths, resolve_flag  # noqa: E402
 from nos_security import GIT_REL, queue_path, security_dir  # noqa: E402
 
 CLAUDE_MD = REPO / "CLAUDE.md"
@@ -251,8 +250,7 @@ def read_tag(raw: str) -> "Version | None":
 
 
 def declared_versions() -> dict[str, str]:
-    return {m.group(1): m.group(2) for m in _VERSION_VAR.finditer(
-        CONFIG.read_text(encoding="utf-8"))}
+    return {m.group(1): m.group(2) for m in _VERSION_VAR.finditer(default_config_text())}
 
 
 def running_images() -> dict[str, str]:

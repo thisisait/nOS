@@ -59,7 +59,8 @@ without `--confirm` is always a dry run. Cloud sessions: [docs/cloud-e2e.md](doc
 
 ## Configuration layering (later wins)
 
-1. `default.config.yml` — every variable with a default (committed)
+1. `config.d/*.yml` (lexical order) then `default.config.yml` — every variable with a default,
+   each in exactly one file (committed; the set is `tools/nos_identity.default_layers()`)
 2. `default.credentials.yml` — every secret as a `{{ global_password_prefix }}_pw_*` template (committed)
 3. `config.yml` — your feature toggles (gitignored)
 4. `credentials.yml` — your secret overrides (gitignored)

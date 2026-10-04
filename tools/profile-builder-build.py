@@ -39,7 +39,6 @@ from pathlib import Path
 import yaml
 
 REPO = Path(__file__).resolve().parents[1]
-CONFIG = REPO / "default.config.yml"
 PROFILES = REPO / "profiles"
 PLUGINS = REPO / "files/anatomy/plugins"
 MANIFEST = REPO / "state/manifest.yml"
@@ -52,7 +51,7 @@ _rspec = importlib.util.spec_from_file_location("profile_builder_rules", REPO / 
 rules = importlib.util.module_from_spec(_rspec)
 _rspec.loader.exec_module(rules)
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import synthetic_identities  # noqa: E402
+from nos_identity import default_config, default_config_text, synthetic_identities  # noqa: E402
 
 FLAG = re.compile(r"^(install_[a-z0-9_]+):\s*(.+?)\s*(?:#\s*(.*))?$")
 AXES = ["service-set", "use-case", "policy", "environment", "constraint"]
@@ -164,7 +163,7 @@ HOST_NOTE = "runs on the host, no container limit — not counted"
 
 
 def _raw() -> dict:
-    return yaml.safe_load(CONFIG.read_text()) or {}
+    return default_config()
 
 
 def _hub_cards() -> dict:
@@ -195,7 +194,7 @@ def flags() -> list[dict]:
     group_of = {c: g for g, cs in GROUPS for c in cs}
     cards = _hub_cards()
     out = []
-    for ln in CONFIG.read_text().splitlines():
+    for ln in default_config_text().splitlines():
         m = FLAG.match(ln)
         if not m:
             continue
@@ -279,7 +278,7 @@ def services(lock: dict | None, override: dict | None = None) -> dict:
     every image. Multi-container roles sum; a flag no role renders is a host
     daemon and says so. `override` (the operator's config.yml) outranks the
     defaults, so an image swap is looked up as the image it swaps in."""
-    vars_ = reach.load(CONFIG)
+    vars_ = default_config()
     vars_.update(reach.load(REPO / "default.credentials.yml"))
     vars_.update(override or {})
     out: dict = {}
