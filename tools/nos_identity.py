@@ -44,6 +44,15 @@ def resolve_flag(flag: str) -> list[tuple[str, str]]:
     return seen
 
 
+def install_flags() -> dict[str, bool]:
+    """Every top-level install_* resolved like resolve_flag. A Jinja value is omitted, not guessed."""
+    names = {m for p in layer_paths()
+             for m in re.findall(r"^(install_\w+):", p.read_text(encoding="utf-8"), re.MULTILINE)}
+    bools = {"true": True, "yes": True, "false": False, "no": False}
+    out = {f: bools.get(resolve_flag(f)[-1][1].lower()) for f in sorted(names)}
+    return {f: v for f, v in out.items() if v is not None}
+
+
 def services() -> list[dict]:
     return yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))["services"]
 

@@ -357,7 +357,7 @@ def axis_toolchain(res: Result) -> None:
 
 # Layer resolution lives in nos_identity — the same reader discovery-scan and
 # nos-smoke use, so three tools cannot disagree about one flag.
-from nos_identity import resolve_flag  # noqa: E402
+from nos_identity import install_flags, resolve_flag  # noqa: E402
 
 
 def axis_config(res: Result, flag: str) -> None:
@@ -414,8 +414,14 @@ def main() -> int:
                     help="skip the fetch (offline); the output says so")
     ap.add_argument("--config", metavar="FLAG",
                     help="resolve one config flag across the layering")
+    ap.add_argument("--install-flags", action="store_true",
+                    help="every install_* resolved, as one JSON object (exit 0)")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
+
+    if args.install_flags:
+        print(json.dumps(install_flags(), indent=2))
+        return 0
 
     res = Result()
     if args.config:

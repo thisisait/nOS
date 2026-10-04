@@ -45,9 +45,12 @@ PostGIS layers (`geo.party_site`) are not listed: no tile server serves them yet
 ## Atlas data refresh
 
 Pulse `geolibre:atlas-refresh` (hourly) runs `tools/atlas-refresh.py`. It follows the
-nos-atlas README "nOS job contract" (`nos-atlas-data/1`). First the read-only reader
-snapshot (`scripts/snapshot-from-readers.mjs`), then the generator, writing to
+nos-atlas README "nOS job contract" (`nos-atlas-data/1`). First it rebuilds the KEAP
+taxonomy fixture from `keap_src_dir` (`scripts/build-fixture.ts`, read-only on KEAP),
+then takes the read-only reader snapshot (`scripts/snapshot-from-readers.mjs`, which
+also writes the resolved `install_*` flags so disabled services draw as dark
+factories), then runs the generator, writing to
 `{{ geolibre_data_dir }}/plugins/nos-atlas/live`. The plugin uses `live/` when
 `live/meta.json` is valid and falls back to its bundled `data/` otherwise. Bad input
-writes nothing, and the previous set stays served. The KEAP taxonomy fixture is not
-rebuilt by the job (`npm run fixture` in nos-atlas).
+writes nothing, and the previous set stays served. A missing KEAP checkout fails the
+run (exit 2) instead of drawing an empty planet.

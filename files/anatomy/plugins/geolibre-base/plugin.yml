@@ -60,14 +60,16 @@ e2e:
       url: https://{{ geolibre_domain }}/
       expect: {status: [302], location_contains: "{{ authentik_domain }}/application/o/authorize"}
 
-# Regenerates the nos-atlas planet + buildings from a read-only reader snapshot
-# into plugins/nos-atlas/live (nos-atlas "nOS job contract"). Off → empty dir → no-op.
+# Rebuilds the KEAP taxonomy fixture (read-only on KEAP), then the nos-atlas planet +
+# buildings from a read-only reader snapshot into plugins/nos-atlas/live (nos-atlas
+# "nOS job contract"). Off → empty dir → no-op; no KEAP checkout → exit 2.
 pulse:
   jobs:
     - name: atlas-refresh
       runner: subprocess
       command: "{{ playbook_dir }}/tools/atlas-refresh.py"
-      args: ["--data-dir", "{{ geolibre_data_dir }}", "--atlas-src", "{{ nos_atlas_src_dir }}"]
+      args: ["--data-dir", "{{ geolibre_data_dir }}", "--atlas-src", "{{ nos_atlas_src_dir }}",
+             "--keap-src", "{{ keap_src_dir }}"]
       schedule: "40 * * * *"
       jitter_min: 5
       max_runtime_s: 600

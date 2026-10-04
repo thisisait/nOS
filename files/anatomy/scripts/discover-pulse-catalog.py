@@ -161,6 +161,7 @@ def _build_substitutions() -> dict[str, str]:
         # atlas-refresh (geolibre-base): "" when install_geolibre is off → no-op.
         "{{ geolibre_data_dir }}":        _env("NOS_GEOLIBRE_DATA_DIR"),
         "{{ nos_atlas_src_dir }}":        _env("NOS_ATLAS_SRC_DIR"),
+        "{{ keap_src_dir }}":             _env("NOS_KEAP_SRC_DIR"),
         # S2 corpus-in-parallel (docs/archive/cortex-corpus-parallel.md): the two
         # keap-base feeders FAN OUT to the cortex organ, and cortex-base adds the
         # agreement harness. The URL is Ansible-rendered to "" when the organ is

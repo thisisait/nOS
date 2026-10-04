@@ -533,6 +533,7 @@
     NOS_GEO_REGION_CODES: "{{ geo_regions | default([]) | join(',') }}"
     NOS_GEOLIBRE_DATA_DIR: "{{ geolibre_data_dir if install_geolibre | default(false) else '' }}"
     NOS_ATLAS_SRC_DIR: "{{ nos_atlas_src_dir if install_geolibre | default(false) else '' }}"
+    NOS_KEAP_SRC_DIR: "{{ (keap_src_dir | default(ansible_facts['env']['HOME'] ~ '/keap/src')) if install_geolibre | default(false) else '' }}"
     # S2 fan-out: an EMPTY url is the off switch — keap-consolidate and
     # keap-embed-sync then behave exactly as they did before the second target
     # existed, rather than failing against a daemon that is not there.

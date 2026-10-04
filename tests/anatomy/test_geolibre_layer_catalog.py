@@ -8,7 +8,9 @@ rev aa28b2a) and refuses to start on an invalid entry. So:
   2. every declared layer carries a licence note with an https source, and every
      URL is https (the page is https; mixed content never loads);
   3. atlas.<tenant> smokes as what forward_auth returns to an anonymous probe;
-  4. the atlas-refresh Pulse job survives BOTH token lists and the real validator.
+  4. the atlas-refresh Pulse job survives BOTH token lists and the real validator;
+  5. it rebuilds the KEAP taxonomy fixture first (read-only on KEAP) and refuses,
+     loudly, when the KEAP checkout is missing.
 """
 from __future__ import annotations
 
@@ -108,7 +110,7 @@ def _refresh_job() -> dict:
 def test_refresh_job_passes_both_token_lists_and_the_validator(monkeypatch):
     job = _refresh_job()
     env = {"NOS_PLAYBOOK_DIR": "/Users/op/nOS", "NOS_GEOLIBRE_DATA_DIR": "/Users/op/nos/geolibre/data",
-           "NOS_ATLAS_SRC_DIR": "/Users/op/projects/nos-atlas"}
+           "NOS_ATLAS_SRC_DIR": "/Users/op/projects/nos-atlas", "NOS_KEAP_SRC_DIR": "/Users/op/keap/src"}
     for k, v in env.items():
         monkeypatch.setenv(k, v)
     spec = importlib.util.spec_from_file_location(
@@ -118,7 +120,8 @@ def test_refresh_job_passes_both_token_lists_and_the_validator(monkeypatch):
     expanded = cat._expand(job, cat._build_substitutions())
     assert "{{" not in json.dumps(expanded), f"a token the catalog does not render: {expanded}"
     wing = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
-    for name in ("NOS_GEOLIBRE_DATA_DIR", "NOS_ATLAS_SRC_DIR"):
+    assert expanded["args"][expanded["args"].index("--keap-src") + 1] == "/Users/op/keap/src"
+    for name in ("NOS_GEOLIBRE_DATA_DIR", "NOS_ATLAS_SRC_DIR", "NOS_KEAP_SRC_DIR"):
         assert f"{name}:" in wing, f"{name} is not exported by wing post.yml"
     monkeypatch.setenv("NOS_REPO_ROOT", "/Users/op/nOS")
     monkeypatch.setenv("HOME", "/Users/op")
@@ -132,22 +135,31 @@ def _tool():
     return mod
 
 
+class _Done:
+    returncode, stdout, stderr = 0, "", ""
+
+
+def _keap(tmp_path) -> Path:
+    keap = tmp_path / "keap-src"
+    (keap / "knowledge/spine").mkdir(parents=True)
+    (keap / "knowledge/spine/manifest.json").write_text("{}")
+    return keap
+
+
 def test_refresh_runs_the_nos_atlas_job_contract(tmp_path, monkeypatch):
-    """nos-atlas README "nOS job contract": snapshot script, then build.ts --out <root>/live."""
-    atlas = tmp_path / "nos-atlas"
-    (atlas / "fixtures").mkdir(parents=True)
-    (atlas / "fixtures/keap-taxonomy.json").write_text("{}")
+    """Fixture from the KEAP checkout, then the README "nOS job contract": snapshot, build.ts."""
+    atlas, keap = tmp_path / "nos-atlas", _keap(tmp_path)
+    atlas.mkdir()
     tool = _tool()
     calls = []
-
-    class Done:
-        returncode, stdout, stderr = 0, "", ""
-
-    monkeypatch.setattr(tool.subprocess, "run", lambda argv, **kw: calls.append((argv, kw)) or Done())
-    assert tool.main(["--data-dir", str(tmp_path / "data"), "--atlas-src", str(atlas)]) == 0
-    (snap, kw1), (gen, kw2) = calls
-    assert all(isinstance(x, str) for x in snap + gen), "argv lists, never a shell string"
-    assert kw1["cwd"] == kw2["cwd"] == atlas
+    monkeypatch.setattr(tool.subprocess, "run", lambda argv, **kw: calls.append((argv, kw)) or _Done())
+    assert tool.main(["--data-dir", str(tmp_path / "data"), "--atlas-src", str(atlas),
+                      "--keap-src", str(keap)]) == 0
+    (fix, kw0), (snap, kw1), (gen, kw2) = calls
+    assert all(isinstance(x, str) for x in fix + snap + gen), "argv lists, never a shell string"
+    assert kw0["cwd"] == kw1["cwd"] == kw2["cwd"] == atlas
+    assert fix[1:] == ["scripts/build-fixture.ts", str(keap)]
+    assert gen[gen.index("--fixture") + 1] == str(atlas / "fixtures/keap-taxonomy.json")
     assert snap[1] == "scripts/snapshot-from-readers.mjs" and snap[snap.index("--nos") + 1] == str(REPO)
     assert gen[1] == "src/generator/build.ts"
     assert gen[gen.index("--snapshot") + 1] == snap[snap.index("--out") + 1]
@@ -155,5 +167,16 @@ def test_refresh_runs_the_nos_atlas_job_contract(tmp_path, monkeypatch):
 
 
 def test_refresh_is_a_noop_when_geolibre_is_off(capsys):
-    assert _tool().main(["--data-dir", "", "--atlas-src", ""]) == 0
+    assert _tool().main(["--data-dir", "", "--atlas-src", "", "--keap-src", ""]) == 0
     assert "off" in capsys.readouterr().out
+
+
+def test_a_missing_keap_checkout_fails_loudly_and_runs_nothing(tmp_path, monkeypatch, capsys):
+    """Not an empty planet and not last week's fixture: no KEAP, no refresh."""
+    tool = _tool()
+    calls = []
+    monkeypatch.setattr(tool.subprocess, "run", lambda argv, **kw: calls.append(argv) or _Done())
+    rc = tool.main(["--data-dir", str(tmp_path / "data"), "--atlas-src", str(tmp_path),
+                    "--keap-src", str(tmp_path / "no-keap")])
+    assert rc != 0 and calls == []
+    assert "KEAP checkout" in capsys.readouterr().err
