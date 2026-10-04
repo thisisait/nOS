@@ -2,4 +2,7 @@
 # Version pin + sha256 live in default.config.yml (santa_version, santa_pkg_sha256).
 santa_app: /Applications/Santa.app
 santa_santactl: /usr/local/bin/santactl
-santa_pkg_cache: "/tmp/santa-{{ santa_version }}.pkg"
+# Root-owned 0700: installer runs as root, so nothing the operator can write may
+# sit between the checksum and the install (a /tmp pkg was a TOCTOU to root).
+santa_pkg_dir: /Library/Caches/nos-santa
+santa_pkg_cache: "{{ santa_pkg_dir }}/santa-{{ santa_version }}.pkg"

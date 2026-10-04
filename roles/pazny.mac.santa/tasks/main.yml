@@ -22,12 +22,24 @@
   when: santa_installed.rc != 0 or santa_installed.stdout | trim != santa_version
   tags: ['santa']
   block:
-    - name: "Santa | Download santa-{{ santa_version }}.pkg (sha256-pinned)"
+    - name: "Santa | Root-only pkg directory"
+      ansible.builtin.file:
+        path: "{{ santa_pkg_dir }}"
+        state: directory
+        owner: root
+        group: wheel
+        mode: "0700"
+      become: true
+
+    - name: "Santa | Download santa-{{ santa_version }}.pkg (sha256-pinned, as root)"
       ansible.builtin.get_url:
         url: "https://github.com/northpolesec/santa/releases/download/{{ santa_version }}/santa-{{ santa_version }}.pkg"
         dest: "{{ santa_pkg_cache }}"
         checksum: "sha256:{{ santa_pkg_sha256 }}"
-        mode: "0644"
+        owner: root
+        group: wheel
+        mode: "0600"
+      become: true
 
     - name: "Santa | Run the installer"
       ansible.builtin.command:

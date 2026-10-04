@@ -122,3 +122,23 @@ def test_santa_ships_off_with_a_pinned_digest():
     cfg = yaml.safe_load((REPO / "default.config.yml").read_text())
     assert cfg["install_santa"] is False
     assert len(cfg["santa_pkg_sha256"]) == 64 and cfg["santa_version"]
+
+
+def test_the_pkg_root_installs_is_root_downloaded_and_verified():
+    """Review 2026-10-04: the pkg landed in /tmp as the operator, was checksummed as
+    the operator, then `installer` ran it as root — a swap in between is root.
+    Parse the role: download + check under become, into a root dir, not /tmp."""
+    tasks = yaml.safe_load((ROLE / "tasks" / "main.yml").read_text(encoding="utf-8"))
+    flat = [t for t in tasks for t in (t.get("block") or [t])]
+    get = next(t for t in flat if "ansible.builtin.get_url" in t)
+    inst = next(t for t in flat if "/usr/sbin/installer" in str(t))
+    defaults = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text(encoding="utf-8"))
+    pkg = inst["ansible.builtin.command"]["argv"][2]
+    resolved = pkg.replace("{{ santa_pkg_cache }}", str(defaults.get("santa_pkg_cache", "")))
+    assert not resolved.startswith(("/tmp", "/private/tmp", "/var/tmp")), resolved
+    assert get["ansible.builtin.get_url"]["dest"] == pkg, "install exactly what was verified"
+    assert get.get("become") is True and get["ansible.builtin.get_url"].get("checksum")
+    assert get["ansible.builtin.get_url"].get("owner") == "root"
+    d = next(t for t in flat if "ansible.builtin.file" in t)["ansible.builtin.file"]
+    assert (d["owner"], d["mode"]) == ("root", "0700") and defaults["santa_pkg_cache"].startswith(
+        "{{ santa_pkg_dir }}/"), "the pkg's directory must be root-only"
