@@ -82,6 +82,17 @@ traefik_machine_lanes:
       # ?token= on subscribe, carrying email + groups; RequestPath logs the query in full.
       access_log: false
 
+  # geolibre: the martin tiles on the atlas host, NOT a machine lane — `gated` keeps
+  # authentik@file (tier 3: party-derived data). Same origin as GeoLibre, so the
+  # forward_single cookie rides each tile fetch; tiles.<tenant> would 302 them all.
+  # `flag` renders the lane only while install_martin is on.
+  geolibre:
+    - name: tiles
+      prefixes: ["/tiles"]
+      upstream: {svc: martin, port: 3000}
+      gated: true
+      flag: install_martin
+
 
 traefik_auth_modes:
   # ── No auth (public or self-managed) ───────────────────────────────────────
@@ -441,6 +452,7 @@ traefik_container_upstreams:
   mailpit:       { port: 8025 }
   qgis_server:   { port: 80 }
   offline_maps:  { svc: tileserver, port: 8080 }
+  geolibre:      { port: 80 }
   mcp_gateway:   { svc: mcpo, port: 8000 }
   wordpress:     { port: 80 }
   code_server:   { port: 8443 }

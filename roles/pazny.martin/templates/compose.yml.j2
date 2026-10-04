@@ -1,0 +1,31 @@
+# pazny.martin — compose override fragment, merged into `docker compose -p iiab up`
+# (tasks/stacks/stack-up.yml). No host port: Traefik reaches martin:3000 on the
+# shared network, only through the gated atlas.<tenant>/tiles lane.
+
+services:
+  martin:
+    image: "{{ martin_image }}:{{ martin_version }}"
+    restart: unless-stopped
+    command: ["--config", "/etc/martin/config.yaml"]
+    environment:
+      # The read-only `martin` login (pazny.postgresql post.yml): USAGE + SELECT on schema geo only.
+      MARTIN_PG_URL: "postgres://martin:{{ nos_derived_secrets.martin_db | urlencode }}@postgresql:5432/{{ geo_db_name | default('geo') }}?sslmode={{ 'require' if (postgresql_ssl_enabled | default(false)) else 'disable' }}"
+    volumes:
+      - "{{ stacks_dir }}/iiab/martin:/etc/martin:ro"
+    # The image's own probe (wget is in it); /health stays at the root under route_prefix.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ martin_mem_limit }}
+    cpus: {{ martin_cpus }}

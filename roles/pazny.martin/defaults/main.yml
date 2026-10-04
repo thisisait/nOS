@@ -1,0 +1,5 @@
+---
+# pazny.martin — PostGIS vector tiles. Install flag, image pin live in default.config.yml only.
+
+martin_mem_limit: "{{ docker_mem_limit_light | default('512m') }}"
+martin_cpus: "{{ docker_cpus_light | default('0.5') }}"

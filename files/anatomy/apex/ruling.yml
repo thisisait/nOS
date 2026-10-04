@@ -379,6 +379,7 @@ nodes:
   # (and what it `speaks:`) is a signature decision, not a generator commit.
   "service:nos_forum": withheld
   "service:geolibre": withheld
+  "service:martin": withheld
 
   # --- withheld: SSO clients (the map of who gates what stays home) ---------
   "authentik:backrest": withheld

@@ -212,7 +212,8 @@ services:
            address). Keyed by party, not email: tools/digest-teardown.py
            --erase-party <party-slug> --confirm erases the KEAP party-site rows
            AND geo.party_site at once; the nightly projection then cannot
-           recreate them. RÚIAN/INSPIRE layers hold no subject data."
+           recreate them. martin (install_martin) serves it uncached, so
+           the next tile is already without them. RÚIAN/INSPIRE layers hold no subject data."
 
   - id: svc_redis
     # `redis_docker`, not `install_redis`: the latter is declared in no config

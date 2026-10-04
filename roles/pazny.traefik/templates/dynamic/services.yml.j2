@@ -112,14 +112,16 @@ http:
    removes the prefix before it (`<router>-<lane>-strip@file`); `allow_paths`
    narrows the lane to exact post-strip paths, so it is not a whole-API door;
    `access_log: false` drops the lane from the access log (a credential in its URL).
+   `gated: true` (martin tiles, 2026-10-04) keeps authentik@file on the lane; `flag`
+   names an install_* var that must be on for the lane (and its service) to render.
 #}
-{% for _lane in (traefik_machine_lanes | default({})).get(s.id, []) %}
+{% for _lane in (traefik_machine_lanes | default({})).get(s.id, []) if _lane.flag is not defined or (lookup('vars', _lane.flag, default=false) | bool) %}
 {% if _lane.allow_paths is defined %}
 {%   set _match = '(' ~ (_lane.allow_paths | map('regex_replace', '^(.*)$', 'Path(`' ~ _lane.prefixes[0] ~ '\\1`)') | join(' || ')) ~ ')' %}
 {% else %}
 {%   set _match = 'PathPrefix(' ~ (_lane.prefixes | map('regex_replace', '^(.*)$', '`\\1`') | join(', ')) ~ ')' %}
 {% endif %}
-{% set _lane_mw = ([_router ~ '-' ~ _lane.name ~ '-strip'] if _lane.strip_prefix | default(false) else []) + ['security-headers@file', 'compress@file'] %}
+{% set _lane_mw = (['authentik@file'] if _lane.gated | default(false) else []) + ([_router ~ '-' ~ _lane.name ~ '-strip'] if _lane.strip_prefix | default(false) else []) + ['security-headers@file', 'compress@file'] %}
 {% for _sfx, _ep, _tls in _doors %}
     {{ _router }}-{{ _lane.name }}{{ _sfx }}:
       rule: "Host(`{{ _host }}`) && {{ _match }}"
@@ -214,7 +216,7 @@ http:
 {% if _is_https %}
         serversTransport: "noverify@file"
 {% endif %}
-{% for _lane in (traefik_machine_lanes | default({})).get(s.id, []) if _lane.upstream is defined %}
+{% for _lane in (traefik_machine_lanes | default({})).get(s.id, []) if _lane.upstream is defined and (_lane.flag is not defined or (lookup('vars', _lane.flag, default=false) | bool)) %}
     {{ _router }}-{{ _lane.name }}:
       loadBalancer:
         servers:

@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 109 (85 core services, 3 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (97)
+- **Processing activities:** 110 (86 core services, 3 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (98)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 17
 
@@ -429,6 +429,21 @@ Authentik-authenticated principals reach the service.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 7 days
+- **Storage:** 'iiab' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
+#### Martin — `svc_martin`
+- **Purpose:** Serves the local PostGIS geo schema as map tiles to signed-in tier-3 users
+of the atlas: open ČÚZK parcels/buildings and the party-site projection
+(a sole trader's site is a natural person's address). Reads through a
+read-only role limited to schema geo; keeps no tile cache, so an erased
+party (geo-project-sites --erase-party) is gone from the next tile.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `clients`; `operators`
+- **Data categories:** `public_geodata`; `company_affiliation`; `postal_address`; `http_access_logs`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
 - **Storage:** 'iiab' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 

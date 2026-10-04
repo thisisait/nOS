@@ -598,6 +598,7 @@ install_nextcloud: true          # Nextcloud – self-hosted cloud  [requires: m
 install_kiwix: true              # Kiwix – offline Wikipedia, Gutenberg, ZIM  [requires: Docker]
 install_offline_maps: false       # Offline maps – tileserver-gl + MBTiles    [requires: node]
 install_geolibre: false          # GeoLibre web GIS + nos-atlas plugin at atlas.<tenant>, forward-auth [Docker, requires: Authentik]
+install_martin: false            # martin vector tiles of the geo schema at atlas.<tenant>/tiles [Docker, requires: postgis, geolibre]
 install_n8n: true                # n8n – workflow automation                  [requires: Docker]
 install_gitea: true              # Gitea – self-hosted Git server             [Homebrew]
 install_gitlab: false             # GitLab CE – full DevOps platform           [requires: Docker, ~4 GB RAM]
@@ -1758,10 +1759,17 @@ geolibre_image: "ghcr.io/opengeos/geolibre"
 geolibre_version: "v3.2.0@sha256:7c43f124f306d7c00c66660faf73eced043d6ddd749a06afb055ed223e79cebe"   # image label v3.2.0, rev aa28b2a; the digest nos-atlas was tested against
 nos_atlas_src_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nos-atlas"   # dist/nos-atlas is COPIED into geolibre_data_dir; build it there (npm run build)
 
+# martin: geo tables as vector tiles at atlas.<tenant>/tiles (same origin, the atlas gate).
+martin_image: "ghcr.io/maplibre/martin"
+martin_version: "1.16.1@sha256:59902019bf9038926ff0c71174237d6852e64c457830a6349abe7090be8818ca"   # index digest; linux/arm64 sha256:62e47a0d… (manifest inspect 2026-10-04)
+
 # GeoLibre Browser layer catalog (rendered to GEOLIBRE_SERVICES_FILE; schema = GeoLibre
 # docker/entrypoint.sh). Free, keyless services only; `licence_url` is the source checked.
 # GeoLibre shows no per-service attribution, so the required credit rides in `name`.
 # ČÚZK services verified 2026-10-03: capabilities Fees/AccessConstraints = none, EPSG:3857.
+# No martin entry: GeoLibre v3.2.0 catalog kinds are raster/OGC only, and its xyz
+# kind rejects a vector TileJSON. Add tiles by hand: Add data → OGC vector tiles →
+# https://atlas.<tenant>/tiles/<source> (roles/pazny.martin/README.md).
 geolibre_layers:
   - id: nos-basemap
     name: "nOS basemap — Liberty (© OpenStreetMap contributors)"

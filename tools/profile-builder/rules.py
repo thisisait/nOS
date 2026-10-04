@@ -289,6 +289,9 @@ def gated_flags() -> dict:
     routers = yaml.safe_load(_ENV.from_string((REPO / "roles/pazny.traefik/templates/dynamic/services.yml.j2").read_text()).render(**ctx))["http"]["routers"]
     exempt = set(re.findall(r"difference\(\[([^\]]*)\]\)", (REPO / "main.yml").read_text())[0].replace("'", "").replace('"', "").split(", "))
     by_router = {s["id"].replace("_", "-"): flag_of_service()[s["id"]] for s in man["services"]}
+    # A gated lane (`<router>-<lane>`) is its row's surface: refused with the row's flag.
+    by_router |= {f"{sid.replace('_', '-')}-{ln['name']}": flag_of_service()[sid]
+                  for sid, lanes in (tv.get("traefik_machine_lanes") or {}).items() for ln in lanes or []}
     out: dict = {}
     for rid, x in routers.items():
         if "authentik@file" in ((x or {}).get("middlewares") or []) and rid not in exempt:

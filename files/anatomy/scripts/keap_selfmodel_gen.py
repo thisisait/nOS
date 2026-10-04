@@ -128,6 +128,7 @@ SYSTEM_NAME = {
     "hedgedoc": "HedgeDoc", "bookstack": "BookStack", "firefly": "Firefly III",
     "nos-forum": "nos-forum",
     "geolibre": "GeoLibre",
+    "martin": "martin",
     "dolibarr": "Dolibarr",
     "onlyoffice": "ONLYOFFICE",
     "metabase": "Metabase", "superset": "Superset", "influxdb": "InfluxDB",
@@ -336,6 +337,11 @@ SYSTEM_EN = {
         "GeoLibre, the browser GIS at atlas. It opens and styles layers in the visitor's "
         "browser and hosts the nos-atlas plugin that draws KEAP as a planet; it shows maps, "
         "where the offline map server only supplies the tiles."
+    ),
+    "martin": (
+        "martin, the vector tile server for the PostGIS geo schema. It turns parcels, "
+        "buildings and party sites into map tiles at atlas/tiles, read live through a "
+        "read-only login, so it keeps no copy of its own."
     ),
     "jellyfin": (
         "Jellyfin, the media library server. It catalogues film, television and music "

@@ -1,0 +1,31 @@
+---
+# ==============================================================================
+# pazny.martin/tasks/main.yml — render phase, BEFORE `docker compose -p iiab up`.
+# The read-only `martin` login and its geo grants are made by pazny.postgresql
+# (post.yml); this role renders the config and the compose fragment only.
+# ==============================================================================
+
+- name: "[pazny.martin] install_martin needs install_postgis (martin serves the geo database)"
+  ansible.builtin.fail:
+    msg: "install_martin needs install_postgis: true — martin serves the geo schema and nothing else."
+  when: not (install_postgis | default(false) | bool)
+
+- name: "[pazny.martin] Ensure the config directory exists"
+  ansible.builtin.file:
+    path: "{{ stacks_dir }}/iiab/martin"
+    state: directory
+    mode: '0755'
+
+- name: "[pazny.martin] Render the martin config (explicit geo sources, no cache)"
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ stacks_dir }}/iiab/martin/config.yaml"
+    mode: '0644'
+  notify: Restart martin
+
+- name: "[pazny.martin] Render compose override fragment"
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ stacks_dir }}/iiab/overrides/martin.yml"
+    mode: '0600'
+  notify: Restart martin

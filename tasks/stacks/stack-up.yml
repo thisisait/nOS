@@ -92,6 +92,7 @@
 - { name: "[Stacks] pazny.rustfs render", ansible.builtin.include_role: { name: pazny.rustfs, apply: { tags: ['rustfs'] } }, when: "install_rustfs | default(false)", tags: ['rustfs'] }
 - { name: "[Stacks] pazny.offline_maps render", ansible.builtin.include_role: { name: pazny.offline_maps, apply: { tags: ['maps'] } }, when: "install_offline_maps | default(false)", tags: ['maps'] }
 - { name: "[Stacks] pazny.geolibre render", ansible.builtin.include_role: { name: pazny.geolibre, apply: { tags: ['geolibre'] } }, when: "install_geolibre | default(false)", tags: ['geolibre'] }
+- { name: "[Stacks] pazny.martin render", ansible.builtin.include_role: { name: pazny.martin, apply: { tags: ['martin'] } }, when: "install_martin | default(false)", tags: ['martin'] }
 - { name: "[Stacks] pazny.keap render", ansible.builtin.include_role: { name: pazny.keap, apply: { tags: ['keap'] } }, when: "install_keap | default(false)", tags: ['keap'] }
 - { name: "[Stacks] pazny.face render", ansible.builtin.include_role: { name: pazny.face, apply: { tags: ['face'] } }, when: "install_face | default(false)", tags: ['face'] }
 - { name: "[Stacks] pazny.nos_forum render", ansible.builtin.include_role: { name: pazny.nos_forum, apply: { tags: ['nos_forum', 'iiab'] } }, when: "install_nos_forum | default(false)", tags: ['nos_forum', 'iiab'] }

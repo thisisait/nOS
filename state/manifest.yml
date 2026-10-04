@@ -395,6 +395,21 @@ services:
       expect_status: 200
       timeout_sec: 5
 
+  # No domain/port: martin is reached only via the gated atlas.<tenant>/tiles lane.
+  - id: martin
+    category: gis
+    stack: iiab
+    install_flag: install_martin
+    version_var: martin_version
+    version_source: docker_image
+    image: ghcr.io/maplibre/martin
+    container_name: iiab-martin-1
+    health_check:
+      type: exec
+      command: docker exec iiab-martin-1 wget -q --spider http://127.0.0.1:3000/health
+      expect_rc: 0
+      timeout_sec: 10
+
   - id: jellyfin
     category: media
     stack: iiab
