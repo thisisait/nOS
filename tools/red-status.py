@@ -827,6 +827,26 @@ def santa() -> dict:
     return {"items": mod.summary(report), "missing": report["sources_missing"]}
 
 
+def doctrine_reviews(root: pathlib.Path = REPO / "ssot" / "doctrine") -> list[dict]:
+    """Doctrine whose front matter dates its own review (last_reviewed + review_every_days) and is past it."""
+    import re  # noqa: PLC0415
+
+    out = []
+    for path in sorted(root.glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        head = text.split("---", 2)
+        if not text.startswith("---") or len(head) < 3:
+            continue
+        last = re.search(r"^last_reviewed:\s*(\d{4}-\d{2}-\d{2})", head[1], re.M)
+        every = re.search(r"^review_every_days:\s*(\d+)", head[1], re.M)
+        if not (last and every):
+            continue
+        due = datetime.fromisoformat(last.group(1)).replace(tzinfo=timezone.utc) + timedelta(days=int(every.group(1)))
+        if _now() > due:
+            out.append({"doc": path.name, "last_reviewed": last.group(1), "due": due.date().isoformat()})
+    return out
+
+
 def collect() -> dict:
     report: dict = {"generated_at": _now().isoformat(), "sources_read": [], "sources_missing": []}
     conn = _connect()
@@ -872,6 +892,7 @@ def collect() -> dict:
     sa = santa()
     report["santa"] = sa["items"]
     report["sources_missing"] += sa["missing"]
+    report["doctrine_reviews"] = doctrine_reviews()
 
     # Not a red source: None means "loops running", the healthy default, so it
     # never becomes an UNKNOWN. Its presence is a HOLD, reported by hold_lines().
@@ -954,6 +975,9 @@ def reds(report: dict) -> list[str]:
                    + (" …" if len(items) > 8 else ""))
     if report.get("santa"):
         out.append("Santa: " + "; ".join(report["santa"]) + " — tools/santa-status.py")
+    for doc in report.get("doctrine_reviews") or []:
+        out.append(f"doctrine review overdue: ssot/doctrine/{doc['doc']} last reviewed "
+                   f"{doc['last_reviewed']}, due {doc['due']} — review it, then move last_reviewed")
     for job in report.get("overdue_jobs", []):
         out.append(
             f"{job['job']} was due {job['due_at']} and did not fire "

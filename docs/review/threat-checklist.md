@@ -35,3 +35,13 @@ change is declared somewhere a reader checks (a gate, a manifest row, a plugin).
   code that needs it. A gate that passes because it was edited is not a gate:
   ask for the gate to be shown red against the old code first.
 - A test weakened, skipped or deleted next to the change it would have caught.
+
+## 6. Session compromise
+The author may be a hijacked assistant session (ssot/doctrine/session-threat-model.md).
+`tools/prepush-score.py` already scored this range at push time; re-check its signals here.
+- Persistence: LaunchAgents/Daemons, cron, shell rc, git hooks (`core.hooksPath`),
+  Pulse jobs, `.claude/` settings or hooks, `CLAUDE.md`/`AGENTS.md`/skills/agent prompts.
+- Dormant triggers: a branch on a date literal, hostname, user, env var or file existence.
+- Obfuscation: long base64, decode-and-run, `eval`/`exec` of built strings, binary blobs.
+- Exfiltration: a new URL host, raw sockets (`/dev/tcp`, `nc`), a new git remote or push URL.
+- The checker itself: `tools/prepush-score.py`, its prompt or `tools/nos-push` changed.
