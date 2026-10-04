@@ -19,7 +19,7 @@
 | **Image** | `nickfedor/watchtower:1.16.1` (`watchtower_image`) |
 | **Compose override** | `~/stacks/iiab/overrides/watchtower.yml` |
 | **Data** | `{{ nos_data_root }}/platform/services/watchtower/data` (default `~/nos/platform/services/watchtower/data`) → mounted at `/data` |
-| **Docker socket** | `/var/run/docker.sock` (read-only bind is not used — it needs write to pull/recreate in apply mode) |
+| **Docker socket** | via `watchtower-socket-proxy` (CONTAINERS/IMAGES/INFO/POST, +NETWORKS in apply mode) — no direct bind |
 
 ## Configuration
 
@@ -53,6 +53,6 @@
 
 ## Dependencies
 
-- Docker daemon socket (`/var/run/docker.sock`) — mandatory.
+- Docker daemon API via its own `watchtower-socket-proxy` — mandatory.
 - Mailpit (or any SMTP relay) for notifications.
 - Grafana/Loki for the operator-facing log view (Loki labels `app: watchtower`).
