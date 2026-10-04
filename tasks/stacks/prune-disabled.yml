@@ -167,11 +167,12 @@
   ansible.builtin.set_fact:
     _on_disk_flags: >-
       {%- set _f = lookup('fileglob', playbook_dir ~ '/config.yml', wantlist=True) -%}
-      {%- set _base = {} -%}
+      {#- namespace: a plain `set` inside the loop never left it — _base stayed {} (review 2026-10-04) -#}
+      {%- set ns = namespace(base={}) -%}
       {%- for _p in (lookup('fileglob', playbook_dir ~ '/config.d/*.yml', wantlist=True) | sort) + [playbook_dir ~ '/default.config.yml'] -%}
-      {%- set _base = _base | combine(lookup('file', _p) | from_yaml) -%}{%- endfor -%}
+      {%- set ns.base = ns.base | combine(lookup('file', _p) | from_yaml) -%}{%- endfor -%}
       {%- set _over = (lookup('file', _f[0]) | from_yaml) if _f else {} -%}
-      {{ (_base | combine(_over | default({}, true))) | dict2items
+      {{ (ns.base | combine(_over | default({}, true))) | dict2items
          | selectattr('key', 'match', '^install_') | items2dict }}
   tags: ['stacks', 'core', 'always']
 
