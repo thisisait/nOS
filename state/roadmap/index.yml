@@ -228,6 +228,9 @@
 - slug: declare-playbook-started-daemons
   parent: workload-allowlist
   track: platform
+- slug: default-config-split
+  parent: ''
+  track: platform
 - slug: dependabot-alerts-are-mostly-a-fixture
   parent: ''
   track: security
@@ -1289,6 +1292,9 @@
   track: agents
 - slug: swarm-2026-09-15
   parent: plat
+  track: platform
+- slug: synthetic-identities-apart
+  parent: ''
   track: platform
 - slug: tables
   parent: ''
