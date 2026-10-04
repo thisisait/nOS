@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import collections
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -36,7 +37,11 @@ CONFIG_D = re.compile(r"(?<![\w/])config\.d/(\*|[\w-]+\.ya?ml)")   # a domain fi
 
 
 def _code_files():
-    for p in REPO.rglob("*"):
+    # Tracked files only: an rglob counted __pycache__ and build leftovers, 611 in
+    # the operator's checkout vs 311 in a clean worktree (2026-10-04).
+    tracked = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, capture_output=True, check=True).stdout
+    for rel in filter(None, tracked.decode().split("\0")):
+        p = REPO / rel
         if p.is_file() and p.suffix in SUFFIXES and not (SKIP_PARTS | {"config.d"}) & set(p.parts):
             try:
                 yield p, p.read_text(encoding="utf-8", errors="ignore")
