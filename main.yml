@@ -1720,6 +1720,34 @@
     # estate whatever the TLD says. The explicit `-e allow_weak_prefix=true`
     # bypass stays for throwaway sandboxes — an operator opting in knowingly is
     # a different thing from a default that opts in silently.
+    # sec-prefix-gate-flaps: this assert failed 3 of 5 identical runs (2026-08-31).
+    # Every run leaves the evidence — length, a salted digest (never the value),
+    # which files declare it, how many converges were running — so a flap can be
+    # correlated instead of re-run. Reader: tail ~/.nos/events/prefix-gate.jsonl.
+    - name: "[Security] Record what the prefix gate reads (never the value)"
+      ansible.builtin.lineinfile:
+        path: "{{ ansible_facts['env']['HOME'] }}/.nos/events/prefix-gate.jsonl"
+        create: true
+        mode: '0600'
+        line: >-
+          {%- set ns = namespace(d=[]) -%}
+          {%- for f in ['default.credentials.yml', 'credentials.yml', 'config.yml'] -%}
+          {%- if (playbook_dir ~ '/' ~ f) is file and (lookup('file', playbook_dir ~ '/' ~ f)
+                 is search('^global_password_prefix:', multiline=True)) -%}
+          {%- set ns.d = ns.d + [f] -%}
+          {%- endif -%}
+          {%- endfor -%}
+          {%- set v = global_password_prefix | default('') | string -%}
+          {{ {'at': now(utc=true).isoformat(), 'weak': v in ['changeme', ''] or (v | length) < 12,
+              'length': v | length, 'digest': (('nos-prefix-gate:' ~ v) | hash('sha256'))[:16],
+              'declared_in': ns.d,
+              'converges_running': lookup('pipe', 'pgrep -f "[a]nsible-playbook" | wc -l') | trim | int}
+             | to_json }}
+      changed_when: false
+      failed_when: false
+      no_log: true
+      tags: ['always']
+
     - name: "[Security] Refuse a weak password prefix"
       ansible.builtin.assert:
         that:
