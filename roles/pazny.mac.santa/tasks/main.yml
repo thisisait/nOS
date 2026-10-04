@@ -1,0 +1,79 @@
+---
+# Santa (northpolesec) in MONITOR mode: telemetry of every exec, never a block.
+# No configuration profile is rendered — ClientMode defaults to 1 (Monitor), so
+# there is nothing here that could say Lockdown (gate: test_santa_is_monitor_only).
+# The system extension and Full Disk Access need a human click; the role stops there.
+
+- name: "Santa | macOS only"
+  ansible.builtin.assert:
+    that: ansible_os_family == 'Darwin'
+    fail_msg: "pazny.mac.santa is macOS-only (Santa is an Endpoint Security client)."
+  tags: ['santa']
+
+- name: "Santa | Read the installed version"
+  ansible.builtin.command:
+    argv: [/usr/bin/plutil, -extract, CFBundleShortVersionString, raw, "{{ santa_app }}/Contents/Info.plist"]
+  register: santa_installed
+  changed_when: false
+  failed_when: false
+  tags: ['santa']
+
+- name: "Santa | Install the pinned release pkg"
+  when: santa_installed.rc != 0 or santa_installed.stdout | trim != santa_version
+  tags: ['santa']
+  block:
+    - name: "Santa | Download santa-{{ santa_version }}.pkg (sha256-pinned)"
+      ansible.builtin.get_url:
+        url: "https://github.com/northpolesec/santa/releases/download/{{ santa_version }}/santa-{{ santa_version }}.pkg"
+        dest: "{{ santa_pkg_cache }}"
+        checksum: "sha256:{{ santa_pkg_sha256 }}"
+        mode: "0644"
+
+    - name: "Santa | Run the installer"
+      ansible.builtin.command:
+        argv: [/usr/sbin/installer, -pkg, "{{ santa_pkg_cache }}", -target, /]
+      become: true
+      changed_when: true
+
+- name: "Santa | Read the system extension state"
+  ansible.builtin.command:
+    argv: [/usr/bin/systemextensionsctl, list]
+  register: santa_sysext
+  changed_when: false
+  failed_when: false
+  tags: ['santa', 'verify']
+
+- name: "Santa | Read santactl status"
+  ansible.builtin.command:
+    argv: ["{{ santa_santactl }}", status, --json]
+  register: santa_status
+  changed_when: false
+  failed_when: false
+  tags: ['santa', 'verify']
+
+- name: "Santa | STOP — approval needed in System Settings"
+  ansible.builtin.fail:
+    msg: |
+      Santa {{ santa_version }} is installed but its system extension is not running.
+      macOS allows no unattended approval without MDM. On this Mac:
+        1. System Settings -> General -> Login Items & Extensions -> Endpoint Security
+           Extensions (the (i) button) -> toggle ON "Santa".
+        2. System Settings -> Privacy & Security -> Full Disk Access -> toggle ON
+           "com.northpolesec.santa.daemon".
+        3. Re-run: ansible-playbook main.yml --tags santa
+      Nothing blocks executions meanwhile: no rules and no profile are installed.
+  when: >-
+    santa_status.rc != 0
+    or not (santa_sysext.stdout_lines | select('search', 'com.northpolesec.santa')
+            | select('search', 'activated enabled') | list)
+  tags: ['santa', 'verify']
+
+- name: "Santa | Monitor mode, or stop"
+  ansible.builtin.assert:
+    that: (santa_status.stdout | from_json).daemon.mode == 'Monitor'
+    fail_msg: >-
+      santactl reports mode {{ (santa_status.stdout | from_json).daemon.mode }}. nOS runs
+      Santa in MONITOR only (interpreted scripts + weekly brew upgrades make a lockdown
+      either block the operator or allow everything). Something else set the mode —
+      find it with `sudo profiles show -type configuration | grep -i santa` and remove it.
+  tags: ['santa', 'verify']

@@ -1,0 +1,5 @@
+---
+# Version pin + sha256 live in default.config.yml (santa_version, santa_pkg_sha256).
+santa_app: /Applications/Santa.app
+santa_santactl: /usr/local/bin/santactl
+santa_pkg_cache: "/tmp/santa-{{ santa_version }}.pkg"

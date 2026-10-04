@@ -501,6 +501,12 @@ install_nginx: false
 install_docker: true              # Linux: install Docker CE + compose plugin via APT
 install_hardening: true           # Linux: ANSSI baseline (ufw + fail2ban + sysctl + auditd + apparmor + chrony + ssh + unattended). Decision O5: default ON, opt-out via this flag.
 
+# macOS workload telemetry (epic workload-allowlist). MONITOR mode only, never lockdown.
+# First run stops for two System Settings approvals (system extension + Full Disk Access).
+install_santa: false              # Santa exec telemetry; reader: tools/santa-status.py
+santa_version: "2026.8"           # github.com/northpolesec/santa release (Apache-2.0)
+santa_pkg_sha256: "0aaa970c7ddc63fe6a55c3144c825acb7f6bfa9cb15bcba1bffcaf2b5efc952a"
+
 # ── Languages / runtimes ──────────────────────────────────────────────────────
 # PHP at the host level is no longer needed by default — Track A (2026-04-26)
 # moved Wing's PHP-FPM into a container and Composer runs inside that

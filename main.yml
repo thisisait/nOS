@@ -1090,6 +1090,14 @@
         - configure_dock | default(false)
       tags: ['dock']
 
+    # Epic workload-allowlist (2026-10-04): both default-off, macOS-only.
+    - role: pazny.mac.santa
+      when:
+        - not (nos_dry_removal | default(false) | bool)
+        - ansible_os_family == 'Darwin'
+        - install_santa | default(false) | bool
+      tags: ['santa']
+
     # ── Linux-only host roles ───────────────────────────────────────────────
     # Activate on Debian/RedHat families. v0.4-beta cross-platform shipped
     # 2026-05-31 with a standing Ubuntu-24.04 CI wet-test (the full playbook is

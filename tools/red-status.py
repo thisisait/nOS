@@ -816,6 +816,17 @@ def undeclared() -> dict:
     return {"items": mod.summary(report), "missing": report["sources_missing"]}
 
 
+def santa() -> dict:
+    """Santa exec telemetry vs the declared trees — tools/santa-status.py."""
+    import importlib.util  # noqa: PLC0415 — sibling helper, not a package
+
+    spec = importlib.util.spec_from_file_location("_santa", REPO / "tools" / "santa-status.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    report = mod.collect()
+    return {"items": mod.summary(report), "missing": report["sources_missing"]}
+
+
 def collect() -> dict:
     report: dict = {"generated_at": _now().isoformat(), "sources_read": [], "sources_missing": []}
     conn = _connect()
@@ -858,6 +869,9 @@ def collect() -> dict:
     und = undeclared()
     report["undeclared"] = und["items"]
     report["sources_missing"] += und["missing"]
+    sa = santa()
+    report["santa"] = sa["items"]
+    report["sources_missing"] += sa["missing"]
 
     # Not a red source: None means "loops running", the healthy default, so it
     # never becomes an UNKNOWN. Its presence is a HOLD, reported by hold_lines().
@@ -938,6 +952,8 @@ def reds(report: dict) -> list[str]:
         out.append(f"{len(items)} running/persisted on the host and declared nowhere "
                    f"(tools/undeclared-status.py): " + ", ".join(items[:8])
                    + (" …" if len(items) > 8 else ""))
+    if report.get("santa"):
+        out.append("Santa: " + "; ".join(report["santa"]) + " — tools/santa-status.py")
     for job in report.get("overdue_jobs", []):
         out.append(
             f"{job['job']} was due {job['due_at']} and did not fire "
