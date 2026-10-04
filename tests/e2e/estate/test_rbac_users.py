@@ -1,7 +1,7 @@
 """RBAC and per-user storage, for the declared test users.
 
-Users are the nos_identities entries gated by `enabled_by` (alice/bob/carol/
-dave, profiles/test-users.yml); services are the same plan rows the config
+Users are the synthetic identities (alice/bob/carol/dave, kind: synthetic in
+profiles/test-users.yml); services are the same plan rows the config
 journeys walk. Nothing is listed here:
   * every test user reaches each gated / native-OIDC service at or above its
     tier and is refused by Authentik below it;
@@ -22,7 +22,7 @@ from lib.sso_walk import CODE, DENIED, REACHED, walk
 from test_config_journeys import GATED, NATIVE, _authorize_url
 
 try:
-    USERS = [i for i in load_identities() if i.get("enabled_by")]
+    USERS = [i for i in load_identities() if i.get("kind") == "synthetic"]
     _WHY = ("no test user is enabled — set nos_test_users_enabled: true "
             "(nos -e @profiles/test-users.yml) and converge")
 except Exception as exc:  # noqa: BLE001

@@ -157,10 +157,10 @@ default_admin_email: "admin@{{ tenant_domain | default('dev.local') }}"  # Fallb
 # is how drift starts. `tools/identity-status.py` reads all three and checks
 # them against the realms; doctrine: docs/doctrine/identity.md.
 #
-# Fields: name (account username), kind (operator|user|service|agent),
-# tier (RBAC 1-4, see authentik_rbac_tiers), email, realms (where the
-# account must exist: authentik|gitea|gitlab|woodpecker|wing), password_var,
-# enabled_by (optional: a bool var; the entry exists only while it is true).
+# Fields: name (account username), kind (operator|user|service|agent;
+# synthetic lives in profiles/test-users.yml), tier (RBAC 1-4, see
+# authentik_rbac_tiers), email, realms (where the account must exist:
+# authentik|gitea|gitlab|woodpecker|wing), password_var.
 # ==============================================================================
 
 # The local forge/OS-side admin. TODAY this defaults to the OS username so a
@@ -204,19 +204,13 @@ nos_identities:
     email: "tester@{{ tenant_domain | default('dev.local') }}"
     realms: [authentik]
     password_var: nos_tester_password
-  # RBAC + multi-user test personas, one group each (the one their tier adds
-  # in authentik_rbac_tiers). Two at tier 3 so isolation has a peer to fail
-  # against. Off by default; profiles/test-users.yml turns them on. Turning it
-  # off later leaves the accounts in Authentik — identity-status names them.
-  - {name: alice, kind: user, tier: 2, email: "alice@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
-     password_var: nos_test_alice_password, enabled_by: nos_test_users_enabled}
-  - {name: bob, kind: user, tier: 3, email: "bob@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
-     password_var: nos_test_bob_password, enabled_by: nos_test_users_enabled}
-  - {name: carol, kind: user, tier: 3, email: "carol@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
-     password_var: nos_test_carol_password, enabled_by: nos_test_users_enabled}
-  - {name: dave, kind: user, tier: 4, email: "dave@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
-     password_var: nos_test_dave_password, enabled_by: nos_test_users_enabled}
-nos_test_users_enabled: false   # the alice/bob/carol/dave entries above
+# Synthetic test identities (alice/bob/carol/dave) are NOT here: they are
+# `nos_synthetic_identities` in profiles/test-users.yml, kind: synthetic, so
+# this roster holds real accounts only. main.yml adopts that profile's roster
+# whenever this stays empty; `nos_test_users_enabled` switches them on, and
+# off they retire (state: absent) on the next `nos --confirm` run.
+nos_synthetic_identities: []
+nos_test_users_enabled: false   # profiles/test-users.yml flips it
 # Your own extra people, [{name, email, tier 1-4}] (the profile builder's People
 # step writes it). Each gets an Authentik user in its tier's group and its app
 # accounts from the first-login walk; the password is derived per name in

@@ -14,9 +14,9 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 CFG = yaml.safe_load((REPO / "default.config.yml").read_text())
 CREDS = yaml.safe_load((REPO / "default.credentials.yml").read_text())
-# Always-on identities; toggled ones (enabled_by) are pinned by
-# test_toggled_identities_are_gated_accounts.py.
-IDS = [i for i in CFG["nos_identities"] if "authentik" in i.get("realms", []) and not i.get("enabled_by")]
+# The real accounts; the synthetic ones (profiles/test-users.yml) are pinned by
+# test_synthetic_identities_live_apart.py.
+IDS = [i for i in CFG["nos_identities"] if "authentik" in i.get("realms", [])]
 spec = importlib.util.spec_from_file_location("first_login", REPO / "tools/nos-first-login.py")
 fl = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fl)

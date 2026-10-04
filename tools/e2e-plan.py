@@ -25,6 +25,8 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 PLUGINS = REPO / "files/anatomy/plugins"
+sys.path.insert(0, str(REPO / "tools"))
+from nos_identity import SYNTHETIC_FLAG, synthetic_identities  # noqa: E402
 MODES = ("native_oidc", "forward_auth", "header_oidc")
 
 _spec = importlib.util.spec_from_file_location("nos_smoke", REPO / "tools/nos-smoke.py")
@@ -108,12 +110,13 @@ def _resolved(vars_: dict | None) -> tuple[dict, jinja2.Environment]:
 
 
 def identities(vars_: dict | None = None) -> list[dict]:
-    """nos_identities as this config resolves them. An entry whose enabled_by
-    toggle is off has no account anywhere, so it is not returned."""
+    """nos_identities as this config resolves them, plus the synthetic ones
+    (kind: synthetic) while their switch is on — off, they have no account."""
     vars_, env = _resolved(vars_)
-    return [_render(env, i) for i in vars_.get("nos_identities") or []
-            if isinstance(i, dict) and (not i.get("enabled_by")
-                                        or _truthy(_render(env, vars_.get(i["enabled_by"], False))))]
+    ids = [i for i in vars_.get("nos_identities") or [] if isinstance(i, dict)]
+    if _truthy(_render(env, vars_.get(SYNTHETIC_FLAG, False))):
+        ids += synthetic_identities(vars_)
+    return [_render(env, i) for i in ids]
 
 
 def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict]:

@@ -85,10 +85,11 @@ def accounts() -> int:
                 [stem.removesuffix("_admin") + s for s in LOGIN_SUFFIXES]
         login = next((plan._render(env, v[c]) for c in cands if c in v and c != var), "")
         rows.append((stem, str(login) or "(see the service)", key))
-    for i in v.get("nos_identities") or []:
+    for i in (v.get("nos_identities") or []) + plan.synthetic_identities(v):
         if "authentik" in (i.get("realms") or []):
             m = re.search(r"nos_derived_secrets\.(\w+)", str(v.get(i.get("password_var"), "")))
-            rows.append(("authentik", plan._render(env, i["name"]), m.group(1) if m else i.get("password_var")))
+            svc = "authentik (synthetic)" if i.get("kind") == "synthetic" else "authentik"
+            rows.append((svc, plan._render(env, i["name"]), m.group(1) if m else i.get("password_var")))
     for p in v.get("nos_extra_identities") or []:
         rows.append(("authentik", p["name"], f"--user {p['name']} nos-identity password"))
     w = max(len(r[0]) for r in rows)

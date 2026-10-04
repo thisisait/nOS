@@ -3,9 +3,9 @@
 # every SSO app on the FIRST install: tools/nos-first-login.py logs it in once
 # and walks each enabled plugin's authentik.first_login. Native/header OIDC
 # apps create users only at a first SSO login; before this, an app a person
-# never opened had no account for them. A failed walk fails the run. An entry
-# whose enabled_by toggle is off has no account; apps above an identity's
-# tier are skipped (RBAC refuses them by design). nos_extra_identities walk too,
+# never opened had no account for them. A failed walk fails the run. The
+# synthetic identities walk only while nos_test_users_enabled; apps above an
+# identity's tier are skipped (RBAC refuses them by design). nos_extra_identities walk too,
 # with their INITIAL password: refused = the person owns it now (fine);
 # accepted = still on a password the master derives (named, every run).
 - name: "[Identities] Create every declared account in every SSO app"
@@ -14,8 +14,8 @@
               + (['--insecure'] if (tenant_domain_is_local | default(true) | bool) else []) }}"
   environment:
     NOS_FIRST_LOGIN: >-
-      {% set out = [] %}{% for i in nos_identities if 'authentik' in (i.realms | default([]))
-      and (i.enabled_by is not defined or (lookup('vars', i.enabled_by, default=false) | bool)) %}{%
+      {% set out = [] %}{% for i in nos_identities + (nos_synthetic_identities | default([])
+      if (nos_test_users_enabled | default(false) | bool) else []) if 'authentik' in (i.realms | default([])) %}{%
       set _ = out.append({'name': i.name, 'tier': i.tier, 'password': lookup('vars', i.password_var)}) %}{%
       endfor %}{% for i in nos_extra_identities | default([]) %}{%
       set _ = out.append({'name': i.name, 'tier': i.tier, 'password': nos_extra_identity_passwords[i.name],

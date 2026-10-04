@@ -194,16 +194,15 @@ def silent_rules(profile_knobs: list[tuple[str, str]]) -> list[dict]:
             add({"flag": flag}, svc[req["peer_service"]], f"{name}/plugin.yml requires.peer_service")
         if isinstance(d.get("authentik"), dict):
             add({"flag": flag}, "install_authentik", f"{name}/plugin.yml authentik: (mode {d['authentik'].get('mode', '?')})")
-    # The accounts authentik-base's blueprint creates: the extra people, and every
-    # nos_identities entry switched on by a variable (the test users).
+    # The accounts authentik-base's blueprint creates: the extra people, and the
+    # synthetic identities behind their one switch.
     ak = _plugins()["authentik-base"]
     ak_flag = ak["requires"]["feature_flag"]
     idx = _text_index()
     if "nos_extra_identities" in idx["plugin:authentik-base"]:
         add({"people": True}, ak_flag, "authentik-base blueprint renders nos_extra_identities")
-    if "nos_identities" in idx["plugin:authentik-base"]:
-        for v in sorted({i["enabled_by"] for i in _cfg()["nos_identities"] if i.get("enabled_by")}):
-            add({"field": v}, ak_flag, f"authentik-base blueprint renders nos_identities (enabled_by: {v})")
+    if "nos_synthetic_identities" in idx["plugin:authentik-base"]:
+        add({"field": "nos_test_users_enabled"}, ak_flag, "authentik-base blueprint renders nos_synthetic_identities")
     for prof, k in profile_knobs:
         flags = _consumers_of(k, idx)
         if flags:

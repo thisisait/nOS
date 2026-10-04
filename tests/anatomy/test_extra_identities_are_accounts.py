@@ -26,6 +26,8 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "files/anatomy/module_utils"))
 import load_plugins as lp  # noqa: E402
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 import nos_secret_derive as derive  # noqa: E402
 
 CFG = yaml.safe_load((REPO / "default.config.yml").read_text())
@@ -56,8 +58,9 @@ def _ctx(tmp: Path, people: list[dict], passwords: dict | None = None) -> dict:
            "nos_extra_identities": people,
            "nos_extra_identity_passwords": {p["name"]: f"pw-{p['name']}" for p in people} if passwords is None else passwords}
     env = jinja2.Environment()
-    ctx["nos_identities"] = [{k: env.from_string(v).render(**ctx) if isinstance(v, str) else v for k, v in i.items()}
-                             for i in CFG["nos_identities"]]
+    rend = lambda i: {k: env.from_string(v).render(**ctx) if isinstance(v, str) else v for k, v in i.items()}  # noqa: E731
+    ctx["nos_identities"] = [rend(i) for i in CFG["nos_identities"]]
+    ctx["nos_synthetic_identities"] = [rend(i) for i in ni.synthetic_identities()]   # main.yml adopts the profile's
     return ctx
 
 

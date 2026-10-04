@@ -926,7 +926,7 @@ _NO_DEFAULT = object()
 
 def vars_lookup(tvars: dict):
     """Ansible's `lookup('vars', name, default=…)` and nothing else: a blueprint
-    reads a var NAMED by data (nos_identities password_var/enabled_by) with the
+    reads a var NAMED by data (an identity's password_var) with the
     same expression the role-side Ansible copy renders, so the two stay
     byte-identical. Any other lookup kind is refused, not guessed."""
     def lookup(kind, name, default=_NO_DEFAULT):

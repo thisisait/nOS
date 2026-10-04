@@ -24,6 +24,10 @@ MANIFEST = REPO / "state" / "manifest.yml"
 #: declaration and a reader that skips it answers "declared in no layer" about
 #: a variable that is declared — `keap_repo_ref` lives only in role defaults.
 CONFIG_LAYERS = ("roles/*/defaults/main.yml", "default.config.yml", "config.yml")
+#: The synthetic test identities (alice/bob/carol/dave): declared ONLY in the
+#: profile, switched by one flag. main.yml adopts the same roster the same way.
+SYNTHETIC_PROFILE = REPO / "profiles" / "test-users.yml"
+SYNTHETIC_FLAG = "nos_test_users_enabled"
 
 
 def layer_paths() -> list[Path]:
@@ -51,6 +55,15 @@ def install_flags() -> dict[str, bool]:
     bools = {"true": True, "yes": True, "false": False, "no": False}
     out = {f: bools.get(resolve_flag(f)[-1][1].lower()) for f in sorted(names)}
     return {f: v for f, v in out.items() if v is not None}
+
+
+def synthetic_identities(merged: dict | None = None) -> list[dict]:
+    """The synthetic roster, kind: synthetic always: the config's own list when
+    it declares one (config.yml / -e), else profiles/test-users.yml."""
+    own = (merged or {}).get("nos_synthetic_identities") or []
+    roster = own or (yaml.safe_load(SYNTHETIC_PROFILE.read_text(encoding="utf-8")) or {}).get(
+        "nos_synthetic_identities") or []
+    return [{**i, "kind": "synthetic"} for i in roster if isinstance(i, dict)]
 
 
 def services() -> list[dict]:
@@ -82,4 +95,5 @@ if __name__ == "__main__":  # self-check: the three hops no guess can make
         assert row and fragment_stem(row) == stem, (flag, row)
     assert fragment_stem({"id": "x", "stack": "apps", "fragment": None}) is None
     assert fragment_stem(by_flag("install_gitea")) == "gitea"
+    assert {i["kind"] for i in synthetic_identities()} == {"synthetic"}
     print("ok")

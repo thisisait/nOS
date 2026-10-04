@@ -33,6 +33,7 @@ import argparse
 import importlib.util
 import json
 import re
+import sys
 from pathlib import Path
 
 import yaml
@@ -50,6 +51,8 @@ _spec.loader.exec_module(reach)
 _rspec = importlib.util.spec_from_file_location("profile_builder_rules", REPO / "tools/profile-builder/rules.py")
 rules = importlib.util.module_from_spec(_rspec)
 _rspec.loader.exec_module(rules)
+sys.path.insert(0, str(REPO / "tools"))
+from nos_identity import synthetic_identities  # noqa: E402
 
 FLAG = re.compile(r"^(install_[a-z0-9_]+):\s*(.+?)\s*(?:#\s*(.*))?$")
 AXES = ["service-set", "use-case", "policy", "environment", "constraint"]
@@ -216,7 +219,8 @@ def profiles() -> list[dict]:
         m = re.search(r"^# axis: ([a-z-]+)", text, re.M)
         if not m:
             continue
-        data = yaml.safe_load(text) or {}
+        # The synthetic roster is main.yml's to adopt, never a knob the page writes.
+        data = {k: v for k, v in (yaml.safe_load(text) or {}).items() if k != "nos_synthetic_identities"}
         plain = re.search(r"^# plain: (.+)$", text, re.M)
         # A profile whose every key one step asks (test-users = the People step's
         # switch) is answered there, not offered as an axis choice: one source.
@@ -240,12 +244,12 @@ def accounts() -> dict:
     """The access levels and the declared accounts, as default.config.yml says."""
     raw = _raw()
     r = reach.Resolver(raw)
-    names = [str(r.render(i["name"]) or "") for i in raw["nos_identities"]]
+    synthetic = synthetic_identities(raw)
+    names = [str(r.render(i["name"]) or "") for i in raw["nos_identities"] + synthetic]
     return {
         "tiers": [{"tier": t["tier"], "label": t["name"].removeprefix("tier-"), "description": t["description"]}
                   for t in raw["authentik_rbac_tiers"]],
-        "test_users": [{"name": i["name"], "tier": i["tier"]} for i in raw["nos_identities"]
-                       if i.get("enabled_by") == "nos_test_users_enabled"],
+        "test_users": [{"name": i["name"], "tier": i["tier"]} for i in synthetic],
         "reserved": sorted(n for n in names if n),
     }
 

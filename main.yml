@@ -99,6 +99,21 @@
     - import_tasks: tasks/_platform.yml
       tags: ['always', 'platform']
 
+    # ── Synthetic identities (profiles/test-users.yml) ────────────────────
+    # The roster is read namespaced so the profile's switch stays the
+    # operator's (config.yml / -e); adopted only when nothing declared one.
+    - name: "[Identities] Read the synthetic roster the profile declares"
+      ansible.builtin.include_vars:
+        file: profiles/test-users.yml
+        name: _nos_test_users_profile
+      tags: ['always']
+
+    - name: "[Identities] Adopt it unless config.yml or -e declared its own"
+      ansible.builtin.set_fact:
+        nos_synthetic_identities: "{{ _nos_test_users_profile.nos_synthetic_identities | default([]) }}"
+      when: not (nos_synthetic_identities | default([]))
+      tags: ['always']
+
     # ── A removal DRY RUN needs no sudo (2026-09-29) ───────────────────────
     # `nos --remove=data` prints the inventory and stops — but the host roles
     # below run first and pazny.mac.homebrew's first task is `become`, so the
@@ -1473,7 +1488,7 @@
           - (_xn | map('regex_replace', '[^a-z0-9]+', '-') | unique | list | length) == (_xn | length)
           - (_xn | map('regex_replace', '[^a-z0-9]+', '-') | select('in', _taken) | list | length) == 0
           - (_xe | unique | list | length) == (_xe | length)
-          - (_xe | select('in', nos_identities | map(attribute='email') | map('lower') | list) | list | length) == 0
+          - (_xe | select('in', (nos_identities + nos_synthetic_identities) | map(attribute='email') | map('lower') | list) | list | length) == 0
         fail_msg: >-
           nos_extra_identities: two people share a name or an e-mail, or one reuses a
           declared account's (akadmin, the operator, the tester, the test users). Names
@@ -1482,7 +1497,15 @@
       vars:
         _xn: "{{ nos_extra_identities | default([]) | map(attribute='name') | list }}"
         _xe: "{{ nos_extra_identities | default([]) | map(attribute='email') | map('lower') | list }}"
-        _taken: "{{ nos_identities | map(attribute='name') | map('regex_replace', '[^a-z0-9]+', '-') | list }}"
+        _taken: "{{ (nos_identities + nos_synthetic_identities) | map(attribute='name') | map('regex_replace', '[^a-z0-9]+', '-') | list }}"
+      tags: ['always']
+
+    - name: "[Identities] Synthetic accounts retire only on a confirmed run (DRY RUN)"
+      ansible.builtin.debug:
+        msg: >-
+          nos_test_users_enabled is off: {{ nos_synthetic_identities | map(attribute='name') | join(', ') }}
+          stay in Authentik if present — `nos --confirm` retires them.
+      when: not (nos_test_users_enabled | bool) and not (nos_confirmed | default(false) | bool)
       tags: ['always']
 
     - name: "[Identities] Derive each extra person's password (user scope)"
