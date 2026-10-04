@@ -103,21 +103,6 @@
     - import_tasks: tasks/_platform.yml
       tags: ['always', 'platform']
 
-    # ── Synthetic identities (profiles/test-users.yml) ────────────────────
-    # The roster is read namespaced so the profile's switch stays the
-    # operator's (config.yml / -e); adopted only when nothing declared one.
-    - name: "[Identities] Read the synthetic roster the profile declares"
-      ansible.builtin.include_vars:
-        file: profiles/test-users.yml
-        name: _nos_test_users_profile
-      tags: ['always']
-
-    - name: "[Identities] Adopt it unless config.yml or -e declared its own"
-      ansible.builtin.set_fact:
-        nos_synthetic_identities: "{{ _nos_test_users_profile.nos_synthetic_identities | default([]) }}"
-      when: not (nos_synthetic_identities | default([]))
-      tags: ['always']
-
     # ── A removal DRY RUN needs no sudo (2026-09-29) ───────────────────────
     # `nos --remove=data` prints the inventory and stops — but the host roles
     # below run first and pazny.mac.homebrew's first task is `become`, so the
@@ -317,6 +302,22 @@
       include_vars: "{{ item }}"
       with_fileglob:
         - "{{ playbook_dir }}/config.yml"
+      tags: ['always']
+
+    # ── Synthetic identities (profiles/test-users.yml) ────────────────────
+    # The roster is read namespaced so the profile's switch stays the
+    # operator's (config.yml / -e); adopted only when nothing declared one —
+    # AFTER config.yml: set_fact outranks include_vars and would shadow it.
+    - name: "[Identities] Read the synthetic roster the profile declares"
+      ansible.builtin.include_vars:
+        file: profiles/test-users.yml
+        name: _nos_test_users_profile
+      tags: ['always']
+
+    - name: "[Identities] Adopt it unless config.yml or -e declared its own"
+      ansible.builtin.set_fact:
+        nos_synthetic_identities: "{{ _nos_test_users_profile.nos_synthetic_identities | default([]) }}"
+      when: not (nos_synthetic_identities | default([]))
       tags: ['always']
 
     # After config.yml so install_apex is the RESOLVED flag. Before Homebrew.
