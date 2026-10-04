@@ -156,6 +156,9 @@
 - slug: consulting-uc-evals
   parent: consulting-firm-deployment
   track: agents
+- slug: containerized-core
+  parent: ''
+  track: platform
 - slug: converge-become
   parent: converge-speed
   track: platform
@@ -185,6 +188,21 @@
   track: platform
 - slug: converge-watch
   parent: converge-speed
+  track: platform
+- slug: core-agents-in-containers
+  parent: containerized-core
+  track: security
+- slug: core-host-bridge
+  parent: containerized-core
+  track: security
+- slug: core-organs-in-containers
+  parent: containerized-core
+  track: platform
+- slug: core-pulse-in-container
+  parent: containerized-core
+  track: platform
+- slug: core-rpi-profile
+  parent: containerized-core
   track: platform
 - slug: cortex
   parent: ''
@@ -612,6 +630,21 @@
 - slug: identities-from-install
   parent: ''
   track: release
+- slug: immune-apoptosis-regulator
+  parent: immune-system
+  track: security
+- slug: immune-cell-registry
+  parent: immune-system
+  track: security
+- slug: immune-first-crawler
+  parent: immune-system
+  track: security
+- slug: immune-heartbeats
+  parent: immune-system
+  track: security
+- slug: immune-system
+  parent: ''
+  track: security
 - slug: importer-isdoc
   parent: digest
   track: platform
@@ -927,6 +960,9 @@
 - slug: oneshot-logprobs-for-field-confidence
   parent: consulting-firm-deployment
   track: agents
+- slug: operator-session-threat-model
+  parent: ''
+  track: security
 - slug: organ-health-carries-a-version
   parent: ''
   track: platform
