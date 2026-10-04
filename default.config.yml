@@ -3336,9 +3336,9 @@ backup_volumes_to_dump: []
 # Extend (gated by dir-existence; backup.sh skips a missing path) for other
 # host-bind SQLite services — see "KNOWN-UNBACKED" in docs/backup-architecture.md.
 backup_dirs_to_dump:
-  - { name: "gitea", path: "{{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}" }
-  - { name: "gitlab", path: "{{ gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab') }}" }
-  - { name: "gitlab-config", path: "{{ gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config') }}" }
+  - { name: "gitea", flag: install_gitea, path: "{{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}" }
+  - { name: "gitlab", flag: install_gitlab, path: "{{ gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab') }}" }
+  - { name: "gitlab-config", flag: install_gitlab, path: "{{ gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config') }}" }
   # S4 (2026-06-10) — the KNOWN-UNBACKED host-bind set from
   # docs/backup-architecture.md: PRIMARY state no DB dump covers; before this,
   # a DR lost every Vaultwarden password. backup.sh skips absent paths, so
@@ -3346,45 +3346,45 @@ backup_dirs_to_dump:
   # db.sqlite3 + n8n database.sqlite are tar'd LIVE at 03:00 (low-write
   # window); restic keeps 7 dailies so one torn copy isn't fatal. A proper
   # sqlite3 .backup quiesce is the queued follow-up.
-  - { name: "vaultwarden", path: "{{ vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden') }}" }
-  - { name: "n8n", path: "{{ n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n') }}" }
-  - { name: "nodered", path: "{{ nodered_data_dir | default(ansible_facts['env']['HOME'] + '/nodered/data') }}" }
-  - { name: "authentik", empty_ok: true, path: "{{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}" }
+  - { name: "vaultwarden", flag: install_vaultwarden, path: "{{ vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden') }}" }
+  - { name: "n8n", flag: install_n8n, path: "{{ n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n') }}" }
+  - { name: "nodered", flag: install_nodered, path: "{{ nodered_data_dir | default(ansible_facts['env']['HOME'] + '/nodered/data') }}" }
+  - { name: "authentik", flag: install_authentik, empty_ok: true, path: "{{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}" }
   # Invoice PDFs and extracts live under tenants/.../inbox/accounting/*/incoming
   # (and extracts/). KEAP sqlite is not those files. Alpine bind-mounts the
   # tree (same VirtioFS path as gitea) so launchd TCC cannot drop them.
   - { name: "tenants", path: "{{ nos_data_root }}/tenants" }
-  - { name: "dolibarr-documents", path: "{{ dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents') }}" }
-  - { name: "dolibarr-custom", path: "{{ dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom') }}" }
+  - { name: "dolibarr-documents", flag: install_dolibarr, path: "{{ dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents') }}" }
+  - { name: "dolibarr-custom", flag: install_dolibarr, path: "{{ dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom') }}" }
   # MikoPBX: cf/ holds the whole config in SQLite (same torn-window honesty as
   # kuma.db), storage/ the recordings + voicemail. One source, one restore target.
-  - { name: "mikopbx", path: "{{ mikopbx_data_dir | default(ansible_facts['env']['HOME'] + '/mikopbx') }}" }
+  - { name: "mikopbx", flag: install_mikopbx, path: "{{ mikopbx_data_dir | default(ansible_facts['env']['HOME'] + '/mikopbx') }}" }
   # 2026-09-28 — the ten cheap holes backup_coverage named: file-only stores
   # no DB dump covers (attachments, uploads, three SQLite apps). Same torn-window
   # honesty as vaultwarden/n8n for kuma.db / webui.db / home-assistant_v2.db.
   # empty_ok: an attachment store with no uploads yet IS empty; backup.sh records
   # it as success/0 bytes instead of FAILED (the in-container count already
   # rules out the unreadable-mount case that made "empty" a failure elsewhere).
-  - { name: "bookstack", empty_ok: true, path: "{{ bookstack_data_dir | default(ansible_facts['env']['HOME'] + '/bookstack') }}" }
-  - { name: "firefly-upload", empty_ok: true, path: "{{ firefly_upload_dir | default(ansible_facts['env']['HOME'] + '/firefly/upload') }}" }
-  - { name: "freescout", empty_ok: true, path: "{{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout') }}" }
-  - { name: "hedgedoc", empty_ok: true, path: "{{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}" }
-  - { name: "outline", empty_ok: true, path: "{{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline') }}" }
-  - { name: "paperclip", empty_ok: true, path: "{{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}" }
-  - { name: "uptime-kuma", path: "{{ uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma') }}" }
-  - { name: "homeassistant", path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}" }
-  - { name: "openwebui", path: "{{ openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui') }}" }
-  - { name: "wordpress-uploads", empty_ok: true, path: "{{ wordpress_dir | default(ansible_facts['env']['HOME'] + '/projects/wordpress') }}/wp-content/uploads" }
+  - { name: "bookstack", flag: install_bookstack, empty_ok: true, path: "{{ bookstack_data_dir | default(ansible_facts['env']['HOME'] + '/bookstack') }}" }
+  - { name: "firefly-upload", flag: install_firefly, empty_ok: true, path: "{{ firefly_upload_dir | default(ansible_facts['env']['HOME'] + '/firefly/upload') }}" }
+  - { name: "freescout", flag: install_freescout, empty_ok: true, path: "{{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout') }}" }
+  - { name: "hedgedoc", flag: install_hedgedoc, empty_ok: true, path: "{{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}" }
+  - { name: "outline", flag: install_outline, empty_ok: true, path: "{{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline') }}" }
+  - { name: "paperclip", flag: install_paperclip, empty_ok: true, path: "{{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}" }
+  - { name: "uptime-kuma", flag: install_uptime_kuma, path: "{{ uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma') }}" }
+  - { name: "homeassistant", flag: install_homeassistant, path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}" }
+  - { name: "openwebui", flag: install_openwebui, path: "{{ openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui') }}" }
+  - { name: "wordpress-uploads", flag: install_wordpress, empty_ok: true, path: "{{ wordpress_dir | default(ansible_facts['env']['HOME'] + '/projects/wordpress') }}/wp-content/uploads" }
   # 2026-09-28, second pass — every unbacked store whose service is ON:
   # Stalwart mailboxes (the one real mail store; rocksdb tar'd live, same
   # torn-window honesty), grafana.db, woodpecker.sqlite, InfluxDB TSDB, PDS
   # sqlite + repos, the browser IDE's workspace (empty_ok: nothing checked out yet).
-  - { name: "stalwart", path: "{{ stalwart_data_dir | default(ansible_facts['env']['HOME'] + '/stalwart') }}" }
-  - { name: "grafana", path: "{{ grafana_data_dir | default(ansible_facts['env']['HOME'] + '/grafana') }}" }
-  - { name: "woodpecker", path: "{{ woodpecker_data_dir | default(ansible_facts['env']['HOME'] + '/woodpecker') }}" }
-  - { name: "influxdb", path: "{{ influxdb_data_dir | default(ansible_facts['env']['HOME'] + '/influxdb') }}" }
-  - { name: "bluesky-pds", path: "{{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}" }
-  - { name: "code-server-workspace", empty_ok: true, path: "{{ code_server_workspace_dir | default(ansible_facts['env']['HOME'] + '/code-server/workspace') }}" }
+  - { name: "stalwart", flag: install_smtp_stalwart, path: "{{ stalwart_data_dir | default(ansible_facts['env']['HOME'] + '/stalwart') }}" }
+  - { name: "grafana", flag: install_observability, path: "{{ grafana_data_dir | default(ansible_facts['env']['HOME'] + '/grafana') }}" }
+  - { name: "woodpecker", flag: install_woodpecker, path: "{{ woodpecker_data_dir | default(ansible_facts['env']['HOME'] + '/woodpecker') }}" }
+  - { name: "influxdb", flag: install_influxdb, path: "{{ influxdb_data_dir | default(ansible_facts['env']['HOME'] + '/influxdb') }}" }
+  - { name: "bluesky-pds", flag: install_bluesky_pds, path: "{{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}" }
+  - { name: "code-server-workspace", flag: install_code_server, empty_ok: true, path: "{{ code_server_workspace_dir | default(ansible_facts['env']['HOME'] + '/code-server/workspace') }}" }
 # Every `*_dir` var in this file that backup_dirs_to_dump does NOT cover, with
 # the class that says why — reconciled by tests/anatomy/test_backup_coverage_is_declared.py,
 # so a new service cannot be silently absent from the backup set (the removal

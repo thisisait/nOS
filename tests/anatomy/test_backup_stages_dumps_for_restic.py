@@ -171,13 +171,14 @@ def test_the_dir_arrays_render_in_lockstep() -> None:
     one `i`; a filter applied to one and not the others silently pairs a name
     with the wrong path or verdict. Rendered with the gitlab skip active."""
     import subprocess
-    text = _env().from_string(BACKUP.read_text(encoding="utf-8")).render(
+    env = _env()
+    env.globals["lookup"] = lambda kind, name, default=False: {"install_gitlab": False}.get(name, True)
+    text = env.from_string(BACKUP.read_text(encoding="utf-8")).render(
         backup_dirs_to_dump=[
-            {"name": "gitea", "path": "/g"},
-            {"name": "gitlab", "path": "/gl"},           # skipped: install_gitlab off
+            {"name": "gitea", "path": "/g", "flag": "install_gitea"},
+            {"name": "gitlab", "path": "/gl", "flag": "install_gitlab"},   # skipped: flag off
             {"name": "outline", "path": "/o", "empty_ok": True},
         ],
-        install_gitlab=False,
         backup_encryption_enabled=False, backup_overwrite_same_day=True,
         backup_retention_daily=7, backup_retention_weekly=4, backup_retention_monthly=6,
     )
