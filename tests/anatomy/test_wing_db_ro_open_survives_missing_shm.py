@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import ast
 import importlib
+import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -56,11 +57,18 @@ def wing(tmp_path, monkeypatch):
     return db, importlib.import_module("clients.wing")
 
 
+@pytest.mark.skipif(os.geteuid() == 0, reason="root ignores the read-only directory the trap needs")
 def test_the_trap_is_real(tmp_path):
-    """Without an anchor a `mode=ro` open of a sidecar-less WAL db fails."""
+    """Without an anchor a `mode=ro` open of a sidecar-less WAL db fails where
+    the directory is read-only — Grafana's `:ro` mount. In a writable directory
+    Linux SQLite creates -shm itself (CI, 2026-10-04), so that is not the trap."""
     db = _wal_db_without_sidecars(tmp_path)
-    with pytest.raises(sqlite3.OperationalError, match="unable to open"):
-        _ro_count(db)
+    tmp_path.chmod(0o555)
+    try:   # macOS 3.51: "unable to open"; Linux 3.46: "attempt to write a readonly database"
+        with pytest.raises(sqlite3.OperationalError, match="unable to open|readonly database"):
+            _ro_count(db)
+    finally:
+        tmp_path.chmod(0o755)
 
 
 def test_anchor_keeps_ro_readers_open(wing):
