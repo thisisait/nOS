@@ -259,11 +259,12 @@ services:
       - "127.0.0.1:{{ cadvisor_port | default(8080) }}:8080"
     volumes:
       - /:/rootfs:ro
-      - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - cadvisor-socket-proxy
     command:
+      - "--docker=tcp://cadvisor-socket-proxy:2375"
       - "--housekeeping_interval=30s"
       - "--docker_only=true"
       - "--store_container_labels=true"
@@ -276,6 +277,7 @@ services:
     networks:
       - observability_net
       - {{ stacks_shared_network }}
+      - cadvisor_sock
     logging:
       driver: "json-file"
       options:
@@ -283,6 +285,36 @@ services:
         max-file: "3"
     mem_limit: {{ cadvisor_mem_limit | default(docker_mem_limit_standard) }}
     cpus: {{ docker_cpus_light | default('0.5') }}
+
+  # cAdvisor's Docker API, read-only: container inspect + daemon info. Its
+  # /var/run and docker.sock binds are gone; /rootfs still reaches the socket
+  # (privileged anyway) — declared in test_docker_sock_only_behind_proxy.py.
+  cadvisor-socket-proxy:
+    image: tecnativa/docker-socket-proxy:{{ docker_socket_proxy_version }}
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+{% if not (nos_kernel_ipv6 | default(true) | bool) %}
+      DISABLE_IPV6: 1
+{% endif %}
+      CONTAINERS: 1
+      INFO: 1
+      POST: 0
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2375/_ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - cadvisor_sock
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    mem_limit: 128m
+    cpus: "0.25"
 {% endif %}
 
   # ── Blackbox exporter — HTTP/TCP probes ─────────────────────────────────
@@ -316,3 +348,9 @@ services:
         max-file: "3"
     mem_limit: {{ docker_mem_limit_light | default('512m') }}
     cpus: {{ docker_cpus_light | default('0.5') }}
+{% if ansible_os_family != 'Darwin' %}
+
+networks:
+  cadvisor_sock:
+    internal: true
+{% endif %}
