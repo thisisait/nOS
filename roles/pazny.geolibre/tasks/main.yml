@@ -34,6 +34,13 @@
       in nos-atlas, then re-run `--tags geolibre`. GeoLibre itself still comes up.
   when: not _geolibre_atlas_dist.stat.exists
 
+- name: "[pazny.geolibre] Service worker that removes itself (no cached shell behind forward_auth)"
+  ansible.builtin.copy:
+    src: sw.js
+    dest: "{{ geolibre_data_dir }}/sw.js"
+    mode: '0644'
+  notify: Restart geolibre
+
 - name: "[pazny.geolibre] Render the layer catalog (GEOLIBRE_SERVICES_FILE, from geolibre_layers)"
   ansible.builtin.template:
     src: services.json.j2

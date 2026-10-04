@@ -16,6 +16,8 @@ services:
       - "{{ geolibre_data_dir }}/plugins/nos-atlas:/usr/share/nginx/html/plugins/nos-atlas:ro"
       # A directory, not the file: a file bind keeps the old inode after a rename.
       - "{{ geolibre_data_dir }}/catalog:/etc/geolibre:ro"
+      # Replaces the image's sw.js with one that unregisters itself (files/sw.js).
+      - "{{ geolibre_data_dir }}/sw.js:/usr/share/nginx/html/sw.js:ro"
     # The image's own /healthz probe, declared so the strict health-wait sees it.
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1/healthz', timeout=4).status==200 else 1)\""]

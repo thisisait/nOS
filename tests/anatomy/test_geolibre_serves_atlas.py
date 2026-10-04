@@ -12,9 +12,13 @@ the served shape:
 """
 from __future__ import annotations
 
+import json
+import shutil
+import subprocess
 from pathlib import Path
 
 import jinja2
+import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
@@ -85,3 +89,27 @@ def test_manifest_row_and_plugin_gate_it():
     assert plugin["authentik"]["mode"] == "forward_auth"
     assert plugin["authentik"]["tier"] == 3
     assert plugin["ui-extension"]["hub_card"]["tier"] == 3
+
+
+def test_the_image_service_worker_is_replaced_read_only():
+    """2026-10-04: GeoLibre's PWA shell, cached by its service worker, loaded
+    with an expired forward_auth sign-in; every request then hit the redirect."""
+    mounts = _fragment()["volumes"]
+    assert any(m.endswith(":/usr/share/nginx/html/sw.js:ro") for m in mounts), mounts
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="runs the worker in node")
+def test_the_replacement_worker_unregisters_and_clears_caches():
+    harness = """
+    const calls = []; const h = {};
+    global.self = { addEventListener: (t, f) => (h[t] = f), skipWaiting: () => calls.push('skip'),
+      registration: { unregister: async () => calls.push('unregister') },
+      clients: { matchAll: async () => [{ url: 'https://atlas/x', navigate: (u) => calls.push('navigate ' + u) }] } };
+    global.caches = { keys: async () => ['shell'], delete: async (n) => calls.push('delete ' + n) };
+    require(process.argv[1]);
+    let done; h.activate({ waitUntil: (p) => (done = p) });
+    done.then(() => console.log(JSON.stringify(calls)));
+    """
+    out = subprocess.run(["node", "-e", harness, str(ROLE / "files/sw.js")],
+                         capture_output=True, text=True, check=True).stdout
+    assert json.loads(out) == ["unregister", "delete shell", "navigate https://atlas/x"]
