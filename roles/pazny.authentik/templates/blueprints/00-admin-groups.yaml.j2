@@ -58,14 +58,19 @@ entries:
 
   # ── Synthetic identities (nos_synthetic_identities, profiles/test-users.yml):
   # present while nos_test_users_enabled, each in ONE group — the one its tier
-  # adds in authentik_rbac_tiers. Off: a dry run leaves them; a confirmed run
-  # (nos --confirm) retires them — absent, not lingering.
+  # adds in authentik_rbac_tiers. Off, they linger until -e retire_synthetic=true;
+  # absent then matches username AND attributes.kind synthetic (Authentik ANDs
+  # identifiers, a dict is __contains), so a person who shares the name stays.
 {% set _synthetic_on = nos_test_users_enabled | default(false) | bool %}
-{% for u in nos_synthetic_identities | default([]) if _synthetic_on or (nos_confirmed | default(false) | bool) %}
+{% for u in nos_synthetic_identities | default([]) if _synthetic_on or (retire_synthetic | default(false) | bool) %}
   - model: authentik_core.user
     state: {{ 'present' if _synthetic_on else 'absent' }}
     identifiers:
       username: "{{ u.name }}"
+{% if not _synthetic_on %}
+      attributes:
+        kind: synthetic
+{% endif %}
 {% if _synthetic_on %}
     attrs:
       name: "{{ u.name }}"

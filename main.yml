@@ -1505,12 +1505,13 @@
         _taken: "{{ (nos_identities + nos_synthetic_identities) | map(attribute='name') | map('regex_replace', '[^a-z0-9]+', '-') | list }}"
       tags: ['always']
 
-    - name: "[Identities] Synthetic accounts retire only on a confirmed run (DRY RUN)"
+    # Not on confirm: `nos -y` sets confirm=true on every unattended converge.
+    - name: "[Identities] Synthetic accounts retire only when asked (DRY RUN)"
       ansible.builtin.debug:
         msg: >-
           nos_test_users_enabled is off: {{ nos_synthetic_identities | map(attribute='name') | join(', ') }}
-          stay in Authentik if present — `nos --confirm` retires them.
-      when: not (nos_test_users_enabled | bool) and not (nos_confirmed | default(false) | bool)
+          stay in Authentik if present — `nos -e retire_synthetic=true` retires the ones tagged synthetic.
+      when: not (nos_test_users_enabled | bool) and not (retire_synthetic | default(false) | bool)
       tags: ['always']
 
     - name: "[Identities] Derive each extra person's password (user scope)"

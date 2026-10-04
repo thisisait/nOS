@@ -19,10 +19,10 @@
 #   nos -e @profiles/test-users.yml          # or nos_test_users_enabled: true in config.yml
 #   cd tests/e2e && python3 -m pytest estate/test_rbac_users.py -o addopts=""
 #
-# Switched off, the accounts RETIRE: a plain run is a dry run (they stay, the
-# run and tools/identity-status.py name them as synthetic and lingering); the
-# next `nos --confirm` run renders them state: absent and Authentik deletes
-# them. App-side accounts the first-login walk created are not touched.
+# Switched off, the accounts LINGER (the run and tools/identity-status.py name
+# them synthetic and lingering) until `nos -e retire_synthetic=true`, which
+# deletes only Authentik users tagged attributes.kind synthetic — never on -y
+# or --confirm. App-side accounts the first-login walk created are not touched.
 # =============================================================================
 
 nos_test_users_enabled: true

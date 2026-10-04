@@ -5,8 +5,10 @@ alice/bob/carol/dave are `kind: synthetic` in profiles/test-users.yml
 which holds real accounts only. One switch, `nos_test_users_enabled`:
 on, the REAL plugin-loader render of the blueprint creates each one active in
 exactly its tier's group, tagged synthetic; off, an unconfirmed run renders
-none (dry run: they linger, the run says so) and a confirmed run (nos
---confirm) renders `state: absent` — retire, not linger. Every reader that
+none (they linger, the run says so) and only `-e retire_synthetic=true`
+renders `state: absent`, identified by username AND attributes.kind synthetic,
+so a person who merely shares the name is never matched (Authentik ANDs the
+identifiers, a dict value is `__contains`). `nos -y` / `--confirm` retire nothing. Every reader that
 lists accounts labels a synthetic one as synthetic, never as a person.
 """
 from __future__ import annotations
@@ -45,7 +47,7 @@ def _tier_group(tier: int) -> str:
     return next(t for t in CFG["authentik_rbac_tiers"] if t["tier"] == tier)["groups"][-1]
 
 
-def _ctx(on: bool, tmp: Path, confirmed: bool = False) -> dict:
+def _ctx(on: bool, tmp: Path, confirmed: bool = False, retire: bool = False) -> dict:
     """What nos_plugin_ctx carries for the vars the blueprint reads: rendered."""
     ctx = {"stacks_dir": str(tmp), "tenant_domain": "example.test", "nos_primary_admin": "op",
            "nos_operator_email": "op@example.test", "default_admin_email": "admin@example.test",
@@ -54,6 +56,8 @@ def _ctx(on: bool, tmp: Path, confirmed: bool = False) -> dict:
            "authentik_default_groups": CFG["authentik_default_groups"],
            "authentik_rbac_tiers": CFG["authentik_rbac_tiers"],
            ni.SYNTHETIC_FLAG: on, "nos_confirmed": confirmed}
+    if retire:
+        ctx["retire_synthetic"] = "true"   # as -e passes it
     env = jinja2.Environment()
     rend = lambda i: {k: env.from_string(v).render(**ctx) if isinstance(v, str) else v for k, v in i.items()}  # noqa: E731
     ctx["nos_identities"] = [rend(i) for i in CFG["nos_identities"]]
@@ -70,10 +74,10 @@ class _Loader(yaml.SafeLoader):
 _Loader.add_constructor("!Find", lambda ld, n: ("Find", ld.construct_sequence(n, deep=True)))
 
 
-def _render_users(on: bool, tmp: Path, confirmed: bool = False) -> dict:
+def _render_users(on: bool, tmp: Path, confirmed: bool = False, retire: bool = False) -> dict:
     """Run the loader's own render_dir for authentik-base, read 00 back."""
     plugin = lp.Plugin.from_manifest_file(PLUGIN / "plugin.yml")
-    note = lp._run_actions(plugin, "pre_compose", [{"render_dir": "provisioning.blueprints"}], _ctx(on, tmp, confirmed))
+    note = lp._run_actions(plugin, "pre_compose", [{"render_dir": "provisioning.blueprints"}], _ctx(on, tmp, confirmed, retire))
     assert "rendered" in note, note
     doc = yaml.load((tmp / "infra/authentik/blueprints/00-admin-groups.yaml").read_text(), _Loader)
     return {e["identifiers"]["username"]: e for e in doc["entries"] if e["model"] == "authentik_core.user"}
@@ -114,13 +118,27 @@ def test_off_and_unconfirmed_the_blueprint_leaves_them_alone(tmp_path):
     assert not leaked, f"toggle off, yet the blueprint touches {leaked}"
 
 
-def test_off_and_confirmed_the_blueprint_retires_them(tmp_path):
+def test_off_and_confirmed_alone_retires_nobody(tmp_path):
+    """`nos -y` emits confirm=true on every unattended converge — not consent."""
     users = _render_users(False, tmp_path, confirmed=True)
-    assert users["akadmin"]["state"] == "present", "positive control: a confirmed run retired the SSO root"
+    leaked = sorted({i["name"] for i in SYNTHETIC} & set(users))
+    assert not leaked, f"confirm=true (any -y run) retires {leaked} without -e retire_synthetic=true"
+
+
+def test_off_and_retire_removes_only_accounts_tagged_synthetic(tmp_path):
+    users = _render_users(False, tmp_path, retire=True)
+    assert users["akadmin"]["state"] == "present", "positive control: a retire run retired the SSO root"
     for i in SYNTHETIC:
         u = users.get(i["name"])
-        assert u and u["state"] == "absent", f"toggle off + nos --confirm, yet {i['name']} is not retired: {u}"
+        assert u and u["state"] == "absent", f"toggle off + retire_synthetic, yet {i['name']} is not retired: {u}"
+        assert u["identifiers"] == {"username": i["name"], "attributes": {"kind": "synthetic"}}, (
+            f"{i['name']}: retire matches on more than the synthetic tag — a person named so would be deleted")
         assert "password" not in (u.get("attrs") or {}), i["name"]
+
+
+def test_on_retire_is_ignored(tmp_path):
+    users = _render_users(True, tmp_path, retire=True)
+    assert all(users[i["name"]]["state"] == "present" for i in SYNTHETIC)
 
 
 def test_on_each_is_active_in_exactly_its_tier_group_and_tagged_synthetic(tmp_path):
@@ -170,8 +188,9 @@ def test_main_adopts_the_profile_roster_and_the_dry_run_names_them():
     assert pre.index(inc) < pre.index(adopt)
     text = (REPO / "main.yml").read_text()
     assert "nos_synthetic_identities" in text.split("_taken:", 1)[1].split("\n", 1)[0], "a person may take a synthetic name"
-    dry = [t for t in main["tasks"] if "nos --confirm" in str(t.get("ansible.builtin.debug", ""))]
-    assert dry and "nos_confirmed" in dry[0]["when"] and ni.SYNTHETIC_FLAG in dry[0]["when"], "no dry-run notice before a retire"
+    dry = [t for t in main["tasks"] if "retire_synthetic=true" in str(t.get("ansible.builtin.debug", ""))]
+    assert dry and "retire_synthetic" in dry[0]["when"] and ni.SYNTHETIC_FLAG in dry[0]["when"], "no dry-run notice before a retire"
+    assert "nos_confirmed" not in str(dry[0]), "the notice still promises a -y/--confirm retire"
 
 
 def test_identity_status_labels_them_synthetic_and_names_the_lingering():

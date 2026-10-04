@@ -13,7 +13,7 @@ Declared sources (the repo):
   • nos_synthetic_identities  profiles/test-users.yml — the test personas,
                           kind synthetic, declared only while
                           nos_test_users_enabled; off, a realm account of
-                          theirs is LINGERING (retired by `nos --confirm`)
+                          theirs is LINGERING (retired by `nos -e retire_synthetic=true`)
   • nos_extra_identities  config.yml — the operator's own people (realm authentik)
   • authentik_agent_clients — machine OIDC clients (counted, not re-typed)
   • Bone loopauth.IDENTITIES — the loop's token identities (counted)
@@ -115,11 +115,11 @@ def _on(merged: dict, flag: str, ctx: dict) -> bool:
 
 def lingering(merged: dict, held: list[str]) -> str:
     """Synthetic accounts a realm still holds while their switch is off: not
-    UNDECLARED people, retired by the next `nos --confirm` run."""
+    UNDECLARED people, retired by `nos -e retire_synthetic=true`."""
     if _on(merged, SYNTHETIC_FLAG, {}):
         return ""
     names = sorted({i["name"] for i in synthetic_identities(merged)} & set(held))
-    return f"synthetic, lingering (`nos --confirm` retires them): {', '.join(names)}" if names else ""
+    return f"synthetic, lingering (`nos -e retire_synthetic=true` retires them): {', '.join(names)}" if names else ""
 
 
 def _port(merged: dict, key: str, default: int) -> int:
