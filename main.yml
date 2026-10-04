@@ -1627,16 +1627,12 @@
           {{ nos_derived_secrets | length }} credentials in the derived map.
       tags: ['always']
 
-    # Part B (survive-the-wipe): a CONFIRMED keap-inclusive removal takes a
-    # FRESH synchronous off-site restic snapshot BEFORE blank-reset deletes
-    # copy #1. Confirmed-only by construction (run-mode's dry-run end_play
-    # already fired). Off-site only (restic_repo set). A missing survivor STOPS
-    # the removal (operator 2026-10-02; override -e prewipe_snapshot_required=false).
+    # Part B (survive-the-wipe): EVERY confirmed removal takes a fresh synchronous
+    # off-site restic snapshot BEFORE blank-reset deletes copy #1 (confirmed-only:
+    # run-mode's dry-run end_play already fired). No restic_repo = no survivor =
+    # STOP (override -e prewipe_snapshot_required=false). Never gate on restic_repo.
     - import_tasks: tasks/pre-wipe-backup.yml
-      when:
-        - nos_removing | default(false) | bool
-        - install_keap | default(false) | bool
-        - (restic_repo | default('')) | length > 0
+      when: nos_removing | default(false) | bool
       tags: ['blank', 'reset']
 
     - import_tasks: tasks/blank-reset.yml

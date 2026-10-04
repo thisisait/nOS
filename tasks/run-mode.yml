@@ -243,6 +243,10 @@
              Set restic_repo + configure_backup first, or use remove=none.
       {% endif %}
       {% endif %}
+      {% if (restic_repo | default('')) | length == 0 %}
+         - ⚠ restic_repo is UNSET: a confirmed run REFUSES (no survivor, no
+           wipe) unless -e prewipe_snapshot_required=false.
+      {% endif %}
       {% if not nos_leaving %}
            bluesky_pds_rotation_key + authentik_secret_key (and the whole
            persist-and-reuse group) SURVIVE — loaded before deletion,

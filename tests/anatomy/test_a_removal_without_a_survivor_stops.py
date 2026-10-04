@@ -13,7 +13,7 @@ REPO = Path(__file__).resolve().parents[2]
 TASKS = yaml.safe_load((REPO / "tasks/pre-wipe-backup.yml").read_text())
 VERDICT = TASKS[-1]
 OK = {"_prewipe_backup_sh": {"stat": {"exists": True}}, "_prewipe_copy1": {"rc": 0},
-      "_prewipe_restic": {"rc": 0}, "_prewipe_snapshot": {"rc": 0}}
+      "_prewipe_restic": {"rc": 0}, "_prewipe_snapshot": {"rc": 0}, "restic_repo": "/r"}
 
 
 def _passes(ctx) -> bool:
@@ -34,3 +34,4 @@ def test_a_complete_backup_passes_and_each_missing_piece_stops():
                      ("_prewipe_restic", {"rc": 127}), ("_prewipe_backup_sh", {"stat": {"exists": False}})):
         assert not _passes({**OK, key: bad}), key
     assert not _passes({k: v for k, v in OK.items() if k != "_prewipe_snapshot"}), "a skipped snapshot is not a snapshot"
+    assert not _passes({**OK, "restic_repo": ""}), "no repo, no survivor (review 2026-10-04)"
