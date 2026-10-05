@@ -47,6 +47,9 @@
     - "{{ nginx_etc_dir }}/sites-enabled"
     - "{{ nginx_etc_dir }}/conf.d"
     - "{{ nginx_log_dir }}"
+    # proxy_cache_path in nginx.conf: a clean runner has no var/cache, and
+    # `nginx -t` fails on mkdir (macOS-15 CI, 2026-10-05).
+    - "{{ (homebrew_prefix ~ '/var') if ansible_os_family == 'Darwin' else '/var' }}/cache/nginx"
   # On Linux nginx_etc_dir is /etc/nginx (root-owned); macOS uses the
   # operator-writable homebrew prefix, so become only on non-Darwin.
   become: "{{ ansible_os_family != 'Darwin' }}"
