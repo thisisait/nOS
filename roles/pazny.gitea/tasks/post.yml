@@ -60,7 +60,7 @@
     exec -T -u git gitea gitea admin user create
     --username "{{ gitea_admin_user | default(ansible_facts['user_id']) }}"
     --password "{{ gitea_admin_password }}"
-    --email "{{ gitea_admin_email | default(gitea_admin_user | default(ansible_facts['user_id']) + '@localhost') }}"
+    --email "{{ gitea_admin_email | default(gitea_admin_user | default(ansible_facts['user_id']) + '@localhost', true) }}"
     --admin
     --must-change-password=false
   when:

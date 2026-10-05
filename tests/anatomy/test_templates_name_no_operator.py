@@ -22,3 +22,18 @@ def test_no_template_names_the_operator() -> None:
             for n, line in enumerate((REPO / f).read_text(encoding="utf-8").splitlines(), 1)
             if OPERATOR.search(line)]
     assert not hits, "template names a literal home or the maintainer:\n" + "\n".join(hits)
+
+
+def test_committed_defaults_carry_no_git_identity():
+    """A fork inherited the maintainer's git name and e-mail and Gitea admin
+    address from default.credentials.yml (2026-10-05). Identity lives in the
+    operator's gitignored credentials.yml; the committed defaults stay empty."""
+    import yaml
+    creds = yaml.safe_load((REPO / "default.credentials.yml").read_text())
+    for key in ("git_user_name", "git_user_email", "gitea_admin_email"):
+        assert creds.get(key, "") == "", f"{key} has a committed default"
+
+
+def test_an_empty_gitea_admin_email_falls_back():
+    post = (REPO / "roles/pazny.gitea/tasks/post.yml").read_text()
+    assert "@localhost', true)" in post, "default() without true keeps an empty string"
