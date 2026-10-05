@@ -70,7 +70,9 @@
     pyenv exec pip install {% if item.version is defined %}"{{ item.name }}=={{ item.version }}"{% else %}{{ item.name }}{% endif %}
   args:
     executable: /bin/zsh
-  loop: "{{ pip_packages | default([]) }}"
+  loop: >-
+    {{ (pip_packages | default([])) + (pip_recommended_packages | default([]))
+       + ((pip_personal_packages | default([])) if (install_personal_packages | default(false) | bool) else []) }}
   environment:
     PYENV_ROOT: "{{ ansible_facts['env']['HOME'] }}/.pyenv"
     PATH: "{{ ansible_facts['env']['HOME'] }}/.pyenv/bin:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"

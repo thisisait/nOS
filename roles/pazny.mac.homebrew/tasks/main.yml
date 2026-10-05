@@ -219,9 +219,9 @@
         HOMEBREW_NO_AUTO_UPDATE: "1"
         HOMEBREW_NO_INSTALL_CLEANUP: "1"
       # install_cask_apps gated nothing until 2026-09-01 — false still installed
-      # VS Code, Windsurf, Sublime, Ghostty. Default true, so nothing changes on
-      # an existing box. Blacklist-uninstall above stays ungated: not an install.
-      when: install_cask_apps | default(true) | bool
+      # VS Code, Windsurf, Sublime, Ghostty. Casks are personal: default false since
+      # 2026-10-05. Blacklist-uninstall above stays ungated: not an install.
+      when: install_cask_apps | default(false) | bool
       notify:
         - Clear homebrew cache
 
@@ -473,7 +473,10 @@
       failed_when:
         - _brew_result.rc != 0
         - "'already installed' not in _brew_result.stderr"
-      loop: "{{ homebrew_installed_packages }}"
+      # Runtime + recommended always; personal only on request (host_software_owner).
+      loop: >-
+        {{ homebrew_installed_packages + (homebrew_recommended_packages | default([]))
+           + ((homebrew_personal_packages | default([])) if (install_personal_packages | default(false) | bool) else []) }}
       loop_control:
         label: "{{ item.name | default(item) }}"
       environment:

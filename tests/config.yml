@@ -85,6 +85,13 @@ configure_dotfiles: false   # Geerlingguy dotfiles - unneeded in CI
 configure_sublime: false
 
 # -- Minimal package set for fast CI -------------------------------------------
+# Personal install paths stay exercised, but only with the minimal lists here;
+# the recommended/personal default lists are emptied so CI installs what it did.
+install_personal_packages: true
+homebrew_recommended_packages: []
+homebrew_personal_packages: []
+pip_recommended_packages: []
+pip_personal_packages: []
 homebrew_installed_packages:
   - autoconf
   - bash-completion

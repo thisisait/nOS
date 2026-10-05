@@ -474,8 +474,9 @@ docker_cpus_light: "0.5"
 # ==============================================================================
 
 # ── Homebrew & Apps ───────────────────────────────────────────────────────────
-install_homebrew_packages: true   # CLI tools (including build tools: cmake, ninja, llvm...)
-install_cask_apps: true           # GUI applications via Homebrew Cask
+install_homebrew_packages: true   # Homebrew + the runtime/recommended formulae (host_software_owner)
+install_cask_apps: false          # GUI applications via Homebrew Cask (personal)
+install_personal_packages: false  # homebrew/pip/npm *personal* lists below (personal)
 install_mas_apps: false           # Mac App Store applications
 
 # ── Reverse proxy ─────────────────────────────────────────────────────────────
@@ -522,7 +523,7 @@ install_php: false                # Kept false. The host-PHP INSTALLER (tasks/ph
                                   # This flag now only gates some service-registry/dashboard rows (which
                                   # over-use it as a proxy for Wing/Redis/php-fpm); do NOT delete the key
                                   # until those are re-gated, or `| default(true)` flips them all on.
-install_node: true                # Node.js + NVM + global npm packages
+install_node: true                # Node.js + NVM (Cortex runs on it); node_global_packages are personal
 # Claude CLI as a NATIVE build outside NVM (tasks/claude-cli.yml). Separate
 # from install_node because that is the whole point: a node version migration
 # must not be able to reinstall the tool the operator is holding. Turning this
@@ -530,10 +531,10 @@ install_node: true                # Node.js + NVM + global npm packages
 # live sessions with EACCES several times a day (measured 2026-08-04).
 install_claude_cli: true
 claude_cli_channel: "stable"      # stable | latest | an exact version
-install_bun: true                 # Bun JavaScript runtime / bundler
+install_bun: false                # Bun JavaScript runtime / bundler (personal)
 install_python: true              # Python + pyenv + pip packages
-install_golang: true              # Go language + gopls, golangci-lint, air
-install_dotnet: true              # .NET SDK (C#, F#) + EF CLI
+install_golang: false             # Go language + gopls, golangci-lint, air (personal)
+install_dotnet: false             # .NET SDK (C#, F#) + EF CLI (personal)
 
 # ── AI Agent ──────────────────────────────────────────────────────────────────
 install_openclaw: true            # OpenClaw (Inspektor Klepitko, Ollama, no API key)
@@ -573,13 +574,13 @@ install_wing: true           # Wing Security Dashboard + Hub (Nette PHP + SQLite
 
 # ── macOS system configuration ────────────────────────────────────────────────
 configure_dotfiles: false         # Dotfiles – requires your own repo! Set dotfiles_repo in credentials.yml
-configure_terminal: true          # Terminal theme
-configure_osx: true               # Base macOS defaults (.osx script)
-configure_macos_defaults: true    # Extended macOS settings (Finder, keyboard, Dock...)
+configure_terminal: false         # Terminal theme (personal)
+configure_osx: false              # Base macOS defaults (.osx script) (personal)
+configure_macos_defaults: false   # Extended macOS settings (Finder, keyboard, Dock...) (personal)
 configure_dock: false             # Dock layout (requires dockutil)
 configure_sudoers: false          # Custom sudoers rules
 configure_sublime: false          # Sublime Text editor
-install_shell_extras: true        # Starship prompt + shell aliases (bat, eza, fzf, zoxide, lazygit)
+install_shell_extras: false       # Starship prompt + shell aliases (bat, eza, fzf, zoxide, lazygit) (personal)
 
 # ── System services (require sudo) ────────────────────────────────────────────
 enable_ssh: false                 # Remote Login / SSH server
@@ -742,6 +743,43 @@ install_tailscale: true           # Tailscale – WireGuard mesh VPN (remote acc
 install_dnsmasq: true             # dnsmasq – auto *.dev.local DNS (no /etc/hosts edits)
 
 # ==============================================================================
+# HOST SOFTWARE OWNERSHIP — who answers for each host package list and switch.
+# runtime: nOS calls it, pins and upgrades it. recommended: installed once when
+# absent, then left to its vendor. personal: off unless config.yml turns it on.
+# Gate: tests/anatomy/test_every_host_package_has_an_owner.py
+# ==============================================================================
+host_software_owner:
+  homebrew_installed_packages: runtime
+  homebrew_recommended_packages: recommended
+  homebrew_personal_packages: personal
+  homebrew_cask_apps: personal
+  pip_packages: runtime
+  pip_recommended_packages: recommended
+  pip_personal_packages: personal
+  node_global_packages: personal
+  npm_packages: personal
+  bun_global_packages: personal
+  go_packages: personal
+  gem_packages: personal
+  composer_packages: personal
+  php_composer_packages: personal
+  dotnet_global_tools: personal
+  mas_installed_apps: personal
+  install_personal_packages: personal
+  install_cask_apps: personal
+  install_mas_apps: personal
+  install_bun: personal
+  install_golang: personal
+  install_dotnet: personal
+  install_shell_extras: personal
+  configure_terminal: personal
+  configure_osx: personal
+  configure_macos_defaults: personal
+  configure_dotfiles: personal
+  configure_dock: personal
+  configure_sublime: personal
+
+# ==============================================================================
 # HOMEBREW – general settings
 # ==============================================================================
 
@@ -750,26 +788,45 @@ homebrew_prefix: "{{ '/opt/homebrew' if ansible_facts['machine'] == 'arm64' else
 # Docker Desktop installs binaries into /usr/local/bin regardless of architecture
 docker_bin: /usr/local/bin/docker
 
+# runtime — each one has a caller in tasks/roles/tools/organs (the gate finds it).
 homebrew_installed_packages:
+  - git
+  - gh                   # tools/red-status.py reads CI + Dependabot through it
+  - curl
+  - jq
+  - openssl
+  - sqlite               # sqlite3: wing.db restore + verify
+  - tmux                 # tools/nos-cc.sh control centre
+  - mkcert               # local SSL certificates (tasks/tls-certs.yml)
+  - ffmpeg               # ears: microphone capture + resample
+  - restic               # pre-wipe backup, Backrest
+  - gitleaks             # gitleaks plugin: nightly secret scan
+  # Infisical CLI — used by roles/pazny.infisical/tasks/seed.yml to run
+  # `infisical bootstrap` on a fresh CE instance, returning a machine
+  # identity token used for the rest of the org/project/secret seed flow.
+  # Tap: `infisical/get-cli` (added below).
+  - infisical
+
+# recommended — installed when absent, then left alone (nOS calls none directly).
+homebrew_recommended_packages:
+  - nss                  # mkcert's Firefox trust-store backend
+  - ripgrep              # rg — on the AgentKit read-only bash allow-list
+  - pre-commit           # contributors: .pre-commit-config.yaml
+
+# personal — the operator's desk; installed only with install_personal_packages.
+homebrew_personal_packages:
   # Base tools
   - autoconf
   - bash-completion
-  - git
-  - gh
   - gpg
   - wget
-  - curl
-  - jq
   - yq
   - htop
-  - tmux
   - tree
   - pv
   - watch
   - readline
-  - openssl
   - libevent
-  - sqlite
   - gettext
   - ssh-copy-id
   - zsh-history-substring-search
@@ -778,57 +835,41 @@ homebrew_installed_packages:
   - httpie
   - iperf
   - wrk
-  - mkcert               # local SSL certificates
-  - nss                  # mkcert backend
   # Media
   - gifsicle
   - pngpaste
   - doxygen
-  # Development tools (included even if a specific stack is skipped)
+  # Development tools
   - git-lfs
-  - pre-commit
   - act                  # GitHub Actions locally
-  # ── Modern CLI replacements ──────────────────────────────────────────────
-  - ripgrep              # rg  – faster grep (regex, .gitignore-aware)
-  - fd                   # fd  – faster find
-  - bat                  # bat – cat with syntax highlighting + git diff
-  - eza                  # eza – modern ls (icons, trees, git status)
-  - fzf                  # fzf – fuzzy finder (Ctrl+R history, Ctrl+T files)
-  - zoxide               # z   – smart cd (weights by history)
-  - starship             # starship – GPU-fast cross-shell prompt
-  - lazygit              # lazygit – TUI for git (add/commit/push/merge)
-  - ncdu                 # ncdu – interactive disk usage TUI
-  - duf                  # duf  – modern df (disk overview)
-  - tldr                 # tldr – shortened man pages with examples
-  - hyperfine            # hyperfine – CLI benchmarking
+  # ── Modern CLI replacements (install_shell_extras aliases them) ───────────
+  - fd
+  - bat
+  - eza
+  - fzf
+  - zoxide
+  - starship
+  - lazygit
+  - ncdu
+  - duf
+  - tldr
+  - hyperfine
   # ── Media (Blender renders, FL Studio exports, video workflow) ────────────
-  - ffmpeg               # ffmpeg – audio/video conversion (needed for Blender+FL)
-  - imagemagick          # convert – batch image processing
-  - yt-dlp               # yt-dlp – video/audio download from YT and others
-  - exiftool             # exiftool – read/write media metadata
-  # ── Backups and maintenance ──────────────────────────────────────────────
-  - restic               # Restic – encrypted backups (Backblaze B2, SFTP, local disk)
-  - mac-cleanup-go       # TUI macOS cleaner – cache, logs, Xcode, brew (github.com/2ykwang/mac-cleanup-go)
-  # ── Security research tools (SBOM, SAST, secrets, CVE scan) ──────────────
-  - trivy                # Trivy – vulnerability scanner (Docker images, FS, IaC, SBOM)
-  - grype                # Grype – CVE scanner against SBOM / image
-  - syft                 # Syft – SBOM generator (produces SPDX/CycloneDX for grype)
-  - gitleaks             # Gitleaks – detection of secrets in git history
-  - nuclei               # Nuclei – template-based vulnerability scanner (web/API)
-  - semgrep              # Semgrep CE – SAST / pattern-based static analysis
+  - imagemagick
+  - yt-dlp
+  - exiftool
+  # ── Maintenance ───────────────────────────────────────────────────────────
+  - mac-cleanup-go       # TUI macOS cleaner (github.com/2ykwang/mac-cleanup-go)
+  # ── Security research tools (SBOM, SAST, CVE scan) ────────────────────────
+  - trivy
+  - grype
+  - syft
+  - nuclei
+  - semgrep
   # ── Self-hosted CLI / agents ─────────────────────────────────────────────
-  - ntfy                 # ntfy – CLI client for push notifications (server is a Docker role)
-  - opencode             # OpenCode – AI-first terminal code agent (SST)
-  # ── Build tools – NOT toggleable, required by other tools ────────────────
-  # cmake:      Ollama build, native Python/Node extensions (numpy, sharp...)
-  # ninja:      Fast build system (cmake backend, meson backend)
-  # llvm:       Clang/LLVM – required by kiwix-tools build, some Rust crates
-  # ccache:     Compiler cache – speeds up repeated compilation 5–10x
-  # pkg-config: Library dependency management (required for many brew --HEAD formulas)
-  # libomp:     OpenMP parallelism – Ollama CPU inference, numpy, scipy
-  # openblas:   BLAS/LAPACK – numpy, scipy, ML workloads without GPU
-  # protobuf:   Protocol Buffers – gRPC, ONNX, TFLite, OpenClaw tools
-  # meson:      Build system (kiwix-tools, libzim)
+  - ntfy                 # CLI client; nOS itself posts to the server over HTTP
+  - opencode             # pazny.opencode installs its own when install_opencode
+  # ── Build tools (native extensions, source builds) ───────────────────────
   - cmake
   - ninja
   - llvm
@@ -838,11 +879,6 @@ homebrew_installed_packages:
   - openblas
   - protobuf
   - meson
-  # Infisical CLI — used by roles/pazny.infisical/tasks/seed.yml to run
-  # `infisical bootstrap` on a fresh CE instance, returning a machine
-  # identity token used for the rest of the org/project/secret seed flow.
-  # Tap: `infisical/get-cli` (added below).
-  - infisical
 
 # ── FrankenPHP — Wing host runtime (anatomy A3.5, 2026-05-04) ────────────────
 # FrankenPHP = single binary bundling Caddy HTTP server + PHP runtime + Mercure +
@@ -940,7 +976,7 @@ homebrew_cask_apps:
                          # ↳ Connects to ~/agents/log/ and Grafana
 
   # ── Network / access ──────────────────────────────────────────────────────
-  - tailscale            # Tailscale – WireGuard mesh VPN (access to all services from anywhere)
+  # Tailscale is not here: tasks/tailscale.yml installs it under install_tailscale.
 
   # ── Virtualization ────────────────────────────────────────────────────────
   # - utm                # UTM – macOS/Linux VM on Apple Silicon (Ansible testing, OS images)
@@ -1133,22 +1169,29 @@ bun_global_packages: []
 
 python_version: "3.13"   # pyenv install target
 
+# runtime: Bone runs ansible-playbook and the loop's pytest judge; a Pulse job imports numpy.
 pip_packages:
+  - name: ansible
+  - name: pytest
+  - name: numpy
+
+# recommended: the tests the pytest judge runs import these (installed when absent).
+pip_recommended_packages:
+  - name: httpx
+  - name: fastapi
+
+# personal: installed only with install_personal_packages.
+pip_personal_packages:
   # ── Dev base ────────────────────────────────────────────────────────────
   - name: virtualenv
   - name: black
   - name: ruff
   - name: mypy
-  - name: pytest
-  - name: httpx
-  - name: fastapi
   - name: uvicorn
   - name: rich
-  - name: ansible
   - name: anthropic     # Claude API SDK
   # ── Data Science / AI ────────────────────────────────────────────────────
   - name: jupyterlab    # Jupyter notebooks (Ollama experiments, data analysis)
-  - name: numpy
   - name: pandas
   - name: matplotlib
   - name: transformers  # HuggingFace models (local inference alongside Ollama)

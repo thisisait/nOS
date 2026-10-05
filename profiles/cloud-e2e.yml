@@ -67,4 +67,5 @@ apps_skip: [twofauth, documenso, roundcube]
 # pip installed `ansible` into the frozen controller venv (2.21.0 → 2.21.4).
 # e2e.sh strips the venv from PATH too; this is the belt to that brace.
 pip_packages: []
+pip_recommended_packages: []
 node_global_packages: []
