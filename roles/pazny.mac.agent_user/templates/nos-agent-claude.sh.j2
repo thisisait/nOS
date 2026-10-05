@@ -1,0 +1,4 @@
+#!/bin/bash
+# Rendered by pazny.mac.agent_user. NOS_CLAUDE_BIN points here when agents_separate_user is on.
+# sudo carries only agents_env_keep; the launcher maps NOS_AGENT_WING_TOKEN to WING_API_TOKEN.
+cd / && exec /usr/bin/sudo -n -u {{ agents_user }} -- {{ agents_launcher }} "$@"

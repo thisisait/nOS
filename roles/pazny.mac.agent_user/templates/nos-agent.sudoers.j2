@@ -1,0 +1,5 @@
+# Rendered by pazny.mac.agent_user; installed only after `visudo -cf` accepts it.
+# {{ agents_operator_user }} may start ONE program as {{ agents_user }}; sudo passes only env_keep.
+Defaults!{{ agents_launcher }} env_reset
+Defaults!{{ agents_launcher }} env_keep = "{{ agents_env_keep | join(' ') }}"
+{{ agents_operator_user }} ALL=({{ agents_user }}) NOPASSWD: {{ agents_launcher }}

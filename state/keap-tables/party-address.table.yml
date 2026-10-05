@@ -31,3 +31,5 @@ schema:
     - { key: postcode,    label: "Postcode",       kind: text,   role: attribute, required: true }
     - { key: subdivision, label: "Subdivision",    kind: text,   role: attribute }
     - { key: country,     label: "Country",        kind: text,   role: dimension, required: true }
+    # RÚIAN address point (kód ADM) — CZ only; the join key into geo.ruian_adm.
+    - { key: ruian_adm,   label: "RÚIAN ADM",      kind: number, role: attribute }

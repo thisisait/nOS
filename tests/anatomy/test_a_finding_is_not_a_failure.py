@@ -125,11 +125,11 @@ def test_the_weakness_reader_does_not_mine_a_finding_as_a_failure(tmp_path) -> N
     db = tmp_path / "wing.db"
     conn = sqlite3.connect(db)
     conn.executescript("""
-        CREATE TABLE pulse_jobs (id TEXT PRIMARY KEY, findings_exit_codes TEXT);
+        CREATE TABLE pulse_jobs (id TEXT PRIMARY KEY, findings_exit_codes TEXT, removed_at TEXT);
         CREATE TABLE pulse_runs (job_id TEXT, exit_code INT, fired_at TEXT,
                                  stderr_tail TEXT, stdout_tail TEXT, duration_ms INT);
     """)
-    conn.executemany("INSERT INTO pulse_jobs VALUES (?,?)", [
+    conn.executemany("INSERT INTO pulse_jobs (id, findings_exit_codes) VALUES (?,?)", [
         ("finder", "[1,3]"),      # exits 1 to say "found something"
         ("breaker", None),        # no declaration: 1 is a failure
         ("malformed", "{oops"),   # a bad declaration must not silence a red job

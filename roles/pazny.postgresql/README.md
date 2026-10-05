@@ -77,3 +77,15 @@ Revert the commit that introduced this role and:
 3. Restore the `include_tasks` / `include_role` calls in `tasks/stacks/core-up.yml`
 
 The override file at `~/stacks/infra/overrides/postgresql.yml` becomes dead — delete it manually if the rollback is permanent.
+
+## PostGIS (`install_postgis`)
+
+With `install_postgis: true` the service is built from `files/postgis/Dockerfile`:
+PostGIS `postgis_version` (sha256-checked) compiled onto `postgres:{{ postgresql_version }}`
+for the host's arch, tagged `nos/postgis:<pg>-<postgis>`. Prebuilt multi-arch
+images lagged the PG CVE pin per platform (measured 2026-10-03), so the pin stays
+the one `postgresql_version`. Same musl base, so an existing data dir starts
+unchanged (no collation version is recorded on musl). `post.yml` creates the
+`geo` database, `CREATE EXTENSION IF NOT EXISTS postgis` and schema `geo`.
+The image carries `gdal-tools` so loaders run `ogr2ogr` in-container over the
+local socket. Measured: build 2m17s on arm64, image 993 MB (vs 114 MB).

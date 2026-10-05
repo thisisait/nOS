@@ -74,7 +74,7 @@ its row reference is `failed` — an unattributable judgement cannot be reviewed
 ## E. `Recall brief` — the RAG ceremony (NOT YET LIVE)
 
 Retained verbatim from the 2026-05-17 contract. Applies once the runner lands
-and the Qdrant corpus is non-empty; until then no task should name it.
+and the KEAP libSQL corpus is non-empty; until then no task should name it.
 
 - Report under heading `## Recall brief`.
 - Three sub-sections, in order: `Query summary`, `Matches found`,
@@ -83,15 +83,15 @@ and the Qdrant corpus is non-empty; until then no task should name it.
 Each bullet under `Matches found` MUST include:
 
 1. **Source row** — wing.db row reference (events.id, remediation_items.id,
-   etc.) the matched Qdrant point indexes.
-2. **Similarity score** — Qdrant cosine similarity (0.0-1.0). Below the
+   etc.) the matched KEAP vector row indexes.
+2. **Similarity score** — cosine similarity (0.0-1.0). Below the
    threshold default (0.75) means `needs_revision`.
 3. **Verbatim excerpt** — 1-2 sentences from the matched source row that
    demonstrates the similarity to the current query.
 4. **What's different** — explicit call-out of why the current case isn't
    identical (otherwise this is just "we already fixed it").
 
-If Qdrant returns zero matches above threshold, the report is exactly:
+If the search returns zero matches above threshold, the report is exactly:
 
 ```
 ## Recall brief

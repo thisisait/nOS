@@ -33,7 +33,7 @@ def load_plan() -> list[dict]:
 
 
 def load_identities() -> list[dict]:
-    """nos_identities resolved; entries whose enabled_by toggle is off are absent."""
+    """nos_identities resolved, plus the synthetic ones while nos_test_users_enabled."""
     return _plan_module().identities()
 
 

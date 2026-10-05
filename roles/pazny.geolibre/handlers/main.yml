@@ -1,0 +1,6 @@
+---
+- name: Restart geolibre
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    restart geolibre
+  failed_when: false

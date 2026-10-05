@@ -129,3 +129,10 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+e2e:
+  enabled: "{{ (install_ntfy | default(false)) }}"
+  probes:
+    - name: rendered-auth-config-is-live
+      url: http://127.0.0.1:{{ ntfy_port }}/v1/config
+      expect: {json_equals: {enable_login: true}}

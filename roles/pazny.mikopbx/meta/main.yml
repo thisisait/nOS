@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: mikopbx
+  namespace: pazny
+  author: Pázny
+  description: MikoPBX (Asterisk 22) in Docker compose override (nOS voip stack)
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+
+dependencies: []
+collections: []

@@ -1,0 +1,92 @@
+# =============================================================================
+# geo-base — the open-data loader organelle for the PostGIS `geo` database.
+#
+# Monthly Pulse job: RÚIAN address points + INSPIRE parcels/buildings for the
+# configured kraje into geo.ruian_adm / geo.inspire_cp / geo.inspire_bu
+# (EPSG:5514), and a nightly one-way projection of KEAP party-site rows (+ the
+# ARES seat) into geo.party_site. Neither job reports success; tools/geo-status.py
+# counts. Both idle (exit 0) where there is no geo database.
+# =============================================================================
+
+name: geo-base
+version: 0.1.0
+description: |
+  Pulse job running tools/geo-load.py: ČÚZK open data (RÚIAN CSV, INSPIRE
+  CP/BU GML) for `geo_regions` into PostGIS, conditional downloads into
+  `geo_cache_dir`, staged + swapped per layer; nightly KEAP party-site →
+  geo.party_site projection (tools/geo-project-sites.py).
+license: MIT
+
+type:
+  - scheduled-job
+
+requires:
+  feature_flag: install_postgis
+  variables:
+    - playbook_dir
+    - geo_cache_dir
+    - geo_region_codes
+
+pulse:
+  jobs:
+    - name: geo-load
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/geo-load.py"
+      args: ["--regions", "{{ geo_region_codes }}", "--cache-dir", "{{ geo_cache_dir }}"]
+      # RÚIAN publishes the month-end state in the first days of the month.
+      schedule: "30 3 6 * *"
+      jitter_min: 30
+      max_runtime_s: 7200
+      max_concurrent: 1
+      category: knowledge
+    - name: project-sites
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/geo-project-sites.py"
+      schedule: "20 2 * * *"
+      jitter_min: 10
+      max_runtime_s: 300
+      max_concurrent: 1
+      category: knowledge
+      env:
+        KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []
+
+gdpr:
+  purpose: |
+    Loads public ČÚZK cadastral open data (address points, parcel and building
+    geometry) into the local PostGIS database, and projects the parties' sites
+    (operator-entered party-site rows, ARES registered seats) onto it so they
+    can be placed on a map. Open data carries no names or owners; the
+    projection carries party slugs and registry keys — a sole trader's (OSVČ)
+    site is a natural person's address. KEAP is the source of truth; the
+    projection is rewritten nightly and erased with the party
+    (state/gdpr-erasure-map.yml svc_geo).
+  legal_basis: legitimate_interests
+  data_categories:
+    - public_geodata
+    - company_affiliation
+    - postal_address
+  data_subjects:
+    - clients                      # incl. sole traders (natural persons)
+    - residents                    # address points, no names or owners
+  retention_days: 0                # mirror of KEAP; nothing kept beyond it
+  processors: []
+  eu_residency: true
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) and (install_postgis | default(false)) }}"
+  probes:
+    - name: geo-load-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.geo:geo-load.id": "geo:geo-load"}}
+    - name: project-sites-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.geo:project-sites.id": "geo:project-sites"}}

@@ -11,7 +11,22 @@
 
 services:
   postgresql:
+{% if install_postgis | default(false) %}
+    # PostGIS compiled onto the pinned postgres, per host arch (files/postgis/Dockerfile).
+    build:
+      context: {{ nos_main_checkout }}/files/postgis
+      args:
+        BASE: "postgres:{{ postgresql_version }}"
+        POSTGIS_VERSION: "{{ postgis_version }}"
+        POSTGIS_SHA256: "{{ postgis_sha256 }}"
+{% if nos_build_ca_bundle | default('', true) | length > 0 %}
+      secrets:
+        - nos_build_ca
+{% endif %}
+    image: nos/postgis:{{ postgresql_version }}-{{ postgis_version }}
+{% else %}
     image: postgres:{{ postgresql_version }}
+{% endif %}
     hostname: postgresql
     restart: unless-stopped
     ports:
@@ -83,3 +98,9 @@ services:
         max-file: "5"
     mem_limit: {{ postgresql_mem_limit | default(docker_mem_limit_standard) }}
     cpus: {{ docker_cpus_standard | default('1.0') }}
+{% if install_postgis | default(false) and nos_build_ca_bundle | default('', true) | length > 0 %}
+
+secrets:
+  nos_build_ca:
+    file: {{ nos_build_ca_bundle }}
+{% endif %}

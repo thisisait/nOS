@@ -100,3 +100,9 @@ hub_card:
   url: "https://{{ backrest_domain }}"
   category: ops
   description: "restic backup UI — snapshots, restore, DR-verify"
+
+e2e:
+  probes:
+    - name: anonymous-is-sent-to-authentik
+      url: https://{{ backrest_domain }}/
+      expect: {status: [302], location_contains: "{{ authentik_domain }}/application/o/authorize"}

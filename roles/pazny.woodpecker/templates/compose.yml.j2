@@ -74,8 +74,8 @@ services:
     restart: unless-stopped
     depends_on:
       - woodpecker-server
+      - woodpecker-socket-proxy
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       # ── Stable agent identity (2026-08-19) ──────────────────────────────
       # On first connect the agent registers via WOODPECKER_AGENT_SECRET and
       # the server hands back an agent ID, which the agent persists to
@@ -95,8 +95,10 @@ services:
       WOODPECKER_HOSTNAME: "{{ woodpecker_agent_hostname | default('nos-woodpecker-agent') }}"
       WOODPECKER_MAX_WORKFLOWS: "{{ woodpecker_max_workflows | default(4) }}"
       WOODPECKER_BACKEND: docker
+      DOCKER_HOST: "tcp://woodpecker-socket-proxy:2375"
     networks:
       - devops_net
+      - woodpecker_sock
     logging:
       driver: "json-file"
       options:
@@ -104,3 +106,43 @@ services:
         max-file: "5"
     mem_limit: {{ woodpecker_agent_mem_limit | default(docker_mem_limit_standard) }}
     cpus: {{ docker_cpus_standard | default('1.0') }}
+
+  # The agent's own Docker API gate: pipeline steps are containers it creates,
+  # networks/volumes per workflow, image pulls — so POST is on and this stays
+  # root-equivalent (a step can ask for a host bind). It drops EXEC/BUILD/SWARM/
+  # SYSTEM/SECRETS/... Template fork: roles/pazny.woodpecker/files/.
+  woodpecker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:{{ docker_socket_proxy_version }}
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - {{ stacks_dir }}/devops/woodpecker-socket-proxy.cfg.template:/usr/local/etc/haproxy/haproxy.cfg.template:ro
+    environment:
+{% if not (nos_kernel_ipv6 | default(true) | bool) %}
+      DISABLE_IPV6: 1
+{% endif %}
+      CONTAINERS: 1
+      IMAGES: 1
+      NETWORKS: 1
+      VOLUMES: 1
+      INFO: 1
+      POST: 1
+      EVENTS: 0
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2375/_ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - woodpecker_sock
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    mem_limit: 128m
+    cpus: "0.25"
+
+networks:
+  woodpecker_sock:
+    internal: true

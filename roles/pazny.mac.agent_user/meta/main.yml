@@ -1,0 +1,18 @@
+---
+dependencies: []
+
+galaxy_info:
+  role_name: agent_user
+  namespace: pazny
+  author: Pázny
+  description: Agents as a separate non-admin macOS user — sudoers-scoped launcher, no bypassPermissions.
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+  galaxy_tags:
+    - macos
+    - security
+    - agents

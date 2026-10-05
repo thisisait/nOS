@@ -1,7 +1,7 @@
 """Two readers, one column, and they must not differ by a job.
 
 `pulse_jobs.findings_exit_codes` is read by Wing
-(`PulseRepository::failingJobs()`) and by `tools/red-status.py::failing_jobs`.
+(`PulseRepository::latestVerdicts()`) and by `tools/red-status.py::failing_jobs`.
 Wing collapses a fired_at tie (`GROUP BY r.job_id HAVING r.run_id =
 MAX(r.run_id)`); red-status did not, so two runs stamped in the same second
 made one reader say N and the other N+1 about the same estate. That is the
@@ -36,7 +36,7 @@ def _red_status():
 RS = _red_status()
 
 SCHEMA = """
-CREATE TABLE pulse_jobs (id TEXT PRIMARY KEY, findings_exit_codes TEXT);
+CREATE TABLE pulse_jobs (id TEXT PRIMARY KEY, findings_exit_codes TEXT, removed_at TEXT);
 CREATE TABLE pulse_runs (run_id TEXT PRIMARY KEY, job_id TEXT, fired_at TEXT,
                          exit_code INT, duration_ms INT, stdout_tail TEXT);
 """
@@ -46,7 +46,9 @@ def _ledger(runs, jobs=()):
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
-    conn.executemany("INSERT INTO pulse_jobs VALUES (?,?)", jobs)
+    # every run's job is in the catalog unless the test says otherwise
+    jobs = list(jobs) + [(j, None) for j in {r[1] for r in runs} - {j[0] for j in jobs}]
+    conn.executemany("INSERT INTO pulse_jobs (id, findings_exit_codes) VALUES (?,?)", jobs)
     conn.executemany(
         "INSERT INTO pulse_runs VALUES (?,?,?,?,?,?)",
         [(rid, jid, at, rc, 1, "boom") for rid, jid, at, rc in runs],
@@ -61,7 +63,7 @@ def test_a_fired_at_tie_reports_one_job_not_two():
     jobs = [r["job"] for r in RS.failing_jobs(conn)]
     assert jobs == ["loop:review"], (
         f"a fired_at tie produced {jobs} — red-status counts a job twice where "
-        f"Wing's failingJobs() counts it once"
+        f"Wing's latestVerdicts() counts it once"
     )
 
 

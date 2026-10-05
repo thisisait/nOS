@@ -17,7 +17,7 @@
 #       tails) moves to composition plugins authored by U11-U13 in Phase 3:
 #         alloy-host-metrics    (prometheus.exporter.unix + scrapes for
 #                                cadvisor / postgres-exporter / mysqld /
-#                                redis / blackbox / nginx / php-fpm / qdrant)
+#                                redis / blackbox / nginx / php-fpm)
 #         alloy-docker-metrics  (discovery.docker + loki.source.docker)
 #         alloy-syslog          (file_match + loki.source.file for nginx /
 #                                php-fpm / agents / homebrew-services logs)

@@ -106,8 +106,8 @@ PLAYBOOK_AGENTS = {
         "label_default": "eu.thisisait.nos.acme-renew",
     },
     "pazny.openclaw": {
-        "template": "com.ollama.agent.plist.j2",
-        "label_var": None,  # openclaw's plist has a hardcoded label, not a template var
+        "template": "ollama-agent.plist.j2",
+        "label_var": "ollama_launchd_label",
         "label_default": "com.ollama.agent",
     },
 }

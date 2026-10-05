@@ -94,9 +94,6 @@
 {% if install_superset | default(false) %}
 {% set _ = _cards.append(card("Superset", superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), superset_port | default(8089), "Data visualization", "data")) %}
 {% endif %}
-{% if install_freepbx | default(false) %}
-{% set _ = _cards.append(card("FreePBX", freepbx_domain | default('pbx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), freepbx_port | default(8088), "VoIP phone exchange", "voip")) %}
-{% endif %}
 {% if install_qgis_server | default(false) %}
 {% set _ = _cards.append(card("QGIS Server", qgis_domain | default('gis' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))), qgis_port | default(8071), "GIS map server", "engineering")) %}
 {% endif %}

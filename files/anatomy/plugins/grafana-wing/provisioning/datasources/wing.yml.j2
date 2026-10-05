@@ -25,6 +25,7 @@ datasources:
     jsonData:
       path: /var/lib/grafana/wing/wing.db
       # Open read-only so we don't race with the Nette / Bone writer.
+      # mode=ro needs -wal/-shm on disk; Bone holds them (clients/wing.py anchor_wal).
       pathOptions: "mode=ro"
     version: 1
     editable: false

@@ -23,10 +23,11 @@ def _third_party(tool: Path, seen=None) -> set:
     seen.add(tool)
     src = tool.read_text(encoding="utf-8")
     found = {m for m in THIRD_PARTY if re.search(rf"^\s*(import {m}\b|from {m}\b)", src, re.M)}
-    deps = re.findall(r"^\s*from ([\w]+) import", src, re.M) + \
-        [p[:-3] for p in re.findall(r'"([\w-]+\.py)"', src)]
-    for d in deps:
-        found |= _third_party(REPO / "tools" / f"{d}.py", seen)
+    paths = [REPO / "tools" / f"{d}.py" for d in re.findall(r"^\s*from ([\w]+) import", src, re.M)]
+    for ref in re.findall(r'"((?:tools/)?[\w/-]+\.py)"', src):   # importlib loads, incl. tools/cloud/…
+        paths.append(REPO / ref if ref.startswith("tools/") else tool.parent / ref)
+    for d in paths:
+        found |= _third_party(d, seen)
     return found
 
 
@@ -74,3 +75,24 @@ def test_the_venv_exists_before_the_stacks_and_carries_requests():
     need = _third_party(REPO / "tools/nos-first-login.py") | _third_party(REPO / "tools/woodpecker-token.py")
     assert need >= {"requests", "jinja2", "yaml"}, f"the detector lost its positive case: {need}"
     assert all(THIRD_PARTY[m] in reqs for m in need), f"tools/requirements.txt lacks one of {need}"
+
+
+def test_every_ci_job_installs_what_its_tools_import():
+    """The v0.14-beta Pages build ran tools/profile-builder-build.py without
+    Jinja2 installed. A job running a tool must pip-install its third-party
+    deps (by name, or via -r tools/requirements.txt)."""
+    import yaml
+    reqs = (REPO / "tools/requirements.txt").read_text().lower()
+    bad = []
+    for wf in sorted((REPO / ".github/workflows").glob("*.yml")):
+        for name, job in ((yaml.safe_load(wf.read_text()) or {}).get("jobs") or {}).items():
+            runs = [str(st.get("run", "")) for st in job.get("steps") or []]
+            installs = " ".join(r for r in runs if "pip" in r and "install" in r).lower()
+            if "-r tools/requirements.txt" in installs:
+                installs += " " + reqs
+            for r in runs:
+                for tool in re.findall(r"python3? (?:\S*/)?tools/([\w-]+\.py)", r):
+                    missing = [m for m in _third_party(REPO / "tools" / tool) if THIRD_PARTY[m] not in installs]
+                    if missing:
+                        bad.append(f"{wf.name}:{name} runs {tool} without {missing}")
+    assert not bad, "\n".join(bad)

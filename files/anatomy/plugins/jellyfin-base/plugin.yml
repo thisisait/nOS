@@ -4,7 +4,7 @@
 # CORRECTION (D1.0): U6 worker mis-classified as forward_auth because the
 # heuristic was "no OIDC env in compose template = proxy". That's wrong for
 # Jellyfin: native SSO is wired via the SSO-Auth Jellyfin SERVER PLUGIN
-# (XML config at roles/pazny.jellyfin/templates/SSO-Auth.xml.j2), not env.
+# (provider written via its /sso/OID/Add API in roles/pazny.jellyfin/tasks/post.yml), not env.
 # Central authentik_oidc_apps lists Jellyfin as oauth2 with redirect_uri
 # `/sso/OID/redirect/Authentik` — that's the SSO-Auth callback. Authentik
 # creates an oauth2 provider; Jellyfin server-plugin consumes it. → native_oidc.
@@ -39,7 +39,7 @@ authentik:
   client_id: nos-jellyfin
   client_secret: "{{ nos_derived_secrets.oidc_jellyfin }}"
   slug: jellyfin
-  first_login_blocked: "the SSO-Auth provider config is wiped on load — /sso/OID/start 400s (roles/pazny.jellyfin/tasks/post.yml, deferred)"
+  first_login_blocked: "the SSO-Auth provider is written via the plugin API only when the nOS admin can sign in (roles/pazny.jellyfin/tasks/post.yml); not yet proven live"
   name: 'Jellyfin'
   enabled: "{{ install_jellyfin | default(false) }}"
   redirect_uris:
@@ -52,8 +52,8 @@ authentik:
   tier: 4
 
 # No compose_extension — Jellyfin SSO is wired through the server-side
-# SSO-Auth plugin (XML config). The role manages the plugin install +
-# SSO-Auth.xml render. Plugin-self compose-extension would have nothing
+# SSO-Auth plugin. The role installs it; post.yml writes the provider
+# through the plugin API. Plugin-self compose-extension would have nothing
 # to render.
 
 # =============================================================================
@@ -126,3 +126,9 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+e2e:
+  probes:
+    - name: oidc-start-reaches-authentik
+      url: https://{{ jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/sso/OID/start/{{ jellyfin_oidc_provider_name }}
+      expect: {status: [302, 303, 307], location_contains: "{{ authentik_domain }}/application/o/authorize"}

@@ -52,7 +52,7 @@ artifact: state/anatomy-graph.json
 # file as AMENDED AFTER SIGNING and asks for a fresh signature. To re-sign:
 #   python3 tools/apex-sign.py            # prints the diff since the last sign
 #   python3 tools/apex-sign.py --confirm  # writes the new digest
-signed_digest: 80e5665e55cee46d05cdb10cc7d48189df4ee5c7432cee4c004475fdee27e0d7
+signed_digest: 149ae34e91d68d0ec11853c535c43c1910098fdf763dafd9564189e33ff4406b
 
 
 # The declared split. The gate recounts the table below and refuses to run
@@ -239,7 +239,7 @@ forbidden_marks:
    mariadb, postgres, postgresql, redis, restic, keap, kiwix, calibre,
    nextcloud, onlyoffice, jellyfin, grafana, prometheus, loki, influxdb,
    gitea, gitlab, woodpecker, erpnext, freescout, firefly, metabase,
-   superset, wordpress, freepbx, asterisk, stalwart, snappymail, miniflux,
+   superset, wordpress, stalwart, snappymail, miniflux,
    hedgedoc, bookstack, portainer, watchtower, kuma, rustfs, backrest,
    openclaw, ollama, mailpit, ntfy, n8n, nodered, homeassistant, qgis,
    docker, ansible, launchd]
@@ -266,7 +266,7 @@ organs:
   voice:     { title: "The Voice",     tells: "Mail, calls and signals, spoken from home.",   limb: right, order: 4 }
 
 # -----------------------------------------------------------------------------
-# NODE RULINGS — all 277 nodes the artifact carries today. 63 atoms
+# NODE RULINGS — all 277 nodes the artifact carries today. 62 atoms
 # publish; 214 nodes are withheld. Counted 2026-09-14 (was 251/188 in the
 # prose while the table had already grown). +3 table:device* then
 # +service:device_gateway + daemon this wave.
@@ -357,7 +357,6 @@ nodes:
   # the sentence would be a public claim about listening — theirs to author and
   # sign, not an agent's to draft. Withheld publishes nothing meanwhile.
   "service:ears":          withheld
-  "service:qdrant":        withheld
   "service:spacetimedb":   withheld
   "service:homeassistant": { publish: reflexes, speaks: "the physical home, sensed and switched" }
 
@@ -366,7 +365,7 @@ nodes:
   "service:snappymail":    { publish: voice, speaks: "a window onto the mailbox" }
   "service:ntfy":          { publish: voice, speaks: "a tap on the shoulder when something matters" }
   "service:wordpress":     { publish: voice, speaks: "the public word, published from home" }
-  "service:freepbx":       { publish: voice, speaks: "a telephone switchboard of one's own" }
+  "service:mikopbx":       { publish: voice, speaks: "a telephone switchboard of one's own" }
 
   # --- withheld: the page's own server (a page must not narrate itself) -----
   # service:apex serves THIS site. Publishing it would name the serving
@@ -375,6 +374,13 @@ nodes:
   # the word from every emitted file. Withheld, deliberately and forever.
   "service:apex": withheld
 
+  # --- withheld: nos-forum, pending the operator's ruling (2026-10-03) -------
+  # Added with the role, default-off. Whether the forum becomes a public atom
+  # (and what it `speaks:`) is a signature decision, not a generator commit.
+  "service:nos_forum": withheld
+  "service:geolibre": withheld
+  "service:martin": withheld
+
   # --- withheld: SSO clients (the map of who gates what stays home) ---------
   "authentik:backrest": withheld
   "authentik:bookstack": withheld
@@ -382,6 +388,9 @@ nodes:
   "authentik:code-server": withheld
   "authentik:documenso": withheld
   "authentik:dolibarr": withheld
+  "authentik:mikopbx": withheld
+  "authentik:nos-forum": withheld
+  "authentik:geolibre": withheld
   "authentik:erpnext": withheld
   # Residual OAuth2 client of the RETIRED EspoCRM desk (espocrm-retire-base),
   # held only until OpenTofu destroys it. WITHHELD like every authentik:* node;
@@ -497,6 +506,9 @@ nodes:
   "resource:backend-minimax": withheld
   "resource:backend-mistral-eu": withheld
   "resource:backend-ollama": withheld
+  # 2026-10-01 openclaw row (the gateway's OpenAI surface). Withheld like
+  # every backend row; NOT signed here — the signature is the operator's.
+  "resource:backend-openclaw": withheld
   "resource:backend-xai": withheld
   # The human channel a caddy holds (2026-08-31). Withheld with every other
   # tool node: which questions an agent may ask its operator is estate
@@ -540,6 +552,12 @@ nodes:
   "daemon:eu.thisisait.nos.pulse": withheld
   "daemon:eu.thisisait.nos.resume": withheld
   "daemon:eu.thisisait.nos.wing": withheld
+  # 2026-10-04: vendor daemons the converge starts, now on the roster
+  # (added AFTER the signature; the published set is unchanged).
+  "daemon:ai.openclaw.gateway": withheld
+  "daemon:com.ollama.agent": withheld
+  "daemon:homebrew.mxcl.dnsmasq": withheld
+  "daemon:sh.brew.grafana-alloy": withheld
 
   # --- withheld: doctrine paragraphs (internal law) --------------------------
   "doctrine:docs/archive/cortex-corpus-parallel.md#2.1": withheld
@@ -578,12 +596,6 @@ nodes:
 
   # --- withheld: scheduled jobs (when the house is busy stays home, D3) ------
   "pulse:alert-relay:relay-firing": withheld
-  # ARES registry clock (ares-verify-base) — WITHHELD like every pulse:* node
-  # (D3). SLATED FOR DELETION with the plugin once `pulse:n8n:exec-watch` is
-  # seen reporting live (docs/doctrine/n8n-packs.md §7); remove these two rows
-  # in the same commit so the D4 vanish-halt is a conscious shrink.
-  "pulse:ares-verify:registry-daily": withheld
-  "pulse:ares-verify:registry-new": withheld
   "pulse:authentik-tofu-drift:tofu-drift-plan": withheld
   "pulse:backup:backup-restore-drill": withheld
   "pulse:conductor:scan-state-record": withheld
@@ -593,6 +605,12 @@ nodes:
   "pulse:cortex:cortex-corpus-diff": withheld
   "pulse:cortex:cortex-fs-sync": withheld
   "pulse:crm-hydrate:hydrate-parties": withheld
+  # geo-base (2026-10-03): open-data loader + party-site projection. WITHHELD:
+  # where the firm's sites are and which kraje it maps is its own business.
+  "pulse:geo:geo-load": withheld
+  "pulse:geo:project-sites": withheld
+  # geolibre-base (2026-10-03): atlas data refresh. WITHHELD like the geo rows.
+  "pulse:geolibre:atlas-refresh": withheld
   # 2026-08-26 roster close: five withheld pulse rows left the artifact
   # (curator-sweep, promote-migration — agents PARKED; drift-scan,
   # triage-open-findings, upgrade-advise — agents RETIRED). All were
@@ -716,6 +734,9 @@ nodes:
   # it). WITHHELD like every table node — whose counterparties the estate
   # watches is the firm's business, never the public front door.
   "table:party-registry-status": withheld
+  # Party sites (geo). WITHHELD like every table node — a sole trader's site
+  # is a person's address.
+  "table:party-site": withheld
   # ČNB daily FX reference table (n8n ČNB pack fills it). WITHHELD like every
   # table node — the rates are public data, but which spine the estate keeps
   # and refreshes is its own business, never the public front door.

@@ -52,8 +52,8 @@ traefik_machine_lanes:
 
   # n8n: DELIBERATELY EMPTY, decided 2026-09-23 while gating the n8n edge.
   # The obvious lane would be /webhook/, and it must not be opened yet:
-  #   - nothing needs it. tools/n8n-fire.py posts to 127.0.0.1:5678 over
-  #     loopback (ares-verify-base/plugin.yml), never through Traefik, and the
+  #   - nothing needs it. n8n's own schedule triggers the packs inside the
+  #     container (the old loopback Pulse clock was deleted 2026-10-02), and the
   #     packs' other clock is n8n's own Schedule node — internal.
   #   - the one webhook that exists has NO auth. The ARES node is
   #     {httpMethod: POST, path: nos-ares-registry, credentials: null}, so an
@@ -64,6 +64,39 @@ traefik_machine_lanes:
   # the production prefix (/webhook/) — /webhook-test/ and /form-test/ are
   # editor-only and belong behind the gate.
   n8n: []
+
+  # nos-forum: the browser's SpacetimeDB WebSocket. Caller = the forum app in a
+  # browser; SpacetimeDB authenticates it itself (Authentik id_token, checked
+  # against the module's issuer + audience). No outpost hop is possible on a WS
+  # upgrade, and SEC-02 headers mean nothing to SpacetimeDB. allow_paths keeps
+  # this to the two endpoints the SDK uses — not the publish/sql/admin API.
+  nos_forum:
+    - name: stdb
+      prefixes: ["/stdb"]
+      upstream: {svc: spacetimedb, port: 3000}
+      strip_prefix: true
+      allow_paths:
+        - "/v1/identity/websocket-token"
+        - "/v1/database/nos-forum/subscribe"   # the database name is fixed: one forum per estate
+      # The SDK swaps the id_token (POST header) for a 60 s SpacetimeDB JWT that rides
+      # ?token= on subscribe, carrying email + groups; RequestPath logs the query in full.
+      access_log: false
+
+  # geolibre: the martin tiles on the atlas host, NOT a machine lane — `gated` keeps
+  # authentik@file (tier 3: party-derived data). Same origin as GeoLibre, so the
+  # forward_single cookie rides each tile fetch; tiles.<tenant> would 302 them all.
+  # `flag` renders the lane only while install_martin is on.
+  geolibre:
+    # Ungated, exactly /sw.js: the self-removing worker must reach a browser
+    # whose sign-in expired, or the cached shell hides the login (2026-10-04).
+    - name: sw
+      prefixes: ["/sw.js"]
+      allow_paths: [""]
+    - name: tiles
+      prefixes: ["/tiles"]
+      upstream: {svc: martin, port: 3000}
+      gated: true
+      flag: install_martin
 
 
 traefik_auth_modes:
@@ -140,6 +173,7 @@ traefik_auth_modes:
                             # (Audit 2026-06-13 flagged BYPASS; re-judged: app
                             # auth is the gate here, route-gating is wrong.)
   hedgedoc: oidc
+  nos_forum: oidc           # native OIDC broker in forum-web; /stdb lane = SpacetimeDB checks the JWT itself
   bookstack: oidc
   superset: oidc            # SUPERSET_AUTH_TYPE=AUTH_OAUTH
   homeassistant: oidc       # Auth provider plugin
@@ -171,7 +205,9 @@ traefik_auth_modes:
   metabase: proxy
   uptime_kuma: proxy
   calibre_web: proxy
+  mikopbx: proxy            # PBX admin UI; no OIDC/header auth in MikoPBX core (docs/systems/mikopbx)
   kiwix: proxy
+  geolibre: proxy           # atlas.<tenant>; static web GIS, no app login
   paperclip: proxy
   wing: proxy
   code_server: proxy
@@ -403,6 +439,7 @@ traefik_container_upstreams:
   jellyfin:      { port: 8096 }
   miniflux:      { port: 8080 }
   hedgedoc:      { port: 3000 }
+  nos_forum:     { port: 5091 }
   bookstack:     { port: 80 }
   firefly:       { port: 8080 }
   dolibarr:      { port: 80 }
@@ -420,6 +457,7 @@ traefik_container_upstreams:
   mailpit:       { port: 8025 }
   qgis_server:   { port: 80 }
   offline_maps:  { svc: tileserver, port: 8080 }
+  geolibre:      { port: 80 }
   mcp_gateway:   { svc: mcpo, port: 8000 }
   wordpress:     { port: 80 }
   code_server:   { port: 8443 }

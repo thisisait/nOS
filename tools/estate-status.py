@@ -99,9 +99,9 @@ TOOLCHAIN = [
      "pin_re": r"^\s*([0-9.]+)\s*$"},
     {"tool": "ansible-core", "cmd": ["ansible", "--version"],
      "pin_file": "tools/ci-freeze.env", "pin_re": r'NOS_ANSIBLE_CORE="[^=]+==([0-9.]+)"'},
-    {"tool": "node", "cmd": ["node", "-v"], "pin_file": "default.config.yml",
+    {"tool": "node", "cmd": ["node", "-v"], "pin_file": "defaults",
      "pin_re": r'^node_nvm_version:\s*"([^"]+)"'},
-    {"tool": "ollama", "cmd": ["ollama", "--version"], "pin_file": "default.config.yml",
+    {"tool": "ollama", "cmd": ["ollama", "--version"], "pin_file": "defaults",
      "pin_re": r'^ollama_version:\s*"?([0-9.]+)"?'},
     {"tool": "docker", "cmd": ["docker", "--version"], "pin_file": None, "pin_re": None},
 ]
@@ -115,8 +115,8 @@ KNOWN_SPLITS = {
         "host": "2.20.5", "pin": "2.21.0",
         "why": "the operator's daily driver stays 2.20.5; 2.21.0 is the frozen "
                "CI mirror (the GitHub runner's filter-load path needs a 2.21 "
-               "symbol). Reasoning: tools/ci-freeze.env header + CLAUDE.md "
-               "'Known Tech Debt'.",
+               "symbol). Reasoning: tools/ci-freeze.env header + docs/git-and-release.md "
+               "§Frozen integration toolchain.",
     },
 }
 
@@ -196,10 +196,14 @@ def host_version(cmd: list[str]) -> str | None:
 def declared(pin_file: str | None, pin_re: str | None) -> str | None:
     if not pin_file or not pin_re:
         return None
-    path = REPO / pin_file
-    if not path.exists():
-        return None
-    m = re.search(pin_re, path.read_text(encoding="utf-8"), re.MULTILINE)
+    if pin_file == "defaults":                      # the whole default layer set
+        text = default_config_text()
+    else:
+        path = REPO / pin_file
+        if not path.exists():
+            return None
+        text = path.read_text(encoding="utf-8")
+    m = re.search(pin_re, text, re.MULTILINE)
     return m.group(1) if m else None
 
 
@@ -357,7 +361,7 @@ def axis_toolchain(res: Result) -> None:
 
 # Layer resolution lives in nos_identity — the same reader discovery-scan and
 # nos-smoke use, so three tools cannot disagree about one flag.
-from nos_identity import resolve_flag  # noqa: E402
+from nos_identity import default_config_text, install_flags, resolve_flag  # noqa: E402
 
 
 def axis_config(res: Result, flag: str) -> None:
@@ -414,8 +418,14 @@ def main() -> int:
                     help="skip the fetch (offline); the output says so")
     ap.add_argument("--config", metavar="FLAG",
                     help="resolve one config flag across the layering")
+    ap.add_argument("--install-flags", action="store_true",
+                    help="every install_* resolved, as one JSON object (exit 0)")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
+
+    if args.install_flags:
+        print(json.dumps(install_flags(), indent=2))
+        return 0
 
     res = Result()
     if args.config:

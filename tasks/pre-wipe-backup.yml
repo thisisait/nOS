@@ -11,10 +11,11 @@
 # copy #1 and takes an IMMEDIATE SYNCHRONOUS off-site snapshot so the repo holds
 # the captures as of the wipe moment, not last night's 04:00 cron.
 #
-# Gated (main.yml) on install_keap + restic_repo set — operator choice
-# 2026-07-25: add-when-repo-set + loud-warn-only, NEVER block a confirmed wipe.
-# FAIL-SOFT throughout: a backup hiccup never aborts the removal; the loud
-# summary + blank-reset's interactive pause are the abort backstop. restic is
+# Imported on EVERY confirmed removal (review 2026-10-04: a restic_repo/install_keap
+# gate skipped the verdict exactly when no survivor existed). FAIL-SOFT while the steps
+# run, then ONE verdict at the end: a removal whose survivor is missing STOPS
+# (operator 2026-10-02, reversing 07-25's warn-only: "we must have working
+# backups"; with -y there is no interactive pause to Ctrl-C at). restic is
 # invoked SYNCHRONOUSLY (not backrest's async plan API) so the snapshot cannot
 # race the wipe deleting copy #1. Password rides RESTIC_PASSWORD (env, no_log),
 # never argv.
@@ -58,6 +59,7 @@
   register: _prewipe_restic
   changed_when: false
   failed_when: false
+  when: (restic_repo | default('')) | length > 0
   tags: ['blank', 'reset']
 
 - name: "[Pre-wipe] Ensure the off-site repo exists (probe config)"
@@ -122,7 +124,9 @@
       {% else %}
       ✓ copy #1 refreshed (full backup → RustFS bucket), all sources OK.
       {% endif %}
-      {% if (_prewipe_restic.rc | default(1)) != 0 %}
+      {% if (restic_repo | default('')) | length == 0 %}
+      ⚠ restic_repo is UNSET — there is NO off-site repo, so NO survivor.
+      {% elif (_prewipe_restic.rc | default(1)) != 0 %}
       ⚠ restic NOT on PATH — NO synchronous off-site snapshot taken. The captures
         survive ONLY if backrest's scheduled off-site run already carried them.
       {% elif (_prewipe_snapshot.rc | default(1)) == 0 %}
@@ -134,4 +138,23 @@
         them, ABORT at the next interactive pause (Ctrl-C).
       {% endif %}
       ───────────────────────────────────────────────────────────────────────
+  tags: ['blank', 'reset']
+
+# The verdict. Override, knowingly: -e prewipe_snapshot_required=false.
+- name: "[Pre-wipe] A removal without a survivor stops here"
+  ansible.builtin.assert:
+    that:
+      - (restic_repo | default('')) | length > 0
+      - _prewipe_backup_sh.stat.exists
+      - (_prewipe_copy1.rc | default(1)) == 0
+      - (_prewipe_restic.rc | default(1)) == 0
+      - (_prewipe_snapshot.rc | default(1)) == 0
+    fail_msg: >-
+      The pre-wipe backup did not complete (see the summary above), so this
+      remove={{ remove }} would delete data that exists nowhere else. Fix the
+      backup (no off-site repo? set restic_repo in config.yml + its password in
+      credentials.yml, configure_backup: true) and run again — or, knowing the
+      cost, pass -e prewipe_snapshot_required=false.
+    quiet: true
+  when: prewipe_snapshot_required | default(true) | bool
   tags: ['blank', 'reset']

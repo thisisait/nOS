@@ -581,7 +581,7 @@ def test_every_registry_row_has_a_node_and_bindings_resolve(committed):
     # spacetimedb (excluded service). A new unmatched slug is a new gap to
     # look at, not an error — but shrinkage below the known set means a
     # binding was lost, which is.
-    for expected in ("documenso", "qdrant", "roundcube", "spacetimedb", "twofauth"):
+    for expected in ("documenso", "roundcube", "spacetimedb", "twofauth"):
         assert expected in unmatched or f"service:{expected}" in committed["nodes"], (
             f"{expected} was unmatched on 2026-08-06 and is now neither "
             f"unmatched nor a service node — a binding silently vanished"

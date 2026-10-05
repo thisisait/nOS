@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: martin
+  namespace: pazny
+  author: Pázny
+  description: martin vector tiles over the PostGIS geo schema in a compose override (nOS iiab stack)
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+# No role dependencies — the geo grants live in pazny.postgresql (post.yml); orchestration in tasks/stacks/stack-up.yml.
+dependencies: []
+
+collections: []

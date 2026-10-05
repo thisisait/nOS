@@ -45,7 +45,6 @@
          install_nextcloud | default(false) or
          install_erpnext | default(false) or
          install_freescout | default(false) or
-         install_freepbx | default(false) or
          install_bookstack | default(false) or
          install_firefly | default(false) or
          install_dolibarr | default(false) }}
@@ -101,6 +100,9 @@
         (install_offline_maps | default(false)) | ternary(
           [maps_data_dir | default(ansible_facts['env']['HOME'] + '/maps')], [])
         +
+        (install_geolibre | default(false)) | ternary(
+          [geolibre_data_dir | default(ansible_facts['env']['HOME'] + '/geolibre')], [])
+        +
         (install_traefik | default(false)) | ternary(
           [traefik_config_dir | default(ansible_facts['env']['HOME'] + '/iiab/traefik')], [])
         +
@@ -152,8 +154,8 @@
         (install_outline | default(false)) | ternary(
           [outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline/data')], [])
         +
-        (install_freepbx | default(false)) | ternary(
-          [freepbx_data_dir | default(ansible_facts['env']['HOME'] + '/freepbx')], [])
+        (install_mikopbx | default(false)) | ternary(
+          [mikopbx_data_dir | default(ansible_facts['env']['HOME'] + '/mikopbx')], [])
         +
         (install_qgis_server | default(false)) | ternary(
           [qgis_data_dir | default(ansible_facts['env']['HOME'] + '/qgis')], [])
@@ -236,6 +238,9 @@
           [spacetimedb_data_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/data'),
            spacetimedb_keys_dir | default(ansible_facts['env']['HOME'] + '/spacetimedb/keys')], [])
         +
+        (install_nos_forum | default(false)) | ternary(
+          [nos_forum_data_dir | default(ansible_facts['env']['HOME'] + '/nos_forum/data')], [])
+        +
         (install_mcp_gateway | default(false)) | ternary(
           [mcpo_data_dir | default(ansible_facts['env']['HOME'] + '/mcpo')], [])
         +
@@ -263,7 +268,10 @@
 - name: "[Removal-set] Declare what the data level keeps (reconciled by the gate)"
   ansible.builtin.set_fact:
     _removal_keep:
+      - { var: agents_libexec_dir, level: never, why: "pazny.mac.agent_user host files (claude copy, launcher); no level removes the agent user or its sudoers rule yet — open" }
       - { var: artifact_cache_dir, level: never, why: "the verified image cache a rebuild loads from instead of re-pulling — survives every level by design (tools/nos-image-cache.py)" }
+      - { var: geo_cache_dir, level: never, why: "under artifact_cache_dir — open-data downloads the monthly loader re-uses (If-Modified-Since)" }
+      - { var: maps_cache_dir, level: never, why: "under artifact_cache_dir — the Planetiler base map takes ~10 min and GBs of downloads to rebuild" }
       - { var: calibreweb_books_dir, level: all, why: "user content — the tenant's shared library is SOURCE, not derived state" }
       - { var: erpnext_data_dir, level: all, why: "P0.1: sites live in a named volume (compose down -v); the var only names site_config.json" }
       - { var: node_exporter_textfile_dir, level: all, why: "under ~/.nos, the runtime side-car; blank keeps it, uninstall takes it" }
@@ -273,6 +281,7 @@
       - { var: openclaw_base_dir, level: never, why: "is $HOME itself" }
       - { var: openclaw_agents_dir, level: never, why: "~/agents holds user content; only anatomy-owned children (hermes) are removed" }
       - { var: openclaw_projects_dir, level: never, why: "~/projects holds user content — this checkout included" }
+      - { var: nos_atlas_src_dir, level: never, why: "the nos-atlas dev checkout under ~/projects; the role only copies its dist/ out" }
       - { var: openclaw_log_dir, level: never, why: "under ~/agents (see openclaw_agents_dir)" }
       - { var: iiab_terminal_config_dir, level: all, why: "under homebrew_prefix/etc but written by nOS, not a formula — a leave takes it with the home user (2026-09-29 exit audit)" }
 

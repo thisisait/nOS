@@ -1,0 +1,93 @@
+# =============================================================================
+# device-gateway-base — Article 30 record for the device gateway (2026-10-02)
+#
+# This plugin is the Art-30 entry and nothing else: no authentik block (the
+# RFC 8628 public client is terraform/authentik/device_gateway.tf, never the
+# for_each module), no compose, no lifecycle. Policy: docs/compliance/devices.md.
+# Gate: tests/anatomy/test_device_gateway_art30.py.
+# =============================================================================
+
+name: device-gateway-base
+version: 0.1.0
+description: |
+  Device gateway — loopback BFF for paired handheld / phone / wearable clients
+  holding an Authentik RFC 8628 token. Serves allowlisted, column-projected
+  KEAP tables over GET. This manifest carries the GDPR Article 30 record for
+  the pairing registry, the tokens and the edge access log.
+upstream: https://github.com/pazny-develop/nOS
+license: AGPL-3.0
+
+type:
+  - service
+
+_NOS_PLUGIN: "device-gateway-base"
+
+requires:
+  role: pazny.device_gateway
+  feature_flag: install_device_gateway
+  variables:
+    - device_gateway_domain
+    - device_gateway_port
+    - tenant_domain
+
+# =============================================================================
+# GDPR — Article 30 register row. Every number was CONFIRMED by the operator on
+# 2026-10-02 (docs/compliance/devices.md); the gate refuses an empty block.
+# =============================================================================
+gdpr:
+  purpose: |
+    Let a user's own paired device (handheld, phone, wearable) read the nOS
+    tables that user may already see in the browser, without sharing the
+    estate KEAP token. Processing: (1) the pairing registry row per device
+    (table device-client: owner username, device kind, a hash fingerprint,
+    scopes, paired_at, last_seen at day precision, status, revoked_at);
+    (2) the Authentik device-code grant and its access / refresh tokens;
+    (3) the Traefik edge access log line for device.<tld> requests
+    (client IP, path, status, user agent; no headers, no bodies).
+    The gateway itself persists nothing: a 30-second in-memory cache of
+    projected rows and a suppressed request log.
+  legal_basis: contract            # Art. 6(1)(b) — the user asks for the pairing. CONFIRMED 2026-10-02 (alt: consent)
+  data_categories:
+    - device_pairing_registry      # device-client row: owner, kind, hash fingerprint, scopes, timestamps, status
+    - oauth_tokens                 # Authentik RFC 8628 grant + access (10 min) + refresh (30 d, rotating)
+    - edge_access_log              # Traefik JSON access log -> Loki (IP, path, status, UA)
+  data_subjects:
+    - end_users                    # any nOS account holder who pairs a device (manager tier today)
+    - operators
+  # Interpreted as: a device-client row lives until unpair, then 30 days after
+  # revoked_at. Access log follows loki_retention (31 d). Tokens follow the
+  # Authentik validity in device_gateway.tf. CONFIRMED 30, 2026-10-02.
+  retention_days: 30
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+  storage_location: >-
+    KEAP libsql table device-client (iiab stack, host volume); Authentik
+    PostgreSQL (infra stack); Loki (observability stack). Gateway process
+    holds no file state.
+  security_measures:
+    - "TLS in transit (Traefik edge; wildcard cert)"
+    - "Gateway binds 127.0.0.1; only Traefik reaches it"
+    - "Bearer verified against Authentik userinfo; azp/aud must be nos-device-gateway"
+    - "Authorization: userinfo groups must hold a tier-2 (manager) group; fail closed"
+    - "Table allowlist + column projection; PII/financial tables are 403 before KEAP is called"
+    - "Refresh token rotates on every use (threshold = validity); access token 10 min"
+    - "Identifiers are hashes only — never a raw serial / IMEI / UDID / MAC"
+    - "Disk encryption at rest is operator-provisioned (FileVault / LUKS)"
+  # RETENTION NOT ENFORCED YET. No code writes device-client rows (pairing
+  # runtime is dtt device-pairing, queued); the only live state is the
+  # Authentik token, which expires by itself. The gate requires a Pulse job
+  # named device-client-retention the moment a writer lands.
+  notes: >-
+    retention_enforced: false — the registry has no writer yet; unpair /
+    erasure / export are manual steps named in state/gdpr-erasure-map.yml and
+    state/gdpr-export-map.yml. Audio, transcripts, location, message content
+    and raw hardware identifiers are never stored (docs/compliance/devices.md).
+
+# ── Notification routing (A9 severity → channel) ─────────────────────────────
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []

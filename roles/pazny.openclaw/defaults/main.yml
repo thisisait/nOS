@@ -18,6 +18,10 @@ openclaw_log_dir: "{{ ansible_facts['env']['HOME'] }}/agents/log"        # struc
 # OpenClaw configuration (~/.openclaw/)
 openclaw_config_dir: "~/.openclaw"
 
+# launchd labels this role starts (bootout when install_openclaw is false).
+openclaw_gateway_launchd_label: "ai.openclaw.gateway"   # written by `openclaw gateway install`
+ollama_launchd_label: "com.ollama.agent"                # templates/com.ollama.agent.plist.j2
+
 # ─────────────────────────────────────────────────────────────────────────────
 # OLLAMA + MLX (Apple Silicon native, Ollama 0.20+)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -69,6 +73,8 @@ ollama_models_dir: "{{ ansible_facts['env']['HOME'] }}/.ollama/models"
 openclaw_install_daemon: true
 openclaw_domain: "claw{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 openclaw_gateway_port: 18789
+# OpenAI-compatible /v1/chat/completions on the gateway — loopback only, token-gated.
+openclaw_http_api_enabled: true
 
 # Agent name (persona)
 openclaw_agent_name: "Inspektor Klepítko"

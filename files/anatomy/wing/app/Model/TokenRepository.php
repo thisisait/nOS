@@ -68,6 +68,16 @@ final class TokenRepository
 
 
 	/**
+	 * Does the token name this scope EXPLICITLY? Unlike permits(), NULL grants
+	 * nothing: a door with no incumbents defaults closed (the cortex precedent).
+	 */
+	public static function grants(?string $scopes, string $scope): bool
+	{
+		return in_array($scope, array_map('trim', explode(',', (string) $scopes)), true);
+	}
+
+
+	/**
 	 * Create a new API token. Stores SHA-256 hash, not plaintext.
 	 */
 	public function create(string $token, string $name = 'default', ?string $createdBy = null): void

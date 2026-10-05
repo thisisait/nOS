@@ -328,7 +328,7 @@
       fi
     done
     # Kill any running instance (brew or our own wrapper)
-    launchctl unload "$HOME/Library/LaunchAgents/com.ollama.agent.plist" 2>/dev/null || true
+    launchctl unload "$HOME/Library/LaunchAgents/{{ ollama_launchd_label }}.plist" 2>/dev/null || true
     pkill -f 'ollama serve' 2>/dev/null || true
     sleep 1
     echo "DONE"
@@ -345,16 +345,16 @@
     timeout: 15
   failed_when: false
 
-- name: "[Ollama] Deploy persistent user LaunchAgent (com.ollama.agent)"
+- name: "[Ollama] Deploy persistent user LaunchAgent (ollama)"
   ansible.builtin.template:
-    src: com.ollama.agent.plist.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.ollama.agent.plist"
+    src: ollama-agent.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ ollama_launchd_label }}.plist"
     mode: '0644'
   when: nos_service_manager == 'launchd'
 
-- name: "[Ollama] Load user LaunchAgent (com.ollama.agent)"
+- name: "[Ollama] Load user LaunchAgent (ollama)"
   ansible.builtin.command: >
-    launchctl load "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.ollama.agent.plist"
+    launchctl load "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ ollama_launchd_label }}.plist"
   register: ollama_svc
   changed_when: true
   failed_when: >
@@ -435,8 +435,8 @@
 - name: "[Ollama] Reload the daemon so it execs the installed binary"
   ansible.builtin.shell: |
     set -o pipefail
-    L="{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/com.ollama.agent.plist"
-    launchctl bootout "gui/$(id -u)/com.ollama.agent" 2>/dev/null || true
+    L="{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ ollama_launchd_label }}.plist"
+    launchctl bootout "gui/$(id -u)/{{ ollama_launchd_label }}" 2>/dev/null || true
     sleep 2
     launchctl bootstrap "gui/$(id -u)" "$L" || echo "BOOTSTRAP-FAILED rc=$?"
   args:
@@ -499,8 +499,8 @@
         {{ _ollama_drift.stdout | default('(not measured)') | trim }}
         daemon now: {{ _ollama_ver_after.stdout | default('(none)') | trim }}
       The reload above should have fixed it. By hand:
-        launchctl bootout gui/$(id -u)/com.ollama.agent
-        launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ollama.agent.plist
+        launchctl bootout gui/$(id -u)/{{ ollama_launchd_label }}
+        launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/{{ ollama_launchd_label }}.plist
   when:
     - nos_service_manager == 'launchd'
     - "'drift' in (_ollama_drift.stdout | default(''))"
@@ -655,7 +655,7 @@
 
 - name: "[OpenClaw] Which openclaw does the gateway service actually launch"
   ansible.builtin.shell: |
-    plist="$HOME/Library/LaunchAgents/ai.openclaw.gateway.plist"
+    plist="$HOME/Library/LaunchAgents/{{ openclaw_gateway_launchd_label }}.plist"
     [ -f "$plist" ] || exit 0
     python3 -c '
     import plistlib, sys
@@ -736,6 +736,55 @@
     NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
   changed_when: false
   failed_when: false
+
+# OpenAI-compatible HTTP API (2026-10-01). Measured: 2026.7.1 answered 404 on
+# /v1/chat/completions, so AgentKit's openclaw-* provider had no wire at all.
+# The token is OPERATOR-grade (upstream docs/gateway/openai-http-api.md), so the
+# bind is re-asserted loopback FIRST and the enable only runs after it held.
+# Gate: tests/anatomy/test_openclaw_http_api_is_loopback_only.py.
+- name: "[OpenClaw] Serve the OpenAI HTTP API on loopback only"
+  ansible.builtin.shell: |
+    set -e
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+    nvm use default >/dev/null
+    if [ "$(openclaw config get gateway.bind 2>/dev/null)" != "loopback" ]; then
+      openclaw config set gateway.bind '"loopback"' --strict-json; echo CHANGED
+    fi
+    want={{ 'true' if (openclaw_http_api_enabled | bool) else 'false' }}
+    if [ "$(openclaw config get gateway.http.endpoints.chatCompletions.enabled 2>/dev/null)" != "$want" ]; then
+      openclaw config set gateway.http.endpoints.chatCompletions.enabled "$want" --strict-json; echo CHANGED
+    fi
+  args:
+    executable: /bin/zsh
+  environment:
+    NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
+  register: _oc_http_api
+  changed_when: "'CHANGED' in _oc_http_api.stdout"
+  when: _oc_config.stat.exists or (_oc_onboard.rc | default(1)) == 0
+
+# The gateway token, copied into ~/.nos/secrets.yml for the `openclaw` backend
+# row (nos:openclaw_gateway_token). OpenClaw mints it; nOS never rotates it.
+- name: "[OpenClaw] Read the gateway token"
+  ansible.builtin.slurp:
+    src: "{{ ansible_facts['env']['HOME'] }}/.openclaw/openclaw.json"
+  register: _oc_config_raw
+  failed_when: false
+  no_log: true
+
+- name: "[OpenClaw] Persist the gateway token into ~/.nos/secrets.yml (in-role)"
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+    regexp: '^openclaw_gateway_token:'
+    line: 'openclaw_gateway_token: "{{ _oc_token }}"'
+    create: true
+    mode: '0600'
+  vars:
+    _oc_token: "{{ (_oc_config_raw.content | b64decode | from_json).get('gateway', {}).get('auth', {}).get('token', '') }}"
+  when:
+    - _oc_config_raw.content is defined
+    - _oc_token | length > 0
+  no_log: true
 
 # Idempotent model upgrade: onboarding is skipped if the config exists, but the user
 # could change openclaw_model. Forcibly updating `agents.defaults.model.primary`

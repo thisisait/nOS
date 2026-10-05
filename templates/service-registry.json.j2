@@ -255,21 +255,6 @@
   "description": "Data exploration and visualization"
 }) %}
 {% endif %}
-{% if install_freepbx | default(false) %}
-{% set _ = _services.append({
-  "name": "FreePBX",
-  "category": "voip",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_freepbx",
-  "domain": freepbx_domain | default('pbx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
-  "port": freepbx_port | default(8088),
-  "url": "https://" ~ (freepbx_domain | default('pbx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
-  "type": "docker",
-  "stack": "voip",
-  "description": "VoIP phone exchange (Asterisk)"
-}) %}
-{% endif %}
 {% if install_qgis_server | default(false) %}
 {% set _ = _services.append({
   "name": "QGIS Server",

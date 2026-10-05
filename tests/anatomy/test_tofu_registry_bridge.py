@@ -67,8 +67,8 @@ def test_registry_covers_tier2_app_manifests():
     """Tier-2 apps/<name>.yml with an authentik: block must be in the
     registry — under engine=tofu the blueprint render is a no-op, so tofu is
     their ONLY provider-creator (blank #3: documenso/roundcube/twofauth had
-    no provider at all). Also: no duplicate slugs (qdrant appears via both a
-    Tier-1 plugin and a Tier-2 manifest; the tfvars map would silently keep
+    no provider at all). Also: no duplicate slugs (a slug may appear via both
+    a Tier-1 plugin and a Tier-2 manifest; the tfvars map would silently keep
     the last)."""
     registry_slugs = [
         s["slug"]

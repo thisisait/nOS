@@ -1,0 +1,16 @@
+# manifest.fragment.yml — mikopbx-base
+#
+# Merged by the plugin loader's manifest-aggregator into the state/manifest.yml
+# `services[]` row. Advertises the proxy-auth gate + tier binding to Traefik's
+# file-provider derivation (roles/pazny.traefik/templates/dynamic/services.yml.j2).
+
+slug: mikopbx
+role: pazny.mikopbx
+feature_flag: install_mikopbx
+auth: proxy
+authentik:
+  mode: forward_auth
+  slug: mikopbx
+  tier: 1
+domain_var: mikopbx_domain
+port_var: mikopbx_port

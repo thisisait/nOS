@@ -24,7 +24,7 @@ import sys
 
 import urllib.request
 
-from keap_api import human_base, human_headers
+from keap_api import human_base, human_headers, paged
 import roadmap_seed_lib as lib
 from roadmap_seed_lib import seed_dir  # noqa: F401
 
@@ -35,9 +35,10 @@ TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d
 BASE = f"{human_base()}/api/tables/{TABLE}"
 
 def _get_rows() -> list[dict]:
-    req = urllib.request.Request(BASE + "/rows?limit=500", headers=human_headers())
-    with urllib.request.urlopen(req) as r:
-        return __import__("json").loads(r.read())["data"]["rows"]
+    def fetch(url: str) -> dict:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=human_headers())) as r:
+            return __import__("json").loads(r.read())
+    return paged(fetch, BASE + "/rows")["data"]["rows"]
 
 
 def _when(v: dict) -> str:

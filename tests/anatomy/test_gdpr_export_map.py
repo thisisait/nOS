@@ -29,8 +29,7 @@ MAP_PATH = REPO / "state" / "gdpr-export-map.yml"
 ERASURE_PATH = REPO / "state" / "gdpr-erasure-map.yml"
 PLUGINS_ROOT = REPO / "files" / "anatomy" / "plugins"
 APPS_DIR = REPO / "apps"
-# Same residual store as svc_qdrant — do not duplicate as app_qdrant.
-APP_IDS_SKIPPED = {"app_qdrant"}
+APP_IDS_SKIPPED: set[str] = set()
 EXPORT_TASK = REPO / "tasks" / "gdpr-export.yml"
 
 VALID_METHODS = {"authentik_api", "container_exec", "manual"}
@@ -44,7 +43,8 @@ MUTATING_TOKENS = (
 # Keep this residual set in sync with test_gdpr_erasure_map.py
 # (test_backend_store_residual_reach_documented). These backend/derived stores
 # are reached by Art-17 erasure but NOT extracted by an Art-15 access export.
-RESIDUAL_STORES = {"svc_redis", "svc_qdrant", "svc_rustfs", "svc_wing", "svc_loki", "svc_tempo"}
+# svc_geo: geo.party_site is a nightly projection of KEAP rows — its Art-15 copy is KEAP's.
+RESIDUAL_STORES = {"svc_redis", "svc_rustfs", "svc_wing", "svc_loki", "svc_tempo", "svc_geo"}
 
 
 def _entries() -> list[dict]:
@@ -161,7 +161,7 @@ def _inscope_expected() -> set[str]:
     """Every per-user-PII service that MUST carry an Art-15 export entry: gdpr
     plugins with authentik.mode in {native_oidc, header_oidc} plus the AT-proto
     (svc_bluesky-pds) + authentik anchors, plus every Tier-2 app gdpr record
-    except app_qdrant (residual svc_qdrant). Plugin forward_auth stays out of
+    (none skipped today). Plugin forward_auth stays out of
     scope; app forward_auth with a gdpr block is in scope (per-user PII)."""
     ids = {"svc_authentik", "svc_bluesky-pds"}
     for f in PLUGINS_ROOT.glob("*/plugin.yml"):

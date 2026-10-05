@@ -16,7 +16,7 @@ living thing. New capabilities land as new organs, not as new flags.
                        ┌─────────────┐
                        │    BRAIN    │  LLM orchestration, policy,
                        │  (planned)  │  decision-making, vector memory
-                       └──────┬──────┘  (Qdrant, OpenClaw, Hermes,
+                       └──────┬──────┘  (KEAP, OpenClaw, Hermes,
                               │          Ollama, MLX)
                               │
               ┌───────────────┼───────────────┐
@@ -114,10 +114,10 @@ read from Wing, and reason over memory held in Gut.
 - **Likely env prefix**: `BRAIN_*`
 - **Likely ingredients**: OpenClaw (agentic shell), Hermes (tool-calling
   adapter), Ollama (local LLM runtime), Apple MLX (on-device inference),
-  Qdrant (vector memory store).
+  KEAP (libSQL vector memory store).
 - **Not yet built.** The first step here is probably a thin
   `brain-chat` surface that proxies to Ollama/OpenClaw/Hermes, with
-  Qdrant as long-term memory and Wing's SQLite as short-term recall.
+  KEAP as long-term memory and Wing's SQLite as short-term recall.
 
 ---
 

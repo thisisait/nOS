@@ -62,6 +62,43 @@ final class AgentLoader
 	}
 
 	/**
+	 * A fallback is always BOUND to a registry row its own Article-30 record
+	 * covers (2026-10-01: an unbound openclaw fallback 404'd, so every transient
+	 * MiniMax error was a hard failure). Same gate 4/8 code the primary meets.
+	 *
+	 * @param array<string, mixed> $gdpr
+	 * @throws AgentLoadException
+	 */
+	private static function checkFallbackBackend(mixed $fallback, mixed $backend, array $gdpr, string $name): void
+	{
+		if ($fallback === null && $backend === null) {
+			return;
+		}
+		if ($fallback === null || !is_string($backend) || $backend === '') {
+			throw new AgentLoadException(
+				'agent.yml model.fallback and model.fallback_backend come together — '
+				. 'an unbound fallback answers from a party the record may not name'
+			);
+		}
+		$spec = LLMClient\BindingResolver::readRegistry()[$backend] ?? null;
+		if (!is_array($spec)) {
+			throw new AgentLoadException(
+				"agent.yml model.fallback_backend '{$backend}' is not a row in state/llm-backends.yml"
+			);
+		}
+		if (($spec['default'] ?? false) === true) {
+			throw new AgentLoadException(
+				"agent.yml model.fallback_backend '{$backend}' is the default backend — that is the unbound path"
+			);
+		}
+		try {
+			LLMClient\BindingResolver::assertRecordCovers($name, $gdpr, $backend, $spec);
+		} catch (LLMClient\BindingRefused $e) {
+			throw new AgentLoadException('agent.yml model.fallback_backend: ' . $e->getMessage(), previous: $e);
+		}
+	}
+
+	/**
 	 * @throws AgentLoadException
 	 */
 	public function load(string $name): Agent
@@ -102,6 +139,8 @@ final class AgentLoader
 		if ($fallback !== null && (!is_string($fallback) || !$this->isValidModelUri($fallback))) {
 			throw new AgentLoadException("agent.yml model.fallback invalid: " . var_export($fallback, true));
 		}
+		$fallbackBackend = $raw['model']['fallback_backend'] ?? null;
+		self::checkFallbackBackend($fallback, $fallbackBackend, (array) ($raw['gdpr'] ?? []), $name);
 		// A grader that IS the proposer is not a second opinion — a model asked
 		// to judge its own output agrees with itself (arXiv:2510.16657), so the
 		// same-model arrangement is refused rather than tolerated. `backend` is
@@ -325,6 +364,7 @@ final class AgentLoader
 			deliverableFiledByRunner: $deliverableFiledByRunner ?? false,
 			mode: (string) $mode,
 			oneShotSchema: $oneShotSchema,
+			fallbackBackendName: $fallbackBackend,
 		);
 
 		// Idempotent webhook registration — only when wired in production.

@@ -90,10 +90,13 @@ def test_verify_is_loud():
 def test_create_maps_tier1_admin_group():
     create = next(t for t in _gitea_tasks() if "add-oauth" in _argv(t))
     argv = _argv(create)
-    assert "--group-claim-name" in argv and "groups" in argv
-    assert "--admin-group" in argv
-    joined = " ".join(argv)
-    assert "selectattr('tier', 'equalto', 1)" in joined
+    # nos_roles carries 'admin' for EVERY tier-1 group (tasks/nos-roles.yml);
+    # the old groups claim matched one of the two and missed nos-providers.
+    assert argv[argv.index("--group-claim-name") + 1] == "nos_roles"
+    assert argv[argv.index("--admin-group") + 1] == "admin"
+    update = next(t for t in _gitea_tasks() if "update-oauth" in _argv(t))
+    u = _argv(update)
+    assert u[u.index("--group-claim-name") + 1] == "nos_roles" and u[u.index("--admin-group") + 1] == "admin"
 
 
 def test_every_gitea_cli_exec_runs_as_git():
@@ -111,8 +114,7 @@ def test_plugin_hook_mirrors_cli_create():
     hook = HOOK.read_text(encoding="utf-8")
     assert "add-oauth" in hook
     assert "path: /api/v1/admin/identity-providers" not in hook
-    assert "--group-claim-name" in hook
-    assert "selectattr('tier', 'equalto', 1)" in hook
+    assert "--group-claim-name nos_roles" in hook and "--admin-group admin" in hook
 
 
 def test_role_sso_guard_refuses_hidden_form_without_source():

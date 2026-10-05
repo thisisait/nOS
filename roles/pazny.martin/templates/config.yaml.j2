@@ -1,0 +1,49 @@
+# pazny.martin — martin 1.16 config. Explicit sources only (auto_publish: false):
+# every source is a table or view in schema geo, listed here with its columns.
+# No tile cache and Cache-Control no-store: a party erased from geo.party_site
+# (geo-project-sites --erase-party) is absent from the very next tile.
+listen_addresses: "0.0.0.0:3000"
+# Served at atlas.<tenant>/tiles — same origin as GeoLibre, so its cookie rides along.
+route_prefix: /tiles
+cors: false
+cache: disable
+cache_control: no-store
+web_ui: disable
+# A layer geo-load has not loaded yet is skipped with a warning, not a crash loop.
+on_invalid: warn
+postgres:
+  # Unquoted: martin expands ${VAR} only in plain YAML scalars (crash loop 2026-10-04).
+  connection_string: ${MARTIN_PG_URL}
+  auto_publish: false
+  pool_size: 4
+  tables:
+    party_site:
+      schema: geo
+      table: party_site_geom
+      geometry_column: adm_geom
+      geometry_type: POINT
+      srid: 5514
+      properties: {slug: text, party: text, kind: text, source: text}
+    party_site_parcel:
+      schema: geo
+      table: party_site_geom
+      geometry_column: parcel_geom
+      geometry_type: MULTIPOLYGON
+      srid: 5514
+      properties: {slug: text, party: text, kind: text, ku_kod: int4, parcel_no: text}
+    inspire_cp:
+      schema: geo
+      table: inspire_cp
+      geometry_column: geom
+      geometry_type: MULTIPOLYGON
+      srid: 5514
+      minzoom: 12
+      properties: {ku_kod: int4, parcel_no: text, ncr: text, area_m2: int8}
+    inspire_bu:
+      schema: geo
+      table: inspire_bu
+      geometry_column: geom
+      geometry_type: GEOMETRY
+      srid: 5514
+      minzoom: 12
+      properties: {kod_so: int8, units: int4, floors: text}

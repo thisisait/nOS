@@ -8,12 +8,21 @@
 # A forward_auth/header_oidc service yields a proxy provider (never oauth2), so
 # the MTI shared-base cascade (ADR-0001 trigger) is impossible by construction.
 
+# nos_roles rides the `profile` scope beside the managed mapping (Authentik
+# merges every mapping of a requested scope), so no client asks for a new scope.
+resource "authentik_property_mapping_provider_scope" "nos_roles" {
+  count      = var.nos_roles_expression == "" ? 0 : 1
+  name       = "nOS roles"
+  scope_name = "profile"
+  expression = var.nos_roles_expression
+}
+
 locals {
-  _scopes = [
+  _scopes = concat([
     data.authentik_property_mapping_provider_scope.openid.id,
     data.authentik_property_mapping_provider_scope.email.id,
     data.authentik_property_mapping_provider_scope.profile.id,
-  ]
+  ], authentik_property_mapping_provider_scope.nos_roles[*].id)
 }
 
 module "service" {

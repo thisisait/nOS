@@ -1,0 +1,81 @@
+# =============================================================================
+# martin-base — service plugin (roadmap row geo-vector-tiles, 2026-10-04)
+#
+# martin serves the PostGIS geo schema as vector tiles at atlas.<tenant>/tiles.
+# No edge surface of its own: the gated `tiles` lane on the geolibre router
+# (roles/pazny.traefik/vars/main.yml) carries authentik@file, so the atlas app
+# (geolibre-base, forward_auth tier 3) is the gate — same host, same cookie.
+# =============================================================================
+
+name: martin-base
+version: 0.1.0
+description: |
+  Wiring layer for martin (PostGIS vector tiles): no own route or Authentik app
+  (rides the atlas gate), GDPR Article 30 row, e2e probe of the gate.
+upstream: https://github.com/maplibre/martin
+license: Apache-2.0 OR MIT
+
+type:
+  - service
+
+requires:
+  role: pazny.martin
+  feature_flag: install_martin
+  variables:
+    - geolibre_domain
+    - authentik_domain
+
+# AUTHENTIK — none here on purpose: the lane is gated by the geolibre app.
+
+depends_on:
+  - upstream: "service:postgresql"
+    kind: data
+    via: >-
+      the read-only `martin` login on the geo database (MARTIN_PG_URL),
+      made and granted by pazny.postgresql post.yml
+    measured: "2026-10-04"
+    unenforced: >-
+      nothing auto-enables PostgreSQL for martin (on purpose); the role asserts
+      install_postgis, and without a database martin fails its 30 s connect retry.
+
+observability:
+  loki:
+    labels:
+      app: martin
+      stack: iiab
+      tier: "3"
+
+e2e:
+  enabled: "{{ (install_martin | default(false)) and (install_geolibre | default(false)) }}"
+  probes:
+    - name: anonymous-tiles-are-sent-to-authentik
+      url: https://{{ geolibre_domain }}/tiles/catalog
+      expect: {status: [302], location_contains: "{{ authentik_domain }}/application/o/authorize"}
+
+gdpr:
+  purpose: |
+    Serves the local PostGIS geo schema as map tiles to signed-in tier-3 users
+    of the atlas: open ČÚZK parcels/buildings and the party-site projection
+    (a sole trader's site is a natural person's address). Reads through a
+    read-only role limited to schema geo; keeps no tile cache, so an erased
+    party (geo-project-sites --erase-party) is gone from the next tile.
+  legal_basis: legitimate_interests
+  data_categories:
+    - public_geodata
+    - company_affiliation
+    - postal_address
+    - http_access_logs
+  data_subjects:
+    - clients                      # incl. sole traders (natural persons)
+    - operators
+  retention_days: 0                # no copy: every tile is read live from geo
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []

@@ -149,3 +149,11 @@ gdpr:
   retention_days: 365
   processors: []                  # local Homebrew binary; no external data transfer
   eu_residency: true
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) }}"
+  probes:
+    - name: nightly-scan-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.gitleaks:nightly-scan.id": "gitleaks:nightly-scan"}}

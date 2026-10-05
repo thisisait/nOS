@@ -7,6 +7,7 @@ namespace App\Presenters\Api;
 use App\Model\EventRepository;
 use App\Model\NotificationRepository;
 use App\Model\PulseRepository;
+use App\Model\TokenRepository;
 use Nette\Http\IResponse;
 
 /**
@@ -42,6 +43,14 @@ final class PulsePresenter extends BaseApiPresenter
 	 */
 	public function actionJobs(?string $id = null): void
 	{
+		// Registering a job IS running a command as the operator, so wing.write
+		// is not enough: an agent holding it reached the scheduler (review
+		// 2026-10-04). pulse.write is explicit-only; provision-token.php mints it
+		// for ansible-provisioned alone.
+		if (!in_array($this->getMethod(), ['GET', 'HEAD'], true)
+			&& !TokenRepository::grants($this->validatedToken['scopes'] ?? null, 'pulse.write')) {
+			$this->sendError('Registering a Pulse job needs the pulse.write scope', IResponse::S403_Forbidden);
+		}
 		if ($id !== null && $this->getMethod() === 'DELETE') {
 			// A row whose agent was retired can never run and still reads as a
 			// job. Safe by construction: a job the catalog still declares is
@@ -422,35 +431,34 @@ final class PulsePresenter extends BaseApiPresenter
 	}
 
 	/**
-	 * Allowed path prefixes for Pulse `command`. The basename after the
-	 * prefix is matched against ALLOWED_BASENAME_PATTERN; combined with
-	 * the BANNED_BASENAMES list this lets `php`/`python3` through (they
-	 * require a script arg the arg-regex itself validates) but rejects
-	 * shell interpreters that take inline scripts via `-c`.
-	 *
-	 * Hardcoded — anatomy gate pins the list. Operators wiring a new
-	 * subprocess runner add a path to the live plugin manifest, which
-	 * lands under one of these prefixes by convention; if not, the
-	 * playbook fails loud here rather than at runtime.
+	 * Exact system binaries a job may name. Until 2026-10-04 this was all of
+	 * /opt/homebrew/bin/ + /usr/local/bin/, so any wrapper (docker, gtimeout,
+	 * uv, pip3) ran a planted payload. Mirrors subprocess.py::_SYSTEM_BINARIES;
+	 * test_pulse_command_allowlist pins both and every declared job against them.
 	 */
-	private const ALLOWED_COMMAND_PREFIXES = [
-		'/opt/homebrew/bin/',     // Homebrew-installed CLIs (gitleaks, trivy, php, …)
-		'/usr/local/bin/',        // legacy/system-managed CLIs
-		'/Users/',                // host-owned scripts on macOS (wing/app/bin, plugins/<x>/skills/)
-		'/home/',                 // host-owned scripts on Linux (playbook_dir = /home/<user>/…)
-	];
+	private const SYSTEM_BINARIES = ['/opt/homebrew/bin/php'];
+
+	/** Exact binaries under HOME: Linux Wing PHP. */
+	private const HOME_BINARIES = ['.local/bin/frankenphp'];
+
+	/** Under NOS_REPO_ROOT. Until 2026-10-03 all of /Users/ and /home/ passed. */
+	private const REPO_TREES = ['tools/', 'files/anatomy/scripts/', 'files/anatomy/plugins/', 'files/vuln-scan/'];
+
+	/** Under HOME: wing/app/bin scripts, ~/.nos/backup-verify.sh. */
+	private const HOME_TREES = ['wing/', '.nos/'];
+
+	/** An interpreter runs its first positional arg, so that arg is the real command. */
+	private const INTERPRETER_REGEX = '/^(php|frankenphp|python[0-9.]*|node|ruby|perl)$/';
 
 	/**
-	 * Shell-interpreter basenames that take inline scripts via -c and
-	 * thus get full RCE even when the path itself is in the allowlist.
-	 * php is NOT here — it can only run a file given as a positional
-	 * arg, and the arg-regex bans the shell-meta needed for `php -r`
-	 * inline-eval (the `-r` flag + space-separated body fails the
-	 * arg-regex).
+	 * Shells (inline -c scripts) and wrappers that exec another program. Naming
+	 * one here is not enough to allow it: it must also join SYSTEM_BINARIES with
+	 * a reason. php is NOT here — the arg-regex bans the space `php -r` needs.
 	 */
 	private const BANNED_BASENAMES = [
-		'sh', 'bash', 'zsh', 'dash', 'csh', 'ksh', 'fish',
-		'sudo', 'su', 'env',
+		'bash', 'bun', 'bunx', 'csh', 'dash', 'docker', 'env', 'fish', 'gtimeout', 'ksh',
+		'nohup', 'npm', 'npx', 'pip', 'pip3', 'sh', 'su', 'sudo', 'timeout', 'uv', 'uvx',
+		'xargs', 'zsh',
 	];
 
 	/**
@@ -465,23 +473,49 @@ final class PulsePresenter extends BaseApiPresenter
 	 */
 	private const ARG_REGEX = '/^[a-zA-Z0-9._@\/:=,+~-]{0,512}$/';
 
+	private static function root(string $var): string
+	{
+		$v = rtrim((string) getenv($var), '/');
+		return str_starts_with($v, '/') ? $v . '/' : '';
+	}
+
 	/**
-	 * The static prefixes + the running user's OWN home. `/Users/` and
-	 * `/home/` stand for an operator home; root's (`/root`, a container or a
-	 * server install) was refused — every host-script job 400'd on the cloud
-	 * sandbox (2026-09-25). The daemon's HOME is the same trust boundary.
-	 * Mirrors pulse/runners/subprocess.py::_allowed_prefixes.
+	 * Repo trees under NOS_REPO_ROOT + home trees under HOME; unset → none.
+	 * Mirrors pulse/runners/subprocess.py::_script_trees.
 	 *
 	 * @return list<string>
 	 */
-	private function allowedCommandPrefixes(): array
+	private function scriptTrees(): array
 	{
-		$prefixes = self::ALLOWED_COMMAND_PREFIXES;
-		$home = getenv('HOME');
-		if (is_string($home) && str_starts_with($home, '/') && rtrim($home, '/') !== '') {
-			$prefixes[] = rtrim($home, '/') . '/';
+		$out = [];
+		$repo = self::root('NOS_REPO_ROOT');
+		$home = self::root('HOME');
+		foreach ($repo !== '' ? self::REPO_TREES : [] as $t) {
+			$out[] = $repo . $t;
 		}
-		return $prefixes;
+		foreach ($home !== '' ? self::HOME_TREES : [] as $t) {
+			$out[] = $home . $t;
+		}
+		return $out;
+	}
+
+	/**
+	 * Exact paths. Mirrors subprocess.py::_allowed_binaries.
+	 *
+	 * @return list<string>
+	 */
+	private function allowedBinaries(): array
+	{
+		$home = self::root('HOME');
+		return array_merge(self::SYSTEM_BINARIES, $home === '' ? [] : array_map(
+			static fn (string $b): string => $home . $b,
+			self::HOME_BINARIES,
+		));
+	}
+
+	private static function hasDotSegment(string $path): bool
+	{
+		return str_contains($path . '/', '/../') || str_contains($path, '/./');
 	}
 
 	private function validatePulseCommand(string $command, mixed $args): void
@@ -492,23 +526,23 @@ final class PulsePresenter extends BaseApiPresenter
 		if ($command[0] !== '/') {
 			$this->sendError('command must be an absolute path', 400);
 		}
-		$inPrefix = false;
-		foreach ($this->allowedCommandPrefixes() as $prefix) {
-			if (str_starts_with($command, $prefix)) {
-				$inPrefix = true;
-				break;
-			}
+		if (self::hasDotSegment($command)) {
+			$this->sendError('command path must be normalised (no . or .. segments)', 400);
 		}
-		if (!$inPrefix) {
+		$allowed = in_array($command, $this->allowedBinaries(), true);
+		foreach ($this->scriptTrees() as $tree) {
+			$allowed = $allowed || str_starts_with($command, $tree);
+		}
+		if (!$allowed) {
 			$this->sendError(
-				'command path not in Pulse allowlist (see PulsePresenter::ALLOWED_COMMAND_PREFIXES)',
+				'command path not in Pulse allowlist (see PulsePresenter::SYSTEM_BINARIES)',
 				400,
 			);
 		}
 		$basename = basename($command);
 		if (in_array($basename, self::BANNED_BASENAMES, true)) {
 			$this->sendError(
-				"command basename '{$basename}' is banned (shell interpreter — accepts -c inline scripts)",
+				"command basename '{$basename}' is banned (shell or exec wrapper)",
 				400,
 			);
 		}
@@ -532,6 +566,20 @@ final class PulsePresenter extends BaseApiPresenter
 						400,
 					);
 				}
+			}
+		}
+		if (preg_match(self::INTERPRETER_REGEX, $basename)) {
+			$rest = array_values(array_filter(is_array($args) ? $args : [], fn ($a) => $a !== 'php-cli'));
+			$script = (string) ($rest[0] ?? '');
+			$ok = !self::hasDotSegment($script);
+			if ($ok) {
+				$ok = false;
+				foreach ($this->scriptTrees() as $tree) {
+					$ok = $ok || str_starts_with($script, $tree);
+				}
+			}
+			if (!$ok) {
+				$this->sendError("{$basename} must run a script from the Pulse trees", 400);
 			}
 		}
 	}

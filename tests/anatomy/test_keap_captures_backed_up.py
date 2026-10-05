@@ -56,16 +56,20 @@ def test_keap_data_dir_is_wiped_by_removal() -> None:
     assert "keap_data_dir" in txt, "keap_data_dir absent from removal-set (would orphan)"
 
 
-def test_prewipe_snapshot_is_wired_confirmed_only_and_gated() -> None:
-    """main.yml imports the pre-wipe survivor, gated on restic_repo + install_keap."""
-    txt = MAIN_PATH.read_text()
-    assert "tasks/pre-wipe-backup.yml" in txt, "pre-wipe-backup import missing from main.yml"
-    # the import must be gated on restic_repo being set and install_keap
-    block = txt.split("tasks/pre-wipe-backup.yml", 1)[1].split("blank-reset.yml", 1)[0]
-    assert "restic_repo" in block, "pre-wipe import not gated on restic_repo"
-    assert "install_keap" in block, "pre-wipe import not gated on install_keap"
-    # it MUST precede the blank-reset delete loop (survivor before the wipe)
-    assert txt.index("tasks/pre-wipe-backup.yml") < txt.index("tasks/blank-reset.yml"), (
+def test_prewipe_survivor_check_runs_on_every_confirmed_removal() -> None:
+    """Review 2026-10-04: gated on install_keap + restic_repo, the import (and its
+    'no survivor, no wipe' verdict) vanished exactly when no survivor existed, so
+    `nos --remove=all -y` without restic_repo wiped with no backup. Parse the when."""
+    import yaml
+    play = yaml.safe_load(MAIN_PATH.read_text())
+    tasks = [t for p in play for t in p.get("tasks") or []]
+    paths = [str(t.get("import_tasks", "")) for t in tasks]
+    pre = tasks[paths.index("tasks/pre-wipe-backup.yml")]
+    when = " ".join(pre["when"] if isinstance(pre["when"], list) else [pre["when"]])
+    assert "nos_removing" in when, when
+    for leak in ("install_keap", "restic_repo"):
+        assert leak not in when, f"the survivor check must not depend on {leak}: {when}"
+    assert paths.index("tasks/pre-wipe-backup.yml") < paths.index("tasks/blank-reset.yml"), (
         "pre-wipe snapshot must run BEFORE blank-reset deletes copy #1"
     )
 

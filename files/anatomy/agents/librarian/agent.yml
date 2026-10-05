@@ -15,8 +15,8 @@ description: |
   embeddings substrate — is GONE: KEAP's libSQL vector corpus is live
   (790 taxonomy nodes embedded, keap-embed-sync Pulse job keeps it
   current) and reachable via the mcp-keap tool. What remains is the
-  runner itself (Pulse job + ceremony wiring). Qdrant is no longer a
-  prerequisite; it stays reserved for a future agent-outputs corpus.
+  runner itself (Pulse job + ceremony wiring). Qdrant was retired
+  2026-10-02; KEAP's libSQL vectors are the only retrieval path.
   The Authentik client `nos-librarian` is pre-provisioned and reserved.
 
 model:
@@ -41,7 +41,11 @@ model:
   # `stop_reason: max_tokens` mid-brief on 2026-08-16 and never reached the POST
   # that the batch exists to make — 39k tokens spent, zero proposals filed.
   max_output_tokens: 32000
-  fallback: openclaw-qwen2.5-coder:32b
+  # Bound to the local ollama row (2026-10-01): the unbound openclaw fallback
+  # 404'd, so every transient primary error was a hard failure. haiku tier
+  # = ollama_small_model (hermes3:8b) — a resident 14B starves KEAP.
+  fallback: openai-local-haiku
+  fallback_backend: ollama
 
 system_prompt_path: system.md
 
@@ -138,6 +142,10 @@ gdpr:
       role: "LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit)"
       country: "unverified — international endpoint api.minimax.io; entity and seat not established"
       safeguard: "None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer."
+    - name: "on-device (operator's own hardware)"
+      role: "FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt."
+      country: "CZ — this host"
+      safeguard: "Not applicable. No transfer occurs."
   eu_residency: false
   transfers_outside_eu: true
 

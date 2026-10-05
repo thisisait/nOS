@@ -141,3 +141,11 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+e2e:
+  enabled: "{{ (install_mcp_gateway | default(false)) and (install_observability | default(false)) }}"
+  probes:
+    - name: grafana-service-account-exists
+      url: http://127.0.0.1:{{ grafana_port }}/api/serviceaccounts/search?query=mcp-gateway
+      auth: {basic: {user: admin, secret: grafana}}
+      expect: {json_any: {serviceAccounts: {field: name, contains: mcp-gateway}}}

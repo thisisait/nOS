@@ -1,0 +1,36 @@
+# =============================================================================
+# pazny.nos_forum — compose override fragment (iiab stack).
+# forum-web: OIDC broker + static app (OIDC client env: plugin nos-forum-base). The browser talks to SpacetimeDB through
+# the Traefik /stdb lane (roles/pazny.traefik/vars/main.yml); this container
+# reaches it directly as spacetimedb:3000 on the shared net.
+# =============================================================================
+
+services:
+  nos-forum:
+    image: "{{ nos_forum_image }}:{{ nos_forum_version }}"
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ nos_forum_port }}:5091"
+    environment:
+      PORT: "5091"
+      ORIGIN: "https://{{ nos_forum_domain }}"
+      STDB_URL: "http://spacetimedb:3000"
+      STDB_PUBLIC_URL: "https://{{ nos_forum_domain }}/stdb/"
+      STDB_DB: "nos-forum"
+      SESSION_KEY: "{{ nos_derived_secrets.forum_session_key }}"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:5091/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    mem_limit: {{ nos_forum_mem_limit }}
+    cpus: {{ nos_forum_cpus }}

@@ -126,7 +126,7 @@ Doktrína: forward_auth gateuje **přístup k route (WHO)**, ne identitu služby
 
 ### passthrough_clean (6) — už plný autologin, žádná práce
 
-`kiwix`, `ntfy`, `onlyoffice`, `qdrant`, `spacetimedb`, `mailpit`. Stateless / žádná service-side auth → Authentik gate = úplné přihlášení. **Hotovo.**
+`kiwix`, `ntfy`, `onlyoffice`, `spacetimedb`, `mailpit`. Stateless / žádná service-side auth → Authentik gate = úplné přihlášení. **Hotovo.**
 
 ### second-login offenders (11) — druhý login + cesta k eliminaci
 

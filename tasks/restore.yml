@@ -80,6 +80,7 @@
       tenants: "{{ nos_data_root }}/tenants"
       dolibarr-documents: "{{ dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents') }}"
       dolibarr-custom: "{{ dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom') }}"
+      mikopbx: "{{ mikopbx_data_dir | default(ansible_facts['env']['HOME'] + '/mikopbx') }}"
       bookstack: "{{ bookstack_data_dir | default(ansible_facts['env']['HOME'] + '/bookstack') }}"
       firefly-upload: "{{ firefly_upload_dir | default(ansible_facts['env']['HOME'] + '/firefly/upload') }}"
       freescout: "{{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout') }}"

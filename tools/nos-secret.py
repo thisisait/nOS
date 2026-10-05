@@ -20,6 +20,10 @@ Two verbs, deliberately small:
                                       account password the bridge provisioned.
                                       v2 only, same refusal under v1.
 
+  tools/nos-secret.py --accounts      every service login: the user name and
+                                      the key to read its password with —
+                                      NAMES ONLY, never a value.
+
 Post-blank UX (docs/secrets-p1-hkdf.md §10): credentials are 43-char random
 strings; this is where the operator reads e.g. their akadmin login:
 `tools/nos-secret.py authentik_admin` (the leaf akadmin boots with).
@@ -51,12 +55,58 @@ def _store() -> dict:
     return data if isinstance(data, dict) else {}
 
 
+LOGIN_SUFFIXES = ("_admin_email", "_admin_user", "_admin_username", "_admin_login", "_user")
+
+
+def accounts() -> int:
+    """Which login goes with which key. Login names come from the RESOLVED config
+    (config.yml over the defaults, the way tools/e2e-plan.py renders it): the
+    n8n owner signs in with config.yml's n8n_admin_email, not admin@ (2026-10-02)."""
+    import importlib.util
+    import re
+    spec = importlib.util.spec_from_file_location("e2e_plan", REPO / "tools/e2e-plan.py")
+    plan = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(plan)
+    import getpass
+    import yaml
+    creds = yaml.safe_load((REPO / "default.credentials.yml").read_text()) or {}
+    v = {**plan._role_defaults(), **creds, **plan.smoke.load_vars()}
+    v.setdefault("ansible_facts", {"user_id": getpass.getuser()})   # nos_primary_admin's source
+    env = plan._env(v)
+    password_vars = {}   # registry key -> the config var that carries it
+    for k, val in v.items():
+        m = re.search(r"nos_derived_secrets\.(\w+)", str(val)) if isinstance(val, str) else None
+        if m and ("password" in k or k.endswith("_pw")):
+            password_vars.setdefault(m.group(1), k)
+    rows = []
+    for key, var in sorted(password_vars.items()):
+        stem = var.rsplit("_password", 1)[0]
+        cands = [stem + s for s in ("_email", "_user", "_username", "_login")] + \
+                [stem.removesuffix("_admin") + s for s in LOGIN_SUFFIXES]
+        login = next((plan._render(env, v[c]) for c in cands if c in v and c != var), "")
+        rows.append((stem, str(login) or "(see the service)", key))
+    for i in (v.get("nos_identities") or []) + plan.synthetic_identities(v):
+        if "authentik" in (i.get("realms") or []):
+            m = re.search(r"nos_derived_secrets\.(\w+)", str(v.get(i.get("password_var"), "")))
+            svc = "authentik (synthetic)" if i.get("kind") == "synthetic" else "authentik"
+            rows.append((svc, plan._render(env, i["name"]), m.group(1) if m else i.get("password_var")))
+    for p in v.get("nos_extra_identities") or []:
+        rows.append(("authentik", p["name"], f"--user {p['name']} nos-identity password"))
+    w = max(len(r[0]) for r in rows)
+    print(f"{'service'.ljust(w)}  login  →  tools/nos-secret.py <key>")
+    for svc, login, key in rows:
+        print(f"{svc.ljust(w)}  {login}  →  {key}")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     user_mode = bool(argv) and argv[0] == "--user"
     if user_mode:
         if len(argv) != 4:
             print(__doc__.strip(), file=sys.stderr)
             return 2
+    elif argv == ["--accounts"]:
+        return accounts()
     elif len(argv) != 1 or argv[0] in ("-h", "--help"):
         print(__doc__.strip(), file=sys.stderr)
         return 2

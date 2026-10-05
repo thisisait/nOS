@@ -119,6 +119,19 @@ def open_connection() -> sqlite3.Connection:
     return _open()
 
 
+def anchor_wal() -> sqlite3.Connection:
+    """An idle connection Bone holds for life, so wing.db's -wal/-shm survive.
+
+    Wing's PHP last-close deletes them and `mode=ro` readers (Grafana, tools/)
+    then CANTOPEN; NO_CKPT_ON_CLOSE keeps this one's own close from doing it.
+    Gate: tests/anatomy/test_wing_db_ro_open_survives_missing_shm.py.
+    """
+    conn = _open()
+    conn.setconfig(sqlite3.SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, True)
+    conn.execute("SELECT 1 FROM sqlite_master").fetchall()   # creates the sidecars
+    return conn
+
+
 # ── Writes ────────────────────────────────────────────────────────────
 
 

@@ -20,6 +20,8 @@ pulse_home: "{{ ansible_facts['env']['HOME'] }}/pulse"
 pulse_venv: "{{ pulse_home }}/venv"
 pulse_log_dir: "{{ pulse_home }}/log"
 pulse_state_dir: "{{ pulse_home }}/state"
+# wing.db Pulse holds a WAL anchor on (mirrors bone_wing_db_dir).
+pulse_wing_db_path: "{{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}/wing.db"
 
 # launchd plist
 pulse_launchd_label: "eu.thisisait.nos.pulse"

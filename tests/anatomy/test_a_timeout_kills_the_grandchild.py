@@ -36,13 +36,9 @@ from __future__ import annotations
 import importlib.util
 import os
 import pathlib
-import subprocess
 import sys
-import shutil
-import tempfile
 import time
 
-import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 RUNNER = REPO / "files/anatomy/pulse/pulse/runners/subprocess.py"
@@ -69,7 +65,7 @@ def _alive(pid: int) -> bool:
     return True
 
 
-def test_the_timeout_reaches_a_backgrounded_grandchild(tmp_path, request) -> None:
+def test_the_timeout_reaches_a_backgrounded_grandchild(tmp_path, monkeypatch) -> None:
     mod = _runner()
     pidfile = tmp_path / "grandchild.pid"
     # The shape of tools/run-agent.sh: a wrapper that starts the real work as a
@@ -83,17 +79,15 @@ def test_the_timeout_reaches_a_backgrounded_grandchild(tmp_path, request) -> Non
         f"open({str(pidfile)!r}, 'w').write(str(child.pid))\n"
         "child.wait()\n")
 
-    # The allowlist demands an absolute path under /Users/ or /home/ whose
-    # basename looks like a tool. tmp_path on macOS is /var/folders/... , so
-    # copy the interpreter invocation into a wrapper the allowlist accepts.
-    shim_dir = pathlib.Path(tempfile.mkdtemp(dir=pathlib.Path.home()))
-    request.addfinalizer(lambda: shutil.rmtree(shim_dir, ignore_errors=True))  # 241 were left in ~ by 2026-09-29
-    shim = shim_dir / "pulsekilltest.py"
-    shim.write_text(script.read_text())
+    # The allowlist runs only scripts under HOME/REPO trees (workload-allowlist,
+    # 2026-10-03), so the wrapper lives in a temp HOME's .nos/ and runs by shebang.
+    monkeypatch.setenv("HOME", str(tmp_path))
+    shim = tmp_path / ".nos" / "pulsekilltest.py"
+    shim.parent.mkdir()
+    shim.write_text(f"#!{sys.executable}\n" + script.read_text())
     os.chmod(shim, 0o755)
 
-    result = mod.execute(str(_python()), [str(shim)],
-                         timeout_s=3, env={}, cwd=str(tmp_path))
+    result = mod.execute(str(shim), [], timeout_s=3, env={}, cwd=str(tmp_path))
 
     assert result.timed_out is True and result.exit_code == -9, (
         f"expected a timeout kill, got rc={result.exit_code} "
@@ -118,17 +112,6 @@ def test_the_timeout_reaches_a_backgrounded_grandchild(tmp_path, request) -> Non
         "trap would have released stays held.")
 
 
-def _python() -> pathlib.Path:
-    """An interpreter path the runner's allowlist accepts (/opt/homebrew, /usr/local
-    or under a home directory). The system /usr/bin/python3 is deliberately NOT
-    allowlisted, so a test that used it would be testing the allowlist."""
-    import shutil
-    for candidate in ("python3",):
-        found = shutil.which(candidate)
-        if found and any(found.startswith(p)
-                         for p in ("/opt/homebrew/", "/usr/local/", "/Users/", "/home/")):
-            return pathlib.Path(found)
-    pytest.skip("no allowlisted python3 on this host to spawn the fixture with")
 
 
 def test_the_child_leads_its_own_session() -> None:

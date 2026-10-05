@@ -45,12 +45,35 @@ final class BindingResolver
 
 	public function resolve(Agent $agent): BindingDecision
 	{
-		$declared = $agent->backendName;
+		return $this->decide($agent, $agent->backendName, $agent->modelPrimaryUri);
+	}
+
+	/**
+	 * The fallback, held to the same gates as the primary — and it never degrades.
+	 * A disarmed or default fallback would answer UNBOUND from the default backend,
+	 * a party the agent's record may not name (Runner::serveFallback, 2026-08-16).
+	 */
+	public function resolveFallback(Agent $agent): Binding
+	{
+		$declared = (string) $agent->fallbackBackendName;
+		$d = $this->decide($agent, $declared, (string) $agent->modelFallbackUri);
+		if ($d->binding === null) {
+			throw new BindingRefused(
+				"agent '{$agent->name}': fallback backend '{$declared}' is "
+				. ($d->declaredDisarmed !== null ? 'not armed' : 'the default')
+				. ' — a fallback is served bound or not at all.'
+			);
+		}
+		return $d->binding;
+	}
+
+	private function decide(Agent $agent, ?string $declared, string $uri): BindingDecision
+	{
 		if ($declared === null) {
 			return BindingDecision::default();
 		}
 
-		$backends = $this->registry();
+		$backends = self::readRegistry($this->registryPath);
 		if (!isset($backends[$declared])) {
 			throw new BindingRefused(
 				"agent '{$agent->name}' declares backend '{$declared}', which "
@@ -72,8 +95,8 @@ final class BindingResolver
 		// day an `openai`-protocol backend row lands (Mistral), an
 		// anthropic-* primary bound to it refuses at session open instead of
 		// dying at the endpoint with a shape error nothing classifies.
-		$provider = substr($agent->modelPrimaryUri, 0, (int) strpos($agent->modelPrimaryUri, '-'));
-		$speaks = ['claude' => 'anthropic', 'anthropic' => 'anthropic', 'openai' => 'openai'];
+		$provider = substr($uri, 0, (int) strpos($uri, '-'));
+		$speaks = ['claude' => 'anthropic', 'anthropic' => 'anthropic', 'openai' => 'openai', 'openclaw' => 'openai'];
 		$protocol = (string) ($spec['protocol'] ?? 'anthropic');
 		if (($speaks[$provider] ?? null) !== $protocol) {
 			throw new BindingRefused(
@@ -96,47 +119,10 @@ final class BindingResolver
 			);
 		}
 
-		// Gate 4 — the register is the INPUT to routing, never outrun by it.
-		$match = (string) ($spec['processor_match'] ?? '');
-		$named = false;
-		foreach ((array) ($agent->gdpr['processors'] ?? []) as $p) {
-			if ($match !== '' && str_contains((string) (((array) $p)['name'] ?? ''), $match)) {
-				$named = true;
-				break;
-			}
-		}
-		if (!$named) {
-			throw new BindingRefused(
-				"agent '{$agent->name}' routes to '{$declared}' but its own "
-				. "gdpr.processors never names '{$match}'. The Article-30 "
-				. 'register would be complete, well-formed, and false — write '
-				. 'the processor entry first.'
-			);
-		}
-
-		// Gate 8 — NO-DEGRADE, derived from the register rather than a knob
-		// (2026-08-16, the gov-ready half). An agent whose own Article-30
-		// record declares `transfers_outside_eu: false` while naming
-		// processors has committed its data to staying in the EU; that
-		// commitment is the MECHANISM here, not a parallel setting:
-		//   * routing it to a non-EU backend refuses — the record is false
-		//     the moment the first prompt leaves, and running elsewhere
-		//     instead would falsify it from the other side;
-		//   * degrading to the (non-EU) default when the binding is disarmed
-		//     refuses too, below — for every other agent disarmed means "the
-		//     default serves", for this one it means "no run". EU residency
-		//     that evaporates under a config flag is a claim, not a property.
+		// Gates 4 + 8 (record half) — shared with AgentLoader's fallback check.
+		self::assertRecordCovers($agent->name, $agent->gdpr, $declared, $spec);
 		$euOnly = (($agent->gdpr['transfers_outside_eu'] ?? null) === false)
 			&& ((array) ($agent->gdpr['processors'] ?? []) !== []);
-		$backendIsEu = ((($spec['residency'] ?? []))['eu'] ?? false) === true;
-		if ($euOnly && !$backendIsEu) {
-			throw new BindingRefused(
-				"agent '{$agent->name}' declares transfers_outside_eu: false "
-				. "but routes to '{$declared}', which is not EU-resident "
-				. '(state/llm-backends.yml residency.eu). One of the two is '
-				. 'wrong; refusing until they agree.'
-			);
-		}
 
 		// Gate 6 — the TIER WORD in the primary URI's tail, for both bindable
 		// providers: `claude-sonnet` names it outright, and every Anthropic
@@ -151,12 +137,12 @@ final class BindingResolver
 		// path: it names an INPUT CAPABILITY, not a cost/quality rung, but the
 		// same tier mechanism carries it — a backend either maps `vision` in
 		// its model_env or the agent refuses here, same as any other tier.
-		$tail = substr($agent->modelPrimaryUri, (int) strpos($agent->modelPrimaryUri, '-') + 1);
+		$tail = substr($uri, (int) strpos($uri, '-') + 1);
 		$tier = preg_match('/\b(haiku|sonnet|opus|vision)\b/', $tail, $m) ? $m[1] : $tail;
 		$modelEnvByTier = (array) ($spec['model_env'] ?? []);
 		if (!array_key_exists($tier, $modelEnvByTier) || $modelEnvByTier[$tier] === null) {
 			throw new BindingRefused(
-				"agent '{$agent->name}' (tier '{$tier}', from '{$agent->modelPrimaryUri}') "
+				"agent '{$agent->name}' (tier '{$tier}', from '{$uri}') "
 				. "has no model mapping on backend '{$declared}' — ruling 1 keeps "
 				. 'opus-tier ceremonies on the default backend, and a tail without '
 				. 'a tier word cannot be remapped by a tier table.'
@@ -209,11 +195,13 @@ final class BindingResolver
 		// to any cloud row here, and nothing leaves a machine that never opens
 		// a socket. That falls out of the existing gates rather than needing a
 		// new one.
+		//
+		// A local row MAY still name a secret when the on-host service itself
+		// demands one (OpenClaw's gateway token, 2026-10-01): then it must resolve.
 		$isLocal = ($spec['local'] ?? false) === true;
-		$token = $isLocal
-			? ''
-			: (string) ($this->credentials->dereferenceRef((string) ($spec['auth_secret'] ?? '')) ?? '');
-		if (!$isLocal && $token === '') {
+		$ref = (string) ($spec['auth_secret'] ?? '');
+		$token = $ref === '' ? '' : (string) ($this->credentials->dereferenceRef($ref) ?? '');
+		if ($token === '' && (!$isLocal || $ref !== '')) {
 			throw new BindingRefused(
 				"backend '{$declared}' is armed but its auth_secret "
 				. "'{$spec['auth_secret']}' resolves to nothing — paste the key "
@@ -230,12 +218,65 @@ final class BindingResolver
 	}
 
 	/**
+	 * Does the agent's own Article-30 record cover routing to this backend?
+	 * Gate 4 (the processor is named) and gate 8's record half (an EU-only
+	 * record never routes to a non-EU row). Static: the loader holds a
+	 * declared fallback to it before any session exists.
+	 *
+	 * @param array<string, mixed> $gdpr
+	 * @param array<string, mixed> $spec
+	 */
+	public static function assertRecordCovers(string $agentName, array $gdpr, string $declared, array $spec): void
+	{
+		// Gate 4 — the register is the INPUT to routing, never outrun by it.
+		$match = (string) ($spec['processor_match'] ?? '');
+		$named = false;
+		foreach ((array) ($gdpr['processors'] ?? []) as $p) {
+			if ($match !== '' && str_contains((string) (((array) $p)['name'] ?? ''), $match)) {
+				$named = true;
+				break;
+			}
+		}
+		if (!$named) {
+			throw new BindingRefused(
+				"agent '{$agentName}' routes to '{$declared}' but its own "
+				. "gdpr.processors never names '{$match}'. The Article-30 "
+				. 'register would be complete, well-formed, and false — write '
+				. 'the processor entry first.'
+			);
+		}
+
+		// Gate 8 — NO-DEGRADE, derived from the register rather than a knob
+		// (2026-08-16, the gov-ready half). An agent whose own Article-30
+		// record declares `transfers_outside_eu: false` while naming
+		// processors has committed its data to staying in the EU; that
+		// commitment is the MECHANISM here, not a parallel setting:
+		//   * routing it to a non-EU backend refuses — the record is false
+		//     the moment the first prompt leaves, and running elsewhere
+		//     instead would falsify it from the other side;
+		//   * degrading to the (non-EU) default when the binding is disarmed
+		//     refuses too, below — for every other agent disarmed means "the
+		//     default serves", for this one it means "no run". EU residency
+		//     that evaporates under a config flag is a claim, not a property.
+		$euOnly = (($gdpr['transfers_outside_eu'] ?? null) === false)
+			&& ((array) ($gdpr['processors'] ?? []) !== []);
+		$backendIsEu = ((($spec['residency'] ?? []))['eu'] ?? false) === true;
+		if ($euOnly && !$backendIsEu) {
+			throw new BindingRefused(
+				"agent '{$agentName}' declares transfers_outside_eu: false "
+				. "but routes to '{$declared}', which is not EU-resident "
+				. '(state/llm-backends.yml residency.eu). One of the two is '
+				. 'wrong; refusing until they agree.'
+			);
+		}
+	}
+
+	/**
 	 * @return array<string, mixed>
 	 */
-	private function registry(): array
+	public static function readRegistry(?string $path = null): array
 	{
-		$path = $this->registryPath
-			?? ((getenv('NOS_REPO_ROOT') ?: '') . '/state/llm-backends.yml');
+		$path ??= ((getenv('NOS_REPO_ROOT') ?: '') . '/state/llm-backends.yml');
 		if (!is_file($path)) {
 			return [];
 		}

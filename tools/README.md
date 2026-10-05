@@ -42,6 +42,7 @@ worse than none, because it reads as complete.
 - `agent-token-status.py` — agent-token-status — can each declared agent client mint a token RIGHT NOW.
 - `anatomy-measure-margins.py` — Measure the nightly chain's temporal margins, and restamp the declared edges.
 - `app-version.py` — What each container actually RUNS, against what the pin says it bundles.
+- `digest-status.py` — READER: image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker.
 - `awaiting-operator.py` — What is waiting for a HUMAN right now, across every source that asks for one.
 - `caddy-status.py` — Can the caddy answer, is the ear listening, and what did it hear.
 - `brew-pin-status.py` — How old is the version brew wants to give us, and is it old enough to adopt?
@@ -59,6 +60,12 @@ worse than none, because it reads as complete.
 - `identity-status.py` — identity-status — the declared account roster vs what each realm holds.
 - `loader-vars-report.py` — D1 scoping tool (2026-06-11) — the plugin-loader variable contract.
 - `loop-status.py` — Which weakness sources actually produce proposals, and what came of them.
+- `geo-load.py` — Load ČÚZK open data (RÚIAN address points, INSPIRE parcels + buildings) for the configured kraje into PostGIS `geo`; staged + swapped per layer.
+- `geo-status.py` — READER: rows per geo layer counted back from PostGIS, last load beside it; UNKNOWN when unreachable.
+- `geo-project-sites.py` — Nightly one-way projection of KEAP party-site rows (+ ARES seats) into PostGIS `geo.party_site`; `--erase-party` for GDPR (called by digest-teardown).
+- `atlas-refresh.py` — Pulse job: nos-atlas "nOS job contract" (read-only reader snapshot → generator) into GeoLibre's `plugins/nos-atlas/live`.
+- `_geo_db.py` — The shared "is there a geo database here" check: absent idles, a stopped container is an outage.
+- `maps-style-vendor.py` — Vendor an OpenFreeMap style for the offline tileserver: every source, sprite and glyph made local, labels `name:cs`.
 - `nos_identity.py` — The manifest row is the only place a service's spellings meet.
 - `npm-ioc-scan.py` — Cross-check every installed npm package against a published IOC list.
 - `plugin-wiring-report.py` — Plugin wiring report — capability matrix + contract checks.
@@ -66,9 +73,12 @@ worse than none, because it reads as complete.
 - `nos_work_uri.py` — Parse + match the nos-work:// routing address (dtt-routing-address); the planner's capability/assignment matcher.
 - `raw-archive-probe.py` — Does the S3 endpoint honor Object Lock COMPLIANCE, or only accept the headers?
 - `red-status.py` — What is red on this estate right now.
+- `undeclared-status.py` — What runs on this host that nOS never declared: launchd plists/labels, exposed or Docker-published ports, crontab — vs sets derived from the graph, manifest and rendered compose.
+- `santa-status.py` — What Santa (monitor mode, `install_santa`) saw execute outside the declared trees (Pulse runner trees + OS/Homebrew/Applications), any DENY, and a mode other than Monitor; UNKNOWN when the log or santactl is unreadable.
 - `profile-builder-build.py` — Build the static profile builder (`_site/profile-builder/index.html` on release tags): seven steps (this computer incl. one timezone, web address, organisation & security, services with a RAM/disk estimate and a nearest-profile hint, backup & mail, people — the operator, test users, `nos_extra_identities` — and download) → a tailored config.yml plus a one-line credentials.yml for the password prefix. Data from default.config.yml + profiles/ + state/manifest.yml categories + plugin hub_cards + each role's compose (via registry-reach's discover()); `--image-lock` marks an OFFLINE build, `--config` resolves it against an operator config.yml. One self-contained file: test locally with `tools/profile-builder-build.py --out ~/nos-profile-builder && open ~/nos-profile-builder/index.html`. Page in tools/profile-builder/.
 - `managed-status.py` — Every managed dir: what a blank does to it × what the backup does with it, one table from the artifacts (`--gaps`, `--json`; the cc pane `managed`).
 - `reload-stale-config.py` — Make a running container read the config the estate rendered for it.
+- `digest-record.py` — main.yml post_task: writes the record digest-status.py reads (image ref, ID, repo digests, source commit of local builds).
 - `stale-config-status.py` — Containers running config the estate has already replaced.
 - `nos_security.py` — Resolve the live security notebook (`~/.nos/security`), not the git promotion copy.
 - `rem-dispose.py` — Write a REM disposition into the operator's `~/.nos/security` notebook; never touches the scanner's queue.
@@ -138,7 +148,6 @@ worse than none, because it reads as complete.
 - `cnb-dtt.py` — parse ČNB denni_kurz.txt and project onto a DTT schema; optional --push to KEAP. Oracle for the n8n ČNB templates.
 - `ares-dtt.py` — ARES + ADIS lookups → party-registry-status row payloads. Oracle the gate scores; the live writer is the n8n ARES pack.
 - `digest-import-doli.py` — hydrator organelle: Dolibarr thirdparties (IČO required) → KEAP party / party-tax-identity through the digest gate. Reads the MariaDB schema directly, never Dolibarr REST; Bone is not a hydrator. Dry by default; --absorb writes.
-- `n8n-fire.py` — Pulse clock for an n8n webhook workflow (ares-verify-base). SLATED FOR DELETION once `n8n-pack.py watch` is seen reporting live (docs/doctrine/n8n-packs.md §7).
 - `n8n-pack.py` — the n8n pack contract in one tool: `lint` (docs/doctrine/n8n-packs.md §8 gate), `encryption-key` (REM-202 adopt-or-mint), `sync` (post.yml harvester — upsert graphs keyed on meta.nos.id, inject nos-keap-rw), `watch` (Pulse exec reader: staleness vs cron, UNKNOWN when n8n is unreachable).
 - `derive-postings.py` — The invoice→ledger tie: reads invoices + accounts from KEAP, derives one BALANCED journal entry per invoice from --own-party's books (double-entry, gated). Dry by default; --absorb writes.
 - `keap-apply-view.py` — Apply a KEAP table definition's `view:` block to the live table for the digest OUTPUT tables (invoice, account) — same refuse-before-write / verify-by-reading discipline as roadmap-apply-view.py, kept separate since those UNSEEDED tables are importer-populated, not playbook-seeded.
@@ -172,6 +181,7 @@ worse than none, because it reads as complete.
 - `test_report_chain_synth_gen.py` — the generator's own validator, runnable standalone; gated in CI by tests/anatomy/test_report_chain_synth_is_gated.py.
 
 ## Release, CI, git
+- `prepush-score.py` — Score what a push would carry before `nos-push` pushes it: deterministic signals (file:line) per threat-checklist section 1-6, then a small local Ollama model's per-aspect scores (UNAVAILABLE on failure, never a number); bar chart, checker+prompt SHA-256, one JSONL line in `~/.nos/events/prepush-scores.jsonl`. Advisory; `--strict` refuses at 70.
 - `forge-sync.py` — The trunk's four holders, and the only tool that moves refs between them.
 - `migration-pr.sh` — tools/migration-pr.sh — validate an authored migration record + its version
 - `recipe-pr.sh` — tools/recipe-pr.sh — validate an upgrade recipe and (optionally) open a PR/MR
@@ -191,6 +201,7 @@ worse than none, because it reads as complete.
 - `e2e-plan.py` — What the estate promises a user, rendered from the manifests — the E2E plan.
 - `nos-image-cache.py` — A verified local cache of container images, so a rebuild does not re-pull.
 - `nos-first-login.py` — Signs every declared identity in to every SSO app once, so its account exists from install.
+- `outline-roles.py` — Makes Outline's admins exactly Authentik's tier-1 people (Outline takes no role from OIDC).
 - `nos-secret.py` — nos-secret — the operator's reader for the derived credential map (P1).
 
 - `anatomy-graph-gen.py` — Compile the anatomy graph — every declared actor and edge, one address space.

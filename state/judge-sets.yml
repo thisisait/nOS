@@ -269,7 +269,9 @@ judges:
     # that catalog is this judge's own oracle, so the loop cannot lower both.
     # 10 -> 9 on 2026-08-12: traefik-routers-count removed — the :8082 API
     # surface it probed was closed (api.insecure:false); one fewer curated entry.
-    min_work: 9
+    # 9 -> 10 on 2026-10-03: geolibre (atlas) forward_auth 302 row added.
+    # 10 -> 11 on 2026-10-04: martin (atlas/tiles) forward_auth 302 row added.
+    min_work: 11
     mutates_worktree: false
     requires: ["live_estate"]
     # §5.1 — the prober and the catalog it reads. Removing an entry from the

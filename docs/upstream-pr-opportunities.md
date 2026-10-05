@@ -43,7 +43,6 @@ is the correct, final mode.
 - **mailpit** — dev SMTP capture, no multi-user model
 - **onlyoffice** — B2B JWT (DocServer is a render backend, not end-user)
 - **spacetimedb** — DB binary protocol, no UI
-- **qdrant** — vector DB, no per-user state
 - **snappymail** — webmail; identity is IMAP-account-determined (Stalwart), not Authentik. SSO for IMAP does not exist → by-design proxy.
 
 > **influxdb (OSS)** and **metabase (OSS)** are NOT in this list — they have a

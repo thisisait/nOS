@@ -94,7 +94,7 @@ gdpr:
 # only gets created because THIS block exists: load_plugins.run_aggregators's
 # `from: app_manifest` source reads apps/*.yml's top-level `authentik:` key
 # (module_utils/load_plugins.py:~385) into authentik-base's inputs.clients —
-# the exact same path documenso/qdrant/roundcube/twofauth use. Omitting this
+# the exact same path documenso/roundcube/twofauth use. Omitting this
 # block (as an earlier draft of this manifest did) means Authentik never
 # provisions a provider for espocrm at all — not a manual-click gap, a missing
 # object. mode: native_oidc (not forward_auth) renders an OAuth2Provider,

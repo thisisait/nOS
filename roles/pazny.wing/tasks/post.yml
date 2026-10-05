@@ -210,7 +210,8 @@
       # Ruling 4 close-out: every consumer of this token WRITES (Pulse run
       # start/finish, telemetry callback), so wing.write is its honest class —
       # declared, not grandfathered. permits() grants reads to writers.
-      - --scopes=wing.write
+      # pulse.write: the catalog upsert below; no agent row may hold it.
+      - --scopes=wing.write,pulse.write
     chdir: "{{ wing_app_dir }}"
   register: _wing_token_result
   changed_when: >
@@ -527,6 +528,13 @@
     NOS_BACKUP_VERIFY_SCRIPT: "{{ backup_verify_script_path | default(ansible_facts['env']['HOME'] ~ '/.nos/backup-verify.sh') }}"
     NOS_CONSOLIDATE_FS_ROOTS: "{{ (nextcloud_data_dir | default('')) ~ ':' ~ (ansible_facts['env']['HOME'] ~ '/keap/inbox') }}"
     NOS_CONSOLIDATE_DB_EXCLUDE: "{{ mariadb_databases | default([]) | map(attribute='name') | join(',') }}"
+    # geo-base: the loader's cache dir and kraj codes, rendered here (a list is
+    # not a catalog token).
+    NOS_GEO_CACHE_DIR: "{{ geo_cache_dir | default('') }}"
+    NOS_GEO_REGION_CODES: "{{ geo_regions | default([]) | join(',') }}"
+    NOS_GEOLIBRE_DATA_DIR: "{{ geolibre_data_dir if install_geolibre | default(false) else '' }}"
+    NOS_ATLAS_SRC_DIR: "{{ nos_atlas_src_dir if install_geolibre | default(false) else '' }}"
+    NOS_KEAP_SRC_DIR: "{{ (keap_src_dir | default(ansible_facts['env']['HOME'] ~ '/keap/src')) if install_geolibre | default(false) else '' }}"
     # S2 fan-out: an EMPTY url is the off switch — keap-consolidate and
     # keap-embed-sync then behave exactly as they did before the second target
     # existed, rather than failing against a daemon that is not there.

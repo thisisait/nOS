@@ -91,6 +91,6 @@ sequence:
       --key nos-gitea --secret {{ nos_derived_secrets.oidc_gitea }}
       --auto-discover-url https://{{ authentik_domain }}/application/o/gitea/.well-known/openid-configuration
       --scopes openid --scopes profile --scopes email
-      --group-claim-name groups
-      --admin-group {{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | map(attribute='groups') | first | default(['nos-admins'])) | last }}
+      --group-claim-name nos_roles
+      --admin-group admin
     notify: Restart gitea

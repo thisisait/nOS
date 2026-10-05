@@ -56,14 +56,22 @@ entries:
       groups:
         - !Find [authentik_core.group, [name, nos-admins]]
 
-  # ── Toggled identities (nos_identities with enabled_by, e.g. the RBAC test
-  # users): rendered only while their toggle is true, in ONE group — the one
-  # their tier adds in authentik_rbac_tiers (tier 2 = nos-managers, ...).
-{% for u in nos_identities | default([]) if u.enabled_by is defined and (lookup('vars', u.enabled_by, default=false) | bool) %}
+  # ── Synthetic identities (nos_synthetic_identities, profiles/test-users.yml):
+  # present while nos_test_users_enabled, each in ONE group — the one its tier
+  # adds in authentik_rbac_tiers. Off, they linger until -e retire_synthetic=true;
+  # absent then matches username AND attributes.kind synthetic (Authentik ANDs
+  # identifiers, a dict is __contains), so a person who shares the name stays.
+{% set _synthetic_on = nos_test_users_enabled | default(false) | bool %}
+{% for u in nos_synthetic_identities | default([]) if _synthetic_on or (retire_synthetic | default(false) | bool) %}
   - model: authentik_core.user
-    state: present
+    state: {{ 'present' if _synthetic_on else 'absent' }}
     identifiers:
       username: "{{ u.name }}"
+{% if not _synthetic_on %}
+      attributes:
+        kind: synthetic
+{% endif %}
+{% if _synthetic_on %}
     attrs:
       name: "{{ u.name }}"
       email: "{{ u.email }}"
@@ -72,9 +80,10 @@ entries:
       path: "users"
       type: "internal"
       attributes:
-        enabled_by: "{{ u.enabled_by }}"
+        kind: synthetic
       groups:
         - !Find [authentik_core.group, [name, "{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', u.tier | int) | first).groups | last }}"]]
+{% endif %}
 {% endfor %}
 
   # ── The operator's extra people (nos_extra_identities). The password is

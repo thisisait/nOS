@@ -155,6 +155,13 @@ def _build_substitutions() -> dict[str, str]:
         "{{ backup_verify_script_path }}": _env("NOS_BACKUP_VERIFY_SCRIPT"),
         "{{ consolidate_fs_roots }}":     _env("NOS_CONSOLIDATE_FS_ROOTS"),
         "{{ consolidate_db_exclude }}":   _env("NOS_CONSOLIDATE_DB_EXCLUDE"),
+        # geo-load (maps & GIS P0): the open-data loader's cache + kraj codes.
+        "{{ geo_cache_dir }}":            _env("NOS_GEO_CACHE_DIR"),
+        "{{ geo_region_codes }}":         _env("NOS_GEO_REGION_CODES"),
+        # atlas-refresh (geolibre-base): "" when install_geolibre is off → no-op.
+        "{{ geolibre_data_dir }}":        _env("NOS_GEOLIBRE_DATA_DIR"),
+        "{{ nos_atlas_src_dir }}":        _env("NOS_ATLAS_SRC_DIR"),
+        "{{ keap_src_dir }}":             _env("NOS_KEAP_SRC_DIR"),
         # S2 corpus-in-parallel (docs/archive/cortex-corpus-parallel.md): the two
         # keap-base feeders FAN OUT to the cortex organ, and cortex-base adds the
         # agreement harness. The URL is Ansible-rendered to "" when the organ is

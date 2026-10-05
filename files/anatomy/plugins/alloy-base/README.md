@@ -20,7 +20,7 @@ validates the **host-binary shape** (#6 in `docs/bones-and-wings-refactor.md`
 ## What this plugin does NOT own (Phase 3, U11-U13)
 
 - Host metric scrapes (`prometheus.exporter.unix`, cAdvisor, Postgres /
-  MariaDB / Redis exporters, Blackbox, nginx, php-fpm, Qdrant) →
+  MariaDB / Redis exporters, Blackbox, nginx, php-fpm) →
   `alloy-host-metrics` composition plugin.
 - Docker container log discovery (`discovery.docker` + `loki.source.docker`)
   → `alloy-docker-metrics` composition plugin.

@@ -1,0 +1,113 @@
+---
+# ==============================================================================
+# pazny.nos_forum/tasks/post.yml — AFTER `docker compose up iiab`.
+# Publishes the image's module.wasm into SpacetimeDB and points the module at
+# Authentik. The spacetime CLI runs as a throwaway container on the shared net
+# with HOME={{ nos_forum_data_dir }}/cli: its server-issued token there IS the
+# module owner (a second identity is refused with 403, measured 2026-10-03), so
+# that directory must survive every converge (open question Q11).
+# ==============================================================================
+
+- name: "[pazny.nos_forum Post] Wait for SpacetimeDB"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ spacetimedb_port | default(3030) }}/v1/ping"
+    status_code: [200, 204]
+  register: _nos_forum_stdb
+  until: _nos_forum_stdb.status | default(0) in [200, 204]
+  retries: 24
+  delay: 5
+
+- name: "[pazny.nos_forum Post] Extract module.wasm from the running image"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    out="{{ nos_forum_data_dir }}/module/module.wasm"
+    {{ docker_bin }} cp iiab-nos-forum-1:/app/module.wasm "$out.new"
+    if cmp -s "$out.new" "$out"; then rm "$out.new"; else mv "$out.new" "$out"; echo "new-wasm"; fi
+  args:
+    executable: /bin/bash
+  register: _nos_forum_extract
+  changed_when: "'new-wasm' in _nos_forum_extract.stdout"
+
+- name: "[pazny.nos_forum Post] Hash module.wasm"
+  ansible.builtin.stat:
+    path: "{{ nos_forum_data_dir }}/module/module.wasm"
+    checksum_algorithm: sha256
+  register: _nos_forum_wasm
+
+- name: "[pazny.nos_forum Post] Read the last published module hash"
+  ansible.builtin.slurp:
+    src: "{{ nos_forum_data_dir }}/module/published.sha256"
+  register: _nos_forum_published
+  failed_when: false
+
+# Publishing the same wasm twice prints "Updated database" both times, so the
+# stamp decides. A schema-breaking module is refused here (no --delete-data,
+# ever): that is an upgrades/ recipe, not a converge.
+- name: "[pazny.nos_forum Post] Publish the module (owner identity)"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin }}"
+      - run
+      - --rm
+      - --network
+      - "{{ stacks_shared_network }}"
+      - -v
+      - "{{ nos_forum_data_dir }}/cli:/w"
+      - -v
+      - "{{ nos_forum_data_dir }}/module/module.wasm:/m.wasm:ro"
+      - -e
+      - HOME=/w
+      - "clockworklabs/spacetime:{{ spacetimedb_version }}"
+      - publish
+      - --yes
+      - --bin-path
+      - /m.wasm
+      - --server
+      - http://spacetimedb:3000
+      - nos-forum
+  register: _nos_forum_publish
+  when: (_nos_forum_published.content | default('', true) | b64decode | trim) != _nos_forum_wasm.stat.checksum
+
+- name: "[pazny.nos_forum Post] Stamp the published hash"
+  ansible.builtin.copy:
+    content: "{{ _nos_forum_wasm.stat.checksum }}\n"
+    dest: "{{ nos_forum_data_dir }}/module/published.sha256"
+    mode: '0600'
+  when: _nos_forum_publish is not skipped
+
+# Overwrites are idempotent; the module accepts set_config from its owner only.
+- name: "[pazny.nos_forum Post] Point the module at Authentik (issuer, audience)"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin }}"
+      - run
+      - --rm
+      - --network
+      - "{{ stacks_shared_network }}"
+      - -v
+      - "{{ nos_forum_data_dir }}/cli:/w"
+      - -e
+      - HOME=/w
+      - "clockworklabs/spacetime:{{ spacetimedb_version }}"
+      - call
+      - --server
+      - http://spacetimedb:3000
+      - nos-forum
+      - set_config
+      - "{{ item.key | to_json }}"
+      - "{{ item.value | to_json }}"
+  loop:
+    - { key: issuer, value: "https://{{ authentik_domain }}/application/o/nos-forum/" }
+    - { key: audience, value: "nos-forum" }
+  loop_control:
+    label: "{{ item.key }}"
+  changed_when: false
+
+- name: "[pazny.nos_forum Post] Wait for forum-web /health"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ nos_forum_port }}/health"
+    status_code: [200]
+  register: _nos_forum_health
+  until: _nos_forum_health.status | default(0) == 200
+  retries: 24
+  delay: 5

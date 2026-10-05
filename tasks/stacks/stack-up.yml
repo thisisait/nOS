@@ -53,7 +53,7 @@
     src: "stacks/voip/docker-compose.yml.j2"
     dest: "{{ stacks_dir }}/voip/docker-compose.yml"
     mode: '0644'
-  when: install_freepbx | default(false)
+  when: install_mikopbx | default(false)
 
 - name: "[Stacks] Deploy engineering compose"
   ansible.builtin.template:
@@ -91,8 +91,11 @@
 - { name: "[Stacks] pazny.homeassistant render", ansible.builtin.include_role: { name: pazny.homeassistant, apply: { tags: ['homeassistant'] } }, when: "install_homeassistant | default(false)", tags: ['homeassistant'] }
 - { name: "[Stacks] pazny.rustfs render", ansible.builtin.include_role: { name: pazny.rustfs, apply: { tags: ['rustfs'] } }, when: "install_rustfs | default(false)", tags: ['rustfs'] }
 - { name: "[Stacks] pazny.offline_maps render", ansible.builtin.include_role: { name: pazny.offline_maps, apply: { tags: ['maps'] } }, when: "install_offline_maps | default(false)", tags: ['maps'] }
+- { name: "[Stacks] pazny.geolibre render", ansible.builtin.include_role: { name: pazny.geolibre, apply: { tags: ['geolibre'] } }, when: "install_geolibre | default(false)", tags: ['geolibre'] }
+- { name: "[Stacks] pazny.martin render", ansible.builtin.include_role: { name: pazny.martin, apply: { tags: ['martin'] } }, when: "install_martin | default(false)", tags: ['martin'] }
 - { name: "[Stacks] pazny.keap render", ansible.builtin.include_role: { name: pazny.keap, apply: { tags: ['keap'] } }, when: "install_keap | default(false)", tags: ['keap'] }
 - { name: "[Stacks] pazny.face render", ansible.builtin.include_role: { name: pazny.face, apply: { tags: ['face'] } }, when: "install_face | default(false)", tags: ['face'] }
+- { name: "[Stacks] pazny.nos_forum render", ansible.builtin.include_role: { name: pazny.nos_forum, apply: { tags: ['nos_forum', 'iiab'] } }, when: "install_nos_forum | default(false)", tags: ['nos_forum', 'iiab'] }
 - { name: "[Stacks] pazny.vaultwarden render", ansible.builtin.include_role: { name: pazny.vaultwarden, apply: { tags: ['vaultwarden'] } }, when: "install_vaultwarden | default(false)", tags: ['vaultwarden'] }
 - { name: "[Stacks] pazny.ntfy render", ansible.builtin.include_role: { name: pazny.ntfy, apply: { tags: ['ntfy'] } }, when: "install_ntfy | default(false)", tags: ['ntfy'] }
 - { name: "[Stacks] pazny.miniflux render", ansible.builtin.include_role: { name: pazny.miniflux, apply: { tags: ['miniflux'] } }, when: "install_miniflux | default(false)", tags: ['miniflux'] }
@@ -117,7 +120,7 @@
 - { name: "[Stacks] pazny.onlyoffice render", ansible.builtin.include_role: { name: pazny.onlyoffice, apply: { tags: ['onlyoffice'] } }, when: "install_onlyoffice | default(false)", tags: ['onlyoffice'] }
 
 # VoIP / Engineering / Data roles
-- { name: "[Stacks] pazny.freepbx render", ansible.builtin.include_role: { name: pazny.freepbx, apply: { tags: ['freepbx'] } }, when: "install_freepbx | default(false)", tags: ['freepbx'] }
+- { name: "[Stacks] pazny.mikopbx render", ansible.builtin.include_role: { name: pazny.mikopbx, apply: { tags: ['mikopbx'] } }, when: "install_mikopbx | default(false)", tags: ['mikopbx'] }
 - { name: "[Stacks] pazny.qgis_server render", ansible.builtin.include_role: { name: pazny.qgis_server, apply: { tags: ['qgis'] } }, when: "install_qgis_server | default(false)", tags: ['qgis'] }
 - { name: "[Stacks] pazny.metabase render", ansible.builtin.include_role: { name: pazny.metabase, apply: { tags: ['metabase'] } }, when: "install_metabase | default(false)", tags: ['metabase'] }
 - { name: "[Stacks] pazny.superset render", ansible.builtin.include_role: { name: pazny.superset, apply: { tags: ['superset'] } }, when: "install_superset | default(false)", tags: ['superset'] }
@@ -146,7 +149,7 @@
         +
         ((install_erpnext | default(false) or install_freescout | default(false) or install_outline | default(false) or install_hedgedoc | default(false) or install_bookstack | default(false) or install_firefly | default(false) or install_dolibarr | default(false) or install_onlyoffice | default(false)) | ternary(['b2b'], []))
         +
-        ((install_freepbx | default(false)) | ternary(['voip'], []))
+        ((install_mikopbx | default(false)) | ternary(['voip'], []))
         +
         ((install_qgis_server | default(false)) | ternary(['engineering'], []))
         +
@@ -190,6 +193,26 @@
           | zip(_stack_overrides_find.results | map(attribute='files'))
         )
       }}
+
+# A plugin fragment whose role fragment is not on disk yet names a service no
+# file defines, and compose then refuses the whole stack (iiab, 2026-10-03).
+- name: "[Stacks] Exclude orphan compose extensions (no base defines the service)"
+  tags: ['stacks', 'always']
+  ansible.builtin.set_fact:
+    _orphan_split: "{{ _stack_overrides_map | nos_split_orphans(stacks_dir) }}"
+
+- name: "[Stacks] Merge only fragments whose services are defined"
+  tags: ['stacks', 'always']
+  ansible.builtin.set_fact:
+    _stack_overrides_map: "{{ _orphan_split.keep }}"
+
+- name: "[Stacks] REPORT — orphan compose extensions left out of `up`"
+  tags: ['stacks', 'always']
+  ansible.builtin.debug:
+    msg: >-
+      Not merged (their service has no image/build in any fragment):
+      {{ _orphan_split.orphans | join(', ') }}. tools/red-status.py names them too.
+  when: _orphan_split.orphans | length > 0
 
 # A stack whose every service is off has a base file with `services: {}` and
 # no overrides, and `docker compose up` on it exits 1 ("no service selected").
@@ -428,6 +451,7 @@
 - { name: "[Stacks] pazny.bookstack post (migration retry)", ansible.builtin.include_role: { name: pazny.bookstack, tasks_from: post.yml, apply: { tags: ['bookstack'] } }, when: "install_bookstack | default(false) and 'b2b' in (_remaining_stacks | default([]))", tags: ['bookstack'] }
 - { name: "[Stacks] pazny.firefly post (migration retry)", ansible.builtin.include_role: { name: pazny.firefly, tasks_from: post.yml, apply: { tags: ['firefly'] } }, when: "install_firefly | default(false) and 'b2b' in (_remaining_stacks | default([]))", tags: ['firefly'] }
 - { name: "[Stacks] pazny.erpnext post", ansible.builtin.include_role: { name: pazny.erpnext, tasks_from: post.yml, apply: { tags: ['erpnext'] } }, when: "install_erpnext | default(false) and 'b2b' in (_remaining_stacks | default([]))", tags: ['erpnext'] }
+- { name: "[Stacks] pazny.mikopbx post (REST provisioning + read-back)", ansible.builtin.include_role: { name: pazny.mikopbx, tasks_from: post.yml, apply: { tags: ['mikopbx'] } }, when: "install_mikopbx | default(false) and 'voip' in (_remaining_stacks | default([]))", tags: ['mikopbx'] }
 - { name: "[Stacks] pazny.superset post", ansible.builtin.include_role: { name: pazny.superset, tasks_from: post.yml, apply: { tags: ['superset'] } }, when: "install_superset | default(false) and 'data' in (_remaining_stacks | default([]))", tags: ['superset'] }
 - { name: "[Stacks] pazny.paperclip post", ansible.builtin.include_role: { name: pazny.paperclip, tasks_from: post.yml, apply: { tags: ['paperclip'] } }, when: "install_paperclip | default(false) and 'devops' in (_remaining_stacks | default([]))", tags: ['paperclip'] }
 - { name: "[Stacks] pazny.freescout post", ansible.builtin.include_role: { name: pazny.freescout, tasks_from: post.yml, apply: { tags: ['freescout'] } }, when: "install_freescout | default(false) and 'b2b' in (_remaining_stacks | default([]))", tags: ['freescout'] }
@@ -444,6 +468,7 @@
 - { name: "[Stacks] pazny.homeassistant post", ansible.builtin.include_role: { name: pazny.homeassistant, tasks_from: post.yml, apply: { tags: ['homeassistant'] } }, when: "install_homeassistant | default(false)", tags: ['homeassistant'] }
 - { name: "[Stacks] pazny.calibre_web post", ansible.builtin.include_role: { name: pazny.calibre_web, tasks_from: post.yml, apply: { tags: ['calibreweb'] } }, when: "install_calibreweb | default(false)", tags: ['calibreweb'] }
 - { name: "[Stacks] pazny.keap post", ansible.builtin.include_role: { name: pazny.keap, tasks_from: post.yml, apply: { tags: ['keap'] } }, when: "install_keap | default(false)", tags: ['keap'] }
+- { name: "[Stacks] pazny.nos_forum post", ansible.builtin.include_role: { name: pazny.nos_forum, tasks_from: post.yml, apply: { tags: ['nos_forum', 'iiab'] } }, when: "install_nos_forum | default(false)", tags: ['nos_forum', 'iiab'] }
 - { name: "[Stacks] pazny.ntfy post", ansible.builtin.include_role: { name: pazny.ntfy, tasks_from: post.yml, apply: { tags: ['ntfy'] } }, when: "install_ntfy | default(false)", tags: ['ntfy'] }
 - { name: "[Stacks] pazny.wing post", ansible.builtin.include_role: { name: pazny.wing, tasks_from: post.yml, apply: { tags: ['wing', 'security'] } }, when: "install_wing | default(true) and 'iiab' in (_remaining_stacks | default([]))", tags: ['wing', 'security'] }
 # Kuma's monitors are Tier-1 state derived from state/manifest.yml, but until
@@ -461,8 +486,13 @@
 - { name: "[Stacks] pazny.gitlab post", ansible.builtin.include_role: { name: pazny.gitlab, tasks_from: post.yml, apply: { tags: ['gitlab'] } }, when: "install_gitlab | default(false)", tags: ['gitlab'] }
 
 # ── Authentik OIDC: service-side configuration (Gitea API, Nextcloud occ) ───
+# Tagged like the services it wires: untagged, a `--tags gitea` leg never
+# re-ran the source update (nos_roles admin mapping sat unapplied, 2026-10-01).
 - name: "[Stacks] Authentik service-side OIDC post-setup"
-  ansible.builtin.include_tasks: "tasks/stacks/authentik_service_post.yml"
+  ansible.builtin.include_tasks:
+    file: "tasks/stacks/authentik_service_post.yml"
+    apply: { tags: ['authentik', 'gitea', 'nextcloud'] }
+  tags: ['authentik', 'gitea', 'nextcloud']
   when:
     - install_authentik | default(false)
 

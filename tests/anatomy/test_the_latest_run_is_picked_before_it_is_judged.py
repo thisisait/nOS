@@ -1,4 +1,4 @@
-"""Anatomy CI gate — `failingJobs` picks the latest run, then asks if it failed.
+"""Anatomy CI gate — `latestVerdicts` (was failingJobs) picks the latest run, then asks if it failed.
 
 MEASURED 2026-09-02. The query filtered `exit_code != 0` in the WHERE, i.e.
 BEFORE `GROUP BY job_id HAVING run_id = MAX(run_id)`, so the tie-break ranged
@@ -26,18 +26,22 @@ PHP = REPO / "files/anatomy/wing/app/Model/PulseRepository.php"
 
 def _sql() -> str:
     src = PHP.read_text(encoding="utf-8")
-    body = re.search(r"public function failingJobs\(\).*?\n\t\}", src, re.S)
-    assert body, "failingJobs is gone from PulseRepository"
+    body = re.search(r"public function latestVerdicts\(\).*?\n\t\}", src, re.S)
+    assert body, "latestVerdicts is gone from PulseRepository"
     q = re.search(r"query\(\s*'(.*?)',", body.group(0), re.S)
-    assert q, "failingJobs no longer issues a literal query"
+    assert q, "latestVerdicts no longer issues a literal query"
     return q.group(1)
 
 
-def _rows(sql: str, runs: list[tuple]) -> set[str]:
+def _rows(sql: str, runs: list[tuple], removed: dict[str, str | None] | None = None) -> set[str]:
     conn = sqlite3.connect(":memory:")
     conn.execute("CREATE TABLE pulse_runs "
                  "(run_id TEXT, job_id TEXT, fired_at TEXT, exit_code INT)")
+    conn.execute("CREATE TABLE pulse_jobs (id TEXT, removed_at TEXT)")
     conn.executemany("INSERT INTO pulse_runs VALUES (?,?,?,?)", runs)
+    jobs = {r[1]: None for r in runs} | (removed or {})
+    conn.executemany("INSERT INTO pulse_jobs VALUES (?,?)",
+                     [(j, at) for j, at in jobs.items() if at != "deleted"])
     try:
         return {r[0] for r in conn.execute(sql)}
     finally:
@@ -78,3 +82,15 @@ def test_an_unfinished_latest_run_is_not_a_failure():
             ("r2", "nightly", "2026-09-02T03:00:00+02:00", None)]
     assert _rows(_sql(), rows) == set(), (
         "a job whose latest run has not finished is reported as failing")
+
+
+def test_a_retired_job_is_history_not_state():
+    """ares-verify was retired 2026-10-02; its last run had failed, and both
+    readers kept it red after the job left pulse_jobs. A job that no longer
+    exists, or is marked removed, cannot be failing now."""
+    if sqlite3.sqlite_version_info < (3, 25):
+        pytest.skip(f"no window functions in sqlite {sqlite3.sqlite_version}")
+    rows = [("r1", "gone", "2026-10-02T23:00:00+02:00", 127),
+            ("r2", "marked", "2026-10-02T23:00:00+02:00", 127),
+            ("r3", "live", "2026-10-02T23:00:00+02:00", 1)]
+    assert _rows(_sql(), rows, {"gone": "deleted", "marked": "2026-10-02"}) == {"live"}

@@ -61,7 +61,7 @@ calibreweb_books_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/
 calibreweb_config_dir: "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/shared/calibreweb/config"
 code_server_data_dir: "{{ nos_data_root }}/platform/services/code_server/data"
 erpnext_data_dir: "{{ nos_data_root }}/platform/services/erpnext/data"
-freepbx_data_dir: "{{ nos_data_root }}/platform/services/freepbx/data"
+mikopbx_data_dir: "{{ nos_data_root }}/platform/services/mikopbx"
 freescout_data_dir: "{{ nos_data_root }}/platform/services/freescout/data"
 gitea_data_dir: "{{ nos_data_root }}/platform/services/gitea/data"
 gitlab_config_dir: "{{ nos_data_root }}/platform/services/gitlab/config"
@@ -77,6 +77,7 @@ hedgedoc_data_dir: "{{ nos_data_root }}/platform/services/hedgedoc/data"
 # because it is a render, not state: a blank may wipe it and the next converge
 # writes it back, while compose must find a FILE there before it binds it.
 hedgedoc_config_dir: "{{ nos_data_root }}/platform/services/hedgedoc/config"
+geolibre_data_dir: "{{ nos_data_root }}/platform/services/geolibre/data"
 homeassistant_config_dir: "{{ nos_data_root }}/platform/services/homeassistant/config"
 infisical_data_dir: "{{ nos_data_root }}/platform/services/infisical/data"
 influxdb_config_dir: "{{ nos_data_root }}/platform/services/influxdb/config"
@@ -95,6 +96,7 @@ ntfy_data_dir: "{{ nos_data_root }}/platform/services/ntfy/data"
 onlyoffice_data_dir: "{{ nos_data_root }}/platform/services/onlyoffice/data"
 openwebui_data_dir: "{{ nos_data_root }}/platform/services/openwebui/data"
 outline_data_dir: "{{ nos_data_root }}/platform/services/outline/data"
+nos_forum_data_dir: "{{ nos_data_root }}/platform/services/nos_forum/data"
 paperclip_data_dir: "{{ nos_data_root }}/platform/services/paperclip/data"
 portainer_data_dir: "{{ nos_data_root }}/platform/services/portainer/data"
 postgresql_data_dir: "{{ nos_data_root }}/platform/services/postgresql/data"
@@ -155,10 +157,10 @@ default_admin_email: "admin@{{ tenant_domain | default('dev.local') }}"  # Fallb
 # is how drift starts. `tools/identity-status.py` reads all three and checks
 # them against the realms; doctrine: docs/doctrine/identity.md.
 #
-# Fields: name (account username), kind (operator|user|service|agent),
-# tier (RBAC 1-4, see authentik_rbac_tiers), email, realms (where the
-# account must exist: authentik|gitea|gitlab|woodpecker|wing), password_var,
-# enabled_by (optional: a bool var; the entry exists only while it is true).
+# Fields: name (account username), kind (operator|user|service|agent;
+# synthetic lives in profiles/test-users.yml), tier (RBAC 1-4, see
+# authentik_rbac_tiers), email, realms (where the account must exist:
+# authentik|gitea|gitlab|woodpecker|wing), password_var.
 # ==============================================================================
 
 # The local forge/OS-side admin. TODAY this defaults to the OS username so a
@@ -171,6 +173,9 @@ nos_operator_email: "{{ nos_primary_admin }}@{{ tenant_domain | default('dev.loc
 # Venv for host tools that need more than the stdlib (tasks/tools-venv.yml).
 nos_tools_venv: "{{ ansible_facts['env']['HOME'] }}/.nos/tools-venv"
 nos_tools_python: "{{ nos_tools_venv }}/bin/python"
+# What every container ran at the last converge (tools/digest-record.py writes,
+# tools/digest-status.py compares). Runtime state; a converge rewrites it.
+nos_workload_digests_file: "{{ ansible_facts['env']['HOME'] }}/.nos/workload-digests.json"
 
 nos_identities:
   # The SSO root. Seeded by the Authentik blueprint (00-admin-groups.yaml.j2)
@@ -199,19 +204,13 @@ nos_identities:
     email: "tester@{{ tenant_domain | default('dev.local') }}"
     realms: [authentik]
     password_var: nos_tester_password
-  # RBAC + multi-user test personas, one group each (the one their tier adds
-  # in authentik_rbac_tiers). Two at tier 3 so isolation has a peer to fail
-  # against. Off by default; profiles/test-users.yml turns them on. Turning it
-  # off later leaves the accounts in Authentik — identity-status names them.
-  - {name: alice, kind: user, tier: 2, email: "alice@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
-     password_var: nos_test_alice_password, enabled_by: nos_test_users_enabled}
-  - {name: bob, kind: user, tier: 3, email: "bob@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
-     password_var: nos_test_bob_password, enabled_by: nos_test_users_enabled}
-  - {name: carol, kind: user, tier: 3, email: "carol@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
-     password_var: nos_test_carol_password, enabled_by: nos_test_users_enabled}
-  - {name: dave, kind: user, tier: 4, email: "dave@{{ tenant_domain | default('dev.local') }}", realms: [authentik],
-     password_var: nos_test_dave_password, enabled_by: nos_test_users_enabled}
-nos_test_users_enabled: false   # the alice/bob/carol/dave entries above
+# Synthetic test identities (alice/bob/carol/dave) are NOT here: they are
+# `nos_synthetic_identities` in profiles/test-users.yml, kind: synthetic, so
+# this roster holds real accounts only. main.yml adopts that profile's roster
+# whenever this stays empty; `nos_test_users_enabled` switches them on, and
+# off they retire (state: absent) on the next `nos --confirm` run.
+nos_synthetic_identities: []
+nos_test_users_enabled: false   # profiles/test-users.yml flips it
 # Your own extra people, [{name, email, tier 1-4}] (the profile builder's People
 # step writes it). Each gets an Authentik user in its tier's group and its app
 # accounts from the first-login walk; the password is derived per name in
@@ -496,6 +495,19 @@ install_nginx: false
 install_docker: true              # Linux: install Docker CE + compose plugin via APT
 install_hardening: true           # Linux: ANSSI baseline (ufw + fail2ban + sysctl + auditd + apparmor + chrony + ssh + unattended). Decision O5: default ON, opt-out via this flag.
 
+# macOS workload telemetry (epic workload-allowlist). MONITOR mode only, never lockdown.
+# First run stops for two System Settings approvals (system extension + Full Disk Access).
+install_santa: false              # Santa exec telemetry; reader: tools/santa-status.py
+santa_version: "2026.8"           # github.com/northpolesec/santa release (Apache-2.0)
+santa_pkg_sha256: "0aaa970c7ddc63fe6a55c3144c825acb7f6bfa9cb15bcba1bffcaf2b5efc952a"
+
+# Agents (claude CLI children of AgentKit / pulse-run-agent.sh) run as a separate,
+# non-admin macOS user that cannot read ~/.nos. Off = agents run as the operator, as today.
+agents_separate_user: false
+agents_user: "nos-agent"
+agents_libexec_dir: "/usr/local/libexec/nos-agent"
+agents_claude_wrapper: "{{ agents_libexec_dir }}/nos-agent-claude"
+
 # ── Languages / runtimes ──────────────────────────────────────────────────────
 # PHP at the host level is no longer needed by default — Track A (2026-04-26)
 # moved Wing's PHP-FPM into a container and Composer runs inside that
@@ -526,7 +538,7 @@ install_dotnet: true              # .NET SDK (C#, F#) + EF CLI
 # ── AI Agent ──────────────────────────────────────────────────────────────────
 install_openclaw: true            # OpenClaw (Inspektor Klepitko, Ollama, no API key)
 install_hermes: false             # Hermes Agent (Nous) – Python daemon, MCP client, cross-channel gateway
-install_device_gateway: false     # Device BFF (RFC 8628). Enable in config.yml; no plugin until Art-30.
+install_device_gateway: false     # Device BFF (RFC 8628). Enable in config.yml; Art-30 gate docs/compliance/devices.md.
 install_opencode: false           # OpenCode AI coding TUI (sst.dev) with local Ollama provider
 
 # ── Skill library (2026-08-27) ────────────────────────────────────────────────
@@ -577,6 +589,8 @@ enable_remote_management: false   # Apple Remote Desktop (ARD) – full manageme
 
 # ── Observability – Grafana LGTM stack ────────────────────────────────────────
 install_observability: true       # Grafana + Prometheus + Loki + Tempo + Alloy
+# The host half of install_observability is Homebrew's Alloy agent (the formula names it).
+observability_launchd_label: "sh.brew.grafana-alloy"
 # REM-107: Alloy OTLP receiver bind. 127.0.0.1 = loopback-only (on-host apps only —
 # the secure default; Alloy is a HOST process, so 0.0.0.0 exposed 4317/4318 to the
 # LAN/Tailscale unauthenticated). Set 0.0.0.0 ONLY for cross-host telemetry, then
@@ -592,6 +606,8 @@ install_wordpress: false          # WordPress CMS            [requires: mariadb,
 install_nextcloud: true          # Nextcloud – self-hosted cloud  [requires: mariadb, php, nginx]
 install_kiwix: true              # Kiwix – offline Wikipedia, Gutenberg, ZIM  [requires: Docker]
 install_offline_maps: false       # Offline maps – tileserver-gl + MBTiles    [requires: node]
+install_geolibre: false          # GeoLibre web GIS + nos-atlas plugin at atlas.<tenant>, forward-auth [Docker, requires: Authentik]
+install_martin: false            # martin vector tiles of the geo schema at atlas.<tenant>/tiles [Docker, requires: postgis, geolibre]
 install_n8n: true                # n8n – workflow automation                  [requires: Docker]
 install_gitea: true              # Gitea – self-hosted Git server             [Homebrew]
 install_gitlab: false             # GitLab CE – full DevOps platform           [requires: Docker, ~4 GB RAM]
@@ -600,6 +616,7 @@ install_openwebui: true          # Open WebUI – chat UI for Ollama            
 install_mcp_gateway: false        # mcpo – MCP-to-OpenAPI proxy for OpenWebUI  [Docker, requires: Open WebUI]
 install_portainer: true          # Portainer CE – Docker management UI        [requires: Docker]
 install_spacetimedb: false       # SpacetimeDB Standalone – realtime DB (BSL 1.1, internal-SaaS use only) [Docker]
+install_nos_forum: false         # nos-forum – chat + forum on SpacetimeDB, native OIDC [Docker, requires: SpacetimeDB, Authentik]
 install_jellyfin: false           # Jellyfin – media server                    [requires: Docker]
 install_uptime_kuma: true        # Uptime Kuma – monitoring dashboard         [requires: Docker]
 install_calibreweb: true         # Calibre-Web – ebook server                [requires: Docker, calibre]
@@ -620,10 +637,10 @@ install_hedgedoc: false           # HedgeDoc – collaborative markdown [Docker,
 install_bookstack: false          # BookStack – wiki platform [Docker, requires: MariaDB]
 install_firefly: false            # Firefly III – personal finance [Docker, requires: MariaDB, Redis]
 install_dolibarr: false           # Dolibarr ERP/CRM desk [Docker, MariaDB, ARM64]. Praxis pack ON. KEAP tables = books fallback when this is off. SSO is forward_auth until OIDC module is proven in post.yml.
-install_onlyoffice: false         # ONLYOFFICE Document Server [Docker]
+install_onlyoffice: true          # ONLYOFFICE Document Server [Docker] — Nextcloud's Edit needs it (builder edge, 2026-10-01)
 
 # ── VoIP stack (telecommunications) ──────────────────────────────────────────
-install_freepbx: false            # FreePBX + Asterisk – PBX / call center              [Docker]
+install_mikopbx: false            # MikoPBX – Asterisk 22 PBX (extensions, trunks)      [Docker]
 
 # ── Engineering stack (HW/CAD/GIS) ───────────────────────────────────────────
 install_qgis_server: false        # QGIS Server – GIS map server                        [Docker]
@@ -662,7 +679,8 @@ install_ears: true               # Jeff – speech ingress + assistant tables [A
 # agent has none (roles/pazny.ears/tasks/main.yml "NO LAUNCHD JOB"). Closing
 # the window stops the recording. A reboot-proof always-listen ear waits on a
 # real signing identity: roadmap row `ears-app-bundle`.
-# Transcripts: ~/jeff/turns/, pruned at ears_retention_days (90).
+# Transcripts: NOT kept by default (ears_keep_transcripts: false, role default);
+# set true to keep ~/ears/turns/ for ears_retention_days (90). Art-30: ears-base.
 
 # ── AI orchestration ──────────────────────────────────────────────────────────
 install_paperclip: true          # Paperclip – multi-agent orchestration platform [requires: PostgreSQL]
@@ -954,19 +972,6 @@ homebrew_cask_apps:
 # leftover Caskroom dir and the sudo upgrade module would fail the whole play.
 homebrew_cask_upgrade_ignore:
   - windsurf             # renamed to devin-desktop; leftover token has no .app
-
-# ==============================================================================
-# MAC APP STORE
-# Requires install_mas_apps: true + App Store login (mas login).
-# Each app is [id, name] — find the ID in the URL appstore.com/.../id<ID>.
-# ==============================================================================
-mas_installed_apps: []
-#  - { id: 1351639930, name: "Gifski" }             # GIF encoder (ffmpeg wrapper)
-#  - { id: 931571202,  name: "QuickShade" }         # Dimmer for external monitors
-#  - { id: 1355679052, name: "Dropover" }           # Drag & drop shelf buffer
-#  - { id: 1452453066, name: "Hidden Bar" }         # Alt: use the hiddenbar cask (above)
-mas_email: ""
-mas_password: ""
 
 # ==============================================================================
 # NGINX
@@ -1272,7 +1277,9 @@ xai_small_model: ""            # -> NOS_XAI_SMALL_MODEL     (haiku tier)
 # The knee is 14B and the ceiling is this machine, not the weights.
 ollama_enabled: false
 ollama_model: ""               # -> NOS_LOCAL_MODEL         (sonnet tier)
-ollama_small_model: ""         # -> NOS_LOCAL_SMALL_MODEL   (haiku tier)
+# hermes3:8b: the bound FALLBACK of every hosted-primary agent (2026-10-01) —
+# tool-capable, and small enough that KEAP keeps answering (14B starves it).
+ollama_small_model: "hermes3:8b"  # -> NOS_LOCAL_SMALL_MODEL (haiku tier)
 # vision tier — a document/image-input model, distinct from the text tiers
 # above (BindingResolver's tier regex now also matches `vision`). Chosen
 # 2026-09-20 for the D1 invoice-vision path: qwen2.5vl:7b (Ollama library tag
@@ -1323,6 +1330,8 @@ ollama_version: "0.35.0"
 openclaw_install_daemon: true
 openclaw_domain: "claw{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 openclaw_gateway_port: 18789
+# AgentKit backend row `openclaw` (state/llm-backends.yml) — prepared, not armed.
+openclaw_backend_enabled: false
 
 # Agent name (persona)
 openclaw_agent_name: "Inspektor Klepítko"
@@ -1342,131 +1351,6 @@ pi_config_dir: "{{ ansible_facts['env']['HOME'] }}/.pi/agent"
 
 # Install pi-autoresearch extension (optimization loop for experiments)
 pi_install_autoresearch: true
-
-# ==============================================================================
-# DOTFILES
-# ==============================================================================
-
-dotfiles_repo: https://github.com/geerlingguy/dotfiles.git
-dotfiles_repo_accept_hostkey: true
-dotfiles_repo_local_destination: ~/Development/GitHub/dotfiles
-dotfiles_repo_version: master
-dotfiles_files:
-  - .zshrc
-  - .gitignore
-  - .inputrc
-  - .osx
-  - .vimrc
-
-# ==============================================================================
-# macOS DEFAULTS (.osx script)
-# ==============================================================================
-
-osx_script: "~/.osx --no-restart"
-
-sudoers_custom_config: ""
-# sudoers_custom_config: |
-#   %admin ALL=(ALL) NOPASSWD: ALL
-
-# ==============================================================================
-# macOS EXTENDED SETTINGS (configure_macos_defaults)
-# Automates everything from "Manual settings to automate someday" + developer defaults
-# ==============================================================================
-
-# Defer GUI restarts: apply Finder/Dock settings but DON'T killall mid-run (a
-# killall flickers the GUI and on a heavy host can drop the IDE/session); false
-# = legacy immediate restart. Restart Finder/Dock out-of-band or log out to apply.
-defer_gui_restarts: true
-
-# ── Finder ────────────────────────────────────────────────────────────────────
-macos_finder_show_hidden_files: true          # Show hidden files (Cmd+Shift+.)
-macos_finder_show_extensions: true           # Show file extensions
-macos_finder_show_path_bar: true             # Show path bar at the bottom
-macos_finder_show_status_bar: true           # Show status bar at the bottom
-macos_finder_disable_desktop_click: true     # Disable click-to-show-desktop (Stage Manager)
-macos_finder_default_search_scope: "SCcf"   # Search in current folder (SCcf) / computer (SCev)
-macos_finder_show_posix_path_title: false    # Show POSIX path in title bar
-
-# ── Keyboard ──────────────────────────────────────────────────────────────────
-macos_keyboard_repeat_rate: 2        # 0=fastest ... 120=slowest (2 = Fast)
-macos_keyboard_repeat_delay: 15      # 0=shortest ... 120=longest (15 = Short)
-macos_keyboard_press_hold: false     # false = key repeat (not accent menu)
-# Caps Lock → Esc: CANNOT be fully automated (HW-specific IOKit), see README
-
-# ── Accessibility ─────────────────────────────────────────────────────────────
-macos_reduce_transparency: true      # Reduce transparency (performance)
-macos_reduce_motion: false           # Reduce motion of animations
-
-# ── Screenshot ────────────────────────────────────────────────────────────────
-macos_screenshot_location: "~/Desktop"   # Where to save screenshots
-macos_screenshot_format: "png"           # png | jpg | pdf | tiff
-
-# ── Dock ──────────────────────────────────────────────────────────────────────
-macos_dock_autohide: true            # Automatically hide the Dock
-macos_dock_show_recents: false       # Do not show recent applications
-macos_dock_tilesize: 48              # Icon size (pixels)
-macos_dock_minimize_effect: "scale"  # genie | scale
-
-# ── Safari (developer) ────────────────────────────────────────────────────────
-macos_safari_show_full_url: true          # Show full URL
-macos_safari_developer_menu: true         # Enable Developer menu
-# Note: Userscripts (Return YouTube Dislike) must be installed manually
-
-# ── Terminal ──────────────────────────────────────────────────────────────────
-macos_terminal_secure_keyboard: true  # Secure keyboard entry
-
-# ── System ────────────────────────────────────────────────────────────────────
-macos_computer_name: ""               # NetBIOS computer name; empty = use ansible_hostname
-# Full Disk Access for Terminal: CANNOT be automated (SIP protected)
-# The installer will ask for it on first run
-
-# ==============================================================================
-# SYSTEM SERVICES
-# ==============================================================================
-
-# SSH
-ssh_port: 22
-ssh_allow_groups: "admin staff"   # Groups with SSH access
-ssh_password_auth: true           # true = password + keys; false = keys only (after ssh-copy-id)
-
-# Samba / SMB
-samba_workgroup: "WORKGROUP"
-samba_shares:
-  - name: "projects"
-    path: "{{ ansible_facts['env']['HOME'] }}/projects"
-    comment: "{{ ansible_facts['user_id'] }} projects"
-    browseable: true
-    writable: true
-
-# VNC
-vnc_password: "{{ nos_derived_secrets.vnc }}"
-
-# ==============================================================================
-# DOCK
-# ==============================================================================
-
-dockitems_remove: []
-dockitems_persist: []
-
-# ==============================================================================
-# SUBLIME TEXT
-# ==============================================================================
-
-sublime_base_path: "~/Library/Application Support/Sublime Text"
-sublime_config_path: "Packages/User"
-sublime_package_control:
-  - "DocBlockr"
-  - "Dockerfile Syntax Highlighting"
-  - "FileDiffs"
-  - "GitHub Flavored Markdown Preview"
-  - "Jinja2"
-  - "Package Control"
-  - "Pretty JSON"
-  - "SublimeLinter"
-  - "SublimeLinter-contrib-yamllint"
-  - "Theme - Cobalt2"
-  - "TrailingSpaces"
-  - "WordingStatus"
 
 # ==============================================================================
 # IIAB – MARIADB
@@ -1509,6 +1393,18 @@ mariadb_ssl_enabled: "{{ ansible_facts['os_family'] | default('') == 'Darwin' }}
 
 install_postgresql: false
 postgresql_version: "16.15-alpine"      # REM-215: 16.14 is NOT clean — the previous batch told the next reader to ignore the signal that would have found it. Was 16.14 (CVE-2026-6479 SSL/GSS DoS) + 16.13 (CVE-2026-2004/2005/2006/2007). Minor within 16.x, no pg_upgrade.
+# PostGIS: the same pinned postgres with PostGIS compiled in (files/postgis/Dockerfile),
+# built per host so the PG minor never lags the CVE pin. Adds the `geo` database.
+install_postgis: false
+postgis_version: "3.6.4"
+postgis_sha256: "ed8dc6679f1e06f7b113592b04cde2a7e00f1b1e681294c8ca2204058990cec6"   # download.osgeo.org tarball (md5 matches upstream .md5)
+geo_db_name: "geo"
+# Open cadastral data loaded monthly into the geo db (tools/geo-load.py, Pulse geo:geo-load).
+# VÚSC kraj codes: 35 Jihočeský, 19 Praha, 27 Středočeský, 43 Plzeňský, 51 Karlovarský,
+# 60 Ústecký, 78 Liberecký, 86 Královéhradecký, 94 Pardubický, 108 Vysočina,
+# 116 Jihomoravský, 124 Olomoucký, 132 Moravskoslezský, 141 Zlínský.
+geo_regions: [35]
+geo_cache_dir: "{{ artifact_cache_dir }}/geo"
 postgresql_port: 5432
 postgresql_root_user: "postgres"
 postgresql_root_password: "{{ nos_derived_secrets.postgresql }}"
@@ -1555,7 +1451,6 @@ mariadb_databases:
   - name: "nextcloud"
   - name: "freescout"
   - name: "erpnext"
-  - name: "asterisk"
   - name: "bookstack"
   - name: "firefly"
   - name: "dolibarr"
@@ -1573,9 +1468,6 @@ mariadb_users:
   - name: "erpnext"
     password: "{{ erpnext_admin_password | default(nos_derived_secrets.erpnext) }}"
     priv: "erpnext.*:ALL"
-  - name: "asterisk"
-    password: "{{ freepbx_db_password | default(nos_derived_secrets.freepbx) }}"
-    priv: "asterisk.*:ALL"
   - name: "bookstack"
     password: "{{ bookstack_db_password | default(nos_derived_secrets.bookstack) }}"
     priv: "bookstack.*:ALL"
@@ -1707,56 +1599,81 @@ kiwix_zim_files: []
 #   dest: "wikipedia_cs_mini.zim"        # ~500 MB
 
 # ==============================================================================
-# IIAB – OFFLINE MAPS (tileserver-gl + MBTiles)
+# IIAB – OFFLINE MAPS (tileserver-gl + a Planetiler-built base map)
 # ==============================================================================
 
 maps_domain: "maps{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 maps_port: 8081                               # 8080 taken by Traefik dashboard
 maps_tileserver_version: "v5.6.0"                  # Docker image tag (maptiler/tileserver-gl). Pinned from floating latest (REM-117 reproducibility shadow; v5.6.0 verified on Docker Hub). tileserver-gl is CVE-clean in-window.
 
-# Init MBTiles — small file downloaded automatically so tileserver starts.
-# Default: Zurich demo (~2 MB) from tileserver-gl test fixtures — proof of life.
-# Set to "" to disable; replace with Czech Republic or other region for real use.
-maps_init_mbtiles_url: "https://raw.githubusercontent.com/maptiler/tileserver-gl/master/test_fixtures/zurich_switzerland.mbtiles"
-maps_init_mbtiles_dest: "zurich_switzerland.mbtiles"
+# Base map: Planetiler builds OpenMapTiles PMTiles from the Geofabrik extract
+# once, into maps_cache_dir (survives every removal level). Region = Geofabrik slug.
+maps_region: "czech-republic"
+maps_languages: "cs,en,de,sk,pl"               # name:* tags kept in the tiles
+maps_planetiler_version: "0.10.2"              # ghcr.io/onthegomap/planetiler
+maps_planetiler_java_opts: "-Xmx3g"            # 6g was OOM-killed beside ~10 GB of estate; CZ measured in roles/pazny.offline_maps/README.md
+maps_cache_dir: "{{ artifact_cache_dir }}/maps"
+# Glyphs + sprites the vendored OpenFreeMap style expects (OFL fonts, BSD sprites).
+maps_fonts_url: "https://assets.openfreemap.com/fonts/ofm.tar.gz"
+maps_sprites_url: "https://tiles.openfreemap.org/sprites/ofm_f384"
 
-# Additional MBTiles files to download (empty = do not download automatically)
-# Free Czech Republic source (no registration): https://openfreemap.org/
+# Extra operator archives ({url, dest} into maps_data_dir), served by basename.
 maps_mbtiles_files: []
-# - url: "https://openfreemap.org/..."   # operator fills in after checking openfreemap.org
-#   dest: "czech-republic.mbtiles"
 
 # ==============================================================================
-# SHELL EXTRAS – Starship + aliases
+# IIAB – GEOLIBRE (web GIS) + the nos-atlas plugin drop-in, at atlas.<tenant>
 # ==============================================================================
 
-# Starship preset: plain-text | bracketed-segments | gruvbox-rainbow | tokyo-night
-starship_preset: "gruvbox-rainbow"
+geolibre_domain: "atlas{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+geolibre_port: 8072                           # nginx :80 in the container, 127.0.0.1 only
+geolibre_image: "ghcr.io/opengeos/geolibre"
+geolibre_version: "v3.2.0@sha256:7c43f124f306d7c00c66660faf73eced043d6ddd749a06afb055ed223e79cebe"   # image label v3.2.0, rev aa28b2a; the digest nos-atlas was tested against
+nos_atlas_src_dir: "{{ ansible_facts['env']['HOME'] }}/projects/nos-atlas"   # dist/nos-atlas is COPIED into geolibre_data_dir; build it there (npm run build)
 
-# Aliases added to ~/.zshrc
-shell_aliases:
-  - alias: ls
-    command: "eza --icons --group-directories-first"
-  - alias: ll
-    command: "eza -la --icons --git --group-directories-first"
-  - alias: lt
-    command: "eza --tree --icons --level=3"
-  - alias: cat
-    command: "bat --style=numbers,changes,header"
-  - alias: grep
-    command: "rg"
-  - alias: find
-    command: "fd"
-  - alias: du
-    command: "ncdu"
-  - alias: df
-    command: "duf"
-  - alias: lg
-    command: "lazygit"
-  - alias: nr
-    command: "npm run"
-  - alias: br
-    command: "bun run"
+# martin: geo tables as vector tiles at atlas.<tenant>/tiles (same origin, the atlas gate).
+martin_image: "ghcr.io/maplibre/martin"
+martin_version: "1.16.1@sha256:59902019bf9038926ff0c71174237d6852e64c457830a6349abe7090be8818ca"   # index digest; linux/arm64 sha256:62e47a0d… (manifest inspect 2026-10-04)
+
+# GeoLibre Browser layer catalog (rendered to GEOLIBRE_SERVICES_FILE; schema = GeoLibre
+# docker/entrypoint.sh). Free, keyless services only; `licence_url` is the source checked.
+# GeoLibre shows no per-service attribution, so the required credit rides in `name`.
+# ČÚZK services verified 2026-10-03: capabilities Fees/AccessConstraints = none, EPSG:3857.
+# No martin entry: GeoLibre v3.2.0 catalog kinds are raster/OGC only, and its xyz
+# kind rejects a vector TileJSON. Add tiles by hand: Add data → OGC vector tiles →
+# https://atlas.<tenant>/tiles/<source> (roles/pazny.martin/README.md).
+geolibre_layers:
+  - id: nos-basemap
+    name: "nOS basemap — Liberty (© OpenStreetMap contributors)"
+    category: Basemaps
+    kind: xyz
+    enabled: "{{ install_offline_maps }}"
+    fields: {url: "https://{{ maps_domain }}/styles/liberty/{z}/{x}/{y}.png", tileSize: "256", shortUrl: false}
+    licence: "Own tileserver (pazny.offline_maps). Data © OpenStreetMap contributors, ODbL 1.0."
+    licence_url: "https://www.openstreetmap.org/copyright"
+  - id: cuzk-katastralni-mapa
+    name: "Katastrální mapa (ČÚZK – on-line)"
+    category: ČÚZK
+    kind: wms
+    enabled: true
+    fields: {endpoint: "https://services.cuzk.gov.cz/wms/local-km-wms.asp", layers: "KN", styles: "", format: "image/png", transparent: true, tileSize: "256", version: "1.3.0"}
+    licence: "ČÚZK network services: free, no registration, commercial use allowed; credit 'ČÚZK – on-line'."
+    licence_url: "https://www.cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-sitovych-sluzeb-CUZK.aspx"
+  - id: cuzk-ortofoto
+    name: "Ortofoto ČR (ČÚZK – on-line)"
+    category: ČÚZK
+    kind: wms
+    enabled: true
+    fields: {endpoint: "https://ags.cuzk.gov.cz/arcgis1/services/ORTOFOTO/MapServer/WMSServer", layers: "0", styles: "", format: "image/png", transparent: false, tileSize: "256", version: "1.3.0"}
+    licence: "ČÚZK network services: free, no registration, commercial use allowed; credit 'ČÚZK – on-line'."
+    licence_url: "https://www.cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-sitovych-sluzeb-CUZK.aspx"
+  - id: cuzk-ruian
+    name: "RÚIAN — budovy a adresní místa (ČÚZK – on-line)"
+    category: ČÚZK
+    kind: wms
+    enabled: true
+    fields: {endpoint: "https://ags.cuzk.gov.cz/arcgis/services/RUIAN/MapServer/WMSServer", layers: "StavebniObjekt,AdresniMisto", styles: "", format: "image/png", transparent: true, tileSize: "256", version: "1.3.0"}
+    licence: "ČÚZK network services: free, no registration, commercial use allowed; credit 'ČÚZK – on-line'."
+    licence_url: "https://www.cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-sitovych-sluzeb-CUZK.aspx"
 
 # ==============================================================================
 # OBSERVABILITY – Grafana LGTM stack + Alloy
@@ -1869,23 +1786,6 @@ blackbox_exporter_version: "v0.28.0"  # [swept 2026-08-06]
 alloy_scrape_postgres_exporter: "{{ install_postgresql | default(false) }}"
 alloy_scrape_mysqld_exporter: "{{ install_mariadb | default(false) }}"
 alloy_scrape_redis_exporter: "{{ redis_docker | default(false) }}"
-# Tier-2 Qdrant (apps/qdrant.yml). Auto-on when the manifest is enabled —
-# operator can flip in config.yml if Qdrant runs without observability scrape.
-alloy_scrape_qdrant: "{{ install_qdrant | default(false) }}"
-qdrant_port: 6333
-# install_qdrant flips true when apps/qdrant.yml is present in the apps
-# catalog. apps_runner sets this fact dynamically; default is false so a
-# stripped-down build doesn't trigger Qdrant-dependent wiring spuriously.
-install_qdrant: false
-# Qdrant API keys are auto-generated by apps_runner from the
-# $SERVICE_PASSWORD_API / $SERVICE_PASSWORD_RO_API magic tokens in
-# apps/qdrant.yml, then persisted under app_secrets.qdrant.* in
-# credentials.yml. Bone / Wing read these via the env they're set in
-# (see roles/pazny.bone/templates/bone.plist.j2 + roles/pazny.wing/
-# templates/compose.yml.j2). Operators with a custom Qdrant deployment
-# can override `qdrant_api_key` / `qdrant_api_key_ro` directly in
-# credentials.yml — these wrappers fall back to the auto-generated
-# values when no override is set.
 # app_secrets is the apps_runner secret-store (its own default is `{}` in
 # roles/pazny.apps_runner/defaults). That role default only materialises during
 # stack-up — AFTER the core-up `template_vars: "{{ vars }}"` loader resolves the
@@ -1900,9 +1800,6 @@ apps_runner_enabled: true
 # Tier-2 manifest ids to leave out of this estate (apps/<id>.yml stays
 # committed; the runner just does not discover it). Default: none.
 apps_skip: []
-qdrant_api_key: "{{ (app_secrets | default({})).get('qdrant', {}).get('PASSWORD_API', '') }}"
-qdrant_api_key_ro: "{{ (app_secrets | default({})).get('qdrant', {}).get('PASSWORD_RO_API', '') }}"
-qdrant_url: "http://127.0.0.1:{{ qdrant_port | default(6333) }}"
 # Derived from where the cAdvisor CONTAINER exists, not declared beside it.
 # roles/pazny.grafana/templates/compose.yml.j2:221 gates that container on
 # `ansible_os_family != 'Darwin'` — its cgroup and layerdb paths are real only
@@ -1987,7 +1884,7 @@ gitea_allow_only_external_registration: true
 gitlab_domain: "gitlab{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 gitlab_http_port: 8929          # Internal HTTP port (nginx handles SSL, forwards here)
 gitlab_ssh_port: 2224           # Git SSH (22=system, 2222=Gitea → Gitlab on 2224)
-gitlab_version: "18.11.9-ce.0"  # REM-159: 18.11.8 was withdrawn upstream; 18.11.9 is the terminal 18.11.x build
+gitlab_version: "18.11.12-ce.0"  # REM-264/REM-159: last 18.11.x patch (fixes 18.11.9 unauth file read + GraphQL injection); 19.x is the next step
 gitlab_timezone: "{{ nos_timezone }}"
 gitlab_signup_enabled: false    # Disables registration of new users
 gitlab_puma_workers: 2          # Worker processes (min 2, with 36 GB feel free to use 4)
@@ -2116,6 +2013,22 @@ spacetimedb_version: "v2.7.0-hotfix3"           # REM-135: v2.7.0-hotfix3 (was v
 spacetimedb_keys_dir: "{{ nos_data_root }}/platform/services/spacetimedb/keys"
 spacetimedb_install_host_cli: true      # install `spacetime` binary on host so the operator can publish modules
 spacetimedb_dev_db: "dev"               # logical dev DB name printed in onboarding hint
+
+# ==============================================================================
+# IIAB – NOS-FORUM (chat + forum on SpacetimeDB; github.com/pazny/nos-forum, AGPL-3.0)
+# Spec: nos-forum docs/spec/nos-integration.md. v0.1 = text chat + forum, no calls.
+# ==============================================================================
+nos_forum_version: "v0.1.0"             # image tag; the image carries module.wasm, published by the role
+nos_forum_image: "ghcr.io/pazny/nos-forum-web"
+# Local checkout: set to build the image from source instead of pulling (no release is published yet).
+nos_forum_src_dir: ""
+nos_forum_domain: "forum{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+nos_forum_port: 5091                    # forum-web, 127.0.0.1 only; Traefik reaches it on the shared net
+nos_forum_retention_days: 365           # Art-30 horizon; NOT enforced in v0.1 (no archiver yet)
+nos_forum_calls_enabled: false          # v0.2: LiveKit + /rtc lane. Must stay false in v0.1
+nos_forum_media_host: "home"            # home | vps | tailscale — where the v0.2 SFU runs (a home SFU cannot sit behind Cloudflare)
+nos_forum_cloudflare_turn: false        # v0.2: Cloudflare Realtime TURN credentials handed to clients
+nos_forum_cloudflare_turn_key_id: ""    # Cloudflare dashboard → Realtime → TURN; the token is an operator secret
 
 # ==============================================================================
 # IIAB – JELLYFIN (media server)
@@ -2248,6 +2161,8 @@ pmset_ttyskeepawake: 1                 # TTY session prevents sleep
 # (tested on macOS 27) and is the reference the restart handler's
 # plist-existence guard hardens around. Bump when a newer release is verified.
 dnsmasq_version: "2.91"                    # known-good Homebrew dnsmasq (macOS 27 validated)
+dnsmasq_launchd_label: "homebrew.mxcl.dnsmasq"  # the formula's plist, run as root
+dnsmasq_launchd_domain: "system"           # root LaunchDaemon: bootout needs become, not gui/<uid>
 dnsmasq_dev_domain: "{{ tenant_domain | default('dev.local') }}"  # Auto-tracks tenant_domain (Track F)
 dnsmasq_dev_address: "127.0.0.1"          # Target for *.dev.local from localhost
 dnsmasq_port: 53                          # DNS port (53 = default)
@@ -2351,6 +2266,8 @@ uninstall_disabled_services: false
 # managed-resource manifest (docs/archive/blank-uninstall-managed-resources.md).
 nos_retired_services:
   - puter
+  - qdrant     # 2026-10-02: KEAP's libSQL vectors are the retrieval path
+  - freepbx    # 2026-10-03: tiredofit image gone from Docker Hub, CRITICALs unfixable
 
 # ── External-volume mount preflight (macOS / Docker Desktop) ─────────────────
 # When nos_data_root is redirected onto an external disk (/Volumes/<disk>), an
@@ -2402,6 +2319,10 @@ traefik_image_version: "v3.7.13"        # REM-251 GHSA-rf44-j88r-hh8c (aliasHead
 traefik_http_port: 80
 traefik_https_port: 443
 traefik_dashboard_port: 8082            # 8080=cadvisor, 8081=tileserver, 8090=freescout — 8082 is the first free slot
+# Cloudflare Authenticated Origin Pulls: a second, mTLS-only door. :443 is untouched;
+# the router forwards WAN 443 here instead. Runbook: docs/traefik-primary-proxy.md.
+traefik_origin_pull_enabled: false
+traefik_origin_pull_port: 8443
 traefik_domain: "traefik{{ _host_alias_seg }}.{{ tenant_domain | default('dev.local') }}"
 traefik_log_level: "INFO"               # DEBUG / INFO / WARN / ERROR
 # traefik_dynamic_dir / traefik_certs_dir live in roles/pazny.traefik/defaults
@@ -2631,21 +2552,24 @@ outline_secret_key: "{{ global_password_prefix }}_pw_outline_secret"
 outline_utils_secret: "{{ global_password_prefix }}_pw_outline_utils"
 
 # ==============================================================================
-# VOIP – FREEPBX + ASTERISK (PBX / call center)
-# Requires: install_mariadb: true
+# VOIP – MIKOPBX (Asterisk 22 PBX; SQLite + Redis inside, no infra DB)
+# SSO: Authentik forward_auth gate; PBX admin password derived. Calls on macOS
+# need NAT pinned through the API — docs/systems/mikopbx/README.md.
 # ==============================================================================
 
-freepbx_domain: "pbx{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
-freepbx_port: 8088                     # Web UI
-freepbx_sip_port: 5060                 # SIP signaling (UDP+TCP)
-freepbx_iax_port: 4569                 # IAX2 protocol
-freepbx_rtp_start: 10000              # RTP media start port
-freepbx_rtp_end: 10100                # RTP media end port
-freepbx_version: "latest"   # ⚠️  VENDOR-BLOCKED (REM-014/046): tiredofit/freepbx Docker image abandoned upstream 2022-04-30; latest published tag is 5.2.0 (2022). No maintained ARM64 FOSS alternative. CRITICAL CVEs (CVSS 10.0/9.3) UNFIXABLE in this image — operators running freepbx accept the risk. Track docs/llm/security/remediation-queue.json items REM-014/046 for status changes.
-freepbx_db_name: "asterisk"
-freepbx_db_user: "asterisk"
-freepbx_db_password: "{{ nos_derived_secrets.freepbx }}"
-freepbx_timezone: "{{ nos_timezone }}"
+mikopbx_version: "2026.3.40"           # mikopbx/mikopbx, multi-arch (Asterisk 22.8.2 inside)
+mikopbx_domain: "pbx{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
+mikopbx_port: 8088                     # Web UI + REST API (loopback publish)
+mikopbx_sip_port: 5060                 # SIP signaling (UDP+TCP), published port
+mikopbx_rtp_start: 10000               # RTP media range — Docker Desktop makes one proxy per port, keep it small
+mikopbx_rtp_end: 10100
+mikopbx_lan_access: "{{ services_lan_access | default(false) }}"   # true = SIP/RTP on 0.0.0.0 so LAN phones can reach the PBX
+mikopbx_external_ip: "{{ ansible_facts['default_ipv4']['address'] | default('') }}"   # address phones reach; advertised in SDP
+mikopbx_admin_login: "admin"
+mikopbx_pbx_name: "nOS PBX"
+mikopbx_timezone: "{{ nos_timezone }}"
+mikopbx_extensions: []                 # - { number: "301", name: "Alice", email: "", secret: "" }   secret optional (derived)
+mikopbx_providers: []                  # - { name: "provider", host: "sip.example", username: "u", secret: "s", port: 5060 }
 
 # ==============================================================================
 # ENGINEERING – QGIS SERVER (GIS map server)
@@ -3412,9 +3336,9 @@ backup_volumes_to_dump: []
 # Extend (gated by dir-existence; backup.sh skips a missing path) for other
 # host-bind SQLite services — see "KNOWN-UNBACKED" in docs/backup-architecture.md.
 backup_dirs_to_dump:
-  - { name: "gitea", path: "{{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}" }
-  - { name: "gitlab", path: "{{ gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab') }}" }
-  - { name: "gitlab-config", path: "{{ gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config') }}" }
+  - { name: "gitea", flag: install_gitea, path: "{{ gitea_data_dir | default(ansible_facts['env']['HOME'] + '/gitea') }}" }
+  - { name: "gitlab", flag: install_gitlab, path: "{{ gitlab_data_dir | default(ansible_facts['env']['HOME'] + '/gitlab') }}" }
+  - { name: "gitlab-config", flag: install_gitlab, path: "{{ gitlab_config_dir | default(ansible_facts['env']['HOME'] + '/gitlab-config') }}" }
   # S4 (2026-06-10) — the KNOWN-UNBACKED host-bind set from
   # docs/backup-architecture.md: PRIMARY state no DB dump covers; before this,
   # a DR lost every Vaultwarden password. backup.sh skips absent paths, so
@@ -3422,42 +3346,45 @@ backup_dirs_to_dump:
   # db.sqlite3 + n8n database.sqlite are tar'd LIVE at 03:00 (low-write
   # window); restic keeps 7 dailies so one torn copy isn't fatal. A proper
   # sqlite3 .backup quiesce is the queued follow-up.
-  - { name: "vaultwarden", path: "{{ vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden') }}" }
-  - { name: "n8n", path: "{{ n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n') }}" }
-  - { name: "nodered", path: "{{ nodered_data_dir | default(ansible_facts['env']['HOME'] + '/nodered/data') }}" }
-  - { name: "authentik", empty_ok: true, path: "{{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}" }
+  - { name: "vaultwarden", flag: install_vaultwarden, path: "{{ vaultwarden_data_dir | default(ansible_facts['env']['HOME'] + '/vaultwarden') }}" }
+  - { name: "n8n", flag: install_n8n, path: "{{ n8n_data_dir | default(ansible_facts['env']['HOME'] + '/n8n') }}" }
+  - { name: "nodered", flag: install_nodered, path: "{{ nodered_data_dir | default(ansible_facts['env']['HOME'] + '/nodered/data') }}" }
+  - { name: "authentik", flag: install_authentik, empty_ok: true, path: "{{ authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik') }}" }
   # Invoice PDFs and extracts live under tenants/.../inbox/accounting/*/incoming
   # (and extracts/). KEAP sqlite is not those files. Alpine bind-mounts the
   # tree (same VirtioFS path as gitea) so launchd TCC cannot drop them.
   - { name: "tenants", path: "{{ nos_data_root }}/tenants" }
-  - { name: "dolibarr-documents", path: "{{ dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents') }}" }
-  - { name: "dolibarr-custom", path: "{{ dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom') }}" }
+  - { name: "dolibarr-documents", flag: install_dolibarr, path: "{{ dolibarr_data_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/documents') }}" }
+  - { name: "dolibarr-custom", flag: install_dolibarr, path: "{{ dolibarr_custom_dir | default(ansible_facts['env']['HOME'] + '/dolibarr/custom') }}" }
+  # MikoPBX: cf/ holds the whole config in SQLite (same torn-window honesty as
+  # kuma.db), storage/ the recordings + voicemail. One source, one restore target.
+  - { name: "mikopbx", flag: install_mikopbx, path: "{{ mikopbx_data_dir | default(ansible_facts['env']['HOME'] + '/mikopbx') }}" }
   # 2026-09-28 — the ten cheap holes backup_coverage named: file-only stores
   # no DB dump covers (attachments, uploads, three SQLite apps). Same torn-window
   # honesty as vaultwarden/n8n for kuma.db / webui.db / home-assistant_v2.db.
   # empty_ok: an attachment store with no uploads yet IS empty; backup.sh records
   # it as success/0 bytes instead of FAILED (the in-container count already
   # rules out the unreadable-mount case that made "empty" a failure elsewhere).
-  - { name: "bookstack", empty_ok: true, path: "{{ bookstack_data_dir | default(ansible_facts['env']['HOME'] + '/bookstack') }}" }
-  - { name: "firefly-upload", empty_ok: true, path: "{{ firefly_upload_dir | default(ansible_facts['env']['HOME'] + '/firefly/upload') }}" }
-  - { name: "freescout", empty_ok: true, path: "{{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout') }}" }
-  - { name: "hedgedoc", empty_ok: true, path: "{{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}" }
-  - { name: "outline", empty_ok: true, path: "{{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline') }}" }
-  - { name: "paperclip", empty_ok: true, path: "{{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}" }
-  - { name: "uptime-kuma", path: "{{ uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma') }}" }
-  - { name: "homeassistant", path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}" }
-  - { name: "openwebui", path: "{{ openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui') }}" }
-  - { name: "wordpress-uploads", empty_ok: true, path: "{{ wordpress_dir | default(ansible_facts['env']['HOME'] + '/projects/wordpress') }}/wp-content/uploads" }
+  - { name: "bookstack", flag: install_bookstack, empty_ok: true, path: "{{ bookstack_data_dir | default(ansible_facts['env']['HOME'] + '/bookstack') }}" }
+  - { name: "firefly-upload", flag: install_firefly, empty_ok: true, path: "{{ firefly_upload_dir | default(ansible_facts['env']['HOME'] + '/firefly/upload') }}" }
+  - { name: "freescout", flag: install_freescout, empty_ok: true, path: "{{ freescout_data_dir | default(ansible_facts['env']['HOME'] + '/freescout') }}" }
+  - { name: "hedgedoc", flag: install_hedgedoc, empty_ok: true, path: "{{ hedgedoc_data_dir | default(ansible_facts['env']['HOME'] + '/hedgedoc/uploads') }}" }
+  - { name: "outline", flag: install_outline, empty_ok: true, path: "{{ outline_data_dir | default(ansible_facts['env']['HOME'] + '/outline') }}" }
+  - { name: "paperclip", flag: install_paperclip, empty_ok: true, path: "{{ paperclip_data_dir | default(ansible_facts['env']['HOME'] + '/paperclip') }}" }
+  - { name: "uptime-kuma", flag: install_uptime_kuma, path: "{{ uptime_kuma_data_dir | default(ansible_facts['env']['HOME'] + '/uptime-kuma') }}" }
+  - { name: "homeassistant", flag: install_homeassistant, path: "{{ homeassistant_config_dir | default(ansible_facts['env']['HOME'] + '/homeassistant') }}" }
+  - { name: "openwebui", flag: install_openwebui, path: "{{ openwebui_data_dir | default(ansible_facts['env']['HOME'] + '/openwebui') }}" }
+  - { name: "wordpress-uploads", flag: install_wordpress, empty_ok: true, path: "{{ wordpress_dir | default(ansible_facts['env']['HOME'] + '/projects/wordpress') }}/wp-content/uploads" }
   # 2026-09-28, second pass — every unbacked store whose service is ON:
   # Stalwart mailboxes (the one real mail store; rocksdb tar'd live, same
   # torn-window honesty), grafana.db, woodpecker.sqlite, InfluxDB TSDB, PDS
   # sqlite + repos, the browser IDE's workspace (empty_ok: nothing checked out yet).
-  - { name: "stalwart", path: "{{ stalwart_data_dir | default(ansible_facts['env']['HOME'] + '/stalwart') }}" }
-  - { name: "grafana", path: "{{ grafana_data_dir | default(ansible_facts['env']['HOME'] + '/grafana') }}" }
-  - { name: "woodpecker", path: "{{ woodpecker_data_dir | default(ansible_facts['env']['HOME'] + '/woodpecker') }}" }
-  - { name: "influxdb", path: "{{ influxdb_data_dir | default(ansible_facts['env']['HOME'] + '/influxdb') }}" }
-  - { name: "bluesky-pds", path: "{{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}" }
-  - { name: "code-server-workspace", empty_ok: true, path: "{{ code_server_workspace_dir | default(ansible_facts['env']['HOME'] + '/code-server/workspace') }}" }
+  - { name: "stalwart", flag: install_smtp_stalwart, path: "{{ stalwart_data_dir | default(ansible_facts['env']['HOME'] + '/stalwart') }}" }
+  - { name: "grafana", flag: install_observability, path: "{{ grafana_data_dir | default(ansible_facts['env']['HOME'] + '/grafana') }}" }
+  - { name: "woodpecker", flag: install_woodpecker, path: "{{ woodpecker_data_dir | default(ansible_facts['env']['HOME'] + '/woodpecker') }}" }
+  - { name: "influxdb", flag: install_influxdb, path: "{{ influxdb_data_dir | default(ansible_facts['env']['HOME'] + '/influxdb') }}" }
+  - { name: "bluesky-pds", flag: install_bluesky_pds, path: "{{ bluesky_pds_data_dir | default(ansible_facts['env']['HOME'] + '/bluesky-pds') }}" }
+  - { name: "code-server-workspace", flag: install_code_server, empty_ok: true, path: "{{ code_server_workspace_dir | default(ansible_facts['env']['HOME'] + '/code-server/workspace') }}" }
 # Every `*_dir` var in this file that backup_dirs_to_dump does NOT cover, with
 # the class that says why — reconciled by tests/anatomy/test_backup_coverage_is_declared.py,
 # so a new service cannot be silently absent from the backup set (the removal
@@ -3470,9 +3397,14 @@ backup_dirs_to_dump:
 #   unbacked — REAL GAP, named: files no dump covers. Move the var into
 #              backup_dirs_to_dump to close it (size/consistency is the operator's call).
 backup_coverage:
+  agents_libexec_dir:          { class: derived, why: "root-owned claude copy + launcher, rendered by pazny.mac.agent_user" }
   artifact_cache_dir:          { class: derived, why: "verified image tars — re-pullable, checksummed, survives every removal" }
+  geo_cache_dir:               { class: derived, why: "RÚIAN/INSPIRE downloads — re-fetchable open data; the loaded tables are in pg_dumpall" }
+  maps_cache_dir:              { class: derived, why: "Planetiler PMTiles + OSM sources, glyphs, sprites — rebuildable from open data" }
+  nos_atlas_src_dir:           { class: never, why: "the nos-atlas dev checkout — operator-owned source, not estate state" }
+  geolibre_data_dir:           { class: derived, why: "copy of the nos-atlas dist bundle — rebuildable from the nos-atlas checkout" }
   mariadb_data_dir:            { class: dump, why: "mariadb.sql.gz — all databases" }
-  postgresql_data_dir:         { class: dump, why: "postgres.sql.gz — pg_dumpall" }
+  postgresql_data_dir:         { class: dump, why: "postgres.sql.gz — pg_dumpall (incl. the PostGIS geo db; restore replays into the same image)" }
   erpnext_data_dir:            { class: dump, why: "sites in a named volume; DB in mariadb.sql.gz (parked service)" }
   wing_app_dir:                { class: dump, why: "wing-db.sql.gz — sqlite3 .dump of wing.db" }
   wing_data_dir:               { class: dump, why: "wing-db.sql.gz — sqlite3 .dump of wing.db" }
@@ -3482,9 +3414,9 @@ backup_coverage:
   code_server_data_dir:        { class: derived, why: "editor settings + extensions" }
   influxdb_config_dir:         { class: derived, why: "rendered config" }
   qgis_data_dir:               { class: unbacked, why: "GIS projects (opt-in service)" }
-  freepbx_data_dir:            { class: unbacked, why: "parked service (vendor-abandoned image)" }
-  spacetimedb_data_dir:        { class: unbacked, why: "parked service" }
-  spacetimedb_keys_dir:        { class: unbacked, why: "parked service" }
+  spacetimedb_data_dir:        { class: unbacked, why: "nos-forum hot state; no dump path yet (nos-forum open question Q11)" }
+  spacetimedb_keys_dir:        { class: unbacked, why: "JWT signing keys; rotation orphans every identity" }
+  nos_forum_data_dir:          { class: unbacked, why: "module-owner CLI token; losing it = cannot republish the module (Q11)" }
   infisical_data_dir:          { class: db, why: "secrets live in postgres.sql.gz" }
   metabase_data_dir:           { class: db, why: "app db in postgres.sql.gz; dir holds plugins" }
   superset_data_dir:           { class: db, why: "app db in postgres.sql.gz" }

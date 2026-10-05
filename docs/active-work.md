@@ -6,51 +6,24 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-09-23.
+> Last updated: 2026-10-04.
 
 ## Now (current track)
 
-1. **The v0.13-beta cut** (dtt `rel-013`). Invoice identity is closed in
-   SOURCE *and live*: the operator's teardown + re-import ran, and
-   `tools/invoice-identity-scan.py` reads clean (6 rows, every id derived).
-   **Steps 1–6 are done and measured**, re-measured 2026-09-27: full converge
-   `failed=0` (ok=1393 changed=82) + `nos-smoke --strict` 47/47;
-   `tools/ci-local.sh` rc=0 on the frozen 2.21 mirror; ansible-lint 0 failures;
-   dev CI green. **Only step 7 is left, and it is the operator's:**
-   `merge-base(origin/master, origin/dev)` == `origin/master` tip is VERIFIED,
-   so a rebase-merge is a fast-forward. dev is **183** commits ahead — an
-   earlier note here said 1205, which was this file's author measuring against
-   a stale LOCAL `master`; `origin/master` has not moved since v0.12-beta.
-   `gh pr merge --rebase` refused at 188 commits once (v0.10), so 183 may or
-   may not go through; `git push origin origin/dev:master` is the fallback that
-   produces byte-identical history. Then re-sync dev, tag, `gh release`.
-   **Not promoted, deliberately:** the security notebook is at cycle **69** and
-   the committed copy at 55. Promoting publishes still-pending criticals to a
-   public repo; that is an operator decision, not a tidy-up.
-
-2. **First always-on PoC: `git-origin-watcher`** (dtt, parent
-   `loop-definition-model`) on DGX Spark / Qwen3 8B. Slice 1 is reader-only
-   (npm+composer graph). Constraint A: model proposes, judges authorize.
-   Do not re-research agent memory — rows `work-corpus-not-seed`,
-   `cortex-rows`, `keap-row-vector-search`, `fs-project-tree`,
-   `share-grants-agents`, `rsi-ops-loop`.
-
-3. **SOURCE pins await the operator `nos`.** Ask `tools/estate-status.py`
-   and `tools/rem-status.py`. Do **not** land the judged `MINIO_ROOT_PASSWORD`
-   alias for REM-249 (mint+persist already shipped). RustFS rotation breaks
-   S3 clients until they re-read `~/.nos/secrets.yml`.
-
-4. **[`docs/doctrine/agentkit.md`](doctrine/agentkit.md) is DRAFTED as proposed**
-   (`1e263377`). Operator still settles §6 before anything cites the file.
-
-5. **Do not pick `loop-steps-match-run`.** Graph-follows-run vs
-   runner-follows-graph is still queued design.
-
-**Voice → caddy → AgentKit → cortex.** Five wires gated; fee
-[43](hidden_fees/43-a-tool-with-no-door.md) paid. KEAP SOURCE pin is
-`v2.0.0-rc.1` (`9a86ea09`) — not what is running; ask `tools/estate-status.py`.
-**Next (operator):** converge (mint, KEAP re-seed, first real `exec`);
-`caddy-entity-resolve` probe 2 — whether cortex `resolve` covers the taxonomy half.
+1. **v0.15-beta is being cut** (2026-10-04, `RELEASE.md`). After it: the
+   ~30 review follow-ups (dtt `review-v015-followups`), the `default.config.yml`
+   split by domain (`default-config-split`), the immune-system children and
+   `containerized-core` (host bridge first). Jellyfin SSO waits for the blank.
+2. **Redis leaf rotation is LIVE** (converged 2026-10-01; requirepass == new
+   leaf, hash-compared; smoke 47/47, E2E 277 green).
+3. **Datastore TLS is POSTPONED** by the operator. The research is kept in dtt
+   (`sec-transport-enforce`, `sec-transport-study`) for when it resumes.
+4. **Roadmap reconciled 2026-10-02:** 205 open rows checked against the code;
+   96 closed with evidence, 5 folded, epics with all children done closed.
+5. **Identities:** accounts exist from install for every declared identity;
+   tier-1 is admin in gitea/nextcloud/grafana/openwebui/outline. Open: an e2e
+   tester's Outline role lags one converge (its account is born mid-run); six
+   apps carry `first_login_blocked` with their reason.
 
 ## Open follow-ups
 
@@ -112,7 +85,7 @@ loader change that lets it fail — is in
 - OpenClaw (Ollama/CUDA) + Hermes runtimes on Linux — `docs/linux-port.md`.
 - Host-nginx per-service vhosts on Linux (Traefik is the Linux edge).
 - Fleet provisioning (p2p/server-client/mesh) — `docs/archive/fleet-review-2026q2.md`.
-- Inspektor + Librarian runners (contract-only; need trivy/grype resp. Qdrant).
+- Inspektor + Librarian runners (contract-only; need trivy/grype resp. the KEAP corpus).
 - ansible-core 2.24 jump (~4h once upstream ships stable) — CLAUDE.md tech debt.
 - Agent actor_id naming normalization across the two upgrade agents.
 - Architect at-target recipe drafts (freescout/gitlab/grafana).

@@ -1,0 +1,45 @@
+---
+# Flag, user name and paths shared with pazny.wing / pazny.pulse live in default.config.yml.
+agents_user_uid: 480              # < 500 keeps it off the login window; asserted free
+agents_user_home: "/Users/{{ agents_user }}"
+agents_worktrees_dir: "{{ agents_user_home }}/worktrees"
+agents_operator_user: "{{ ansible_facts['user_id'] }}"
+agents_claude_source: "{{ ansible_facts['env']['HOME'] }}/.local/bin/claude"
+agents_launcher: "{{ agents_libexec_dir }}/claude-as-agent"
+
+# `claude setup-token` output; credentials.yml. Empty + flag on = the role stops.
+agents_claude_oauth_token: ""
+
+# The launcher refuses to start claude if the agent user can read any of these.
+agents_forbidden_paths:
+  - "{{ ansible_facts['env']['HOME'] }}/.nos/secrets.yml"
+  - "{{ ansible_facts['env']['HOME'] }}/.nos"
+  - "{{ ansible_facts['env']['HOME'] }}/.ssh"
+  - "{{ ansible_facts['env']['HOME'] }}/wing/app/data"
+
+# Replaces --permission-mode bypassPermissions: dontAsk + this list, nothing else.
+agents_allowed_tools:
+  - Read
+  - Glob
+  - Grep
+  - Edit
+  - Write
+  - "Bash(curl:*)"
+  - "Bash(jq:*)"
+  - "Bash(git:*)"
+
+# The ONLY variables sudo carries across to the agent (sudoers env_keep).
+# Credentials are the agent's own: never the operator's WING_API_TOKEN (wing.write)
+# nor WING_EVENTS_HMAC_SECRET (forges any actor's event, derives the chain key).
+agents_env_keep:
+  - WING_API_URL
+  - NOS_AGENT_WING_TOKEN
+  - NOS_AUTHENTIK_TOKEN
+  - NOS_RUN_ID
+  - NOS_AGENT_NAME
+  - KEAP_AGENT_TOKEN_RO
+  - BONE_API_URL
+  - CLAUDE_CODE_MAX_OUTPUT_TOKENS
+  - ANTHROPIC_BASE_URL
+  - ANTHROPIC_AUTH_TOKEN
+  - ANTHROPIC_MODEL

@@ -36,7 +36,7 @@ upgrade **must bump the role-default version var**, or a plain re-render reverts
 
 A readiness sweep exists; the 16 `v07-darwin27-*` documents behind it were
 archived unimplemented. The live successor is the readiness plan, and the
-ansible-core 2.24 jump is tracked in CLAUDE.md's tech debt — a floor bump plus a
+ansible-core 2.24 jump is tracked in docs/git-and-release.md — a floor bump plus a
 collection review, ~4 hours, not a track.
 
 ## The gate that reports success it did not earn

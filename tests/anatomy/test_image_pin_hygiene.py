@@ -23,11 +23,14 @@ from __future__ import annotations
 
 import pathlib
 import re
+import sys
 
 import pytest
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 FLOATING = {"latest", "main", "master", "stable", "edge", "nightly", "develop"}
 VERSION_KEY_SUFFIXES = ("_version", "_image_version", "_tag")
@@ -36,8 +39,7 @@ VERSION_KEY_SUFFIXES = ("_version", "_image_version", "_tag")
 # for a pin declared there. Each is a DELIBERATE non-pin, not drift.
 EXCEPTIONS = {
     # Moved here with the pin itself when the 38 shadows were deleted.
-    ("default.config.yml", "dotfiles_repo_version"): "git repo branch ref (dotfiles), not a Docker image tag",
-    ("default.config.yml", "freepbx_version"): "excluded service (abandoned image, unfixable CVEs)",
+    ("config.d/10-host-desktop.yml", "dotfiles_repo_version"): "git repo branch ref (dotfiles), not a Docker image tag",
     ("default.config.yml", "face_version"): "nos/face is built locally from the vendored tree; the tag names a local build, not a registry pull",
     # qgis_version LEFT this list the same day it joined it. It was listed as
     # "UNPINNED, pin it on a supervised converge" and then digest-pinned to the
@@ -62,7 +64,7 @@ def _sources() -> list[tuple[str, pathlib.Path]]:
     omitting it (as this gate did until 2026-08-05) means checking a value the
     estate does not run.
     """
-    out = [("default.config.yml", REPO / "default.config.yml")]
+    out = [(str(p.relative_to(REPO)), p) for p in ni.default_layers()]
     out += [(f.parent.parent.name, f)
             for f in sorted((REPO / "roles").glob("pazny.*/defaults/main.yml"))]
     return out
@@ -92,12 +94,12 @@ def test_the_winning_layer_is_scanned():
     production under a green gate. If default.config.yml ever drops out of the
     scan again, this fails before the coverage loss can be mistaken for health.
     """
-    assert any(src == "default.config.yml" for src, _ in _sources()), (
-        "default.config.yml is not scanned, so every pin that lives only there "
+    scanned = {src for src, _ in _sources()}
+    assert {str(p.relative_to(REPO)) for p in ni.default_layers()} <= scanned, (
+        f"a default layer is not scanned ({scanned}), so every pin that lives only there "
         "is unchecked — which is now most of them"
     )
-    text = (REPO / "default.config.yml").read_text()
-    assert "_version:" in text, "default.config.yml parsed but holds no pins?"
+    assert "_version:" in ni.default_config_text(), "the defaults parsed but hold no pins?"
 
 
 def test_no_unexpected_floating_image_tags():

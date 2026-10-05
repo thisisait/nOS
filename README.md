@@ -5,7 +5,7 @@
 
 > **Your own cloud, on the machine on your desk.**
 >
-> nOS is an Ansible playbook that orchestrates 78 roles to turn one Apple Silicon Mac,
+> nOS is an Ansible playbook that orchestrates 83 roles to turn one Apple Silicon Mac,
 > or an Ubuntu 24.04 host, into a complete self-hosted stack: about 55 open-source services behind one sign-in,
 > one secrets vault, one observability stack and one backup, plus local AI agents that
 > run on your own hardware. Everything is FOSS and every byte of data stays on the box.
@@ -131,8 +131,8 @@ up first; the rest only if you enable them.
 | **devops** | Gitea, Woodpecker CI, GitLab CE, Paperclip, code-server |
 | **b2b** | Outline, HedgeDoc, BookStack, OnlyOffice, Dolibarr, Firefly III, FreeScout, ERPNext |
 | **data** | Metabase, Apache Superset |
-| **voip**, **engineering** | FreePBX, QGIS Server |
-| **apps** | Manifest apps from [`apps/`](apps/): Documenso, 2FAuth, Qdrant, Roundcube |
+| **engineering** | QGIS Server |
+| **apps** | Manifest apps from [`apps/`](apps/): Documenso, 2FAuth, Roundcube |
 
 On the host, outside Docker, nOS runs its own small organs:
 

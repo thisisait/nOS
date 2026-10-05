@@ -14,10 +14,10 @@
 #     (REM-204, REM-159, REM-208, all 2026-08-16..19), each gated, and its
 #     refusal paths were observed refusing for real (the 598 KB desynced-base
 #     MR; the webhook-less push). Its two jobs ship ACTIVE.
-#   * The ENTRY half (a model authoring a proposal unattended) has had ZERO
-#     attended cycles in that shape. Its job ships PAUSED — the remediator
-#     precedent — and stays paused until attended runs of
-#     `tools/loop-propose.py --invoke` earn the cadence.
+#   * The ENTRY half (a model authoring a proposal unattended) shipped PAUSED
+#     — the remediator precedent — until attended runs of
+#     `tools/loop-propose.py --invoke` earned the cadence; UNPAUSED 2026-08-20
+#     (see the job below).
 #
 # IDENTITY SPLIT, preserved at the job level: the three jobs never share a
 # credential. `propose` reaches only loop_propose_token (via the nos-loop
@@ -35,7 +35,7 @@
 
 name: loop-base
 version: "1.0.0"
-description: "Scheduled cadence for the agentic loop: drive passed proposals to MRs, review and merge behind 3×YES, and (paused until attended) hand weaknesses to a proposing model."
+description: "Scheduled cadence for the agentic loop: drive passed proposals to MRs, review and merge behind 3×YES, and hand weaknesses to a proposing model (unpaused 2026-08-20)."
 
 type:
   - scheduled-job
@@ -148,3 +148,11 @@ gdpr:
     Only the `propose` job involves a model; `drive` and `review` are
     deterministic local tools. The transfer declaration mirrors the agent
     ceremonies' records (see pulse-base gdpr notes, 2026-08-13 clarification).
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) and (install_bone | default(false)) }}"
+  probes:
+    - name: propose-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.loop:propose.id": "loop:propose"}}

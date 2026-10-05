@@ -40,7 +40,9 @@ def parse_ares(raw: str) -> dict | None:
     ico = "".join(ch for ch in str(data.get("ico") or "") if ch.isdigit()).zfill(8)
     if not name and not dic and ico == "00000000":
         return None
-    return {"legal_name": name, "dic": dic, "ico": ico if ico != "00000000" else None}
+    adm = (data.get("sidlo") or {}).get("kodAdresnihoMista")
+    return {"legal_name": name, "dic": dic, "ico": ico if ico != "00000000" else None,
+            "sidlo_ruian_adm": adm if isinstance(adm, int) else None}
 
 
 def parse_adis(raw: str) -> str:
@@ -79,6 +81,8 @@ def project(*, ico: str, party: str, ares: dict | None, vat: str, when: int | No
         row["legal_name_ares"] = ares["legal_name"]
     if ares and ares.get("dic"):
         row["dic"] = ares["dic"]
+    if ares and ares.get("sidlo_ruian_adm"):
+        row["sidlo_ruian_adm"] = ares["sidlo_ruian_adm"]
     if not ares:
         row["vat_reliability"] = "not_payer"
     elif not ares.get("dic") and row["vat_reliability"] == "unknown":

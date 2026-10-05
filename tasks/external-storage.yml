@@ -78,7 +78,7 @@
     - "{{ freescout_data_dir }}"
     - "{{ outline_data_dir }}"
     # VoIP / Engineering / Data
-    - "{{ freepbx_data_dir }}"
+    - "{{ mikopbx_data_dir }}"
     - "{{ qgis_data_dir }}"
     - "{{ metabase_data_dir }}"
     - "{{ superset_data_dir }}"

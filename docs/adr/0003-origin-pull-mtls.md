@@ -3,6 +3,15 @@
 Status: **accepted design, prepared-not-armed** · 2026-09-03 ·
 Roadmap: `sec-origin-answers-anyone` (operator chose option (a), 2026-09-03)
 
+> **Amended 2026-10-02 — superseded by a second entrypoint.** The design below
+> (`clientAuth` inside `modern`) would have been inert: Traefik applies an
+> entrypoint's `http.tls` model only to routers whose `tls` is nil, and every
+> router here carries `tls: {}`. It would also have broken LAN and smoke access
+> to `:443`. What shipped is a `websecure-origin` door that requires mTLS
+> (`traefik_origin_pull_enabled`). `:443` is untouched, and the router forwards
+> WAN 443 to the door. Runbook: `docs/traefik-primary-proxy.md` §Cloudflare
+> origin pulls.
+
 ## The problem, measured
 
 24h of edge log (2026-09-03): ~60 requests carry an IP-literal Host — mass-IPv4

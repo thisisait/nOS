@@ -112,10 +112,14 @@ def test_the_registry_is_well_formed_and_fail_closed():
                 f"{b.get('base_url')!r}. A local backend that reaches off-box "
                 "is a cloud backend with a false residency claim."
             )
-            assert b.get("auth_secret") is None, (
-                f"backend {name!r} is local and still names an auth_secret. "
-                "There is nobody to show a key to; a placeholder in the vault "
-                "would be a secret that is not one (resolver gate 7)."
+            # A local row names a secret only when the on-host service MINTS
+            # one itself (OpenClaw's gateway token) — then it must be a nos:
+            # ref the converge persists, never a placeholder (resolver gate 7).
+            ref = b.get("auth_secret")
+            assert ref is None or str(ref).startswith("nos:"), (
+                f"backend {name!r} is local and names auth_secret {ref!r}. "
+                "Keyless local rows carry None; a service that mints its own "
+                "token is resolved via a converge-persisted nos: ref."
             )
         else:
             assert b.get("base_url", "").startswith("https://"), (

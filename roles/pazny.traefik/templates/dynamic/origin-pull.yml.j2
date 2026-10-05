@@ -1,0 +1,33 @@
+# {{ ansible_managed }}
+# Cloudflare Authenticated Origin Pulls — the websecure-origin door (rendered
+# only when traefik_origin_pull_enabled). Runbook: docs/traefik-primary-proxy.md.
+
+tls:
+  options:
+    origin-pull:
+      minVersion: "VersionTLS12"
+      # No SNI / unknown SNI gets no certificate at all: an IP-literal scanner
+      # never learns the zone from the cert (the default option would serve it).
+      sniStrict: true
+      clientAuth:
+        caFiles:
+          - /etc/traefik/cloudflare-origin-pull-ca.crt
+        clientAuthType: RequireAndVerifyClientCert
+
+# Without this, an SNI that matches no router falls to Traefik's `default` TLS
+# option (no client cert) and gets a 404. A TCP HostSNI(*) route is the
+# fallback v3.7 consults after the HTTPS hosts, so it carries origin-pull too.
+tcp:
+  routers:
+    origin-pull-refuse:
+      rule: "HostSNI(`*`)"
+      entryPoints: ["websecure-origin"]
+      service: "origin-pull-refuse"
+      tls:
+        options: "origin-pull@file"
+  services:
+    origin-pull-refuse:
+      loadBalancer:
+        servers:
+          # Nothing listens here; a client that passed mTLS still reaches nothing.
+          - address: "127.0.0.1:9"

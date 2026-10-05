@@ -67,13 +67,13 @@ def test_recogniser_partitions_doc_nodes_from_self_model_nodes() -> None:
     """Doc nodes in, service/stack/root nodes out — the measured partition."""
     diff = _load(DIFF, "cortex_corpus_diff")
     for node in (
-        "nos.voip.freepbx.readme-quick-reference",
-        "nos.voip.freepbx.skills-freepbx-skills",
+        "nos.engineering.qgis-server.readme-quick-reference",
+        "nos.engineering.qgis-server.skills-qgis-server-skills",
         "nos.iiab.keap.agents-keap-agent-definition",
     ):
         assert diff._is_doc_node(node), f"{node} is a doc node and must be recognised"
     for node in (
-        "nos", "nos.voip", "nos.voip.freepbx",          # the self-model KEAP shares
+        "nos", "nos.engineering", "nos.engineering.qgis-server",  # the self-model KEAP shares
         "nos.iiab.keap.credential",                      # a generated non-doc child
         "01.04.02",                                      # canonical taxonomy
     ):

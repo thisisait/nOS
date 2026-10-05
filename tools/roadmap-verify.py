@@ -63,7 +63,7 @@ PROBES = REPO / "state/roadmap-probes.yml"
 #: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
 #: non-default loopback publish. Defaults are the operator estate's values.
 TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
-from keap_api import human_base, human_headers, write_row  # noqa: E402 — sibling helper in tools/
+from keap_api import human_base, human_headers, paged, write_row  # noqa: E402 — sibling helper in tools/
 
 KEAP = human_base()   # the identity outpost when configured, else the loopback publish
 
@@ -106,7 +106,7 @@ def run_catalogue(args) -> int:
         _die(f"no probe catalogue at {PROBES}")
     catalogue = yaml.safe_load(PROBES.read_text(encoding="utf-8")) or {}
 
-    rows = _req("GET", f"{KEAP}/api/tables/{TABLE}/rows?limit=500", HUMAN_HDR)
+    rows = paged(lambda u: _req("GET", u, HUMAN_HDR), f"{KEAP}/api/tables/{TABLE}/rows")
     if not rows.get("success"):
         _die(f"cannot read rows — {rows.get('error')}. Is KEAP up?")
     by_slug = {r["values"].get("slug"): r for r in rows["data"]["rows"]}
@@ -187,7 +187,7 @@ def main() -> int:
 
     human = f"{KEAP}/api/tables/{TABLE}"
 
-    rows = _req("GET", f"{human}/rows?limit=500", HUMAN_HDR)
+    rows = paged(lambda u: _req("GET", u, HUMAN_HDR), f"{human}/rows")
     if not rows.get("success"):
         _die(f"cannot read rows — {rows.get('error')}. Is KEAP up?")
     row = next((r for r in rows["data"]["rows"]

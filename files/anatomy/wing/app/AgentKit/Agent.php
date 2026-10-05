@@ -21,7 +21,7 @@ final class Agent
 	 * @param int    $version                bumped on every breaking change
 	 * @param string $description            human description for /agents UI
 	 * @param string $modelPrimaryUri        e.g. 'anthropic-claude-opus-4-7'
-	 * @param ?string $modelFallbackUri      e.g. 'openclaw-qwen-coder-32b'
+	 * @param ?string $modelFallbackUri      e.g. 'openai-local-haiku' (bound via fallback_backend)
 	 * @param ?string $systemPrompt          loaded from system_prompt_path or null
 	 * @param array<int, ToolSpec> $tools
 	 * @param ?Outcome\Rubric $rubric        loaded from rubric_path or null
@@ -105,6 +105,8 @@ final class Agent
 		public readonly string $mode = 'loop',
 		/** Decoded one_shot.schema_path — the shape the single answer must have. */
 		public readonly array $oneShotSchema = [],
+		/** `model.fallback_backend` — the registry row the fallback is BOUND to. */
+		public readonly ?string $fallbackBackendName = null,
 	) {
 	}
 

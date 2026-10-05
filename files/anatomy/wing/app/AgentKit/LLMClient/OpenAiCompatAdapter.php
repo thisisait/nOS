@@ -56,8 +56,8 @@ final class OpenAiCompatAdapter implements LLMClientInterface
 		private readonly string $modelUri,
 		private readonly Binding $binding,
 	) {
-		if (!str_starts_with($modelUri, 'openai-')) {
-			throw new \InvalidArgumentException("OpenAiCompatAdapter requires openai-* URI; got {$modelUri}");
+		if (!str_starts_with($modelUri, 'openai-') && !str_starts_with($modelUri, 'openclaw-')) {
+			throw new \InvalidArgumentException("OpenAiCompatAdapter requires openai-*/openclaw-* URI; got {$modelUri}");
 		}
 	}
 

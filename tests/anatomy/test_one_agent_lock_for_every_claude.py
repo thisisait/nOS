@@ -47,7 +47,8 @@ SEARCH_ROOTS = ("files", "tools")
 #: prose and not `claude.ai`: the match must start a statement, so a leading
 #: `#` or any preceding word excludes it. Both live spawners are found by this
 #: pattern, and the set assertion below is what proves it kept finding them.
-SPAWN = re.compile(r'^\s*(?:[A-Z_]+=\S+\s+)*claude\s+(?:-|"|\$)', re.M)
+#: `"$CLAUDE_BIN"` is the same spawn through NOS_CLAUDE_BIN (pazny.mac.agent_user).
+SPAWN = re.compile(r'^\s*(?:[A-Z_]+=\S+\s+)*(?:claude|"\$\{?CLAUDE_BIN\}?")\s+(?:-|"|\$)', re.M)
 
 
 def _shell_scripts() -> list[Path]:

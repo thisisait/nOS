@@ -30,7 +30,7 @@ Each block in `plugin.yml` corresponds to a real live file or stanza:
 | `compose_extension:` (`GF_AUTH_GENERIC_OAUTH_*`) | `roles/pazny.grafana/templates/compose.yml.j2` env block | ✅ live |
 | `provisioning.datasources` | `files/observability/grafana/provisioning/datasources/all.yml.j2` (rendered to `~/observability/grafana/provisioning/datasources/all.yml` by `tasks/observability.yml`) | ✅ live |
 | `provisioning.dashboards_provider` | `files/observability/grafana/provisioning/dashboards/all.yml.j2` | ✅ live |
-| `provisioning.dashboards.files` | `files/observability/grafana/provisioning/dashboards/*.json` (18 files incl. new `24-qdrant.json`) | ✅ live |
+| `provisioning.dashboards.files` | `files/observability/grafana/provisioning/dashboards/*.json` (one file per dashboard; `24-qdrant.json` left with Qdrant, 2026-10-02) | ✅ live |
 | `lifecycle.post_compose.wait_health` | `roles/pazny.grafana/tasks/post.yml` "Wait for Grafana HTTP API" task | ✅ live |
 | `lifecycle.post_compose.admin_password_reconverge` | `roles/pazny.grafana/tasks/post.yml` "Reconverge admin password" task | ✅ live |
 | `gdpr:` | (gap today — Wing /gdpr has no `grafana` row) | ⏳ closes post-Q |

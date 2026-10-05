@@ -166,3 +166,9 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+e2e:
+  probes:
+    - name: oidc-start-reaches-authentik
+      url: https://{{ nodered_domain | default('nodered' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/auth/strategy
+      expect: {status: [302, 303, 307], location_contains: "{{ authentik_domain }}/application/o/authorize"}

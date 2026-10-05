@@ -137,6 +137,7 @@ CONCEPTLESS = {
     "device-client.scopes": "granted gateway scopes as text — not access.tier — needs access.scopes",
     "device-client.paired_at": "ISO pairing instant as text — time.occurred_at is kind date — needs time.paired_at",
     "device-client.last_seen": "ISO last-seen instant as text — same window pair as paired_at — needs time.last_seen",
+    "device-client.revoked_at": "ISO unpair instant as text — the retention clock (docs/compliance/devices.md) — needs time.revoked_at",
     "device-extraction.owner": "not identity.name (that would imply a party) — scheme B display label until party-review-rung; needs identity.display",
     "device-extraction.operator_owns_device": "an attestation flag is not ui.pinned or lifecycle.status — needs consent.attestation",
     "device-extraction.profile_id": "named deny-default parse profile — not identity.slug of this row — needs digest.profile",
@@ -151,6 +152,12 @@ CONCEPTLESS = {
     "party-registry-status.ico": "a tax identifier is not identity.name; needs identity.registration",
     "party-registry-status.ares_found": "boolean existence in ARES — not evidence.verification (that is select) — needs evidence.found",
     "party-registry-status.dic": "DIČ from ARES — same registration gap as party-tax-identity.value",
+    "party-address.ruian_adm": "a RÚIAN address-point code is a registry key into PostGIS, not identity.* — needs place.address_point",
+    "party-registry-status.sidlo_ruian_adm": "same RÚIAN key, ARES's word for the seat — needs place.address_point",
+    "party-site.ruian_adm": "same — place.address_point",
+    "party-site.ku_kod": "a cadastral-territory code — no cadastral concept exists — needs place.cadastral_unit",
+    "party-site.parcel_no": "a parcel number within the KÚ — needs place.parcel",
+    "party-site.kod_so": "a building (stavební objekt) registry code — needs place.building",
     "party.training_opt_in": "client-train consent flag — not consent.ref (that is a Wing pointer) — needs consent.opt_in",
 }
 

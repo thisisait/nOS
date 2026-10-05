@@ -36,6 +36,15 @@
     - install_nginx | default(true)
     - ansible_os_family == 'Darwin'
 
+# The agent's socket proxy reads this instead of the image's stock template
+# (wait/logs must not hit the 10m server timeout — see the file header).
+- name: "[pazny.woodpecker] Install socket-proxy HAProxy template"
+  ansible.builtin.copy:
+    src: socket-proxy-haproxy.cfg.template
+    dest: "{{ stacks_dir }}/devops/woodpecker-socket-proxy.cfg.template"
+    mode: '0644'
+  notify: Restart woodpecker
+
 - name: "[pazny.woodpecker] Render compose override fragment (server + agent)"
   ansible.builtin.template:
     src: compose.yml.j2

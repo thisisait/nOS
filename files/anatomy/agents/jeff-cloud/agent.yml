@@ -72,12 +72,11 @@ gdpr:
     - operator_speech_transcripts
   data_subjects:
     - operators
-  # 90 days, the operator's horizon (2026-08-31), and it is the SAME number
-  # as jeff_retention_days in roles/pazny.ears/defaults — a horizon declared
-  # in the register and enforced nowhere is the shape this estate already
-  # paid for. The listener prunes; tools/caddy-status.py reports the age of
-  # the oldest surviving transcript, so a sweep that stops firing is visible.
-  retention_days: 90
+  # 0 = transient (operator decision 2026-10-03): the ear keeps no transcript
+  # and the caddy leaves its ledger's transcript column empty. The number
+  # FOLLOWS roles/pazny.ears/defaults — ears_retention_days once
+  # ears_keep_transcripts is true — and test_the_ears_are_wired.py ties them.
+  retention_days: 0
   processors:
     - name: MiniMax
       role: >-

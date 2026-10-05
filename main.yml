@@ -14,7 +14,11 @@
   #   ansible-playbook main.yml --tags preflight --check
   # but any sudo task (dnsmasq, /etc/resolver, system-services) will then fail.
 
+  # The defaults are one layer set: config.d/*.yml in lexical order, then the
+  # remainder default.config.yml (tools/nos_identity.default_layers, pinned by
+  # test_config_d_is_one_layer_set). A variable lives in exactly one of them.
   vars_files:
+    - config.d/10-host-desktop.yml
     - default.config.yml
     - default.credentials.yml
 
@@ -261,6 +265,7 @@
       ansible.builtin.stat:
         path: "{{ item }}"
       loop:
+        - "{{ playbook_dir }}/config.d/10-host-desktop.yml"
         - "{{ playbook_dir }}/default.config.yml"
         - "{{ playbook_dir }}/default.credentials.yml"
         - "{{ playbook_dir }}/config.yml"
@@ -297,6 +302,22 @@
       include_vars: "{{ item }}"
       with_fileglob:
         - "{{ playbook_dir }}/config.yml"
+      tags: ['always']
+
+    # ── Synthetic identities (profiles/test-users.yml) ────────────────────
+    # The roster is read namespaced so the profile's switch stays the
+    # operator's (config.yml / -e); adopted only when nothing declared one —
+    # AFTER config.yml: set_fact outranks include_vars and would shadow it.
+    - name: "[Identities] Read the synthetic roster the profile declares"
+      ansible.builtin.include_vars:
+        file: profiles/test-users.yml
+        name: _nos_test_users_profile
+      tags: ['always']
+
+    - name: "[Identities] Adopt it unless config.yml or -e declared its own"
+      ansible.builtin.set_fact:
+        nos_synthetic_identities: "{{ _nos_test_users_profile.nos_synthetic_identities | default([]) }}"
+      when: not (nos_synthetic_identities | default([]))
       tags: ['always']
 
     # After config.yml so install_apex is the RESOLVED flag. Before Homebrew.
@@ -444,7 +465,7 @@
           {%- set ns = namespace(need=_routers | dict2items
                                  | selectattr('value.middlewares', 'defined')
                                  | selectattr('value.middlewares', 'contains', 'authentik@file')
-                                 | map(attribute='key') | list) -%}
+                                 | map(attribute='key') | reject('match', '.*-origin$') | list) -%}
           {#- Tier-2: nos_apps_render walks apps/ itself; mirror ITS file filter
               (main():534-539) — .yml and .yaml, no `_` template, no `.draft`. -#}
           {%- if apps_runner_enabled | default(true) | bool -%}
@@ -868,7 +889,7 @@
 
     - name: Restart alloy
       ansible.builtin.shell: |
-        plist="$HOME/Library/LaunchAgents/sh.brew.grafana-alloy.plist"   # Homebrew 7 name
+        plist="$HOME/Library/LaunchAgents/{{ observability_launchd_label }}.plist"   # Homebrew 7 name
         [ -f "$plist" ] || plist="$HOME/Library/LaunchAgents/homebrew.mxcl.grafana-alloy.plist"
         [ -f "$plist" ] && launchctl unload "$plist" 2>/dev/null
         sleep 1
@@ -892,7 +913,7 @@
       # makes a missing plist visible (no restart attempted) instead of
       # masking it behind `2>/dev/null`.
       ansible.builtin.shell: |
-        plist="/Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist"
+        plist="/Library/LaunchDaemons/{{ dnsmasq_launchd_label }}.plist"
         if [ ! -f "$plist" ]; then
           echo "WARN: dnsmasq plist not found at $plist — Homebrew formula path may have changed; skipping restart" >&2
           exit 0
@@ -1089,6 +1110,21 @@
         - ansible_os_family == 'Darwin'
         - configure_dock | default(false)
       tags: ['dock']
+
+    # Epic workload-allowlist (2026-10-04): both default-off, macOS-only.
+    - role: pazny.mac.santa
+      when:
+        - not (nos_dry_removal | default(false) | bool)
+        - ansible_os_family == 'Darwin'
+        - install_santa | default(false) | bool
+      tags: ['santa']
+
+    - role: pazny.mac.agent_user
+      when:
+        - not (nos_dry_removal | default(false) | bool)
+        - ansible_os_family == 'Darwin'
+        - agents_separate_user | default(false) | bool
+      tags: ['agent_user']
 
     # ── Linux-only host roles ───────────────────────────────────────────────
     # Activate on Debian/RedHat families. v0.4-beta cross-platform shipped
@@ -1458,7 +1494,7 @@
           - (_xn | map('regex_replace', '[^a-z0-9]+', '-') | unique | list | length) == (_xn | length)
           - (_xn | map('regex_replace', '[^a-z0-9]+', '-') | select('in', _taken) | list | length) == 0
           - (_xe | unique | list | length) == (_xe | length)
-          - (_xe | select('in', nos_identities | map(attribute='email') | map('lower') | list) | list | length) == 0
+          - (_xe | select('in', (nos_identities + nos_synthetic_identities) | map(attribute='email') | map('lower') | list) | list | length) == 0
         fail_msg: >-
           nos_extra_identities: two people share a name or an e-mail, or one reuses a
           declared account's (akadmin, the operator, the tester, the test users). Names
@@ -1467,7 +1503,16 @@
       vars:
         _xn: "{{ nos_extra_identities | default([]) | map(attribute='name') | list }}"
         _xe: "{{ nos_extra_identities | default([]) | map(attribute='email') | map('lower') | list }}"
-        _taken: "{{ nos_identities | map(attribute='name') | map('regex_replace', '[^a-z0-9]+', '-') | list }}"
+        _taken: "{{ (nos_identities + nos_synthetic_identities) | map(attribute='name') | map('regex_replace', '[^a-z0-9]+', '-') | list }}"
+      tags: ['always']
+
+    # Not on confirm: `nos -y` sets confirm=true on every unattended converge.
+    - name: "[Identities] Synthetic accounts retire only when asked (DRY RUN)"
+      ansible.builtin.debug:
+        msg: >-
+          nos_test_users_enabled is off: {{ nos_synthetic_identities | map(attribute='name') | join(', ') }}
+          stay in Authentik if present — `nos -e retire_synthetic=true` retires the ones tagged synthetic.
+      when: not (nos_test_users_enabled | bool) and not (retire_synthetic | default(false) | bool)
       tags: ['always']
 
     - name: "[Identities] Derive each extra person's password (user scope)"
@@ -1584,16 +1629,12 @@
           {{ nos_derived_secrets | length }} credentials in the derived map.
       tags: ['always']
 
-    # Part B (survive-the-wipe): a CONFIRMED keap-inclusive removal takes a
-    # FRESH synchronous off-site restic snapshot BEFORE blank-reset deletes
-    # copy #1. Confirmed-only by construction (run-mode's dry-run end_play
-    # already fired). Off-site only (restic_repo set); fail-soft, never blocks.
-    # Operator choice 2026-07-25 (loud-warn-only + add-when-repo-set).
+    # Part B (survive-the-wipe): EVERY confirmed removal takes a fresh synchronous
+    # off-site restic snapshot BEFORE blank-reset deletes copy #1 (confirmed-only:
+    # run-mode's dry-run end_play already fired). No restic_repo = no survivor =
+    # STOP (override -e prewipe_snapshot_required=false). Never gate on restic_repo.
     - import_tasks: tasks/pre-wipe-backup.yml
-      when:
-        - nos_removing | default(false) | bool
-        - install_keap | default(false) | bool
-        - (restic_repo | default('')) | length > 0
+      when: nos_removing | default(false) | bool
       tags: ['blank', 'reset']
 
     - import_tasks: tasks/blank-reset.yml
@@ -1660,7 +1701,6 @@
         (install_nextcloud | default(false)) or
         (install_erpnext | default(false)) or
         (install_freescout | default(false)) or
-        (install_freepbx | default(false)) or
         (install_bookstack | default(false)) or
         (install_firefly | default(false)) or
         (install_dolibarr | default(false))
@@ -1721,6 +1761,34 @@
     # estate whatever the TLD says. The explicit `-e allow_weak_prefix=true`
     # bypass stays for throwaway sandboxes — an operator opting in knowingly is
     # a different thing from a default that opts in silently.
+    # sec-prefix-gate-flaps: this assert failed 3 of 5 identical runs (2026-08-31).
+    # Every run leaves the evidence — length, a salted digest (never the value),
+    # which files declare it, how many converges were running — so a flap can be
+    # correlated instead of re-run. Reader: tail ~/.nos/events/prefix-gate.jsonl.
+    - name: "[Security] Record what the prefix gate reads (never the value)"
+      ansible.builtin.lineinfile:
+        path: "{{ ansible_facts['env']['HOME'] }}/.nos/events/prefix-gate.jsonl"
+        create: true
+        mode: '0600'
+        line: >-
+          {%- set ns = namespace(d=[]) -%}
+          {%- for f in ['default.credentials.yml', 'credentials.yml', 'config.yml'] -%}
+          {%- if (playbook_dir ~ '/' ~ f) is file and (lookup('file', playbook_dir ~ '/' ~ f)
+                 is search('^global_password_prefix:', multiline=True)) -%}
+          {%- set ns.d = ns.d + [f] -%}
+          {%- endif -%}
+          {%- endfor -%}
+          {%- set v = global_password_prefix | default('') | string -%}
+          {{ {'at': now(utc=true).isoformat(), 'weak': v in ['changeme', ''] or (v | length) < 12,
+              'length': v | length, 'digest': (('nos-prefix-gate:' ~ v) | hash('sha256'))[:16],
+              'declared_in': ns.d,
+              'converges_running': lookup('pipe', 'pgrep -f "[a]nsible-playbook" | wc -l') | trim | int}
+             | to_json }}
+      changed_when: false
+      failed_when: false
+      no_log: true
+      tags: ['always']
+
     - name: "[Security] Refuse a weak password prefix"
       ansible.builtin.assert:
         that:
@@ -2326,6 +2394,14 @@
         - not (nos_allow_no_docker | default(false) | bool)
       tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
 
+    - name: "[Models] Drop resident local models before services come up"
+      ansible.builtin.import_tasks: tasks/models-unload.yml
+      tags: ['always']
+
+    - name: "[Identities] nos_roles claim (tofu + blueprint render the same one)"
+      ansible.builtin.import_tasks: tasks/nos-roles.yml
+      tags: ['always']
+
     - name: "[Tools] Host-tools venv (requests for the SSO tools)"
       ansible.builtin.import_tasks: tasks/tools-venv.yml
       tags: ['always']
@@ -2398,6 +2474,30 @@
           or (dnsmasq_force_local_domains | default(false) | bool)
       tags: ['dnsmasq', 'dns', 'network']
 
+    # Root LaunchDaemons (dnsmasq): prune-disabled.yml's gui rule, system domain,
+    # become. Authored off only (_on_disk_flags; unread = none). dnsmasq takes the
+    # resolver files tasks/dnsmasq.yml wrote ("-> dnsmasq"), or every *.<tld>
+    # keeps asking a dead 127.0.0.1:53 (review 2026-10-04).
+    - name: "[Host daemons] Retire declared-off root LaunchDaemons"
+      ansible.builtin.shell: |
+        launchctl bootout system/{{ item.label | quote }} || true
+        {% if item.install_flag == 'install_dnsmasq' %}
+        for f in /etc/resolver/*; do
+          if grep -q -- '-> dnsmasq' "$f" 2>/dev/null; then rm -f -- "$f" || exit 1; fi
+        done
+        {% endif %}
+      loop: >-
+        {{ lookup('file', playbook_dir ~ '/state/anatomy-graph.json')
+           | from_json | nos_host_daemon_plan('system') }}
+      loop_control:
+        label: "{{ item.label }} ({{ item.install_flag }}=false)"
+      become: true
+      when:
+        - ansible_os_family == 'Darwin'
+        - not (lookup('vars', item.install_flag, default=false) | bool)
+        - (_on_disk_flags | default({}))[item.install_flag] | default(none) is sameas false
+      tags: ['dnsmasq', 'dns', 'network']
+
     # ──────────────────────────────────────────────────────────────────────────
     # Shell extras – starship prompt + aliases
     # ──────────────────────────────────────────────────────────────────────────
@@ -2441,7 +2541,28 @@
       tags: ['hermes', 'ai', 'agent']
 
     # Device gateway BFF — loopback bind, Traefik device.<tld> ungated (ntfy
-    # class, RFC 8628). Default-OFF. No plugin until Art-30.
+    # class, RFC 8628). Default-OFF. Art-30 is the deploy gate: the register
+    # row lives in device-gateway-base/plugin.yml and docs/compliance/devices.md.
+    - name: "[Art-30] Refuse the device gateway without a complete gdpr block"
+      vars:
+        _dg_gdpr: "{{ ((lookup('file', playbook_dir + '/files/anatomy/plugins/device-gateway-base/plugin.yml', errors='ignore') or '{}') | from_yaml).gdpr | default({}) }}"
+      ansible.builtin.assert:
+        that:
+          - (_dg_gdpr.purpose | default('') | trim | length) > 0
+          - _dg_gdpr.legal_basis | default('') in ['consent', 'contract', 'legal_obligation', 'vital_interests', 'public_task', 'legitimate_interests']
+          - (_dg_gdpr.data_categories | default([]) | length) > 0
+          - (_dg_gdpr.data_subjects | default([]) | length) > 0
+          - _dg_gdpr.retention_days is defined
+          - (_dg_gdpr.retention_days | int) != 0
+          - _dg_gdpr.processors is defined
+          - _dg_gdpr.transfers_outside_eu is defined
+        fail_msg: >-
+          install_device_gateway is true but files/anatomy/plugins/device-gateway-base/plugin.yml
+          carries no complete gdpr: block — Art-30 is the deploy gate (docs/compliance/devices.md).
+        quiet: true
+      when: install_device_gateway | default(false)
+      tags: ['device-gateway', 'ai']
+
     - name: "Device gateway (pazny.device_gateway role)"
       ansible.builtin.import_role:
         name: pazny.device_gateway
@@ -2492,6 +2613,30 @@
     # install_ears defaulting true would have failed the Linux integration
     # wet-test that runs this whole playbook. Caught before the first push;
     # the Linux ear needs a different model and is not this role.
+    # Art-30 is the deploy gate (docs/compliance/ears.md). retention_days 0 is
+    # the honest default (transcripts are not kept), so unlike the device
+    # gateway the number may be zero — but it must be declared.
+    - name: "[Art-30] Refuse the ears without a complete gdpr block"
+      vars:
+        _ears_gdpr: "{{ ((lookup('file', playbook_dir + '/files/anatomy/plugins/ears-base/plugin.yml', errors='ignore') or '{}') | from_yaml).gdpr | default({}) }}"
+      ansible.builtin.assert:
+        that:
+          - (_ears_gdpr.purpose | default('') | trim | length) > 0
+          - _ears_gdpr.legal_basis | default('') in ['consent', 'contract', 'legal_obligation', 'vital_interests', 'public_task', 'legitimate_interests']
+          - (_ears_gdpr.data_categories | default([]) | length) > 0
+          - "'bystanders' in (_ears_gdpr.data_subjects | default([]))"
+          - _ears_gdpr.retention_days is defined
+          - _ears_gdpr.processors is defined
+          - _ears_gdpr.transfers_outside_eu is defined
+        fail_msg: >-
+          install_ears is true but files/anatomy/plugins/ears-base/plugin.yml
+          carries no complete gdpr: block — Art-30 is the deploy gate (docs/compliance/ears.md).
+        quiet: true
+      when:
+        - install_ears | default(false)
+        - ansible_os_family == 'Darwin'
+      tags: ['ears', 'anatomy']
+
     - name: "Ears — the speech organ: hears, asks the caddy, reads the answer back (pazny.ears role)"
       ansible.builtin.import_role:
         name: pazny.ears
@@ -2561,6 +2706,45 @@
     # ──────────────────────────────────────────────────────────────────────────
     # (service-specific pre-stack tasks are now in roles/pazny.*/tasks/main.yml,
     #  called from tasks/stacks/stack-up.yml before compose up)
+
+    # nos-forum lives in iiab but its rows live in SpacetimeDB (infra, BSL 1.1)
+    # and its logins in Authentik; refuse rather than auto-enable a BSL service.
+    # Two fail tasks (not one assert) so the profile builder can carry them as rules.
+    - name: "[nos-forum] Refuse install_nos_forum without SpacetimeDB"
+      ansible.builtin.fail:
+        msg: "install_nos_forum needs install_spacetimedb: true — every forum row lives in SpacetimeDB."
+      when:
+        - install_nos_forum | default(false) | bool
+        - not (install_spacetimedb | default(false) | bool)
+      tags: ['nos_forum', 'iiab']
+
+    - name: "[nos-forum] Refuse install_nos_forum without Authentik"
+      ansible.builtin.fail:
+        msg: "install_nos_forum needs install_authentik: true — forum-web has no local login."
+      when:
+        - install_nos_forum | default(false) | bool
+        - not (install_authentik | default(false) | bool)
+      tags: ['nos_forum', 'iiab']
+
+    - name: "[Art-30] Refuse nos-forum without a complete gdpr block"
+      vars:
+        _forum_gdpr: "{{ ((lookup('file', playbook_dir + '/files/anatomy/plugins/nos-forum-base/plugin.yml', errors='ignore') or '{}') | from_yaml).gdpr | default({}) }}"
+      ansible.builtin.assert:
+        that:
+          - (_forum_gdpr.purpose | default('') | trim | length) > 0
+          - _forum_gdpr.legal_basis | default('') in ['consent', 'contract', 'legal_obligation', 'vital_interests', 'public_task', 'legitimate_interests']
+          - (_forum_gdpr.data_categories | default([]) | length) > 0
+          - (_forum_gdpr.data_subjects | default([]) | length) > 0
+          - _forum_gdpr.retention_days is defined
+          - (_forum_gdpr.retention_days | int) != 0
+          - _forum_gdpr.processors is defined
+          - _forum_gdpr.transfers_outside_eu is defined
+        fail_msg: >-
+          install_nos_forum is true but files/anatomy/plugins/nos-forum-base/plugin.yml
+          carries no complete gdpr: block — Art-30 is the deploy gate (docs/compliance/nos-forum.md).
+        quiet: true
+      when: install_nos_forum | default(false)
+      tags: ['nos_forum', 'iiab']
 
     # ──────────────────────────────────────────────────────────────────────────
     # Docker stacks - deploy compose files and start all stacks
@@ -2747,6 +2931,31 @@
     - name: "[Framework] State report (persist + push to Wing)"
       ansible.builtin.import_tasks: tasks/state-report.yml
       tags: ['always', 'state', 'report']
+
+    # Baseline for tools/digest-status.py: what each container runs, recorded
+    # after handlers flushed. An image that later changes without a converge is
+    # red (roadmap digest-drift-red). Tagged like compose-up: `always` + `stacks`.
+    - name: "[State] Record the image every container runs"
+      ansible.builtin.command:
+        argv:
+          - python3
+          - "{{ playbook_dir }}/tools/digest-record.py"
+          - --out
+          - "{{ nos_workload_digests_file }}"
+          - --src
+          - "nos/keap={{ keap_src_dir | default(ansible_facts['env']['HOME'] + '/keap/src') }}"
+          - --src
+          - "nos/face={{ playbook_dir }}/files/anatomy/face"
+          - --src
+          - "nos/superset={{ nos_main_checkout | default(playbook_dir) }}/files/superset"
+          - --src
+          - "nos/postgis={{ nos_main_checkout | default(playbook_dir) }}/files/postgis"
+          - --src
+          - "{{ nos_forum_image }}={{ nos_forum_src_dir | default('') }}"
+      register: _digest_record
+      changed_when: _digest_record.stdout is search('^changed')
+      when: nos_docker_ready | default(true) | bool
+      tags: ['always', 'stacks', 'digest-record']
 
     # ── Post-run web-UI smoke check ──────────────────────────────────────────
     # tools/nos-smoke.py auto-derives one probe per Tier-1 service from

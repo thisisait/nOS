@@ -94,6 +94,14 @@ services:
       - "traefik.http.routers.smtp-stalwart-webadmin.tls=true"
       - "traefik.http.routers.smtp-stalwart-webadmin.middlewares=authentik@file,security-headers@file,compress@file"
       - "traefik.http.services.smtp-stalwart-webadmin.loadbalancer.server.port=8080"
+{% if traefik_origin_pull_enabled | default(false) | bool %}
+      # Origin-pull twin: same route on the mTLS-only websecure-origin door.
+      - "traefik.http.routers.smtp-stalwart-webadmin-origin.rule=Host(`{{ stalwart_domain }}`) && PathPrefix(`/admin`)"
+      - "traefik.http.routers.smtp-stalwart-webadmin-origin.entrypoints=websecure-origin"
+      - "traefik.http.routers.smtp-stalwart-webadmin-origin.tls.options=origin-pull@file"
+      - "traefik.http.routers.smtp-stalwart-webadmin-origin.middlewares=authentik@file,security-headers@file,compress@file"
+      - "traefik.http.routers.smtp-stalwart-webadmin-origin.service=smtp-stalwart-webadmin"
+{% endif %}
     logging:
       driver: "json-file"
       options:

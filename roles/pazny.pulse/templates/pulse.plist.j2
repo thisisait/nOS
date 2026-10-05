@@ -39,6 +39,14 @@
              the repository it serves. -->
         <key>PATH</key>
         <string>{{ pulse_python | dirname }}:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <!-- The runner allows job scripts only under this checkout's trees. -->
+        <key>NOS_REPO_ROOT</key>
+        <string>{{ nos_main_checkout }}</string>
+{% if agents_separate_user | default(false) | bool %}
+        <!-- pulse-run-agent.sh spawns claude as {{ agents_user }} (pazny.mac.agent_user). -->
+        <key>NOS_CLAUDE_BIN</key>
+        <string>{{ agents_claude_wrapper }}</string>
+{% endif %}
         <key>WING_API_BASE</key>
         <string>{{ pulse_wing_api_base }}</string>
         <key>WING_API_TOKEN</key>
@@ -47,6 +55,8 @@
         <string>{{ pulse_tick_interval_s }}</string>
         <key>PULSE_MAX_CONCURRENT</key>
         <string>{{ pulse_max_concurrent }}</string>
+        <key>WING_DB_PATH</key>
+        <string>{{ pulse_wing_db_path }}</string>
         <key>PULSE_STATE_DIR</key>
         <string>{{ pulse_state_dir }}</string>
         <key>PULSE_LOG_PATH</key>

@@ -6,7 +6,7 @@
 #   1. install uptime-kuma-api + PyYAML
 #   2. wait for the web UI
 #   3. load state/manifest.yml → derive the canonical monitor set
-#   4. add DB TCP probes (MariaDB / PostgreSQL / Redis), FreePBX TCP,
+#   4. add DB TCP probes (MariaDB / PostgreSQL / Redis),
 #      Nginx HTTPS loopback, and optional Docker healthcheck pass-through
 #   5. reconverge the admin password (reset-password.py)
 #   6. invoke setup-monitors.py with a spec JSON that covers
@@ -303,11 +303,6 @@
   # `redis_docker` is the declared toggle; `install_redis` exists in no config
   # layer, so this monitor was never once appended.
   when: redis_docker | bool
-
-- name: "[pazny.uptime_kuma] Append FreePBX TCP monitor"
-  ansible.builtin.set_fact:
-    _kuma_spec_monitors: "{{ _kuma_spec_monitors + [{'name': 'FreePBX Web', 'type': 'tcp', 'hostname': '127.0.0.1', 'port': freepbx_port | default(8088), 'interval': 60, 'maxretries': 2, 'tags': ['voip']}] }}"
-  when: install_freepbx | default(false)
 
 - name: "[pazny.uptime_kuma] Append Nginx HTTPS loopback monitor"
   ansible.builtin.set_fact:

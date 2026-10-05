@@ -16,11 +16,13 @@ from __future__ import annotations
 import collections
 import pathlib
 import re
+import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-CONFIG = REPO / "default.config.yml"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
-SKIP_DIRS = {".git", "node_modules", "docs", "tests", ".ci-venv", "dist",
+SKIP_DIRS = {".git", "node_modules", "docs", "tests", ".ci-venv", "dist", "config.d",
              "vendor", ".svelte-kit", ".pytest_cache", "__pycache__"}
 SKIP_FILES = {"default.config.yml", "config.yml"}
 READ_SUFFIXES = {".yml", ".yaml", ".j2", ".py", ".sh", ".php", ".ts", ".js",
@@ -28,7 +30,7 @@ READ_SUFFIXES = {".yml", ".yaml", ".j2", ".py", ".sh", ".php", ".ts", ".js",
 
 
 def _flags() -> list[str]:
-    txt = CONFIG.read_text(encoding="utf-8")
+    txt = ni.default_config_text()
     return sorted(set(re.findall(r"^(install_[a-z0-9_]+|configure_[a-z0-9_]+):",
                                  txt, re.M)))
 

@@ -188,12 +188,14 @@ $try('api_opus_tier_refused', function () use ($resolver) {
     ]));
 });
 
-$try('factory_refuses_openclaw_binding', function () use ($resolver, $factory) {
+$try('factory_refuses_unbindable_binding', function () use ($resolver, $factory) {
     putenv('NOS_ARMED_BACKENDS=minimax');
     putenv('NOS_MINIMAX_MODEL=FAKE-MiniMax-M2');
     $d = $resolver->resolve(agent(['backend' => 'minimax']));
     try {
-        $factory->fromUri('openclaw-qwen2.5-coder:32b', $d->binding);
+        // openclaw-* became bindable 2026-10-01 (OpenAI surface); `local-*`
+        // is a provider no adapter serves, so a binding must still refuse.
+        $factory->fromUri('local-qwen2.5-coder:32b', $d->binding);
         return ['accepted' => true];
     } catch (InvalidArgumentException $e) {
         return ['refused' => $e->getMessage()];
@@ -472,9 +474,9 @@ def test_the_record_is_the_residency_mechanism(verdicts):
 
 
 def test_the_factory_still_refuses_what_cannot_bind(verdicts):
-    v = verdicts["factory_refuses_openclaw_binding"]
+    v = verdicts["factory_refuses_unbindable_binding"]
     assert "refused" in v, (
-        "the factory accepted a binding for openclaw, which speaks neither "
+        "the factory accepted a binding for local-*, which speaks neither "
         "mechanism — the binding would be silently dropped (the MapHandler "
         "defect, again)"
     )

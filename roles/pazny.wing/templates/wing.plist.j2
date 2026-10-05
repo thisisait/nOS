@@ -130,16 +130,9 @@
         <key>NOS_DEPLOY_LOG_DIR</key>
         <string>{{ ansible_facts['env']['HOME'] }}/.nos/deploys</string>
 
-        <!-- Qdrant — Tier-2 vector DB at apps/qdrant.yml. Empty when
-             install_qdrant=false; QdrantClient.php returns 503 in that case. -->
-        <key>QDRANT_URL</key>
-        <string>{{ ('http://127.0.0.1:' + (qdrant_port | default(6333) | string)) if (install_qdrant | default(false)) else '' }}</string>
-        <key>QDRANT_API_KEY_RO</key>
-        <string>{{ qdrant_api_key_ro | default('') }}</string>
-
 {% if install_authentik | default(false) %}
         <!-- Authentik OIDC issuer — Wing presenters can mint operator JWTs
-             for cross-service calls (Bone, Qdrant via Bone). -->
+             for cross-service calls (Bone). -->
         <key>AUTHENTIK_OIDC_ISSUER</key>
         <string>https://{{ authentik_domain }}/</string>
         <!-- W3 (2026-05-17): bare domain used by BasePresenter for the
@@ -191,6 +184,11 @@
              (reason repo_root), never writes to the wrong place. -->
         <key>NOS_REPO_ROOT</key>
         <string>{{ nos_main_checkout }}</string>
+{% if agents_separate_user | default(false) | bool %}
+        <!-- Agents' claude runs as {{ agents_user }} (pazny.mac.agent_user). -->
+        <key>NOS_CLAUDE_BIN</key>
+        <string>{{ agents_claude_wrapper }}</string>
+{% endif %}
 
         <!-- SSO autologin custom preloader (Batch 5). HubPresenter reads these
              via getenv(): the splash route is dormant unless the flag is "1",
@@ -249,7 +247,7 @@
              open); NEVER the API key — that stays in ~/.nos/secrets.yml,
              resolved as nos:minimax_api_key at session open. -->
         <key>NOS_ARMED_BACKENDS</key>
-        <string>{{ (('minimax ' if minimax_enabled | default(false) | bool else '') ~ ('mistral-eu ' if mistral_enabled | default(false) | bool else '') ~ ('xai ' if xai_enabled | default(false) | bool else '') ~ ('ollama' if ollama_enabled | default(false) | bool else '')) | trim }}</string>
+        <string>{{ (('minimax ' if minimax_enabled | default(false) | bool else '') ~ ('mistral-eu ' if mistral_enabled | default(false) | bool else '') ~ ('xai ' if xai_enabled | default(false) | bool else '') ~ ('ollama ' if ollama_enabled | default(false) | bool else '') ~ ('openclaw' if openclaw_backend_enabled | default(false) | bool else '')) | trim }}</string>
         <key>NOS_MINIMAX_MODEL</key>
         <string>{{ minimax_model | default('') }}</string>
         <key>NOS_MINIMAX_SMALL_MODEL</key>
@@ -273,6 +271,10 @@
         <string>{{ ollama_small_model | default('') }}</string>
         <key>NOS_LOCAL_VISION_MODEL</key>
         <string>{{ ollama_vision_model | default('') }}</string>
+        <!-- openclaw: the gateway's AGENT TARGET, not a model id (its OpenAI
+             surface routes `model` to an agent). Token stays in secrets.yml. -->
+        <key>NOS_OPENCLAW_AGENT</key>
+        <string>openclaw/default</string>
     </dict>
 
     <!-- launchd respawns on crash; ThrottleInterval prevents tight loops

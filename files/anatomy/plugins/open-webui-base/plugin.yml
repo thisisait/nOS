@@ -120,8 +120,13 @@ ui-extension:
 # ── e2e: SSO reaches Open WebUI as the tester
 e2e:
   probes:
+    - name: oidc-start-reaches-authentik
+      url: https://{{ openwebui_domain }}/oauth/oidc/login
+      expect: {status: [302, 303, 307], location_contains: "{{ authentik_domain }}/application/o/authorize"}
     - name: sso-lands-as-the-tester
       auth: tester
       sso_start: true
       url: "https://{{ openwebui_domain }}/api/v1/auths/"
       expect: {status: [200], contains_tester: true}
+    - {name: tier-1-is-openwebui-admin, auth: tester, tier: 1, sso_start: true, url: "https://{{ openwebui_domain }}/api/v1/auths/", expect: {status: [200], json_equals: {role: admin}}}
+    - {name: tier-3-is-not-openwebui-admin, auth: tester, tier: 3, sso_start: true, url: "https://{{ openwebui_domain }}/api/v1/auths/", expect: {status: [200], json_equals: {role: user}}}

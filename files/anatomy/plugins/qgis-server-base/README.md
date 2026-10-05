@@ -2,7 +2,7 @@
 
 > **Status:** live, captured 2026-05-07. Wires `pazny.qgis_server`
 > (kartoza/qgis-server) into the plugin loader. **No SSO** — QGIS
-> Server is in CLAUDE.md's "No SSO" bucket alongside FreePBX.
+> Server is in CLAUDE.md's "No SSO" bucket.
 > Tier 3 (user) — OGC WMS / WFS / WCS endpoint serving from the
 > engineering compose stack.
 

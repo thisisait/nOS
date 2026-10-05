@@ -75,8 +75,8 @@ normalized to the canonical shape on 2026-05-23.
 - **authentik → unchanged (38/55).** The 17 "missing" are all correct-by-design:
   infra daemons with no login surface (mariadb, postgresql, redis, alloy, loki,
   tempo, prometheus, traefik, watchtower, smtp-stalwart), the IdP itself
-  (authentik-base), AT-proto identity (bluesky-pds), no-SSO doctrine (freepbx,
-  qgis-server), and API/S3 surfaces where forward-auth would break the API
+  (authentik-base), AT-proto identity (bluesky-pds), no-SSO doctrine
+  (qgis-server), and API/S3 surfaces where forward-auth would break the API
   contract (mcp-gateway, rustfs, offline-maps). Blanket-filling would have
   broken the blank run.
 - **observability → unchanged (38/55).** `metrics`/`dashboard` have no aggregator
@@ -103,7 +103,7 @@ gate-watched `autologin` key):
 | forward_auth service | second login | elimination | status |
 |----------------------|--------------|-------------|--------|
 | **wing** | — (reads X-Authentik-* in `BasePresenter::startup()`) | done | ✅ passthrough_clean in practice |
-| kiwix, ntfy, onlyoffice, qdrant, spacetimedb, mailpit | — (stateless) | done | ✅ passthrough_clean |
+| kiwix, ntfy, onlyoffice, spacetimedb, mailpit | — (stateless) | done | ✅ passthrough_clean |
 | **code-server** | password (LSIO `HASHED_PASSWORD`) | needs-sidecar | oauth2-proxy sidecar OR upstream LSIO build-arg PR (Coder `--auth` flags stripped by the image) |
 | **woodpecker** | Gitea OAuth2 consent (transitively Authentik) | needs-upstream | already Authentik-rooted via Gitea native-OIDC; no `WOODPECKER_OIDC_*` / trusted-proxy env exists upstream to drop the intermediate consent click |
 | **paperclip** | better-auth session | header-provision-patch | better-auth trusted-header / genericOAuth adapter (fork/upstream app code) |

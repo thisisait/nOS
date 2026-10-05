@@ -167,3 +167,9 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+e2e:
+  probes:
+    - name: login-page-offers-authentik
+      url: https://{{ erpnext_domain | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}/login
+      expect: {status: [200], contains: "{{ authentik_domain }}/application/o/authorize"}

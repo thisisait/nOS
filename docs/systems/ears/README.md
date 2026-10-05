@@ -37,10 +37,18 @@ The multiple spellings are not a nicety. Parakeet returns what it heard, and a
 Czech speaker saying "hej Jeffe" lands on several transcriptions; a single
 spelling meant the organ reported LISTENING and never woke.
 
+## What it keeps
+
+Nothing, by default. Audio is one temporary wav per segment, deleted in the
+transcribe call; the turn goes to the caddy in memory. `ears_keep_transcripts:
+true` writes `~/ears/turns/` day-files for `ears_retention_days`. Art-30 row:
+`files/anatomy/plugins/ears-base/plugin.yml`, policy `docs/compliance/ears.md`.
+
 ## What it installs
 
 A venv with `parakeet-mlx` under `~/ears` (`ears_runtime_dir`), the listener,
-the launcher, the speech half, and `ears-listen` + `caddy` on PATH.
+the launcher, the speech half, `ears-listen` + `caddy` on PATH, and
+`~/ears/listener.env` — the role's `ears_*` vars as the listener's defaults.
 
 It deliberately does **not** install ffmpeg or portaudio: ffmpeg is already in
 `homebrew_installed_packages` and the listener captures through it, precisely so

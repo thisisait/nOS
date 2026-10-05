@@ -29,6 +29,9 @@ from collections import Counter
 
 import pytest
 
+# Read-only probes of the live Wing (token from the plist): the offline boundary is lifted for this file.
+pytestmark = pytest.mark.live
+
 
 #: A service answered and answered wrongly. Routing drift.
 HARD_FAIL = {"404", "500", "502", "503"}

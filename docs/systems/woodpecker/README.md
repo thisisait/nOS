@@ -50,6 +50,6 @@
 
 ## Dependencies
 
-- Docker (`devops` compose stack) and `/var/run/docker.sock` bind-mounted into the agent (`WOODPECKER_BACKEND=docker`).
+- Docker (`devops` compose stack); the agent (`WOODPECKER_BACKEND=docker`) reaches the daemon through `woodpecker-socket-proxy` (CONTAINERS/IMAGES/NETWORKS/VOLUMES/INFO/POST, forked HAProxy template so `wait`/`logs` skip the 10m timeout).
 - **Gitea** (peer service) — the OAuth2 forge for app-level auth. Woodpecker is dormant without it.
 - Authentik (route gate, optional).

@@ -488,9 +488,12 @@ final class PulseRepository
 	 * shelling out to. Two readers, one definition each, and the tile says
 	 * which half it is showing rather than implying a total.
 	 *
-	 * @return list<array{job_id: string, exit_code: int, fired_at: string}>
+	 * A declared findings code lands in `findings` = DRIFT, shown amber: a known
+	 * disagreement, not broken and not green (nos-atlas paints it the same).
+	 *
+	 * @return array{failing: list<array{job_id: string, exit_code: int, fired_at: string}>, findings: list<array{job_id: string, exit_code: int, fired_at: string}>}
 	 */
-	public function failingJobs(): array
+	public function latestVerdicts(): array
 	{
 		// Pick the latest run FIRST, then ask whether it failed. The old shape
 		// filtered exit_code != 0 before the grouping, so MAX(run_id) ranged
@@ -501,16 +504,15 @@ final class PulseRepository
 			   SELECT job_id, exit_code, fired_at, ROW_NUMBER() OVER (
 			     PARTITION BY job_id ORDER BY fired_at DESC, run_id DESC) rn
 			     FROM pulse_runs)
-			  WHERE rn = 1 AND exit_code IS NOT NULL AND exit_code != 0',
+			  WHERE rn = 1 AND exit_code IS NOT NULL AND exit_code != 0
+			    AND job_id IN (SELECT id FROM pulse_jobs WHERE removed_at IS NULL)',
 		);
-		$out = [];
+		$out = ['failing' => [], 'findings' => []];
 		foreach ($latest as $row) {
 			$id = (string) $row->job_id;
 			$code = (int) $row->exit_code;
-			if (in_array($code, $this->findingsExitCodes($id), true)) {
-				continue;
-			}
-			$out[] = ['job_id' => $id, 'exit_code' => $code, 'fired_at' => (string) $row->fired_at];
+			$verdict = in_array($code, $this->findingsExitCodes($id), true) ? 'findings' : 'failing';
+			$out[$verdict][] = ['job_id' => $id, 'exit_code' => $code, 'fired_at' => (string) $row->fired_at];
 		}
 		return $out;
 	}

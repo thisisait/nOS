@@ -5,7 +5,7 @@
 # Jellyfin exposes /Startup/* endpoints only before first configuration.
 # Flow: POST /Startup/Configuration -> /Startup/User -> /Startup/Complete.
 #
-# Po dokonceni startup wizardu vraci /Startup/* 403. Pro non-blank runy
+# After the startup wizard, /Startup/* answers 403 (10.11+: 401). Pro non-blank runy
 # reconverge password via AuthenticateUserByName -> POST /Users/{id}/Password
 # with previous_password_prefix for the OLD password. Degrades gracefully at DRIFT.
 # ==============================================================================
@@ -29,7 +29,7 @@
     url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/Startup/Configuration"
     method: GET
     timeout: 10
-    status_code: [200, 403]
+    status_code: [200, 401, 403]
   register: _jf_startup
   failed_when: false
   when: _jf_ready.status | default(0) == 200
@@ -47,6 +47,16 @@
     timeout: 10
   when:
     - _jf_startup.status | default(0) == 200
+  failed_when: false
+
+# 10.11 creates the initial user only on GET /Startup/User; a POST without it
+# 500s (Users.First() on an empty table), the wizard stays open and the
+# operator finishes it by hand under a name/password nOS does not know.
+- name: "[pazny.jellyfin Post] Initialise the startup user"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/Startup/User"
+    timeout: 10
+  when: _jf_startup.status | default(0) == 200
   failed_when: false
 
 - name: "[pazny.jellyfin Post] Set startup user (best-effort)"
@@ -109,7 +119,7 @@
   register: _jf_auth_new
   when:
     - _jf_ready.status | default(0) == 200
-    - _jf_startup.status | default(0) == 403  # wizard already complete
+    - _jf_startup.status | default(0) in [401, 403]  # wizard already complete
   changed_when: false
   failed_when: false
   no_log: true
@@ -130,7 +140,7 @@
   when:
     - _jf_ready.status | default(0) == 200
     - _jf_auth_new.status | default(0) != 200
-    - _jf_startup.status | default(0) == 403
+    - _jf_startup.status | default(0) in [401, 403]
   changed_when: false
   failed_when: false
   no_log: true
@@ -161,15 +171,86 @@
       Jellyfin admin pw:
       {{ 'already converged' if (_jf_auth_new.status | default(0) == 200)
          else ('updated' if (_jf_pw_reset.status | default(0) in [200, 204])
-               else ('DRIFT — manual reset required' if (_jf_startup.status | default(0) == 403) else 'fresh install')) }}
+               else ('DRIFT — manual reset required' if (_jf_startup.status | default(0) in [401, 403]) else 'fresh install')) }}
   when: _jf_ready.status | default(0) == 200
 
-# ── SSO login button (jellyfin-plugin-sso v4) — DEFERRED ─────────────────────
-# The v4 plugin's OidConfig is provisioned via SSO-Auth.xml, but v4's XML
-# deserializer is strict about element order and silently WIPES OidConfigs to
-# empty (<OidConfigs />) on any schema mismatch → /sso/OID/start/<provider> 400s
-# "Provider does not exist" (live 2026-06-02; PortOverride alone did not fix it).
-# We do NOT inject a Branding login button until the OidConfig provisions
-# reliably (a broken button is worse than none) — needs the exact v4 OidConfig
-# field order OR API-driven config (POST to the plugin), tracked as a follow-up.
-# jellyfin is supports:no / Tier-4 → button-only at best, never autologin.
+# ── SSO-Auth provider via the plugin API (v4 wipes a hand-rendered XML) ──────
+# Existing fields (CanonicalLinks = per-user links) are kept; only ours change.
+- name: "[pazny.jellyfin Post] Admin token for SSO provisioning"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/Users/AuthenticateByName"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: 'MediaBrowser Client="nOS", Device="Ansible", DeviceId="ansible-reconverge", Version="1.0"'
+    body:
+      Username: "{{ jellyfin_admin_user | default('admin') }}"
+      Pw: "{{ jellyfin_admin_password | default(nos_derived_secrets.jellyfin) }}"
+    status_code: [200, 401]
+    timeout: 10
+  register: _jf_sso_auth
+  when: install_authentik | default(false) and _jf_ready.status | default(0) == 200
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: "[pazny.jellyfin Post] SSO provider not written — admin login refused"
+  ansible.builtin.debug:
+    msg: >-
+      Jellyfin SSO NOT provisioned: '{{ jellyfin_admin_user | default('admin') }}' cannot sign in
+      with the derived password (an account made by hand?). Set jellyfin_admin_user/_password
+      in credentials.yml, or reset the Jellyfin data dir.
+  when: _jf_sso_auth.status | default(0) == 401
+
+- name: "[pazny.jellyfin Post] Read SSO-Auth OID providers"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/sso/OID/Get"
+    headers: &jf_sso_hdr
+      Authorization: "MediaBrowser Token=\"{{ _jf_sso_auth.json.AccessToken | default('') }}\""
+    timeout: 10
+  register: _jf_sso_get
+  when: _jf_sso_auth.json.AccessToken is defined
+  no_log: true
+
+- name: "[pazny.jellyfin Post] Write the {{ jellyfin_oidc_provider_name }} provider"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/sso/OID/Add/{{ jellyfin_oidc_provider_name }}"
+    method: POST
+    body_format: json
+    headers: *jf_sso_hdr
+    body: "{{ _jf_sso_have | combine(_jf_sso_want) }}"
+    status_code: [200, 204]
+    timeout: 10
+  vars:
+    _jf_sso_have: "{{ (_jf_sso_get.json | default({}) or {}).get(jellyfin_oidc_provider_name) or {} }}"
+    _jf_sso_want:
+      OidEndpoint: "{{ jellyfin_oidc_endpoint }}"
+      OidClientId: "{{ jellyfin_oidc_client_id }}"
+      OidSecret: "{{ jellyfin_oidc_client_secret }}"
+      Enabled: true
+      EnableAuthorization: true
+      EnableAllFolders: true
+      AdminRoles: "{{ jellyfin_oidc_admin_roles }}"
+      Roles: "{{ jellyfin_oidc_user_roles }}"
+      RoleClaim: groups
+      OidScopes: [openid, profile, email, groups]
+      SchemeOverride: https
+      NewPath: true
+      DefaultUsernameClaim: preferred_username
+  register: _jf_sso_add
+  when:
+    - _jf_sso_get.json is defined
+    - _jf_sso_have | combine(_jf_sso_want) != _jf_sso_have
+  changed_when: true
+  no_log: true
+
+- name: "[pazny.jellyfin Post] Read back — the provider must exist after the write"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ jellyfin_port | default(8096) }}/sso/OID/GetNames"
+    timeout: 10
+  register: _jf_sso_names
+  when: _jf_sso_get.json is defined
+  failed_when: jellyfin_oidc_provider_name not in (_jf_sso_names.json | default([]))
+
+# Branding login button: still not injected — jellyfin is supports:no /
+# Tier-4, the plugin's own /sso/OID/start/<provider> is the entry point.

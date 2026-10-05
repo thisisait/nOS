@@ -25,6 +25,8 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 PLUGINS = REPO / "files/anatomy/plugins"
+sys.path.insert(0, str(REPO / "tools"))
+from nos_identity import SYNTHETIC_FLAG, synthetic_identities  # noqa: E402
 MODES = ("native_oidc", "forward_auth", "header_oidc")
 
 _spec = importlib.util.spec_from_file_location("nos_smoke", REPO / "tools/nos-smoke.py")
@@ -93,23 +95,35 @@ def _resolved(vars_: dict | None) -> tuple[dict, jinja2.Environment]:
     vars_.setdefault("ansible_facts", {"user_id": getpass.getuser(),
                                        "env": {"HOME": str(Path.home())},
                                        "os_family": "Darwin" if sys.platform == "darwin" else "Debian"})
+    # A templated var seen from INSIDE another template is its raw text, so
+    # `if tenant_domain_is_local` was always truthy; pin bool-valued ones first.
+    env = _env(vars_)
+    for k, v in list(vars_.items()):
+        if isinstance(v, str) and "{{" in v:
+            try:
+                out = _render(env, v)
+            except jinja2.TemplateError:     # Ansible-only filters: leave as is
+                continue
+            if out in ("True", "False"):
+                vars_[k] = out == "True"
     return vars_, _env(vars_)
 
 
 def identities(vars_: dict | None = None) -> list[dict]:
-    """nos_identities as this config resolves them. An entry whose enabled_by
-    toggle is off has no account anywhere, so it is not returned."""
+    """nos_identities as this config resolves them, plus the synthetic ones
+    (kind: synthetic) while their switch is on — off, they have no account."""
     vars_, env = _resolved(vars_)
-    return [_render(env, i) for i in vars_.get("nos_identities") or []
-            if isinstance(i, dict) and (not i.get("enabled_by")
-                                        or _truthy(_render(env, vars_.get(i["enabled_by"], False))))]
+    ids = [i for i in vars_.get("nos_identities") or [] if isinstance(i, dict)]
+    if _truthy(_render(env, vars_.get(SYNTHETIC_FLAG, False))):
+        ids += synthetic_identities(vars_)
+    return [_render(env, i) for i in ids]
 
 
 def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict]:
     vars_, env = _resolved(vars_)
     edge, domains = _edge_modes(), _manifest_domains()
     rows = []
-    for path in sorted(PLUGINS.glob("*-base/plugin.yml")):
+    for path in sorted(PLUGINS.glob("*/plugin.yml")):      # discovery, gitleaks carry no -base
         doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         ak = doc.get("authentik") or {}
         e2e = doc.get("e2e") or {}
@@ -143,10 +157,11 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
             "enabled": enabled,
             "probes": _render(env, e2e.get("probes") or []),
             "isolation": _render(env, e2e.get("isolation") or []),
+            "app": bool(ak),     # e2e-only plugins (backup, alert-relay) have no URL to open
         })
     # Manifest apps (apps/*.yml) carry their own authentik: block and were
-    # invisible to a plugin-only walk: documenso, twofauth, roundcube, and the
-    # launch URL qdrant-base leaves out. Same rendering, same edge rule.
+    # invisible to a plugin-only walk: documenso, twofauth, roundcube.
+    # Same rendering, same edge rule.
     by_slug = {r["slug"]: r for r in rows}
     skip = set(vars_.get("apps_skip") or [])
     for path in sorted((REPO / "apps").glob("*.yml")):
@@ -168,10 +183,10 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
                      "tier": int(r["tier"]) if str(r.get("tier", "")).isdigit() else None,
                      "client_id": r.get("client_id"), "redirect_uri": (r.get("redirect_uris") or [None])[0],
                      "launch_url": r.get("launch_url"), "first_login": r.get("first_login"),
-                     "edge": "proxy", "enabled": enabled, "probes": [], "isolation": []})
+                     "edge": "proxy", "enabled": enabled, "probes": [], "isolation": [], "app": True})
     for row in rows:
         row["unresolved"] = [k for k in ("launch_url", "redirect_uri")
-                             if (row[k] is None and k == "launch_url") or
+                             if (row[k] is None and k == "launch_url" and row["app"]) or
                              (row[k] is not None and "." not in _host(row[k]))]
     return rows
 

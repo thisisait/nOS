@@ -126,17 +126,20 @@ SYSTEM_NAME = {
     "paperclip": "Paperclip", "code-server": "code-server",
     "erpnext": "ERPNext", "freescout": "FreeScout", "outline": "Outline",
     "hedgedoc": "HedgeDoc", "bookstack": "BookStack", "firefly": "Firefly III",
+    "nos-forum": "nos-forum",
+    "geolibre": "GeoLibre",
+    "martin": "martin",
     "dolibarr": "Dolibarr",
     "onlyoffice": "ONLYOFFICE",
     "metabase": "Metabase", "superset": "Superset", "influxdb": "InfluxDB",
-    "freepbx": "FreePBX", "qgis-server": "QGIS Server",
+    "mikopbx": "MikoPBX", "qgis-server": "QGIS Server",
     "alloy": "Grafana Alloy", "openclaw": "OpenClaw", "hermes": "Hermes",
     "device-gateway": "Device gateway",
     "opencode": "OpenCode", "wing": "Wing", "bone": "Bone", "pulse": "Pulse",
     "cortex": "Cortex", "ears": "Ears",
     "iiab-terminal": "IIAB Terminal", "backup": "Backup", "backrest": "Backrest",
     "tailscale": "Tailscale",
-    "spacetimedb": "SpacetimeDB", "qdrant": "Qdrant",
+    "spacetimedb": "SpacetimeDB",
 }
 
 ROOT_EN = (
@@ -238,12 +241,6 @@ SYSTEM_EN = {
         "Unlike the SQL stores beside it, it has no admin UI and no passwords — identity "
         "is a JWT, and authorisation is written inside the module."
     ),
-    "qdrant": (
-        "Qdrant, the vector database: it stores embeddings and answers similarity "
-        "queries. It is the only store in the estate searched by MEANING rather than by "
-        "key or by SQL predicate, and everything in it is derived — re-embeddable from "
-        "the canonical rows elsewhere."
-    ),
     "redis": (
         "Redis, the shared in-memory key-value store. It holds sessions, locks, hot "
         "lookups and worker queues; everything in it is expendable and nothing is "
@@ -335,6 +332,16 @@ SYSTEM_EN = {
     "offline-maps": (
         "The offline map tile server. It serves vector and raster tiles out of local "
         "MBTiles archives, so a map renders without calling any hosted tile provider."
+    ),
+    "geolibre": (
+        "GeoLibre, the browser GIS at atlas. It opens and styles layers in the visitor's "
+        "browser and hosts the nos-atlas plugin that draws KEAP as a planet; it shows maps, "
+        "where the offline map server only supplies the tiles."
+    ),
+    "martin": (
+        "martin, the vector tile server for the PostGIS geo schema. It turns parcels, "
+        "buildings and party sites into map tiles at atlas/tiles, read live through a "
+        "read-only login, so it keeps no copy of its own."
     ),
     "jellyfin": (
         "Jellyfin, the media library server. It catalogues film, television and music "
@@ -449,6 +456,11 @@ SYSTEM_EN = {
         "Outline, the team wiki. Structured collections of long-lived documents with search "
         "and permissions; it targets curated internal knowledge rather than ad-hoc drafting."
     ),
+    "nos-forum": (
+        "nos-forum, the estate's chat and forum. Servers hold text channels and a small "
+        "forum of categories, topics and posts; rows live in SpacetimeDB and stream live, "
+        "so it is conversation, not the drafting of a shared document."
+    ),
     "hedgedoc": (
         "HedgeDoc, the real-time collaborative markdown pad. Several people type into the "
         "same document at once; it favours quick shared drafting over the wikis' structure."
@@ -489,9 +501,11 @@ SYSTEM_EN = {
         "metrics store in observability."
     ),
     # ── voip / engineering ──
-    "freepbx": (
-        "FreePBX, the telephony control surface over Asterisk. It configures extensions, "
-        "trunks, dial plans and call detail records — real phone calls, not chat."
+    "mikopbx": (
+        "MikoPBX, the estate's phone system: Asterisk 22 packaged with its own web "
+        "admin, SQLite and Redis in one container. It registers SIP phones as extensions, "
+        "routes calls out through SIP trunks and keeps voicemail, recordings and call "
+        "detail records — the maintained successor to the abandoned FreePBX image."
     ),
     "qgis-server": (
         "QGIS Server, the OGC geospatial map service. It publishes WMS, WFS and WCS layers "
@@ -593,11 +607,6 @@ CREDENTIAL_EN = {
         "A bearer JWT — either signed by the estate's own ECDSA keypair or issued by "
         "Authentik. Unlike every issued API token beside it, holding a valid one grants "
         "nothing by itself: the module decides what that identity may do."
-    ),
-    "qdrant": (
-        "The Qdrant API key, in two grades — one read-write, one read-only. A single "
-        "shared string per grade, carrying no person's identity, so a write is "
-        "attributable only to the integration that made it."
     ),
     "authentik": (
         "The Authentik API token. An issued administrative secret scoped to the identity "

@@ -1,0 +1,270 @@
+---
+# ==============================================================================
+# pazny.mikopbx/tasks/post.yml — provision the PBX through its REST API v3.
+#
+# Env vars are honoured on FIRST boot only (DockerCloud stamps itself done),
+# and MikoPBX's own "update external IP" step overwrites extipaddr with the
+# public address whenever autoUpdateExternalIp=1 — which the env path forces
+# to 1 (CloudProvider::applyExternalIpDirect, measured 2026-10-03). So every
+# setting that matters for calls is asserted HERE, on every converge:
+#   1. ports + NAT: RTP range, external SIP port, external address = the
+#      host's LAN address, auto-update off.
+#   2. macOS: drop pjsip `local_net=` lines via MikoPBX's own custom-files
+#      script mode — Docker Desktop delivers every SIP packet from the bridge
+#      gateway (172.17.0.1), which sits inside local_net, so Asterisk would
+#      otherwise put the container IP into SDP (no audio, measured).
+#   3. declared extensions (employees) and SIP providers, create-if-missing.
+#   4. READ BACK: the generated pjsip transport block must carry the declared
+#      external address and the loaded RTP range — the role restarts the
+#      container once if the first-boot ordering left stale asterisk configs.
+# Auth: admin password from nos_derived_secrets → short-lived JWT. An API key
+# cannot be derived (MikoPBX generates it and stores only a bcrypt hash).
+# ==============================================================================
+
+- name: "[pazny.mikopbx Post] Set API facts"
+  ansible.builtin.set_fact:
+    _pbx_api: "http://127.0.0.1:{{ mikopbx_port | default(8088) }}/pbxcore/api/v3"
+    _pbx_container: "{{ mikopbx_container | default('voip-mikopbx-1') }}"
+    _pbx_is_mac: "{{ ansible_facts['os_family'] == 'Darwin' }}"
+
+- name: "[pazny.mikopbx Post] Wait for the public ping endpoint"
+  ansible.builtin.uri:
+    url: "{{ _pbx_api }}/system:ping"
+    status_code: [200]
+    timeout: 5
+  register: _pbx_ping
+  until: _pbx_ping.status | default(0) | int == 200
+  retries: 30
+  delay: 5
+
+- name: "[pazny.mikopbx Post] Log in (JWT, 15 min)"
+  ansible.builtin.uri:
+    url: "{{ _pbx_api }}/auth:login"
+    method: POST
+    body_format: json
+    body: { login: "{{ mikopbx_admin_login | default('admin') }}", password: "{{ mikopbx_admin_password }}" }
+    status_code: [200]
+    timeout: 15
+  register: _pbx_login
+  no_log: true
+
+- name: "[pazny.mikopbx Post] Keep the bearer header"
+  ansible.builtin.set_fact:
+    _pbx_hdr: { Authorization: "Bearer {{ _pbx_login.json.data.accessToken }}" }
+  no_log: true
+
+# ── 1. ports + NAT ──────────────────────────────────────────────────────────
+- name: "[pazny.mikopbx Post] Assert RTP range, external SIP port, no auto external IP"
+  ansible.builtin.uri:
+    url: "{{ _pbx_api }}/general-settings"
+    method: PATCH
+    headers: "{{ _pbx_hdr }}"
+    body_format: json
+    body:
+      RTPPortFrom: "{{ mikopbx_rtp_start | default(10000) | int }}"
+      RTPPortTo: "{{ mikopbx_rtp_end | default(10100) | int }}"
+      externalSIPPort: "{{ mikopbx_sip_port | default(5060) | int }}"
+      autoUpdateExternalIp: false
+    status_code: [200]
+    timeout: 30
+  changed_when: false   # the reader at the end is the truth
+
+- name: "[pazny.mikopbx Post] Read the network config (interfaces are echoed back on save)"
+  ansible.builtin.uri:
+    url: "{{ _pbx_api }}/network:getConfig"
+    headers: "{{ _pbx_hdr }}"
+    status_code: [200]
+    timeout: 15
+  register: _pbx_netcfg
+  when: mikopbx_external_ip | default('') | length > 0
+
+- name: "[pazny.mikopbx Post] Advertise the host address (NAT on, external IP pinned)"
+  ansible.builtin.uri:
+    url: "{{ _pbx_api }}/network:saveConfig"
+    method: POST
+    headers: "{{ _pbx_hdr }}"
+    body_format: json
+    body:
+      interfaces: "{{ _pbx_netcfg.json.data.interfaces }}"
+      internet_interface: "{{ _pbx_netcfg.json.data.internetInterfaceId | string }}"
+      usenat: true
+      extipaddr: "{{ mikopbx_external_ip }}"
+      exthostname: ""
+      staticRoutes: "{{ _pbx_netcfg.json.data.staticRoutes | default([]) }}"
+    status_code: [200]
+    timeout: 60
+  changed_when: false
+  when: mikopbx_external_ip | default('') | length > 0
+
+# ── 2. macOS: 'local' is meaningless behind Docker Desktop's UDP proxy ───────
+- name: "[pazny.mikopbx Post] List custom files (find pjsip.conf's id)"
+  ansible.builtin.uri:
+    url: "{{ _pbx_api }}/custom-files"
+    headers: "{{ _pbx_hdr }}"
+    status_code: [200]
+    timeout: 15
+  register: _pbx_cf
+  when: _pbx_is_mac | bool
+
+- name: "[pazny.mikopbx Post] macOS: drop pjsip local_net lines (custom-files script mode)"
+  ansible.builtin.uri:
+    url: "{{ _pbx_api }}/custom-files/{{ item.id }}"
+    method: PUT
+    headers: "{{ _pbx_hdr }}"
+    body_format: json
+    body:
+      filepath: "/etc/asterisk/pjsip.conf"
+      mode: script
+      description: "nOS: Docker Desktop NAT — advertise the external address to every peer"
+      content: "{{ lookup('ansible.builtin.file', role_path ~ '/files/pjsip-no-local-net.sh') | b64encode }}"
+    status_code: [200]
+    timeout: 15
+  loop: "{{ (_pbx_cf.json.data['items'] | default(_pbx_cf.json.data)) | selectattr('filepath', 'equalto', '/etc/asterisk/pjsip.conf') | list }}"
+  loop_control:
+    label: "{{ item.filepath }}"
+  changed_when: false
+  when: _pbx_is_mac | bool
+
+# ── 3. declared extensions + providers (create-if-missing) ──────────────────
+- name: "[pazny.mikopbx Post] Read existing employees and providers"
+  ansible.builtin.uri:
+    url: "{{ _pbx_api }}/{{ item }}"
+    headers: "{{ _pbx_hdr }}"
+    status_code: [200]
+    timeout: 15
+  loop: [employees, sip-providers]
+  register: _pbx_existing
+
+- name: "[pazny.mikopbx Post] Index what exists"
+  ansible.builtin.set_fact:
+    _pbx_have_numbers: "{{ (_pbx_existing.results[0].json.data.data | default(_pbx_existing.results[0].json.data)) | map(attribute='number') | map('string') | list }}"
+    _pbx_have_providers: "{{ (_pbx_existing.results[1].json.data.data | default(_pbx_existing.results[1].json.data)) | map(attribute='description') | list }}"
+
+- name: "[pazny.mikopbx Post] Create missing extensions"
+  ansible.builtin.uri:
+    url: "{{ _pbx_api }}/employees"
+    method: POST
+    headers: "{{ _pbx_hdr }}"
+    body_format: json
+    body:
+      number: "{{ item.number | string }}"
+      user_username: "{{ item.name }}"
+      user_email: "{{ item.email | default('') }}"
+      sip_secret: "{{ (item.secret | default('', true)) or ((nos_derived_secrets.mikopbx_sip ~ ':' ~ item.number) | hash('sha256') | truncate(24, true, '')) }}"
+    status_code: [201]
+    timeout: 30
+  loop: "{{ mikopbx_extensions | default([]) }}"
+  loop_control:
+    label: "{{ item.number }}"
+  when: (item.number | string) not in _pbx_have_numbers
+  no_log: true
+
+- name: "[pazny.mikopbx Post] Create missing SIP providers (trunks)"
+  ansible.builtin.uri:
+    url: "{{ _pbx_api }}/sip-providers"
+    method: POST
+    headers: "{{ _pbx_hdr }}"
+    body_format: json
+    body:
+      description: "{{ item.name }}"
+      host: "{{ item.host }}"
+      port: "{{ item.port | default(5060) | int }}"
+      username: "{{ item.username | default('') }}"
+      secret: "{{ item.secret | default('') }}"
+      registration_type: "{{ item.registration_type | default('outbound') }}"
+      transport: "{{ item.transport | default('UDP') }}"
+    status_code: [201]
+    timeout: 30
+  loop: "{{ mikopbx_providers | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.name not in _pbx_have_providers
+  no_log: true
+
+# ── 4. readers (no silent green) ────────────────────────────────────────────
+- name: "[pazny.mikopbx Post] Read back employees, providers and NAT"
+  ansible.builtin.uri:
+    url: "{{ _pbx_api }}/{{ item }}"
+    headers: "{{ _pbx_hdr }}"
+    status_code: [200]
+    timeout: 15
+  loop: [employees, sip-providers, "network:getNatSettings"]
+  register: _pbx_read
+
+- name: "[pazny.mikopbx Post] Declared estate must be present in the PBX"
+  ansible.builtin.assert:
+    that:
+      - (mikopbx_extensions | default([]) | map(attribute='number') | map('string') | list)
+        is subset((_pbx_read.results[0].json.data.data | default(_pbx_read.results[0].json.data)) | map(attribute='number') | map('string') | list)
+      - (mikopbx_providers | default([]) | map(attribute='name') | list)
+        is subset((_pbx_read.results[1].json.data.data | default(_pbx_read.results[1].json.data)) | map(attribute='description') | list)
+      - (mikopbx_external_ip | default('') | length == 0) or (_pbx_read.results[2].json.data.extipaddr == mikopbx_external_ip)
+      - _pbx_read.results[2].json.data.RTP_PORT_FROM | int == mikopbx_rtp_start | default(10000) | int
+      - _pbx_read.results[2].json.data.RTP_PORT_TO | int == mikopbx_rtp_end | default(10100) | int
+    fail_msg: >-
+      MikoPBX read-back disagrees with the declaration (employees / providers /
+      NAT: {{ _pbx_read.results[2].json.data | default({}) }}). Open
+      https://{{ mikopbx_domain }} → Network / Employees / Providers.
+
+# Asterisk loads rtp.conf and the pjsip transport at start; the first boot
+# generates them BEFORE the env/REST settings land (measured: DB said
+# 10010-10019, rtp.conf said 10000-10800 until a restart).
+- name: "[pazny.mikopbx Post] What Asterisk actually loaded"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin | default('docker') }}"
+      - exec
+      - "{{ _pbx_container }}"
+      - sh
+      - -c
+      - "grep -h -E '^(rtpstart|rtpend|local_net|external_media_address)=' /etc/asterisk/rtp.conf /etc/asterisk/pjsip.conf"
+  register: _pbx_loaded
+  changed_when: false
+  failed_when: false
+
+- name: "[pazny.mikopbx Post] Restart once if the loaded config is stale"
+  ansible.builtin.command:
+    argv: ["{{ docker_bin | default('docker') }}", "restart", "{{ _pbx_container }}"]
+  when: >-
+    ('rtpstart=' ~ (mikopbx_rtp_start | default(10000))) not in _pbx_loaded.stdout
+    or ((mikopbx_external_ip | default('') | length > 0)
+        and ('external_media_address=' ~ mikopbx_external_ip) not in _pbx_loaded.stdout)
+    or ((_pbx_is_mac | bool) and 'local_net=' in _pbx_loaded.stdout)
+  register: _pbx_restarted
+
+- name: "[pazny.mikopbx Post] Wait for the PBX after the restart"
+  ansible.builtin.uri:
+    url: "{{ _pbx_api }}/system:ping"
+    status_code: [200]
+    timeout: 5
+  register: _pbx_ping2
+  until: _pbx_ping2.status | default(0) | int == 200
+  retries: 30
+  delay: 5
+  when: _pbx_restarted is changed
+
+- name: "[pazny.mikopbx Post] Re-read what Asterisk loaded"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin | default('docker') }}"
+      - exec
+      - "{{ _pbx_container }}"
+      - sh
+      - -c
+      - "grep -h -E '^(rtpstart|rtpend|local_net|external_media_address)=' /etc/asterisk/rtp.conf /etc/asterisk/pjsip.conf"
+  register: _pbx_loaded
+  changed_when: false
+  when: _pbx_restarted is changed
+
+- name: "[pazny.mikopbx Post] Asterisk must run the declared media config (no silent green)"
+  ansible.builtin.assert:
+    that:
+      - ('rtpstart=' ~ (mikopbx_rtp_start | default(10000))) in _pbx_loaded.stdout
+      - ('rtpend=' ~ (mikopbx_rtp_end | default(10100))) in _pbx_loaded.stdout
+      - (mikopbx_external_ip | default('') | length == 0) or (('external_media_address=' ~ mikopbx_external_ip) in _pbx_loaded.stdout)
+      - not (_pbx_is_mac | bool) or ('local_net=' not in _pbx_loaded.stdout)
+    fail_msg: >-
+      Asterisk inside {{ _pbx_container }} loaded: {{ _pbx_loaded.stdout | default('') }}
+      — expected rtp {{ mikopbx_rtp_start | default(10000) }}-{{ mikopbx_rtp_end | default(10100) }},
+      external_media_address={{ mikopbx_external_ip }}{{ ' and no local_net (macOS)' if _pbx_is_mac | bool else '' }}.
+      Phones would get the container IP in SDP: SIP registers, calls have no audio.

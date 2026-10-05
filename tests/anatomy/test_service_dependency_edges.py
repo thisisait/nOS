@@ -107,6 +107,11 @@ REFUSED = {
     ("smtp_stalwart", "authentik"): "SSO — carried by the authentik provider chain",
     ("superset", "authentik"): "SSO — carried by the authentik provider chain",
     ("wing", "authentik"): "SSO — carried by the authentik provider chain",
+    ("nos_forum", "authentik"): "SSO — carried by the authentik provider chain",
+    # SpacetimeDB fetches Authentik's JWKS to verify nos-forum id_tokens (the
+    # extra_hosts hairpin is gated on install_nos_forum). The trust it extends
+    # is authentik:nos-forum's, already in the chain via service:nos_forum.
+    ("spacetimedb", "authentik"): "JWKS for nos-forum tokens — carried by authentik:nos-forum",
     # Handheld BFF calls loopback userinfo. No device-gateway-base plugin until
     # the operator fills Art-30, so there is no authentik:<slug> graph hop to
     # walk; tofu lives in terraform/authentik/device_gateway.tf, not the
@@ -134,10 +139,9 @@ PEER_SERVICE_PLUGINS = ("woodpecker-base", "portainer-base")
 
 #: Identifiers referenced in committed code and DEFINED IN NO config source.
 #: `install_redis` once sat here (why the OnlyOffice Redis block never
-#: rendered) — repaired to `redis_docker` in b87770a2/e6341230, so the two
-#: rows left are the sweep's remaining unrepaired finds.
+#: rendered) — repaired to `redis_docker` in b87770a2/e6341230, so the one
+#: row left is the sweep's remaining unrepaired find.
 PHANTOM_FLAGS = {
-    "freepbx_lan_access": ("roles/pazny.freepbx/templates/compose.yml.j2",),
     "sso_autologin_min_tier_2": (),
 }
 
@@ -472,7 +476,7 @@ def test_an_else_branch_is_the_branch_that_renders():
     and the equality gate announced "a live dependency has silently stopped
     rendering" about a template that is correct."""
     assert _reaches("""
-{% if freepbx_lan_access %}
+{% if phantom_lan_access %}
       DB_HOST: "{{ external_db_host }}"
 {% else %}
       DB_HOST: mariadb
@@ -482,7 +486,7 @@ def test_an_else_branch_is_the_branch_that_renders():
 
 def test_an_elif_chain_reaches_its_live_branch():
     assert _reaches("""
-{% if freepbx_lan_access %}
+{% if phantom_lan_access %}
       DB_HOST: elsewhere
 {% elif install_mariadb %}
       DB_HOST: mariadb
@@ -494,7 +498,7 @@ def test_an_or_guard_survives_one_unknown_operand():
     """`{% if phantom or install_mariadb %}` renders. The first probe called it
     dead because it unioned every identifier in the condition."""
     assert _reaches("""
-{% if freepbx_lan_access or install_mariadb %}
+{% if phantom_lan_access or install_mariadb %}
       DB_HOST: mariadb
 {% endif %}
 """, "mariadb")

@@ -12,12 +12,18 @@
 - slug: actor-attribution
   parent: state-surface
   track: platform
+- slug: agent-fallback-dead
+  parent: ''
+  track: platform
 - slug: agent-ff-onto-dev-helper
   parent: agent-landing-zero-command-operator
   track: platform
 - slug: agent-landing-zero-command-operator
   parent: ''
   track: platform
+- slug: agent-runtime-least-privilege
+  parent: workload-allowlist
+  track: security
 - slug: agent-scope-single-authority
   parent: ''
   track: platform
@@ -78,6 +84,9 @@
 - slug: bff-table-read-tier-gate
   parent: consulting-firm-deployment
   track: security
+- slug: blank-keeps-nextcloud-user-files
+  parent: managed-resources-manifest
+  track: platform
 - slug: brew-deps-deterministic-pin
   parent: ''
   track: platform
@@ -147,6 +156,9 @@
 - slug: consulting-uc-evals
   parent: consulting-firm-deployment
   track: agents
+- slug: containerized-core
+  parent: ''
+  track: platform
 - slug: converge-become
   parent: converge-speed
   track: platform
@@ -176,6 +188,21 @@
   track: platform
 - slug: converge-watch
   parent: converge-speed
+  track: platform
+- slug: core-agents-in-containers
+  parent: containerized-core
+  track: security
+- slug: core-host-bridge
+  parent: containerized-core
+  track: security
+- slug: core-organs-in-containers
+  parent: containerized-core
+  track: platform
+- slug: core-pulse-in-container
+  parent: containerized-core
+  track: platform
+- slug: core-rpi-profile
+  parent: containerized-core
   track: platform
 - slug: cortex
   parent: ''
@@ -213,6 +240,15 @@
 - slug: cortex-vendor-staleness
   parent: ''
   track: cortex
+- slug: csv-party-importer-leaks-id
+  parent: digest-review-remediation
+  track: security
+- slug: declare-playbook-started-daemons
+  parent: workload-allowlist
+  track: platform
+- slug: default-config-split
+  parent: ''
+  track: platform
 - slug: dependabot-alerts-are-mostly-a-fixture
   parent: ''
   track: security
@@ -321,6 +357,9 @@
 - slug: digest-doctrine
   parent: digest
   track: digest
+- slug: digest-drift-red
+  parent: workload-allowlist
+  track: security
 - slug: digest-review-remediation
   parent: digest
   track: platform
@@ -330,6 +369,9 @@
 - slug: digest-teardown
   parent: digest
   track: digest
+- slug: docker-sock-behind-proxy
+  parent: workload-allowlist
+  track: security
 - slug: docs-czech-and-fork-residue
   parent: ''
   track: platform
@@ -375,9 +417,33 @@
 - slug: dtt-task-types
   parent: dtt
   track: platform
+- slug: e2e-config-journeys
+  parent: e2e-lifecycle
+  track: release
+- slug: e2e-effect-probes
+  parent: e2e-lifecycle
+  track: release
+- slug: e2e-exit-audit
+  parent: e2e-lifecycle
+  track: release
+- slug: e2e-lifecycle
+  parent: ''
+  track: release
+- slug: e2e-macos-lifecycle
+  parent: e2e-lifecycle
+  track: release
+- slug: e2e-restore-drill
+  parent: e2e-lifecycle
+  track: release
 - slug: ears-app-bundle
-  parent: local-llm-voice
+  parent: local-llm
   track: platform
+- slug: ears-art30
+  parent: sec
+  track: security
+- slug: edge-claims-vs-traefik
+  parent: e2e-lifecycle
+  track: security
 - slug: egress-containment
   parent: digest
   track: digest
@@ -385,7 +451,7 @@
   parent: ''
   track: platform
 - slug: erasure-embeddings-provenance
-  parent: digest
+  parent: erasure-party-subject
   track: digest
 - slug: erasure-party-subject
   parent: digest
@@ -489,6 +555,9 @@
 - slug: fixtures-service-seed-scope
   parent: fixtures
   track: platform
+- slug: forum-token-in-access-log
+  parent: nos-forum
+  track: security
 - slug: foss-crm-and-wordpress-cms
   parent: consulting-firm-deployment
   track: platform
@@ -531,6 +600,15 @@
 - slug: genome-codegen-targets
   parent: v0-10-genome
   track: cortex
+- slug: geo-vector-tiles
+  parent: gis-property
+  track: platform
+- slug: geolibre-atlas-serve
+  parent: nos-atlas
+  track: platform
+- slug: gis-property
+  parent: ''
+  track: platform
 - slug: git-origin-watcher
   parent: loop-definition-model
   track: agents
@@ -549,6 +627,24 @@
 - slug: idea-surface-absorb
   parent: ''
   track: platform
+- slug: identities-from-install
+  parent: ''
+  track: release
+- slug: immune-apoptosis-regulator
+  parent: immune-system
+  track: security
+- slug: immune-cell-registry
+  parent: immune-system
+  track: security
+- slug: immune-first-crawler
+  parent: immune-system
+  track: security
+- slug: immune-heartbeats
+  parent: immune-system
+  track: security
+- slug: immune-system
+  parent: ''
+  track: security
 - slug: importer-isdoc
   parent: digest
   track: platform
@@ -568,7 +664,7 @@
   parent: consulting-firm-deployment
   track: platform
 - slug: invoice-structured-extractor
-  parent: invoice-vision-intake
+  parent: consulting-firm-deployment
   track: cortex
 - slug: invoice-vision-intake
   parent: consulting-firm-deployment
@@ -585,6 +681,9 @@
 - slug: jeff
   parent: agents
   track: agents
+- slug: jellyfin-sso-provider-missing
+  parent: identities-from-install
+  track: platform
 - slug: keap-anchor-merge-never-heals
   parent: ''
   track: cortex
@@ -594,6 +693,9 @@
 - slug: keap-embed-queue-lost-row
   parent: ''
   track: cortex
+- slug: keap-lint-disabled-refs
+  parent: ''
+  track: platform
 - slug: keap-row-vector-search
   parent: digest
   track: cortex
@@ -624,6 +726,9 @@
 - slug: ledger-payload-bound
   parent: ''
   track: platform
+- slug: local-decision-tev1
+  parent: local-llm
+  track: agents
 - slug: local-llm
   parent: ''
   track: cortex
@@ -751,7 +856,7 @@
   parent: ''
   track: cortex
 - slug: multi-firm-distribution-hardening
-  parent: ''
+  parent: agent-landing-zero-command-operator
   track: platform
 - slug: multitenant-client-isolation
   parent: ''
@@ -766,6 +871,15 @@
   parent: ''
   track: platform
 - slug: n8n-packs-never-activated
+  parent: ''
+  track: platform
+- slug: nextcloud-sso-state-lost
+  parent: e2e-lifecycle
+  track: platform
+- slug: nos-atlas
+  parent: gis-property
+  track: platform
+- slug: nos-forum
   parent: ''
   track: platform
 - slug: notify-body-is-prompt
@@ -844,13 +958,19 @@
   parent: ''
   track: platform
 - slug: oneshot-logprobs-for-field-confidence
-  parent: local-vision-model-7b
+  parent: consulting-firm-deployment
   track: agents
+- slug: operator-session-threat-model
+  parent: ''
+  track: security
 - slug: organ-health-carries-a-version
   parent: ''
   track: platform
 - slug: organs-noun
   parent: ''
+  track: platform
+- slug: orphan-extension-exclusion
+  parent: workload-allowlist
   track: platform
 - slug: party-ares-verify
   parent: digest
@@ -859,7 +979,7 @@
   parent: consulting-firm-deployment
   track: platform
 - slug: party-merge
-  parent: digest
+  parent: party-identity-fixture-vs-resolver
   track: digest
 - slug: party-onboarding-from-invoice
   parent: consulting-firm-deployment
@@ -879,6 +999,9 @@
 - slug: pipeline-exercise-loop-prompt
   parent: ''
   track: agents
+- slug: pipeline-exercise-verdicts
+  parent: ''
+  track: platform
 - slug: planes
   parent: ''
   track: agents
@@ -966,14 +1089,26 @@
 - slug: plat-v07
   parent: plat
   track: platform
+- slug: portable-ssd-offline-replication
+  parent: ''
+  track: platform
 - slug: post-start-silent-green-sweep
   parent: ''
   track: platform
+- slug: pr-threat-review-agent
+  parent: workload-allowlist
+  track: security
 - slug: praxis-pack
   parent: backoffice-organ
   track: platform
+- slug: prewipe-fresh-keap-dump
+  parent: backup-restic-store
+  track: platform
 - slug: profile-builder
   parent: ''
+  track: platform
+- slug: profile-builder-v3
+  parent: profile-builder
   track: platform
 - slug: prom-rules-never-reload
   parent: ''
@@ -981,16 +1116,28 @@
 - slug: pulse-lineage
   parent: ''
   track: agents
+- slug: pulse-prefix-allowlist
+  parent: workload-allowlist
+  track: security
+- slug: qdrant-base-undispatched-actions
+  parent: plat
+  track: platform
 - slug: raw-archive-backup
   parent: digest
   track: digest
 - slug: raw-archive-store
   parent: digest
   track: digest
+- slug: red-status-reboot-required
+  parent: ''
+  track: security
 - slug: rel-011
   parent: ''
   track: release
 - slug: rel-013
+  parent: ''
+  track: release
+- slug: rel-015
   parent: ''
   track: release
 - slug: rem-queue-commit-256-260-261
@@ -1008,6 +1155,9 @@
 - slug: repos-importer
   parent: digest
   track: digest
+- slug: review-v015-followups
+  parent: ''
+  track: security
 - slug: rsi-days-after-blank
   parent: rsi-evals
   track: agents
@@ -1017,6 +1167,9 @@
 - slug: rsi-ops-loop
   parent: rsi-evals
   track: agents
+- slug: santa-monitor
+  parent: workload-allowlist
+  track: security
 - slug: scan-dispositions-sidecar
   parent: sec-queue-authorship
   track: security
@@ -1077,6 +1230,9 @@
 - slug: sec-transport
   parent: sec
   track: security
+- slug: sec-transport-enforce
+  parent: sec-transport
+  track: security
 - slug: sec-transport-hedgedoc
   parent: sec-transport
   track: security
@@ -1094,6 +1250,12 @@
   track: security
 - slug: sec-transport-redis
   parent: sec-transport
+  track: security
+- slug: sec-transport-study
+  parent: sec-transport
+  track: security
+- slug: secrets-at-rest
+  parent: ''
   track: security
 - slug: security-scan-staleness-missed-a-live-critical
   parent: ''
@@ -1129,7 +1291,7 @@
   parent: ''
   track: platform
 - slug: ssot-article-schema
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: platform
 - slug: ssot-cite-adopters-or-amend
   parent: ''
@@ -1138,28 +1300,28 @@
   parent: ssot-index
   track: platform
 - slug: ssot-index
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: platform
 - slug: ssot-organs-genome
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: platform
 - slug: ssot-recite-doctrine
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: platform
 - slug: ssot-repair-companion-headings
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: platform
 - slug: ssot-retrieval-benchmark
-  parent: ssot-index
+  parent: ssot-cite-adopters-or-amend
   track: agents
 - slug: ssot-systems-cite
   parent: ssot-index
   track: platform
 - slug: ssot-tenant-prefix
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: platform
 - slug: ssot-vector
-  parent: wave-small-ssot
+  parent: ssot-cite-adopters-or-amend
   track: cortex
 - slug: stalwart-never-left-bootstrap
   parent: ''
@@ -1173,6 +1335,9 @@
 - slug: swarm-2026-09-15
   parent: plat
   track: platform
+- slug: synthetic-identities-apart
+  parent: ''
+  track: platform
 - slug: tables
   parent: ''
   track: cortex
@@ -1182,6 +1347,12 @@
 - slug: tester-hardware-readiness
   parent: consulting-firm-deployment
   track: release
+- slug: tileserver-serves-nothing
+  parent: gis-property
+  track: platform
+- slug: tls-modern-never-applied
+  parent: sec
+  track: security
 - slug: uc-approve-held-invoice
   parent: consulting-firm-deployment
   track: digest
@@ -1221,6 +1392,9 @@
 - slug: uc-vision-read-invoice
   parent: consulting-firm-deployment
   track: cortex
+- slug: undeclared-status
+  parent: workload-allowlist
+  track: security
 - slug: v0-1
   parent: ''
   track: release
@@ -1317,6 +1491,9 @@
 - slug: wet-test-gate-before-autodeploy
   parent: agent-landing-zero-command-operator
   track: platform
+- slug: wing-db-ro-open-needs-shm
+  parent: ''
+  track: platform
 - slug: wing-events-chain-aware-retention
   parent: ''
   track: platform
@@ -1347,3 +1524,6 @@
 - slug: workflow-build-fanout-verdict
   parent: ''
   track: platform
+- slug: workload-allowlist
+  parent: ''
+  track: security

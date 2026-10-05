@@ -7,5 +7,5 @@
 - name: Restart woodpecker
   ansible.builtin.shell: >
     {{ docker_bin }} compose -p devops
-    restart woodpecker-server woodpecker-agent
+    restart woodpecker-socket-proxy woodpecker-server woodpecker-agent
   failed_when: false

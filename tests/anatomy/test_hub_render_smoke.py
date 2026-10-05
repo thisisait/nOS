@@ -19,6 +19,9 @@ import subprocess
 
 import pytest
 
+# Read-only probes of the live Wing (token from the plist): the offline boundary is lifted for this file.
+pytestmark = pytest.mark.live
+
 
 def _edge_token() -> str | None:
     """The deployed daemon's WING_EDGE_TOKEN (env or operator plist fallback)."""

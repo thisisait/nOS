@@ -10,10 +10,12 @@ services:
   watchtower:
     image: {{ watchtower_image | default('nickfedor/watchtower:1.16.1') }}
     restart: unless-stopped
+    depends_on:
+      - watchtower-socket-proxy
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - {{ watchtower_data_dir }}:/data
     environment:
+      DOCKER_HOST: "tcp://watchtower-socket-proxy:2375"
       WATCHTOWER_SCHEDULE: "{{ watchtower_schedule | default('0 30 4 * * *') }}"
 {% if watchtower_mode == 'notify' %}
       WATCHTOWER_MONITOR_ONLY: "true"
@@ -59,6 +61,7 @@ services:
         {{ '{{- end }}' }}
     networks:
       - iiab_net
+      - watchtower_sock
     logging:
       driver: "json-file"
       options:
@@ -66,3 +69,42 @@ services:
         max-file: "3"
     mem_limit: {{ watchtower_mem_limit | default('128m') }}
     cpus: {{ watchtower_cpus | default('0.25') }}
+
+  # Watchtower's own Docker API gate. Pulling to compare digests is a POST in
+  # both modes, so POST is on; that plus CONTAINERS stays root-equivalent —
+  # the proxy only drops EXEC/BUILD/SWARM/SYSTEM/... (docker-sock-behind-proxy).
+  watchtower-socket-proxy:
+    image: tecnativa/docker-socket-proxy:{{ docker_socket_proxy_version }}
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+{% if not (nos_kernel_ipv6 | default(true) | bool) %}
+      DISABLE_IPV6: 1
+{% endif %}
+      CONTAINERS: 1
+      IMAGES: 1
+      INFO: 1
+      POST: 1
+      EVENTS: 0
+{% if watchtower_mode != 'notify' %}
+      NETWORKS: 1                                              # re-attach on recreate
+{% endif %}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2375/_ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - watchtower_sock
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    mem_limit: 128m
+    cpus: "0.25"
+
+networks:
+  watchtower_sock:
+    internal: true

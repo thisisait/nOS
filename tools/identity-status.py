@@ -9,8 +9,11 @@ asked is UNKNOWN — never green.
 
 Declared sources (the repo):
   • nos_identities        default.config.yml (+ config.yml override) — humans
-                          and service accounts, per-realm membership; an
-                          entry whose `enabled_by` toggle is off is left out
+                          and service accounts, per-realm membership
+  • nos_synthetic_identities  profiles/test-users.yml — the test personas,
+                          kind synthetic, declared only while
+                          nos_test_users_enabled; off, a realm account of
+                          theirs is LINGERING (retired by `nos -e retire_synthetic=true`)
   • nos_extra_identities  config.yml — the operator's own people (realm authentik)
   • authentik_agent_clients — machine OIDC clients (counted, not re-typed)
   • Bone loopauth.IDENTITIES — the loop's token identities (counted)
@@ -39,6 +42,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SECRETS = Path.home() / ".nos/secrets.yml"
+sys.path.insert(0, str(REPO / "tools"))
+from nos_identity import SYNTHETIC_FLAG, synthetic_identities  # noqa: E402
 
 OK, MISSING, UNDECLARED, UNKNOWN = "ok", "MISSING", "UNDECLARED", "?"
 REALMS = ("authentik", "gitea", "woodpecker")
@@ -71,13 +76,14 @@ def _resolve(value: str, ctx: dict) -> str:
         return str(value)
 
 
-def declared_roster() -> tuple[list[dict], dict]:
-    base = _yaml(REPO / "default.config.yml")
-    # credentials.yml joins the merge for TOKEN lookup only (loop-review.py
-    # precedent); config.yml wins last, as in the playbook's vars_files order.
-    creds = _yaml(REPO / "credentials.yml")
-    over = _yaml(REPO / "config.yml")
-    merged = {**base, **creds, **over}
+def declared_roster(merged: dict | None = None) -> tuple[list[dict], dict]:
+    if merged is None:
+        base = _yaml(REPO / "default.config.yml")
+        # credentials.yml joins the merge for TOKEN lookup only (loop-review.py
+        # precedent); config.yml wins last, as in the playbook's vars_files order.
+        creds = _yaml(REPO / "credentials.yml")
+        over = _yaml(REPO / "config.yml")
+        merged = {**base, **creds, **over}
     ctx = {
         "ansible_facts": {"user_id": getpass.getuser()},
         "tenant_domain": merged.get("tenant_domain", "dev.local"),
@@ -90,8 +96,11 @@ def declared_roster() -> tuple[list[dict], dict]:
         merged.get("nos_primary_admin", "{{ ansible_facts['user_id'] }}"), ctx
     )
     roster = []
-    for entry in merged.get("nos_identities", []) or []:
-        if isinstance(entry, dict) and entry.get("name") and enabled(entry, merged, ctx):
+    declared = list(merged.get("nos_identities", []) or [])
+    if _on(merged, SYNTHETIC_FLAG, ctx):
+        declared += synthetic_identities(merged)
+    for entry in declared:
+        if isinstance(entry, dict) and entry.get("name"):
             roster.append({**entry, "name": _resolve(entry["name"], ctx)})
     # The operator's extra people: Authentik users the blueprint creates, kind user.
     for entry in merged.get("nos_extra_identities", []) or []:
@@ -100,13 +109,17 @@ def declared_roster() -> tuple[list[dict], dict]:
     return roster, merged
 
 
-def enabled(entry: dict, merged: dict, ctx: dict) -> bool:
-    """An entry gated by `enabled_by` is declared only while that toggle
-    resolves true — off, its leftover realm account reads UNDECLARED."""
-    gate = entry.get("enabled_by")
-    if not gate:
-        return True
-    return _resolve(merged.get(gate, False), ctx).strip().lower() in ("true", "yes", "1", "on")
+def _on(merged: dict, flag: str, ctx: dict) -> bool:
+    return _resolve(merged.get(flag, False), ctx).strip().lower() in ("true", "yes", "1", "on")
+
+
+def lingering(merged: dict, held: list[str]) -> str:
+    """Synthetic accounts a realm still holds while their switch is off: not
+    UNDECLARED people, retired by `nos -e retire_synthetic=true`."""
+    if _on(merged, SYNTHETIC_FLAG, {}):
+        return ""
+    names = sorted({i["name"] for i in synthetic_identities(merged)} & set(held))
+    return f"synthetic, lingering (`nos -e retire_synthetic=true` retires them): {', '.join(names)}" if names else ""
 
 
 def _port(merged: dict, key: str, default: int) -> int:
@@ -279,7 +292,11 @@ def main() -> int:
             print(f"? {realm:<11} unreadable (no token or no answer) — "
                   "accounts UNKNOWN, not assumed fine")
             continue
-        extra = sorted(set(filter(None, held)) - declared_names)
+        linger = lingering(merged, held)
+        if linger:
+            print(f"! {realm:<11} {linger}")
+        extra = sorted(set(filter(None, held)) - declared_names
+                       - {i["name"] for i in synthetic_identities(merged)})
         if extra:
             print(f"! {realm:<11} {UNDECLARED}: {', '.join(extra)} — "
                   "present in the realm, absent from nos_identities")

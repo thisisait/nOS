@@ -78,7 +78,7 @@ def detail(row, data):
             "BROKEN": "check ~/ears/log/launchd.err.log — the process stopped writing",
             "UNHEARD": "say the wake phrase; if it still misses, ears-listen --listen --verbose prints what it wrote",
         }.get(row.get("state"), "listening"),
-        "transcripts": "~/ears/turns/*.jsonl · pruned by the listener at the horizon",
+        "transcripts": "none by default; with ears_keep_transcripts: true → ~/ears/turns/*.jsonl, pruned by the listener at the horizon",
         "settings": "seeded by pazny.keap from state/fixtures/caddy.seed.yml",
         "sessions": "written by the caddy's runs; empty until the first one",
         "ear": "parakeet lives in ~/ears/venv — installed by a converge, probed there",

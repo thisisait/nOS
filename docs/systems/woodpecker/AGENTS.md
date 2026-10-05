@@ -13,7 +13,7 @@
 - API base (loopback): `http://127.0.0.1:8060/api/`
 - Auth: `Authorization: Bearer <woodpecker_api_token>` — an OAuth-derived PAT that does **not** exist until the operator has logged in once via Gitea OAuth2. On a fresh blank, API actions are skipped gracefully.
 - Forge: Gitea (peer service). Repos are discovered via OAuth2 but each is dormant until explicitly activated.
-- Agent runs pipeline steps in Docker via the mounted `/var/run/docker.sock`.
+- Agent runs pipeline steps in Docker via its own `woodpecker-socket-proxy` (`DOCKER_HOST=tcp://woodpecker-socket-proxy:2375`); it never mounts `/var/run/docker.sock`.
 
 ### Capabilities
 

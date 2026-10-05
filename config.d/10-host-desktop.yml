@@ -1,0 +1,187 @@
+---
+# ==============================================================================
+# config.d/10-host-desktop.yml — the macOS host as a desktop: App Store apps,
+# dotfiles, Finder/Dock/keyboard defaults, Sublime, shell extras, SSH/Samba/VNC.
+#
+# One of the default layers (config.d/*.yml in order, then default.config.yml;
+# the set is tools/nos_identity.default_layers and main.yml vars_files). Every
+# variable is declared in exactly one of them. config.yml still overrides.
+# ==============================================================================
+
+# ==============================================================================
+# MAC APP STORE
+# Requires install_mas_apps: true + App Store login (mas login).
+# Each app is [id, name] — find the ID in the URL appstore.com/.../id<ID>.
+# ==============================================================================
+mas_installed_apps: []
+#  - { id: 1351639930, name: "Gifski" }             # GIF encoder (ffmpeg wrapper)
+#  - { id: 931571202,  name: "QuickShade" }         # Dimmer for external monitors
+#  - { id: 1355679052, name: "Dropover" }           # Drag & drop shelf buffer
+#  - { id: 1452453066, name: "Hidden Bar" }         # Alt: use the hiddenbar cask (above)
+mas_email: ""
+mas_password: ""
+
+# ==============================================================================
+# DOTFILES
+# ==============================================================================
+
+dotfiles_repo: https://github.com/geerlingguy/dotfiles.git
+dotfiles_repo_accept_hostkey: true
+dotfiles_repo_local_destination: ~/Development/GitHub/dotfiles
+dotfiles_repo_version: master
+dotfiles_files:
+  - .zshrc
+  - .gitignore
+  - .inputrc
+  - .osx
+  - .vimrc
+
+# ==============================================================================
+# macOS DEFAULTS (.osx script)
+# ==============================================================================
+
+osx_script: "~/.osx --no-restart"
+
+sudoers_custom_config: ""
+# sudoers_custom_config: |
+#   %admin ALL=(ALL) NOPASSWD: ALL
+
+# ==============================================================================
+# macOS EXTENDED SETTINGS (configure_macos_defaults)
+# Automates everything from "Manual settings to automate someday" + developer defaults
+# ==============================================================================
+
+# Defer GUI restarts: apply Finder/Dock settings but DON'T killall mid-run (a
+# killall flickers the GUI and on a heavy host can drop the IDE/session); false
+# = legacy immediate restart. Restart Finder/Dock out-of-band or log out to apply.
+defer_gui_restarts: true
+
+# ── Finder ────────────────────────────────────────────────────────────────────
+macos_finder_show_hidden_files: true          # Show hidden files (Cmd+Shift+.)
+macos_finder_show_extensions: true           # Show file extensions
+macos_finder_show_path_bar: true             # Show path bar at the bottom
+macos_finder_show_status_bar: true           # Show status bar at the bottom
+macos_finder_disable_desktop_click: true     # Disable click-to-show-desktop (Stage Manager)
+macos_finder_default_search_scope: "SCcf"   # Search in current folder (SCcf) / computer (SCev)
+macos_finder_show_posix_path_title: false    # Show POSIX path in title bar
+
+# ── Keyboard ──────────────────────────────────────────────────────────────────
+macos_keyboard_repeat_rate: 2        # 0=fastest ... 120=slowest (2 = Fast)
+macos_keyboard_repeat_delay: 15      # 0=shortest ... 120=longest (15 = Short)
+macos_keyboard_press_hold: false     # false = key repeat (not accent menu)
+# Caps Lock → Esc: CANNOT be fully automated (HW-specific IOKit), see README
+
+# ── Accessibility ─────────────────────────────────────────────────────────────
+macos_reduce_transparency: true      # Reduce transparency (performance)
+macos_reduce_motion: false           # Reduce motion of animations
+
+# ── Screenshot ────────────────────────────────────────────────────────────────
+macos_screenshot_location: "~/Desktop"   # Where to save screenshots
+macos_screenshot_format: "png"           # png | jpg | pdf | tiff
+
+# ── Dock ──────────────────────────────────────────────────────────────────────
+macos_dock_autohide: true            # Automatically hide the Dock
+macos_dock_show_recents: false       # Do not show recent applications
+macos_dock_tilesize: 48              # Icon size (pixels)
+macos_dock_minimize_effect: "scale"  # genie | scale
+
+# ── Safari (developer) ────────────────────────────────────────────────────────
+macos_safari_show_full_url: true          # Show full URL
+macos_safari_developer_menu: true         # Enable Developer menu
+# Note: Userscripts (Return YouTube Dislike) must be installed manually
+
+# ── Terminal ──────────────────────────────────────────────────────────────────
+macos_terminal_secure_keyboard: true  # Secure keyboard entry
+
+# ── System ────────────────────────────────────────────────────────────────────
+macos_computer_name: ""               # NetBIOS computer name; empty = use ansible_hostname
+# Full Disk Access for Terminal: CANNOT be automated (SIP protected)
+# The installer will ask for it on first run
+
+# ==============================================================================
+# SYSTEM SERVICES
+# ==============================================================================
+
+# SSH
+ssh_port: 22
+ssh_allow_groups: "admin staff"   # Groups with SSH access
+ssh_password_auth: true           # true = password + keys; false = keys only (after ssh-copy-id)
+
+# Samba / SMB
+samba_workgroup: "WORKGROUP"
+samba_shares:
+  - name: "projects"
+    path: "{{ ansible_facts['env']['HOME'] }}/projects"
+    comment: "{{ ansible_facts['user_id'] }} projects"
+    browseable: true
+    writable: true
+
+# VNC
+vnc_password: "{{ nos_derived_secrets.vnc }}"
+
+# ==============================================================================
+# DOCK
+# ==============================================================================
+
+dockitems_remove: []
+dockitems_persist: []
+
+# ==============================================================================
+# SUBLIME TEXT
+# ==============================================================================
+
+sublime_base_path: "~/Library/Application Support/Sublime Text"
+sublime_config_path: "Packages/User"
+sublime_package_control:
+  - "DocBlockr"
+  - "Dockerfile Syntax Highlighting"
+  - "FileDiffs"
+  - "GitHub Flavored Markdown Preview"
+  - "Jinja2"
+  - "Package Control"
+  - "Pretty JSON"
+  - "SublimeLinter"
+  - "SublimeLinter-contrib-yamllint"
+  - "Theme - Cobalt2"
+  - "TrailingSpaces"
+  - "WordingStatus"
+
+# ==============================================================================
+# SHELL EXTRAS – Starship + aliases
+# ==============================================================================
+
+# Starship preset: plain-text | bracketed-segments | gruvbox-rainbow | tokyo-night
+starship_preset: "gruvbox-rainbow"
+
+# Aliases added to ~/.zshrc
+shell_aliases:
+  - alias: ls
+    command: "eza --icons --group-directories-first"
+  - alias: ll
+    command: "eza -la --icons --git --group-directories-first"
+  - alias: lt
+    command: "eza --tree --icons --level=3"
+  - alias: cat
+    command: "bat --style=numbers,changes,header"
+  - alias: grep
+    command: "rg"
+  - alias: find
+    command: "fd"
+  - alias: du
+    command: "ncdu"
+  - alias: df
+    command: "duf"
+  - alias: lg
+    command: "lazygit"
+  - alias: nr
+    command: "npm run"
+  - alias: br
+    command: "bun run"
+
+# ── DEV TOOLCHAIN (Santa) ────────────────────────────────────────────────────
+# The operator's own interpreters and CLIs, under $HOME. Santa reports them as
+# the dev toolchain — neither nOS nor a stranger. Relative to $HOME.
+santa_dev_toolchain_trees:
+  - .pyenv/versions/
+  - .nvm/versions/
+  - .local/share/claude/versions/

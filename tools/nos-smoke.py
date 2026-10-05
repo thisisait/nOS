@@ -48,7 +48,7 @@ except ImportError:
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import resolve_flag  # noqa: E402
+from nos_identity import default_layers, resolve_flag  # noqa: E402
 
 # Lazy ANSI colors — disabled when stdout isn't a TTY.
 _TTY = sys.stdout.isatty()
@@ -883,7 +883,7 @@ def load_vars(host_alias: str | None = None, tenant_domain: str | None = None,
     nos-smoke and tools/e2e-plan.py so the two never read two configs."""
     # ── Load Ansible-style variables ───────────────────────────────────────
     vars_dict = merge_config(
-        REPO / "default.config.yml",
+        *default_layers(),        # the domain files, then default.config.yml
         REPO / "config.yml",      # gitignored operator override
     )
     apply_runtime_estate(

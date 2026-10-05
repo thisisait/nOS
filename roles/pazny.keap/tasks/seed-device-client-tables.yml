@@ -8,7 +8,7 @@
 # seeder-written pair would be a device that never paired.
 #
 # Gated on install_device_gateway: a converge without the organ does not grow
-# its furniture. No plugin / Art-30 this slice — schema only.
+# its furniture. Schema only; retention rule in docs/compliance/devices.md.
 # =============================================================================
 
 - name: "[pazny.keap] Assemble the device-client DataTable (schema, no rows)"

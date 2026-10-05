@@ -63,7 +63,7 @@ FastAPI bridge running on the host. Two responsibilities:
    `clients/wing.py` SQLite seam.
 2. **Control-plane proxy.** Wing presenters delegate
    "do something stateful on the host" calls (read mkcert CA, run
-   `nos_authentik` blueprint sweep, query Qdrant) to Bone via the
+   `nos_authentik` blueprint sweep) to Bone via the
    `BoneClient.php` HTTP layer. Bone is allowed in the host's
    security context; Wing PHP isn't.
 

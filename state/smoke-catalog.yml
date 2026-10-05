@@ -113,6 +113,22 @@ smoke_endpoints:
     when: "install_qgis_server | default(false)"
     note: "QGIS Server root — 200 means FCGI listener is up"
 
+  # Atlas shows party parcels: an anonymous 200 here is a leak, not health.
+  # forward_auth answers 302 to Authentik (the probe stops there) in both modes.
+  - id: geolibre
+    url: "https://{{ geolibre_domain }}/"
+    expect: [302]
+    expect_strict: [302]
+    when: "install_geolibre | default(false)"
+    note: "atlas.<tenant> — forward_auth tier 3; 302 to Authentik proves the gate holds"
+
+  - id: martin
+    url: "https://{{ geolibre_domain }}/tiles/catalog"
+    expect: [302]
+    expect_strict: [302]
+    when: "install_martin | default(false) and install_geolibre | default(false)"
+    note: "atlas.<tenant>/tiles — martin rides the atlas gate (tier 3); a 200 here is party data in public"
+
   - id: openclaw
     url: "http://127.0.0.1:{{ openclaw_gateway_port | default(18789) }}/"
     expect: [200, 401, 403]

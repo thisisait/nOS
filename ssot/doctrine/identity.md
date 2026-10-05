@@ -44,6 +44,7 @@ each owning its channel, none copying another:
 | channel | declaration | credential shape |
 |---|---|---|
 | accounts (humans + service) | `nos_identities` in `default.config.yml` | realm-native login / SSO |
+| synthetic test personas | `nos_synthetic_identities` in `profiles/test-users.yml` (kind `synthetic`, switch `nos_test_users_enabled`; off = retired by `nos -e retire_synthetic=true`) | derived passwords, never a person |
 | machine OIDC clients | `authentik_agent_clients` in `default.config.yml` | `client_credentials` JWT (`docs/sso-and-attribution.md`) |
 | loop identities | `IDENTITIES` in `files/anatomy/bone/loopauth.py` | scoped bearer tokens (propose/judge/forget) |
 

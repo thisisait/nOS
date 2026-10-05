@@ -63,3 +63,6 @@ wing_pulse_retired_jobs:
   - "migration-author:promote-migration"
   # curator is parked contract-only: no pulse block declares this row.
   - "curator:curator-sweep"
+  # The ARES Pulse clock: the n8n pack runs its own schedule now (2026-10-02).
+  - "ares-verify:registry-daily"
+  - "ares-verify:registry-new"

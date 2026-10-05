@@ -2,7 +2,69 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.13-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.14-beta`.
+
+---
+
+## v0.15-beta (2026-10-01 … 2026-10-04)
+
+> **Only what was declared may run — and the estate starts watching itself.**
+> 117 commits since `v0.14-beta` (516 files, +22.5k/−5.8k). Still `-beta`.
+> Anatomy suite 7085 passed; live E2E 348/349 (Jellyfin SSO, blocked on the
+> planned blank); CI green on `dev`. A Fable pre-release review found nine
+> pre-cut defects; all nine are fixed with gates that went red first.
+
+### Workload allow-list (only declared workloads run)
+- Orphan compose extensions are left out of `up` and named (iiab had refused
+  22 healthy services over one missing base fragment).
+- Pulse runs only named binaries and scripts from declared trees; job env is
+  an allow-list; registering a job needs the new `pulse.write` scope, which
+  no agent token can hold.
+- `docker.sock` only behind per-consumer socket proxies (Watchtower,
+  Woodpecker agent, cAdvisor), each with the minimal API sections.
+- New readers: `undeclared-status` (launchd, ports, cron nobody declared),
+  `digest-status` (an image that changed without a converge is red),
+  `santa-status` (Santa in Monitor mode; the dev toolchain is its own set).
+- Daemons the playbook starts (openclaw gateway, Ollama, Alloy, dnsmasq) are
+  declared once; they stop only when switched off in the config on disk.
+
+### The session as attacker
+- Doctrine `session-threat-model`: the assistant session is the largest
+  attack surface; the same-user ceiling is stated, monthly review is data.
+- `tools/prepush-score.py` runs inside `nos-push`: deterministic signals with
+  file:line, a local model's per-aspect score beside them (UNAVAILABLE, never a
+  fake number), the checker's own hash.
+- Doctrine `immune-system`: every indicator is a cell (heartbeat, lifespan,
+  DNA); CodeRabbit reads `docs/review/threat-checklist.md` (six sections).
+- Agents can run as a non-admin `nos-agent` user (off by default) that holds
+  only its own token and cannot read `~/.nos`.
+
+### Maps, GIS and the atlas
+- Offline CZ basemap built with Planetiler; PostGIS on the PostgreSQL pin;
+  monthly ČÚZK loader (2.2M parcels, 343k buildings, RÚIAN) and party sites.
+- GeoLibre with the `nos-atlas` plugin at `atlas.<tenant>` (KEAP as a planet,
+  the estate as an island of factories), layer catalog of keyless ČÚZK WMS,
+  an hourly refresh job, martin vector tiles behind the atlas gate.
+
+### Also
+- nos-forum wired (AGPL, SvelteKit + SpacetimeDB, Authentik SSO); MikoPBX
+  replaces FreePBX (default off); Qdrant retired (KEAP libSQL is the store).
+- ears keeps no transcripts by default; Art-30 rows for ears and the device
+  gateway; synthetic test users live apart from real accounts and retire only
+  with `-e retire_synthetic=true`.
+- `config.d/` begins the split of `default.config.yml` (first domain landed).
+- Backups skip a switched-off service's dir only when it is absent; no wipe
+  without a reachable restic survivor.
+
+### Security
+- GitLab 18.11.12 (REM-264); redis auth leaf rotated; Cloudflare origin-pull
+  mTLS door; the forum's WebSocket token kept out of the access log.
+
+### Known open
+- Jellyfin SSO waits for the planned blank; ~30 review follow-ups
+  (`review-v015-followups`); `default.config.yml` split continues domain by
+  domain; the session under its own user / containerized core are roadmap
+  epics (`containerized-core`).
 
 ---
 

@@ -63,6 +63,9 @@ sequence:
     user: www-data
     cmd: php occ config:system:set allow_local_remote_servers --value=true --type=boolean
 
+  # Groups from the nos_roles claim (tasks/nos-roles.yml): a tier-1 person
+  # joins Nextcloud's own "admin" group; the whitelist admits only those four
+  # values, so a claim cannot mint any other group (e2e probe, 2026-10-01).
   - id: register_authentik_provider
     when: >
       _nc_running.state == 'running'
@@ -80,6 +83,9 @@ sequence:
       --mapping-uid="preferred_username"
       --mapping-email="email"
       --mapping-display-name="name"
+      --group-provisioning=1
+      --mapping-groups=nos_roles
+      --group-whitelist-regex="^(admin|manager|user|guest)$"
     notify: Restart nextcloud
 
   - id: reconverge_provider_secret
@@ -94,4 +100,7 @@ sequence:
     cmd: >
       php occ user_oidc:provider authentik
       --clientsecret="{{ nos_derived_secrets.oidc_nextcloud }}"
+      --group-provisioning=1
+      --mapping-groups=nos_roles
+      --group-whitelist-regex="^(admin|manager|user|guest)$"
     notify: Restart nextcloud

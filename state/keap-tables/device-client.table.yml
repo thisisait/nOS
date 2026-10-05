@@ -25,3 +25,4 @@ schema:
     - { key: last_seen,   label: "Last seen",   kind: text,   role: attribute }
     - { key: status,      label: "Status",      kind: select, role: dimension, concept: lifecycle.status,
         options: ["active", "revoked"] }
+    - { key: revoked_at,  label: "Revoked at",  kind: text,   role: attribute }

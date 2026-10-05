@@ -29,7 +29,7 @@ from urllib.parse import urljoin, urlparse
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from nos_sso import REACHED, login, walk  # noqa: E402
+from nos_sso import REACHED, login, loopback_for_unresolvable, walk  # noqa: E402
 
 
 def _plan() -> list[dict]:
@@ -76,6 +76,8 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     identities = json.loads(os.environ.get("NOS_FIRST_LOGIN", "[]"))
     verify = not a.insecure
+    if a.insecure:            # a local TLD: no DNS on Linux, the edge is on loopback
+        loopback_for_unresolvable()
     apps = [r for r in _plan() if r["mode"] in ("native_oidc", "header_oidc")]
     for r in apps:
         if not r.get("first_login"):

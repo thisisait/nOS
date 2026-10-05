@@ -346,6 +346,24 @@ services:
     oidc: proxy
     rbac_tier: 4
 
+  - id: nos_forum
+    category: collaboration
+    stack: iiab
+    install_flag: install_nos_forum
+    version_var: nos_forum_version
+    version_source: docker_image
+    image: ghcr.io/pazny/nos-forum-web
+    domain_var: nos_forum_domain
+    port_var: nos_forum_port
+    data_path_var: nos_forum_data_dir
+    oidc: native
+    rbac_tier: 4
+    health_check:
+      type: http
+      url_template: "http://127.0.0.1:{port}/health"
+      expect_status: 200
+      timeout_sec: 5
+
   - id: offline_maps
     category: gis
     stack: iiab
@@ -358,6 +376,39 @@ services:
     domain_var: maps_domain
     port_var: maps_port
     data_path_var: maps_data_dir
+
+  - id: geolibre
+    category: gis
+    stack: iiab
+    install_flag: install_geolibre
+    version_var: geolibre_version
+    version_source: docker_image
+    image: ghcr.io/opengeos/geolibre
+    domain_var: geolibre_domain
+    port_var: geolibre_port
+    data_path_var: geolibre_data_dir
+    oidc: proxy
+    rbac_tier: 3
+    health_check:
+      type: http
+      url_template: "http://127.0.0.1:{port}/healthz"
+      expect_status: 200
+      timeout_sec: 5
+
+  # No domain/port: martin is reached only via the gated atlas.<tenant>/tiles lane.
+  - id: martin
+    category: gis
+    stack: iiab
+    install_flag: install_martin
+    version_var: martin_version
+    version_source: docker_image
+    image: ghcr.io/maplibre/martin
+    container_name: iiab-martin-1
+    health_check:
+      type: exec
+      command: docker exec iiab-martin-1 wget -q --spider http://127.0.0.1:3000/health
+      expect_rc: 0
+      timeout_sec: 10
 
   - id: jellyfin
     category: media
@@ -760,16 +811,23 @@ services:
     data_path_var: onlyoffice_data_dir
 
   # --------------------------------------------------------------- voip stack
-  - id: freepbx
+  - id: mikopbx
     category: pbx
     stack: voip
-    install_flag: install_freepbx
-    version_var: freepbx_version
+    install_flag: install_mikopbx
+    version_var: mikopbx_version
     version_source: docker_image
-    image: tiredofit/freepbx
-    port_var: freepbx_port
-    data_path_var: freepbx_data_dir
-    oidc: none
+    image: mikopbx/mikopbx
+    domain_var: mikopbx_domain
+    port_var: mikopbx_port
+    data_path_var: mikopbx_data_dir
+    health_check:
+      type: http
+      url_template: "http://localhost:{{ mikopbx_port }}/pbxcore/api/v3/system:ping"
+      expect_status: 200
+      timeout_sec: 10
+    oidc: proxy                             # Authentik forward-auth at Traefik; PBX admin login stays behind it
+    rbac_tier: 1
 
   # --------------------------------------------------------- engineering stack
   - id: qgis_server
@@ -822,18 +880,6 @@ services:
     domain_var: influxdb_domain
     port_var: influxdb_port
     data_path_var: influxdb_data_dir
-
-  # Tier-2 manifest app (apps/qdrant.yml): apps_runner merges every Tier-2
-  # service into apps/overrides/auto.yml, so this row owns no fragment stem.
-  - id: qdrant
-    category: database
-    stack: apps
-    install_flag: install_qdrant
-    fragment: null
-    version_source: docker_image
-    image: qdrant/qdrant
-    container_name: qdrant
-    port_var: qdrant_port
 
   # ------------------------------------------------------- ai / gateway addons
   - id: mcp_gateway

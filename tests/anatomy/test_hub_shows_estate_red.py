@@ -46,6 +46,8 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 from _ledger_open import open_ledger_ro  # noqa: E402 — after REPO is known
 WING = os.environ.get("NOS_WING_URL", "http://127.0.0.1:9000")
+# Reads the live Wing + wing.db (read-only); the offline boundary is lifted for this file.
+pytestmark = pytest.mark.live
 
 
 def _secret(name: str) -> str:

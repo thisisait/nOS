@@ -57,7 +57,7 @@ def test_dnsmasq_handler_uses_plist_var():
     """The handler must bind the plist to a shell var, not hardcode it inline
     on the launchctl lines."""
     block = _dnsmasq_handler_block()
-    assert 'plist="/Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist"' in block, (
+    assert 'plist="/Library/LaunchDaemons/{{ dnsmasq_launchd_label }}.plist"' in block, (
         "dnsmasq handler must assign the plist path to a `plist=` shell var "
         "(matching the nginx/alloy defensive pattern)"
     )

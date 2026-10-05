@@ -53,7 +53,7 @@ import urllib.request
 
 KEAP = "http://127.0.0.1:8091"
 ROADMAP = "2d498264-bc9a-4324-9935-489e5e4d92f3"
-from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
+from keap_api import human_headers, paged  # noqa: E402 — sibling helper in tools/
 
 #: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once
 #: by keap_api). Without the secret every /api call here 401s since KEAP P1.
@@ -112,7 +112,7 @@ def main() -> int:
         _die(f"the table has no `{args.key}` column — nothing to key a row on")
     required = sorted(k for k, c in cols.items() if c.get("required"))
 
-    rows = _req("GET", f"{human}/rows?limit=500", HUMAN_HDR)
+    rows = paged(lambda u: _req("GET", u, HUMAN_HDR), f"{human}/rows")
     if not rows.get("success"):
         _die(f"cannot read rows — {rows.get('error')}")
     rows = rows["data"]["rows"]
@@ -171,7 +171,7 @@ def main() -> int:
     # a twin that did not land leaves the original in place and a visible
     # duplicate the next run reports.
     now_ids = {row["id"] for row in
-               _req("GET", f"{human}/rows?limit=500", HUMAN_HDR)["data"]["rows"]}
+               paged(lambda u: _req("GET", u, HUMAN_HDR), f"{human}/rows")["data"]["rows"]}
     removed, skipped = 0, 0
     for r in stale:
         key_val = str(r["values"].get(args.key))
@@ -190,7 +190,7 @@ def main() -> int:
         print(f"\n{skipped} row(s) NOT re-keyed — the agent door mints ids from "
               f"`slug`, not `{args.key}`. No original was lost.")
 
-    after = _req("GET", f"{human}/rows?limit=500", HUMAN_HDR)["data"]["rows"]
+    after = paged(lambda u: _req("GET", u, HUMAN_HDR), f"{human}/rows")["data"]["rows"]
     before_vals = sorted(json.dumps(r["values"], sort_keys=True) for r in rows)
     after_vals = sorted(json.dumps(r["values"], sort_keys=True) for r in after)
     mismatched = [r["id"] for r in after if r["id"] != str(r["values"].get(args.key))]

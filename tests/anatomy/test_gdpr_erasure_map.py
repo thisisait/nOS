@@ -21,7 +21,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 MAP_PATH = REPO / "state" / "gdpr-erasure-map.yml"
 PLUGINS_ROOT = REPO / "files" / "anatomy" / "plugins"
 APPS_DIR = REPO / "apps"
-APP_IDS_SKIPPED = {"app_qdrant"}
+APP_IDS_SKIPPED: set[str] = set()
 
 VALID_METHODS = {"authentik_api", "container_exec", "manual"}
 
@@ -76,7 +76,7 @@ def _inscope_expected() -> set[str]:
     """Every per-user-PII service that MUST carry an Art-17 erasure entry: gdpr
     plugins with authentik.mode in {native_oidc, header_oidc} plus the AT-proto
     (svc_bluesky-pds) + authentik anchors, plus every Tier-2 app gdpr record
-    except app_qdrant (residual svc_qdrant). Plugin forward_auth stays out of
+    (none skipped today). Plugin forward_auth stays out of
     scope; app forward_auth with a gdpr block is in scope."""
     ids = {"svc_authentik", "svc_bluesky-pds"}
     for f in PLUGINS_ROOT.glob("*/plugin.yml"):
@@ -108,10 +108,10 @@ def test_backend_store_residual_reach_documented():
     """Art-17 reach (Batch-3): the backend/residual stores that retain DERIVED
     subject data beyond per-service deletes each carry a manual entry, so the
     dry-run plan surfaces the full reach. Regression guard against the
-    'Redis/Qdrant/RustFS/wing.db/Loki entirely uncovered' gap the gov-readiness
+    'Redis/RustFS/wing.db/Loki entirely uncovered' gap the gov-readiness
     audit flagged."""
     entries = {e["id"]: e for e in _entries()}
-    for sid in ("svc_redis", "svc_qdrant", "svc_rustfs", "svc_wing", "svc_loki", "svc_tempo"):
+    for sid in ("svc_redis", "svc_rustfs", "svc_wing", "svc_loki", "svc_tempo"):
         assert sid in entries, f"backend-store reach entry missing: {sid}"
         assert entries[sid]["method"] == "manual", \
             f"{sid} must stay manual — its delete is broad/ambiguous, never auto-run per-subject"

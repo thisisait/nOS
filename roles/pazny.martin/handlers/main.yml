@@ -1,0 +1,6 @@
+---
+- name: Restart martin
+  ansible.builtin.shell: >
+    {{ docker_bin }} compose -p iiab
+    restart martin
+  failed_when: false

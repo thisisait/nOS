@@ -1,0 +1,40 @@
+#!/bin/bash
+# Rendered by pazny.mac.agent_user; runs AS {{ agents_user }} via /etc/sudoers.d/nos-agent.
+# Refuses when the operator's secrets are reachable, and owns the permission flags:
+# dontAsk + an allow-list instead of bypassPermissions (gate: test_agents_run_as_their_own_user).
+set -euo pipefail
+me="$(/usr/bin/id -un)"
+if [ "$me" != {{ agents_user | quote }} ]; then
+    echo "claude-as-agent: must run as {{ agents_user }}, not $me" >&2; exit 2
+fi
+for p in{% for p in agents_forbidden_paths %} {{ p | quote }}{% endfor %}; do
+    if [ -r "$p" ]; then
+        echo "claude-as-agent: REFUSING — $p is readable by $me" >&2; exit 2
+    fi
+done
+
+args=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --) break ;;
+        --permission-mode) shift; if [ $# -gt 0 ]; then shift; fi; continue ;;
+        --permission-mode=*) shift; continue ;;
+        --dangerously-skip-permissions|--allow-dangerously-skip-permissions|--allowedTools*|--allowed-tools*|--add-dir*|--settings*|--mcp-config*)
+            echo "claude-as-agent: REFUSING caller flag $1 — permissions are set here" >&2; exit 2 ;;
+    esac
+    args+=("$1"); shift
+done
+
+export HOME={{ agents_user_home | quote }}
+# Profiles say $WING_API_TOKEN; here it is the agent's own row or nothing.
+export WING_API_TOKEN="${NOS_AGENT_WING_TOKEN:-}"
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin
+export DISABLE_AUTOUPDATER=1
+if [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ] && [ -r "$HOME/.claude-oauth-token" ]; then
+    CLAUDE_CODE_OAUTH_TOKEN="$(cat "$HOME/.claude-oauth-token")"; export CLAUDE_CODE_OAUTH_TOKEN
+fi
+cd {{ agents_worktrees_dir | quote }}
+exec {{ (agents_libexec_dir ~ '/claude') | quote }} --permission-mode dontAsk \
+    --allowed-tools {{ agents_allowed_tools | join(',') | quote }} \
+    --add-dir {{ agents_worktrees_dir | quote }} \
+    ${args[@]+"${args[@]}"} "$@"

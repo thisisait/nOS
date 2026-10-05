@@ -68,11 +68,12 @@ def test_new_graph_nodes_are_withheld():
     assert '"daemon:eu.thisisait.nos.device-gateway": withheld' in text
 
 
-def test_no_plugin_until_art30():
-    assert not PLUGIN.exists(), (
-        "device-gateway-base plugin would need a gdpr.legal_basis — that is "
-        "an operator question (device-gdpr-art30), not an invented clause"
-    )
+def test_plugin_is_the_art30_row_not_an_oidc_client():
+    """The plugin exists for its gdpr block (2026-10-02); it must not mint a
+    second provider — device_gateway.tf owns the RFC 8628 public client."""
+    manifest = yaml.safe_load((PLUGIN / "plugin.yml").read_text(encoding="utf-8"))
+    assert manifest.get("gdpr", {}).get("legal_basis"), "device-gateway-base carries the Art-30 row"
+    assert "authentik" not in manifest, "no authentik: block — the tofu file is the client"
     registry = REGISTRY.read_text(encoding="utf-8")
     assert "device-gateway" not in registry and "device_gateway" not in registry, (
         "do not add this service to tofu-authentik-services.yml — that map "

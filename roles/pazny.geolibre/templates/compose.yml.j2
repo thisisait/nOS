@@ -1,0 +1,37 @@
+# pazny.geolibre — compose override fragment, merged into `docker compose -p iiab up`
+# (tasks/stacks/stack-up.yml). iiab_net is declared by the base iiab compose file.
+# GEOLIBRE_SHARE_URL=off: no project ever leaves the box for share.geolibre.app.
+
+services:
+  geolibre:
+    image: "{{ geolibre_image }}:{{ geolibre_version }}"
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ geolibre_port }}:80"
+    environment:
+      GEOLIBRE_SHARE_URL: "off"
+      # Read once at boot; the role restarts the container when it changes.
+      GEOLIBRE_SERVICES_FILE: /etc/geolibre/services.json
+    volumes:
+      - "{{ geolibre_data_dir }}/plugins/nos-atlas:/usr/share/nginx/html/plugins/nos-atlas:ro"
+      # A directory, not the file: a file bind keeps the old inode after a rename.
+      - "{{ geolibre_data_dir }}/catalog:/etc/geolibre:ro"
+      # Replaces the image's sw.js with one that unregisters itself (files/sw.js).
+      - "{{ geolibre_data_dir }}/sw.js:/usr/share/nginx/html/sw.js:ro"
+    # The image's own /healthz probe, declared so the strict health-wait sees it.
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1/healthz', timeout=4).status==200 else 1)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - iiab_net
+      - {{ stacks_shared_network }}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: {{ geolibre_mem_limit }}
+    cpus: {{ geolibre_cpus }}

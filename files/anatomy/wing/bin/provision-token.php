@@ -68,6 +68,14 @@ if ($deactivate ?? false) {
 	exit(0);
 }
 
+// pulse.write = registering a command the operator's Pulse runs. Only the
+// operator's own token holds it; an agent row asking for it is refused.
+if (in_array('pulse.write', array_map('trim', explode(',', (string) ($scopes ?? ''))), true)
+	&& $name !== 'ansible-provisioned') {
+	echo "pulse.write is reserved for ansible-provisioned, refused for '{$name}'\n";
+	exit(1);
+}
+
 $cortex = [$cortexVerbs ?? null, $cortexNamespaces ?? null, $cortexTenants ?? null];
 $given = count(array_filter($cortex, static fn ($v) => $v !== null && $v !== ''));
 if ($given > 0 && $given < 3) {

@@ -49,6 +49,14 @@ TABLE = REPO / "state/keap-tables/caddy.table.yml"
 WORDING = REPO / "files/anatomy/ears/wording.yml"
 
 
+def _ansible_env():
+    """jinja2 with the one Ansible filter these templates use."""
+    import jinja2
+    env = jinja2.Environment()
+    env.filters["bool"] = lambda v: str(v).strip().lower() in ("1", "true", "yes", "on")
+    return env
+
+
 def test_the_listener_selfcheck_passes():
     """Its own asserts, run — not merely present. Covers the turn state machine,
     the wake-phrase variants, and a real retention sweep on real files."""
@@ -73,23 +81,80 @@ def test_the_reader_probes_the_interpreter_the_listener_runs_on():
 
 
 def test_the_retention_horizon_is_declared_once():
-    """Role default and both agent Article-30 records — one number.
+    """Role defaults decide; ears-base and both agent Article-30 records follow.
 
-    Not a style rule: a retention horizon that disagrees with its register is a
-    compliance claim nobody can act on, and the estate already owns one that was
-    measured in days and could never fire. (The plist clause left with the
-    plist, 2026-09-02 — the launchd listener no longer exists to disagree.)"""
+    ears_keep_transcripts false (the default since 2026-10-03) means 0 —
+    transient — in every record; true means ears_retention_days. A retention
+    horizon that disagrees with its register is a compliance claim nobody can
+    act on, and the estate already owns one that was measured in days and
+    could never fire."""
     defaults = yaml.safe_load(DEFAULTS.read_text())
     horizon = defaults["ears_retention_days"]
     assert isinstance(horizon, int) and horizon > 0
+    assert defaults["ears_keep_transcripts"] is False, "the operator decided: nothing kept by default"
+    expected = horizon if defaults["ears_keep_transcripts"] else 0
 
-    for agent in ("jeff", "jeff-cloud"):   # the persona this estate ships
-        doc = yaml.safe_load((REPO / f"files/anatomy/agents/{agent}/agent.yml").read_text())
-        declared = doc["gdpr"]["retention_days"]
-        assert declared == horizon, (
-            f"{agent}/agent.yml declares retention_days: {declared} while the "
-            f"listener enforces {horizon} — the register is the thing an "
-            f"auditor reads, so it must be the thing that is true")
+    records = {agent: REPO / f"files/anatomy/agents/{agent}/agent.yml"
+               for agent in ("jeff", "jeff-cloud")}   # the persona this estate ships
+    records["ears-base"] = REPO / "files/anatomy/plugins/ears-base/plugin.yml"
+    for name, path in records.items():
+        declared = yaml.safe_load(path.read_text())["gdpr"]["retention_days"]
+        assert declared == expected, (
+            f"{name} declares retention_days: {declared} while the role default "
+            f"means {expected} — the register is the thing an auditor reads, so "
+            f"it must be the thing that is true")
+
+
+def _render_listener_env(tmp_path, **overrides) -> pathlib.Path:
+    import jinja2
+    tpl = _ansible_env().from_string((REPO / "roles/pazny.ears/templates/listener.env.j2").read_text())
+    env = tmp_path / "listener.env"
+    env.write_text(tpl.render({**yaml.safe_load(DEFAULTS.read_text()), **overrides}))
+    return env
+
+
+def _append_turn_under(home: pathlib.Path) -> subprocess.CompletedProcess:
+    """The real write path, in a fresh interpreter whose EARS_HOME is `home`."""
+    code = ("import importlib.util, time, sys\n"
+            f"spec = importlib.util.spec_from_file_location('ears', {str(LISTENER)!r})\n"
+            "m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\n"
+            "m._append_turn('hej jeffe test', time.time())\n"
+            "print(m.KEEP_TRANSCRIPTS)")
+    return subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                          env={"PATH": "/usr/bin:/bin", "EARS_HOME": str(home)}, timeout=60)
+
+
+def test_default_mode_writes_no_turn_file(tmp_path):
+    """Rendered role defaults → the listener's own write path → no file. Not
+    "written then pruned": the turns directory must never come to exist."""
+    env = _render_listener_env(tmp_path)
+    assert "EARS_KEEP_TRANSCRIPTS=0" in env.read_text(), "the role default must render off"
+    run = _append_turn_under(tmp_path)
+    assert run.returncode == 0, run.stderr
+    assert run.stdout.strip() == "False"
+    assert not (tmp_path / "turns").exists(), sorted((tmp_path / "turns").iterdir())
+
+
+def test_keep_mode_writes_the_turn_file(tmp_path):
+    env = _render_listener_env(tmp_path, ears_keep_transcripts=True)
+    assert "EARS_KEEP_TRANSCRIPTS=1" in env.read_text()
+    run = _append_turn_under(tmp_path)
+    assert run.returncode == 0 and run.stdout.strip() == "True", run.stderr
+    files = list((tmp_path / "turns").glob("turns-*.jsonl"))
+    assert len(files) == 1 and "hej jeffe test" in files[0].read_text()
+
+
+def test_the_listen_loop_goes_through_the_switch():
+    """The switch lives in _append_turn; the loop must still call it (a second
+    writer in the loop would bypass the decision)."""
+    import ast
+    tree = ast.parse(LISTENER.read_text())
+    loop = next(n for n in ast.walk(tree)
+                if isinstance(n, ast.FunctionDef) and n.name == "_run_loop")
+    calls = {ast.unparse(n.func) for n in ast.walk(loop) if isinstance(n, ast.Call)}
+    assert "_append_turn" in calls
+    assert not any(c.endswith(".write_text") for c in calls), (
+        f"the loop writes files on its own: {sorted(calls)}")
 
 
 def test_every_seeded_setting_is_a_declared_column_with_a_reader():

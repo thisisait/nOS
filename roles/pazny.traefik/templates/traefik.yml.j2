@@ -18,6 +18,13 @@ api:
 global:
   checkNewVersion: false
   sendAnonymousUsage: false
+{% if traefik_origin_pull_enabled | default(false) | bool %}
+
+# A host served on websecure-origin by routers with different TLS options would
+# otherwise fall back to `default` (no client cert) — fail-open. Strict disables it.
+core:
+  strictTLSOptions: true
+{% endif %}
 
 entryPoints:
   web:
@@ -67,6 +74,23 @@ entryPoints:
         allowEncodedSlash: false
         allowEncodedBackSlash: false
         allowEncodedNullCharacter: false
+{% if traefik_origin_pull_enabled | default(false) | bool %}
+  # Cloudflare origin-pull door (dynamic/origin-pull.yml.j2): websecure's hardening,
+  # minus the modern@file model — its routers name origin-pull@file themselves.
+  # test_origin_pull_is_a_second_door.py fails if this drifts from websecure.
+  websecure-origin:
+    address: ":8443"
+{% if traefik_forwarded_trusted_ips | default([]) | length > 0 %}
+    forwardedHeaders:
+      trustedIPs: {{ traefik_forwarded_trusted_ips | to_json }}
+{% endif %}
+    http:
+      aliasHeadersStrategy: delete
+      encodedCharacters:
+        allowEncodedSlash: false
+        allowEncodedBackSlash: false
+        allowEncodedNullCharacter: false
+{% endif %}
   # REM-194: a dedicated entry point that carries no ROUTERS (every router binds
   # `websecure`), so a peer container reaching :8080 gets a 404 on /api/*. It
   # serves two built-ins: /ping (see `ping:` below) and, since 2026-08-31,

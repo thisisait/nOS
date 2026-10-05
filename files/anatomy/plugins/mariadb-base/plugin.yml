@@ -85,3 +85,8 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+e2e_none: >-
+  no HTTP surface: post.yml creates databases and users inside the container,
+  readable only with the root password over the wire protocol; every consumer's
+  own probe (gitea, nextcloud, wordpress, ...) is the proof its database exists

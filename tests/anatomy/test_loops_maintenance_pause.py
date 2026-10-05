@@ -124,12 +124,12 @@ def test_a_paused_run_is_a_hold_not_a_failure(tmp_path):
     with sqlite3.connect(db) as seed:
         seed.execute("CREATE TABLE pulse_runs (job_id TEXT, fired_at TEXT, "
                      "exit_code INT, duration_ms INT, stdout_tail TEXT)")
-        seed.execute("CREATE TABLE pulse_jobs (id TEXT, findings_exit_codes TEXT)")
+        seed.execute("CREATE TABLE pulse_jobs (id TEXT, findings_exit_codes TEXT, removed_at TEXT)")
         seed.executemany("INSERT INTO pulse_runs VALUES (?,?,?,?,?)", [
             ("agent:surveyor", "2026-09-19T02:00:00+00:00", 3, 10, "PAUSED: loops paused"),
             ("broken:job", "2026-09-19T02:00:00+00:00", 1, 10, "ERROR: it broke"),
         ])
-        seed.executemany("INSERT INTO pulse_jobs VALUES (?,?)",
+        seed.executemany("INSERT INTO pulse_jobs (id, findings_exit_codes) VALUES (?,?)",
                          [("agent:surveyor", None), ("broken:job", None)])
 
     mod = _load_red(None)

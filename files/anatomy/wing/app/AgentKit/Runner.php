@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\AgentKit;
 
 use App\AgentKit\LLMClient\BindingDecision;
+use App\AgentKit\LLMClient\BindingRefused;
 use App\AgentKit\LLMClient\BindingResolver;
 use App\AgentKit\LLMClient\Factory as LLMFactory;
 use App\AgentKit\LLMClient\LLMClientInterface;
@@ -175,7 +176,7 @@ final class Runner
 	/** Providers a binding can steer — Factory refuses every other. */
 	private function isBindableUri(?string $uri): bool
 	{
-		return $uri !== null && (bool) preg_match('#^(anthropic|claude)-#', $uri);
+		return $uri !== null && (bool) preg_match('#^(anthropic|claude|openai|openclaw)-#', $uri);
 	}
 
 	/** Session ceilings, reset per run(). Null deadline = no session open. */
@@ -1365,24 +1366,15 @@ final class Runner
 		string $reason,
 		?\Throwable $cause,
 	): \App\AgentKit\LLMClient\LLMResponse {
-		// THE FALLBACK MUST NOT LEAVE THE DECLARED SERVING SET (2026-08-16).
-		// It is built UNBOUND, and that was safe only by accident: every agent's
-		// fallback happens to name `openclaw-*`, which Factory refuses to bind
-		// anyway. The day one names a bindable provider, a MiniMax-bound agent
-		// would fall back to the DEFAULT backend — answering from a party its own
-		// Article-30 record does not name, under this session's attribution, with
-		// nothing raised. Residency that a failure can silently revoke is a claim,
-		// not a property; so a bound session refuses rather than degrades.
-		if ($this->activeBinding !== null && $this->isBindableUri($agent->modelFallbackUri)) {
+		try {
+			$fallback = $this->fallbackClient($agent);
+		} catch (LLMPermanentError $e) {
+			// Both failures, or the record shows only the second one.
 			throw new LLMPermanentError(
-				"agent '{$agent->name}' is bound to backend "
-				. "'{$this->activeBinding->name}' and declares a bindable fallback "
-				. "('{$agent->modelFallbackUri}'), which would be served UNBOUND by "
-				. 'the default backend. Declare a fallback the binding cannot reach, '
-				. 'or none.'
+				$e->getMessage() . ' Primary failed (' . $reason . '): ' . ($cause?->getMessage() ?? 'no message'),
+				previous: $cause ?? $e,
 			);
 		}
-		$fallback = $this->llmFactory->fromUri($agent->modelFallbackUri);
 		$this->servedByUri = $fallback->identifier();
 		$ctx = $this->fallbackContext ?? [];
 
@@ -1395,6 +1387,7 @@ final class Runner
 				'reason' => $reason,
 				'primary' => $ctx['primary'] ?? $agent->modelPrimaryUri,
 				'fallback' => $this->servedByUri,
+				'fallback_backend' => $agent->fallbackBackendName,
 				// Verbatim, and unmatched by the classifier — this is the
 				// string a future rule would be written against.
 				'unmatched_message' => $cause?->getMessage(),
@@ -1411,6 +1404,40 @@ final class Runner
 			// less would make a truncated answer look like a shorter one.
 			$agent->maxOutputTokens,
 		);
+	}
+
+	/**
+	 * Build the fallback client — BOUND to `model.fallback_backend` through the
+	 * same resolver gates as the primary, or refused. Never served unbound by
+	 * the default backend: residency a failure can revoke is a claim, not a
+	 * property (2026-08-16). Refusal is permanent, so the primary's error stands.
+	 */
+	private function fallbackClient(Agent $agent): LLMClientInterface
+	{
+		$uri = (string) $agent->modelFallbackUri;
+		if ($agent->fallbackBackendName !== null) {
+			if ($this->bindingResolver === null) {
+				throw new LLMPermanentError(
+					"agent '{$agent->name}' declares fallback backend "
+					. "'{$agent->fallbackBackendName}' but no BindingResolver is wired."
+				);
+			}
+			try {
+				$binding = $this->bindingResolver->resolveFallback($agent);
+			} catch (BindingRefused $e) {
+				throw new LLMPermanentError('fallback refused: ' . $e->getMessage(), previous: $e);
+			}
+			return $this->llmFactory->fromUri($uri, $binding);
+		}
+		if ($this->activeBinding !== null && $this->isBindableUri($agent->modelFallbackUri)) {
+			throw new LLMPermanentError(
+				"agent '{$agent->name}' is bound to backend "
+				. "'{$this->activeBinding->name}' and declares a bindable fallback "
+				. "('{$agent->modelFallbackUri}') with no fallback_backend, which would "
+				. 'be served UNBOUND by the default backend. Bind it, or declare none.'
+			);
+		}
+		return $this->llmFactory->fromUri($uri);
 	}
 
 	private function defaultPrompt(Agent $agent): string

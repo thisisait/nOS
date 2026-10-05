@@ -53,7 +53,7 @@ gdpr:
   transfers_outside_eu: false
 
 # ── SSO (Authentik forward-auth) ──────────────────────────────────────────────
-# X.3 (2026-05-08): see qdrant.yml for the aggregator path. 2FAuth has
+# X.3 (2026-05-08): the aggregator (load_plugins.run_aggregators, from: app_manifest) harvests this block. 2FAuth has
 # native auth (TOTP secrets vault); forward-auth is the gate to the
 # vault itself. user-tier — per-operator authenticator.
 authentik:

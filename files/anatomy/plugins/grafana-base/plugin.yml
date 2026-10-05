@@ -144,7 +144,6 @@ provisioning:
       - 21-wiki.json
       - 22-ai-agents.json
       - 23-chat.json
-      - 24-qdrant.json
       # The loop as its own tables record it (2026-08-29). Sibling of
       # 22-ai-agents: that one is the daemons, this one is the ledger.
       - 25-loop.json
@@ -293,7 +292,7 @@ notification:
 # ├── templates/
 # │   └── grafana-base.compose.yml.j2                     # vessel: OIDC + plugin install env
 # ├── provisioning/
-# │   ├── datasources/all.yml.j2                          # MOVED from files/observability/...
+# │   ├── datasources/                                    # per-source files live in grafana-<source> plugins
 # │   └── dashboards/
 # │       ├── all.yml.j2                                  # MOVED
 # │       └── [17 dashboard JSONs]                        # MOVED
@@ -306,6 +305,9 @@ notification:
 # ── e2e: what "wired" means for Grafana (tests/e2e/estate/test_effect_probes.py)
 e2e:
   probes:
+    - name: oidc-start-reaches-authentik
+      url: https://{{ grafana_domain }}/login/generic_oauth
+      expect: {status: [302, 303, 307], location_contains: "{{ authentik_domain }}/application/o/authorize"}
     - name: sso-lands-as-the-tester
       auth: tester
       sso_start: true

@@ -132,7 +132,7 @@ jobs:
       # of nine assertions in the tool-scope gate — every one that actually
       # calls a tool — skipped on every run here. Declared, so a failed or
       # deleted `composer install` aborts instead of going quietly green.
-      NOS_TEST_PROVIDES: git,ansible-playbook,php,composer,jq,sqlite3,openssl,files/anatomy/wing/vendor/autoload.php
+      NOS_TEST_PROVIDES: git,ansible-playbook,php,composer,jq,sqlite3,openssl,node,files/anatomy/wing/vendor/autoload.php
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v7
@@ -680,10 +680,12 @@ jobs:
         #
         # Overridden here rather than in tests/config.yml so the macOS job keeps
         # exercising the nginx vhost path, which is real and supported there.
+        # KEAP + its cortex edge ride the Linux leg (operator, 2026-10-01): the
+        # cloud sandbox cannot pull its build deps, a GitHub runner can.
         run: >-
           ansible-playbook main.yml
           -e allow_weak_prefix=true
-          -e '{"install_traefik": true, "install_nginx": false}'
+          -e '{"install_traefik": true, "install_nginx": false, "install_keap": true, "install_cortex": true}'
           -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
         env:
           ANSIBLE_FORCE_COLOR: '1'

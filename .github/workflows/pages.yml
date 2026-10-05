@@ -73,10 +73,18 @@ jobs:
           python-version: '3.13'
 
       - name: Install renderer deps (pin matches tools/devlog-compile.py)
-        run: pip3 install pyyaml markdown==3.10.2
+        # + tools/requirements.txt: the profile builder renders through Jinja2;
+        # the v0.14-beta tag's build died on ModuleNotFoundError: jinja2.
+        run: pip3 install pyyaml markdown==3.10.2 -r tools/requirements.txt
 
       - name: Render the devlog
         run: python3 tools/devlog-render.py --out _site
+
+      # A builder that can write a config nOS refuses must never ship: every
+      # profile combination and toggle runs through the page's own JS (node,
+      # preinstalled on ubuntu runners; absent = this step fails, never skips).
+      - name: Sweep the profile builder for contradictions
+        run: node --version && python3 tools/profile-builder-build.py --sweep
 
       # The profile builder: a static page built from default.config.yml +
       # profiles/ at release time, so what it offers is what this tag ships.

@@ -64,11 +64,11 @@ def test_execute_command_not_found_returns_127(permit_all):
 
 def test_execute_env_passed(permit_all):
     r = execute(sys.executable,
-                ["-c", "import os; print(os.environ.get('PULSE_TEST_VAR', 'unset'))"],
+                ["-c", "import os; print(os.environ.get('KEAP_API_URL', 'unset'), os.environ.get('PULSE_TEST_VAR', 'unset'))"],
                 timeout_s=5,
-                env={"PULSE_TEST_VAR": "set-from-test"})
+                env={"KEAP_API_URL": "set-from-test", "PULSE_TEST_VAR": "undeclared"})
     assert r.exit_code == 0
-    assert "set-from-test" in r.stdout_tail
+    assert r.stdout_tail.split() == ["set-from-test", "unset"], "job env is an allow-list of declared keys"
 
 
 # ── SEC H-PULSE1: execution-boundary allowlist ───────────────────────────────
@@ -92,8 +92,14 @@ def test_validate_rejects_shell_meta_arg():
         validate_command("/opt/homebrew/bin/gitleaks", ["; rm -rf /"])
 
 
-def test_validate_accepts_allowlisted_command():
-    validate_command("/opt/homebrew/bin/gitleaks", ["detect", "--source=/x"])  # no raise
+def test_validate_accepts_allowlisted_command(monkeypatch):
+    monkeypatch.setenv("HOME", "/Users/op")
+    validate_command("/opt/homebrew/bin/php", ["/Users/op/wing/app/bin/x.php"])  # no raise
+
+
+def test_validate_rejects_an_unnamed_homebrew_binary():
+    with pytest.raises(CommandRejected):
+        validate_command("/opt/homebrew/bin/gitleaks", ["detect", "--source=/x"])
 
 
 def test_execute_rejects_non_allowlisted_returns_126():

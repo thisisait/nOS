@@ -43,7 +43,7 @@
         "app":           {"type": "string", "description": "Tier-2 binding shorthand: plugin no-ops unless apps catalog enables this slug."},
         "plugin":        {"type": "array", "items": {"type": "string"}, "description": "DAG edges — plugins that must be loaded before this one."},
         "peer_service":  {"type": "string", "description": "Cross-service binding: this plugin's role coexists with a sibling infra service (e.g. portainer-base ↔ docker_socket_proxy). Documentation-only today; loader doesn't enforce."},
-        "capability_consumers": {"type": "array", "items": {"type": "string"}, "description": "Components that need this plugin's substrate ready before they boot (e.g. qdrant-base capability_consumers: [bone, wing])."},
+        "capability_consumers": {"type": "array", "items": {"type": "string"}, "description": "Components that need this plugin's substrate ready before they boot (e.g. capability_consumers: [bone, wing])."},
         "feature_flag":  {"type": "string", "description": "Ansible var name (e.g. install_observability) that gates activation."},
         "variables":     {"type": "array", "items": {"type": "string"}, "description": "Var names referenced by manifest Jinja — loader pre-checks they're defined."}
       }
@@ -74,7 +74,8 @@
           "kind": {"type": "string", "enum": ["data"], "description": "Only `data` today. `temporal` needs two cron schedules and a service has none; `trigger` between services has no consumer yet."},
           "via": {"type": "string", "description": "The artifact that crosses the edge — env var, host, schema. An edge that cannot name one is schedule adjacency with better clothes."},
           "measured": {"type": "string", "description": "ISO date the `via` was last verified against the code. Repair before declare: this stamp is a claim that someone read the template, not that someone believed a comment. It never expires and is not trusted to — test_every_declared_edge_is_performed re-derives every edge from the current tree on every CI run, which is the freshness check a date cannot be."},
-          "unenforced": {"type": "string", "description": "REQUIRED when no `Auto-enable <provider> for services that require it` block in main.yml turns the provider on for this consumer, and REFUSED when one does. One sentence: what happens when the provider is absent. Without it the edge reads exactly like the 22 the playbook guarantees — `install_woodpecker: true` with `install_gitea: false` is a green converge with a Woodpecker nobody can log into."}
+          "unenforced": {"type": "string", "description": "REQUIRED when no `Auto-enable <provider> for services that require it` block in main.yml turns the provider on for this consumer, and REFUSED when one does. One sentence: what happens when the provider is absent. Without it the edge reads exactly like the 22 the playbook guarantees — `install_woodpecker: true` with `install_gitea: false` is a green converge with a Woodpecker nobody can log into."},
+          "optional": {"type": "string", "description": "Set when the consumer WORKS without the provider and only one feature idles (one sentence: what idles). The profile builder never turns an optional provider back on (tools/profile-builder/rules.py)."}
         }
       }
     },
@@ -150,6 +151,21 @@
       "anyOf": [
         {"required": ["client_id", "client_secret", "tier"]}
       ]
+    },
+    "e2e": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What 'wired' means after start, probed on the live estate (tests/e2e/estate/test_effect_probes.py; rendered by tools/e2e-plan.py). Required, or e2e_none, on every plugin with post-start wiring — tests/anatomy/test_post_start_wiring_is_probed.py.",
+      "properties": {
+        "enabled":   {"type": "string", "description": "Jinja bool; defaults to authentik.enabled, so a plugin without an authentik block must set it."},
+        "probes":    {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["name"]}},
+        "isolation": {"type": "array"}
+      }
+    },
+    "e2e_none": {
+      "type": "string",
+      "minLength": 40,
+      "description": "Why no outside probe can observe this plugin's post-start wiring, and which reader proves it instead. Refused when TODO-shaped or when e2e.probes is also present."
     },
     "observability": {
       "type": "object",

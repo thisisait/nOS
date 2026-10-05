@@ -159,7 +159,7 @@ observability:
 #   • DSAR worker (D8 framework) reads `dsar_endpoint` for user-erasure
 #   • Wing /gdpr surfaces the row with appropriate severity
 #
-# Compare with portainer-base / qdrant-base (data_subjects: operators) — the
+# Compare with portainer-base (data_subjects: operators) — the
 # same plugin schema accommodates both shapes; the runtime gates differ.
 
 gdpr:
@@ -252,3 +252,9 @@ notification:
 # └── tests/
 #     ├── test_blank_preserves_vault_by_default.py
 #     └── test_dsar_erase_endpoint.py
+
+e2e:
+  probes:
+    - name: sso-prevalidate-issues-a-token
+      url: https://{{ vaultwarden_domain }}/identity/sso/prevalidate
+      expect: {status: [200], contains: '"token"'}

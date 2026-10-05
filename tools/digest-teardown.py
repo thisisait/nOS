@@ -16,6 +16,7 @@ a shared party row survives even under --confirm.
   tools/digest-teardown.py state/fixtures/kolben-it.seed.yml --confirm  # delete the unreferenced rows
   tools/digest-teardown.py --erase-party party-ico-00000112             # GDPR: a party's whole rowRef footprint
   tools/digest-teardown.py --erase-party party-ico-00000112 --confirm   # erase it (party row retained, referrers-gated)
+                                                                        # + its PostGIS projection (geo.party_site)
   tools/digest-teardown.py --tables invoice,invoice-line,journal-entry,posting   # from-blank: the money rows, whatever wrote them
 
 The third mode exists because a seed file can only tear down what a seed file
@@ -177,6 +178,16 @@ def main() -> int:
             print(f"  FAILED  {table}/{row}: {e.code} {e.read().decode()[:120]}", file=sys.stderr)
             failed += 1
             planned.discard((table, row))
+
+    # The PostGIS projection (geo.party_site) is outside KEAP's rowRef graph, so
+    # the closure above cannot reach it; erase it here, not at the next nightly run.
+    if args.erase_party:
+        if not args.confirm:
+            print(f"  [dry] would erase geo.party_site rows of {args.erase_party} (PostGIS projection)")
+        elif subprocess.run([sys.executable, str(REPO / "tools/geo-project-sites.py"),
+                             "--erase-party", args.erase_party]).returncode:
+            print(f"  FAILED  geo.party_site for {args.erase_party}", file=sys.stderr)
+            failed += 1
 
     verb = "deleted" if args.confirm else "would delete"
     ndel = deleted if args.confirm else len(planned)

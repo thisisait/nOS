@@ -1,0 +1,32 @@
+---
+# A resident local model (14 GB) starves the estate: KEAP timed out and the
+# release converge failed twice under one (dtt ollama-residency-as-a-pausable-
+# resource). Before services come up, every resident model is dropped — the same
+# keep_alive:0 call `nos models unload` makes; the next agent run reloads it.
+- name: "[Models] Which local models are resident"
+  ansible.builtin.uri:
+    url: "{{ ollama_api_url | default('http://127.0.0.1:11434') }}/api/ps"
+    return_content: true
+    timeout: 5
+  register: _models_ps
+  failed_when: false
+
+- name: "[Models] Unload them before the converge"
+  ansible.builtin.uri:
+    url: "{{ ollama_api_url | default('http://127.0.0.1:11434') }}/api/generate"
+    method: POST
+    body_format: json
+    body: {model: "{{ item }}", keep_alive: 0}
+    timeout: 60
+  loop: "{{ (_models_ps.json.models | default([])) | map(attribute='name') | list }}"
+  register: _models_unload
+  changed_when: true
+  failed_when: false
+  when: (_models_ps.status | default(0)) == 200
+
+- name: "[Models] A model that would not unload is named"
+  ansible.builtin.debug:
+    msg: "Could not unload {{ item.item }} ({{ item.status | default('no answer') }}) — the converge may run starved."
+  loop: "{{ _models_unload.results | default([]) | rejectattr('status', 'equalto', 200) | list }}"
+  loop_control:
+    label: "{{ item.item | default('?') }}"

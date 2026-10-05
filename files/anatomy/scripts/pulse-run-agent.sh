@@ -71,8 +71,10 @@ _die() { echo "ERROR: $*" >&2; exit 2; }
 [[ -z "$WING_EVENTS_HMAC_SECRET" ]] && _die "WING_EVENTS_HMAC_SECRET is not set"
 [[ -z "$TASK_PROMPT" ]]          && _die "NOS_AGENT_TASK (or NOS_CONDUCTOR_TASK) is not set"
 
-if ! command -v claude &>/dev/null; then
-    _die "claude CLI not found in PATH"
+# NOS_CLAUDE_BIN: the agent-user wrapper when agents_separate_user is on (pazny.mac.agent_user).
+CLAUDE_BIN="${NOS_CLAUDE_BIN:-claude}"
+if ! command -v "$CLAUDE_BIN" &>/dev/null; then
+    _die "claude CLI not found: $CLAUDE_BIN"
 fi
 if ! command -v curl &>/dev/null; then
     _die "curl not found in PATH"
@@ -352,22 +354,18 @@ CLAUDE_ARGS=(--print --output-format json --permission-mode bypassPermissions)
 # secret that mints it. The `unset` lives inside the $( ) subshell, so the
 # parent keeps nothing it had — it never used the var after validation.
 #
-# WING_EVENTS_HMAC_SECRET stays, deliberately, and the groundwork doc's claim
-# that it "need not reach the child" is FALSE today: the conductor profile
-# (files/anatomy/agents/conductor/agent.yml) instructs the ceremony to POST its
-# own attributed events, Bone's /api/v1/events accepts only HMAC, and the
-# live conductor_report rows sit BETWEEN agent_run_start and agent_run_end
-# (2026-08-09T04:04:25Z) — the child signed them. Withholding it is real
-# hardening (the secret derives the audit-chain key) but needs the events
-# POST to accept the child's bearer first; that is spine work, not an unset.
+# WING_EVENTS_HMAC_SECRET: with agents_separate_user on, sudo's env_keep withholds
+# it (and any operator bearer): the child signs no events; its output's tail
+# rides agent_run_end, signed here. Off, the child is the operator anyway.
 CLAUDE_ERR=$(mktemp /tmp/pulse-agent-err-XXXXX)
 CLAUDE_JSON=$(
     unset NOS_AGENT_CLIENT_SECRET NOS_CONDUCTOR_CLIENT_SECRET
     WING_API_URL="$WING_API_URL" \
     WING_API_TOKEN="$WING_API_TOKEN" \
+    NOS_AGENT_WING_TOKEN="$WING_API_TOKEN" \
     NOS_AUTHENTIK_TOKEN="$AUTHENTIK_TOKEN" \
     NOS_RUN_ID="$RUN_ID" \
-    claude "${CLAUDE_ARGS[@]}" "$TASK_PROMPT" 2>"$CLAUDE_ERR"
+    "$CLAUDE_BIN" "${CLAUDE_ARGS[@]}" "$TASK_PROMPT" 2>"$CLAUDE_ERR"
 ) || CLAUDE_EXIT=$?
 
 # Extract .result (human text) + .usage tokens. On any parse failure (claude

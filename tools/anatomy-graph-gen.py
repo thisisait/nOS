@@ -611,13 +611,11 @@ def harvest_weaknesses(nodes: dict) -> None:
 
 
 def harvest_daemons(nodes: dict) -> None:
-    labels: set[str] = set()
-    for pattern in ("roles/*/defaults/main.yml", "default.config.yml"):
-        for path in sorted(REPO.glob(pattern)):
-            for line in path.read_text(encoding="utf-8").splitlines():
-                lm = re.match(r'(\w+):\s*"(eu\.thisisait\.nos\.[a-z.\-]+)"', line.strip())
-                if lm and "legacy" not in lm.group(1):
-                    labels.add(lm.group(2))
+    spec = importlib.util.spec_from_file_location(
+        "_nos_prune_guard", REPO / "filter_plugins" / "nos_prune_guard.py")
+    guard = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(guard)
+    labels = {r["label"] for r in guard.launchd_declarations(REPO)}
     for path in sorted(REPO.glob("templates/eu.thisisait.nos.*.plist.j2")):
         labels.add(path.name.removesuffix(".plist.j2"))
     for label in sorted(labels):
@@ -770,7 +768,7 @@ def harvest_authentik(nodes: dict) -> None:
             continue
         slug = str(row["slug"])
         # Registry slugs use dashes; manifest service ids use underscores
-        # (calibre-web → service:calibre_web). Tier-2 apps (documenso, qdrant,
+        # (calibre-web → service:calibre_web). Tier-2 apps (documenso,
         # roundcube, …) have no manifest row at all — `service: null` states
         # that, rather than an edge to a node that does not exist.
         service = next((c for c in (slug, slug.replace("-", "_"))

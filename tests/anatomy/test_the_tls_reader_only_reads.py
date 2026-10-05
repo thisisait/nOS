@@ -137,6 +137,7 @@ def test_it_exits_zero_even_when_everything_is_cleartext():
             assert d.get("error"), f"{d['datastore']} is UNKNOWN with no reason given"
 
 
+@pytest.mark.live   # a read-only docker inspect of the live container
 @pytest.mark.skipif(shutil.which("docker") is None,
                     reason="docker absent — the leak check needs the live container")
 def test_the_redis_secret_never_appears_in_the_output():

@@ -56,6 +56,16 @@
     content: "{{ playbook_dir }}\n"
     mode: '0644'
 
+# The ears_* vars reached NO process after the launchd plist went (2026-09-02):
+# the Terminal session starts the listener bare. This file is how the role's
+# truth — keep-transcripts first of all — gets to the ear and the caddy.
+- name: "[pazny.ears] Render the listener env (ears_* vars, keep-transcripts switch)"
+  ansible.builtin.template:
+    src: listener.env.j2
+    dest: "{{ ears_runtime_dir }}/listener.env"
+    mode: '0644'
+  notify: Restart ears-listen
+
 - name: "[pazny.ears] Sync listener source to runtime dir"
   ansible.posix.synchronize:
     src: "{{ playbook_dir }}/files/anatomy/ears/"
@@ -180,6 +190,6 @@
          the listener exits 3 and records mic_ok=false — check `tools/caddy-status.py`,
          then grant it in System Settings > Privacy & Security > Microphone and
          re-run --tags ears."
-      - "transcripts: {{ ears_runtime_dir }}/turns/, kept {{ ears_retention_days }} days"
+      - "transcripts: {{ (ears_runtime_dir ~ '/turns/, kept ' ~ ears_retention_days ~ ' days') if (ears_keep_transcripts | bool) else 'NOT kept (ears_keep_transcripts: false) — a turn is handed to the caddy and forgotten' }}"
       - "autorun: {{ 'ON — a finished turn goes to caddy, which asks the agent and typechecks the answer' if (ears_autorun | default(true) | bool) else 'OFF — turns are written down only' }}"
       - "rate what you hear: caddy --rate <-1|0|1|2|3>  (the only writer of that column that may exist)"

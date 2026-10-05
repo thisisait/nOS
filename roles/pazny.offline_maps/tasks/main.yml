@@ -2,91 +2,101 @@
 # ==============================================================================
 # pazny.offline_maps/tasks/main.yml
 #
-# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
-# creates the data dir, renders tileserver-gl config.json, downloads
-# volitelne MBTiles, enabluje nginx vhost, vyhodi helper download-maps.sh
-# a renders the compose override fragment do
-# {{ stacks_dir }}/iiab/overrides/tileserver.yml.
-#
-# Zadny post-start — tileserver slouzi MBTiles staticky.
-#
-# Pozn.: Legacy tasks/iiab/maps.yml obsahovalo npm install tileserver-gl +
-# launchd plist (host-side install). Now runs via the Docker container
-# `tileserver` from the compose override, so host-side npm/launchd is skipped.
+# Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`.
+# Builds the base map once (Planetiler, OSM extract for `maps_region`) into the
+# artifact cache, which no removal level touches, fetches fonts + sprites next
+# to it, copies the vendored style into the data dir and renders config.json.
+# Nothing here hides a failure: a map that does not arrive fails the play.
 # ==============================================================================
 
-- name: "[pazny.offline_maps] Ensure maps data directory exists"
+- name: "[pazny.offline_maps] Ensure data and cache directories exist"
   ansible.builtin.file:
-    path: "{{ maps_data_dir }}"
-    state: directory
-    mode: '0755'
-
-- name: "[pazny.offline_maps] Ensure fonts and styles directories exist"
-  ansible.builtin.file:
-    path: "{{ maps_data_dir }}/{{ item }}"
+    path: "{{ item }}"
     state: directory
     mode: '0755'
   loop:
-    - fonts
-    - styles
+    - "{{ maps_data_dir }}"
+    - "{{ maps_data_dir }}/styles"
+    - "{{ maps_cache_dir }}"
+    - "{{ maps_cache_dir }}/planetiler"
+    - "{{ maps_cache_dir }}/sprites"
 
-- name: "[pazny.offline_maps] Check for MBTiles files"
-  ansible.builtin.find:
-    paths: "{{ maps_data_dir }}"
-    patterns: "*.mbtiles"
-  register: _mbtiles_found
+# One-shot, creates-if-missing. Sources (~2.4 GB for CZ) stay under
+# planetiler/data/sources so a rebuild for a new region re-uses the shared ones.
+- name: "[pazny.offline_maps] Build {{ maps_region }} base map with Planetiler (once)"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin | default('docker') }}"
+      - run
+      - --rm
+      - -v
+      - "{{ maps_cache_dir }}/planetiler:/data"
+      - -e
+      - "JAVA_TOOL_OPTIONS={{ maps_planetiler_java_opts }}"
+      - "ghcr.io/onthegomap/planetiler:{{ maps_planetiler_version }}"
+      - --download
+      - "--area={{ maps_region }}"
+      - "--languages={{ maps_languages }}"
+      - "--output=/data/{{ maps_region }}.pmtiles"
+    creates: "{{ maps_cache_dir }}/planetiler/{{ maps_region }}.pmtiles"
 
-- name: "[pazny.offline_maps] Download init MBTiles ({{ maps_init_mbtiles_dest }})"
+- name: "[pazny.offline_maps] Fetch OpenFreeMap glyphs archive (once)"
   ansible.builtin.get_url:
-    url: "{{ maps_init_mbtiles_url }}"
-    dest: "{{ maps_data_dir }}/{{ maps_init_mbtiles_dest }}"
+    url: "{{ maps_fonts_url }}"
+    dest: "{{ maps_cache_dir }}/ofm-fonts.tar.gz"
     mode: '0644'
     timeout: 600
-  when:
-    - _mbtiles_found.matched == 0
-    - maps_init_mbtiles_url | default('') | length > 0
-  failed_when: false
 
-- name: "[pazny.offline_maps] Download configured MBTiles files"
+# tar, not unarchive: unarchive needs GNU tar for .tar.gz and macOS ships bsdtar.
+- name: "[pazny.offline_maps] Unpack glyphs to {{ maps_cache_dir }}/fonts"
+  ansible.builtin.command:  # noqa: command-instead-of-module
+    argv: [tar, -xzf, "{{ maps_cache_dir }}/ofm-fonts.tar.gz", -C, "{{ maps_cache_dir }}"]
+    creates: "{{ maps_cache_dir }}/ofm/Noto Sans Regular"
+
+# Relative: the cache is bind-mounted at /cache, where an absolute host target
+# does not exist (tileserver restarted 33x, 2026-10-03).
+- name: "[pazny.offline_maps] Expose glyphs under the path the config names"
+  ansible.builtin.file:
+    src: ofm
+    dest: "{{ maps_cache_dir }}/fonts"
+    state: link
+
+- name: "[pazny.offline_maps] Fetch OpenFreeMap sprites"
+  ansible.builtin.get_url:
+    url: "{{ maps_sprites_url }}/ofm{{ item }}"
+    dest: "{{ maps_cache_dir }}/sprites/ofm{{ item }}"
+    mode: '0644'
+  loop: [".json", ".png", "@2x.json", "@2x.png"]
+
+- name: "[pazny.offline_maps] Install vendored style(s)"
+  ansible.builtin.copy:
+    src: "styles/"
+    dest: "{{ maps_data_dir }}/styles/"
+    mode: '0644'
+  notify: Restart offline_maps
+
+- name: "[pazny.offline_maps] Download operator-listed tile archives"
   ansible.builtin.get_url:
     url: "{{ item.url }}"
     dest: "{{ maps_data_dir }}/{{ item.dest }}"
     mode: '0644'
     timeout: 3600
   loop: "{{ maps_mbtiles_files | default([]) }}"
-  when: (maps_mbtiles_files | default([])) | length > 0
-  failed_when: false
 
-- name: "[pazny.offline_maps] Re-check for MBTiles files after downloads"
+- name: "[pazny.offline_maps] Find operator tile archives in {{ maps_data_dir }}"
   ansible.builtin.find:
     paths: "{{ maps_data_dir }}"
-    patterns: "*.mbtiles"
-  register: _mbtiles_post
+    patterns: ["*.pmtiles", "*.mbtiles"]
+  register: _maps_found
 
-- name: "[pazny.offline_maps] Create tileserver-gl configuration"
-  ansible.builtin.copy:
+- name: "[pazny.offline_maps] Render tileserver-gl config.json"
+  ansible.builtin.template:
+    src: config.json.j2
     dest: "{{ maps_data_dir }}/config.json"
-    # Without at least one .mbtiles the data block must be absent — tileserver-gl
-    # logs "Not valid input file: /data/*.mbtiles" and refuses to start otherwise.
-    content: |
-      {
-        "options": {
-          "paths": {
-            "root": "/data",
-            "fonts": "/data/fonts",
-            "styles": "/data/styles",
-            "mbtiles": "/data"
-          }
-        },
-        "styles": {}{% if _mbtiles_post.matched | default(0) > 0 %},
-        "data": {
-          "v3": {
-            "mbtiles": "/data/*.mbtiles"
-          }
-        }{% endif %}
-      }
-    force: true
     mode: '0644'
+  vars:
+    _maps_extra_files: "{{ _maps_found.files | map(attribute='path') | map('basename') | sort }}"
+  notify: Restart offline_maps
 
 # Linux routes via Traefik; host-nginx per-service vhosts are macOS-only.
 - name: "[pazny.offline_maps] Deploy nginx reverse proxy vhost"
@@ -109,67 +119,6 @@
   when:
     - install_nginx | default(true)
     - ansible_os_family == 'Darwin'
-
-- name: "[pazny.offline_maps] Create MBTiles download helper script"
-  ansible.builtin.copy:
-    dest: "{{ maps_data_dir }}/download-maps.sh"
-    content: |
-      #!/usr/bin/env zsh
-      # Helper script for downloading MBTiles map data
-      # After download, re-run the playbook to update tileserver config.json.
-      #
-      # FREE SOURCES (no registration required):
-      #   OpenFreeMap — vector tiles, country/region extracts
-      #     https://openfreemap.org/
-      #   Natural Earth — world base map (zoom 0-6), ~30 MB
-      #     https://github.com/lukasmartinelli/naturalearthdata/releases
-      #
-      # CZECH REPUBLIC — small, under 300 MB:
-      #   1. Go to https://openfreemap.org/  → download the Czech Republic extract
-      #   2. Save as {{ maps_data_dir }}/czech-republic.mbtiles
-      #   3. Re-run: ansible-playbook main.yml -K --tags offline_maps
-      #
-      # MAPTILER (free tier, requires account):
-      #   https://cloud.maptiler.com/tiles/  → download OpenStreetMap regional tiles
-      #
-      # Usage:
-      #   ./download-maps.sh <url> <dest-filename>
-      set -euo pipefail
-      DATA_DIR="{{ maps_data_dir }}"
-
-      if [ $# -lt 2 ]; then
-        echo "Usage: $0 <url> <dest-filename>"
-        echo "Example: $0 https://example.com/czech-republic.mbtiles czech-republic.mbtiles"
-        exit 1
-      fi
-
-      URL="$1"
-      FILENAME="$2"
-      echo "Downloading: $URL -> $DATA_DIR/$FILENAME"
-      curl -L --progress-bar -o "$DATA_DIR/$FILENAME" "$URL"
-      echo "Done. Restart tileserver: docker compose -p iiab restart tileserver"
-    mode: '0755'
-
-- name: "[pazny.offline_maps] Print installation info"
-  ansible.builtin.debug:
-    msg: |
-      ======================================================
-       Tileserver-gl (offline mapy) nainstalovan
-      ======================================================
-       URL:       https://{{ maps_domain | default('maps' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
-       Port:      {{ maps_port | default(8070) }}
-       Data dir:  {{ maps_data_dir }}
-
-       Stazeni mapovych dat:
-         {{ maps_data_dir }}/download-maps.sh
-
-       Or add to default.config.yml:
-         maps_mbtiles_files:
-           - url: "https://..."
-             dest: "czech-republic.mbtiles"
-
-       Add to /etc/hosts:  127.0.0.1 {{ maps_domain | default('maps' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
-      ======================================================
 
 - name: "[pazny.offline_maps] Render compose override fragment"
   ansible.builtin.template:

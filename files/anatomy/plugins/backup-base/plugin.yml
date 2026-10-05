@@ -44,7 +44,7 @@ _NOS_PLUGIN: "backup-base"
 
 requires:
   role: pazny.backup
-  feature_flag: configure_backup
+  feature_flag: install_backup   # pazny.backup is imported under install_backup (main.yml)
 
 # =============================================================================
 # NOTIFICATION — A9 canonical severity routing
@@ -137,3 +137,11 @@ gdpr:
   processors: []
   eu_residency: true
   transfers_outside_eu: false    # local bucket; copy #2 off-site is backrest's row
+
+e2e:
+  enabled: "{{ (install_wing | default(false)) and (install_backup | default(false)) }}"
+  probes:
+    - name: backup-restore-drill-registered-in-wing
+      url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
+      auth: {bearer: wing_api_token, headers: {X-Wing-Edge-Token: wing_edge_token}}
+      expect: {json_equals: {"jobs.backup:backup-restore-drill.id": "backup:backup-restore-drill"}}

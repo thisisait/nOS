@@ -125,3 +125,22 @@ has today. That is a new field and a real design question — not an hour.
 - REM-212 stays in lane 1 and always will. It is CRITICAL, reachable, and
   unfixable — both named fix versions do not exist. Its disposition is
   `sec-rem-212-disposition`, and it is a decision, not a lane.
+
+## 6. Reading a row — knowledge, not state (moved from CLAUDE.md 2026-10-02)
+
+Ask `tools/rem-status.py` (tally + pending HIGH/CRITICAL, `--all` for every row) and
+`tools/discovery-scan.py` (queue vs `docker ps`); never copy a count into prose.
+
+- **A pending row is not proof of exposure.** Twelve rows were already live at their
+  fix version and had never been reconciled — the queue does not learn from a converge.
+- **A row can be wrong the other way.** REM-178 found REM-137 recording fix `1.27.0`
+  while the estate ran `1.27.1`; a recorded fix BELOW the running version re-opens the
+  gap if anyone acts on it.
+- **`discovery:contradiction-scan` is a reader, not a writer.** Closing stays a
+  deliberate act with the evidence in `resolved_by`.
+- **A GHSA with no CVE id** is the recurring blind spot: "no new CVE past the pin" was
+  true and wrong by six days (metabase), and the same gap produced the n8n and authentik
+  waves. Scan the vendor's advisory endpoint, not the CVE feed.
+- **Vendor-blocked:** Ollama REM-126 (no upstream fix). FreePBX (REM-014/046/113/130)
+  was retired 2026-10-03 instead of carried. REM-064 (Open WebUI,
+  admin-only RCE) is `wontfix`.

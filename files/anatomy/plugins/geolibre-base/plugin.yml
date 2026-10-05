@@ -1,0 +1,120 @@
+# =============================================================================
+# geolibre-base — service plugin (roadmap row geolibre-atlas-serve, 2026-10-03)
+#
+# GeoLibre is a static web GIS (nginx + browser app). The role mounts the
+# nos-atlas plugin drop-in at /plugins/nos-atlas; this plugin owns the
+# Authentik forward-auth gate (tier 3), GDPR Art-30 row, /hub card and probes.
+# GeoLibre has no runtime default-plugin list: each browser adds the manifest
+# URL once (roles/pazny.geolibre/README.md §The one click).
+# =============================================================================
+
+name: geolibre-base
+version: 0.1.0
+description: |
+  Wiring layer for GeoLibre with the nos-atlas plugin (the KEAP knowledge graph
+  drawn as a planet). Forward-auth gated at Traefik; no app-level login.
+upstream: https://github.com/opengeos/GeoLibre
+license: MIT
+
+type:
+  - service
+  - ui-extension
+
+requires:
+  role: pazny.geolibre
+  feature_flag: install_geolibre
+  variables:
+    - geolibre_port
+    - geolibre_domain
+    - tenant_domain
+    - host_alias
+
+authentik:
+  mode: forward_auth
+  provider_type: forward_auth
+  client_id: nos-geolibre
+  client_secret: "{{ nos_derived_secrets.oidc_geolibre }}"
+  slug: geolibre
+  name: 'Atlas'
+  enabled: "{{ install_geolibre | default(false) }}"
+  launch_url: "https://{{ geolibre_domain }}"
+  tier: 3
+
+lifecycle:
+  post_compose:
+    - wait_health:
+        url: "http://127.0.0.1:{{ geolibre_port }}/healthz"
+        timeout: 60
+
+e2e:
+  enabled: "{{ install_geolibre | default(false) }}"
+  probes:
+    - name: app-is-served
+      url: http://127.0.0.1:{{ geolibre_port }}/healthz
+      expect: {status: [200]}
+    # Red until nos-atlas `npm run build` produced dist/ and the role copied it.
+    - name: nos-atlas-manifest-is-served
+      url: http://127.0.0.1:{{ geolibre_port }}/plugins/nos-atlas/plugin.json
+      expect: {status: [200]}
+    - name: anonymous-is-sent-to-authentik
+      url: https://{{ geolibre_domain }}/
+      expect: {status: [302], location_contains: "{{ authentik_domain }}/application/o/authorize"}
+
+# Rebuilds the KEAP taxonomy fixture (read-only on KEAP), then the nos-atlas planet +
+# buildings from a read-only reader snapshot into plugins/nos-atlas/live (nos-atlas
+# "nOS job contract"). Off → empty dir → no-op; no KEAP checkout → exit 2.
+pulse:
+  jobs:
+    - name: atlas-refresh
+      runner: subprocess
+      command: "{{ playbook_dir }}/tools/atlas-refresh.py"
+      args: ["--data-dir", "{{ geolibre_data_dir }}", "--atlas-src", "{{ nos_atlas_src_dir }}",
+             "--keap-src", "{{ keap_src_dir }}"]
+      schedule: "40 * * * *"
+      jitter_min: 5
+      max_runtime_s: 600
+      max_concurrent: 1
+      category: platform
+
+observability:
+  loki:
+    labels:
+      app: geolibre
+      stack: iiab
+      tier: "3"
+
+gdpr:
+  purpose: |
+    Operator-hosted web GIS. The app runs in the browser; layers and projects
+    stay in the visitor's browser storage and project sharing is off
+    (GEOLIBRE_SHARE_URL=off). The server keeps nginx access logs for
+    operating the service (legitimate interest, Art. 6(1)(f)). The nos-atlas
+    plugin draws public KEAP taxonomy and a recorded estate snapshot; no
+    personal data.
+  legal_basis: legitimate_interests
+  data_categories:
+    - http_access_logs
+    - oauth_session_data
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: 30
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+
+ui-extension:
+  hub_card:
+    title: "Atlas"
+    icon: map
+    url: "https://{{ geolibre_domain }}/"
+    tier: 3
+    description: "GeoLibre + nOS Atlas. First visit: Settings → Manage Plugins → add /plugins/nos-atlas/plugin.json"
+    health_check: "/healthz"
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []

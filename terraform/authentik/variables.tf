@@ -32,3 +32,11 @@ variable "install_device_gateway" {
   default     = false
   description = "Mint the public nos-device-gateway OAuth2 client (device_code + refresh_token)."
 }
+
+# The nos_roles claim (tasks/nos-roles.yml renders it from authentik_rbac_tiers).
+# Empty = no mapping, so an estate without the task plans no change.
+variable "nos_roles_expression" {
+  type        = string
+  default     = ""
+  description = "Python expression of the 'nOS roles' scope mapping (claim nos_roles)."
+}

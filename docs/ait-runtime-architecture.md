@@ -22,11 +22,10 @@ files/anatomy/wing/app/AgentKit/
 ├── Agent.php                       # parsed agent.yml (immutable value object)
 ├── AgentLoader.php                 # validates + loads agent.yml
 ├── Runner.php                      # one agent session end-to-end
-├── Coordinator.php                 # multi-agent driver (thin wrapper today)
 ├── LLMClient/
 │   ├── LLMClientInterface.php     # 2-method protocol: identifier(), send()
 │   ├── AnthropicAdapter.php       # uses anthropic-ai/sdk (composer dep)
-│   ├── OpenClawAdapter.php        # HTTP to OPENCLAW_BASE_URL
+│   ├── OpenAiCompatAdapter.php    # openai-*/openclaw-*, bound via state/llm-backends.yml
 │   ├── Factory.php                # URI → adapter
 │   └── {Message,ToolSchema,LLMResponse,LLM*Error}.php
 ├── Tools/
@@ -92,8 +91,8 @@ Pinned by:
 
 `Factory::fromUri` splits on the first dash and dispatches:
 - `anthropic-*` → `AnthropicAdapter` (needs `ANTHROPIC_API_KEY`)
-- `openclaw-*` → `OpenClawAdapter` (HTTP to `OPENCLAW_BASE_URL`)
-- `openai-*` / `local-*` → reserved, throws
+- `openai-*` / `openclaw-*` → `OpenAiCompatAdapter`, bound only (a `state/llm-backends.yml` row names endpoint, token, model)
+- `model.fallback` is always bound too, via `model.fallback_backend` (2026-10-01)
 
 To swap backends: change one line in `agent.yml`. System prompt, tool roster, audit trail, OTel spans, grader logic — all stay identical.
 
@@ -244,6 +243,15 @@ ANTHROPIC_API_KEY=sk-ant-... \
 ```
 
 Output (JSON) reports session_uuid + trace_id; full lineage in `wing.db` + Tempo.
+Flags: `--agent=<name> [--prompt=...] [--vault=...] [--trigger=pulse|webhook|operator]`.
+Exit 0 on idle/satisfied, 1 on terminated, 2 on config error.
+
+Other entry points: browser `/agents`, `/agents/<name>`, `/agents/<name>/sessions/<uuid>`
+(threads, iterations, Tempo link via `agent_sessions.trace_id`; spans carry service name
+`nos.agentkit`); API (bearer) `GET /api/v1/agents`, `/api/v1/agents/<name>`,
+`/api/v1/agents/<name>/sessions`, `/api/v1/agent-sessions/<uuid>`. Outcome iteration
+defaults to 3, max 10. Composer deps (lockfile-sync gate): `anthropic-ai/sdk`, `symfony/yaml`,
+`guzzlehttp/guzzle` — spans are plain JSON POSTs, no OTel SDK.
 
 ### Trigger via Pulse
 
@@ -293,7 +301,7 @@ python3 -m pytest tests/anatomy/test_agent_schema.py    # validate before commit
 
 1. Implement `App\AgentKit\LLMClient\LLMClientInterface` in `app/AgentKit/LLMClient/<Name>Adapter.php`.
 2. Add the `<provider>-` prefix to `state/schema/agent.schema.yaml`'s URI regex AND to `App\AgentKit\AgentLoader::isValidModelUri` AND to `App\AgentKit\LLMClient\Factory::fromUri`.
-3. `python3 -m pytest tests/anatomy/test_agentkit_naming.py::test_anthropic_and_openclaw_adapters_implement_interface` extends to cover the new adapter.
+3. `python3 -m pytest tests/anatomy/test_agentkit_naming.py::test_anthropic_and_openai_compat_adapters_implement_interface` extends to cover the new adapter.
 
 ---
 
@@ -302,13 +310,16 @@ python3 -m pytest tests/anatomy/test_agent_schema.py    # validate before commit
 | Test | What it asserts |
 |---|---|
 | `test_agent_schema.py` | Every `agent.yml` validates against the schema, name matches dir, paths exist |
-| `test_agentkit_naming.py::test_all_agentkit_tables_declared` | 6 tables present in schema-extensions.sql |
+| `tests/anatomy/test_agentkit_naming.py::test_all_agentkit_tables_declared` | 6 tables present in schema-extensions.sql |
 | `test_agentkit_naming.py::test_php_namespace_is_App_AgentKit` | PSR-4 contract holds for autoloader |
 | `test_agentkit_naming.py::test_event_repository_carries_agentkit_types` | 12 A14 event types in VALID_TYPES |
 | `test_agentkit_naming.py::test_uri_scheme_uses_dash_separator` | Conductor primary URI uses dashes |
 | `test_agentkit_naming.py::test_runner_emits_required_audit_events` | Runner.php fires the canonical lifecycle events |
-| `test_agentkit_naming.py::test_llm_client_protocol_is_minimal` | Interface stays at 2 methods (identifier, send) |
-| `test_agentkit_naming.py::test_anthropic_and_openclaw_adapters_implement_interface` | Both adapters honour the protocol |
+| `tests/anatomy/test_agentkit_naming.py::test_llm_client_protocol_is_minimal` | Interface stays at 2 methods (identifier, send) |
+| `tests/anatomy/test_agentkit_naming.py::test_anthropic_and_openai_compat_adapters_implement_interface` | Both adapters (`AnthropicAdapter`, `OpenAiCompatAdapter`) honour the protocol |
+
+| `tests/anatomy/test_agent_memory_does_not_return.py` | No agent-memory table: KEAP is the estate's memory (Q8=c, 2026-08-28) |
+| `tests/anatomy/test_claude_md_test_refs.py` | Every qualified `tests/anatomy/<file>.py::<func>` cited here resolves |
 
 A regression that breaks any of these turns CI red before merge.
 
@@ -316,8 +327,8 @@ A regression that breaks any of these turns CI red before merge.
 
 ## What's next (post-A14)
 
-- ~~**Multi-agent process pool**~~ — **SHIPPED 2026-05-07 (Track B U-B-MA).** `Coordinator::runWithChildren()` spawns parallel `bin/run-agent.php` subprocesses via `App\AgentKit\ProcessPool` (sliding-window dispatch, configurable concurrency cap up to a hard ceiling of 16, default 4). Children inherit the coordinator's trace_id via per-child `agent_threads` rows (`role='child'`, `parent_thread_uuid` = coordinator's primary thread). Coordinator emits `agent_thread_start` / `agent_thread_end` audit events with `actor_action_id` = its own session UUID so a single SQL JOIN reconstructs the dispatch tree. Timeouts SIGTERM all running children with a 5s grace period before SIGKILL. Sibling failures are non-fatal — one child's non-zero exit doesn't abort the rest. proc_open uses argv-array form throughout (locked by `tests/anatomy/test_agentkit_multiagent_pool.py`, 20 tests).
-- ~~**Dreams** (memory consolidation)~~ — **SHIPPED 2026-05-07 (Track B U-B-Dreams).** New table `agent_memory_stores` (uuid, agent_name, title, content, source_session_uuid, trace_id) holds deduplicated memory entries per agent. CLI `bin/dream-agent.php --agent=NAME [--limit=50] [--store-limit=20] [--dry-run]` reads the last N `agent_sessions` for the agent + the current store, runs the agent's primary LLM under a strictly read-only "dream" tool roster (declared in agent.yml `dream.tool_roster:`, allowed values: `mcp-wing-read` / `mcp-bone-read` only — no bash, no write endpoints), and applies create/update/delete deltas. Tool restriction is structural: the Dreamer passes an empty tool list to the LLM, so any `tool_use` block in the response is refused with an audit-logged error rather than silently honoured. `Runner::loadMemoryContext()` (appended at end of class to keep the diff orthogonal to the Coordinator multi-agent work) returns recent entries so the regular run path can prepend them to the system prompt when the operator opts in. Per-cycle audit lineage: one `agent_session_start`/`agent_session_end` pair with `trigger=dream` marker; deltas logged as `(uuid, title, length)` triples — never the full content (memory carries operator-note-grade context). Contract pinned by `tests/anatomy/test_agentkit_dreams.py` (9 tests).
+- ~~**Multi-agent process pool**~~ — **DELETED 2026-08-28** (every manifest is `multiagent.type: solo`; `Coordinator.php`/`ProcessPool.php` were unreachable — the `multiagent:` block survives as manifest surface with no runtime). History: SHIPPED 2026-05-07 (Track B U-B-MA).** `Coordinator::runWithChildren()` spawns parallel `bin/run-agent.php` subprocesses via `App\AgentKit\ProcessPool` (sliding-window dispatch, configurable concurrency cap up to a hard ceiling of 16, default 4). Children inherit the coordinator's trace_id via per-child `agent_threads` rows (`role='child'`, `parent_thread_uuid` = coordinator's primary thread). Coordinator emits `agent_thread_start` / `agent_thread_end` audit events with `actor_action_id` = its own session UUID so a single SQL JOIN reconstructs the dispatch tree. Timeouts SIGTERM all running children with a 5s grace period before SIGKILL. Sibling failures are non-fatal — one child's non-zero exit doesn't abort the rest. proc_open uses argv-array form throughout (locked by `tests/anatomy/test_agentkit_multiagent_pool.py`, 20 tests).
+- ~~**Dreams** (memory consolidation)~~ — **DELETED 2026-08-28** (Q8=c: KEAP is the estate's memory; gate `tests/anatomy/test_agent_memory_does_not_return.py`). History: SHIPPED 2026-05-07 (Track B U-B-Dreams).** New table `agent_memory_stores` (uuid, agent_name, title, content, source_session_uuid, trace_id) holds deduplicated memory entries per agent. CLI `bin/dream-agent.php --agent=NAME [--limit=50] [--store-limit=20] [--dry-run]` reads the last N `agent_sessions` for the agent + the current store, runs the agent's primary LLM under a strictly read-only "dream" tool roster (declared in agent.yml `dream.tool_roster:`, allowed values: `mcp-wing-read` / `mcp-bone-read` only — no bash, no write endpoints), and applies create/update/delete deltas. Tool restriction is structural: the Dreamer passes an empty tool list to the LLM, so any `tool_use` block in the response is refused with an audit-logged error rather than silently honoured. `Runner::loadMemoryContext()` (appended at end of class to keep the diff orthogonal to the Coordinator multi-agent work) returns recent entries so the regular run path can prepend them to the system prompt when the operator opts in. Per-cycle audit lineage: one `agent_session_start`/`agent_session_end` pair with `trigger=dream` marker; deltas logged as `(uuid, title, length)` triples — never the full content (memory carries operator-note-grade context). Contract pinned by `tests/anatomy/test_agentkit_dreams.py` (9 tests).
 - ~~**Operator-trigger UI**~~ — **SHIPPED 2026-05-07** (Track B U-B-UI). `POST /api/v1/agents/<name>/sessions` (bearer auth) generates `session_uuid` server-side, spawns `php bin/run-agent.php` via `proc_open` array form (no shell), and returns 202 immediately. The Wing detail page (`/agents/<name>`) carries a "Start new session" form that proxies through `AgentsPresenter::actionStart` so the bearer token never touches browser HTML; on success the operator is redirected to `/agents/<name>/sessions/<uuid>` which auto-refreshes every 3s while status is `pending` / `running` / `starting`. Contract pinned by `tests/anatomy/test_agentkit_operator_trigger.py` (9 tests).
 - ~~**Vault refresh from Infisical**~~ — `infisical:/path` secret_ref scheme **SHIPPED 2026-05-07** (Track B U-B-Vault — see Vault model section above). Re-resolution per session means rotated values pick up automatically when a new session opens; long-running sessions still see the value resolved at session-open time (acceptable trade-off — agents are short-lived by design).
 - ~~**Per-agent webhook auto-fan-out**~~ — **SHIPPED 2026-05-07** (Track B U-B-Webhook). agent.yml `subscribe:` block + `SubscriptionRegistrar` idempotent registration + dispatcher self-loop guard. See "Per-agent fan-out" subsection above. Contract pinned by `tests/anatomy/test_agentkit_webhook_fanout.py` (10 tests).

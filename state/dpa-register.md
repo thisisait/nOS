@@ -20,32 +20,31 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 107 (82 core services, 4 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (10), legal_obligation (1), legitimate_interests (96)
+- **Processing activities:** 110 (86 core services, 3 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (98)
 - **Transfers outside the EU:** 12 activities
-- **Activities engaging a third-party processor:** 18
+- **Activities engaging a third-party processor:** 17
 
 ## Transfers & processors (audit-sensitive subset)
 
 | Service | Outside EU? | Processors |
 |---|---|---|
-| conductor (`agent_conductor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
-| curator (`agent_curator`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| conductor (`agent_conductor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
+| curator (`agent_curator`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
 | invoice-extract (`agent_invoice-extract`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback, constrained to the ISDOC record schema. No third party. · safeguard: Not applicable. No transfer occurs. |
 | invoice-vision-ocr (`agent_invoice-vision-ocr`) | No | **on-device (operator's own hardware)** (CZ — this host) — Vision-model inference on this host via ollama's OpenAI-compatible surface on loopback. No third party: the image never leaves the machine. · safeguard: Not applicable. No transfer occurs. |
 | jeff (`agent_jeff`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. No third party sees the prompt, so there is no processor in the Article-28 sense; this entry says so rather than leaving the field blank. · safeguard: Not applicable. No transfer occurs, which is stronger than any safeguard could describe. |
 | jeff-cloud (`agent_jeff-cloud`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this agent. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support. |
-| librarian (`agent_librarian`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer. |
-| migration-author (`agent_migration-author`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| librarian (`agent_librarian`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
+| migration-author (`agent_migration-author`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
 | ops-extract (`agent_ops-extract`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. There is no third party: the prompt does not leave the machine, so there is no processor in the Article-28 sense and this entry exists to say so rather than leave the field blank. · safeguard: Not applicable. No transfer occurs, which is a stronger position than any safeguard could describe. |
 | ops-extract-cloud (`agent_ops-extract-cloud`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, single call, no tool loop) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer. |
 | ops-triage (`agent_ops-triage`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. No third party: the prompt does not leave the machine, so there is no processor in the Article-28 sense and this entry says so rather than leaving the field blank. · safeguard: Not applicable. No transfer occurs. |
 | ops-triage-cloud (`agent_ops-triage-cloud`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, single call, no tool loop) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer. |
 | proposer (`agent_proposer`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer. |
-| surveyor (`agent_surveyor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
-| upgrade-architect (`agent_upgrade-architect`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on. |
+| surveyor (`agent_surveyor`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
+| upgrade-architect (`agent_upgrade-architect`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
 | repos (`imp_repos`) | **Yes** | `The configured git hosting provider (e.g. self-hosted Gitea, or GitHub/GitLab.com)` |
-| Ares Verify (`svc_ares-verify`) | No | `Ministerstvo financí ČR (ARES)`; `Generální finanční ředitelství (ADIS)` |
 | Loop (`svc_loop`) | **Yes** | `Anthropic (US) — claude CLI backend, authoring proposals when the propose job runs` |
 
 ## Security measures (Art. 32 — platform baseline)
@@ -351,6 +350,22 @@ Authentik forward-auth headers; the shell stores no independent account.
 - **Storage:** 'iiab' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
+#### Geolibre — `svc_geolibre`
+- **Purpose:** Operator-hosted web GIS. The app runs in the browser; layers and projects
+stay in the visitor's browser storage and project sharing is off
+(GEOLIBRE_SHARE_URL=off). The server keeps nginx access logs for
+operating the service (legitimate interest, Art. 6(1)(f)). The nos-atlas
+plugin draws public KEAP taxonomy and a recorded estate snapshot; no
+personal data.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `http_access_logs`; `oauth_session_data`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 30 days
+- **Storage:** 'iiab' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
 #### Homeassistant — `svc_homeassistant`
 - **Purpose:** Hosts the operator's Home Assistant smart-home hub. Stores device
 states, automations, sensor history, user accounts, and OIDC
@@ -414,6 +429,21 @@ Authentik-authenticated principals reach the service.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** 7 days
+- **Storage:** 'iiab' compose stack on host (Docker volumes)
+- **Security measures:** platform baseline (see above)
+
+#### Martin — `svc_martin`
+- **Purpose:** Serves the local PostGIS geo schema as map tiles to signed-in tier-3 users
+of the atlas: open ČÚZK parcels/buildings and the party-site projection
+(a sole trader's site is a natural person's address). Reads through a
+read-only role limited to schema geo; keeps no tile cache, so an erased
+party (geo-project-sites --erase-party) is gone from the next tile.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `clients`; `operators`
+- **Data categories:** `public_geodata`; `company_affiliation`; `postal_address`; `http_access_logs`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
 - **Storage:** 'iiab' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
@@ -484,6 +514,22 @@ Authentik-authenticated principals reach the service.
 - **Retention:** 365 days (~1y)
 - **Storage:** 'iiab' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
+
+#### Nos Forum — `svc_nos-forum`
+- **Purpose:** Let estate users talk: text channels and a minimalist forum (categories,
+topics, posts) inside servers they create or are invited to. Stores the
+messages, posts, reactions and read markers users write, their forum
+profile (username, display name, presence) and their server/channel
+memberships. Identity comes from Authentik; forum-web keeps the OIDC
+tokens only in an encrypted session cookie.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `end_users`; `operators`
+- **Data categories:** `message_content`; `forum_posts`; `reactions_and_read_markers`; `profile_username_display_name`; `presence_status`; `memberships_and_roles`; `oauth_session_data`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 365 days (~1y)
+- **Storage:** SpacetimeDB database nos-forum (spacetimedb_data_dir); forum-web is stateless in v0.1 (session = encrypted cookie in the browser).
+- **Security measures:** `Native OIDC (Authentik, code + PKCE); the module re-checks issuer and audience of every token`; `Private channels: row-level security in SpacetimeDB, gated by an integration test that a non-member never receives a row`; `Session cookie AES-256-GCM, httpOnly, SameSite=Lax, Secure`; `Disk encryption at rest is operator-provisioned (FileVault)`
 
 #### Ntfy — `svc_ntfy`
 - **Purpose:** Operator-hosted pub/sub HTTP push notifications server. Forward-auth gate ensures only
@@ -634,21 +680,6 @@ contracts with counter-parties who agree to electronic execution.
 - **Storage:** 'apps' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
-#### Qdrant — `app_qdrant`
-- **Purpose:** Hosts vector embeddings + payload metadata for the nOS agentic platform:
-semantic search over agent outputs, system metadata, and cybersec
-intelligence. Embeddings are derived from text the operator chose to
-process (audit logs, CVE descriptions, system facts) — Qdrant itself
-does not collect data; it persists what Bone uploads.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`
-- **Data categories:** `agent_run_metadata`; `system_facts`; `cybersec_metadata`
-- **Recipients / processors:** —
-- **Transfers outside EU:** No
-- **Retention:** 365 days (~1y)
-- **Storage:** 'apps' compose stack on host (Docker volumes)
-- **Security measures:** platform baseline (see above)
-
 #### Roundcube — `app_roundcube`
 - **Purpose:** Web frontend over the operator's IMAP/SMTP mail server. Roundcube
 itself stores only UI prefs, address book entries, and a short-term
@@ -674,24 +705,6 @@ third-party user data — the operator is the only data subject.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
-- **Storage:** 'apps' compose stack on host (Docker volumes)
-- **Security measures:** platform baseline (see above)
-
-#### Qdrant — `svc_qdrant`
-- **Purpose:** Qdrant is the vector database backing agent memory and advisory retrieval.
-It stores agent prompt-context embeddings (which may include operator data),
-advisory text (CVE summaries, vendor advisories), and vector metadata
-(collection names, point ids, payload schemas), in order to provide
-semantic memory and retrieval for the platform's AI agents (legitimate
-interest in research / agent operation, not contract-bound, Art. 6(1)(f)).
-Subjects are operators and automated agent systems; Bone redacts operator
-email before upsert. Points expire on a ~365-day nightly Pulse rebuild.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`; `automated_systems`
-- **Data categories:** `agent_prompt_context`; `advisory_text`; `vector_metadata`
-- **Recipients / processors:** —
-- **Transfers outside EU:** No
-- **Retention:** 365 days (~1y)
 - **Storage:** 'apps' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
@@ -878,21 +891,17 @@ document revisions, comments, user accounts, and OIDC session data.
 
 ### voip stack
 
-#### Freepbx — `svc_freepbx`
-- **Purpose:** FreePBX/Asterisk is the self-hosted telephony PBX. It processes call
-detail records (caller/callee numbers, duration, codec), voicemail
-recordings, SIP/IAX extension credentials (hashed), and operator-authored
-dialplan routing rules, in order to provide and operate telephony for the
-organisation (legitimate interest in running the phone system,
-Art. 6(1)(f)). Subjects include PBX admins, extension owners, and external
-callers whose numbers appear in CDRs. CDRs rotate on a ~90-day horizon;
-voicemail retention follows operator policy.
+#### Mikopbx — `svc_mikopbx`
+- **Purpose:** Operator-hosted telephony: call routing between declared extensions and
+SIP trunks, voicemail, optional call recording, call detail records (CDR)
+for billing and troubleshooting. Authentik forward-auth gates the admin
+UI; phones authenticate per extension with SIP digest credentials.
 - **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `operators`; `extension_users`; `external_callers`
-- **Data categories:** `call_metadata`; `voicemail_recordings`; `extension_credentials`; `dialplan_state`
+- **Data subjects:** `operators`; `end_users`; `callers`
+- **Data categories:** `name`; `email`; `phone_number`; `call_detail_records`; `voicemail_audio`; `call_recordings`; `sip_credentials`
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
-- **Retention:** 90 days
+- **Retention:** 365 days (~1y)
 - **Storage:** 'voip' compose stack on host (Docker volumes)
 - **Security measures:** platform baseline (see above)
 
@@ -1024,7 +1033,7 @@ the material it gathers are sent to a hosted model for reasoning.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `estate_health_telemetry`; `job_registry_metadata`; `operator_authored_prompts`
-- **Recipients / processors:** **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
+- **Recipients / processors:** **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs.
 - **Transfers outside EU:** **Yes**
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** host service (non-Docker / launchd)
@@ -1037,7 +1046,7 @@ travels is curated public-knowledge content, not tenant data.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `knowledge_corpus_content`; `taxonomy_structure`
-- **Recipients / processors:** **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
+- **Recipients / processors:** **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs.
 - **Transfers outside EU:** **Yes**
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** host service (non-Docker / launchd)
@@ -1087,7 +1096,7 @@ transferred.
 - **Data categories:** `operator_authored_prompts`; `estate_health_telemetry`; `operator_speech_transcripts`
 - **Recipients / processors:** **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. No third party sees the prompt, so there is no processor in the Article-28 sense; this entry says so rather than leaving the field blank. · safeguard: Not applicable. No transfer occurs, which is stronger than any safeguard could describe.
 - **Transfers outside EU:** No
-- **Retention:** 90 days
+- **Retention:** transient (not persisted)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
@@ -1098,7 +1107,7 @@ transferred.
 - **Data categories:** `operator_authored_prompts`; `estate_health_telemetry`; `operator_speech_transcripts`
 - **Recipients / processors:** **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this agent. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.
 - **Transfers outside EU:** **Yes**
-- **Retention:** 90 days
+- **Retention:** transient (not persisted)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
@@ -1109,7 +1118,7 @@ Estate operation (legitimate interest, Art. 6(1)(f)).
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `agent_run_history`; `remediation_queue_records`; `knowledge_corpus_content`
-- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer.
+- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs.
 - **Transfers outside EU:** **Yes**
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** host service (non-Docker / launchd)
@@ -1123,7 +1132,7 @@ commit metadata.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`; `commit_authors`
 - **Data categories:** `repository_source`; `commit_metadata`
-- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
+- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs.
 - **Transfers outside EU:** **Yes**
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** host service (non-Docker / launchd)
@@ -1197,7 +1206,7 @@ it reads — the ceremony asks for counts and shapes, not for rows.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`; `automation_identities`
 - **Data categories:** `declared_state_manifest`; `service_plugin_manifests`; `system_documentation`; `surface_inventory`
-- **Recipients / processors:** **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
+- **Recipients / processors:** **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs.
 - **Transfers outside EU:** **Yes**
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** host service (non-Docker / launchd)
@@ -1211,7 +1220,7 @@ reasoning.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `repository_source`; `installed_version_inventory`
-- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.
+- **Recipients / processors:** **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs.
 - **Transfers outside EU:** **Yes**
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** host service (non-Docker / launchd)
@@ -1347,19 +1356,6 @@ container logs for security monitoring of a public endpoint.
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
-#### Ares Verify — `svc_ares-verify`
-- **Purpose:** Look up counterparties already on the party spine (IČO) in ARES and the
-GFŘ unreliable-VAT-payer register so AP can refuse a missing subject or
-an unreliable payer. Pulse fires n8n; n8n calls the public CZ endpoints.
-- **Legal basis (Art. 6):** `legitimate_interests`
-- **Data subjects:** `clients`; `client_contacts`
-- **Data categories:** `company_affiliation`; `name`
-- **Recipients / processors:** `Ministerstvo financí ČR (ARES)`; `Generální finanční ředitelství (ADIS)`
-- **Transfers outside EU:** No
-- **Retention:** 3650 days (~10y)
-- **Storage:** host service (non-Docker / launchd)
-- **Security measures:** platform baseline (see above)
-
 #### Authentik Tofu Drift — `svc_authentik-tofu-drift`
 - **Purpose:** Detect configuration drift between the live Authentik SSO tenant and its OpenTofu-managed desired state; notify the operator with the plan summary
 - **Legal basis (Art. 6):** `legitimate_interests`
@@ -1384,6 +1380,26 @@ Stores nothing itself; retention is the party spine / imp_doli-party.
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 
+#### Device Gateway — `svc_device-gateway`
+- **Purpose:** Let a user's own paired device (handheld, phone, wearable) read the nOS
+tables that user may already see in the browser, without sharing the
+estate KEAP token. Processing: (1) the pairing registry row per device
+(table device-client: owner username, device kind, a hash fingerprint,
+scopes, paired_at, last_seen at day precision, status, revoked_at);
+(2) the Authentik device-code grant and its access / refresh tokens;
+(3) the Traefik edge access log line for device.<tld> requests
+(client IP, path, status, user agent; no headers, no bodies).
+The gateway itself persists nothing: a 30-second in-memory cache of
+projected rows and a suppressed request log.
+- **Legal basis (Art. 6):** `contract`
+- **Data subjects:** `end_users`; `operators`
+- **Data categories:** `device_pairing_registry`; `oauth_tokens`; `edge_access_log`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** 30 days
+- **Storage:** KEAP libsql table device-client (iiab stack, host volume); Authentik PostgreSQL (infra stack); Loki (observability stack). Gateway process holds no file state.
+- **Security measures:** `TLS in transit (Traefik edge; wildcard cert)`; `Gateway binds 127.0.0.1; only Traefik reaches it`; `Bearer verified against Authentik userinfo; azp/aud must be nos-device-gateway`; `Authorization: userinfo groups must hold a tier-2 (manager) group; fail closed`; `Table allowlist + column projection; PII/financial tables are 403 before KEAP is called`; `Refresh token rotates on every use (threshold = validity); access token 10 min`; `Identifiers are hashes only — never a raw serial / IMEI / UDID / MAC`; `Disk encryption at rest is operator-provisioned (FileVault / LUKS)`
+
 #### Discovery — `svc_discovery`
 - **Purpose:** Consistency checking between declared configuration and observed runtime state
 - **Legal basis (Art. 6):** `legitimate_interests`
@@ -1394,6 +1410,25 @@ Stores nothing itself; retention is the party spine / imp_doli-party.
 - **Retention:** 365 days (~1y)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
+
+#### Ears — `svc_ears`
+- **Purpose:** Let the operator address the estate by voice. Processing: (1) the
+microphone stream, captured through ffmpeg and transcribed on this host by
+mlx-community/parakeet-tdt-0.6b-v3 (parakeet-mlx); a speech segment is a
+temporary wav for the duration of one transcribe call and is deleted in
+the same call. (2) The transcript of a turn — only what follows the wake
+phrase — handed to the caddy as a process argument and not written down.
+Speech that is not addressed to the caddy is counted, never stored.
+(3) Optional: with ears_keep_transcripts: true, day-files of addressed
+turns under ~/ears/turns/ for ears_retention_days.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `bystanders`
+- **Data categories:** `audio_stream_transient`; `operator_speech_transcripts`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
+- **Storage:** Host only. ~/ears/state.json (counters, no text); ~/ears/turns/ exists only when ears_keep_transcripts is true. The ASR model is a local file under the Hugging Face cache.
+- **Security measures:** `Listening is a visible Terminal window; closing it stops the microphone`; `Only the segment after the wake phrase becomes a turn; unaddressed speech is counted, not stored`; `Audio exists as one temp file per segment, deleted in the transcribe call's finally`; `ears_dump_segments is 0 — the wav diagnostic is off unless the operator turns it on`; `No network path: ASR runs on-device, the turn travels as argv to a local process`; `Disk encryption at rest is operator-provisioned (FileVault)`
 
 #### Espocrm Retire — `svc_espocrm-retire`
 - **Purpose:** Residual Authentik OAuth2 client for a retired CRM desk, held only until
@@ -1415,6 +1450,24 @@ OpenTofu destroys the live objects. This plugin stores no CRM rows.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### Geo — `svc_geo`
+- **Purpose:** Loads public ČÚZK cadastral open data (address points, parcel and building
+geometry) into the local PostGIS database, and projects the parties' sites
+(operator-entered party-site rows, ARES registered seats) onto it so they
+can be placed on a map. Open data carries no names or owners; the
+projection carries party slugs and registry keys — a sole trader's (OSVČ)
+site is a natural person's address. KEAP is the source of truth; the
+projection is rewritten nightly and erased with the party
+(state/gdpr-erasure-map.yml svc_geo).
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `clients`; `residents`
+- **Data categories:** `public_geodata`; `company_affiliation`; `postal_address`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
 

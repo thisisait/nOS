@@ -44,7 +44,7 @@ The embedded PostgreSQL holds only transient document-server state; the real doc
 - **Authentik:** optional — forward-auth gate on the UI only.
 - No external database dependency — PostgreSQL is embedded in the image.
 
-> Note: ONLYOFFICE (live-document editing) and Documenso (e-signature) are independent, non-competing services. The euro-office pilot only swaps the editing backend; it has no e-signing surface, so Documenso stays.
+> **OnlyOffice (euro-office) vs Documenso — independent, non-competing services.** OnlyOffice sits in `b2b`, Documenso in `apps`; they serve orthogonal purposes and do NOT overlap. **OnlyOffice / euro-office** is an embedded **collaborative editing engine** (iframe-embedded in Nextcloud, BookStack, Outline) — it edits *live, mutable* documents. **Documenso** is a standalone manifest-app **e-signature platform** (`apps/documenso.yml`) — e-signing requires *immutability*, the opposite invariant. The euro-office pilot (`ghcr.io/euro-office/documentserver`, a JWT-compatible OnlyOffice fork) only swaps the editing backend; it has no e-signing surface, so **Documenso stays regardless**. See `roles/pazny.onlyoffice/defaults/main.yml` and the pilot devlog `docs/devlog/nos-core/2026/2026-06-13-euro-office-pilot.md`. Gate: `tests/anatomy/test_claude_md_documenso_independence.py`.
 
 ## Upgrades
 

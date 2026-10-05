@@ -18,7 +18,7 @@
 
 ## Authentication
 
-- **App-level auth:** none. QGIS Server is in the "No SSO" bucket (alongside FreePBX).
+- **App-level auth:** none. QGIS Server is in the "No SSO" bucket.
 - **SSO bucket:** `none`. The OGC endpoints (WMS GetMap, WFS GetFeature) are stateless and consumed directly by GIS clients; the only access control is network-level at the Traefik perimeter. No `authentik:` block exists for this service.
 - `kind: backend` — the plugin marks it backend-only so Wing `/hub` suppresses the (would-404) tile.
 

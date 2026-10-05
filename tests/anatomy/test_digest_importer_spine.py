@@ -86,3 +86,18 @@ def test_strip_provenance_removes_prov_before_upsert():
     for rows in stripped.values():
         for r in rows:
             assert "_prov" not in r
+
+
+def test_a_birth_number_or_bad_checksum_is_never_echoed():
+    """csv-party-importer-leaks-id: a rejected identifier may be a rodné číslo
+    (a person's CZ-DIČ). Every refusal names the row and the reason — never the value."""
+    nd, mod = _load()
+    imp = mod.CsvPartyImporter("test.csv")
+    raw = ("legal_name,ico,country\n"
+           "Jan Novak,850101/1234,CZ\n"          # rodné-číslo shape: not an IČO
+           "Bad Digit s.r.o.,27074359,CZ\n")      # 8 digits, wrong mod-11 check digit
+    bundle, errors = nd.run_importer(imp, raw, TABLES)
+    assert len(imp.skipped) == 2, imp.skipped
+    blob = " ".join(imp.skipped)
+    for secret in ("850101", "1234", "27074359"):
+        assert secret not in blob, blob

@@ -1076,7 +1076,10 @@ MEASURED_WORK = {
     # RE-DERIVED 2026-10-01 — fired at 6763 collected vs 6405 (identities +
     # test users batch). Fresh run: 6635 passed, 127 skipped, 1 failed (this
     # ratchet), so 6636.
-    "pytest-anatomy": 6636,
+    # RE-DERIVED 2026-10-03 — fired at 7006 collected vs 6636 (forum, ears,
+    # MikoPBX, geo batch). Fresh run: 6870 passed, 135 skipped, 1 failed
+    # (this ratchet), so 6871.
+    "pytest-anatomy": 6871,
     "cortex-corpus-diff": 1,
 }
 

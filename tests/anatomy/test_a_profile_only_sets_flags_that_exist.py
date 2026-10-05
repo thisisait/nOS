@@ -15,17 +15,19 @@ from __future__ import annotations
 
 import pathlib
 import re
+import sys
 
 import pytest
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PROFILES = sorted((REPO / "profiles").glob("*.yml"))
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 
 def _declared() -> set[str]:
-    txt = (REPO / "default.config.yml").read_text(encoding="utf-8")
-    return set(re.findall(r"^([a-z0-9_]+):", txt, re.M))
+    return set(re.findall(r"^([a-z0-9_]+):", ni.default_config_text(), re.M))
 
 
 def test_the_sweep_finds_profiles():

@@ -21,7 +21,7 @@ One `ansible-playbook` run, ~20 minutes on an M4 Pro:
 | **DevOps** | Gitea, GitLab CE, Woodpecker CI, Paperclip, code-server |
 | **B2B** | ERPNext, FreeScout, Outline, HedgeDoc, BookStack, Firefly III, OnlyOffice |
 | **Data** | Metabase, Apache Superset, InfluxDB |
-| **VoIP / Engineering** | FreePBX (Asterisk), QGIS Server |
+| **Engineering** | QGIS Server |
 | **Agents** | OpenClaw (local DevOps agent, Ollama MLX), Hermes (cross-channel gateway), OpenCode, MCP gateway |
 | **Host-native** | Wing security dashboard, IIAB Terminal TUI, Bone bridge |
 | **Network** | Tailscale VPN, dnsmasq, optional SSH/Samba/VNC |

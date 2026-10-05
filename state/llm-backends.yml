@@ -183,6 +183,27 @@ backends:
     enabled_flag: ollama_enabled
     processor_match: "on-device"
 
+  # The OpenClaw gateway's OpenAI surface (2026-10-01). Measured: 2026.7.1
+  # answers 404 on /v1/messages, /v1/chat/completions and /v1/responses until
+  # gateway.http.endpoints.chatCompletions.enabled — roles/pazny.openclaw turns
+  # it on, bound to loopback. `model` is an AGENT TARGET there, not a model id.
+  # Local, but NOT keyless: the gateway token is an operator credential.
+  # residency.eu holds only while OpenClaw's own model is local (openclaw_model).
+  openclaw:
+    local: true
+    protocol: openai
+    residency:
+      country: "CZ (this host)"
+      eu: true
+    base_url: "http://127.0.0.1:18789/v1"
+    auth_secret: "nos:openclaw_gateway_token"
+    model_env:
+      haiku: NOS_OPENCLAW_AGENT
+      sonnet: NOS_OPENCLAW_AGENT
+      opus: null
+    enabled_flag: openclaw_backend_enabled
+    processor_match: "OpenClaw"
+
   mistral-eu:
     protocol: "openai"
     residency: { country: "FR", eu: true }

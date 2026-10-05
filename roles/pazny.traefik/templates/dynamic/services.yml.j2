@@ -29,6 +29,10 @@
 # those are Traefik's own entry points, routing back into them would loop
 # forever and Traefik would return 404 to the original request.
 
+{# Every websecure router gets an `-origin` twin on websecure-origin when
+   traefik_origin_pull_enabled: same rule, service and middlewares, but
+   tls.options origin-pull@file. Off = one door, byte-identical render. #}
+{% set _doors = [('', 'websecure', {})] + ([('-origin', 'websecure-origin', {'options': 'origin-pull@file'})] if traefik_origin_pull_enabled | default(false) | bool else []) %}
 http:
   routers:
 {% for s in nos_manifest.services | default([]) %}
@@ -53,11 +57,6 @@ http:
 {% set _host = lookup('vars', s.domain_var, default=(s.id | replace('_', '-')) ~ (_host_alias_seg | default('')) ~ '.' ~ tenant_domain) %}
 {% set _auth = traefik_auth_modes.get(s.id, 'proxy') %}
 {% set _router = s.id | replace('_', '-') %}
-    {{ _router }}:
-      rule: "Host(`{{ _host }}`)"
-      entryPoints: ["websecure"]
-      service: "{{ _router }}"
-      tls: {}
 {# SEC-6 (2026-05-23): wing router gets the wing-edge@file middleware
    that injects X-Wing-Edge-Token. Wing's BasePresenter rejects requests
    without it (closing the direct-loopback bypass class). #}
@@ -83,11 +82,18 @@ http:
 {% if s.id in ['onlyoffice', 'euro_office'] %}
 {% set _extra_mw = _extra_mw + ['docserver-nocache@file'] %}
 {% endif %}
+{% for _sfx, _ep, _tls in _doors %}
+    {{ _router }}{{ _sfx }}:
+      rule: "Host(`{{ _host }}`)"
+      entryPoints: ["{{ _ep }}"]
+      service: "{{ _router }}"
+      tls: {{ _tls | to_json }}
 {% if _auth == 'proxy' %}
       middlewares: {{ (['authentik@file', 'security-headers@file', 'compress@file'] + _extra_mw) | to_json }}
 {% else %}
       middlewares: {{ (['security-headers@file', 'compress@file'] + _extra_mw) | to_json }}
 {% endif %}
+{% endfor %}
 {# ── Machine lanes ────────────────────────────────────────────────────────
    A path prefix that must reach the service WITHOUT authentik@file, because
    the caller is a machine and the gate 302s it into Authentik's HTML. Declared
@@ -100,14 +106,33 @@ http:
    there are no X-Authentik-* headers to vouch for, and a backend that trusts
    those headers (SEC-02) must see this lane as anonymous, never as proxied.
    The service behind a lane therefore has to authenticate the caller ITSELF.
+
+   Optional keys (nos-forum, 2026-10-03): `upstream: {svc, port}` sends the lane
+   to a DIFFERENT container (its own `<router>-<lane>` service); `strip_prefix`
+   removes the prefix before it (`<router>-<lane>-strip@file`); `allow_paths`
+   narrows the lane to exact post-strip paths, so it is not a whole-API door;
+   `access_log: false` drops the lane from the access log (a credential in its URL).
+   `gated: true` (martin tiles, 2026-10-04) keeps authentik@file on the lane; `flag`
+   names an install_* var that must be on for the lane (and its service) to render.
 #}
-{% for _lane in (traefik_machine_lanes | default({})).get(s.id, []) %}
-    {{ _router }}-{{ _lane.name }}:
-      rule: "Host(`{{ _host }}`) && PathPrefix({{ _lane.prefixes | map('regex_replace', '^(.*)$', '`\\1`') | join(', ') }})"
-      entryPoints: ["websecure"]
-      service: "{{ _router }}"
-      tls: {}
-      middlewares: ["security-headers@file", "compress@file"]
+{% for _lane in (traefik_machine_lanes | default({})).get(s.id, []) if _lane.flag is not defined or (lookup('vars', _lane.flag, default=false) | bool) %}
+{% if _lane.allow_paths is defined %}
+{%   set _match = '(' ~ (_lane.allow_paths | map('regex_replace', '^(.*)$', 'Path(`' ~ _lane.prefixes[0] ~ '\\1`)') | join(' || ')) ~ ')' %}
+{% else %}
+{%   set _match = 'PathPrefix(' ~ (_lane.prefixes | map('regex_replace', '^(.*)$', '`\\1`') | join(', ')) ~ ')' %}
+{% endif %}
+{% set _lane_mw = (['authentik@file'] if _lane.gated | default(false) else []) + ([_router ~ '-' ~ _lane.name ~ '-strip'] if _lane.strip_prefix | default(false) else []) + ['security-headers@file', 'compress@file'] %}
+{% for _sfx, _ep, _tls in _doors %}
+    {{ _router }}-{{ _lane.name }}{{ _sfx }}:
+      rule: "Host(`{{ _host }}`) && {{ _match }}"
+      entryPoints: ["{{ _ep }}"]
+      service: "{{ (_router ~ '-' ~ _lane.name) if _lane.upstream is defined else _router }}"
+      tls: {{ _tls | to_json }}
+      middlewares: {{ _lane_mw | to_json }}
+{% if not (_lane.access_log | default(true)) %}
+      observability: {accessLogs: false}
+{% endif %}
+{% endfor %}
 {% endfor %}
 {% endif %}
 {% endif %}
@@ -123,16 +148,18 @@ http:
     # WARNING: skipping extra router '{{ r.id }}' — already defined as a
     # manifest entry. Remove it from traefik_extra_routers in vars/main.yml.
 {% else %}
-    {{ r.id | replace('_', '-') }}:
+{% for _sfx, _ep, _tls in _doors %}
+    {{ r.id | replace('_', '-') }}{{ _sfx }}:
       rule: "Host(`{{ r.host }}`)"
-      entryPoints: ["websecure"]
+      entryPoints: ["{{ _ep }}"]
       service: "{{ r.id | replace('_', '-') }}"
-      tls: {}
+      tls: {{ _tls | to_json }}
 {% if r.auth | default('proxy') == 'proxy' %}
       middlewares: ["authentik@file", "security-headers@file", "compress@file"]
 {% else %}
       middlewares: ["security-headers@file", "compress@file"]
 {% endif %}
+{% endfor %}
 {% endif %}
 {% endfor %}
 
@@ -143,12 +170,14 @@ http:
 {# Docker host-gateway), and `traefik` stays in traefik_skip_ids so the manifest #}
 {# auto-loop emits nothing for it. Gate: test_traefik_api_not_insecure.py.       #}
 {% if traefik_dashboard_route_enabled | default(true) | bool %}
-    traefik-dashboard:
+{% for _sfx, _ep, _tls in _doors %}
+    traefik-dashboard{{ _sfx }}:
       rule: "Host(`{{ traefik_domain }}`)"
-      entryPoints: ["websecure"]
+      entryPoints: ["{{ _ep }}"]
       service: "api@internal"
       middlewares: ["authentik@file", "security-headers@file", "compress@file"]
-      tls: {}
+      tls: {{ _tls | to_json }}
+{% endfor %}
 {% endif %}
 
   services:
@@ -187,6 +216,12 @@ http:
 {% if _is_https %}
         serversTransport: "noverify@file"
 {% endif %}
+{% for _lane in (traefik_machine_lanes | default({})).get(s.id, []) if _lane.upstream is defined and (_lane.flag is not defined or (lookup('vars', _lane.flag, default=false) | bool)) %}
+    {{ _router }}-{{ _lane.name }}:
+      loadBalancer:
+        servers:
+          - url: "http://{{ _lane.upstream.svc }}:{{ _lane.upstream.port }}"
+{% endfor %}
 {% endif %}
 {% endif %}
 {% endif %}
@@ -200,3 +235,18 @@ http:
           - url: "{{ r.upstream }}"
 {% endif %}
 {% endfor %}
+{# ── stripPrefix middlewares for machine lanes that declare strip_prefix ── #}
+{% set _strip_lanes = [] %}
+{% for _sid, _lanes in (traefik_machine_lanes | default({})).items() %}
+{% for _lane in _lanes if _lane.strip_prefix | default(false) %}
+{% set _ = _strip_lanes.append((_sid | replace('_', '-'), _lane)) %}
+{% endfor %}
+{% endfor %}
+{% if _strip_lanes %}
+  middlewares:
+{% for _r, _lane in _strip_lanes %}
+    {{ _r }}-{{ _lane.name }}-strip:
+      stripPrefix:
+        prefixes: {{ _lane.prefixes | to_json }}
+{% endfor %}
+{% endif %}

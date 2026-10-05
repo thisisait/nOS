@@ -101,3 +101,10 @@ notification:
   on_medium:   [wing-inbox]
   on_low:      []
   on_info:     []
+
+e2e:
+  enabled: "{{ (install_bluesky_pds | default(false)) }}"
+  probes:
+    - name: admin-handle-resolves
+      url: http://127.0.0.1:{{ bluesky_pds_port }}/xrpc/com.atproto.identity.resolveHandle?handle={{ bluesky_pds_admin_handle }}
+      expect: {status: [200], contains: '"did":"did:'}

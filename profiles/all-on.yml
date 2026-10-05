@@ -24,9 +24,9 @@
 # DELIBERATELY EXCLUDED (scope = "all known-good"):
 #   - install_erpnext      — hard-blocked behind erpnext_experimental_override,
 #                            non-working on first blank (see roles/pazny.erpnext)
-#   - install_freepbx      — tiredofit image abandoned 2022; unfixable CRITICAL
-#                            CVEs (REM-014/046); operators accept-risk only
 #   - install_spacetimedb  — BSL 1.1 license (internal-SaaS use only), not FOSS
+#   - install_mikopbx      — publishes SIP/RTP UDP ports; not yet proven on a
+#                            live converge (docs/systems/mikopbx/README.md)
 # Re-enable any of those manually if you specifically want to test them.
 # =============================================================================
 
@@ -101,9 +101,6 @@ install_qgis_server: true
 # ── data stack ──────────────────────────────────────────────────────────────
 install_metabase: true
 install_superset: true
-
-# ── Tier-2 apps (manifest-driven) ────────────────────────────────────────────
-install_qdrant: true             # now feature_flag-gated (see qdrant-base/plugin.yml)
 
 # ── KEAP catalog: mirror the ENTIRE nOS self-model (not just installed) ───────
 

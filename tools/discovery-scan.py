@@ -55,10 +55,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-CONFIG = REPO / "default.config.yml"
 
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import layer_paths, resolve_flag  # noqa: E402
+from nos_identity import default_config_text, layer_paths, resolve_flag  # noqa: E402
 from nos_security import GIT_REL, queue_path, security_dir  # noqa: E402
 
 CLAUDE_MD = REPO / "CLAUDE.md"
@@ -71,11 +70,17 @@ HOST_WRITTEN = list(GIT_REL)
 TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID", "2d498264-bc9a-4324-9935-489e5e4d92f3")
 KEAP = "http://127.0.0.1:8091"
 BASE = f"{KEAP}/api/tables/{TABLE}"
-from keap_api import human_headers  # noqa: E402 — sibling helper in tools/
+from keap_api import human_headers, paged  # noqa: E402 — sibling helper in tools/
 
 #: X-Authentik-* admin identity + the SEC-02 x-keap-proxy-secret (resolved once
 #: by keap_api). Without the secret every /api call here 401s since KEAP P1.
 HEADERS = human_headers()
+
+
+def _get_json(url: str) -> dict:
+    with urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=30) as resp:
+        return json.loads(resp.read())
+
 
 # Rows this tool files are prefixed so a reader can tell an OBSERVATION from a
 # plan. The prefix survives now that `source` is live (verified 2026-08-08: the
@@ -245,8 +250,7 @@ def read_tag(raw: str) -> "Version | None":
 
 
 def declared_versions() -> dict[str, str]:
-    return {m.group(1): m.group(2) for m in _VERSION_VAR.finditer(
-        CONFIG.read_text(encoding="utf-8"))}
+    return {m.group(1): m.group(2) for m in _VERSION_VAR.finditer(default_config_text())}
 
 
 def running_images() -> dict[str, str]:
@@ -803,10 +807,8 @@ def file_rows(findings: list[Finding]) -> int:
     used and the caller is told, because losing the finding would be worse than
     filing one that needs `tools/keap-reid-rows.py` afterwards.
     """
-    req = urllib.request.Request(BASE + "/rows?limit=500", headers=HEADERS)
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        existing = {r["values"].get("slug")
-                    for r in json.loads(resp.read())["data"]["rows"]}
+    existing = {r["values"].get("slug")
+                for r in paged(_get_json, BASE + "/rows")["data"]["rows"]}
     token = _agent_token()
     filed = 0
     for f in findings:
@@ -1191,9 +1193,7 @@ def open_obs_rows() -> dict[str, str]:
     Returns {} when the table cannot be read, and the caller says so rather than
     reporting "nothing is stale" — the same rule the rest of the tool follows.
     """
-    req = urllib.request.Request(BASE + "/rows?limit=500", headers=HEADERS)
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        rows = json.loads(resp.read())["data"]["rows"]
+    rows = paged(_get_json, BASE + "/rows")["data"]["rows"]
     return {v["slug"]: v.get("status", "")
             for r in rows if (v := r["values"]).get("slug", "").startswith(OBS_PREFIX)
             and v.get("status") not in ("shipped", "dropped")}
