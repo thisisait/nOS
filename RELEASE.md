@@ -6,10 +6,10 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.14
 
 ---
 
-## v0.15-beta (2026-10-01 … 2026-10-04)
+## v0.15-beta (2026-10-01 … 2026-10-05)
 
 > **Only what was declared may run — and the estate starts watching itself.**
-> 117 commits since `v0.14-beta` (516 files, +22.5k/−5.8k). Still `-beta`.
+> 151 commits since `v0.14-beta` (561 files, +31.1k/−10.4k). Still `-beta`.
 > Anatomy suite 7085 passed; live E2E 348/349 (Jellyfin SSO, blocked on the
 > planned blank); CI green on `dev`. A Fable pre-release review found nine
 > pre-cut defects; all nine are fixed with gates that went red first.
@@ -56,11 +56,23 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.14
 - Backups skip a switched-off service's dir only when it is absent; no wipe
   without a reachable restic survivor.
 
+### A fresh machine and a fresh contributor
+- Linux integration is green on a real fresh install (KEAP data dir owned by
+  the image user); a failed health-wait prints the unready logs, scrubbed.
+- The hosted macOS lane (host only, no Docker) converges to the end: python3
+  shebang interpreter pinned, nginx cache dir before `nginx -t`, cortex on the
+  tools venv, and a host-only run skips the web smoke and says so.
+- `CONTRIBUTING.md` + PR template for forks; committed defaults and templates
+  carry no maintainer identity; CodeRabbit reads the repo's rules (advisory).
+- The charter "Working in nOS" opens `CLAUDE.md`: gates outrank agreement.
+
 ### Security
 - GitLab 18.11.12 (REM-264); redis auth leaf rotated; Cloudflare origin-pull
   mTLS door; the forum's WebSocket token kept out of the access log.
 
 ### Known open
+- macOS 14 integration does not finish inside its 60 min (19 small formulae
+  take ~2 min each on that runner; macOS 15 needs 15 min in total).
 - Jellyfin SSO waits for the planned blank; ~30 review follow-ups
   (`review-v015-followups`); `default.config.yml` split continues domain by
   domain; the session under its own user / containerized core are roadmap
