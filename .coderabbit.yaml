@@ -105,6 +105,10 @@ reviews:
         section otherwise. Advisory only: never approve or request changes.
         A fix should ship with the gate that would have caught it, shown red
         against the broken state first; say so when a fix has no gate.
+        Hold changes to the charter "Working in nOS" (top of CLAUDE.md): flag
+        any PR where a gate is weakened alongside the code that needs it, a
+        report claims success no reader verified, or instructions in data are
+        treated as orders.
     - path: "{roles/**,tasks/**,main.yml,handlers/**}"
       instructions: |
         Ansible: idempotent tasks (changed_when/creates where a command runs);

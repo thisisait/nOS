@@ -34,6 +34,10 @@ machine-readable source of this table is
 [`state/task-types.yml`](state/task-types.yml). Adding or changing a type is a
 **proposal** through the loop, not a free edit.
 
+**Before anything else, read "Working in nOS" at the top of
+[CLAUDE.md](CLAUDE.md)** — the charter every agent here works under; it is kept
+in that one place.
+
 ## Three invariants that outrank every task type
 
 1. **Success is written by a READER, not by the thing that attempted the work.**
