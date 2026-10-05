@@ -53,6 +53,7 @@ worse than none, because it reads as complete.
 - `doctrine-cite.py` — Resolve every doctrine citation in the estate — or say exactly which do not. `--file REL --json` is the editor contract (`tools/ssot-cite-vscode/`).
 - `graph-communities.py` — Computed communities vs the declared `stack`/`layer` axes; prints only the disagreement (docs/adr/0002-graphify-borrowings.md §2).
 - `graph-report.py` — What the anatomy graph's SHAPE implies: god nodes, isolated nodes, and which measured edges cite a file that has moved since.
+- `home.py` — Where am I: the estate as four questions (specialization, system, tool, knowledge) — counts and hubs, or one node and what it touches. Reads state/home-graph.json; UNKNOWN when unreadable.
 - `router-status.py` — The WAN router as a declared estate fact: presence probe + intent from state/router.yml; UNKNOWN when it cannot look.
 - `elsewhere-status.py` — Estate work happening OUTSIDE the control centre, and how to get to it.
 - `estate-status.py` — What is TRUE right now, across the three places a fact about nOS can live.
@@ -206,6 +207,7 @@ worse than none, because it reads as complete.
 - `nos-secret.py` — nos-secret — the operator's reader for the derived credential map (P1).
 
 - `anatomy-graph-gen.py` — Compile the anatomy graph — every declared actor and edge, one address space.
+- `home-graph-gen.py` — Project the anatomy graph onto four home classes via state/home-classes.yml (kind → class) into state/home-graph.json.
 - `routing-graph-gen.py` — Compile the agent capability graph (nos-work://) into routing-graph.json for the Planner Routing view.
 - `apex-sign.py` — Sign the apex ruling — after showing what changed since it was last signed.
 - `d12-annotate-plugins.py` — D1.2.b — add `name` + `enabled` to each plugin's authentik block.

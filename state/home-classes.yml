@@ -1,0 +1,55 @@
+# home-classes.yml — the anatomy graph's node KINDS folded into four questions.
+#
+# A newly arrived model cannot read fourteen kinds; it can read four:
+#   specialization  who can I be           system     what runs here
+#   tool            what can I reach for   knowledge  what is known
+# plus `internal` (plumbing, hidden by default). One row per anatomy kind,
+# nothing else: no node ids, no per-node facts — those live in the anatomy
+# graph and are projected by tools/home-graph-gen.py into state/home-graph.json.
+# Gate: tests/anatomy/test_home_graph_is_a_projection.py.
+
+version: 1
+
+classes:
+  agent:
+    class: specialization
+    reason: an agent ceremony is a charter a model can be run as
+  service:
+    class: system
+    reason: a Docker service the estate deploys and serves
+  daemon:
+    class: system
+    reason: a host launchd organ (Bone, Wing, Pulse, cortex, backups)
+  pulse:
+    class: system
+    reason: a scheduled job that runs here on its own cron
+  faceapp:
+    class: system
+    reason: an app the nOS face web desktop runs
+  repo:
+    class: system
+    reason: a git surface hosted or pushed to by the estate
+  judge:
+    class: tool
+    reason: a gate command a model can run to judge a change
+  weakness:
+    class: tool
+    reason: a Bone reader whose findings a model can ask for
+  resource:
+    class: tool
+    reason: mostly agent tool grants and LLM backends; also locks and tokens (mixed kind)
+  table:
+    class: knowledge
+    reason: a KEAP DataTable definition — what the estate records
+  doctrine:
+    class: knowledge
+    reason: a constitution paragraph the graph cites as governing law
+  gateset:
+    class: internal
+    reason: a named bundle of judges; the judges themselves are the tools
+  tofu:
+    class: internal
+    reason: an OpenTofu state root — declarative plumbing behind Authentik
+  authentik:
+    class: internal
+    reason: an SSO client object inside Authentik, not an actor
