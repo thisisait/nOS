@@ -164,3 +164,53 @@ def test_notifications_url_env_override(monkeypatch, tmp_path):
 
     plugin.v2_playbook_on_stats(FakeStats(failed=1))
     assert sent == ["http://other:1234/api/v1/notifications"]
+
+
+# 2026-10-05: 11 unread HIGH "Playbook run failed" rows outlived the green
+# converges after them — the emitter sent no supersede_key, so nothing could
+# retire them. The next run's outcome is the current word on this host.
+
+def _capture(gt, monkeypatch, tmp_path, cliargs):
+    plugin = _activated_plugin(gt, monkeypatch, tmp_path)
+    monkeypatch.setattr(gt, "_cliargs", lambda: cliargs, raising=False)
+    sent = []
+
+    class Sentinel:
+        def send_batch(self, events):
+            pass
+
+        def send_object(self, url, obj):
+            sent.append(obj)
+
+    plugin._http = Sentinel()
+    plugin._active = True
+    plugin._playbook_name = "main.yml"
+    return plugin, sent
+
+
+FULL = {"tags": ("all",), "skip_tags": (), "subset": None}
+
+
+def test_failure_and_green_share_one_supersede_class(monkeypatch, tmp_path):
+    from callback_plugins import wing_telemetry as gt
+
+    plugin, sent = _capture(gt, monkeypatch, tmp_path, FULL)
+    plugin.v2_playbook_on_stats(FakeStats(failed=1))
+    plugin.v2_playbook_on_stats(FakeStats(failed=0))
+    assert [o["severity"] for o in sent] == ["high", "info"]
+    keys = {o.get("supersede_key") for o in sent}
+    assert len(keys) == 1 and next(iter(keys)).startswith("playbook-run:"), keys
+    assert {o.get("origin_plugin") for o in sent} == {"playbook-run"}
+    import re
+    assert re.match(r"^[a-z0-9][a-z0-9_.:-]{0,62}[a-z0-9]$", sent[0]["supersede_key"])
+
+
+def test_a_scoped_green_run_claims_nothing(monkeypatch, tmp_path):
+    """`--tags nginx` green never re-ran the task that failed."""
+    from callback_plugins import wing_telemetry as gt
+
+    for scoped in ({**FULL, "tags": ("nginx",)}, {**FULL, "skip_tags": ("stacks",)},
+                   {**FULL, "subset": "localhost"}, {}):
+        _, sent = _capture(gt, monkeypatch, tmp_path, scoped)
+        _.v2_playbook_on_stats(FakeStats(failed=0))
+        assert sent == [], scoped

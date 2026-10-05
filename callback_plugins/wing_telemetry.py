@@ -55,6 +55,7 @@ import hmac
 import json
 import os
 import re
+import socket
 import sqlite3
 import sys
 import time
@@ -1310,18 +1311,19 @@ class CallbackModule(CallbackBase):
     def _emit_failure_notification(self, recap, duration_ms):
         """W6.1 (2026-06-10): a failed playbook run lands in the Wing inbox.
 
-        The events pipeline records every task, but nothing watched the
-        RECAP — a `failed=3` run scrolled past in ansible.log and the
-        operator-attention surface (Inbox) stayed empty. POST one HIGH
-        notification to Bone /api/v1/notifications (same HMAC scheme as
-        events) when failed/unreachable > 0. Best-effort: a notification
-        transport error must never fail the stats callback (no SQLite
-        fallback either — a stale failure alert replayed hours later is
-        worse than none).
+        POST one notification to Bone /api/v1/notifications (same HMAC as
+        events). Best-effort: a transport error never fails the stats callback,
+        and there is no SQLite fallback (a stale alert replayed later is worse).
+
+        2026-10-05: every outcome carries supersede_key `playbook-run:<host>`,
+        so the next run's word retires the last one — 11 HIGH failures sat
+        unread past green converges. Only an UNSCOPED green run speaks: a
+        `--tags` run never re-ran the task that failed.
         """
         failed = int(recap.get("failed", 0))
         unreachable = int(recap.get("unreachable", 0))
-        if failed == 0 and unreachable == 0:
+        green = failed == 0 and unreachable == 0
+        if green and not run_is_unscoped(_cliargs()):
             return
         if self._http is None:
             return
@@ -1330,22 +1332,48 @@ class CallbackModule(CallbackBase):
         if not url.endswith("/notifications"):
             return  # events URL has a non-standard shape; skip silently
         mins = ("%.1f" % (duration_ms / 60000.0)) if duration_ms else "?"
+        title = ("Playbook run OK: {} ok".format(int(recap.get("ok", 0))) if green
+                 else "Playbook run failed: {} failed, {} unreachable".format(
+                     failed, unreachable))
         payload = {
-            "severity": "high",
-            "title": "Playbook run failed: {} failed, {} unreachable".format(
-                failed, unreachable),
+            "severity": "info" if green else "high",
+            "title": title,
             "body": "playbook: {}\nrun_id: {}\nduration: {} min\nrecap: {}".format(
                 self._playbook_name, self._run_id, mins,
                 json.dumps(recap, sort_keys=True)),
             "actor_id": "operator",
             "actor_action_id": self._run_id,
+            "origin_plugin": "playbook-run",
+            "supersede_key": run_supersede_key(),
             "metadata": {"recap": recap, "playbook": self._playbook_name},
         }
         try:
             self._http.send_object(url, payload)
         except Exception as exc:  # noqa: BLE001 — best-effort by design
             sys.stderr.write(
-                "[wing_telemetry] failure notification POST failed: %s\n" % exc)
+                "[wing_telemetry] run notification POST failed: %s\n" % exc)
+
+
+def _cliargs():
+    try:
+        from ansible import context
+        return dict(context.CLIARGS)
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def run_is_unscoped(cliargs) -> bool:
+    """A full converge: no --tags, --skip-tags or --limit. Empty CLIARGS (not
+    an ansible-playbook run) is unknown scope, so never a green claim."""
+    tags = cliargs.get("tags")
+    return (tags is not None and tuple(tags) == ("all",)
+            and not cliargs.get("skip_tags") and not cliargs.get("subset"))
+
+
+def run_supersede_key(host=None) -> str:
+    """`playbook-run:<host>`, fitted to Bone's class-id pattern."""
+    h = re.sub(r"[^a-z0-9.-]+", "-", (host or socket.gethostname()).lower())
+    return "playbook-run:" + (h[:50].strip(".-") or "localhost")
 
 
 # Allow the file to be imported under pytest without Ansible present, while
