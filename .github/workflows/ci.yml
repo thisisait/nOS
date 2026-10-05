@@ -33,7 +33,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────────
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v7
@@ -117,7 +117,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────────
   pytest:
     name: Pytest (Python tests)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       # THE ENVIRONMENT CONTRACT (tests/anatomy/_environment_contract.py):
       # every tool named here must resolve on PATH or the anatomy suite
@@ -198,7 +198,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────────
   pytest-apps:
     name: Pytest (apps + importer)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v7
@@ -221,7 +221,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────────
   face:
     name: Face (nOS-face shell)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v7
@@ -260,7 +260,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────────
   cortex:
     name: Cortex (reasoning organ)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v7
@@ -301,7 +301,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────────
   contracts-drift:
     name: Contracts drift check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v7
