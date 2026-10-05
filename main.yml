@@ -204,6 +204,11 @@
           - attrs
         state: absent
         extra_args: "--break-system-packages"
+        # Homebrew's pip only: without `executable` this ran against the
+        # interpreter Ansible uses (pyenv) and stripped jsonschema/attrs from it
+        # on every converge — the anatomy suite stopped collecting (2026-10-05).
+        executable: "{{ homebrew_prefix }}/bin/pip3"
+      when: ansible_facts['os_family'] == 'Darwin'
       failed_when: false
       tags: ['always', 'preflight']
 
