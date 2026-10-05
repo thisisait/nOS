@@ -322,8 +322,11 @@ def dump_unready_logs(stacks: list[str], tail: int = 80) -> int:
 
     Called by the health-wait only on its way to failing. CI 37265044993 said
     `keap-1[restarting]` for 10 minutes and never why; the why was one line of
-    the container's own stderr. Never a verdict, always rc 0.
+    the container's own stderr. Never a verdict, always rc 0. Output passes
+    through pulse/redact.py: it lands in the run log and in CI.
     """
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pulse"))
+    from pulse.redact import scrub_text
     for stack in stacks:
         for name, status in _docker_ps(stack):
             if _classify(status) == "ready":
@@ -332,7 +335,7 @@ def dump_unready_logs(stacks: list[str], tail: int = 80) -> int:
             try:
                 out = subprocess.run([DOCKER, "logs", "--tail", str(tail), name],
                                      capture_output=True, text=True, timeout=20)
-                print(((out.stdout or "") + (out.stderr or "")).rstrip() or "(no output)")
+                print(scrub_text((out.stdout or "") + (out.stderr or "")).rstrip() or "(no output)")
             except Exception as exc:
                 print(f"(docker logs failed: {exc})")
     return 0

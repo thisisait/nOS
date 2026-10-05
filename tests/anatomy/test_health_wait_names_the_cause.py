@@ -66,3 +66,22 @@ def test_probe_logs_mode_tails_only_unready(tmp_path: pathlib.Path) -> None:
     assert out.returncode == 0
     assert "LOG-OF-iiab-keap-1" in out.stdout and "Restarting" in out.stdout
     assert "iiab-face-1" not in out.stdout
+
+
+def test_probe_logs_mode_scrubs_secrets(tmp_path: pathlib.Path) -> None:
+    """The dump lands in ansible output, the run log and CI; a container that
+    echoes its env must not leak through it (pulse/redact.py shapes)."""
+    fake = tmp_path / "docker"
+    fake.write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" = ps ]; then echo "iiab-keap-1|Restarting (1) 3 seconds ago"\n'
+        'elif [ "$1" = logs ]; then echo "DB_PASSWORD=hunter2hunter2 boot failed"; fi\n'
+    )
+    fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
+    out = subprocess.run(
+        [sys.executable, str(PROBE), "--logs", "iiab"],
+        capture_output=True, text=True, timeout=30,
+        env={**os.environ, "NOS_DOCKER_BIN": str(fake)},
+    )
+    assert "hunter2hunter2" not in out.stdout
+    assert "DB_PASSWORD=<REDACTED> boot failed" in out.stdout
