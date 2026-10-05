@@ -1,0 +1,69 @@
+# body-levels.yml — the anatomy graph's node KINDS placed on biology's ladder.
+#
+# A newly arrived model cannot read eighteen kinds; it already knows the levels
+# of organisation. Six levels, top of the ladder last:
+#   genome → cell → tissue → organ → organism → habitat
+# three cross-cutting systems: sense (reads), limb (acts), memory (learned),
+# and `internal` (plumbing, hidden by default). One row per anatomy kind,
+# nothing else: no node ids, no per-node facts — those live in the anatomy
+# graph and are projected by tools/body-plan-gen.py into state/body-plan.json.
+# tissue and organism hold no kind today and are printed empty, never hidden.
+# Gate: tests/anatomy/test_body_plan_is_a_projection.py.
+
+version: 1
+
+levels:
+  article:
+    level: genome
+    reason: an in-force constitution article (ssot/INDEX.yml doctrine realm) every cell inherits
+  doctrine:
+    level: genome
+    reason: a cited constitution paragraph — inherited law, the opposite of learned memory
+  tasktype:
+    level: genome
+    reason: a declared work contract every agent inherits; a cell expresses it via may_take
+  skill:
+    level: genome
+    reason: a procedure text — ssot/doctrine/immune-system.md §1 counts skills as the inner organism's DNA
+  agent:
+    level: cell
+    reason: one model in one specialization (its charter, tools and backend)
+  service:
+    level: organ
+    reason: a Docker service with one job — "organ" as a runtime component, one of four meanings in docs/doctrine/organs.md (PROPOSED)
+  daemon:
+    level: organ
+    reason: a host launchd organ with one job (Bone, Wing, Pulse, cortex, backups) — see docs/doctrine/organs.md (PROPOSED)
+  pulse:
+    level: organ
+    reason: a scheduled function with one job, performed by the Pulse daemon on its own cron
+  faceapp:
+    level: organ
+    reason: an app with one job inside the nOS face web desktop
+  repo:
+    level: habitat
+    reason: a git surface the estate lives beside — hosted here or pushed to elsewhere
+  reader:
+    level: sense
+    reason: a tools/README.md §Readers script — asks the estate what is true
+  weakness:
+    level: sense
+    reason: a Bone reader whose findings become loop proposals
+  judge:
+    level: sense
+    reason: a gate command that reads a change and returns a verdict; it does not act
+  resource:
+    level: limb
+    reason: mostly agent tool grants; also LLM backends, capability tokens and one lock (a mixed kind)
+  table:
+    level: memory
+    reason: a KEAP DataTable definition — what the estate learns and records
+  gateset:
+    level: internal
+    reason: a named bundle of judges; the judges themselves are the senses
+  tofu:
+    level: internal
+    reason: an OpenTofu state root — declarative plumbing behind Authentik
+  authentik:
+    level: internal
+    reason: an SSO client object inside Authentik, not an actor

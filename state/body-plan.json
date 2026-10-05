@@ -1,1663 +1,1668 @@
 {
   "version": 1,
-  "generated_by": "tools/home-graph-gen.py",
+  "generated_by": "tools/body-plan-gen.py",
   "projects": "state/anatomy-graph.json",
-  "classes_from": "state/home-classes.yml",
+  "levels_from": "state/body-levels.yml",
   "counts": {
-    "specialization": 36,
-    "system": 144,
-    "tool": 90,
-    "knowledge": 76,
+    "genome": 56,
+    "cell": 16,
+    "tissue": 0,
+    "organ": 140,
+    "organism": 0,
+    "habitat": 4,
+    "sense": 70,
+    "limb": 20,
+    "memory": 40,
     "internal": 66,
     "edges": 276
   },
   "nodes": {
     "agent:conductor": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:curator": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:inspektor": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:invoice-extract": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:invoice-vision-ocr": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:jeff": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:jeff-cloud": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:librarian": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:migration-author": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:ops-extract": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:ops-extract-cloud": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:ops-triage": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:ops-triage-cloud": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:proposer": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:surveyor": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "agent:upgrade-architect": {
-      "class": "specialization",
+      "level": "cell",
       "kind": "agent"
     },
     "article:cross-repo-contracts": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:face": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:face-app-tiers": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:filesystem": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:foreign-properties": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:four-trees": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:gates": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:generative-ui": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:identity": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:immune-system": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:layers": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:loops": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:observability": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:operator-model": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:ponytail": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:secrets": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:security-floor": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:session-threat-model": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:ssot": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:virtiofs": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "article:workflows": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "article"
     },
     "authentik:backrest": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:bookstack": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:calibre-web": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:code-server": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:documenso": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:dolibarr": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:erpnext": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:espocrm": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:face": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:firefly": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:freescout": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:geolibre": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:gitea": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:gitlab": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:grafana": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:hedgedoc": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:hermes": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:homeassistant": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:infisical": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:influxdb": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:jellyfin": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:keap": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:kiwix": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:mailpit": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:metabase": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:mikopbx": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:miniflux": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:n8n": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nextcloud": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nodered": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nos-conductor": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nos-curator": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nos-devlog": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nos-forum": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nos-inspektor": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nos-librarian": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nos-migration-author": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nos-openclaw": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nos-state-manager": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nos-surveyor": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nos-upgrade-architect": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:nos-wing": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:ntfy": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:onlyoffice": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:open-webui": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:openclaw": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:outline": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:paperclip": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:portainer": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:qdrant": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:roundcube": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:snappymail": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:spacetimedb": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:superset": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:twofauth": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:uptime-kuma": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:vaultwarden": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:wing": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:woodpecker": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "authentik:wordpress": {
-      "class": "internal",
+      "level": "internal",
       "kind": "authentik"
     },
     "daemon:ai.openclaw.gateway": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:com.ollama.agent": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.acme-renew": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.backrest": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.backup.exporter": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.backup.offsite": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.backup.rustfs": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.bone": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.cortex": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.device-gateway": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.ears": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.ears-listen": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.heartbeat": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.hermes": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.pulse": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.resume": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.wing": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:homebrew.mxcl.dnsmasq": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "daemon:sh.brew.grafana-alloy": {
-      "class": "system",
+      "level": "organ",
       "kind": "daemon"
     },
     "doctrine:docs/archive/cortex-corpus-parallel.md#2.1": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:docs/archive/cortex-corpus-parallel.md#5.3": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:docs/archive/nos-cortex-organ-design.md#2": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#10": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#5.1": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#5a": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#8.1": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#M2": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#M3": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#M7": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:ssot/doctrine/foreign-properties.md#5.1": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "doctrine:ssot/doctrine/workflows.md#6": {
-      "class": "knowledge",
+      "level": "genome",
       "kind": "doctrine"
     },
     "faceapp:anatomy": {
-      "class": "system",
+      "level": "organ",
       "kind": "faceapp"
     },
     "faceapp:anatomy-widget": {
-      "class": "system",
+      "level": "organ",
       "kind": "faceapp"
     },
     "faceapp:books": {
-      "class": "system",
+      "level": "organ",
       "kind": "faceapp"
     },
     "faceapp:files": {
-      "class": "system",
+      "level": "organ",
       "kind": "faceapp"
     },
     "faceapp:keap-explore": {
-      "class": "system",
+      "level": "organ",
       "kind": "faceapp"
     },
     "faceapp:planner": {
-      "class": "system",
+      "level": "organ",
       "kind": "faceapp"
     },
     "faceapp:tables": {
-      "class": "system",
+      "level": "organ",
       "kind": "faceapp"
     },
     "gateset:corpus": {
-      "class": "internal",
+      "level": "internal",
       "kind": "gateset"
     },
     "gateset:fast": {
-      "class": "internal",
+      "level": "internal",
       "kind": "gateset"
     },
     "gateset:full": {
-      "class": "internal",
+      "level": "internal",
       "kind": "gateset"
     },
     "gateset:live": {
-      "class": "internal",
+      "level": "internal",
       "kind": "gateset"
     },
     "gateset:repo": {
-      "class": "internal",
+      "level": "internal",
       "kind": "gateset"
     },
     "judge:ansible-lint": {
-      "class": "tool",
+      "level": "sense",
       "kind": "judge"
     },
     "judge:cortex-corpus-diff": {
-      "class": "tool",
+      "level": "sense",
       "kind": "judge"
     },
     "judge:genome-codegen": {
-      "class": "tool",
+      "level": "sense",
       "kind": "judge"
     },
     "judge:nos-smoke": {
-      "class": "tool",
+      "level": "sense",
       "kind": "judge"
     },
     "judge:pytest-anatomy": {
-      "class": "tool",
+      "level": "sense",
       "kind": "judge"
     },
     "pulse:alert-relay:relay-firing": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:authentik-tofu-drift:tofu-drift-plan": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:backup:backup-restore-drill": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:conductor:scan-state-record": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:conductor:security-drift-watch": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:conductor:self-test-001": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:conductor:vulnerability-scan": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:cortex:cortex-corpus-diff": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:cortex:cortex-fs-sync": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:crm-hydrate:hydrate-parties": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:discovery:contradiction-scan": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:gdpr-breach:breach-deadline-scan": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:geo:geo-load": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:geo:project-sites": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:geolibre:atlas-refresh": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:gitea:trunk-sync": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:gitlab:trunk-sync": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:gitleaks:nightly-scan": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:invoice-vision:absorb-approved": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:invoice-vision:intake-sweep": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:keap:keap-consolidate": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:keap:keap-embed-sync": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:keap:keap-features-sync": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:keap:keap-lint": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:librarian:brief-taxonomy": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:librarian:describe-taxonomy": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:librarian:judge-lint-queue": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:loop:drive": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:loop:news-scout": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:loop:pipeline-exercise": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:loop:propose": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:loop:repo-check": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:loop:review": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:loop:vision-bench": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:n8n:exec-watch": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:npm-supply-chain:daily-ioc-scan": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:surveyor:surface-survey": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:upgrade-architect:recipe-author": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:wing:agent-cost-tally": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:wing:audit-chain-verify": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:wing:dispatch-notifications": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:wing:dispatch-notifications-digest": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "pulse:wing:inbox-reconcile": {
-      "class": "system",
+      "level": "organ",
       "kind": "pulse"
     },
     "reader:_geo_db": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:_ledger_open": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:agent-capability": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:agent-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:agent-token-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:anatomy-measure-margins": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:app-version": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:atlas-refresh": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:awaiting-operator": {
-      "class": "tool",
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:body": {
+      "level": "sense",
       "kind": "reader"
     },
     "reader:brew-pin-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:caddy-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:cortex-drift": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:cortex-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:current-state": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:digest-record": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:digest-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:discovery-scan": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:doctrine-cite": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:elsewhere-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:estate-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:face-wiring-report": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:geo-load": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:geo-project-sites": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:geo-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:graph-communities": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:graph-report": {
-      "class": "tool",
-      "kind": "reader"
-    },
-    "reader:home": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:identity-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:loader-vars-report": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:loop-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:managed-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:maps-style-vendor": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:nos_identity": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:nos_security": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:nos_work_uri": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:npm-ioc-scan": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:permission-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:plugin-wiring-report": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:profile-builder-build": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:raw-archive-probe": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:red-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:reload-stale-config": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:rem-dispose": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:rem-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:roadmap-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:router-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:santa-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:skill-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:snapshot-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:stale-config-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:stuck-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:task-types-render": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:tls-uptake": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:undeclared-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:usage-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:vendor-keap-contracts": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:view-contract-drift": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "reader:wing-status": {
-      "class": "tool",
+      "level": "sense",
       "kind": "reader"
     },
     "repo:gitea-forge": {
-      "class": "system",
+      "level": "habitat",
       "kind": "repo"
     },
     "repo:github-origin": {
-      "class": "system",
+      "level": "habitat",
       "kind": "repo"
     },
     "repo:gitlab-forge": {
-      "class": "system",
+      "level": "habitat",
       "kind": "repo"
     },
     "repo:scan-data": {
-      "class": "system",
+      "level": "habitat",
       "kind": "repo"
     },
     "resource:agent-run-lock": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:ask-operator": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:backend-anthropic": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:backend-minimax": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:backend-mistral-eu": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:backend-ollama": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:backend-openclaw": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:backend-xai": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:bash-read-only": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:contract-search": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:cortex_token_ro": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:exec": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:keap_token_ro": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:live_estate": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:mcp-bone": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:mcp-keap": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:mcp-loop": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:mcp-wing-read": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:mcp-wing-write": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "resource:migration-file-write": {
-      "class": "tool",
+      "level": "limb",
       "kind": "resource"
     },
     "service:alloy": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:apex": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:authentik": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:backrest": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:backup": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:bluesky_pds": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:bone": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:bookstack": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:calibre_web": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:code_server": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:cortex": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:device_gateway": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:dolibarr": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:ears": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:erpnext": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:face": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:firefly": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:freescout": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:geolibre": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:gitea": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:gitlab": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:grafana": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:hedgedoc": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:hermes": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:homeassistant": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:iiab_terminal": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:infisical": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:influxdb": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:jellyfin": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:keap": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:kiwix": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:loki": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:mailpit": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:mariadb": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:martin": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:mcp_gateway": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:metabase": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:mikopbx": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:miniflux": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:n8n": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:nextcloud": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:nodered": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:nos_forum": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:ntfy": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:offline_maps": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:onlyoffice": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:open_webui": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:openclaw": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:opencode": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:outline": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:paperclip": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:portainer": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:postgresql": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:prometheus": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:pulse": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:qgis_server": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:redis": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:rustfs": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:smtp_stalwart": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:snappymail": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:spacetimedb": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:superset": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:tailscale": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:tempo": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:traefik": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:uptime_kuma": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:vaultwarden": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:watchtower": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:wing": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:woodpecker": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "service:wordpress": {
-      "class": "system",
+      "level": "organ",
       "kind": "service"
     },
     "skill:cortex-query": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "skill"
     },
     "skill:devlog": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "skill"
     },
     "skill:dtt-capture": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "skill"
     },
     "skill:judge": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "skill"
     },
     "skill:loop": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "skill"
     },
     "skill:nos-backoffice": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "skill"
     },
     "skill:nos-datatables": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "skill"
     },
     "skill:nos-devops": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "skill"
     },
     "skill:nos-manifest-app": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "skill"
     },
     "skill:propose": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "skill"
     },
     "skill:weakness-scan": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "skill"
     },
     "table:account": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:application": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:apps": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:book-access": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:caddy": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:caddy-sessions": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:cnb-fx": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:controls": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:current-state": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:device": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:device-client": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:device-extraction": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:invoice": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:invoice-line": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:invoice-review": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:journal-entry": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:kolben-engineer": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:kolben-project": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:kolben-ticket": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:kolben-time-entry": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:layouts": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:loop-config": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:package": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:party": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:party-address": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:party-contact": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:party-registry-status": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:party-site": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:party-tax-identity": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:pending-invoice-verify": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:posting": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:print-job": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:print-job-step": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:print-machine": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:print-material": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:print-order": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:repo": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:roadmap": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:systems": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "table:wallpapers": {
-      "class": "knowledge",
+      "level": "memory",
       "kind": "table"
     },
     "tasktype:code-fix": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "tasktype"
     },
     "tasktype:converge": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "tasktype"
     },
     "tasktype:design": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "tasktype"
     },
     "tasktype:doc": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "tasktype"
     },
     "tasktype:investigate": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "tasktype"
     },
     "tasktype:review": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "tasktype"
     },
     "tasktype:security-remediation": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "tasktype"
     },
     "tasktype:seed-edit": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "tasktype"
     },
     "tasktype:use-case": {
-      "class": "specialization",
+      "level": "genome",
       "kind": "tasktype"
     },
     "tofu:authentik-state": {
-      "class": "internal",
+      "level": "internal",
       "kind": "tofu"
     },
     "weakness:corpus-diff": {
-      "class": "tool",
+      "level": "sense",
       "kind": "weakness"
     },
     "weakness:git-worktree": {
-      "class": "tool",
+      "level": "sense",
       "kind": "weakness"
     },
     "weakness:hidden-fees": {
-      "class": "tool",
+      "level": "sense",
       "kind": "weakness"
     },
     "weakness:prometheus-alerts": {
-      "class": "tool",
+      "level": "sense",
       "kind": "weakness"
     },
     "weakness:pulse-runs": {
-      "class": "tool",
+      "level": "sense",
       "kind": "weakness"
     },
     "weakness:remediation-queue": {
-      "class": "tool",
+      "level": "sense",
       "kind": "weakness"
     },
     "weakness:scan-state": {
-      "class": "tool",
+      "level": "sense",
       "kind": "weakness"
     }
   },

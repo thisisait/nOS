@@ -764,7 +764,7 @@ nodes:
   "weakness:pulse-runs": withheld
   "weakness:remediation-queue": withheld
   "weakness:scan-state": withheld
-  # home-graph increment 2 (2026-10-05): task types, skills, readers and
+  # body-plan increment 2 (2026-10-05): task types, skills, readers and
   # constitution articles became anatomy kinds, plus two ssot paragraphs a
   # reader cites. WITHHELD like every non-service node — the published set is
   # unchanged; awaiting-operator will ask for a routine re-sign.
@@ -817,7 +817,7 @@ nodes:
   "reader:geo-status": withheld
   "reader:graph-communities": withheld
   "reader:graph-report": withheld
-  "reader:home": withheld
+  "reader:body": withheld
   "reader:identity-status": withheld
   "reader:loader-vars-report": withheld
   "reader:loop-status": withheld

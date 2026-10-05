@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Where am I? The estate in four questions, for a model that just arrived.
+"""What am I part of? The estate as a body plan, for a model that just arrived.
 
-    tools/home.py                  the four classes, counts, most-connected nodes
-    tools/home.py tool             every node in one class, most connected first
-    tools/home.py service:keap     one node: what it is, its class, what it touches
-    tools/home.py keap             same, by local name when that is unambiguous
+    tools/body.py                  the ladder top to bottom, then senses, limbs, memory
+    tools/body.py organ            every node at one level, most connected first
+    tools/body.py service:keap     one node: what it is, its level, what it touches
+    tools/body.py keap             same, by local name when that is unambiguous
 
-Reads state/home-graph.json (tools/home-graph-gen.py, a projection of the
+Reads state/body-plan.json (tools/body-plan-gen.py, a projection of the
 anatomy graph) and, for one node's description/source, state/anatomy-graph.json.
 READER: never writes, exits 0 whatever it finds; an unreadable
 graph prints UNKNOWN, never an empty estate. `--json` for a caller.
@@ -20,16 +20,26 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-GRAPH = REPO / "state" / "home-graph.json"
+GRAPH = REPO / "state" / "body-plan.json"
 ANATOMY = REPO / "state" / "anatomy-graph.json"
 
-QUESTIONS = {
-    "specialization": "who can I be",
-    "system": "what runs here",
-    "tool": "what can I reach for",
-    "knowledge": "what is known",
+#: The ladder in order, then the cross-cutting systems — one plain line each.
+LEVELS = {
+    "genome": "the law and declared contracts every cell inherits",
+    "cell": "who you can be — one model in one specialization",
+    "tissue": "cells of one specialization working together",
+    "organ": "a part with one job — a service, daemon or scheduled function",
+    "organism": "the estate as a whole",
+    "habitat": "what lives beside the organism — the git surfaces",
+    "sense": "what you can ask — readers and judges that only read",
+    "limb": "what you can reach for — tool grants that act",
+    "memory": "what the estate has learned — KEAP tables",
 }
-TOP = 5
+EMPTY = {
+    "tissue": "nothing declares a tissue yet",
+    "organism": "no node stands for the whole; the whole is this graph",
+}
+TOP = 3
 EDGE_CAP = 24
 
 
@@ -46,16 +56,17 @@ def _resolve(graph: dict, arg: str) -> list[str]:
         return [arg]
     hits = sorted(n for n in graph["nodes"] if n.split(":", 1)[-1] == arg)
     # `keap` is both service:keap and authentik:keap; the visible one is meant.
-    shown = [n for n in hits if graph["nodes"][n]["class"] != "internal"]
+    shown = [n for n in hits if graph["nodes"][n]["level"] != "internal"]
     return shown if len(shown) == 1 else hits
 
 
+def _members(graph: dict, deg: collections.Counter, level: str) -> list[str]:
+    return sorted((n for n, v in graph["nodes"].items() if v["level"] == level),
+                  key=lambda n: (-deg[n], n))
+
+
 def overview(graph: dict, deg: collections.Counter) -> dict:
-    out = {}
-    for cls in QUESTIONS:
-        members = [n for n, v in graph["nodes"].items() if v["class"] == cls]
-        out[cls] = {"count": len(members),
-                    "top": sorted(members, key=lambda n: (-deg[n], n))[:TOP]}
+    out = {lv: {"count": len(m := _members(graph, deg, lv)), "top": m[:TOP]} for lv in LEVELS}
     out["internal"] = {"count": graph["counts"].get("internal", 0)}
     return out
 
@@ -78,8 +89,8 @@ def node_view(graph: dict, nid: str) -> dict:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="the estate in four questions")
-    ap.add_argument("target", nargs="?", help="a class name or a node id / local name")
+    ap = argparse.ArgumentParser(description="the estate as a body plan")
+    ap.add_argument("target", nargs="?", help="a level name or a node id / local name")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
@@ -87,8 +98,8 @@ def main() -> int:
         graph = json.loads(GRAPH.read_text(encoding="utf-8"))
         graph["nodes"], graph["edges"]
     except (OSError, ValueError, KeyError) as exc:
-        print(f"home: UNKNOWN — cannot read {GRAPH.relative_to(REPO)} ({exc}); "
-              f"regenerate with tools/home-graph-gen.py")
+        print(f"body: UNKNOWN — cannot read {GRAPH.relative_to(REPO)} ({exc}); "
+              f"regenerate with tools/body-plan-gen.py")
         return 0
     deg = _degree(graph)
 
@@ -97,21 +108,27 @@ def main() -> int:
         if args.json:
             print(json.dumps(data, indent=2))
             return 0
-        print("nOS home — four questions (tools/home.py <class|node> to go deeper)")
-        for cls, q in QUESTIONS.items():
-            print(f"\n{cls} — {q}: {data[cls]['count']}")
-            for nid in data[cls]["top"]:
-                print(f"  {nid}  ({deg[nid]} edges)")
-        print(f"\ninternal (hidden plumbing): {data['internal']['count']}")
+        print("nOS body plan — genome to habitat, then senses, limbs, memory "
+              "(tools/body.py <level|node>)")
+        for i, (lv, line) in enumerate(LEVELS.items()):
+            if i == 6:
+                print("  ── cutting across every level ──")
+            print(f"{lv:<9} {line}: {data[lv]['count']}")
+            if data[lv]["top"]:
+                print("          " + ", ".join(f"{n} ({deg[n]})" for n in data[lv]["top"]))
+            else:
+                print(f"          (empty — {EMPTY.get(lv, 'no kind is placed here')})")
+        print(f"internal  hidden plumbing: {data['internal']['count']}")
         return 0
 
-    if args.target in QUESTIONS or args.target == "internal":
-        members = sorted((n for n, v in graph["nodes"].items() if v["class"] == args.target),
-                         key=lambda n: (-deg[n], n))
+    if args.target in LEVELS or args.target == "internal":
+        members = _members(graph, deg, args.target)
         if args.json:
             print(json.dumps(members, indent=2))
             return 0
-        print(f"{args.target} — {QUESTIONS.get(args.target, 'hidden plumbing')}: {len(members)}")
+        print(f"{args.target} — {LEVELS.get(args.target, 'hidden plumbing')}: {len(members)}")
+        if not members:
+            print(f"  (empty — {EMPTY.get(args.target, 'no kind is placed here')})")
         for nid in members[:36]:
             print(f"  {nid}  ({deg[nid]} edges)")
         if len(members) > 36:
@@ -120,14 +137,14 @@ def main() -> int:
 
     hits = _resolve(graph, args.target)
     if len(hits) != 1:
-        print(f"home: {args.target!r} " + ("names no node or class" if not hits
+        print(f"body: {args.target!r} " + ("names no node or level" if not hits
               else f"is ambiguous: {', '.join(hits)}"))
         return 0
     data = node_view(graph, hits[0])
     if args.json:
         print(json.dumps(data, indent=2, ensure_ascii=False))
         return 0
-    print(f"{data['id']}  [{data['class']} — {QUESTIONS.get(data['class'], 'hidden plumbing')}]")
+    print(f"{data['id']}  [{data['level']} — {LEVELS.get(data['level'], 'hidden plumbing')}]")
     print(f"  kind:   {data['kind']}")
     print(f"  what:   {data['description']}")
     print(f"  source: {data['source']}")

@@ -1082,9 +1082,9 @@ def derive_table_refs(nodes: dict) -> list[dict]:
 
 
 # ── harvest: the newcomer's shelf — task types, skills, readers, law ──────
-#    (home-graph increment 2: who-can-I-be and what-is-known were agents and
-#    cited paragraphs only. Each kind is read from the file that already
-#    declares it; none is a list kept here.)
+#    (body-plan increment 2: genome and cell were cited paragraphs and agents
+#    only, and sense was judges alone. Each kind is read from the file that
+#    already declares it; none is a list kept here.)
 
 
 def harvest_task_types(nodes: dict, edges: list) -> None:
@@ -1879,8 +1879,8 @@ def build() -> dict:
     harvest_agents(nodes, agent_edges := [])   # after clients+backends — edges resolve
     harvest_tables(nodes)
     harvest_faceapps(nodes)
-    harvest_task_types(nodes, home_edges := [])   # after agents
-    harvest_skills(nodes, home_edges)             # after services
+    harvest_task_types(nodes, shelf_edges := [])   # after agents
+    harvest_skills(nodes, shelf_edges)             # after services
     harvest_readers(nodes)
     harvest_articles(nodes)
 
@@ -1899,7 +1899,7 @@ def build() -> dict:
     hosting = derive_authentik_hosting(nodes)
     all_edges = (declared + writes + edges + bindings + substrate + face
                  + structural + doctrine + mutex + hosting + agent_edges
-                 + derive_agent_triggers(nodes) + home_edges + derive_table_refs(nodes)
+                 + derive_agent_triggers(nodes) + shelf_edges + derive_table_refs(nodes)
                  + derive_task_type_tools(nodes) + derive_article_parts(nodes)
                  + derive_reader_runs(nodes))
     derive_layers(nodes, all_edges)

@@ -2364,6 +2364,13 @@
       "anchor": "02.02.04",
       "description": "Reader tools/awaiting-operator.py: What is waiting for a HUMAN right now, across every source that asks for one."
     },
+    "reader:body": {
+      "kind": "reader",
+      "source": "tools/body.py",
+      "title": "What am I part of: the estate as a body plan — genome, cell, tissue, organ, organism, habitat, then sense, limb, memory — counts and hubs, or one node and what it touches. Reads state/body-plan.json; UNKNOWN when unreadable.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/body.py: What am I part of: the estate as a body plan — genome, cell, tissue, organ, organism, habitat, then sense, limb, memory — counts and hubs, or one node and what it touches. Reads state/body-plan.json; UNKNOWN when unreadable."
+    },
     "reader:brew-pin-status": {
       "kind": "reader",
       "source": "tools/brew-pin-status.py",
@@ -2482,13 +2489,6 @@
       "title": "What the anatomy graph's SHAPE implies: god nodes, isolated nodes, and which measured edges cite a file that has moved since.",
       "anchor": "02.02.04",
       "description": "Reader tools/graph-report.py: What the anatomy graph's SHAPE implies: god nodes, isolated nodes, and which measured edges cite a file that has moved since."
-    },
-    "reader:home": {
-      "kind": "reader",
-      "source": "tools/home.py",
-      "title": "Where am I: the estate as four questions (specialization, system, tool, knowledge) — counts and hubs, or one node and what it touches. Reads state/home-graph.json; UNKNOWN when unreadable.",
-      "anchor": "02.02.04",
-      "description": "Reader tools/home.py: Where am I: the estate as four questions (specialization, system, tool, knowledge) — counts and hubs, or one node and what it touches. Reads state/home-graph.json; UNKNOWN when unreadable."
     },
     "reader:identity-status": {
       "kind": "reader",
