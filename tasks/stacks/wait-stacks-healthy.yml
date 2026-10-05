@@ -60,6 +60,11 @@
   tags: ['stacks', 'core', 'always']
   ansible.builtin.include_tasks: health-tick.yml
 
+- name: "[Stacks] Dump non-ready container logs before the timeout fail"
+  tags: ['stacks', 'core', 'always']
+  ansible.builtin.include_tasks: dump-unready-logs.yml
+  when: not (_wait_done | bool)
+
 - name: "[Stacks] Health-wait result ({{ _wait_stacks | join(', ') }})"
   tags: ['stacks', 'core', 'always']
   ansible.builtin.fail:

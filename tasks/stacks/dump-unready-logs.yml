@@ -1,0 +1,19 @@
+---
+# The health-wait's last words: `docker logs --tail 80` of every non-ready
+# container, printed before either fail path (tick abort / budget timeout).
+# CI 37265044993 said `keap-1[restarting]` for 10 minutes and never why.
+- name: "[Stacks] Logs of non-ready containers ({{ _wait_stacks | join(', ') }})"
+  tags: ['stacks', 'core', 'always']
+  ansible.builtin.command:
+    argv: "{{ ['python3', playbook_dir ~ '/files/anatomy/scripts/stack-health-probe.py', '--logs'] + _wait_stacks }}"
+  environment:
+    NOS_DOCKER_BIN: "{{ docker_bin | default('docker') }}"
+  register: _unready_logs
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[Stacks] Non-ready container logs ({{ _wait_stacks | join(', ') }})"
+  tags: ['stacks', 'core', 'always']
+  ansible.builtin.debug:
+    msg: "{{ _unready_logs.stdout_lines | default([]) }}"

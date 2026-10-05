@@ -63,6 +63,7 @@ Exit code is always 0 — the marker line carries the state (the tick loop reads
 stdout, never the rc, so a transient docker hiccup never aborts the wait).
 
 Usage: stack-health-probe.py <stack> [<stack> ...]
+       stack-health-probe.py --logs <stack> ...   # tail logs of non-ready containers
 """
 from __future__ import annotations
 
@@ -316,5 +317,28 @@ def main(argv: list[str]) -> int:
     return 0
 
 
+def dump_unready_logs(stacks: list[str], tail: int = 80) -> int:
+    """`--logs`: the last `tail` log lines of every non-ready container.
+
+    Called by the health-wait only on its way to failing. CI 37265044993 said
+    `keap-1[restarting]` for 10 minutes and never why; the why was one line of
+    the container's own stderr. Never a verdict, always rc 0.
+    """
+    for stack in stacks:
+        for name, status in _docker_ps(stack):
+            if _classify(status) == "ready":
+                continue
+            print(f"===== {name} [{status}] — docker logs --tail {tail} =====")
+            try:
+                out = subprocess.run([DOCKER, "logs", "--tail", str(tail), name],
+                                     capture_output=True, text=True, timeout=20)
+                print(((out.stdout or "") + (out.stderr or "")).rstrip() or "(no output)")
+            except Exception as exc:
+                print(f"(docker logs failed: {exc})")
+    return 0
+
+
 if __name__ == "__main__":
+    if sys.argv[1:2] == ["--logs"]:
+        sys.exit(dump_unready_logs(sys.argv[2:]))
     sys.exit(main(sys.argv[1:]))

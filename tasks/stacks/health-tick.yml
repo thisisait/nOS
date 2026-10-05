@@ -41,6 +41,13 @@
     _wait_last: "{{ _tick_probe.stdout_lines | default([]) }}"
   when: not (_wait_done | bool)
 
+- name: "[Stacks] Dump non-ready container logs before the abort (tick {{ _tick }})"
+  tags: ['stacks', 'core', 'always']
+  ansible.builtin.include_tasks: dump-unready-logs.yml
+  when:
+    - not (_wait_done | bool)
+    - (_tick_probe.stdout_lines | default([]) | last | default('')) in ['FAILED', 'UNKNOWN']
+
 # PENDING keeps polling. FAILED/UNKNOWN will not become ALL_READY by waiting:
 # 0 containers with N declared services, a missing compose file, or an Exited
 # container. Hidden fee 08: the STRICT wait used to burn the full budget (or,
