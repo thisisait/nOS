@@ -45,9 +45,13 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 from _ledger_open import open_ledger_ro  # noqa: E402 — after REPO is known
+import _live_guard  # noqa: E402
 WING = os.environ.get("NOS_WING_URL", "http://127.0.0.1:9000")
-# Reads the live Wing + wing.db (read-only); the offline boundary is lifted for this file.
-pytestmark = pytest.mark.live
+# Reads the live Wing + wing.db (read-only), so only when the RUN declares the
+# estate (NOS_LIVE=1); the mark alone would lift the boundary on a plain run.
+# Pinned by test_hub_estate_red_waits_for_nos_live.
+pytestmark = [pytest.mark.live, pytest.mark.skipif(
+    not _live_guard.live_run(), reason=f"{_live_guard.ENV} unset — reads the live Wing + wing.db")]
 
 
 def _secret(name: str) -> str:
