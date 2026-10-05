@@ -110,3 +110,35 @@ def test_red_status_decides_a_run_failure_against_later_runs(tmp_path):
     # No green row after them is not proof of red (scoped runs send none).
     assert inbox2["critical_or_high_unresolvable"] == 2, inbox2
     assert inbox2["critical_or_high_provably_stale"] == 0, inbox2
+
+
+# CodeRabbit PR #36: a keyed failure is answered only by ITS host's next run.
+# Host B's green says nothing about host A; the keyless backlog (no host) is
+# the one separately named exception, pinned above.
+FAIL_A = ("fail-a", "high", FAIL, "playbook-run", "playbook-run:a", "2026-10-05 08:00:00")
+GREEN_B = ("ok-b", "info", "Playbook run OK: 9 ok", "playbook-run",
+           "playbook-run:b", "2026-10-05 09:00:00")
+GREEN_A = ("ok-a", "info", "Playbook run OK: 9 ok", "playbook-run",
+           "playbook-run:a", "2026-10-05 10:00:00")
+
+
+@pytest.mark.skipif(shutil.which("php") is None, reason="php absent")
+@pytest.mark.parametrize("rows, retired", [([FAIL_A, GREEN_B], None),
+                                           ([FAIL_A, GREEN_B, GREEN_A], "ok-a")])
+def test_the_reconciler_retires_a_keyed_failure_only_by_its_host(tmp_path, rows, retired):
+    db = _db(tmp_path, rows)
+    out = subprocess.run(["php", str(RECONCILER), "--apply"], capture_output=True,
+                         text=True, timeout=120, env=dict(os.environ, WING_DB_PATH=str(db)))
+    assert out.returncode in (0, 2), out.stderr[-400:]
+    assert _state(db)["fail-a"]["superseded_by"] == retired, out.stdout[-800:]
+
+
+@pytest.mark.parametrize("rows, stale", [([FAIL_A, GREEN_B], 0),
+                                         ([FAIL_A, GREEN_B, GREEN_A], 1)])
+def test_red_status_decides_a_keyed_failure_only_by_its_host(tmp_path, rows, stale):
+    db = _db(tmp_path, rows)
+    conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    inbox = _red().unread_inbox(conn)
+    assert inbox["critical_or_high_provably_stale"] == stale, inbox
+    assert inbox["critical_or_high_unresolvable"] == 1 - stale, inbox

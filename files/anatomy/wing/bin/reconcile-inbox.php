@@ -568,18 +568,22 @@ function verdict_restated_by_shape(SQLite3 $db, array $n, array $repeaters): arr
 }
 
 /**
- * A playbook-run failure is answered by the next run's outcome (2026-10-05).
- * Evidence: a LATER row from the keyed `playbook-run` emitter, green or not.
- * Bone retires keyed rows itself; this reaches the keyless pre-key backlog.
+ * A playbook-run failure is answered by its host's next run outcome, green or
+ * not: a LATER row from the `playbook-run` emitter with the SAME supersede_key.
+ * KEYLESS BACKLOG (pre-2026-10-05 rows carry no host): any later keyed outcome
+ * retires them — the one rule that crosses hosts, because they name none.
  */
 function verdict_playbook(SQLite3 $db, array $n): array
 {
+	$key = (string) ($n['supersede_key'] ?? '');
 	$stmt = $db->prepare(
 		"SELECT uuid, severity, created_at, supersede_key FROM notifications
 		  WHERE origin_plugin = 'playbook-run' AND supersede_key LIKE 'playbook-run:%'
+		    AND (:key = '' OR supersede_key = :key)
 		    AND created_at > :ts
 		  ORDER BY created_at DESC, id DESC LIMIT 1"
 	);
+	$stmt->bindValue(':key', $key, SQLITE3_TEXT);
 	$stmt->bindValue(':ts', (string) $n['created_at'], SQLITE3_TEXT);
 	$r = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
 	if ($r === false) {
@@ -616,7 +620,7 @@ $hasSupersede = isset($have['superseded_at']) && isset($have['actor_id']);
 
 $res = $db->query(
 	"SELECT id, uuid, severity, title, origin_plugin, metadata_json, created_at"
-	. ($hasSupersede ? ", actor_id" : "") . "
+	. ($hasSupersede ? ", actor_id, supersede_key" : "") . "
 	   FROM notifications
 	  WHERE target_actor_id = 'operator' AND wing_inbox_read_at IS NULL"
 	. ($hasSupersede ? " AND superseded_at IS NULL" : "") . "

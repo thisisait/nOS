@@ -377,17 +377,21 @@ def _still_holds(row: sqlite3.Row, conn: sqlite3.Connection | None = None) -> bo
             if claimed and now.get(sev, 0) >= claimed:
                 return True
         return False
-    # A run failure is decided by the runs after it: a later green outcome
-    # (only an unscoped converge sends one) makes it provably not now. No green
-    # row is not proof of red — scoped and pre-key green runs send none.
+    # A run failure is decided by its host's later green outcome (same
+    # supersede_key; only an unscoped converge sends one). No green row is not
+    # proof of red. KEYLESS BACKLOG (pre-key rows name no host): any later
+    # keyed green answers them — the one rule that crosses hosts.
     if conn is not None and str(row["title"] or "").startswith("Playbook run failed"):
+        key = row["supersede_key"] or ""
         later = conn.execute(
             """
             SELECT 1 FROM notifications
              WHERE origin_plugin = 'playbook-run' AND severity = 'info'
+               AND supersede_key LIKE 'playbook-run:%'
+               AND (? = '' OR supersede_key = ?)
                AND created_at > ?
              LIMIT 1
-            """, (row["created_at"],)).fetchone()
+            """, (key, key, row["created_at"])).fetchone()
         return False if later else None
     return None
 
@@ -445,14 +449,16 @@ def unread_inbox(conn: sqlite3.Connection) -> dict:
     unknown = 0
     loud_rows = conn.execute(
         """
-        SELECT origin_plugin, origin_agent, metadata_json, title, created_at
+        SELECT origin_plugin, origin_agent, metadata_json, title, created_at,
+               supersede_key
           FROM notifications
          WHERE wing_inbox_read_at IS NULL AND superseded_at IS NULL
            AND severity IN ('critical', 'high')
         """
     ).fetchall() if retired else conn.execute(
         """
-        SELECT origin_plugin, origin_agent, metadata_json, title, created_at
+        SELECT origin_plugin, origin_agent, metadata_json, title, created_at,
+               NULL AS supersede_key
           FROM notifications
          WHERE wing_inbox_read_at IS NULL AND severity IN ('critical', 'high')
         """
