@@ -206,11 +206,14 @@ def test_failure_and_green_share_one_supersede_class(monkeypatch, tmp_path):
 
 
 def test_a_scoped_green_run_claims_nothing(monkeypatch, tmp_path):
-    """`--tags nginx` green never re-ran the task that failed."""
+    """`--tags nginx` green never re-ran the task that failed; nor did a run that
+    started mid-play, stepped (tasks may be declined) or only checked."""
     from callback_plugins import wing_telemetry as gt
 
     for scoped in ({**FULL, "tags": ("nginx",)}, {**FULL, "skip_tags": ("stacks",)},
-                   {**FULL, "subset": "localhost"}, {}):
+                   {**FULL, "subset": "localhost"}, {},
+                   {**FULL, "start_at_task": "Install nginx"}, {**FULL, "step": True},
+                   {**FULL, "check": True}):
         _, sent = _capture(gt, monkeypatch, tmp_path, scoped)
         _.v2_playbook_on_stats(FakeStats(failed=0))
         assert sent == [], scoped

@@ -1363,11 +1363,13 @@ def _cliargs():
 
 
 def run_is_unscoped(cliargs) -> bool:
-    """A full converge: no --tags, --skip-tags or --limit. Empty CLIARGS (not
-    an ansible-playbook run) is unknown scope, so never a green claim."""
+    """A full converge: no --tags, --skip-tags, --limit, --start-at-task, --step
+    or --check (each skips or fakes tasks). Empty CLIARGS (not an
+    ansible-playbook run) is unknown scope, so never a green claim."""
     tags = cliargs.get("tags")
     return (tags is not None and tuple(tags) == ("all",)
-            and not cliargs.get("skip_tags") and not cliargs.get("subset"))
+            and not any(cliargs.get(k) for k in
+                        ("skip_tags", "subset", "start_at_task", "step", "check")))
 
 
 def run_supersede_key(host=None) -> str:
