@@ -101,15 +101,16 @@
 # the tree. The daemon holds the composed tree IN MEMORY, so a materialise that
 # changed rows must restart it — changed_when reads the ingest trailer and the
 # self-model applied count off the CLI output.
-# python3 (self-model generator) resolves via PATH: the pyenv shim first, the
-# way the operator's ansible itself runs.
+# python3 (self-model generator) resolves via PATH: the nOS tools venv first
+# (PyYAML, tasks/tools-venv.yml) — a clean CI runner has no pyenv shim and its
+# Homebrew python3 lacks yaml (macOS-15 Integration, 2026-10-05).
 
 - name: "[pazny.cortex] Materialise the store (git tree + self-model)"
   ansible.builtin.command:
     argv: ["{{ _cortex_node_bin | dirname }}/npm", "run", "-s", "store:materialise"]
     chdir: "{{ cortex_src_dir }}"
   environment:
-    PATH: "{{ _cortex_node_bin | dirname }}:{{ ansible_facts['env']['HOME'] }}/.pyenv/shims:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin"
+    PATH: "{{ _cortex_node_bin | dirname }}:{{ nos_tools_venv }}/bin:{{ ansible_facts['env']['HOME'] }}/.pyenv/shims:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin"
     CORTEX_STORE_PATH: "{{ cortex_store_path }}"
     CORTEX_SELFMODEL: "{{ '1' if (cortex_selfmodel_enabled | default(true) | bool) else '0' }}"
   register: _cortex_materialise
