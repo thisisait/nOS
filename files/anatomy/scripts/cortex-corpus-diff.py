@@ -1672,6 +1672,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.no_ledger:
         return 3 if report["removalShaped"] else 0
 
+    # docs/archive/cortex-corpus-parallel.md §5.1: a decided clock (3 agree, 3 disagree, or the ceiling) adds no night
+    # and re-raises nothing; it still observes, and a removal-shaped night still halts.
+    decided = (state["agreeStreak"] >= NIGHTS_REQUIRED or state["disagreements"] >= DISAGREEMENTS_ALLOWED
+               or len(state["nights"]) >= NIGHT_CEILING)
+    if decided and not report["removalShaped"]:
+        print(f"\n  S2 clock already decided ({observation(state, report)}) — night not recorded")
+        return 0
+
     night = {
         "at": report["at"],
         "result": "agree" if report["agrees"] else "disagree",

@@ -780,6 +780,26 @@ def test_a_current_ledger_is_carried_forward(tmp_path):
     assert D.load_state(p)["agreeStreak"] == 1
 
 
+@pytest.mark.parametrize("ledger", [
+    {"nights": [{"result": "disagree"}] * 3, "agreeStreak": 0, "disagreements": 3},
+    {"nights": [{"result": "agree"}] * 3, "agreeStreak": 3, "disagreements": 0},
+])
+def test_a_decided_clock_adds_no_night_and_raises_no_alarm(tmp_path, monkeypatch, ledger):
+    # docs/archive/cortex-corpus-parallel.md §5.1: at 3 disagreements "stop adding nights", at 3 agreements "S2 exits".
+    # MEASURED 2026-10-04: night 4 was appended and the same HIGH re-raised.
+    p = tmp_path / "ledger.json"
+    p.write_text(json.dumps({"version": D.LEDGER_VERSION, "halted": False, **ledger}))
+    sides = {"keap": mk_side("keap", taxonomy_ids=["01", "02"]), "cortex": mk_side("cortex", taxonomy_ids=["01"])}
+    monkeypatch.setattr(D, "read_side", lambda name, *_a: sides[name])
+    sent = []
+    monkeypatch.setattr(D, "notify", lambda *a: sent.append(a))
+    rc = D.main(["--keap-token", "k", "--cortex-token", "c", "--state", str(p),
+                 "--canonical-dir", str(tmp_path / "nope"), "--feeder-state", str(tmp_path / "f.json")])
+    assert rc == 0
+    assert len(json.loads(p.read_text())["nights"]) == 3
+    assert sent == []
+
+
 # ── 10. end to end, over the wire ────────────────────────────────────────────
 
 
