@@ -90,3 +90,16 @@ def test_the_streak_stops_at_a_success(monkeypatch) -> None:
     monkeypatch.setattr(mod, "_gh", lambda *a: [V011[0], V011[9], V011[1]])
     row = mod.ci_runs()["dev"][0]
     assert row["streak"] == 1, "the streak counted past a success"
+
+
+def test_a_running_build_is_no_verdict(monkeypatch) -> None:
+    """2026-10-05: gh reports conclusion "" while a run is queued or in progress;
+    red-status printed four running builds as red. The newest FINISHED run judges."""
+    mod = _mod()
+    running = [{"name": "CI", "conclusion": "", "status": "in_progress",
+                "headSha": "dddddddd", "createdAt": "2026-08-29T10:00:00Z"},
+               {"name": "Nightly", "conclusion": "", "status": "queued",
+                "headSha": "eeeeeeee", "createdAt": "2026-08-29T10:00:00Z"}]
+    monkeypatch.setattr(mod, "_gh", lambda *a: running + RUNS)
+    assert [f["workflow"] for f in mod.ci_runs()["dev"]] == ["Nightly"]
+    assert mod.ci_runs()["dev"][0]["sha"] == "cccccccc", "the finished Nightly failure, not the queued run"

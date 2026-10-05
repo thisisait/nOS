@@ -715,14 +715,16 @@ def ci_runs() -> dict | None:
                    "--json", "name,conclusion,status,headSha,createdAt")
         if runs is None:
             return None
+        # The newest FINISHED run is the verdict: gh reports conclusion "" (not
+        # None) while a run is queued or in progress, which read as red (10-05).
+        runs = [r for r in runs if r.get("status") == "completed"]
         newest: dict[str, dict] = {}
         for run in runs:
             if run["name"] not in newest:
                 newest[run["name"]] = run
         rows = []
         for name, r in sorted(newest.items()):
-            if (r["conclusion"] in ("success", "skipped", None)
-                    and r["status"] in ("completed", "in_progress", "queued")):
+            if r["conclusion"] in ("success", "skipped"):
                 continue
             # Fee 39: a state without its streak hid 46 days of red — the
             # newest run said "failure" and nothing said "×9 since 07-16".
