@@ -83,9 +83,23 @@ def test_coderabbit_config_matches_the_published_schema():
 
 
 def test_unknown_keys_are_refused_not_ignored():
+    """Strict copy of the published schema: every object that lists its
+    properties refuses others, at every depth (auto_review.base_brances too).
+    The fixture stays byte-identical to what CodeRabbit publishes."""
     import json
-    schema = json.loads((REPO / "tests/fixtures/coderabbit-schema.v2.json").read_text())
-    cfg = yaml.safe_load((REPO / ".coderabbit.yaml").read_text())
-    known = schema["properties"]["reviews"]["properties"]
-    assert not set(cfg["reviews"]) - set(known), set(cfg["reviews"]) - set(known)
-    assert not set(cfg) - set(schema["properties"]), set(cfg) - set(schema["properties"])
+
+    import jsonschema
+
+    def strict(node):
+        if isinstance(node, dict):
+            if "properties" in node and "additionalProperties" not in node:
+                node["additionalProperties"] = False
+            for v in node.values():
+                strict(v)
+        elif isinstance(node, list):
+            for v in node:
+                strict(v)
+        return node
+
+    schema = strict(json.loads((REPO / "tests/fixtures/coderabbit-schema.v2.json").read_text()))
+    jsonschema.validate(yaml.safe_load((REPO / ".coderabbit.yaml").read_text()), schema)
