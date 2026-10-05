@@ -69,3 +69,23 @@ def test_coderabbit_reviews_prs_into_master_and_dev():
     assert auto["enabled"] is True
     for branch in ("master", "dev"):
         assert any(re.fullmatch(p, branch) for p in auto["base_branches"]), branch
+
+
+def test_coderabbit_config_matches_the_published_schema():
+    """A misspelt key is silently ignored by the bot — so validate, offline,
+    against the schema fetched 2026-10-05 (tests/fixtures). Re-fetch it when
+    CodeRabbit adds a key we want."""
+    import json
+
+    import jsonschema
+    schema = json.loads((REPO / "tests/fixtures/coderabbit-schema.v2.json").read_text())
+    jsonschema.validate(yaml.safe_load((REPO / ".coderabbit.yaml").read_text()), schema)
+
+
+def test_unknown_keys_are_refused_not_ignored():
+    import json
+    schema = json.loads((REPO / "tests/fixtures/coderabbit-schema.v2.json").read_text())
+    cfg = yaml.safe_load((REPO / ".coderabbit.yaml").read_text())
+    known = schema["properties"]["reviews"]["properties"]
+    assert not set(cfg["reviews"]) - set(known), set(cfg["reviews"]) - set(known)
+    assert not set(cfg) - set(schema["properties"]), set(cfg) - set(schema["properties"])
