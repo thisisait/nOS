@@ -109,6 +109,7 @@ worse than none, because it reads as complete.
 
 - `agent-report.py` — agent-report.py — print an agent's real report, losslessly.
 - `aggregator-dry-run.py` — D3 — Authentik aggregator dry-run + parity report.
+- `home-benchmark.py` — Score how at home a model is in the estate from ONE context file: questions from `state/home-benchmark.yml`, answer key derived from the sources at run time, scored by exact-identifier F1 outside any model (`score` never calls one); unreachable backend = UNAVAILABLE. `ask` is a manual, operator-run live path.
 - `local-model-bench.py` — Measure a local model on the one job the estate has for it, with code as judge.
 - `loop-diff.py` — Build a valid unified diff from a replacement an agent can state in words.
 - `loop-graph-gen.py` — Compile the loop harness from ledger.py into loop-graph.json (the Planner Loops view + its gate).

@@ -1,0 +1,77 @@
+# =============================================================================
+# state/home-benchmark.yml — the question set `tools/home-benchmark.py` asks.
+#
+# Roadmap row `home-benchmark`: "every LLM feels at home" is a claim until a
+# reader scores it. A model sees ONE context file and nothing else; code
+# compares its answers to a key derived from the estate's own sources.
+#
+# THIS FILE HOLDS NO ANSWERS, and that is gated
+# (tests/anatomy/test_home_benchmark_key_is_derived.py): each family is a
+# template plus the NAME of a derivation in the tool. The key is recomputed
+# from the sources on every run, so it moves when the estate moves.
+#
+# A second set (the ssot retrieval benchmark) is another file of this shape
+# passed with `--set`, plus its derivations; this one stays the "home" set.
+# =============================================================================
+
+version: 1
+seed: 1
+
+# Prepended to every run. Identifiers, not prose: the scorer matches exact
+# names, and prose answers would score words that happen to be identifiers.
+system: |
+  You answer questions about one software estate, using ONLY the context you
+  are given. Answer every question on its own line, in exactly this form:
+    Qnn: <identifiers, comma-separated>
+  Use the exact names as they are written (a file name, a path, a slug, a
+  variable). No explanations. If the context does not tell you, answer
+    Qnn: unknown
+
+families:
+  - id: reader
+    class: tools
+    derive: readers
+    count: 5
+    template: "Which reader script (give its file name) answers this: \"{description}\"?"
+
+  - id: tool-holders
+    class: specializations
+    derive: tool_holders
+    count: 5
+    template: "Which agents declare the tool `{tool}`? List every one."
+
+  - id: service-deps
+    class: systems
+    derive: service_deps
+    count: 5
+    template: "Which services does the service `{service}` depend on (read data from)? List every one."
+
+  - id: doctrine-file
+    class: knowledge
+    derive: doctrine_files
+    count: 5
+    template: "Which file(s) hold the doctrine titled \"{title}\"? Give the path(s)."
+
+  - id: task-type-writes
+    class: specializations
+    derive: task_type_writes
+    count: 5
+    template: "Which task types have `writes: {writes}` in their contract? List every one."
+
+  - id: agent-task-types
+    class: specializations
+    derive: agent_task_types
+    count: 5
+    template: "Which task types can the agent `{agent}` take on? List every one."
+
+  - id: pulse-command
+    class: systems
+    derive: pulse_commands
+    count: 5
+    template: "Which script does the Pulse job `{job}` run? Give its file name."
+
+  - id: install-flag
+    class: systems
+    derive: install_flags
+    count: 5
+    template: "Which config variable toggles the service `{service}` on or off?"

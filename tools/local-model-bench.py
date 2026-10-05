@@ -117,13 +117,19 @@ def installed_models() -> list[str]:
     return [n for n in names if not NOT_CHAT.search(n)]
 
 
-def generate(model: str, system: str, prompt: str, timeout: int) -> dict:
+def generate(model: str, system: str, prompt: str, timeout: int,
+             num_ctx: int | None = None, keep_alive: int | None = None) -> dict:
     body = {
         "model": model, "system": system, "prompt": prompt, "stream": False,
         # Deterministic: a benchmark whose score moves between runs measures the
         # sampler, not the model.
         "options": {"temperature": 0, "seed": 1},
     }
+    # Ollama's default window silently truncates a long prompt (tools/home-benchmark.py).
+    if num_ctx:
+        body["options"]["num_ctx"] = num_ctx
+    if keep_alive is not None:
+        body["keep_alive"] = keep_alive
     req = urllib.request.Request(f"{OLLAMA}/api/generate",
                                  data=json.dumps(body).encode(),
                                  headers={"content-type": "application/json"},
