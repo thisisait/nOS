@@ -4,12 +4,12 @@
   "projects": "state/anatomy-graph.json",
   "classes_from": "state/home-classes.yml",
   "counts": {
-    "specialization": 16,
+    "specialization": 36,
     "system": 144,
-    "tool": 32,
-    "knowledge": 53,
+    "tool": 90,
+    "knowledge": 76,
     "internal": 66,
-    "edges": 205
+    "edges": 276
   },
   "nodes": {
     "agent:conductor": {
@@ -75,6 +75,90 @@
     "agent:upgrade-architect": {
       "class": "specialization",
       "kind": "agent"
+    },
+    "article:cross-repo-contracts": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:face": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:face-app-tiers": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:filesystem": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:foreign-properties": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:four-trees": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:gates": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:generative-ui": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:identity": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:immune-system": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:layers": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:loops": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:observability": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:operator-model": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:ponytail": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:secrets": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:security-floor": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:session-threat-model": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:ssot": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:virtiofs": {
+      "class": "knowledge",
+      "kind": "article"
+    },
+    "article:workflows": {
+      "class": "knowledge",
+      "kind": "article"
     },
     "authentik:backrest": {
       "class": "internal",
@@ -444,6 +528,14 @@
       "class": "knowledge",
       "kind": "doctrine"
     },
+    "doctrine:ssot/doctrine/foreign-properties.md#5.1": {
+      "class": "knowledge",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/workflows.md#6": {
+      "class": "knowledge",
+      "kind": "doctrine"
+    },
     "faceapp:anatomy": {
       "class": "system",
       "kind": "faceapp"
@@ -683,6 +775,238 @@
     "pulse:wing:inbox-reconcile": {
       "class": "system",
       "kind": "pulse"
+    },
+    "reader:_geo_db": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:_ledger_open": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:agent-capability": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:agent-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:agent-token-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:anatomy-measure-margins": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:app-version": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:atlas-refresh": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:awaiting-operator": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:brew-pin-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:caddy-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:cortex-drift": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:cortex-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:current-state": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:digest-record": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:digest-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:discovery-scan": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:doctrine-cite": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:elsewhere-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:estate-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:face-wiring-report": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:geo-load": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:geo-project-sites": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:geo-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:graph-communities": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:graph-report": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:home": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:identity-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:loader-vars-report": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:loop-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:managed-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:maps-style-vendor": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:nos_identity": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:nos_security": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:nos_work_uri": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:npm-ioc-scan": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:permission-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:plugin-wiring-report": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:profile-builder-build": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:raw-archive-probe": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:red-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:reload-stale-config": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:rem-dispose": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:rem-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:roadmap-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:router-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:santa-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:skill-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:snapshot-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:stale-config-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:stuck-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:task-types-render": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:tls-uptake": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:undeclared-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:usage-status": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:vendor-keap-contracts": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:view-contract-drift": {
+      "class": "tool",
+      "kind": "reader"
+    },
+    "reader:wing-status": {
+      "class": "tool",
+      "kind": "reader"
     },
     "repo:gitea-forge": {
       "class": "system",
@@ -1064,6 +1388,50 @@
       "class": "system",
       "kind": "service"
     },
+    "skill:cortex-query": {
+      "class": "specialization",
+      "kind": "skill"
+    },
+    "skill:devlog": {
+      "class": "specialization",
+      "kind": "skill"
+    },
+    "skill:dtt-capture": {
+      "class": "specialization",
+      "kind": "skill"
+    },
+    "skill:judge": {
+      "class": "specialization",
+      "kind": "skill"
+    },
+    "skill:loop": {
+      "class": "specialization",
+      "kind": "skill"
+    },
+    "skill:nos-backoffice": {
+      "class": "specialization",
+      "kind": "skill"
+    },
+    "skill:nos-datatables": {
+      "class": "specialization",
+      "kind": "skill"
+    },
+    "skill:nos-devops": {
+      "class": "specialization",
+      "kind": "skill"
+    },
+    "skill:nos-manifest-app": {
+      "class": "specialization",
+      "kind": "skill"
+    },
+    "skill:propose": {
+      "class": "specialization",
+      "kind": "skill"
+    },
+    "skill:weakness-scan": {
+      "class": "specialization",
+      "kind": "skill"
+    },
     "table:account": {
       "class": "knowledge",
       "kind": "table"
@@ -1224,6 +1592,42 @@
       "class": "knowledge",
       "kind": "table"
     },
+    "tasktype:code-fix": {
+      "class": "specialization",
+      "kind": "tasktype"
+    },
+    "tasktype:converge": {
+      "class": "specialization",
+      "kind": "tasktype"
+    },
+    "tasktype:design": {
+      "class": "specialization",
+      "kind": "tasktype"
+    },
+    "tasktype:doc": {
+      "class": "specialization",
+      "kind": "tasktype"
+    },
+    "tasktype:investigate": {
+      "class": "specialization",
+      "kind": "tasktype"
+    },
+    "tasktype:review": {
+      "class": "specialization",
+      "kind": "tasktype"
+    },
+    "tasktype:security-remediation": {
+      "class": "specialization",
+      "kind": "tasktype"
+    },
+    "tasktype:seed-edit": {
+      "class": "specialization",
+      "kind": "tasktype"
+    },
+    "tasktype:use-case": {
+      "class": "specialization",
+      "kind": "tasktype"
+    },
     "tofu:authentik-state": {
       "class": "internal",
       "kind": "tofu"
@@ -1258,6 +1662,131 @@
     }
   },
   "edges": [
+    {
+      "from": "agent:conductor",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:conductor",
+      "to": "tasktype:review",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:curator",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:curator",
+      "to": "tasktype:seed-edit",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:inspektor",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:inspektor",
+      "to": "tasktype:review",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:invoice-extract",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:invoice-vision-ocr",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:jeff",
+      "to": "tasktype:code-fix",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:jeff",
+      "to": "tasktype:design",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:jeff",
+      "to": "tasktype:doc",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:jeff",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:jeff-cloud",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:librarian",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:librarian",
+      "to": "tasktype:seed-edit",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:migration-author",
+      "to": "tasktype:code-fix",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:ops-extract",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:ops-extract-cloud",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:ops-triage",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:ops-triage-cloud",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:proposer",
+      "to": "tasktype:design",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:surveyor",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:surveyor",
+      "to": "tasktype:seed-edit",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:upgrade-architect",
+      "to": "tasktype:code-fix",
+      "kind": "may_take"
+    },
+    {
+      "from": "agent:upgrade-architect",
+      "to": "tasktype:design",
+      "kind": "may_take"
+    },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
       "to": "pulse:alert-relay:relay-firing",
@@ -1474,6 +2003,16 @@
       "kind": "data"
     },
     {
+      "from": "doctrine:ssot/doctrine/foreign-properties.md#5.1",
+      "to": "article:foreign-properties",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/workflows.md#6",
+      "to": "article:workflows",
+      "kind": "part_of"
+    },
+    {
       "from": "faceapp:anatomy-widget",
       "to": "faceapp:anatomy",
       "kind": "trigger"
@@ -1660,8 +2199,28 @@
     },
     {
       "from": "pulse:discovery:contradiction-scan",
+      "to": "reader:discovery-scan",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:discovery:contradiction-scan",
       "to": "table:roadmap",
       "kind": "data"
+    },
+    {
+      "from": "pulse:geo:geo-load",
+      "to": "reader:geo-load",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:geo:project-sites",
+      "to": "reader:geo-project-sites",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:geolibre:atlas-refresh",
+      "to": "reader:atlas-refresh",
+      "kind": "trigger"
     },
     {
       "from": "pulse:invoice-vision:absorb-approved",
@@ -1794,6 +2353,11 @@
       "kind": "governed_by"
     },
     {
+      "from": "pulse:npm-supply-chain:daily-ioc-scan",
+      "to": "reader:npm-ioc-scan",
+      "kind": "trigger"
+    },
+    {
       "from": "pulse:surveyor:surface-survey",
       "to": "agent:surveyor",
       "kind": "trigger"
@@ -1807,6 +2371,16 @@
       "from": "pulse:upgrade-architect:recipe-author",
       "to": "agent:upgrade-architect",
       "kind": "trigger"
+    },
+    {
+      "from": "reader:discovery-scan",
+      "to": "doctrine:ssot/doctrine/workflows.md#6",
+      "kind": "governed_by"
+    },
+    {
+      "from": "reader:tls-uptake",
+      "to": "doctrine:ssot/doctrine/foreign-properties.md#5.1",
+      "kind": "governed_by"
     },
     {
       "from": "repo:gitea-forge",
@@ -2282,6 +2856,191 @@
       "from": "service:wing",
       "to": "service:face",
       "kind": "data"
+    },
+    {
+      "from": "skill:cortex-query",
+      "to": "service:hermes",
+      "kind": "data"
+    },
+    {
+      "from": "skill:cortex-query",
+      "to": "service:openclaw",
+      "kind": "data"
+    },
+    {
+      "from": "skill:nos-backoffice",
+      "to": "service:hermes",
+      "kind": "data"
+    },
+    {
+      "from": "skill:nos-backoffice",
+      "to": "service:openclaw",
+      "kind": "data"
+    },
+    {
+      "from": "skill:nos-datatables",
+      "to": "service:hermes",
+      "kind": "data"
+    },
+    {
+      "from": "skill:nos-datatables",
+      "to": "service:openclaw",
+      "kind": "data"
+    },
+    {
+      "from": "skill:nos-devops",
+      "to": "service:hermes",
+      "kind": "data"
+    },
+    {
+      "from": "skill:nos-devops",
+      "to": "service:openclaw",
+      "kind": "data"
+    },
+    {
+      "from": "table:account",
+      "to": "table:posting",
+      "kind": "references"
+    },
+    {
+      "from": "table:application",
+      "to": "table:package",
+      "kind": "references"
+    },
+    {
+      "from": "table:device",
+      "to": "table:device-extraction",
+      "kind": "references"
+    },
+    {
+      "from": "table:invoice",
+      "to": "table:invoice-line",
+      "kind": "references"
+    },
+    {
+      "from": "table:invoice",
+      "to": "table:journal-entry",
+      "kind": "references"
+    },
+    {
+      "from": "table:journal-entry",
+      "to": "table:posting",
+      "kind": "references"
+    },
+    {
+      "from": "table:kolben-engineer",
+      "to": "table:kolben-ticket",
+      "kind": "references"
+    },
+    {
+      "from": "table:kolben-engineer",
+      "to": "table:kolben-time-entry",
+      "kind": "references"
+    },
+    {
+      "from": "table:kolben-project",
+      "to": "table:kolben-ticket",
+      "kind": "references"
+    },
+    {
+      "from": "table:kolben-ticket",
+      "to": "table:kolben-time-entry",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:account",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:book-access",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:invoice",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:kolben-project",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:party-address",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:party-contact",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:party-registry-status",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:party-site",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:party-tax-identity",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:print-order",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:repo",
+      "kind": "references"
+    },
+    {
+      "from": "table:print-job",
+      "to": "table:print-job-step",
+      "kind": "references"
+    },
+    {
+      "from": "table:print-machine",
+      "to": "table:print-job-step",
+      "kind": "references"
+    },
+    {
+      "from": "table:print-material",
+      "to": "table:print-job",
+      "kind": "references"
+    },
+    {
+      "from": "table:print-order",
+      "to": "table:print-job",
+      "kind": "references"
+    },
+    {
+      "from": "table:repo",
+      "to": "table:application",
+      "kind": "references"
+    },
+    {
+      "from": "tasktype:doc",
+      "to": "skill:devlog",
+      "kind": "allows"
+    },
+    {
+      "from": "tasktype:security-remediation",
+      "to": "reader:discovery-scan",
+      "kind": "allows"
+    },
+    {
+      "from": "tasktype:security-remediation",
+      "to": "reader:rem-status",
+      "kind": "allows"
     }
   ]
 }

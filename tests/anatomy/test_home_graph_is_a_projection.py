@@ -86,6 +86,29 @@ def test_the_map_holds_no_per_node_facts():
         f"facts belong in the anatomy graph, the map holds kinds only")
 
 
+#: Connected nodes per class, and how many kinds supply them. Measured at
+#: increment 2 (2026-10-05); increment 1 answered "who can I be" with one kind.
+CONNECTED_FLOOR = 10
+KINDS_FLOOR = 2
+
+
+def test_every_question_is_answered_by_more_than_one_source():
+    """A class filled by one kind is one registry wearing a class name, and a
+    class of isolated nodes is a list, not a graph a model can walk."""
+    _, home, _ = _load()
+    touched = {end for e in home["edges"] for end in (e["from"], e["to"])}
+    thin = {}
+    for cls in _gen().HOME_CLASSES:
+        live = [n for n in touched if home["nodes"][n]["class"] == cls]
+        kinds = {home["nodes"][n]["kind"] for n in live}
+        if len(live) < CONNECTED_FLOOR or len(kinds) < KINDS_FLOOR:
+            thin[cls] = f"{len(live)} connected node(s) from kinds {sorted(kinds)}"
+    assert not thin, (
+        f"home classes too thin to walk: {thin}. Add the missing kind to "
+        f"tools/anatomy-graph-gen.py from the file that already declares it, "
+        f"with its declared edges — never a hand list in the projection")
+
+
 def test_the_generator_refuses_an_unmapped_kind():
     """The artifact being clean is not the generator enforcing it."""
     gen = _gen()

@@ -4,8 +4,8 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 311,
-    "edges": 319,
+    "nodes": 412,
+    "edges": 390,
     "nodes_pulse": 43,
     "nodes_judge": 5,
     "nodes_gateset": 5,
@@ -17,14 +17,22 @@
     "nodes_tofu": 1,
     "nodes_authentik": 60,
     "nodes_table": 40,
-    "nodes_doctrine": 13,
+    "nodes_doctrine": 15,
     "nodes_faceapp": 7,
     "nodes_agent": 16,
-    "edges_data": 222,
-    "edges_trigger": 50,
+    "nodes_tasktype": 9,
+    "nodes_skill": 11,
+    "nodes_reader": 58,
+    "nodes_article": 21,
+    "edges_data": 230,
+    "edges_trigger": 55,
     "edges_temporal": 5,
     "edges_mutex": 21,
-    "edges_governed_by": 21,
+    "edges_governed_by": 23,
+    "edges_may_take": 25,
+    "edges_allows": 3,
+    "edges_references": 26,
+    "edges_part_of": 2,
     "edges_service_dependency": 39,
     "services_survey_declared": 29,
     "services_survey_not_surveyed": 39,
@@ -276,6 +284,153 @@
       ],
       "anchor": "02.02.09",
       "description": "Agent ceremony 'upgrade-architect' (recipe-authoring), mode=None, runner_status=UNDECLARED (not a green state) — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+    },
+    "article:cross-repo-contracts": {
+      "kind": "article",
+      "source": "ssot/doctrine/cross-repo-contracts.md",
+      "title": "Cross-repo contracts — how nOS and a sibling repo agree on a shared surface",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/cross-repo-contracts.md: Cross-repo contracts — how nOS and a sibling repo agree on a shared surface"
+    },
+    "article:face": {
+      "kind": "article",
+      "source": "ssot/doctrine/face.md",
+      "title": "nOS-face Doctrine",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/face.md: nOS-face Doctrine"
+    },
+    "article:face-app-tiers": {
+      "kind": "article",
+      "source": "ssot/doctrine/face-app-tiers.md",
+      "title": "nOS-app tiers — the face-to-nOS complexity doctrine",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/face-app-tiers.md: nOS-app tiers — the face-to-nOS complexity doctrine"
+    },
+    "article:filesystem": {
+      "kind": "article",
+      "source": "ssot/doctrine/filesystem.md",
+      "title": "Filesystem Doctrine",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/filesystem.md: Filesystem Doctrine"
+    },
+    "article:foreign-properties": {
+      "kind": "article",
+      "source": "ssot/doctrine/foreign-properties.md",
+      "title": "Foreign properties — upstream facts our work cannot remove",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/foreign-properties.md: Foreign properties — upstream facts our work cannot remove"
+    },
+    "article:four-trees": {
+      "kind": "article",
+      "source": "ssot/doctrine/four-trees.md",
+      "title": "The four trees",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/four-trees.md: The four trees"
+    },
+    "article:gates": {
+      "kind": "article",
+      "source": "ssot/doctrine/gates.md",
+      "title": "Gates — a check that cannot fail is not a check",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/gates.md: Gates — a check that cannot fail is not a check"
+    },
+    "article:generative-ui": {
+      "kind": "article",
+      "source": "ssot/doctrine/generative-ui.md",
+      "title": "Generative UI",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/generative-ui.md: Generative UI"
+    },
+    "article:identity": {
+      "kind": "article",
+      "source": "ssot/doctrine/identity.md",
+      "title": "Identity — the declared account roster",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/identity.md: Identity — the declared account roster"
+    },
+    "article:immune-system": {
+      "kind": "article",
+      "source": "ssot/doctrine/immune-system.md",
+      "title": "The immune system — indicators as cells",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/immune-system.md: The immune system — indicators as cells"
+    },
+    "article:layers": {
+      "kind": "article",
+      "source": "ssot/doctrine/layers.md",
+      "title": "Layers — what breaks when this stops",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/layers.md: Layers — what breaks when this stops"
+    },
+    "article:loops": {
+      "kind": "article",
+      "source": "ssot/doctrine/loops.md",
+      "title": "The two loops — sequence doctrine",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/loops.md: The two loops — sequence doctrine"
+    },
+    "article:observability": {
+      "kind": "article",
+      "source": "ssot/doctrine/observability.md",
+      "title": "Observability Doctrine",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/observability.md: Observability Doctrine"
+    },
+    "article:operator-model": {
+      "kind": "article",
+      "source": "ssot/doctrine/operator-model.md",
+      "title": "The operator model — what a human does, and what may not happen without one",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/operator-model.md: The operator model — what a human does, and what may not happen without one"
+    },
+    "article:ponytail": {
+      "kind": "article",
+      "source": "ssot/doctrine/ponytail.md",
+      "title": "ponytail — the ladder this repo builds on",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/ponytail.md: ponytail — the ladder this repo builds on"
+    },
+    "article:secrets": {
+      "kind": "article",
+      "source": "ssot/doctrine/secrets.md",
+      "title": "Secrets Doctrine",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/secrets.md: Secrets Doctrine"
+    },
+    "article:security-floor": {
+      "kind": "article",
+      "source": "ssot/doctrine/security-floor.md",
+      "title": "The security floor — what a pending finding is waiting for",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/security-floor.md: The security floor — what a pending finding is waiting for"
+    },
+    "article:session-threat-model": {
+      "kind": "article",
+      "source": "ssot/doctrine/session-threat-model.md",
+      "title": "The operator session — the attacker is the assistant",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/session-threat-model.md: The operator session — the attacker is the assistant"
+    },
+    "article:ssot": {
+      "kind": "article",
+      "source": "ssot/doctrine/ssot.md",
+      "title": "SSOT",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/ssot.md: SSOT"
+    },
+    "article:virtiofs": {
+      "kind": "article",
+      "source": "ssot/doctrine/virtiofs.md",
+      "title": "VirtioFS Doctrine",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/virtiofs.md: VirtioFS Doctrine"
+    },
+    "article:workflows": {
+      "kind": "article",
+      "source": "ssot/doctrine/workflows.md",
+      "title": "Doctrine: multi-agent workflows",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/workflows.md: Doctrine: multi-agent workflows"
     },
     "authentik:backrest": {
       "kind": "authentik",
@@ -1212,6 +1367,22 @@
       "anchor": "09",
       "description": "Constitution paragraph M7 of docs/idea/11-agentic-loop-contract.md: `genome-codegen` and `pytest` collide"
     },
+    "doctrine:ssot/doctrine/foreign-properties.md#5.1": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/foreign-properties.md",
+      "section": "5.1",
+      "heading": "There is a third contract: the application's own",
+      "anchor": "09",
+      "description": "Constitution paragraph 5.1 of ssot/doctrine/foreign-properties.md: There is a third contract: the application's own"
+    },
+    "doctrine:ssot/doctrine/workflows.md#6": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/workflows.md",
+      "section": "6",
+      "heading": "Two loops, and the gate between them",
+      "anchor": "09",
+      "description": "Constitution paragraph 6 of ssot/doctrine/workflows.md: Two loops, and the gate between them"
+    },
     "faceapp:anatomy": {
       "kind": "faceapp",
       "source": "files/anatomy/face/src/lib/apps/native/registry.ts",
@@ -2129,6 +2300,412 @@
       "runs_agent": null,
       "anchor": "03.08",
       "description": "Pulse scheduled job (notification): runs php on cron `*/15 * * * *`"
+    },
+    "reader:_geo_db": {
+      "kind": "reader",
+      "source": "tools/_geo_db.py",
+      "title": "The shared \"is there a geo database here\" check: absent idles, a stopped container is an outage.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/_geo_db.py: The shared \"is there a geo database here\" check: absent idles, a stopped container is an outage."
+    },
+    "reader:_ledger_open": {
+      "kind": "reader",
+      "source": "tools/_ledger_open.py",
+      "title": "One way to open the Wing ledger read-only, for readers that must not write.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/_ledger_open.py: One way to open the Wing ledger read-only, for readers that must not write."
+    },
+    "reader:agent-capability": {
+      "kind": "reader",
+      "source": "tools/agent-capability.py",
+      "title": "Derive each agent's nos-work:// capability address from its manifest (the routing projection).",
+      "anchor": "02.02.04",
+      "description": "Reader tools/agent-capability.py: Derive each agent's nos-work:// capability address from its manifest (the routing projection)."
+    },
+    "reader:agent-status": {
+      "kind": "reader",
+      "source": "tools/agent-status.py",
+      "title": "What the agents are doing, and what came of the last ones.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/agent-status.py: What the agents are doing, and what came of the last ones."
+    },
+    "reader:agent-token-status": {
+      "kind": "reader",
+      "source": "tools/agent-token-status.py",
+      "title": "agent-token-status — can each declared agent client mint a token RIGHT NOW.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/agent-token-status.py: agent-token-status — can each declared agent client mint a token RIGHT NOW."
+    },
+    "reader:anatomy-measure-margins": {
+      "kind": "reader",
+      "source": "tools/anatomy-measure-margins.py",
+      "title": "Measure the nightly chain's temporal margins, and restamp the declared edges.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/anatomy-measure-margins.py: Measure the nightly chain's temporal margins, and restamp the declared edges."
+    },
+    "reader:app-version": {
+      "kind": "reader",
+      "source": "tools/app-version.py",
+      "title": "What each container actually RUNS, against what the pin says it bundles.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/app-version.py: What each container actually RUNS, against what the pin says it bundles."
+    },
+    "reader:atlas-refresh": {
+      "kind": "reader",
+      "source": "tools/atlas-refresh.py",
+      "title": "Pulse job: nos-atlas \"nOS job contract\" (read-only reader snapshot → generator) into GeoLibre's `plugins/nos-atlas/live`.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/atlas-refresh.py: Pulse job: nos-atlas \"nOS job contract\" (read-only reader snapshot → generator) into GeoLibre's `plugins/nos-atlas/live`."
+    },
+    "reader:awaiting-operator": {
+      "kind": "reader",
+      "source": "tools/awaiting-operator.py",
+      "title": "What is waiting for a HUMAN right now, across every source that asks for one.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/awaiting-operator.py: What is waiting for a HUMAN right now, across every source that asks for one."
+    },
+    "reader:brew-pin-status": {
+      "kind": "reader",
+      "source": "tools/brew-pin-status.py",
+      "title": "How old is the version brew wants to give us, and is it old enough to adopt?",
+      "anchor": "02.02.04",
+      "description": "Reader tools/brew-pin-status.py: How old is the version brew wants to give us, and is it old enough to adopt?"
+    },
+    "reader:caddy-status": {
+      "kind": "reader",
+      "source": "tools/caddy-status.py",
+      "title": "Can the caddy answer, is the ear listening, and what did it hear.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/caddy-status.py: Can the caddy answer, is the ear listening, and what did it hear."
+    },
+    "reader:cortex-drift": {
+      "kind": "reader",
+      "source": "tools/cortex-drift.py",
+      "title": "Compare the vendored cortex organ against the KEAP tree it was cut from.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/cortex-drift.py: Compare the vendored cortex organ against the KEAP tree it was cut from."
+    },
+    "reader:cortex-status": {
+      "kind": "reader",
+      "source": "tools/cortex-status.py",
+      "title": "What the cortex organ is, all of it — not just the part KEAP serves.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/cortex-status.py: What the cortex organ is, all of it — not just the part KEAP serves."
+    },
+    "reader:current-state": {
+      "kind": "reader",
+      "source": "tools/current-state.py",
+      "title": "The claim board's WRITE side: file/claim/release/progress; a claim is refused unless the match says you are capable.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/current-state.py: The claim board's WRITE side: file/claim/release/progress; a claim is refused unless the match says you are capable."
+    },
+    "reader:digest-record": {
+      "kind": "reader",
+      "source": "tools/digest-record.py",
+      "title": "main.yml post_task: writes the record digest-status.py reads (image ref, ID, repo digests, source commit of local builds).",
+      "anchor": "02.02.04",
+      "description": "Reader tools/digest-record.py: main.yml post_task: writes the record digest-status.py reads (image ref, ID, repo digests, source commit of local builds)."
+    },
+    "reader:digest-status": {
+      "kind": "reader",
+      "source": "tools/digest-status.py",
+      "title": "READER: image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/digest-status.py: READER: image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker."
+    },
+    "reader:discovery-scan": {
+      "kind": "reader",
+      "source": "tools/discovery-scan.py",
+      "title": "Discovery: find two representations of one fact that disagree.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/discovery-scan.py: Discovery: find two representations of one fact that disagree."
+    },
+    "reader:doctrine-cite": {
+      "kind": "reader",
+      "source": "tools/doctrine-cite.py",
+      "title": "Resolve every doctrine citation in the estate — or say exactly which do not. `--file REL --json` is the editor contract (`tools/ssot-cite-vscode/`).",
+      "anchor": "02.02.04",
+      "description": "Reader tools/doctrine-cite.py: Resolve every doctrine citation in the estate — or say exactly which do not. `--file REL --json` is the editor contract (`tools/ssot-cite-vscode/`)."
+    },
+    "reader:elsewhere-status": {
+      "kind": "reader",
+      "source": "tools/elsewhere-status.py",
+      "title": "Estate work happening OUTSIDE the control centre, and how to get to it.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/elsewhere-status.py: Estate work happening OUTSIDE the control centre, and how to get to it."
+    },
+    "reader:estate-status": {
+      "kind": "reader",
+      "source": "tools/estate-status.py",
+      "title": "What is TRUE right now, across the three places a fact about nOS can live.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/estate-status.py: What is TRUE right now, across the three places a fact about nOS can live."
+    },
+    "reader:face-wiring-report": {
+      "kind": "reader",
+      "source": "tools/face-wiring-report.py",
+      "title": "nOS-face wiring report — the hard-doctrine linter for the web-desktop shell.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/face-wiring-report.py: nOS-face wiring report — the hard-doctrine linter for the web-desktop shell."
+    },
+    "reader:geo-load": {
+      "kind": "reader",
+      "source": "tools/geo-load.py",
+      "title": "Load ČÚZK open data (RÚIAN address points, INSPIRE parcels + buildings) for the configured kraje into PostGIS `geo`; staged + swapped per layer.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/geo-load.py: Load ČÚZK open data (RÚIAN address points, INSPIRE parcels + buildings) for the configured kraje into PostGIS `geo`; staged + swapped per layer."
+    },
+    "reader:geo-project-sites": {
+      "kind": "reader",
+      "source": "tools/geo-project-sites.py",
+      "title": "Nightly one-way projection of KEAP party-site rows (+ ARES seats) into PostGIS `geo.party_site`; `--erase-party` for GDPR (called by digest-teardown).",
+      "anchor": "02.02.04",
+      "description": "Reader tools/geo-project-sites.py: Nightly one-way projection of KEAP party-site rows (+ ARES seats) into PostGIS `geo.party_site`; `--erase-party` for GDPR (called by digest-teardown)."
+    },
+    "reader:geo-status": {
+      "kind": "reader",
+      "source": "tools/geo-status.py",
+      "title": "READER: rows per geo layer counted back from PostGIS, last load beside it; UNKNOWN when unreachable.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/geo-status.py: READER: rows per geo layer counted back from PostGIS, last load beside it; UNKNOWN when unreachable."
+    },
+    "reader:graph-communities": {
+      "kind": "reader",
+      "source": "tools/graph-communities.py",
+      "title": "Computed communities vs the declared `stack`/`layer` axes; prints only the disagreement (docs/adr/0002-graphify-borrowings.md §2).",
+      "anchor": "02.02.04",
+      "description": "Reader tools/graph-communities.py: Computed communities vs the declared `stack`/`layer` axes; prints only the disagreement (docs/adr/0002-graphify-borrowings.md §2)."
+    },
+    "reader:graph-report": {
+      "kind": "reader",
+      "source": "tools/graph-report.py",
+      "title": "What the anatomy graph's SHAPE implies: god nodes, isolated nodes, and which measured edges cite a file that has moved since.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/graph-report.py: What the anatomy graph's SHAPE implies: god nodes, isolated nodes, and which measured edges cite a file that has moved since."
+    },
+    "reader:home": {
+      "kind": "reader",
+      "source": "tools/home.py",
+      "title": "Where am I: the estate as four questions (specialization, system, tool, knowledge) — counts and hubs, or one node and what it touches. Reads state/home-graph.json; UNKNOWN when unreadable.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/home.py: Where am I: the estate as four questions (specialization, system, tool, knowledge) — counts and hubs, or one node and what it touches. Reads state/home-graph.json; UNKNOWN when unreadable."
+    },
+    "reader:identity-status": {
+      "kind": "reader",
+      "source": "tools/identity-status.py",
+      "title": "identity-status — the declared account roster vs what each realm holds.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/identity-status.py: identity-status — the declared account roster vs what each realm holds."
+    },
+    "reader:loader-vars-report": {
+      "kind": "reader",
+      "source": "tools/loader-vars-report.py",
+      "title": "D1 scoping tool (2026-06-11) — the plugin-loader variable contract.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/loader-vars-report.py: D1 scoping tool (2026-06-11) — the plugin-loader variable contract."
+    },
+    "reader:loop-status": {
+      "kind": "reader",
+      "source": "tools/loop-status.py",
+      "title": "Which weakness sources actually produce proposals, and what came of them.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/loop-status.py: Which weakness sources actually produce proposals, and what came of them."
+    },
+    "reader:managed-status": {
+      "kind": "reader",
+      "source": "tools/managed-status.py",
+      "title": "Every managed dir: what a blank does to it × what the backup does with it, one table from the artifacts (`--gaps`, `--json`; the cc pane `managed`).",
+      "anchor": "02.02.04",
+      "description": "Reader tools/managed-status.py: Every managed dir: what a blank does to it × what the backup does with it, one table from the artifacts (`--gaps`, `--json`; the cc pane `managed`)."
+    },
+    "reader:maps-style-vendor": {
+      "kind": "reader",
+      "source": "tools/maps-style-vendor.py",
+      "title": "Vendor an OpenFreeMap style for the offline tileserver: every source, sprite and glyph made local, labels `name:cs`.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/maps-style-vendor.py: Vendor an OpenFreeMap style for the offline tileserver: every source, sprite and glyph made local, labels `name:cs`."
+    },
+    "reader:nos_identity": {
+      "kind": "reader",
+      "source": "tools/nos_identity.py",
+      "title": "The manifest row is the only place a service's spellings meet.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/nos_identity.py: The manifest row is the only place a service's spellings meet."
+    },
+    "reader:nos_security": {
+      "kind": "reader",
+      "source": "tools/nos_security.py",
+      "title": "Resolve the live security notebook (`~/.nos/security`), not the git promotion copy.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/nos_security.py: Resolve the live security notebook (`~/.nos/security`), not the git promotion copy."
+    },
+    "reader:nos_work_uri": {
+      "kind": "reader",
+      "source": "tools/nos_work_uri.py",
+      "title": "Parse + match the nos-work:// routing address (dtt-routing-address); the planner's capability/assignment matcher.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/nos_work_uri.py: Parse + match the nos-work:// routing address (dtt-routing-address); the planner's capability/assignment matcher."
+    },
+    "reader:npm-ioc-scan": {
+      "kind": "reader",
+      "source": "tools/npm-ioc-scan.py",
+      "title": "Cross-check every installed npm package against a published IOC list.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/npm-ioc-scan.py: Cross-check every installed npm package against a published IOC list."
+    },
+    "reader:permission-status": {
+      "kind": "reader",
+      "source": "tools/permission-status.py",
+      "title": "What macOS will and will not let this estate do, in one place.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/permission-status.py: What macOS will and will not let this estate do, in one place."
+    },
+    "reader:plugin-wiring-report": {
+      "kind": "reader",
+      "source": "tools/plugin-wiring-report.py",
+      "title": "Plugin wiring report — capability matrix + contract checks.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/plugin-wiring-report.py: Plugin wiring report — capability matrix + contract checks."
+    },
+    "reader:profile-builder-build": {
+      "kind": "reader",
+      "source": "tools/profile-builder-build.py",
+      "title": "Build the static profile builder (`_site/profile-builder/index.html` on release tags): seven steps (this computer incl. one timezone, web address, organisation & security, services with a RAM/disk estimate and a nearest-profile hint, backup & mail, people — the operator, test users, `nos_extra_identities` — and download) → a tailored config.yml plus a one-line credentials.yml for the password prefix. Data from default.config.yml + profiles/ + state/manifest.yml categories + plugin hub_cards + each role's compose (via registry-reach's discover()); `--image-lock` marks an OFFLINE build, `--config` resolves it against an operator config.yml. One self-contained file: test locally with `tools/profile-builder-build.py --out ~/nos-profile-builder && open ~/nos-profile-builder/index.html`. Page in tools/profile-builder/.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/profile-builder-build.py: Build the static profile builder (`_site/profile-builder/index.html` on release tags): seven steps (this computer incl. one timezone, web address, organisation & security, services with a RAM/disk estimate and a nearest-profile hint, backup & mail, people — the operator, test users, `nos_extra_identities` — and download) → a tailored config.yml plus a one-line credentials.yml for the password prefix. Data from default.config.yml + profiles/ + state/manifest.yml categories + plugin hub_cards + each role's compose (via registry-reach's discover()); `--image-lock` marks an OFFLINE build, `--config` resolves it against an operator config.yml. One self-contained file: test locally with `tools/profile-builder-build.py --out ~/nos-profile-builder && open ~/nos-profile-builder/index.html`. Page in tools/profile-builder/."
+    },
+    "reader:raw-archive-probe": {
+      "kind": "reader",
+      "source": "tools/raw-archive-probe.py",
+      "title": "Does the S3 endpoint honor Object Lock COMPLIANCE, or only accept the headers?",
+      "anchor": "02.02.04",
+      "description": "Reader tools/raw-archive-probe.py: Does the S3 endpoint honor Object Lock COMPLIANCE, or only accept the headers?"
+    },
+    "reader:red-status": {
+      "kind": "reader",
+      "source": "tools/red-status.py",
+      "title": "What is red on this estate right now.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/red-status.py: What is red on this estate right now."
+    },
+    "reader:reload-stale-config": {
+      "kind": "reader",
+      "source": "tools/reload-stale-config.py",
+      "title": "Make a running container read the config the estate rendered for it.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/reload-stale-config.py: Make a running container read the config the estate rendered for it."
+    },
+    "reader:rem-dispose": {
+      "kind": "reader",
+      "source": "tools/rem-dispose.py",
+      "title": "Write a REM disposition into the operator's `~/.nos/security` notebook; never touches the scanner's queue.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/rem-dispose.py: Write a REM disposition into the operator's `~/.nos/security` notebook; never touches the scanner's queue."
+    },
+    "reader:rem-status": {
+      "kind": "reader",
+      "source": "tools/rem-status.py",
+      "title": "What the security queue says, right now.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/rem-status.py: What the security queue says, right now."
+    },
+    "reader:roadmap-status": {
+      "kind": "reader",
+      "source": "tools/roadmap-status.py",
+      "title": "What the roadmap says, right now.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/roadmap-status.py: What the roadmap says, right now."
+    },
+    "reader:router-status": {
+      "kind": "reader",
+      "source": "tools/router-status.py",
+      "title": "The WAN router as a declared estate fact: presence probe + intent from state/router.yml; UNKNOWN when it cannot look.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/router-status.py: The WAN router as a declared estate fact: presence probe + intent from state/router.yml; UNKNOWN when it cannot look."
+    },
+    "reader:santa-status": {
+      "kind": "reader",
+      "source": "tools/santa-status.py",
+      "title": "What Santa (monitor mode, `install_santa`) saw execute outside the declared trees (Pulse runner trees + OS/Homebrew/Applications), any DENY, and a mode other than Monitor; UNKNOWN when the log or santactl is unreadable.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/santa-status.py: What Santa (monitor mode, `install_santa`) saw execute outside the declared trees (Pulse runner trees + OS/Homebrew/Applications), any DENY, and a mode other than Monitor; UNKNOWN when the log or santactl is unreadable."
+    },
+    "reader:skill-status": {
+      "kind": "reader",
+      "source": "tools/skill-status.py",
+      "title": "What is on the shelf, who should be holding it, and who actually is.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/skill-status.py: What is on the shelf, who should be holding it, and who actually is."
+    },
+    "reader:snapshot-status": {
+      "kind": "reader",
+      "source": "tools/snapshot-status.py",
+      "title": "Is there a net under the next converge, and what exactly does it hold?",
+      "anchor": "02.02.04",
+      "description": "Reader tools/snapshot-status.py: Is there a net under the next converge, and what exactly does it hold?"
+    },
+    "reader:stale-config-status": {
+      "kind": "reader",
+      "source": "tools/stale-config-status.py",
+      "title": "Containers running config the estate has already replaced.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/stale-config-status.py: Containers running config the estate has already replaced."
+    },
+    "reader:stuck-status": {
+      "kind": "reader",
+      "source": "tools/stuck-status.py",
+      "title": "What has STOPPED MOVING — which is a different question from what is broken.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/stuck-status.py: What has STOPPED MOVING — which is a different question from what is broken."
+    },
+    "reader:task-types-render": {
+      "kind": "reader",
+      "source": "tools/task-types-render.py",
+      "title": "Render AGENTS.md (the task-type router) from state/task-types.yml.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/task-types-render.py: Render AGENTS.md (the task-type router) from state/task-types.yml."
+    },
+    "reader:tls-uptake": {
+      "kind": "reader",
+      "source": "tools/tls-uptake.py",
+      "title": "How much of the datastore traffic on this estate is actually encrypted.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/tls-uptake.py: How much of the datastore traffic on this estate is actually encrypted."
+    },
+    "reader:undeclared-status": {
+      "kind": "reader",
+      "source": "tools/undeclared-status.py",
+      "title": "What runs on this host that nOS never declared: launchd plists/labels, exposed or Docker-published ports, crontab — vs sets derived from the graph, manifest and rendered compose.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/undeclared-status.py: What runs on this host that nOS never declared: launchd plists/labels, exposed or Docker-published ports, crontab — vs sets derived from the graph, manifest and rendered compose."
+    },
+    "reader:usage-status": {
+      "kind": "reader",
+      "source": "tools/usage-status.py",
+      "title": "What each model budget has been spent on, and what is left.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/usage-status.py: What each model budget has been spent on, and what is left."
+    },
+    "reader:vendor-keap-contracts": {
+      "kind": "reader",
+      "source": "tools/vendor-keap-contracts.py",
+      "title": "Re-vendor KEAP's table schema (pinned to keap_repo_ref) for the schema-pin gate.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/vendor-keap-contracts.py: Re-vendor KEAP's table schema (pinned to keap_repo_ref) for the schema-pin gate."
+    },
+    "reader:view-contract-drift": {
+      "kind": "reader",
+      "source": "tools/view-contract-drift.py",
+      "title": "Compare the face's `TableView` against KEAP's `viewMetaSchema`.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/view-contract-drift.py: Compare the face's `TableView` against KEAP's `viewMetaSchema`."
+    },
+    "reader:wing-status": {
+      "kind": "reader",
+      "source": "tools/wing-status.py",
+      "title": "What Wing actually is: every table, who writes it, who reads it, what it costs.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/wing-status.py: What Wing actually is: every table, who writes it, who reads it, what it costs."
     },
     "repo:gitea-forge": {
       "kind": "repo",
@@ -3291,6 +3868,83 @@
         "upstreams": 2
       }
     },
+    "skill:cortex-query": {
+      "kind": "skill",
+      "source": "files/anatomy/skills/cortex-query/SKILL.md",
+      "title": "Read-only recall over KEAP /agent/v1 (RO bearer). Returns ranked passages with node ids. Refuses to write. Wraps tools/cortex-query.py, which uses tools/keap-semantic-search.py and the query set from tools/keap-recall-queries.py.",
+      "anchor": "02.02.09",
+      "description": "Skill 'cortex-query' (files/anatomy/skills/cortex-query/SKILL.md): Read-only recall over KEAP /agent/v1 (RO bearer). Returns ranked passages with node ids. Refuses to write. Wraps tools/cortex-query.py, which uses tools/keap-semantic-search.py and the query set from tools/keap-recall-queries.py."
+    },
+    "skill:devlog": {
+      "kind": "skill",
+      "source": ".claude/skills/devlog/SKILL.md",
+      "title": "Read, author, and publish nOS devlog entries across the repo-committed nos-core namespace and the on-site WordPress namespaces (site, tenant/*, machine/*, user/*). Use for narrative history, session write-ups, and the pre-release review ceremony. Doctrine in docs/devlog/README.md.",
+      "anchor": "02.02.09",
+      "description": "Skill 'devlog' (.claude/skills/devlog/SKILL.md): Read, author, and publish nOS devlog entries across the repo-committed nos-core namespace and the on-site WordPress namespaces (site, tenant/*, machine/*, user/*). Use for narrative history, session write-ups, and the pre-release review ceremony. Doctrine in docs/devlog/README.md."
+    },
+    "skill:dtt-capture": {
+      "kind": "skill",
+      "source": ".claude/skills/dtt-capture/SKILL.md",
+      "title": "Capture an idea, plan, or spec into the nOS roadmap DataTable as a per-row seed file — the ONLY sanctioned way to write down new work (operator directive: track/ideate/spec via skill + dtt, never a hand-authored docs/plans/*.md). Writes through tools/dtt-capture.py into the private seed repo.",
+      "anchor": "02.02.09",
+      "description": "Skill 'dtt-capture' (.claude/skills/dtt-capture/SKILL.md): Capture an idea, plan, or spec into the nOS roadmap DataTable as a per-row seed file — the ONLY sanctioned way to write down new work (operator directive: track/ideate/spec via skill + dtt, never a hand-authored docs/plans/*.md). Writes through tools/dtt-capture.py into the private seed repo."
+    },
+    "skill:judge": {
+      "kind": "skill",
+      "source": ".claude/plugins/nos-loop/skills/judge/SKILL.md",
+      "title": "Trigger a named gate set against the nOS loop engine and report the verdict it returns — pass, fail or indeterminate, with evidence. Use to evaluate a recorded proposal, or to get one deterministic reading of the repo's health. Never to decide an outcome yourself.",
+      "anchor": "02.02.09",
+      "description": "Skill 'judge' (.claude/plugins/nos-loop/skills/judge/SKILL.md): Trigger a named gate set against the nOS loop engine and report the verdict it returns — pass, fail or indeterminate, with evidence. Use to evaluate a recorded proposal, or to get one deterministic reading of the repo's health. Never to decide an outcome yourself."
+    },
+    "skill:loop": {
+      "kind": "skill",
+      "source": ".claude/plugins/nos-loop/skills/loop/SKILL.md",
+      "title": "Run one bounded improvement cycle over the nOS estate — mine a weakness, propose one change, make it, have it judged, report the verdict. Use when asked to run the loop, improve something, or close a weakness end to end. One cycle per invocation.",
+      "anchor": "02.02.09",
+      "description": "Skill 'loop' (.claude/plugins/nos-loop/skills/loop/SKILL.md): Run one bounded improvement cycle over the nOS estate — mine a weakness, propose one change, make it, have it judged, report the verdict. Use when asked to run the loop, improve something, or close a weakness end to end. One cycle per invocation."
+    },
+    "skill:nos-backoffice": {
+      "kind": "skill",
+      "source": "files/anatomy/skills/nos-backoffice/SKILL.md",
+      "title": "Backoffice pack — CRM desk is Dolibarr when installed; agents read KEAP party/invoice tables, never vendor REST. Hydrator is digest-import-doli, not Bone.",
+      "anchor": "02.02.09",
+      "description": "Skill 'nos-backoffice' (files/anatomy/skills/nos-backoffice/SKILL.md): Backoffice pack — CRM desk is Dolibarr when installed; agents read KEAP party/invoice tables, never vendor REST. Hydrator is digest-import-doli, not Bone."
+    },
+    "skill:nos-datatables": {
+      "kind": "skill",
+      "source": "files/anatomy/skills/nos-datatables/SKILL.md",
+      "title": "Work with the nOS DataTables (the roadmap and the current-state claim board in KEAP) as an agent — read the board, file a row, claim and release work, never write a verdict. Covers the `nos dtt` CLI, the `nos_tables` MCP tool and the token tiers.",
+      "anchor": "02.02.09",
+      "description": "Skill 'nos-datatables' (files/anatomy/skills/nos-datatables/SKILL.md): Work with the nOS DataTables (the roadmap and the current-state claim board in KEAP) as an agent — read the board, file a row, claim and release work, never write a verdict. Covers the `nos dtt` CLI, the `nos_tables` MCP tool and the token tiers."
+    },
+    "skill:nos-devops": {
+      "kind": "skill",
+      "source": "files/anatomy/skills/nos-devops/SKILL.md",
+      "title": "DevOps skills for the nOS Ansible playbook - orchestrating the Docker stack, delegating to Claude Code / a local dense model, logging agentic work.",
+      "anchor": "02.02.09",
+      "description": "Skill 'nos-devops' (files/anatomy/skills/nos-devops/SKILL.md): DevOps skills for the nOS Ansible playbook - orchestrating the Docker stack, delegating to Claude Code / a local dense model, logging agentic work."
+    },
+    "skill:nos-manifest-app": {
+      "kind": "skill",
+      "source": "files/anatomy/skills/nos-manifest-app/SKILL.md",
+      "title": "Author a Tier-2 nOS app as apps/<name>.yml — the manifest the apps_runner deploys. Covers the GDPR Article 30 block the parser refuses to deploy without, magic tokens, and the smoke-parse that must pass before a converge.",
+      "anchor": "02.02.09",
+      "description": "Skill 'nos-manifest-app' (files/anatomy/skills/nos-manifest-app/SKILL.md): Author a Tier-2 nOS app as apps/<name>.yml — the manifest the apps_runner deploys. Covers the GDPR Article 30 block the parser refuses to deploy without, magic tokens, and the smoke-parse that must pass before a converge."
+    },
+    "skill:propose": {
+      "kind": "skill",
+      "source": ".claude/plugins/nos-loop/skills/propose/SKILL.md",
+      "title": "Record one bounded change with the nOS loop engine before making it — read the budget, POST the proposal, obey the refusal. Use when acting on a weakness from weakness-scan, or whenever a change is meant to be judged and remembered rather than just applied.",
+      "anchor": "02.02.09",
+      "description": "Skill 'propose' (.claude/plugins/nos-loop/skills/propose/SKILL.md): Record one bounded change with the nOS loop engine before making it — read the budget, POST the proposal, obey the refusal. Use when acting on a weakness from weakness-scan, or whenever a change is meant to be judged and remembered rather than just applied."
+    },
+    "skill:weakness-scan": {
+      "kind": "skill",
+      "source": ".claude/plugins/nos-loop/skills/weakness-scan/SKILL.md",
+      "title": "Ask the nOS loop engine what is currently wrong with the estate — a ranked, evidence-carrying list drawn from the working tree, the security remediation queue, scan freshness, the hidden-fees ledger and the corpus-diff ledger. Use before proposing any change, and whenever asked \"what should I fix next\".",
+      "anchor": "02.02.09",
+      "description": "Skill 'weakness-scan' (.claude/plugins/nos-loop/skills/weakness-scan/SKILL.md): Ask the nOS loop engine what is currently wrong with the estate — a ranked, evidence-carrying list drawn from the working tree, the security remediation queue, scan freshness, the hidden-fees ledger and the corpus-diff ledger. Use before proposing any change, and whenever asked \"what should I fix next\"."
+    },
     "table:account": {
       "kind": "table",
       "source": "state/keap-tables/account.table.yml",
@@ -3571,6 +4225,115 @@
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Face Wallpapers' (state/keap-tables/wallpapers.table.yml)"
     },
+    "tasktype:code-fix": {
+      "kind": "tasktype",
+      "source": "state/task-types.yml",
+      "title": "Fix a defect at its ROOT (the shared function, not each caller).",
+      "tools": [
+        "read",
+        "grep",
+        "edit",
+        "bash",
+        "pytest"
+      ],
+      "anchor": "02.02.04",
+      "description": "Task type 'code-fix' (state/task-types.yml): Fix a defect at its ROOT (the shared function, not each caller)."
+    },
+    "tasktype:converge": {
+      "kind": "tasktype",
+      "source": "state/task-types.yml",
+      "title": "Apply committed SOURCE to the running estate (the repo is not the system).",
+      "tools": [
+        "nos",
+        "ansible-playbook main.yml",
+        "tools/nos-smoke.py"
+      ],
+      "anchor": "02.02.04",
+      "description": "Task type 'converge' (state/task-types.yml): Apply committed SOURCE to the running estate (the repo is not the system)."
+    },
+    "tasktype:design": {
+      "kind": "tasktype",
+      "source": "state/task-types.yml",
+      "title": "Produce a spec or doctrine a builder can execute; write no code.",
+      "tools": [
+        "read",
+        "write (docs/plans, docs/doctrine)"
+      ],
+      "anchor": "02.02.04",
+      "description": "Task type 'design' (state/task-types.yml): Produce a spec or doctrine a builder can execute; write no code."
+    },
+    "tasktype:doc": {
+      "kind": "tasktype",
+      "source": "state/task-types.yml",
+      "title": "Documentation — keep live doctrine true, narrate history in the devlog.",
+      "tools": [
+        "edit",
+        "/devlog"
+      ],
+      "anchor": "02.02.04",
+      "description": "Task type 'doc' (state/task-types.yml): Documentation — keep live doctrine true, narrate history in the devlog."
+    },
+    "tasktype:investigate": {
+      "kind": "tasktype",
+      "source": "state/task-types.yml",
+      "title": "Read-only. Find something out and report it; change nothing.",
+      "tools": [
+        "read",
+        "grep",
+        "Explore",
+        "tools/*-status.py readers"
+      ],
+      "anchor": "02.02.04",
+      "description": "Task type 'investigate' (state/task-types.yml): Read-only. Find something out and report it; change nothing."
+    },
+    "tasktype:review": {
+      "kind": "tasktype",
+      "source": "state/task-types.yml",
+      "title": "Adversarially verify a claim — try to REFUTE it, not confirm it.",
+      "tools": [
+        "read",
+        "grep"
+      ],
+      "anchor": "02.02.04",
+      "description": "Task type 'review' (state/task-types.yml): Adversarially verify a claim — try to REFUTE it, not confirm it."
+    },
+    "tasktype:security-remediation": {
+      "kind": "tasktype",
+      "source": "state/task-types.yml",
+      "title": "Close a remediation-queue row — a foreign CVE or an estate exposure.",
+      "tools": [
+        "tools/rem-status.py",
+        "tools/discovery-scan.py",
+        "edit",
+        "pytest"
+      ],
+      "anchor": "02.02.04",
+      "description": "Task type 'security-remediation' (state/task-types.yml): Close a remediation-queue row — a foreign CVE or an estate exposure."
+    },
+    "tasktype:seed-edit": {
+      "kind": "tasktype",
+      "source": "state/task-types.yml",
+      "title": "Change one row / seed file (a roadmap or dtt row, a *.seed.yml).",
+      "tools": [
+        "tools/roadmap-update.py",
+        "tools/roadmap-seed.py",
+        "edit"
+      ],
+      "anchor": "02.02.04",
+      "description": "Task type 'seed-edit' (state/task-types.yml): Change one row / seed file (a roadmap or dtt row, a *.seed.yml)."
+    },
+    "tasktype:use-case": {
+      "kind": "tasktype",
+      "source": "state/task-types.yml",
+      "title": "A live use-case walkthrough / acceptance test of an end-to-end workflow, recorded with steps + expected + actual result.",
+      "tools": [
+        "read",
+        "the running estate (UI, API, CLI)",
+        "edit"
+      ],
+      "anchor": "02.02.04",
+      "description": "Task type 'use-case' (state/task-types.yml): A live use-case walkthrough / acceptance test of an end-to-end workflow, recorded with steps + expected + actual result."
+    },
     "tofu:authentik-state": {
       "kind": "tofu",
       "source": "terraform/authentik/",
@@ -3634,6 +4397,30 @@
     }
   },
   "edges": [
+    {
+      "from": "tasktype:doc",
+      "to": "skill:devlog",
+      "kind": "allows",
+      "via": "tools: [/devlog] in state/task-types.yml",
+      "derived": "task-type-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tasktype:security-remediation",
+      "to": "reader:discovery-scan",
+      "kind": "allows",
+      "via": "tools: [tools/discovery-scan.py] in state/task-types.yml",
+      "derived": "task-type-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tasktype:security-remediation",
+      "to": "reader:rem-status",
+      "kind": "allows",
+      "via": "tools: [tools/rem-status.py] in state/task-types.yml",
+      "derived": "task-type-tools",
+      "evidence": "derived"
+    },
     {
       "from": "authentik:backrest",
       "to": "service:backrest",
@@ -5463,6 +6250,70 @@
       "evidence": "measured"
     },
     {
+      "from": "skill:cortex-query",
+      "to": "service:hermes",
+      "kind": "data",
+      "via": "metadata.nos.audience in files/anatomy/skills/cortex-query/SKILL.md (linked onto that shelf by tasks/skills.yml)",
+      "derived": "skill-audience",
+      "evidence": "derived"
+    },
+    {
+      "from": "skill:cortex-query",
+      "to": "service:openclaw",
+      "kind": "data",
+      "via": "metadata.nos.audience in files/anatomy/skills/cortex-query/SKILL.md (linked onto that shelf by tasks/skills.yml)",
+      "derived": "skill-audience",
+      "evidence": "derived"
+    },
+    {
+      "from": "skill:nos-backoffice",
+      "to": "service:hermes",
+      "kind": "data",
+      "via": "metadata.nos.audience in files/anatomy/skills/nos-backoffice/SKILL.md (linked onto that shelf by tasks/skills.yml)",
+      "derived": "skill-audience",
+      "evidence": "derived"
+    },
+    {
+      "from": "skill:nos-backoffice",
+      "to": "service:openclaw",
+      "kind": "data",
+      "via": "metadata.nos.audience in files/anatomy/skills/nos-backoffice/SKILL.md (linked onto that shelf by tasks/skills.yml)",
+      "derived": "skill-audience",
+      "evidence": "derived"
+    },
+    {
+      "from": "skill:nos-datatables",
+      "to": "service:hermes",
+      "kind": "data",
+      "via": "metadata.nos.audience in files/anatomy/skills/nos-datatables/SKILL.md (linked onto that shelf by tasks/skills.yml)",
+      "derived": "skill-audience",
+      "evidence": "derived"
+    },
+    {
+      "from": "skill:nos-datatables",
+      "to": "service:openclaw",
+      "kind": "data",
+      "via": "metadata.nos.audience in files/anatomy/skills/nos-datatables/SKILL.md (linked onto that shelf by tasks/skills.yml)",
+      "derived": "skill-audience",
+      "evidence": "derived"
+    },
+    {
+      "from": "skill:nos-devops",
+      "to": "service:hermes",
+      "kind": "data",
+      "via": "metadata.nos.audience in files/anatomy/skills/nos-devops/SKILL.md (linked onto that shelf by tasks/skills.yml)",
+      "derived": "skill-audience",
+      "evidence": "derived"
+    },
+    {
+      "from": "skill:nos-devops",
+      "to": "service:openclaw",
+      "kind": "data",
+      "via": "metadata.nos.audience in files/anatomy/skills/nos-devops/SKILL.md (linked onto that shelf by tasks/skills.yml)",
+      "derived": "skill-audience",
+      "evidence": "derived"
+    },
+    {
       "from": "tofu:authentik-state",
       "to": "pulse:authentik-tofu-drift:tofu-drift-plan",
       "kind": "data",
@@ -5668,6 +6519,224 @@
       "evidence": "derived"
     },
     {
+      "from": "reader:discovery-scan",
+      "to": "doctrine:ssot/doctrine/workflows.md#6",
+      "kind": "governed_by",
+      "via": "cited at tools/discovery-scan.py:32",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "reader:tls-uptake",
+      "to": "doctrine:ssot/doctrine/foreign-properties.md#5.1",
+      "kind": "governed_by",
+      "via": "cited at tools/tls-uptake.py:212",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:conductor",
+      "to": "tasktype:investigate",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/conductor/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:conductor",
+      "to": "tasktype:review",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/conductor/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:curator",
+      "to": "tasktype:investigate",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/curator/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:curator",
+      "to": "tasktype:seed-edit",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/curator/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:inspektor",
+      "to": "tasktype:investigate",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/inspektor/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:inspektor",
+      "to": "tasktype:review",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/inspektor/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:invoice-extract",
+      "to": "tasktype:investigate",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/invoice-extract/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:invoice-vision-ocr",
+      "to": "tasktype:investigate",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/invoice-vision-ocr/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:jeff",
+      "to": "tasktype:code-fix",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/jeff/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:jeff",
+      "to": "tasktype:design",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/jeff/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:jeff",
+      "to": "tasktype:doc",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/jeff/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:jeff",
+      "to": "tasktype:investigate",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/jeff/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:jeff-cloud",
+      "to": "tasktype:investigate",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/jeff-cloud/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:librarian",
+      "to": "tasktype:investigate",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/librarian/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:librarian",
+      "to": "tasktype:seed-edit",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/librarian/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:migration-author",
+      "to": "tasktype:code-fix",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/migration-author/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:ops-extract",
+      "to": "tasktype:investigate",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/ops-extract/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:ops-extract-cloud",
+      "to": "tasktype:investigate",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/ops-extract-cloud/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:ops-triage",
+      "to": "tasktype:investigate",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/ops-triage/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:ops-triage-cloud",
+      "to": "tasktype:investigate",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/ops-triage-cloud/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:proposer",
+      "to": "tasktype:design",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/proposer/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:surveyor",
+      "to": "tasktype:investigate",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/surveyor/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:surveyor",
+      "to": "tasktype:seed-edit",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/surveyor/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:upgrade-architect",
+      "to": "tasktype:code-fix",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/upgrade-architect/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
+      "from": "agent:upgrade-architect",
+      "to": "tasktype:design",
+      "kind": "may_take",
+      "via": "task_types: in files/anatomy/agents/upgrade-architect/agent.yml",
+      "derived": "agent-task-types",
+      "evidence": "derived"
+    },
+    {
       "from": "pulse:conductor:self-test-001",
       "to": "pulse:conductor:vulnerability-scan",
       "kind": "mutex",
@@ -5833,6 +6902,230 @@
       "kind": "mutex",
       "resource": "agent-run-lock",
       "derived": "claims",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/foreign-properties.md#5.1",
+      "to": "article:foreign-properties",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/foreign-properties.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/workflows.md#6",
+      "to": "article:workflows",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/workflows.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:account",
+      "to": "table:posting",
+      "kind": "references",
+      "via": "rowRef column(s) account in state/keap-tables/posting.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:application",
+      "to": "table:package",
+      "kind": "references",
+      "via": "rowRef column(s) application in state/keap-tables/package.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:device",
+      "to": "table:device-extraction",
+      "kind": "references",
+      "via": "rowRef column(s) device in state/keap-tables/device-extraction.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:invoice",
+      "to": "table:invoice-line",
+      "kind": "references",
+      "via": "rowRef column(s) invoice in state/keap-tables/invoice-line.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:invoice",
+      "to": "table:journal-entry",
+      "kind": "references",
+      "via": "rowRef column(s) source in state/keap-tables/journal-entry.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:journal-entry",
+      "to": "table:posting",
+      "kind": "references",
+      "via": "rowRef column(s) entry in state/keap-tables/posting.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:kolben-engineer",
+      "to": "table:kolben-ticket",
+      "kind": "references",
+      "via": "rowRef column(s) assignee in state/keap-tables/kolben-ticket.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:kolben-engineer",
+      "to": "table:kolben-time-entry",
+      "kind": "references",
+      "via": "rowRef column(s) engineer in state/keap-tables/kolben-time-entry.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:kolben-project",
+      "to": "table:kolben-ticket",
+      "kind": "references",
+      "via": "rowRef column(s) project in state/keap-tables/kolben-ticket.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:kolben-ticket",
+      "to": "table:kolben-time-entry",
+      "kind": "references",
+      "via": "rowRef column(s) ticket in state/keap-tables/kolben-time-entry.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:party",
+      "to": "table:account",
+      "kind": "references",
+      "via": "rowRef column(s) party in state/keap-tables/account.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:party",
+      "to": "table:book-access",
+      "kind": "references",
+      "via": "rowRef column(s) book_owner in state/keap-tables/book-access.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:party",
+      "to": "table:invoice",
+      "kind": "references",
+      "via": "rowRef column(s) seller, buyer, book_owner in state/keap-tables/invoice.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:party",
+      "to": "table:kolben-project",
+      "kind": "references",
+      "via": "rowRef column(s) client in state/keap-tables/kolben-project.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:party",
+      "to": "table:party-address",
+      "kind": "references",
+      "via": "rowRef column(s) party in state/keap-tables/party-address.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:party",
+      "to": "table:party-contact",
+      "kind": "references",
+      "via": "rowRef column(s) party in state/keap-tables/party-contact.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:party",
+      "to": "table:party-registry-status",
+      "kind": "references",
+      "via": "rowRef column(s) party in state/keap-tables/party-registry-status.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:party",
+      "to": "table:party-site",
+      "kind": "references",
+      "via": "rowRef column(s) party in state/keap-tables/party-site.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:party",
+      "to": "table:party-tax-identity",
+      "kind": "references",
+      "via": "rowRef column(s) party in state/keap-tables/party-tax-identity.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:party",
+      "to": "table:print-order",
+      "kind": "references",
+      "via": "rowRef column(s) customer in state/keap-tables/print-order.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:party",
+      "to": "table:repo",
+      "kind": "references",
+      "via": "rowRef column(s) party in state/keap-tables/repo.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:print-job",
+      "to": "table:print-job-step",
+      "kind": "references",
+      "via": "rowRef column(s) job in state/keap-tables/print-job-step.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:print-machine",
+      "to": "table:print-job-step",
+      "kind": "references",
+      "via": "rowRef column(s) machine in state/keap-tables/print-job-step.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:print-material",
+      "to": "table:print-job",
+      "kind": "references",
+      "via": "rowRef column(s) material in state/keap-tables/print-job.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:print-order",
+      "to": "table:print-job",
+      "kind": "references",
+      "via": "rowRef column(s) order in state/keap-tables/print-job.table.yml",
+      "derived": "keap-table-rowref",
+      "evidence": "derived"
+    },
+    {
+      "from": "table:repo",
+      "to": "table:application",
+      "kind": "references",
+      "via": "rowRef column(s) repo in state/keap-tables/application.table.yml",
+      "derived": "keap-table-rowref",
       "evidence": "derived"
     },
     {
@@ -6271,6 +7564,38 @@
       "evidence": "measured"
     },
     {
+      "from": "pulse:discovery:contradiction-scan",
+      "to": "reader:discovery-scan",
+      "kind": "trigger",
+      "via": "the job's command is tools/discovery-scan.py",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:geo:geo-load",
+      "to": "reader:geo-load",
+      "kind": "trigger",
+      "via": "the job's command is tools/geo-load.py",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:geo:project-sites",
+      "to": "reader:geo-project-sites",
+      "kind": "trigger",
+      "via": "the job's command is tools/geo-project-sites.py",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:geolibre:atlas-refresh",
+      "to": "reader:atlas-refresh",
+      "kind": "trigger",
+      "via": "the job's command is tools/atlas-refresh.py",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
       "from": "pulse:librarian:brief-taxonomy",
       "to": "agent:librarian",
       "kind": "trigger",
@@ -6292,6 +7617,14 @@
       "kind": "trigger",
       "via": "run-agent.sh dispatches the librarian ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
       "derived": "agent-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:npm-supply-chain:daily-ioc-scan",
+      "to": "reader:npm-ioc-scan",
+      "kind": "trigger",
+      "via": "the job's command is tools/npm-ioc-scan.py",
+      "derived": "pulse-command",
       "evidence": "derived"
     },
     {

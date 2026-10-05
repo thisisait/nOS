@@ -1,6 +1,6 @@
 # home-classes.yml — the anatomy graph's node KINDS folded into four questions.
 #
-# A newly arrived model cannot read fourteen kinds; it can read four:
+# A newly arrived model cannot read eighteen kinds; it can read four:
 #   specialization  who can I be           system     what runs here
 #   tool            what can I reach for   knowledge  what is known
 # plus `internal` (plumbing, hidden by default). One row per anatomy kind,
@@ -14,6 +14,12 @@ classes:
   agent:
     class: specialization
     reason: an agent ceremony is a charter a model can be run as
+  tasktype:
+    class: specialization
+    reason: a kind of work with its contract — what a model may take on here
+  skill:
+    class: specialization
+    reason: a procedure a model loads to do one job the estate's way
   service:
     class: system
     reason: a Docker service the estate deploys and serves
@@ -35,6 +41,9 @@ classes:
   weakness:
     class: tool
     reason: a Bone reader whose findings a model can ask for
+  reader:
+    class: tool
+    reason: a tools/README.md §Readers script — asks the estate what is true
   resource:
     class: tool
     reason: mostly agent tool grants and LLM backends; also locks and tokens (mixed kind)
@@ -44,6 +53,9 @@ classes:
   doctrine:
     class: knowledge
     reason: a constitution paragraph the graph cites as governing law
+  article:
+    class: knowledge
+    reason: an in-force constitution article (ssot/INDEX.yml doctrine realm)
   gateset:
     class: internal
     reason: a named bundle of judges; the judges themselves are the tools

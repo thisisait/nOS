@@ -46,6 +46,10 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
                             independent `build` axis (F1–F4/H). Frames are NOT
                             emitted: a hub service already has a service: node
                             and a second address for it would be padding.
+    tasktype:<name>         state/task-types.yml rows
+    skill:<name>            every SKILL.md in the repo (SKILL_SOURCES)
+    reader:<stem>           tools/README.md §Readers lines
+    article:<stem>          in-force doctrine realm of ssot/INDEX.yml
 
 SERVICE→SERVICE DEPENDENCIES (docs/idea/13-relations.md R1)
 -----------------------------------------------------------
@@ -186,6 +190,14 @@ REPO_SURFACES: dict[str, dict] = {
     },
 }
 
+TASK_TYPES = REPO / "state" / "task-types.yml"
+#: Every place the repo keeps a SKILL.md: the distributed library, the project
+#: skills, and Claude Code plugin skills.
+SKILL_SOURCES = ("files/anatomy/skills/*/SKILL.md", ".claude/skills/*/SKILL.md",
+                 ".claude/plugins/*/skills/*/SKILL.md")
+TOOLS_README = REPO / "tools" / "README.md"
+SSOT_INDEX = REPO / "ssot" / "INDEX.yml"
+
 TAXONOMY_BUNDLE = REPO / "state" / "fable" / "taxonomy-bundle.json"
 
 #: KEAP taxonomy anchors (ids from state/fable/taxonomy-bundle.json `anchor`,
@@ -229,6 +241,10 @@ KIND_ANCHORS = {
     # neither is what a face app is). Honestly generic rather than a guessed
     # leaf, exactly as this table's header says.
     "faceapp": "02.02.04",
+    "tasktype": "02.02.04",
+    "skill": "02.02.09",          # procedures an agent loads
+    "reader": "02.02.04",
+    "article": "09",
 }
 FALLBACK_ANCHOR = "02.02.04"      # Software Engineering
 
@@ -560,6 +576,14 @@ def _describe(nid: str, n: dict) -> str:
                 f"build, ssot/doctrine/face-app-tiers.md); reads {scopes}")
     if kind == "table":
         return f"KEAP DataTable definition '{n.get('title')}' ({n['source']})"
+    if kind == "tasktype":
+        return f"Task type '{local}' (state/task-types.yml): {n.get('title')}"
+    if kind == "skill":
+        return f"Skill '{local}' ({n['source']}): {n.get('title')}"
+    if kind == "reader":
+        return f"Reader {n['source']}: {n.get('title')}"
+    if kind == "article":
+        return f"Constitution article {n['source']}: {n.get('title')}"
     if kind == "doctrine":
         head = n.get("heading") or "(unheaded table-row address)"
         return (f"Constitution paragraph {n.get('section')} of {n['source']}: "
@@ -1031,6 +1055,146 @@ def harvest_tables(nodes: dict) -> None:
         }
 
 
+def derive_table_refs(nodes: dict) -> list[dict]:
+    """table:<ref> → table:<t> for every `kind: rowRef` column's `refTable`.
+
+    `references`, not `data`: a rowRef is a foreign key, and tables refer to
+    each other in both directions, so it must stay out of the per-kind cycle
+    refusal. Self-references (a COA `parent`) are not edges.
+    """
+    out = {}
+    for path in sorted(KEAP_TABLES.glob("*.table.yml")):
+        try:
+            doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError:
+            continue
+        nid = f"table:{path.name.removesuffix('.table.yml')}"
+        for col in ((doc.get("schema") or {}).get("columns") or []):
+            ref = col.get("refTable") if isinstance(col, dict) and col.get("kind") == "rowRef" else None
+            if not ref or f"table:{ref}" == nid:
+                continue
+            if f"table:{ref}" not in nodes:
+                _die(f"{nid}: column `{col.get('key')}` refTable {ref!r} names no table definition")
+            out.setdefault((f"table:{ref}", nid), []).append(col.get("key"))
+    return [{"from": a, "to": b, "kind": "references",
+             "via": f"rowRef column(s) {', '.join(cols)} in {nodes[b]['source']}",
+             "derived": "keap-table-rowref"} for (a, b), cols in sorted(out.items())]
+
+
+# ── harvest: the newcomer's shelf — task types, skills, readers, law ──────
+#    (home-graph increment 2: who-can-I-be and what-is-known were agents and
+#    cited paragraphs only. Each kind is read from the file that already
+#    declares it; none is a list kept here.)
+
+
+def harvest_task_types(nodes: dict, edges: list) -> None:
+    """tasktype:<name> from state/task-types.yml, and agent → tasktype from
+    each agent.yml `task_types:` (absent means `*`, which is not an edge)."""
+    doc = yaml.safe_load(TASK_TYPES.read_text(encoding="utf-8")) or {}
+    for name, t in (doc.get("task_types") or {}).items():
+        nodes[f"tasktype:{name}"] = {"kind": "tasktype", "source": "state/task-types.yml",
+                                     "title": t.get("summary"), "tools": t.get("tools") or []}
+    for path in sorted(REPO.glob(AGENT_PROFILES)):
+        a = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        aid = f"agent:{a.get('name') or path.parent.name}"
+        for tt in a.get("task_types") or []:
+            if f"tasktype:{tt}" not in nodes:
+                _die(f"{aid}: task_types names {tt!r}, not a row in state/task-types.yml")
+            edges.append({"from": aid, "to": f"tasktype:{tt}", "kind": "may_take",
+                          "via": f"task_types: in {path.relative_to(REPO)}",
+                          "derived": "agent-task-types"})
+
+
+def harvest_skills(nodes: dict, edges: list) -> None:
+    """skill:<name> from every SKILL.md the repo carries, and skill → service
+    for each `metadata.nos.audience` consumer that is a manifest service."""
+    for pattern in SKILL_SOURCES:
+        for path in sorted(REPO.glob(pattern)):
+            text = path.read_text(encoding="utf-8")
+            m = re.match(r"---\n(.*?)\n---", text, re.S)
+            try:
+                front = (yaml.safe_load(m.group(1)) if m else None) or {}
+            except yaml.YAMLError:
+                # Not YAML (an unquoted `: ` in a description) — Claude Code reads
+                # it line-wise, so do the same for the two scalar keys.
+                front = dict(re.findall(r"^(name|description):\s*(.*)$", m.group(1), re.M))
+            name = str(front.get("name") or path.parent.name)
+            nid = f"skill:{name}"
+            if nid in nodes:
+                _die(f"{nid}: declared twice ({nodes[nid]['source']} and {path.relative_to(REPO)})")
+            nodes[nid] = {"kind": "skill", "source": str(path.relative_to(REPO)),
+                          "title": front.get("description")}
+            audience = ((front.get("metadata") or {}).get("nos") or {}).get("audience") or []
+            for who in audience:
+                if f"service:{who}" in nodes:
+                    edges.append({"from": nid, "to": f"service:{who}", "kind": "data",
+                                  "via": f"metadata.nos.audience in {path.relative_to(REPO)} "
+                                         f"(linked onto that shelf by tasks/skills.yml)",
+                                  "derived": "skill-audience"})
+
+
+def harvest_readers(nodes: dict) -> None:
+    """reader:<stem> for every line of tools/README.md §Readers — the index
+    test_the_tools_index_is_complete.py already holds complete."""
+    text = TOOLS_README.read_text(encoding="utf-8")
+    m = re.search(r"^## Readers[^\n]*\n(.*?)^## ", text, re.S | re.M)
+    if not m:
+        _die("tools/README.md has no `## Readers` section — the index moved")
+    for name, what in re.findall(r"^- `([^`]+)` — (.*)$", m.group(1), re.M):
+        nodes[f"reader:{Path(name).stem}"] = {"kind": "reader", "source": f"tools/{name}",
+                                              "title": what.strip()}
+
+
+def harvest_articles(nodes: dict) -> None:
+    """article:<stem> for each in-force doctrine article — the realm path is
+    read from ssot/INDEX.yml, not restated."""
+    realm = (yaml.safe_load(SSOT_INDEX.read_text(encoding="utf-8")) or {}) \
+        .get("realms", {}).get("doctrine") or {}
+    if not realm.get("path") or not realm.get("in_force"):
+        _die("ssot/INDEX.yml has no in-force `doctrine` realm — the index moved")
+    for path in sorted((REPO / realm["path"]).glob("*.md")):
+        head = next((ln[2:].strip() for ln in path.read_text(encoding="utf-8").splitlines()
+                     if ln.startswith("# ")), None)
+        nodes[f"article:{path.stem}"] = {"kind": "article",
+                                         "source": str(path.relative_to(REPO)), "title": head}
+
+
+def derive_task_type_tools(nodes: dict) -> list[dict]:
+    """tasktype → reader/skill where a `tools:` entry names one EXACTLY
+    (`tools/rem-status.py`, `/devlog`). Prose entries resolve to nothing."""
+    by_name = {n["source"]: nid for nid, n in nodes.items() if n["kind"] == "reader"}
+    by_name |= {f"/{nid.split(':', 1)[1]}": nid for nid, n in nodes.items() if n["kind"] == "skill"}
+    out = []
+    for nid, n in sorted(nodes.items()):
+        if n["kind"] != "tasktype":
+            continue
+        for t in n["tools"]:
+            if str(t) in by_name:
+                out.append({"from": nid, "to": by_name[str(t)], "kind": "allows",
+                            "via": f"tools: [{t}] in state/task-types.yml",
+                            "derived": "task-type-tools"})
+    return out
+
+
+def derive_reader_runs(nodes: dict) -> list[dict]:
+    """pulse → reader when the job's declared command IS that reader."""
+    readers = {Path(n["source"]).name: nid for nid, n in nodes.items() if n["kind"] == "reader"}
+    return [{"from": nid, "to": readers[n["command_name"]], "kind": "trigger",
+             "via": f"the job's command is {nodes[readers[n['command_name']]]['source']}",
+             "derived": "pulse-command"}
+            for nid, n in sorted(nodes.items())
+            if n["kind"] == "pulse" and n.get("command_name") in readers]
+
+
+def derive_article_parts(nodes: dict) -> list[dict]:
+    """doctrine paragraph → the article it is a paragraph of."""
+    arts = {n["source"]: nid for nid, n in nodes.items() if n["kind"] == "article"}
+    return [{"from": nid, "to": arts[n["source"]], "kind": "part_of",
+             "via": f"paragraph of {n['source']}", "derived": "doctrine-paragraph"}
+            for nid, n in sorted(nodes.items())
+            if n["kind"] == "doctrine" and n["source"] in arts]
+
+
 # ── edges: validate declarations, derive structure ────────────────────────
 
 
@@ -1312,7 +1476,16 @@ def derive_doctrine(nodes: dict) -> list[dict]:
     gs_ranges = _block_ranges_yaml_list(js_lines, "gate_sets",
                                         r"^\s{2}([a-z0-9-]+):")
 
+    # A reader or skill IS its file, so its citations belong to that one node —
+    # but only those into in-force law (article sources): docstrings also cite
+    # paragraphs as EXAMPLES (doctrine-cite.py's own), which are not governance.
+    whole_file = {n["source"]: nid for nid, n in nodes.items()
+                  if n["kind"] in ("reader", "skill") and (REPO / n["source"]).is_file()}
+    law = {n["source"] for n in nodes.values() if n["kind"] == "article"}
+
     def owner_for(src: str, line: int) -> str | None:
+        if src in whole_file:
+            return whole_file[src]
         if src == "state/judge-sets.yml":
             for name, a, b in judge_ranges:
                 if a <= line <= b and f"judge:{name}" in nodes:
@@ -1330,13 +1503,15 @@ def derive_doctrine(nodes: dict) -> list[dict]:
                     return owner
         return None
 
-    sources = {"state/judge-sets.yml"} | set(ranges_by_file)
+    sources = {"state/judge-sets.yml"} | set(ranges_by_file) | set(whole_file)
     pairs: dict[tuple[str, str], dict] = {}
     for src in sorted(sources):
         cites = dc.harvest_file(REPO / src, src, corpus)
         dc.resolve(cites, corpus)
         for c in cites:
             if c.status not in ("resolved", "moved") or c.shape in ("external", "sec"):
+                continue
+            if src in whole_file and (c.doc not in law or not c.key):
                 continue
             owner = owner_for(src, c.line)
             if owner is None:
@@ -1704,6 +1879,10 @@ def build() -> dict:
     harvest_agents(nodes, agent_edges := [])   # after clients+backends — edges resolve
     harvest_tables(nodes)
     harvest_faceapps(nodes)
+    harvest_task_types(nodes, home_edges := [])   # after agents
+    harvest_skills(nodes, home_edges)             # after services
+    harvest_readers(nodes)
+    harvest_articles(nodes)
 
     declared = compile_declared(raw, nodes)
     writes = compile_writes(raw_writes, nodes)
@@ -1720,7 +1899,9 @@ def build() -> dict:
     hosting = derive_authentik_hosting(nodes)
     all_edges = (declared + writes + edges + bindings + substrate + face
                  + structural + doctrine + mutex + hosting + agent_edges
-                 + derive_agent_triggers(nodes))
+                 + derive_agent_triggers(nodes) + home_edges + derive_table_refs(nodes)
+                 + derive_task_type_tools(nodes) + derive_article_parts(nodes)
+                 + derive_reader_runs(nodes))
     derive_layers(nodes, all_edges)
 
     # Per-kind cycles are a compile error (§2c-2): there is no legitimate
@@ -1760,9 +1941,11 @@ def build() -> dict:
              + "\n  ".join(orphans))
     counts = {"nodes": len(nodes), "edges": len(all_edges)}
     for k in ("pulse", "judge", "gateset", "weakness", "daemon", "service", "resource",
-              "repo", "tofu", "authentik", "table", "doctrine", "faceapp", "agent"):
+              "repo", "tofu", "authentik", "table", "doctrine", "faceapp", "agent",
+              "tasktype", "skill", "reader", "article"):
         counts[f"nodes_{k}"] = sum(1 for n in nodes.values() if n["kind"] == k)
-    for k in EDGE_KINDS + ("mutex", "governed_by"):
+    for k in EDGE_KINDS + ("mutex", "governed_by", "may_take", "allows", "references",
+                           "part_of"):
         counts[f"edges_{k}"] = sum(1 for e in all_edges if e["kind"] == k)
     counts["edges_service_dependency"] = sum(
         1 for e in all_edges

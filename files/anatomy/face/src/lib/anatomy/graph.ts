@@ -38,9 +38,22 @@ export type NodeKind =
 	| 'authentik'
 	| 'table'
 	| 'doctrine'
-	| 'faceapp';
+	| 'faceapp'
+	| 'tasktype'
+	| 'skill'
+	| 'reader'
+	| 'article';
 
-export type EdgeKind = 'data' | 'trigger' | 'temporal' | 'mutex' | 'governed_by';
+export type EdgeKind =
+	| 'data'
+	| 'trigger'
+	| 'temporal'
+	| 'mutex'
+	| 'governed_by'
+	| 'may_take'
+	| 'allows'
+	| 'references'
+	| 'part_of';
 
 export const NODE_KINDS: readonly NodeKind[] = [
 	'pulse',
@@ -55,6 +68,10 @@ export const NODE_KINDS: readonly NodeKind[] = [
 	'table',
 	'doctrine',
 	'faceapp',
+	'tasktype',
+	'skill',
+	'reader',
+	'article',
 	'authentik',
 	'service'
 ] as const;
@@ -75,6 +92,10 @@ export const KIND_GLYPH: Record<NodeKind, string> = {
 	table: '▤',
 	doctrine: '§',
 	faceapp: '🪟',
+	tasktype: '☰',
+	skill: '✎',
+	reader: '◉',
+	article: '¶',
 	authentik: '🛡',
 	service: '▣'
 };
