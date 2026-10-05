@@ -24,6 +24,10 @@ review_every_days: 31
 Self is **generated** from declarations, never hand-listed. Anything running
 that no declaration explains is non-self (`undeclared-status`, `digest-status`).
 
+Declared is not the same as self. Host software classed `symbiont` or `host` in
+`software_owner` is **tolerated non-self**: declared, living beside the
+organism, not of it. A cell neither attacks it nor counts it as self.
+
 ## 2. The cell contract
 
 Every indicator — deterministic probe or model — declares the same fields.
