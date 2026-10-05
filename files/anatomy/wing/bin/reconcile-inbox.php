@@ -34,6 +34,8 @@ declare(strict_types=1);
  *   agent questions ("Agent asks: <name>")
  *       source: agent_questions — status != 'open' (answered/expired/
  *       cancelled). The ask was the condition; a decided ask is not pending.
+ *   run failures    ("Playbook run failed ...")
+ *       source: the next `playbook-run` outcome row — RETIRED, not read.
  *
  * A SECOND VERDICT, AND A SECOND COLUMN (2026-08-24). The rules above all ask
  * "did the CONDITION clear". Report rows have no condition — this file said so
@@ -565,6 +567,36 @@ function verdict_restated_by_shape(SQLite3 $db, array $n, array $repeaters): arr
 	];
 }
 
+/**
+ * A playbook-run failure is answered by the next run's outcome (2026-10-05).
+ * Evidence: a LATER row from the keyed `playbook-run` emitter, green or not.
+ * Bone retires keyed rows itself; this reaches the keyless pre-key backlog.
+ */
+function verdict_playbook(SQLite3 $db, array $n): array
+{
+	$stmt = $db->prepare(
+		"SELECT uuid, severity, created_at, supersede_key FROM notifications
+		  WHERE origin_plugin = 'playbook-run' AND supersede_key LIKE 'playbook-run:%'
+		    AND created_at > :ts
+		  ORDER BY created_at DESC, id DESC LIMIT 1"
+	);
+	$stmt->bindValue(':ts', (string) $n['created_at'], SQLITE3_TEXT);
+	$r = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+	if ($r === false) {
+		return ['action' => 'leave', 'reason' => 'no later run outcome — this is the latest word'];
+	}
+	return [
+		'action'   => 'supersede',
+		'reason'   => "next run outcome {$r['uuid']} [{$r['severity']}] at {$r['created_at']}",
+		'evidence' => [
+			'superseded_by'     => $r['uuid'],
+			'successor_sent_at' => $r['created_at'],
+			'successor_severity'=> $r['severity'],
+			'declared_class'    => $r['supersede_key'],
+		],
+	];
+}
+
 // ── Main sweep ───────────────────────────────────────────────────────────────
 
 $rows = [];
@@ -611,6 +643,8 @@ foreach ($rows as $n) {
 		$v = verdict_pulse($db, $n);
 	} elseif ($origin === 'prometheus-alert-relay') {
 		$v = verdict_alert($db, $n, $relayStatePath);
+	} elseif ($hasSupersede && str_starts_with($title, 'Playbook run failed')) {
+		$v = verdict_playbook($db, $n);
 	} elseif ($origin === 'backup' && (str_starts_with($title, 'Backup FAILED') || str_starts_with($title, 'Backup ran but recorded ZERO'))) {
 		$v = verdict_backup($n, $backupStatusPath);
 	} elseif ($origin === 'agent-inbox' && isset($n['metadata']['question_uuid'])) {

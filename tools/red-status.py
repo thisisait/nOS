@@ -337,7 +337,7 @@ def _queue_pending() -> dict[str, int] | None:
     return counts
 
 
-def _still_holds(row: sqlite3.Row) -> bool | None:
+def _still_holds(row: sqlite3.Row, conn: sqlite3.Connection | None = None) -> bool | None:
     """Does this notification's own claim still hold?
 
     A notification is an EVENT and red is a STATE — the sentence this whole
@@ -377,6 +377,18 @@ def _still_holds(row: sqlite3.Row) -> bool | None:
             if claimed and now.get(sev, 0) >= claimed:
                 return True
         return False
+    # A run failure is decided by the runs after it: a later green outcome
+    # (only an unscoped converge sends one) makes it provably not now. No green
+    # row is not proof of red — scoped and pre-key green runs send none.
+    if conn is not None and str(row["title"] or "").startswith("Playbook run failed"):
+        later = conn.execute(
+            """
+            SELECT 1 FROM notifications
+             WHERE origin_plugin = 'playbook-run' AND severity = 'info'
+               AND created_at > ?
+             LIMIT 1
+            """, (row["created_at"],)).fetchone()
+        return False if later else None
     return None
 
 
@@ -433,20 +445,20 @@ def unread_inbox(conn: sqlite3.Connection) -> dict:
     unknown = 0
     loud_rows = conn.execute(
         """
-        SELECT origin_plugin, origin_agent, metadata_json
+        SELECT origin_plugin, origin_agent, metadata_json, title, created_at
           FROM notifications
          WHERE wing_inbox_read_at IS NULL AND superseded_at IS NULL
            AND severity IN ('critical', 'high')
         """
     ).fetchall() if retired else conn.execute(
         """
-        SELECT origin_plugin, origin_agent, metadata_json
+        SELECT origin_plugin, origin_agent, metadata_json, title, created_at
           FROM notifications
          WHERE wing_inbox_read_at IS NULL AND severity IN ('critical', 'high')
         """
     ).fetchall()
     for row in loud_rows:
-        verdict = _still_holds(row)
+        verdict = _still_holds(row, conn)
         if verdict is False:
             provably_stale += 1
         elif verdict is None:
