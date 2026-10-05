@@ -112,3 +112,20 @@ def test_rem_dispose_writes_the_sidecar_not_the_notebook(tmp_path):
     assert sidecar["REM-250"]["resolved_by"] == "pin 2.2.8"
     raw = json.loads(_status(tmp_path, "--json").stdout)
     assert raw["by_status"].get("resolved") == 1
+
+
+def test_the_drift_hook_counts_the_joined_queue(tmp_path):
+    """drift-watch and NosCriticalCveFound* read this hook's count. Unjoined, it
+    paged 4 CRITICAL on 2026-10-04 while rem-status showed 2."""
+    hook = REPO / "hooks/playbook-end.d/20-cve-drift-check.sh"
+    _write_queue(tmp_path, [
+        {"id": "REM-256", "status": "pending", "severity": "CRITICAL"},
+        {"id": "REM-264", "status": "pending", "severity": "CRITICAL"},
+    ])
+    (tmp_path / "scan-state.json").write_text('{"components": {}}\n', encoding="utf-8")
+    _write_sidecar(tmp_path, {"REM-256": {"status": "resolved", "resolved_by": "x"}})
+    out = subprocess.run(
+        ["bash", str(hook)], env={**_env(tmp_path), "TEXTFILE_DIR": str(tmp_path)},
+        capture_output=True, text=True, check=True,
+    ).stdout
+    assert json.loads(out)["pending_critical"] == 1, out
