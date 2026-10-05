@@ -27,8 +27,8 @@ reviews:
     bullets. First: what changes on a running nOS estate after the next
     converge — services started, stopped or removed, ports, SSO or
     permissions, data written or deleted. Then: what is code, tests or docs
-    only. End with the threat-checklist sections (docs/review/threat-checklist.md,
-    1-6) this PR touches, or "none".
+    only. End with one line per threat-checklist section
+    (docs/review/threat-checklist.md, 1-6): "hit: <file:line>" or "no findings".
   auto_title_instructions: >-
     Conventional Commits: type(scope): subject. Types: feat, fix, refactor,
     docs, chore, test, ci, sec. Scope is the role, tool or area (keap, pulse,
@@ -101,8 +101,10 @@ reviews:
     - path: "**"
       instructions: |
         Review this change against docs/review/threat-checklist.md, all six
-        sections. Report each hit with file and line; say "no findings" per
-        section otherwise. Advisory only: never approve or request changes.
+        sections. Comment only on a HIT, at its file and line. Never post a
+        per-file "no findings" or checklist recap as a comment — the verdict
+        per section goes once, in the summary (PR #36 got 16 such nitpicks).
+        Advisory only: never approve or request changes.
         A fix should ship with the gate that would have caught it, shown red
         against the broken state first; say so when a fix has no gate.
         Hold changes to the charter "Working in nOS" (top of CLAUDE.md): flag

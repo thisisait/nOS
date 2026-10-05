@@ -75,7 +75,10 @@ def test_probe_logs_mode_scrubs_secrets(tmp_path: pathlib.Path) -> None:
     fake.write_text(
         "#!/bin/sh\n"
         'if [ "$1" = ps ]; then echo "iiab-keap-1|Restarting (1) 3 seconds ago"\n'
-        'elif [ "$1" = logs ]; then echo "DB_PASSWORD=hunter2hunter2 boot failed"; fi\n'
+        'elif [ "$1" = logs ]; then echo "DB_PASSWORD=hunter2hunter2 boot failed"\n'
+        '  echo "mariadb-upgrade --password=s3cretPassVal"\n'
+        '  echo "curl: Authorization: Bearer abcdefgh12345678xyz"\n'
+        '  echo "retrying with Bearer tok9876543210abcdef"; fi\n'
     )
     fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
     out = subprocess.run(
@@ -83,5 +86,7 @@ def test_probe_logs_mode_scrubs_secrets(tmp_path: pathlib.Path) -> None:
         capture_output=True, text=True, timeout=30,
         env={**os.environ, "NOS_DOCKER_BIN": str(fake)},
     )
-    assert "hunter2hunter2" not in out.stdout
+    # every shape pulse/redact.py declares, not only the env one (PR #36 review)
+    for secret in ("hunter2hunter2", "s3cretPassVal", "abcdefgh12345678xyz", "tok9876543210abcdef"):
+        assert secret not in out.stdout, secret
     assert "DB_PASSWORD=<REDACTED> boot failed" in out.stdout
