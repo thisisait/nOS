@@ -27,8 +27,10 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 try:
     import yaml  # PyYAML
-except Exception:  # pragma: no cover — import error surfaces in module
+    _YAML_ERR = ""
+except Exception as _exc:  # pragma: no cover — import error surfaces in module
     yaml = None  # type: ignore[assignment]
+    _YAML_ERR = repr(_exc)
 
 
 DEFAULT_STATE_PATH = "~/.nos/state.yml"
@@ -52,7 +54,12 @@ def utcnow_iso() -> str:
 
 def _require_yaml() -> None:
     if yaml is None:
-        raise RuntimeError("PyYAML is required for nos_state_lib (pip install pyyaml).")
+        # Name the interpreter: macOS CI has said only "PyYAML is required" for
+        # weeks while the job's $PY demonstrably had it — so which python ran?
+        import sys
+        raise RuntimeError(
+            f"PyYAML is required for nos_state_lib (pip install pyyaml). "
+            f"interpreter={sys.executable} import_error={_YAML_ERR}")
 
 
 def empty_state() -> Dict[str, Any]:

@@ -367,8 +367,9 @@ jobs:
     # NON-BLOCKING (2026-06-08): the macOS hosted runner regressed the custom-module
     # interpreter path — nos_state runs on an auto-discovered python WITHOUT pyyaml
     # even though env / cfg `interpreter_python` / `-e ansible_python_interpreter`
-    # all point at a $PY that has it (PY-DEPS-OK). 7 fixes couldn't redirect it; it
-    # is a GitHub-macOS-runner + ansible-2.21 quirk, NOT a code/playbook defect. The
+    # all point at a $PY that has it (PY-DEPS-OK). Cause found 2026-10-05: our
+    # modules' `#!/usr/bin/python3` shebang obeys only ansible_python3_interpreter
+    # (now pinned below); flip this back to blocking after one green macOS run. The
     # The Linux `integration-linux` job is the INTENDED gating wet-test — but as of
     # 2026-07-22 it does not yet prove the playbook, and this file carried the
     # withdrawn sentence ("IS the gating wet-test (green, full ok=473 run)") for
@@ -459,7 +460,7 @@ jobs:
           # externally-managed, so a plain install silently lands in user-site,
           # which PYTHONNOUSERSITE=1 (job env) then hides from the module → nos_state
           # "PyYAML is required". Force the main site-packages.
-          "$PY" -m pip install --break-system-packages "$NOS_ANSIBLE_CORE" pyyaml jsonschema
+          "$PY" -m pip install --break-system-packages "$NOS_ANSIBLE_CORE" pyyaml jsonschema requests
           "$PY" -c 'import yaml, jsonschema; print("PY-DEPS-OK @", yaml.__file__)' || echo "PY-DEPS-MISSING"
           # Sanity probe — confirm the venv ansible loads core filters cleanly.
           "$RUNNER_TEMP/nosvenv/bin/python" -c 'import yaml, jsonschema; print("ok", yaml.__version__, jsonschema.__version__, "@", __import__("sys").executable)'
@@ -514,9 +515,10 @@ jobs:
           PY
 
       - name: Test the playbook.
-        # -e ansible_python_interpreter (extra-vars, highest precedence) forces the
-        # module interpreter past macOS's custom-module discovery cache, which
-        # ignores the env + cfg pins. $PY has ansible-core + pyyaml (main-site).
+        # -e ansible_python_interpreter pins `#!/usr/bin/python` modules only; our
+        # `#!/usr/bin/python3` ones (nos_state…) obey ansible_python3_interpreter or
+        # run Apple's /usr/bin/python3 (the June "PyYAML is required" — measured in
+        # module_common._get_shebang). test_macos_ci_pins_the_python3_shebang.
         # -e nos_allow_no_docker=true — the GitHub macOS runner ships no Docker
         # daemon, so this lane is a HOST-ONLY wet-test by design and every stack
         # task skips. main.yml otherwise refuses that state (a Docker-less run
@@ -524,7 +526,10 @@ jobs:
         # exception is declared HERE, in a reviewed file, rather than defaulted
         # in the playbook where nobody would see it. The Linux lane below does
         # NOT carry it: that one has Docker and must prove the stacks.
-        run: ansible-playbook main.yml -e allow_weak_prefix=true -e nos_allow_no_docker=true -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
+        run: >-
+          ansible-playbook main.yml -e allow_weak_prefix=true -e nos_allow_no_docker=true
+          -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
+          -e ansible_python3_interpreter="${{ steps.python-setup.outputs.python-path }}"
         env:
           ANSIBLE_FORCE_COLOR: '1'
           ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
@@ -532,7 +537,9 @@ jobs:
       - name: Idempotence check.
         run: |
           idempotence=$(mktemp)
-          ansible-playbook main.yml -e nos_allow_no_docker=true -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}" | tee -a "${idempotence}"
+          ansible-playbook main.yml -e nos_allow_no_docker=true \
+            -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}" \
+            -e ansible_python3_interpreter="${{ steps.python-setup.outputs.python-path }}" | tee -a "${idempotence}"
           tail "${idempotence}" | grep -q 'changed=0.*failed=0' \
             && (echo 'Idempotence test: pass' && exit 0) \
             || (echo 'Idempotence test: fail' && exit 1)
