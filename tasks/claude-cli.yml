@@ -46,6 +46,10 @@
 # harness and that version moves belong to the agents via wing/upgrades — a
 # broader change than one line, tracked separately. This file only stops that
 # float from reaching the CLI.
+#
+# 2026-10-05: the CLI is vendor-owned. A claude that already resolves is left
+# untouched (no reinstall, no force-link, no .zshrc edit); nOS installs only
+# when none does. Gate: test_claude_cli_respects_an_existing_install.py.
 # ==============================================================================
 
 - name: "[claude-cli] Where a native build lives"
@@ -53,62 +57,76 @@
     _claude_native_bin: "{{ ansible_facts['env']['HOME'] }}/.local/bin/claude"
   tags: ['claude-cli', 'node']
 
-- name: "[claude-cli] Is the native build already installed?"
-  ansible.builtin.stat:
-    path: "{{ _claude_native_bin }}"
-  register: _claude_native
+# Any claude that already resolves is the operator's: his PATH first, then the
+# vendor's native location, the launchd bridge, and last NVM's default node.
+- name: "[claude-cli] Which claude already resolves?"
+  ansible.builtin.shell: |
+    PATH="$PATH:$HOME/.local/bin:{{ homebrew_prefix }}/bin"
+    found=$(command -v claude 2>/dev/null || true)
+    if [ -z "$found" ] && [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ]; then
+      export NVM_DIR="$HOME/.nvm"; . "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
+      nvm use default >/dev/null 2>&1; found=$(command -v claude 2>/dev/null || true)
+    fi
+    echo "$found"
+  args:
+    executable: /bin/bash
+  register: _claude_existing
+  changed_when: false
+  failed_when: false
+  check_mode: false
   tags: ['claude-cli', 'node']
 
-# Runs the CLI's own installer rather than curl-piping a script: it is the
-# supported path (`claude install [stable|latest|<version>]`) and it is
-# ADDITIVE — it writes a separate native build and does not touch the npm tree,
-# so this is safe to run while the operator is inside a session.
-#
-# `stable`, not `latest`, and that is the same argument the operator makes
-# about pins: a deterministic harness should not take whatever shipped today
-# just because it shipped today.
-- name: "[claude-cli] Install the native build"
+# Only when nothing resolves, by the vendor's own route, once; its auto-updater
+# owns the build afterwards. The old route (`claude install`) needed a claude to
+# exist already, so on a clean host it never installed anything.
+- name: "[claude-cli] Install the native build (no claude resolved)"
   ansible.builtin.shell: |
-    set -euo pipefail
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "{{ homebrew_prefix }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix }}/opt/nvm/nvm.sh"
-    nvm use default >/dev/null 2>&1 || true
-    claude install '{{ claude_cli_channel | default("stable") }}'
+    set -o pipefail
+    curl -fsSL https://claude.ai/install.sh | bash -s '{{ claude_cli_channel | default("stable") }}'
   args:
     executable: /bin/bash
   register: _claude_install
-  changed_when: "'installed' in (_claude_install.stdout | default('') | lower)"
+  changed_when: _claude_install.rc | default(1) == 0
   failed_when: false
   when:
     - nos_pkg_manager == 'homebrew'
-    - not (_claude_native.stat.exists | default(false))
+    - (_claude_existing.stdout | default('') | trim) == ''
   tags: ['claude-cli', 'node']
 
-- name: "[claude-cli] Re-stat after install"
+- name: "[claude-cli] Stat the native build and the launchd bridge slot"
   ansible.builtin.stat:
-    path: "{{ _claude_native_bin }}"
-  register: _claude_native_after
+    path: "{{ item }}"
+    follow: false
+  loop:
+    - "{{ _claude_native_bin }}"
+    - "{{ homebrew_prefix }}/bin/claude"
+  register: _claude_paths
   tags: ['claude-cli', 'node']
 
-# ── The launchd PATH bridge, now pointed at something that does not move ────
-# Same purpose as the old task in tasks/node.yml (Pulse forks
-# pulse-run-agent.sh under launchd's minimal PATH; `command -v claude` has to
-# resolve). Different target: a path no node upgrade can invalidate.
+- name: "[claude-cli] Name what the stats found"
+  ansible.builtin.set_fact:
+    _claude_native_after: "{{ _claude_paths.results[0] }}"
+    _claude_bridge: "{{ _claude_paths.results[1] }}"
+  tags: ['claude-cli', 'node']
+
+# ── The launchd PATH bridge ──────────────────────────────────────────────────
+# Pulse forks pulse-run-agent.sh under launchd's minimal PATH, so `command -v
+# claude` must resolve in the homebrew prefix. Written only into an EMPTY slot,
+# only at the native build: whatever already sits there is the operator's.
 - name: "[claude-cli] Bridge the native build into the homebrew PATH"
   ansible.builtin.file:
     src: "{{ _claude_native_bin }}"
     dest: "{{ homebrew_prefix }}/bin/claude"
     state: link
-    force: true
   when:
     - nos_pkg_manager == 'homebrew'
     - _claude_native_after.stat.exists | default(false)
+    - not (_claude_bridge.stat.exists | default(false))
   tags: ['claude-cli', 'node']
 
-# ~/.local/bin is NOT on this operator's PATH (measured 2026-08-04), so without
-# this the shell would keep resolving the nvm copy and the whole exercise would
-# be decorative. Prepended so it wins over any surviving nvm shim.
-- name: "[claude-cli] Put ~/.local/bin ahead of NVM in the shell profile"
+# Only for a build THIS run installed (~/.local/bin is not on every PATH). A
+# claude the operator already had keeps its place in his PATH.
+- name: "[claude-cli] Put ~/.local/bin on the shell PATH (fresh install only)"
   ansible.builtin.blockinfile:
     path: "{{ ansible_facts['env']['HOME'] }}/.zshrc"
     marker: "# {mark} CLAUDE CLI - ANSIBLE MANAGED"
@@ -119,13 +137,18 @@
       export PATH="$HOME/.local/bin:$PATH"
     create: true
     mode: '0644'
-  when: nos_pkg_manager == 'homebrew'
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - _claude_install is changed
+    - _claude_native_after.stat.exists | default(false)
   tags: ['claude-cli', 'node']
 
 # ── The duplicate copies NVM accumulated ───────────────────────────────────
 # Each one carries its own auto-updater, so each is another chance to rewrite a
-# 270 MB file while a session is holding it. Removing them is the cleanup half
-# of this fix.
+# 270 MB file while a session is holding it. nOS cannot prove which of them it
+# put there (an operator's own `npm i -g` looks identical), so it never removes
+# one on its own: the flag below is the operator's explicit request, and even
+# then the copy his PATH resolves to is kept.
 #
 # REPORTS BY DEFAULT, REMOVES ONLY ON REQUEST — and that is not timidity, it is
 # the specific failure this would otherwise cause. Deleting the copy that a
@@ -164,7 +187,8 @@
     msg: >-
       {{ _claude_nvm_copies.files | default([]) | length }} claude-code copies
       under NVM{{ ' — ' ~ (_claude_nvm_copies.files | map(attribute='path') | join(', ')) if (_claude_nvm_copies.files | default([]) | length) > 0 else '' }}.
-      {{ 'Set claude_cli_prune_nvm_copies=true to remove them.'
+      Left in place (not provably nOS's).
+      {{ 'Set claude_cli_prune_nvm_copies=true to remove them yourself.'
          if (_claude_running.stdout | default('0') | int) == 0
          else (_claude_running.stdout ~ ' claude process(es) are running — removal is refused while one holds a copy.') }}
   when: (_claude_nvm_copies.files | default([]) | length) > 0
@@ -174,7 +198,10 @@
   ansible.builtin.file:
     path: "{{ item.path }}"
     state: absent
-  loop: "{{ _claude_nvm_copies.files | default([]) }}"
+  # The node tree the resolved claude lives in is never in the loop (empty = all kept).
+  loop: >-
+    {{ _claude_nvm_copies.files | default([]) | rejectattr('path', 'search',
+       '^' ~ (_claude_existing.stdout | default('') | trim | dirname | dirname | regex_escape)) | list }}
   loop_control:
     label: "{{ item.path }}"
   when:
@@ -183,11 +210,17 @@
     - (_claude_running.stdout | default('1') | int) == 0
   tags: ['claude-cli', 'node']
 
-- name: "[claude-cli] Report which build the estate will resolve"
+- name: "[claude-cli] Report which claude the estate resolves"
   ansible.builtin.debug:
     msg: >-
-      claude resolves to {{ _claude_native_bin }}
-      {{ '(installed)' if (_claude_native_after.stat.exists | default(false)) else '(NOT installed — the nvm copy is still in use)' }}.
-      Open a NEW shell for the PATH change; a session started before this run
-      keeps executing the binary it was launched with.
+      {{ ('claude resolves to ' ~ (_claude_existing.stdout | trim) ~ ' (already present, left untouched)')
+         if (_claude_existing.stdout | default('') | trim)
+         else ('claude installed by the vendor installer at ' ~ _claude_native_bin ~ '; open a NEW shell')
+         if (_claude_native_after.stat.exists | default(false))
+         else 'NO claude found and the vendor install produced none: agents that call claude will fail' }}.
+      launchd bridge {{ homebrew_prefix }}/bin/claude:
+      {{ (_claude_bridge.stat.lnk_source | default('present, not a symlink', true))
+         if (_claude_bridge.stat.exists | default(false))
+         else ('-> ' ~ _claude_native_bin) if (_claude_native_after.stat.exists | default(false))
+         else 'ABSENT: Pulse/Wing agents cannot resolve claude under launchd' }}.
   tags: ['claude-cli', 'node']
