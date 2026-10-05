@@ -67,3 +67,34 @@ def test_driver_holds_an_operator_required_row():
                       timeout=1, act=True, log=logged.append)
     assert rc == 0
     assert any("requires an operator" in line for line in logged)
+
+
+def test_the_reader_names_the_operator_for_a_held_unjudged_row(tmp_path, monkeypatch):
+    """The driver holds it before judging, so the reader must not say the driver
+    will judge it (REM-159/260 sat as 'never judged' on 2026-10-05)."""
+    import sqlite3
+
+    spec = importlib.util.spec_from_file_location("loop_status_ro", ROOT / "tools/loop-status.py")
+    ls = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ls)
+    db = tmp_path / "wing.db"
+    conn = sqlite3.connect(db)
+    conn.executescript(
+        "CREATE TABLE loop_proposals (id INTEGER PRIMARY KEY, uuid TEXT, weakness_id TEXT,"
+        " intent_class TEXT, gate_set TEXT, target_paths TEXT, proposer_id TEXT,"
+        " diff_text TEXT, requires_operator INTEGER, created_at TEXT);"
+        "CREATE TABLE loop_verdicts (id INTEGER PRIMARY KEY, proposal_id INTEGER,"
+        " result TEXT, tree_sha TEXT, created_at TEXT);")
+    for pid, ro in ((1, 1), (2, 0)):
+        conn.execute("INSERT INTO loop_proposals VALUES (?,?,?,?,?,?,?,?,?,?)",
+                     (pid, f"uuid-{pid}", f"rem:T-{pid}", "version-pin-bump", "live",
+                      "[]", "agent:test", "", ro, "2026-10-05"))
+    conn.commit()
+    conn.close()
+    monkeypatch.setattr(ls, "WING_DB", db)
+    monkeypatch.setattr(ls, "_dirty", lambda _p: [])
+    rows = {r["weakness_id"]: r for r in ls.awaiting()["rows"]}
+    held, free = rows["rem:T-1"], rows["rem:T-2"]
+    assert held["state"] == free["state"] == "unjudged"
+    assert "nos-loop judge --gate-set live --proposal uuid-1 --wait" in held["detail"]
+    assert "driver judges" in free["detail"]

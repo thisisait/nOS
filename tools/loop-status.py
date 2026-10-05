@@ -388,10 +388,10 @@ def awaiting() -> dict:
         # (ledger.ensure_schema). This reader issues ONLY SELECTs (gated by
         # test_the_lineage_reader_admits_what_it_cannot_ask), so the fallback is
         # a second SELECT, never a PRAGMA — try the column, drop to a literal 0.
-        def _awaiting_select(ro_expr):
+        def _awaiting_select(ro_expr, gs_expr="p.gate_set"):
             return f"""
             SELECT p.uuid, p.weakness_id, p.intent_class, p.proposer_id,
-                   p.target_paths, p.diff_text, {ro_expr},
+                   {gs_expr}, p.target_paths, p.diff_text, {ro_expr},
                    v.result AS verdict, v.created_at AS verdict_at,
                    v.tree_sha AS verdict_tree
               FROM loop_proposals p
@@ -402,10 +402,10 @@ def awaiting() -> dict:
              WHERE v.result IN ('pass', 'indeterminate') OR v.id IS NULL
              ORDER BY COALESCE(v.created_at, p.created_at)
             """
-        try:
-            rows = [dict(r) for r in conn.execute(_awaiting_select("p.requires_operator"))]
-        except sqlite3.OperationalError:
-            rows = [dict(r) for r in conn.execute(_awaiting_select("0 AS requires_operator"))]
+        cols = {d[0] for d in conn.execute("SELECT * FROM loop_proposals LIMIT 0").description}
+        rows = [dict(r) for r in conn.execute(_awaiting_select(
+            "p.requires_operator" if "requires_operator" in cols else "0 AS requires_operator",
+            "p.gate_set" if "gate_set" in cols else "NULL AS gate_set"))]
         # A verdict can be sealed with no proposal attached — `POST /loop/judge`
         # takes an optional `proposal_uuid`, so a bare gate-set run against the
         # working tree seals a real row with `proposal_id IS NULL`. The JOIN
@@ -430,7 +430,14 @@ def awaiting() -> dict:
             # Filed and never ruled on. Not a failure and not a pass — an item
             # waiting for the one identity allowed to judge it (§3.4: the
             # driver, never the proposer).
-            state, detail = "unjudged", "no judge has ruled on this proposal yet"
+            state, detail = "unjudged", "the driver judges it on its next run"
+            if row["requires_operator"]:
+                # loop-pr.py::land() holds these before judging, so "the
+                # driver's to pick up" would be false — name the operator act.
+                detail = (f"requires_operator: the driver holds it and never "
+                          f"judges it — an operator runs `nos-loop judge "
+                          f"--gate-set {row['gate_set']} --proposal "
+                          f"{row['uuid']} --wait`")
             moved, drift_error = [], None
         elif not diff:
             state, detail = "no-diff", "the ledger row carries no patch"
@@ -648,7 +655,7 @@ def collect() -> dict:
 #: order is the order to act in — a ready patch is a minute's work, a conflicted
 #: one is a re-proposal.
 STATE_GLOSS = {
-    "unjudged": "filed, and no judge has ruled on it — the driver's to pick up",
+    "unjudged": "filed, and no judge has ruled on it",
     "ready": "applies to HEAD, and no target path moved since the judges ruled",
     "re-judge": "still applies, but the judged tree is gone — no judge has ruled on THIS one",
     "indeterminate": "a judge declined to answer, and the tree moved since — the driver re-judges",

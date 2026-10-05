@@ -690,6 +690,7 @@ def stalled_verdicts() -> dict | None:
         return {
             "unlanded": [
                 {"weakness_id": r["weakness_id"], "state": r["state"],
+                 "requires_operator": bool(r.get("requires_operator")),
                  "uuid": r["uuid"][:8], "verdict_at": r["verdict_at"]}
                 for r in report.get("unlanded", [])
             ],
@@ -1023,7 +1024,9 @@ def reds(report: dict) -> list[str]:
         if unjudged:
             out.append(
                 f"{len(unjudged)} loop proposal(s) filed and never judged: "
-                + ", ".join(r["weakness_id"] for r in unjudged[:4])
+                + ", ".join(r["weakness_id"]
+                            + (" [operator: the driver holds it]" if r.get("requires_operator") else "")
+                            for r in unjudged[:4])
             )
     inbox = report.get("inbox") or {}
     # A notification is an EVENT; this file reports STATE. Where the emitter
