@@ -7,11 +7,11 @@ defaults — and 12 of the 69 formulae had a caller anywhere in the repo. A
 default converge on a client's Mac took responsibility for software nOS never
 runs, and `brew upgrade` then stood between those apps and their vendors.
 
-The line is drawn by OWNERSHIP, declared once in `host_software_owner`
-(default.config.yml), one class per list or switch:
-  runtime      nOS calls it, pins it, upgrades it  -> every entry has a caller
-  recommended  installed once when absent, then left to its vendor
-  personal     the operator's desk                 -> off unless config.yml asks
+The line is drawn by OWNERSHIP, declared once in `software_owner`
+(the default layers), one class per list or switch:
+  self      nOS calls it, pins it, updates it   -> every entry has a caller
+  symbiont  installed once when absent, then fed by its vendor's updates
+  host      the machine owner's (the *personal* keys) -> off unless config.yml asks
 
 A caller is read from code (tasks, roles, tools, organs, judge argv), never
 from comments, docs, tests or the config layers that DECLARE the package.
@@ -31,7 +31,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 import nos_identity as ni  # noqa: E402
 
-CLASSES = {"runtime", "recommended", "personal"}
+CLASSES = {"self", "symbiont", "host"}
 # A host package list: Homebrew/pip/npm/go/gem/... — not authentik_oidc_apps.
 LIST_NAME = re.compile(r"(_packages|_cask_apps|_installed_apps|_global_tools)$")
 # Where the command a package provides differs from its install name.
@@ -50,8 +50,8 @@ def _defaults() -> dict:
 
 
 def _owner() -> dict:
-    owner = _defaults().get("host_software_owner")
-    assert isinstance(owner, dict) and owner, "host_software_owner is missing from the default layers"
+    owner = _defaults().get("software_owner")
+    assert isinstance(owner, dict) and owner, "software_owner is missing from the default layers"
     return owner
 
 
@@ -97,7 +97,7 @@ def test_every_host_package_list_is_classed():
     lists = sorted(k for k, v in cfg.items() if isinstance(v, list) and LIST_NAME.search(k))
     assert len(lists) >= 8, f"positive control: the sweep found only {lists}"
     unclassed = [k for k in lists if k not in owner]
-    assert not unclassed, f"host package lists with no owner in host_software_owner: {unclassed}"
+    assert not unclassed, f"host package lists with no owner in software_owner: {unclassed}"
     bad = {k: v for k, v in owner.items() if v not in CLASSES or k not in cfg}
     assert not bad, f"owner entries naming an unknown class or an undeclared variable: {bad}"
 
@@ -115,15 +115,15 @@ def test_a_package_has_one_owner():
     assert not twice, "a package sits in two owner lists:\n  " + "\n  ".join(twice)
 
 
-def test_every_runtime_package_has_a_caller():
+def test_every_self_package_has_a_caller():
     owner, cfg, lines = _owner(), _defaults(), _code_lines()
     assert callers("jq", lines), "positive control: jq is called by tasks/upgrade-engine.yml"
     assert not callers("htop", lines), "negative control: nothing in the repo runs htop"
-    orphans = [f"{var}: {_name(e)}" for var, cls in owner.items() if cls == "runtime"
+    orphans = [f"{var}: {_name(e)}" for var, cls in owner.items() if cls == "self"
                and isinstance(cfg[var], list) for e in cfg[var] if not callers(_name(e), lines)]
     assert not orphans, (
-        f"{len(orphans)} runtime package(s) with no caller in tasks/roles/tools/organs. "
-        "nOS owns what it runs; move each to a recommended or personal list:\n  "
+        f"{len(orphans)} self package(s) with no caller in tasks/roles/tools/organs. "
+        "nOS owns what it runs; move each to a symbiont or personal (host) list:\n  "
         + "\n  ".join(orphans))
 
 
@@ -156,19 +156,19 @@ def _gates(var: str) -> list[str]:
     return out
 
 
-def test_defaults_enable_no_personal_item():
+def test_defaults_enable_no_host_item():
     owner, cfg = _owner(), _defaults()
-    switches = {k for k, c in owner.items() if c == "personal" and isinstance(cfg[k], bool)}
+    switches = {k for k, c in owner.items() if c == "host" and isinstance(cfg[k], bool)}
     on = sorted(k for k in switches if cfg[k])
     ungated = []
     for var, cls in owner.items():
-        if cls != "personal" or not isinstance(cfg[var], list) or not cfg[var]:
+        if cls != "host" or not isinstance(cfg[var], list) or not cfg[var]:
             continue
         sites = _gates(var)
         if not sites or not all(any(re.search(rf"\b{s}\b", g) and not cfg[s] for s in switches)
                                 for g in sites):
             ungated.append(f"{var} ({len(sites)} install site(s))")
     assert not (on or ungated), (
-        f"personal switches that default ON: {on}\n"
-        "personal lists a default converge installs (every task looping over one must be "
-        "gated by a personal switch that defaults off):\n  " + "\n  ".join(ungated))
+        f"host-class switches that default ON: {on}\n"
+        "host-class lists a default converge installs (every task looping over one must be "
+        "gated by a host-class switch that defaults off):\n  " + "\n  ".join(ungated))

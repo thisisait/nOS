@@ -474,9 +474,9 @@ docker_cpus_light: "0.5"
 # ==============================================================================
 
 # ── Homebrew & Apps ───────────────────────────────────────────────────────────
-install_homebrew_packages: true   # Homebrew + the runtime/recommended formulae (host_software_owner)
-install_cask_apps: false          # GUI applications via Homebrew Cask (personal)
-install_personal_packages: false  # homebrew/pip/npm *personal* lists below (personal)
+install_homebrew_packages: true   # Homebrew + the self/symbiont formulae (software_owner)
+install_cask_apps: false          # GUI applications via Homebrew Cask (host)
+install_personal_packages: false  # homebrew/pip/npm *personal* lists below (host)
 install_mas_apps: false           # Mac App Store applications
 
 # ── Reverse proxy ─────────────────────────────────────────────────────────────
@@ -531,10 +531,10 @@ install_node: true                # Node.js + NVM (Cortex runs on it); node_glob
 # live sessions with EACCES several times a day (measured 2026-08-04).
 install_claude_cli: true
 claude_cli_channel: "stable"      # stable | latest | an exact version
-install_bun: false                # Bun JavaScript runtime / bundler (personal)
+install_bun: false                # Bun JavaScript runtime / bundler (host)
 install_python: true              # Python + pyenv + pip packages
-install_golang: false             # Go language + gopls, golangci-lint, air (personal)
-install_dotnet: false             # .NET SDK (C#, F#) + EF CLI (personal)
+install_golang: false             # Go language + gopls, golangci-lint, air (host)
+install_dotnet: false             # .NET SDK (C#, F#) + EF CLI (host)
 
 # ── AI Agent ──────────────────────────────────────────────────────────────────
 install_openclaw: true            # OpenClaw (Inspektor Klepitko, Ollama, no API key)
@@ -574,13 +574,13 @@ install_wing: true           # Wing Security Dashboard + Hub (Nette PHP + SQLite
 
 # ── macOS system configuration ────────────────────────────────────────────────
 configure_dotfiles: false         # Dotfiles – requires your own repo! Set dotfiles_repo in credentials.yml
-configure_terminal: false         # Terminal theme (personal)
-configure_osx: false              # Base macOS defaults (.osx script) (personal)
-configure_macos_defaults: false   # Extended macOS settings (Finder, keyboard, Dock...) (personal)
+configure_terminal: false         # Terminal theme (host)
+configure_osx: false              # Base macOS defaults (.osx script) (host)
+configure_macos_defaults: false   # Extended macOS settings (Finder, keyboard, Dock...) (host)
 configure_dock: false             # Dock layout (requires dockutil)
 configure_sudoers: false          # Custom sudoers rules
 configure_sublime: false          # Sublime Text editor
-install_shell_extras: false       # Starship prompt + shell aliases (bat, eza, fzf, zoxide, lazygit) (personal)
+install_shell_extras: false       # Starship prompt + shell aliases (bat, eza, fzf, zoxide, lazygit) (host)
 
 # ── System services (require sudo) ────────────────────────────────────────────
 enable_ssh: false                 # Remote Login / SSH server
@@ -743,41 +743,41 @@ install_tailscale: true           # Tailscale – WireGuard mesh VPN (remote acc
 install_dnsmasq: true             # dnsmasq – auto *.dev.local DNS (no /etc/hosts edits)
 
 # ==============================================================================
-# HOST SOFTWARE OWNERSHIP — who answers for each host package list and switch.
-# runtime: nOS calls it, pins and upgrades it. recommended: installed once when
-# absent, then left to its vendor. personal: off unless config.yml turns it on.
+# SOFTWARE OWNERSHIP. self: nOS calls, pins and updates it. symbiont: installed
+# once when absent, then fed by its vendor, never touched. host: the machine
+# owner's, never installed by default; class `host` = the `*personal*` keys.
 # Gate: tests/anatomy/test_every_host_package_has_an_owner.py
 # ==============================================================================
-host_software_owner:
-  homebrew_installed_packages: runtime
-  homebrew_recommended_packages: recommended
-  homebrew_personal_packages: personal
-  homebrew_cask_apps: personal
-  pip_packages: runtime
-  pip_recommended_packages: recommended
-  pip_personal_packages: personal
-  node_global_packages: personal
-  npm_packages: personal
-  bun_global_packages: personal
-  go_packages: personal
-  gem_packages: personal
-  composer_packages: personal
-  php_composer_packages: personal
-  dotnet_global_tools: personal
-  mas_installed_apps: personal
-  install_personal_packages: personal
-  install_cask_apps: personal
-  install_mas_apps: personal
-  install_bun: personal
-  install_golang: personal
-  install_dotnet: personal
-  install_shell_extras: personal
-  configure_terminal: personal
-  configure_osx: personal
-  configure_macos_defaults: personal
-  configure_dotfiles: personal
-  configure_dock: personal
-  configure_sublime: personal
+software_owner:
+  homebrew_installed_packages: self
+  homebrew_symbiont_packages: symbiont
+  homebrew_personal_packages: host
+  homebrew_cask_apps: host
+  pip_packages: self
+  pip_symbiont_packages: symbiont
+  pip_personal_packages: host
+  node_global_packages: host
+  npm_packages: host
+  bun_global_packages: host
+  go_packages: host
+  gem_packages: host
+  composer_packages: host
+  php_composer_packages: host
+  dotnet_global_tools: host
+  mas_installed_apps: host
+  install_personal_packages: host
+  install_cask_apps: host
+  install_mas_apps: host
+  install_bun: host
+  install_golang: host
+  install_dotnet: host
+  install_shell_extras: host
+  configure_terminal: host
+  configure_osx: host
+  configure_macos_defaults: host
+  configure_dotfiles: host
+  configure_dock: host
+  configure_sublime: host
 
 # ==============================================================================
 # HOMEBREW – general settings
@@ -788,7 +788,7 @@ homebrew_prefix: "{{ '/opt/homebrew' if ansible_facts['machine'] == 'arm64' else
 # Docker Desktop installs binaries into /usr/local/bin regardless of architecture
 docker_bin: /usr/local/bin/docker
 
-# runtime — each one has a caller in tasks/roles/tools/organs (the gate finds it).
+# self — each one has a caller in tasks/roles/tools/organs (the gate finds it).
 homebrew_installed_packages:
   - git
   - gh                   # tools/red-status.py reads CI + Dependabot through it
@@ -807,13 +807,13 @@ homebrew_installed_packages:
   # Tap: `infisical/get-cli` (added below).
   - infisical
 
-# recommended — installed when absent, then left alone (nOS calls none directly).
-homebrew_recommended_packages:
+# symbiont — installed when absent, then left to its vendor (nOS calls none directly).
+homebrew_symbiont_packages:
   - nss                  # mkcert's Firefox trust-store backend
   - ripgrep              # rg — on the AgentKit read-only bash allow-list
   - pre-commit           # contributors: .pre-commit-config.yaml
 
-# personal — the operator's desk; installed only with install_personal_packages.
+# host (personal) — the machine owner's; installed only with install_personal_packages.
 homebrew_personal_packages:
   # Base tools
   - autoconf
@@ -1169,18 +1169,18 @@ bun_global_packages: []
 
 python_version: "3.13"   # pyenv install target
 
-# runtime: Bone runs ansible-playbook and the loop's pytest judge; a Pulse job imports numpy.
+# self: Bone runs ansible-playbook and the loop's pytest judge; a Pulse job imports numpy.
 pip_packages:
   - name: ansible
   - name: pytest
   - name: numpy
 
-# recommended: the tests the pytest judge runs import these (installed when absent).
-pip_recommended_packages:
+# symbiont: the tests the pytest judge runs import these (installed when absent).
+pip_symbiont_packages:
   - name: httpx
   - name: fastapi
 
-# personal: installed only with install_personal_packages.
+# host (personal): installed only with install_personal_packages.
 pip_personal_packages:
   # ── Dev base ────────────────────────────────────────────────────────────
   - name: virtualenv

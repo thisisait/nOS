@@ -22,7 +22,7 @@
     {% if item.state | default('present') == 'absent' %}--uninstall -y{% endif %}
     {% if item.version is defined %}"{{ item.name | default(item) }}=={{ item.version }}"{% else %}{{ item.name | default(item) }}{% endif %}
   loop: >-
-    {{ pip_packages + (pip_recommended_packages | default([]))
+    {{ pip_packages + (pip_symbiont_packages | default([]))
        + ((pip_personal_packages | default([])) if (install_personal_packages | default(false) | bool) else []) }}
   changed_when: false
   failed_when: false
