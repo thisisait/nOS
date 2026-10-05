@@ -17,7 +17,6 @@
     mode: '0755'
   loop:
     - "{{ keap_home | default(ansible_facts['env']['HOME'] + '/keap') }}"
-    - "{{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}"
     # Universal drop dir — anything copied here becomes a datapoint on the
     # next keap-consolidate sweep (the operator's "dump it, sort it later").
     - "{{ keap_home | default(ansible_facts['env']['HOME'] + '/keap') }}/inbox"
@@ -32,6 +31,19 @@
     # runc only has to overlay-mount onto it. Harmless (empty, hidden by the
     # overlay) when keap_selfmodel is off.
     - "{{ nos_data_root }}/tenants/{{ nos_tenant_slug }}/users/{{ keap_selfmodel_uid | default('nos-docs') }}"
+
+# The image runs as `USER node` (uid 1000) and /data is a bind mount: on Linux
+# a runner-owned 0755 dir = SQLITE_CANTOPEN crash-loop (CI 37265044993). Owner =
+# the image user, group = the host user (post.yml touches a marker here).
+# macOS: Docker Desktop maps ownership — unchanged there.
+- name: "[pazny.keap] Ensure the data directory, writable by the image user"
+  ansible.builtin.file:
+    path: "{{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}"
+    state: directory
+    mode: "{{ '0755' if ansible_os_family == 'Darwin' else '0775' }}"
+    owner: "{{ omit if ansible_os_family == 'Darwin' else keap_container_uid }}"
+    group: "{{ omit if ansible_os_family == 'Darwin' else ansible_facts['user_gid'] }}"
+  become: "{{ ansible_os_family != 'Darwin' }}"
 
 # ── Self-model: MOUNTPOINTS ONLY in the render phase ─────────────────────────
 # The CONTENT of the self-model tree is written in post.yml (tasks/selfmodel.yml),

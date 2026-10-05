@@ -15,11 +15,14 @@
 
 keap_home: "{{ ansible_facts['env']['HOME'] }}/keap"
 keap_src_dir: "{{ keap_home }}/src"
+# uid of the image's runtime user (nos-keap Dockerfile: USER node). Linux only:
+# the data dir is chowned to it, else libsql cannot create keap.db.
+keap_container_uid: 1000
 
 # Upstream repo — org-transferred 2026-07-13 from budweis-dev/knowledge-explorer-
-# -and-preserver to thisisait/nos-keap (public; old path still redirects). CI still
-# skips it (install_keap off in tests/config.yml) to avoid a heavy Docker image
-# build, same as every other Docker stack in the wet-test — not an auth limit now.
+# -and-preserver to thisisait/nos-keap (public; old path still redirects). The
+# Linux CI leg turns it on (ci.yml -e install_keap); tests/config.yml keeps it off
+# for the macOS leg (heavy image build).
 keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # Immutable release tag (R10: branches make `--tags keap` builds non-
 # reproducible; a force-pushed branch silently changes what gets built under
