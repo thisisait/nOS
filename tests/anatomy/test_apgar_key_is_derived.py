@@ -1,10 +1,10 @@
-"""The home benchmark's key is derived from the estate, and its scorer is not a rubber stamp.
+"""Apgar's key is derived from the estate, and its scorer is not a rubber stamp.
 
-WHY. "Every LLM feels at home" (roadmap row `home-benchmark`) is a claim until
+WHY. "Every LLM feels at home" (roadmap row `apgar`) is a claim until
 code scores it. A key typed by hand scores the author's memory; a scorer that
 rewards any answer, turns a dead backend into 0.0, or reports a score without
-the no-context control writes success itself. Tool: tools/home-benchmark.py;
-set: state/home-benchmark.yml. Offline: no model is ever called here.
+the no-imprint control writes success itself. Tool: tools/apgar.py;
+set: state/apgar.yml. Offline: no model is ever called here.
 """
 
 from __future__ import annotations
@@ -16,13 +16,13 @@ import math
 import pathlib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-_spec = importlib.util.spec_from_file_location("home_benchmark", REPO / "tools/home-benchmark.py")
+_spec = importlib.util.spec_from_file_location("apgar", REPO / "tools/apgar.py")
 hb = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(hb)
 
 
 def _record(bench: dict, fill, control: bool = False) -> dict:
-    return {"status": "ok", "model": "fixture", "context": {"control": control},
+    return {"status": "ok", "model": "fixture", "imprint": {"control": control},
             "questions": [{"id": q["id"], "text": q["text"]} for q in bench["questions"]],
             "answers": {q["id"]: fill(q) for q in bench["questions"]}}
 
@@ -127,9 +127,9 @@ def test_a_saved_run_is_scored_without_a_model_and_staleness_refuses(tmp_path) -
     ctx.write_text("x" * 400)
     reply = "\n".join(f"Q{n:02d}: {_first(q)}" for n, q in enumerate(bench["questions"], 1))
     rec = hb.ask(bench, ctx, "ollama:fixture", call=lambda *_a: {"text": reply, "tokens": 123})
-    assert rec["status"] == "ok" and rec["context"]["tokens_est"] == 100 and hb.exit_code(rec) == 0
+    assert rec["status"] == "ok" and rec["imprint"]["tokens_est"] == 100 and hb.exit_code(rec) == 0
     ctl = hb.ask(bench, None, "ollama:fixture", call=lambda *_a: {"text": "Q01: unknown"})
-    assert ctl["context"]["control"] is True and ctl["context"]["tokens_est"] == 0
+    assert ctl["imprint"]["control"] is True and ctl["imprint"]["tokens_est"] == 0
     saved, saved_ctl = tmp_path / "answers.json", tmp_path / "control.json"
     saved.write_text(json.dumps(rec))
     saved_ctl.write_text(json.dumps(ctl))

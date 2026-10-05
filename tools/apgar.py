@@ -1,37 +1,39 @@
 #!/usr/bin/env python3
-"""Score how at home a model is in the estate, from ONE context file — code is the judge.
+"""Apgar: score a newborn model on its first page in the estate — code is the judge.
 
-Roadmap row `home-benchmark`. The question set (state/home-benchmark.yml) holds
+Like the newborn score, it is taken in the first minutes: the model (the
+NEWBORN) sees ONE file (the IMPRINT, the first page a newborn model reads) and
+nothing else. Roadmap row `apgar`. The question set (state/apgar.yml) holds
 templates only; every answer key is DERIVED at run time from the estate's own
 sources (anatomy graph, manifest, task types, routing graph, agent.yml files,
 tools/README.md, doctrine titles), so the key moves when the estate does.
 
     questions   print the set and its derived key (offline)
-    ask         give a model the context file (or none: the control) + the questions
+    ask         give the newborn the imprint (or none: the control) + the questions
     score       compare a saved answers file to the key — calls no model
 
-A score means nothing alone: `ask --no-context` records the CONTROL (what the
-model guesses with no context) and `score --control` prints score, control and
-lift per family. The lift is what the context file bought.
+A score means nothing alone: `ask --no-imprint` records the CONTROL (what the
+newborn guesses with nothing to read) and `score --control` prints score,
+control and lift per family. The lift is what the imprint bought.
 
 Scoring is per question, on the `Qnn:` line only: comma-separated identifiers,
 matched exactly against the family's names; a key slot may hold alternatives
 (either copy of a duplicated doctrine). F1 over slots. Prose on the line is a
 format failure, scored 0 — never scanned for words. No model judges.
 
-Two failures, kept apart: UNAVAILABLE (the model could not be asked — no
+Two failures, kept apart: UNAVAILABLE (the newborn could not be asked — no
 number, exit 2) and a format failure (it answered without `Qnn:` lines — a
-recorded low score, `ask` exits 1). The context's size is recorded beside the
-score: the target is a better score at a SMALLER context.
+recorded low score, `ask` exits 1). The imprint's size is recorded beside the
+score: the target is a better score from a SMALLER imprint.
 
 `ask` is the only live path, and only the operator starts it: a resident local
 model starves other services on this host (memory: local-model-budget).
 
 Usage:
-    tools/home-benchmark.py questions [--json]
-    tools/home-benchmark.py ask --context CLAUDE.md --model ollama:hermes3:8b --out answers.json
-    tools/home-benchmark.py ask --no-context --model ollama:hermes3:8b --out control.json
-    tools/home-benchmark.py score answers.json --control control.json [--json]
+    tools/apgar.py questions [--json]
+    tools/apgar.py ask --imprint CLAUDE.md --model ollama:hermes3:8b --out newborn.json
+    tools/apgar.py ask --no-imprint --model ollama:hermes3:8b --out control.json
+    tools/apgar.py score newborn.json --control control.json [--json]
 """
 from __future__ import annotations
 
@@ -50,7 +52,7 @@ from pathlib import Path
 import yaml
 
 REPO = Path(__file__).resolve().parents[1]
-SET = REPO / "state/home-benchmark.yml"
+SET = REPO / "state/apgar.yml"
 TOKEN = re.compile(r"[A-Za-z0-9_.:/#@+-]+")
 QLINE = re.compile(r"^\W*(Q\d+)\W*?[:.)\-]\s*(.*)$", re.I)
 NO_ANSWER = {"", "unknown", "none", "-", "n/a"}
@@ -286,17 +288,17 @@ def _score_one(answers: dict, bench: dict) -> dict:
     return {"status": "ok", "score": round(sum(r["score"] for r in rows) / len(rows), 3),
             "families": {f: round(sum(v) / len(v), 3) for f, v in sorted(per.items())},
             "unparsed": sum(1 for r in rows if not r["parsed"]), "questions": rows,
-            "model": answers.get("model"), "context": answers.get("context")}
+            "model": answers.get("model"), "imprint": answers.get("imprint")}
 
 
 def score(answers: dict, bench: dict | None = None, control: dict | None = None) -> dict:
-    """Score a saved answers record, and its lift over a no-context control. Never calls a model."""
+    """Score a saved answers record, and its lift over a no-imprint control. Never calls a model."""
     bench = bench or build()
     res = _score_one(answers, bench)
     if control is None or res["status"] != "ok":
         return res
-    if not (control.get("context") or {}).get("control"):
-        return {"status": "UNAVAILABLE", "why": "the control file is not an `ask --no-context` run", "run": res}
+    if not (control.get("imprint") or {}).get("control"):
+        return {"status": "UNAVAILABLE", "why": "the control file is not an `ask --no-imprint` run", "run": res}
     ctl = _score_one(control, bench)
     if ctl["status"] != "ok":
         return {"status": ctl["status"], "why": f"control: {ctl['why']}", "run": res}
@@ -323,18 +325,18 @@ def _ollama_call(name: str, system: str, prompt: str, num_ctx: int) -> dict:
 BACKENDS = {"ollama": _ollama_call}
 
 
-def ask(bench: dict, context: Path | None, model: str, call=None) -> dict:
-    """context=None is the control run: the same questions, an empty context."""
-    text = context.read_text(encoding="utf-8") if context else ""
+def ask(bench: dict, imprint: Path | None, model: str, call=None) -> dict:
+    """imprint=None is the control run: the same questions, nothing to read."""
+    text = imprint.read_text(encoding="utf-8") if imprint else ""
     qids = {f"Q{n:02d}": q["id"] for n, q in enumerate(bench["questions"], 1)}
-    prompt = (f"<context>\n{text}\n</context>\n\nQuestions:\n"
+    prompt = (f"<imprint>\n{text}\n</imprint>\n\nQuestions:\n"
               + "\n".join(f"{n}: {q['text']}" for n, q in zip(qids, bench["questions"])))
     num_ctx = max(8192, 1 << (len(prompt) // 3 + 2048).bit_length())
     record = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"), "model": model,
               "set": bench["set"], "set_sha256": bench["set_sha256"],
               # ponytail: tokens_est is chars/4 (no tokenizer offline); prompt_tokens is measured
-              "context": {"control": context is None, "path": str(context) if context else None,
-                          "sha256": _sha(context) if context else None, "bytes": len(text.encode()),
+              "imprint": {"control": imprint is None, "path": str(imprint) if imprint else None,
+                          "sha256": _sha(imprint) if imprint else None, "bytes": len(text.encode()),
                           "tokens_est": len(text) // 4},
               "questions": [{"id": q["id"], "text": q["text"]} for q in bench["questions"]]}
     backend, _, name = model.partition(":")
@@ -355,7 +357,7 @@ def ask(bench: dict, context: Path | None, model: str, call=None) -> dict:
 
 
 def exit_code(rec: dict) -> int:
-    """2 = the model could not be asked; 1 = it answered, not in the Qnn format; 0 = it answered."""
+    """2 = the newborn could not be asked; 1 = it answered, not in the Qnn format; 0 = it answered."""
     if rec.get("status") != "ok":
         return 2
     return 1 if rec.get("parsed", 0) < len(rec.get("questions", [])) else 0
@@ -372,13 +374,13 @@ def _render(res: dict) -> str:
     if res["status"] != "ok":
         run = res.get("run")
         tail = f"\n  run alone: {run['score']:.3f}, no lift without a control" if run else ""
-        return f"home-benchmark: {res['status']} — {res['why']}{tail}"
+        return f"apgar: {res['status']} — {res['why']}{tail}"
     ctl = res.get("control")
-    out = [f"home-benchmark  model {res['model']}  context {_ctx(res['context'])}",
+    out = [f"apgar  newborn {res['model']}  imprint {_ctx(res['imprint'])}",
            f"score {res['score']:.3f} over {len(res['questions'])} questions"
            + (f", {res['unparsed']} not in the Qnn format (scored 0)" if res["unparsed"] else "")]
     if ctl:
-        out.append(f"control {ctl['score']:.3f}  lift {res['lift_total']:+.3f}  (control context: {_ctx(ctl['context'])})")
+        out.append(f"control {ctl['score']:.3f}  lift {res['lift_total']:+.3f}  (control imprint: {_ctx(ctl['imprint'])})")
         out.append(f"  {'family':18} {'score':>6} {'control':>8} {'lift':>7}")
         out += [f"  {f:18} {s:6.3f} {ctl['families'][f]:8.3f} {res['lift'][f]:+7.3f}"
                 for f, s in res["families"].items()]
@@ -395,20 +397,21 @@ def _load(path: str | None) -> dict | None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--set", default=str(SET), help="question set (default: the home set)")
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0] + " Named for the newborn "
+                                 "score: taken in the first minutes, on what it was shown first.")
+    ap.add_argument("--set", default=str(SET), help="question set (default: state/apgar.yml)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     q = sub.add_parser("questions")
     q.add_argument("--json", action="store_true")
     a = sub.add_parser("ask")
     src = a.add_mutually_exclusive_group(required=True)
-    src.add_argument("--context", help="the ONE file the model may see")
-    src.add_argument("--no-context", action="store_true", help="the control run: same questions, no context")
-    a.add_argument("--model", required=True, help="<backend>:<model>, e.g. ollama:hermes3:8b")
+    src.add_argument("--imprint", help="the imprint: the ONE file the newborn may read")
+    src.add_argument("--no-imprint", action="store_true", help="the control run: same questions, nothing to read")
+    a.add_argument("--model", required=True, help="the newborn, <backend>:<model>, e.g. ollama:hermes3:8b")
     a.add_argument("--out", required=True)
     s = sub.add_parser("score")
     s.add_argument("answers")
-    s.add_argument("--control", help="answers file of an `ask --no-context` run")
+    s.add_argument("--control", help="answers file of an `ask --no-imprint` run")
     s.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
     bench = build(Path(args.set).resolve())
@@ -422,10 +425,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{len(bench['questions'])} questions, set sha256 {bench['set_sha256'][:12]}")
         return 0
     if args.cmd == "ask":
-        rec = ask(bench, None if args.no_context else Path(args.context), args.model)
+        rec = ask(bench, None if args.no_imprint else Path(args.imprint), args.model)
         Path(args.out).write_text(json.dumps(rec, indent=2) + "\n", encoding="utf-8")
         rc = exit_code(rec)
-        print(f"home-benchmark ask: " + (f"UNAVAILABLE — {rec['why']}" if rc == 2 else
+        print("apgar ask: " + (f"UNAVAILABLE — {rec['why']}" if rc == 2 else
               f"{rec['parsed']}/{len(rec['questions'])} answers in the Qnn format") + f" → {args.out}")
         return rc
     res = score(_load(args.answers), bench, _load(args.control))

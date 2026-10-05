@@ -1,43 +1,43 @@
 # =============================================================================
-# state/home-benchmark.yml — the question set `tools/home-benchmark.py` asks.
+# state/apgar.yml — the question set `tools/apgar.py` asks a newborn model.
 #
-# Roadmap row `home-benchmark`: "every LLM feels at home" is a claim until a
-# reader scores it. A model sees ONE context file and nothing else; code
+# Roadmap row `apgar`: "every LLM feels at home" is a claim until a reader
+# scores it. The newborn sees ONE file (the imprint) and nothing else; code
 # compares its answers to a key derived from the estate's own sources.
 #
 # THIS FILE HOLDS NO ANSWERS, and that is gated
-# (tests/anatomy/test_home_benchmark_key_is_derived.py): each family is a
+# (tests/anatomy/test_apgar_key_is_derived.py): each family is a
 # template plus the NAME of a derivation in the tool. The key is recomputed
 # from the sources on every run, so it moves when the estate moves.
 #
 # A second set (the ssot retrieval benchmark) is another file of this shape
-# passed with `--set`, plus its derivations; this one stays the "home" set.
+# passed with `--set`, plus its derivations; this one stays the newborn set.
 # =============================================================================
 
 version: 1
 seed: 1
 
-# Prepended to every run, the control included: only the context differs.
+# Prepended to every run, the control included: only the imprint differs.
 # Identifiers, not prose: a line with words around the names scores 0.
 system: |
-  You answer questions about one software estate from the context you are
-  given; the context may be empty. Answer every question on its own line, in
+  You answer questions about one software estate from the page between the
+  <imprint> tags; it may be empty. Answer every question on its own line, in
   exactly this form:
     Qnn: <identifiers, comma-separated>
   The line holds the names only, exactly as they are written (a file name, a
   path, a slug, a variable) — no words around them, no explanations. When the
-  context does not settle it, give your best guess; if you have none, answer
+  page does not settle it, give your best guess; if you have none, answer
     Qnn: unknown
 
 families:
   - id: reader
-    class: tools
+    class: sense
     derive: readers
     count: 10
     template: "Which reader script (give its file name) answers this: \"{description}\"?"
 
   - id: tool-holders
-    class: specializations
+    class: limb
     derive: tool_holders
     count: 10
     template: "Which agents declare the tool `{tool}`? List every one."
@@ -49,7 +49,7 @@ families:
     template: "Which services does the service `{service}` depend on (read data from)? List every one."
 
   - id: doctrine-file
-    class: knowledge
+    class: memory
     derive: doctrine_files
     count: 10
     template: "Which file(s) hold the doctrine titled \"{title}\"? Give the path(s)."

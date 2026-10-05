@@ -125,7 +125,7 @@ def generate(model: str, system: str, prompt: str, timeout: int,
         # sampler, not the model.
         "options": {"temperature": 0, "seed": 1},
     }
-    # Ollama's default window silently truncates a long prompt (tools/home-benchmark.py).
+    # Ollama's default window silently truncates a long prompt (tools/apgar.py).
     if num_ctx:
         body["options"]["num_ctx"] = num_ctx
     if keep_alive is not None:
