@@ -61,3 +61,11 @@ def test_coderabbit_names_as_many_sections_as_the_checklist_has():
     said = [n for w, n in words.items() if f"all {w}" in text]
     heads = re.findall(r"^## \d\.", (REPO / CHECKLIST).read_text(), re.M)
     assert said == [len(heads)], f"config says {said}, checklist has {len(heads)} sections"
+
+
+def test_coderabbit_reviews_prs_into_master_and_dev():
+    """PR #35 (2026-10-05): the bot skipped a dev→master PR as a non-default base."""
+    auto = yaml.safe_load((REPO / ".coderabbit.yaml").read_text())["reviews"]["auto_review"]
+    assert auto["enabled"] is True
+    for branch in ("master", "dev"):
+        assert any(re.fullmatch(p, branch) for p in auto["base_branches"]), branch

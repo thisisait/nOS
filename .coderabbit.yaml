@@ -7,6 +7,12 @@ reviews:
   request_changes_workflow: false
   high_level_summary: true
   poem: false
+  # Explicit: on PR #35 (dev→master) the bot skipped with "auto reviews are
+  # disabled on base branches other than the default", master being the default.
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches: ["^master$", "^dev$"]
   path_instructions:
     - path: "**"
       instructions: |
