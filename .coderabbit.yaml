@@ -9,6 +9,16 @@ reviews:
   poem: false
   # Explicit: on PR #35 (dev→master) the bot skipped with "auto reviews are
   # disabled on base branches other than the default", master being the default.
+  # Generated artifacts: their source is reviewed, the output is noise against
+  # the 300-file limit (PR #35 had 518).
+  path_filters:
+    - "!state/**"
+    - "!**/package-lock.json"
+    - "!**/*.lock"
+    - "!**/anatomy-graph.json"
+    - "!**/graphLayout*.json"
+    - "!docs/devlog/**"
+    - "!**/screenshots/**"
   auto_review:
     enabled: true
     drafts: false
