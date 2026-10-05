@@ -117,8 +117,8 @@ user: "Draft a migration from Postgres 16 to 17 for our Docker stacks"
 
 ## What you currently know about the user
 
-- **Name:** pazny
-- **Email:** pazny.develop@gmail.com
+- **Name:** {{ ansible_facts['user_id'] }}
+- **Email:** {{ git_user_email | default('', true) or '(not set)' }}
 - **Machine:** Mac Studio M2 Ultra, 36 GB
 - **Prefers:** English, pragmatic solutions, good observability, security-aware
 - **Has a Claude Code subscription** (delegate big tasks there - saves API credit)

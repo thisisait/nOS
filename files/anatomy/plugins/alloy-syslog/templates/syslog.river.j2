@@ -21,7 +21,7 @@ loki.source.file "nginx" {
 // ── Wing (FrankenPHP, Caddy access log) ──────────────────────────────────────
 local.file_match "wing" {
   path_targets = [
-    {__path__ = "/Users/pazny/wing/log/access.log", job = "wing", stream = "access"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/wing/log/access.log", job = "wing", stream = "access"},
   ]
 }
 loki.source.file "wing" {
@@ -35,12 +35,12 @@ loki.source.file "wing" {
 // label, distinguished by `service`.
 local.file_match "daemons" {
   path_targets = [
-    {__path__ = "/Users/pazny/bone/log/launchd.out.log",     job = "daemon", service = "bone",     stream = "stdout"},
-    {__path__ = "/Users/pazny/bone/log/launchd.err.log",     job = "daemon", service = "bone",     stream = "stderr"},
-    {__path__ = "/Users/pazny/pulse/log/pulse.log",          job = "daemon", service = "pulse",    stream = "app"},
-    {__path__ = "/Users/pazny/pulse/log/launchd.err.log",    job = "daemon", service = "pulse",    stream = "stderr"},
-    {__path__ = "/Users/pazny/openclaw/log/launchd.out.log", job = "daemon", service = "openclaw", stream = "stdout"},
-    {__path__ = "/Users/pazny/openclaw/log/launchd.err.log", job = "daemon", service = "openclaw", stream = "stderr"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/bone/log/launchd.out.log",     job = "daemon", service = "bone",     stream = "stdout"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/bone/log/launchd.err.log",     job = "daemon", service = "bone",     stream = "stderr"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/pulse/log/pulse.log",          job = "daemon", service = "pulse",    stream = "app"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/pulse/log/launchd.err.log",    job = "daemon", service = "pulse",    stream = "stderr"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/openclaw/log/launchd.out.log", job = "daemon", service = "openclaw", stream = "stdout"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/openclaw/log/launchd.err.log", job = "daemon", service = "openclaw", stream = "stderr"},
   ]
 }
 loki.source.file "daemons" {
@@ -54,7 +54,7 @@ loki.source.file "daemons" {
 // then it's a no-op match (Alloy tolerates empty globs).
 local.file_match "conductor_runs" {
   path_targets = [
-    {__path__ = "/Users/pazny/.nos/conductor/*.log", job = "agent", agent = "conductor"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/.nos/conductor/*.log", job = "agent", agent = "conductor"},
   ]
 }
 loki.source.file "conductor_runs" {
