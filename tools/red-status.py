@@ -825,27 +825,29 @@ def digest_drift() -> dict | None:
     return None if "unknown" in report else report
 
 
-def undeclared() -> dict:
-    """launchd / ports / cron nOS never declared — tools/undeclared-status.py."""
+def _sibling(name: str) -> dict:
+    """Run tools/<name>-status.py; any failure is UNKNOWN, never a traceback."""
     import importlib.util  # noqa: PLC0415 — sibling helper, not a package
 
-    spec = importlib.util.spec_from_file_location(
-        "_undeclared", REPO / "tools" / "undeclared-status.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    report = mod.collect()
-    return {"items": mod.summary(report), "missing": report["sources_missing"]}
+    path = REPO / "tools" / f"{name}-status.py"
+    try:
+        spec = importlib.util.spec_from_file_location(f"_{name}", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        report = mod.collect()
+        return {"items": mod.summary(report), "missing": report["sources_missing"]}
+    except Exception as exc:  # noqa: BLE001 — any failure is the same answer: cannot ask
+        return {"items": [], "missing": [f"{path} ({type(exc).__name__})"]}
+
+
+def undeclared() -> dict:
+    """launchd / ports / cron nOS never declared — tools/undeclared-status.py."""
+    return _sibling("undeclared")
 
 
 def santa() -> dict:
     """Santa exec telemetry vs the declared trees — tools/santa-status.py."""
-    import importlib.util  # noqa: PLC0415 — sibling helper, not a package
-
-    spec = importlib.util.spec_from_file_location("_santa", REPO / "tools" / "santa-status.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    report = mod.collect()
-    return {"items": mod.summary(report), "missing": report["sources_missing"]}
+    return _sibling("santa")
 
 
 def doctrine_reviews(root: pathlib.Path = REPO / "ssot" / "doctrine") -> list[dict]:
