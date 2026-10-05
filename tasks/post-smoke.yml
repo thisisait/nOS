@@ -18,7 +18,17 @@
 # probe failure). A clean run is always rc 0.
 # ==============================================================================
 
+# A host-only run (nos_allow_no_docker: the macOS CI lane) brings up no stack,
+# so every probe is UNREACH by construction — not a verdict on any service
+# (macOS-15 Integration 2026-10-05: 0/6, failed the run).
+- name: "[smoke] Skipped — this run brought up no Docker stack"
+  ansible.builtin.debug:
+    msg: "nos_docker_ready is false (host-only run): the web smoke needs the stacks; nothing probed."
+  when: not (nos_docker_ready | default(true) | bool)
+  tags: ['always', 'smoke']
+
 - name: "[smoke] Run nos-smoke.py"
+  when: nos_docker_ready | default(true) | bool
   ansible.builtin.command: >
     {{ ansible_playbook_python | default('python3') }}
     {{ playbook_dir }}/tools/nos-smoke.py
@@ -36,7 +46,7 @@
 - name: "[smoke] Show smoke results"
   ansible.builtin.debug:
     msg: "{{ _nos_smoke.stdout_lines }}"
-  when: _nos_smoke.stdout_lines is defined
+  when: _nos_smoke.stdout_lines is defined and not (_nos_smoke.skipped | default(false))
   tags: ['always', 'smoke']
 
 - name: "[smoke] Note sub-threshold smoke failures (non-fatal)"
