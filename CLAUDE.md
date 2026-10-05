@@ -133,6 +133,8 @@ never by the code that attempted the work. Doctrine: [ssot/doctrine/gates.md](ss
 - `dev` reaches `master` only by PR. `master` is PR-only, fast-forward only, and locked on
   both GitHub and the local Gitea mirror; release tags `v<semver>` live there.
 - `pzny` is the maintainer's local workspace, mirrored to Gitea only, never to GitHub.
+- Working from a fork (no deployed estate, readers report UNKNOWN): [CONTRIBUTING.md](CONTRIBUTING.md)
+  — offline gates, PR template, what never goes into a commit.
 
 One-time branch protection setup, ruleset verification and the release-cut procedure:
 [docs/git-and-release.md](docs/git-and-release.md).

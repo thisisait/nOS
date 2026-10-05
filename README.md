@@ -274,7 +274,7 @@ tools/estate-status.py --config tenant_domain    # a resolved value, not the def
   only through a pull request. Release tags are cut from `master`.
 - A change that fixes a defect ships with the gate that would have caught it.
 
-[CLAUDE.md](CLAUDE.md) is the working contract for agents and humans alike. History and
+Fork-and-PR mechanics: [CONTRIBUTING.md](CONTRIBUTING.md). [CLAUDE.md](CLAUDE.md) is the working contract for agents and humans alike. History and
 design narratives live in the [devlog](docs/devlog/README.md).
 
 ---
