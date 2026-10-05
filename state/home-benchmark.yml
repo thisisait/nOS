@@ -17,61 +17,63 @@
 version: 1
 seed: 1
 
-# Prepended to every run. Identifiers, not prose: the scorer matches exact
-# names, and prose answers would score words that happen to be identifiers.
+# Prepended to every run, the control included: only the context differs.
+# Identifiers, not prose: a line with words around the names scores 0.
 system: |
-  You answer questions about one software estate, using ONLY the context you
-  are given. Answer every question on its own line, in exactly this form:
+  You answer questions about one software estate from the context you are
+  given; the context may be empty. Answer every question on its own line, in
+  exactly this form:
     Qnn: <identifiers, comma-separated>
-  Use the exact names as they are written (a file name, a path, a slug, a
-  variable). No explanations. If the context does not tell you, answer
+  The line holds the names only, exactly as they are written (a file name, a
+  path, a slug, a variable) — no words around them, no explanations. When the
+  context does not settle it, give your best guess; if you have none, answer
     Qnn: unknown
 
 families:
   - id: reader
     class: tools
     derive: readers
-    count: 5
+    count: 10
     template: "Which reader script (give its file name) answers this: \"{description}\"?"
 
   - id: tool-holders
     class: specializations
     derive: tool_holders
-    count: 5
+    count: 10
     template: "Which agents declare the tool `{tool}`? List every one."
 
   - id: service-deps
     class: systems
     derive: service_deps
-    count: 5
+    count: 10
     template: "Which services does the service `{service}` depend on (read data from)? List every one."
 
   - id: doctrine-file
     class: knowledge
     derive: doctrine_files
-    count: 5
+    count: 10
     template: "Which file(s) hold the doctrine titled \"{title}\"? Give the path(s)."
 
   - id: task-type-writes
     class: specializations
     derive: task_type_writes
-    count: 5
+    count: 10
     template: "Which task types have `writes: {writes}` in their contract? List every one."
 
   - id: agent-task-types
     class: specializations
     derive: agent_task_types
-    count: 5
+    count: 10
     template: "Which task types can the agent `{agent}` take on? List every one."
 
   - id: pulse-command
     class: systems
     derive: pulse_commands
-    count: 5
+    count: 10
     template: "Which script does the Pulse job `{job}` run? Give its file name."
 
   - id: install-flag
     class: systems
     derive: install_flags
-    count: 5
+    count: 10
     template: "Which config variable toggles the service `{service}` on or off?"
