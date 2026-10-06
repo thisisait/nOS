@@ -465,6 +465,9 @@
 - slug: dtt-share-phase2-refusal
   parent: dtt-share-model
   track: platform
+- slug: dtt-skill-task-type-list
+  parent: dtt
+  track: platform
 - slug: dtt-task-types
   parent: dtt
   track: platform
@@ -501,6 +504,9 @@
 - slug: empty-is-not-a-failure-ares
   parent: ''
   track: platform
+- slug: end-user-tool-bakeoff
+  parent: body-tissue
+  track: agents
 - slug: erasure-embeddings-provenance
   parent: erasure-party-subject
   track: digest
@@ -780,6 +786,9 @@
 - slug: keap-lint-disabled-refs
   parent: ''
   track: platform
+- slug: keap-mcp-door
+  parent: body-organ
+  track: platform
 - slug: keap-recall
   parent: body-organ
   track: cortex
@@ -1058,6 +1067,9 @@
   track: platform
 - slug: oneshot-logprobs-for-field-confidence
   parent: consulting-firm-deployment
+  track: agents
+- slug: openhuman
+  parent: body-organ
   track: agents
 - slug: operator-session-threat-model
   parent: ''
