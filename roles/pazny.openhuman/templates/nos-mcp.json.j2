@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "nos-tables": {
+      "command": "/bin/sh",
+      "args": ["-c", "KEAP_AGENT_TOKEN_RO=$({{ docker_bin }} exec {{ openhuman_keap_container }} printenv KEAP_AGENT_TOKEN_RO) KEAP_API_URL=http://127.0.0.1:{{ keap_port }} NOS_MCP_AGENT=openhuman exec /usr/bin/python3 {{ nos_main_checkout }}/tools/mcp-tables-server.py"]
+    }
+  }
+}

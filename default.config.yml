@@ -1453,9 +1453,14 @@ apps_runner_enabled: true
 # Tier-2 manifest ids to leave out of this estate (apps/<id>.yml stays
 # committed; the runner just does not discover it). Default: none.
 apps_skip: []
-# OpenHuman headless core (apps/openhuman.yml.draft, staged). false = the runner
-# skips `openhuman` even once the draft is promoted. Desktop test: docs/systems/openhuman.
+# OpenHuman on this host: the desktop app (roles/pazny.openhuman, `--tags openhuman`).
+# The headless draft (apps/openhuman.yml.draft) reads it too and is declined while
+# false; promoting the draft must split it off (install_openhuman_core), not share it.
 install_openhuman: false
+openhuman_provider: ollama        # ollama (local_only) | claude-code (the claude CLI login, privacy standard)
+openhuman_model: ""               # "" = ollama_small_model on ollama, `sonnet` on claude-code
+openhuman_register_mcp: true      # render the nOS tables MCP document (pasted once in the app)
+openhuman_skills: [nos-datatables]  # copied into ~/.openhuman/skills (it rejects symlinks)
 # Derived from where the cAdvisor CONTAINER exists, not declared beside it.
 # roles/pazny.grafana/templates/compose.yml.j2:221 gates that container on
 # `ansible_os_family != 'Darwin'` — its cgroup and layerdb paths are real only

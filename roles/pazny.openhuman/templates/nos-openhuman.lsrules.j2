@@ -1,0 +1,7 @@
+{
+  "name": "nOS: OpenHuman",
+  "description": "OpenHuman reaches nothing beyond this Mac. Loopback (Ollama, its own core, the nOS MCP server) is not filtered by Little Snitch. Rendered by pazny.openhuman.",
+  "rules": [
+    { "process": "{{ openhuman_app }}/Contents/MacOS/OpenHuman", "remote": "any", "action": "deny", "notes": "no cloud: sign-in, updater, Sentry, skills catalog" }
+  ]
+}

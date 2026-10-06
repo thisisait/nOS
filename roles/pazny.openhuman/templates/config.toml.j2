@@ -1,0 +1,29 @@
+{# The keys nOS declares; toml_merge.py keeps every other key already in the file. #}
+default_model = "{{ _oh_model }}"
+chat_provider = "{{ _oh_route }}"
+reasoning_provider = "{{ _oh_route }}"
+agentic_provider = "{{ _oh_route }}"
+coding_provider = "{{ _oh_route }}"
+
+[privacy]
+# local_only refuses every cloud route, claude-code included: that mode needs standard.
+mode = "{{ 'local_only' if openhuman_provider == 'ollama' else 'standard' }}"
+[observability]
+analytics_enabled = false
+share_usage_data = false
+[update]
+enabled = false
+rpc_mutations_enabled = false
+[gitbooks]
+enabled = false
+[memory.conversations]
+enabled = false
+[memory.recall]
+enabled = false
+[local_ai]
+runtime_enabled = true
+opt_in_confirmed = true
+provider = "ollama"
+base_url = "http://127.0.0.1:11434"
+chat_model_id = "{{ ollama_small_model }}"
+num_ctx = 8192

@@ -2301,6 +2301,18 @@
       when: install_claude_cli | default(true)
       tags: ['claude-cli', 'node', 'nodejs']
 
+    # After claude-cli (the claude-code provider drives that binary) and homebrew.
+    - name: "OpenHuman desktop (pazny.openhuman role)"
+      ansible.builtin.include_role:
+        name: pazny.openhuman
+        apply:
+          tags: ['openhuman']
+      when:
+        - install_openhuman | default(false) | bool
+        - ansible_os_family == 'Darwin'
+        - not (nos_dry_removal | default(false) | bool)
+      tags: ['openhuman']
+
     - import_tasks: tasks/bun.yml
       when: install_bun | default(false)
       tags: ['bun']

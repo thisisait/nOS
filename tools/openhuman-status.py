@@ -14,7 +14,7 @@ Usage:
     tools/openhuman-status.py [--json]
     tools/openhuman-status.py --selftest      # fixture configs, no app needed
 Env (tests): NOS_OPENHUMAN_DIR (default ~/.openhuman), NOS_OPENHUMAN_APP,
-NOS_OPENHUMAN_CASKROOM.
+NOS_OPENHUMAN_CASKROOM, NOS_OPENHUMAN_PROVIDER (ollama | claude-code, the declared one).
 """
 
 from __future__ import annotations
@@ -79,15 +79,20 @@ def _loopback(url: str) -> bool:
         return False
 
 
-def judge_config(cfg: dict | None, src: str) -> list[dict]:
-    """Config lines. Missing keys are judged at OpenHuman's documented defaults."""
+def judge_config(cfg: dict | None, src: str, provider: str | None = None) -> list[dict]:
+    """Config lines. Missing keys are judged at OpenHuman's documented defaults.
+    provider `claude-code` (NOS_OPENHUMAN_PROVIDER, the declared choice) expects privacy
+    `standard` and allows `claude-code:` routes; any other cloud route stays RED."""
+    claude = (provider or os.environ.get("NOS_OPENHUMAN_PROVIDER", "ollama")) == "claude-code"
+    allowed = LOCAL_PREFIXES + (("claude-code:",) if claude else ())
     names = ("privacy mode", "analytics", "usage sharing", "core updater", "model route",
              "memory", "gitbooks MCP (remote)")
     if cfg is None:
         return [line(n, UNKNOWN, "no config.toml read", src) for n in names]
     out = []
     mode = _get(cfg, "privacy.mode", "standard")
-    out.append(line("privacy mode", OK if mode == "local_only" else RED, f"mode={mode}", src))
+    want = "standard" if claude else "local_only"
+    out.append(line("privacy mode", OK if mode == want else RED, f"mode={mode} (declared: {want})", src))
     for name, key in (("analytics", "observability.analytics_enabled"),
                       ("usage sharing", "observability.share_usage_data")):
         val = _get(cfg, key, True)
@@ -97,7 +102,7 @@ def judge_config(cfg: dict | None, src: str) -> list[dict]:
     out.append(line("core updater", OK if not upd and not mut else RED,
                     f"enabled={str(upd).lower()} rpc_mutations={str(mut).lower()}", src))
     routes = {w: _get(cfg, w) or "cloud" for w in WORKLOADS}
-    cloud = [w for w, v in routes.items() if not str(v).startswith(LOCAL_PREFIXES)]
+    cloud = [w for w, v in routes.items() if not str(v).startswith(allowed)]
     base_url = _get(cfg, "local_ai.base_url")
     remote_base = bool(base_url) and not _loopback(base_url)
     detail = f"chat={routes['chat_provider']} local_ai.base_url={base_url or 'default'}"
@@ -209,6 +214,10 @@ agentic_provider = "ollama:hermes3:8b"\ncoding_provider = "ollama:hermes3:8b"
     assert set(states(tomllib.loads(good)).values()) == {OK}, states(tomllib.loads(good))
     assert set(states({}).values()) == {RED}, states({})          # documented defaults
     assert set(states(None).values()) == {UNKNOWN}
+    cc = tomllib.loads(good.replace("ollama:hermes3:8b", "claude-code:sonnet").replace('"local_only"', '"standard"'))
+    by = lambda p: {r["check"]: r["state"] for r in judge_config(cc, "f", p)}  # noqa: E731
+    assert by("claude-code")["model route"] == OK and by("claude-code")["privacy mode"] == OK
+    assert by("ollama")["model route"] == RED and by("ollama")["privacy mode"] == RED
     assert judge_lsof("COMMAND PID\nOpenHuman 1 u 3u IPv4 0 0t0 TCP 127.0.0.1:5->127.0.0.1:11434 (ESTABLISHED)")["state"] == OK
     assert judge_lsof("COMMAND PID\nOpenHuman 1 u 3u IPv4 0 0t0 TCP 10.0.0.2:5->140.82.112.3:443 (ESTABLISHED)")["state"] == RED
     assert judge_lsof("COMMAND PID\nopenhuman 1 u 3u IPv4 0 0t0 TCP *:7788 (LISTEN)")["state"] == RED

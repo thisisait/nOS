@@ -1,0 +1,9 @@
+---
+# Internals only. Operator-facing switches: default.config.yml (install_openhuman, openhuman_*).
+openhuman_home: "{{ ansible_facts['env']['HOME'] }}/.openhuman"
+openhuman_user_dir: "{{ openhuman_home }}/users/local"
+openhuman_app: /Applications/OpenHuman.app
+openhuman_claude_default_model: sonnet    # OpenHuman's own CLAUDE_CODE_DEFAULT_MODEL
+openhuman_keap_container: iiab-keap-1
+# The tree being converged: IMPRINT.md and the skills are COPIED from it (contents, not a path).
+openhuman_source_dir: "{{ playbook_dir }}"

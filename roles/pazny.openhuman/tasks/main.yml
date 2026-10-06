@@ -1,0 +1,95 @@
+---
+# OpenHuman desktop, configured before its first launch. Recipe and limits:
+# docs/systems/openhuman/README.md. Gate: tests/anatomy/test_openhuman_role.py.
+- name: "[openhuman] Resolve provider and model"
+  ansible.builtin.set_fact:
+    _oh_model: "{{ _m }}"
+    _oh_route: "{{ openhuman_provider }}:{{ _m }}"
+  vars:
+    _m: "{{ openhuman_model or (ollama_small_model if openhuman_provider == 'ollama' else openhuman_claude_default_model) }}"
+
+- name: "[openhuman] openhuman_provider is ollama or claude-code"
+  ansible.builtin.assert:
+    that: openhuman_provider in ['ollama', 'claude-code']
+    fail_msg: "openhuman_provider={{ openhuman_provider }}; expected ollama or claude-code"
+    quiet: true
+
+# Symbiont: installed only when neither the Caskroom dir nor the .app exists.
+- name: "[openhuman] Install the app (symbiont cask)"
+  ansible.builtin.include_role:
+    name: pazny.mac.homebrew
+    tasks_from: symbiont-casks.yml
+  vars:
+    _symbiont_casks: "{{ homebrew_symbiont_casks | selectattr('name', 'equalto', 'openhuman') | list }}"
+
+- name: "[openhuman] Workspace and skills dirs"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ openhuman_user_dir }}/workspace"
+    - "{{ openhuman_home }}/skills"
+
+# Declared keys win, every other key stays (a TOML merge, not an overwrite).
+- name: "[openhuman] config.toml — declared keys merged into the file"
+  ansible.builtin.command:
+    argv: ["{{ ansible_playbook_python }}", "{{ role_path }}/files/toml_merge.py", "{{ openhuman_user_dir }}/config.toml"]
+    stdin: "{{ lookup('ansible.builtin.template', 'config.toml.j2') }}"
+  register: _oh_config
+  changed_when: _oh_config.stdout == 'changed'
+
+- name: "[openhuman] AGENTS.md — the imprint, re-copied every converge"
+  ansible.builtin.copy:
+    content: "{{ _hdr }}\n{{ lookup('ansible.builtin.file', openhuman_source_dir ~ '/IMPRINT.md', rstrip=False) }}"
+    dest: "{{ openhuman_user_dir }}/workspace/AGENTS.md"
+    mode: "0600"
+  vars:
+    _hdr: "<!-- nOS: copy of IMPRINT.md, rewritten by pazny.openhuman every converge. Edit IMPRINT.md. -->"
+
+# Copied, not linked: OpenHuman rejects symlinked skills.
+- name: "[openhuman] Skills"
+  ansible.builtin.copy:
+    src: "{{ openhuman_source_dir }}/files/anatomy/skills/{{ item }}/"
+    dest: "{{ openhuman_home }}/skills/{{ item }}/"
+    mode: preserve
+  loop: "{{ openhuman_skills }}"
+
+# OpenHuman reads MCP servers from no file: only its mcp.json editor (RPC
+# mcp_clients_config_set → mcp_clients.db) adds one. This is the paste-ready document.
+- name: "[openhuman] nos-mcp.json — the document to paste once"
+  ansible.builtin.template:
+    src: nos-mcp.json.j2
+    dest: "{{ openhuman_user_dir }}/nos-mcp.json"
+    mode: "0600"
+  when: openhuman_register_mcp | bool
+
+# Little Snitch has no rule-import CLI (only restore-model, which replaces everything).
+- name: "[openhuman] Little Snitch rule group — the file to import once"
+  ansible.builtin.template:
+    src: nos-openhuman.lsrules.j2
+    dest: "{{ openhuman_home }}/nos-openhuman.lsrules"
+    mode: "0644"
+
+- name: "[openhuman] What is left for the operator"
+  ansible.builtin.debug:
+    msg: >-
+      OpenHuman configured ({{ _oh_route }}). Once, by hand: launch it, choose "Set it up myself";
+      {{ ('paste ' ~ openhuman_user_dir ~ '/nos-mcp.json into Connections → MCP Servers → mcp.json; ')
+         if openhuman_register_mcp | bool else '' }}import {{ openhuman_home }}/nos-openhuman.lsrules into Little Snitch.
+
+# The reader writes the verdict: RED fails the play, UNKNOWN (app idle, updater) does not.
+- name: "[openhuman] Verify with tools/openhuman-status.py"
+  ansible.builtin.command:
+    argv: ["{{ ansible_playbook_python }}", "{{ openhuman_source_dir }}/tools/openhuman-status.py", "--json"]
+  environment:
+    NOS_OPENHUMAN_DIR: "{{ openhuman_home }}"
+    NOS_OPENHUMAN_APP: "{{ openhuman_app }}"
+    NOS_OPENHUMAN_CASKROOM: "{{ homebrew_prefix }}/Caskroom/openhuman"
+    NOS_OPENHUMAN_PROVIDER: "{{ openhuman_provider }}"
+  register: _oh_status
+  changed_when: false
+  failed_when: >-
+    _oh_status.rc != 0 or
+    (_oh_status.stdout | from_json | selectattr('state', 'equalto', 'RED') | list | length) > 0
+  tags: ['verify']
