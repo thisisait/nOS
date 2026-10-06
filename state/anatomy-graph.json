@@ -5,7 +5,7 @@
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
     "nodes": 429,
-    "edges": 476,
+    "edges": 477,
     "nodes_pulse": 43,
     "nodes_judge": 5,
     "nodes_gateset": 5,
@@ -31,7 +31,7 @@
     "nodes_article": 22,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
-    "edges_data": 230,
+    "edges_data": 231,
     "edges_trigger": 55,
     "edges_temporal": 5,
     "edges_mutex": 21,
@@ -40,16 +40,16 @@
     "edges_allows": 3,
     "edges_references": 26,
     "edges_part_of": 88,
-    "edges_service_dependency": 39,
-    "services_survey_declared": 29,
-    "services_survey_not_surveyed": 40,
+    "edges_service_dependency": 40,
+    "services_survey_declared": 30,
+    "services_survey_not_surveyed": 39,
     "services_survey_no_manifest": 3,
-    "edges_service_dependency_unenforced": 16,
+    "edges_service_dependency_unenforced": 17,
     "services_layer_L0": 3,
     "services_layer_L1": 5,
-    "services_layer_L2": 21,
+    "services_layer_L2": 22,
     "services_layer_L3": 0,
-    "services_layer_withheld": 43
+    "services_layer_withheld": 42
   },
   "warnings": [
     "union-kind cycle (feedback loop, review-not-refuse): pulse:cortex:cortex-fs-sync -> pulse:keap:keap-embed-sync -> pulse:cortex:cortex-corpus-diff -> pulse:cortex:cortex-fs-sync"
@@ -3332,7 +3332,7 @@
       "layer": "L1",
       "layer_basis": {
         "height": 2,
-        "dependents": 2,
+        "dependents": 3,
         "upstreams": 2
       }
     },
@@ -3606,11 +3606,15 @@
       "stack": null,
       "category": "agent",
       "install_flag": "install_openhuman",
-      "dependency_survey": "not-surveyed",
+      "dependency_survey": "declared",
       "anchor": "02.02.09",
       "description": "Docker service 'openhuman' (agent) in the None compose stack, toggled by install_openhuman",
-      "layer": null,
-      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
+      "layer": "L2",
+      "layer_basis": {
+        "height": 0,
+        "dependents": 0,
+        "upstreams": 1
+      }
     },
     "service:outline": {
       "kind": "service",
@@ -5761,6 +5765,16 @@
       "via": "n8n packs write KEAP DataTables over the agent API: post.yml's pack sync (tools/n8n-pack.py sync) injects the nos-keap-rw credential from keap_agent_token_rw and renders https://{{ keap_domain }} into every keap_write pack graph (docs/doctrine/n8n-packs.md §3)",
       "enforced_by": null,
       "unenforced": "Both sync and the pack graphs are gated on install_keap (post.yml when: + pack requires:); with KEAP off, keap_write packs are skipped at sync and nothing imports them, so no runtime failure surfaces.",
+      "evidence": "measured"
+    },
+    {
+      "from": "service:keap",
+      "to": "service:openhuman",
+      "kind": "data",
+      "measured": "2026-10-06",
+      "via": "the nOS tables MCP server reads KEAP's agent API on 127.0.0.1:keap_port with the RO token from `docker exec iiab-keap-1` (roles/pazny.openhuman/templates/nos-mcp.json.j2)",
+      "enforced_by": null,
+      "unenforced": "No auto-enable block ties install_keap to install_openhuman. With KEAP down the app still runs; only the nos-tables MCP server fails to start.",
       "evidence": "measured"
     },
     {

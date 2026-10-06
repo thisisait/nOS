@@ -17,7 +17,7 @@
     "law": 37,
     "reflex": 43,
     "internal": 67,
-    "edges": 362
+    "edges": 363
   },
   "nodes": {
     "agent:conductor": {
@@ -2740,6 +2740,11 @@
     {
       "from": "service:keap",
       "to": "service:n8n",
+      "kind": "data"
+    },
+    {
+      "from": "service:keap",
+      "to": "service:openhuman",
       "kind": "data"
     },
     {
