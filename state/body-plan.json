@@ -7,17 +7,17 @@
     "genome": 20,
     "cell": 16,
     "tissue": 0,
-    "organ": 90,
+    "organ": 101,
     "organ system": 13,
     "organism": 0,
-    "habitat": 4,
+    "habitat": 0,
     "sense": 70,
     "limb": 20,
     "memory": 40,
     "law": 36,
     "reflex": 43,
-    "internal": 73,
-    "edges": 336
+    "internal": 66,
+    "edges": 339
   },
   "nodes": {
     "agent:conductor": {
@@ -545,31 +545,31 @@
       "kind": "doctrine"
     },
     "faceapp:anatomy": {
-      "level": "internal",
+      "level": "organ",
       "kind": "faceapp"
     },
     "faceapp:anatomy-widget": {
-      "level": "internal",
+      "level": "organ",
       "kind": "faceapp"
     },
     "faceapp:books": {
-      "level": "internal",
+      "level": "organ",
       "kind": "faceapp"
     },
     "faceapp:files": {
-      "level": "internal",
+      "level": "organ",
       "kind": "faceapp"
     },
     "faceapp:keap-explore": {
-      "level": "internal",
+      "level": "organ",
       "kind": "faceapp"
     },
     "faceapp:planner": {
-      "level": "internal",
+      "level": "organ",
       "kind": "faceapp"
     },
     "faceapp:tables": {
-      "level": "internal",
+      "level": "organ",
       "kind": "faceapp"
     },
     "gateset:corpus": {
@@ -1069,19 +1069,19 @@
       "kind": "reader"
     },
     "repo:gitea-forge": {
-      "level": "habitat",
+      "level": "organ",
       "kind": "repo"
     },
     "repo:github-origin": {
-      "level": "habitat",
+      "level": "organ",
       "kind": "repo"
     },
     "repo:gitlab-forge": {
-      "level": "habitat",
+      "level": "organ",
       "kind": "repo"
     },
     "repo:scan-data": {
-      "level": "habitat",
+      "level": "organ",
       "kind": "repo"
     },
     "resource:agent-run-lock": {
@@ -2058,6 +2058,11 @@
       "kind": "trigger"
     },
     {
+      "from": "daemon:eu.thisisait.nos.wing",
+      "to": "faceapp:anatomy-widget",
+      "kind": "data"
+    },
+    {
       "from": "doctrine:ssot/doctrine/foreign-properties.md#5.1",
       "to": "article:foreign-properties",
       "kind": "part_of"
@@ -2066,6 +2071,11 @@
       "from": "doctrine:ssot/doctrine/workflows.md#6",
       "to": "article:workflows",
       "kind": "part_of"
+    },
+    {
+      "from": "faceapp:anatomy-widget",
+      "to": "faceapp:anatomy",
+      "kind": "trigger"
     },
     {
       "from": "judge:ansible-lint",
@@ -2776,6 +2786,11 @@
       "from": "service:erpnext",
       "to": "organ_system:backoffice",
       "kind": "part_of"
+    },
+    {
+      "from": "service:face",
+      "to": "faceapp:anatomy-widget",
+      "kind": "data"
     },
     {
       "from": "service:face",

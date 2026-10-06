@@ -15,7 +15,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - **organ** (organ) — One service or host daemon with one job; one row in state/manifest.yml. Not: organ system, cell, digest.
 - **organ system** (organ system) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organs:` key, whose rename is pending (step 5). Not: organ, organism.
 - **organism** (organism) — One nOS install on one machine, all its organ systems together. Not: habitat, anatomy.
-- **habitat** (habitat) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat) and its git surfaces. Software of origin habitat belongs to the machine's owner, and nOS never installs or touches it. Not: organism, symbiont.
+- **habitat** (habitat) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner, and nOS never installs or touches it. Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs). Not: organism, symbiont.
 
 ## Across levels
 
@@ -27,7 +27,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - **memory** — What nOS has learned, kept in KEAP; RAM stays plain English. Not: cortex, verdicts, stores.
 - **verdicts** — The log of what each sense reported and what the operator judged. Not: memory.
 - **law** — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Not: genome, definition.
-- **reflex** (proposed, not yet ruled) — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Not: Pulse, heartbeat, organ.
+- **reflex** — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Not: Pulse, heartbeat, organ.
 - **heartbeat** — A periodic signal that proves something is still alive. Not: Pulse.
 - **nervous system** — The path events take to the operator, from events to the Wing inbox to ntfy or mail. Not: converge.
 - **twin** — The second Mac. Not: mirror-parity.

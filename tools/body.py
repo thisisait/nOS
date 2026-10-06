@@ -28,15 +28,15 @@ LEVELS = {
     "genome": "declared contracts every part inherits — task types, skills",
     "cell": "who you can be — one model in one specialization",
     "tissue": "cells of one specialization working together",
-    "organ": "a part with one job — a service or host daemon",
+    "organ": "a part with one job — a service, host daemon, hosted forge or face app",
     "organ system": "organs grouped for one function",
     "organism": "the estate as a whole",
-    "habitat": "what lives beside the organism — software by origin, the git surfaces",
+    "habitat": "what lives beside the organism — third-party processors it does not own",
     "sense": "what you can ask — readers and judges that only read",
     "limb": "what you can reach for — tool grants that act",
     "memory": "what the estate has learned — KEAP tables",
     "law": "the rules it inherits — constitution articles and paragraphs",
-    "reflex": "what runs by itself — scheduled responses Pulse fires (proposed word)",
+    "reflex": "what runs by itself — scheduled responses Pulse fires",
 }
 CROSS = "sense"
 EMPTY = {

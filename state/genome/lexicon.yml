@@ -111,6 +111,14 @@ words:
         reason: one service with one job, one state/manifest.yml row
       - graph_kind: daemon
         reason: one host launchd daemon with one job
+      - graph_kind: repo
+        reason: >-
+          ruled 2026-10-06: a git surface an organ hosts (hosted_by); github-origin
+          is the one true outside surface, noted, not split
+      - graph_kind: faceapp
+        reason: >-
+          ruled 2026-10-06: a face app is one job of the face organ (its edges to the
+          face service stay)
     not: [organ system, cell, digest]
     retired:
       - sense: "a public apex group called an organ"
@@ -147,11 +155,10 @@ words:
     level: habitat
     means: >-
       The machine and what lives beside the organism: its software by origin
-      (self / symbiont / habitat) and its git surfaces. Software of origin habitat
-      belongs to the machine's owner, and nOS never installs or touches it.
+      (self / symbiont / habitat). Software of origin habitat belongs to the
+      machine's owner, and nOS never installs or touches it. Ruled 2026-10-06: the
+      git forges nOS hosts itself are not habitat (they are organ jobs).
     names:
-      - graph_kind: repo
-        reason: a git surface the organism lives beside, hosted here or pushed elsewhere
       - config_key: software_owner
         values: [self, symbiont, habitat]
     not: [organism, symbiont]
@@ -249,7 +256,6 @@ words:
 
   reflex:
     level: cross
-    proposed: true
     means: An automatic, scheduled response of an organ; Pulse runs each one on its clock.
     names:
       - graph_kind: pulse
@@ -267,8 +273,6 @@ words:
         reason: an SSO client object inside Authentik, not an actor
       - graph_kind: tofu
         reason: an OpenTofu state root, declarative plumbing behind Authentik
-      - graph_kind: faceapp
-        reason: a face is for humans; a model reaches the organ, not its face
     not: [organ, sense]
 
   heartbeat:
