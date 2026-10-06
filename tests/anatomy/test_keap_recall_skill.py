@@ -1,11 +1,11 @@
-"""Anatomy gate — cortex-query is a READER over KEAP recall, never a writer.
+"""Anatomy gate — keap-recall is a READER over KEAP recall, never a writer.
 
-WHY THIS IS A GATE. A skill that "queries the cortex" can ship green on an
+WHY THIS IS A GATE. A skill that recalls from KEAP can ship green on an
 empty answer: broken RO token, drained embeddings, or a second HTTP client
 that never actually called KEAP. Empty recall is a miss, not a pass.
 
-The procedure lives at files/anatomy/skills/cortex-query/SKILL.md. The
-machinery is tools/cortex-query.py, which wraps the EXISTING client
+The procedure lives at files/anatomy/skills/keap-recall/SKILL.md. The
+machinery is tools/keap-recall.py, which wraps the EXISTING client
 (tools/keap-semantic-search.py) and the EXISTING query set
 (tools/keap-recall-queries.py). Inventing a second /agent/v1 client is the
 defect this file watches for.
@@ -26,11 +26,11 @@ import sys
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SKILL = REPO / "files" / "anatomy" / "skills" / "cortex-query" / "SKILL.md"
-TOOL = REPO / "tools" / "cortex-query.py"
+SKILL = REPO / "files" / "anatomy" / "skills" / "keap-recall" / "SKILL.md"
+TOOL = REPO / "tools" / "keap-recall.py"
 CLIENT = REPO / "tools" / "keap-semantic-search.py"
 QUERIES = REPO / "tools" / "keap-recall-queries.py"
-FIXTURE = REPO / "tests" / "fixtures" / "cortex-query-recall.json"
+FIXTURE = REPO / "tests" / "fixtures" / "keap-recall.json"
 
 SMOKE_Q = "is cortex up"
 
@@ -44,7 +44,7 @@ def _load(path: pathlib.Path, name: str):
 
 @pytest.fixture(scope="module")
 def cq():
-    return _load(TOOL, "cortex_query")
+    return _load(TOOL, "keap_recall")
 
 
 @pytest.fixture(scope="module")
@@ -53,10 +53,10 @@ def recall():
 
 
 def test_skill_exists_with_frontmatter():
-    assert SKILL.is_file(), "files/anatomy/skills/cortex-query/SKILL.md missing"
+    assert SKILL.is_file(), "files/anatomy/skills/keap-recall/SKILL.md missing"
     text = SKILL.read_text(encoding="utf-8")
     assert text.startswith("---"), "skill has no frontmatter"
-    assert "name: cortex-query" in text
+    assert "name: keap-recall" in text
     assert "when not to use" in text.lower()
 
 
@@ -67,7 +67,7 @@ def test_skill_is_read_only_and_names_the_existing_client():
     assert "tools/keap-recall-queries.py" in text, (
         "known queries come from the recall set, not a second list")
     assert "KEAP_AGENT_TOKEN_RO" in text
-    assert "tools/cortex-query.py" in text
+    assert "tools/keap-recall.py" in text
     lowered = text.lower()
     assert "refus" in lowered
     for banned in ("POST /agent/v1/captures", "KEAP_AGENT_TOKEN_RW"):
@@ -77,7 +77,7 @@ def test_skill_is_read_only_and_names_the_existing_client():
 def test_wrapper_does_not_invent_a_second_client():
     src = TOOL.read_text(encoding="utf-8")
     assert "urllib.request" not in src, (
-        "cortex-query.py opened its own HTTP client; wrap "
+        "keap-recall.py opened its own HTTP client; wrap "
         "tools/keap-semantic-search.py instead")
     assert "keap-semantic-search.py" in src or "keap_semantic_search" in src
     assert "keap-recall-queries.py" in src or "keap_recall_queries" in src
