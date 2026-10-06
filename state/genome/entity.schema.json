@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://thisisait.eu/nos/schema/entity.schema.json",
-  "title": "nOS entity — the base every organelle inherits",
-  "description": "The abstract nOS entity. It carries the harness every data node needs — compliance, access, cortex indexing, face rendering — as DATA, so a specific organelle inherits it by `allOf` instead of restating it. What may ACT on an entity is deliberately absent: `nos-cortex-lang.md` §2 and the Wing executor §2 both require that a capability must not be addable by data, so opcodes and handlers stay code, per runtime, hash-compared.\n\nDIALECT: draft-07 with `definitions`, matching 6 of the 7 existing schemas in state/schema/. The estate already uses `$ref` 18 times — but every one is intra-file. Nothing here is a new idiom; this is the same factoring applied one level up, across a file boundary, which is the thing that has never been done.\n\nEVIDENCE: the required core is not invented. All 72 plugin manifests declare name, version, description, type, requires and gdpr — measured, not assumed.",
+  "title": "nOS entity — the base every gene inherits",
+  "description": "The abstract nOS entity. It carries the harness every data node needs — compliance, access, cortex indexing, face rendering — as DATA, so a specific gene inherits it by `allOf` instead of restating it. What may ACT on an entity is deliberately absent: `nos-cortex-lang.md` §2 and the Wing executor §2 both require that a capability must not be addable by data, so opcodes and handlers stay code, per runtime, hash-compared.\n\nDIALECT: draft-07 with `definitions`, matching 6 of the 7 existing schemas in state/schema/. The estate already uses `$ref` 18 times — but every one is intra-file. Nothing here is a new idiom; this is the same factoring applied one level up, across a file boundary, which is the thing that has never been done.\n\nEVIDENCE: the required core is not invented. All 72 plugin manifests declare name, version, description, type, requires and gdpr — measured, not assumed.",
   "definitions": {
     "identity": {
       "type": "object",
@@ -29,13 +29,13 @@
         },
         "kind": {
           "type": "string",
-          "description": "Which organelle this is. Open on purpose: the base must not need editing to admit a new kind.",
+          "description": "Which gene this is. Open on purpose: the base must not need editing to admit a new kind.",
           "minLength": 1
         },
         "anchor": {
           "type": "string",
           "pattern": "^[0-9]{2}(\\.[0-9]{2}){0,2}$",
-          "description": "Cortex node this entity hangs from — an id from the committed 362-anchor spine (state/fable/taxonomy-bundle.json `anchor`), e.g. `02.02.11`. What makes `ent:` addressable from cortex-lang once the registry lands (cortex-self-core.md §6b).\n\nRENAMED from `taxonomy_anchor` on 2026-08-07, and the rename IS the finding. Measured: `taxonomy_anchor` had zero producers and zero consumers for its whole life (one grep, one hit — its own declaration), while 196 anatomy-graph nodes carried the same fact under the name `anchor`, and its example spelling `tax:02.02.11` matched none of the 362 live ids. One fact, two names, the dead one in the genome — which is the exact defect this file exists to end, so it is repaired rather than aliased.\n\nOPTIONAL, not required, and the asymmetry is deliberate: 196/196 graph nodes carry one, 0/1 organelle instances do. The pattern is generated into both runtimes as ANCHOR_PATTERN so a dangling anchor is refused at compile time by whatever stamps it — `tools/anatomy-graph-gen.py` refuses one that fails this pattern, and `tests/anatomy/test_anatomy_graph_is_sound.py` separately refuses one the spine does not hold. Shape and membership are two checks because a well-formed id that names nothing is the failure this estate actually hits."
+          "description": "Cortex node this entity hangs from — an id from the committed 362-anchor spine (state/fable/taxonomy-bundle.json `anchor`), e.g. `02.02.11`. What makes `ent:` addressable from cortex-lang once the registry lands (cortex-self-core.md §6b).\n\nRENAMED from `taxonomy_anchor` on 2026-08-07, and the rename IS the finding. Measured: `taxonomy_anchor` had zero producers and zero consumers for its whole life (one grep, one hit — its own declaration), while 196 anatomy-graph nodes carried the same fact under the name `anchor`, and its example spelling `tax:02.02.11` matched none of the 362 live ids. One fact, two names, the dead one in the genome — which is the exact defect this file exists to end, so it is repaired rather than aliased.\n\nOPTIONAL, not required, and the asymmetry is deliberate: 196/196 graph nodes carry one, 0/1 gene instances do. The pattern is generated into both runtimes as ANCHOR_PATTERN so a dangling anchor is refused at compile time by whatever stamps it — `tools/anatomy-graph-gen.py` refuses one that fails this pattern, and `tests/anatomy/test_anatomy_graph_is_sound.py` separately refuses one the spine does not hold. Shape and membership are two checks because a well-formed id that names nothing is the failure this estate actually hits."
         }
       }
     },
@@ -323,7 +323,7 @@
     },
     "entity": {
       "type": "object",
-      "description": "The base. An organelle composes this with `allOf` and adds its own kind-specific properties.",
+      "description": "The base. A gene composes this with `allOf` and adds its own kind-specific properties.",
       "required": [
         "identity",
         "compliance"

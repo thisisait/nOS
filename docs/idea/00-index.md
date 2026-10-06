@@ -27,7 +27,7 @@ only fall. Do not add idea 22+. Device work is dtt `device-organ`.
 | [03](03-cortex-corpus.md) | The corpus, and what it can honestly recall | **seeded** (`cortex-*`, `kpro`) — archive after absorb | Parity is measured nightly; the user tree is one document, so recall is thin by *input*, not by design. |
 | [04](04-one-filesystem.md) | One filesystem | **keep** | The same document can live in three places and nothing decides which is real. |
 | [05](05-per-user-isolation.md) | Per-user isolation | **seeded** `fs-peruser` — absorb into 04 | Per-user prices concurrency, not headcount — and the secret scope must be built before the containers are. |
-| [06](06-genome.md) | The genome and its organelles | **keep** — L1 shipped; codegen still 2/4 | One declaration the runtimes inherit, instead of the same law restated in five languages. |
+| [06](06-genome.md) | The genome and its genes | **keep** — L1 shipped; codegen still 2/4 | One declaration the runtimes inherit, instead of the same law restated in five languages. |
 | [07](07-face.md) | face — the desktop and its tables | **keep** | Four render styles ship; the settings surface is the open half. |
 | [08](08-lifecycle.md) | Lifecycle — blank, upgrade, coexist | **keep** — PG cutover never ran | The install↔leave loop closes; the upgrade engine's headline claim is still unexercised. |
 | [09](09-hidden-fees.md) | Hidden fees | **keep** — pointer only; tally lives in `docs/hidden_fees/` | The costs paid without a decision. Do not copy a count here. |

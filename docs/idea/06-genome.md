@@ -1,4 +1,4 @@
-# 06 — The genome and its organelles
+# 06 — The genome and its genes
 
 **Status: L1 shipped in v0.10-beta. The generator emits 2 of the 4 targets B1
 promised. `rowRef` and `table_row_refs` — referenced by the plan — do not exist

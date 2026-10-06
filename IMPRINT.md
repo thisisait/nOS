@@ -162,7 +162,7 @@ The public organ systems (the apex ruling publishes 13; 365 of 428 ruled nodes a
 ## 7. The level words
 
 - **genome** (genome) — The declared facts every part of nOS inherits, kept in state/genome/. Not: law, definition.
-- **gene** (genome) — One declared kind of entity in the genome (the word replacing organelle, step 4). Not: plugin.
+- **gene** (genome) — One declared kind of entity in the genome (the word that replaced organelle). Not: plugin.
 - **cell** (cell) — One model in one specialization; in code it is called an agent. Not: sense, stem cell.
 - **stem cell** (cell) — A model that has not yet differentiated into one specialization. Not: cell.
 - **definition** (cell) — One cell's own prompt and tool allow-list, versioned and hashed. Not: genome, law.

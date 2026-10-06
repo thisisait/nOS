@@ -7,7 +7,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 ## Levels
 
 - **genome** (genome) — The declared facts every part of nOS inherits, kept in state/genome/. Not: law, definition.
-- **gene** (genome) — One declared kind of entity in the genome (the word replacing organelle, step 4). Not: plugin.
+- **gene** (genome) — One declared kind of entity in the genome (the word that replaced organelle). Not: plugin.
 - **cell** (cell) — One model in one specialization; in code it is called an agent. Not: sense, stem cell.
 - **stem cell** (cell) — A model that has not yet differentiated into one specialization. Not: cell.
 - **definition** (cell) — One cell's own prompt and tool allow-list, versioned and hashed. Not: genome, law.
@@ -91,8 +91,8 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - twin for two lists that must stay equal (twin-parity) → mirror-parity
 - a second kind-to-level map beside the lexicon → the graph_kind names in state/genome/lexicon.yml
 - the digest organ, the stomach → digest
-- cortex-query, recall from KEAP → keap-recall (step 3)
+- cortex-query, recall from KEAP → keap-recall
 - brain for KEAP, the four host parts or the Wing API token → memory / organs / flat token
 - a reader called the spinal cord → sense
-- organelle for a genome entity kind → gene (step 4)
+- organelle for a genome entity kind → gene
 - organelle for a plugin → plugin

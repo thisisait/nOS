@@ -1,5 +1,5 @@
 # =============================================================================
-# backup-base — organelle for the pazny.backup HOST role (copy #1, logical).
+# backup-base — plugin for the pazny.backup HOST role (copy #1, logical).
 #
 # WHY THIS FILE EXISTS (2026-07-30)
 # ---------------------------------
@@ -17,13 +17,13 @@
 # could not say so.
 #
 # Bone now has a severity-aware fallback (an unrouted critical/high still gets
-# ntfy), but that is the safety net. THIS is the fix: backup is an organelle
+# ntfy), but that is the safety net. THIS is the fix: backup is a plugin
 # like everything else, it declares its own routing, and it stops being the one
 # component that reports into a void.
 #
 # No compose_extension, no authentik block: pazny.backup renders a launchd job
 # and a shell script. It has no surface, no port, and nothing to gate. What it
-# has — and what an organelle is for — is a severity contract, an owner, a
+# has — and what a plugin is for — is a severity contract, an owner, a
 # schedule, and a stated blast radius.
 # =============================================================================
 
@@ -109,7 +109,7 @@ observability:
 # =============================================================================
 # GDPR — Article 30 register row
 #
-# This organelle is unusual and the register should say so plainly: backup does
+# This plugin is unusual and the register should say so plainly: backup does
 # not collect anything of its own, it makes a SECOND COPY of everything every
 # other service holds. Its data categories are therefore the union of the
 # estate's, and its retention is the one that actually bounds how long personal

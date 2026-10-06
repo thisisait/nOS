@@ -57,7 +57,7 @@ words:
 
   gene:
     level: genome
-    means: One declared kind of entity in the genome (the word replacing organelle, step 4).
+    means: One declared kind of entity in the genome (the word that replaced organelle).
     not: [plugin]
 
   cell:
@@ -417,7 +417,7 @@ words:
     not: [memory, KEAP]
     retired:
       - sense: "cortex-query, recall from KEAP"
-        replacement: "keap-recall (step 3)"
+        replacement: "keap-recall"
         surfaces:
           - path: tools/cortex-query.py
           - path: files/anatomy/skills/cortex-query/
@@ -507,7 +507,7 @@ words:
     means: Not used. A genome entity kind is a gene; a plugin is a plugin.
     retired:
       - sense: "organelle for a genome entity kind"
-        replacement: "gene (step 4)"
+        replacement: "gene"
         surfaces:
           - path: state/genome/organelle/
       - sense: "organelle for a plugin"

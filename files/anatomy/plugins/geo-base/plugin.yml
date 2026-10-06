@@ -1,5 +1,5 @@
 # =============================================================================
-# geo-base — the open-data loader organelle for the PostGIS `geo` database.
+# geo-base — the open-data loader plugin for the PostGIS `geo` database.
 #
 # Monthly Pulse job: RÚIAN address points + INSPIRE parcels/buildings for the
 # configured kraje into geo.ruian_adm / geo.inspire_cp / geo.inspire_bu

@@ -1,5 +1,5 @@
 # =============================================================================
-# crm-hydrate-base — backoffice hydrator organelle (not the Dolibarr container).
+# crm-hydrate-base — backoffice hydrator plugin (not the Dolibarr container).
 #
 # Espo and Firefly shipped a compose fragment and stopped. The organs never
 # learned the desk. This plugin is the missing tendon: Pulse fires Digest,
