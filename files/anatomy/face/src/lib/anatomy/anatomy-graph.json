@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 429,
+    "nodes": 430,
     "edges": 477,
     "nodes_pulse": 43,
     "nodes_judge": 5,
@@ -27,7 +27,7 @@
     "nodes_agent": 16,
     "nodes_tasktype": 9,
     "nodes_skill": 11,
-    "nodes_reader": 60,
+    "nodes_reader": 61,
     "nodes_article": 22,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
@@ -2816,6 +2816,13 @@
       "title": "What has STOPPED MOVING — which is a different question from what is broken.",
       "anchor": "02.02.04",
       "description": "Reader tools/stuck-status.py: What has STOPPED MOVING — which is a different question from what is broken."
+    },
+    "reader:tailscale-status": {
+      "kind": "reader",
+      "source": "tools/tailscale-status.py",
+      "title": "Can the tailnet reach nOS by name (`nos_edge: lan_tailscale`): Tailscale installed, up, hostname, the `nos_lan_ip/32` route advertised vs approved, `dig @nos_lan_ip` answering, Funnel (RED when on); UNKNOWN without the CLI. Cannot see the tailnet's split-DNS setting (no API key by design).",
+      "anchor": "02.02.04",
+      "description": "Reader tools/tailscale-status.py: Can the tailnet reach nOS by name (`nos_edge: lan_tailscale`): Tailscale installed, up, hostname, the `nos_lan_ip/32` route advertised vs approved, `dig @nos_lan_ip` answering, Funnel (RED when on); UNKNOWN without the CLI. Cannot see the tailnet's split-DNS setting (no API key by design)."
     },
     "reader:task-types-render": {
       "kind": "reader",
