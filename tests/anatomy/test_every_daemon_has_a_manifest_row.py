@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import pathlib
 import re
+import sys
 
 import yaml
 
@@ -76,8 +77,11 @@ def test_a_host_native_row_names_its_daemon_or_what_it_is():
 def test_only_a_launchd_label_var_declares_a_daemon():
     """The ears bundle id became a daemon because its VALUE carried the
     eu.thisisait.nos. prefix. The declaration is the var name, not the shape."""
-    text = "\n".join(p.read_text(encoding="utf-8") for p in
-                     [*REPO.glob("roles/*/defaults/main.yml"), REPO / "default.config.yml"])
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity as ni  # noqa: E402
+
+    text = "\n".join([*(p.read_text(encoding="utf-8") for p in REPO.glob("roles/*/defaults/main.yml")),
+                      ni.default_config_text()])  # every default layer, not one file
     declared = set(re.findall(r'^\w+_launchd_label:\s*"([\w.\-]+)"', text, re.M))
     declared |= {p.name.removesuffix(".plist.j2") for p in REPO.glob("templates/eu.thisisait.nos.*.plist.j2")}
     stray = sorted(_daemons() - declared)
