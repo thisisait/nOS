@@ -831,6 +831,7 @@ nodes:
   "reader:nos_security": withheld
   "reader:nos_work_uri": withheld
   "reader:npm-ioc-scan": withheld
+  "reader:openhuman-status": withheld
   "reader:permission-status": withheld
   "reader:plugin-wiring-report": withheld
   "reader:profile-builder-build": withheld

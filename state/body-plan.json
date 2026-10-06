@@ -11,7 +11,7 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
-    "sense": 76,
+    "sense": 77,
     "limb": 8,
     "memory": 40,
     "law": 36,
@@ -1005,6 +1005,10 @@
       "kind": "reader"
     },
     "reader:npm-ioc-scan": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:openhuman-status": {
       "level": "sense",
       "kind": "reader"
     },

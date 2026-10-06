@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 427,
+    "nodes": 428,
     "edges": 476,
     "nodes_pulse": 43,
     "nodes_judge": 5,
@@ -27,7 +27,7 @@
     "nodes_agent": 16,
     "nodes_tasktype": 9,
     "nodes_skill": 11,
-    "nodes_reader": 59,
+    "nodes_reader": 60,
     "nodes_article": 21,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
@@ -2703,6 +2703,13 @@
       "title": "Cross-check every installed npm package against a published IOC list.",
       "anchor": "02.02.04",
       "description": "Reader tools/npm-ioc-scan.py: Cross-check every installed npm package against a published IOC list."
+    },
+    "reader:openhuman-status": {
+      "kind": "reader",
+      "source": "tools/openhuman-status.py",
+      "title": "Is OpenHuman on this Mac set up to stay on this Mac: privacy mode, analytics, updaters, model route, memory, MCP servers (RED if the RW token is in them), install, running, and any non-loopback socket (`lsof`); UNKNOWN without a config or a running process. `--selftest` needs no app.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/openhuman-status.py: Is OpenHuman on this Mac set up to stay on this Mac: privacy mode, analytics, updaters, model route, memory, MCP servers (RED if the RW token is in them), install, running, and any non-loopback socket (`lsof`); UNKNOWN without a config or a running process. `--selftest` needs no app."
     },
     "reader:permission-status": {
       "kind": "reader",
