@@ -226,6 +226,12 @@ nos_extra_identities: []
 # warned for a client firm. Override with `-e tenant_domain_is_local=false`.
 tenant_domain_is_local: "{{ (tenant_domain | default('')).endswith(('.local', '.lan', '.test', '.localhost', '.internal', '.home.arpa')) or (tenant_domain | default('')) == 'localhost' }}"
 
+# How clients reach this host. cloudflare: a public zone Cloudflare may front.
+# lan_tailscale: no public IP; dnsmasq answers the LAN IP (LAN + tailnet split DNS),
+# the Cloudflare door is refused. Derived: a public TLD has always meant Cloudflare.
+# A firm with its own domain and no Cloudflare sets lan_tailscale in config.yml.
+nos_edge: "{{ 'lan_tailscale' if tenant_domain_is_local else 'cloudflare' }}"
+
 # ── TLS cert paths ───────────────────────────────────────────────────────────
 # Cert tree lives under the infra stack dir. mkcert writes here for local
 # TLDs; pazny.acme symlinks LE certs here for public TLDs. Traefik mounts
@@ -247,6 +253,10 @@ acme_provider: "cloudflare"               # cloudflare | manual | http
 acme_email: "{{ default_admin_email }}"
 acme_renewal_days: 60                     # Re-issue when cert expires within N days
 acme_staging: false                       # true → use LE staging endpoint (testing)
+acme_dns_provider: "dns_cf"               # acme.sh --dns id: dns_cf | dns_hetznercloud | dns_desec | dns_ovh …
+# Non-Cloudflare credentials, under acme.sh's own env names, in credentials.yml, e.g.
+#   {HETZNER_TOKEN: …} | {DEDYN_TOKEN: …} | {OVH_END_POINT, OVH_AK, OVH_AS, OVH_CK}
+acme_dns_env: {}
 # Cloudflare API token with "Zone:DNS:Edit" + "Zone:Zone:Read" — set in
 # credentials.yml as `acme_cloudflare_api_token`. Not defined here to
 # prevent the empty default silently shadowing a credentials.yml value

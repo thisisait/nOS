@@ -17,6 +17,10 @@
     <dict>
         <key>CF_Token</key>
         <string>{{ acme_cloudflare_api_token }}</string>
+{% for k, v in (acme_dns_env | default({})).items() %}
+        <key>{{ k }}</key>
+        <string>{{ v }}</string>
+{% endfor %}
         <key>HOME</key>
         <string>{{ ansible_facts['env']['HOME'] }}</string>
         <key>PATH</key>

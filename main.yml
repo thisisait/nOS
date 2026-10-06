@@ -462,6 +462,25 @@
         - not (nos_skip_edge_check | default(false) | bool)
       tags: ['always', 'preflight']
 
+    # nos_edge (default.config.yml) says how clients reach the host. Gate:
+    # tests/anatomy/test_edge_is_a_declared_fact.py.
+    - name: "[Preflight] nos_edge must be cloudflare or lan_tailscale"
+      ansible.builtin.fail:
+        msg: "nos_edge is '{{ nos_edge }}'. Set nos_edge: cloudflare or nos_edge: lan_tailscale in config.yml."
+      when: nos_edge | default('cloudflare') not in ['cloudflare', 'lan_tailscale']
+      tags: ['always', 'preflight']
+
+    - name: "[Preflight] Refuse Cloudflare origin-pull on a lan_tailscale edge"
+      ansible.builtin.fail:
+        msg: |
+          nos_edge is lan_tailscale (no public IP, no Cloudflare in front), but
+          traefik_origin_pull_enabled is true: that door admits only Cloudflare,
+          so nobody would come through it. Set traefik_origin_pull_enabled: false.
+      when:
+        - traefik_origin_pull_enabled | default(false) | bool
+        - (nos_edge | default('cloudflare')) == 'lan_tailscale'
+      tags: ['always', 'preflight']
+
     # ── Preflight: a gate with nothing behind it ─────────────────────────────
     # With `install_authentik: false` both renderers still attach the
     # `authentik@file` middleware, Traefik finds it undefined, and every gated
@@ -2498,12 +2517,13 @@
     # public TLDs when the operator wants HYBRID mode (real domain + valid LE
     # cert + box reachable only locally on 127.0.0.1). Set
     # `dnsmasq_force_local_domains: true` in config.yml to keep /etc/resolver
-    # active on a public TLD.
+    # active on a public TLD. nos_edge: lan_tailscale is split-horizon by definition.
     - import_tasks: tasks/dnsmasq.yml
       when:
         - install_dnsmasq | default(true)
         - (tenant_domain_is_local | default(true) | bool)
           or (dnsmasq_force_local_domains | default(false) | bool)
+          or (nos_edge | default('cloudflare')) == 'lan_tailscale'
       tags: ['dnsmasq', 'dns', 'network']
 
     # Root LaunchDaemons (dnsmasq): prune-disabled.yml's gui rule, system domain,

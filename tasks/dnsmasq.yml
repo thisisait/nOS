@@ -18,16 +18,21 @@
     state: present
   when: nos_pkg_manager == 'homebrew'
 
+# lan_tailscale: LAN devices and the tailnet's split DNS ask this host, so it must listen there.
+- name: "[dnsmasq] Decide whether to answer on the LAN"
+  ansible.builtin.set_fact:
+    _dnsmasq_lan: "{{ (dnsmasq_lan_access | default(true) | bool) or (nos_edge | default('cloudflare')) == 'lan_tailscale' }}"
+
 - name: "[dnsmasq] Detect LAN IP for DNS responses"
   ansible.builtin.shell: ipconfig getifaddr en0 2>/dev/null || echo "127.0.0.1"
   register: _lan_ip
   changed_when: false
   check_mode: false
-  when: dnsmasq_lan_access | default(true)
+  when: _dnsmasq_lan | bool
 
 - name: "[dnsmasq] Build listen addresses"
   ansible.builtin.set_fact:
-    _dnsmasq_listen: "{{ '127.0.0.1,' ~ (_lan_ip.stdout | default('127.0.0.1')) if (dnsmasq_lan_access | default(true)) else '127.0.0.1' }}"
+    _dnsmasq_listen: "{{ '127.0.0.1,' ~ (_lan_ip.stdout | default('127.0.0.1')) if (_dnsmasq_lan | bool) else '127.0.0.1' }}"
     _dnsmasq_target: "{{ _lan_ip.stdout | default(dnsmasq_dev_address | default('127.0.0.1')) }}"
 
 - name: Deploy dnsmasq configuration

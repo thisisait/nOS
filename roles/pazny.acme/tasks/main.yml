@@ -26,6 +26,18 @@
   when:
     - install_acme | default(false) | bool
     - (acme_cloudflare_api_token | default('') | length) == 0
+    - acme_dns_provider | default('dns_cf') == 'dns_cf'
+
+- name: "[ACME] Refuse a DNS provider with no credentials"
+  ansible.builtin.fail:
+    msg: |-
+      acme_dns_provider is {{ acme_dns_provider }} but acme_dns_env is empty. Put that
+      provider's credentials in credentials.yml under acme.sh's own env names, e.g.
+      acme_dns_env: {HETZNER_TOKEN: "..."} for dns_hetznercloud.
+  when:
+    - install_acme | default(false) | bool
+    - acme_dns_provider | default('dns_cf') != 'dns_cf'
+    - (acme_dns_env | default({}) | length) == 0
 
 # ── 1. Install acme.sh via Homebrew ─────────────────────────────────────────
 # This role is Darwin-only and is gated as such at its include site in main.yml
@@ -61,6 +73,9 @@
       LOG_LEVEL=1
       AUTO_UPGRADE=1
       USER_PATH="/usr/bin:/bin:/usr/sbin:/sbin:{{ homebrew_prefix | default('/opt/homebrew') }}/bin"
+      {% for k, v in (acme_dns_env | default({})).items() %}
+      {{ k }}="{{ v }}"
+      {% endfor %}
   no_log: true
 
 - name: "[ACME] Register account with Let's Encrypt"
@@ -80,13 +95,12 @@
     {{ homebrew_prefix | default('/opt/homebrew') }}/bin/acme.sh
     --issue
     {% for d in acme_domains %}-d {{ d }} {% endfor %}
-    --dns dns_cf
+    --dns {{ acme_dns_provider }}
     --keylength 2048
     --server {{ 'letsencrypt_test' if (acme_staging | bool) else 'letsencrypt' }}
     --renew-hook "{{ ('/opt/homebrew/bin/brew services restart nginx' if (install_nginx | default(false)) else (docker_bin | default('/usr/local/bin/docker')) + ' compose -p infra restart traefik') }}"
-  environment:
-    CF_Token: "{{ acme_cloudflare_api_token }}"
-    HOME: "{{ ansible_facts['env']['HOME'] }}"
+  # acme.sh reads its provider's credentials from env (acme_dns_env, its own names).
+  environment: "{{ {'CF_Token': acme_cloudflare_api_token, 'HOME': ansible_facts['env']['HOME']} | combine(acme_dns_env | default({})) }}"
   register: _acme_issue
   changed_when:
     - _acme_issue.rc == 0

@@ -30,9 +30,9 @@
 # forever and Traefik would return 404 to the original request.
 
 {# Every websecure router gets an `-origin` twin on websecure-origin when
-   traefik_origin_pull_enabled: same rule, service and middlewares, but
+   traefik_origin_pull_enabled on a cloudflare nos_edge: same rule, service and middlewares, but
    tls.options origin-pull@file. Off = one door, byte-identical render. #}
-{% set _doors = [('', 'websecure', {})] + ([('-origin', 'websecure-origin', {'options': 'origin-pull@file'})] if traefik_origin_pull_enabled | default(false) | bool else []) %}
+{% set _doors = [('', 'websecure', {})] + ([('-origin', 'websecure-origin', {'options': 'origin-pull@file'})] if (traefik_origin_pull_enabled | default(false) | bool) and (nos_edge is undefined or nos_edge == 'cloudflare') else []) %}
 http:
   routers:
 {% for s in nos_manifest.services | default([]) %}
