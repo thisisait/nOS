@@ -475,8 +475,8 @@ docker_cpus_light: "0.5"
 
 # ── Homebrew & Apps ───────────────────────────────────────────────────────────
 install_homebrew_packages: true   # Homebrew + the self/symbiont formulae (software_owner)
-install_cask_apps: false          # GUI applications via Homebrew Cask (host)
-install_personal_packages: false  # homebrew/pip/npm *personal* lists below (host)
+install_cask_apps: false          # GUI applications via Homebrew Cask (habitat)
+install_personal_packages: false  # homebrew/pip/npm *personal* lists below (habitat)
 install_mas_apps: false           # Mac App Store applications
 
 # ── Reverse proxy ─────────────────────────────────────────────────────────────
@@ -531,10 +531,10 @@ install_node: true                # Node.js + NVM (Cortex runs on it); node_glob
 # live sessions with EACCES several times a day (measured 2026-08-04).
 install_claude_cli: true
 claude_cli_channel: "stable"      # stable | latest | an exact version
-install_bun: false                # Bun JavaScript runtime / bundler (host)
+install_bun: false                # Bun JavaScript runtime / bundler (habitat)
 install_python: true              # Python + pyenv + pip packages
-install_golang: false             # Go language + gopls, golangci-lint, air (host)
-install_dotnet: false             # .NET SDK (C#, F#) + EF CLI (host)
+install_golang: false             # Go language + gopls, golangci-lint, air (habitat)
+install_dotnet: false             # .NET SDK (C#, F#) + EF CLI (habitat)
 
 # ── AI Agent ──────────────────────────────────────────────────────────────────
 install_openclaw: true            # OpenClaw (Inspektor Klepitko, Ollama, no API key)
@@ -574,13 +574,13 @@ install_wing: true           # Wing Security Dashboard + Hub (Nette PHP + SQLite
 
 # ── macOS system configuration ────────────────────────────────────────────────
 configure_dotfiles: false         # Dotfiles – requires your own repo! Set dotfiles_repo in credentials.yml
-configure_terminal: false         # Terminal theme (host)
-configure_osx: false              # Base macOS defaults (.osx script) (host)
-configure_macos_defaults: false   # Extended macOS settings (Finder, keyboard, Dock...) (host)
+configure_terminal: false         # Terminal theme (habitat)
+configure_osx: false              # Base macOS defaults (.osx script) (habitat)
+configure_macos_defaults: false   # Extended macOS settings (Finder, keyboard, Dock...) (habitat)
 configure_dock: false             # Dock layout (requires dockutil)
 configure_sudoers: false          # Custom sudoers rules
 configure_sublime: false          # Sublime Text editor
-install_shell_extras: false       # Starship prompt + shell aliases (bat, eza, fzf, zoxide, lazygit) (host)
+install_shell_extras: false       # Starship prompt + shell aliases (bat, eza, fzf, zoxide, lazygit) (habitat)
 
 # ── System services (require sudo) ────────────────────────────────────────────
 enable_ssh: false                 # Remote Login / SSH server
@@ -744,40 +744,40 @@ install_dnsmasq: true             # dnsmasq – auto *.dev.local DNS (no /etc/ho
 
 # ==============================================================================
 # SOFTWARE OWNERSHIP. self: nOS calls, pins and updates it. symbiont: installed
-# once when absent, then fed by its vendor, never touched. host: the machine
-# owner's, never installed by default; class `host` = the `*personal*` keys.
+# once when absent, then fed by its vendor, never touched. habitat: the machine
+# owner's, never installed by default; class `habitat` = the `*personal*` lists.
 # Gate: tests/anatomy/test_every_host_package_has_an_owner.py
 # ==============================================================================
 software_owner:
   homebrew_installed_packages: self
   homebrew_symbiont_packages: symbiont
-  homebrew_personal_packages: host
-  homebrew_cask_apps: host
+  homebrew_personal_packages: habitat
+  homebrew_cask_apps: habitat
   pip_packages: self
   pip_symbiont_packages: symbiont
-  pip_personal_packages: host
-  node_global_packages: host
-  npm_packages: host
-  bun_global_packages: host
-  go_packages: host
-  gem_packages: host
-  composer_packages: host
-  php_composer_packages: host
-  dotnet_global_tools: host
-  mas_installed_apps: host
-  install_personal_packages: host
-  install_cask_apps: host
-  install_mas_apps: host
-  install_bun: host
-  install_golang: host
-  install_dotnet: host
-  install_shell_extras: host
-  configure_terminal: host
-  configure_osx: host
-  configure_macos_defaults: host
-  configure_dotfiles: host
-  configure_dock: host
-  configure_sublime: host
+  pip_personal_packages: habitat
+  node_global_packages: habitat
+  npm_packages: habitat
+  bun_global_packages: habitat
+  go_packages: habitat
+  gem_packages: habitat
+  composer_packages: habitat
+  php_composer_packages: habitat
+  dotnet_global_tools: habitat
+  mas_installed_apps: habitat
+  install_personal_packages: habitat
+  install_cask_apps: habitat
+  install_mas_apps: habitat
+  install_bun: habitat
+  install_golang: habitat
+  install_dotnet: habitat
+  install_shell_extras: habitat
+  configure_terminal: habitat
+  configure_osx: habitat
+  configure_macos_defaults: habitat
+  configure_dotfiles: habitat
+  configure_dock: habitat
+  configure_sublime: habitat
 
 # ==============================================================================
 # HOMEBREW – general settings
@@ -813,7 +813,7 @@ homebrew_symbiont_packages:
   - ripgrep              # rg — on the AgentKit read-only bash allow-list
   - pre-commit           # contributors: .pre-commit-config.yaml
 
-# host (personal) — the machine owner's; installed only with install_personal_packages.
+# habitat (personal) — the machine owner's; installed only with install_personal_packages.
 homebrew_personal_packages:
   # Base tools
   - autoconf
@@ -1180,7 +1180,7 @@ pip_symbiont_packages:
   - name: httpx
   - name: fastapi
 
-# host (personal): installed only with install_personal_packages.
+# habitat (personal): installed only with install_personal_packages.
 pip_personal_packages:
   # ── Dev base ────────────────────────────────────────────────────────────
   - name: virtualenv

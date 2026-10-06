@@ -92,7 +92,7 @@
     NVM_DIR: "{{ ansible_facts['env']['HOME'] }}/.nvm"
   when:
     - nos_pkg_manager == 'homebrew'
-    - install_personal_packages | default(false) | bool   # class host (software_owner)
+    - install_personal_packages | default(false) | bool   # class habitat (software_owner)
 
 # `--ignore-scripts` has one real failure mode: a package that genuinely needs
 # a postinstall (native builds via node-gyp) installs INCOMPLETE and npm still
