@@ -7,7 +7,12 @@
 # level    one of `order` below. The body levels come first, smallest to largest.
 # names    typed surfaces where the word lives today; each must exist:
 #            path | yaml_key (file#dotted.key, * = any key or list item) |
+#            config_key (a committed default, whichever config layer holds it) |
 #            graph_kind | manifest_field | launchd_label | anchor_prefix
+#          A graph_kind carries a one-line `reason`; it is the ONE kind → level
+#          map (tools/body-plan-gen.py reads it). Its class is the word's level,
+#          or the word itself when the level is `cross`. A yaml_key may pin `values`.
+# proposed true when the word is new and the operator has not yet ruled it.
 # not      words it must not be confused with.
 # retired  senses the word no longer carries: {sense, replacement, surfaces};
 #            each surface must be gone (today's are pending in the gate).
@@ -26,6 +31,7 @@ order:
   - organism
   - habitat
   - cross
+  - internal
   - procedure
   - proper-name
   - legacy
@@ -38,6 +44,10 @@ words:
     names:
       - path: state/genome/
       - yaml_key: "ssot/INDEX.yml#realms.genome"
+      - graph_kind: tasktype
+        reason: a declared work contract every part inherits; a cell expresses it via may_take
+      - graph_kind: skill
+        reason: a declared procedure contract every part inherits
     not: [law, definition]
     retired:
       - sense: "DNA of the inner organism (prompts, skills, CLAUDE.md, allow-lists)"
@@ -55,6 +65,7 @@ words:
     means: One model in one specialization; in code it is called an agent.
     names:
       - graph_kind: agent
+        reason: one model in one specialization (its charter, tools and backend)
       - path: files/anatomy/agents/
     not: [sense, stem cell]
     retired:
@@ -97,7 +108,9 @@ words:
     names:
       - manifest_field: id
       - graph_kind: service
+        reason: one service with one job, one state/manifest.yml row
       - graph_kind: daemon
+        reason: one host launchd daemon with one job
     not: [organ system, cell, digest]
     retired:
       - sense: "a public apex group called an organ"
@@ -116,9 +129,13 @@ words:
 
   organ system:
     level: organ system
-    means: A public group of organs serving one function; the apex page shows thirteen.
+    means: >-
+      A public group of organs serving one function; the apex page shows thirteen.
+      Its source is the apex ruling's `organs:` key, whose rename is pending (step 5).
     names:
       - yaml_key: "files/anatomy/apex/ruling.yml#organs"
+      - graph_kind: organ_system
+        reason: one public group of organs from the signed apex ruling's `organs:` key
     not: [organ, organism]
 
   organism:
@@ -128,7 +145,15 @@ words:
 
   habitat:
     level: habitat
-    means: The machine and what belongs to its owner; nOS never installs or touches it.
+    means: >-
+      The machine and what lives beside the organism: its software by origin
+      (self / symbiont / habitat) and its git surfaces. Software of origin habitat
+      belongs to the machine's owner, and nOS never installs or touches it.
+    names:
+      - graph_kind: repo
+        reason: a git surface the organism lives beside, hosted here or pushed elsewhere
+      - config_key: software_owner
+        values: [self, symbiont, habitat]
     not: [organism, symbiont]
     retired:
       - sense: "host, as the third owner class of software"
@@ -139,6 +164,8 @@ words:
   self:
     level: cross
     means: Software nOS wrote, pins and updates itself; a self organ is one of nOS's own parts.
+    names:
+      - config_key: software_owner
     not: [declared, symbiont]
     retired:
       - sense: "self meaning the immune system's tolerated set"
@@ -149,6 +176,8 @@ words:
   symbiont:
     level: cross
     means: Declared foreign software that lives beside nOS and is updated by its own vendor.
+    names:
+      - config_key: software_owner
     not: [self, habitat]
 
   declared:
@@ -160,9 +189,12 @@ words:
     level: cross
     means: A reader or judge that only reads; an immune indicator is a sense with an indicator contract.
     names:
+      - graph_kind: reader
+        reason: a tools/README.md §Readers script that asks the estate what is true
       - graph_kind: judge
+        reason: a gate command that reads a change and returns a verdict; it does not act
       - graph_kind: weakness
-      - graph_kind: gateset
+        reason: a Bone reader whose findings become loop proposals
       - path: tools/README.md
       - yaml_key: "files/anatomy/apex/ruling.yml#organs.senses"
     not: [cell, limb]
@@ -170,6 +202,9 @@ words:
   limb:
     level: cross
     means: A tool that acts.
+    names:
+      - graph_kind: resource
+        reason: mostly agent tool grants, also backends, tokens and one lock; a limb until the kind is split
     not: [sense, side]
     retired:
       - sense: "limb as the apex page's left/right/core column key"
@@ -182,6 +217,8 @@ words:
     means: What nOS has learned, kept in KEAP; RAM stays plain English.
     names:
       - path: roles/pazny.keap/
+      - graph_kind: table
+        reason: a KEAP DataTable definition, what the estate records and learns
     not: [cortex, verdicts, stores]
     retired:
       - sense: "The Memory, the apex group of databases"
@@ -205,7 +242,34 @@ words:
       - path: ssot/doctrine/
       - yaml_key: "ssot/INDEX.yml#realms.doctrine"
       - graph_kind: doctrine
+        reason: a cited constitution paragraph, an inherited rule
+      - graph_kind: article
+        reason: an in-force constitution article (the ssot/INDEX.yml doctrine realm)
     not: [genome, definition]
+
+  reflex:
+    level: cross
+    proposed: true
+    means: An automatic, scheduled response of an organ; Pulse runs each one on its clock.
+    names:
+      - graph_kind: pulse
+        reason: one scheduled job, run by the Pulse daemon on its own cron
+      - yaml_key: "files/anatomy/apex/ruling.yml#organs.reflexes"
+    not: [Pulse, heartbeat, organ]
+
+  internal:
+    level: internal
+    means: Real plumbing that is not a body part; the body plan hides it by default.
+    names:
+      - graph_kind: gateset
+        reason: a named bundle of judges; the judges themselves are the senses
+      - graph_kind: authentik
+        reason: an SSO client object inside Authentik, not an actor
+      - graph_kind: tofu
+        reason: an OpenTofu state root, declarative plumbing behind Authentik
+      - graph_kind: faceapp
+        reason: a face is for humans; a model reaches the organ, not its face
+    not: [organ, sense]
 
   heartbeat:
     level: cross
@@ -257,8 +321,17 @@ words:
 
   body plan:
     level: cross
-    means: The level scheme the anatomy is projected onto (registered by the body-plan work).
+    means: The anatomy projected onto the levels above; each graph kind's level is read from state/genome/lexicon.yml.
+    names:
+      - path: state/body-plan.json
+      - path: tools/body-plan-gen.py
+      - path: tools/body.py
     not: [anatomy]
+    retired:
+      - sense: "a second kind-to-level map beside the lexicon"
+        replacement: "the graph_kind names in state/genome/lexicon.yml"
+        surfaces:
+          - path: state/body-levels.yml
 
   # ── procedures ──────────────────────────────────────────────────────────
   digest:
@@ -382,15 +455,13 @@ words:
       - anchor_prefix: nos.host.
   pulse (graph kind):
     level: legacy
-    means: One scheduled job in the anatomy graph, not the Pulse organ.
-    names:
-      - graph_kind: pulse
+    means: The anatomy graph's kind name for a reflex (one scheduled job), not the Pulse organ; the kind name stays.
   heartbeat_* / mail_digest_*:
     level: legacy
     means: Config keys for the fleet heartbeat and the daily mail digest; they stay.
     names:
-      - yaml_key: "default.config.yml#heartbeat_interval"
-      - yaml_key: "default.config.yml#mail_digest_cron"
+      - config_key: heartbeat_interval
+      - config_key: mail_digest_cron
 
   # ── retired entirely ────────────────────────────────────────────────────
   brain:

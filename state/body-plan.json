@@ -2,12 +2,12 @@
   "version": 1,
   "generated_by": "tools/body-plan-gen.py",
   "projects": "state/anatomy-graph.json",
-  "levels_from": "state/body-levels.yml",
+  "levels_from": "state/genome/lexicon.yml",
   "counts": {
     "genome": 20,
     "cell": 16,
     "tissue": 0,
-    "organ": 140,
+    "organ": 90,
     "organ system": 13,
     "organism": 0,
     "habitat": 4,
@@ -15,8 +15,9 @@
     "limb": 20,
     "memory": 40,
     "law": 36,
-    "internal": 66,
-    "edges": 339
+    "reflex": 43,
+    "internal": 73,
+    "edges": 336
   },
   "nodes": {
     "agent:conductor": {
@@ -544,31 +545,31 @@
       "kind": "doctrine"
     },
     "faceapp:anatomy": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "faceapp:anatomy-widget": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "faceapp:books": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "faceapp:files": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "faceapp:keap-explore": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "faceapp:planner": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "faceapp:tables": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "gateset:corpus": {
@@ -664,175 +665,175 @@
       "kind": "organ_system"
     },
     "pulse:alert-relay:relay-firing": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:authentik-tofu-drift:tofu-drift-plan": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:backup:backup-restore-drill": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:conductor:scan-state-record": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:conductor:security-drift-watch": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:conductor:self-test-001": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:conductor:vulnerability-scan": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:cortex:cortex-corpus-diff": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:cortex:cortex-fs-sync": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:crm-hydrate:hydrate-parties": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:discovery:contradiction-scan": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:gdpr-breach:breach-deadline-scan": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:geo:geo-load": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:geo:project-sites": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:geolibre:atlas-refresh": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:gitea:trunk-sync": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:gitlab:trunk-sync": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:gitleaks:nightly-scan": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:invoice-vision:absorb-approved": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:invoice-vision:intake-sweep": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:keap:keap-consolidate": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:keap:keap-embed-sync": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:keap:keap-features-sync": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:keap:keap-lint": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:librarian:brief-taxonomy": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:librarian:describe-taxonomy": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:librarian:judge-lint-queue": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:loop:drive": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:loop:news-scout": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:loop:pipeline-exercise": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:loop:propose": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:loop:repo-check": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:loop:review": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:loop:vision-bench": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:n8n:exec-watch": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:npm-supply-chain:daily-ioc-scan": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:surveyor:surface-survey": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:upgrade-architect:recipe-author": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:wing:agent-cost-tally": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:wing:audit-chain-verify": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:wing:dispatch-notifications": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:wing:dispatch-notifications-digest": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "pulse:wing:inbox-reconcile": {
-      "level": "organ",
+      "level": "reflex",
       "kind": "pulse"
     },
     "reader:_geo_db": {
@@ -2057,11 +2058,6 @@
       "kind": "trigger"
     },
     {
-      "from": "daemon:eu.thisisait.nos.wing",
-      "to": "faceapp:anatomy-widget",
-      "kind": "data"
-    },
-    {
       "from": "doctrine:ssot/doctrine/foreign-properties.md#5.1",
       "to": "article:foreign-properties",
       "kind": "part_of"
@@ -2070,11 +2066,6 @@
       "from": "doctrine:ssot/doctrine/workflows.md#6",
       "to": "article:workflows",
       "kind": "part_of"
-    },
-    {
-      "from": "faceapp:anatomy-widget",
-      "to": "faceapp:anatomy",
-      "kind": "trigger"
     },
     {
       "from": "judge:ansible-lint",
@@ -2785,11 +2776,6 @@
       "from": "service:erpnext",
       "to": "organ_system:backoffice",
       "kind": "part_of"
-    },
-    {
-      "from": "service:face",
-      "to": "faceapp:anatomy-widget",
-      "kind": "data"
     },
     {
       "from": "service:face",

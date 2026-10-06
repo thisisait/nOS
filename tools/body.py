@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """What am I part of? The estate as a body plan, for a model that just arrived.
 
-    tools/body.py                  the ladder top to bottom, then senses, limbs, memory, law
+    tools/body.py                  the ladder top to bottom, then senses, limbs, memory, law, reflexes
     tools/body.py "organ system"   every node at one level, most connected first
     tools/body.py service:keap     one node: what it is, its level, what it touches
     tools/body.py keap             same, by local name when that is unambiguous
@@ -28,14 +28,15 @@ LEVELS = {
     "genome": "declared contracts every part inherits — task types, skills",
     "cell": "who you can be — one model in one specialization",
     "tissue": "cells of one specialization working together",
-    "organ": "a part with one job — a service, daemon or scheduled function",
+    "organ": "a part with one job — a service or host daemon",
     "organ system": "organs grouped for one function",
     "organism": "the estate as a whole",
-    "habitat": "what lives beside the organism — the git surfaces",
+    "habitat": "what lives beside the organism — software by origin, the git surfaces",
     "sense": "what you can ask — readers and judges that only read",
     "limb": "what you can reach for — tool grants that act",
     "memory": "what the estate has learned — KEAP tables",
     "law": "the rules it inherits — constitution articles and paragraphs",
+    "reflex": "what runs by itself — scheduled responses Pulse fires (proposed word)",
 }
 CROSS = "sense"
 EMPTY = {
@@ -111,7 +112,7 @@ def main() -> int:
         if args.json:
             print(json.dumps(data, indent=2))
             return 0
-        print("nOS body plan — genome to habitat, then senses, limbs, memory, law "
+        print("nOS body plan — genome to habitat, then senses, limbs, memory, law, reflexes "
               "(tools/body.py <level|node>)")
         for lv, line in LEVELS.items():
             if lv == CROSS:

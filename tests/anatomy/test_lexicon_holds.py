@@ -12,7 +12,8 @@ What it checks, all from artifacts, never from prose about them:
       launchd label, anchor prefix);
   (b) every `retired.surfaces` entry is gone;
   (c) every node kind in state/anatomy-graph.json is named by exactly one word,
-      and that word is a body level or cross-cutting;
+      and that word is a body level, cross-cutting or internal (the same
+      map tools/body-plan-gen.py projects; test_body_plan_is_a_projection.py);
   (d) `retired_phrases` do not appear in the files models are told to trust
       (CLAUDE.md, ssot/doctrine/, docs/doctrine/, skill SKILL.md, agent
       system.md) — exact phrase, any case, across emphasis and line breaks.
@@ -30,6 +31,7 @@ import functools
 import json
 import pathlib
 import re
+import sys
 
 import pytest
 import yaml
@@ -52,10 +54,6 @@ PENDING_SURFACES = {
     "brain: path tests/anatomy/test_backup_reaches_the_brain.py",
     "organelle: path state/genome/organelle/",
 }
-
-#: Graph kinds with no ruled level yet. `pulse` is written down (legacy) but
-#: not placed; the rest have no word at all.
-PENDING_KINDS = {"authentik", "faceapp", "pulse", "repo", "resource", "table", "tofu"}
 
 #: "file :: phrase" → occurrences, in the files models are told to trust.
 PENDING_PHRASES: dict[str, int] = {
@@ -84,7 +82,7 @@ PENDING_PHRASES: dict[str, int] = {
     "ssot/doctrine/immune-system.md :: indicators as cells": 1,
     "ssot/doctrine/immune-system.md :: memory | where each verdict": 1,
     "ssot/doctrine/immune-system.md :: memory — the verdict log": 1,
-    "ssot/doctrine/immune-system.md :: non-self": 1,
+    "ssot/doctrine/immune-system.md :: non-self": 2,
     "ssot/doctrine/immune-system.md :: organs of a first organism": 1,
     "ssot/doctrine/immune-system.md :: spinal cord": 1,
 }
@@ -96,6 +94,14 @@ PENDING_PHRASES: dict[str, int] = {
 @functools.lru_cache(maxsize=None)
 def _yaml(rel: str):
     return yaml.safe_load((REPO / rel).read_text(encoding="utf-8"))
+
+
+@functools.lru_cache(maxsize=None)
+def _defaults() -> dict:
+    """The committed config defaults, every layer (tools/nos_identity.py)."""
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity  # noqa: PLC0415
+    return nos_identity.default_config()
 
 
 def _words() -> dict:
@@ -123,14 +129,35 @@ def _text_under(globs: tuple[str, ...]) -> str:
                      for g in globs for p in sorted(REPO.glob(g)) if p.is_file())
 
 
+#: Keys a surface may carry beside its one typed key.
+_SURFACE_EXTRAS = {"reason", "values"}
+
+
+def _typed(surface: dict) -> tuple[str, str]:
+    (kind, value), = ((k, v) for k, v in surface.items() if k not in _SURFACE_EXTRAS)
+    return kind, value
+
+
 def _exists(surface: dict) -> bool:
-    (kind, value), = surface.items()
+    kind, value = _typed(surface)
     if kind == "path":
         p = REPO / value
         return p.is_dir() if value.endswith("/") else p.exists()
-    if kind == "yaml_key":
-        rel, _, dotted = value.partition("#")
-        return (REPO / rel).is_file() and _has_key(_yaml(rel), dotted.split("."))
+    if kind in ("yaml_key", "config_key"):
+        if kind == "yaml_key":
+            rel, _, dotted = value.partition("#")
+            if not (REPO / rel).is_file():
+                return False
+            doc = _yaml(rel)
+        else:
+            doc, dotted = _defaults(), value
+        if not _has_key(doc, dotted.split(".")):
+            return False
+        if "values" not in surface:
+            return True
+        for k in dotted.split("."):
+            doc = doc[k]
+        return set(doc.values()) == set(surface["values"])
     if kind == "graph_kind":
         return value in _graph_kinds()
     if kind == "manifest_field":
@@ -145,8 +172,8 @@ def _exists(surface: dict) -> bool:
 
 
 def _label(word: str, surface: dict) -> str:
-    (kind, value), = surface.items()
-    return f"{word}: {kind} {value}"
+    kind, value = _typed(surface)
+    return f"{word}: {kind} {value}" + (f" = {surface['values']}" if "values" in surface else "")
 
 
 def _trusted() -> list[pathlib.Path]:
@@ -239,12 +266,11 @@ def test_every_graph_kind_maps_to_exactly_one_level():
 
     words = _words()
     ruled = {k for k, (w,) in named.items()
-             if words[w]["level"] in BODY_LEVELS + ("cross",)}
-    unruled = set(_graph_kinds()) - ruled
-    assert unruled == PENDING_KINDS, (
-        f"graph kinds with no level or cross ruling: {sorted(unruled - PENDING_KINDS)} "
-        f"(rule them in state/genome/lexicon.yml); now ruled, delete from PENDING_KINDS: "
-        f"{sorted(PENDING_KINDS - unruled)}")
+             if words[w]["level"] in BODY_LEVELS + ("cross", "internal")}
+    unruled = sorted(set(_graph_kinds()) - ruled)
+    assert not unruled, (
+        f"graph kinds with no body level, cross or internal ruling: {unruled} — "
+        f"name each under one word's `names: graph_kind` in state/genome/lexicon.yml")
 
 
 # ── (d) retired phrases, in the files models trust ────────────────────────

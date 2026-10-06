@@ -13,9 +13,9 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - **definition** (cell) — One cell's own prompt and tool allow-list, versioned and hashed. Not: genome, law.
 - **tissue** (tissue) — The transplantable pack of one specialization's cells with their skills, tables and services. Not: plugin, organ.
 - **organ** (organ) — One service or host daemon with one job; one row in state/manifest.yml. Not: organ system, cell, digest.
-- **organ system** (organ system) — A public group of organs serving one function; the apex page shows thirteen. Not: organ, organism.
+- **organ system** (organ system) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organs:` key, whose rename is pending (step 5). Not: organ, organism.
 - **organism** (organism) — One nOS install on one machine, all its organ systems together. Not: habitat, anatomy.
-- **habitat** (habitat) — The machine and what belongs to its owner; nOS never installs or touches it. Not: organism, symbiont.
+- **habitat** (habitat) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat) and its git surfaces. Software of origin habitat belongs to the machine's owner, and nOS never installs or touches it. Not: organism, symbiont.
 
 ## Across levels
 
@@ -27,12 +27,17 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - **memory** — What nOS has learned, kept in KEAP; RAM stays plain English. Not: cortex, verdicts, stores.
 - **verdicts** — The log of what each sense reported and what the operator judged. Not: memory.
 - **law** — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Not: genome, definition.
+- **reflex** (proposed, not yet ruled) — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Not: Pulse, heartbeat, organ.
 - **heartbeat** — A periodic signal that proves something is still alive. Not: Pulse.
 - **nervous system** — The path events take to the operator, from events to the Wing inbox to ntfy or mail. Not: converge.
 - **twin** — The second Mac. Not: mirror-parity.
 - **plugin** — A plugin.yml declaring how one service is wired to the others (SSO, dashboards, jobs). Not: tissue, gene.
 - **anatomy** — The structure of one organism drawn as a graph. Not: body plan.
-- **body plan** — The level scheme the anatomy is projected onto (registered by the body-plan work). Not: anatomy.
+- **body plan** — The anatomy projected onto the levels above; each graph kind's level is read from state/genome/lexicon.yml. Not: anatomy.
+
+## Plumbing (hidden from the body plan)
+
+- **internal** — Real plumbing that is not a body part; the body plan hides it by default. Not: organ, sense.
 
 ## Procedures
 
@@ -59,7 +64,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - `tests/anatomy/` — The offline gates; the directory name stays.
 - `bone_* / WING_* / eu.thisisait.nos.*` — Config, environment and launchd label prefixes; they stay as spelled.
 - `nos.host.*` — KEAP anchors for host-native organs; they stay.
-- **pulse (graph kind)** — One scheduled job in the anatomy graph, not the Pulse organ.
+- **pulse (graph kind)** — The anatomy graph's kind name for a reflex (one scheduled job), not the Pulse organ; the kind name stays.
 - `heartbeat_* / mail_digest_*` — Config keys for the fleet heartbeat and the daily mail digest; they stay.
 - **brain** — Not used. KEAP is memory, the host parts are organs, the Wing API token is a flat token.
 - **spine** — Not a body-plan word; KEAP's ontology spine is upstream's word, and "The Spine" stays an apex title.
@@ -84,6 +89,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - Pulse called the heartbeat → Pulse, which is the scheduler
 - the playbook called the nervous system → converge
 - twin for two lists that must stay equal (twin-parity) → mirror-parity
+- a second kind-to-level map beside the lexicon → the graph_kind names in state/genome/lexicon.yml
 - the digest organ, the stomach → digest
 - cortex-query, recall from KEAP → keap-recall (step 3)
 - brain for KEAP, the four host parts or the Wing API token → memory / organs / flat token

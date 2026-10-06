@@ -5,9 +5,10 @@ state/anatomy-graph.json holds every node in one address space, in as many
 kinds as the estate has parts. A newly arrived model already knows the ladder
 genome → cell → tissue → organ → organ system → organism → habitat, and the
 systems that cut across it: sense (reads), limb (acts), memory (learned), law
-(inherited). state/body-levels.yml
-places each anatomy KIND on one of those (or `internal`); this file applies the
-placement and nothing else.
+(inherited), reflex (scheduled response). state/genome/lexicon.yml places
+each anatomy KIND on one of those (or `internal`) through the one word that
+names it under `names: graph_kind`; this file applies the placement and
+nothing else.
 
 A PROJECTION, not a second graph: every body-plan node is an anatomy node
 carrying only its kind and level, and an edge survives only between two
@@ -31,15 +32,15 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 ANATOMY = REPO / "state" / "anatomy-graph.json"
-LEVELS_FILE = REPO / "state" / "body-levels.yml"
+LEVELS_FILE = REPO / "state" / "genome" / "lexicon.yml"
 TARGET = REPO / "state" / "body-plan.json"
 
 #: The ladder, in order, then the cross-cutting systems. Order is the reading order.
 LADDER = ("genome", "cell", "tissue", "organ", "organ system", "organism", "habitat")
-SYSTEMS = ("sense", "limb", "memory", "law")
+SYSTEMS = ("sense", "limb", "memory", "law", "reflex")
 ALL_LEVELS = LADDER + SYSTEMS + ("internal",)
-#: The only keys a map row may carry — anything more is a per-node fact creeping in.
-ROW_KEYS = {"level", "reason"}
+#: The only keys a kind row may carry — anything more is a per-node fact creeping in.
+ROW_KEYS = {"graph_kind", "reason"}
 
 
 def _die(msg: str) -> None:
@@ -47,20 +48,38 @@ def _die(msg: str) -> None:
     raise SystemExit(1)
 
 
+def kind_rows(doc: dict) -> dict[str, tuple[str, dict]]:
+    """kind -> (naming word, its graph_kind row); a kind named by two words is refused."""
+    words = (doc or {}).get("words")
+    if not isinstance(words, dict):
+        _die(f"{LEVELS_FILE.relative_to(REPO)} has no `words:` mapping")
+    out: dict[str, tuple[str, dict]] = {}
+    for word, w in words.items():
+        for row in w.get("names") or []:
+            if "graph_kind" not in row:
+                continue
+            if row["graph_kind"] in out:
+                _die(f"kind {row['graph_kind']!r} is named by both "
+                     f"{out[row['graph_kind']][0]!r} and {word!r}")
+            out[row["graph_kind"]] = (word, row)
+    return out
+
+
 def kind_map(doc: dict) -> dict[str, str]:
-    """kind -> level from the map file, refusing any row that is not exactly that."""
-    rows = (doc or {}).get("levels")
-    if not isinstance(rows, dict):
-        _die(f"{LEVELS_FILE.relative_to(REPO)} has no `levels:` mapping")
+    """kind -> level: the naming word's level, or the word itself when it is `cross`."""
+    if tuple((doc or {}).get("order", ())[: len(LADDER)]) != LADDER:
+        _die(f"{LEVELS_FILE.relative_to(REPO)} `order` does not open with {LADDER}")
     out = {}
-    for kind, row in rows.items():
-        if not isinstance(row, dict) or set(row) != ROW_KEYS:
+    for kind, (word, row) in kind_rows(doc).items():
+        if set(row) != ROW_KEYS:
             _die(f"kind {kind!r}: a row is exactly {sorted(ROW_KEYS)}, got {row!r}")
-        if row["level"] not in ALL_LEVELS:
-            _die(f"kind {kind!r}: level {row['level']!r} is not one of {ALL_LEVELS}")
+        level = doc["words"][word]["level"]
+        level = word if level == "cross" else level
+        if level not in ALL_LEVELS:
+            _die(f"kind {kind!r}: level {level!r} (word {word!r}) is not one of {ALL_LEVELS}")
         if not str(row["reason"]).strip():
             _die(f"kind {kind!r}: a level with no reason is an assertion")
-        out[kind] = row["level"]
+        out[kind] = level
     return out
 
 
@@ -68,11 +87,11 @@ def project(anatomy: dict, kinds: dict[str, str]) -> dict:
     present = {n["kind"] for n in anatomy["nodes"].values()}
     unmapped = sorted(present - set(kinds))
     if unmapped:
-        _die(f"anatomy kinds with no level: {unmapped} — add a row to "
-             f"{LEVELS_FILE.relative_to(REPO)} (level + one-line reason)")
+        _die(f"anatomy kinds with no level: {unmapped} — name each under one word's "
+             f"`names: graph_kind` in {LEVELS_FILE.relative_to(REPO)} (+ one-line reason)")
     dead = sorted(set(kinds) - present)
     if dead:
-        _die(f"map rows for kinds the anatomy graph no longer has: {dead}")
+        _die(f"lexicon names kinds the anatomy graph no longer has: {dead}")
 
     # Level and kind only: description/source stay in the anatomy graph and
     # are joined by id (tools/body.py), so no fact is held twice.
@@ -90,7 +109,7 @@ def project(anatomy: dict, kinds: dict[str, str]) -> dict:
         "version": 1,
         "generated_by": "tools/body-plan-gen.py",
         "projects": "state/anatomy-graph.json",
-        "levels_from": "state/body-levels.yml",
+        "levels_from": "state/genome/lexicon.yml",
         "counts": counts,
         "nodes": nodes,
         "edges": edges,

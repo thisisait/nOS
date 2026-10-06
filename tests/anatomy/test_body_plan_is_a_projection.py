@@ -2,9 +2,10 @@
 
 state/body-plan.json places anatomy KINDS on biology's ladder (genome → cell →
 tissue → organ → organ system → organism → habitat, plus sense / limb /
-memory / law) through
-state/body-levels.yml. The failure this guards is the one the estate keeps
-paying for: two representations of one fact. If the map grew per-node rows, or
+memory / law / reflex) through the one word that names each kind in
+state/genome/lexicon.yml (`names: graph_kind`). The failure this guards is the
+one the estate keeps paying for: two representations of one fact — which is
+why state/body-levels.yml was folded into the lexicon. If the map grew per-node rows, or
 the artifact held a node the anatomy graph does not, the body plan would start
 drifting from the estate it claims to describe — and read as complete.
 """
@@ -23,7 +24,7 @@ import yaml
 REPO = pathlib.Path(__file__).resolve().parents[2]
 ANATOMY = REPO / "state" / "anatomy-graph.json"
 PLAN = REPO / "state" / "body-plan.json"
-LEVELS = REPO / "state" / "body-levels.yml"
+LEVELS = REPO / "state" / "genome" / "lexicon.yml"
 GEN = REPO / "tools" / "body-plan-gen.py"
 
 
@@ -40,26 +41,34 @@ def _load():
             yaml.safe_load(LEVELS.read_text(encoding="utf-8")))
 
 
+def _level_of(doc: dict, word: str) -> str:
+    """The class a kind gets: the naming word's level, or the word when it is `cross`."""
+    level = doc["words"][word]["level"]
+    return word if level == "cross" else level
+
+
 def test_every_anatomy_kind_has_a_level():
     anatomy, _, doc = _load()
+    rows = _gen().kind_rows(doc)
     kinds = {n["kind"] for n in anatomy["nodes"].values()}
-    unmapped = sorted(kinds - set(doc["levels"]))
+    unmapped = sorted(kinds - set(rows))
     assert not unmapped, (
-        f"anatomy kinds with no level: {unmapped}. Add a row to "
-        f"state/body-levels.yml (level + one-line reason), then run "
-        f"tools/body-plan-gen.py")
-    bad = {k: r.get("level") for k, r in doc["levels"].items()
-           if r.get("level") not in _gen().ALL_LEVELS}
+        f"anatomy kinds with no level: {unmapped}. Name each under one word's "
+        f"`names: graph_kind` in state/genome/lexicon.yml (+ one-line reason), "
+        f"then run tools/body-plan-gen.py")
+    bad = {k: _level_of(doc, w) for k, (w, _) in rows.items()
+           if _level_of(doc, w) not in _gen().ALL_LEVELS}
     assert not bad, f"levels outside the vocabulary: {bad}"
 
 
 def test_every_body_node_resolves_to_an_anatomy_node():
     anatomy, plan, doc = _load()
+    rows = _gen().kind_rows(doc)
     stray = sorted(set(plan["nodes"]) - set(anatomy["nodes"]))
     assert not stray, f"body-plan nodes the anatomy graph does not hold: {stray[:10]}"
     wrong = [nid for nid, n in plan["nodes"].items()
              if n["kind"] != anatomy["nodes"][nid]["kind"]
-             or n["level"] != doc["levels"][n["kind"]]["level"]]
+             or n["level"] != _level_of(doc, rows[n["kind"]][0])]
     assert not wrong, f"nodes whose kind/level disagree with the source: {wrong[:10]}"
     real = {(e["from"], e["to"], e["kind"]) for e in anatomy["edges"]}
     for e in plan["edges"]:
@@ -76,15 +85,17 @@ def test_check_is_clean():
 
 def test_the_map_holds_no_per_node_facts():
     anatomy, _, doc = _load()
-    assert set(doc) == {"version", "levels"}, f"unexpected top-level keys: {set(doc)}"
-    fat = {k: sorted(r) for k, r in doc["levels"].items()
-           if not isinstance(r, dict) or set(r) != {"level", "reason"}}
-    assert not fat, f"a map row is exactly level + reason: {fat}"
+    assert set(doc) == {"version", "order", "words"}, f"unexpected top-level keys: {set(doc)}"
+    fat = {k: sorted(r) for k, (_, r) in _gen().kind_rows(doc).items()
+           if not isinstance(r, dict) or set(r) != {"graph_kind", "reason"}}
+    assert not fat, f"a kind row is exactly graph_kind + reason: {fat}"
     text = LEVELS.read_text(encoding="utf-8")
     named = sorted(nid for nid in anatomy["nodes"] if nid in text)
     assert not named, (
-        f"state/body-levels.yml names individual nodes {named[:5]} — per-node "
-        f"facts belong in the anatomy graph, the map holds kinds only")
+        f"state/genome/lexicon.yml names individual nodes {named[:5]} — per-node "
+        f"facts belong in the anatomy graph, the lexicon holds kinds only")
+    assert not (REPO / "state" / "body-levels.yml").exists(), (
+        "state/body-levels.yml is back — the kind → level map lives in the lexicon only")
 
 
 def test_an_empty_level_is_counted_not_hidden():
@@ -108,7 +119,7 @@ def test_law_and_organ_system_are_populated():
 #: (2026-10-05); before it, `sense` was judges alone (5). tissue, organism and
 #: habitat carry no floor: the first two are empty by declaration.
 CONNECTED_FLOOR = 10
-WALKED = ("genome", "cell", "organ", "organ system", "sense", "limb", "memory", "law")
+WALKED = ("genome", "cell", "organ", "organ system", "sense", "limb", "memory", "law", "reflex")
 
 
 def test_every_walked_level_is_a_graph_not_a_list():

@@ -362,7 +362,8 @@ LEXICON = GENOME / "lexicon.yml"
 GLOSSARY_TARGET = REPO / "docs" / "glossary.md"
 
 _SECTIONS = {
-    "cross": "Across levels", "procedure": "Procedures",
+    "cross": "Across levels", "internal": "Plumbing (hidden from the body plan)",
+    "procedure": "Procedures",
     "proper-name": "Proper names (one job each)", "legacy": "Left alone, or retired",
 }
 
@@ -394,6 +395,7 @@ def emit_glossary(_g: dict) -> str:
             if w["level"] != lv:
                 continue
             tag = f" ({lv})" if lv not in _SECTIONS else ""
+            tag += " (proposed, not yet ruled)" if w.get("proposed") else ""
             nots = f" Not: {', '.join(w['not'])}." if w.get("not") else ""
             name = f"`{word}`" if set(word) & set("*_/") else f"**{word}**"
             out.append(f"- {name}{tag} — {w['means']}{nots}")
