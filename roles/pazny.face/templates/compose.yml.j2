@@ -55,6 +55,9 @@ services:
       # block verbatim, credentials included.
       NOS_WING_API_URL: "http://host.docker.internal:{{ wing_port | default(9000) }}/api/v1"
       NOS_WING_API_TOKEN: "{{ wing_api_token | default('') }}"
+      # The `face-bff` bearer: the only Wing token that may act AS an end user
+      # (files/anatomy/contracts/face-wing.yml). Empty -> the session routes say 503.
+      NOS_WING_BFF_TOKEN: "{{ face_bff_wing_api_token | default('') }}"
       # Bone VFS (host daemon) — the real per-user tree. Endpoint lands in M2;
       # until then the file browser degrades gracefully (shows "unreachable").
       NOS_VFS_API_URL: "http://host.docker.internal:{{ bone_port | default(8099) }}/api/v1/vfs"

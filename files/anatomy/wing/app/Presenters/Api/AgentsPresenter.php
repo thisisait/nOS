@@ -27,7 +27,8 @@ use Nette\Http\IResponse;
  *
  * Operator-trigger contract (A14 follow-up, 2026-05-07):
  *   - actor_id is ALWAYS derived from $this->validatedToken['name'] via
- *     BaseApiPresenter::getActorId(). NEVER accept a client-supplied
+ *     BaseApiPresenter::getActorId() — or, for the face-bff bearer only,
+ *     'user:<uid>' (files/anatomy/contracts/face-wing.yml). NEVER accept a client-supplied
  *     actor_id in the request body — that is a privilege-escalation
  *     vector and would let any token holder masquerade as 'conductor'
  *     or 'openclaw'. Same X.1.b pattern Pulse uses.
@@ -57,6 +58,8 @@ final class AgentsPresenter extends BaseApiPresenter
 	) {
 		parent::__construct();
 	}
+
+	protected array $bffActions = ['sessions'];
 
 	public function actionDefault(?string $name = null): void
 	{
@@ -123,7 +126,7 @@ final class AgentsPresenter extends BaseApiPresenter
 			return;
 		}
 		$this->requireMethod('GET');
-		$rows = $this->sessions->listRecent(100, $name);
+		$rows = $this->sessions->listRecent(100, $name, $this->endUser?->scope());
 		$this->sendSuccess(['data' => $rows, 'total' => count($rows)]);
 	}
 
@@ -151,12 +154,20 @@ final class AgentsPresenter extends BaseApiPresenter
 		// argv as the value of --agent and get rejected by the child only
 		// after Nette container boot — wasting ~500ms).
 		try {
-			$this->loader->load($name);
+			$agent = $this->loader->load($name);
 		} catch (AgentLoadException $exc) {
 			$this->sendError($exc->getMessage(), 404);
 		}
 
 		$body = $this->getJsonBody();
+		// face-wing.yml §2-3: an end user picks no vault, and below Tier 1 opens
+		// only an agent that declares itself open to end users.
+		if ($this->endUser !== null && isset($body['vault'])) {
+			$this->sendError('vault is not accepted from an end user', 400);
+		}
+		if ($this->endUser !== null && !$this->endUser->operator && ($agent->metadata['end_user'] ?? false) !== true) {
+			$this->sendError("agent '{$name}' is not open to end users (metadata.end_user)", 403);
+		}
 		$prompt = isset($body['prompt']) && is_string($body['prompt']) ? $body['prompt'] : null;
 		$vault  = isset($body['vault'])  && is_string($body['vault'])  ? $body['vault']  : null;
 

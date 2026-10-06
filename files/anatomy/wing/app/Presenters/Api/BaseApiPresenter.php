@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Presenters\Api;
 
 use App\Model\TokenRepository;
+use App\Security\EndUser;
 use Nette\Application\UI\Presenter;
 use Nette\Http\IResponse;
 
@@ -27,6 +28,12 @@ abstract class BaseApiPresenter extends Presenter
 	 */
 	protected ?array $validatedToken = null;
 
+	/** Actions the face-bff bearer may reach; each must narrow reads by endUser->scope(). */
+	protected array $bffActions = [];
+
+	/** The end user the face BFF speaks for, or null (face-wing.yml §2). */
+	protected ?EndUser $endUser = null;
+
 	public function startup(): void
 	{
 		parent::startup();
@@ -44,6 +51,20 @@ abstract class BaseApiPresenter extends Presenter
 				'Token scope does not permit ' . $this->getMethod() . ' on the ops plane',
 				IResponse::S403_Forbidden,
 			);
+		}
+
+		$req = $this->getHttpRequest();
+		try {
+			$this->endUser = EndUser::fromRequest(
+				$this->validatedToken['name'] ?? null,
+				$req->getHeader('X-Nos-User-Uid'),
+				$req->getHeader('X-Nos-User-Groups'),
+			);
+		} catch (\DomainException $e) {
+			$this->sendError($e->getMessage(), IResponse::S401_Unauthorized);
+		}
+		if ($this->endUser !== null && !in_array($this->getAction(), $this->bffActions, true)) {
+			$this->sendError('the face-bff token does not reach this action', IResponse::S403_Forbidden);
 		}
 	}
 
@@ -74,6 +95,9 @@ abstract class BaseApiPresenter extends Presenter
 	 */
 	protected function getActorId(): ?string
 	{
+		if ($this->endUser !== null) {
+			return $this->endUser->actorId();
+		}
 		$name = $this->validatedToken['name'] ?? null;
 		return is_string($name) && $name !== '' ? $name : null;
 	}

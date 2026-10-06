@@ -338,6 +338,26 @@
     or 'Updated' in (_wing_librarian_token.stdout | default(''))
   no_log: true
 
+# The face BFF speaks for end users with this row and no other: Wing believes
+# X-Nos-User-* only on a bearer named face-bff, and only on the session actions
+# (files/anatomy/contracts/face-wing.yml §2). wing.write: it opens sessions.
+- name: "[pazny.wing] Reconverge API token — face-bff (end-user sessions)"
+  ansible.builtin.command:
+    argv:
+      - "{{ wing_php_cli }}"
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ face_bff_wing_api_token }}
+      - --name=face-bff
+      - --scopes=wing.write
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_face_bff_token
+  changed_when: >
+    'Created' in (_wing_face_bff_token.stdout | default(''))
+    or 'Updated' in (_wing_face_bff_token.stdout | default(''))
+  no_log: true
+  when: install_face | default(false)
+
 # Roster close 2026-08-26 left retired/parked agents' rows live; ruling 4
 # (docs/doctrine/agentkit.md §6.4) ends that: measured 2026-09-03, all five
 # were NULL-scope, active, and NEVER used. Reactivating one is a deliberate

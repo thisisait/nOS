@@ -235,11 +235,14 @@ final class AgentSessionRepository
 	/**
 	 * @return array<int, array<string, mixed>>
 	 */
-	public function listRecent(int $limit = 50, ?string $agentName = null): array
+	public function listRecent(int $limit = 50, ?string $agentName = null, ?string $actorId = null): array
 	{
 		$q = $this->db->table('agent_sessions')->order('id DESC')->limit($limit);
 		if ($agentName !== null) {
 			$q->where('agent_name', $agentName);
+		}
+		if ($actorId !== null) {
+			$q->where('actor_id', $actorId);
 		}
 		$out = [];
 		foreach ($q->fetchAll() as $row) {

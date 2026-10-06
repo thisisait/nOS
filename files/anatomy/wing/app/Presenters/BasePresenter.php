@@ -37,7 +37,7 @@ abstract class BasePresenter extends Presenter
 	 * contract — a rename in default.config.yml must be matched in code.
 	 */
 	private const TIER_GROUPS = [
-		1 => ['nos-providers', 'nos-admins'],
+		1 => \App\Security\EndUser::OPERATOR_GROUPS,
 		2 => ['nos-managers'],
 		3 => ['nos-users'],
 		4 => ['nos-guests'],

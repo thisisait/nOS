@@ -22,10 +22,14 @@ final class AgentSessionsPresenter extends BaseApiPresenter
 		parent::__construct();
 	}
 
+	protected array $bffActions = ['default'];
+
 	public function actionDefault(string $uuid): void
 	{
 		$session = $this->sessions->findByUuid($uuid);
-		if ($session === null) {
+		// Not yours answers like absent, so a uuid's existence does not leak.
+		$scope = $this->endUser?->scope();
+		if ($session === null || ($scope !== null && $session['actor_id'] !== $scope)) {
 			$this->sendError('not_found', 404);
 		}
 		$this->sendSuccess([
