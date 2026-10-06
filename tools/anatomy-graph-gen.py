@@ -35,7 +35,11 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
     weakness:<id>           files/anatomy/bone/weaknesses.py SOURCE_ORDER
     daemon:<launchd label>  eu.thisisait.nos.* labels from role defaults
     service:<manifest id>   state/manifest.yml services[].id
-    resource:<name>         mutex/capability resources (claims + requires)
+    tool:<id> / tool_ro:<id>   agent tool grants; `_ro` when every scope the
+                            grant opens is `.read` (tools/agent-capability.py TOOL_KAM)
+    token:<n> / token_ro:<n>   judge-sets `requires:` capabilities; `_ro` by name
+    backend:<name>          state/llm-backends.yml rows
+    lock:<name>             mutex resources (claims)
     repo:<name>             git surfaces jobs touch (curated, each node pinned
                             to the code that touches it — see REPO_SURFACES)
     tofu:<name>             OpenTofu state roots (terraform/<name>/)
@@ -92,7 +96,7 @@ WHAT IS DERIVED, NOT DECLARED
   * daemon:eu.thisisait.nos.pulse → job dispatch edges (structural: the
     daemon fires every unpaused job; pulse/daemon.py list_due_jobs)
   * judge capability edges — judge-sets `requires:` become data edges from
-    resource:* nodes (satisfied or not, never exclusive)
+    token:* / token_ro:* nodes (satisfied or not, never exclusive)
   * temporal debt — for every temporal edge, the worst-case DECLARED margin
     (cron gap − upstream jitter − upstream max_runtime) and whether the
     declared budgets already permit inversion (§1.4 col 4)
@@ -105,6 +109,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import functools
 import importlib.util
 import json
 import re
@@ -232,7 +237,9 @@ KIND_ANCHORS = {
     "judge": "02.02.04", "gateset": "02.02.04",
     "weakness": "02.02.08",
     "daemon": "02.02.06",
-    "resource": "02.02.06",       # concurrency primitives are an OS concept
+    "lock": "02.02.06",           # concurrency primitives are an OS concept
+    "tool": "02.02.09", "tool_ro": "02.02.09", "backend": "02.02.09",
+    "token": "02.02.08", "token_ro": "02.02.08",
     "repo": "02.02.04",
     "tofu": "02.02.04",
     "authentik": "02.02.08",
@@ -449,6 +456,30 @@ def harvest_loop_manifests(nodes: dict, raw_edges: list, raw_writes: list) -> No
 # ── harvest: judges + gate sets ───────────────────────────────────────────
 
 
+@functools.lru_cache(maxsize=None)
+def _tool_kam() -> dict[str, list[str]]:
+    """tool id → scopes, from the routing projection's own map (one source)."""
+    spec = importlib.util.spec_from_file_location(
+        "_agent_capability", REPO / "tools" / "agent-capability.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.TOOL_KAM
+
+
+def tool_id(tool: str) -> str:
+    """`tool_ro:` when every scope the grant opens is `.read` (a sense); else
+    `tool:` (a limb). A grant with no declared scope (ask-operator) is a limb:
+    absence of a read-only declaration is never read as read-only."""
+    scopes = _tool_kam().get(tool) or []
+    ro = bool(scopes) and all(s.endswith(".read") for s in scopes)
+    return f"{'tool_ro' if ro else 'tool'}:{tool}"
+
+
+def token_id(cap: str) -> str:
+    """`token_ro:` for a capability whose own name declares `_ro`; else `token:`."""
+    return f"{'token_ro' if cap.endswith('_ro') else 'token'}:{cap}"
+
+
 def harvest_judges(nodes: dict, edges: list) -> None:
     doc = yaml.safe_load(JUDGE_SETS.read_text(encoding="utf-8"))
     for name, j in (doc.get("judges") or {}).items():
@@ -465,7 +496,7 @@ def harvest_judges(nodes: dict, edges: list) -> None:
         }
         for cap in j.get("requires") or []:
             edges.append({
-                "from": f"resource:{cap}",
+                "from": token_id(cap),
                 "to": f"judge:{name}",
                 "kind": "data",
                 "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
@@ -534,20 +565,21 @@ def _describe(nid: str, n: dict) -> str:
                 f"{n.get('runner_status') or 'UNDECLARED (not a green state)'} — "
                 f"primary {n.get('primary_model')} on backend {n.get('backend')}"
                 f"{'' if n.get('backend_declared') else ' (the register default, undeclared)'}")
-    if kind == "resource":
-        src = str(n.get("source"))
-        if src.startswith("state/llm-backends.yml"):
-            return (f"LLM backend '{local.removeprefix('backend-')}' — a permitted "
-                    f"orchestrator row (protocol {n.get('protocol')}, "
-                    f"eu_resident={n.get('eu_resident')}), armed by "
-                    f"{n.get('enabled_flag') or 'no flag — this is the default backend'}")
-        if "agent tools" in src:
-            return (f"Agent tool '{local}' — a capability grant an agent's runtime may "
-                    f"call; declared per agent in tools[], enforced by the tool's own scope")
-        if "requires" in src:
-            return (f"Capability resource '{local}' — required by judges, satisfied "
-                    f"or not, never exclusive")
-        return (f"Exclusion resource '{local}' — nodes claiming it are pairwise "
+    if kind == "backend":
+        return (f"LLM backend '{local}' — a permitted "
+                f"orchestrator row (protocol {n.get('protocol')}, "
+                f"eu_resident={n.get('eu_resident')}), armed by "
+                f"{n.get('enabled_flag') or 'no flag — this is the default backend'}")
+    if kind in ("tool", "tool_ro"):
+        what = ("opens only `.read` scopes" if kind == "tool_ro"
+                else "acts (opens a write scope, or declares none)")
+        return (f"Agent tool '{local}' — a capability grant an agent's runtime may "
+                f"call; {what}; declared per agent in tools[], enforced by the tool's own scope")
+    if kind in ("token", "token_ro"):
+        return (f"Capability '{local}' — required by judges, satisfied "
+                f"or not, never exclusive{' (read-only by name)' if kind == 'token_ro' else ''}")
+    if kind == "lock":
+        return (f"Exclusion lock '{local}' — nodes claiming it are pairwise "
                 f"mutually exclusive (mutex edges derived from claims)")
     if kind == "repo":
         return f"Git surface: {n.get('role')}"
@@ -850,10 +882,9 @@ def harvest_agent_clients(nodes: dict) -> None:
 def harvest_backends(nodes: dict) -> None:
     """Every row of the permitted-orchestrator list, bound or not.
 
-    `resource:` and not a kind of its own: a backend is exactly what the judge
-    `requires:` resources already are — something an actor needs in order to
-    run, satisfied or not, never exclusive. A prepared-not-armed row (mistral)
-    is a node with no in-edges, which is the honest picture of it.
+    `backend:` — a third-party processor living beside the organism (the
+    lexicon's habitat), split out of `resource:` 2026-10-06. A prepared-not-armed
+    row (mistral) is a node with no in-edges, which is the honest picture of it.
     """
     doc = yaml.safe_load(LLM_BACKENDS.read_text(encoding="utf-8")) or {}
     backends = doc.get("backends") or {}
@@ -861,8 +892,8 @@ def harvest_backends(nodes: dict) -> None:
         _die("state/llm-backends.yml declares no backends — the register moved, update "
              "harvest_backends rather than shipping agents with no orchestrator")
     for name, b in backends.items():
-        nodes[f"resource:backend-{name}"] = {
-            "kind": "resource",
+        nodes[f"backend:{name}"] = {
+            "kind": "backend",
             "source": "state/llm-backends.yml",
             "protocol": b.get("protocol"),
             "eu_resident": (b.get("residency") or {}).get("eu"),
@@ -881,7 +912,7 @@ def harvest_agents(nodes: dict, edges: list) -> None:
     exists to correct for Authentik.
     """
     default_backend = next(
-        (nid.removeprefix("resource:backend-") for nid, n in sorted(nodes.items())
+        (nid.removeprefix("backend:") for nid, n in sorted(nodes.items())
          if n.get("is_default")), None)
     for path in sorted(REPO.glob(AGENT_PROFILES)):
         doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -907,15 +938,15 @@ def harvest_agents(nodes: dict, edges: list) -> None:
             "tools": tools,
         }
         for t in tools:
-            rid = f"resource:{t}"
-            nodes.setdefault(rid, {"kind": "resource",
+            rid = tool_id(t)
+            nodes.setdefault(rid, {"kind": rid.split(":", 1)[0],
                                    "source": "derived from agent tools"})
             edges.append({
                 "from": rid, "to": nid, "kind": "data",
                 "via": f"tool grant `{t}` declared in {src} tools[]",
                 "derived": "agent-tools",
             })
-        rid = f"resource:backend-{backend}" if backend else None
+        rid = f"backend:{backend}" if backend else None
         if rid and rid in nodes:
             edges.append({
                 "from": rid, "to": nid, "kind": "data",
@@ -1729,8 +1760,8 @@ def derive_mutex(nodes: dict) -> list[dict]:
             by_resource.setdefault(c, []).append(nid)
     edges = []
     for resource, members in sorted(by_resource.items()):
-        rid = f"resource:{resource}"
-        nodes.setdefault(rid, {"kind": "resource", "source": "derived from claims"})
+        rid = f"lock:{resource}"
+        nodes.setdefault(rid, {"kind": "lock", "source": "derived from claims"})
         members.sort()
         for i, a in enumerate(members):
             for b in members[i + 1:]:
@@ -1745,8 +1776,9 @@ def ensure_capability_resources(nodes: dict, edges: list[dict]) -> None:
     for e in edges:
         for end in ("from", "to"):
             nid = e[end]
-            if nid.startswith("resource:") and nid not in nodes:
-                nodes[nid] = {"kind": "resource", "source": "derived from judge-sets requires"}
+            if nid.startswith(("token:", "token_ro:")) and nid not in nodes:
+                nodes[nid] = {"kind": nid.split(":", 1)[0],
+                              "source": "derived from judge-sets requires"}
 
 
 # ── cycles ────────────────────────────────────────────────────────────────
@@ -1972,7 +2004,8 @@ def build() -> dict:
         _die("edge with no provenance (needs `derived:` or `measured:`):\n  "
              + "\n  ".join(orphans))
     counts = {"nodes": len(nodes), "edges": len(all_edges)}
-    for k in ("pulse", "judge", "gateset", "weakness", "daemon", "service", "resource",
+    for k in ("pulse", "judge", "gateset", "weakness", "daemon", "service", "lock",
+              "tool", "tool_ro", "token", "token_ro", "backend",
               "repo", "tofu", "authentik", "table", "doctrine", "faceapp", "agent",
               "tasktype", "skill", "reader", "article", "organ_system"):
         counts[f"nodes_{k}"] = sum(1 for n in nodes.values() if n["kind"] == k)

@@ -157,8 +157,11 @@ words:
       The machine and what lives beside the organism: its software by origin
       (self / symbiont / habitat). Software of origin habitat belongs to the
       machine's owner, and nOS never installs or touches it. Ruled 2026-10-06: the
-      git forges nOS hosts itself are not habitat (they are organ jobs).
+      git forges nOS hosts itself are not habitat (they are organ jobs); the LLM
+      backends nOS's cells call are habitat, third-party processors beside it.
     names:
+      - graph_kind: backend
+        reason: an LLM backend row of state/llm-backends.yml, a third-party processor beside the organism
       - config_key: software_owner
         values: [self, symbiont, habitat]
     not: [organism, symbiont]
@@ -198,6 +201,10 @@ words:
     names:
       - graph_kind: reader
         reason: a tools/README.md §Readers script that asks the estate what is true
+      - graph_kind: tool_ro
+        reason: an agent tool grant whose every scope is `.read` (tools/agent-capability.py)
+      - graph_kind: token_ro
+        reason: a judge capability whose own name declares it read-only (`_ro`)
       - graph_kind: judge
         reason: a gate command that reads a change and returns a verdict; it does not act
       - graph_kind: weakness
@@ -210,8 +217,10 @@ words:
     level: cross
     means: A tool that acts.
     names:
-      - graph_kind: resource
-        reason: mostly agent tool grants, also backends, tokens and one lock; a limb until the kind is split
+      - graph_kind: tool
+        reason: an agent tool grant that acts — it opens a write scope, or declares none
+      - graph_kind: token
+        reason: a judge capability whose name does not declare it read-only
     not: [sense, side]
     retired:
       - sense: "limb as the apex page's left/right/core column key"
@@ -273,6 +282,8 @@ words:
         reason: an SSO client object inside Authentik, not an actor
       - graph_kind: tofu
         reason: an OpenTofu state root, declarative plumbing behind Authentik
+      - graph_kind: lock
+        reason: a mutex claims are drawn against; exclusion is plumbing, not a body part
     not: [organ, sense]
 
   heartbeat:

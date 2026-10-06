@@ -324,7 +324,7 @@
 								}
 							}}
 						>
-							{#if n.kind === 'resource'}
+							{#if n.kind === 'lock'}
 								<!--
 								  A RESOURCE IS A CLAIM, not a node like the others, and drawing
 								  it as one is what left the mutex layer unreadable: 56 pairwise
@@ -408,7 +408,7 @@
 						{/if}
 					{/if}
 
-					{#if selected.kind === 'resource'}
+					{#if selected.kind === 'lock'}
 						<!--
 						  The hexagon collapses 56 pairwise edges into 5 claims. Collapsing is
 						  only honest if the thing collapsed is still reachable, so the

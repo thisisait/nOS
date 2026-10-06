@@ -10,13 +10,13 @@
     "organ": 101,
     "organ system": 13,
     "organism": 0,
-    "habitat": 0,
-    "sense": 70,
-    "limb": 20,
+    "habitat": 6,
+    "sense": 75,
+    "limb": 8,
     "memory": 40,
     "law": 36,
     "reflex": 43,
-    "internal": 66,
+    "internal": 67,
     "edges": 339
   },
   "nodes": {
@@ -408,6 +408,30 @@
       "level": "internal",
       "kind": "authentik"
     },
+    "backend:anthropic": {
+      "level": "habitat",
+      "kind": "backend"
+    },
+    "backend:minimax": {
+      "level": "habitat",
+      "kind": "backend"
+    },
+    "backend:mistral-eu": {
+      "level": "habitat",
+      "kind": "backend"
+    },
+    "backend:ollama": {
+      "level": "habitat",
+      "kind": "backend"
+    },
+    "backend:openclaw": {
+      "level": "habitat",
+      "kind": "backend"
+    },
+    "backend:xai": {
+      "level": "habitat",
+      "kind": "backend"
+    },
     "daemon:ai.openclaw.gateway": {
       "level": "organ",
       "kind": "daemon"
@@ -611,6 +635,10 @@
     "judge:pytest-anatomy": {
       "level": "sense",
       "kind": "judge"
+    },
+    "lock:agent-run-lock": {
+      "level": "internal",
+      "kind": "lock"
     },
     "organ_system:archive": {
       "level": "organ system",
@@ -1083,86 +1111,6 @@
     "repo:scan-data": {
       "level": "organ",
       "kind": "repo"
-    },
-    "resource:agent-run-lock": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:ask-operator": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:backend-anthropic": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:backend-minimax": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:backend-mistral-eu": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:backend-ollama": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:backend-openclaw": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:backend-xai": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:bash-read-only": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:contract-search": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:cortex_token_ro": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:exec": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:keap_token_ro": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:live_estate": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:mcp-bone": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:mcp-keap": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:mcp-loop": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:mcp-wing-read": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:mcp-wing-write": {
-      "level": "limb",
-      "kind": "resource"
-    },
-    "resource:migration-file-write": {
-      "level": "limb",
-      "kind": "resource"
     },
     "service:alloy": {
       "level": "organ",
@@ -1692,6 +1640,58 @@
       "level": "internal",
       "kind": "tofu"
     },
+    "token:live_estate": {
+      "level": "limb",
+      "kind": "token"
+    },
+    "token_ro:cortex_token_ro": {
+      "level": "sense",
+      "kind": "token_ro"
+    },
+    "token_ro:keap_token_ro": {
+      "level": "sense",
+      "kind": "token_ro"
+    },
+    "tool:ask-operator": {
+      "level": "limb",
+      "kind": "tool"
+    },
+    "tool:exec": {
+      "level": "limb",
+      "kind": "tool"
+    },
+    "tool:mcp-bone": {
+      "level": "limb",
+      "kind": "tool"
+    },
+    "tool:mcp-keap": {
+      "level": "limb",
+      "kind": "tool"
+    },
+    "tool:mcp-loop": {
+      "level": "limb",
+      "kind": "tool"
+    },
+    "tool:mcp-wing-write": {
+      "level": "limb",
+      "kind": "tool"
+    },
+    "tool:migration-file-write": {
+      "level": "limb",
+      "kind": "tool"
+    },
+    "tool_ro:bash-read-only": {
+      "level": "sense",
+      "kind": "tool_ro"
+    },
+    "tool_ro:contract-search": {
+      "level": "sense",
+      "kind": "tool_ro"
+    },
+    "tool_ro:mcp-wing-read": {
+      "level": "sense",
+      "kind": "tool_ro"
+    },
     "weakness:corpus-diff": {
       "level": "sense",
       "kind": "weakness"
@@ -1846,6 +1846,86 @@
       "from": "agent:upgrade-architect",
       "to": "tasktype:design",
       "kind": "may_take"
+    },
+    {
+      "from": "backend:anthropic",
+      "to": "agent:inspektor",
+      "kind": "data"
+    },
+    {
+      "from": "backend:anthropic",
+      "to": "agent:migration-author",
+      "kind": "data"
+    },
+    {
+      "from": "backend:anthropic",
+      "to": "agent:upgrade-architect",
+      "kind": "data"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:conductor",
+      "kind": "data"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:curator",
+      "kind": "data"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:jeff-cloud",
+      "kind": "data"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:librarian",
+      "kind": "data"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:ops-extract-cloud",
+      "kind": "data"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:ops-triage-cloud",
+      "kind": "data"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:proposer",
+      "kind": "data"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:surveyor",
+      "kind": "data"
+    },
+    {
+      "from": "backend:ollama",
+      "to": "agent:invoice-extract",
+      "kind": "data"
+    },
+    {
+      "from": "backend:ollama",
+      "to": "agent:invoice-vision-ocr",
+      "kind": "data"
+    },
+    {
+      "from": "backend:ollama",
+      "to": "agent:jeff",
+      "kind": "data"
+    },
+    {
+      "from": "backend:ollama",
+      "to": "agent:ops-extract",
+      "kind": "data"
+    },
+    {
+      "from": "backend:ollama",
+      "to": "agent:ops-triage",
+      "kind": "data"
     },
     {
       "from": "daemon:eu.thisisait.nos.pulse",
@@ -2445,276 +2525,6 @@
     {
       "from": "repo:gitea-forge",
       "to": "service:woodpecker",
-      "kind": "data"
-    },
-    {
-      "from": "resource:ask-operator",
-      "to": "agent:jeff",
-      "kind": "data"
-    },
-    {
-      "from": "resource:ask-operator",
-      "to": "agent:jeff-cloud",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-anthropic",
-      "to": "agent:inspektor",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-anthropic",
-      "to": "agent:migration-author",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-anthropic",
-      "to": "agent:upgrade-architect",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:conductor",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:curator",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:jeff-cloud",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:librarian",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:ops-extract-cloud",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:ops-triage-cloud",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:proposer",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:surveyor",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-ollama",
-      "to": "agent:invoice-extract",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-ollama",
-      "to": "agent:invoice-vision-ocr",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-ollama",
-      "to": "agent:jeff",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-ollama",
-      "to": "agent:ops-extract",
-      "kind": "data"
-    },
-    {
-      "from": "resource:backend-ollama",
-      "to": "agent:ops-triage",
-      "kind": "data"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:conductor",
-      "kind": "data"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:curator",
-      "kind": "data"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:inspektor",
-      "kind": "data"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:librarian",
-      "kind": "data"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:migration-author",
-      "kind": "data"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:proposer",
-      "kind": "data"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:surveyor",
-      "kind": "data"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:upgrade-architect",
-      "kind": "data"
-    },
-    {
-      "from": "resource:contract-search",
-      "to": "agent:jeff",
-      "kind": "data"
-    },
-    {
-      "from": "resource:contract-search",
-      "to": "agent:jeff-cloud",
-      "kind": "data"
-    },
-    {
-      "from": "resource:cortex_token_ro",
-      "to": "judge:cortex-corpus-diff",
-      "kind": "data"
-    },
-    {
-      "from": "resource:exec",
-      "to": "agent:jeff",
-      "kind": "data"
-    },
-    {
-      "from": "resource:keap_token_ro",
-      "to": "judge:cortex-corpus-diff",
-      "kind": "data"
-    },
-    {
-      "from": "resource:live_estate",
-      "to": "judge:nos-smoke",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-bone",
-      "to": "agent:conductor",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-bone",
-      "to": "agent:curator",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-bone",
-      "to": "agent:inspektor",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-bone",
-      "to": "agent:librarian",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-bone",
-      "to": "agent:surveyor",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-keap",
-      "to": "agent:curator",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-keap",
-      "to": "agent:librarian",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-loop",
-      "to": "agent:proposer",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:conductor",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:curator",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:inspektor",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:jeff",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:jeff-cloud",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:librarian",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:migration-author",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:proposer",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:surveyor",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:upgrade-architect",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-wing-write",
-      "to": "agent:librarian",
-      "kind": "data"
-    },
-    {
-      "from": "resource:mcp-wing-write",
-      "to": "agent:surveyor",
-      "kind": "data"
-    },
-    {
-      "from": "resource:migration-file-write",
-      "to": "agent:migration-author",
-      "kind": "data"
-    },
-    {
-      "from": "resource:migration-file-write",
-      "to": "agent:upgrade-architect",
       "kind": "data"
     },
     {
@@ -3416,6 +3226,196 @@
       "from": "tasktype:security-remediation",
       "to": "reader:rem-status",
       "kind": "allows"
+    },
+    {
+      "from": "token:live_estate",
+      "to": "judge:nos-smoke",
+      "kind": "data"
+    },
+    {
+      "from": "token_ro:cortex_token_ro",
+      "to": "judge:cortex-corpus-diff",
+      "kind": "data"
+    },
+    {
+      "from": "token_ro:keap_token_ro",
+      "to": "judge:cortex-corpus-diff",
+      "kind": "data"
+    },
+    {
+      "from": "tool:ask-operator",
+      "to": "agent:jeff",
+      "kind": "data"
+    },
+    {
+      "from": "tool:ask-operator",
+      "to": "agent:jeff-cloud",
+      "kind": "data"
+    },
+    {
+      "from": "tool:exec",
+      "to": "agent:jeff",
+      "kind": "data"
+    },
+    {
+      "from": "tool:mcp-bone",
+      "to": "agent:conductor",
+      "kind": "data"
+    },
+    {
+      "from": "tool:mcp-bone",
+      "to": "agent:curator",
+      "kind": "data"
+    },
+    {
+      "from": "tool:mcp-bone",
+      "to": "agent:inspektor",
+      "kind": "data"
+    },
+    {
+      "from": "tool:mcp-bone",
+      "to": "agent:librarian",
+      "kind": "data"
+    },
+    {
+      "from": "tool:mcp-bone",
+      "to": "agent:surveyor",
+      "kind": "data"
+    },
+    {
+      "from": "tool:mcp-keap",
+      "to": "agent:curator",
+      "kind": "data"
+    },
+    {
+      "from": "tool:mcp-keap",
+      "to": "agent:librarian",
+      "kind": "data"
+    },
+    {
+      "from": "tool:mcp-loop",
+      "to": "agent:proposer",
+      "kind": "data"
+    },
+    {
+      "from": "tool:mcp-wing-write",
+      "to": "agent:librarian",
+      "kind": "data"
+    },
+    {
+      "from": "tool:mcp-wing-write",
+      "to": "agent:surveyor",
+      "kind": "data"
+    },
+    {
+      "from": "tool:migration-file-write",
+      "to": "agent:migration-author",
+      "kind": "data"
+    },
+    {
+      "from": "tool:migration-file-write",
+      "to": "agent:upgrade-architect",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:conductor",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:curator",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:inspektor",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:librarian",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:migration-author",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:proposer",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:surveyor",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:upgrade-architect",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:contract-search",
+      "to": "agent:jeff",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:contract-search",
+      "to": "agent:jeff-cloud",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:conductor",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:curator",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:inspektor",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:jeff",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:jeff-cloud",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:librarian",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:migration-author",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:proposer",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:surveyor",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:upgrade-architect",
+      "kind": "data"
     }
   ]
 }

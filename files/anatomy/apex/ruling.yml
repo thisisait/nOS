@@ -502,30 +502,34 @@ nodes:
   # Capability resources on the agents' side of the graph. The tool ids name
   # the estate's internal APIs; the backend rows name third-party inference
   # endpoints and which of them is armed.
-  "resource:backend-anthropic": withheld
-  "resource:backend-minimax": withheld
-  "resource:backend-mistral-eu": withheld
-  "resource:backend-ollama": withheld
+  # 2026-10-06 the `resource` kind was split (operator ruling, body-plan-2):
+  # resource:backend-<n> → backend:<n>, the mutex → lock:, agent grants →
+  # tool:/tool_ro:, judge capabilities → token:/token_ro:. Same 20 nodes, same
+  # WITHHELD verdict; the rows below were renamed in place, nothing published.
+  "backend:anthropic": withheld
+  "backend:minimax": withheld
+  "backend:mistral-eu": withheld
+  "backend:ollama": withheld
   # 2026-10-01 openclaw row (the gateway's OpenAI surface). Withheld like
   # every backend row; NOT signed here — the signature is the operator's.
-  "resource:backend-openclaw": withheld
-  "resource:backend-xai": withheld
+  "backend:openclaw": withheld
+  "backend:xai": withheld
   # The human channel a caddy holds (2026-08-31). Withheld with every other
   # tool node: which questions an agent may ask its operator is estate
   # mechanics, not a public claim.
-  "resource:ask-operator": withheld
-  "resource:bash-read-only": withheld
+  "tool:ask-operator": withheld
+  "tool_ro:bash-read-only": withheld
   # Which committed contracts an agent may search is estate mechanics (2026-09-01).
-  "resource:contract-search": withheld
+  "tool_ro:contract-search": withheld
   # That the caddy can run one cortex-lang sentence is a fact about the door,
   # and a door is not a thing to publish (2026-09-01).
-  "resource:exec": withheld
-  "resource:mcp-bone": withheld
-  "resource:mcp-keap": withheld
-  "resource:mcp-loop": withheld
-  "resource:mcp-wing-read": withheld
-  "resource:mcp-wing-write": withheld
-  "resource:migration-file-write": withheld
+  "tool:exec": withheld
+  "tool:mcp-bone": withheld
+  "tool:mcp-keap": withheld
+  "tool:mcp-loop": withheld
+  "tool_ro:mcp-wing-read": withheld
+  "tool:mcp-wing-write": withheld
+  "tool:migration-file-write": withheld
 
   # --- withheld: host daemons (the estate's launchd organs) -----------------
   "daemon:eu.thisisait.nos.acme-renew": withheld
@@ -672,10 +676,10 @@ nodes:
   "repo:github-origin": withheld
   "repo:gitlab-forge": withheld
   "repo:scan-data": withheld
-  "resource:agent-run-lock": withheld
-  "resource:cortex_token_ro": withheld
-  "resource:keap_token_ro": withheld
-  "resource:live_estate": withheld
+  "lock:agent-run-lock": withheld
+  "token_ro:cortex_token_ro": withheld
+  "token_ro:keap_token_ro": withheld
+  "token:live_estate": withheld
   # "resource:nos_entity" re-ruled OUT 2026-08-20: the judges' machine-wide
   # mutex was retired (state/judge-sets.yml, test_the_engine_judges_its_own_gates)
   # so the node left the artifact. It was withheld — nothing that ever left the

@@ -32,7 +32,7 @@ LEVELS = {
     "organ system": "organs grouped for one function",
     "organism": "the estate as a whole",
     "habitat": "what lives beside the organism — third-party processors it does not own",
-    "sense": "what you can ask — readers and judges that only read",
+    "sense": "what you can ask — readers, judges and read-only grants",
     "limb": "what you can reach for — tool grants that act",
     "memory": "what the estate has learned — KEAP tables",
     "law": "the rules it inherits — constitution articles and paragraphs",

@@ -32,7 +32,12 @@ export type NodeKind =
 	| 'weakness'
 	| 'daemon'
 	| 'service'
-	| 'resource'
+	| 'lock'
+	| 'tool'
+	| 'tool_ro'
+	| 'token'
+	| 'token_ro'
+	| 'backend'
 	| 'repo'
 	| 'tofu'
 	| 'authentik'
@@ -63,7 +68,12 @@ export const NODE_KINDS: readonly NodeKind[] = [
 	'judge',
 	'gateset',
 	'weakness',
-	'resource',
+	'lock',
+	'tool',
+	'tool_ro',
+	'token',
+	'token_ro',
+	'backend',
 	'repo',
 	'tofu',
 	'table',
@@ -88,7 +98,12 @@ export const KIND_GLYPH: Record<NodeKind, string> = {
 	judge: '⚖',
 	gateset: '▦',
 	weakness: '⚠',
-	resource: '⛒',
+	lock: '⛒',
+	tool: '🔧',
+	tool_ro: '🔍',
+	token: '🔑',
+	token_ro: '🗝',
+	backend: '☁',
 	repo: '⎇',
 	tofu: '⬡',
 	table: '▤',
@@ -350,8 +365,8 @@ export function mutexSpokes(graph: AnatomyGraph): MutexSpoke[] {
 	const spokes = new Set<string>();
 	for (const e of graph.edges) {
 		if (e.kind !== 'mutex' || !e.resource) continue;
-		spokes.add(`${e.from} resource:${e.resource}`);
-		spokes.add(`${e.to} resource:${e.resource}`);
+		spokes.add(`${e.from} lock:${e.resource}`);
+		spokes.add(`${e.to} lock:${e.resource}`);
 	}
 	return [...spokes].sort().map((s) => {
 		const [node, resource] = s.split(' ');

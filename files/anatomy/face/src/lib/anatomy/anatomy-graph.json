@@ -12,7 +12,12 @@
     "nodes_weakness": 7,
     "nodes_daemon": 19,
     "nodes_service": 71,
-    "nodes_resource": 20,
+    "nodes_lock": 1,
+    "nodes_tool": 7,
+    "nodes_tool_ro": 3,
+    "nodes_token": 1,
+    "nodes_token_ro": 2,
+    "nodes_backend": 6,
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 60,
@@ -1150,6 +1155,66 @@
       "anchor": "02.02.08",
       "description": "Authentik native_oidc client 'nos-wordpress' (RBAC tier 4) — gates service:wordpress; provider+application managed by OpenTofu from the committed registry"
     },
+    "backend:anthropic": {
+      "kind": "backend",
+      "source": "state/llm-backends.yml",
+      "protocol": "anthropic",
+      "eu_resident": false,
+      "enabled_flag": null,
+      "is_default": true,
+      "anchor": "02.02.09",
+      "description": "LLM backend 'anthropic' — a permitted orchestrator row (protocol anthropic, eu_resident=False), armed by no flag — this is the default backend"
+    },
+    "backend:minimax": {
+      "kind": "backend",
+      "source": "state/llm-backends.yml",
+      "protocol": "anthropic",
+      "eu_resident": false,
+      "enabled_flag": "minimax_enabled",
+      "is_default": false,
+      "anchor": "02.02.09",
+      "description": "LLM backend 'minimax' — a permitted orchestrator row (protocol anthropic, eu_resident=False), armed by minimax_enabled"
+    },
+    "backend:mistral-eu": {
+      "kind": "backend",
+      "source": "state/llm-backends.yml",
+      "protocol": "openai",
+      "eu_resident": true,
+      "enabled_flag": "mistral_enabled",
+      "is_default": false,
+      "anchor": "02.02.09",
+      "description": "LLM backend 'mistral-eu' — a permitted orchestrator row (protocol openai, eu_resident=True), armed by mistral_enabled"
+    },
+    "backend:ollama": {
+      "kind": "backend",
+      "source": "state/llm-backends.yml",
+      "protocol": "openai",
+      "eu_resident": true,
+      "enabled_flag": "ollama_enabled",
+      "is_default": false,
+      "anchor": "02.02.09",
+      "description": "LLM backend 'ollama' — a permitted orchestrator row (protocol openai, eu_resident=True), armed by ollama_enabled"
+    },
+    "backend:openclaw": {
+      "kind": "backend",
+      "source": "state/llm-backends.yml",
+      "protocol": "openai",
+      "eu_resident": true,
+      "enabled_flag": "openclaw_backend_enabled",
+      "is_default": false,
+      "anchor": "02.02.09",
+      "description": "LLM backend 'openclaw' — a permitted orchestrator row (protocol openai, eu_resident=True), armed by openclaw_backend_enabled"
+    },
+    "backend:xai": {
+      "kind": "backend",
+      "source": "state/llm-backends.yml",
+      "protocol": "openai",
+      "eu_resident": false,
+      "enabled_flag": "xai_enabled",
+      "is_default": false,
+      "anchor": "02.02.09",
+      "description": "LLM backend 'xai' — a permitted orchestrator row (protocol openai, eu_resident=False), armed by xai_enabled"
+    },
     "daemon:ai.openclaw.gateway": {
       "kind": "daemon",
       "source": "launchd label (role defaults)",
@@ -1619,6 +1684,12 @@
       "requires": [],
       "anchor": "02.02.04",
       "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=7070, deterministic=True"
+    },
+    "lock:agent-run-lock": {
+      "kind": "lock",
+      "source": "derived from claims",
+      "anchor": "02.02.06",
+      "description": "Exclusion lock 'agent-run-lock' — nodes claiming it are pairwise mutually exclusive (mutex edges derived from claims)"
     },
     "organ_system:archive": {
       "kind": "organ_system",
@@ -2446,9 +2517,9 @@
     "reader:body": {
       "kind": "reader",
       "source": "tools/body.py",
-      "title": "What am I part of: the estate as a body plan — genome, cell, tissue, organ, organism, habitat, then sense, limb, memory — counts and hubs, or one node and what it touches. Reads state/body-plan.json; UNKNOWN when unreadable.",
+      "title": "What am I part of: the estate as a body plan — genome, cell, tissue, organ, organ system, organism, habitat, then sense, limb, memory, law, reflex — counts and hubs, or one node and what it touches. Levels come from state/genome/lexicon.yml; reads state/body-plan.json; UNKNOWN when unreadable.",
       "anchor": "02.02.04",
-      "description": "Reader tools/body.py: What am I part of: the estate as a body plan — genome, cell, tissue, organ, organism, habitat, then sense, limb, memory — counts and hubs, or one node and what it touches. Reads state/body-plan.json; UNKNOWN when unreadable."
+      "description": "Reader tools/body.py: What am I part of: the estate as a body plan — genome, cell, tissue, organ, organ system, organism, habitat, then sense, limb, memory, law, reflex — counts and hubs, or one node and what it touches. Levels come from state/genome/lexicon.yml; reads state/body-plan.json; UNKNOWN when unreadable."
     },
     "reader:brew-pin-status": {
       "kind": "reader",
@@ -2834,150 +2905,6 @@
       "evidence": "tools/scan-state-snapshot.py:90 (BRANCH), :237 (moves one ref)",
       "anchor": "02.02.04",
       "description": "Git surface: orphan branch — nightly security snapshot ledger (local ref only; the recording job passes no --push)"
-    },
-    "resource:agent-run-lock": {
-      "kind": "resource",
-      "source": "derived from claims",
-      "anchor": "02.02.06",
-      "description": "Exclusion resource 'agent-run-lock' — nodes claiming it are pairwise mutually exclusive (mutex edges derived from claims)"
-    },
-    "resource:ask-operator": {
-      "kind": "resource",
-      "source": "derived from agent tools",
-      "anchor": "02.02.06",
-      "description": "Agent tool 'ask-operator' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
-    },
-    "resource:backend-anthropic": {
-      "kind": "resource",
-      "source": "state/llm-backends.yml",
-      "protocol": "anthropic",
-      "eu_resident": false,
-      "enabled_flag": null,
-      "is_default": true,
-      "anchor": "02.02.06",
-      "description": "LLM backend 'anthropic' — a permitted orchestrator row (protocol anthropic, eu_resident=False), armed by no flag — this is the default backend"
-    },
-    "resource:backend-minimax": {
-      "kind": "resource",
-      "source": "state/llm-backends.yml",
-      "protocol": "anthropic",
-      "eu_resident": false,
-      "enabled_flag": "minimax_enabled",
-      "is_default": false,
-      "anchor": "02.02.06",
-      "description": "LLM backend 'minimax' — a permitted orchestrator row (protocol anthropic, eu_resident=False), armed by minimax_enabled"
-    },
-    "resource:backend-mistral-eu": {
-      "kind": "resource",
-      "source": "state/llm-backends.yml",
-      "protocol": "openai",
-      "eu_resident": true,
-      "enabled_flag": "mistral_enabled",
-      "is_default": false,
-      "anchor": "02.02.06",
-      "description": "LLM backend 'mistral-eu' — a permitted orchestrator row (protocol openai, eu_resident=True), armed by mistral_enabled"
-    },
-    "resource:backend-ollama": {
-      "kind": "resource",
-      "source": "state/llm-backends.yml",
-      "protocol": "openai",
-      "eu_resident": true,
-      "enabled_flag": "ollama_enabled",
-      "is_default": false,
-      "anchor": "02.02.06",
-      "description": "LLM backend 'ollama' — a permitted orchestrator row (protocol openai, eu_resident=True), armed by ollama_enabled"
-    },
-    "resource:backend-openclaw": {
-      "kind": "resource",
-      "source": "state/llm-backends.yml",
-      "protocol": "openai",
-      "eu_resident": true,
-      "enabled_flag": "openclaw_backend_enabled",
-      "is_default": false,
-      "anchor": "02.02.06",
-      "description": "LLM backend 'openclaw' — a permitted orchestrator row (protocol openai, eu_resident=True), armed by openclaw_backend_enabled"
-    },
-    "resource:backend-xai": {
-      "kind": "resource",
-      "source": "state/llm-backends.yml",
-      "protocol": "openai",
-      "eu_resident": false,
-      "enabled_flag": "xai_enabled",
-      "is_default": false,
-      "anchor": "02.02.06",
-      "description": "LLM backend 'xai' — a permitted orchestrator row (protocol openai, eu_resident=False), armed by xai_enabled"
-    },
-    "resource:bash-read-only": {
-      "kind": "resource",
-      "source": "derived from agent tools",
-      "anchor": "02.02.06",
-      "description": "Agent tool 'bash-read-only' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
-    },
-    "resource:contract-search": {
-      "kind": "resource",
-      "source": "derived from agent tools",
-      "anchor": "02.02.06",
-      "description": "Agent tool 'contract-search' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
-    },
-    "resource:cortex_token_ro": {
-      "kind": "resource",
-      "source": "derived from judge-sets requires",
-      "anchor": "02.02.06",
-      "description": "Capability resource 'cortex_token_ro' — required by judges, satisfied or not, never exclusive"
-    },
-    "resource:exec": {
-      "kind": "resource",
-      "source": "derived from agent tools",
-      "anchor": "02.02.06",
-      "description": "Agent tool 'exec' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
-    },
-    "resource:keap_token_ro": {
-      "kind": "resource",
-      "source": "derived from judge-sets requires",
-      "anchor": "02.02.06",
-      "description": "Capability resource 'keap_token_ro' — required by judges, satisfied or not, never exclusive"
-    },
-    "resource:live_estate": {
-      "kind": "resource",
-      "source": "derived from judge-sets requires",
-      "anchor": "02.02.06",
-      "description": "Capability resource 'live_estate' — required by judges, satisfied or not, never exclusive"
-    },
-    "resource:mcp-bone": {
-      "kind": "resource",
-      "source": "derived from agent tools",
-      "anchor": "02.02.06",
-      "description": "Agent tool 'mcp-bone' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
-    },
-    "resource:mcp-keap": {
-      "kind": "resource",
-      "source": "derived from agent tools",
-      "anchor": "02.02.06",
-      "description": "Agent tool 'mcp-keap' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
-    },
-    "resource:mcp-loop": {
-      "kind": "resource",
-      "source": "derived from agent tools",
-      "anchor": "02.02.06",
-      "description": "Agent tool 'mcp-loop' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
-    },
-    "resource:mcp-wing-read": {
-      "kind": "resource",
-      "source": "derived from agent tools",
-      "anchor": "02.02.06",
-      "description": "Agent tool 'mcp-wing-read' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
-    },
-    "resource:mcp-wing-write": {
-      "kind": "resource",
-      "source": "derived from agent tools",
-      "anchor": "02.02.06",
-      "description": "Agent tool 'mcp-wing-write' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
-    },
-    "resource:migration-file-write": {
-      "kind": "resource",
-      "source": "derived from agent tools",
-      "anchor": "02.02.06",
-      "description": "Agent tool 'migration-file-write' — a capability grant an agent's runtime may call; declared per agent in tools[], enforced by the tool's own scope"
     },
     "service:alloy": {
       "kind": "service",
@@ -4425,6 +4352,84 @@
       "anchor": "02.02.04",
       "description": "OpenTofu state root terraform/authentik/ — the declarative authority over Authentik providers/applications/outposts; plan daily, apply only at converge behind the destroy-guard"
     },
+    "token:live_estate": {
+      "kind": "token",
+      "source": "derived from judge-sets requires",
+      "anchor": "02.02.08",
+      "description": "Capability 'live_estate' — required by judges, satisfied or not, never exclusive"
+    },
+    "token_ro:cortex_token_ro": {
+      "kind": "token_ro",
+      "source": "derived from judge-sets requires",
+      "anchor": "02.02.08",
+      "description": "Capability 'cortex_token_ro' — required by judges, satisfied or not, never exclusive (read-only by name)"
+    },
+    "token_ro:keap_token_ro": {
+      "kind": "token_ro",
+      "source": "derived from judge-sets requires",
+      "anchor": "02.02.08",
+      "description": "Capability 'keap_token_ro' — required by judges, satisfied or not, never exclusive (read-only by name)"
+    },
+    "tool:ask-operator": {
+      "kind": "tool",
+      "source": "derived from agent tools",
+      "anchor": "02.02.09",
+      "description": "Agent tool 'ask-operator' — a capability grant an agent's runtime may call; acts (opens a write scope, or declares none); declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "tool:exec": {
+      "kind": "tool",
+      "source": "derived from agent tools",
+      "anchor": "02.02.09",
+      "description": "Agent tool 'exec' — a capability grant an agent's runtime may call; acts (opens a write scope, or declares none); declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "tool:mcp-bone": {
+      "kind": "tool",
+      "source": "derived from agent tools",
+      "anchor": "02.02.09",
+      "description": "Agent tool 'mcp-bone' — a capability grant an agent's runtime may call; acts (opens a write scope, or declares none); declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "tool:mcp-keap": {
+      "kind": "tool",
+      "source": "derived from agent tools",
+      "anchor": "02.02.09",
+      "description": "Agent tool 'mcp-keap' — a capability grant an agent's runtime may call; acts (opens a write scope, or declares none); declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "tool:mcp-loop": {
+      "kind": "tool",
+      "source": "derived from agent tools",
+      "anchor": "02.02.09",
+      "description": "Agent tool 'mcp-loop' — a capability grant an agent's runtime may call; acts (opens a write scope, or declares none); declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "tool:mcp-wing-write": {
+      "kind": "tool",
+      "source": "derived from agent tools",
+      "anchor": "02.02.09",
+      "description": "Agent tool 'mcp-wing-write' — a capability grant an agent's runtime may call; acts (opens a write scope, or declares none); declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "tool:migration-file-write": {
+      "kind": "tool",
+      "source": "derived from agent tools",
+      "anchor": "02.02.09",
+      "description": "Agent tool 'migration-file-write' — a capability grant an agent's runtime may call; acts (opens a write scope, or declares none); declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "tool_ro:bash-read-only": {
+      "kind": "tool_ro",
+      "source": "derived from agent tools",
+      "anchor": "02.02.09",
+      "description": "Agent tool 'bash-read-only' — a capability grant an agent's runtime may call; opens only `.read` scopes; declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "tool_ro:contract-search": {
+      "kind": "tool_ro",
+      "source": "derived from agent tools",
+      "anchor": "02.02.09",
+      "description": "Agent tool 'contract-search' — a capability grant an agent's runtime may call; opens only `.read` scopes; declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "tool_ro:mcp-wing-read": {
+      "kind": "tool_ro",
+      "source": "derived from agent tools",
+      "anchor": "02.02.09",
+      "description": "Agent tool 'mcp-wing-read' — a capability grant an agent's runtime may call; opens only `.read` scopes; declared per agent in tools[], enforced by the tool's own scope"
+    },
     "weakness:corpus-diff": {
       "kind": "weakness",
       "source": "files/anatomy/bone/weaknesses.py",
@@ -4909,6 +4914,134 @@
       "evidence": "derived"
     },
     {
+      "from": "backend:anthropic",
+      "to": "agent:inspektor",
+      "kind": "data",
+      "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:anthropic",
+      "to": "agent:migration-author",
+      "kind": "data",
+      "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:anthropic",
+      "to": "agent:upgrade-architect",
+      "kind": "data",
+      "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:conductor",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:curator",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:jeff-cloud",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:ops-extract-cloud",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:ops-triage-cloud",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:proposer",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:minimax",
+      "to": "agent:surveyor",
+      "kind": "data",
+      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:ollama",
+      "to": "agent:invoice-extract",
+      "kind": "data",
+      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:ollama",
+      "to": "agent:invoice-vision-ocr",
+      "kind": "data",
+      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:ollama",
+      "to": "agent:jeff",
+      "kind": "data",
+      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:ollama",
+      "to": "agent:ops-extract",
+      "kind": "data",
+      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
+      "from": "backend:ollama",
+      "to": "agent:ops-triage",
+      "kind": "data",
+      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
       "from": "daemon:eu.thisisait.nos.wing",
       "to": "faceapp:anatomy-widget",
       "kind": "data",
@@ -5039,438 +5172,6 @@
       "kind": "data",
       "via": "CI clone/fetch of pushed branches (WOODPECKER_GITEA_URL, roles/pazny.woodpecker/templates/compose.yml.j2:31-34; Gitea OAuth2 client auto-created, A16/A19)",
       "derived": "role-config",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:ask-operator",
-      "to": "agent:jeff",
-      "kind": "data",
-      "via": "tool grant `ask-operator` declared in files/anatomy/agents/jeff/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:ask-operator",
-      "to": "agent:jeff-cloud",
-      "kind": "data",
-      "via": "tool grant `ask-operator` declared in files/anatomy/agents/jeff-cloud/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-anthropic",
-      "to": "agent:inspektor",
-      "kind": "data",
-      "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-anthropic",
-      "to": "agent:migration-author",
-      "kind": "data",
-      "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-anthropic",
-      "to": "agent:upgrade-architect",
-      "kind": "data",
-      "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:conductor",
-      "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:curator",
-      "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:jeff-cloud",
-      "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:librarian",
-      "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:ops-extract-cloud",
-      "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:ops-triage-cloud",
-      "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:proposer",
-      "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-minimax",
-      "to": "agent:surveyor",
-      "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-ollama",
-      "to": "agent:invoice-extract",
-      "kind": "data",
-      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-ollama",
-      "to": "agent:invoice-vision-ocr",
-      "kind": "data",
-      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-ollama",
-      "to": "agent:jeff",
-      "kind": "data",
-      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-ollama",
-      "to": "agent:ops-extract",
-      "kind": "data",
-      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:backend-ollama",
-      "to": "agent:ops-triage",
-      "kind": "data",
-      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:conductor",
-      "kind": "data",
-      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/conductor/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:curator",
-      "kind": "data",
-      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/curator/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:inspektor",
-      "kind": "data",
-      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:librarian",
-      "kind": "data",
-      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/librarian/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:migration-author",
-      "kind": "data",
-      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:proposer",
-      "kind": "data",
-      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/proposer/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:surveyor",
-      "kind": "data",
-      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:bash-read-only",
-      "to": "agent:upgrade-architect",
-      "kind": "data",
-      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/upgrade-architect/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:contract-search",
-      "to": "agent:jeff",
-      "kind": "data",
-      "via": "tool grant `contract-search` declared in files/anatomy/agents/jeff/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:contract-search",
-      "to": "agent:jeff-cloud",
-      "kind": "data",
-      "via": "tool grant `contract-search` declared in files/anatomy/agents/jeff-cloud/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:cortex_token_ro",
-      "to": "judge:cortex-corpus-diff",
-      "kind": "data",
-      "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
-      "derived": "judge-sets.requires",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:exec",
-      "to": "agent:jeff",
-      "kind": "data",
-      "via": "tool grant `exec` declared in files/anatomy/agents/jeff/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:keap_token_ro",
-      "to": "judge:cortex-corpus-diff",
-      "kind": "data",
-      "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
-      "derived": "judge-sets.requires",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:live_estate",
-      "to": "judge:nos-smoke",
-      "kind": "data",
-      "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
-      "derived": "judge-sets.requires",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-bone",
-      "to": "agent:conductor",
-      "kind": "data",
-      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/conductor/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-bone",
-      "to": "agent:curator",
-      "kind": "data",
-      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/curator/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-bone",
-      "to": "agent:inspektor",
-      "kind": "data",
-      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-bone",
-      "to": "agent:librarian",
-      "kind": "data",
-      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/librarian/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-bone",
-      "to": "agent:surveyor",
-      "kind": "data",
-      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-keap",
-      "to": "agent:curator",
-      "kind": "data",
-      "via": "tool grant `mcp-keap` declared in files/anatomy/agents/curator/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-keap",
-      "to": "agent:librarian",
-      "kind": "data",
-      "via": "tool grant `mcp-keap` declared in files/anatomy/agents/librarian/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-loop",
-      "to": "agent:proposer",
-      "kind": "data",
-      "via": "tool grant `mcp-loop` declared in files/anatomy/agents/proposer/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:conductor",
-      "kind": "data",
-      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/conductor/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:curator",
-      "kind": "data",
-      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/curator/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:inspektor",
-      "kind": "data",
-      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:jeff",
-      "kind": "data",
-      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/jeff/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:jeff-cloud",
-      "kind": "data",
-      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/jeff-cloud/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:librarian",
-      "kind": "data",
-      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/librarian/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:migration-author",
-      "kind": "data",
-      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:proposer",
-      "kind": "data",
-      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/proposer/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:surveyor",
-      "kind": "data",
-      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-wing-read",
-      "to": "agent:upgrade-architect",
-      "kind": "data",
-      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/upgrade-architect/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-wing-write",
-      "to": "agent:librarian",
-      "kind": "data",
-      "via": "tool grant `mcp-wing-write` declared in files/anatomy/agents/librarian/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:mcp-wing-write",
-      "to": "agent:surveyor",
-      "kind": "data",
-      "via": "tool grant `mcp-wing-write` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:migration-file-write",
-      "to": "agent:migration-author",
-      "kind": "data",
-      "via": "tool grant `migration-file-write` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "resource:migration-file-write",
-      "to": "agent:upgrade-architect",
-      "kind": "data",
-      "via": "tool grant `migration-file-write` declared in files/anatomy/agents/upgrade-architect/agent.yml tools[]",
-      "derived": "agent-tools",
       "evidence": "derived"
     },
     {
@@ -6406,6 +6107,310 @@
       "kind": "data",
       "via": "converge-time `tofu apply` writes providers/applications/outpost attachments into the live tenant (tasks/tofu-authentik.yml, destroy-guarded, -parallelism=1); read back daily by the plan-only drift job",
       "derived": "tofu-apply-path",
+      "evidence": "derived"
+    },
+    {
+      "from": "token:live_estate",
+      "to": "judge:nos-smoke",
+      "kind": "data",
+      "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
+      "derived": "judge-sets.requires",
+      "evidence": "derived"
+    },
+    {
+      "from": "token_ro:cortex_token_ro",
+      "to": "judge:cortex-corpus-diff",
+      "kind": "data",
+      "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
+      "derived": "judge-sets.requires",
+      "evidence": "derived"
+    },
+    {
+      "from": "token_ro:keap_token_ro",
+      "to": "judge:cortex-corpus-diff",
+      "kind": "data",
+      "via": "capability requirement (judge-sets requires:) — satisfied or not, never exclusive",
+      "derived": "judge-sets.requires",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:ask-operator",
+      "to": "agent:jeff",
+      "kind": "data",
+      "via": "tool grant `ask-operator` declared in files/anatomy/agents/jeff/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:ask-operator",
+      "to": "agent:jeff-cloud",
+      "kind": "data",
+      "via": "tool grant `ask-operator` declared in files/anatomy/agents/jeff-cloud/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:exec",
+      "to": "agent:jeff",
+      "kind": "data",
+      "via": "tool grant `exec` declared in files/anatomy/agents/jeff/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:mcp-bone",
+      "to": "agent:conductor",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/conductor/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:mcp-bone",
+      "to": "agent:curator",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/curator/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:mcp-bone",
+      "to": "agent:inspektor",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:mcp-bone",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/librarian/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:mcp-bone",
+      "to": "agent:surveyor",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:mcp-keap",
+      "to": "agent:curator",
+      "kind": "data",
+      "via": "tool grant `mcp-keap` declared in files/anatomy/agents/curator/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:mcp-keap",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "tool grant `mcp-keap` declared in files/anatomy/agents/librarian/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:mcp-loop",
+      "to": "agent:proposer",
+      "kind": "data",
+      "via": "tool grant `mcp-loop` declared in files/anatomy/agents/proposer/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:mcp-wing-write",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-write` declared in files/anatomy/agents/librarian/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:mcp-wing-write",
+      "to": "agent:surveyor",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-write` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:migration-file-write",
+      "to": "agent:migration-author",
+      "kind": "data",
+      "via": "tool grant `migration-file-write` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool:migration-file-write",
+      "to": "agent:upgrade-architect",
+      "kind": "data",
+      "via": "tool grant `migration-file-write` declared in files/anatomy/agents/upgrade-architect/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:conductor",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/conductor/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:curator",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/curator/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:inspektor",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/librarian/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:migration-author",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:proposer",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/proposer/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:surveyor",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:bash-read-only",
+      "to": "agent:upgrade-architect",
+      "kind": "data",
+      "via": "tool grant `bash-read-only` declared in files/anatomy/agents/upgrade-architect/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:contract-search",
+      "to": "agent:jeff",
+      "kind": "data",
+      "via": "tool grant `contract-search` declared in files/anatomy/agents/jeff/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:contract-search",
+      "to": "agent:jeff-cloud",
+      "kind": "data",
+      "via": "tool grant `contract-search` declared in files/anatomy/agents/jeff-cloud/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:conductor",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/conductor/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:curator",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/curator/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:inspektor",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:jeff",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/jeff/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:jeff-cloud",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/jeff-cloud/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/librarian/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:migration-author",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/migration-author/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:proposer",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/proposer/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:surveyor",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-wing-read",
+      "to": "agent:upgrade-architect",
+      "kind": "data",
+      "via": "tool grant `mcp-wing-read` declared in files/anatomy/agents/upgrade-architect/agent.yml tools[]",
+      "derived": "agent-tools",
       "evidence": "derived"
     },
     {
