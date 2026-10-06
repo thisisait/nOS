@@ -151,7 +151,7 @@ describe('temporalDebt', () => {
 describe('mutexSpokes', () => {
 	it('folds pairwise exclusions into one spoke per claim', () => {
 		const spokes = mutexSpokes(graph);
-		const agentSpokes = spokes.filter((s) => s.resource === 'resource:agent-run-lock');
+		const agentSpokes = spokes.filter((s) => s.resource === 'lock:agent-run-lock');
 		const pairs = graph.edges.filter((e) => e.kind === 'mutex' && e.resource === 'agent-run-lock');
 		// N claimants: N spokes vs N(N-1)/2 pairs. Same information, less ink.
 		expect((agentSpokes.length * (agentSpokes.length - 1)) / 2).toBe(pairs.length);

@@ -117,8 +117,10 @@ def test_law_and_organ_system_are_populated():
 
 #: Connected nodes per level a newcomer walks first. Measured at increment 2
 #: (2026-10-05); before it, `sense` was judges alone (5). tissue, organism and
-#: habitat carry no floor: the first two are empty by declaration.
+#: habitat carry no floor: the first two are empty by declaration. limb's own
+#: floor: the 2026-10-06 resource split left it the 8 acting grants it truly has.
 CONNECTED_FLOOR = 10
+LEVEL_FLOOR = {"limb": 8}
 WALKED = ("genome", "cell", "organ", "organ system", "sense", "limb", "memory", "law", "reflex")
 
 
@@ -127,9 +129,10 @@ def test_every_walked_level_is_a_graph_not_a_list():
     _, plan, _ = _load()
     touched = {end for e in plan["edges"] for end in (e["from"], e["to"])}
     thin = {lv: n for lv in WALKED
-            if (n := sum(1 for t in touched if plan["nodes"][t]["level"] == lv)) < CONNECTED_FLOOR}
+            if (n := sum(1 for t in touched if plan["nodes"][t]["level"] == lv))
+            < LEVEL_FLOOR.get(lv, CONNECTED_FLOOR)}
     assert not thin, (
-        f"levels with fewer than {CONNECTED_FLOOR} connected nodes: {thin}. Add the "
+        f"levels below their connected-node floor: {thin}. Add the "
         f"missing kind to tools/anatomy-graph-gen.py from the file that already "
         f"declares it, with its declared edges — never a hand list in the projection")
 

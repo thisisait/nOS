@@ -36,10 +36,11 @@ GRAPH = FACE / "anatomy-graph.json"
 
 REMEDY = (
     "anatomy-graph.json changed since the layout pin was frozen. Re-freeze "
-    "deliberately: (1) cd files/anatomy/face && npx vitest run "
-    "src/lib/anatomy/graphLayout.test.ts — if it fails, take the Received "
-    "hash into defaultViewPositionsSha256; (2) shasum -a 256 "
-    "src/lib/anatomy/anatomy-graph.json into graphSha256; (3) bump pinnedAt."
+    "deliberately: (1) cd files/anatomy/face && FACE_LAYOUT_REPIN=1 npx vitest "
+    "run src/lib/anatomy/graphLayout.test.ts (rewrites positions, graphSha256 "
+    "and pinnedAt); (2) npx prettier --write src/lib/anatomy/graphLayout.force.pin.json; "
+    "(3) run vitest again without FACE_LAYOUT_REPIN — it must pass — and read the "
+    "positions diff before committing."
 )
 
 

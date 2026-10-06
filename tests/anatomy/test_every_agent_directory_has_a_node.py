@@ -114,7 +114,8 @@ def test_every_declared_tool_is_an_edge(graph, profiles):
     edges = _edges(graph, "agent-tools")
     for name, doc in profiles.items():
         for tool in {t["id"] for t in doc.get("tools") or []}:
-            assert (f"resource:{tool}", f"agent:{name}") in edges, (
+            assert {(f"tool:{tool}", f"agent:{name}"),
+                    (f"tool_ro:{tool}", f"agent:{name}")} & edges, (
                 f"{name} declares tool {tool} with no edge — the grant is invisible "
                 f"to every reader of the graph")
 
@@ -127,7 +128,7 @@ def test_every_agent_is_served_by_a_register_row(graph, profiles):
     for name, doc in profiles.items():
         served = [f for f, t in edges if t == f"agent:{name}"]
         assert len(served) == 1, f"{name}: expected one backend edge, got {served}"
-        row = served[0].removeprefix("resource:backend-")
+        row = served[0].removeprefix("backend:")
         assert row in register, f"{name} is bound to {row}, which the register lacks"
         declared = (doc.get("model") or {}).get("backend")
         assert row == (declared or next(k for k, v in register.items() if v.get("default")))

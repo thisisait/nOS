@@ -59,7 +59,7 @@ def test_the_collapse_is_worth_making():
 
 def test_a_resource_is_not_drawn_as_another_rectangle():
     src = VIEW.read_text(encoding="utf-8")
-    assert "n.kind === 'resource'" in src, (
+    assert "n.kind === 'lock'" in src, (
         "the canvas no longer distinguishes a resource node, so a claim renders "
         "identically to the jobs it constrains"
     )
@@ -75,7 +75,7 @@ def test_a_resource_is_not_drawn_as_another_rectangle():
 def test_the_collapse_can_be_expanded():
     """The inspector must list every claimant of the selected resource."""
     src = VIEW.read_text(encoding="utf-8")
-    block = src[src.find("selected.kind === 'resource'"):]
+    block = src[src.find("selected.kind === 'lock'"):]
     block = block[:1400]
     assert block, "the inspector has no resource branch"
     assert "spokes.filter" in block, (
