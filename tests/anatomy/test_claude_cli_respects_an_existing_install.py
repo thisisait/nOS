@@ -79,8 +79,11 @@ def test_an_existing_claude_is_left_alone(tmp_path, where, native):
 
 
 def _declared_default(name: str):
-    """The default as default.config.yml declares it, not as the task guesses it."""
-    return yaml.safe_load((REPO / "default.config.yml").read_text())[name]
+    """The default as the default layers declare it, not as the task guesses it."""
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity as ni  # noqa: E402
+
+    return ni.default_config()[name]
 
 
 @needs_ansible
