@@ -376,6 +376,7 @@ services:
       url_template: "http://127.0.0.1:{port}/health"
       expect_status: 200
       timeout_sec: 5
+    joint_pending: "own repo (ghcr.io/pazny/nos-forum-web) attached by OIDC and SpacetimeDB; no contract spec yet"
 
   - id: offline_maps
     category: gis
@@ -519,6 +520,7 @@ services:
     port_var: face_port
     oidc: proxy
     rbac_tier: 3
+    joint_pending: "the face-Wing/Bone contract is not written; Wing hand-copies face's uid rule (row appendage-joint-face)"
 
   - id: keap
     category: knowledge
@@ -917,6 +919,7 @@ services:
     launchd_helpers: ["com.ollama.agent"]  # ollama_launchd_label, same role and flag
     domain_var: openclaw_domain
     port_var: openclaw_gateway_port
+    joint_pending: "attached through the nOS skills and the Wing/Bone OpenAPI specs (files/anatomy/skills/contracts/); no fixture or consumer-side gate yet"
 
   - id: hermes
     category: messaging
@@ -926,6 +929,7 @@ services:
     launchd_label: "eu.thisisait.nos.hermes"
     domain_var: hermes_domain
     port_var: hermes_web_port
+    joint_pending: "attached through the nOS skills and the Wing/Bone OpenAPI specs (files/anatomy/skills/contracts/); no fixture or consumer-side gate yet"
 
   - id: device_gateway
     category: agent
@@ -957,6 +961,7 @@ services:
     install_flag: install_openhuman
     version_source: none
     host_process: "a desktop app (cask) the operator opens; no launchd job"
+    joint_pending: "attached through the nos-tables MCP server over KEAP's agent API (roles/pazny.openhuman/templates/nos-mcp.json.j2); no contract spec yet"
 
   - id: wing
     category: security

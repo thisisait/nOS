@@ -101,8 +101,11 @@
         "coexistence_supported": { "type": "boolean", "default": false },
         "rbac_tier":     { "type": ["integer", "null"], "minimum": 1, "maximum": 4 },
         "oidc":          { "type": ["string", "null"], "enum": ["native", "proxy", "none", null] },
-        "notes":         { "type": ["string", "null"] }
-      }
+        "notes":         { "type": ["string", "null"] },
+        "joint":         { "type": "string", "minLength": 1, "description": "Appendage (ssot/doctrine/body-plan.md §7): repo path of the cross-repo contract spec this organ is attached through. Gate: tests/anatomy/test_appendage_is_detachable.py." },
+        "joint_pending": { "type": "string", "minLength": 1, "description": "Appendage whose contract is not written yet: why. Tolerated only on the gate's pending list, which may only shrink." }
+      },
+      "not": { "required": ["joint", "joint_pending"] }
     }
   }
 }
