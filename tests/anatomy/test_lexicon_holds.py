@@ -53,33 +53,7 @@ PENDING_SURFACES = {
 
 #: "file :: phrase" → occurrences, in the files models are told to trust.
 PENDING_PHRASES: dict[str, int] = {
-    "docs/doctrine/README.md :: dna": 1,
-    "docs/doctrine/README.md :: indicators are cells": 1,
-    "docs/doctrine/README.md :: public organ": 1,
-    "docs/doctrine/README.md :: stomach": 1,
-    "docs/doctrine/backoffice.md :: fifth brain": 1,
-    "docs/doctrine/backoffice.md :: organelle": 5,
-    "docs/doctrine/backoffice.md :: praxis pack": 2,
-    "docs/doctrine/backoffice.md :: public organ": 3,
-    "docs/doctrine/backoffice.md :: stomach": 1,
-    "docs/doctrine/backoffice.md :: tendon": 1,
-    "docs/doctrine/organs.md :: layer of the brain": 1,
-    "docs/doctrine/organs.md :: public organ": 1,
-    "docs/doctrine/organs.md :: tendon": 1,
-    "files/anatomy/skills/nos-backoffice/SKILL.md :: backoffice pack": 1,
     "files/anatomy/skills/nos-backoffice/SKILL.md :: cortex-query": 2,
-    "files/anatomy/skills/nos-backoffice/SKILL.md :: organelle": 1,
-    "ssot/doctrine/immune-system.md :: DNA of the inner organism": 1,
-    "ssot/doctrine/immune-system.md :: attacking self": 1,
-    "ssot/doctrine/immune-system.md :: cell contract": 1,
-    "ssot/doctrine/immune-system.md :: cell kinds": 1,
-    "ssot/doctrine/immune-system.md :: dna": 5,
-    "ssot/doctrine/immune-system.md :: indicators as cells": 1,
-    "ssot/doctrine/immune-system.md :: memory | where each verdict": 1,
-    "ssot/doctrine/immune-system.md :: memory — the verdict log": 1,
-    "ssot/doctrine/immune-system.md :: non-self": 2,
-    "ssot/doctrine/immune-system.md :: organs of a first organism": 1,
-    "ssot/doctrine/immune-system.md :: spinal cord": 1,
 }
 
 
