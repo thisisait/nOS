@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 428,
+    "nodes": 429,
     "edges": 476,
     "nodes_pulse": 43,
     "nodes_judge": 5,
@@ -28,7 +28,7 @@
     "nodes_tasktype": 9,
     "nodes_skill": 11,
     "nodes_reader": 60,
-    "nodes_article": 21,
+    "nodes_article": 22,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
     "edges_data": 230,
@@ -292,6 +292,13 @@
       "anchor": "02.02.09",
       "description": "Agent ceremony 'upgrade-architect' (recipe-authoring), mode=None, runner_status=UNDECLARED (not a green state) — primary claude-sonnet on backend anthropic (the register default, undeclared)"
     },
+    "article:body-plan": {
+      "kind": "article",
+      "source": "ssot/doctrine/body-plan.md",
+      "title": "Body plan — one word, one meaning",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/body-plan.md: Body plan — one word, one meaning"
+    },
     "article:cross-repo-contracts": {
       "kind": "article",
       "source": "ssot/doctrine/cross-repo-contracts.md",
@@ -358,9 +365,9 @@
     "article:immune-system": {
       "kind": "article",
       "source": "ssot/doctrine/immune-system.md",
-      "title": "The immune system — indicators as cells",
+      "title": "The immune system — indicators as senses",
       "anchor": "09",
-      "description": "Constitution article ssot/doctrine/immune-system.md: The immune system — indicators as cells"
+      "description": "Constitution article ssot/doctrine/immune-system.md: The immune system — indicators as senses"
     },
     "article:layers": {
       "kind": "article",
@@ -3927,9 +3934,9 @@
     "skill:nos-backoffice": {
       "kind": "skill",
       "source": "files/anatomy/skills/nos-backoffice/SKILL.md",
-      "title": "Backoffice pack — CRM desk is Dolibarr when installed; agents read KEAP party/invoice tables, never vendor REST. Hydrator is digest-import-doli, not Bone.",
+      "title": "Backoffice tissue — CRM desk is Dolibarr when installed; agents read KEAP party/invoice tables, never vendor REST. Hydrator is digest-import-doli, not Bone.",
       "anchor": "02.02.09",
-      "description": "Skill 'nos-backoffice' (files/anatomy/skills/nos-backoffice/SKILL.md): Backoffice pack — CRM desk is Dolibarr when installed; agents read KEAP party/invoice tables, never vendor REST. Hydrator is digest-import-doli, not Bone."
+      "description": "Skill 'nos-backoffice' (files/anatomy/skills/nos-backoffice/SKILL.md): Backoffice tissue — CRM desk is Dolibarr when installed; agents read KEAP party/invoice tables, never vendor REST. Hydrator is digest-import-doli, not Bone."
     },
     "skill:nos-datatables": {
       "kind": "skill",

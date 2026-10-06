@@ -14,7 +14,7 @@
     "sense": 77,
     "limb": 8,
     "memory": 40,
-    "law": 36,
+    "law": 37,
     "reflex": 43,
     "internal": 67,
     "edges": 362
@@ -83,6 +83,10 @@
     "agent:upgrade-architect": {
       "level": "cell",
       "kind": "agent"
+    },
+    "article:body-plan": {
+      "level": "law",
+      "kind": "article"
     },
     "article:cross-repo-contracts": {
       "level": "law",
