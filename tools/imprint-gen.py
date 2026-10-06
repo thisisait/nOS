@@ -43,7 +43,7 @@ SOURCES = {
 OTHER_SOURCES = [
     "state/body-plan.json (via tools/body.py)",
     "state/anatomy-graph.json (via files/anatomy/apex/projection.py)",
-    "default.config.yml + config.d/*.yml (via tools/nos_identity.py default_config())",
+    "the default layers (tools/nos_identity.py default_config())",
 ]
 
 
