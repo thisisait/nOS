@@ -180,6 +180,9 @@
 - slug: compose-hardening
   parent: sec
   track: security
+- slug: config-d-host-software
+  parent: default-config-split
+  track: platform
 - slug: constitution-llm-legible
   parent: ''
   track: platform
