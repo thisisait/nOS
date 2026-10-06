@@ -135,7 +135,7 @@ SYSTEM_NAME = {
     "mikopbx": "MikoPBX", "qgis-server": "QGIS Server",
     "alloy": "Grafana Alloy", "openclaw": "OpenClaw", "hermes": "Hermes",
     "device-gateway": "Device gateway",
-    "opencode": "OpenCode", "wing": "Wing", "bone": "Bone", "pulse": "Pulse",
+    "opencode": "OpenCode", "openhuman": "OpenHuman", "wing": "Wing", "bone": "Bone", "pulse": "Pulse",
     "cortex": "Cortex", "ears": "Ears",
     "iiab-terminal": "IIAB Terminal", "backup": "Backup", "backrest": "Backrest",
     "tailscale": "Tailscale",
@@ -538,6 +538,11 @@ SYSTEM_EN = {
         "OpenCode, the agentic coding helper on the host. It works inside a checked-out "
         "repository, editing files and running commands, rather than serving a browser "
         "session."
+    ),
+    "openhuman": (
+        "OpenHuman, a desktop agent on the operator's Mac. It answers from a local model "
+        "by default and reads the estate's tables with a read-only token, and nOS sets it "
+        "up but does not contain it: it runs as the operator's own user."
     ),
     "wing": (
         "Wing, the operator dashboard and state-framework UI. It reads the estate's own "

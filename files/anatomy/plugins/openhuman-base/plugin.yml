@@ -1,0 +1,67 @@
+# =============================================================================
+# openhuman-base — Article 30 record for the OpenHuman desktop agent (2026-10-06)
+#
+# The Art-30 entry and the SSO statement, nothing else: the role is a symbiont
+# cask plus files in ~/.openhuman. Recipe: docs/systems/openhuman/README.md.
+# =============================================================================
+
+name: openhuman-base
+version: 0.1.0
+description: |
+  OpenHuman — a desktop agent (Tauri app) on the operator's Mac, set up by
+  roles/pazny.openhuman: local model by default, the nOS tables read-only over
+  MCP, the imprint as its AGENTS.md. Runs as the operator's user.
+upstream: https://github.com/tinyhumansai/openhuman
+license: GPL-3.0
+
+type:
+  - service
+
+_NOS_PLUGIN: "openhuman-base"
+
+requires:
+  role: pazny.openhuman
+  feature_flag: install_openhuman
+  variables:
+    - openhuman_provider
+    - openhuman_register_mcp
+
+# No authentik block = SSO mode none: a desktop app has no web surface.
+
+gdpr:
+  purpose: |
+    A personal assistant that answers the operator from a model and the
+    estate's read-only tables. Processing: the operator's prompts and the
+    table rows it reads, held in the app's session state under ~/.openhuman.
+    Memory (conversation log, recall) is turned off by the role.
+  legal_basis: legitimate_interests   # Art. 6(1)(f) — the operator's own assistant over his own estate
+  balancing_test: >-
+    Single user, the operator. The default model is local (Ollama, privacy
+    local_only) and the firewall rule denies the app any non-local host;
+    the table token is read-only and read at spawn, never stored.
+  data_source: from_subject
+  data_categories:
+    - operator_prompts
+    - estate_table_rows             # roadmap / current-state rows, read-only
+  data_subjects:
+    - operators
+  retention_days: 0                 # memory off; session state is the app's, erased with ~/.openhuman
+  # openhuman_provider: ollama (default) has no processor. claude-code sends
+  # prompts to Anthropic (US) through the claude CLI: then the processor is
+  # "Anthropic PBC (US)", eu_residency false, transfers_outside_eu true.
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+  storage_location: >-
+    Host only: ~/.openhuman (config.toml, workspace/AGENTS.md, skills,
+    the app's own session and MCP stores).
+  security_measures:
+    - "privacy.mode local_only on the default provider: the core refuses to build a cloud route"
+    - "analytics, usage sharing, core updater, remote gitbooks MCP and memory off in config.toml"
+    - "nOS tables over MCP with the RO token, read from the KEAP container at spawn"
+    - "Little Snitch rule group rendered by the role: OpenHuman denied every non-local host"
+    - "tools/openhuman-status.py verifies the config every converge; RED fails the play"
+  notes: >-
+    Not contained beyond the operator's uid ("runs as the user",
+    ssot/doctrine/session-threat-model.md). The desktop updater has no switch;
+    the firewall rule is what stops it.

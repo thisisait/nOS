@@ -933,6 +933,15 @@ services:
     version_source: homebrew
     brew_formula: opencode
 
+  # A desktop app (symbiont cask, roles/pazny.openhuman): it serves nothing, so no
+  # domain_var/port_var/health_check. version_source none: it updates itself, so
+  # brew's record goes stale. Reader: tools/openhuman-status.py.
+  - id: openhuman
+    category: agent
+    stack: null
+    install_flag: install_openhuman
+    version_source: none
+
   - id: wing
     category: security
     stack: null

@@ -11,7 +11,7 @@
     "nodes_gateset": 5,
     "nodes_weakness": 7,
     "nodes_daemon": 19,
-    "nodes_service": 71,
+    "nodes_service": 72,
     "nodes_lock": 1,
     "nodes_tool": 7,
     "nodes_tool_ro": 3,
@@ -42,14 +42,14 @@
     "edges_part_of": 88,
     "edges_service_dependency": 39,
     "services_survey_declared": 29,
-    "services_survey_not_surveyed": 39,
+    "services_survey_not_surveyed": 40,
     "services_survey_no_manifest": 3,
     "edges_service_dependency_unenforced": 16,
     "services_layer_L0": 3,
     "services_layer_L1": 5,
     "services_layer_L2": 21,
     "services_layer_L3": 0,
-    "services_layer_withheld": 42
+    "services_layer_withheld": 43
   },
   "warnings": [
     "union-kind cycle (feedback loop, review-not-refuse): pulse:cortex:cortex-fs-sync -> pulse:keap:keap-embed-sync -> pulse:cortex:cortex-corpus-diff -> pulse:cortex:cortex-fs-sync"
@@ -3599,6 +3599,18 @@
       "description": "Docker service 'opencode' (ai) in the None compose stack, toggled by install_opencode",
       "layer": null,
       "layer_withheld": "dependency_survey=no-manifest — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
+    },
+    "service:openhuman": {
+      "kind": "service",
+      "source": "state/manifest.yml",
+      "stack": null,
+      "category": "agent",
+      "install_flag": "install_openhuman",
+      "dependency_survey": "not-surveyed",
+      "anchor": "02.02.09",
+      "description": "Docker service 'openhuman' (agent) in the None compose stack, toggled by install_openhuman",
+      "layer": null,
+      "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
     "service:outline": {
       "kind": "service",

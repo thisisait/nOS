@@ -7,7 +7,7 @@
     "genome": 20,
     "cell": 16,
     "tissue": 1,
-    "organ": 101,
+    "organ": 102,
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
@@ -1317,6 +1317,10 @@
       "kind": "service"
     },
     "service:opencode": {
+      "level": "organ",
+      "kind": "service"
+    },
+    "service:openhuman": {
       "level": "organ",
       "kind": "service"
     },

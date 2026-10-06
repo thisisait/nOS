@@ -346,6 +346,8 @@ nodes:
   # this slice; published set unchanged.
   "service:device_gateway": withheld
   "service:opencode":      { publish: wits, speaks: "a mind that writes code beside you" }
+  # A third-party desktop agent on the operator's Mac: a public sentence is theirs to sign.
+  "service:openhuman":     withheld
   "service:open_webui":    { publish: wits, speaks: "a chat room with the house's own models" }
   "service:mcp_gateway":   { publish: wits, speaks: "one socket where minds plug into tools" }
 
