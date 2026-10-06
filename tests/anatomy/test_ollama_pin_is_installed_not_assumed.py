@@ -16,7 +16,7 @@ import jinja2
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
-ROLE = REPO / "roles/pazny.openclaw/tasks/main.yml"
+ROLE = REPO / "roles/pazny.ollama/tasks/main.yml"
 
 
 def _task() -> dict:

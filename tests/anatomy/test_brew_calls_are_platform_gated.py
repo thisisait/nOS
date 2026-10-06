@@ -139,7 +139,7 @@ def test_the_include_site_scanner_finds_the_known_darwin_roles():
     """Guard the guard: if this parser silently found nothing, the gate above
     would pass by excluding everything instead of by everything being gated."""
     gated = _darwin_gated_roles()
-    for role in ("pazny.openclaw", "pazny.hermes", "pazny.acme",
+    for role in ("pazny.openclaw", "pazny.ollama", "pazny.hermes", "pazny.acme",
                  "tasks/tailscale.yml", "tasks/observability.yml"):
         assert role in gated, (
             f"{role} is Darwin-gated in main.yml but the include-site scanner "

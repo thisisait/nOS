@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """How old is the version brew wants to give us, and is it old enough to adopt?
 
-WHY THIS EXISTS. `roles/pazny.openclaw/tasks/main.yml` installs ollama with
+WHY THIS EXISTS. `roles/pazny.ollama/tasks/main.yml` installs ollama with
 `state: present` and LINKS the keg `default.config.yml` records. Advancing
 that number is a decision, not a failed converge. This reader says when a
 newer upstream version has aged enough to adopt.
@@ -59,7 +59,7 @@ CONFIG = REPO / "default.config.yml"
 #: to. Add a row when a role starts recording a brew version.
 PINNED = {
     "ollama": ("ollama_version",
-               "roles/pazny.openclaw links this keg (and refuses if it cannot); "
+               "roles/pazny.ollama links this keg (and refuses if it cannot); "
                "MLX backend needs >= 0.19"),
 }
 

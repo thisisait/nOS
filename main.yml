@@ -2575,6 +2575,18 @@
       tags: ['git']
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Ollama - the local model server (backend:ollama), before its consumers.
+    # Also keeps the tags it ran under inside pazny.openclaw (openclaw, agent).
+    # ──────────────────────────────────────────────────────────────────────────
+    - name: "Ollama (pazny.ollama role)"
+      ansible.builtin.import_role:
+        name: pazny.ollama
+      when:
+        - install_ollama | default(false)
+        - ansible_os_family == 'Darwin'
+      tags: ['ollama', 'openclaw', 'ai', 'agent']
+
+    # ──────────────────────────────────────────────────────────────────────────
     # OpenClaw - self-hosted AI agent (Ollama, no API key)
     # ──────────────────────────────────────────────────────────────────────────
     - name: "OpenClaw (pazny.openclaw role)"

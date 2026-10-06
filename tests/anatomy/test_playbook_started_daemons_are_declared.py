@@ -27,9 +27,9 @@ GRAPH = REPO / "state" / "anatomy-graph.json"
 STARTED = {
     "ai.openclaw.gateway": ("install_openclaw", "gui", "openclaw_gateway_launchd_label",
                             ["roles/pazny.openclaw/tasks/main.yml"]),
-    "com.ollama.agent": ("install_openclaw", "gui", "ollama_launchd_label",
-                         ["roles/pazny.openclaw/tasks/main.yml",
-                          "roles/pazny.openclaw/templates/ollama-agent.plist.j2"]),
+    "com.ollama.agent": ("install_ollama", "gui", "ollama_launchd_label",
+                         ["roles/pazny.ollama/tasks/main.yml",
+                          "roles/pazny.ollama/templates/ollama-agent.plist.j2"]),
     "sh.brew.grafana-alloy": ("install_observability", "gui", "observability_launchd_label",
                               ["main.yml"]),
     "homebrew.mxcl.dnsmasq": ("install_dnsmasq", "system", "dnsmasq_launchd_label",

@@ -7,7 +7,7 @@
     "genome": 20,
     "cell": 16,
     "tissue": 1,
-    "organ": 101,
+    "organ": 102,
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
@@ -17,7 +17,7 @@
     "law": 37,
     "reflex": 43,
     "internal": 67,
-    "edges": 363
+    "edges": 366
   },
   "nodes": {
     "agent:conductor": {
@@ -1301,6 +1301,10 @@
       "kind": "service"
     },
     "service:offline_maps": {
+      "level": "organ",
+      "kind": "service"
+    },
+    "service:ollama": {
       "level": "organ",
       "kind": "service"
     },
@@ -2868,6 +2872,16 @@
       "kind": "part_of"
     },
     {
+      "from": "service:ollama",
+      "to": "backend:ollama",
+      "kind": "data"
+    },
+    {
+      "from": "service:ollama",
+      "to": "service:openclaw",
+      "kind": "data"
+    },
+    {
       "from": "service:onlyoffice",
       "to": "organ_system:commons",
       "kind": "part_of"
@@ -2881,6 +2895,11 @@
       "from": "service:open_webui",
       "to": "organ_system:wits",
       "kind": "part_of"
+    },
+    {
+      "from": "service:openclaw",
+      "to": "backend:openclaw",
+      "kind": "data"
     },
     {
       "from": "service:openclaw",

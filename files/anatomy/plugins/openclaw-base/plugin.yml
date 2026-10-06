@@ -83,6 +83,19 @@ authentik:
       urgency; not shipped here to avoid a half-baked auth change to the
       gateway — left honestly as a header-provision patch for OpenClaw.
 
+# ── DEPENDS_ON — the model server is its own row since 2026-10-06 ───────────
+depends_on:
+  - upstream: "service:ollama"
+    kind: data
+    via: >-
+      `openclaw onboard --auth-choice ollama` and agents.defaults.model.primary
+      "ollama/{{ openclaw_model }}" (roles/pazny.openclaw/tasks/main.yml) — every
+      completion goes to 127.0.0.1:11434
+    measured: "2026-10-06"
+    unenforced: >-
+      No auto-enable block ties install_ollama to install_openclaw. With Ollama
+      off the gateway still starts; every model call fails.
+
 # =============================================================================
 # GDPR — Article 30 register row
 # =============================================================================

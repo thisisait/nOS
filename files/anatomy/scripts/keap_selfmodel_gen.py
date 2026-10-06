@@ -133,7 +133,7 @@ SYSTEM_NAME = {
     "onlyoffice": "ONLYOFFICE",
     "metabase": "Metabase", "superset": "Superset", "influxdb": "InfluxDB",
     "mikopbx": "MikoPBX", "qgis-server": "QGIS Server",
-    "alloy": "Grafana Alloy", "openclaw": "OpenClaw", "hermes": "Hermes",
+    "alloy": "Grafana Alloy", "openclaw": "OpenClaw", "ollama": "Ollama", "hermes": "Hermes",
     "device-gateway": "Device gateway",
     "opencode": "OpenCode", "openhuman": "OpenHuman", "wing": "Wing", "bone": "Bone", "pulse": "Pulse",
     "cortex": "Cortex", "ears": "Ears",
@@ -522,6 +522,11 @@ SYSTEM_EN = {
         "OpenClaw, the autonomous DevOps agent daemon on the host. It runs long-lived agent "
         "loops against local language models and holds the tool permissions those loops act "
         "with."
+    ),
+    "ollama": (
+        "Ollama, the local model server on the host. It answers language and embedding "
+        "requests on loopback for agents, OpenClaw, Hermes and KEAP, and nothing it is "
+        "sent leaves the machine."
     ),
     "hermes": (
         "Hermes, the cross-channel agent gateway. It bridges outside chat channels such as "

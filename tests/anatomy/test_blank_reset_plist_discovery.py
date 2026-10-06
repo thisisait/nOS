@@ -59,8 +59,8 @@ SELF_CLEANED_PLISTS = {
     # backup role boots out + removes the legacy colliding label every run
     # (roles/pazny.backup/tasks/main.yml "[backup] Remove legacy colliding plist")
     "eu.thisisait.nos.backup.plist",
-    # openclaw role renames brew's plist to .disabled every run, then blank-reset
-    # evicts the .disabled form (roles/pazny.openclaw/tasks/main.yml line 56).
+    # ollama role renames brew's plist to .disabled every run, then blank-reset
+    # evicts the .disabled form (roles/pazny.ollama/tasks/main.yml).
     "homebrew.mxcl.ollama.plist",
 }
 
@@ -105,7 +105,7 @@ PLAYBOOK_AGENTS = {
         "label_var": "acme_launchd_label",
         "label_default": "eu.thisisait.nos.acme-renew",
     },
-    "pazny.openclaw": {
+    "pazny.ollama": {
         "template": "ollama-agent.plist.j2",
         "label_var": "ollama_launchd_label",
         "label_default": "com.ollama.agent",

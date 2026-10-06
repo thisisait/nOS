@@ -8,13 +8,15 @@ WHAT THIS PINS (YAML/text, no wet converge):
 1. No ``main-fast.yml`` at repo root.
 2. ``elliotweiser.osx-command-line-tools`` carries tag ``homebrew``.
 3. The skip-list is the documented frozenset; organs+stacks are disjoint.
-4. ``pazny.openclaw`` is tagged ``openclaw`` and does not intersect the skip list.
+4. ``pazny.openclaw`` and ``pazny.ollama`` are tagged ``openclaw``, off the skip list.
 """
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 MAIN = REPO / "main.yml"
@@ -62,18 +64,20 @@ def test_skip_list_does_not_drop_organs_or_stacks():
     )
 
 
-def test_openclaw_stays_off_the_skip_list():
+@pytest.mark.parametrize("role", ["pazny.openclaw", "pazny.ollama"])
+def test_openclaw_stays_off_the_skip_list(role):
+    """pazny.ollama carries the ollama pin since 2026-10-06 and keeps the openclaw tag."""
     text = MAIN.read_text(encoding="utf-8")
     m = re.search(
-        r"name:\s*pazny\.openclaw\n"
+        rf"name:\s*{re.escape(role)}\n"
         r"(?:.*\n){0,16}?"
         r"\s+tags:\s*\[([^\]]+)\]",
         text,
     )
-    assert m, "pazny.openclaw import_role has no tags"
+    assert m, f"{role} import_role has no tags"
     tags = _tags(m.group(1))
-    assert "openclaw" in tags, f"openclaw tags {tags} lost the openclaw tag"
+    assert "openclaw" in tags, f"{role} tags {tags} lost the openclaw tag"
     assert tags.isdisjoint(SKIP), (
-        f"pazny.openclaw tags {tags} intersect the host skip-list {tags & SKIP}; "
+        f"{role} tags {tags} intersect the host skip-list {tags & SKIP}; "
         "a source-only skip would drop the ollama pin"
     )

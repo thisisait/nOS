@@ -171,7 +171,7 @@
       - "com.ollama.agent.plist.disabled"
       - "homebrew.mxcl.ollama.plist.disabled"
       - "sh.brew.ollama.plist"                  # Homebrew 7 name for the brew service
-      - "sh.brew.ollama.plist.disabled"         # …as parked by pazny.openclaw
+      - "sh.brew.ollama.plist.disabled"         # …as parked by pazny.ollama
       # Anatomy host daemons (eu.thisisait.nos.*) — each role renders its plist
       # into ~/Library/LaunchAgents; without these a blank leaves stale plists
       # pointing at wiped data dirs (gated by test_blank_reset_plist_discovery).

@@ -24,7 +24,7 @@ from pathlib import Path
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
-TASKS = REPO / "roles" / "pazny.openclaw" / "tasks" / "main.yml"
+TASKS = REPO / "roles" / "pazny.ollama" / "tasks" / "main.yml"
 
 
 def tasks() -> list[dict]:

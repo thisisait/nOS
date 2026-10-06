@@ -920,6 +920,26 @@ def harvest_backends(nodes: dict) -> None:
         }
 
 
+def derive_backend_servers(nodes: dict) -> list[dict]:
+    """service:<row> → backend:<name>, from a backend's `served_by:` (2026-10-06).
+
+    Without it backend:ollama floated free of the daemon that answers it, and
+    openclaw's row carried that daemon unseen. Upstream → consumer, as everywhere.
+    """
+    backends = (yaml.safe_load(LLM_BACKENDS.read_text(encoding="utf-8")) or {}).get("backends") or {}
+    out = []
+    for name, b in sorted(backends.items()):
+        if not b.get("served_by"):
+            continue
+        nid, sid = f"backend:{name}", f"service:{b['served_by']}"
+        if sid not in nodes:
+            _die(f"{nid}: served_by {b['served_by']!r} is not a row in state/manifest.yml")
+        out.append({"from": sid, "to": nid, "kind": "data",
+                    "via": f"`served_by: {b['served_by']}` in state/llm-backends.yml",
+                    "derived": "backend-server"})
+    return out
+
+
 def harvest_agents(nodes: dict, edges: list) -> None:
     """agent:<name> — one node per ceremony profile, with its three in-edges.
 
@@ -2010,7 +2030,7 @@ def build() -> dict:
                  + structural + doctrine + mutex + hosting + agent_edges
                  + derive_agent_triggers(nodes) + shelf_edges + derive_table_refs(nodes)
                  + derive_task_type_tools(nodes) + derive_article_parts(nodes)
-                 + derive_reader_runs(nodes))
+                 + derive_reader_runs(nodes) + derive_backend_servers(nodes))
     derive_layers(nodes, all_edges)
 
     # Per-kind cycles are a compile error (§2c-2): there is no legitimate

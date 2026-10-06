@@ -72,7 +72,7 @@ DAEMON_ROLES_EXCUSED = {
     # So the role compares the RUNNING daemon against the INSTALLED keg and
     # reloads on the difference, whoever caused it. Same argument as the Wing
     # plist drift reload: key on reality, not on having just written something.
-    "pazny.openclaw": "reloads on measured keg-vs-daemon drift, not on notify — "
+    "pazny.ollama": "reloads on measured keg-vs-daemon drift, not on notify — "
                       "a handler misses the common case (operator swaps the keg "
                       "by hand, brew then reports changed=false forever)",
 }

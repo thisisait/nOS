@@ -93,3 +93,23 @@ def test_a_host_native_service_is_not_described_as_docker():
            if n.get("kind") == "service" and n.get("stack") is None
            and "Docker" in n.get("description", "")]
     assert not bad, f"host-native rows described as Docker services: {bad}"
+
+
+def test_a_local_backend_is_served_by_a_row_that_owns_its_daemon():
+    """MEASURED 2026-10-06: backend:ollama (core cells bind it) had no edge to
+    any row, and its daemon sat in openclaw's row as a helper — so cutting off
+    openclaw looked free. A local backend names its server in `served_by:`."""
+    backends = yaml.safe_load((REPO / "state/llm-backends.yml").read_text(encoding="utf-8"))["backends"]
+    rows = {r["id"]: r for r in _manifest()["services"]}
+    edges = {(e["from"], e["to"]) for e in json.loads(
+        (REPO / "state/anatomy-graph.json").read_text(encoding="utf-8"))["edges"]}
+    bad = []
+    for name, b in backends.items():
+        if not b.get("local"):
+            continue
+        row = rows.get(b.get("served_by"))
+        if not row or not row.get("launchd_label"):
+            bad.append(f"{name}: served_by {b.get('served_by')!r} is no manifest row with a launchd_label")
+        elif (f"service:{row['id']}", f"backend:{name}") not in edges:
+            bad.append(f"{name}: no graph edge service:{row['id']} -> backend:{name}")
+    assert not bad, "\n".join(bad)

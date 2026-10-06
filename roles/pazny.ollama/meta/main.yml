@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: ollama
+  namespace: pazny
+  author: Pázny
+  description: Ollama — local model server (homebrew formula + user LaunchAgent) for nOS
+  license: MIT
+  min_ansible_version: "2.20"
+  platforms:
+    - name: MacOSX
+      versions:
+        - all
+
+dependencies: []
+
+collections:
+  - community.general  # community.general.homebrew

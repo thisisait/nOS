@@ -994,6 +994,11 @@ ollama_vision_model: ""        # -> NOS_LOCAL_VISION_MODEL  (vision tier)
 # /v1/systemone decision models (dtt local-decision-tev1) need >= 0.35.
 ollama_version: "0.35.0"
 
+# The model server itself (roles/pazny.ollama, row `ollama`). Its own flag since
+# 2026-10-06: core cells use it as backend:ollama, so install_openclaw: false must
+# not take it away. Default true = what install_openclaw: true installed before.
+install_ollama: true
+
 # Run openclaw as a launchd daemon (always running, autorestart)
 openclaw_install_daemon: true
 openclaw_domain: "claw{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
@@ -1578,7 +1583,7 @@ nos_agent_forge: "gitea"
 
 # ==============================================================================
 # IIAB – OPEN WEBUI (chat UI for Ollama)
-# Requires: install_openclaw: true (Ollama must run on port 11434)
+# Requires: install_ollama: true (Ollama must run on port 11434)
 # ==============================================================================
 
 openwebui_domain: "ai{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"

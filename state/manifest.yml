@@ -916,10 +916,22 @@ services:
     install_flag: install_openclaw
     version_source: launchd
     launchd_label: "ai.openclaw.gateway"   # openclaw_gateway_launchd_label, written by `openclaw gateway install`
-    launchd_helpers: ["com.ollama.agent"]  # ollama_launchd_label, same role and flag
     domain_var: openclaw_domain
     port_var: openclaw_gateway_port
     joint_pending: "attached through the nOS skills and the Wing/Bone OpenAPI specs (files/anatomy/skills/contracts/); no fixture or consumer-side gate yet"
+
+  # The local model server behind backend:ollama (state/llm-backends.yml). Out of
+  # openclaw's row 2026-10-06: core cells bind it, so it is core, not an appendage.
+  # Loopback 127.0.0.1:11434 only, no route — hence no domain_var/port_var.
+  - id: ollama
+    category: ai
+    stack: null
+    install_flag: install_ollama
+    version_var: ollama_version
+    version_source: homebrew
+    brew_formula: ollama
+    launchd_label: "com.ollama.agent"      # ollama_launchd_label (roles/pazny.ollama)
+    data_path_var: ollama_models_dir
 
   - id: hermes
     category: messaging

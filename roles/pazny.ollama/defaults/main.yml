@@ -1,0 +1,25 @@
+---
+# pazny.ollama — the local model server (moved out of pazny.openclaw 2026-10-06).
+# Values unchanged. Install flag and pin: install_ollama, ollama_version.
+
+# launchd label this role starts (bootout when install_ollama is declared false).
+ollama_launchd_label: "com.ollama.agent"                # templates/ollama-agent.plist.j2
+
+# MLX is Ollama's default backend on Apple Silicon since 0.20.
+ollama_max_loaded_models: 1      # 1 for MoE 30B (dense); 2 if you use 20B/14B
+ollama_num_parallel: 2           # Max concurrent inference requests
+ollama_keep_alive: "5m"          # Release model from RAM after this much idle time
+ollama_flash_attention: 1        # Flash attention for MLX (faster, less RAM)
+
+# KV cache quantization — halves context RAM vs f16, negligible quality loss
+# on Qwen3/Gemma/Llama-3.3 (command-r + vanilla llama3 unsupported → falls back to f16).
+# Requires flash_attention=1. Stay <= 256K ctx to avoid crash #11619.
+ollama_kv_cache_type: "q8_0"     # q8_0 = -50% context RAM; q4_0 = -75% but worse reasoning
+
+# Context window limit — WITHOUT A LIMIT Ollama reserves the model's full context
+# (qwen3-coder:30b = 262K = ~47GB RAM just for KV cache!). Override per request.
+ollama_context_length: 32768
+
+# Models persist across --blank only on the external SSD (external-paths.yml
+# sets external_storage_root/llmModels); this fallback does not.
+ollama_models_dir: "{{ ansible_facts['env']['HOME'] }}/.ollama/models"

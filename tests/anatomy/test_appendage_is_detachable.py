@@ -21,8 +21,9 @@ What it reads, all artifacts:
 CEILING. Config coupling is not an import or a mount and passes: Bone reads
 face_vfs_token, Wing can arm openclaw as an LLM backend, bone_registry_dir
 defaults into openclaw_projects_dir. KEAP's code lives in its own repo; only
-its role's templates are read. openclaw's row also carries the Ollama daemon,
-which core cells use as backend:ollama — the graph does not join the two.
+its role's templates are read. A backend counts through `served_by:`
+(state/llm-backends.yml): an appendage serving one a core agent binds is red.
+Ollama has its own core row since 2026-10-06, so openclaw no longer serves it.
 """
 from __future__ import annotations
 
@@ -94,6 +95,12 @@ def _core_dependents(graph: dict) -> list[str]:
     out += [f"{e['from']} -> {e['to']} ({e['kind']})" for e in graph["edges"]
             if e["kind"] in _gen().EDGE_KINDS and e["kind"] != "data"
             and e["from"] in owned and e["to"] in core]
+    # An appendage serving an LLM backend a core agent binds (2026-10-06).
+    served = {e["to"]: e["from"] for e in graph["edges"] if e["kind"] == "data"
+              and e["from"] in owned and e["to"].startswith("backend:")}
+    out += [f"{served[e['from']]} -> {e['to']} (via {e['from']})" for e in graph["edges"]
+            if e["kind"] == "data" and e["from"] in served
+            and e["to"].startswith("agent:") and e["to"] not in owned]
     return sorted(set(out))
 
 
@@ -179,6 +186,8 @@ def test_a_planted_dependency_goes_red():
     assert "service:face -> service:wing (data, SSO collapsed)" in _core_dependents(graph)
     graph["edges"][-1]["kind"] = "trigger"
     assert "service:face -> service:wing (trigger)" in _core_dependents(graph)
+    graph["edges"].append({"from": "service:openclaw", "to": "backend:ollama", "kind": "data"})
+    assert "service:openclaw -> agent:jeff (via backend:ollama)" in _core_dependents(graph)
 
 
 def test_core_code_and_templates_never_name_an_appendage_source():

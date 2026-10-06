@@ -348,6 +348,9 @@ nodes:
   "service:opencode":      { publish: wits, speaks: "a mind that writes code beside you" }
   # A third-party desktop agent on the operator's Mac: a public sentence is theirs to sign.
   "service:openhuman":     withheld
+  # 2026-10-06: Ollama got its own row (out of openclaw's). WITHHELD until the
+  # operator authors its sentence and re-signs (tools/apex-sign.py).
+  "service:ollama":        withheld
   "service:open_webui":    { publish: wits, speaks: "a chat room with the house's own models" }
   "service:mcp_gateway":   { publish: wits, speaks: "one socket where minds plug into tools" }
 

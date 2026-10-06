@@ -143,9 +143,9 @@ keap_fs_sync_dirs: "documents,library,inbox,nOS"
 # so post.yml `ollama pull`s it (idempotent). 768-dim.
 keap_embed_model: "nomic-embed-text"
 # Pull the embed model on the host during provisioning. Needs a host Ollama
-# (installed + run by the openclaw role) — gated on install_openclaw so a run
+# (installed + run by roles/pazny.ollama) — gated on install_ollama so a run
 # without Ollama doesn't spuriously fail. Set false to manage the model yourself.
-keap_embed_pull: "{{ install_openclaw | default(false) }}"
+keap_embed_pull: "{{ install_ollama | default(false) }}"
 
 # Extra origins permitted to iframe KEAP, beyond the nOS face. Comma-joined into
 # KEAP_EMBED_ORIGINS. Real (empty) default, not a bare `| default([])` reference

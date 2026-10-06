@@ -4,7 +4,7 @@
 # vectors via host-loopback Ollama. The model KEAP dictates (keap_embed_model)
 # must exist on the host Ollama or every embed call 404s and semantic search +
 # table vector columns stay empty. `ollama pull` is idempotent (no-op if present).
-# Gated on install_openclaw (which installs + runs the host Ollama); tolerant of
+# Gated on install_ollama (roles/pazny.ollama installs + runs it); tolerant of
 # a transient Ollama outage so it never blocks the converge.
 - name: "[pazny.keap] Ensure embed model on host Ollama ({{ keap_embed_model }})"
   ansible.builtin.command: "ollama pull {{ keap_embed_model }}"

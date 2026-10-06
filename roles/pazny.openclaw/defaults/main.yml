@@ -18,40 +18,15 @@ openclaw_log_dir: "{{ ansible_facts['env']['HOME'] }}/agents/log"        # struc
 # OpenClaw configuration (~/.openclaw/)
 openclaw_config_dir: "~/.openclaw"
 
-# launchd labels this role starts (bootout when install_openclaw is false).
+# launchd label this role starts (bootout when install_openclaw is false).
+# Ollama (daemon, tuning vars, models dir) is roles/pazny.ollama since 2026-10-06.
 openclaw_gateway_launchd_label: "ai.openclaw.gateway"   # written by `openclaw gateway install`
-ollama_launchd_label: "com.ollama.agent"                # templates/com.ollama.agent.plist.j2
 
-# ─────────────────────────────────────────────────────────────────────────────
-# OLLAMA + MLX (Apple Silicon native, Ollama 0.20+)
-# ─────────────────────────────────────────────────────────────────────────────
-# MLX backend is the default on Apple Silicon since 0.20 (0.19 preview, 0.21 stable).
-# On M2 Ultra: +40-60% tok/s, unified-memory zero-copy, better scheduler.
-# NPU speedups (M5+) do not work here, but MLX still beats llama.cpp.
-#
 # Primary agent model — qwen3-coder:30b MoE (3.3B active of 30B total):
 #   - RL-trained for SWE-bench + tool calling (best for MCP agent loops)
 #   - 256K context, ~19 GB disk, ~19 GB RAM when active
 #   - Leaves ~15 GB for the Docker stack
 openclaw_model: "qwen3-coder:30b"
-
-# Additional models to pull (fix: ollama pull loop lives in main.yml)
-# See `openclaw_additional_models` for MoE fallback + dense heavy-duty
-ollama_max_loaded_models: 1      # 1 for MoE 30B (dense); 2 if you use 20B/14B
-ollama_num_parallel: 2           # Max concurrent inference requests
-ollama_keep_alive: "5m"          # Release model from RAM after this much idle time
-ollama_flash_attention: 1        # Flash attention for MLX (faster, less RAM)
-
-# KV cache quantization — halves context RAM vs f16, negligible quality loss
-# on Qwen3/Gemma/Llama-3.3 (command-r + vanilla llama3 unsupported → falls back to f16).
-# Requires flash_attention=1. Stay <= 256K ctx to avoid crash #11619.
-ollama_kv_cache_type: "q8_0"     # q8_0 = -50% context RAM; q4_0 = -75% but worse reasoning
-
-# Context window limit — WITHOUT A LIMIT Ollama reserves the model's full context
-# (qwen3-coder:30b = 262K = ~47GB RAM just for KV cache!).
-# 32K is a reasonable default for agentic use cases; for a specific large-context
-# task override per-request via the API.
-ollama_context_length: 32768
 
 # Additional models — downloaded via ollama pull in main.yml.
 # Default = just 1 dense for heavy tasks (qwen3-coder:30b primary + qwen2.5-coder:32b = ~40GB).
@@ -63,11 +38,6 @@ ollama_context_length: 32768
 #     - "qwen3:32b"          # Dense reasoning
 openclaw_additional_models:
   - "qwen2.5-coder:32b"          # Dense coder (20 GB) — GPT-4o-class code refactoring
-
-# Path to downloaded models — persistent even with --blank.
-# On external SSD: {{ external_storage_root }}/llmModels (override via external-paths.yml).
-# Fallback: ~/.ollama/models (default Ollama path, does NOT survive --blank).
-ollama_models_dir: "{{ ansible_facts['env']['HOME'] }}/.ollama/models"
 
 # Run openclaw as a launchd daemon (always running, autorestart)
 openclaw_install_daemon: true

@@ -1,0 +1,72 @@
+# =============================================================================
+# ollama-base — Article 30 record for the local model server (2026-10-06)
+#
+# The Art-30 entry and nothing else: no authentik block (loopback only, no
+# route), no compose, no lifecycle (the role is a brew formula + a LaunchAgent).
+# =============================================================================
+
+name: ollama-base
+version: 0.1.0
+description: |
+  Ollama — the local model server on 127.0.0.1:11434 (homebrew formula, user
+  LaunchAgent com.ollama.agent), installed and pinned by roles/pazny.ollama.
+  It serves backend:ollama (state/llm-backends.yml) to agents, OpenClaw,
+  Hermes, KEAP embeddings and face ask.
+upstream: https://github.com/ollama/ollama
+license: MIT
+
+type:
+  - service
+
+_NOS_PLUGIN: "ollama-base"
+
+requires:
+  role: pazny.ollama
+  feature_flag: install_ollama
+  variables:
+    - ollama_version
+    - ollama_models_dir
+
+# No authentik block = SSO mode none: it binds loopback and has no web surface.
+
+# Measured: the LaunchAgent runs a homebrew binary; no estate service upstream.
+depends_on: []
+
+gdpr:
+  purpose: |
+    Run language and embedding models on this host for the estate's own
+    callers. Processing: the prompt or text a caller sends, held in memory
+    for the request; the answer goes back to that caller. Ollama keeps no
+    prompt or completion on disk — what is kept is the caller's business.
+  legal_basis: legitimate_interests   # Art. 6(1)(f) — estate operation by its operator
+  balancing_test: >-
+    Loopback only; the callers are the estate's own organs and the operator.
+    Nothing leaves the host and nothing is written down by the server.
+  data_source: the estate's own callers (agents, OpenClaw, Hermes, KEAP, face)
+  data_categories:
+    - operator_prompts              # text sent for inference, in memory per request
+    - estate_records_in_prompts     # whatever a calling agent puts in its prompt
+  data_subjects:
+    - operators
+  retention_days: 0                 # no prompt or completion at rest
+  processors: []                    # on-device inference; no third party
+  eu_residency: true
+  transfers_outside_eu: false
+  storage_location: >-
+    Host only. Model weights under ollama_models_dir (no personal data);
+    daemon logs under ~/agents/log/ollama.*.log.
+  security_measures:
+    - "OLLAMA_HOST is 127.0.0.1:11434 in the LaunchAgent: not reachable from the network"
+    - "No route in Traefik and no manifest domain_var/port_var"
+    - "The version is pinned (ollama_version) and verified against the linked keg each converge"
+  notes: >-
+    Callers keep their own records (agent sessions in Wing, KEAP tables);
+    erasure and export are theirs. The server log may name a model and a
+    request time, not content.
+
+notification:
+  on_critical: [wing-inbox, ntfy]
+  on_high:     [wing-inbox, ntfy]
+  on_medium:   [wing-inbox]
+  on_low:      []
+  on_info:     []

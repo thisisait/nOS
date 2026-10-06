@@ -25,6 +25,7 @@ install_golang: true
 install_dotnet: true
 
 install_openclaw: false     # Ollama 27GB model - impractical in CI
+install_ollama: false       # the model server openclaw used to bring; off as before
 install_shell_extras: true
 configure_macos_defaults: true
 configure_power_management: false  # pmset requires sudo - CI runner has none

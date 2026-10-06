@@ -81,16 +81,16 @@
   register: _ollama_plist_check
   when:
     - ansible_os_family == 'Darwin'
-    - install_openclaw | default(false) | bool
+    - install_ollama | default(false) | bool
 
 - name: "[Auto-start] WARN if Ollama persistent plist missing"
   ansible.builtin.debug:
     msg: |
       WARN: Ollama persistent LaunchAgent missing - after reboot Ollama won't see SSD models.
-      Fix: ansible-playbook main.yml -K --tags openclaw
+      Fix: ansible-playbook main.yml -K --tags ollama
   when:
     - ansible_os_family == 'Darwin'
-    - install_openclaw | default(false) | bool
+    - install_ollama | default(false) | bool
     - not (_ollama_plist_check.stat.exists | default(false))
 
 # ── 5. Summary ────────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@
       {% endif %}
        Docker containers:  {{ 'all restart=unless-stopped' if 'ALL_OK' in (_container_restart_check.stdout | default('')) else 'see warning above' }}
        Homebrew services:  launchctl plists (nginx/php/dnsmasq/alloy)
-      {% if ansible_os_family == 'Darwin' and install_openclaw | default(false) | bool %}
+      {% if ansible_os_family == 'Darwin' and install_ollama | default(false) | bool %}
        Ollama:             {{ 'custom LaunchAgent (env vars for SSD + KV cache)' if _ollama_plist_check.stat.exists | default(false) else 'WARN brew plist (env vars lost after reboot)' }}
       {% endif %}
       ═══════════════════════════════════════════════════════════════════
