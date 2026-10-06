@@ -22,6 +22,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 GRAPH = REPO / "state" / "body-plan.json"
 ANATOMY = REPO / "state" / "anatomy-graph.json"
+MANIFEST = REPO / "state" / "manifest.yml"
 
 #: The ladder in order, then the cross-cutting systems — one plain line each.
 LEVELS = {
@@ -84,8 +85,25 @@ def _anatomy_node(nid: str) -> dict:
                 "source": "UNKNOWN"}
 
 
+def appendage(nid: str) -> str | None:
+    """A property, not a level (body-plan.md §7): the manifest row's joint, if any."""
+    if not nid.startswith("service:"):
+        return None
+    try:
+        import yaml  # noqa: PLC0415
+        rows = yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))["services"]
+    except (OSError, ValueError, KeyError, ImportError):
+        return "UNKNOWN (state/manifest.yml unreadable)"
+    row = next((r for r in rows if f"service:{r.get('id')}" == nid), {})
+    if row.get("joint"):
+        return f"appendage (joint: {row['joint']})"
+    if row.get("joint_pending"):
+        return f"appendage (joint pending: {row['joint_pending']})"
+    return None
+
+
 def node_view(graph: dict, nid: str) -> dict:
-    n = {**graph["nodes"][nid], **_anatomy_node(nid)}
+    n = {**graph["nodes"][nid], **_anatomy_node(nid), "appendage": appendage(nid)}
     touches = [(e["kind"], "->", e["to"]) for e in graph["edges"] if e["from"] == nid]
     touches += [(e["kind"], "<-", e["from"]) for e in graph["edges"] if e["to"] == nid]
     return {"id": nid, **n, "touches": [{"kind": k, "dir": d, "node": o} for k, d, o in touches]}
@@ -149,6 +167,8 @@ def main() -> int:
         return 0
     print(f"{data['id']}  [{data['level']} — {LEVELS.get(data['level'], 'hidden plumbing')}]")
     print(f"  kind:   {data['kind']}")
+    if data["appendage"]:
+        print(f"  also:   {data['appendage']}")
     print(f"  what:   {data['description']}")
     print(f"  source: {data['source']}")
     t = data["touches"]
