@@ -12,7 +12,7 @@
 |---|---|---|
 | Vector store | KEAP (libSQL) — `docs/systems/keap/README.md` | 768-dim `nomic-embed-text`, rows beside the taxonomy they embed |
 | Embedder | host Ollama, driven by the `keap-embed-sync` Pulse job (`files/anatomy/scripts/keap-embed-sync.py`) | runs host-side because the gated container cannot reach loopback Ollama |
-| Query surface | KEAP `/agent/v1/embeddings` + `tools/keap-semantic-search.py`, the `cortex-query` skill, the `mcp-keap` AgentKit tool | read-only bearer for agents |
+| Query surface | KEAP `/agent/v1/embeddings` + `tools/keap-semantic-search.py`, the `keap-recall` skill, the `mcp-keap` AgentKit tool | read-only bearer for agents |
 | Consumer | `files/anatomy/agents/librarian` (contract-only; runner still owed) | rubric §E names the KEAP corpus |
 
 The GDPR posture of that store is KEAP's Article 30 row (`files/anatomy/plugins/keap-base/plugin.yml`

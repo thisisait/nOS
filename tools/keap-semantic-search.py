@@ -41,7 +41,7 @@ def fetch_results(query: str, limit: int = 10, kind: str | None = None) -> list[
     """GET /agent/v1/search/semantic. Raises OSError/URLError if KEAP is unreachable.
 
     An empty list is a real answer (broken token / drained embeddings), not an
-    outage — callers that treat [] as success are the defect cortex-query pins.
+    outage — callers that treat [] as success are the defect keap-recall pins.
     """
     params: dict[str, str | int] = {"q": query, "limit": limit}
     if kind:

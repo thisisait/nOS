@@ -1,6 +1,6 @@
 ---
-name: cortex-query
-description: Read-only recall over KEAP /agent/v1 (RO bearer). Returns ranked passages with node ids. Refuses to write. Wraps tools/cortex-query.py, which uses tools/keap-semantic-search.py and the query set from tools/keap-recall-queries.py.
+name: keap-recall
+description: Read-only recall over KEAP /agent/v1 (RO bearer). Returns ranked passages with node ids. Refuses to write. Wraps tools/keap-recall.py, which uses tools/keap-semantic-search.py and the query set from tools/keap-recall-queries.py.
 metadata:
   nos:
     audience: [hermes, openclaw]
@@ -10,23 +10,23 @@ prerequisites:
   commands: [python3]
 ---
 
-# cortex-query — read the cortex, do not write it
+# keap-recall — read KEAP, do not write it
 
 Ask KEAP's hybrid search for ranked passages. The door is the **RO bearer**
 (`KEAP_AGENT_TOKEN_RO`). Every write belongs to another tool.
 
 ## The one rule
 
-**Every recall goes through `tools/cortex-query.py`**, which calls
+**Every recall goes through `tools/keap-recall.py`**, which calls
 `tools/keap-semantic-search.py` (the existing `/agent/v1/search/semantic`
 client) and scores the answer against `tools/keap-recall-queries.py` (the
 SKILLS.md trigger set). Do not curl KEAP. Do not open a second HTTP client.
 Do not POST.
 
 ```
-python3 tools/cortex-query.py "is cortex up"
-python3 tools/cortex-query.py --json "cortex health"
-python3 tools/cortex-query.py --fixture tests/fixtures/cortex-query-recall.json
+python3 tools/keap-recall.py "is cortex up"
+python3 tools/keap-recall.py --json "cortex health"
+python3 tools/keap-recall.py --fixture tests/fixtures/keap-recall.json
 ```
 
 Each row is `{rank, node_id, title, passage}`. Empty recall is a miss — a

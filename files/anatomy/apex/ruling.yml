@@ -855,7 +855,9 @@ nodes:
   "reader:vendor-keap-contracts": withheld
   "reader:view-contract-drift": withheld
   "reader:wing-status": withheld
-  "skill:cortex-query": withheld
+  # 2026-10-06 skill:cortex-query → skill:keap-recall (lexicon step 3: it
+  # recalls from KEAP, not the cortex). Renamed in place, still WITHHELD.
+  "skill:keap-recall": withheld
   "skill:devlog": withheld
   "skill:dtt-capture": withheld
   "skill:judge": withheld

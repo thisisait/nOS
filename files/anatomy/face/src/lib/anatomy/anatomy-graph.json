@@ -3889,13 +3889,6 @@
         "upstreams": 2
       }
     },
-    "skill:cortex-query": {
-      "kind": "skill",
-      "source": "files/anatomy/skills/cortex-query/SKILL.md",
-      "title": "Read-only recall over KEAP /agent/v1 (RO bearer). Returns ranked passages with node ids. Refuses to write. Wraps tools/cortex-query.py, which uses tools/keap-semantic-search.py and the query set from tools/keap-recall-queries.py.",
-      "anchor": "02.02.09",
-      "description": "Skill 'cortex-query' (files/anatomy/skills/cortex-query/SKILL.md): Read-only recall over KEAP /agent/v1 (RO bearer). Returns ranked passages with node ids. Refuses to write. Wraps tools/cortex-query.py, which uses tools/keap-semantic-search.py and the query set from tools/keap-recall-queries.py."
-    },
     "skill:devlog": {
       "kind": "skill",
       "source": ".claude/skills/devlog/SKILL.md",
@@ -3916,6 +3909,13 @@
       "title": "Trigger a named gate set against the nOS loop engine and report the verdict it returns — pass, fail or indeterminate, with evidence. Use to evaluate a recorded proposal, or to get one deterministic reading of the repo's health. Never to decide an outcome yourself.",
       "anchor": "02.02.09",
       "description": "Skill 'judge' (.claude/plugins/nos-loop/skills/judge/SKILL.md): Trigger a named gate set against the nOS loop engine and report the verdict it returns — pass, fail or indeterminate, with evidence. Use to evaluate a recorded proposal, or to get one deterministic reading of the repo's health. Never to decide an outcome yourself."
+    },
+    "skill:keap-recall": {
+      "kind": "skill",
+      "source": "files/anatomy/skills/keap-recall/SKILL.md",
+      "title": "Read-only recall over KEAP /agent/v1 (RO bearer). Returns ranked passages with node ids. Refuses to write. Wraps tools/keap-recall.py, which uses tools/keap-semantic-search.py and the query set from tools/keap-recall-queries.py.",
+      "anchor": "02.02.09",
+      "description": "Skill 'keap-recall' (files/anatomy/skills/keap-recall/SKILL.md): Read-only recall over KEAP /agent/v1 (RO bearer). Returns ranked passages with node ids. Refuses to write. Wraps tools/keap-recall.py, which uses tools/keap-semantic-search.py and the query set from tools/keap-recall-queries.py."
     },
     "skill:loop": {
       "kind": "skill",
@@ -6052,18 +6052,18 @@
       "evidence": "measured"
     },
     {
-      "from": "skill:cortex-query",
+      "from": "skill:keap-recall",
       "to": "service:hermes",
       "kind": "data",
-      "via": "metadata.nos.audience in files/anatomy/skills/cortex-query/SKILL.md (linked onto that shelf by tasks/skills.yml)",
+      "via": "metadata.nos.audience in files/anatomy/skills/keap-recall/SKILL.md (linked onto that shelf by tasks/skills.yml)",
       "derived": "skill-audience",
       "evidence": "derived"
     },
     {
-      "from": "skill:cortex-query",
+      "from": "skill:keap-recall",
       "to": "service:openclaw",
       "kind": "data",
-      "via": "metadata.nos.audience in files/anatomy/skills/cortex-query/SKILL.md (linked onto that shelf by tasks/skills.yml)",
+      "via": "metadata.nos.audience in files/anatomy/skills/keap-recall/SKILL.md (linked onto that shelf by tasks/skills.yml)",
       "derived": "skill-audience",
       "evidence": "derived"
     },

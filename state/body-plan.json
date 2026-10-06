@@ -1404,10 +1404,6 @@
       "level": "organ",
       "kind": "service"
     },
-    "skill:cortex-query": {
-      "level": "genome",
-      "kind": "skill"
-    },
     "skill:devlog": {
       "level": "genome",
       "kind": "skill"
@@ -1417,6 +1413,10 @@
       "kind": "skill"
     },
     "skill:judge": {
+      "level": "genome",
+      "kind": "skill"
+    },
+    "skill:keap-recall": {
       "level": "genome",
       "kind": "skill"
     },
@@ -3090,12 +3090,12 @@
       "kind": "part_of"
     },
     {
-      "from": "skill:cortex-query",
+      "from": "skill:keap-recall",
       "to": "service:hermes",
       "kind": "data"
     },
     {
-      "from": "skill:cortex-query",
+      "from": "skill:keap-recall",
       "to": "service:openclaw",
       "kind": "data"
     },

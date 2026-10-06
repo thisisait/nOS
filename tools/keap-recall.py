@@ -4,9 +4,9 @@
 Wraps tools/keap-semantic-search.py (the client) and tools/keap-recall-queries.py
 (the known-query set). Returns ranked passages with node ids. Refuses to write.
 
-  tools/cortex-query.py "is cortex up"
-  tools/cortex-query.py --fixture tests/fixtures/cortex-query-recall.json
-  tools/cortex-query.py --json "cortex health"
+  tools/keap-recall.py "is cortex up"
+  tools/keap-recall.py --fixture tests/fixtures/keap-recall.json
+  tools/keap-recall.py --json "cortex health"
 
 Exit 0 ranked hits · 1 empty recall · 2 refuse / unreachable.
 """
@@ -38,7 +38,7 @@ def _load(filename: str, name: str):
 def write_refusal(argv: list[str]) -> str | None:
     for a in argv:
         if a in WRITE_FLAGS or a.upper() == "POST":
-            return f"REFUSING: cortex-query is read-only (got {a!r})"
+            return f"REFUSING: keap-recall is read-only (got {a!r})"
     return None
 
 
