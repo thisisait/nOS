@@ -102,11 +102,20 @@ STEPS = [
     ]},
     {"id": "domain", "title": "Web address", "blurb": "The address every service answers on, and who can reach it from outside.", "fields": [
         {"key": "tenant_domain", "label": "Domain", "type": "text", "check": "domain",
-         "hint": "Every service gets its own name under it, e.g. files.dev.local. A name ending in .local, .lan or .test stays on this machine. A real domain you own gets proper certificates through Cloudflare."},
+         "hint": "Every service gets its own name under it, e.g. files.dev.local. A name ending in .local, .lan or .test stays on this machine. A real domain you own gets proper certificates from Let's Encrypt."},
+        {"key": "nos_edge", "label": "Can the internet reach this computer?", "short": "the edge", "type": "choice", "check": "edge",
+         "options": [{"value": "", "label": "Decide from my domain (a real domain means Cloudflare)"},
+                     {"value": "cloudflare", "label": "Yes — it has a public IP, or Cloudflare sits in front of it"},
+                     {"value": "lan_tailscale", "label": "No — only the office network, and Tailscale from outside"}],
+         "hint": "No public IP and no Cloudflare: the office router sends the names to this computer, and Tailscale does the same from anywhere. Users see one name per service either way."},
         {"key": "install_tailscale", "label": "Reach it from anywhere with Tailscale", "type": "bool",
-         "hint": "A private network between your own devices. You sign in once in the browser after the first run."},
-        {"key": "acme_cloudflare_api_token", "label": "Cloudflare API token (public domain only)", "type": "password", "secret": True, "check": "acme_token",
-         "hint": "Only for a domain you own: a token with Zone:DNS:Edit, so nOS can get its certificates. It goes into credentials.yml, never into config.yml."},
+         "hint": "A private network between your own devices. Put a Tailscale auth key into credentials.yml as tailscale_auth_key, or sign in once in the Tailscale app."},
+        {"key": "acme_dns_provider", "label": "Who hosts your domain's DNS? (real domain only)", "short": "the DNS host", "type": "dnsprovider", "check": "dns_provider",
+         "hint": "nOS proves it owns the domain by writing one DNS record there, so certificates work without opening any port. Pick your DNS host, or type its acme.sh name."},
+        {"key": "acme_cloudflare_api_token", "label": "Cloudflare API token (Cloudflare DNS only)", "type": "password", "secret": True, "check": "acme_token",
+         "hint": "Only when Cloudflare hosts your DNS: a token with Zone:DNS:Edit, so nOS can get its certificates. It goes into credentials.yml, never into config.yml."},
+        {"key": "acme_dns_env", "label": "DNS host API login", "type": "dnsenv", "secret": True, "check": "dns_env",
+         "hint": "Only for a DNS host other than Cloudflare: the login acme.sh needs, under its own names. It goes into credentials.yml as acme_dns_env, never into config.yml."},
         {"key": "tailscale_hostname", "label": "Tailscale name of this machine", "type": "text", "placeholder": "mac-studio.tailnet-abc.ts.net",
          "hint": "Optional. Shown on the home page as the remote address."},
         {"key": "services_lan_access", "label": "Let other devices on your home or office network connect", "type": "bool",
@@ -152,6 +161,16 @@ MAIL = {"key": "mail", "label": "E-mail from this machine", "options": [
     {"id": "stalwart", "label": "Real mail server on your domain — needs a public domain, DNS records and port 25",
      "flags": {"install_mailpit": False, "install_smtp_stalwart": True}},
 ]}
+# acme.sh 3.1.6 dnsapi/<id>.sh `Options:` names (the gate re-reads them when acme.sh is
+# installed). Wedos needs WAPI on, and this office's public IP on its WAPI allow-list.
+DNS_PROVIDERS = [
+    {"id": "dns_cf", "label": "Cloudflare", "env": []},
+    {"id": "dns_wedos", "label": "Wedos", "env": ["WEDOS_Username", "WEDOS_Wapipass"],
+     "note": "Turn on WAPI in the Wedos customer area and add this office's public IP to its allowed addresses."},
+    {"id": "dns_hetznercloud", "label": "Hetzner", "env": ["HETZNER_TOKEN"]},
+    {"id": "dns_desec", "label": "deSEC (free)", "env": ["DEDYN_TOKEN"]},
+    {"id": "dns_ovh", "label": "OVH", "env": ["OVH_END_POINT", "OVH_AK", "OVH_AS", "OVH_CK"]},
+]
 # Mirrors main.yml "[Security] Refuse a weak password prefix" (the gate reads both).
 PREFIX_RULE = {"min": 12, "refused": ["changeme", ""]}
 
@@ -328,7 +347,8 @@ def build(lock_path: Path | None = None, config_path: Path | None = None) -> dic
             "knob_defaults": knob_defaults, "mail": mail, "flags": fl, "groups": [g for g, _ in GROUPS] + [HOST_GROUP],
             "profiles": profs, "services": svcs, "accounts": accounts(), "prefix_rule": PREFIX_RULE,
             "offline": lock is not None, "assumptions": DATA_GB_ASSUMED,
-            "local_suffixes": rules.local_suffixes(), "derived": ref["derived"],
+            "local_suffixes": rules.local_suffixes(), "derived": ref["derived"], "dns_providers": DNS_PROVIDERS,
+            "derived_values": rules.derived_values([f["key"] for s in STEPS for f in s["fields"] if f["type"] == "choice"]),
             "rules": derived + ref["rules"], "rules_oracle": ref["oracle"], "rules_skipped": ref["skipped"]}
 
 

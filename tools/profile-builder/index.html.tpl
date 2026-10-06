@@ -73,7 +73,17 @@ function isLocalDomain(data, d) {
   return d === "localhost" || data.local_suffixes.some(x => d.endsWith(x));
 }
 function stepFields(data) { return data.steps.flatMap(x => x.fields); }
-function given(v) { return v !== undefined && v !== null && v !== ""; }
+function given(v) { return v !== undefined && v !== null && v !== "" && (typeof v !== "object" || Object.values(v).some(given)); }
+function derivedValue(data, s, key) {
+  // a choice left on "decide from my domain" is what the playbook's own default renders
+  const v = fieldValue(data, s.picks, s.fields, key);
+  return given(v) ? String(v) : ((data.derived_values || {})[key] || {})[isLocalDomain(data, fieldValue(data, s.picks, s.fields, "tenant_domain")) ? "local" : "public"];
+}
+function envProblem(data, s, env) {
+  const id = fieldValue(data, s.picks, s.fields, "acme_dns_provider") || "dns_cf", p = data.dns_providers.find(x => x.id === id);
+  const missing = p ? p.env.filter(k => !given((env || {})[k])) : Object.entries(env || {}).filter(([k, v]) => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(k) || !given(v)).map(([k]) => k);
+  return missing.length ? `Fill in ${missing.join(", ")}.` : "";
+}
 function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
 function profileFor(data, picks, axis) { return data.profiles.find(p => p.axis === axis && p.id === (picks || {})[axis]); }
 function fieldValue(data, picks, fields, key) {
@@ -195,6 +205,7 @@ const CHECKS = {
   email: v => EMAIL_RE.test(v) ? "" : "That does not look like an e-mail address.",
   username: v => NAME_RE.test(v) ? "" : "Start with a lowercase letter; then lowercase letters, digits, dot, dash or underscore; end with a letter or digit.",
   acme_token: v => /^\S+$/.test(v) ? "" : "A token has no spaces.",
+  dns_provider: v => /^dns_[a-z0-9_]+$/.test(v) ? "" : "An acme.sh DNS name starts with dns_, e.g. dns_wedos.",
 };
 function fieldActive(data, s, on, f) {
   return !f.when || (f.when.startsWith("install_") ? !!on[f.when] : !!fieldValue(data, s.picks, s.fields, f.when));
@@ -211,12 +222,16 @@ function refusedProblems(data, s, st) {
   const field = v => stepFields(data).find(f => f.key === v);
   const val = v => v in st.on ? !!st.on[v] : v in data.derived ? (data.derived[v] === "local") === isLocalDomain(data, domain)
     : v in st.kn ? !!st.kn[v] : given((s.fields || {})[v]);
+  // a text literal ("==dns_cf" / "!=dns_cf") compares the value the playbook will see
+  const holds = ([v, want]) => typeof want === "string" ? (derivedValue(data, s, v) === want.slice(2)) === want.startsWith("==") : val(v) === want;
+  const name = v => (field(v).short || field(v).label).replace(/\s*\(.*\)$/, "");
   const words = ([v, want]) => v in data.derived ? ((data.derived[v] === "local") === want ? "your domain stays on this machine" : "your domain is public")
-    : field(v) && field(v).type !== "bool" ? (want ? `${field(v).label.replace(/\s*\(.*\)$/, "")} is given` : `no ${field(v).label.replace(/\s*\(.*\)$/, "")} is given`)
+    : typeof want === "string" ? `${name(v)} ${want.startsWith("==") ? "is" : "is not"} ${want.slice(2)}`
+    : field(v) && field(v).type !== "bool" ? (want ? `${name(v)} is given` : `no ${name(v)} is given`)
     : `${title(data, v)} is ${want ? "on" : "off"}`;
   const P = [];
   for (const r of data.rules.filter(r => r.cls === "refused")) {
-    if (!r.all.every(([v, want]) => val(v) === want)) continue;
+    if (!r.all.every(holds)) continue;
     const via = r.any.filter(val);
     if (r.any.length && !via.length) continue;
     const said = [...new Set(r.all.map(words))].join(", ");
@@ -262,7 +277,10 @@ function problems(data, s) {
     let msg = "";
     if (f.check === "prefix") msg = prefixProblem(data, v);
     else if (f.check === "repo" && !given(v)) msg = "Say where the second copy goes, or turn it off.";
-    else if (given(v)) msg = CHECKS[f.check](String(v).trim());
+    else if (!given(v)) msg = "";
+    else if (f.type === "choice") msg = f.options.some(o => o.value && o.value === v) ? "" : "Choose one of the answers.";
+    else if (f.type === "dnsenv") msg = envProblem(data, s, v);
+    else msg = CHECKS[f.check](String(v).trim());
     if (msg) P.push({step: x.id, key: f.key, msg});
   }
   P.push(...refusedProblems(data, s, st), ...unmetProblems(data, st));
@@ -321,7 +339,7 @@ function renderCredentials(data, prefix, fields) {
              `global_password_prefix: ${JSON.stringify(prefix)}`];
   for (const f of stepFields(data)) {
     const v = (fields || {})[f.key];
-    if (f.secret && f.check !== "prefix" && given(v)) L.push(`${f.key}: ${JSON.stringify(String(v).trim())}`);
+    if (f.secret && f.check !== "prefix" && given(v)) L.push(`${f.key}: ${JSON.stringify(typeof v === "string" ? v.trim() : v)}`);
   }
   return L.concat("").join("\n");
 }
@@ -373,13 +391,25 @@ function fieldHtml(f) {
     const cur = f.key.startsWith("install_") ? !!on()[f.key] : !!val(f.key);
     return wrap(`<label><input type="checkbox" id="${id}" data-k="${f.key}" aria-describedby="h-${f.key}" ${cur ? "checked" : ""}><span>${f.label}</span></label>${hint}`);
   }
+  if (f.type === "choice") {
+    const cur = state.fields[f.key] || "";
+    return wrap(`<label for="${id}">${f.label}</label><select id="${id}" data-k="${f.key}" aria-describedby="h-${f.key} e-${f.key}">${f.options.map(o => `<option value="${o.value}" ${o.value === cur ? "selected" : ""}>${esc(o.label)}</option>`).join("")}</select>${hint}`);
+  }
+  if (f.type === "dnsenv") {
+    const pid = val("acme_dns_provider") || "dns_cf", p = DATA.dns_providers.find(x => x.id === pid), env = state.fields[f.key] || {};
+    if (pid === "dns_cf") return `<div class="f" id="w-${f.key}" hidden>${err}</div>`;
+    const inner = p ? p.env.map(k => `<label for="${id}.${k}">${k}</label><div class="row"><input type="password" id="${id}.${k}" data-env="${k}" value="${esc(env[k] || "")}" autocomplete="off" spellcheck="false"></div>`).join("")
+      : `<label for="${id}">${f.label}: one NAME=value per line, as acme.sh's dnsapi/${esc(pid)}.sh names them</label><textarea id="${id}" data-envtext rows="3" spellcheck="false">${esc(Object.entries(env).map(([k, x]) => `${k}=${x}`).join("\n"))}</textarea>`;
+    return wrap(`${inner}${p && p.note ? `<p class="hint">${esc(p.note)}</p>` : ""}${hint}`);
+  }
   const v = f.secret ? (state.fields[f.key] || "") : (state.fields[f.key] ?? (val(f.key) ?? ""));
   const type = f.type === "password" ? "password" : "text";
-  const extra = f.type === "timezone" ? ` list="tzlist" autocomplete="off"` : f.check === "email" ? ` inputmode="email" autocomplete="email"` : ` autocomplete="off"`;
+  const extra = f.type === "timezone" ? ` list="tzlist" autocomplete="off"` : f.type === "dnsprovider" ? ` list="dnslist" autocomplete="off"` : f.check === "email" ? ` inputmode="email" autocomplete="email"` : ` autocomplete="off"`;
   let after = "";
   if (f.type === "password") after = `${f.check === "prefix" ? `<button type="button" class="ghost small" data-gen="${f.key}">Generate</button>` : ""}<button type="button" class="ghost small" data-show="${f.key}" aria-pressed="false">Show</button>`;
   if (f.type === "timezone" && BROWSER_TZ && BROWSER_TZ !== v) after = `<button type="button" class="ghost small" data-tz>Use this computer's: ${esc(BROWSER_TZ)}</button>`;
-  const dl = f.type === "timezone" && TZ_LIST.length ? `<datalist id="tzlist">${TZ_LIST.map(z => `<option value="${z}">`).join("")}</datalist>` : "";
+  const dl = f.type === "timezone" && TZ_LIST.length ? `<datalist id="tzlist">${TZ_LIST.map(z => `<option value="${z}">`).join("")}</datalist>`
+    : f.type === "dnsprovider" ? `<datalist id="dnslist">${DATA.dns_providers.map(p => `<option value="${p.id}" label="${esc(p.label)}">`).join("")}</datalist>` : "";
   return wrap(`<label for="${id}">${f.label}</label><div class="row"><input type="${type}" id="${id}" data-k="${f.key}" value="${esc(v)}" placeholder="${esc(placeholderFor(f))}" aria-describedby="h-${f.key} e-${f.key}"${extra} spellcheck="false">${after}</div>${dl}${hint}`);
 }
 function showProblems() {
@@ -413,10 +443,19 @@ function drawFields(i) {
     const t = e.target, k = t.dataset.k;
     if (t.id === "mail") { state.mail = t.value || null; showProblems(); return; }
     if (t.dataset.p !== undefined) { state.people[+t.dataset.p][t.dataset.pk] = t.value; showProblems(); return; }
+    if (t.dataset.env) { state.fields.acme_dns_env = {...(state.fields.acme_dns_env || {}), [t.dataset.env]: t.value}; domNote(); showProblems(); return; }
+    if (t.dataset.envtext !== undefined) {
+      state.fields.acme_dns_env = Object.fromEntries(t.value.split("\n").filter(l => l.trim()).map(l => [l.split("=")[0].trim(), l.split("=").slice(1).join("=").trim()]));
+      showProblems(); return;
+    }
     if (!k) return;
     if (t.type === "checkbox") { if (k.startsWith("install_")) state.manual[k] = t.checked; else state.fields[k] = t.checked; }
     else state.fields[k] = t.value;
     if (k === "nos_test_users_enabled" && st.id === "accounts") { drawFields(i); return; }
+    if (k === "acme_dns_provider") {          // a new DNS host asks for its own login
+      state.fields.acme_dns_env = {};
+      $("#w-acme_dns_env").outerHTML = fieldHtml(st.fields.find(f => f.key === "acme_dns_env"));
+    }
     if (st.id === "domain") domNote();
     showProblems();
   };
@@ -452,10 +491,16 @@ function accountsHtml() {
   <div class="note">Passwords: nOS makes a separate password for each person. After the first run, read one with <code>tools/nos-secret.py --user &lt;username&gt; nos-identity password</code> and give it to that person. nOS keeps it: a password changed on the sign-in page is put back by the next run.</div>`;
 }
 function domNote() {
-  const d = val("tenant_domain") || "";
+  const d = val("tenant_domain") || "", edge = derivedValue(DATA, state, "nos_edge");
+  const pid = val("acme_dns_provider") || "dns_cf", p = DATA.dns_providers.find(x => x.id === pid);
+  const login = pid === "dns_cf" ? `a Cloudflare API token with <i>Zone:DNS:Edit</i> as <code>acme_cloudflare_api_token</code>`
+    : `its API login as <code>acme_dns_env: {${(p ? p.env : ["…"]).map(k => `${esc(k)}: "…"`).join(", ")}}</code>`;
+  const reach = edge === "lan_tailscale"
+    ? `Nothing is opened to the internet: the office router must hand out this computer as its DNS server, and Tailscale sends the same names here from anywhere (one step in the Tailscale admin console, printed at the end of the first run).`
+    : `Point the domain at this machine when you are ready to open it up.`;
   $("#domnote").innerHTML = isLocalDomain(DATA, d)
     ? `<b>${esc(d)}</b> stays on this machine: nOS makes its own certificate and answers the names itself. No internet or DNS settings needed. Your browser will ask once to trust the certificate.`
-    : `<b>${esc(d)}</b> is a public domain: nOS asks Let's Encrypt for a certificate through Cloudflare. Put a Cloudflare API token with <i>Zone:DNS:Edit</i> into <code>credentials.yml</code> as <code>acme_cloudflare_api_token</code>, and point the domain at this machine when you are ready to open it up.`;
+    : `<b>${esc(d)}</b> is a public domain: nOS asks Let's Encrypt for a certificate by writing one DNS record at <b>${esc(p ? p.label : pid)}</b>. Put ${login} into <code>credentials.yml</code> (the fields above do it for you). ${reach}`;
 }
 function notesHtml(filter) {
   // What the rules turned on for you, and why — never silently.

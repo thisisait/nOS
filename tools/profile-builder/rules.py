@@ -216,14 +216,19 @@ def silent_rules(profile_knobs: list[tuple[str, str]]) -> list[dict]:
 _NEG = re.compile(r"^\s*not\s*\((.*)\)\s*$", re.S)
 _BOOL = re.compile(r"^\(?\s*([a-z_][a-z0-9_]*)\s*(?:\|\s*default\([^()]*\)\s*)?(?:\|\s*bool\s*)?\)?\s*$")
 _LEN = re.compile(r"^\(?\s*([a-z_][a-z0-9_]*)\s*(?:\|\s*default\([^()]*\)\s*)?\|\s*length\s*\)?\s*(==\s*0|>\s*0)\s*$")
+_EQ = re.compile(r"""^\(?\s*([a-z_][a-z0-9_]*)\s*(?:\|\s*default\([^()]*\)\s*)?\)?\s*(==|!=)\s*['"]([^'"]*)['"]\s*$""")
 GATED_FACT = "_nos_gated_without_authentik_refusable"
 
 
-def literal(expr: str) -> tuple[str, bool] | None:
-    """`[not] (var | default(x) | bool)` or `(var | default('') | length) ==0/>0` → (var, wanted truth)."""
+def literal(expr: str) -> tuple[str, bool | str] | None:
+    """`[not] (var | default(x) | bool)` or `(var | default('') | length) ==0/>0` → (var, wanted truth);
+    `(var | default(x)) == / != 'text'` → (var, "==text" / "!=text"), a value the page compares."""
     m = _NEG.match(expr)
     if m and (inner := literal(m.group(1))):
-        return inner[0], not inner[1]
+        want = inner[1]
+        return inner[0], ({"==": "!=", "!=": "=="}[want[:2]] + want[2:]) if isinstance(want, str) else not want
+    if m := _EQ.match(expr):
+        return m.group(1), m.group(2) + m.group(3)
     if m := _LEN.match(expr):
         return m.group(1), m.group(2).startswith(">")
     if m := _BOOL.match(expr):
@@ -255,6 +260,18 @@ def derived_vars() -> dict:
                 out[k] = "local"
             elif got == [False, True]:
                 out[k] = "public"
+    return out
+
+
+def derived_values(keys) -> dict:
+    """Choice fields whose Jinja default follows the domain class (nos_edge) → {'local': …, 'public': …}."""
+    out = {}
+    for k in keys:
+        v = _cfg().get(k)
+        if k not in derived_vars() and isinstance(v, str) and "{{" in v:
+            got = {"local": _render_default(k, "dev.local"), "public": _render_default(k, "example.eu")}
+            if isinstance(got["local"], str) and got["local"] != got["public"]:
+                out[k] = got
     return out
 
 
@@ -400,10 +417,13 @@ class Oracle:
 
     def __call__(self, cfg: dict, creds: dict) -> list[str]:
         ctx = {**self.consts, **cfg, **creds, "ansible_os_family": "Darwin"}
+        local = _render_default("tenant_domain_is_local", ctx.get("tenant_domain") or "dev.local")
         for k, kind in self.data["derived"].items():
-            local = _render_default("tenant_domain_is_local", ctx.get("tenant_domain") or "dev.local")
             if k not in cfg:
                 ctx[k] = local if kind == "local" else not local
+        for k, by in self.data.get("derived_values", {}).items():
+            if k not in cfg:                                   # unwritten: the playbook renders the default
+                ctx[k] = by["local" if local else "public"]
         on = lambda f: bool(ctx.get(f))  # noqa: E731
         ctx[GATED_FACT] = sorted(r for f, rs in self.gated.items() if on(f) for r in rs) + \
             ([f"app:{a}" for a in self.apps] if ctx.get("apps_runner_enabled", True) else [])
