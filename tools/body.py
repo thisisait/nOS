@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """What am I part of? The estate as a body plan, for a model that just arrived.
 
-    tools/body.py                  the ladder top to bottom, then senses, limbs, memory
-    tools/body.py organ            every node at one level, most connected first
+    tools/body.py                  the ladder top to bottom, then senses, limbs, memory, law
+    tools/body.py "organ system"   every node at one level, most connected first
     tools/body.py service:keap     one node: what it is, its level, what it touches
     tools/body.py keap             same, by local name when that is unambiguous
 
@@ -25,16 +25,19 @@ ANATOMY = REPO / "state" / "anatomy-graph.json"
 
 #: The ladder in order, then the cross-cutting systems — one plain line each.
 LEVELS = {
-    "genome": "the law and declared contracts every cell inherits",
+    "genome": "declared contracts every part inherits — task types, skills",
     "cell": "who you can be — one model in one specialization",
     "tissue": "cells of one specialization working together",
     "organ": "a part with one job — a service, daemon or scheduled function",
+    "organ system": "organs grouped for one function",
     "organism": "the estate as a whole",
     "habitat": "what lives beside the organism — the git surfaces",
     "sense": "what you can ask — readers and judges that only read",
     "limb": "what you can reach for — tool grants that act",
     "memory": "what the estate has learned — KEAP tables",
+    "law": "the rules it inherits — constitution articles and paragraphs",
 }
+CROSS = "sense"
 EMPTY = {
     "tissue": "nothing declares a tissue yet",
     "organism": "no node stands for the whole; the whole is this graph",
@@ -108,17 +111,17 @@ def main() -> int:
         if args.json:
             print(json.dumps(data, indent=2))
             return 0
-        print("nOS body plan — genome to habitat, then senses, limbs, memory "
+        print("nOS body plan — genome to habitat, then senses, limbs, memory, law "
               "(tools/body.py <level|node>)")
-        for i, (lv, line) in enumerate(LEVELS.items()):
-            if i == 6:
+        for lv, line in LEVELS.items():
+            if lv == CROSS:
                 print("  ── cutting across every level ──")
-            print(f"{lv:<9} {line}: {data[lv]['count']}")
+            print(f"{lv:<13}{line}: {data[lv]['count']}")
             if data[lv]["top"]:
-                print("          " + ", ".join(f"{n} ({deg[n]})" for n in data[lv]["top"]))
+                print(" " * 13 + ", ".join(f"{n} ({deg[n]})" for n in data[lv]["top"]))
             else:
-                print(f"          (empty — {EMPTY.get(lv, 'no kind is placed here')})")
-        print(f"internal  hidden plumbing: {data['internal']['count']}")
+                print(" " * 13 + f"(empty — {EMPTY.get(lv, 'no kind is placed here')})")
+        print(f"{'internal':<13}hidden plumbing: {data['internal']['count']}")
         return 0
 
     if args.target in LEVELS or args.target == "internal":

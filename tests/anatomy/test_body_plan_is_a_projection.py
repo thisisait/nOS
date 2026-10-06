@@ -1,7 +1,8 @@
 """The body plan is a projection of the anatomy graph, never a second graph.
 
 state/body-plan.json places anatomy KINDS on biology's ladder (genome → cell →
-tissue → organ → organism → habitat, plus sense / limb / memory) through
+tissue → organ → organ system → organism → habitat, plus sense / limb /
+memory / law) through
 state/body-levels.yml. The failure this guards is the one the estate keeps
 paying for: two representations of one fact. If the map grew per-node rows, or
 the artifact held a node the anatomy graph does not, the body plan would start
@@ -91,13 +92,23 @@ def test_an_empty_level_is_counted_not_hidden():
     _, plan, _ = _load()
     missing = [lv for lv in _gen().ALL_LEVELS if lv not in plan["counts"]]
     assert not missing, f"levels absent from counts (an empty level must say 0): {missing}"
+    assert plan["counts"]["tissue"] == 0 and plan["counts"]["organism"] == 0, (
+        "tissue/organism gained nodes — update tools/body.py's EMPTY lines and this pin")
+
+
+def test_law_is_populated():
+    """Added on the operator's ruling (2026-10-06); an empty one is a harvest
+    that silently stopped, not a level nobody fills."""
+    _, plan, _ = _load()
+    empty = [lv for lv in ("law",) if plan["counts"].get(lv, 0) < 1]
+    assert not empty, f"levels with no node: {empty}"
 
 
 #: Connected nodes per level a newcomer walks first. Measured at increment 2
 #: (2026-10-05); before it, `sense` was judges alone (5). tissue, organism and
 #: habitat carry no floor: the first two are empty by declaration.
 CONNECTED_FLOOR = 10
-WALKED = ("genome", "cell", "organ", "sense", "limb", "memory")
+WALKED = ("genome", "cell", "organ", "sense", "limb", "memory", "law")
 
 
 def test_every_walked_level_is_a_graph_not_a_list():

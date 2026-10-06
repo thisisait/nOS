@@ -4,15 +4,17 @@
   "projects": "state/anatomy-graph.json",
   "levels_from": "state/body-levels.yml",
   "counts": {
-    "genome": 56,
+    "genome": 20,
     "cell": 16,
     "tissue": 0,
     "organ": 140,
+    "organ system": 0,
     "organism": 0,
     "habitat": 4,
     "sense": 70,
     "limb": 20,
     "memory": 40,
+    "law": 36,
     "internal": 66,
     "edges": 276
   },
@@ -82,87 +84,87 @@
       "kind": "agent"
     },
     "article:cross-repo-contracts": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:face": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:face-app-tiers": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:filesystem": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:foreign-properties": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:four-trees": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:gates": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:generative-ui": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:identity": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:immune-system": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:layers": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:loops": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:observability": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:operator-model": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:ponytail": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:secrets": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:security-floor": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:session-threat-model": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:ssot": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:virtiofs": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "article:workflows": {
-      "level": "genome",
+      "level": "law",
       "kind": "article"
     },
     "authentik:backrest": {
@@ -482,63 +484,63 @@
       "kind": "daemon"
     },
     "doctrine:docs/archive/cortex-corpus-parallel.md#2.1": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:docs/archive/cortex-corpus-parallel.md#5.3": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:docs/archive/nos-cortex-organ-design.md#2": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#10": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#5.1": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#5a": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#8.1": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#M2": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#M3": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:docs/idea/11-agentic-loop-contract.md#M7": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:ssot/doctrine/foreign-properties.md#5.1": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "doctrine:ssot/doctrine/workflows.md#6": {
-      "level": "genome",
+      "level": "law",
       "kind": "doctrine"
     },
     "faceapp:anatomy": {

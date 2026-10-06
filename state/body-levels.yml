@@ -1,24 +1,19 @@
 # body-levels.yml — the anatomy graph's node KINDS placed on biology's ladder.
 #
 # A newly arrived model cannot read eighteen kinds; it already knows the levels
-# of organisation. Six levels, top of the ladder last:
-#   genome → cell → tissue → organ → organism → habitat
-# three cross-cutting systems: sense (reads), limb (acts), memory (learned),
-# and `internal` (plumbing, hidden by default). One row per anatomy kind,
-# nothing else: no node ids, no per-node facts — those live in the anatomy
-# graph and are projected by tools/body-plan-gen.py into state/body-plan.json.
-# tissue and organism hold no kind today and are printed empty, never hidden.
-# Gate: tests/anatomy/test_body_plan_is_a_projection.py.
+# of organisation. Seven levels, top of the ladder last:
+#   genome → cell → tissue → organ → organ system → organism → habitat
+# four cross-cutting systems: sense (reads), limb (acts), memory (learned) and
+# law (inherited rules — ssot/INDEX.yml keeps `doctrine: law` apart from
+# `genome: what exists`), and `internal` (plumbing, hidden by default). One row
+# per anatomy kind, nothing else: no node ids, no per-node facts — those live
+# in the anatomy graph, projected by tools/body-plan-gen.py into
+# state/body-plan.json. tissue and organism hold no kind today and are printed
+# empty, never hidden. Gate: tests/anatomy/test_body_plan_is_a_projection.py.
 
 version: 1
 
 levels:
-  article:
-    level: genome
-    reason: an in-force constitution article (ssot/INDEX.yml doctrine realm) every cell inherits
-  doctrine:
-    level: genome
-    reason: a cited constitution paragraph — inherited law, the opposite of learned memory
   tasktype:
     level: genome
     reason: a declared work contract every agent inherits; a cell expresses it via may_take
@@ -27,7 +22,7 @@ levels:
     reason: a procedure text — ssot/doctrine/immune-system.md §1 counts skills as the inner organism's DNA
   agent:
     level: cell
-    reason: one model in one specialization (its charter, tools and backend)
+    reason: one model in one specialization; indicators are senses
   service:
     level: organ
     reason: a Docker service with one job — "organ" as a runtime component, one of four meanings in docs/doctrine/organs.md (PROPOSED)
@@ -58,6 +53,12 @@ levels:
   table:
     level: memory
     reason: a KEAP DataTable definition — what the estate learns and records
+  article:
+    level: law
+    reason: an in-force constitution article (ssot/INDEX.yml doctrine realm, read as law)
+  doctrine:
+    level: law
+    reason: a cited constitution paragraph — inherited rule, the opposite of learned memory
   gateset:
     level: internal
     reason: a named bundle of judges; the judges themselves are the senses
