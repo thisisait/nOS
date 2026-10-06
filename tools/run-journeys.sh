@@ -98,6 +98,9 @@ exported = {
     "WING_EVENTS_HMAC_SECRET": secrets.get("wing_events_hmac_secret"),
     "BONE_SECRET": secrets.get("bone_secret") or secrets.get("bone_hmac_secret"),
     "AUTHENTIK_API_TOKEN": secrets.get("authentik_bootstrap_token"),
+    # face journeys (face-wing contract); absent when face is not installed.
+    "FACE_URL": f"http://127.0.0.1:{from_config('face_port', '5090')}",
+    "FACE_EDGE_TOKEN": secrets.get("face_edge_token"),
 }
 
 missing = [k for k, v in exported.items() if not v]
