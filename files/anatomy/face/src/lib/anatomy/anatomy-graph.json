@@ -1703,79 +1703,79 @@
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
-      "description": "Organ system 'archive' — a public group of organs for one function, declared as an `organs:` group in files/anatomy/apex/ruling.yml"
+      "description": "Organ system 'archive' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
     "organ_system:backoffice": {
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
-      "description": "Organ system 'backoffice' — a public group of organs for one function, declared as an `organs:` group in files/anatomy/apex/ruling.yml"
+      "description": "Organ system 'backoffice' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
     "organ_system:commons": {
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
-      "description": "Organ system 'commons' — a public group of organs for one function, declared as an `organs:` group in files/anatomy/apex/ruling.yml"
+      "description": "Organ system 'commons' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
     "organ_system:forge": {
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
-      "description": "Organ system 'forge' — a public group of organs for one function, declared as an `organs:` group in files/anatomy/apex/ruling.yml"
+      "description": "Organ system 'forge' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
     "organ_system:gatehouse": {
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
-      "description": "Organ system 'gatehouse' — a public group of organs for one function, declared as an `organs:` group in files/anatomy/apex/ruling.yml"
+      "description": "Organ system 'gatehouse' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
     "organ_system:keel": {
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
-      "description": "Organ system 'keel' — a public group of organs for one function, declared as an `organs:` group in files/anatomy/apex/ruling.yml"
-    },
-    "organ_system:memory": {
-      "kind": "organ_system",
-      "source": "files/anatomy/apex/ruling.yml",
-      "anchor": "02.02.04",
-      "description": "Organ system 'memory' — a public group of organs for one function, declared as an `organs:` group in files/anatomy/apex/ruling.yml"
+      "description": "Organ system 'keel' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
     "organ_system:reflexes": {
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
-      "description": "Organ system 'reflexes' — a public group of organs for one function, declared as an `organs:` group in files/anatomy/apex/ruling.yml"
+      "description": "Organ system 'reflexes' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
     "organ_system:senses": {
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
-      "description": "Organ system 'senses' — a public group of organs for one function, declared as an `organs:` group in files/anatomy/apex/ruling.yml"
+      "description": "Organ system 'senses' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
     "organ_system:spine": {
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
-      "description": "Organ system 'spine' — a public group of organs for one function, declared as an `organs:` group in files/anatomy/apex/ruling.yml"
+      "description": "Organ system 'spine' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
+    },
+    "organ_system:stores": {
+      "kind": "organ_system",
+      "source": "files/anatomy/apex/ruling.yml",
+      "anchor": "02.02.04",
+      "description": "Organ system 'stores' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
     "organ_system:vault": {
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
-      "description": "Organ system 'vault' — a public group of organs for one function, declared as an `organs:` group in files/anatomy/apex/ruling.yml"
+      "description": "Organ system 'vault' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
     "organ_system:voice": {
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
-      "description": "Organ system 'voice' — a public group of organs for one function, declared as an `organs:` group in files/anatomy/apex/ruling.yml"
+      "description": "Organ system 'voice' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
     "organ_system:wits": {
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
-      "description": "Organ system 'wits' — a public group of organs for one function, declared as an `organs:` group in files/anatomy/apex/ruling.yml"
+      "description": "Organ system 'wits' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
     "pulse:alert-relay:relay-firing": {
       "kind": "pulse",
@@ -7341,9 +7341,9 @@
     },
     {
       "from": "service:mariadb",
-      "to": "organ_system:memory",
+      "to": "organ_system:stores",
       "kind": "part_of",
-      "via": "`publish: memory` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: stores` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
@@ -7477,9 +7477,9 @@
     },
     {
       "from": "service:postgresql",
-      "to": "organ_system:memory",
+      "to": "organ_system:stores",
       "kind": "part_of",
-      "via": "`publish: memory` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: stores` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
@@ -7509,9 +7509,9 @@
     },
     {
       "from": "service:redis",
-      "to": "organ_system:memory",
+      "to": "organ_system:stores",
       "kind": "part_of",
-      "via": "`publish: memory` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: stores` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },

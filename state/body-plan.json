@@ -668,10 +668,6 @@
       "level": "organ system",
       "kind": "organ_system"
     },
-    "organ_system:memory": {
-      "level": "organ system",
-      "kind": "organ_system"
-    },
     "organ_system:reflexes": {
       "level": "organ system",
       "kind": "organ_system"
@@ -681,6 +677,10 @@
       "kind": "organ_system"
     },
     "organ_system:spine": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:stores": {
       "level": "organ system",
       "kind": "organ_system"
     },
@@ -2784,7 +2784,7 @@
     },
     {
       "from": "service:mariadb",
-      "to": "organ_system:memory",
+      "to": "organ_system:stores",
       "kind": "part_of"
     },
     {
@@ -2909,7 +2909,7 @@
     },
     {
       "from": "service:postgresql",
-      "to": "organ_system:memory",
+      "to": "organ_system:stores",
       "kind": "part_of"
     },
     {
@@ -2984,7 +2984,7 @@
     },
     {
       "from": "service:redis",
-      "to": "organ_system:memory",
+      "to": "organ_system:stores",
       "kind": "part_of"
     },
     {

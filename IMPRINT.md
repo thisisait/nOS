@@ -147,7 +147,7 @@ The public organ systems (the apex ruling publishes 13; 367 of 430 ruled nodes a
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)
-- The Memory — Everything remembered lives here, at home. (3 parts)
+- The Stores — Everything remembered lives here, at home. (3 parts)
 - The Vault — Secrets are kept, never scattered. (2 parts)
 - The Keel — Copied nightly. Restore, proven. (3 parts)
 - The Archive — Where knowledge is preserved and grown. (9 parts)
@@ -168,7 +168,7 @@ The public organ systems (the apex ruling publishes 13; 367 of 430 ruled nodes a
 - **definition** (cell) — One cell's own prompt and tool allow-list, versioned and hashed. Not: genome, law.
 - **tissue** (tissue) — The transplantable pack of one specialization's cells with their skills, tables and services. Not: plugin, organ.
 - **organ** (organ) — One service or host daemon with one job; one row in state/manifest.yml. Not: organ system, cell, digest.
-- **organ system** (organ system) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organs:` key, whose rename is pending (step 5). Not: organ, organism.
+- **organ system** (organ system) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Not: organ, organism.
 - **organism** (organism) — One nOS install on one machine, all its organ systems together. Not: habitat, anatomy.
 - **habitat** (habitat) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner, and nOS never installs or touches it. Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Not: organism, symbiont.
 
