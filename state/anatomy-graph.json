@@ -2708,9 +2708,9 @@
     "reader:openhuman-status": {
       "kind": "reader",
       "source": "tools/openhuman-status.py",
-      "title": "Is OpenHuman on this Mac set up to stay on this Mac: privacy mode, analytics, updaters, model route, memory, MCP servers (RED if the RW token is in them), install, running, and any non-loopback socket (`lsof`); UNKNOWN without a config or a running process. `--selftest` needs no app.",
+      "title": "Is OpenHuman on this Mac set up to stay on this Mac: per profile (`users/*/config.toml`) privacy mode, analytics, updaters, model route, memory and background routes; MCP servers (RED if the RW token is in them), install, running, any non-loopback socket (`lsof`), and a second Ollama (another binary, or a port other than 11434); UNKNOWN without a config or a running process. `--selftest` needs no app.",
       "anchor": "02.02.04",
-      "description": "Reader tools/openhuman-status.py: Is OpenHuman on this Mac set up to stay on this Mac: privacy mode, analytics, updaters, model route, memory, MCP servers (RED if the RW token is in them), install, running, and any non-loopback socket (`lsof`); UNKNOWN without a config or a running process. `--selftest` needs no app."
+      "description": "Reader tools/openhuman-status.py: Is OpenHuman on this Mac set up to stay on this Mac: per profile (`users/*/config.toml`) privacy mode, analytics, updaters, model route, memory and background routes; MCP servers (RED if the RW token is in them), install, running, any non-loopback socket (`lsof`), and a second Ollama (another binary, or a port other than 11434); UNKNOWN without a config or a running process. `--selftest` needs no app."
     },
     "reader:permission-status": {
       "kind": "reader",
@@ -5773,7 +5773,7 @@
       "to": "service:openhuman",
       "kind": "data",
       "measured": "2026-10-06",
-      "via": "the nOS tables MCP server reads KEAP's agent API on 127.0.0.1:keap_port with the RO token from `docker exec iiab-keap-1` (roles/pazny.openhuman/templates/nos-mcp.json.j2)",
+      "via": "the nOS tables MCP server reads KEAP's agent API on 127.0.0.1:keap_port with the RO token from `docker exec iiab-keap-1` (the [[mcp_client.servers]] entry in roles/pazny.openhuman/templates/config.toml.j2)",
       "enforced_by": null,
       "unenforced": "No auto-enable block ties install_keap to install_openhuman. With KEAP down the app still runs; only the nos-tables MCP server fails to start.",
       "evidence": "measured"
