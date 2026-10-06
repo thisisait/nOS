@@ -83,8 +83,8 @@ def test_dnsmasq_runs_and_listens_on_the_lan(edge, runs):
     dns = yaml.safe_load((REPO / "tasks/dnsmasq.yml").read_text())
     lan = next(t for t in dns if "_dnsmasq_lan" in (t.get("ansible.builtin.set_fact") or {}))
     assert _true(lan["ansible.builtin.set_fact"]["_dnsmasq_lan"].strip("{} "), **ctx) is runs
-    detect = _task(dns, "Detect LAN IP")
-    assert _true(detect["when"], _dnsmasq_lan=runs) is runs
+    listen = _task(dns, "Build listen addresses")["ansible.builtin.set_fact"]["_dnsmasq_listen"]
+    assert ("192.168.1.10" in ENV.from_string(listen).render(_dnsmasq_lan=runs, nos_lan_ip="192.168.1.10")) is runs
 
 
 # ── (c) certificates: acme.sh's own --dns contract, not a hardcoded Cloudflare ─
