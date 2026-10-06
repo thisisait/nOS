@@ -18,7 +18,7 @@ before this schema existed:
 
 `state/genome/entity.schema.json` is the single declaration those collapse onto.
 This file pins three things about it: the generated artifacts are current, the
-schema is *composable* (an organelle inherits it rather than restating it), and —
+schema is *composable* (a gene inherits it rather than restating it), and —
 the one that matters most — **the schema describes the estate that exists**, not
 an idealised one. A base entity that no live manifest satisfies is fiction.
 
@@ -37,7 +37,7 @@ import yaml
 REPO = pathlib.Path(__file__).resolve().parents[2]
 GENOME = REPO / "state" / "genome"
 ENTITY = GENOME / "entity.schema.json"
-ORGANELLE_DIR = GENOME / "organelle"
+GENES_DIR = GENOME / "genes"
 CODEGEN = REPO / "tools" / "genome-codegen.py"
 PLUGINS = REPO / "files" / "anatomy" / "plugins"
 
@@ -85,16 +85,16 @@ def test_every_facet_is_reachable_from_the_base():
 # ── composition: the thing the estate has never done across a file ────────
 
 
-def _organelle_validator(path: pathlib.Path):
+def _gene_validator(path: pathlib.Path):
     org = json.loads(path.read_text())
     store = {"https://thisisait.eu/nos/schema/entity.schema.json": _entity()}
     resolver = jsonschema.RefResolver(base_uri=org["$id"], referrer=org, store=store)
     return jsonschema.Draft7Validator(org, resolver=resolver), org
 
 
-def test_at_least_one_organelle_composes_the_base():
-    files = sorted(ORGANELLE_DIR.glob("*.schema.json"))
-    assert files, "no organelle schemas — the base composes with nothing and proves nothing"
+def test_at_least_one_gene_composes_the_base():
+    files = sorted(GENES_DIR.glob("*.schema.json"))
+    assert files, "no gene schemas — the base composes with nothing and proves nothing"
     for f in files:
         org = json.loads(f.read_text())
         refs = json.dumps(org)
@@ -104,22 +104,22 @@ def test_at_least_one_organelle_composes_the_base():
         )
 
 
-def test_organelle_rejects_an_illegal_visibility():
+def test_gene_rejects_an_illegal_visibility():
     """Today this value is a free string that nothing checks."""
-    v, _ = _organelle_validator(ORGANELLE_DIR / "data-table.schema.json")
+    v, _ = _gene_validator(GENES_DIR / "data-table.schema.json")
     inst = _valid_data_table()
     inst["table"]["visibility"] = "Manager"  # legal-looking, wrong case
     assert list(v.iter_errors(inst)), "an illegal visibility validated — the enum is not enforced"
 
 
-def test_organelle_enforces_the_rem144_clause():
+def test_gene_enforces_the_rem144_clause():
     """A routed entity with no gate must carry a justification FIELD.
 
     This is Part 0.4's rule expressed as schema instead of as a hand-written
     pytest. `traefik: none` was justified by a prose comment that had been false
     since batch-21, and nothing compared it to the router actually rendered.
     """
-    v, _ = _organelle_validator(ORGANELLE_DIR / "data-table.schema.json")
+    v, _ = _gene_validator(GENES_DIR / "data-table.schema.json")
 
     ungated = _valid_data_table()
     ungated["access"] = {"routed": True, "gate": "none"}
@@ -159,7 +159,7 @@ def _valid_data_table() -> dict:
 def test_the_happy_instance_is_actually_valid():
     """Guards the negative tests above: if the baseline were invalid they would
     pass for the wrong reason."""
-    v, _ = _organelle_validator(ORGANELLE_DIR / "data-table.schema.json")
+    v, _ = _gene_validator(GENES_DIR / "data-table.schema.json")
     assert not list(v.iter_errors(_valid_data_table()))
 
 
