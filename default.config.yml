@@ -220,11 +220,11 @@ nos_extra_identities: []
 # ── TLD class detection (drives mkcert vs ACME, dnsmasq vs real DNS) ─────────
 # tenant_domain_is_local: true  → use mkcert + dnsmasq + /etc/resolver (dev mode)
 #                        false → use ACME (Let's Encrypt) + public DNS (prod mode)
-# Heuristic: anything ending in .local, .lan, .test, .localhost, or literally
-# 'localhost' is treated as local. Everything else is assumed public.
-# Override with `-e tenant_domain_is_local=false` if you want to force ACME on
-# a custom local TLD (e.g. if you have your own internal CA).
-tenant_domain_is_local: "{{ (tenant_domain | default('')).endswith(('.local', '.lan', '.test', '.localhost')) or (tenant_domain | default('')) == 'localhost' }}"
+# The ONE list of local suffixes (Python reads it via nos_identity.local_tld_suffixes;
+# gate tests/anatomy/test_tld_class.py). .internal (ICANN 2024) and .home.arpa
+# (RFC 8375) are private by design; .local is mDNS-only (RFC 6762), accepted but
+# warned for a client firm. Override with `-e tenant_domain_is_local=false`.
+tenant_domain_is_local: "{{ (tenant_domain | default('')).endswith(('.local', '.lan', '.test', '.localhost', '.internal', '.home.arpa')) or (tenant_domain | default('')) == 'localhost' }}"
 
 # ── TLS cert paths ───────────────────────────────────────────────────────────
 # Cert tree lives under the infra stack dir. mkcert writes here for local

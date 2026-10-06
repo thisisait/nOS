@@ -383,6 +383,19 @@
         (not (tenant_domain | regex_search('^[a-z0-9][a-z0-9.\\-]*[a-z0-9]$', ignorecase=True)))
       tags: ['always', 'preflight']
 
+    # .local is mDNS (RFC 6762): phones and laptops on the firm's LAN or tailnet
+    # ask multicast, not dnsmasq. Accepted (dev.local is ours), warned for a client.
+    - name: "[Track F validate] WARNING — a client firm on .local (mDNS-only)"
+      ansible.builtin.debug:
+        msg: >-
+          tenant_domain {{ tenant_domain }} ends in .local, which other devices resolve
+          by mDNS, not through this host's DNS. For {{ instance_org }} prefer
+          <name>.internal or <name>.home.arpa (both private by design).
+      when:
+        - tenant_domain.endswith('.local')
+        - instance_org | default('') | length > 0
+      tags: ['always', 'preflight']
+
     - name: "[Track F validate] host_alias must be DNS-safe (or empty)"
       ansible.builtin.fail:
         msg: |-

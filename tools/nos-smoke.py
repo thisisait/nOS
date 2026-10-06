@@ -48,7 +48,7 @@ except ImportError:
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import default_layers, resolve_flag  # noqa: E402
+from nos_identity import default_layers, is_local_domain, resolve_flag  # noqa: E402
 
 # Lazy ANSI colors — disabled when stdout isn't a TTY.
 _TTY = sys.stdout.isatty()
@@ -463,7 +463,7 @@ def _loopback_ok(url: str) -> bool:
     loopback retry.
     """
     host = (urllib.parse.urlsplit(url).hostname or "").lower()
-    if host.endswith(".local") or host.endswith(".test") or host.endswith(".lan"):
+    if is_local_domain(host):
         return True
     return bool(_TENANT_SUFFIX) and (
         host == _TENANT_SUFFIX or host.endswith("." + _TENANT_SUFFIX))

@@ -17,6 +17,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "tests/e2e"))
+sys.path.insert(0, str(REPO / "tools"))
+from nos_identity import is_local_domain  # noqa: E402  the one local-TLD list
 
 TIERS = {1: "provider", 2: "manager", 3: "user", 4: "guest"}
 
@@ -49,7 +51,7 @@ def auth_host() -> str:
 
 @pytest.fixture(scope="session")
 def verify_tls(auth_host) -> bool:
-    return not auth_host.endswith((".local", ".lan", ".test"))
+    return not is_local_domain(auth_host)
 
 
 @pytest.fixture(scope="session")

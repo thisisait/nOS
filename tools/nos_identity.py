@@ -13,6 +13,7 @@ Importable, not a CLI: `sys.path.insert(0, "<repo>/tools")`.
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from pathlib import Path
 
 import yaml
@@ -55,6 +56,18 @@ def default_config() -> dict:
     for p in default_layers():
         out.update(yaml.safe_load(p.read_text(encoding="utf-8")) or {})
     return out
+
+
+@lru_cache(None)
+def local_tld_suffixes() -> tuple[str, ...]:
+    """The suffixes tenant_domain_is_local counts as local, read from its own expression."""
+    m = re.search(r"endswith\(\(([^)]*)\)\)", default_config()["tenant_domain_is_local"])
+    return tuple(s.strip(" '\"") for s in m.group(1).split(","))
+
+
+def is_local_domain(name: str) -> bool:
+    """tenant_domain_is_local for any host name (mkcert, not a public CA)."""
+    return name == "localhost" or name.endswith(local_tld_suffixes())
 
 
 def resolve_flag(flag: str) -> list[tuple[str, str]]:

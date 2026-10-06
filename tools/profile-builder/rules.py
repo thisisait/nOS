@@ -273,8 +273,7 @@ def _resolver(over: dict):
 
 
 def local_suffixes() -> list[str]:
-    m = re.search(r"endswith\(\(([^)]*)\)\)", _cfg()["tenant_domain_is_local"])
-    return [s.strip(" '\"") for s in m.group(1).split(",")] if m else []
+    return list(ni.local_tld_suffixes())
 
 
 @lru_cache(None)

@@ -55,7 +55,7 @@ def test_the_rules_come_from_the_sources(data):
     gate = refused["[Preflight] Refuse a forward-auth gate with no Authentik behind it"]
     assert "install_wing" in gate["any"] and "install_observability" not in gate["any"], \
         "the gated set is the rendered services.yml.j2 (grafana is native OIDC, not gated)"
-    assert data["local_suffixes"] == [".local", ".lan", ".test", ".localhost"]
+    assert data["local_suffixes"] == [".local", ".lan", ".test", ".localhost", ".internal", ".home.arpa"]
     assert data["derived"] == {"tenant_domain_is_local": "local", "install_acme": "public"}
 
 
