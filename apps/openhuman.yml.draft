@@ -1,0 +1,138 @@
+---
+# ============================================================================
+# OpenHuman headless core — STAGED, NOT DEPLOYED (roadmap row `openhuman`).
+#
+# Why `.draft`: the runner discovers `*.yml` and also excludes `*.draft`
+# (roles/pazny.apps_runner/tasks/main.yml; nos_apps_render.py skips the same
+# suffix), so nothing here renders or starts. Step 0 is the DESKTOP test on
+# the operator's Mac (docs/systems/openhuman/README.md); this is step 1.
+#
+# Gate: tests/anatomy/test_openhuman_draft_is_local_only.py pins local_only,
+# analytics off, updater mutations off, no route, processors [].
+#
+# BEFORE PROMOTING (`mv apps/openhuman.yml.draft apps/openhuman.yml` +
+# `install_openhuman: true`), three things this draft cannot settle:
+#   1. IMAGE. Upstream publishes the core image for amd64 only (GHCR), and
+#      this host is arm64. The line below is a placeholder: build from the
+#      upstream Dockerfile or wait for an arm64 tag. Unverified name.
+#   2. ROUTE. nos_apps_render.py adds Traefik labels to EVERY app today;
+#      `nginx.route: false` below is the intent, not yet a switch it reads.
+#      Promotion needs that switch first, or this core gets a vhost.
+#   3. CONFIG WRITE. privacy.mode has no env form, so it rides in config.toml.
+#      The core rewrites config.toml (migrations, atomic rename); a read-only
+#      mount may make it refuse to boot. Unverified.
+#
+# Upstream:  https://github.com/tinyhumansai/openhuman   License: GPL-3.0
+# Threat class: "runs as the user" (ssot/doctrine/session-threat-model.md) —
+# in a container it runs as the container's user instead, which is the point.
+# ============================================================================
+
+meta:
+  name: "openhuman"
+  version: "0.64.10"
+  summary: "OpenHuman agent core (headless JSON-RPC), local models only."
+  homepage: "https://github.com/tinyhumansai/openhuman"
+  category: "ai"
+  ports: [7788]
+  tags: ["ai", "agent", "local-only", "draft"]
+
+gdpr:
+  purpose: |
+    A personal agent that answers the operator from local models and the
+    estate's read-only tables. Inference stays on this host (local_only);
+    no memory engine is configured, so conversations are not stored beyond
+    the core's own session log in its volume.
+  legal_basis: "legitimate_interests"
+  balancing_test: >-
+    The operator runs an assistant over his own estate. Single user, no third
+    parties, no cloud processor; local_only refuses cloud inference in the
+    core. Data is erasable by deleting the volume.
+  data_source: from_subject
+  data_categories:
+    - "behavioural_data"
+  data_subjects:
+    - "employees"
+  retention_days: 90
+  processors: []
+  transfers_outside_eu: false
+
+compose:
+  services:
+    openhuman:
+      # Placeholder — GHCR ships amd64 only; see header item 1.
+      image: "ghcr.io/tinyhumansai/openhuman-core:0.64.10"
+      container_name: openhuman
+      # Supervisor restart: the core stages an update but never restarts
+      # itself; Docker is the supervisor.
+      restart: unless-stopped
+      read_only: true
+      security_opt: ["no-new-privileges:true"]
+      cap_drop: ["ALL"]
+      cap_add: ["CHOWN", "SETUID", "SETGID"]
+      tmpfs: ["/tmp"]
+      # Loopback only. No Traefik route (header item 2).
+      ports:
+        - "127.0.0.1:7788:7788"
+      environment:
+        - "OPENHUMAN_CORE_HOST=0.0.0.0"
+        - "OPENHUMAN_CORE_PORT=7788"
+        - "OPENHUMAN_CORE_TOKEN=$SERVICE_PASSWORD_CORE"
+        - "OPENHUMAN_WORKSPACE=/home/openhuman/.openhuman"
+        - "OPENHUMAN_ANALYTICS_ENABLED=false"
+        - "OPENHUMAN_AUTO_UPDATE_RPC_MUTATIONS_ENABLED=false"
+        - "OPENHUMAN_AUTO_UPDATE_RESTART_STRATEGY=supervisor"
+        # local-openai -> the host's Ollama. host.docker.internal from inside
+        # Docker Desktop: unverified for this core (it may refuse non-loopback
+        # "local" endpoints under local_only).
+        - "LOCAL_OPENAI_URL=http://host.docker.internal:11434/v1"
+      configs:
+        - source: openhuman_config
+          target: /home/openhuman/.openhuman/config.toml
+      volumes:
+        - openhuman_workspace:/home/openhuman/.openhuman
+      networks:
+        - apps_net
+      mem_limit: 2g
+      cpus: 1.0
+
+  configs:
+    openhuman_config:
+      content: |
+        default_model = "hermes3:8b"
+        chat_provider = "local-openai:hermes3:8b"
+        reasoning_provider = "local-openai:hermes3:8b"
+        agentic_provider = "local-openai:hermes3:8b"
+        coding_provider = "local-openai:hermes3:8b"
+        memory_provider = "local-openai:hermes3:8b"
+
+        [privacy]
+        mode = "local_only"
+
+        [observability]
+        analytics_enabled = false
+        share_usage_data = false
+
+        [update]
+        enabled = false
+        rpc_mutations_enabled = false
+        restart_strategy = "supervisor"
+
+        [gitbooks]
+        enabled = false
+
+        [memory.conversations]
+        enabled = false
+
+        [memory.recall]
+        enabled = false
+
+        [local_ai]
+        runtime_enabled = true
+        opt_in_confirmed = true
+
+  volumes:
+    openhuman_workspace:
+
+nginx:
+  route: false   # intent only — not yet read by nos_apps_render.py (header item 2)
+  auth: "proxy"  # if a route is ever added, it stays behind forward-auth

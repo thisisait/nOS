@@ -31,6 +31,15 @@
   when: apps_runner_enabled | default(true) | bool
   block:
 
+    # install_openhuman: false declines apps/openhuman.yml like an apps_skip entry.
+    # ponytail: one app has a flag today; derive from install_* when a second does.
+    - name: "[pazny.apps_runner] Decline openhuman unless install_openhuman"
+      ansible.builtin.set_fact:
+        apps_skip: "{{ (apps_skip | default([])) + ['openhuman'] }}"
+      when:
+        - not (install_openhuman | default(false) | bool)
+        - "'openhuman' not in (apps_skip | default([]))"
+
     # ── Skip cleanly if there are no manifests ───────────────────────────────
     - name: "[pazny.apps_runner] Discover apps/*.yml manifests"
       ansible.builtin.find:

@@ -1453,6 +1453,9 @@ apps_runner_enabled: true
 # Tier-2 manifest ids to leave out of this estate (apps/<id>.yml stays
 # committed; the runner just does not discover it). Default: none.
 apps_skip: []
+# OpenHuman headless core (apps/openhuman.yml.draft, staged). false = the runner
+# skips `openhuman` even once the draft is promoted. Desktop test: docs/systems/openhuman.
+install_openhuman: false
 # Derived from where the cAdvisor CONTAINER exists, not declared beside it.
 # roles/pazny.grafana/templates/compose.yml.j2:221 gates that container on
 # `ansible_os_family != 'Darwin'` — its cgroup and layerdb paths are real only
