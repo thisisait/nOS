@@ -121,7 +121,6 @@ homebrew_cask_apps:
 
 # -- Languages - base config ---------------------------------------------------
 php_version: "8.3"
-node_nvm_version: "lts/*"
 python_version: "3.13"
 
 node_global_packages:

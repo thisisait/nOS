@@ -1092,7 +1092,9 @@ wing_audit_chain_enabled: false
 # NODE.JS
 # ==============================================================================
 
-node_nvm_version: "lts/*"   # or specific: "22", "20"
+# EXACT, not lts/* or a major: either floats and leaves a new node tree per converge.
+# Cortex needs >= 22. A bump is a commit, never a converge.
+node_nvm_version: "24.20.0"
 nvm_git_version: "v0.40.8"   # Linux: nvm cloned from github.com/nvm-sh/nvm at this tag (macOS: Homebrew nvm)
 
 # PEM bundle trusted while nOS BUILDS its own images (face, superset), never
