@@ -76,7 +76,7 @@ jobs:
         os:
           - ubuntu-22.04
           - ubuntu-24.04
-          - macos-14
+          - macos-26
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v7
@@ -406,9 +406,11 @@ jobs:
       matrix:
         # macos-14 left the matrix 2026-10-06 (operator): it spent 36 of 49 min
         # on 19 small formulae (~2 min each, no bottles) and never reached the
-        # 60 min limit's end; macos-15 does the whole job in 15. Syntax-check
-        # keeps a macos-14 lane above. Roadmap: ci-macos14-lane.
+        # 60 min limit's end; macos-15 does the whole job in 15. GitHub marks 14
+        # deprecated; 26 is the operator's own major (26.6) and macos-latest.
+        # There is no 25 or 27 runner. Roadmap: ci-macos14-lane.
         os:
+          - macos-26
           - macos-15
 
     steps:
