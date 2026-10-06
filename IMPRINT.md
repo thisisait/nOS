@@ -37,20 +37,20 @@ the agent's or anyone's — is caught before it costs anything. Both are the poi
 Levels run smallest to largest, then the systems that cut across every level.
 Each line: level (count) — what it is: the most connected nodes (edge count).
 
-- **genome** (20) — declared contracts every part inherits — task types, skills: tasktype:investigate (13), tasktype:code-fix (3), tasktype:design (3), tasktype:seed-edit (3), skill:cortex-query (2)
+- **genome** (20) — declared contracts every part inherits — task types, skills: tasktype:investigate (13), skill:nos-backoffice (3), skill:nos-datatables (3), tasktype:code-fix (3), tasktype:design (3)
 - **cell** (16) — who you can be — one model in one specialization: agent:librarian (11), agent:jeff (9), agent:surveyor (8), agent:conductor (7), agent:curator (7)
-- **tissue** (0) — cells of one specialization working together: none — nothing declares a tissue yet
-- **organ** (90) — a part with one job — a service or host daemon: daemon:eu.thisisait.nos.pulse (42), service:postgresql (11), service:redis (9), service:mariadb (8), service:hermes (5)
+- **tissue** (1) — cells of one specialization working together: tissue:backoffice (23)
+- **organ** (101) — a part with one job — a service, host daemon, hosted forge or face app: daemon:eu.thisisait.nos.pulse (42), service:postgresql (11), service:redis (9), service:mariadb (8), service:hermes (5)
 - **organ system** (13) — organs grouped for one function: organ_system:archive (9), organ_system:senses (8), organ_system:voice (6), organ_system:backoffice (5), organ_system:forge (5)
 - **organism** (0) — the estate as a whole: none — no node stands for the whole; the whole is this graph
-- **habitat** (4) — what lives beside the organism — software by origin, the git surfaces: repo:gitea-forge (1), repo:scan-data (1), repo:github-origin (0), repo:gitlab-forge (0)
-- **sense** (70) — what you can ask — readers and judges that only read: judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), judge:genome-codegen (4), judge:nos-smoke (4), reader:discovery-scan (3)
-- **limb** (20) — what you can reach for — tool grants that act: resource:mcp-wing-read (10), resource:backend-minimax (8), resource:bash-read-only (8), resource:backend-ollama (5), resource:mcp-bone (5)
-- **memory** (40) — what the estate has learned — KEAP tables: table:party (12), table:invoice (4), table:journal-entry (3), table:kolben-ticket (3), table:posting (3)
+- **habitat** (6) — what lives beside the organism — third-party processors it does not own: backend:minimax (8), backend:ollama (5), backend:anthropic (3), backend:mistral-eu (0), backend:openclaw (0)
+- **sense** (76) — what you can ask — readers, judges and read-only grants: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), judge:genome-codegen (4)
+- **limb** (8) — what you can reach for — tool grants that act: tool:mcp-bone (5), tool:ask-operator (2), tool:mcp-keap (2), tool:mcp-wing-write (2), tool:migration-file-write (2)
+- **memory** (40) — what the estate has learned — KEAP tables: table:party (13), table:invoice (5), table:journal-entry (4), table:posting (4), table:account (3)
 - **law** (36) — the rules it inherits — constitution articles and paragraphs: doctrine:docs/idea/11-agentic-loop-contract.md#5.1 (5), doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d (2), doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e (2), doctrine:docs/idea/11-agentic-loop-contract.md#M7 (2), doctrine:ssot/doctrine/foreign-properties.md#5.1 (2)
-- **reflex** (43) — what runs by itself — scheduled responses Pulse fires (proposed word): pulse:conductor:self-test-001 (8), pulse:cortex:cortex-fs-sync (8), pulse:keap:keap-embed-sync (8), pulse:librarian:brief-taxonomy (8), pulse:librarian:describe-taxonomy (8)
+- **reflex** (43) — what runs by itself — scheduled responses Pulse fires: pulse:conductor:self-test-001 (8), pulse:cortex:cortex-fs-sync (8), pulse:keap:keap-embed-sync (8), pulse:librarian:brief-taxonomy (8), pulse:librarian:describe-taxonomy (8)
 
-Hidden plumbing: 73 internal nodes. Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
+Hidden plumbing: 67 internal nodes. Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
 
 ## 4. How to ask — the senses
 
@@ -69,6 +69,7 @@ Start with the first one.
 - `tools/caddy-status.py` — Can the caddy answer, is the ear listening, and what did it hear.
 - `tools/brew-pin-status.py` — How old is the version brew wants to give us, and is it old enough to adopt?
 - `tools/cortex-status.py` — What the cortex organ is, all of it — not just the part KEAP serves.
+- `tools/tissue-status.py` — Which tissues the estate declares (state/tissues/), their members, and whether each holds: schema, every id resolved, Article 30 inherited complete. Also the loader anatomy-graph-gen imports.
 - `tools/router-status.py` — The WAN router as a declared estate fact: presence probe + intent from state/router.yml; UNKNOWN when it cannot look.
 - `tools/elsewhere-status.py` — Estate work happening OUTSIDE the control centre, and how to get to it.
 - `tools/loop-status.py` — Which weakness sources actually produce proposals, and what came of them.
@@ -141,7 +142,7 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
   code_server, erpnext, freescout, outline, hedgedoc, bookstack, firefly, dolibarr, onlyoffice, mikopbx, qgis_server,
   metabase, superset, influxdb, mcp_gateway, openclaw, hermes, device_gateway, wing, bone, cortex, backrest.
 
-The public organ systems (the apex ruling publishes 13; 362 of 425 ruled nodes are withheld):
+The public organ systems (the apex ruling publishes 13; 364 of 427 ruled nodes are withheld):
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)
@@ -168,7 +169,7 @@ The public organ systems (the apex ruling publishes 13; 362 of 425 ruled nodes a
 - **organ** (organ) — One service or host daemon with one job; one row in state/manifest.yml. Not: organ system, cell, digest.
 - **organ system** (organ system) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organs:` key, whose rename is pending (step 5). Not: organ, organism.
 - **organism** (organism) — One nOS install on one machine, all its organ systems together. Not: habitat, anatomy.
-- **habitat** (habitat) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat) and its git surfaces. Software of origin habitat belongs to the machine's owner, and nOS never installs or touches it. Not: organism, symbiont.
+- **habitat** (habitat) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner, and nOS never installs or touches it. Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Not: organism, symbiont.
 
 ## Sources
 
