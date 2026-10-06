@@ -397,8 +397,12 @@ def emit_glossary(_g: dict) -> str:
             tag = f" ({lv})" if lv not in _SECTIONS else ""
             tag += " (proposed, not yet ruled)" if w.get("proposed") else ""
             nots = f" Not: {', '.join(w['not'])}." if w.get("not") else ""
+            nots += f" Mechanism: {w['mechanism']}." if w.get("mechanism") else ""
             name = f"`{word}`" if set(word) & set("*_/") else f"**{word}**"
             out.append(f"- {name}{tag} — {w['means']}{nots}")
+            # Indented, so it stays in the item; imprint-gen takes only "- " lines.
+            if w.get("counter_example"):
+                out.append(f"  Counter-example: {w['counter_example']}.")
     out += ["", "## Retired senses (old use → what to say now)", ""]
     for w in words.values():
         for r in w.get("retired") or []:

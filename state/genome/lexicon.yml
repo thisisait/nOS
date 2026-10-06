@@ -14,6 +14,11 @@
 #          or the word itself when the level is `cross`. A yaml_key may pin `values`.
 # proposed true when the word is new and the operator has not yet ruled it.
 # not      words it must not be confused with.
+# counter_example  one thing a reader could take for this word and that is not
+#            it (ssot/doctrine/body-plan.md §7); legacy and proper names owe none.
+# no_surface_reason  why a word has no `names` (one sentence), instead of a surface.
+# mechanism  the mechanical word that says it better. Its own field, not a `not:`
+#            entry: `not:` keeps nOS words apart; a mechanism is a sibling to cite.
 # retired  senses the word no longer carries: {sense, replacement, surfaces};
 #            each surface must be gone (today's are pending in the gate).
 # retired_phrases  exact phrases a model must not be taught; matched only in
@@ -49,6 +54,7 @@ words:
       - graph_kind: skill
         reason: a declared procedure contract every part inherits
     not: [law, definition]
+    counter_example: "a cell's system.md (its definition, not something every part inherits)"
     retired:
       - sense: "DNA of the inner organism (prompts, skills, CLAUDE.md, allow-lists)"
         replacement: "law for the shared parts; definition for one cell's prompt and allow-list"
@@ -58,7 +64,10 @@ words:
   gene:
     level: genome
     means: One declared kind of entity in the genome (the word that replaced organelle).
+    names:
+      - path: state/genome/genes/
     not: [plugin]
+    counter_example: "one DataTable row (data a gene shapes, not a gene)"
 
   cell:
     level: cell
@@ -67,7 +76,8 @@ words:
       - graph_kind: agent
         reason: one model in one specialization (its charter, tools and backend)
       - path: files/anatomy/agents/
-    not: [sense, stem cell]
+    not: [sense, stem cell, "AWS/Slack cell (an isolated full-stack replica)"]
+    counter_example: "an immune indicator (a sense)"
     retired:
       - sense: "an immune indicator called a cell"
         replacement: "sense (an indicator is a sense with an indicator contract)"
@@ -77,12 +87,18 @@ words:
   stem cell:
     level: cell
     means: A model that has not yet differentiated into one specialization.
+    no_surface_reason: every agent in files/anatomy/agents/ has one charter today, so none is a stem cell.
     not: [cell]
+    counter_example: "jeff, a broad assistant that still has one charter (a cell)"
 
   definition:
     level: cell
     means: One cell's own prompt and tool allow-list, versioned and hashed.
+    names:
+      - yaml_key: "files/anatomy/agents/jeff/agent.yml#system_prompt_path"
+      - yaml_key: "files/anatomy/agents/jeff/agent.yml#tools"
     not: [genome, law]
+    counter_example: "the model pin in agent.yml (which model runs the cell, not its prompt or allow-list)"
     retired:
       - sense: "the `dna` field of the indicator contract"
         replacement: definition
@@ -97,6 +113,8 @@ words:
         reason: one manifest gathering a specialization's existing cells, skills, tables, services and reflexes
       - path: state/tissues/
     not: [plugin, organ]
+    mechanism: bounded context (domain-driven design)
+    counter_example: "a plugin (wiring, not a specialization)"
     retired:
       - sense: "praxis pack / backoffice pack"
         replacement: tissue
@@ -124,6 +142,7 @@ words:
           ruled 2026-10-06: a face app is one job of the face organ (its edges to the
           face service stay)
     not: [organ system, cell, digest]
+    counter_example: "a Pulse job (a reflex of the Pulse organ)"
     retired:
       - sense: "a public apex group called an organ"
         replacement: organ system
@@ -150,11 +169,15 @@ words:
       - graph_kind: organ_system
         reason: one public group of organs from the signed apex ruling's `organ_systems:` key
     not: [organ, organism]
+    counter_example: "a compose stack such as iiab (a deployment group, not a public function)"
 
   organism:
     level: organism
     means: One nOS install on one machine, all its organ systems together.
+    no_surface_reason: no file or node stands for the whole install; the whole is the anatomy graph (tools/body.py says so).
     not: [habitat, anatomy]
+    counter_example: "the anatomy graph (a drawing of the organism, not the organism)"
+    retired_phrases: ["the organism is alive"]
 
   habitat:
     level: habitat
@@ -170,6 +193,7 @@ words:
       - config_key: software_owner
         values: [self, symbiont, habitat]
     not: [organism, symbiont]
+    counter_example: "the Gitea or GitLab nOS hosts (organ jobs, not habitat)"
     retired:
       - sense: "host, as the third owner class of software"
         replacement: habitat
@@ -182,6 +206,7 @@ words:
     names:
       - config_key: software_owner
     not: [declared, symbiont]
+    counter_example: "OpenHuman, declared and installed by nOS but updated by its vendor (a symbiont)"
     retired:
       - sense: "self meaning the immune system's tolerated set"
         replacement: declared
@@ -194,11 +219,15 @@ words:
     names:
       - config_key: software_owner
     not: [self, habitat]
+    counter_example: "a personal Homebrew package (habitat: the machine owner's, never installed by nOS)"
 
   declared:
     level: cross
     means: On the list nOS generates from its declarations; the immune system tolerates it, and anything undeclared is a signal.
+    names:
+      - path: tools/undeclared-status.py
     not: [self]
+    counter_example: "a launchd job the operator loaded by hand (undeclared until a declaration explains it, however harmless)"
 
   sense:
     level: cross
@@ -217,6 +246,7 @@ words:
       - path: tools/README.md
       - yaml_key: "files/anatomy/apex/ruling.yml#organ_systems.senses"
     not: [cell, limb]
+    counter_example: "tools/genome-codegen.py (it writes the glossary; only its --check reads)"
 
   limb:
     level: cross
@@ -227,6 +257,8 @@ words:
       - graph_kind: token
         reason: a judge capability whose name does not declare it read-only
     not: [sense, side]
+    mechanism: port / adapter (hexagonal architecture)
+    counter_example: "an agent tool grant whose every scope is .read (a sense)"
     retired:
       - sense: "limb as the apex page's left/right/core column key"
         replacement: side
@@ -241,6 +273,7 @@ words:
       - graph_kind: table
         reason: a KEAP DataTable definition, what the estate records and learns
     not: [cortex, verdicts, stores]
+    counter_example: "Wing's audit ledger (a record of what happened, not what nOS learned)"
     retired:
       - sense: "The Memory, the apex group of databases"
         replacement: The Stores
@@ -253,7 +286,9 @@ words:
   verdicts:
     level: cross
     means: The log of what each sense reported and what the operator judged.
+    no_surface_reason: each indicator's contract names its own verdicts file (immune-system.md §2); no shared log exists yet.
     not: [memory]
+    counter_example: "KEAP (memory: what nOS learned, not what a sense reported)"
     retired_phrases: ["immune memory", "memory — the verdict log", "memory | where each verdict"]
 
   law:
@@ -267,6 +302,7 @@ words:
       - graph_kind: article
         reason: an in-force constitution article (the ssot/INDEX.yml doctrine realm)
     not: [genome, definition]
+    counter_example: "the genome's entity schema (declared facts, not rules in force)"
 
   reflex:
     level: cross
@@ -276,6 +312,8 @@ words:
         reason: one scheduled job, run by the Pulse daemon on its own cron
       - yaml_key: "files/anatomy/apex/ruling.yml#organ_systems.reflexes"
     not: [Pulse, heartbeat, organ]
+    mechanism: "a scheduled job (cron); where it restarts what failed, a supervisor (Erlang/OTP)"
+    counter_example: "a launchd daemon (an organ, not a scheduled response)"
 
   internal:
     level: internal
@@ -290,6 +328,7 @@ words:
       - graph_kind: lock
         reason: a mutex claims are drawn against; exclusion is plumbing, not a body part
     not: [organ, sense]
+    counter_example: "the Authentik service (an organ); only an SSO client object inside it is internal"
 
   heartbeat:
     level: cross
@@ -298,6 +337,8 @@ words:
       - path: files/heartbeat/heartbeat.py
       - launchd_label: eu.thisisait.nos.heartbeat
     not: [Pulse]
+    mechanism: a liveness signal; monitor / link (Erlang/OTP)
+    counter_example: "a health check (asked from outside; a heartbeat is sent from inside on a clock)"
     retired:
       - sense: "Pulse called the heartbeat"
         replacement: "Pulse, which is the scheduler"
@@ -307,7 +348,11 @@ words:
   nervous system:
     level: cross
     means: The path events take to the operator, from events to the Wing inbox to ntfy or mail.
+    names:
+      - path: files/anatomy/wing/app/Presenters/InboxPresenter.php
+      - path: roles/pazny.ntfy/
     not: [converge]
+    counter_example: "a converge (one playbook run, not the path events take)"
     retired:
       - sense: "the playbook called the nervous system"
         replacement: converge
@@ -317,7 +362,9 @@ words:
   twin:
     level: cross
     means: The second Mac.
+    no_surface_reason: the second Mac is a machine, not a file; nothing in the repo declares it yet.
     not: [mirror-parity]
+    counter_example: "a coexistence track (a second copy of one service on the same Mac)"
     retired:
       - sense: "twin for two lists that must stay equal (twin-parity)"
         replacement: mirror-parity
@@ -330,6 +377,7 @@ words:
     names:
       - path: files/anatomy/plugins/
     not: [tissue, gene]
+    counter_example: "an apps/<name>.yml manifest app (it deploys a service; a plugin only wires one)"
 
   anatomy:
     level: cross
@@ -338,6 +386,7 @@ words:
       - path: state/anatomy-graph.json
       - path: tools/anatomy-graph-gen.py
     not: [body plan]
+    counter_example: "state/body-plan.json (the anatomy projected onto levels, not the graph)"
 
   body plan:
     level: cross
@@ -347,11 +396,26 @@ words:
       - path: tools/body-plan-gen.py
       - path: tools/body.py
     not: [anatomy]
+    counter_example: "state/anatomy-graph.json (the anatomy itself; the body plan is its projection)"
     retired:
       - sense: "a second kind-to-level map beside the lexicon"
         replacement: "the graph_kind names in state/genome/lexicon.yml"
         surfaces:
           - path: state/body-levels.yml
+
+  appendage:
+    level: cross
+    means: >-
+      An organ attached through one declared joint (a cross-repo contract: spec,
+      fixture, symmetric gates), with its own code and licence, which no core organ
+      depends on or imports; the organism survives its loss. A property of an organ,
+      not a level.
+    names:
+      - manifest_field: joint_pending
+      - yaml_key: "state/schema/manifest.schema.json#definitions.service.properties.joint"
+      - path: ssot/doctrine/cross-repo-contracts.md
+    not: [tissue, symbiont, organ system, twin, limb, KEAP]
+    counter_example: "KEAP: has a cross-repo contract and the core depends on it"
 
   # ── procedures ──────────────────────────────────────────────────────────
   digest:
@@ -362,6 +426,7 @@ words:
       - path: state/digest-constitution.yml
       - path: files/anatomy/module_utils/nos_digest.py
     not: [organ]
+    counter_example: "a sha256 digest (a hash, an allowed compound, not the intake)"
     retired:
       - sense: "the digest organ, the stomach"
         replacement: digest
@@ -374,6 +439,9 @@ words:
     names:
       - path: main.yml
     not: [nervous system]
+    mechanism: a reconcile loop (a Kubernetes operator) — declared against observed; it does not heal
+    counter_example: "a hand `docker compose up` (it moves one container, not the declared source)"
+    retired_phrases: ["self-healing", "heals itself"]
 
   imprint:
     level: procedure
@@ -381,6 +449,7 @@ words:
     names:
       - path: tools/apgar.py
     not: [cell]
+    counter_example: "CLAUDE.md (the brief for an assistant working in the repo, not a newborn's first page)"
 
   apgar:
     level: procedure
@@ -389,6 +458,7 @@ words:
       - path: tools/apgar.py
       - path: state/apgar.yml
     not: [cell]
+    counter_example: "a pytest gate (it scores the repo, not a newborn model's answers)"
 
   # ── proper names: one job each, the metaphor no longer justifies them ───
   Bone:

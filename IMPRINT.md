@@ -164,10 +164,10 @@ The public organ systems (the apex ruling publishes 13; 367 of 430 ruled nodes a
 
 - **genome** (genome) — The declared facts every part of nOS inherits, kept in state/genome/. Not: law, definition.
 - **gene** (genome) — One declared kind of entity in the genome (the word that replaced organelle). Not: plugin.
-- **cell** (cell) — One model in one specialization; in code it is called an agent. Not: sense, stem cell.
+- **cell** (cell) — One model in one specialization; in code it is called an agent. Not: sense, stem cell, AWS/Slack cell (an isolated full-stack replica).
 - **stem cell** (cell) — A model that has not yet differentiated into one specialization. Not: cell.
 - **definition** (cell) — One cell's own prompt and tool allow-list, versioned and hashed. Not: genome, law.
-- **tissue** (tissue) — The transplantable pack of one specialization's cells with their skills, tables and services. Not: plugin, organ.
+- **tissue** (tissue) — The transplantable pack of one specialization's cells with their skills, tables and services. Not: plugin, organ. Mechanism: bounded context (domain-driven design).
 - **organ** (organ) — One service or host daemon with one job; one row in state/manifest.yml. Not: organ system, cell, digest.
 - **organ system** (organ system) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Not: organ, organism.
 - **organism** (organism) — One nOS install on one machine, all its organ systems together. Not: habitat, anatomy.

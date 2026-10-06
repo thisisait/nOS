@@ -7,44 +7,76 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 ## Levels
 
 - **genome** (genome) — The declared facts every part of nOS inherits, kept in state/genome/. Not: law, definition.
+  Counter-example: a cell's system.md (its definition, not something every part inherits).
 - **gene** (genome) — One declared kind of entity in the genome (the word that replaced organelle). Not: plugin.
-- **cell** (cell) — One model in one specialization; in code it is called an agent. Not: sense, stem cell.
+  Counter-example: one DataTable row (data a gene shapes, not a gene).
+- **cell** (cell) — One model in one specialization; in code it is called an agent. Not: sense, stem cell, AWS/Slack cell (an isolated full-stack replica).
+  Counter-example: an immune indicator (a sense).
 - **stem cell** (cell) — A model that has not yet differentiated into one specialization. Not: cell.
+  Counter-example: jeff, a broad assistant that still has one charter (a cell).
 - **definition** (cell) — One cell's own prompt and tool allow-list, versioned and hashed. Not: genome, law.
-- **tissue** (tissue) — The transplantable pack of one specialization's cells with their skills, tables and services. Not: plugin, organ.
+  Counter-example: the model pin in agent.yml (which model runs the cell, not its prompt or allow-list).
+- **tissue** (tissue) — The transplantable pack of one specialization's cells with their skills, tables and services. Not: plugin, organ. Mechanism: bounded context (domain-driven design).
+  Counter-example: a plugin (wiring, not a specialization).
 - **organ** (organ) — One service or host daemon with one job; one row in state/manifest.yml. Not: organ system, cell, digest.
+  Counter-example: a Pulse job (a reflex of the Pulse organ).
 - **organ system** (organ system) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Not: organ, organism.
+  Counter-example: a compose stack such as iiab (a deployment group, not a public function).
 - **organism** (organism) — One nOS install on one machine, all its organ systems together. Not: habitat, anatomy.
+  Counter-example: the anatomy graph (a drawing of the organism, not the organism).
 - **habitat** (habitat) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner, and nOS never installs or touches it. Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Not: organism, symbiont.
+  Counter-example: the Gitea or GitLab nOS hosts (organ jobs, not habitat).
 
 ## Across levels
 
 - **self** — Software nOS wrote, pins and updates itself; a self organ is one of nOS's own parts. Not: declared, symbiont.
+  Counter-example: OpenHuman, declared and installed by nOS but updated by its vendor (a symbiont).
 - **symbiont** — Declared foreign software that lives beside nOS and is updated by its own vendor. Not: self, habitat.
+  Counter-example: a personal Homebrew package (habitat: the machine owner's, never installed by nOS).
 - **declared** — On the list nOS generates from its declarations; the immune system tolerates it, and anything undeclared is a signal. Not: self.
+  Counter-example: a launchd job the operator loaded by hand (undeclared until a declaration explains it, however harmless).
 - **sense** — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Not: cell, limb.
-- **limb** — A tool that acts. Not: sense, side.
+  Counter-example: tools/genome-codegen.py (it writes the glossary; only its --check reads).
+- **limb** — A tool that acts. Not: sense, side. Mechanism: port / adapter (hexagonal architecture).
+  Counter-example: an agent tool grant whose every scope is .read (a sense).
 - **memory** — What nOS has learned, kept in KEAP; RAM stays plain English. Not: cortex, verdicts, stores.
+  Counter-example: Wing's audit ledger (a record of what happened, not what nOS learned).
 - **verdicts** — The log of what each sense reported and what the operator judged. Not: memory.
+  Counter-example: KEAP (memory: what nOS learned, not what a sense reported).
 - **law** — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Not: genome, definition.
-- **reflex** — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Not: Pulse, heartbeat, organ.
-- **heartbeat** — A periodic signal that proves something is still alive. Not: Pulse.
+  Counter-example: the genome's entity schema (declared facts, not rules in force).
+- **reflex** — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Not: Pulse, heartbeat, organ. Mechanism: a scheduled job (cron); where it restarts what failed, a supervisor (Erlang/OTP).
+  Counter-example: a launchd daemon (an organ, not a scheduled response).
+- **heartbeat** — A periodic signal that proves something is still alive. Not: Pulse. Mechanism: a liveness signal; monitor / link (Erlang/OTP).
+  Counter-example: a health check (asked from outside; a heartbeat is sent from inside on a clock).
 - **nervous system** — The path events take to the operator, from events to the Wing inbox to ntfy or mail. Not: converge.
+  Counter-example: a converge (one playbook run, not the path events take).
 - **twin** — The second Mac. Not: mirror-parity.
+  Counter-example: a coexistence track (a second copy of one service on the same Mac).
 - **plugin** — A plugin.yml declaring how one service is wired to the others (SSO, dashboards, jobs). Not: tissue, gene.
+  Counter-example: an apps/<name>.yml manifest app (it deploys a service; a plugin only wires one).
 - **anatomy** — The structure of one organism drawn as a graph. Not: body plan.
+  Counter-example: state/body-plan.json (the anatomy projected onto levels, not the graph).
 - **body plan** — The anatomy projected onto the levels above; each graph kind's level is read from state/genome/lexicon.yml. Not: anatomy.
+  Counter-example: state/anatomy-graph.json (the anatomy itself; the body plan is its projection).
+- **appendage** — An organ attached through one declared joint (a cross-repo contract: spec, fixture, symmetric gates), with its own code and licence, which no core organ depends on or imports; the organism survives its loss. A property of an organ, not a level. Not: tissue, symbiont, organ system, twin, limb, KEAP.
+  Counter-example: KEAP: has a cross-repo contract and the core depends on it.
 
 ## Plumbing (hidden from the body plan)
 
 - **internal** — Real plumbing that is not a body part; the body plan hides it by default. Not: organ, sense.
+  Counter-example: the Authentik service (an organ); only an SSO client object inside it is internal.
 
 ## Procedures
 
 - **digest** — The intake process that turns outside data into DataTable rows; mail digest and hash digest are allowed compounds. Not: organ.
-- **converge** — One playbook run that moves the source into the running system. Not: nervous system.
+  Counter-example: a sha256 digest (a hash, an allowed compound, not the intake).
+- **converge** — One playbook run that moves the source into the running system. Not: nervous system. Mechanism: a reconcile loop (a Kubernetes operator) — declared against observed; it does not heal.
+  Counter-example: a hand `docker compose up` (it moves one container, not the declared source).
 - **imprint** — The one page a newborn model reads first. Not: cell.
+  Counter-example: CLAUDE.md (the brief for an assistant working in the repo, not a newborn's first page).
 - **apgar** — The score of a newborn model on the questions its imprint should answer. Not: cell.
+  Counter-example: a pytest gate (it scores the repo, not a newborn model's answers).
 
 ## Proper names (one job each)
 
