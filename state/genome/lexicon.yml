@@ -127,7 +127,8 @@ words:
     retired:
       - sense: "a public apex group called an organ"
         replacement: organ system
-        surfaces: []
+        surfaces:
+          - yaml_key: "files/anatomy/apex/ruling.yml#organs"
       - sense: "organ meaning host-native (runs under launchd or systemd)"
         replacement: "the stack axis: stack is null"
         surfaces: []
@@ -143,11 +144,11 @@ words:
     level: organ system
     means: >-
       A public group of organs serving one function; the apex page shows thirteen.
-      Its source is the apex ruling's `organs:` key, whose rename is pending (step 5).
+      Its source is the apex ruling's `organ_systems:` key.
     names:
-      - yaml_key: "files/anatomy/apex/ruling.yml#organs"
+      - yaml_key: "files/anatomy/apex/ruling.yml#organ_systems"
       - graph_kind: organ_system
-        reason: one public group of organs from the signed apex ruling's `organs:` key
+        reason: one public group of organs from the signed apex ruling's `organ_systems:` key
     not: [organ, organism]
 
   organism:
@@ -214,7 +215,7 @@ words:
       - graph_kind: weakness
         reason: a Bone reader whose findings become loop proposals
       - path: tools/README.md
-      - yaml_key: "files/anatomy/apex/ruling.yml#organs.senses"
+      - yaml_key: "files/anatomy/apex/ruling.yml#organ_systems.senses"
     not: [cell, limb]
 
   limb:
@@ -228,9 +229,9 @@ words:
     not: [sense, side]
     retired:
       - sense: "limb as the apex page's left/right/core column key"
-        replacement: "side (step 5)"
+        replacement: side
         surfaces:
-          - yaml_key: "files/anatomy/apex/ruling.yml#organs.*.limb"
+          - yaml_key: "files/anatomy/apex/ruling.yml#organ_systems.*.limb"
 
   memory:
     level: cross
@@ -242,9 +243,9 @@ words:
     not: [cortex, verdicts, stores]
     retired:
       - sense: "The Memory, the apex group of databases"
-        replacement: "The Stores (step 5)"
+        replacement: The Stores
         surfaces:
-          - yaml_key: "files/anatomy/apex/ruling.yml#organs.memory"
+          - yaml_key: "files/anatomy/apex/ruling.yml#organ_systems.memory"
       - sense: "memory meaning the immune system's verdict log"
         replacement: verdicts
         surfaces: []
@@ -273,7 +274,7 @@ words:
     names:
       - graph_kind: pulse
         reason: one scheduled job, run by the Pulse daemon on its own cron
-      - yaml_key: "files/anatomy/apex/ruling.yml#organs.reflexes"
+      - yaml_key: "files/anatomy/apex/ruling.yml#organ_systems.reflexes"
     not: [Pulse, heartbeat, organ]
 
   internal:
@@ -496,7 +497,7 @@ words:
     level: legacy
     means: Not a body-plan word; KEAP's ontology spine is upstream's word, and "The Spine" stays an apex title.
     names:
-      - yaml_key: "files/anatomy/apex/ruling.yml#organs.spine"
+      - yaml_key: "files/anatomy/apex/ruling.yml#organ_systems.spine"
     retired:
       - sense: "a reader called the spinal cord"
         replacement: sense

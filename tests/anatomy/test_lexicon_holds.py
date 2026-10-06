@@ -46,8 +46,6 @@ BODY_LEVELS = ("genome", "cell", "tissue", "organ", "organ system", "organism", 
 
 #: Retired surfaces that still exist; the rename steps (3–5) remove them.
 PENDING_SURFACES = {
-    "limb: yaml_key files/anatomy/apex/ruling.yml#organs.*.limb",
-    "memory: yaml_key files/anatomy/apex/ruling.yml#organs.memory",
     "brain: path tests/anatomy/test_backup_reaches_the_brain.py",
 }
 

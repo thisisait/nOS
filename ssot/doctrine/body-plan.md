@@ -48,7 +48,7 @@ A new word the operator has not ruled carries `proposed: true`.
 | cell | one model in one specialization (in code: an agent) | `files/anatomy/agents/` |
 | tissue | the transplantable pack of one specialization: its cells, skills, tables, services and reflexes | `state/tissues/` |
 | organ | one service or host daemon with one job; one row | `state/manifest.yml` |
-| organ system | a public group of organs serving one function | the apex ruling's `organs:` key |
+| organ system | a public group of organs serving one function | the apex ruling's `organ_systems:` key |
 | organism | one nOS install on one machine | — |
 | habitat | the machine and what lives beside the organism | `software_owner` |
 

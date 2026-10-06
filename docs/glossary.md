@@ -13,7 +13,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - **definition** (cell) — One cell's own prompt and tool allow-list, versioned and hashed. Not: genome, law.
 - **tissue** (tissue) — The transplantable pack of one specialization's cells with their skills, tables and services. Not: plugin, organ.
 - **organ** (organ) — One service or host daemon with one job; one row in state/manifest.yml. Not: organ system, cell, digest.
-- **organ system** (organ system) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organs:` key, whose rename is pending (step 5). Not: organ, organism.
+- **organ system** (organ system) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Not: organ, organism.
 - **organism** (organism) — One nOS install on one machine, all its organ systems together. Not: habitat, anatomy.
 - **habitat** (habitat) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner, and nOS never installs or touches it. Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Not: organism, symbiont.
 
@@ -83,8 +83,8 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - organ meaning nOS's own parts as opposed to vendor software → self organ
 - host, as the third owner class of software → habitat
 - self meaning the immune system's tolerated set → declared
-- limb as the apex page's left/right/core column key → side (step 5)
-- The Memory, the apex group of databases → The Stores (step 5)
+- limb as the apex page's left/right/core column key → side
+- The Memory, the apex group of databases → The Stores
 - memory meaning the immune system's verdict log → verdicts
 - Pulse called the heartbeat → Pulse, which is the scheduler
 - the playbook called the nervous system → converge
