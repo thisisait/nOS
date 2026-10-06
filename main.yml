@@ -481,6 +481,16 @@
         - (nos_edge | default('cloudflare')) == 'lan_tailscale'
       tags: ['always', 'preflight']
 
+    # Funnel would publish this host to the internet: never (operator, 2026-10-06).
+    # Gate: tests/anatomy/test_tailscale_wiring.py.
+    - name: "[Preflight] Refuse Tailscale Funnel"
+      ansible.builtin.fail:
+        msg: >-
+          {{ query('ansible.builtin.varnames', '^tailscale_funnel') | join(', ') }} is set. nOS never
+          uses Tailscale Funnel: it would publish this host to the internet. Remove it from config.yml.
+      when: query('ansible.builtin.varnames', '^tailscale_funnel') | length > 0
+      tags: ['always', 'preflight']
+
     # ── Preflight: a gate with nothing behind it ─────────────────────────────
     # With `install_authentik: false` both renderers still attach the
     # `authentik@file` middleware, Traefik finds it undefined, and every gated

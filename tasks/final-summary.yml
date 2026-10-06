@@ -96,6 +96,16 @@
         Homepage (Grafana): https://{{ tailscale_hostname }}
         Services via ports: http://{{ tailscale_hostname }}:<port>
       {% endif %}
+      {% if (nos_edge | default('cloudflare')) == 'lan_tailscale' and (install_tailscale | default(false) | bool) %}
+      ── TAILSCALE SPLIT DNS — ONE TIME, IN THE ADMIN CONSOLE ─────────────────
+
+        1. login.tailscale.com/admin/machines → this host → ⋯ → Edit route settings
+           → approve {{ nos_lan_ip }}/32 → Save.
+        2. login.tailscale.com/admin/dns → Nameservers → Add nameserver → Custom…
+           → Nameserver: {{ nos_lan_ip }} → turn on "Restrict to domain"
+           → Domain: {{ tenant_domain }} → Save.
+        Check: ansible-playbook main.yml --tags verify   (or tools/tailscale-status.py)
+      {% endif %}
 
       {# ── A16 (2026-05-17): CI autowire token reminder ────────────────────── #}
       {# WS2 (2026-05-23): authentik_bootstrap_token is now playbook-generated

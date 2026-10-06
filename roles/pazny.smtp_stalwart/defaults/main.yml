@@ -11,7 +11,7 @@
 #
 # DNS prerequisites for production (operator-managed via Cloudflare):
 #   MX     <tenant_domain>           → mail.<tenant_domain>
-#   A      mail.<tenant_domain>      → public IP (or Tailscale Funnel)
+#   A      mail.<tenant_domain>      → public IP
 #   TXT    <tenant_domain>           "v=spf1 mx ~all"
 #   TXT    _dmarc.<tenant_domain>    "v=DMARC1; p=quarantine; rua=mailto:…"
 #   TXT    selector._domainkey.<td>  (DKIM key — Stalwart auto-generates,
@@ -42,7 +42,7 @@ stalwart_domain: "mail{{ _host_alias_seg | default('') }}.{{ tenant_domain | def
 
 # Port mappings — mail protocols bind to the host (0.0.0.0) so the router
 # can forward to them. Override `stalwart_lan_only: true` to bind only on
-# 127.0.0.1 (useful for Tailscale-only deployments — funnel does public exposure).
+# 127.0.0.1 (useful for Tailscale-only deployments).
 stalwart_lan_only: false
 stalwart_port_smtp:    25     # MTA — incoming mail
 stalwart_port_smtps:   465    # implicit TLS submission

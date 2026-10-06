@@ -1,44 +1,168 @@
 ---
-# ==============================================================================
-# TAILSCALE - WireGuard mesh VPN
-# Exposes all self-hosted services from anywhere without port forwarding
-#
-# After install, run manually:
-#   tailscale up
-#   -> opens browser to log in at https://login.tailscale.com
-#
-# Services then available via ports (requires services_lan_access: true):
-#   http://<hostname>.<tailnet>.ts.net:3000   (Grafana - homepage)
-#   http://<hostname>.<tailnet>.ts.net:3003   (Gitea)
-#   http://<hostname>.<tailnet>.ts.net:5678   (n8n)
-#   http://<hostname>.<tailnet>.ts.net:8096   (Jellyfin)
-#   http://<hostname>.<tailnet>.ts.net:8085   (Nextcloud)
-#   http://<hostname>.<tailnet>.ts.net:8888   (Kiwix)
-#   http://<hostname>.<tailnet>.ts.net:3004   (Open WebUI)
-#   http://<hostname>.<tailnet>.ts.net:9002   (Portainer)
-#
-# Homepage (https://<tailscale_hostname>/) -> Grafana (set tailscale_hostname in config.yml)
-# ==============================================================================
+# Tailscale: the remote door of nos_edge: lan_tailscale. The host joins the tailnet
+# with tailscale_auth_key and advertises nos_lan_ip/32; the tailnet's split DNS (one
+# manual step, docs/systems/tailscale/README.md) sends *.<tenant_domain> to dnsmasq.
+# Gate: tests/anatomy/test_tailscale_wiring.py. Reader: tools/tailscale-status.py.
+
+# The operator's own Tailscale.app (a CLI shim, no cask) counts: no second install.
+- name: "[Tailscale] Find the CLI"
+  ansible.builtin.shell: |
+    for c in "$(command -v tailscale 2>/dev/null)" {{ _ts_candidates | default([homebrew_prefix ~ '/bin/tailscale', '/usr/local/bin/tailscale', '/Applications/Tailscale.app/Contents/MacOS/Tailscale']) | map('quote') | join(' ') }}; do
+      if [ -n "$c" ] && [ -x "$c" ]; then echo "$c"; exit 0; fi
+    done
+  register: _ts_find
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  tags: ['verify']
 
 - name: Install Tailscale via Homebrew Cask
   community.general.homebrew_cask:
     name: tailscale
     state: present
+  when: _ts_find.stdout | default('') | length == 0
 
-- name: Check if tailscaled is running
-  ansible.builtin.command: pgrep -x tailscaled
-  register: tailscaled_check
+- name: "[Tailscale] Name the CLI and the route"
+  ansible.builtin.set_fact:
+    _ts_bin: "{{ _ts_find.stdout | default('', true) or (homebrew_prefix ~ '/bin/tailscale') }}"
+    _ts_route: "{{ nos_lan_ip }}/32"
+    _ts_short: "{{ (tailscale_hostname | default('')).split('.')[0] }}"
+    _ts_lan: "{{ (nos_edge | default('cloudflare')) == 'lan_tailscale' }}"
+  tags: ['verify']
+
+- name: "[Tailscale] Refuse a lan_tailscale edge without a LAN address"
+  ansible.builtin.assert:
+    that:
+      - nos_lan_ip | default('') | length > 0
+      - not (nos_lan_ip | string).startswith('127.')
+    fail_msg: >-
+      nos_edge is lan_tailscale but nos_lan_ip is '{{ nos_lan_ip | default('') }}'. Set
+      nos_lan_ip in config.yml to the address the router reserves for this host.
+  when: _ts_lan | bool
+  tags: ['verify']
+
+- name: "[Tailscale] Read the node state"
+  ansible.builtin.command: "{{ _ts_bin }} status --json"
+  register: _ts_status
   changed_when: false
   failed_when: false
+  check_mode: false
 
-- name: Start Tailscale system extension (GUI required for first run)
+- name: "[Tailscale] Read the advertised routes"
+  ansible.builtin.command: "{{ _ts_bin }} debug prefs"
+  register: _ts_prefs
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "[Tailscale] Judge the node state"
+  ansible.builtin.set_fact:
+    _ts_running: "{{ _ts_status.rc | default(1) == 0 and ((_ts_status.stdout | from_json).BackendState | default('')) == 'Running' }}"
+    _ts_adv: "{{ ((_ts_prefs.stdout | from_json).AdvertiseRoutes | default([], true)) if _ts_prefs.rc | default(1) == 0 else [] }}"
+
+# `up` only on a node that is not up: re-running it with other flags is refused by
+# tailscale and could drop the operator's own settings.
+- name: "[Tailscale] Join the tailnet and advertise this host"
+  ansible.builtin.command:
+    argv: "{{ [_ts_bin, 'up', '--auth-key=' ~ tailscale_auth_key, '--advertise-routes=' ~ _ts_route] + (['--hostname=' ~ _ts_short] if _ts_short | length > 0 else []) }}"
+  register: _ts_up
+  changed_when: _ts_up.rc == 0
+  no_log: true
+  when:
+    - _ts_lan | bool
+    - not (_ts_running | bool)
+    - tailscale_auth_key | default('') | length > 0
+
+- name: "[Tailscale] Add the route on a node that is already up"
+  ansible.builtin.command:
+    argv: "{{ [_ts_bin, 'set', '--advertise-routes=' ~ ((_ts_adv + [_ts_route]) | join(','))] }}"
+  register: _ts_set
+  changed_when: _ts_set.rc == 0
+  when:
+    - _ts_lan | bool
+    - _ts_running | bool
+    - _ts_route not in _ts_adv
+
+- name: "[Tailscale] Log in once by hand"
   ansible.builtin.debug:
-    msg: |
-      Tailscale has been installed. To finish setup:
-        1. Open Tailscale in Applications
-        2. Click "Log in" and sign in at https://login.tailscale.com
-        3. After login, the Mac Studio will be available as a node in your tailnet
+    msg: >-
+      Tailscale is installed but this host is not on a tailnet and tailscale_auth_key is
+      empty. Open Tailscale and log in, or put an auth key in credentials.yml and re-run
+      with --tags tailscale. Then follow docs/systems/tailscale/README.md (route + split DNS).
+  when:
+    - not (_ts_running | bool)
+    - tailscale_auth_key | default('') | length == 0
 
-      For SSH over Tailscale: tailscale up --ssh
-      For subnet router (whole home network): tailscale up --advertise-routes=192.168.1.0/24
-  when: tailscaled_check.rc != 0
+# ── Verify: read again, after the changes above. RED fails the play; absent is UNKNOWN.
+- name: "[Tailscale] Verify: is the CLI there"
+  ansible.builtin.stat:
+    path: "{{ _ts_bin }}"
+  register: _ts_v_bin
+  check_mode: false
+  tags: ['verify']
+
+- name: "[Tailscale] Verify: read the node, its routes and the LAN DNS"
+  ansible.builtin.command:
+    argv: "{{ item }}"
+  loop:
+    - ["{{ _ts_bin }}", "status", "--json"]
+    - ["{{ _ts_bin }}", "debug", "prefs"]
+    - ["dig", "+short", "+time=2", "+tries=1", "@{{ nos_lan_ip }}", "grafana{{ _host_alias_seg | default('') }}.{{ tenant_domain }}"]
+  register: _ts_v
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _ts_lan | bool and _ts_v_bin.stat.exists
+  tags: ['verify']
+
+- name: "[Tailscale] Verify: judge"
+  ansible.builtin.set_fact:
+    _ts_v_state: >-
+      {%- set r = _ts_v.results -%}
+      {%- set st = (r[0].stdout | from_json) if r[0].rc | default(1) == 0 else {} -%}
+      {%- set adv = ((r[1].stdout | from_json).AdvertiseRoutes | default([], true)) if r[1].rc | default(1) == 0 else [] -%}
+      {{ {'up': st.get('BackendState', 'unreadable') == 'Running',
+          'advertised': _ts_route in adv,
+          'approved': _ts_route in ((st.get('Self') or {}).get('PrimaryRoutes') or []),
+          'dns': nos_lan_ip in (r[2].stdout | default('')).split()} }}
+  when: _ts_v is not skipped
+  tags: ['verify']
+
+- name: "[Tailscale] Verify: the tailnet reaches nOS by name"
+  ansible.builtin.assert:
+    that:
+      - _ts_v_state.up
+      - _ts_v_state.advertised
+      - _ts_v_state.approved
+      - _ts_v_state.dns
+    fail_msg: >-
+      RED {{ _ts_v_state }}. up: this host is logged in to the tailnet. advertised: it
+      offers {{ _ts_route }}. approved: an admin approved that route (admin console →
+      Machines → this host → Edit route settings). dns: `dig @{{ nos_lan_ip }}` answers
+      {{ nos_lan_ip }}. Steps: docs/systems/tailscale/README.md.
+    success_msg: "OK: {{ _ts_route }} advertised and approved; dnsmasq answers {{ nos_lan_ip }} on the LAN"
+  # A first converge is RED by design (the route is approved after it is advertised):
+  # it reports and goes on; `--tags verify` fails.
+  ignore_errors: "{{ 'verify' not in ansible_run_tags }}"
+  when: _ts_v is not skipped
+  tags: ['verify']
+
+- name: "[Tailscale] Verify: UNKNOWN without the CLI"
+  ansible.builtin.debug:
+    msg: "UNKNOWN: no Tailscale CLI at {{ _ts_bin }}; nothing about the tailnet was checked."
+  when: _ts_lan | bool and not _ts_v_bin.stat.exists
+  tags: ['verify']
+
+# Funnel would publish this host to the internet; nOS never turns it on (operator
+# 2026-10-06) and refuses one that is on. Reading the serve config is not enabling it.
+- name: "[Tailscale] Verify: Funnel is off"
+  ansible.builtin.command:
+    argv: ["{{ _ts_bin }}", "serve", "status", "--json"]
+  register: _ts_v_funnel
+  changed_when: false
+  failed_when: >-
+    _ts_v_funnel.rc == 0 and (_ts_v_funnel.stdout | trim | length > 0)
+    and ((_ts_v_funnel.stdout | from_json).AllowFunnel | default({}, true) | length > 0)
+  check_mode: false
+  when: _ts_v_bin.stat.exists
+  tags: ['verify']

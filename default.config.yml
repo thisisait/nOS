@@ -232,6 +232,11 @@ tenant_domain_is_local: "{{ (tenant_domain | default('')).endswith(('.local', '.
 # A firm with its own domain and no Cloudflare sets lan_tailscale in config.yml.
 nos_edge: "{{ 'lan_tailscale' if tenant_domain_is_local else 'cloudflare' }}"
 
+# This host's address on the office LAN: dnsmasq answers it, Tailscale advertises it
+# as a /32 route. Ansible's default-route fact; pin the router's DHCP reservation
+# here (config.yml) when the host has more than one interface.
+nos_lan_ip: "{{ ansible_facts['default_ipv4']['address'] | default('') }}"
+
 # ── TLS cert paths ───────────────────────────────────────────────────────────
 # Cert tree lives under the infra stack dir. mkcert writes here for local
 # TLDs; pazny.acme symlinks LE certs here for public TLDs. Traefik mounts
@@ -367,7 +372,7 @@ mailpit_ui_port: 8025                     # Web UI + REST API port (nginx fronts
 #   1. tenant_domain switched to a public TLD (your real domain)
 #   2. pazny.acme has issued the wildcard cert via Cloudflare DNS-01
 #   3. CF DNS records added: MX, A mail.<td>, SPF/DKIM/DMARC TXT
-#   4. router/Tailscale Funnel forwards 25/465/587/993 to host
+#   4. the router forwards 25/465/587/993 to host
 # When install_smtp_stalwart is on, role refuses to render on a local TLD
 # (Mailpit covers dev capture). See roles/pazny.smtp_stalwart/defaults
 # and docs/operator-domain-switch.md.
@@ -1769,7 +1774,6 @@ snappymail_image: "djmaze/snappymail:v2.38.2"
 # Services then available via: http://mac-studio.<tailnet>.ts.net:<PORT>
 # ==============================================================================
 
-# tailscale_auth_key: ""          # Pre-auth key for non-interactive setup (from admin console)
 tailscale_hostname: ""            # Tailscale FQDN (e.g. mac-studio.tailnet-abc.ts.net) – homepage → Grafana
 services_lan_access: false        # true = Docker services on 0.0.0.0 (access via Tailscale/LAN by ports)
 

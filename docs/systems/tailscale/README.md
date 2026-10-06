@@ -1,53 +1,48 @@
 # Tailscale
 
-> Tailscale — WireGuard mesh VPN. Gives the host a stable private address
-> reachable from the operator's other devices without opening a router port.
-> Exposes the estate's services remotely without port forwarding.
+> WireGuard mesh VPN, host-native (Homebrew cask, or the operator's own Tailscale.app —
+> `tasks/tailscale.yml` finds an existing CLI and installs nothing then). Toggle
+> `install_tailscale` (default `true`). Health: `tailscale status --peers=false`, rc 0.
 
-## Quick Reference
+## nos_edge: lan_tailscale — one name per service, inside and outside
 
-| | |
-|---|---|
-| **Type** | Host-native (NOT a Docker service) — installed on the Mac host |
-| **Stack** | none (`stack: null` → taxonomy anchor `nos.host.tailscale`) |
-| **Toggle** | `install_tailscale: true` (default **`true`** — on by default) |
-| **Install** | Homebrew Cask `tailscale` (`tasks/tailscale.yml`) — the Tailscale.app system-extension variant |
-| **CLI** | `/usr/local/bin/tailscale` (shim installed by the app) |
-| **Version source** | `homebrew` (`brew_formula: tailscale`) |
-| **Domain / Port** | none — a mesh VPN has no web vhost and no published port |
-| **Data** | none managed by nOS |
-| **SSO** | none — device auth is at `https://login.tailscale.com` |
+No public IP, no Cloudflare. Every service keeps ONE name (`files.<tenant_domain>`):
+the office router hands out this host as DNS, dnsmasq answers `nos_lan_ip`, and the
+tailnet's split DNS sends the same names to the same address from anywhere. Users
+never see the tailnet name. Certificates are public (ACME DNS-01 at the registrar,
+`acme_dns_provider`), so no device has to trust a private CA. Funnel: never — the
+preflight refuses any `tailscale_funnel*` variable and `--tags verify` fails if it is on.
 
-Because it is a system-extension app (not a `brew` formula), the manifest health
-check probes the **CLI**, not formula presence — a scout side-find (2026-06-11)
-saw the mirror report `healthy:false` for a working VPN when it keyed off the
-missing brew formula.
+**Set:** `nos_edge: lan_tailscale`, `nos_lan_ip` (the address the router reserves) in
+`config.yml`; `tailscale_auth_key` (admin console → Settings → Keys) in
+`credentials.yml`. The converge runs `tailscale up --advertise-routes=<nos_lan_ip>/32`
+once, only on a node that is not up; a node already up gets the route via `tailscale set`.
 
-## Configuration
+**Router (once):** reserve the host's IP in DHCP; set DHCP's DNS server to that IP.
 
-- `tailscale_hostname` (default `""`) — the node's tailnet FQDN, e.g.
-  `mac-studio.tailnet-abc.ts.net`. Set in `config.yml`; the homepage
-  (`https://<tailscale_hostname>/`) points at Grafana.
-- `services_lan_access: true` binds Docker services on `0.0.0.0` so they are
-  reachable over the tailnet by port (e.g. `http://<host>.<tailnet>.ts.net:3000`
-  for Grafana). Default `false` keeps services on loopback.
+**Admin console (once, the converge cannot do it — no API key by design):**
 
-## First-run setup (manual)
+1. login.tailscale.com/admin/machines → this host → ⋯ → Edit route settings →
+   approve `<nos_lan_ip>/32` → Save.
+2. login.tailscale.com/admin/dns → Nameservers → Add nameserver → Custom… →
+   Nameserver: `<nos_lan_ip>` → turn on "Restrict to domain" → Domain:
+   `<tenant_domain>` → Save.
 
-Tailscale requires an interactive login the playbook cannot perform:
+macOS, iOS and Windows clients use approved routes by default; a Linux client needs
+`tailscale up --accept-routes`.
 
-1. Open **Tailscale** in Applications.
-2. Click **Log in** and sign in at `https://login.tailscale.com`.
-3. The host then appears as a node in your tailnet.
+## Is it working
 
-## Health Check
+- `ansible-playbook main.yml --tags verify` — RED (fails the play) unless the node is
+  up, the /32 is advertised AND approved, and `dig @<nos_lan_ip>` answers `nos_lan_ip`;
+  UNKNOWN without the CLI.
+- `tools/tailscale-status.py` — the same, read-only, any time.
 
-- **Type:** `exec` (host CLI, not HTTP)
-- **Command:** `tailscale status --peers=false`
-- **Expected:** exit code `0` (the daemon is up and the node is authenticated).
+Neither can see the tailnet's DNS settings (that needs an API key). The end-to-end
+check is a phone on mobile data with Tailscale on: `https://grafana.<tenant_domain>`
+must open with a valid certificate.
 
-## Dependencies
+## Other knobs
 
-- `tailscaled` (the Tailscale system extension daemon) running on the host.
-- None inside the nOS compose estate — Tailscale wraps the host network, it does
-  not depend on any nOS service.
+- `tailscale_hostname` — the node's tailnet FQDN; its first label becomes `--hostname`.
+- `services_lan_access: true` binds services on `0.0.0.0` (reachable by port).

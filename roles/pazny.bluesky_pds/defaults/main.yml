@@ -32,7 +32,7 @@ bluesky_pds_admin_email: "{{ default_admin_email | default('admin@' ~ (tenant_do
 # ── AT Protocol public federation (Track G) ────────────────────────────────
 # Off by default — federation requires:
 #   1. tenant_domain is a public TLD (not .local/.lan/.test)
-#   2. DNS A record bsky.<tenant_domain> → public IP (or Tailscale Funnel)
+#   2. DNS A record bsky.<tenant_domain> → public IP (nOS never uses Tailscale's public exposure)
 #   3. ACME wildcard cert covers *.{tenant_domain} or explicit bsky cert
 #   4. Inbound 443 from the open internet to Traefik
 #
