@@ -2,7 +2,7 @@
 
 > **PROPOSED, not settled.** This file mines rules the tree already enforces.
 > It does not invent a second runtime. The operator settles §6 before anything
-> cites this file. Sibling of [`organs.md`](organs.md) in status.
+> cites this file. Sibling of [`backoffice.md`](backoffice.md) in status.
 >
 > Authorities this file points at, never copies: `state/schema/agent.schema.yaml`,
 > `state/llm-backends.yml`, `docs/ait-runtime-architecture.md` (essay; stale

@@ -772,6 +772,7 @@ nodes:
   # constitution articles became anatomy kinds, plus two ssot paragraphs a
   # reader cites. WITHHELD like every non-service node — the published set is
   # unchanged; awaiting-operator will ask for a routine re-sign.
+  "article:body-plan": withheld
   "article:cross-repo-contracts": withheld
   "article:face": withheld
   "article:face-app-tiers": withheld

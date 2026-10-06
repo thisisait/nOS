@@ -71,7 +71,7 @@ in `tests/` overall. **Most of them are fine** — §4 bounds which are not.
   and `backup_alpine_image` (`default.config.yml:3276` +
   `roles/pazny.backup/defaults/main.yml:108`) are each declared twice, gate green.
 
-### B5 — defaults (from `docs/doctrine/organs.md` §4-6)
+### B5 — defaults (from `docs/archive/organs-axes-2026-09.md` §4-6)
 
 Declared-and-gated, after derivation was refused on evidence. Census L0 9 /
 L1 11 / L2 39 / withheld 6. **Not in scope here** except as a consumer of §3's
