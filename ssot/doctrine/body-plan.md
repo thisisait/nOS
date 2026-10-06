@@ -1,6 +1,7 @@
 # Body plan — one word, one meaning
 
-> **PROPOSED** (2026-10-06, roadmap rows `lexicon` and `prose-retirement`).
+> **PROPOSED** (2026-10-06, roadmap rows `lexicon` and `prose-retirement`;
+> §7 reviewed 2026-10-06, rows `appendage-lexicon` and `retire-healing-words`).
 > Not in force until the operator says so. The words themselves are already
 > ruled in `state/genome/lexicon.yml`; this article says how they are kept.
 > Sibling of [`layers.md`](layers.md), which settled the word **tier** the same way.
@@ -29,8 +30,8 @@ So each word has exactly one meaning, written down once:
 ## 2. How to add or change a word
 
 1. Write the entry in `state/genome/lexicon.yml`: `level`, one plain
-   sentence in `means`, the `names` where it lives, and `not` for the words
-   it must not be confused with.
+   sentence in `means`, the `names` where it lives, `not` for the words
+   it must not be confused with, and one `counter_example` (§7).
 2. To retire a sense, add it under `retired` with its `replacement`, and add
    the exact phrases a model must stop being taught to `retired_phrases`.
 3. Run `python3 tools/genome-codegen.py` to render the glossary, then
@@ -96,3 +97,27 @@ The axes and defaults proposal that stood here before (an `organ` field and a
 written in [`docs/archive/organs-axes-2026-09.md`](../../docs/archive/organs-axes-2026-09.md).
 The stop-versus-delete split shipped 2026-09-02; the two manifest fields are
 not built.
+
+## 7. The metaphor is a tool, and this is its leash
+
+The levels run genome → cell → tissue → organ → organ system → organism →
+habitat; sense, limb, memory, law, reflex and the rest cut across them. Origin
+is self, symbiont or habitat, and the immune system tolerates what is declared.
+
+An **appendage** is an organ attached through one declared joint — a
+cross-repo contract ([`cross-repo-contracts.md`](cross-repo-contracts.md) §1:
+spec, fixture, symmetric gates) — with its own code and licence, which no core
+organ depends on or imports. The organism survives its loss. It is a property
+of an organ, not a level. Counter-example: KEAP has a contract and is not an
+appendage, because the core depends on it.
+
+The body is a map, not a claim. nOS is not alive. It does not heal: a converge
+reconciles what is declared with what is observed. Its immune system reports;
+it does not attack. Nothing evolves unless a reader scores it against a
+control. Where a mechanical word says it better (port, supervisor, reconcile,
+bounded context), the glossary names it under `mechanism:`, so a model that
+knows the mechanism is not misled by the body.
+
+The rule: a word enters the lexicon only with a machine surface (or a written
+reason it has none), a `not:` list and one counter-example. A word without a
+counter-example is a slogan, and the gate refuses it.
