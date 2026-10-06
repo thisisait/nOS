@@ -48,11 +48,7 @@ BODY_LEVELS = ("genome", "cell", "tissue", "organ", "organ system", "organism", 
 PENDING_SURFACES = {
     "limb: yaml_key files/anatomy/apex/ruling.yml#organs.*.limb",
     "memory: yaml_key files/anatomy/apex/ruling.yml#organs.memory",
-    "Cortex: path tools/cortex-query.py",
-    "Cortex: path files/anatomy/skills/cortex-query/",
-    "Cortex: path tests/fixtures/cortex-query-recall.json",
     "brain: path tests/anatomy/test_backup_reaches_the_brain.py",
-    "organelle: path state/genome/organelle/",
 }
 
 #: "file :: phrase" → occurrences, in the files models are told to trust.
@@ -70,7 +66,6 @@ PENDING_PHRASES: dict[str, int] = {
     "docs/doctrine/organs.md :: layer of the brain": 1,
     "docs/doctrine/organs.md :: public organ": 1,
     "docs/doctrine/organs.md :: tendon": 1,
-    "files/anatomy/skills/cortex-query/SKILL.md :: cortex-query": 7,
     "files/anatomy/skills/nos-backoffice/SKILL.md :: backoffice pack": 1,
     "files/anatomy/skills/nos-backoffice/SKILL.md :: cortex-query": 2,
     "files/anatomy/skills/nos-backoffice/SKILL.md :: organelle": 1,
