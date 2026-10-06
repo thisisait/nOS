@@ -44,7 +44,7 @@ Each line: level (count) — what it is: the most connected nodes (edge count).
 - **organ system** (13) — organs grouped for one function: organ_system:archive (9), organ_system:senses (8), organ_system:voice (6), organ_system:backoffice (5), organ_system:forge (5)
 - **organism** (0) — the estate as a whole: none — no node stands for the whole; the whole is this graph
 - **habitat** (6) — what lives beside the organism — third-party processors it does not own: backend:minimax (8), backend:ollama (5), backend:anthropic (3), backend:mistral-eu (0), backend:openclaw (0)
-- **sense** (77) — what you can ask — readers, judges and read-only grants: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), judge:genome-codegen (4)
+- **sense** (78) — what you can ask — readers, judges and read-only grants: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), judge:genome-codegen (4)
 - **limb** (8) — what you can reach for — tool grants that act: tool:mcp-bone (5), tool:ask-operator (2), tool:mcp-keap (2), tool:mcp-wing-write (2), tool:migration-file-write (2)
 - **memory** (40) — what the estate has learned — KEAP tables: table:party (13), table:invoice (5), table:journal-entry (4), table:posting (4), table:account (3)
 - **law** (37) — the rules it inherits — constitution articles and paragraphs: doctrine:docs/idea/11-agentic-loop-contract.md#5.1 (5), doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d (2), doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e (2), doctrine:docs/idea/11-agentic-loop-contract.md#M7 (2), doctrine:ssot/doctrine/foreign-properties.md#5.1 (2)
@@ -78,6 +78,7 @@ Start with the first one.
 - `tools/undeclared-status.py` — What runs on this host that nOS never declared: launchd plists/labels, exposed or Docker-published ports, crontab — vs sets derived from the graph, manifest and rendered compose.
 - `tools/santa-status.py` — What Santa (monitor mode, `install_santa`) saw execute outside the declared trees (Pulse runner trees + OS/Homebrew/Applications), any DENY, and a mode other than Monitor; UNKNOWN when the log or santactl is unreadable.
 - `tools/openhuman-status.py` — Is OpenHuman on this Mac set up to stay on this Mac: privacy mode, analytics, updaters, model route, memory, MCP servers (RED if the RW token is in them), install, running, and any non-loopback socket (`lsof`); UNKNOWN without a config or a running process. `--selftest` needs no app.
+- `tools/tailscale-status.py` — Can the tailnet reach nOS by name (`nos_edge: lan_tailscale`): Tailscale installed, up, hostname, the `nos_lan_ip/32` route advertised vs approved, `dig @nos_lan_ip` answering, Funnel (RED when on); UNKNOWN without the CLI. Cannot see the tailnet's split-DNS setting (no API key by design).
 - `tools/managed-status.py` — Every managed dir: what a blank does to it × what the backup does with it, one table from the artifacts (`--gaps`, `--json`; the cc pane `managed`).
 - `tools/stale-config-status.py` — Containers running config the estate has already replaced.
 - `tools/roadmap-status.py` — What the roadmap says, right now.
@@ -143,7 +144,7 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
   code_server, erpnext, freescout, outline, hedgedoc, bookstack, firefly, dolibarr, onlyoffice, mikopbx, qgis_server,
   metabase, superset, influxdb, mcp_gateway, openclaw, hermes, device_gateway, wing, bone, cortex, backrest.
 
-The public organ systems (the apex ruling publishes 13; 366 of 429 ruled nodes are withheld):
+The public organ systems (the apex ruling publishes 13; 367 of 430 ruled nodes are withheld):
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)

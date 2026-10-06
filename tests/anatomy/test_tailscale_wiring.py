@@ -162,6 +162,32 @@ def test_verify_refuses_a_funnel_that_is_on(tmp_path):
     assert r.returncode == 0, "serving on the tailnet alone is not Funnel"
 
 
+# ── the reader ──────────────────────────────────────────────────────────────
+def _reader(tmp: Path, cli=True, **state) -> dict:
+    stubs, log, st, ans = tmp / "stubs", tmp / "calls.log", tmp / "ts.json", tmp / "dig.answer"
+    log.write_text("")
+    st.write_text(json.dumps({"state": "Running", "adv": [ROUTE], "approved": [ROUTE], "serve": {}, **state}))
+    ans.write_text(state.get("answer", LAN) + "\n")
+    _exe(stubs / "tailscale", TAILSCALE.format(py=sys.executable, state=st, log=log))
+    _exe(stubs / "dig", DIG.format(log=log, answer=ans))
+    env = {**os.environ, "PATH": f"{stubs}:/usr/bin:/bin", "NOS_LAN_IP": LAN, "NOS_TENANT_DOMAIN": DOMAIN,
+           "NOS_EDGE": "lan_tailscale", "NOS_TAILSCALE_BIN": str(stubs / "tailscale") if cli else str(tmp / "absent")}
+    r = subprocess.run([sys.executable, str(REPO / "tools/tailscale-status.py"), "--json"], capture_output=True, text=True, env=env, timeout=60)
+    assert r.returncode == 0, r.stderr
+    for verb in ("up", "set", "funnel", "serve --"):
+        assert f"tailscale {verb}" not in log.read_text(), f"the reader ran a verb that changes something: {verb}"
+    return {ln["check"]: ln["state"] for ln in json.loads(r.stdout)}
+
+
+def test_the_reader_only_reads_and_never_says_green_blind(tmp_path):
+    assert _reader(tmp_path) == {"installed": "OK", "up": "OK", "hostname": "UNKNOWN", "route": "OK", "lan dns": "OK", "funnel": "OK"}
+    assert _reader(tmp_path, approved=[])["route"] == "RED"
+    assert _reader(tmp_path, answer="10.9.9.9")["lan dns"] == "RED"
+    assert _reader(tmp_path, serve={"AllowFunnel": {"x:443": True}})["funnel"] == "RED"
+    assert _reader(tmp_path, state="NeedsLogin")["up"] == "RED"
+    assert _reader(tmp_path, cli=False) == {"installed": "UNKNOWN"}, "absent is UNKNOWN, never green"
+
+
 # ── Funnel: never ───────────────────────────────────────────────────────────
 ALLOWED = {"[Preflight] Refuse Tailscale Funnel", "[Tailscale] Verify: Funnel is off"}
 SCANNED = ["main.yml", "default.config.yml", "default.credentials.yml", "config.d", "tasks", "roles", "templates"]

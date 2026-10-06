@@ -847,6 +847,9 @@ nodes:
   "reader:snapshot-status": withheld
   "reader:stale-config-status": withheld
   "reader:stuck-status": withheld
+  # 2026-10-06 reader:tailscale-status (edge-tailscale-wiring): names this host's
+  # LAN address and tailnet state. WITHHELD; the published set is unchanged.
+  "reader:tailscale-status": withheld
   "reader:task-types-render": withheld
   "reader:tissue-status": withheld
   "reader:tls-uptake": withheld
