@@ -30,10 +30,12 @@ thing the tool was written to stop.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import pathlib
 import re
 import subprocess
+import sys
 
 import pytest
 
@@ -87,21 +89,31 @@ def test_a_failed_fetch_refuses_rather_than_comparing() -> None:
     )
 
 
-def test_a_floating_pin_is_never_scored_as_agreement(offline) -> None:
-    """Rule 2. `lts/*` matching nothing must read as a warning, not a tick."""
-    payload = json.loads(offline.stdout)
-    floating = [x for x in payload["lines"] if "FLOATING" in x["detail"]]
-    assert floating, (
-        "no floating pin was reported. default.config.yml declares "
-        "node_nvm_version: 'lts/*' — if that stopped being surfaced, either the "
-        "pin became real (good, delete this assertion) or the tool went quiet."
-    )
+def test_a_floating_pin_is_never_scored_as_agreement(tmp_path, monkeypatch) -> None:
+    """Rule 2. `lts/*` matching nothing must read as a warning, not a tick.
+
+    Fed a SYNTHETIC floating pin: the real one (node_nvm_version) became exact
+    on 2026-10-06, and a rule must not depend on the repo still breaking it.
+    """
+    spec = importlib.util.spec_from_file_location("estate_status", TOOL)
+    tool = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, "estate_status", tool)   # @dataclass looks itself up there
+    monkeypatch.syspath_prepend(str(TOOL.parent))              # its nos_identity import
+    spec.loader.exec_module(tool)
+    (tmp_path / "pin.yml").write_text('synthetic_version: "lts/*"\n')
+    monkeypatch.setattr(tool, "TOOLCHAIN", [
+        {"tool": "synthetic", "cmd": [sys.executable, "-V"], "pin_file": str(tmp_path / "pin.yml"),
+         "pin_re": r'^synthetic_version:\s*"([^"]+)"'}])
+    res = tool.Result()
+    tool.axis_toolchain(res)
+    floating = [x for x in res.lines if "FLOATING" in x.detail]
+    assert floating, "a floating pin was declared and not reported — the tool went quiet"
     for line in floating:
-        assert line["state"] != "ok" or "can never warn you" in line["detail"], (
+        assert line.state != "ok" or "can never warn you" in line.detail, (
             "a floating pin rendered as a plain match. It cannot disagree with "
             "anything, so scoring it as agreement is agreement with nothing."
         )
-    assert payload["uncomparable"], "floating pins must also be counted, not just printed"
+    assert res.uncomparable, "floating pins must also be counted, not just printed"
 
 
 def test_an_organ_that_reports_no_version_is_unreadable_not_ok(offline) -> None:
