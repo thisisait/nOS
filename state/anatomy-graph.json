@@ -4,13 +4,13 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 430,
+    "nodes": 429,
     "edges": 477,
     "nodes_pulse": 43,
     "nodes_judge": 5,
     "nodes_gateset": 5,
     "nodes_weakness": 7,
-    "nodes_daemon": 19,
+    "nodes_daemon": 18,
     "nodes_service": 72,
     "nodes_lock": 1,
     "nodes_tool": 7,
@@ -1282,12 +1282,6 @@
       "source": "launchd label (role defaults)",
       "anchor": "02.02.06",
       "description": "Host launchd daemon eu.thisisait.nos.device-gateway — host daemon"
-    },
-    "daemon:eu.thisisait.nos.ears": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon eu.thisisait.nos.ears — host daemon"
     },
     "daemon:eu.thisisait.nos.ears-listen": {
       "kind": "daemon",
@@ -2936,7 +2930,7 @@
       "install_flag": "install_observability",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
-      "description": "Docker service 'alloy' (observability) in the None compose stack, toggled by install_observability",
+      "description": "Host-native service 'alloy' (observability): host daemon (launchd sh.brew.grafana-alloy), toggled by install_observability",
       "layer": null,
       "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
@@ -2980,7 +2974,7 @@
       "install_flag": "install_backrest",
       "dependency_survey": "not-surveyed",
       "anchor": "11.04",
-      "description": "Docker service 'backrest' (storage) in the None compose stack, toggled by install_backrest",
+      "description": "Host-native service 'backrest' (storage): host daemon (launchd eu.thisisait.nos.backrest), toggled by install_backrest",
       "layer": null,
       "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
@@ -2992,7 +2986,7 @@
       "install_flag": "install_backup",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.08",
-      "description": "Docker service 'backup' (security) in the None compose stack, toggled by install_backup",
+      "description": "Host-native service 'backup' (security): host daemon (launchd eu.thisisait.nos.backup.rustfs), toggled by install_backup",
       "layer": null,
       "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
@@ -3016,7 +3010,7 @@
       "install_flag": "install_bone",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'bone' (api) in the None compose stack, toggled by install_bone",
+      "description": "Host-native service 'bone' (api): host daemon (launchd eu.thisisait.nos.bone), toggled by install_bone",
       "layer": null,
       "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
@@ -3068,7 +3062,7 @@
       "install_flag": "install_cortex",
       "dependency_survey": "not-surveyed",
       "anchor": "09",
-      "description": "Docker service 'cortex' (knowledge) in the None compose stack, toggled by install_cortex",
+      "description": "Host-native service 'cortex' (knowledge): host daemon (launchd eu.thisisait.nos.cortex), toggled by install_cortex",
       "layer": null,
       "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
@@ -3080,7 +3074,7 @@
       "install_flag": "install_device_gateway",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.09",
-      "description": "Docker service 'device_gateway' (agent) in the None compose stack, toggled by install_device_gateway",
+      "description": "Host-native service 'device_gateway' (agent): host daemon (launchd eu.thisisait.nos.device-gateway), toggled by install_device_gateway",
       "layer": null,
       "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
@@ -3108,7 +3102,7 @@
       "install_flag": "install_ears",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.09",
-      "description": "Docker service 'ears' (ai) in the None compose stack, toggled by install_ears",
+      "description": "Host-native service 'ears' (ai): host program — a Terminal session opened from nos-cc (`s`); no launchd job, toggled by install_ears",
       "layer": null,
       "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
@@ -3252,7 +3246,7 @@
       "install_flag": "install_hermes",
       "dependency_survey": "not-surveyed",
       "anchor": "03.08",
-      "description": "Docker service 'hermes' (messaging) in the None compose stack, toggled by install_hermes",
+      "description": "Host-native service 'hermes' (messaging): host daemon (launchd eu.thisisait.nos.hermes), toggled by install_hermes",
       "layer": null,
       "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
@@ -3276,7 +3270,7 @@
       "install_flag": "install_iiab_terminal",
       "dependency_survey": "no-manifest",
       "anchor": "02.02.04",
-      "description": "Docker service 'iiab_terminal' (iiab) in the None compose stack, toggled by install_iiab_terminal",
+      "description": "Host-native service 'iiab_terminal' (iiab): host program — a TUI sshd starts per login (ForceCommand); no launchd job, toggled by install_iiab_terminal",
       "layer": null,
       "layer_withheld": "dependency_survey=no-manifest — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
@@ -3584,7 +3578,7 @@
       "install_flag": "install_openclaw",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.09",
-      "description": "Docker service 'openclaw' (agent) in the None compose stack, toggled by install_openclaw",
+      "description": "Host-native service 'openclaw' (agent): host daemon (launchd ai.openclaw.gateway), toggled by install_openclaw",
       "layer": null,
       "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
@@ -3596,7 +3590,7 @@
       "install_flag": "install_opencode",
       "dependency_survey": "no-manifest",
       "anchor": "02.02.09",
-      "description": "Docker service 'opencode' (ai) in the None compose stack, toggled by install_opencode",
+      "description": "Host-native service 'opencode' (ai): host program — a CLI run on demand; no launchd job, toggled by install_opencode",
       "layer": null,
       "layer_withheld": "dependency_survey=no-manifest — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
@@ -3608,7 +3602,7 @@
       "install_flag": "install_openhuman",
       "dependency_survey": "declared",
       "anchor": "02.02.09",
-      "description": "Docker service 'openhuman' (agent) in the None compose stack, toggled by install_openhuman",
+      "description": "Host-native service 'openhuman' (agent): host program — a desktop app (cask) the operator opens; no launchd job, toggled by install_openhuman",
       "layer": "L2",
       "layer_basis": {
         "height": 0,
@@ -3696,7 +3690,7 @@
       "install_flag": "install_pulse",
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
-      "description": "Docker service 'pulse' (automation) in the None compose stack, toggled by install_pulse",
+      "description": "Host-native service 'pulse' (automation): host daemon (launchd eu.thisisait.nos.pulse), toggled by install_pulse",
       "layer": null,
       "layer_withheld": "dependency_survey=not-surveyed — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
@@ -3800,7 +3794,7 @@
       "install_flag": "install_tailscale",
       "dependency_survey": "no-manifest",
       "anchor": "02.02.07",
-      "description": "Docker service 'tailscale' (vpn) in the None compose stack, toggled by install_tailscale",
+      "description": "Host-native service 'tailscale' (vpn): host program — Tailscale.app (cask) and its system extension; no launchd job of ours, toggled by install_tailscale",
       "layer": null,
       "layer_withheld": "dependency_survey=no-manifest — nobody has read this role's upstreams, and a longest path over edges that were never looked for derives L0 substrate from an absence of evidence"
     },
@@ -3872,7 +3866,7 @@
       "install_flag": "install_wing",
       "dependency_survey": "declared",
       "anchor": "02.02.08",
-      "description": "Docker service 'wing' (security) in the None compose stack, toggled by install_wing",
+      "description": "Host-native service 'wing' (security): host daemon (launchd eu.thisisait.nos.wing), toggled by install_wing",
       "layer": "L1",
       "layer_basis": {
         "height": 1,

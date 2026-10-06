@@ -40,7 +40,7 @@ Each line: level (count) — what it is: the most connected nodes (edge count).
 - **genome** (20) — declared contracts every part inherits — task types, skills: tasktype:investigate (13), skill:nos-backoffice (3), skill:nos-datatables (3), tasktype:code-fix (3), tasktype:design (3)
 - **cell** (16) — who you can be — one model in one specialization: agent:librarian (11), agent:jeff (9), agent:surveyor (8), agent:conductor (7), agent:curator (7)
 - **tissue** (1) — cells of one specialization working together: tissue:backoffice (23)
-- **organ** (102) — a part with one job — a service, host daemon, hosted forge or face app: daemon:eu.thisisait.nos.pulse (42), service:postgresql (11), service:redis (9), service:mariadb (8), service:hermes (5)
+- **organ** (101) — a part with one job — a service, host daemon, hosted forge or face app: daemon:eu.thisisait.nos.pulse (42), service:postgresql (11), service:redis (9), service:mariadb (8), service:hermes (5)
 - **organ system** (13) — organs grouped for one function: organ_system:archive (9), organ_system:senses (8), organ_system:voice (6), organ_system:backoffice (5), organ_system:forge (5)
 - **organism** (0) — the estate as a whole: none — no node stands for the whole; the whole is this graph
 - **habitat** (6) — what lives beside the organism — third-party processors it does not own: backend:minimax (8), backend:ollama (5), backend:anthropic (3), backend:mistral-eu (0), backend:openclaw (0)
@@ -143,7 +143,7 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
   code_server, erpnext, freescout, outline, hedgedoc, bookstack, firefly, dolibarr, onlyoffice, mikopbx, qgis_server,
   metabase, superset, influxdb, mcp_gateway, openclaw, hermes, device_gateway, wing, bone, cortex, backrest.
 
-The public organ systems (the apex ruling publishes 13; 367 of 430 ruled nodes are withheld):
+The public organ systems (the apex ruling publishes 13; 366 of 429 ruled nodes are withheld):
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)

@@ -7,7 +7,7 @@
     "genome": 20,
     "cell": 16,
     "tissue": 1,
-    "organ": 102,
+    "organ": 101,
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
@@ -473,10 +473,6 @@
       "kind": "daemon"
     },
     "daemon:eu.thisisait.nos.device-gateway": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.ears": {
       "level": "organ",
       "kind": "daemon"
     },
