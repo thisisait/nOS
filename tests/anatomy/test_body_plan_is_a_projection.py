@@ -99,12 +99,15 @@ def test_the_map_holds_no_per_node_facts():
 
 
 def test_an_empty_level_is_counted_not_hidden():
-    """tissue and organism hold nothing today; absence must read as absence."""
+    """organism holds nothing today; absence must read as absence. tissue was
+    empty until state/tissues/ (2026-10-06) and may not fall back to empty."""
     _, plan, _ = _load()
     missing = [lv for lv in _gen().ALL_LEVELS if lv not in plan["counts"]]
     assert not missing, f"levels absent from counts (an empty level must say 0): {missing}"
-    assert plan["counts"]["tissue"] == 0 and plan["counts"]["organism"] == 0, (
-        "tissue/organism gained nodes — update tools/body.py's EMPTY lines and this pin")
+    assert plan["counts"]["organism"] == 0, (
+        "organism gained nodes — update tools/body.py's EMPTY lines and this pin")
+    assert plan["counts"]["tissue"] >= 1, (
+        "the tissue level is empty again — state/tissues/ stopped compiling into the graph")
 
 
 def test_law_and_organ_system_are_populated():
@@ -117,8 +120,8 @@ def test_law_and_organ_system_are_populated():
 
 #: Connected nodes per level a newcomer walks first. Measured at increment 2
 #: (2026-10-05); before it, `sense` was judges alone (5). tissue, organism and
-#: habitat carry no floor: the first two are empty by declaration. limb's own
-#: floor: the 2026-10-06 resource split left it the 8 acting grants it truly has.
+#: habitat carry no floor: tissue holds one node, organism none by declaration.
+#: limb's own floor: the 2026-10-06 resource split left it the 8 acting grants it truly has.
 CONNECTED_FLOOR = 10
 LEVEL_FLOOR = {"limb": 8}
 WALKED = ("genome", "cell", "organ", "organ system", "sense", "limb", "memory", "law", "reflex")
