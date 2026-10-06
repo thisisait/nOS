@@ -73,4 +73,4 @@ def test_bridge_allowlist_never_contains_removal_tags():
 
 def test_doctrine_texts_name_the_ladder():
     assert "remove=data/deep/all" in (REPO / "tools/workflows/v07-overnight-review.mjs").read_text()
-    assert "any `remove=` level" in (REPO / "docs/bones-and-wings-refactor.md").read_text()
+    assert "any `remove=` level" in (REPO / "docs/archive/bones-and-wings-refactor.md").read_text()

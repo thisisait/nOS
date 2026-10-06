@@ -8,6 +8,7 @@ Address form: nos-sot:doctrine/ssot.md#1
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import yaml
@@ -96,7 +97,9 @@ def test_every_moved_stub_aliases_the_live_article():
         if "Moved to" not in text:
             continue
         rel = stub_path.relative_to(REPO).as_posix()
-        live_rel = f"ssot/doctrine/{stub_path.name}"
+        # The stub names its article; a renamed promotion (organs → body-plan) is allowed.
+        target = re.search(r"ssot/doctrine/([\w.-]+\.md)", text)
+        live_rel = f"ssot/doctrine/{target.group(1) if target else stub_path.name}"
         if live_rel not in corpus:
             drifted.append(f"{rel} has no {live_rel}")
             continue
@@ -118,7 +121,6 @@ def test_index_names_unpromoted_proposed_files():
     assert named == [
         "docs/doctrine/agentkit.md",
         "docs/doctrine/backoffice.md",
-        "docs/doctrine/organs.md",
     ]
     for rel in named:
         path = REPO / rel
