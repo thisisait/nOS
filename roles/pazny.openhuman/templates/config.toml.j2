@@ -21,16 +21,14 @@ rpc_mutations_enabled = false
 [gitbooks]
 enabled = false
 [memory]
+# auto_save is the schema's memory switch; [memory.conversations]/[memory.recall] are not v0.64.10 keys (dropped on save).
+auto_save = false
 embedding_provider = "ollama"
 embedding_model = "{{ openhuman_embed_model }}"
 embedding_dimensions = {{ openhuman_embed_dimensions }}
 [memory_tree]
 llm_extractor_model = "{{ _oh_local_model }}"
 llm_summariser_model = "{{ _oh_local_model }}"
-[memory.conversations]
-enabled = false
-[memory.recall]
-enabled = false
 [local_ai]
 runtime_enabled = true
 opt_in_confirmed = true
@@ -39,3 +37,11 @@ base_url = "http://127.0.0.1:11434"
 chat_model_id = "{{ ollama_small_model }}"
 embedding_model_id = "{{ openhuman_embed_model }}"
 num_ctx = 8192
+{% if openhuman_register_mcp | bool %}
+# The static MCP set read at boot (mcp::host::static_registry). env is literal, so the RO token is read by sh at spawn.
+[[mcp_client.servers]]
+name = "nos-tables"
+description = "nOS DataTables, read-only"
+command = "/bin/sh"
+args = ["-c", "KEAP_AGENT_TOKEN_RO=$({{ docker_bin }} exec {{ openhuman_keap_container }} printenv KEAP_AGENT_TOKEN_RO) KEAP_API_URL=http://127.0.0.1:{{ keap_port }} NOS_MCP_AGENT=openhuman exec /usr/bin/python3 {{ nos_main_checkout }}/tools/mcp-tables-server.py"]
+{% endif %}

@@ -33,7 +33,7 @@ depends_on:
     kind: data
     via: >-
       the nOS tables MCP server reads KEAP's agent API on 127.0.0.1:keap_port with
-      the RO token from `docker exec iiab-keap-1` (roles/pazny.openhuman/templates/nos-mcp.json.j2)
+      the RO token from `docker exec iiab-keap-1` (the [[mcp_client.servers]] entry in roles/pazny.openhuman/templates/config.toml.j2)
     measured: "2026-10-06"
     unenforced: >-
       No auto-enable block ties install_keap to install_openhuman. With KEAP down

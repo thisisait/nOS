@@ -6,8 +6,12 @@
     _oh_model: "{{ _m }}"
     _oh_route: "{{ openhuman_provider }}:{{ _m }}"
     _oh_local_model: "{{ _m if openhuman_provider == 'ollama' else ollama_small_model }}"
+    _oh_bin: "{{ openhuman_app }}/Contents/MacOS/OpenHuman"
+    # Sliced as the core slices it (credentials/session_support.rs local_session_user_id).
+    _oh_local_id: "local-{{ _slug or 'device' }}"
   vars:
     _m: "{{ openhuman_model or (ollama_small_model if openhuman_provider == 'ollama' else openhuman_claude_default_model) }}"
+    _slug: "{{ openhuman_hostname | lower | regex_replace('[^a-z0-9]+', '-') | regex_replace('^-+|-+$', '') }}"
 
 - name: "[openhuman] openhuman_provider is ollama or claude-code"
   ansible.builtin.assert:
@@ -23,19 +27,58 @@
   vars:
     _symbiont_casks: "{{ homebrew_symbiont_casks | selectattr('name', 'equalto', 'openhuman') | list }}"
 
+# The app rewrites config.toml on save, so nothing below writes it while the app runs.
+- name: "[openhuman] Is the app running"
+  ansible.builtin.command:
+    argv: [ps, -axo, comm=]
+  register: _oh_ps
+  changed_when: false
+
+- name: "[openhuman] The vendor CLI and the session state"
+  ansible.builtin.stat:
+    path: "{{ _oh_bin }}"
+  register: _oh_bin_stat
+
+- name: "[openhuman] Session facts"
+  ansible.builtin.set_fact:
+    _oh_running: "{{ _oh_ps.stdout_lines | select('search', 'OpenHuman\\.app/Contents/MacOS/') | list | length > 0 }}"
+    _oh_active: "{{ lookup('ansible.builtin.file', openhuman_home ~ '/active_user.toml', errors='ignore') | default('', true)
+      | regex_search('user_id\\s*=\\s*\"([^\"]*)\"', '\\1') | default([''], true) | first }}"
+
+- name: "[openhuman] The app is running — config and session left alone"
+  ansible.builtin.debug:
+    msg: "OpenHuman is running. Quit it and run --tags openhuman again; verify reports what it has now."
+  when: _oh_running | bool
+
+# 1/3 The "Set it up myself" local session, done by the vendor CLI in-process (no GUI, no token).
+# Only before any login: a marker naming a user (local or cloud) is never replaced.
+- name: "[openhuman] Local session (auth_set_credential)"
+  ansible.builtin.command:
+    argv: ["{{ _oh_bin }}", core, call, --method, openhuman.auth_set_credential, --params, "{{ _params | to_json }}"]
+  vars:
+    _now: "{{ now().timestamp() | int }}"
+    _b64: "{{ [{'alg': 'none', 'typ': 'JWT'}, {'sub': 'local', 'user_id': 'local', 'iat': _now | int, 'exp': _now | int + 31536000}]
+      | map('to_json', separators=[',', ':']) | map('b64encode') | map('replace', '=', '') | map('replace', '+', '-')
+      | map('replace', '/', '_') | list }}"
+    _params:
+      token: "{{ _b64[0] }}.{{ _b64[1] }}.local"
+      kind: local
+      user: {_id: local, id: local, name: Local User, email: local@openhuman.local}
+  register: _oh_cred
+  when: _oh_bin_stat.stat.exists and not _oh_running | bool and not _oh_active
+
 - name: "[openhuman] Profiles already on disk"
   ansible.builtin.find:
     paths: "{{ openhuman_home }}/users"
     file_type: directory
   register: _oh_found
 
-# Every profile on disk, plus users/local and the one "login locally" will make (slug cut as the core cuts it).
+# Every profile on disk, plus users/local and the local-session one (predicted, or just made above).
 - name: "[openhuman] Profiles to configure"
   ansible.builtin.set_fact:
     _oh_profiles: "{{ (_oh_found.files | map(attribute='path') | list
-      + [openhuman_home ~ '/users/local', openhuman_home ~ '/users/local-' ~ (_slug or 'device')]) | unique | sort }}"
-  vars:
-    _slug: "{{ openhuman_hostname | lower | regex_replace('[^a-z0-9]+', '-') | regex_replace('^-+|-+$', '') }}"
+      + [openhuman_home ~ '/users/local', openhuman_home ~ '/users/' ~ _oh_local_id]) | unique | sort }}"
+    _oh_active: "{{ _oh_local_id if _oh_cred is changed else _oh_active }}"
 
 - name: "[openhuman] Workspace and skills dirs"
   ansible.builtin.file:
@@ -44,7 +87,7 @@
     mode: "0700"
   loop: "{{ _oh_profiles | map('regex_replace', '$', '/workspace') | list + [openhuman_home ~ '/skills'] }}"
 
-# Declared keys win, every other key stays (a TOML merge, not an overwrite).
+# 2/3 Declared keys win, every other key stays (a TOML merge, not an overwrite). Schema keys only.
 - name: "[openhuman] config.toml — declared keys merged into every profile"
   ansible.builtin.command:
     argv: ["{{ ansible_playbook_python }}", "{{ role_path }}/files/toml_merge.py", "{{ item }}/config.toml"]
@@ -52,6 +95,17 @@
   loop: "{{ _oh_profiles }}"
   register: _oh_config
   changed_when: _oh_config.stdout == 'changed'
+  when: not _oh_running | bool
+
+# 3/3 Local login resets onboarding_completed; the RPC (not the flag) also seeds the proactive cron jobs.
+- name: "[openhuman] Onboarding completed (config_set_onboarding_completed)"
+  ansible.builtin.command:
+    argv: ["{{ _oh_bin }}", core, call, --method, openhuman.config_set_onboarding_completed, --params, '{"value": true}']
+  when:
+    - _oh_bin_stat.stat.exists and not _oh_running | bool
+    - _oh_active == _oh_local_id
+    - lookup('ansible.builtin.file', openhuman_home ~ '/users/' ~ _oh_local_id ~ '/config.toml', errors='ignore')
+      | default('', true) | regex_search('(?m)^onboarding_completed\s*=\s*true') is none
 
 # The core reads <profile>/workspace/AGENTS.md (agent/prompts/agents_md.rs).
 - name: "[openhuman] AGENTS.md — the imprint, re-copied every converge"
@@ -71,16 +125,6 @@
     mode: preserve
   loop: "{{ openhuman_skills }}"
 
-# OpenHuman reads MCP servers from no file: only its mcp.json editor (RPC
-# mcp_clients_config_set → mcp_clients.db) adds one. This is the paste-ready document.
-- name: "[openhuman] nos-mcp.json — the document to paste once"
-  ansible.builtin.template:
-    src: nos-mcp.json.j2
-    dest: "{{ item }}/nos-mcp.json"
-    mode: "0600"
-  loop: "{{ _oh_profiles }}"
-  when: openhuman_register_mcp | bool
-
 # Little Snitch has no rule-import CLI (only restore-model, which replaces everything).
 - name: "[openhuman] Little Snitch rule group — the file to import once"
   ansible.builtin.template:
@@ -91,9 +135,8 @@
 - name: "[openhuman] What is left for the operator"
   ansible.builtin.debug:
     msg: >-
-      OpenHuman configured ({{ _oh_route }}). Once, by hand: launch it, choose "Set it up myself";
-      {{ ('paste ' ~ _oh_profiles | last ~ '/nos-mcp.json into Connections → MCP Servers → mcp.json; ')
-         if openhuman_register_mcp | bool else '' }}import {{ openhuman_home }}/nos-openhuman.lsrules into Little Snitch.
+      OpenHuman configured ({{ _oh_route }}, profiles: {{ _oh_profiles | map('basename') | join(', ') }}).
+      Once, by hand: import {{ openhuman_home }}/nos-openhuman.lsrules into Little Snitch.
 
 # The reader writes the verdict: RED fails the play, UNKNOWN (app idle, updater) does not.
 - name: "[openhuman] Verify with tools/openhuman-status.py"

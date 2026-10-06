@@ -14,10 +14,20 @@ import sys
 import tomllib
 
 
+def _named(x) -> bool:
+    return isinstance(x, list) and all(isinstance(i, dict) and "name" in i for i in x)
+
+
 def merge(base: dict, over: dict) -> dict:
     out = dict(base)
     for k, v in over.items():
-        out[k] = merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = merge(out[k], v)
+        elif v and _named(v) and _named(out.get(k)):  # [[mcp_client.servers]]: by name, foreign entries kept
+            mine = {i["name"]: i for i in v}
+            out[k] = [merge(i, mine.pop(i["name"])) if i["name"] in mine else i for i in out[k]] + list(mine.values())
+        else:
+            out[k] = v
     return out
 
 
@@ -74,6 +84,8 @@ def selftest() -> None:
     new = merge(old, {"a": {"x": "new"}, "b": {"c": False}})
     assert new["a"] == {"keep": 1, "x": "new"} and new["schema_version"] == 3 and new["b"] == {"c": False}
     assert tomllib.loads(dump(new)) == new, dump(new)
+    srv = merge(old, {"srv": [{"name": "s", "args": ["a"]}, {"name": "n"}]})["srv"]
+    assert srv == [{"name": "s", "env": {"K": "v"}, "args": ["a"]}, {"name": "n"}], srv
     print("selftest ok")
 
 

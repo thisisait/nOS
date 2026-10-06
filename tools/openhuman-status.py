@@ -118,8 +118,11 @@ def judge_config(cfg: dict | None, src: str, provider: str | None = None) -> lis
     detail = f"chat={routes['chat_provider']} local_ai.base_url={base_url or 'default'}"
     out.append(line("model route", RED if cloud or remote_base else OK,
                     detail + (f"; on the cloud route: {', '.join(cloud)}" if cloud else ""), src))
-    conv = _get(cfg, "memory.conversations.enabled", True)
-    recall = _get(cfg, "memory.recall.enabled", True)
+    # memory.auto_save is the v0.64.10 schema switch (default on); conversations/recall are
+    # not schema keys there (the app drops them on save), so they count only when present.
+    auto = _get(cfg, "memory.auto_save", True)
+    conv = auto or _get(cfg, "memory.conversations.enabled", False)
+    recall = _get(cfg, "memory.recall.enabled", False)
     sources = _get(cfg, "memory.sources", []) or []
     bg = {w: _get(cfg, w) or "cloud" for w in BACKGROUND}
     if "learning_provider" in cfg:
@@ -129,7 +132,7 @@ def judge_config(cfg: dict | None, src: str, provider: str | None = None) -> lis
     if emb in ("cloud", "managed", "openhuman"):
         bg_cloud.append(f"memory.embedding_provider={emb}")
     out.append(line("memory", RED if conv or recall or sources or bg_cloud else OK,
-                    f"engine={_get(cfg, 'memory.engine', 'tinyhumans')} conversations="
+                    f"auto_save={str(auto).lower()} conversations="
                     f"{str(conv).lower()} recall={str(recall).lower()} sources={len(sources)}"
                     + (f"; on the cloud route: {', '.join(bg_cloud)}" if bg_cloud else ""), src))
     gb = _get(cfg, "gitbooks.enabled", True)
@@ -223,8 +226,10 @@ def collect() -> list[dict]:
     out.append(line("running", UNKNOWN if ps is None else OK,
                     f"{len(procs)} process(es)" if ps is not None else "ps unreadable", "ps -axo comm"))
     paths = profiles(base)
+    active = config_path(base)
     out.append(line("profiles", OK if paths else UNKNOWN,
-                    ", ".join(p.parent.name for p in paths) or "no users/*/config.toml", str(base / "users")))
+                    (", ".join(p.parent.name for p in paths) or "no users/*/config.toml")
+                    + (f"; active: {active.parent.name}" if active else ""), f"{base / 'users'}, {base / 'active_user.toml'}"))
     servers, raws = [], []
     for path in paths or [None]:
         cfg, raw, src = None, "", str(path or base / "users/local/config.toml")
@@ -258,8 +263,7 @@ chat_provider = "ollama:hermes3:8b"\nreasoning_provider = "ollama:hermes3:8b"
 agentic_provider = "ollama:hermes3:8b"\ncoding_provider = "ollama:hermes3:8b"
 [privacy]\nmode = "local_only"\n[observability]\nanalytics_enabled = false\nshare_usage_data = false
 [update]\nenabled = false\nrpc_mutations_enabled = false\n[gitbooks]\nenabled = false
-[memory.conversations]\nenabled = false\n[memory.recall]\nenabled = false
-[local_ai]\nbase_url = "http://127.0.0.1:11434"\n[memory]\nembedding_provider = "ollama"\n"""
+[local_ai]\nbase_url = "http://127.0.0.1:11434"\n[memory]\nauto_save = false\nembedding_provider = "ollama"\n"""
     states = lambda cfg: {r["check"]: r["state"] for r in judge_config(cfg, "fixture")}  # noqa: E731
     states_detail = lambda cfg: next(r["detail"] for r in judge_config(cfg, "f") if r["check"] == "memory")  # noqa: E731
     assert set(states(tomllib.loads(good)).values()) == {OK}, states(tomllib.loads(good))
@@ -275,6 +279,8 @@ agentic_provider = "ollama:hermes3:8b"\ncoding_provider = "ollama:hermes3:8b"
     assert judge_lsof(None)["state"] == UNKNOWN and judge_lsof("")["state"] == UNKNOWN
     vendor = tomllib.loads(good.replace('embeddings_provider = "ollama:nomic-embed-text"', 'embeddings_provider = "cloud"'))
     assert "embeddings_provider" in states_detail(vendor)
+    assert states(tomllib.loads(good.replace("auto_save = false", "auto_save = true")))["memory"] == RED
+    assert states(tomllib.loads(good + "[memory.recall]\nenabled = true\n"))["memory"] == RED
     lis = "COMMAND PID USER FD TYPE DEVICE SIZE NODE NAME\nollama 1 u 3u IPv4 0 0t0 TCP 127.0.0.1:{} (LISTEN)"
     assert judge_ollama("/opt/homebrew/bin/ollama\n", lis.format(11434), "/opt/homebrew", [])["state"] == OK
     assert judge_ollama("/usr/local/bin/ollama\n", "", "/opt/homebrew", [])["state"] == RED

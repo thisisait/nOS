@@ -1474,7 +1474,7 @@ apps_skip: []
 install_openhuman: false
 openhuman_provider: ollama        # ollama (local_only) | claude-code (the claude CLI login, privacy standard)
 openhuman_model: ""               # "" = ollama_small_model on ollama, `sonnet` on claude-code
-openhuman_register_mcp: true      # render the nOS tables MCP document (pasted once in the app)
+openhuman_register_mcp: true      # declare the nOS tables MCP server ([[mcp_client.servers]] in config.toml)
 openhuman_skills: [nos-datatables]  # copied into ~/.openhuman/skills (it rejects symlinks)
 # Derived from where the cAdvisor CONTAINER exists, not declared beside it.
 # roles/pazny.grafana/templates/compose.yml.j2:221 gates that container on
