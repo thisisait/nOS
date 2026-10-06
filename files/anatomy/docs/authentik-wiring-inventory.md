@@ -297,10 +297,10 @@ on that field.
 - Grafana V3 inventory: `files/anatomy/docs/grafana-wiring-inventory.md`
 - 6-step recipe: `files/anatomy/docs/role-thinning-recipe.md`
 - Plugin loader spec: `files/anatomy/docs/plugin-loader-spec.md`
-- Doctrine source: `docs/bones-and-wings-refactor.md` §1.1
-- Refactor PoC plan: `docs/bones-and-wings-refactor.md` §8 (A6.5 = Grafana pilot;
+- Doctrine source: `docs/archive/bones-and-wings-refactor.md` §1.1
+- Refactor PoC plan: `docs/archive/bones-and-wings-refactor.md` §8 (A6.5 = Grafana pilot;
   A6 lifecycle hooks revised post-V3+V4 to 4-hook with DAG resolution)
-- Track Q post-PoC plan: `docs/bones-and-wings-refactor.md` §13.1 (Q2 = IAM batch)
+- Track Q post-PoC plan: `docs/archive/bones-and-wings-refactor.md` §13.1 (Q2 = IAM batch)
 
 ## Recipe deltas to land in `role-thinning-recipe.md` v0.2
 

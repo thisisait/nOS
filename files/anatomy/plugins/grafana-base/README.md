@@ -61,7 +61,7 @@ fixed; Grafana now matches:
 
 ## Why this exists
 
-See `docs/bones-and-wings-refactor.md` §1.1 — "tendons & vessels" doctrine.
+See `docs/archive/bones-and-wings-refactor.md` §1.1 — "tendons & vessels" doctrine.
 Today, ~70% of `roles/pazny.grafana/` is wiring rather than install. This
 plugin extracts that 70% into a separate, modular, removable artifact
 owned by the integration, not by the role.

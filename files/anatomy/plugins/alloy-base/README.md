@@ -6,7 +6,7 @@ Wiring layer for **Grafana Alloy** — the unified telemetry collector that ship
 host-level metrics to Prometheus, log lines to Loki, and OTLP traces to Tempo.
 
 `alloy-base` is the **first non-Docker service plugin** in the nOS anatomy. It
-validates the **host-binary shape** (#6 in `docs/bones-and-wings-refactor.md`
+validates the **host-binary shape** (#6 in `docs/archive/bones-and-wings-refactor.md`
 §1.1) for any Homebrew-installed, `brew services`-managed daemon.
 
 ## What this plugin owns

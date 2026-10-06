@@ -1,7 +1,7 @@
 # nOS SSO + identity attribution — doctrine + audit
 
 > **Status:** doctrine locked 2026-05-17 by `tests/anatomy/test_sso_doctrine.py` (7 gates).
-> **Companion docs:** [native-sso-survey.md](native-sso-survey.md) (per-service verdicts), [bones-and-wings-refactor.md §11](bones-and-wings-refactor.md) (audit-trail spec).
+> **Companion docs:** [native-sso-survey.md](native-sso-survey.md) (per-service verdicts), [bones-and-wings-refactor.md §11](archive/bones-and-wings-refactor.md) (audit-trail spec).
 
 ## Mode trichotomy (post-β1.A)
 

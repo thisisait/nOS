@@ -262,4 +262,4 @@ That migration is ~30 lines and reusable for every Q-batch role.
 
 - Plugin manifest draft: `files/anatomy/plugins/grafana-base/plugin.yml`
 - Recipe (deterministic 6-step process): `files/anatomy/docs/role-thinning-recipe.md`
-- Doctrine source: `docs/bones-and-wings-refactor.md` §1.1
+- Doctrine source: `docs/archive/bones-and-wings-refactor.md` §1.1

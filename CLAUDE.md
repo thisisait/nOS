@@ -107,7 +107,7 @@ Longer tour: [docs/architecture.md](docs/architecture.md).
   [files/anatomy/docs/plugin-wiring-capabilities.md](files/anatomy/docs/plugin-wiring-capabilities.md).
 - **Anatomy organs on the host:** Bone (FastAPI bridge), Wing (dashboard + state UI),
   Pulse (scheduled jobs), Cortex (reasoning daemon); KEAP is the Docker-served knowledge
-  layer. See [docs/anatomy.md](docs/anatomy.md), [docs/bones-and-wings-refactor.md](docs/bones-and-wings-refactor.md).
+  layer. Words: [docs/glossary.md](docs/glossary.md); how they are kept: [ssot/doctrine/body-plan.md](ssot/doctrine/body-plan.md).
 - **Edge:** Traefik owns 80/443, routes derived from `state/manifest.yml`
   ([docs/traefik-primary-proxy.md](docs/traefik-primary-proxy.md)); host nginx is opt-in.
 - **SSO:** every service is `native_oidc`, `header_oidc`, `forward_auth` or none, declared

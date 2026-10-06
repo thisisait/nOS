@@ -5,7 +5,7 @@ A4 PoC scope (2026-05-03): non-agentic only. Tick loop polls
 runs to ``wing.db.pulse_runs``. Agentic mode (claude SDK invocations) is
 A8 phase work.
 
-Authoritative spec: ``docs/bones-and-wings-refactor.md`` §4.4 +
+Authoritative spec: ``docs/archive/bones-and-wings-refactor.md`` §4.4 +
 ``files/anatomy/docs/plugin-loader-spec.md``.
 """
 

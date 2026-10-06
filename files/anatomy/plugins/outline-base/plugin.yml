@@ -6,7 +6,7 @@
 # role-side env block render — Phase 2 C1 deletes the central list and the
 # role-side block, leaving only this manifest.
 #
-# Doctrine: docs/bones-and-wings-refactor.md §1.1 (tendons & vessels).
+# Doctrine: docs/archive/bones-and-wings-refactor.md §1.1 (tendons & vessels).
 # =============================================================================
 
 name: outline-base

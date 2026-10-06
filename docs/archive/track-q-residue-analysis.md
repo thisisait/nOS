@@ -6,7 +6,7 @@
 > which roles are **legitimate exceptions** (post.yml is the right
 > shape) vs. **pending Q1c/Q2 work**.
 >
-> Cross-references `docs/bones-and-wings-refactor.md` §1.1 (doctrine)
+> Cross-references `docs/archive/bones-and-wings-refactor.md` §1.1 (doctrine)
 > + §13.1 (the 7-batch plan covering all `pazny.*` roles).
 
 ## Snapshot (post-Phase-1)

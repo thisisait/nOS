@@ -5,7 +5,7 @@
 > first Q-batches revealed. See the versioning table at the foot of this doc.
 >
 > **Audience:** any agent (human or claude) running a Track Q batch.
-> Doctrine source: `docs/bones-and-wings-refactor.md` §1.1.
+> Doctrine source: `docs/archive/bones-and-wings-refactor.md` §1.1.
 
 ## When to use this recipe
 

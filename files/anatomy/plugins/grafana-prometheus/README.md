@@ -8,7 +8,7 @@ observability stack as a Grafana data source.
 
 Track Q1b — first composition plugin past the A6.5 doctrine gate. Validates
 the "composition plugin" shape (`type: [composition]` + `requires.plugin: [...]`)
-described in `docs/bones-and-wings-refactor.md` §1.1 / §6 and the
+described in `docs/archive/bones-and-wings-refactor.md` §1.1 / §6 and the
 `plugin-loader-spec.md` §6.2 contract.
 
 ## What it does
@@ -59,5 +59,5 @@ The filename matches the plugin slug, so ownership is obvious at a glance.
 - `files/anatomy/plugins/prometheus-base/plugin.yml` — owner of
   Prometheus's master config + recording rules.
 - `files/anatomy/docs/plugin-loader-spec.md` (composition-plugin loading) +
-  `docs/bones-and-wings-refactor.md` §6.2 — the plugin-type shape contract.
+  `docs/archive/bones-and-wings-refactor.md` §6.2 — the plugin-type shape contract.
   The spec itself is unnumbered; §6.2 was always the refactor doc's number.

@@ -1,3 +1,5 @@
+> **Archived 2026-10-06:** the bones & wings plan finished; the body's words now live in `ssot/doctrine/body-plan.md` and `docs/glossary.md`.
+
 # bones & wings — refactor master plan
 
 > **Status:** IN FLIGHT 2026-05-04. Architecture decisions are resolved; phases A0, A1, A2, A3a, **A3.5**, A4, A6 foundation, and **A6.5** have landed. This document is now both the master plan and live implementation tracker for the bones & wings PoC.

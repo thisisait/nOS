@@ -1,6 +1,6 @@
 """Pulse daemon — tick loop.
 
-Architecture (per docs/bones-and-wings-refactor.md §4.4):
+Architecture (per docs/archive/bones-and-wings-refactor.md §4.4):
 
 1. Every ``tick_interval_s`` (default 30s), poll Wing API for due jobs.
 2. For each due job: emit ``run_start`` event, fork-and-exec via the

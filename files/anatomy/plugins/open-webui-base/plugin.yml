@@ -4,7 +4,7 @@
 # Replaces the `authentik_oidc_apps[slug=open-webui]` row + the role-side
 # OAUTH_* env block. Phase 2 C1 deletes the central row + role env block.
 #
-# Doctrine: docs/bones-and-wings-refactor.md §1.1.
+# Doctrine: docs/archive/bones-and-wings-refactor.md §1.1.
 # =============================================================================
 
 name: open-webui-base

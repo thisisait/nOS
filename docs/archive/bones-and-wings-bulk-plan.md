@@ -3,7 +3,7 @@
 > Coordination plan for parallel agentic implementation of the
 > remaining anatomy phases. Authoritative status pointer:
 > [`docs/active-work.md`](../active-work.md). Architecture + phase
-> tracker: [`docs/bones-and-wings-refactor.md`](../bones-and-wings-refactor.md).
+> tracker: [`docs/archive/bones-and-wings-refactor.md`](bones-and-wings-refactor.md).
 >
 > **Current state (2026-05-05):** Lanes A (A3.5 Wing host-revert) and D
 > (A6.5 Grafana thin-role pilot) shipped and are deleted from this
@@ -40,14 +40,14 @@ Push pending commits if depth > 30 — keeps each worker close to origin.
 - **No A7 plugin scheduling before Lane B (Pulse Wing API)** — Pulse
   can idle but real jobs need endpoints.
 - Docs update with every lane: `docs/active-work.md` punch-list +
-  `docs/bones-and-wings-refactor.md` Appendix B.
+  `docs/archive/bones-and-wings-refactor.md` Appendix B.
 
 ### Shared lock files (one editor at a time)
 
 `main.yml` · `tasks/stacks/core-up.yml` · `tasks/stacks/stack-up.yml` ·
 `tasks/blank-reset.yml` · `default.config.yml` · `default.credentials.yml` ·
 `state/manifest.yml` · `CLAUDE.md` · `docs/active-work.md` ·
-`docs/bones-and-wings-refactor.md` · `files/anatomy/module_utils/load_plugins.py`.
+`docs/archive/bones-and-wings-refactor.md` · `files/anatomy/module_utils/load_plugins.py`.
 
 ---
 
@@ -246,7 +246,7 @@ Per `docs/multi-agent-batch.md` doctrine. Worker MUST:
 1. Open with **relative paths only** (not `/Users/.../nOS/...`) — git
    worktree isolation is filesystem-isolated, not namespace-isolated.
 2. Pre-flight: `pwd` + `git worktree list` to verify isolation.
-3. Edit `docs/active-work.md` punch-list + `docs/bones-and-wings-refactor.md`
+3. Edit `docs/active-work.md` punch-list + `docs/archive/bones-and-wings-refactor.md`
    Appendix B as part of the lane commit.
 4. End with exact verification commands + results.
 

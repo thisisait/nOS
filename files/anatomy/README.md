@@ -5,7 +5,7 @@
 > Pulse source, custom Ansible modules, plugin-loader code, internal docs, and
 > the first draft service plugin. A3.5/A5/A6.5/A7-A10 remain the active PoC work.
 >
-> **Doctrine source:** `docs/bones-and-wings-refactor.md` §1.1 + §6.
+> **Doctrine source:** `docs/archive/bones-and-wings-refactor.md` §1.1 + §6.
 
 ## Current contents
 
@@ -78,7 +78,7 @@ A9 (notifications), A10 (audit trail).
 
 ## Pointers
 
-- Doctrine: `docs/bones-and-wings-refactor.md` §1.1
-- PoC plan: `docs/bones-and-wings-refactor.md` §8 (A6.5 = Grafana thin-role pilot)
-- Track Q (post-PoC autowiring debt consolidation): `docs/bones-and-wings-refactor.md` §13.1
-- Glossary: `docs/bones-and-wings-refactor.md` §14
+- Doctrine: `docs/archive/bones-and-wings-refactor.md` §1.1
+- PoC plan: `docs/archive/bones-and-wings-refactor.md` §8 (A6.5 = Grafana thin-role pilot)
+- Track Q (post-PoC autowiring debt consolidation): `docs/archive/bones-and-wings-refactor.md` §13.1
+- Glossary: `docs/archive/bones-and-wings-refactor.md` §14

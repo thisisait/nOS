@@ -323,14 +323,14 @@
 # files/anatomy/plugins/{prometheus,loki,tempo}-base/provisioning/. Same target
 # paths under {{ stacks_dir }}/observability/, single declarative manifest
 # entry per plugin instead of 4 imperative tasks here. Doctrine reference:
-# docs/bones-and-wings-refactor.md §1.1 + §13.1 Q1 batch.
+# docs/archive/bones-and-wings-refactor.md §1.1 + §13.1 Q1 batch.
 
 # Anatomy A6.5 (2026-05-04): Grafana datasources/dashboards provisioning
 # rendering moved to the plugin loader (grafana-base plugin). The loader's
 # pre_compose hook (further down in this file) now runs the equivalent
 # `render` actions reading from
 #   files/anatomy/plugins/grafana-base/provisioning/{datasources,dashboards}/all.yml.j2
-# Doctrine reference: docs/bones-and-wings-refactor.md §1.1 + Lane D in
+# Doctrine reference: docs/archive/bones-and-wings-refactor.md §1.1 + Lane D in
 # docs/archive/bones-and-wings-bulk-plan.md.
 
 - name: "[Core] Deploy blackbox-exporter configuration"

@@ -7,7 +7,7 @@ backend). Provisions a Grafana Tempo datasource, with service-map
 (Prometheus) + trace-to-logs (Loki) deep-linking enabled.
 
 This plugin owns no Tier-1 service of its own — it is pure wiring. Validates
-plugin shape #7 (composition) per `docs/bones-and-wings-refactor.md` §6.
+plugin shape #7 (composition) per `docs/archive/bones-and-wings-refactor.md` §6.
 
 ## What lives here
 
