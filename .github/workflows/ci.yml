@@ -404,9 +404,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # macos-14 left the matrix 2026-10-06 (operator): it spent 36 of 49 min
+        # on 19 small formulae (~2 min each, no bottles) and never reached the
+        # 60 min limit's end; macos-15 does the whole job in 15. Syntax-check
+        # keeps a macos-14 lane above. Roadmap: ci-macos14-lane.
         os:
           - macos-15
-          - macos-14
 
     steps:
       - name: Check out the codebase.
