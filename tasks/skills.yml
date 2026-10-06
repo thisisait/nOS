@@ -62,6 +62,39 @@
   when: (item.dir | dirname) is directory
   tags: ['skills', 'anatomy']
 
+# A renamed or deleted skill leaves its old link dangling on every shelf.
+# Prune only links that point into THIS library and no longer resolve — a link
+# nOS did not make (any other target) is never touched.
+# Gate: tests/anatomy/test_skills_prune_dangling_links.py.
+- name: "[Skills] Find the links on each present shelf"
+  ansible.builtin.find:
+    paths: "{{ nos_skill_consumers | map(attribute='dir') | select('directory') | list }}"
+    file_type: link
+  register: _skill_links
+  tags: ['skills', 'anatomy']
+
+- name: "[Skills] Read where each link points"
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+    follow: false
+  loop: "{{ _skill_links.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+  register: _skill_link_stats
+  tags: ['skills', 'anatomy']
+
+- name: "[Skills] Remove our links whose skill is gone"
+  ansible.builtin.file:
+    path: "{{ item.stat.path }}"
+    state: absent
+  loop: "{{ _skill_link_stats.results | default([]) }}"
+  loop_control:
+    label: "{{ item.stat.path }} -> {{ item.stat.lnk_target | default('') }}"
+  when:
+    - (item.stat.lnk_target | default('')).startswith(playbook_dir ~ '/files/anatomy/skills/')
+    - item.stat.lnk_target is not exists
+  tags: ['skills', 'anatomy']
+
 # `force: true` because the link must follow a rename of the library entry;
 # `state: link` on an existing correct link is a no-op, so this stays idempotent.
 - name: "[Skills] Link each skill onto the shelves that should hold it"
