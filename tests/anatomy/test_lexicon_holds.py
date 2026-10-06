@@ -16,7 +16,10 @@ What it checks, all from artifacts, never from prose about them:
       map tools/body-plan-gen.py projects; test_body_plan_is_a_projection.py);
   (d) `retired_phrases` do not appear in the files models are told to trust
       (CLAUDE.md, ssot/doctrine/, docs/doctrine/, skill SKILL.md, agent
-      system.md) — exact phrase, any case, across emphasis and line breaks.
+      system.md) — exact phrase, any case, across emphasis and line breaks;
+  (e) every word that is not legacy or a proper name has a surface (or a
+      written `no_surface_reason`), a `not` list and a `counter_example`
+      (ssot/doctrine/body-plan.md §7: a word without one is a slogan).
 Today's violations are pinned below and can only shrink (the ratchet in
 test_genome_contract.py): fixing one fails until its line is deleted here.
 
@@ -126,7 +129,9 @@ def _exists(surface: dict) -> bool:
     if kind == "graph_kind":
         return value in _graph_kinds()
     if kind == "manifest_field":
-        return any(value in s for s in _yaml("state/manifest.yml")["services"])
+        schema = json.loads((REPO / "state/schema/manifest.schema.json").read_text(encoding="utf-8"))
+        return (value in schema["definitions"]["service"]["properties"]
+                and any(value in s for s in _yaml("state/manifest.yml")["services"]))
     if kind == "launchd_label":
         rows = {s.get("launchd_label") for s in _yaml("state/manifest.yml")["services"]}
         return value in rows or value in _text_under(
@@ -192,6 +197,24 @@ def test_every_word_has_a_level_and_one_plain_meaning():
                 bad.append(f"phrase {ph!r} retired by both {seen[ph.lower()]} and {word}")
             seen[ph.lower()] = word
     assert not bad, "\n  ".join(["lexicon shape:", *bad])
+
+
+#: Levels whose words are names kept as spelled; they owe no counter-example.
+_NAMES_KEPT = ("legacy", "proper-name")
+
+
+def test_every_word_has_a_surface_a_not_list_and_a_counter_example():
+    bad = []
+    for word, w in _words().items():
+        if w.get("level") in _NAMES_KEPT:
+            continue
+        if not (w.get("names") or str(w.get("no_surface_reason") or "").strip()):
+            bad.append(f"{word}: no `names` and no `no_surface_reason`")
+        if not w.get("not"):
+            bad.append(f"{word}: no `not` list")
+        if not str(w.get("counter_example") or "").strip():
+            bad.append(f"{word}: no `counter_example`")
+    assert not bad, "\n  ".join(["a word without a counter-example is a slogan (body-plan.md §7):", *bad])
 
 
 # ── (a) named surfaces exist ──────────────────────────────────────────────
