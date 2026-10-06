@@ -177,9 +177,9 @@ def doors() -> list[str]:
     art, ruling = proj.load_artifact(), proj.load_ruling()
     public = json.loads(proj.public_json(art, ruling))
     withheld = sum(1 for v in ruling["nodes"].values() if not isinstance(v, dict))
-    out += ["", f"The public organ systems (the apex ruling publishes {public['counts']['organs']}; "
+    out += ["", f"The public organ systems (the apex ruling publishes {public['counts']['organ_systems']}; "
             f"{withheld} of {len(ruling['nodes'])} ruled nodes are withheld):", ""]
-    out += [f"- {o['title']} — {o['tells']} ({len(o['atoms'])} parts)" for o in public["organs"]]
+    out += [f"- {o['title']} — {o['tells']} ({len(o['atoms'])} parts)" for o in public["organ_systems"]]
     return out
 
 

@@ -76,8 +76,8 @@ def load_ruling(path: Path = RULING_PATH) -> dict:
     for axis in ("artifact", "node", "edge"):
         if axis not in ruling.get("fields", {}):
             raise GateError(f"ruling.yml lacks the `fields.{axis}` table")
-    if "nodes" not in ruling or "organs" not in ruling:
-        raise GateError("ruling.yml lacks `nodes` or `organs`")
+    if "nodes" not in ruling or "organ_systems" not in ruling:
+        raise GateError("ruling.yml lacks `nodes` or `organ_systems`")
     return ruling
 
 
@@ -154,7 +154,7 @@ def gate_nodes(artifact: dict, ruling: dict) -> None:
             "a frozen set may not silently shrink (ruling D4). Re-rule."
         )
 
-    organs = set(ruling["organs"].keys())
+    organs = set(ruling["organ_systems"].keys())
     for nid, verdict in ruled.items():
         if verdict == "withheld":
             continue
@@ -163,7 +163,7 @@ def gate_nodes(artifact: dict, ruling: dict) -> None:
         if artifact["nodes"][nid].get("kind") != "service":
             raise GateError(f"node `{nid}`: only `service` nodes may publish (field ruling on node.kind)")
         if verdict["publish"] not in organs:
-            raise GateError(f"node `{nid}` publishes into unknown organ `{verdict['publish']}`")
+            raise GateError(f"node `{nid}` publishes into unknown organ system `{verdict['publish']}`")
         speaks = verdict.get("speaks", "")
         if not speaks or not isinstance(speaks, str):
             raise GateError(f"node `{nid}`: a published atom must carry a `speaks:` phrase")
@@ -328,7 +328,7 @@ def leak_check(text: str, artifact: dict, ruling: dict) -> None:
 # the projection itself
 # ---------------------------------------------------------------------------
 
-_LIMB_ORDER = {"core": 0, "left": 1, "right": 2}
+_SIDE_ORDER = {"core": 0, "left": 1, "right": 2}
 
 
 def project(artifact: dict, ruling: dict) -> dict:
@@ -341,7 +341,7 @@ def project(artifact: dict, ruling: dict) -> dict:
             published[nid] = {"organ": verdict["publish"], "speaks": verdict["speaks"]}
 
     organs_out = []
-    for oid, meta in ruling["organs"].items():
+    for oid, meta in ruling["organ_systems"].items():
         atoms = sorted(
             row["speaks"] for row in published.values() if row["organ"] == oid
         )
@@ -349,11 +349,11 @@ def project(artifact: dict, ruling: dict) -> dict:
             "id": oid,
             "title": meta["title"],
             "tells": meta["tells"],
-            "limb": meta["limb"],
+            "side": meta["side"],
             "order": int(meta["order"]),
             "atoms": [{"speaks": s} for s in atoms],
         })
-    organs_out.sort(key=lambda o: (_LIMB_ORDER[o["limb"]], o["order"]))
+    organs_out.sort(key=lambda o: (_SIDE_ORDER[o["side"]], o["order"]))
 
     veins: dict[tuple[str, str], set[str]] = {}
     for edge in artifact["edges"]:
@@ -375,11 +375,11 @@ def project(artifact: dict, ruling: dict) -> dict:
         "schema": PUBLIC_SCHEMA,
         "version": artifact["version"],
         "counts": {
-            "organs": len(organs_out),
+            "organ_systems": len(organs_out),
             "atoms": sum(len(o["atoms"]) for o in organs_out),
             "veins": len(veins_out),
         },
-        "organs": organs_out,
+        "organ_systems": organs_out,
         "veins": veins_out,
     }
 

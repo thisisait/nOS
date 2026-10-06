@@ -37,7 +37,7 @@ def _rand(seed: str, *parts, lo: float = 0.0, hi: float = 1.0) -> float:
 
 
 # ---------------------------------------------------------------------------
-# geometry — a core column and two limbs, sweeping up and out: the engine
+# geometry — a core column and two wings, sweeping up and out: the engine
 # ---------------------------------------------------------------------------
 
 W, H = 800, 880
@@ -50,9 +50,9 @@ _RIGHT = [(W - x, y) for (x, y) in _LEFT]
 
 def _organ_pos(organ: dict) -> tuple[float, float]:
     idx = organ["order"] - 1
-    if organ["limb"] == "core":
+    if organ["side"] == "core":
         return (W / 2, _CORE_Y[idx])
-    if organ["limb"] == "left":
+    if organ["side"] == "left":
         return _LEFT[idx]
     return _RIGHT[idx]
 
@@ -125,10 +125,10 @@ def _vein(seed: str, doc_organs: dict, vein: dict) -> str:
 
 
 def _feathers(seed: str, organ: dict) -> str:
-    """Faint strokes sweeping outward from limb organs — the wings."""
-    if organ["limb"] == "core":
+    """Faint strokes sweeping outward from side organ systems — the wings."""
+    if organ["side"] == "core":
         return ""
-    sign = -1 if organ["limb"] == "left" else 1
+    sign = -1 if organ["side"] == "left" else 1
     cx, cy = _organ_pos(organ)
     out = []
     for i in range(3):
@@ -165,13 +165,13 @@ def _wing_silhouette(seed: str, sign: int) -> str:
 
 
 def engine_svg(doc: dict, seed: str) -> str:
-    organs = {o["id"]: o for o in doc["organs"]}
+    organs = {o["id"]: o for o in doc["organ_systems"]}
     veins = "\n    ".join(_vein(seed, organs, v) for v in doc["veins"])
-    feathers = "\n    ".join(f for f in (_feathers(seed, o) for o in doc["organs"]) if f)
-    bodies = "\n".join(_constellation(seed, o) for o in doc["organs"])
+    feathers = "\n    ".join(f for f in (_feathers(seed, o) for o in doc["organ_systems"]) if f)
+    bodies = "\n".join(_constellation(seed, o) for o in doc["organ_systems"])
     spine_top, spine_bot = _CORE_Y[0], _CORE_Y[-1]
     return f'''<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" role="group"
-     aria-label="The winged engine: {doc['counts']['organs']} organs, {doc['counts']['atoms']} parts, drawn as constellations.">
+     aria-label="The winged engine: {doc['counts']['organ_systems']} organs, {doc['counts']['atoms']} parts, drawn as constellations.">
   <defs>
     <radialGradient id="heart" cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="#2A63A8" stop-opacity="0.16"/>
@@ -305,7 +305,7 @@ def _card(organ: dict) -> str:
 def page_html(doc: dict, seed: str) -> str:
     return _PAGE.substitute(
         atoms=doc["counts"]["atoms"],
-        organs=doc["counts"]["organs"],
+        organs=doc["counts"]["organ_systems"],
         svg=engine_svg(doc, seed),
-        cards="\n".join(_card(o) for o in doc["organs"]),
+        cards="\n".join(_card(o) for o in doc["organ_systems"]),
     )

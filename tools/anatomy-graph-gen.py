@@ -54,7 +54,7 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
     skill:<name>            every SKILL.md in the repo (SKILL_SOURCES)
     reader:<stem>           tools/README.md §Readers lines
     article:<stem>          in-force doctrine realm of ssot/INDEX.yml
-    organ_system:<key>      `organs:` groups of files/anatomy/apex/ruling.yml
+    organ_system:<key>      `organ_systems:` groups of files/anatomy/apex/ruling.yml
     tissue:<name>           state/tissues/<name>.tissue.yml (tools/tissue-status.py)
 
 SERVICE→SERVICE DEPENDENCIES (docs/idea/13-relations.md R1)
@@ -624,7 +624,7 @@ def _describe(nid: str, n: dict) -> str:
         return f"Constitution article {n['source']}: {n.get('title')}"
     if kind == "organ_system":
         return (f"Organ system '{local}' — a public group of organs for one function, "
-                f"declared as an `organs:` group in {n['source']}")
+                f"declared as an `organ_systems:` group in {n['source']}")
     if kind == "tissue":
         return f"Tissue '{local}' — the transplantable pack of one specialization: {n.get('title')}"
     if kind == "doctrine":
@@ -1219,16 +1219,16 @@ def derive_task_type_tools(nodes: dict) -> list[dict]:
 
 
 def harvest_organ_systems(nodes: dict, edges: list) -> None:
-    """organ_system:<key> for each `organs:` group of the signed apex ruling,
+    """organ_system:<key> for each `organ_systems:` group of the signed apex ruling,
     and organ → organ_system `part_of` from each node's `publish:` row.
 
     No `title`/`tells` on the node: both are published text, and the ruling's
     leak check forbids withheld node values (title is WITHHELD) on the page.
     """
     ruling = yaml.safe_load(APEX_RULING.read_text(encoding="utf-8")) or {}
-    groups = ruling.get("organs") or {}
+    groups = ruling.get("organ_systems") or {}
     if not groups:
-        _die("apex ruling has no `organs:` table — the ruling moved")
+        _die("apex ruling has no `organ_systems:` table — the ruling moved")
     for key in groups:
         nodes[f"organ_system:{key}"] = {"kind": "organ_system",
                                         "source": str(APEX_RULING.relative_to(REPO))}

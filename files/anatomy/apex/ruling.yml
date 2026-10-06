@@ -21,7 +21,7 @@
 #                 count, its ordering, and its absence.
 #
 # HOW TO READ A NODE RULING
-#   publish: <organ>  — the node joins that organ as ONE ANONYMOUS ATOM.
+#   publish: <system> — the node joins that organ system as ONE ANONYMOUS ATOM.
 #                       What leaves: the organ it belongs to, and the
 #                       `speaks:` phrase. What never leaves: its name, its
 #                       hostname, its version, its schedule, its health.
@@ -245,25 +245,25 @@ forbidden_marks:
    docker, ansible, launchd]
 
 # -----------------------------------------------------------------------------
-# ORGANS — the public shapes. Thirteen constellations forming one winged
-# engine: a core column and two limbs. `tells:` is the sentence that
+# ORGAN SYSTEMS — the public shapes. Thirteen constellations forming one winged
+# engine: a core column and two wings; `side:` places each. `tells:` is the sentence that
 # unfolds on hover/tap. Everything here is authored for the public page;
 # none of it is derived from the artifact.
 # -----------------------------------------------------------------------------
-organs:
-  gatehouse: { title: "The Gatehouse", tells: "Access is decided in one place.",              limb: core,  order: 1 }
-  spine:     { title: "The Spine",     tells: "The estate governs and audits itself.",        limb: core,  order: 2 }
-  memory:    { title: "The Memory",    tells: "Everything remembered lives here, at home.",   limb: core,  order: 3 }
-  vault:     { title: "The Vault",     tells: "Secrets are kept, never scattered.",           limb: core,  order: 4 }
-  keel:      { title: "The Keel",      tells: "Copied nightly. Restore, proven.",             limb: core,  order: 5 }
-  archive:   { title: "The Archive",   tells: "Where knowledge is preserved and grown.",      limb: left,  order: 1 }
-  forge:     { title: "The Forge",     tells: "Software made, tested and landed at home.",    limb: left,  order: 2 }
-  backoffice: { title: "The Backoffice", tells: "CRM, books and a customer desk, at home.", limb: left,  order: 3 }
-  commons:   { title: "The Commons",   tells: "Daily work and daily life, shared.",           limb: left,  order: 4 }
-  senses:    { title: "The Senses",    tells: "The system watches itself.",                   limb: right, order: 1 }
-  wits:      { title: "The Wits",      tells: "Autonomous minds with bounded hands.",         limb: right, order: 2 }
-  reflexes:  { title: "The Reflexes",  tells: "Events become actions, on schedule.",          limb: right, order: 3 }
-  voice:     { title: "The Voice",     tells: "Mail, calls and signals, spoken from home.",   limb: right, order: 4 }
+organ_systems:
+  gatehouse: { title: "The Gatehouse", tells: "Access is decided in one place.",              side: core,  order: 1 }
+  spine:     { title: "The Spine",     tells: "The estate governs and audits itself.",        side: core,  order: 2 }
+  stores:    { title: "The Stores",    tells: "Everything remembered lives here, at home.",   side: core,  order: 3 }
+  vault:     { title: "The Vault",     tells: "Secrets are kept, never scattered.",           side: core,  order: 4 }
+  keel:      { title: "The Keel",      tells: "Copied nightly. Restore, proven.",             side: core,  order: 5 }
+  archive:   { title: "The Archive",   tells: "Where knowledge is preserved and grown.",      side: left,  order: 1 }
+  forge:     { title: "The Forge",     tells: "Software made, tested and landed at home.",    side: left,  order: 2 }
+  backoffice: { title: "The Backoffice", tells: "CRM, books and a customer desk, at home.", side: left,  order: 3 }
+  commons:   { title: "The Commons",   tells: "Daily work and daily life, shared.",           side: left,  order: 4 }
+  senses:    { title: "The Senses",    tells: "The system watches itself.",                   side: right, order: 1 }
+  wits:      { title: "The Wits",      tells: "Autonomous minds with bounded hands.",         side: right, order: 2 }
+  reflexes:  { title: "The Reflexes",  tells: "Events become actions, on schedule.",          side: right, order: 3 }
+  voice:     { title: "The Voice",     tells: "Mail, calls and signals, spoken from home.",   side: right, order: 4 }
 
 # -----------------------------------------------------------------------------
 # NODE RULINGS — all 277 nodes the artifact carries today. 62 atoms
@@ -286,9 +286,9 @@ nodes:
   "service:iiab_terminal": { publish: spine, speaks: "a guided terminal for guests" }
   "service:portainer":     { publish: spine, speaks: "the engine room's control panel" }
 
-  "service:mariadb":       { publish: memory, speaks: "structured records kept safe, transaction by transaction" }
-  "service:postgresql":    { publish: memory, speaks: "the deep store most organs write to" }
-  "service:redis":         { publish: memory, speaks: "short-term recall, answered in microseconds" }
+  "service:mariadb":       { publish: stores, speaks: "structured records kept safe, transaction by transaction" }
+  "service:postgresql":    { publish: stores, speaks: "the deep store most organs write to" }
+  "service:redis":         { publish: stores, speaks: "short-term recall, answered in microseconds" }
 
   "service:infisical":     { publish: vault, speaks: "machine secrets, sealed in one place" }
   "service:vaultwarden":   { publish: vault, speaks: "a personal vault for passwords and keys" }
@@ -297,7 +297,7 @@ nodes:
   "service:backrest":      { publish: keel, speaks: "snapshots that can prove they restore" }
   "service:rustfs":        { publish: keel, speaks: "the shelf where the nightly copies land" }
 
-  # --- the left limb --------------------------------------------------------
+  # --- the left side ---------------------------------------------------------
   "service:keap":          { publish: archive, speaks: "a curated map of what the house knows" }
   "service:cortex":        { publish: archive, speaks: "machinery that tends and grows the knowledge map" }
   "service:kiwix":         { publish: archive, speaks: "whole libraries, readable with no internet" }
@@ -329,7 +329,7 @@ nodes:
   "service:jellyfin":      { publish: commons, speaks: "the family's media, streamed at home" }
   "service:qgis_server":   { publish: commons, speaks: "maps drawn from the house's own data" }
 
-  # --- the right limb -------------------------------------------------------
+  # --- the right side --------------------------------------------------------
   "service:grafana":       { publish: senses, speaks: "vital signs, drawn where anyone can read them" }
   "service:prometheus":    { publish: senses, speaks: "numbers sampled from every organ, on a heartbeat" }
   "service:loki":          { publish: senses, speaks: "every log line, kept and searchable" }
@@ -880,9 +880,9 @@ nodes:
   "tasktype:security-remediation": withheld
   "tasktype:seed-edit": withheld
   "tasktype:use-case": withheld
-  # organ systems (2026-10-06): one anatomy node per `organs:` group ABOVE,
+  # organ systems (2026-10-06): one anatomy node per `organ_systems:` group ABOVE,
   # derived from this file. WITHHELD as nodes: the group already reaches the
-  # page through `organs:` (title + tells), and node.kind lets only `service`
+  # page through `organ_systems:` (title + tells), and node.kind lets only `service`
   # nodes publish — a second public form would be this file narrating itself.
   "organ_system:archive": withheld
   "organ_system:backoffice": withheld
@@ -890,7 +890,8 @@ nodes:
   "organ_system:forge": withheld
   "organ_system:gatehouse": withheld
   "organ_system:keel": withheld
-  "organ_system:memory": withheld
+  # 2026-10-06: was organ_system:memory; the group renamed to stores (lexicon step 5).
+  "organ_system:stores": withheld
   "organ_system:reflexes": withheld
   "organ_system:senses": withheld
   "organ_system:spine": withheld
