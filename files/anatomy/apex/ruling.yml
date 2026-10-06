@@ -869,3 +869,20 @@ nodes:
   "tasktype:security-remediation": withheld
   "tasktype:seed-edit": withheld
   "tasktype:use-case": withheld
+  # organ systems (2026-10-06): one anatomy node per `organs:` group ABOVE,
+  # derived from this file. WITHHELD as nodes: the group already reaches the
+  # page through `organs:` (title + tells), and node.kind lets only `service`
+  # nodes publish — a second public form would be this file narrating itself.
+  "organ_system:archive": withheld
+  "organ_system:backoffice": withheld
+  "organ_system:commons": withheld
+  "organ_system:forge": withheld
+  "organ_system:gatehouse": withheld
+  "organ_system:keel": withheld
+  "organ_system:memory": withheld
+  "organ_system:reflexes": withheld
+  "organ_system:senses": withheld
+  "organ_system:spine": withheld
+  "organ_system:vault": withheld
+  "organ_system:voice": withheld
+  "organ_system:wits": withheld

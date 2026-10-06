@@ -1,6 +1,6 @@
 # body-levels.yml — the anatomy graph's node KINDS placed on biology's ladder.
 #
-# A newly arrived model cannot read eighteen kinds; it already knows the levels
+# A newly arrived model cannot read nineteen kinds; it already knows the levels
 # of organisation. Seven levels, top of the ladder last:
 #   genome → cell → tissue → organ → organ system → organism → habitat
 # four cross-cutting systems: sense (reads), limb (acts), memory (learned) and
@@ -35,6 +35,9 @@ levels:
   faceapp:
     level: organ
     reason: an app with one job inside the nOS face web desktop
+  organ_system:
+    level: organ system
+    reason: a public group of organs for one function — the `organs:` groups of the signed apex ruling
   repo:
     level: habitat
     reason: a git surface the estate lives beside — hosted here or pushed to elsewhere

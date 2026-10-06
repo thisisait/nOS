@@ -8,7 +8,7 @@
     "cell": 16,
     "tissue": 0,
     "organ": 140,
-    "organ system": 0,
+    "organ system": 13,
     "organism": 0,
     "habitat": 4,
     "sense": 70,
@@ -16,7 +16,7 @@
     "memory": 40,
     "law": 36,
     "internal": 66,
-    "edges": 276
+    "edges": 339
   },
   "nodes": {
     "agent:conductor": {
@@ -610,6 +610,58 @@
     "judge:pytest-anatomy": {
       "level": "sense",
       "kind": "judge"
+    },
+    "organ_system:archive": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:backoffice": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:commons": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:forge": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:gatehouse": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:keel": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:memory": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:reflexes": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:senses": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:spine": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:vault": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:voice": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:wits": {
+      "level": "organ system",
+      "kind": "organ_system"
     },
     "pulse:alert-relay:relay-firing": {
       "level": "organ",
@@ -2665,6 +2717,36 @@
       "kind": "data"
     },
     {
+      "from": "service:alloy",
+      "to": "organ_system:senses",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:authentik",
+      "to": "organ_system:gatehouse",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:backrest",
+      "to": "organ_system:keel",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:backup",
+      "to": "organ_system:keel",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:bluesky_pds",
+      "to": "organ_system:gatehouse",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:bone",
+      "to": "organ_system:spine",
+      "kind": "part_of"
+    },
+    {
       "from": "service:bone",
       "to": "service:face",
       "kind": "data"
@@ -2675,9 +2757,34 @@
       "kind": "data"
     },
     {
+      "from": "service:bookstack",
+      "to": "organ_system:archive",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:calibre_web",
+      "to": "organ_system:archive",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:code_server",
+      "to": "organ_system:forge",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:cortex",
+      "to": "organ_system:archive",
+      "kind": "part_of"
+    },
+    {
       "from": "service:cortex",
       "to": "service:keap",
       "kind": "data"
+    },
+    {
+      "from": "service:erpnext",
+      "to": "organ_system:backoffice",
+      "kind": "part_of"
     },
     {
       "from": "service:face",
@@ -2685,14 +2792,84 @@
       "kind": "data"
     },
     {
+      "from": "service:face",
+      "to": "organ_system:spine",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:firefly",
+      "to": "organ_system:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:freescout",
+      "to": "organ_system:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:gitea",
+      "to": "organ_system:forge",
+      "kind": "part_of"
+    },
+    {
       "from": "service:gitea",
       "to": "service:woodpecker",
       "kind": "data"
     },
     {
+      "from": "service:gitlab",
+      "to": "organ_system:forge",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:grafana",
+      "to": "organ_system:senses",
+      "kind": "part_of"
+    },
+    {
       "from": "service:grafana",
       "to": "service:mcp_gateway",
       "kind": "data"
+    },
+    {
+      "from": "service:hedgedoc",
+      "to": "organ_system:archive",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:hermes",
+      "to": "organ_system:wits",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:homeassistant",
+      "to": "organ_system:reflexes",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:iiab_terminal",
+      "to": "organ_system:spine",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:infisical",
+      "to": "organ_system:vault",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:influxdb",
+      "to": "organ_system:senses",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:jellyfin",
+      "to": "organ_system:commons",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:keap",
+      "to": "organ_system:archive",
+      "kind": "part_of"
     },
     {
       "from": "service:keap",
@@ -2703,6 +2880,21 @@
       "from": "service:keap",
       "to": "service:wing",
       "kind": "data"
+    },
+    {
+      "from": "service:kiwix",
+      "to": "organ_system:archive",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:loki",
+      "to": "organ_system:senses",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:mailpit",
+      "to": "organ_system:voice",
+      "kind": "part_of"
     },
     {
       "from": "service:mailpit",
@@ -2718,6 +2910,11 @@
       "from": "service:mailpit",
       "to": "service:nextcloud",
       "kind": "data"
+    },
+    {
+      "from": "service:mariadb",
+      "to": "organ_system:memory",
+      "kind": "part_of"
     },
     {
       "from": "service:mariadb",
@@ -2755,9 +2952,94 @@
       "kind": "data"
     },
     {
+      "from": "service:mcp_gateway",
+      "to": "organ_system:wits",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:metabase",
+      "to": "organ_system:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:mikopbx",
+      "to": "organ_system:voice",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:miniflux",
+      "to": "organ_system:archive",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:n8n",
+      "to": "organ_system:reflexes",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:nextcloud",
+      "to": "organ_system:commons",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:nodered",
+      "to": "organ_system:reflexes",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:ntfy",
+      "to": "organ_system:voice",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:offline_maps",
+      "to": "organ_system:archive",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:onlyoffice",
+      "to": "organ_system:commons",
+      "kind": "part_of"
+    },
+    {
       "from": "service:onlyoffice",
       "to": "service:nextcloud",
       "kind": "data"
+    },
+    {
+      "from": "service:open_webui",
+      "to": "organ_system:wits",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:openclaw",
+      "to": "organ_system:wits",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:opencode",
+      "to": "organ_system:wits",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:outline",
+      "to": "organ_system:archive",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:paperclip",
+      "to": "organ_system:forge",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:portainer",
+      "to": "organ_system:spine",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:postgresql",
+      "to": "organ_system:memory",
+      "kind": "part_of"
     },
     {
       "from": "service:postgresql",
@@ -2811,8 +3093,28 @@
     },
     {
       "from": "service:prometheus",
+      "to": "organ_system:senses",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:prometheus",
       "to": "service:wing",
       "kind": "data"
+    },
+    {
+      "from": "service:pulse",
+      "to": "organ_system:reflexes",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:qgis_server",
+      "to": "organ_system:commons",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:redis",
+      "to": "organ_system:memory",
+      "kind": "part_of"
     },
     {
       "from": "service:redis",
@@ -2855,14 +3157,79 @@
       "kind": "data"
     },
     {
+      "from": "service:rustfs",
+      "to": "organ_system:keel",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:smtp_stalwart",
+      "to": "organ_system:voice",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:snappymail",
+      "to": "organ_system:voice",
+      "kind": "part_of"
+    },
+    {
       "from": "service:spacetimedb",
       "to": "service:nos_forum",
       "kind": "data"
     },
     {
+      "from": "service:superset",
+      "to": "organ_system:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:tailscale",
+      "to": "organ_system:gatehouse",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:tempo",
+      "to": "organ_system:senses",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:traefik",
+      "to": "organ_system:gatehouse",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:uptime_kuma",
+      "to": "organ_system:senses",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:vaultwarden",
+      "to": "organ_system:vault",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:watchtower",
+      "to": "organ_system:senses",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:wing",
+      "to": "organ_system:spine",
+      "kind": "part_of"
+    },
+    {
       "from": "service:wing",
       "to": "service:face",
       "kind": "data"
+    },
+    {
+      "from": "service:woodpecker",
+      "to": "organ_system:forge",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:wordpress",
+      "to": "organ_system:voice",
+      "kind": "part_of"
     },
     {
       "from": "skill:cortex-query",

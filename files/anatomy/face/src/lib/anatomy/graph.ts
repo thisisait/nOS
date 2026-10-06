@@ -42,7 +42,8 @@ export type NodeKind =
 	| 'tasktype'
 	| 'skill'
 	| 'reader'
-	| 'article';
+	| 'article'
+	| 'organ_system';
 
 export type EdgeKind =
 	| 'data'
@@ -72,6 +73,7 @@ export const NODE_KINDS: readonly NodeKind[] = [
 	'skill',
 	'reader',
 	'article',
+	'organ_system',
 	'authentik',
 	'service'
 ] as const;
@@ -96,6 +98,7 @@ export const KIND_GLYPH: Record<NodeKind, string> = {
 	skill: '✎',
 	reader: '◉',
 	article: '¶',
+	organ_system: '✶',
 	authentik: '🛡',
 	service: '▣'
 };

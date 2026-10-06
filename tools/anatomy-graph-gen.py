@@ -50,6 +50,7 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
     skill:<name>            every SKILL.md in the repo (SKILL_SOURCES)
     reader:<stem>           tools/README.md §Readers lines
     article:<stem>          in-force doctrine realm of ssot/INDEX.yml
+    organ_system:<key>      `organs:` groups of files/anatomy/apex/ruling.yml
 
 SERVICE→SERVICE DEPENDENCIES (docs/idea/13-relations.md R1)
 -----------------------------------------------------------
@@ -197,6 +198,7 @@ SKILL_SOURCES = ("files/anatomy/skills/*/SKILL.md", ".claude/skills/*/SKILL.md",
                  ".claude/plugins/*/skills/*/SKILL.md")
 TOOLS_README = REPO / "tools" / "README.md"
 SSOT_INDEX = REPO / "ssot" / "INDEX.yml"
+APEX_RULING = REPO / "files" / "anatomy" / "apex" / "ruling.yml"
 
 TAXONOMY_BUNDLE = REPO / "state" / "fable" / "taxonomy-bundle.json"
 
@@ -245,6 +247,7 @@ KIND_ANCHORS = {
     "skill": "02.02.09",          # procedures an agent loads
     "reader": "02.02.04",
     "article": "09",
+    "organ_system": "02.02.04",
 }
 FALLBACK_ANCHOR = "02.02.04"      # Software Engineering
 
@@ -584,6 +587,9 @@ def _describe(nid: str, n: dict) -> str:
         return f"Reader {n['source']}: {n.get('title')}"
     if kind == "article":
         return f"Constitution article {n['source']}: {n.get('title')}"
+    if kind == "organ_system":
+        return (f"Organ system '{local}' — a public group of organs for one function, "
+                f"declared as an `organs:` group in {n['source']}")
     if kind == "doctrine":
         head = n.get("heading") or "(unheaded table-row address)"
         return (f"Constitution paragraph {n.get('section')} of {n['source']}: "
@@ -1174,6 +1180,31 @@ def derive_task_type_tools(nodes: dict) -> list[dict]:
                             "via": f"tools: [{t}] in state/task-types.yml",
                             "derived": "task-type-tools"})
     return out
+
+
+def harvest_organ_systems(nodes: dict, edges: list) -> None:
+    """organ_system:<key> for each `organs:` group of the signed apex ruling,
+    and organ → organ_system `part_of` from each node's `publish:` row.
+
+    No `title`/`tells` on the node: both are published text, and the ruling's
+    leak check forbids withheld node values (title is WITHHELD) on the page.
+    """
+    ruling = yaml.safe_load(APEX_RULING.read_text(encoding="utf-8")) or {}
+    groups = ruling.get("organs") or {}
+    if not groups:
+        _die("apex ruling has no `organs:` table — the ruling moved")
+    for key in groups:
+        nodes[f"organ_system:{key}"] = {"kind": "organ_system",
+                                        "source": str(APEX_RULING.relative_to(REPO))}
+    for nid, verdict in sorted((ruling.get("nodes") or {}).items()):
+        group = verdict.get("publish") if isinstance(verdict, dict) else None
+        if not group:
+            continue
+        if f"organ_system:{group}" not in nodes or nid not in nodes:
+            _die(f"apex ruling: {nid} publishes into {group!r}, which does not resolve")
+        edges.append({"from": nid, "to": f"organ_system:{group}", "kind": "part_of",
+                      "via": f"`publish: {group}` in files/anatomy/apex/ruling.yml",
+                      "derived": "apex-ruling"})
 
 
 def derive_reader_runs(nodes: dict) -> list[dict]:
@@ -1883,6 +1914,7 @@ def build() -> dict:
     harvest_skills(nodes, shelf_edges)             # after services
     harvest_readers(nodes)
     harvest_articles(nodes)
+    harvest_organ_systems(nodes, shelf_edges)   # after services
 
     declared = compile_declared(raw, nodes)
     writes = compile_writes(raw_writes, nodes)
@@ -1942,7 +1974,7 @@ def build() -> dict:
     counts = {"nodes": len(nodes), "edges": len(all_edges)}
     for k in ("pulse", "judge", "gateset", "weakness", "daemon", "service", "resource",
               "repo", "tofu", "authentik", "table", "doctrine", "faceapp", "agent",
-              "tasktype", "skill", "reader", "article"):
+              "tasktype", "skill", "reader", "article", "organ_system"):
         counts[f"nodes_{k}"] = sum(1 for n in nodes.values() if n["kind"] == k)
     for k in EDGE_KINDS + ("mutex", "governed_by", "may_take", "allows", "references",
                            "part_of"):
