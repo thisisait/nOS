@@ -1,4 +1,4 @@
-"""Every `*_dir` var in default.config.yml is either in backup_dirs_to_dump or
+"""Every `*_dir` var in the default layers is either in backup_dirs_to_dump or
 declared in `backup_coverage` with a class and a reason.
 
 Measured 2026-09-28 with the same resolver the blank gate uses: 62 of 72 dir
@@ -42,7 +42,7 @@ def test_every_dir_var_is_backed_up_or_declared():
     assert len(dirs) > 40
     undeclared = sorted(k for k, v in dirs.items() if not blank_gate._covered(v, backed) and k not in cov)
     assert not undeclared, (
-        "these default.config.yml dirs are outside backup_dirs_to_dump and "
+        "these default-layer dirs are outside backup_dirs_to_dump and "
         "backup_coverage says nothing about them:\n  " + "\n  ".join(undeclared))
 
 
@@ -53,7 +53,7 @@ def test_every_declaration_is_well_formed_and_current():
     stale = sorted(k for k in cov if k in dirs and blank_gate._covered(dirs[k], backed))
     assert not stale, f"declared but backup_dirs_to_dump covers them — drop: {stale}"
     unknown = sorted(k for k in cov if k not in dirs)
-    assert not unknown, f"backup_coverage names dirs default.config.yml does not define: {unknown}"
+    assert not unknown, f"backup_coverage names dirs the default layers do not define: {unknown}"
 
 
 def test_the_gap_list_is_readable():

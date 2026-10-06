@@ -24,9 +24,9 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 import nos_identity as ni  # noqa: E402
 
-#: Files still opening default.config.yml as a file (measured 2026-10-04 after
-#: the machinery landed). Rerouting a reader through nos_identity lowers it.
-DIRECT_READERS_MAX = 311
+#: Files still opening default.config.yml as a file (measured 2026-10-06 after
+#: the host-software domain landed). Rerouting a reader through nos_identity lowers it.
+DIRECT_READERS_MAX = 300
 SUFFIXES = {".py", ".yml", ".yaml", ".sh", ".php", ".j2", ".js", ".ts", ".json", ""}
 SKIP_PARTS = {".git", "node_modules", "docs", ".ci-venv", "dist", "vendor", "build"}
 #: The only code allowed to open config.d/ by name: the helper and this gate.

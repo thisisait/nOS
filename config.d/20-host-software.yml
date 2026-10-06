@@ -1,0 +1,409 @@
+# ==============================================================================
+# config.d/20-host-software.yml — software on the habitat: who owns each host
+# package (software_owner), the Homebrew/pip/npm/bun/go/gem/composer/.NET lists
+# by class, the switches that install them, and the runtime pins they need.
+#
+# One of the default layers (config.d/*.yml in order, then default.config.yml;
+# the set is tools/nos_identity.default_layers and main.yml vars_files). Every
+# variable is declared in exactly one of them. config.yml still overrides.
+# ==============================================================================
+
+# ==============================================================================
+# INSTALL SWITCHES — software (the rest of the queue stays in default.config.yml)
+# ==============================================================================
+install_homebrew_packages: true   # Homebrew + the self/symbiont formulae (software_owner)
+install_cask_apps: false          # GUI applications via Homebrew Cask (habitat)
+install_personal_packages: false  # homebrew/pip/npm *personal* lists below (habitat)
+install_node: true                # Node.js + NVM (Cortex runs on it); node_global_packages are personal
+# Claude CLI as a NATIVE build outside NVM (tasks/claude-cli.yml). Separate
+# from install_node because that is the whole point: a node version migration
+# must not be able to reinstall the tool the operator is holding. Turning this
+# off leaves the CLI wherever NVM put it — which is the arrangement that broke
+# live sessions with EACCES several times a day (measured 2026-08-04).
+install_claude_cli: true
+claude_cli_channel: "stable"      # stable | latest | an exact version
+# When no claude resolves, DOWNLOAD and RUN the vendor's script (claude.ai/install.sh)
+# once; its auto-updater owns the CLI afterwards. Off = nOS installs nothing, reports ABSENT.
+install_claude_cli_vendor: false
+install_bun: false                # Bun JavaScript runtime / bundler (habitat)
+install_python: true              # Python + pyenv + pip packages
+install_golang: false             # Go language + gopls, golangci-lint, air (habitat)
+install_dotnet: false             # .NET SDK (C#, F#) + EF CLI (habitat)
+
+# ==============================================================================
+# SOFTWARE OWNERSHIP. self: nOS calls, pins and updates it. symbiont: installed
+# once when absent, then fed by its vendor, never touched. habitat: the machine
+# owner's, never installed by default; class `habitat` = the `*personal*` lists.
+# Gate: tests/anatomy/test_every_host_package_has_an_owner.py
+# ==============================================================================
+software_owner:
+  homebrew_installed_packages: self
+  homebrew_symbiont_packages: symbiont
+  homebrew_personal_packages: habitat
+  homebrew_cask_apps: habitat
+  pip_packages: self
+  pip_symbiont_packages: symbiont
+  pip_personal_packages: habitat
+  node_global_packages: habitat
+  npm_packages: habitat
+  bun_global_packages: habitat
+  go_packages: habitat
+  gem_packages: habitat
+  composer_packages: habitat
+  php_composer_packages: habitat
+  dotnet_global_tools: habitat
+  mas_installed_apps: habitat
+  install_personal_packages: habitat
+  install_cask_apps: habitat
+  install_mas_apps: habitat
+  install_bun: habitat
+  install_golang: habitat
+  install_dotnet: habitat
+  install_shell_extras: habitat
+  configure_terminal: habitat
+  configure_osx: habitat
+  configure_macos_defaults: habitat
+  configure_dotfiles: habitat
+  configure_dock: habitat
+  configure_sublime: habitat
+
+# ==============================================================================
+# HOMEBREW – general settings
+# ==============================================================================
+
+homebrew_prefix: "{{ '/opt/homebrew' if ansible_facts['machine'] == 'arm64' else '/usr/local' }}"
+
+# self — each one has a caller in tasks/roles/tools/organs (the gate finds it).
+homebrew_installed_packages:
+  - git
+  - gh                   # tools/red-status.py reads CI + Dependabot through it
+  - curl
+  - jq
+  - openssl
+  - sqlite               # sqlite3: wing.db restore + verify
+  - tmux                 # tools/nos-cc.sh control centre
+  - mkcert               # local SSL certificates (tasks/tls-certs.yml)
+  - ffmpeg               # ears: microphone capture + resample
+  - restic               # pre-wipe backup, Backrest
+  - gitleaks             # gitleaks plugin: nightly secret scan
+  # Infisical CLI — used by roles/pazny.infisical/tasks/seed.yml to run
+  # `infisical bootstrap` on a fresh CE instance, returning a machine
+  # identity token used for the rest of the org/project/secret seed flow.
+  # Tap: `infisical/get-cli` (added below).
+  - infisical
+
+# symbiont — installed when absent, then left to its vendor (nOS calls none directly).
+homebrew_symbiont_packages:
+  - nss                  # mkcert's Firefox trust-store backend
+  - ripgrep              # rg — on the AgentKit read-only bash allow-list
+  - pre-commit           # contributors: .pre-commit-config.yaml
+
+# habitat (personal) — the machine owner's; installed only with install_personal_packages.
+homebrew_personal_packages:
+  # Base tools
+  - autoconf
+  - bash-completion
+  - gpg
+  - wget
+  - yq
+  - htop
+  - tree
+  - pv
+  - watch
+  - readline
+  - libevent
+  - gettext
+  - ssh-copy-id
+  - zsh-history-substring-search
+  # Network / diagnostics
+  - nmap
+  - httpie
+  - iperf
+  - wrk
+  # Media
+  - gifsicle
+  - pngpaste
+  - doxygen
+  # Development tools
+  - git-lfs
+  - act                  # GitHub Actions locally
+  # ── Modern CLI replacements (install_shell_extras aliases them) ───────────
+  - fd
+  - bat
+  - eza
+  - fzf
+  - zoxide
+  - starship
+  - lazygit
+  - ncdu
+  - duf
+  - tldr
+  - hyperfine
+  # ── Media (Blender renders, FL Studio exports, video workflow) ────────────
+  - imagemagick
+  - yt-dlp
+  - exiftool
+  # ── Maintenance ───────────────────────────────────────────────────────────
+  - mac-cleanup-go       # TUI macOS cleaner (github.com/2ykwang/mac-cleanup-go)
+  # ── Security research tools (SBOM, SAST, CVE scan) ────────────────────────
+  - trivy
+  - grype
+  - syft
+  - nuclei
+  - semgrep
+  # ── Self-hosted CLI / agents ─────────────────────────────────────────────
+  - ntfy                 # CLI client; nOS itself posts to the server over HTTP
+  - opencode             # pazny.opencode installs its own when install_opencode
+  # ── Build tools (native extensions, source builds) ───────────────────────
+  - cmake
+  - ninja
+  - llvm
+  - ccache
+  - pkg-config
+  - libomp
+  - openblas
+  - protobuf
+  - meson
+
+homebrew_taps:
+  - dunglas/frankenphp
+  - shivammathur/php
+  - infisical/get-cli       # required by `- infisical` formula above
+
+homebrew_cask_appdir: /Applications
+homebrew_cask_accept_external_apps: true
+
+homebrew_cask_apps:
+  # ── Infrastructure ────────────────────────────────────────────────────────
+  # Docker Desktop: installed manually, managed by external-storage.yml
+  # (symlink /Applications/Docker.app → SSD). Do not manage via brew cask.
+
+  # ── Editors / IDE ─────────────────────────────────────────────────────────
+  - visual-studio-code   # VS Code – primary editor
+  - devin-desktop        # Windsurf rebrand (Homebrew token was windsurf)
+  - sublime-text         # Sublime Text – fast editor
+
+  # ── Terminals ─────────────────────────────────────────────────────────────
+  - ghostty              # Ghostty – GPU-accelerated terminal (new standard)
+  # - iterm2             # iTerm2 – backup terminal
+  # - warp               # Warp – AI terminal (alternative)
+
+  # ── Browsers ──────────────────────────────────────────────────────────────
+  - brave-browser        # Brave – privacy-first browser (recommended)
+  - google-chrome        # Chrome – for testing
+  - firefox              # Firefox – for testing
+  # - arc                # Arc – alternative browser
+
+  # ── Productivity / System ─────────────────────────────────────────────────
+  - raycast              # Raycast – Spotlight replacement (AI, snippets, scripts)
+
+  # ── Communication ─────────────────────────────────────────────────────────
+  #- slack                # Slack – team communication
+  - discord              # Discord – communities and voice chat
+
+  # ── File management / DB ──────────────────────────────────────────────────
+  - transmit             # Transmit – SFTP / S3 / cloud storage
+  - sequel-ace           # Sequel Ace – GUI for MySQL/MariaDB
+  - tableplus            # TablePlus – multi-DB GUI (Postgres, SQLite...)
+
+  # ── Development tools ─────────────────────────────────────────────────────
+  - insomnia             # Insomnia – REST / GraphQL client
+  # - postman            # Postman – alternative to Insomnia
+  - balenaetcher         # balenaEtcher – write OS image to SD/USB
+  - licecap              # LiCEcap – record GIF screenshots
+
+  # ── Security / VPN ────────────────────────────────────────────────────────
+  - lastpass             # LastPass – password manager
+  - openvpn-connect      # OpenVPN Connect – VPN client
+  # - 1password          # 1Password – alternative to LastPass
+  # - mullvadvpn         # Mullvad – privacy VPN
+
+  # ── Media / Entertainment ─────────────────────────────────────────────────
+  - vlc                  # VLC – universal media player
+  - spotify              # Spotify – music
+  - handbrake            # HandBrake – video format conversion
+  # - plex               # Plex – home media server
+
+  # ── Creative tools ────────────────────────────────────────────────────────
+  - blender              # Blender – 3D modeling, animation, rendering
+  # - fl-studio            # FL Studio – not in Homebrew, install manually from image-line.com
+  - gimp                 # GIMP – raster graphics (open-source PS)
+  - inkscape             # Inkscape – vector graphics (open-source AI)
+  # - davinci-resolve    # DaVinci Resolve – video editing
+
+  # ── Observability ─────────────────────────────────────────────────────────
+  - obsidian             # Obsidian – local .md knowledge base + kanban
+                         # ↳ Connects to ~/agents/log/ and Grafana
+
+  # ── Network / access ──────────────────────────────────────────────────────
+  # Tailscale is not here: tasks/tailscale.yml installs it under install_tailscale.
+
+  # ── Virtualization ────────────────────────────────────────────────────────
+  # - utm                # UTM – macOS/Linux VM on Apple Silicon (Ansible testing, OS images)
+
+  # ── System utilities ──────────────────────────────────────────────────────
+  # - dropbox              # Dropbox – cloud sync (uncomment in config.yml if desired)
+  #- jordanbaird-ice      # Ice – free Bartender (menu bar organization)
+  - hiddenbar            # Hidden Bar – hide menu bar icons (MAS alt.)
+  - stats                # Stats – CPU/GPU/RAM/network in the menu bar
+  - onyx                 # OnyX – macOS maintenance, cache cleanup, hidden prefs
+  # - cheatsheet         # DEPRECATED 2025-11-09 (upstream discontinued; download 404). Replacement: keyboard-cheat-sheet (App Store) or Raycast keymap.
+  - shottr               # Shottr – advanced screenshots + scrolling capture + OCR
+  - dockdoor             # DockDoor – Windows-like window previews in the Dock
+  - hyperkey             # Hyperkey – capslock as hyper modifier (⌃⌥⇧⌘)
+  - linearmouse          # LinearMouse – mouse/trackpad customization (scroll, cursor)
+  - syncthing-app        # Syncthing – P2P file sync between devices
+  - imazing              # iMazing v3 – iOS/iPadOS device management, backups
+  # - rectangle          # Rectangle – window manager
+  - alt-tab            # AltTab – Windows-like app switcher
+  # - bettertouchtool    # BetterTouchTool – trackpad/keyboard customization
+  # ── Optional productivity tools (default: opt-in in config.yml) ──────────
+  - antinote           # Antinote – quick notes, alternative to Apple Notes
+  # - cotypist           # Cotypist – AI text autocomplete (not in brew, manual)
+  # - boring-notch       # boring.notch – notch customization (GitHub, manual)
+  # - flux-markdown      # flux-markdown – markdown editor (GitHub, manual)
+  # - typewhisper        # TypeWhisper – dictation util (manual install)
+
+# Tokens Homebrew retired. They still appear in `brew outdated --cask` from a
+# leftover Caskroom dir and the sudo upgrade module would fail the whole play.
+homebrew_cask_upgrade_ignore:
+  - windsurf             # renamed to devin-desktop; leftover token has no .app
+
+# ==============================================================================
+# NODE.JS
+# ==============================================================================
+
+# EXACT, not lts/* or a major: either floats and leaves a new node tree per converge.
+# Cortex needs >= 22. A bump is a commit, never a converge.
+node_nvm_version: "24.20.0"
+nvm_git_version: "v0.40.8"   # Linux: nvm cloned from github.com/nvm-sh/nvm at this tag (macOS: Homebrew nvm)
+
+# ── npm supply-chain posture ────────────────────────────────────────────────
+# `--ignore-scripts` on every npm install this playbook performs.
+#
+# WHY, measured 2026-08-04 — the day the ChainDrop worm ran. It compromised 443
+# packages and 2 235 versions in under four hours starting from keyv@6.0.0
+# (153.7M weekly downloads), and its dropper executes as an INSTALL LIFECYCLE
+# SCRIPT: `setup.mjs` fetches the Bun runtime, then a 727KB payload harvests
+# credentials across 140+ paths — npm and GitHub tokens, AWS, Vault, k8s, SSH
+# keys, and specifically `.claude/credentials.json` — and plants persistence in
+# `.claude/settings.json` SessionStart hooks and `.vscode/tasks.json`.
+#
+# This estate was NOT hit: 6 315 package.json scanned, 0 of 2 235 malicious
+# versions present, because eslint pins keyv/flat-cache/file-entry-cache below
+# the poisoned majors. That is semver luck. `--ignore-scripts` is the same
+# outcome on purpose — a poisoned tarball that cannot run code at install time
+# has to wait to be imported, which is a far smaller and more observable window.
+#
+# HONEST LIMIT: a package that genuinely needs a postinstall (native builds via
+# node-gyp) installs incomplete and SILENTLY. That is why the install tasks
+# verify the CLI actually runs afterwards instead of trusting npm's exit code —
+# the reader writes the success marker, not the code that attempted the work.
+npm_ignore_scripts: true
+
+# EXACT PINS, not bare names. A bare name resolves to whatever was published
+# minutes ago, which is precisely the window ChainDrop lived in; StepSecurity's
+# own recommendation is a minimum release age of 3-7 days. Pinning is how you
+# get that for free, and it matches the operator's standing rule that a version
+# move is a proposal an agent makes, never something a converge does blindly.
+# Versions below are what this host ran on 2026-08-04, all pre-worm-clean.
+node_global_packages:
+  - yarn@1.22.22
+  - pnpm@11.20.0
+  - typescript@7.0.2
+  - ts-node@10.9.2
+  - tsx@4.23.5
+  - nodemon@3.1.14
+  - pm2@7.0.3
+  - eslint@10.8.0
+  - prettier@3.9.6
+  - "@anthropic-ai/sdk@0.115.0"   # Claude API SDK
+# `@anthropic-ai/claude-code` USED TO BE HERE and its removal is the other half
+# of the 2026-08-04 EACCES fix. tasks/claude-cli.yml installs the CLI as a
+# NATIVE build outside NVM precisely so a node-version migration cannot
+# reinstall the tool the operator is holding — but leaving it in this list
+# defeated that entirely: every converge would put a fresh copy back into
+# whatever node `nvm use default` resolved to, which is how five installs and
+# five independent auto-updaters accumulated in the first place.
+#
+# It was also the only unpinned entry left, i.e. the one package here that
+# resolved to whatever had been published minutes earlier — on the exact day a
+# worm compromised 443 packages in four hours. Both reasons point the same way.
+
+npm_packages: []
+# - name: webpack
+#   state: present
+#   version: "^5.0"
+
+# ==============================================================================
+# BUN
+# ==============================================================================
+
+bun_global_packages: []
+# - name: "@hono/hono"
+#   state: present
+
+# ==============================================================================
+# PYTHON
+# ==============================================================================
+
+python_version: "3.13"   # pyenv install target
+
+# self: Bone runs ansible-playbook and the loop's pytest judge; a Pulse job imports numpy.
+pip_packages:
+  - name: ansible
+  - name: pytest
+  - name: numpy
+
+# symbiont: the tests the pytest judge runs import these (installed when absent).
+pip_symbiont_packages:
+  - name: httpx
+  - name: fastapi
+
+# habitat (personal): installed only with install_personal_packages.
+pip_personal_packages:
+  # ── Dev base ────────────────────────────────────────────────────────────
+  - name: virtualenv
+  - name: black
+  - name: ruff
+  - name: mypy
+  - name: uvicorn
+  - name: rich
+  - name: anthropic     # Claude API SDK
+  # ── Data Science / AI ────────────────────────────────────────────────────
+  - name: jupyterlab    # Jupyter notebooks (Ollama experiments, data analysis)
+  - name: pandas
+  - name: matplotlib
+  - name: transformers  # HuggingFace models (local inference alongside Ollama)
+  - name: langchain     # LLM orchestration + chains
+  - name: langchain-community
+  - name: openai        # OpenAI SDK (compatible with Ollama API)
+  # ── Observability client ─────────────────────────────────────────────────
+  - name: opentelemetry-sdk
+  - name: opentelemetry-exporter-otlp  # OTLP traces from Python projects → Tempo
+
+# ==============================================================================
+# GO
+# ==============================================================================
+
+go_packages:
+  - "golang.org/x/tools/gopls@latest"
+  - "github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
+  - "github.com/go-task/task/v3/cmd/task@latest"
+  - "github.com/air-verse/air@latest"
+
+gem_packages: []
+# - name: bundler
+#   state: present
+
+composer_packages: []
+
+# ==============================================================================
+# .NET / C#
+# ==============================================================================
+
+dotnet_sdk_cask: "dotnet-sdk"   # Homebrew Cask name
+
+dotnet_global_tools:
+  - name: dotnet-ef             # Entity Framework CLI
+  - name: dotnet-script         # C# scripting

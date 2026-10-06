@@ -13,14 +13,15 @@ in-container. The stop task stays for hosts provisioned before this.
 from __future__ import annotations
 
 import pathlib
-
-import yaml
+import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 
 def test_homebrew_does_not_install_redis():
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text(encoding="utf-8"))
+    cfg = ni.default_config()
     pkgs = cfg.get("homebrew_installed_packages") or []
     assert "redis" not in pkgs, (
         "homebrew_installed_packages carries `redis` again. The same converge "

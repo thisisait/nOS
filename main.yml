@@ -19,6 +19,7 @@
   # test_config_d_is_one_layer_set). A variable lives in exactly one of them.
   vars_files:
     - config.d/10-host-desktop.yml
+    - config.d/20-host-software.yml
     - default.config.yml
     - default.credentials.yml
 
@@ -271,6 +272,7 @@
         path: "{{ item }}"
       loop:
         - "{{ playbook_dir }}/config.d/10-host-desktop.yml"
+        - "{{ playbook_dir }}/config.d/20-host-software.yml"
         - "{{ playbook_dir }}/default.config.yml"
         - "{{ playbook_dir }}/default.credentials.yml"
         - "{{ playbook_dir }}/config.yml"

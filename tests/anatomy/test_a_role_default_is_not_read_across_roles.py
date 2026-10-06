@@ -34,7 +34,7 @@ silently on every host where the two disagree. `false` against
 it failed was open.
 
 THE FIX this gate protects: `postgresql_ssl_enabled` now lives in
-`default.config.yml`, at play scope, where every consumer can see it. The role
+the default layers, at play scope, where every consumer can see it. The role
 default stays as a fallback so the role remains usable alone.
 
 WHAT THIS GATE CANNOT DO. It cannot tell whether a value that IS in scope is
@@ -47,12 +47,15 @@ from __future__ import annotations
 
 import pathlib
 import re
+import sys
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 
-PLAY_SCOPE_FILES = ("default.config.yml", "default.credentials.yml")
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
+PLAY_SCOPE_FILES = (*ni.default_layers(), REPO / "default.credentials.yml")
 
 #: A declaration Ansible has to WORK OUT — from facts, from another var, from a
 #: filter. A constant standing in for one of these is the failure mode.
@@ -82,7 +85,7 @@ EXPRESSION = re.compile(r"\{\{(.*?)\}\}|\{%(.*?)%\}", re.S)
 def _play_scope() -> set[str]:
     names: set[str] = set()
     for name in PLAY_SCOPE_FILES:
-        data = yaml.safe_load((REPO / name).read_text(encoding="utf-8")) or {}
+        data = yaml.safe_load(name.read_text(encoding="utf-8")) or {}
         names |= set(data)
     return names
 
@@ -132,7 +135,7 @@ def test_no_constant_fallback_stands_in_for_a_computed_default():
         + "\n  ".join(offenders)
         + "\n(this is how `sslmode=require` was pinned in June and rendered "
           "`prefer` on every host until 2026-08-23 — move the declaration to "
-          "default.config.yml so every consumer resolves the same value)")
+          "the default layers so every consumer resolves the same value)")
 
 
 def test_the_variable_this_gate_was_written_for_is_at_play_scope():
@@ -141,6 +144,6 @@ def test_the_variable_this_gate_was_written_for_is_at_play_scope():
     permitting cleartext and the gate above would not fire — the name would
     simply be unknown again, which is the state that caused this."""
     assert "postgresql_ssl_enabled" in _play_scope(), (
-        "postgresql_ssl_enabled is no longer declared in default.config.yml; "
+        "postgresql_ssl_enabled is no longer declared in the default layers; "
         "authentik, hedgedoc, infisical and paperclip all read it to decide "
         "their sslmode and none of them can see a pazny.postgresql role default")

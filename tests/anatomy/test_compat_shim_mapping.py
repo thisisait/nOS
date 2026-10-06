@@ -12,19 +12,22 @@ A typoed set_fact key (remove:->removed:) prints remove=none and goes red.
 The parse half asserts the set_fact PAYLOAD (keys AND values), not just task
 names / when-shape."""
 import subprocess
+import sys
 import textwrap
 from pathlib import Path
 
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 HARNESS = textwrap.dedent("""\
     - hosts: localhost
       connection: local
       gather_facts: true
       vars_files:
-        - {repo}/default.config.yml
+{layers}
       tasks:
         - import_tasks: {repo}/tasks/run-mode.yml
         # blank via | bool: an explicit -e blank=<x> extra-var OUTRANKS the derived
@@ -37,7 +40,7 @@ HARNESS = textwrap.dedent("""\
 
 def _play(tmp_path, extra_vars):
     pb = tmp_path / "harness.yml"
-    pb.write_text(HARNESS.format(repo=REPO))
+    pb.write_text(HARNESS.format(repo=REPO, layers="\n".join(f"        - {p}" for p in ni.default_layers())))
     cmd = ["ansible-playbook", str(pb), "-i", "localhost,"]
     for k, v in extra_vars.items():
         cmd += ["-e", f"{k}={v}"]

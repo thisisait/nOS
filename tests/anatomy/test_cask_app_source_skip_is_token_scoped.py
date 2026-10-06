@@ -8,10 +8,12 @@ that line — not just ``windsurf`` after the Devin rebrand.
 from __future__ import annotations
 
 import pathlib
+import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TASK = REPO / "roles/pazny.mac.homebrew/tasks/main.yml"
-CFG = REPO / "default.config.yml"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 
 def test_app_source_exemption_is_keyed_to_upgrade_ignore():
@@ -30,7 +32,7 @@ def test_app_source_exemption_is_keyed_to_upgrade_ignore():
 
 
 def test_windsurf_is_the_retired_token():
-    cfg = CFG.read_text(encoding="utf-8")
+    cfg = ni.default_config_text()
     assert "homebrew_cask_upgrade_ignore:" in cfg
     assert "windsurf" in cfg
     assert "devin-desktop" in cfg

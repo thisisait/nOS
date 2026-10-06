@@ -21,13 +21,14 @@ This gate:
   4. Verifies external-paths.yml is included BEFORE `_blank_dirs` is built, so
      `external_storage_root` overrides are visible to the wipe list.
 
-The gate auto-fails when a new bind-mount service is added to default.config.yml
+The gate auto-fails when a new bind-mount service is added to the default layers
 with an `install_*` flag + data dir but is not wired into `_blank_dirs`.
 """
 
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 import yaml
@@ -36,11 +37,13 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "tools"))
+import nos_identity as ni  # noqa: E402
 REMOVAL_SET_PATH = REPO_ROOT / "tasks" / "removal-set.yml"
 BLANK_RESET_PATH = REPO_ROOT / "tasks" / "blank-reset.yml"
 
 # The contract is no longer a hand list here. A set a test can be edited to
-# satisfy is not a gate; the required set is DERIVED from default.config.yml
+# satisfy is not a gate; the required set is DERIVED from the default layers
 # (every `*_dir` var) and reconciled against what removal-set.yml removes at
 # some level or declares kept (`_removal_keep`, with a reason each).
 
@@ -109,7 +112,7 @@ def _levels(env, ctx):
 
 def test_every_dir_var_is_removed_by_blank_or_declared_kept():
     """The reconciliation, at the DATA level — the one a blank runs. Rendered,
-    not grepped: every `*_dir` var in default.config.yml resolves to a path,
+    not grepped: every `*_dir` var in the default layers resolves to a path,
     and that path is under something remove=data deletes, or it is in
     `_removal_keep` with the level that does remove it and a reason.
 
@@ -126,7 +129,7 @@ def test_every_dir_var_is_removed_by_blank_or_declared_kept():
     data, all_, keep = _levels(env, ctx)
     orphans = {k: v for k, v in dirs.items() if not _covered(v, data) and k not in keep}
     assert not orphans, (
-        "these default.config.yml dirs survive remove=data and are not declared "
+        "these default-layer dirs survive remove=data and are not declared "
         "in tasks/removal-set.yml `_removal_keep`:\n  "
         + "\n  ".join(f"{k} = {v}" for k, v in sorted(orphans.items()))
     )
@@ -138,10 +141,10 @@ def test_every_dir_var_is_removed_by_blank_or_declared_kept():
 
 
 def test_the_removal_set_names_no_dir_the_config_does_not_have():
-    """A clause referencing a var default.config.yml no longer defines wipes
+    """A clause referencing a var the default layers no longer define wipes
     the fallback literal, i.e. usually nothing (calibreweb did exactly that)."""
     body = _extract_blank_dirs_expr()
-    cfg = (REPO_ROOT / "default.config.yml").read_text()
+    cfg = ni.default_config_text()
     role_defaults = "".join(p.read_text() for p in (REPO_ROOT / "roles").glob("*/defaults/main.yml"))
     referenced = set(re.findall(r"\b([a-z0-9_]+_dir)\b", body))
     unknown = sorted(v for v in referenced

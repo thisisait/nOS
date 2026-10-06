@@ -2,7 +2,7 @@
 artifacts at build time, and whose JS is RUN here under node — a page that
 lists services from prose would drift the day a flag is added.
 
-  1. the data derives every install_* flag default.config.yml declares, every
+  1. the data derives every install_* flag the default layers declare, every
      profile that carries an `axis:` header, and every step field is a variable
      the config declares; groups come from the manifest's closed category enum;
   2. the merge (default → service-set → use-case → policy → environment →
@@ -24,13 +24,16 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
-CONFIG_TEXT = (REPO / "default.config.yml").read_text()
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
+CONFIG_TEXT = ni.default_config_text()
 _spec = importlib.util.spec_from_file_location("pb", REPO / "tools/profile-builder-build.py")
 pb = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(pb)
@@ -52,7 +55,7 @@ def test_the_data_is_the_artifacts_not_a_list():
     for step in data["steps"]:
         for f in step["fields"]:
             assert f["key"] in (every_var | secrets if f.get("secret") else every_var), \
-                f"step field {f['key']} is not a variable default.config.yml (a secret: default.credentials.yml) declares"
+                f"step field {f['key']} is not a variable the default layers (a secret: default.credentials.yml) declares"
             assert f["hint"], f"{f['key']} has no plain-language line"
             assert f.get("when") in (None, *every_var), f"{f['key']}: `when` names no declared variable"
     assert [s["id"] for s in data["steps"]] == ["machine", "domain", "owner", "services", "backup", "accounts", "review"]
@@ -75,7 +78,7 @@ def test_groups_come_from_the_manifest_category_enum():
 
 
 def test_one_timezone_every_service_derives_from_it():
-    cfg = yaml.safe_load(CONFIG_TEXT)
+    cfg = ni.default_config()
     assert cfg["nos_timezone"] == "Europe/Prague"
     tz_keys = [k for k in cfg if re.search(r"_(timezone|tz)$", k) and k != "nos_timezone"]
     assert len(tz_keys) >= 7 and all(cfg[k] == "{{ nos_timezone }}" for k in tz_keys), tz_keys

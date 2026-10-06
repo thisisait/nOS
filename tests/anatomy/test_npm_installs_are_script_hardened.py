@@ -34,12 +34,14 @@ declared as bare names that resolve to whatever was published minutes ago.
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-CONFIG = REPO / "default.config.yml"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 SEARCH_DIRS = ("tasks", "roles", "tools")
 SUFFIXES = {".yml", ".yaml", ".sh", ".j2"}
 
@@ -116,9 +118,9 @@ def test_every_npm_install_is_script_hardened():
 
 
 def test_the_hardening_switch_defaults_to_on():
-    text = CONFIG.read_text(encoding="utf-8")
+    text = ni.default_config_text()
     m = re.search(r"^npm_ignore_scripts:\s*(\S+)", text, re.MULTILINE)
-    assert m, "npm_ignore_scripts is not declared in default.config.yml"
+    assert m, "npm_ignore_scripts is not declared in the default layers"
     assert m.group(1).lower() in {"true", "yes"}, (
         f"npm_ignore_scripts defaults to {m.group(1)!r}. A default-off safety "
         f"control is a control nobody has."
@@ -134,9 +136,9 @@ def test_global_npm_packages_are_pinned():
     standing rule that a version move is a proposal, never a side effect of a
     converge.
     """
-    text = CONFIG.read_text(encoding="utf-8")
+    text = ni.default_config_text()
     m = re.search(r"^node_global_packages:\n((?:\s+-\s+.*\n)+)", text, re.MULTILINE)
-    assert m, "node_global_packages is no longer a list in default.config.yml"
+    assert m, "node_global_packages is no longer a list in the default layers"
 
     unpinned = []
     for raw in m.group(1).splitlines():

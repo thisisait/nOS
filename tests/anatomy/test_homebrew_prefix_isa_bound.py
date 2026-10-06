@@ -1,6 +1,6 @@
 """Anatomy gate — homebrew_prefix is ISA-bound (arm64), not die-variant-bound.
 
-WHY: `homebrew_prefix` in default.config.yml selects the Homebrew root from the
+WHY: `homebrew_prefix` in the default layers selects the Homebrew root from the
 instruction-set architecture: `ansible_facts['machine'] == 'arm64'` →
 `/opt/homebrew`, else `/usr/local`. A reviewer flagged this as "hardcoded to
 arm64 with no future Apple Silicon variant detection (M4 Pro/Max, M5+)". That
@@ -17,19 +17,21 @@ from __future__ import annotations
 
 import pathlib
 import re
+import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-CONFIG = REPO / "default.config.yml"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 # The note moved out of CLAUDE.md 2026-10-02 into the platform doc.
 CLAUDE = REPO / "docs" / "cross-platform.md"
 
 
 def _homebrew_prefix_value() -> str:
-    for line in CONFIG.read_text().splitlines():
+    for line in ni.default_config_text().splitlines():
         m = re.match(r"^homebrew_prefix:\s*(.+?)\s*$", line)
         if m:
             return m.group(1).strip().strip('"').strip("'")
-    raise AssertionError("homebrew_prefix not defined in default.config.yml")
+    raise AssertionError("homebrew_prefix not defined in the default layers")
 
 
 def test_homebrew_prefix_branches_on_machine_arm64():

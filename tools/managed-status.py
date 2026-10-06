@@ -7,10 +7,10 @@ backup does with it — ONE table, derived from the artifacts, never typed twice
     tools/managed-status.py --json     # {"rows": [...], "counts": {...}}
 
 Sources (all rendered, nothing grepped):
-  default.config.yml      every `*_dir` var, resolved with every install_* on
+  default layers          every `*_dir` var, resolved with every install_* on
   tasks/removal-set.yml   `_blank_dirs` (level data), `_uninstall_source`
                           (level all), `_removal_keep` (declared, with why)
-  default.config.yml      `backup_dirs_to_dump` + `backup_coverage`
+  default layers          `backup_dirs_to_dump` + `backup_coverage`
 The two gates that keep the declarations honest import this module:
 tests/anatomy/test_blank_reset_data_dirs.py and test_backup_coverage_is_declared.py.
 A reader: exit 0 whatever it finds.
@@ -26,7 +26,8 @@ import jinja2
 import yaml
 
 REPO = Path(__file__).resolve().parents[1]
-CONFIG = REPO / "default.config.yml"
+sys.path.insert(0, str(REPO / "tools"))
+from nos_identity import default_config, default_config_text  # noqa: E402
 REMOVAL = REPO / "tasks/removal-set.yml"
 DIR_VAR = re.compile(r"^([a-z0-9_]+_(?:data_dir|config_dir|cache_dir|certs_dir|books_dir|dir)):\s*(.*)$", re.M)
 FAKE_HOME = "/H"
@@ -40,8 +41,8 @@ def jinja() -> jinja2.Environment:
 
 
 def config_ctx(env) -> dict:
-    """default.config.yml with every install_* ON and the Jinja resolved."""
-    raw = yaml.safe_load(CONFIG.read_text()) or {}
+    """The default layers with every install_* ON and the Jinja resolved."""
+    raw = default_config()
     ctx = {k: v for k, v in raw.items() if isinstance(v, (str, int, bool))}
     ctx.update({k: True for k in ctx if k.startswith("install_")})
     ctx["ansible_facts"] = {"env": {"HOME": FAKE_HOME}, "machine": "arm64"}
@@ -57,7 +58,7 @@ def config_ctx(env) -> dict:
 
 def dir_vars(ctx) -> dict[str, str]:
     out = {}
-    for name, _ in DIR_VAR.findall(CONFIG.read_text()):
+    for name, _ in DIR_VAR.findall(default_config_text()):
         v = ctx.get(name)
         if isinstance(v, str) and v.startswith("/") and "{{" not in v:
             out[name] = v.rstrip("/")
@@ -79,7 +80,7 @@ def removal_levels(env, ctx):
 
 
 def backup_sets(env, ctx):
-    cfg = yaml.safe_load(CONFIG.read_text())
+    cfg = default_config()
     backed = {env.from_string(d["path"]).render(ctx).rstrip("/") for d in cfg["backup_dirs_to_dump"]}
     return backed, cfg.get("backup_coverage") or {}
 
