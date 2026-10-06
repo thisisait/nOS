@@ -163,6 +163,7 @@ gdpr:
   retention_days: 3650        # accounting-document horizon (matches the ISDOC importer)
   processors: []              # local only: ollama on loopback + KEAP on loopback
   eu_residency: true
+  transfers_outside_eu: false
 
 e2e:
   enabled: "{{ (install_wing | default(false)) }}"

@@ -112,6 +112,7 @@ gdpr:
   retention_days: 1095   # 3 years — typical helpdesk retention horizon
   processors: []
   eu_residency: true
+  transfers_outside_eu: false
 
 ui-extension:
   hub_card:
