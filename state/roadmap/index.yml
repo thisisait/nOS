@@ -54,6 +54,12 @@
 - slug: agents-nos-skill
   parent: agents
   track: agents
+- slug: apex-organ-systems
+  parent: body-organ
+  track: platform
+- slug: apgar
+  parent: body-cell
+  track: agents
 - slug: audit-anchor-earned
   parent: ''
   track: security
@@ -86,6 +92,27 @@
   track: security
 - slug: blank-keeps-nextcloud-user-files
   parent: managed-resources-manifest
+  track: platform
+- slug: body-cell
+  parent: body-plan
+  track: platform
+- slug: body-genome
+  parent: body-plan
+  track: platform
+- slug: body-habitat
+  parent: body-plan
+  track: platform
+- slug: body-organ
+  parent: body-plan
+  track: platform
+- slug: body-organism
+  parent: body-plan
+  track: platform
+- slug: body-plan
+  parent: rel-017
+  track: platform
+- slug: body-tissue
+  parent: body-plan
   track: platform
 - slug: brew-deps-deterministic-pin
   parent: ''
@@ -123,6 +150,21 @@
 - slug: cc-tui-variants
   parent: cc-app
   track: face
+- slug: cell-two-types
+  parent: body-cell
+  track: platform
+- slug: ci-macos-idempotence-step
+  parent: body-habitat
+  track: release
+- slug: ci-macos14-lane
+  parent: body-habitat
+  track: release
+- slug: ci-ubuntu-latest-moves-to-26
+  parent: body-habitat
+  track: release
+- slug: claude-cli-respects-existing
+  parent: self-symbiont-host
+  track: platform
 - slug: client-data-training-opt-in
   parent: consulting-firm-deployment
   track: security
@@ -243,6 +285,9 @@
 - slug: csv-party-importer-leaks-id
   parent: digest-review-remediation
   track: security
+- slug: daemon-manifest-drift
+  parent: body-organ
+  track: platform
 - slug: declare-playbook-started-daemons
   parent: workload-allowlist
   track: platform
@@ -369,6 +414,9 @@
 - slug: digest-teardown
   parent: digest
   track: digest
+- slug: docker-runtime-choice
+  parent: self-symbiont-host
+  track: platform
 - slug: docker-sock-behind-proxy
   parent: workload-allowlist
   track: security
@@ -582,6 +630,9 @@
 - slug: fs-user-home-bridge
   parent: ''
   track: filesystem
+- slug: gates-reach-live-or-break-in-worktree
+  parent: review-v015-followups
+  track: security
 - slug: gdpr-6f-gate
   parent: digest
   track: digest
@@ -597,9 +648,18 @@
 - slug: gdpr-tier2-apps-export-erasure
   parent: consulting-firm-deployment
   track: security
+- slug: genes
+  parent: body-genome
+  track: platform
 - slug: genome-codegen-targets
   parent: v0-10-genome
   track: cortex
+- slug: genome-facets
+  parent: body-genome
+  track: platform
+- slug: genome-ownership-facets
+  parent: rel-017
+  track: platform
 - slug: geo-vector-tiles
   parent: gis-property
   track: platform
@@ -615,14 +675,32 @@
 - slug: ha-ip-ban-bans-the-proxy
   parent: ''
   track: security
+- slug: habitat-docker-runtime
+  parent: self-symbiont-host
+  track: platform
 - slug: handheld-dtt-sso-client
   parent: device-organ
   track: face
 - slug: harden-verify-rung-empty-fields
   parent: consulting-firm-deployment
   track: digest
+- slug: home-benchmark
+  parent: rel-017
+  track: agents
+- slug: home-door
+  parent: rel-017
+  track: platform
+- slug: home-graph
+  parent: rel-017
+  track: platform
+- slug: homebrew-recurse-changed
+  parent: body-habitat
+  track: platform
 - slug: host-disk-pressure
   parent: ''
+  track: platform
+- slug: host-software-ownership
+  parent: rel-017
   track: platform
 - slug: idea-surface-absorb
   parent: ''
@@ -651,6 +729,9 @@
 - slug: importer-spine
   parent: digest
   track: digest
+- slug: imprint
+  parent: body-cell
+  track: platform
 - slug: invoice-identity-cross-source
   parent: ''
   track: platform
@@ -696,6 +777,9 @@
 - slug: keap-lint-disabled-refs
   parent: ''
   track: platform
+- slug: keap-recall
+  parent: body-organ
+  track: cortex
 - slug: keap-row-vector-search
   parent: digest
   track: cortex
@@ -726,6 +810,12 @@
 - slug: ledger-payload-bound
   parent: ''
   track: platform
+- slug: lexicon
+  parent: body-genome
+  track: platform
+- slug: live-mark-consent
+  parent: review-v015-followups
+  track: security
 - slug: local-decision-tev1
   parent: local-llm
   track: agents
@@ -852,6 +942,12 @@
 - slug: managed-resources-manifest
   parent: ''
   track: platform
+- slug: manifest-origin
+  parent: body-habitat
+  track: platform
+- slug: maturity
+  parent: body-organism
+  track: release
 - slug: moderation-drain-loop
   parent: ''
   track: cortex
@@ -966,6 +1062,9 @@
 - slug: organ-health-carries-a-version
   parent: ''
   track: platform
+- slug: organ-one-meaning
+  parent: body-organ
+  track: platform
 - slug: organs-noun
   parent: ''
   track: platform
@@ -992,6 +1091,9 @@
   track: digest
 - slug: pg-cutover
   parent: plat
+  track: platform
+- slug: phenotype
+  parent: body-organism
   track: platform
 - slug: pipeline-exercise-loop-build
   parent: ''
@@ -1107,11 +1209,17 @@
 - slug: profile-builder
   parent: ''
   track: platform
+- slug: profile-builder-graph
+  parent: rel-017
+  track: platform
 - slug: profile-builder-v3
   parent: profile-builder
   track: platform
 - slug: prom-rules-never-reload
   parent: ''
+  track: platform
+- slug: prose-retirement
+  parent: body-plan
   track: platform
 - slug: pulse-lineage
   parent: ''
@@ -1138,6 +1246,9 @@
   parent: ''
   track: release
 - slug: rel-015
+  parent: ''
+  track: release
+- slug: rel-017
   parent: ''
   track: release
 - slug: rem-queue-commit-256-260-261
@@ -1254,6 +1365,9 @@
 - slug: sec-transport-study
   parent: sec-transport
   track: security
+- slug: second-mac-lab
+  parent: rel-017
+  track: release
 - slug: secrets-at-rest
   parent: ''
   track: security
@@ -1263,6 +1377,9 @@
 - slug: seed-bundle-generalize
   parent: digest
   track: digest
+- slug: self-symbiont-host
+  parent: body-habitat
+  track: platform
 - slug: sere
   parent: ''
   track: platform
@@ -1284,6 +1401,9 @@
 - slug: sign-before-origin-primitive
   parent: agent-landing-zero-command-operator
   track: platform
+- slug: specialization-packs
+  parent: rel-017
+  track: agents
 - slug: spine-tools-vs-cli-refusal
   parent: w-agentkit-spine
   track: agents
@@ -1323,6 +1443,9 @@
 - slug: ssot-vector
   parent: ssot-cite-adopters-or-amend
   track: cortex
+- slug: stable-contract
+  parent: rel-017
+  track: release
 - slug: stalwart-never-left-bootstrap
   parent: ''
   track: platform
@@ -1334,6 +1457,9 @@
   track: agents
 - slug: swarm-2026-09-15
   parent: plat
+  track: platform
+- slug: symbiont-claude
+  parent: self-symbiont-host
   track: platform
 - slug: synthetic-identities-apart
   parent: ''
@@ -1350,9 +1476,18 @@
 - slug: tileserver-serves-nothing
   parent: gis-property
   track: platform
+- slug: tissues
+  parent: body-tissue
+  track: agents
 - slug: tls-modern-never-applied
   parent: sec
   track: security
+- slug: track-knowledge
+  parent: body-plan
+  track: platform
+- slug: twin
+  parent: body-habitat
+  track: release
 - slug: uc-approve-held-invoice
   parent: consulting-firm-deployment
   track: digest
