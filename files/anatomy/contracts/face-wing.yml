@@ -80,4 +80,15 @@ open:
     uid (fixture: "forged: zero-width suffix collides"). Nothing stops
     Authentik from creating the second. Proposed: refuse at enrolment a
     username whose fold collides with an existing user's.
-  - "Wing cannot verify the user independently of the face. A signed identity assertion (JWT from Authentik) would remove the delegate trust; not needed while face is the only end-user surface."
+  - >-
+    Wing cannot verify the user independently of the face. A signed identity
+    assertion (an Authentik JWT) would remove the delegate trust; not needed
+    while face is the only end-user surface.
+  - >-
+    Proposed (2026-10-06 Wing study): a signed HMAC assertion over {uid,
+    groups, method, path, body sha256, ts} instead of the plain X-Nos-User-*
+    headers. Not adopted in v1: its key would be held by the same one process
+    that holds the face-bff bearer, so it proves nothing more about the person;
+    replay protection only matters off loopback. Adopt it, with a fixture of
+    signed samples, if the face ever reaches Wing over a network or a second
+    process gets the bearer.
