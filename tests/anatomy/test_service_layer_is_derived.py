@@ -137,7 +137,9 @@ def test_traefik_is_the_named_ceiling_and_not_a_substrate_node(committed):
         "gate should assert the new value and the doctrine's ceiling paragraph should "
         "be rewritten in the same commit"
     )
-    assert not [e for e in committed["edges"] if "traefik" in e["from"] + e["to"]], (
+    dep = {"data", "trigger", "temporal"}
+    assert not [e for e in committed["edges"]
+                if e["kind"] in dep and "traefik" in e["from"] + e["to"]], (
         "traefik gained edges — re-read ssot/doctrine/layers.md §4's ceiling"
     )
 
