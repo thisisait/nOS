@@ -33,7 +33,8 @@ import nos_identity as ni  # noqa: E402
 
 CLASSES = {"self", "symbiont", "habitat"}
 # A host package list: Homebrew/pip/npm/go/gem/... — not authentik_oidc_apps.
-LIST_NAME = re.compile(r"(_packages|_cask_apps|_installed_apps|_global_tools)$")
+# `_casks`: homebrew_symbiont_casks (2026-10-06); without it a cask list went unclassed, unseen.
+LIST_NAME = re.compile(r"(_packages|_casks|_cask_apps|_installed_apps|_global_tools)$")
 # Where the command a package provides differs from its install name.
 COMMAND = {"sqlite": "sqlite3", "ansible": "ansible-playbook", "nss": "certutil", "ripgrep": "rg"}
 
