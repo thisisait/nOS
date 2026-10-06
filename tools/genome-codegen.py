@@ -358,9 +358,56 @@ export function ungatedRouteNeedsJustification(access: {{
 """
 
 
+LEXICON = GENOME / "lexicon.yml"
+GLOSSARY_TARGET = REPO / "docs" / "glossary.md"
+
+_SECTIONS = {
+    "cross": "Across levels", "procedure": "Procedures",
+    "proper-name": "Proper names (one job each)", "legacy": "Left alone, or retired",
+}
+
+
+def emit_glossary(_g: dict) -> str:
+    """The lexicon as a page a person reads: levels first, one line per word.
+
+    Reads its own source (state/genome/lexicon.yml), not the entity schema.
+    """
+    import yaml  # noqa: PLC0415 — only this target needs it
+
+    lex = yaml.safe_load(LEXICON.read_text())
+    order, words = lex["order"], lex["words"]
+    out = [
+        "<!-- GENERATED — do not edit. Source: state/genome/lexicon.yml"
+        f" (via {GENERATOR}). Gate: tests/anatomy/test_lexicon_holds.py -->",
+        "# Glossary",
+        "",
+        "Each word in nOS means one thing. The body levels run smallest to largest:",
+        " → ".join(lv for lv in order if lv not in _SECTIONS) + ".",
+        "",
+        "## Levels",
+        "",
+    ]
+    for lv in order:
+        if lv in _SECTIONS:
+            out += ["", f"## {_SECTIONS[lv]}", ""]
+        for word, w in words.items():
+            if w["level"] != lv:
+                continue
+            tag = f" ({lv})" if lv not in _SECTIONS else ""
+            nots = f" Not: {', '.join(w['not'])}." if w.get("not") else ""
+            name = f"`{word}`" if set(word) & set("*_/") else f"**{word}**"
+            out.append(f"- {name}{tag} — {w['means']}{nots}")
+    out += ["", "## Retired senses (old use → what to say now)", ""]
+    for w in words.values():
+        for r in w.get("retired") or []:
+            out.append(f"- {r['sense']} → {r['replacement']}")
+    return "\n".join(out) + "\n"
+
+
 TARGETS = [
     (PY_TARGET, emit_python),
     (TS_TARGET, emit_typescript),
+    (GLOSSARY_TARGET, emit_glossary),
 ]
 
 

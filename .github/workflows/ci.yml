@@ -321,6 +321,7 @@ jobs:
         run: |
           pip3 install --upgrade pip
           pip3 install -r files/anatomy/bone/requirements.txt
+          pip3 install pyyaml  # genome-codegen.py reads state/genome/lexicon.yml
 
       - name: Regenerate contracts.
         run: |

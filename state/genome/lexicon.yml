@@ -1,0 +1,426 @@
+# The lexicon: one meaning per word. nOS names its parts after a living body,
+# and a word that means two things lets a newly arrived model learn the wrong one.
+# Rulings accepted by the operator 2026-10-06 (roadmap row `lexicon`).
+# Rendered to docs/glossary.md by tools/genome-codegen.py.
+# Gate: tests/anatomy/test_lexicon_holds.py.
+#
+# level    one of `order` below. The body levels come first, smallest to largest.
+# names    typed surfaces where the word lives today; each must exist:
+#            path | yaml_key (file#dotted.key, * = any key or list item) |
+#            graph_kind | manifest_field | launchd_label | anchor_prefix
+# not      words it must not be confused with.
+# retired  senses the word no longer carries: {sense, replacement, surfaces};
+#            each surface must be gone (today's are pending in the gate).
+# retired_phrases  exact phrases a model must not be taught; matched only in
+#            the files models are told to trust (CLAUDE.md, doctrine, skills,
+#            agent system prompts).
+
+version: 1
+
+order:
+  - genome
+  - cell
+  - tissue
+  - organ
+  - organ system
+  - organism
+  - habitat
+  - cross
+  - procedure
+  - proper-name
+  - legacy
+
+words:
+  # ── the body levels, smallest to largest ────────────────────────────────
+  genome:
+    level: genome
+    means: The declared facts every part of nOS inherits, kept in state/genome/.
+    names:
+      - path: state/genome/
+      - yaml_key: "ssot/INDEX.yml#realms.genome"
+    not: [law, definition]
+    retired:
+      - sense: "DNA of the inner organism (prompts, skills, CLAUDE.md, allow-lists)"
+        replacement: "law for the shared parts; definition for one cell's prompt and allow-list"
+        surfaces: []
+    retired_phrases: ["DNA of the inner organism"]
+
+  gene:
+    level: genome
+    means: One declared kind of entity in the genome (the word replacing organelle, step 4).
+    not: [plugin]
+
+  cell:
+    level: cell
+    means: One model in one specialization; in code it is called an agent.
+    names:
+      - graph_kind: agent
+      - path: files/anatomy/agents/
+    not: [sense, stem cell]
+    retired:
+      - sense: "an immune indicator called a cell"
+        replacement: "sense (an indicator is a sense with an indicator contract)"
+        surfaces: []
+    retired_phrases: ["indicators are cells", "indicators as cells", "cell contract", "cell kinds"]
+
+  stem cell:
+    level: cell
+    means: A model that has not yet differentiated into one specialization.
+    not: [cell]
+
+  definition:
+    level: cell
+    means: One cell's own prompt and tool allow-list, versioned and hashed.
+    not: [genome, law]
+    retired:
+      - sense: "the `dna` field of the indicator contract"
+        replacement: definition
+        surfaces: []
+    retired_phrases: ["dna"]
+
+  tissue:
+    level: tissue
+    means: The transplantable pack of one specialization's cells with their skills, tables and services.
+    not: [plugin, organ]
+    retired:
+      - sense: "praxis pack / backoffice pack"
+        replacement: tissue
+        surfaces: []
+      - sense: "plugins as connective tissue, tendons or vessels"
+        replacement: plugin wiring
+        surfaces: []
+    retired_phrases: ["praxis pack", "backoffice pack", "connective tissue", "tendon"]
+
+  organ:
+    level: organ
+    means: One service or host daemon with one job; one row in state/manifest.yml.
+    names:
+      - manifest_field: id
+      - graph_kind: service
+      - graph_kind: daemon
+    not: [organ system, cell, digest]
+    retired:
+      - sense: "a public apex group called an organ"
+        replacement: organ system
+        surfaces: []
+      - sense: "organ meaning host-native (runs under launchd or systemd)"
+        replacement: "the stack axis: stack is null"
+        surfaces: []
+      - sense: "a model called an organ"
+        replacement: cell
+        surfaces: []
+      - sense: "organ meaning nOS's own parts as opposed to vendor software"
+        replacement: self organ
+        surfaces: []
+    retired_phrases: ["models are organs", "organs of a first organism", "public organ"]
+
+  organ system:
+    level: organ system
+    means: A public group of organs serving one function; the apex page shows thirteen.
+    names:
+      - yaml_key: "files/anatomy/apex/ruling.yml#organs"
+    not: [organ, organism]
+
+  organism:
+    level: organism
+    means: One nOS install on one machine, all its organ systems together.
+    not: [habitat, anatomy]
+
+  habitat:
+    level: habitat
+    means: The machine and what belongs to its owner; nOS never installs or touches it.
+    not: [organism, symbiont]
+    retired:
+      - sense: "host, as the third owner class of software"
+        replacement: habitat
+        surfaces: []
+
+  # ── across levels ───────────────────────────────────────────────────────
+  self:
+    level: cross
+    means: Software nOS wrote, pins and updates itself; a self organ is one of nOS's own parts.
+    not: [declared, symbiont]
+    retired:
+      - sense: "self meaning the immune system's tolerated set"
+        replacement: declared
+        surfaces: []
+    retired_phrases: ["non-self", "attacking self"]
+
+  symbiont:
+    level: cross
+    means: Declared foreign software that lives beside nOS and is updated by its own vendor.
+    not: [self, habitat]
+
+  declared:
+    level: cross
+    means: On the list nOS generates from its declarations; the immune system tolerates it, and anything undeclared is a signal.
+    not: [self]
+
+  sense:
+    level: cross
+    means: A reader or judge that only reads; an immune indicator is a sense with an indicator contract.
+    names:
+      - graph_kind: judge
+      - graph_kind: weakness
+      - graph_kind: gateset
+      - path: tools/README.md
+      - yaml_key: "files/anatomy/apex/ruling.yml#organs.senses"
+    not: [cell, limb]
+
+  limb:
+    level: cross
+    means: A tool that acts.
+    not: [sense, side]
+    retired:
+      - sense: "limb as the apex page's left/right/core column key"
+        replacement: "side (step 5)"
+        surfaces:
+          - yaml_key: "files/anatomy/apex/ruling.yml#organs.*.limb"
+
+  memory:
+    level: cross
+    means: What nOS has learned, kept in KEAP; RAM stays plain English.
+    names:
+      - path: roles/pazny.keap/
+    not: [cortex, verdicts, stores]
+    retired:
+      - sense: "The Memory, the apex group of databases"
+        replacement: "The Stores (step 5)"
+        surfaces:
+          - yaml_key: "files/anatomy/apex/ruling.yml#organs.memory"
+      - sense: "memory meaning the immune system's verdict log"
+        replacement: verdicts
+        surfaces: []
+
+  verdicts:
+    level: cross
+    means: The log of what each sense reported and what the operator judged.
+    not: [memory]
+    retired_phrases: ["immune memory", "memory — the verdict log", "memory | where each verdict"]
+
+  law:
+    level: cross
+    means: The rules in force, kept in ssot/doctrine/ and kept apart from the genome.
+    names:
+      - path: ssot/doctrine/
+      - yaml_key: "ssot/INDEX.yml#realms.doctrine"
+      - graph_kind: doctrine
+    not: [genome, definition]
+
+  heartbeat:
+    level: cross
+    means: A periodic signal that proves something is still alive.
+    names:
+      - path: files/heartbeat/heartbeat.py
+      - launchd_label: eu.thisisait.nos.heartbeat
+    not: [Pulse]
+    retired:
+      - sense: "Pulse called the heartbeat"
+        replacement: "Pulse, which is the scheduler"
+        surfaces: []
+    retired_phrases: ["Pulse is the heartbeat"]
+
+  nervous system:
+    level: cross
+    means: The path events take to the operator, from events to the Wing inbox to ntfy or mail.
+    not: [converge]
+    retired:
+      - sense: "the playbook called the nervous system"
+        replacement: converge
+        surfaces: []
+    retired_phrases: ["the playbook is the nervous system"]
+
+  twin:
+    level: cross
+    means: The second Mac.
+    not: [mirror-parity]
+    retired:
+      - sense: "twin for two lists that must stay equal (twin-parity)"
+        replacement: mirror-parity
+        surfaces: []
+    retired_phrases: ["twin-parity", "twin parity"]
+
+  plugin:
+    level: cross
+    means: A plugin.yml declaring how one service is wired to the others (SSO, dashboards, jobs).
+    names:
+      - path: files/anatomy/plugins/
+    not: [tissue, gene]
+
+  anatomy:
+    level: cross
+    means: The structure of one organism drawn as a graph.
+    names:
+      - path: state/anatomy-graph.json
+      - path: tools/anatomy-graph-gen.py
+    not: [body plan]
+
+  body plan:
+    level: cross
+    means: The level scheme the anatomy is projected onto (registered by the body-plan work).
+    not: [anatomy]
+
+  # ── procedures ──────────────────────────────────────────────────────────
+  digest:
+    level: procedure
+    means: The intake process that turns outside data into DataTable rows; mail digest and hash digest are allowed compounds.
+    names:
+      - path: tools/digest-import.py
+      - path: state/digest-constitution.yml
+      - path: files/anatomy/module_utils/nos_digest.py
+    not: [organ]
+    retired:
+      - sense: "the digest organ, the stomach"
+        replacement: digest
+        surfaces: []
+    retired_phrases: ["digest organ", "stomach", "gut"]
+
+  converge:
+    level: procedure
+    means: One playbook run that moves the source into the running system.
+    names:
+      - path: main.yml
+    not: [nervous system]
+
+  imprint:
+    level: procedure
+    means: The one page a newborn model reads first.
+    names:
+      - path: tools/apgar.py
+    not: [cell]
+
+  apgar:
+    level: procedure
+    means: The score of a newborn model on the questions its imprint should answer.
+    names:
+      - path: tools/apgar.py
+      - path: state/apgar.yml
+    not: [cell]
+
+  # ── proper names: one job each, the metaphor no longer justifies them ───
+  Bone:
+    level: proper-name
+    means: The host API bridge between the runs and the records.
+    names:
+      - path: roles/pazny.bone/
+      - launchd_label: eu.thisisait.nos.bone
+  Wing:
+    level: proper-name
+    means: The host dashboard and audit ledger.
+    names:
+      - path: roles/pazny.wing/
+  Pulse:
+    level: proper-name
+    means: The scheduler that runs every scheduled job.
+    names:
+      - path: roles/pazny.pulse/
+    not: [heartbeat]
+  Cortex:
+    level: proper-name
+    means: The reasoning machinery (the cortex daemon, cortex-lang and Wing's executor); it is not KEAP.
+    names:
+      - path: roles/pazny.cortex/
+      - path: files/anatomy/cortex/server/cortex-lang.ts
+      - path: files/anatomy/wing/app/Cortex/
+    not: [memory, KEAP]
+    retired:
+      - sense: "cortex-query, recall from KEAP"
+        replacement: "keap-recall (step 3)"
+        surfaces:
+          - path: tools/cortex-query.py
+          - path: files/anatomy/skills/cortex-query/
+          - path: tests/fixtures/cortex-query-recall.json
+    retired_phrases: ["cortex-query"]
+  Face:
+    level: proper-name
+    means: The web desktop.
+    names:
+      - path: roles/pazny.face/
+  Ears:
+    level: proper-name
+    means: The speech organ, which hears and speaks.
+    names:
+      - path: roles/pazny.ears/
+  Apex:
+    level: proper-name
+    means: The public page that shows the organ systems to strangers.
+    names:
+      - path: roles/pazny.apex/
+  KEAP:
+    level: proper-name
+    means: The knowledge store where nOS keeps its memory.
+    names:
+      - path: roles/pazny.keap/
+    not: [Cortex]
+
+  # ── left alone and written down once ────────────────────────────────────
+  iiab:
+    level: legacy
+    means: An old compose stack name, still used by about two dozen services.
+    names:
+      - yaml_key: "state/manifest.yml#services.*.stack"
+  files/anatomy/:
+    level: legacy
+    means: The source tree of nOS's own parts; the directory name stays.
+    names:
+      - path: files/anatomy/
+  tests/anatomy/:
+    level: legacy
+    means: The offline gates; the directory name stays.
+    names:
+      - path: tests/anatomy/
+  bone_* / WING_* / eu.thisisait.nos.*:
+    level: legacy
+    means: Config, environment and launchd label prefixes; they stay as spelled.
+    names:
+      - yaml_key: "state/manifest.yml#nos.launchd_prefix"
+      - path: roles/pazny.wing/templates/wing.env.j2
+  nos.host.*:
+    level: legacy
+    means: KEAP anchors for host-native organs; they stay.
+    names:
+      - anchor_prefix: nos.host.
+  pulse (graph kind):
+    level: legacy
+    means: One scheduled job in the anatomy graph, not the Pulse organ.
+    names:
+      - graph_kind: pulse
+  heartbeat_* / mail_digest_*:
+    level: legacy
+    means: Config keys for the fleet heartbeat and the daily mail digest; they stay.
+    names:
+      - yaml_key: "default.config.yml#heartbeat_interval"
+      - yaml_key: "default.config.yml#mail_digest_cron"
+
+  # ── retired entirely ────────────────────────────────────────────────────
+  brain:
+    level: legacy
+    means: Not used. KEAP is memory, the host parts are organs, the Wing API token is a flat token.
+    retired:
+      - sense: "brain for KEAP, the four host parts or the Wing API token"
+        replacement: "memory / organs / flat token"
+        surfaces:
+          - path: tests/anatomy/test_backup_reaches_the_brain.py
+    retired_phrases: ["brain token", "four brains", "fourth brain", "fifth brain", "layer of the brain"]
+  spine:
+    level: legacy
+    means: Not a body-plan word; KEAP's ontology spine is upstream's word, and "The Spine" stays an apex title.
+    names:
+      - yaml_key: "files/anatomy/apex/ruling.yml#organs.spine"
+    retired:
+      - sense: "a reader called the spinal cord"
+        replacement: sense
+        surfaces: []
+    retired_phrases: ["spinal cord"]
+  organelle:
+    level: legacy
+    means: Not used. A genome entity kind is a gene; a plugin is a plugin.
+    retired:
+      - sense: "organelle for a genome entity kind"
+        replacement: "gene (step 4)"
+        surfaces:
+          - path: state/genome/organelle/
+      - sense: "organelle for a plugin"
+        replacement: plugin
+        surfaces: []
+    retired_phrases: ["organelle"]
