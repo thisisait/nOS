@@ -20,7 +20,7 @@ skills, not the container.
 ## The one rule
 
 **Read counterparties and booked invoices through KEAP DataTables**
-(`nos-datatables` / `nos_tables` / `tools/cortex-query.py` for knowledge).
+(`nos-datatables` / `nos_tables` / `tools/keap-recall.py` for knowledge).
 Do not curl Dolibarr, Espo, or Firefly. Do not invent a second party table.
 
 | surface | owns | door |
@@ -39,7 +39,7 @@ Do not curl Dolibarr, Espo, or Firefly. Do not invent a second party table.
   `llx_facture` or Firefly into `invoice` / `posting`.
 - To dual-write Espo-style (`espo-party-sync`). That path is retired.
 - To treat Bone as a CRM client. Bone carries HMAC events; it does not hydrate.
-- When the question is taxonomy/SKILLS.md recall — that is `cortex-query`.
+- When the question is taxonomy/SKILLS.md recall — that is the `keap-recall` skill.
 
 ## Hydrator
 
