@@ -39,6 +39,7 @@ install_dotnet: false             # .NET SDK (C#, F#) + EF CLI (habitat)
 software_owner:
   homebrew_installed_packages: self
   homebrew_symbiont_packages: symbiont
+  homebrew_symbiont_casks: symbiont
   homebrew_personal_packages: habitat
   homebrew_cask_apps: habitat
   pip_packages: self
@@ -97,6 +98,11 @@ homebrew_symbiont_packages:
   - nss                  # mkcert's Firefox trust-store backend
   - ripgrep              # rg — on the AgentKit read-only bash allow-list
   - pre-commit           # contributors: .pre-commit-config.yaml
+
+# symbiont casks — installed once when absent (Caskroom or the .app), never upgraded
+# or removed by nOS: the vendor's updater owns them. `flag` = the switch that wants it.
+homebrew_symbiont_casks:
+  - { name: openhuman, app: /Applications/OpenHuman.app, flag: install_openhuman }
 
 # habitat (personal) — the machine owner's; installed only with install_personal_packages.
 homebrew_personal_packages:

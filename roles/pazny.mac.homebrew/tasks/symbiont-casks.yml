@@ -1,0 +1,27 @@
+---
+# Symbiont casks (software_owner): installed once when neither the Caskroom dir
+# nor the .app exists, then never upgraded or removed — the vendor's updater owns
+# them. Reports which copy it found. pazny.openhuman passes its own entry.
+- name: "[Homebrew] Symbiont casks — install only what is absent"
+  ansible.builtin.shell: |
+    if [ -d "{{ homebrew_prefix }}/Caskroom/{{ item.name }}" ]; then
+      echo "PRESENT: {{ homebrew_prefix }}/Caskroom/{{ item.name }} (brew cask, its updater owns it)"
+    elif [ -e "{{ item.app }}" ]; then
+      echo "PRESENT: {{ item.app }} (not from brew; left alone)"
+    else
+      brew install --cask {{ item.name | quote }} 2>&1
+    fi
+  args:
+    executable: /bin/bash
+  register: _symbiont_cask
+  changed_when: "'PRESENT:' not in _symbiont_cask.stdout"
+  loop: "{{ _symbiont_casks | default(homebrew_symbiont_casks | default([])) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.flag is not defined or (lookup('vars', item.flag, default=false) | bool)
+  environment:
+    HOMEBREW_NO_AUTO_UPDATE: "1"
+
+- name: "[Homebrew] Symbiont casks — which copy each one is"
+  ansible.builtin.debug:
+    msg: "{{ _symbiont_cask.results | default([]) | selectattr('stdout', 'defined') | map(attribute='stdout') | list }}"
