@@ -3,7 +3,7 @@
 WHY (face-i0-identity, 2026-10-06). The face BFF opened Wing sessions with the
 estate's operator bearer, so every session a user started was stamped with the
 token's name (`ansible-provisioned`) and every user could list every session.
-files/anatomy/contracts/face-wing.yml §2-3 is the fix: only the `face-bff`
+files/anatomy/contracts/face-wing.yml, wire + invariants is the fix: only the `face-bff`
 bearer may speak for a user; Wing stamps actor_id = user:<uid> and narrows reads.
 
 What runs: (1) EndUser, pure PHP; (2) the REAL Api presenters, executed through

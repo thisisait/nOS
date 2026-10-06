@@ -1,4 +1,4 @@
-/** BFF · an end user's agent sessions (files/anatomy/contracts/face-wing.yml §2).
+/** BFF · an end user's agent sessions (files/anatomy/contracts/face-wing.yml, wire).
  *
  * GET lists, POST opens. Both go to Wing AS the hook-pinned uid through the
  * `face-bff` bearer; Wing stamps actor_id = user:<uid> and narrows the list.

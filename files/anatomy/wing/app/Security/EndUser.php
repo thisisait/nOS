@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Security;
 
 /**
- * An end user the face BFF speaks for (files/anatomy/contracts/face-wing.yml §2).
+ * An end user the face BFF speaks for (files/anatomy/contracts/face-wing.yml, wire).
  *
  * Wing believes X-Nos-User-* only on a request whose bearer is the `face-bff`
  * row; every other token gets null and the headers are ignored. Pure, so the

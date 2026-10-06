@@ -160,7 +160,7 @@ final class AgentsPresenter extends BaseApiPresenter
 		}
 
 		$body = $this->getJsonBody();
-		// face-wing.yml §2-3: an end user picks no vault, and below Tier 1 opens
+		// face-wing.yml, wire + invariants: an end user picks no vault, and below Tier 1 opens
 		// only an agent that declares itself open to end users.
 		if ($this->endUser !== null && isset($body['vault'])) {
 			$this->sendError('vault is not accepted from an end user', 400);

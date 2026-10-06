@@ -1,4 +1,4 @@
-/** BFF · one agent session, if it is the caller's (face-wing.yml §3: else 404).
+/** BFF · one agent session, if it is the caller's (face-wing.yml, invariants: else 404).
  *
  * Projects the session row only. Threads and iterations stay in Wing until the
  * converse surface (I1) decides which of them a user may read.

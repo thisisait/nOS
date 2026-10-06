@@ -1,6 +1,6 @@
 # face <-> Wing joint: who an end user is when the face speaks to Wing.
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + symmetric
-# gates). face is an appendage (body-plan.md §7); this file is its joint
+# gates). face is an appendage (ssot/doctrine/body-plan.md §7); this file is its joint
 # (state/manifest.yml face.joint). One copy only: both sides cite this path.
 contract_version: 1
 fixture: files/anatomy/contracts/face-wing.fixture.json
@@ -46,7 +46,7 @@ wire:
   proof: >-
     Wing believes the two X-Nos-User-* headers only on a request authenticated
     by the `face-bff` bearer, and ignores them on every other token. The face
-    believes the X-Authentik-* headers only with X-Face-Edge-Token (face.md §3).
+    believes the X-Authentik-* headers only with X-Face-Edge-Token (ssot/doctrine/face.md §3).
     So the chain is edge -> face hook -> face-bff bearer -> Wing; Wing trusts
     the face as a delegate and cannot re-check the user itself.
   refusals:
@@ -57,7 +57,7 @@ wire:
     - "POST /api/v1/agents/<name>/sessions   body: {prompt?}; vault and actor_id refused"
     - "GET  /api/v1/agent-sessions/<uuid>"
 
-# ── 3. The three invariants (cross-repo-contracts.md §4) ────────────────────
+# ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ────────────────────
 invariants:
   identity: >-
     A session opened through the face has agent_sessions.actor_id =

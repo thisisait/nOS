@@ -39,7 +39,7 @@ final class CanonicalUid
 		return rtrim($s, '-');
 	}
 
-	/** A uid Wing accepts: non-empty and already folded (files/anatomy/contracts/face-wing.yml §1). */
+	/** A uid Wing accepts: non-empty and already folded (files/anatomy/contracts/face-wing.yml, uid). */
 	public static function isCanonical(string $uid): bool
 	{
 		return $uid !== '' && self::fold($uid) === $uid;

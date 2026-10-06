@@ -2,7 +2,7 @@
 
 WHY. face pins `uid` (uid.ts) and Wing folds the same person's name
 (CanonicalUid.php) — the rule was copied by hand, so a person could be two
-users (2026-09-21: `jan.novak` vs `jan-novak`). cross-repo-contracts.md §1:
+users (2026-09-21: `jan.novak` vs `jan-novak`). ssot/doctrine/cross-repo-contracts.md §1:
 spec + fixture + symmetric gates over the SAME bytes. This runs both the TS
 (node) and the PHP (php) on files/anatomy/contracts/face-wing.fixture.json.
 The appendage gate checks the joint exists; this checks it holds.

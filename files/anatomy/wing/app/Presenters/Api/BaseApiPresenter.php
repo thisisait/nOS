@@ -31,7 +31,7 @@ abstract class BaseApiPresenter extends Presenter
 	/** Actions the face-bff bearer may reach; each must narrow reads by endUser->scope(). */
 	protected array $bffActions = [];
 
-	/** The end user the face BFF speaks for, or null (face-wing.yml §2). */
+	/** The end user the face BFF speaks for, or null (face-wing.yml, wire). */
 	protected ?EndUser $endUser = null;
 
 	public function startup(): void
