@@ -9,9 +9,13 @@ HOME on a sealed PATH; brew, docker and open are stubs that log their argv.
 2026-10-06, first live launch: "login locally" made users/local-studio-local
 with the vendor's cloud defaults while the role had written users/local only.
 Every profile on disk, and the predicted one, now gets the declared keys, and
-`--tags verify` fails on any profile left on the cloud route.
+`--tags verify` fails on any profile left on the cloud route. The local session
+itself is made by the bundle's own CLI (`OpenHuman core call`): credential, then
+config, then onboarding — never while the app runs, never over an existing login.
 """
+import base64
 import importlib.util
+import json
 import os
 import re
 import subprocess
@@ -51,12 +55,16 @@ rpc_mutations_enabled = true
 enabled = true
 [memory]
 backend = "sqlite"
+auto_save = true
 embedding_provider = "cloud"
 embedding_model = "embedding-v1"
 embedding_dimensions = 1024
 [memory_tree]
 llm_extractor_model = "gemma3:4b"
 llm_summariser_model = "gemma3:4b"
+[[mcp_client.servers]]
+name = "mine"
+command = "/usr/local/bin/my-mcp"
 """
 
 
@@ -68,7 +76,8 @@ def _exe(path: Path, body: str) -> None:
 
 def _converge(tmp: Path, app_present: bool = False, config: str | None = None,
               caskroom: bool = False, profiles: dict[str, str] | None = None,
-              verify_only: bool = False, ok: bool = True) -> tuple[Path, str, str]:
+              verify_only: bool = False, ok: bool = True, cli: bool = False, running: bool = False,
+              marker: str | None = None) -> tuple[Path, str, str]:
     home, stubs, brew = tmp / "home", tmp / "stubs", tmp / "brew"
     app = tmp / "Applications/OpenHuman.app"
     log = tmp / "calls.log"
@@ -77,13 +86,21 @@ def _converge(tmp: Path, app_present: bool = False, config: str | None = None,
     log.touch()
     for name in ("brew", "docker", "open"):
         _exe(stubs / name, STUB.format(log=log))
-    if app_present:
+    # ps answers from a file, so a real OpenHuman on the test host never decides the run.
+    (tmp / "ps.txt").write_text(f"{app}/Contents/MacOS/OpenHuman\n" if running else "/sbin/launchd\n")
+    _exe(stubs / "ps", f'#!/bin/sh\ncat "{tmp / "ps.txt"}"\n')
+    if app_present or cli:
         app.mkdir(parents=True)
+    if cli:
+        _exe(app / "Contents/MacOS/OpenHuman", STUB.format(log=log))
+    if marker is not None:
+        (home / ".openhuman").mkdir(parents=True, exist_ok=True)
+        (home / ".openhuman/active_user.toml").write_text(f'user_id = "{marker}"\n')
     if caskroom:
         (brew / "Caskroom/openhuman").mkdir(parents=True)
     for name, text in (profiles or ({"local": config} if config is not None else {})).items():
         cfg = home / f".openhuman/users/{name}/config.toml"
-        cfg.parent.mkdir(parents=True)
+        cfg.parent.mkdir(parents=True, exist_ok=True)
         cfg.write_text(text)
     defaults = ni.default_config()
     casks = [dict(c, app=str(app)) for c in defaults["homebrew_symbiont_casks"]]
@@ -140,11 +157,13 @@ def test_agents_md_is_the_imprint_and_no_rw_token_is_written(tmp_path):
     # The copied skill names the RW token in prose; nothing may read or assign it.
     leaks = [str(p) for p in home.rglob("*") if p.is_file() and RW_USE.search(p.read_bytes())]
     assert not leaks, f"the RW token is read or assigned: {leaks}"
-    rendered = [home / ".openhuman/users/local" / n for n in ("config.toml", "nos-mcp.json")]
-    assert not [p for p in rendered if b"KEAP_AGENT_TOKEN_RW" in p.read_bytes()], "a rendered file names the RW token"
+    rendered = home / ".openhuman/users/local/config.toml"
+    assert b"KEAP_AGENT_TOKEN_RW" not in rendered.read_bytes(), "config.toml names the RW token"
     assert "docker" not in calls, "the converge read a token; it must be read at spawn only"
-    mcp = (home / ".openhuman/users/local/nos-mcp.json").read_text()
-    assert "printenv KEAP_AGENT_TOKEN_RO" in mcp and str(REPO / "tools/mcp-tables-server.py") in mcp
+    # [[mcp_client.servers]] is the static set the core reads at boot (mcp::host::static_registry).
+    servers = {s["name"]: s for s in tomllib.loads(rendered.read_text())["mcp_client"]["servers"]}
+    cmd = " ".join(servers["nos-tables"]["args"])
+    assert "printenv KEAP_AGENT_TOKEN_RO" in cmd and str(REPO / "tools/mcp-tables-server.py") in cmd
 
 
 def _declared(cfg: dict, small: str) -> list[str]:
@@ -152,7 +171,7 @@ def _declared(cfg: dict, small: str) -> list[str]:
             "observability.share_usage_data": False, "update.enabled": False, "gitbooks.enabled": False,
             "chat_provider": "ollama:" + small, "memory_provider": "ollama:" + small,
             "embeddings_provider": "ollama:nomic-embed-text", "learning_provider": "ollama:" + small,
-            "memory.embedding_provider": "ollama", "memory.embedding_model": "nomic-embed-text",
+            "memory.auto_save": False, "memory.embedding_provider": "ollama", "memory.embedding_model": "nomic-embed-text",
             "memory.embedding_dimensions": 768, "memory_tree.llm_extractor_model": small,
             "memory_tree.llm_summariser_model": small}
     bad = []
@@ -178,8 +197,10 @@ def test_every_profile_and_the_predicted_one_get_the_declared_keys(tmp_path):
         assert not _declared(cfg, small), f"{name} kept a vendor value: {_declared(cfg, small)}"
         head = (users / name / "workspace/AGENTS.md").read_text().split("\n", 1)[0]
         assert head.startswith("<!-- nOS:"), f"{name} has no AGENTS.md"
-        assert b"KEAP_AGENT_TOKEN_RW" not in (users / name / "nos-mcp.json").read_bytes()
-    assert tomllib.loads((users / "u-cloud/config.toml").read_text())["computer"] == {"decision_model": "jev"}
+        assert "nos-tables" in [s["name"] for s in cfg["mcp_client"]["servers"]], f"{name} has no nos-tables MCP"
+    cloud = tomllib.loads((users / "u-cloud/config.toml").read_text())
+    assert cloud["computer"] == {"decision_model": "jev"}
+    assert [s["name"] for s in cloud["mcp_client"]["servers"]] == ["mine", "nos-tables"], "a foreign MCP server was dropped"
     assert tomllib.loads((users / "local/config.toml").read_text())["ui"] == {"theme": "dark"}
     leaks = [str(p) for p in home.rglob("*") if p.is_file() and RW_USE.search(p.read_bytes())]
     assert not leaks, f"the RW token is read or assigned: {leaks}"
@@ -193,3 +214,54 @@ def test_verify_fails_on_a_profile_left_on_the_cloud_route(tmp_path):
     _, _, out = _converge(tmp_path / "bad", app_present=True, verify_only=True, ok=False,
                           profiles={"local": local, "local-studio-local": VENDOR})
     assert "[local-studio-local] mode=standard" in out, "verify failed, but not on the cloud profile:\n" + out[-3000:]
+
+
+def _cli_calls(calls: str) -> list[tuple[str, dict]]:
+    out = []
+    for row in calls.splitlines():
+        if row.startswith("OpenHuman "):
+            m = re.fullmatch(r"OpenHuman core call --method (\S+) --params (.*)", row)
+            assert m, f"not a `core call`: {row}"
+            out.append((m.group(1), json.loads(m.group(2))))
+    return out
+
+
+def _b64(part: str) -> dict:
+    return json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))
+
+
+@needs_ansible
+def test_the_local_session_is_made_by_the_vendor_cli_in_order(tmp_path):
+    home, calls, _ = _converge(tmp_path, cli=True)
+    got = _cli_calls(calls)
+    assert [m for m, _ in got] == ["openhuman.auth_set_credential", "openhuman.config_set_onboarding_completed"], got
+    cred, onboard = got[0][1], got[1][1]
+    head, claims, sig = cred["token"].split(".")
+    assert sig == "local" and _b64(head) == {"alg": "none", "typ": "JWT"}, "not localSession.ts's token shape"
+    assert claims_ok(_b64(claims)), _b64(claims)
+    assert cred["kind"] == "local" and cred["user"]["email"] == "local@openhuman.local"
+    assert onboard == {"value": True}
+    cfg = tomllib.loads((home / ".openhuman/users/local-studio-local/config.toml").read_text())
+    assert cfg["privacy"]["mode"] == "local_only", "the session's profile did not get the declared keys"
+
+
+def claims_ok(c: dict) -> bool:
+    return c["sub"] == c["user_id"] == "local" and c["exp"] - c["iat"] == 31536000
+
+
+@needs_ansible
+def test_a_session_already_there_is_not_touched(tmp_path):
+    _, calls, _ = _converge(tmp_path, cli=True, marker="local-studio-local",
+                            profiles={"local-studio-local": "onboarding_completed = true\n"})
+    assert not _cli_calls(calls), f"the CLI ran against an existing session:\n{calls}"
+    _, calls, _ = _converge(tmp_path / "cloud", cli=True, marker="u-cloud", profiles={"u-cloud": VENDOR})
+    assert not _cli_calls(calls), f"a cloud login was replaced by a local session:\n{calls}"
+
+
+@needs_ansible
+def test_nothing_is_written_while_the_app_runs(tmp_path):
+    home, calls, out = _converge(tmp_path, cli=True, running=True, profiles={"local-studio-local": VENDOR})
+    assert not _cli_calls(calls), f"the CLI ran while the app was running:\n{calls}"
+    cfg = tomllib.loads((home / ".openhuman/users/local-studio-local/config.toml").read_text())
+    assert cfg["privacy"]["mode"] == "standard", "config.toml was rewritten under a running app"
+    assert "OpenHuman is running" in out
