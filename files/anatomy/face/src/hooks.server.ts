@@ -52,8 +52,10 @@ function readIdentity(request: Request, trusted: boolean): Identity {
 		.filter(Boolean);
 	// BLANK-STABLE partition key: derive uid from the username (Authentik's raw
 	// uid churns on every re-provision → orphaned file trees). username/email stay
-	// the raw display values. Fall back to rawUid if no stable claim slugs.
-	const uid = canonicalUid(username, email, rawUid) || rawUid;
+	// the raw display values. Nothing foldable = anonymous, never an unfolded uid
+	// (files/anatomy/contracts/face-wing.yml §1: Wing refuses a non-canonical one).
+	const uid = canonicalUid(username, email, rawUid);
+	if (!uid) return { ...ANON };
 	return {
 		uid,
 		username,

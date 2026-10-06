@@ -1,0 +1,50 @@
+{
+  "contract_version": 1,
+  "fold": [
+    {"case": "clean username", "in": "akadmin", "uid": "akadmin"},
+    {"case": "case folds", "in": "AkAdmin", "uid": "akadmin"},
+    {"case": "email-shaped", "in": "Pazny.Develop@Gmail.com", "uid": "pazny-develop-gmail-com"},
+    {"case": "Czech, composed", "in": "Pázny", "uid": "pazny"},
+    {"case": "Czech, decomposed", "in": "Pázny", "uid": "pazny"},
+    {"case": "Czech, two words", "in": "Šárka Čížková", "uid": "sarka-cizkova"},
+    {"case": "fullwidth (NFKD compat)", "in": "Ｐａｚｎｙ", "uid": "pazny"},
+    {"case": "ligature (NFKD compat)", "in": "ﬁle", "uid": "file"},
+    {"case": "Kelvin sign", "in": "Kelvin", "uid": "kelvin"},
+    {"case": "Vietnamese, stacked marks", "in": "Nguyễn", "uid": "nguyen"},
+    {"case": "sharp s has no decomposition", "in": "Straße", "uid": "stra-e"},
+    {"case": "dotless i has no decomposition", "in": "Iğdır", "uid": "igd-r"},
+    {"case": "non-Latin folds to nothing", "in": "Σοφία", "uid": ""},
+    {"case": "forged: zero-width suffix collides", "in": "akadmin​", "uid": "akadmin"},
+    {"case": "forged: right-to-left override", "in": "admin‮gnp", "uid": "admin-gnp"},
+    {"case": "forged: NUL", "in": "a\u0000b", "uid": "a-b"},
+    {"case": "forged: path traversal", "in": "../../etc/passwd", "uid": "etc-passwd"},
+    {"case": "forged: actor prefix", "in": "user:akadmin", "uid": "user-akadmin"},
+    {"case": "separator runs and edges", "in": "--a..b__c--", "uid": "a-b-c"},
+    {"case": "cap at 64", "in": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "uid": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"},
+    {"case": "cap lands on a dash, re-trim", "in": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.y", "uid": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"},
+    {"case": "empty", "in": "", "uid": ""}
+  ],
+  "claims": [
+    {"case": "username wins", "username": "Pázny", "email": "other@example.org", "raw_uid": "9f1c2e", "uid": "pazny"},
+    {"case": "missing username header: email local-part", "username": "", "email": "Jan.Novak+face@example.org", "raw_uid": "9f1c2e", "uid": "jan-novak-face"},
+    {"case": "non-Latin username: email local-part", "username": "Σοφία", "email": "sofia@example.org", "raw_uid": "9f1c2e", "uid": "sofia"},
+    {"case": "no stable claim: raw Authentik uid", "username": "", "email": "", "raw_uid": "9F1C2E", "uid": "9f1c2e"},
+    {"case": "forged: traversal username", "username": "../../etc/passwd", "email": "", "raw_uid": "9f1c2e", "uid": "etc-passwd"},
+    {"case": "nothing foldable: anonymous", "username": "Σοφία", "email": "", "raw_uid": "日本", "uid": ""},
+    {"case": "all headers missing: anonymous", "username": "", "email": "", "raw_uid": "", "uid": ""}
+  ],
+  "not_canonical": [
+    "",
+    "Pazny",
+    "pázny",
+    "a--b",
+    "-a",
+    "a-",
+    "a.b",
+    "a/b",
+    "../a",
+    "user:akadmin",
+    "akadmin​",
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  ]
+}

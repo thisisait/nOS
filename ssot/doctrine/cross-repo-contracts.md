@@ -72,6 +72,7 @@ own.
 | Surface | Spec | Producer | Consumer |
 |---|---|---|---|
 | nOS self-model → knowledge tree | `nos-keap:docs/specs/nos-selfmodel-keap-contract.md` | nOS (`files/anatomy/scripts/keap_selfmodel_gen.py`) | KEAP (`server/fs-sync.ts`, `knowledge/ingest.mjs`) |
+| face → Wing: the end user (uid, session actor) | `files/anatomy/contracts/face-wing.yml` | face (`src/lib/security/uid.ts`, the BFF) | Wing (`app/Security/CanonicalUid.php`, `EndUser.php`) |
 
 ## 6. Agreed, authoring pending — the DataTable engine (`tables`)
 

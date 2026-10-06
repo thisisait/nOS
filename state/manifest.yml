@@ -520,7 +520,7 @@ services:
     port_var: face_port
     oidc: proxy
     rbac_tier: 3
-    joint_pending: "the face-Wing/Bone contract is not written; Wing hand-copies face's uid rule (row appendage-joint-face)"
+    joint: files/anatomy/contracts/face-wing.yml
 
   - id: keap
     category: knowledge

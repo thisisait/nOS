@@ -1,0 +1,83 @@
+# face <-> Wing joint: who an end user is when the face speaks to Wing.
+# Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + symmetric
+# gates). face is an appendage (body-plan.md §7); this file is its joint
+# (state/manifest.yml face.joint). One copy only: both sides cite this path.
+contract_version: 1
+fixture: files/anatomy/contracts/face-wing.fixture.json
+
+producer:
+  organ: face
+  code:
+    - files/anatomy/face/src/lib/security/uid.ts        # slugifyUid, canonicalUid
+    - files/anatomy/face/src/hooks.server.ts            # pins uid from the edge-trusted identity
+    - files/anatomy/face/src/lib/server/upstream.ts     # agentSessions: the only caller of the wire below
+consumer:
+  organ: wing
+  code:
+    - files/anatomy/wing/app/Security/CanonicalUid.php  # fold, isCanonical
+    - files/anatomy/wing/app/Security/EndUser.php       # the BFF proof and the actor
+    - files/anatomy/wing/app/Presenters/Api/BaseApiPresenter.php
+gates:
+  both: tests/anatomy/test_face_wing_contract.py       # runs uid.ts (node) and CanonicalUid.php (php) on the fixture bytes
+  face: files/anatomy/face/src/lib/security/uid.contract.test.ts
+  wing: tests/anatomy/test_face_user_owns_its_sessions.py
+  live: tests/e2e/journeys/test_two_users_cannot_see_each_others_sessions.py
+
+# ── 1. The uid ──────────────────────────────────────────────────────────────
+uid:
+  fold:   # slugifyUid (TS) == CanonicalUid::fold (PHP), byte for byte
+    - NFKD, then drop combining marks U+0300-U+036F (Pazny with an accent -> pazny)
+    - lowercase
+    - every run of characters outside [a-z0-9] -> one "-"
+    - trim "-"; cap at 64; trim "-" again
+  claims: # canonicalUid(username, email, raw_uid), face only
+    - fold(username), if not empty
+    - else fold(email local-part), if not empty
+    - else fold(raw Authentik uid)
+    - else "" = anonymous; the face refuses /bff/* (401). It never falls back to an unfolded value.
+  canonical: "a non-empty fixed point of fold: fold(uid) == uid. Wing refuses anything else."
+  requires: "PHP ext-intl (Normalizer). Without it fold differs on accented input; the fixture goes red."
+
+# ── 2. The wire: face BFF -> Wing API, speaking for one end user ────────────
+wire:
+  bearer: "Authorization: Bearer <face_bff_wing_api_token> — the api_tokens row named `face-bff`. Held only by the face container."
+  uid: "X-Nos-User-Uid: <canonical uid> — pinned by the face hook, never read from the browser."
+  groups: "X-Nos-User-Groups: comma list of the edge-trusted Authentik groups."
+  proof: >-
+    Wing believes the two X-Nos-User-* headers only on a request authenticated
+    by the `face-bff` bearer, and ignores them on every other token. The face
+    believes the X-Authentik-* headers only with X-Face-Edge-Token (face.md §3).
+    So the chain is edge -> face hook -> face-bff bearer -> Wing; Wing trusts
+    the face as a delegate and cannot re-check the user itself.
+  refusals:
+    - "face-bff bearer without a canonical X-Nos-User-Uid -> 401"
+    - "face-bff bearer on any action outside the allow-list below -> 403"
+  actions:   # the face-bff bearer reaches these and nothing else
+    - "GET  /api/v1/agents/<name>/sessions"
+    - "POST /api/v1/agents/<name>/sessions   body: {prompt?}; vault and actor_id refused"
+    - "GET  /api/v1/agent-sessions/<uuid>"
+
+# ── 3. The three invariants (cross-repo-contracts.md §4) ────────────────────
+invariants:
+  identity: >-
+    A session opened through the face has agent_sessions.actor_id =
+    "user:<uid>". The uid is blank-stable (derived from the username, not the
+    random Authentik uid), so a re-provisioned user keeps their sessions.
+  visibility: >-
+    A caller in a Tier-1 group (nos-providers, nos-admins) sees every session.
+    Any other face caller sees only rows with actor_id = "user:<own uid>"; a
+    session that is not theirs answers 404, never 403, so its existence does
+    not leak. Agents open to an end user below Tier 1: those whose agent.yml
+    sets metadata.end_user: true. None does in v1.
+  removal: >-
+    Deleting a user in Authentik removes nothing in Wing: their sessions stay
+    as audit lineage under "user:<uid>". A new account whose username folds to
+    the same uid inherits that history (see open items).
+
+open:
+  - >-
+    fold is not injective: "akadmin" and "akadmin<zero-width space>" are one
+    uid (fixture: "forged: zero-width suffix collides"). Nothing stops
+    Authentik from creating the second. Proposed: refuse at enrolment a
+    username whose fold collides with an existing user's.
+  - "Wing cannot verify the user independently of the face. A signed identity assertion (JWT from Authentik) would remove the delegate trust; not needed while face is the only end-user surface."

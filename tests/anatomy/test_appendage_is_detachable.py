@@ -45,7 +45,7 @@ CORE_CODE = ("wing", "bone", "pulse")
 CORE_ROLES = ("wing", "bone", "pulse", "keap")
 
 #: Appendages without a contract yet, 2026-10-06. Only ever delete lines.
-PENDING_JOINTS = {"face", "hermes", "openclaw", "openhuman", "nos_forum"}
+PENDING_JOINTS = {"hermes", "openclaw", "openhuman", "nos_forum"}
 
 
 def _load(name: str, path: pathlib.Path):
