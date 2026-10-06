@@ -132,3 +132,14 @@ e2e:
     - name: anonymous-is-sent-to-authentik
       url: https://{{ hermes_domain }}/
       expect: {status: [302], location_contains: "{{ authentik_domain }}/application/o/authorize"}
+
+depends_on:
+  - upstream: "service:ollama"
+    kind: data
+    via: >-
+      Hermes talks to the host Ollama at 127.0.0.1:11434 for local completions (roles/pazny.hermes; state/llm-backends.yml backend:ollama)
+    measured: "2026-10-06"
+    unenforced: >-
+      Ollama is host-native under install_ollama; no auto-enable block ties it
+      to this service. Without it the local-model path answers with an error,
+      not a wrong result.

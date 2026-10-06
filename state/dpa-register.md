@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 111 (87 core services, 3 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (99)
+- **Processing activities:** 112 (88 core services, 3 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (100)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 17
 
@@ -1621,6 +1621,20 @@ claude CLI — the same transfer the attended ceremony performs today.
 - **Retention:** 365 days (~1y)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
+
+#### Ollama — `svc_ollama`
+- **Purpose:** Run language and embedding models on this host for the estate's own
+callers. Processing: the prompt or text a caller sends, held in memory
+for the request; the answer goes back to that caller. Ollama keeps no
+prompt or completion on disk — what is kept is the caller's business.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `operator_prompts`; `estate_records_in_prompts`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
+- **Storage:** Host only. Model weights under ollama_models_dir (no personal data); daemon logs under ~/agents/log/ollama.*.log.
+- **Security measures:** `OLLAMA_HOST is 127.0.0.1:11434 in the LaunchAgent: not reachable from the network`; `No route in Traefik and no manifest domain_var/port_var`; `The version is pinned (ollama_version) and verified against the linked keg each converge`
 
 #### Openclaw — `svc_openclaw`
 - **Purpose:** OpenClaw is the operator's local LLM gateway. It receives prompts from

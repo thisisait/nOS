@@ -29,6 +29,15 @@ requires:
 # No authentik block = SSO mode none: a desktop app has no web surface.
 
 depends_on:
+  - upstream: "service:ollama"
+    kind: data
+    via: >-
+      config.toml.j2 pins every route to ollama:<model> and local_ai.base_url http://127.0.0.1:11434 (roles/pazny.openhuman/templates/config.toml.j2)
+    measured: "2026-10-06"
+    unenforced: >-
+      Ollama is host-native under install_ollama; no auto-enable block ties it
+      to this service. Without it the local-model path answers with an error,
+      not a wrong result.
   - upstream: "service:keap"
     kind: data
     via: >-

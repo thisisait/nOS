@@ -31,7 +31,7 @@ the agent's or anyone's — is caught before it costs anything. Both are the poi
 
 An Ansible playbook that turns a Mac (Apple Silicon) or Ubuntu 24.04 host into a
 self-hosted **Agentic Home Lab**: ~50 FOSS Docker services, each owned by a
-`roles/pazny.<service>/` role, 87 anatomy plugins for cross-service wiring, SSO
+`roles/pazny.<service>/` role, 88 anatomy plugins for cross-service wiring, SSO
 (Authentik), a secrets vault (Infisical), observability (Grafana/Prometheus/Loki/Tempo),
 AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode, AgentKit), backup, and a web desktop
 (nOS face). All data stays local, and `nos --remove=data --confirm` reinstalls from

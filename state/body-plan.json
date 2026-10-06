@@ -17,7 +17,7 @@
     "law": 37,
     "reflex": 43,
     "internal": 67,
-    "edges": 366
+    "edges": 369
   },
   "nodes": {
     "agent:conductor": {
@@ -2878,7 +2878,22 @@
     },
     {
       "from": "service:ollama",
+      "to": "service:hermes",
+      "kind": "data"
+    },
+    {
+      "from": "service:ollama",
+      "to": "service:keap",
+      "kind": "data"
+    },
+    {
+      "from": "service:ollama",
       "to": "service:openclaw",
+      "kind": "data"
+    },
+    {
+      "from": "service:ollama",
+      "to": "service:openhuman",
       "kind": "data"
     },
     {
