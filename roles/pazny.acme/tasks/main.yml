@@ -186,14 +186,14 @@
 - name: "[ACME] Render renewal launchd plist"
   ansible.builtin.template:
     src: acme-renew.plist.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ acme_renewal_label }}.plist"
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ acme_launchd_label }}.plist"
     mode: '0644'
   notify: Reload acme renewal launchd
 
 - name: "[ACME] Load renewal launchd job"
   ansible.builtin.command: >-
     launchctl load -w
-    {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ acme_renewal_label }}.plist
+    {{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ acme_launchd_label }}.plist
   register: _acme_load
   changed_when:
     - _acme_load.rc == 0
@@ -213,6 +213,6 @@
        Domains:     {{ acme_domains | join(', ') }}
        Cert path:   {{ acme_cert_path }}
        Key path:    {{ acme_cert_key }}
-       Renewal:     daily at {{ '%02d:%02d' | format(acme_renewal_hour, acme_renewal_minute) }} (launchd: {{ acme_renewal_label }})
+       Renewal:     daily at {{ '%02d:%02d' | format(acme_renewal_hour, acme_renewal_minute) }} (launchd: {{ acme_launchd_label }})
        Account:     {{ acme_email }}
       ======================================================

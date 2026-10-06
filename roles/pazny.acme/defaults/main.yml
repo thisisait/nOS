@@ -72,6 +72,6 @@ acme_domains: >-
       '*' + (_host_alias_seg | default('')) + '.' + (apps_subdomain | default('apps')) + '.' + tenant_domain] }}
 
 # Renewal launchd job (runs daily at 03:30; acme.sh internally checks expiry)
-acme_renewal_label: "eu.thisisait.nos.acme-renew"
+acme_launchd_label: "eu.thisisait.nos.acme-renew"
 acme_renewal_hour: 3
 acme_renewal_minute: 30

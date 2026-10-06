@@ -222,13 +222,13 @@ def nos_prune_plan(disabled, on_disk_flags, overrides, containers):
     }
 
 
-_LAUNCHD_VAR = re.compile(r'^(\w+):\s*"([\w.\-]+)"')
-_NOS = "eu.thisisait.nos."
+_LAUNCHD_VAR = re.compile(r'^(\w+)_launchd_label:\s*"([\w.\-]+)"')
 
 
 def launchd_declarations(repo=None):
-    """Every launchd label the repo declares, once: an `eu.thisisait.nos.*`
-    value or any `<x>_launchd_label` var, in role defaults or default.config.yml.
+    """Every launchd label the repo declares, once: a `<x>_launchd_label` var
+    in role defaults or default.config.yml — the var name, never the value's
+    shape (an `eu.thisisait.nos.*` .app bundle id is not a job, 2026-10-05).
     Flag: the role (`pazny.backrest` -> install_backrest), else `install_<x>` if
     declared. Domain: `<x>_launchd_domain`, default gui. Shared with
     tools/anatomy-graph-gen.py harvest_daemons, so roster and plan agree."""
@@ -246,10 +246,7 @@ def launchd_declarations(repo=None):
             m = _LAUNCHD_VAR.match(line.strip())
             if not m or "legacy" in m.group(1):
                 continue
-            var, label = m.groups()
-            if not (label.startswith(_NOS) or var.endswith("_launchd_label")):
-                continue
-            x = var.removesuffix("_launchd_label")
+            x, label = m.groups()
             flag = role_flag or (f"install_{x}" if f"install_{x}" in flags else None)
             rows.setdefault(label, {"label": label, "install_flag": flag,
                                     "domain": domains.get(x, "gui")})

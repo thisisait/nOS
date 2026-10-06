@@ -32,6 +32,17 @@ nos:
   # override with explicit `container_name` or `container_names:`.
   container_pattern: "{stack}-{id}-1"
 
+# Host launchd jobs no service row owns, each with why. Every other daemon node
+# binds to one row via launchd_label / launchd_helpers
+# (gate: tests/anatomy/test_every_daemon_has_a_manifest_row.py).
+daemons_without_row:
+  eu.thisisait.nos.acme-renew: "pazny.acme's daily renewal timer; acme serves nothing, it writes the certificates Traefik reads"
+  eu.thisisait.nos.backup.offsite: "tasks/backup.yml's off-site restic leg, toggled by configure_backup; backrest takes this job when installed"
+  eu.thisisait.nos.ears-listen: "retired: pazny.ears boots it out and deletes its plist (no mic grant under launchd); declared so a stale one is booted out"
+  eu.thisisait.nos.heartbeat: "playbook-core liveness hook (tasks/heartbeat.yml), on every host, no install_* flag"
+  eu.thisisait.nos.resume: "playbook-core post-boot hook (tasks/os-resume.yml), on every host, no install_* flag"
+  homebrew.mxcl.dnsmasq: "root LaunchDaemon for local DNS (tasks/dnsmasq.yml); dnsmasq has no manifest row yet"
+
 services:
   # -------------------------------------------------------------- infra stack
   - id: postgresql
@@ -255,7 +266,9 @@ services:
   # No domain_var: alloy is loopback-only (no Traefik route auto-derived).
   - id: alloy
     category: observability
+    stack: null
     install_flag: install_observability
+    launchd_label: "sh.brew.grafana-alloy"   # observability_launchd_label
     version_var: alloy_version
     version_source: homebrew
     brew_formula: grafana-alloy
@@ -900,7 +913,8 @@ services:
     stack: null
     install_flag: install_openclaw
     version_source: launchd
-    launchd_label: "eu.thisisait.nos.openclaw"
+    launchd_label: "ai.openclaw.gateway"   # openclaw_gateway_launchd_label, written by `openclaw gateway install`
+    launchd_helpers: ["com.ollama.agent"]  # ollama_launchd_label, same role and flag
     domain_var: openclaw_domain
     port_var: openclaw_gateway_port
 
@@ -932,6 +946,7 @@ services:
     install_flag: install_opencode
     version_source: homebrew
     brew_formula: opencode
+    host_process: "a CLI run on demand; no launchd job"
 
   # A desktop app (symbiont cask, roles/pazny.openhuman): it serves nothing, so no
   # domain_var/port_var/health_check. version_source none: it updates itself, so
@@ -941,12 +956,14 @@ services:
     stack: null
     install_flag: install_openhuman
     version_source: none
+    host_process: "a desktop app (cask) the operator opens; no launchd job"
 
   - id: wing
     category: security
     stack: null
     install_flag: install_wing
     version_source: git_tag
+    launchd_label: "eu.thisisait.nos.wing"
     domain_var: wing_domain
     # Anatomy A3.5 (2026-05-04): Wing now binds host:9000 as a FrankenPHP
     # launchd daemon. port_var added so the Traefik file provider auto-
@@ -1020,8 +1037,8 @@ services:
     category: ai
     stack: null
     install_flag: install_ears
-    version_source: launchd
-    launchd_label: eu.thisisait.nos.ears-listen
+    version_source: none
+    host_process: "a Terminal session opened from nos-cc (`s`); no launchd job"
     data_path_var: ears_runtime_dir
   - id: backrest
     category: storage
@@ -1042,6 +1059,7 @@ services:
     stack: null
     install_flag: install_iiab_terminal
     version_source: none
+    host_process: "a TUI sshd starts per login (ForceCommand); no launchd job"
 
   - id: backup
     category: security                         # 'ops' not in schema enum; security is the closest vault-adjacent category
@@ -1049,6 +1067,7 @@ services:
     install_flag: install_backup
     version_source: launchd
     launchd_label: "eu.thisisait.nos.backup.rustfs"   # copy #1 (RustFS); was .backup — de-collided 2026-06-09
+    launchd_helpers: ["eu.thisisait.nos.backup.exporter"]
     health_check:
       type: exec
       # Fail if status file is missing or last_run is older than 36h.
@@ -1063,6 +1082,7 @@ services:
     install_flag: install_tailscale
     version_source: homebrew
     brew_formula: tailscale
+    host_process: "Tailscale.app (cask) and its system extension; no launchd job of ours"
     # Health via the CLI probe, NOT brew-formula presence: the operator host
     # runs Tailscale.app (system-extension variant; CLI shim at
     # /usr/local/bin/tailscale) with no brew formula installed — the mirror

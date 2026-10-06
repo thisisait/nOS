@@ -26,6 +26,12 @@
       }
     },
 
+    "daemons_without_row": {
+      "type": "object",
+      "description": "launchd label -> why no service row owns that host daemon. Every other anatomy-graph daemon binds to one row via launchd_label or launchd_helpers.",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+
     "services": {
       "type": "array",
       "items": { "$ref": "#/definitions/service" }
@@ -59,7 +65,13 @@
           "description": "Explicit list of container names for multi-container services (e.g. erpnext, authentik). The first entry is treated as the primary for introspection."
         },
         "brew_formula":   { "type": ["string", "null"] },
-        "launchd_label":  { "type": ["string", "null"] },
+        "launchd_label":  { "type": ["string", "null"], "description": "The row's main launchd job — the one version_source launchd reads." },
+        "launchd_helpers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Further launchd jobs the same role starts under the same flag (an exporter, a model server)."
+        },
+        "host_process":   { "type": "string", "minLength": 1, "description": "For a host-native row (stack null) with no launchd job: what runs instead (a CLI, a desktop app, an sshd ForceCommand)." },
         "data_path_var":  { "type": ["string", "null"] },
         "domain_var":     { "type": ["string", "null"] },
         "port_var":       { "type": ["string", "null"] },

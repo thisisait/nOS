@@ -33,7 +33,7 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
                             fire it; in-edges are its tools, its backend
                             binding and the identity it authenticates as
     weakness:<id>           files/anatomy/bone/weaknesses.py SOURCE_ORDER
-    daemon:<launchd label>  eu.thisisait.nos.* labels from role defaults
+    daemon:<launchd label>  `*_launchd_label` vars in role defaults / default.config.yml
     service:<manifest id>   state/manifest.yml services[].id
     tool:<id> / tool_ro:<id>   agent tool grants; `_ro` when every scope the
                             grant opens is `.read` (tools/agent-capability.py TOOL_KAM)
@@ -533,6 +533,12 @@ def _anchor(nid: str, n: dict) -> str:
     return KIND_ANCHORS.get(kind, FALLBACK_ANCHOR)
 
 
+@functools.cache
+def _manifest_rows() -> dict:
+    doc = yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))
+    return {s["id"]: s for s in doc.get("services") or [] if isinstance(s, dict) and s.get("id")}
+
+
 def _describe(nid: str, n: dict) -> str:
     kind, local = n["kind"], nid.split(":", 1)[1]
     if kind == "pulse":
@@ -559,6 +565,13 @@ def _describe(nid: str, n: dict) -> str:
         label = local.removeprefix("eu.thisisait.nos.")
         what = DAEMON_DESC.get(label, "host daemon")
         return f"Host launchd daemon {local} — {what}"
+    if kind == "service" and n.get("stack") is None:
+        # Read from the row, not stamped on the node: a new node field is a new apex ruling.
+        row = _manifest_rows().get(local, {})
+        how = (f"host daemon (launchd {row['launchd_label']})" if row.get("launchd_label")
+               else f"host program — {row.get('host_process') or 'UNDECLARED process'}")
+        return (f"Host-native service '{local}' ({n.get('category')}): {how}, "
+                f"toggled by {n.get('install_flag')}")
     if kind == "service":
         return (f"Docker service '{local}' ({n.get('category')}) in the "
                 f"{n.get('stack')} compose stack, toggled by {n.get('install_flag')}")

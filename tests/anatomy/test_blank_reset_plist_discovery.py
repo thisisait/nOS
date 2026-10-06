@@ -102,7 +102,7 @@ PLAYBOOK_AGENTS = {
     },
     "pazny.acme": {
         "template": "acme-renew.plist.j2",
-        "label_var": "acme_renewal_label",
+        "label_var": "acme_launchd_label",
         "label_default": "eu.thisisait.nos.acme-renew",
     },
     "pazny.openclaw": {
