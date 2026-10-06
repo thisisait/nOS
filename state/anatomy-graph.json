@@ -2518,9 +2518,9 @@
     "reader:body": {
       "kind": "reader",
       "source": "tools/body.py",
-      "title": "What am I part of: the estate as a body plan — genome, cell, tissue, organ, organism, habitat, then sense, limb, memory — counts and hubs, or one node and what it touches. Reads state/body-plan.json; UNKNOWN when unreadable.",
+      "title": "What am I part of: the estate as a body plan — genome, cell, tissue, organ, organ system, organism, habitat, then sense, limb, memory, law, reflex — counts and hubs, or one node and what it touches. Levels come from state/genome/lexicon.yml; reads state/body-plan.json; UNKNOWN when unreadable.",
       "anchor": "02.02.04",
-      "description": "Reader tools/body.py: What am I part of: the estate as a body plan — genome, cell, tissue, organ, organism, habitat, then sense, limb, memory — counts and hubs, or one node and what it touches. Reads state/body-plan.json; UNKNOWN when unreadable."
+      "description": "Reader tools/body.py: What am I part of: the estate as a body plan — genome, cell, tissue, organ, organ system, organism, habitat, then sense, limb, memory, law, reflex — counts and hubs, or one node and what it touches. Levels come from state/genome/lexicon.yml; reads state/body-plan.json; UNKNOWN when unreadable."
     },
     "reader:brew-pin-status": {
       "kind": "reader",
