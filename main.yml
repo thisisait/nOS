@@ -2311,7 +2311,7 @@
         - install_openhuman | default(false) | bool
         - ansible_os_family == 'Darwin'
         - not (nos_dry_removal | default(false) | bool)
-      tags: ['openhuman']
+      tags: ['openhuman', 'verify']   # --tags verify reaches only the role's verify task
 
     - import_tasks: tasks/bun.yml
       when: install_bun | default(false)

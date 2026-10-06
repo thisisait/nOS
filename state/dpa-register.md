@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 110 (86 core services, 3 Tier-2 apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (98)
+- **Processing activities:** 111 (87 core services, 3 Tier-2 apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (99)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 17
 
@@ -1637,6 +1637,20 @@ unless the caller explicitly POSTs to Wing /events with source=agent:*
 - **Retention:** transient (not persisted)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
+
+#### Openhuman — `svc_openhuman`
+- **Purpose:** A personal assistant that answers the operator from a model and the
+estate's read-only tables. Processing: the operator's prompts and the
+table rows it reads, held in the app's session state under ~/.openhuman.
+Memory (conversation log, recall) is turned off by the role.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`
+- **Data categories:** `operator_prompts`; `estate_table_rows`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
+- **Storage:** Host only: ~/.openhuman (config.toml, workspace/AGENTS.md, skills, the app's own session and MCP stores).
+- **Security measures:** `privacy.mode local_only on the default provider: the core refuses to build a cloud route`; `analytics, usage sharing, core updater, remote gitbooks MCP and memory off in config.toml`; `nOS tables over MCP with the RO token, read from the KEAP container at spawn`; `Little Snitch rule group rendered by the role: OpenHuman denied every non-local host`; `tools/openhuman-status.py verifies the config every converge; RED fails the play`
 
 #### Pulse — `svc_pulse`
 - **Purpose:** Pulse is the host-side scheduled-job runner. It processes aggregated job

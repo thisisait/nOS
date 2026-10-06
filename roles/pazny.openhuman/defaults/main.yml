@@ -1,5 +1,5 @@
 ---
-# Internals only. Operator-facing switches: default.config.yml (install_openhuman, openhuman_*).
+# Internals only. Operator-facing switches (install_openhuman, openhuman_*) live in the default layers.
 openhuman_home: "{{ ansible_facts['env']['HOME'] }}/.openhuman"
 openhuman_user_dir: "{{ openhuman_home }}/users/local"
 openhuman_app: /Applications/OpenHuman.app
