@@ -974,7 +974,7 @@ META_DOMAINS: list[tuple[str, str, str, list[tuple[str, str, str]]]] = [
      "the roster behind the constellation. The self-model's own index.",
      []),
     ("nos.digest", "digest",
-     "The digest organ's output — a client organisation's own operational memory, "
+     "The output of digest — a client organisation's own operational memory, "
      "absorbed from its real sources (git remotes, invoices, statements) into "
      "governed rows through the gate-before-absorb firebreak. The software-estate "
      "facet is the first: what the organisation builds and depends on, deduped "
