@@ -264,6 +264,47 @@ export async function wingNotifications(params: Record<string, string> = {}): Pr
 	return wingGet('/notifications', { limit: '40', ...params });
 }
 
+// ── Wing agent sessions, AS the end user (files/anatomy/contracts/face-wing.yml) ──
+// The `face-bff` bearer is the only Wing token that may speak for a user; Wing
+// believes X-Nos-User-* on it alone. Callers pass the hook-pinned identity.
+
+const WING_BFF_TOKEN = () => env.NOS_WING_BFF_TOKEN || process.env.NOS_WING_BFF_TOKEN || '';
+
+export function wingBffConfigured(): boolean {
+	return Boolean(WING_BFF_TOKEN());
+}
+
+function asUser(user: { uid: string; groups: string[] }, json = false): Record<string, string> {
+	const h: Record<string, string> = {
+		authorization: `Bearer ${WING_BFF_TOKEN()}`,
+		'x-nos-user-uid': user.uid,
+		'x-nos-user-groups': user.groups.join(',')
+	};
+	if (json) h['content-type'] = 'application/json';
+	return h;
+}
+
+export const agentSessions = {
+	async list(user: { uid: string; groups: string[] }, agent: string): Promise<unknown> {
+		const u = WING_API() + '/agents/' + encodeURIComponent(agent) + '/sessions';
+		return asJson(await fetch(u, { headers: asUser(user) }));
+	},
+	async open(
+		user: { uid: string; groups: string[] },
+		agent: string,
+		body: { prompt?: string }
+	): Promise<unknown> {
+		const u = WING_API() + '/agents/' + encodeURIComponent(agent) + '/sessions';
+		return asJson(
+			await fetch(u, { method: 'POST', headers: asUser(user, true), body: JSON.stringify(body) })
+		);
+	},
+	async get(user: { uid: string; groups: string[] }, uuid: string): Promise<unknown> {
+		const u = WING_API() + '/agent-sessions/' + encodeURIComponent(uuid);
+		return asJson(await fetch(u, { headers: asUser(user) }));
+	}
+};
+
 // ── Bone (host daemon) ───────────────────────────────────────────────────────
 //
 // HONEST CREDENTIAL NOTE, measured 2026-08-05. The face holds BONE_VFS_TOKEN, a
