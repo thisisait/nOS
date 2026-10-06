@@ -417,6 +417,9 @@
 - slug: digest-teardown
   parent: digest
   track: digest
+- slug: dnsmasq-manifest-row
+  parent: body-organ
+  track: platform
 - slug: docker-runtime-choice
   parent: self-symbiont-host
   track: platform
@@ -495,9 +498,27 @@
 - slug: ears-art30
   parent: sec
   track: security
+- slug: edge-builder-questions
+  parent: edge-two-doors
+  track: platform
 - slug: edge-claims-vs-traefik
   parent: e2e-lifecycle
   track: security
+- slug: edge-declared-fact
+  parent: edge-two-doors
+  track: platform
+- slug: edge-outside-journey
+  parent: edge-two-doors
+  track: release
+- slug: edge-tailscale-wiring
+  parent: edge-two-doors
+  track: platform
+- slug: edge-tld-class
+  parent: edge-two-doors
+  track: platform
+- slug: edge-two-doors
+  parent: rel-016
+  track: platform
 - slug: egress-containment
   parent: digest
   track: digest
@@ -960,6 +981,9 @@
 - slug: maturity
   parent: body-organism
   track: release
+- slug: memory-direction
+  parent: body-plan
+  track: cortex
 - slug: moderation-drain-loop
   parent: ''
   track: cortex
@@ -1068,6 +1092,9 @@
 - slug: oneshot-logprobs-for-field-confidence
   parent: consulting-firm-deployment
   track: agents
+- slug: openclaw-dead-handlers
+  parent: body-organ
+  track: platform
 - slug: openhuman
   parent: body-organ
   track: agents
