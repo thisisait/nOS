@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { layout, forceLayout, rankNodes, COL_W, PAD, type Layout } from './graphLayout';
 import raw from './anatomy-graph.json';
@@ -81,11 +81,37 @@ function defaultViewInput() {
 	};
 }
 
-function hashLayout(l: Layout): string {
-	const canon = l.nodes.map((n) => [n.id, n.x, n.y, n.rank]);
-	return createHash('sha256')
-		.update(JSON.stringify({ nodes: canon, width: l.width, height: l.height }))
-		.digest('hex');
+type Snapshot = { positions: (string | number)[][]; width: number; height: number };
+
+function snapshot(l: Layout): Snapshot {
+	return {
+		positions: l.nodes.map((n) => [n.id, n.x, n.y, n.rank]),
+		width: l.width,
+		height: l.height
+	};
+}
+
+/** Every way `got` differs from `want` beyond TOL px per coordinate; rank,
+ *  node set and node order are exact. Empty means "the same picture". */
+const TOL = 1;
+function driftFrom(want: Snapshot, got: Snapshot): string[] {
+	const ids = (s: Snapshot) => s.positions.map((r) => r[0] as string);
+	const [w, g] = [ids(want), ids(got)];
+	if (w.join('\n') !== g.join('\n')) {
+		const missing = w.filter((id) => !g.includes(id));
+		const added = g.filter((id) => !w.includes(id));
+		return [`node set/order differs — missing [${missing}], added [${added}]`];
+	}
+	const out: string[] = [];
+	const far = (a: number, b: number) => Math.abs(a - b) > TOL;
+	want.positions.forEach(([id, x, y, rank], i) => {
+		const [, gx, gy, gr] = got.positions[i] as [string, number, number, number];
+		if (far(x as number, gx) || far(y as number, gy) || rank !== gr)
+			out.push(`${id}: pinned (${x},${y}) rank ${rank}, got (${gx},${gy}) rank ${gr}`);
+	});
+	if (far(want.width, got.width) || far(want.height, got.height))
+		out.push(`canvas: pinned ${want.width}×${want.height}, got ${got.width}×${got.height}`);
+	return out;
 }
 
 describe('forceLayout', () => {
@@ -132,19 +158,44 @@ describe('forceLayout', () => {
 	 * `docker run --platform linux/amd64 node:22` over an esbuild bundle of
 	 * this file's default-view input, and diff per-node floats first.
 	 *
-	 * The pin re-freezes on ANY change to the artifact, the filter defaults,
-	 * or the force tuning. That is intended — re-run this test, read the new
-	 * hash from the failure, and re-pin deliberately. The hash itself lives in
-	 * graphLayout.force.pin.json: the fixture-secret gate refuses 64-hex
-	 * literals inside test files, and reading the needle out of the fixture is
-	 * that gate's own prescribed remedy.
+	 * It split again 2026-10-06 at 148 default-view nodes, so the hash was
+	 * retired for a positions snapshot compared within TOL px: a 1-px rounding
+	 * flip passes, a moved/added/lost node or a rank change does not.
+	 *
+	 * The pin re-freezes on ANY real change to the artifact, the filter
+	 * defaults, or the force tuning. That is intended — re-freeze deliberately:
+	 * `FACE_LAYOUT_REPIN=1 npx vitest run src/lib/anatomy/graphLayout.test.ts`
+	 * then `npx prettier --write src/lib/anatomy/graphLayout.force.pin.json`.
+	 * The snapshot lives in graphLayout.force.pin.json beside graphSha256 (the
+	 * fixture-secret gate refuses 64-hex literals inside test files).
 	 */
-	it('is deterministic — sha256 of the default-view positions is pinned', () => {
+	it('is deterministic — the default-view positions match the pinned snapshot', () => {
 		const input = defaultViewInput();
-		const h1 = hashLayout(forceLayout(input));
-		const h2 = hashLayout(forceLayout(input));
-		expect(h1).toBe(h2);
-		expect(h1).toBe(pin.defaultViewPositionsSha256);
+		const s = snapshot(forceLayout(input));
+		expect(snapshot(forceLayout(input))).toEqual(s);
+		if (process.env.FACE_LAYOUT_REPIN) {
+			const pinPath = fileURLToPath(new URL('./graphLayout.force.pin.json', import.meta.url));
+			const graph = readFileSync(fileURLToPath(new URL('./anatomy-graph.json', import.meta.url)));
+			const graphSha256 = createHash('sha256').update(graph).digest('hex');
+			const pinnedAt = new Date().toISOString().slice(0, 10);
+			writeFileSync(pinPath, JSON.stringify({ ...pin, pinnedAt, graphSha256, ...s }));
+		}
+		expect(driftFrom(pin, s)).toEqual([]);
+	});
+
+	it('the snapshot tolerance is not blind', () => {
+		const s = snapshot(forceLayout(defaultViewInput()));
+		const shifted = (i: number, dx: number, rank = 0): Snapshot => ({
+			...s,
+			positions: s.positions.map((r, j) =>
+				j === i ? [r[0], (r[1] as number) + dx, r[2], (r[3] as number) + rank] : r
+			)
+		});
+		expect(driftFrom(s, shifted(0, TOL))).toEqual([]); // the ISA rounding flip
+		expect(driftFrom(s, shifted(0, 2))).toHaveLength(1);
+		expect(driftFrom(s, shifted(0, 0, 1))).toHaveLength(1);
+		expect(driftFrom(s, { ...s, positions: s.positions.slice(1) })[0]).toMatch(/missing/);
+		expect(driftFrom(s, { ...s, width: s.width + 2 })).toHaveLength(1);
 	});
 
 	it('earns its place — fewer edge crossings than the layered mode on the default view', () => {
