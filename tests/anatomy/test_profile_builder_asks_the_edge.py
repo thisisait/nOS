@@ -70,6 +70,7 @@ CASES = {
     "wedos_half": {"acme_dns_provider": "dns_wedos", "acme_dns_env": {"WEDOS_Username": "it@firma.cz"}},
     "wedos": {"acme_dns_provider": "dns_wedos", "acme_dns_env": WEDOS, "nos_edge": "lan_tailscale"},
     "cloudflare_no_token": {},
+    "lan_cf_dns": {"nos_edge": "lan_tailscale", "acme_dns_provider": "dns_cf", "acme_cloudflare_api_token": "cf-fake"},
     "bad_edge": {"nos_edge": "cloudfare", "acme_cloudflare_api_token": "cf"},
     "other_id": {"acme_dns_provider": "dns_acmeproxy", "acme_dns_env": {"ACMEPROXY_ENDPOINT": "https://p", "ACMEPROXY_USERNAME": "u", "ACMEPROXY_PASSWORD": "p"}},
 }
@@ -99,6 +100,24 @@ def test_a_wedos_domain_writes_a_config_nos_accepts(data):
     assert "WEDOS" not in res["wedos"]["config"], "a credential never lands in config.yml"
     assert judge(cfg, creds) == [], "the page's config is refused by the playbook's own expressions"
     assert judge(cfg, {k: v for k, v in creds.items() if k != "acme_dns_env"}), "positive control: no login is refused"
+
+
+@needs_node
+def test_cloudflare_dns_only_on_a_lan_tailscale_edge_is_first_class(data):
+    """Operator 2026-10-06: Cloudflare for DNS-01 only, no proxy, no public IP — a default path."""
+    assert data["dns_providers"][0]["id"] == "dns_cf" and "recommended" in data["dns_providers"][0]["label"]
+    assert "Cloudflare DNS-only is not the Cloudflare edge; the edge needs a public IP." in _field(data, "acme_dns_provider")["hint"]
+    res = _judge(data)["lan_cf_dns"]
+    assert res["problems"] == [], res["problems"]
+    cfg, creds = yaml.safe_load(res["config"]), yaml.safe_load(res["creds"])
+    assert cfg["nos_edge"] == "lan_tailscale" and "acme_dns_provider" not in cfg, "dns_cf is the default: not written"
+    assert creds["acme_cloudflare_api_token"] == "cf-fake" and "acme_dns_env" not in creds
+    assert rules.Oracle(data)(cfg, creds) == []
+    # The Cloudflare door stays refused on this edge (main.yml, increment 2).
+    play = yaml.safe_load((REPO / "main.yml").read_text())[0]
+    door = next(t for t in play["pre_tasks"] + play["tasks"] if "Refuse Cloudflare origin-pull" in str(t.get("name")))
+    ctx = {**cfg, "traefik_origin_pull_enabled": True}
+    assert all(rules._truth(w, ctx) for w in door["when"]), "origin-pull must be refused with this config"
 
 
 @needs_node

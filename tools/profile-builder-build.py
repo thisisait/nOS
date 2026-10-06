@@ -111,7 +111,7 @@ STEPS = [
         {"key": "install_tailscale", "label": "Reach it from anywhere with Tailscale", "type": "bool",
          "hint": "A private network between your own devices. Put a Tailscale auth key into credentials.yml as tailscale_auth_key, or sign in once in the Tailscale app."},
         {"key": "acme_dns_provider", "label": "Who hosts your domain's DNS? (real domain only)", "short": "the DNS host", "type": "dnsprovider", "check": "dns_provider",
-         "hint": "nOS proves it owns the domain by writing one DNS record there, so certificates work without opening any port. Pick your DNS host, or type its acme.sh name."},
+         "hint": "nOS proves it owns the domain by writing one DNS record there, so certificates work without opening any port. Recommended: Cloudflare, DNS only (free; keep the domain registered where it is and point its nameservers at Cloudflare). Cloudflare DNS-only is not the Cloudflare edge; the edge needs a public IP. Or pick your DNS host, or type its acme.sh name."},
         {"key": "acme_cloudflare_api_token", "label": "Cloudflare API token (Cloudflare DNS only)", "type": "password", "secret": True, "check": "acme_token",
          "hint": "Only when Cloudflare hosts your DNS: a token with Zone:DNS:Edit, so nOS can get its certificates. It goes into credentials.yml, never into config.yml."},
         {"key": "acme_dns_env", "label": "DNS host API login", "type": "dnsenv", "secret": True, "check": "dns_env",
@@ -162,11 +162,12 @@ MAIL = {"key": "mail", "label": "E-mail from this machine", "options": [
      "flags": {"install_mailpit": False, "install_smtp_stalwart": True}},
 ]}
 # acme.sh 3.1.6 dnsapi/<id>.sh `Options:` names (the gate re-reads them when acme.sh is
-# installed). Wedos needs WAPI on, and this office's public IP on its WAPI allow-list.
+# installed). Cloudflare leads: the recommended path, also for lan_tailscale (DNS-01 only).
 DNS_PROVIDERS = [
-    {"id": "dns_cf", "label": "Cloudflare", "env": []},
+    {"id": "dns_cf", "label": "Cloudflare (recommended, DNS only)", "env": []},
     {"id": "dns_wedos", "label": "Wedos", "env": ["WEDOS_Username", "WEDOS_Wapipass"],
-     "note": "Turn on WAPI in the Wedos customer area and add this office's public IP to its allowed addresses."},
+     "note": "acme.sh supports Wedos through WAPI: turn WAPI on and allow this office's public IP (it must stay fixed). "
+             "Simpler: keep the domain at Wedos and point its nameservers at Cloudflare."},
     {"id": "dns_hetznercloud", "label": "Hetzner", "env": ["HETZNER_TOKEN"]},
     {"id": "dns_desec", "label": "deSEC (free)", "env": ["DEDYN_TOKEN"]},
     {"id": "dns_ovh", "label": "OVH", "env": ["OVH_END_POINT", "OVH_AK", "OVH_AS", "OVH_CK"]},
