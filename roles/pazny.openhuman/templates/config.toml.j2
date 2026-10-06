@@ -4,6 +4,10 @@ chat_provider = "{{ _oh_route }}"
 reasoning_provider = "{{ _oh_route }}"
 agentic_provider = "{{ _oh_route }}"
 coding_provider = "{{ _oh_route }}"
+# Background work stays on Ollama in both modes; unset means cloud. learning_provider is retired after v0.64.10.
+memory_provider = "ollama:{{ _oh_local_model }}"
+embeddings_provider = "ollama:{{ openhuman_embed_model }}"
+learning_provider = "ollama:{{ _oh_local_model }}"
 
 [privacy]
 # local_only refuses every cloud route, claude-code included: that mode needs standard.
@@ -16,6 +20,13 @@ enabled = false
 rpc_mutations_enabled = false
 [gitbooks]
 enabled = false
+[memory]
+embedding_provider = "ollama"
+embedding_model = "{{ openhuman_embed_model }}"
+embedding_dimensions = {{ openhuman_embed_dimensions }}
+[memory_tree]
+llm_extractor_model = "{{ _oh_local_model }}"
+llm_summariser_model = "{{ _oh_local_model }}"
 [memory.conversations]
 enabled = false
 [memory.recall]
@@ -26,4 +37,5 @@ opt_in_confirmed = true
 provider = "ollama"
 base_url = "http://127.0.0.1:11434"
 chat_model_id = "{{ ollama_small_model }}"
+embedding_model_id = "{{ openhuman_embed_model }}"
 num_ctx = 8192

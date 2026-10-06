@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Is OpenHuman on this Mac set up to stay on this Mac?
 
-Reads the OpenHuman config (~/.openhuman/users/<active user>/config.toml), the
-app bundle, the process table and `lsof`, and reports privacy mode, analytics,
-updater, model route, memory, MCP servers, install, running and egress — each as
-OK / RED / UNKNOWN with the source it read. Step 0 of roadmap row `openhuman`;
+Reads every OpenHuman profile config (~/.openhuman/users/*/config.toml), the
+app bundle, the process table and `lsof`, and reports profiles, privacy mode,
+analytics, updater, model route, memory, MCP servers, install, running, egress
+and a second Ollama — each as OK / RED / UNKNOWN with the source it read. Step 0 of roadmap row `openhuman`;
 the recipe is docs/systems/openhuman/README.md.
 
 Reads only. Exit 0 always. A source it cannot read is UNKNOWN, never green.
@@ -14,7 +14,8 @@ Usage:
     tools/openhuman-status.py [--json]
     tools/openhuman-status.py --selftest      # fixture configs, no app needed
 Env (tests): NOS_OPENHUMAN_DIR (default ~/.openhuman), NOS_OPENHUMAN_APP,
-NOS_OPENHUMAN_CASKROOM, NOS_OPENHUMAN_PROVIDER (ollama | claude-code, the declared one).
+NOS_OPENHUMAN_CASKROOM, NOS_OPENHUMAN_PROVIDER (ollama | claude-code, the declared one),
+NOS_OPENHUMAN_OLLAMA_PREFIX (default /opt/homebrew: where the one Ollama lives).
 """
 
 from __future__ import annotations
@@ -38,10 +39,19 @@ OK, RED, UNKNOWN = "OK", "RED", "UNKNOWN"
 HOME = pathlib.Path.home()
 LOCAL_PREFIXES = ("ollama:", "lmstudio:", "mlx:", "omlx:", "local-openai:")
 WORKLOADS = ("chat_provider", "reasoning_provider", "agentic_provider", "coding_provider")
+# Background workloads: unset means cloud. learning_provider is retired after v0.64.10, so judged only when present.
+BACKGROUND = ("memory_provider", "embeddings_provider")
+OLLAMA_PORT = "11434"
 
 
 def root() -> pathlib.Path:
     return pathlib.Path(os.environ.get("NOS_OPENHUMAN_DIR", HOME / ".openhuman"))
+
+
+def profiles(base: pathlib.Path) -> list[pathlib.Path]:
+    """Every profile config: the app makes users/local-<host slug> on "login locally", not users/local."""
+    found = sorted(base.glob("users/*/config.toml"))
+    return found or ([base / "config.toml"] if (base / "config.toml").is_file() else [])
 
 
 def config_path(base: pathlib.Path) -> pathlib.Path | None:
@@ -111,9 +121,17 @@ def judge_config(cfg: dict | None, src: str, provider: str | None = None) -> lis
     conv = _get(cfg, "memory.conversations.enabled", True)
     recall = _get(cfg, "memory.recall.enabled", True)
     sources = _get(cfg, "memory.sources", []) or []
-    out.append(line("memory", RED if conv or recall or sources else OK,
+    bg = {w: _get(cfg, w) or "cloud" for w in BACKGROUND}
+    if "learning_provider" in cfg:
+        bg["learning_provider"] = cfg["learning_provider"] or "cloud"
+    bg_cloud = [w for w, v in bg.items() if not str(v).startswith(LOCAL_PREFIXES)]
+    emb = _get(cfg, "memory.embedding_provider", "cloud")
+    if emb in ("cloud", "managed", "openhuman"):
+        bg_cloud.append(f"memory.embedding_provider={emb}")
+    out.append(line("memory", RED if conv or recall or sources or bg_cloud else OK,
                     f"engine={_get(cfg, 'memory.engine', 'tinyhumans')} conversations="
-                    f"{str(conv).lower()} recall={str(recall).lower()} sources={len(sources)}", src))
+                    f"{str(conv).lower()} recall={str(recall).lower()} sources={len(sources)}"
+                    + (f"; on the cloud route: {', '.join(bg_cloud)}" if bg_cloud else ""), src))
     gb = _get(cfg, "gitbooks.enabled", True)
     out.append(line("gitbooks MCP (remote)", RED if gb else OK, f"enabled={str(gb).lower()}", src))
     return out
@@ -165,6 +183,24 @@ def judge_lsof(text: str | None) -> dict:
     return line("egress", OK, f"{len(rows)} socket(s), all loopback (a snapshot, not a window)", src)
 
 
+def judge_ollama(comms: str | None, listeners: str | None, prefix: str, path_dirs: list[str]) -> dict:
+    """One Ollama, under `prefix`, on :11434. Another binary, process or port is a second habitat."""
+    src = f"ps -axo comm, lsof -iTCP -sTCP:LISTEN -c ollama, PATH, /Applications/Ollama.app; allowed {prefix}"
+    if comms is None:
+        return line("second Ollama", UNKNOWN, "ps unreadable", src)
+    pre = prefix.rstrip("/") + "/"
+    bins = {str(pathlib.Path(d) / "ollama") for d in path_dirs if (pathlib.Path(d) / "ollama").exists()}
+    bins |= {c.strip() for c in comms.splitlines() if pathlib.Path(c.strip()).name.lower() == "ollama"}
+    if pathlib.Path("/Applications/Ollama.app").exists():
+        bins.add("/Applications/Ollama.app")
+    bad = sorted(b for b in bins if not b.startswith(pre))
+    ports = sorted({r.split()[8].rsplit(":", 1)[-1] for r in (listeners or "").splitlines()[1:] if len(r.split()) > 8})
+    bad += [f"listening on :{p}" for p in ports if p != OLLAMA_PORT]
+    seen = f"binaries: {', '.join(sorted(bins)) or 'none'}; ports: {', '.join(ports) or 'none'}"
+    return line("second Ollama", RED if bad else OK, ("outside the one Ollama: " + "; ".join(bad) + " — ")
+                * bool(bad) + seen, src)
+
+
 def line(check: str, state: str, detail: str, source: str) -> dict:
     return {"check": check, "state": state, "detail": detail, "source": source}
 
@@ -186,31 +222,46 @@ def collect() -> list[dict]:
     procs = [p for p in (ps or "").splitlines() if "openhuman" in p.lower()]
     out.append(line("running", UNKNOWN if ps is None else OK,
                     f"{len(procs)} process(es)" if ps is not None else "ps unreadable", "ps -axo comm"))
-    path = config_path(base)
-    cfg, raw, src = None, "", str(path or base / "users/local/config.toml")
-    if path and tomllib:
-        try:
-            raw = path.read_text()
-            cfg = tomllib.loads(raw)
-        except (OSError, tomllib.TOMLDecodeError) as exc:
-            src += f" ({type(exc).__name__})"
-    out += judge_config(cfg, src)
+    paths = profiles(base)
+    out.append(line("profiles", OK if paths else UNKNOWN,
+                    ", ".join(p.parent.name for p in paths) or "no users/*/config.toml", str(base / "users")))
+    servers, raws = [], []
+    for path in paths or [None]:
+        cfg, raw, src = None, "", str(path or base / "users/local/config.toml")
+        if path and tomllib:
+            try:
+                raw = path.read_text()
+                cfg = tomllib.loads(raw)
+            except (OSError, tomllib.TOMLDecodeError) as exc:
+                src += f" ({type(exc).__name__})"
+        name = path.parent.name if path else "local"
+        out += [dict(r, detail=f"[{name}] {r['detail']}") for r in judge_config(cfg, src)]
+        servers += _get(cfg or {}, "mcp_client.servers", []) or []
+        raws.append(raw)
+    cfg = {"mcp_client": {"servers": servers}} if any(raws) else None
+    raw = "\n".join(raws)
     out.append(line("desktop updater", UNKNOWN if app.exists() else OK,
                     "Tauri updater active, no documented switch — watch egress to github.com"
                     if app.exists() else "no app", "upstream tauri.conf.json plugins.updater"))
     out.append(judge_mcp(base, cfg, raw))
     out.append(judge_lsof(_run(["lsof", "-nP", "-iTCP", "-iUDP"]) if procs else ""))
+    out.append(judge_ollama(_run(["ps", "-axo", "comm="]),
+                            _run(["lsof", "-nP", "-a", "-iTCP", "-sTCP:LISTEN", "-c", "ollama"]),
+                            os.environ.get("NOS_OPENHUMAN_OLLAMA_PREFIX", "/opt/homebrew"),
+                            os.environ.get("PATH", "").split(os.pathsep)))
     return out
 
 
 def selftest() -> None:
-    good = """chat_provider = "ollama:hermes3:8b"\nreasoning_provider = "ollama:hermes3:8b"
+    good = """memory_provider = "ollama:hermes3:8b"\nembeddings_provider = "ollama:nomic-embed-text"
+chat_provider = "ollama:hermes3:8b"\nreasoning_provider = "ollama:hermes3:8b"
 agentic_provider = "ollama:hermes3:8b"\ncoding_provider = "ollama:hermes3:8b"
 [privacy]\nmode = "local_only"\n[observability]\nanalytics_enabled = false\nshare_usage_data = false
 [update]\nenabled = false\nrpc_mutations_enabled = false\n[gitbooks]\nenabled = false
 [memory.conversations]\nenabled = false\n[memory.recall]\nenabled = false
-[local_ai]\nbase_url = "http://127.0.0.1:11434"\n"""
+[local_ai]\nbase_url = "http://127.0.0.1:11434"\n[memory]\nembedding_provider = "ollama"\n"""
     states = lambda cfg: {r["check"]: r["state"] for r in judge_config(cfg, "fixture")}  # noqa: E731
+    states_detail = lambda cfg: next(r["detail"] for r in judge_config(cfg, "f") if r["check"] == "memory")  # noqa: E731
     assert set(states(tomllib.loads(good)).values()) == {OK}, states(tomllib.loads(good))
     assert set(states({}).values()) == {RED}, states({})          # documented defaults
     assert set(states(None).values()) == {UNKNOWN}
@@ -222,6 +273,13 @@ agentic_provider = "ollama:hermes3:8b"\ncoding_provider = "ollama:hermes3:8b"
     assert judge_lsof("COMMAND PID\nOpenHuman 1 u 3u IPv4 0 0t0 TCP 10.0.0.2:5->140.82.112.3:443 (ESTABLISHED)")["state"] == RED
     assert judge_lsof("COMMAND PID\nopenhuman 1 u 3u IPv4 0 0t0 TCP *:7788 (LISTEN)")["state"] == RED
     assert judge_lsof(None)["state"] == UNKNOWN and judge_lsof("")["state"] == UNKNOWN
+    vendor = tomllib.loads(good.replace('embeddings_provider = "ollama:nomic-embed-text"', 'embeddings_provider = "cloud"'))
+    assert "embeddings_provider" in states_detail(vendor)
+    lis = "COMMAND PID USER FD TYPE DEVICE SIZE NODE NAME\nollama 1 u 3u IPv4 0 0t0 TCP 127.0.0.1:{} (LISTEN)"
+    assert judge_ollama("/opt/homebrew/bin/ollama\n", lis.format(11434), "/opt/homebrew", [])["state"] == OK
+    assert judge_ollama("/usr/local/bin/ollama\n", "", "/opt/homebrew", [])["state"] == RED
+    assert judge_ollama("/opt/homebrew/bin/ollama\n", lis.format(11435), "/opt/homebrew", [])["state"] == RED
+    assert judge_ollama(None, None, "/opt/homebrew", [])["state"] == UNKNOWN
     with tempfile.TemporaryDirectory() as d:
         base = pathlib.Path(d)
         assert config_path(base) is None
