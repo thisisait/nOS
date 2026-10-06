@@ -174,6 +174,7 @@ One-time branch protection setup, ruleset verification and the release-cut proce
 
 - **Live doctrine:** `ssot/doctrine/` and `docs/doctrine/` (index [docs/doctrine/README.md](docs/doctrine/README.md)), guides in `docs/` and `files/anatomy/docs/`.
 - **Per-service:** `docs/systems/<service>/README.md`.
+- **Words:** [docs/glossary.md](docs/glossary.md) — one meaning per word (organ, cell, memory, …), generated from `state/genome/lexicon.yml`.
 - **History:** devlog under `docs/devlog/nos-core/` (`/devlog` skill; [docs/devlog/README.md](docs/devlog/README.md)), release notes in [RELEASE.md](RELEASE.md), incident lessons in `docs/hidden_fees/`, finished plans in `docs/archive/`.
 - **Now:** [docs/active-work.md](docs/active-work.md) (≤ 150 lines); new work is captured as a roadmap DataTable row (`/dtt-capture`), not a new `docs/plans/*.md`.
 - **Language:** English everywhere — docs, comments, task names.
