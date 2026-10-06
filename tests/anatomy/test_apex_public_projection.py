@@ -90,15 +90,15 @@ def test_published_set_is_the_ruled_63_in_13(artifact, ruling):
     # two published organs, so one new anonymous organ-pair vein appears on
     # the page. Atoms unchanged; a vein bump is a public-surface decision
     # and lands with the same commit that re-signs the ruling.
-    assert doc["counts"] == {"organs": 13, "atoms": 63, "veins": 15}
+    assert doc["counts"] == {"organ_systems": 13, "atoms": 63, "veins": 15}
 
 
 def test_the_firm_desk_organ_is_backoffice(ruling):
-    organs = ruling["organs"]
+    organs = ruling["organ_systems"]
     assert "backoffice" in organs
     assert "ledger" not in organs
     assert organs["backoffice"]["title"] == "The Backoffice"
-    assert organs["backoffice"]["limb"] == "left"
+    assert organs["backoffice"]["side"] == "left"
 
 
 # ---------------------------------------------------------------------------
@@ -201,9 +201,9 @@ def test_the_shipped_surfaces_are_clean(artifact, ruling):
 
 def test_public_document_shape_is_frozen(artifact, ruling):
     doc = P.project(artifact, ruling)
-    assert set(doc) == {"schema", "version", "counts", "organs", "veins"}
-    for organ in doc["organs"]:
-        assert set(organ) == {"id", "title", "tells", "limb", "order", "atoms"}
+    assert set(doc) == {"schema", "version", "counts", "organ_systems", "veins"}
+    for organ in doc["organ_systems"]:
+        assert set(organ) == {"id", "title", "tells", "side", "order", "atoms"}
         for atom in organ["atoms"]:
             assert set(atom) == {"speaks"}   # no `facts`, no id, nothing else
     for vein in doc["veins"]:
