@@ -1,9 +1,10 @@
-# Backoffice — the firm's desk, not a fifth brain
+# Backoffice — the firm's desk, not a new host daemon
 
 > **PROPOSED, not settled** only for promote-to-ssot. The names are
-> settled: **backoffice** is the public organ; **praxis** is a pack
-> inside it, not a second organ and not a host daemon. Sibling of
-> [`organs.md`](organs.md) and of Digest (the stomach: intake).
+> settled: **backoffice** is the organ system; the **backoffice tissue**
+> (`state/tissues/backoffice.tissue.yml`, doctrine [`tissues.md`](tissues.md))
+> is the pack inside it, not a second organ system and not a host daemon.
+> Sibling of [`body-plan.md`](../../ssot/doctrine/body-plan.md) and of digest (intake).
 
 ## 1. Two names, one daemon refusal
 
@@ -11,14 +12,14 @@ Apex publishes **The Backoffice** — *"CRM, books and a customer desk, at home.
 (`organs.backoffice`). CRM, invoices, double-entry, a customer desk,
 optional heavier books and analytics.
 
-**Praxis** is not a 14th constellation and not `files/anatomy/praxis/`.
-It is the default **practice pack** inside backoffice — Dolibarr + KEAP
-tables + invoice doors. EspoCRM is retired (`apps/espocrm.yml.draft`).
-A florist or a workshop later gets a different pack; they still live
-under backoffice.
+The **backoffice tissue** is not a 14th constellation and not
+`files/anatomy/praxis/`. It is the default set inside backoffice —
+Dolibarr + KEAP tables + invoice doors — installed by the `praxis`
+profile. EspoCRM is retired (`apps/espocrm.yml.draft`). A florist or a
+workshop later gets a different tissue; it still lives under backoffice.
 
-That is meaning **public organ** in [`organs.md`](organs.md) §1. It is
-not Bone · Wing · Pulse · Cortex, and not a new launchd unit.
+That is the **organ system** of [`body-plan.md`](../../ssot/doctrine/body-plan.md) §3.
+It is not Bone · Wing · Pulse · Cortex, and not a new launchd unit.
 
 | piece | owns | is not |
 |---|---|---|
@@ -32,12 +33,12 @@ not Bone · Wing · Pulse · Cortex, and not a new launchd unit.
 FreeScout is the customer desk in backoffice. Mail stays in `voice`.
 Digest does not book its own invoices.
 
-## 2. Core for every tenant; praxis is the first pack
+## 2. Core for every tenant; the consulting firm is the first tissue
 
 Every firm that hosts nOS needs a backoffice. The consulting-firm pilot
-is the first **praxis** pack, not a plugin other tenants leave off.
+is the first backoffice tissue, not a plugin other tenants leave off.
 
-**Default blank (settled 2026-09-21):** praxis on (Dolibarr flag in
+**Default blank (settled 2026-09-21):** the tissue on (Dolibarr flag in
 `profiles/praxis.yml`; committed default `install_dolibarr: false`);
 Firefly and ERPNext off. KEAP tables stay the books fallback.
 
@@ -48,7 +49,7 @@ Firefly and ERPNext off. KEAP tables stay the books fallback.
   `invoice` / `posting` behind absorb.
 - **Dolibarr** is the CRM desk when installed. Agents must not hardcode
   Dolibarr URLs; they read `party` / `invoice` via tables MCP (or future
-  `get db:`). The hydrator organelle is `crm-hydrate-base` +
+  `get db:`). The hydrator plugin is `crm-hydrate-base` +
   `digest-import-doli` (MariaDB `llx_societe` → digest absorb), not Bone
   and not vendor REST. Join marker `nos:doli:<rowid>` in `party.notes`.
   Do not fork `party`.
@@ -64,7 +65,7 @@ Firefly and ERPNext off. KEAP tables stay the books fallback.
   A client's books are not the public front door. Atoms are
   capabilities, not rows.
 
-## 4. Doors (praxis pack)
+## 4. Doors (backoffice tissue)
 
 | door | in | out |
 |---|---|---|
@@ -72,25 +73,25 @@ Firefly and ERPNext off. KEAP tables stay the books fallback.
 | invoice-vision Pulse | photo/PDF | `pending-invoice-verify` |
 | HMAC `invoice-verify` / Books approve | held row | absorb books it |
 | `digest-import-doli` (Pulse `crm-hydrate:hydrate-parties`) | open thirdparties with IČO | KEAP `party` projection |
-| n8n ARES/ADIS (Pulse `ares-verify:registry-*`) | IČO on the spine | `party-registry-status` (exists + nespolehlivý plátce) |
+| n8n pack `nos-pull-ares-registry` (its own n8n schedule; Pulse `n8n:exec-watch` observes, [`n8n-packs.md`](n8n-packs.md)) | IČO on the spine | `party-registry-status` (exists + nespolehlivý plátce) |
 | n8n ČNB / DTT | after approve | export, never a second SoT |
 
 A release that ships Books without absorb, or Dolibarr as a second
-party table without the hydrator organelle, or vision that writes `invoice`
-directly, is not praxis and not backoffice.
+party table without the hydrator plugin, or vision that writes `invoice`
+directly, is not the backoffice tissue and not backoffice.
 
-## 4b. Organelles (what Espo/Firefly never grew)
+## 4b. Plugins (what Espo/Firefly never grew)
 
-The desk container is replaceable FOSS. The pack is the tendons:
+The desk container is replaceable FOSS. The tissue's value is its plugin wiring:
 
-| organelle | organ | artifact |
+| plugin | organ | artifact |
 |---|---|---|
 | hydrator | Digest + Pulse | `crm-hydrate-base`, `tools/digest-import-doli.py`, `imp_doli-party` |
-| registry check | Pulse + n8n (reflexes) | `ares-verify-base` → webhook `nos-ares-registry` → ARES + ADIS → `party-registry-status` |
-| party spine | Cortex / KEAP | `state/keap-tables/party.table.yml` (`graph.mode: rows`) |
+| registry check | n8n (reflex in its own schedule) | `files/anatomy/n8n/packs/nos-pull-ares-registry.yml` → ARES + ADIS → `party-registry-status` |
+| party spine | KEAP (memory) | `state/keap-tables/party.table.yml` (`graph.mode: rows`) |
 | agent procedure | nos-lang / skills | `files/anatomy/skills/nos-backoffice/SKILL.md` |
 | HMAC events | Bone | digest absorb already posts through the KEAP agent door |
-| books intake | Digest + Pulse + Bone | ISDOC / vision queue / HMAC `invoice-verify` — already an organelle |
+| books intake | Digest + Pulse + Bone | ISDOC / vision queue / HMAC `invoice-verify` — already wired |
 
 Dolibarr `Facture` and Firefly are **desks**, not a second invoice spine.
 A hydrator that copies `llx_facture` (or Firefly journals) into `invoice` /
@@ -100,17 +101,17 @@ a digest-constitution change, not a Dolibarr feature.
 
 ## 5. Settled (operator 2026-09-20)
 
-1. Public organ = **backoffice**; **praxis** = pack. Apex key moved
-   from `ledger` (re-signed). Promote this file when ssot harvest next
-   recites doctrine.
+1. Organ system = **backoffice**; the consulting-firm set = the backoffice
+   tissue (installed by the `praxis` profile). Apex key moved from `ledger`
+   (re-signed). Promote this file when ssot harvest next recites doctrine.
 2. Firefly and ERPNext off on a blank. Dolibarr off in committed
-   defaults; praxis overlay turns it on.
+   defaults; the praxis overlay turns it on.
 3. Client/user portal lives in **commons**. WordPress is that portal
    when the firm wants a CMS, not a second backoffice.
 4. **Config builder:** none in this tree. YAML `profiles/*`, queued
    `face-app-builder` (apps, not `install_*`), `docs/overview.html`.
    A first-onboard chooser that emits `config.yml` is new work beside
-   commons, not a 15th organ.
+   commons, not a 15th organ system.
 5. **Client-data training:** optional, default OUT, per `book_owner`
    (`party.training_opt_in`), withdrawable. Pipeline off until
    offboarding can honour Art-17 against a model. Art-7 capture is

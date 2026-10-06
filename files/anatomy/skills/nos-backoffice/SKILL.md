@@ -1,6 +1,6 @@
 ---
 name: nos-backoffice
-description: Backoffice pack — CRM desk is Dolibarr when installed; agents read KEAP party/invoice tables, never vendor REST. Hydrator is digest-import-doli, not Bone.
+description: Backoffice tissue — CRM desk is Dolibarr when installed; agents read KEAP party/invoice tables, never vendor REST. Hydrator is digest-import-doli, not Bone.
 metadata:
   nos:
     audience: [hermes, openclaw]
@@ -12,9 +12,10 @@ prerequisites:
 
 # nos-backoffice — one SoT, replaceable desk
 
-The consulting-firm pack lives under the **backoffice** organ. Dolibarr is a
-replaceable FOSS desk. nOS value is the hydrator + tables + skills, not the
-container.
+The consulting-firm set is the **backoffice tissue**
+(`state/tissues/backoffice.tissue.yml`), inside the **backoffice** organ system.
+Dolibarr is a replaceable FOSS desk. nOS value is the hydrator + tables +
+skills, not the container.
 
 ## The one rule
 
@@ -26,8 +27,8 @@ Do not curl Dolibarr, Espo, or Firefly. Do not invent a second party table.
 |---|---|---|
 | Dolibarr | CRM desk (when `install_dolibarr`) | humans in the browser, Authentik gate |
 | `party` / `invoice` / `posting` | governed facts | digest absorb |
-| `digest-import-doli.py` | hydrator organelle | Pulse `crm-hydrate:hydrate-parties` |
-| ARES / nespolehlivý plátce | n8n workflow | Pulse `ares-verify` POSTs webhook; n8n hops; not a Python hydrator |
+| `digest-import-doli.py` | hydrator plugin (`crm-hydrate-base`) | Pulse `crm-hydrate:hydrate-parties` |
+| ARES / nespolehlivý plátce | n8n pack `nos-pull-ares-registry` | its own n8n schedule; Pulse `n8n:exec-watch` observes; not a Python hydrator |
 | Face Books | projection + HMAC verify | not a store |
 | KEAP explore | optional embed of party rows (`graph.mode: rows` on the table; hide iframe via `face_keap_explore_url: ""`) | not a second SoT |
 
