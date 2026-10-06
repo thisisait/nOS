@@ -60,6 +60,15 @@
 - slug: apgar
   parent: body-cell
   track: agents
+- slug: appendage-detachable-gate
+  parent: body-organ
+  track: platform
+- slug: appendage-joint-face
+  parent: body-organ
+  track: face
+- slug: appendage-lexicon
+  parent: body-plan
+  track: platform
 - slug: audit-anchor-earned
   parent: ''
   track: security
@@ -150,6 +159,9 @@
 - slug: cc-tui-variants
   parent: cc-app
   track: face
+- slug: cell-not-aws-cell
+  parent: body-cell
+  track: platform
 - slug: cell-two-types
   parent: body-cell
   track: platform
@@ -543,6 +555,9 @@
 - slug: espocrm-retire-cleanup
   parent: ''
   track: platform
+- slug: evolve-imprint
+  parent: body-cell
+  track: agents
 - slug: ext-contract
   parent: ''
   track: platform
@@ -570,6 +585,9 @@
 - slug: face-files-explorer
   parent: ''
   track: face
+- slug: face-licence-split
+  parent: body-organ
+  track: face
 - slug: face-loop-view
   parent: face
   track: face
@@ -595,6 +613,9 @@
   parent: face
   track: face
 - slug: face-tauri
+  parent: face
+  track: face
+- slug: face-the-endpoint
   parent: face
   track: face
 - slug: face-tree
@@ -632,6 +653,9 @@
   track: platform
 - slug: fixtures-service-seed-scope
   parent: fixtures
+  track: platform
+- slug: fork-ramet-word
+  parent: body-organism
   track: platform
 - slug: forum-token-in-access-log
   parent: nos-forum
@@ -1098,6 +1122,9 @@
 - slug: openhuman
   parent: body-organ
   track: agents
+- slug: openhuman-upstream-prs
+  parent: openhuman
+  track: agents
 - slug: operator-session-threat-model
   parent: ''
   track: security
@@ -1106,6 +1133,9 @@
   track: platform
 - slug: organ-one-meaning
   parent: body-organ
+  track: platform
+- slug: organism-type-colony
+  parent: body-organism
   track: platform
 - slug: organs-noun
   parent: ''
@@ -1136,6 +1166,9 @@
   track: platform
 - slug: phenotype
   parent: body-organism
+  track: platform
+- slug: phenotype-not-organism-type
+  parent: phenotype
   track: platform
 - slug: pipeline-exercise-loop-build
   parent: ''
@@ -1311,6 +1344,9 @@
 - slug: repos-importer
   parent: digest
   track: digest
+- slug: retire-healing-words
+  parent: body-plan
+  track: platform
 - slug: review-v015-followups
   parent: ''
   track: security
