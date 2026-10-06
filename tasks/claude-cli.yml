@@ -76,9 +76,9 @@
   check_mode: false
   tags: ['claude-cli', 'node']
 
-# Only when nothing resolves, by the vendor's own route, once; its auto-updater
-# owns the build afterwards. The old route (`claude install`) needed a claude to
-# exist already, so on a clean host it never installed anything.
+# Only when nothing resolves AND the operator set install_claude_cli_vendor: the
+# vendor's own route, once; its auto-updater owns the build afterwards. The old
+# route (`claude install`) needed a claude already, so a clean host got nothing.
 - name: "[claude-cli] Install the native build (no claude resolved)"
   ansible.builtin.shell: |
     set -o pipefail
@@ -90,6 +90,7 @@
   failed_when: false
   when:
     - nos_pkg_manager == 'homebrew'
+    - install_claude_cli_vendor | default(false) | bool
     - (_claude_existing.stdout | default('') | trim) == ''
   tags: ['claude-cli', 'node']
 
@@ -217,7 +218,9 @@
          if (_claude_existing.stdout | default('') | trim)
          else ('claude installed by the vendor installer at ' ~ _claude_native_bin ~ '; open a NEW shell')
          if (_claude_native_after.stat.exists | default(false))
-         else 'NO claude found and the vendor install produced none: agents that call claude will fail' }}.
+         else 'NO claude found and the vendor install produced none: agents that call claude will fail'
+         if (install_claude_cli_vendor | default(false) | bool)
+         else 'claude: ABSENT — set install_claude_cli_vendor: true to let the vendor installer run once' }}.
       launchd bridge {{ homebrew_prefix }}/bin/claude:
       {{ (_claude_bridge.stat.lnk_source | default('present, not a symlink', true))
          if (_claude_bridge.stat.exists | default(false))

@@ -531,6 +531,9 @@ install_node: true                # Node.js + NVM (Cortex runs on it); node_glob
 # live sessions with EACCES several times a day (measured 2026-08-04).
 install_claude_cli: true
 claude_cli_channel: "stable"      # stable | latest | an exact version
+# When no claude resolves, DOWNLOAD and RUN the vendor's script (claude.ai/install.sh)
+# once; its auto-updater owns the CLI afterwards. Off = nOS installs nothing, reports ABSENT.
+install_claude_cli_vendor: false
 install_bun: false                # Bun JavaScript runtime / bundler (habitat)
 install_python: true              # Python + pyenv + pip packages
 install_golang: false             # Go language + gopls, golangci-lint, air (habitat)

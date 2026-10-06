@@ -17,6 +17,7 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 TASKS = REPO / "tasks/claude-cli.yml"
+TOGGLE = "install_claude_cli_vendor"
 needs_ansible = pytest.mark.skipif(importlib.util.find_spec("ansible") is None, reason="runs the task through real Ansible")
 # Logs its own name + args and exits; nothing here may ever run during the gate.
 STUB = '#!/bin/sh\necho "$(basename "$0") $*" >> "{log}"\nexit 0\n'
@@ -33,7 +34,7 @@ def _exe(path: Path, body: str) -> None:
     path.chmod(0o755)
 
 
-def _converge(tmp: Path, existing: Path | None, native: bool) -> tuple[dict, dict, str, str]:
+def _converge(tmp: Path, existing: Path | None, native: bool, **extra) -> tuple[dict, dict, str, str]:
     home, stubs, brew = tmp / "home", tmp / "stubs", tmp / "brew"
     for d in (home, stubs, brew / "bin"):
         d.mkdir(parents=True, exist_ok=True)
@@ -49,7 +50,7 @@ def _converge(tmp: Path, existing: Path | None, native: bool) -> tuple[dict, dic
 
     play = [{"hosts": "localhost", "connection": "local", "gather_facts": True, "gather_subset": ["!all", "min"],
              "vars": {"ansible_python_interpreter": sys.executable,
-                      "nos_pkg_manager": "homebrew", "homebrew_prefix": str(brew)},
+                      "nos_pkg_manager": "homebrew", "homebrew_prefix": str(brew), **extra},
              "tasks": [{"import_tasks": str(TASKS)}]}]
     (tmp / "play.yml").write_text(yaml.safe_dump(play))
     # Sealed PATH: the host's own claude/curl/npm/brew can never be reached.
@@ -77,10 +78,25 @@ def test_an_existing_claude_is_left_alone(tmp_path, where, native):
     assert str(existing) in out, "the run did not report which claude it found"
 
 
+def _declared_default(name: str):
+    """The default as default.config.yml declares it, not as the task guesses it."""
+    return yaml.safe_load((REPO / "default.config.yml").read_text())[name]
+
+
 @needs_ansible
-def test_no_claude_anywhere_runs_only_the_vendor_installer(tmp_path):
+def test_no_claude_anywhere_installs_nothing_by_default(tmp_path):
+    """The vendor script is downloaded and run only on the operator's word."""
+    default = _declared_default(TOGGLE)
+    assert default is False, f"{TOGGLE} must default to false, got {default!r}"
+    _, _, calls, out = _converge(tmp_path, None, native=False, **{TOGGLE: default})
+    assert not calls.strip(), f"an installer ran without {TOGGLE}:\n{calls}"
+    assert f"set {TOGGLE}: true" in out, "absence must be reported with the switch that ends it"
+
+
+@needs_ansible
+def test_the_toggle_runs_only_the_vendor_installer_once(tmp_path):
     """Positive control: a gate that passes because nothing ever installs is blind."""
-    _, _, calls, out = _converge(tmp_path, None, native=False)
+    _, _, calls, out = _converge(tmp_path, None, native=False, **{TOGGLE: True})
     assert [c.split()[0] for c in calls.splitlines()] == ["curl"], f"expected one vendor installer call:\n{calls}"
     assert "claude.ai/install.sh" in calls
     assert "NO claude found" in out, "a failed install must be reported as absence, not success"
