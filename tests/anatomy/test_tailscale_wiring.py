@@ -190,7 +190,8 @@ def test_the_reader_only_reads_and_never_says_green_blind(tmp_path):
 
 # ── Funnel: never ───────────────────────────────────────────────────────────
 ALLOWED = {"[Preflight] Refuse Tailscale Funnel", "[Tailscale] Verify: Funnel is off"}
-SCANNED = ["main.yml", "default.config.yml", "default.credentials.yml", "config.d", "tasks", "roles", "templates"]
+SCANNED = ["main.yml", "default.credentials.yml", "tasks", "roles", "templates",
+           *(str(p.relative_to(REPO)) for p in ni.default_layers())]
 
 
 def funnel_mentions(text: str) -> list[str]:
