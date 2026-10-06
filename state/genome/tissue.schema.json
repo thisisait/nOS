@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://thisisait.eu/nos/schema/tissue.schema.json",
+  "title": "tissue — the transplantable pack of one specialization",
+  "description": "A tissue declares nothing new. Every list below holds ids that already exist in their own source (an agent dir, a SKILL.md, a table definition, a manifest row, a plugin pulse job, an importer, a seed); files/anatomy/module_utils/nos_tissue.py resolves each one and refuses a dangling reference. `meta` is the Tier-2 app manifest's own block (state/schema/app.schema.json), plus a licence. There is no gdpr block on purpose: Article 30 is inherited from the members that process data. Doctrine: docs/doctrine/tissues.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["meta", "cells", "skills", "tables", "services", "reflexes", "acceptance"],
+  "definitions": {
+    "ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" }
+    }
+  },
+  "properties": {
+    "meta": {
+      "allOf": [
+        { "$ref": "https://thisisait.eu/schemas/nos/app.schema.json#/properties/meta" },
+        {
+          "type": "object",
+          "required": ["license"],
+          "properties": {
+            "license": { "type": "string", "minLength": 3, "description": "SPDX id. The pack travels as plain files under this licence." }
+          }
+        }
+      ]
+    },
+    "cells": { "$ref": "#/definitions/ids", "minItems": 1, "description": "files/anatomy/agents/<id>/agent.yml" },
+    "skills": { "$ref": "#/definitions/ids", "description": "files/anatomy/skills/<id>/SKILL.md — the distributed library only; a project skill under .claude/ does not travel" },
+    "tables": { "$ref": "#/definitions/ids", "description": "state/keap-tables/<id>.table.yml" },
+    "services": { "$ref": "#/definitions/ids", "description": "state/manifest.yml services[].id, each with files/anatomy/plugins/<id>-base/plugin.yml" },
+    "reflexes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$" },
+      "description": "<owner>:<job> — a pulse.jobs[] row of files/anatomy/plugins/<owner>-base/plugin.yml (the anatomy graph's pulse:<owner>:<job>)"
+    },
+    "importers": { "$ref": "#/definitions/ids", "description": "state/digest-importers/<id>.importer.yml — the doors data enters by" },
+    "seeds": { "$ref": "#/definitions/ids", "description": "state/fixtures/<id>.seed.yml — reference knowledge the tissue starts with (no personal data)" },
+    "profile": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "description": "profiles/<id>.yml — the overlay that installs it" },
+    "acceptance": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+      "description": "fixture ids: state/fixtures/<id>.seed.yml + state/fixtures/<id>/expected.yml, and roadmap row fixture-<id>"
+    }
+  }
+}

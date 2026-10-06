@@ -847,6 +847,7 @@ nodes:
   "reader:stale-config-status": withheld
   "reader:stuck-status": withheld
   "reader:task-types-render": withheld
+  "reader:tissue-status": withheld
   "reader:tls-uptake": withheld
   "reader:undeclared-status": withheld
   "reader:usage-status": withheld
@@ -890,3 +891,7 @@ nodes:
   "organ_system:vault": withheld
   "organ_system:voice": withheld
   "organ_system:wits": withheld
+  # tissues (2026-10-06, PROPOSED): one node per state/tissues/<name>.tissue.yml.
+  # WITHHELD: a tissue names the cells, tables and services a firm runs, and
+  # node.kind lets only `service` nodes publish.
+  "tissue:backoffice": withheld

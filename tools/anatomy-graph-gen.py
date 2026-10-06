@@ -55,6 +55,7 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
     reader:<stem>           tools/README.md §Readers lines
     article:<stem>          in-force doctrine realm of ssot/INDEX.yml
     organ_system:<key>      `organs:` groups of files/anatomy/apex/ruling.yml
+    tissue:<name>           state/tissues/<name>.tissue.yml (tools/tissue-status.py)
 
 SERVICE→SERVICE DEPENDENCIES (docs/idea/13-relations.md R1)
 -----------------------------------------------------------
@@ -204,6 +205,7 @@ SKILL_SOURCES = ("files/anatomy/skills/*/SKILL.md", ".claude/skills/*/SKILL.md",
 TOOLS_README = REPO / "tools" / "README.md"
 SSOT_INDEX = REPO / "ssot" / "INDEX.yml"
 APEX_RULING = REPO / "files" / "anatomy" / "apex" / "ruling.yml"
+TISSUE_LOADER = REPO / "tools" / "tissue-status.py"
 
 TAXONOMY_BUNDLE = REPO / "state" / "fable" / "taxonomy-bundle.json"
 
@@ -255,6 +257,7 @@ KIND_ANCHORS = {
     "reader": "02.02.04",
     "article": "09",
     "organ_system": "02.02.04",
+    "tissue": "02.02.04",
 }
 FALLBACK_ANCHOR = "02.02.04"      # Software Engineering
 
@@ -622,6 +625,8 @@ def _describe(nid: str, n: dict) -> str:
     if kind == "organ_system":
         return (f"Organ system '{local}' — a public group of organs for one function, "
                 f"declared as an `organs:` group in {n['source']}")
+    if kind == "tissue":
+        return f"Tissue '{local}' — the transplantable pack of one specialization: {n.get('title')}"
     if kind == "doctrine":
         head = n.get("heading") or "(unheaded table-row address)"
         return (f"Constitution paragraph {n.get('section')} of {n['source']}: "
@@ -1236,6 +1241,32 @@ def harvest_organ_systems(nodes: dict, edges: list) -> None:
         edges.append({"from": nid, "to": f"organ_system:{group}", "kind": "part_of",
                       "via": f"`publish: {group}` in files/anatomy/apex/ruling.yml",
                       "derived": "apex-ruling"})
+
+
+#: What a tissue lists → the kind prefix its members already carry here.
+TISSUE_MEMBERS = {"cells": "agent", "skills": "skill", "tables": "table",
+                  "services": "service", "reflexes": "pulse"}
+
+
+def harvest_tissues(nodes: dict, edges: list) -> None:
+    """tissue:<name> per manifest, and member → tissue `part_of`. The loader
+    refuses a dangling id; here a refused tissue is a compile error."""
+    spec = importlib.util.spec_from_file_location("_tissue_status", TISSUE_LOADER)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    for t in mod.load_all():
+        if t["refused"]:
+            _die(f"{t['source']} refused: " + "; ".join(t["refused"]))
+        nid = f"tissue:{t['name']}"
+        nodes[nid] = {"kind": "tissue", "source": t["source"],
+                      "title": t["doc"]["meta"]["summary"]}
+        for key, prefix in TISSUE_MEMBERS.items():
+            for local in t["doc"].get(key) or []:
+                if f"{prefix}:{local}" not in nodes:
+                    _die(f"{t['source']}: {key} {local!r} has no {prefix}: node")
+                edges.append({"from": f"{prefix}:{local}", "to": nid, "kind": "part_of",
+                              "via": f"`{key}:` in {t['source']}",
+                              "derived": "tissue-manifest"})
 
 
 def derive_reader_runs(nodes: dict) -> list[dict]:
@@ -1947,6 +1978,7 @@ def build() -> dict:
     harvest_readers(nodes)
     harvest_articles(nodes)
     harvest_organ_systems(nodes, shelf_edges)   # after services
+    harvest_tissues(nodes, shelf_edges)   # last harvest: its members must exist
 
     declared = compile_declared(raw, nodes)
     writes = compile_writes(raw_writes, nodes)
@@ -2007,7 +2039,7 @@ def build() -> dict:
     for k in ("pulse", "judge", "gateset", "weakness", "daemon", "service", "lock",
               "tool", "tool_ro", "token", "token_ro", "backend",
               "repo", "tofu", "authentik", "table", "doctrine", "faceapp", "agent",
-              "tasktype", "skill", "reader", "article", "organ_system"):
+              "tasktype", "skill", "reader", "article", "organ_system", "tissue"):
         counts[f"nodes_{k}"] = sum(1 for n in nodes.values() if n["kind"] == k)
     for k in EDGE_KINDS + ("mutex", "governed_by", "may_take", "allows", "references",
                            "part_of"):

@@ -40,7 +40,6 @@ LEVELS = {
 }
 CROSS = "sense"
 EMPTY = {
-    "tissue": "nothing declares a tissue yet",
     "organism": "no node stands for the whole; the whole is this graph",
 }
 TOP = 3

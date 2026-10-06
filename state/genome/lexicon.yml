@@ -92,6 +92,10 @@ words:
   tissue:
     level: tissue
     means: The transplantable pack of one specialization's cells with their skills, tables and services.
+    names:
+      - graph_kind: tissue
+        reason: one manifest gathering a specialization's existing cells, skills, tables, services and reflexes
+      - path: state/tissues/
     not: [plugin, organ]
     retired:
       - sense: "praxis pack / backoffice pack"

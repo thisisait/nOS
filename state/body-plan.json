@@ -6,18 +6,18 @@
   "counts": {
     "genome": 20,
     "cell": 16,
-    "tissue": 0,
+    "tissue": 1,
     "organ": 101,
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
-    "sense": 75,
+    "sense": 76,
     "limb": 8,
     "memory": 40,
     "law": 36,
     "reflex": 43,
     "internal": 67,
-    "edges": 339
+    "edges": 362
   },
   "nodes": {
     "agent:conductor": {
@@ -1072,6 +1072,10 @@
       "level": "sense",
       "kind": "reader"
     },
+    "reader:tissue-status": {
+      "level": "sense",
+      "kind": "reader"
+    },
     "reader:tls-uptake": {
       "level": "sense",
       "kind": "reader"
@@ -1636,6 +1640,10 @@
       "level": "genome",
       "kind": "tasktype"
     },
+    "tissue:backoffice": {
+      "level": "tissue",
+      "kind": "tissue"
+    },
     "tofu:authentik-state": {
       "level": "internal",
       "kind": "tofu"
@@ -1758,9 +1766,19 @@
       "kind": "may_take"
     },
     {
+      "from": "agent:invoice-extract",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
       "from": "agent:invoice-vision-ocr",
       "to": "tasktype:investigate",
       "kind": "may_take"
+    },
+    {
+      "from": "agent:invoice-vision-ocr",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
     },
     {
       "from": "agent:jeff",
@@ -2338,6 +2356,11 @@
       "kind": "data"
     },
     {
+      "from": "pulse:crm-hydrate:hydrate-parties",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
       "from": "pulse:discovery:contradiction-scan",
       "to": "reader:discovery-scan",
       "kind": "trigger"
@@ -2378,9 +2401,19 @@
       "kind": "data"
     },
     {
+      "from": "pulse:invoice-vision:absorb-approved",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
       "from": "pulse:invoice-vision:intake-sweep",
       "to": "table:pending-invoice-verify",
       "kind": "data"
+    },
+    {
+      "from": "pulse:invoice-vision:intake-sweep",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
     },
     {
       "from": "pulse:keap:keap-consolidate",
@@ -2593,6 +2626,11 @@
       "kind": "data"
     },
     {
+      "from": "service:dolibarr",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
       "from": "service:erpnext",
       "to": "organ_system:backoffice",
       "kind": "part_of"
@@ -2615,6 +2653,11 @@
     {
       "from": "service:freescout",
       "to": "organ_system:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "service:freescout",
+      "to": "tissue:backoffice",
       "kind": "part_of"
     },
     {
@@ -3063,6 +3106,11 @@
       "kind": "data"
     },
     {
+      "from": "skill:nos-backoffice",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
       "from": "skill:nos-datatables",
       "to": "service:hermes",
       "kind": "data"
@@ -3071,6 +3119,11 @@
       "from": "skill:nos-datatables",
       "to": "service:openclaw",
       "kind": "data"
+    },
+    {
+      "from": "skill:nos-datatables",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
     },
     {
       "from": "skill:nos-devops",
@@ -3088,9 +3141,24 @@
       "kind": "references"
     },
     {
+      "from": "table:account",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
       "from": "table:application",
       "to": "table:package",
       "kind": "references"
+    },
+    {
+      "from": "table:book-access",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "table:cnb-fx",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
     },
     {
       "from": "table:device",
@@ -3108,9 +3176,29 @@
       "kind": "references"
     },
     {
+      "from": "table:invoice",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "table:invoice-line",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "table:invoice-review",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
       "from": "table:journal-entry",
       "to": "table:posting",
       "kind": "references"
+    },
+    {
+      "from": "table:journal-entry",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
     },
     {
       "from": "table:kolben-engineer",
@@ -3186,6 +3274,41 @@
       "from": "table:party",
       "to": "table:repo",
       "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "table:party-address",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "table:party-contact",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "table:party-registry-status",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "table:party-tax-identity",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "table:pending-invoice-verify",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
+    },
+    {
+      "from": "table:posting",
+      "to": "tissue:backoffice",
+      "kind": "part_of"
     },
     {
       "from": "table:print-job",
