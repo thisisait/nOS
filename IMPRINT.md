@@ -143,7 +143,7 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
   code_server, erpnext, freescout, outline, hedgedoc, bookstack, firefly, dolibarr, onlyoffice, mikopbx, qgis_server,
   metabase, superset, influxdb, mcp_gateway, openclaw, hermes, device_gateway, wing, bone, cortex, backrest.
 
-The public organ systems (the apex ruling publishes 13; 366 of 429 ruled nodes are withheld):
+The public organ systems (the apex ruling publishes 13; 367 of 430 ruled nodes are withheld):
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)
