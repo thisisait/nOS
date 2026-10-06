@@ -29,8 +29,8 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 
 ## Across levels
 
-- **self** — Software nOS wrote, pins and updates itself; a self organ is one of nOS's own parts. Not: declared, symbiont.
-  Counter-example: OpenHuman, declared and installed by nOS but updated by its vendor (a symbiont).
+- **self** — Software nOS calls, pins and updates itself, vendor formulae included; a self organ is one of nOS's own parts. Provisional — a deeper sense (versions as a lineage, old ones die, new ones are born) is being designed, roadmap row self-definition. Not: declared, symbiont.
+  Counter-example: OpenHuman, declared and installed by nOS but neither pinned nor updated by it (its vendor updates it: a symbiont).
 - **symbiont** — Declared foreign software that lives beside nOS and is updated by its own vendor. Not: self, habitat.
   Counter-example: a personal Homebrew package (habitat: the machine owner's, never installed by nOS).
 - **declared** — On the list nOS generates from its declarations; the immune system tolerates it, and anything undeclared is a signal. Not: self.

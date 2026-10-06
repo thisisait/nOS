@@ -202,11 +202,15 @@ words:
   # ── across levels ───────────────────────────────────────────────────────
   self:
     level: cross
-    means: Software nOS wrote, pins and updates itself; a self organ is one of nOS's own parts.
+    # Operator ruling 2026-10-06, provisional: calls, not wrote (vendor formulae count).
+    means: >-
+      Software nOS calls, pins and updates itself, vendor formulae included; a self
+      organ is one of nOS's own parts. Provisional — a deeper sense (versions as a
+      lineage, old ones die, new ones are born) is being designed, roadmap row self-definition.
     names:
       - config_key: software_owner
     not: [declared, symbiont]
-    counter_example: "OpenHuman, declared and installed by nOS but updated by its vendor (a symbiont)"
+    counter_example: "OpenHuman, declared and installed by nOS but neither pinned nor updated by it (its vendor updates it: a symbiont)"
     retired:
       - sense: "self meaning the immune system's tolerated set"
         replacement: declared
