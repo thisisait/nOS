@@ -1,6 +1,6 @@
 # face <-> Wing joint: who an end user is when the face speaks to Wing.
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + symmetric
-# gates). face is an appendage (ssot/doctrine/body-plan.md §7); this file is its joint
+# gates). face is an appendage (ssot/doctrine/body-plan.md §4.2); this file is its joint
 # (state/manifest.yml face.joint). One copy only: both sides cite this path.
 contract_version: 1
 fixture: files/anatomy/contracts/face-wing.fixture.json
