@@ -138,7 +138,7 @@ SYSTEM_NAME = {
     "opencode": "OpenCode", "openhuman": "OpenHuman", "wing": "Wing", "bone": "Bone", "pulse": "Pulse",
     "cortex": "Cortex", "ears": "Ears",
     "iiab-terminal": "IIAB Terminal", "backup": "Backup", "backrest": "Backrest",
-    "tailscale": "Tailscale",
+    "tailscale": "Tailscale", "dnsmasq": "dnsmasq",
     "spacetimedb": "SpacetimeDB",
 }
 
@@ -603,6 +603,11 @@ SYSTEM_EN = {
     "tailscale": (
         "Tailscale, the mesh VPN. It gives the host a stable private address reachable from "
         "the operator's other devices without opening a port on the router."
+    ),
+    "dnsmasq": (
+        "dnsmasq, the host's own DNS answer for the local TLD. A root LaunchDaemon on port 53 "
+        "that resolves every *.<local tld> name to this machine so Traefik can route it; unlike "
+        "Tailscale it carries no traffic, it only says where the names point."
     ),
 }
 

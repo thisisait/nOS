@@ -71,8 +71,8 @@ A new word the operator has not ruled carries `proposed: true`.
 `files/anatomy/plugins/<id>-base/` wires it, `docs/systems/<id>/` explains it,
 with `_` → `-` in the plugin and docs names. A home nobody can derive from the
 row is a part a model cannot find. Seven organs lack one today (alloy has no
-role; tailscale has docs only; dnsmasq has none of the three; bone, opencode
-and iiab_terminal have no plugin; homeassistant has no docs); each is declared
+role; tailscale has docs only; dnsmasq has docs only; bone, opencode
+and iiab_terminal have no plugin; homeassistant's docs are spelt home-assistant); each is declared
 with its reason in
 `tests/anatomy/test_every_organ_has_its_homes.py`, a list that may only shrink.
 

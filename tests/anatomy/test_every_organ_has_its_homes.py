@@ -25,12 +25,11 @@ EXCEPTIONS = {
     ("bone", "plugin"): "Bone is the bridge the plugins are wired through, not a wired service",
     ("opencode", "plugin"): "a CLI run on demand; nothing to wire",
     ("iiab_terminal", "plugin"): "an sshd ForceCommand TUI; nothing to wire",
-    ("homeassistant", "docs"): "no docs/systems page yet",
+    ("homeassistant", "docs"): "docs live at docs/systems/home-assistant, not spelt from the id",
     # I-12: dnsmasq became a row (it has a flag, a pin, a root daemon and an authored stop);
     # tasks/dnsmasq.yml is its whole implementation until a role is built.
     ("dnsmasq", "role"): "tasks/dnsmasq.yml installs and configures it; no role yet",
     ("dnsmasq", "plugin"): "local DNS for the edge; nothing to wire yet",
-    ("dnsmasq", "docs"): "no docs/systems page yet",
 }
 
 
