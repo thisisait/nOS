@@ -606,6 +606,9 @@
 - slug: face-app-builder
   parent: face
   track: face
+- slug: face-app-min-tier
+  parent: wing-organ-without-face
+  track: security
 - slug: face-chat-style
   parent: face-collab
   track: face
@@ -1827,6 +1830,9 @@
 - slug: wing-db-ro-open-needs-shm
   parent: ''
   track: platform
+- slug: wing-doctrine-organ-without-face
+  parent: wing-organ-without-face
+  track: face
 - slug: wing-events-chain-aware-retention
   parent: ''
   track: platform
@@ -1839,6 +1845,21 @@
 - slug: wing-inc1-inbox-app
   parent: wing-organ-without-face
   track: face
+- slug: wing-inc2-agents-timeline
+  parent: wing-organ-without-face
+  track: face
+- slug: wing-inc3-upgrades-app
+  parent: wing-organ-without-face
+  track: face
+- slug: wing-inc4-admin-users-compliance
+  parent: wing-organ-without-face
+  track: security
+- slug: wing-inc5-face-desktop
+  parent: wing-organ-without-face
+  track: face
+- slug: wing-inc6-latte-gone
+  parent: wing-organ-without-face
+  track: security
 - slug: wing-latte-ratchet
   parent: wing-organ-without-face
   track: face
