@@ -22,6 +22,13 @@
 | **Config** | `~/.hermes/` (CLI config, `memory.json`, `skills/`) |
 | **Logs** | `~/agents/log/` |
 
+**Memory server.** `hermes_enable_memory: true` (default) renders the MCP
+`memory` server, Hermes's own scratch store at `~/.hermes/memory.json`. It is
+not nOS memory (that is KEAP; `ssot/doctrine/body-plan.md` §4). Setting the
+toggle to `false` only drops the server from the config: the file stays on
+disk, unread, and nothing in nOS reads it. Retiring it for good needs an
+export/ingest migration from that JSON into KEAP, which does not exist.
+
 Values read from `roles/pazny.hermes/defaults/main.yml`,
 `roles/pazny.hermes/templates/{hermes.plist.j2,cli-config.yaml.j2}`,
 `state/manifest.yml`, and `files/anatomy/plugins/hermes-base/plugin.yml`.

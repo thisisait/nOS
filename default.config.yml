@@ -2087,7 +2087,8 @@ onlyoffice_port: 3015
 influxdb_port: 8086
 mcpo_port: 8765
 hermes_web_port: 18790
-device_gateway_port: 8770               # loopback BFF; Traefik host:8770 when install_device_gateway
+hermes_enable_memory: true              # Hermes's own MCP memory server (~/.hermes/memory.json); not nOS memory
+device_gateway_port: 8770              # loopback BFF; Traefik host:8770 when install_device_gateway
 mailpit_port: 8025                      # UI port (1025 is SMTP)
 
 # ── Home Assistant ─────────────────────────────────────────────────────────────

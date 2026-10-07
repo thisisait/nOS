@@ -34,6 +34,13 @@ Configured via `config.json`; each is toggled independently (all default `true`)
 | `postgres` | read-only DB queries (user `mcp_readonly`) | npx server-postgres |
 | `grafana` | Grafana dashboards/queries | SSE sibling container `mcp-grafana` |
 
+**Memory server.** `mcp_enable_memory: true` keeps server-memory's notes in
+the container volume at `/data/memory.json`. That file is a symbiont's scratch
+store, not nOS memory (KEAP; `ssot/doctrine/body-plan.md` §4). Flipping the
+toggle off drops the server and orphans the file: nothing in nOS reads it.
+Retiring it for good needs an export/ingest migration from that JSON into
+KEAP, which does not exist; until then the toggle stays on where it is on.
+
 ## Health Check
 
 - **Plugin `wait_health`:** `GET /docs` accepting `2xx`/`3xx`/`4xx` (behind the bearer key, `/docs` may 401 — still live).

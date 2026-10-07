@@ -86,7 +86,10 @@ are habitat, third-party processors beside the organism.
 - **sense** reads, **limb** acts. An immune indicator is a sense with an
   indicator contract ([`immune-system.md`](immune-system.md) §2).
 - **memory** is what nOS has learned, kept in KEAP. **verdicts** is the log
-  of what each sense reported and what the operator judged.
+  of what each sense reported and what the operator judged. A symbiont's own
+  scratch store (mcp_gateway server-memory at `/data/memory.json`; Hermes
+  `~/.hermes/memory.json`; OpenHuman `memory_tree`) is not nOS memory: it is
+  declared and left where it is, not switched off.
 - **law** is the rules in force (`ssot/doctrine/`); it is kept apart from the genome.
 - **reflex**, **Pulse** and **heartbeat** are defined once, in
   [`loops.md`](loops.md) §10.

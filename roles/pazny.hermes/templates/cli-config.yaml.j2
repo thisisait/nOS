@@ -39,7 +39,7 @@ skills:
 # ── MCP servers (stdio transport) ───────────────────────────────────────────
 # Alternativne: `hermes mcp add <name> --command ...` pro interactive setup
 mcp_servers:
-{% for srv in hermes_mcp_servers %}
+{% for srv in hermes_mcp_servers if srv.name != 'memory' or hermes_enable_memory %}
   {{ srv.name }}:
     command: "{{ srv.command }}"
     args: {{ srv.args | tojson }}

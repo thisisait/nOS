@@ -56,7 +56,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - **limb** — A tool that acts. Not: sense, side. Mechanism: port / adapter (hexagonal architecture).
   Counter-example: tools/red-status.py, or an agent tool grant whose every scope is .read (each only reads: a sense).
 - **memory** — What nOS has learned, kept in KEAP; RAM stays plain English. Not: cortex, verdicts, stores.
-  Counter-example: Wing's audit ledger (a record of what happened, not what nOS learned).
+  Counter-example: a symbiont's own scratch store (mcp_gateway server-memory at /data/memory.json, Hermes ~/.hermes/memory.json, OpenHuman memory_tree): declared, kept beside nOS, never what nOS learned; likewise Wing's audit ledger (what happened, not what was learned).
 - **verdicts** — The log of what each sense reported and what the operator judged. Not: memory.
   Counter-example: KEAP (memory: what nOS learned, not what a sense reported).
 - **law** — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Not: genome, definition.

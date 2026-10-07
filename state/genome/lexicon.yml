@@ -401,7 +401,10 @@ words:
       - graph_kind: table
         reason: a KEAP DataTable definition, what the estate records and learns
     not: [cortex, verdicts, stores]
-    counter_example: "Wing's audit ledger (a record of what happened, not what nOS learned)"
+    counter_example: >-
+      a symbiont's own scratch store (mcp_gateway server-memory at /data/memory.json,
+      Hermes ~/.hermes/memory.json, OpenHuman memory_tree): declared, kept beside nOS,
+      never what nOS learned; likewise Wing's audit ledger (what happened, not what was learned)
     retired:
       - sense: "The Memory, the apex group of databases"
         replacement: The Stores
