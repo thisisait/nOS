@@ -345,7 +345,7 @@ mail_digest_floor: "medium"
 # Cron expression for the digest flush job. Defaults to 09:00 UTC daily.
 mail_digest_cron: "0 9 * * *"
 
-# ── Pulse (host launchd — scheduled-job daemon, A4 of bones-and-wings) ───────
+# ── Pulse (host launchd — scheduled-job daemon, A4 of the host-organs refactor)
 # Local Python daemon that polls Wing API for due jobs and fires them.
 # A4 PoC (2026-05-03): non-agentic only; agent runner lands in A8.
 # Anatomy default is ON — Pulse is part of the nOS skeleton (not opt-in).
@@ -637,7 +637,7 @@ install_outline: true            # Outline – team wiki / knowledge base       
 install_hedgedoc: false           # HedgeDoc – collaborative markdown [Docker, requires: PostgreSQL]
 install_bookstack: false          # BookStack – wiki platform [Docker, requires: MariaDB]
 install_firefly: false            # Firefly III – personal finance [Docker, requires: MariaDB, Redis]
-install_dolibarr: false           # Dolibarr ERP/CRM desk [Docker, MariaDB, ARM64]. Praxis pack ON. KEAP tables = books fallback when this is off. SSO is forward_auth until OIDC module is proven in post.yml.
+install_dolibarr: false           # Dolibarr ERP/CRM desk [Docker, MariaDB, ARM64]. Backoffice tissue ON. KEAP tables = books fallback when this is off. SSO is forward_auth until OIDC module is proven in post.yml.
 install_onlyoffice: true          # ONLYOFFICE Document Server [Docker] — Nextcloud's Edit needs it (builder edge, 2026-10-01)
 
 # ── VoIP stack (telecommunications) ──────────────────────────────────────────
@@ -1653,7 +1653,7 @@ woodpecker_admin: >-
   {{ _wp_names | join(',') }}
 woodpecker_max_workflows: 4      # Max parallel pipeline runs per agent
 # REM-002 hardening — see roles/pazny.woodpecker/templates/compose.yml.j2 for
-# the full vessel block. Operators with vetted plugins can override
+# the full hardening block. Operators with vetted plugins can override
 # `woodpecker_plugins_privileged` with a comma-separated allowlist of plugin
 # image refs (e.g. "plugins/docker,plugins/kaniko"). Empty = no privileged plugins.
 woodpecker_plugins_privileged: ""
@@ -1672,7 +1672,7 @@ portainer_port: 9002                   # 9000/9001 reserved for RustFS (S3 API +
   # (node-red's recorded 4.1.13 has no plain tag at all).
 portainer_version: "2.45.0"             # STS line; also carries the CVE-2025-68121 Go-TLS sweep
 portainer_admin_password: "{{ nos_derived_secrets.portainer }}"
-# Self-heal an admin-password DRIFT (admin exists but neither the current nor
+# Repair an admin-password DRIFT (admin exists but neither the current nor
 # previous prefix logs in — left by an interrupted/partial provisioning). true =
 # wipe Portainer's BoltDB so admin-init recreates the admin with the config
 # password (Portainer holds no user data — endpoints/OAuth are reprovisioned).
@@ -1958,8 +1958,8 @@ nos_retired_services:
 # docker_autoheal_external_mount: restart Docker Desktop automatically to
 #   re-propagate the mount when the probe finds it stale. Default false = fail
 #   fast with the remedy (never surprise-restart Docker under live containers);
-#   a `blank=true` run auto-heals regardless (from-scratch rebuild, nothing to
-#   lose). Set true to auto-heal on a non-blank run too.
+#   a `blank=true` run restarts it regardless (from-scratch rebuild, nothing to
+#   lose). Set true to restart it on a non-blank run too.
 docker_autoheal_external_mount: false
 # docker_mount_probe_image: throwaway image used only to test the bind-mount
 #   (container exits immediately via --entrypoint true). Kept overridable so an
@@ -2355,7 +2355,7 @@ apex_port: 8061                                # loopback publish (container bin
 apex_version: "1.30.4-alpine@sha256:97d490c12ba55b4946b01546d1c3ed324e8d41ab1c9fcb2a616aa470620e5b46"
 
 # ==============================================================================
-# KEAP – Knowledge Explorer and Preserver (the CORTEX of the nOS anatomy)
+# KEAP – Knowledge Explorer and Preserver (where nOS keeps its memory)
 # Built from source by roles/pazny.keap (git clone at keap_repo_ref, face-
 # style compose build). Human surface behind header_oidc SSO; agent surface
 # /agent/v1 on the loopback port for AgentKit (scope-split bearer tokens).
@@ -3140,7 +3140,7 @@ backup_notify_enabled: true
 backup_notify_url: "http://127.0.0.1:8099/api/v1/notifications"
 backup_authentik_blueprints: "{{ install_authentik | default(false) }}"
 backup_wing_db: "{{ install_wing | default(true) }}"   # sqlite3 .dump of the Wing store
-backup_keap_db: "{{ install_keap | default(false) }}"  # sqlite3 .backup of the KEAP cortex store (taxonomy, tables, vectors)
+backup_keap_db: "{{ install_keap | default(false) }}"  # sqlite3 .backup of the KEAP store (taxonomy, tables, vectors)
 backup_nos_state: true                                  # ~/.nos/{secrets,state}.yml (restore gated by restore_state)
 # Client-side encryption (GDPR Art.32 / NIS2 at-rest). OFF only for a throw-away
 # dev target with no PII. The passphrase is the ONLY key to every object —
