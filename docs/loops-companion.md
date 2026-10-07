@@ -1,6 +1,6 @@
 # The two loops — diagrams and full accounts (companion)
 
-> Companion to [`docs/doctrine/loops.md`](doctrine/loops.md), split out
+> Companion to [`ssot/doctrine/loops.md`](../ssot/doctrine/loops.md), split out
 > 2026-09-03. The doctrine file keeps the rules, refusals and the missing-edge
 > ranking under stable section numbers; this file carries the verified Mermaid
 > diagrams and the full narratives, verbatim, under the same numbers. Code

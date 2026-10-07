@@ -51,7 +51,7 @@ Data-path note: `nos_data_root` defaults to `~/nos`. On external storage the pat
   the internal volume's figures, so Loki's WAL guard compared the internal
   disk's fullness against its 90% threshold and throttled writes to an external
   disk with 434 GiB free. The WAL is 66 MB. See
-  `docs/doctrine/foreign-properties.md` — this is a property of Docker
+  `ssot/doctrine/foreign-properties.md` — this is a property of Docker
   Desktop, not of Loki or of this playbook.
 - Recovery needs BOTH restarts, in order: the ingester latches into
   `Ingester is shutting down` and never re-reads the disk, and Alloy's client

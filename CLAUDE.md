@@ -113,7 +113,7 @@ Longer tour: [docs/architecture.md](docs/architecture.md).
 - **SSO:** every service is `native_oidc`, `header_oidc`, `forward_auth` or none, declared
   as `authentik.mode` in its plugin; RBAC tiers 1–4 bind to Authentik groups.
   [docs/sso-and-attribution.md](docs/sso-and-attribution.md). `tier` means RBAC only; the
-  dependency axis is `layer` ([docs/doctrine/layers.md](docs/doctrine/layers.md)).
+  dependency axis is `layer` ([ssot/doctrine/layers.md](ssot/doctrine/layers.md)).
 - **State & upgrades:** `state/manifest.yml` vs `~/.nos/state.yml`, migrations in
   `files/anatomy/migrations/`, upgrade recipes in `upgrades/`, coexistence tracks.
   [files/anatomy/docs/framework-overview.md](files/anatomy/docs/framework-overview.md).
@@ -172,7 +172,7 @@ One-time branch protection setup, ruleset verification and the release-cut proce
 
 ## Where things are written down
 
-- **Live doctrine:** `ssot/doctrine/` and `docs/doctrine/` (index [docs/doctrine/README.md](docs/doctrine/README.md)), guides in `docs/` and `files/anatomy/docs/`.
+- **Law:** `ssot/doctrine/` (index [ssot/README.md](ssot/README.md)), guides in `docs/` and `files/anatomy/docs/`.
 - **Per-service:** `docs/systems/<service>/README.md`.
 - **Words:** [docs/glossary.md](docs/glossary.md) — one meaning per word (organ, cell, memory, …), generated from `state/genome/lexicon.yml`.
 - **History:** devlog under `docs/devlog/nos-core/` (`/devlog` skill; [docs/devlog/README.md](docs/devlog/README.md)), release notes in [RELEASE.md](RELEASE.md), incident lessons in `docs/hidden_fees/`, finished plans in `docs/archive/`.

@@ -1,7 +1,7 @@
 # nOS
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-[![built with ponytail](https://img.shields.io/badge/built%20with-ponytail-ff69b4?style=flat-square)](docs/doctrine/ponytail.md)
+[![built with ponytail](https://img.shields.io/badge/built%20with-ponytail-ff69b4?style=flat-square)](ssot/doctrine/ponytail.md)
 
 > **Your own cloud, on the machine on your desk.**
 >

@@ -7,7 +7,7 @@ later. Decide now.
 
 ## The one collision that forces a decision
 
-CLAUDE.md (Architecture / Vocabulary, settled 2026-08-07, `docs/doctrine/layers.md`):
+CLAUDE.md (Architecture / Vocabulary, settled 2026-08-07, `ssot/doctrine/layers.md`):
 **"`tier` means RBAC and nothing else."** The operator's phrase "two tiers on top of the
 runtime" cannot survive into code — the word carried four meanings once and the estate paid to
 retire three of them. Both judges used "tier" loosely; neither may.

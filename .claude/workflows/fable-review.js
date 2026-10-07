@@ -123,7 +123,7 @@ look like it is working.`,
 
 nOS has four host organs (Bone signals, Wing observes, Pulse keeps time, Cortex
 remembers), 72 anatomy plugins, an AgentKit runtime with its own session/grader
-loop, and a doctrine layer in docs/doctrine/.
+loop, and a doctrine layer in ssot/doctrine/.
 
 The contract chose to put the engine INSIDE Bone rather than create a fifth
 organ, and argued it. Judge that argument. Then judge the rest: does the ledger

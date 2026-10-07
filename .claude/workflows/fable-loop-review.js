@@ -12,10 +12,10 @@ const GROUND = `
 YOU ARE REVIEWING THE nOS AGENTIC SELF-IMPROVEMENT LOOP. Repo: /Users/pazny/projects/nOS (branch dev, HEAD 8b3c165c).
 
 READ THIS FIRST — it is the estate's own account of the loop and the thing you are judging:
-  docs/doctrine/loops.md        (30k, the sequence doctrine: SERE state machine, the unattended
+  ssot/doctrine/loops.md        (30k, the sequence doctrine: SERE state machine, the unattended
                                  night as a clock, identities, the evidence graph, missing edges,
                                  edge gates)
-  docs/doctrine/operator-model.md, docs/doctrine/gates.md, docs/doctrine/security-floor.md
+  ssot/doctrine/operator-model.md, ssot/doctrine/gates.md, ssot/doctrine/security-floor.md
 
 THE MACHINERY, as it exists on disk and in the live wing.db:
   files/anatomy/agents/<name>/{agent.yml,system.md,rubric.md}   10 profiles

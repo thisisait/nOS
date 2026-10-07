@@ -67,7 +67,7 @@ Group names are configurable via `authentik_rbac_tiers`. Installs provisioned be
 or run `nos --remove=data --confirm` to regenerate.
 
 The word `tier` means RBAC and nothing else; the dependency axis is `layer`
-([doctrine/layers.md](doctrine/layers.md)).
+([ssot/doctrine/layers.md](../ssot/doctrine/layers.md)).
 
 ## Live state (2026-05-17 audit)
 

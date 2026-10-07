@@ -3,7 +3,7 @@ export const meta = {
   // TRIAGE GATE. This workflow implements roadmap row `face-anatomy`, and the fact
   // that this line is COMMITTED is the gate itself. Discovery writes roadmap
   // rows over HTTP and has no path into git, so it cannot promote its own
-  // finding to implementable — see docs/doctrine/workflows.md.
+  // finding to implementable — see ssot/doctrine/workflows.md.
   implements: 'face-anatomy',
   description:
     'The Bone view of the face Anatomy app — estate state, aggregate health, the event stream, and the loop ledger, with absence rendered as absence',
@@ -214,7 +214,7 @@ empty in practice — those are traps for a UI designer.`,
 
 // FAN-OUT: union. Each lens owns a different directory and a different
 // question; the outputs are ADDED, none is discarded. That is what repays
-// the per-agent context tax. docs/doctrine/workflow-standard.md §1.
+// the per-agent context tax. docs/workflow-standard.md §1.
 const survey = (await parallel(LENSES.map(l => () =>
   agent(l.prompt, { label: `ground:${l.key}`, phase: 'Ground', schema: SURVEY_SCHEMA })
 ))).filter(Boolean)

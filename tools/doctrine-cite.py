@@ -3,7 +3,7 @@
 
 WHAT THIS IS
 ------------
-The constitution exists (CLAUDE.md, docs/idea/*, docs/doctrine/*,
+The constitution exists (CLAUDE.md, docs/idea/*, ssot/doctrine/*,
 files/anatomy/docs/*, the judge-sets comment blocks) and the code cites it
 constantly — measured 2026-08-06: 694 `§`-citations across 130 files under
 {files,tools,state,tasks,roles,main.yml}, 72 of them a bare `§5` with no

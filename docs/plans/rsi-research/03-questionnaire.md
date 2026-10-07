@@ -28,7 +28,7 @@ familiarity.
 > **ANSWER (operator, 2026-08-28): (a) `nos-ops`.** Agreed — one axis with sere.
 
 **Q2. What is the word for the two-plane split itself?**
-Why: "tier" is doctrine-reserved for RBAC and nothing else (CLAUDE.md, `docs/doctrine/
+Why: "tier" is doctrine-reserved for RBAC and nothing else (CLAUDE.md, `ssot/doctrine/
 layers.md`) — the operator's phrase "two tiers" cannot enter code.
 - (a) **plane** (sere plane / ops plane) — settled infra semantics, no repo collision.
 - (b) other: ______

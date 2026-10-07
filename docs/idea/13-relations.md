@@ -16,7 +16,7 @@ Three questions the estate cannot answer today, all of them the same question:
 
 1. *"What breaks if I remove ERPNext?"* — asked 2026-08-07, answered with a
    guess, because nothing records what depends on what.
-2. *"Which layer is this service?"* — `docs/doctrine/layers.md` defines the axis
+2. *"Which layer is this service?"* — `ssot/doctrine/layers.md` defines the axis
    and refuses to ship an inventory, because `layer` must be derived and the
    derivation has no input.
 3. *"What kind of thing is this face app?"* — answered today by a **complexity**
@@ -117,7 +117,7 @@ Two more phantom identifiers the R1 sweep found and its write-up did not name �
 ## R2 — `layer`, derived — **SHIPPED 2026-08-07**
 
 `layer` (L0 substrate · L1 platform · L2 application · L3 custom,
-`docs/doctrine/layers.md` §3) is longest path over the **service projection** of
+`ssot/doctrine/layers.md` §3) is longest path over the **service projection** of
 the dependency edges — the same arithmetic `graphLayout.ts::rankNodes` runs for
 the canvas, with the SSO chain `service:authentik → authentik:<slug> →
 service:<x>` collapsed onto its endpoints.
@@ -152,7 +152,7 @@ Split the one overloaded field into two independent ones.
 | `frame` | a service rendered in an iframe | ~37 hub services |
 
 **`build`** — how hard it is to build, i.e. which organs and which recipe. This
-is what `F1`–`F4`/`H` already measures well (`docs/doctrine/face-app-tiers.md`);
+is what `F1`–`F4`/`H` already measures well (`ssot/doctrine/face-app-tiers.md`);
 it keeps its prefixes and stops pretending to be a taxonomy of form.
 
 The two axes are **independent, and only loosely correlated**. A `frame` will
@@ -176,7 +176,7 @@ node — `faceapp:anatomy-widget`, degree 3 — with three edges the code perfor
 `service:face →` it (mounted at the desktop root),
 it `→ faceapp:anatomy` (the click-through), and
 `daemon:eu.thisisait.nos.wing →` it (the /bff/pulse projection it polls).
-Doctrine: `docs/doctrine/face-app-tiers.md` §Form. Gate:
+Doctrine: `ssot/doctrine/face-app-tiers.md` §Form. Gate:
 `tests/anatomy/test_face_app_form_axis.py`.
 
 ## R4 — the ontology — **SHIPPED 2026-08-07**

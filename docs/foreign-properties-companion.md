@@ -1,6 +1,6 @@
 # Foreign properties — the measured accounts (companion)
 
-> Companion to [`docs/doctrine/foreign-properties.md`](doctrine/foreign-properties.md),
+> Companion to [`ssot/doctrine/foreign-properties.md`](../ssot/doctrine/foreign-properties.md),
 > split out 2026-09-03. The doctrine file keeps every rule, refusal and
 > accommodation under its original section number; this file carries the full
 > measured stories, verbatim, under the same numbers. Code cites the doctrine

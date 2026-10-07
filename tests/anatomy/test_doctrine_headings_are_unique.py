@@ -3,7 +3,7 @@
 Subject: ssot/doctrine/ssot.md. The citation indexer
 (`tools/doctrine-cite.py` `index_doc`) last-write-wins on a repeated section
 number, so two `## 9` headings silently become one address. This gate pins
-docs/doctrine/*.md. A duplicate number outside that tree is not a nos-sot
+ssot/doctrine/*.md and docs/doctrine/*.md. A duplicate number outside that tree is not a nos-sot
 address; docs/workflow-standard.md still carries two headings numbered 9.
 
 Retro-red: the checker fails a synthetic duplicate (title and number) and

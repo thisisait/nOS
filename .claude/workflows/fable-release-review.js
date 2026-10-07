@@ -88,7 +88,7 @@ WHERE TO LOOK
   ${REPO}/tools/tls-uptake.py                 the reader everything hangs on
   ${REPO}/state/roadmap-probes.yml            the probes that decide roadmap rows
   ${REPO}/docs/idea/21-mariadb-tls-ladder.md  the plan, and its two corrections
-  ${REPO}/docs/doctrine/foreign-properties.md §5, §5.1, §5.2
+  ${REPO}/ssot/doctrine/foreign-properties.md §5, §5.1, §5.2
   ${REPO}/docs/hidden_fees/{22,23,26,27,28,29}-*.md
   ${REPO}/tests/anatomy/test_postgresql_ssl.py
   ${REPO}/tests/anatomy/test_mariadb_client_tls.py

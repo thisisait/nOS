@@ -47,7 +47,7 @@ loader change that lets it fail — is in
 - **R5 verify misses best-effort teardown.** `failed_when: false` tasks can
   survive a removal silently; the absence assert only stats the path set.
 - **FS doctrine P3** — AgentKit tool-layer FS path-scoping; P1/P1b shipped
-  (`docs/doctrine/filesystem.md`).
+  (`ssot/doctrine/filesystem.md`).
 - **Version-pin drift wave:** counts from `tools/rem-status.py`, never inherited.
   Gitea closed via the agentic recipe path — the template. `validate_record` still
   lacks `security` in `_SEVERITY_VALUES` (schema has it).

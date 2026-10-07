@@ -62,7 +62,7 @@ Across the eight files in `state/schema/` there was **not one `$ref`, `allOf` or
 `axes` — `form` · `build` · `layer`, the three adjectives R1–R3 produced. Before
 it they were three registries with nothing between them (TypeScript unions in
 the face, string literals in `tools/anatomy-graph-gen.py`, prose in
-`docs/doctrine/layers.md`) and the compiler that stamps all three validated none
+`ssot/doctrine/layers.md`) and the compiler that stamps all three validated none
 of them: `form: 'veiw'` compiled into the anatomy graph as a fourth form, with
 no gate able to see it.
 

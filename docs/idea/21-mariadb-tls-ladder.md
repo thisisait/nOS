@@ -115,7 +115,7 @@ reach its database. Rung 4 is a cliff.
 
 And rung 3 carries a trap the PostgreSQL work has already sprung once: **the
 same sslmode word means different things in different client libraries**
-(`docs/doctrine/foreign-properties.md` §5). Expect the MySQL side to have its
+(`ssot/doctrine/foreign-properties.md` §5). Expect the MySQL side to have its
 own version — PDO, WordPress's `MYSQL_CLIENT_FLAGS`, and Nextcloud's
 `dbdriveroptions` are three separate contracts, not one spelled three ways.
 

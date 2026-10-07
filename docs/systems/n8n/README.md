@@ -27,7 +27,7 @@ role defaults mirror them as fallbacks. The domain derives from `tenant_domain` 
 
 > **The data path is OFF the `nos_data_root` doctrine — reported, not silently "fixed".**
 > Every other Docker-service data dir derives from `{{ nos_data_root }}/...`
-> (`docs/doctrine/filesystem.md`). `n8n_data_dir` is still the pre-doctrine
+> (`ssot/doctrine/filesystem.md`). `n8n_data_dir` is still the pre-doctrine
 > `{{ ansible_facts['env']['HOME'] }}/n8n` in *both* `default.config.yml` and the role
 > default, so `~/n8n` is the TRUE path today. It survives because the doctrine gate
 > `tests/anatomy/test_fs_doctrine_paths.py` matches path vars with `^([a-z_]+)_data_dir:`

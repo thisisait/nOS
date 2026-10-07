@@ -1,10 +1,10 @@
 # Workflow standard
 
-> **Companion to** [docs/doctrine/workflows.md](doctrine/workflows.md), which holds
+> **Companion to** [ssot/doctrine/workflows.md](../ssot/doctrine/workflows.md), which holds
 > the canonical decisions in under 80 lines. This file carries the measurements,
 > the rationale and the checklist.
 > **Machine-checked by:** `tests/anatomy/test_workflow_declares_fanout_semantics.py`
-> **Related:** [doctrine/four-trees.md](doctrine/four-trees.md) · [doctrine/gates.md](doctrine/gates.md)
+> **Related:** [ssot/doctrine/four-trees.md](../ssot/doctrine/four-trees.md) · [ssot/doctrine/gates.md](../ssot/doctrine/gates.md)
 
 This governs multi-agent workflows in nOS: when to fan out, how to judge, and
 what a workflow must declare before it may run. It exists because the operator's

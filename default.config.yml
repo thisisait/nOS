@@ -36,7 +36,7 @@ tenant_domain: "dev.local"                # Primary TLD; all FQDNs resolve here
 host_alias: ""                            # Per-host segment ("" drops it; "lab" yields bone.lab.dev.local)
 apps_subdomain: "apps"                    # Subdomain segment for Tier-2 apps (Coolify-imported et al.)
 
-# ── Filesystem doctrine (docs/doctrine/filesystem.md) ─────────────────────────
+# ── Filesystem doctrine (ssot/doctrine/filesystem.md) ─────────────────────────
 # Single persistent-data root. Every service data/config path derives from this
 # in its ROLE default (not here) — see the doctrine. Point at an SSD by setting
 # this one var; ~/.nos stays the runtime sidecar (never persistent data).
@@ -50,7 +50,7 @@ artifact_cache_seed: false
 # Short per-tenant slug for the on-disk tree (full domain kept as tenant_domain).
 nos_tenant_slug: "{{ (tenant_domain | default('dev.local')).split('.')[0] }}"
 
-# ── FS doctrine — derived service paths (docs/doctrine/filesystem.md) ─────────
+# ── FS doctrine — derived service paths (ssot/doctrine/filesystem.md) ─────────
 # Global (referenced by core-up dir-creation + blank-reset before roles run, so
 # they must resolve pre-core-up); value mirrors each role default. The config-
 # surface-revision epic will DRY this via a trap-safe generator.
@@ -73,7 +73,7 @@ grafana_sqlite_plugin_version: "4.0.6"
 grafana_sqlite_plugin_sha256: "e5ce2354dd26ba9bea56b37f9ed4050cc917a46b858a0a191e1cafda382bf18a"
 hedgedoc_data_dir: "{{ nos_data_root }}/platform/services/hedgedoc/data"
 # Rendered config.json — HedgeDoc's database TLS, which its connection URL
-# cannot express (doctrine/foreign-properties.md §5.2). Separate from data/
+# cannot express (ssot/doctrine/foreign-properties.md §5.2). Separate from data/
 # because it is a render, not state: a blank may wipe it and the next converge
 # writes it back, while compose must find a FILE there before it binds it.
 hedgedoc_config_dir: "{{ nos_data_root }}/platform/services/hedgedoc/config"
@@ -155,7 +155,7 @@ default_admin_email: "admin@{{ tenant_domain | default('dev.local') }}"  # Fallb
 # channel rosters — `authentik_agent_clients` (OIDC client_credentials) and
 # Bone's loopauth.IDENTITIES (loop token scopes) — because re-typing a roster
 # is how drift starts. `tools/identity-status.py` reads all three and checks
-# them against the realms; doctrine: docs/doctrine/identity.md.
+# them against the realms; doctrine: ssot/doctrine/identity.md.
 #
 # Fields: name (account username), kind (operator|user|service|agent;
 # synthetic lives in profiles/test-users.yml), tier (RBAC 1-4, see
@@ -165,7 +165,7 @@ default_admin_email: "admin@{{ tenant_domain | default('dev.local') }}"  # Fallb
 
 # The local forge/OS-side admin. TODAY this defaults to the OS username so a
 # converge is byte-identical with the pre-registry estate. The TARGET model
-# (docs/doctrine/identity.md §5) makes akadmin the primary admin everywhere
+# (ssot/doctrine/identity.md §5) makes akadmin the primary admin everywhere
 # and demotes this account to kind:user — that flip is an operator act with a
 # written runbook, never a silent default change.
 nos_primary_admin: "{{ ansible_facts['user_id'] }}"
@@ -431,7 +431,7 @@ restic_s3_secret_key: ""
 # operator's config.yml sets `restic_repo: /Volumes/SSD1TB/nos-restic` and
 # `configure_backup: true`, and that repository exists, created under the
 # DERIVED key. Only the default was checked (the version-pin shadow class,
-# docs/doctrine/four-trees.md R4).
+# ssot/doctrine/four-trees.md R4).
 #
 # Emptying this cost two converges: `Fatal: wrong password or no key found`.
 # A restic key is PER-REPOSITORY — minting a new value does not rotate the

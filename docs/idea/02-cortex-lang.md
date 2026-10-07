@@ -93,7 +93,7 @@ not something the chain **operates on** — it is a hint about who runs the stag
 carry colons: this box serves `qwen2.5-coder:32b`, `nomic-embed-text:latest`,
 `hermes3:8b`. A quoted string is the one slot in this grammar that carries
 another vendor's punctuation unedited, which is what
-[`foreign-properties`](../doctrine/foreign-properties.md) asks of us — we own
+[`foreign-properties`](../../ssot/doctrine/foreign-properties.md) asks of us — we own
 the provider prefix, ollama owns everything after it.
 
 The provider vocabulary is declared three times today (`agent.schema.yaml`,

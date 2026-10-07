@@ -13,7 +13,7 @@ Dual-Band Wi-Fi 7)**, admin UI at `http://192.168.1.1/`. Everything nOS has
 ever said about it lived as prose in an operator checklist: remote management
 off, UPnP off, forwards limited to 80+443. Prose is exactly the shape this
 estate keeps converting into declared config + a reader — see
-`docs/doctrine/gates.md` and the security-queue precedent in CLAUDE.md
+`ssot/doctrine/gates.md` and the security-queue precedent in CLAUDE.md
 ("this line no longer carries the numbers — ask instead"). The router is the
 same shape one layer further out: a fact about the network the estate cannot
 introspect, sitting only in someone's memory of a checklist.
@@ -56,7 +56,7 @@ scrutinized" than "clean" — sibling Mercusys models (e.g. MW325R,
 CVE-2023-52162, stack-based buffer overflow) have shipped memory-safety CVEs
 in the same firmware family. Treat "no known CVE" as absence of evidence, per
 the same rule this estate already applies to its own remediation queue
-(`docs/doctrine/security-floor.md`: a GHSA with no CVE id is still a real
+(`ssot/doctrine/security-floor.md`: a GHSA with no CVE id is still a real
 finding).
 
 **Conclusion this design is built on:** login-walled web UI only, no stable
@@ -113,7 +113,7 @@ never folded silently into the presence check.
 
 ## 6. Doctrine
 
-One line added to `docs/doctrine/foreign-properties.md` (§6): the router is a
+One line added to `ssot/doctrine/foreign-properties.md` (§6): the router is a
 foreign property with no API — declared facts + a presence probe, never an
 assumed configuration. Not duplicated into `operator-model.md`; this is a
 narrower, single-topic fact and foreign-properties.md is exactly the file
@@ -124,12 +124,12 @@ wrong produces a confident wrong reading") already covers it.
 
 - **No config automation against the router's admin UI.** It is a
   login-walled, undocumented, reverse-engineering-only surface — the kind of
-  foreign property `docs/doctrine/foreign-properties.md` §1 says to route
+  foreign property `ssot/doctrine/foreign-properties.md` §1 says to route
   around, not own. A firmware bump could silently break a scraper with no
   warning and no changelog entry naming the break.
 - **No credential storage for the router.** Nothing in this design asks for
   or stores the router admin password. Adding that later would be a
-  `config.yml`-tier decision (`docs/doctrine/operator-model.md` §2 — "operator,
+  `config.yml`-tier decision (`ssot/doctrine/operator-model.md` §2 — "operator,
   always") and its own, separate proposal.
 - **No TR-069/ACS integration.** Disproportionate to the ask, and TR-069
   access is itself a thing worth having OFF, not a channel worth opening.

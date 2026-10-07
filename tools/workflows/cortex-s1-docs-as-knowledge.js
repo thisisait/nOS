@@ -58,7 +58,7 @@ Inventory every documentation source in ${NOS} that should become knowledge, and
 is wrong with it:
   - docs/systems/<svc>/{README,SKILLS,AGENTS}.md — the intended routing corpus. SKILLS.md carries
     named actions with "Trigger:" phrases; the recall gate's 261 cases are generated from them.
-  - docs/doctrine/, docs/hidden_fees/, docs/idea/ — decisions, debts, intentions.
+  - ssot/doctrine/, docs/hidden_fees/, docs/idea/ — decisions, debts, intentions.
   - files/anatomy/skills/, files/anatomy/agents/ — what the agents already know.
   - role README/defaults comments — often the only place a variable's WHY is written.
 
