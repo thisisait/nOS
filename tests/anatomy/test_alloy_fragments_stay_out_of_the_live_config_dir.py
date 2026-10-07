@@ -15,7 +15,7 @@ DUPLICATE what `files/observability/alloy/config.alloy.j2` already declares:
   * alloy-docker-metrics discovery.docker + loki.source.docker "containers"
                          vs live "docker_targets" / "docker_logs"
   * alloy-syslog         nginx / wing / daemons file matches vs live
-                         nginx_access, nginx_error, organ_logs
+                         nginx_access, nginx_error, host_daemon_logs
 
 The component LABELS differ, so Alloy would not complain — it would start
 cleanly and then ship every container log to Loki twice and scrape every host

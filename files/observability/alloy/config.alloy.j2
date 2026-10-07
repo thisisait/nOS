@@ -322,8 +322,8 @@ loki.source.file "agent_logs" {
 }
 {% endif %}
 
-{% if alloy_tail_organ_logs | default(true) %}
-// ── The four host organs (2026-08-31) ───────────────────────────────────────
+{% if alloy_tail_host_daemon_logs %}
+// ── The four host daemons (2026-08-31) ───────────────────────────────────────
 //
 // Wing, Bone, Pulse and the cortex organ are nOS's OWN daemons and their logs
 // were the only ones not reaching Loki. Measured that day: Alloy tailed five
@@ -350,7 +350,7 @@ loki.source.file "agent_logs" {
 // alloy-host-metrics declares prometheus.exporter.unix "host" beside this
 // file's "local"; alloy-docker-metrics declares discovery.docker +
 // loki.source.docker beside this file's docker_targets/docker_logs;
-// alloy-syslog's nginx/wing/daemons overlap organ_logs and nginx_*. The
+// alloy-syslog's nginx/wing/daemons overlap host_daemon_logs and nginx_*. The
 // component LABELS differ, so Alloy would start cleanly and then ship every
 // container log twice and scrape every host metric twice. Only cadvisor is
 // additive.
@@ -361,20 +361,22 @@ loki.source.file "agent_logs" {
 // `test_alloy_fragments_stay_out_of_the_live_config_dir.py` stops anyone
 // "fixing" the path and silently doubling the estate's log volume.
 //
-// `service` is set per target so a query can name one organ. Missing files are
+// `service` is set per target so a query can name one organ. Label job="organ"
+// was renamed job="host_daemon" 2026-10-07 (lexicon); queries spanning the
+// change use job=~"organ|host_daemon". Missing files are
 // a no-op: Alloy tolerates a glob that matches nothing, which is what keeps
 // this safe on a host where an organ is disabled.
-local.file_match "organ_logs" {
+local.file_match "host_daemon_logs" {
   path_targets = [
-    {__path__ = "{{ ansible_facts['env']['HOME'] }}/wing/app/log/*.log",  job = "organ", service = "wing"},
-    {__path__ = "{{ ansible_facts['env']['HOME'] }}/bone/log/*.log",      job = "organ", service = "bone"},
-    {__path__ = "{{ ansible_facts['env']['HOME'] }}/pulse/log/*.log",     job = "organ", service = "pulse"},
-    {__path__ = "{{ ansible_facts['env']['HOME'] }}/cortex/log/*.log",    job = "organ", service = "cortex"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/wing/app/log/*.log",  job = "host_daemon", service = "wing"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/bone/log/*.log",      job = "host_daemon", service = "bone"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/pulse/log/*.log",     job = "host_daemon", service = "pulse"},
+    {__path__ = "{{ ansible_facts['env']['HOME'] }}/cortex/log/*.log",    job = "host_daemon", service = "cortex"},
   ]
 }
 
-loki.source.file "organ_logs" {
-  targets    = local.file_match.organ_logs.targets
+loki.source.file "host_daemon_logs" {
+  targets    = local.file_match.host_daemon_logs.targets
   forward_to = [loki.write.default.receiver]
 }
 {% endif %}

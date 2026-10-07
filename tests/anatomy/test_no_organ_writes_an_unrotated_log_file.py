@@ -20,7 +20,7 @@ already tails every container in the estate.
 
 SCOPE, honestly. This checks the containerised services' rendered config, where
 stdout is always available and always tailed. The HOST organs write real files
-by necessity (launchd has no log driver) and are covered by the `organ_logs`
+by necessity (launchd has no log driver) and are covered by the `host_daemon_logs`
 Alloy block instead — so they are read, and their sizes are the next thing to
 bound. Measured the same day: no host organ log exceeded 50 MB.
 """

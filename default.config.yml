@@ -1429,7 +1429,8 @@ alloy_tail_nginx_logs: true        # Nginx access+error logs → Loki
 alloy_tail_agent_logs: true        # ~/agents/*.log → Loki
 alloy_tail_php_logs: true          # PHP-FPM logs → Loki
 alloy_tail_docker_logs: true       # All Docker container stdout/stderr → Loki
-alloy_receive_otlp: true           # OTLP receiver for app traces/metrics/logs → Tempo
+alloy_tail_host_daemon_logs: true  # ~/{wing,bone,pulse,cortex}/log/*.log → Loki, job="host_daemon"
+alloy_receive_otlp: true          # OTLP receiver for app traces/metrics/logs → Tempo
 
 # ── Exporter containers (observability stack) ─────────────────────────────────
 # Sprint 1 / Wave 1: expand metrics coverage with infra + container exporters.

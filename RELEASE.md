@@ -6,6 +6,15 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.14
 
 ---
 
+## Unreleased (since v0.15-beta)
+
+- Loki: host-daemon logs (Wing, Bone, Pulse, Cortex) carry `job="host_daemon"`,
+  no longer `job="organ"`; a query spanning the change uses
+  `job=~"organ|host_daemon"`. The tail is declared as
+  `alloy_tail_host_daemon_logs` (default on, as before).
+- Hermes: `hermes_enable_memory` (default on) declares the MCP memory server;
+  turning it off leaves `~/.hermes/memory.json` in place, unread.
+
 ## v0.15-beta (2026-10-01 … 2026-10-05)
 
 > **Only what was declared may run — and the estate starts watching itself.**
