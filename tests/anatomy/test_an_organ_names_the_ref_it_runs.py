@@ -126,4 +126,4 @@ def test_the_converge_stamps_each_organ():
     bone_role = (REPO / "roles/pazny.bone/tasks/main.yml").read_text(encoding="utf-8")
     assert "DEPLOYED_REF" in bone_role, "pazny.bone no longer stamps the ref"
     wing_plist = (REPO / "roles/pazny.wing/templates/wing.plist.j2").read_text(encoding="utf-8")
-    assert "NOS_ORGAN_DEPLOYED_REF" in wing_plist, "pazny.wing plist no longer carries the ref"
+    assert "NOS_WING_DEPLOYED_REF" in wing_plist, "pazny.wing plist no longer carries the ref"
