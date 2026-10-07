@@ -1370,7 +1370,7 @@ container logs for security monitoring of a public endpoint.
 #### Crm Hydrate — `svc_crm-hydrate`
 - **Purpose:** Scheduled projection of CRM counterparties from the estate MariaDB
 Dolibarr schema into KEAP DataTables so organs share one party noun.
-Stores nothing itself; retention is the party spine / imp_doli-party.
+Stores nothing itself; retention is the party table / imp_doli-party.
 - **Legal basis (Art. 6):** `contract`
 - **Data subjects:** `clients`; `client_contacts`
 - **Data categories:** `company_affiliation`; `name`
