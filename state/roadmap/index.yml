@@ -555,6 +555,9 @@
 - slug: edge-tld-class
   parent: edge-two-doors
   track: platform
+- slug: edge-token-forges-tier
+  parent: wing-organ-without-face
+  track: security
 - slug: edge-two-doors
   parent: rel-016
   track: platform
@@ -1380,6 +1383,9 @@
 - slug: pulse-prefix-allowlist
   parent: workload-allowlist
   track: security
+- slug: pytest-ratchet-remeasure
+  parent: review-v015-followups
+  track: platform
 - slug: qdrant-base-undispatched-actions
   parent: plat
   track: platform
