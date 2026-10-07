@@ -33,8 +33,14 @@
 - slug: agentkit-baseline-gate-attribution
   parent: ''
   track: platform
+- slug: agentkit-lexicon-proper-name
+  parent: body-cell
+  track: agents
 - slug: agentkit-multimodal-oneshot-transport
   parent: local-vision-model-7b
+  track: agents
+- slug: agentkit-rust-organ
+  parent: face-the-endpoint
   track: agents
 - slug: agentkit-xai-backend
   parent: ''
@@ -54,6 +60,9 @@
 - slug: agents-nos-skill
   parent: agents
   track: agents
+- slug: apex-and-cross-level-keys
+  parent: repo-body-plan
+  track: platform
 - slug: apex-organ-systems
   parent: body-organ
   track: platform
@@ -120,6 +129,9 @@
 - slug: body-plan
   parent: rel-017
   track: platform
+- slug: body-plan-levels-complete
+  parent: repo-body-plan
+  track: platform
 - slug: body-tissue
   parent: body-plan
   track: platform
@@ -159,6 +171,9 @@
 - slug: cc-tui-variants
   parent: cc-app
   track: face
+- slug: cell-level-words-and-capability-map
+  parent: body-cell
+  track: agents
 - slug: cell-not-aws-cell
   parent: body-cell
   track: platform
@@ -195,6 +210,9 @@
 - slug: config-d-host-software
   parent: default-config-split
   track: platform
+- slug: config-readers-and-habitat-ruling
+  parent: default-config-split
+  track: platform
 - slug: constitution-llm-legible
   parent: ''
   track: platform
@@ -215,6 +233,9 @@
   track: agents
 - slug: containerized-core
   parent: ''
+  track: platform
+- slug: contracts-one-home
+  parent: body-organ
   track: platform
 - slug: converge-become
   parent: converge-speed
@@ -266,6 +287,9 @@
   track: cortex
 - slug: cortex-caddy-transcript-visibility
   parent: ''
+  track: cortex
+- slug: cortex-corpus-ruling
+  parent: body-organ
   track: cortex
 - slug: cortex-exec
   parent: cortex
@@ -441,6 +465,9 @@
 - slug: docs-czech-and-fork-residue
   parent: ''
   track: platform
+- slug: doctrine-front-matter-in-force
+  parent: repo-body-plan
+  track: platform
 - slug: dolibarr-module-init
   parent: ''
   track: platform
@@ -585,6 +612,24 @@
 - slug: face-files-explorer
   parent: ''
   track: face
+- slug: face-holds-the-widest-token
+  parent: wing-organ-without-face
+  track: security
+- slug: face-i0-identity
+  parent: face-the-endpoint
+  track: face
+- slug: face-i1-converse
+  parent: face-the-endpoint
+  track: face
+- slug: face-i2-tauri-shell
+  parent: face-the-endpoint
+  track: face
+- slug: face-i3-device-powers
+  parent: face-the-endpoint
+  track: face
+- slug: face-i4-connectors
+  parent: face-the-endpoint
+  track: face
 - slug: face-licence-split
   parent: body-organ
   track: face
@@ -687,6 +732,9 @@
 - slug: gates-reach-live-or-break-in-worktree
   parent: review-v015-followups
   track: security
+- slug: gates-see-sibling-worktrees
+  parent: review-v015-followups
+  track: security
 - slug: gdpr-6f-gate
   parent: digest
   track: digest
@@ -732,6 +780,9 @@
 - slug: habitat-docker-runtime
   parent: self-symbiont-host
   track: platform
+- slug: halt-has-no-break-glass
+  parent: wing-organ-without-face
+  track: security
 - slug: handheld-dtt-sso-client
   parent: device-organ
   track: face
@@ -828,6 +879,9 @@
 - slug: keap-embed-queue-lost-row
   parent: ''
   track: cortex
+- slug: keap-is-memory-cortex-reasons
+  parent: body-organ
+  track: cortex
 - slug: keap-lint-disabled-refs
   parent: ''
   track: platform
@@ -858,6 +912,9 @@
 - slug: kpro-table-access
   parent: kpro
   track: cortex
+- slug: law-one-home-ssot-doctrine
+  parent: repo-body-plan
+  track: platform
 - slug: ledger-constitution
   parent: backoffice-organ
   track: platform
@@ -869,6 +926,9 @@
   track: platform
 - slug: lexicon
   parent: body-genome
+  track: platform
+- slug: lexicon-gate-sees-the-body
+  parent: repo-body-plan
   track: platform
 - slug: live-mark-consent
   parent: review-v015-followups
@@ -1002,6 +1062,9 @@
 - slug: manifest-origin
   parent: body-habitat
   track: platform
+- slug: manifest-origin-and-one-organ-one-node
+  parent: body-organ
+  track: platform
 - slug: maturity
   parent: body-organism
   track: release
@@ -1110,6 +1173,9 @@
 - slug: oidc-classification-is-a-claim-nobody-checks
   parent: ''
   track: security
+- slug: ollama-manifest-row
+  parent: body-organ
+  track: platform
 - slug: ollama-residency-as-a-pausable-resource
   parent: ''
   track: platform
@@ -1134,6 +1200,12 @@
 - slug: organ-one-meaning
   parent: body-organ
   track: platform
+- slug: organelle-zero-before-ruling
+  parent: body-cell
+  track: agents
+- slug: organelles-not-agentkit
+  parent: body-cell
+  track: agents
 - slug: organism-type-colony
   parent: body-organism
   track: platform
@@ -1161,6 +1233,9 @@
 - slug: party-review-rung
   parent: digest
   track: digest
+- slug: person-disappears-at-the-api
+  parent: wing-organ-without-face
+  track: security
 - slug: pg-cutover
   parent: plat
   track: platform
@@ -1178,6 +1253,9 @@
   track: agents
 - slug: pipeline-exercise-verdicts
   parent: ''
+  track: platform
+- slug: plan-homes-frozen-docs-realms
+  parent: repo-body-plan
   track: platform
 - slug: planes
   parent: ''
@@ -1332,6 +1410,9 @@
 - slug: rem-queue-commit-256-260-261
   parent: ''
   track: security
+- slug: repo-body-plan
+  parent: rel-017
+  track: platform
 - slug: repo-split-trigger
   parent: ''
   track: platform
@@ -1449,6 +1530,9 @@
 - slug: second-mac-lab
   parent: rel-017
   track: release
+- slug: second-memory-declared-not-flipped
+  parent: body-habitat
+  track: security
 - slug: secrets-at-rest
   parent: ''
   track: security
@@ -1458,6 +1542,9 @@
 - slug: seed-bundle-generalize
   parent: digest
   track: digest
+- slug: self-definition
+  parent: body-habitat
+  track: platform
 - slug: self-symbiont-host
   parent: body-habitat
   track: platform
@@ -1533,6 +1620,9 @@
 - slug: standardize-digest-outputs-and-storage
   parent: consulting-firm-deployment
   track: filesystem
+- slug: state-layout-by-realm
+  parent: body-genome
+  track: platform
 - slug: state-surface
   parent: sere
   track: agents
@@ -1563,6 +1653,9 @@
 - slug: tls-modern-never-applied
   parent: sec
   track: security
+- slug: tools-index-by-body-word
+  parent: repo-body-plan
+  track: platform
 - slug: track-knowledge
   parent: body-plan
   track: platform
@@ -1707,6 +1800,12 @@
 - slug: wet-test-gate-before-autodeploy
   parent: agent-landing-zero-command-operator
   track: platform
+- slug: wing-and-bone-inventory-honest-means
+  parent: body-organ
+  track: platform
+- slug: wing-api-has-no-tier
+  parent: wing-organ-without-face
+  track: security
 - slug: wing-db-ro-open-needs-shm
   parent: ''
   track: platform
@@ -1719,12 +1818,21 @@
 - slug: wing-hub-honesty
   parent: ''
   track: platform
+- slug: wing-inc1-inbox-app
+  parent: wing-organ-without-face
+  track: face
+- slug: wing-latte-ratchet
+  parent: wing-organ-without-face
+  track: face
 - slug: wing-map
   parent: ''
   track: platform
 - slug: wing-neon-getenv-false-crashes-cli
   parent: consulting-firm-deployment
   track: platform
+- slug: wing-organ-without-face
+  parent: face-the-endpoint
+  track: face
 - slug: wing-tenants
   parent: ''
   track: platform
