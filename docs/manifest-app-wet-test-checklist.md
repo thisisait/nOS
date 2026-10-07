@@ -224,7 +224,7 @@ Each should be:
 - type: HTTP
 - url: `https://<slug>.apps.dev.local`
 - accepts: 200-299, 301, 302, 308, 401, 403
-- tags: `apps`, `<category>`, `tier2`
+- tags: `apps`, `<category>`, `manifest-app` (and `tier2`, the alias dropped next release)
 
 If missing:
 ```bash
@@ -319,7 +319,7 @@ the fix-and-recover loop is much cheaper than a full re-blank.
 
 5. Re-run WITHOUT a blank (no full reset):
    ```bash
-   ansible-playbook main.yml -K --tags apps,tier2,apps-runner
+   ansible-playbook main.yml -K --tags apps,manifest-app,apps-runner
    ```
    The runner re-renders + `docker compose up apps --wait` brings the
    fixed container up without touching the healthy ones. Re-running

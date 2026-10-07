@@ -91,6 +91,9 @@ before it touches anything.
   to `ubuntu-24.04`.
 - **The loop** may write any default layer but never `ssot/` (the budget
   refuses it by name); designs go to drafts.
+- **Tags**: the apps stack answers to `--tags manifest-app`; `tier2` is kept
+  as an alias for this release only and is dropped in the next one. The
+  Uptime Kuma monitors of manifest apps carry both tags meanwhile.
 
 ### One thing to do after the upgrade
 - `state/llm-backends.yml` is a **compat symlink** to
