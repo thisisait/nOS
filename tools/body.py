@@ -26,23 +26,47 @@ MANIFEST = REPO / "state" / "manifest.yml"
 
 LEXICON = REPO / "state" / "genome" / "lexicon.yml"
 
-#: The ladder in order, then the cross-cutting systems. What each means is the
-#: lexicon's `means` (test_body_glosses_are_the_lexicon.py), never a string here.
-LEVELS = ("genome", "cell", "tissue", "organ", "organ system", "organism", "habitat",
-          "sense", "limb", "memory", "law", "reflex", "heartbeat")
+
+def _lexicon() -> dict:
+    """The lexicon document, or {} when unreadable (the caller prints UNKNOWN)."""
+    try:
+        import yaml  # noqa: PLC0415
+        return yaml.safe_load(LEXICON.read_text(encoding="utf-8")) or {}
+    except (OSError, ValueError, ImportError):
+        return {}
+
+
+def _levels(doc: dict) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """(ladder, cross-cutting systems): `order` up to `cross`, then every cross word
+    that names a graph kind — the rule tools/body-plan-gen.py applies too
+    (test_body_levels_are_the_lexicon.py)."""
+    try:
+        order = doc["order"]
+        ladder = tuple(order[: order.index("cross")])
+        systems = tuple(w for w, v in doc["words"].items()
+                        if v.get("level") == "cross"
+                        and any("graph_kind" in r for r in v.get("names") or []))
+        return ladder, systems
+    except (KeyError, TypeError, ValueError):
+        return (), ()
+
+
+#: What each level means is the lexicon's `means` (test_body_glosses_are_the_lexicon.py),
+#: never a string here; which words ARE levels is the lexicon's too.
+_LADDER, _SYSTEMS = _levels(_lexicon())
+LEVELS = _LADDER + _SYSTEMS
 
 
 def gloss(level: str) -> str:
     """The lexicon's meaning of a level, on one line; UNKNOWN if unreadable."""
     try:
-        import yaml  # noqa: PLC0415
-        words = yaml.safe_load(LEXICON.read_text(encoding="utf-8"))["words"]
-        return " ".join(str(words[level]["means"]).split())
-    except (OSError, ValueError, KeyError, ImportError):
+        return " ".join(str(_lexicon()["words"][level]["means"]).split())
+    except (KeyError, TypeError):
         return "UNKNOWN (state/genome/lexicon.yml unreadable or lacks this word)"
 
 
-CROSS = "sense"
+#: Where the overview draws the line between the ladder and the cross-cutting systems.
+CROSS = _SYSTEMS[0] if _SYSTEMS else None
 EMPTY = {
     "organism": "no node stands for the whole; the whole is this graph",
 }

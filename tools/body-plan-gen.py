@@ -2,14 +2,12 @@
 """Project the anatomy graph onto biology's levels of organisation — the body plan.
 
 state/anatomy-graph.json holds every node in one address space, in as many
-kinds as the estate has parts. A newly arrived model already knows the ladder
-genome → cell → tissue → organ → organ system → organism → habitat, and the
-systems that cut across it: sense (reads), limb (acts), memory (learned), law
-(inherited), reflex (scheduled response), heartbeat (the liveness signal, the
-one host daemon that is no organ). state/genome/lexicon.yml places
-each anatomy KIND on one of those (or `internal`) through the one word that
-names it under `names: graph_kind`; this file applies the placement and
-nothing else.
+kinds as the estate has parts. state/genome/lexicon.yml says what the levels
+are (`order` up to `cross` is the ladder; a cross word that names a graph kind
+is a cross-cutting level) and places each anatomy KIND on one of them (or
+`internal`) through the one word that names it under `names: graph_kind`;
+this file applies the placement and nothing else. What a level means is the
+lexicon's `means` (tools/body.py), never a string here.
 
 A PROJECTION, not a second graph: every body-plan node is an anatomy node
 carrying only its kind and level, and an edge survives only between two
@@ -36,10 +34,6 @@ ANATOMY = REPO / "state" / "anatomy-graph.json"
 LEVELS_FILE = REPO / "state" / "genome" / "lexicon.yml"
 TARGET = REPO / "state" / "body-plan.json"
 
-#: The ladder, in order, then the cross-cutting systems. Order is the reading order.
-LADDER = ("genome", "cell", "tissue", "organ", "organ system", "organism", "habitat")
-SYSTEMS = ("sense", "limb", "memory", "law", "reflex", "heartbeat")
-ALL_LEVELS = LADDER + SYSTEMS + ("internal",)
 #: The only keys a kind row may carry — anything more is a per-node fact creeping in.
 ROW_KEYS = {"graph_kind", "reason"}
 
@@ -47,6 +41,25 @@ ROW_KEYS = {"graph_kind", "reason"}
 def _die(msg: str) -> None:
     print(f"body-plan-gen: {msg}", file=sys.stderr)
     raise SystemExit(1)
+
+
+def levels(doc: dict) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """(ladder, cross-cutting systems) as the lexicon rules them, in reading order."""
+    order = doc["order"]
+    if "cross" not in order:
+        _die(f"{LEVELS_FILE.relative_to(REPO)} `order` has no `cross`")
+    ladder = tuple(order[: order.index("cross")])
+    systems = tuple(w for w, v in doc["words"].items()
+                    if v.get("level") == "cross"
+                    and any("graph_kind" in r for r in v.get("names") or []))
+    return ladder, systems
+
+
+try:
+    LADDER, SYSTEMS = levels(yaml.safe_load(LEVELS_FILE.read_text(encoding="utf-8")))
+except (OSError, ValueError, KeyError, TypeError):
+    LADDER, SYSTEMS = (), ()
+ALL_LEVELS = LADDER + SYSTEMS + ("internal",)
 
 
 def kind_rows(doc: dict) -> dict[str, tuple[str, dict]]:
@@ -68,8 +81,8 @@ def kind_rows(doc: dict) -> dict[str, tuple[str, dict]]:
 
 def kind_map(doc: dict) -> dict[str, str]:
     """kind -> level: the naming word's level, or the word itself when it is `cross`."""
-    if tuple((doc or {}).get("order", ())[: len(LADDER)]) != LADDER:
-        _die(f"{LEVELS_FILE.relative_to(REPO)} `order` does not open with {LADDER}")
+    if not LADDER or not SYSTEMS:
+        _die(f"{LEVELS_FILE.relative_to(REPO)} rules no levels (unreadable, or no `cross` in `order`)")
     out = {}
     for kind, (word, row) in kind_rows(doc).items():
         if set(row) != ROW_KEYS:
