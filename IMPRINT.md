@@ -37,7 +37,7 @@ the agent's or anyone's — is caught before it costs anything. Both are the poi
 Levels run smallest to largest, then the systems that cut across every level.
 Each line: level (count) — what it means (the lexicon's words), then the most connected nodes (edge count).
 
-- **genome** (20) — The declared facts every part of nOS inherits, kept in state/genome/. Most connected: tasktype:investigate (13), tasktype:seed-edit (5), skill:nos-backoffice (3), skill:nos-datatables (3), tasktype:code-fix (3)
+- **genome** (20) — The declared facts every part of nOS inherits. Most live in state/genome/ (genes, schemas, this lexicon, the task types); the skill library lives in files/anatomy/skills/, beside the code that hands skills out. Most connected: tasktype:investigate (13), tasktype:seed-edit (5), skill:nos-backoffice (3), skill:nos-datatables (3), tasktype:code-fix (3)
 - **cell** (16) — One model in one specialization; in code it is called an agent. Most connected: agent:librarian (11), agent:jeff (9), agent:surveyor (8), agent:conductor (7), agent:curator (7)
 - **tissue** (1) — The transplantable pack of one specialization's cells with their skills, tables and services. Most connected: tissue:backoffice (23)
 - **organ** (102) — One service or host daemon with one job; one row in state/manifest.yml. Most connected: daemon:eu.thisisait.nos.pulse (42), service:postgresql (11), service:redis (9), service:mariadb (8), service:openclaw (7)
@@ -160,11 +160,15 @@ The public organ systems (the apex ruling publishes 13; 481 of 544 ruled nodes a
 
 ## 7. The level words
 
-- **genome** (genome) — The declared facts every part of nOS inherits, kept in state/genome/. Not: law, definition.
+- **genome** (genome) — The declared facts every part of nOS inherits. Most live in state/genome/ (genes, schemas, this lexicon, the task types); the skill library lives in files/anatomy/skills/, beside the code that hands skills out. Not: law, definition.
 - **gene** (genome) — One declared kind of entity in the genome. Not: plugin.
+- **skill** (genome) — A declared how-to in files/anatomy/skills/ that a cell or a runtime is handed. Not: law, definition, reflex.
 - **cell** (cell) — One model in one specialization; in code it is called an agent. Not: sense, stem cell, AWS/Slack cell (an isolated full-stack replica).
 - **stem cell** (cell) — A model that has not yet differentiated into one specialization. Not: cell.
 - **definition** (cell) — One cell's own prompt and tool allow-list, versioned and hashed. Not: genome, law.
+- **caddy** (cell) — The role of the cell the operator speaks to through Ears; jeff holds it today. Not: cell, the Caddy web server inside FrankenPHP.
+- **conductor** (cell) — The cell that self-tests the estate after a converge and weekly; it directs no other cell. Not: Pulse, ceremony.
+- **cell roster** (cell) — The set of cells nOS declares, one directory per cell under files/anatomy/agents/. Not: account roster, tissue.
 - **tissue** (tissue) — The transplantable pack of one specialization's cells with their skills, tables and services. Not: plugin, organ. Mechanism: bounded context (domain-driven design).
 - **organ** (organ) — One service or host daemon with one job; one row in state/manifest.yml. Not: organ system, cell, digest.
 - **organ system** (organ system) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Not: organ, organism.

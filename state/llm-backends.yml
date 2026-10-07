@@ -25,7 +25,7 @@
 #     (`spine-tools-vs-cli-refusal`): every agent declares tools, and the CLI
 #     adapter rightly refuses tool schemas it cannot honour.
 #   * `claude` (the local CLI) — the ANTHROPIC_BASE_URL / _AUTH_TOKEN /
-#     _MODEL env contract; tool-LESS ceremonies only, by that refusal.
+#     _MODEL env contract; tool-LESS cells only, by that refusal.
 # Rulings 1 and 3 (docs/minimax-groundwork.md) live here and in
 # App\AgentKit\BindingResolver, which reads this file.
 #
@@ -48,7 +48,7 @@
 #      register entry is truthful ONLY because it never runs (its own note
 #      says so); a binding that made it runnable would falsify the record.
 #   6. An `opus`-primary agent refuses a foreign binding outright — ruling 1:
-#      code-authoring, opus-pinned ceremonies stay on the default backend
+#      code-authoring, opus-pinned cells stay on the default backend
 #      until the inner permission posture is tightened.
 #
 # Gate: tests/anatomy/test_a_binding_reads_the_register.py (values, not shape).
@@ -234,7 +234,7 @@ backends:
   # claim served by a US backend is a false record, not a degraded one. An
   # agent may only reach this row by naming an xAI processor in its own gdpr
   # block (gate 4). Gate 6 additionally refuses it to every opus-primary,
-  # code-authoring agent, which is most of the ceremonies.
+  # code-authoring agent, which is most of the cells.
   #
   # ARMING IS FIVE EDITS AND ALL OF THEM ARE THE OPERATOR'S: xai_enabled: true
   # in config.yml, the two model ids, `xai_api_key` pasted into

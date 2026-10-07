@@ -15,7 +15,7 @@ gates:
 
 A **cell** is one model in one specialization (in code, an agent). A **tissue**
 is everything one specialization needs to do its work, gathered in one file:
-its cells, the skills they read, the tables they write, the services behind
+its cells, the skills its operators read, the tables they write, the services behind
 them, the reflexes (Pulse jobs) that run on a clock, the doors data comes in by,
 and the reference knowledge it starts with.
 
@@ -58,6 +58,10 @@ not copied) plus a `license:`. The rest are lists of existing ids:
 | `seeds` | seed name | `state/fixtures/<id>.seed.yml` (reference data, no personal data) |
 | `profile` | profile name | `profiles/<id>.yml` |
 | `acceptance` | fixture name | `state/fixtures/<id>.seed.yml` + `<id>/expected.yml` + roadmap row `fixture-<id>` |
+
+`skills` are the skills the tissue's operators read: the people and outside
+tools pointed at it. No loader hands them to a cell yet; an `agent.yml`
+`skills:` key and a loader that injects them come after v0.17.
 
 `tools/tissue-status.py` lists every tissue and resolves every id. One dangling
 id refuses the whole tissue, and `tools/anatomy-graph-gen.py` will not compile

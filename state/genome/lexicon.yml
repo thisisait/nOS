@@ -48,9 +48,14 @@ words:
   # ── the body levels, smallest to largest ────────────────────────────────
   genome:
     level: genome
-    means: The declared facts every part of nOS inherits, kept in state/genome/.
+    means: >-
+      The declared facts every part of nOS inherits. Most live in state/genome/
+      (genes, schemas, this lexicon, the task types); the skill library lives in
+      files/anatomy/skills/, beside the code that hands skills out.
     names:
       - path: state/genome/
+      - path: state/genome/task-types.yml
+      - path: files/anatomy/skills/
       - yaml_key: "ssot/INDEX.yml#realms.genome"
       - graph_kind: tasktype
         reason: a declared work contract every part inherits; a cell expresses it via may_take
@@ -72,13 +77,22 @@ words:
     not: [plugin]
     counter_example: "one DataTable row (data a gene shapes, not a gene)"
 
+  skill:
+    level: genome
+    means: A declared how-to in files/anatomy/skills/ that a cell or a runtime is handed.
+    names:
+      - path: files/anatomy/skills/
+    not: [law, definition, reflex]
+    counter_example: ".claude/skills/devlog/SKILL.md (a how-to for an assistant working in this repo; it does not travel with nOS)"
+
   cell:
     level: cell
     means: One model in one specialization; in code it is called an agent.
     names:
       - graph_kind: agent
-        reason: one model in one specialization (its charter, tools and backend)
+        reason: one model in one specialization, with its tools and backend
       - path: files/anatomy/agents/
+      - yaml_key: "files/anatomy/agents/jeff/agent.yml#metadata.specialization"
     not: [sense, stem cell, "AWS/Slack cell (an isolated full-stack replica)"]
     counter_example: "an immune indicator (a sense)"
     retired:
@@ -90,9 +104,9 @@ words:
   stem cell:
     level: cell
     means: A model that has not yet differentiated into one specialization.
-    no_surface_reason: every agent in files/anatomy/agents/ has one charter today, so none is a stem cell.
+    no_surface_reason: every agent in files/anatomy/agents/ declares one metadata.specialization today, so none is a stem cell.
     not: [cell]
-    counter_example: "jeff, a broad assistant that still has one charter (a cell)"
+    counter_example: "jeff, a broad assistant that still has one specialization (a cell)"
 
   definition:
     level: cell
@@ -107,6 +121,38 @@ words:
         replacement: definition
         surfaces: []
     retired_phrases: ["dna"]
+
+  caddy:
+    level: cell
+    means: The role of the cell the operator speaks to through Ears; jeff holds it today.
+    names:
+      - path: files/anatomy/ears/caddy.py
+      - path: tools/caddy-status.py
+      - path: state/keap-tables/caddy-sessions.table.yml
+    not: [cell, "the Caddy web server inside FrankenPHP"]
+    counter_example: "roles/pazny.wing/templates/wing.Caddyfile.j2 (config for the Caddy server that serves Wing, not the role)"
+
+  conductor:
+    level: cell
+    means: The cell that self-tests the estate after a converge and weekly; it directs no other cell.
+    names:
+      - path: files/anatomy/agents/conductor/
+    not: [Pulse, ceremony]
+    counter_example: "the loop drive job in the loop plugin (it schedules loop work; the conductor only runs its self-test)"
+    retired:
+      # The event type keeps its name until after v0.17, when both names are
+      # accepted for one release; so no surface is listed as gone yet.
+      - sense: "conductor_report as the name of every cell's report event"
+        replacement: "run_report (renamed after v0.17, with both names accepted)"
+        surfaces: []
+
+  cell roster:
+    level: cell
+    means: The set of cells nOS declares, one directory per cell under files/anatomy/agents/.
+    names:
+      - path: files/anatomy/agents/
+    not: [account roster, tissue]
+    counter_example: "the account roster (which accounts a realm must hold, not which cells exist)"
 
   tissue:
     level: tissue
@@ -235,6 +281,15 @@ words:
       - path: tools/undeclared-status.py
     not: [self]
     counter_example: "a launchd job the operator loaded by hand (undeclared until a declaration explains it, however harmless)"
+
+  account roster:
+    level: cross
+    means: The declared accounts every realm (Authentik, Gitea and the rest) must hold; tools/identity-status.py compares it with what each realm holds.
+    names:
+      - path: ssot/doctrine/identity.md
+      - path: tools/identity-status.py
+    not: [cell roster]
+    counter_example: "a user invited into Authentik (people a realm holds, not a roster entry; ssot/doctrine/identity.md)"
 
   sense:
     level: cross
@@ -454,6 +509,15 @@ words:
     mechanism: a reconcile loop (a Kubernetes operator) — declared against observed; it does not heal
     counter_example: "a hand `docker compose up` (it moves one container, not the declared source)"
     retired_phrases: ["self-healing", "heals itself", "self-heal", "auto-heal"]
+
+  ceremony:
+    level: procedure
+    means: One session of a cell that the runner opens, lets the cell work in, and closes with an outcome.
+    names:
+      - path: files/anatomy/wing/app/AgentKit/Runner.php
+      - path: tests/anatomy/test_a_ceremony_owes_an_artifact.py
+    not: [cell, session]
+    counter_example: "the Pulse job that fires a cell (the trigger; the ceremony is the session it opens)"
 
   imprint:
     level: procedure

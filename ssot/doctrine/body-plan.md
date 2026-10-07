@@ -55,15 +55,17 @@ A new word the operator has not ruled carries `proposed: true`.
 
 | level | one meaning | lives in |
 |---|---|---|
-| genome | the declared facts every part inherits | `state/genome/` |
-| cell | one model in one specialization (in code: an agent) | `files/anatomy/agents/` |
+| genome | the declared facts every part inherits | `state/genome/` (genes, schemas, the lexicon, `task-types.yml`) and the skill library `files/anatomy/skills/` |
+| cell | one model in one specialization (in code: an agent; `metadata.specialization`) | `files/anatomy/agents/` |
 | tissue | the transplantable pack of one specialization: its cells, skills, tables, services and reflexes | `state/tissues/` |
 | organ | one service or host daemon with one job; one row | `state/manifest.yml` |
 | organ system | a public group of organs serving one function | the apex ruling's `organ_systems:` key |
 | organism | one nOS install on one machine | — |
 | habitat | the machine and what lives beside the organism | `software_owner` |
 
-A cell's own prompt and tool allow-list is its **definition**. A genome
+A cell's own prompt and tool allow-list is its **definition**; one session
+the runner opens for it is a **ceremony**. A **skill** is a declared how-to a
+cell or a runtime is handed; it is genome, kept in `files/anatomy/skills/`. A genome
 entity kind is a **gene** ([`genome.md`](genome.md)). A tissue's file is
 described in [`tissue.md`](tissue.md).
 
