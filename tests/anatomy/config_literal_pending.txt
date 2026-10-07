@@ -11,4 +11,3 @@ tests/anatomy/test_no_master_in_rendered_artifacts.py
 tests/anatomy/test_santa_is_monitor_only.py
 tests/anatomy/test_the_driver_lands_without_merging.py
 tests/upgrades/test_template_vars_resolvable.py
-tools/anatomy-graph-gen.py

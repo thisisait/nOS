@@ -136,6 +136,8 @@ REPO = Path(__file__).resolve().parents[1]
 #: `form:` in the registry compiled into the address space as a new form.
 sys.path.insert(0, str(REPO / "files" / "anatomy"))
 from module_utils import nos_entity  # noqa: E402
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 TARGET = REPO / "state" / "anatomy-graph.json"
 #: Byte-identical vendored copy for the face. The face container's build
@@ -161,7 +163,6 @@ KEAP_TABLES = REPO / "state" / "keap-tables"
 #: may be bound to. Read here as the register it is; the binding itself is
 #: `model.backend` in each agent.yml.
 LLM_BACKENDS = REPO / "state" / "habitat" / "llm-backends.yml"
-DEFAULT_CONFIG = REPO / "default.config.yml"
 #: The blueprint that actually creates the agent OIDC clients. Named so the
 #: `authentik:<slug>` nodes minted from the roster die with the code that
 #: applies them, rather than outliving it (repair before declare).
@@ -904,7 +905,7 @@ def harvest_agent_clients(nodes: dict) -> None:
     """
     if not AGENT_CLIENT_BLUEPRINT.exists():
         return
-    doc = yaml.safe_load(DEFAULT_CONFIG.read_text(encoding="utf-8")) or {}
+    doc = ni.default_config()
     for row in doc.get("authentik_agent_clients") or []:
         if not (isinstance(row, dict) and row.get("slug")):
             continue
