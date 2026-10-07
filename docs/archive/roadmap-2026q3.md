@@ -225,7 +225,7 @@ real robustness gap, not a one-off; fixes are structural.
   template — now renders only the URL and reads the secret from `secrets.yml` (==
   Bone's plist secret, end-to-end proven 200/insert); Bone **self-heals** a stale env
   secret inline (signed-ping → reload) independent of end-of-play handler flush. New
-  doctrine: [`docs/doctrine/observability.md`](../doctrine/observability.md).
+  doctrine: [`docs/doctrine/observability.md`](../../ssot/doctrine/observability.md).
 - **External-volume mount preflight + self-heal** — a remounted external SSD leaves
   Docker Desktop's VM a stale `/host_mnt` ref → every bind-mount fails, containers stick
   in `Created`, the STRICT health-wait hangs ~20 min with no clue. Probe before the

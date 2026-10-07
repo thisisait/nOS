@@ -196,7 +196,7 @@ ran; a backup reporting success over empty archives; a container reporting
 healthy for ten days while serving its own installer. In a workflow this means a
 build agent may not declare its own step verified.
 
-**Division of labour between gates** ([gates.md](gates.md)): pytest owns the
+**Division of labour between gates** ([ssot/doctrine/gates.md](../ssot/doctrine/gates.md)): pytest owns the
 *shape*, `--tags verify` owns the *effect*, `nos-smoke --strict` owns
 *end-to-end truth*. None may claim another's job, and **a gate you can satisfy
 by editing the gate is not one**.

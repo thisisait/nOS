@@ -1,7 +1,7 @@
 # nOS Filesystem Doctrine — unified, structured, isolated storage
 
 > **Status: P1/P1b shipped.** Canonical decisions:
-> [`docs/doctrine/filesystem.md`](../doctrine/filesystem.md). This file is the
+> [`docs/doctrine/filesystem.md`](../../ssot/doctrine/filesystem.md). This file is the
 > design archive (detail + phasing). P2 (per-user tree) and P3 (isolation +
 > AgentKit path-scoping) remain. Motivated 2026-07-16: ad-hoc per-service volume
 > paths block safe multi-tenant / multi-user / multi-agent-per-user isolation,
