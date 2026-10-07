@@ -58,7 +58,7 @@ REPO = Path(__file__).resolve().parents[1]
 
 sys.path.insert(0, str(REPO / "tools"))
 from nos_identity import default_config_text, layer_paths, resolve_flag  # noqa: E402
-from nos_security import GIT_REL, queue_path, security_dir  # noqa: E402
+from nos_security import GIT_REL, load_queue_items, security_dir  # noqa: E402
 
 CLAUDE_MD = REPO / "CLAUDE.md"
 
@@ -309,13 +309,12 @@ def image_tag(image: str) -> str | None:
 
 
 def queue_items() -> list[dict]:
-    path = queue_path()
-    if not path.is_file():
-        return []
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if isinstance(data, list):
-        return data
-    return data.get("items", data.get("remediations", []))
+    """Notebook JOINED with dispositions.json — the same view rem-status reads.
+
+    Unjoined, probe B called five sidecar-resolved rows `still pending` on
+    2026-10-07 (test_rem_dispositions_sidecar.py::test_discovery_scan_judges_the_joined_queue).
+    """
+    return load_queue_items() or []
 
 
 def at_ref(ref: str, relpath: str) -> str | None:
