@@ -199,8 +199,8 @@ fields:
 
   edge:
     kind:                { ruling: VERBATIM, note: "relationship vocabulary (`data`, `trigger`, ...); only leaves on veins between published organs" }
-    from:                { ruling: TRANSFORMED, transform: "rewritten to the public organ id; internal ids never leave" }
-    to:                  { ruling: TRANSFORMED, transform: "rewritten to the public organ id; internal ids never leave" }
+    from:                { ruling: TRANSFORMED, transform: "rewritten to the organ-system id; internal ids never leave" }
+    to:                  { ruling: TRANSFORMED, transform: "rewritten to the organ-system id; internal ids never leave" }
     via:                 { ruling: WITHHELD, why: "env var names, ports, file:line — 174 occurrences of exactly what an attacker maps first" }
     unenforced:          { ruling: WITHHELD, why: "a written catalogue of silent-failure modes, with file:line" }
     derived:             { ruling: WITHHELD, why: "provenance metadata" }
@@ -733,7 +733,7 @@ nodes:
   "table:print-machine": withheld
   "table:print-material": withheld
   "table:print-order": withheld
-  # The digest organ's output tables (repos importer): repo -> application ->
+  # The digest importer's output tables (repos importer): repo -> application ->
   # package. WITHHELD like every table node — a client organisation's software
   # estate is theirs, never the public front door. Added 2026-09-11 after the
   # signature; the published set is unchanged (nothing new leaves the machine),
