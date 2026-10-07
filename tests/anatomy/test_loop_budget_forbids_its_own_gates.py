@@ -63,6 +63,8 @@ if str(BONE) not in sys.path:
 import budget  # noqa: E402  — the subject
 import judges  # noqa: E402  — the registry the budget is computed from
 import ledger  # noqa: E402  — the enforcement site
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 REGISTRY_YML = REPO / "state" / "judge-sets.yml"
 
@@ -347,11 +349,12 @@ def test_an_unclassified_path_is_denied(registry, path):
     "tasks/stacks/stack-up.yml",
     "apps/documenso.yml",
     "upgrades/freescout.yml",
-    "default.config.yml",
+    *(str(p.relative_to(REPO)) for p in ni.default_layers()),
 ])
 def test_the_allowed_roots_actually_allow(registry, path):
     """A budget that refuses everything is also useless — §5.3 must admit the
-    places a real fix lives."""
+    places a real fix lives — every committed default layer, not only the remainder
+    (a toggle moved to config.d/ would otherwise leave the loop unable to flip it)."""
     assert budget.check_paths([path], intent_class="config-fix", gate_set="full",
                               registry=registry) == []
 

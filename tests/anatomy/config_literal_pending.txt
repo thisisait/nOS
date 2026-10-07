@@ -7,7 +7,6 @@ tests/anatomy/test_estate_status_install_flags.py
 tests/anatomy/test_every_toggle_gates_something.py
 tests/anatomy/test_hidden_fee_01_names_the_measured_layer.py
 tests/anatomy/test_image_pin_hygiene.py
-tests/anatomy/test_loop_budget_forbids_its_own_gates.py
 tests/anatomy/test_no_master_in_rendered_artifacts.py
 tests/anatomy/test_santa_is_monitor_only.py
 tests/anatomy/test_the_driver_lands_without_merging.py
