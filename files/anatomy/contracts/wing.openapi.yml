@@ -19,6 +19,59 @@ components:
       scheme: bearer
       description: 'API token issued by Wing (api_tokens table). Scopes: wing.read, wing.write; an operation listing wing.operator is an operator decision — no agent token holds it, and through the face BFF the person must be Tier 1.'
 paths:
+  /api/v1/admin/halt:
+    post:
+      summary: the emergency halt (every unpaused Pulse job)
+      operationId: Admin_halt_post
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth:
+            - wing.operator
+  /api/v1/admin/resume:
+    post:
+      summary: lift ONLY emergency halts; manual pauses stay
+      operationId: Admin_resume_post
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth:
+            - wing.operator
+  /api/v1/admin/state:
+    get:
+      summary: is a halt active, and the job counts
+      operationId: Admin_state_get
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Authentication required
+        '404':
+          description: Not found
+      security:
+        - BearerAuth: []
   /api/v1/advisories:
     get:
       summary: 'list advisories (?date, ?limit)'
@@ -1726,7 +1779,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: id
           in: path
