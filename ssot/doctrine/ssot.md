@@ -35,8 +35,10 @@ Harvest SHALL name `ssot/doctrine/<file>.md` or
 INDEX `proposed:` names warehouse files that are still full originals.
 They are not law. Today: `agentkit.md`, `backoffice.md`, `n8n-packs.md`,
 `tissues.md` — promote when the operator rules on each.
-A **PROPOSED** banner on a file in an in-force realm means that file is not
-law yet. The realm being in force does not settle the banner.
+Each article says its own force in front matter: `in_force: true|false`,
+`ruled` (date or null), `row` (roadmap slug or null), `gates` (the tests that
+cite it). The article's key overrides the realm's. A **PROPOSED** banner
+appears exactly when `in_force: false`. No other banner states force.
 
 ## 4. Tenant
 
