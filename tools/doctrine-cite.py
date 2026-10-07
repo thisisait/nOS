@@ -251,29 +251,48 @@ def build_corpus() -> dict[str, DocIndex]:
         for path in sorted(REPO.glob(pattern)):
             if path.is_file():
                 corpus[str(path.relative_to(REPO))] = index_doc(path)
-    _alias_doctrine_stubs(corpus)
+    _alias_doctrine_redirects(corpus)
     return corpus
 
 
-def _alias_doctrine_stubs(corpus: dict[str, DocIndex]) -> None:
-    """A docs/doctrine stub that points at ssot/doctrine/X.md keeps the old path
-    as an address for leftover warehouse docs. Harvest cites the live path
-    (ssot.md §3). Sections come from the live file."""
-    for rel, idx in corpus.items():
-        if not rel.startswith("docs/doctrine/") or not rel.endswith(".md"):
-            continue
-        text = (REPO / rel).read_text(encoding="utf-8", errors="replace")
-        m = re.search(r"ssot/doctrine/([\w.-]+\.md)", text)
-        if not m:
-            continue
-        dest = "ssot/doctrine/" + m.group(1)
-        src = corpus.get(dest)
+#: Old warehouse address -> promoted article. The 22 "Moved to" stubs were
+#: deleted (2026-10-07); history still cites these paths, and they resolve to
+#: the live file's sections. Harvest cites the live path (ssot.md §3).
+DOCTRINE_REDIRECTS: dict[str, str] = {
+    "docs/doctrine/cross-repo-contracts.md": "ssot/doctrine/cross-repo-contracts.md",
+    "docs/doctrine/face-app-tiers.md": "ssot/doctrine/face-app-tiers.md",
+    "docs/doctrine/face.md": "ssot/doctrine/face.md",
+    "docs/doctrine/filesystem.md": "ssot/doctrine/filesystem.md",
+    "docs/doctrine/foreign-properties.md": "ssot/doctrine/foreign-properties.md",
+    "docs/doctrine/four-trees.md": "ssot/doctrine/four-trees.md",
+    "docs/doctrine/gates.md": "ssot/doctrine/gates.md",
+    "docs/doctrine/generative-ui.md": "ssot/doctrine/generative-ui.md",
+    "docs/doctrine/identity.md": "ssot/doctrine/identity.md",
+    "docs/doctrine/immune-system.md": "ssot/doctrine/immune-system.md",
+    "docs/doctrine/layers.md": "ssot/doctrine/layers.md",
+    "docs/doctrine/loops.md": "ssot/doctrine/loops.md",
+    "docs/doctrine/observability.md": "ssot/doctrine/observability.md",
+    "docs/doctrine/operator-model.md": "ssot/doctrine/operator-model.md",
+    "docs/doctrine/ponytail.md": "ssot/doctrine/ponytail.md",
+    "docs/doctrine/secrets.md": "ssot/doctrine/secrets.md",
+    "docs/doctrine/security-floor.md": "ssot/doctrine/security-floor.md",
+    "docs/doctrine/session-threat-model.md": "ssot/doctrine/session-threat-model.md",
+    "docs/doctrine/ssot.md": "ssot/doctrine/ssot.md",
+    "docs/doctrine/virtiofs.md": "ssot/doctrine/virtiofs.md",
+    "docs/doctrine/workflows.md": "ssot/doctrine/workflows.md",
+    "docs/doctrine/organs.md": "ssot/doctrine/body-plan.md",
+    "docs/doctrine/README.md": "ssot/README.md",
+}
+
+
+def _alias_doctrine_redirects(corpus: dict[str, DocIndex]) -> None:
+    for old, new in DOCTRINE_REDIRECTS.items():
+        src = corpus.get(new)
         if src is None:
             continue
-        idx.sections = dict(src.sections)
-        idx.decisions = dict(src.decisions)
-        idx.m_ids = set(src.m_ids)
-        idx.constraints = set(src.constraints)
+        corpus[old] = DocIndex(path=old, sections=dict(src.sections),
+                               decisions=dict(src.decisions), m_ids=set(src.m_ids),
+                               constraints=set(src.constraints))
 
 
 def epic_registry() -> set[str]:

@@ -109,16 +109,18 @@ def service_deps(root: Path):
 
 
 def doctrine_files(root: Path):
+    """Articles in ssot/doctrine plus the warehouse originals INDEX `proposed:`
+    names. A promoted article has one home, so it is never expected in docs/."""
+    proposed = yaml.safe_load((root / "ssot/INDEX.yml").read_text(encoding="utf-8")).get("proposed") or []
+    files = sorted((root / "ssot/doctrine").glob("*.md")) + [root / p for p in proposed]
     titles: dict[str, set] = {}
-    for d in ("ssot/doctrine", "docs/doctrine"):
-        for f in sorted((root / d).glob("*.md")):
-            m = re.search(r"^# (.+)$", f.read_text(encoding="utf-8"), re.M)
-            if m and f.name != "README.md":
-                # The subtitle names the TOPIC; the title alone would hand over the file name.
-                title = m.group(1).split(" — ", 1)[-1].strip()
-                titles.setdefault(title, set()).add(f"{d}/{f.name}")
+    for f in files:
+        m = re.search(r"^# (.+)$", f.read_text(encoding="utf-8"), re.M)
+        if m:
+            # The subtitle names the TOPIC; the title alone would hand over the file name.
+            title = m.group(1).split(" — ", 1)[-1].strip()
+            titles.setdefault(title, set()).add(f.relative_to(root).as_posix())
     universe = set().union(*titles.values())
-    # Same title in both trees = one answer with two spellings, not two answers.
     return universe, [({"title": t}, {frozenset(p)}) for t, p in sorted(titles.items())]
 
 
