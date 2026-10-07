@@ -64,11 +64,18 @@ A new word the operator has not ruled carries `proposed: true`.
 | habitat | the machine and what lives beside the organism | `software_owner` |
 
 A cell's own prompt and tool allow-list is its **definition**. A genome
-entity kind is a **gene**.
+entity kind is a **gene** ([`genome.md`](genome.md)). A tissue's file is
+described in [`tissue.md`](tissue.md).
+
+The **organism** is one install. Nothing in the repo stands for the whole;
+the anatomy graph is a drawing of it, not the organism. The **habitat** is the
+machine and what lives beside the organism. Two rulings of 2026-10-06 place
+the hard cases: the git forges nOS hosts itself (Gitea, GitLab) are jobs of
+organs, not habitat; the LLM backends the cells call (`state/llm-backends.yml`)
+are habitat, third-party processors beside the organism.
 
 ## 4. Words that cross the levels
 
-- **self / symbiont / habitat** — who wrote the software and who updates it.
 - **declared / undeclared** — on the generated list or not; the immune
   system tolerates the first and reports the second.
 - **sense** reads, **limb** acts. An immune indicator is a sense with an
@@ -76,8 +83,8 @@ entity kind is a **gene**.
 - **memory** is what nOS has learned, kept in KEAP. **verdicts** is the log
   of what each sense reported and what the operator judged.
 - **law** is the rules in force (`ssot/doctrine/`); it is kept apart from the genome.
-- **Pulse** is the scheduler; one scheduled job is a **reflex**. A
-  **heartbeat** is a signal that proves something is still alive.
+- **reflex**, **Pulse** and **heartbeat** are defined once, in
+  [`loops.md`](loops.md) §10.
 - **nervous system** — events → Wing inbox → ntfy or mail. One playbook run
   is a **converge**.
 - **plugin** — one `plugin.yml`; what it declares is **plugin wiring**.
@@ -87,6 +94,25 @@ entity kind is a **gene**.
   that must stay equal are in **mirror-parity**.
 
 The glossary's last section lists every retired sense with what to say now.
+
+### 4.1 Origin
+
+`software_owner` (`config.d/20-host-software.yml`) says whose a piece of
+software is. **self**: nOS calls, pins and updates it, vendor formulae
+included. **symbiont**: declared, lives beside nOS, updated by its own vendor.
+**habitat**: the machine owner's. Origin is not what the immune system
+tolerates; that word is **declared**.
+
+### 4.2 Appendage and joint
+
+An **appendage** is an organ attached through one declared **joint**: a
+cross-repo contract ([`cross-repo-contracts.md`](cross-repo-contracts.md) §7).
+It has its own code and licence, and no core organ depends on it or imports
+it, so the organism survives its loss. It is a property of an organ, not a
+level. The manifest row says `joint:` (the spec) or `joint_pending:` (why
+not yet). Gate: `tests/anatomy/test_appendage_is_detachable.py`.
+Counter-example: KEAP has a contract and is not an appendage, because the
+core depends on it.
 
 ## 5. The four old meanings of organ, and where each went
 
@@ -100,6 +126,13 @@ The glossary's last section lists every retired sense with what to say now.
 Two later meanings were retired the same day: a model is a **cell**, not an
 organ; nOS's own parts, as against vendor software, are **self** organs.
 
+**The test of an organ.** A part is an organ when it has one row in
+`state/manifest.yml` and one job that fits in one sentence. Where it runs is
+the row's `stack` (a compose stack, or `null` on the host), not a second kind
+of organ. A job of an organ (a Pulse job, a face app, a hosted forge) is not
+another organ. Today the anatomy graph still counts some host daemons as
+nodes beside their rows; that is a gap to close, not a second rule.
+
 ## 6. What this does not settle
 
 The axes and defaults proposal that stood here before (an `organ` field and a
@@ -112,14 +145,7 @@ not built.
 
 The levels run genome → cell → tissue → organ → organ system → organism →
 habitat; sense, limb, memory, law, reflex and the rest cut across them. Origin
-is self, symbiont or habitat, and the immune system tolerates what is declared.
-
-An **appendage** is an organ attached through one declared joint — a
-cross-repo contract ([`cross-repo-contracts.md`](cross-repo-contracts.md) §1:
-spec, fixture, symmetric gates) — with its own code and licence, which no core
-organ depends on or imports. The organism survives its loss. It is a property
-of an organ, not a level. Counter-example: KEAP has a contract and is not an
-appendage, because the core depends on it.
+(§4.1) and **appendage** (§4.2) are properties, not levels.
 
 The body is a map, not a claim. nOS is not alive. It does not heal: a converge
 reconciles what is declared with what is observed. Its immune system reports;
