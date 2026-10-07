@@ -1,7 +1,34 @@
-# Derived artifacts: parallel agents regenerate these, so a content merge is
-# noise — any resolution is wrong until tools/anatomy-graph-gen.py reruns, and
-# test_anatomy_graph_is_sound.py refuses a stale artifact either way.
+# Generated files (the list is state/generated.yml; the gate
+# test_generated_files_hold.py keeps the two equal). A content merge of one is
+# noise: keep ours, then rerun its writer (docs/adr/0002-graphify-borrowings.md §3).
 # One-time setup (like the pre-push hook): git config merge.regen.driver true
 # Unconfigured, git falls back to a normal text merge — a loud conflict, safe.
-files/anatomy/face/src/lib/anatomy/anatomy-graph.json merge=regen
 state/anatomy-graph.json merge=regen
+files/anatomy/face/src/lib/anatomy/anatomy-graph.json merge=regen
+state/body-plan.json merge=regen
+state/routing-graph.json merge=regen
+files/anatomy/face/src/lib/anatomy/routing-graph.json merge=regen
+state/loop-graph.json merge=regen
+files/anatomy/face/src/lib/anatomy/loop-graph.json merge=regen
+IMPRINT.md merge=regen
+AGENTS.md merge=regen
+docs/glossary.md merge=regen
+files/anatomy/module_utils/nos_entity.py merge=regen
+files/anatomy/face/src/lib/contracts/entity.gen.ts merge=regen
+state/dpa-register.md merge=regen
+tests/fixtures/selfmodel-recall.json merge=regen
+state/devlog-bundle.jsonl merge=regen
+state/tofu-authentik-services.yml merge=regen
+state/roadmap/index.yml merge=regen
+state/fixtures/report-chain-synthetic/expected.yml merge=regen
+files/anatomy/contracts/bone.openapi.yml merge=regen
+files/anatomy/contracts/wing.openapi.yml merge=regen
+files/anatomy/contracts/wing.db-schema.sql merge=regen
+files/anatomy/cortex/src/game/data/taxonomy.ts merge=regen
+docs/llm/security/remediation-queue.json merge=regen
+docs/llm/security/scan-state.json merge=regen
+docs/llm/security/versions.json merge=regen
+docs/llm/security/misconfig-findings.json merge=regen
+docs/llm/security/attack-surface.json merge=regen
+docs/llm/security/pentest-journal.json merge=regen
+docs/llm/security/audit-manifest.json merge=regen

@@ -283,6 +283,7 @@ def build() -> dict:
 
     return {
         "version": 2,
+        "generated_by": "tools/loop-graph-gen.py",
         "generated_from": "files/anatomy/bone/ledger.py + files/anatomy/loops/*.loop.yml",
         "engine_actor": ledger.ENGINE_ACTOR,
         "loops": [SERE_ENTRY] + [{"id": m["id"], "label": m["label"], "blurb": m["blurb"]}

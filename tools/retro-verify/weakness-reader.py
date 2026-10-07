@@ -29,6 +29,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 
 READER = REPO / "files" / "anatomy" / "bone" / "weaknesses.py"
+GENERATED = REPO / "state" / "generated.yml"
 LOOPAUTH = REPO / "files" / "anatomy" / "bone" / "loopauth.py"
 BONE_MAIN = REPO / "files" / "anatomy" / "bone" / "main.py"
 CREDENTIALS = REPO / "default.credentials.yml"
@@ -304,9 +305,9 @@ MUTATIONS: list[tuple[str, pathlib.Path, str, str, str, str]] = [
     ),
     (
         "a watched machine-written path is renamed out from under the alarm",
-        READER,
-        '    "state/devlog-bundle.jsonl": "tools/devlog-compile.py",',
-        '    "state/devlog-bundle-renamed.jsonl": "tools/devlog-compile.py",',
+        GENERATED,
+        "  state/devlog-bundle.jsonl:\n    writer: tools/devlog-compile.py",
+        "  state/devlog-bundle-renamed.jsonl:\n    writer: tools/devlog-compile.py",
         SHAPE,
         "test_every_machine_written_path_still_exists",
     ),

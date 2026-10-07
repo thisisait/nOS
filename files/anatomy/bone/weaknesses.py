@@ -93,6 +93,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+import yaml
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 # Flat import, matching budget.py and ledger.py — Bone runs with its own
@@ -424,22 +425,16 @@ def _unavailable(
 
 # ── Source 1: the git working tree ──────────────────────────────────────────
 
-#: Repo paths a SCHEDULED JOB writes. An uncommitted change to one of these is
-#: not an operator edit in progress — it is a job whose output never reached the
-#: place its consumers read from. Data, so a test can read it.
-MACHINE_WRITTEN: dict[str, str] = {
-    "docs/llm/security/remediation-queue.json": "the nightly security scan",
-    "docs/llm/security/scan-state.json": "the nightly security scan",
-    "docs/llm/security/versions.json": "the nightly security scan",
-    "docs/llm/security/misconfig-findings.json": "the nightly security scan",
-    "docs/llm/security/attack-surface.json": "the nightly security scan",
-    "docs/llm/security/pentest-journal.json": "the pentest agent",
-    "docs/llm/security/audit-manifest.json": "the security audit agent",
-    "state/devlog-bundle.jsonl": "tools/devlog-compile.py",
-    "state/tofu-authentik-services.yml": "tools/tofu-authentik-gen-registry.py",
-    "files/anatomy/module_utils/nos_entity.py": "tools/genome-codegen.py",
-    "files/anatomy/face/src/lib/contracts/entity.gen.ts": "tools/genome-codegen.py",
-}
+#: Repo paths a job or generator writes, read from the tree being read. An
+#: uncommitted change to one is not an operator edit in progress: it is output
+#: that never reached the place its consumers read from. One registry for Bone
+#: and the gates (tests/anatomy/test_generated_files_hold.py).
+GENERATED_REGISTRY = "state/generated.yml"
+
+
+def _machine_written(root: Path) -> dict[str, str]:
+    doc = yaml.safe_load((root / GENERATED_REGISTRY).read_text(encoding="utf-8"))
+    return {str(p): str(e["writer"]) for p, e in doc["files"].items()}
 
 
 def _git(root: Path, *args: str) -> tuple[int, str]:
@@ -499,6 +494,12 @@ def _source_git_worktree() -> tuple[SourceReport, set[str]]:
             set(),
         )
     toplevel = out.strip() or str(root)
+    registry_error = None
+    try:
+        MACHINE_WRITTEN = _machine_written(Path(toplevel))  # noqa: N806 — the gates' name for it
+    except (OSError, yaml.YAMLError, KeyError, TypeError, AttributeError) as exc:
+        MACHINE_WRITTEN = {}  # noqa: N806 — reported below; the other findings still stand
+        registry_error = _clip(f"{type(exc).__name__}: {exc}")
 
     rc, status_blob = _git(root, "status", "--porcelain=v1", "-z", "--untracked-files=all")
     if rc != 0:
@@ -528,6 +529,18 @@ def _source_git_worktree() -> tuple[SourceReport, set[str]]:
             numstat[parts[2]] = f"+{parts[0]}/-{parts[1]}"
 
     weaknesses: list[Weakness] = []
+    if registry_error:
+        weaknesses.append(
+            Weakness(
+                weakness_id="git:generated-registry-unreadable",
+                source=name,
+                severity="high",
+                evidence_committed=False,
+                title=f"{GENERATED_REGISTRY} is unreadable — no generated file is recognised",
+                evidence={"path": GENERATED_REGISTRY, "detail": registry_error},
+                observed={"head_sha": head_sha},
+            )
+        )
     machine: list[tuple[str, str, str]] = []   # (path, xy, writer)
     tracked: list[tuple[str, str]] = []
     untracked: list[str] = []
