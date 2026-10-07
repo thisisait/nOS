@@ -1033,7 +1033,8 @@ services:
     # The reasoning organ — loopback-only host daemon (design §5: pure loopback
     # default, NO Traefik route; the id is in traefik_skip_ids). domain_var
     # exists for the day a route becomes an explicit opt-in, not for today.
-    category: knowledge
+    # `ai`, not `knowledge`: Cortex reasons, KEAP is memory (ruling 2026-10-07).
+    category: ai
     stack: null
     install_flag: install_cortex
     version_source: launchd
