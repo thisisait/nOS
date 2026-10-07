@@ -34,7 +34,7 @@ WHAT THIS FILE PINS
   5. **It never merges.** No API call, no `git merge`, no `git push` to a base
      branch. This is the whole boundary between a driver and an operator.
   6. **It never writes to the ledger.** Constraint B
-     (`docs/idea/11-agentic-loop-contract.md` §3.5): a driver that stamped
+     (`ssot/doctrine/loop-contract.md` §3.5): a driver that stamped
      "landed" would be a step recording its own success, which is the defect
      class this estate has paid for four times.
   7. **A pushed branch with no MR exits non-zero.** Half-done work that reports

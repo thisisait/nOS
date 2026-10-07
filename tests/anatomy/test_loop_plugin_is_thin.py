@@ -49,7 +49,7 @@ import yaml
 REPO = pathlib.Path(__file__).resolve().parents[2]
 BONE = REPO / "files" / "anatomy" / "bone"
 PLUGIN = REPO / ".claude" / "plugins" / "nos-loop"
-CONTRACT = REPO / "docs" / "idea" / "11-agentic-loop-contract.md"
+CONTRACT = REPO / "ssot" / "doctrine" / "loop-contract.md"
 
 SKILL_DIRS = ("weakness-scan", "propose", "judge", "loop")
 #: the three skills that actually call the engine; `loop` delegates and calls nothing
@@ -302,7 +302,7 @@ def test_the_plugin_addresses_only_routes_the_engine_serves():
     declared = _engine_routes()
     assert {"weaknesses", "budget", "proposals", "judge"} <= declared, (
         "the contract's endpoint table moved; re-derive this gate from "
-        "docs/idea/11-agentic-loop-contract.md §6.1"
+        "ssot/doctrine/loop-contract.md §6.1"
     )
     assert "verdicts" not in _engine_write_routes(), (
         "a write-method verdicts route exists. §3.1 deleted it on purpose: a "

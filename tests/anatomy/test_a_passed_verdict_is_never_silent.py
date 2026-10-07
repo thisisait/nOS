@@ -9,7 +9,7 @@ chain by an identity the proposer could not touch. Three days later:
     default.config.yml:1692  gitlab_version:    "18.11.7-ce.0"
     remediation-queue.json   REM-204: pending · REM-159: pending
 
-Nothing had applied them, which is CORRECT — docs/idea/11-agentic-loop-contract.md
+Nothing had applied them, which is CORRECT — ssot/doctrine/loop-contract.md
 §7 non-goal 5 says application is an operator act or a forge MR and nothing
 merges on a green verdict. What was wrong is that nothing SAID so. `tools/loop-status.py` reported
 "2p/0f/1i" and `tools/red-status.py` listed three reds, none of them this. The

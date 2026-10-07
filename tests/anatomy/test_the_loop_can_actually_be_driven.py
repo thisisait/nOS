@@ -52,7 +52,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 CLI = REPO / "files/anatomy/bone/bin/nos-loop"
-CONTRACT = REPO / "docs/idea/11-agentic-loop-contract.md"
+CONTRACT = REPO / "ssot/doctrine/loop-contract.md"
 BONE_TASKS = REPO / "roles/pazny.bone/tasks/main.yml"
 
 

@@ -1,6 +1,6 @@
 """Anatomy gate — the wedge has an operator exit, and gate-add means ADD.
 
-Contract: docs/idea/11-agentic-loop-contract.md §4 ("the block lifts"), §5a,
+Contract: ssot/doctrine/loop-contract.md §4 ("the block lifts"), §5a,
 §6.2 (`nos-loop forget` — operator identity only), DECISION 6.
 Subjects: files/anatomy/bone/{looproutes,loopauth,ledger,budget}.py and
 files/anatomy/bone/bin/nos-loop.

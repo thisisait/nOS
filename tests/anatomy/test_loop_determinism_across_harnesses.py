@@ -1,6 +1,6 @@
 """Anatomy gate — one tree, one verdict, whichever harness asks.
 
-Contract: ``docs/idea/11-agentic-loop-contract.md`` — DECISION 6 (HTTP is the
+Contract: ``ssot/doctrine/loop-contract.md`` — DECISION 6 (HTTP is the
 only implementation, the CLI is a thin client over it), §3.5 (constraint B),
 §8.2 (constraint D), §1 + §6.1 (constraint E), §11 (replay is the guarantee).
 

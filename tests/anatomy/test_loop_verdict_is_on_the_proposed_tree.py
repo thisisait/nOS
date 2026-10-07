@@ -1,6 +1,6 @@
 """Anatomy gate — an attached verdict is on the PROPOSED tree, never on HEAD.
 
-Contract: docs/idea/11-agentic-loop-contract.md §2.5 (one set, one tree), §11
+Contract: ssot/doctrine/loop-contract.md §2.5 (one set, one tree), §11
 (replay). Subjects: files/anatomy/bone/{judges,ledger,looproutes}.py.
 
 A1, THE HEADLINE FINDING of the 2026-08-03 adversarial review, verified twice:

@@ -13,7 +13,7 @@ THE RULE THIS PINS: the readers SEGREGATE a colon-less weakness id — out of
 the headline count, out of the per-source table, out of the `--awaiting` list
 — into an explicitly labelled fixture section. They never delete it, never
 rewrite it, and `--json` still carries every row: out of the way is not out
-of the record. (The ledger's own §4 lookup (docs/idea/11-agentic-loop-contract.md)
+of the record. (The ledger's own §4 lookup (ssot/doctrine/loop-contract.md)
 refuses unresolvable ids at write
 time since 2026-08-16, so NEW placeholders cannot be filed; this covers the
 nine that predate that wall.)

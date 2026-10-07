@@ -5,7 +5,7 @@ to the apparatus it is judged BY rather than the estate it is judged ON —
 becomes an operator toggle, default OFF, surfaced in a loop editor where the
 harnesses are visible before the switch is thrown. Q7 adds the half that is
 easy to leave as prose: the toggle itself is on the denylist floor
-(docs/idea/11-agentic-loop-contract.md §5.2), because a
+(ssot/doctrine/loop-contract.md §5.2), because a
 permission a system can grant itself is not a permission.
 
 WHAT THIS READS. The ARTIFACTS, not the paragraph above:
@@ -40,14 +40,14 @@ import ledger  # noqa: E402 — the enum that names the disabled intent
 
 TABLE_DEF = REPO / "state" / "keap-tables" / "loop-config.table.yml"
 FIXTURE = REPO / "state" / "fixtures" / "loop-config.seed.yml"
-CONTRACT = REPO / "docs" / "idea" / "11-agentic-loop-contract.md"
+CONTRACT = REPO / "ssot" / "doctrine" / "loop-contract.md"
 PRESENTER = REPO / "files/anatomy/wing/app/Presenters/LoopEditorPresenter.php"
 
 TABLE_SLUG = "loop-config"
 ROW_SLUG = "harness_proposals_enabled"
 
 # The gate set is irrelevant to the always-forbidden floor
-# (docs/idea/11-agentic-loop-contract.md §5.2) — it applies to every set —
+# (ssot/doctrine/loop-contract.md §5.2) — it applies to every set —
 # but check_paths needs one. `repo` is the everyday set.
 GATE_SET = "repo"
 
@@ -146,7 +146,7 @@ def test_the_contract_records_the_addendum():
     for path in (TABLE_DEF, FIXTURE):
         rel = str(path.relative_to(REPO))
         assert rel in text, (
-            f"docs/idea/11-agentic-loop-contract.md §5.2 does not list {rel}. "
+            f"ssot/doctrine/loop-contract.md §5.2 does not list {rel}. "
             f"The Q7 answer was 'written rather than assumed'."
         )
 

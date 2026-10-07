@@ -1,6 +1,6 @@
 """Anatomy gate — no ratchet input the proposer controls; the diff is persisted.
 
-Contract: docs/idea/11-agentic-loop-contract.md §4 (the ceiling), §5 (budget).
+Contract: ssot/doctrine/loop-contract.md §4 (the ceiling), §5 (budget).
 Subjects: files/anatomy/bone/{ledger,budget,looproutes,weaknesses}.py
 
 THE SHAPE UNDER ATTACK: the §4 retry ceiling and the content dedup are the only

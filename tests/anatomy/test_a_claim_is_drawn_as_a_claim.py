@@ -95,7 +95,7 @@ def test_the_law_is_quoted_where_it_binds():
     assert "lawcard" in src, "the governing paragraphs render with no shape of their own"
     assert "law.heading" in src, (
         "only the section NUMBER is rendered. A bare number tells an operator "
-        "nothing at 03:00 — 'docs/idea/11-agentic-loop-contract.md §2.4' means "
+        "nothing at 03:00 — 'ssot/doctrine/loop-contract.md §2.4' means "
         "something only because the heading behind it says 'Fail closed: "
         "absence is never success'. The heading is the half that carries "
         "meaning, and it is what makes the citation checkable."

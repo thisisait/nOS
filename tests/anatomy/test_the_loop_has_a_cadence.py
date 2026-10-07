@@ -5,7 +5,7 @@ WHAT WAS MEASURED (2026-08-19, the operator's own question — "does any loop
 drive development, or must I keep pushing it from a chat session?"): zero
 Pulse jobs referenced the loop; every proposal in the ledger was filed by
 `agent:librarian` or `agent:claude-opus-5` with a human typing at it; 63 of 66
-reported weaknesses had never been proposed against. docs/idea/11-agentic-loop-contract.md §10 step 6 says
+reported weaknesses had never been proposed against. ssot/doctrine/loop-contract.md §10 step 6 says
 "one Pulse job, only after enough attended cycles to trust the above" — and
 the honest reading of that bar is PER HALF:
 
@@ -27,7 +27,7 @@ WHAT THIS FILE PINS
      substitution: a token missing from EITHER list vanishes silently).
   4. The entry runner holds no judge identity: it never reads
      `loop_judge_token` and never invokes `nos-loop`. The proposer proposes
-     and stops (docs/idea/11-agentic-loop-contract.md §3.4).
+     and stops (ssot/doctrine/loop-contract.md §3.4).
   5. The committed-evidence deadlock is refused with its remedy, not spent a
      model run on: `pick()` raises with the commit named when nothing
      proposable is also fixable, and the ledger's refusal distinguishes

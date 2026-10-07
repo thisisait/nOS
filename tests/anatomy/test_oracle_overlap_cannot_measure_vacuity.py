@@ -10,7 +10,7 @@ an oracle_paths overlap with the diff, record `nothing objected`, not `pass`."*
 Measured 2026-08-29, and this file is that measurement kept runnable:
 `oracle_paths` are the paths that ARE a judge's oracle, and `budget_for()`
 turns every one of them into a FORBIDDEN rule for any proposal judged by a set
-containing that judge (`budget.py`, docs/idea/11-agentic-loop-contract.md §5.1).
+containing that judge (`budget.py`, ssot/doctrine/loop-contract.md §5.1).
 So for any proposal that exists the overlap is empty — not usually, but by construction, because a proposal that
 overlapped one was refused before it got a uuid. A check on that overlap has no
 state in which it can distinguish an informative pass from a vacuous one; it

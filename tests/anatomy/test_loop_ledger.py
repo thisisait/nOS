@@ -1,6 +1,6 @@
 """Anatomy gate — the agentic-loop ledger, and the one thing it must guarantee.
 
-Contract: docs/idea/11-agentic-loop-contract.md (§2.4, §3, §4, §5a).
+Contract: ssot/doctrine/loop-contract.md (§2.4, §3, §4, §5a).
 Subject:  files/anatomy/bone/ledger.py
 
 THE REQUIREMENT THAT MATTERS: **a proposer must be structurally unable to write

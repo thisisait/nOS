@@ -21,7 +21,7 @@ absence resolves to "nothing failed", this tool merges untested code at 3am —
 which is the hour it exists to work in.
 
 So absence is INDETERMINATE, INDETERMINATE refuses, and it is reported as its
-own outcome (`docs/idea/11-agentic-loop-contract.md` §2.4 forbids mapping it
+own outcome (`ssot/doctrine/loop-contract.md` §2.4 forbids mapping it
 onto either neighbour).
 
 AND WHY QUESTION 3 EXISTS. One and two are about a proposal; the merge is about

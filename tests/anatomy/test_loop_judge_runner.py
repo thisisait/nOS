@@ -1,6 +1,6 @@
 """Anatomy gate — the judge runner may not report a false green.
 
-Contract: ``docs/idea/11-agentic-loop-contract.md`` §2. This pins the PROPERTIES
+Contract: ``ssot/doctrine/loop-contract.md`` §2. This pins the PROPERTIES
 of ``files/anatomy/bone/judges.py``:
 
   1. a FAILING judge produces a FAILING verdict;

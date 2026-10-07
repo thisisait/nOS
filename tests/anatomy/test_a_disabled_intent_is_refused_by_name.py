@@ -10,7 +10,7 @@ and the loop grows a second refusal mechanism to keep in step with the first.
 It joins the SAME closed enum and one more frozenset beside
 `OPERATOR_REQUIRED_INTENTS`, and the refusal names the toggle that will one day
 lift it — because a refusal an operator cannot act on produces a retry, and a
-retry is what the docs/idea/11-agentic-loop-contract.md §4 ceiling spends.
+retry is what the ssot/doctrine/loop-contract.md §4 ceiling spends.
 
 WHAT THIS GATE READS. The real router, the real ledger, a real POST over the
 wire, against a temp wing.db. Not the enum's membership — a test that asserted
