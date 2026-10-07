@@ -19,7 +19,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 TASKS = REPO / "roles/pazny.openclaw/tasks/main.yml"
 DEFAULTS = REPO / "roles/pazny.openclaw/defaults/main.yml"
-REGISTRY = REPO / "state/llm-backends.yml"
+REGISTRY = REPO / "state/habitat/llm-backends.yml"
 KEY = "gateway.http.endpoints.chatCompletions.enabled"
 
 

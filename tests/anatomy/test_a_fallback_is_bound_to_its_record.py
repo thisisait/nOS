@@ -31,7 +31,7 @@ REPO = Path(__file__).resolve().parents[2]
 WING = REPO / "files/anatomy/wing"
 AUTOLOAD = WING / "vendor/autoload.php"
 AGENTS = REPO / "files/anatomy/agents"
-REGISTRY = REPO / "state/llm-backends.yml"
+REGISTRY = REPO / "state/habitat/llm-backends.yml"
 
 _HARNESS = r"""<?php
 declare(strict_types=1);

@@ -13,7 +13,7 @@ THE CONTRACT NOW:
   * PREPARED — the key has a documented place to be pasted
     (default.credentials.yml), a persisted home (~/.nos/secrets.yml via
     templates/secrets.yml.j2), and a registry entry that resolves it by
-    REFERENCE (state/llm-backends.yml, `nos:minimax_api_key`).
+    REFERENCE (state/habitat/llm-backends.yml, `nos:minimax_api_key`).
   * NOT ARMED — minimax_enabled defaults false, and arming renders
     NOS_ARMED_BACKENDS into wing.plist where App\\AgentKit\\BindingResolver
     reads it. Routing additionally requires a per-agent `model.backend`
@@ -42,7 +42,7 @@ CATALOG = REPO / "files" / "anatomy" / "scripts" / "discover-pulse-catalog.py"
 SECRETS_TPL = REPO / "templates" / "secrets.yml.j2"
 CFG = REPO / "default.config.yml"
 CREDS = REPO / "default.credentials.yml"
-REGISTRY = REPO / "state" / "llm-backends.yml"
+REGISTRY = REPO / "state" / "habitat" / "llm-backends.yml"
 WING_PLIST = REPO / "roles" / "pazny.wing" / "templates" / "wing.plist.j2"
 
 
@@ -124,7 +124,7 @@ def test_the_catalog_carries_no_backend_env_armed_or_not():
         assert not offenders, (
             f"[{label}] the catalog put a backend env on a job again: "
             f"{offenders}. Backend selection is a per-agent AgentKit binding "
-            "(state/llm-backends.yml); the catalog re-growing an injection is "
+            "(state/habitat/llm-backends.yml); the catalog re-growing an injection is "
             "the estate-wide shape ruling 1 forbids, rebuilt."
         )
         blob = json.dumps(cat)

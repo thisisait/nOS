@@ -19,7 +19,7 @@ WHAT DECIDES, and what this file now pins:
   `agent.yml model.primary` carries a tier word (haiku|sonnet|opus|vision).
   The BindingResolver parses it (`BindingResolver.php` — `preg_match('/\\b
   (haiku|sonnet|opus|vision)\\b/')`), looks it up in the backend's `model_env` table in
-  `state/llm-backends.yml`, and reads the env var named there. A tier the
+  `state/habitat/llm-backends.yml`, and reads the env var named there. A tier the
   backend does not map is REFUSED at resolution, which is how ruling 1 keeps
   opus-tier ceremonies off a foreign backend.
 
@@ -35,7 +35,7 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 AGENTS = REPO / "files/anatomy/agents"
-REGISTRY = REPO / "state/llm-backends.yml"
+REGISTRY = REPO / "state/habitat/llm-backends.yml"
 
 #: The words BindingResolver looks for in `model.primary`. `vision` joined
 #: 2026-09-20 (D1 invoice-vision path) — an input-capability tier, carried by

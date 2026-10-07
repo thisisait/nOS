@@ -99,7 +99,7 @@ def test_a_local_backend_is_served_by_a_row_that_owns_its_daemon():
     """MEASURED 2026-10-06: backend:ollama (core cells bind it) had no edge to
     any row, and its daemon sat in openclaw's row as a helper — so cutting off
     openclaw looked free. A local backend names its server in `served_by:`."""
-    backends = yaml.safe_load((REPO / "state/llm-backends.yml").read_text(encoding="utf-8"))["backends"]
+    backends = yaml.safe_load((REPO / "state/habitat/llm-backends.yml").read_text(encoding="utf-8"))["backends"]
     rows = {r["id"]: r for r in _manifest()["services"]}
     edges = {(e["from"], e["to"]) for e in json.loads(
         (REPO / "state/anatomy-graph.json").read_text(encoding="utf-8"))["edges"]}

@@ -2,7 +2,7 @@
 
 WHY THIS GATE READS VALUES. `gdpr-agent-processors` (57168ff8) made the
 Article-30 register say, per agent, which processor its ceremony ships prompts
-to. The binding layer (`model.backend` in agent.yml → state/llm-backends.yml →
+to. The binding layer (`model.backend` in agent.yml → state/habitat/llm-backends.yml →
 App\\AgentKit\\BindingResolver) is the machinery that could make that register
 FALSE again five minutes after it became true: route curator to MiniMax while
 its gdpr block names only Anthropic, and the register is complete, well-formed
@@ -10,7 +10,7 @@ its gdpr block names only Anthropic, and the register is complete, well-formed
 compliance defect, not a bug (coordinator ruling, 2026-08-13), so the register
 is the INPUT to routing, never a parallel document.
 
-THE SIX GATES are prose in state/llm-backends.yml and code in BindingResolver;
+THE SIX GATES are prose in state/habitat/llm-backends.yml and code in BindingResolver;
 this file holds the DECLARED DATA to the four that are decidable offline:
 
   * a declared backend exists in the registry            (gate 2)
@@ -42,7 +42,7 @@ import pytest
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-REGISTRY = REPO / "state/llm-backends.yml"
+REGISTRY = REPO / "state/habitat/llm-backends.yml"
 AGENTS = REPO / "files/anatomy/agents"
 SECRETS_TPL = REPO / "templates/secrets.yml.j2"
 
@@ -50,7 +50,7 @@ SECRETS_TPL = REPO / "templates/secrets.yml.j2"
 def _registry() -> dict:
     doc = yaml.safe_load(REGISTRY.read_text())
     assert isinstance(doc, dict) and isinstance(doc.get("backends"), dict), (
-        "state/llm-backends.yml no longer parses to a backends map"
+        "state/habitat/llm-backends.yml no longer parses to a backends map"
     )
     return doc["backends"]
 

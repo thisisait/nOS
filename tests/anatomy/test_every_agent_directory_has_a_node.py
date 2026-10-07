@@ -38,7 +38,7 @@ REPO = Path(__file__).resolve().parents[2]
 GRAPH = REPO / "state" / "anatomy-graph.json"
 AGENTS = REPO / "files" / "anatomy" / "agents"
 SCHEMA = REPO / "state" / "schema" / "agent.schema.yaml"
-BACKENDS = REPO / "state" / "llm-backends.yml"
+BACKENDS = REPO / "state" / "habitat" / "llm-backends.yml"
 
 
 @pytest.fixture(scope="module")

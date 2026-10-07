@@ -1,6 +1,6 @@
 """Anatomy gate: the router reader must never report a green it did not measure.
 
-`tools/router-status.py` reads a DECLARED fact file (`state/router.yml`) about
+`tools/router-status.py` reads a DECLARED fact file (`state/habitat/router.yml`) about
 the estate's WAN router — a login-walled Mercusys BE3600 with no
 unauthenticated status API (see `docs/router-as-estate-fact.md`). The one
 thing this class of reader can get wrong, per house doctrine, is rendering
@@ -36,23 +36,23 @@ def test_the_tool_exists_and_exits_zero() -> None:
 
 
 def test_the_declared_file_is_present_and_shaped() -> None:
-    declared = REPO / "state" / "router.yml"
-    assert declared.exists(), "state/router.yml is the declared-fact scaffolding this reader needs"
+    declared = REPO / "state" / "habitat" / "router.yml"
+    assert declared.exists(), "state/habitat/router.yml is the declared-fact scaffolding this reader needs"
     import yaml
     data = yaml.safe_load(declared.read_text())["router"]
     for key in ("model", "gateway_ip", "admin_url", "firmware", "declared"):
-        assert key in data, f"state/router.yml is missing declared field: {key}"
+        assert key in data, f"state/habitat/router.yml is missing declared field: {key}"
     assert {"remote_management_enabled", "upnp_enabled", "port_forwards"} <= set(data["declared"])
 
 
 def test_missing_declared_file_reports_unknown_not_green() -> None:
     """The core refusal: no file, no verdict — UNKNOWN, never OK.
 
-    The tool resolves state/router.yml relative to its own path (not cwd), so
+    The tool resolves state/habitat/router.yml relative to its own path (not cwd), so
     the only honest way to exercise "the file is gone" is to move it aside for
     the duration of one subprocess call.
     """
-    declared = REPO / "state" / "router.yml"
+    declared = REPO / "state" / "habitat" / "router.yml"
     moved = declared.with_suffix(".yml.movedfortest")
     declared.rename(moved)
     try:
@@ -62,7 +62,7 @@ def test_missing_declared_file_reports_unknown_not_green() -> None:
 
     payload = json.loads(result.stdout)
     assert payload["status"] == "UNKNOWN", (
-        "with state/router.yml absent, the tool must never report OK — "
+        "with state/habitat/router.yml absent, the tool must never report OK — "
         "that would be a green nothing measured"
     )
     assert result.returncode == 0

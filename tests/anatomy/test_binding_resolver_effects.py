@@ -3,7 +3,7 @@
 WHY EFFECTS AND NOT SHAPE. The companion gate
 (test_a_binding_reads_the_register.py) holds the DECLARED DATA to the rules;
 this one runs the actual PHP — `BindingResolver::resolve()` against the real
-state/llm-backends.yml, and `ClaudeCliAdapter::send()` against a fake `claude`
+state/habitat/llm-backends.yml, and `ClaudeCliAdapter::send()` against a fake `claude`
 binary that records what it was given. The distinction matters because the
 resolver is exactly the kind of machinery that can be visible in source and
 absent from behaviour (the MapHandler defect, twice corrected in this
@@ -342,7 +342,7 @@ def verdicts(tmp_path_factory):
     php = shutil.which("php")
     out = subprocess.run(
         [php, str(harness), str(AUTOLOAD),
-         str(REPO / "state/llm-backends.yml"), str(fake), str(probe)],
+         str(REPO / "state/habitat/llm-backends.yml"), str(fake), str(probe)],
         capture_output=True, text=True, timeout=120,
         # Minimal env ON PURPOSE: no NOS_ARMED_BACKENDS inherited from the
         # operator's shell, so the harness's own putenv() calls are the only
@@ -393,7 +393,7 @@ def test_an_armed_binding_resolves_from_registry_and_secrets(verdicts):
         "token_present": True,
     }, (
         f"got {verdicts['armed_bound']!r} — the armed path must read base_url "
-        "from state/llm-backends.yml, the model id from the tier env, and the "
+        "from state/habitat/llm-backends.yml, the model id from the tier env, and the "
         "token from ~/.nos/secrets.yml via nos:minimax_api_key"
     )
 

@@ -101,7 +101,7 @@ def test_both_dialects_are_reachable():
     src = _src()
     assert "DIALECT_ANTHROPIC" in src and "DIALECT_OPENAI" in src, (
         "the adapter no longer distinguishes wire dialects; one of the two "
-        "armed backends in state/llm-backends.yml would be unreachable."
+        "armed backends in state/habitat/llm-backends.yml would be unreachable."
     )
     assert "customBaseUrl" in src, (
         "the Anthropic-dialect path no longer sets a custom base URL, so it "

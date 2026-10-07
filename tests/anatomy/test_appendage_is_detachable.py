@@ -22,7 +22,7 @@ CEILING. Config coupling is not an import or a mount and passes: Bone reads
 face_vfs_token, Wing can arm openclaw as an LLM backend, bone_registry_dir
 defaults into openclaw_projects_dir. KEAP's code lives in its own repo; only
 its role's templates are read. A backend counts through `served_by:`
-(state/llm-backends.yml): an appendage serving one a core agent binds is red.
+(state/habitat/llm-backends.yml): an appendage serving one a core agent binds is red.
 Ollama has its own core row since 2026-10-06, so openclaw no longer serves it.
 """
 from __future__ import annotations

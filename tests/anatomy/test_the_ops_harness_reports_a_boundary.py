@@ -27,7 +27,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 HARNESS = REPO / "tools" / "nos-ops-harness.py"
 FAMILY = REPO / "state" / "ops-task-families" / "invoice-extract"
-REGISTRY = REPO / "state" / "llm-backends.yml"
+REGISTRY = REPO / "state" / "habitat" / "llm-backends.yml"
 
 FAKE = """\
 import json, os, sys
@@ -147,7 +147,7 @@ def test_a_dead_runner_is_unknown_not_zero_accuracy(tmp_path):
 
 
 def test_the_shipped_registry_reports_what_it_actually_declares(tmp_path):
-    """Read against the committed state/llm-backends.yml. No local row is armed
+    """Read against the committed state/habitat/llm-backends.yml. No local row is armed
     today, so the honest report is UNKNOWN everywhere — and it stays honest
     when one lands: an unmeasured size may never reach the boundary."""
     report = run_harness(tmp_path, registry=REGISTRY, armed="")

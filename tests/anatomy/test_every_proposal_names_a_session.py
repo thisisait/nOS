@@ -299,7 +299,7 @@ def resolution(tmp_path_factory) -> dict | None:
     harness.write_text(_PHP_HARNESS)
     out = subprocess.run(
         [php, str(harness), str(AUTOLOAD),
-         str(REPO / "state/llm-backends.yml"), FALLBACK_URI],
+         str(REPO / "state/habitat/llm-backends.yml"), FALLBACK_URI],
         capture_output=True, text=True, timeout=120,
         # A fake key: buildAnthropic refuses to construct a client without one,
         # and nothing here ever sends. HOME is a tmp dir so the operator's own
@@ -318,7 +318,7 @@ def resolved_model_uri(resolution) -> str | None:
 
 
 def test_a_proposer_session_resolves_onto_the_anthropic_adapter(resolution):
-    """Ruling from state/llm-backends.yml:26-28: the SDK adapter is the only
+    """Ruling from state/habitat/llm-backends.yml:26-28: the SDK adapter is the only
     one that keeps TOOLS through a binding, and a proposer with no tools cannot
     read the budget it must stay inside. So the resolver must not hand this
     ceremony to the tool-less CLI path — or to a refusal."""
