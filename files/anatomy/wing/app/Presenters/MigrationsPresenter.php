@@ -100,6 +100,7 @@ final class MigrationsPresenter extends BasePresenter
 	public function actionMarkRejected(string $id): void
 	{
 		$this->requirePostMethod();
+		$actor = $this->requireActor();
 		$rowId = (int) $id;
 		$reason = (string) ($this->getHttpRequest()->getPost('reason') ?? '');
 		$reason = $reason !== '' ? $reason : 'rejected by operator';
@@ -115,7 +116,7 @@ final class MigrationsPresenter extends BasePresenter
 		}
 		$row = $this->authored->setReviewStatus($rowId, 'rejected', $reason);
 		if ($row['ok']) {
-			$this->emitRejected($uuid, $reason);
+			$this->emitRejected($uuid, $reason, $actor);
 		}
 		$this->flashMessage(
 			$row['ok'] ? 'Proposal rejected.' : "Refused — {$row['detail']}.",
@@ -128,16 +129,15 @@ final class MigrationsPresenter extends BasePresenter
 	 * Best-effort migration_rejected emit (migration_id col holds the row uuid,
 	 * §2.6). Never blocks the reject — an audit failure mustn't abort the action.
 	 */
-	private function emitRejected(string $uuid, string $reason): void
+	private function emitRejected(string $uuid, string $reason, string $actor): void
 	{
 		try {
-			$actor = (string) ($this->getHttpRequest()->getHeader('X-Authentik-Username') ?? 'operator');
 			$this->events->insert([
 				'type'            => 'migration_rejected',
 				'task'            => 'migration_rejected: ' . $uuid,
 				'source'          => 'wing',
 				'migration_id'    => $uuid,
-				'actor_id'        => $actor !== '' ? $actor : 'operator',
+				'actor_id'        => $actor,
 				'actor_action_id' => $uuid,
 				'result'          => [
 					'migration_uuid'  => $uuid,

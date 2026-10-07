@@ -621,17 +621,13 @@ final class UsersPresenter extends BasePresenter
 	// ── helpers ──────────────────────────────────────────────────────────
 
 	/**
-	 * Authentik client_id of the operator making the request. Mirrors the
-	 * pattern in Api/* presenters — bearer-token attribution is the gold
-	 * standard, but browser sessions don't carry a bearer token, so we
-	 * fall back to the forward-auth X-Authentik-Username header. The
-	 * actor_id ends up as e.g. `operator:akadmin` so the /audit timeline
-	 * can distinguish operator-issued invites from agent-issued ones.
+	 * The forward-auth person, as e.g. `operator:akadmin`, so the /audit
+	 * timeline can tell operator-issued invites from agent-issued ones.
+	 * No identity → refused (requireActor), never `operator:unknown`.
 	 */
 	private function getActorId(): string
 	{
-		$user = (string) ($this->getHttpRequest()->getHeader('X-Authentik-Username') ?? '');
-		return $user !== '' ? 'operator:' . $user : 'operator:unknown';
+		return 'operator:' . $this->requireActor();
 	}
 
 	private static function uuid4(): string

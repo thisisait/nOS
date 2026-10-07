@@ -308,6 +308,20 @@ abstract class BasePresenter extends Presenter
 	}
 
 	/**
+	 * The person behind this request, from the same identity the tier gate read.
+	 * Refuses rather than invent one: a record that names "operator" or "unknown"
+	 * names nobody (Inbox:answer's rule, for every presenter).
+	 */
+	protected function requireActor(): string
+	{
+		$id = trim((string) $this->getUser()->getId());
+		if ($id === '') {
+			$this->error('Unauthorized -- no forward-auth identity on this request, so nothing was recorded.', 401);
+		}
+		return $id;
+	}
+
+	/**
 	 * Reject the request with 403 unless the forward-auth header includes the
 	 * named group. Server-side gate — UI-level hiding of buttons is cosmetic
 	 * only; this is the real authorization boundary.

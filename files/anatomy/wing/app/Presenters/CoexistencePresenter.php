@@ -201,8 +201,7 @@ final class CoexistencePresenter extends BasePresenter
 			$this->flashMessage('Refused — tag is required to cancel a queued provision.', 'error');
 			$this->redirect('Coexistence:default');
 		}
-		$cancelledBy = (string) ($this->getHttpRequest()->getHeader('X-Authentik-Username') ?? 'operator');
-		$cancelledBy = $cancelledBy !== '' ? $cancelledBy : 'operator';
+		$cancelledBy = $this->requireActor();
 		$result = $this->coexistence->cancelPlanned($service, $tag, $cancelledBy);
 		[$msg, $type] = $result['ok']
 			? ["Cancelled queued provision {$service}/{$tag}.", 'success']

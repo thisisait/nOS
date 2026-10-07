@@ -147,13 +147,8 @@ final class InboxPresenter extends BasePresenter
 	public function actionAnswer(string $uuid, string $answer = ''): void
 	{
 		$this->requirePostMethod();
-		$operator = (string) ($this->getHttpRequest()->getHeader('X-Authentik-Username') ?: '');
-		if ($operator === '') {
-			// No identity, no decision. "who approved this" must name someone,
-			// and forward-auth is the only thing that can say.
-			$this->flashMessage('Cannot record an answer without an authenticated identity.', 'error');
-			$this->redirect('Inbox:default');
-		}
+		// No identity, no decision: "who approved this" must name someone.
+		$operator = $this->requireActor();
 
 		$answer = trim($answer !== '' ? $answer : (string) $this->getHttpRequest()->getPost('answer'));
 		if ($answer === '') {

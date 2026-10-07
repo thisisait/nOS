@@ -130,7 +130,7 @@ final class AgentsPresenter extends BasePresenter
 	public function actionKill(string $uuid): void
 	{
 		$this->requirePostMethod();
-		$by = (string) ($this->getUser()->getId() ?: 'operator');
+		$by = $this->requireActor();
 		if ($this->sessions->markInterrupted($uuid, $by)) {
 			$this->flashMessage("Session {$uuid} marked interrupted.", 'success');
 		} else {

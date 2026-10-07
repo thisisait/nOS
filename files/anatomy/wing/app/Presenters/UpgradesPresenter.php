@@ -96,7 +96,7 @@ final class UpgradesPresenter extends BasePresenter
 		$this->requirePostMethod();
 		$target = $this->getHttpRequest()->getPost('target_version');
 		$force = (bool) $this->getHttpRequest()->getPost('force');
-		$plannedBy = (string) ($this->getHttpRequest()->getHeader('X-Authentik-Username') ?? 'operator');
+		$plannedBy = $this->requireActor();
 		$result = $this->upgrades->planUpgrade(
 			$service,
 			$recipe,
@@ -131,8 +131,7 @@ final class UpgradesPresenter extends BasePresenter
 	public function actionCancelPlanned(string $service): void
 	{
 		$this->requirePostMethod();
-		$triggeredBy = (string) ($this->getHttpRequest()->getHeader('X-Authentik-Username') ?? 'operator');
-		$triggeredBy = $triggeredBy !== '' ? $triggeredBy : 'operator';
+		$triggeredBy = $this->requireActor();
 		$recipeWanted = (string) ($this->getHttpRequest()->getPost('recipe_id') ?? '');
 
 		// Resolve the planned row id from service (and recipe, when posted) — the
@@ -231,8 +230,7 @@ final class UpgradesPresenter extends BasePresenter
 		$runMode = $req->getPost('run_mode');
 		$runMode = in_array($runMode, ['attached', 'detached', 'stage_then_reboot'], true)
 			? $runMode : 'attached';
-		$plannedBy = (string) ($req->getHeader('X-Authentik-Username') ?? 'operator');
-		$plannedBy = $plannedBy !== '' ? $plannedBy : 'operator';
+		$plannedBy = $this->requireActor();
 
 		$result = $this->upgrades->planUpgradeWithMode(
 			$service,
@@ -330,8 +328,7 @@ final class UpgradesPresenter extends BasePresenter
 	public function actionPromoteToMigration(string $service, string $recipe): void
 	{
 		$this->requirePostMethod();
-		$triggeredBy = (string) ($this->getHttpRequest()->getHeader('X-Authentik-Username') ?? 'operator');
-		$triggeredBy = $triggeredBy !== '' ? $triggeredBy : 'operator';
+		$triggeredBy = $this->requireActor();
 
 		// Guard: refuse if the recipe doesn't exist (no empty session).
 		if (!$this->migrationGap($service, $recipe)) {

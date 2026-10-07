@@ -85,7 +85,7 @@ final class AdminPresenter extends BasePresenter
 
 	private function operatorId(): string
 	{
-		return (string) ($this->getHttpRequest()->getHeader('X-Authentik-Username') ?? 'unknown');
+		return $this->requireActor();
 	}
 
 	/**
