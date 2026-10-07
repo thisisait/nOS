@@ -6,13 +6,19 @@ the role starts `ai.openclaw.gateway`), wing and alloy rows had no
 `launchd_label`, and `daemon:eu.thisisait.nos.ears` was the ears .app BUNDLE id,
 harvested because its value merely looked like a label. Two representations of
 one fact, no join between them. The join is `launchd_label` (+ `launchd_helpers`
-for a row's second job); a daemon no service owns says why in
-`daemons_without_row`; a host-native row with no launchd job says what it is in
-`host_process`. Reads the graph and the manifest; never the live host.
+for a row's second job); a daemon no service owns is RULED in
+`daemons_without_row` (reflex or internal of its owner, or the heartbeat); a
+host-native row with no launchd job says what it is in `host_process`.
+
+I-12 (2026-10-07): one organ, one node. A row's labels sit on its service: node
+as `launchd_labels` and get no daemon: node; a ruled reflex/internal gets none
+either; the heartbeat keeps its node at level cross. Reads the graph, the
+manifest and the role declarations; never the live host.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import pathlib
 import re
@@ -44,27 +50,75 @@ def _owners() -> dict[str, list[str]]:
     return owners
 
 
+def _rulings() -> dict[str, dict]:
+    return _manifest().get("daemons_without_row") or {}
+
+
+def _declared() -> set[str]:
+    """Every label a role or template declares (the generator's own reader)."""
+    spec = importlib.util.spec_from_file_location("_gen", REPO / "tools" / "anatomy-graph-gen.py")
+    gen = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gen)
+    return gen.declared_launchd_labels()
+
+
+def _carried() -> dict[str, list[str]]:
+    """launchd label -> service nodes carrying it (`launchd_labels`, I-12)."""
+    out: dict[str, list[str]] = {}
+    for nid, n in _graph().items():
+        for label in n.get("launchd_labels") or []:
+            out.setdefault(label, []).append(nid)
+    return out
+
+
 def test_every_daemon_has_one_row_or_a_reason():
-    owners, reasons = _owners(), _manifest().get("daemons_without_row") or {}
+    owners, reasons = _owners(), _rulings()
     bad = []
     for label in sorted(_daemons()):
         rows = owners.get(label, [])
         if len(rows) > 1:
             bad.append(f"{label}: owned by {rows} — one daemon, one row")
         elif rows and label in reasons:
-            bad.append(f"{label}: row {rows[0]} AND a daemons_without_row reason — pick one")
-        elif not rows and not str(reasons.get(label) or "").strip():
-            bad.append(f"{label}: no manifest row and no daemons_without_row reason")
+            bad.append(f"{label}: row {rows[0]} AND a daemons_without_row ruling — pick one")
+        elif not rows and not str((reasons.get(label) or {}).get("reason") or "").strip():
+            bad.append(f"{label}: no manifest row and no daemons_without_row ruling")
     assert not bad, "\n".join(bad)
 
 
-def test_every_declared_label_is_a_daemon_node():
+def test_every_declared_label_is_a_row_or_ruled_and_vice_versa():
+    """The two-way join, after the fold: every label a role declares is one
+    row's or ruled; every row label is declared AND sits on that row's node."""
+    declared, owners, rulings, carried = _declared(), _owners(), _rulings(), _carried()
+    bad = [f"{label}: declared by a role, no manifest row and no daemons_without_row ruling"
+           for label in sorted(declared - set(owners) - set(rulings))]
+    bad += [f"{label}: row {rows} names it but no role renders it"
+            for label, rows in owners.items() if label not in declared]
+    bad += [f"{label}: daemons_without_row names it but no role renders it"
+            for label in rulings if label not in declared]
+    bad += [f"{label}: row {rows}, but graph node(s) {carried.get(label)} carry it"
+            for label, rows in owners.items() if carried.get(label) != [f"service:{rows[0]}"]]
+    bad += [f"{label}: on a service node {nodes} but owned by no row"
+            for label, nodes in carried.items() if label not in owners]
+    assert not bad, "\n".join(bad)
+
+
+def test_a_ruled_job_is_no_organ_and_the_heartbeat_keeps_its_node():
+    """`ruling` is a lexicon word at level cross or internal; `of` is a row or
+    playbook-core; reflex/internal emit no node, heartbeat emits exactly one."""
+    words = yaml.safe_load((REPO / "state/genome/lexicon.yml").read_text(encoding="utf-8"))["words"]
+    rows = {r["id"] for r in _manifest()["services"]}
     daemons = _daemons()
-    stale = [f"manifest row {rows} names {label}" for label, rows in _owners().items()
-             if label not in daemons]
-    stale += [f"daemons_without_row names {label}"
-              for label in (_manifest().get("daemons_without_row") or {}) if label not in daemons]
-    assert not stale, "no role renders these labels:\n" + "\n".join(stale)
+    bad = []
+    for label, r in _rulings().items():
+        if words.get(r.get("ruling"), {}).get("level") not in ("cross", "internal"):
+            bad.append(f"{label}: ruling {r.get('ruling')!r} is no cross/internal lexicon word")
+        if r.get("of") not in rows | {"playbook-core"}:
+            bad.append(f"{label}: of {r.get('of')!r} is neither a row nor playbook-core")
+        if r.get("ruling") in ("reflex", "internal") and label in daemons:
+            bad.append(f"{label}: ruled {r['ruling']} of {r.get('of')} yet still a daemon node")
+        if r.get("ruling") == "heartbeat" and label not in daemons:
+            bad.append(f"{label}: ruled heartbeat but has no daemon node")
+    assert not bad, "\n".join(bad)
 
 
 def test_a_host_native_row_names_its_daemon_or_what_it_is():

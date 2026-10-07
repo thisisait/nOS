@@ -253,6 +253,20 @@ def launchd_declarations(repo=None):
     return list(rows.values())
 
 
+def graph_launchd_labels(nodes):
+    """The launchd roster the graph carries: a row's own jobs sit on its
+    service: node as `launchd_labels` (I-12, one organ one node); a daemon: node
+    is a job no row owns (the heartbeat). Shared with tools/undeclared-status.py."""
+    labels = set()
+    for nid, n in (nodes or {}).items():
+        if not isinstance(n, dict) or ":" not in nid:
+            continue
+        if n.get("kind") == "daemon":
+            labels.add(nid.split(":", 1)[1])
+        labels.update(n.get("launchd_labels") or [])
+    return labels
+
+
 def nos_host_daemon_plan(graph, domain=None):
     """Join anatomy-graph daemon nodes to install_* via their declaration.
 
@@ -262,11 +276,7 @@ def nos_host_daemon_plan(graph, domain=None):
     narrows to gui (the sudo-free stack layer) or system (needs become).
     """
     nodes = (graph or {}).get("nodes") or {}
-    graph_labels = {
-        nid.split(":", 1)[1]
-        for nid, n in nodes.items()
-        if isinstance(n, dict) and n.get("kind") == "daemon" and ":" in nid
-    }
+    graph_labels = graph_launchd_labels(nodes)
     return [r for r in launchd_declarations()
             if r["install_flag"] and r["label"] in graph_labels
             and domain in (None, r["domain"])]

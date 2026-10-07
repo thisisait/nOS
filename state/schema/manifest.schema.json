@@ -28,8 +28,17 @@
 
     "daemons_without_row": {
       "type": "object",
-      "description": "launchd label -> why no service row owns that host daemon. Every other anatomy-graph daemon binds to one row via launchd_label or launchd_helpers.",
-      "additionalProperties": { "type": "string", "minLength": 1 }
+      "description": "launchd label -> the ruling for a host daemon no service row owns (body-plan.md §5): a reflex or internal of its owner is a job, not an organ, and gets no graph node; heartbeat keeps its daemon: node at level cross. Every other declared label is a row's launchd_label or launchd_helpers and is that organ.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["ruling", "of", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "ruling": { "type": "string", "enum": ["reflex", "internal", "heartbeat"] },
+          "of":     { "type": "string", "minLength": 1, "description": "The owner: a services[].id, or playbook-core for a tasks/*.yml hook." },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
     },
 
     "services": {

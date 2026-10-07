@@ -295,7 +295,7 @@ def test_the_widget_is_a_node_with_real_edges(graph):
     for want in (
         ("service:face", wid, "data"),                          # mounted at the root
         (wid, "faceapp:anatomy", "trigger"),                    # click-through
-        ("daemon:eu.thisisait.nos.wing", wid, "data"),          # what it reads
+        ("service:wing", wid, "data"),                          # what it reads (I-12: the organ is its row)
     ):
         assert want in touching, f"missing declared edge {want}; have {sorted(touching)}"
 

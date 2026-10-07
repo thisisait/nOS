@@ -138,8 +138,12 @@ organ; nOS's own parts, as against vendor software, are **self** organs.
 `state/manifest.yml` and one job that fits in one sentence. Where it runs is
 the row's `stack` (a compose stack, or `null` on the host), not a second kind
 of organ. A job of an organ (a Pulse job, a face app, a hosted forge) is not
-another organ. Today the anatomy graph still counts some host daemons as
-nodes beside their rows; that is a gap to close, not a second rule.
+another organ. Since I-12 (2026-10-07) the anatomy graph counts each organ
+once: a row's launchd jobs ride its `service:` node as `launchd_labels`, a
+face app is internal to the face, and a host job no row owns is ruled in the
+manifest's `daemons_without_row` (a reflex or internal of its owner, or the
+heartbeat, which keeps its own cross-level node). Gate:
+`tests/anatomy/test_every_daemon_has_a_manifest_row.py`.
 
 ## 6. What this does not settle
 

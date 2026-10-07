@@ -219,17 +219,13 @@ words:
     names:
       - manifest_field: id
       - graph_kind: service
-        reason: one service with one job, one state/manifest.yml row
-      - graph_kind: daemon
-        reason: one host launchd daemon with one job
+        reason: >-
+          one service or host daemon with one job, one state/manifest.yml row; a
+          row's launchd jobs are the row (I-12: `launchd_labels` on the node, no second node)
       - graph_kind: repo
         reason: >-
           ruled 2026-10-06: a git surface an organ hosts (hosted_by); github-origin
           is the one true outside surface, noted, not split
-      - graph_kind: faceapp
-        reason: >-
-          ruled 2026-10-06: a face app is one job of the face organ (its edges to the
-          face service stay)
     not: [organ system, cell, digest]
     counter_example: "a Pulse job (a reflex of the Pulse organ)"
     retired:
@@ -477,6 +473,10 @@ words:
         reason: an OpenTofu state root, declarative plumbing behind Authentik
       - graph_kind: lock
         reason: a mutex claims are drawn against; exclusion is plumbing, not a body part
+      - graph_kind: faceapp
+        reason: >-
+          I-12 (2026-10-07): a face app is one job of the face organ, as an SSO client
+          is of Authentik; it is reached through the face service and is not an organ
     not: [organ, sense]
     counter_example: "the Authentik service (an organ); only an SSO client object inside it is internal"
 
@@ -486,6 +486,10 @@ words:
     names:
       - path: files/heartbeat/heartbeat.py
       - launchd_label: eu.thisisait.nos.heartbeat
+      - graph_kind: daemon
+        reason: >-
+          I-12 (2026-10-07): a declared launchd job no row owns and no ruling folds
+          away; after the fold that is the heartbeat alone, a signal, not an organ
     not: [Pulse]
     mechanism: a liveness signal; monitor / link (Erlang/OTP)
     counter_example: "a health check (asked from outside; a heartbeat is sent from inside on a clock)"

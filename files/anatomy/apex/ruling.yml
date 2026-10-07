@@ -61,7 +61,7 @@ signed_digest: e402f86c1de57c47895e66273561bc6e1d4a0e8bc4a12acf3b4735f5a7d70213
 splits:
   verbatim: 6
   transformed: 9
-  withheld: 70
+  withheld: 71
 
 # -----------------------------------------------------------------------------
 # STANDING DECISIONS — operator rulings, recorded as decisions with reasons,
@@ -117,8 +117,8 @@ decisions:
       count on the page is recomputed over the published set only.
 
 # -----------------------------------------------------------------------------
-# FIELD RULINGS — all 84 fields the artifact carries today: 8 top-level,
-# 59 node fields, 17 edge fields. The gate diffs this table against the
+# FIELD RULINGS — all 85 fields the artifact carries today: 8 top-level,
+# 60 node fields, 17 edge fields. The gate diffs this table against the
 # artifact's actual key census, both directions.
 # -----------------------------------------------------------------------------
 fields:
@@ -172,6 +172,7 @@ fields:
     evidence:          { ruling: WITHHELD, why: "points at the estate's own weaknesses" }
     ref:               { ruling: WITHHELD, why: "git ref" }
     install_flag:      { ruling: WITHHELD, why: "config namespace" }
+    launchd_labels:    { ruling: WITHHELD, why: "a row's own launchd job names (I-12, 2026-10-07: the daemon nodes folded into their rows); the launchd namespace is estate mechanics" }
     dependency_survey: { ruling: WITHHELD, why: "survey coverage discloses the unsurveyed" }
     layer:             { ruling: WITHHELD, why: "D1" }
     layer_withheld:    { ruling: WITHHELD, why: "D1" }
@@ -538,34 +539,13 @@ nodes:
   "tool:mcp-wing-write": withheld
   "tool:migration-file-write": withheld
 
-  # --- withheld: host daemons (the estate's launchd organs) -----------------
-  "daemon:eu.thisisait.nos.acme-renew": withheld
-  "daemon:eu.thisisait.nos.backrest": withheld
-  # The listener (2026-08-31). WITHHELD, and here the default is not merely
-  # conventional — it is the point: a public page that named a microphone
-  # daemon would tell a stranger that this house has an open microphone, which
-  # is a fact about the people in it and not about the software.
-  "daemon:eu.thisisait.nos.ears-listen": withheld
-  # 2026-10-06: row for daemon:eu.thisisait.nos.ears removed — that id is the
-  # .app bundle's, never a launchd job; the graph no longer harvests it
-  # (fix/daemon-manifest-drift). The published set is unchanged.
-  "daemon:eu.thisisait.nos.backup.exporter": withheld
-  "daemon:eu.thisisait.nos.backup.offsite": withheld
-  "daemon:eu.thisisait.nos.backup.rustfs": withheld
-  "daemon:eu.thisisait.nos.bone": withheld
-  "daemon:eu.thisisait.nos.cortex": withheld
+  # --- withheld: host daemons no row owns ------------------------------------
+  # I-12 (2026-10-07): the 17 other daemon: rows left with their nodes. A row's
+  # own launchd jobs are that row's organ (its service: ruling above holds; the
+  # label names sit in the WITHHELD `launchd_labels` field); the ruled
+  # reflexes/internals (acme-renew, backup.offsite, resume, dnsmasq, the retired
+  # ears-listen microphone job) emit no node at all. The published set is unchanged.
   "daemon:eu.thisisait.nos.heartbeat": withheld
-  "daemon:eu.thisisait.nos.hermes": withheld
-  "daemon:eu.thisisait.nos.device-gateway": withheld
-  "daemon:eu.thisisait.nos.pulse": withheld
-  "daemon:eu.thisisait.nos.resume": withheld
-  "daemon:eu.thisisait.nos.wing": withheld
-  # 2026-10-04: vendor daemons the converge starts, now on the roster
-  # (added AFTER the signature; the published set is unchanged).
-  "daemon:ai.openclaw.gateway": withheld
-  "daemon:com.ollama.agent": withheld
-  "daemon:homebrew.mxcl.dnsmasq": withheld
-  "daemon:sh.brew.grafana-alloy": withheld
 
   # --- withheld: doctrine paragraphs (internal law) --------------------------
   "doctrine:docs/archive/cortex-corpus-parallel.md#2.1": withheld

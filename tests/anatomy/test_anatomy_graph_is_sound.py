@@ -325,7 +325,9 @@ def test_the_node_counts_are_sane(committed):
     assert c["nodes_judge"] >= 5
     assert c["nodes_gateset"] >= 4
     assert c["nodes_weakness"] >= 7
-    assert c["nodes_daemon"] >= 11
+    # I-12: a row's jobs sit on its service: node; the heartbeat is the one daemon: node left.
+    assert c["nodes_daemon"] >= 1
+    assert sum(len(n.get("launchd_labels") or []) for n in committed["nodes"].values()) >= 12
     assert c["nodes_service"] >= 60
     assert c["nodes_repo"] >= 4
     assert c["nodes_tofu"] >= 1

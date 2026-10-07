@@ -7,7 +7,7 @@
     "genome": 20,
     "cell": 16,
     "tissue": 1,
-    "organ": 102,
+    "organ": 77,
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
@@ -16,8 +16,9 @@
     "memory": 40,
     "law": 52,
     "reflex": 43,
-    "internal": 67,
-    "edges": 429
+    "heartbeat": 1,
+    "internal": 74,
+    "edges": 426
   },
   "nodes": {
     "agent:conductor": {
@@ -452,76 +453,8 @@
       "level": "habitat",
       "kind": "backend"
     },
-    "daemon:ai.openclaw.gateway": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:com.ollama.agent": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.acme-renew": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.backrest": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.backup.exporter": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.backup.offsite": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.backup.rustfs": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.bone": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.cortex": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.device-gateway": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.ears-listen": {
-      "level": "organ",
-      "kind": "daemon"
-    },
     "daemon:eu.thisisait.nos.heartbeat": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.hermes": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.pulse": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.resume": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:eu.thisisait.nos.wing": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:homebrew.mxcl.dnsmasq": {
-      "level": "organ",
-      "kind": "daemon"
-    },
-    "daemon:sh.brew.grafana-alloy": {
-      "level": "organ",
+      "level": "heartbeat",
       "kind": "daemon"
     },
     "doctrine:docs/archive/cortex-corpus-parallel.md#2.1": {
@@ -1053,31 +986,31 @@
       "kind": "effector"
     },
     "faceapp:anatomy": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "faceapp:anatomy-widget": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "faceapp:books": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "faceapp:files": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "faceapp:keap-explore": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "faceapp:planner": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "faceapp:tables": {
-      "level": "organ",
+      "level": "internal",
       "kind": "faceapp"
     },
     "gateset:corpus": {
@@ -2414,221 +2347,6 @@
       "kind": "data"
     },
     {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:alert-relay:relay-firing",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:authentik-tofu-drift:tofu-drift-plan",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:backup:backup-restore-drill",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:conductor:scan-state-record",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:conductor:security-drift-watch",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:conductor:self-test-001",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:conductor:vulnerability-scan",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:cortex:cortex-corpus-diff",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:cortex:cortex-fs-sync",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:crm-hydrate:hydrate-parties",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:discovery:contradiction-scan",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:gdpr-breach:breach-deadline-scan",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:geo:geo-load",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:geo:project-sites",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:geolibre:atlas-refresh",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:gitea:trunk-sync",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:gitlab:trunk-sync",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:gitleaks:nightly-scan",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:invoice-vision:absorb-approved",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:invoice-vision:intake-sweep",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:keap:keap-consolidate",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:keap:keap-embed-sync",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:keap:keap-features-sync",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:keap:keap-lint",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:librarian:brief-taxonomy",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:librarian:describe-taxonomy",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:librarian:judge-lint-queue",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:drive",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:news-scout",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:pipeline-exercise",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:propose",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:repo-check",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:review",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:vision-bench",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:n8n:exec-watch",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:npm-supply-chain:daily-ioc-scan",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:surveyor:surface-survey",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:wing:agent-cost-tally",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:wing:audit-chain-verify",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:wing:dispatch-notifications",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:wing:dispatch-notifications-digest",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:wing:inbox-reconcile",
-      "kind": "trigger"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.wing",
-      "to": "faceapp:anatomy-widget",
-      "kind": "data"
-    },
-    {
       "from": "doctrine:ssot/doctrine/face-app-tiers.md#2",
       "to": "article:face-app-tiers",
       "kind": "part_of"
@@ -2822,11 +2540,6 @@
       "from": "effector:loop-review",
       "to": "doctrine:ssot/doctrine/loop-contract.md#3.4",
       "kind": "governed_by"
-    },
-    {
-      "from": "faceapp:anatomy-widget",
-      "to": "faceapp:anatomy",
-      "kind": "trigger"
     },
     {
       "from": "judge:ansible-lint",
@@ -3390,11 +3103,6 @@
     },
     {
       "from": "service:face",
-      "to": "faceapp:anatomy-widget",
-      "kind": "data"
-    },
-    {
-      "from": "service:face",
       "to": "organ_system:spine",
       "kind": "part_of"
     },
@@ -3747,6 +3455,216 @@
       "from": "service:pulse",
       "to": "organ_system:clockwork",
       "kind": "part_of"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:alert-relay:relay-firing",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:authentik-tofu-drift:tofu-drift-plan",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:backup:backup-restore-drill",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:conductor:scan-state-record",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:conductor:security-drift-watch",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:conductor:self-test-001",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:conductor:vulnerability-scan",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:cortex:cortex-corpus-diff",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:cortex:cortex-fs-sync",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:crm-hydrate:hydrate-parties",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:discovery:contradiction-scan",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:gdpr-breach:breach-deadline-scan",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:geo:geo-load",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:geo:project-sites",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:geolibre:atlas-refresh",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:gitea:trunk-sync",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:gitlab:trunk-sync",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:gitleaks:nightly-scan",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:invoice-vision:absorb-approved",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:invoice-vision:intake-sweep",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:keap:keap-consolidate",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:keap:keap-embed-sync",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:keap:keap-features-sync",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:keap:keap-lint",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:librarian:brief-taxonomy",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:librarian:describe-taxonomy",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:librarian:judge-lint-queue",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:drive",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:news-scout",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:pipeline-exercise",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:propose",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:repo-check",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:review",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:vision-bench",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:n8n:exec-watch",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:npm-supply-chain:daily-ioc-scan",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:surveyor:surface-survey",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:wing:agent-cost-tally",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:wing:audit-chain-verify",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:wing:dispatch-notifications",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:wing:dispatch-notifications-digest",
+      "kind": "trigger"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:wing:inbox-reconcile",
+      "kind": "trigger"
     },
     {
       "from": "service:qgis_server",

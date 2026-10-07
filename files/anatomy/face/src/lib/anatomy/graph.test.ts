@@ -279,7 +279,7 @@ describe('spotlight — the widget-sized projection', () => {
 
 describe('nodeLabel', () => {
 	it('shortens the label, never the address', () => {
-		expect(nodeLabel('daemon:eu.thisisait.nos.pulse')).toBe('pulse');
+		expect(nodeLabel('daemon:eu.thisisait.nos.heartbeat')).toBe('heartbeat');
 		expect(nodeLabel('doctrine:ssot/doctrine/loop-contract.md#5.1')).toBe('loop-contract §5.1');
 		expect(nodeLabel('pulse:keap:keap-lint')).toBe('keap:keap-lint');
 	});

@@ -4,13 +4,13 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 544,
+    "nodes": 527,
     "edges": 543,
     "nodes_pulse": 43,
     "nodes_judge": 5,
     "nodes_gateset": 5,
     "nodes_weakness": 7,
-    "nodes_daemon": 18,
+    "nodes_daemon": 1,
     "nodes_service": 73,
     "nodes_lock": 1,
     "nodes_tool": 6,
@@ -53,7 +53,7 @@
     "services_layer_withheld": 40
   },
   "warnings": [
-    "union-kind cycle (feedback loop, review-not-refuse): pulse:cortex:cortex-fs-sync -> pulse:keap:keap-embed-sync -> pulse:cortex:cortex-corpus-diff -> pulse:cortex:cortex-fs-sync"
+    "union-kind cycle (feedback loop, review-not-refuse): pulse:cortex:cortex-corpus-diff -> pulse:cortex:cortex-fs-sync -> pulse:keap:keap-embed-sync -> pulse:cortex:cortex-corpus-diff"
   ],
   "nodes": {
     "agent:conductor": {
@@ -1252,113 +1252,11 @@
       "anchor": "02.02.09",
       "description": "LLM backend 'xai' — a permitted orchestrator row (protocol openai, eu_resident=False), armed by xai_enabled"
     },
-    "daemon:ai.openclaw.gateway": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon ai.openclaw.gateway — host daemon"
-    },
-    "daemon:com.ollama.agent": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon com.ollama.agent — host daemon"
-    },
-    "daemon:eu.thisisait.nos.acme-renew": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon eu.thisisait.nos.acme-renew — renews the estate's TLS certificates on schedule"
-    },
-    "daemon:eu.thisisait.nos.backrest": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon eu.thisisait.nos.backrest — Backrest backup orchestrator (restic UI spike)"
-    },
-    "daemon:eu.thisisait.nos.backup.exporter": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "11.04",
-      "description": "Host launchd daemon eu.thisisait.nos.backup.exporter — exports backup outcome metrics for Prometheus scraping"
-    },
-    "daemon:eu.thisisait.nos.backup.offsite": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "11.04",
-      "description": "Host launchd daemon eu.thisisait.nos.backup.offsite — ships the nightly backup set to the offsite target"
-    },
-    "daemon:eu.thisisait.nos.backup.rustfs": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "11.04",
-      "description": "Host launchd daemon eu.thisisait.nos.backup.rustfs — nightly backup of service data into RustFS"
-    },
-    "daemon:eu.thisisait.nos.bone": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon eu.thisisait.nos.bone — Bone — the local FastAPI bridge between Ansible runs and Wing's SQLite store"
-    },
-    "daemon:eu.thisisait.nos.cortex": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon eu.thisisait.nos.cortex — cortex organ server — the KEAP-facing knowledge mirror API"
-    },
-    "daemon:eu.thisisait.nos.device-gateway": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon eu.thisisait.nos.device-gateway — host daemon"
-    },
-    "daemon:eu.thisisait.nos.ears-listen": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon eu.thisisait.nos.ears-listen — host daemon"
-    },
     "daemon:eu.thisisait.nos.heartbeat": {
       "kind": "daemon",
       "source": "launchd label (role defaults)",
       "anchor": "02.02.06",
       "description": "Host launchd daemon eu.thisisait.nos.heartbeat — host heartbeat — periodic liveness signal into the estate's telemetry"
-    },
-    "daemon:eu.thisisait.nos.hermes": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon eu.thisisait.nos.hermes — Hermes web-UI daemon (loopback-only, opt-in) — cross-channel agent gateway"
-    },
-    "daemon:eu.thisisait.nos.pulse": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon eu.thisisait.nos.pulse — Pulse — the host-side scheduled-job runner dispatching every unpaused pulse job"
-    },
-    "daemon:eu.thisisait.nos.resume": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon eu.thisisait.nos.resume — post-boot resume hook — re-establishes host state after a reboot"
-    },
-    "daemon:eu.thisisait.nos.wing": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon eu.thisisait.nos.wing — Wing — the Nette/FrankenPHP dashboard and state-framework UI"
-    },
-    "daemon:homebrew.mxcl.dnsmasq": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon homebrew.mxcl.dnsmasq — host daemon"
-    },
-    "daemon:sh.brew.grafana-alloy": {
-      "kind": "daemon",
-      "source": "launchd label (role defaults)",
-      "anchor": "02.02.06",
-      "description": "Host launchd daemon sh.brew.grafana-alloy — host daemon"
     },
     "doctrine:docs/archive/cortex-corpus-parallel.md#2.1": {
       "kind": "doctrine",
@@ -3738,6 +3636,9 @@
       "stack": null,
       "category": "observability",
       "install_flag": "install_observability",
+      "launchd_labels": [
+        "sh.brew.grafana-alloy"
+      ],
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.06",
       "description": "Host-native service 'alloy' (observability): host daemon (launchd sh.brew.grafana-alloy), toggled by install_observability",
@@ -3782,6 +3683,9 @@
       "stack": null,
       "category": "storage",
       "install_flag": "install_backrest",
+      "launchd_labels": [
+        "eu.thisisait.nos.backrest"
+      ],
       "dependency_survey": "not-surveyed",
       "anchor": "11.04",
       "description": "Host-native service 'backrest' (storage): host daemon (launchd eu.thisisait.nos.backrest), toggled by install_backrest",
@@ -3794,6 +3698,10 @@
       "stack": null,
       "category": "security",
       "install_flag": "install_backup",
+      "launchd_labels": [
+        "eu.thisisait.nos.backup.rustfs",
+        "eu.thisisait.nos.backup.exporter"
+      ],
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.08",
       "description": "Host-native service 'backup' (security): host daemon (launchd eu.thisisait.nos.backup.rustfs), toggled by install_backup",
@@ -3818,6 +3726,9 @@
       "stack": null,
       "category": "api",
       "install_flag": "install_bone",
+      "launchd_labels": [
+        "eu.thisisait.nos.bone"
+      ],
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Host-native service 'bone' (api): host daemon (launchd eu.thisisait.nos.bone), toggled by install_bone",
@@ -3870,6 +3781,9 @@
       "stack": null,
       "category": "ai",
       "install_flag": "install_cortex",
+      "launchd_labels": [
+        "eu.thisisait.nos.cortex"
+      ],
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.09",
       "description": "Host-native service 'cortex' (ai): host daemon (launchd eu.thisisait.nos.cortex), toggled by install_cortex",
@@ -3882,6 +3796,9 @@
       "stack": null,
       "category": "agent",
       "install_flag": "install_device_gateway",
+      "launchd_labels": [
+        "eu.thisisait.nos.device-gateway"
+      ],
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.09",
       "description": "Host-native service 'device_gateway' (agent): host daemon (launchd eu.thisisait.nos.device-gateway), toggled by install_device_gateway",
@@ -4054,6 +3971,9 @@
       "stack": null,
       "category": "messaging",
       "install_flag": "install_hermes",
+      "launchd_labels": [
+        "eu.thisisait.nos.hermes"
+      ],
       "dependency_survey": "declared",
       "anchor": "03.08",
       "description": "Host-native service 'hermes' (messaging): host daemon (launchd eu.thisisait.nos.hermes), toggled by install_hermes",
@@ -4362,6 +4282,9 @@
       "stack": null,
       "category": "ai",
       "install_flag": "install_ollama",
+      "launchd_labels": [
+        "com.ollama.agent"
+      ],
       "dependency_survey": "declared",
       "anchor": "02.02.09",
       "description": "Host-native service 'ollama' (ai): host daemon (launchd com.ollama.agent), toggled by install_ollama",
@@ -4406,6 +4329,9 @@
       "stack": null,
       "category": "agent",
       "install_flag": "install_openclaw",
+      "launchd_labels": [
+        "ai.openclaw.gateway"
+      ],
       "dependency_survey": "declared",
       "anchor": "02.02.09",
       "description": "Host-native service 'openclaw' (agent): host daemon (launchd ai.openclaw.gateway), toggled by install_openclaw",
@@ -4522,6 +4448,9 @@
       "stack": null,
       "category": "automation",
       "install_flag": "install_pulse",
+      "launchd_labels": [
+        "eu.thisisait.nos.pulse"
+      ],
       "dependency_survey": "not-surveyed",
       "anchor": "02.02.04",
       "description": "Host-native service 'pulse' (automation): host daemon (launchd eu.thisisait.nos.pulse), toggled by install_pulse",
@@ -4698,6 +4627,9 @@
       "stack": null,
       "category": "security",
       "install_flag": "install_wing",
+      "launchd_labels": [
+        "eu.thisisait.nos.wing"
+      ],
       "dependency_survey": "declared",
       "anchor": "02.02.08",
       "description": "Host-native service 'wing' (security): host daemon (launchd eu.thisisait.nos.wing), toggled by install_wing",
@@ -5931,14 +5863,6 @@
       "evidence": "derived"
     },
     {
-      "from": "daemon:eu.thisisait.nos.wing",
-      "to": "faceapp:anatomy-widget",
-      "kind": "data",
-      "via": "60 s poll of /bff/pulse, a PROJECTION (never a proxy) of Wing's pulse_jobs + run summary; joined onto the pulse: nodes on screen so a scheduled job's real state colours its dot (src/routes/bff/pulse/+server.ts → $lib/server/upstream.pulseJobs)",
-      "derived": "face-bff-projection",
-      "evidence": "derived"
-    },
-    {
       "from": "pulse:conductor:scan-state-record",
       "to": "repo:scan-data",
       "kind": "data",
@@ -6976,6 +6900,14 @@
     },
     {
       "from": "service:wing",
+      "to": "faceapp:anatomy-widget",
+      "kind": "data",
+      "via": "60 s poll of /bff/pulse, a PROJECTION (never a proxy) of Wing's pulse_jobs + run summary; joined onto the pulse: nodes on screen so a scheduled job's real state colours its dot (src/routes/bff/pulse/+server.ts → $lib/server/upstream.pulseJobs)",
+      "derived": "face-bff-projection",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:wing",
       "to": "service:face",
       "kind": "data",
       "measured": "2026-08-07",
@@ -7372,7 +7304,7 @@
       "from": "effector:anatomy-graph-gen",
       "to": "doctrine:ssot/doctrine/layers.md#3",
       "kind": "governed_by",
-      "via": "cited at tools/anatomy-graph-gen.py:1897",
+      "via": "cited at tools/anatomy-graph-gen.py:1912",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7381,7 +7313,7 @@
       "from": "effector:anatomy-graph-gen",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at tools/anatomy-graph-gen.py:1565",
+      "via": "cited at tools/anatomy-graph-gen.py:1580",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -9288,342 +9220,6 @@
       "evidence": "measured"
     },
     {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:alert-relay:relay-firing",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:authentik-tofu-drift:tofu-drift-plan",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:backup:backup-restore-drill",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:conductor:scan-state-record",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:conductor:security-drift-watch",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:conductor:self-test-001",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:conductor:vulnerability-scan",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:cortex:cortex-corpus-diff",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:cortex:cortex-fs-sync",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:crm-hydrate:hydrate-parties",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:discovery:contradiction-scan",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:gdpr-breach:breach-deadline-scan",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:geo:geo-load",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:geo:project-sites",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:geolibre:atlas-refresh",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:gitea:trunk-sync",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:gitlab:trunk-sync",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:gitleaks:nightly-scan",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:invoice-vision:absorb-approved",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:invoice-vision:intake-sweep",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:keap:keap-consolidate",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:keap:keap-embed-sync",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:keap:keap-features-sync",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:keap:keap-lint",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:librarian:brief-taxonomy",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:librarian:describe-taxonomy",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:librarian:judge-lint-queue",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:drive",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:news-scout",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:pipeline-exercise",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:propose",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:repo-check",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:review",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:loop:vision-bench",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:n8n:exec-watch",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:npm-supply-chain:daily-ioc-scan",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:surveyor:surface-survey",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:wing:agent-cost-tally",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:wing:audit-chain-verify",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:wing:dispatch-notifications",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:wing:dispatch-notifications-digest",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
-      "from": "daemon:eu.thisisait.nos.pulse",
-      "to": "pulse:wing:inbox-reconcile",
-      "kind": "trigger",
-      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
-      "derived": "daemon-dispatch",
-      "evidence": "derived"
-    },
-    {
       "from": "faceapp:anatomy-widget",
       "to": "faceapp:anatomy",
       "kind": "trigger",
@@ -9853,6 +9449,342 @@
       "kind": "trigger",
       "via": "the job's command is tools/run-agent.sh",
       "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:alert-relay:relay-firing",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:authentik-tofu-drift:tofu-drift-plan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:backup:backup-restore-drill",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:conductor:scan-state-record",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:conductor:security-drift-watch",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:conductor:self-test-001",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:conductor:vulnerability-scan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:cortex:cortex-corpus-diff",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:cortex:cortex-fs-sync",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:crm-hydrate:hydrate-parties",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:discovery:contradiction-scan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:gdpr-breach:breach-deadline-scan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:geo:geo-load",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:geo:project-sites",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:geolibre:atlas-refresh",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:gitea:trunk-sync",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:gitlab:trunk-sync",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:gitleaks:nightly-scan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:invoice-vision:absorb-approved",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:invoice-vision:intake-sweep",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:keap:keap-consolidate",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:keap:keap-embed-sync",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:keap:keap-features-sync",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:keap:keap-lint",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:librarian:brief-taxonomy",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:librarian:describe-taxonomy",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:librarian:judge-lint-queue",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:drive",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:news-scout",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:pipeline-exercise",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:propose",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:repo-check",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:review",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:loop:vision-bench",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:n8n:exec-watch",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:npm-supply-chain:daily-ioc-scan",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:surveyor:surface-survey",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:wing:agent-cost-tally",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:wing:audit-chain-verify",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:wing:dispatch-notifications",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:wing:dispatch-notifications-digest",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "service:pulse",
+      "to": "pulse:wing:inbox-reconcile",
+      "kind": "trigger",
+      "via": "list_due_jobs dispatch (files/anatomy/pulse/pulse/daemon.py)",
+      "derived": "daemon-dispatch",
       "evidence": "derived"
     }
   ]

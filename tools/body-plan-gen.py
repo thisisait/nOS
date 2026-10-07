@@ -5,7 +5,8 @@ state/anatomy-graph.json holds every node in one address space, in as many
 kinds as the estate has parts. A newly arrived model already knows the ladder
 genome → cell → tissue → organ → organ system → organism → habitat, and the
 systems that cut across it: sense (reads), limb (acts), memory (learned), law
-(inherited), reflex (scheduled response). state/genome/lexicon.yml places
+(inherited), reflex (scheduled response), heartbeat (the liveness signal, the
+one host daemon that is no organ). state/genome/lexicon.yml places
 each anatomy KIND on one of those (or `internal`) through the one word that
 names it under `names: graph_kind`; this file applies the placement and
 nothing else.
@@ -37,7 +38,7 @@ TARGET = REPO / "state" / "body-plan.json"
 
 #: The ladder, in order, then the cross-cutting systems. Order is the reading order.
 LADDER = ("genome", "cell", "tissue", "organ", "organ system", "organism", "habitat")
-SYSTEMS = ("sense", "limb", "memory", "law", "reflex")
+SYSTEMS = ("sense", "limb", "memory", "law", "reflex", "heartbeat")
 ALL_LEVELS = LADDER + SYSTEMS + ("internal",)
 #: The only keys a kind row may carry — anything more is a per-node fact creeping in.
 ROW_KEYS = {"graph_kind", "reason"}

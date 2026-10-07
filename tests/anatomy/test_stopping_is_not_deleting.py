@@ -160,13 +160,11 @@ def test_host_daemon_plan_is_the_graph_not_a_hand_list():
     labels = {r["label"] for r in plan}
     assert BACKREST in labels, "the measured victim is missing from the plan"
     assert all(r["install_flag"].startswith("install_") for r in plan)
-    graph_labels = {
-        nid.split(":", 1)[1]
-        for nid, n in graph["nodes"].items()
-        if n.get("kind") == "daemon"
-    }
+    # A row's jobs sit on its service: node (I-12); a daemon: node is a row-less job.
+    graph_labels = {lb for n in graph["nodes"].values() for lb in n.get("launchd_labels") or []}
+    graph_labels |= {nid.split(":", 1)[1] for nid, n in graph["nodes"].items() if n.get("kind") == "daemon"}
     assert labels <= graph_labels, "plan invented a daemon the graph does not carry"
     dropped = dict(graph["nodes"])
-    dropped.pop(f"daemon:{BACKREST}", None)
+    dropped.pop("service:backrest", None)
     assert BACKREST not in {r["label"] for r in _daemon_plan()({"nodes": dropped})}, (
         "removing the node from the graph still stops it — that is a hand list")

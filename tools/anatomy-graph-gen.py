@@ -33,7 +33,11 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
                             fire it; in-edges are its tools, its backend
                             binding and the identity it authenticates as
     weakness:<id>           files/anatomy/bone/weaknesses.py SOURCE_ORDER
-    daemon:<launchd label>  `*_launchd_label` vars in role defaults / default.config.yml
+    daemon:<launchd label>  a declared launchd job NO manifest row owns and no
+                            `daemons_without_row` ruling folds away (today: the
+                            heartbeat). A row's own jobs (`launchd_label`,
+                            `launchd_helpers`) are the row: stamped on its
+                            service: node as `launchd_labels`, never a node (I-12)
     service:<manifest id>   state/manifest.yml services[].id
     tool:<id> / tool_ro:<id>   agent tool grants; `_ro` when every scope the
                             grant opens is `.read` (tools/agent-capability.py TOOL_KAM)
@@ -95,8 +99,8 @@ WHAT IS DERIVED, NOT DECLARED
   * the agent-run-lock claim — any job whose command runs pulse-run-agent.sh
     or scan-runner.sh takes ~/.nos/agent-run.lock via agent-run-lock.sh
     (one law, one implementation — commit ba7a9471)
-  * daemon:eu.thisisait.nos.pulse → job dispatch edges (structural: the
-    daemon fires every unpaused job; pulse/daemon.py list_due_jobs)
+  * service:pulse → job dispatch edges (structural: the Pulse daemon fires
+    every unpaused job; pulse/daemon.py list_due_jobs)
   * judge capability edges — judge-sets `requires:` become data edges from
     token:* / token_ro:* nodes (satisfied or not, never exclusive)
   * temporal debt — for every temporal edge, the worst-case DECLARED margin
@@ -262,21 +266,10 @@ KIND_ANCHORS = {
 }
 FALLBACK_ANCHOR = "02.02.04"      # Software Engineering
 
-#: What each host daemon IS — curated because launchd labels carry no prose
-#: anywhere in the repo. One line each, estate vocabulary.
+#: What a row-less host daemon IS — launchd labels carry no prose anywhere in
+#: the repo. A row's own jobs are described by the row (I-12).
 DAEMON_DESC = {
-    "acme-renew": "renews the estate's TLS certificates on schedule",
-    "backrest": "Backrest backup orchestrator (restic UI spike)",
-    "backup.exporter": "exports backup outcome metrics for Prometheus scraping",
-    "backup.offsite": "ships the nightly backup set to the offsite target",
-    "backup.rustfs": "nightly backup of service data into RustFS",
-    "bone": "Bone — the local FastAPI bridge between Ansible runs and Wing's SQLite store",
-    "cortex": "cortex organ server — the KEAP-facing knowledge mirror API",
     "heartbeat": "host heartbeat — periodic liveness signal into the estate's telemetry",
-    "hermes": "Hermes web-UI daemon (loopback-only, opt-in) — cross-channel agent gateway",
-    "pulse": "Pulse — the host-side scheduled-job runner dispatching every unpaused pulse job",
-    "resume": "post-boot resume hook — re-establishes host state after a reboot",
-    "wing": "Wing — the Nette/FrankenPHP dashboard and state-framework UI",
 }
 
 
@@ -529,8 +522,6 @@ def _anchor(nid: str, n: dict) -> str:
         return PULSE_ANCHORS.get(n.get("category"), FALLBACK_ANCHOR)
     if kind == "service":
         return SERVICE_ANCHORS.get(n.get("category"), FALLBACK_ANCHOR)
-    if kind == "daemon" and ".backup." in nid:
-        return "11.04"  # Backup Strategies
     return KIND_ANCHORS.get(kind, FALLBACK_ANCHOR)
 
 
@@ -691,7 +682,8 @@ def harvest_weaknesses(nodes: dict) -> None:
 #    the resume plist is the one template with a literal filename) ─────────
 
 
-def harvest_daemons(nodes: dict) -> None:
+def declared_launchd_labels() -> set[str]:
+    """Every launchd label a role or template declares (filter_plugins/nos_prune_guard)."""
     spec = importlib.util.spec_from_file_location(
         "_nos_prune_guard", REPO / "filter_plugins" / "nos_prune_guard.py")
     guard = importlib.util.module_from_spec(spec)
@@ -699,7 +691,25 @@ def harvest_daemons(nodes: dict) -> None:
     labels = {r["label"] for r in guard.launchd_declarations(REPO)}
     for path in sorted(REPO.glob("templates/eu.thisisait.nos.*.plist.j2")):
         labels.add(path.name.removesuffix(".plist.j2"))
-    for label in sorted(labels):
+    return labels
+
+
+def row_launchd_labels() -> dict[str, str]:
+    """launchd label -> the manifest row that owns it (launchd_label + launchd_helpers)."""
+    return {label: sid for sid, row in _manifest_rows().items()
+            for label in [row.get("launchd_label"), *(row.get("launchd_helpers") or [])] if label}
+
+
+def harvest_daemons(nodes: dict) -> None:
+    """One organ, one node (I-12, body-plan.md §5). A label a row owns is that
+    row's organ and gets no node of its own; a label the manifest rules a reflex
+    or internal of its owner (`daemons_without_row`) is a job, not an organ, and
+    gets none either. What remains is a daemon node: the heartbeat (ruled so),
+    or an undeclared job the gate then names."""
+    doc = yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))
+    folded = {label for label, r in (doc.get("daemons_without_row") or {}).items()
+              if isinstance(r, dict) and r.get("ruling") in ("reflex", "internal")}
+    for label in sorted(declared_launchd_labels() - set(row_launchd_labels()) - folded):
         nodes[f"daemon:{label}"] = {"kind": "daemon", "source": "launchd label (role defaults)"}
 
 
@@ -717,6 +727,11 @@ def harvest_services(nodes: dict) -> None:
                 "category": svc.get("category"),
                 "install_flag": svc.get("install_flag"),
             }
+            labels = [lb for lb in [svc.get("launchd_label"), *(svc.get("launchd_helpers") or [])] if lb]
+            if labels:
+                # The row's own launchd jobs ARE the organ (I-12); the roster
+                # readers (prune guard, undeclared-status) join on this field.
+                nodes[f"service:{svc['id']}"]["launchd_labels"] = labels
 
 
 # ── harvest: service→service dependencies, consumer-side (R1) ─────────────
@@ -1801,10 +1816,10 @@ def derive_face_edges(nodes: dict) -> list[dict]:
                    "(src/lib/apps/widgets/AnatomyWidget.svelte)",
             "derived": "face-click-through",
         })
-    if ("daemon:eu.thisisait.nos.wing" in nodes
+    if ("service:wing" in nodes
             and "loadPulse" in widget_txt and "pulseJobs" in bff_txt):
         edges.append({
-            "from": "daemon:eu.thisisait.nos.wing",
+            "from": "service:wing",
             "to": wid,
             "kind": "data",
             "via": "60 s poll of /bff/pulse, a PROJECTION (never a proxy) of Wing's "
@@ -1818,7 +1833,7 @@ def derive_face_edges(nodes: dict) -> list[dict]:
 
 def derive_structural(nodes: dict) -> list[dict]:
     edges = []
-    pulse_daemon = "daemon:eu.thisisait.nos.pulse"
+    pulse_daemon = "service:pulse"   # the Pulse organ is its row (I-12)
     if pulse_daemon in nodes:
         for nid, n in nodes.items():
             if n["kind"] == "pulse" and not n["paused"]:

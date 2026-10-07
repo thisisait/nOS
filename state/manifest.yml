@@ -32,16 +32,37 @@ nos:
   # override with explicit `container_name` or `container_names:`.
   container_pattern: "{stack}-{id}-1"
 
-# Host launchd jobs no service row owns, each with why. Every other daemon node
-# binds to one row via launchd_label / launchd_helpers
-# (gate: tests/anatomy/test_every_daemon_has_a_manifest_row.py).
+# Host launchd jobs no service row owns, each RULED (I-12, body-plan.md §5): a
+# `reflex` or `internal` of its owner (`of:` a row id, or playbook-core for a
+# tasks/*.yml hook) is a job, not an organ, and gets no graph node; `heartbeat`
+# is the lexicon's own cross-level word and keeps its daemon: node. Every other
+# launchd label is a row's (launchd_label / launchd_helpers) and IS that organ.
+# Gate: tests/anatomy/test_every_daemon_has_a_manifest_row.py.
 daemons_without_row:
-  eu.thisisait.nos.acme-renew: "pazny.acme's daily renewal timer; acme serves nothing, it writes the certificates Traefik reads"
-  eu.thisisait.nos.backup.offsite: "tasks/backup.yml's off-site restic leg, toggled by configure_backup; backrest takes this job when installed"
-  eu.thisisait.nos.ears-listen: "retired: pazny.ears boots it out and deletes its plist (no mic grant under launchd); declared so a stale one is booted out"
-  eu.thisisait.nos.heartbeat: "playbook-core liveness hook (tasks/heartbeat.yml), on every host, no install_* flag"
-  eu.thisisait.nos.resume: "playbook-core post-boot hook (tasks/os-resume.yml), on every host, no install_* flag"
-  homebrew.mxcl.dnsmasq: "root LaunchDaemon for local DNS (tasks/dnsmasq.yml); dnsmasq has no manifest row yet"
+  eu.thisisait.nos.acme-renew:
+    ruling: reflex
+    of: traefik
+    reason: "pazny.acme's daily renewal timer: a scheduled response that writes the certificates Traefik serves; acme itself serves nothing"
+  eu.thisisait.nos.backup.offsite:
+    ruling: reflex
+    of: backup
+    reason: "tasks/backup.yml's off-site restic leg on its own clock, toggled by configure_backup (not install_backup, so not a helper); backrest takes this job when installed"
+  eu.thisisait.nos.ears-listen:
+    ruling: internal
+    of: ears
+    reason: "retired: pazny.ears boots it out and deletes its plist (no mic grant under launchd); declared only so a stale one is booted out"
+  eu.thisisait.nos.heartbeat:
+    ruling: heartbeat
+    of: playbook-core
+    reason: "liveness hook (tasks/heartbeat.yml) on every host, no install_* flag; the lexicon's heartbeat word names this label, so it keeps its node at level cross"
+  eu.thisisait.nos.resume:
+    ruling: internal
+    of: playbook-core
+    reason: "post-boot hook (tasks/os-resume.yml) that re-establishes host state; on every host, no install_* flag, no job of its own to show"
+  homebrew.mxcl.dnsmasq:
+    ruling: internal
+    of: playbook-core
+    reason: "root LaunchDaemon answering *.<local tld> for the edge (tasks/dnsmasq.yml, install_dnsmasq); a row of its own waits on a role, plugin and docs (body-plan.md §3 homes rule)"
 
 services:
   # -------------------------------------------------------------- infra stack

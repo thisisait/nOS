@@ -7,6 +7,7 @@ device.<tld> with auth_mode none — authentik@file 302s a machine caller.
 from __future__ import annotations
 
 import ast
+import json
 import pathlib
 import sys
 import re
@@ -67,7 +68,10 @@ def test_manifest_id_is_routed_ungated_with_justification():
 def test_new_graph_nodes_are_withheld():
     text = RULING.read_text(encoding="utf-8")
     assert '"service:device_gateway": withheld' in text
-    assert '"daemon:eu.thisisait.nos.device-gateway": withheld' in text
+    # I-12: the daemon folded into its row; the label rides the row's node, withheld with it.
+    graph = json.loads((REPO / "state" / "anatomy-graph.json").read_text(encoding="utf-8"))["nodes"]
+    assert graph["service:device_gateway"].get("launchd_labels") == ["eu.thisisait.nos.device-gateway"]
+    assert "daemon:eu.thisisait.nos.device-gateway" not in graph
 
 
 def test_plugin_is_the_art30_row_not_an_oidc_client():

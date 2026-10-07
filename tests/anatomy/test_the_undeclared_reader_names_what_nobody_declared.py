@@ -32,11 +32,12 @@ def test_declared_labels_come_from_the_graph_and_the_templates(tmp_path, monkeyp
     mod = _load(TOOL, "_undecl_a")
     graph = tmp_path / "g.json"
     graph.write_text(json.dumps({"nodes": {
-        "daemon:eu.thisisait.nos.bone": {"kind": "daemon"},
+        "daemon:eu.thisisait.nos.heartbeat": {"kind": "daemon"},
+        "service:bone": {"kind": "service", "launchd_labels": ["eu.thisisait.nos.bone"]},
         "service:grafana": {"kind": "service"}}}))
     monkeypatch.setattr(mod, "GRAPH", graph)
     labels = mod.declared_labels()
-    assert "eu.thisisait.nos.bone" in labels and "grafana" not in labels
+    assert "eu.thisisait.nos.bone" in labels and "grafana" not in labels, "a row's job is declared by its node (I-12)"
     assert "eu.thisisait.nos.heartbeat" in labels, "a literal-Label template declares its label"
 
 
