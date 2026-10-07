@@ -22,7 +22,7 @@ than kept as a rule that only ever reports its own defeat.)
 |---|---|---|
 | [filesystem.md](doctrine/filesystem.md) | storage layout, `nos_data_root`, data classes, isolation | ✅ v1 |
 | [observability.md](doctrine/observability.md) | telemetry/callbacks are best-effort, never gate a run; circuit-breaker, sidecar, secret single-source | ✅ v1 |
-| [secrets.md](doctrine/secrets.md) | shared-secret single resolved source (`~/.nos/secrets.yml`); no self-ref template to raw consumers; daemon self-heal | ✅ v1 |
+| [secrets.md](doctrine/secrets.md) | shared-secret single resolved source (`~/.nos/secrets.yml`); no self-ref template to raw consumers; daemon reload | ✅ v1 |
 | [virtiofs.md](doctrine/virtiofs.md) | Docker Desktop VirtioFS bind risk; sockets/locks/mmap-DBs off the bind (tmpfs/named volume); `# VFS-DOCTRINE:` markers; macOS-27 tightening detectable | ✅ v1 |
 | [face.md](doctrine/face.md) | nOS-face: vendored-in-repo, edge-token identity, SoC→DataTable→user-state, native-over-iframe, XSS/filename/UTF-8 safety, the enforcement triplet | ✅ v1 |
 | [gates.md](doctrine/gates.md) | a gate that can pass without checking is worse than none; missing evidence = FAIL, and a green check pointed at a stale artifact is the same defect from the other side; assert on substance, never on silence | ✅ v1 |

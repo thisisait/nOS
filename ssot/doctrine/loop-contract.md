@@ -554,7 +554,7 @@ This is the honest boundary of automation in this design.
 > it. No shared library, ever.
 
 Three runtimes exist (Claude Code, Hermes, AgentKit/PHP) and a fourth is planned
-(the Rust brain). A library is ported four times and drifts four ways.
+(the Rust runtime). A library is ported four times and drifts four ways.
 
 ### 6.1 HTTP — `127.0.0.1:8099`, loopback only (constraint E)
 
@@ -731,7 +731,7 @@ Named, so nobody mistakes silence for settlement.
 6. **keap-lint's possible re-admission.** If upstream adds a read-only
    `GET /agent/v1/lint` verdict path with no reconcile and no notification, it
    becomes admissible as a judge. Not today.
-7. **The Rust brain's client shape.** It is an HTTP client; beyond that, nothing
+7. **The Rust runtime's client shape.** It is an HTTP client; beyond that, nothing
    here constrains it, and nothing here should.
 8. **Cross-host / fleet semantics.** Single host. A verdict's `tree_sha` is
    meaningless across machines with different working trees.

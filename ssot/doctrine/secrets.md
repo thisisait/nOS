@@ -41,13 +41,13 @@ A raw-var consumer MUST read the resolved value from `secrets.yml` and MUST
 REJECT any value still containing `{{`. The emitter MUST NOT sign with an
 un-rendered template. (`wing_telemetry.py` `load_hmac_secret_fallback`.)
 
-## 3. Self-heal a stale secret
+## 3. Reload a daemon holding a stale secret
 
 Ansible handlers flush at end-of-play. A run that fails earlier leaves a
 rotated secret on disk while the daemon keeps the stale env it booted
 with; later runs 401 and never reach the flush.
 
-The daemon MUST self-heal in-band: a signed-ping self-test detects the
+The daemon MUST reload in-band: a signed-ping self-test detects the
 desync and triggers an inline reload + re-verify. It MUST NOT wait for the
 next clean run. (`roles/pazny.bone/tasks/post.yml`,
 `roles/pazny.bone/files/hmac_selftest.py`.)

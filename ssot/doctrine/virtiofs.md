@@ -51,7 +51,7 @@ Cite when adding one:
 - **loki scratch stale-dir clean** — [`tasks/stacks/core-up.yml`](../../tasks/stacks/core-up.yml)
   ("Clean stale scratch dir (macOS VirtioFS workaround)", `.../tsdb-shipper-active/scratch`).
 - **external-SSD stale `/host_mnt` remount** — [`tasks/stacks/docker-external-mount-preflight.yml`](../../tasks/stacks/docker-external-mount-preflight.yml)
-  (probe + self-heal when `nos_data_root` on an external `/Volumes` disk is
+  (probe + Docker Desktop restart when `nos_data_root` on an external `/Volumes` disk is
   remounted after Docker Desktop started).
 
 ## 5. Tightening

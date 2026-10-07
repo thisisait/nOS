@@ -45,7 +45,7 @@ not be able to open the db and starve a writer on a lock. See
 ## 5. Shared secret
 
 The rule — one resolved source for a shared secret, plus the raw-`{{ … }}`
-rejection and daemon self-heal that follow from it — is owned by
+rejection and daemon reload that follow from it — is owned by
 [`secrets.md`](secrets.md).
 
 ## 6. Loud vs silent
