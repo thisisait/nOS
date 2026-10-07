@@ -62,7 +62,6 @@ PENDING_SURFACES = {
 #: Seeded 2026-10-07 when TRUSTED widened; the default config layers were fixed instead.
 PENDING_PHRASES: dict[str, int] = {
     'IMPRINT.md :: public organ': 1,
-    'docs/doctrine/README.md :: self-heal': 1,
     'docs/systems/dolibarr/README.md :: praxis pack': 1,
     'docs/systems/infisical/README.md :: self-heal': 1,
     'docs/systems/keap/AGENTS.md :: the nOS cortex': 1,
@@ -70,6 +69,7 @@ PENDING_PHRASES: dict[str, int] = {
     'docs/systems/keap/README.md :: layer of the brain': 1,
     'docs/systems/keap/SKILLS.md :: KEAP cortex': 1,
     'docs/systems/portainer/README.md :: self-heal': 1,
+    'ssot/README.md :: self-heal': 1,
     'files/anatomy/agents/curator/system.md :: KEAP cortex': 1,
     'files/anatomy/agents/librarian/agent.yml :: KEAP cortex': 1,
     'files/anatomy/agents/librarian/system.md :: cortex (KEAP)': 1,
@@ -229,7 +229,7 @@ def _label(word: str, surface: dict) -> str:
 #: only, so a sibling worktree, node_modules or vendor/ is never read.
 TRUSTED = (
     "CLAUDE.md", "IMPRINT.md", "AGENTS.md", "tools/README.md",
-    "ssot/doctrine/**/*.md", "docs/doctrine/**/*.md", "docs/systems/*/*.md", "files/anatomy/docs/*.md",
+    "ssot/README.md", "ssot/doctrine/**/*.md", "docs/doctrine/**/*.md", "docs/systems/*/*.md", "files/anatomy/docs/*.md",
     "files/anatomy/skills/*/SKILL.md", ".claude/skills/*/SKILL.md", ".claude/plugins/*/skills/*/SKILL.md",
     "files/anatomy/agents/*/system.md", "files/anatomy/agents/*/agent.yml",
     "files/anatomy/plugins/*/plugin.yml", "files/anatomy/apex/ruling.yml",
@@ -266,11 +266,7 @@ def _trusted() -> tuple[tuple[str, str], ...]:
     """(repo path, text) of every trusted file. The lexicon, the glossary and
     history (archive, devlog, RELEASE.md, hidden_fees, the KEAP corpus,
     state/fable) are outside TRUSTED: they may name retired senses."""
-    # A docs/doctrine/ file whose article was promoted to ssot/doctrine/ is a
-    # 3-line "Moved to" stub; the article itself is scanned instead.
-    promoted = {p.name for p in (REPO / "ssot" / "doctrine").glob("*.md")}
-    rels = [r for r in _tracked(TRUSTED)
-            if not (r.startswith("docs/doctrine/") and pathlib.PurePath(r).name in promoted)]
+    rels = _tracked(TRUSTED)
     _defaults()  # puts tools/ on sys.path; the default layers come from nos_identity
     import nos_identity  # noqa: PLC0415
     rels += [str(p.relative_to(REPO)) for p in nos_identity.default_layers()]

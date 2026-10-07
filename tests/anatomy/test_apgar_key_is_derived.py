@@ -75,15 +75,29 @@ def test_the_key_scores_one_and_nothing_scores_zero() -> None:
     assert shotgun["score"] < 0.5, shotgun["families"]
 
 
-def test_either_copy_of_a_duplicated_doctrine_is_the_full_answer() -> None:
+def test_a_promoted_article_is_answered_at_its_ssot_path() -> None:
+    """Law has one home: no key expects a docs/doctrine copy of an ssot article."""
     bench = hb.build()
-    dup = [q for q in bench["questions"] if any(len(slot) > 1 for slot in q["key"])]
-    assert dup, "no alternative keys derived: the either-copy rule is unexercised"
-    res = hb.score(_record(bench, lambda q: ", ".join(slot[-1] for slot in q["key"])), bench)
-    both = hb.score(_record(bench, lambda q: ", ".join(n for slot in q["key"] for n in slot)), bench)
-    for q in dup:
+    promoted = {p.name for p in (REPO / "ssot/doctrine").glob("*.md")}
+    universe = bench["universes"]["doctrine-file"]
+    assert any(n.startswith("ssot/doctrine/") for n in universe), universe
+    stale = [n for n in universe
+             if n.startswith("docs/doctrine/") and n.rsplit("/", 1)[-1] in promoted]
+    assert not stale, stale
+
+
+def test_either_alternative_in_a_key_slot_is_the_full_answer() -> None:
+    """The scorer still honours a slot with alternatives; widened by hand here
+    because the live doctrine family no longer derives one."""
+    bench = hb.build()
+    q = next(q for q in bench["questions"] if q["family"] == "doctrine-file")
+    alt = next(n for n in bench["universes"]["doctrine-file"] if n != q["key"][0][0])
+    q["key"] = [sorted([q["key"][0][0], alt])]
+    for pick in (0, 1):
+        res = hb.score(_record(bench, lambda x: x["key"][0][pick] if x is q else _first(x)), bench)
         assert next(r for r in res["questions"] if r["id"] == q["id"])["score"] == 1.0
-        assert next(r for r in both["questions"] if r["id"] == q["id"])["score"] == 1.0
+    both = hb.score(_record(bench, lambda x: ", ".join(q["key"][0]) if x is q else _first(x)), bench)
+    assert next(r for r in both["questions"] if r["id"] == q["id"])["score"] == 1.0
 
 
 def test_lift_is_measured_against_the_control(tmp_path) -> None:

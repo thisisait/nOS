@@ -80,32 +80,33 @@ def _cite():
     return mod
 
 
-def test_ssot_stub_keeps_docs_path_as_an_address():
+def test_an_old_doctrine_path_is_still_an_address():
+    """History cites the warehouse path of ssot.md; the redirect keeps it an address."""
     corpus = _cite().build_corpus()
-    stub = corpus["docs/doctrine/ssot.md"]
+    old = corpus["docs/doctrine/ssot.md"]
     live = corpus["ssot/doctrine/ssot.md"]
     assert live.sections, "ssot/doctrine/ssot.md has no numbered sections"
-    assert stub.sections == live.sections
+    assert old.sections == live.sections
+    assert corpus["docs/doctrine/organs.md"].sections == \
+        corpus["ssot/doctrine/body-plan.md"].sections
 
 
-def test_every_moved_stub_aliases_the_live_article():
-    """A stub that no longer copies numbered headings is a broken § address."""
-    corpus = _cite().build_corpus()
-    drifted = []
-    for stub_path in sorted((REPO / "docs" / "doctrine").glob("*.md")):
-        text = stub_path.read_text(encoding="utf-8")
-        if "Moved to" not in text:
-            continue
-        rel = stub_path.relative_to(REPO).as_posix()
-        # The stub names its article; a renamed promotion (organs → body-plan) is allowed.
-        target = re.search(r"ssot/doctrine/([\w.-]+\.md)", text)
-        live_rel = f"ssot/doctrine/{target.group(1) if target else stub_path.name}"
-        if live_rel not in corpus:
-            drifted.append(f"{rel} has no {live_rel}")
-            continue
-        if corpus[rel].sections != corpus[live_rel].sections:
-            drifted.append(f"{rel} sections != {live_rel}")
-    assert not drifted, drifted
+def test_every_promoted_article_keeps_its_old_address():
+    """Each article has a redirect from its warehouse path, the redirect's
+    target is live, and no stub file sits beside it (law has one home)."""
+    cite = _cite()
+    corpus = cite.build_corpus()
+    redirects = cite.DOCTRINE_REDIRECTS
+    bad = [f"{old} -> {new} (target missing)" for old, new in redirects.items()
+           if not (REPO / new).is_file()]
+    bad += [f"{old} still on disk" for old in redirects if (REPO / old).exists()]
+    bad += [f"{old} sections != {new}" for old, new in redirects.items()
+            if new in corpus and corpus[old].sections != corpus[new].sections]
+    targets = set(redirects.values())
+    bad += [f"ssot/doctrine/{p.name} has no old address"
+            for p in sorted((REPO / "ssot" / "doctrine").glob("*.md"))
+            if f"ssot/doctrine/{p.name}" not in targets]
+    assert not bad, bad
 
 
 def test_the_constitution_is_not_a_draft():
@@ -168,6 +169,7 @@ def test_harvest_cites_promoted_articles_at_ssot_path():
 #:   - finished workflows whose task text records the old tree (RECORD)
 _STUB_PATH_ALLOW = {
     "tests/anatomy/test_ssot_index.py",
+    "tools/doctrine-cite.py",  # DOCTRINE_REDIRECTS: the old paths, as data
     ".claude/workflows/ssot-promote.js",
     ".claude/workflows/wave-small-ssot.js",
     "state/devlog-bundle.jsonl",
