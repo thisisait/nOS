@@ -111,7 +111,7 @@ def detail(*, uid="akadmin", path="documents/a.md", size=10, mtime=1000, visibil
 # (2026-07-27T00:00:00Z). The staleness guard in adjudicate_objects only blames
 # the organ's reader for a file that was already there when it walked, so a test
 # about a MISSED READ has to place the file before the pass — a file written
-# "now" is newer than the fixture's pass and is correctly read as organ-stale.
+# "now" is newer than the fixture's pass and is correctly read as cortex-stale.
 BEFORE_PASS = 1785067200  # 2026-07-26T12:00:00Z
 
 
@@ -871,7 +871,7 @@ def _serve(corpus):
 
 def test_end_to_end_over_the_wire_reads_both_sides_and_adjudicates(tmp_path):
     # Predating the fixture's last pass keeps this a missed read over the wire;
-    # a file written "now" would be adjudicated organ-stale and prove nothing
+    # a file written "now" would be adjudicated cortex-stale and prove nothing
     # about the reader.
     roots = host_tree(tmp_path, {"documents/a.md": "hello"}, mtime=BEFORE_PASS)
     st = os.stat(tmp_path / "users" / "akadmin" / "documents" / "a.md")

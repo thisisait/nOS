@@ -85,8 +85,8 @@ def test_recogniser_partitions_doc_nodes_from_self_model_nodes() -> None:
 def test_exclusion_is_reported_rather_than_silent() -> None:
     """A withdrawn population a reader cannot see is a lie of omission."""
     src = DIFF.read_text()
-    assert "organ-docs-corpus" in src, "the docs exclusion lost its finding verdict"
-    block = src.split("organ-docs-corpus", 1)[1][:1200]
+    assert "cortex-docs-corpus" in src, "the docs exclusion lost its finding verdict"
+    block = src.split("cortex-docs-corpus", 1)[1][:1200]
     assert "count" in block and "sample" in block, (
         "the docs finding must carry the count and a sample — an exclusion nobody "
         "can size is indistinguishable from a corpus that never had those nodes"

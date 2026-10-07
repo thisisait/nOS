@@ -186,7 +186,7 @@ NOT_EXERCISED = [
 # answers rather than a shrug: most first-run disagreements are neither corpus
 # being wrong, and a harness that can only blame a corpus will blame the wrong
 # thing loudly.
-CULPRIT_ORGAN = "organ"      # the organ's reader/store is wrong
+CULPRIT_CORTEX = "cortex"    # the Cortex's reader/store is wrong
 CULPRIT_KEAP = "keap"        # the incumbent's reader/store is wrong or stale
 CULPRIT_CONFIG = "config"    # both are behaving; they were pointed at different things
 CULPRIT_FEEDER = "feeder"    # the fan-out job, not either store
@@ -753,7 +753,7 @@ def adjudicate_objects(keap: Side, organ: Side, fs: HostReferee) -> tuple[TableD
             continue
         if organ.passDegraded:
             out.append(Finding(
-                "knowledge_objects", "only_in_keap", oid, CULPRIT_NEITHER, "organ-pass-degraded",
+                "knowledge_objects", "only_in_keap", oid, CULPRIT_NEITHER, "cortex-pass-degraded",
                 f"not attributable to the reader: {organ.passDegraded}. A truncated or refused pass explains a "
                 "missing id on its own",
                 "fix the organ's pass, then re-read this night", {}))
@@ -776,7 +776,7 @@ def adjudicate_objects(keap: Side, organ: Side, fs: HostReferee) -> tuple[TableD
             pass_at = organ.lastPassAt
             if _pass_newer_than(pass_at, r["mtime"]) is False:
                 out.append(Finding(
-                    "knowledge_objects", "only_in_keap", oid, CULPRIT_ORGAN, "organ-stale",
+                    "knowledge_objects", "only_in_keap", oid, CULPRIT_CORTEX, "cortex-stale",
                     f"the file exists and was modified at {r['mtime']} (epoch), AFTER the organ's last pass at "
                     f"{pass_at} — the organ has simply not walked since it appeared",
                     "no defect; the next organ pass closes it. If it does not, check that the cortex-fs-sync "
@@ -784,7 +784,7 @@ def adjudicate_objects(keap: Side, organ: Side, fs: HostReferee) -> tuple[TableD
                     {"uid": uid, "relPath": rel, "fs": r, "organLastPass": pass_at}))
                 continue
             out.append(Finding(
-                "knowledge_objects", "only_in_keap", oid, CULPRIT_ORGAN, "organ-reader-missed-it",
+                "knowledge_objects", "only_in_keap", oid, CULPRIT_CORTEX, "cortex-reader-missed-it",
                 f"the file EXISTS on the host ({r['path']}, {r['size']} bytes), predates the organ's last pass at "
                 f"{pass_at}, and that pass was clean — so the organ's reader walked while the file was there and "
                 "produced no row",
@@ -799,7 +799,7 @@ def adjudicate_objects(keap: Side, organ: Side, fs: HostReferee) -> tuple[TableD
                 {"uid": uid, "relPath": rel, "fs": r}))
         else:
             out.append(Finding(
-                "knowledge_objects", "only_in_keap", oid, CULPRIT_CONFIG, "organ-root-missing-for-uid",
+                "knowledge_objects", "only_in_keap", oid, CULPRIT_CONFIG, "cortex-root-missing-for-uid",
                 f"{r['why']} — the two deployments were pointed at different trees, so this is a configuration "
                 "difference and neither reader is at fault",
                 f"add a root deriving uid {uid!r} to CORTEX_FS_USER_ROOTS, or accept the divergence explicitly",
@@ -808,7 +808,7 @@ def adjudicate_objects(keap: Side, organ: Side, fs: HostReferee) -> tuple[TableD
     for oid in t.onlyOrgan:
         if not oid.startswith("fs:"):
             out.append(Finding(
-                "knowledge_objects", "only_in_organ", oid, CULPRIT_ORGAN, "organ-invented-non-mirror-row",
+                "knowledge_objects", "only_in_organ", oid, CULPRIT_CORTEX, "cortex-invented-non-mirror-row",
                 "the organ holds a non-fs object that KEAP does not, and the organ serves no surface that creates "
                 "one — so it was not fed, it appeared",
                 "read the organ's write log; nothing in the fan-out writes this shape", {}))
@@ -840,14 +840,14 @@ def adjudicate_objects(keap: Side, organ: Side, fs: HostReferee) -> tuple[TableD
                     {"uid": uid, "relPath": rel, "fs": r, "keapLastPass": pass_at}))
         elif r["state"] == "absent":
             out.append(Finding(
-                "knowledge_objects", "only_in_organ", oid, CULPRIT_ORGAN, "organ-row-without-a-file",
+                "knowledge_objects", "only_in_organ", oid, CULPRIT_CORTEX, "cortex-row-without-a-file",
                 f"no file exists at {rel!r} under uid {uid!r}, and the organ's last pass was clean — so the organ "
                 "either derived a row for a path that never existed, or failed to prune one whose file went away",
                 "read the organ's last pass counters (removed/pruneRefused) before assuming invention",
                 {"uid": uid, "relPath": rel, "fs": r, "organLastPass": organ.lastPass}))
         else:
             out.append(Finding(
-                "knowledge_objects", "only_in_organ", oid, CULPRIT_CONFIG, "organ-extra-root",
+                "knowledge_objects", "only_in_organ", oid, CULPRIT_CONFIG, "cortex-extra-root",
                 f"{r['why']} — the organ is reading a tree KEAP is not; the row is correct for the organ and absent "
                 "from KEAP by configuration",
                 "align the root lists, or record the divergence as intended",
@@ -898,7 +898,7 @@ def adjudicate_shared_objects(keap: Side, organ: Side, fs: HostReferee) -> list[
             k_match = all(dk.get(f) == r[f] for f in stat_fields)
             o_match = all(do.get(f) == r[f] for f in stat_fields)
             if k_match and not o_match:
-                culprit, verdict, who = CULPRIT_ORGAN, "organ-stale-read", "the organ"
+                culprit, verdict, who = CULPRIT_CORTEX, "cortex-stale-read", "the organ"
             elif o_match and not k_match:
                 culprit, verdict, who = CULPRIT_KEAP, "keap-stale-read", "KEAP"
             else:
@@ -923,7 +923,7 @@ def adjudicate_shared_objects(keap: Side, organ: Side, fs: HostReferee) -> list[
             if bool(kb) != bool(ob):
                 empty = "keap" if not kb else "organ"
                 out.append(Finding(
-                    "knowledge_objects", "field_mismatch", oid, CULPRIT_KEAP if empty == "keap" else CULPRIT_ORGAN,
+                    "knowledge_objects", "field_mismatch", oid, CULPRIT_KEAP if empty == "keap" else CULPRIT_CORTEX,
                     "empty-body-read",
                     f"{empty} holds NO body for a file the other side read ({do.get('bodyLen')} / {dk.get('bodyLen')} "
                     "chars); the row is the right size and the content is gone — this is the class the prune guards "
@@ -993,7 +993,7 @@ def adjudicate_taxonomy(keap: Side, organ: Side, canonical: set[str] | None) -> 
             t.organRows -= len(docs_only)
         out.append(Finding(
             "taxonomy_nodes", "expected_asymmetry", f"{len(docs_only)} node(s)", CULPRIT_NEITHER,
-            "organ-docs-corpus",
+            "cortex-docs-corpus",
             f"{len(docs_only)} node(s) are the estate's own documentation, which the organ generates and KEAP "
             "deliberately does not hold — an asymmetry by design (the publishability rule), so it is withdrawn "
             "from the id diff rather than counted as divergence",
@@ -1074,7 +1074,7 @@ def adjudicate_taxonomy(keap: Side, organ: Side, canonical: set[str] | None) -> 
     # and 2 000 identical finding lines is a wall, not a report.
     for ids, case, in_repo_verdict, in_repo_why, out_repo_verdict, out_repo_why in (
         (t.onlyKeap, "only_in_keap",
-         "organ-store-not-materialised",
+         "cortex-store-not-materialised",
          "present in the pinned canonical tree and in KEAP, absent from the organ — the organ's STORE was never "
          "re-materialised after the parity pin moved (the repo tree is fine; the db is behind it)",
          "keap-ahead-of-pin",
@@ -1084,7 +1084,7 @@ def adjudicate_taxonomy(keap: Side, organ: Side, canonical: set[str] | None) -> 
          "keap-container-behind-pin",
          "present in the pinned canonical tree and in the organ, absent from KEAP — the CONTAINER is behind "
          "keap_repo_ref; the organ materialised the newer tree first",
-         "organ-invented-node",
+         "cortex-invented-node",
          "in the organ but in neither KEAP nor the pinned canonical tree — the organ materialises only from that "
          "tree, so this id has no source"),
     ):
@@ -1101,15 +1101,15 @@ def adjudicate_taxonomy(keap: Side, organ: Side, canonical: set[str] | None) -> 
         if in_repo:
             out.append(Finding(
                 "taxonomy_nodes", case, f"{len(in_repo)} node(s)",
-                CULPRIT_ORGAN if in_repo_verdict.startswith("organ") else CULPRIT_KEAP,
+                CULPRIT_CORTEX if in_repo_verdict.startswith("cortex") else CULPRIT_KEAP,
                 in_repo_verdict, in_repo_why,
-                "re-materialise the organ's store (npm run store:materialise)" if in_repo_verdict.startswith("organ")
+                "re-materialise the organ's store (npm run store:materialise)" if in_repo_verdict.startswith("cortex")
                 else "rebuild/redeploy the KEAP container at keap_repo_ref",
                 {"sample": in_repo[:8], "count": len(in_repo)}))
         if out_repo:
             out.append(Finding(
                 "taxonomy_nodes", case, f"{len(out_repo)} node(s)",
-                CULPRIT_KEAP if out_repo_verdict.startswith("keap") else CULPRIT_ORGAN,
+                CULPRIT_KEAP if out_repo_verdict.startswith("keap") else CULPRIT_CORTEX,
                 out_repo_verdict, out_repo_why,
                 "reconcile keap_repo_ref with what is actually deployed",
                 {"sample": out_repo[:8], "count": len(out_repo)}))
@@ -1175,8 +1175,8 @@ def adjudicate_embeddings(keap: Side, organ: Side, obj_table: TableDiff,
             if src and rows < len(src):
                 out.append(Finding(
                     "embeddings", "count_mismatch", f"{kind}@{side.name}",
-                    CULPRIT_ORGAN if side.name != "keap" else CULPRIT_KEAP,
-                    f"{'organ' if side.name != 'keap' else 'keap'}-embed-behind",
+                    CULPRIT_CORTEX if side.name != "keap" else CULPRIT_KEAP,
+                    f"{'cortex' if side.name != 'keap' else 'keap'}-embed-behind",
                     f"{side.name} holds {rows} {kind} vector(s) for {len(src)} source row(s) — {len(src) - rows} "
                     "source(s) have no vector at all",
                     f"run keap-embed-sync against {side.name}",
@@ -1184,7 +1184,7 @@ def adjudicate_embeddings(keap: Side, organ: Side, obj_table: TableDiff,
             elif src and rows > len(src):
                 out.append(Finding(
                     "embeddings", "count_mismatch", f"{kind}@{side.name}",
-                    CULPRIT_ORGAN if side.name != "keap" else CULPRIT_KEAP, "orphan-vectors",
+                    CULPRIT_CORTEX if side.name != "keap" else CULPRIT_KEAP, "orphan-vectors",
                     f"{side.name} holds {rows} {kind} vector(s) for only {len(src)} source row(s) — {rows - len(src)} "
                     "vector(s) outlive their source",
                     "the pending endpoint prunes these; if the count stands, the embed job is not running",
@@ -1220,8 +1220,8 @@ def adjudicate_embeddings(keap: Side, organ: Side, obj_table: TableDiff,
             in_organ_corpus = oid in osrc
             out.append(Finding(
                 "embeddings", "only_in_keap", f"{kind}:{oid}",
-                CULPRIT_ORGAN if in_organ_corpus else CULPRIT_NEITHER,
-                "organ-embed-behind" if in_organ_corpus else "organ-corpus-lacks-source",
+                CULPRIT_CORTEX if in_organ_corpus else CULPRIT_NEITHER,
+                "cortex-embed-behind" if in_organ_corpus else "cortex-corpus-lacks-source",
                 ("the source row exists on BOTH sides and only KEAP has a current vector for it — the organ's embed "
                  "pass has not caught up") if in_organ_corpus else
                 ("the organ has no such source row at all, so there is nothing for it to embed; this is an object/"
@@ -1426,7 +1426,7 @@ def build_report(keap: Side, organ: Side, fs: HostReferee, canonical: set[str] |
 
     # ── removal-shaped: the only immediate halt ──────────────────────────────
     organ_pruned_what_keap_kept = bool(
-        [f for f in obj_f if f.case == "only_in_keap" and f.verdict == "organ-reader-missed-it"]
+        [f for f in obj_f if f.case == "only_in_keap" and f.verdict == "cortex-reader-missed-it"]
     ) and (organ.lastPass.get("removed") or 0) > 0
 
     return {
