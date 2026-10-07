@@ -1,7 +1,7 @@
 # face <-> Wing joint: who an end user is when the face speaks to Wing.
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + symmetric
-# gates). This file is face's joint (state/manifest.yml face.joint). One copy
-# only: both sides cite this path.
+# gates). A contract, not a joint: the face is a core organ (operator ruling
+# I-12, 2026-10-07), as KEAP is. One copy only: both sides cite this path.
 contract_version: 1
 fixture: files/anatomy/contracts/face-wing.fixture.json
 

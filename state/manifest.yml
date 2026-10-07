@@ -572,7 +572,8 @@ services:
     port_var: face_port
     oidc: proxy
     rbac_tier: 3
-    joint: files/anatomy/contracts/face-wing.yml
+    # Operator ruling I-12 (2026-10-07): the face is a CORE organ, not an appendage.
+    # files/anatomy/contracts/face-wing.yml stays a contract (as KEAP's), not a joint.
 
   - id: keap
     software_owner: self

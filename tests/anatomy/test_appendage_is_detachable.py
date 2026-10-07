@@ -24,6 +24,9 @@ defaults into openclaw_projects_dir. KEAP's code lives in its own repo; only
 its role's templates are read. A backend counts through `served_by:`
 (state/habitat/llm-backends.yml): an appendage serving one a core agent binds is red.
 Ollama has its own core row since 2026-10-06, so openclaw no longer serves it.
+The face is a core organ (operator ruling I-12, 2026-10-07): face-wing.yml is a
+contract like KEAP's, not a joint; the appendages are hermes, openclaw,
+openhuman and nos_forum.
 """
 from __future__ import annotations
 
@@ -180,12 +183,13 @@ def test_a_core_node_never_depends_on_an_appendage():
 
 
 def test_a_planted_dependency_goes_red():
-    """(a) can go red: one edge from face to Wing in a copy of the graph."""
+    """(a) can go red: one edge from hermes to Wing in a copy of the graph.
+    (face was the planted appendage until I-12 ruled it a core organ.)"""
     graph = copy.deepcopy(json.loads(GRAPH.read_text(encoding="utf-8")))
-    graph["edges"].append({"from": "service:face", "to": "service:wing", "kind": "data"})
-    assert "service:face -> service:wing (data, SSO collapsed)" in _core_dependents(graph)
+    graph["edges"].append({"from": "service:hermes", "to": "service:wing", "kind": "data"})
+    assert "service:hermes -> service:wing (data, SSO collapsed)" in _core_dependents(graph)
     graph["edges"][-1]["kind"] = "trigger"
-    assert "service:face -> service:wing (trigger)" in _core_dependents(graph)
+    assert "service:hermes -> service:wing (trigger)" in _core_dependents(graph)
     graph["edges"].append({"from": "service:openclaw", "to": "backend:ollama", "kind": "data"})
     assert "service:openclaw -> agent:jeff (via backend:ollama)" in _core_dependents(graph)
 
@@ -204,12 +208,12 @@ def test_core_code_and_templates_never_name_an_appendage_source():
 
 def test_the_import_and_mount_readers_can_go_red():
     py, php = pathlib.Path("x.py"), pathlib.Path("x.php")
-    assert _import_hits("face", py, "from face.lib import uid\n")
+    assert _import_hits("openclaw", py, "from openclaw.lib import uid\n")
     assert _import_hits("hermes", php, "require_once '../../roles/pazny.hermes/x.php';\n")
-    assert not _import_hits("face", py, "# files/anatomy/face/ is read by hand\nimport json\n")
-    assert _template_hits("face", "      - {{ face_src_dir }}:/face:ro\n")
-    assert not _template_hits("face", "      KEAP_EMBED_ORIGINS: https://{{ face_domain }}\n")
-    assert not _template_hits("face", "{# files/anatomy/face/ #}\n")
+    assert not _import_hits("openclaw", py, "# files/anatomy/openclaw/ is read by hand\nimport json\n")
+    assert _template_hits("openclaw", "      - {{ openclaw_src_dir }}:/openclaw:ro\n")
+    assert not _template_hits("openclaw", "      KEAP_EMBED_ORIGINS: https://{{ openclaw_domain }}\n")
+    assert not _template_hits("openclaw", "{# files/anatomy/openclaw/ #}\n")
 
 
 def test_every_joint_is_a_spec_with_a_fixture():
