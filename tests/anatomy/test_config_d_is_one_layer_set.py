@@ -109,3 +109,26 @@ def test_only_the_helper_spells_the_remainder_path():
 def test_the_literal_pending_list_only_shrinks():
     stale = sorted(LITERAL_PENDING - _literal_readers())
     assert not stale, f"converted, so delete from config_literal_pending.txt: {stale}"
+
+
+#: Secrets still declared twice — in a default layer AND default.credentials.yml,
+#: equal today (measured 2026-10-07: 45 doubles, 0 differing). Shrink-only; the
+#: non-secret doubles (ssh_allow_groups, gitea_admin_email, paperclip_db_user,
+#: authentik_bootstrap_email) were deleted first.
+CREDENTIAL_DOUBLES_PENDING = frozenset(
+    Path(__file__).with_name("credential_doubles_pending.txt").read_text().split())
+
+
+def test_credentials_do_not_redeclare_a_default():
+    """vars_files loads default.credentials.yml AFTER the default layers, so a key
+    in both is one value shadowing another: whichever an operator edits may be
+    the one that loses. A pending double must still be equal; a new one is refused."""
+    creds = yaml.safe_load((REPO / "default.credentials.yml").read_text(encoding="utf-8"))
+    cfg = ni.default_config()
+    doubles = set(creds) & set(cfg)
+    assert not sorted(doubles - CREDENTIAL_DOUBLES_PENDING), \
+        f"declared in a default layer and in default.credentials.yml: {sorted(doubles - CREDENTIAL_DOUBLES_PENDING)}"
+    assert not sorted(CREDENTIAL_DOUBLES_PENDING - doubles), \
+        f"no longer a double, delete from credential_doubles_pending.txt: {sorted(CREDENTIAL_DOUBLES_PENDING - doubles)}"
+    unequal = {k for k in doubles if creds[k] != cfg[k]}
+    assert not unequal, f"a pending double drifted apart: {sorted(unequal)}"
