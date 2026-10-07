@@ -400,7 +400,7 @@ def test_doctrine_nodes_carry_the_paragraph(committed):
 
 def test_every_node_has_a_resolving_anchor_and_a_body(committed):
     bundle = json.loads(
-        (REPO / "state/fable/taxonomy-bundle.json").read_text(encoding="utf-8"))
+        (REPO / "state/fixtures/fable/taxonomy-bundle.json").read_text(encoding="utf-8"))
     valid = {a["id"] for a in bundle["anchor"]}
     assert len(valid) >= 300, "the taxonomy bundle shrank — re-check before trusting it"
     for nid, n in committed["nodes"].items():

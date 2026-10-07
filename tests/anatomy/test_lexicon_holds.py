@@ -28,7 +28,7 @@ test_genome_contract.py): fixing one fails until its line is deleted here.
 CEILING. (d) matches exact phrases only: a new paraphrase of a retired sense
 passes. It reads tracked files only, and ignores code, comments and history
 ("cell" in face grids, Python `self`, sha "digest", docs/archive, devlog,
-RELEASE.md, hidden_fees, the KEAP corpus, state/fable) — a gate that cried wolf
+RELEASE.md, hidden_fees, the KEAP corpus, state/fixtures/fable) — a gate that cried wolf
 there would be switched off. A comment in code is not seen.
 """
 from __future__ import annotations
@@ -209,7 +209,8 @@ TRUSTED = (
     "files/anatomy/skills/*/SKILL.md", ".claude/skills/*/SKILL.md", ".claude/plugins/*/skills/*/SKILL.md",
     "files/anatomy/agents/*/system.md", "files/anatomy/agents/*/agent.yml",
     "files/anatomy/plugins/*/plugin.yml", "files/anatomy/apex/ruling.yml",
-    "state/*.yml", "state/genome/genes/**", "state/schema/**", "state/digest-importers/**",
+    "state/*.yml", "state/habitat/*.yml", "state/fixtures/local-model-bench.yml",
+    "state/genome/genes/**", "state/schema/**", "state/digest-importers/**",
     "state/keap-tables/**", "default.credentials.yml")
 #: Only the docstrings of these are trusted text; code and comments are not.
 DOCSTRINGS = ("tools/*.py", "tests/anatomy/*.py")
@@ -241,7 +242,7 @@ def _docstrings(src: str) -> str:
 def _trusted() -> tuple[tuple[str, str], ...]:
     """(repo path, text) of every trusted file. The lexicon, the glossary and
     history (archive, devlog, RELEASE.md, hidden_fees, the KEAP corpus,
-    state/fable) are outside TRUSTED: they may name retired senses."""
+    state/fixtures/fable) are outside TRUSTED: they may name retired senses."""
     rels = _tracked(TRUSTED)
     _defaults()  # puts tools/ on sys.path; the default layers come from nos_identity
     import nos_identity  # noqa: PLC0415

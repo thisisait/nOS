@@ -45,7 +45,7 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 SCHEMA = REPO / "files/anatomy/agents/ops-extract/one-shot.schema.json"
-FAMILIES = REPO / "state/ops-task-families"
+FAMILIES = REPO / "state/fixtures/ops-task-families"
 RUNNER = REPO / "files/anatomy/wing/bin/run-agent.php"
 WING = REPO / "files/anatomy/wing"
 

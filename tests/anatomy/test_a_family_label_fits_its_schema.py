@@ -32,7 +32,7 @@ import pytest
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-FAMILIES = REPO / "state/ops-task-families"
+FAMILIES = REPO / "state/fixtures/ops-task-families"
 AGENTS = REPO / "files/anatomy/agents"
 
 _TYPES = {"string": str, "number": (int, float), "boolean": bool,

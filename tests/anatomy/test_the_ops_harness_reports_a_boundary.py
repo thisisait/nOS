@@ -26,7 +26,7 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 HARNESS = REPO / "tools" / "nos-ops-harness.py"
-FAMILY = REPO / "state" / "ops-task-families" / "invoice-extract"
+FAMILY = REPO / "state" / "fixtures" / "ops-task-families" / "invoice-extract"
 REGISTRY = REPO / "state" / "habitat" / "llm-backends.yml"
 
 FAKE = """\

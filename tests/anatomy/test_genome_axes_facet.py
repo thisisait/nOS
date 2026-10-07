@@ -51,7 +51,7 @@ TS_GEN = REPO / "files" / "anatomy" / "face" / "src" / "lib" / "contracts" / "en
 CONTRACTS = REPO / "files" / "anatomy" / "face" / "src" / "lib" / "contracts" / "index.ts"
 REGISTRY = REPO / "files" / "anatomy" / "face" / "src" / "lib" / "apps" / "native" / "registry.ts"
 GRAPH_TS = REPO / "files" / "anatomy" / "face" / "src" / "lib" / "anatomy" / "graph.ts"
-SPINE = REPO / "state" / "fable" / "taxonomy-bundle.json"
+SPINE = REPO / "state" / "fixtures" / "fable" / "taxonomy-bundle.json"
 
 jsonschema = pytest.importorskip("jsonschema")
 
