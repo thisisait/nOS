@@ -185,11 +185,11 @@ def test_only_in_keap_and_the_file_exists_blames_the_organs_reader(tmp_path):
     k = mk_side("keap", objects=["fs:akadmin:aaa"], details={"fs:akadmin:aaa": detail()}, roots=roots)
     o = mk_side("cortex", objects=[], details={}, roots=roots)
     rep = report(k, o, roots)
-    assert "organ-reader-missed-it" in verdicts(rep)
-    assert culprit_of(rep, "organ-reader-missed-it") == {D.CULPRIT_ORGAN}
+    assert "cortex-reader-missed-it" in verdicts(rep)
+    assert culprit_of(rep, "cortex-reader-missed-it") == {D.CULPRIT_CORTEX}
     # The evidence, not just the verdict: the referee's own numbers must appear,
     # or "the organ missed it" is an assertion rather than a finding.
-    f = next(f for f in rep["findings"] if f["verdict"] == "organ-reader-missed-it")
+    f = next(f for f in rep["findings"] if f["verdict"] == "cortex-reader-missed-it")
     assert f["detail"]["fs"]["state"] == "exists"
     assert str(tmp_path) in f["because"]
 
@@ -210,10 +210,10 @@ def test_only_in_keap_with_an_unroutable_uid_is_config_not_a_defect(tmp_path):
                 details={"fs:otheruser:aaa": detail(uid="otheruser")}, roots=roots)
     o = mk_side("cortex", objects=[], details={}, roots=roots)
     rep = report(k, o, roots)
-    assert "organ-root-missing-for-uid" in verdicts(rep)
+    assert "cortex-root-missing-for-uid" in verdicts(rep)
     # NOT the organ's reader: it was never given a root that could produce this
     # uid. A reader cannot miss a tree it was not pointed at.
-    assert culprit_of(rep, "organ-root-missing-for-uid") == {D.CULPRIT_CONFIG}
+    assert culprit_of(rep, "cortex-root-missing-for-uid") == {D.CULPRIT_CONFIG}
 
 
 def test_a_degraded_organ_pass_preempts_every_reader_verdict(tmp_path):
@@ -224,9 +224,9 @@ def test_a_degraded_organ_pass_preempts_every_reader_verdict(tmp_path):
     rep = report(k, o, roots)
     # The file IS on disk, so the naive answer is "the organ missed it". It did
     # not: its pass refused the prune, which explains a missing id by itself.
-    assert "organ-pass-degraded" in verdicts(rep)
-    assert "organ-reader-missed-it" not in verdicts(rep)
-    assert culprit_of(rep, "organ-pass-degraded") == {D.CULPRIT_NEITHER}
+    assert "cortex-pass-degraded" in verdicts(rep)
+    assert "cortex-reader-missed-it" not in verdicts(rep)
+    assert culprit_of(rep, "cortex-pass-degraded") == {D.CULPRIT_NEITHER}
 
 
 def test_a_non_fs_row_only_in_keap_is_not_an_ingestion_defect(tmp_path):
@@ -281,8 +281,8 @@ def test_only_in_organ_with_no_file_at_all_is_the_organs_row_to_explain(tmp_path
     k = mk_side("keap", objects=[], roots=roots)
     o = mk_side("cortex", objects=["fs:akadmin:aaa"], details={"fs:akadmin:aaa": detail()}, roots=roots)
     rep = report(k, o, roots)
-    assert "organ-row-without-a-file" in verdicts(rep)
-    assert culprit_of(rep, "organ-row-without-a-file") == {D.CULPRIT_ORGAN}
+    assert "cortex-row-without-a-file" in verdicts(rep)
+    assert culprit_of(rep, "cortex-row-without-a-file") == {D.CULPRIT_CORTEX}
 
 
 # ── 3b. the organ's own staleness, which the mirror branch always had ────────
@@ -295,7 +295,7 @@ def test_a_file_newer_than_the_organs_last_pass_is_staleness_not_a_missed_read(t
     it walks at boot and from the nightly `cortex-fs-sync` job. KEAP re-walks
     every 300 s. So on any estate where documents arrive between passes, KEAP has
     rows the organ does not — the expected reading of a file created after the
-    organ last walked — and the harness used to stamp CULPRIT_ORGAN /
+    organ last walked — and the harness used to stamp CULPRIT_CORTEX /
     "the organ's reader walked past a file that is really there" for a reader
     that was never asked to look. The fs-ids clause then fails every night and
     the 3-night clock can never reach NIGHTS_REQUIRED."""
@@ -307,11 +307,11 @@ def test_a_file_newer_than_the_organs_last_pass_is_staleness_not_a_missed_read(t
     o = mk_side("cortex", objects=[], details={}, roots=roots,
                 last_pass_at="2026-07-01T00:00:00.000Z")
     rep = report(k, o, roots)
-    assert "organ-stale" in verdicts(rep)
-    assert "organ-reader-missed-it" not in verdicts(rep)
+    assert "cortex-stale" in verdicts(rep)
+    assert "cortex-reader-missed-it" not in verdicts(rep)
     # The action has to name the thing that closes it — the organ has no timer,
     # so "wait for the next pass" is only true if a job runs one.
-    f = next(f for f in rep["findings"] if f["verdict"] == "organ-stale")
+    f = next(f for f in rep["findings"] if f["verdict"] == "cortex-stale")
     assert "cortex-fs-sync" in f["action"]
 
 
@@ -325,8 +325,8 @@ def test_a_file_older_than_the_organs_last_pass_still_blames_its_reader(tmp_path
     o = mk_side("cortex", objects=[], details={}, roots=roots,
                 last_pass_at="2026-07-27T00:00:00.000Z")
     rep = report(k, o, roots)
-    assert "organ-reader-missed-it" in verdicts(rep)
-    assert culprit_of(rep, "organ-reader-missed-it") == {D.CULPRIT_ORGAN}
+    assert "cortex-reader-missed-it" in verdicts(rep)
+    assert culprit_of(rep, "cortex-reader-missed-it") == {D.CULPRIT_CORTEX}
 
 
 def test_new_documents_between_passes_do_not_raise_a_removal_shaped_halt(tmp_path):
@@ -405,9 +405,9 @@ def test_an_escaping_path_does_not_flip_the_culprit(tmp_path):
                 details={"fs:akadmin:aaa": detail(path="/etc/hosts")}, roots=roots)
     o = mk_side("cortex", objects=[], details={}, roots=roots)
     rep = report(k, o, roots)
-    assert "organ-reader-missed-it" not in verdicts(rep)
-    assert "organ-root-missing-for-uid" in verdicts(rep)   # unresolvable -> config, not a defect
-    assert culprit_of(rep, "organ-root-missing-for-uid") == {D.CULPRIT_CONFIG}
+    assert "cortex-reader-missed-it" not in verdicts(rep)
+    assert "cortex-root-missing-for-uid" in verdicts(rep)   # unresolvable -> config, not a defect
+    assert culprit_of(rep, "cortex-root-missing-for-uid") == {D.CULPRIT_CONFIG}
 
 
 def test_an_ordinary_relative_path_is_still_resolved(tmp_path):
@@ -422,7 +422,7 @@ def test_an_ordinary_relative_path_is_still_resolved(tmp_path):
 # ── 4. shared ids: the content digests ───────────────────────────────────────
 
 
-@pytest.mark.parametrize("disk_size,expect", [(10, "organ-stale-read"), (99, "keap-stale-read")])
+@pytest.mark.parametrize("disk_size,expect", [(10, "cortex-stale-read"), (99, "keap-stale-read")])
 def test_the_filesystem_names_the_stale_reader(tmp_path, disk_size, expect):
     roots = host_tree(tmp_path, {"documents/a.md": "x" * disk_size})
     st = os.stat(tmp_path / "users" / "akadmin" / "documents" / "a.md")
@@ -485,8 +485,8 @@ def test_a_node_in_the_pin_and_in_keap_means_the_organ_never_rematerialised():
     k = mk_side("keap", taxonomy_ids=["01", "02"])
     o = mk_side("cortex", taxonomy_ids=["01"])
     rep = report(k, o, canonical={"01", "02"})
-    assert "organ-store-not-materialised" in verdicts(rep)
-    assert culprit_of(rep, "organ-store-not-materialised") == {D.CULPRIT_ORGAN}
+    assert "cortex-store-not-materialised" in verdicts(rep)
+    assert culprit_of(rep, "cortex-store-not-materialised") == {D.CULPRIT_CORTEX}
 
 
 def test_a_node_in_the_pin_and_in_the_organ_means_the_container_is_behind():
@@ -660,8 +660,8 @@ def test_a_shared_source_embedded_on_one_side_only_names_the_lagging_pass(tmp_pa
     o = mk_side("cortex", objects=["fs:akadmin:aaa"], details=det, by_kind={"object": 0},
                 pending={"object": {"fs:akadmin:aaa": "h1"}}, roots=roots)
     rep = report(k, o, roots)
-    assert "organ-embed-behind" in verdicts(rep)
-    assert culprit_of(rep, "organ-embed-behind") == {D.CULPRIT_ORGAN}
+    assert "cortex-embed-behind" in verdicts(rep)
+    assert culprit_of(rep, "cortex-embed-behind") == {D.CULPRIT_CORTEX}
     assert rep["clauses"]["embedded refs"] is False
 
 
@@ -675,8 +675,8 @@ def test_a_missing_source_is_not_reported_as_a_missing_vector(tmp_path):
                 by_kind={"object": 1}, roots=roots)
     o = mk_side("cortex", objects=[], by_kind={"object": 0}, roots=roots)
     rep = report(k, o, roots)
-    assert "organ-corpus-lacks-source" in verdicts(rep)
-    assert culprit_of(rep, "organ-corpus-lacks-source") == {D.CULPRIT_NEITHER}
+    assert "cortex-corpus-lacks-source" in verdicts(rep)
+    assert culprit_of(rep, "cortex-corpus-lacks-source") == {D.CULPRIT_NEITHER}
 
 
 def test_a_truncated_pending_page_never_publishes_a_derived_number(tmp_path):
@@ -695,7 +695,7 @@ def test_a_truncated_pending_page_never_publishes_a_derived_number(tmp_path):
     assert t["comparable"] is False and "NOT derived" in t["ceiling"]
     assert t["organRows"] == 0 and t["keapRows"] == 600
     # The exact row-count check still names the culprit and the real deficit.
-    f = next(f for f in rep["findings"] if f["verdict"] == "organ-embed-behind")
+    f = next(f for f in rep["findings"] if f["verdict"] == "cortex-embed-behind")
     assert f["detail"] == {"kind": "taxonomy", "vectors": 0, "sources": 600}
     # …and the clause does NOT read ok just because the ref-set diff was the
     # thing that got skipped. Pending is largest exactly when a side is furthest
@@ -894,7 +894,7 @@ def test_end_to_end_over_the_wire_reads_both_sides_and_adjudicates(tmp_path):
         keap_http.shutdown()
         organ_http.shutdown()
     assert rep["agrees"] is False
-    assert "organ-reader-missed-it" in {f["verdict"] for f in rep["findings"]}
+    assert "cortex-reader-missed-it" in {f["verdict"] for f in rep["findings"]}
     # The referee reached the tree over a real run, not only in-process.
     assert rep["refereesAvailable"]["filesystem"] is True
     assert rep["refereesAvailable"]["canonicalTree"] is False
