@@ -1,6 +1,6 @@
 # nOS State & Migration Framework — Implementation Plan
 
-**Status:** Under construction. Agents: this document is the source of truth. Follow it exactly. If a decision point is not covered here, raise it in your final report rather than inventing a convention.
+**Status:** a plan, not law (law lives in `ssot/doctrine/`). If a decision point is not covered here, raise it in your final report rather than inventing a convention.
 
 ---
 
