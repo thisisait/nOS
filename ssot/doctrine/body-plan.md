@@ -64,7 +64,10 @@ A new word the operator has not ruled carries `proposed: true`.
 | habitat | the machine and what lives beside the organism | `software_owner` |
 
 A cell's own prompt and tool allow-list is its **definition**; one session
-the runner opens for it is a **ceremony**. A **skill** is a declared how-to a
+the runner opens for it is a **ceremony**. The machinery that turns a definition
+into an acting cell (it loads the definition, binds the model, and lets actions out
+only through the approval gate) is the cell's **organelles** (code: AgentKit,
+`files/anatomy/wing/app/AgentKit/`). A **skill** is a declared how-to a
 cell or a runtime is handed; it is genome, kept in `files/anatomy/skills/`. A genome
 entity kind is a **gene** ([`genome.md`](genome.md)). A tissue's file is
 described in [`tissue.md`](tissue.md).

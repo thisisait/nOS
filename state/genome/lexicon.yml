@@ -154,6 +154,33 @@ words:
     not: [account roster, tissue]
     counter_example: "the account roster (which accounts a realm must hold, not which cells exist)"
 
+  organelles:
+    level: cell
+    # Ruling 2026-10-07 (roadmap row organelles-not-agentkit): the word now, no code rename.
+    means: >-
+      The cell's machinery that turns a definition into an acting cell: the runtime
+      that loads the definition (ribosome), binds the model (mitochondria), admits
+      tools and lets actions out only through the approval gate (membrane). In code:
+      AgentKit.
+    names:
+      - path: files/anatomy/wing/app/AgentKit/
+    not: [plugin, gene, tissue, organ, limb, cell]
+    mechanism: agent runtime / harness
+    counter_example: "a plugin (wiring between organs, not inside a cell)"
+    retired:
+      - sense: "organelle for a genome entity kind"
+        replacement: gene
+        surfaces:
+          - path: state/genome/organelle/
+      - sense: "organelle for a plugin"
+        replacement: plugin
+        surfaces: []
+      - sense: "organelle for a digest importer (hydrator)"
+        replacement: digest importer
+        surfaces: []
+    # "organelle" alone is the word now; only the old senses' phrasings stay retired.
+    retired_phrases: ["organelle kind", "organelle schema", "a job is an organelle", "plugins as organelles"]
+
   tissue:
     level: tissue
     means: The transplantable pack of one specialization's cells with their skills, tables and services.
@@ -219,6 +246,30 @@ words:
         reason: one public group of organs from the signed apex ruling's `organ_systems:` key
     not: [organ, organism]
     counter_example: "a compose stack such as iiab (a deployment group, not a public function)"
+
+  vein:
+    level: organ system
+    means: >-
+      An anonymised edge between two organ systems on the public apex page; the
+      public key `veins` is frozen with the page's schema.
+    names:
+      - path: files/anatomy/apex/projection.py
+    not: [atom, "an anatomy-graph edge (a link between two named nodes)"]
+    counter_example: "the Bone↔face link (an edge between two organs; it never leaves the machine)"
+    retired:
+      - sense: "vein for an anatomy-graph edge or a live link between organs"
+        replacement: "link (in the graph, an edge)"
+        surfaces: []
+
+  atom:
+    level: organ
+    means: >-
+      One published node on the public apex page: an organ shown only by its
+      `speaks:` sentence, with no name; the public key `atoms` is frozen with the page.
+    names:
+      - path: files/anatomy/apex/projection.py
+    not: [organ, vein, "an anatomy-graph node (named, never published as such)"]
+    counter_example: "service:grafana in the anatomy graph (a named node; only its sentence leaves, as an atom)"
 
   organism:
     level: organism
@@ -638,14 +689,6 @@ words:
     names:
       - path: roles/pazny.keap/
     not: [Cortex]
-  AgentKit:
-    # A rename is pending the operator's ruling (roadmap row organelles-not-agentkit); not planned here.
-    level: proper-name
-    means: The audit-first runtime inside Wing that runs the cells (agents).
-    names:
-      - path: files/anatomy/wing/app/AgentKit/
-    not: [cell, tissue, Wing]
-    counter_example: "a cell such as jeff (AgentKit runs it; the cell is the model in its specialization)"
 
   # ── left alone and written down once ────────────────────────────────────
   iiab:
@@ -653,6 +696,14 @@ words:
     means: An old compose stack name, still used by about two dozen services.
     names:
       - yaml_key: "state/manifest.yml#services.*.stack"
+  AgentKit:
+    level: legacy
+    means: >-
+      The code name of the organelles; the directory and class names stay until the
+      Rust transplant (roadmap row agentkit-rust-organ). Say organelles in prose.
+    names:
+      - path: files/anatomy/wing/app/AgentKit/
+    retired_phrases: ["AgentKit runs the cells"]
   files/anatomy/:
     level: legacy
     means: The source tree of nOS's own parts; the directory name stays.
@@ -703,19 +754,17 @@ words:
       - sense: "a reader called the spinal cord"
         replacement: sense
         surfaces: []
-    retired_phrases: ["spinal cord"]
-  organelle:
-    level: legacy
-    means: Not used. A genome entity kind is a gene; a plugin is a plugin.
-    retired:
-      - sense: "organelle for a genome entity kind"
-        replacement: "gene"
-        surfaces:
-          - path: state/genome/organelle/
-      - sense: "organelle for a plugin"
-        replacement: plugin
+      - sense: "the party (master-data) spine, the shared party DataTable"
+        replacement: party table
         surfaces: []
-      - sense: "organelle for a digest importer (hydrator)"
-        replacement: "digest importer"
+      - sense: "importer-spine, the shared importer code"
+        replacement: importer harness
         surfaces: []
-    retired_phrases: ["organelle"]
+      - sense: "the notification spine"
+        replacement: nervous system
+        surfaces: []
+      - sense: "the spine redirect (the operator's 2026-08-15 direction)"
+        replacement: "plain prose: the 2026-08-15 direction that Claude is one of several permitted orchestrators"
+        surfaces: []
+    retired_phrases: ["spinal cord", "party spine", "master-data spine", "importer-spine",
+                      "notification spine", "spine redirect"]

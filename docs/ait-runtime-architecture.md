@@ -1,6 +1,6 @@
 # AIT runtime — AgentKit architecture (Anatomy A14)
 
-**TL;DR** — AIT (Agentic IT) is the user-facing concept; **AgentKit** is the implementation living under `files/anatomy/wing/app/AgentKit/`. It is a self-hosted, platform-agnostic, audit-first agent runtime. It borrows the Anthropic Managed Agents conceptual surface (agent / session / thread / outcome / vault / webhook) but every byte of state lives in `wing.db` so OpenClaw / future local LLMs swap in by changing one URI in `agent.yml`.
+**TL;DR** — AIT (Agentic IT) is the user-facing concept; the **organelles** (code: AgentKit) are the cells' machinery, living under `files/anatomy/wing/app/AgentKit/`. The organelles run the cells (agents); together they are a self-hosted, platform-agnostic, audit-first agent runtime. It borrows the Anthropic Managed Agents conceptual surface (agent / session / thread / outcome / vault / webhook) but every byte of state lives in `wing.db` so OpenClaw / future local LLMs swap in by changing one URI in `agent.yml`.
 
 ---
 
