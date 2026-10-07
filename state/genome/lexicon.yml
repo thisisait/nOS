@@ -241,7 +241,7 @@ words:
     means: A reader or judge that only reads; an immune indicator is a sense with an indicator contract.
     names:
       - graph_kind: reader
-        reason: a tools/README.md §Readers script that asks the estate what is true
+        reason: a tools/README.md §Readers script that asks the estate what is true (only that section)
       - graph_kind: tool_ro
         reason: an agent tool grant whose every scope is `.read` (tools/agent-capability.py)
       - graph_kind: token_ro
@@ -250,7 +250,6 @@ words:
         reason: a gate command that reads a change and returns a verdict; it does not act
       - graph_kind: weakness
         reason: a Bone reader whose findings become loop proposals
-      - path: tools/README.md
       - yaml_key: "files/anatomy/apex/ruling.yml#organ_systems.senses"
     not: [cell, limb]
     counter_example: "tools/genome-codegen.py (it writes the glossary; only its --check reads)"
@@ -263,9 +262,13 @@ words:
         reason: an agent tool grant that acts — it opens a write scope, or declares none
       - graph_kind: token
         reason: a judge capability whose name does not declare it read-only
+      - graph_kind: effector
+        reason: >-
+          a tools/README.md §Limbs script that writes, posts, restarts or renders;
+          the immune doctrine's `effector:` is what an indicator may do
     not: [sense, side]
     mechanism: port / adapter (hexagonal architecture)
-    counter_example: "an agent tool grant whose every scope is .read (a sense)"
+    counter_example: "tools/red-status.py, or an agent tool grant whose every scope is .read (each only reads: a sense)"
     retired:
       - sense: "limb as the apex page's left/right/core column key"
         replacement: side

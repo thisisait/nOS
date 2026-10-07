@@ -37,18 +37,18 @@ the agent's or anyone's — is caught before it costs anything. Both are the poi
 Levels run smallest to largest, then the systems that cut across every level.
 Each line: level (count) — what it means (the lexicon's words), then the most connected nodes (edge count).
 
-- **genome** (20) — The declared facts every part of nOS inherits, kept in state/genome/. Most connected: tasktype:investigate (13), skill:nos-backoffice (3), skill:nos-datatables (3), tasktype:code-fix (3), tasktype:design (3)
+- **genome** (20) — The declared facts every part of nOS inherits, kept in state/genome/. Most connected: tasktype:investigate (13), tasktype:seed-edit (5), skill:nos-backoffice (3), skill:nos-datatables (3), tasktype:code-fix (3)
 - **cell** (16) — One model in one specialization; in code it is called an agent. Most connected: agent:librarian (11), agent:jeff (9), agent:surveyor (8), agent:conductor (7), agent:curator (7)
 - **tissue** (1) — The transplantable pack of one specialization's cells with their skills, tables and services. Most connected: tissue:backoffice (23)
 - **organ** (102) — One service or host daemon with one job; one row in state/manifest.yml. Most connected: daemon:eu.thisisait.nos.pulse (42), service:postgresql (11), service:redis (9), service:mariadb (8), service:openclaw (7)
 - **organ system** (13) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Most connected: organ_system:archive (9), organ_system:senses (8), organ_system:voice (6), organ_system:backoffice (5), organ_system:forge (5)
 - **organism** (0) — One nOS install on one machine, all its organ systems together. Most connected: none — no node stands for the whole; the whole is this graph
 - **habitat** (6) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner, and nOS never installs or touches it. Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Most connected: backend:minimax (8), backend:ollama (6), backend:anthropic (3), backend:openclaw (1), backend:mistral-eu (0)
-- **sense** (78) — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Most connected: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), judge:genome-codegen (4)
-- **limb** (8) — A tool that acts. Most connected: tool:mcp-bone (5), tool:ask-operator (2), tool:mcp-keap (2), tool:mcp-wing-write (2), tool:migration-file-write (2)
+- **sense** (70) — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Most connected: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), judge:genome-codegen (4)
+- **limb** (114) — A tool that acts. Most connected: effector:loop-pr (6), effector:run-agent (6), effector:loop-propose (5), tool:mcp-bone (5), effector:discovery-scan (3)
 - **memory** (40) — What nOS has learned, kept in KEAP; RAM stays plain English. Most connected: table:party (13), table:invoice (5), table:journal-entry (4), table:posting (4), table:account (3)
-- **law** (45) — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Most connected: article:loop-contract (14), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#5a (3), doctrine:ssot/doctrine/loop-contract.md#7 (3), doctrine:ssot/doctrine/loop-contract.md#DECISION-2d (3)
-- **reflex** (43) — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Most connected: pulse:conductor:self-test-001 (8), pulse:cortex:cortex-fs-sync (8), pulse:keap:keap-embed-sync (8), pulse:librarian:brief-taxonomy (8), pulse:librarian:describe-taxonomy (8)
+- **law** (52) — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Most connected: article:loop-contract (19), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#3.4 (5), doctrine:ssot/doctrine/loop-contract.md#5a (4), doctrine:ssot/doctrine/loop-contract.md#DECISION-2e (4)
+- **reflex** (43) — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Most connected: pulse:conductor:self-test-001 (9), pulse:librarian:brief-taxonomy (9), pulse:librarian:describe-taxonomy (9), pulse:librarian:judge-lint-queue (9), pulse:surveyor:surface-survey (9)
 
 Hidden plumbing: 67 internal nodes. Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
 
@@ -63,8 +63,6 @@ Start with the first one.
 - `tools/rem-status.py` — What the security queue says, right now.
 - `tools/identity-status.py` — the declared account roster vs what each realm holds.
 - `tools/plugin-wiring-report.py` — Plugin wiring report — capability matrix + contract checks.
-- `tools/discovery-scan.py` — Discovery: find two representations of one fact that disagree.
-- `tools/agent-token-status.py` — can each declared agent client mint a token RIGHT NOW.
 - `tools/workload-digest-status.py` — image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker.
 - `tools/caddy-status.py` — Can the caddy answer, is the ear listening, and what did it hear.
 - `tools/brew-pin-status.py` — How old is the version brew wants to give us, and is it old enough to adopt?
@@ -144,7 +142,7 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
   code_server, erpnext, freescout, outline, hedgedoc, bookstack, firefly, dolibarr, onlyoffice, mikopbx, qgis_server,
   metabase, superset, influxdb, mcp_gateway, openclaw, hermes, device_gateway, wing, bone, cortex, backrest.
 
-The public organ systems (the apex ruling publishes 13; 376 of 439 ruled nodes are withheld):
+The public organ systems (the apex ruling publishes 13; 481 of 544 ruled nodes are withheld):
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)

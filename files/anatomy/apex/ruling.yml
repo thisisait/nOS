@@ -809,29 +809,27 @@ nodes:
   "article:workflows": withheld
   "doctrine:ssot/doctrine/foreign-properties.md#5.1": withheld
   "doctrine:ssot/doctrine/workflows.md#6": withheld
-  "reader:_geo_db": withheld
-  "reader:_ledger_open": withheld
   "reader:agent-capability": withheld
   "reader:agent-status": withheld
-  "reader:agent-token-status": withheld
-  "reader:anatomy-measure-margins": withheld
+  "effector:agent-token-status": withheld
+  "effector:anatomy-measure-margins": withheld
   "reader:app-version": withheld
-  "reader:atlas-refresh": withheld
+  "effector:atlas-refresh": withheld
   "reader:awaiting-operator": withheld
   "reader:brew-pin-status": withheld
   "reader:caddy-status": withheld
   "reader:cortex-drift": withheld
   "reader:cortex-status": withheld
-  "reader:current-state": withheld
-  "reader:workload-digest-record": withheld  # 2026-10-07: renamed from digest-record (workload-digest)
+  "effector:current-state": withheld
+  "effector:workload-digest-record": withheld  # 2026-10-07: was reader:digest-record; it writes, so a limb
   "reader:workload-digest-status": withheld  # 2026-10-07: renamed from digest-status
-  "reader:discovery-scan": withheld
+  "effector:discovery-scan": withheld
   "reader:doctrine-cite": withheld
   "reader:elsewhere-status": withheld
   "reader:estate-status": withheld
   "reader:face-wiring-report": withheld
-  "reader:geo-load": withheld
-  "reader:geo-project-sites": withheld
+  "effector:geo-load": withheld
+  "effector:geo-project-sites": withheld
   "reader:geo-status": withheld
   "reader:graph-communities": withheld
   "reader:graph-report": withheld
@@ -840,19 +838,16 @@ nodes:
   "reader:loader-vars-report": withheld
   "reader:loop-status": withheld
   "reader:managed-status": withheld
-  "reader:maps-style-vendor": withheld
-  "reader:nos_identity": withheld
-  "reader:nos_security": withheld
-  "reader:nos_work_uri": withheld
+  "effector:maps-style-vendor": withheld
   "reader:npm-ioc-scan": withheld
   "reader:openhuman-status": withheld
   "reader:permission-status": withheld
   "reader:plugin-wiring-report": withheld
-  "reader:profile-builder-build": withheld
-  "reader:raw-archive-probe": withheld
+  "effector:profile-builder-build": withheld
+  "effector:raw-archive-probe": withheld
   "reader:red-status": withheld
-  "reader:reload-stale-config": withheld
-  "reader:rem-dispose": withheld
+  "effector:reload-stale-config": withheld
+  "effector:rem-dispose": withheld
   "reader:rem-status": withheld
   "reader:roadmap-status": withheld
   "reader:router-status": withheld
@@ -864,14 +859,130 @@ nodes:
   # 2026-10-06 reader:tailscale-status (edge-tailscale-wiring): names this host's
   # LAN address and tailnet state. WITHHELD; the published set is unchanged.
   "reader:tailscale-status": withheld
-  "reader:task-types-render": withheld
+  "effector:task-types-render": withheld
   "reader:tissue-status": withheld
   "reader:tls-uptake": withheld
   "reader:undeclared-status": withheld
   "reader:usage-status": withheld
-  "reader:vendor-keap-contracts": withheld
+  "effector:vendor-keap-contracts": withheld
   "reader:view-contract-drift": withheld
   "reader:wing-status": withheld
+  # 2026-10-07 tools-index-by-body-word: gate-clean readers moved into
+  # tools/README.md §Readers. WITHHELD; the published set is unchanged.
+  "reader:agent-report": withheld
+  "reader:aggregator-dry-run": withheld
+  "reader:ares-dtt": withheld
+  "reader:e2e-plan": withheld
+  "reader:gdpr-records": withheld
+  "reader:keap-semantic-search": withheld
+  "reader:moderation-drain": withheld
+  "reader:nos-pane": withheld
+  "reader:nos-secret": withheld
+  "reader:pin-latest-scan": withheld
+  "reader:work-assignment": withheld
+  "reader:workflow-tree": withheld
+  # 2026-10-07 tools-index-by-body-word: effector:<stem> per §Limbs line
+  # (a tool that acts). WITHHELD; the published set is unchanged.
+  "effector:anatomy-graph-gen": withheld
+  "effector:apex-sign": withheld
+  "effector:body-plan-gen": withheld
+  "effector:ci-local": withheld
+  "effector:cnb-dtt": withheld
+  "effector:cortex-seed-fixtures": withheld
+  "effector:d12-annotate-plugins": withheld
+  "effector:deploy-from-ci": withheld
+  "effector:deploy-sync": withheld
+  "effector:derive-postings": withheld
+  "effector:devlog-compile": withheld
+  "effector:devlog-post": withheld
+  "effector:devlog-release": withheld
+  "effector:devlog-render": withheld
+  "effector:digest-import": withheld
+  "effector:digest-import-doli": withheld
+  "effector:digest-import-isdoc": withheld
+  "effector:digest-import-repos": withheld
+  "effector:digest-import-vision": withheld
+  "effector:digest-teardown": withheld
+  "effector:dtt-capture": withheld
+  "effector:dtt-table": withheld
+  "effector:e2e-auth-helper": withheld
+  "effector:espo-party-sync": withheld
+  "effector:fetch-authentik-bootstrap-token": withheld
+  "effector:forge-sync": withheld
+  "effector:gdpr-dpa-register": withheld
+  "effector:gen-invoice-images": withheld
+  "effector:genome-codegen": withheld
+  "effector:import-coolify-template": withheld
+  "effector:imprint-gen": withheld
+  "effector:invoice-verify": withheld
+  "effector:invoice-vision-intake": withheld
+  "effector:invoice-vision-pipeline": withheld
+  "effector:keap-apply-view": withheld
+  "effector:keap-branches-to-canonical": withheld
+  "effector:keap-fable-bundle": withheld
+  "effector:keap-fable-to-bundles": withheld
+  "effector:keap-recall": withheld
+  "effector:keap-recall-queries": withheld
+  "effector:keap-reid-rows": withheld
+  "effector:loop-diff": withheld
+  "effector:loop-graph-gen": withheld
+  "effector:loop-pr": withheld
+  "effector:loop-propose": withheld
+  "effector:loop-review": withheld
+  "effector:mcp-tables-server": withheld
+  "effector:migration-pr": withheld
+  "effector:n8n-pack": withheld
+  "effector:night-watch": withheld
+  "effector:nos": withheld
+  "effector:nos-cc": withheld
+  "effector:nos-first-login": withheld
+  "effector:nos-image-cache": withheld
+  "effector:nos-ops-harness": withheld
+  "effector:nos-os-update-arm": withheld
+  "effector:nos-stacks": withheld
+  "effector:nos-statusline": withheld
+  "effector:nos-upgrade-detached": withheld
+  "effector:nos-watch": withheld
+  "effector:offboard-book-owner": withheld
+  "effector:outline-roles": withheld
+  "effector:party-graph": withheld
+  "effector:post-blank": withheld
+  "effector:preconverge-snapshot": withheld
+  "effector:promote-public": withheld
+  "effector:recipe-pr": withheld
+  "effector:report-chain-synth-gen": withheld
+  "effector:roadmap-apply-columns": withheld
+  "effector:roadmap-apply-view": withheld
+  "effector:roadmap-extract": withheld
+  "effector:roadmap-seed": withheld
+  "effector:roadmap-update": withheld
+  "effector:roadmap-verify": withheld
+  "effector:routing-graph-gen": withheld
+  "effector:run-agent": withheld
+  "effector:run-journeys": withheld
+  "effector:run-librarian": withheld
+  "effector:run-phase5-ceremony": withheld
+  "effector:run-surveyor": withheld
+  "effector:run-upgrade-architect": withheld
+  "effector:scan-state-snapshot": withheld
+  "effector:sync-trunk-to-gitea": withheld
+  "effector:sync-trunk-to-gitlab": withheld
+  "effector:tofu-authentik-adopt": withheld
+  "effector:tofu-authentik-gen-registry": withheld
+  "effector:tofu-authentik-reconcile": withheld
+  "effector:wf-panel": withheld
+  "effector:wing-telemetry-smoke": withheld
+  "effector:woodpecker-token": withheld
+  "effector:worktree-lease": withheld
+  # 2026-10-07: citations now owned by effector files (whole-file owner).
+  # WITHHELD; the published set is unchanged.
+  "doctrine:ssot/doctrine/face-app-tiers.md#2": withheld
+  "doctrine:ssot/doctrine/layers.md#3": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#2.4": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#3.5": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#5.2": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#DECISION-6a": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#constraint-B": withheld
   # 2026-10-06 skill:cortex-query → skill:keap-recall (lexicon step 3: it
   # recalls from KEAP, not the cortex). Renamed in place, still WITHHELD.
   "skill:keap-recall": withheld

@@ -38,7 +38,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - **sense** — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Not: cell, limb.
   Counter-example: tools/genome-codegen.py (it writes the glossary; only its --check reads).
 - **limb** — A tool that acts. Not: sense, side. Mechanism: port / adapter (hexagonal architecture).
-  Counter-example: an agent tool grant whose every scope is .read (a sense).
+  Counter-example: tools/red-status.py, or an agent tool grant whose every scope is .read (each only reads: a sense).
 - **memory** — What nOS has learned, kept in KEAP; RAM stays plain English. Not: cortex, verdicts, stores.
   Counter-example: Wing's audit ledger (a record of what happened, not what nOS learned).
 - **verdicts** — The log of what each sense reported and what the operator judged. Not: memory.

@@ -11,13 +11,13 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
-    "sense": 78,
-    "limb": 8,
+    "sense": 70,
+    "limb": 114,
     "memory": 40,
-    "law": 45,
+    "law": 52,
     "reflex": 43,
     "internal": 67,
-    "edges": 389
+    "edges": 429
   },
   "nodes": {
     "agent:conductor": {
@@ -536,7 +536,15 @@
       "level": "law",
       "kind": "doctrine"
     },
+    "doctrine:ssot/doctrine/face-app-tiers.md#2": {
+      "level": "law",
+      "kind": "doctrine"
+    },
     "doctrine:ssot/doctrine/foreign-properties.md#5.1": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/layers.md#3": {
       "level": "law",
       "kind": "doctrine"
     },
@@ -544,7 +552,15 @@
       "level": "law",
       "kind": "doctrine"
     },
+    "doctrine:ssot/doctrine/loop-contract.md#2.4": {
+      "level": "law",
+      "kind": "doctrine"
+    },
     "doctrine:ssot/doctrine/loop-contract.md#3.4": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#3.5": {
       "level": "law",
       "kind": "doctrine"
     },
@@ -553,6 +569,10 @@
       "kind": "doctrine"
     },
     "doctrine:ssot/doctrine/loop-contract.md#5.1": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#5.2": {
       "level": "law",
       "kind": "doctrine"
     },
@@ -580,6 +600,10 @@
       "level": "law",
       "kind": "doctrine"
     },
+    "doctrine:ssot/doctrine/loop-contract.md#DECISION-6a": {
+      "level": "law",
+      "kind": "doctrine"
+    },
     "doctrine:ssot/doctrine/loop-contract.md#M2": {
       "level": "law",
       "kind": "doctrine"
@@ -596,9 +620,437 @@
       "level": "law",
       "kind": "doctrine"
     },
+    "doctrine:ssot/doctrine/loop-contract.md#constraint-B": {
+      "level": "law",
+      "kind": "doctrine"
+    },
     "doctrine:ssot/doctrine/workflows.md#6": {
       "level": "law",
       "kind": "doctrine"
+    },
+    "effector:agent-token-status": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:anatomy-graph-gen": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:anatomy-measure-margins": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:apex-sign": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:atlas-refresh": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:body-plan-gen": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:ci-local": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:cnb-dtt": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:cortex-seed-fixtures": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:current-state": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:d12-annotate-plugins": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:deploy-from-ci": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:deploy-sync": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:derive-postings": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:devlog-compile": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:devlog-post": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:devlog-release": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:devlog-render": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:digest-import": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:digest-import-doli": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:digest-import-isdoc": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:digest-import-repos": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:digest-import-vision": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:digest-teardown": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:discovery-scan": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:dtt-capture": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:dtt-table": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:e2e-auth-helper": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:espo-party-sync": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:fetch-authentik-bootstrap-token": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:forge-sync": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:gdpr-dpa-register": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:gen-invoice-images": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:genome-codegen": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:geo-load": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:geo-project-sites": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:import-coolify-template": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:imprint-gen": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:invoice-verify": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:invoice-vision-intake": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:invoice-vision-pipeline": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:keap-apply-view": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:keap-branches-to-canonical": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:keap-fable-bundle": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:keap-fable-to-bundles": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:keap-recall": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:keap-recall-queries": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:keap-reid-rows": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:loop-diff": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:loop-graph-gen": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:loop-pr": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:loop-propose": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:loop-review": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:maps-style-vendor": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:mcp-tables-server": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:migration-pr": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:n8n-pack": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:night-watch": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:nos": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:nos-cc": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:nos-first-login": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:nos-image-cache": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:nos-ops-harness": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:nos-os-update-arm": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:nos-stacks": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:nos-statusline": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:nos-upgrade-detached": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:nos-watch": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:offboard-book-owner": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:outline-roles": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:party-graph": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:post-blank": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:preconverge-snapshot": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:profile-builder-build": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:promote-public": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:raw-archive-probe": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:recipe-pr": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:reload-stale-config": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:rem-dispose": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:report-chain-synth-gen": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:roadmap-apply-columns": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:roadmap-apply-view": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:roadmap-extract": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:roadmap-seed": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:roadmap-update": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:roadmap-verify": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:routing-graph-gen": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:run-agent": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:run-journeys": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:run-librarian": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:run-phase5-ceremony": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:run-surveyor": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:run-upgrade-architect": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:scan-state-snapshot": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:sync-trunk-to-gitea": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:sync-trunk-to-gitlab": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:task-types-render": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:tofu-authentik-adopt": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:tofu-authentik-gen-registry": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:tofu-authentik-reconcile": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:vendor-keap-contracts": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:wf-panel": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:wing-telemetry-smoke": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:woodpecker-token": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:workload-digest-record": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:worktree-lease": {
+      "level": "limb",
+      "kind": "effector"
     },
     "faceapp:anatomy": {
       "level": "organ",
@@ -896,15 +1348,11 @@
       "level": "reflex",
       "kind": "pulse"
     },
-    "reader:_geo_db": {
-      "level": "sense",
-      "kind": "reader"
-    },
-    "reader:_ledger_open": {
-      "level": "sense",
-      "kind": "reader"
-    },
     "reader:agent-capability": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:agent-report": {
       "level": "sense",
       "kind": "reader"
     },
@@ -912,11 +1360,7 @@
       "level": "sense",
       "kind": "reader"
     },
-    "reader:agent-token-status": {
-      "level": "sense",
-      "kind": "reader"
-    },
-    "reader:anatomy-measure-margins": {
+    "reader:aggregator-dry-run": {
       "level": "sense",
       "kind": "reader"
     },
@@ -924,7 +1368,7 @@
       "level": "sense",
       "kind": "reader"
     },
-    "reader:atlas-refresh": {
+    "reader:ares-dtt": {
       "level": "sense",
       "kind": "reader"
     },
@@ -952,15 +1396,11 @@
       "level": "sense",
       "kind": "reader"
     },
-    "reader:current-state": {
-      "level": "sense",
-      "kind": "reader"
-    },
-    "reader:discovery-scan": {
-      "level": "sense",
-      "kind": "reader"
-    },
     "reader:doctrine-cite": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:e2e-plan": {
       "level": "sense",
       "kind": "reader"
     },
@@ -976,11 +1416,7 @@
       "level": "sense",
       "kind": "reader"
     },
-    "reader:geo-load": {
-      "level": "sense",
-      "kind": "reader"
-    },
-    "reader:geo-project-sites": {
+    "reader:gdpr-records": {
       "level": "sense",
       "kind": "reader"
     },
@@ -1000,6 +1436,10 @@
       "level": "sense",
       "kind": "reader"
     },
+    "reader:keap-semantic-search": {
+      "level": "sense",
+      "kind": "reader"
+    },
     "reader:loader-vars-report": {
       "level": "sense",
       "kind": "reader"
@@ -1012,19 +1452,15 @@
       "level": "sense",
       "kind": "reader"
     },
-    "reader:maps-style-vendor": {
+    "reader:moderation-drain": {
       "level": "sense",
       "kind": "reader"
     },
-    "reader:nos_identity": {
+    "reader:nos-pane": {
       "level": "sense",
       "kind": "reader"
     },
-    "reader:nos_security": {
-      "level": "sense",
-      "kind": "reader"
-    },
-    "reader:nos_work_uri": {
+    "reader:nos-secret": {
       "level": "sense",
       "kind": "reader"
     },
@@ -1040,27 +1476,15 @@
       "level": "sense",
       "kind": "reader"
     },
+    "reader:pin-latest-scan": {
+      "level": "sense",
+      "kind": "reader"
+    },
     "reader:plugin-wiring-report": {
       "level": "sense",
       "kind": "reader"
     },
-    "reader:profile-builder-build": {
-      "level": "sense",
-      "kind": "reader"
-    },
-    "reader:raw-archive-probe": {
-      "level": "sense",
-      "kind": "reader"
-    },
     "reader:red-status": {
-      "level": "sense",
-      "kind": "reader"
-    },
-    "reader:reload-stale-config": {
-      "level": "sense",
-      "kind": "reader"
-    },
-    "reader:rem-dispose": {
       "level": "sense",
       "kind": "reader"
     },
@@ -1100,10 +1524,6 @@
       "level": "sense",
       "kind": "reader"
     },
-    "reader:task-types-render": {
-      "level": "sense",
-      "kind": "reader"
-    },
     "reader:tissue-status": {
       "level": "sense",
       "kind": "reader"
@@ -1120,10 +1540,6 @@
       "level": "sense",
       "kind": "reader"
     },
-    "reader:vendor-keap-contracts": {
-      "level": "sense",
-      "kind": "reader"
-    },
     "reader:view-contract-drift": {
       "level": "sense",
       "kind": "reader"
@@ -1132,7 +1548,11 @@
       "level": "sense",
       "kind": "reader"
     },
-    "reader:workload-digest-record": {
+    "reader:work-assignment": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:workflow-tree": {
       "level": "sense",
       "kind": "reader"
     },
@@ -2209,8 +2629,18 @@
       "kind": "data"
     },
     {
+      "from": "doctrine:ssot/doctrine/face-app-tiers.md#2",
+      "to": "article:face-app-tiers",
+      "kind": "part_of"
+    },
+    {
       "from": "doctrine:ssot/doctrine/foreign-properties.md#5.1",
       "to": "article:foreign-properties",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/layers.md#3",
+      "to": "article:layers",
       "kind": "part_of"
     },
     {
@@ -2219,7 +2649,17 @@
       "kind": "part_of"
     },
     {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#2.4",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
       "from": "doctrine:ssot/doctrine/loop-contract.md#3.4",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#3.5",
       "to": "article:loop-contract",
       "kind": "part_of"
     },
@@ -2230,6 +2670,11 @@
     },
     {
       "from": "doctrine:ssot/doctrine/loop-contract.md#5.1",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#5.2",
       "to": "article:loop-contract",
       "kind": "part_of"
     },
@@ -2264,6 +2709,11 @@
       "kind": "part_of"
     },
     {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#DECISION-6a",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
       "from": "doctrine:ssot/doctrine/loop-contract.md#M2",
       "to": "article:loop-contract",
       "kind": "part_of"
@@ -2284,9 +2734,94 @@
       "kind": "part_of"
     },
     {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#constraint-B",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
       "from": "doctrine:ssot/doctrine/workflows.md#6",
       "to": "article:workflows",
       "kind": "part_of"
+    },
+    {
+      "from": "effector:anatomy-graph-gen",
+      "to": "doctrine:ssot/doctrine/layers.md#3",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:anatomy-graph-gen",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:discovery-scan",
+      "to": "doctrine:ssot/doctrine/workflows.md#6",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:genome-codegen",
+      "to": "doctrine:ssot/doctrine/face-app-tiers.md#2",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:loop-graph-gen",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#constraint-A",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:loop-pr",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#3.4",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:loop-pr",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#3.5",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:loop-pr",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5a",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:loop-pr",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-6a",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:loop-pr",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#constraint-B",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:loop-propose",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#10",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:loop-propose",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#3.4",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:loop-propose",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5.2",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:loop-propose",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-6a",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:loop-review",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#2.4",
+      "kind": "governed_by"
+    },
+    {
+      "from": "effector:loop-review",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#3.4",
+      "kind": "governed_by"
     },
     {
       "from": "faceapp:anatomy-widget",
@@ -2375,12 +2910,22 @@
     },
     {
       "from": "pulse:conductor:scan-state-record",
+      "to": "effector:scan-state-snapshot",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:conductor:scan-state-record",
       "to": "repo:scan-data",
       "kind": "data"
     },
     {
       "from": "pulse:conductor:self-test-001",
       "to": "agent:conductor",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:conductor:self-test-001",
+      "to": "effector:run-agent",
       "kind": "trigger"
     },
     {
@@ -2465,6 +3010,11 @@
     },
     {
       "from": "pulse:crm-hydrate:hydrate-parties",
+      "to": "effector:digest-import-doli",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:crm-hydrate:hydrate-parties",
       "to": "table:party",
       "kind": "data"
     },
@@ -2480,7 +3030,7 @@
     },
     {
       "from": "pulse:discovery:contradiction-scan",
-      "to": "reader:discovery-scan",
+      "to": "effector:discovery-scan",
       "kind": "trigger"
     },
     {
@@ -2490,17 +3040,32 @@
     },
     {
       "from": "pulse:geo:geo-load",
-      "to": "reader:geo-load",
+      "to": "effector:geo-load",
       "kind": "trigger"
     },
     {
       "from": "pulse:geo:project-sites",
-      "to": "reader:geo-project-sites",
+      "to": "effector:geo-project-sites",
       "kind": "trigger"
     },
     {
       "from": "pulse:geolibre:atlas-refresh",
-      "to": "reader:atlas-refresh",
+      "to": "effector:atlas-refresh",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:gitea:trunk-sync",
+      "to": "effector:sync-trunk-to-gitea",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:gitlab:trunk-sync",
+      "to": "effector:sync-trunk-to-gitlab",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:invoice-vision:absorb-approved",
+      "to": "effector:digest-import-vision",
       "kind": "trigger"
     },
     {
@@ -2522,6 +3087,11 @@
       "from": "pulse:invoice-vision:absorb-approved",
       "to": "tissue:backoffice",
       "kind": "part_of"
+    },
+    {
+      "from": "pulse:invoice-vision:intake-sweep",
+      "to": "effector:invoice-vision-intake",
+      "kind": "trigger"
     },
     {
       "from": "pulse:invoice-vision:intake-sweep",
@@ -2585,6 +3155,11 @@
     },
     {
       "from": "pulse:librarian:brief-taxonomy",
+      "to": "effector:run-agent",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:librarian:brief-taxonomy",
       "to": "pulse:librarian:describe-taxonomy",
       "kind": "mutex"
     },
@@ -2610,6 +3185,11 @@
     },
     {
       "from": "pulse:librarian:describe-taxonomy",
+      "to": "effector:run-agent",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:librarian:describe-taxonomy",
       "to": "pulse:librarian:judge-lint-queue",
       "kind": "mutex"
     },
@@ -2630,6 +3210,11 @@
     },
     {
       "from": "pulse:librarian:judge-lint-queue",
+      "to": "effector:run-agent",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:librarian:judge-lint-queue",
       "to": "pulse:surveyor:surface-survey",
       "kind": "mutex"
     },
@@ -2639,9 +3224,29 @@
       "kind": "mutex"
     },
     {
+      "from": "pulse:loop:drive",
+      "to": "effector:loop-pr",
+      "kind": "trigger"
+    },
+    {
       "from": "pulse:loop:propose",
       "to": "doctrine:ssot/doctrine/loop-contract.md#10",
       "kind": "governed_by"
+    },
+    {
+      "from": "pulse:loop:propose",
+      "to": "effector:loop-propose",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:loop:review",
+      "to": "effector:loop-review",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:n8n:exec-watch",
+      "to": "effector:n8n-pack",
+      "kind": "trigger"
     },
     {
       "from": "pulse:npm-supply-chain:daily-ioc-scan",
@@ -2655,6 +3260,11 @@
     },
     {
       "from": "pulse:surveyor:surface-survey",
+      "to": "effector:run-agent",
+      "kind": "trigger"
+    },
+    {
+      "from": "pulse:surveyor:surface-survey",
       "to": "pulse:upgrade-architect:recipe-author",
       "kind": "mutex"
     },
@@ -2664,9 +3274,9 @@
       "kind": "trigger"
     },
     {
-      "from": "reader:discovery-scan",
-      "to": "doctrine:ssot/doctrine/workflows.md#6",
-      "kind": "governed_by"
+      "from": "pulse:upgrade-architect:recipe-author",
+      "to": "effector:run-agent",
+      "kind": "trigger"
     },
     {
       "from": "reader:loop-status",
@@ -3525,12 +4135,22 @@
     },
     {
       "from": "tasktype:security-remediation",
-      "to": "reader:discovery-scan",
+      "to": "effector:discovery-scan",
       "kind": "allows"
     },
     {
       "from": "tasktype:security-remediation",
       "to": "reader:rem-status",
+      "kind": "allows"
+    },
+    {
+      "from": "tasktype:seed-edit",
+      "to": "effector:roadmap-seed",
+      "kind": "allows"
+    },
+    {
+      "from": "tasktype:seed-edit",
+      "to": "effector:roadmap-update",
       "kind": "allows"
     },
     {
