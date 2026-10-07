@@ -116,8 +116,9 @@ def test_cancel_derives_identity_from_header_not_body():
     """cancelled_by is the forward-auth identity, never a POST field —
     anti-spoof parity with UpgradesPresenter."""
     body = _action_body(COEX_PRESENTER.read_text(), "actionCancel") or ""
-    assert "X-Authentik-Username" in body, (
-        "actionCancel must derive cancelled_by from X-Authentik-Username, not the body"
+    assert "requireActor()" in body, (
+        "actionCancel must derive cancelled_by from the forward-auth identity "
+        "(BasePresenter::requireActor), not the body"
     )
 
 

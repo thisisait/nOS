@@ -188,7 +188,7 @@ def test_users_presenter_actor_id_from_forward_auth_headers():
     that test_no_body_supplied_attribution_anti_pattern enforces on the
     API presenters."""
     src = (WING / "app/Presenters/UsersPresenter.php").read_text()
-    assert "X-Authentik-Username" in src
+    assert "requireActor()" in src  # BasePresenter's one reader of the forward-auth person
     assert "getActorId" in src
     # The presenter must not read $body['actor_id'] / $body['resolved_by'] / etc.
     for forbidden in ("$body['actor_id']", "$body['invited_by']", "$body['resolved_by']"):
