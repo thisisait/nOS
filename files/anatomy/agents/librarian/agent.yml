@@ -3,7 +3,7 @@ version: 1
 description: |
   nOS librarian — knowledge / RAG agent. Surfaces "have we seen this
   before?" context from prior agent runs + remediation history, and
-  queries the KEAP cortex (mcp-keap) for semantic recall over the
+  queries KEAP (mcp-keap) for semantic recall over the
   curated knowledge taxonomy, captures and notes. Grows the taxonomy
   bottom-up: when no anchor is specific enough it proposes a new node
   via /agent/v1/taxonomy/propose (Track T zone governance — the
