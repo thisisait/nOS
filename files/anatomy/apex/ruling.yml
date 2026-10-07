@@ -260,7 +260,7 @@ organ_systems:
   forge:     { title: "The Forge",     tells: "Software made, tested and landed at home.",    side: left,  order: 2 }
   backoffice: { title: "The Backoffice", tells: "CRM, books and a customer desk, at home.", side: left,  order: 3 }
   commons:   { title: "The Commons",   tells: "Daily work and daily life, shared.",           side: left,  order: 4 }
-  senses:    { title: "The Senses",    tells: "The system watches itself.",                   side: right, order: 1 }
+  watch:     { title: "The Watch",     tells: "The system watches itself.",                   side: right, order: 1 }
   wits:      { title: "The Wits",      tells: "Autonomous minds with bounded hands.",         side: right, order: 2 }
   reflexes:  { title: "The Reflexes",  tells: "Events become actions, on schedule.",          side: right, order: 3 }
   voice:     { title: "The Voice",     tells: "Mail, calls and signals, spoken from home.",   side: right, order: 4 }
@@ -330,14 +330,14 @@ nodes:
   "service:qgis_server":   { publish: commons, speaks: "maps drawn from the house's own data" }
 
   # --- the right side --------------------------------------------------------
-  "service:grafana":       { publish: senses, speaks: "vital signs, drawn where anyone can read them" }
-  "service:prometheus":    { publish: senses, speaks: "numbers sampled from every organ, on a heartbeat" }
-  "service:loki":          { publish: senses, speaks: "every log line, kept and searchable" }
-  "service:tempo":         { publish: senses, speaks: "one request's path, traced end to end" }
-  "service:alloy":         { publish: senses, speaks: "the courier that carries signals to the watchers" }
-  "service:influxdb":      { publish: senses, speaks: "measurements kept over time, for the trends" }
-  "service:uptime_kuma":   { publish: senses, speaks: "a bell that rings when something goes quiet" }
-  "service:watchtower":    { publish: senses, speaks: "an eye on the parts that grow stale" }
+  "service:grafana":       { publish: watch, speaks: "vital signs, drawn where anyone can read them" }
+  "service:prometheus":    { publish: watch, speaks: "numbers sampled from every organ, on a heartbeat" }
+  "service:loki":          { publish: watch, speaks: "every log line, kept and searchable" }
+  "service:tempo":         { publish: watch, speaks: "one request's path, traced end to end" }
+  "service:alloy":         { publish: watch, speaks: "the courier that carries signals to the watchers" }
+  "service:influxdb":      { publish: watch, speaks: "measurements kept over time, for the trends" }
+  "service:uptime_kuma":   { publish: watch, speaks: "a bell that rings when something goes quiet" }
+  "service:watchtower":    { publish: watch, speaks: "an eye on the parts that grow stale" }
 
   "service:openclaw":      { publish: wits, speaks: "an autonomous hand that does the night work" }
   "service:hermes":        { publish: wits, speaks: "a messenger mind that meets you on any channel" }
@@ -1020,7 +1020,8 @@ nodes:
   # 2026-10-06: was organ_system:memory; the group renamed to stores (lexicon step 5).
   "organ_system:stores": withheld
   "organ_system:reflexes": withheld
-  "organ_system:senses": withheld
+  # 2026-10-07: was organ_system:senses; the group renamed to watch (ruling I-13).
+  "organ_system:watch": withheld
   "organ_system:spine": withheld
   "organ_system:vault": withheld
   "organ_system:voice": withheld

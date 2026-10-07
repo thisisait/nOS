@@ -305,9 +305,13 @@ words:
         reason: a gate command that reads a change and returns a verdict; it does not act
       - graph_kind: weakness
         reason: a Bone reader whose findings become loop proposals
-      - yaml_key: "files/anatomy/apex/ruling.yml#organ_systems.senses"
     not: [cell, limb]
     counter_example: "tools/genome-codegen.py (it writes the glossary; only its --check reads)"
+    retired:
+      - sense: "The Senses, the apex group of observability organs"
+        replacement: The Watch
+        surfaces:
+          - yaml_key: "files/anatomy/apex/ruling.yml#organ_systems.senses"
 
   limb:
     level: cross
