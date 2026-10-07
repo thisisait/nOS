@@ -255,10 +255,10 @@ module_utils = files/anatomy/module_utils
 **Operator-facing docs that STAY at top-level `/docs/`:**
 - `roadmap-2026q2.md`
 - `active-work.md`
-- `tier2-app-onboarding.md`
+- `manifest-app-onboarding.md`
 - `coolify-import.md`
 - `traefik-primary-proxy.md`
-- `tier2-wet-test-checklist.md`
+- `manifest-app-wet-test-checklist.md`
 - `bones-and-wings-refactor.md` (this file)
 - `llm/security/pentest-task.md` (operator authored, agent-consumed)
 - `wet-test-automation.md` (Track P seed)

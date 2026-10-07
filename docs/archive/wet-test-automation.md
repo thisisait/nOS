@@ -3,7 +3,7 @@
 > **Status:** scaffolding only (this batch). Full implementation post-H.
 >
 > Operator-driven motivation (2026-04-29): walking
-> [`docs/tier2-wet-test-checklist.md`](../tier2-wet-test-checklist.md) by
+> [`docs/manifest-app-wet-test-checklist.md`](../manifest-app-wet-test-checklist.md) by
 > hand after every blank is necessary today but won't scale. Once the
 > nOS catalog grows past 5-10 Tier-2 apps, we need a Playwright suite +
 > Claude Cowork session that drives the 12 checklist sections
@@ -48,7 +48,7 @@ The split:
 | Blank run (`ansible-playbook -e blank=true`) | yes | no — needs `-K` |
 | Run Playwright suite | optional | yes |
 | Parse JSON results | optional | yes |
-| Open `docs/tier2-wet-test-checklist.md` Section N for failure context | optional | yes — reads file, cross-references |
+| Open `docs/manifest-app-wet-test-checklist.md` Section N for failure context | optional | yes — reads file, cross-references |
 | Diagnose failure (manifest typo, healthcheck timing, etc.) | optional | yes |
 | Propose + apply fix | optional | yes — small fixes only; large changes file as Cowork question |
 | Commit (`fix(apps): ...`) | optional | yes |
@@ -62,12 +62,12 @@ The split:
 ```
 nos/
   tests/e2e/
-    tier2-wet-test.spec.ts        ← skeleton this batch; full impl post-H
+    manifest-app-wet-test.spec.ts        ← skeleton this batch; full impl post-H
     playwright.config.ts          ← (post-H) Headless Chromium + mkcert + reporter=json
     fixtures/                     ← (post-H) seed-data PNGs / signature samples for documenso
   docs/
     wet-test-automation.md        ← this file (architecture)
-    tier2-wet-test-checklist.md   ← human-readable checklist (single source of truth)
+    manifest-app-wet-test-checklist.md   ← human-readable checklist (single source of truth)
 ```
 
 The Playwright spec is the **mechanical** mirror of the checklist —
@@ -92,7 +92,7 @@ Section 1, …, Section 12) are stable.
 └─────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────┐
-│ Cowork session reads docs/tier2-wet-test-checklist.md   │
+│ Cowork session reads docs/manifest-app-wet-test-checklist.md   │
 │ Section 7 to understand expected JSON shape, then       │
 │ tail ~/.nos/events/playbook.jsonl and confirms event    │
 │ has app_id=documenso but NEXT_PRIVATE_DATABASE_URL was  │
@@ -118,7 +118,7 @@ post-hooks waits for operator review.
 
 ## What's in this batch (scaffolding, not implementation)
 
-- `tests/e2e/tier2-wet-test.spec.ts` — Playwright skeleton mapping
+- `tests/e2e/manifest-app-wet-test.spec.ts` — Playwright skeleton mapping
   sections 2/3/5/8/11 to `describe`/`test` blocks. Stubs only —
   every test has an `expect.fail("not yet implemented")` placeholder.
 - `playwright.config.ts` is NOT included in this batch (post-H —
@@ -128,7 +128,7 @@ post-hooks waits for operator review.
 
 The spec compiles (well, parses — TypeScript syntax) but won't run
 green until Track P proper. Useful in this batch as a placeholder so
-new Cowork sessions can `cat tests/e2e/tier2-wet-test.spec.ts` and
+new Cowork sessions can `cat tests/e2e/manifest-app-wet-test.spec.ts` and
 see the shape of what's coming.
 
 ---
@@ -144,7 +144,7 @@ NOS_HOST=dev.local \
 ```
 
 Cowork session reads `tests/e2e/results.json`, cross-references
-`docs/tier2-wet-test-checklist.md` Section IDs against the
+`docs/manifest-app-wet-test-checklist.md` Section IDs against the
 `title` / `parent` fields in the JSON, and proceeds.
 
 Suggested CI integration (post-H): `workflow_dispatch` only — running
@@ -168,7 +168,7 @@ Post-Track-E batch the scaffolding got two real layers:
   the Cowork dispatch prompt; ready to paste into a Cowork session.
 
 What's still scaffold (= Track P proper, post-H): the Playwright
-bodies in `tests/e2e/tier2-wet-test.spec.ts` (sections 4/11). All
+bodies in `tests/e2e/manifest-app-wet-test.spec.ts` (sections 4/11). All
 other sections have working automation today.
 
 ---

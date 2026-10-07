@@ -4799,9 +4799,9 @@
     "skill:nos-manifest-app": {
       "kind": "skill",
       "source": "files/anatomy/skills/nos-manifest-app/SKILL.md",
-      "title": "Author a Tier-2 nOS app as apps/<name>.yml — the manifest the apps_runner deploys. Covers the GDPR Article 30 block the parser refuses to deploy without, magic tokens, and the smoke-parse that must pass before a converge.",
+      "title": "Author a manifest app as apps/<name>.yml — the long-tail nOS app the apps_runner deploys, no role. Covers the GDPR Article 30 block the parser refuses to deploy without, magic tokens, and the smoke-parse that must pass before a converge.",
       "anchor": "02.02.09",
-      "description": "Skill 'nos-manifest-app' (files/anatomy/skills/nos-manifest-app/SKILL.md): Author a Tier-2 nOS app as apps/<name>.yml — the manifest the apps_runner deploys. Covers the GDPR Article 30 block the parser refuses to deploy without, magic tokens, and the smoke-parse that must pass before a converge."
+      "description": "Skill 'nos-manifest-app' (files/anatomy/skills/nos-manifest-app/SKILL.md): Author a manifest app as apps/<name>.yml — the long-tail nOS app the apps_runner deploys, no role. Covers the GDPR Article 30 block the parser refuses to deploy without, magic tokens, and the smoke-parse that must pass before a converge."
     },
     "skill:propose": {
       "kind": "skill",
@@ -7435,7 +7435,7 @@
       "from": "effector:loop-pr",
       "to": "doctrine:ssot/doctrine/loop-contract.md#5a",
       "kind": "governed_by",
-      "via": "cited at tools/loop-pr.py:570",
+      "via": "cited at tools/loop-pr.py:572",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7444,7 +7444,7 @@
       "from": "effector:loop-pr",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-6a",
       "kind": "governed_by",
-      "via": "cited at tools/loop-pr.py:555",
+      "via": "cited at tools/loop-pr.py:557",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"

@@ -1,6 +1,6 @@
 """Tier-2 wet-test — non-browser sections (6, 7, 9) of the checklist.
 
-Mirrors `docs/tier2-wet-test-checklist.md` for the surfaces that are
+Mirrors `docs/manifest-app-wet-test-checklist.md` for the surfaces that are
 deterministic and not browser-driven:
 
 - Section 6 — GDPR Article 30 rows in `~/wing/wing.db`
@@ -8,7 +8,7 @@ deterministic and not browser-driven:
 - Section 9 — Smoke catalog runtime `~/.nos/smoke-catalog.runtime.yml`
 
 Sections 2/3/4/5/8/11 are Playwright surfaces — see
-`tests/e2e/tier2-wet-test.spec.ts`. Section 10 is a CLI invocation
+`tests/e2e/manifest-app-wet-test.spec.ts`. Section 10 is a CLI invocation
 (`tools/nos-smoke.py`) — Cowork runs directly.
 
 These tests SKIP if the artifact isn't present (fresh worktree, pre-
@@ -178,7 +178,7 @@ class TestSection7_BoneEvents:
         if not events:
             pytest.skip("no app.deployed events")
         ev = events[-1]
-        # Required fields per docs/tier2-wet-test-checklist.md §7
+        # Required fields per docs/manifest-app-wet-test-checklist.md §7
         for field in (
             "ts",
             "run_id",

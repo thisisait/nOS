@@ -1,10 +1,10 @@
-# Tier-2 wet-test checklist
+# Manifest-app wet-test checklist
 
-> Operator runbook for verifying Tier-2 apps deploy end-to-end:
+> Operator runbook for verifying manifest apps deploy end-to-end:
 > healthy containers → routed by Traefik → guarded by Authentik →
 > known to Wing /hub → GDPR rows recorded → Bone events fired →
 > Kuma probing → smoke catalog covering. Run after every blank that
-> touches a Tier-2 manifest. Re-runnable forever — copy-paste, no
+> touches a app manifest. Re-runnable forever — copy-paste, no
 > AI in the loop for routine verification.
 
 > **Multi-pilot mode (default).** All three pilots
@@ -67,7 +67,7 @@ grep -B5 -A2 'fatal:' ~/.nos/ansible.log | tail -40
 ```
 
 **Bonus**: the last few lines of the recap should include
-`[Apps] Inline smoke summary` showing Tier-2 probe results — added in
+`[Apps] Inline smoke summary` showing manifest-app probe results — added in
 Phase 2 of this batch so failures surface immediately, not just at the
 global post-smoke step.
 
@@ -248,18 +248,18 @@ entries (`app_twofauth`, `app_roundcube`, `app_documenso`), each with:
   url: "https://<slug>.apps.dev.local/"
   expect: [200, 301, 302, 308, 401, 502]
   tier: 2
-  note: "Tier-2 app onboarded via apps_runner"
+  note: "manifest app onboarded via apps_runner"
 ```
 
 ---
 
-## 10 · Smoke probe — three Tier-2 rows green
+## 10 · Smoke probe — three manifest-app rows green
 
 ```bash
 python3 tools/nos-smoke.py --tier 2
 ```
 
-Expected: all three Tier-2 rows green (`ok: true`). Common transient is
+Expected: all three manifest-app rows green (`ok: true`). Common transient is
 `502` immediately after compose-up (Traefik upstream still passing first
 healthcheck) — already in the accepted-codes list, won't fail the row.
 
@@ -328,7 +328,7 @@ the fix-and-recover loop is much cheaper than a full re-blank.
 
 6. Re-run sections 3-11 for the recovered pilot only.
 
-7. If the fix needed updates to a Tier-1 surface (e.g. Authentik blueprint
+7. If the fix needed updates to a role-service surface (e.g. Authentik blueprint
    change, Wing systems schema), re-run with broader tags:
    ```bash
    ansible-playbook main.yml -K --tags apps,authentik,wing,observability
@@ -338,7 +338,7 @@ the fix-and-recover loop is much cheaper than a full re-blank.
 
 ## All 12 sections green for all three pilots = Track E DONE.
 
-Commit: `feat(apps): tier-2 wet test verified — twofauth + roundcube + documenso live`
+Commit: `feat(apps): manifest-app wet test verified — twofauth + roundcube + documenso live`
 Update [`docs/active-work.md`](active-work.md) — flip pointer to Track F (D10).
 
 If a new pilot needs onboarding later (post-Track-F), use the Coolify

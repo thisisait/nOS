@@ -31,7 +31,7 @@ auto-derives one router + one service per `state/manifest.yml` entry whose
 
 For Tier-2 apps (`apps/*.yml`) the runner emits Traefik labels via the
 Docker provider. See `docs/playbook-event-hooks.md` and the upcoming
-`docs/tier2-app-onboarding.md`.
+`docs/manifest-app-onboarding.md`.
 
 ## Don't add new vhosts here
 

@@ -21,7 +21,7 @@
 # OIDC docs: https://docs.espocrm.com/administration/oidc/
 #
 # ── DB: dedicated embedded MariaDB, magic tokens only ───────────────────────
-# Tier-2 manifests get NO DB-prep post-hook (docs/tier2-app-onboarding.md:
+# Tier-2 manifests get NO DB-prep post-hook (docs/manifest-app-onboarding.md:
 # "no bespoke post-start API calls... no DB-prep tasks"), so reusing the
 # shared infra MariaDB would need either a bespoke role (out of scope — this
 # is a manifest app on purpose) or Jinja inside the compose: block, which is

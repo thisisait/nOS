@@ -1,5 +1,5 @@
 /**
- * tests/e2e/tier2-wet-test.spec.ts
+ * tests/e2e/manifest-app-wet-test.spec.ts
  *
  * Playwright browser tests — nOS services with Authentik SSO login.
  *

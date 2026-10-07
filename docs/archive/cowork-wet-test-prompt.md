@@ -1,7 +1,7 @@
 # Cowork dispatch — post-blank wet-test loop
 
 > **Status:** ready for Track P proper. The Playwright bodies are still
-> stubs (`tests/e2e/tier2-wet-test.spec.ts`), but the Python companion
+> stubs (`tests/e2e/manifest-app-wet-test.spec.ts`), but the Python companion
 > (`tests/wet/`) and `tools/post-blank.sh` are functional today. A
 > Cowork session can drive sections 6/7/9 + the Tier-2 smoke probe
 > autonomously right now.
@@ -84,7 +84,7 @@ Decide between **small fix** (you commit) and **judgment-required**
 ```
 fix(apps): <what> — <why> (post-blank wet-test)
 
-Detected by tools/post-blank.sh; fails docs/tier2-wet-test-checklist.md
+Detected by tools/post-blank.sh; fails docs/manifest-app-wet-test-checklist.md
 section <N>. Recipe: <which row from the table above>.
 ```
 
@@ -105,7 +105,7 @@ When you escalate, post to the operator queue with:
 [wet-test ESCALATION]
 
 Failure: <test name or smoke ID>
-Section: docs/tier2-wet-test-checklist.md §<N>
+Section: docs/manifest-app-wet-test-checklist.md §<N>
 Diagnostic so far:
   <commands you ran + their output, trimmed to ~20 lines>
 Suspected root cause:
@@ -161,7 +161,7 @@ If you've never run this loop before, read in this order:
 
 1. **`docs/post-blank.md`** — what the pipeline does, env knobs, triage
    table. Your operating manual.
-2. **`docs/tier2-wet-test-checklist.md`** — the 12 canonical sections;
+2. **`docs/manifest-app-wet-test-checklist.md`** — the 12 canonical sections;
    each test/probe in `tools/post-blank.sh` maps to a section ID here.
 3. **`docs/wet-test-automation.md`** — Track P architecture; explains
    why Cowork-driven (vs. CI) and where the human-judgment line sits.

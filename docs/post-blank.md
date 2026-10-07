@@ -9,7 +9,7 @@
 
 This is the **single canonical sequence** to run after every blank.
 Replaces the ad-hoc "ok now what" mental checklist that used to live
-across `docs/tier2-wet-test-checklist.md`, `tools/nos-smoke.py`,
+across `docs/manifest-app-wet-test-checklist.md`, `tools/nos-smoke.py`,
 `tools/wing-telemetry-smoke.py`, and tribal memory.
 
 ---
@@ -151,7 +151,7 @@ The Cowork dispatch prompt lives at
 
 ## Related docs
 
-- [`tier2-wet-test-checklist.md`](tier2-wet-test-checklist.md) — the
+- [`manifest-app-wet-test-checklist.md`](manifest-app-wet-test-checklist.md) — the
   human-readable canonical checklist (12 sections). `post-blank.sh`
   automates sections 6/7/9 (Python) and parts of 2/3/5/8 via smoke
   probes; sections 4/11 (Authentik admin UI, browser flow) stay manual

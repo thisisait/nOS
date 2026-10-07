@@ -1,6 +1,6 @@
 ---
 name: nos-manifest-app
-description: Author a Tier-2 nOS app as apps/<name>.yml — the manifest the apps_runner deploys. Covers the GDPR Article 30 block the parser refuses to deploy without, magic tokens, and the smoke-parse that must pass before a converge.
+description: Author a manifest app as apps/<name>.yml — the long-tail nOS app the apps_runner deploys, no role. Covers the GDPR Article 30 block the parser refuses to deploy without, magic tokens, and the smoke-parse that must pass before a converge.
 version: 1.0.0
 license: MIT
 platforms: [macos, linux]
@@ -100,5 +100,5 @@ that had failed to come up — absence read as success, green for weeks.
 - `apps/_template.yml` — the shape, with every field commented.
 - `files/anatomy/module_utils/nos_app_parser` — **the enforcement.** When this
   document and that parser disagree, the parser is right and this file is a bug.
-- `docs/tier2-app-onboarding.md` — the long-form operator guide.
+- `docs/manifest-app-onboarding.md` — the long-form operator guide.
 - `docs/coolify-import.md` — the import path.

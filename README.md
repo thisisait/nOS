@@ -166,7 +166,7 @@ lists which manifest blocks have a live consumer.
 
 Long-tail apps that do not need a role are a single YAML manifest in `apps/`. The runner
 refuses a manifest without a complete GDPR Article 30 block. See
-[docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.md).
+[docs/manifest-app-onboarding.md](docs/manifest-app-onboarding.md).
 
 ### Sign-in
 

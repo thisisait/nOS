@@ -8,7 +8,7 @@
 ## Problem / why
 
 The wet-test runbook
-([`docs/tier2-wet-test-checklist.md`](../../tier2-wet-test-checklist.md) §12,
+([`docs/manifest-app-wet-test-checklist.md`](../../manifest-app-wet-test-checklist.md) §12,
 lines 320-327) tells the operator that a manifest fix re-applied **without a
 blank** converges in place:
 
@@ -88,7 +88,7 @@ recreate is cheap and expected.
 | `tasks/stacks/apps-up.yml` | Add `--force-recreate` to the `[Apps] Start APPS stack` `up -d` command; add a post-up **converge-verify** task that fails loud when the live container config-hash still does not reflect the rendered override (mirrors `compose_ops.py`'s post-condition philosophy). Gate the force-recreate behind `apps_force_recreate` (default `true`) so an operator can opt out for a pure health re-poll. |
 | `default.config.yml` | New var `apps_force_recreate: true` (stock-Jinja, real default — satisfies `test_config_stock_jinja_only.py`). Document it next to the existing `apps_*` toggles. |
 | `roles/pazny.apps_runner/defaults/main.yml` | Mirror `apps_force_recreate` default (role-local fallback) — note: the **authoritative** default must live in `default.config.yml`, not only here (the version-pin-shadow / before-core-up-resolve trap; a role default alone does not load before the var is referenced in `apps-up.yml`). |
-| `docs/tier2-wet-test-checklist.md` | §12 step 5: replace the "bare `up` is idempotent, only the broken one transitions" claim with the accurate contract (force-recreate converges the changed app in place; the converge-verify catches drift). Keep it honest — no overclaim. |
+| `docs/manifest-app-wet-test-checklist.md` | §12 step 5: replace the "bare `up` is idempotent, only the broken one transitions" claim with the accurate contract (force-recreate converges the changed app in place; the converge-verify catches drift). Keep it honest — no overclaim. |
 | `tests/anatomy/test_apps_runner_update_semantics.py` | **NEW gate** (see Gates). |
 | `docs/active-work.md` | Add the Tier-1 `--force-recreate` parallel as a one-line follow-up under "Open follow-ups" (≤150-line ceiling — `test_active_work_slim.py`; trim only if needed). |
 | `CLAUDE.md` "Recently shipped doctrine" | One-line pointer once shipped (do **not** add in this plan-only commit; this row is a reminder for the implementation commit). |
@@ -178,7 +178,7 @@ source-text + render assertions — no live Docker, consistent with the existing
 4. `test_force_recreate_opt_out_wired` — the command uses the
    `apps_force_recreate | default(true) | bool` conditional (opt-out path
    exists), so an operator can disable it for a pure health re-poll.
-5. `test_runbook_no_stale_idempotence_overclaim` — `docs/tier2-wet-test-checklist.md`
+5. `test_runbook_no_stale_idempotence_overclaim` — `docs/manifest-app-wet-test-checklist.md`
    no longer contains the "only the broken one transitions state" overclaim
    string, and **does** mention force-recreate (docs truthfulness pinned).
 
@@ -221,7 +221,7 @@ ansible-playbook main.yml --syntax-check
 - [ ] `--force-recreate` wired into apps-up (behind `apps_force_recreate`).
 - [ ] Post-up converge-verify fails loud on stale-image drift (read-only).
 - [ ] `apps_force_recreate: true` in `default.config.yml` (+ role-default mirror).
-- [ ] `docs/tier2-wet-test-checklist.md` §12 overclaim removed, contract honest.
+- [ ] `docs/manifest-app-wet-test-checklist.md` §12 overclaim removed, contract honest.
 - [ ] `tests/anatomy/test_apps_runner_update_semantics.py` (5 gates) green.
 - [ ] Full anatomy suite green; `--syntax-check` clean.
 - [ ] Tier-1 `--force-recreate` parallel logged as a one-line follow-up in

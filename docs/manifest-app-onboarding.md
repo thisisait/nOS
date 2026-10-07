@@ -1,16 +1,16 @@
-# Tier-2 app onboarding
+# Manifest app onboarding
 
-The fast path for adding a self-hosted app to nOS. **Tier-2** is the
+The fast path for adding a self-hosted app to nOS. A **manifest app** is the
 manifest-driven layer — drop a YAML file at `apps/<name>.yml`, run the
 playbook, get a fully-routed Traefik vhost, Authentik gate, GDPR
 register entry, Wing systems row, Bone deploy event, Uptime Kuma
 probe, and a smoke catalog row. Total operator effort: ~10 minutes
 of typing per app.
 
-> **When NOT to use Tier-2:** if the service deserves dedicated RBAC
+> **When NOT to use a manifest app:** if the service deserves dedicated RBAC
 > tiers, custom OIDC blueprint policies, migration recipes, or any
 > kind of cross-stack integration, give it a `pazny.<name>` role
-> instead. Tier-2 is for the long-tail self-hosted catalog (the 200+
+> instead. A manifest app is for the long-tail self-hosted catalog (the 200+
 > apps you'd otherwise pick from Coolify / Cloudron / Yacht).
 
 ---
@@ -29,8 +29,8 @@ PYTHONPATH=files/anatomy python3 -m module_utils.nos_app_parser apps/myapp.yml
 ansible-playbook main.yml -K
 ```
 
-The Tier-2 entrypoint is `tasks/stacks/apps-up.yml`, wired into
-`main.yml` after the Tier-1 stacks come up. Empty `apps/` (only
+The manifest-app entrypoint is `tasks/stacks/apps-up.yml`, wired into
+`main.yml` after the role-service stacks come up. Empty `apps/` (only
 `_template.yml`) is a clean no-op.
 
 ---
@@ -201,7 +201,7 @@ you verify lighter pilots. Example: `apps/plane.yml.draft` ships in
 the repo as a 13-container stress-test pilot — operator un-drafts
 once they're ready.
 
-### Disable Tier-2 entirely
+### Disable manifest apps entirely
 
 ```yaml
 # config.yml
@@ -209,7 +209,7 @@ apps_runner_enabled: false
 ```
 
 The render task skips, the apps stack is not deployed, no post-hooks
-fire. Existing Tier-2 containers stay up (Docker doesn't tear them
+fire. Existing manifest-app containers stay up (Docker doesn't tear them
 down on a skipped task) — `docker compose -p apps down` cleans them
 manually.
 
@@ -245,7 +245,7 @@ The parser collected one or more issues. Common ones:
   the Authentik admin UI lists it under Providers / Applications.
   If missing, `apps_runner_reconverge_blueprints: true` (default) was
   probably skipped — re-run with `--tags apps,authentik`.
-- Check Docker DNS — apps in the apps stack reach Tier-1 services
+- Check Docker DNS — apps in the apps stack reach role services
   (Postgres, Redis) over their compose-project hostnames or via
   `nos-host:host-gateway` (Docker Desktop quirk).
 
@@ -257,11 +257,11 @@ file across reinstalls. If the file was lost, drop the volume too
 (`docker volume rm apps_<app>_db`) — there's no recovery without the
 secret.
 
-### Smoke probe fails for a Tier-2 app
+### Smoke probe fails for a manifest app
 
 `tools/nos-smoke.py` reads `~/.nos/smoke-catalog.runtime.yml` (auto-
 written by the runner) on top of `state/smoke-catalog.yml`. Each
-Tier-2 entry expects 200 / 301 / 302 / 308 / 401. 401 covers the
+manifest-app entry expects 200 / 301 / 302 / 308 / 401. 401 covers the
 Authentik proxy gate before the user logs in. Anything else (e.g.
 404, 502, 503) means the container is up but something is wrong with
 its routing or healthcheck — check logs with `docker compose -p apps

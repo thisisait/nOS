@@ -162,7 +162,7 @@
 
     # ── Hook 3.5: EspoCRM hands-off OIDC config (bespoke, single Tier-2 app) ─
     # Tier-2 manifests get NO generic post-start API-call hook by design
-    # (docs/tier2-app-onboarding.md) — this is a deliberate, named exception
+    # (docs/manifest-app-onboarding.md) — this is a deliberate, named exception
     # for exactly one app, not a new apps_runner capability.
     #
     # EspoCRM's OIDC client (Administration -> Authentication -> OIDC) has no
@@ -442,7 +442,7 @@
     # telemetry. The `app.deployed` events posted above go straight to Bone
     # over HTTP — they never reach the JSONL.
     #
-    # That's a problem for the wet-test contract: docs/tier2-wet-test-checklist.md
+    # That's a problem for the wet-test contract: docs/manifest-app-wet-test-checklist.md
     # §7 and tests/wet/test_post_blank_state.py::TestSection7_BoneEvents both
     # rely on `tail playbook.jsonl | jq 'select(.type == "app.deployed")'`.
     # We mirror the events to JSONL here regardless of HTTP outcome so the

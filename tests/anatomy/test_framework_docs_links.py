@@ -86,7 +86,7 @@ def test_no_stale_framework_doc_references():
 
 # `.remember/` is operator-local runtime scratch (gitignored at .gitignore:19,
 # `.remember/*`); it is never committed and no `.remember/remember.md` exists.
-# tier2-wet-test-checklist.md once told the operator to update that absent file
+# manifest-app-wet-test-checklist.md once told the operator to update that absent file
 # — a broken link to a path that can never resolve from the tree. Trip if any
 # tracked markdown re-introduces a `.remember/` reference.
 _REMEMBER = re.compile(r"\.remember/")

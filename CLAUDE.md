@@ -137,7 +137,7 @@ Longer tour: [docs/architecture.md](docs/architecture.md).
 **A manifest app** (long-tail, no role): `cp apps/_template.yml apps/<name>.yml`, fill
 meta + `gdpr:` + compose, smoke-parse with
 `PYTHONPATH=files/anatomy python3 -m module_utils.nos_app_parser apps/<name>.yml`, converge.
-The GDPR Article 30 block is mandatory. [docs/tier2-app-onboarding.md](docs/tier2-app-onboarding.md).
+The GDPR Article 30 block is mandatory. [docs/manifest-app-onboarding.md](docs/manifest-app-onboarding.md).
 
 **Traps that are gated, not remembered** — read the gate's docstring when it fails:
 `test_config_stock_jinja_only.py` (`{{ vars }}` eager-resolve), `test_mkcert_ca_mount_is_guarded.py`

@@ -117,7 +117,7 @@ else
   echo "${C_DIM}wet=${WET_RC}  smoke=${SMOKE_RC}${C_RST}"
   echo
   echo "Next steps:"
-  echo "  - Read failing test name; cross-reference docs/tier2-wet-test-checklist.md"
+  echo "  - Read failing test name; cross-reference docs/manifest-app-wet-test-checklist.md"
   echo "    Section ID for the diagnostic recipe."
   echo "  - For smoke failures, ${C_BOLD}python3 tools/nos-smoke.py --failed-only${C_RST}"
   echo "    to filter to the red rows."

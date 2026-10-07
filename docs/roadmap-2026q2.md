@@ -581,7 +581,7 @@ Without a working Tier-2 deploy, refactoring `instance_tld` → `tenant_domain +
 #### Files to touch
 - `apps/twofauth.yml`, `apps/roundcube.yml`, `apps/documenso.yml` — only if any one of them surfaces a manifest-level issue (image, env, healthcheck)
 - `roles/pazny.apps_runner/tasks/post.yml` — only if a hook misfires; otherwise no edits
-- `docs/tier2-wet-test-checklist.md` (NEW) — operator's copy-paste checklist; primary deliverable of D8
+- `docs/manifest-app-wet-test-checklist.md` (NEW) — operator's copy-paste checklist; primary deliverable of D8
 
 #### Exit criteria
 - 4 healthy containers (twofauth + roundcube + documenso + documenso-db) in `apps` stack
@@ -590,7 +590,7 @@ Without a working Tier-2 deploy, refactoring `instance_tld` → `tenant_domain +
 - `~/.nos/smoke-catalog.runtime.yml` exists with 3 entries
 - `python3 tools/nos-smoke.py --tier 2` returns 0 failures
 - Track marked DONE; new commits use `feat(apps): ` for additions, `fix(apps): ` for follow-ups
-- `docs/tier2-wet-test-checklist.md` published — re-runnable forever
+- `docs/manifest-app-wet-test-checklist.md` published — re-runnable forever
 
 ---
 
@@ -844,7 +844,7 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 | 2026-04-30 | **O12**: Tier-2 apps reach infra services via `shared_net`, not a dedicated `infra_net` external mount | The infra stack's network is named `infra_infra_net` (compose project prefix); declaring `external: infra_net` in the apps stack never resolved. Architecture already routes cross-stack via `shared_net` — infra services are dual-attached. Same pattern now applied to mailpit (Track J Phase 2, commit `9708133`) and any future cross-stack service. Surfaced during Track E recovery, fixed in commit `8091c07`. |
 | 2026-04-30 | **O13**: Apps stack `--wait-timeout` = 240s default | Cold-start budget for N parallel Tier-2 containers: `start_period (60s) + healthcheck interval × retries (≤150s) + image pull/volume init headroom`. With 4 containers (twofauth + roundcube + documenso + documenso-db) on Apple Silicon, 120s was tight (compose-up returned rc=1 even though all 4 became healthy ~30s later). 240s gives enough margin for 6-8 containers; will need to revisit if Tier-2 catalog grows past ~10 simultaneous deploys. Commit `d4e99f2`. |
 | 2026-04-30 | **O14**: Authentik runtime reconverge entry-point = `tasks_from: blueprints.yml` + `meta: flush_handlers` | The role's `tasks_from: post.yml` (renamed to `health.yml` in Track J Phase 3, commit `326a592`) is JUST a readiness probe — calling it for "blueprint reconverge" is a no-op trap that burns recovery cycles. Canonical pattern lives in `roles/pazny.apps_runner/tasks/post.yml` lines ~123-150 (commit `d4e99f2`). |
-| 2026-04-30 | **O15**: Section 12 recovery pattern is the canonical Tier-2 fix flow (no full blank required) | `ansible-playbook main.yml -K --tags apps,tier2,apps-runner` re-renders manifests, re-runs image probes, re-deploys apps stack, re-fires post-hooks. Validated 3× in succession during Track E recovery (each commit `8091c07` / `a8fc804` / `d4e99f2` was tested via partial re-run). Documented as Section 12 of `docs/tier2-wet-test-checklist.md`. |
+| 2026-04-30 | **O15**: Section 12 recovery pattern is the canonical Tier-2 fix flow (no full blank required) | `ansible-playbook main.yml -K --tags apps,tier2,apps-runner` re-renders manifests, re-runs image probes, re-deploys apps stack, re-fires post-hooks. Validated 3× in succession during Track E recovery (each commit `8091c07` / `a8fc804` / `d4e99f2` was tested via partial re-run). Documented as Section 12 of `docs/manifest-app-wet-test-checklist.md`. |
 | 2026-05-01 | **O16**: Roadmap order revised to **J → H → F → G** | Track J (tech debt cleanup, ~3-4h) lands first to remove Track-E-recovery debris and false-friend traps. Track H (ansible-core 2.24) shrinks to ~1 day after J Phase 4 lands the `ansible_env` migration (9 occurrences, not 200-400 as originally feared). Track F (instance_tld decomposition) keeps its position before G. Track G (public deploy) keeps its position last so Stalwart SMTP role can build on a clean tree. Total revised Q2-wave-2 ETA: ~7-9 days (was estimated ~3 weeks). |
 | 2026-05-01 | **O17**: Track H re-scoped from "ansible-core 2.24 upgrade" to "2.20+ tightening + 2.24 readiness" | ansible-core 2.24 not yet released by upstream (audit 2026-05-01: latest stable 2.20.5, latest RC 2.21.0rc1). Original Track H was forward-looking. Re-scoped to deliver what's possible today: pin current versions across operator + CI, modernize what 2.21 RC flags, run ansible-lint production profile clean. The actual 2.24 jump becomes a ~4h floor-bump follow-up when 2.24 ships. Operator confirmed Variant A. Track H DONE 2026-05-01 in 7 commits `6767e56..72c021d`. |
 | 2026-05-01 | **O18**: New post-G arc — Wing modernization + agent platform | Operator-proposed 2026-05-01: a strategic Wing audit + refactor + agent-suite + watchtower-scheduler + pentest-run-loop that turns `~/wing/` from a fragmented filesystem layout into a cohesive Tier-2-app-style project consuming our own infra (Authentik + Bone + Loki + Traefik). Sketched as Tracks K/L/M at the end of this document. **SUPERSEDED by O19** (2026-05-01) — full plan written, scope expanded, Track K/L/M IDs retired. |
@@ -968,9 +968,9 @@ deferred to **post-roadmap stretch goals** (see Appendix below)._
 
 **Status: scaffolding seeded in Track E batch (commit chain `c7b5a4e..`).** File skeletons landed:
 - `docs/archive/wet-test-automation.md` — architecture, Cowork session protocol, file layout, activation steps
-- `tests/e2e/tier2-wet-test.spec.ts` — Playwright skeleton mapping checklist sections 2/3/4/5/8/11 to `describe`/`test` blocks; every test currently calls `test.fixme()` so a `npx playwright test` reports "skipped" until Track P proper
+- `tests/e2e/manifest-app-wet-test.spec.ts` — Playwright skeleton mapping checklist sections 2/3/4/5/8/11 to `describe`/`test` blocks; every test currently calls `test.fixme()` so a `npx playwright test` reports "skipped" until Track P proper
 
-**Why this matters:** walking `docs/tier2-wet-test-checklist.md` by hand is tractable for 3-5 pilots but won't scale once the Tier-2 catalog reaches 10+. Operator's vision: a Cowork session driven Playwright suite that walks the 12 sections autonomously, files `fix(apps):` commits for low-risk failures (image tag bumps, healthcheck timing), and surfaces Cowork questions for anything that needs human judgment.
+**Why this matters:** walking `docs/manifest-app-wet-test-checklist.md` by hand is tractable for 3-5 pilots but won't scale once the Tier-2 catalog reaches 10+. Operator's vision: a Cowork session driven Playwright suite that walks the 12 sections autonomously, files `fix(apps):` commits for low-risk failures (image tag bumps, healthcheck timing), and surfaces Cowork questions for anything that needs human judgment.
 
 **Activation (post-H):** `cd tests/e2e && npm ci && npx playwright install chromium`, then a Cowork session runs `npx playwright test --reporter=json` after each blank and acts on the JSON.
 

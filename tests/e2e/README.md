@@ -1,7 +1,7 @@
 # nOS E2E SSO test suite — Playwright
 
 Browser-based end-to-end tests for nOS services with Authentik SSO login.
-Covers **18 forward_auth services** (3 Tier-2 apps + 15 Tier-1/opt-in) + health checks.
+Covers **18 forward_auth services** (3 manifest apps + 15 role-service/opt-in) + health checks.
 
 ## One-time setup
 
@@ -22,7 +22,7 @@ revoked after.
 # One-time after blank=true: fetch the nos-api token into ~/.nos/secrets.yml
 python3 ../../tools/fetch-authentik-bootstrap-token.py
 
-# Default: ephemeral tester in Tier-1 (provider) scope (reads token from secrets.yml)
+# Default: ephemeral tester in tier-1 (provider) RBAC scope (reads token from secrets.yml)
 NOS_HOST=dev.local npx playwright test
 
 # Production
@@ -84,7 +84,7 @@ python3 files/anatomy/scripts/sweep-orphan-testers.py
 
 ```
 tests/e2e/
-├── tier2-wet-test.spec.ts   # Tier-2 apps (3) + Tier-1/opt-in services (15) + health checks
+├── manifest-app-wet-test.spec.ts   # manifest apps (3) + role-service/opt-in services (15) + health checks
 ├── global-setup.ts          # Provision ephemeral tester before the suite
 ├── global-teardown.ts       # Revoke tester after the suite (pass or fail)
 ├── journeys/                # Pytest-based journey tests (operator_login, rbac_admin, smoke...)
