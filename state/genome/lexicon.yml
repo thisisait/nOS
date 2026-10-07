@@ -22,8 +22,9 @@
 # retired  senses the word no longer carries: {sense, replacement, surfaces};
 #            each surface must be gone (today's are pending in the gate).
 # retired_phrases  exact phrases a model must not be taught; matched only in
-#            the files models are told to trust (CLAUDE.md, doctrine, skills,
-#            agent system prompts).
+#            the tracked files models are told to trust (briefs, doctrine, docs,
+#            skills, agents, plugins, state tables, the default config layers,
+#            tool and gate docstrings; the gate's TRUSTED list), never history.
 
 version: 1
 
@@ -122,7 +123,7 @@ words:
       - sense: "plugins as connective tissue, tendons or vessels"
         replacement: plugin wiring
         surfaces: []
-    retired_phrases: ["praxis pack", "backoffice pack", "connective tissue", "tendon"]
+    retired_phrases: ["praxis pack", "backoffice pack", "connective tissue", "tendon", "vessel"]
 
   organ:
     level: organ
@@ -347,7 +348,7 @@ words:
       - sense: "Pulse called the heartbeat"
         replacement: "Pulse, which is the scheduler"
         surfaces: []
-    retired_phrases: ["Pulse is the heartbeat"]
+    retired_phrases: ["Pulse is the heartbeat", "Pulse heartbeat"]
 
   nervous system:
     level: cross
@@ -445,7 +446,7 @@ words:
     not: [nervous system]
     mechanism: a reconcile loop (a Kubernetes operator) — declared against observed; it does not heal
     counter_example: "a hand `docker compose up` (it moves one container, not the declared source)"
-    retired_phrases: ["self-healing", "heals itself"]
+    retired_phrases: ["self-healing", "heals itself", "self-heal", "auto-heal"]
 
   imprint:
     level: procedure
@@ -471,6 +472,11 @@ words:
     names:
       - path: roles/pazny.bone/
       - launchd_label: eu.thisisait.nos.bone
+    retired:
+      - sense: "bones-and-wings for the host organs together"
+        replacement: "the host organs"
+        surfaces: []
+    retired_phrases: ["bones-and-wings"]
   Wing:
     level: proper-name
     means: The host dashboard and audit ledger.
@@ -497,7 +503,11 @@ words:
           - path: tools/cortex-query.py
           - path: files/anatomy/skills/cortex-query/
           - path: tests/fixtures/cortex-query-recall.json
-    retired_phrases: ["cortex-query"]
+      - sense: "KEAP called the cortex (a cortex store, cortex objects)"
+        replacement: "KEAP, where nOS keeps its memory"
+        surfaces: []
+    retired_phrases: ["cortex-query", "KEAP cortex", "cortex (KEAP)", "the nOS cortex",
+                      "cortex of the nOS anatomy", "cortex store", "cortex object"]
   Face:
     level: proper-name
     means: The web desktop.

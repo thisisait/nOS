@@ -15,8 +15,10 @@ What it checks, all from artifacts, never from prose about them:
       and that word is a body level, cross-cutting or internal (the same
       map tools/body-plan-gen.py projects; test_body_plan_is_a_projection.py);
   (d) `retired_phrases` do not appear in the files models are told to trust
-      (CLAUDE.md, ssot/doctrine/, docs/doctrine/, skill SKILL.md, agent
-      system.md) — exact phrase, any case, across emphasis and line breaks;
+      (TRUSTED below: the briefs, doctrine, system and anatomy docs, skills,
+      agent prompts and agent.yml, plugin.yml, the apex ruling, genes, schemas,
+      state tables, the default config layers, and the docstrings of tools/ and
+      tests/anatomy/) — exact phrase, any case, across emphasis and line breaks;
   (e) every word that is not legacy or a proper name has a surface (or a
       written `no_surface_reason`), a `not` list and a `counter_example`
       (ssot/doctrine/body-plan.md §7: a word without one is a slogan).
@@ -24,17 +26,21 @@ Today's violations are pinned below and can only shrink (the ratchet in
 test_genome_contract.py): fixing one fails until its line is deleted here.
 
 CEILING. (d) matches exact phrases only: a new paraphrase of a retired sense
-passes. It deliberately ignores bare words in code and history ("cell" in face
-grids, Python `self`, sha "digest", docs/archive, devlog, RELEASE.md, the KEAP
-corpus) — a gate that cried wolf there would be switched off.
+passes. It reads tracked files only, and ignores code, comments and history
+("cell" in face grids, Python `self`, sha "digest", docs/archive, devlog,
+RELEASE.md, hidden_fees, the KEAP corpus, state/fable) — a gate that cried wolf
+there would be switched off. A comment in code is not seen.
 """
 from __future__ import annotations
 
+import ast
 import functools
 import json
 import pathlib
 import re
+import subprocess
 import sys
+import warnings
 
 import pytest
 import yaml
@@ -146,15 +152,60 @@ def _label(word: str, surface: dict) -> str:
     return f"{word}: {kind} {value}" + (f" = {surface['values']}" if "values" in surface else "")
 
 
-def _trusted() -> list[pathlib.Path]:
+#: The files models are told to trust, as git glob pathspecs over TRACKED files
+#: only, so a sibling worktree, node_modules or vendor/ is never read.
+TRUSTED = (
+    "CLAUDE.md", "IMPRINT.md", "AGENTS.md", "tools/README.md",
+    "ssot/doctrine/**/*.md", "docs/doctrine/**/*.md", "docs/systems/*/*.md", "files/anatomy/docs/*.md",
+    "files/anatomy/skills/*/SKILL.md", ".claude/skills/*/SKILL.md", ".claude/plugins/*/skills/*/SKILL.md",
+    "files/anatomy/agents/*/system.md", "files/anatomy/agents/*/agent.yml",
+    "files/anatomy/plugins/*/plugin.yml", "files/anatomy/apex/ruling.yml",
+    "state/*.yml", "state/genome/genes/**", "state/schema/**", "state/digest-importers/**",
+    "state/keap-tables/**", "default.credentials.yml")
+#: Only the docstrings of these are trusted text; code and comments are not.
+DOCSTRINGS = ("tools/*.py", "tests/anatomy/*.py")
+
+
+def _tracked(globs: tuple[str, ...]) -> list[str]:
+    out = subprocess.run(["git", "ls-files", "-z", "--", *(f":(glob){g}" for g in globs)],
+                         cwd=REPO, capture_output=True, check=True).stdout.decode()
+    return sorted(r for r in out.split("\0") if r and (REPO / r).is_file())
+
+
+def _docstrings(src: str) -> str:
+    """Only the docstring lines of a Python file, every other line blanked so
+    line numbers still point into the file."""
+    lines = src.splitlines()
+    keep = [""] * len(lines)
+    with warnings.catch_warnings():  # a tool's own escape warnings are not this gate's
+        warnings.simplefilter("ignore", SyntaxWarning)
+        tree = ast.parse(src)
+    for node in ast.walk(tree):
+        if (isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+                and ast.get_docstring(node) is not None):
+            expr = node.body[0]
+            keep[expr.lineno - 1:expr.end_lineno] = lines[expr.lineno - 1:expr.end_lineno]
+    return "\n".join(keep)
+
+
+@functools.lru_cache(maxsize=None)
+def _trusted() -> tuple[tuple[str, str], ...]:
+    """(repo path, text) of every trusted file. The lexicon, the glossary and
+    history (archive, devlog, RELEASE.md, hidden_fees, the KEAP corpus,
+    state/fable) are outside TRUSTED: they may name retired senses."""
     # A docs/doctrine/ file whose article was promoted to ssot/doctrine/ is a
     # 3-line "Moved to" stub; the article itself is scanned instead.
     promoted = {p.name for p in (REPO / "ssot" / "doctrine").glob("*.md")}
-    return [REPO / "CLAUDE.md",
-            *sorted((REPO / "ssot" / "doctrine").rglob("*.md")),
-            *sorted(p for p in (REPO / "docs" / "doctrine").rglob("*.md") if p.name not in promoted),
-            *sorted(REPO.glob("files/anatomy/skills/*/SKILL.md")),
-            *sorted(REPO.glob("files/anatomy/agents/*/system.md"))]
+    rels = [r for r in _tracked(TRUSTED)
+            if not (r.startswith("docs/doctrine/") and pathlib.PurePath(r).name in promoted)]
+    _defaults()  # puts tools/ on sys.path; the default layers come from nos_identity
+    import nos_identity  # noqa: PLC0415
+    rels += [str(p.relative_to(REPO)) for p in nos_identity.default_layers()]
+    out = [(r, (REPO / r).read_text(encoding="utf-8", errors="replace")) for r in rels]
+    me = str(pathlib.Path(__file__).resolve().relative_to(REPO))
+    out += [(r, _docstrings((REPO / r).read_text(encoding="utf-8")))
+            for r in _tracked(DOCSTRINGS) if r != me]
+    return tuple(out)
 
 
 def _phrase_rx(phrase: str) -> re.Pattern:
@@ -168,12 +219,11 @@ def _phrase_hits() -> dict[str, list[int]]:
     """'file :: phrase' → line numbers of each occurrence."""
     phrases = [p for w in _words().values() for p in w.get("retired_phrases") or []]
     hits: dict[str, list[int]] = {}
-    for f in _trusted():
-        text = f.read_text(encoding="utf-8")
+    for rel, text in _trusted():
         for ph in phrases:
             lines = [text.count("\n", 0, m.start()) + 1 for m in _phrase_rx(ph).finditer(text)]
             if lines:
-                hits[f"{f.relative_to(REPO)} :: {ph}"] = lines
+                hits[f"{rel} :: {ph}"] = lines
     return hits
 
 
@@ -265,14 +315,15 @@ def test_every_graph_kind_maps_to_exactly_one_level():
 
 
 def test_retired_phrases_in_trusted_files_only_shrink():
-    have = {k: len(v) for k, v in _phrase_hits().items()}
+    hits = _phrase_hits()
+    have = {k: len(v) for k, v in hits.items()}
     if have == PENDING_PHRASES:
         return
     grew = {k: (n, PENDING_PHRASES.get(k, 0)) for k, n in have.items()
             if n > PENDING_PHRASES.get(k, 0)}
     shrank = {k: (have.get(k, 0), n) for k, n in PENDING_PHRASES.items()
               if have.get(k, 0) < n}
-    lines = [f"{k}: {n} (pending {p}) at lines {_phrase_hits()[k]}"
+    lines = [f"{k}: {n} (pending {p}) at lines {hits[k]}"
              for k, (n, p) in sorted(grew.items())]
     pytest.fail(
         "retired phrases in files models are told to trust (state/genome/lexicon.yml "

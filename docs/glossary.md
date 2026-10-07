@@ -123,7 +123,9 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - twin for two lists that must stay equal (twin-parity) → mirror-parity
 - a second kind-to-level map beside the lexicon → the graph_kind names in state/genome/lexicon.yml
 - the digest organ, the stomach → digest
+- bones-and-wings for the host organs together → the host organs
 - cortex-query, recall from KEAP → keap-recall
+- KEAP called the cortex (a cortex store, cortex objects) → KEAP, where nOS keeps its memory
 - brain for KEAP, the four host parts or the Wing API token → memory / organs / flat token
 - a reader called the spinal cord → sense
 - organelle for a genome entity kind → gene
