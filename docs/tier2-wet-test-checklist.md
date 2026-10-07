@@ -237,7 +237,7 @@ grep "Reconverge Uptime Kuma" ~/.nos/ansible.log | tail -3
 ## 9 · Smoke catalog runtime — three entries
 
 ```bash
-cat /Users/pazny/projects/nOS/state/smoke-catalog.runtime.yml
+cat ~/.nos/smoke-catalog.runtime.yml
 ```
 
 Expected: file exists, contains `smoke_endpoints` list with three

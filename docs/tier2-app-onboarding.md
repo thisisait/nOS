@@ -259,7 +259,7 @@ secret.
 
 ### Smoke probe fails for a Tier-2 app
 
-`tools/nos-smoke.py` reads `state/smoke-catalog.runtime.yml` (auto-
+`tools/nos-smoke.py` reads `~/.nos/smoke-catalog.runtime.yml` (auto-
 written by the runner) on top of `state/smoke-catalog.yml`. Each
 Tier-2 entry expects 200 / 301 / 302 / 308 / 401. 401 covers the
 Authentik proxy gate before the user logs in. Anything else (e.g.

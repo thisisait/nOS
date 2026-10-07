@@ -26,7 +26,7 @@ across `docs/tier2-wet-test-checklist.md`, `tools/nos-smoke.py`,
 
 [2/3] python3 tools/nos-smoke.py
         ↳ HTTP probes every service in state/manifest.yml + every
-          Tier-2 entry from state/smoke-catalog.runtime.yml
+          Tier-2 entry from ~/.nos/smoke-catalog.runtime.yml
         ↳ Status code expectations come from the catalog (e.g. 401 is
           OK for Authentik-protected pages — that's the redirect)
 

@@ -587,7 +587,7 @@ Without a working Tier-2 deploy, refactoring `instance_tld` → `tenant_domain +
 - 4 healthy containers (twofauth + roundcube + documenso + documenso-db) in `apps` stack
 - 3 entries each in: service-registry.json, Wing systems table, Authentik proxy providers, Kuma monitors, gdpr_processing rows
 - 3 `app.deployed` events in `~/.nos/events/playbook.jsonl`
-- `state/smoke-catalog.runtime.yml` exists with 3 entries
+- `~/.nos/smoke-catalog.runtime.yml` exists with 3 entries
 - `python3 tools/nos-smoke.py --tier 2` returns 0 failures
 - Track marked DONE; new commits use `feat(apps): ` for additions, `fix(apps): ` for follow-ups
 - `docs/tier2-wet-test-checklist.md` published — re-runnable forever

@@ -995,7 +995,7 @@ def main() -> int:
 
     # ── Load manifest + smoke catalog (static + runtime) ───────────────────
     # state/smoke-catalog.yml         — checked-in, edited by humans
-    # state/smoke-catalog.runtime.yml — auto-written by pazny.apps_runner
+    # ~/.nos/smoke-catalog.runtime.yml — auto-written by pazny.apps_runner
     #                                   tasks/post.yml; one entry per Tier-2
     #                                   apps/<name>.yml manifest. Same shape
     #                                   as the static catalog so this loader
@@ -1006,7 +1006,10 @@ def main() -> int:
     defaults = catalog.get("smoke_defaults") or {}
     extras = list(catalog.get("smoke_endpoints") or [])
 
-    runtime_path = REPO / "state" / "smoke-catalog.runtime.yml"
+    runtime_path = pathlib.Path.home() / ".nos" / "smoke-catalog.runtime.yml"
+    if not runtime_path.is_file():
+        # Compat: written into the checkout before 2026-10-07; drop after the next converge.
+        runtime_path = REPO / "state" / "smoke-catalog.runtime.yml"
     if runtime_path.is_file():
         runtime_catalog = load_yaml(runtime_path)
         runtime_extras = runtime_catalog.get("smoke_endpoints") or []
