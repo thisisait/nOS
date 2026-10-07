@@ -54,8 +54,7 @@ vault:
     - scope: mcp-bone
 
 metadata:
-  ait_phase: A9.4-contract-only
-  ceremony_role: pentest-survey
+  specialization: pentest-survey
   runner_status: deferred
   deferred_reason: needs trivy / grype / nuclei substrate integration
 

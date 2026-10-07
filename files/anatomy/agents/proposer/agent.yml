@@ -46,8 +46,7 @@ vault:
     - scope: mcp-loop
 
 metadata:
-  ait_phase: loop-entry
-  ceremony_role: propose
+  specialization: propose
   # Its first run has never happened: the agent did not exist until 2026-08-29,
   # while `loop-propose.py` had been spawning `--agent=proposer` since the
   # AgentKit cutover. `unproven` until a session records a proposal.

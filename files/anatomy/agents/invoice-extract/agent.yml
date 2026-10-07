@@ -35,8 +35,7 @@ vault:
       optional: true
 
 metadata:
-  ait_phase: invoice-pipeline
-  ceremony_role: extract-stage
+  specialization: extract-stage
   runner_status: unproven
 
 exit_code_semantics:

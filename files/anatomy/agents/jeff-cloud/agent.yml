@@ -50,8 +50,7 @@ vault:
     - scope: anthropic-api
 
 metadata:
-  ait_phase: voice
-  ceremony_role: operator-assistant-cloud
+  specialization: operator-assistant-cloud
   runner_status: unproven
 
 exit_code_semantics:

@@ -73,8 +73,7 @@ vault:
     - scope: mcp-bone
 
 metadata:
-  ait_phase: A20
-  ceremony_role: surface-legibility
+  specialization: surface-legibility
   # `unproven`, not `live` — and the distinction is measured, not cautious.
   # Five supervised runs on 2026-08-17 produced no report: the model writes a
   # one-line preamble, calls a tool, repeats until the budget ends. The live

@@ -73,8 +73,7 @@ vault:
     - scope: mcp-keap
 
 metadata:
-  ait_phase: curator-P0-pilot
-  ceremony_role: taxonomy-reconcile
+  specialization: taxonomy-reconcile
   runner_status: parked
   plan_ref: docs/archive/keap-curator-agent.md
   deferred_reason: >-

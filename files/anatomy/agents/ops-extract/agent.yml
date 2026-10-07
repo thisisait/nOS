@@ -37,8 +37,7 @@ vault:
       optional: true
 
 metadata:
-  ait_phase: ops-plane
-  ceremony_role: measurement-subject
+  specialization: measurement-subject
   runner_status: unproven
 
 exit_code_semantics:

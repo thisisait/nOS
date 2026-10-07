@@ -70,7 +70,7 @@
         "mcp-wing-read"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'conductor' (first-non-operator-write), mode=None, runner_status=proven — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent cell 'conductor' (first-non-operator-write), mode=None, runner_status=proven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:curator": {
       "kind": "agent",
@@ -87,7 +87,7 @@
         "mcp-wing-read"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'curator' (taxonomy-reconcile), mode=None, runner_status=parked — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent cell 'curator' (taxonomy-reconcile), mode=None, runner_status=parked — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:inspektor": {
       "kind": "agent",
@@ -103,7 +103,7 @@
         "mcp-wing-read"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'inspektor' (pentest-survey), mode=None, runner_status=deferred — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+      "description": "Agent cell 'inspektor' (pentest-survey), mode=None, runner_status=deferred — primary claude-sonnet on backend anthropic (the register default, undeclared)"
     },
     "agent:invoice-extract": {
       "kind": "agent",
@@ -115,7 +115,7 @@
       "backend_declared": true,
       "tools": [],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'invoice-extract' (extract-stage), mode=None, runner_status=unproven — primary openai-local-sonnet on backend ollama"
+      "description": "Agent cell 'invoice-extract' (extract-stage), mode=None, runner_status=unproven — primary openai-local-sonnet on backend ollama"
     },
     "agent:invoice-vision-ocr": {
       "kind": "agent",
@@ -127,7 +127,7 @@
       "backend_declared": true,
       "tools": [],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'invoice-vision-ocr' (vision-ocr-stage), mode=None, runner_status=unproven — primary openai-local-vision on backend ollama"
+      "description": "Agent cell 'invoice-vision-ocr' (vision-ocr-stage), mode=None, runner_status=unproven — primary openai-local-vision on backend ollama"
     },
     "agent:jeff": {
       "kind": "agent",
@@ -144,7 +144,7 @@
         "mcp-wing-read"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'jeff' (operator-assistant), mode=None, runner_status=unproven — primary openai-local-sonnet on backend ollama"
+      "description": "Agent cell 'jeff' (operator-assistant), mode=None, runner_status=unproven — primary openai-local-sonnet on backend ollama"
     },
     "agent:jeff-cloud": {
       "kind": "agent",
@@ -160,7 +160,7 @@
         "mcp-wing-read"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'jeff-cloud' (operator-assistant-cloud), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent cell 'jeff-cloud' (operator-assistant-cloud), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:librarian": {
       "kind": "agent",
@@ -178,7 +178,7 @@
         "mcp-wing-write"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'librarian' (rag-recall), mode=None, runner_status=proven — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent cell 'librarian' (rag-recall), mode=None, runner_status=proven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:migration-author": {
       "kind": "agent",
@@ -194,7 +194,7 @@
         "migration-file-write"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'migration-author' (migration-authoring), mode=None, runner_status=parked — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+      "description": "Agent cell 'migration-author' (migration-authoring), mode=None, runner_status=parked — primary claude-sonnet on backend anthropic (the register default, undeclared)"
     },
     "agent:ops-extract": {
       "kind": "agent",
@@ -206,7 +206,7 @@
       "backend_declared": true,
       "tools": [],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'ops-extract' (measurement-subject), mode=None, runner_status=unproven — primary openai-local-haiku on backend ollama"
+      "description": "Agent cell 'ops-extract' (measurement-subject), mode=None, runner_status=unproven — primary openai-local-haiku on backend ollama"
     },
     "agent:ops-extract-cloud": {
       "kind": "agent",
@@ -218,7 +218,7 @@
       "backend_declared": true,
       "tools": [],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'ops-extract-cloud' (measurement-subject-cloud), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent cell 'ops-extract-cloud' (measurement-subject-cloud), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:ops-triage": {
       "kind": "agent",
@@ -230,7 +230,7 @@
       "backend_declared": true,
       "tools": [],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'ops-triage' (measurement-subject), mode=None, runner_status=unproven — primary openai-local-haiku on backend ollama"
+      "description": "Agent cell 'ops-triage' (measurement-subject), mode=None, runner_status=unproven — primary openai-local-haiku on backend ollama"
     },
     "agent:ops-triage-cloud": {
       "kind": "agent",
@@ -242,7 +242,7 @@
       "backend_declared": true,
       "tools": [],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'ops-triage-cloud' (measurement-subject-cloud), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent cell 'ops-triage-cloud' (measurement-subject-cloud), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:proposer": {
       "kind": "agent",
@@ -258,7 +258,7 @@
         "mcp-wing-read"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'proposer' (propose), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent cell 'proposer' (propose), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:surveyor": {
       "kind": "agent",
@@ -275,7 +275,7 @@
         "mcp-wing-write"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'surveyor' (surface-legibility), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
+      "description": "Agent cell 'surveyor' (surface-legibility), mode=None, runner_status=unproven — primary anthropic-claude-sonnet-4-5 on backend minimax"
     },
     "agent:upgrade-architect": {
       "kind": "agent",
@@ -291,7 +291,7 @@
         "migration-file-write"
       ],
       "anchor": "02.02.09",
-      "description": "Agent ceremony 'upgrade-architect' (recipe-authoring), mode=None, runner_status=UNDECLARED (not a green state) — primary claude-sonnet on backend anthropic (the register default, undeclared)"
+      "description": "Agent cell 'upgrade-architect' (recipe-authoring), mode=None, runner_status=UNDECLARED (not a green state) — primary claude-sonnet on backend anthropic (the register default, undeclared)"
     },
     "article:body-plan": {
       "kind": "article",

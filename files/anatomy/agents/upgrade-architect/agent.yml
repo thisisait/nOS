@@ -50,8 +50,7 @@ vault:
     - scope: mcp-wing
 
 metadata:
-  ait_phase: W5-B5
-  ceremony_role: recipe-authoring
+  specialization: recipe-authoring
 
 exit_code_semantics:
   emits_sentinel: true

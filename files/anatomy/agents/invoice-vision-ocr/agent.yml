@@ -47,8 +47,7 @@ vault:
       optional: true
 
 metadata:
-  ait_phase: invoice-pipeline
-  ceremony_role: vision-ocr-stage
+  specialization: vision-ocr-stage
   # UNPROVEN, and honestly so on two axes: (1) qwen2.5vl:7b has not been
   # pulled on this host, so no run has ever happened; (2) AgentKit's one_shot
   # transport (Message / OpenAiCompatAdapter::translateMessages / OneShot)

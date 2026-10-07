@@ -60,8 +60,7 @@ vault:
       optional: true
 
 metadata:
-  ait_phase: voice
-  ceremony_role: operator-assistant
+  specialization: operator-assistant
   # PREPARED, NOT ARMED, and both halves are true today: `ollama_enabled` is
   # false and `ollama_model` is empty in default.config.yml, so a session would
   # refuse at resolution rather than send a blank model id. Arming is the

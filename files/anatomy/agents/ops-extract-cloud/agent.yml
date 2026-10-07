@@ -41,8 +41,7 @@ vault:
     - scope: anthropic-api
 
 metadata:
-  ait_phase: ops-plane
-  ceremony_role: measurement-subject-cloud
+  specialization: measurement-subject-cloud
   runner_status: unproven
 
 exit_code_semantics:

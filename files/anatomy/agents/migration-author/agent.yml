@@ -75,8 +75,7 @@ vault:
     - scope: mcp-wing
 
 metadata:
-  ait_phase: A2
-  ceremony_role: migration-authoring
+  specialization: migration-authoring
   runtime: agentkit            # native AgentKit (Q8/A2); flat CLI fallback removed 2026-08-26
   runner_status: parked
   plan_ref: docs/archive/agentic-upgrade-migration-coexistence.md

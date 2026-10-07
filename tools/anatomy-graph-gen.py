@@ -28,7 +28,7 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
                             (matches wing.db pulse_jobs id, e.g. keap:keap-lint)
     judge:<name>            state/judge-sets.yml key
     gateset:<name>          state/judge-sets.yml gate_sets key
-    agent:<name>            files/anatomy/agents/<name>/agent.yml — the ceremony
+    agent:<name>            files/anatomy/agents/<name>/agent.yml — the cell
                             itself, addressed apart from the pulse jobs that
                             fire it; in-edges are its tools, its backend
                             binding and the identity it authenticates as
@@ -577,7 +577,7 @@ def _describe(nid: str, n: dict) -> str:
         return (f"Docker service '{local}' ({n.get('category')}) in the "
                 f"{n.get('stack')} compose stack, toggled by {n.get('install_flag')}")
     if kind == "agent":
-        return (f"Agent ceremony '{local}' ({n.get('charter') or 'no declared charter'}), "
+        return (f"Agent cell '{local}' ({n.get('charter') or 'no declared specialization'}), "
                 f"mode={n.get('mode')}, runner_status="
                 f"{n.get('runner_status') or 'UNDECLARED (not a green state)'} — "
                 f"primary {n.get('primary_model')} on backend {n.get('backend')}"
@@ -942,7 +942,7 @@ def derive_backend_servers(nodes: dict) -> list[dict]:
 
 
 def harvest_agents(nodes: dict, edges: list) -> None:
-    """agent:<name> — one node per ceremony profile, with its three in-edges.
+    """agent:<name> — one node per cell profile, with its three in-edges.
 
     DIRECTION, since the brief spells the relations the other way round: every
     edge here runs UPSTREAM → CONSUMER, the estate's one convention (a judge's
@@ -967,7 +967,7 @@ def harvest_agents(nodes: dict, edges: list) -> None:
         nodes[nid] = {
             "kind": "agent",
             "source": src,
-            "charter": meta.get("ceremony_role"),
+            "charter": meta.get("specialization"),
             # No default. An undeclared runner_status is UNKNOWN and reads as
             # UNKNOWN — `state/schema/agent.schema.yaml` holds the vocabulary.
             "runner_status": meta.get("runner_status"),
