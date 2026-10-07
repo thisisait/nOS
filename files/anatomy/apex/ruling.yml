@@ -262,7 +262,7 @@ organ_systems:
   commons:   { title: "The Commons",   tells: "Daily work and daily life, shared.",           side: left,  order: 4 }
   watch:     { title: "The Watch",     tells: "The system watches itself.",                   side: right, order: 1 }
   wits:      { title: "The Wits",      tells: "Autonomous minds with bounded hands.",         side: right, order: 2 }
-  reflexes:  { title: "The Reflexes",  tells: "Events become actions, on schedule.",          side: right, order: 3 }
+  clockwork: { title: "The Clockwork", tells: "Events become actions, on schedule.",          side: right, order: 3 }
   voice:     { title: "The Voice",     tells: "Mail, calls and signals, spoken from home.",   side: right, order: 4 }
 
 # -----------------------------------------------------------------------------
@@ -354,16 +354,16 @@ nodes:
   "service:open_webui":    { publish: wits, speaks: "a chat room with the house's own models" }
   "service:mcp_gateway":   { publish: wits, speaks: "one socket where minds plug into tools" }
 
-  "service:n8n":           { publish: reflexes, speaks: "workflows that click together without code" }
-  "service:nodered":       { publish: reflexes, speaks: "wires from events to actions" }
-  "service:pulse":         { publish: reflexes, speaks: "the metronome every scheduled duty answers to" }
+  "service:n8n":           { publish: clockwork, speaks: "workflows that click together without code" }
+  "service:nodered":       { publish: clockwork, speaks: "wires from events to actions" }
+  "service:pulse":         { publish: clockwork, speaks: "the metronome every scheduled duty answers to" }
   # ears: WITHHELD pending the operator. Every sibling organ publishes a
   # `speaks:` sentence, but this one is a microphone in the operator's home and
   # the sentence would be a public claim about listening — theirs to author and
   # sign, not an agent's to draft. Withheld publishes nothing meanwhile.
   "service:ears":          withheld
   "service:spacetimedb":   withheld
-  "service:homeassistant": { publish: reflexes, speaks: "the physical home, sensed and switched" }
+  "service:homeassistant": { publish: clockwork, speaks: "the physical home, sensed and switched" }
 
   "service:smtp_stalwart": { publish: voice, speaks: "the house post office" }
   "service:mailpit":       { publish: voice, speaks: "a sealed room where test mail lands" }
@@ -1019,7 +1019,8 @@ nodes:
   "organ_system:keel": withheld
   # 2026-10-06: was organ_system:memory; the group renamed to stores (lexicon step 5).
   "organ_system:stores": withheld
-  "organ_system:reflexes": withheld
+  # 2026-10-07: was organ_system:reflexes; the group renamed to clockwork (ruling I-13).
+  "organ_system:clockwork": withheld
   # 2026-10-07: was organ_system:senses; the group renamed to watch (ruling I-13).
   "organ_system:watch": withheld
   "organ_system:spine": withheld

@@ -380,10 +380,14 @@ words:
     names:
       - graph_kind: pulse
         reason: one scheduled job, run by the Pulse daemon on its own cron
-      - yaml_key: "files/anatomy/apex/ruling.yml#organ_systems.reflexes"
     not: [Pulse, heartbeat, organ]
     mechanism: "a scheduled job (cron); where it restarts what failed, a supervisor (Erlang/OTP)"
     counter_example: "a launchd daemon (an organ, not a scheduled response)"
+    retired:
+      - sense: "The Reflexes, the apex group of organs that run on a clock"
+        replacement: The Clockwork
+        surfaces:
+          - yaml_key: "files/anatomy/apex/ruling.yml#organ_systems.reflexes"
 
   internal:
     level: internal
