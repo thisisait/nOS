@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Upsert EspoCRM Account rows from the KEAP party spine.
+"""Upsert EspoCRM Account rows from the KEAP party table.
 
 Join key lives in Account.description as `nos:party:<slug>` — no custom Espo
 entity (the custom volume is a named Docker volume, not a bind from git).

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""digest-import — the importer-spine round-trip on real input.
+"""digest-import — the importer harness round-trip on real input.
 
 The smallest end-to-end proof of the digest pipeline: a CSV of counterparties →
 parse → normalize (IČO canonicalisation + deterministic party slug) → compose →
@@ -39,7 +39,7 @@ TABLES_DIR = REPO / "state" / "keap-tables"
 
 
 class CsvPartyImporter:
-    """CSV counterparties → the EN-16931 party spine (party + party-tax-identity).
+    """CSV counterparties → the EN-16931 party table (party + party-tax-identity).
     Format knowledge only; the harness owns provenance + the gate."""
 
     name = "csv-party"

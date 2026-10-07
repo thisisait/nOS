@@ -1,4 +1,4 @@
-# Digest importer — doli-party (Dolibarr thirdparties → KEAP party spine).
+# Digest importer — doli-party (Dolibarr thirdparties → KEAP party table).
 #
 # Digest importer (hydrator) for the backoffice tissue. Swept by
 # nos_gdpr.records_from_importers (id imp_doli-party). Reads the estate's own

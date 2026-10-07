@@ -47,7 +47,7 @@ _SQL = (
 
 
 class DoliPartyImporter:
-    """MariaDB llx_societe rows → EN-16931 party spine. Format knowledge only."""
+    """MariaDB llx_societe rows → EN-16931 party table. Format knowledge only."""
 
     name = "doli-party"
     version = "0.1.0"

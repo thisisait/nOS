@@ -11,14 +11,14 @@ Three findings, in the order they matter:
   DUPLICATE  two rows for the same (book_owner, seller, document_number)
   TWIN       the same (seller, document_number) across two books — legitimate
              only when one firm's sale is another's purchase AND both are your
-             clients; otherwise it is a party-spine fork wearing a disguise
+             clients; otherwise it is a party-table fork wearing a disguise
   DRIFT      a row whose slug is not nos_digest.invoice_slug(...) — it predates
              the identity, or something minted its own id
 
 What it CANNOT see: a duplicate hiding behind a party fork. 2026-ALFA-PHOTO-001
 also stands twice live, but one row names `party-ico-00000131` and the other
 `synthetic-client-alfa` — the same firm under two spellings — so neither the
-identity nor the (seller, document) key matches. That is the party spine's own
+identity nor the (seller, document) key matches. That is the party table's own
 problem (dtt `party-identity-fixture-vs-resolver`), and pretending this reader
 covers it would be the worst kind of green.
 

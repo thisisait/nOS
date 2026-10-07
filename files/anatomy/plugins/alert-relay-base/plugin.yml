@@ -13,7 +13,7 @@
 #
 # WHY NOT ALERTMANAGER. It is the right tool for silences, grouping and paging
 # rotations, and it would be a SECOND answer to "where do alerts go" beside a
-# notification spine that already exists and that an operator already reads.
+# nervous system that already exists and that an operator already reads.
 # Two answers to one question is the defect the 2026-08-05 survey was hunting.
 # When silences or inhibition become necessary, adopt Alertmanager properly and
 # retire this file — do not grow it.
@@ -30,7 +30,7 @@ name: alert-relay-base
 version: "0.1.0"
 description: >
   Polls Prometheus for firing alerts every 15 minutes and delivers each new one
-  to Bone's notification spine exactly once, mapping the Prometheus severity
+  into the nervous system (Bone's notifications) exactly once, mapping the Prometheus severity
   label onto the A9 ladder. Emits a RESOLVED note when an alert stops firing.
   Delivery is recorded only after Bone answers 2xx, so a failed POST retries.
 upstream: https://prometheus.io/docs/prometheus/latest/querying/api/

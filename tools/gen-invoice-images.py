@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """gen-invoice-images — render the consulting-firm fixture invoices as JPEG images
 in varied layouts + fonts, so the vision pipeline has realistic image intake whose
-DATA MATCHES the seeded party spine (so extraction resolves + books end-to-end,
+DATA MATCHES the seeded party table (so extraction resolves + books end-to-end,
 unlike arbitrary real-world PDFs).
 
 Reads each state/fixtures/consulting-firm/<slug>.image.txt (the plain-text OCR

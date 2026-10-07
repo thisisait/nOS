@@ -6,7 +6,7 @@
 **Endpoint:** none for agents — see Constraints
 **Role:** There is deliberately no acting agent for Dolibarr. It is the
 operator's CRM desk; the estate's readable truth about parties and invoices
-lives in the KEAP DataTables the digest spine fills.
+lives in the KEAP DataTables the digest importers fill.
 
 ### Context
 
@@ -16,7 +16,7 @@ lives in the KEAP DataTables the digest spine fills.
   (digest gate) → KEAP `party` / `party-tax-identity`. The importer reads the
   DB schema read-only and never calls Dolibarr REST.
 - Registry status for its thirdparties (`party-registry-status`) is filled by
-  the n8n ARES pack, keyed on the party spine — not by anything Dolibarr-side.
+  the n8n ARES pack, keyed on the party table — not by anything Dolibarr-side.
 
 ### Constraints
 

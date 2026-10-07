@@ -73,7 +73,7 @@ Firefly and ERPNext off. KEAP tables stay the books fallback.
 | invoice-vision Pulse | photo/PDF | `pending-invoice-verify` |
 | HMAC `invoice-verify` / Books approve | held row | absorb books it |
 | `digest-import-doli` (Pulse `crm-hydrate:hydrate-parties`) | open thirdparties with IČO | KEAP `party` projection |
-| n8n pack `nos-pull-ares-registry` (its own n8n schedule; Pulse `n8n:exec-watch` observes, [`n8n-packs.md`](n8n-packs.md)) | IČO on the spine | `party-registry-status` (exists + nespolehlivý plátce) |
+| n8n pack `nos-pull-ares-registry` (its own n8n schedule; Pulse `n8n:exec-watch` observes, [`n8n-packs.md`](n8n-packs.md)) | IČO on the party table | `party-registry-status` (exists + nespolehlivý plátce) |
 | n8n ČNB / DTT | after approve | export, never a second SoT |
 
 A release that ships Books without absorb, or Dolibarr as a second
@@ -88,12 +88,12 @@ The desk container is replaceable FOSS. The tissue's value is its plugin wiring:
 |---|---|---|
 | hydrator | Digest + Pulse | `crm-hydrate-base`, `tools/digest-import-doli.py`, `imp_doli-party` |
 | registry check | n8n (reflex in its own schedule) | `files/anatomy/n8n/packs/nos-pull-ares-registry.yml` → ARES + ADIS → `party-registry-status` |
-| party spine | KEAP (memory) | `state/keap-tables/party.table.yml` (`graph.mode: rows`) |
+| party table | KEAP (memory) | `state/keap-tables/party.table.yml` (`graph.mode: rows`) |
 | agent procedure | nos-lang / skills | `files/anatomy/skills/nos-backoffice/SKILL.md` |
 | HMAC events | Bone | digest absorb already posts through the KEAP agent door |
 | books intake | Digest + Pulse + Bone | ISDOC / vision queue / HMAC `invoice-verify` — already wired |
 
-Dolibarr `Facture` and Firefly are **desks**, not a second invoice spine.
+Dolibarr `Facture` and Firefly are **desks**, not a second invoice table.
 A hydrator that copies `llx_facture` (or Firefly journals) into `invoice` /
 `posting` would fork the books the way Espo forked `party`. Withhold it.
 Bone does not grow a CRM client. A hydrator that PATCHes existing slugs is

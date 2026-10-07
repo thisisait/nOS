@@ -5,7 +5,7 @@ Proves the importer interface generalises off CSV: same nos_digest.run_importer
 harness, a wholly different source. Walks a directory of repositories, reads each
 one's git metadata + dependency manifests, and emits the repo → application →
 package rowRef chain, with every repo OWNED by a party resolved against the live
-party spine (party-resolver) — so a repo whose owner was already imported reuses
+party table (party-resolver) — so a repo whose owner was already imported reuses
 that party row instead of forking it (the cross-source dedup the CSV scaffold did
 not exercise).
 
@@ -94,7 +94,7 @@ _MANIFESTS = {"package.json": _parse_package_json,
 
 class RepoImporter:
     """A directory of repos → repo/application/package rows, owners resolved to
-    the shared party spine. Format knowledge only; the harness owns the gate."""
+    the shared party table. Format knowledge only; the harness owns the gate."""
 
     name = "repos"
     version = "0.1.0"

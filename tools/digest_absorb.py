@@ -95,7 +95,7 @@ def read_rows(table: str, hdr: dict | None = None) -> list:
 
 def build_party_index() -> dict:
     """{by_key: {(scheme, value): party_slug}, by_name: {normname: [slug]}} for
-    resolve_party — party-tax-identity ⋈ party over the live spine. Shared by
+    resolve_party — party-tax-identity ⋈ party over the live party table. Shared by
     every importer that resolves counterparties (repos, isdoc, …)."""
     hdr = {"Authorization": f"Bearer {ro_token()}", **proxy_header()}
     by_key, by_name = {}, {}
@@ -115,7 +115,7 @@ def _existing_slugs(table: str, hdr: dict) -> set:
 
 def ensure_table(table: str, hdr: dict) -> None:
     """Reconcile the DataTable from its committed def before upserting rows — a
-    digest importer owns its OUTPUT tables' existence (the party spine already
+    digest importer owns its OUTPUT tables' existence (the party table already
     exists; repo/application/package are created here). Mirrors seed-face-table's
     reconcile: additive/relabel is 200/201, a destructive schema change is 409
     (an authoring error, raised loud), a missing def means the table must already

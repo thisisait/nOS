@@ -59,7 +59,7 @@ gdpr:
   purpose: |
     Scheduled projection of CRM counterparties from the estate MariaDB
     Dolibarr schema into KEAP DataTables so organs share one party noun.
-    Stores nothing itself; retention is the party spine / imp_doli-party.
+    Stores nothing itself; retention is the party table / imp_doli-party.
   legal_basis: contract
   data_categories:
     - company_affiliation

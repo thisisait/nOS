@@ -1,6 +1,6 @@
 # Dolibarr
 
-> ERP/CRM desk for the praxis/consulting pack. Thirdparties, customer/supplier invoices, proposals — the operator-facing CRM surface whose master data the digest spine projects into KEAP.
+> ERP/CRM desk for the praxis/consulting pack. Thirdparties, customer/supplier invoices, proposals — the operator-facing CRM surface whose master data the digest importers project into KEAP.
 
 ## Quick Reference
 
@@ -25,7 +25,7 @@ authority). Not `native_oidc` yet; do not stack a second gate when it flips.
 ## Position in the estate
 
 Dolibarr is the CRM **desk** when installed — the KEAP DataTables stay the
-spine (`docs/doctrine/backoffice.md`):
+record (`docs/doctrine/backoffice.md`):
 
 - **Hydration**: `tools/digest-import-doli.py` projects open thirdparties
   (IČO required) through the digest gate into `party` / `party-tax-identity`.

@@ -1,11 +1,11 @@
 # Dolibarr — Skills
 
 > **No HTTP skill surface for agents.** Dolibarr is the human CRM desk; the
-> machine-readable projection of its master data is the KEAP party spine
+> machine-readable projection of its master data is the KEAP party table
 > (`docs/doctrine/backoffice.md`). What exists is one CLI, run by Pulse or the
 > operator, never an agent hitting Dolibarr REST.
 
-## Hydrate the party spine from the desk
+## Hydrate the party table from the desk
 
 ```bash
 tools/digest-import-doli.py                    # docker fetch, gate, print (dry)
@@ -21,5 +21,5 @@ tools/digest-import-doli.py --from-json f.json # tests / no docker
 ## What deliberately does not exist
 
 - No Dolibarr REST token for agents, no webhook consumer, no write-back from
-  KEAP to Dolibarr. A divergence between desk and spine is resolved by
+  KEAP to Dolibarr. A divergence between desk and party table is resolved by
   re-running the hydrator, not by teaching an agent the vendor API.
