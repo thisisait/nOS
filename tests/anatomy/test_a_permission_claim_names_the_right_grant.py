@@ -78,7 +78,7 @@ def test_the_reader_exists_and_cannot_write() -> None:
 
 #: Words that turn a refuted sentence into a CITATION of one. Third time in a
 #: day that a text detector here flagged the correction rather than the error
-#: (see test_agent_memory_does_not_return and test_backup_reaches_the_brain) —
+#: (see test_agent_memory_does_not_return and test_backup_reaches_keap) —
 #: the reader's own docstring quotes "Docker Desktop holds the grant" to say it
 #: was wrong, and a gate that forbids writing that sentence forbids recording
 #: why it was wrong.

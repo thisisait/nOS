@@ -1,4 +1,4 @@
-"""Anatomy gate — the backup must cover the brain, and must be able to say it didn't.
+"""Anatomy gate — the backup must cover KEAP, and must be able to say it didn't.
 
 Found 2026-07-30, the night before a scheduled blank. Three independent defects
 lined up so that the single most valuable store in the estate had never once been
@@ -12,7 +12,7 @@ backed up, and nobody knew:
 
   2. Every `run_*` returns 0 by design (one broken source must not abort the
      rest), so the script's own exit code could not distinguish "all good" from
-     "the brain is missing". `tasks/pre-wipe-backup.yml` checks exactly that rc,
+     "KEAP is missing". `tasks/pre-wipe-backup.yml` checks exactly that rc,
      and so printed "✓ copy #1 refreshed" over a bucket with no KEAP data in it
      — every night, right before offering to wipe.
 
@@ -56,7 +56,7 @@ def _sh_code() -> str:
     )
 
 
-# ── 1. the brain is reachable without a GUI permission grant ──────────────
+# ── 1. KEAP is reachable without a GUI permission grant ───────────────────
 
 
 def test_keap_backup_runs_inside_the_container():
@@ -112,7 +112,7 @@ def test_backup_exits_non_zero_when_a_source_failed():
     assert "return 1" in main, (
         "main() no longer fails when a source failed. pre-wipe-backup.yml gates "
         "on this exit code and will go back to printing a green banner over a "
-        "bucket that is missing the brain."
+        "bucket that is missing KEAP."
     )
     assert 'if not x.get("success")' in main, (
         "main() no longer reads the per-source success flags it is supposed to "

@@ -31,7 +31,7 @@ Two defences, and the gate wants both, because they fail in different places:
     * post-check  — a source can list entries and still tar to nothing, so the
                     archive's MEMBER count decides and the object is withdrawn
 
-Related: `test_backup_reaches_the_brain.py` (a vanished source recording
+Related: `test_backup_reaches_keap.py` (a vanished source recording
 nothing), `test_key_ring_captures_the_retired_key.py` (same day, same estate).
 """
 

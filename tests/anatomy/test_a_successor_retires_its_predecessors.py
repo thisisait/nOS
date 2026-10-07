@@ -75,7 +75,7 @@ def test_an_existing_database_gets_them_too():
     """`CREATE TABLE IF NOT EXISTS` is a NO-OP on the 979 MB database that
     actually holds the backlog. Without the ALTER sweep the feature would be
     live only where there is nothing to fix — the exact failure
-    `test_backup_reaches_the_brain.py` names for another column."""
+    `test_backup_reaches_keap.py` names for another column."""
     php = INITDB.read_text(encoding="utf-8")
     sweep = php[php.index("$addMissingColumns($db, 'notifications'"):]
     for col in COLUMNS:

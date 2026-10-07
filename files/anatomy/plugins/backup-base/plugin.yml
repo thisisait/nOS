@@ -56,7 +56,7 @@ requires:
 #
 # `on_high` MUST keep ntfy. A backup failure that only reaches the Wing inbox is
 # indistinguishable from no backup failure at all — that is the exact shape of
-# the 2026-07-25..30 miss, and tests/anatomy/test_backup_reaches_the_brain.py
+# the 2026-07-25..30 miss, and tests/anatomy/test_backup_reaches_keap.py
 # pins it from the Bone side.
 # =============================================================================
 notification:

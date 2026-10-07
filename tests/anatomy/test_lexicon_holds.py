@@ -54,9 +54,7 @@ BODY_LEVELS = ("genome", "cell", "tissue", "organ", "organ system", "organism", 
 # ── pending: today's violations, measured 2026-10-06. Only ever delete lines. ──
 
 #: Retired surfaces that still exist; the rename steps (3–5) remove them.
-PENDING_SURFACES = {
-    "brain: path tests/anatomy/test_backup_reaches_the_brain.py",
-}
+PENDING_SURFACES: set[str] = set()
 
 #: "file :: phrase" → occurrences, in the files models are told to trust.
 #: Seeded 2026-10-07 when TRUSTED widened; the default config layers were fixed instead.

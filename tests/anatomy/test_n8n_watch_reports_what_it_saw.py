@@ -8,7 +8,7 @@ three runs of `rc=0` with an empty stdout_tail in `pulse_runs`.
 
 This is the estate's signature defect in its cheapest form (a success marker
 written by code that did not do the thing), and the gates that already exist
-for it — test_post_wiring_is_not_self_reporting, test_backup_reaches_the_brain —
+for it — test_post_wiring_is_not_self_reporting, test_backup_reaches_keap —
 are the precedent for this one.
 
 The tests drive `cmd_watch` against injected API responses: no live n8n, and

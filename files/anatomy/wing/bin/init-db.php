@@ -502,7 +502,7 @@ $addMissingColumns($db, 'notifications', [
 // retires its predecessors (2026-08-23). The live DB is 979 MB and holds 76
 // unread rows of which 60 are already false; without this sweep the column
 // exists only on fresh installs and the feature is dead on the one estate
-// that has the backlog (tests/anatomy/test_backup_reaches_the_brain.py names
+// that has the backlog (tests/anatomy/test_backup_reaches_keap.py names
 // that exact failure mode for another column).
 $addMissingColumns($db, 'notifications', [
     'supersede_key' => 'TEXT',

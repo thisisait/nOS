@@ -44,7 +44,7 @@ final class NotificationRepository
 	 * `_DEFAULT_CHANNELS_BY_SEVERITY` (files/anatomy/bone/clients/wing.py) —
 	 * the two paths insert into the SAME table, so a caller reaching Wing
 	 * directly must not get a quieter default than one reaching it via Bone.
-	 * Pinned by tests/anatomy/test_backup_reaches_the_brain.py.
+	 * Pinned by tests/anatomy/test_backup_reaches_keap.py.
 	 *
 	 * @return list<string>
 	 */
