@@ -6,16 +6,24 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 
 ## Levels
 
-- **genome** (genome) — The declared facts every part of nOS inherits, kept in state/genome/. Not: law, definition.
+- **genome** (genome) — The declared facts every part of nOS inherits. Most live in state/genome/ (genes, schemas, this lexicon, the task types); the skill library lives in files/anatomy/skills/, beside the code that hands skills out. Not: law, definition.
   Counter-example: a cell's system.md (its definition, not something every part inherits).
 - **gene** (genome) — One declared kind of entity in the genome. Not: plugin.
   Counter-example: one DataTable row (data a gene shapes, not a gene).
+- **skill** (genome) — A declared how-to in files/anatomy/skills/ that a cell or a runtime is handed. Not: law, definition, reflex.
+  Counter-example: .claude/skills/devlog/SKILL.md (a how-to for an assistant working in this repo; it does not travel with nOS).
 - **cell** (cell) — One model in one specialization; in code it is called an agent. Not: sense, stem cell, AWS/Slack cell (an isolated full-stack replica).
   Counter-example: an immune indicator (a sense).
 - **stem cell** (cell) — A model that has not yet differentiated into one specialization. Not: cell.
-  Counter-example: jeff, a broad assistant that still has one charter (a cell).
+  Counter-example: jeff, a broad assistant that still has one specialization (a cell).
 - **definition** (cell) — One cell's own prompt and tool allow-list, versioned and hashed. Not: genome, law.
   Counter-example: the model pin in agent.yml (which model runs the cell, not its prompt or allow-list).
+- **caddy** (cell) — The role of the cell the operator speaks to through Ears; jeff holds it today. Not: cell, the Caddy web server inside FrankenPHP.
+  Counter-example: roles/pazny.wing/templates/wing.Caddyfile.j2 (config for the Caddy server that serves Wing, not the role).
+- **conductor** (cell) — The cell that self-tests the estate after a converge and weekly; it directs no other cell. Not: Pulse, ceremony.
+  Counter-example: the loop drive job in the loop plugin (it schedules loop work; the conductor only runs its self-test).
+- **cell roster** (cell) — The set of cells nOS declares, one directory per cell under files/anatomy/agents/. Not: account roster, tissue.
+  Counter-example: the account roster (which accounts a realm must hold, not which cells exist).
 - **organelles** (cell) — The cell's machinery that turns a definition into an acting cell: the runtime that loads the definition (ribosome), binds the model (mitochondria), admits tools and lets actions out only through the approval gate (membrane). In code: AgentKit. Not: plugin, gene, tissue, organ, limb, cell. Mechanism: agent runtime / harness.
   Counter-example: a plugin (wiring between organs, not inside a cell).
 - **tissue** (tissue) — The transplantable pack of one specialization's cells with their skills, tables and services. Not: plugin, organ. Mechanism: bounded context (domain-driven design).
@@ -41,6 +49,8 @@ genome → cell → tissue → organ → organ system → organism → habitat.
   Counter-example: a personal Homebrew package (habitat: the machine owner's, never installed by nOS).
 - **declared** — On the list nOS generates from its declarations; the immune system tolerates it, and anything undeclared is a signal. Not: self.
   Counter-example: a launchd job the operator loaded by hand (undeclared until a declaration explains it, however harmless).
+- **account roster** — The declared accounts every realm (Authentik, Gitea and the rest) must hold; tools/identity-status.py compares it with what each realm holds. Not: cell roster.
+  Counter-example: a user invited into Authentik (people a realm holds, not a roster entry; ssot/doctrine/identity.md).
 - **sense** — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Not: cell, limb.
   Counter-example: tools/genome-codegen.py (it writes the glossary; only its --check reads).
 - **limb** — A tool that acts. Not: sense, side. Mechanism: port / adapter (hexagonal architecture).
@@ -79,6 +89,8 @@ genome → cell → tissue → organ → organ system → organism → habitat.
   Counter-example: a sha256 digest (a hash, an allowed compound, not the intake).
 - **converge** — One playbook run that moves the source into the running system. Not: nervous system. Mechanism: a reconcile loop (a Kubernetes operator) — declared against observed; it does not heal.
   Counter-example: a hand `docker compose up` (it moves one container, not the declared source).
+- **ceremony** — One session of a cell that the runner opens, lets the cell work in, and closes with an outcome. Not: cell, session.
+  Counter-example: the Pulse job that fires a cell (the trigger; the ceremony is the session it opens).
 - **imprint** — The one page a newborn model reads first. Not: cell.
   Counter-example: CLAUDE.md (the brief for an assistant working in the repo, not a newborn's first page).
 - **apgar** — The score of a newborn model on the questions its imprint should answer. Not: cell.
@@ -114,6 +126,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - DNA of the inner organism (prompts, skills, CLAUDE.md, allow-lists) → law for the shared parts; definition for one cell's prompt and allow-list
 - an immune indicator called a cell → sense (an indicator is a sense with an indicator contract)
 - the `dna` field of the indicator contract → definition
+- conductor_report as the name of every cell's report event → run_report (renamed after v0.17, with both names accepted)
 - organelle for a genome entity kind → gene
 - organelle for a plugin → plugin
 - organelle for a digest importer (hydrator) → digest importer

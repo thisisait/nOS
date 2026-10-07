@@ -37,15 +37,15 @@ the agent's or anyone's — is caught before it costs anything. Both are the poi
 Levels run smallest to largest, then the systems that cut across every level.
 Each line: level (count) — what it means (the lexicon's words), then the most connected nodes (edge count).
 
-- **genome** (20) — The declared facts every part of nOS inherits, kept in state/genome/. Most connected: tasktype:investigate (13), tasktype:seed-edit (5), skill:nos-backoffice (3), skill:nos-datatables (3), tasktype:code-fix (3)
+- **genome** (20) — The declared facts every part of nOS inherits. Most live in state/genome/ (genes, schemas, this lexicon, the task types); the skill library lives in files/anatomy/skills/, beside the code that hands skills out. Most connected: tasktype:investigate (13), tasktype:seed-edit (5), skill:nos-backoffice (3), skill:nos-datatables (3), tasktype:code-fix (3)
 - **cell** (16) — One model in one specialization; in code it is called an agent. Most connected: agent:librarian (11), agent:jeff (9), agent:surveyor (8), agent:conductor (7), agent:curator (7)
 - **tissue** (1) — The transplantable pack of one specialization's cells with their skills, tables and services. Most connected: tissue:backoffice (23)
 - **organ** (102) — One service or host daemon with one job; one row in state/manifest.yml. Most connected: daemon:eu.thisisait.nos.pulse (42), service:postgresql (11), service:redis (9), service:mariadb (8), service:openclaw (7)
 - **organ system** (13) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Most connected: organ_system:archive (9), organ_system:watch (8), organ_system:voice (6), organ_system:backoffice (5), organ_system:forge (5)
 - **organism** (0) — One nOS install on one machine, all its organ systems together. Most connected: none — no node stands for the whole; the whole is this graph
 - **habitat** (6) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner, and nOS never installs or touches it. Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Most connected: backend:minimax (8), backend:ollama (6), backend:anthropic (3), backend:openclaw (1), backend:mistral-eu (0)
-- **sense** (70) — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Most connected: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), judge:genome-codegen (4)
-- **limb** (114) — A tool that acts. Most connected: effector:loop-pr (6), effector:run-agent (6), effector:loop-propose (5), tool:mcp-bone (5), effector:discovery-scan (3)
+- **sense** (71) — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Most connected: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), tool_ro:mcp-bone (5)
+- **limb** (113) — A tool that acts. Most connected: effector:loop-pr (6), effector:run-agent (6), effector:loop-propose (5), effector:discovery-scan (3), effector:loop-review (3)
 - **memory** (40) — What nOS has learned, kept in KEAP; RAM stays plain English. Most connected: table:party (13), table:invoice (5), table:journal-entry (4), table:posting (4), table:account (3)
 - **law** (52) — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Most connected: article:loop-contract (19), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#3.4 (5), doctrine:ssot/doctrine/loop-contract.md#5a (4), doctrine:ssot/doctrine/loop-contract.md#DECISION-2e (4)
 - **reflex** (43) — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Most connected: pulse:conductor:self-test-001 (9), pulse:librarian:brief-taxonomy (9), pulse:librarian:describe-taxonomy (9), pulse:librarian:judge-lint-queue (9), pulse:surveyor:surface-survey (9)
@@ -160,11 +160,15 @@ The public organ systems (the apex ruling publishes 13; 481 of 544 ruled nodes a
 
 ## 7. The level words
 
-- **genome** (genome) — The declared facts every part of nOS inherits, kept in state/genome/. Not: law, definition.
+- **genome** (genome) — The declared facts every part of nOS inherits. Most live in state/genome/ (genes, schemas, this lexicon, the task types); the skill library lives in files/anatomy/skills/, beside the code that hands skills out. Not: law, definition.
 - **gene** (genome) — One declared kind of entity in the genome. Not: plugin.
+- **skill** (genome) — A declared how-to in files/anatomy/skills/ that a cell or a runtime is handed. Not: law, definition, reflex.
 - **cell** (cell) — One model in one specialization; in code it is called an agent. Not: sense, stem cell, AWS/Slack cell (an isolated full-stack replica).
 - **stem cell** (cell) — A model that has not yet differentiated into one specialization. Not: cell.
 - **definition** (cell) — One cell's own prompt and tool allow-list, versioned and hashed. Not: genome, law.
+- **caddy** (cell) — The role of the cell the operator speaks to through Ears; jeff holds it today. Not: cell, the Caddy web server inside FrankenPHP.
+- **conductor** (cell) — The cell that self-tests the estate after a converge and weekly; it directs no other cell. Not: Pulse, ceremony.
+- **cell roster** (cell) — The set of cells nOS declares, one directory per cell under files/anatomy/agents/. Not: account roster, tissue.
 - **organelles** (cell) — The cell's machinery that turns a definition into an acting cell: the runtime that loads the definition (ribosome), binds the model (mitochondria), admits tools and lets actions out only through the approval gate (membrane). In code: AgentKit. Not: plugin, gene, tissue, organ, limb, cell. Mechanism: agent runtime / harness.
 - **tissue** (tissue) — The transplantable pack of one specialization's cells with their skills, tables and services. Not: plugin, organ. Mechanism: bounded context (domain-driven design).
 - **organ** (organ) — One service or host daemon with one job; one row in state/manifest.yml. Not: organ system, cell, digest.
@@ -180,7 +184,7 @@ Every line above is rendered from these files:
 
 - CLAUDE.md
 - tools/README.md
-- state/task-types.yml
+- state/genome/task-types.yml
 - files/anatomy/skills/nos-datatables/SKILL.md
 - tools/mcp-tables-server.py
 - templates/secrets.yml.j2
