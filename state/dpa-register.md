@@ -1227,7 +1227,7 @@ reasoning.
 - **Security measures:** platform baseline (see above)
 
 #### csv-party — `imp_csv-party`
-- **Purpose:** Ingest an organisation's own list of counterparties (customers, suppliers, sole traders) from a CSV export into the shared party master-data spine, so the estate can reference one deduplicated party record across its business tables. Processing is limited to identifying and tax-registration data the organisation already holds about its counterparties.
+- **Purpose:** Ingest an organisation's own list of counterparties (customers, suppliers, sole traders) from a CSV export into the shared party table, so the estate can reference one deduplicated party record across its business tables. Processing is limited to identifying and tax-registration data the organisation already holds about its counterparties.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `The organisation's counterparties — customers and suppliers`; `Sole traders among them (natural persons acting as businesses)`
 - **Data categories:** `Organisation identity (legal name, trading name)`; `Company registration / tax identifiers (IČO, VAT/DIČ)`; `Business contact points (email, phone, web) where present in the source`
@@ -1238,7 +1238,7 @@ reasoning.
 - **Security measures:** platform baseline (see above)
 
 #### doli-party — `imp_doli-party`
-- **Purpose:** Project open Dolibarr thirdparties (IČO-keyed organisations) into the shared party spine so agents, KEAP recall, Digest absorb and Face Books share one counterparty noun. The desk remains Dolibarr; KEAP holds the governed projection. No marketing.
+- **Purpose:** Project open Dolibarr thirdparties (IČO-keyed organisations) into the shared party table so agents, KEAP recall, Digest absorb and Face Books share one counterparty noun. The desk remains Dolibarr; KEAP holds the governed projection. No marketing.
 - **Legal basis (Art. 6):** `contract`
 - **Data subjects:** `The organisation's counterparties — customers and suppliers`; `Sole traders among them (natural persons acting as businesses)`
 - **Data categories:** `Organisation identity (legal name, trading name)`; `Company registration identifiers (IČO)`; `Country code (ISO 3166-1 alpha-2)`
@@ -1249,7 +1249,7 @@ reasoning.
 - **Security measures:** platform baseline (see above)
 
 #### isdoc — `imp_isdoc`
-- **Purpose:** Ingest an organisation's ISDOC e-invoices into the invoice facet — document number, dates, payable amount, and the seller and buyer as references into the shared party spine — so the estate can answer accounting and cash-flow questions against governed rows. Both counterparties are resolved against the spine, never minted.
+- **Purpose:** Ingest an organisation's ISDOC e-invoices into the invoice facet — document number, dates, payable amount, and the seller and buyer as references into the shared party table — so the estate can answer accounting and cash-flow questions against governed rows. Both counterparties are resolved against the party table, never minted.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `The organisation's invoice counterparties — customers and suppliers`; `Sole traders among them (natural persons acting as businesses)`
 - **Data categories:** `Invoice metadata (document number, issue/due dates, currency, payable amount)`; `Counterparty identity references (IČO of seller and buyer)`
@@ -1260,7 +1260,7 @@ reasoning.
 - **Security measures:** platform baseline (see above)
 
 #### isdoc-vision — `imp_isdoc-vision`
-- **Purpose:** Ingest vision-extracted invoice sidecars (structured fields produced from scanned/photographed invoices by the invoice-extract agent) into the same invoice facet the ISDOC importer writes — document number, dates, payable amount, and the seller and buyer as references into the shared party spine. Both counterparties are resolved against the spine, never minted. An unverified or low-confidence extraction is held for review and never becomes an invoice row.
+- **Purpose:** Ingest vision-extracted invoice sidecars (structured fields produced from scanned/photographed invoices by the invoice-extract agent) into the same invoice facet the ISDOC importer writes — document number, dates, payable amount, and the seller and buyer as references into the shared party table. Both counterparties are resolved against the party table, never minted. An unverified or low-confidence extraction is held for review and never becomes an invoice row.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `The organisation's invoice counterparties — customers and suppliers`; `Sole traders among them (natural persons acting as businesses)`
 - **Data categories:** `Invoice metadata (document number, issue/due dates, currency, payable amount)`; `Counterparty identity references (IČO of seller and buyer)`
@@ -1271,7 +1271,7 @@ reasoning.
 - **Security measures:** platform baseline (see above)
 
 #### repos — `imp_repos`
-- **Purpose:** Inventory an organisation's software estate — repositories, the applications inside them, and their third-party package dependencies — by listing and shallow-cloning from a git remote, so the estate can answer supply-surface, licence and security questions against governed rows. Each repo is attributed to its owning party (resolved against the master-data spine, never minted).
+- **Purpose:** Inventory an organisation's software estate — repositories, the applications inside them, and their third-party package dependencies — by listing and shallow-cloning from a git remote, so the estate can answer supply-surface, licence and security questions against governed rows. Each repo is attributed to its owning party (resolved against the party table, never minted).
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `The organisation whose repositories are inventoried (owning party)`; `Developers named incidentally in repo/commit metadata`
 - **Data categories:** `Repository metadata (name, remote URL, head commit)`; `Dependency manifests (package name, version, ecosystem)`; `Committer/owner identifiers only where a manifest or remote exposes them`
@@ -1282,7 +1282,7 @@ reasoning.
 - **Security measures:** platform baseline (see above)
 
 #### Alert Relay — `svc_alert-relay`
-- **Purpose:** Deliver Prometheus firing alerts to the operator via the A9 notification spine, so a rule that evaluates is a rule someone reads
+- **Purpose:** Deliver Prometheus firing alerts to the operator through the nervous system (Bone notifications, the A9 ladder), so a rule that evaluates is a rule someone reads
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `operators`
 - **Data categories:** `service_health_metadata`

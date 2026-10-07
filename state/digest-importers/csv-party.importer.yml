@@ -17,16 +17,16 @@ egress: []
 gdpr:
   purpose: >-
     Ingest an organisation's own list of counterparties (customers, suppliers,
-    sole traders) from a CSV export into the shared party master-data spine, so
+    sole traders) from a CSV export into the shared party table, so
     the estate can reference one deduplicated party record across its business
     tables. Processing is limited to identifying and tax-registration data the
     organisation already holds about its counterparties.
   legal_basis: legitimate_interests
   balancing_test: >-
-    The controller's interest is a single accurate counterparty spine for its
+    The controller's interest is a single accurate party table for its
     own accounts and operations. Names, IČO and business contacts already sit
     in the organisation's CSV; ingesting them is necessary to deduplicate the
-    spine and is limited to that file. No marketing, no special-category data,
+    party table and is limited to that file. No marketing, no special-category data,
     no match on a person's tax number. Counterparties reasonably expect a
     business to keep a supplier/customer register. Erasable via
     digest-teardown.py --erase-party. Rights override the interest where a

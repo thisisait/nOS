@@ -108,7 +108,7 @@ notification:
 # =============================================================================
 
 gdpr:
-  purpose: "Deliver Prometheus firing alerts to the operator via the A9 notification spine, so a rule that evaluates is a rule someone reads"
+  purpose: "Deliver Prometheus firing alerts to the operator through the nervous system (Bone notifications, the A9 ladder), so a rule that evaluates is a rule someone reads"
   legal_basis: legitimate_interests
   data_categories:
     - service_health_metadata       # alert name, labels (service/instance/job), rule annotations

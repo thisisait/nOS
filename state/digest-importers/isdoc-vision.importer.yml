@@ -22,8 +22,8 @@ gdpr:
     Ingest vision-extracted invoice sidecars (structured fields produced from
     scanned/photographed invoices by the invoice-extract agent) into the same
     invoice facet the ISDOC importer writes — document number, dates, payable
-    amount, and the seller and buyer as references into the shared party spine.
-    Both counterparties are resolved against the spine, never minted. An
+    amount, and the seller and buyer as references into the shared party table.
+    Both counterparties are resolved against the party table, never minted. An
     unverified or low-confidence extraction is held for review and never
     becomes an invoice row.
   legal_basis: legitimate_interests
