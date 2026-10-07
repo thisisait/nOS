@@ -716,8 +716,19 @@ def harvest_daemons(nodes: dict) -> None:
 # ── harvest: services ─────────────────────────────────────────────────────
 
 
+def ruled_jobs_of_rows() -> dict[str, list[str]]:
+    """row id -> launchd labels ruled a reflex/internal `of:` that row (daemons_without_row)."""
+    doc = yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))
+    out: dict[str, list[str]] = {}
+    for label, r in sorted((doc.get("daemons_without_row") or {}).items()):
+        if isinstance(r, dict) and r.get("ruling") in ("reflex", "internal"):
+            out.setdefault(str(r.get("of")), []).append(label)
+    return out
+
+
 def harvest_services(nodes: dict) -> None:
     doc = yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))
+    ruled = ruled_jobs_of_rows()
     for svc in doc.get("services") or []:
         if isinstance(svc, dict) and svc.get("id"):
             nodes[f"service:{svc['id']}"] = {
@@ -727,10 +738,12 @@ def harvest_services(nodes: dict) -> None:
                 "category": svc.get("category"),
                 "install_flag": svc.get("install_flag"),
             }
+            # The row's own launchd jobs ARE the organ (I-12), and a job ruled
+            # `of:` this row rides it too; the roster readers (prune guard,
+            # undeclared-status) join on this field, so an authored stop survives.
             labels = [lb for lb in [svc.get("launchd_label"), *(svc.get("launchd_helpers") or [])] if lb]
+            labels += ruled.get(svc["id"], [])
             if labels:
-                # The row's own launchd jobs ARE the organ (I-12); the roster
-                # readers (prune guard, undeclared-status) join on this field.
                 nodes[f"service:{svc['id']}"]["launchd_labels"] = labels
 
 

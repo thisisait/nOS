@@ -5,7 +5,7 @@ the places that describe it are derived from its id, never remembered:
 `roles/pazny.<id>/` renders it, `files/anatomy/plugins/<id>-base/` wires it,
 `docs/systems/<id>/` explains it, with `_` → `-` in the plugin and docs names.
 A home that is missing or spelt otherwise is a part a model cannot find from
-the row. Today's six organs without a full set are declared below with the
+the row. Today's seven organs without a full set are declared below with the
 reason; the list may only shrink.
 """
 from __future__ import annotations
@@ -26,6 +26,11 @@ EXCEPTIONS = {
     ("opencode", "plugin"): "a CLI run on demand; nothing to wire",
     ("iiab_terminal", "plugin"): "an sshd ForceCommand TUI; nothing to wire",
     ("homeassistant", "docs"): "no docs/systems page yet",
+    # I-12: dnsmasq became a row (it has a flag, a pin, a root daemon and an authored stop);
+    # tasks/dnsmasq.yml is its whole implementation until a role is built.
+    ("dnsmasq", "role"): "tasks/dnsmasq.yml installs and configures it; no role yet",
+    ("dnsmasq", "plugin"): "local DNS for the edge; nothing to wire yet",
+    ("dnsmasq", "docs"): "no docs/systems page yet",
 }
 
 

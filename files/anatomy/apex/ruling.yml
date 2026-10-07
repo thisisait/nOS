@@ -346,6 +346,9 @@ nodes:
   # public claim about a household device organ is theirs to sign. Loopback
   # this slice; published set unchanged.
   "service:device_gateway": withheld
+  # I-12 (2026-10-07): local DNS for the edge got its own row. WITHHELD: how
+  # the house resolves its own names is estate mechanics; published set unchanged.
+  "service:dnsmasq": withheld
   "service:opencode":      { publish: wits, speaks: "a mind that writes code beside you" }
   # A third-party desktop agent on the operator's Mac: a public sentence is theirs to sign.
   "service:openhuman":     withheld

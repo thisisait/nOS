@@ -28,7 +28,7 @@ the agent's or anyone's — is caught before it costs anything. Both are the poi
 
 - nOS is an Ansible playbook that turns one Mac (Apple Silicon) or Ubuntu 24.04 host into a self-hosted Agentic Home Lab.
 - This repo is the SOURCE. The running estate lives elsewhere on the host and changes only when the operator runs a converge.
-- Each service is an organ: one role, one compose override, one row in state/manifest.yml (73 rows).
+- Each service is an organ: one role, one compose override, one row in state/manifest.yml (74 rows).
 - All data stays on the machine. Sign-in goes through Authentik; work is tracked in KEAP tables, not in prose files.
 - When this page and a reader disagree, the reader is right. Ask it (section 4).
 
@@ -40,7 +40,7 @@ Each line: level (count) — what it means (the lexicon's words), then the most 
 - **genome** (20) — The declared facts every part of nOS inherits. Most live in state/genome/ (genes, schemas, this lexicon, the task types); the skill library lives in files/anatomy/skills/, beside the code that hands skills out. Most connected: tasktype:investigate (13), tasktype:seed-edit (5), skill:nos-backoffice (3), skill:nos-datatables (3), tasktype:code-fix (3)
 - **cell** (16) — One model in one specialization; in code it is called an agent. Most connected: agent:librarian (11), agent:jeff (9), agent:surveyor (8), agent:conductor (7), agent:curator (7)
 - **tissue** (1) — The transplantable pack of one specialization's cells with their skills, tables and services. Most connected: tissue:backoffice (23)
-- **organ** (77) — One service or host daemon with one job; one row in state/manifest.yml. Most connected: service:pulse (43), service:postgresql (11), service:redis (9), service:mariadb (8), service:openclaw (7)
+- **organ** (78) — One service or host daemon with one job; one row in state/manifest.yml. Most connected: service:pulse (43), service:postgresql (11), service:redis (9), service:mariadb (8), service:openclaw (7)
 - **organ system** (13) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Most connected: organ_system:archive (9), organ_system:watch (8), organ_system:voice (6), organ_system:backoffice (5), organ_system:forge (5)
 - **organism** (0) — One nOS install on one machine, all its organ systems together. Most connected: none — no node stands for the whole; the whole is this graph
 - **habitat** (6) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner; nOS never installs or touches it by default, only through opt-in toggles the owner sets (configure_dock, install_mas_apps and their kin in the host-desktop layer). Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Most connected: backend:minimax (8), backend:ollama (6), backend:anthropic (3), backend:openclaw (1), backend:mistral-eu (0)
@@ -136,14 +136,14 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
 ```
 
 - Local models (Ollama, OpenAI-compatible): `http://127.0.0.1:11434/v1`, no token. Models the register names: `hermes3:8b`, `qwen3:14b`.
-- Web: Traefik owns ports 80/443. A service with a `domain_var` in state/manifest.yml (54 of 73) answers at that variable, by default `<name>.{{ tenant_domain }}` with `tenant_domain: dev.local`. This host's value: `tools/estate-status.py --config tenant_domain`.
+- Web: Traefik owns ports 80/443. A service with a `domain_var` in state/manifest.yml (54 of 74) answers at that variable, by default `<name>.{{ tenant_domain }}` with `tenant_domain: dev.local`. This host's value: `tools/estate-status.py --config tenant_domain`.
   Routed: authentik, infisical, portainer, traefik, grafana, wordpress, apex, nextcloud, n8n, nodered, kiwix,
   nos_forum, offline_maps, geolibre, jellyfin, open_webui, uptime_kuma, calibre_web, homeassistant, rustfs, face,
   keap, vaultwarden, ntfy, miniflux, mailpit, smtp_stalwart, snappymail, gitea, gitlab, woodpecker, paperclip,
   code_server, erpnext, freescout, outline, hedgedoc, bookstack, firefly, dolibarr, onlyoffice, mikopbx, qgis_server,
   metabase, superset, influxdb, mcp_gateway, openclaw, hermes, device_gateway, wing, bone, cortex, backrest.
 
-The public organ systems (the apex ruling publishes 13; 464 of 527 ruled nodes are withheld):
+The public organ systems (the apex ruling publishes 13; 465 of 528 ruled nodes are withheld):
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)

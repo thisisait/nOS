@@ -34,7 +34,9 @@ nos:
 
 # Host launchd jobs no service row owns, each RULED (I-12, body-plan.md §5): a
 # `reflex` or `internal` of its owner (`of:` a row id, or playbook-core for a
-# tasks/*.yml hook) is a job, not an organ, and gets no graph node; `heartbeat`
+# tasks/*.yml hook) is a job, not an organ, and gets no graph node — a job `of:` a
+# row rides that row's node as a `launchd_labels` entry, so the roster readers
+# (prune guard, undeclared-status) still see it; `heartbeat`
 # is the lexicon's own cross-level word and keeps its daemon: node. Every other
 # launchd label is a row's (launchd_label / launchd_helpers) and IS that organ.
 # Gate: tests/anatomy/test_every_daemon_has_a_manifest_row.py.
@@ -59,10 +61,6 @@ daemons_without_row:
     ruling: internal
     of: playbook-core
     reason: "post-boot hook (tasks/os-resume.yml) that re-establishes host state; on every host, no install_* flag, no job of its own to show"
-  homebrew.mxcl.dnsmasq:
-    ruling: internal
-    of: playbook-core
-    reason: "root LaunchDaemon answering *.<local tld> for the edge (tasks/dnsmasq.yml, install_dnsmasq); a row of its own waits on a role, plugin and docs (body-plan.md §3 homes rule)"
 
 services:
   # -------------------------------------------------------------- infra stack
@@ -1204,4 +1202,24 @@ services:
       type: exec
       command: "tailscale status --peers=false"
       expect_rc: 0
+      timeout_sec: 5
+
+  # I-12 ruling (2026-10-07): a row, not a daemons_without_row entry. dnsmasq has
+  # a flag, a version pin, a root LaunchDaemon and an authored stop (tasks/dnsmasq.yml);
+  # ruling it a job of playbook-core dropped it from the graph roster the prune guard
+  # and tools/undeclared-status.py read. Its role, plugin and docs are still owed
+  # (tests/anatomy/test_every_organ_has_its_homes.py).
+  - id: dnsmasq
+    software_owner: symbiont
+    category: infra
+    stack: null
+    install_flag: install_dnsmasq
+    version_source: homebrew
+    version_var: dnsmasq_version
+    brew_formula: dnsmasq
+    launchd_label: "homebrew.mxcl.dnsmasq"
+    health_check:
+      type: tcp
+      host: 127.0.0.1
+      port: 53
       timeout_sec: 5

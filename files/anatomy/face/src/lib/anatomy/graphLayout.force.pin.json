@@ -1,7 +1,7 @@
 {
 	"comment": "Determinism pin for forceLayout() on the default view (docs/idea/17-loop-split-refactor-graph.md §3). positions snapshot [id,x,y,rank] per node + width/height, whole-px coordinates since 2026-08-18 (raw floats are ISA-bound: arm64 and x86_64 V8 disagree by ≤2.1e-06 px, so the rounding was verified identical on macOS arm64, linux/arm64 and linux/amd64 before freezing). Lives OUTSIDE the test file because tests/anatomy/test_a_fixture_is_never_a_real_secret.py refuses credential-shaped literals inside *.test.ts (graphSha256 is that shape). Re-pin deliberately: FACE_LAYOUT_REPIN=1 npx vitest run src/lib/anatomy/graphLayout.test.ts, then npx prettier --write this file. graphSha256 is sha256 of the anatomy-graph.json this pin was frozen against — tests/anatomy/test_face_layout_pin_binds_the_graph.py compares it to the artifact, so a graph regen that forgets this file goes red in the pytest lane (the lane that regenerates), not four days later in the face lane. That gate exists because the 6b960b47 lesson repeated 2026-08-20..23: three graph regens, no re-freeze, three days of CI red. 2026-10-06: the sha256 of these positions was retired. At 148 default-view nodes the same re-freeze hashed 702b87c9… on macOS arm64 and cc079150… on CI's ubuntu x86_64: hash equality turns any 1-px rounding flip into red. The test now compares each coordinate within 1 px, rank and node set/order exactly, so a real move still fails and an ISA flip does not.",
 	"pinnedAt": "2026-10-07",
-	"graphSha256": "a2bdb9487d9cfaa519f5d75903f5305961267f54eccd930fe29307e2ae45b0d7",
+	"graphSha256": "f0ed9b25f7d9473e5c08553f86af4228a5aa02765c2dbeaadd6f4a92ffc1778a",
 	"positions": [
 		["agent:conductor", 1121, 763, 4],
 		["agent:curator", 1003, 436, 3],

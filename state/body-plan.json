@@ -7,7 +7,7 @@
     "genome": 20,
     "cell": 16,
     "tissue": 1,
-    "organ": 77,
+    "organ": 78,
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
@@ -1554,6 +1554,10 @@
       "kind": "service"
     },
     "service:device_gateway": {
+      "level": "organ",
+      "kind": "service"
+    },
+    "service:dnsmasq": {
       "level": "organ",
       "kind": "service"
     },

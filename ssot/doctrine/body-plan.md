@@ -70,9 +70,10 @@ A new word the operator has not ruled carries `proposed: true`.
 `id` in `state/manifest.yml`: `roles/pazny.<id>/` renders it,
 `files/anatomy/plugins/<id>-base/` wires it, `docs/systems/<id>/` explains it,
 with `_` → `-` in the plugin and docs names. A home nobody can derive from the
-row is a part a model cannot find. Six organs lack one today (alloy has no
-role; tailscale has docs only; bone, opencode and iiab_terminal have no
-plugin; homeassistant has no docs); each is declared with its reason in
+row is a part a model cannot find. Seven organs lack one today (alloy has no
+role; tailscale has docs only; dnsmasq has none of the three; bone, opencode
+and iiab_terminal have no plugin; homeassistant has no docs); each is declared
+with its reason in
 `tests/anatomy/test_every_organ_has_its_homes.py`, a list that may only shrink.
 
 A cell's own prompt and tool allow-list is its **definition**; one session
@@ -160,8 +161,9 @@ of organ. A job of an organ (a Pulse job, a face app, a hosted forge) is not
 another organ. Since I-12 (2026-10-07) the anatomy graph counts each organ
 once: a row's launchd jobs ride its `service:` node as `launchd_labels`, a
 face app is internal to the face, and a host job no row owns is ruled in the
-manifest's `daemons_without_row` (a reflex or internal of its owner, or the
-heartbeat, which keeps its own cross-level node). Gate:
+manifest's `daemons_without_row` (a reflex or internal of its owner, riding
+the owner's node so an authored stop survives, or the heartbeat, which keeps
+its own cross-level node). Gate:
 `tests/anatomy/test_every_daemon_has_a_manifest_row.py`.
 
 ## 6. What this does not settle

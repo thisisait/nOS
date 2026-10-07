@@ -57,7 +57,7 @@
         "software_owner": {
           "type": "string",
           "enum": ["self", "symbiont"],
-          "description": "Whose software this organ is (body-plan.md §4.1; same key and values as config.d/20-host-software.yml). self: one of nOS's own parts, code in this repo or a contract-declared sibling. symbiont: declared vendor software beside nOS, fed by its vendor. Habitat is the machine owner's and is never a row. Gate: tests/anatomy/test_manifest_rows_carry_origin.py."
+          "description": "Whose software this organ is (body-plan.md §4.1; same key and values as the host-software default layer, tools/nos_identity.py). self: one of nOS's own parts, code in this repo or a contract-declared sibling. symbiont: declared vendor software beside nOS, fed by its vendor. Habitat is the machine owner's and is never a row. Gate: tests/anatomy/test_manifest_rows_carry_origin.py."
         },
         "category": {
           "type": "string",

@@ -95,10 +95,14 @@ def test_every_declared_label_is_a_row_or_ruled_and_vice_versa():
             for label, rows in owners.items() if label not in declared]
     bad += [f"{label}: daemons_without_row names it but no role renders it"
             for label in rulings if label not in declared]
-    bad += [f"{label}: row {rows}, but graph node(s) {carried.get(label)} carry it"
-            for label, rows in owners.items() if carried.get(label) != [f"service:{rows[0]}"]]
-    bad += [f"{label}: on a service node {nodes} but owned by no row"
-            for label, nodes in carried.items() if label not in owners]
+    # Who carries a label on its node: the owning row, or the row a ruling says `of:`.
+    rides = {**{lb: f"service:{rows[0]}" for lb, rows in owners.items()},
+             **{lb: f"service:{r.get('of')}" for lb, r in rulings.items()
+                if r.get("ruling") in ("reflex", "internal") and r.get("of") != "playbook-core"}}
+    bad += [f"{label}: should ride {node}, but graph node(s) {carried.get(label)} carry it"
+            for label, node in rides.items() if carried.get(label) != [node]]
+    bad += [f"{label}: on a service node {nodes} but owned by no row and ruled of none"
+            for label, nodes in carried.items() if label not in rides]
     assert not bad, "\n".join(bad)
 
 
