@@ -26,6 +26,7 @@ This gate pins the new contract by running the SCRIPT (not reading its source):
 
 from __future__ import annotations
 
+import sys
 import pathlib
 import re
 import subprocess
@@ -33,10 +34,12 @@ import subprocess
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 
 def _resolved_flag() -> str:
-    for f in (REPO / "config.yml", REPO / "default.config.yml"):
+    for f in (REPO / "config.yml", *reversed(ni.default_layers())):
         if not f.is_file():
             continue
         m = re.search(r"^install_gitlab:\s*(\S+)", f.read_text(encoding="utf-8"), re.M)

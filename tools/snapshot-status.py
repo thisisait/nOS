@@ -52,6 +52,8 @@ import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 HOME = pathlib.Path(os.path.expanduser("~"))
 
 #: The paths whose loss would cost something git cannot give back, and what
@@ -64,7 +66,7 @@ GUARDED = [
     (HOME / "stacks", "rendered compose files and role overrides"),
 ]
 
-#: Resolved from default.config.yml rather than assumed, because on this estate
+#: Resolved from the default layers rather than assumed, because on this estate
 #: it is redirected to external storage and that is the whole finding.
 DATA_ROOT_VAR = "nos_data_root"
 EXTERNAL_ROOT_VAR = "external_storage_root"
@@ -93,7 +95,7 @@ def _run(argv: list[str]) -> tuple[int, str]:
 
 
 def _config_scalar(key: str) -> str | None:
-    for path in (REPO / "config.yml", REPO / "default.config.yml"):
+    for path in (REPO / "config.yml", *reversed(ni.default_layers())):
         if not path.exists():
             continue
         m = re.search(rf"^{re.escape(key)}:\s*[\"']?([^\"'#\n]+)",

@@ -36,12 +36,15 @@ above passes by absence. Both are asserted as positive controls.
 
 from __future__ import annotations
 
+import sys
 import pathlib
 
 import pytest
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 REGISTRY = REPO / "state/habitat/llm-backends.yml"
 AGENTS = REPO / "files/anatomy/agents"
 SECRETS_TPL = REPO / "templates/secrets.yml.j2"
@@ -175,7 +178,7 @@ def test_every_backend_ships_prepared_not_armed():
     fault. A backend-shaped hole in any of the three layers is found here,
     not on the night.
     """
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text())
+    cfg = ni.default_config()
     plist = (REPO / "roles/pazny.wing/templates/wing.plist.j2").read_text()
     problems = []
     for name, b in _registry().items():

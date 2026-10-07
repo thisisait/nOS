@@ -38,16 +38,17 @@ import sys
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 CATALOG = REPO / "files" / "anatomy" / "scripts" / "discover-pulse-catalog.py"
 SECRETS_TPL = REPO / "templates" / "secrets.yml.j2"
-CFG = REPO / "default.config.yml"
 CREDS = REPO / "default.credentials.yml"
 REGISTRY = REPO / "state" / "habitat" / "llm-backends.yml"
 WING_PLIST = REPO / "roles" / "pazny.wing" / "templates" / "wing.plist.j2"
 
 
 def test_disabled_by_default():
-    cfg = yaml.safe_load(CFG.read_text())
+    cfg = ni.default_config()
     assert cfg.get("minimax_enabled") is False, (
         "minimax_enabled must default to false — this feature ships inert"
     )

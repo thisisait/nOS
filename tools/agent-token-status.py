@@ -36,6 +36,8 @@ import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 SECRETS = Path.home() / ".nos/secrets.yml"
 
 
@@ -83,7 +85,7 @@ def _token_status(url: str, client_id: str, secret: str) -> str:
 
 
 def main() -> int:
-    base = _yaml(REPO / "default.config.yml")
+    base = ni.default_config()
     over = _yaml(REPO / "config.yml")
     merged = {**base, **over}
     secrets = _yaml(SECRETS)

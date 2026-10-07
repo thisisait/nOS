@@ -45,15 +45,17 @@ the converge operator knows this gate's green is necessary, not sufficient.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 TABLES_DIR = REPO / "state/keap-tables"
 SEED = REPO / "state/fixtures/label-printer.seed.yml"
 BUNDLE = REPO / "roles/pazny.keap/tasks/seed-bundle.yml"
-CONFIG = REPO / "default.config.yml"
 
 #: Dependency order — must match the seeder's _fixture_table_order verbatim.
 ORDER = [
@@ -150,7 +152,7 @@ def test_the_seed_key_order_is_the_dependency_order():
         "non-native Jinja that is a string and the loop iterates characters; "
         "loop `_bundle_seed.keys() | list` instead"
     )
-    flag = yaml.safe_load(CONFIG.read_text()).get("keap_seed_business_fixture")
+    flag = ni.default_config().get("keap_seed_business_fixture")
     assert flag is False, (
         "keap_seed_business_fixture must default false — a public nOS install "
         "does not grow a label printer unasked"

@@ -22,14 +22,16 @@ shape; a closed queue row still needs the converge.
 """
 from __future__ import annotations
 
+import sys
 import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 MAIN = REPO / "main.yml"
 STORE = REPO / "templates/secrets.yml.j2"
 COMPOSE = REPO / "roles/pazny.rustfs/templates/compose.yml.j2"
-CONFIG = REPO / "default.config.yml"
 RECIPE = REPO / "upgrades/freescout.yml"
 
 
@@ -68,7 +70,7 @@ def test_rustfs_s3_keys_are_lazy_minted_and_persisted() -> None:
 
 
 def test_freescout_pin_clears_the_aug29_wave() -> None:
-    cfg = CONFIG.read_text(encoding="utf-8")
+    cfg = ni.default_config_text()
     pin = re.search(r'^freescout_version:\s*"(\d+\.\d+\.\d+)"', cfg, re.M)
     assert pin, "freescout_version left default.config.yml"
     ver = tuple(int(p) for p in pin.group(1).split("."))

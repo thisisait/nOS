@@ -9,11 +9,13 @@ WHAT THIS CANNOT DO: pull images or prove running binaries. nos + a reader.
 """
 from __future__ import annotations
 
+import sys
 import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-CONFIG = REPO / "default.config.yml"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 GRAFANA_RECIPE = REPO / "upgrades/grafana.yml"
 MARIADB_RECIPE = REPO / "upgrades/mariadb.yml"
 DNSMASQ = REPO / "tasks/dnsmasq.yml"
@@ -21,12 +23,13 @@ MINIFLUX_COMPOSE = REPO / "roles/pazny.miniflux/templates/compose.yml.j2"
 MINIFLUX_DEF = REPO / "roles/pazny.miniflux/defaults/main.yml"
 NTFY_DEF = REPO / "roles/pazny.ntfy/defaults/main.yml"
 MAILPIT_DEF = REPO / "roles/pazny.mailpit/defaults/main.yml"
-VW_DEF_OR_CFG = CONFIG  # vaultwarden_version lives in default.config.yml
 
 
-def _pin_in(path: Path, name: str) -> str:
-    m = re.search(rf'^{re.escape(name)}:\s*"([^"]+)"', path.read_text(encoding="utf-8"), re.M)
-    assert m, f"{name} left {path.relative_to(REPO)}"
+def _pin_in(path: Path | None, name: str) -> str:
+    """path None = the default layers (where every version pin lives)."""
+    text = path.read_text(encoding="utf-8") if path else ni.default_config_text()
+    m = re.search(rf'^{re.escape(name)}:\s*"([^"]+)"', text, re.M)
+    assert m, f"{name} left {path.relative_to(REPO) if path else 'the default layers'}"
     return m.group(1)
 
 
@@ -35,18 +38,18 @@ def _tuple(ver: str) -> tuple[int, ...]:
 
 
 def test_tempo_grafana_mariadb_vaultwarden_pins() -> None:
-    assert _tuple(_pin_in(CONFIG, "tempo_version")) >= (2, 10, 8)
-    g = _pin_in(CONFIG, "grafana_version")
+    assert _tuple(_pin_in(None, "tempo_version")) >= (2, 10, 8)
+    g = _pin_in(None, "grafana_version")
     assert _tuple(g) >= (12, 4, 10)
     recipe = GRAFANA_RECIPE.read_text(encoding="utf-8")
     at = re.search(r'id: "grafana-12-current".*?to: "(\d+\.\d+\.\d+)"', recipe, re.S)
     assert at and at.group(1) == g, f"grafana recipe to={at and at.group(1)} pin={g}"
-    m = _pin_in(CONFIG, "mariadb_version")
+    m = _pin_in(None, "mariadb_version")
     assert _tuple(m) >= (11, 8, 9)
     mrec = MARIADB_RECIPE.read_text(encoding="utf-8")
     mt = re.search(r'id: "mariadb-11-current".*?to: "(\d+\.\d+\.\d+)"', mrec, re.S)
     assert mt and mt.group(1) == m, f"mariadb recipe to={mt and mt.group(1)} pin={m}"
-    assert _tuple(_pin_in(CONFIG, "vaultwarden_version")) >= (1, 37, 3)
+    assert _tuple(_pin_in(None, "vaultwarden_version")) >= (1, 37, 3)
 
 
 def test_miniflux_ntfy_mailpit_role_pins() -> None:

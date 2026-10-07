@@ -25,10 +25,12 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import re
+import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import nos_identity as ni  # noqa: E402
 
-CONFIG = os.path.join(ROOT, "default.config.yml")
 ROLE_DEFAULT = os.path.join(ROOT, "roles", "pazny.postgresql", "defaults", "main.yml")
 
 # Operative floor — the patch line the 2026-05-14 release demands. Bump (never
@@ -39,15 +41,14 @@ MAJOR = 16
 _PIN_RE = re.compile(r'^postgresql_version:\s*["\']?(\d+)\.(\d+)-alpine["\']?', re.M)
 
 
-def _read_pin(path):
-    with open(path) as fh:
-        m = _PIN_RE.search(fh.read())
-    assert m, "postgresql_version (NN.NN-alpine) not found in %s" % path
+def _read_pin(text):
+    m = _PIN_RE.search(text)
+    assert m, "postgresql_version (NN.NN-alpine) not found in the default layers"
     return int(m.group(1)), int(m.group(2)), "%s.%s-alpine" % (m.group(1), m.group(2))
 
 
 def test_config_pin_at_or_above_floor():
-    major, minor, tag = _read_pin(CONFIG)
+    major, minor, tag = _read_pin(ni.default_config_text())
     assert major == MAJOR, "PostgreSQL major changed (%s) — major bumps need a pg_upgrade recipe, not a pin edit" % tag
     assert minor >= MIN_MINOR, (
         "default.config.yml postgresql_version=%s is behind the 16.%d floor "

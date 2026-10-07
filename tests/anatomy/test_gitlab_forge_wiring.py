@@ -16,16 +16,18 @@ when an operator opts in:
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 GL_DEFAULTS = REPO / "roles" / "pazny.gitlab" / "defaults" / "main.yml"
 GL_POST = REPO / "roles" / "pazny.gitlab" / "tasks" / "post.yml"
 GL_FORGE = REPO / "roles" / "pazny.gitlab" / "tasks" / "post-forge.yml"
 SECRETS_TPL = REPO / "templates" / "secrets.yml.j2"
 RECIPE_PR = REPO / "tools" / "recipe-pr.sh"
 SYNC_GL = REPO / "tools" / "sync-trunk-to-gitlab.sh"
-DEFAULT_CONFIG = REPO / "default.config.yml"
 
 
 def test_gitlab_forge_defaults_declared():
@@ -100,7 +102,7 @@ def test_recipe_pr_defaults_to_gitea_not_gitlab():
     assert "install_gitlab" in text, "recipe-pr.sh must refuse GitLab when it is declared off"
     assert "PRIVATE-TOKEN" in text and "merge_requests" in text, "GitLab MR leg missing (drop-in replacement)"
     assert "api/v1/repos" in text and "pulls" in text, "Gitea PR fallback leg removed"
-    cfg = DEFAULT_CONFIG.read_text()
+    cfg = ni.default_config_text()
     assert re.search(r'^nos_agent_forge:\s*"gitea"', cfg, re.M), (
         "default.config.yml must declare nos_agent_forge: gitea — GitLab is optional"
     )

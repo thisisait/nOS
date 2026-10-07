@@ -13,9 +13,12 @@ This gate pins the closures + guards the already-safe services from regressing.
 
 from __future__ import annotations
 
+import sys
 import pathlib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 
 def test_open_webui_local_signup_off_and_admin_db_seeded():
@@ -28,7 +31,7 @@ def test_open_webui_local_signup_off_and_admin_db_seeded():
     assert "openwebui_enable_signup | default(true)" not in compose, "ENABLE_SIGNUP must not default true"
     # The explicit config var is the live source of truth — the template
     # default is moot if this is set true (the gap the first run exposed).
-    cfg = (REPO / "default.config.yml").read_text()
+    cfg = ni.default_config_text()
     assert "openwebui_enable_signup: false" in cfg, "default.config.yml must set signup false (overrides the template default)"
     assert "openwebui_enable_signup: true" not in cfg, "no explicit true override may reopen public signup"
     post = (REPO / "roles/pazny.open_webui/tasks/post.yml").read_text()
@@ -60,7 +63,7 @@ def test_gitea_external_only_registration():
     ALLOW_ONLY_EXTERNAL_REGISTRATION=true is the external-only gate."""
     compose = (REPO / "roles/pazny.gitea/templates/compose.yml.j2").read_text()
     assert "ALLOW_ONLY_EXTERNAL_REGISTRATION" in compose
-    assert "gitea_allow_only_external_registration: true" in (REPO / "default.config.yml").read_text()
+    assert "gitea_allow_only_external_registration: true" in ni.default_config_text()
     # Group → admin sync: the Authentik OIDC source maps the groups claim, and a
     # tier-1 Authentik user becomes a Gitea admin (no manual promotion). Gitea
     # registers via the `gitea admin auth add-oauth` CLI (no REST endpoint

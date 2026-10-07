@@ -22,12 +22,15 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 WING = REPO / "files/anatomy/wing"
 AUTOLOAD = WING / "vendor/autoload.php"
 AGENTS = REPO / "files/anatomy/agents"
@@ -238,7 +241,7 @@ def test_every_declared_fallback_resolves_to_a_known_backend(verdicts):
 def test_the_local_fallback_model_is_pinned_and_small():
     """The haiku tier an ollama fallback reads must be set, and must not be the
     14B that starves KEAP (memory: local-model-budget-on-this-host)."""
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text())
+    cfg = ni.default_config()
     model = cfg.get("ollama_small_model") or ""
     sizes = (yaml.safe_load(REGISTRY.read_text())["backends"]["ollama"].get("sizes_b") or {})
     assert model, "ollama_small_model is empty — every ollama fallback refuses 'armed without a model id'"

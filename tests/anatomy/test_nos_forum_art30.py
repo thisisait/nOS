@@ -9,6 +9,7 @@ Policy: docs/compliance/nos-forum.md.
 """
 from __future__ import annotations
 
+import sys
 import pathlib
 
 import yaml
@@ -17,6 +18,8 @@ from test_device_gateway_art30 import gdpr_block_is_complete  # type: ignore
 from module_utils.nos_app_parser import REQUIRED_GDPR  # type: ignore
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 PLUGIN = REPO / "files/anatomy/plugins/nos-forum-base/plugin.yml"
 MAIN = REPO / "main.yml"
 DOC = REPO / "docs/compliance/nos-forum.md"
@@ -104,6 +107,6 @@ def test_policy_doc_matches_the_register_row():
 
 
 def test_flag_ships_off():
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text(encoding="utf-8"))
+    cfg = ni.default_config()
     assert cfg["install_nos_forum"] is False
     assert cfg["nos_forum_calls_enabled"] is False

@@ -26,6 +26,8 @@ import sys
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 sys.path.insert(0, str(REPO / "files/anatomy"))
 
 from module_utils import load_plugins  # noqa: E402
@@ -34,7 +36,7 @@ from module_utils import load_plugins  # noqa: E402
 def load_central_apps() -> list[dict]:
     """Parse the `authentik_oidc_apps` list out of default.config.yml without
     Jinja resolution (we only need slugs + shape, not rendered values)."""
-    raw = (REPO / "default.config.yml").read_text(encoding="utf-8")
+    raw = ni.default_config_text()
     # Strip {{ ... }} so PyYAML doesn't choke on template braces.
     raw = re.sub(r"\{\{[^}]+\}\}", "TEMPLATE", raw)
     data = yaml.safe_load(raw)

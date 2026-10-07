@@ -23,20 +23,21 @@ declaration is not presence in the realm; ask tools/identity-status.py.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 import jinja2
-import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-CONFIG = REPO / "default.config.yml"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 KINDS = {"operator", "user", "service", "agent"}
 KNOWN_REALMS = {"authentik", "gitea", "gitlab", "woodpecker", "wing"}
 
 
 def _config() -> dict:
-    return yaml.safe_load(CONFIG.read_text())
+    return ni.default_config()
 
 
 def test_the_roster_exists_and_every_entry_is_well_formed():
@@ -79,7 +80,7 @@ def test_akadmin_and_the_primary_admin_are_both_declared():
 
 
 def test_gitea_admin_derives_from_the_roster_not_the_os():
-    text = CONFIG.read_text()
+    text = ni.default_config_text()
     m = re.search(r"^gitea_admin_user:\s*(.+)$", text, re.M)
     assert m, "gitea_admin_user is gone from default.config.yml"
     assert "nos_primary_admin" in m.group(1), (

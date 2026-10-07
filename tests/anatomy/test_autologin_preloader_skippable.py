@@ -18,9 +18,12 @@ reintroduce a redirect loop or remove the bypass.
 
 from __future__ import annotations
 
+import sys
 import pathlib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 WING = REPO / "files" / "anatomy" / "wing"
 PRESENTER = WING / "app" / "Presenters" / "HubPresenter.php"
 SPLASH = WING / "app" / "Templates" / "Hub" / "splash.latte"
@@ -54,7 +57,7 @@ def test_preloader_dormant_by_default():
     assert "SSO_ENABLE_CUSTOM_PRELOADER" in src, \
         "renderSplash does not gate on the SSO_ENABLE_CUSTOM_PRELOADER flag"
     # The dormant default config var must exist (false).
-    cfg = (REPO / "default.config.yml").read_text()
+    cfg = ni.default_config_text()
     assert "sso_enable_custom_preloader: false" in cfg, \
         "sso_enable_custom_preloader default is not false (dormant)"
 

@@ -29,6 +29,8 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 sys.path.insert(0, str(REPO / "files/anatomy/module_utils"))
 
 import nos_secret_derive as d  # noqa: E402
@@ -231,8 +233,8 @@ def test_store_persisted_map_names_are_reconciled_after_derivation():
     name whose declaration resolves via the map must appear in the reconcile
     task, mapped to the SAME key its declaration uses."""
     decls = {}
-    for f in ("default.credentials.yml", "default.config.yml"):
-        decls.update({m.group(1): m.group(2) for m in _DECL.finditer((REPO / f).read_text())})
+    for f in (REPO / "default.credentials.yml", *ni.default_layers()):
+        decls.update({m.group(1): m.group(2) for m in _DECL.finditer(f.read_text())})
 
     tpl = (REPO / "templates/secrets.yml.j2").read_text()
     persisted = set(re.findall(r"^([a-z0-9_]+):", tpl, re.M))

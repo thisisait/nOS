@@ -32,14 +32,16 @@ hold.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 import pytest
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 LIBRARY = REPO / "files/anatomy/skills"
-CONFIG = REPO / "default.config.yml"
 DISTRIBUTOR = REPO / "tasks/skills.yml"
 
 #: Numbers that were true once and rot silently inside a procedure. The old
@@ -60,7 +62,7 @@ def _skills() -> list[tuple[str, dict, str]]:
 
 
 def _consumers() -> list[dict]:
-    doc = yaml.safe_load(CONFIG.read_text(encoding="utf-8")) or {}
+    doc = ni.default_config() or {}
     return doc.get("nos_skill_consumers") or []
 
 

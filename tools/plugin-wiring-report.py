@@ -13,7 +13,7 @@ What it reports:
       A authentik, B post_blank lifecycle).
   2. Gate parity — every `service` plugin must declare a gate
      (requires.feature_flag OR requires.app); a feature_flag must resolve to a
-     real toggle var in default.config.yml.
+     real toggle var in the default layers.
   3. DAG — load_plugins.topological_order resolves with no cycles.
   4. Notification shape — blocks should use the canonical A9 severity routing
      (on_critical/on_high/on_medium/on_low/on_info), not the dead event-key
@@ -35,6 +35,8 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "files/anatomy"))
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 from module_utils import load_plugins  # noqa: E402
 
@@ -43,11 +45,11 @@ CANONICAL_SEVERITIES = {"on_critical", "on_high", "on_medium", "on_low", "on_inf
 
 
 def known_toggles() -> set[str]:
-    """Top-level var names defined in default.config.yml (the toggle namespace).
+    """Top-level var names defined in the default layers (the toggle namespace).
 
     Strips {{ ... }} so PyYAML doesn't choke on Jinja-templated default values.
     """
-    raw = (REPO / "default.config.yml").read_text(encoding="utf-8")
+    raw = ni.default_config_text()
     raw = re.sub(r"\{\{[^}]+\}\}", "TEMPLATE", raw)
     data = yaml.safe_load(raw) or {}
     return set(data.keys())
@@ -116,7 +118,7 @@ def main(argv: list[str]) -> int:
         elif flag and flag not in toggles:
             violations.append(
                 f"{p.name}: feature_flag {flag!r} is not a toggle in "
-                f"default.config.yml")
+                f"the default layers")
         if notification_shape(p.manifest) == "legacy":
             legacy_notif.append(p.name)
 

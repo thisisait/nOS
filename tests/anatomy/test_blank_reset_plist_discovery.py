@@ -20,6 +20,7 @@ are not updated.
 
 from __future__ import annotations
 
+import sys
 import re
 from pathlib import Path
 
@@ -28,6 +29,8 @@ import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "tools"))
+import nos_identity as ni  # noqa: E402
 BLANK_RESET_PATH = REPO_ROOT / "tasks" / "blank-reset.yml"
 ROLES_DIR = REPO_ROOT / "roles"
 
@@ -288,9 +291,7 @@ def _global_label_var_map() -> dict[str, str]:
     """
     var_map: dict[str, str] = {}
     sources = list((ROLES_DIR).glob("*/defaults/main.yml"))
-    cfg = REPO_ROOT / "default.config.yml"
-    if cfg.is_file():
-        sources.append(cfg)
+    sources.extend(ni.default_layers())
     for src in sources:
         if ".ci-venv" in src.parts:
             continue

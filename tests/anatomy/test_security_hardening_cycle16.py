@@ -10,9 +10,12 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 
 def test_alloy_otlp_binds_via_var_not_wildcard():
@@ -24,7 +27,7 @@ def test_alloy_otlp_binds_via_var_not_wildcard():
         assert "alloy_otlp_bind_addr" in src, f"{rel}: OTLP must bind via alloy_otlp_bind_addr"
         assert 'endpoint = "0.0.0.0:{{ alloy_otlp_grpc_port' not in src, f"{rel}: grpc still 0.0.0.0"
         assert 'endpoint = "0.0.0.0:{{ alloy_otlp_http_port' not in src, f"{rel}: http still 0.0.0.0"
-    cfg = (REPO / "default.config.yml").read_text()
+    cfg = ni.default_config_text()
     assert "\nalloy_otlp_bind_addr: \"127.0.0.1\"" in cfg, "default must be loopback"
 
 

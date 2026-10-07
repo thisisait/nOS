@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import jinja2
@@ -25,6 +26,8 @@ import yaml
 from pulse.runners.subprocess import validate_command
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ROLE = REPO / "roles/pazny.geolibre"
 PLUGIN = REPO / "files/anatomy/plugins/geolibre-base/plugin.yml"
 KINDS = ("wms", "wfs", "wmts", "xyz", "arcgis", "csw")  # entrypoint.sh service_kinds
@@ -33,7 +36,7 @@ URL_FIELDS = ("url", "endpoint")
 
 def _declared(**over) -> list[dict]:
     """geolibre_layers with its Jinja resolved the way Ansible does (native types)."""
-    d = yaml.safe_load((REPO / "default.config.yml").read_text())
+    d = ni.default_config()
     ctx = {"maps_domain": "maps.dev.local", "install_offline_maps": True, **over}
     env = jinja2.nativetypes.NativeEnvironment(undefined=jinja2.StrictUndefined)
 

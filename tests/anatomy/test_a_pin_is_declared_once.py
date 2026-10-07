@@ -39,11 +39,13 @@ default.
 
 from __future__ import annotations
 
+import sys
 import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-CONFIG = REPO / "default.config.yml"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 #: `_repo_ref` is in here because keap_repo_ref is a pin in every sense that
 #: matters: it selects the source tree a service is built from. Bare `_image`
 #: joined 2026-09-01: it escaped the first spelling, and snappymail_image +
@@ -61,7 +63,7 @@ def _declared(text: str) -> dict[str, str]:
 
 
 def _config() -> dict[str, str]:
-    return _declared(CONFIG.read_text(encoding="utf-8"))
+    return _declared(ni.default_config_text())
 
 
 def _role_defaults() -> dict[str, tuple[str, str]]:
@@ -106,7 +108,7 @@ def test_the_config_comments_do_not_point_at_a_deleted_line():
     line this change removes. The rationale moved up with the pin; nothing else
     may still send a reader to a role default for a version.
     """
-    text = CONFIG.read_text(encoding="utf-8")
+    text = ni.default_config_text()
     dangling = []
     for line in text.splitlines():
         head, _, comment = line.partition("#")

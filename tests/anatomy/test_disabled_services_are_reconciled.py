@@ -35,15 +35,17 @@ apps/ directory — so a fourth dependency or a new manifest app needs no edit.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 import pytest
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 TASK = REPO / "tasks/stacks/prune-disabled.yml"
 RETIRED = REPO / "tasks/stacks/prune-retired.yml"
-CONFIG = REPO / "default.config.yml"
 ORCHESTRATORS = (REPO / "tasks/stacks/core-up.yml", REPO / "tasks/stacks/stack-up.yml")
 
 
@@ -96,7 +98,7 @@ def test_removal_is_opt_in_and_the_report_is_not(tasks) -> None:
 
 
 def test_the_flag_is_declared_and_defaults_to_false(tasks) -> None:
-    cfg = CONFIG.read_text(encoding="utf-8")
+    cfg = ni.default_config_text()
     m = re.search(r"^uninstall_disabled_services:\s*(\S+)", cfg, re.M)
     assert m, "uninstall_disabled_services is not declared in default.config.yml"
     assert m.group(1) == "false", (

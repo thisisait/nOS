@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 TOOL = REPO / "tools/nos-image-cache.py"
 
 FAKE = r'''#!/usr/bin/env python3
@@ -138,7 +140,7 @@ def test_a_tampered_tar_is_refused_not_loaded(tmp_path: Path) -> None:
 
 def test_the_cache_sits_outside_everything_a_removal_takes() -> None:
     import jinja2, re, yaml
-    cfg = (REPO / "default.config.yml").read_text(encoding="utf-8")
+    cfg = ni.default_config_text()
     expr = re.search(r'^artifact_cache_dir: "(.*)"$', cfg, re.M).group(1)
     removal = (REPO / "tasks/removal-set.yml").read_text(encoding="utf-8")
     src = yaml.safe_load(removal)

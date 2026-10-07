@@ -16,13 +16,15 @@ from pathlib import Path
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 spec = importlib.util.spec_from_file_location("e2e_plan", REPO / "tools/e2e-plan.py")
 plan_mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(plan_mod)
 sys.path.insert(0, str(REPO / "tests/e2e"))
 from lib import sso_walk  # noqa: E402
 
-VARS = {**plan_mod.smoke.merge_config(REPO / "default.config.yml"),
+VARS = {**plan_mod.smoke.merge_config(*ni.default_layers()),
         "tenant_domain": "example.test", "_host_alias_seg": "", "apps_runner_enabled": True,
         "install_paperclip": True, "install_ntfy": True, "install_gitea": True}
 

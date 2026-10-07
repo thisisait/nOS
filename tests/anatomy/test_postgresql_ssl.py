@@ -42,9 +42,12 @@ and it is the only thing that should be believed on that question.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 PG = REPO / "roles/pazny.postgresql"
 COMPOSE = PG / "templates/compose.yml.j2"
@@ -212,7 +215,7 @@ def test_the_conditional_is_gated_on_a_resolvable_variable():
     Every client conditional keys on `postgresql_ssl_enabled`; if that name is
     not at play scope, each of them silently takes the permissive branch."""
     import yaml
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text()) or {}
+    cfg = ni.default_config() or {}
     assert "postgresql_ssl_enabled" in cfg, (
         "postgresql_ssl_enabled must be declared in default.config.yml. As a "
         "pazny.postgresql role default it is invisible to the seven client "

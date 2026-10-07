@@ -2,15 +2,18 @@
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 
 def test_flags_default_off_in_config():
-    cfg = (REPO / "default.config.yml").read_text()
+    cfg = ni.default_config_text()
     assert "enforce_mfa: false" in cfg
     assert "mfa_password_hibp: false" in cfg
     assert "mfa_password_min_length: 15" in cfg

@@ -22,6 +22,7 @@ re-introduce the drift:
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 import pytest
@@ -31,6 +32,8 @@ import yaml
 from module_utils import load_plugins  # type: ignore  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 PLUGINS_ROOT = REPO / "files" / "anatomy" / "plugins"
 SCHEMA_PATH = REPO / "state" / "schema" / "plugin.schema.json"
 
@@ -39,7 +42,7 @@ CANONICAL_SEVERITIES = {"on_critical", "on_high", "on_medium", "on_low", "on_inf
 
 def _known_toggles() -> set[str]:
     """Top-level var names in default.config.yml (the toggle namespace)."""
-    raw = (REPO / "default.config.yml").read_text(encoding="utf-8")
+    raw = ni.default_config_text()
     raw = re.sub(r"\{\{[^}]+\}\}", "TEMPLATE", raw)
     return set((yaml.safe_load(raw) or {}).keys())
 

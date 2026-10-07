@@ -14,11 +14,14 @@ the {{ vars }} eager-finalize trap can't abort the run on it).
 """
 from __future__ import annotations
 
+import sys
 import pathlib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 POST = (REPO / "roles/pazny.portainer/tasks/post.yml").read_text(encoding="utf-8")
-CONFIG = (REPO / "default.config.yml").read_text(encoding="utf-8")
+CONFIG = ni.default_config_text()
 
 
 def test_drift_is_detected_from_both_failed_logins():

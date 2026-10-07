@@ -26,15 +26,16 @@ Auto-fails if the guard is removed or the version pin disappears.
 
 from __future__ import annotations
 
+import sys
 import re
 from pathlib import Path
 
-import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "tools"))
+import nos_identity as ni  # noqa: E402
 MAIN_YML = REPO_ROOT / "main.yml"
-DEFAULT_CONFIG = REPO_ROOT / "default.config.yml"
 
 
 def _dnsmasq_handler_block() -> str:
@@ -94,7 +95,7 @@ def test_dnsmasq_handler_is_darwin_gated():
 
 def test_dnsmasq_version_pinned():
     """`dnsmasq_version` must be a pinned literal in default.config.yml."""
-    data = yaml.safe_load(DEFAULT_CONFIG.read_text()) or {}
+    data = ni.default_config() or {}
     assert "dnsmasq_version" in data, (
         "dnsmasq_version pin missing from default.config.yml"
     )

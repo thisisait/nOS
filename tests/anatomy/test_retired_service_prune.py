@@ -13,16 +13,18 @@ the narrow reconciler that closes it.
 
 from __future__ import annotations
 
+import sys
 import pathlib
 
-import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tools"))
+import nos_identity as ni  # noqa: E402
 PRUNE = ROOT / "tasks/stacks/prune-retired.yml"
 
 
 def _config() -> dict:
-    return yaml.safe_load((ROOT / "default.config.yml").read_text())
+    return ni.default_config()
 
 
 def test_prune_task_exists_and_is_wired_into_both_orchestrators():

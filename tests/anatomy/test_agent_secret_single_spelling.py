@@ -41,10 +41,11 @@ import sys
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 AGENTS = sorted((REPO / "files/anatomy/agents").glob("*/agent.yml"))
 PLUGINS = sorted(REPO.glob("files/anatomy/plugins/*/plugin.yml"))
 STORE_TEMPLATE = REPO / "templates/secrets.yml.j2"
-CONFIG = REPO / "default.config.yml"
 CATALOG = REPO / "files/anatomy/scripts/discover-pulse-catalog.py"
 
 DERIVED = "{{ global_password_prefix }}_pw_"
@@ -149,7 +150,7 @@ def test_pulse_and_authentik_read_the_same_derived_leaf() -> None:
     `nos_derived_secrets.<leaf>` — not equal-today strings, the same name.
     """
     leaves = _store_leaves()
-    config = yaml.safe_load(CONFIG.read_text(encoding="utf-8")) or {}
+    config = ni.default_config() or {}
     roster = {
         c.get("client_id"): c.get("client_secret", "")
         for c in config.get("authentik_agent_clients") or []

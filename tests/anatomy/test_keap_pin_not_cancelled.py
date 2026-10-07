@@ -22,11 +22,14 @@ Offline: pure text read of the two pin sites.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tools"))
+import nos_identity as ni  # noqa: E402
 ROLE_DEFAULTS = ROOT / "roles/pazny.keap/defaults/main.yml"
 
 # Tags whose schema was cancelled after release. Append (never remove) if
@@ -49,7 +52,7 @@ def _role_pin() -> str:
 
 
 def _config_pins() -> dict:
-    cfg = yaml.safe_load((ROOT / "default.config.yml").read_text())
+    cfg = ni.default_config()
     return {k: _norm(v) for k, v in cfg.items() if k in ("keap_version", "keap_repo_ref")}
 
 

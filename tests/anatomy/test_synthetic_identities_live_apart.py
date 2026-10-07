@@ -28,7 +28,7 @@ sys.path.insert(0, str(REPO / "tools"))
 import load_plugins as lp  # noqa: E402
 import nos_identity as ni  # noqa: E402
 
-CFG = yaml.safe_load((REPO / "default.config.yml").read_text())
+CFG = ni.default_config()
 CREDS_TEXT = (REPO / "default.credentials.yml").read_text()
 REGISTRY = yaml.safe_load((REPO / "files/anatomy/secrets/registry.yml").read_text())["credentials"]
 PROFILE = yaml.safe_load((REPO / "profiles/test-users.yml").read_text())
@@ -209,7 +209,7 @@ def test_identity_status_labels_them_synthetic_and_names_the_lingering():
 
 def test_e2e_plan_resolves_them_synthetic_only_while_on():
     plan = _load("e2e-plan")
-    base = {**plan.smoke.merge_config(REPO / "default.config.yml"), "tenant_domain": "example.test", "_host_alias_seg": ""}
+    base = {**plan.smoke.merge_config(*ni.default_layers()), "tenant_domain": "example.test", "_host_alias_seg": ""}
     on = plan.identities({**base, ni.SYNTHETIC_FLAG: True})
     off = plan.identities({**base, ni.SYNTHETIC_FLAG: False})
     assert {i["name"]: i["kind"] for i in on if i["name"] == "alice"} == {"alice": "synthetic"}
@@ -231,7 +231,7 @@ def test_every_isolation_probe_renders_to_a_runnable_shape():
     """tests/e2e/estate/test_rbac_users.py runs these; a probe it cannot run
     would fail on the estate, not here."""
     plan = _load("e2e-plan")
-    rows = plan.plan({**plan.smoke.merge_config(REPO / "default.config.yml"), "tenant_domain": "example.test",
+    rows = plan.plan({**plan.smoke.merge_config(*ni.default_layers()), "tenant_domain": "example.test",
                       "_host_alias_seg": ""}, include_disabled=True)
     probes = [(r, p) for r in rows for p in r["isolation"]]
     assert len(probes) >= 2, "the isolation probes left the plugins"

@@ -24,19 +24,20 @@ If the preflight is deleted, or the var goes missing / non-literal, this fails.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
-import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-CONFIG = REPO / "default.config.yml"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 WING_TASKS = REPO / "roles" / "pazny.wing" / "tasks" / "main.yml"
 
 _SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 
 
 def _config() -> dict:
-    return yaml.safe_load(CONFIG.read_text()) or {}
+    return ni.default_config() or {}
 
 
 def test_frankenphp_version_pinned_as_semver_literal():
@@ -53,7 +54,7 @@ def test_frankenphp_version_pinned_as_semver_literal():
 def test_frankenphp_version_is_stock_jinja_safe():
     # The raw YAML value must carry no Jinja (no `{{ }}`, no `|` filter) so it
     # cannot trip the {{ vars }} eager-resolve trap in the plugin loader.
-    raw = CONFIG.read_text()
+    raw = ni.default_config_text()
     m = re.search(r"^frankenphp_version:\s*(.+?)\s*$", raw, re.M)
     assert m, "frankenphp_version line not found in default.config.yml"
     literal = m.group(1)

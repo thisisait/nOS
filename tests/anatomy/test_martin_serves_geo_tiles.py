@@ -20,6 +20,7 @@ origin, same cookie, same tier-3 app — no CORS at all. This gate pins:
 from __future__ import annotations
 
 import json
+import sys
 import re
 from pathlib import Path
 
@@ -31,6 +32,8 @@ import yaml
 from test_origin_pull_is_a_second_door import SERVICES, render  # type: ignore
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ROLE = REPO / "roles/pazny.martin"
 SCHEMA = json.loads((REPO / "tests/fixtures/martin-1.16.1-config.schema.json").read_text())
 DIGEST = "sha256:59902019bf9038926ff0c71174237d6852e64c457830a6349abe7090be8818ca"
@@ -83,7 +86,7 @@ def test_an_erased_party_leaves_no_tile():
 
 
 def _compose() -> dict:
-    d = yaml.safe_load((REPO / "default.config.yml").read_text())
+    d = ni.default_config()
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     env.filters["urlencode"] = lambda s: s
     ctx = {"martin_image": d["martin_image"], "martin_version": d["martin_version"],
@@ -101,7 +104,7 @@ def test_compose_runs_the_pin_unpublished_as_the_readonly_role():
     assert svc["environment"]["MARTIN_PG_URL"] == "postgres://martin:PW@postgresql:5432/geo?sslmode=disable"
     assert "/stacks/iiab/martin:/etc/martin:ro" in svc["volumes"]
     assert svc["command"] == ["--config", "/etc/martin/config.yaml"]
-    d = yaml.safe_load((REPO / "default.config.yml").read_text())
+    d = ni.default_config()
     assert d["install_martin"] is False
     reg = yaml.safe_load((REPO / "files/anatomy/secrets/registry.yml").read_text())["credentials"]
     assert reg["martin_db"] == {"service": "martin", "purpose": "db-password"}

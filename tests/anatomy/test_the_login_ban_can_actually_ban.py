@@ -31,6 +31,7 @@ upstream's defect inside our own config.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import jinja2
@@ -38,8 +39,9 @@ import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 TASKS = REPO / "roles/pazny.homeassistant/tasks/main.yml"
-CONFIG = REPO / "default.config.yml"
 
 #: Changing this ORPHANS the block already written on every live install:
 #: blockinfile would append a second `http:` mapping, and Home Assistant
@@ -85,7 +87,7 @@ def test_the_marker_is_unchanged():
 def test_the_default_renders_a_threshold_that_actually_bans(trim_blocks):
     """Rendered under both Jinja whitespace settings, because the block is
     templated as a task argument and the environment is not ours to choose."""
-    default = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))[
+    default = ni.default_config()[
         "homeassistant_login_attempts_threshold"
     ]
     http = _render(int(default), trim_blocks=trim_blocks)

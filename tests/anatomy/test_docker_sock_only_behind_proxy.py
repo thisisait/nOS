@@ -14,6 +14,7 @@ that does not render is red, not skipped.
 from __future__ import annotations
 
 import functools
+import sys
 import re
 from pathlib import Path
 
@@ -22,6 +23,8 @@ import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 PROXY_IMAGE = "tecnativa/docker-socket-proxy"
 #: Directories a bind can expose the socket through (Linux: /var/run -> /run).
 SOCKET_DIRS = {"/", "/var", "/var/run", "/run"}
@@ -78,7 +81,7 @@ def _vars(os_family: str) -> dict:
     """default.config.yml with every install_* on, string values resolved the
     way Ansible would (a few lazy passes), facts for one OS family."""
     env = _env()
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text()) or {}
+    cfg = ni.default_config() or {}
     cfg.update({k: True for k in cfg if k.startswith("install_")})
     facts = _Facts(os_family=os_family, env=_Facts(HOME="/home/nos"), user_id="nos",
                    user_uid=1000, user_gid=1000)

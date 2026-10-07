@@ -42,8 +42,9 @@ import sys
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 LIBRARY = REPO / "files/anatomy/skills"
-CONFIG = REPO / "default.config.yml"
 HOME = pathlib.Path(os.path.expanduser("~"))
 
 
@@ -53,7 +54,7 @@ def consumers() -> list[dict]:
     A second list would drift from the one the playbook uses, and the drift
     would be invisible precisely because both halves would look right.
     """
-    doc = yaml.safe_load(CONFIG.read_text(encoding="utf-8")) or {}
+    doc = ni.default_config() or {}
     out = []
     for entry in doc.get("nos_skill_consumers") or []:
         raw = str(entry.get("dir", ""))

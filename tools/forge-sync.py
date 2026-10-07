@@ -77,6 +77,8 @@ import sys
 import tempfile
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 #: The four holders, in report order. `local` and `github` are git-native;
 #: the two forges get their coordinates from the driver's FORGE_KEYS (one
@@ -191,7 +193,7 @@ def read_tips(driver, branch: str) -> dict[str, dict]:
         # false excuses that seat. Excused ≠ ignored; flipping the flag
         # restores it.
         flag = driver._yaml_lookup(f"install_{name}", REPO / "config.yml",
-                                   REPO / "default.config.yml")
+                                   *reversed(ni.default_layers()))
         if str(flag).lower() == "false":
             tips[name] = {"sha": None, "error": None, "declared_off": True}
             continue

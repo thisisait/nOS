@@ -28,6 +28,8 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
+sys.path.insert(0, str(REPO / "tools"))
 from nos_identity import layer_paths, resolve_flag  # noqa: E402
 
 
@@ -82,7 +84,7 @@ def test_every_manifest_port_var_resolves_for_both_readers():
 
 def test_the_smoke_loopback_probe_resolves_the_role_default():
     """The concrete drop: cortex is unrouted, so its probe IS the loopback one."""
-    vars_dict = SMOKE.merge_config(REPO / "default.config.yml", REPO / "config.yml")
+    vars_dict = SMOKE.merge_config(*ni.default_layers(), REPO / "config.yml")
     rows = yaml.safe_load((REPO / "state/manifest.yml").read_text(encoding="utf-8"))["services"]
     cortex = next(r for r in rows if r["id"] == "cortex")
     probe = SMOKE._loopback_probe(cortex, vars_dict)

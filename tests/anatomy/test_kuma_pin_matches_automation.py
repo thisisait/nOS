@@ -30,13 +30,15 @@ shadow` trap, and this gate reads the half that wins.
 
 from __future__ import annotations
 
+import sys
 import re
 from pathlib import Path
 
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-CONFIG = REPO / "default.config.yml"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ROLE = REPO / "roles/pazny.uptime_kuma"
 COMPOSE = ROLE / "templates/compose.yml.j2"
 
@@ -46,7 +48,7 @@ DB_TYPE_ENV = "UPTIME_KUMA_DB_TYPE"
 
 def _effective_pin() -> str:
     """The version that actually runs: default.config.yml outranks role defaults."""
-    text = CONFIG.read_text(encoding="utf-8")
+    text = ni.default_config_text()
     m = re.search(r'^uptime_kuma_version:\s*["\']?([^"\'#\s]+)', text, re.MULTILINE)
     assert m, "uptime_kuma_version is no longer declared in default.config.yml"
     return m.group(1)

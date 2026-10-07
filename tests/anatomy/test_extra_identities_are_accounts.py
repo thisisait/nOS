@@ -30,7 +30,7 @@ sys.path.insert(0, str(REPO / "tools"))
 import nos_identity as ni  # noqa: E402
 import nos_secret_derive as derive  # noqa: E402
 
-CFG = yaml.safe_load((REPO / "default.config.yml").read_text())
+CFG = ni.default_config()
 PLUGIN = REPO / "files/anatomy/plugins/authentik-base"
 BP = "blueprints/00-admin-groups.yaml.j2"
 PEOPLE = [{"name": "jana.novak", "email": "Jana@Example.test", "tier": 3},
@@ -185,8 +185,7 @@ def test_the_first_login_walk_carries_them_with_tier_and_password():
 
 def test_identity_status_declares_them(monkeypatch):
     ids = _mod("ids", "tools/identity-status.py")
-    base = dict(CFG)
-    monkeypatch.setattr(ids, "_yaml", lambda path: {"config.yml": {"nos_extra_identities": PEOPLE}}.get(path.name, base if path.name == "default.config.yml" else {}))
+    monkeypatch.setattr(ids, "_yaml", lambda path: {"config.yml": {"nos_extra_identities": PEOPLE}}.get(path.name, {}))
     roster, _ = ids.declared_roster()
     got = {r["name"]: r for r in roster}
     assert got["petr"]["realms"] == ["authentik"] and got["petr"]["kind"] == "user" and got["petr"]["tier"] == 1

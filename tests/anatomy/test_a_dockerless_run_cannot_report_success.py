@@ -14,14 +14,16 @@ ships on by default is the old behaviour with a longer name.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 MAIN = REPO / "main.yml"
 CI = REPO / ".github" / "workflows" / "ci.yml"
-CONFIG = REPO / "default.config.yml"
 FLAG = "nos_allow_no_docker"
 
 
@@ -81,7 +83,7 @@ def test_the_escape_defaults_to_off_and_is_not_a_config_default():
     assert re.search(rf"{FLAG}\s*\|\s*default\(false\)", when), (
         f"{FLAG} must default to FALSE in the condition — an escape that "
         "defaults true is the unguarded behaviour wearing a longer name")
-    assert not re.search(rf"^{FLAG}\s*:", CONFIG.read_text(encoding="utf-8"), re.M), (
+    assert not re.search(rf"^{FLAG}\s*:", ni.default_config_text(), re.M), (
         f"{FLAG} is declared in default.config.yml. It must be passed "
         "per-invocation so the exception is visible in the file that takes it, "
         "not inherited silently by every operator")

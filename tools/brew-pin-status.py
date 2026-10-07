@@ -51,7 +51,8 @@ import urllib.error
 import urllib.request
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
-CONFIG = REPO / "default.config.yml"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 #: formula -> (the var in default.config.yml that RECORDS what brew linked,
 #:             why this formula is watched at all)
@@ -100,7 +101,7 @@ def recorded_pin(var: str) -> str | None:
     gitignored, so resolving here would make the answer unshareable.
     """
     m = re.search(rf"^{re.escape(var)}:\s*[\"']?([^\"'#\s]+)",
-                  CONFIG.read_text(encoding="utf-8"), re.M)
+                  ni.default_config_text(), re.M)
     return m.group(1) if m else None
 
 

@@ -25,14 +25,16 @@ No network, no docker, fast.
 """
 from __future__ import annotations
 
+import sys
 import pathlib
 
 import yaml
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "tools"))
+import nos_identity as ni  # noqa: E402
 PREFLIGHT = REPO_ROOT / "tasks" / "stacks" / "docker-external-mount-preflight.yml"
 CORE_UP = REPO_ROOT / "tasks" / "stacks" / "core-up.yml"
-CONFIG = REPO_ROOT / "default.config.yml"
 
 
 def _load_tasks(path: pathlib.Path) -> list:
@@ -145,7 +147,7 @@ def test_restart_gated_on_blank_and_repair_flag():
 
 # ── 5. config keys are REAL global keys in default.config.yml ─────────────────
 def test_config_keys_are_global():
-    cfg = yaml.safe_load(CONFIG.read_text())
+    cfg = ni.default_config()
     assert isinstance(cfg, dict), "default.config.yml did not parse to a mapping"
     assert "docker_repair_external_mount" in cfg, (
         "docker_repair_external_mount must be a global key in default.config.yml"

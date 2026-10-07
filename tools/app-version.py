@@ -55,7 +55,8 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-CONFIG = REPO / "default.config.yml"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import nos_identity as ni  # noqa: E402
 TIMEOUT = 20
 
 #: service -> how to ask the RUNNING application what version it is.
@@ -121,7 +122,7 @@ def _run(argv: list[str]) -> tuple[int, str]:
 def pin_lines() -> dict[str, tuple[str, str]]:
     """var -> (pinned value, the rest of the line after `#`)."""
     out: dict[str, tuple[str, str]] = {}
-    for line in CONFIG.read_text(encoding="utf-8").splitlines():
+    for line in ni.default_config_text().splitlines():
         m = re.match(r'^([a-z_][a-z0-9_]*):\s*"?([^"#]*?)"?\s*(?:#(.*))?$', line)
         if m and m.group(2).strip():
             out[m.group(1)] = (m.group(2).strip(), (m.group(3) or "").strip())

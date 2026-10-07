@@ -14,6 +14,7 @@ runtime behaviour is smoke-tested separately + by the real update):
 
 from __future__ import annotations
 
+import sys
 import os
 import subprocess
 from pathlib import Path
@@ -21,6 +22,8 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 SCRIPTS = REPO / "files" / "anatomy" / "scripts"
 BOOTID = SCRIPTS / "nos-boot-id.sh"
 RESUME = SCRIPTS / "nos-os-resume.sh"
@@ -131,7 +134,6 @@ def test_resume_fans_an_a9_notification():
 PLIST = REPO / "templates" / "eu.thisisait.nos.resume.plist.j2"
 OS_RESUME_TASKS = REPO / "tasks" / "os-resume.yml"
 MAIN = REPO / "main.yml"
-CONFIG = REPO / "default.config.yml"
 
 
 def test_resume_launchd_plist_is_a_oneshot_login_agent():
@@ -167,5 +169,5 @@ def test_main_wires_os_resume_with_its_own_tag():
 def test_install_os_resume_flag_has_a_real_default():
     """The var must be defined in default.config.yml (a plain boolean) — both for
     the {{ vars }} eager-resolve trap and so the toggle is discoverable."""
-    body = CONFIG.read_text()
+    body = ni.default_config_text()
     assert "\ninstall_os_resume: true" in body, "install_os_resume must have a real default"

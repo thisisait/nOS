@@ -22,6 +22,8 @@ import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ROLE = REPO / "roles" / "pazny.traefik"
 CA = ROLE / "files" / "cloudflare-origin-pull-ca.crt"
 CA_IN_CONTAINER = "/etc/traefik/cloudflare-origin-pull-ca.crt"
@@ -50,7 +52,7 @@ def _env(**kw) -> jinja2.Environment:
 
 def _ctx(**over) -> dict:
     """default.config + traefik role vars, every install_* on, a public TLD."""
-    c = yaml.safe_load((REPO / "default.config.yml").read_text())
+    c = ni.default_config()
     c.update(yaml.safe_load((ROLE / "defaults" / "main.yml").read_text()))
     c.update(yaml.safe_load((ROLE / "vars" / "main.yml").read_text()))
     c.update({k: True for k in c if k.startswith("install_")})
@@ -130,7 +132,7 @@ def test_off_renders_byte_identical_and_carries_no_door(rel):
 
 
 def test_default_is_off_and_tier2_off_is_unchanged():
-    assert yaml.safe_load((REPO / "default.config.yml").read_text())["traefik_origin_pull_enabled"] is False
+    assert ni.default_config()["traefik_origin_pull_enabled"] is False
     assert not any("origin" in l for ls in tier2(False).values() for l in ls)
 
 

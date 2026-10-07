@@ -11,9 +11,12 @@ pins the retirement); live-agent wiring is asserted against upgrade-architect.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 WING = REPO / "files/anatomy/wing/app"
 ROUTER = WING / "Core/RouterFactory.php"
 NOTIF_PRESENTER = WING / "Presenters/Api/NotificationsPresenter.php"
@@ -183,7 +186,7 @@ def test_upgrade_architect_agent_wired():
     for f in ("upgrade-architect/agent.yml", "upgrade-architect/system.md", "upgrade-architect/rubric.md", "upgrade-architect/agent.yml"):
         assert (base / f).is_file(), f"missing: {f}"
     assert (REPO / "tools/run-upgrade-architect.sh").is_file()
-    assert 'client_id: "nos-upgrade-architect"' in (REPO / "default.config.yml").read_text()
+    assert 'client_id: "nos-upgrade-architect"' in ni.default_config_text()
     assert "upgrade_architect_wing_api_token" in (REPO / "default.credentials.yml").read_text()
     cat = (REPO / "files/anatomy/scripts/discover-pulse-catalog.py").read_text()
     assert "{{ upgrade_architect_wing_api_token }}" in cat and '"secret:upgrade_architect_wing_api_token"' in cat

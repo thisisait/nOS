@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import jinja2
@@ -22,13 +23,15 @@ import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ROLE = REPO / "roles/pazny.geolibre"
 PLUGIN = REPO / "files/anatomy/plugins/geolibre-base/plugin.yml"
 DIGEST = "sha256:7c43f124f306d7c00c66660faf73eced043d6ddd749a06afb055ed223e79cebe"
 
 
 def _defaults() -> dict:
-    return yaml.safe_load((REPO / "default.config.yml").read_text())
+    return ni.default_config()
 
 
 def _fragment() -> dict:

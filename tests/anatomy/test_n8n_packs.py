@@ -8,6 +8,8 @@ import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 TOOL = REPO / "tools" / "n8n-pack.py"
 PACKS = REPO / "files/anatomy/n8n/packs"
 COMPOSE = REPO / "roles/pazny.n8n/templates/compose.yml.j2"
@@ -84,7 +86,7 @@ def test_ssrf_defaults_stay_empty_but_keap_pack_path_allowlists():
     assert 'n8n_ssrf_allowed_ip_ranges: ""' in defaults
     # GLOBAL, not a role default: the plugin loader renders the compose
     # extension without role defaults in scope (a role-scoped var came out "").
-    config = (REPO / "default.config.yml").read_text(encoding="utf-8")
+    config = ni.default_config_text()
     assert "n8n_host_gateway_cidr" in config
     assert "n8n_host_gateway_cidr:" not in defaults, "must be global-only (loader scope)"
     ext = COMPOSE_EXT.read_text(encoding="utf-8")

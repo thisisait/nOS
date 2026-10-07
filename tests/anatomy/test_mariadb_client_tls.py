@@ -55,11 +55,14 @@ configuration is coherent.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 #: service -> (compose template, the env var IT reads, where that was read from)
 #: `None` for env means the client is not env-configurable at all.
@@ -100,7 +103,7 @@ GATE = "mariadb_ssl_enabled"
 
 
 def _config() -> dict:
-    return yaml.safe_load((REPO / "default.config.yml").read_text(encoding="utf-8")) or {}
+    return ni.default_config() or {}
 
 
 def _src(service: str) -> str:

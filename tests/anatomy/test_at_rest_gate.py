@@ -9,11 +9,14 @@ but set true in profiles/gov-local.yml.
 Pure file-read / yaml-parse — runs in the no-Docker pytest CI job. Never executes
 fdesetup/lsblk, so platform-agnostic + CI-safe.
 """
+import sys
 import pathlib
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 GATE = REPO / 'tasks/preflight-at-rest.yml'
 
 
@@ -65,7 +68,7 @@ def test_hard_fail_direction_and_escape_hatch():
 
 
 def test_flag_default_off_in_config_and_on_in_gov_profile():
-    cfg = (REPO / 'default.config.yml').read_text()
+    cfg = ni.default_config_text()
     assert 'require_disk_encryption: false' in cfg, 'flag not declared default-false'
     gov = (REPO / 'profiles/gov-local.yml').read_text()
     assert 'require_disk_encryption: true' in gov, 'gov-local.yml does not opt in'

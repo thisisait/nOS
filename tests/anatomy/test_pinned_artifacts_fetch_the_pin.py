@@ -26,11 +26,14 @@ future module grows one). Content fetches (ZIM, maps) are out of scope.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 # (task file, the version var it pins, a URL fragment identifying the fetch)
 PINNED_FETCHES = [
@@ -105,7 +108,7 @@ def test_pinned_downloads_do_not_fetch_latest():
 
 def test_the_asserted_pin_still_exists_as_a_real_default():
     """The var must be defined where the eager-resolve namespace can see it."""
-    cfg = (REPO / "default.config.yml").read_text()
+    cfg = ni.default_config_text()
     for _, var, _ in PINNED_FETCHES:
         assert re.search(rf"^{re.escape(var)}\s*:", cfg, re.M), (
             f"{var} has no definition in default.config.yml — the URL now "

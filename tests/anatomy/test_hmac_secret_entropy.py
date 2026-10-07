@@ -26,9 +26,12 @@ This gate pins:
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 MAIN = REPO / "main.yml"
 SECRETS_TPL = REPO / "templates/secrets.yml.j2"
 
@@ -105,7 +108,7 @@ def test_default_credentials_still_carries_legacy_template():
 	`ansible-playbook --tags X` runs that bypass main.yml's lazy-regen
 	still have a value for the var). The lazy-regen replaces it on
 	first execution of main.yml."""
-	src = (REPO / "default.config.yml").read_text()
+	src = ni.default_config_text()
 	# The prefix-derived template must still be the default (it's the
 	# pre-regen state).
 	assert 'bone_secret: "{{ global_password_prefix }}_pw_bone"' in src

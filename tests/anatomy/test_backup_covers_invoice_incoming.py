@@ -14,13 +14,15 @@ CI-safe: source scan. No Docker, no live host, no network.
 """
 from __future__ import annotations
 
+import sys
 import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 BACKUP_SH = REPO / "roles" / "pazny.backup" / "files" / "backup.sh"
 BACKUP_DEFAULTS = REPO / "roles" / "pazny.backup" / "defaults" / "main.yml"
-PLAY_CONFIG = REPO / "default.config.yml"
 
 
 def _code(text: str) -> str:
@@ -75,8 +77,7 @@ def test_nightly_set_is_not_only_the_keap_db():
     """Filesystem originals need a dir tar; keap-db.gz is not that tar."""
     main = _fn("main")
     assert "run_dirs" in main and "run_keap_db" in main
-    for src in (BACKUP_DEFAULTS, PLAY_CONFIG):
-        text = src.read_text(encoding="utf-8")
+    for src, text in ((BACKUP_DEFAULTS, BACKUP_DEFAULTS.read_text(encoding="utf-8")), ("the default layers", ni.default_config_text())):
         start = text.index("backup_dirs_to_dump:")
         names = re.findall(r'\{ name: "([a-z0-9-]+)"', text[start:])
         assert names, f"{src} backup_dirs_to_dump parsed empty"

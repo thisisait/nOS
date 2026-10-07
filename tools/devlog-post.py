@@ -35,6 +35,8 @@ import uuid
 sys.path.insert(
     0, str(pathlib.Path(__file__).resolve().parents[1] / "files" / "anatomy" / "scripts")
 )
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
+import nos_identity as ni  # noqa: E402
 import yaml  # noqa: E402
 from devlog_lib import WPClient, WPError, emit_bone_event  # noqa: E402
 
@@ -86,8 +88,7 @@ def main() -> int:
         return 1
 
     # Resolve the WP port from the repo config the same way the sync task does.
-    repo = pathlib.Path(__file__).resolve().parents[1]
-    cfg = yaml.safe_load((repo / "default.config.yml").read_text())
+    cfg = ni.default_config()
     port = cfg.get("wordpress_port", 8084)
     bot_user = cfg.get("wordpress_devlog_bot_user", "nos-devlog-bot")
     bone_port = cfg.get("bone_port", 8099)

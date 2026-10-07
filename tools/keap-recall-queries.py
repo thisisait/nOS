@@ -41,6 +41,8 @@ import unicodedata
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 SYSTEMS_DIR = REPO / "docs" / "systems"
 MANIFEST_PATH = REPO / "state" / "manifest.yml"
 # The path KEAP's recall gate actually reads (KEAP docs/specs/recall-gate.md §6:
@@ -67,7 +69,7 @@ COMMENT = (
     "specific system or skill its query names. Where two systems advertise the "
     "same trigger phrase the cases are merged, so expect may name more than "
     "one winner. Services whose manifest install_flag resolves false in "
-    "default.config.yml alone (the stock install; the operator's config.yml "
+    "the default layers alone (the stock install; the operator's config.yml "
     "overlay is deliberately NOT read, so this committed benchmark is "
     "reproducible in CI) are SKIPPED: the removal ladder takes a parked "
     "service's cards out of the corpus, and its triggers leave the benchmark "
@@ -85,10 +87,10 @@ MANIFEST_ID_RE = re.compile(r"^  - id:\s*(?P<id>\S+)\s*$")
 MANIFEST_STACK_RE = re.compile(r"^    stack:\s*(?P<stack>\S+)\s*$")
 MANIFEST_FLAG_RE = re.compile(r"^    install_flag:\s*(?P<flag>\S+)\s*$")
 # Enablement is config, not manifest: the manifest is the full catalog
-# (a parked service keeps its row), default.config.yml declares every flag's
+# (a parked service keeps its row), the default layers declare every flag's
 # default.
 #
-# ONLY default.config.yml, deliberately — NOT the operator's config.yml overlay
+# ONLY the committed default layers, deliberately — NOT the operator's config.yml overlay
 # (2026-09-05). This tool's sole output is tests/fixtures/selfmodel-recall.json,
 # a COMMITTED, CI-GATED artifact: test_selfmodel_recall asserts committed ==
 # build(). config.yml is gitignored, so CI resolves flags from defaults alone;
@@ -97,7 +99,7 @@ MANIFEST_FLAG_RE = re.compile(r"^    install_flag:\s*(?P<flag>\S+)\s*$")
 # was written under. The committed benchmark is the STOCK install — reproducible
 # by CI, a fresh clone, and any other operator — never one machine's private
 # on/off set.
-CONFIG_PATHS = (REPO / "default.config.yml",)
+CONFIG_PATHS = tuple(ni.default_layers())
 INSTALL_RE = re.compile(r"^(?P<flag>install_[a-z0-9_]+):\s*(?P<val>true|false)\b")
 
 
@@ -156,7 +158,7 @@ def load_manifest_stacks() -> dict[str, tuple[str, str]]:
 
 
 def load_install_flags() -> dict[str, bool]:
-    """install flag -> resolved value (default.config.yml only; see CONFIG_PATHS)."""
+    """install flag -> resolved value (the default layers only; see CONFIG_PATHS)."""
     flags: dict[str, bool] = {}
     for cfg in CONFIG_PATHS:
         if not cfg.is_file():

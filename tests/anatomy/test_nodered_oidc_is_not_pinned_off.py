@@ -16,17 +16,19 @@ shape.
 """
 from __future__ import annotations
 
+import sys
 import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-CONFIG = REPO / "default.config.yml"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ROLE_DEFAULTS = REPO / "roles/pazny.nodered/defaults/main.yml"
 SETTINGS = REPO / "roles/pazny.nodered/templates/settings.js.j2"
 
 
 def test_default_config_follows_install_authentik() -> None:
-    cfg = CONFIG.read_text(encoding="utf-8")
+    cfg = ni.default_config_text()
     m = re.search(r"^nodered_native_oidc_enabled:\s*(.*)$", cfg, re.M)
     assert m, (
         "nodered_native_oidc_enabled left default.config.yml — D2 needs it "

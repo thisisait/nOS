@@ -18,17 +18,19 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import sys
 import re
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 TABLES_DIR = REPO / "state/keap-tables"
 SEED = REPO / "state/fixtures/consulting-firm.seed.yml"
 DOCS_DIR = REPO / "state/fixtures/consulting-firm"
 EXPECTED = DOCS_DIR / "expected.yml"
 BUNDLE = REPO / "roles/pazny.keap/tasks/seed-bundle.yml"
-CONFIG = REPO / "default.config.yml"
 
 #: Dependency order — must match the seeder's list verbatim (self-contained;
 #: no rowRef target outside this fixture's own table set).
@@ -80,7 +82,7 @@ def test_the_seed_key_order_is_the_dependency_order():
     assert list(_seed().keys()) == ORDER, (
         f"consulting-firm.seed.yml key order {list(_seed().keys())} != {ORDER}"
     )
-    flag = yaml.safe_load(CONFIG.read_text()).get("keap_seed_consulting_fixture")
+    flag = ni.default_config().get("keap_seed_consulting_fixture")
     assert flag is False, (
         "keap_seed_consulting_fixture must default false — a public nOS "
         "install does not grow a consulting-firm tenant unasked"

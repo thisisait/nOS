@@ -8,7 +8,7 @@ that nobody declared is reported as UNDECLARED, and a realm that cannot be
 asked is UNKNOWN — never green.
 
 Declared sources (the repo):
-  • nos_identities        default.config.yml (+ config.yml override) — humans
+  • nos_identities        the default layers (+ config.yml override) — humans
                           and service accounts, per-realm membership
   • nos_synthetic_identities  profiles/test-users.yml — the test personas,
                           kind synthetic, declared only while
@@ -43,7 +43,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 SECRETS = Path.home() / ".nos/secrets.yml"
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import SYNTHETIC_FLAG, synthetic_identities  # noqa: E402
+from nos_identity import SYNTHETIC_FLAG, default_config, synthetic_identities  # noqa: E402
 
 OK, MISSING, UNDECLARED, UNKNOWN = "ok", "MISSING", "UNDECLARED", "?"
 REALMS = ("authentik", "gitea", "woodpecker")
@@ -78,7 +78,7 @@ def _resolve(value: str, ctx: dict) -> str:
 
 def declared_roster(merged: dict | None = None) -> tuple[list[dict], dict]:
     if merged is None:
-        base = _yaml(REPO / "default.config.yml")
+        base = default_config()
         # credentials.yml joins the merge for TOKEN lookup only (loop-review.py
         # precedent); config.yml wins last, as in the playbook's vars_files order.
         creds = _yaml(REPO / "credentials.yml")
@@ -353,7 +353,7 @@ def main() -> int:
     # this report names every identity channel, without re-typing them.
     clients = merged.get("authentik_agent_clients", []) or []
     print(f"machine identities: {len(clients)} authentik_agent_clients "
-          "(declared in default.config.yml); 3 loop identities "
+          "(declared in the default layers); 3 loop identities "
           "(files/anatomy/bone/loopauth.py)")
     return 0
 

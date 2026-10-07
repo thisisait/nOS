@@ -30,11 +30,14 @@ cannot land silently:
 """
 from __future__ import annotations
 
+import sys
 import pathlib
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ROLE = REPO / "roles/pazny.wordpress"
 DEVLOG_TASKS = ROLE / "tasks/devlog.yml"
 POST_TASKS = ROLE / "tasks/post.yml"
@@ -42,7 +45,6 @@ MU_PLUGIN = ROLE / "files/devlog-app-passwords.php"
 COMPOSE = ROLE / "templates/compose.yml.j2"
 HOOK = REPO / "files/anatomy/plugins/wordpress-base/hooks/post_compose.yml"
 SECRETS_TMPL = REPO / "templates/secrets.yml.j2"
-CONFIG = REPO / "default.config.yml"
 BLANK_RESET = REPO / "tasks/blank-reset.yml"
 
 
@@ -97,7 +99,7 @@ def test_hook_documents_the_non_mirror():
 
 
 def test_config_vars_have_real_defaults():
-    cfg = CONFIG.read_text(encoding="utf-8")
+    cfg = ni.default_config_text()
     for var in ("wordpress_devlog_enabled", "wordpress_devlog_bot_user",
                 "wordpress_devlog_app_name"):
         assert f"\n{var}:" in cfg, f"{var} missing from default.config.yml"

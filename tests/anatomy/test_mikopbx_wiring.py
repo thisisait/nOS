@@ -22,6 +22,7 @@ Pinned here, offline:
 """
 from __future__ import annotations
 
+import sys
 import re
 from pathlib import Path
 
@@ -29,6 +30,8 @@ import jinja2
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ROLE = REPO / "roles/pazny.mikopbx"
 PLUGIN = REPO / "files/anatomy/plugins/mikopbx-base"
 
@@ -98,7 +101,7 @@ def test_post_reasserts_media_settings_and_reads_what_asterisk_loaded():
 
 
 def test_default_off_and_pinned():
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text())
+    cfg = ni.default_config()
     assert cfg["install_mikopbx"] is False
     assert re.fullmatch(r"\d{4}\.\d+\.\d+", str(cfg["mikopbx_version"]))
     assert _manifest_row()["health_check"]["expect_status"] == 200

@@ -11,6 +11,7 @@ RENDERED artifact — the launcher is executed, the sudoers file goes through
 from __future__ import annotations
 
 import getpass
+import sys
 import os
 import plistlib
 import re
@@ -24,8 +25,10 @@ import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ROLE = REPO / "roles" / "pazny.mac.agent_user"
-CONFIG = yaml.safe_load((REPO / "default.config.yml").read_text())
+CONFIG = ni.default_config()
 
 
 def _env() -> jinja2.Environment:

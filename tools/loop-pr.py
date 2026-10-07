@@ -94,6 +94,8 @@ import urllib.parse
 import urllib.request
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 #: Where each forge's coordinates come from, in the order the sibling tools read
 #: them. Duplicated from `tools/recipe-pr.sh` as DATA rather than shared as code
@@ -137,7 +139,7 @@ def _forge_installed(name: str) -> bool:
     the landing half died because this driver pushed to a forge that no
     longer exists. Gitea carries the CI either way."""
     flag = _yaml_lookup(f"install_{name}", REPO / "config.yml",
-                        REPO / "default.config.yml")
+                        *reversed(ni.default_layers()))
     if not flag:
         return name == "gitea"
     return str(flag).lower() != "false"
@@ -192,13 +194,13 @@ def _forge(name: str) -> dict:
     keys = FORGE_KEYS[name]
     here = [REPO / "credentials.yml", REPO / "config.yml",
             pathlib.Path.home() / ".nos" / "secrets.yml"]
-    conf = [REPO / "config.yml", REPO / "default.config.yml",
+    conf = [REPO / "config.yml", *reversed(ni.default_layers()),
             REPO / keys["role_defaults"]]
 
     token = os.environ.get(keys["token_env"]) or _yaml_lookup(keys["token_key"], *here)
     domain = os.environ.get(keys["domain_env"]) or _yaml_lookup(keys["domain_key"], *here[:2])
     if not domain:
-        tenant = _yaml_lookup("tenant_domain", REPO / "config.yml", REPO / "default.config.yml")
+        tenant = _yaml_lookup("tenant_domain", REPO / "config.yml", *reversed(ni.default_layers()))
         domain = f"{keys['domain_prefix']}.{tenant}" if tenant else ""
     if not token or not domain:
         raise Refused(
@@ -319,7 +321,7 @@ def _open_merge_request(forge: dict, branch: str, base: str,
     git push keeps the domain because a git URL has no %2F in it.
     """
     port = _yaml_lookup("gitlab_http_port", REPO / "config.yml",
-                        REPO / "default.config.yml",
+                        *reversed(ni.default_layers()),
                         REPO / "roles/pazny.gitlab/defaults/main.yml") or "8929"
     project = f"{forge['owner']}%2F{forge['repo']}"
     url = f"http://127.0.0.1:{port}/api/v4/projects/{project}/merge_requests"
@@ -384,7 +386,7 @@ def _base_exists(forge: dict, base: str) -> tuple[bool, str]:
     """
     if forge["name"] == "gitlab":
         port = _yaml_lookup("gitlab_http_port", REPO / "config.yml",
-                            REPO / "default.config.yml",
+                            *reversed(ni.default_layers()),
                             REPO / "roles/pazny.gitlab/defaults/main.yml") or "8929"
         url = (f"http://127.0.0.1:{port}/api/v4/projects/"
                f"{forge['owner']}%2F{forge['repo']}/repository/branches/{base}")
@@ -434,7 +436,7 @@ def _remote_tip(forge: dict, branch: str) -> tuple[str | None, str | None]:
     """
     if forge["name"] == "gitlab":
         port = _yaml_lookup("gitlab_http_port", REPO / "config.yml",
-                            REPO / "default.config.yml",
+                            *reversed(ni.default_layers()),
                             REPO / "roles/pazny.gitlab/defaults/main.yml") or "8929"
         encoded = urllib.parse.quote(branch, safe="")
         url = (f"http://127.0.0.1:{port}/api/v4/projects/"

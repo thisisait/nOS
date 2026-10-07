@@ -27,6 +27,8 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "tools"))
+import nos_identity as ni  # noqa: E402
 E2E_LIB = REPO_ROOT / "tests" / "e2e" / "lib"
 CONFTEST = REPO_ROOT / "tests" / "e2e" / "conftest.py"
 
@@ -85,7 +87,7 @@ def test_default_config_groups_match():
     """The four group names in TIER_TO_GROUP must be subsets of the names in
     ``default.config.yml::authentik_default_groups``. Catches the case where
     someone renames a group in config without bumping the lib (or vice versa)."""
-    cfg = (REPO_ROOT / "default.config.yml").read_text()
+    cfg = ni.default_config_text()
     # Extract group names declared in authentik_default_groups[*].name
     # We don't pull a YAML parser in here — keep this anatomy gate lock-stack-light.
     # Names are quoted in default.config.yml: ``- name: "nos-providers"``.

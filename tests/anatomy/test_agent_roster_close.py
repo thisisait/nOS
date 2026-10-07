@@ -25,11 +25,14 @@ defect this close removed — that is the regression this file refuses.
 
 from __future__ import annotations
 
+import sys
 import pathlib
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 AGENTS = REPO / "files/anatomy/agents"
 TOOLS = REPO / "tools"
 
@@ -61,7 +64,7 @@ def test_retired_agents_left_no_spelling_behind():
 
 
 def test_retired_agents_left_the_authentik_registry():
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text())
+    cfg = ni.default_config()
     slugs = {c.get("slug") for c in (cfg.get("authentik_agent_clients") or [])}
     for name in RETIRED:
         assert f"nos-{name}" not in slugs, (

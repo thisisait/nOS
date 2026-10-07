@@ -52,6 +52,8 @@ import pytest
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 APEX = REPO / "files" / "anatomy" / "apex"
 ROLE = REPO / "roles" / "pazny.apex"
 
@@ -367,7 +369,7 @@ def test_the_serving_surface_is_read_only_and_static():
 
 
 def test_the_image_pin_carries_tag_and_digest():
-    text = (REPO / "default.config.yml").read_text()
+    text = ni.default_config_text()
     m = re.search(r'^apex_version:\s*"([^"]+)"', text, re.M)
     assert m, "apex_version left default.config.yml (the winning layer)"
     assert re.fullmatch(r"[0-9.]+-alpine(?:[a-z0-9.-]*)?@sha256:[0-9a-f]{64}", m.group(1)), (

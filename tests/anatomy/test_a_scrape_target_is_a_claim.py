@@ -30,6 +30,7 @@ never in what the file said — it was in what it sent.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import jinja2
@@ -37,6 +38,8 @@ import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 PROM = REPO / "files/anatomy/plugins/prometheus-base/provisioning/prometheus.yml.j2"
 ALLOY = REPO / "files/observability/alloy/config.alloy.j2"
 
@@ -102,7 +105,7 @@ def test_both_scrape_paths_agree_that_the_exporters_are_optional():
     disagreed with itself for months; the half that was wrong is the half that
     alerted. This keeps them in step.
     """
-    config = yaml.safe_load((REPO / "default.config.yml").read_text(encoding="utf-8"))
+    config = ni.default_config()
     for var in ("alloy_scrape_nginx", "alloy_scrape_phpfpm"):
         expr = str(config.get(var, ""))
         assert "install_nginx" in expr, (

@@ -29,6 +29,8 @@ import sys
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 REGISTRY = REPO / "state" / "tofu-authentik-services.yml"
 TOFU_TASKS = REPO / "tasks" / "tofu-authentik.yml"
 TFVARS_TEMPLATE = REPO / "templates" / "tofu" / "nos.auto.tfvars.json.j2"
@@ -231,7 +233,7 @@ def _config_install_vars() -> set[str]:
     """Every `install_*` key DEFINED in default.config.yml — the only vars that
     resolve BEFORE tasks/tofu-authentik.yml runs (role defaults load later, in
     stack-up). The registry's enabled expressions may reference only these."""
-    txt = (REPO / "default.config.yml").read_text()
+    txt = ni.default_config_text()
     return set(re.findall(r"(?m)^(install_[a-z0-9_]+):", txt))
 
 

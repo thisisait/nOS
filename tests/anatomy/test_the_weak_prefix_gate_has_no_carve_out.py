@@ -28,13 +28,15 @@ the value.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 MAIN = REPO / "main.yml"
-CONFIG = REPO / "default.config.yml"
 
 def _find_task(node):
     """The assert that refuses a weak prefix, found by WHAT IT ASSERTS.
@@ -135,7 +137,7 @@ def test_it_refuses_both_the_shipped_sentinel_and_a_short_prefix():
 def test_the_shipped_default_is_still_the_sentinel_the_guard_names():
     """If the default were changed without updating the assert, the guard would
     pass on a value the repository still publishes to the world."""
-    config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    config = ni.default_config()
     shipped = config.get("global_password_prefix")
     that = " ".join(str(t) for t in _guard()["ansible.builtin.assert"]["that"])
     assert shipped in that, (

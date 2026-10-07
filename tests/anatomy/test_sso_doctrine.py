@@ -24,11 +24,14 @@ on them.
 
 from __future__ import annotations
 
+import sys
 import pathlib
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 PLUGINS = REPO / "files/anatomy/plugins"
 
 CANONICAL_MODES = {"native_oidc", "header_oidc", "forward_auth", "none"}
@@ -242,7 +245,7 @@ def test_agent_clients_in_authentik_blueprint_register_all_runners():
 
     if not agent_names:
         return  # nothing to verify
-    cfg_src = (REPO / "default.config.yml").read_text()
+    cfg_src = ni.default_config_text()
     for name in agent_names:
         client_id = f"nos-{name}"
         assert client_id in cfg_src, (

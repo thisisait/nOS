@@ -19,14 +19,16 @@ plan. This gate pins the contract so the two halves can never diverge again:
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 BACKUP_SH = REPO / "roles" / "pazny.backup" / "files" / "backup.sh"
 BACKUP_DEFAULTS = REPO / "roles" / "pazny.backup" / "defaults" / "main.yml"
-CONFIG = REPO / "default.config.yml"
 RESTORE_YML = REPO / "tasks" / "restore.yml"
 RESTORE_VOLUME = REPO / "tasks" / "_restore_volume.yml"
 
@@ -139,7 +141,7 @@ def test_alpine_image_has_exactly_one_declaration():
     restore.yml, two `| default()` fallbacks) and parity was asserted pairwise —
     which holds only while every copy is edited together.
     """
-    m = re.search(r'^backup_alpine_image:\s*"([^"]+)"', CONFIG.read_text(), re.M)
+    m = re.search(r'^backup_alpine_image:\s*"([^"]+)"', ni.default_config_text(), re.M)
     assert m, "backup_alpine_image not declared in default.config.yml"
     assert not re.search(r'^backup_alpine_image:', BACKUP_DEFAULTS.read_text(), re.M), (
         "backup_alpine_image is back in the role default, where vars_files outrank it"
@@ -238,7 +240,7 @@ def test_backup_dirs_have_restore_targets():
     silent half-contract the 2026-06-09 overhaul was built to kill."""
     import re
 
-    cfg = (REPO / "default.config.yml").read_text()
+    cfg = ni.default_config_text()
     block = cfg[cfg.index("backup_dirs_to_dump:"):]
     block = block[: re.search(r"\nbackup_databases_mariadb", block).start()]
     backup_names = set(re.findall(r'\{ name: "([a-z0-9-]+)"', block))
@@ -313,7 +315,7 @@ def test_tofu_state_backup_defaults_declared():
     )
     # Shadow guard (version-pin trap, see memory): a default.config.yml override
     # with a DIFFERENT dir would silently back up nothing (path-missing skip).
-    cfg = (REPO / "default.config.yml").read_text()
+    cfg = ni.default_config_text()
     shadow = re.search(r'^backup_tofu_state_dir:\s*"([^"]+)"', cfg, re.M)
     if shadow:
         assert shadow.group(1).endswith("/terraform/authentik"), (

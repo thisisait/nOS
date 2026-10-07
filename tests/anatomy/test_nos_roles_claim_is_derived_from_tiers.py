@@ -4,13 +4,16 @@
 tier-1 tester (nos-providers) was no Gitea admin. One claim, one value per tier.
 """
 import json
+import sys
 from pathlib import Path
 
 import jinja2
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
-CFG = yaml.safe_load((REPO / "default.config.yml").read_text())
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
+CFG = ni.default_config()
 
 
 def _expression(tiers) -> str:

@@ -14,6 +14,7 @@ So PostGIS is compiled onto `postgres:{{ postgresql_version }}` per host:
 """
 from __future__ import annotations
 
+import sys
 import re
 from pathlib import Path
 
@@ -21,9 +22,11 @@ import jinja2
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ROLE = REPO / "roles/pazny.postgresql"
 DOCKERFILE = REPO / "files/postgis/Dockerfile"
-CONFIG = yaml.safe_load((REPO / "default.config.yml").read_text())
+CONFIG = ni.default_config()
 
 
 def _service(install_postgis: bool) -> dict:

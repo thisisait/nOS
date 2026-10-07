@@ -6,13 +6,16 @@ Authentik gets them from the 00-admin-groups blueprint; each app gets them from
 tools/nos-first-login.py walking the plugin's authentik.first_login.
 """
 import importlib.util
+import sys
 import re
 from pathlib import Path
 
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
-CFG = yaml.safe_load((REPO / "default.config.yml").read_text())
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
+CFG = ni.default_config()
 CREDS = yaml.safe_load((REPO / "default.credentials.yml").read_text())
 # The real accounts; the synthetic ones (profiles/test-users.yml) are pinned by
 # test_synthetic_identities_live_apart.py.

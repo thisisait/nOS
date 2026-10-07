@@ -42,6 +42,8 @@ import jinja2
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 MANIFEST = REPO / "state" / "manifest.yml"
 
 # registry -> the host its layer blobs are served from, when that differs.
@@ -314,7 +316,7 @@ def main() -> int:
         elif tok.startswith("-e"):
             a.extra.append(tok[2:])
 
-    vars_ = load(REPO / "default.config.yml")
+    vars_ = ni.default_config()
     vars_.update(load(REPO / "default.credentials.yml"))
     vars_.update(load(REPO / "config.yml"))
     if a.profile:

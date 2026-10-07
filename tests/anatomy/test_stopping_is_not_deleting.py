@@ -29,9 +29,10 @@ import sys
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 TASK = REPO / "tasks" / "stacks" / "prune-disabled.yml"
 FILTER = REPO / "filter_plugins" / "nos_prune_guard.py"
-CONFIG = REPO / "default.config.yml"
 GRAPH = REPO / "state" / "anatomy-graph.json"
 GATE = "uninstall_disabled_services"
 BACKREST = "eu.thisisait.nos.backrest"
@@ -106,7 +107,7 @@ def test_the_retired_flag_is_refused_not_ignored():
 
 
 def test_the_flag_is_declared_and_defaults_to_false():
-    cfg = CONFIG.read_text(encoding="utf-8")
+    cfg = ni.default_config_text()
     m = re.search(rf"^{GATE}:\s*(\S+)", cfg, re.M)
     assert m, f"{GATE} is not declared in default.config.yml"
     assert m.group(1) == "false", "deletion defaults on; it must be deliberate"

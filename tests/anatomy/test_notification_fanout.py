@@ -24,6 +24,8 @@ import yaml
 from module_utils import load_plugins  # type: ignore  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 
 # ── Schema + Wing-side surface ──────────────────────────────────────────
@@ -275,7 +277,7 @@ def test_dispatch_worker_handles_digest_path():
 
 
 def test_default_config_exposes_digest_knobs():
-    cfg = (REPO / "default.config.yml").read_text()
+    cfg = ni.default_config_text()
     assert "mail_digest_floor:" in cfg
     assert "mail_digest_cron:" in cfg
 

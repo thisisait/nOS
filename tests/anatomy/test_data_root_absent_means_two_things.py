@@ -19,15 +19,17 @@ already arms on `is match('^/Volumes/')`, and this test pins that the two agree.
 
 from __future__ import annotations
 
+import sys
 import re
 from pathlib import Path
 
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 CORTEX = REPO / "roles/pazny.cortex/tasks/main.yml"
 PREFLIGHT = REPO / "tasks/stacks/docker-external-mount-preflight.yml"
-CONFIG = REPO / "default.config.yml"
 
 REMOVABLE_TEST = "is match('^/Volumes/')"
 
@@ -43,7 +45,7 @@ def _when(task: dict) -> str:
 
 def test_the_default_data_root_is_not_removable():
     """If this ever changes, the whole rationale below has to be revisited."""
-    text = CONFIG.read_text()
+    text = ni.default_config_text()
     m = re.search(r"^nos_data_root:\s*(.+)$", text, re.MULTILINE)
     assert m, "nos_data_root not declared in default.config.yml"
     default = m.group(1).strip().strip('"').strip("'")

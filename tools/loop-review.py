@@ -65,6 +65,8 @@ import urllib.error
 import urllib.request
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 #: Only branches the driver cuts. A reviewer that could merge an arbitrary
 #: branch is an unattended merge button on the operator's own work.
@@ -146,7 +148,7 @@ def ci_verdict(sha: str, driver) -> tuple[str, str]:
         "woodpecker_api_token", REPO / "credentials.yml", REPO / "config.yml",
         pathlib.Path.home() / ".nos" / "secrets.yml")
     port = driver._yaml_lookup("woodpecker_port", REPO / "config.yml",
-                               REPO / "default.config.yml") or "8060"
+                               *reversed(ni.default_layers())) or "8060"
     if not token:
         return INDETERMINATE, "no woodpecker_api_token — CI state cannot be read"
 
@@ -158,12 +160,12 @@ def ci_verdict(sha: str, driver) -> tuple[str, str]:
     gitea = driver.FORGE_KEYS["gitea"]
     owner = (driver._yaml_lookup("woodpecker_nos_repo_owner", REPO / "config.yml")
              or driver._yaml_lookup(gitea["owner_key"], REPO / "config.yml",
-                                    REPO / "default.config.yml",
+                                    *reversed(ni.default_layers()),
                                     REPO / gitea["role_defaults"])
              or gitea["owner_default"])
     name = (driver._yaml_lookup("woodpecker_nos_repo_name", REPO / "config.yml")
             or driver._yaml_lookup(gitea["name_key"], REPO / "config.yml",
-                                   REPO / "default.config.yml",
+                                   *reversed(ni.default_layers()),
                                    REPO / gitea["role_defaults"])
             or gitea["name_default"])
     base = f"http://127.0.0.1:{port}"
@@ -260,7 +262,7 @@ def _same_change(judged: str, offered: str) -> bool:
 def _gitlab(driver) -> tuple[dict, str]:
     forge = driver._forge("gitlab")
     port = driver._yaml_lookup("gitlab_http_port", REPO / "config.yml",
-                               REPO / "default.config.yml",
+                               *reversed(ni.default_layers()),
                                REPO / "roles/pazny.gitlab/defaults/main.yml") or "8929"
     project = f"{forge['owner']}%2F{forge['repo']}"
     return forge, f"http://127.0.0.1:{port}/api/v4/projects/{project}"
@@ -433,7 +435,7 @@ def main() -> int:
         # consequence instead of a hole: the PR lives on Gitea, which
         # carries the CI anyway. Unreachable-while-true stays rc=2.
         flag = driver._yaml_lookup("install_gitlab", REPO / "config.yml",
-                                   REPO / "default.config.yml")
+                                   *reversed(ni.default_layers()))
         gitea_mode = str(flag).lower() == "false"
         if gitea_mode:
             log("install_gitlab is false — reviewing on Gitea (the CI forge "

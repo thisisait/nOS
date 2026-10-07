@@ -69,10 +69,13 @@ state is CROWN_JEWEL_CEILING = 0 and MAX_BLAST_RADIUS = 1.
 
 from __future__ import annotations
 
+import sys
 import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 #: The literal that every derived credential is built from.
 MASTER = "global_password_prefix"
@@ -143,7 +146,7 @@ CROWN_JEWEL_CEILING = 0      # excluding BLOCKED. P2 freed one of two; the other
 
 
 def _sources() -> list[Path]:
-    out = [REPO / "default.credentials.yml", REPO / "default.config.yml"]
+    out = [REPO / "default.credentials.yml", *ni.default_layers()]
     out += sorted((REPO / "roles").glob("*/defaults/main.yml"))
     return [p for p in out if p.is_file()]
 
@@ -267,7 +270,7 @@ def test_the_backup_contains_the_secrets_file_it_is_keyed_against():
     link, which would leave the chain intact and the docs wrong.
     """
     backup_defaults = (REPO / "roles/pazny.backup/defaults/main.yml").read_text()
-    config = (REPO / "default.config.yml").read_text()
+    config = ni.default_config_text()
 
     key_derived = bool(
         re.search(r"backup_encryption_passphrase:\s*[\"']?\{\{\s*" + MASTER, backup_defaults)

@@ -41,18 +41,20 @@ runner will actually read at 02:00.
 
 from __future__ import annotations
 
+import sys
 import pathlib
 import re
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 PROFILES = REPO / "files/anatomy/agents"
 SECRETS_TPL = REPO / "templates/secrets.yml.j2"
 CREDENTIALS = REPO / "default.credentials.yml"
 WING_POST = REPO / "roles/pazny.wing/tasks/post.yml"
 CATALOG = REPO / "files/anatomy/scripts/discover-pulse-catalog.py"
-CONFIG = REPO / "default.config.yml"
 
 
 def _profiles() -> dict[str, str]:
@@ -91,7 +93,7 @@ def test_the_sweep_sees_the_profiles():
 
 
 def test_the_sites_this_gate_reads_exist():
-    for path in (SECRETS_TPL, CREDENTIALS, WING_POST, CATALOG, CONFIG):
+    for path in (SECRETS_TPL, CREDENTIALS, WING_POST, CATALOG, *ni.default_layers()):
         assert path.is_file(), f"{path.relative_to(REPO)} is gone — a moved "
         "declaration site would make this gate pass by not looking"
 
@@ -133,7 +135,7 @@ def test_every_profiled_agent_has_an_authentik_client():
     a client the runner cannot mint a token at all, and Authentik answers
     `invalid_grant`, which reads as a bad secret rather than a missing client.
     """
-    config = CONFIG.read_text(encoding="utf-8")
+    config = ni.default_config_text()
     start = config.index("authentik_agent_clients:")
     declared = set(re.findall(r'slug:\s*"nos-([a-z0-9-]+)"', config[start:start + 12000]))
     orphans = sorted(set(_profiles()) - declared)

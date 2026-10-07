@@ -44,18 +44,21 @@ for TLS. Only a converge and `tools/tls-uptake.py` answer those.
 
 from __future__ import annotations
 
+import sys
 import pathlib
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ROLE = REPO / "roles/pazny.mariadb"
 TASKS = ROLE / "tasks/main.yml"
 COMPOSE = ROLE / "templates/compose.yml.j2"
 
 
 def test_the_toggle_is_at_play_scope():
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text(encoding="utf-8")) or {}
+    cfg = ni.default_config() or {}
     assert "mariadb_ssl_enabled" in cfg, (
         "mariadb_ssl_enabled must be declared in default.config.yml, not only "
         "in the role — the client roles that will read it are other roles, and "

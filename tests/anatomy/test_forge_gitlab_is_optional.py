@@ -17,11 +17,13 @@ consulting `install_gitlab`.
 
 from __future__ import annotations
 
+import sys
 import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-DEFAULT_CONFIG = REPO / "default.config.yml"
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 FORGE_SYNC = REPO / "tools" / "forge-sync.py"
 LOOP_PR = REPO / "tools" / "loop-pr.py"
 RECIPE_PR = REPO / "tools" / "recipe-pr.sh"
@@ -31,7 +33,7 @@ SYNC_GT = REPO / "tools" / "sync-trunk-to-gitea.sh"
 
 
 def test_stock_install_gitlab_is_off():
-    cfg = DEFAULT_CONFIG.read_text(encoding="utf-8")
+    cfg = ni.default_config_text()
     assert re.search(r"^install_gitlab:\s*false\b", cfg, re.M), (
         "install_gitlab must default false — GitLab is optional RAM, not the forge"
     )

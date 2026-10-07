@@ -21,10 +21,12 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import re
+import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import nos_identity as ni  # noqa: E402
 
-CONFIG = os.path.join(ROOT, "default.config.yml")
 ROLE_DEFAULT = os.path.join(ROOT, "roles", "pazny.mariadb", "defaults", "main.yml")
 README = os.path.join(ROOT, "roles", "pazny.mariadb", "README.md")
 
@@ -48,15 +50,15 @@ def _read(path):
         return fh.read()
 
 
-def _read_pin(path):
-    m = _PIN_RE.search(_read(path))
-    assert m, "mariadb_version not found in %s" % path
+def _read_pin(text):
+    m = _PIN_RE.search(text)
+    assert m, "mariadb_version not found in the default layers"
     return m.group(1)
 
 
 def test_pin_is_the_cited_release():
-    for path in (CONFIG,):
-        tag = _read_pin(path)
+    for path in ("the default layers",):
+        tag = _read_pin(ni.default_config_text())
         assert tag == PINNED_VERSION, (
             "%s pins mariadb_version=%r but the CVE citations claim %r is fixed. "
             "Bumping the pin without re-verifying the CVE coverage is the exact "
@@ -84,10 +86,10 @@ def test_every_cited_cve_present_in_both_surfaces():
     """
     for cve in CITED_CVES:
         for label, path in (
-            ("default.config.yml", CONFIG),
+            ("default layers", None),
             ("role README", README),
         ):
-            assert cve in _read(path), (
+            assert cve in (_read(path) if path else ni.default_config_text()), (
                 "%s is missing from %s (%s). All MariaDB CVE citations must stay "
                 "in sync across both surfaces — an orphaned citation triggers "
                 "audit confusion during compliance reviews "

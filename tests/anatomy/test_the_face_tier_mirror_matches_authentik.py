@@ -33,13 +33,14 @@ Superset instance is why this file exists rather than a TODO.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
-import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 TIER_TS = REPO / "files/anatomy/face/src/lib/security/tier.ts"
-CONFIG = REPO / "default.config.yml"
 
 
 def _ts_groups(name: str) -> set[str]:
@@ -50,7 +51,7 @@ def _ts_groups(name: str) -> set[str]:
 
 
 def _tier_groups(tier: int) -> set[str]:
-    doc = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    doc = ni.default_config()
     rows = doc.get("authentik_rbac_tiers") or []
     row = next((r for r in rows if int(r.get("tier", -1)) == tier), None)
     assert row, f"authentik_rbac_tiers has no tier {tier}"

@@ -7,6 +7,7 @@ it that can silently rot without any sandbox present.
 """
 from __future__ import annotations
 
+import sys
 import importlib.util
 import json
 import os
@@ -17,6 +18,8 @@ from pathlib import Path
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 CLOUD = REPO / "tools" / "cloud"
 PROFILE = REPO / "profiles" / "cloud-e2e.yml"
 
@@ -75,7 +78,7 @@ def test_profile_flags_are_declared():
 
 def test_profile_pulls_nothing_the_sandbox_refuses():
     reach = _load_reach()
-    vars_ = reach.load(REPO / "default.config.yml")
+    vars_ = ni.default_config()
     vars_.update(reach.load(REPO / "default.credentials.yml"))
     vars_.update(reach.load(PROFILE))
     top = reach.Resolver(vars_)

@@ -11,14 +11,16 @@ DOLI_AUTH chaining the handlers in conf.php.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 PLUGIN = REPO / "files/anatomy/plugins/dolibarr-base/plugin.yml"
 COMPOSE = REPO / "roles/pazny.dolibarr/templates/compose.yml.j2"
-DEFAULTS = REPO / "default.config.yml"
 PRAXIS = REPO / "profiles/praxis.yml"
 KEAP = REPO / "files/anatomy/plugins/keap-base/plugin.yml"
 TRAEFIK = REPO / "roles/pazny.traefik/vars/main.yml"
@@ -66,7 +68,7 @@ def test_dolibarr_compose_uses_shared_mariadb_not_an_embedded_db():
 
 
 def test_dolibarr_backup_dirs_have_restore_targets():
-    cfg = DEFAULTS.read_text(encoding="utf-8")
+    cfg = ni.default_config_text()
     assert 'name: "dolibarr-documents"' in cfg
     assert 'name: "dolibarr-custom"' in cfg
     restore = (REPO / "tasks/restore.yml").read_text(encoding="utf-8")
@@ -75,7 +77,7 @@ def test_dolibarr_backup_dirs_have_restore_targets():
 
 
 def test_install_dolibarr_defaults_off_and_praxis_turns_it_on():
-    raw = DEFAULTS.read_text(encoding="utf-8")
+    raw = ni.default_config_text()
     m = re.search(r"^install_dolibarr:\s*(\S+)", raw, re.M)
     assert m and m.group(1).startswith("false")
     prof = yaml.safe_load(PRAXIS.read_text(encoding="utf-8")) or {}

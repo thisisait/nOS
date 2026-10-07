@@ -47,6 +47,8 @@ import sys
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 TOOL = REPO / "tools/tls-uptake.py"
 
 WRITE_SQL = ("insert ", "update ", "delete ", "drop ", "create ", "alter ",
@@ -313,7 +315,7 @@ def test_the_ca_path_the_reader_looks_for_is_the_one_the_playbook_mounts():
     import re
 
     import yaml
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text(encoding="utf-8")) or {}
+    cfg = ni.default_config() or {}
     declared = cfg.get("mariadb_client_ca_path")
     if declared is None:
         pytest.skip("mariadb_client_ca_path not declared yet — rung 3 unstarted")

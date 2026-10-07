@@ -12,12 +12,15 @@ defaults, deriving from a single `nos_data_root`. This gate pins that:
 Host-daemon + render-adjacent paths are explicitly EXEMPT (wing/openclaw/pi/traefik/
 iiab_terminal) — they are not Docker-service data dirs.
 """
+import sys
 import re
 import glob
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-CFG = (ROOT / "default.config.yml").read_text()
+sys.path.insert(0, str(ROOT / "tools"))
+import nos_identity as ni  # noqa: E402
+CFG = ni.default_config_text()
 
 # Services whose path lives outside the tree by design (host daemons / render-adjacent).
 EXEMPT_VARS = {

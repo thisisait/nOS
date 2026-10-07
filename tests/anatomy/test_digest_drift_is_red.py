@@ -13,6 +13,7 @@ converge records AFTER handlers flushed and on every pass that ran compose-up.
 
 from __future__ import annotations
 
+import sys
 import ast
 import importlib.util
 import json
@@ -21,6 +22,8 @@ import pathlib
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 READER = REPO / "tools/workload-digest-status.py"
 RECORDER = REPO / "tools/workload-digest-record.py"
 
@@ -143,7 +146,7 @@ def test_the_converge_records_after_handlers_on_every_compose_pass():
     argv = task["ansible.builtin.command"]["argv"]
     assert "{{ nos_workload_digests_file }}" in argv
     # the reader's default path IS the declared one
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text(encoding="utf-8"))
+    cfg = ni.default_config()
     rd = _load(READER, "_digest_status3")
     assert cfg["nos_workload_digests_file"].endswith("/.nos/" + rd.RECORD.name)
     # every locally built image the roles declare carries a --src

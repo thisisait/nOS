@@ -49,6 +49,8 @@ import yaml
 
 _HERE = pathlib.Path(__file__).resolve()
 _REPO = _HERE.parents[2]
+sys.path.insert(0, str(_REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 _ANATOMY = _REPO / "files" / "anatomy"
 
 
@@ -779,7 +781,6 @@ def test_gate_open_for_migration_mode_row(tmp_path):
 import datetime as _dt  # noqa: E402  (kept local to the A5 section)
 
 _TTL_VALIDATE = _REPO / "tasks" / "coexistence-ttl-validate.yml"
-_DEFAULT_CONFIG = _REPO / "default.config.yml"
 
 
 def test_ttl_validate_task_pins_3_to_60_inclusive():
@@ -809,7 +810,7 @@ def test_ttl_default_is_seven_and_a_bare_literal():
     """default.config.yml carries coexistence_secondary_ttl_days as a BARE
     literal 7 (no filter / no expression) — the {{ vars }} eager-resolve trap
     requires it, and the default is 7 (the §7-RESOLVED Q4 deviation)."""
-    cfg = yaml.safe_load(_DEFAULT_CONFIG.read_text())
+    cfg = ni.default_config()
     assert cfg.get("coexistence_secondary_ttl_days") == 7, (
         "coexistence_secondary_ttl_days must default to a bare integer 7"
     )

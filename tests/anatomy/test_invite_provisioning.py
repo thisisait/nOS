@@ -22,6 +22,7 @@ invite flow without surfacing the regression — these tests fail loud.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 import shutil
 import subprocess
@@ -29,6 +30,8 @@ import subprocess
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 
 # ── Wing PHP — InfisicalClient ───────────────────────────────────────────
@@ -378,7 +381,7 @@ def test_wing_plist_carries_all_provisioning_envs():
 
 
 def test_default_config_declares_toggle_and_users_project():
-	src = (REPO / "default.config.yml").read_text()
+	src = ni.default_config_text()
 	assert "nos_invite_provisioning_enabled: false" in src
 	assert "infisical_users_project_id:" in src
 	assert "infisical_users_environment:" in src
@@ -387,7 +390,7 @@ def test_default_config_declares_toggle_and_users_project():
 def test_default_config_seeds_nos_users_infisical_project():
 	"""Seed.py auto-creates the `nos-users` project on first run; the
 	operator then copies its UUID into infisical_users_project_id."""
-	src = (REPO / "default.config.yml").read_text()
+	src = ni.default_config_text()
 	assert "slug: nos-users" in src
 
 

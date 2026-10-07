@@ -17,21 +17,23 @@ Pins (devlog follow-up, 2026-06-13):
 """
 from __future__ import annotations
 
+import sys
 import json
 import pathlib
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ROLE = REPO / "roles/pazny.wordpress"
 MU = ROLE / "files/rbac-role-sync.php"
 COMPOSE_EXT = REPO / "files/anatomy/plugins/wordpress-base/templates/wordpress-base.compose.yml.j2"
-CONFIG = REPO / "default.config.yml"
 
 
 def _config() -> dict:
     return yaml.safe_load(
-        CONFIG.read_text(encoding="utf-8").replace("{{", "RAW_").replace("}}", "_RAW")
+        ni.default_config_text().replace("{{", "RAW_").replace("}}", "_RAW")
     )
 
 
@@ -53,7 +55,7 @@ def test_mu_plugin_staged_and_mounted():
 
 
 def test_role_map_is_json_literal_covering_all_tiers():
-    raw = CONFIG.read_text(encoding="utf-8")
+    raw = ni.default_config_text()
     line = next(l for l in raw.splitlines() if l.startswith("wordpress_rbac_role_map_json:"))
     payload = line.split(":", 1)[1].strip().strip("'\"")
     role_map = json.loads(payload)  # must be literal JSON, no Jinja

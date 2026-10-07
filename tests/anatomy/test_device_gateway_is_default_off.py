@@ -8,13 +8,15 @@ from __future__ import annotations
 
 import ast
 import pathlib
+import sys
 import re
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 GATEWAY = REPO / "files" / "anatomy" / "device-gateway" / "gateway.py"
-DEFAULTS = REPO / "default.config.yml"
 MAIN = REPO / "main.yml"
 MANIFEST = REPO / "state" / "manifest.yml"
 TRAEFIK = REPO / "roles" / "pazny.traefik" / "vars" / "main.yml"
@@ -32,7 +34,7 @@ def _traefik() -> dict:
 
 
 def test_install_flag_defaults_off():
-    text = DEFAULTS.read_text(encoding="utf-8")
+    text = ni.default_config_text()
     assert re.search(r"^install_device_gateway:\s*false\b", text, re.M), (
         "install_device_gateway must default false — do not ship LAN-open"
     )

@@ -28,14 +28,15 @@ disagree.
 from __future__ import annotations
 
 import pathlib
+import sys
 import re
 
-import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 COMPOSE = REPO / "roles/pazny.grafana/templates/compose.yml.j2"
 ALLOY = REPO / "files/observability/alloy/config.alloy.j2"
-CONFIG = REPO / "default.config.yml"
 
 #: The fact both conditions must turn on. Spelled either way — `ansible_os_family`
 #: in a role template, `ansible_facts['os_family']` at play scope — because the
@@ -67,7 +68,7 @@ def test_the_container_is_still_platform_gated():
 def test_the_scrape_flag_is_derived_from_that_same_fact():
     """Not 'is also true'. DERIVED — a second literal is how these two spent
     two days disagreeing while both looked right."""
-    cfg = CONFIG.read_text(encoding="utf-8")
+    cfg = ni.default_config_text()
     m = re.search(r"^alloy_scrape_cadvisor:\s*(.+)$", cfg, re.M)
     assert m, "alloy_scrape_cadvisor is gone from default.config.yml"
     value = m.group(1).strip()
@@ -94,7 +95,7 @@ def test_the_two_agree_on_a_darwin_host():
     assert it is falsey — the platform where the container does not exist."""
     import jinja2
 
-    cfg = CONFIG.read_text(encoding="utf-8")
+    cfg = ni.default_config_text()
     value = re.search(r"^alloy_scrape_cadvisor:\s*(.+)$", cfg, re.M).group(1).strip()
     value = value.strip('"').strip("'")
     env = jinja2.Environment()

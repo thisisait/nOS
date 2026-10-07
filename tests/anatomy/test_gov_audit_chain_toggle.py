@@ -10,20 +10,22 @@ Pure file-read / yaml-parse — runs in standing pytest CI, never in a playbook.
 """
 from __future__ import annotations
 
+import sys
 import pathlib
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 GOV = REPO / "profiles" / "gov-local.yml"
-CFG = REPO / "default.config.yml"
 POST = REPO / "roles" / "pazny.wing" / "tasks" / "post.yml"
 
 
 def test_default_config_ships_chain_off():
     # Parsed, not grepped: a commented-out line satisfied the old text assert.
     # `test_gov_local_opts_in` was its parsed twin's duplicate and is gone.
-    assert yaml.safe_load(CFG.read_text()).get("wing_audit_chain_enabled") is False, \
+    assert ni.default_config().get("wing_audit_chain_enabled") is False, \
         "default.config.yml must keep the audit chain OFF (normal run inert)"
 
 

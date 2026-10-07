@@ -41,6 +41,8 @@ import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import nos_identity as ni  # noqa: E402
 TIMEOUT = 25
 
 #: Images this repository builds. Their tags are not upstream's business.
@@ -262,7 +264,7 @@ def live_images() -> dict[str, str]:
 
 
 def collect_pins() -> list[dict]:
-    cfg = (REPO / "default.config.yml").read_text(encoding="utf-8")
+    cfg = ni.default_config_text()
     pins = dict(re.findall(r'^([a-z0-9_]*_version):\s*"([^"]+)"', cfg, re.M))
     images: dict[str, str] = {}
     for pattern in ("roles/*/templates/*.j2", "files/anatomy/plugins/*/templates/*.j2"):
