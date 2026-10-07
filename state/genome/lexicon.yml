@@ -269,7 +269,7 @@ words:
     names:
       - path: files/anatomy/apex/projection.py
     not: [organ, vein, "an anatomy-graph node (named, never published as such)"]
-    counter_example: "service:grafana in the anatomy graph (a named node; only its sentence leaves, as an atom)"
+    counter_example: "a named service node in the anatomy graph (only its speaks: sentence leaves, as an atom)"
 
   organism:
     level: organism

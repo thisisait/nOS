@@ -23,7 +23,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - **organ** (organ) — One service or host daemon with one job; one row in state/manifest.yml. Not: organ system, cell, digest.
   Counter-example: a Pulse job (a reflex of the Pulse organ).
 - **atom** (organ) — One published node on the public apex page: an organ shown only by its `speaks:` sentence, with no name; the public key `atoms` is frozen with the page. Not: organ, vein, an anatomy-graph node (named, never published as such).
-  Counter-example: service:grafana in the anatomy graph (a named node; only its sentence leaves, as an atom).
+  Counter-example: a named service node in the anatomy graph (only its speaks: sentence leaves, as an atom).
 - **organ system** (organ system) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Not: organ, organism.
   Counter-example: a compose stack such as iiab (a deployment group, not a public function).
 - **vein** (organ system) — An anonymised edge between two organ systems on the public apex page; the public key `veins` is frozen with the page's schema. Not: atom, an anatomy-graph edge (a link between two named nodes).
