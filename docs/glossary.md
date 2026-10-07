@@ -164,7 +164,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - Pulse called the heartbeat → Pulse, which is the scheduler
 - the playbook called the nervous system → converge
 - twin for two lists that must stay equal (twin-parity) → mirror-parity
-- the delivery tier: Tier-1 a role service, Tier-2 a manifest app → role service / manifest app; the Ansible tag `tier2` and the Kuma monitor tag keep their spelling
+- the delivery tier: Tier-1 a role service, Tier-2 a manifest app → role service / manifest app; the Ansible tag and the Kuma monitor tag are `manifest-app`, with `tier2` kept as an alias for one release
 - a second kind-to-level map beside the lexicon → the graph_kind names in state/genome/lexicon.yml
 - the digest organ, the stomach → digest
 - bones-and-wings for the host organs together → the host organs

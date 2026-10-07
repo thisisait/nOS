@@ -282,7 +282,7 @@
       # 401 covers proxy-auth gate redirect-then-block before login
       accepted_statuscodes: ["200-299", "301", "302", "308", "401", "403"]
       expiry_notification: "{{ uptime_kuma_tls_expiry_monitors | default(true) }}"
-      tags: ["{{ svc.stack | default('apps') }}", "{{ svc.category | default('app') }}", "tier2"]
+      tags: ["{{ svc.stack | default('apps') }}", "{{ svc.category | default('app') }}", "manifest-app", "tier2"]
   when:
     - _domain | trim | length > 0
 

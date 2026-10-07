@@ -476,7 +476,7 @@
 # four gates deep (a manifest rendered, compose rc=0, reconverge enabled). So an
 # estate with Tier-2 disabled monitored nothing, and `--tags uptime-kuma` — a tag
 # that task declares — could not reach it, because the parent include carries
-# only ['apps','tier2','apps-runner']. Tier-1 gets its own call site here; the
+# only ['apps','manifest-app','tier2','apps-runner']. Tier-1 gets its own call site here; the
 # apps hook stays as the Tier-2 extension. setup-monitors.py upserts and never
 # prunes, so running it twice appends rather than churns.
 - { name: "[Stacks] pazny.uptime_kuma monitors (Tier-1)", ansible.builtin.include_role: { name: pazny.uptime_kuma, tasks_from: monitors.yml, apply: { tags: ['uptime-kuma'] } }, when: "install_uptime_kuma | default(false) and 'iiab' in (_remaining_stacks | default([]))", tags: ['uptime-kuma'] }

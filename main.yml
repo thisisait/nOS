@@ -2848,7 +2848,7 @@
     # ──────────────────────────────────────────────────────────────────────────
     - import_tasks: tasks/stacks/apps-up.yml
       when: nos_docker_ready | default(true)
-      tags: ['apps', 'tier2', 'stack', 'stacks', 'apps-runner']
+      tags: ['apps', 'manifest-app', 'tier2', 'stack', 'stacks', 'apps-runner']
 
     # Verification: confirms all services respond (after post-start tasks)
     - import_tasks: tasks/iiab/stack_verify.yml

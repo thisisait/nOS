@@ -578,7 +578,7 @@ words:
     counter_example: "the infra stack coming up first (a layer, dependency depth; not an access tier)"
     retired:
       - sense: "the delivery tier: Tier-1 a role service, Tier-2 a manifest app"
-        replacement: "role service / manifest app; the Ansible tag `tier2` and the Kuma monitor tag keep their spelling"
+        replacement: "role service / manifest app; the Ansible tag and the Kuma monitor tag are `manifest-app`, with `tier2` kept as an alias for one release"
         surfaces: []
     retired_phrases: ["Delivery tier", "Tier-2 app", "Tier-2 manifest"]
 

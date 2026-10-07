@@ -32,8 +32,8 @@
   ansible.builtin.include_role:
     name: pazny.apps_runner
     apply:
-      tags: ['apps', 'tier2', 'apps-runner']
-  tags: ['apps', 'tier2', 'apps-runner']
+      tags: ['apps', 'manifest-app', 'tier2', 'apps-runner']
+  tags: ['apps', 'manifest-app', 'tier2', 'apps-runner']
 
 # ── Stack-up + post-hooks gated on actual rendered apps ─────────────────────
 # _apps_render is registered by library/nos_apps_render.py. It's defined only
@@ -115,7 +115,7 @@
 
           Recovery: fix the manifest(s) and re-run with the Section 12
           recipe (no full blank required):
-            ansible-playbook main.yml -K --tags apps,tier2,apps-runner
+            ansible-playbook main.yml -K --tags apps,manifest-app,apps-runner
           apps_runner main.yml (render) ALREADY ran successfully —
           _apps_render.apps has {{ (_apps_render.apps | default([])) | length }} entries.
       when: (_apps_stack_result.rc | default(1)) != 0
@@ -126,9 +126,9 @@
         name: pazny.apps_runner
         tasks_from: post.yml
         apply:
-          tags: ['apps', 'tier2', 'apps-runner']
+          tags: ['apps', 'manifest-app', 'tier2', 'apps-runner']
       when: (_apps_stack_result.rc | default(1)) == 0
-      tags: ['apps', 'tier2', 'apps-runner']
+      tags: ['apps', 'manifest-app', 'tier2', 'apps-runner']
 
     # ── Container status (parity with stack-up.yml summary) ─────────────────
     - name: "[Apps] Container status"

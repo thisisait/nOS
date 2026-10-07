@@ -138,7 +138,7 @@
         - _apps_has_authentik_consumers | bool
       # Task-level tags here are only ever the reachable ones. This file is
       # entered through the include in apps-up.yml, which carries
-      # ['apps','tier2','apps-runner'] — a dynamic include is itself
+      # ['apps','manifest-app','tier2','apps-runner'] — a dynamic include is itself
       # tag-filtered, so `--tags authentik` never gets in and a tag declared
       # here that the parent does not admit is a lie. The `apply:` block above
       # is different: it scopes tasks INSIDE pazny.authentik and is correct.
