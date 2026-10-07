@@ -6,17 +6,18 @@ Docker started). Every bind-mount then fails at container-create, containers sit
 in `Created`, and the STRICT health-wait hangs the WHOLE run for the full
 stack_up_wait_timeout with no diagnosis (observed 2026-07-17: infra frozen at
 3/11 for 59 ticks). `tasks/stacks/docker-external-mount-preflight.yml` probes the
-mount in ~5s BEFORE the first `docker compose up` and either self-heals (blank /
-docker_autoheal_external_mount) or fails fast with the exact remedy.
+mount in ~5s BEFORE the first `docker compose up` and either restarts Docker
+Desktop (blank / docker_repair_external_mount) or fails fast with the exact remedy.
 
 This offline gate pins the wiring so it can't silently regress:
   1. the preflight task file exists + is valid YAML;
   2. core-up.yml includes it via include_tasks;
   3. the include runs BEFORE the "Start INFRA stack" compose-up (else the probe
      is useless — it must precede the first up -d);
-  4. the self-heal auto-restart is gated on blank OR docker_autoheal_external_mount
+  4. the auto-restart is gated on blank OR docker_repair_external_mount (or its
+     pre-2026-10-07 alias docker_autoheal_external_mount, honoured through v0.17)
      (never a surprise Docker restart under a live operator's containers);
-  5. docker_autoheal_external_mount + docker_mount_probe_image are REAL keys in
+  5. docker_repair_external_mount + docker_mount_probe_image are REAL keys in
      default.config.yml (global, not role-default-only, so the loader/eager
      `{{ vars }}` resolution + every task sees them).
 
@@ -105,36 +106,40 @@ def test_preflight_runs_before_infra_up():
     )
 
 
-# ── 4. self-heal auto-restart gated on blank OR docker_autoheal_external_mount ─
-def _find_self_heal_block(tasks: list) -> dict | None:
-    """Recurse through nested `block:` groups to find the self-heal restart block."""
+# ── 4. auto-restart gated on blank OR docker_repair_external_mount ────────────
+def _find_restart_block(tasks: list) -> dict | None:
+    """Recurse through nested `block:` groups to find the Docker restart block."""
     for t in tasks:
         if not isinstance(t, dict):
             continue
         name = str(t.get("name", ""))
-        # The self-heal is the task carrying an inner `block:` whose name mentions Self-heal.
-        if "block" in t and ("Self-heal" in name or "restart docker" in name.lower()):
+        # The repair is the task carrying an inner `block:` that restarts Docker.
+        if "block" in t and "restart docker" in name.lower():
             return t
-        # Descend into any nested block to reach it (the self-heal block is nested
+        # Descend into any nested block to reach it (the restart block is nested
         # inside the outer "External-mount preflight" block).
         if isinstance(t.get("block"), list):
-            found = _find_self_heal_block(t["block"])
+            found = _find_restart_block(t["block"])
             if found is not None:
                 return found
     return None
 
 
-def test_self_heal_gated_on_blank_and_autoheal_flag():
+def test_restart_gated_on_blank_and_repair_flag():
     tasks = _load_tasks(PREFLIGHT)
-    block = _find_self_heal_block(tasks)
-    assert block is not None, "self-heal `block:` (restart Docker Desktop) not found in preflight"
+    block = _find_restart_block(tasks)
+    assert block is not None, "restart `block:` (restart Docker Desktop) not found in preflight"
     when = _flatten_when(block.get("when"))
     assert "blank" in when, (
-        f"self-heal `when:` must reference `blank` (blank run auto-heals). Got: {when!r}"
+        f"restart `when:` must reference `blank` (a blank run restarts). Got: {when!r}"
     )
-    assert "docker_autoheal_external_mount" in when, (
-        "self-heal `when:` must reference `docker_autoheal_external_mount` (the opt-in "
+    assert "docker_repair_external_mount" in when, (
+        "restart `when:` must reference `docker_repair_external_mount` (the opt-in "
         f"flag for a live non-blank system). Got: {when!r}"
+    )
+    # Config keys are an API: the old name keeps working through v0.17.
+    assert "docker_autoheal_external_mount" in when, (
+        f"the old key docker_autoheal_external_mount stopped being honoured. Got: {when!r}"
     )
 
 
@@ -142,11 +147,11 @@ def test_self_heal_gated_on_blank_and_autoheal_flag():
 def test_config_keys_are_global():
     cfg = yaml.safe_load(CONFIG.read_text())
     assert isinstance(cfg, dict), "default.config.yml did not parse to a mapping"
-    assert "docker_autoheal_external_mount" in cfg, (
-        "docker_autoheal_external_mount must be a global key in default.config.yml"
+    assert "docker_repair_external_mount" in cfg, (
+        "docker_repair_external_mount must be a global key in default.config.yml"
     )
-    assert cfg["docker_autoheal_external_mount"] is False, (
-        "docker_autoheal_external_mount default must be false (no surprise restarts)"
+    assert cfg["docker_repair_external_mount"] is False, (
+        "docker_repair_external_mount default must be false (no surprise restarts)"
     )
     assert "docker_mount_probe_image" in cfg, (
         "docker_mount_probe_image must be a global key in default.config.yml"

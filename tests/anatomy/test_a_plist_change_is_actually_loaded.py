@@ -28,8 +28,8 @@ layer up, and it is why the estate spent an unknown period with Bone verifying
 HMACs against a retired key.
 
 Bone's variant was worse: a loaded job took NO action at all — not even a
-restart. It survived the secret desync only because Bone self-heals that one
-variable in-process. Nothing else it reads from its plist would have updated.
+restart. It survived the secret desync only because Bone reloads itself when that one
+variable desyncs. Nothing else it reads from its plist would have updated.
 
 WHAT THIS PINS: all three host daemons must bootout+bootstrap when their plist
 CHANGED, and must therefore register the render task to know that it did.

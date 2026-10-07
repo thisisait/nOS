@@ -1,4 +1,4 @@
-"""Anatomy gate — Portainer admin-password DRIFT self-heal.
+"""Anatomy gate — Portainer admin-password DRIFT reset (opt-in BoltDB wipe).
 
 Portainer's admin password can only be rotated via the API WITH the old password.
 When an interrupted/partial provisioning (e.g. an aborted blank) leaves the admin
