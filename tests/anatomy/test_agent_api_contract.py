@@ -53,7 +53,7 @@ def test_upgrades_planned_queue_wired():
     assert "Upgrades:queue" in router, "API queue route missing"
     assert "Upgrades:queueUpgrade" in router, "operator queue route missing"
     api = (REPO / "files/anatomy/wing/app/Presenters/Api/UpgradesPresenter.php").read_text()
-    assert "function actionQueue" in api and "getActorId" in api, "queue must derive planned_by from the token"
+    assert "function actionQueue" in api and "requireActorId" in api, "queue must derive planned_by from the token"
     repo = (REPO / "files/anatomy/wing/app/Model/UpgradeRepository.php").read_text()
     for m in ("function planUpgrade", "function listPlanned", "function markPlannedApplied"):
         assert m in repo, f"UpgradeRepository missing {m}"
@@ -212,7 +212,7 @@ def test_coexistence_queue_consumed_under_tag():
     for m in ("function planCoexistence", "function listPlanned", "function markPlannedApplied"):
         assert m in repo, f"CoexistenceRepository missing {m}"
     api = (REPO / "files/anatomy/wing/app/Presenters/Api/CoexistencePresenter.php").read_text()
-    assert "function actionQueue" in api and "getActorId" in api, "queue must derive planned_by from the token"
+    assert "function actionQueue" in api and "requireActorId" in api, "queue must derive planned_by from the token"
     bridge = (REPO / "files/anatomy/wing/bin/planned-coexistence.php")
     assert bridge.is_file(), "planned-coexistence.php bridge missing"
     assert "--list" in bridge.read_text() and "mark-applied" in bridge.read_text()

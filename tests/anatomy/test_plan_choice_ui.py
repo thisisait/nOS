@@ -93,8 +93,8 @@ def test_plan_choice_action_does_not_trust_body_identity():
     """planned_by is the forward-auth identity, never a POST field —
     anti-spoof parity with actionQueueUpgrade."""
     body = _action_body(PRESENTER.read_text(), "actionPlanChoice") or ""
-    assert "X-Authentik-Username" in body, (
-        "actionPlanChoice must derive planned_by from the X-Authentik-Username header, not the body"
+    assert "requireActor()" in body, (
+        "actionPlanChoice must derive planned_by from the forward-auth identity (requireActor), not the body"
     )
 
 
