@@ -44,7 +44,7 @@ than kept as a rule that only ever reports its own defeat.)
 | [agentkit.md](../docs/doctrine/agentkit.md) | how an agent runs, spends, and satisfies: one runner door, two scope vocabularies, backend≠provider, vault is a pointer, satisfaction is a gate run — §6 awaits the operator | proposed |
 | [body-plan.md](doctrine/body-plan.md) | one word, one meaning: the lexicon is the source, the glossary its rendering, a gate keeps both true; the levels genome → habitat; where the four old meanings of "organ" went | proposed |
 | [backoffice.md](../docs/doctrine/backoffice.md) | organ system **backoffice**; the backoffice **tissue** (installed by the `praxis` profile) is the set inside it, not a daemon; KEAP tables SoT, Espo join, digest is the intake | proposed |
-| [tissues.md](../docs/doctrine/tissues.md) | a tissue is one manifest of existing ids (cells, skills, tables, services, reflexes); Art. 30 inherited from its members; install = profile, remove through the ladder, export carries files not rows; accepted by a fixture | proposed |
+| [tissue.md](doctrine/tissue.md) | a tissue is one manifest of existing ids (cells, skills, tables, services, reflexes); Art. 30 inherited from its members; install = profile, remove through the ladder, export carries files not rows; accepted by a fixture | proposed |
 | [n8n-packs.md](../docs/doctrine/n8n-packs.md) | external HTTP pulls into KEAP DataTables: n8n is the runner, nOS the contract (pack graph, keap_write, one Pulse reader) | proposed |
 | [ssot.md](doctrine/ssot.md) | address + INDEX map; in-force articles live under `ssot/doctrine/` | live |
 | table-naming.md | DB table / column naming conventions | planned |

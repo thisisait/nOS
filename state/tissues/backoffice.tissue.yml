@@ -1,6 +1,6 @@
 # The backoffice tissue: a firm's books and counterparties, staffed by cells.
 # Every id below already exists in its own source; this file only gathers
-# them (docs/doctrine/tissues.md, PROPOSED). Checked by tools/tissue-status.py
+# them (ssot/doctrine/tissue.md, PROPOSED). Checked by tools/tissue-status.py
 # and tests/anatomy/test_tissue_holds.py.
 meta:
   name: backoffice

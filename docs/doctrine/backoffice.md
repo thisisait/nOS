@@ -2,7 +2,7 @@
 
 > **PROPOSED, not settled** only for promote-to-ssot. The names are
 > settled: **backoffice** is the organ system; the **backoffice tissue**
-> (`state/tissues/backoffice.tissue.yml`, doctrine [`tissues.md`](tissues.md))
+> (`state/tissues/backoffice.tissue.yml`, doctrine [`ssot/doctrine/tissue.md`](../../ssot/doctrine/tissue.md))
 > is the pack inside it, not a second organ system and not a host daemon.
 > Sibling of [`body-plan.md`](../../ssot/doctrine/body-plan.md) and of digest (intake).
 

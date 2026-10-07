@@ -4,6 +4,7 @@ ruled: null
 row: lexicon
 gates:
   - tests/anatomy/test_appendage_is_detachable.py
+  - tests/anatomy/test_body_glosses_are_the_lexicon.py
   - tests/anatomy/test_lexicon_holds.py
   - tests/anatomy/test_ssot_index.py
 ---

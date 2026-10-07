@@ -283,6 +283,7 @@ DOCTRINE_REDIRECTS: dict[str, str] = {
     "docs/doctrine/organs.md": "ssot/doctrine/body-plan.md",
     "docs/doctrine/README.md": "ssot/README.md",
     "docs/idea/11-agentic-loop-contract.md": "ssot/doctrine/loop-contract.md",
+    "docs/doctrine/tissues.md": "ssot/doctrine/tissue.md",
 }
 
 

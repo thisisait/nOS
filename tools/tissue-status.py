@@ -5,7 +5,7 @@
     tools/tissue-status.py backoffice   one tissue, with the Article 30 it inherits
     tools/tissue-status.py --json
 
-A tissue (docs/doctrine/tissues.md, PROPOSED) is state/tissues/<name>.tissue.yml:
+A tissue (ssot/doctrine/tissue.md, PROPOSED) is state/tissues/<name>.tissue.yml:
 a list of ids that already exist elsewhere. This loader validates it against
 state/genome/tissue.schema.json and resolves every id against its own source;
 one dangling reference refuses the whole tissue. tools/anatomy-graph-gen.py
