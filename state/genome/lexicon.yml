@@ -308,6 +308,7 @@ words:
         reason: an in-force constitution article (the ssot/INDEX.yml doctrine realm)
     not: [genome, definition]
     counter_example: "the genome's entity schema (declared facts, not rules in force)"
+    retired_phrases: ["settled law", "this file is the law", "doctrine locked", "authoritative doc"]
 
   reflex:
     level: cross
