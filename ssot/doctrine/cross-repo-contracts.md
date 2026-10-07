@@ -155,3 +155,13 @@ week): upsert merge treats `null` as *delete-the-cell*; object/table update
 `rowref-contract`, `table-schema-reconcile`). nOS drafts this registry row's
 promotion to Live + the definitions-side schema-pin gate (clause 2). Both on the
 operator's go; on completion this entry moves into the Live table above.
+
+## 7. A joint is an appendage's contract
+
+A **joint** is the one contract an appendage is attached through
+([`body-plan.md`](body-plan.md) §4.2). It is a contract as §1 says: one spec
+with `contract_version:`, a fixture the producer owns, gates on both sides.
+The organ's manifest row names it: `joint:` is the spec's repo path, and
+`joint_pending:` says why there is none yet. Every other contract is only a
+contract. KEAP has one and it is not a joint, because the core depends on
+KEAP. Gate: `tests/anatomy/test_appendage_is_detachable.py`.
