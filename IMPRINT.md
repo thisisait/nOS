@@ -65,7 +65,7 @@ Start with the first one.
 - `tools/plugin-wiring-report.py` — Plugin wiring report — capability matrix + contract checks.
 - `tools/discovery-scan.py` — Discovery: find two representations of one fact that disagree.
 - `tools/agent-token-status.py` — can each declared agent client mint a token RIGHT NOW.
-- `tools/digest-status.py` — image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker.
+- `tools/workload-digest-status.py` — image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker.
 - `tools/caddy-status.py` — Can the caddy answer, is the ear listening, and what did it hear.
 - `tools/brew-pin-status.py` — How old is the version brew wants to give us, and is it old enough to adopt?
 - `tools/cortex-status.py` — What the cortex organ is, all of it — not just the part KEAP serves.

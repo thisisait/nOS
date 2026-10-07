@@ -3009,14 +3009,14 @@
       ansible.builtin.import_tasks: tasks/state-report.yml
       tags: ['always', 'state', 'report']
 
-    # Baseline for tools/digest-status.py: what each container runs, recorded
+    # Baseline for tools/workload-digest-status.py: what each container runs, recorded
     # after handlers flushed. An image that later changes without a converge is
     # red (roadmap digest-drift-red). Tagged like compose-up: `always` + `stacks`.
     - name: "[State] Record the image every container runs"
       ansible.builtin.command:
         argv:
           - python3
-          - "{{ playbook_dir }}/tools/digest-record.py"
+          - "{{ playbook_dir }}/tools/workload-digest-record.py"
           - --out
           - "{{ nos_workload_digests_file }}"
           - --src
@@ -3032,7 +3032,7 @@
       register: _digest_record
       changed_when: _digest_record.stdout is search('^changed')
       when: nos_docker_ready | default(true) | bool
-      tags: ['always', 'stacks', 'digest-record']
+      tags: ['always', 'stacks', 'workload-digest-record']
 
     # ── Post-run web-UI smoke check ──────────────────────────────────────────
     # tools/nos-smoke.py auto-derives one probe per Tier-1 service from

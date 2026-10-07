@@ -809,7 +809,7 @@ def _digest_report() -> dict:
     import importlib.util  # noqa: PLC0415 — sibling reader, not a package
 
     spec = importlib.util.spec_from_file_location(
-        "_digest_status", REPO / "tools" / "digest-status.py")
+        "_digest_status", REPO / "tools" / "workload-digest-status.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod.collect()
@@ -817,7 +817,7 @@ def _digest_report() -> dict:
 
 def digest_drift() -> dict | None:
     """Images that changed under a container without a converge — the record
-    is the converge's, the verdict `tools/digest-status.py`'s. None = UNKNOWN."""
+    is the converge's, the verdict `tools/workload-digest-status.py`'s. None = UNKNOWN."""
     try:
         report = _digest_report()
     except Exception:  # noqa: BLE001 — any failure is the same answer: cannot ask
@@ -897,7 +897,7 @@ def collect() -> dict:
         ("orphan_extensions", STACKS_DIR, orphan_extensions),
         ("loop_verdicts", REPO / "tools" / "loop-status.py", stalled_verdicts),
         ("restore_drill", pathlib.Path.home() / ".nos" / "backup-verify.json", restore_drill),
-        ("digest_drift", pathlib.Path("tools/digest-status.py (~/.nos/workload-digests.json + docker)"),
+        ("digest_drift", pathlib.Path("tools/workload-digest-status.py (~/.nos/workload-digests.json + docker)"),
          digest_drift),
         ("ci", pathlib.Path("gh run list"), ci_runs),
         ("dependabot", pathlib.Path("gh api dependabot/alerts"), dependabot),
@@ -987,7 +987,7 @@ def reds(report: dict) -> list[str]:
             f"({report['digest_drift'].get('recorded_at')}): "
             + ", ".join(f"{d['container']} {d['recorded_id'][7:19]}→{d['live_id'][7:19]}"
                         for d in drift[:6])
-            + " — tools/digest-status.py"
+            + " — tools/workload-digest-status.py"
         )
     for frag in report.get("orphan_extensions") or []:
         out.append(f"compose extension without its service, left out of `up`: {frag}")

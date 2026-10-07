@@ -25,7 +25,7 @@ review_every_days: 31
 | law and definitions | law: the shared parts every model inherits (skills, CLAUDE.md, `ssot/doctrine/`); definition: one cell's prompt and tool allow-list |
 
 The declared set is **generated** from declarations, never hand-listed. Anything
-running that no declaration explains is undeclared (`undeclared-status`, `digest-status`).
+running that no declaration explains is undeclared (`undeclared-status`, `workload-digest-status`).
 
 Software on the machine classed `symbiont` or `habitat` in `software_owner` is
 **tolerated**: declared, not of the organism, living beside it. A sense
@@ -52,7 +52,7 @@ A detector that cannot fill one in is not an indicator yet.
 ## 3. Indicator kinds
 
 - **Sentinel** — fixed place, always on, read by red-status: undeclared-status,
-  digest-status, santa-status, identity-status.
+  workload-digest-status, santa-status, identity-status.
 - **Patrol** — Pulse sweeps on a schedule: discovery contradiction-scan,
   gitleaks nightly, npm IOC scan, tofu drift plan, security drift watch.
 - **Checkpoint** — at a border, on crossing: `tools/prepush-score.py` before
@@ -91,7 +91,7 @@ A detector that cannot fill one in is not an indicator yet.
 
 | Indicator | Kind | Heartbeat | Lifespan | Regulated |
 |---|---|---|---|---|
-| undeclared-status, digest-status, santa-status | sentinel | red-status run | — | no |
+| undeclared-status, workload-digest-status, santa-status | sentinel | red-status run | — | no |
 | discovery, gitleaks, npm-ioc, tofu-drift, security-drift | patrol | Pulse schedule | — | no |
 | prepush-score, CodeRabbit + checklist | checkpoint | per push / PR | — | no |
 | audit-chain-verify | verdicts integrity | nightly | — | — |

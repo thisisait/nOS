@@ -823,8 +823,8 @@ nodes:
   "reader:cortex-drift": withheld
   "reader:cortex-status": withheld
   "reader:current-state": withheld
-  "reader:digest-record": withheld
-  "reader:digest-status": withheld
+  "reader:workload-digest-record": withheld  # 2026-10-07: renamed from digest-record (workload-digest)
+  "reader:workload-digest-status": withheld  # 2026-10-07: renamed from digest-status
   "reader:discovery-scan": withheld
   "reader:doctrine-cite": withheld
   "reader:elsewhere-status": withheld

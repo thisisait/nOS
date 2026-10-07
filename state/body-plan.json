@@ -956,14 +956,6 @@
       "level": "sense",
       "kind": "reader"
     },
-    "reader:digest-record": {
-      "level": "sense",
-      "kind": "reader"
-    },
-    "reader:digest-status": {
-      "level": "sense",
-      "kind": "reader"
-    },
     "reader:discovery-scan": {
       "level": "sense",
       "kind": "reader"
@@ -1137,6 +1129,14 @@
       "kind": "reader"
     },
     "reader:wing-status": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:workload-digest-record": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:workload-digest-status": {
       "level": "sense",
       "kind": "reader"
     },

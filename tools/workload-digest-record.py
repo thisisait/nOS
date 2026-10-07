@@ -3,7 +3,7 @@
 
 Called from main.yml post_tasks (after handlers). Writes image ref, image ID
 and repo digests per container, plus the source git commit for images built
-locally (`--src REPO=DIR`). `tools/digest-status.py` judges drift; this only
+locally (`--src REPO=DIR`). `tools/workload-digest-status.py` judges drift; this only
 records. Prints `changed`/`unchanged`; exit 1 when docker cannot be read.
 """
 
@@ -18,7 +18,7 @@ import sys
 from datetime import datetime, timezone
 
 _spec = importlib.util.spec_from_file_location(
-    "_digest_status", pathlib.Path(__file__).with_name("digest-status.py"))
+    "_digest_status", pathlib.Path(__file__).with_name("workload-digest-status.py"))
 _reader = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_reader)
 

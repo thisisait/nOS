@@ -2618,20 +2618,6 @@
       "anchor": "02.02.04",
       "description": "Reader tools/current-state.py: The claim board's WRITE side: file/claim/release/progress; a claim is refused unless the match says you are capable."
     },
-    "reader:digest-record": {
-      "kind": "reader",
-      "source": "tools/digest-record.py",
-      "title": "main.yml post_task: writes the record digest-status.py reads (image ref, ID, repo digests, source commit of local builds).",
-      "anchor": "02.02.04",
-      "description": "Reader tools/digest-record.py: main.yml post_task: writes the record digest-status.py reads (image ref, ID, repo digests, source commit of local builds)."
-    },
-    "reader:digest-status": {
-      "kind": "reader",
-      "source": "tools/digest-status.py",
-      "title": "READER: image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker.",
-      "anchor": "02.02.04",
-      "description": "Reader tools/digest-status.py: READER: image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker."
-    },
     "reader:discovery-scan": {
       "kind": "reader",
       "source": "tools/discovery-scan.py",
@@ -2939,6 +2925,20 @@
       "title": "What Wing actually is: every table, who writes it, who reads it, what it costs.",
       "anchor": "02.02.04",
       "description": "Reader tools/wing-status.py: What Wing actually is: every table, who writes it, who reads it, what it costs."
+    },
+    "reader:workload-digest-record": {
+      "kind": "reader",
+      "source": "tools/workload-digest-record.py",
+      "title": "main.yml post_task: writes the record workload-digest-status.py reads (image ref, ID, repo digests, source commit of local builds).",
+      "anchor": "02.02.04",
+      "description": "Reader tools/workload-digest-record.py: main.yml post_task: writes the record workload-digest-status.py reads (image ref, ID, repo digests, source commit of local builds)."
+    },
+    "reader:workload-digest-status": {
+      "kind": "reader",
+      "source": "tools/workload-digest-status.py",
+      "title": "READER: image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/workload-digest-status.py: READER: image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker."
     },
     "repo:gitea-forge": {
       "kind": "repo",

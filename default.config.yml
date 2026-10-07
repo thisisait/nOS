@@ -173,8 +173,8 @@ nos_operator_email: "{{ nos_primary_admin }}@{{ tenant_domain | default('dev.loc
 # Venv for host tools that need more than the stdlib (tasks/tools-venv.yml).
 nos_tools_venv: "{{ ansible_facts['env']['HOME'] }}/.nos/tools-venv"
 nos_tools_python: "{{ nos_tools_venv }}/bin/python"
-# What every container ran at the last converge (tools/digest-record.py writes,
-# tools/digest-status.py compares). Runtime state; a converge rewrites it.
+# What every container ran at the last converge (tools/workload-digest-record.py writes,
+# tools/workload-digest-status.py compares). Runtime state; a converge rewrites it.
 nos_workload_digests_file: "{{ ansible_facts['env']['HOME'] }}/.nos/workload-digests.json"
 
 nos_identities:

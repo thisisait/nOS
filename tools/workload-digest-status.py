@@ -3,7 +3,7 @@
 
 Roadmap `digest-drift-red`. Most images here are unsigned and several are built
 locally, so per-role digest pins would be costly and partial. Instead the
-converge records what each container runs (`tools/digest-record.py` →
+converge records what each container runs (`tools/workload-digest-record.py` →
 `~/.nos/workload-digests.json`) and this reader compares the live estate
 against that record:
 
@@ -16,7 +16,7 @@ against that record:
 A missing or torn record, or docker unreachable, is UNKNOWN, never green.
 It reads only: `docker inspect` with a format string, never Config.Env.
 
-Usage: tools/digest-status.py [--json]. Exit 0 always.
+Usage: tools/workload-digest-status.py [--json]. Exit 0 always.
 """
 
 from __future__ import annotations
