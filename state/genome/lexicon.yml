@@ -8,7 +8,8 @@
 # names    typed surfaces where the word lives today; each must exist:
 #            path | yaml_key (file#dotted.key, * = any key or list item) |
 #            config_key (a committed default, whichever config layer holds it) |
-#            graph_kind | manifest_field | launchd_label | anchor_prefix
+#            graph_kind | manifest_field | launchd_label | anchor_prefix |
+#            text (file#literal: a label or env name in one tracked file)
 #          A graph_kind carries a one-line `reason`; it is the ONE kind → level
 #          map (tools/body-plan-gen.py reads it). Its class is the word's level,
 #          or the word itself when the level is `cross`. A yaml_key may pin `values`.
@@ -225,14 +226,21 @@ words:
         surfaces:
           - yaml_key: "files/anatomy/apex/ruling.yml#organs"
       - sense: "organ meaning host-native (runs under launchd or systemd)"
-        replacement: "the stack axis: stack is null"
-        surfaces: []
+        replacement: "the stack axis: stack is null; in code, host daemon"
+        surfaces:
+          - text: 'files/observability/alloy/config.alloy.j2#alloy_tail_organ_logs'
+          - text: 'files/observability/alloy/config.alloy.j2#job = "organ"'
+          - text: 'roles/pazny.wing/templates/wing.plist.j2#NOS_ORGAN_DEPLOYED_REF'
       - sense: "a model called an organ"
         replacement: cell
         surfaces: []
       - sense: "organ meaning nOS's own parts as opposed to vendor software"
         replacement: self organ
         surfaces: []
+      - sense: "organ meaning the Cortex, as the side of a corpus diff against KEAP"
+        replacement: cortex
+        surfaces:
+          - text: 'files/anatomy/scripts/cortex-corpus-diff.py#CULPRIT_ORGAN'
     retired_phrases: ["models are organs", "organs of a first organism", "public organ"]
 
   organ system:

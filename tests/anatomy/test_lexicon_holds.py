@@ -9,7 +9,7 @@ first. `state/genome/lexicon.yml` holds the one meaning; this gate keeps it true
 
 What it checks, all from artifacts, never from prose about them:
   (a) every `names:` surface exists (path, YAML key, graph kind, manifest field,
-      launchd label, anchor prefix);
+      launchd label, anchor prefix, a literal token in one file);
   (b) every `retired.surfaces` entry is gone;
   (c) every node kind in state/anatomy-graph.json is named by exactly one word,
       and that word is a body level, cross-cutting or internal (the same
@@ -193,6 +193,10 @@ def _exists(surface: dict) -> bool:
             ("templates/*.j2", "roles/*/defaults/main.yml", "roles/*/templates/*.j2"))
     if kind == "anchor_prefix":
         return value in _text_under(("docs/systems/*/*.md",))
+    if kind == "text":  # "rel#literal": a token in one tracked file (a label, an env name)
+        rel, _, needle = value.partition("#")
+        p = REPO / rel
+        return p.is_file() and needle in p.read_text(encoding="utf-8", errors="replace")
     raise AssertionError(f"unknown surface type {kind!r} — add it here, do not skip it")
 
 

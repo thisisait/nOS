@@ -133,9 +133,10 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - praxis pack / backoffice pack → tissue
 - plugins as connective tissue, tendons or vessels → plugin wiring
 - a public apex group called an organ → organ system
-- organ meaning host-native (runs under launchd or systemd) → the stack axis: stack is null
+- organ meaning host-native (runs under launchd or systemd) → the stack axis: stack is null; in code, host daemon
 - a model called an organ → cell
 - organ meaning nOS's own parts as opposed to vendor software → self organ
+- organ meaning the Cortex, as the side of a corpus diff against KEAP → cortex
 - vein for an anatomy-graph edge or a live link between organs → link (in the graph, an edge)
 - host, as the third owner class of software → habitat
 - self meaning the immune system's tolerated set → declared
