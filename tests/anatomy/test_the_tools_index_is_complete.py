@@ -57,7 +57,7 @@ def test_every_tool_is_listed() -> None:
     assert not missing, (
         f"{missing} are in tools/ and not in tools/README.md. Add a line under "
         "the group it belongs to — or, if it fits no group, that is the signal "
-        "to start a directory rather than a ninth prefix (see the README's own "
+        "to start a directory rather than another prefix (see the README's own "
         "rule)."
     )
 
