@@ -101,7 +101,7 @@ PENDING_PHRASES: dict[str, int] = {
     'state/keap-tables/party.table.yml :: party spine': 1,
     'state/keap-tables/repo.table.yml :: digest organ': 1,
     'state/keap-tables/repo.table.yml :: party spine': 1,
-    'state/llm-backends.yml :: spine redirect': 1,
+    'state/habitat/llm-backends.yml :: spine redirect': 1,
     'tests/anatomy/test_digest_constitution.py :: digest organ': 1,
     'tests/anatomy/test_gitea_oauth_source_cli_register.py :: tendon': 1,
     'tests/anatomy/test_nos_digest_erasure.py :: digest organ': 1,

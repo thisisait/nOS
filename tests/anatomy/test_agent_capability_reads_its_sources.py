@@ -9,7 +9,7 @@ tools/agent-capability.py were typed by hand and both were wrong:
     `internet` scope, and WHERE came from the `-cloud` name suffix.
 This gate compares TOOL_KAM with each PHP tool's own requiredScopes() by
 polarity (read vs write; the two namespaces differ, `mcp.tool_use` is ignored),
-and each cell's WHERE/`internet` with its serving row in state/llm-backends.yml.
+and each cell's WHERE/`internet` with its serving row in state/habitat/llm-backends.yml.
 """
 
 from __future__ import annotations
@@ -74,7 +74,7 @@ def test_kam_polarity_matches_the_php_scopes():
 
 
 def test_where_and_internet_come_from_the_serving_backend():
-    reg = yaml.safe_load((REPO / "state/llm-backends.yml").read_text(encoding="utf-8"))["backends"]
+    reg = yaml.safe_load((REPO / "state/habitat/llm-backends.yml").read_text(encoding="utf-8"))["backends"]
     default = next(n for n, r in reg.items() if r.get("default"))
     bad = []
     for d in cap._agents():
@@ -92,4 +92,4 @@ def test_where_and_internet_come_from_the_serving_backend():
         if ("internet" in p.kam) == local:
             bad.append(f"{d['name']}: `internet` {'held' if local else 'missing'} on a "
                        f"{'local' if local else 'hosted'} backend")
-    assert not bad, "\n  ".join(["capability vs state/llm-backends.yml:", *bad])
+    assert not bad, "\n  ".join(["capability vs state/habitat/llm-backends.yml:", *bad])

@@ -8,7 +8,7 @@ and emits, for each, the address a planner matches assignments against:
     nos-work://<WHERE>/agent:<name>/<KAM>/<CO>/*
 
   WHERE  where the model runs, read from the cell's serving row in
-         state/llm-backends.yml (`model.backend`, else the default row):
+         state/habitat/llm-backends.yml (`model.backend`, else the default row):
          `local: true` ⇒ local, else `residency.eu` ⇒ eu-cloud, else ext-cloud.
   WHO    agent:<name>.
   KAM    the tool/scope set derived from `tools:` (the tool-id → scope map
@@ -68,7 +68,7 @@ NO_KAM: dict[str, str] = {
     "ask-operator": "a human channel, not a machine scope",
 }
 
-BACKENDS = REPO / "state/llm-backends.yml"
+BACKENDS = REPO / "state/habitat/llm-backends.yml"
 
 
 @functools.lru_cache(maxsize=1)

@@ -7,7 +7,7 @@
   against a fresh generate). Nothing here drags or writes.
 
   What it shows: each cell (agent) under where its model runs (WHERE: local,
-  eu-cloud or ext-cloud, read from state/llm-backends.yml), wired to the
+  eu-cloud or ext-cloud, read from state/habitat/llm-backends.yml), wired to the
   task_types it may do (CO, "can do") and the scopes it touches (KAM). What it
   does NOT show yet: the LIVE match of assignments to capabilities — those are
   runtime currentState rows, and the matcher (assignment ⊆ capability) is
