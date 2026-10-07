@@ -515,6 +515,30 @@ words:
         surfaces: []
     retired_phrases: ["the playbook is the nervous system"]
 
+  ledger:
+    level: cross
+    means: >-
+      An append-only log: a row is written once and never changed or deleted. Two
+      compounds are allowed: Wing's audit ledger (what happened, hash-chained) and
+      Bone's loop ledger (what each judge ruled); plain "ledger" means neither.
+    names:
+      - path: files/anatomy/wing/app/Model/AuditChain.php
+      - path: files/anatomy/bone/ledger.py
+    not: [memory, verdicts]
+    counter_example: "a KEAP table (memory: rows are edited and learned from, not appended once)"
+
+  hub:
+    level: cross
+    means: >-
+      The catalog of the estate's services. Wing's Hub is the whole inventory (hosts,
+      backends, databases, web apps); the face's bff/hub is its projection, the enabled
+      services with a web UI, for the dock.
+    names:
+      - path: files/anatomy/wing/app/Presenters/HubPresenter.php
+      - path: files/anatomy/face/src/routes/bff/hub/
+    not: [dashboard, Wing]
+    counter_example: "the Wing timeline (what the estate did, not what it offers)"
+
   twin:
     level: cross
     means: The second Mac.
@@ -701,7 +725,11 @@ words:
   # ── proper names: one job each, the metaphor no longer justifies them ───
   Bone:
     level: proper-name
-    means: The host API bridge between the runs and the records.
+    means: >-
+      The host API bridge between the runs and the records, and three more jobs it
+      has grown: measured 2026-10-07 in files/anatomy/bone/, the bridge is 3.2k lines,
+      the agentic loop (judges, ledger, budget, routes, auth) 4.2k plus the nos-loop
+      CLI 0.5k, the weakness reader 1.7k, and the face's file and user-state storage 0.7k.
     names:
       - path: roles/pazny.bone/
       - launchd_label: eu.thisisait.nos.bone
@@ -715,6 +743,7 @@ words:
     means: The host dashboard and audit ledger.
     names:
       - path: roles/pazny.wing/
+      - launchd_label: eu.thisisait.nos.wing
   Pulse:
     level: proper-name
     means: The scheduler that runs every scheduled job.
