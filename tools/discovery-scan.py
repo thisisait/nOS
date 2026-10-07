@@ -605,7 +605,10 @@ def probe_queue_vs_running(images: dict[str, str], res: ScanResult) -> None:
                     f"Six rows were found in exactly this state on 2026-08-02 — "
                     f"the queue does not learn from a converge, so a 'pending' row "
                     f"may simply be stale. Stale pendings are not harmless: they "
-                    f"inflate the backlog and hide the rows that are real."
+                    f"inflate the backlog and hide the rows that are real. "
+                    f"Close with this reading: tools/rem-dispose.py {item['id']} "
+                    f"--status resolved --by \"discovery-scan: {name} runs {image} "
+                    f">= {fix}\""
                 ),
             ))
 
