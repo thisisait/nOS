@@ -64,7 +64,7 @@ words:
 
   gene:
     level: genome
-    means: One declared kind of entity in the genome (the word that replaced organelle).
+    means: One declared kind of entity in the genome.
     names:
       - path: state/genome/genes/
     not: [plugin]
@@ -381,6 +381,7 @@ words:
     means: A plugin.yml declaring how one service is wired to the others (SSO, dashboards, jobs).
     names:
       - path: files/anatomy/plugins/
+      - path: tests/anatomy/test_a_plugin_loads_when_its_role_runs.py
     not: [tissue, gene]
     counter_example: "an apps/<name>.yml manifest app (it deploys a service; a plugin only wires one)"
 
@@ -529,6 +530,14 @@ words:
     names:
       - path: roles/pazny.keap/
     not: [Cortex]
+  AgentKit:
+    # A rename is pending the operator's ruling (roadmap row organelles-not-agentkit); not planned here.
+    level: proper-name
+    means: The audit-first runtime inside Wing that runs the cells (agents).
+    names:
+      - path: files/anatomy/wing/app/AgentKit/
+    not: [cell, tissue, Wing]
+    counter_example: "a cell such as jeff (AgentKit runs it; the cell is the model in its specialization)"
 
   # ── left alone and written down once ────────────────────────────────────
   iiab:
@@ -597,5 +606,8 @@ words:
           - path: state/genome/organelle/
       - sense: "organelle for a plugin"
         replacement: plugin
+        surfaces: []
+      - sense: "organelle for a digest importer (hydrator)"
+        replacement: "digest importer"
         surfaces: []
     retired_phrases: ["organelle"]

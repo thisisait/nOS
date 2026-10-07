@@ -1,6 +1,6 @@
 # Digest importer — doli-party (Dolibarr thirdparties → KEAP party spine).
 #
-# Hydrator organelle for the backoffice pack. Swept by
+# Digest importer (hydrator) for the backoffice tissue. Swept by
 # nos_gdpr.records_from_importers (id imp_doli-party). Reads the estate's own
 # MariaDB schema (loopback docker exec); no vendor REST, no egress.
 name: doli-party

@@ -173,7 +173,7 @@ BUILD: the anatomy view, offline and dependency-honest.
 Per the decision:
 ${decision}
 
-Implement the visual: organs, organelles, vessels, in the KEAP-explore manner — zoomed to a scope, discreet navigation only, click-through targets present but inert if the route does not exist yet. Read files/anatomy/face/src/lib/anatomy/graph.ts and graphLayout.ts first; docs/idea/17-loop-split-refactor-graph.md recommends d3-force as a second layout mode and that recommendation may serve here too.
+Implement the visual: organ systems, organs and the plugin wiring between them, in the KEAP-explore manner — zoomed to a scope, discreet navigation only, click-through targets present but inert if the route does not exist yet. Read files/anatomy/face/src/lib/anatomy/graph.ts and graphLayout.ts first; docs/idea/17-loop-split-refactor-graph.md recommends d3-force as a second layout mode and that recommendation may serve here too.
 
 Consume ONLY the public projection from the sibling task — never the internal artifact. If the projection is not ready, build against its documented shape and say so.
 

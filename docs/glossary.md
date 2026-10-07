@@ -8,7 +8,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 
 - **genome** (genome) — The declared facts every part of nOS inherits, kept in state/genome/. Not: law, definition.
   Counter-example: a cell's system.md (its definition, not something every part inherits).
-- **gene** (genome) — One declared kind of entity in the genome (the word that replaced organelle). Not: plugin.
+- **gene** (genome) — One declared kind of entity in the genome. Not: plugin.
   Counter-example: one DataTable row (data a gene shapes, not a gene).
 - **cell** (cell) — One model in one specialization; in code it is called an agent. Not: sense, stem cell, AWS/Slack cell (an isolated full-stack replica).
   Counter-example: an immune indicator (a sense).
@@ -88,6 +88,8 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - **Ears** — The speech organ, which hears and speaks.
 - **Apex** — The public page that shows the organ systems to strangers.
 - **KEAP** — The knowledge store where nOS keeps its memory. Not: Cortex.
+- **AgentKit** — The audit-first runtime inside Wing that runs the cells (agents). Not: cell, tissue, Wing.
+  Counter-example: a cell such as jeff (AgentKit runs it; the cell is the model in its specialization).
 
 ## Left alone, or retired
 
@@ -130,3 +132,4 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - a reader called the spinal cord → sense
 - organelle for a genome entity kind → gene
 - organelle for a plugin → plugin
+- organelle for a digest importer (hydrator) → digest importer

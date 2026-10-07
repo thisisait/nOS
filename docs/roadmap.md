@@ -29,7 +29,7 @@ happened for five days, because a document that has to be rewritten by hand to
 stay true will not stay true.
 
 The measurement that settled it: of the workstreams the estate was actually
-running that week — SERE, the genome and its organelles, hydrators, cortex-lang,
+running that week — SERE, the genome and its genes, hydrators, cortex-lang,
 the Planner, the relations graph, the hidden-fee ledger — this file mentioned
 **none**. Not one, in 638 lines that opened by calling themselves "the single
 forward-planning surface". Meanwhile the table carried a row for each.

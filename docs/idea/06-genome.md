@@ -3,7 +3,7 @@
 **Status: L1 shipped in v0.10-beta. The generator emits 2 of the 4 targets B1
 promised. `rowRef` and `table_row_refs` — referenced by the plan — do not exist
 in KEAP.**
-**Detail:** [`nos-genome-and-organelles.md`](../archive/nos-genome-and-organelles.md) ·
+**Detail:** [the genome plan (archived)](../archive/nos-genome-and-organelles.md) ·
 [`datatables-relations.md`](../archive/datatables-relations.md) ·
 [`keap-datatables-apps-systems.md`](../archive/keap-datatables-apps-systems.md)
 

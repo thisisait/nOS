@@ -1,7 +1,7 @@
-"""crm-hydrate is a hydrator organelle, not another FOSS login screen.
+"""crm-hydrate is a digest importer (hydrator), not another FOSS login screen.
 
 RETRO-RED: before crm-hydrate-base + digest-import-doli, Dolibarr was a
-container with no Pulse/Digest/Cortex tendon — the Espo/Firefly shape.
+container with no Pulse/Digest/Cortex wiring — the Espo/Firefly shape.
 """
 
 from __future__ import annotations

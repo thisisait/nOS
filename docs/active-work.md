@@ -29,7 +29,7 @@
 
 The general fix for the class below — a per-service `verify.yml` hook plus the
 loader change that lets it fail — is in
-[`nos-genome-and-organelles.md`](archive/nos-genome-and-organelles.md) §Thread D.
+[the genome plan (archived)](archive/nos-genome-and-organelles.md) §Thread D.
 
 - **`genome-codegen.py` emits 2 of B1's 4.**
 - **Euro-office: full role swap after first stable** — pilot via `onlyoffice_image`

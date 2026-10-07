@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""digest-import-doli — hydrator organelle: Dolibarr thirdparties → KEAP party.
+"""digest-import-doli — digest importer (hydrator): Dolibarr thirdparties → KEAP party.
 
 Dolibarr is the CRM desk when installed. This importer projects open
 thirdparties (IČO required) through the digest gate into `party` /

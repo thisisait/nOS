@@ -40,7 +40,7 @@
 # written by tools/espo-party-sync.py (bootstrap admin, no custom entity).
 # Contact/Lead stay Espo's own store — do not fork a second party table.
 #
-# ── Organelles already generic vs skipped ───────────────────────────────────
+# ── Plugin wiring already generic vs skipped ────────────────────────────────
 # Kuma + Wing ingest: apps_runner post.yml maps kuma_monitor / registry_entry
 # for every rendered app — no Espo-specific hook.
 # Notification + plugin observability: NOT harvested from apps/*.yml.

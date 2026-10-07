@@ -61,7 +61,6 @@ PENDING_SURFACES = {
 #: "file :: phrase" → occurrences, in the files models are told to trust.
 #: Seeded 2026-10-07 when TRUSTED widened; the default config layers were fixed instead.
 PENDING_PHRASES: dict[str, int] = {
-    'IMPRINT.md :: organelle': 1,
     'IMPRINT.md :: public organ': 1,
     'docs/doctrine/README.md :: self-heal': 1,
     'docs/systems/dolibarr/README.md :: praxis pack': 1,
@@ -111,8 +110,6 @@ PENDING_PHRASES: dict[str, int] = {
     'ssot/doctrine/secrets.md :: self-heal': 2,
     'ssot/doctrine/virtiofs.md :: self-heal': 1,
     'state/digest-constitution.yml :: digest organ': 1,
-    'state/digest-importers/doli-party.importer.yml :: backoffice pack': 1,
-    'state/digest-importers/doli-party.importer.yml :: organelle': 1,
     'state/genome/genes/data-table.schema.json :: cortex object': 1,
     'state/keap-tables/application.table.yml :: digest organ': 1,
     'state/keap-tables/invoice-line.table.yml :: digest organ': 1,
@@ -122,10 +119,7 @@ PENDING_PHRASES: dict[str, int] = {
     'state/keap-tables/repo.table.yml :: digest organ': 1,
     'state/schema/agent.schema.yaml :: KEAP cortex': 1,
     'tests/anatomy/test_a_plist_change_is_actually_loaded.py :: self-heal': 1,
-    'tests/anatomy/test_a_plugin_loads_when_its_role_runs.py :: organelle': 1,
     'tests/anatomy/test_an_emitted_event_type_is_whitelisted.py :: twin-parity': 1,
-    'tests/anatomy/test_crm_hydrate.py :: organelle': 1,
-    'tests/anatomy/test_crm_hydrate.py :: tendon': 1,
     'tests/anatomy/test_digest_constitution.py :: digest organ': 1,
     'tests/anatomy/test_external_mount_preflight.py :: self-heal': 3,
     'tests/anatomy/test_gitea_oauth_source_cli_register.py :: tendon': 1,
@@ -137,8 +131,6 @@ PENDING_PHRASES: dict[str, int] = {
     'tests/anatomy/test_table_write_audit.py :: twin-parity': 1,
     'tests/anatomy/test_the_cortex_executor_materialises.py :: brain token': 1,
     'tests/anatomy/test_vendored_cortex_matches_keap.py :: KEAP cortex': 1,
-    'tools/README.md :: organelle': 1,
-    'tools/digest-import-doli.py :: organelle': 1,
     'tools/party-graph.py :: digest organ': 1,
 }
 

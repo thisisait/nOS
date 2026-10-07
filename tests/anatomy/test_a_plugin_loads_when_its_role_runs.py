@@ -2,7 +2,7 @@
 
 2026-10-01: backup-base declared configure_backup (restic copy #2, default off)
 while main.yml imports pazny.backup under install_backup — so the loader skipped
-the organelle that routes the nightly backup's alarms, on every default estate.
+the plugin that routes the nightly backup's alarms, on every default estate.
 """
 import re
 from pathlib import Path
