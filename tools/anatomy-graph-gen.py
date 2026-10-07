@@ -50,7 +50,7 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
                             independent `build` axis (F1–F4/H). Frames are NOT
                             emitted: a hub service already has a service: node
                             and a second address for it would be padding.
-    tasktype:<name>         state/task-types.yml rows
+    tasktype:<name>         state/genome/task-types.yml rows
     skill:<name>            every SKILL.md in the repo (SKILL_SOURCES)
     reader:<stem>           tools/README.md §Readers lines
     effector:<stem>         tools/README.md §Limbs lines (a tool that acts)
@@ -198,7 +198,7 @@ REPO_SURFACES: dict[str, dict] = {
     },
 }
 
-TASK_TYPES = REPO / "state" / "task-types.yml"
+TASK_TYPES = REPO / "state" / "genome" / "task-types.yml"
 #: Every place the repo keeps a SKILL.md: the distributed library, the project
 #: skills, and Claude Code plugin skills.
 SKILL_SOURCES = ("files/anatomy/skills/*/SKILL.md", ".claude/skills/*/SKILL.md",
@@ -629,7 +629,7 @@ def _describe(nid: str, n: dict) -> str:
     if kind == "table":
         return f"KEAP DataTable definition '{n.get('title')}' ({n['source']})"
     if kind == "tasktype":
-        return f"Task type '{local}' (state/task-types.yml): {n.get('title')}"
+        return f"Task type '{local}' (state/genome/task-types.yml): {n.get('title')}"
     if kind == "skill":
         return f"Skill '{local}' ({n['source']}): {n.get('title')}"
     if kind in ("reader", "effector"):
@@ -1164,18 +1164,18 @@ def derive_table_refs(nodes: dict) -> list[dict]:
 
 
 def harvest_task_types(nodes: dict, edges: list) -> None:
-    """tasktype:<name> from state/task-types.yml, and agent → tasktype from
+    """tasktype:<name> from state/genome/task-types.yml, and agent → tasktype from
     each agent.yml `task_types:` (absent means `*`, which is not an edge)."""
     doc = yaml.safe_load(TASK_TYPES.read_text(encoding="utf-8")) or {}
     for name, t in (doc.get("task_types") or {}).items():
-        nodes[f"tasktype:{name}"] = {"kind": "tasktype", "source": "state/task-types.yml",
+        nodes[f"tasktype:{name}"] = {"kind": "tasktype", "source": "state/genome/task-types.yml",
                                      "title": t.get("summary"), "tools": t.get("tools") or []}
     for path in sorted(REPO.glob(AGENT_PROFILES)):
         a = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         aid = f"agent:{a.get('name') or path.parent.name}"
         for tt in a.get("task_types") or []:
             if f"tasktype:{tt}" not in nodes:
-                _die(f"{aid}: task_types names {tt!r}, not a row in state/task-types.yml")
+                _die(f"{aid}: task_types names {tt!r}, not a row in state/genome/task-types.yml")
             edges.append({"from": aid, "to": f"tasktype:{tt}", "kind": "may_take",
                           "via": f"task_types: in {path.relative_to(REPO)}",
                           "derived": "agent-task-types"})
@@ -1258,7 +1258,7 @@ def derive_task_type_tools(nodes: dict) -> list[dict]:
         for t in n["tools"]:
             if str(t) in by_name:
                 out.append({"from": nid, "to": by_name[str(t)], "kind": "allows",
-                            "via": f"tools: [{t}] in state/task-types.yml",
+                            "via": f"tools: [{t}] in state/genome/task-types.yml",
                             "derived": "task-type-tools"})
     return out
 

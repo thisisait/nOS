@@ -1,4 +1,4 @@
-<!-- GENERATED from state/task-types.yml by tools/task-types-render.py — do not edit by hand. -->
+<!-- GENERATED from state/genome/task-types.yml by tools/task-types-render.py — do not edit by hand. -->
 # AGENTS.md — the task-type contract
 
 Every row on the board carries a **`task_type`**. A row is a *claim*; its
@@ -7,7 +7,7 @@ reach for its tools, and end it with its evidence — nothing more.
 
 This page is the task-type contract. The full estate reference is [CLAUDE.md](CLAUDE.md); the
 machine-readable source of this table is
-[`state/task-types.yml`](state/task-types.yml). Adding or changing a type is a
+[`state/genome/task-types.yml`](state/genome/task-types.yml). Adding or changing a type is a
 **proposal** through the loop, not a free edit.
 
 **Before anything else, read "Working in nOS" at the top of

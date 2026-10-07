@@ -21,7 +21,7 @@ nos-work://<WHERE>/<WHO>/<KAM>/<CO>/<KDY>
 | **WHERE** | execution locus | `local` · `eu-cloud` · `ext-cloud` · `*` | cloud/local tiers, ADR-0003 network boundaries |
 | **WHO** | principal | `agent:<name>` · `user:<canonicalUid>` · `*` | `identity.md` + `dtt-share-model` principal vocabulary |
 | **KAM** | access/target scope | `repo` `dtt` `keap` `cortex` `internet` `fs:<dir>` `all` · scoped verbs `keap.read` `dtt.write` · `*` | the tool/scope model |
-| **CO** | task_type | a slug from `state/task-types.yml` · `*` | `dtt-task-types` |
+| **CO** | task_type | a slug from `state/genome/task-types.yml` · `*` | `dtt-task-types` |
 | **KDY** | when | a date `YYYY-MM-DD` (deadline) · `@<pulse-job>` (trigger) · `*` (anytime) | Pulse |
 
 Every segment is a **set** (fork #2: KAM — and uniformly all of them), joined by

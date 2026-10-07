@@ -177,7 +177,7 @@ Every line above is rendered from these files:
 
 - CLAUDE.md
 - tools/README.md
-- state/task-types.yml
+- state/genome/task-types.yml
 - files/anatomy/skills/nos-datatables/SKILL.md
 - tools/mcp-tables-server.py
 - templates/secrets.yml.j2

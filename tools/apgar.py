@@ -125,7 +125,7 @@ def doctrine_files(root: Path):
 
 
 def task_type_writes(root: Path):
-    types = yaml.safe_load((root / "state/task-types.yml").read_text(encoding="utf-8"))["task_types"]
+    types = yaml.safe_load((root / "state/genome/task-types.yml").read_text(encoding="utf-8"))["task_types"]
     by: dict[str, set] = {}
     for name, c in types.items():
         by.setdefault(str(c["writes"]), set()).add(name)

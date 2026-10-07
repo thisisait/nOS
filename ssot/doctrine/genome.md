@@ -25,6 +25,13 @@ law: law is the rules in force and lives in `ssot/doctrine/`.
   and `allOf`, so a fact is declared once and inherited.
 - `genes/` — the entity kinds. Today there is one: `data-table`.
 - `tissue.schema.json` — the shape of a tissue file ([`tissue.md`](tissue.md)).
+- `task-types.yml` — the declared work contracts. A cell lists the ones it
+  may take under `task_types:` in its `agent.yml`; `AGENTS.md` is rendered
+  from this file.
+
+One genome place is outside `state/genome/`: the skill library,
+`files/anatomy/skills/`. A skill is a declared how-to a cell or a runtime is
+handed, and it ships with the code that reads it, so it stays there.
 
 ## 3. A gene
 
@@ -49,5 +56,4 @@ capability is never added by declaring it in the genome.
 ## 6. What it does not hold yet
 
 The Wing and Cortex emitters do not exist; two of the generator's planned
-targets are missing. Task types live
-in `state/task-types.yml`, outside `state/genome/`, until they are moved.
+targets are missing.

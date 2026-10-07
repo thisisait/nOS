@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Render AGENTS.md — the task-type contract — from state/task-types.yml.
+"""Render AGENTS.md — the task-type contract — from state/genome/task-types.yml.
 
-state/task-types.yml is the ONE source (the enum lives in code, §14.2). AGENTS.md
+state/genome/task-types.yml is the ONE source (the enum lives in code, §14.2). AGENTS.md
 is what a "dumber" agent reads FIRST: for its row's task_type, which tools, does
 it write, does it need the operator, what is "done". Generating it here means the
 page can never drift from the contract; its three invariants are quoted from
@@ -20,11 +20,11 @@ import sys
 import yaml
 
 _REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-_SRC = os.path.join(_REPO, "state", "task-types.yml")
+_SRC = os.path.join(_REPO, "state", "genome", "task-types.yml")
 _OUT = os.path.join(_REPO, "AGENTS.md")
 _CHARTER = os.path.join(_REPO, "CLAUDE.md")
 
-_HEADER = """<!-- GENERATED from state/task-types.yml by tools/task-types-render.py — do not edit by hand. -->
+_HEADER = """<!-- GENERATED from state/genome/task-types.yml by tools/task-types-render.py — do not edit by hand. -->
 # AGENTS.md — the task-type contract
 
 Every row on the board carries a **`task_type`**. A row is a *claim*; its
@@ -33,7 +33,7 @@ reach for its tools, and end it with its evidence — nothing more.
 
 This page is the task-type contract. The full estate reference is [CLAUDE.md](CLAUDE.md); the
 machine-readable source of this table is
-[`state/task-types.yml`](state/task-types.yml). Adding or changing a type is a
+[`state/genome/task-types.yml`](state/genome/task-types.yml). Adding or changing a type is a
 **proposal** through the loop, not a free edit.
 
 **Before anything else, read "Working in nOS" at the top of
@@ -92,7 +92,7 @@ def main() -> int:
         if current != rendered:
             print("AGENTS.md is STALE — run tools/task-types-render.py", file=sys.stderr)
             return 1
-        print("AGENTS.md in sync with state/task-types.yml")
+        print("AGENTS.md in sync with state/genome/task-types.yml")
         return 0
     with open(_OUT, "w", encoding="utf-8") as fh:
         fh.write(rendered)

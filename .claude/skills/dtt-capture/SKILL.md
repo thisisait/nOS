@@ -16,7 +16,7 @@ per-row seed file. Use it instead of writing a new planning document.
 the live table directly, never call the `tools/*.py` path (it only exists inside
 a pulled checkout; `nos dtt` reaches it from any shell/branch/cwd). The tool
 validates the slug (KEAP assertRowId), the `task_type` (against
-`state/task-types.yml`), and the `status` (against
+`state/genome/task-types.yml`), and the `status` (against
 `state/keap-tables/roadmap.table.yml`), then writes the canonical per-row format
 into `NOS_SEED_DIR` (the PRIVATE seed repo). A row that would fail the seeder is
 refused before it is written.
@@ -28,7 +28,7 @@ refused before it is written.
    - `--title` — one line: what the row IS (git-owned, a claim).
    - `--track` — `platform | security | agents | cortex | face | release | filesystem`.
    - `--parent` — an existing roadmap slug, or omit for a top-level row.
-   - `--task-type` — one of `state/task-types.yml` (`investigate` for research,
+   - `--task-type` — one of `state/genome/task-types.yml` (`investigate` for research,
      `design` for a spec, `code-fix`, `seed-edit`, `review`, `doc`,
      `security-remediation`, `converge`). Adding a NEW type is a proposal, not a
      free value.

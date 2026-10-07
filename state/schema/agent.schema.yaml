@@ -44,7 +44,7 @@ properties:
         - security-remediation
         - converge
     description: |
-      The task_type(s) this agent may work (state/task-types.yml). The one
+      The task_type(s) this agent may work (state/genome/task-types.yml). The one
       segment of its nos-work:// capability address (dtt-routing-address, CO)
       that is authored, not derived — WHERE comes from the -cloud naming +
       model, WHO from name, KAM from tools:; only CO has no structural source.

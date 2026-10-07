@@ -14,7 +14,7 @@ and emits, for each, the address a planner matches assignments against:
   KAM    the tool/scope set derived from `tools:` (the tool-id → scope map
          below), plus `internet` when that row is not `local: true` (a hosted
          model call is data egress).
-  CO     the authored `task_types:` list (state/task-types.yml) — the one
+  CO     the authored `task_types:` list (state/genome/task-types.yml) — the one
          segment nothing else declares; absent ⇒ `*`.
   KDY    `*` — a capability is held anytime; a deadline lives on an assignment.
 

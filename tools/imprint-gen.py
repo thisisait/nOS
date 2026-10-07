@@ -31,7 +31,7 @@ TOP = 5
 SOURCES = {
     "charter": "CLAUDE.md",
     "readers": "tools/README.md",
-    "tasks": "state/task-types.yml",
+    "tasks": "state/genome/task-types.yml",
     "skill": "files/anatomy/skills/nos-datatables/SKILL.md",
     "mcp": "tools/mcp-tables-server.py",
     "secrets": "templates/secrets.yml.j2",

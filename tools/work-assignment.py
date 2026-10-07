@@ -49,13 +49,13 @@ import nos_work_uri  # noqa: E402
 
 @functools.lru_cache(maxsize=1)
 def _task_meta() -> dict:
-    return yaml.safe_load((REPO / "state/task-types.yml").read_text())["task_types"]
+    return yaml.safe_load((REPO / "state/genome/task-types.yml").read_text())["task_types"]
 
 
 def _needs_operator(task_type: str) -> bool:
     """A needs_operator task_type (converge) is HUMAN-only — no agent can take
     it, which is not a capability GAP. Distinguishing the two keeps the match
-    report honest (state/task-types.yml)."""
+    report honest (state/genome/task-types.yml)."""
     return bool(_task_meta().get(task_type or "", {}).get("needs_operator"))
 
 

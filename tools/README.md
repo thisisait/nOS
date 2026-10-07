@@ -129,7 +129,7 @@ posts, restarts or renders something.
 - `reload-stale-config.py` — Make a running container read the config the estate rendered for it.
 - `workload-digest-record.py` — main.yml post_task: writes the record workload-digest-status.py reads (image ref, ID, repo digests, source commit of local builds).
 - `rem-dispose.py` — Write a REM disposition into the operator's `~/.nos/security` notebook; never touches the scanner's queue.
-- `task-types-render.py` — Render AGENTS.md (the task-type contract) from state/task-types.yml.
+- `task-types-render.py` — Render AGENTS.md (the task-type contract) from state/genome/task-types.yml.
 - `vendor-keap-contracts.py` — Re-vendor KEAP's table schema (pinned to keap_repo_ref) for the schema-pin gate.
 - `raw-archive-probe.py` — Does the S3 endpoint honor Object Lock COMPLIANCE, or only accept the headers? The live run PUTs one locked object that cannot be deleted before it expires.
 - `discovery-scan.py` — Discovery: find two representations of one fact that disagree.

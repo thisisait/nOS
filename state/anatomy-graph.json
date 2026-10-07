@@ -2243,9 +2243,9 @@
     "effector:task-types-render": {
       "kind": "effector",
       "source": "tools/task-types-render.py",
-      "title": "Render AGENTS.md (the task-type contract) from state/task-types.yml.",
+      "title": "Render AGENTS.md (the task-type contract) from state/genome/task-types.yml.",
       "anchor": "02.02.04",
-      "description": "Effector tools/task-types-render.py: Render AGENTS.md (the task-type contract) from state/task-types.yml."
+      "description": "Effector tools/task-types-render.py: Render AGENTS.md (the task-type contract) from state/genome/task-types.yml."
     },
     "effector:tofu-authentik-adopt": {
       "kind": "effector",
@@ -5099,7 +5099,7 @@
     },
     "tasktype:code-fix": {
       "kind": "tasktype",
-      "source": "state/task-types.yml",
+      "source": "state/genome/task-types.yml",
       "title": "Fix a defect at its ROOT (the shared function, not each caller).",
       "tools": [
         "read",
@@ -5109,11 +5109,11 @@
         "pytest"
       ],
       "anchor": "02.02.04",
-      "description": "Task type 'code-fix' (state/task-types.yml): Fix a defect at its ROOT (the shared function, not each caller)."
+      "description": "Task type 'code-fix' (state/genome/task-types.yml): Fix a defect at its ROOT (the shared function, not each caller)."
     },
     "tasktype:converge": {
       "kind": "tasktype",
-      "source": "state/task-types.yml",
+      "source": "state/genome/task-types.yml",
       "title": "Apply committed SOURCE to the running estate (the repo is not the system).",
       "tools": [
         "nos",
@@ -5121,33 +5121,33 @@
         "tools/nos-smoke.py"
       ],
       "anchor": "02.02.04",
-      "description": "Task type 'converge' (state/task-types.yml): Apply committed SOURCE to the running estate (the repo is not the system)."
+      "description": "Task type 'converge' (state/genome/task-types.yml): Apply committed SOURCE to the running estate (the repo is not the system)."
     },
     "tasktype:design": {
       "kind": "tasktype",
-      "source": "state/task-types.yml",
+      "source": "state/genome/task-types.yml",
       "title": "Produce a spec or doctrine a builder can execute; write no code.",
       "tools": [
         "read",
         "write (docs/drafts)"
       ],
       "anchor": "02.02.04",
-      "description": "Task type 'design' (state/task-types.yml): Produce a spec or doctrine a builder can execute; write no code."
+      "description": "Task type 'design' (state/genome/task-types.yml): Produce a spec or doctrine a builder can execute; write no code."
     },
     "tasktype:doc": {
       "kind": "tasktype",
-      "source": "state/task-types.yml",
+      "source": "state/genome/task-types.yml",
       "title": "Documentation — keep live doctrine true, narrate history in the devlog.",
       "tools": [
         "edit",
         "/devlog"
       ],
       "anchor": "02.02.04",
-      "description": "Task type 'doc' (state/task-types.yml): Documentation — keep live doctrine true, narrate history in the devlog."
+      "description": "Task type 'doc' (state/genome/task-types.yml): Documentation — keep live doctrine true, narrate history in the devlog."
     },
     "tasktype:investigate": {
       "kind": "tasktype",
-      "source": "state/task-types.yml",
+      "source": "state/genome/task-types.yml",
       "title": "Read-only. Find something out and report it; change nothing.",
       "tools": [
         "read",
@@ -5156,22 +5156,22 @@
         "tools/*-status.py readers"
       ],
       "anchor": "02.02.04",
-      "description": "Task type 'investigate' (state/task-types.yml): Read-only. Find something out and report it; change nothing."
+      "description": "Task type 'investigate' (state/genome/task-types.yml): Read-only. Find something out and report it; change nothing."
     },
     "tasktype:review": {
       "kind": "tasktype",
-      "source": "state/task-types.yml",
+      "source": "state/genome/task-types.yml",
       "title": "Adversarially verify a claim — try to REFUTE it, not confirm it.",
       "tools": [
         "read",
         "grep"
       ],
       "anchor": "02.02.04",
-      "description": "Task type 'review' (state/task-types.yml): Adversarially verify a claim — try to REFUTE it, not confirm it."
+      "description": "Task type 'review' (state/genome/task-types.yml): Adversarially verify a claim — try to REFUTE it, not confirm it."
     },
     "tasktype:security-remediation": {
       "kind": "tasktype",
-      "source": "state/task-types.yml",
+      "source": "state/genome/task-types.yml",
       "title": "Close a remediation-queue row — a foreign CVE or an estate exposure.",
       "tools": [
         "tools/rem-status.py",
@@ -5180,11 +5180,11 @@
         "pytest"
       ],
       "anchor": "02.02.04",
-      "description": "Task type 'security-remediation' (state/task-types.yml): Close a remediation-queue row — a foreign CVE or an estate exposure."
+      "description": "Task type 'security-remediation' (state/genome/task-types.yml): Close a remediation-queue row — a foreign CVE or an estate exposure."
     },
     "tasktype:seed-edit": {
       "kind": "tasktype",
-      "source": "state/task-types.yml",
+      "source": "state/genome/task-types.yml",
       "title": "Change one row / seed file (a roadmap or dtt row, a *.seed.yml).",
       "tools": [
         "tools/roadmap-update.py",
@@ -5192,11 +5192,11 @@
         "edit"
       ],
       "anchor": "02.02.04",
-      "description": "Task type 'seed-edit' (state/task-types.yml): Change one row / seed file (a roadmap or dtt row, a *.seed.yml)."
+      "description": "Task type 'seed-edit' (state/genome/task-types.yml): Change one row / seed file (a roadmap or dtt row, a *.seed.yml)."
     },
     "tasktype:use-case": {
       "kind": "tasktype",
-      "source": "state/task-types.yml",
+      "source": "state/genome/task-types.yml",
       "title": "A live use-case walkthrough / acceptance test of an end-to-end workflow, recorded with steps + expected + actual result.",
       "tools": [
         "read",
@@ -5204,7 +5204,7 @@
         "edit"
       ],
       "anchor": "02.02.04",
-      "description": "Task type 'use-case' (state/task-types.yml): A live use-case walkthrough / acceptance test of an end-to-end workflow, recorded with steps + expected + actual result."
+      "description": "Task type 'use-case' (state/genome/task-types.yml): A live use-case walkthrough / acceptance test of an end-to-end workflow, recorded with steps + expected + actual result."
     },
     "tissue:backoffice": {
       "kind": "tissue",
@@ -5358,7 +5358,7 @@
       "from": "tasktype:doc",
       "to": "skill:devlog",
       "kind": "allows",
-      "via": "tools: [/devlog] in state/task-types.yml",
+      "via": "tools: [/devlog] in state/genome/task-types.yml",
       "derived": "task-type-tools",
       "evidence": "derived"
     },
@@ -5366,7 +5366,7 @@
       "from": "tasktype:security-remediation",
       "to": "effector:discovery-scan",
       "kind": "allows",
-      "via": "tools: [tools/discovery-scan.py] in state/task-types.yml",
+      "via": "tools: [tools/discovery-scan.py] in state/genome/task-types.yml",
       "derived": "task-type-tools",
       "evidence": "derived"
     },
@@ -5374,7 +5374,7 @@
       "from": "tasktype:security-remediation",
       "to": "reader:rem-status",
       "kind": "allows",
-      "via": "tools: [tools/rem-status.py] in state/task-types.yml",
+      "via": "tools: [tools/rem-status.py] in state/genome/task-types.yml",
       "derived": "task-type-tools",
       "evidence": "derived"
     },
@@ -5382,7 +5382,7 @@
       "from": "tasktype:seed-edit",
       "to": "effector:roadmap-seed",
       "kind": "allows",
-      "via": "tools: [tools/roadmap-seed.py] in state/task-types.yml",
+      "via": "tools: [tools/roadmap-seed.py] in state/genome/task-types.yml",
       "derived": "task-type-tools",
       "evidence": "derived"
     },
@@ -5390,7 +5390,7 @@
       "from": "tasktype:seed-edit",
       "to": "effector:roadmap-update",
       "kind": "allows",
-      "via": "tools: [tools/roadmap-update.py] in state/task-types.yml",
+      "via": "tools: [tools/roadmap-update.py] in state/genome/task-types.yml",
       "derived": "task-type-tools",
       "evidence": "derived"
     },

@@ -35,7 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import roadmap_seed_lib as lib  # noqa: E402
 
 _REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-_TASK_TYPES = os.path.join(_REPO, "state", "task-types.yml")
+_TASK_TYPES = os.path.join(_REPO, "state", "genome", "task-types.yml")
 _TABLE_DEF = os.path.join(_REPO, "state", "keap-tables", "roadmap.table.yml")
 
 
@@ -106,7 +106,7 @@ def main() -> int:
     if args.task_type:
         known = _known_task_types()
         if known and args.task_type not in known:
-            _die(f"task_type {args.task_type!r} is not in state/task-types.yml.\n"
+            _die(f"task_type {args.task_type!r} is not in state/genome/task-types.yml.\n"
                  f"  known: {', '.join(sorted(known))}\n"
                  "  adding a type is a PROPOSAL through the loop, not an ad-hoc value.")
     if args.status:

@@ -24,7 +24,7 @@ Frontmatter keys:
   title      required — git-owned, the row's claim.
   parent     "" for a top-level row, else an existing slug.
   track      platform | security | agents | cortex | face | release | filesystem
-  task_type  one of state/task-types.yml (authored now; not yet a table column).
+  task_type  one of state/genome/task-types.yml (authored now; not yet a table column).
   status     INSERT-time seed only — the TABLE owns it after (roadmap-update.py).
   when       a date (YYYY-MM-DD); STATUS decides target vs occurred_at.
   refs       "·"-separated pointers.
