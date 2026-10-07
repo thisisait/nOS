@@ -32,6 +32,7 @@ realms:
     path: docs/idea
     in_force: false
     for: not law
+    ceiling: 23   # files, measured 2026-10-07; absorb or archive, never accrete
   dtt:
     path: "$NOS_SEED_DIR"
     in_force: true
@@ -50,3 +51,29 @@ proposed:
   - docs/doctrine/agentkit.md
   - docs/doctrine/backoffice.md
   - docs/doctrine/n8n-packs.md
+# docs/ directories outside every realm, each with its reason (gate:
+# tests/anatomy/test_docs_dirs_are_realms_or_frozen.py). A `ceiling` is a file
+# count that only falls: new work is a roadmap row (/dtt-capture), not a file
+# here. Counts measured 2026-10-07. The archive moves wait until after v0.17
+# (roadmap row plan-homes-frozen-docs-realms).
+unrealmed:
+  - path: docs/plans
+    ceiling: 19
+    why: retired 2026-08-02 by its own README; the live specs promote and the rest leaves after v0.17
+  - path: docs/drafts
+    ceiling: 4
+    why: unfinished prose with no owner; frozen until each is a row or archived
+  - path: docs/adr
+    why: three decision records; a `decisions` realm candidate once the archive moves settle
+  - path: docs/archive
+    why: finished plans and guides, preserved; a `history` realm candidate; grows only by moves in
+  - path: docs/devlog
+    why: narrative history, the nos-core devlog namespace (repo is its source of truth); grows by entries
+  - path: docs/compliance
+    why: audit reports and per-device records; a `compliance` realm candidate
+  - path: docs/llm
+    why: pages written for a model to read first; an `llm` realm candidate
+  - path: docs/review
+    why: one review checklist; a `review` realm candidate
+  - path: docs/doctrine
+    why: the warehouse originals `proposed:` still names; drains to empty as promotion finishes
