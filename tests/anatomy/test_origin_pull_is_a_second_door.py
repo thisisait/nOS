@@ -79,7 +79,7 @@ def render(rel: str, **over) -> str:
     return env.from_string((REPO / rel).read_text()).render(_ctx(**over))
 
 
-def tier2(origin_pull: bool) -> dict[str, list[str]]:
+def manifest_app_labels(origin_pull: bool) -> dict[str, list[str]]:
     sys.path.insert(0, str(REPO / "files" / "anatomy" / "library"))
     sys.path.insert(0, str(REPO / "files" / "anatomy"))
     import nos_apps_render as m
@@ -118,7 +118,7 @@ def file_routers(**over) -> dict[str, dict]:
 def docker_routers(origin_pull: bool) -> dict[str, dict]:
     on = {"traefik_origin_pull_enabled": True} if origin_pull else {}
     out = _labels_to_routers(_stalwart_labels(**on))
-    for labels in tier2(origin_pull).values():
+    for labels in manifest_app_labels(origin_pull).values():
         out.update(_labels_to_routers(labels))
     return out
 
@@ -131,9 +131,9 @@ def test_off_renders_byte_identical_and_carries_no_door(rel):
     assert "websecure-origin" not in off and "origin-pull" not in off
 
 
-def test_default_is_off_and_tier2_off_is_unchanged():
+def test_default_is_off_and_manifest_apps_off_is_unchanged():
     assert ni.default_config()["traefik_origin_pull_enabled"] is False
-    assert not any("origin" in l for ls in tier2(False).values() for l in ls)
+    assert not any("origin" in l for ls in manifest_app_labels(False).values() for l in ls)
 
 
 def test_on_only_adds_never_changes_port_443():
@@ -170,7 +170,7 @@ def test_every_websecure_router_has_an_origin_twin(kind):
         assert opt == OPTION, f"{name} is on websecure-origin without {OPTION}"
 
 
-def test_tier2_runner_passes_the_flag():
+def test_manifest_app_runner_passes_the_flag():
     tasks = (REPO / "roles" / "pazny.apps_runner" / "tasks" / "main.yml").read_text()
     assert re.search(r"origin_pull:\s*\"\{\{\s*traefik_origin_pull_enabled", tasks)
 

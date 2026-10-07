@@ -4,8 +4,8 @@ THE DEFECT, THREE TIMES IN ONE DAY (2026-08-05):
 
   1. `--tags uptime-kuma` did not reconverge Kuma's monitors. The task declares
      that tag; it sits in `roles/pazny.apps_runner/tasks/post.yml`, entered
-     through an include in `apps-up.yml` carrying `['apps','tier2',
-     'apps-runner']`. A dynamic include is ITSELF tag-filtered, so the filter
+     through an include in `apps-up.yml` carrying the apps-stack
+     tags (`apps`, `manifest-app`, `apps-runner`). A dynamic include is ITSELF tag-filtered, so the filter
      stops at the door and never sees the tag inside.
   2. Same file, three more: `authentik`, `iam`, `portainer` — all declared, none
      reachable.

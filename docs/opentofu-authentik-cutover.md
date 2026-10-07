@@ -86,7 +86,7 @@ is pinned by a CI gate. If you touch this layer, read them first.
    (blueprint no-op'd, registry missed them) → 404, no provider at all.
    *Fix:* `tools/tofu-authentik-gen-registry.py` harvests app manifests like
    the live loader does, plus slug dedupe (a slug may live in BOTH tiers).
-   *Gate:* `test_tofu_registry_bridge.py::test_registry_covers_tier2_app_manifests`.
+   *Gate:* `test_tofu_registry_bridge.py::test_registry_covers_manifest_apps`.
 5. **`internal_host_ssl_validation=false` never converges** — Authentik
    normalizes the field back to `true` whenever `internal_host` is empty
    (all our forward_single proxies route via Traefik), producing a perpetual

@@ -5,8 +5,8 @@ Authentik to gate them` computes the services that would answer 500 when
 `install_authentik: false` leaves `authentik@file` undefined. Two other places
 decide that for real:
 
-  * `roles/pazny.traefik/templates/dynamic/services.yml.j2` — Tier-1 routers.
-  * `files/anatomy/library/nos_apps_render.py:209` — Tier-2 Docker labels.
+  * `roles/pazny.traefik/templates/dynamic/services.yml.j2` — role-service routers.
+  * `files/anatomy/library/nos_apps_render.py:209` — manifest-app Docker labels.
 
 A preflight that computes the answer a *second* way is a guess. This renders
 BOTH artifacts with the same Ansible that main.yml uses, collects every router
@@ -28,7 +28,7 @@ WHAT IT CANNOT COVER. The estate's own `config.yml` is deliberately NOT loaded
 proves the two computations agree on the committed default — the drift it is
 built to catch is structural, not per-host. A `@docker`-provider label that
 attaches `authentik@file` from a role compose template (one exists,
-pazny.smtp_stalwart) is likewise out of scope: it is not a Tier-1 router and
+pazny.smtp_stalwart) is likewise out of scope: it is not a role-service router and
 the preflight never claimed it.
 
 CI-safe: `hosts: localhost, connection: local`, only `set_fact` and a pure
@@ -77,8 +77,8 @@ PROBE = """---
         dest: "{out}"
         content: >-
           {{{{ {{'preflight': _nos_gated_without_authentik,
-                'tier1': _t1,
-                'tier2': _t2.apps | map(attribute='id') | zip(_t2.apps | map(attribute='traefik_labels')) | list}}
+                'role_services': _t1,
+                'manifest_apps': _t2.apps | map(attribute='id') | zip(_t2.apps | map(attribute='traefik_labels')) | list}}
              | to_json }}}}
 """
 
@@ -123,13 +123,13 @@ def _render(expression: str, extra: list[str] | None = None) -> dict:
 
 
 def _rendered_gated(payload: dict) -> set[str]:
-    routers = (yaml.safe_load(payload["tier1"])["http"]["routers"]) or {}
+    routers = (yaml.safe_load(payload["role_services"])["http"]["routers"]) or {}
     gated = {
         name for name, r in routers.items()
         if "authentik@file" in ((r or {}).get("middlewares") or [])
     }
     gated |= {
-        f"app:{app_id}" for app_id, labels in payload["tier2"]
+        f"app:{app_id}" for app_id, labels in payload["manifest_apps"]
         if any("authentik@file" in label for label in labels)
     }
     return gated

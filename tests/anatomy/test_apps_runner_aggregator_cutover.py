@@ -1,4 +1,4 @@
-"""Anatomy gates for the Tier-2 aggregator cleanup (2026-05-17).
+"""Anatomy gates for the manifest-app aggregator cleanup (2026-05-17).
 
 Pre-cleanup, apps_runner/post.yml shadowed the X.3 aggregator path by
 also `set_fact`'ing extensions into the legacy `authentik_oidc_apps` +
