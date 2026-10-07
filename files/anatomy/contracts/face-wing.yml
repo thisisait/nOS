@@ -10,7 +10,7 @@ producer:
   code:
     - files/anatomy/face/src/lib/security/uid.ts        # slugifyUid, canonicalUid
     - files/anatomy/face/src/hooks.server.ts            # pins uid from the edge-trusted identity
-    - files/anatomy/face/src/lib/server/upstream.ts     # agentSessions: the only caller of the wire below
+    - files/anatomy/face/src/lib/server/upstream.ts     # asUser(): the only caller of the wire below
 consumer:
   organ: wing
   code:
@@ -53,10 +53,12 @@ wire:
     - "face-bff bearer without a canonical X-Nos-User-Uid -> 401"
     - "face-bff bearer on any action outside the allow-list below -> 403"
     - "face-bff bearer on an operator verb for a person below Tier 1 -> 403"
+    - "face-bff bearer on an estate-wide read for a person below Tier 1 -> 403"
   actions:   # the face-bff bearer reaches these and nothing else
     - "GET  /api/v1/agents/<name>/sessions"
     - "POST /api/v1/agents/<name>/sessions   body: {prompt?}; vault and actor_id refused"
     - "GET  /api/v1/agent-sessions/<uuid>"
+    - "GET  /api/v1/pulse_jobs, /pulse_runs[/summary], /events, /notifications — Tier 1 only (BaseApiPresenter::$bffOperatorReads)"
     - "POST every operator verb (BaseApiPresenter::$operatorActions; scope wing.operator) — Tier 1 only; the record names user:<uid>"
 
 # ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ────────────────────

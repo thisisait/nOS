@@ -27,6 +27,12 @@ use Nette\Http\IResponse;
  */
 final class PulsePresenter extends BaseApiPresenter
 {
+	/** The face Anatomy view reads these as a Tier-1 person (face-wing.yml). */
+	protected array $bffOperatorReads = ['jobs', 'runs', 'runSummary'];
+
+	/** Run-now moves the schedule of an operator-declared job: a Tier-1 act. */
+	protected array $operatorActions = ['runNow'];
+
 	public function __construct(
 		private PulseRepository $pulse,
 		private NotificationRepository $notifications,

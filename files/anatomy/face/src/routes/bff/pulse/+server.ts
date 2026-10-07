@@ -12,13 +12,13 @@
  * Three failure modes, deliberately distinguished — an observability surface
  * that renders "unreachable" the same as "nothing is wrong" is the defect it
  * was built to catch:
- *   configured:false  the Wing API token is not wired (a deployment fact)
+ *   configured:false  the face-bff Wing token is not wired (a deployment fact)
  *   error:<message>   Wing answered, badly (an upstream fact)
  *   jobs:[]           Wing answered fine and there are genuinely no jobs
  */
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { pulseJobs, pulseRunSummary, pulseRuns, wingApiConfigured } from '$lib/server/upstream';
+import { pulseJobs, pulseRunSummary, pulseRuns, wingBffConfigured } from '$lib/server/upstream';
 import { asKeyedList, projectSnapshot } from '$lib/anatomy/pulse';
 import { canViewAnatomy } from '$lib/security/tier';
 
@@ -28,12 +28,12 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		throw error(403, 'The Anatomy view requires the admin tier.');
 	}
 
-	if (!wingApiConfigured()) {
+	if (!wingBffConfigured()) {
 		// NOT an empty list. The operator must be able to tell "nothing is
 		// scheduled" from "this view was never wired up".
 		return json({
 			configured: false,
-			note: 'NOS_WING_API_TOKEN is not set on the face container, so the Pulse API cannot be read. Nothing was checked.'
+			note: 'NOS_WING_BFF_TOKEN is not set on the face container, so the Pulse API cannot be read. Nothing was checked.'
 		});
 	}
 
@@ -47,7 +47,13 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		const since = url.searchParams.get('since') ?? undefined;
 		const until = url.searchParams.get('until') ?? undefined;
 		try {
-			const runs = (await pulseRuns(jobId, since || until ? 200 : 25, since, until)) as {
+			const runs = (await pulseRuns(
+				locals.identity,
+				jobId,
+				since || until ? 200 : 25,
+				since,
+				until
+			)) as {
 				runs?: unknown;
 			};
 			return json({
@@ -69,8 +75,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	try {
 		// Sequential rather than Promise.all: two calls to the same loopback
 		// service, where the second is meaningless without the first.
-		const jobs = await pulseJobs();
-		const summary = await pulseRunSummary();
+		const jobs = await pulseJobs(locals.identity);
+		const summary = await pulseRunSummary(locals.identity);
 		return json({ configured: true, ...projectSnapshot(jobs, summary) });
 	} catch (e) {
 		return json({

@@ -10,7 +10,7 @@
   container serve its own installer for ten days behind a green dashboard.
 
   Usage:
-    <StatusNote kind="unwired">NOS_WING_API_TOKEN is not set.</StatusNote>
+    <StatusNote kind="unwired">NOS_WING_BFF_TOKEN is not set.</StatusNote>
     <StatusNote kind="empty" title="No runs recorded" />
 
   Text is rendered escaped via {@render}; there is no {@html} path.

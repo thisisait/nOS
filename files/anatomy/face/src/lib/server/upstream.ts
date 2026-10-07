@@ -190,46 +190,52 @@ export async function hubSystems(): Promise<unknown> {
 	return asJson(await fetch(HUB_URL(), { headers: h }));
 }
 
-// ── Wing Pulse API (Anatomy view — READ ONLY) ────────────────────────────────
+// ── Wing API, AS the end user (files/anatomy/contracts/face-wing.yml) ─────────
 //
-// Bearer-authenticated, unlike the hub catalog above. The token is the Wing API
-// token; it never leaves the server, and neither does most of what it fetches:
-// `GET /api/v1/pulse_jobs` returns each job's `env_json` VERBATIM, and on this
-// estate that is 57 live credential values across 23 of 25 jobs — Bone's HMAC
-// secret, the Wing API token itself, agent client secrets, the MariaDB root
-// password. The BFF therefore PROJECTS these responses onto an explicit
-// allow-list of fields; nothing here may be proxied to a browser as-is.
+// One bearer: `face-bff`, the only Wing token that may speak for a user; Wing
+// believes X-Nos-User-* on it alone and re-checks Tier 1 itself. Callers pass
+// the hook-pinned identity. What it fetches never leaves the server as-is:
+// `GET /api/v1/pulse_jobs` returns each job's `env_json` VERBATIM (57 live
+// credentials across 23 of 25 jobs, measured), so the BFF PROJECTS every
+// response onto an explicit allow-list of fields.
+
+type WingUser = { uid: string; groups: string[] };
 
 const WING_API = () => env.NOS_WING_API_URL ?? 'http://host.docker.internal:9000/api/v1';
-const WING_API_TOKEN = () => env.NOS_WING_API_TOKEN || process.env.NOS_WING_API_TOKEN || '';
+const WING_BFF_TOKEN = () => env.NOS_WING_BFF_TOKEN || process.env.NOS_WING_BFF_TOKEN || '';
 
-/** True when the Wing API token is wired. A missing token is a CONFIGURATION
+/** True when the face-bff token is wired. A missing token is a CONFIGURATION
  *  fact the view must state, not an empty list it should render as calm. */
-export function wingApiConfigured(): boolean {
-	return Boolean(WING_API_TOKEN());
+export function wingBffConfigured(): boolean {
+	return Boolean(WING_BFF_TOKEN());
 }
 
-async function wingGet(path: string, params?: Record<string, string>): Promise<unknown> {
+async function wingGet(
+	user: WingUser,
+	path: string,
+	params?: Record<string, string>
+): Promise<unknown> {
 	const u = new URL(WING_API() + path);
 	for (const [k, v] of Object.entries(params ?? {})) u.searchParams.set(k, v);
-	const h: Record<string, string> = { authorization: `Bearer ${WING_API_TOKEN()}` };
+	const h = asUser(user);
 	if (WING_EDGE()) h['x-wing-edge-token'] = WING_EDGE();
 	return asJson(await fetch(u, { headers: h }));
 }
 
 /** Every registered Pulse job. Wing returns `jobs` as a MAP keyed by id — not
  *  an array; a caller that iterates it as one silently renders nothing. */
-export async function pulseJobs(): Promise<unknown> {
-	return wingGet('/pulse_jobs');
+export async function pulseJobs(user: WingUser): Promise<unknown> {
+	return wingGet(user, '/pulse_jobs');
 }
 
 /** Per-job run aggregates. A job ABSENT from `summaries` has never fired. */
-export async function pulseRunSummary(): Promise<unknown> {
-	return wingGet('/pulse_runs/summary');
+export async function pulseRunSummary(user: WingUser): Promise<unknown> {
+	return wingGet(user, '/pulse_runs/summary');
 }
 
 /** Recent runs, newest first. */
 export async function pulseRuns(
+	user: WingUser,
 	jobId?: string,
 	limit = 50,
 	since?: string,
@@ -239,42 +245,34 @@ export async function pulseRuns(
 	if (jobId) p.job_id = jobId;
 	if (since) p.since = since;
 	if (until) p.until = until;
-	return wingGet('/pulse_runs', p);
+	return wingGet(user, '/pulse_runs', p);
 }
 
 /** §4b run-now: POST with an EMPTY body — Wing refuses anything else, and so
- *  does the BFF route in front of this. 202 + the recorded request. */
-export async function pulseRunNow(jobId: string): Promise<unknown> {
+ *  does the BFF route in front of this. An operator verb: Wing records user:<uid>. */
+export async function pulseRunNow(user: WingUser, jobId: string): Promise<unknown> {
 	const u = new URL(WING_API() + '/pulse_jobs/' + encodeURIComponent(jobId) + '/run-now');
-	const r = await fetch(u, {
-		method: 'POST',
-		headers: { authorization: `Bearer ${WING_API_TOKEN()}` }
-	});
-	return asJson(r);
+	return asJson(await fetch(u, { method: 'POST', headers: asUser(user) }));
 }
 
 /** Recent events — the audit spine. `actor_action_id` is the thread that ties
  *  a Pulse run to the events it produced, which is why Anatomy is one app. */
-export async function wingEvents(params: Record<string, string> = {}): Promise<unknown> {
-	return wingGet('/events', { limit: '60', ...params });
+export async function wingEvents(
+	user: WingUser,
+	params: Record<string, string> = {}
+): Promise<unknown> {
+	return wingGet(user, '/events', { limit: '60', ...params });
 }
 
 /** Notification inbox with its per-channel dispatch stamps. */
-export async function wingNotifications(params: Record<string, string> = {}): Promise<unknown> {
-	return wingGet('/notifications', { limit: '40', ...params });
+export async function wingNotifications(
+	user: WingUser,
+	params: Record<string, string> = {}
+): Promise<unknown> {
+	return wingGet(user, '/notifications', { limit: '40', ...params });
 }
 
-// ── Wing agent sessions, AS the end user (files/anatomy/contracts/face-wing.yml) ──
-// The `face-bff` bearer is the only Wing token that may speak for a user; Wing
-// believes X-Nos-User-* on it alone. Callers pass the hook-pinned identity.
-
-const WING_BFF_TOKEN = () => env.NOS_WING_BFF_TOKEN || process.env.NOS_WING_BFF_TOKEN || '';
-
-export function wingBffConfigured(): boolean {
-	return Boolean(WING_BFF_TOKEN());
-}
-
-function asUser(user: { uid: string; groups: string[] }, json = false): Record<string, string> {
+function asUser(user: WingUser, json = false): Record<string, string> {
 	const h: Record<string, string> = {
 		authorization: `Bearer ${WING_BFF_TOKEN()}`,
 		'x-nos-user-uid': user.uid,

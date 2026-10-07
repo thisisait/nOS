@@ -9,7 +9,7 @@
  */
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { wingEvents, wingNotifications, wingApiConfigured } from '$lib/server/upstream';
+import { wingEvents, wingNotifications, wingBffConfigured } from '$lib/server/upstream';
 import { projectWing } from '$lib/anatomy/wing';
 import { canViewAnatomy } from '$lib/security/tier';
 
@@ -17,10 +17,10 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!canViewAnatomy(locals.identity?.groups)) {
 		throw error(403, 'The Anatomy view requires the admin tier.');
 	}
-	if (!wingApiConfigured()) {
+	if (!wingBffConfigured()) {
 		return json({
 			configured: false,
-			note: 'NOS_WING_API_TOKEN is not set on the face container, so Wing’s events and inbox cannot be read. Nothing was checked.'
+			note: 'NOS_WING_BFF_TOKEN is not set on the face container, so Wing’s events and inbox cannot be read. Nothing was checked.'
 		});
 	}
 
@@ -35,8 +35,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	if (type) eventParams.type = type;
 
 	try {
-		const events = await wingEvents(eventParams);
-		const notifications = await wingNotifications(notifParams);
+		const events = await wingEvents(locals.identity, eventParams);
+		const notifications = await wingNotifications(locals.identity, notifParams);
 		return json({ configured: true, thread, ...projectWing(events, notifications) });
 	} catch (e) {
 		return json({

@@ -17,6 +17,9 @@ abstract class BaseApiPresenter extends Presenter
 	/** Override in subclasses to list actions that skip token auth */
 	protected array $publicActions = [];
 
+	/** Non-empty: a $publicActions action skips token auth only on these methods. */
+	protected array $publicMethods = [];
+
 	/**
 	 * Validated token row from requireTokenAuth(). NULL if the action
 	 * is in $publicActions (HMAC-only path) or before startup() ran.
@@ -34,6 +37,9 @@ abstract class BaseApiPresenter extends Presenter
 	/** The end user the face BFF speaks for, or null (face-wing.yml, wire). */
 	protected ?EndUser $endUser = null;
 
+	/** Estate-wide GETs the face-bff bearer reaches for a Tier-1 person only: nothing to narrow to. */
+	protected array $bffOperatorReads = [];
+
 	/** Actions that write an operator decision; startup() runs requireOperator() on each. */
 	protected array $operatorActions = [];
 
@@ -43,7 +49,8 @@ abstract class BaseApiPresenter extends Presenter
 		$this->getHttpResponse()->setContentType('application/json', 'utf-8');
 
 		// Skip token auth for explicitly public actions
-		if (in_array($this->getAction(), $this->publicActions, true)) {
+		if (in_array($this->getAction(), $this->publicActions, true)
+			&& (!$this->publicMethods || in_array($this->getMethod(), $this->publicMethods, true))) {
 			return;
 		}
 
@@ -68,8 +75,13 @@ abstract class BaseApiPresenter extends Presenter
 		}
 		// PHP method names are case-insensitive, so the match must be too.
 		$operatorAction = in_array(strtolower($this->getAction()), array_map('strtolower', $this->operatorActions), true);
-		if ($this->endUser !== null && !$operatorAction && !in_array($this->getAction(), $this->bffActions, true)) {
+		$operatorRead = in_array($this->getAction(), $this->bffOperatorReads, true)
+			&& in_array($this->getMethod(), ['GET', 'HEAD'], true);
+		if ($this->endUser !== null && !$operatorAction && !$operatorRead && !in_array($this->getAction(), $this->bffActions, true)) {
 			$this->sendError('the face-bff token does not reach this action', IResponse::S403_Forbidden);
+		}
+		if ($this->endUser !== null && $operatorRead && !$this->endUser->operator) {
+			$this->sendError('This estate-wide read is Tier 1 (nos-providers or nos-admins) only', IResponse::S403_Forbidden);
 		}
 		if ($operatorAction) {
 			$this->requireOperator();

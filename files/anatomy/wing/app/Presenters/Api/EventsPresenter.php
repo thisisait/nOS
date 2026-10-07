@@ -19,6 +19,12 @@ final class EventsPresenter extends BaseApiPresenter
 	/** POST uses HMAC, not bearer — list still requires bearer. */
 	protected array $publicActions = ['default'];
 
+	/** Only POST skips bearer auth; GET runs the full startup() check. */
+	protected array $publicMethods = ['POST'];
+
+	/** The face Anatomy view reads the spine as a Tier-1 person (face-wing.yml). */
+	protected array $bffOperatorReads = ['default'];
+
 	public function __construct(
 		private EventRepository $events,
 		private \App\Model\AgentSessionRepository $sessions,
@@ -28,7 +34,7 @@ final class EventsPresenter extends BaseApiPresenter
 	/**
 	 * Method-dispatched:
 	 *   POST → ingestion (HMAC-signed, from Ansible callback plugin)
-	 *   GET  → paginated list (requires bearer token, checked inline)
+	 *   GET  → paginated list (bearer token, checked in startup())
 	 */
 	public function actionDefault(): void
 	{
@@ -37,7 +43,6 @@ final class EventsPresenter extends BaseApiPresenter
 			$this->createEvent();
 		}
 		if ($method === 'GET') {
-			$this->requireBearerToken();
 			$this->listEvents();
 		}
 		$this->sendError('Method not allowed', 405);
@@ -90,22 +95,6 @@ final class EventsPresenter extends BaseApiPresenter
 		]);
 		$limit = (int) ($this->getParameter('limit') ?? 100);
 		$this->sendSuccess($this->events->query($filters, $limit));
-	}
-
-	/**
-	 * Fallback bearer-token check for GET (since we bypassed the startup
-	 * check via publicActions to accommodate POST's HMAC path).
-	 */
-	private function requireBearerToken(): void
-	{
-		$authHeader = $this->getHttpRequest()->getHeader('Authorization');
-		if (!$authHeader || !str_starts_with($authHeader, 'Bearer ')) {
-			$this->sendError('Missing or invalid Authorization header', 401);
-		}
-		$token = substr($authHeader, 7);
-		if (!$this->tokenRepo->validate($token)) {
-			$this->sendError('Invalid or inactive API token', 401);
-		}
 	}
 
 	/**

@@ -19,6 +19,9 @@ use App\Model\NotificationRepository;
  */
 final class NotificationsPresenter extends BaseApiPresenter
 {
+	/** The face Anatomy view reads the inbox as a Tier-1 person (face-wing.yml). */
+	protected array $bffOperatorReads = ['default'];
+
 	public function __construct(
 		private NotificationRepository $notifications,
 	) {

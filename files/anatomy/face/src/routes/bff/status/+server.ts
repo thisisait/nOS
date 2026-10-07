@@ -16,7 +16,7 @@ import {
 	pulseRunSummary,
 	wingNotifications,
 	boneHealth,
-	wingApiConfigured
+	wingBffConfigured
 } from '$lib/server/upstream';
 import { projectSnapshot } from '$lib/anatomy/pulse';
 import { projectNotification, isContested, isUnreadWork } from '$lib/anatomy/wing';
@@ -27,16 +27,19 @@ export const GET: RequestHandler = async ({ locals }) => {
 	if (!canViewAnatomy(locals.identity?.groups)) {
 		return json(QUIET);
 	}
-	if (!wingApiConfigured()) {
+	if (!wingBffConfigured()) {
 		// Not an error and not zeroes: nothing was checked, and the menubar
 		// must be able to say that rather than looking calm.
-		return json({ ...QUIET, visible: true, error: 'NOS_WING_API_TOKEN is not set' });
+		return json({ ...QUIET, visible: true, error: 'NOS_WING_BFF_TOKEN is not set' });
 	}
 
 	const out: SystemStatus = { ...QUIET, visible: true };
 
 	try {
-		const snap = projectSnapshot(await pulseJobs(), await pulseRunSummary());
+		const snap = projectSnapshot(
+			await pulseJobs(locals.identity),
+			await pulseRunSummary(locals.identity)
+		);
 		out.failing = snap.counts.failing;
 		out.overdue = snap.counts.overdue;
 		out.never = snap.counts.never;
@@ -52,7 +55,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		// silently past 60 total notifications (2026-09-02).
 		// ponytail: exact up to 500 unread rows, a floor beyond — revisit if
 		// the inbox ever legitimately holds more unread work than that.
-		const raw = (await wingNotifications({ unread_only: '1', limit: '500' })) as {
+		const raw = (await wingNotifications(locals.identity, { unread_only: '1', limit: '500' })) as {
 			notifications?: Record<string, unknown>[];
 		};
 		const notes = (raw.notifications ?? []).map(projectNotification);
