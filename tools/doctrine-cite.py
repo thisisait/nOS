@@ -724,6 +724,27 @@ def run() -> tuple[list[Citation], dict[str, DocIndex]]:
     return citations, corpus
 
 
+def article_gates() -> dict[str, list[str]]:
+    """ssot/doctrine/<file>.md -> the tests/ files that cite it: a resolved
+    citation, or the article (or its redirected old path) named on a line.
+    An article's front matter `gates:` is this list (test_ssot_index)."""
+    citations, corpus = run()
+    out: dict[str, set[str]] = {}
+    for c in citations:
+        doc = DOCTRINE_REDIRECTS.get(c.doc or "", c.doc or "")
+        if c.status == "resolved" and doc.startswith("ssot/doctrine/") \
+                and c.file.startswith("tests/"):
+            out.setdefault(doc, set()).add(c.file)
+    for f in sorted((REPO / "tests").rglob("*.py")):
+        rel = str(f.relative_to(REPO))
+        for line in f.read_text(encoding="utf-8", errors="replace").splitlines():
+            for doc in _named_docs(line, rel, corpus)[0]:
+                doc = DOCTRINE_REDIRECTS.get(doc, doc)
+                if doc.startswith("ssot/doctrine/"):
+                    out.setdefault(doc, set()).add(rel)
+    return {d: sorted(s) for d, s in out.items()}
+
+
 def _in_harvest_roots(rel: str) -> bool:
     if rel == "main.yml":
         return True

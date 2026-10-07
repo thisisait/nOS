@@ -213,3 +213,87 @@ def test_code_does_not_cite_promoted_stub_paths():
                     if name in promoted or not (REPO / "docs/doctrine" / f"{name}.md").is_file():
                         offenders.append(f"{rel}:{i} docs/doctrine/{name}.md")
     assert not offenders, offenders
+
+
+# ── force is a key (nos-sot:doctrine/ssot.md#3) ─────────────────────────────
+
+#: Phrases that make a file read as law. Outside ssot/ only an INDEX `proposed:`
+#: original may carry one in its first lines (it also says PROPOSED).
+#: CEILING: exact phrases, first 6 lines only; a new paraphrase passes.
+_LAW_CLAIM = re.compile(
+    r"settled law|this file is the law|doctrine locked|authoritative doc"
+    r"|follow it exactly|contract settled|retro doctrine|status:\W*doctrine", re.I)
+#: Force banners the front matter replaced: a second, unparsed way to say it.
+_FORCE_BANNER = re.compile(r"^>?\s*\**(canonical\b|status:\W*doctrine|doctrine,\s*20\d\d)", re.I | re.M)
+_HISTORY = ("docs/archive/", "docs/devlog/", "docs/hidden_fees/", "RELEASE.md")
+_FRONT_KEYS = ("in_force", "ruled", "row", "gates")
+
+
+def _articles() -> list[Path]:
+    return sorted((REPO / "ssot" / "doctrine").glob("*.md"))
+
+
+def _front(path: Path) -> tuple[dict | None, str]:
+    """(front matter, body). None when the file opens without `---`."""
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith("---\n"):
+        return None, text
+    head, _, body = text[4:].partition("\n---\n")
+    return (yaml.safe_load(head) or {}), body
+
+
+def test_every_article_declares_in_force():
+    """Force is a key, not a banner: in_force, ruled, row, gates on every article."""
+    bad = []
+    for p in _articles():
+        fm, _ = _front(p)
+        if fm is None:
+            bad.append(f"{p.name}: no front matter")
+            continue
+        bad += [f"{p.name}: no `{k}`" for k in _FRONT_KEYS if k not in fm]
+        if not isinstance(fm.get("in_force"), bool):
+            bad.append(f"{p.name}: in_force is not true|false")
+    assert not bad, bad
+
+
+def test_a_proposed_banner_iff_not_in_force():
+    """The article's key overrides the realm flag; the banner only repeats it."""
+    bad = []
+    for p in _articles():
+        fm, body = _front(p)
+        banner = bool(re.search(r"^>\s*\*\*PROPOSED", body, re.M))
+        if fm is not None and banner == bool(fm.get("in_force")):
+            bad.append(f"{p.name}: in_force={fm.get('in_force')} banner={banner}")
+        top = "\n".join(body.splitlines()[:8])
+        if _FORCE_BANNER.search(top):
+            bad.append(f"{p.name}: force banner in the first lines")
+    assert not bad, bad
+
+
+def test_article_gates_are_the_tests_that_cite_it():
+    """`gates:` is derived (tools/doctrine-cite.py article_gates), never typed."""
+    derived = _cite().article_gates()
+    bad = []
+    for p in _articles():
+        fm, _ = _front(p)
+        rel = f"ssot/doctrine/{p.name}"
+        want = derived.get(rel, [])
+        if fm is not None and sorted(fm.get("gates") or []) != want:
+            bad.append(f"{p.name}: gates should be {want}")
+    assert not bad, bad
+
+
+def test_no_law_claim_outside_ssot():
+    """A banner that says 'law' outside ssot/ is a second constitution."""
+    import subprocess
+    proposed = set(_index().get("proposed") or [])
+    out = subprocess.run(["git", "ls-files", "-z", "*.md"], cwd=REPO,
+                         capture_output=True, check=True).stdout.decode()
+    bad = []
+    for rel in sorted(r for r in out.split("\0") if r):
+        if rel.startswith(("ssot/", *_HISTORY)) or rel in proposed or not (REPO / rel).is_file():
+            continue
+        head = (REPO / rel).read_text(encoding="utf-8", errors="replace").splitlines()[:6]
+        if m := _LAW_CLAIM.search("\n".join(head)):
+            bad.append(f"{rel}: {m.group(0)!r}")
+    assert not bad, bad
