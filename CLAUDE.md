@@ -30,8 +30,8 @@ the agent's or anyone's — is caught before it costs anything. Both are the poi
 ## What nOS is
 
 An Ansible playbook that turns a Mac (Apple Silicon) or Ubuntu 24.04 host into a
-self-hosted **Agentic Home Lab**: ~50 FOSS Docker services, each owned by a
-`roles/pazny.<service>/` role, 88 anatomy plugins for cross-service wiring, SSO
+self-hosted **Agentic Home Lab**: FOSS Docker services, each owned by a
+`roles/pazny.<service>/` role, anatomy plugins for cross-service wiring, SSO
 (Authentik), a secrets vault (Infisical), observability (Grafana/Prometheus/Loki/Tempo),
 AI agents (OpenClaw + Ollama MLX, Hermes, OpenCode, AgentKit), backup, and a web desktop
 (nOS face). All data stays local, and `nos --remove=data --confirm` reinstalls from
@@ -109,8 +109,10 @@ Longer tour: [docs/architecture.md](docs/architecture.md).
   wiring: SSO client, notifications, dashboards, Pulse jobs. Contract:
   [files/anatomy/docs/plugin-wiring-capabilities.md](files/anatomy/docs/plugin-wiring-capabilities.md).
 - **Anatomy organs on the host:** Bone (FastAPI bridge), Wing (dashboard + state UI),
-  Pulse (scheduled jobs), Cortex (reasoning daemon); KEAP is the Docker-served knowledge
-  layer. Words: [docs/glossary.md](docs/glossary.md); how they are kept: [ssot/doctrine/body-plan.md](ssot/doctrine/body-plan.md).
+  Pulse (scheduled jobs), Cortex (reasoning daemon); KEAP (Docker) is the memory organ
+  and the face is a core organ. Every `state/manifest.yml` row carries `software_owner`
+  (`self` | `symbiont`). Words: [docs/glossary.md](docs/glossary.md); levels and owners:
+  [ssot/doctrine/body-plan.md](ssot/doctrine/body-plan.md).
 - **Edge:** Traefik owns 80/443, routes derived from `state/manifest.yml`
   ([docs/traefik-primary-proxy.md](docs/traefik-primary-proxy.md)); host nginx is opt-in.
 - **SSO:** every service is `native_oidc`, `header_oidc`, `forward_auth` or none, declared

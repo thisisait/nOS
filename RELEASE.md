@@ -2,18 +2,124 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.14-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.15-beta`.
 
 ---
 
-## Unreleased (since v0.15-beta)
+## v0.16-beta (2026-10-05 … 2026-10-07) — DRAFT, not yet cut
 
-- Loki: host-daemon logs (Wing, Bone, Pulse, Cortex) carry `job="host_daemon"`,
-  no longer `job="organ"`; a query spanning the change uses
-  `job=~"organ|host_daemon"`. The tail is declared as
+> **The body has a plan, and every part knows its name and its owner.**
+> 265 commits since `v0.15-beta` (777 files, +38.0k/−14.5k), measured with
+> `git log v0.15-beta..dev`. Still `-beta`. Converge on 2026-10-07 ended
+> `failed=0`, smoke 48/48, live E2E one red (Jellyfin SSO, known, row
+> `jellyfin-sso-provider-missing`). Whether CI is green on every lane at the
+> tag is checked at the cut, not promised here.
+
+This release is mostly about words and places: what each part of nOS is called,
+where its files live, and who owns it. Little changes on the running estate;
+most of the work is in the repo, in the gates, and in the pages an agent reads
+before it touches anything.
+
+### The body plan: one word, one meaning
+- `ssot/doctrine/body-plan.md` is now law. It names every level of the
+  organism (organism, organ system, organ, cell, organelle, atom) and says
+  what a word may and may not mean. The old "home graph" is the body plan.
+- The **lexicon** (`state/genome/lexicon.yml`, rendered to `docs/glossary.md`)
+  holds one meaning per word, with a counter-example for each. Phrases that
+  claimed law or named a retired sense ("self-heal", "Tier-2 app", "the
+  Senses", "cortex-query" …) are retired and a gate refuses them in the files
+  an agent is told to trust. Renames that followed: `cortex-query` →
+  `keap-recall`, `state/genome/organelle` → `genes`, `digest-*` readers →
+  `workload-digest-*`, `docs/tier2-app-onboarding.md` →
+  `docs/manifest-app-onboarding.md`. KEAP is **memory**, not a cortex.
+- **Tissues**: one manifest per specialization under `state/tissues/` (the
+  transplantable pack of cells, skills, tables and services); the tissue level
+  may not be empty (gate).
+- **Imprint**: `IMPRINT.md` is the one page a newborn model reads first,
+  rendered from the body plan and the lexicon, never hand-written.
+- **Apex** (the public picture of the estate): the groups "The Senses" and
+  "The Reflexes" are now **The Watch** and **The Clockwork**; "The Stores"
+  joins the core side. Every organ system has a public one-liner.
+
+### Where things live
+- `state/` is grouped by realm: `state/habitat/` holds what lives beside the
+  organism (`router.yml`, `llm-backends.yml`); `state/fixtures/` holds test
+  and bench data (seeds, ISDOC samples, `fable/`, the benches); law companions
+  stay beside the law. A converge writes nothing into `state/` (gate).
+- One registry of generated files, `state/generated.yml`: each says who writes
+  it and how to check it; `tests/anatomy/test_generated_files_hold.py` runs
+  every check, and Bone's weakness reader reads the same list.
+- `default.config.yml` keeps splitting into `config.d/`: the host-software
+  domain moved, and the eight desktop switches (`install_mas_apps`,
+  `configure_dock`, `configure_osx` …) now sit next to their values in
+  `config.d/10-host-desktop.yml`, all off by default. A literal
+  `default.config.yml` path in new code trips a ratchet; code asks
+  `tools/nos_identity.py` for the layers.
+- Contracts have one home, `files/anatomy/contracts/` (face↔Wing, KEAP schema,
+  one event-types spec for Bone and Wing); the eight copied KEAP spec files
+  are gone.
+
+### Every row has an owner
+- Every `state/manifest.yml` row carries `software_owner`: **self** (one of
+  nOS's own parts: wing, bone, pulse, cortex, face, ears, apex, keap …) or
+  **symbiont** (vendor software nOS runs). Habitat software is the machine
+  owner's and is never a row. A package has exactly one owner (opencode left
+  the Homebrew list; its role owns it).
+- The **face** is a core organ, not an appendage (operator ruling I-12);
+  `face-wing.yml` stays a contract, as KEAP's does.
+- **Ollama** and **dnsmasq** have their own manifest rows (dnsmasq: flag, pin,
+  root daemon, authored stop). Every daemon the playbook starts is bound to a
+  row, and a row's scheduled jobs ride its own node in the anatomy graph.
+
+### Smaller changes you may notice
+- **Loki**: host-daemon logs (Wing, Bone, Pulse, Cortex) carry
+  `job="host_daemon"`, no longer `job="organ"`. A query spanning the change
+  uses `job=~"organ|host_daemon"`. The tail is declared as
   `alloy_tail_host_daemon_logs` (default on, as before).
-- Hermes: `hermes_enable_memory` (default on) declares the MCP memory server;
-  turning it off leaves `~/.hermes/memory.json` in place, unread.
+- **Hermes**: `hermes_enable_memory` (default on) declares the MCP memory
+  server; off leaves `~/.hermes/memory.json` in place, unread.
+- **Wing**: a halt API with a `nos halt` break-glass; an operator verb needs
+  the `wing.operator` scope; an empty identity is refused, never named; a
+  session can be opened for a face user (the face holds only the `face-bff`
+  token). The plist env is `NOS_WING_DEPLOYED_REF`.
+- **Edge**: `.internal` and `.home.arpa` resolve locally; `nos_edge` is a
+  declared fact; Tailscale joins and advertises the LAN IP;
+  `tools/tailscale-status.py` reads it.
+- **Profile builder** asks about the edge and the DNS host; Cloudflare
+  DNS-only leads.
+- **CI**: macOS 26 tested beside 15; macOS 14 left the matrix; runners pinned
+  to `ubuntu-24.04`.
+- **The loop** may write any default layer but never `ssot/` (the budget
+  refuses it by name); designs go to drafts.
+
+### One thing to do after the upgrade
+- `state/llm-backends.yml` is a **compat symlink** to
+  `state/habitat/llm-backends.yml`, kept because the deployed Wing still reads
+  the old path. After every host has run `nos --tags wing`, delete the
+  symlink and the two fallback reads (`BindingResolver`, `readRegistry`); the
+  gate `test_the_backend_register_compat_read.py` says which lines.
+
+### Not promised in this release
+- **Gov readiness.** `profiles/gov-local.yml` exists, but the P0 blockers in
+  `docs/compliance/gov-readiness-audit-2026q2.md` (ISDS/NIA federation,
+  retention enforcement) are open. Nothing here makes nOS deployable in a
+  government setting.
+- **OpenHuman — OPEN operator decision.** Row `rel-016` MUST (4) still says
+  "installed by the role and passing its five acceptance questions". The role
+  exists (every profile configured, session and MCP by the vendor CLI, a
+  reader `openhuman-status`), but this week the work was **parked**: upstream
+  resets its onboarding on each start, so the five questions cannot be
+  answered yet. The headless core (`apps/openhuman.yml.draft`) is a draft.
+  The operator chooses: keep MUST (4) and hold the tag, or re-scope `rel-016`
+  to "role present, acceptance deferred to v0.17". This note does not decide.
+- **Wing → face migration.** The face is a core organ now, but Wing stays the
+  operator dashboard through v0.16; the move is roadmap work after it
+  (epic `wing-organ-without-face` and its children).
+- **Memory gaps.** Row `memory-organ-gaps`: no temporal validity on facts,
+  recall stops at one hop, reflect is only the curator's schedule, no single
+  retain/recall/reflect door. KEAP stays the memory organ; the gaps are
+  measured, not closed.
+- **Jellyfin SSO** waits for the planned blank, as in v0.15.
 
 ## v0.15-beta (2026-10-01 … 2026-10-05)
 

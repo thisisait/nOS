@@ -48,7 +48,7 @@ one system:
 
 ## Status and limits
 
-nOS is **beta** (latest tag `v0.13-beta`) and has one primary maintainer who works with
+nOS is **beta** (latest tag `v0.15-beta`) and has one primary maintainer who works with
 coding agents. It runs daily on the maintainer's Mac Studio. Read this before you rely
 on it:
 
@@ -134,14 +134,19 @@ up first; the rest only if you enable them.
 | **engineering** | QGIS Server |
 | **apps** | Manifest apps from [`apps/`](apps/): Documenso, 2FAuth, Roundcube |
 
-On the host, outside Docker, nOS runs its own small organs:
+On the host, outside Docker, nOS runs its own small organs. Every row in
+`state/manifest.yml` says who owns the software: `self` (nOS's own parts) or
+`symbiont` (vendor software nOS runs); what you installed yourself is habitat and
+never a row. The words are in [docs/glossary.md](docs/glossary.md).
 
 - **Bone:** a local FastAPI bridge between playbook runs and the event store.
 - **Wing:** the operator dashboard, covering security findings, migrations, upgrades,
   the audit timeline and agent sessions.
 - **Pulse:** the scheduler for recurring jobs.
 - **Cortex:** a loopback reasoning daemon that validates agent pipelines against KEAP,
-  the knowledge store.
+  the memory store.
+- **nOS face:** the web desktop (a core organ, served from the `iiab` stack); Wing stays
+  the operator dashboard until the planned move.
 - **OpenClaw and Hermes:** AI agents backed by Ollama with the MLX backend, so models run
   on the Mac's GPU with no API key.
 - **Backrest** (optional): the UI over the restic backup repository.
@@ -170,7 +175,8 @@ refuses a manifest without a complete GDPR Article 30 block. See
 
 ### Sign-in
 
-Authentik serves `auth.<tenant_domain>`. Each service is in one of three modes:
+Authentik serves `auth.<tenant_domain>`. Each service declares one of three SSO modes
+(or none, for a service with no web login):
 
 | Mode | What the user sees | Examples |
 |---|---|---|

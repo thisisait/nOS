@@ -6,21 +6,29 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-10-04.
+> Last updated: 2026-10-07.
 
 ## Now (current track)
 
-1. **v0.15-beta is being cut** (2026-10-04, `RELEASE.md`). After it: the
-   ~30 review follow-ups (dtt `review-v015-followups`), the `default.config.yml`
-   split by domain (`default-config-split`), the immune-system children and
-   `containerized-core` (host bridge first). Jellyfin SSO waits for the blank.
-2. **Redis leaf rotation is LIVE** (converged 2026-10-01; requirepass == new
+1. **v0.16-beta is being drafted** (row `rel-016`; `RELEASE.md` section marked
+   DRAFT). v0.15-beta shipped 2026-10-06. This week: body plan + lexicon + tissues
+   + imprint, `state/` by realm, `software_owner` on every row, face a core organ.
+   Open before the tag: CI green on every lane (macOS 26 idempotence,
+   `homebrew-recurse-changed`), atlas and forum smoke-probed live, and the
+   **OpenHuman decision** — MUST (4) still says installed + five acceptance
+   questions; the work is parked (upstream resets onboarding). Keep or re-scope.
+   After the tag: the ~30 review follow-ups (`review-v015-followups`), the
+   `default.config.yml` split continues (`default-config-split`), `containerized-core`.
+   Jellyfin SSO waits for the blank.
+2. **Wing compat symlink** `state/llm-backends.yml` → `state/habitat/` stays until
+   every host has run `nos --tags wing`; then delete it and the two fallback reads.
+3. **Redis leaf rotation is LIVE** (converged 2026-10-01; requirepass == new
    leaf, hash-compared; smoke 47/47, E2E 277 green).
-3. **Datastore TLS is POSTPONED** by the operator. The research is kept in dtt
+4. **Datastore TLS is POSTPONED** by the operator. The research is kept in dtt
    (`sec-transport-enforce`, `sec-transport-study`) for when it resumes.
-4. **Roadmap reconciled 2026-10-02:** 205 open rows checked against the code;
+5. **Roadmap reconciled 2026-10-02:** 205 open rows checked against the code;
    96 closed with evidence, 5 folded, epics with all children done closed.
-5. **Identities:** accounts exist from install for every declared identity;
+6. **Identities:** accounts exist from install for every declared identity;
    tier-1 is admin in gitea/nextcloud/grafana/openwebui/outline. Open: an e2e
    tester's Outline role lags one converge (its account is born mid-run); six
    apps carry `first_login_blocked` with their reason.
