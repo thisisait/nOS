@@ -2,8 +2,7 @@
 in_force: true
 ruled: null
 row: null
-gates:
-  - tests/anatomy/test_lexicon_holds.py
+gates: []
 ---
 # VirtioFS Doctrine
 

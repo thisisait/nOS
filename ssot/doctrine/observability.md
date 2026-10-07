@@ -4,7 +4,6 @@ ruled: null
 row: null
 gates:
   - tests/anatomy/test_a_hook_that_fails_is_heard.py
-  - tests/anatomy/test_lexicon_holds.py
 ---
 # Observability Doctrine
 
