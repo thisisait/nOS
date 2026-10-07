@@ -1,6 +1,6 @@
 """Every event type the code EMITS must exist in both whitelists.
 
-WHY DERIVED AND NOT LISTED. The estate already had a twin-parity rule — Wing's
+WHY DERIVED AND NOT LISTED. The estate already had a mirror-parity rule — Wing's
 `EventRepository::VALID_TYPES` and Bone's `events.py::VALID_TYPES` must agree,
 because a type present on one side only makes a Bone-proxied replay 400 with no
 clue which side is short — and it is checked by roughly a dozen assertions in
@@ -112,7 +112,7 @@ def test_every_emitted_type_is_in_wings_whitelist():
 
 
 def test_every_emitted_type_is_in_bones_whitelist():
-    """The twin. A type Wing accepts and Bone does not 400s on replay, and the
+    """The mirror. A type Wing accepts and Bone does not 400s on replay, and the
     400 names neither the type nor the side that is short."""
     allowed = _whitelist(BONE_LIST)
     offenders = {

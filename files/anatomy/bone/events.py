@@ -109,8 +109,8 @@ VALID_TYPES = {
     # AgentKit (agent_session_*…) when run via the runtime, and those traverse
     # Bone; without these here the agent's session events would 400 exactly like
     # the 2026-05-17 remediator_report incident. Backfilled in the SAME commit as
-    # the 8 new types below so the twins re-align (test_devlog_event_types.py-style
-    # twin-parity gate now pins both halves).
+    # the 8 new types below so the mirrors re-align (test_devlog_event_types.py-style
+    # mirror-parity gate now pins both halves).
     #   patch_* — apply-patches engine (mirrors upgrade_* / migration_*).
     "patch_start", "patch_step_ok", "patch_step_failed", "patch_end",
     #   AgentKit lifecycle (A14) — every agent session emits start + end;
@@ -124,13 +124,13 @@ VALID_TYPES = {
     "agent_message", "agent_grader_decision",
     "agent_webhook_dispatch", "agent_webhook_receipt",
     "agent_vault_resolved",
-    #   Backend attribution (2026-08-13). TWIN of Wing's list. Both types were
-    #   emitted by Runner before either list carried them, and the twin-parity
+    #   Backend attribution (2026-08-13). MIRROR of Wing's list. Both types were
+    #   emitted by Runner before either list carried them, and the mirror-parity
     #   gate stayed green because parity held with both halves missing.
     "agent_model_fallback", "agent_binding_disarmed",
     #   Agent approval workflow (A11 — /approvals UI).
     "agent_approval_request", "agent_approval_decision",
-    # agents-inbox (2026-08-08). TWIN of Wing's EventRepository::VALID_TYPES —
+    # agents-inbox (2026-08-08). MIRROR of Wing's EventRepository::VALID_TYPES —
     # a type present on one side only makes a proxied replay 400 with no clue
     # which side is short. An approval stays on the two names above; these carry
     # free-text questions and choices.
@@ -140,7 +140,7 @@ VALID_TYPES = {
     #   E2E journey telemetry (A13 — non-interactive end-to-end testing).
     "e2e_journey_start", "e2e_journey_step", "e2e_journey_end",
     # ── Agentic upgrade→migration→coexistence epic — the 8 NEW types (B1) ───
-    # Twin rule (NON-NEGOTIABLE, one commit): every type here MUST also be in
+    # Mirror rule (NON-NEGOTIABLE, one commit): every type here MUST also be in
     # Wing's EventRepository::VALID_TYPES or an agent's Bone-proxied POST 400s.
     # See docs/archive/agentic-upgrade-migration-coexistence-design.md §2.6 for
     # the emitter / FK-column / result_json contract of each.
@@ -174,7 +174,7 @@ VALID_TYPES = {
     # The relocated B5 data move (now an explicit verb, not auto-at-cutover).
     # Emitted by Api\CoexistencePresenter::actionCopyData on a COMMITTED copy
     # only (dry_run=false AND Bone 2xx), source='wing', actor_id = the operator
-    # (never body-supplied). Twin rule (NON-NEGOTIABLE, one commit): also in
+    # (never body-supplied). Mirror rule (NON-NEGOTIABLE, one commit): also in
     # Wing's EventRepository::VALID_TYPES, else a Bone-proxied replay 400s.
     # Pinned by tests/anatomy/test_devlog_event_types.py.
     #   coexistence_copy_data — uses coexist_svc; result_json
@@ -184,7 +184,7 @@ VALID_TYPES = {
     # The OPERATOR's supervision event for the button press — distinct from the
     # spawned agent's own agent_session_*/agent_tool_* lineage. Emitted by
     # UpgradesPresenter::emitPromoteRequested with actor_id = the operator
-    # (X-Authentik-Username, NEVER the agent), source='wing'. Twin rule
+    # (X-Authentik-Username, NEVER the agent), source='wing'. Mirror rule
     # (NON-NEGOTIABLE, one commit): also in Wing's EventRepository::VALID_TYPES,
     # else a Bone-proxied replay/forward of this row 400s. Pinned by
     # tests/anatomy/test_devlog_event_types.py.
@@ -197,7 +197,7 @@ VALID_TYPES = {
     # hand DB poke). Emitted by UpgradesPresenter::emitUpgradeUnqueued with
     # actor_id = the operator (X-Authentik-Username, NEVER the agent),
     # source='wing'; reuses UpgradeRepository::cancelPlanned (status planned →
-    # cancelled). Twin rule (NON-NEGOTIABLE, one commit): also in Wing's
+    # cancelled). Mirror rule (NON-NEGOTIABLE, one commit): also in Wing's
     # EventRepository::VALID_TYPES, else a Bone-proxied replay/forward of this
     # row 400s. Pinned by tests/anatomy/test_devlog_event_types.py.
     #   upgrade_unqueued — UpgradesPresenter::actionCancelPlanned; uses upgrade_id;
@@ -209,14 +209,14 @@ VALID_TYPES = {
     # emits this. actor_id = the edge-trusted identity.uid (never a bearer
     # subject); result_json {slug, row_id}. HMAC-signed straight from the
     # SvelteKit server (files/anatomy/face/src/lib/server/audit.ts), same
-    # signer shape as callback_plugins/wing_telemetry.py. Twin rule
+    # signer shape as callback_plugins/wing_telemetry.py. Mirror rule
     # (NON-NEGOTIABLE, one commit): also in Wing's EventRepository::
     # VALID_TYPES, else a replay/forward of this row 400s.
     "table.upsert",
     # ── SERE-loop maintenance pause (`nos loops pause|resume`) ──────────────
     # The operator's live hold on the agent runtime — a best-effort audit event
     # from the nos CLI (actor_id=operator:<login>, source='nos-cli'; result_json
-    # {reason}). Twin rule (NON-NEGOTIABLE): also in Wing's
+    # {reason}). Mirror rule (NON-NEGOTIABLE): also in Wing's
     # EventRepository::VALID_TYPES, else the Bone POST 400s and the pause leaves
     # no audit trace.
     "loops_paused", "loops_resumed",

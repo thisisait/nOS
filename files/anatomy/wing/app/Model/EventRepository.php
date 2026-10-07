@@ -58,7 +58,7 @@ final class EventRepository
 		//   agent_question_asked     — AgentQuestionRepository::ask()
 		//   agent_question_answered  — emitted ONLY on the winning conditional
 		//     UPDATE in ::answer(), so the lineage carries exactly one decision
-		//     per question. Twin rule: both names must also exist in Bone's
+		//     per question. Mirror rule: both names must also exist in Bone's
 		//     VALID_TYPES or a Bone-proxied replay of these rows 400s.
 		'agent_question_asked', 'agent_question_answered',
 		// Big-red-button platform halt (A12 — /admin emergency control, 2026-05-07).
@@ -96,7 +96,7 @@ final class EventRepository
 		'agent_webhook_receipt',  // inbound webhook ack from subscriber
 		'agent_vault_resolved',   // credential pulled at session start (no plaintext)
 		// Backend attribution (2026-08-13). Both were emitted by Runner before
-		// they were listed here, and the twin-parity gate did not object —
+		// they were listed here, and the mirror-parity gate did not object —
 		// parity held because they were missing from BOTH lists. A check that
 		// compares two artefacts to each other cannot see them being equally
 		// wrong; `test_an_emitted_event_type_is_whitelisted.py` now derives the
@@ -142,10 +142,10 @@ final class EventRepository
 		'devlog_entry_created', 'devlog_entry_updated', 'devlog_entry_deleted',
 		'devlog_sync_run', 'devlog_published',
 		// ── Agentic upgrade→migration→coexistence epic — 8 NEW types (B1) ─
-		// Twin rule (NON-NEGOTIABLE, one commit): every type here MUST also be
+		// Mirror rule (NON-NEGOTIABLE, one commit): every type here MUST also be
 		// in Bone's events.py VALID_TYPES or an agent's Bone-proxied POST 400s
 		// (the 2026-05-17 remediator incident). Pinned by the extended
-		// tests/anatomy/test_devlog_event_types.py twin-parity gate. Emitter /
+		// tests/anatomy/test_devlog_event_types.py mirror-parity gate. Emitter /
 		// FK-column / result_json contracts:
 		//   plan_choice_recorded — UpgradesPresenter::actionPlanChoice; upgrade_id;
 		//     {service, recipe_id, plan_mode, coexistence_planned_id?, data_copy, port_offset}.
@@ -171,7 +171,7 @@ final class EventRepository
 		// The relocated B5 data move (explicit verb, not auto-at-cutover).
 		// Emitted by Api\CoexistencePresenter::actionCopyData on a COMMITTED
 		// copy only (dry_run=false AND Bone 2xx); coexist_svc; result_json
-		// {coexistence_service, tag, source_migration_id, data_copied_at}. Twin
+		// {coexistence_service, tag, source_migration_id, data_copied_at}. Mirror
 		// of Bone's events.py — pinned by test_devlog_event_types.py.
 		'coexistence_copy_data',
 		// ── A3 (Q5/2026-06-16): Wing "Promote to migration" Tier-1 button ──
@@ -179,7 +179,7 @@ final class EventRepository
 		// the spawned agent's own agent_session_*/agent_tool_* lineage.
 		//   migration_promote_requested — UpgradesPresenter::actionPromoteToMigration;
 		//     actor_id=operator (X-Authentik-Username, NEVER the agent); source='wing';
-		//     result_json {service, recipe_id, session_uuid, agent}. Twin of Bone's
+		//     result_json {service, recipe_id, session_uuid, agent}. Mirror of Bone's
 		//     events.py — pinned by test_devlog_event_types.py.
 		'migration_promote_requested',
 		// ── F3 (2026-06-18): Unqueue / Cancel a planned upgrade (Tier-1) ───
@@ -189,18 +189,18 @@ final class EventRepository
 		// (X-Authentik-Username, NEVER the agent), source='wing'; reuses
 		// UpgradeRepository::cancelPlanned (planned → cancelled); uses
 		// upgrade_id; result_json {service, recipe_id, target_version,
-		// planned_by}. Twin of Bone's events.py — pinned by
+		// planned_by}. Mirror of Bone's events.py — pinned by
 		// test_devlog_event_types.py.
 		'upgrade_unqueued',
 		// ── D5 table-write-audit (consulting-surface-wiring, 2026-09) ───────
-		// Twin of Bone's events.py — every KEAP DataTable write through the
+		// Mirror of Bone's events.py — every KEAP DataTable write through the
 		// face BFF (routes/bff/tables/+server.ts) emits this; result_json
 		// {slug, row_id}, actor_id = the edge-trusted identity.uid.
 		'table.upsert',
 		// ── SERE-loop maintenance pause (`nos loops pause|resume`) ──────────
 		// The operator's live hold on the agent runtime — a best-effort audit
 		// event from the nos CLI (actor_id=operator:<login>, source='nos-cli';
-		// result_json {reason}). Twin of Bone's events.py VALID_TYPES, else the
+		// result_json {reason}). Mirror of Bone's events.py VALID_TYPES, else the
 		// Bone POST 400s and the pause leaves no audit trace.
 		'loops_paused', 'loops_resumed',
 		// Bone-ingested types Wing had refused (measured 2026-10-07): the list is

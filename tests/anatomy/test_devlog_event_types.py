@@ -25,7 +25,7 @@ DEVLOG_TYPES = (
 )
 
 # ── Agentic upgrade→migration→coexistence epic — 8 new types (Phase B / B1) ──
-# Same twin-parity contract as DEVLOG_TYPES: every type below MUST appear in
+# Same mirror-parity contract as DEVLOG_TYPES: every type below MUST appear in
 # BOTH Bone's events.py VALID_TYPES and Wing's EventRepository::VALID_TYPES, or
 # an agent's Bone-proxied POST silently 400s (the 2026-05-17 remediator_report
 # incident). See docs/archive/agentic-upgrade-migration-coexistence-design.md §2.6.
@@ -44,7 +44,7 @@ UPGRADE_COEXIST_B1_TYPES = (
 # The migration-author emits through AgentKit (agent_session_*…) when run via
 # the runtime, and those traverse Bone. B1 backfills the AgentKit + patch_* +
 # approval + admin-emergency + e2e families into Bone so the migration-author's
-# session events don't 400. This gate pins that the backfill stays in BOTH twins.
+# session events don't 400. This gate pins that the backfill stays in BOTH mirrors.
 B1_BACKFILL_TYPES = (
     "patch_start", "patch_step_ok", "patch_step_failed", "patch_end",
     "agent_session_start", "agent_session_end",
@@ -61,7 +61,7 @@ B1_BACKFILL_TYPES = (
 
 # ── A3 (Q5/2026-06-16): Wing "Promote to migration" Tier-1 button ───────────
 # The operator's supervision event for the button press
-# (UpgradesPresenter::emitPromoteRequested). Same NON-NEGOTIABLE twin-parity
+# (UpgradesPresenter::emitPromoteRequested). Same NON-NEGOTIABLE mirror-parity
 # contract: must be in BOTH Bone's events.py VALID_TYPES and Wing's
 # EventRepository::VALID_TYPES, else a Bone-proxied replay/forward of the row
 # 400s. See docs/archive/agentic-upgrade-adjustments-design.md §4.5.
@@ -72,7 +72,7 @@ A3_PROMOTE_BUTTON_TYPES = (
 # ── A4 (Q3/2026-06-16): manual re-runnable "Copy data" action ───────────────
 # The relocated B5 data move (Api\CoexistencePresenter::actionCopyData, emitted
 # only on a committed copy: dry_run=false AND Bone 2xx). Same NON-NEGOTIABLE
-# twin-parity contract: must be in BOTH Bone's events.py VALID_TYPES and Wing's
+# mirror-parity contract: must be in BOTH Bone's events.py VALID_TYPES and Wing's
 # EventRepository::VALID_TYPES, else a Bone-proxied replay/forward of the row
 # 400s. See docs/archive/agentic-upgrade-adjustments-design.md §5.4.
 A4_COPY_DATA_TYPES = (
@@ -83,7 +83,7 @@ A4_COPY_DATA_TYPES = (
 # The operator's supervision event for the "Unqueue" control on a planned
 # upgrade row (UpgradesPresenter::emitUpgradeUnqueued — the machinery path to
 # reset a queued upgrade and re-run the plan-choice flow for a re-test). Same
-# NON-NEGOTIABLE twin-parity contract: must be in BOTH Bone's events.py
+# NON-NEGOTIABLE mirror-parity contract: must be in BOTH Bone's events.py
 # VALID_TYPES and Wing's EventRepository::VALID_TYPES, else a Bone-proxied
 # replay/forward of the row 400s (the 2026-05-17 remediator incident class).
 F3_UNQUEUE_TYPES = (
@@ -121,7 +121,7 @@ def test_bone_whitelists_b1_upgrade_coexist_types():
 
 
 def test_wing_repository_whitelists_b1_upgrade_coexist_types():
-    """The 8 new B1 event types are all present in Wing's VALID_TYPES (twin)."""
+    """The 8 new B1 event types are all present in Wing's VALID_TYPES (mirror)."""
     src = PHP_REPO.read_text(encoding="utf-8")
     for t in UPGRADE_COEXIST_B1_TYPES:
         assert f"'{t}'" in src, f"Wing EventRepository VALID_TYPES missing B1 type {t}"
@@ -129,7 +129,7 @@ def test_wing_repository_whitelists_b1_upgrade_coexist_types():
 
 def test_b1_backfill_types_present_in_both_twins():
     """The AgentKit/patch_*/approval/admin/e2e drift backfilled by B1 is in BOTH
-    twins — without it the migration-author's AgentKit session events 400 at Bone.
+    mirrors — without it the migration-author's AgentKit session events 400 at Bone.
     """
     bone = BONE.read_text(encoding="utf-8")
     php = PHP_REPO.read_text(encoding="utf-8")
@@ -140,9 +140,9 @@ def test_b1_backfill_types_present_in_both_twins():
 
 def test_a3_promote_button_type_present_in_both_twins():
     """A3 (Q5): the operator's `migration_promote_requested` supervision event for
-    the "Promote to migration" button is in BOTH twins. UpgradesPresenter emits it
-    Wing-side; the twin keeps a Bone-proxied replay/forward of the row from 400'ing
-    (the 2026-05-17 remediator incident class). One-commit twin rule.
+    the "Promote to migration" button is in BOTH mirrors. UpgradesPresenter emits it
+    Wing-side; the mirror keeps a Bone-proxied replay/forward of the row from 400'ing
+    (the 2026-05-17 remediator incident class). One-commit mirror rule.
     """
     bone = BONE.read_text(encoding="utf-8")
     php = PHP_REPO.read_text(encoding="utf-8")
@@ -153,10 +153,10 @@ def test_a3_promote_button_type_present_in_both_twins():
 
 def test_a4_copy_data_type_present_in_both_twins():
     """A4 (Q3): the `coexistence_copy_data` audit event for the manual,
-    re-runnable "Copy data" action is in BOTH twins. Api\\CoexistencePresenter
-    emits it Wing-side on a committed copy; the twin keeps a Bone-proxied
+    re-runnable "Copy data" action is in BOTH mirrors. Api\\CoexistencePresenter
+    emits it Wing-side on a committed copy; the mirror keeps a Bone-proxied
     replay/forward of the row from 400'ing (the 2026-05-17 remediator incident
-    class). One-commit twin rule.
+    class). One-commit mirror rule.
     """
     bone = BONE.read_text(encoding="utf-8")
     php = PHP_REPO.read_text(encoding="utf-8")
@@ -167,7 +167,7 @@ def test_a4_copy_data_type_present_in_both_twins():
 
 def test_a4_copy_data_presenter_emits_the_twinned_type():
     """The emitter and the whitelist agree: Api\\CoexistencePresenter emits
-    exactly the `coexistence_copy_data` type the twins whitelist, ONLY on a
+    exactly the `coexistence_copy_data` type the mirrors whitelist, ONLY on a
     committed move (catches a future rename / a drift between emitter + whitelist).
     """
     presenter = (
@@ -181,7 +181,7 @@ def test_a4_copy_data_presenter_emits_the_twinned_type():
 
 def test_a3_promote_presenter_emits_the_twinned_type():
     """The emitter and the whitelist agree: UpgradesPresenter emits exactly the
-    `migration_promote_requested` type the twins whitelist (catches a future rename
+    `migration_promote_requested` type the mirrors whitelist (catches a future rename
     on one side only — the emitter or the whitelist drifting apart)."""
     presenter = (
         REPO / "files/anatomy/wing/app/Presenters/UpgradesPresenter.php"
@@ -194,9 +194,9 @@ def test_a3_promote_presenter_emits_the_twinned_type():
 
 def test_f3_unqueue_type_present_in_both_twins():
     """F3: the operator's `upgrade_unqueued` supervision event for the "Unqueue"
-    control on a planned upgrade is in BOTH twins. UpgradesPresenter emits it
-    Wing-side; the twin keeps a Bone-proxied replay/forward of the row from
-    400'ing (the 2026-05-17 remediator incident class). One-commit twin rule.
+    control on a planned upgrade is in BOTH mirrors. UpgradesPresenter emits it
+    Wing-side; the mirror keeps a Bone-proxied replay/forward of the row from
+    400'ing (the 2026-05-17 remediator incident class). One-commit mirror rule.
     """
     bone = BONE.read_text(encoding="utf-8")
     php = PHP_REPO.read_text(encoding="utf-8")
@@ -207,7 +207,7 @@ def test_f3_unqueue_type_present_in_both_twins():
 
 def test_f3_unqueue_presenter_emits_the_twinned_type():
     """The emitter and the whitelist agree: UpgradesPresenter emits exactly the
-    `upgrade_unqueued` type the twins whitelist (catches a future rename on one
+    `upgrade_unqueued` type the mirrors whitelist (catches a future rename on one
     side only — the emitter or the whitelist drifting apart)."""
     presenter = (
         REPO / "files/anatomy/wing/app/Presenters/UpgradesPresenter.php"

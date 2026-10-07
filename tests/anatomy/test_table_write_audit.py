@@ -5,7 +5,7 @@ RETRO-RED: before this commit `files/anatomy/face/src/routes/bff/tables/
 import of a signer; `"table.upsert"` was in neither Bone's nor Wing's event
 whitelist. Every assertion below fails on that tree.
 
-Twin-parity contract mirrors tests/anatomy/test_devlog_event_types.py's
+Mirror-parity contract mirrors tests/anatomy/test_devlog_event_types.py's
 established idiom for every prior event-type addition in this repo.
 """
 from __future__ import annotations
