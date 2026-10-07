@@ -101,6 +101,8 @@ exported = {
     # face journeys (face-wing contract); absent when face is not installed.
     "FACE_URL": f"http://127.0.0.1:{from_config('face_port', '5090')}",
     "FACE_EDGE_TOKEN": secrets.get("face_edge_token"),
+    # `nos halt` break-glass journey (test_halt_break_glass.py).
+    "WING_HALT_TOKEN": secrets.get("wing_halt_token"),
 }
 
 missing = [k for k, v in exported.items() if not v]

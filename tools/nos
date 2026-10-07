@@ -6,6 +6,7 @@
 #       [--print-cmd] [-h|--help] [--version] [ansible-args...]
 #   nos dtt <capture|seed|status|update|verify|extract> [args]   (DataTables ops)
 #   nos loops <pause|resume|status> [--reason "..."]   (live SERE-loop pause)
+#   nos halt [--status] | nos resume   (emergency halt of every Pulse job)
 #
 # `nos dtt` runs the DataTables tools from $NOS_SRC over the PRIVATE seed repo
 # (NOS_SEED_DIR) — an installed nos reaches them from any shell/branch/cwd, so
@@ -245,6 +246,35 @@ LOOPS
       exit 0 ;;
     *) echo "nos loops: unknown verb '$sub' (pause|resume|status)" >&2; exit 64 ;;
   esac
+fi
+
+# ── `nos halt [--status]` / `nos resume` — emergency-halt break-glass ─────────
+# Wing's POST /api/v1/admin/{halt,resume} over LOOPBACK :9000, so it works with
+# face, Traefik and Authentik down. The proof is the wing-halt bearer (scope
+# wing.halt), held only here in ~/.nos/secrets.yml — no agent or container.
+if [ "${1:-}" = "halt" ] || [ "${1:-}" = "resume" ]; then
+  verb="$1"; shift
+  [ "$verb" = "halt" ] && [ "${1:-}" = "--status" ] && { verb="state"; shift; }
+  [ $# -eq 0 ] || { echo "nos $verb: takes no arguments (nos halt [--status] | nos resume)" >&2; exit 64; }
+  command -v curl >/dev/null 2>&1 || { echo "nos $verb: curl not found" >&2; exit 69; }
+  tok="${WING_HALT_TOKEN:-}"
+  if [ -z "$tok" ] && [ -f "$HOME/.nos/secrets.yml" ]; then
+    tok="$(grep -E '^wing_halt_token:' "$HOME/.nos/secrets.yml" 2>/dev/null \
+           | head -1 | sed -E 's/^[^:]+:[[:space:]]*//; s/^["'"'"']//; s/["'"'"']$//' || true)"
+  fi
+  case "$tok" in ""|placeholder*)
+    echo "nos $verb: no wing_halt_token in ~/.nos/secrets.yml — a converge with --tags wing mints it" >&2; exit 69 ;;
+  esac
+  method=POST; [ "$verb" = "state" ] && method=GET
+  url="${NOS_WING_URL:-http://127.0.0.1:${WING_PORT:-9000}}/api/v1/admin/$verb"
+  if ! out="$(curl -sS -m 10 -X "$method" -H "Authorization: Bearer $tok" -w '\n%{http_code}' "$url" 2>&1)"; then
+    echo "nos $verb: Wing did not answer at $url — UNKNOWN, nothing was changed by this call" >&2
+    printf '%s\n' "$out" >&2; exit 69
+  fi
+  code="${out##*$'\n'}"; body="${out%$'\n'*}"
+  printf '%s\n' "$body"
+  case "$code" in 2*) exit 0 ;; esac
+  echo "nos $verb: Wing refused (HTTP $code)" >&2; exit 1
 fi
 
 usage() {

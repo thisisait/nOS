@@ -359,6 +359,25 @@
   no_log: true
   when: install_face | default(false)
 
+# The emergency-halt break-glass (`nos halt`, docs/nos-cli.md). wing.halt reaches
+# Admin:halt/resume and no other operator verb; wing.write: POST. Its only holder
+# is the operator's ~/.nos/secrets.yml, so it works with face and Traefik down.
+- name: "[pazny.wing] Reconverge API token — wing-halt (operator break-glass)"
+  ansible.builtin.command:
+    argv:
+      - "{{ wing_php_cli }}"
+      - "{{ wing_app_dir }}/bin/provision-token.php"
+      - --db={{ wing_data_dir }}/wing.db
+      - --token={{ wing_halt_token }}
+      - --name=wing-halt
+      - --scopes=wing.halt,wing.write
+    chdir: "{{ wing_app_dir }}"
+  register: _wing_halt_token
+  changed_when: >
+    'Created' in (_wing_halt_token.stdout | default(''))
+    or 'Updated' in (_wing_halt_token.stdout | default(''))
+  no_log: true
+
 # Roster close 2026-08-26 left retired/parked agents' rows live; ruling 4
 # (docs/doctrine/agentkit.md §6.4) ends that: measured 2026-09-03, all five
 # were NULL-scope, active, and NEVER used. Reactivating one is a deliberate

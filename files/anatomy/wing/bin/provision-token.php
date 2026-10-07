@@ -81,6 +81,12 @@ if (in_array('wing.operator', $requested, true) && $name !== 'face-bff') {
 	echo "wing.operator is reserved for face-bff, refused for '{$name}'\n";
 	exit(1);
 }
+// wing.halt = the emergency halt/resume and nothing else; the operator's shell
+// holds it (`nos halt`, ~/.nos/secrets.yml), never a container or an agent.
+if (in_array('wing.halt', $requested, true) && $name !== 'wing-halt') {
+	echo "wing.halt is reserved for wing-halt, refused for '{$name}'\n";
+	exit(1);
+}
 
 $cortex = [$cortexVerbs ?? null, $cortexNamespaces ?? null, $cortexTenants ?? null];
 $given = count(array_filter($cortex, static fn ($v) => $v !== null && $v !== ''));

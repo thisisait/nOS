@@ -120,6 +120,38 @@ not a timeout. Run it after a loop, or before a converge you need to trust.
 - Fetch and render are separate calls on purpose: the first version shared one
   error path and reported "ollama did not answer" about an ollama that had.
 
+## `nos halt` / `nos resume` — the emergency halt, break-glass
+
+The same act as the big red button on Wing's `/admin` page: pause every unpaused
+Pulse job, and later lift only the emergency halt (manual pauses stay paused).
+
+```
+nos halt               # POST /api/v1/admin/halt   — every Pulse job stops firing
+nos halt --status      # GET  /api/v1/admin/state  — is a halt active, job counts
+nos resume             # POST /api/v1/admin/resume — lift the emergency halt only
+```
+
+**It needs neither face, Traefik nor Authentik.** It calls Wing on loopback
+(`http://127.0.0.1:9000`, override `NOS_WING_URL` / `WING_PORT`). The Wing API
+asks for a bearer, not the edge token; only the browser pages ask for that.
+
+**The proof is the `wing-halt` bearer**, scope `wing.halt`, read from
+`wing_halt_token` in `~/.nos/secrets.yml` (or `WING_HALT_TOKEN`). It is minted
+random on the first converge (`--tags wing` mints the row), never derived from
+the password prefix, and rendered into no container or agent env. Agents run as
+their own macOS user and cannot read `~/.nos`. `wing.halt` reaches halt and
+resume and no other operator verb. Wing records the act as `admin_emergency_halt`
+/ `admin_emergency_resume` with `actor_id = wing-halt`, so `/admin` lists it
+beside the page's own acts.
+
+Not chosen: the forward-auth identity on loopback. Wing believes
+`X-Authentik-*` from anyone holding the edge token, and the face container
+holds that token, so it is not a proof that the operator is the caller.
+
+- Exit 0 = Wing answered 2xx; 1 = Wing refused (HTTP code on stderr);
+  69 = no token, or Wing did not answer: **UNKNOWN**, never "halted".
+- Gate: `tests/anatomy/test_halt_has_a_break_glass.py`.
+
 ## Flag → extra-var mapping
 
 | CLI | emits | note |

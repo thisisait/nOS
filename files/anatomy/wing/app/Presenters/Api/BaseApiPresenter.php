@@ -43,6 +43,9 @@ abstract class BaseApiPresenter extends Presenter
 	/** Actions that write an operator decision; startup() runs requireOperator() on each. */
 	protected array $operatorActions = [];
 
+	/** Scopes any one of which carries this presenter's operator verbs. */
+	protected array $operatorScopes = ['wing.operator'];
+
 	public function startup(): void
 	{
 		parent::startup();
@@ -89,13 +92,14 @@ abstract class BaseApiPresenter extends Presenter
 	}
 
 	/**
-	 * An operator decision needs the wing.operator scope, which no agent token holds
+	 * An operator decision needs an $operatorScopes scope, which no agent token holds
 	 * (explicit-only: NULL grants nothing). Through the face BFF the person must also
 	 * be Tier 1; a pure token holding the scope has no person to ask.
 	 */
 	protected function requireOperator(): void
 	{
-		if (!TokenRepository::grants($this->validatedToken['scopes'] ?? null, 'wing.operator')) {
+		$scopes = $this->validatedToken['scopes'] ?? null;
+		if (!array_filter($this->operatorScopes, static fn (string $s) => TokenRepository::grants($scopes, $s))) {
 			$this->sendError(
 				'This is an operator decision: it needs the wing.operator scope, which agent tokens do not hold',
 				IResponse::S403_Forbidden,

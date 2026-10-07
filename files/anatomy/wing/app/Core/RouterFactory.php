@@ -116,6 +116,10 @@ final class RouterFactory
 		// captured as an <id> and answer 404 for a run that does not exist.
 		$api->addRoute('api/v1/pulse_runs/summary', 'Pulse:runSummary');
 		$api->addRoute('api/v1/pulse_runs[/<id>]', 'Pulse:runs');
+		// Emergency halt over the API: the break-glass beside the /admin page.
+		$api->addRoute('api/v1/admin/halt', 'Admin:halt');
+		$api->addRoute('api/v1/admin/resume', 'Admin:resume');
+		$api->addRoute('api/v1/admin/state', 'Admin:state');
 
 		// Cortex-lang executor — P1, read verbs, synchronous (2026-08-09).
 		// No /status/<id>: a synchronous dispatch has no job to poll. That

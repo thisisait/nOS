@@ -1992,6 +1992,9 @@
         # word "placeholder". Every sibling line above tests for it; this one
         # omitted it and the omission was invisible because the token WORKED.
         cortex_executor_token: "{% if 'placeholder' in (cortex_executor_token | default('')) or '_pw_' in (cortex_executor_token | default('')) or (cortex_executor_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ cortex_executor_token }}{% endif %}"
+        # `nos halt` break-glass bearer (scope wing.halt). GENERATED, never derived:
+        # an agent holding any derived sibling knows the prefix, and must not reach this.
+        wing_halt_token: "{% if 'placeholder' in (wing_halt_token | default('')) or '_pw_' in (wing_halt_token | default('')) or (wing_halt_token | default('') | length) < 32 %}{{ lookup('pipe', 'openssl rand -hex 32') }}{% else %}{{ wing_halt_token }}{% endif %}"
         # REM-191 (HIGH, 2026-08-11). Superset's local Flask-AppBuilder admin is
         # reachable REGARDLESS of AUTH_TYPE: `POST /api/v1/security/login` with
         # {"provider":"db"} calls auth_user_db() unconditionally — verified in the
