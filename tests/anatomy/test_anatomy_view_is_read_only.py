@@ -192,8 +192,8 @@ def test_the_ui_primitives_are_present():
 
 def test_the_wing_token_stays_server_side():
     """`$lib/server/*` is the SvelteKit boundary; the check is that we use it."""
-    assert "NOS_WING_API_TOKEN" in UPSTREAM.read_text(encoding="utf-8"), (
-        "the Wing API token is no longer read in $lib/server/upstream.ts — if it "
+    assert "NOS_WING_BFF_TOKEN" in UPSTREAM.read_text(encoding="utf-8"), (
+        "the face-bff Wing token is no longer read in $lib/server/upstream.ts — if it "
         "moved somewhere importable from client code, SvelteKit will happily "
         "bundle it into the browser"
     )
@@ -203,7 +203,7 @@ def test_the_wing_token_stays_server_side():
     # demonstrating how to say "this token is not set". A variable's NAME is
     # not its value, and a gate that cannot tell them apart will be muted by
     # whoever hits it next.
-    reads_env = re.compile(r"(?:process\.)?env\s*[.\[]\s*['\"]?NOS_WING_API_TOKEN")
+    reads_env = re.compile(r"(?:process\.)?env\s*[.\[]\s*['\"]?NOS_WING_(?:API|BFF)_TOKEN")
     for path in FACE.rglob("*.svelte"):
         hit = reads_env.search(path.read_text(encoding="utf-8"))
         assert not hit, (

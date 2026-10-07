@@ -42,7 +42,8 @@ needs_vendor = pytest.mark.skipif(not AUTOLOAD.exists(), reason="wing vendor/aut
 #: The verbs the 2026-10-06 measurement named. The derived list must hold them.
 KNOWN = {("Upgrades", "apply"), ("Upgrades", "applyDetached"), ("Upgrades", "queue"),
          ("Upgrades", "planChoice"), ("Migrations", "apply"), ("Migrations", "rollback"),
-         ("Coexistence", "promote"), ("Coexistence", "cutover"), ("Coexistence", "cleanup")}
+         ("Coexistence", "promote"), ("Coexistence", "cutover"), ("Coexistence", "cleanup"),
+         ("Pulse", "runNow")}
 
 #: Every other routed write, and why it is not an operator decision.
 NOT_DECISIONS = {
@@ -73,7 +74,6 @@ NOT_DECISIONS = {
     ("Pulse", "jobs"): "already pulse.write (minted for ansible-provisioned alone)",
     ("Pulse", "runs"): "the Pulse daemon records a run",
     ("Pulse", "runFinish"): "the Pulse daemon records a run",
-    ("Pulse", "runNow"): "requests a registered job; face calls it with the operator bearer (follow-up)",
     ("Remediation", "default"): "remediation queue record",
     ("Remediation", "bulkStatus"): "remediation queue record",
     ("Scan", "cycle"): "scan pipeline record",
