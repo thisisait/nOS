@@ -3,7 +3,7 @@
 Most FOSS images are unsigned and several are built here (`--build` from a
 *_src_dir), so pinning digests per role is costly and partial. The honest
 version (roadmap `digest-drift-red`): the converge RECORDS what each container
-runs, and `tools/digest-status.py` compares `docker inspect` against that
+runs, and `tools/workload-digest-status.py` compares `docker inspect` against that
 record. The converge writes; only the reader may call it drift or not.
 
 Pinned here: the comparison (fixtures, no docker), UNKNOWN on a missing record,
@@ -21,8 +21,8 @@ import pathlib
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-READER = REPO / "tools/digest-status.py"
-RECORDER = REPO / "tools/digest-record.py"
+READER = REPO / "tools/workload-digest-status.py"
+RECORDER = REPO / "tools/workload-digest-record.py"
 
 
 def _load(path: pathlib.Path, name: str):
@@ -126,7 +126,7 @@ def test_the_reader_writes_nothing():
 
 def _record_task(play):
     for i, t in enumerate(play.get("post_tasks") or []):
-        if "digest-record.py" in json.dumps(t):
+        if "workload-digest-record.py" in json.dumps(t):
             return i, t
     return None, None
 
@@ -136,7 +136,7 @@ def test_the_converge_records_after_handlers_on_every_compose_pass():
     i, task = _record_task(play)
     # post_tasks run after the tasks-section handler flush, so a handler that
     # recreates a container is inside the record, not a false drift.
-    assert task is not None, "no post_task runs tools/digest-record.py"
+    assert task is not None, "no post_task runs tools/workload-digest-record.py"
     tags = set(task.get("tags") or [])
     # compose-up tasks are tagged `always`; --skip-tags stacks skips both.
     assert {"always", "stacks"} <= tags, tags
