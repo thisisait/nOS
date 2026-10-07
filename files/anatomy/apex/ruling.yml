@@ -260,9 +260,9 @@ organ_systems:
   forge:     { title: "The Forge",     tells: "Software made, tested and landed at home.",    side: left,  order: 2 }
   backoffice: { title: "The Backoffice", tells: "CRM, books and a customer desk, at home.", side: left,  order: 3 }
   commons:   { title: "The Commons",   tells: "Daily work and daily life, shared.",           side: left,  order: 4 }
-  watch:     { title: "The Watch",     tells: "The system watches itself.",                   side: right, order: 1 }
+  watch:     { title: "The Watch",     tells: "The estate keeps watch on itself.",          side: right, order: 1 }
   wits:      { title: "The Wits",      tells: "Autonomous minds with bounded hands.",         side: right, order: 2 }
-  clockwork: { title: "The Clockwork", tells: "Events become actions, on schedule.",          side: right, order: 3 }
+  clockwork: { title: "The Clockwork", tells: "Duties kept on a clock, events turned into actions.", side: right, order: 3 }
   voice:     { title: "The Voice",     tells: "Mail, calls and signals, spoken from home.",   side: right, order: 4 }
 
 # -----------------------------------------------------------------------------
@@ -331,7 +331,7 @@ nodes:
 
   # --- the right side --------------------------------------------------------
   "service:grafana":       { publish: watch, speaks: "vital signs, drawn where anyone can read them" }
-  "service:prometheus":    { publish: watch, speaks: "numbers sampled from every organ, on a heartbeat" }
+  "service:prometheus":    { publish: watch, speaks: "numbers sampled from every organ" }
   "service:loki":          { publish: watch, speaks: "every log line, kept and searchable" }
   "service:tempo":         { publish: watch, speaks: "one request's path, traced end to end" }
   "service:alloy":         { publish: watch, speaks: "the courier that carries signals to the watchers" }
