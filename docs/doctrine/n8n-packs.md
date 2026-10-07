@@ -1,9 +1,10 @@
 # n8n packs — external pulls, one contract
 
-> **Settled 2026-09-21.** Sibling of [`backoffice.md`](backoffice.md).
-> The ČNB and ARES graphs are the first two instances; this file is the
-> law so a third (VIES, ARES address, ČSSZ, …) does not grow a role,
-> a Pulse plugin and a fire script.
+> **PROPOSED** for promote-to-ssot: the contract was settled 2026-09-21,
+> but it is not law until a ruling moves it to `ssot/doctrine/` (ssot.md §3).
+> Sibling of [`backoffice.md`](backoffice.md). The ČNB and ARES graphs are
+> the first two instances; this file is the contract so a third (VIES, ARES
+> address, ČSSZ, …) does not grow a role, a Pulse plugin and a fire script.
 
 ## 1. What this is for
 

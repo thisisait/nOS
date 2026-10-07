@@ -30,9 +30,12 @@ realms:
     in_force: false
     for: paid lessons
 # Full warehouse originals, not stubs, not law. Promote when the operator
-# settles the remaining axes (agentkit §6; backoffice §5 apex rename).
+# settles the remaining axes (agentkit §6; backoffice §5 apex rename;
+# n8n-packs and tissues each need an explicit ruling).
 # organs.md moved to ssot/doctrine/body-plan.md, which carries its own
 # PROPOSED banner inside the in-force realm (ssot.md §3).
 proposed:
   - docs/doctrine/agentkit.md
   - docs/doctrine/backoffice.md
+  - docs/doctrine/n8n-packs.md
+  - docs/doctrine/tissues.md
