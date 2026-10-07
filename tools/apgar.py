@@ -312,9 +312,9 @@ def score(answers: dict, bench: dict | None = None, control: dict | None = None)
 
 def _ollama_call(name: str, system: str, prompt: str, num_ctx: int) -> dict:
     """Reuse local-model-bench's client; refuse unless the ollama row is local."""
-    rows = yaml.safe_load((REPO / "state/llm-backends.yml").read_text(encoding="utf-8"))["backends"]
+    rows = yaml.safe_load((REPO / "state/habitat/llm-backends.yml").read_text(encoding="utf-8"))["backends"]
     if not (rows.get("ollama") or {}).get("local"):
-        raise RuntimeError("state/llm-backends.yml has no local ollama row")
+        raise RuntimeError("state/habitat/llm-backends.yml has no local ollama row")
     spec = importlib.util.spec_from_file_location("local_model_bench", REPO / "tools/local-model-bench.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

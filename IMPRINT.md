@@ -68,7 +68,7 @@ Start with the first one.
 - `tools/brew-pin-status.py` — How old is the version brew wants to give us, and is it old enough to adopt?
 - `tools/cortex-status.py` — What the cortex organ is, all of it — not just the part KEAP serves.
 - `tools/tissue-status.py` — Which tissues the estate declares (state/tissues/), their members, and whether each holds: schema, every id resolved, Article 30 inherited complete. Also the loader anatomy-graph-gen imports.
-- `tools/router-status.py` — The WAN router as a declared estate fact: presence probe + intent from state/router.yml; UNKNOWN when it cannot look.
+- `tools/router-status.py` — The WAN router as a declared estate fact: presence probe + intent from state/habitat/router.yml; UNKNOWN when it cannot look.
 - `tools/elsewhere-status.py` — Estate work happening OUTSIDE the control centre, and how to get to it.
 - `tools/loop-status.py` — Which weakness sources actually produce proposals, and what came of them.
 - `tools/geo-status.py` — rows per geo layer counted back from PostGIS, last load beside it; UNKNOWN when unreachable.
@@ -184,7 +184,7 @@ Every line above is rendered from these files:
 - files/anatomy/skills/nos-datatables/SKILL.md
 - tools/mcp-tables-server.py
 - templates/secrets.yml.j2
-- state/llm-backends.yml
+- state/habitat/llm-backends.yml
 - state/manifest.yml
 - files/anatomy/apex/ruling.yml
 - docs/glossary.md

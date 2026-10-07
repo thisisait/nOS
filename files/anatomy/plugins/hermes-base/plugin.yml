@@ -137,7 +137,7 @@ depends_on:
   - upstream: "service:ollama"
     kind: data
     via: >-
-      Hermes talks to the host Ollama at 127.0.0.1:11434 for local completions (roles/pazny.hermes; state/llm-backends.yml backend:ollama)
+      Hermes talks to the host Ollama at 127.0.0.1:11434 for local completions (roles/pazny.hermes; state/habitat/llm-backends.yml backend:ollama)
     measured: "2026-10-06"
     unenforced: >-
       Ollama is host-native under install_ollama; no auto-enable block ties it

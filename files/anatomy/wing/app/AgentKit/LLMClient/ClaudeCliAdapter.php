@@ -47,7 +47,7 @@ final class ClaudeCliAdapter implements LLMClientInterface
      * @param string   $model    what `--model` receives, e.g. `sonnet`
      * @param string   $binary   resolved `claude` path
      * @param int      $timeoutS wall clock for one call
-     * @param ?Binding $binding  backend binding (state/llm-backends.yml).
+     * @param ?Binding $binding  backend binding (state/habitat/llm-backends.yml).
      *        When present the CLI's traffic is steered by env — and RULING 3
      *        (docs/minimax-groundwork.md) applies: `--model` is NOT passed,
      *        because the flag OUTRANKS ANTHROPIC_MODEL and would silently

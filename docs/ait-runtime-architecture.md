@@ -25,7 +25,7 @@ files/anatomy/wing/app/AgentKit/
 ├── LLMClient/
 │   ├── LLMClientInterface.php     # 2-method protocol: identifier(), send()
 │   ├── AnthropicAdapter.php       # uses anthropic-ai/sdk (composer dep)
-│   ├── OpenAiCompatAdapter.php    # openai-*/openclaw-*, bound via state/llm-backends.yml
+│   ├── OpenAiCompatAdapter.php    # openai-*/openclaw-*, bound via state/habitat/llm-backends.yml
 │   ├── Factory.php                # URI → adapter
 │   └── {Message,ToolSchema,LLMResponse,LLM*Error}.php
 ├── Tools/
@@ -91,7 +91,7 @@ Pinned by:
 
 `Factory::fromUri` splits on the first dash and dispatches:
 - `anthropic-*` → `AnthropicAdapter` (needs `ANTHROPIC_API_KEY`)
-- `openai-*` / `openclaw-*` → `OpenAiCompatAdapter`, bound only (a `state/llm-backends.yml` row names endpoint, token, model)
+- `openai-*` / `openclaw-*` → `OpenAiCompatAdapter`, bound only (a `state/habitat/llm-backends.yml` row names endpoint, token, model)
 - `model.fallback` is always bound too, via `model.fallback_backend` (2026-10-01)
 
 To swap backends: change one line in `agent.yml`. System prompt, tool roster, audit trail, OTel spans, grader logic — all stay identical.

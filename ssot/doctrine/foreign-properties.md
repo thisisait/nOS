@@ -192,7 +192,7 @@ at `192.168.1.1` is login-walled; the only documented API surface (TR-069) is
 for the ISP's ACS, not for us; the undocumented `cgi-bin`/`stok` JSON surface
 TP-Link-family firmware exposes is reverse-engineered, unstable across
 firmware revisions, and not a contract with anyone. **The accommodation:**
-`state/router.yml` declares what the operator intends (forwards, remote-mgmt
+`state/habitat/router.yml` declares what the operator intends (forwards, remote-mgmt
 and UPnP OFF, firmware version — dated, operator-entered);
 `tools/router-status.py` MUST measure only gateway presence and report
 `UNKNOWN` rather than a guessed match whenever it cannot look further. See

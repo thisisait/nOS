@@ -61,7 +61,7 @@ refusal). OAuth scope semantics — the settled word.
   only when something external enforces it.
 
 ### 6. Routing decision — **binding** (keep)
-Which orchestrator serves a run: `state/llm-backends.yml` + `model.backend` +
+Which orchestrator serves a run: `state/habitat/llm-backends.yml` + `model.backend` +
 `BindingResolver`, fail-closed, armed via `NOS_ARMED_BACKENDS`. Already named, already the
 doctrine ("backends as BINDINGS, not providers", `docs/minimax-groundwork.md`).
 - NOT: a "provider" — the estate explicitly retired that framing.

@@ -94,7 +94,7 @@ properties:
         type: string
         pattern: "^[a-z][a-z0-9-]{0,30}$"
         description: |
-          The state/llm-backends.yml row that serves model.fallback, through the
+          The state/habitat/llm-backends.yml row that serves model.fallback, through the
           same BindingResolver gates as model.backend — never the default row,
           and never degraded when disarmed. The agent's own gdpr.processors must
           name the row's processor_match (an `ollama` fallback needs an
@@ -119,7 +119,7 @@ properties:
         pattern: "^[a-z][a-z0-9-]{0,30}$"
         description: |
           OPTIONAL backend binding — where a `claude-*` primary's traffic is
-          pointed, named into state/llm-backends.yml. A backend is NOT a
+          pointed, named into state/habitat/llm-backends.yml. A backend is NOT a
           provider: the genome's llm.provider enum names which adapter runs
           (fail-closed, adapter-first), while this names the env contract the
           `claude` CLI honours (ANTHROPIC_BASE_URL / _AUTH_TOKEN / _MODEL).

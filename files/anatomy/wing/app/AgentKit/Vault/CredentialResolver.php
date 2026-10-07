@@ -99,7 +99,7 @@ final class CredentialResolver
 	/**
 	 * Dereference a raw secret_ref that did not come from a vault row.
 	 *
-	 * Added for the backend registry (state/llm-backends.yml): its
+	 * Added for the backend registry (state/habitat/llm-backends.yml): its
 	 * `auth_secret` is a secret_ref by the same rule as agent_credentials —
 	 * a pointer, never a value — but there is no vault row to look it up
 	 * through, so the schemes needed a public door. Same lifetime discipline

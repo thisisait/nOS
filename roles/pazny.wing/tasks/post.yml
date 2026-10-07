@@ -583,7 +583,7 @@
     # NOS_MINIMAX_* here and inject an ANTHROPIC_* override into every agent
     # job — the estate-wide shape ruling 1 (docs/minimax-groundwork.md)
     # forbids. Backend selection is now a per-agent BINDING resolved by
-    # AgentKit (state/llm-backends.yml + model.backend in agent.yml); the
+    # AgentKit (state/habitat/llm-backends.yml + model.backend in agent.yml); the
     # catalog carries no backend env at all, and the arming envs
     # (NOS_ARMED_BACKENDS + the model-id envs) ride wing.plist where the
     # binding resolver runs.

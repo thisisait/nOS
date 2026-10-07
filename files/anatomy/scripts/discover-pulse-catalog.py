@@ -180,7 +180,7 @@ def _build_substitutions() -> dict[str, str]:
         # armed — the estate-wide shape ruling 1 (docs/minimax-groundwork.md)
         # forbids, enforced by the very gate meant to keep the feature inert.
         # Backend selection now lives where a run is a first-class object:
-        # `model.backend` per agent.yml → state/llm-backends.yml →
+        # `model.backend` per agent.yml → state/habitat/llm-backends.yml →
         # App\AgentKit\BindingResolver, which also refuses a routing the
         # agent's own Article-30 record does not declare. The catalog carries
         # NO backend env at all, armed or not; a ceremony on the shell-bridge

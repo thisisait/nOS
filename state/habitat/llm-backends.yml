@@ -1,0 +1,260 @@
+# LLM backend registry — THE PERMITTED-ORCHESTRATOR LIST.
+#
+# The operator's direction (2026-08-15, spine redirect): "Claude should be
+# only ONE of the permitted highest-level orchestrators." Mechanically that
+# notion is THIS FILE and nothing new: an orchestrator of a run is the
+# (adapter, backend) pair that serves an agent session's PRIMARY model, a
+# PERMITTED orchestrator is a row here, and the per-agent grant is the
+# binding — `model.backend` in agent.yml, walked through the resolver's six
+# gates below, including agreement with that agent's own Article-30 record.
+# "Claude is one of several" = the `anthropic` default row is one entry,
+# `minimax` the second, and a future orchestrator (a local model, another
+# compatible endpoint) joins as a ROW once an adapter speaks its protocol —
+# never as a per-agent free-text field, which would be the second
+# implementation of the same law.
+#
+# A BACKEND IS NOT A PROVIDER. The genome's `llm.provider` vocabulary
+# (state/genome/entity.schema.json) names which ADAPTER runs, under a
+# fail-closed rule: adapter ships first, enum member second — `minimax` is
+# deliberately absent there and stays absent. TWO adapters honour a binding,
+# each by its own mechanism:
+#   * `anthropic` (the SDK) — THE PRIMARY BINDABLE PATH since 2026-08-15: the
+#     client is rebuilt with the binding's base_url + bearer, and because
+#     AgentKit's Runner drives the tool loop against this adapter, a bound
+#     run keeps its tools. This is what dissolved the spine blocker
+#     (`spine-tools-vs-cli-refusal`): every agent declares tools, and the CLI
+#     adapter rightly refuses tool schemas it cannot honour.
+#   * `claude` (the local CLI) — the ANTHROPIC_BASE_URL / _AUTH_TOKEN /
+#     _MODEL env contract; tool-LESS cells only, by that refusal.
+# Rulings 1 and 3 (docs/minimax-groundwork.md) live here and in
+# App\AgentKit\BindingResolver, which reads this file.
+#
+# HOW A BACKEND IS SELECTED (all fail-closed, each gate independent):
+#   1. The agent declares `model.backend: <name>` in its agent.yml. Absent →
+#      the default backend. Per agent, never estate-wide — ruling 1.
+#   2. The name must exist here. Unknown → session refuses to open.
+#   3. The backend must be ARMED: its name must appear in the space-separated
+#      `NOS_ARMED_BACKENDS` env (rendered into wing.plist from the operator's
+#      `<name>_enabled` config flag). Declared-but-disarmed → the run proceeds
+#      on the default backend and an `agent_binding_disarmed` audit event says
+#      so — mirroring "prepared, not armed": committing an agent.yml must
+#      never half-arm a backend the operator has not flipped on.
+#   4. COMPLIANCE, and this is a refusal, not a degradation: the agent's own
+#      `gdpr.processors` (its Article-30 record, feat 57168ff8) must name the
+#      backend's processor (matched on `processor_match`). A routing the
+#      register does not declare is a compliance defect — the run must not
+#      happen on ANY backend, because the declaration is wrong, not the wire.
+#   5. `metadata.runner_status: deferred` refuses any binding: inspektor's
+#      register entry is truthful ONLY because it never runs (its own note
+#      says so); a binding that made it runnable would falsify the record.
+#   6. An `opus`-primary agent refuses a foreign binding outright — ruling 1:
+#      code-authoring, opus-pinned cells stay on the default backend
+#      until the inner permission posture is tightened.
+#
+# Gate: tests/anatomy/test_a_binding_reads_the_register.py (values, not shape).
+
+backends:
+  # The default: the operator's own `claude` CLI session. No base_url — the
+  # CLI talks to its vendor unredirected; no secret — the CLI carries the
+  # operator's session. Every ACTIVE agent's Article-30 record already names
+  # this processor, which is what made the default honest to begin with.
+  #
+  # `protocol` names the WIRE PROTOCOL the backend speaks, and it is what a
+  # future EU backend (Mistral: OpenAI-compatible, NOT anthropic) makes
+  # load-bearing: a binding may only pair a backend with an adapter that
+  # speaks its protocol, or the request dies at the endpoint with a shape
+  # error nothing classified. The resolver refuses the mismatch at session
+  # open (gate 7); the provider→protocol map lives beside it.
+  #
+  # `residency` is the COMPLIANCE fact, declared once here and held against
+  # every bound agent's own Article-30 record by the register gate: an agent
+  # may declare `transfers_outside_eu: false` ONLY when every backend that
+  # can serve it — the declared one AND the default it degrades to when
+  # disarmed — is EU-resident. Today no such serving set exists, which is
+  # why every active agent's record honestly says `true`.
+  anthropic:
+    default: true
+    protocol: "anthropic"
+    residency: { country: "US", eu: false }
+    processor_match: "Anthropic"
+
+  # MiniMax's Anthropic-compatible endpoint. PREPARED, NOT ARMED: arming is
+  # `minimax_enabled: true` in config.yml (renders into NOS_ARMED_BACKENDS)
+  # plus the operator's model-id choices below — and a per-agent
+  # `model.backend: minimax` plus a MiniMax processor entry in that agent's
+  # gdpr block, or gate 4 refuses the session.
+  minimax:
+    protocol: "anthropic"
+    # `eu: false` is CERTAIN (the endpoint is not an EU deployment); the
+    # entity/seat behind api.minimax.io could not be established from a
+    # primary source (agent_librarian's register entry records the same
+    # UNVERIFIED status) — the boolean is load-bearing, the string is honest.
+    residency: { country: "UNVERIFIED (non-EU)", eu: false }
+    base_url: "https://api.minimax.io/anthropic"
+    # Resolved by CredentialResolver at session open; `nos:` reads the named
+    # key out of ~/.nos/secrets.yml (0600, operator-pasted, converge-persisted).
+    # NEVER a value here — same secret_ref rule as agent_credentials.
+    auth_secret: "nos:minimax_api_key"
+    # Which env carries the model id for each tier the agents pin. Values are
+    # ENV NAMES (rendered into wing.plist from minimax_model /
+    # minimax_small_model, both default "" — the operator re-decides the tier
+    # pins consciously; an armed backend with an empty model id refuses at
+    # resolution rather than sending a blank model). `opus: null` is ruling 1's
+    # carve-out, enforced as gate 6 above.
+    model_env:
+      haiku: "NOS_MINIMAX_SMALL_MODEL"
+      sonnet: "NOS_MINIMAX_MODEL"
+      opus: null
+    enabled_flag: "minimax_enabled"
+    # Match token against the agent's gdpr.processors[].name. The full legal
+    # entity for the international endpoint belongs in the agent's register
+    # entry (verify the contracting entity + Art. 46 safeguard when writing
+    # it); this token only keys the binding↔register agreement check.
+    processor_match: "MiniMax"
+
+  # Mistral's EU-regional endpoint — PREPARED, NOT ARMED (2026-08-16, the
+  # operator's EU-residency direction). The FIRST openai-protocol row, served
+  # by OpenAiCompatAdapter via an `openai-*` primary; gate 7 refuses any
+  # other pairing. Arming = `mistral_enabled: true` + the model ids + the key
+  # in credentials.yml + per-agent backend/gdpr edits, same five-edit shape
+  # as minimax.
+  #
+  # RESIDENCY, verified 2026-08-16 against docs.mistral.ai and priced facts:
+  # `api.eu.mistral.ai` guarantees EU INFERENCE (at 1.1x the base price; the
+  # bare api.mistral.ai no longer carries that guarantee). eu: true refers to
+  # inference+storage under the regional endpoint. CAVEATS the operator's
+  # register entry must weigh: the CONTROL PLANE (auth, billing, abuse) is
+  # not regionalised; zero-data-retention is Scale-plan-only, by request;
+  # training use requires an explicit opt-out. Mistral AI SAS, Paris, is the
+  # contracting entity — an EU processor with an EU seat, which is what makes
+  # `transfers_outside_eu: false` REACHABLE for an agent whose whole serving
+  # set is this row (see the no-degrade rule in the resolver: a register
+  # entry declaring false removes the degrade-to-default path by itself).
+  # PRIMARY-URI CONVENTION for protocol-only providers: `openai-sonnet` — the
+  # tail is the TIER, because the vendor model comes from the binding's
+  # model_env remap and a tail like `mistral-large` carries no tier word for
+  # gate 6 to map. (For `claude`/`anthropic` primaries the tier word sits
+  # inside the vendor id and both readings agree.)
+  # THE ONLY BACKEND THAT CAN CARRY `transfers_outside_eu: false`.
+  #
+  # ollama on this machine, through its OpenAI-compatible surface. It is in the
+  # register for the same reason every other row is — gate 4 refuses a routing
+  # the register does not declare — but its residency claim is the strong one:
+  # nothing leaves the host, so there is no transfer to disclose. `processor`
+  # names the operator, because on-device inference has no third party, and
+  # Article 30 wants that said rather than left blank.
+  #
+  # `local: true` is load-bearing in the resolver: it is what makes the empty
+  # auth token honest instead of a placeholder secret in the vault (gate 7).
+  #
+  # `sizes_b` is read by tools/nos-ops-harness.py, not by the resolver. It is
+  # the ladder the ops plane's open question is about — at which model SIZE
+  # does one_shot chain emission stop working — and each entry is a model that
+  # must actually be pulled. MEASURED 2026-08-30 on the nos-lang bench:
+  # hermes3:8b fails on syntax, qwen3:14b on semantics, qwen2.5-coder:32b
+  # starves the KEAP validator (16.71s against a 0.02s baseline) and is
+  # disqualified by that harness's own rule. So the ladder stops at 14.
+  ollama:
+    local: true
+    protocol: openai
+    residency:
+      country: "CZ (this host)"
+      eu: true
+    base_url: "http://127.0.0.1:11434/v1"
+    auth_secret: null
+    model_env:
+      haiku: NOS_LOCAL_SMALL_MODEL
+      sonnet: NOS_LOCAL_MODEL
+      opus: null
+      # `vision` (2026-09-20, D1 invoice-vision path) is a FOURTH tier word,
+      # not a size — it names an INPUT CAPABILITY (image-taking) rather than a
+      # cost/quality rung, so it sits beside haiku/sonnet/opus rather than
+      # inside sizes_b. BindingResolver's tier regex was widened to match it
+      # (tests/anatomy/test_the_effective_model_is_decided_where_it_is_read.py
+      # TIERS tuple, same file). Chosen model: qwen2.5vl:7b (Ollama library
+      # tag `qwen2.5vl:7b`; see files/anatomy/agents/invoice-vision-ocr/
+      # agent.yml for the reasoning + runner-up). The operator pulls it and
+      # sets `ollama_vision_model` in config.yml — this row only names the env
+      # var the binding reads.
+      vision: NOS_LOCAL_VISION_MODEL
+    sizes_b:
+      8: hermes3:8b
+      14: qwen3:14b
+    enabled_flag: ollama_enabled
+    processor_match: "on-device"
+    served_by: ollama            # manifest row whose daemon answers base_url (graph edge)
+
+  # The OpenClaw gateway's OpenAI surface (2026-10-01). Measured: 2026.7.1
+  # answers 404 on /v1/messages, /v1/chat/completions and /v1/responses until
+  # gateway.http.endpoints.chatCompletions.enabled — roles/pazny.openclaw turns
+  # it on, bound to loopback. `model` is an AGENT TARGET there, not a model id.
+  # Local, but NOT keyless: the gateway token is an operator credential.
+  # residency.eu holds only while OpenClaw's own model is local (openclaw_model).
+  openclaw:
+    local: true
+    protocol: openai
+    residency:
+      country: "CZ (this host)"
+      eu: true
+    base_url: "http://127.0.0.1:18789/v1"
+    auth_secret: "nos:openclaw_gateway_token"
+    model_env:
+      haiku: NOS_OPENCLAW_AGENT
+      sonnet: NOS_OPENCLAW_AGENT
+      opus: null
+    enabled_flag: openclaw_backend_enabled
+    processor_match: "OpenClaw"
+    served_by: openclaw          # the gateway ai.openclaw.gateway answers base_url
+
+  mistral-eu:
+    protocol: "openai"
+    residency: { country: "FR", eu: true }
+    base_url: "https://api.eu.mistral.ai/v1"
+    auth_secret: "nos:mistral_api_key"
+    model_env:
+      haiku: "NOS_MISTRAL_SMALL_MODEL"
+      sonnet: "NOS_MISTRAL_MODEL"
+      opus: null
+    enabled_flag: "mistral_enabled"
+    processor_match: "Mistral"
+
+  # xAI's Grok, through its OpenAI-compatible surface — PREPARED, NOT ARMED
+  # (2026-09-01, operator direction: "zkusit, zda dokážeš orchestrovat
+  # GrokBota"). The SECOND openai-protocol row after mistral-eu, and it needed
+  # no adapter: OpenAiCompatAdapter is deliberately vendor-blank, and xAI
+  # documents `POST https://api.x.ai/v1/chat/completions` with Bearer auth as
+  # OpenAI-SDK-compatible (only base_url and key change). So "orchestrating
+  # Grok" is a REGISTRY ROW, which is the point of the permitted-orchestrator
+  # list — a new orchestrator joins as an entry, never as code.
+  #
+  # RESIDENCY IS THE HONEST HALF AND THE OPERATOR CHOSE IT DELIBERATELY.
+  # xAI Corp. is a US processor; `eu: false` is certain. Gate 8 therefore
+  # refuses to bind this row to any agent whose Article-30 record declares
+  # `transfers_outside_eu: false`, and that refusal is the feature — an EU
+  # claim served by a US backend is a false record, not a degraded one. An
+  # agent may only reach this row by naming an xAI processor in its own gdpr
+  # block (gate 4). Gate 6 additionally refuses it to every opus-primary,
+  # code-authoring agent, which is most of the cells.
+  #
+  # ARMING IS FIVE EDITS AND ALL OF THEM ARE THE OPERATOR'S: xai_enabled: true
+  # in config.yml, the two model ids, `xai_api_key` pasted into
+  # ~/.nos/secrets.yml, and per-agent `model.backend: xai` + the gdpr
+  # processor entry. Nothing here half-arms any of that.
+  #
+  # PRIMARY-URI CONVENTION, same as mistral-eu: the agent pins `openai-sonnet`
+  # (the tail is the TIER) and the vendor model id arrives from model_env —
+  # a tail like `grok-4` carries no tier word for gate 6 to map.
+  xai:
+    protocol: "openai"
+    residency: { country: "US", eu: false }
+    base_url: "https://api.x.ai/v1"
+    auth_secret: "nos:xai_api_key"
+    model_env:
+      haiku: "NOS_XAI_SMALL_MODEL"
+      sonnet: "NOS_XAI_MODEL"
+      opus: null
+    enabled_flag: "xai_enabled"
+    # Keys the binding<->register agreement check only. The contracting entity
+    # (xAI Corp., and whether an Art. 46 safeguard covers the transfer) belongs
+    # in the bound agent's own register entry, verified when it is written.
+    processor_match: "xAI"

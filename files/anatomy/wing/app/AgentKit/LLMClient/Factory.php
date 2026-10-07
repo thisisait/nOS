@@ -30,7 +30,7 @@ final class Factory
 	}
 
 	/**
-	 * @param ?Binding $binding backend binding (state/llm-backends.yml),
+	 * @param ?Binding $binding backend binding (state/habitat/llm-backends.yml),
 	 *        resolved by BindingResolver. TWO providers accept one, each by
 	 *        its own mechanism — and the asymmetry is the 2026-08-15 spine
 	 *        redirect ("primarily through the classic API"):

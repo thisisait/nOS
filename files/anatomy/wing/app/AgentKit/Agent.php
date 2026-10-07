@@ -33,7 +33,7 @@ final class Agent
 	 * @param array<string, mixed> $metadata
 	 * @param string $sourceDir              absolute path to agent's directory
 	 * @param ?string $backendName           `model.backend` — backend binding name
-	 *        into state/llm-backends.yml; null = the default backend. Resolved
+	 *        into state/habitat/llm-backends.yml; null = the default backend. Resolved
 	 *        (and possibly refused) by LLMClient\BindingResolver, per ruling 1.
 	 * @param array<string, mixed> $gdpr     the agent's Article-30 record
 	 *        (feat 57168ff8). Carried on the value object because the binding

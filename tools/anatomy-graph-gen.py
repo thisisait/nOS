@@ -38,7 +38,7 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
     tool:<id> / tool_ro:<id>   agent tool grants; `_ro` when every scope the
                             grant opens is `.read` (tools/agent-capability.py TOOL_KAM)
     token:<n> / token_ro:<n>   judge-sets `requires:` capabilities; `_ro` by name
-    backend:<name>          state/llm-backends.yml rows
+    backend:<name>          state/habitat/llm-backends.yml rows
     lock:<name>             mutex resources (claims)
     repo:<name>             git surfaces jobs touch (curated, each node pinned
                             to the code that touches it — see REPO_SURFACES)
@@ -156,7 +156,7 @@ KEAP_TABLES = REPO / "state" / "keap-tables"
 #: The permitted-orchestrator list — one row per (adapter, backend) an agent
 #: may be bound to. Read here as the register it is; the binding itself is
 #: `model.backend` in each agent.yml.
-LLM_BACKENDS = REPO / "state" / "llm-backends.yml"
+LLM_BACKENDS = REPO / "state" / "habitat" / "llm-backends.yml"
 DEFAULT_CONFIG = REPO / "default.config.yml"
 #: The blueprint that actually creates the agent OIDC clients. Named so the
 #: `authentik:<slug>` nodes minted from the roster die with the code that
@@ -908,12 +908,12 @@ def harvest_backends(nodes: dict) -> None:
     doc = yaml.safe_load(LLM_BACKENDS.read_text(encoding="utf-8")) or {}
     backends = doc.get("backends") or {}
     if not backends:
-        _die("state/llm-backends.yml declares no backends — the register moved, update "
+        _die("state/habitat/llm-backends.yml declares no backends — the register moved, update "
              "harvest_backends rather than shipping agents with no orchestrator")
     for name, b in backends.items():
         nodes[f"backend:{name}"] = {
             "kind": "backend",
-            "source": "state/llm-backends.yml",
+            "source": "state/habitat/llm-backends.yml",
             "protocol": b.get("protocol"),
             "eu_resident": (b.get("residency") or {}).get("eu"),
             "enabled_flag": b.get("enabled_flag"),
@@ -936,7 +936,7 @@ def derive_backend_servers(nodes: dict) -> list[dict]:
         if sid not in nodes:
             _die(f"{nid}: served_by {b['served_by']!r} is not a row in state/manifest.yml")
         out.append({"from": sid, "to": nid, "kind": "data",
-                    "via": f"`served_by: {b['served_by']}` in state/llm-backends.yml",
+                    "via": f"`served_by: {b['served_by']}` in state/habitat/llm-backends.yml",
                     "derived": "backend-server"})
     return out
 
@@ -991,11 +991,11 @@ def harvest_agents(nodes: dict, edges: list) -> None:
                 "from": rid, "to": nid, "kind": "data",
                 "via": (f"`model.backend: {declared}` binding" if declared else
                         "the register's default backend — this agent declares none")
-                       + ", resolved through state/llm-backends.yml at session open",
+                       + ", resolved through state/habitat/llm-backends.yml at session open",
                 "derived": "agent-backend",
             })
         elif rid:
-            _die(f"{nid}: backend {backend!r} is not a row in state/llm-backends.yml")
+            _die(f"{nid}: backend {backend!r} is not a row in state/habitat/llm-backends.yml")
         client = f"authentik:nos-{name}"
         if client in nodes:
             edges.append({

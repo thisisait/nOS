@@ -11,7 +11,7 @@ model:
   # haiku tier: the ops plane's whole question is whether the SMALL end works,
   # so pinning the small tier is the measurement, not a cost saving. Which
   # model that is comes from the backend's model_env — the harness moves it
-  # per size (state/llm-backends.yml `sizes_b`).
+  # per size (state/habitat/llm-backends.yml `sizes_b`).
   primary: openai-local-haiku
   backend: ollama
 

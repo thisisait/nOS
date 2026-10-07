@@ -1194,7 +1194,7 @@
     },
     "backend:anthropic": {
       "kind": "backend",
-      "source": "state/llm-backends.yml",
+      "source": "state/habitat/llm-backends.yml",
       "protocol": "anthropic",
       "eu_resident": false,
       "enabled_flag": null,
@@ -1204,7 +1204,7 @@
     },
     "backend:minimax": {
       "kind": "backend",
-      "source": "state/llm-backends.yml",
+      "source": "state/habitat/llm-backends.yml",
       "protocol": "anthropic",
       "eu_resident": false,
       "enabled_flag": "minimax_enabled",
@@ -1214,7 +1214,7 @@
     },
     "backend:mistral-eu": {
       "kind": "backend",
-      "source": "state/llm-backends.yml",
+      "source": "state/habitat/llm-backends.yml",
       "protocol": "openai",
       "eu_resident": true,
       "enabled_flag": "mistral_enabled",
@@ -1224,7 +1224,7 @@
     },
     "backend:ollama": {
       "kind": "backend",
-      "source": "state/llm-backends.yml",
+      "source": "state/habitat/llm-backends.yml",
       "protocol": "openai",
       "eu_resident": true,
       "enabled_flag": "ollama_enabled",
@@ -1234,7 +1234,7 @@
     },
     "backend:openclaw": {
       "kind": "backend",
-      "source": "state/llm-backends.yml",
+      "source": "state/habitat/llm-backends.yml",
       "protocol": "openai",
       "eu_resident": true,
       "enabled_flag": "openclaw_backend_enabled",
@@ -1244,7 +1244,7 @@
     },
     "backend:xai": {
       "kind": "backend",
-      "source": "state/llm-backends.yml",
+      "source": "state/habitat/llm-backends.yml",
       "protocol": "openai",
       "eu_resident": false,
       "enabled_flag": "xai_enabled",
@@ -3574,9 +3574,9 @@
     "reader:router-status": {
       "kind": "reader",
       "source": "tools/router-status.py",
-      "title": "The WAN router as a declared estate fact: presence probe + intent from state/router.yml; UNKNOWN when it cannot look.",
+      "title": "The WAN router as a declared estate fact: presence probe + intent from state/habitat/router.yml; UNKNOWN when it cannot look.",
       "anchor": "02.02.04",
-      "description": "Reader tools/router-status.py: The WAN router as a declared estate fact: presence probe + intent from state/router.yml; UNKNOWN when it cannot look."
+      "description": "Reader tools/router-status.py: The WAN router as a declared estate fact: presence probe + intent from state/habitat/router.yml; UNKNOWN when it cannot look."
     },
     "reader:santa-status": {
       "kind": "reader",
@@ -5806,7 +5806,7 @@
       "from": "backend:anthropic",
       "to": "agent:inspektor",
       "kind": "data",
-      "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
+      "via": "the register's default backend — this agent declares none, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5814,7 +5814,7 @@
       "from": "backend:anthropic",
       "to": "agent:migration-author",
       "kind": "data",
-      "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
+      "via": "the register's default backend — this agent declares none, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5822,7 +5822,7 @@
       "from": "backend:anthropic",
       "to": "agent:upgrade-architect",
       "kind": "data",
-      "via": "the register's default backend — this agent declares none, resolved through state/llm-backends.yml at session open",
+      "via": "the register's default backend — this agent declares none, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5830,7 +5830,7 @@
       "from": "backend:minimax",
       "to": "agent:conductor",
       "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "via": "`model.backend: minimax` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5838,7 +5838,7 @@
       "from": "backend:minimax",
       "to": "agent:curator",
       "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "via": "`model.backend: minimax` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5846,7 +5846,7 @@
       "from": "backend:minimax",
       "to": "agent:jeff-cloud",
       "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "via": "`model.backend: minimax` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5854,7 +5854,7 @@
       "from": "backend:minimax",
       "to": "agent:librarian",
       "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "via": "`model.backend: minimax` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5862,7 +5862,7 @@
       "from": "backend:minimax",
       "to": "agent:ops-extract-cloud",
       "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "via": "`model.backend: minimax` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5870,7 +5870,7 @@
       "from": "backend:minimax",
       "to": "agent:ops-triage-cloud",
       "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "via": "`model.backend: minimax` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5878,7 +5878,7 @@
       "from": "backend:minimax",
       "to": "agent:proposer",
       "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "via": "`model.backend: minimax` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5886,7 +5886,7 @@
       "from": "backend:minimax",
       "to": "agent:surveyor",
       "kind": "data",
-      "via": "`model.backend: minimax` binding, resolved through state/llm-backends.yml at session open",
+      "via": "`model.backend: minimax` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5894,7 +5894,7 @@
       "from": "backend:ollama",
       "to": "agent:invoice-extract",
       "kind": "data",
-      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
+      "via": "`model.backend: ollama` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5902,7 +5902,7 @@
       "from": "backend:ollama",
       "to": "agent:invoice-vision-ocr",
       "kind": "data",
-      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
+      "via": "`model.backend: ollama` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5910,7 +5910,7 @@
       "from": "backend:ollama",
       "to": "agent:jeff",
       "kind": "data",
-      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
+      "via": "`model.backend: ollama` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5918,7 +5918,7 @@
       "from": "backend:ollama",
       "to": "agent:ops-extract",
       "kind": "data",
-      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
+      "via": "`model.backend: ollama` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -5926,7 +5926,7 @@
       "from": "backend:ollama",
       "to": "agent:ops-triage",
       "kind": "data",
-      "via": "`model.backend: ollama` binding, resolved through state/llm-backends.yml at session open",
+      "via": "`model.backend: ollama` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
       "evidence": "derived"
     },
@@ -6728,7 +6728,7 @@
       "from": "service:ollama",
       "to": "backend:ollama",
       "kind": "data",
-      "via": "`served_by: ollama` in state/llm-backends.yml",
+      "via": "`served_by: ollama` in state/habitat/llm-backends.yml",
       "derived": "backend-server",
       "evidence": "derived"
     },
@@ -6737,7 +6737,7 @@
       "to": "service:hermes",
       "kind": "data",
       "measured": "2026-10-06",
-      "via": "Hermes talks to the host Ollama at 127.0.0.1:11434 for local completions (roles/pazny.hermes; state/llm-backends.yml backend:ollama)",
+      "via": "Hermes talks to the host Ollama at 127.0.0.1:11434 for local completions (roles/pazny.hermes; state/habitat/llm-backends.yml backend:ollama)",
       "enforced_by": null,
       "unenforced": "Ollama is host-native under install_ollama; no auto-enable block ties it to this service. Without it the local-model path answers with an error, not a wrong result.",
       "evidence": "measured"
@@ -6786,7 +6786,7 @@
       "from": "service:openclaw",
       "to": "backend:openclaw",
       "kind": "data",
-      "via": "`served_by: openclaw` in state/llm-backends.yml",
+      "via": "`served_by: openclaw` in state/habitat/llm-backends.yml",
       "derived": "backend-server",
       "evidence": "derived"
     },

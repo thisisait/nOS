@@ -178,7 +178,7 @@ lives as a **per-agent binding**:
 
 - `model.backend: minimax` in `files/anatomy/agents/<name>/agent.yml` — the
   declaration, per agent, never estate-wide.
-- `state/llm-backends.yml` — the closed backend registry and the six
+- `state/habitat/llm-backends.yml` — the closed backend registry and the six
   fail-closed gates, prose and all.
 - `App\AgentKit\LLMClient\BindingResolver` — the gates as running code:
   registry membership, arming via `NOS_ARMED_BACKENDS` (wing.plist, rendered
@@ -207,7 +207,7 @@ CLI. The operator's direction: **primarily the classic API** — where
 `AnthropicAdapter` speaks the tool protocol and AgentKit's own Runner drives
 the loop, so the refusal dissolves structurally — with Claude as only ONE of
 the permitted highest-level orchestrators (mechanically: one row in
-`state/llm-backends.yml`, which IS the permitted-orchestrator list; see its
+`state/habitat/llm-backends.yml`, which IS the permitted-orchestrator list; see its
 header). The binding layer built for the CLI carried over unchanged in
 doctrine and mostly in code: the API adapter is now the primary bindable one
 (base_url + bearer + tier-remapped model id, `model_effective` stamped at
@@ -290,7 +290,7 @@ The write-time stamp (backend + effective model in `agent_run_end`) shipped
    pointing the other direction.
 2. ~~`w-agentkit-spine`, which is where rulings 1 and 3 acquire a place to
    live.~~ **THE NON-SUPERVISED HALF SHIPPED 2026-08-13**: rulings 1 and 3 now
-   live in the binding layer (`state/llm-backends.yml` +
+   live in the binding layer (`state/habitat/llm-backends.yml` +
    `App\AgentKit\LLMClient\BindingResolver` + `model.backend` per agent.yml —
    see ruling 1's resolution above for the map). What remains of the spine row
    is the operator-supervised half: a parallel-run night proving a real

@@ -35,7 +35,7 @@ SOURCES = {
     "skill": "files/anatomy/skills/nos-datatables/SKILL.md",
     "mcp": "tools/mcp-tables-server.py",
     "secrets": "templates/secrets.yml.j2",
-    "backends": "state/llm-backends.yml",
+    "backends": "state/habitat/llm-backends.yml",
     "manifest": "state/manifest.yml",
     "ruling": "files/anatomy/apex/ruling.yml",
     "glossary": "docs/glossary.md",

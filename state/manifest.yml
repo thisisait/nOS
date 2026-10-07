@@ -920,7 +920,7 @@ services:
     port_var: openclaw_gateway_port
     joint_pending: "attached through the nOS skills and the Wing/Bone OpenAPI specs (files/anatomy/contracts/); no fixture or consumer-side gate yet"
 
-  # The local model server behind backend:ollama (state/llm-backends.yml). Out of
+  # The local model server behind backend:ollama (state/habitat/llm-backends.yml). Out of
   # openclaw's row 2026-10-06: core cells bind it, so it is core, not an appendage.
   # Loopback 127.0.0.1:11434 only, no route — hence no domain_var/port_var.
   - id: ollama

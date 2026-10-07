@@ -22,7 +22,7 @@ root. It is rendered by `tools/imprint-gen.py` and gated by
    (`keap_agent_token_rw`) is never given to an end-user app**: writes stay
    with the operator and the estate's own agents. Offline check: `--selftest`.
 3. **Local models.** Ollama's OpenAI-compatible surface: `http://127.0.0.1:11434/v1`,
-   no token (`state/llm-backends.yml`, row `ollama`).
+   no token (`state/habitat/llm-backends.yml`, row `ollama`).
 4. **Web.** Services answer at `<name>.<tenant_domain>` through Traefik; ask
    `tools/estate-status.py --config tenant_domain` for this host's value.
 

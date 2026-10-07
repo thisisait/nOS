@@ -289,7 +289,7 @@ words:
       backends nOS's cells call are habitat, third-party processors beside it.
     names:
       - graph_kind: backend
-        reason: an LLM backend row of state/llm-backends.yml, a third-party processor beside the organism
+        reason: an LLM backend row of state/habitat/llm-backends.yml, a third-party processor beside the organism
       - config_key: software_owner
         values: [self, symbiont, habitat]
     not: [organism, symbiont]

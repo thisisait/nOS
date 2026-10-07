@@ -25,7 +25,7 @@ use AIAccess\Provider\OpenAICompatible;
  * WHAT THE SPIKE VERIFIED, since doc 16 §5 listed it as unestablished:
  * `OpenAICompatible\Client` takes `$apiKey` AND `$baseUrl` as constructor
  * arguments, per instance — which is precisely the binding contract in
- * `state/llm-backends.yml` (base_url + bearer resolved per session). No
+ * `state/habitat/llm-backends.yml` (base_url + bearer resolved per session). No
  * globals, no singleton, no environment. `setOptions()` additionally moves
  * the auth header and prefix, so an endpoint wanting `api-key:` rather than
  * `Authorization: Bearer` needs no new class either.
@@ -56,7 +56,7 @@ final class AiAccessAdapter implements LLMClientInterface
 	/**
 	 * @param string $uri         our model URI, as it appears in agent.yml and audit rows
 	 * @param string $servedModel what the endpoint itself calls the model
-	 * @param string $dialect     self::DIALECT_* — see `state/llm-backends.yml`,
+	 * @param string $dialect     self::DIALECT_* — see `state/habitat/llm-backends.yml`,
 	 *                            where `minimax` binds an ANTHROPIC-dialect URL
 	 *                            (`api.minimax.io/anthropic`) and `mistral` an
 	 *                            OpenAI one. A single dialect would have covered

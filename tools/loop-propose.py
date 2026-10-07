@@ -26,7 +26,7 @@ no session row, no token tally, no ceiling, and no binding — so the loop's
 entry was the one step of the loop with no record of its own cost. The
 proposal it produced named no author. It now runs on the ANTHROPIC adapter,
 which is the only adapter that keeps tools through a binding
-(state/llm-backends.yml:26-28), because a proposer with no tools cannot read
+(state/habitat/llm-backends.yml:26-28), because a proposer with no tools cannot read
 the budget it must stay inside.
 
 WHAT IT DELIBERATELY IS NOT

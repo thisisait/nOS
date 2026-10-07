@@ -238,7 +238,7 @@
         <key>STALWART_ADMIN_PASSWORD</key>
         <string>{{ stalwart_admin_password | default('') }}</string>
 {% endif %}
-        <!-- LLM backend arming (state/llm-backends.yml). Space-separated list
+        <!-- LLM backend arming (state/habitat/llm-backends.yml). Space-separated list
              of backend names App\AgentKit\BindingResolver may honour; a
              backend absent here is declared-but-disarmed and every run on it
              proceeds on the default backend with an audit event saying so.

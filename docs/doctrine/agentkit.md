@@ -5,7 +5,7 @@
 > cites this file. Sibling of [`backoffice.md`](backoffice.md) in status.
 >
 > Authorities this file points at, never copies: `state/schema/agent.schema.yaml`,
-> `state/llm-backends.yml`, `docs/ait-runtime-architecture.md` (essay; stale
+> `state/habitat/llm-backends.yml`, `docs/ait-runtime-architecture.md` (essay; stale
 > where §6 names it).
 
 There is one AgentKit: `files/anatomy/wing/app/AgentKit/`, opened by
@@ -56,7 +56,7 @@ There is one AgentKit: `files/anatomy/wing/app/AgentKit/`, opened by
 ## 3. Backends — a backend is not a provider
 
 - `llm.provider` names the **adapter** (fail-closed, adapter-first).
-  `model.backend` names a **row** in `state/llm-backends.yml`
+  `model.backend` names a **row** in `state/habitat/llm-backends.yml`
   (`agent.schema.yaml:103-120`; `llm-backends.yml:16-30`). A new
   orchestrator joins as a row, never as per-agent free text
   (`llm-backends.yml:11-14`).

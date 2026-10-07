@@ -76,7 +76,7 @@ The **organism** is one install. Nothing in the repo stands for the whole;
 the anatomy graph is a drawing of it, not the organism. The **habitat** is the
 machine and what lives beside the organism. Two rulings of 2026-10-06 place
 the hard cases: the git forges nOS hosts itself (Gitea, GitLab) are jobs of
-organs, not habitat; the LLM backends the cells call (`state/llm-backends.yml`)
+organs, not habitat; the LLM backends the cells call (`state/habitat/llm-backends.yml`)
 are habitat, third-party processors beside the organism.
 
 ## 4. Words that cross the levels

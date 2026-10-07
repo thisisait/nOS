@@ -893,7 +893,7 @@ ollama_flash_attention: 1      # Flash attention for MLX (faster, less memory)
 # never outruns it), (c) the agent is not deferred and not opus-pinned, and
 # (d) the model ids below are set. Every gate is per agent; the shell-bridge
 # path (pulse-run-agent.sh) always runs on the default backend. The registry
-# of backends is state/llm-backends.yml. It still does NOT touch
+# of backends is state/habitat/llm-backends.yml. It still does NOT touch
 # ~/.claude/settings.json (the operator's own thread stays on Anthropic).
 # The API key is pasted into credentials.yml and persisted as
 # secret nos:minimax_api_key; the cost_basis honesty path in
@@ -909,7 +909,7 @@ minimax_model: ""              # -> NOS_MINIMAX_MODEL       (sonnet tier)
 minimax_small_model: ""        # -> NOS_MINIMAX_SMALL_MODEL (haiku tier)
 
 # ── Mistral EU backend — PREPARED, NOT ARMED (2026-08-16) ────────────────────
-# The first openai-protocol row in state/llm-backends.yml (its comment carries
+# The first openai-protocol row in state/habitat/llm-backends.yml (its comment carries
 # the residency facts + control-plane caveats). Arming follows the same
 # five-edit shape as MiniMax: key in credentials.yml, this flag, the model ids
 # (from Mistral's catalog — the operator re-decides the tier pins), plus the
@@ -925,7 +925,7 @@ mistral_small_model: ""        # -> NOS_MISTRAL_SMALL_MODEL (haiku tier)
 # by design. Same five-edit arming as Mistral — key as `xai_api_key` in
 # credentials.yml, this flag, the two model ids, plus the per-agent
 # `model.backend: xai` and gdpr processor entry.
-# NON-EU, DELIBERATELY (state/llm-backends.yml residency.eu: false): gate 8
+# NON-EU, DELIBERATELY (state/habitat/llm-backends.yml residency.eu: false): gate 8
 # refuses this row to any agent claiming transfers_outside_eu: false, and gate 6
 # refuses it to every opus-primary code-authoring agent. Both refusals are the
 # point — this backend is reachable only where the Article-30 record says so.
@@ -1003,7 +1003,7 @@ install_ollama: true
 openclaw_install_daemon: true
 openclaw_domain: "claw{{ _host_alias_seg | default('') }}.{{ tenant_domain | default('dev.local') }}"
 openclaw_gateway_port: 18789
-# AgentKit backend row `openclaw` (state/llm-backends.yml) — prepared, not armed.
+# AgentKit backend row `openclaw` (state/habitat/llm-backends.yml) — prepared, not armed.
 openclaw_backend_enabled: false
 
 # Agent name (persona)

@@ -151,7 +151,7 @@ Two corrections to carry into the spike anyway: the "LangChain callbacks are obs
 
 ### One defect this research found that nobody was looking for
 
-`serveFallback` (`Runner.php:919`) builds the fallback client as `$this->llmFactory->fromUri($agent->modelFallbackUri)` — **no `Binding` argument, no `BindingResolver` call**. Gates 4 (Article-30 processor agreement), 7 (protocol) and 8 (residency, including the no-degrade half) therefore never apply to whatever actually answers when the primary fails. There is no live exposure today only because all nine agents' fallback is a local model. But the estate's headline claim — *EU residency enforced by the record, not a config flag* — is true of the primary binding and **not of the serving set**, which is precisely the distinction `state/llm-backends.yml:69-74` draws.
+`serveFallback` (`Runner.php:919`) builds the fallback client as `$this->llmFactory->fromUri($agent->modelFallbackUri)` — **no `Binding` argument, no `BindingResolver` call**. Gates 4 (Article-30 processor agreement), 7 (protocol) and 8 (residency, including the no-degrade half) therefore never apply to whatever actually answers when the primary fails. There is no live exposure today only because all nine agents' fallback is a local model. But the estate's headline claim — *EU residency enforced by the record, not a config flag* — is true of the primary binding and **not of the serving set**, which is precisely the distinction `state/habitat/llm-backends.yml:69-74` draws.
 
 **This is a defect, not a design question. Fix it before anything else in this document.** It is a one-line change plus a gate.
 

@@ -11,6 +11,6 @@ and starts it under launchd as `com.ollama.agent` (`roles/pazny.ollama`).
   RED in `tools/openhuman-status.py`.
 - Consumers declare it: openclaw, hermes, keap, openhuman (`depends_on` in
   their plugins); core cells reach it as `backend:ollama`
-  (`state/llm-backends.yml`).
+  (`state/habitat/llm-backends.yml`).
 - A resident 14B model starves KEAP (memory `local-model-budget`); the
   converge unloads resident models before core-up.

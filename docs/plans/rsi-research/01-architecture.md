@@ -20,7 +20,7 @@ The estate has been burned by plans that re-describe existing wiring as work. So
 **Already built, keep untouched:** the agent-as-directory contract + schema gate; `Runner`'s
 session lifecycle, ceilings, synthesis reserve, retry ladder (local research §1 — the bounds
 work; the ceremonies don't finish, which is a different problem); the binding registry
-(`state/llm-backends.yml` — the only concept already general enough for two planes); the loop
+(`state/habitat/llm-backends.yml` — the only concept already general enough for two planes); the loop
 ledger with its WORM triggers and code-only verdict actor; the three-YES merge reader
 (`tools/loop-review.py:188-246`); the Authentik client-credentials exchange on the CLI path;
 `actor_action_id == agent_sessions.uuid` lineage; the A9 notification shape; the GDPR

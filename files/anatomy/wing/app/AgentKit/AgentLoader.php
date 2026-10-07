@@ -83,7 +83,7 @@ final class AgentLoader
 		$spec = LLMClient\BindingResolver::readRegistry()[$backend] ?? null;
 		if (!is_array($spec)) {
 			throw new AgentLoadException(
-				"agent.yml model.fallback_backend '{$backend}' is not a row in state/llm-backends.yml"
+				"agent.yml model.fallback_backend '{$backend}' is not a row in state/habitat/llm-backends.yml"
 			);
 		}
 		if (($spec['default'] ?? false) === true) {

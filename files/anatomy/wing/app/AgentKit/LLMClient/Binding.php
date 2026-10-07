@@ -7,7 +7,7 @@ namespace App\AgentKit\LLMClient;
 /**
  * A resolved backend binding — where a `claude-*` run's traffic is pointed.
  *
- * A BACKEND IS NOT A PROVIDER (state/llm-backends.yml carries the argument in
+ * A BACKEND IS NOT A PROVIDER (state/habitat/llm-backends.yml carries the argument in
  * full): the genome's provider enum names which adapter runs, fail-closed and
  * adapter-first; this names the env contract the `claude` CLI honours
  * (ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN / ANTHROPIC_MODEL). A Binding

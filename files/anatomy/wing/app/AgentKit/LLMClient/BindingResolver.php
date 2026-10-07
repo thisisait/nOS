@@ -12,7 +12,7 @@ use Symfony\Component\Yaml\Yaml;
  * Resolves an agent's declared `model.backend` into a Binding — or refuses.
  *
  * THE SIX GATES, in the order they are checked (prose with the history in
- * state/llm-backends.yml; the data-side half is held offline by
+ * state/habitat/llm-backends.yml; the data-side half is held offline by
  * tests/anatomy/test_a_binding_reads_the_register.py):
  *
  *   1. per-agent declaration (`model.backend`); absent → default backend
@@ -31,7 +31,7 @@ use Symfony\Component\Yaml\Yaml;
  *      armed backend with an empty model-id env refuses rather than sending
  *      a blank model
  *
- * The registry is read from state/llm-backends.yml under NOS_REPO_ROOT (the
+ * The registry is read from state/habitat/llm-backends.yml under NOS_REPO_ROOT (the
  * env wing.plist already carries); no registry file → no non-default backend
  * can resolve, which is the fail-closed shape everything here inherits.
  */
@@ -77,7 +77,7 @@ final class BindingResolver
 		if (!isset($backends[$declared])) {
 			throw new BindingRefused(
 				"agent '{$agent->name}' declares backend '{$declared}', which "
-				. 'state/llm-backends.yml does not list. A backend joins the '
+				. 'state/habitat/llm-backends.yml does not list. A backend joins the '
 				. 'registry first (with its processor_match), then agents may '
 				. 'name it.'
 			);
@@ -265,7 +265,7 @@ final class BindingResolver
 			throw new BindingRefused(
 				"agent '{$agentName}' declares transfers_outside_eu: false "
 				. "but routes to '{$declared}', which is not EU-resident "
-				. '(state/llm-backends.yml residency.eu). One of the two is '
+				. '(state/habitat/llm-backends.yml residency.eu). One of the two is '
 				. 'wrong; refusing until they agree.'
 			);
 		}
@@ -276,7 +276,15 @@ final class BindingResolver
 	 */
 	public static function readRegistry(?string $path = null): array
 	{
-		$path ??= ((getenv('NOS_REPO_ROOT') ?: '') . '/state/llm-backends.yml');
+		if ($path === null) {
+			$root = (getenv('NOS_REPO_ROOT') ?: '');
+			$path = $root . '/state/habitat/llm-backends.yml';
+			// Compat: a checkout older than this Wing still has the old path.
+			// Drop after every host has run a `--tags wing` converge.
+			if (!is_file($path)) {
+				$path = $root . '/state/llm-backends.yml';
+			}
+		}
 		if (!is_file($path)) {
 			return [];
 		}

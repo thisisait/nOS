@@ -10,7 +10,7 @@ version: 0.1.0
 description: |
   Ollama — the local model server on 127.0.0.1:11434 (homebrew formula, user
   LaunchAgent com.ollama.agent), installed and pinned by roles/pazny.ollama.
-  It serves backend:ollama (state/llm-backends.yml) to agents, OpenClaw,
+  It serves backend:ollama (state/habitat/llm-backends.yml) to agents, OpenClaw,
   Hermes, KEAP embeddings and face ask.
 upstream: https://github.com/ollama/ollama
 license: MIT

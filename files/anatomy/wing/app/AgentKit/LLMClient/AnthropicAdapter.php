@@ -26,7 +26,7 @@ final class AnthropicAdapter implements LLMClientInterface
 	private readonly string $modelId;
 
 	/**
-	 * @param ?Binding $binding backend binding (state/llm-backends.yml). THIS
+	 * @param ?Binding $binding backend binding (state/habitat/llm-backends.yml). THIS
 	 *        is the adapter the spine redirect (2026-08-15) makes bindable:
 	 *        it speaks the tool protocol AnthropicKit's Runner drives, so a
 	 *        bound run keeps AgentKit's own tool loop — the structural

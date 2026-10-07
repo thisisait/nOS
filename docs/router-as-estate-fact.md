@@ -65,7 +65,7 @@ design below — declare, don't scrape.
 
 ## 3. What nOS should KNOW (declared)
 
-Lives in `state/router.yml` (not `state/manifest.yml` — see that file's own
+Lives in `state/habitat/router.yml` (not `state/manifest.yml` — see that file's own
 header for why: the manifest schema is `additionalProperties: false` and
 shaped around services nOS deploys; the router is foreign hardware, not a
 service). Fields: gateway IP, model, admin URL, the 80/443 port-forward list
@@ -102,11 +102,11 @@ never folded silently into the presence check.
 
 ## 5. Where it lives
 
-- **`state/router.yml`** — the declared block. Small, separate from the
+- **`state/habitat/router.yml`** — the declared block. Small, separate from the
   manifest schema on purpose (see file header).
 - **`tools/router-status.py`** — the reader. Reports the declared facts,
   probes gateway presence, and returns `UNKNOWN` (never a guessed `OK`) when
-  `state/router.yml` is missing. Never `OK`s a forward or a toggle it did not
+  `state/habitat/router.yml` is missing. Never `OK`s a forward or a toggle it did not
   measure — `measured_config` is always `null` until a credentialed or
   external-vantage measurement path exists. Gate:
   `tests/anatomy/test_router_status_is_honest.py`.

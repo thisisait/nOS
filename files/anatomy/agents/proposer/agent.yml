@@ -8,7 +8,7 @@ description: >-
 
 model:
   # sonnet tier; the backend's model_env decides which model that is
-  # (state/llm-backends.yml). Authoring a patch is judgement over code.
+  # (state/habitat/llm-backends.yml). Authoring a patch is judgement over code.
   primary: anthropic-claude-sonnet-4-5
   backend: minimax
 

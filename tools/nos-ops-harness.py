@@ -6,7 +6,7 @@ extraction chains. The open question is not "does model X pass" but "at which
 model SIZE does one_shot chain emission stop working", because that number is
 what decides whether the ops plane ever needs a tool-use surface at all.
 
-So this runs EVERY ARMED LOCAL binding in state/llm-backends.yml, over the
+So this runs EVERY ARMED LOCAL binding in state/habitat/llm-backends.yml, over the
 sizes that binding declares (~1B..~7B), in AgentKit `mode: one_shot`, against
 a hand-labelled task family, and scores by EXACT reproduction of the label.
 The oracle is this file. The model never assesses itself, and a size nobody
@@ -38,7 +38,7 @@ import sys
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
-DEFAULT_REGISTRY = REPO / "state" / "llm-backends.yml"
+DEFAULT_REGISTRY = REPO / "state" / "habitat" / "llm-backends.yml"
 # tools/run-agent.sh, NOT `php bin/run-agent.php` (corrected 2026-08-30).
 #
 # The wrapper exists precisely to stop what calling the php directly does: its

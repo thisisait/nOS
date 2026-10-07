@@ -532,7 +532,7 @@ await pipeline([1],
        looproutes.py propose accepts + stores it.
      - tools/loop-propose.py: replace the claude --print bypassPermissions spawn with an
        AgentKit run via bin/run-agent.php (anthropic adapter — the only adapter that keeps
-       tools, state/llm-backends.yml:26-28), passing the session uuid into the proposal
+       tools, state/habitat/llm-backends.yml:26-28), passing the session uuid into the proposal
        POST. The proposer now contends on the Q12 slot lock as an AgentKit acquisition —
        keep the weakness-id plumbing unchanged.
      - Q6 SEAM (1): add 'harness' to the existing closed INTENT_CLASSES enum in ledger.py
@@ -569,7 +569,7 @@ await pipeline([1],
      Graph model: tools/anatomy-graph-gen.py emits agent:<name> as a 14th node kind from
      files/anatomy/agents/*/agent.yml (charter/runner_status/mode attrs; edges: agent->tool,
      agent->authentik client from default.config.yml authentik_agent_clients, agent->backend
-     from model.backend + state/llm-backends.yml as a NEW source, pulse-job->agent trigger
+     from model.backend + state/habitat/llm-backends.yml as a NEW source, pulse-job->agent trigger
      edges). Add 'agent' to NodeKind in files/anatomy/face/src/lib/anatomy/graph.ts.
      runner_status becomes an enum in agent.schema.yaml (unproven|scheduled|parked|deferred|
      proven). Regenerate state/anatomy-graph.json.
@@ -644,7 +644,7 @@ await pipeline([1],
        chain against a schema, record. Branch at session open; no tool-use loop, no outcome
        loop. (~60 LOC; NOT a fork.)
      - tools/nos-ops-harness.py: given a task-family dir (labelled sample set: inputs +
-       expected extractions), run EVERY armed local binding from state/llm-backends.yml —
+       expected extractions), run EVERY armed local binding from state/habitat/llm-backends.yml —
        parameterised over the declared model-size range, ~1B through ~7B, not pinned at any
        size — in one_shot mode, score by exact label reproduction (code oracle — the model
        NEVER self-assesses), and write a per-model report artifact (json) keyed by model

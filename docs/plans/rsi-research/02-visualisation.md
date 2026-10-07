@@ -18,7 +18,7 @@ Emitted by the compiler from files it either already opens and discards, or must
 | attrs: charter summary, `runner_status` (enum per arch item 8), `mode` | same file — `description`, `metadata.runner_status` | unread |
 | `agent → tool` edges (kind: `data`) | `agent.yml` `tools:` roster | unread |
 | `agent → authentik:<client>` edge — the principal | `default.config.yml` `authentik_agent_clients` (10 declared; zero in graph — "an agent has an SSO identity in the estate and no address in the address space") | source not opened |
-| `agent → backend` edge — the binding | `agent.yml` `model.backend` + `state/llm-backends.yml` | `llm-backends.yml` not among sources at all |
+| `agent → backend` edge — the binding | `agent.yml` `model.backend` + `state/habitat/llm-backends.yml` | `llm-backends.yml` not among sources at all |
 | `pulse:<owner>:<job> → agent:<name>` edge (kind: `trigger`) | job's `command_name: run-agent.sh` + owner | derivable from data already parsed |
 | `agent → gateset` edge — the oracle (arch item 3) | `agent.yml` `outcomes.gateset` | field is new; compiler reads it when it exists |
 | `agent → weakness` edges — loop membership | today underivable: `loop_proposals.proposer_id` is a string, not a session. **Lands with arch item 5** (`session_uuid` column) — the edge is derived from the joined ledgers, not hand-authored | blocked on item 5 |

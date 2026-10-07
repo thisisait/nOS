@@ -14,7 +14,7 @@ description: >-
 model:
   # `vision` (2026-09-20) is a dedicated tier — not a size, an INPUT
   # CAPABILITY word — so it sits beside haiku/sonnet/opus in
-  # state/llm-backends.yml's ollama.model_env rather than borrowing sonnet's
+  # state/habitat/llm-backends.yml's ollama.model_env rather than borrowing sonnet's
   # slot. Chosen model: qwen2.5vl:7b (Ollama library tag `qwen2.5vl:7b`;
   # runner-up minicpm-v:8b). Neither has been pulled on this host yet — the
   # operator sets `ollama_vision_model` in config.yml once it is.

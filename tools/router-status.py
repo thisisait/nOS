@@ -32,7 +32,7 @@ import urllib.request
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
-ROUTER_YML = REPO / "state" / "router.yml"
+ROUTER_YML = REPO / "state" / "habitat" / "router.yml"
 
 
 def load_declared() -> dict | None:
