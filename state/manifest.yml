@@ -67,6 +67,7 @@ daemons_without_row:
 services:
   # -------------------------------------------------------------- infra stack
   - id: postgresql
+    software_owner: symbiont
     category: database
     stack: infra
     install_flag: install_postgresql
@@ -85,6 +86,7 @@ services:
     coexistence_supported: true
 
   - id: mariadb
+    software_owner: symbiont
     category: database
     stack: infra
     install_flag: install_mariadb
@@ -103,6 +105,7 @@ services:
     coexistence_supported: true
 
   - id: redis
+    software_owner: symbiont
     category: cache
     stack: infra
     # redis_docker, not install_redis: the flag chooses Docker over the Homebrew
@@ -121,6 +124,7 @@ services:
     breaking_boundaries: ["6->7", "7->8"]
 
   - id: authentik
+    software_owner: symbiont
     category: identity
     stack: infra
     install_flag: install_authentik
@@ -144,6 +148,7 @@ services:
     oidc: native
 
   - id: infisical
+    software_owner: symbiont
     category: vault
     stack: infra
     install_flag: install_infisical
@@ -161,6 +166,7 @@ services:
     oidc: native                            # env-seeded org SSO config; requires one-time Security→SSO toggle in UI post-install
 
   - id: portainer
+    software_owner: symbiont
     category: devops
     stack: infra
     install_flag: install_portainer
@@ -177,6 +183,7 @@ services:
     oidc: native
 
   - id: traefik
+    software_owner: symbiont
     category: proxy
     stack: infra
     install_flag: install_traefik
@@ -191,6 +198,7 @@ services:
       expect_status: 200
 
   - id: bluesky_pds
+    software_owner: symbiont
     category: identity
     stack: infra
     install_flag: install_bluesky_pds
@@ -211,6 +219,7 @@ services:
   # Traefik router, and traefik_auth_modes says `none` where the plugin says
   # forward_auth. Adding the row must not settle that — see the P1 report.
   - id: spacetimedb
+    software_owner: symbiont
     category: database
     stack: infra
     install_flag: install_spacetimedb
@@ -222,6 +231,7 @@ services:
 
   # ------------------------------------------------------- observability stack
   - id: grafana
+    software_owner: symbiont
     category: observability
     stack: observability
     install_flag: install_observability
@@ -242,6 +252,7 @@ services:
     oidc: native
 
   - id: prometheus
+    software_owner: symbiont
     category: observability
     stack: observability
     install_flag: install_observability
@@ -255,6 +266,7 @@ services:
       expect_status: 200
 
   - id: loki
+    software_owner: symbiont
     category: observability
     stack: observability
     install_flag: install_observability
@@ -268,6 +280,7 @@ services:
       expect_status: 200
 
   - id: tempo
+    software_owner: symbiont
     category: observability
     stack: observability
     install_flag: install_observability
@@ -286,6 +299,7 @@ services:
   # in the observability category. Plugin: files/anatomy/plugins/alloy-base/.
   # No domain_var: alloy is loopback-only (no Traefik route auto-derived).
   - id: alloy
+    software_owner: symbiont
     category: observability
     stack: null
     install_flag: install_observability
@@ -301,6 +315,7 @@ services:
 
   # ------------------------------------------------------------- iiab stack
   - id: wordpress
+    software_owner: symbiont
     category: cms
     stack: iiab
     install_flag: install_wordpress
@@ -313,6 +328,7 @@ services:
     rbac_tier: 4
 
   - id: apex
+    software_owner: self
     category: web
     stack: iiab
     install_flag: install_apex
@@ -330,6 +346,7 @@ services:
       ruling is unsigned.
 
   - id: nextcloud
+    software_owner: symbiont
     category: collaboration
     stack: iiab
     install_flag: install_nextcloud
@@ -344,6 +361,7 @@ services:
     coexistence_supported: true
 
   - id: n8n
+    software_owner: symbiont
     category: automation
     stack: iiab
     install_flag: install_n8n
@@ -357,6 +375,7 @@ services:
     rbac_tier: 2
 
   - id: nodered
+    software_owner: symbiont
     category: automation
     stack: iiab
     install_flag: install_nodered
@@ -368,6 +387,7 @@ services:
     data_path_var: nodered_data_dir
 
   - id: kiwix
+    software_owner: symbiont
     category: iiab
     stack: iiab
     install_flag: install_kiwix
@@ -381,6 +401,7 @@ services:
     rbac_tier: 4
 
   - id: nos_forum
+    software_owner: self
     category: collaboration
     stack: iiab
     install_flag: install_nos_forum
@@ -400,6 +421,7 @@ services:
     joint_pending: "own repo (ghcr.io/pazny/nos-forum-web) attached by OIDC and SpacetimeDB; no contract spec yet"
 
   - id: offline_maps
+    software_owner: symbiont
     category: gis
     stack: iiab
     install_flag: install_offline_maps
@@ -413,6 +435,7 @@ services:
     data_path_var: maps_data_dir
 
   - id: geolibre
+    software_owner: symbiont
     category: gis
     stack: iiab
     install_flag: install_geolibre
@@ -432,6 +455,7 @@ services:
 
   # No domain/port: martin is reached only via the gated atlas.<tenant>/tiles lane.
   - id: martin
+    software_owner: symbiont
     category: gis
     stack: iiab
     install_flag: install_martin
@@ -446,6 +470,7 @@ services:
       timeout_sec: 10
 
   - id: jellyfin
+    software_owner: symbiont
     category: media
     stack: iiab
     install_flag: install_jellyfin
@@ -458,6 +483,7 @@ services:
     rbac_tier: 4
 
   - id: open_webui
+    software_owner: symbiont
     category: ai
     stack: iiab
     install_flag: install_openwebui
@@ -473,6 +499,7 @@ services:
     rbac_tier: 3
 
   - id: uptime_kuma
+    software_owner: symbiont
     category: observability
     stack: iiab
     install_flag: install_uptime_kuma
@@ -488,6 +515,7 @@ services:
     rbac_tier: 3
 
   - id: calibre_web
+    software_owner: symbiont
     category: media
     stack: iiab
     install_flag: install_calibreweb
@@ -502,6 +530,7 @@ services:
     rbac_tier: 3
 
   - id: homeassistant
+    software_owner: symbiont
     category: homeautomation
     stack: iiab
     install_flag: install_homeassistant
@@ -514,6 +543,7 @@ services:
     rbac_tier: 3
 
   - id: rustfs
+    software_owner: symbiont
     category: storage
     stack: iiab
     install_flag: install_rustfs
@@ -531,6 +561,7 @@ services:
     upgrade_recipe: upgrades/rustfs.yml
 
   - id: face
+    software_owner: self
     category: desktop
     stack: iiab
     install_flag: install_face
@@ -544,6 +575,7 @@ services:
     joint: files/anatomy/contracts/face-wing.yml
 
   - id: keap
+    software_owner: self
     category: knowledge
     stack: iiab
     install_flag: install_keap
@@ -557,6 +589,7 @@ services:
     rbac_tier: 3
 
   - id: vaultwarden
+    software_owner: symbiont
     category: vault
     stack: iiab
     install_flag: install_vaultwarden
@@ -570,6 +603,7 @@ services:
     rbac_tier: 3
 
   - id: ntfy
+    software_owner: symbiont
     category: notifications
     stack: iiab
     install_flag: install_ntfy
@@ -581,6 +615,7 @@ services:
     data_path_var: ntfy_data_dir
 
   - id: miniflux
+    software_owner: symbiont
     category: rss
     stack: iiab
     install_flag: install_miniflux
@@ -591,6 +626,7 @@ services:
     port_var: miniflux_port
 
   - id: mailpit
+    software_owner: symbiont
     category: mail
     stack: iiab
     install_flag: install_mailpit
@@ -602,6 +638,7 @@ services:
     rbac_tier: 1
 
   - id: smtp_stalwart
+    software_owner: symbiont
     category: mail
     stack: infra
     install_flag: install_smtp_stalwart
@@ -614,6 +651,7 @@ services:
     oidc: none                         # SASL via Stalwart's native DB; webadmin OIDC behind feature flag
 
   - id: watchtower
+    software_owner: symbiont
     category: monitoring
     stack: iiab
     install_flag: install_watchtower
@@ -624,6 +662,7 @@ services:
     oidc: none                         # no UI; emits notifications via mailpit/SMTP relay
 
   - id: snappymail
+    software_owner: symbiont
     category: mail
     stack: iiab
     install_flag: install_snappymail
@@ -637,6 +676,7 @@ services:
 
   # ------------------------------------------------------------ devops stack
   - id: gitea
+    software_owner: symbiont
     category: devops
     stack: devops
     install_flag: install_gitea
@@ -650,6 +690,7 @@ services:
     rbac_tier: 2
 
   - id: gitlab
+    software_owner: symbiont
     category: devops
     stack: devops
     install_flag: install_gitlab
@@ -670,6 +711,7 @@ services:
     rbac_tier: 2
 
   - id: woodpecker
+    software_owner: symbiont
     category: devops
     stack: devops
     install_flag: install_woodpecker
@@ -684,6 +726,7 @@ services:
     data_path_var: woodpecker_data_dir
 
   - id: paperclip
+    software_owner: symbiont
     category: agent
     stack: devops
     install_flag: install_paperclip
@@ -704,6 +747,7 @@ services:
     rbac_tier: 2
 
   - id: code_server
+    software_owner: symbiont
     category: devops
     stack: devops
     install_flag: install_code_server
@@ -719,6 +763,7 @@ services:
 
   # --------------------------------------------------------------- b2b stack
   - id: erpnext
+    software_owner: symbiont
     category: finance
     stack: b2b
     install_flag: install_erpnext
@@ -744,6 +789,7 @@ services:
     rbac_tier: 2
 
   - id: freescout
+    software_owner: symbiont
     category: helpdesk
     stack: b2b
     install_flag: install_freescout
@@ -757,6 +803,7 @@ services:
     rbac_tier: 2
 
   - id: outline
+    software_owner: symbiont
     category: wiki
     stack: b2b
     install_flag: install_outline
@@ -770,6 +817,7 @@ services:
     rbac_tier: 3
 
   - id: hedgedoc
+    software_owner: symbiont
     category: wiki
     stack: b2b
     install_flag: install_hedgedoc
@@ -781,6 +829,7 @@ services:
     data_path_var: hedgedoc_data_dir
 
   - id: bookstack
+    software_owner: symbiont
     category: wiki
     stack: b2b
     install_flag: install_bookstack
@@ -800,6 +849,7 @@ services:
     rbac_tier: 3
 
   - id: firefly
+    software_owner: symbiont
     category: finance
     stack: b2b
     install_flag: install_firefly
@@ -818,6 +868,7 @@ services:
     rbac_tier: 2
 
   - id: dolibarr
+    software_owner: symbiont
     category: crm
     stack: b2b
     install_flag: install_dolibarr
@@ -836,6 +887,7 @@ services:
     rbac_tier: 2
 
   - id: onlyoffice
+    software_owner: symbiont
     category: collaboration
     stack: b2b
     install_flag: install_onlyoffice
@@ -848,6 +900,7 @@ services:
 
   # --------------------------------------------------------------- voip stack
   - id: mikopbx
+    software_owner: symbiont
     category: pbx
     stack: voip
     install_flag: install_mikopbx
@@ -867,6 +920,7 @@ services:
 
   # --------------------------------------------------------- engineering stack
   - id: qgis_server
+    software_owner: symbiont
     category: gis
     stack: engineering
     install_flag: install_qgis_server
@@ -881,6 +935,7 @@ services:
 
   # --------------------------------------------------------------- data stack
   - id: metabase
+    software_owner: symbiont
     category: data
     stack: data
     install_flag: install_metabase
@@ -894,6 +949,7 @@ services:
     rbac_tier: 2
 
   - id: superset
+    software_owner: symbiont
     category: data
     stack: data
     install_flag: install_superset
@@ -907,6 +963,7 @@ services:
     rbac_tier: 2
 
   - id: influxdb
+    software_owner: symbiont
     category: data
     stack: data
     install_flag: install_influxdb
@@ -919,6 +976,7 @@ services:
 
   # ------------------------------------------------------- ai / gateway addons
   - id: mcp_gateway
+    software_owner: symbiont
     category: ai
     stack: iiab
     install_flag: install_mcp_gateway
@@ -932,6 +990,7 @@ services:
 
   # ----------------------------------------------- non-Docker / host-native
   - id: openclaw
+    software_owner: symbiont
     category: agent
     stack: null
     install_flag: install_openclaw
@@ -945,6 +1004,7 @@ services:
   # openclaw's row 2026-10-06: core cells bind it, so it is core, not an appendage.
   # Loopback 127.0.0.1:11434 only, no route — hence no domain_var/port_var.
   - id: ollama
+    software_owner: symbiont
     category: ai
     stack: null
     install_flag: install_ollama
@@ -955,6 +1015,7 @@ services:
     data_path_var: ollama_models_dir
 
   - id: hermes
+    software_owner: symbiont
     category: messaging
     stack: null
     install_flag: install_hermes
@@ -965,6 +1026,7 @@ services:
     joint_pending: "attached through the nOS skills and the Wing/Bone OpenAPI specs (files/anatomy/contracts/); no fixture or consumer-side gate yet"
 
   - id: device_gateway
+    software_owner: self
     category: agent
     stack: null
     install_flag: install_device_gateway
@@ -978,6 +1040,7 @@ services:
       expect_status: 200
 
   - id: opencode
+    software_owner: symbiont
     category: ai
     stack: null
     install_flag: install_opencode
@@ -989,6 +1052,7 @@ services:
   # domain_var/port_var/health_check. version_source none: it updates itself, so
   # brew's record goes stale. Reader: tools/openhuman-status.py.
   - id: openhuman
+    software_owner: symbiont
     category: agent
     stack: null
     install_flag: install_openhuman
@@ -997,6 +1061,7 @@ services:
     joint_pending: "attached through the nos-tables MCP server over KEAP's agent API (roles/pazny.openhuman/templates/nos-mcp.json.j2); no contract spec yet"
 
   - id: wing
+    software_owner: self
     category: security
     stack: null
     install_flag: install_wing
@@ -1012,6 +1077,7 @@ services:
     data_path_var: wing_data_dir
 
   - id: bone
+    software_owner: self
     category: api
     stack: null
     install_flag: install_bone
@@ -1025,6 +1091,7 @@ services:
       expect_status: 200
 
   - id: pulse
+    software_owner: self
     # The scheduling organ (anatomy A4) — the fourth host organ, and the only
     # one that LISTENS FOR NOTHING. Pulse is a client: every tick it CALLS Wing
     # on loopback (pulse_wing_api_base = http://127.0.0.1:{{ wing_port }}) for
@@ -1051,6 +1118,7 @@ services:
     data_path_var: pulse_state_dir
 
   - id: cortex
+    software_owner: self
     # The reasoning organ — loopback-only host daemon (design §5: pure loopback
     # default, NO Traefik route; the id is in traefik_skip_ids). domain_var
     # exists for the day a route becomes an explicit opt-in, not for today.
@@ -1073,6 +1141,7 @@ services:
   # (TCC mic-grant reality, roles/pazny.ears/tasks/main.yml). A health check
   # here would report a correctly-off organ as broken.
   - id: ears
+    software_owner: self
     category: ai
     stack: null
     install_flag: install_ears
@@ -1080,6 +1149,7 @@ services:
     host_process: "a Terminal session opened from nos-cc (`s`); no launchd job"
     data_path_var: ears_runtime_dir
   - id: backrest
+    software_owner: symbiont
     category: storage
     stack: null
     install_flag: install_backrest
@@ -1094,6 +1164,7 @@ services:
       expect_status: 200
 
   - id: iiab_terminal
+    software_owner: self
     category: iiab
     stack: null
     install_flag: install_iiab_terminal
@@ -1101,6 +1172,7 @@ services:
     host_process: "a TUI sshd starts per login (ForceCommand); no launchd job"
 
   - id: backup
+    software_owner: self
     category: security                         # 'ops' not in schema enum; security is the closest vault-adjacent category
     stack: null
     install_flag: install_backup
@@ -1116,6 +1188,7 @@ services:
 
   # --------------------------------------------------------- host-only addons
   - id: tailscale
+    software_owner: symbiont
     category: vpn
     stack: null
     install_flag: install_tailscale

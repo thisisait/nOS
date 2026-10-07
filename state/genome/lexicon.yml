@@ -327,6 +327,7 @@ words:
       lineage, old ones die, new ones are born) is being designed, roadmap row self-definition.
     names:
       - config_key: software_owner
+      - manifest_field: software_owner
     not: [declared, symbiont]
     counter_example: "OpenHuman, declared and installed by nOS but neither pinned nor updated by it (its vendor updates it: a symbiont)"
     retired:
@@ -340,6 +341,7 @@ words:
     means: Declared foreign software that lives beside nOS and is updated by its own vendor.
     names:
       - config_key: software_owner
+      - manifest_field: software_owner
     not: [self, habitat]
     counter_example: "a personal Homebrew package (habitat: the machine owner's; nOS installs it only through an opt-in toggle the owner sets)"
 

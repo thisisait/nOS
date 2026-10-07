@@ -37,7 +37,7 @@ ROW_OWNERS = {"self", "symbiont"}
 #: 2026-10-07. Only ever delete lines (move the code or write the contract).
 SELF_SOURCE_ELSEWHERE = {
     "backup": "roles/pazny.backup/files/backup.sh",
-    "iiab_terminal": "roles/pazny.iiab_terminal/files",
+    "iiab_terminal": "files/iiab-terminal/iiab_terminal.py",
     "nos_forum": "roles/pazny.nos_forum",   # own repo ghcr.io/pazny/nos-forum-web; joint pending
 }
 
@@ -78,14 +78,19 @@ def self_source_problems(rows) -> list[str]:
 
 
 def host_list_disagreements(rows, defaults: dict) -> list[str]:
-    """A row's brew formula or cask classed by a config.d list must carry that class."""
+    """A row's brew_formula found in a classed formula list, or a cask whose
+    `flag` is the row's install_flag, must carry that list's class. Joined on
+    the declared package, never the row id: the `infisical` and `ntfy` formulae
+    are CLIs beside the server rows of the same name."""
     owner = defaults["software_owner"]
-    classed = {name: (lst, cls) for lst, cls in owner.items() if lst.startswith("homebrew_")
-               for name in _names(defaults.get(lst))}
+    formulae = {name: (lst, cls) for lst, cls in owner.items() if lst.startswith("homebrew_")
+                for name in _names(defaults.get(lst))}
+    casks = {c["flag"]: (lst, cls) for lst, cls in owner.items() if lst.endswith("_casks")
+             for c in defaults.get(lst) or [] if isinstance(c, dict) and c.get("flag")}
     bad = []
     for r in rows:
-        for key in ("brew_formula", "id"):
-            hit = classed.get(str(r.get(key) or ""))
+        for key, table in (("brew_formula", formulae), ("install_flag", casks)):
+            hit = table.get(str(r.get(key) or ""))
             if hit and hit[1] != r.get("software_owner"):
                 bad.append(f"{r['id']}: row says {r.get('software_owner')!r}, {hit[0]} says {hit[1]!r} ({key} {r.get(key)})")
     return bad
@@ -121,7 +126,7 @@ def test_row_owner_and_host_lists_agree():
 
 def test_the_readers_can_go_red():
     planted = [{"id": "zzz_planted", "software_owner": "self"},
-               {"id": "openhuman", "software_owner": "self"},
+               {"id": "openhuman", "software_owner": "self", "install_flag": "install_openhuman"},
                {"id": "x", "software_owner": "symbiont", "brew_formula": "git"}]
     assert ("zzz_planted: self, but no files/anatomy/zzz-planted/, no contracts/zzz-planted/ and "
             "not in SELF_SOURCE_ELSEWHERE") in self_source_problems(planted)

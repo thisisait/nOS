@@ -159,7 +159,8 @@ homebrew_personal_packages:
   - semgrep
   # ── Self-hosted CLI / agents ─────────────────────────────────────────────
   - ntfy                 # CLI client; nOS itself posts to the server over HTTP
-  - opencode             # pazny.opencode installs its own when install_opencode
+  # opencode is NOT here: roles/pazny.opencode installs it under install_opencode and
+  # its manifest row owns it (symbiont); one package, one owner (I-12).
   # ── Build tools (native extensions, source builds) ───────────────────────
   - cmake
   - ninja

@@ -50,10 +50,15 @@
   "definitions": {
     "service": {
       "type": "object",
-      "required": ["id", "category", "version_source"],
+      "required": ["id", "category", "version_source", "software_owner"],
       "additionalProperties": false,
       "properties": {
         "id":             { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+        "software_owner": {
+          "type": "string",
+          "enum": ["self", "symbiont"],
+          "description": "Whose software this organ is (body-plan.md §4.1; same key and values as config.d/20-host-software.yml). self: one of nOS's own parts, code in this repo or a contract-declared sibling. symbiont: declared vendor software beside nOS, fed by its vendor. Habitat is the machine owner's and is never a row. Gate: tests/anatomy/test_manifest_rows_carry_origin.py."
+        },
         "category": {
           "type": "string",
           "enum": ["infra", "database", "cache", "identity", "observability", "storage", "proxy", "web", "collaboration", "media", "devops", "automation", "ai", "messaging", "pbx", "gis", "data", "finance", "cms", "crm", "helpdesk", "wiki", "iam", "vault", "notifications", "rss", "iiab", "agent", "desktop", "api", "security", "homeautomation", "vpn", "mail", "monitoring", "knowledge", "productivity", "app"]

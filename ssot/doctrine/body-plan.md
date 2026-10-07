@@ -111,6 +111,13 @@ included. **symbiont**: declared, lives beside nOS, updated by its own vendor.
 **habitat**: the machine owner's. Origin is not what the immune system
 tolerates; that word is **declared**.
 
+Every manifest row carries the same key (I-12, 2026-10-07): a **self** organ
+is one of nOS's own parts, its code under `files/anatomy/<id>/` or a
+contract-declared sibling repo (KEAP); every vendor service nOS runs, pinned
+or not, is a **symbiont** organ. Habitat is never a row. A row's owner and
+the host-package lists never disagree. Gate:
+`tests/anatomy/test_manifest_rows_carry_origin.py`.
+
 ### 4.2 Appendage and joint
 
 An **appendage** is an organ attached through one declared **joint**: a
