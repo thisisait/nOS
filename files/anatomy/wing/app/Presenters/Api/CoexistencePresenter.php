@@ -21,6 +21,8 @@ use App\Model\EventRepository;
  */
 final class CoexistencePresenter extends BaseApiPresenter
 {
+	protected array $operatorActions = ['provision', 'queue', 'cutover', 'promote', 'deactivate', 'copyData', 'cancel', 'cleanup'];
+
 	public function __construct(
 		private CoexistenceRepository $coexistence,
 		private EventRepository $events,
@@ -55,7 +57,7 @@ final class CoexistencePresenter extends BaseApiPresenter
 		if (isset($body['planned_by'])) {
 			$this->sendError('planned_by is derived from the bearer token identity, not the body', 400);
 		}
-		$plannedBy = $this->getActorId() ?: 'api';
+		$plannedBy = $this->requireActorId();
 		$tag = (isset($body['tag']) && is_string($body['tag']) && $body['tag'] !== '') ? $body['tag'] : 'new';
 		$portOffset = (int) ($body['port_offset'] ?? 10);
 		$version = (isset($body['target_version']) && is_string($body['target_version'])) ? $body['target_version'] : null;
@@ -201,7 +203,7 @@ final class CoexistencePresenter extends BaseApiPresenter
 			$this->sendError('tag is required');
 		}
 		$tag = (string) $body['tag'];
-		$cancelledBy = $this->getActorId() ?: 'api';
+		$cancelledBy = $this->requireActorId();
 		$result = $this->coexistence->cancelPlanned($service, $tag, $cancelledBy);
 		if (!$result['ok']) {
 			$this->sendError($result['detail'], 409);

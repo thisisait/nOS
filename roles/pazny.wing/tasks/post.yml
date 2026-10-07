@@ -341,6 +341,7 @@
 # The face BFF speaks for end users with this row and no other: Wing believes
 # X-Nos-User-* only on a bearer named face-bff, and only on the session actions
 # (files/anatomy/contracts/face-wing.yml, wire). wing.write: it opens sessions.
+# wing.operator: a Tier-1 person decides through it; no other token holds it.
 - name: "[pazny.wing] Reconverge API token — face-bff (end-user sessions)"
   ansible.builtin.command:
     argv:
@@ -349,7 +350,7 @@
       - --db={{ wing_data_dir }}/wing.db
       - --token={{ face_bff_wing_api_token }}
       - --name=face-bff
-      - --scopes=wing.write
+      - --scopes=wing.operator,wing.write
     chdir: "{{ wing_app_dir }}"
   register: _wing_face_bff_token
   changed_when: >

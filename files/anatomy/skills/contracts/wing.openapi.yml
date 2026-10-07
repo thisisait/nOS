@@ -17,7 +17,7 @@ components:
     BearerAuth:
       type: http
       scheme: bearer
-      description: API token issued by Wing (api_tokens table).
+      description: 'API token issued by Wing (api_tokens table). Scopes: wing.read, wing.write; an operation listing wing.operator is an operator decision — no agent token holds it, and through the face BFF the person must be Tier 1.'
 paths:
   /api/v1/advisories:
     get:
@@ -250,7 +250,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: service
           in: path
@@ -273,7 +274,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: service
           in: path
@@ -301,7 +303,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: service
           in: path
@@ -324,7 +327,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: service
           in: path
@@ -347,7 +351,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: service
           in: path
@@ -370,7 +375,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: service
           in: path
@@ -393,7 +399,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: service
           in: path
@@ -416,7 +423,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: service
           in: path
@@ -1047,7 +1055,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: uuid
           in: path
@@ -1165,7 +1174,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: id
           in: path
@@ -1211,7 +1221,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: id
           in: path
@@ -1346,7 +1357,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: id
           in: path
@@ -2236,7 +2248,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: service
           in: path
@@ -2264,7 +2277,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: service
           in: path
@@ -2320,7 +2334,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: service
           in: path
@@ -2348,7 +2363,8 @@ paths:
         '404':
           description: Not found
       security:
-        - BearerAuth: []
+        - BearerAuth:
+            - wing.operator
       parameters:
         - name: service
           in: path

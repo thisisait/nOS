@@ -23,6 +23,8 @@ use App\Model\MigrationRepository;
  */
 final class MigrationsPresenter extends BaseApiPresenter
 {
+	protected array $operatorActions = ['apply', 'rollback'];
+
 	public function __construct(
 		private MigrationRepository $migrations,
 		private MigrationAuthoredRepository $authored,
@@ -67,7 +69,7 @@ final class MigrationsPresenter extends BaseApiPresenter
 		if (isset($body['author_agent']) || isset($body['actor_id'])) {
 			$this->sendError('author_agent / actor_id are derived from the bearer token identity, not the body', 400);
 		}
-		$actorId = $this->getActorId() ?: 'api';
+		$actorId = $this->requireActorId();
 		// author_agent == actor_id minus the "agent:" prefix (schema §2.1).
 		$authorAgent = str_starts_with($actorId, 'agent:') ? substr($actorId, 6) : $actorId;
 

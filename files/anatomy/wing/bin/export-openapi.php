@@ -11,7 +11,8 @@ declare(strict_types=1);
  * This script reads ``app/Core/RouterFactory.php`` for the route list and
  * walks the ``app/Presenters/Api/*Presenter.php`` files for class-level
  * docblocks describing HTTP methods + summaries. Auth requirement is
- * derived from ``protected array $publicActions`` per presenter.
+ * derived from ``protected array $publicActions`` per presenter; the
+ * wing.operator scope from ``$operatorActions``.
  *
  * The output is intentionally pragmatic: paths + methods + auth +
  * summaries. Request/response body schemas are NOT introspected (Wing's
@@ -114,17 +115,17 @@ function parse_presenter_docblock(string $file): array
 }
 
 /**
- * Pull the ``protected array $publicActions = [...];`` value from a
- * presenter source file. Returns the action names as an array.
+ * Pull a ``protected array $<prop> = [...];`` value ($publicActions,
+ * $operatorActions) from a presenter source file, as action names.
  */
-function parse_public_actions(string $file): array
+function parse_action_list(string $file, string $prop): array
 {
 	$src = file_get_contents($file);
 	if ($src === false) {
 		return [];
 	}
 	if (!preg_match(
-		'/protected\s+array\s+\$publicActions\s*=\s*\[([^\]]*)\]/',
+		'/protected\s+array\s+\$' . $prop . '\s*=\s*\[([^\]]*)\]/',
 		$src,
 		$m
 	)) {
@@ -178,7 +179,8 @@ foreach ($matches as $row) {
 	if (!isset($presenterCache[$presenter])) {
 		$presenterCache[$presenter] = [
 			'docblock' => parse_presenter_docblock($presenterFile),
-			'public'   => parse_public_actions($presenterFile),
+			'public'   => parse_action_list($presenterFile, 'publicActions'),
+			'operator' => parse_action_list($presenterFile, 'operatorActions'),
 		];
 	}
 	$pInfo = $presenterCache[$presenter];
@@ -205,6 +207,8 @@ foreach ($matches as $row) {
 			true
 		);
 
+		$isOperator = in_array(lcfirst($action), array_map('lcfirst', $pInfo['operator']), true);
+
 		foreach ($matchedMethods as $method => $summary) {
 			$op = [
 				'summary'     => $summary,
@@ -218,7 +222,7 @@ foreach ($matches as $row) {
 				],
 			];
 			if (!$isPublic) {
-				$op['security'] = [['BearerAuth' => []]];
+				$op['security'] = [['BearerAuth' => $isOperator ? ['wing.operator'] : []]];
 			}
 
 			// Path parameters.
@@ -264,7 +268,9 @@ $spec = [
 			'BearerAuth' => [
 				'type'         => 'http',
 				'scheme'       => 'bearer',
-				'description'  => 'API token issued by Wing (api_tokens table).',
+				'description'  => 'API token issued by Wing (api_tokens table). Scopes: wing.read, '
+					. 'wing.write; an operation listing wing.operator is an operator decision — '
+					. 'no agent token holds it, and through the face BFF the person must be Tier 1.',
 			],
 		],
 	],

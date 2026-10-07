@@ -70,9 +70,15 @@ if ($deactivate ?? false) {
 
 // pulse.write = registering a command the operator's Pulse runs. Only the
 // operator's own token holds it; an agent row asking for it is refused.
-if (in_array('pulse.write', array_map('trim', explode(',', (string) ($scopes ?? ''))), true)
-	&& $name !== 'ansible-provisioned') {
+$requested = array_map('trim', explode(',', (string) ($scopes ?? '')));
+if (in_array('pulse.write', $requested, true) && $name !== 'ansible-provisioned') {
 	echo "pulse.write is reserved for ansible-provisioned, refused for '{$name}'\n";
+	exit(1);
+}
+// wing.operator = an operator decision over the API (upgrade, migration, coexistence,
+// patch, approval). Only the face BFF holds it, and Wing still asks its person for Tier 1.
+if (in_array('wing.operator', $requested, true) && $name !== 'face-bff') {
+	echo "wing.operator is reserved for face-bff, refused for '{$name}'\n";
 	exit(1);
 }
 

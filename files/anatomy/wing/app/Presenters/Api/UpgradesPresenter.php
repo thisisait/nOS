@@ -19,6 +19,8 @@ use App\Model\UpgradeRepository;
  */
 final class UpgradesPresenter extends BaseApiPresenter
 {
+	protected array $operatorActions = ['apply', 'applyDetached', 'queue', 'planChoice'];
+
 	public function __construct(
 		private UpgradeRepository $upgrades,
 		private MigrationAuthoredRepository $authored,
@@ -93,7 +95,7 @@ final class UpgradesPresenter extends BaseApiPresenter
 		if (isset($body['planned_by'])) {
 			$this->sendError('planned_by is derived from the bearer token identity, not the request body', 400);
 		}
-		$plannedBy = $this->getActorId() ?: 'api';
+		$plannedBy = $this->requireActorId();
 		$target = (isset($body['target_version']) && is_string($body['target_version'])) ? $body['target_version'] : null;
 		$notes  = (isset($body['notes']) && is_string($body['notes'])) ? $body['notes'] : null;
 		$force  = !empty($body['force']);
@@ -134,7 +136,7 @@ final class UpgradesPresenter extends BaseApiPresenter
 		if (isset($body['planned_by'])) {
 			$this->sendError('planned_by is derived from the bearer token identity, not the request body', 400);
 		}
-		$plannedBy = $this->getActorId() ?: 'api';
+		$plannedBy = $this->requireActorId();
 		$mode = (isset($body['plan_mode']) && $body['plan_mode'] === 'coexist') ? 'coexist' : 'migration';
 		$target = (isset($body['target_version']) && is_string($body['target_version'])) ? $body['target_version'] : null;
 		$portOffset = isset($body['port_offset']) && is_numeric($body['port_offset']) ? (int) $body['port_offset'] : 100;

@@ -34,6 +34,9 @@ abstract class BaseApiPresenter extends Presenter
 	/** The end user the face BFF speaks for, or null (face-wing.yml, wire). */
 	protected ?EndUser $endUser = null;
 
+	/** Actions that write an operator decision; startup() runs requireOperator() on each. */
+	protected array $operatorActions = [];
+
 	public function startup(): void
 	{
 		parent::startup();
@@ -63,8 +66,34 @@ abstract class BaseApiPresenter extends Presenter
 		} catch (\DomainException $e) {
 			$this->sendError($e->getMessage(), IResponse::S401_Unauthorized);
 		}
-		if ($this->endUser !== null && !in_array($this->getAction(), $this->bffActions, true)) {
+		// PHP method names are case-insensitive, so the match must be too.
+		$operatorAction = in_array(strtolower($this->getAction()), array_map('strtolower', $this->operatorActions), true);
+		if ($this->endUser !== null && !$operatorAction && !in_array($this->getAction(), $this->bffActions, true)) {
 			$this->sendError('the face-bff token does not reach this action', IResponse::S403_Forbidden);
+		}
+		if ($operatorAction) {
+			$this->requireOperator();
+		}
+	}
+
+	/**
+	 * An operator decision needs the wing.operator scope, which no agent token holds
+	 * (explicit-only: NULL grants nothing). Through the face BFF the person must also
+	 * be Tier 1; a pure token holding the scope has no person to ask.
+	 */
+	protected function requireOperator(): void
+	{
+		if (!TokenRepository::grants($this->validatedToken['scopes'] ?? null, 'wing.operator')) {
+			$this->sendError(
+				'This is an operator decision: it needs the wing.operator scope, which agent tokens do not hold',
+				IResponse::S403_Forbidden,
+			);
+		}
+		if ($this->endUser !== null && !$this->endUser->operator) {
+			$this->sendError(
+				'This is an operator decision: Tier 1 (nos-providers or nos-admins) only',
+				IResponse::S403_Forbidden,
+			);
 		}
 	}
 
@@ -100,6 +129,16 @@ abstract class BaseApiPresenter extends Presenter
 		}
 		$name = $this->validatedToken['name'] ?? null;
 		return is_string($name) && $name !== '' ? $name : null;
+	}
+
+	/** The actor a record names; refuses rather than write a default name. */
+	protected function requireActorId(): string
+	{
+		$actor = $this->getActorId();
+		if ($actor === null) {
+			$this->sendError('No identity on this request, so nothing was recorded', IResponse::S401_Unauthorized);
+		}
+		return $actor;
 	}
 
 	protected function getJsonBody(): array

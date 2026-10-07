@@ -38,6 +38,8 @@ use Nette\Http\IResponse;
  */
 final class InboxPresenter extends BaseApiPresenter
 {
+	protected array $operatorActions = ['answer'];
+
 	public function __construct(
 		private AgentQuestionRepository $questions,
 	) {
@@ -134,7 +136,8 @@ final class InboxPresenter extends BaseApiPresenter
 		// recorded (the agents-inbox plan's own trap). `agent:*` and
 		// `channel:*` are the estate's two non-person actor spellings —
 		// refused by shape even when non-empty.
-		$answeredBy = trim((string) ($b['answered_by'] ?? ''));
+		// Through the face BFF the person is known; the body cannot name someone else.
+		$answeredBy = $this->endUser?->actorId() ?? trim((string) ($b['answered_by'] ?? ''));
 		if ($answeredBy === ''
 			|| strtolower($answeredBy) === 'unknown'
 			|| str_starts_with($answeredBy, 'agent:')

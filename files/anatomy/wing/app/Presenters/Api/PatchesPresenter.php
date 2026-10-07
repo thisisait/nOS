@@ -24,6 +24,8 @@ use App\Model\PatchRepository;
  */
 final class PatchesPresenter extends BaseApiPresenter
 {
+	protected array $operatorActions = ['apply'];
+
 	public function __construct(
 		private PatchRepository $patches,
 	) {
