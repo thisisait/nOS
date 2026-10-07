@@ -1,6 +1,6 @@
 """The task-type contract is well-shaped and AGENTS.md is its faithful render.
 
-state/task-types.yml is the ONE source of the task_type enum (operator decision
+state/genome/task-types.yml is the ONE source of the task_type enum (operator decision
 §14.2: the enum lives in code). Two ways it can rot, both gated here:
 
 1. A type with a missing/blank field — a dumb agent reading a half-contract does
@@ -24,7 +24,7 @@ import pytest
 import yaml
 
 _REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-_SRC = os.path.join(_REPO, "state", "task-types.yml")
+_SRC = os.path.join(_REPO, "state", "genome", "task-types.yml")
 _RENDER = os.path.join(_REPO, "tools", "task-types-render.py")
 
 _REQUIRED = {"summary", "tools", "writes", "needs_operator", "done"}
@@ -38,7 +38,7 @@ def _doc() -> dict:
 
 def test_source_exists_and_has_types():
     doc = _doc()
-    assert doc.get("task_types"), "state/task-types.yml declares no task_types"
+    assert doc.get("task_types"), "state/genome/task-types.yml declares no task_types"
 
 
 @pytest.mark.parametrize("name", list(_doc()["task_types"].keys()))
@@ -62,7 +62,7 @@ def test_agents_md_is_in_sync():
     r = subprocess.run([sys.executable, _RENDER, "--check"],
                        capture_output=True, text=True)
     assert r.returncode == 0, (
-        "AGENTS.md is stale vs state/task-types.yml — run "
+        "AGENTS.md is stale vs state/genome/task-types.yml — run "
         "tools/task-types-render.py.\n" + (r.stderr or r.stdout))
 
 

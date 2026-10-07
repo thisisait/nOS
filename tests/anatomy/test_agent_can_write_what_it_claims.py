@@ -5,7 +5,7 @@ writing task_type (code-fix/seed-edit/design/…) is backed by a scope that can
 actually WRITE its target. Without this, a read-only agent could carry
 `code-fix` in its task_types and MATCH a code-fix assignment it cannot perform —
 a fabricated affordance, the shape this estate keeps paying for. This gate seals
-it: for every writing task_type an agent authors (state/task-types.yml `writes`),
+it: for every writing task_type an agent authors (state/genome/task-types.yml `writes`),
 its capability KAM (tools/agent-capability.py) must cover the write target.
 
   writes=code  → needs a repo write            (bare `repo`)
@@ -46,7 +46,7 @@ WRITE_TARGETS = {
 
 
 def _task_types() -> dict:
-    return yaml.safe_load((REPO / "state/task-types.yml").read_text())["task_types"]
+    return yaml.safe_load((REPO / "state/genome/task-types.yml").read_text())["task_types"]
 
 
 def test_a_writing_task_type_has_a_write_scope():
