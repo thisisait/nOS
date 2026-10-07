@@ -1,7 +1,7 @@
 """A tissue gathers what exists; it never declares anything of its own.
 
 state/tissues/<name>.tissue.yml lists ids of cells, skills, tables, services,
-reflexes, importers and seeds (docs/doctrine/tissues.md, PROPOSED). The
+reflexes, importers and seeds (ssot/doctrine/tissue.md, PROPOSED). The
 failure this guards is a pack that reads as transplantable while naming a part
 that is gone, or that carries personal data no member declared under Article
 30. Each rule is checked on the real manifests AND shown to refuse a broken one.

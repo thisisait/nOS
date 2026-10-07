@@ -130,7 +130,6 @@ def test_index_names_unpromoted_proposed_files():
         "docs/doctrine/agentkit.md",
         "docs/doctrine/backoffice.md",
         "docs/doctrine/n8n-packs.md",
-        "docs/doctrine/tissues.md",
     ]
     for rel in named:
         path = REPO / rel

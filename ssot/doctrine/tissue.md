@@ -3,7 +3,6 @@ in_force: false
 ruled: null
 row: tissues
 gates:
-  - tests/anatomy/test_ssot_index.py
   - tests/anatomy/test_tissue_holds.py
 ---
 # Tissues — the transplantable pack of one specialization
