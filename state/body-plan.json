@@ -11,8 +11,8 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
-    "sense": 70,
-    "limb": 114,
+    "sense": 71,
+    "limb": 113,
     "memory": 40,
     "law": 52,
     "reflex": 43,
@@ -2136,10 +2136,6 @@
       "level": "limb",
       "kind": "tool"
     },
-    "tool:mcp-bone": {
-      "level": "limb",
-      "kind": "tool"
-    },
     "tool:mcp-keap": {
       "level": "limb",
       "kind": "tool"
@@ -2161,6 +2157,10 @@
       "kind": "tool_ro"
     },
     "tool_ro:contract-search": {
+      "level": "sense",
+      "kind": "tool_ro"
+    },
+    "tool_ro:mcp-bone": {
       "level": "sense",
       "kind": "tool_ro"
     },
@@ -4184,31 +4184,6 @@
       "kind": "data"
     },
     {
-      "from": "tool:mcp-bone",
-      "to": "agent:conductor",
-      "kind": "data"
-    },
-    {
-      "from": "tool:mcp-bone",
-      "to": "agent:curator",
-      "kind": "data"
-    },
-    {
-      "from": "tool:mcp-bone",
-      "to": "agent:inspektor",
-      "kind": "data"
-    },
-    {
-      "from": "tool:mcp-bone",
-      "to": "agent:librarian",
-      "kind": "data"
-    },
-    {
-      "from": "tool:mcp-bone",
-      "to": "agent:surveyor",
-      "kind": "data"
-    },
-    {
       "from": "tool:mcp-keap",
       "to": "agent:curator",
       "kind": "data"
@@ -4291,6 +4266,31 @@
     {
       "from": "tool_ro:contract-search",
       "to": "agent:jeff-cloud",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-bone",
+      "to": "agent:conductor",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-bone",
+      "to": "agent:curator",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-bone",
+      "to": "agent:inspektor",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-bone",
+      "to": "agent:librarian",
+      "kind": "data"
+    },
+    {
+      "from": "tool_ro:mcp-bone",
+      "to": "agent:surveyor",
       "kind": "data"
     },
     {

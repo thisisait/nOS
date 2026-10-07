@@ -13,8 +13,8 @@
     "nodes_daemon": 18,
     "nodes_service": 73,
     "nodes_lock": 1,
-    "nodes_tool": 7,
-    "nodes_tool_ro": 3,
+    "nodes_tool": 6,
+    "nodes_tool_ro": 4,
     "nodes_token": 1,
     "nodes_token_ro": 2,
     "nodes_backend": 6,
@@ -5255,12 +5255,6 @@
       "anchor": "02.02.09",
       "description": "Agent tool 'exec' — a capability grant an agent's runtime may call; acts (opens a write scope, or declares none); declared per agent in tools[], enforced by the tool's own scope"
     },
-    "tool:mcp-bone": {
-      "kind": "tool",
-      "source": "derived from agent tools",
-      "anchor": "02.02.09",
-      "description": "Agent tool 'mcp-bone' — a capability grant an agent's runtime may call; acts (opens a write scope, or declares none); declared per agent in tools[], enforced by the tool's own scope"
-    },
     "tool:mcp-keap": {
       "kind": "tool",
       "source": "derived from agent tools",
@@ -5296,6 +5290,12 @@
       "source": "derived from agent tools",
       "anchor": "02.02.09",
       "description": "Agent tool 'contract-search' — a capability grant an agent's runtime may call; opens only `.read` scopes; declared per agent in tools[], enforced by the tool's own scope"
+    },
+    "tool_ro:mcp-bone": {
+      "kind": "tool_ro",
+      "source": "derived from agent tools",
+      "anchor": "02.02.09",
+      "description": "Agent tool 'mcp-bone' — a capability grant an agent's runtime may call; opens only `.read` scopes; declared per agent in tools[], enforced by the tool's own scope"
     },
     "tool_ro:mcp-wing-read": {
       "kind": "tool_ro",
@@ -7113,46 +7113,6 @@
       "evidence": "derived"
     },
     {
-      "from": "tool:mcp-bone",
-      "to": "agent:conductor",
-      "kind": "data",
-      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/conductor/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "tool:mcp-bone",
-      "to": "agent:curator",
-      "kind": "data",
-      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/curator/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "tool:mcp-bone",
-      "to": "agent:inspektor",
-      "kind": "data",
-      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "tool:mcp-bone",
-      "to": "agent:librarian",
-      "kind": "data",
-      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/librarian/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
-      "from": "tool:mcp-bone",
-      "to": "agent:surveyor",
-      "kind": "data",
-      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
-      "derived": "agent-tools",
-      "evidence": "derived"
-    },
-    {
       "from": "tool:mcp-keap",
       "to": "agent:curator",
       "kind": "data",
@@ -7285,6 +7245,46 @@
       "to": "agent:jeff-cloud",
       "kind": "data",
       "via": "tool grant `contract-search` declared in files/anatomy/agents/jeff-cloud/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-bone",
+      "to": "agent:conductor",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/conductor/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-bone",
+      "to": "agent:curator",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/curator/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-bone",
+      "to": "agent:inspektor",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/inspektor/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-bone",
+      "to": "agent:librarian",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/librarian/agent.yml tools[]",
+      "derived": "agent-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tool_ro:mcp-bone",
+      "to": "agent:surveyor",
+      "kind": "data",
+      "via": "tool grant `mcp-bone` declared in files/anatomy/agents/surveyor/agent.yml tools[]",
       "derived": "agent-tools",
       "evidence": "derived"
     },

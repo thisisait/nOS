@@ -14,7 +14,7 @@
     "seed-edit"
   ],
   "scopes": [
-    "bone",
+    "bone.read",
     "dtt",
     "internet",
     "keap",
@@ -32,6 +32,8 @@
     "jeff-cloud",
     "librarian",
     "migration-author",
+    "ops-extract-cloud",
+    "ops-triage-cloud",
     "proposer",
     "surveyor",
     "upgrade-architect"
@@ -49,38 +51,38 @@
       "kind": "where",
       "label": "local",
       "x": 0,
-      "y": 210
+      "y": 910
     },
     {
       "id": "agent:conductor",
       "kind": "agent",
       "label": "conductor",
       "x": 300,
-      "y": 280,
-      "address": "nos-work://local/agent:conductor/repo.read+wing.read+bone/investigate+review/*"
+      "y": 70,
+      "address": "nos-work://ext-cloud/agent:conductor/repo.read+wing.read+bone.read+internet/investigate+review/*"
     },
     {
       "id": "agent:curator",
       "kind": "agent",
       "label": "curator",
       "x": 300,
-      "y": 350,
-      "address": "nos-work://local/agent:curator/repo.read+wing.read+bone+keap+dtt/seed-edit+investigate/*"
+      "y": 140,
+      "address": "nos-work://ext-cloud/agent:curator/repo.read+wing.read+bone.read+keap+dtt+internet/seed-edit+investigate/*"
     },
     {
       "id": "agent:inspektor",
       "kind": "agent",
       "label": "inspektor",
       "x": 300,
-      "y": 420,
-      "address": "nos-work://local/agent:inspektor/repo.read+wing.read+bone+internet/investigate+review/*"
+      "y": 210,
+      "address": "nos-work://ext-cloud/agent:inspektor/repo.read+wing.read+bone.read+internet/investigate+review/*"
     },
     {
       "id": "agent:jeff",
       "kind": "agent",
       "label": "jeff",
       "x": 300,
-      "y": 490,
+      "y": 980,
       "address": "nos-work://local/agent:jeff/wing.read+repo/investigate+design+doc+code-fix/*"
     },
     {
@@ -88,48 +90,64 @@
       "kind": "agent",
       "label": "jeff-cloud",
       "x": 300,
-      "y": 70,
-      "address": "nos-work://ext-cloud/agent:jeff-cloud/wing.read+repo.read/investigate/*"
+      "y": 280,
+      "address": "nos-work://ext-cloud/agent:jeff-cloud/wing.read+repo.read+internet/investigate/*"
     },
     {
       "id": "agent:librarian",
       "kind": "agent",
       "label": "librarian",
       "x": 300,
-      "y": 560,
-      "address": "nos-work://local/agent:librarian/repo.read+wing+bone+keap+dtt/investigate+seed-edit/*"
+      "y": 350,
+      "address": "nos-work://ext-cloud/agent:librarian/repo.read+wing+bone.read+keap+dtt+internet/investigate+seed-edit/*"
     },
     {
       "id": "agent:migration-author",
       "kind": "agent",
       "label": "migration-author",
       "x": 300,
-      "y": 630,
-      "address": "nos-work://local/agent:migration-author/wing.read+repo+internet/code-fix/*"
+      "y": 420,
+      "address": "nos-work://ext-cloud/agent:migration-author/wing.read+repo+internet/code-fix/*"
+    },
+    {
+      "id": "agent:ops-extract-cloud",
+      "kind": "agent",
+      "label": "ops-extract-cloud",
+      "x": 300,
+      "y": 490,
+      "address": "nos-work://ext-cloud/agent:ops-extract-cloud/internet/investigate/*"
+    },
+    {
+      "id": "agent:ops-triage-cloud",
+      "kind": "agent",
+      "label": "ops-triage-cloud",
+      "x": 300,
+      "y": 560,
+      "address": "nos-work://ext-cloud/agent:ops-triage-cloud/internet/investigate/*"
     },
     {
       "id": "agent:proposer",
       "kind": "agent",
       "label": "proposer",
       "x": 300,
-      "y": 700,
-      "address": "nos-work://local/agent:proposer/repo.read+loop+wing.read/design/*"
+      "y": 630,
+      "address": "nos-work://ext-cloud/agent:proposer/repo.read+loop+wing.read+internet/design/*"
     },
     {
       "id": "agent:surveyor",
       "kind": "agent",
       "label": "surveyor",
       "x": 300,
-      "y": 770,
-      "address": "nos-work://local/agent:surveyor/repo.read+wing+bone/investigate+seed-edit/*"
+      "y": 700,
+      "address": "nos-work://ext-cloud/agent:surveyor/repo.read+wing+bone.read+internet/investigate+seed-edit/*"
     },
     {
       "id": "agent:upgrade-architect",
       "kind": "agent",
       "label": "upgrade-architect",
       "x": 300,
-      "y": 840,
-      "address": "nos-work://local/agent:upgrade-architect/wing.read+repo+internet/design+code-fix/*"
+      "y": 770,
+      "address": "nos-work://ext-cloud/agent:upgrade-architect/wing.read+repo+internet/design+code-fix/*"
     },
     {
       "id": "co:review",
@@ -139,100 +157,100 @@
       "y": 0
     },
     {
-      "id": "co:investigate",
-      "kind": "task_type",
-      "label": "investigate",
-      "x": 600,
-      "y": 70
-    },
-    {
-      "id": "co:doc",
-      "kind": "task_type",
-      "label": "doc",
-      "x": 600,
-      "y": 140
-    },
-    {
       "id": "co:seed-edit",
       "kind": "task_type",
       "label": "seed-edit",
       "x": 600,
-      "y": 210
+      "y": 70
+    },
+    {
+      "id": "co:investigate",
+      "kind": "task_type",
+      "label": "investigate",
+      "x": 600,
+      "y": 140
     },
     {
       "id": "co:code-fix",
       "kind": "task_type",
       "label": "code-fix",
       "x": 600,
-      "y": 280
+      "y": 210
     },
     {
       "id": "co:design",
       "kind": "task_type",
       "label": "design",
       "x": 600,
-      "y": 350
+      "y": 280
     },
     {
-      "id": "kam:repo.read",
-      "kind": "scope",
-      "label": "repo.read",
-      "x": 900,
-      "y": 0
+      "id": "co:doc",
+      "kind": "task_type",
+      "label": "doc",
+      "x": 600,
+      "y": 350
     },
     {
       "id": "kam:dtt",
       "kind": "scope",
       "label": "dtt",
       "x": 900,
-      "y": 70
+      "y": 0
     },
     {
       "id": "kam:keap",
       "kind": "scope",
       "label": "keap",
       "x": 900,
+      "y": 70
+    },
+    {
+      "id": "kam:bone.read",
+      "kind": "scope",
+      "label": "bone.read",
+      "x": 900,
       "y": 140
     },
     {
-      "id": "kam:wing.read",
+      "id": "kam:repo.read",
       "kind": "scope",
-      "label": "wing.read",
+      "label": "repo.read",
       "x": 900,
       "y": 210
-    },
-    {
-      "id": "kam:bone",
-      "kind": "scope",
-      "label": "bone",
-      "x": 900,
-      "y": 280
     },
     {
       "id": "kam:internet",
       "kind": "scope",
       "label": "internet",
       "x": 900,
-      "y": 350
+      "y": 280
     },
     {
-      "id": "kam:repo",
+      "id": "kam:wing.read",
       "kind": "scope",
-      "label": "repo",
+      "label": "wing.read",
       "x": 900,
-      "y": 420
+      "y": 350
     },
     {
       "id": "kam:wing",
       "kind": "scope",
       "label": "wing",
       "x": 900,
-      "y": 490
+      "y": 420
     },
     {
       "id": "kam:loop",
       "kind": "scope",
       "label": "loop",
+      "x": 900,
+      "y": 490
+    },
+    {
+      "id": "kam:repo",
+      "kind": "scope",
+      "label": "repo",
       "x": 900,
       "y": 560
     }
@@ -240,17 +258,17 @@
   "edges": [
     {
       "source": "agent:conductor",
-      "target": "where:local",
+      "target": "where:ext-cloud",
       "kind": "runs-in"
     },
     {
       "source": "agent:curator",
-      "target": "where:local",
+      "target": "where:ext-cloud",
       "kind": "runs-in"
     },
     {
       "source": "agent:inspektor",
-      "target": "where:local",
+      "target": "where:ext-cloud",
       "kind": "runs-in"
     },
     {
@@ -265,27 +283,37 @@
     },
     {
       "source": "agent:librarian",
-      "target": "where:local",
+      "target": "where:ext-cloud",
       "kind": "runs-in"
     },
     {
       "source": "agent:migration-author",
-      "target": "where:local",
+      "target": "where:ext-cloud",
+      "kind": "runs-in"
+    },
+    {
+      "source": "agent:ops-extract-cloud",
+      "target": "where:ext-cloud",
+      "kind": "runs-in"
+    },
+    {
+      "source": "agent:ops-triage-cloud",
+      "target": "where:ext-cloud",
       "kind": "runs-in"
     },
     {
       "source": "agent:proposer",
-      "target": "where:local",
+      "target": "where:ext-cloud",
       "kind": "runs-in"
     },
     {
       "source": "agent:surveyor",
-      "target": "where:local",
+      "target": "where:ext-cloud",
       "kind": "runs-in"
     },
     {
       "source": "agent:upgrade-architect",
-      "target": "where:local",
+      "target": "where:ext-cloud",
       "kind": "runs-in"
     },
     {
@@ -300,7 +328,12 @@
     },
     {
       "source": "agent:conductor",
-      "target": "kam:bone",
+      "target": "kam:bone.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:conductor",
+      "target": "kam:internet",
       "kind": "touches"
     },
     {
@@ -325,12 +358,17 @@
     },
     {
       "source": "agent:curator",
-      "target": "kam:bone",
+      "target": "kam:bone.read",
       "kind": "touches"
     },
     {
       "source": "agent:curator",
       "target": "kam:dtt",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:curator",
+      "target": "kam:internet",
       "kind": "touches"
     },
     {
@@ -360,7 +398,7 @@
     },
     {
       "source": "agent:inspektor",
-      "target": "kam:bone",
+      "target": "kam:bone.read",
       "kind": "touches"
     },
     {
@@ -382,6 +420,11 @@
       "source": "agent:jeff-cloud",
       "target": "co:investigate",
       "kind": "can-do"
+    },
+    {
+      "source": "agent:jeff-cloud",
+      "target": "kam:internet",
+      "kind": "touches"
     },
     {
       "source": "agent:jeff-cloud",
@@ -435,12 +478,17 @@
     },
     {
       "source": "agent:librarian",
-      "target": "kam:bone",
+      "target": "kam:bone.read",
       "kind": "touches"
     },
     {
       "source": "agent:librarian",
       "target": "kam:dtt",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:librarian",
+      "target": "kam:internet",
       "kind": "touches"
     },
     {
@@ -479,9 +527,34 @@
       "kind": "touches"
     },
     {
+      "source": "agent:ops-extract-cloud",
+      "target": "co:investigate",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:ops-extract-cloud",
+      "target": "kam:internet",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:ops-triage-cloud",
+      "target": "co:investigate",
+      "kind": "can-do"
+    },
+    {
+      "source": "agent:ops-triage-cloud",
+      "target": "kam:internet",
+      "kind": "touches"
+    },
+    {
       "source": "agent:proposer",
       "target": "co:design",
       "kind": "can-do"
+    },
+    {
+      "source": "agent:proposer",
+      "target": "kam:internet",
+      "kind": "touches"
     },
     {
       "source": "agent:proposer",
@@ -510,7 +583,12 @@
     },
     {
       "source": "agent:surveyor",
-      "target": "kam:bone",
+      "target": "kam:bone.read",
+      "kind": "touches"
+    },
+    {
+      "source": "agent:surveyor",
+      "target": "kam:internet",
       "kind": "touches"
     },
     {

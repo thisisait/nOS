@@ -6,7 +6,8 @@
   tools/routing-graph-gen.py → routing-graph.json, imported build-time and gated
   against a fresh generate). Nothing here drags or writes.
 
-  What it shows: each agent under its execution locus (WHERE), wired to the
+  What it shows: each cell (agent) under where its model runs (WHERE: local,
+  eu-cloud or ext-cloud, read from state/llm-backends.yml), wired to the
   task_types it may do (CO, "can do") and the scopes it touches (KAM). What it
   does NOT show yet: the LIVE match of assignments to capabilities — those are
   runtime currentState rows, and the matcher (assignment ⊆ capability) is
@@ -69,8 +70,8 @@
 	})) as Edge[];
 
 	const KIND_LEGEND: { key: string; label: string }[] = [
-		{ key: 'where', label: 'locus' },
-		{ key: 'agent', label: 'agent' },
+		{ key: 'where', label: 'where the model runs' },
+		{ key: 'agent', label: 'cell' },
 		{ key: 'task_type', label: 'task type' },
 		{ key: 'scope', label: 'scope' }
 	];
@@ -80,8 +81,8 @@
 	<header>
 		<strong>Routing</strong>
 		<span class="sub"
-			>who may do what, where, touching what · read-only · {graph.agents.length} agents · locus &rarr;
-			agent &rarr; task type &rarr; scope</span
+			>who may do what, where, touching what · read-only · {graph.agents.length} cells · where the model
+			runs &rarr; cell &rarr; task type &rarr; scope</span
 		>
 		<span class="legend">
 			{#each KIND_LEGEND as k}

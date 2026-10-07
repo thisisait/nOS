@@ -529,7 +529,9 @@ nodes:
   # That the caddy can run one cortex-lang sentence is a fact about the door,
   # and a door is not a thing to publish (2026-09-01).
   "tool:exec": withheld
-  "tool:mcp-bone": withheld
+  # 2026-10-07: renamed in place from tool:mcp-bone. The PHP tool asks only
+  # bone.read and does GET only, so the grant is a sense. Same WITHHELD verdict.
+  "tool_ro:mcp-bone": withheld
   "tool:mcp-keap": withheld
   "tool:mcp-loop": withheld
   "tool_ro:mcp-wing-read": withheld
