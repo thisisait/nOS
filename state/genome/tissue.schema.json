@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://thisisait.eu/nos/schema/tissue.schema.json",
   "title": "tissue — the transplantable pack of one specialization",
-  "description": "A tissue declares nothing new. Every list below holds ids that already exist in their own source (an agent dir, a SKILL.md, a table definition, a manifest row, a plugin pulse job, an importer, a seed); files/anatomy/module_utils/nos_tissue.py resolves each one and refuses a dangling reference. `meta` is the Tier-2 app manifest's own block (state/schema/app.schema.json), plus a licence. There is no gdpr block on purpose: Article 30 is inherited from the members that process data. Doctrine: ssot/doctrine/tissue.md.",
+  "description": "A tissue declares nothing new. Every list below holds ids that already exist in their own source (an agent dir, a SKILL.md, a table definition, a manifest row, a plugin pulse job, an importer, a seed); files/anatomy/module_utils/nos_tissue.py resolves each one and refuses a dangling reference. `meta` is the manifest app's own block (state/schema/app.schema.json), plus a licence. There is no gdpr block on purpose: Article 30 is inherited from the members that process data. Doctrine: ssot/doctrine/tissue.md.",
   "type": "object",
   "additionalProperties": false,
   "required": ["meta", "cells", "skills", "tables", "services", "reflexes", "acceptance"],
