@@ -234,6 +234,9 @@
 - slug: containerized-core
   parent: ''
   track: platform
+- slug: contracts-missing
+  parent: body-organ
+  track: platform
 - slug: contracts-one-home
   parent: body-organ
   track: platform
@@ -585,6 +588,9 @@
 - slug: espocrm-retire-cleanup
   parent: ''
   track: platform
+- slug: event-type-gate-dot-blind
+  parent: wing-organ-without-face
+  track: platform
 - slug: evolve-imprint
   parent: body-cell
   track: agents
@@ -896,6 +902,9 @@
   track: cortex
 - slug: keap-row-vector-search
   parent: digest
+  track: cortex
+- slug: keap-rowref-facet-upstream
+  parent: body-organ
   track: cortex
 - slug: keap-slow-under-model-load
   parent: ''
