@@ -95,6 +95,35 @@ def test_a_host_native_service_is_not_described_as_docker():
     assert not bad, f"host-native rows described as Docker services: {bad}"
 
 
+def _body_plan() -> dict:
+    return json.loads((REPO / "state/body-plan.json").read_text(encoding="utf-8"))
+
+
+def test_the_body_plan_counts_each_organ_once():
+    """MEASURED 2026-10-07 (I-12): the organ level held 73 rows + 18 daemon nodes
+    + 7 face apps + the repo surfaces, so wing, bone, pulse and cortex were each
+    two organs and a face app was one. An organ is one row (body-plan.md §5);
+    the only other organ-level node is a declared repo surface."""
+    plan = _body_plan()
+    organs = [nid for nid, n in plan["nodes"].items() if n["level"] == "organ"]
+    repos = [nid for nid in organs if nid.startswith("repo:")]
+    rows = len(_manifest()["services"])
+    extra = sorted(nid for nid in organs if not nid.startswith(("service:", "repo:")))
+    assert len(organs) == rows + len(repos) and not extra, (
+        f"organ level holds {len(organs)} nodes, manifest {rows} rows + {len(repos)} repo "
+        f"surfaces = {rows + len(repos)}; nodes that are not a row or a repo surface: {extra}")
+
+
+def test_no_organ_node_carries_a_rows_launchd_label():
+    """A daemon whose label a row owns IS that row's organ; a second node for it
+    is the same fact twice (the 2026-10-05 study's finding, still open on 10-07)."""
+    owned = set(_owners())
+    twice = sorted(nid for nid, n in _body_plan()["nodes"].items()
+                   if n["level"] == "organ" and nid.startswith("daemon:")
+                   and nid.split(":", 1)[1] in owned)
+    assert not twice, f"organ nodes that are a row's launchd job counted again: {twice}"
+
+
 def test_a_local_backend_is_served_by_a_row_that_owns_its_daemon():
     """MEASURED 2026-10-06: backend:ollama (core cells bind it) had no edge to
     any row, and its daemon sat in openclaw's row as a helper — so cutting off
