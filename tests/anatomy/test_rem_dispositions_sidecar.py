@@ -129,3 +129,27 @@ def test_the_drift_hook_counts_the_joined_queue(tmp_path):
         capture_output=True, text=True, check=True,
     ).stdout
     assert json.loads(out)["pending_critical"] == 1, out
+
+
+def test_discovery_scan_judges_the_joined_queue(tmp_path, monkeypatch):
+    """Probe B read the raw notebook while rem-status read the join. On
+    2026-10-07 five rows (REM-156/244/251/253/260) were resolved in the sidecar
+    and still reported `still pending` — two readers, one fact, two answers."""
+    import importlib.util
+
+    _write_queue(tmp_path, [{
+        "id": "REM-156", "status": "pending", "severity": "HIGH",
+        "component": "nodered", "fix_version": "4.1.13",
+    }])
+    _write_sidecar(tmp_path, {"REM-156": {"status": "resolved", "resolved_by": "pin 4.1.14"}})
+    monkeypatch.setenv("NOS_SECURITY_DIR", str(tmp_path))
+    monkeypatch.setenv("VULNSCAN_SECURITY_DIR", str(tmp_path))
+    spec = importlib.util.spec_from_file_location(
+        "discovery_scan_join", REPO / "tools/discovery-scan.py")
+    scan = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = scan
+    spec.loader.exec_module(scan)
+    res = scan.ScanResult()
+    scan.probe_queue_vs_running({"iiab-nodered-1": "nodered/node-red:4.1.14"}, res)
+    assert not res.findings, [f.title for f in res.findings]
+    assert "obs-queue-rem-156" in res.judged
