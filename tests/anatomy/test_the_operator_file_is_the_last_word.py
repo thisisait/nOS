@@ -28,7 +28,7 @@ divergence existed only for the key that had just been pasted — which is what
 makes this class dangerous: it is invisible until the first time the operator
 changes their mind, and then it silently ignores them.
 
-This is the drift `docs/secret-lifecycle-doctrine.md` already names — a value
+This is the drift `ssot/doctrine/secrets.md` §7 (kind C) names — a value
 captured at bootstrap outranking the value the operator declares — arriving
 one layer further out than the doc's own examples.
 

@@ -4,6 +4,7 @@ ruled: null
 row: null
 gates:
   - tests/anatomy/test_lexicon_holds.py
+  - tests/anatomy/test_the_operator_file_is_the_last_word.py
 ---
 # Secrets Doctrine
 
