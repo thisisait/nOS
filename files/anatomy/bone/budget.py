@@ -82,6 +82,7 @@ ALLOWED_ROOTS: tuple[str, ...] = (
     "apps/",
     "upgrades/",
     "default.config.yml",
+    "config.d/",   # the other committed default layers (nos_identity.default_layers)
 )
 
 # ── §5a the carve-out ─────────────────────────────────────────────────────
