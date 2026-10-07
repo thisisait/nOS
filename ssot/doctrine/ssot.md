@@ -18,12 +18,13 @@ Never copy a realm into `ssot/<realm>` — that directory is a second tree.
 `in_force: true` is law. `in_force: false` is not.
 A loop promotes a file into `ssot/doctrine/` when it is an article.
 `docs/` is the warehouse the loop empties.
-A stub under `docs/doctrine/` aliases a promoted article until harvest cites
-move. Harvest SHALL name `ssot/doctrine/<file>.md` or
-`nos-sot:doctrine/<file>#<id>`. The stub drops when nothing names it.
-INDEX `proposed:` names warehouse files that are still full originals, not
-stubs. They are not law. Today: `agentkit.md`, `backoffice.md` —
-promote when the operator settles the remaining axes in those files.
+A promoted article leaves no stub. Its old `docs/doctrine/` path stays an
+address through a redirect in `tools/doctrine-cite.py`, so history resolves.
+Harvest SHALL name `ssot/doctrine/<file>.md` or
+`nos-sot:doctrine/<file>#<id>`.
+INDEX `proposed:` names warehouse files that are still full originals.
+They are not law. Today: `agentkit.md`, `backoffice.md`, `n8n-packs.md`,
+`tissues.md` — promote when the operator rules on each.
 A **PROPOSED** banner on a file in an in-force realm means that file is not
 law yet. The realm being in force does not settle the banner.
 
