@@ -1132,6 +1132,10 @@
       "level": "organ system",
       "kind": "organ_system"
     },
+    "organ_system:clockwork": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
     "organ_system:commons": {
       "level": "organ system",
       "kind": "organ_system"
@@ -1148,14 +1152,6 @@
       "level": "organ system",
       "kind": "organ_system"
     },
-    "organ_system:reflexes": {
-      "level": "organ system",
-      "kind": "organ_system"
-    },
-    "organ_system:senses": {
-      "level": "organ system",
-      "kind": "organ_system"
-    },
     "organ_system:spine": {
       "level": "organ system",
       "kind": "organ_system"
@@ -1169,6 +1165,10 @@
       "kind": "organ_system"
     },
     "organ_system:voice": {
+      "level": "organ system",
+      "kind": "organ_system"
+    },
+    "organ_system:watch": {
       "level": "organ system",
       "kind": "organ_system"
     },
@@ -3315,7 +3315,7 @@
     },
     {
       "from": "service:alloy",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of"
     },
     {
@@ -3430,7 +3430,7 @@
     },
     {
       "from": "service:grafana",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of"
     },
     {
@@ -3450,7 +3450,7 @@
     },
     {
       "from": "service:homeassistant",
-      "to": "organ_system:reflexes",
+      "to": "organ_system:clockwork",
       "kind": "part_of"
     },
     {
@@ -3465,7 +3465,7 @@
     },
     {
       "from": "service:influxdb",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of"
     },
     {
@@ -3500,7 +3500,7 @@
     },
     {
       "from": "service:loki",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of"
     },
     {
@@ -3585,7 +3585,7 @@
     },
     {
       "from": "service:n8n",
-      "to": "organ_system:reflexes",
+      "to": "organ_system:clockwork",
       "kind": "part_of"
     },
     {
@@ -3595,7 +3595,7 @@
     },
     {
       "from": "service:nodered",
-      "to": "organ_system:reflexes",
+      "to": "organ_system:clockwork",
       "kind": "part_of"
     },
     {
@@ -3735,7 +3735,7 @@
     },
     {
       "from": "service:prometheus",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of"
     },
     {
@@ -3745,7 +3745,7 @@
     },
     {
       "from": "service:pulse",
-      "to": "organ_system:reflexes",
+      "to": "organ_system:clockwork",
       "kind": "part_of"
     },
     {
@@ -3830,7 +3830,7 @@
     },
     {
       "from": "service:tempo",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of"
     },
     {
@@ -3840,7 +3840,7 @@
     },
     {
       "from": "service:uptime_kuma",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of"
     },
     {
@@ -3850,7 +3850,7 @@
     },
     {
       "from": "service:watchtower",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of"
     },
     {

@@ -1697,9 +1697,9 @@
     "effector:digest-import": {
       "kind": "effector",
       "source": "tools/digest-import.py",
-      "title": "The importer-spine round-trip + first reference importer (CSV counterparties → EN-16931 party spine): parse → normalize → GATE → absorb (upsert by deterministic party-ico slug). Dry by default; --absorb writes.",
+      "title": "The importer harness round-trip + first reference importer (CSV counterparties → EN-16931 party table): parse → normalize → GATE → absorb (upsert by deterministic party-ico slug). Dry by default; --absorb writes.",
       "anchor": "02.02.04",
-      "description": "Effector tools/digest-import.py: The importer-spine round-trip + first reference importer (CSV counterparties → EN-16931 party spine): parse → normalize → GATE → absorb (upsert by deterministic party-ico slug). Dry by default; --absorb writes."
+      "description": "Effector tools/digest-import.py: The importer harness round-trip + first reference importer (CSV counterparties → EN-16931 party table): parse → normalize → GATE → absorb (upsert by deterministic party-ico slug). Dry by default; --absorb writes."
     },
     "effector:digest-import-doli": {
       "kind": "effector",
@@ -1711,16 +1711,16 @@
     "effector:digest-import-isdoc": {
       "kind": "effector",
       "source": "tools/digest-import-isdoc.py",
-      "title": "Third digest importer (ISDOC e-invoices → invoice facet); seller AND buyer resolved to the party spine (dual resolve, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs.",
+      "title": "Third digest importer (ISDOC e-invoices → invoice facet); seller AND buyer resolved to the party table (dual resolve, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs.",
       "anchor": "02.02.04",
-      "description": "Effector tools/digest-import-isdoc.py: Third digest importer (ISDOC e-invoices → invoice facet); seller AND buyer resolved to the party spine (dual resolve, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs."
+      "description": "Effector tools/digest-import-isdoc.py: Third digest importer (ISDOC e-invoices → invoice facet); seller AND buyer resolved to the party table (dual resolve, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs."
     },
     "effector:digest-import-repos": {
       "kind": "effector",
       "source": "tools/digest-import-repos.py",
-      "title": "Second digest importer (git repos → repo/application/package chain); owners resolved to the party spine (dedup, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs.",
+      "title": "Second digest importer (git repos → repo/application/package chain); owners resolved to the party table (dedup, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs.",
       "anchor": "02.02.04",
-      "description": "Effector tools/digest-import-repos.py: Second digest importer (git repos → repo/application/package chain); owners resolved to the party spine (dedup, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs."
+      "description": "Effector tools/digest-import-repos.py: Second digest importer (git repos → repo/application/package chain); owners resolved to the party table (dedup, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs."
     },
     "effector:digest-import-vision": {
       "kind": "effector",
@@ -1767,9 +1767,9 @@
     "effector:espo-party-sync": {
       "kind": "effector",
       "source": "tools/espo-party-sync.py",
-      "title": "KEAP party spine → EspoCRM Account; join key `nos:party:<slug>` in description. Dry-run default; `--write` autowires Espo's bootstrap admin from the running container (same credential the OIDC PUT uses).",
+      "title": "KEAP party table → EspoCRM Account; join key `nos:party:<slug>` in description. Dry-run default; `--write` autowires Espo's bootstrap admin from the running container (same credential the OIDC PUT uses).",
       "anchor": "02.02.04",
-      "description": "Effector tools/espo-party-sync.py: KEAP party spine → EspoCRM Account; join key `nos:party:<slug>` in description. Dry-run default; `--write` autowires Espo's bootstrap admin from the running container (same credential the OIDC PUT uses)."
+      "description": "Effector tools/espo-party-sync.py: KEAP party table → EspoCRM Account; join key `nos:party:<slug>` in description. Dry-run default; `--write` autowires Espo's bootstrap admin from the running container (same credential the OIDC PUT uses)."
     },
     "effector:fetch-authentik-bootstrap-token": {
       "kind": "effector",
@@ -1795,9 +1795,9 @@
     "effector:gen-invoice-images": {
       "kind": "effector",
       "source": "tools/gen-invoice-images.py",
-      "title": "render those stand-ins as JPEG intake whose data matches the seeded party spine.",
+      "title": "render those stand-ins as JPEG intake whose data matches the seeded party table.",
       "anchor": "02.02.04",
-      "description": "Effector tools/gen-invoice-images.py: render those stand-ins as JPEG intake whose data matches the seeded party spine."
+      "description": "Effector tools/gen-invoice-images.py: render those stand-ins as JPEG intake whose data matches the seeded party table."
     },
     "effector:genome-codegen": {
       "kind": "effector",
@@ -2564,6 +2564,12 @@
       "anchor": "02.02.04",
       "description": "Organ system 'backoffice' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
+    "organ_system:clockwork": {
+      "kind": "organ_system",
+      "source": "files/anatomy/apex/ruling.yml",
+      "anchor": "02.02.04",
+      "description": "Organ system 'clockwork' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
+    },
     "organ_system:commons": {
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
@@ -2588,18 +2594,6 @@
       "anchor": "02.02.04",
       "description": "Organ system 'keel' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
-    "organ_system:reflexes": {
-      "kind": "organ_system",
-      "source": "files/anatomy/apex/ruling.yml",
-      "anchor": "02.02.04",
-      "description": "Organ system 'reflexes' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
-    },
-    "organ_system:senses": {
-      "kind": "organ_system",
-      "source": "files/anatomy/apex/ruling.yml",
-      "anchor": "02.02.04",
-      "description": "Organ system 'senses' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
-    },
     "organ_system:spine": {
       "kind": "organ_system",
       "source": "files/anatomy/apex/ruling.yml",
@@ -2623,6 +2617,12 @@
       "source": "files/anatomy/apex/ruling.yml",
       "anchor": "02.02.04",
       "description": "Organ system 'voice' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
+    },
+    "organ_system:watch": {
+      "kind": "organ_system",
+      "source": "files/anatomy/apex/ruling.yml",
+      "anchor": "02.02.04",
+      "description": "Organ system 'watch' — a public group of organs for one function, declared as an `organ_systems:` group in files/anatomy/apex/ruling.yml"
     },
     "organ_system:wits": {
       "kind": "organ_system",
@@ -8358,9 +8358,9 @@
     },
     {
       "from": "service:alloy",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of",
-      "via": "`publish: senses` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: watch` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
@@ -8502,9 +8502,9 @@
     },
     {
       "from": "service:grafana",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of",
-      "via": "`publish: senses` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: watch` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
@@ -8526,9 +8526,9 @@
     },
     {
       "from": "service:homeassistant",
-      "to": "organ_system:reflexes",
+      "to": "organ_system:clockwork",
       "kind": "part_of",
-      "via": "`publish: reflexes` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: clockwork` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
@@ -8550,9 +8550,9 @@
     },
     {
       "from": "service:influxdb",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of",
-      "via": "`publish: senses` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: watch` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
@@ -8582,9 +8582,9 @@
     },
     {
       "from": "service:loki",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of",
-      "via": "`publish: senses` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: watch` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
@@ -8638,9 +8638,9 @@
     },
     {
       "from": "service:n8n",
-      "to": "organ_system:reflexes",
+      "to": "organ_system:clockwork",
       "kind": "part_of",
-      "via": "`publish: reflexes` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: clockwork` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
@@ -8654,9 +8654,9 @@
     },
     {
       "from": "service:nodered",
-      "to": "organ_system:reflexes",
+      "to": "organ_system:clockwork",
       "kind": "part_of",
-      "via": "`publish: reflexes` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: clockwork` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
@@ -8742,17 +8742,17 @@
     },
     {
       "from": "service:prometheus",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of",
-      "via": "`publish: senses` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: watch` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
     {
       "from": "service:pulse",
-      "to": "organ_system:reflexes",
+      "to": "organ_system:clockwork",
       "kind": "part_of",
-      "via": "`publish: reflexes` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: clockwork` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
@@ -8814,9 +8814,9 @@
     },
     {
       "from": "service:tempo",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of",
-      "via": "`publish: senses` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: watch` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
@@ -8830,9 +8830,9 @@
     },
     {
       "from": "service:uptime_kuma",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of",
-      "via": "`publish: senses` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: watch` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
@@ -8846,9 +8846,9 @@
     },
     {
       "from": "service:watchtower",
-      "to": "organ_system:senses",
+      "to": "organ_system:watch",
       "kind": "part_of",
-      "via": "`publish: senses` in files/anatomy/apex/ruling.yml",
+      "via": "`publish: watch` in files/anatomy/apex/ruling.yml",
       "derived": "apex-ruling",
       "evidence": "derived"
     },
