@@ -5,6 +5,7 @@ row: lexicon
 gates:
   - tests/anatomy/test_appendage_is_detachable.py
   - tests/anatomy/test_body_glosses_are_the_lexicon.py
+  - tests/anatomy/test_body_levels_are_the_lexicon.py
   - tests/anatomy/test_every_daemon_has_a_manifest_row.py
   - tests/anatomy/test_every_organ_has_its_homes.py
   - tests/anatomy/test_lexicon_holds.py
@@ -38,7 +39,10 @@ So each word has exactly one meaning, written down once:
   files models are told to trust.
 - **Projection:** `tools/body.py` shows the estate by level. It reads
   `state/body-plan.json`, which `tools/body-plan-gen.py` builds from the
-  anatomy graph and the lexicon; there is no second map.
+  anatomy graph and the lexicon; there is no second map. Which words are
+  levels is the lexicon's too: `order` up to `cross` is the ladder, and a
+  cross word is a level exactly when it names a graph kind (today sense, limb,
+  memory, law, reflex, heartbeat). Gate: `tests/anatomy/test_body_levels_are_the_lexicon.py`.
 
 ## 2. How to add or change a word
 
