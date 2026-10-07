@@ -20,7 +20,7 @@ controller-side evidence.
 | **In transit (internal)** | Service-to-service traffic stays on private Docker networks on a single host; not exposed off-box. | Playbook-managed. |
 | **At rest (disk)** | Full-disk encryption — **FileVault** (macOS) / **LUKS** (Linux). | **Operator-provisioned** — nOS does not enable it for you; verify before processing personal data. |
 | **At rest (backups)** | Every nightly dump is **AES-256-CBC / pbkdf2 client-side encrypted before upload** to RustFS (`backup_encryption_enabled`, default on); object storage never holds cleartext personal data. | Playbook-managed; `backup_encryption_passphrase` custody is the operator's (lose it → backups unrecoverable). |
-| **At rest (secrets)** | Secrets held in **Infisical** (central vault) or launchd/systemd environment, never written to disk in plaintext by the playbook. See [`secret-lifecycle-doctrine.md`](secret-lifecycle-doctrine.md). | Playbook-managed; root key custody is the operator's. |
+| **At rest (secrets)** | Secrets held in **Infisical** (central vault) or launchd/systemd environment, never written to disk in plaintext by the playbook. See [`ssot/doctrine/secrets.md`](../ssot/doctrine/secrets.md) §7–§9. | Playbook-managed; root key custody is the operator's. |
 
 ## 2. Access control & identity
 

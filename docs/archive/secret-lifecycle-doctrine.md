@@ -1,6 +1,7 @@
 # Secret lifecycle + recovery doctrine (SEC-13, 2026-05-23)
 
-> Authoritative doc for the systematic security pass triggered 2026-05-23
+> ARCHIVED 2026-10-07: the rules are folded into `ssot/doctrine/secrets.md` §7–§9.
+> This was the record of the systematic security pass triggered 2026-05-23
 > after the Infisical-login lockout incident. Cross-references the SEC-1
 > through SEC-12 commits that implement each pattern.
 

@@ -1,6 +1,6 @@
 # Gitleaks allowlist — verified FALSE POSITIVES only (2026-06-10 security review).
 # Each entry was manually inspected; none is a real credential. Real findings
-# must NEVER be allowlisted — rotate + purge instead (docs/secret-lifecycle-doctrine.md).
+# must NEVER be allowlisted — rotate instead (ssot/doctrine/secrets.md §9).
 #
 # Run:  gitleaks detect --source . --no-banner
 # The pulse gitleaks job picks this file up automatically (repo-root config).

@@ -78,3 +78,45 @@ The plugin loader passes `template_vars: "{{ vars }}"`. A secret whose
 value uses a non-stock filter, or a before-core-up undefined ref that
 slips past `default()`, aborts the run. See CLAUDE.md operator gotchas;
 do not re-derive it here.
+
+## 7. Four kinds of secret
+
+Every secret is exactly one kind (folded from the 2026-05-23 lifecycle pass,
+[`docs/archive/secret-lifecycle-doctrine.md`](../../docs/archive/secret-lifecycle-doctrine.md)):
+
+- **A, derived.** Cheap to recompute and not sensitive alone (a URL, a path).
+  Re-derived every run. Nothing is persisted.
+- **B, generated.** High entropy (an HMAC key, a JWT secret, an app key).
+  Made once with `openssl rand`, kept in `~/.nos/secrets.yml`, reused. An
+  operator override in `credentials.yml` wins when it is at least 32
+  characters and is not the prefix-derived shape.
+- **C, captured.** An identity a service holds after bootstrap (an admin
+  email, a user id). Captured once; later runs read it instead of
+  re-deriving it. The operator's `credentials.yml` still outranks the
+  captured value (`test_the_operator_file_is_the_last_word.py`).
+- **D, recoverable.** Every role that bootstraps an admin ships a tag-gated
+  reset (`--tags <service>-reset-admin`, `never` by default) that refuses
+  when the service holds data unless forced. Template:
+  `roles/pazny.infisical/tasks/reset-admin.yml`.
+
+An admin lockout SHALL NOT need a data wipe. If it does, a reset is missing.
+
+## 8. At rest and in logs
+
+A file that holds a secret is mode 0600 and its directory 0700: `~/.nos/`,
+the launchd plists, rendered overrides, ACME private keys. Gate:
+`tests/anatomy/test_security_file_modes.py`. An error message carries the
+upstream HTTP code, never the upstream body. Host organs bind 127.0.0.1;
+public access goes through Traefik with its middleware.
+
+## 9. A published secret is burned
+
+A value pushed to a public remote is burned for good, whatever is deleted
+later. Rotate it at once. Never use the published value again: not as a
+fixture, an assertion needle or a gitleaks allowlist entry. Rewriting public
+history is the operator's call, never an agent's; the default is rotate and
+record.
+
+| First published | Was | Rotated |
+|---|---|---|
+| 2026-08-05 `710be435` (fingerprint `0c05d2…c751`) | `bone_secret` / `WING_EVENTS_HMAC_SECRET` | 2026-08-06 (`bone_secret_retired`) |

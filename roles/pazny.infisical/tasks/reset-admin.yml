@@ -29,7 +29,7 @@
 #
 # Doctrine context:
 #   This is a TEMPLATE for the systemic recovery pattern declared in
-#   docs/secret-lifecycle-doctrine.md (SEC-13). Every admin-bootstrap
+#   ssot/doctrine/secrets.md §7 (kind D). Every admin-bootstrap
 #   role should ship an equivalent reset path so `blank=true` ceases to
 #   be the only recovery option. See also SEC-13 capture-not-derive
 #   pattern that prevents future lockouts.

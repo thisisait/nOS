@@ -680,7 +680,7 @@
     # keys also live in the store, and four of them AGREE byte-for-byte (the
     # store was seeded from them). So this restores one value and changes
     # nothing else — the divergence existed only for the newly pasted key.
-    # This is the drift class docs/secret-lifecycle-doctrine.md already names:
+    # This is the drift class ssot/doctrine/secrets.md §7 (kind C) names:
     # a value captured at bootstrap outranking the value the operator declares.
     - name: "[Secrets] Re-assert operator credentials over the persisted store"
       ansible.builtin.include_vars: "{{ item }}"
