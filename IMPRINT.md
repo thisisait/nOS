@@ -35,20 +35,20 @@ the agent's or anyone's — is caught before it costs anything. Both are the poi
 ## 3. The body plan
 
 Levels run smallest to largest, then the systems that cut across every level.
-Each line: level (count) — what it is: the most connected nodes (edge count).
+Each line: level (count) — what it means (the lexicon's words), then the most connected nodes (edge count).
 
-- **genome** (20) — declared contracts every part inherits — task types, skills: tasktype:investigate (13), skill:nos-backoffice (3), skill:nos-datatables (3), tasktype:code-fix (3), tasktype:design (3)
-- **cell** (16) — who you can be — one model in one specialization: agent:librarian (11), agent:jeff (9), agent:surveyor (8), agent:conductor (7), agent:curator (7)
-- **tissue** (1) — cells of one specialization working together: tissue:backoffice (23)
-- **organ** (102) — a part with one job — a service, host daemon, hosted forge or face app: daemon:eu.thisisait.nos.pulse (42), service:postgresql (11), service:redis (9), service:mariadb (8), service:openclaw (7)
-- **organ system** (13) — organs grouped for one function: organ_system:archive (9), organ_system:senses (8), organ_system:voice (6), organ_system:backoffice (5), organ_system:forge (5)
-- **organism** (0) — the estate as a whole: none — no node stands for the whole; the whole is this graph
-- **habitat** (6) — what lives beside the organism — third-party processors it does not own: backend:minimax (8), backend:ollama (6), backend:anthropic (3), backend:openclaw (1), backend:mistral-eu (0)
-- **sense** (78) — what you can ask — readers, judges and read-only grants: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), judge:genome-codegen (4)
-- **limb** (8) — what you can reach for — tool grants that act: tool:mcp-bone (5), tool:ask-operator (2), tool:mcp-keap (2), tool:mcp-wing-write (2), tool:migration-file-write (2)
-- **memory** (40) — what the estate has learned — KEAP tables: table:party (13), table:invoice (5), table:journal-entry (4), table:posting (4), table:account (3)
-- **law** (43) — the rules it inherits — constitution articles and paragraphs: article:loop-contract (14), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#5a (3), doctrine:ssot/doctrine/loop-contract.md#7 (3), doctrine:ssot/doctrine/loop-contract.md#DECISION-2d (3)
-- **reflex** (43) — what runs by itself — scheduled responses Pulse fires: pulse:conductor:self-test-001 (8), pulse:cortex:cortex-fs-sync (8), pulse:keap:keap-embed-sync (8), pulse:librarian:brief-taxonomy (8), pulse:librarian:describe-taxonomy (8)
+- **genome** (20) — The declared facts every part of nOS inherits, kept in state/genome/. Most connected: tasktype:investigate (13), skill:nos-backoffice (3), skill:nos-datatables (3), tasktype:code-fix (3), tasktype:design (3)
+- **cell** (16) — One model in one specialization; in code it is called an agent. Most connected: agent:librarian (11), agent:jeff (9), agent:surveyor (8), agent:conductor (7), agent:curator (7)
+- **tissue** (1) — The transplantable pack of one specialization's cells with their skills, tables and services. Most connected: tissue:backoffice (23)
+- **organ** (102) — One service or host daemon with one job; one row in state/manifest.yml. Most connected: daemon:eu.thisisait.nos.pulse (42), service:postgresql (11), service:redis (9), service:mariadb (8), service:openclaw (7)
+- **organ system** (13) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Most connected: organ_system:archive (9), organ_system:senses (8), organ_system:voice (6), organ_system:backoffice (5), organ_system:forge (5)
+- **organism** (0) — One nOS install on one machine, all its organ systems together. Most connected: none — no node stands for the whole; the whole is this graph
+- **habitat** (6) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner, and nOS never installs or touches it. Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Most connected: backend:minimax (8), backend:ollama (6), backend:anthropic (3), backend:openclaw (1), backend:mistral-eu (0)
+- **sense** (78) — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Most connected: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), judge:genome-codegen (4)
+- **limb** (8) — A tool that acts. Most connected: tool:mcp-bone (5), tool:ask-operator (2), tool:mcp-keap (2), tool:mcp-wing-write (2), tool:migration-file-write (2)
+- **memory** (40) — What nOS has learned, kept in KEAP; RAM stays plain English. Most connected: table:party (13), table:invoice (5), table:journal-entry (4), table:posting (4), table:account (3)
+- **law** (43) — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Most connected: article:loop-contract (14), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#5a (3), doctrine:ssot/doctrine/loop-contract.md#7 (3), doctrine:ssot/doctrine/loop-contract.md#DECISION-2d (3)
+- **reflex** (43) — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Most connected: pulse:conductor:self-test-001 (8), pulse:cortex:cortex-fs-sync (8), pulse:keap:keap-embed-sync (8), pulse:librarian:brief-taxonomy (8), pulse:librarian:describe-taxonomy (8)
 
 Hidden plumbing: 67 internal nodes. Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
 

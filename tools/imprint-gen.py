@@ -84,12 +84,14 @@ def body_plan() -> list[str]:
     graph = json.loads(body.GRAPH.read_text(encoding="utf-8"))
     deg = body._degree(graph)
     out = ["Levels run smallest to largest, then the systems that cut across every level.",
-           "Each line: level (count) — what it is: the most connected nodes (edge count).", ""]
-    for lv, what in body.LEVELS.items():
+           "Each line: level (count) — what it means (the lexicon's words), then the most "
+           "connected nodes (edge count).", ""]
+    for lv in body.LEVELS:
+        what = body.gloss(lv)
         members = body._members(graph, deg, lv)
         top = ", ".join(f"{n} ({deg[n]})" for n in members[:TOP])
         top = top or f"none — {body.EMPTY.get(lv, 'no kind is placed here')}"
-        out.append(f"- **{lv}** ({len(members)}) — {what}: {top}")
+        out.append(f"- **{lv}** ({len(members)}) — {what} Most connected: {top}")
     out += ["", f"Hidden plumbing: {graph['counts'].get('internal', 0)} internal nodes. "
             "Look closer: `tools/body.py <level>` or `tools/body.py <node>`."]
     return out

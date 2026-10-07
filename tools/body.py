@@ -24,21 +24,24 @@ GRAPH = REPO / "state" / "body-plan.json"
 ANATOMY = REPO / "state" / "anatomy-graph.json"
 MANIFEST = REPO / "state" / "manifest.yml"
 
-#: The ladder in order, then the cross-cutting systems — one plain line each.
-LEVELS = {
-    "genome": "declared contracts every part inherits — task types, skills",
-    "cell": "who you can be — one model in one specialization",
-    "tissue": "cells of one specialization working together",
-    "organ": "a part with one job — a service, host daemon, hosted forge or face app",
-    "organ system": "organs grouped for one function",
-    "organism": "the estate as a whole",
-    "habitat": "what lives beside the organism — third-party processors it does not own",
-    "sense": "what you can ask — readers, judges and read-only grants",
-    "limb": "what you can reach for — tool grants that act",
-    "memory": "what the estate has learned — KEAP tables",
-    "law": "the rules it inherits — constitution articles and paragraphs",
-    "reflex": "what runs by itself — scheduled responses Pulse fires",
-}
+LEXICON = REPO / "state" / "genome" / "lexicon.yml"
+
+#: The ladder in order, then the cross-cutting systems. What each means is the
+#: lexicon's `means` (test_body_glosses_are_the_lexicon.py), never a string here.
+LEVELS = ("genome", "cell", "tissue", "organ", "organ system", "organism", "habitat",
+          "sense", "limb", "memory", "law", "reflex")
+
+
+def gloss(level: str) -> str:
+    """The lexicon's meaning of a level, on one line; UNKNOWN if unreadable."""
+    try:
+        import yaml  # noqa: PLC0415
+        words = yaml.safe_load(LEXICON.read_text(encoding="utf-8"))["words"]
+        return " ".join(str(words[level]["means"]).split())
+    except (OSError, ValueError, KeyError, ImportError):
+        return "UNKNOWN (state/genome/lexicon.yml unreadable or lacks this word)"
+
+
 CROSS = "sense"
 EMPTY = {
     "organism": "no node stands for the whole; the whole is this graph",
@@ -86,7 +89,7 @@ def _anatomy_node(nid: str) -> dict:
 
 
 def appendage(nid: str) -> str | None:
-    """A property, not a level (body-plan.md §7): the manifest row's joint, if any."""
+    """A property, not a level (body-plan.md §4.2): the manifest row's joint, if any."""
     if not nid.startswith("service:"):
         return None
     try:
@@ -131,10 +134,11 @@ def main() -> int:
             return 0
         print("nOS body plan — genome to habitat, then senses, limbs, memory, law, reflexes "
               "(tools/body.py <level|node>)")
-        for lv, line in LEVELS.items():
+        for lv in LEVELS:
+            line = gloss(lv)
             if lv == CROSS:
                 print("  ── cutting across every level ──")
-            print(f"{lv:<13}{line}: {data[lv]['count']}")
+            print(f"{lv:<13}({data[lv]['count']}) {line}")
             if data[lv]["top"]:
                 print(" " * 13 + ", ".join(f"{n} ({deg[n]})" for n in data[lv]["top"]))
             else:
@@ -147,7 +151,8 @@ def main() -> int:
         if args.json:
             print(json.dumps(members, indent=2))
             return 0
-        print(f"{args.target} — {LEVELS.get(args.target, 'hidden plumbing')}: {len(members)}")
+        what = gloss(args.target) if args.target in LEVELS else "hidden plumbing"
+        print(f"{args.target} — {what}: {len(members)}")
         if not members:
             print(f"  (empty — {EMPTY.get(args.target, 'no kind is placed here')})")
         for nid in members[:36]:
@@ -165,7 +170,8 @@ def main() -> int:
     if args.json:
         print(json.dumps(data, indent=2, ensure_ascii=False))
         return 0
-    print(f"{data['id']}  [{data['level']} — {LEVELS.get(data['level'], 'hidden plumbing')}]")
+    what = gloss(data["level"]) if data["level"] in LEVELS else "hidden plumbing"
+    print(f"{data['id']}  [{data['level']} — {what}]")
     print(f"  kind:   {data['kind']}")
     if data["appendage"]:
         print(f"  also:   {data['appendage']}")
