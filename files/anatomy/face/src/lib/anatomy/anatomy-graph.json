@@ -4,8 +4,8 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 439,
-    "edges": 503,
+    "nodes": 544,
+    "edges": 543,
     "nodes_pulse": 43,
     "nodes_judge": 5,
     "nodes_gateset": 5,
@@ -22,24 +22,25 @@
     "nodes_tofu": 1,
     "nodes_authentik": 60,
     "nodes_table": 40,
-    "nodes_doctrine": 19,
+    "nodes_doctrine": 26,
     "nodes_faceapp": 7,
     "nodes_agent": 16,
     "nodes_tasktype": 9,
     "nodes_skill": 11,
-    "nodes_reader": 61,
+    "nodes_reader": 53,
+    "nodes_effector": 106,
     "nodes_article": 26,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
     "edges_data": 237,
-    "edges_trigger": 55,
+    "edges_trigger": 71,
     "edges_temporal": 5,
     "edges_mutex": 21,
-    "edges_governed_by": 29,
+    "edges_governed_by": 44,
     "edges_may_take": 25,
-    "edges_allows": 3,
+    "edges_allows": 5,
     "edges_references": 26,
-    "edges_part_of": 102,
+    "edges_part_of": 109,
     "edges_service_dependency": 44,
     "services_survey_declared": 33,
     "services_survey_not_surveyed": 37,
@@ -1383,6 +1384,14 @@
       "anchor": "09",
       "description": "Constitution paragraph 2 of docs/archive/nos-cortex-organ-design.md: Where it sits — anatomy integration"
     },
+    "doctrine:ssot/doctrine/face-app-tiers.md#2": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/face-app-tiers.md",
+      "section": "2",
+      "heading": "Why tiers",
+      "anchor": "09",
+      "description": "Constitution paragraph 2 of ssot/doctrine/face-app-tiers.md: Why tiers"
+    },
     "doctrine:ssot/doctrine/foreign-properties.md#5.1": {
       "kind": "doctrine",
       "source": "ssot/doctrine/foreign-properties.md",
@@ -1390,6 +1399,14 @@
       "heading": "There is a third contract: the application's own",
       "anchor": "09",
       "description": "Constitution paragraph 5.1 of ssot/doctrine/foreign-properties.md: There is a third contract: the application's own"
+    },
+    "doctrine:ssot/doctrine/layers.md#3": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/layers.md",
+      "section": "3",
+      "heading": "The layers",
+      "anchor": "09",
+      "description": "Constitution paragraph 3 of ssot/doctrine/layers.md: The layers"
     },
     "doctrine:ssot/doctrine/loop-contract.md#10": {
       "kind": "doctrine",
@@ -1399,6 +1416,14 @@
       "anchor": "09",
       "description": "Constitution paragraph 10 of ssot/doctrine/loop-contract.md: BUILD ORDER"
     },
+    "doctrine:ssot/doctrine/loop-contract.md#2.4": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "2.4",
+      "heading": "Fail closed: absence is never success",
+      "anchor": "09",
+      "description": "Constitution paragraph 2.4 of ssot/doctrine/loop-contract.md: Fail closed: absence is never success"
+    },
     "doctrine:ssot/doctrine/loop-contract.md#3.4": {
       "kind": "doctrine",
       "source": "ssot/doctrine/loop-contract.md",
@@ -1406,6 +1431,14 @@
       "heading": "Two identities, never one",
       "anchor": "09",
       "description": "Constitution paragraph 3.4 of ssot/doctrine/loop-contract.md: Two identities, never one"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#3.5": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "3.5",
+      "heading": "Constraint B: no step records its own success",
+      "anchor": "09",
+      "description": "Constitution paragraph 3.5 of ssot/doctrine/loop-contract.md: Constraint B: no step records its own success"
     },
     "doctrine:ssot/doctrine/loop-contract.md#4": {
       "kind": "doctrine",
@@ -1422,6 +1455,14 @@
       "heading": "Computed from the gate set — §5's core rule",
       "anchor": "09",
       "description": "Constitution paragraph 5.1 of ssot/doctrine/loop-contract.md: Computed from the gate set — §5's core rule"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#5.2": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "5.2",
+      "heading": "Always forbidden, every set",
+      "anchor": "09",
+      "description": "Constitution paragraph 5.2 of ssot/doctrine/loop-contract.md: Always forbidden, every set"
     },
     "doctrine:ssot/doctrine/loop-contract.md#5a": {
       "kind": "doctrine",
@@ -1471,6 +1512,14 @@
       "anchor": "09",
       "description": "Constitution paragraph DECISION-2f of ssot/doctrine/loop-contract.md: `keap-lint` is **not** in any gate set. It stays a Pulse job."
     },
+    "doctrine:ssot/doctrine/loop-contract.md#DECISION-6a": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "DECISION-6a",
+      "heading": "CLI exit codes are a **fixed small enum**, never a count.",
+      "anchor": "09",
+      "description": "Constitution paragraph DECISION-6a of ssot/doctrine/loop-contract.md: CLI exit codes are a **fixed small enum**, never a count."
+    },
     "doctrine:ssot/doctrine/loop-contract.md#M2": {
       "kind": "doctrine",
       "source": "ssot/doctrine/loop-contract.md",
@@ -1503,6 +1552,14 @@
       "anchor": "09",
       "description": "Constitution paragraph constraint-A of ssot/doctrine/loop-contract.md: judge is code, proposer is a model, never one identity"
     },
+    "doctrine:ssot/doctrine/loop-contract.md#constraint-B": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "constraint-B",
+      "heading": "a step may not record its own success",
+      "anchor": "09",
+      "description": "Constitution paragraph constraint-B of ssot/doctrine/loop-contract.md: a step may not record its own success"
+    },
     "doctrine:ssot/doctrine/workflows.md#6": {
       "kind": "doctrine",
       "source": "ssot/doctrine/workflows.md",
@@ -1510,6 +1567,748 @@
       "heading": "Two loops, and the gate between them",
       "anchor": "09",
       "description": "Constitution paragraph 6 of ssot/doctrine/workflows.md: Two loops, and the gate between them"
+    },
+    "effector:agent-token-status": {
+      "kind": "effector",
+      "source": "tools/agent-token-status.py",
+      "title": "agent-token-status — can each declared agent client mint a token RIGHT NOW.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/agent-token-status.py: agent-token-status — can each declared agent client mint a token RIGHT NOW."
+    },
+    "effector:anatomy-graph-gen": {
+      "kind": "effector",
+      "source": "tools/anatomy-graph-gen.py",
+      "title": "Compile the anatomy graph — every declared actor and edge, one address space.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/anatomy-graph-gen.py: Compile the anatomy graph — every declared actor and edge, one address space."
+    },
+    "effector:anatomy-measure-margins": {
+      "kind": "effector",
+      "source": "tools/anatomy-measure-margins.py",
+      "title": "Measure the nightly chain's temporal margins, and restamp the declared edges.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/anatomy-measure-margins.py: Measure the nightly chain's temporal margins, and restamp the declared edges."
+    },
+    "effector:apex-sign": {
+      "kind": "effector",
+      "source": "tools/apex-sign.py",
+      "title": "Sign the apex ruling — after showing what changed since it was last signed.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/apex-sign.py: Sign the apex ruling — after showing what changed since it was last signed."
+    },
+    "effector:atlas-refresh": {
+      "kind": "effector",
+      "source": "tools/atlas-refresh.py",
+      "title": "Pulse job: nos-atlas \"nOS job contract\" (read-only reader snapshot → generator) into GeoLibre's `plugins/nos-atlas/live`.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/atlas-refresh.py: Pulse job: nos-atlas \"nOS job contract\" (read-only reader snapshot → generator) into GeoLibre's `plugins/nos-atlas/live`."
+    },
+    "effector:body-plan-gen": {
+      "kind": "effector",
+      "source": "tools/body-plan-gen.py",
+      "title": "Project the anatomy graph onto biology's levels via the lexicon's graph_kind names (state/genome/lexicon.yml, kind → level) into state/body-plan.json.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/body-plan-gen.py: Project the anatomy graph onto biology's levels via the lexicon's graph_kind names (state/genome/lexicon.yml, kind → level) into state/body-plan.json."
+    },
+    "effector:ci-local": {
+      "kind": "effector",
+      "source": "tools/ci-local.sh",
+      "title": "tools/ci-local.sh — run a command inside a FROZEN venv that reproduces the CI",
+      "anchor": "02.02.04",
+      "description": "Effector tools/ci-local.sh: tools/ci-local.sh — run a command inside a FROZEN venv that reproduces the CI"
+    },
+    "effector:cnb-dtt": {
+      "kind": "effector",
+      "source": "tools/cnb-dtt.py",
+      "title": "parse ČNB denni_kurz.txt and project onto a DTT schema; optional --push to KEAP. Oracle for the n8n ČNB templates.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/cnb-dtt.py: parse ČNB denni_kurz.txt and project onto a DTT schema; optional --push to KEAP. Oracle for the n8n ČNB templates."
+    },
+    "effector:cortex-seed-fixtures": {
+      "kind": "effector",
+      "source": "tools/cortex-seed-fixtures.sh",
+      "title": "give the corpus diff something to measure",
+      "anchor": "02.02.04",
+      "description": "Effector tools/cortex-seed-fixtures.sh: give the corpus diff something to measure"
+    },
+    "effector:current-state": {
+      "kind": "effector",
+      "source": "tools/current-state.py",
+      "title": "The claim board's WRITE side: file/claim/release/progress; a claim is refused unless the match says you are capable.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/current-state.py: The claim board's WRITE side: file/claim/release/progress; a claim is refused unless the match says you are capable."
+    },
+    "effector:d12-annotate-plugins": {
+      "kind": "effector",
+      "source": "tools/d12-annotate-plugins.py",
+      "title": "D1.2.b — add `name` + `enabled` to each plugin's authentik block.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/d12-annotate-plugins.py: D1.2.b — add `name` + `enabled` to each plugin's authentik block."
+    },
+    "effector:deploy-from-ci": {
+      "kind": "effector",
+      "source": "tools/deploy-from-ci.sh",
+      "title": "host-side deploy wrapper invoked by Wing's",
+      "anchor": "02.02.04",
+      "description": "Effector tools/deploy-from-ci.sh: host-side deploy wrapper invoked by Wing's"
+    },
+    "effector:deploy-sync": {
+      "kind": "effector",
+      "source": "tools/deploy-sync.sh",
+      "title": "make this checkout a clean, current mirror of upstream before a converge (ends the scan-drift reconcile dance).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/deploy-sync.sh: make this checkout a clean, current mirror of upstream before a converge (ends the scan-drift reconcile dance)."
+    },
+    "effector:derive-postings": {
+      "kind": "effector",
+      "source": "tools/derive-postings.py",
+      "title": "The invoice→ledger tie: reads invoices + accounts from KEAP, derives one BALANCED journal entry per invoice from --own-party's books (double-entry, gated). Dry by default; --absorb writes.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/derive-postings.py: The invoice→ledger tie: reads invoices + accounts from KEAP, derives one BALANCED journal entry per invoice from --own-party's books (double-entry, gated). Dry by default; --absorb writes."
+    },
+    "effector:devlog-compile": {
+      "kind": "effector",
+      "source": "tools/devlog-compile.py",
+      "title": "devlog-compile — validate nos-core devlog entries, emit the committed bundle.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/devlog-compile.py: devlog-compile — validate nos-core devlog entries, emit the committed bundle."
+    },
+    "effector:devlog-post": {
+      "kind": "effector",
+      "source": "tools/devlog-post.py",
+      "title": "devlog-post — publish a devlog entry to an ON-SITE namespace via WP REST.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/devlog-post.py: devlog-post — publish a devlog entry to an ON-SITE namespace via WP REST."
+    },
+    "effector:devlog-release": {
+      "kind": "effector",
+      "source": "tools/devlog-release.sh",
+      "title": "mechanical pre-flight for a release cut.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/devlog-release.sh: mechanical pre-flight for a release cut."
+    },
+    "effector:devlog-render": {
+      "kind": "effector",
+      "source": "tools/devlog-render.py",
+      "title": "devlog-render — static site generator for the nos-core devlog.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/devlog-render.py: devlog-render — static site generator for the nos-core devlog."
+    },
+    "effector:digest-import": {
+      "kind": "effector",
+      "source": "tools/digest-import.py",
+      "title": "The importer-spine round-trip + first reference importer (CSV counterparties → EN-16931 party spine): parse → normalize → GATE → absorb (upsert by deterministic party-ico slug). Dry by default; --absorb writes.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/digest-import.py: The importer-spine round-trip + first reference importer (CSV counterparties → EN-16931 party spine): parse → normalize → GATE → absorb (upsert by deterministic party-ico slug). Dry by default; --absorb writes."
+    },
+    "effector:digest-import-doli": {
+      "kind": "effector",
+      "source": "tools/digest-import-doli.py",
+      "title": "digest importer (hydrator): Dolibarr thirdparties (IČO required) → KEAP party / party-tax-identity through the digest gate. Reads the MariaDB schema directly, never Dolibarr REST; Bone is not a hydrator. Dry by default; --absorb writes.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/digest-import-doli.py: digest importer (hydrator): Dolibarr thirdparties (IČO required) → KEAP party / party-tax-identity through the digest gate. Reads the MariaDB schema directly, never Dolibarr REST; Bone is not a hydrator. Dry by default; --absorb writes."
+    },
+    "effector:digest-import-isdoc": {
+      "kind": "effector",
+      "source": "tools/digest-import-isdoc.py",
+      "title": "Third digest importer (ISDOC e-invoices → invoice facet); seller AND buyer resolved to the party spine (dual resolve, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/digest-import-isdoc.py: Third digest importer (ISDOC e-invoices → invoice facet); seller AND buyer resolved to the party spine (dual resolve, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs."
+    },
+    "effector:digest-import-repos": {
+      "kind": "effector",
+      "source": "tools/digest-import-repos.py",
+      "title": "Second digest importer (git repos → repo/application/package chain); owners resolved to the party spine (dedup, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/digest-import-repos.py: Second digest importer (git repos → repo/application/package chain); owners resolved to the party spine (dedup, never mint). Dry by default; --absorb writes, --fixture-mode resolves synthetic IČOs."
+    },
+    "effector:digest-import-vision": {
+      "kind": "effector",
+      "source": "tools/digest-import-vision.py",
+      "title": "Fourth digest importer (vision-extracted invoice sidecars → invoice facet); VisionImporter(IsdocImporter) overrides only parse(), inheriting normalize/compose/_resolve. An unverified or below-confidence-floor sidecar is skipped in parse() and never reaches absorb. Dry by default; --absorb writes, --fixture-mode.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/digest-import-vision.py: Fourth digest importer (vision-extracted invoice sidecars → invoice facet); VisionImporter(IsdocImporter) overrides only parse(), inheriting normalize/compose/_resolve. An unverified or below-confidence-floor sidecar is skipped in parse() and never reaches absorb. Dry by default; --absorb writes, --fixture-mode."
+    },
+    "effector:digest-teardown": {
+      "kind": "effector",
+      "source": "tools/digest-teardown.py",
+      "title": "Tear a bundle/fixture's rows down leaf-first (inverse of seed-bundle.yml); referrers-gated so shared rows survive. From-blank reset + agency client-data removal. Dry-run by default.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/digest-teardown.py: Tear a bundle/fixture's rows down leaf-first (inverse of seed-bundle.yml); referrers-gated so shared rows survive. From-blank reset + agency client-data removal. Dry-run by default."
+    },
+    "effector:discovery-scan": {
+      "kind": "effector",
+      "source": "tools/discovery-scan.py",
+      "title": "Discovery: find two representations of one fact that disagree.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/discovery-scan.py: Discovery: find two representations of one fact that disagree."
+    },
+    "effector:dtt-capture": {
+      "kind": "effector",
+      "source": "tools/dtt-capture.py",
+      "title": "File an idea/plan/spec into dtt as a per-row seed file in the private repo (the /dtt-capture skill's machinery).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/dtt-capture.py: File an idea/plan/spec into dtt as a per-row seed file in the private repo (the /dtt-capture skill's machinery)."
+    },
+    "effector:dtt-table": {
+      "kind": "effector",
+      "source": "tools/dtt-table.py",
+      "title": "Per-user DataTable verbs from the shell (list/create/share/visibility) through the KEAP identity outpost; the `nos dtt` table surface on the DGX recipe.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/dtt-table.py: Per-user DataTable verbs from the shell (list/create/share/visibility) through the KEAP identity outpost; the `nos dtt` table surface on the DGX recipe."
+    },
+    "effector:e2e-auth-helper": {
+      "kind": "effector",
+      "source": "tools/e2e-auth-helper.py",
+      "title": "Provision / teardown ephemeral tester identities for Playwright e2e tests.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/e2e-auth-helper.py: Provision / teardown ephemeral tester identities for Playwright e2e tests."
+    },
+    "effector:espo-party-sync": {
+      "kind": "effector",
+      "source": "tools/espo-party-sync.py",
+      "title": "KEAP party spine → EspoCRM Account; join key `nos:party:<slug>` in description. Dry-run default; `--write` autowires Espo's bootstrap admin from the running container (same credential the OIDC PUT uses).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/espo-party-sync.py: KEAP party spine → EspoCRM Account; join key `nos:party:<slug>` in description. Dry-run default; `--write` autowires Espo's bootstrap admin from the running container (same credential the OIDC PUT uses)."
+    },
+    "effector:fetch-authentik-bootstrap-token": {
+      "kind": "effector",
+      "source": "tools/fetch-authentik-bootstrap-token.py",
+      "title": "Retrieve the ``nos-api`` Authentik token and persist it to secrets.yml.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/fetch-authentik-bootstrap-token.py: Retrieve the ``nos-api`` Authentik token and persist it to secrets.yml."
+    },
+    "effector:forge-sync": {
+      "kind": "effector",
+      "source": "tools/forge-sync.py",
+      "title": "The trunk's four holders, and the only tool that moves refs between them.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/forge-sync.py: The trunk's four holders, and the only tool that moves refs between them."
+    },
+    "effector:gdpr-dpa-register": {
+      "kind": "effector",
+      "source": "tools/gdpr-dpa-register.py",
+      "title": "Generate the GDPR Article-30 DPA register (`state/dpa-register.md`).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/gdpr-dpa-register.py: Generate the GDPR Article-30 DPA register (`state/dpa-register.md`)."
+    },
+    "effector:gen-invoice-images": {
+      "kind": "effector",
+      "source": "tools/gen-invoice-images.py",
+      "title": "render those stand-ins as JPEG intake whose data matches the seeded party spine.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/gen-invoice-images.py: render those stand-ins as JPEG intake whose data matches the seeded party spine."
+    },
+    "effector:genome-codegen": {
+      "kind": "effector",
+      "source": "tools/genome-codegen.py",
+      "title": "Emit per-runtime artifacts from the nOS genome. One declaration, N languages.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/genome-codegen.py: Emit per-runtime artifacts from the nOS genome. One declaration, N languages."
+    },
+    "effector:geo-load": {
+      "kind": "effector",
+      "source": "tools/geo-load.py",
+      "title": "Load ČÚZK open data (RÚIAN address points, INSPIRE parcels + buildings) for the configured kraje into PostGIS `geo`; staged + swapped per layer.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/geo-load.py: Load ČÚZK open data (RÚIAN address points, INSPIRE parcels + buildings) for the configured kraje into PostGIS `geo`; staged + swapped per layer."
+    },
+    "effector:geo-project-sites": {
+      "kind": "effector",
+      "source": "tools/geo-project-sites.py",
+      "title": "Nightly one-way projection of KEAP party-site rows (+ ARES seats) into PostGIS `geo.party_site`; `--erase-party` for GDPR (called by digest-teardown).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/geo-project-sites.py: Nightly one-way projection of KEAP party-site rows (+ ARES seats) into PostGIS `geo.party_site`; `--erase-party` for GDPR (called by digest-teardown)."
+    },
+    "effector:import-coolify-template": {
+      "kind": "effector",
+      "source": "tools/import-coolify-template.py",
+      "title": "import-coolify-template.py — fetch a Coolify service template and emit a",
+      "anchor": "02.02.04",
+      "description": "Effector tools/import-coolify-template.py: import-coolify-template.py — fetch a Coolify service template and emit a"
+    },
+    "effector:imprint-gen": {
+      "kind": "effector",
+      "source": "tools/imprint-gen.py",
+      "title": "Render IMPRINT.md, the first page a newborn model reads, from the body plan, readers, task types and doors (`--check`, ≤ 200 lines).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/imprint-gen.py: Render IMPRINT.md, the first page a newborn model reads, from the body plan, readers, task types and doors (`--check`, ≤ 200 lines)."
+    },
+    "effector:invoice-verify": {
+      "kind": "effector",
+      "source": "tools/invoice-verify.py",
+      "title": "approve / reject / onboard a pending-invoice-verify row (HMAC table.upsert). Batch: POSTs KEAP; the next digest-import-vision --absorb honours it.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/invoice-verify.py: approve / reject / onboard a pending-invoice-verify row (HMAC table.upsert). Batch: POSTs KEAP; the next digest-import-vision --absorb honours it."
+    },
+    "effector:invoice-vision-intake": {
+      "kind": "effector",
+      "source": "tools/invoice-vision-intake.py",
+      "title": "Pulse sweep: extract incoming images, upsert pending-invoice-verify for held sidecars. Does not book.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/invoice-vision-intake.py: Pulse sweep: extract incoming images, upsert pending-invoice-verify for held sidecars. Does not book."
+    },
+    "effector:invoice-vision-pipeline": {
+      "kind": "effector",
+      "source": "tools/invoice-vision-pipeline.py",
+      "title": "joins the two invoice-pipeline one_shot agents end to end: invoice-vision-ocr (image → OCR text) feeds invoice-extract (text → ISDOC record) via two `run-agent.php` calls, then writes the `.extract.json` sidecar. Every field is stamped confidence=0.0 (no logprobs in this transport yet), so a pipeline sidecar always lands in the operator-verify queue.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/invoice-vision-pipeline.py: joins the two invoice-pipeline one_shot agents end to end: invoice-vision-ocr (image → OCR text) feeds invoice-extract (text → ISDOC record) via two `run-agent.php` calls, then writes the `.extract.json` sidecar. Every field is stamped confidence=0.0 (no logprobs in this transport yet), so a pipeline sidecar always lands in the operator-verify queue."
+    },
+    "effector:keap-apply-view": {
+      "kind": "effector",
+      "source": "tools/keap-apply-view.py",
+      "title": "Apply a KEAP table definition's `view:` block to the live table for the digest OUTPUT tables (invoice, account) — same refuse-before-write / verify-by-reading discipline as roadmap-apply-view.py, kept separate since those UNSEEDED tables are importer-populated, not playbook-seeded.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/keap-apply-view.py: Apply a KEAP table definition's `view:` block to the live table for the digest OUTPUT tables (invoice, account) — same refuse-before-write / verify-by-reading discipline as roadmap-apply-view.py, kept separate since those UNSEEDED tables are importer-populated, not playbook-seeded."
+    },
+    "effector:keap-branches-to-canonical": {
+      "kind": "effector",
+      "source": "tools/keap-branches-to-canonical.py",
+      "title": "Convert a fable branches-authoring JSON (structured pillars+blocks for empty",
+      "anchor": "02.02.04",
+      "description": "Effector tools/keap-branches-to-canonical.py: Convert a fable branches-authoring JSON (structured pillars+blocks for empty"
+    },
+    "effector:keap-fable-bundle": {
+      "kind": "effector",
+      "source": "tools/keap-fable-bundle.py",
+      "title": "Generate the raw-data bundle for the fable ontology-review pass.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/keap-fable-bundle.py: Generate the raw-data bundle for the fable ontology-review pass."
+    },
+    "effector:keap-fable-to-bundles": {
+      "kind": "effector",
+      "source": "tools/keap-fable-to-bundles.py",
+      "title": "Transform the fable ontology-review output into per-domain import bundles.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/keap-fable-to-bundles.py: Transform the fable ontology-review output into per-domain import bundles."
+    },
+    "effector:keap-recall": {
+      "kind": "effector",
+      "source": "tools/keap-recall.py",
+      "title": "Read-only KEAP recall (RO bearer): ranked passages with node ids; wraps keap-semantic-search.py + keap-recall-queries.py; empty recall is a miss.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/keap-recall.py: Read-only KEAP recall (RO bearer): ranked passages with node ids; wraps keap-semantic-search.py + keap-recall-queries.py; empty recall is a miss."
+    },
+    "effector:keap-recall-queries": {
+      "kind": "effector",
+      "source": "tools/keap-recall-queries.py",
+      "title": "Emit the KEAP recall-query set from the estate's SKILLS.md trigger lines.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/keap-recall-queries.py: Emit the KEAP recall-query set from the estate's SKILLS.md trigger lines."
+    },
+    "effector:keap-reid-rows": {
+      "kind": "effector",
+      "source": "tools/keap-reid-rows.py",
+      "title": "Make every row of a KEAP DataTable addressable by its own business key.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/keap-reid-rows.py: Make every row of a KEAP DataTable addressable by its own business key."
+    },
+    "effector:loop-diff": {
+      "kind": "effector",
+      "source": "tools/loop-diff.py",
+      "title": "Build a valid unified diff from a replacement an agent can state in words.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/loop-diff.py: Build a valid unified diff from a replacement an agent can state in words."
+    },
+    "effector:loop-graph-gen": {
+      "kind": "effector",
+      "source": "tools/loop-graph-gen.py",
+      "title": "Compile the loop harness from ledger.py into loop-graph.json (the Planner Loops view + its gate).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/loop-graph-gen.py: Compile the loop harness from ledger.py into loop-graph.json (the Planner Loops view + its gate)."
+    },
+    "effector:loop-pr": {
+      "kind": "effector",
+      "source": "tools/loop-pr.py",
+      "title": "The loop's driver: what happens after the judges say pass.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/loop-pr.py: The loop's driver: what happens after the judges say pass."
+    },
+    "effector:loop-propose": {
+      "kind": "effector",
+      "source": "tools/loop-propose.py",
+      "title": "The loop's ENTRY: hand one reported weakness to a model that may propose.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/loop-propose.py: The loop's ENTRY: hand one reported weakness to a model that may propose."
+    },
+    "effector:loop-review": {
+      "kind": "effector",
+      "source": "tools/loop-review.py",
+      "title": "The reviewer: the only thing in the loop permitted to merge.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/loop-review.py: The reviewer: the only thing in the loop permitted to merge."
+    },
+    "effector:maps-style-vendor": {
+      "kind": "effector",
+      "source": "tools/maps-style-vendor.py",
+      "title": "Vendor an OpenFreeMap style for the offline tileserver: every source, sprite and glyph made local, labels `name:cs`.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/maps-style-vendor.py: Vendor an OpenFreeMap style for the offline tileserver: every source, sprite and glyph made local, labels `name:cs`."
+    },
+    "effector:mcp-tables-server": {
+      "kind": "effector",
+      "source": "tools/mcp-tables-server.py",
+      "title": "stdio MCP server giving external agents (Cursor/Codex/Claude Code) the DataTables verb surface.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/mcp-tables-server.py: stdio MCP server giving external agents (Cursor/Codex/Claude Code) the DataTables verb surface."
+    },
+    "effector:migration-pr": {
+      "kind": "effector",
+      "source": "tools/migration-pr.sh",
+      "title": "tools/migration-pr.sh — validate an authored migration record + its version",
+      "anchor": "02.02.04",
+      "description": "Effector tools/migration-pr.sh: tools/migration-pr.sh — validate an authored migration record + its version"
+    },
+    "effector:n8n-pack": {
+      "kind": "effector",
+      "source": "tools/n8n-pack.py",
+      "title": "the n8n pack contract in one tool: `lint` (docs/doctrine/n8n-packs.md §8 gate), `encryption-key` (REM-202 adopt-or-mint), `sync` (post.yml harvester — upsert graphs keyed on meta.nos.id, inject nos-keap-rw), `watch` (Pulse exec reader: staleness vs cron, UNKNOWN when n8n is unreachable).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/n8n-pack.py: the n8n pack contract in one tool: `lint` (docs/doctrine/n8n-packs.md §8 gate), `encryption-key` (REM-202 adopt-or-mint), `sync` (post.yml harvester — upsert graphs keyed on meta.nos.id, inject nos-keap-rw), `watch` (Pulse exec reader: staleness vs cron, UNKNOWN when n8n is unreachable)."
+    },
+    "effector:night-watch": {
+      "kind": "effector",
+      "source": "tools/night-watch.py",
+      "title": "What we said the night would do, beside what it did.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/night-watch.py: What we said the night would do, beside what it did."
+    },
+    "effector:nos": {
+      "kind": "effector",
+      "source": "tools/nos",
+      "title": "operator entry point for the nOS playbook.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/nos: operator entry point for the nOS playbook."
+    },
+    "effector:nos-cc": {
+      "kind": "effector",
+      "source": "tools/nos-cc.sh",
+      "title": "the terminal control centre.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/nos-cc.sh: the terminal control centre."
+    },
+    "effector:nos-first-login": {
+      "kind": "effector",
+      "source": "tools/nos-first-login.py",
+      "title": "Signs every declared identity in to every SSO app once, so its account exists from install.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/nos-first-login.py: Signs every declared identity in to every SSO app once, so its account exists from install."
+    },
+    "effector:nos-image-cache": {
+      "kind": "effector",
+      "source": "tools/nos-image-cache.py",
+      "title": "A verified local cache of container images, so a rebuild does not re-pull.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/nos-image-cache.py: A verified local cache of container images, so a rebuild does not re-pull."
+    },
+    "effector:nos-ops-harness": {
+      "kind": "effector",
+      "source": "tools/nos-ops-harness.py",
+      "title": "nos-ops measurement harness — WHERE does the chain/tool-use boundary sit?",
+      "anchor": "02.02.04",
+      "description": "Effector tools/nos-ops-harness.py: nos-ops measurement harness — WHERE does the chain/tool-use boundary sit?"
+    },
+    "effector:nos-os-update-arm": {
+      "kind": "effector",
+      "source": "tools/nos-os-update-arm.sh",
+      "title": "arm the cross-reboot continuation BEFORE a macOS update.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/nos-os-update-arm.sh: arm the cross-reboot continuation BEFORE a macOS update."
+    },
+    "effector:nos-stacks": {
+      "kind": "effector",
+      "source": "tools/nos-stacks.sh",
+      "title": "run the Docker stack layer autonomously (no sudo, no prompt).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/nos-stacks.sh: run the Docker stack layer autonomously (no sudo, no prompt)."
+    },
+    "effector:nos-statusline": {
+      "kind": "effector",
+      "source": "tools/nos-statusline.sh",
+      "title": "one line of estate truth, for the tmux status bar.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/nos-statusline.sh: one line of estate truth, for the tmux status bar."
+    },
+    "effector:nos-upgrade-detached": {
+      "kind": "effector",
+      "source": "tools/nos-upgrade-detached.sh",
+      "title": "run an upgrade DETACHED from the controlling TTY.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/nos-upgrade-detached.sh: run an upgrade DETACHED from the controlling TTY."
+    },
+    "effector:nos-watch": {
+      "kind": "effector",
+      "source": "tools/nos-watch.sh",
+      "title": "render a reader's CURRENT OUTPUT on an interval, in place.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/nos-watch.sh: render a reader's CURRENT OUTPUT on an interval, in place."
+    },
+    "effector:offboard-book-owner": {
+      "kind": "effector",
+      "source": "tools/offboard-book-owner.py",
+      "title": "Erase one client's book (book_owner slug): dry-run plan, `--confirm` rmtree inbox + KEAP DELETE leaf-first. Espo Account stays operator-run.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/offboard-book-owner.py: Erase one client's book (book_owner slug): dry-run plan, `--confirm` rmtree inbox + KEAP DELETE leaf-first. Espo Account stays operator-run."
+    },
+    "effector:outline-roles": {
+      "kind": "effector",
+      "source": "tools/outline-roles.py",
+      "title": "Makes Outline's admins exactly Authentik's tier-1 people (Outline takes no role from OIDC).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/outline-roles.py: Makes Outline's admins exactly Authentik's tier-1 people (Outline takes no role from OIDC)."
+    },
+    "effector:party-graph": {
+      "kind": "effector",
+      "source": "tools/party-graph.py",
+      "title": "The kmenová-data (master-data) view: walk the live rowRef graph around a party (facets + derived rows) and render it as mermaid; --dump json is the {nodes,edges} a face graph view consumes. Reader only.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/party-graph.py: The kmenová-data (master-data) view: walk the live rowRef graph around a party (facets + derived rows) and render it as mermaid; --dump json is the {nodes,edges} a face graph view consumes. Reader only."
+    },
+    "effector:post-blank": {
+      "kind": "effector",
+      "source": "tools/post-blank.sh",
+      "title": "tools/post-blank.sh — operator-facing post-blank verification runner.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/post-blank.sh: tools/post-blank.sh — operator-facing post-blank verification runner."
+    },
+    "effector:preconverge-snapshot": {
+      "kind": "effector",
+      "source": "tools/preconverge-snapshot.py",
+      "title": "Take the pre-converge Time Machine snapshot that can be taken; refuse to claim the rest.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/preconverge-snapshot.py: Take the pre-converge Time Machine snapshot that can be taken; refuse to claim the rest."
+    },
+    "effector:profile-builder-build": {
+      "kind": "effector",
+      "source": "tools/profile-builder-build.py",
+      "title": "Build the static profile builder (`_site/profile-builder/index.html` on release tags): seven steps (this computer incl. one timezone, web address, organisation & security, services with a RAM/disk estimate and a nearest-profile hint, backup & mail, people — the operator, test users, `nos_extra_identities` — and download) → a tailored config.yml plus a one-line credentials.yml for the password prefix. Data from default.config.yml + profiles/ + state/manifest.yml categories + plugin hub_cards + each role's compose (via registry-reach's discover()); `--image-lock` marks an OFFLINE build, `--config` resolves it against an operator config.yml. One self-contained file: test locally with `tools/profile-builder-build.py --out ~/nos-profile-builder && open ~/nos-profile-builder/index.html`. Page in tools/profile-builder/.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/profile-builder-build.py: Build the static profile builder (`_site/profile-builder/index.html` on release tags): seven steps (this computer incl. one timezone, web address, organisation & security, services with a RAM/disk estimate and a nearest-profile hint, backup & mail, people — the operator, test users, `nos_extra_identities` — and download) → a tailored config.yml plus a one-line credentials.yml for the password prefix. Data from default.config.yml + profiles/ + state/manifest.yml categories + plugin hub_cards + each role's compose (via registry-reach's discover()); `--image-lock` marks an OFFLINE build, `--config` resolves it against an operator config.yml. One self-contained file: test locally with `tools/profile-builder-build.py --out ~/nos-profile-builder && open ~/nos-profile-builder/index.html`. Page in tools/profile-builder/."
+    },
+    "effector:promote-public": {
+      "kind": "effector",
+      "source": "tools/promote-public.sh",
+      "title": "tools/promote-public.sh — promote a VETTED local change to a PUBLIC GitHub PR.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/promote-public.sh: tools/promote-public.sh — promote a VETTED local change to a PUBLIC GitHub PR."
+    },
+    "effector:raw-archive-probe": {
+      "kind": "effector",
+      "source": "tools/raw-archive-probe.py",
+      "title": "Does the S3 endpoint honor Object Lock COMPLIANCE, or only accept the headers? The live run PUTs one locked object that cannot be deleted before it expires.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/raw-archive-probe.py: Does the S3 endpoint honor Object Lock COMPLIANCE, or only accept the headers? The live run PUTs one locked object that cannot be deleted before it expires."
+    },
+    "effector:recipe-pr": {
+      "kind": "effector",
+      "source": "tools/recipe-pr.sh",
+      "title": "tools/recipe-pr.sh — validate an upgrade recipe and (optionally) open a PR/MR",
+      "anchor": "02.02.04",
+      "description": "Effector tools/recipe-pr.sh: tools/recipe-pr.sh — validate an upgrade recipe and (optionally) open a PR/MR"
+    },
+    "effector:reload-stale-config": {
+      "kind": "effector",
+      "source": "tools/reload-stale-config.py",
+      "title": "Make a running container read the config the estate rendered for it.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/reload-stale-config.py: Make a running container read the config the estate rendered for it."
+    },
+    "effector:rem-dispose": {
+      "kind": "effector",
+      "source": "tools/rem-dispose.py",
+      "title": "Write a REM disposition into the operator's `~/.nos/security` notebook; never touches the scanner's queue.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/rem-dispose.py: Write a REM disposition into the operator's `~/.nos/security` notebook; never touches the scanner's queue."
+    },
+    "effector:report-chain-synth-gen": {
+      "kind": "effector",
+      "source": "tools/report-chain-synth-gen.py",
+      "title": "synthesize report-prepare training chains from SCHEMA ALONE (keap-tables + relation ontology + frozen opcodes), so the expected.yml needs no live model.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/report-chain-synth-gen.py: synthesize report-prepare training chains from SCHEMA ALONE (keap-tables + relation ontology + frozen opcodes), so the expected.yml needs no live model."
+    },
+    "effector:roadmap-apply-columns": {
+      "kind": "effector",
+      "source": "tools/roadmap-apply-columns.py",
+      "title": "Reconcile a NAMED column's shape (kind/options) from the roadmap definition to the live table; per-column, never touches the column set.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/roadmap-apply-columns.py: Reconcile a NAMED column's shape (kind/options) from the roadmap definition to the live table; per-column, never touches the column set."
+    },
+    "effector:roadmap-apply-view": {
+      "kind": "effector",
+      "source": "tools/roadmap-apply-view.py",
+      "title": "Apply the roadmap definition's `view:` block to the live table.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/roadmap-apply-view.py: Apply the roadmap definition's `view:` block to the live table."
+    },
+    "effector:roadmap-extract": {
+      "kind": "effector",
+      "source": "tools/roadmap-extract.py",
+      "title": "One-time: live roadmap table → per-row `<slug>.md` files in the PRIVATE seed repo.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/roadmap-extract.py: One-time: live roadmap table → per-row `<slug>.md` files in the PRIVATE seed repo."
+    },
+    "effector:roadmap-seed": {
+      "kind": "effector",
+      "source": "tools/roadmap-seed.py",
+      "title": "Seed / --sync the roadmap table from per-row files in the private seed repo (NOS_SEED_DIR).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/roadmap-seed.py: Seed / --sync the roadmap table from per-row files in the private seed repo (NOS_SEED_DIR)."
+    },
+    "effector:roadmap-update": {
+      "kind": "effector",
+      "source": "tools/roadmap-update.py",
+      "title": "Move a roadmap row's CLAIM. Not its verdict — that has a different writer.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/roadmap-update.py: Move a roadmap row's CLAIM. Not its verdict — that has a different writer."
+    },
+    "effector:roadmap-verify": {
+      "kind": "effector",
+      "source": "tools/roadmap-verify.py",
+      "title": "Write a roadmap row's VERDICT — which is an exit code, never an argument.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/roadmap-verify.py: Write a roadmap row's VERDICT — which is an exit code, never an argument."
+    },
+    "effector:routing-graph-gen": {
+      "kind": "effector",
+      "source": "tools/routing-graph-gen.py",
+      "title": "Compile the agent capability graph (nos-work://) into routing-graph.json for the Planner Routing view.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/routing-graph-gen.py: Compile the agent capability graph (nos-work://) into routing-graph.json for the Planner Routing view."
+    },
+    "effector:run-agent": {
+      "kind": "effector",
+      "source": "tools/run-agent.sh",
+      "title": "tools/run-agent.sh — run an AgentKit agent against the LIVE estate.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/run-agent.sh: tools/run-agent.sh — run an AgentKit agent against the LIVE estate."
+    },
+    "effector:run-journeys": {
+      "kind": "effector",
+      "source": "tools/run-journeys.sh",
+      "title": "tools/run-journeys.sh — run the e2e journeys against the LIVE estate.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/run-journeys.sh: tools/run-journeys.sh — run the e2e journeys against the LIVE estate."
+    },
+    "effector:run-librarian": {
+      "kind": "effector",
+      "source": "tools/run-librarian.sh",
+      "title": "operator-driven knowledge judgment (cortex Layer 2)",
+      "anchor": "02.02.04",
+      "description": "Effector tools/run-librarian.sh: operator-driven knowledge judgment (cortex Layer 2)"
+    },
+    "effector:run-phase5-ceremony": {
+      "kind": "effector",
+      "source": "tools/run-phase5-ceremony.sh",
+      "title": "operator-driven conductor self-test (Anatomy A8/A9)",
+      "anchor": "02.02.04",
+      "description": "Effector tools/run-phase5-ceremony.sh: operator-driven conductor self-test (Anatomy A8/A9)"
+    },
+    "effector:run-surveyor": {
+      "kind": "effector",
+      "source": "tools/run-surveyor.sh",
+      "title": "operator-driven surface survey (Anatomy A20)",
+      "anchor": "02.02.04",
+      "description": "Effector tools/run-surveyor.sh: operator-driven surface survey (Anatomy A20)"
+    },
+    "effector:run-upgrade-architect": {
+      "kind": "effector",
+      "source": "tools/run-upgrade-architect.sh",
+      "title": "operator-driven recipe authoring (W5-B5, 2026-05-27)",
+      "anchor": "02.02.04",
+      "description": "Effector tools/run-upgrade-architect.sh: operator-driven recipe authoring (W5-B5, 2026-05-27)"
+    },
+    "effector:scan-state-snapshot": {
+      "kind": "effector",
+      "source": "tools/scan-state-snapshot.py",
+      "title": "Record the nightly scan's output on its own branch, without touching yours.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/scan-state-snapshot.py: Record the nightly scan's output on its own branch, without touching yours."
+    },
+    "effector:sync-trunk-to-gitea": {
+      "kind": "effector",
+      "source": "tools/sync-trunk-to-gitea.sh",
+      "title": "tools/sync-trunk-to-gitea.sh — keep the writable Gitea agent forge's trunk",
+      "anchor": "02.02.04",
+      "description": "Effector tools/sync-trunk-to-gitea.sh: tools/sync-trunk-to-gitea.sh — keep the writable Gitea agent forge's trunk"
+    },
+    "effector:sync-trunk-to-gitlab": {
+      "kind": "effector",
+      "source": "tools/sync-trunk-to-gitlab.sh",
+      "title": "tools/sync-trunk-to-gitlab.sh — keep the GitLab agent forge's trunk",
+      "anchor": "02.02.04",
+      "description": "Effector tools/sync-trunk-to-gitlab.sh: tools/sync-trunk-to-gitlab.sh — keep the GitLab agent forge's trunk"
+    },
+    "effector:task-types-render": {
+      "kind": "effector",
+      "source": "tools/task-types-render.py",
+      "title": "Render AGENTS.md (the task-type contract) from state/task-types.yml.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/task-types-render.py: Render AGENTS.md (the task-type contract) from state/task-types.yml."
+    },
+    "effector:tofu-authentik-adopt": {
+      "kind": "effector",
+      "source": "tools/tofu-authentik-adopt.sh",
+      "title": "tools/tofu-authentik-adopt.sh — ADR-0001 Phase 1 one-time tenant adoption.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/tofu-authentik-adopt.sh: tools/tofu-authentik-adopt.sh — ADR-0001 Phase 1 one-time tenant adoption."
+    },
+    "effector:tofu-authentik-gen-registry": {
+      "kind": "effector",
+      "source": "tools/tofu-authentik-gen-registry.py",
+      "title": "ADR-0001 Phase 1 — regenerate the OpenTofu Authentik service registry.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/tofu-authentik-gen-registry.py: ADR-0001 Phase 1 — regenerate the OpenTofu Authentik service registry."
+    },
+    "effector:tofu-authentik-reconcile": {
+      "kind": "effector",
+      "source": "tools/tofu-authentik-reconcile.sh",
+      "title": "tools/tofu-authentik-reconcile.sh — tofu-state ⇄ live-Authentik PK reconcile.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/tofu-authentik-reconcile.sh: tools/tofu-authentik-reconcile.sh — tofu-state ⇄ live-Authentik PK reconcile."
+    },
+    "effector:vendor-keap-contracts": {
+      "kind": "effector",
+      "source": "tools/vendor-keap-contracts.py",
+      "title": "Re-vendor KEAP's table schema (pinned to keap_repo_ref) for the schema-pin gate.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/vendor-keap-contracts.py: Re-vendor KEAP's table schema (pinned to keap_repo_ref) for the schema-pin gate."
+    },
+    "effector:wf-panel": {
+      "kind": "effector",
+      "source": "tools/wf-panel.sh",
+      "title": "put the workflow tree in the nos-cc panel, and nowhere else.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/wf-panel.sh: put the workflow tree in the nos-cc panel, and nowhere else."
+    },
+    "effector:wing-telemetry-smoke": {
+      "kind": "effector",
+      "source": "tools/wing-telemetry-smoke.py",
+      "title": "wing-telemetry-smoke.py — end-to-end probe for the telemetry pipeline.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/wing-telemetry-smoke.py: wing-telemetry-smoke.py — end-to-end probe for the telemetry pipeline."
+    },
+    "effector:woodpecker-token": {
+      "kind": "effector",
+      "source": "tools/woodpecker-token.py",
+      "title": "Mint the Woodpecker personal token as an SSO identity — no browser, no form.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/woodpecker-token.py: Mint the Woodpecker personal token as an SSO identity — no browser, no form."
+    },
+    "effector:workload-digest-record": {
+      "kind": "effector",
+      "source": "tools/workload-digest-record.py",
+      "title": "main.yml post_task: writes the record workload-digest-status.py reads (image ref, ID, repo digests, source commit of local builds).",
+      "anchor": "02.02.04",
+      "description": "Effector tools/workload-digest-record.py: main.yml post_task: writes the record workload-digest-status.py reads (image ref, ID, repo digests, source commit of local builds)."
+    },
+    "effector:worktree-lease": {
+      "kind": "effector",
+      "source": "tools/worktree-lease.py",
+      "title": "A lease over a worktree's SHAPE, so a long agent run cannot be cut from under.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/worktree-lease.py: A lease over a worktree's SHAPE, so a long agent run cannot be cut from under."
     },
     "faceapp:anatomy": {
       "kind": "faceapp",
@@ -2513,26 +3312,19 @@
       "anchor": "03.08",
       "description": "Pulse scheduled job (notification): runs php on cron `*/15 * * * *`"
     },
-    "reader:_geo_db": {
-      "kind": "reader",
-      "source": "tools/_geo_db.py",
-      "title": "The shared \"is there a geo database here\" check: absent idles, a stopped container is an outage.",
-      "anchor": "02.02.04",
-      "description": "Reader tools/_geo_db.py: The shared \"is there a geo database here\" check: absent idles, a stopped container is an outage."
-    },
-    "reader:_ledger_open": {
-      "kind": "reader",
-      "source": "tools/_ledger_open.py",
-      "title": "One way to open the Wing ledger read-only, for readers that must not write.",
-      "anchor": "02.02.04",
-      "description": "Reader tools/_ledger_open.py: One way to open the Wing ledger read-only, for readers that must not write."
-    },
     "reader:agent-capability": {
       "kind": "reader",
       "source": "tools/agent-capability.py",
       "title": "Derive each agent's nos-work:// capability address from its manifest (the routing projection).",
       "anchor": "02.02.04",
       "description": "Reader tools/agent-capability.py: Derive each agent's nos-work:// capability address from its manifest (the routing projection)."
+    },
+    "reader:agent-report": {
+      "kind": "reader",
+      "source": "tools/agent-report.py",
+      "title": "agent-report.py — print an agent's real report, losslessly.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/agent-report.py: agent-report.py — print an agent's real report, losslessly."
     },
     "reader:agent-status": {
       "kind": "reader",
@@ -2541,19 +3333,12 @@
       "anchor": "02.02.04",
       "description": "Reader tools/agent-status.py: What the agents are doing, and what came of the last ones."
     },
-    "reader:agent-token-status": {
+    "reader:aggregator-dry-run": {
       "kind": "reader",
-      "source": "tools/agent-token-status.py",
-      "title": "agent-token-status — can each declared agent client mint a token RIGHT NOW.",
+      "source": "tools/aggregator-dry-run.py",
+      "title": "D3 — Authentik aggregator dry-run + parity report.",
       "anchor": "02.02.04",
-      "description": "Reader tools/agent-token-status.py: agent-token-status — can each declared agent client mint a token RIGHT NOW."
-    },
-    "reader:anatomy-measure-margins": {
-      "kind": "reader",
-      "source": "tools/anatomy-measure-margins.py",
-      "title": "Measure the nightly chain's temporal margins, and restamp the declared edges.",
-      "anchor": "02.02.04",
-      "description": "Reader tools/anatomy-measure-margins.py: Measure the nightly chain's temporal margins, and restamp the declared edges."
+      "description": "Reader tools/aggregator-dry-run.py: D3 — Authentik aggregator dry-run + parity report."
     },
     "reader:app-version": {
       "kind": "reader",
@@ -2562,12 +3347,12 @@
       "anchor": "02.02.04",
       "description": "Reader tools/app-version.py: What each container actually RUNS, against what the pin says it bundles."
     },
-    "reader:atlas-refresh": {
+    "reader:ares-dtt": {
       "kind": "reader",
-      "source": "tools/atlas-refresh.py",
-      "title": "Pulse job: nos-atlas \"nOS job contract\" (read-only reader snapshot → generator) into GeoLibre's `plugins/nos-atlas/live`.",
+      "source": "tools/ares-dtt.py",
+      "title": "ARES + ADIS lookups → party-registry-status row payloads. Oracle the gate scores; the live writer is the n8n ARES pack.",
       "anchor": "02.02.04",
-      "description": "Reader tools/atlas-refresh.py: Pulse job: nos-atlas \"nOS job contract\" (read-only reader snapshot → generator) into GeoLibre's `plugins/nos-atlas/live`."
+      "description": "Reader tools/ares-dtt.py: ARES + ADIS lookups → party-registry-status row payloads. Oracle the gate scores; the live writer is the n8n ARES pack."
     },
     "reader:awaiting-operator": {
       "kind": "reader",
@@ -2611,26 +3396,19 @@
       "anchor": "02.02.04",
       "description": "Reader tools/cortex-status.py: What the cortex organ is, all of it — not just the part KEAP serves."
     },
-    "reader:current-state": {
-      "kind": "reader",
-      "source": "tools/current-state.py",
-      "title": "The claim board's WRITE side: file/claim/release/progress; a claim is refused unless the match says you are capable.",
-      "anchor": "02.02.04",
-      "description": "Reader tools/current-state.py: The claim board's WRITE side: file/claim/release/progress; a claim is refused unless the match says you are capable."
-    },
-    "reader:discovery-scan": {
-      "kind": "reader",
-      "source": "tools/discovery-scan.py",
-      "title": "Discovery: find two representations of one fact that disagree.",
-      "anchor": "02.02.04",
-      "description": "Reader tools/discovery-scan.py: Discovery: find two representations of one fact that disagree."
-    },
     "reader:doctrine-cite": {
       "kind": "reader",
       "source": "tools/doctrine-cite.py",
       "title": "Resolve every doctrine citation in the estate — or say exactly which do not. `--file REL --json` is the editor contract (`tools/ssot-cite-vscode/`).",
       "anchor": "02.02.04",
       "description": "Reader tools/doctrine-cite.py: Resolve every doctrine citation in the estate — or say exactly which do not. `--file REL --json` is the editor contract (`tools/ssot-cite-vscode/`)."
+    },
+    "reader:e2e-plan": {
+      "kind": "reader",
+      "source": "tools/e2e-plan.py",
+      "title": "What the estate promises a user, rendered from the manifests — the E2E plan.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/e2e-plan.py: What the estate promises a user, rendered from the manifests — the E2E plan."
     },
     "reader:elsewhere-status": {
       "kind": "reader",
@@ -2653,19 +3431,12 @@
       "anchor": "02.02.04",
       "description": "Reader tools/face-wiring-report.py: nOS-face wiring report — the hard-doctrine linter for the web-desktop shell."
     },
-    "reader:geo-load": {
+    "reader:gdpr-records": {
       "kind": "reader",
-      "source": "tools/geo-load.py",
-      "title": "Load ČÚZK open data (RÚIAN address points, INSPIRE parcels + buildings) for the configured kraje into PostGIS `geo`; staged + swapped per layer.",
+      "source": "tools/gdpr-records.py",
+      "title": "Emit GDPR Article-30 records as a JSON array (machine-readable sibling of",
       "anchor": "02.02.04",
-      "description": "Reader tools/geo-load.py: Load ČÚZK open data (RÚIAN address points, INSPIRE parcels + buildings) for the configured kraje into PostGIS `geo`; staged + swapped per layer."
-    },
-    "reader:geo-project-sites": {
-      "kind": "reader",
-      "source": "tools/geo-project-sites.py",
-      "title": "Nightly one-way projection of KEAP party-site rows (+ ARES seats) into PostGIS `geo.party_site`; `--erase-party` for GDPR (called by digest-teardown).",
-      "anchor": "02.02.04",
-      "description": "Reader tools/geo-project-sites.py: Nightly one-way projection of KEAP party-site rows (+ ARES seats) into PostGIS `geo.party_site`; `--erase-party` for GDPR (called by digest-teardown)."
+      "description": "Reader tools/gdpr-records.py: Emit GDPR Article-30 records as a JSON array (machine-readable sibling of"
     },
     "reader:geo-status": {
       "kind": "reader",
@@ -2695,6 +3466,13 @@
       "anchor": "02.02.04",
       "description": "Reader tools/identity-status.py: identity-status — the declared account roster vs what each realm holds."
     },
+    "reader:keap-semantic-search": {
+      "kind": "reader",
+      "source": "tools/keap-semantic-search.py",
+      "title": "Semantic search over the estate's knowledge from the shell: a thin reader over KEAP's hybrid /agent/v1/search/semantic (query embedded + vector_top_k over the libsql embeddings + lexical + graph). Reader only; adds no vectors (no drift). Covers taxonomy/capture/note/object — DataTable rows once KEAP embeds them.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/keap-semantic-search.py: Semantic search over the estate's knowledge from the shell: a thin reader over KEAP's hybrid /agent/v1/search/semantic (query embedded + vector_top_k over the libsql embeddings + lexical + graph). Reader only; adds no vectors (no drift). Covers taxonomy/capture/note/object — DataTable rows once KEAP embeds them."
+    },
     "reader:loader-vars-report": {
       "kind": "reader",
       "source": "tools/loader-vars-report.py",
@@ -2716,33 +3494,26 @@
       "anchor": "02.02.04",
       "description": "Reader tools/managed-status.py: Every managed dir: what a blank does to it × what the backup does with it, one table from the artifacts (`--gaps`, `--json`; the cc pane `managed`)."
     },
-    "reader:maps-style-vendor": {
+    "reader:moderation-drain": {
       "kind": "reader",
-      "source": "tools/maps-style-vendor.py",
-      "title": "Vendor an OpenFreeMap style for the offline tileserver: every source, sprite and glyph made local, labels `name:cs`.",
+      "source": "tools/moderation-drain.py",
+      "title": "PREPARE a weekly KEAP moderation batch: classify proposed briefs into retarget/human-review/per-domain batchable fills with a deterministic spot-check (9/10). Reader only — drafts the plan; apply is the operator's (human /api) + the dump.mjs backport.",
       "anchor": "02.02.04",
-      "description": "Reader tools/maps-style-vendor.py: Vendor an OpenFreeMap style for the offline tileserver: every source, sprite and glyph made local, labels `name:cs`."
+      "description": "Reader tools/moderation-drain.py: PREPARE a weekly KEAP moderation batch: classify proposed briefs into retarget/human-review/per-domain batchable fills with a deterministic spot-check (9/10). Reader only — drafts the plan; apply is the operator's (human /api) + the dump.mjs backport."
     },
-    "reader:nos_identity": {
+    "reader:nos-pane": {
       "kind": "reader",
-      "source": "tools/nos_identity.py",
-      "title": "The manifest row is the only place a service's spellings meet.",
+      "source": "tools/nos-pane.py",
+      "title": "One control-centre pane. `nos-cc.sh` runs several; you can run one anywhere.",
       "anchor": "02.02.04",
-      "description": "Reader tools/nos_identity.py: The manifest row is the only place a service's spellings meet."
+      "description": "Reader tools/nos-pane.py: One control-centre pane. `nos-cc.sh` runs several; you can run one anywhere."
     },
-    "reader:nos_security": {
+    "reader:nos-secret": {
       "kind": "reader",
-      "source": "tools/nos_security.py",
-      "title": "Resolve the live security notebook (`~/.nos/security`), not the git promotion copy.",
+      "source": "tools/nos-secret.py",
+      "title": "nos-secret — the operator's reader for the derived credential map (P1).",
       "anchor": "02.02.04",
-      "description": "Reader tools/nos_security.py: Resolve the live security notebook (`~/.nos/security`), not the git promotion copy."
-    },
-    "reader:nos_work_uri": {
-      "kind": "reader",
-      "source": "tools/nos_work_uri.py",
-      "title": "Parse + match the nos-work:// routing address (dtt-routing-address); the planner's capability/assignment matcher.",
-      "anchor": "02.02.04",
-      "description": "Reader tools/nos_work_uri.py: Parse + match the nos-work:// routing address (dtt-routing-address); the planner's capability/assignment matcher."
+      "description": "Reader tools/nos-secret.py: nos-secret — the operator's reader for the derived credential map (P1)."
     },
     "reader:npm-ioc-scan": {
       "kind": "reader",
@@ -2765,6 +3536,13 @@
       "anchor": "02.02.04",
       "description": "Reader tools/permission-status.py: What macOS will and will not let this estate do, in one place."
     },
+    "reader:pin-latest-scan": {
+      "kind": "reader",
+      "source": "tools/pin-latest-scan.py",
+      "title": "What is each image pin missing, measured against its registry.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/pin-latest-scan.py: What is each image pin missing, measured against its registry."
+    },
     "reader:plugin-wiring-report": {
       "kind": "reader",
       "source": "tools/plugin-wiring-report.py",
@@ -2772,40 +3550,12 @@
       "anchor": "02.02.04",
       "description": "Reader tools/plugin-wiring-report.py: Plugin wiring report — capability matrix + contract checks."
     },
-    "reader:profile-builder-build": {
-      "kind": "reader",
-      "source": "tools/profile-builder-build.py",
-      "title": "Build the static profile builder (`_site/profile-builder/index.html` on release tags): seven steps (this computer incl. one timezone, web address, organisation & security, services with a RAM/disk estimate and a nearest-profile hint, backup & mail, people — the operator, test users, `nos_extra_identities` — and download) → a tailored config.yml plus a one-line credentials.yml for the password prefix. Data from default.config.yml + profiles/ + state/manifest.yml categories + plugin hub_cards + each role's compose (via registry-reach's discover()); `--image-lock` marks an OFFLINE build, `--config` resolves it against an operator config.yml. One self-contained file: test locally with `tools/profile-builder-build.py --out ~/nos-profile-builder && open ~/nos-profile-builder/index.html`. Page in tools/profile-builder/.",
-      "anchor": "02.02.04",
-      "description": "Reader tools/profile-builder-build.py: Build the static profile builder (`_site/profile-builder/index.html` on release tags): seven steps (this computer incl. one timezone, web address, organisation & security, services with a RAM/disk estimate and a nearest-profile hint, backup & mail, people — the operator, test users, `nos_extra_identities` — and download) → a tailored config.yml plus a one-line credentials.yml for the password prefix. Data from default.config.yml + profiles/ + state/manifest.yml categories + plugin hub_cards + each role's compose (via registry-reach's discover()); `--image-lock` marks an OFFLINE build, `--config` resolves it against an operator config.yml. One self-contained file: test locally with `tools/profile-builder-build.py --out ~/nos-profile-builder && open ~/nos-profile-builder/index.html`. Page in tools/profile-builder/."
-    },
-    "reader:raw-archive-probe": {
-      "kind": "reader",
-      "source": "tools/raw-archive-probe.py",
-      "title": "Does the S3 endpoint honor Object Lock COMPLIANCE, or only accept the headers?",
-      "anchor": "02.02.04",
-      "description": "Reader tools/raw-archive-probe.py: Does the S3 endpoint honor Object Lock COMPLIANCE, or only accept the headers?"
-    },
     "reader:red-status": {
       "kind": "reader",
       "source": "tools/red-status.py",
       "title": "What is red on this estate right now.",
       "anchor": "02.02.04",
       "description": "Reader tools/red-status.py: What is red on this estate right now."
-    },
-    "reader:reload-stale-config": {
-      "kind": "reader",
-      "source": "tools/reload-stale-config.py",
-      "title": "Make a running container read the config the estate rendered for it.",
-      "anchor": "02.02.04",
-      "description": "Reader tools/reload-stale-config.py: Make a running container read the config the estate rendered for it."
-    },
-    "reader:rem-dispose": {
-      "kind": "reader",
-      "source": "tools/rem-dispose.py",
-      "title": "Write a REM disposition into the operator's `~/.nos/security` notebook; never touches the scanner's queue.",
-      "anchor": "02.02.04",
-      "description": "Reader tools/rem-dispose.py: Write a REM disposition into the operator's `~/.nos/security` notebook; never touches the scanner's queue."
     },
     "reader:rem-status": {
       "kind": "reader",
@@ -2870,13 +3620,6 @@
       "anchor": "02.02.04",
       "description": "Reader tools/tailscale-status.py: Can the tailnet reach nOS by name (`nos_edge: lan_tailscale`): Tailscale installed, up, hostname, the `nos_lan_ip/32` route advertised vs approved, `dig @nos_lan_ip` answering, Funnel (RED when on); UNKNOWN without the CLI. Cannot see the tailnet's split-DNS setting (no API key by design)."
     },
-    "reader:task-types-render": {
-      "kind": "reader",
-      "source": "tools/task-types-render.py",
-      "title": "Render AGENTS.md (the task-type contract) from state/task-types.yml.",
-      "anchor": "02.02.04",
-      "description": "Reader tools/task-types-render.py: Render AGENTS.md (the task-type contract) from state/task-types.yml."
-    },
     "reader:tissue-status": {
       "kind": "reader",
       "source": "tools/tissue-status.py",
@@ -2905,13 +3648,6 @@
       "anchor": "02.02.04",
       "description": "Reader tools/usage-status.py: What each model budget has been spent on, and what is left."
     },
-    "reader:vendor-keap-contracts": {
-      "kind": "reader",
-      "source": "tools/vendor-keap-contracts.py",
-      "title": "Re-vendor KEAP's table schema (pinned to keap_repo_ref) for the schema-pin gate.",
-      "anchor": "02.02.04",
-      "description": "Reader tools/vendor-keap-contracts.py: Re-vendor KEAP's table schema (pinned to keap_repo_ref) for the schema-pin gate."
-    },
     "reader:view-contract-drift": {
       "kind": "reader",
       "source": "tools/view-contract-drift.py",
@@ -2926,12 +3662,19 @@
       "anchor": "02.02.04",
       "description": "Reader tools/wing-status.py: What Wing actually is: every table, who writes it, who reads it, what it costs."
     },
-    "reader:workload-digest-record": {
+    "reader:work-assignment": {
       "kind": "reader",
-      "source": "tools/workload-digest-record.py",
-      "title": "main.yml post_task: writes the record workload-digest-status.py reads (image ref, ID, repo digests, source commit of local builds).",
+      "source": "tools/work-assignment.py",
+      "title": "Derive a currentState row's nos-work:// assignment address + match it to capable agents.",
       "anchor": "02.02.04",
-      "description": "Reader tools/workload-digest-record.py: main.yml post_task: writes the record workload-digest-status.py reads (image ref, ID, repo digests, source commit of local builds)."
+      "description": "Reader tools/work-assignment.py: Derive a currentState row's nos-work:// assignment address + match it to capable agents."
+    },
+    "reader:workflow-tree": {
+      "kind": "reader",
+      "source": "tools/workflow-tree.py",
+      "title": "Draw a workflow definition as a tree, with live progress if a run is going.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/workflow-tree.py: Draw a workflow definition as a tree, with live progress if a run is going."
     },
     "reader:workload-digest-status": {
       "kind": "reader",
@@ -4621,7 +5364,7 @@
     },
     {
       "from": "tasktype:security-remediation",
-      "to": "reader:discovery-scan",
+      "to": "effector:discovery-scan",
       "kind": "allows",
       "via": "tools: [tools/discovery-scan.py] in state/task-types.yml",
       "derived": "task-type-tools",
@@ -4632,6 +5375,22 @@
       "to": "reader:rem-status",
       "kind": "allows",
       "via": "tools: [tools/rem-status.py] in state/task-types.yml",
+      "derived": "task-type-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tasktype:seed-edit",
+      "to": "effector:roadmap-seed",
+      "kind": "allows",
+      "via": "tools: [tools/roadmap-seed.py] in state/task-types.yml",
+      "derived": "task-type-tools",
+      "evidence": "derived"
+    },
+    {
+      "from": "tasktype:seed-edit",
+      "to": "effector:roadmap-update",
+      "kind": "allows",
+      "via": "tools: [tools/roadmap-update.py] in state/task-types.yml",
       "derived": "task-type-tools",
       "evidence": "derived"
     },
@@ -6610,6 +7369,150 @@
       "evidence": "derived"
     },
     {
+      "from": "effector:anatomy-graph-gen",
+      "to": "doctrine:ssot/doctrine/layers.md#3",
+      "kind": "governed_by",
+      "via": "cited at tools/anatomy-graph-gen.py:1897",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:anatomy-graph-gen",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
+      "kind": "governed_by",
+      "via": "cited at tools/anatomy-graph-gen.py:1565",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:discovery-scan",
+      "to": "doctrine:ssot/doctrine/workflows.md#6",
+      "kind": "governed_by",
+      "via": "cited at tools/discovery-scan.py:32",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:genome-codegen",
+      "to": "doctrine:ssot/doctrine/face-app-tiers.md#2",
+      "kind": "governed_by",
+      "via": "cited at tools/genome-codegen.py:29",
+      "citations": 2,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:loop-graph-gen",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#constraint-A",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-graph-gen.py:225",
+      "citations": 2,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:loop-pr",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#3.4",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-pr.py:24",
+      "citations": 2,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:loop-pr",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#3.5",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-pr.py:17",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:loop-pr",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5a",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-pr.py:570",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:loop-pr",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-6a",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-pr.py:555",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:loop-pr",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#constraint-B",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-pr.py:16",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:loop-propose",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#10",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-propose.py:44",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:loop-propose",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#3.4",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-propose.py:36",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:loop-propose",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5.2",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-propose.py:85",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:loop-propose",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-6a",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-propose.py:64",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:loop-review",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#2.4",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-review.py:16",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "effector:loop-review",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#3.4",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-review.py:43",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
       "from": "gateset:live",
       "to": "doctrine:ssot/doctrine/loop-contract.md#M3",
       "kind": "governed_by",
@@ -6795,15 +7698,6 @@
       "kind": "governed_by",
       "via": "cited at files/anatomy/plugins/loop-base/plugin.yml:69",
       "citations": 2,
-      "derived": "doctrine-cite",
-      "evidence": "derived"
-    },
-    {
-      "from": "reader:discovery-scan",
-      "to": "doctrine:ssot/doctrine/workflows.md#6",
-      "kind": "governed_by",
-      "via": "cited at tools/discovery-scan.py:32",
-      "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
     },
@@ -7255,10 +8149,26 @@
       "evidence": "derived"
     },
     {
+      "from": "doctrine:ssot/doctrine/face-app-tiers.md#2",
+      "to": "article:face-app-tiers",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/face-app-tiers.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
       "from": "doctrine:ssot/doctrine/foreign-properties.md#5.1",
       "to": "article:foreign-properties",
       "kind": "part_of",
       "via": "paragraph of ssot/doctrine/foreign-properties.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/layers.md#3",
+      "to": "article:layers",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/layers.md",
       "derived": "doctrine-paragraph",
       "evidence": "derived"
     },
@@ -7271,7 +8181,23 @@
       "evidence": "derived"
     },
     {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#2.4",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
       "from": "doctrine:ssot/doctrine/loop-contract.md#3.4",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#3.5",
       "to": "article:loop-contract",
       "kind": "part_of",
       "via": "paragraph of ssot/doctrine/loop-contract.md",
@@ -7288,6 +8214,14 @@
     },
     {
       "from": "doctrine:ssot/doctrine/loop-contract.md#5.1",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#5.2",
       "to": "article:loop-contract",
       "kind": "part_of",
       "via": "paragraph of ssot/doctrine/loop-contract.md",
@@ -7343,6 +8277,14 @@
       "evidence": "derived"
     },
     {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#DECISION-6a",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
       "from": "doctrine:ssot/doctrine/loop-contract.md#M2",
       "to": "article:loop-contract",
       "kind": "part_of",
@@ -7368,6 +8310,14 @@
     },
     {
       "from": "doctrine:ssot/doctrine/loop-contract.md#constraint-A",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#constraint-B",
       "to": "article:loop-contract",
       "kind": "part_of",
       "via": "paragraph of ssot/doctrine/loop-contract.md",
@@ -8682,11 +9632,27 @@
       "evidence": "derived"
     },
     {
+      "from": "pulse:conductor:scan-state-record",
+      "to": "effector:scan-state-snapshot",
+      "kind": "trigger",
+      "via": "the job's command is tools/scan-state-snapshot.py",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
       "from": "pulse:conductor:self-test-001",
       "to": "agent:conductor",
       "kind": "trigger",
       "via": "run-agent.sh dispatches the conductor ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
       "derived": "agent-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:conductor:self-test-001",
+      "to": "effector:run-agent",
+      "kind": "trigger",
+      "via": "the job's command is tools/run-agent.sh",
+      "derived": "pulse-command",
       "evidence": "derived"
     },
     {
@@ -8698,8 +9664,16 @@
       "evidence": "measured"
     },
     {
+      "from": "pulse:crm-hydrate:hydrate-parties",
+      "to": "effector:digest-import-doli",
+      "kind": "trigger",
+      "via": "the job's command is tools/digest-import-doli.py",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
       "from": "pulse:discovery:contradiction-scan",
-      "to": "reader:discovery-scan",
+      "to": "effector:discovery-scan",
       "kind": "trigger",
       "via": "the job's command is tools/discovery-scan.py",
       "derived": "pulse-command",
@@ -8707,7 +9681,7 @@
     },
     {
       "from": "pulse:geo:geo-load",
-      "to": "reader:geo-load",
+      "to": "effector:geo-load",
       "kind": "trigger",
       "via": "the job's command is tools/geo-load.py",
       "derived": "pulse-command",
@@ -8715,7 +9689,7 @@
     },
     {
       "from": "pulse:geo:project-sites",
-      "to": "reader:geo-project-sites",
+      "to": "effector:geo-project-sites",
       "kind": "trigger",
       "via": "the job's command is tools/geo-project-sites.py",
       "derived": "pulse-command",
@@ -8723,9 +9697,41 @@
     },
     {
       "from": "pulse:geolibre:atlas-refresh",
-      "to": "reader:atlas-refresh",
+      "to": "effector:atlas-refresh",
       "kind": "trigger",
       "via": "the job's command is tools/atlas-refresh.py",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:gitea:trunk-sync",
+      "to": "effector:sync-trunk-to-gitea",
+      "kind": "trigger",
+      "via": "the job's command is tools/sync-trunk-to-gitea.sh",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:gitlab:trunk-sync",
+      "to": "effector:sync-trunk-to-gitlab",
+      "kind": "trigger",
+      "via": "the job's command is tools/sync-trunk-to-gitlab.sh",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:invoice-vision:absorb-approved",
+      "to": "effector:digest-import-vision",
+      "kind": "trigger",
+      "via": "the job's command is tools/digest-import-vision.py",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:invoice-vision:intake-sweep",
+      "to": "effector:invoice-vision-intake",
+      "kind": "trigger",
+      "via": "the job's command is tools/invoice-vision-intake.py",
       "derived": "pulse-command",
       "evidence": "derived"
     },
@@ -8738,6 +9744,14 @@
       "evidence": "derived"
     },
     {
+      "from": "pulse:librarian:brief-taxonomy",
+      "to": "effector:run-agent",
+      "kind": "trigger",
+      "via": "the job's command is tools/run-agent.sh",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
       "from": "pulse:librarian:describe-taxonomy",
       "to": "agent:librarian",
       "kind": "trigger",
@@ -8746,11 +9760,59 @@
       "evidence": "derived"
     },
     {
+      "from": "pulse:librarian:describe-taxonomy",
+      "to": "effector:run-agent",
+      "kind": "trigger",
+      "via": "the job's command is tools/run-agent.sh",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
       "from": "pulse:librarian:judge-lint-queue",
       "to": "agent:librarian",
       "kind": "trigger",
       "via": "run-agent.sh dispatches the librarian ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
       "derived": "agent-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:librarian:judge-lint-queue",
+      "to": "effector:run-agent",
+      "kind": "trigger",
+      "via": "the job's command is tools/run-agent.sh",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:loop:drive",
+      "to": "effector:loop-pr",
+      "kind": "trigger",
+      "via": "the job's command is tools/loop-pr.py",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:loop:propose",
+      "to": "effector:loop-propose",
+      "kind": "trigger",
+      "via": "the job's command is tools/loop-propose.py",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:loop:review",
+      "to": "effector:loop-review",
+      "kind": "trigger",
+      "via": "the job's command is tools/loop-review.py",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:n8n:exec-watch",
+      "to": "effector:n8n-pack",
+      "kind": "trigger",
+      "via": "the job's command is tools/n8n-pack.py",
+      "derived": "pulse-command",
       "evidence": "derived"
     },
     {
@@ -8770,11 +9832,27 @@
       "evidence": "derived"
     },
     {
+      "from": "pulse:surveyor:surface-survey",
+      "to": "effector:run-agent",
+      "kind": "trigger",
+      "via": "the job's command is tools/run-agent.sh",
+      "derived": "pulse-command",
+      "evidence": "derived"
+    },
+    {
       "from": "pulse:upgrade-architect:recipe-author",
       "to": "agent:upgrade-architect",
       "kind": "trigger",
       "via": "run-agent.sh dispatches the upgrade-architect ceremony (--agent= / NOS_AGENT_NAME in the job's own declaration)",
       "derived": "agent-dispatch",
+      "evidence": "derived"
+    },
+    {
+      "from": "pulse:upgrade-architect:recipe-author",
+      "to": "effector:run-agent",
+      "kind": "trigger",
+      "via": "the job's command is tools/run-agent.sh",
+      "derived": "pulse-command",
       "evidence": "derived"
     }
   ]

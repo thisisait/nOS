@@ -10,8 +10,9 @@ Usage:
     tools/raw-archive-probe.py --dry-run    # no network; UNVERIFIED
     tools/raw-archive-probe.py --json
 
-Exit 0 always: this is a reader. The pytest gate is what goes red on a WORM
-claim without a 403.
+Exit 0 always, but this is NOT a reader: the live run PUTs an Object-Lock
+object nobody can delete until it expires (a limb, tools/README.md §Limbs).
+The pytest gate is what goes red on a WORM claim without a 403.
 """
 from __future__ import annotations
 

@@ -53,6 +53,7 @@ ADDRESS SPACE (kind-prefixed, local ids verbatim — §2b)
     tasktype:<name>         state/task-types.yml rows
     skill:<name>            every SKILL.md in the repo (SKILL_SOURCES)
     reader:<stem>           tools/README.md §Readers lines
+    effector:<stem>         tools/README.md §Limbs lines (a tool that acts)
     article:<stem>          in-force doctrine realm of ssot/INDEX.yml
     organ_system:<key>      `organ_systems:` groups of files/anatomy/apex/ruling.yml
     tissue:<name>           state/tissues/<name>.tissue.yml (tools/tissue-status.py)
@@ -254,7 +255,7 @@ KIND_ANCHORS = {
     "faceapp": "02.02.04",
     "tasktype": "02.02.04",
     "skill": "02.02.09",          # procedures an agent loads
-    "reader": "02.02.04",
+    "reader": "02.02.04", "effector": "02.02.04",
     "article": "09",
     "organ_system": "02.02.04",
     "tissue": "02.02.04",
@@ -631,8 +632,8 @@ def _describe(nid: str, n: dict) -> str:
         return f"Task type '{local}' (state/task-types.yml): {n.get('title')}"
     if kind == "skill":
         return f"Skill '{local}' ({n['source']}): {n.get('title')}"
-    if kind == "reader":
-        return f"Reader {n['source']}: {n.get('title')}"
+    if kind in ("reader", "effector"):
+        return f"{kind.title()} {n['source']}: {n.get('title')}"
     if kind == "article":
         return f"Constitution article {n['source']}: {n.get('title')}"
     if kind == "organ_system":
@@ -1208,16 +1209,27 @@ def harvest_skills(nodes: dict, edges: list) -> None:
                                   "derived": "skill-audience"})
 
 
-def harvest_readers(nodes: dict) -> None:
-    """reader:<stem> for every line of tools/README.md §Readers — the index
+def _harvest_tools_section(nodes: dict, heading: str, kind: str) -> None:
+    """<kind>:<stem> for every line of one tools/README.md section — the index
     test_the_tools_index_is_complete.py already holds complete."""
     text = TOOLS_README.read_text(encoding="utf-8")
-    m = re.search(r"^## Readers[^\n]*\n(.*?)^## ", text, re.S | re.M)
+    m = re.search(rf"^## {heading}[^\n]*\n(.*?)^## ", text, re.S | re.M)
     if not m:
-        _die("tools/README.md has no `## Readers` section — the index moved")
+        _die(f"tools/README.md has no `## {heading}` section — the index moved")
     for name, what in re.findall(r"^- `([^`]+)` — (.*)$", m.group(1), re.M):
-        nodes[f"reader:{Path(name).stem}"] = {"kind": "reader", "source": f"tools/{name}",
-                                              "title": what.strip()}
+        nid = f"{kind}:{Path(name).stem}"
+        if nid in nodes:
+            _die(f"tools/README.md §{heading}: two tools share the id {nid}")
+        nodes[nid] = {"kind": kind, "source": f"tools/{name}", "title": what.strip()}
+
+
+def harvest_readers(nodes: dict) -> None:
+    _harvest_tools_section(nodes, "Readers", "reader")
+
+
+def harvest_limbs(nodes: dict) -> None:
+    """effector:<stem> for §Limbs: a tool that acts (writes, POSTs, restarts)."""
+    _harvest_tools_section(nodes, "Limbs", "effector")
 
 
 def harvest_articles(nodes: dict) -> None:
@@ -1235,9 +1247,9 @@ def harvest_articles(nodes: dict) -> None:
 
 
 def derive_task_type_tools(nodes: dict) -> list[dict]:
-    """tasktype → reader/skill where a `tools:` entry names one EXACTLY
+    """tasktype → reader/effector/skill where a `tools:` entry names one EXACTLY
     (`tools/rem-status.py`, `/devlog`). Prose entries resolve to nothing."""
-    by_name = {n["source"]: nid for nid, n in nodes.items() if n["kind"] == "reader"}
+    by_name = {n["source"]: nid for nid, n in nodes.items() if n["kind"] in ("reader", "effector")}
     by_name |= {f"/{nid.split(':', 1)[1]}": nid for nid, n in nodes.items() if n["kind"] == "skill"}
     out = []
     for nid, n in sorted(nodes.items()):
@@ -1303,8 +1315,9 @@ def harvest_tissues(nodes: dict, edges: list) -> None:
 
 
 def derive_reader_runs(nodes: dict) -> list[dict]:
-    """pulse → reader when the job's declared command IS that reader."""
-    readers = {Path(n["source"]).name: nid for nid, n in nodes.items() if n["kind"] == "reader"}
+    """pulse → reader/effector when the job's declared command IS that tool."""
+    readers = {Path(n["source"]).name: nid for nid, n in nodes.items()
+               if n["kind"] in ("reader", "effector")}
     return [{"from": nid, "to": readers[n["command_name"]], "kind": "trigger",
              "via": f"the job's command is {nodes[readers[n['command_name']]]['source']}",
              "derived": "pulse-command"}
@@ -1606,7 +1619,7 @@ def derive_doctrine(nodes: dict) -> list[dict]:
     # but only those into in-force law (article sources): docstrings also cite
     # paragraphs as EXAMPLES (doctrine-cite.py's own), which are not governance.
     whole_file = {n["source"]: nid for nid, n in nodes.items()
-                  if n["kind"] in ("reader", "skill") and (REPO / n["source"]).is_file()}
+                  if n["kind"] in ("reader", "effector", "skill") and (REPO / n["source"]).is_file()}
     law = {n["source"] for n in nodes.values() if n["kind"] == "article"}
 
     def owner_for(src: str, line: int) -> str | None:
@@ -2011,6 +2024,7 @@ def build() -> dict:
     harvest_task_types(nodes, shelf_edges := [])   # after agents
     harvest_skills(nodes, shelf_edges)             # after services
     harvest_readers(nodes)
+    harvest_limbs(nodes)
     harvest_articles(nodes)
     harvest_organ_systems(nodes, shelf_edges)   # after services
     harvest_tissues(nodes, shelf_edges)   # last harvest: its members must exist
@@ -2074,7 +2088,7 @@ def build() -> dict:
     for k in ("pulse", "judge", "gateset", "weakness", "daemon", "service", "lock",
               "tool", "tool_ro", "token", "token_ro", "backend",
               "repo", "tofu", "authentik", "table", "doctrine", "faceapp", "agent",
-              "tasktype", "skill", "reader", "article", "organ_system", "tissue"):
+              "tasktype", "skill", "reader", "effector", "article", "organ_system", "tissue"):
         counts[f"nodes_{k}"] = sum(1 for n in nodes.values() if n["kind"] == k)
     for k in EDGE_KINDS + ("mutex", "governed_by", "may_take", "allows", "references",
                            "part_of"):
