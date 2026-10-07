@@ -117,10 +117,8 @@ SELF_REFERENTIAL = ("tools/doctrine-cite.py",
 
 #: The constitution corpus. docs/** includes idea, doctrine, archive,
 #: compliance, hidden_fees — archive membership is what powers the `moved`
-#: class, so it must stay in. The cortex tree carries its OWN spec corpus
-#: (files/anatomy/cortex/docs/specs/*) — first run without it misclassified
-#: every cortex-validate.md §-citation as `wrong` via a header doc it never
-#: meant.
+#: class, so it must stay in. The cortex tree's own docs stay in the corpus;
+#: its KEAP spec copies are gone (KEAP_PORT resolves those cites as foreign).
 CORPUS_GLOBS = ("CLAUDE.md", "docs/**/*.md", "ssot/**/*.md",
                 "files/anatomy/docs/*.md",
                 "files/anatomy/cortex/docs/**/*.md", "files/anatomy/cortex/README.md")

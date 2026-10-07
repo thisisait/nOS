@@ -43,9 +43,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 SYSTEMS_DIR = REPO / "docs" / "systems"
 MANIFEST_PATH = REPO / "state" / "manifest.yml"
-# The path KEAP's recall gate actually reads (`files/anatomy/cortex/docs/specs/
-# recall-gate.md` §6: "read where nOS keeps it — ../nOS/tests/fixtures/
-# selfmodel-recall.json"). The former default (state/keap-selfmodel-recall.json)
+# The path KEAP's recall gate actually reads (KEAP docs/specs/recall-gate.md §6:
+# "read where nOS keeps it — ../nOS/tests/fixtures/selfmodel-recall.json"). The former default (state/keap-selfmodel-recall.json)
 # has never existed on disk, so `--check` compared the tree against nothing and
 # a plain run wrote a file no consumer opened.
 DEFAULT_OUT = REPO / "tests" / "fixtures" / "selfmodel-recall.json"

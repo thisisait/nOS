@@ -180,7 +180,6 @@ _STUB_PATH_ALLOW = {
     ".claude/workflows/ssot-promote.js",
     ".claude/workflows/wave-small-ssot.js",
     "state/devlog-bundle.jsonl",
-    "files/anatomy/cortex/docs/specs/nos-selfmodel-keap-contract.md",
 }
 
 

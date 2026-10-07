@@ -60,7 +60,7 @@ Therefore:
 | `knowledge/{_ontology,ingest,spine-render}.mjs` | KEAP `knowledge/…` | verbatim — the git materialisation path |
 | `knowledge/{spine,canonical,ontology}/`, `knowledge/fixtures/onto1/` | KEAP `knowledge/…` | verbatim — the git SoT itself |
 | `scripts/ann-recall.mjs` | KEAP `scripts/…` | verbatim |
-| `docs/specs/*.md` | KEAP `docs/specs/…` | verbatim — the normative specs the modules cite by § |
+| `docs/specs/*.md` | KEAP `docs/specs/…` | NOT vendored since 2026-10-07 (cross-repo-contracts §1: no local copy); the modules' `docs/specs/…` cites name KEAP's |
 
 Locally authored (the only non-ported files): `server/index.ts`,
 `server/cortex-{config,ann,store,store-cli}.ts`, `server/cortex-store.test.ts`,
