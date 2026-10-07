@@ -1,3 +1,12 @@
+---
+in_force: false
+ruled: null
+row: lexicon
+gates:
+  - tests/anatomy/test_appendage_is_detachable.py
+  - tests/anatomy/test_lexicon_holds.py
+  - tests/anatomy/test_ssot_index.py
+---
 # Body plan — one word, one meaning
 
 > **PROPOSED** (2026-10-06, roadmap rows `lexicon` and `prose-retirement`;

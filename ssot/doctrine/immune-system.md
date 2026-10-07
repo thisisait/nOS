@@ -1,10 +1,14 @@
 ---
+in_force: true
+ruled: 2026-10-04
+row: immune-system
+gates: []
 last_reviewed: 2026-10-06
 review_every_days: 31
 ---
 # The immune system — indicators as senses
 
-> Doctrine, 2026-10-04 (epic `immune-system`); words per `state/genome/lexicon.yml`.
+> Words per `state/genome/lexicon.yml`.
 > nOS is an organism; its models, defined by their prompts and permissions, are
 > its cells. Detection is a population of senses that run on a clock, report to
 > the nervous system, age and die. Threat side: [session-threat-model.md](session-threat-model.md).

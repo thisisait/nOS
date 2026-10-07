@@ -1,3 +1,11 @@
+---
+in_force: true
+ruled: null
+row: null
+gates:
+  - tests/anatomy/test_face_wing_contract.py
+  - tests/anatomy/test_the_system_table_count_matches_doctrine.py
+---
 # Cross-repo contracts — how nOS and a sibling repo agree on a shared surface
 
 nOS produces surfaces that another repo consumes (today: the KEAP self-model —

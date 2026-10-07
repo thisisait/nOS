@@ -1,6 +1,12 @@
+---
+in_force: true
+ruled: 2026-08-21
+row: null
+gates: []
+---
 # The two loops — sequence doctrine
 
-> Status: doctrine, opened 2026-08-21. This file is the estate's only statement
+> This file is the estate's only statement
 > of the *sequence* — which step hands to which, holding which identity,
 > refusing what. Component behaviour stays owned by the artifacts cited on each
 > edge; where this file and a cited gate disagree, the gate wins and this file

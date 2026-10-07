@@ -1,6 +1,11 @@
+---
+in_force: true
+ruled: 2026-08-23
+row: loop-operator-model
+gates: []
+---
 # The operator model — what a human does, and what may not happen without one
 
-> Status: doctrine, opened 2026-08-23. Closes roadmap row `loop-operator-model`.
 > Two halves: the operator's five steps (stated 2026-08-05) and the decision
 > rights that say which of them an agent may take alone (stated 2026-08-23).
 

@@ -1,3 +1,11 @@
+---
+in_force: true
+ruled: null
+row: null
+gates:
+  - tests/anatomy/test_documented_flags_are_parsed.py
+  - tests/anatomy/test_workflow_declares_fanout_semantics.py
+---
 # Doctrine: multi-agent workflows
 
 **Detail, measurements and the checklist:** [docs/workflow-standard.md](../../docs/workflow-standard.md).

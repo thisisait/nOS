@@ -1,3 +1,12 @@
+---
+in_force: true
+ruled: null
+row: null
+gates:
+  - tests/anatomy/test_keap_pin_not_cancelled.py
+  - tests/anatomy/test_loop_budget_forbids_its_own_gates.py
+  - tests/anatomy/test_traefik_https_upstream_binds_tls.py
+---
 # Gates — a check that cannot fail is not a check
 
 A gate exists to go red. A gate that can report success **without having

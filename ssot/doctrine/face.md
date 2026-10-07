@@ -1,6 +1,15 @@
+---
+in_force: true
+ruled: null
+row: null
+gates:
+  - tests/anatomy/test_face_datatable_defs.py
+  - tests/anatomy/test_face_security_gates.py
+  - tests/anatomy/test_face_wiring_contract.py
+---
 # nOS-face Doctrine
 
-> Canonical decisions for the nOS face (the web-desktop shell). Detail:
+> Decisions for the nOS face (the web-desktop shell). Detail:
 > [`docs/archive/nos-face.md`](../../docs/archive/nos-face.md) +
 > [`docs/archive/nos-face-shell-v2.md`](../../docs/archive/nos-face-shell-v2.md).
 > Companion: [`face-app-tiers.md`](face-app-tiers.md),

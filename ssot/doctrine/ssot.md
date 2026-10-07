@@ -1,3 +1,13 @@
+---
+in_force: true
+ruled: null
+row: null
+gates:
+  - tests/anatomy/test_doctrine_headings_are_unique.py
+  - tests/anatomy/test_ssot_cite_provider_agrees.py
+  - tests/anatomy/test_ssot_index.py
+  - tests/anatomy/test_systems_ssot_cite.py
+---
 # SSOT
 
 ## 1. Address

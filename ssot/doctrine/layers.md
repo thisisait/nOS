@@ -1,6 +1,16 @@
+---
+in_force: true
+ruled: null
+row: null
+gates:
+  - tests/anatomy/service_edge_probe.py
+  - tests/anatomy/test_genome_axes_facet.py
+  - tests/anatomy/test_service_dependency_edges.py
+  - tests/anatomy/test_service_layer_is_derived.py
+---
 # Layers — what breaks when this stops
 
-> Canonical. This document owns one axis (`layer`) and settles what the word
+> This document owns one axis (`layer`) and settles what the word
 > **tier** may mean. Numbered headings are the addresses; citations elsewhere
 > keep `§N`.
 

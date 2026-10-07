@@ -1,6 +1,13 @@
+---
+in_force: true
+ruled: 2026-08-22
+row: null
+gates:
+  - tests/anatomy/test_the_floor_defers_only_what_waits.py
+---
 # The security floor — what a pending finding is waiting for
 
-> Doctrine, 2026-08-22 after a four-design panel. Most of what the panel
+> Written after a four-design panel. Most of what the panel
 > proposed is **refused** here, with the reason, because the refusals are
 > the durable part. Reader: `tools/rem-status.py --floor`.
 

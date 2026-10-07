@@ -1,6 +1,13 @@
+---
+in_force: true
+ruled: 2026-08-19
+row: null
+gates:
+  - tests/anatomy/test_an_identity_is_declared_not_inherited.py
+---
 # Identity — the declared account roster
 
-> Status: doctrine, live since 2026-08-19. Gates:
+> Gates:
 > `tests/anatomy/test_an_identity_is_declared_not_inherited.py`,
 > `tests/anatomy/test_the_identity_reader_only_reads.py`,
 > `tests/anatomy/test_the_agent_identity_survives_recreate.py`.

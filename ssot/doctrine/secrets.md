@@ -1,6 +1,13 @@
+---
+in_force: true
+ruled: null
+row: null
+gates:
+  - tests/anatomy/test_lexicon_holds.py
+---
 # Secrets Doctrine
 
-> Canonical decisions. 2026-07-17: a rotated HMAC secret split across two
+> 2026-07-17: a rotated HMAC secret split across two
 > independent resolutions, so every event POST 401'd.
 
 Shared-secret resolution lives here. Emitter fail-open is

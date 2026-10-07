@@ -1,3 +1,9 @@
+---
+in_force: true
+ruled: null
+row: null
+gates: []
+---
 # Generative UI
 
 **The decision:** a model MAY FILL a declarative render contract. It MUST NOT

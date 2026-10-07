@@ -1,11 +1,16 @@
 ---
+in_force: true
+ruled: 2026-10-04
+row: operator-session-threat-model
+gates:
+  - tests/anatomy/test_prepush_score.py
+  - tests/anatomy/test_threat_review_reads_the_checklist.py
 last_reviewed: 2026-10-04
 review_every_days: 31
 ---
 # The operator session — the attacker is the assistant
 
-> Doctrine, 2026-10-04 (roadmap epic `operator-session-threat-model`, children
-> 1 and 2). Review is monthly and is DATA: the front matter above, read by
+> Review is monthly and is DATA: the front matter above, read by
 > `tools/red-status.py`, which names this file when the date runs out.
 > PR checklist: [docs/review/threat-checklist.md](../../docs/review/threat-checklist.md) §6.
 

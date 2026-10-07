@@ -1,6 +1,15 @@
+---
+in_force: true
+ruled: null
+row: null
+gates:
+  - tests/anatomy/test_mariadb_client_tls.py
+  - tests/anatomy/test_postgresql_ssl.py
+  - tests/anatomy/test_traefik_https_upstream_binds_tls.py
+---
 # Foreign properties — upstream facts our work cannot remove
 
-> Canonical. This document owns the rules that are true about **someone else's**
+> This document owns the rules that are true about **someone else's**
 > software: images, binaries and protocols this estate consumes but does not
 > build. Numbered headings are the addresses; citations elsewhere keep `§N`.
 > Full measured stories live in

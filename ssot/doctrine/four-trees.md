@@ -1,6 +1,13 @@
+---
+in_force: true
+ruled: 2026-08-03
+row: null
+gates:
+  - tests/anatomy/test_loop_repo_root_is_asked.py
+---
 # The four trees
 
-> Doctrine, 2026-08-03. Written after one day in which the confusion between
+> Written after one day in which the confusion between
 > these four cost time five separate times, each in a different disguise.
 
 There is no single "the code". There are **four trees**, they are routinely out

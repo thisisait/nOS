@@ -1,6 +1,14 @@
+---
+in_force: true
+ruled: null
+row: null
+gates:
+  - tests/anatomy/test_a_hook_that_fails_is_heard.py
+  - tests/anatomy/test_lexicon_holds.py
+---
 # Observability Doctrine
 
-> Canonical decisions. The 2026-07-17 telemetry saga (a broken HMAC pipeline
+> The 2026-07-17 telemetry saga (a broken HMAC pipeline
 > CRAWLED a release blank to a halt) is why this file exists.
 
 ## 1. Best-effort

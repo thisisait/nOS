@@ -1,6 +1,15 @@
+---
+in_force: true
+ruled: null
+row: null
+gates:
+  - tests/anatomy/test_fs_doctrine_paths.py
+  - tests/anatomy/test_nextcloud_user_files_bridge.py
+  - tests/bone_vfs/test_vfs_containment.py
+---
 # Filesystem Doctrine
 
-> Canonical decisions. Detail + phasing: [`docs/archive/fs-doctrine.md`](../../docs/archive/fs-doctrine.md).
+> Detail + phasing: [`docs/archive/fs-doctrine.md`](../../docs/archive/fs-doctrine.md).
 
 ## 1. One root
 

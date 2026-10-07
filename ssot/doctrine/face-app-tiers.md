@@ -1,6 +1,13 @@
+---
+in_force: true
+ruled: null
+row: null
+gates:
+  - tests/anatomy/test_face_app_form_axis.py
+---
 # nOS-app tiers — the face-to-nOS complexity doctrine
 
-> Canonical. This document owns the face-app **build** axis (F1–F4/H) — how
+> This document owns the face-app **build** axis (F1–F4/H) — how
 > an agent picks the build recipe. Companion:
 > [`docs/archive/nos-face.md`](../../docs/archive/nos-face.md) (the face epic)
 > and [`filesystem.md`](filesystem.md) (the data classes).

@@ -1,6 +1,13 @@
+---
+in_force: true
+ruled: null
+row: null
+gates:
+  - tests/anatomy/test_lexicon_holds.py
+---
 # VirtioFS Doctrine
 
-> Canonical decisions. A major macOS jump (26 → 27) can tighten Docker Desktop's
+> A major macOS jump (26 → 27) can tighten Docker Desktop's
 > bind-mount semantics; this file exists so that tightening is DETECTABLE, not silent.
 > Preflight: [`tasks/macos27-preflight.yml`](../../tasks/macos27-preflight.yml).
 
