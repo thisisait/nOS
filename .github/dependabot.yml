@@ -14,3 +14,26 @@ updates:
         applies-to: security-updates
         patterns:
           - "*"
+  # npm lockfiles we ship — without these, alerts are raised but no fix PR
+  # ever comes (tests/anatomy/test_dependabot_covers_every_lockfile.py).
+  # open-pull-requests-limit 0 = security fixes only, no weekly version churn.
+  - package-ecosystem: "npm"
+    directory: "/files/anatomy/face"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+  - package-ecosystem: "npm"
+    directory: "/files/anatomy/cortex"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
