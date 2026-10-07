@@ -72,6 +72,10 @@ def _run(tmp: Path, *, edge="lan_tailscale", key="tskey-auth-FAKE", cli=True, ta
         _exe(stubs / "tailscale", TAILSCALE.format(py=sys.executable, state=st, log=log))
     _exe(stubs / "dig", DIG.format(log=log, answer=ans))
     _exe(stubs / "brew", f'#!/bin/sh\necho "brew $*" >> "{log}"\n')
+    # CI has ansible-core but no community.general: a stub cask module, so the
+    # play parses; it logs as brew does, so "brew not in log" keeps its meaning.
+    _exe(tmp / "coll/ansible_collections/community/general/plugins/modules/homebrew_cask.py",
+         f'#!/bin/sh\necho "brew cask stub" >> "{log}"\necho \'{{"changed": false}}\'\n')
     play = [{"hosts": "localhost", "connection": "local", "gather_facts": False,
              "vars": {"ansible_python_interpreter": sys.executable, "homebrew_prefix": str(brew),
                       "_ts_candidates": [], "nos_edge": edge, "nos_lan_ip": LAN, "tenant_domain": DOMAIN,
@@ -79,7 +83,7 @@ def _run(tmp: Path, *, edge="lan_tailscale", key="tskey-auth-FAKE", cli=True, ta
              "tasks": [{"import_tasks": str(TASKS)}]}]
     (tmp / "play.yml").write_text(yaml.safe_dump(play))
     env = {**os.environ, "HOME": str(home), "PATH": f"{stubs}:/usr/bin:/bin:/usr/sbin:/sbin",
-           "ANSIBLE_LOCAL_TEMP": str(tmp / ".ansible")}
+           "ANSIBLE_LOCAL_TEMP": str(tmp / ".ansible"), "ANSIBLE_COLLECTIONS_PATH": str(tmp / "coll")}
     argv = [sys.executable, "-m", "ansible.cli.playbook", "-i", "localhost,", str(tmp / "play.yml")]
     r = subprocess.run(argv + (["--tags", tags] if tags else []), capture_output=True, text=True, cwd=tmp, env=env, timeout=300)
     return r, log.read_text(), json.loads(st.read_text())
