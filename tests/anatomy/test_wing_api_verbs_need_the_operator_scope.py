@@ -43,7 +43,7 @@ needs_vendor = pytest.mark.skipif(not AUTOLOAD.exists(), reason="wing vendor/aut
 KNOWN = {("Upgrades", "apply"), ("Upgrades", "applyDetached"), ("Upgrades", "queue"),
          ("Upgrades", "planChoice"), ("Migrations", "apply"), ("Migrations", "rollback"),
          ("Coexistence", "promote"), ("Coexistence", "cutover"), ("Coexistence", "cleanup"),
-         ("Pulse", "runNow")}
+         ("Pulse", "runNow"), ("Admin", "halt"), ("Admin", "resume")}
 
 #: Every other routed write, and why it is not an operator decision.
 NOT_DECISIONS = {
