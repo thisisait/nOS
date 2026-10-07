@@ -61,8 +61,6 @@ PENDING_SURFACES: set[str] = set()
 PENDING_PHRASES: dict[str, int] = {
     'IMPRINT.md :: public organ': 1,
     'docs/systems/dolibarr/README.md :: praxis pack': 1,
-    'docs/systems/infisical/README.md :: self-heal': 1,
-    'docs/systems/portainer/README.md :: self-heal': 1,
     'files/anatomy/apex/ruling.yml :: cortex-query': 1,
     'files/anatomy/apex/ruling.yml :: digest organ': 1,
     'files/anatomy/apex/ruling.yml :: public organ': 2,

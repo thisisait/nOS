@@ -23,7 +23,7 @@ recipes:
     notes: |
       In-place bump within the 6.x line. Backup the DB + upload/export
       dirs; pull new image; recreate container; run bench's own
-      upgrade-database and correct-database to self-heal any schema
+      upgrade-database and correct-database to repair any schema
       drift; verify /health.
 
     coexistence_supported: false
@@ -39,7 +39,7 @@ recipes:
       reason: >-
         Image-tag bump via compose.set_image_tag recreates only the firefly
         container; pre/post steps are backups + in-container artisan
-        migrate/self-heal/health-wait, no shared-DB or host restart.
+        migrate/repair/health-wait, no shared-DB or host restart.
 
     pre:
       - id: backup_db
@@ -83,7 +83,7 @@ recipes:
           docker exec b2b-firefly-1
           php artisan migrate --force --no-interaction
         allow_shell: true
-      - id: firefly_self_heal
+      - id: firefly_repair
         type: exec.shell
         command: |
           docker exec b2b-firefly-1 php artisan firefly-iii:upgrade-database --no-interaction

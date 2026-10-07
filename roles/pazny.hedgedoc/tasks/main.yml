@@ -41,8 +41,8 @@
     fi
   args:
     executable: /bin/bash
-  register: _hedgedoc_config_heal
-  changed_when: "'purged-invalid-config' in _hedgedoc_config_heal.stdout"
+  register: _hedgedoc_config_repair
+  changed_when: "'purged-invalid-config' in _hedgedoc_config_repair.stdout"
 
 # REM-217 / sec-transport-hedgedoc. Rendered ALWAYS, not only on the TLS
 # branch: the mount is gated, but an estate that flips postgresql_ssl_enabled

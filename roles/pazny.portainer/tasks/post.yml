@@ -263,7 +263,7 @@
         wait_name: "[pazny.portainer Post] (drift-heal re-wait)"
         wait_url: "http://127.0.0.1:{{ portainer_port | default(9002) }}/api/system/status"
         wait_status_codes: [200]
-        wait_register_as: _portainer_ready_heal
+        wait_register_as: _portainer_ready_repair
         wait_retries: 12
         wait_delay: 5
         wait_hard_fail: false

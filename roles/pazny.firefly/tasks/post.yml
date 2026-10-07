@@ -19,7 +19,7 @@
 # stack, so MariaDB is genuinely ready. We probe `migrate:status`; if the
 # schema is missing we run the forward migrations with retries; and we run
 # Firefly's own upgrade-database/correct-database/report-integrity commands
-# which are idempotent and self-healing.
+# which are idempotent and repair schema drift.
 #
 # Pattern borrowed from roles/pazny.erpnext/tasks/post.yml.
 # ==============================================================================
@@ -72,7 +72,7 @@
     {{ docker_bin }} exec b2b-firefly-1 php artisan firefly-iii:upgrade-database --no-interaction || true
     {{ docker_bin }} exec b2b-firefly-1 php artisan firefly-iii:correct-database --no-interaction || true
     {{ docker_bin }} exec b2b-firefly-1 php artisan firefly-iii:report-integrity --no-interaction || true
-  register: _firefly_self_heal
+  register: _firefly_repair
   changed_when: false
   failed_when: false
   check_mode: false

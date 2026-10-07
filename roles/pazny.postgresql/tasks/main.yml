@@ -53,8 +53,8 @@
     fi
   args:
     executable: /bin/bash
-  register: _pg_cert_heal
-  changed_when: "'purged-invalid-certs' in _pg_cert_heal.stdout"
+  register: _pg_cert_repair
+  changed_when: "'purged-invalid-certs' in _pg_cert_repair.stdout"
   when: postgresql_ssl_enabled | default(false) | bool
 
 # Self-signed, 10y, SAN postgresql + loopback. Idempotent: only generated

@@ -1676,7 +1676,7 @@ portainer_admin_password: "{{ nos_derived_secrets.portainer }}"
 # previous prefix logs in — left by an interrupted/partial provisioning). true =
 # wipe Portainer's BoltDB so admin-init recreates the admin with the config
 # password (Portainer holds no user data — endpoints/OAuth are reprovisioned).
-# Default false (manual-over-auto): off gives a loud, paste-able heal diagnostic.
+# Default false (manual-over-auto): off gives a loud, paste-able reset diagnostic.
 portainer_admin_auto_reset: false
 # Shared Traefik/Portainer Docker-API gateway (templates/stacks/infra base
 # compose). Guards docker.sock = root-on-host — pinned, never floating
@@ -1955,12 +1955,13 @@ nos_retired_services:
 # with a stale /host_mnt reference — every bind-mount then fails and the whole
 # run hangs at the STRICT health-wait. tasks/stacks/docker-external-mount-
 # preflight.yml probes for this in ~5s before the first `docker compose up`.
-# docker_autoheal_external_mount: restart Docker Desktop automatically to
+# docker_repair_external_mount: restart Docker Desktop automatically to
 #   re-propagate the mount when the probe finds it stale. Default false = fail
 #   fast with the remedy (never surprise-restart Docker under live containers);
 #   a `blank=true` run restarts it regardless (from-scratch rebuild, nothing to
 #   lose). Set true to restart it on a non-blank run too.
-docker_autoheal_external_mount: false
+#   Renamed from docker_autoheal_external_mount (2026-10-07); the old key still works through v0.17.
+docker_repair_external_mount: false
 # docker_mount_probe_image: throwaway image used only to test the bind-mount
 #   (container exits immediately via --entrypoint true). Kept overridable so an
 #   offline/pre-loaded-registry replica can point it at a locally-present image.

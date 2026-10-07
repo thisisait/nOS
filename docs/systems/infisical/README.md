@@ -72,7 +72,7 @@ is defined only in `default.config.yml`; an external-storage override relocates 
 
 - **Endpoint:** `GET /api/status` → `200 OK` (manifest, the container healthcheck's
   `curl` and the role's readiness probe all use the same one).
-- **KMS self-heal:** if readiness fails *and* the container logs show
+- **KMS repair:** if readiness fails *and* the container logs show
   `Unsupported state or unable to authenticate data`, `post.yml` truncates the
   unrecoverable `kms_root_config` row, restarts the container and re-probes. Safe only
   pre-first-user — it is the wrapping key, and Infisical re-seeds it from the current

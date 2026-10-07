@@ -50,8 +50,8 @@
     fi
   args:
     executable: /bin/bash
-  register: _mariadb_cert_heal
-  changed_when: "'purged-invalid-certs' in _mariadb_cert_heal.stdout"
+  register: _mariadb_cert_repair
+  changed_when: "'purged-invalid-certs' in _mariadb_cert_repair.stdout"
   when: mariadb_ssl_enabled | default(false) | bool
 
 # `mariadb` is the SAN that matters — it is the name every client on the docker

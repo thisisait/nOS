@@ -15,7 +15,7 @@
 # diagnosis (observed 2026-07-17: infra frozen at 3/11 for 59 ticks).
 #
 # This probe catches it in ~5s BEFORE the first `docker compose up` and:
-#   • on a blank run (or docker_autoheal_external_mount=true) → SELF-HEALS by
+#   • on a blank run (or docker_repair_external_mount=true) → REPAIRS it by
 #     restarting Docker Desktop and re-probing, so NO manual restart is needed;
 #   • otherwise (live non-blank system) → FAILS FAST with the exact remedy
 #     instead of a silent 20-min hang, and never surprise-restarts Docker under
@@ -80,7 +80,7 @@
 
     # A stale VM mount fails at container-create with a "mount source path" /
     # "file exists" stderr — distinguish it from an ordinary run failure (bad
-    # image, etc.) so self-heal only fires for the propagation bug.
+    # image, etc.) so the restart only fires for the propagation bug.
     - name: "[Preflight] Classify the probe failure"
       ansible.builtin.set_fact:
         _ext_probe_stale: >-
@@ -88,10 +88,11 @@
              and (('file exists' in (_ext_probe.stderr | default('')))
                   or ('mount source path' in (_ext_probe.stderr | default('')))) }}
 
-    - name: "[Preflight] Self-heal: restart Docker Desktop to re-propagate the mount"
+    - name: "[Preflight] Repair: restart Docker Desktop to re-propagate the mount"
       when:
         - _ext_probe_stale | bool
-        - (blank | default(false) | bool) or (docker_autoheal_external_mount | default(false) | bool)
+        # docker_autoheal_external_mount: the pre-2026-10-07 key, honoured through v0.17.
+        - (blank | default(false) | bool) or (docker_repair_external_mount | default(false) | bool) or (docker_autoheal_external_mount | default(false) | bool)
       block:
         - name: "[Preflight] Quit Docker Desktop"
           ansible.builtin.command: osascript -e 'quit app "Docker"'
@@ -131,7 +132,7 @@
           check_mode: false
 
     # A SKIPPED task still registers. The re-probe above lives inside the
-    # self-heal block, so on every run where self-heal does NOT fire it used to
+    # restart block, so on every run where the restart does NOT fire it used to
     # register `_ext_probe` as {skipped: true} — with no `rc` — clobbering the
     # real probe's result. `rc | default(1)` then read 1 and the preflight
     # FAILED ON A HEALTHY MOUNT, always. It went unnoticed because the probe
@@ -170,7 +171,7 @@
           The external disk was (re)mounted AFTER Docker Desktop started, so the
           VM holds a stale /host_mnt reference. Recover with either:
             1) Restart Docker Desktop (Quit + reopen), then re-run; OR
-            2) Re-run with  -e docker_autoheal_external_mount=true  to have the
+            2) Re-run with  -e docker_repair_external_mount=true  to have the
                playbook restart Docker Desktop for you.
           Verify by hand:
               {{ docker_bin }} run --rm -v {{ nos_data_root }}:/mnt alpine ls /mnt
