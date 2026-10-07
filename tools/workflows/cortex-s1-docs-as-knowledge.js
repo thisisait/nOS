@@ -6,7 +6,7 @@ export const meta = {
     { title: 'Recheck', detail: 'the S0 facts this stage depends on' },
     { title: 'Survey', detail: 'what documentation exists, what it covers, where it lies' },
     { title: 'Design', detail: 'the node kinds and the ingestion contract' },
-    { title: 'Build', detail: 'generator + ingestion into the organ store' },
+    { title: 'Build', detail: 'generator + ingestion into the Cortex corpus' },
     { title: 'Verify', detail: 'adversarial, and the recall gate with a stated denominator' },
   ],
 }
@@ -45,7 +45,7 @@ phase('Recheck')
 await agent(`${RULES}
 
 Read ${NOS}/docs/archive/cortex-s0-report.md and confirm its verdict permits this stage. Then re-verify
-ONLY the facts S1 depends on: docs/systems coverage (plan says 22 of ~60 services), the organ's store
+ONLY the facts S1 depends on: docs/systems coverage (plan says 22 of ~60 services), the Cortex corpus (a replica of memory held for the onto1 digest)
 materialises and reports its digest, and the recall gate still runs.
 
 If the S0 report is absent, STOP and say so — S1 must not run on unverified ground.`,
@@ -114,7 +114,7 @@ ${design.slice(0, 3000)}
 Build:
 - a generator (host-side, alongside files/anatomy/scripts/keap_selfmodel_gen.py — same shape, same
   conventions) that walks the documentation sources and emits typed nodes with provenance;
-- ingestion into the organ store, following the existing self-model path in
+- ingestion into the Cortex corpus, following the existing self-model path in
   files/anatomy/cortex/server/cortex-store.ts. Note the precedent set there: a materialise that
   produces no slug root THROWS. Do the same — docs that ingest to zero nodes must fail loudly, not
   log and continue. Absence is not emptiness.

@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """cortex-fs-sync — the thing that actually runs the organ's mirror pass.
 
+The pass fills the Cortex corpus (a replica of memory held for the onto1
+digest; KEAP is memory), transitional debt by the ruling of 2026-10-07
+(roadmap row cortex-corpus-ruling). "The organ" below is the Cortex daemon.
+
 Pulse job (cortex-base), scheduled BETWEEN the consolidator (04:15) and
 keap-embed-sync (04:45), so a file that arrived during the day is mirrored
 before the vectors are built and long before the agreement harness reads
@@ -24,7 +28,7 @@ staleness guard now tells the truth about WHY; this job is what makes the
 truth stop being "the organ was never asked to look".
 
 ── What it does, and what it refuses to do ──────────────────────────────
-One POST to /agent/v1/fs/sync (rw tier — a pass WRITES the corpus), then
+One POST to /agent/v1/fs/sync (rw tier — a pass WRITES the Cortex corpus), then
 it reports the pass counters. It is a TRIGGER, not a second implementation
 of the pass: every guard, the mount sentinel and the five prune refusals
 live in the daemon, where the walk is.

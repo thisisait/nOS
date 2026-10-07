@@ -7,7 +7,10 @@ on `127.0.0.1:8098`** with 15 Playwright tests green against the built bundle. N
 Ansible role yet (step 9), **nothing deployed**.
 
 Cortex is the nOS reasoning organ — the fourth host organ beside Bone (signals),
-Wing (observes) and Pulse (keeps time). It is a **verbatim port** of KEAP v1.27.0's
+Wing (observes) and Pulse (keeps time). Cortex reasons; KEAP is memory. The store
+here holds the Cortex corpus (a replica of memory held for the onto1 digest) and is
+transitional debt by the ruling of 2026-10-07 (roadmap row `cortex-corpus-ruling`;
+the file list is `Cortex.debt` in `state/genome/lexicon.yml`). It is a **verbatim port** of KEAP v1.27.0's
 `cortex-*` modules. See `docs/archive/nos-cortex-organ-design.md` at the repo root
 for the full design and the 13-step build sequence.
 
@@ -162,7 +165,7 @@ reads the variable itself; none of them goes through `resolveStoreConfig`. The
 fallback protected nothing and aimed an unconfigured organ at KEAP's data
 directory. `openStore()` still *sets* `KEAP_DATA_DIR` from the resolved
 directory — that is how the vendored `db.ts` and `ingest.mjs` are pointed at the
-organ's store. The flow is one way.
+Cortex corpus. The flow is one way.
 
 **The store file is `keap.db`, not `cortex.db`.** Design §3 wrote `cortex.db`;
 `server/db.ts:30` and `knowledge/ingest.mjs:60` each independently join the

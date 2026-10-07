@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """cortex-corpus-diff — the S2 corpus agreement harness.
 
+The two corpora are KEAP (memory) and the Cortex corpus (a replica of memory
+held for the onto1 digest), transitional debt by the ruling of 2026-10-07
+(roadmap row cortex-corpus-ruling). "The organ" below is the Cortex daemon.
+
 Pulse job, scheduled AFTER keap-embed-sync. Reads BOTH corpora over
 `/agent/v1/*` only — never host sqlite3 against a live store, never a
 container exec, never a write of any kind to either store. If the API is
@@ -30,7 +34,7 @@ guesswork — it appeals to a third party that neither corpus controls:
                    the bytes on disk and the other does not.
   the repo         For a taxonomy node, `knowledge/canonical` at the
                    pinned ref is the referee. A node in the repo and in
-                   KEAP but not the organ means the organ's store was
+                   KEAP but not the organ means the Cortex corpus was
                    never re-materialised; the same node missing from KEAP
                    means the CONTAINER is behind the pin. Same
                    observation, opposite culprit, and only the referee
@@ -87,7 +91,7 @@ harness into a deploy gate and destroys the evidence it exists to collect:
 from one sample you cannot tell a bug (identical every night) from a race
 (shape changes nightly) from a transient (once, never again), and those
 three want different responses. Continuing costs nothing real — nothing
-consumes the organ's corpus yet, so a wrong shadow harms nobody.
+consumes the Cortex corpus yet, so a wrong shadow harms nobody.
 
 Both stops are named NOW so neither is negotiable later: 3 disagreeing
 nights in total stop the run and notify `high`; a 14-night ceiling forces

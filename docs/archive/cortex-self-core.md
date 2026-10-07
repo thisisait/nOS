@@ -1,5 +1,9 @@
 # Cortex → nOS self-core, and bring-your-own-data
 
+> **REJECTED 2026-10-07** by the operator's ruling (roadmap row `cortex-corpus-ruling`,
+> option b): Cortex reasons, KEAP is memory. The store this plan built inside Cortex is
+> transitional debt (`state/genome/lexicon.yml`, `Cortex.debt`). Kept as history.
+
 Status: **plan, not started.** Written 2026-07-26. Supersedes the C2–C4 staging in
 KEAP `docs/specs/cortex-full-scope-decision.md`, which drew its boundary in the
 wrong place (see §3).

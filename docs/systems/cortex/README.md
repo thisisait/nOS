@@ -14,10 +14,10 @@
 | **launchd label** | `eu.thisisait.nos.cortex` |
 | **Package** | `nos-cortex` `0.1.0`, vendored KEAP v1.27.0 cortex port (`engines.node >= 22`) |
 | **Working dir** | `files/anatomy/cortex` (`cortex_src_dir`) — runs in-place from the playbook tree |
-| **Store** | `~/cortex/data/keap.db` (`cortex_store_path` = `~/cortex/data`) |
+| **Store** | `~/cortex/data/keap.db` (`cortex_store_path` = `~/cortex/data`) — the Cortex corpus (a replica of memory held for the onto1 digest), transitional debt (roadmap row `cortex-corpus-ruling`) |
 | **Logs** | `~/cortex/log` (`cortex_log_dir`) |
 
-The daemon runs in-place from the playbook tree deliberately: its self-model half resolves `state/manifest.yml`, `files/anatomy/plugins/` and `docs/systems/` relative to its own module path, so the code must live where the estate's descriptors live. The store lives outside the tree so neither `git clean` nor a re-clone wipes reasoning history.
+The daemon runs in-place from the playbook tree deliberately: its self-model half resolves `state/manifest.yml`, `files/anatomy/plugins/` and `docs/systems/` relative to its own module path, so the code must live where the estate's descriptors live. The store lives outside the tree so neither `git clean` nor a re-clone wipes it. Cortex reasons; KEAP is memory: the store is declared debt in `state/genome/lexicon.yml` (`Cortex.debt`) and leaves Cortex after v0.17.
 
 ## Routing
 
@@ -43,5 +43,5 @@ Token comparison is `timingSafeEqual` over a `sha256` of the presented bearer. *
 ## Dependencies
 
 - Node ≥ 22 (nvm default; `tasks/node.yml` installs it).
-- Its own libsql store at `~/cortex/data/keap.db`, materialised on boot from the repo spine + canonical tree + generated nOS self-model (`CORTEX_SELFMODEL=1`).
+- The Cortex corpus, a libsql store at `~/cortex/data/keap.db`, materialised on boot from the repo spine + canonical tree + generated nOS self-model (`CORTEX_SELFMODEL=1`).
 - KEAP (separate iiab Docker service, `nos.iiab.keap`) — Cortex is NOT KEAP; it is a distinct organ with its own store and `db_identity`. Embeddings/recall (`cortex_ollama_url`) are C2 scope, not served by the C1 daemon.

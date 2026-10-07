@@ -3,7 +3,7 @@
 # pazny.cortex — the reasoning organ (host Node daemon, P-4 build seq. step 9).
 #
 # The fourth host organ beside Bone (signals), Wing (observes) and Pulse (keeps
-# time): Cortex remembers and reasons. A loopback-only Node 22 daemon serving
+# time): Cortex reasons; KEAP is memory. A loopback-only Node 22 daemon serving
 # POST /agent/v1/validate + GET /agent/v1/validate/opcodes + /health, built from
 # the vendored KEAP v1.27.0 port at files/anatomy/cortex/.
 #
@@ -15,11 +15,10 @@
 # NOS_ROOT at ~/../.. and the coverage assertion would refuse the store. The
 # STORE is what must survive `git clean`, and it lives outside the tree.
 #
-# Store: ~/cortex/data/keap.db — the basename is fixed by the vendored port
-# (server/db.ts:30); the DIRECTORY is the isolation boundary. This is NOT a
-# shared keap.db (docs/specs/cortex-full-scope-decision.md "Two corrections"):
-# different directory, own db_identity, and cortex-store.ts refuses to open a
-# store file the organ did not create.
+# Store: ~/cortex/data/keap.db holds the Cortex corpus (a replica of memory held
+# for the onto1 digest), transitional debt by the ruling of 2026-10-07 (roadmap
+# row cortex-corpus-ruling; state/genome/lexicon.yml Cortex.debt). The basename is
+# fixed by the vendored port (server/db.ts:30); the DIRECTORY isolates it from KEAP.
 # ==============================================================================
 
 cortex_port: 8098          # loopback-only, beside Bone's 8099
@@ -31,8 +30,8 @@ cortex_launchd_label: "eu.thisisait.nos.cortex"
 # playbook tree, see the header.
 cortex_src_dir: "{{ playbook_dir }}/files/anatomy/cortex"
 
-# The organ's store DIRECTORY (env CORTEX_STORE_PATH). Outside the playbook
-# tree so neither `git clean` nor a repo re-clone can wipe reasoning history.
+# The Cortex corpus DIRECTORY (env CORTEX_STORE_PATH). Outside the playbook
+# tree so neither `git clean` nor a repo re-clone can wipe it.
 cortex_store_path: "{{ ansible_facts['env']['HOME'] }}/cortex/data"
 cortex_log_dir: "{{ ansible_facts['env']['HOME'] }}/cortex/log"
 

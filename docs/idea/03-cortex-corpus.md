@@ -20,18 +20,20 @@ knowledge_objects[fs:] 317 /  317
 relations             1438 / 1438
 ```
 
-KEAP and the vendored organ agree. Asymmetries are **named** rather than counted
-as drift: the estate's own 1 088 doc nodes, the 97 nodes outside the referee's
-jurisdiction, the KEAP-only table cards.
+KEAP and the Cortex corpus (a replica of memory held for the onto1 digest) agree.
+Asymmetries are **named** rather than counted as drift: the estate's own 1 088
+doc nodes, the 97 nodes outside the referee's jurisdiction, the KEAP-only table cards.
 
 ## The organ
 
 `pazny.cortex` is the fourth host organ beside Bone, Wing and Pulse — *Cortex
-remembers and reasons*. A loopback daemon on `127.0.0.1:8098`, a verbatim TS/Node
-port vendored under `files/anatomy/cortex/`, owning one libsql store with the ANN
-index tuned to the measured optimum (float8, `max_neighbors=20`).
+reasons; KEAP is memory* (ruling of 2026-10-07, roadmap row `cortex-corpus-ruling`).
+A loopback daemon on `127.0.0.1:8098`, a verbatim TS/Node port vendored under
+`files/anatomy/cortex/`. It still holds the Cortex corpus in one libsql store with
+the ANN index tuned to the measured optimum (float8, `max_neighbors=20`); that
+store is transitional debt (`state/genome/lexicon.yml`, `Cortex.debt`).
 
-Being a host process reading a host-local store is not incidental: it **dissolves
+Being a host process is not incidental: it **dissolves
 the Wing-executor network risk** (launchd→launchd loopback, no host→container
 hop) and colocates the recall gate with the host Ollama embedder, where they are
 architecturally forced to live.
