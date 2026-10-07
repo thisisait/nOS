@@ -46,6 +46,7 @@
 		"html-to-image": "^1.11.13"
 	},
 	"overrides": {
-		"cookie": "^0.7.2"
+		"cookie": "^0.7.2",
+		"postcss-selector-parser": "^7.1.6"
 	}
 }
