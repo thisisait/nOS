@@ -163,8 +163,11 @@ def test_harvest_cites_promoted_articles_at_ssot_path():
 #:   - the stub-alias gate + proposed list (this file)
 #:   - frozen published devlog history (content_hash-pinned)
 #:   - the frozen cross-repo negotiation record
+#:   - finished workflows whose task text records the old tree (RECORD)
 _STUB_PATH_ALLOW = {
     "tests/anatomy/test_ssot_index.py",
+    ".claude/workflows/ssot-promote.js",
+    ".claude/workflows/wave-small-ssot.js",
     "state/devlog-bundle.jsonl",
     "files/anatomy/cortex/docs/specs/nos-selfmodel-keap-contract.md",
 }
@@ -174,16 +177,23 @@ def test_code_does_not_cite_promoted_stub_paths():
     """Every code cite to a promoted article names ssot/doctrine/<file>.md or
     nos-sot:doctrine/<file>#id — never the warehouse stub, which would keep the
     stub load-bearing forever (nos-sot:doctrine/ssot.md#3). Covers the trees the
-    harvester skips; retro-red on the old `docs/doctrine/<file>.md` form."""
+    harvester skips; retro-red on the old `docs/doctrine/<file>.md` form.
+    Also covers the briefs and config layers a model reads first, and a
+    `docs/doctrine/<file>.md` that no longer exists (a dangling path)."""
     import re
+    import sys
     promoted = {p.stem for p in (REPO / "ssot" / "doctrine").glob("*.md")}
-    pat = re.compile(r"docs/doctrine/([a-z0-9-]+)\.md")
+    pat = re.compile(r"docs/doctrine/([A-Za-z0-9-]+)\.md")
     suffixes = {".py", ".yml", ".yaml", ".sh", ".php", ".ts", ".svelte", ".j2",
                 ".md", ".cfg", ".neon", ".sql", ".js", ".latte", ".json"}
     skip_dirs = {"node_modules", ".svelte-kit", "build", "dist", "vendor"}
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity  # noqa: PLC0415 — the default layers, never a filename
+    layers = [p.relative_to(REPO).as_posix() for p in nos_identity.default_layers()]
     offenders = []
     for root in ("files", "tools", "tasks", "roles", "state", "tests",
-                 "callback_plugins", "main.yml"):
+                 "callback_plugins", "main.yml", "CLAUDE.md", "README.md",
+                 ".claude/workflows", *layers):
         base = REPO / root
         files = [base] if base.is_file() else base.rglob("*")
         for f in files:
@@ -196,6 +206,6 @@ def test_code_does_not_cite_promoted_stub_paths():
                 continue
             for i, line in enumerate(f.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
                 for name in pat.findall(line):
-                    if name in promoted:
+                    if name in promoted or not (REPO / "docs/doctrine" / f"{name}.md").is_file():
                         offenders.append(f"{rel}:{i} docs/doctrine/{name}.md")
     assert not offenders, offenders
