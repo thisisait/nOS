@@ -69,6 +69,11 @@ def test_no_second_copy_of_the_list():
         if rel.startswith("docs/") or rel in ALLOWED or not rel.endswith((".py", ".yml", ".yaml", ".j2", ".sh", ".js", ".ts", ".php", ".tpl")):
             continue
         p = REPO / rel
-        if p.is_file():
-            hits += [f"{rel}:{n}" for n, line in enumerate(p.read_text(errors="ignore").splitlines(), 1) if COPY.search(line)]
+        if not p.is_file():
+            continue
+        lines = p.read_text(errors="ignore").splitlines()
+        # a LIST is two or more suffixes in one file; a lone ".test" is a file suffix, not a TLD list
+        if len({m.group(0).strip("\"'") for line in lines for m in COPY.finditer(line)}) < 2:
+            continue
+        hits += [f"{rel}:{n}" for n, line in enumerate(lines, 1) if COPY.search(line)]
     assert not hits, "a second local-TLD list — derive it from nos_identity.local_tld_suffixes():\n" + "\n".join(hits)
