@@ -510,6 +510,8 @@ words:
     means: The structure of one organism drawn as a graph.
     names:
       - path: state/anatomy-graph.json
+      # The generated copy the face reads; anatomy-graph-gen writes both.
+      - path: files/anatomy/face/src/lib/anatomy/anatomy-graph.json
       - path: tools/anatomy-graph-gen.py
     not: [body plan]
     counter_example: "state/body-plan.json (the anatomy projected onto levels, not the graph)"
