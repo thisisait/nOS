@@ -2,7 +2,7 @@
 
 These tests assert post-blank state on the operator's box. They're
 NOT unit tests — they read live artifacts (~/wing/wing.db, ~/.nos/
-events/playbook.jsonl, state/smoke-catalog.runtime.yml) and only run
+events/playbook.jsonl, ~/.nos/smoke-catalog.runtime.yml) and only run
 when those exist. On CI / fresh worktrees the artifacts are absent
 and every test in this dir skips cleanly.
 
@@ -30,7 +30,7 @@ WING_DB = pathlib.Path(
     os.environ.get("NOS_WING_DB", HOME / "wing" / "app" / "data" / "wing.db")
 )
 EVENTS_JSONL = HOME / ".nos" / "events" / "playbook.jsonl"
-SMOKE_CATALOG = REPO_ROOT / "state" / "smoke-catalog.runtime.yml"
+SMOKE_CATALOG = HOME / ".nos" / "smoke-catalog.runtime.yml"
 
 PILOTS = ("twofauth", "roundcube", "documenso")
 APP_IDS = tuple(f"app_{p}" for p in PILOTS)

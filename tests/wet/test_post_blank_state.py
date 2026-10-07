@@ -5,7 +5,7 @@ deterministic and not browser-driven:
 
 - Section 6 — GDPR Article 30 rows in `~/wing/wing.db`
 - Section 7 — Bone `app.deployed` events in `~/.nos/events/playbook.jsonl`
-- Section 9 — Smoke catalog runtime `state/smoke-catalog.runtime.yml`
+- Section 9 — Smoke catalog runtime `~/.nos/smoke-catalog.runtime.yml`
 
 Sections 2/3/4/5/8/11 are Playwright surfaces — see
 `tests/e2e/tier2-wet-test.spec.ts`. Section 10 is a CLI invocation
