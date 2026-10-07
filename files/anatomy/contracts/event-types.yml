@@ -1,0 +1,99 @@
+# Event types: the one list every event whitelist in nOS is held to.
+# Two writers keep a copy each (Bone in Python, Wing in PHP, separate runtimes);
+# the gate holds BOTH to this file, so neither can drift and both cannot drift
+# together. Add a type here first; the gate names the side that lags.
+---
+contract_version: 1
+gate: tests/anatomy/test_event_types_match_the_contract.py
+mirrors:
+  bone: files/anatomy/bone/events.py                        # VALID_TYPES
+  wing: files/anatomy/wing/app/Model/EventRepository.php    # EventRepository::VALID_TYPES
+subsets:
+  ansible: state/schema/event.schema.json                   # properties.type.enum
+types:
+  - admin_emergency_halt
+  - admin_emergency_resume
+  - agent_approval_decision
+  - agent_approval_request
+  - agent_binding_disarmed
+  - agent_grader_decision
+  - agent_iteration_end
+  - agent_iteration_start
+  - agent_message
+  - agent_model_fallback
+  - agent_question_answered
+  - agent_question_asked
+  - agent_run_end
+  - agent_run_start
+  - agent_session_end
+  - agent_session_start
+  - agent_thread_end
+  - agent_thread_start
+  - agent_tool_result
+  - agent_tool_use
+  - agent_vault_resolved
+  - agent_webhook_dispatch
+  - agent_webhook_receipt
+  - app.deployed
+  - app.removed
+  - coexistence_cancel
+  - coexistence_cleanup
+  - coexistence_copy_data
+  - coexistence_cutover
+  - coexistence_demote
+  - coexistence_promote
+  - coexistence_provision
+  - conductor_report
+  - conductor_self_test_step
+  - consent_granted
+  - consent_withdrawn
+  - devlog_entry_created
+  - devlog_entry_deleted
+  - devlog_entry_updated
+  - devlog_published
+  - devlog_sync_run
+  - e2e_journey_end
+  - e2e_journey_start
+  - e2e_journey_step
+  - gdpr_export_user
+  - gdpr_forget_user
+  - handler_ok
+  - handler_start
+  - loops_paused
+  - loops_resumed
+  - migration_authored
+  - migration_end
+  - migration_pr_opened
+  - migration_promote_requested
+  - migration_promoted
+  - migration_rejected
+  - migration_start
+  - migration_step_failed
+  - migration_step_ok
+  - patch_end
+  - patch_start
+  - patch_step_failed
+  - patch_step_ok
+  - plan_choice_recorded
+  - play_end
+  - play_start
+  - playbook_end
+  - playbook_start
+  - remediator_report
+  - scan.batch_done
+  - scan.batch_started
+  - scan.finding_recorded
+  - security.drift.snapshot
+  - table.upsert
+  - task_changed
+  - task_failed
+  - task_ok
+  - task_skipped
+  - task_start
+  - task_unreachable
+  - upgrade_end
+  - upgrade_start
+  - upgrade_step_ok
+  - upgrade_unqueued
+  - user_invitation_issued
+  - user_invitation_revoked

@@ -203,6 +203,10 @@ final class EventRepository
 		// result_json {reason}). Twin of Bone's events.py VALID_TYPES, else the
 		// Bone POST 400s and the pause leaves no audit trace.
 		'loops_paused', 'loops_resumed',
+		// Bone-ingested types Wing had refused (measured 2026-10-07): the list is
+		// files/anatomy/contracts/event-types.yml, and both sides now equal it.
+		'remediator_report', 'app.deployed', 'app.removed',
+		'scan.batch_started', 'scan.finding_recorded', 'scan.batch_done', 'security.drift.snapshot',
 	];
 
 	public function __construct(
