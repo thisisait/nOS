@@ -37,7 +37,7 @@ schema:
         options: ["service", "backend", "host_daemon"] }
     - { key: rbac_tier,   label: "RBAC tier",         kind: select, role: dimension, concept: access.tier,
         options: ["tier-1", "tier-2", "tier-3", "tier-4"] }
-    # β1.A SSO trichotomy (docs/sso-and-attribution.md).
+    # The four SSO modes (ssot/doctrine/sso.md §1).
     - { key: sso_mode,    label: "SSO mode",          kind: select, role: dimension, concept: access.sso_mode,
         options: ["native_oidc", "header_oidc", "forward_auth", "none"] }
 

@@ -112,7 +112,7 @@ Longer tour: [docs/architecture.md](docs/architecture.md).
   ([docs/traefik-primary-proxy.md](docs/traefik-primary-proxy.md)); host nginx is opt-in.
 - **SSO:** every service is `native_oidc`, `header_oidc`, `forward_auth` or none, declared
   as `authentik.mode` in its plugin; RBAC tiers 1–4 bind to Authentik groups.
-  [docs/sso-and-attribution.md](docs/sso-and-attribution.md). `tier` means RBAC only; the
+  [ssot/doctrine/sso.md](ssot/doctrine/sso.md). `tier` means RBAC only; the
   dependency axis is `layer` ([ssot/doctrine/layers.md](ssot/doctrine/layers.md)).
 - **State & upgrades:** `state/manifest.yml` vs `~/.nos/state.yml`, migrations in
   `files/anatomy/migrations/`, upgrade recipes in `upgrades/`, coexistence tracks.

@@ -1,30 +1,15 @@
-# nOS SSO + identity attribution — doctrine + audit
+# nOS SSO + identity attribution — guide + audit
 
-> **Status:** doctrine locked 2026-05-17 by `tests/anatomy/test_sso_doctrine.py` (7 gates).
+> The rule (four modes, one spelling, never gated twice) is
+> [`ssot/doctrine/sso.md`](../ssot/doctrine/sso.md); gates:
+> `tests/anatomy/test_sso_doctrine.py`, `tests/anatomy/test_forward_auth_does_not_stack.py`.
 > **Companion docs:** [native-sso-survey.md](native-sso-survey.md) (per-service verdicts), [bones-and-wings-refactor.md §11](archive/bones-and-wings-refactor.md) (audit-trail spec).
 
-## Mode trichotomy (post-β1.A)
-
-Every Authentik-wired service falls into exactly one of three buckets,
-declared in its plugin manifest as `authentik.mode` (and pinned by the
-[`test_every_plugin_uses_canonical_authentik_mode`](../tests/anatomy/test_sso_doctrine.py)
-anatomy gate):
-
-| Mode | Meaning | Operator UX | Live probe (unauth GET /) |
-|---|---|---|---|
-| **`native_oidc`** | Service consumes OIDC at app level — has its own login UI surface with "Sign in with Authentik" button. Per-user identity flows into the service. | One extra click on the service login page | 200 (own login) or 302 → self/login |
-| **`header_oidc`** | Authentik proxy outpost forwards `X-Authentik-Username` / `X-Authentik-Email` headers; service auto-creates the local user from headers. True SSO. | No extra click | 302 → auth.{tld} |
-| **`forward_auth`** | Pure access gate — Authentik session means "you're in"; service has no per-user state. | No extra click | 302 → auth.{tld} |
-| (`none`) | Substrate / no-SSO service (PostgreSQL, MariaDB, Redis, etc.) | n/a | n/a |
-
-**Anti-canon (caught by gate):** `oauth2`, `proxy_auth`, missing mode.
-The blueprint's default-expression chain used to accept all of them
-silently — pre-2026-05-17 cleanup. Now `mode:` and `provider_type:` MUST
-be one of the canonical four.
+## Modes
 
 ### Bucket membership (snapshot, moved from CLAUDE.md 2026-10-02)
 
-Authoritative: each plugin's `authentik.mode` in
+The record is each plugin's `authentik.mode` in
 `files/anatomy/plugins/<svc>-base/plugin.yml`. This list is a reading aid and can lag.
 
 - **`native_oidc`, env-driven:** Grafana, Outline, Open WebUI, n8n, GitLab (omniauth),
