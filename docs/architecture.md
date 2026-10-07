@@ -1,8 +1,8 @@
 # nOS architecture — the longer tour
 
 `CLAUDE.md` carries the brief; this is the next level down. Per-service detail lives in
-`docs/systems/<service>/README.md`; the anatomy metaphor in [anatomy.md](anatomy.md) and
-[bones-and-wings-refactor.md](archive/bones-and-wings-refactor.md) §1.1 + §6.
+`docs/systems/<service>/README.md`; the body-plan words in
+[ssot/doctrine/body-plan.md](../ssot/doctrine/body-plan.md) and [anatomy.md](anatomy.md).
 
 ## Role services — the compose-override pattern
 

@@ -1,11 +1,11 @@
 <!-- GENERATED from state/task-types.yml by tools/task-types-render.py — do not edit by hand. -->
-# AGENTS.md — the task-type router
+# AGENTS.md — the task-type contract
 
 Every row on the board carries a **`task_type`**. A row is a *claim*; its
 task_type is the tiny contract for HOW to work it. Read your row's type below,
 reach for its tools, and end it with its evidence — nothing more.
 
-This is the router. The full estate reference is [CLAUDE.md](CLAUDE.md); the
+This page is the task-type contract. The full estate reference is [CLAUDE.md](CLAUDE.md); the
 machine-readable source of this table is
 [`state/task-types.yml`](state/task-types.yml). Adding or changing a type is a
 **proposal** through the loop, not a free edit.
@@ -16,14 +16,11 @@ in that one place.
 
 ## Three invariants that outrank every task type
 
-1. **Success is written by a READER, not by the thing that attempted the work.**
-   A backup that reports its own success, a gate you can pass by editing the
-   gate, a queue row that marks itself done — all lie. Prove it from the outside.
-2. **Run the gate against the BROKEN state too.** A check that cannot fail on the
-   pre-fix tree pins nothing.
-3. **The repo is not the running system.** Source lives here; the estate runs
-   from elsewhere and converges only on an operator's `nos`. A git ref answers
-   "what is in the repo", never "what is running".
+Quoted from [CLAUDE.md](CLAUDE.md) at render time.
+
+1. Success is written by a reader, not by the code that did the work — and not by your own report. Say what you verified and what you did not.
+2. A fix ships with the gate that would have caught it, and the gate is shown red against the broken state.
+3. This checkout is the **source**. A deployed nOS runs from elsewhere on the host (`~/stacks`, `~/wing`, `~/keap/src`, `~/face/src`, launchd/systemd organs); only a converge moves source into runtime. So a git ref answers "what is in the repo", never "what is running"
 
 ## The types
 

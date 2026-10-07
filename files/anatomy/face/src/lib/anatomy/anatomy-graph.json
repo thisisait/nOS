@@ -2873,9 +2873,9 @@
     "reader:task-types-render": {
       "kind": "reader",
       "source": "tools/task-types-render.py",
-      "title": "Render AGENTS.md (the task-type router) from state/task-types.yml.",
+      "title": "Render AGENTS.md (the task-type contract) from state/task-types.yml.",
       "anchor": "02.02.04",
-      "description": "Reader tools/task-types-render.py: Render AGENTS.md (the task-type router) from state/task-types.yml."
+      "description": "Reader tools/task-types-render.py: Render AGENTS.md (the task-type contract) from state/task-types.yml."
     },
     "reader:tissue-status": {
       "kind": "reader",

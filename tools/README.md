@@ -91,7 +91,7 @@ worse than none, because it reads as complete.
 - `skill-status.py` — What is on the shelf, who should be holding it, and who actually is.
 - `snapshot-status.py` — Is there a net under the next converge, and what exactly does it hold?
 - `stuck-status.py` — What has STOPPED MOVING — which is a different question from what is broken.
-- `task-types-render.py` — Render AGENTS.md (the task-type router) from state/task-types.yml.
+- `task-types-render.py` — Render AGENTS.md (the task-type contract) from state/task-types.yml.
 - `tls-uptake.py` — How much of the datastore traffic on this estate is actually encrypted.
 - `view-contract-drift.py` — Compare the face's `TableView` against KEAP's `viewMetaSchema`.
 - `vendor-keap-contracts.py` — Re-vendor KEAP's table schema (pinned to keap_repo_ref) for the schema-pin gate.
