@@ -21,6 +21,8 @@
 #            entry: `not:` keeps nOS words apart; a mechanism is a sibling to cite.
 # retired  senses the word no longer carries: {sense, replacement, surfaces};
 #            each surface must be gone (today's are pending in the gate).
+# debt     code the word does not own yet still holds: {says, row, paths}; the
+#            word's own gate keeps `paths` true (rendered to the glossary).
 # retired_phrases  exact phrases a model must not be taught; matched only in
 #            the tracked files models are told to trust (briefs, doctrine, docs,
 #            skills, agents, plugins, state tables, the default config layers,
@@ -498,7 +500,36 @@ words:
       - path: files/anatomy/cortex/server/cortex-lang.ts
       - path: files/anatomy/wing/app/Cortex/
     not: [memory, KEAP]
+    # Ruling 2026-10-07 (option b); gate: tests/anatomy/test_cortex_store_is_declared_debt.py.
+    debt:
+      says: >-
+        The store inside Cortex is transitional: the Cortex corpus (a replica of memory
+        held for the onto1 digest) with its libsql store, fs-sync, embeddings and ANN index.
+        KEAP is memory; the store leaves Cortex after v0.17, and no new store code lands here
+      row: cortex-corpus-ruling
+      paths:
+        - files/anatomy/cortex/knowledge/
+        - files/anatomy/cortex/server/cortex-ann.ts
+        - files/anatomy/cortex/server/cortex-config.ts
+        - files/anatomy/cortex/server/cortex-fs-cli.ts
+        - files/anatomy/cortex/server/cortex-fs.ts
+        - files/anatomy/cortex/server/cortex-store-cli.ts
+        - files/anatomy/cortex/server/cortex-store.test.ts
+        - files/anatomy/cortex/server/cortex-store.ts
+        - files/anatomy/cortex/server/embeddings.ts
+        - files/anatomy/cortex/server/fs-roots.test.ts
+        - files/anatomy/cortex/server/fs-roots.ts
+        - files/anatomy/cortex/server/fs-sync.test.ts
+        - files/anatomy/cortex/server/fs-sync.ts
+        - files/anatomy/cortex/server/intake.test.ts
+        - files/anatomy/cortex/server/intake.ts
+        - files/anatomy/cortex/server/objects.ts
+        - files/anatomy/cortex/server/search.ts
+        - files/anatomy/cortex/server/uid.ts
     retired:
+      - sense: "Cortex remembers (holds memory) as well as reasons"
+        replacement: "Cortex reasons; KEAP is memory"
+        surfaces: []
       - sense: "cortex-query, recall from KEAP"
         replacement: "keap-recall"
         surfaces:
@@ -509,7 +540,8 @@ words:
         replacement: "KEAP, where nOS keeps its memory"
         surfaces: []
     retired_phrases: ["cortex-query", "KEAP cortex", "cortex (KEAP)", "the nOS cortex",
-                      "cortex of the nOS anatomy", "cortex store", "cortex object"]
+                      "cortex of the nOS anatomy", "cortex store", "cortex object",
+                      "remembers and reasons"]
   Face:
     level: proper-name
     means: The web desktop.

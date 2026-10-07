@@ -84,6 +84,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - **Wing** — The host dashboard and audit ledger.
 - **Pulse** — The scheduler that runs every scheduled job. Not: heartbeat.
 - **Cortex** — The reasoning machinery (the cortex daemon, cortex-lang and Wing's executor); it is not KEAP. Not: memory, KEAP.
+  Transitional debt (roadmap row `cortex-corpus-ruling`): The store inside Cortex is transitional: the Cortex corpus (a replica of memory held for the onto1 digest) with its libsql store, fs-sync, embeddings and ANN index. KEAP is memory; the store leaves Cortex after v0.17, and no new store code lands here.
 - **Face** — The web desktop.
 - **Ears** — The speech organ, which hears and speaks.
 - **Apex** — The public page that shows the organ systems to strangers.
@@ -126,6 +127,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - a second kind-to-level map beside the lexicon → the graph_kind names in state/genome/lexicon.yml
 - the digest organ, the stomach → digest
 - bones-and-wings for the host organs together → the host organs
+- Cortex remembers (holds memory) as well as reasons → Cortex reasons; KEAP is memory
 - cortex-query, recall from KEAP → keap-recall
 - KEAP called the cortex (a cortex store, cortex objects) → KEAP, where nOS keeps its memory
 - brain for KEAP, the four host parts or the Wing API token → memory / organs / flat token

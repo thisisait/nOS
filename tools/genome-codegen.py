@@ -403,6 +403,8 @@ def emit_glossary(_g: dict) -> str:
             # Indented, so it stays in the item; imprint-gen takes only "- " lines.
             if w.get("counter_example"):
                 out.append(f"  Counter-example: {w['counter_example']}.")
+            if w.get("debt"):
+                out.append(f"  Transitional debt (roadmap row `{w['debt']['row']}`): {w['debt']['says']}.")
     out += ["", "## Retired senses (old use → what to say now)", ""]
     for w in words.values():
         for r in w.get("retired") or []:
