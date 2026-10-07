@@ -172,7 +172,7 @@ fields:
     evidence:          { ruling: WITHHELD, why: "points at the estate's own weaknesses" }
     ref:               { ruling: WITHHELD, why: "git ref" }
     install_flag:      { ruling: WITHHELD, why: "config namespace" }
-    launchd_labels:    { ruling: WITHHELD, why: "a row's own launchd job names (I-12, 2026-10-07: the daemon nodes folded into their rows); the launchd namespace is estate mechanics" }
+    launchd_labels:    { ruling: WITHHELD, why: "a row's own launchd job names (I-12: the daemon nodes folded into their rows); launchd namespace" }
     dependency_survey: { ruling: WITHHELD, why: "survey coverage discloses the unsurveyed" }
     layer:             { ruling: WITHHELD, why: "D1" }
     layer_withheld:    { ruling: WITHHELD, why: "D1" }
