@@ -790,6 +790,7 @@ nodes:
   "article:four-trees": withheld
   "article:gates": withheld
   "article:generative-ui": withheld
+  "article:genome": withheld  # 2026-10-07: new, PROPOSED
   "article:identity": withheld
   "article:immune-system": withheld
   "article:layers": withheld
@@ -803,6 +804,7 @@ nodes:
   "article:session-threat-model": withheld
   "article:sso": withheld  # 2026-10-07: carved from docs/sso-and-attribution.md
   "article:ssot": withheld
+  "article:tissue": withheld  # 2026-10-07: promoted from the warehouse, PROPOSED
   "article:virtiofs": withheld
   "article:workflows": withheld
   "doctrine:ssot/doctrine/foreign-properties.md#5.1": withheld

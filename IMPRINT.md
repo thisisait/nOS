@@ -47,7 +47,7 @@ Each line: level (count) — what it means (the lexicon's words), then the most 
 - **sense** (78) — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Most connected: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), judge:genome-codegen (4)
 - **limb** (8) — A tool that acts. Most connected: tool:mcp-bone (5), tool:ask-operator (2), tool:mcp-keap (2), tool:mcp-wing-write (2), tool:migration-file-write (2)
 - **memory** (40) — What nOS has learned, kept in KEAP; RAM stays plain English. Most connected: table:party (13), table:invoice (5), table:journal-entry (4), table:posting (4), table:account (3)
-- **law** (43) — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Most connected: article:loop-contract (14), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#5a (3), doctrine:ssot/doctrine/loop-contract.md#7 (3), doctrine:ssot/doctrine/loop-contract.md#DECISION-2d (3)
+- **law** (45) — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Most connected: article:loop-contract (14), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#5a (3), doctrine:ssot/doctrine/loop-contract.md#7 (3), doctrine:ssot/doctrine/loop-contract.md#DECISION-2d (3)
 - **reflex** (43) — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Most connected: pulse:conductor:self-test-001 (8), pulse:cortex:cortex-fs-sync (8), pulse:keap:keap-embed-sync (8), pulse:librarian:brief-taxonomy (8), pulse:librarian:describe-taxonomy (8)
 
 Hidden plumbing: 67 internal nodes. Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
@@ -144,7 +144,7 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
   code_server, erpnext, freescout, outline, hedgedoc, bookstack, firefly, dolibarr, onlyoffice, mikopbx, qgis_server,
   metabase, superset, influxdb, mcp_gateway, openclaw, hermes, device_gateway, wing, bone, cortex, backrest.
 
-The public organ systems (the apex ruling publishes 13; 374 of 437 ruled nodes are withheld):
+The public organ systems (the apex ruling publishes 13; 376 of 439 ruled nodes are withheld):
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)

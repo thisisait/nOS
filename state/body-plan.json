@@ -14,7 +14,7 @@
     "sense": 78,
     "limb": 8,
     "memory": 40,
-    "law": 43,
+    "law": 45,
     "reflex": 43,
     "internal": 67,
     "edges": 389
@@ -120,6 +120,10 @@
       "level": "law",
       "kind": "article"
     },
+    "article:genome": {
+      "level": "law",
+      "kind": "article"
+    },
     "article:identity": {
       "level": "law",
       "kind": "article"
@@ -169,6 +173,10 @@
       "kind": "article"
     },
     "article:ssot": {
+      "level": "law",
+      "kind": "article"
+    },
+    "article:tissue": {
       "level": "law",
       "kind": "article"
     },
