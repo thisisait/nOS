@@ -94,7 +94,7 @@ never “what is running”; the two differ routinely and on purpose.</p>
 <h2>Configuration — later overrides earlier</h2>
 <pre>
 default.config.yml      every variable, committed defaults   (~94 install_* toggles)
-default.credentials.yml every secret as a template, committed
+default.credentials.yml the secret declarations, committed (HKDF-derived, legacy prefix, or minted at runtime)
 config.yml              the operator's overrides, gitignored  ← the estate's real flags
 credentials.yml         the operator's secrets, gitignored
 -e extra-vars           highest precedence, this run only     (profiles live here)

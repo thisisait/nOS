@@ -84,7 +84,10 @@ without `--confirm` is always a dry run. Cloud sessions: [docs/cloud-e2e.md](doc
 
 1. `config.d/*.yml` (lexical order) then `default.config.yml` — every variable with a default,
    each in exactly one file (committed; the set is `tools/nos_identity.default_layers()`)
-2. `default.credentials.yml` — every secret as a `{{ global_password_prefix }}_pw_*` template (committed)
+2. `default.credentials.yml` — the secret declarations (committed). Most derive one-way from
+   `nos_derived_secrets` (HKDF); a shrinking minority still use the legacy
+   `{{ global_password_prefix }}_pw_*` form; the rest are empty until the operator fills them
+   or the playbook mints them at runtime
 3. `config.yml` — your feature toggles (gitignored)
 4. `credentials.yml` — your secret overrides (gitignored)
 
