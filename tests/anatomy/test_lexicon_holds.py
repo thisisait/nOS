@@ -219,7 +219,8 @@ DOCSTRINGS = ("tools/*.py", "tests/anatomy/*.py")
 def _tracked(globs: tuple[str, ...]) -> list[str]:
     out = subprocess.run(["git", "ls-files", "-z", "--", *(f":(glob){g}" for g in globs)],
                          cwd=REPO, capture_output=True, check=True).stdout.decode()
-    return sorted(r for r in out.split("\0") if r and (REPO / r).is_file())
+    # A committed symlink is its target counted twice; the target is the file.
+    return sorted(r for r in out.split("\0") if r and (REPO / r).is_file() and not (REPO / r).is_symlink())
 
 
 def _docstrings(src: str) -> str:
