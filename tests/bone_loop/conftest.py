@@ -128,6 +128,10 @@ def repo(tmp_path, monkeypatch, state, weaknesses):  # noqa: ARG001
         json.dumps(make_scan_state())
     )
     (repo / "docs" / "hidden_fees" / "README.md").write_text(FEES_README)
+    # The reader keys machine-written output on the tree's own registry.
+    (repo / "state").mkdir()
+    (repo / "state" / "generated.yml").write_text(
+        (ROOT / "state" / "generated.yml").read_text(encoding="utf-8"))
     for slug, body in FEE_FILES:
         (repo / "docs" / "hidden_fees" / slug).write_text(
             FEE_FILE.format(slug=slug, body=body)

@@ -73,13 +73,15 @@ class TestGitWorkingTreeIsFirstClass:
 
     def test_untracked_scheduled_job_output_is_the_same_failure(self, repo, weaknesses):
         """git-add never happened is not milder than git-commit never happened."""
-        (repo / "state").mkdir(exist_ok=True)
-        (repo / "state" / "devlog-bundle.jsonl").write_text("{}\n")
+        # A NEW dir (state/ itself is tracked: it holds the registry), so
+        # --untracked-files=normal would collapse it and hide the file.
+        (repo / "state" / "roadmap").mkdir()
+        (repo / "state" / "roadmap" / "index.yml").write_text("[]\n")
 
-        w = _by_id(weaknesses.read_weaknesses(), "git:uncommitted:state/devlog-bundle.jsonl")
+        w = _by_id(weaknesses.read_weaknesses(), "git:uncommitted:state/roadmap/index.yml")
         assert w["severity"] == "high"
         assert w["evidence"]["porcelain_xy"] == "??"
-        assert w["evidence"]["writer"] == "tools/devlog-compile.py"
+        assert w["evidence"]["writer"] == "tools/roadmap-seed.py"
 
     def test_operator_edits_rank_below_machine_writes(self, repo, weaknesses):
         (repo / QUEUE_REL).write_text(json.dumps(make_queue(pending=[("LOW", "x")])))

@@ -267,9 +267,11 @@ def test_the_reader_binds_nothing_of_its_own(reader_src):
 def test_every_machine_written_path_still_exists(reader_src):
     """The alarm is keyed on literal paths. Rename `nos_entity.py` and the
     reader silently stops noticing that genome-codegen's output is uncommitted —
-    a gate that fails open. This is the ratchet against that."""
-    block = reader_src.split("MACHINE_WRITTEN: dict[str, str] = {", 1)[1].split("}", 1)[0]
-    paths = re.findall(r'^\s*"([^"]+)":', block, re.MULTILINE)
+    a gate that fails open. This is the ratchet against that. The paths moved
+    from a dict in the reader to state/generated.yml (2026-10-07), which it reads."""
+    import yaml  # noqa: PLC0415
+    assert 'GENERATED_REGISTRY = "state/generated.yml"' in reader_src
+    paths = list(yaml.safe_load((REPO / "state/generated.yml").read_text(encoding="utf-8"))["files"])
     assert len(paths) >= 10, f"expected the full machine-written set, found {len(paths)}"
 
     missing = [p for p in paths if not (REPO / p).exists()]
