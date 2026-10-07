@@ -474,7 +474,8 @@ For each judge in the set, its **oracle paths** are forbidden:
 - **The engine's own source:** `files/anatomy/bone/**`, `state/judge-sets.yml`,
   `roles/pazny.bone/**`. *A loop that rewrites its own instructions is not
   improving, it is drifting.*
-- `docs/**` — including this file.
+- `docs/**` — including this file. `ssot/**` — the law, which moved out of
+  `docs/` (`ssot/doctrine/ssot.md` §3); promoting into it is a ruling.
 - `.claude/**`, `.github/workflows/**`.
 - **`state/manifest.yml`** — an added `domain_var` + `port_var` auto-derives a
   Traefik router (constraint E, REM-144). The loop may not create edge surface.

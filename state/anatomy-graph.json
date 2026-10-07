@@ -4326,7 +4326,7 @@
       "title": "Produce a spec or doctrine a builder can execute; write no code.",
       "tools": [
         "read",
-        "write (docs/plans, docs/doctrine)"
+        "write (docs/drafts)"
       ],
       "anchor": "02.02.04",
       "description": "Task type 'design' (state/task-types.yml): Produce a spec or doctrine a builder can execute; write no code."

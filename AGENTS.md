@@ -53,7 +53,7 @@ in that one place.
 
 ### `design` — Produce a spec or doctrine a builder can execute; write no code.
 
-- **tools**: `read`, `write (docs/plans, docs/doctrine)`
+- **tools**: `read`, `write (docs/drafts)`
 - **writes**: docs · **agent-run**
 - **done**: a plan/doctrine doc concrete enough that another agent can build from it.
 

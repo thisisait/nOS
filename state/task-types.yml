@@ -67,7 +67,7 @@ task_types:
 
   design:
     summary: Produce a spec or doctrine a builder can execute; write no code.
-    tools: [read, "write (docs/plans, docs/doctrine)"]
+    tools: [read, "write (docs/drafts)"]
     writes: docs
     needs_operator: false   # a genuine RULING (a doctrine choice) flips this true
     done: a plan/doctrine doc concrete enough that another agent can build from it.

@@ -132,6 +132,9 @@ ALWAYS_FORBIDDEN: tuple[Rule, ...] = (
     Rule("state/judge-sets.yml", "engine-source", "§5.2"),
     # The loop's own plugin skills and this contract.
     Rule("docs/**", "doctrine", "§5.2"),
+    # Law moved out of docs/ (ssot.md §3: in_force is law); SERE must not edit
+    # its doctrine (ssot/doctrine/loops.md §1). Promotion is a ruling.
+    Rule("ssot/**", "doctrine", "§5.2"),
     Rule(".claude/**", "agent-config", "§5.2"),
     Rule(".github/workflows/**", "ci-config", "§5.2"),
     # Constraint E, REM-144: a `domain_var` + `port_var` added here
