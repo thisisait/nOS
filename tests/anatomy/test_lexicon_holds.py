@@ -16,9 +16,10 @@ What it checks, all from artifacts, never from prose about them:
       map tools/body-plan-gen.py projects; test_body_plan_is_a_projection.py);
   (d) `retired_phrases` do not appear in the files models are told to trust
       (TRUSTED below: the briefs, doctrine, system and anatomy docs, skills,
-      agent prompts and agent.yml, plugin.yml, the apex ruling, genes, schemas,
-      state tables, the default config layers, and the docstrings of tools/ and
-      tests/anatomy/) — exact phrase, any case, across emphasis and line breaks;
+      agent prompts and agent.yml, plugin.yml, the apex ruling, the whole genome
+      but its lexicon, schemas, state tables, the default config layers, and the
+      docstrings of tools/ and tests/anatomy/) — exact phrase, any case, across
+      emphasis and line breaks;
   (e) every word that is not legacy or a proper name has a surface (or a
       written `no_surface_reason`), a `not` list and a `counter_example`
       (ssot/doctrine/body-plan.md §7: a word without one is a slogan).
@@ -216,7 +217,7 @@ TRUSTED = (
     "files/anatomy/agents/*/system.md", "files/anatomy/agents/*/agent.yml",
     "files/anatomy/plugins/*/plugin.yml", "files/anatomy/apex/ruling.yml",
     "state/*.yml", "state/habitat/*.yml", "state/fixtures/local-model-bench.yml",
-    "state/genome/genes/**", "state/schema/**", "state/digest-importers/**",
+    "state/genome/**", "state/schema/**", "state/digest-importers/**",
     "state/keap-tables/**", "default.credentials.yml")
 #: Only the docstrings of these are trusted text; code and comments are not.
 DOCSTRINGS = ("tools/*.py", "tests/anatomy/*.py")
@@ -250,7 +251,7 @@ def _trusted() -> tuple[tuple[str, str], ...]:
     """(repo path, text) of every trusted file. The lexicon, the glossary and
     history (archive, devlog, RELEASE.md, hidden_fees, the KEAP corpus,
     state/fixtures/fable) are outside TRUSTED: they may name retired senses."""
-    rels = _tracked(TRUSTED)
+    rels = [r for r in _tracked(TRUSTED) if r != str(LEXICON.relative_to(REPO))]
     _defaults()  # puts tools/ on sys.path; the default layers come from nos_identity
     import nos_identity  # noqa: PLC0415
     rels += [str(p.relative_to(REPO)) for p in nos_identity.default_layers()]
