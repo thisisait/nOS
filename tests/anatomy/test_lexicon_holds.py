@@ -62,8 +62,6 @@ PENDING_PHRASES: dict[str, int] = {
     'IMPRINT.md :: public organ': 1,
     'docs/systems/dolibarr/README.md :: praxis pack': 1,
     'files/anatomy/apex/ruling.yml :: cortex-query': 1,
-    'files/anatomy/apex/ruling.yml :: digest organ': 1,
-    'files/anatomy/apex/ruling.yml :: public organ': 2,
     'files/anatomy/docs/grafana-wiring-inventory.md :: vessel': 3,
     'files/anatomy/plugins/bookstack-base/plugin.yml :: vessel': 1,
     'files/anatomy/plugins/crm-hydrate-base/plugin.yml :: tendon': 1,
