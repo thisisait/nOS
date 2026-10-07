@@ -87,8 +87,8 @@ CI drift gate.
 **Files:**
 - `files/anatomy/wing/bin/export-openapi.php` (extend)
 - `files/anatomy/wing/bin/export-schema.php` (verify)
-- `files/anatomy/skills/contracts/{wing,bone}.openapi.yml`
-- `files/anatomy/skills/contracts/wing.db-schema.sql`
+- `files/anatomy/contracts/{wing,bone}.openapi.yml`
+- `files/anatomy/contracts/wing.db-schema.sql`
 
 **Deliverables:**
 - `--check-summaries` mode flips from advisory (P0.4) to error.

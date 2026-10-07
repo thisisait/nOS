@@ -27,7 +27,7 @@ import re
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-CONTRACT = REPO / "files/anatomy/skills/contracts/wing.db-schema.sql"
+CONTRACT = REPO / "files/anatomy/contracts/wing.db-schema.sql"
 EXPORTER = REPO / "files/anatomy/wing/bin/export-schema.php"
 
 sys.path.insert(0, str(REPO / "files/anatomy/bone"))

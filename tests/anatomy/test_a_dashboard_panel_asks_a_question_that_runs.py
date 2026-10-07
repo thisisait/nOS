@@ -34,7 +34,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PLUGIN = REPO / "files/anatomy/plugins/grafana-base/plugin.yml"
 DASH_DIR = REPO / "files/anatomy/plugins/grafana-base/provisioning/dashboards"
-SCHEMA = REPO / "files/anatomy/skills/contracts/wing.db-schema.sql"
+SCHEMA = REPO / "files/anatomy/contracts/wing.db-schema.sql"
 WING_UID = "wing_sqlite"
 
 

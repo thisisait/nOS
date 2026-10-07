@@ -15,7 +15,7 @@ declare(strict_types=1);
  *             Falls back to a fresh in-memory build via init-db.php +
  *             schema-extensions.sql + gdpr-seed.sql when the data dir does
  *             not exist (CI-friendly).
- *   --output  files/anatomy/skills/contracts/wing.db-schema.sql
+ *   --output  files/anatomy/contracts/wing.db-schema.sql
  *             relative to the repo root.
  *
  * The export reads ``sqlite_master`` for tables, indexes, views, and
@@ -37,7 +37,7 @@ $wingDir = dirname($here);
 $repoRoot = dirname($wingDir, 3);
 
 $dbPath = $args['db'] ?? (getenv('HOME') . '/wing/data/wing.db');
-$outPath = $args['output'] ?? ($repoRoot . '/files/anatomy/skills/contracts/wing.db-schema.sql');
+$outPath = $args['output'] ?? ($repoRoot . '/files/anatomy/contracts/wing.db-schema.sql');
 
 // Build a temp DB from scratch if the host DB is missing. This is the
 // CI path: spawn init-db.php via proc_open against a fresh dir, then dump.

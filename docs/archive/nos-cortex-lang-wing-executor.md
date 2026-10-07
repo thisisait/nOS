@@ -284,7 +284,7 @@ The flat `default` brain token and the KEAP `/agent/v1` token are both too stron
 
 ### 4.1 Schema — `api_tokens.scopes` + `tenant` (idempotent)
 
-`bin/init-db.php:286` and mirror `files/anatomy/skills/contracts/wing.db-schema.sql:131`. Additive, via the existing `$addMissingColumns` sweep:
+`bin/init-db.php:286` and mirror `files/anatomy/contracts/wing.db-schema.sql:131`. Additive, via the existing `$addMissingColumns` sweep:
 
 ```php
 $addMissingColumns($db, 'api_tokens', [ 'scopes' => 'TEXT', 'tenant' => 'TEXT' ]);
@@ -425,7 +425,7 @@ app/Core/RouterFactory.php               +2 routes (opcodes, execute), specific-
 app/Presenters/Api/BaseApiPresenter.php  +requireCortexScope() + nsAllowed() beside getActorId():68
 app/Model/TokenRepository.php:48         create() gains ?array $scopes, ?string $tenant; validate() returns them
 bin/init-db.php:286                      $addMissingColumns api_tokens += scopes, tenant (idempotent sweep)
-files/anatomy/skills/contracts/wing.db-schema.sql:131   mirror the schema delta
+files/anatomy/contracts/wing.db-schema.sql:131   mirror the schema delta
 bin/provision-token.php:71               --scopes= / --tenant= ; mint cortex-exec-readonly-<tenant>
 app/config/common.neon (services:)       register KeapCortexClient, CortexOpcodeRegistry (ToolRegistry-style
                                          factory ~137-153), CortexPhase2Resolver, ResourceRegistry,
@@ -459,4 +459,4 @@ Write verbs: `MUTATING_HANDLERS` + `WriteHandlerInterface`, `CortexConfirmGate` 
 ---
 
 ## 9. File anchors verified across the three source maps
-`app/Presenters/Api/BaseApiPresenter.php:68` (`getActorId`, anti-spoof), `app/Model/TokenRepository.php:48` (`create`), `bin/init-db.php:286` (`api_tokens`, no scope column today), `app/Core/RouterFactory.php` (`$api` block; parameterized poll at ~236), `app/Presenters/Api/PulsePresenter.php:267-317` (allowlist discipline to copy), `app/AgentKit/OperatorTrigger.php:64,176` (spawn + `generateUuidV4`, P3), `app/AgentKit/Telemetry/AuditEmitter.php:31,44-45` (`emit`, `actor_action_id` lineage), `app/AgentKit/Tools/McpWingTool.php` (loopback-bearer template), `app/Model/BoneClient.php` (host-bridge template), `app/Model/QdrantClient.php`, `app/config/common.neon:20-22` (Api mapping), `common.neon:137-153` (ToolRegistry factory), `files/anatomy/skills/contracts/wing.db-schema.sql:131`, `state/manifest.yml` + `apps/*.yml` (`svc:` source), `docs/archive/nos-cortex-lang.md`.
+`app/Presenters/Api/BaseApiPresenter.php:68` (`getActorId`, anti-spoof), `app/Model/TokenRepository.php:48` (`create`), `bin/init-db.php:286` (`api_tokens`, no scope column today), `app/Core/RouterFactory.php` (`$api` block; parameterized poll at ~236), `app/Presenters/Api/PulsePresenter.php:267-317` (allowlist discipline to copy), `app/AgentKit/OperatorTrigger.php:64,176` (spawn + `generateUuidV4`, P3), `app/AgentKit/Telemetry/AuditEmitter.php:31,44-45` (`emit`, `actor_action_id` lineage), `app/AgentKit/Tools/McpWingTool.php` (loopback-bearer template), `app/Model/BoneClient.php` (host-bridge template), `app/Model/QdrantClient.php`, `app/config/common.neon:20-22` (Api mapping), `common.neon:137-153` (ToolRegistry factory), `files/anatomy/contracts/wing.db-schema.sql:131`, `state/manifest.yml` + `apps/*.yml` (`svc:` source), `docs/archive/nos-cortex-lang.md`.

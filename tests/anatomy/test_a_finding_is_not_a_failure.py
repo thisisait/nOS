@@ -37,7 +37,7 @@ import sqlite3
 REPO = pathlib.Path(__file__).resolve().parents[2]
 DASH = (REPO / "files/anatomy/plugins/grafana-base/provisioning/dashboards"
         / "27-pulse.json")
-SCHEMA = REPO / "files/anatomy/skills/contracts/wing.db-schema.sql"
+SCHEMA = REPO / "files/anatomy/contracts/wing.db-schema.sql"
 
 
 def _queries() -> list[tuple[str, str]]:

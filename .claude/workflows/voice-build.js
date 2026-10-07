@@ -36,7 +36,7 @@ THIS ESTATE'S RULES, which outrank your taste:
 
 MEASURED, do not re-derive: qwen3:14b invented GET /api/v1/security/findings/
 open/count and 404'd; the answer exists as GET /api/v1/remediation, described,
-in files/anatomy/skills/contracts/wing.openapi.yml (98 paths, 117 operations,
+in files/anatomy/contracts/wing.openapi.yml (98 paths, 117 operations,
 117 with summaries). The genome is a schema with ZERO entity instances — not an
 index. tax: and rel: are the only cortex namespaces marked resolved.
 

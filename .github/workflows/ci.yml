@@ -295,7 +295,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────────
   # CONTRACTS DRIFT – regenerate Bone OpenAPI + Wing OpenAPI + Wing DDL
   # and diff against the committed artifacts under
-  # files/anatomy/skills/contracts/. Anatomy A5 (2026-05-04) — surfaces
+  # files/anatomy/contracts/. Anatomy A5 (2026-05-04) — surfaces
   # API/schema drift the moment a presenter or migration lands without
   # the artifact being refreshed.
   # ──────────────────────────────────────────────────────────────────────────
@@ -345,7 +345,7 @@ jobs:
           set -e
           fail=0
           for f in bone.openapi.yml wing.openapi.yml wing.db-schema.sql; do
-            committed="files/anatomy/skills/contracts/$f"
+            committed="files/anatomy/contracts/$f"
             rebuilt="/tmp/contracts-rebuild/$f"
             if ! diff -u "$committed" "$rebuilt"; then
               echo "::error::Drift detected in $f — regenerate via the export script and recommit."

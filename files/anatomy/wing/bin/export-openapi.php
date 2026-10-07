@@ -49,7 +49,7 @@ $repoRoot = dirname($wingDir, 3);
 
 $routerPath = $wingDir . '/app/Core/RouterFactory.php';
 $presentersDir = $wingDir . '/app/Presenters/Api';
-$outPath = $args['output'] ?? ($repoRoot . '/files/anatomy/skills/contracts/wing.openapi.yml');
+$outPath = $args['output'] ?? ($repoRoot . '/files/anatomy/contracts/wing.openapi.yml');
 
 // -- Step 1: parse the router. -------------------------------------------
 $router = file_get_contents($routerPath);

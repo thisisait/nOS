@@ -81,7 +81,7 @@ Before launching a parallel batch:
 2. **Forbidden-writes contract**: list the shared-spine files no worker
    may touch (`default.config.yml`, `state/manifest.yml`, `tasks/stacks/
    core-up.yml`, `files/anatomy/module_utils/load_plugins.py`,
-   `files/anatomy/skills/contracts/*`).
+   `files/anatomy/contracts/*`).
 3. **Non-overlapping scope**: every worker's file list must be disjoint
    from siblings'. If two units touch the same file (e.g. U5 + U8 both
    creating `nextcloud-base/plugin.yml`), explicitly mark it in BOTH

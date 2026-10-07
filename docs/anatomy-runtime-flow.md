@@ -335,7 +335,7 @@ the whole run as a coherent story.
 | Item | Where to read more |
 |---|---|
 | Bone events ingest with full audit | `files/anatomy/bone/clients/wing.py`, `files/anatomy/wing/app/Presenters/Api/EventsPresenter.php` |
-| Wing API surface (87 paths, contract-pinned) | `files/anatomy/skills/contracts/wing.openapi.yml` |
+| Wing API surface (87 paths, contract-pinned) | `files/anatomy/contracts/wing.openapi.yml` |
 | Pulse daemon + cron parser | `files/anatomy/pulse/pulse/daemon.py` |
 | Conductor agent profile + runner | `files/anatomy/agents/conductor/agent.yml`, `files/anatomy/scripts/pulse-run-agent.sh` |
 | Plugin loader aggregator (consumer_block, agent_profile, app_manifest) | `files/anatomy/module_utils/load_plugins.py`, `tools/aggregator-dry-run.py` |

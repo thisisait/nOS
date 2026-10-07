@@ -3,7 +3,7 @@
 Measured: `jeff` asked "kolik je otevřených bezpečnostních nálezů", called a
 made-up `/api/v1/security/findings/open/count`, got 404, reported it honestly.
 The real endpoint, `GET /api/v1/remediation` (`?status, ?severity, ?component,
-?limit`), is already described in `files/anatomy/skills/contracts/wing.openapi.yml`
+?limit`), is already described in `files/anatomy/contracts/wing.openapi.yml`
 (98 paths, 117 operations, 117/117 with a summary). The agent never saw it.
 
 ## 1. Tool or prompt block?

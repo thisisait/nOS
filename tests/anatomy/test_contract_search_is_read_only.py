@@ -3,7 +3,7 @@
 Measured 2026-08-30: qwen3:14b, asked how many security findings are open,
 invented GET /api/v1/security/findings/open/count and 404'd. The answer —
 GET /api/v1/remediation, with its query parameters — was already written in
-files/anatomy/skills/contracts/wing.openapi.yml, which nothing read.
+files/anatomy/contracts/wing.openapi.yml, which nothing read.
 
 The tool that closes that gap is handed out with NO data scope, and that is
 only safe while it stays incapable of data. Three things are pinned here:
@@ -38,7 +38,7 @@ WING = REPO / "files/anatomy/wing"
 TOOL = WING / "app/AgentKit/Tools/ContractSearchTool.php"
 INDEX = WING / "app/AgentKit/StaticIndex.php"
 AUTOLOAD = WING / "vendor/autoload.php"
-CONTRACTS = REPO / "files/anatomy/skills/contracts"
+CONTRACTS = REPO / "files/anatomy/contracts"
 
 
 def test_the_scope_list_names_no_data_scope() -> None:

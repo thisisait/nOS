@@ -43,7 +43,7 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "files/anatomy/wing/bin/backfill-event-chain.php"
-SCHEMA = REPO / "files/anatomy/skills/contracts/wing.db-schema.sql"
+SCHEMA = REPO / "files/anatomy/contracts/wing.db-schema.sql"
 
 pytestmark = pytest.mark.skipif(shutil.which("php") is None, reason="php not installed")
 

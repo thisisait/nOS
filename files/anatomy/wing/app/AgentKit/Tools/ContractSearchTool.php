@@ -13,7 +13,7 @@ use App\AgentKit\StaticIndex;
  * Measured 2026-08-30: `jeff`, asked how many security findings are open,
  * called a made-up GET /api/v1/security/findings/open/count and 404'd. The
  * real one — GET /api/v1/remediation — was already described, with its query
- * parameters, in files/anatomy/skills/contracts/wing.openapi.yml, which no
+ * parameters, in files/anatomy/contracts/wing.openapi.yml, which no
  * tool and no prompt ever read. This tool is the missing half in front of
  * mcp-wing-read: find the path, then call it.
  *
@@ -31,7 +31,10 @@ use App\AgentKit\StaticIndex;
 final class ContractSearchTool implements ToolInterface
 {
 	/** Repo-relative home of the auto-generated contracts. */
-	private const CONTRACTS_SUBDIR = 'files/anatomy/skills/contracts';
+	private const CONTRACTS_SUBDIR = 'files/anatomy/contracts';
+
+	/** Pre-2026-10 home; read only while NOS_REPO_ROOT is a checkout older than this code. */
+	private const LEGACY_CONTRACTS_SUBDIR = 'files/anatomy/skills/contracts';
 
 	private const SURFACES = [
 		'wing' => 'wing.openapi.yml',
@@ -147,6 +150,9 @@ final class ContractSearchTool implements ToolInterface
 		$entries = [];
 		foreach (self::SURFACES as $source => $basename) {
 			$file = $this->repoRoot . '/' . self::CONTRACTS_SUBDIR . '/' . $basename;
+			if (!is_readable($file)) {
+				$file = $this->repoRoot . '/' . self::LEGACY_CONTRACTS_SUBDIR . '/' . $basename;
+			}
 			if (!is_readable($file)) {
 				throw new \RuntimeException("missing or unreadable: {$file}");
 			}

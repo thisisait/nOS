@@ -283,7 +283,7 @@ def test_no_index_here_depends_on_a_swept_in_column():
     indexes init-db.php already creates AFTER their sweeps — init-db.php is
     this file's only executor, so the schema-extensions.sql copies were
     deleted and the ratchet with them. The exported contract
-    (`skills/contracts/wing.db-schema.sql`) is built from the finished DB, so
+    (`files/anatomy/contracts/wing.db-schema.sql`) is built from the finished DB, so
     the indexes survive in it — only their whitespace changed, because
     sqlite_master keeps the DDL as its author spelled it and init-db.php now
     IS the author (regenerated in the same commit)."""

@@ -64,7 +64,7 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 WING_DB = pathlib.Path.home() / "wing" / "app" / "data" / "wing.db"
-SCHEMA = REPO / "files/anatomy/skills/contracts/wing.db-schema.sql"
+SCHEMA = REPO / "files/anatomy/contracts/wing.db-schema.sql"
 
 # Where a query to wing.db can legitimately come from. Bone owns the loop_*
 # tables in the same file, which is why its tree is in here beside Wing's.

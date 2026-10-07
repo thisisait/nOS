@@ -95,7 +95,9 @@ SKIP_DIRS = {"node_modules", ".svelte-kit", "build", "dist", "vendor",
 #: bare § and tripped this ceiling.
 SKIP_FILES_PREFIX = ("files/anatomy/docs/", "files/anatomy/cortex/docs/",
                      "files/anatomy/cortex/README.md",
-                     "files/anatomy/skills/contracts/",
+                     "files/anatomy/contracts/bone.openapi.yml",
+                     "files/anatomy/contracts/wing.openapi.yml",
+                     "files/anatomy/contracts/wing.db-schema.sql",
                      "files/anatomy/face/src/lib/keap-contracts/")
 #: Compiled echoes of harvest already counted at the source. String-replacing
 #: them is a second cite of the same claim; regenerating them here would also

@@ -1,6 +1,6 @@
 """The committed Bone OpenAPI must be what the routes actually declare.
 
-MEASURED 2026-08-29. `files/anatomy/skills/contracts/bone.openapi.yml` was
+MEASURED 2026-08-29. `files/anatomy/contracts/bone.openapi.yml` was
 nineteen days stale: `session_uuid` had been added to the propose payload — the
 field the whole proposal-lineage join depends on — and the artifact an agent
 reads to learn Bone's shape did not have it. CI's "Contracts drift check" job
@@ -32,7 +32,7 @@ import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 EXPORT = REPO / "files/anatomy/bone/bin/export-openapi.py"
-COMMITTED = REPO / "files/anatomy/skills/contracts/bone.openapi.yml"
+COMMITTED = REPO / "files/anatomy/contracts/bone.openapi.yml"
 
 
 def _regenerate() -> str | None:
@@ -69,9 +69,9 @@ def test_the_committed_openapi_matches_the_routes() -> None:
         COMMITTED.read_text(encoding="utf-8").splitlines(),
         fresh.splitlines(), "committed", "regenerated", lineterm="", n=1)][:40]
     raise AssertionError(
-        "files/anatomy/skills/contracts/bone.openapi.yml is stale — a route "
+        "files/anatomy/contracts/bone.openapi.yml is stale — a route "
         "changed and the artifact agents read did not. Regenerate:\n"
         "  python3 files/anatomy/bone/bin/export-openapi.py "
-        "--output files/anatomy/skills/contracts/bone.openapi.yml\n\n"
+        "--output files/anatomy/contracts/bone.openapi.yml\n\n"
         + "\n".join(delta)
     )

@@ -1208,7 +1208,7 @@ def test_ledger_opens_no_socket_and_runs_no_subprocess():
 #: below and cannot disagree with it. It had to be added because the artifact
 #: called "the wing.db schema" described 41 of the 45 tables that exist, and
 #: three gates building fixtures from it had to import `ledger._DDL` themselves.
-GENERATED_CONTRACT = REPO / "files/anatomy/skills/contracts/wing.db-schema.sql"
+GENERATED_CONTRACT = REPO / "files/anatomy/contracts/wing.db-schema.sql"
 
 
 def test_loop_schema_is_declared_in_exactly_one_place():

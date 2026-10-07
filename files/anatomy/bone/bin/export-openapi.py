@@ -5,7 +5,7 @@ Anatomy A5 (2026-05-04) — first half of the contracts pair.
 
 FastAPI auto-generates the OpenAPI schema from route signatures and
 docstrings. We just dump it deterministically as YAML so it can be
-committed to ``files/anatomy/skills/contracts/`` and CI-drift-checked.
+committed to ``files/anatomy/contracts/`` and CI-drift-checked.
 
 The Bone app's auth bootstrap is tolerant of missing env vars
 (``_AUTH_READY = False`` path), so this script can run in CI without
@@ -14,7 +14,7 @@ needing Authentik / JWKS reachable.
 Usage:
     python3 bin/export-openapi.py [--output PATH]
 
-Default output: ``files/anatomy/skills/contracts/bone.openapi.yml``
+Default output: ``files/anatomy/contracts/bone.openapi.yml``
 relative to the repo root (assumes the script is run from the repo root
 or the bone source dir).
 """
@@ -52,7 +52,7 @@ def main() -> int:
     parser.add_argument(
         "--output",
         type=Path,
-        default=_repo_root() / "files/anatomy/skills/contracts/bone.openapi.yml",
+        default=_repo_root() / "files/anatomy/contracts/bone.openapi.yml",
         help="Destination YAML file (default: contracts/bone.openapi.yml).",
     )
     args = parser.parse_args()
