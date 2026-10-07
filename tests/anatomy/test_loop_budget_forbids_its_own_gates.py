@@ -289,6 +289,8 @@ def test_the_refusal_does_not_depend_on_history(proposer):
     ("roles/pazny.bone/tasks/main.yml", "engine-source"),
     ("state/judge-sets.yml", "engine-source"),
     ("docs/idea/11-agentic-loop-contract.md", "doctrine"),
+    ("ssot/doctrine/gates.md", "doctrine"),
+    ("ssot/INDEX.yml", "doctrine"),
     (".claude/plugins/nos-loop/skills/judge/SKILL.md", "agent-config"),
     (".github/workflows/ci.yml", "ci-config"),
     ("state/manifest.yml", "edge-surface"),
