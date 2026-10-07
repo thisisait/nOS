@@ -1044,7 +1044,7 @@ def probe_declared_gate_actually_exists(res: ScanResult) -> None:
             title=f"{sid} is marked oidc but its login page offers no Authentik",
             track="security",
             refs=f"roles/pazny.traefik/vars/main.yml traefik_auth_modes.{sid} · "
-                 f"127.0.0.1:{m.group(1)}/login · docs/idea (SSO trichotomy)",
+                 f"127.0.0.1:{port}/login · docs/idea (SSO trichotomy)",
             body=(
                 f"traefik_auth_modes.{sid} is `oidc`, which asserts the service's "
                 "OWN login page gates the user — and on that assertion the edge "
