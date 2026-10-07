@@ -1836,6 +1836,9 @@
 - slug: wing-tenants
   parent: ''
   track: platform
+- slug: wing-tier-followups
+  parent: wing-organ-without-face
+  track: security
 - slug: wordpress-client-portal
   parent: consulting-firm-deployment
   track: face
