@@ -199,6 +199,23 @@ def test_every_declared_tag_can_select_its_task():
     )
 
 
+#: The apps-stack tag and its retiring alias (roadmap row tier2-identifiers-alias).
+#: A tag is an API: operators type it and runbooks copy it, so the rename ships
+#: as one release of both spellings. Drop `tier2` here only with the release
+#: note that retires it.
+APPS_STACK_TAGS = ("manifest-app", "tier2")
+
+
+def test_the_apps_stack_answers_to_both_spellings():
+    walker = _analyse()
+    reached = {tag for where, _, tag in walker.alive if where == "tasks/stacks/apps-up.yml"}
+    missing = [t for t in APPS_STACK_TAGS if t not in reached]
+    assert not missing, (
+        f"--tags {missing} does not reach tasks/stacks/apps-up.yml; both spellings "
+        f"must select the apps stack until the release note drops the alias"
+    )
+
+
 def test_bone_only_invokes_tags_that_exist():
     """Bone drives the playbook by tag; a tag it names must be selectable.
 
