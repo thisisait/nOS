@@ -33,8 +33,9 @@ address through a redirect in `tools/doctrine-cite.py`, so history resolves.
 Harvest SHALL name `ssot/doctrine/<file>.md` or
 `nos-sot:doctrine/<file>#<id>`.
 INDEX `proposed:` names warehouse files that are still full originals.
-They are not law. Today: `agentkit.md`, `backoffice.md`, `n8n-packs.md`,
-`tissues.md` — promote when the operator rules on each.
+They are not law. Today: `agentkit.md`, `backoffice.md`, `n8n-packs.md` —
+promote when the operator rules on each. An article not yet ruled may sit in
+`ssot/doctrine/` with `in_force: false` (`body-plan.md`, `tissue.md`).
 Each article says its own force in front matter: `in_force: true|false`,
 `ruled` (date or null), `row` (roadmap slug or null), `gates` (the tests that
 cite it). The article's key overrides the realm's. A **PROPOSED** banner
