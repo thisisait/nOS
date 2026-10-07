@@ -1,4 +1,4 @@
-"""The importer-spine round-trip, offline half.
+"""The importer harness round-trip, offline half.
 
 Proves express → GATE → (plan the store) → reset on the reference CSV importer,
 without a live KEAP: run_importer stamps provenance and gates; the deterministic

@@ -80,7 +80,7 @@ def test_bad_checksum_unknown_ico_is_not_a_key():
     assert r["status"] == "review" and r["slug"] is None
 
 
-def test_bad_checksum_known_spine_ico_resolves():
+def test_bad_checksum_known_party_ico_resolves():
     """Printed 87654321 is checksum-invalid; the seed still owns that key."""
     idx = {"by_key": {("ICO", "87654321"): "synthetic-client-hejsek"}, "by_name": {}}
     r = ND.resolve_party({"kind": "org", "ico": "87654321"}, idx)

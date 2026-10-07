@@ -1,5 +1,5 @@
 """party-review-rung: review/ambiguous resolve_party outcomes become proposed
-party-spine rows born __visibility:system (not /ingest/v1/capture).
+party-table rows born __visibility:system (not /ingest/v1/capture).
 
 The KEAP peel+history door already exists; this gate pins the nOS composer so a
 review cannot mint a normal-visibility party. Device identifiers still mint none
@@ -31,7 +31,7 @@ def _item(ref, **resolve_kw):
     return {"ref": ref, "result": ND.resolve_party(ref, resolve_kw.pop("index", EMPTY), **resolve_kw)}
 
 
-def _spine_rows(det: dict):
+def _party_rows(det: dict):
     rows = []
     for table in ("party", "party-tax-identity", "party-address", "party-contact"):
         rows.extend(det.get(table) or [])
@@ -51,8 +51,8 @@ def test_review_and_ambiguous_mint_system_visibility_not_normal():
     assert weak_org["result"]["status"] == "review"
 
     det = ND.compose_party_review([person, amb, weak_org], batch_id=BATCH)
-    rows = _spine_rows(det)
-    assert rows, "review/ambiguous must become proposed spine rows"
+    rows = _party_rows(det)
+    assert rows, "review/ambiguous must become proposed party rows"
     assert "captures" not in det and "proposals" not in det
     for r in rows:
         assert r.get("__visibility") == "system", r
@@ -74,7 +74,7 @@ def test_device_identifier_still_mints_no_party():
     ]
     items = [_item(r) for r in refs]
     det = ND.compose_party_review(items, batch_id="device-b")
-    assert _spine_rows(det) == []
+    assert _party_rows(det) == []
     assert not det.get("party")
 
 
@@ -88,7 +88,7 @@ def test_synthetic_and_resolved_do_not_enter_the_rung():
     assert hit["result"]["status"] == "resolved"
     assert created["result"]["status"] == "create"
     det = ND.compose_party_review([synth, hit, created], batch_id=BATCH)
-    assert _spine_rows(det) == []
+    assert _party_rows(det) == []
 
 
 def test_review_bundle_is_gated_deterministic_not_capture():

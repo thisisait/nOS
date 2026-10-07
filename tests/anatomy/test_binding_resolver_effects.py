@@ -399,7 +399,7 @@ def test_an_armed_binding_resolves_from_registry_and_secrets(verdicts):
 
 
 def test_the_api_path_builds_the_bound_client(verdicts):
-    """The spine redirect's core claim, measured at construction.
+    """The 2026-08-15 direction's core claim, measured at construction.
 
     A MiniMax-served run is the ANTHROPIC adapter (the SDK speaks the wire
     protocol; the genome's provider enum stays untouched) built with the

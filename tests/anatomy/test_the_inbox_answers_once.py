@@ -1,7 +1,7 @@
 """An agent's question may be answered once, and the loser must be told.
 
-WHAT THIS COVERS. `agent_questions` is the write half of the A9 notification
-spine (roadmap row `agents-inbox`, filed 2026-08-08 after three independent
+WHAT THIS COVERS. `agent_questions` is the write half of the A9 nervous
+system (roadmap row `agents-inbox`, filed 2026-08-08 after three independent
 technology audits — openworker, cloudflare-os, channels-sdk — converged on the
 same missing organ: an agent can broadcast and cannot ASK).
 

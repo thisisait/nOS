@@ -1,6 +1,7 @@
 """Two clients inside a bound session are built UNBOUND. Today that is harmless.
 
-MEASURED 2026-08-15, reading `Runner.php` after the spine redirect made the
+MEASURED 2026-08-15, reading `Runner.php` after the operator's 2026-08-15 direction (Claude is one of
+several permitted orchestrators) made the
 `anthropic` provider bindable. Three `fromUri` call sites:
 
     :155  primary  — receives $decision->binding          ✔

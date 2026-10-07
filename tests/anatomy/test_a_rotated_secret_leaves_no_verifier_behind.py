@@ -38,7 +38,7 @@ ring, it is a stale copy of a rotated key, not an operator override.**
 WHY IT WAS INVISIBLE FOR AS LONG AS IT WAS. The job was honest — it exits 2 and
 prints UNDELIVERED, exactly as the estate's rule requires. Nobody read it,
 because the channel that would have carried the complaint is the channel that
-was down. This is the failure mode a notification spine has and a log does not,
+was down. This is the failure mode a nervous system has and a log does not,
 and it argues for the reader being somewhere other than the thing being read.
 
 WHAT THIS GATE DOES NOT COVER, stated so nobody reads a green run as more than
