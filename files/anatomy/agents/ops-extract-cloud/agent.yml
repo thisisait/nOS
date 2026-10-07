@@ -60,7 +60,7 @@ gdpr:
     Measuring how well a HOSTED model extracts fields from short business
     documents, against the identical task the local twin runs, so the estate
     can decide whether the cloud is worth the transfer. The inputs are the
-    hand-written fixtures in state/ops-task-families/, not customer documents
+    hand-written fixtures in state/fixtures/ops-task-families/, not customer documents
     — which is what makes this transfer proportionate to run at all.
   legal_basis: legitimate_interests
   data_categories: [business_document_fixtures]

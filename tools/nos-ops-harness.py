@@ -15,7 +15,7 @@ ran is UNKNOWN in the report — never a pass, never a blank.
 Usage: tools/nos-ops-harness.py --family <dir> [--agent <name>] [--registry <yml>]
        [--out <json>] [--threshold 0.9] [--timeout 180] [--limit N] [--repeat N]
 
-    tools/nos-ops-harness.py --family state/ops-task-families/invoice-extract \\
+    tools/nos-ops-harness.py --family state/fixtures/ops-task-families/invoice-extract \\
                              --agent ops-extract
 
 Reads only; exits 0 whatever it finds. Arming stays the operator's: a backend
@@ -342,7 +342,7 @@ def main() -> int:
     # of them saying so — the estate's signature defect wearing a filename.
     # The default overwrites; a run that supersedes a measurement should
     # replace it, not sit beside it.
-    out = args.out or (REPO / "state" / "ops-harness" / f"{report['family']}.json")
+    out = args.out or (REPO / "state" / "fixtures" / "ops-harness" / f"{report['family']}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2, sort_keys=False) + "\n", encoding="utf-8")
     print(json.dumps(report["boundary"], indent=2))

@@ -52,7 +52,7 @@ gdpr:
     Measuring how well a locally-hosted model triages the estate's own
     reported weaknesses, so the loop can eventually stop spending a model run
     on a row no patch can close. The inputs are the fixtures in
-    state/ops-task-families/weakness-triage/ — real findings, rewritten by
+    state/fixtures/ops-task-families/weakness-triage/ — real findings, rewritten by
     hand with their source ids removed.
   legal_basis: legitimate_interests
   data_categories: [own_infrastructure_findings]

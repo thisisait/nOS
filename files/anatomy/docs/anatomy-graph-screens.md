@@ -63,7 +63,7 @@ operator-only, and a job silently gaining a push to the public trunk is
 exactly what `test_github_origin_has_no_automated_writer` refuses.
 
 Every node also carries `anchor` (a KEAP taxonomy anchor id, validated
-against `state/fable/taxonomy-bundle.json` — a dangling anchor is refusal
+against `state/fixtures/fable/taxonomy-bundle.json` — a dangling anchor is refusal
 class 1 applied to the import) and `description` (a one-line body worth
 embedding). See §7 for why.
 
@@ -313,7 +313,7 @@ inside KEAP so custom views can SCOPE it — by service (anchor), by string
 the artifact and are now in it:
 
 - **`anchor` per node** — a KEAP taxonomy anchor id from the committed
-  362-anchor spine (`state/fable/taxonomy-bundle.json`). Without one every
+  362-anchor spine (`state/fixtures/fable/taxonomy-bundle.json`). Without one every
   imported node is an `orphan-object` — measured: keap-lint reported 26/27
   fixture findings as exactly that, "invisible in the universe". Per-kind
   defaults refined per category where the branch is unambiguous

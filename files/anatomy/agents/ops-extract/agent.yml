@@ -56,7 +56,7 @@ gdpr:
     Measuring how well a locally-hosted model extracts fields from short
     business documents, so the estate can decide which model size its ops plane
     needs. The inputs are the hand-written fixtures in
-    state/ops-task-families/, not customer documents.
+    state/fixtures/ops-task-families/, not customer documents.
   legal_basis: legitimate_interests
   data_categories: [business_document_fixtures]
   data_subjects: [none]

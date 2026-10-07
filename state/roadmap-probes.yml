@@ -124,7 +124,7 @@ local-llm-model: >-
   test -d files/anatomy/models
 
 local-llm-bench: >-
-  test -x tools/local-model-bench.py && test -f state/local-model-bench.yml
+  test -x tools/local-model-bench.py && test -f state/fixtures/local-model-bench.yml
 
 # CAUGHT MYSELF A THIRD TIME. The first version of this probe asserted that the
 # installed ollama ships `llama-server` — and came back `confirmed`, because it

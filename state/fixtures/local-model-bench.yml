@@ -1,5 +1,5 @@
 # =============================================================================
-# state/local-model-bench.yml — the task set `tools/local-model-bench.py` runs
+# state/fixtures/local-model-bench.yml — the task set `tools/local-model-bench.py` runs
 # against every candidate local model.
 #
 # WHY THESE TASKS AND NOT A LEADERBOARD. We do not need to know which model is

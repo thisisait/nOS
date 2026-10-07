@@ -1139,7 +1139,7 @@ commit metadata.
 - **Security measures:** platform baseline (see above)
 
 #### ops-extract — `agent_ops-extract`
-- **Purpose:** Measuring how well a locally-hosted model extracts fields from short business documents, so the estate can decide which model size its ops plane needs. The inputs are the hand-written fixtures in state/ops-task-families/, not customer documents.
+- **Purpose:** Measuring how well a locally-hosted model extracts fields from short business documents, so the estate can decide which model size its ops plane needs. The inputs are the hand-written fixtures in state/fixtures/ops-task-families/, not customer documents.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `none`
 - **Data categories:** `business_document_fixtures`
@@ -1150,7 +1150,7 @@ commit metadata.
 - **Security measures:** platform baseline (see above)
 
 #### ops-extract-cloud — `agent_ops-extract-cloud`
-- **Purpose:** Measuring how well a HOSTED model extracts fields from short business documents, against the identical task the local twin runs, so the estate can decide whether the cloud is worth the transfer. The inputs are the hand-written fixtures in state/ops-task-families/, not customer documents — which is what makes this transfer proportionate to run at all.
+- **Purpose:** Measuring how well a HOSTED model extracts fields from short business documents, against the identical task the local twin runs, so the estate can decide whether the cloud is worth the transfer. The inputs are the hand-written fixtures in state/fixtures/ops-task-families/, not customer documents — which is what makes this transfer proportionate to run at all.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `none`
 - **Data categories:** `business_document_fixtures`
@@ -1161,7 +1161,7 @@ commit metadata.
 - **Security measures:** platform baseline (see above)
 
 #### ops-triage — `agent_ops-triage`
-- **Purpose:** Measuring how well a locally-hosted model triages the estate's own reported weaknesses, so the loop can eventually stop spending a model run on a row no patch can close. The inputs are the fixtures in state/ops-task-families/weakness-triage/ — real findings, rewritten by hand with their source ids removed.
+- **Purpose:** Measuring how well a locally-hosted model triages the estate's own reported weaknesses, so the loop can eventually stop spending a model run on a row no patch can close. The inputs are the fixtures in state/fixtures/ops-task-families/weakness-triage/ — real findings, rewritten by hand with their source ids removed.
 - **Legal basis (Art. 6):** `legitimate_interests`
 - **Data subjects:** `none`
 - **Data categories:** `own_infrastructure_findings`

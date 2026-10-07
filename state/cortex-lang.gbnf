@@ -4,7 +4,7 @@
 # the opcode does not accept.
 #
 # WHY THIS FILE EXISTS. Roadmap row `local-llm-grammar` (ordinal 3), measured
-# 2026-08-08: hermes3:8b scored 2/6 on state/local-model-bench.yml and THREE OF
+# 2026-08-08: hermes3:8b scored 2/6 on state/fixtures/local-model-bench.yml and THREE OF
 # THE FOUR FAILURES WERE PUNCTUATION, not comprehension — the pipeline shape was
 # right and the parentheses were missing. Constrained decoding converts that
 # class from "rarer with a better prompt" to "impossible".
@@ -23,7 +23,7 @@
 # WHAT IT IS DERIVED FROM. Every production is transcribed from the parser that
 # judges the output — `files/anatomy/cortex/server/cortex-lang.ts` — and every
 # opcode's arity and namespace set from `cortex-opcodes.ts` CORTEX_OPCODES.
-# NOT from the primer in `state/local-model-bench.yml`: the two differ on
+# NOT from the primer in `state/fixtures/local-model-bench.yml`: the two differ on
 # purpose, because the primer teaches 7 namespaces and 14 opcodes (a prompt that
 # teaches the whole grammar measures the prompt), while the registry publishes
 # 8 and 15. A grammar written from the primer would forbid `agent:` and

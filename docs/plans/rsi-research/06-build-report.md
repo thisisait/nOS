@@ -261,7 +261,7 @@ correct and is also why it currently answers nothing:
 
 ```bash
 NOS_ARMED_BACKENDS="<backend>" tools/nos-ops-harness.py \
-  --family state/ops-task-families/invoice-extract \
+  --family state/fixtures/ops-task-families/invoice-extract \
   --agent <one_shot-agent-name>
 ```
 

@@ -74,7 +74,7 @@ import digest_absorb  # noqa: E402
 import nos_digest  # noqa: E402
 
 FIXTURE = REPO / "state" / "fixtures" / "consulting-firm"
-STATE = REPO / "state" / "pipeline-exercise"
+STATE = REPO / "state" / "fixtures" / "pipeline-exercise"
 PY = sys.executable
 
 

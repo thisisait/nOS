@@ -18,7 +18,7 @@ names this exactly: "the opcode registry and the validator as a free oracle."
 An oracle that costs nothing is what makes a 4B candidate worth a try instead of
 reaching for 32B by default.
 
-WHAT IS SCORED (state/local-model-bench.yml carries the tasks)
+WHAT IS SCORED (state/fixtures/local-model-bench.yml carries the tasks)
 
     valid    the validator accepted the chain              hard pass/fail
     opcode   it used the opcode the task asked for         did it understand?
@@ -58,7 +58,7 @@ import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-TASKS = REPO / "state/local-model-bench.yml"
+TASKS = REPO / "state/fixtures/local-model-bench.yml"
 GRAMMAR = REPO / "state/cortex-lang.gbnf"
 OLLAMA = "http://127.0.0.1:11434"
 KEAP = "http://127.0.0.1:8091"
@@ -227,7 +227,7 @@ class GrammarServer:
                 self.proc.kill()
 
     def generate(self, system: str, prompt: str, timeout: int) -> dict:
-        # ChatML, because every candidate in state/local-model-bench.yml uses it.
+        # ChatML, because every candidate in state/fixtures/local-model-bench.yml uses it.
         body = {
             "prompt": (f"<|im_start|>system\n{system}<|im_end|>\n"
                        f"<|im_start|>user\n{prompt}<|im_end|>\n"

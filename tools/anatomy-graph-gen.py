@@ -208,9 +208,9 @@ SSOT_INDEX = REPO / "ssot" / "INDEX.yml"
 APEX_RULING = REPO / "files" / "anatomy" / "apex" / "ruling.yml"
 TISSUE_LOADER = REPO / "tools" / "tissue-status.py"
 
-TAXONOMY_BUNDLE = REPO / "state" / "fable" / "taxonomy-bundle.json"
+TAXONOMY_BUNDLE = REPO / "state" / "fixtures" / "fable" / "taxonomy-bundle.json"
 
-#: KEAP taxonomy anchors (ids from state/fable/taxonomy-bundle.json `anchor`,
+#: KEAP taxonomy anchors (ids from state/fixtures/fable/taxonomy-bundle.json `anchor`,
 #: the committed 362-anchor spine). Every node gets one so a KEAP import is
 #: never 179 `orphan-object` findings — keap-lint measured 26/27 findings as
 #: exactly that against unanchored fixtures ("invisible in the universe").

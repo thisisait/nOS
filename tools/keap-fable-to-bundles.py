@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Transform the fable ontology-review output into per-domain import bundles.
 
-Reads state/fable/ontology-review-output.json (fable's L3 pillars + L4 blocks
+Reads state/fixtures/fable/ontology-review-output.json (fable's L3 pillars + L4 blocks
 for the 8 empty core-physics branches 01.01.03-.10) and emits one
 deploy/<key>-import.json per branch in the shape import-domain.mjs consumes:
 
@@ -20,7 +20,7 @@ Usage: python3 tools/keap-fable-to-bundles.py [<fable-output.json>] [<app-deploy
 """
 import sys, json, os
 
-FABLE = sys.argv[1] if len(sys.argv) > 1 else "state/fable/ontology-review-output.json"
+FABLE = sys.argv[1] if len(sys.argv) > 1 else "state/fixtures/fable/ontology-review-output.json"
 DEPLOY = sys.argv[2] if len(sys.argv) > 2 else \
     "/Users/pazny/projects/knowledge-explorer-and-preserver/deploy"
 

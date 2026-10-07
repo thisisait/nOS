@@ -34,7 +34,7 @@
 # the hosted model" is a statement about EXTRACTION and false as a general
 # claim. See that family's header.
 #
-# Reports in state/ops-harness/ are the LAST run, never the best one.
+# Reports in state/fixtures/ops-harness/ are the LAST run, never the best one.
 name: invoice-extract
 # The agent whose one_shot schema these labels are written against. The
 # harness takes --agent as a flag, so a family could be scored against a
