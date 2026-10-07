@@ -107,9 +107,9 @@ before it touches anything.
 - **OpenHuman — OPEN operator decision.** Row `rel-016` MUST (4) still says
   "installed by the role and passing its five acceptance questions". The role
   exists (every profile configured, session and MCP by the vendor CLI, a
-  reader `openhuman-status`), but this week the work was **parked**: upstream
-  resets its onboarding on each start, so the five questions cannot be
-  answered yet. The headless core (`apps/openhuman.yml.draft`) is a draft.
+  reader `openhuman-status`), but on 2026-10-06 the work was **parked**: a
+  local login resets the app's onboarding flag every time (upstream defect,
+  row `openhuman-upstream-prs`), so the five questions cannot be answered yet. The headless core (`apps/openhuman.yml.draft`) is a draft.
   The operator chooses: keep MUST (4) and hold the tag, or re-scope `rel-016`
   to "role present, acceptance deferred to v0.17". This note does not decide.
 - **Wing → face migration.** The face is a core organ now, but Wing stays the
