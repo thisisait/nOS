@@ -11,7 +11,7 @@
 > + D-series (central authentik retirement) + β1 (SSO trichotomy)
 > shipped post-Lane-D. **Forward lanes:** B (Pulse Wing API), C (A5
 > contracts), E (A7 gitleaks), F (A8 conductor), G (A9 notifications),
-> H (A10 audit). Worker doctrine: [`docs/multi-agent-batch.md`](../multi-agent-batch.md).
+> H (A10 audit). Worker doctrine: [`docs/archive/multi-agent-batch.md`](multi-agent-batch.md).
 
 ---
 
@@ -33,7 +33,7 @@ Push pending commits if depth > 30 — keeps each worker close to origin.
 ### Hard rules
 
 - **One agent owns one surface** — no parallel edits to the same file set.
-- **Worker prompts use relative paths only** (per `docs/multi-agent-batch.md`)
+- **Worker prompts use relative paths only** (per `docs/archive/multi-agent-batch.md`)
   — absolute paths bypass git worktree isolation.
 - **No A8 production loop before A5 contracts** — conductor needs
   reliable schemas.
@@ -241,7 +241,7 @@ For Wave 4 ceremony only: full `ansible-playbook main.yml -K -e blank=true`.
 
 ## 5. Worker prompt template
 
-Per `docs/multi-agent-batch.md` doctrine. Worker MUST:
+Per `docs/archive/multi-agent-batch.md` doctrine. Worker MUST:
 
 1. Open with **relative paths only** (not `/Users/.../nOS/...`) — git
    worktree isolation is filesystem-isolated, not namespace-isolated.

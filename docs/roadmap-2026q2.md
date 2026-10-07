@@ -1009,7 +1009,7 @@ trichotomy doctrine.
   compose-extension is authoritative).
 
 **Artifacts:** `docs/native-sso-survey.md`, `docs/upstream-pr-opportunities.md`,
-`docs/archive/aggregator-parity-report.md`, `docs/multi-agent-batch.md`,
+`docs/archive/aggregator-parity-report.md`, `docs/archive/multi-agent-batch.md`,
 `docs/archive/track-q-residue-analysis.md`, `tools/aggregator-dry-run.py`,
 `tools/d12-annotate-plugins.py`.
 

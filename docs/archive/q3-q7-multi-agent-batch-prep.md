@@ -1,6 +1,6 @@
 # Q3-Q7 plugin batch — multi-agent run prep
 
-> **Status:** ready to launch. Pin `docs/multi-agent-batch.md` doctrine
+> **Status:** ready to launch. Pin `docs/archive/multi-agent-batch.md` doctrine
 > first. This file is the per-batch scope + worker prompt template +
 > e2e recipe.
 >
@@ -44,7 +44,7 @@ PRs target master sequentially.
 
 ## Per-worker prompt template
 
-Copy the doctrine envelope from `docs/multi-agent-batch.md` then append
+Copy the doctrine envelope from `docs/archive/multi-agent-batch.md` then append
 this body. Each worker gets the same envelope; only the GOAL section
 changes.
 
@@ -53,7 +53,7 @@ You are worker {WORKER-ID} in the nOS Q3-Q7 plugin batch. Plan:
 docs/q3-q7-multi-agent-batch-prep.md (open this first).
 
 WORKTREE — CRITICAL:
-{copy verbatim from docs/multi-agent-batch.md "Worker-prompt doctrine"}
+{copy verbatim from docs/archive/multi-agent-batch.md "Worker-prompt doctrine"}
 
 GOAL:
 Create plugin manifests for these roles: {ROLE-LIST}. For each one:
@@ -134,7 +134,7 @@ grep "<service>:" /Volumes/SSD1TB/traefik/conf.d/services.yml
 Before launching the batch:
 
 - [ ] Push current 75+ commits to origin
-- [ ] Confirm `docs/multi-agent-batch.md` worker-prompt doctrine is the
+- [ ] Confirm `docs/archive/multi-agent-batch.md` worker-prompt doctrine is the
       latest (no patches since 2026-05-04 retro)
 - [ ] Pause both Pulse jobs (`gitleaks:nightly-scan`,
       `conductor:self-test-001`) to avoid spam during the batch

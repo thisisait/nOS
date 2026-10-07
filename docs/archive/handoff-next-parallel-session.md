@@ -10,7 +10,7 @@
 > See [`docs/active-work.md`](../active-work.md) for the current pointer.
 > This file is kept as the as-shipped record of the session's intent.
 
-**Read this first. Then load `CLAUDE.md` and `docs/multi-agent-batch.md` before spawning workers.**
+**Read this first. Then load `CLAUDE.md` and `docs/archive/multi-agent-batch.md` before spawning workers.**
 
 This document hands off the nOS roadmap to the next session. It assumes you (the next Claude) start fresh and need the full context to pick up cleanly. Date written: 2026-05-07 evening, after A14.2.
 
@@ -78,7 +78,7 @@ python3 -m pytest tests/anatomy/test_plugin_loader.py tests/anatomy/test_native_
 
 Both must pass before the worker commits.
 
-**Parallelism:** spawn 5–8 workers (per `docs/multi-agent-batch.md` doctrine — never more than that until a 3-worker trial succeeds, and **mandate relative paths in the worker prompt** to avoid the cross-leak surfaced in the Phase 1 retro). Group plugins by quadrant (Q3 / Q4 / Q5 / Q6 / Q7), one worker per quadrant. Each worker handles ~3–5 plugins.
+**Parallelism:** spawn 5–8 workers (per `docs/archive/multi-agent-batch.md` doctrine — never more than that until a 3-worker trial succeeds, and **mandate relative paths in the worker prompt** to avoid the cross-leak surfaced in the Phase 1 retro). Group plugins by quadrant (Q3 / Q4 / Q5 / Q6 / Q7), one worker per quadrant. Each worker handles ~3–5 plugins.
 
 **Worker prompt template (use verbatim, paths relative):**
 
@@ -136,7 +136,7 @@ Pass = first non-operator-identity end-to-end write to `wing.db`. Track P / Trac
    - The "Known Tech Debt" section ends at A14.2 — append your new entries here when you commit.
    - "Apple Silicon Constraints" — ARM64 only.
 
-2. **`docs/multi-agent-batch.md`** — multi-agent batch doctrine pinned after the cross-leak retro. **Mandatory worker-prompt template** + relative-paths rule. **DO NOT skip this.**
+2. **`docs/archive/multi-agent-batch.md`** — multi-agent batch doctrine pinned after the cross-leak retro. **Mandatory worker-prompt template** + relative-paths rule. **DO NOT skip this.**
 
 3. **`docs/anatomy-runtime-flow.md`** — Bone/Wing/Pulse/Conductor data-flow diagram. Helps reason about which surface a fix touches.
 
@@ -170,7 +170,7 @@ Pass = first non-operator-identity end-to-end write to `wing.db`. Track P / Trac
 When you're ready:
 
 1. Pick the track (A or B) and the quadrants/items in scope for this session.
-2. Read `docs/multi-agent-batch.md` end-to-end.
+2. Read `docs/archive/multi-agent-batch.md` end-to-end.
 3. Decide how many workers (≤8; ≤5 until you have a 3-worker trial pass).
 4. Write each worker's prompt using the template in §Track A or §Track B above. **Relative paths only.** **CWD pre-flight assertion in every prompt.**
 5. Spawn all workers in a single `Agent` tool-call message (multiple tool_use blocks in one assistant turn).
