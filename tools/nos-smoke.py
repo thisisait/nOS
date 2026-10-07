@@ -10,7 +10,7 @@ table of pass/fail/warn results, exits with the count of failures
 Usage:
   ./tools/nos-smoke.py                       # all enabled endpoints
   ./tools/nos-smoke.py --tier 1              # only Tier-1 (manifest-derived)
-  ./tools/nos-smoke.py --tier 2              # only Tier-2 apps
+  ./tools/nos-smoke.py --tier 2              # only manifest apps
   ./tools/nos-smoke.py --failed-only         # print only non-OK rows
   ./tools/nos-smoke.py --json                # JSONL on stdout (one event per line)
   ./tools/nos-smoke.py --jsonl ~/.nos/events/smoke.jsonl

@@ -44,7 +44,7 @@ outside tool (for example an end-user assistant) can be pointed at.
 
 One file per tissue: `state/tissues/<name>.tissue.yml`, validated by
 `state/genome/tissue.schema.json`. There is no third format: `meta:` is the
-Tier-2 app manifest's own block (`state/schema/app.schema.json`, referenced,
+app manifest's own block (`state/schema/app.schema.json`, referenced,
 not copied) plus a `license:`. The rest are lists of existing ids:
 
 | key | id | resolves against |

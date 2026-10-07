@@ -24,7 +24,7 @@ version: 0.1.0
 description: |
   Wiring layer for Traefik (edge reverse proxy). Two providers: file
   provider serves Tier-1 services from a YAML auto-derived from
-  state/manifest.yml; Docker provider serves Tier-2 apps via labels on
+  state/manifest.yml; Docker provider serves manifest apps via labels on
   the apps stack. Authentik forward-auth is a file-provider middleware
   (authentik@file) that Tier-1 routers + Tier-2 labels reference. See
   docs/traefik-primary-proxy.md for the full SSO/middleware contract.

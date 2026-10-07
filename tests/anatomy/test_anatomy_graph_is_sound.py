@@ -558,7 +558,7 @@ def test_github_origin_has_no_automated_writer(committed):
 def test_every_registry_row_has_a_node_and_bindings_resolve(committed):
     """43 rows in state/tofu-authentik-services.yml on 2026-08-06. Every slug
     gets an authentik: node; slugs that map onto a manifest service carry the
-    binding edge; the ones that do not (Tier-2 apps + uninstalled) say
+    binding edge; the ones that do not (manifest apps + uninstalled) say
     `service: null` rather than pointing at nodes that do not exist."""
     import yaml
     reg = yaml.safe_load(
@@ -577,7 +577,7 @@ def test_every_registry_row_has_a_node_and_bindings_resolve(committed):
             assert f"service:{node['service']}" in committed["nodes"]
     unmatched = sorted(s for s in slugs
                        if committed["nodes"][f"authentik:{s}"]["service"] is None)
-    # Measured 2026-08-06: Tier-2 apps (documenso/qdrant/roundcube/twofauth),
+    # Measured 2026-08-06: manifest apps (documenso/qdrant/roundcube/twofauth),
     # spacetimedb (excluded service). A new unmatched slug is a new gap to
     # look at, not an error — but shrinkage below the known set means a
     # binding was lost, which is.

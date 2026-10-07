@@ -31,7 +31,7 @@ OUT = REPO / "state" / "tofu-authentik-services.yml"
 
 
 def _load_app_manifests() -> list[dict]:
-    """Tier-2 apps/<name>.yml harvest — mirrors nos_plugin_loader.py (X.3).
+    """apps/<name>.yml harvest — mirrors nos_plugin_loader.py (X.3).
 
     The live loader passes app_manifests to run_aggregators, so the blueprint
     path always covered Tier-2 authentik: blocks. This generator originally
@@ -75,7 +75,7 @@ def main() -> int:
         if not slug:
             continue
         # Dedupe by slug — a service can appear via BOTH a Tier-1 plugin and a
-        # Tier-2 app manifest. Aggregation order is plugins
+        # app manifest. Aggregation order is plugins
         # first, so the plugin block wins; the tfvars map would otherwise
         # silently keep the LAST entry.
         if slug in seen_slugs:

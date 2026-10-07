@@ -7,16 +7,16 @@
 # ad-hoc dumps across 20 plugins. Keys (`id`) match the DPA register /
 # gdpr_processing rows (`svc_<plugin>` or `app_<manifest>`); `flag` is the
 # install toggle (`always` = always-on stack; `apps_runner_enabled` for
-# Tier-2 manifests).
+# app manifests).
 #
 # COVERAGE = 21 per-user-PII service plugins (native_oidc + header_oidc carrying
 # a gdpr: block) + 2 anchors (svc_authentik identity + svc_bluesky-pds AT-proto)
-# + 3 Tier-2 apps with a gdpr: block (documenso, twofauth, roundcube;
+# + 3 manifest apps with a gdpr: block (documenso, twofauth, roundcube;
 # EspoCRM retired to apps/espocrm.yml.draft 2026-09-21; Qdrant retired
 # 2026-10-02) = 27 entries. This is byte-for-byte the per-user-PII set
 # the erasure map covers (erasure-minus-the-5-residual-stores) — Art-15 access
 # mirrors Art-17 erasure. Plugin forward_auth services remain out of scope;
-# Tier-2 apps that keep per-user PII behind a forward_auth gate are in scope.
+# manifest apps that keep per-user PII behind a forward_auth gate are in scope.
 # The backend/residual stores (Redis sessions, RustFS
 # backups, wing.db, Loki/Tempo) that the erasure map additionally reaches are
 # NOT extracted by a single-subject access export, so they are intentionally
@@ -253,7 +253,7 @@ services:
     note: "Resolve did from @<handle>.bsky.<tld>, then com.atproto.sync.getRepo
            (CAR export of the subject's repo) via the PDS admin/auth token."
 
-  # ── Tier-2 apps (app_<name> — DPA records_from_app_manifests) ────────────
+  # ── manifest apps (app_<name> — DPA records_from_app_manifests) ────────────
   - id: app_documenso
     flag: apps_runner_enabled
     method: manual

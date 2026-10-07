@@ -107,7 +107,7 @@ case for Track Q sweep — not blocker for A6.5.
 
 ### 11. Coolify importer + Tier-2 — N/A for grafana
 
-Grafana is Tier-1, not in the apps_runner orbit. Doctrine for Tier-2 manifests
+Grafana is Tier-1, not in the apps_runner orbit. Doctrine for app manifests
 is the same shape (plugins wire to apps), but Track Q's first batches focus on
 Tier-1.
 

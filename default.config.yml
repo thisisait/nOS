@@ -22,7 +22,7 @@ nos_timezone: "Europe/Prague"       # IANA name, e.g. Europe/London, America/New
 # per-host segment between the service name and the rest (lab/factory/branch).
 #
 #   Tier-1 service host:  <svc>[.<host_alias>].<tenant_domain>
-#   Tier-2 app host:      <svc>[.<host_alias>].<apps_subdomain>.<tenant_domain>
+#   manifest app host:      <svc>[.<host_alias>].<apps_subdomain>.<tenant_domain>
 #
 # Examples (tenant_domain=dev.local, apps_subdomain=apps):
 #   host_alias=""    → bone.dev.local           |  documenso.apps.dev.local
@@ -34,7 +34,7 @@ nos_timezone: "Europe/Prague"       # IANA name, e.g. Europe/London, America/New
 # them to the explicit segment layout. See docs/operator-domain-naming.md.
 tenant_domain: "dev.local"                # Primary TLD; all FQDNs resolve here
 host_alias: ""                            # Per-host segment ("" drops it; "lab" yields bone.lab.dev.local)
-apps_subdomain: "apps"                    # Subdomain segment for Tier-2 apps (Coolify-imported et al.)
+apps_subdomain: "apps"                    # Subdomain segment for manifest apps (Coolify-imported et al.)
 
 # ── Filesystem doctrine (ssot/doctrine/filesystem.md) ─────────────────────────
 # Single persistent-data root. Every service data/config path derives from this
@@ -489,7 +489,7 @@ docker_cpus_light: "0.5"
 # ==============================================================================
 
 # ── Reverse proxy ─────────────────────────────────────────────────────────────
-# Traefik is the edge proxy (binds 80/443). It auto-discovers Tier-2 apps
+# Traefik is the edge proxy (binds 80/443). It auto-discovers manifest apps
 # via Docker labels and routes Tier-1 services from a file provider that
 # pazny.traefik renders out of state/manifest.yml + the install_* flags.
 #
@@ -1463,7 +1463,7 @@ app_secrets: {}
 # `lookup('vars', 'apps_runner_enabled')` outside the role. Role default is
 # the same true; operators set false in config.yml to skip the whole catalog.
 apps_runner_enabled: true
-# Tier-2 manifest ids to leave out of this estate (apps/<id>.yml stays
+# app manifest ids to leave out of this estate (apps/<id>.yml stays
 # committed; the runner just does not discover it). Default: none.
 apps_skip: []
 # OpenHuman on this host: the desktop app (roles/pazny.openhuman, `--tags openhuman`).
@@ -2614,10 +2614,10 @@ authentik_app_tiers:
 #
 # This empty list survives ONLY as the Tier-2 apps_runner extension
 # channel: apps_runner appends entries for each apps/<name>.yml
-# manifest's `authentik_entry` (Tier-1 services have plugins; Tier-2 apps
+# manifest's `authentik_entry` (Tier-1 services have plugins; manifest apps
 # don't yet). The blueprint merges both sources until apps_runner gets
 # its own plugin-aggregator pathway. Long-term: extend run_aggregators
-# with a `from: app_manifest` source so Tier-2 apps land in
+# with a `from: app_manifest` source so manifest apps land in
 # inputs.clients alongside Tier-1 plugins.
 authentik_oidc_apps: []
 

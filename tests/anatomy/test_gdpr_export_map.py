@@ -58,7 +58,7 @@ def _register_ids() -> set[str]:
 
 
 def _plugin_legal_basis(svc_id: str) -> str | None:
-    """Lawful basis from the plugin gdpr block or the Tier-2 app manifest.
+    """Lawful basis from the plugin gdpr block or the app manifest.
     Anchors svc_authentik / svc_bluesky-pds have no consent/contract basis
     -> None, i.e. access-only."""
     if svc_id.startswith("app_"):
@@ -160,7 +160,7 @@ def test_authentik_executor_writes_single_match_not_envelope():
 def _inscope_expected() -> set[str]:
     """Every per-user-PII service that MUST carry an Art-15 export entry: gdpr
     plugins with authentik.mode in {native_oidc, header_oidc} plus the AT-proto
-    (svc_bluesky-pds) + authentik anchors, plus every Tier-2 app gdpr record
+    (svc_bluesky-pds) + authentik anchors, plus every manifest app gdpr record
     (none skipped today). Plugin forward_auth stays out of
     scope; app forward_auth with a gdpr block is in scope (per-user PII)."""
     ids = {"svc_authentik", "svc_bluesky-pds"}

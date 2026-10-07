@@ -10,7 +10,7 @@ blocks into Wing's live `gdpr_processing` table — one `php bin/upsert-gdpr.php
 
 Usage:
   python3 tools/gdpr-records.py --tier core    # Tier-1 plugins  (svc_*)
-  python3 tools/gdpr-records.py --tier app      # Tier-2 manifests (app_*)
+  python3 tools/gdpr-records.py --tier app      # app manifests (app_*)
   python3 tools/gdpr-records.py --tier all      # both
 """
 

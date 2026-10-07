@@ -4,7 +4,7 @@
 The Data Processing Agreement register is the auditable artifact an operator
 hands to their DPO: one Record of Processing Activities (Article 30(1)) entry
 per nOS service, derived from the per-plugin `gdpr:` blocks (Tier-1) and the
-Tier-2 app manifests. Source-of-truth mapping lives in
+app manifests. Source-of-truth mapping lives in
 `files/anatomy/module_utils/nos_gdpr.py`; this tool only renders it, so the
 markdown register and Wing's live `gdpr_processing` table never disagree.
 
@@ -129,7 +129,7 @@ def render(records: list[dict]) -> str:
     L.append("")
     L.append(f"- **Processing activities:** {n} "
              f"({sum(1 for r in records if r['tier'] == 'core')} core services, "
-             f"{sum(1 for r in records if r['tier'] == 'app')} Tier-2 apps)")
+             f"{sum(1 for r in records if r['tier'] == 'app')} manifest apps)")
     L.append("- **Legal basis (Art. 6(1)):** "
              + ", ".join(f"{k} ({v})" for k, v in sorted(bases.items())))
     L.append(f"- **Transfers outside the EU:** {n_transfers} "

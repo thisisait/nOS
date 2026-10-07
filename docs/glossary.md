@@ -12,6 +12,8 @@ genome → cell → tissue → organ → organ system → organism → habitat.
   Counter-example: one DataTable row (data a gene shapes, not a gene).
 - **skill** (genome) — A declared how-to in files/anatomy/skills/ that a cell or a runtime is handed. Not: law, definition, reflex.
   Counter-example: .claude/skills/devlog/SKILL.md (a how-to for an assistant working in this repo; it does not travel with nOS).
+- **schema** (genome) — The declared shape a file must validate against: the JSON Schemas in state/schema/ (manifest, plugin, app, state, upgrade, migration) and the genome's own entity schema. A schema says what may be written; it holds no rows. Not: gene, law, a database schema (a vendor's tables).
+  Counter-example: state/keap-tables/invoice.table.yml (a table definition the schema shapes, not a schema).
 - **cell** (cell) — One model in one specialization; in code it is called an agent. Not: sense, stem cell, AWS/Slack cell (an isolated full-stack replica).
   Counter-example: an immune indicator (a sense).
 - **stem cell** (cell) — A model that has not yet differentiated into one specialization. Not: cell.
@@ -38,7 +40,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
   Counter-example: the Bone↔face link (an edge between two organs; it never leaves the machine).
 - **organism** (organism) — One nOS install on one machine, all its organ systems together. Not: habitat, anatomy.
   Counter-example: the anatomy graph (a drawing of the organism, not the organism).
-- **habitat** (habitat) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner, and nOS never installs or touches it. Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Not: organism, symbiont.
+- **habitat** (habitat) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner; nOS never installs or touches it by default, only through opt-in toggles the owner sets (configure_dock, install_mas_apps and their kin in the host-desktop layer). Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Not: organism, symbiont.
   Counter-example: the Gitea or GitLab nOS hosts (organ jobs, not habitat).
 
 ## Across levels
@@ -46,7 +48,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - **self** — Software nOS calls, pins and updates itself, vendor formulae included; a self organ is one of nOS's own parts. Provisional — a deeper sense (versions as a lineage, old ones die, new ones are born) is being designed, roadmap row self-definition. Not: declared, symbiont.
   Counter-example: OpenHuman, declared and installed by nOS but neither pinned nor updated by it (its vendor updates it: a symbiont).
 - **symbiont** — Declared foreign software that lives beside nOS and is updated by its own vendor. Not: self, habitat.
-  Counter-example: a personal Homebrew package (habitat: the machine owner's, never installed by nOS).
+  Counter-example: a personal Homebrew package (habitat: the machine owner's; nOS installs it only through an opt-in toggle the owner sets).
 - **declared** — On the list nOS generates from its declarations; the immune system tolerates it, and anything undeclared is a signal. Not: self.
   Counter-example: a launchd job the operator loaded by hand (undeclared until a declaration explains it, however harmless).
 - **account roster** — The declared accounts every realm (Authentik, Gitea and the rest) must hold; tools/identity-status.py compares it with what each realm holds. Not: cell roster.
@@ -71,6 +73,16 @@ genome → cell → tissue → organ → organ system → organism → habitat.
   Counter-example: a coexistence track (a second copy of one service on the same Mac).
 - **plugin** — A plugin.yml declaring how one service is wired to the others (SSO, dashboards, jobs). Not: tissue, gene.
   Counter-example: an apps/<name>.yml manifest app (it deploys a service; a plugin only wires one).
+- **tier** — The RBAC access level, 1–4, an organ or account requires; each binds to an Authentik group. Declared as `authentik.tier` in a plugin and `rbac_tier` in the manifest. Never a delivery class or a dependency rank — those are role service / manifest app, and layer. Not: layer, role service, manifest app, F1–F4 / H (face-app build cost).
+  Counter-example: the infra stack coming up first (a layer, dependency depth; not an access tier).
+- **layer** — The dependency axis of an organ: if this stops, what else stops (ssot/doctrine/layers.md). Derived, never declared on a manifest row; its values are the genome's `axes.layer`. The config layers (the config.d/ files, default.config.yml, config.yml) are an allowed compound: files Ansible loads in order. Not: tier, stack.
+  Counter-example: a service's rbac_tier (who may enter; a layer is what it stands on).
+- **stack** — The compose project an organ's containers belong to (infra, observability, iiab, apps, ...): the deployment group docker compose brings up as one; null for a host organ. Not a public function (that is an organ system). Not: organ system, layer.
+  Counter-example: The Stores on the apex page (a public group of organs; a stack is where compose runs them).
+- **role service** — An organ owned by a roles/pazny.<service>/ role that renders a compose override into its stack and is wired by its plugin; one manifest row with a role. The committed catalog of ~50 services. Not: manifest app, plugin.
+  Counter-example: apps/documenso.yml (a manifest app: no role, the apps runner deploys it).
+- **manifest app** — A long-tail organ declared whole in apps/<name>.yml — meta, the GDPR Article 30 block, compose — and deployed by the apps runner; it has no role. Not: role service, plugin.
+  Counter-example: roles/pazny.gitea/ (a role service: its role renders the override).
 - **anatomy** — The structure of one organism drawn as a graph. Not: body plan.
   Counter-example: state/body-plan.json (the anatomy projected onto levels, not the graph).
 - **body plan** — The anatomy projected onto the levels above; each graph kind's level is read from state/genome/lexicon.yml. Not: anatomy.
@@ -148,6 +160,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - Pulse called the heartbeat → Pulse, which is the scheduler
 - the playbook called the nervous system → converge
 - twin for two lists that must stay equal (twin-parity) → mirror-parity
+- the delivery tier: Tier-1 a role service, Tier-2 a manifest app → role service / manifest app; the Ansible tag `tier2` and the Kuma monitor tag keep their spelling
 - a second kind-to-level map beside the lexicon → the graph_kind names in state/genome/lexicon.yml
 - the digest organ, the stomach → digest
 - bones-and-wings for the host organs together → the host organs

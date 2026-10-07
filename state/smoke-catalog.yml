@@ -6,7 +6,7 @@
 # auto-imports every state/manifest.yml entry that has `domain_var` (one
 # baseline GET / per service) and then layers the entries below on top —
 # operator-friendly place to add custom paths, health endpoints, API
-# probes, and Tier-2 apps once the apps_runner onboards them.
+# probes, and manifest apps once the apps_runner onboards them.
 #
 # Schema for each entry:
 #   id          string  — unique stable identifier (logs / dashboards)
@@ -191,7 +191,7 @@ smoke_endpoints:
     tier: 3
     note: "cortex chain executes end to end; stage 1 receives stage 0's rows"
 
-  # ── Tier-2 apps (populated by apps_runner once it lands) ──────────────────
+  # ── manifest apps (populated by apps_runner once it lands) ──────────────────
   # Apps_runner appends entries here automatically per onboarded
   # apps/<name>.yml manifest; left empty by default.
   # Example:

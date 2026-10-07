@@ -29,7 +29,7 @@ DIAGNOSIS changes.
 The estate already knew this hazard in prose: CLAUDE.md's operator gotcha about
 Rust-slim images says a `wget --spider` check against an image without wget
 "logs `wget: not found` and marks the container unhealthy". It was written for
-Tier-2 manifests, it applies to every image, and nothing compared it to
+app manifests, it applies to every image, and nothing compared it to
 anything until now.
 """
 

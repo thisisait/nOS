@@ -26,7 +26,7 @@ FOUR PLACES CAN ATTACH THE MIDDLEWARE, AND THIS READS ALL FOUR:
   2. `traefik_extra_routers[].auth` — same default (services.yml.j2:107)
   3. a `traefik.http.routers.*.middlewares=…authentik@file…` compose label,
      the @docker provider — one live today (`roles/pazny.smtp_stalwart`)
-  4. a Tier-2 manifest's `nginx.auth` (nos_apps_render.py:192/209)
+  4. a app manifest's `nginx.auth` (nos_apps_render.py:192/209)
 
 MEASURED 2026-08-07, and the finding is that there is nothing to fix: 45 routed
 services, 19 of them declaring `native_oidc`, and all 19 carry edge mode `oidc`.

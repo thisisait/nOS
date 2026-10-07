@@ -25,7 +25,7 @@ this file exists rather than a one-line "the task is imported" check:
      default.config.yml is their correct default. Pruning postgresql's fragment
      would tear down the database the whole estate runs on. Verified 2026-08-10
      under both flag semantics: postgresql's fragment is never in the report.
-  2. TIER-2 MANIFEST APPS. `apps/<name>.yml` owns their bring-up, so the toggle
+  2. MANIFEST APPS. `apps/<name>.yml` owns their bring-up, so the toggle
      is not what would have switched them off.
 
 Both lists are DERIVED — from main.yml's own auto-enable tasks and from the
@@ -132,7 +132,7 @@ def test_auto_enabled_dependencies_are_derived_not_listed(tasks) -> None:
 def test_manifest_apps_are_derived_from_the_directory(tasks) -> None:
     body = TASK.read_text(encoding="utf-8")
     assert "apps" in body and "_manifest_apps" in body, (
-        "Tier-2 manifest apps are no longer excluded. Their bring-up belongs to "
+        "manifest apps are no longer excluded. Their bring-up belongs to "
         "apps/<name>.yml, so an install_<name> toggle is not what switched them "
         "off, and comparing the two is a guess."
     )

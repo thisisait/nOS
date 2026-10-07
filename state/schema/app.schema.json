@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://thisisait.eu/schemas/nos/app.schema.json",
-  "title": "nOS Tier-2 App Manifest (apps/<name>.yml)",
+  "title": "nOS App Manifest (apps/<name>.yml)",
   "description": "Coolify-style lightweight app manifest. Validated by module_utils/nos_app_parser.py and consumed by pazny.apps_runner. The `gdpr:` block is mandatory — apps cannot deploy without a complete GDPR Article 30 record. See docs/framework-overview.md for two-tier rationale, apps/_template.yml for a worked example.",
   "type": "object",
   "required": ["meta", "gdpr", "compose"],

@@ -2,7 +2,7 @@
 
 C3 (2026-05-25) connected the per-plugin `gdpr:` blocks (loader-validated but
 previously never ingested) to the Article-30 register surfaces. Before C3 the
-live `gdpr_processing` table + the DPA register covered only the 4 Tier-2 apps;
+live `gdpr_processing` table + the DPA register covered only the 4 manifest apps;
 the ~50 core services were dark. This gate pins the contract so the register
 can't silently regress to partial coverage:
 

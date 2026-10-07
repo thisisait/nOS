@@ -2,7 +2,7 @@
 
 Profiles are extra-vars, the highest-precedence layer, so a misspelled key is
 SILENT. MEASURED 2026-09-01: 4 of dev-minimal's 63 keys were wrong on the first
-pass — `install_open_webui` (really `install_openwebui`) plus three Tier-2
+pass — `install_open_webui` (really `install_openwebui`) plus three
 manifest apps that have no role flag at all. None errored; each would have left
 its service running while the profile claimed the memory back.
 

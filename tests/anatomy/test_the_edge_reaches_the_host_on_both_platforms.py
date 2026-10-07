@@ -7,8 +7,8 @@ that was hardcoded as the default for every platform, with a comment inviting a
 per-host override that a Linux install had no reason to know about.
 
 MEASURED IN CI 2026-08-31, on the first run where Linux had a Traefik at all:
-every router answered a uniform 500 — face, wing, mailpit and all four Tier-2
-apps — because that IP does not exist on a Linux bridge network. The defect is
+every router answered a uniform 500 — face, wing, mailpit and all four
+manifest apps — because that IP does not exist on a Linux bridge network. The defect is
 as old as the Linux port. Nothing could see it because CI ran `install_traefik:
 false`, so there was no edge to fail (docs/hidden_fees/39).
 

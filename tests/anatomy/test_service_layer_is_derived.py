@@ -166,7 +166,7 @@ def test_a_leaf_is_l2_and_a_root_with_dependents_is_l0(committed):
 def test_no_l3_is_emitted_because_it_is_not_this_axis(committed):
     """§3 defines L3 by DELIVERY — "small per-tenant apps, manifest-shipped" —
     which is a different axis leaking into this one. It is not derivable from
-    dependency depth, the Tier-2 apps have no `service:` node, and emitting a
+    dependency depth, the manifest apps have no `service:` node, and emitting a
     guess would have made the census look complete. Zero, deliberately."""
     assert committed["counts"]["services_layer_L3"] == 0
     assert not [n for n in services(committed).values() if n["layer"] == "L3"]

@@ -26,7 +26,7 @@
 ## Providers & routing
 
 - **File provider** — `/etc/traefik/conf.d` (`traefik_dynamic_dir`, `watch: true`). Tier-1 routers/services are auto-derived from `state/manifest.yml` into `services.yml`; `middlewares.yml` + `tls.yml` alongside.
-- **Docker provider** — `exposedByDefault: false`, endpoint `tcp://docker-socket-proxy:2375`, network `shared_net`. Tier-2 apps emit router labels on the apps stack.
+- **Docker provider** — `exposedByDefault: false`, endpoint `tcp://docker-socket-proxy:2375`, network `shared_net`. manifest apps emit router labels on the apps stack.
 - **TLS:** `websecure` uses `modern@file` options; encoded slash/backslash/null rejected at the entrypoint (path-traversal hardening).
 - **Host loopback:** `extra_hosts` alias `nos-host:host-gateway` — file-provider routers reach Tier-1 upstreams published on `127.0.0.1:<port>`.
 

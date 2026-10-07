@@ -59,6 +59,7 @@ PENDING_SURFACES: set[str] = set()
 #: "file :: phrase" → occurrences, in the files models are told to trust.
 #: Seeded 2026-10-07 when TRUSTED widened; the default config layers were fixed instead.
 #: Spine phrases seeded 2026-10-07 (I-13) only in files other agents held that round.
+#: "Tier-2 app" seeded 2026-10-07 (I-14) in the one file I-12 held that round.
 PENDING_PHRASES: dict[str, int] = {
     'IMPRINT.md :: public organ': 1,
     'docs/systems/dolibarr/README.md :: praxis pack': 1,
@@ -107,6 +108,7 @@ PENDING_PHRASES: dict[str, int] = {
     'tests/anatomy/test_nos_digest_erasure.py :: digest organ': 1,
     'tests/anatomy/test_pulse_knowledge_contract.py :: cortex store': 1,
     'tests/anatomy/test_skills_prune_dangling_links.py :: cortex-query': 2,
+    'tools/anatomy-graph-gen.py :: Tier-2 app': 1,
     'tools/party-graph.py :: digest organ': 1,
 }
 

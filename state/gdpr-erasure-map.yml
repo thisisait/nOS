@@ -6,16 +6,16 @@
 # scattering `rm`-equivalents across 20 plugins. Keys (`id`) match the DPA
 # register / gdpr_processing rows (`svc_<plugin>` or `app_<manifest>`); `flag`
 # is the install toggle (`always` = always-on; `apps_runner_enabled` for
-# Tier-2 manifests).
+# app manifests).
 #
 # Coverage = every plugin that stores PER-USER data (native_oidc + header_oidc
-# + AT-proto identity) + three Tier-2 apps with a gdpr: block (
+# + AT-proto identity) + three manifest apps with a gdpr: block (
 # documenso, twofauth, roundcube; EspoCRM retired 2026-09-21, Qdrant 2026-10-02),
 # PLUS the backend/residual stores that retain DERIVED subject data beyond
 # those per-service deletes (Redis sessions, RustFS
 # backups, wing.db agent tables, Loki/Tempo) — see the "Backend stores &
 # residual reach" section. Plugin forward_auth services remain absent;
-# Tier-2 apps that keep per-user PII behind a forward_auth gate are in scope.
+# manifest apps that keep per-user PII behind a forward_auth gate are in scope.
 #
 # method:
 #   authentik_api  — the identity anchor. Deletes the Authentik user, revoking
@@ -179,7 +179,7 @@ services:
     method: manual
     note: "pdsadmin account delete <did> (resolve did from @<handle>.bsky.<tld>)."
 
-  # ── Tier-2 apps (app_<name> — DPA records_from_app_manifests) ────────────
+  # ── manifest apps (app_<name> — DPA records_from_app_manifests) ────────────
   - id: app_documenso
     flag: apps_runner_enabled
     method: manual

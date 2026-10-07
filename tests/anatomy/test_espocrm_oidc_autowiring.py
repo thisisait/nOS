@@ -43,7 +43,7 @@ def test_espocrm_embedded_mariadb_is_1189():
 
 
 def test_espocrm_gdpr_block_complete():
-    """Kuma/Wing post-hooks are generic for every Tier-2 app; this pins the
+    """Kuma/Wing post-hooks are generic for every manifest app; this pins the
     Espo-specific leftover: the manifest still carries a complete Art-30
     block so upsert-gdpr.php has something to ingest."""
     from module_utils.nos_app_parser import REQUIRED_GDPR

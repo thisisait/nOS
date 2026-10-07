@@ -75,7 +75,7 @@ def test_entry_is_well_formed(entry):
 def _inscope_expected() -> set[str]:
     """Every per-user-PII service that MUST carry an Art-17 erasure entry: gdpr
     plugins with authentik.mode in {native_oidc, header_oidc} plus the AT-proto
-    (svc_bluesky-pds) + authentik anchors, plus every Tier-2 app gdpr record
+    (svc_bluesky-pds) + authentik anchors, plus every manifest app gdpr record
     (none skipped today). Plugin forward_auth stays out of
     scope; app forward_auth with a gdpr block is in scope."""
     ids = {"svc_authentik", "svc_bluesky-pds"}

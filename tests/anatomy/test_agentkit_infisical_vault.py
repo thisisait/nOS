@@ -17,7 +17,7 @@ The boundaries this file pins:
 
   3. Plaintext is never echoed in error_log lines. The bad-input
      reject path must NOT include $secretRef / $path in the message
-     (those can be attacker-controlled via Tier-2 manifests).
+     (those can be attacker-controlled via app manifests).
 
   4. The proc_open env_vars allowlist forwards INFISICAL_TOKEN +
      PATH/HOME/TZ but NEVER ANTHROPIC_API_KEY / WING_API_TOKEN /
