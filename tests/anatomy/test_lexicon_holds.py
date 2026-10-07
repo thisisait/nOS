@@ -58,9 +58,11 @@ PENDING_SURFACES: set[str] = set()
 
 #: "file :: phrase" → occurrences, in the files models are told to trust.
 #: Seeded 2026-10-07 when TRUSTED widened; the default config layers were fixed instead.
+#: Spine phrases seeded 2026-10-07 (I-13) only in files other agents held that round.
 PENDING_PHRASES: dict[str, int] = {
     'IMPRINT.md :: public organ': 1,
     'docs/systems/dolibarr/README.md :: praxis pack': 1,
+    'files/anatomy/agents/invoice-extract/agent.yml :: party spine': 1,
     'files/anatomy/apex/ruling.yml :: cortex-query': 1,
     'files/anatomy/docs/grafana-wiring-inventory.md :: vessel': 3,
     'files/anatomy/plugins/bookstack-base/plugin.yml :: vessel': 1,
@@ -87,12 +89,19 @@ PENDING_PHRASES: dict[str, int] = {
     'files/anatomy/plugins/woodpecker-base/plugin.yml :: vessel': 5,
     'files/anatomy/plugins/wordpress-base/plugin.yml :: vessel': 1,
     'state/digest-constitution.yml :: digest organ': 1,
+    'state/digest-constitution.yml :: party spine': 1,
     'state/keap-tables/application.table.yml :: digest organ': 1,
     'state/keap-tables/invoice-line.table.yml :: digest organ': 1,
     'state/keap-tables/invoice-review.table.yml :: digest organ': 1,
     'state/keap-tables/invoice.table.yml :: digest organ': 1,
+    'state/keap-tables/invoice.table.yml :: party spine': 1,
     'state/keap-tables/package.table.yml :: digest organ': 1,
+    'state/keap-tables/package.table.yml :: party spine': 1,
+    'state/keap-tables/party-registry-status.table.yml :: party spine': 3,
+    'state/keap-tables/party.table.yml :: party spine': 1,
     'state/keap-tables/repo.table.yml :: digest organ': 1,
+    'state/keap-tables/repo.table.yml :: party spine': 1,
+    'state/llm-backends.yml :: spine redirect': 1,
     'tests/anatomy/test_digest_constitution.py :: digest organ': 1,
     'tests/anatomy/test_gitea_oauth_source_cli_register.py :: tendon': 1,
     'tests/anatomy/test_nos_digest_erasure.py :: digest organ': 1,
