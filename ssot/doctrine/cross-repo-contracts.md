@@ -3,6 +3,7 @@ in_force: true
 ruled: null
 row: null
 gates:
+  - tests/anatomy/test_cortex_vendored_docs.py
   - tests/anatomy/test_face_wing_contract.py
   - tests/anatomy/test_the_system_table_count_matches_doctrine.py
   - tests/anatomy/test_vendored_keap_pin.py

@@ -373,6 +373,11 @@ def _iter_harvest_files():
 #: those to the nOS doc named second on the same line.
 SUBTREE_ROOTS = ("files/anatomy/cortex/",)
 
+#: The cortex tree is a vendored port of KEAP; its tree-relative `docs/specs/*`
+#: cites name KEAP's specs, which live only in KEAP (cross-repo-contracts.md §1
+#: forbids a local copy). Missing from this checkout there means foreign, not lost.
+KEAP_PORT = "files/anatomy/cortex/"
+
 
 _REALM_PATHS: dict[str, str] | None = None
 
@@ -500,6 +505,9 @@ def harvest_file(f: Path, rel: str, corpus: dict[str, DocIndex]) -> list[Citatio
         headers = _header_docs(lines, rel, corpus)
         header = headers[0] if headers else None
         self_doc = rel if rel in corpus else None
+        port_specs = rel.startswith(KEAP_PORT) and any(
+            m.startswith("docs/specs/")
+            for line in lines[:50] for m in _named_docs(line, rel, corpus)[1])
         # Tier 2 authorities: corpus docs named ANYWHERE in the file. Still
         # the file's own declaration — test_loop_plugin_is_thin.py names the
         # contract at line 305 and its bare §3.1 belongs to it; fs-sync.ts
@@ -546,14 +554,19 @@ def harvest_file(f: Path, rel: str, corpus: dict[str, DocIndex]) -> list[Citatio
                 foreign = next((name for name, path in FOREIGN_REPOS.items()
                                 if re.search(rf"\b{name}\s+\S*$", line[:m.start()])
                                 or re.search(rf"\b{name}\s+docs/", line)), None)
+
+                def _has(d: str) -> bool:
+                    return key in corpus[d].sections or key in corpus[d].decisions
+
+                if not foreign and rel.startswith(KEAP_PORT) and not sameline and (
+                        (sameline_missing or "").startswith("docs/specs/")
+                        or (port_specs and not any(_has(d) for d in headers + filedocs))):
+                    foreign = "KEAP"
                 if foreign:
                     out.append(Citation(rel, i, "external", f"{foreign} §{key}",
                                         FOREIGN_REPOS[foreign], "foreign-repo",
                                         status="resolved-external", **span))
                     continue
-
-                def _has(d: str) -> bool:
-                    return key in corpus[d].sections or key in corpus[d].decisions
 
                 if sameline:
                     doc, how = sameline, "sameline"

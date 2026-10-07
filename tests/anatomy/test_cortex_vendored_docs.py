@@ -1,42 +1,38 @@
-"""Anatomy gate — every vendored cortex spec declares where it came from.
+"""Anatomy gate — no KEAP spec is copied into the cortex organ.
 
-`files/anatomy/cortex/docs/specs/` holds copies of KEAP specs. Nothing in CI can
-diff them against their originals — KEAP is a different repo and is not checked
-out here — so the copies drift silently. That is `docs/hidden_fees/11`, and it
-ends only when the original is deleted rather than copied (S5).
+`files/anatomy/cortex/docs/specs/` held eight copies of KEAP specs. Nothing in
+CI could diff them against their originals — KEAP is a different repo and is
+not checked out here — so the copies drifted silently. That is
+`docs/hidden_fees/11`, and it ends only when the original is cited rather than
+copied (S5; ssot/doctrine/cross-repo-contracts.md §1: "A local copy MUST NOT
+exist"). Measured 2026-10-07: the eight carried three different KEAP tags
+(v1.27.0-v1.29.0) while the pin was v2.0.1.
 
-Until then the cheapest real defence is provenance: a reader who opens a copy
-must be able to see that it IS a copy, and of what. Without the header the
-failure mode is someone editing the copy, believing they fixed the spec, and
-losing the change at the next re-vendor.
-
-The ledger (`docs/archive/cortex-specs-ledger.md`) claimed all eight carried a
-header on 2026-07-25. Three did. This test is why that cannot happen again.
+The organ's code cites them tree-relative (`docs/specs/cortex-validate.md`);
+tools/doctrine-cite.py resolves those as KEAP's (KEAP_PORT), never as ours.
 """
 
 from __future__ import annotations
 
 import pathlib
 
-import pytest
-
 REPO = pathlib.Path(__file__).resolve().parents[2]
-VENDORED = REPO / "files" / "anatomy" / "cortex" / "docs" / "specs"
-
-FILES = sorted(VENDORED.glob("*.md"))
+ORGAN_DOCS = REPO / "files" / "anatomy" / "cortex" / "docs"
 
 
-def test_vendored_dir_is_not_empty():
-    """Guard the guard: a glob that matches nothing passes every parametrised case."""
-    assert FILES, f"no vendored specs found under {VENDORED.relative_to(REPO)}"
+def test_no_keap_spec_is_copied_into_the_organ():
+    copies = sorted(
+        str(p.relative_to(REPO))
+        for p in ORGAN_DOCS.rglob("*.md")
+        if "Vendored from thisisait/nos-keap" in "\n".join(p.read_text().splitlines()[:6])
+    )
+    assert not copies, (
+        f"KEAP spec copies inside nOS: {copies}. Cite the original as "
+        "`KEAP docs/specs/<name>.md` and delete the copy — two copies diverge."
+    )
 
 
-@pytest.mark.parametrize("path", FILES, ids=[p.name for p in FILES])
-def test_carries_provenance(path: pathlib.Path):
-    head = "\n".join(path.read_text().splitlines()[:6])
-    assert "Vendored from thisisait/nos-keap @" in head, (
-        f"{path.name} has no provenance header in its first 6 lines. A vendored copy that "
-        f"does not say it is a copy invites someone to edit it instead of the original — "
-        f"the change then dies at the next re-vendor. Add:\n"
-        f"  > Vendored from thisisait/nos-keap @ <tag> docs/specs/{path.name} — organ-side copy."
+def test_the_specs_dir_is_gone():
+    assert not (ORGAN_DOCS / "specs").exists(), (
+        "files/anatomy/cortex/docs/specs/ is back; KEAP's specs live in KEAP."
     )
