@@ -232,3 +232,13 @@ derivation target — two new edge kinds, `handoff` and `identity`, inside
 §9. When those edges become data, the diagrams become checkable against the
 graph and this file shrinks to the prose and the refusals, which is what
 doctrine is for.
+
+## 10. Reflexes — what runs on a clock
+
+A **reflex** is one scheduled response of an organ: a `pulse.jobs[]` entry in
+its owner's `plugin.yml`, addressed `pulse:<owner>:<job>`. **Pulse** is the
+organ that runs every reflex on its clock. A reflex is not an organ, and
+Pulse is not a heartbeat. A **heartbeat** is a signal that proves something is
+still alive; a sense whose heartbeat stops is red, not quiet
+([`immune-system.md`](immune-system.md)). This is the one place these three
+words are defined; other articles cite this section.
