@@ -10,7 +10,7 @@ Four questions, all of which found something the first time they were asked
 
   god nodes        service:authentik carries 58 edges, 55 of them outbound.
   isolated nodes   65 of 256 have no edge at all — every host daemon but pulse.
-                   Bone<->Wing is named as a VEIN in CLAUDE.md and is not an edge,
+                   Bone<->Wing is named as a LINK in CLAUDE.md and is not an edge,
                    so the graph knows the estate's services and not its organs.
   evidence split   236 derived / 50 measured. A derived edge is recomputed from a
                    declaration every run and cannot go stale. A measured one is a

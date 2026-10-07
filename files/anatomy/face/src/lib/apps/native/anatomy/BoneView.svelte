@@ -1,5 +1,5 @@
 <!--
-  Bone view — liveness, the vein the face depends on, and what this view is
+  Bone view — liveness, the link the face depends on, and what this view is
   NOT allowed to see.
 
   The third panel is the one that matters. The face holds a static VFS bearer,
@@ -86,7 +86,7 @@
 				{/if}
 			</Panel>
 
-			<Panel title="Vein · face → Bone VFS">
+			<Panel title="Link · face → Bone VFS">
 				<p class="line">
 					<StateDot
 						tone={data.vfs?.ok ? 'ok' : 'bad'}
@@ -98,7 +98,7 @@
 				{#if !data.vfs?.ok}
 					<StatusNote kind="error" title="The file browser will degrade quietly">
 						Bone can be alive while this fails — a stale or unset
-						<code>NOS_VFS_API_TOKEN</code> breaks the vein, not the organ.
+						<code>NOS_VFS_API_TOKEN</code> breaks the link, not the organ.
 					</StatusNote>
 				{/if}
 			</Panel>

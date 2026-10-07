@@ -1,6 +1,6 @@
 /**
  * The Bone projection's job is to keep three things apart that all look like
- * "fine" from a distance: the daemon answering, the vein carrying, and the
+ * "fine" from a distance: the daemon answering, the link carrying, and the
  * surfaces this view is not allowed to see.
  */
 import { describe, it, expect } from 'vitest';
@@ -40,7 +40,7 @@ describe('liveness is not health', () => {
 	});
 });
 
-describe('the vein is probed separately from the organ', () => {
+describe('the link is probed separately from the organ', () => {
 	it('records a failing VFS beside a healthy daemon', () => {
 		const b = projectBone(
 			{ status: 'ok', uptime: 1, auth_ready: true },

@@ -2,7 +2,7 @@
  *
  * Two calls, both of which the face is actually credentialed for: Bone's
  * ungated liveness probe, and a `stat /` through the VFS bearer that proves the
- * Bone↔face vein carries traffic rather than merely existing.
+ * Bone↔face link carries traffic rather than merely existing.
  *
  * The scope-gated surfaces are NOT called. They would 401, and a panel that
  * renders a 401 as an empty list is the failure this app was built to catch —

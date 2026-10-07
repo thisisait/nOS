@@ -329,7 +329,7 @@ export async function boneHealth(): Promise<unknown> {
 }
 
 /**
- * Prove the vein the face actually depends on carries traffic.
+ * Prove the link the face actually depends on carries traffic.
  *
  * Bone being alive does not mean the face can talk to it — the VFS token could
  * be unset or stale, and the file browser would then degrade quietly. One

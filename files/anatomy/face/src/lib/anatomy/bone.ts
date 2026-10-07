@@ -1,5 +1,5 @@
 /**
- * Bone projection — liveness, the vein the face depends on, and an explicit
+ * Bone projection — liveness, the link the face depends on, and an explicit
  * account of what this view is NOT allowed to see.
  *
  * THE THIRD ITEM IS THE INTERESTING ONE. Measured 2026-08-05: the face holds
@@ -40,7 +40,7 @@ export interface BoneSnapshot {
 	authReady: boolean | null;
 	/** Why `alive` is false, when it is. */
 	error: string;
-	/** The Bone↔face vein, probed rather than assumed. */
+	/** The Bone↔face link, probed rather than assumed. */
 	vfs: { ok: boolean; detail: string };
 	/** Surfaces this view is not credentialed for, stated rather than hidden. */
 	gaps: BoneGap[];
