@@ -69,11 +69,11 @@ GROUPS = [
     ("Sign-in, passwords & backup", ["identity", "iam", "vault", "security"]),
     ("Files, documents & knowledge", ["storage", "collaboration", "wiki", "productivity", "knowledge"]),
     ("Websites & home screen", ["web", "cms", "desktop", "rss"]),
-    ("Media, books & maps", ["media", "iiab", "gis"]),
+    ("Media, books & maps", ["media", "gis"]),
     ("Mail, messages & phone", ["mail", "messaging", "notifications", "pbx"]),
-    ("Business: customers, helpdesk & money", ["crm", "helpdesk", "finance", "app"]),
+    ("Business: customers, helpdesk & money", ["crm", "helpdesk", "finance"]),
     ("Automation & smart home", ["automation", "homeautomation"]),
-    ("AI & assistants", ["ai", "agent"]),
+    ("AI & assistants", ["ai"]),
     ("Charts, data & monitoring", ["data", "observability", "monitoring"]),
     ("Developer tools", ["devops"]),
     ("Under the hood: databases & network", ["infra", "database", "cache", "proxy", "vpn", "api"]),
@@ -178,7 +178,7 @@ PREFIX_RULE = {"min": 12, "refused": ["changeme", ""]}
 # Where nothing is measurable, ONE table of assumptions, shown as such in the
 # page: GB of service data per manifest category after a year of normal use.
 DATA_GB_ASSUMED = {"database": 2, "media": 20, "ai": 10, "knowledge": 5, "storage": 10, "collaboration": 10,
-                   "gis": 5, "devops": 5, "cms": 1, "app": 1, "_default": 1}
+                   "gis": 5, "devops": 5, "cms": 1, "_default": 1}
 HOST_NOTE = "runs on the host, no container limit — not counted"
 
 

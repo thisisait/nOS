@@ -232,7 +232,7 @@ PULSE_ANCHORS = {
 SERVICE_ANCHORS = {
     "database": "02.02.05", "cache": "02.02.05",
     "security": "02.02.08", "vault": "02.02.08", "identity": "02.02.08",
-    "ai": "02.02.09", "agent": "02.02.09",
+    "ai": "02.02.09",
     "observability": "02.02.06", "monitoring": "02.02.06",
     "proxy": "02.02.07", "vpn": "02.02.07",
     "mail": "03.08", "messaging": "03.08", "notifications": "03.08", "pbx": "03.08",

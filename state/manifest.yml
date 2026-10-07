@@ -388,7 +388,7 @@ services:
 
   - id: kiwix
     software_owner: symbiont
-    category: iiab
+    category: knowledge
     stack: iiab
     install_flag: install_kiwix
     version_var: kiwix_version
@@ -727,7 +727,7 @@ services:
 
   - id: paperclip
     software_owner: symbiont
-    category: agent
+    category: ai
     stack: devops
     install_flag: install_paperclip
     version_var: paperclip_version
@@ -991,7 +991,7 @@ services:
   # ----------------------------------------------- non-Docker / host-native
   - id: openclaw
     software_owner: symbiont
-    category: agent
+    category: ai
     stack: null
     install_flag: install_openclaw
     version_source: launchd
@@ -1027,7 +1027,7 @@ services:
 
   - id: device_gateway
     software_owner: self
-    category: agent
+    category: ai
     stack: null
     install_flag: install_device_gateway
     version_source: launchd
@@ -1053,7 +1053,7 @@ services:
   # brew's record goes stale. Reader: tools/openhuman-status.py.
   - id: openhuman
     software_owner: symbiont
-    category: agent
+    category: ai
     stack: null
     install_flag: install_openhuman
     version_source: none
@@ -1165,7 +1165,7 @@ services:
 
   - id: iiab_terminal
     software_owner: self
-    category: iiab
+    category: knowledge
     stack: null
     install_flag: install_iiab_terminal
     version_source: none

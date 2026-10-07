@@ -227,7 +227,8 @@ def test_the_estimate_is_measured_memory_plus_one_assumption_table():
     rows = {r["id"]: r for r in yaml.safe_load((REPO / "state/manifest.yml").read_text())["services"]}
     expect = sum(pb.DATA_GB_ASSUMED.get(rows[i].get("category"), pb.DATA_GB_ASSUMED["_default"])
                  for i in res["enabled"] if i in rows)
-    expect += sum(pb.DATA_GB_ASSUMED["app"] for i in res["enabled"] if i.startswith("app:"))
+    # a Tier-2 app (apps/*.yml) is no manifest category: it takes the table's default (I-12)
+    expect += sum(pb.DATA_GB_ASSUMED["_default"] for i in res["enabled"] if i.startswith("app:"))
     assert res["data_gb"] == expect, "the data figure must be the assumption table applied per manifest category"
 
 
