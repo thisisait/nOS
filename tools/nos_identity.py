@@ -83,6 +83,17 @@ def resolve_flag(flag: str) -> list[tuple[str, str]]:
     return seen
 
 
+def resolve_list(name: str, paths: list[Path] | None = None) -> list:
+    """A top-level list var through the layers; the LAST layer that declares it
+    wins, an empty list included. `paths` is for tests; default layer_paths()."""
+    value: list = []
+    for p in layer_paths() if paths is None else paths:
+        doc = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        if isinstance(doc, dict) and isinstance(doc.get(name), list):
+            value = doc[name]
+    return value
+
+
 def install_flags() -> dict[str, bool]:
     """Every top-level install_* resolved like resolve_flag. A Jinja value is omitted, not guessed."""
     names = {m for p in layer_paths()

@@ -197,3 +197,9 @@ santa_dev_toolchain_trees:
   - .pyenv/versions/
   - .nvm/versions/
   - .local/share/claude/versions/
+
+# ── HABITAT (undeclared-status) ──────────────────────────────────────────────
+# The owner's own software beside nOS (lexicon: habitat): a launchd label or an
+# executable name tools/undeclared-status.py would otherwise report every
+# session. Declare yours in config.yml, e.g. [com.google.keystone.agent, Spotify].
+habitat_processes: []

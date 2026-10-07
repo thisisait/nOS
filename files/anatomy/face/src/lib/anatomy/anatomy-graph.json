@@ -3535,9 +3535,9 @@
     "reader:undeclared-status": {
       "kind": "reader",
       "source": "tools/undeclared-status.py",
-      "title": "What runs on this host that nOS never declared: launchd plists/labels, exposed or Docker-published ports, crontab — vs sets derived from the graph, manifest and rendered compose.",
+      "title": "What runs on this host that nOS never declared: launchd plists/labels, exposed or Docker-published ports, crontab — vs sets derived from the graph, manifest (`host_programs`) and rendered compose; the owner's own software is declared in config.yml as `habitat_processes`.",
       "anchor": "02.02.04",
-      "description": "Reader tools/undeclared-status.py: What runs on this host that nOS never declared: launchd plists/labels, exposed or Docker-published ports, crontab — vs sets derived from the graph, manifest and rendered compose."
+      "description": "Reader tools/undeclared-status.py: What runs on this host that nOS never declared: launchd plists/labels, exposed or Docker-published ports, crontab — vs sets derived from the graph, manifest (`host_programs`) and rendered compose; the owner's own software is declared in config.yml as `habitat_processes`."
     },
     "reader:usage-status": {
       "kind": "reader",

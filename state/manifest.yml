@@ -1194,6 +1194,9 @@ services:
     version_source: homebrew
     brew_formula: tailscale
     host_process: "Tailscale.app (cask) and its system extension; no launchd job of ours"
+    # The sysext listens on two wildcard ports; its executable name is the join
+    # tools/undeclared-status.py needs (no launchd label, no pid in `launchctl list`).
+    host_programs: ["io.tailscale.ipn.macsys.network-extension"]
     # Health via the CLI probe, NOT brew-formula presence: the operator host
     # runs Tailscale.app (system-extension variant; CLI shim at
     # /usr/local/bin/tailscale) with no brew formula installed — the mirror

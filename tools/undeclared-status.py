@@ -10,9 +10,15 @@ Three axes, each judged against a DERIVED declared set, never a hand list:
            *.plist.j2 templates
   ports    Docker-published listeners (any address) and every non-loopback
            listener, vs manifest port_vars resolved through the config layers,
-           host ports in the rendered ~/stacks compose files, and the PIDs of
-           loaded declared daemons
+           host ports in the rendered ~/stacks compose files, the PIDs of
+           loaded declared daemons and the rows' `host_programs` (a cask's
+           system extension has no launchd label; its executable name is declared)
   cron     the user crontab; the playbook declares no cron job
+
+Habitat (lexicon): the owner's software beside nOS — Spotify, a game launcher,
+an updater. The owner declares it in config.yml as `habitat_processes` (launchd
+labels and executable names), resolved through the config layers like every
+other declaration; undeclared until then, however harmless.
 
 Loopback listeners of ordinary user processes (editors, dev servers) are not
 judged — noise on a dev Mac. Binaries on the sealed system volume are the OS.
@@ -77,6 +83,22 @@ def declared_labels() -> set[str] | None:
     return labels
 
 
+def _identity():
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity  # noqa: PLC0415 — sibling helper, not a package
+    return nos_identity
+
+
+def declared_programs() -> frozenset[str]:
+    """Executable basenames the manifest rows declare (`host_programs`)."""
+    return frozenset(str(x) for row in _identity().services() for x in row.get("host_programs") or [])
+
+
+def habitat() -> frozenset[str]:
+    """The owner's declaration: `habitat_processes` from the config layers."""
+    return frozenset(str(x) for x in _identity().resolve_list("habitat_processes"))
+
+
 def _host_ports(entry) -> set[int]:
     """Host side of one compose `ports:` item; container-only = no host port."""
     if isinstance(entry, dict):
@@ -94,9 +116,7 @@ def _host_ports(entry) -> set[int]:
 def declared_ports() -> set[int] | None:
     if not STACKS_DIR.is_dir():
         return None
-    sys.path.insert(0, str(REPO / "tools"))
-    import nos_identity  # noqa: PLC0415 — sibling helper, not a package
-
+    nos_identity = _identity()
     ports: set[int] = set()
     for row in nos_identity.services():
         layers = nos_identity.resolve_flag(row["port_var"]) if row.get("port_var") else []
@@ -189,13 +209,16 @@ def judge_launchd(loaded: dict, plists: dict, declared: set[str]) -> list[dict]:
 
 def judge_ports(rows: list[dict], declared: set[int], daemon_pids: set[int],
                 daemon_exes: frozenset[str] = frozenset()) -> list[dict]:
+    """`daemon_exes`: a declared plist's program (full path), or a declared
+    program / habitat name (basename). Either joins the listener to a declaration."""
     out, seen = [], set()
     for r in sorted(rows, key=lambda r: r["port"]):
         exe = r.get("exe") or "?"
         docker = pathlib.Path(exe).name in DOCKER_BINS
         if exe.startswith(SYSTEM_PATHS) or (LOOPBACK.match(r["addr"]) and not docker):
             continue
-        if r["port"] in declared or {r["pid"], r.get("ppid")} & daemon_pids or exe in daemon_exes:
+        if (r["port"] in declared or {r["pid"], r.get("ppid")} & daemon_pids
+                or exe in daemon_exes or pathlib.Path(exe).name in daemon_exes):
             continue
         if (r["port"], exe) not in seen:
             seen.add((r["port"], exe))
@@ -205,11 +228,11 @@ def judge_ports(rows: list[dict], declared: set[int], daemon_pids: set[int],
 
 def collect() -> dict:
     report: dict = {"sources_missing": []}
-    labels, loaded, plists = declared_labels(), loaded_labels(), plist_files()
+    labels, loaded, plists, own = declared_labels(), loaded_labels(), plist_files(), habitat()
     if labels is None or loaded is None:
         report["sources_missing"].append("launchd (launchctl list / state/anatomy-graph.json)")
     else:
-        report["launchd"] = judge_launchd(loaded, plists, labels)
+        report["launchd"] = judge_launchd(loaded, plists, labels | own)
     ports, rows = declared_ports(), listeners()
     if ports is None or rows is None or labels is None or loaded is None:
         report["sources_missing"].append(f"listening ports (netstat / {STACKS_DIR})")
@@ -217,7 +240,7 @@ def collect() -> dict:
         pids = {p for lbl, p in loaded.items() if lbl in labels and p}
         # A root daemon's pid is not in a user `launchctl list`; its program path is.
         exes = frozenset(v["program"] for lbl, v in plists.items() if lbl in labels)
-        report["ports"] = judge_ports(rows, ports, pids, exes)
+        report["ports"] = judge_ports(rows, ports, pids, exes | declared_programs() | own)
     cron = crontab()
     if cron is None:
         report["sources_missing"].append("crontab -l")

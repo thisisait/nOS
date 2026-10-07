@@ -310,6 +310,8 @@ words:
         reason: an LLM backend row of state/habitat/llm-backends.yml, a third-party processor beside the organism
       - config_key: software_owner
         values: [self, symbiont, habitat]
+      - config_key: habitat_processes
+        reason: the owner's launchd labels and executables beside nOS, declared in config.yml so tools/undeclared-status.py tolerates them
     not: [organism, symbiont]
     counter_example: "the Gitea or GitLab nOS hosts (organ jobs, not habitat)"
     retired:

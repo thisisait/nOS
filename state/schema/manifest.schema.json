@@ -86,6 +86,7 @@
           "description": "Further launchd jobs the same role starts under the same flag (an exporter, a model server)."
         },
         "host_process":   { "type": "string", "minLength": 1, "description": "For a host-native row (stack null) with no launchd job: what runs instead (a CLI, a desktop app, an sshd ForceCommand)." },
+        "host_programs":  { "type": "array", "items": { "type": "string", "minLength": 1 }, "description": "Executable basenames the row runs outside launchd (a cask's system extension); tools/undeclared-status.py joins their listeners to this row." },
         "data_path_var":  { "type": ["string", "null"] },
         "domain_var":     { "type": ["string", "null"] },
         "port_var":       { "type": ["string", "null"] },
