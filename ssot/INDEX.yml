@@ -8,6 +8,18 @@ realms:
     path: ssot/doctrine
     in_force: true
     for: law
+    # Law kept as data in state/, read by code that enforces it. They stay in
+    # state/ because their readers name them there (AgentLoader, judges, budget).
+    # A state/ file with obligation keys must be listed here or sit in a realm
+    # (gate: tests/anatomy/test_an_obligation_is_classified.py).
+    companions:
+      - state/judge-sets.yml
+      - state/gdpr-consent-map.yml
+      - state/gdpr-erasure-map.yml
+      - state/gdpr-export-map.yml
+      - state/offboard-book-owner.yml
+      - state/digest-constitution.yml
+      - state/digest-importers/
   genome:
     path: state/genome
     in_force: true
