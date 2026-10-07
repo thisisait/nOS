@@ -45,6 +45,7 @@ Exit codes
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import re
@@ -1160,6 +1161,11 @@ def probe_healthy_but_unreachable(images: dict[str, str], res: ScanResult) -> No
             continue                      # answered
         except urllib.error.HTTPError:
             continue                      # 3xx/4xx/5xx is still an answer
+        except http.client.BadStatusLine:
+            # Bytes came back that are not HTTP — an SMTP `220` banner on
+            # stalwart's :25 (2026-10-07). Transport proven. An empty close is
+            # RemoteDisconnected, which urllib wraps in URLError → still below.
+            continue
         except Exception as exc:          # noqa: BLE001 — transport failure is the finding
             detail = f"{type(exc).__name__}: {exc}"
 
