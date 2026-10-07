@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Re-vendor KEAP's DataTable schema into the face, pinned to keap_repo_ref.
+"""Re-vendor KEAP's DataTable schema into contracts/keap/ and the face mirror, at keap_repo_ref.
 
 The schema-pin gate (files/anatomy/face/src/lib/keap-contracts/schema-pin.test.ts)
 validates every state/keap-tables/*.table.yml against KEAP's OWN zod schema. That
@@ -9,7 +9,9 @@ schema is the caddy-sessions incident the gate exists to prevent).
 
 This copies the three self-contained contract files from the KEAP source clone
 (~/keap/src, which roles/pazny.keap checks out AT keap_repo_ref during a
-converge) into the vendor dir, stamping each with the pin. Run it after bumping
+converge) into files/anatomy/contracts/keap/ (the one home), stamping each with
+the pin, and mirrors them byte-equal into the face, which must build from its own
+tree (it resolves `zod` from its node_modules and syncs alone to ~/face/src). Run it after bumping
 keap_repo_ref and re-converging (or after `git -C ~/keap/src checkout <tag>`):
 
     tools/vendor-keap-contracts.py            # vendor from ~/keap/src at the pin
@@ -28,7 +30,8 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 SRC = pathlib.Path.home() / "keap/src/shared/contracts"
-DST = REPO / "files/anatomy/face/src/lib/keap-contracts"
+DST = REPO / "files/anatomy/contracts/keap"
+MIRROR = REPO / "files/anatomy/face/src/lib/keap-contracts"
 DEFAULTS = REPO / "roles/pazny.keap/defaults/main.yml"
 FILES = ("visibility.ts", "table.ts", "field-concepts.ts")
 
@@ -66,17 +69,17 @@ def main() -> int:
 
     p = pin()
     print(f"keap_repo_ref = {p}  (from {DEFAULTS.name})")
-    DST.mkdir(parents=True, exist_ok=True)
     stale = []
     for name in FILES:
         want = rendered(name, p)
-        dst = DST / name
-        if args.check:
-            if not dst.is_file() or dst.read_text(encoding="utf-8") != want:
-                stale.append(name)
-        else:
-            dst.write_text(want, encoding="utf-8")
-            print(f"  vendored {name}")
+        for dst in (DST / name, MIRROR / name):
+            if args.check:
+                if not dst.is_file() or dst.read_text(encoding="utf-8") != want:
+                    stale.append(str(dst.relative_to(REPO)))
+            else:
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                dst.write_text(want, encoding="utf-8")
+                print(f"  vendored {dst.relative_to(REPO)}")
     if args.check and stale:
         print(f"STALE: {', '.join(stale)} — run tools/vendor-keap-contracts.py", file=sys.stderr)
         return 1

@@ -2,8 +2,9 @@
  * SCHEMA-PIN GATE (dtt tables contract, clause 2 — the highest-value clause).
  *
  * Validates every state/keap-tables/*.table.yml against KEAP's OWN zod schema,
- * vendored at the pinned keap_repo_ref (v1.44.0 / a97c91ff — see the sibling
- * files' headers). This makes "a definition runs ahead of the pin" structurally
+ * vendored at the tag each sibling file's header names (a byte-equal mirror of
+ * files/anatomy/contracts/keap/; tests/anatomy/test_vendored_keap_pin.py holds
+ * that tag to keap_repo_ref). This makes "a definition runs ahead of the pin" structurally
  * impossible instead of release discipline: the caddy-sessions `style: chat`
  * incident was a def valid only against a schema an orphan tag carried; a
  * dev-cut release would have 400'd the seed and killed the converge, and no
