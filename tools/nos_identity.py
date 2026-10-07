@@ -46,8 +46,10 @@ def layer_paths() -> list[Path]:
 
 
 def default_config_text() -> str:
-    """The defaults as ONE text, for readers that regex the declarations."""
-    return "\n".join(p.read_text(encoding="utf-8") for p in default_layers())
+    """The defaults as ONE text: regex it or safe_load it. Each file's leading
+    `---` is dropped so the join is one YAML document, not a stream."""
+    return "\n".join(re.sub(r"\A---[ \t]*\n", "", p.read_text(encoding="utf-8"))
+                     for p in default_layers())
 
 
 def default_config() -> dict:
@@ -130,4 +132,5 @@ if __name__ == "__main__":  # self-check: the three hops no guess can make
     assert fragment_stem(by_flag("install_gitea")) == "gitea"
     assert {i["kind"] for i in synthetic_identities()} == {"synthetic"}
     assert "macos_dock_autohide" in default_config() and "global_password_prefix" in default_config()
+    assert yaml.safe_load(default_config_text())["global_password_prefix"]
     print("ok")
