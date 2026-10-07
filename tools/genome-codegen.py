@@ -21,7 +21,7 @@ git diff --exit-code, gdpr-dpa-register.py --check). This is that machinery
 pointed at a new source, not new machinery.
 
 The design's own test: adding a fifth runtime must cost ONE emitter, not a
-renegotiated contract. If a Rust brain requires reopening the schema, the genome
+renegotiated contract. If a Rust runtime requires reopening the schema, the genome
 failed.
 
 WHAT IS DELIBERATELY NOT GENERATED

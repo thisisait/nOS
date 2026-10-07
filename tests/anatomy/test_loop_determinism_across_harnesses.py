@@ -7,7 +7,7 @@ only implementation, the CLI is a thin client over it), §3.5 (constraint B),
 WHY THIS FILE EXISTS
 --------------------
 The engine lives ON THE DEVICE and not inside one harness. Claude Code, Hermes,
-AgentKit and the planned Rust brain all reach the same judge; a Pulse job at
+AgentKit and the planned Rust runtime all reach the same judge; a Pulse job at
 03:00 reaches it with no human in the loop. That arrangement buys exactly one
 thing — a verdict that means the same thing everywhere — and it buys it only if
 the verdict is a function of ``(tree, gate set)`` and of nothing else. If the

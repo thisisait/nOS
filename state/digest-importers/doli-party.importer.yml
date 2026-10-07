@@ -12,7 +12,7 @@ egress: []
 gdpr:
   purpose: >-
     Project open Dolibarr thirdparties (IČO-keyed organisations) into the
-    shared party spine so agents, Cortex recall, Digest absorb and Face
+    shared party spine so agents, KEAP recall, Digest absorb and Face
     Books share one counterparty noun. The desk remains Dolibarr; KEAP
     holds the governed projection. No marketing.
   legal_basis: contract

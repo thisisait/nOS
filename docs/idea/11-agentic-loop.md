@@ -109,7 +109,7 @@ harness is a judge that disagrees with itself across harnesses.
 
 **Why it is a plugin and not a library:** three runtimes already exist in this
 estate (Claude Code, Hermes, AgentKit/PHP) and a fourth is planned (the Rust
-brain). A library would be ported three times and drift; an HTTP+CLI surface is
+runtime). A library would be ported three times and drift; an HTTP+CLI surface is
 ported zero times.
 
 ## 4. The plugin — thin on purpose

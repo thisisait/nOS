@@ -50,7 +50,7 @@ DIR_ENABLED=({% for d in backup_dirs_to_dump %}"{{ 'true' if (d.flag is not defi
 WING_DB_PATH="{{ backup_wing_db_path }}"
 DO_WING="{{ 'true' if backup_wing_db else 'false' }}"
 
-# KEAP cortex libSQL store (taxonomy, curated descriptions/briefs, data-table
+# KEAP libSQL store (taxonomy, curated descriptions/briefs, data-table
 # registry + rows, and the libSQL vector embeddings corpus) — a host file
 # under the container's bind-mounted data dir. Backed up with sqlite3 online
 # `.backup` (NOT `.dump`): WAL-consistent, and the vector index uses

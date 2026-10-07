@@ -8,9 +8,9 @@ namespace App\Cortex;
  * What one token may execute: verbs x namespaces x tenants.
  *
  * THE RULE THE DESIGN CALLS NON-NEGOTIABLE — "the strong token may not use the
- * weak door." Wing's flat brain token authenticates every other API route; if
+ * weak door." Wing's flat API token authenticates every other API route; if
  * it also opened the executor, the capability model would be decoration, since
- * anyone holding the brain token could run any verb over any namespace. So a
+ * anyone holding the flat token could run any verb over any namespace. So a
  * token with no cortex axes is REFUSED here, and being powerful elsewhere is
  * not a way in.
  *

@@ -2541,7 +2541,7 @@
       ]
     },
     {
-      "q": "post vectors back to the cortex",
+      "q": "post vectors back to KEAP",
       "expect": [
         "node:nos.iiab.keap",
         "title:upsert-embeddings"
@@ -2728,7 +2728,7 @@
       ]
     },
     {
-      "q": "push computed features to the cortex",
+      "q": "push computed features to KEAP",
       "expect": [
         "node:nos.iiab.keap",
         "title:upsert-features"
@@ -2917,7 +2917,7 @@
       ]
     },
     {
-      "q": "reconcile cortex drift",
+      "q": "reconcile KEAP drift",
       "expect": [
         "node:nos.iiab.keap",
         "title:run-lint"
@@ -4861,7 +4861,7 @@
       ]
     },
     {
-      "q": "what vectors does the cortex hold",
+      "q": "what vectors does KEAP hold",
       "expect": [
         "node:nos.iiab.keap",
         "title:get-feature-vectors"

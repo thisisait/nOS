@@ -25,7 +25,7 @@ Across the eight files in `state/schema/` there was **not one `$ref`, `allOf` or
 ## What shipped
 
 - **`state/genome/entity.schema.json`** — a base entity with `identity` /
-  `compliance` / `access` / `cortex` / `face` facets, composed by `$ref` +
+  `compliance` / `access` / `memory` / `face` facets, composed by `$ref` +
   `allOf`. The first cross-file `$ref` in the estate.
 - **The `access` facet** reconciles the five declarations of "how is this
   reached and what gates it" — the split that produced REM-144.

@@ -205,7 +205,7 @@
 		const v = row[col.key];
 		if (v === null || v === undefined) return '';
 		if (typeof v === 'boolean') return v ? '✓' : '—';
-		if (col.kind === 'vector') return '⋯'; // brain-embedding — not shown inline
+		if (col.kind === 'vector') return '⋯'; // embedding vector — not shown inline
 		if (typeof v === 'object') {
 			try {
 				return JSON.stringify(v);

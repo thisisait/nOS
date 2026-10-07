@@ -9,7 +9,7 @@ reader with different framing.
 ## 0. The idea
 
 A model arriving at this estate — Claude Code, Hermes, an AgentKit agent, the
-future Rust brain — should not have to *hunt* for what is true, and must not
+future Rust runtime — should not have to *hunt* for what is true, and must not
 fall back on what it remembers. It reads one artifact:
 
 - what the system **is** right now (services, versions, health, open findings)

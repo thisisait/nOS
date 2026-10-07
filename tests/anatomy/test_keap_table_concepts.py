@@ -4,7 +4,7 @@ A column carries two machine facts today: `kind` (how the value is stored) and
 `role` (how OLAP may aggregate it). Neither says what the column MEANS. `status`
 appears in four of the five seeded tables as four unrelated strings; `owner`,
 `slug` and `taxonomy_ref` appear in all five. Nothing ties them together, so no
-consumer — face, Wing, an agent, a future Rust brain — can ask "every column
+consumer — face, Wing, an agent, a future Rust runtime — can ask "every column
 meaning lifecycle status" across the estate. That is the "no common
 denominator" problem, stated for one organ.
 

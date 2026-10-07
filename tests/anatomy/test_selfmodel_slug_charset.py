@@ -166,7 +166,7 @@ def test_a_fake_2fauth_slug_fails_the_gate(tmp_path):
 
 
 def test_every_manifest_service_has_handwritten_system_en():
-    """p=64644: cortex store:materialise died — no SYSTEM_EN for device-gateway.
+    """p=64644: Cortex's `store:materialise` died — no SYSTEM_EN for device-gateway.
 
     A new manifest row without prose lands as a generic vector; the generator
     refuses rather than ship filler. Pin that refusal here so the next organ

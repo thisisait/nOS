@@ -191,7 +191,7 @@ export interface ColumnSpec {
 	required?: boolean;
 	/** OLAP role (dimension/measure/attribute) — metadata, not enforced here. */
 	role?: string;
-	/** vector column dimensionality (Pulse-generated brain-embedding). */
+	/** vector column dimensionality (Pulse-generated embedding). */
 	dim?: number;
 	unit?: string;
 	/** kind:rowRef only — the table this column's value is a row id into. */

@@ -11,7 +11,7 @@
 #     volume-<name>.tar.gz       Docker named volume tarball
 #     dir-<name>.tar.gz          host-bind dir (gitea/gitlab repos)
 #     wing-db.sql.gz             Wing SQLite store (sqlite3 .dump)
-#     keap-db.gz                 KEAP cortex libSQL store (sqlite3 .backup, binary)
+#     keap-db.gz                 KEAP libSQL store (sqlite3 .backup, binary)
 #     nos-state.tar.gz           ~/.nos/{secrets,state}.yml (GATED: -e restore_state=true)
 #     authentik-blueprints.json  Authentik export (durable state restores via the postgres dump)
 #
@@ -623,7 +623,7 @@
       changed_when: true
       failed_when: false
 
-# 5e-2. KEAP cortex libSQL store (keap-db.gz) --------------------------------
+# 5e-2. KEAP libSQL store (keap-db.gz) --------------------------------
 # NOT a sqlite3 replay: the backup is a binary online-`.backup` copy (the
 # vector index uses libsql_vector_idx(), which host sqlite3 can't rebuild from
 # a .dump). Restore = gunzip the binary DB straight into place. KEAP is a

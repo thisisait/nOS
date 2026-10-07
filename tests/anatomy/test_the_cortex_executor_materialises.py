@@ -192,7 +192,7 @@ def test_mutating_opcodes_are_not_demanded(tmp_path: Path):
 
 
 def test_a_token_without_all_three_axes_has_no_capability(tmp_path: Path):
-    """The brain token must not open the executor."""
+    """The flat Wing API token must not open the executor."""
     out = php(textwrap.dedent("""\
         $C = 'App\\Cortex\\CortexCapability';
         $none = $C::fromToken(['name' => 'default']);
@@ -205,7 +205,7 @@ def test_a_token_without_all_three_axes_has_no_capability(tmp_path: Path):
     assert out.stdout.strip() == "abc", (
         "a token with no cortex columns, or with only some axes granted, was "
         "given a capability. Every token that predates this feature has NULL "
-        "columns, including the brain token — they must all be refused."
+        "columns, including the flat API token — they must all be refused."
         f"\nstdout: {out.stdout}\nstderr: {out.stderr}")
 
 

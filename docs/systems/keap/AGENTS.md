@@ -1,8 +1,8 @@
 # KEAP — Agent Definition
 
-## CortexAgent
+## KeapAgent
 
-**System:** KEAP (iiab stack) — the nOS cortex / knowledge layer.
+**System:** KEAP (iiab stack) — nOS's memory / knowledge layer.
 **Agent surface:** `http://127.0.0.1:8091/agent/v1` and `/ingest/v1` (loopback only).
 **Role:** Reads and maintains the estate's knowledge corpus — taxonomy, node
 features, embeddings, and the capture review queue — on behalf of AgentKit.

@@ -6,8 +6,8 @@ digest gate is **green and pinned**, and the **daemon serves the validate surfac
 on `127.0.0.1:8098`** with 15 Playwright tests green against the built bundle. No
 Ansible role yet (step 9), **nothing deployed**.
 
-Cortex is the nOS reasoning organ — the fourth brain beside Bone (signals), Wing
-(observes) and Pulse (keeps time). It is a **verbatim port** of KEAP v1.27.0's
+Cortex is the nOS reasoning organ — the fourth host organ beside Bone (signals),
+Wing (observes) and Pulse (keeps time). It is a **verbatim port** of KEAP v1.27.0's
 `cortex-*` modules. See `docs/archive/nos-cortex-organ-design.md` at the repo root
 for the full design and the 13-step build sequence.
 

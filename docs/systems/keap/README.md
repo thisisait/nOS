@@ -1,6 +1,6 @@
 # KEAP — Knowledge Explorer and Preserver
 
-> The CORTEX of the nOS anatomy: the knowledge layer of the brain. A curated
+> Where nOS keeps its MEMORY: the knowledge layer. A curated
 > taxonomy, content links into the live content services, a capture/preservation
 > review queue, and an agent-facing knowledge API (`/agent/v1`) consumed by the
 > AgentKit runtime.

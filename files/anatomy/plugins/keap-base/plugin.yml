@@ -1,9 +1,9 @@
 # =============================================================================
-# keap-base — service plugin (CORTEX, 2026-07-10)
+# keap-base — service plugin (MEMORY, 2026-07-10)
 #
-# Status: live manifest. KEAP (Knowledge Explorer and Preserver) is the
-# CORTEX of the nOS anatomy — the knowledge layer of the brain. Where Bone
-# carries signals, Wing observes, and Pulse keeps time, the cortex REMEMBERS:
+# Status: live manifest. KEAP (Knowledge Explorer and Preserver) is where
+# nOS keeps its MEMORY. Where Bone carries signals, Wing observes, and Pulse
+# keeps time, KEAP REMEMBERS:
 # curated taxonomy (790 nodes), content links resolved into the live content
 # services (Kiwix, Calibre-Web, Nextcloud, Open WebUI), a capture/
 # preservation review queue, and an agent-facing knowledge API (/agent/v1)
@@ -26,7 +26,7 @@
 name: keap-base
 version: 0.1.0
 description: |
-  KEAP — Knowledge Explorer and Preserver (the nOS cortex).
+  KEAP — Knowledge Explorer and Preserver (where nOS keeps its memory).
 
   Wiring layer for header-OIDC authenticated access via Authentik proxy
   outpost. The role `pazny.keap` keeps install-only responsibilities
@@ -315,7 +315,7 @@ ui-extension:
     icon: compass
     url: "https://{{ keap_domain }}"
     tier: 3
-    description: "Cortex — taxonomy, content links & preservation"
+    description: "Memory — taxonomy, content links & preservation"
     health_check: "https://{{ keap_domain }}/api/health"
 
 # ── Notification routing (A9 severity → channel) ─────────────────────────────

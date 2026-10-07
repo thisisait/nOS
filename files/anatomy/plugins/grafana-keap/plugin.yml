@@ -1,14 +1,14 @@
 # =============================================================================
 # grafana-keap — composition plugin (veins wiring, 2026-07-31)
 #
-# Sibling of grafana-wing. Wires keap-base (the cortex knowledge store) into
+# Sibling of grafana-wing. Wires keap-base (the KEAP knowledge store) into
 # grafana-base via a datasource provisioning fragment. Pure tendon: no service,
 # no Authentik client, no compose extension of its own — the bind mount lives in
 # roles/pazny.grafana beside the wing one, so plugin + datasource + mount are
 # gated on the same condition and can never provision half-wired.
 #
 # WHY: table rows are invisible outside KEAP's own UI. `syncRows()` (roadmap B2)
-# will materialise them as cortex objects, but even before that lands, the
+# will materialise them as KEAP objects, but even before that lands, the
 # operator has no way to see what the knowledge layer actually contains without
 # opening KEAP. Wing's store has had a Grafana view since 2026-05-30; the
 # knowledge store has had none.
@@ -24,7 +24,7 @@
 name: grafana-keap
 version: 0.1.0
 description: |
-  Composition plugin: registers the KEAP cortex store as a Grafana datasource
+  Composition plugin: registers the KEAP store as a Grafana datasource
   (uid=keap_sqlite, type frser-sqlite-datasource) so dashboards can read the
   taxonomy, typed relations, knowledge objects and DataTables rows directly
   from keap.db, bind-mounted read-only into the Grafana container at
@@ -39,7 +39,7 @@ type:
 # REQUIRES — activation gate, not merely DAG ordering
 # =============================================================================
 # Renders only when BOTH grafana-base (install_observability) and keap-base
-# (install_keap) are loaded, so a host without the cortex never gets a
+# (install_keap) are loaded, so a host without KEAP never gets a
 # datasource pointing at a keap.db that is not there.
 
 requires:
@@ -76,7 +76,7 @@ lifecycle:
 #
 # Compositions process no new data, but the schema requires a complete block and
 # that is correct: this one widens WHO can read the knowledge store. Grafana is
-# Tier-1 (admin); the cortex itself is header_oidc with per-user rows. A panel
+# Tier-1 (admin); KEAP itself is header_oidc with per-user rows. A panel
 # built on this datasource sees rows across users, so the register should say so
 # rather than shrug because the plugin "stores nothing".
 # =============================================================================

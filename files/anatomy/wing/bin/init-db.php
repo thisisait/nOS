@@ -349,12 +349,12 @@ $addMissingColumns($db, 'systems', [
 // capability axes (2026-08-09).
 //
 // WHY THREE COLUMNS AND NOT A BOOLEAN. The executor's whole security posture is
-// that its token is provably WEAKER than the flat Wing brain token: a caller may
+// that its token is provably WEAKER than the flat Wing API token: a caller may
 // be allowed `get` over `tax` in one tenant and nothing else. One flag cannot
 // express that, and a flag is what gets granted broadly "just to unblock".
 //
 // NULL means NO cortex capability, and that is the important default: every
-// token that exists today — including the brain token — gets NULL and is refused
+// token that exists today — including the flat API token — gets NULL and is refused
 // at the executor door. A capability nobody granted is a capability nobody has.
 // Comma-separated lists; '*' widens one axis and must be written deliberately.
 $addMissingColumns($db, 'api_tokens', [

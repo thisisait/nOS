@@ -139,7 +139,7 @@ schema:
     - { key: refs,        label: "References",   kind: json,   role: attribute, concept: prov.references }
     - { key: release,     label: "Release",      kind: text,   role: attribute, concept: identity.version }
 
-    # ── the cortex ───────────────────────────────────────────────────────────
+    # ── the KEAP taxonomy ────────────────────────────────────────────────────
     - { key: anchor,      label: "Anchor",       kind: taxonomyRef, role: dimension, concept: graph.anchor }
 
 # =============================================================================

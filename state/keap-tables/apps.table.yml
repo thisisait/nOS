@@ -6,13 +6,13 @@
 # harness) creates the table in KEAP via POST /api/tables and upserts one row
 # per app via POST /api/tables/:id/rows. Each row anchors into the KEAP universe
 # (taxonomy_ref → a body orbiting the "nOS / Applications" star) and carries a
-# 768-dim embedding of `description` for free local semantic search ("brain").
+# 768-dim embedding of `description` for free local semantic search.
 #
 # Contract: nos-keap shared/contracts/table.ts (createTableRequestSchema).
 # Driver: libsql (SQLite) — per owner direction "DataTable(Store) je klíčový".
 # The nOS-face "Apps" desktop icon is a mini UI over this table: per-row
 # enable/disable (status), add-to-desktop (on_desktop), and edit-description
-# (re-embeds for brain search).
+# (re-embeds for semantic search).
 # =============================================================================
 
 title: "Apps"
@@ -32,7 +32,7 @@ schema:
     - { key: name,        label: "Name",              kind: text,   role: dimension, required: true, concept: identity.name }
     - { key: slug,        label: "Slug",              kind: text,   role: dimension, required: true, concept: identity.slug }
     - { key: description, label: "Description",       kind: text,   role: attribute, concept: identity.description }
-    # 768-dim nomic-embed-text vector of `description` — the brain-embedding.
+    # 768-dim nomic-embed-text vector of `description` — the embedding.
     - { key: embedding,   label: "Embedding",         kind: vector, role: attribute, dim: 768, concept: machine.embedding }
 
     # ── classification (LeanIX fact-sheet dimensions) ─────────────────────────

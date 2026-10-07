@@ -1,5 +1,5 @@
 ---
-# ── Embed model (host Ollama) — KEAP's brain-embedding dependency ─────────────
+# ── Embed model (host Ollama) — KEAP's embedding dependency ───────────────────
 # The keap-embed-sync Pulse job embeds node/table descriptions into 768-dim
 # vectors via host-loopback Ollama. The model KEAP dictates (keap_embed_model)
 # must exist on the host Ollama or every embed call 404s and semantic search +

@@ -52,7 +52,7 @@ final class CortexExecutorPresenter extends BaseApiPresenter
     {
         parent::startup();
 
-        // The brain token is refused at the door. It authenticates every other
+        // The flat API token is refused at the door. It authenticates every other
         // Wing route, and if it opened this one the capability axes below would
         // be decoration — anyone holding it could run any verb anywhere.
         $this->capability = CortexCapability::fromToken($this->validatedToken);

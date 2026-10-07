@@ -1,6 +1,6 @@
 ---
 # ==============================================================================
-# pazny.keap/tasks/main.yml — CORTEX (knowledge layer)
+# pazny.keap/tasks/main.yml — MEMORY (knowledge layer)
 #
 # Called from tasks/stacks/stack-up.yml BEFORE `docker compose -p iiab up`:
 # clones the nos-keap repo at the pinned ref (git-clone build precedent:
@@ -192,7 +192,7 @@
   ansible.builtin.debug:
     msg: |
       ══════════════════════════════════════════════════════
-       KEAP cortex ready (starts via the IIAB stack)
+       KEAP ready (starts via the IIAB stack)
       ══════════════════════════════════════════════════════
        URL:       https://{{ keap_domain | default('keap' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) }}
        Port:      {{ keap_port | default(8091) }} (loopback; agent surface /agent/v1)

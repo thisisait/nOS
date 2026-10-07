@@ -1238,7 +1238,7 @@ reasoning.
 - **Security measures:** platform baseline (see above)
 
 #### doli-party — `imp_doli-party`
-- **Purpose:** Project open Dolibarr thirdparties (IČO-keyed organisations) into the shared party spine so agents, Cortex recall, Digest absorb and Face Books share one counterparty noun. The desk remains Dolibarr; KEAP holds the governed projection. No marketing.
+- **Purpose:** Project open Dolibarr thirdparties (IČO-keyed organisations) into the shared party spine so agents, KEAP recall, Digest absorb and Face Books share one counterparty noun. The desk remains Dolibarr; KEAP holds the governed projection. No marketing.
 - **Legal basis (Art. 6):** `contract`
 - **Data subjects:** `The organisation's counterparties — customers and suppliers`; `Sole traders among them (natural persons acting as businesses)`
 - **Data categories:** `Organisation identity (legal name, trading name)`; `Company registration identifiers (IČO)`; `Country code (ISO 3166-1 alpha-2)`

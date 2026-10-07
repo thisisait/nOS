@@ -4,7 +4,7 @@
 HTTP is the ONLY implementation of the loop; this file holds no rule, no
 schema knowledge beyond the request bodies, and imports NOTHING from the
 engine (pinned by tests/anatomy/test_loop_forget_and_gate_add_adds.py, parsed
-with ast). Three other runtimes (Hermes, AgentKit, the planned Rust brain)
+with ast). Three other runtimes (Hermes, AgentKit, the planned Rust runtime)
 speak to the same endpoints; a shared library would be ported four times and
 drift four ways.
 

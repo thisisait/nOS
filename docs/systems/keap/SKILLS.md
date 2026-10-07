@@ -1,6 +1,6 @@
 # KEAP — Skills
 
-> Callable actions for the KEAP cortex. All are API-first against the loopback agent
+> Callable actions for KEAP, nOS's memory. All are API-first against the loopback agent
 > surface `http://127.0.0.1:8091`, authenticated with scope-split bearer tokens.
 
 ## Authentication
@@ -16,7 +16,7 @@
 
 ## get-feature-vectors
 
-**Trigger:** "read taxonomy embeddings", "get node feature vectors", "what vectors does the cortex hold"
+**Trigger:** "read taxonomy embeddings", "get node feature vectors", "what vectors does KEAP hold"
 **Method:** API
 **Endpoint:** `GET /agent/v1/features/vectors`
 **Token:** RO
@@ -26,7 +26,7 @@
 
 ## upsert-features
 
-**Trigger:** "write node features", "update GraphCanvas features", "push computed features to the cortex"
+**Trigger:** "write node features", "update GraphCanvas features", "push computed features to KEAP"
 **Method:** API
 **Endpoint:** `POST /agent/v1/features`
 **Token:** RW
@@ -48,7 +48,7 @@
 
 ## upsert-embeddings
 
-**Trigger:** "store embeddings", "post vectors back to the cortex", "save computed embeddings"
+**Trigger:** "store embeddings", "post vectors back to KEAP", "save computed embeddings"
 **Method:** API
 **Endpoint:** `POST /agent/v1/embeddings`
 **Token:** RW
@@ -61,7 +61,7 @@ reach loopback Ollama.
 
 ## run-lint
 
-**Trigger:** "lint the knowledge base", "reconcile cortex drift", "run the corpus lint"
+**Trigger:** "lint the knowledge base", "reconcile KEAP drift", "run the corpus lint"
 **Method:** API
 **Endpoint:** `POST /agent/v1/lint/run`
 **Token:** RW (it is a write — it reconciles state)

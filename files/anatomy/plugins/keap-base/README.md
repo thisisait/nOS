@@ -1,8 +1,8 @@
-# keap-base — CORTEX (knowledge layer)
+# keap-base — MEMORY (knowledge layer)
 
-KEAP (Knowledge Explorer and Preserver) is the **cortex** of the nOS anatomy —
-the part of the brain that *remembers*. Bones carry signals, Wings observe,
-Pulse keeps time; the cortex holds the curated knowledge map:
+KEAP (Knowledge Explorer and Preserver) is where nOS keeps its **memory** —
+the part that *remembers*. Bone carries signals, Wing observes,
+Pulse keeps time; KEAP holds the curated knowledge map:
 
 - **Taxonomy** — a curated ~790-node knowledge tree, Admin-editable after seeding.
 - **Content links** — `requiredData` refs (e.g. `kiwix:wikipedia_en`) resolved

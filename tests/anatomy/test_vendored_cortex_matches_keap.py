@@ -1,7 +1,7 @@
 """Anatomy gate: the vendored cortex must declare the same contract as KEAP's.
 
 `files/anatomy/cortex/server/` is a VENDORED PORT of KEAP's cortex half
-(`f6c15a9a`, "vendor the KEAP cortex port"). Two copies of a contract with
+(commit `f6c15a9a`). Two copies of a contract with
 nothing comparing them is a fork with a delay on it.
 
 MEASURED 2026-08-10, which is why this exists: adding the `agent:` namespace and
