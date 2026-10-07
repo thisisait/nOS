@@ -6,9 +6,9 @@ config.yml. YAML cannot include, so the set is spelled in two places that this
 gate pins to one rule: main.yml (vars_files + the preflight YAML check) and
 tools/nos_identity.default_layers() (every Python reader). A variable is declared
 exactly once across the set, so file order can never change a value. Nothing
-reads config.d/ on its own (a partial view is not the defaults), and the number
-of files that still open default.config.yml directly may only go down — the
-checklist lives in the roadmap row default-config-split.
+reads config.d/ on its own (a partial view is not the defaults), and no reader in
+tools/ or tests/ spells the remainder's path as a literal except nos_identity —
+the ones that still do are a pending list that only shrinks.
 """
 from __future__ import annotations
 
@@ -24,9 +24,15 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 import nos_identity as ni  # noqa: E402
 
-#: Files still opening default.config.yml as a file (measured 2026-10-06 after
-#: the host-software domain landed). Rerouting a reader through nos_identity lowers it.
-DIRECT_READERS_MAX = 300
+#: The literal the helper owns. A reader that quotes it sees ONE layer and calls it
+#: the defaults — `install_mas_apps` moved to config.d/ and such a reader says
+#: "undeclared". Only nos_identity may spell it; everyone else asks default_layers().
+LITERAL = re.compile(r"""["']default\.config\.yml["']""")
+LITERAL_OWNER = "tools/nos_identity.py"
+#: Readers in tools/ and tests/ that still quote the literal (measured 2026-10-07).
+#: Shrink-only: convert one, delete its line. Never add.
+LITERAL_PENDING = frozenset(
+    Path(__file__).with_name("config_literal_pending.txt").read_text().split())
 SUFFIXES = {".py", ".yml", ".yaml", ".sh", ".php", ".j2", ".js", ".ts", ".json", ""}
 SKIP_PARTS = {".git", "node_modules", "docs", ".ci-venv", "dist", "vendor", "build"}
 #: The only code allowed to open config.d/ by name: the helper and this gate.
@@ -89,10 +95,17 @@ def test_nothing_but_the_helper_opens_config_d():
     assert not bad, f"a reader opens a domain file by name — route it through nos_identity: {bad}"
 
 
-def test_direct_readers_of_the_remainder_only_shrink():
-    direct = sorted(str(p.relative_to(REPO)) for p, t in _code_files() if "default.config.yml" in t)
-    assert len(direct) <= DIRECT_READERS_MAX, (
-        f"{len(direct)} files open default.config.yml directly, ratchet {DIRECT_READERS_MAX}; "
-        f"route the new one through nos_identity.default_config(): {direct}")
-    assert len(direct) >= DIRECT_READERS_MAX * 0.8, (
-        f"{len(direct)} direct readers, ratchet {DIRECT_READERS_MAX}: lower the ratchet to what was measured")
+def _literal_readers():
+    return {str(p.relative_to(REPO)) for p, t in _code_files()
+            if p.suffix == ".py" and p.relative_to(REPO).parts[0] in ("tools", "tests")
+            and LITERAL.search(t)}
+
+
+def test_only_the_helper_spells_the_remainder_path():
+    new = sorted(_literal_readers() - LITERAL_PENDING - {LITERAL_OWNER})
+    assert not new, f"a reader quotes default.config.yml — ask nos_identity.default_layers(): {new}"
+
+
+def test_the_literal_pending_list_only_shrinks():
+    stale = sorted(LITERAL_PENDING - _literal_readers())
+    assert not stale, f"converted, so delete from config_literal_pending.txt: {stale}"
