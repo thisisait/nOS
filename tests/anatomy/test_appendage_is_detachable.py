@@ -1,6 +1,6 @@
 """Anatomy gate — an appendage can be cut off and the core does not notice.
 
-WHY (Fable reflection, accepted 2026-10-06; ssot/doctrine/body-plan.md §7). An
+WHY (Fable reflection, accepted 2026-10-06; ssot/doctrine/body-plan.md §4.2). An
 appendage is an organ attached through one declared joint (a cross-repo
 contract), which no core organ depends on or imports. A row says so in
 state/manifest.yml with `joint:` (the spec) or `joint_pending:` (why not yet).
@@ -176,7 +176,7 @@ def test_a_core_node_never_depends_on_an_appendage():
     assert not missing, f"appendage rows with no graph node — regenerate the graph: {missing}"
     bad = _core_dependents(graph)
     assert not bad, ("the core depends on an appendage, so it cannot be cut off "
-                     "(body-plan.md §7):\n  " + "\n  ".join(bad))
+                     "(body-plan.md §4.2):\n  " + "\n  ".join(bad))
 
 
 def test_a_planted_dependency_goes_red():

@@ -95,6 +95,7 @@ def test_an_old_doctrine_path_is_still_an_address():
 #: warehouse file was moved, so there is no old address to redirect.
 _BORN_IN_SSOT = {
     "sso.md": "carved from docs/sso-and-attribution.md, which stays the guide",
+    "genome.md": "the shipped half of docs/idea/06-genome.md, which stays an idea",
 }
 
 
