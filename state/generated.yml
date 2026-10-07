@@ -82,7 +82,7 @@ files:
     writer: files/anatomy/cortex/knowledge/spine-render.mjs
     checked_by: CI (node files/anatomy/cortex/knowledge/spine-render.mjs --check)
     header: false
-    why: a Cortex store debt path (lexicon Cortex.debt); no new code lands there.
+    why: the path is in Cortex's declared debt (lexicon Cortex.debt); no new code lands there.
   # Written by scheduled jobs on the host, not rerunnable offline.
   docs/llm/security/remediation-queue.json: &scan
     writer: the nightly security scan
