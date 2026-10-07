@@ -2,7 +2,9 @@
 in_force: true
 ruled: 2026-05-17
 row: null
-gates: []
+gates:
+  - tests/anatomy/test_forward_auth_does_not_stack.py
+  - tests/anatomy/test_sso_doctrine.py
 ---
 # SSO — one mode per service
 

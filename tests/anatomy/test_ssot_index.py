@@ -91,6 +91,13 @@ def test_an_old_doctrine_path_is_still_an_address():
         corpus["ssot/doctrine/body-plan.md"].sections
 
 
+#: Articles written in ssot/ from part of a guide that stays a guide: no
+#: warehouse file was moved, so there is no old address to redirect.
+_BORN_IN_SSOT = {
+    "sso.md": "carved from docs/sso-and-attribution.md, which stays the guide",
+}
+
+
 def test_every_promoted_article_keeps_its_old_address():
     """Each article has a redirect from its warehouse path, the redirect's
     target is live, and no stub file sits beside it (law has one home)."""
@@ -105,7 +112,7 @@ def test_every_promoted_article_keeps_its_old_address():
     targets = set(redirects.values())
     bad += [f"ssot/doctrine/{p.name} has no old address"
             for p in sorted((REPO / "ssot" / "doctrine").glob("*.md"))
-            if f"ssot/doctrine/{p.name}" not in targets]
+            if f"ssot/doctrine/{p.name}" not in targets and p.name not in _BORN_IN_SSOT]
     assert not bad, bad
 
 

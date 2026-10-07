@@ -2,6 +2,7 @@
 
 Plan: docs/idea/13-relations.md §R5, row "Forward-auth ≠ native-OIDC
       double-protection" ("ours, derivable").
+Doctrine: ssot/doctrine/sso.md §3 (never gated twice).
 
 WHAT IS BEING REFUSED. A `native_oidc` service redirects to Authentik from its
 OWN login page. Putting `authentik@file` in front of it as well makes the

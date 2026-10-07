@@ -1,5 +1,7 @@
 """Anatomy gates for the SSO/identity doctrine (2026-05-17).
 
+Doctrine: ssot/doctrine/sso.md §1 (four modes) and §2 (one spelling).
+
 CLAUDE.md β1.A pinned three Authentik-wiring buckets per service:
 
   native_oidc   — service consumes OIDC at app level (own login UI +
