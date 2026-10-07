@@ -1,13 +1,13 @@
-"""Anatomy CI gate — CLAUDE.md anatomy-plugin count stays honest.
+"""Anatomy CI gate — CLAUDE.md carries no plugin count.
 
-CLAUDE.md line 7 advertises the number of anatomy plugins ("N anatomy plugins
-for cross-service wiring"). That count drifted silently as plugins were added
-(it claimed 65 while 67 plugin.yml manifests existed on disk, after
-authentik-tofu-drift-base + hermes-base landed). No gate caught it.
+CLAUDE.md's own brief says: "Do not paste history, incident notes or counts
+that move into this file." The plugin count did exactly that: it claimed 65
+while 67 manifests existed, then had to be bumped by hand on every new plugin.
+Until 2026-10-07 this gate pinned the printed count to the loader's; now it
+refuses the count altogether — the loader is the reader for that number
+(`load_plugins.discover`), the prose only says plugins exist.
 
-This pins the prose to ground truth: the count CLAUDE.md prints must equal the
-number of plugins the loader actually discovers (one per
-files/anatomy/plugins/<name>/plugin.yml).
+The loader-vs-filesystem half stays: every plugin dir carries a plugin.yml.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 PLUGINS_ROOT = REPO / "files" / "anatomy" / "plugins"
 CLAUDE_MD = REPO / "CLAUDE.md"
 
-_COUNT_RE = re.compile(r"(\d+)\s+anatomy plugins for cross-service wiring")
+_COUNT_RE = re.compile(r"~?\d+\s+(anatomy plugins|FOSS Docker services)")
 
 
 def _discovered_count() -> int:
@@ -40,14 +40,11 @@ def test_loader_matches_filesystem():
     assert _discovered_count() == _filesystem_count()
 
 
-def test_claude_md_plugin_count_is_accurate():
-    """CLAUDE.md line 7's plugin count == the real discovered count."""
+def test_claude_md_carries_no_moving_count():
+    """CLAUDE.md names plugins and services without a number in front."""
     text = CLAUDE_MD.read_text(encoding="utf-8")
-    m = _COUNT_RE.search(text)
-    assert m, "CLAUDE.md must state '<N> anatomy plugins for cross-service wiring'"
-    claimed = int(m.group(1))
-    actual = _discovered_count()
-    assert claimed == actual, (
-        f"CLAUDE.md claims {claimed} anatomy plugins but {actual} plugin.yml "
-        f"manifests exist under {PLUGINS_ROOT.relative_to(REPO)}/"
+    hits = [m.group(0) for m in _COUNT_RE.finditer(text)]
+    assert not hits, (
+        f"CLAUDE.md carries a count that moves: {hits}. The brief forbids counts "
+        f"here; the loader ({_discovered_count()} plugins today) is the reader."
     )
