@@ -5,7 +5,10 @@ row: lexicon
 gates:
   - tests/anatomy/test_appendage_is_detachable.py
   - tests/anatomy/test_body_glosses_are_the_lexicon.py
+  - tests/anatomy/test_every_daemon_has_a_manifest_row.py
+  - tests/anatomy/test_every_organ_has_its_homes.py
   - tests/anatomy/test_lexicon_holds.py
+  - tests/anatomy/test_manifest_rows_carry_origin.py
   - tests/anatomy/test_ssot_index.py
 ---
 # Body plan — one word, one meaning
@@ -62,6 +65,15 @@ A new word the operator has not ruled carries `proposed: true`.
 | organ system | a public group of organs serving one function | the apex ruling's `organ_systems:` key |
 | organism | one nOS install on one machine | — |
 | habitat | the machine and what lives beside the organism | `software_owner` |
+
+**An organ's homes are spelt from its id** (I-12, 2026-10-07). For a row
+`id` in `state/manifest.yml`: `roles/pazny.<id>/` renders it,
+`files/anatomy/plugins/<id>-base/` wires it, `docs/systems/<id>/` explains it,
+with `_` → `-` in the plugin and docs names. A home nobody can derive from the
+row is a part a model cannot find. Six organs lack one today (alloy has no
+role; tailscale has docs only; bone, opencode and iiab_terminal have no
+plugin; homeassistant has no docs); each is declared with its reason in
+`tests/anatomy/test_every_organ_has_its_homes.py`, a list that may only shrink.
 
 A cell's own prompt and tool allow-list is its **definition**; one session
 the runner opens for it is a **ceremony**. The machinery that turns a definition

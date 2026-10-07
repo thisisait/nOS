@@ -156,7 +156,7 @@ def _body_plan() -> dict:
 def test_the_body_plan_counts_each_organ_once():
     """MEASURED 2026-10-07 (I-12): the organ level held 73 rows + 18 daemon nodes
     + 7 face apps + the repo surfaces, so wing, bone, pulse and cortex were each
-    two organs and a face app was one. An organ is one row (body-plan.md §5);
+    two organs and a face app was one. An organ is one row (ssot/doctrine/body-plan.md §5);
     the only other organ-level node is a declared repo surface."""
     plan = _body_plan()
     organs = [nid for nid, n in plan["nodes"].items() if n["level"] == "organ"]

@@ -1,6 +1,6 @@
 """Anatomy gate — every manifest row says whose software it is.
 
-WHY (repo-body-plan I-12, 2026-10-07; body-plan.md §4.1). `software_owner` in
+WHY (repo-body-plan I-12, 2026-10-07; ssot/doctrine/body-plan.md §4.1). `software_owner` in
 config.d/20-host-software.yml classes the HOST packages (self / symbiont /
 habitat), but the 73 organs of state/manifest.yml carried no origin at all, so
 "nOS's own part" and "vendor software nOS runs" were told apart by reading
