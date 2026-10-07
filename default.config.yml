@@ -488,9 +488,6 @@ docker_cpus_light: "0.5"
 # Comment out (#) any line to SKIP that component during provisioning.
 # ==============================================================================
 
-# ── Mac App Store ─────────────────────────────────────────────────────────────
-install_mas_apps: false           # Mac App Store applications
-
 # ── Reverse proxy ─────────────────────────────────────────────────────────────
 # Traefik is the edge proxy (binds 80/443). It auto-discovers Tier-2 apps
 # via Docker labels and routes Tier-1 services from a file provider that
@@ -573,14 +570,9 @@ install_backrest: false          # pazny.backrest — restic store orchestrator 
 install_wing: true           # Wing Security Dashboard + Hub (Nette PHP + SQLite) [requires: php, nginx]
 
 # ── macOS system configuration ────────────────────────────────────────────────
-configure_dotfiles: false         # Dotfiles – requires your own repo! Set dotfiles_repo in credentials.yml
-configure_terminal: false         # Terminal theme (habitat)
-configure_osx: false              # Base macOS defaults (.osx script) (habitat)
-configure_macos_defaults: false   # Extended macOS settings (Finder, keyboard, Dock...) (habitat)
-configure_dock: false             # Dock layout (requires dockutil)
+# The desktop switches (App Store, dotfiles, Finder/Dock defaults, Terminal,
+# Sublime, shell extras) live beside their values in the host-desktop layer of config.d/.
 configure_sudoers: false          # Custom sudoers rules
-configure_sublime: false          # Sublime Text editor
-install_shell_extras: false       # Starship prompt + shell aliases (bat, eza, fzf, zoxide, lazygit) (habitat)
 
 # ── System services (require sudo) ────────────────────────────────────────────
 enable_ssh: false                 # Remote Login / SSH server

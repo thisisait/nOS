@@ -9,6 +9,18 @@
 # ==============================================================================
 
 # ==============================================================================
+# DESKTOP SWITCHES — all off: a habitat is the owner's, never nOS's by default
+# ==============================================================================
+install_mas_apps: false           # Mac App Store applications
+configure_dotfiles: false         # Dotfiles – requires your own repo! Set dotfiles_repo in credentials.yml
+configure_terminal: false         # Terminal theme (habitat)
+configure_osx: false              # Base macOS defaults (.osx script) (habitat)
+configure_macos_defaults: false   # Extended macOS settings (Finder, keyboard, Dock...) (habitat)
+configure_dock: false             # Dock layout (requires dockutil)
+configure_sublime: false          # Sublime Text editor
+install_shell_extras: false       # Starship prompt + shell aliases (bat, eza, fzf, zoxide, lazygit) (habitat)
+
+# ==============================================================================
 # MAC APP STORE
 # Requires install_mas_apps: true + App Store login (mas login).
 # Each app is [id, name] — find the ID in the URL appstore.com/.../id<ID>.
