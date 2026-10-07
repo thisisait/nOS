@@ -140,7 +140,7 @@ export function nodeLabel(id: string): string {
 	const local = id.split(':').slice(1).join(':');
 	if (id.startsWith('daemon:')) return local.replace(/^eu\.thisisait\.nos\./, '');
 	if (id.startsWith('doctrine:')) {
-		// "docs/idea/11-agentic-loop-contract.md#2.4" → "loop-contract §2.4"
+		// "ssot/doctrine/loop-contract.md#2.4" → "loop-contract §2.4"
 		const [doc, section] = local.split('#');
 		const base = (doc.split('/').pop() ?? doc).replace(/\.md$/, '');
 		return `${base.replace(/^11-agentic-/, '')} §${section}`;

@@ -1,7 +1,39 @@
+---
+in_force: true
+ruled: 2026-08-02
+row: null
+gates:
+  - tests/anatomy/test_a_claim_is_drawn_as_a_claim.py
+  - tests/anatomy/test_a_disabled_intent_is_refused_by_name.py
+  - tests/anatomy/test_a_passed_verdict_is_never_silent.py
+  - tests/anatomy/test_anatomy_graph_is_sound.py
+  - tests/anatomy/test_fixture_rows_do_not_head_the_readers.py
+  - tests/anatomy/test_loop_budget_forbids_its_own_gates.py
+  - tests/anatomy/test_loop_determinism_across_harnesses.py
+  - tests/anatomy/test_loop_forget_and_gate_add_adds.py
+  - tests/anatomy/test_loop_graph_is_sound.py
+  - tests/anatomy/test_loop_judge_runner.py
+  - tests/anatomy/test_loop_ledger.py
+  - tests/anatomy/test_loop_plugin_is_thin.py
+  - tests/anatomy/test_loop_ratchet_inputs_are_derived.py
+  - tests/anatomy/test_loop_verdict_is_on_the_proposed_tree.py
+  - tests/anatomy/test_loop_weakness_reader.py
+  - tests/anatomy/test_oracle_overlap_cannot_measure_vacuity.py
+  - tests/anatomy/test_the_driver_lands_without_merging.py
+  - tests/anatomy/test_the_engine_judges_its_own_gates.py
+  - tests/anatomy/test_the_halt_can_actually_halt.py
+  - tests/anatomy/test_the_harness_toggle_defaults_off.py
+  - tests/anatomy/test_the_loop_can_actually_be_driven.py
+  - tests/anatomy/test_the_loop_has_a_cadence.py
+  - tests/anatomy/test_the_proposer_cannot_reach_its_own_verdict.py
+  - tests/anatomy/test_the_reviewer_refuses_before_it_merges.py
+  - tests/anatomy/test_the_session_reports_its_best_iteration.py
+  - tests/bone_loop/test_loop_auth.py
+---
 # 11a — The agentic loop: engine contract
 
-**Status: contract settled, not built.** Opened 2026-08-02.
-**Parent:** [11-agentic-loop.md](11-agentic-loop.md) — the shape. This document is
+Opened 2026-08-02; built since (`files/anatomy/bone/`).
+**Parent:** [11-agentic-loop.md](../../docs/idea/11-agentic-loop.md) — the shape. This document is
 the **contract**: what gets built, where it lives, and what it may not do.
 
 Every section states a **DECISION**. §9 lists what was deliberately *not* decided.
@@ -26,7 +58,7 @@ Nothing below is inferred from documentation. The load-bearing claims were run.
 | M7 | `genome-codegen` and `pytest` collide | `tools/genome-codegen.py:49` vs `test_genome_contract.py` | both write `files/anatomy/module_utils/nos_entity.py` |
 
 M2 and M3 are the same defect as
-[`docs/hidden_fees/08-empty-stack-reads-as-success.md`](../hidden_fees/08-empty-stack-reads-as-success.md),
+[`docs/hidden_fees/08-empty-stack-reads-as-success.md`](../../docs/hidden_fees/08-empty-stack-reads-as-success.md),
 in the judges themselves. **The loop's judges currently contain the exact failure
 mode the loop exists to detect.** That is the single most important input to this
 contract, and §2.4 is built on it.

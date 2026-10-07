@@ -4,7 +4,7 @@ Read this before any `nos-loop` skill. It is the **only** file in this plugin
 that names an address, a port or a credential; the four skills name none, so a
 change here changes all of them at once and cannot change one of them silently.
 
-Authoritative source for everything below: `docs/idea/11-agentic-loop-contract.md`.
+Authoritative source for everything below: `ssot/doctrine/loop-contract.md`.
 This file is a *client's* view of that contract. Where the two disagree, the
 contract wins and this file is the bug.
 

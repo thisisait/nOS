@@ -1,7 +1,7 @@
 # 13 — Fable review: the agentic-loop engine
 
 One slow pass over `files/anatomy/bone/*.py`, `state/judge-sets.yml`,
-`docs/idea/11-agentic-loop-contract.md` and the readers around them. Everything below was
+`ssot/doctrine/loop-contract.md` and the readers around them. Everything below was
 run against the live estate on 2026-08-19, HEAD `5d83e384`.
 
 ## 1. Verdict
@@ -29,7 +29,7 @@ independent layers, and every change worth making is in the *bookkeeping around*
 
 ## 3. The three changes worth making
 
-### 3.1 Rewrite the §11 proof criterion — `docs/idea/11-agentic-loop-contract.md:716-727`
+### 3.1 Rewrite the §11 proof criterion — `ssot/doctrine/loop-contract.md:716-727`
 
 §11 adopts the parent's criterion unchanged: *"a weakness that was on the list, is not on
 the list."* The architecture forbids satisfying it. `budget.py:134` is

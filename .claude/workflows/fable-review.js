@@ -46,7 +46,7 @@ const READING = `
 WHAT TO READ
 
   ${REPO}/docs/idea/11-agentic-loop.md            the parent plan
-  ${REPO}/docs/idea/11-agentic-loop-contract.md   the contract the workflow committed to
+  ${REPO}/ssot/doctrine/loop-contract.md   the contract the workflow committed to
   ${REPO}/docs/idea/12-state-surface.md           the state artefact every model reads first
   ${REPO}/files/anatomy/bone/{judges,ledger,weaknesses,budget,loopauth}.py
   ${REPO}/state/judge-sets.yml

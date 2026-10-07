@@ -1632,6 +1632,8 @@ def derive_doctrine(nodes: dict) -> list[dict]:
     sources = {"state/judge-sets.yml"} | set(ranges_by_file) | set(whole_file)
     pairs: dict[tuple[str, str], dict] = {}
     for src in sorted(sources):
+        if src in dc.SELF_REFERENTIAL:
+            continue  # it quotes citations as data (doctrine-cite.py's own rule)
         cites = dc.harvest_file(REPO / src, src, corpus)
         dc.resolve(cites, corpus)
         for c in cites:

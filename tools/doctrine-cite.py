@@ -282,6 +282,7 @@ DOCTRINE_REDIRECTS: dict[str, str] = {
     "docs/doctrine/workflows.md": "ssot/doctrine/workflows.md",
     "docs/doctrine/organs.md": "ssot/doctrine/body-plan.md",
     "docs/doctrine/README.md": "ssot/README.md",
+    "docs/idea/11-agentic-loop-contract.md": "ssot/doctrine/loop-contract.md",
 }
 
 
@@ -614,9 +615,11 @@ def harvest_file(f: Path, rel: str, corpus: dict[str, DocIndex]) -> list[Citatio
 def resolve(citations: list[Citation], corpus: dict[str, DocIndex]) -> None:
     rems = rem_registry()
     epics = epic_registry()
-    decision_docs = {d for d, idx in corpus.items() if idx.decisions}
-    m_docs = {d for d, idx in corpus.items() if idx.m_ids}
-    constraint_docs = {d for d, idx in corpus.items() if idx.constraints}
+    # A redirect alias is an old address, never the holder of a registry id.
+    real = {d: idx for d, idx in corpus.items() if d not in DOCTRINE_REDIRECTS}
+    decision_docs = {d for d, idx in real.items() if idx.decisions}
+    m_docs = {d for d, idx in real.items() if idx.m_ids}
+    constraint_docs = {d for d, idx in real.items() if idx.constraints}
     sec_docs = set()
     for d in corpus:
         try:

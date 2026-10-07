@@ -570,16 +570,23 @@ nodes:
   "doctrine:docs/archive/cortex-corpus-parallel.md#5.3": withheld
   "doctrine:docs/archive/nos-cortex-organ-design.md#2": withheld
   # 2026-08-19: §10 gained citations when the loop's cadence shipped.
-  "doctrine:docs/idea/11-agentic-loop-contract.md#10": withheld
-  "doctrine:docs/idea/11-agentic-loop-contract.md#5.1": withheld
-  "doctrine:docs/idea/11-agentic-loop-contract.md#5a": withheld
-  "doctrine:docs/idea/11-agentic-loop-contract.md#8.1": withheld
-  "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d": withheld
-  "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e": withheld
-  "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f": withheld
-  "doctrine:docs/idea/11-agentic-loop-contract.md#M2": withheld
-  "doctrine:docs/idea/11-agentic-loop-contract.md#M3": withheld
-  "doctrine:docs/idea/11-agentic-loop-contract.md#M7": withheld
+  # 2026-10-07: renamed in place from docs/idea/11-agentic-loop-contract.md
+  # (promoted to ssot/doctrine/loop-contract.md); verdicts unchanged.
+  # 2026-10-07: #3.4 #4 #7 #constraint-A are cited by readers/skills now the contract is law.
+  "doctrine:ssot/doctrine/loop-contract.md#10": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#3.4": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#4": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#5.1": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#5a": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#7": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#8.1": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#DECISION-2d": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#DECISION-2f": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#M2": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#M3": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#M7": withheld
+  "doctrine:ssot/doctrine/loop-contract.md#constraint-A": withheld
 
   # --- withheld: face apps, gate sets, judges --------------------------------
   "faceapp:anatomy": withheld
@@ -786,6 +793,7 @@ nodes:
   "article:identity": withheld
   "article:immune-system": withheld
   "article:layers": withheld
+  "article:loop-contract": withheld  # 2026-10-07: promoted from docs/idea
   "article:loops": withheld
   "article:observability": withheld
   "article:operator-model": withheld
@@ -793,6 +801,7 @@ nodes:
   "article:secrets": withheld
   "article:security-floor": withheld
   "article:session-threat-model": withheld
+  "article:sso": withheld  # 2026-10-07: carved from docs/sso-and-attribution.md
   "article:ssot": withheld
   "article:virtiofs": withheld
   "article:workflows": withheld

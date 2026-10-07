@@ -68,7 +68,7 @@ doctrine ("backends as BINDINGS, not providers", `docs/minimax-groundwork.md`).
 - Rejected: "route" — Traefik owns that word here.
 
 ### 7. Loop — **the loop** / **nos-loop** (keep); scheduled run — **ceremony** (keep)
-The loop: weakness → proposal → judge → verdict → MR (`docs/idea/11-agentic-loop-contract.md`).
+The loop: weakness → proposal → judge → verdict → MR (`ssot/doctrine/loop-contract.md`).
 A ceremony: one scheduled agent run through `tools/run-agent.sh`. Both are estate words that
 work. Organ, tendon, vein, bone, gate: all keep — they are the anatomy doctrine.
 - NOT: the in-session grader iteration (that is explicitly a contract non-goal, contract

@@ -1,6 +1,6 @@
 """Agentic-loop path budget — §5, computed from the gate set.
 
-Contract: docs/idea/11-agentic-loop-contract.md §5 (DECISION 5, 5a). Build-order
+Contract: ssot/doctrine/loop-contract.md §5 (DECISION 5, 5a). Build-order
 item 4. This module answers exactly one question, as data:
 
     given a gate set, which paths may a proposal touch?

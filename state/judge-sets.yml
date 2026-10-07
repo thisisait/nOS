@@ -1,6 +1,6 @@
 # state/judge-sets.yml — the judge registry and the named gate sets.
 #
-# Contract: docs/idea/11-agentic-loop-contract.md §2.1 (DECISION 2).
+# Contract: ssot/doctrine/loop-contract.md §2.1 (DECISION 2).
 # Committed to the repo on purpose: a gate set must mean the same thing in CI,
 # on the operator's Mac, and in a 03:00 Pulse job. A set defined in runtime
 # state drifts per host. This file is itself inside the budget's deny list

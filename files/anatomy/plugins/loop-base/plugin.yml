@@ -1,5 +1,5 @@
 # =============================================================================
-# loop-base — the agentic loop's cadence (docs/idea/11-agentic-loop-contract.md §10 step 6, 2026-08-19)
+# loop-base — the agentic loop's cadence (ssot/doctrine/loop-contract.md §10 step 6, 2026-08-19)
 #
 # The loop's components all existed before this file — reader, ledger, judges
 # (Bone), driver (tools/loop-pr.py), reviewer (tools/loop-review.py), entry
@@ -7,7 +7,7 @@
 # 2026-08-19, zero Pulse jobs referenced the loop and every proposal ever
 # filed was typed by a human or a model a human was talking to. This plugin
 # declares the cadence; Pulse owns it (the engine deliberately has no internal
-# tick — docs/idea/11-agentic-loop-contract.md §7 non-goal 2).
+# tick — ssot/doctrine/loop-contract.md §7 non-goal 2).
 #
 # THE STEP-6 BAR, judged per half rather than waved at the whole:
 #   * The JUDGED half (drive + review) has three attended green cycles
@@ -79,7 +79,7 @@ pulse:
       # declared, so an operator pause set since is untouched. Once the live
       # row reads paused=0 with a null reason, both of these lines can go.
       paused: false
-      paused_reason: "entry half has zero attended cycles (docs/idea/11-agentic-loop-contract.md §10 step 6) — run tools/loop-propose.py --invoke attended until trusted, then unpause"
+      paused_reason: "entry half has zero attended cycles (ssot/doctrine/loop-contract.md §10 step 6) — run tools/loop-propose.py --invoke attended until trusted, then unpause"
       # Exit 3 = refused (nothing proposable / committed-evidence deadlock).
       # That is NEWS for the operator, not a crash: the refusal names the
       # commit that unblocks the loop.

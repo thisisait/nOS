@@ -13,7 +13,7 @@
 
 Counted 2026-09-14: most “open/design” rows below had already shipped or
 been seeded. Files stay in this directory until `idea-surface-absorb` moves
-cites (gates still pin `docs/idea/11-agentic-loop-contract.md`,
+cites (gates still pin `ssot/doctrine/loop-contract.md`,
 `13-relations.md`, `15-business-fixture.md`, `21-mariadb-tls-ladder.md`,
 `02-cortex-lang.md`). Ceiling stays 24 until that cite-migration; it may
 only fall. Do not add idea 22+. Device work is dtt `device-organ`.
@@ -37,7 +37,7 @@ only fall. Do not add idea 22+. Device work is dtt `device-organ`.
 | [11](11-agentic-loop.md) | The agentic loop | **built** — index said “design”; that was a lie (fee 50) | The propose→judge loop exists; remaining defects are `loop-*` rows. |
 | [13](13-relations.md) | Relations | **R1–R5 shipped** — still a cite target | What is joined to what, and who owns the verb. |
 | [15](15-business-fixture.md) | A real business on nOS | **increment 1 shipped** — cite target | A fixture is data that argues back. |
-| [11a](11-agentic-loop-contract.md) | The loop engine contract | **settled law** — do not move until cite-migration | Tests and Bone import this path as the contract. |
+| [11a](../../ssot/doctrine/loop-contract.md) | The loop engine contract | **promoted** 2026-10-07 to `ssot/doctrine/loop-contract.md` | Tests and Bone cite the article. |
 | [13F](13-fable-review.md) | Fable review of the loop engine | **record** — colliding number | Filed under 13; 13 proper is relations. |
 | [16](16-orchestrator-question.md) | The orchestrator question | **decision record** — not open | Which layer is ours. |
 | [17](17-loop-split-refactor-graph.md) | Loop split refactor graph | **record** | Six-dimension research output, filed late. |

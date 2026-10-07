@@ -608,7 +608,7 @@ await pipeline([1],
      - Q7, made precise by the KEAP home: the denylist entry names the toggle's PATHS —
        the table definition file under state/keap-tables/, its fixture, and the
        (table, row-slug) address the ledger will one day read — WRITTEN into the denylist
-       floor where it is recorded (docs/idea/11-agentic-loop-contract.md's list or its
+       floor where it is recorded (ssot/doctrine/loop-contract.md's list or its
        successor). The loop may not propose enabling its own harness editing: a permission
        a system can grant itself is not a permission.
      - do NOT build the 'harness' proposal kind — that is a later cycle; this cycle cuts

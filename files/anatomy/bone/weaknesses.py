@@ -1,6 +1,6 @@
 """Bone weakness reader — `GET /api/v1/loop/weaknesses`.
 
-Build step 3 of docs/idea/11-agentic-loop-contract.md. It READS sources that
+Build step 3 of ssot/doctrine/loop-contract.md. It READS sources that
 already exist and returns ranked `(severity, title, evidence, source)`. It does
 not recompute, it does not judge, and it holds no opinion about what to do next.
 

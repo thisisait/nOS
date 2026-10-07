@@ -671,7 +671,7 @@ def stalled_verdicts() -> dict | None:
 
     Added 2026-08-19, after two proposals passed every judge on 08-16 and sat
     for three days with both queue rows still `pending` and nothing saying so.
-    The loop not applying is by design (docs/idea/11-agentic-loop-contract.md
+    The loop not applying is by design (ssot/doctrine/loop-contract.md
     §7 non-goal 5); the waiting being invisible is not, and invisible waiting is
     exactly the state this file was written to end.
 

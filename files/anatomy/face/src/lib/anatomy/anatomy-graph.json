@@ -4,8 +4,8 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 431,
-    "edges": 483,
+    "nodes": 437,
+    "edges": 503,
     "nodes_pulse": 43,
     "nodes_judge": 5,
     "nodes_gateset": 5,
@@ -22,24 +22,24 @@
     "nodes_tofu": 1,
     "nodes_authentik": 60,
     "nodes_table": 40,
-    "nodes_doctrine": 15,
+    "nodes_doctrine": 19,
     "nodes_faceapp": 7,
     "nodes_agent": 16,
     "nodes_tasktype": 9,
     "nodes_skill": 11,
     "nodes_reader": 61,
-    "nodes_article": 22,
+    "nodes_article": 24,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
     "edges_data": 237,
     "edges_trigger": 55,
     "edges_temporal": 5,
     "edges_mutex": 21,
-    "edges_governed_by": 23,
+    "edges_governed_by": 29,
     "edges_may_take": 25,
     "edges_allows": 3,
     "edges_references": 26,
-    "edges_part_of": 88,
+    "edges_part_of": 102,
     "edges_service_dependency": 44,
     "services_survey_declared": 33,
     "services_survey_not_surveyed": 37,
@@ -376,6 +376,13 @@
       "anchor": "09",
       "description": "Constitution article ssot/doctrine/layers.md: Layers — what breaks when this stops"
     },
+    "article:loop-contract": {
+      "kind": "article",
+      "source": "ssot/doctrine/loop-contract.md",
+      "title": "11a — The agentic loop: engine contract",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/loop-contract.md: 11a — The agentic loop: engine contract"
+    },
     "article:loops": {
       "kind": "article",
       "source": "ssot/doctrine/loops.md",
@@ -424,6 +431,13 @@
       "title": "The operator session — the attacker is the assistant",
       "anchor": "09",
       "description": "Constitution article ssot/doctrine/session-threat-model.md: The operator session — the attacker is the assistant"
+    },
+    "article:sso": {
+      "kind": "article",
+      "source": "ssot/doctrine/sso.md",
+      "title": "SSO — one mode per service",
+      "anchor": "09",
+      "description": "Constitution article ssot/doctrine/sso.md: SSO — one mode per service"
     },
     "article:ssot": {
       "kind": "article",
@@ -1355,86 +1369,6 @@
       "anchor": "09",
       "description": "Constitution paragraph 2 of docs/archive/nos-cortex-organ-design.md: Where it sits — anatomy integration"
     },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#10": {
-      "kind": "doctrine",
-      "source": "docs/idea/11-agentic-loop-contract.md",
-      "section": "10",
-      "heading": "BUILD ORDER",
-      "anchor": "09",
-      "description": "Constitution paragraph 10 of docs/idea/11-agentic-loop-contract.md: BUILD ORDER"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#5.1": {
-      "kind": "doctrine",
-      "source": "docs/idea/11-agentic-loop-contract.md",
-      "section": "5.1",
-      "heading": "Computed from the gate set — §5's core rule",
-      "anchor": "09",
-      "description": "Constitution paragraph 5.1 of docs/idea/11-agentic-loop-contract.md: Computed from the gate set — §5's core rule"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#5a": {
-      "kind": "doctrine",
-      "source": "docs/idea/11-agentic-loop-contract.md",
-      "section": "5a",
-      "heading": "`intent_class: gate-add` proposals are permitted to write",
-      "anchor": "09",
-      "description": "Constitution paragraph 5a of docs/idea/11-agentic-loop-contract.md: `intent_class: gate-add` proposals are permitted to write"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#8.1": {
-      "kind": "doctrine",
-      "source": "docs/idea/11-agentic-loop-contract.md",
-      "section": "8.1",
-      "heading": "Retro-verification (constraint C)",
-      "anchor": "09",
-      "description": "Constitution paragraph 8.1 of docs/idea/11-agentic-loop-contract.md: Retro-verification (constraint C)"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d": {
-      "kind": "doctrine",
-      "source": "docs/idea/11-agentic-loop-contract.md",
-      "section": "DECISION-2d",
-      "heading": "`pytest-anatomy` runs **only** in an ephemeral git-worktree",
-      "anchor": "09",
-      "description": "Constitution paragraph DECISION-2d of docs/idea/11-agentic-loop-contract.md: `pytest-anatomy` runs **only** in an ephemeral git-worktree"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e": {
-      "kind": "doctrine",
-      "source": "docs/idea/11-agentic-loop-contract.md",
-      "section": "DECISION-2e",
-      "heading": "Judges are invoked with their side effects suppressed by flag,",
-      "anchor": "09",
-      "description": "Constitution paragraph DECISION-2e of docs/idea/11-agentic-loop-contract.md: Judges are invoked with their side effects suppressed by flag,"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f": {
-      "kind": "doctrine",
-      "source": "docs/idea/11-agentic-loop-contract.md",
-      "section": "DECISION-2f",
-      "heading": "`keap-lint` is **not** in any gate set. It stays a Pulse job.",
-      "anchor": "09",
-      "description": "Constitution paragraph DECISION-2f of docs/idea/11-agentic-loop-contract.md: `keap-lint` is **not** in any gate set. It stays a Pulse job."
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#M2": {
-      "kind": "doctrine",
-      "source": "docs/idea/11-agentic-loop-contract.md",
-      "section": "M2",
-      "heading": "`nos-smoke` reads absence as success",
-      "anchor": "09",
-      "description": "Constitution paragraph M2 of docs/idea/11-agentic-loop-contract.md: `nos-smoke` reads absence as success"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#M3": {
-      "kind": "doctrine",
-      "source": "docs/idea/11-agentic-loop-contract.md",
-      "section": "M3",
-      "heading": "`pytest-anatomy` reads absence as success",
-      "anchor": "09",
-      "description": "Constitution paragraph M3 of docs/idea/11-agentic-loop-contract.md: `pytest-anatomy` reads absence as success"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#M7": {
-      "kind": "doctrine",
-      "source": "docs/idea/11-agentic-loop-contract.md",
-      "section": "M7",
-      "heading": "`genome-codegen` and `pytest` collide",
-      "anchor": "09",
-      "description": "Constitution paragraph M7 of docs/idea/11-agentic-loop-contract.md: `genome-codegen` and `pytest` collide"
-    },
     "doctrine:ssot/doctrine/foreign-properties.md#5.1": {
       "kind": "doctrine",
       "source": "ssot/doctrine/foreign-properties.md",
@@ -1442,6 +1376,118 @@
       "heading": "There is a third contract: the application's own",
       "anchor": "09",
       "description": "Constitution paragraph 5.1 of ssot/doctrine/foreign-properties.md: There is a third contract: the application's own"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#10": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "10",
+      "heading": "BUILD ORDER",
+      "anchor": "09",
+      "description": "Constitution paragraph 10 of ssot/doctrine/loop-contract.md: BUILD ORDER"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#3.4": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "3.4",
+      "heading": "Two identities, never one",
+      "anchor": "09",
+      "description": "Constitution paragraph 3.4 of ssot/doctrine/loop-contract.md: Two identities, never one"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#4": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "4",
+      "heading": "PROPOSAL FINGERPRINTING",
+      "anchor": "09",
+      "description": "Constitution paragraph 4 of ssot/doctrine/loop-contract.md: PROPOSAL FINGERPRINTING"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#5.1": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "5.1",
+      "heading": "Computed from the gate set — §5's core rule",
+      "anchor": "09",
+      "description": "Constitution paragraph 5.1 of ssot/doctrine/loop-contract.md: Computed from the gate set — §5's core rule"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#5a": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "5a",
+      "heading": "`intent_class: gate-add` proposals are permitted to write",
+      "anchor": "09",
+      "description": "Constitution paragraph 5a of ssot/doctrine/loop-contract.md: `intent_class: gate-add` proposals are permitted to write"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#7": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "7",
+      "heading": "WHAT I AM NOT BUILDING",
+      "anchor": "09",
+      "description": "Constitution paragraph 7 of ssot/doctrine/loop-contract.md: WHAT I AM NOT BUILDING"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#8.1": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "8.1",
+      "heading": "Retro-verification (constraint C)",
+      "anchor": "09",
+      "description": "Constitution paragraph 8.1 of ssot/doctrine/loop-contract.md: Retro-verification (constraint C)"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#DECISION-2d": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "DECISION-2d",
+      "heading": "`pytest-anatomy` runs **only** in an ephemeral git-worktree",
+      "anchor": "09",
+      "description": "Constitution paragraph DECISION-2d of ssot/doctrine/loop-contract.md: `pytest-anatomy` runs **only** in an ephemeral git-worktree"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "DECISION-2e",
+      "heading": "Judges are invoked with their side effects suppressed by flag,",
+      "anchor": "09",
+      "description": "Constitution paragraph DECISION-2e of ssot/doctrine/loop-contract.md: Judges are invoked with their side effects suppressed by flag,"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#DECISION-2f": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "DECISION-2f",
+      "heading": "`keap-lint` is **not** in any gate set. It stays a Pulse job.",
+      "anchor": "09",
+      "description": "Constitution paragraph DECISION-2f of ssot/doctrine/loop-contract.md: `keap-lint` is **not** in any gate set. It stays a Pulse job."
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#M2": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "M2",
+      "heading": "`nos-smoke` reads absence as success",
+      "anchor": "09",
+      "description": "Constitution paragraph M2 of ssot/doctrine/loop-contract.md: `nos-smoke` reads absence as success"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#M3": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "M3",
+      "heading": "`pytest-anatomy` reads absence as success",
+      "anchor": "09",
+      "description": "Constitution paragraph M3 of ssot/doctrine/loop-contract.md: `pytest-anatomy` reads absence as success"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#M7": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "M7",
+      "heading": "`genome-codegen` and `pytest` collide",
+      "anchor": "09",
+      "description": "Constitution paragraph M7 of ssot/doctrine/loop-contract.md: `genome-codegen` and `pytest` collide"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#constraint-A": {
+      "kind": "doctrine",
+      "source": "ssot/doctrine/loop-contract.md",
+      "section": "constraint-A",
+      "heading": "judge is code, proposer is a model, never one identity",
+      "anchor": "09",
+      "description": "Constitution paragraph constraint-A of ssot/doctrine/loop-contract.md: judge is code, proposer is a model, never one identity"
     },
     "doctrine:ssot/doctrine/workflows.md#6": {
       "kind": "doctrine",
@@ -6551,7 +6597,7 @@
     },
     {
       "from": "gateset:live",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M3",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#M3",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:330",
       "citations": 1,
@@ -6560,7 +6606,7 @@
     },
     {
       "from": "judge:ansible-lint",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:56",
       "citations": 1,
@@ -6569,7 +6615,7 @@
     },
     {
       "from": "judge:cortex-corpus-diff",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:306",
       "citations": 1,
@@ -6578,7 +6624,7 @@
     },
     {
       "from": "judge:cortex-corpus-diff",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:287",
       "citations": 2,
@@ -6587,7 +6633,7 @@
     },
     {
       "from": "judge:cortex-corpus-diff",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2f",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:312",
       "citations": 1,
@@ -6596,7 +6642,7 @@
     },
     {
       "from": "judge:genome-codegen",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:88",
       "citations": 1,
@@ -6605,7 +6651,7 @@
     },
     {
       "from": "judge:genome-codegen",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#8.1",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#8.1",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:65",
       "citations": 1,
@@ -6614,7 +6660,7 @@
     },
     {
       "from": "judge:genome-codegen",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2d",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:78",
       "citations": 1,
@@ -6623,7 +6669,7 @@
     },
     {
       "from": "judge:genome-codegen",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M7",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#M7",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:78",
       "citations": 1,
@@ -6632,7 +6678,7 @@
     },
     {
       "from": "judge:nos-smoke",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:277",
       "citations": 1,
@@ -6641,7 +6687,7 @@
     },
     {
       "from": "judge:nos-smoke",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:242",
       "citations": 1,
@@ -6650,7 +6696,7 @@
     },
     {
       "from": "judge:nos-smoke",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M2",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#M2",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:263",
       "citations": 2,
@@ -6659,7 +6705,7 @@
     },
     {
       "from": "judge:pytest-anatomy",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:227",
       "citations": 1,
@@ -6668,7 +6714,7 @@
     },
     {
       "from": "judge:pytest-anatomy",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5a",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5a",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:228",
       "citations": 1,
@@ -6677,7 +6723,7 @@
     },
     {
       "from": "judge:pytest-anatomy",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2d",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:217",
       "citations": 1,
@@ -6686,7 +6732,7 @@
     },
     {
       "from": "judge:pytest-anatomy",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M3",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#M3",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:98",
       "citations": 1,
@@ -6695,7 +6741,7 @@
     },
     {
       "from": "judge:pytest-anatomy",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M7",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#M7",
       "kind": "governed_by",
       "via": "cited at state/judge-sets.yml:223",
       "citations": 1,
@@ -6731,7 +6777,7 @@
     },
     {
       "from": "pulse:loop:propose",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#10",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#10",
       "kind": "governed_by",
       "via": "cited at files/anatomy/plugins/loop-base/plugin.yml:69",
       "citations": 2,
@@ -6748,10 +6794,64 @@
       "evidence": "derived"
     },
     {
+      "from": "reader:loop-status",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#3.4",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-status.py:431",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "reader:loop-status",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#4",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-status.py:8",
+      "citations": 4,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "reader:loop-status",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5a",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-status.py:495",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "reader:loop-status",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#7",
+      "kind": "governed_by",
+      "via": "cited at tools/loop-status.py:49",
+      "citations": 2,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "reader:red-status",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#7",
+      "kind": "governed_by",
+      "via": "cited at tools/red-status.py:675",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
       "from": "reader:tls-uptake",
       "to": "doctrine:ssot/doctrine/foreign-properties.md#5.1",
       "kind": "governed_by",
       "via": "cited at tools/tls-uptake.py:212",
+      "citations": 1,
+      "derived": "doctrine-cite",
+      "evidence": "derived"
+    },
+    {
+      "from": "skill:propose",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#constraint-A",
+      "kind": "governed_by",
+      "via": "cited at .claude/plugins/nos-loop/skills/propose/SKILL.md:13",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7145,6 +7245,118 @@
       "to": "article:foreign-properties",
       "kind": "part_of",
       "via": "paragraph of ssot/doctrine/foreign-properties.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#10",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#3.4",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#4",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#5.1",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#5a",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#7",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#8.1",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2d",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2f",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#M2",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#M3",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#M7",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
+      "derived": "doctrine-paragraph",
+      "evidence": "derived"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#constraint-A",
+      "to": "article:loop-contract",
+      "kind": "part_of",
+      "via": "paragraph of ssot/doctrine/loop-contract.md",
       "derived": "doctrine-paragraph",
       "evidence": "derived"
     },

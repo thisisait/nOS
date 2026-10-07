@@ -13,7 +13,7 @@ THE THREE QUESTIONS, AND WHY ALL THREE
 A merge request may be merged only when every one of these is answered YES.
 Any NO refuses. Any *unanswerable* question is INDETERMINATE, which also
 refuses — and is reported as its own outcome, never folded into either
-neighbour (`docs/idea/11-agentic-loop-contract.md` §2.4).
+neighbour (`ssot/doctrine/loop-contract.md` §2.4).
 
   1. **Did CI pass on this exact commit?** Woodpecker, keyed on the head sha.
      Measured 2026-08-19, and the reason this question is first: the Gitea repo

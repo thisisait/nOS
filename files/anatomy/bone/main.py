@@ -332,7 +332,7 @@ except Exception as _userstate_err:  # noqa: BLE001
 
 
 # ---- Agentic loop: the weakness reader — isolated deferred import ----------
-# docs/idea/11-agentic-loop-contract.md build step 3. READ-ONLY: it reads
+# ssot/doctrine/loop-contract.md build step 3. READ-ONLY: it reads
 # sources that already exist (the git working tree, the security remediation
 # queue, scan freshness, the hidden-fees ledger, the corpus-diff ledger) and
 # returns them ranked. It writes nothing, judges nothing, and accepts no input

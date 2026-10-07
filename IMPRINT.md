@@ -47,7 +47,7 @@ Each line: level (count) — what it is: the most connected nodes (edge count).
 - **sense** (78) — what you can ask — readers, judges and read-only grants: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), judge:genome-codegen (4)
 - **limb** (8) — what you can reach for — tool grants that act: tool:mcp-bone (5), tool:ask-operator (2), tool:mcp-keap (2), tool:mcp-wing-write (2), tool:migration-file-write (2)
 - **memory** (40) — what the estate has learned — KEAP tables: table:party (13), table:invoice (5), table:journal-entry (4), table:posting (4), table:account (3)
-- **law** (37) — the rules it inherits — constitution articles and paragraphs: doctrine:docs/idea/11-agentic-loop-contract.md#5.1 (5), doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d (2), doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e (2), doctrine:docs/idea/11-agentic-loop-contract.md#M7 (2), doctrine:ssot/doctrine/foreign-properties.md#5.1 (2)
+- **law** (43) — the rules it inherits — constitution articles and paragraphs: article:loop-contract (14), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#5a (3), doctrine:ssot/doctrine/loop-contract.md#7 (3), doctrine:ssot/doctrine/loop-contract.md#DECISION-2d (3)
 - **reflex** (43) — what runs by itself — scheduled responses Pulse fires: pulse:conductor:self-test-001 (8), pulse:cortex:cortex-fs-sync (8), pulse:keap:keap-embed-sync (8), pulse:librarian:brief-taxonomy (8), pulse:librarian:describe-taxonomy (8)
 
 Hidden plumbing: 67 internal nodes. Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
@@ -144,7 +144,7 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
   code_server, erpnext, freescout, outline, hedgedoc, bookstack, firefly, dolibarr, onlyoffice, mikopbx, qgis_server,
   metabase, superset, influxdb, mcp_gateway, openclaw, hermes, device_gateway, wing, bone, cortex, backrest.
 
-The public organ systems (the apex ruling publishes 13; 368 of 431 ruled nodes are withheld):
+The public organ systems (the apex ruling publishes 13; 374 of 437 ruled nodes are withheld):
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)

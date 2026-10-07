@@ -79,7 +79,7 @@ The one tenant-scoped token is **read-only over KEAP taxonomy**, `db:` deliberat
 
 ### What is refused outright
 
-No second daemon, second ledger, second budget, second judge registry. `11-agentic-loop-contract.md` §6 DECISION 6 already settles ownership: *"HTTP is the only implementation… No shared library, ever. Three runtimes exist and a fourth is planned"* — AgentKit is designated a **client** of the Bone engine. Bone's `budget.py`/`judges.py` are not a rival regime that accidentally re-derived three properties; they are that engine, built to that contract.
+No second daemon, second ledger, second budget, second judge registry. `ssot/doctrine/loop-contract.md` §6 DECISION 6 already settles ownership: *"HTTP is the only implementation… No shared library, ever. Three runtimes exist and a fourth is planned"* — AgentKit is designated a **client** of the Bone engine. Bone's `budget.py`/`judges.py` are not a rival regime that accidentally re-derived three properties; they are that engine, built to that contract.
 
 And no tenant rows anywhere near the chained tables until `wing-events-chain-aware-retention` closes. Art-17 erasure against a WORM hash chain is unsolved; walking into it holding customer data is the worst possible order.
 

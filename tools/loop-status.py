@@ -46,7 +46,7 @@ measured the day this was written:
     and no reader said so. `loop-status` reported "1p/7f" and "2p/0f/1i" — both
     true, and both silent about the only fact worth acting on.
 
-Not applying is by DESIGN — docs/idea/11-agentic-loop-contract.md §7 non-goal 5
+Not applying is by DESIGN — ssot/doctrine/loop-contract.md §7 non-goal 5
 says application is an operator act or a forge MR, and nothing merges on a green
 verdict. What was not designed is that the waiting had no surface. That is `docs/hidden_fees/08` one
 storey up: absence reading as success. A green verdict nobody can see is
@@ -742,7 +742,7 @@ def _print_awaiting(report: dict, *, as_json: bool) -> int:
         print("\n  Nothing lands on a green verdict by design: application is an"
               "\n  operator act or a forge MR. This is the list that act works "
               "from."
-              "\n  (docs/idea/11-agentic-loop-contract.md §7 non-goal 5)")
+              "\n  (ssot/doctrine/loop-contract.md §7 non-goal 5)")
     return 0
 
 

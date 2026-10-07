@@ -1,6 +1,6 @@
 """judges.py — the judge runner: the callable core of the agentic loop.
 
-Contract: ``docs/idea/11-agentic-loop-contract.md`` §2 (the judge contract),
+Contract: ``ssot/doctrine/loop-contract.md`` §2 (the judge contract),
 built as §10 step 1. **HTTP is deliberately not wired here.** DECISION 6 makes
 HTTP the only implementation and the CLI a thin client over it; this module is
 the callable core that ``POST /api/v1/loop/judge`` will mount in step 1b. It

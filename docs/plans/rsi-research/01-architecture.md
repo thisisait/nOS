@@ -10,7 +10,7 @@ where they disagree or the corpus is silent. Vocabulary per `00-terminology.md`.
 3. A detector reads the artifact, not the prose describing it.
 4. A gate you can satisfy by editing the gate is not a gate.
 5. The repo is not the running system — only an operator converge moves source into runtime.
-6. Loop contract non-goals stand (`docs/idea/11-agentic-loop-contract.md:562-587`): no LLM
+6. Loop contract non-goals stand (`ssot/doctrine/loop-contract.md:562-587`): no LLM
    judge (not even advisory), no auto-apply, no new daemon/port/organ.
 
 ## 1. What already exists vs what is new

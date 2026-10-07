@@ -37,7 +37,7 @@ companion §1):
   Weakness → proposal → judgement → merge request → review → `dev`. It ends at
   the trunk, on purpose: converging source into runtime and retiring the
   weakness are the business loop's and the operator's, never SERE's
-  (`docs/idea/11-agentic-loop-contract.md` §11 — "the loop contributing one
+  (`ssot/doctrine/loop-contract.md` §11 — "the loop contributing one
   link of six is still a loop").
 - **The nOS loop proper** — the estate serving its purpose: knowledge (KEAP /
   cortex), agents, the Pulse cadence, the notification event→state path,

@@ -13,7 +13,7 @@ WHAT IT DOES NOT DO, AND WHY THAT IS THE WHOLE DESIGN
   It does not merge. It does not touch `master`. It does not write one byte to
   the ledger. It opens a merge request and stops.
 
-  Not writing to the ledger is constraint B (`docs/idea/11-agentic-loop-contract.md`
+  Not writing to the ledger is constraint B (`ssot/doctrine/loop-contract.md`
   §3.5) at this layer: a driver that stamped "landed" would be a step recording
   its own success, and this estate has bought that lesson four times — a
   `dispatched_at` written by the sender, a `status=scanned` written by a scan
@@ -567,7 +567,7 @@ def land(row: dict, *, base: str, gate_set: str, rejudge: bool,
     wid = row["weakness_id"]
     state = row["state"]
 
-    # docs/idea/11-agentic-loop-contract.md §5a (loop-requires-operator) — the
+    # ssot/doctrine/loop-contract.md §5a (loop-requires-operator) — the
     # front door. The ledger stamps `requires_operator` on a gate-add (it edits
     # the oracle's own directory) and, since loop-pin-bump-gate, on a version-
     # pin-bump that crosses a major, downgrades, or names a pin no oracle can

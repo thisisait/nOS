@@ -14,10 +14,10 @@
     "sense": 78,
     "limb": 8,
     "memory": 40,
-    "law": 37,
+    "law": 43,
     "reflex": 43,
     "internal": 67,
-    "edges": 369
+    "edges": 389
   },
   "nodes": {
     "agent:conductor": {
@@ -132,6 +132,10 @@
       "level": "law",
       "kind": "article"
     },
+    "article:loop-contract": {
+      "level": "law",
+      "kind": "article"
+    },
     "article:loops": {
       "level": "law",
       "kind": "article"
@@ -157,6 +161,10 @@
       "kind": "article"
     },
     "article:session-threat-model": {
+      "level": "law",
+      "kind": "article"
+    },
+    "article:sso": {
       "level": "law",
       "kind": "article"
     },
@@ -520,47 +528,63 @@
       "level": "law",
       "kind": "doctrine"
     },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#10": {
-      "level": "law",
-      "kind": "doctrine"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#5.1": {
-      "level": "law",
-      "kind": "doctrine"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#5a": {
-      "level": "law",
-      "kind": "doctrine"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#8.1": {
-      "level": "law",
-      "kind": "doctrine"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d": {
-      "level": "law",
-      "kind": "doctrine"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e": {
-      "level": "law",
-      "kind": "doctrine"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f": {
-      "level": "law",
-      "kind": "doctrine"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#M2": {
-      "level": "law",
-      "kind": "doctrine"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#M3": {
-      "level": "law",
-      "kind": "doctrine"
-    },
-    "doctrine:docs/idea/11-agentic-loop-contract.md#M7": {
-      "level": "law",
-      "kind": "doctrine"
-    },
     "doctrine:ssot/doctrine/foreign-properties.md#5.1": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#10": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#3.4": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#4": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#5.1": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#5a": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#7": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#8.1": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#DECISION-2d": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#DECISION-2f": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#M2": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#M3": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#M7": {
+      "level": "law",
+      "kind": "doctrine"
+    },
+    "doctrine:ssot/doctrine/loop-contract.md#constraint-A": {
       "level": "law",
       "kind": "doctrine"
     },
@@ -2182,6 +2206,76 @@
       "kind": "part_of"
     },
     {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#10",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#3.4",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#4",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#5.1",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#5a",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#7",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#8.1",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2d",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2f",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#M2",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#M3",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#M7",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
+      "from": "doctrine:ssot/doctrine/loop-contract.md#constraint-A",
+      "to": "article:loop-contract",
+      "kind": "part_of"
+    },
+    {
       "from": "doctrine:ssot/doctrine/workflows.md#6",
       "to": "article:workflows",
       "kind": "part_of"
@@ -2193,82 +2287,82 @@
     },
     {
       "from": "judge:ansible-lint",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by"
     },
     {
       "from": "judge:cortex-corpus-diff",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by"
     },
     {
       "from": "judge:cortex-corpus-diff",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
       "kind": "governed_by"
     },
     {
       "from": "judge:cortex-corpus-diff",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2f",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2f",
       "kind": "governed_by"
     },
     {
       "from": "judge:genome-codegen",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by"
     },
     {
       "from": "judge:genome-codegen",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#8.1",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#8.1",
       "kind": "governed_by"
     },
     {
       "from": "judge:genome-codegen",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2d",
       "kind": "governed_by"
     },
     {
       "from": "judge:genome-codegen",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M7",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#M7",
       "kind": "governed_by"
     },
     {
       "from": "judge:nos-smoke",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by"
     },
     {
       "from": "judge:nos-smoke",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2e",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
       "kind": "governed_by"
     },
     {
       "from": "judge:nos-smoke",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M2",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#M2",
       "kind": "governed_by"
     },
     {
       "from": "judge:pytest-anatomy",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5.1",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by"
     },
     {
       "from": "judge:pytest-anatomy",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#5a",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5a",
       "kind": "governed_by"
     },
     {
       "from": "judge:pytest-anatomy",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#DECISION-2d",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2d",
       "kind": "governed_by"
     },
     {
       "from": "judge:pytest-anatomy",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M3",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#M3",
       "kind": "governed_by"
     },
     {
       "from": "judge:pytest-anatomy",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#M7",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#M7",
       "kind": "governed_by"
     },
     {
@@ -2538,7 +2632,7 @@
     },
     {
       "from": "pulse:loop:propose",
-      "to": "doctrine:docs/idea/11-agentic-loop-contract.md#10",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#10",
       "kind": "governed_by"
     },
     {
@@ -2564,6 +2658,31 @@
     {
       "from": "reader:discovery-scan",
       "to": "doctrine:ssot/doctrine/workflows.md#6",
+      "kind": "governed_by"
+    },
+    {
+      "from": "reader:loop-status",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#3.4",
+      "kind": "governed_by"
+    },
+    {
+      "from": "reader:loop-status",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#4",
+      "kind": "governed_by"
+    },
+    {
+      "from": "reader:loop-status",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#5a",
+      "kind": "governed_by"
+    },
+    {
+      "from": "reader:loop-status",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#7",
+      "kind": "governed_by"
+    },
+    {
+      "from": "reader:red-status",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#7",
       "kind": "governed_by"
     },
     {
@@ -3185,6 +3304,11 @@
       "from": "skill:nos-devops",
       "to": "service:openclaw",
       "kind": "data"
+    },
+    {
+      "from": "skill:propose",
+      "to": "doctrine:ssot/doctrine/loop-contract.md#constraint-A",
+      "kind": "governed_by"
     },
     {
       "from": "table:account",

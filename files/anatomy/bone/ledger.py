@@ -1,6 +1,6 @@
 """Agentic-loop ledger — schema, fingerprints, and the ONLY verdict writer.
 
-Contract: docs/idea/11-agentic-loop-contract.md §3 (the ledger), §4
+Contract: ssot/doctrine/loop-contract.md §3 (the ledger), §4
 (fingerprinting), §2.4 (absence is never success). This module is build-order
 item 2: it mounts no routes and spawns no process of its own. `judges.py`
 (build-order item 1) is the derivation site — adapters, work counts, the §2.4
@@ -197,7 +197,7 @@ class ProposalRefused(LedgerError):
       passed-awaiting-act — a prior attempt at this fingerprint already holds
                             a latest verdict of `pass`; the weakness waits on
                             an act OUTSIDE the loop (merge → converge →
-                            rescan — docs/idea/11-agentic-loop-contract.md
+                            rescan — ssot/doctrine/loop-contract.md
                             §11), not on another proposal. Lifted the
                             same two ways as the ceiling: the weakness's
                             evidence changes, or an operator forget
@@ -1168,7 +1168,7 @@ class ProposerLedger(ReaderLedger):
         # proposal that went nowhere. A weakness the loop already SOLVED must
         # not consume further attempts, and its refusal must name what it
         # waits for (merge → converge → rescan, all outside the loop —
-        # docs/idea/11-agentic-loop-contract.md §11).
+        # ssot/doctrine/loop-contract.md §11).
         # THE verdict of a proposal is its LATEST by rowid — the rule
         # `tools/loop-status.py` had to invent (`ORDER BY id DESC LIMIT 1`)
         # because nothing said; now something says.

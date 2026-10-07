@@ -15,7 +15,7 @@
 # refused in files/anatomy/bone/ledger.py). A permission a system can grant
 # itself is not a permission, so this file, its fixture, and the row address
 # `(loop-config, harness_proposals_enabled)` are named in §5.2 of
-# docs/idea/11-agentic-loop-contract.md and enforced by budget.ALWAYS_FORBIDDEN.
+# ssot/doctrine/loop-contract.md and enforced by budget.ALWAYS_FORBIDDEN.
 # Gate: tests/anatomy/test_the_harness_toggle_defaults_off.py.
 #
 # WHY IT IS NOT SEEDED YET (UNSEEDED in test_keap_table_concepts.py). Nothing

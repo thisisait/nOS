@@ -33,7 +33,7 @@ WHAT IT DELIBERATELY IS NOT
 
   * **Not the evaluator.** This runner holds no judge scope, never reads
     `loop_judge_token`, and never triggers judgment. The proposer proposes and
-    stops (docs/idea/11-agentic-loop-contract.md §3.4); the driver — `tools/loop-pr.py`, a distinct process
+    stops (ssot/doctrine/loop-contract.md §3.4); the driver — `tools/loop-pr.py`, a distinct process
     with a distinct token — judges and lands. One process holding both halves
     is the loop grading its own homework.
   * **Not a recorder of its own success.** It writes nothing anywhere. Whether
@@ -82,7 +82,7 @@ sys.path.insert(0, str(REPO / "tools"))
 import _ledger_open  # noqa: E402 — after REPO is known
 
 #: Sources whose findings the budget gives the loop no way to FIX: a `fee:`
-#: closes only by writing docs/**, forbidden in every gate set (docs/idea/11-agentic-loop-contract.md §5.2). Handing
+#: closes only by writing docs/**, forbidden in every gate set (ssot/doctrine/loop-contract.md §5.2). Handing
 #: one to the proposer buys a model run and a guaranteed refusal.
 UNFIXABLE_SOURCES = {
     "fee": "closes only by writing docs/**, which every gate set's budget forbids",
