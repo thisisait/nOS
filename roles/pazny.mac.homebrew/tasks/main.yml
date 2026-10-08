@@ -175,7 +175,7 @@
 
     # homebrew_cask Ansible modul je extremne pomaly (brew 4.x Ruby JSON API
     # parsing, 60s+ na cask). Nahrazeno rychlym Caskroom dir checkm.
-    # Casks without a Caskroom entry install with a 90s timeout.
+    # Casks without a Caskroom entry install under homebrew_cask_install_timeout.
     #
     # Tolerance for upstream Homebrew API regressions (2026-05-07): the
     # cask_struct_generator.rb path occasionally trips on individual casks
@@ -194,15 +194,22 @@
           exit 0
         fi
         echo "INSTALLING: ${cask_name}..."
-        if command -v timeout &>/dev/null; then
-          out=$(timeout 90 brew install --cask "${cask_name}" --appdir="{{ homebrew_cask_appdir }}" 2>&1)
-        else
-          out=$(brew install --cask "${cask_name}" --appdir="{{ homebrew_cask_appdir }}" 2>&1)
-        fi
+        # Portable cap: stock macOS has no `timeout` (coreutils arrives later in
+        # this role). Own process group so the curl children of brew die with it.
+        cap() {
+          local secs=$1; shift
+          set -m; "$@" & local pid=$!; set +m
+          ( sleep "$secs" && kill -TERM -- "-$pid" ) </dev/null >/dev/null 2>&1 &
+          local dog=$!
+          wait "$pid"; local rc=$?
+          if kill -0 "$dog" 2>/dev/null; then kill "$dog" 2>/dev/null; else rc=124; fi
+          return $rc
+        }
+        out=$(cap {{ homebrew_cask_install_timeout }} brew install --cask "${cask_name}" --appdir="{{ homebrew_cask_appdir }}" 2>&1)
         rc=$?
         echo "$out"
         if [ $rc -eq 124 ]; then
-          echo "TIMEOUT: ${cask_name} install exceeded 90s — install manually: brew install --cask ${cask_name}"
+          echo "TIMEOUT: ${cask_name} install exceeded {{ homebrew_cask_install_timeout }}s — install manually: brew install --cask ${cask_name}"
           exit 0
         fi
         # Tolerate upstream Homebrew internal errors so a single bad-cask
@@ -483,11 +490,18 @@
           exit 0
         fi
         echo "INSTALLING: ${pkg_name}..."
-        if command -v timeout &>/dev/null; then
-          timeout 120 brew install "${pkg_name}" {{ item.install_options | default('') }} 2>&1
-        else
-          brew install "${pkg_name}" {{ item.install_options | default('') }} 2>&1
-        fi
+        # Portable cap: stock macOS has no `timeout` (coreutils arrives later in
+        # this role). Own process group so the curl children of brew die with it.
+        cap() {
+          local secs=$1; shift
+          set -m; "$@" & local pid=$!; set +m
+          ( sleep "$secs" && kill -TERM -- "-$pid" ) </dev/null >/dev/null 2>&1 &
+          local dog=$!
+          wait "$pid"; local rc=$?
+          if kill -0 "$dog" 2>/dev/null; then kill "$dog" 2>/dev/null; else rc=124; fi
+          return $rc
+        }
+        cap {{ homebrew_formula_install_timeout }} brew install "${pkg_name}" {{ item.install_options | default('') }} 2>&1
         rc=$?
         [ $rc -eq 124 ] && echo "TIMEOUT: ${pkg_name} — install manually: brew install ${pkg_name}" && exit 0
         exit $rc
