@@ -130,6 +130,23 @@
 # straight to /Library/LaunchDaemons and bootstrap it with launchctl — no brew
 # under sudo. This also makes the existing "Restart dnsmasq" handler work, since
 # the plist it reloads now exists.
+#
+# Homebrew 7 ships `sh.brew.<svc>.plist` (was `homebrew.mxcl.<svc>`) (#46).
+# Keep the configured label when its plist exists; else follow Homebrew 7.
+- name: "[dnsmasq] Stat the configured formula plist"
+  ansible.builtin.stat:
+    path: "{{ homebrew_prefix }}/opt/dnsmasq/{{ dnsmasq_launchd_label }}.plist"
+  register: _dnsmasq_formula_plist
+  when: ansible_os_family == 'Darwin'
+
+- name: "[dnsmasq] Follow Homebrew 7 plist naming when the configured one is absent"
+  ansible.builtin.set_fact:
+    dnsmasq_launchd_label: "sh.brew.dnsmasq"
+  when:
+    - ansible_os_family == 'Darwin'
+    - not (_dnsmasq_formula_plist.stat.exists | default(false))
+    - (homebrew_prefix ~ '/opt/dnsmasq/sh.brew.dnsmasq.plist') is file
+
 - name: "[dnsmasq] Install the dnsmasq system LaunchDaemon plist"
   ansible.builtin.copy:
     src: "{{ homebrew_prefix }}/opt/dnsmasq/{{ dnsmasq_launchd_label }}.plist"
