@@ -231,10 +231,46 @@
 # dependency-free, node: builtins only) against the STAGED canonical, so a
 # malformed tree never reaches the live mount at all.
 #   exit 0 = clean, 1 = violations (printed), 2 = usage/read error.
+# Node comes from nvm (tasks/node.yml); Homebrew has no `node` on a fresh Mac,
+# so a bare `node` on Homebrew's PATH is luck, not resolution (#50). Same probe
+# as pazny.cortex; `keap_node_bin` overrides it.
+- name: "[pazny.keap] Detect the Node binary (nvm default)"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "{{ homebrew_prefix | default('/opt/homebrew') }}/opt/nvm/nvm.sh" ] && source "{{ homebrew_prefix | default('/opt/homebrew') }}/opt/nvm/nvm.sh"
+    [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+    nvm use default >/dev/null 2>&1 || true
+    command -v node || true
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ homebrew_prefix | default('/opt/homebrew') }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+  register: _keap_node_probe
+  changed_when: false
+  check_mode: false
+  when:
+    - _keap_sm_slug | bool
+    - keap_node_bin | default('') | length == 0
+
+- name: "[pazny.keap] Resolve the Node binary"
+  ansible.builtin.set_fact:
+    _keap_node_bin: >-
+      {{ keap_node_bin if (keap_node_bin | default('') | length > 0)
+         else (_keap_node_probe.stdout_lines | default([]) | last | default('')) }}
+  when: _keap_sm_slug | bool
+
+- name: "[pazny.keap] Assert a Node binary resolved"
+  ansible.builtin.assert:
+    that: _keap_node_bin | length > 0
+    fail_msg: >-
+      No `node` for KEAP's self-model gates: nvm default did not resolve and
+      none is on PATH. Converge with install_node (nvm) or set keap_node_bin.
+  when: _keap_sm_slug | bool
+
 - name: "[pazny.keap] WET GATE — lint staged canonical with KEAP's own linter"
   ansible.builtin.command:
     argv:
-      - node
+      - "{{ _keap_node_bin }}"
       - "{{ keap_src_dir }}/knowledge/lint.mjs"
       - "--canonical"
       - "{{ _keap_sm_stage }}/canonical"
@@ -406,7 +442,7 @@
 - name: "[pazny.keap] RECALL GATE — measure meaning, not length (opt-in)"
   ansible.builtin.command:
     argv:
-      - node
+      - "{{ _keap_node_bin }}"
       - "scripts/recall-gate.mjs"
       - "--fixture"
       - "{{ _keap_sm_stage }}/canonical"
