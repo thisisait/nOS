@@ -151,3 +151,6 @@ keap_embed_pull: "{{ install_ollama | default(false) }}"
 # KEAP_EMBED_ORIGINS. Real (empty) default, not a bare `| default([])` reference
 # — an undefined var referenced only through default() aborts a live converge.
 keap_embed_origins: []
+
+# Host Node for the self-model gates; empty = nvm default (as pazny.cortex) (#50).
+keap_node_bin: ""
