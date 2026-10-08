@@ -86,6 +86,15 @@
     nos_docker_bin: "/usr/bin/docker"
   when: nos_platform == 'redhat'
 
+# A fresh macOS user has no ~/Library/LaunchAgents (it appears with the first
+# login item); 34 files render plists into it. Ensure it once, here (#44).
+- name: "[platform] Ensure the user-scope service directory exists"
+  ansible.builtin.file:
+    path: "{{ nos_systemd_user_dir }}"
+    state: directory
+    mode: "0755"
+  when: nos_systemd_user_dir is defined
+
 # A Linux host whose PID 1 is not systemd — a container, a cloud agent sandbox
 # (Claude Code on the web runs `process_api` as PID 1), WSL1. The unit CONTRACT
 # does not change: roles still render the same ~/.config/systemd/user/*.service
