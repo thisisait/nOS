@@ -10,14 +10,16 @@ which is the only thing this probe claims to know. An empty close
 (RemoteDisconnected) is still a finding.
 
 Measured 2026-10-08 through the real opener, 60 runs per shape: a banner raises
-BadStatusLine 60/60; accept-then-close raises RemoteDisconnected or
-ConnectionResetError (6/54, a race on whether the FIN or the RST lands first),
-both RAW — urllib wraps only errors from h.request, not from getresponse; a
-port that accepts and never sends raises TimeoutError. RemoteDisconnected is a
-SUBCLASS of BadStatusLine, so `except BadStatusLine` swallows the empty close
-too. The empty-close fake below reads the request before closing so the client
-always sees EOF on the status line, never a reset mid-send: the test is
-deterministic and the race lives in the probe, where it belongs.
+BadStatusLine 60/60; close-before-read raises ConnectionResetError 51 or
+RemoteDisconnected 9 (a race on whether the FIN or the RST lands first), both
+RAW — urllib wraps only errors from h.request, not from getresponse;
+read-then-close raises RemoteDisconnected 60/60; accept-and-never-send raises
+TimeoutError 25 or URLError(timeout) 35. Only BadStatusLine proper may count
+as an answer; every other shape is the finding. RemoteDisconnected is a
+SUBCLASS of BadStatusLine, so `except BadStatusLine` alone swallows the empty
+close 9 times in 60. The empty-close fake below reads the request before
+closing — the 60/60 shape — so the test is deterministic (20/20 in a loop)
+and the race lives in the probe, where it belongs.
 """
 from __future__ import annotations
 
