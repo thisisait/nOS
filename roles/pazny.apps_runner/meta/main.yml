@@ -14,7 +14,7 @@ galaxy_info:
   galaxy_tags:
     - nos
     - apps
-    - manifest-app
+    - manifestapp
     - traefik
     - gdpr
 
