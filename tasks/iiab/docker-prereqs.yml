@@ -27,6 +27,17 @@
   check_mode: false
   when: not (_docker_bin_stat.stat.exists | default(false))
 
+# Fresh Apple Silicon has no /usr/local/bin (Homebrew is in /opt/homebrew) (#40).
+- name: "[Docker] Ensure /usr/local/bin exists for the CLI symlinks"
+  ansible.builtin.file:
+    path: /usr/local/bin
+    state: directory
+    mode: "0755"
+  become: true
+  when:
+    - not (_docker_bin_stat.stat.exists | default(false))
+    - _docker_app_bin.stat.exists | default(false)
+
 - name: "[Docker] Create CLI symlinks from Docker.app"
   ansible.builtin.file:
     src: "/Applications/Docker.app/Contents/Resources/{{ item.src }}"
