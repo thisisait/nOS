@@ -8,6 +8,16 @@ SMTP port (manifest: "25 = MTA"), so the pair itself is honest; the reader
 misread the answer. Any bytes back prove the port forward lands on a listener,
 which is the only thing this probe claims to know. An empty close
 (RemoteDisconnected) is still a finding.
+
+Measured 2026-10-08 through the real opener, 60 runs per shape: a banner raises
+BadStatusLine 60/60; accept-then-close raises RemoteDisconnected or
+ConnectionResetError (6/54, a race on whether the FIN or the RST lands first),
+both RAW — urllib wraps only errors from h.request, not from getresponse; a
+port that accepts and never sends raises TimeoutError. RemoteDisconnected is a
+SUBCLASS of BadStatusLine, so `except BadStatusLine` swallows the empty close
+too. The empty-close fake below reads the request before closing so the client
+always sees EOF on the status line, never a reset mid-send: the test is
+deterministic and the race lives in the probe, where it belongs.
 """
 from __future__ import annotations
 
@@ -35,8 +45,9 @@ class _Banner(socketserver.BaseRequestHandler):
         self.request.recv(64)
 
 
-class _Silent(socketserver.BaseRequestHandler):
+class _EmptyClose(socketserver.BaseRequestHandler):
     def handle(self):
+        self.request.recv(4096)  # take the request, so the close is an EOF, not a RST
         return  # close without a byte: the paperclip shape
 
 
@@ -69,5 +80,5 @@ def test_an_smtp_banner_is_an_answer(tmp_path, monkeypatch):
 
 
 def test_an_empty_close_is_still_silence(tmp_path, monkeypatch):
-    res = _probe(_load(), tmp_path, _Silent, monkeypatch)
+    res = _probe(_load(), tmp_path, _EmptyClose, monkeypatch)
     assert [f.slug for f in res.findings] == ["obs-healthy-unreachable-smtp-stalwart"]
