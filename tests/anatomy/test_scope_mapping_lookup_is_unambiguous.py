@@ -46,3 +46,25 @@ def test_no_scope_mapping_is_found_by_scope_name():
         "[managed, goauthentik.io/providers/oauth2/scope-<x>] or [name, …]:\n  "
         + "\n  ".join(offenders)
     )
+
+
+#: The tofu path (terraform/authentik) carries the same lookup as data sources.
+TF_SCOPE_LOOKUP = re.compile(
+    r'data\s+"authentik_property_mapping_provider_scope"\s+"[^"]+"\s*\{[^}]*\bscope_name\s*=',
+    re.S,
+)
+
+
+def test_no_tofu_scope_mapping_data_source_is_found_by_scope_name():
+    tf_files = sorted((REPO / "terraform").rglob("*.tf"))
+    assert tf_files, "gate went blind: no terraform files found"
+    offenders = [
+        f"{p.relative_to(REPO)}: {m.group(0).splitlines()[0]}"
+        for p in tf_files
+        for m in TF_SCOPE_LOOKUP.finditer(p.read_text(encoding="utf-8"))
+    ]
+    assert not offenders, (
+        "data source looks a scope mapping up by scope_name — ambiguous once "
+        "nos_roles shares it; use managed = \"goauthentik.io/providers/oauth2/scope-<x>\":\n  "
+        + "\n  ".join(offenders)
+    )
