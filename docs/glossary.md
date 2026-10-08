@@ -69,6 +69,10 @@ genome → cell → tissue → organ → organ system → organism → habitat.
   Counter-example: a health check (asked from outside; a heartbeat is sent from inside on a clock).
 - **nervous system** — The path events take to the operator, from events to the Wing inbox to ntfy or mail. Not: converge.
   Counter-example: a converge (one playbook run, not the path events take).
+- **ledger** — An append-only log: a row is written once and never changed or deleted. Two compounds are allowed: Wing's audit ledger (what happened, hash-chained) and Bone's loop ledger (what each judge ruled); plain "ledger" means neither. Not: memory, verdicts.
+  Counter-example: a KEAP table (memory: rows are edited and learned from, not appended once).
+- **hub** — The catalog of the estate's services. Wing's Hub is the whole inventory (hosts, backends, databases, web apps); the face's bff/hub is its projection, the enabled services with a web UI, for the dock. Not: dashboard, Wing.
+  Counter-example: the Wing timeline (what the estate did, not what it offers).
 - **twin** — The second Mac. Not: mirror-parity.
   Counter-example: a coexistence track (a second copy of one service on the same Mac).
 - **plugin** — A plugin.yml declaring how one service is wired to the others (SSO, dashboards, jobs). Not: tissue, gene.
@@ -110,7 +114,7 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 
 ## Proper names (one job each)
 
-- **Bone** — The host API bridge between the runs and the records.
+- **Bone** — The host API bridge between the runs and the records, and three more jobs it has grown: measured 2026-10-07 in files/anatomy/bone/, the bridge is 3.2k lines, the agentic loop (judges, ledger, budget, routes, auth) 4.2k plus the nos-loop CLI 0.5k, the weakness reader 1.7k, and the face's file and user-state storage 0.7k.
 - **Wing** — The host dashboard and audit ledger.
 - **Pulse** — The scheduler that runs every scheduled job. Not: heartbeat.
 - **Cortex** — The reasoning machinery (the cortex daemon, cortex-lang and Wing's executor); it is not KEAP. Not: memory, KEAP.
