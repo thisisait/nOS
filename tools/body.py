@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """What am I part of? The estate as a body plan, for a model that just arrived.
 
-    tools/body.py                  the ladder top to bottom, then senses, limbs, memory, law, reflexes, heartbeat
+    tools/body.py                  the ladder bottom to top, then the cross-cutting words
     tools/body.py "organ system"   every node at one level, most connected first
     tools/body.py service:keap     one node: what it is, its level, what it touches
     tools/body.py keap             same, by local name when that is unambiguous
@@ -156,7 +156,8 @@ def main() -> int:
         if args.json:
             print(json.dumps(data, indent=2))
             return 0
-        print("nOS body plan — genome to habitat, then senses, limbs, memory, law, reflexes, heartbeat "
+        ladder = f"{_LADDER[0]} to {_LADDER[-1]}" if _LADDER else "UNKNOWN ladder"
+        print(f"nOS body plan — {ladder}, then {', '.join(_SYSTEMS) or 'UNKNOWN cross words'} "
               "(tools/body.py <level|node>)")
         for lv in LEVELS:
             line = gloss(lv)
