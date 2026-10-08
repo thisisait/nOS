@@ -14,9 +14,10 @@
    DRAFT). v0.15-beta shipped 2026-10-06. This week: body plan + lexicon + tissues
    + imprint, `state/` by realm, `software_owner` on every row, face a core organ.
    Open before the tag: CI green on every lane (macOS 26 idempotence,
-   `homebrew-recurse-changed`), atlas and forum smoke-probed live, and the
-   **OpenHuman decision** — MUST (4) still says installed + five acceptance
-   questions; the work is parked (upstream resets onboarding). Keep or re-scope.
+   `homebrew-recurse-changed`), atlas and forum smoke-probed live. Operator
+   2026-10-08: MUST (4) re-scoped (OpenHuman role present and converging;
+   acceptance deferred to v0.17); MUST (5) reworded (body plan proposed,
+   `in_force: false`; lexicon shipped; tissues + imprint rows carry to v0.17).
    After the tag: the ~30 review follow-ups (`review-v015-followups`), the
    `default.config.yml` split continues (`default-config-split`), `containerized-core`.
    Jellyfin SSO waits for the blank.

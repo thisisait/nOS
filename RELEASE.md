@@ -1,6 +1,6 @@
 # nOS — Release notes
 
-`nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
+`nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac or Ubuntu 24.04 host into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
 
 Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.15-beta`.
 
@@ -21,9 +21,12 @@ most of the work is in the repo, in the gates, and in the pages an agent reads
 before it touches anything.
 
 ### The body plan: one word, one meaning
-- `ssot/doctrine/body-plan.md` is now law. It names every level of the
-  organism (organism, organ system, organ, cell, organelle, atom) and says
-  what a word may and may not mean. The old "home graph" is the body plan.
+- `ssot/doctrine/body-plan.md` is **proposed** (doctrine PROPOSED,
+  `in_force: false`; the operator rules on it, not this release). It names
+  every level of the organism (organism, organ system, organ, cell, organelle,
+  atom) and says what a word may and may not mean. The old "home graph" is
+  the body plan. Row `rel-016` MUST (5) reads: body plan proposed, lexicon
+  shipped; tissues and imprint rows carry to v0.17.
 - The **lexicon** (`state/genome/lexicon.yml`, rendered to `docs/glossary.md`)
   holds one meaning per word, with a counter-example for each. Phrases that
   claimed law or named a retired sense ("self-heal", "Tier-2 app", "the
@@ -107,14 +110,14 @@ before it touches anything.
   `docs/compliance/gov-readiness-audit-2026q2.md` (ISDS/NIA federation,
   retention enforcement) are open. Nothing here makes nOS deployable in a
   government setting.
-- **OpenHuman — OPEN operator decision.** Row `rel-016` MUST (4) still says
-  "installed by the role and passing its five acceptance questions". The role
-  exists (every profile configured, session and MCP by the vendor CLI, a
-  reader `openhuman-status`), but on 2026-10-06 the work was **parked**: a
-  local login resets the app's onboarding flag every time (upstream defect,
-  row `openhuman-upstream-prs`), so the five questions cannot be answered yet. The headless core (`apps/openhuman.yml.draft`) is a draft.
-  The operator chooses: keep MUST (4) and hold the tag, or re-scope `rel-016`
-  to "role present, acceptance deferred to v0.17". This note does not decide.
+- **OpenHuman — re-scoped by the operator (2026-10-08).** Row `rel-016`
+  MUST (4) now reads "OpenHuman role present and converging; acceptance
+  (onboarding loop) deferred to v0.17". The role exists (every profile
+  configured, session and MCP by the vendor CLI, a reader `openhuman-status`),
+  but a local login resets the app's onboarding flag every time (upstream
+  defect, row `openhuman-upstream-prs`), so the five acceptance questions are
+  not answered in this release. The headless core (`apps/openhuman.yml.draft`)
+  is a draft.
 - **Wing → face migration.** The face is a core organ now, but Wing stays the
   operator dashboard through v0.16; the move is roadmap work after it
   (epic `wing-organ-without-face` and its children).
