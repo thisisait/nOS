@@ -213,7 +213,12 @@ judges:
     #   sqlite3 "file:$HOME/wing/app/data/wing.db?mode=ro" \
     #     "SELECT started_at, work_count, min_work, outcome FROM loop_judge_runs
     #       WHERE judge_name='pytest-anatomy' ORDER BY id DESC LIMIT 10"
-    min_work: 7400   # re-measured 2026-10-08 (organ fold, dnsmasq, review-v015 follow-ups): 7432 passed / 7587 collected
+    # 2026-10-08: the judge sandbox is a bare worktree WITHOUT the gitignored
+    # files/anatomy/wing/vendor, so ~146 vendor-conditional gates skip there.
+    # The floor is set from a vendor-less run of the same tip (7291 passed /
+    # 301 skipped), 120 under it per THE RULE — not from the operator's
+    # vendored 7432, which the judge can never reach.
+    min_work: 7170   # re-measured 2026-10-08: judge-env (no vendor) 7291 passed; operator (vendor) 7432 passed / 7592 collected
     # DECISION 2d: ALWAYS sandboxed, attended and unattended alike.
     # test_genome_contract.py appends HAND_EDITED to a TRACKED file and
     # restores it in a `finally` — a killed run leaves the source corrupted,

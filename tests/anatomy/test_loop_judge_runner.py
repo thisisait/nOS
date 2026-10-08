@@ -1081,7 +1081,9 @@ MEASURED_WORK = {
     # (this ratchet), so 6871.
     # RE-DERIVED 2026-10-08 — fired at 7587 collected vs 7095 (organ fold,
     # dnsmasq, identities, review-v015 follow-ups). Fresh run: 7431 passed,
-    # 155 skipped, 1 failed (this ratchet), so 7432.
+    # 155 skipped, 1 failed (this ratchet), so 7432. That is the OPERATOR
+    # reading (vendor present). The judge sandbox has no wing/vendor and reads
+    # 7291 / 301 skipped on the same tip; min_work derives from THAT number.
     "pytest-anatomy": 7432,
     "cortex-corpus-diff": 1,
 }

@@ -2431,7 +2431,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 7400,
+      "min_work": 7170,
       "argv": [
         "python3",
         "-m",
@@ -2442,7 +2442,7 @@
       "claims": [],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=7400, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=7170, deterministic=True"
     },
     "lock:agent-run-lock": {
       "kind": "lock",
@@ -7470,7 +7470,7 @@
       "from": "gateset:live",
       "to": "doctrine:ssot/doctrine/loop-contract.md#M3",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:330",
+      "via": "cited at state/judge-sets.yml:335",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7488,7 +7488,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:306",
+      "via": "cited at state/judge-sets.yml:311",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7497,7 +7497,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:287",
+      "via": "cited at state/judge-sets.yml:292",
       "citations": 2,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7506,7 +7506,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2f",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:312",
+      "via": "cited at state/judge-sets.yml:317",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7551,7 +7551,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:277",
+      "via": "cited at state/judge-sets.yml:282",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7560,7 +7560,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:242",
+      "via": "cited at state/judge-sets.yml:247",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7569,7 +7569,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:ssot/doctrine/loop-contract.md#M2",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:263",
+      "via": "cited at state/judge-sets.yml:268",
       "citations": 2,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7578,7 +7578,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:227",
+      "via": "cited at state/judge-sets.yml:232",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7587,7 +7587,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:ssot/doctrine/loop-contract.md#5a",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:228",
+      "via": "cited at state/judge-sets.yml:233",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7596,7 +7596,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2d",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:217",
+      "via": "cited at state/judge-sets.yml:222",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7614,7 +7614,7 @@
       "from": "judge:pytest-anatomy",
       "to": "doctrine:ssot/doctrine/loop-contract.md#M7",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:223",
+      "via": "cited at state/judge-sets.yml:228",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
