@@ -548,10 +548,12 @@ jobs:
 
       # Same sandbox as the first pass: without allow_weak_prefix the prefix assert
       # stops this pass at task 96 (run 37368276781). test_ci_converges_share_sandbox_flags.
+      # --diff: a `changed` file task on this pass then prints the before/after it
+      # acted on (run 37368276781 pass 2 showed changed=2 with no path named).
       - name: Idempotence check.
         run: |
           idempotence=$(mktemp)
-          ansible-playbook main.yml -e allow_weak_prefix=true -e nos_allow_no_docker=true \
+          ansible-playbook main.yml --diff -e allow_weak_prefix=true -e nos_allow_no_docker=true \
             -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}" \
             -e ansible_python3_interpreter="${{ steps.python-setup.outputs.python-path }}" | tee -a "${idempotence}"
           tail "${idempotence}" | grep -q 'changed=0.*failed=0' \

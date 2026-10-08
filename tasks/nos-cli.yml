@@ -22,11 +22,13 @@
   become: true
   when: ansible_os_family != 'Darwin'
 
+# No mode: on macOS this is {{ homebrew_prefix }}/bin, whose mode (0775) the
+# homebrew role owns — a second declaration here (0755) flipped the directory on
+# every converge (live 10-04/06/07, CI run 37368276781). Linux got its mode above.
 - name: "[nos-cli] Ensure install dir exists"
   ansible.builtin.file:
     path: "{{ nos_cli_install_dir }}"
     state: directory
-    mode: '0755'
 
 - name: "[nos-cli] Install nos (atomic copy)"
   ansible.builtin.copy:

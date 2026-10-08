@@ -78,6 +78,25 @@
     mode: "0775"
   become: true
 
+# Reader first: the recursive chown below reports `changed` for the whole tree
+# and never says which path. CI pass 2 (run 37368276781) flipped here with no
+# file named; the live estate (299k files) walks clean. The list is the evidence.
+- name: Which files under homebrew_install_path are not owned by homebrew_user:group?
+  command: >-
+    find {{ homebrew_install_path | quote }}
+    ( ! -user {{ homebrew_user | quote }} -o ! -group {{ homebrew_group | string | quote }} )
+    -print
+  register: _brew_misowned
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  become: true
+
+- name: Report the mis-owned Homebrew paths (first 40).
+  debug:
+    msg: "{{ (_brew_misowned.stdout_lines | default([]))[:40] }}"
+  when: (_brew_misowned.stdout_lines | default([])) | length > 0
+
 - name: Ensure proper ownership on homebrew_install_path subdirs.
   file:
     path: "{{ homebrew_install_path }}"
@@ -87,6 +106,7 @@
     recurse: true
     follow: false
   become: true
+  when: (_brew_misowned.stdout_lines | default([])) | length > 0
 
 # Place brew binary in proper location and complete setup.
 - name: Check if homebrew binary is already in place.
