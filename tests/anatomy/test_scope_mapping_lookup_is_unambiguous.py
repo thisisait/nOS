@@ -49,22 +49,31 @@ def test_no_scope_mapping_is_found_by_scope_name():
 
 
 #: The tofu path (terraform/authentik) carries the same lookup as data sources.
-TF_SCOPE_LOOKUP = re.compile(
-    r'data\s+"authentik_property_mapping_provider_scope"\s+"[^"]+"\s*\{[^}]*\bscope_name\s*=',
+TF_DATA_BY_SCOPE = re.compile(
+    r'data\s+"authentik_property_mapping_provider_scope"\s+"([^"]+)"\s*\{[^}]*\bscope_name\s*=\s*"([^"]+)"',
+    re.S,
+)
+TF_NOS_MAPPING = re.compile(
+    r'resource\s+"authentik_property_mapping_provider_scope"\s+"[^"]+"\s*\{[^}]*?\bscope_name\s*=\s*"([^"]+)"',
     re.S,
 )
 
 
-def test_no_tofu_scope_mapping_data_source_is_found_by_scope_name():
-    tf_files = sorted((REPO / "terraform").rglob("*.tf"))
-    assert tf_files, "gate went blind: no terraform files found"
+def test_no_tofu_data_source_finds_a_shared_scope_name():
+    """A data source may look a stock mapping up by scope_name only while no
+    nOS-declared mapping shares that scope_name (#52: nos_roles is "profile")."""
+    tf = {p: p.read_text(encoding="utf-8") for p in sorted((REPO / "terraform").rglob("*.tf"))}
+    assert tf, "gate went blind: no terraform files found"
+    shared = {m.group(1) for text in tf.values() for m in TF_NOS_MAPPING.finditer(text)}
+    assert "profile" in shared, "gate went blind: nos_roles mapping (scope_name profile) not found"
     offenders = [
-        f"{p.relative_to(REPO)}: {m.group(0).splitlines()[0]}"
-        for p in tf_files
-        for m in TF_SCOPE_LOOKUP.finditer(p.read_text(encoding="utf-8"))
+        f"{p.relative_to(REPO)}: data {m.group(1)!r} scope_name={m.group(2)!r}"
+        for p, text in tf.items()
+        for m in TF_DATA_BY_SCOPE.finditer(text)
+        if m.group(2) in shared
     ]
     assert not offenders, (
-        "data source looks a scope mapping up by scope_name — ambiguous once "
-        "nos_roles shares it; use managed = \"goauthentik.io/providers/oauth2/scope-<x>\":\n  "
+        "a nOS mapping shares this scope_name, so the lookup is ambiguous — use "
+        "managed = \"goauthentik.io/providers/oauth2/scope-<x>\":\n  "
         + "\n  ".join(offenders)
     )
