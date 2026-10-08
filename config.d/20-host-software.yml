@@ -173,7 +173,6 @@ homebrew_personal_packages:
   - meson
 
 homebrew_taps:
-  - dunglas/frankenphp
   - shivammathur/php
   - infisical/get-cli       # required by `- infisical` formula above
 

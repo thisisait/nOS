@@ -94,30 +94,28 @@
     mode: '0700'
 
 # ── FrankenPHP runtime ───────────────────────────────────────────────────────
-# FrankenPHP lives in the dunglas/frankenphp tap (added globally via
-# default.config.yml's homebrew_taps list — pazny.mac.homebrew installs the
-# tap in pre-stack phase). The formula depends on shivammathur/php's php-zts
-# (also tapped). Both taps must exist before this task runs; if they're
-# missing, brew prints a clear error pointing at the tap name.
+# One source on every platform: the pinned GitHub release static binary (#48).
+# The Homebrew tap formula it replaces on macOS had no version selector.
 
 - name: "[pazny.wing] Resolve FrankenPHP + composer paths per platform"
   ansible.builtin.set_fact:
-    _wing_frankenphp_bin: "{{ frankenphp_bin if (ansible_os_family == 'Darwin') else (ansible_facts['env']['HOME'] ~ '/.local/bin/frankenphp') }}"
+    _wing_frankenphp_bin: "{{ frankenphp_bin }}"
     # composer.phar location + how to invoke it. macOS runs it against php-zts
     # on PATH; Linux runs it through FrankenPHP's embedded PHP (no separate php).
     _wing_composer_phar: "{{ (homebrew_prefix | default('/opt/homebrew') ~ '/bin/composer') if (ansible_os_family == 'Darwin') else (ansible_facts['env']['HOME'] ~ '/.local/bin/composer.phar') }}"
     _wing_composer_cmd: "{{ 'composer' if (ansible_os_family == 'Darwin') else (ansible_facts['env']['HOME'] ~ '/.local/bin/frankenphp php-cli ' ~ ansible_facts['env']['HOME'] ~ '/.local/bin/composer.phar') }}"
 
-# ---- macOS: Homebrew tap (php-zts dep) ----
-- name: "[pazny.wing] Install frankenphp via Homebrew"
+# ---- macOS: the `php` CLI (composer, bin/*.php, Pulse jobs) ----
+# php-zts used to arrive as the frankenphp formula's dependency; with FrankenPHP
+# off Homebrew it is installed by name. It owns /opt/homebrew/bin/php.
+- name: "[pazny.wing] (macOS) Install the php CLI (php-zts)"
   community.general.homebrew:
-    name: dunglas/frankenphp/frankenphp
+    name: shivammathur/php/php-zts
     state: present
-  register: _wing_frankenphp_install
   when: ansible_os_family == 'Darwin'
 
-# frankenphp + its libphp (php-zts, dunglas tap) dynamically link a set of
-# libs the tap formulae DO NOT declare as runtime deps, so `brew autoremove`
+# php-zts's libphp (and, before #48, the brew frankenphp) dynamically link a set
+# of libs the tap formulae DO NOT declare as runtime deps, so `brew autoremove`
 # prunes them as "unused" leaves → dangling dylib → dyld abort → `version`
 # returns rc=-6 empty and the preflight below refuses. Observed pruned on this
 # host: freetds (2026-07-15), then gd/libpq/argon2/watcher (frankenphp binary)
@@ -141,11 +139,11 @@
     state: present
   when: ansible_os_family == 'Darwin'
 
-# ---- Linux: static binary (self-contained PHP — NEEDS-VM-VALIDATION) ----
-# FrankenPHP ships a static per-arch binary on GitHub releases; its embedded
-# PHP also runs composer via `frankenphp php-cli`, so no separate php package
-# is needed. Validate the asset name/arch + php-cli behaviour on Ubuntu 24.04.
-- name: "[pazny.wing] (Linux) Ensure ~/.local + bin exist (operator-owned)"
+# ---- Every platform: the pinned static binary ----
+# FrankenPHP ships a static per-OS/arch binary on GitHub releases. On Linux its
+# embedded PHP also runs composer via `frankenphp php-cli`, so no separate php
+# package is needed there.
+- name: "[pazny.wing] Ensure ~/.local + bin exist (operator-owned)"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -158,7 +156,6 @@
   # runner image); chown it back so the operator-context frankenphp + composer
   # downloads below can write here without become.
   become: true
-  when: ansible_os_family != 'Darwin'
 
 # The URL must carry the PIN, not `latest`. It fetched
 # releases/latest/download/… while the preflight below asserted the binary
@@ -167,18 +164,26 @@
 # landed (CI 2026-07-22) while macOS, whose version comes from the brew
 # formula, stayed on the pinned 1.12.4. A pin that does not govern the fetch
 # pins nothing. Pinned by tests/anatomy/test_pinned_artifacts_fetch_the_pin.py.
-- name: "[pazny.wing] (Linux) Download FrankenPHP static binary"
+# macOS then hit the mirror image (#48): brew landed 1.12.6 over the 1.12.4
+# pin on every fresh Mac. Same fetch now, every platform:
+# tests/anatomy/test_frankenphp_pin_governs_every_platform.py.
+- name: "[pazny.wing] Download the pinned FrankenPHP static binary"
+  vars:
+    # Release asset suffix: mac-arm64 | mac-x86_64 | linux-aarch64 | linux-x86_64.
+    _fp_asset: >-
+      {{ ('mac-' ~ ('arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'x86_64'))
+         if ansible_os_family == 'Darwin' else
+         ('linux-' ~ ('aarch64' if ansible_architecture in ['aarch64', 'arm64'] else 'x86_64')) }}
   ansible.builtin.get_url:
-    url: "https://github.com/dunglas/frankenphp/releases/download/v{{ frankenphp_version }}/frankenphp-linux-{{ 'aarch64' if ansible_architecture in ['aarch64', 'arm64'] else 'x86_64' }}"
+    url: "https://github.com/php/frankenphp/releases/download/v{{ frankenphp_version }}/frankenphp-{{ _fp_asset }}"
     dest: "{{ _wing_frankenphp_bin }}"
     mode: '0755'
-    checksum: "sha256:{{ frankenphp_linux_checksums['aarch64' if ansible_architecture in ['aarch64', 'arm64'] else 'x86_64'] }}"
+    checksum: "sha256:{{ frankenphp_checksums[_fp_asset] }}"
     timeout: 60   # default 10s times out on a slow github.com release CDN
   register: _wing_frankenphp_dl
   until: _wing_frankenphp_dl is succeeded
   retries: 5
   delay: 10
-  when: ansible_os_family != 'Darwin'
 
 # `nos-php` — a one-line shim so Ansible (and argv-shaped tasks) can say ONE
 # word for "the PHP CLI" on Linux, where that is `frankenphp php-cli` and no
@@ -202,16 +207,13 @@
   ansible.builtin.fail:
     msg: |
       frankenphp binary not found at {{ _wing_frankenphp_bin }}.
-        macOS: brew tap shivammathur/php + dunglas/frankenphp, then
-               `brew list dunglas/frankenphp/frankenphp`.
-        Linux: verify the GitHub release asset name/arch in this role.
+        The pinned release fetch above did not land it: check the asset
+        name/arch and frankenphp_checksums for v{{ frankenphp_version }}.
   when: not _wing_frankenphp_stat.stat.exists
 
 # Version preflight — the landed binary must report frankenphp_version. Catches
-# a stale tap, a half-finished source build (no arm64_sequoia bottle on older
-# macOS), or a missing Linux release asset before launchd ever execs it. The
-# install path is architecture-agnostic (one ARM64 binary across M1..M5), so a
-# wrong/empty `--version` is the real signal, not the chip generation.
+# a pin bumped without its checksums, or a binary that will not exec here,
+# before launchd or systemd ever starts it.
 - name: "[pazny.wing] Read frankenphp version"
   ansible.builtin.command: "{{ _wing_frankenphp_bin }} --version"
   register: _wing_frankenphp_ver
@@ -230,10 +232,10 @@
       frankenphp at {{ _wing_frankenphp_bin }} did not report the pinned
       version {{ frankenphp_version }} (rc={{ _wing_frankenphp_ver.rc }}).
         Reported: {{ _wing_frankenphp_ver.stdout | default('(none)') | trim }}
-        macOS: `brew upgrade dunglas/frankenphp/frankenphp` — the arm64_sequoia
-               bottle only exists on macOS 15+; older macOS source-builds (needs
-               Go). Then re-pin frankenphp_version in default.config.yml.
-        Linux: re-run to re-fetch the GitHub release static binary.
+        The fetch above verified its sha256, so a wrong version means
+        frankenphp_version and frankenphp_checksums disagree (one bumped, not
+        the other). rc != 0 means it does not run here: check macOS Gatekeeper
+        (`spctl -a -vv {{ _wing_frankenphp_bin }}`) or the Linux arch.
   when: >-
     _wing_frankenphp_ver.rc != 0
     or ('FrankenPHP v' ~ frankenphp_version) not in (_wing_frankenphp_ver.stdout | default(''))

@@ -743,25 +743,24 @@ docker_bin: /usr/local/bin/docker
 # host-native launchd daemon listening on 127.0.0.1:9000. Ships PHP 8.5 +
 # Caddy 2.x; Wing's composer.json minimum is PHP 8.3 — backward compatible.
 #
-# The frankenphp formula depends on shivammathur/php's php-zts (PHP-ZTS variant
-# required for FrankenPHP's worker mode). The shivammathur tap is added here
-# unconditionally — the formula itself only links if frankenphp is also in
-# `homebrew_installed_packages` AND install_wing is true (gate in
-# pazny.wing/tasks/main.yml).
+# The binary is the GitHub release static build on EVERY platform (#48): a
+# Homebrew tap formula has no version selector, so on macOS it landed the tap's
+# latest and every upstream release broke every fresh install at the version
+# preflight. The release binary is self-contained (system dylibs only) and is
+# installed to frankenphp_bin (~/.local/bin/frankenphp). The `php` CLI on macOS
+# (composer, Pulse jobs) stays Homebrew's shivammathur/php/php-zts.
 #
-# frankenphp_version: the FrankenPHP version proven on Apple Silicon arm64 (the
-# Homebrew arm64_sequoia bottle; older macOS / no bottle forces a source build).
-# pazny.wing/tasks/main.yml runs `frankenphp --version` post-install and fails
-# with a clear diagnostic if the landed binary does not report this version —
-# so a stale tap, a half-finished source build, or a missing bottle surfaces at
-# provision time, not as a silent Wing daemon segfault. Bump after re-validating
-# on the live host (`frankenphp --version`).
+# frankenphp_version: pazny.wing fetches exactly this release and refuses a
+# binary whose `frankenphp --version` does not report it. Bump = new version +
+# all four checksums below, in one commit.
 frankenphp_version: "1.12.4"
-# GitHub release asset SHA256 for the Linux static binary get_url (macOS uses brew).
-# Source: api.github.com/repos/php/frankenphp/releases/tags/v1.12.4 asset digest.
-frankenphp_linux_checksums:
-  aarch64: "1912d7dee869a060afd2de183b9921bcadc82ad47a4650f861b5414888cb6feb"
-  x86_64: "b39c7511483c99faf0d857cc0789b39cc23023038260b31d4b40dd4ae18795dc"
+# sha256 per release asset (frankenphp-<key>). Linux values: the release's
+# asset digests. mac values: measured 2026-10-08 from the same release URLs.
+frankenphp_checksums:
+  linux-aarch64: "1912d7dee869a060afd2de183b9921bcadc82ad47a4650f861b5414888cb6feb"
+  linux-x86_64: "b39c7511483c99faf0d857cc0789b39cc23023038260b31d4b40dd4ae18795dc"
+  mac-arm64: "fb38e69514a04875b83900da0e1585d611fe0f52f3a904c50bef5605347e5dec"
+  mac-x86_64: "0e97b3e2bb8e98c0f8c6275921e1d44fb6459abfaa3bc0525e56c07ae13aa55b"
 
 # ==============================================================================
 # NGINX

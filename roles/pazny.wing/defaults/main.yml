@@ -50,9 +50,9 @@ wing_port: 9000
 # under the eu.thisisait.nos.* namespace.
 wing_launchd_label: "eu.thisisait.nos.wing"
 
-# FrankenPHP binary path (Homebrew default). The role installs this via
-# `community.general.homebrew` if missing — see tasks/main.yml.
-frankenphp_bin: "/opt/homebrew/bin/frankenphp"
+# FrankenPHP binary path. The role fetches the pinned release binary here on
+# every platform (#48) — see tasks/main.yml.
+frankenphp_bin: "{{ ansible_facts['env']['HOME'] }}/.local/bin/frankenphp"
 
 # Pulse rows of agents the 2026-08-26 roster close retired (and migration-author,
 # which never had a launcher). No profile on disk = the job can never run.
