@@ -605,6 +605,11 @@
     # apply-patches.yml moved alongside for cohesion (state-framework ops
     # belong together).
 
+    # credentials.yml must be values only (#42) — before it is first loaded.
+    - import_tasks: tasks/preflight-credentials-shape.yml
+      when: (playbook_dir ~ '/credentials.yml') is file
+      tags: ['always', 'preflight']
+
     - name: Include credentials overrides.
       include_vars: "{{ item }}"
       with_fileglob:
