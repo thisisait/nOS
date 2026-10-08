@@ -125,10 +125,12 @@ entries:
         - matching_mode: "strict"
           url: "{{ r }}"
 {% endfor %}{% endif %}
+      # By `managed`, never `scope_name`: the nOS roles mapping shares profile,
+      # and a scope_name Find resolved to it instead of the stock mapping (#52).
       property_mappings:
-        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
-        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, email]]
-        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, "goauthentik.io/providers/oauth2/scope-openid"]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, "goauthentik.io/providers/oauth2/scope-email"]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, "goauthentik.io/providers/oauth2/scope-profile"]]
 {% if nos_roles_expression | default('') %}
         - !Find [authentik_providers_oauth2.scopemapping, [name, "nOS roles"]]
 {% endif %}

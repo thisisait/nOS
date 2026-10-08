@@ -95,7 +95,7 @@ entries:
           url: "http://localhost/never-used-by-client-credentials"
       property_mappings:
 {% for cap in caps %}
-        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, "{{ cap }}"]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, "nos/{{ cap }}"]]
 {% endfor %}
       signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
 
