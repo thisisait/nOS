@@ -15,9 +15,11 @@
 ## Mkcert CA conditional
 
 Volume mount gated on `install_authentik AND tenant_domain_is_local`. The
-Nextcloud base image runs `update-ca-certificates` at boot so the mkcert CA
-ends up in PHP curl's trusted bundle — needed for the `occ user_oidc:provider`
-discovery call against the local-TLD Authentik endpoint.
+Nextcloud base image does NOT run `update-ca-certificates` (#53), so the same
+guard overrides the entrypoint: rebuild the store, then `exec /entrypoint.sh
+apache2-foreground`. That puts the mkcert CA in PHP curl's trust — needed for
+user_oidc's discovery and token calls against the local-TLD Authentik.
+Gate: `tests/anatomy/test_mkcert_ca_mount_is_trusted.py`.
 
 ## Why no OIDC env block
 

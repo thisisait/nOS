@@ -14,6 +14,10 @@ services:
     # mkcert CA conditional — local TLDs only (regression class sweep 2026-05-03).
     volumes:
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/etc/ssl/certs/mkcert-rootCA.pem:ro
+    environment:
+      # A file dropped in /etc/ssl/certs without a hash link trusts nothing;
+      # Node (code-server + extensions) reads this instead (#53).
+      NODE_EXTRA_CA_CERTS: "/etc/ssl/certs/mkcert-rootCA.pem"
 {% endif %}
     labels:
       # Tier-1 service — routed by the Traefik FILE provider (state/manifest.yml →

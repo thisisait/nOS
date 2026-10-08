@@ -15,6 +15,10 @@ services:
     # mkcert CA conditional — local TLDs only. Public-TLD path uses Mozilla
     # CA bundle to validate Authentik LE; mounting mkcert rootCA would
     # shadow it. Same regression class swept across 14 roles 2026-05-03.
+    # wordpress:<ver> never adds the mount to its store (#53): rebuild it, then
+    # exec the image's own entrypoint + CMD (re-check on bumps).
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["update-ca-certificates >/dev/null 2>&1; exec docker-entrypoint.sh apache2-foreground"]
     volumes:
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
 {% endif %}

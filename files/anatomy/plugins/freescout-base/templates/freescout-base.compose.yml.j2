@@ -11,11 +11,9 @@
 
 services:
   freescout:
-{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
-    # mkcert CA conditional — local TLDs only (regression class 2026-05-03).
-    volumes:
-      - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
-{% endif %}
+    # No mkcert CA mount: FreeScout is forward_auth (REM-192) and makes no TLS
+    # call to Authentik, and the mount was never trusted anyway (#53). Restore
+    # it WITH a trust mechanism the day the OIDC block below comes back.
     environment:
       # Defensive placeholder (P0.12 doctrine).
       _NOS_PLUGIN: "freescout-base"

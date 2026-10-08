@@ -11,9 +11,12 @@
 services:
   nextcloud:
 {% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
-    # mkcert CA conditional — local TLDs only. Nextcloud's PHP curl trusts
-    # /usr/local/share/ca-certificates/* via the base image's
-    # update-ca-certificates entrypoint hook.
+    # mkcert CA conditional — local TLDs only. The mount alone trusts nothing:
+    # nextcloud:33 runs no update-ca-certificates hook, so PHP curl failed TLS
+    # to auth.<tld> (verify result 20) and user_oidc login hung (#53). Rebuild
+    # the store, then exec the image's own entrypoint + CMD (re-check on bumps).
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["update-ca-certificates >/dev/null 2>&1; exec /entrypoint.sh apache2-foreground"]
     volumes:
       - {{ stacks_dir }}/shared-certs/rootCA.pem:/usr/local/share/ca-certificates/mkcert-ca.crt:ro
 {% endif %}

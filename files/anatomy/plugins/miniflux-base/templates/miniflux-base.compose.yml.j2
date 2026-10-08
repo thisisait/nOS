@@ -14,6 +14,12 @@ services:
       # Defensive placeholder (anatomy P0.12). Keeps environment: a valid
       # mapping when every conditional block below renders empty.
       _NOS_PLUGIN: "miniflux-base"
+{% if install_authentik | default(false) and (tenant_domain_is_local | default(true) | bool) %}
+      # Go reads every cert in SSL_CERT_DIR; the image runs as nobody, so no
+      # update-ca-certificates. Without it: "x509: certificate signed by
+      # unknown authority" on OIDC discovery (#53). System dir stays first.
+      SSL_CERT_DIR: "/etc/ssl/certs:/usr/local/share/ca-certificates"
+{% endif %}
 {% if install_authentik | default(false) %}
       # ── Authentik SSO (OIDC) ───────────────────────────────────────────────
       OAUTH2_PROVIDER: "oidc"
