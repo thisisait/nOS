@@ -12,6 +12,12 @@ Every profile on disk, and the predicted one, now gets the declared keys, and
 `--tags verify` fails on any profile left on the cloud route. The local session
 itself is made by the bundle's own CLI (`OpenHuman core call`): credential, then
 config, then onboarding — never while the app runs, never over an existing login.
+
+2026-10-09, the twin: a role install left every opt-in tool on (no stored
+enabled_tools, user_filter.rs "Empty list means all tools are enabled"), cron on,
+and an in-app local re-login resets onboarding_completed (credential.rs). The
+role stores the wizard's default tool list, declares [cron] enabled = false and
+re-asserts onboarding on the next converge.
 """
 import base64
 import importlib.util
@@ -35,6 +41,11 @@ STUB = '#!/bin/sh\necho "$(basename "$0") $*" >> "{log}"\nexit 0\n'
 RW_USE = re.compile(rb"KEAP_AGENT_TOKEN_RW\s*[=:]|printenv\s+KEAP_AGENT_TOKEN_RW")
 KEYS = ("homebrew_symbiont_casks", "ollama_small_model", "keap_port", "openhuman_provider",
         "openhuman_model", "openhuman_register_mcp", "openhuman_skills")
+# The wizard's completeAndExit default, getEnabledRustToolNames(getDefaultEnabledTools())
+# (app/src/utils/toolDefinitions.ts at v0.64.10: every catalog entry with defaultEnabled: true).
+WIZARD_TOOLS = ["shell", "git_operations", "file_read", "read_diff", "csv_export", "file_write", "update_memory_md",
+                "image_info", "web_search_tool", "memory_store", "memory_recall", "memory_forget", "cron_add",
+                "cron_list", "cron_remove", "cron_update", "cron_run", "cron_runs", "schedule"]
 HOSTNAME = "Studio.local"   # the core's local_session_user_id() -> "local-studio-local"
 # What "login locally" wrote on 2026-10-06 (v0.64.10 defaults), trimmed to the keys that matter.
 VENDOR = """default_model = "reasoning-v1"
@@ -77,7 +88,7 @@ def _exe(path: Path, body: str) -> None:
 def _converge(tmp: Path, app_present: bool = False, config: str | None = None,
               caskroom: bool = False, profiles: dict[str, str] | None = None,
               verify_only: bool = False, ok: bool = True, cli: bool = False, running: bool = False,
-              marker: str | None = None) -> tuple[Path, str, str]:
+              marker: str | None = None, app_state: dict[str, dict] | None = None) -> tuple[Path, str, str]:
     home, stubs, brew = tmp / "home", tmp / "stubs", tmp / "brew"
     app = tmp / "Applications/OpenHuman.app"
     log = tmp / "calls.log"
@@ -102,6 +113,10 @@ def _converge(tmp: Path, app_present: bool = False, config: str | None = None,
         cfg = home / f".openhuman/users/{name}/config.toml"
         cfg.parent.mkdir(parents=True, exist_ok=True)
         cfg.write_text(text)
+    for name, state in (app_state or {}).items():   # <workspace>/state/app-state.json (app_state/ops/state_file.rs)
+        f = home / f".openhuman/users/{name}/workspace/state/app-state.json"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(state))
     defaults = ni.default_config()
     casks = [dict(c, app=str(app)) for c in defaults["homebrew_symbiont_casks"]]
     play = [{"hosts": "localhost", "connection": "local", "gather_facts": True, "gather_subset": ["!all", "min"],
@@ -234,8 +249,10 @@ def _b64(part: str) -> dict:
 def test_the_local_session_is_made_by_the_vendor_cli_in_order(tmp_path):
     home, calls, _ = _converge(tmp_path, cli=True)
     got = _cli_calls(calls)
-    assert [m for m, _ in got] == ["openhuman.auth_set_credential", "openhuman.config_set_onboarding_completed"], got
-    cred, onboard = got[0][1], got[1][1]
+    assert [m for m, _ in got] == ["openhuman.auth_set_credential", "openhuman.app_state_update_local_state",
+                                   "openhuman.config_set_onboarding_completed"], got
+    cred, tasks, onboard = got[0][1], got[1][1]["onboardingTasks"], got[2][1]
+    assert tasks["enabledTools"] == WIZARD_TOOLS, "not the wizard's default tool list"
     head, claims, sig = cred["token"].split(".")
     assert sig == "local" and _b64(head) == {"alg": "none", "typ": "JWT"}, "not localSession.ts's token shape"
     assert claims_ok(_b64(claims)), _b64(claims)
@@ -252,7 +269,8 @@ def claims_ok(c: dict) -> bool:
 @needs_ansible
 def test_a_session_already_there_is_not_touched(tmp_path):
     _, calls, _ = _converge(tmp_path, cli=True, marker="local-studio-local",
-                            profiles={"local-studio-local": "onboarding_completed = true\n"})
+                            profiles={"local-studio-local": "onboarding_completed = true\n"},
+                            app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}})
     assert not _cli_calls(calls), f"the CLI ran against an existing session:\n{calls}"
     _, calls, _ = _converge(tmp_path / "cloud", cli=True, marker="u-cloud", profiles={"u-cloud": VENDOR})
     assert not _cli_calls(calls), f"a cloud login was replaced by a local session:\n{calls}"
@@ -265,3 +283,34 @@ def test_nothing_is_written_while_the_app_runs(tmp_path):
     cfg = tomllib.loads((home / ".openhuman/users/local-studio-local/config.toml").read_text())
     assert cfg["privacy"]["mode"] == "standard", "config.toml was rewritten under a running app"
     assert "OpenHuman is running" in out
+
+
+@needs_ansible
+def test_a_local_relogin_reset_is_reasserted(tmp_path):
+    # credential.rs (CredentialKind::Local) set onboarding_completed=false; the tool list survived.
+    _, calls, _ = _converge(tmp_path, cli=True, marker="local-studio-local",
+                            profiles={"local-studio-local": "onboarding_completed = false\n"},
+                            app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}})
+    assert _cli_calls(calls) == [("openhuman.config_set_onboarding_completed", {"value": True})], calls
+
+
+@needs_ansible
+def test_a_session_without_a_tool_list_gets_the_wizard_one_and_keeps_its_tasks(tmp_path):
+    _, calls, _ = _converge(tmp_path, cli=True, marker="local-studio-local",
+                            profiles={"local-studio-local": "onboarding_completed = true\n"},
+                            app_state={"local-studio-local": {"onboardingTasks": {
+                                "accessibilityPermissionGranted": True, "connectedSources": ["gmail"]}}})
+    got = _cli_calls(calls)
+    assert [m for m, _ in got] == ["openhuman.app_state_update_local_state"], got
+    tasks = got[0][1]["onboardingTasks"]
+    assert tasks["enabledTools"] == WIZARD_TOOLS
+    assert tasks["accessibilityPermissionGranted"] is True and tasks["connectedSources"] == ["gmail"], \
+        "update_local_state replaces onboardingTasks whole; a stored task field was dropped"
+
+
+@needs_ansible
+def test_the_twin_is_quiet_cron_is_off_in_every_profile(tmp_path):
+    home, _, _ = _converge(tmp_path, app_present=True, profiles={"u-cloud": VENDOR + "[cron]\nenabled = true\n"})
+    for name in ("local", "local-studio-local", "u-cloud"):
+        cfg = tomllib.loads((home / f".openhuman/users/{name}/config.toml").read_text())
+        assert cfg.get("cron", {}).get("enabled") is False, f"{name}: cron left on (config/schema/cron.rs defaults it on)"
