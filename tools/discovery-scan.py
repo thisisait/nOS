@@ -49,6 +49,7 @@ import http.client
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import urllib.request
@@ -607,9 +608,11 @@ def probe_queue_vs_running(images: dict[str, str], res: ScanResult) -> None:
                     f"the queue does not learn from a converge, so a 'pending' row "
                     f"may simply be stale. Stale pendings are not harmless: they "
                     f"inflate the backlog and hide the rows that are real. "
-                    f"Close with this reading: tools/rem-dispose.py {item['id']} "
-                    f"--status resolved --by \"discovery-scan: {name} runs {image} "
-                    f">= {fix}\""
+                    f"Close with this reading: "
+                    + shlex.join([
+                        "tools/rem-dispose.py", item["id"], "--status", "resolved",
+                        "--by", f"discovery-scan: {name} runs {image} >= {fix}",
+                    ])
                 ),
             ))
 
