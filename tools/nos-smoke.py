@@ -291,6 +291,8 @@ def derive_from_manifest(manifest: dict, vars_dict: dict, defaults: dict,
             # has not answered; the edge list keeps 301/302/308 because a
             # redirect there proves the router is alive, which is the point.
             "expect": expect_override or defaults.get("expect", [200, 301, 302, 308]),
+            # A default is not the row's choice: --strict must still reach [200, 204].
+            "_expect_defaulted": expect_override is None,
             "timeout": defaults.get("timeout", 5),
             "tier": 1,
             "note": f"manifest auto: {s.get('category','-')}/{s.get('stack','-')}",
@@ -307,7 +309,9 @@ def merge_catalog(manifest_entries: list[dict], extra_entries: list[dict],
     by_id: dict[str, dict] = {e["id"]: e for e in manifest_entries}
     for e in extra_entries or []:
         e = dict(e)
-        e.setdefault("expect", defaults.get("expect", [200, 301, 302, 308]))
+        if "expect" not in e:
+            e["expect"] = defaults.get("expect", [200, 301, 302, 308])
+            e["_expect_defaulted"] = True
         e.setdefault("timeout", defaults.get("timeout", 5))
         e.setdefault("tier", defaults.get("tier", 3))
         e["_source"] = "catalog"
@@ -600,7 +604,7 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
     auth_mode = entry.get("auth", "anon")
 
     # Pick expect set based on strict mode + entry override.
-    explicit = entry.get("expect")
+    explicit = None if entry.get("_expect_defaulted") else entry.get("expect")
     explicit_strict = entry.get("expect_strict")
     if strict:
         expect = explicit_strict if explicit_strict is not None else (
