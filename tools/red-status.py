@@ -850,6 +850,11 @@ def santa() -> dict:
     return _sibling("santa")
 
 
+def e2e() -> dict:
+    """The last estate e2e run: failures, or older than 7 days — tools/e2e-status.py."""
+    return _sibling("e2e")
+
+
 def doctrine_reviews(root: pathlib.Path = REPO / "ssot" / "doctrine") -> list[dict]:
     """Doctrine whose front matter dates its own review (last_reviewed + review_every_days) and is past it."""
     import re  # noqa: PLC0415
@@ -915,6 +920,9 @@ def collect() -> dict:
     sa = santa()
     report["santa"] = sa["items"]
     report["sources_missing"] += sa["missing"]
+    ee = e2e()
+    report["e2e"] = ee["items"]
+    report["sources_missing"] += ee["missing"]
     report["doctrine_reviews"] = doctrine_reviews()
 
     # Not a red source: None means "loops running", the healthy default, so it
@@ -998,6 +1006,8 @@ def reds(report: dict) -> list[str]:
                    + (" …" if len(items) > 8 else ""))
     if report.get("santa"):
         out.append("Santa: " + "; ".join(report["santa"]) + " — tools/santa-status.py")
+    if report.get("e2e"):
+        out.append("e2e: " + "; ".join(report["e2e"]) + " — tools/e2e-status.py")
     for doc in report.get("doctrine_reviews") or []:
         out.append(f"doctrine review overdue: ssot/doctrine/{doc['doc']} last reviewed "
                    f"{doc['last_reviewed']}, due {doc['due']} — review it, then move last_reviewed")

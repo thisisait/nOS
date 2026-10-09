@@ -58,6 +58,7 @@ Each line here is a `reader:` node of the anatomy graph, a sense.
 - `body.py` — What am I part of: the estate as a body plan — genome, cell, tissue, organ, organ system, organism, habitat, then sense, limb, memory, law, reflex — counts and hubs, or one node and what it touches. Levels come from state/genome/lexicon.yml; reads state/body-plan.json; UNKNOWN when unreadable.
 - `tissue-status.py` — Which tissues the estate declares (state/tissues/), their members, and whether each holds: schema, every id resolved, Article 30 inherited complete. Also the loader anatomy-graph-gen imports.
 - `router-status.py` — The WAN router as a declared estate fact: presence probe + intent from state/habitat/router.yml; UNKNOWN when it cannot look.
+- `e2e-status.py` — What the last estate e2e run (tests/e2e/estate) said, read back from `~/.nos/e2e/results.jsonl`: counts, the failing nodeids, age (red past 7 days); UNKNOWN without the record.
 - `elsewhere-status.py` — Estate work happening OUTSIDE the control centre, and how to get to it.
 - `estate-status.py` — What is TRUE right now, across the three places a fact about nOS can live.
 - `face-wiring-report.py` — nOS-face wiring report — the hard-doctrine linter for the web-desktop shell.

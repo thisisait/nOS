@@ -9,8 +9,11 @@ services this estate runs.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
+import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -21,6 +24,48 @@ sys.path.insert(0, str(REPO / "tools"))
 from nos_identity import is_local_domain  # noqa: E402  the one local-TLD list
 
 TIERS = {1: "provider", 2: "manager", 3: "user", 4: "guest"}
+
+# ── verdicts are written down (ssot/doctrine/gates.md) ─────────────────────
+# One JSON line per probe, the shape tools/nos-smoke.py uses for ~/.nos/events;
+# tools/e2e-status.py reads the last run back. NOS_E2E_RESULTS="" turns it off.
+RUN_ID = "e2e_" + datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+_RBAC_ID = re.compile(r"^[^:]+-t\d+:(.+?)-t\d+$")   # alice-t1:nextcloud-t3
+
+
+def _results_path() -> Path | None:
+    p = os.environ.get("NOS_E2E_RESULTS")
+    if p == "":
+        return None
+    return Path(p) if p else Path.home() / ".nos" / "e2e" / "results.jsonl"
+
+
+def _service(nodeid: str) -> str | None:
+    """jellyfin | grafana:probe | alice-t1:nextcloud-t3 → the service slug."""
+    m = re.search(r"\[(.+)\]$", nodeid)
+    if not m:
+        return None
+    pid = m.group(1)
+    if (r := _RBAC_ID.match(pid)):
+        return r.group(1)
+    return pid.split(":")[0]
+
+
+def pytest_runtest_logreport(report) -> None:
+    if report.when != "call" and report.outcome == "passed":
+        return                      # a green setup/teardown is not a verdict
+    path = _results_path()
+    if path is None:
+        return
+    row = {
+        "ts": datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "run_id": RUN_ID, "type": "e2e_result",
+        "nodeid": report.nodeid, "outcome": report.outcome,
+        "duration_ms": int(report.duration * 1000),
+        "service": _service(report.nodeid),
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
 def _plan_module():
