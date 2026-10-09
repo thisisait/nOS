@@ -1832,7 +1832,7 @@ pmset_ttyskeepawake: 1                 # TTY session prevents sleep
 # formula version; this pin documents the release nOS is validated against
 # (tested on macOS 27) and is the reference the restart handler's
 # plist-existence guard hardens around. Bump when a newer release is verified.
-dnsmasq_version: "2.91"                    # known-good Homebrew dnsmasq (macOS 27 validated)
+dnsmasq_version: "2.93"                    # known-good Homebrew dnsmasq (2.93 runs both estates, 2026-10-09)
 dnsmasq_launchd_label: "homebrew.mxcl.dnsmasq"  # the formula's plist, run as root
 dnsmasq_launchd_domain: "system"           # root LaunchDaemon: bootout needs become, not gui/<uid>
 dnsmasq_dev_domain: "{{ tenant_domain | default('dev.local') }}"  # Auto-tracks tenant_domain (Track F)
