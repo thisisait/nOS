@@ -177,6 +177,11 @@
   ansible.builtin.include_tasks: seed-face-tables.yml
   when: install_keap | default(false) | bool
 
+# ── Core DataTables the default tools address (roadmap, current-state, books) ─
+- name: "[pazny.keap] Seed core DataTables (roadmap, current-state, books spine)"
+  ansible.builtin.include_tasks: seed-core-tables.yml
+  when: install_keap | default(false) | bool
+
 # ── n8n pack DataTables (docs/doctrine/n8n-packs.md) ─────────────────────────
 - name: "[pazny.keap] Seed n8n pack DataTables (cnb-fx, party-registry-status)"
   ansible.builtin.include_tasks: seed-pack-tables.yml

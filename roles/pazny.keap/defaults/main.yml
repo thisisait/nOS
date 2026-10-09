@@ -154,3 +154,8 @@ keap_embed_origins: []
 
 # Host Node for the self-model gates; empty = nvm default (as pazny.cortex) (#50).
 keap_node_bin: ""
+
+# The id every tool defaults to (NOS_ROADMAP_TABLE_ID): the estate's roadmap was
+# minted by hand under a UUID, so a fresh one takes the same id and a restored
+# one is not duplicated. ponytail: slug `roadmap` (as on the DGX) needs a re-id.
+keap_roadmap_table_id: "2d498264-bc9a-4324-9935-489e5e4d92f3"

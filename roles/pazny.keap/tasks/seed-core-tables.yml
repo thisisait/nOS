@@ -1,0 +1,45 @@
+---
+# pazny.keap/tasks/seed-core-tables.yml — the tables the default tools address.
+# Shape only (rows: []): roadmap rows come from the seed repo (`nos dtt seed`),
+# claims from agents, books rows from importers or a restore. Without this a
+# blank left them absent and every reader 404'd (2026-10-09).
+
+- name: "[pazny.keap] Reconcile core DataTables (roadmap, current-state, books spine)"
+  ansible.builtin.include_tasks: seed-face-table.yml
+  loop:
+    - slug: "{{ keap_roadmap_table_id }}"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/roadmap.table.yml') | from_yaml }}"
+      rows: []
+    - slug: "current-state"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/current-state.table.yml') | from_yaml }}"
+      rows: []
+    - slug: "party"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party.table.yml') | from_yaml }}"
+      rows: []
+    - slug: "party-tax-identity"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/party-tax-identity.table.yml') | from_yaml }}"
+      rows: []
+    - slug: "account"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/account.table.yml') | from_yaml }}"
+      rows: []
+    - slug: "invoice"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/invoice.table.yml') | from_yaml }}"
+      rows: []
+    - slug: "invoice-line"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/invoice-line.table.yml') | from_yaml }}"
+      rows: []
+    - slug: "journal-entry"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/journal-entry.table.yml') | from_yaml }}"
+      rows: []
+    - slug: "posting"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/posting.table.yml') | from_yaml }}"
+      rows: []
+    - slug: "pending-invoice-verify"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/pending-invoice-verify.table.yml') | from_yaml }}"
+      rows: []
+    - slug: "book-access"
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/book-access.table.yml') | from_yaml }}"
+      rows: []
+  loop_control:
+    loop_var: _face_tbl
+    label: "{{ _face_tbl.slug }}"
