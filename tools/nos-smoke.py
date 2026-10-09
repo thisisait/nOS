@@ -375,7 +375,7 @@ def _try_authentik_login(opener, authentik_domain: str, tester_user: str,
         for k, v in headers_common.items():
             req.add_header(k, v)
         try:
-            with opener.open(req, timeout=timeout, context=ctx) as resp:
+            with opener.open(req, timeout=timeout) as resp:
                 txt = resp.read().decode("utf-8", "replace")
                 return resp.status, json.loads(txt) if txt else None, None
         except urllib.error.HTTPError as exc:
@@ -391,7 +391,7 @@ def _try_authentik_login(opener, authentik_domain: str, tester_user: str,
     try:
         req = urllib.request.Request(base, method="GET")
         req.add_header("User-Agent", "nos-smoke/1.0 (auth-flow)")
-        opener.open(req, timeout=timeout, context=ctx).read()
+        opener.open(req, timeout=timeout).read()
     except Exception:  # noqa: BLE001
         pass  # not fatal — POST may still work
 
@@ -670,6 +670,8 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
     class _RedirectedToAuth(Exception):
         """Sentinel: the probe was bounced to the SSO IdP (service is alive)."""
 
+    bounced: list[bool] = []
+
     def _do_simple(method: str) -> tuple[int | None, str | None]:
         # Build a custom redirect handler that records every Location header
         # seen and bails when we hit the same URL twice in a row (loop) or
@@ -712,6 +714,7 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
             with opener.open(req, timeout=timeout) as resp:
                 return resp.status, None
         except _RedirectedToAuth:
+            bounced.append(True)
             # Alive: bounced to the SSO IdP. 302 is in the non-strict expect
             # set; strict mode still wants `auth: tester` to follow to 200.
             return 302, None
@@ -745,8 +748,11 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
             code, err = _do_simple("GET")
         if strict and auth_mode == "tester" and not (tester_user and tester_password):
             err = err or "auth: tester requested but no --tester-user/--tester-password"
-        duration_ms = int((time.monotonic() - started) * 1000)
-        return ProbeResult(entry, code, duration_ms, err, code in expect)
+        # A bounce to the IdP says the row needs the tester; under --strict, with
+        # credentials, follow it instead of failing (2026-10-09).
+        if not (strict and bounced and tester_user and tester_password):
+            duration_ms = int((time.monotonic() - started) * 1000)
+            return ProbeResult(entry, code, duration_ms, err, code in expect)
 
     # ── Auth path: cookie-jar Session + Authentik flow executor ────────────
     cj = http.cookiejar.CookieJar()
@@ -765,7 +771,7 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
     for _ in range(5):
         try:
             req = urllib.request.Request(cur, method="GET")
-            with opener.open(req, timeout=timeout, context=ctx) as resp:
+            with opener.open(req, timeout=timeout) as resp:
                 final_code = resp.status
                 final_url = resp.geturl()
                 break
@@ -793,7 +799,7 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
             # Re-fetch original URL with the auth session cookie.
             try:
                 req = urllib.request.Request(url, method="GET")
-                with opener.open(req, timeout=timeout, context=ctx) as resp:
+                with opener.open(req, timeout=timeout) as resp:
                     final_code = resp.status
             except urllib.error.HTTPError as exc:
                 final_code = exc.code
