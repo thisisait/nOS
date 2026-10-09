@@ -277,7 +277,8 @@ judges:
     # 9 -> 10 on 2026-10-03: geolibre (atlas) forward_auth 302 row added.
     # 10 -> 11 on 2026-10-04: martin (atlas/tiles) forward_auth 302 row added.
     # 11 -> 13 on 2026-10-09: nos-forum-health + nos-forum-sso (rel-016 MUST 3).
-    min_work: 13
+    # 13 -> 15 on 2026-10-09: atlas-tiles-cuzk-parcels + -buildings (rel-016 MUST 2).
+    min_work: 15
     mutates_worktree: false
     requires: ["live_estate"]
     # §5.1 — the prober and the catalog it reads. Removing an entry from the

@@ -2413,7 +2413,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": false,
       "mutates_worktree": false,
-      "min_work": 13,
+      "min_work": 15,
       "argv": [
         "python3",
         "tools/nos-smoke.py",
@@ -2424,7 +2424,7 @@
         "live_estate"
       ],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 tools/nos-smoke.py --no-jsonl` — work floor min_work=13, deterministic=False"
+      "description": "Loop judge: gate command `python3 tools/nos-smoke.py --no-jsonl` — work floor min_work=15, deterministic=False"
     },
     "judge:pytest-anatomy": {
       "kind": "judge",
@@ -7477,7 +7477,7 @@
       "from": "gateset:live",
       "to": "doctrine:ssot/doctrine/loop-contract.md#M3",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:336",
+      "via": "cited at state/judge-sets.yml:337",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7495,7 +7495,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:312",
+      "via": "cited at state/judge-sets.yml:313",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7504,7 +7504,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:293",
+      "via": "cited at state/judge-sets.yml:294",
       "citations": 2,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7513,7 +7513,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2f",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:318",
+      "via": "cited at state/judge-sets.yml:319",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7558,7 +7558,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:283",
+      "via": "cited at state/judge-sets.yml:284",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
