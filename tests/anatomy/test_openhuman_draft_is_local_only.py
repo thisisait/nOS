@@ -110,3 +110,15 @@ def test_the_reader_reports_unknown_without_a_config(tmp_path, monkeypatch):
     rows = {r["check"]: r["state"] for r in mod.collect()}
     assert rows["privacy mode"] == mod.UNKNOWN and rows["analytics"] == mod.UNKNOWN
     assert mod.OK not in {rows[k] for k in ("privacy mode", "model route", "memory", "MCP servers")}
+
+
+def test_the_reader_is_red_on_a_brew_record_without_its_app(tmp_path, monkeypatch):
+    """Caskroom/openhuman with no OpenHuman.app read 'installed: OK' (2026-10-09)."""
+    spec = importlib.util.spec_from_file_location("ohs", REPO / "tools/openhuman-status.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    (tmp_path / "Caskroom/openhuman").mkdir(parents=True)
+    monkeypatch.setenv("NOS_OPENHUMAN_DIR", str(tmp_path))
+    monkeypatch.setenv("NOS_OPENHUMAN_APP", str(tmp_path / "none.app"))
+    monkeypatch.setenv("NOS_OPENHUMAN_CASKROOM", str(tmp_path / "Caskroom/openhuman"))
+    assert {r["check"]: r["state"] for r in mod.collect()}["installed"] == mod.RED

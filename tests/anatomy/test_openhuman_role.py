@@ -138,11 +138,20 @@ def _converge(tmp: Path, app_present: bool = False, config: str | None = None,
 
 
 @needs_ansible
-@pytest.mark.parametrize("where", ["app", "caskroom"])
-def test_an_existing_app_is_not_reinstalled(tmp_path, where):
-    _, calls, out = _converge(tmp_path, app_present=where == "app", caskroom=where == "caskroom")
+@pytest.mark.parametrize("caskroom", [False, True])
+def test_an_existing_app_is_not_reinstalled(tmp_path, caskroom):
+    _, calls, out = _converge(tmp_path, app_present=True, caskroom=caskroom)
     assert not calls.strip(), f"an installer ran although OpenHuman.app was there:\n{calls}"
     assert "PRESENT:" in out, "the run did not report which copy it found"
+
+
+@needs_ansible
+def test_a_brew_record_without_its_app_is_reinstalled(tmp_path):
+    """The app dragged to the Trash leaves Caskroom/openhuman behind; reading
+    that as installed skipped the session, the onboarding and the imprint, and
+    verify said nothing (blank converge 2026-10-09)."""
+    _, calls, _ = _converge(tmp_path, caskroom=True)
+    assert calls.splitlines() == ["brew reinstall --cask openhuman"], f"expected one reinstall:\n{calls}"
 
 
 @needs_ansible
