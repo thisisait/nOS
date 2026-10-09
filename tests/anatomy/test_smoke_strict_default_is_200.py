@@ -60,3 +60,11 @@ def test_a_row_that_declares_expect_still_wins_in_strict():
         assert smoke.probe(row, strict=True).ok
     finally:
         srv.shutdown()
+
+
+def test_the_table_shows_the_set_the_row_was_judged_by():
+    """--strict printed the legacy 200,301,302,308 beside a 302 it had failed."""
+    row = _catalog_row("http://127.0.0.1:1/")
+    r = smoke.ProbeResult(row, 302, 1, None, False)
+    assert "200,204" in smoke.render_table([r], strict=True)
+    assert "200,301,302,308" in smoke.render_table([r])
