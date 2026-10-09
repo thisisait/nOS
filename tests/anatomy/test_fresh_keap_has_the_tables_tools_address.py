@@ -43,3 +43,13 @@ def test_every_addressed_table_is_created_by_a_converge():
     seeded = _seeded_on_keap_alone()
     missing = [s for s in [_roadmap_id()] + REQUIRED if s not in seeded]
     assert not missing, f"a fresh KEAP lacks tables the default tools address: {missing}"
+
+
+def test_an_existing_roadmap_is_created_never_reshaped():
+    """The estate's roadmap predates its definition (refs text, a `when` column);
+    a reconcile against it is a 409 that fails the converge. Create only."""
+    core = (TASKS / "seed-core-tables.yml").read_text()
+    item = core[core.index("keap_roadmap_table_id"):core.index('slug: "current-state"')]
+    assert "create_only: true" in item
+    seeder = (TASKS / "seed-face-table.yml").read_text()
+    assert "create_only" in seeder, "the shared seeder ignores create_only"
