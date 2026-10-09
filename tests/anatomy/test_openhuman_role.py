@@ -88,7 +88,8 @@ def _exe(path: Path, body: str) -> None:
 def _converge(tmp: Path, app_present: bool = False, config: str | None = None,
               caskroom: bool = False, profiles: dict[str, str] | None = None,
               verify_only: bool = False, ok: bool = True, cli: bool = False, running: bool = False,
-              marker: str | None = None, app_state: dict[str, dict] | None = None) -> tuple[Path, str, str]:
+              marker: str | None = None, app_state: dict[str, dict] | None = None,
+              onboard_writes: str | None = None) -> tuple[Path, str, str]:
     home, stubs, brew = tmp / "home", tmp / "stubs", tmp / "brew"
     app = tmp / "Applications/OpenHuman.app"
     log = tmp / "calls.log"
@@ -103,7 +104,13 @@ def _converge(tmp: Path, app_present: bool = False, config: str | None = None,
     if app_present or cli:
         app.mkdir(parents=True)
     if cli:
-        _exe(app / "Contents/MacOS/OpenHuman", STUB.format(log=log))
+        body = STUB.format(log=log)
+        if onboard_writes is not None:   # the vendor RPC saves the whole active profile
+            (tmp / "onboard.toml").write_text(onboard_writes)
+            cfg = home / f".openhuman/users/{marker}/config.toml"
+            body = body.replace("exit 0", f'case "$*" in *config_set_onboarding_completed*) '
+                                          f'cp "{tmp / "onboard.toml"}" "{cfg}";; esac\nexit 0')
+        _exe(app / "Contents/MacOS/OpenHuman", body)
     if marker is not None:
         (home / ".openhuman").mkdir(parents=True, exist_ok=True)
         (home / ".openhuman/active_user.toml").write_text(f'user_id = "{marker}"\n')
@@ -323,3 +330,29 @@ def test_the_twin_is_quiet_cron_is_off_in_every_profile(tmp_path):
     for name in ("local", "local-studio-local", "u-cloud"):
         cfg = tomllib.loads((home / f".openhuman/users/{name}/config.toml").read_text())
         assert cfg.get("cron", {}).get("enabled") is False, f"{name}: cron left on (config/schema/cron.rs defaults it on)"
+
+
+# OpenHuman 0.64.15 (2026-10-09) made [memory.conversations] and [memory.recall] real keys,
+# default on; the role declared only auto_save, and verify went RED on a fresh install.
+V0_64_15_MEMORY = "[memory]\nauto_save = true\n[memory.conversations]\nenabled = true\n" \
+                  "[memory.recall]\nenabled = true\nbudget_tokens = 1200\n"
+
+
+@needs_ansible
+def test_conversations_and_recall_are_declared_off(tmp_path):
+    home, _, _ = _converge(tmp_path, app_present=True, profiles={"local": V0_64_15_MEMORY})
+    mem = tomllib.loads((home / ".openhuman/users/local/config.toml").read_text())["memory"]
+    assert mem["conversations"]["enabled"] is False and mem["recall"]["enabled"] is False, mem
+    assert mem["recall"]["budget_tokens"] == 1200, "a vendor key beside the declared one was dropped"
+
+
+@needs_ansible
+def test_the_declared_keys_outlive_the_onboarding_rpc(tmp_path):
+    """config_set_onboarding_completed saves the whole profile with the app's defaults;
+    the merge ran before it, so the fresh install of 2026-10-09 kept auto_save on."""
+    home, _, _ = _converge(tmp_path, cli=True, marker="local-studio-local",
+                           profiles={"local-studio-local": "onboarding_completed = false\n"},
+                           app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}},
+                           onboard_writes="onboarding_completed = true\n" + V0_64_15_MEMORY)
+    cfg = tomllib.loads((home / ".openhuman/users/local-studio-local/config.toml").read_text())
+    assert cfg["memory"]["auto_save"] is False and cfg["onboarding_completed"] is True, cfg
