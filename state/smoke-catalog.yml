@@ -174,7 +174,7 @@ smoke_endpoints:
     expect: [200, 302]
     expect_strict: [200]
     require_json: "tiles.inspire_cp"
-    when: "(install_martin | default(false)) and (install_geolibre | default(false))"
+    when: "install_martin | default(false) and install_geolibre | default(false)"
     tier: 3
     note: "martin publishes the ČÚZK parcels to a signed-in tier-3 user (rel-016 MUST 2)"
   - id: atlas-tiles-cuzk-buildings
@@ -183,7 +183,7 @@ smoke_endpoints:
     expect: [200, 302]
     expect_strict: [200]
     require_json: "tiles.inspire_bu"
-    when: "(install_martin | default(false)) and (install_geolibre | default(false))"
+    when: "install_martin | default(false) and install_geolibre | default(false)"
     tier: 3
     note: "martin publishes the ČÚZK buildings to a signed-in tier-3 user (rel-016 MUST 2)"
 
