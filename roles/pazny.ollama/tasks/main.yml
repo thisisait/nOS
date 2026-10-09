@@ -518,3 +518,36 @@
     - nos_pkg_manager == 'homebrew'
     - ollama_version | default('') | length > 0
     - ollama_version not in (_ollama_ver_after.stdout | default(''))
+
+# ── The tier models the config names (ollama_pull_models) ────────────────────
+# A job bound to a tier runs against the id the config names, so the id must be
+# on the host. Skipped when present; a failed pull is not fatal HERE — the
+# verify play (tools/job_readiness.py --verify) fails on a configured model the
+# host still lacks after the converge.
+- name: "[Ollama] Which models the host already holds"
+  ansible.builtin.command: ollama list
+  environment:
+    PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+    OLLAMA_HOST: "http://127.0.0.1:11434"
+  register: _ollama_have
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: ollama_pull_models | length > 0
+
+- name: "[Ollama] Pull a configured tier model the host lacks"
+  ansible.builtin.command: "ollama pull {{ item }}"
+  environment:
+    PATH: "{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+    OLLAMA_MODELS: "{{ ollama_models_dir }}"
+    OLLAMA_HOST: "http://127.0.0.1:11434"
+  loop: "{{ ollama_pull_models | reject('in', _have) | reject('in', _have | map('regex_replace', ':latest$', '')) | list }}"
+  loop_control:
+    label: "{{ item }}"
+  vars:
+    _have: "{{ (_ollama_have.stdout_lines | default([]))[1:] | map('regex_replace', '\\s.*$', '') | list }}"
+  register: _ollama_pulled
+  changed_when: _ollama_pulled.rc == 0
+  failed_when: false
+  timeout: 3600
+  when: ollama_pull_models | length > 0
