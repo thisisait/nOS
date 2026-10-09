@@ -19,7 +19,7 @@
     fail_msg: "openhuman_provider={{ openhuman_provider }}; expected ollama or claude-code"
     quiet: true
 
-# Symbiont: installed only when neither the Caskroom dir nor the .app exists.
+# Symbiont: installed when the .app is absent (a Caskroom record alone is reinstalled).
 - name: "[openhuman] Install the app (symbiont cask)"
   ansible.builtin.include_role:
     name: pazny.mac.homebrew

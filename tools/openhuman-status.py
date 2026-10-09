@@ -288,8 +288,11 @@ def collect() -> list[dict]:
     base = root()
     app = pathlib.Path(os.environ.get("NOS_OPENHUMAN_APP", "/Applications/OpenHuman.app"))
     cask = pathlib.Path(os.environ.get("NOS_OPENHUMAN_CASKROOM", "/opt/homebrew/Caskroom/openhuman"))
-    out = [line("installed", OK, ("app present" if app.exists() else "no app")
-                + (", via brew cask" if cask.is_dir() else ""), f"{app}, {cask}")]
+    orphan = cask.is_dir() and not app.exists()   # the app trashed, brew's record left behind
+    out = [line("installed", RED if orphan else OK,
+                "brew cask record without its app — converge reinstalls it" if orphan else
+                ("app present" if app.exists() else "no app") + (", via brew cask" if cask.is_dir() else ""),
+                f"{app}, {cask}")]
     ps = _run(["ps", "-axo", "comm="])
     procs = [p for p in (ps or "").splitlines() if "openhuman" in p.lower()]
     out.append(line("running", UNKNOWN if ps is None else OK,
