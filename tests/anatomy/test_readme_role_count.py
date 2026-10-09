@@ -47,3 +47,24 @@ def test_readme_role_count_is_accurate():
         f"README.md claims {claimed} roles but {actual} roles/pazny.* "
         f"directories exist under {ROLES_ROOT.relative_to(REPO)}/"
     )
+
+
+_SERVICES_RE = re.compile(r"(\d+) (?:open-source|FOSS) services")
+
+
+def test_readme_and_release_service_count_is_measured():
+    """README.md and RELEASE.md say the same service count, and it is the
+    manifest's. On 2026-10-09 README said 'about 55', RELEASE said '~50',
+    the manifest held 74 rows — two moving counts, both stale."""
+    import sys  # noqa: PLC0415
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity  # noqa: PLC0415 — the manifest reader, never a filename
+    measured = len(nos_identity.services())
+    claims = {}
+    for doc in ("README.md", "RELEASE.md"):
+        m = _SERVICES_RE.search((REPO / doc).read_text(encoding="utf-8"))
+        assert m, f"{doc} must state '<N> open-source|FOSS services'"
+        claims[doc] = int(m.group(1))
+    assert set(claims.values()) == {measured}, (
+        f"{claims} vs {measured} rows in state/manifest.yml (nos_identity.services())"
+    )
