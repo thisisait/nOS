@@ -1,6 +1,6 @@
 # nOS — Release notes
 
-`nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac or Ubuntu 24.04 host into a reproducible, self-hosted, self-managing cloud of ~50 FOSS services behind one SSO.
+`nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac or Ubuntu 24.04 host into a reproducible, self-hosted, self-managing cloud of 74 FOSS services behind one SSO.
 
 Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.15-beta`.
 
