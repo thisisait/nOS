@@ -6,21 +6,19 @@
 > [`docs/roadmap-2026q2.md`](roadmap-2026q2.md). Release narrative →
 > [`RELEASE.md`](../RELEASE.md). Completed plans → [`docs/archive/`](archive/).
 >
-> Last updated: 2026-10-07.
+> Last updated: 2026-10-09.
 
 ## Now (current track)
 
 1. **v0.16-beta is being drafted** (row `rel-016`; `RELEASE.md` section marked
-   DRAFT). v0.15-beta shipped 2026-10-06. This week: body plan + lexicon + tissues
-   + imprint, `state/` by realm, `software_owner` on every row, face a core organ.
-   Open before the tag: CI green on every lane (macOS 26 idempotence,
-   `homebrew-recurse-changed`), atlas and forum smoke-probed live. Operator
-   2026-10-08: MUST (4) re-scoped (OpenHuman role present and converging;
-   acceptance deferred to v0.17); MUST (5) reworded (body plan proposed,
-   `in_force: false`; lexicon shipped; tissues + imprint rows carry to v0.17).
-   After the tag: the ~30 review follow-ups (`review-v015-followups`), the
-   `default.config.yml` split continues (`default-config-split`), `containerized-core`.
-   Jellyfin SSO waits for the blank.
+   DRAFT). Blank converge 2026-10-09: one first-login timeout (passed on
+   `--tags identities`), smoke 50/50, `--strict` with the tester 49/50 (probe
+   fixed), E2E 339/0. Open before the tag, per MUST: (1) CI on every lane at the
+   release PR; (2) atlas needs `install_martin: true` and one converge (the
+   operator's config call); (4) OpenHuman converges once the orphaned cask is
+   reinstalled (`nos --tags openhuman`, app quit); (6) one converge `failed=0`.
+   After the tag: `review-v015-followups`, `default-config-split`,
+   `containerized-core`; v0.17 rows: Iris cell, OpenHuman acceptance.
 2. **Wing compat symlink** `state/llm-backends.yml` → `state/habitat/` stays until
    every host has run `nos --tags wing`; then delete it and the two fallback reads.
 3. **Redis leaf rotation is LIVE** (converged 2026-10-01; requirepass == new
