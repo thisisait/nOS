@@ -26,6 +26,9 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 TARGET = REPO / "IMPRINT.md"
 MAX_LINES = 200
+# OpenHuman cuts each AGENTS.md layer at 20,000 chars (agent/prompts/types.rs
+# BOOTSTRAP_MAX_CHARS); under 16k leaves a harness room for its own prompt.
+MAX_CHARS = 16000
 TOP = 5
 
 SOURCES = {

@@ -31,6 +31,12 @@ def test_imprint_fits_the_cap() -> None:
         assert text.count("\n") <= gen.MAX_LINES, f"{name} is over {gen.MAX_LINES} lines"
 
 
+def test_imprint_fits_the_char_cap() -> None:
+    """A harness truncates by characters, not lines: past the cap the tail is never read."""
+    for name, text in (("IMPRINT.md", _page()), ("render", gen.render())):
+        assert len(text) <= gen.MAX_CHARS, f"{name} is {len(text)} chars, over {gen.MAX_CHARS}"
+
+
 def test_every_section_is_present_in_order() -> None:
     heads = re.findall(r"^## (.+)$", _page(), re.M)
     assert heads == [t for t, _ in gen.SECTIONS] + ["Sources"]
