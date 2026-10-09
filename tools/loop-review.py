@@ -459,7 +459,9 @@ def main() -> int:
             return _promote(log)
         return 0
     except Refused as exc:
+        # Both streams: Pulse records only stdout (pulse_runs.stdout_tail).
         print(f"[loop-review] {exc}", file=sys.stderr)
+        print(f"[loop-review] Refused: {exc}", flush=True)
         return 2
 
 
