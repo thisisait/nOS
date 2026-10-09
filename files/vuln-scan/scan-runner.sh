@@ -70,7 +70,7 @@ _ready_rc=0
 python3 "$(cd "$(dirname "$0")/../.." && pwd)/tools/job_readiness.py" \
     --job conductor:vulnerability-scan || _ready_rc=$?
 if [ "$_ready_rc" -eq 78 ]; then
-    log "HELD: scan not dispatched — the need is on the line above"
+    log "scan held, not dispatched — the need is on the line above"
     exit 78
 fi
 

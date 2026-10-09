@@ -64,6 +64,9 @@ LOOPS_PAUSED_FILE = pathlib.Path(
 #: The exit code agent-run-lock.sh returns when the loops are paused; a pulse
 #: run recorded with it is a hold, never a failure.
 PAUSED_EXIT = 3
+#: The exit code of a run tools/job_readiness.py HELD: the job lacks a need
+#: (backend, claude CLI, tier model) and did not run. Mirrors its HOLD_EXIT.
+HOLD_EXIT = 78
 #: The scanner's LIVE notebook — scan-runner.sh's own target, and the only file
 #: that answers "did the scan run". The git copy below is the last PROMOTION of
 #: it. On 2026-09-23 they were 16 days and 9 cycles apart, and reading the git
@@ -187,7 +190,7 @@ def failing_jobs(conn: sqlite3.Connection) -> list[dict]:
         # (agent-run-lock.sh returns it; the runners carry it out). A held run is
         # not a failure — paused_runs() surfaces it. Reserve a distinct code per
         # job only if 3 ever means something else for one.
-        if row["exit_code"] == PAUSED_EXIT:
+        if row["exit_code"] in (PAUSED_EXIT, HOLD_EXIT):  # held_needs() says these
             continue
         # Declared findings code → the job worked. Unparseable declaration is
         # NOT read as "no codes declared": that would silently restore the old
@@ -254,6 +257,38 @@ def paused_runs(conn: sqlite3.Connection) -> list[dict]:
             "fired_at": row["fired_at"],
             "age": _age(_parse_iso(row["fired_at"])),
         })
+    return out
+
+
+def held_needs(conn: sqlite3.Connection) -> dict[str, list[str]]:
+    """need -> the jobs whose most recent run was HELD for it (exit HOLD_EXIT).
+
+    One missing need holds many jobs; grouping by the judge's own `HELD:` line
+    makes it one line to act on instead of N failures (client deploy 2026-10-09:
+    eight failing jobs, three needs). A held run without a HELD line is still
+    reported, under a need that says so.
+    """
+    rows = conn.execute(
+        """
+        SELECT r.job_id, r.stdout_tail
+          FROM pulse_runs r
+          JOIN (SELECT job_id, MAX(fired_at) AS latest
+                  FROM pulse_runs GROUP BY job_id) m
+            ON r.job_id = m.job_id AND r.fired_at = m.latest
+          LEFT JOIN pulse_jobs j ON j.id = r.job_id
+         WHERE r.exit_code = ? AND j.id IS NOT NULL AND j.removed_at IS NULL
+         ORDER BY r.job_id
+        """, (HOLD_EXIT,)).fetchall()
+    out: dict[str, list[str]] = {}
+    seen: set[str] = set()
+    for row in rows:
+        if row["job_id"] in seen:
+            continue
+        seen.add(row["job_id"])
+        needs = [ln.strip()[len("HELD: "):] for ln in (row["stdout_tail"] or "").splitlines()
+                 if ln.strip().startswith("HELD: ")] or ["held, need not recorded"]
+        for need in dict.fromkeys(needs):
+            out.setdefault(need, []).append(row["job_id"])
     return out
 
 
@@ -885,6 +920,7 @@ def collect() -> dict:
             with conn:
                 report["failing_jobs"] = failing_jobs(conn)
                 report["paused_runs"] = paused_runs(conn)
+                report["held_needs"] = held_needs(conn)
                 report["overdue_jobs"] = overdue_jobs(conn)
                 report["inbox"] = unread_inbox(conn)
                 report["audit_chain"] = audit_chain(conn)
@@ -969,6 +1005,9 @@ def reds(report: dict) -> list[str]:
         out.append(
             f"{job['job']} failing rc={job['exit_code']} ({job['age']}) — {job['last_line']}"
         )
+    for need, jobs in (report.get("held_needs") or {}).items():
+        out.append(f"{len(jobs)} job(s) held: {need} — {', '.join(jobs)} "
+                   "(tools/job_readiness.py)")
     scan = report.get("security_scan")
     if scan and scan.get("scan_failed"):
         out.append(
