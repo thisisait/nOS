@@ -294,6 +294,42 @@ agentic_provider = "ollama:hermes3:8b"\ncoding_provider = "ollama:hermes3:8b"
         assert config_path(base) == base / "users/local/config.toml"
         assert judge_mcp(base, {}, 'env = { KEAP_AGENT_TOKEN_RW = "x" }')["state"] == RED
         assert judge_mcp(base, None, "")["state"] == UNKNOWN
+    with tempfile.TemporaryDirectory() as d:   # the twin lines: session, onboarding, tools, imprint
+        base, imp = pathlib.Path(d), pathlib.Path(d) / "IMPRINT.md"
+        imp.write_text("# imprint\n")
+        tw = lambda: {r["check"]: r["state"] for r in judge_twin(base, imp)}  # noqa: E731
+        assert {tw()[k] for k in ("session", "onboarding", "tools", "imprint")} == {UNKNOWN}, tw()
+        (base / "active_user.toml").write_text('user_id = "local-x"\n')
+        prof = base / "users/local-x"
+        (prof / "workspace/state").mkdir(parents=True)
+        assert tw()["session"] == RED and tw()["onboarding"] == UNKNOWN
+        (prof / "auth-profiles.json").write_text("{}")
+        (prof / "config.toml").write_text("onboarding_completed = false\n")
+        assert tw()["session"] == OK and tw()["onboarding"] == RED and tw()["tools"] == RED
+        (prof / "config.toml").write_text("onboarding_completed = true\n")
+        assert tw()["onboarding"] == OK
+        state = prof / "workspace/state/app-state.json"
+        state.write_text('{"onboardingTasks": {"enabledTools": []}}')
+        assert tw()["tools"] == RED
+        state.write_text('{"onboardingTasks": {"enabledTools": ["shell"]}}')
+        assert tw()["tools"] == OK
+        state.write_text("{not json")
+        assert tw()["tools"] == UNKNOWN
+        agents = prof / "workspace/AGENTS.md"
+        assert tw()["imprint"] == RED                                 # no AGENTS.md
+        agents.write_text("<!-- nOS: copy -->\n# imprint\n")
+        assert tw()["imprint"] == OK
+        agents.write_text("<!-- nOS: copy -->\n# stale\n")
+        assert tw()["imprint"] == RED
+        imp.write_text("x" * BOOTSTRAP_MAX_CHARS)
+        agents.write_text("<!-- nOS: copy -->\n" + "x" * BOOTSTRAP_MAX_CHARS)
+        assert "truncated by OpenHuman" in next(r["detail"] for r in judge_twin(base, imp) if r["check"] == "imprint")
+        imp.unlink()
+        assert tw()["imprint"] == UNKNOWN
+    assert judge_cron({}, "f", "ollama")["state"] == RED                  # schema default: on
+    assert judge_cron({"cron": {"enabled": False}}, "f", "ollama")["state"] == OK
+    assert judge_cron({}, "f", "claude-code")["state"] == OK
+    assert judge_cron(None, "f", "ollama")["state"] == UNKNOWN
     print("selftest ok")
 
 
