@@ -128,3 +128,20 @@ def test_the_log_directory_exists_before_ansible_runs(tmp_path):
     r = subprocess.run([NOS, "--tags", "openclaw"], env=env, capture_output=True, text=True, timeout=30)
     assert "LOGDIR-OK" in r.stdout, r.stdout + r.stderr
     assert oct((home / ".nos").stat().st_mode & 0o777) == "0o700"
+
+
+def test_dtt_tools_see_the_seed_dir_from_the_env_file(tmp_path):
+    """~/.nos/nos-cli.env is sourced, not exported: NOS_SEED_DIR set only there
+    never reached the python tool, which fell back to ~/nos-seed (2026-10-09:
+    `nos dtt seed --sync` refused on a stray 8-file dir, not the seed repo)."""
+    import sys
+    home, src = tmp_path / "home", tmp_path / "src"
+    (home / ".nos").mkdir(parents=True)
+    (src / "tools").mkdir(parents=True)
+    (home / ".nos/nos-cli.env").write_text(f"NOS_SEED_DIR={tmp_path}/seed\n")
+    (src / "tools/roadmap-status.py").write_text(
+        "import os; print(os.environ.get('NOS_SEED_DIR', 'UNSET'))\n")
+    env = {"HOME": str(home), "PATH": os.environ["PATH"],
+           "NOS_SRC": str(src), "NOS_PY": sys.executable}
+    r = _run("dtt", "status", env=env)
+    assert r.stdout.strip() == f"{tmp_path}/seed", (r.stdout, r.stderr)
