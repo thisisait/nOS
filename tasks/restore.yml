@@ -18,7 +18,9 @@
 # Invocation:
 #   ansible-playbook main.yml -K --tags restore \
 #       -e restore_date=2026-04-20 \
-#       [-e restore_sources=mariadb,postgres,volume-mariadb_data]
+#       [-e restore_sources=mariadb,postgres,volume-mariadb_data] \
+#       [-e restore_from=~/backups/<dir>]   # a local set instead of S3: remove=data
+#                                           # wipes RustFS, ~/backups/staging survives
 #
 # If restore_sources is omitted, every source at that date is restored.
 # ==============================================================================
@@ -44,6 +46,7 @@
   register: aws_which
   changed_when: false
   failed_when: aws_which.rc != 0
+  when: restore_from is not defined
 
 - name: "[Restore] Verify docker is available"
   ansible.builtin.command: which docker
@@ -58,7 +61,8 @@
     restore_s3_endpoint: "http://127.0.0.1:{{ rustfs_api_port | default(9010) }}"
     restore_s3_bucket: "backups"
     restore_s3_prefix: "{{ restore_date }}/"
-    restore_workdir: "{{ ansible_facts['env']['HOME'] }}/restore-temp/{{ restore_date }}"
+    restore_workdir: "{{ restore_from | expanduser if restore_from is defined
+                         else ansible_facts['env']['HOME'] ~ '/restore-temp/' ~ restore_date }}"
     restore_started_at: "{{ ansible_date_time.iso8601 | default(lookup('pipe', 'date -Iseconds')) }}"
     restore_requested_sources: >-
       {{ (restore_sources | default('') | string).split(',')
@@ -119,6 +123,14 @@
   failed_when: false
   check_mode: false  # fee 36: skipped-under---check stdout invents "no backups"
   no_log: true
+  when: restore_from is not defined
+
+- name: "[Restore] List the local backup set in {{ restore_from | default('') }}"
+  ansible.builtin.find:
+    paths: "{{ restore_workdir }}"
+    file_type: file
+  register: restore_local
+  when: restore_from is defined
 
 - name: "[Restore] Bail if no backups exist at the requested date"
   ansible.builtin.fail:
@@ -127,7 +139,14 @@
       Endpoint: {{ restore_s3_endpoint }}
       List available dates:
         aws --endpoint-url {{ restore_s3_endpoint }} s3 ls {{ restore_s3_bucket }}/
-  when: restore_ls.rc != 0 or (restore_ls.stdout | default('') | trim | length) == 0
+  when:
+    - restore_from is not defined
+    - restore_ls.rc != 0 or (restore_ls.stdout | default('') | trim | length) == 0
+
+- name: "[Restore] Bail if the local backup set is empty"
+  ansible.builtin.fail:
+    msg: "No backup files in {{ restore_workdir }}"
+  when: restore_from is defined and restore_local.matched == 0
 
 # A FOLDED SCALAR DOES NOT UNESCAPE (measured 2026-09-28). `>-` passes
 # backslashes through literally, so `\\s` here reaches the regex engine as
@@ -138,10 +157,11 @@
 - name: "[Restore] Parse available source filenames"
   ansible.builtin.set_fact:
     restore_available_files: >-
-      {{ restore_ls.stdout_lines
+      {{ (restore_local.files | map(attribute='path') | map('basename') | list) if restore_from is defined
+         else (restore_ls.stdout_lines
          | map('regex_replace', '^.*\s+([^\s]+)$', '\1')
          | reject('equalto', '')
-         | list }}
+         | list) }}
 
 - name: "[Restore] Build list of sources to restore"
   # `s3file` is the object key (may carry a `.enc` suffix from client-side
@@ -183,8 +203,8 @@
   ansible.builtin.debug:
     msg: |
       Restore plan for {{ restore_date }}:
-      Endpoint:  {{ restore_s3_endpoint }}
-      Bucket:    s3://{{ restore_s3_bucket }}/{{ restore_s3_prefix }}
+      Source:    {{ restore_workdir if restore_from is defined
+                    else restore_s3_endpoint ~ ' s3://' ~ restore_s3_bucket ~ '/' ~ restore_s3_prefix }}
       Files:     {{ restore_plan | map(attribute='file') | list | join(', ') }}
       Target:    live services (infra stack must be running)
       Work dir:  {{ restore_workdir }}
@@ -234,6 +254,7 @@
   register: restore_downloads
   changed_when: true
   no_log: true
+  when: restore_from is not defined
 
 # Decrypt client-side-encrypted objects in place (.enc → plaintext name).
 # Mirror of encrypt_stream() in roles/pazny.backup/files/backup.sh — cipher
