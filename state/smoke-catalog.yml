@@ -143,6 +143,29 @@ smoke_endpoints:
     when: "install_bluesky_pds | default(false)"
     note: "Bluesky PDS direct loopback (Traefik routing pending)"
 
+  # nos-forum is a v0.16 MUST ("forum SSO works", rel-016). The manifest
+  # baseline GET / stays; these two add the health endpoint and the SSO fact.
+  # /health is the path the compose healthcheck and post.yml wait on
+  # (roles/pazny.nos_forum). Gate: tests/anatomy/test_smoke_must_rows_have_tester.py.
+  - id: nos-forum-health
+    url: "https://{{ nos_forum_domain }}/health"
+    expect: [200]
+    when: "install_nos_forum | default(false)"
+    tier: 3
+    note: "forum-web /health through the edge — same path the container healthcheck polls"
+
+  # /auth/login starts the OIDC code flow (plugin nos-forum-base first_login).
+  # Anonymous it 302s to Authentik; in strict mode the tester logs in and the
+  # callback must land the session on a final 200 — that is "forum SSO works".
+  - id: nos-forum-sso
+    url: "https://{{ nos_forum_domain }}/auth/login"
+    auth: "tester"
+    expect: [200, 302]          # legacy: the bounce to Authentik proves the wiring
+    expect_strict: [200]        # strict: only the post-login landing counts
+    when: "install_nos_forum | default(false)"
+    tier: 3
+    note: "forum OIDC start → Authentik → callback; tester must land a 200 (rel-016 MUST 3)"
+
   # GitLab is documented as slow-start (3-5 min cold). The role's
   # health-probes.yml already has retries: 36 for the wait-for, but
   # the smoke runner's default 5s per-request timeout is too tight

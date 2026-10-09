@@ -31,6 +31,12 @@ Lose that directory and the module can only be replaced by deleting the database
 `forum` proxied (orange) at Cloudflare. No new ports in v0.1. Calls (v0.2) add a
 DNS-only `media` record and router forwards; see the spec's `04-realtime-and-media.md`.
 
+## Verification
+
+`tools/nos-smoke.py --strict` carries two rows in `state/smoke-catalog.yml`: `nos-forum-health`
+(anonymous `/health`, 200) and `nos-forum-sso` (`/auth/login` as the tester, must land a 200 —
+the v0.16 "forum SSO works" fact). Gate: `tests/anatomy/test_smoke_must_rows_have_tester.py`.
+
 ## Authentik key rotation
 
 SpacetimeDB caches Authentik's JWKS per issuer and does not refetch on an unknown `kid`.
