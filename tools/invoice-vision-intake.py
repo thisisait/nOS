@@ -191,7 +191,7 @@ def main(argv: list[str] | None = None) -> int:
             extracted += 1
             park_incoming(img)
     if imgs and extracted == 0:
-        print("REFUSING: every extraction failed — is qwen2.5vl:7b pulled and ollama armed?", file=sys.stderr)
+        print("REFUSING: every extraction failed — is ollama_vision_model set, pulled and ollama armed?", file=sys.stderr)
         return 2
 
     # populate the operator-verify queue for held sidecars (idempotent upsert)

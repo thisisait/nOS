@@ -185,7 +185,7 @@ def main() -> int:
             print(f"  it failed {common[1]}/{len(_FAILURES)} time(s) with, verbatim:", file=sys.stderr)
             print("  " + common[0].replace("\n", "\n  "), file=sys.stderr)
         else:
-            print("  the pipeline said nothing — is qwen2.5vl:7b pulled and ollama armed?",
+            print("  the pipeline said nothing — is ollama_vision_model set, pulled and ollama armed?",
                   file=sys.stderr)
         return 2
 
