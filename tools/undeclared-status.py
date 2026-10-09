@@ -80,7 +80,17 @@ def declared_labels() -> set[str] | None:
         m = re.search(r"<key>Label</key>\s*<string>([^<{]+)</string>", tpl.read_text(encoding="utf-8"))
         if m:
             labels.add(m.group(1).strip())
-    return labels
+    return labels | _brew_twins(labels)
+
+
+# `brew services` wrote homebrew.mxcl.<formula> until Homebrew 7, sh.brew.<formula>
+# since; the host runs whichever its brew writes, so a declared one is both.
+_BREW_PREFIXES = ("homebrew.mxcl.", "sh.brew.")
+
+
+def _brew_twins(labels: set[str]) -> set[str]:
+    return {other + lb[len(pre):] for lb in labels for pre in _BREW_PREFIXES
+            if lb.startswith(pre) for other in _BREW_PREFIXES}
 
 
 def _identity():
