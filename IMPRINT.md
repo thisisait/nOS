@@ -37,18 +37,18 @@ the agent's or anyone's — is caught before it costs anything. Both are the poi
 Levels run smallest to largest, then the systems that cut across every level.
 Each line: level (count) — what it means (the lexicon's words), then the most connected nodes (edge count).
 
-- **genome** (20) — The declared facts every part of nOS inherits. Most live in state/genome/ (genes, schemas, this lexicon, the task types); the skill library lives in files/anatomy/skills/, beside the code that hands skills out. Most connected: tasktype:investigate (13), tasktype:seed-edit (5), skill:nos-backoffice (3), skill:nos-datatables (3), tasktype:code-fix (3)
-- **cell** (16) — One model in one specialization; in code it is called an agent. Most connected: agent:librarian (11), agent:jeff (9), agent:surveyor (8), agent:conductor (7), agent:curator (7)
+- **genome** (20) — The declared facts every part of nOS inherits. Most live in state/genome/ (genes, schemas, this lexicon, the task types); the skill library lives in files/anatomy/skills/, beside the code that hands skills out. Most connected: tasktype:investigate (13), tasktype:seed-edit (5), skill:nos-backoffice (3)
+- **cell** (16) — One model in one specialization; in code it is called an agent. Most connected: agent:librarian (11), agent:jeff (9), agent:surveyor (8)
 - **tissue** (1) — The transplantable pack of one specialization's cells with their skills, tables and services. Most connected: tissue:backoffice (23)
-- **organ** (78) — One service or host daemon with one job; one row in state/manifest.yml. Most connected: service:pulse (43), service:postgresql (11), service:redis (9), service:mariadb (8), service:openclaw (7)
-- **organ system** (13) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Most connected: organ_system:archive (9), organ_system:watch (8), organ_system:voice (6), organ_system:backoffice (5), organ_system:forge (5)
+- **organ** (78) — One service or host daemon with one job; one row in state/manifest.yml. Most connected: service:pulse (43), service:postgresql (11), service:redis (9)
+- **organ system** (13) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Most connected: organ_system:archive (9), organ_system:watch (8), organ_system:voice (6)
 - **organism** (0) — One nOS install on one machine, all its organ systems together. Most connected: none — no node stands for the whole; the whole is this graph
-- **habitat** (6) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner; nOS never installs or touches it by default, only through opt-in toggles the owner sets (configure_dock, install_mas_apps and their kin in the host-desktop layer). Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Most connected: backend:minimax (8), backend:ollama (6), backend:anthropic (3), backend:openclaw (1), backend:mistral-eu (0)
-- **sense** (72) — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Most connected: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), tool_ro:mcp-bone (5)
-- **limb** (113) — A tool that acts. Most connected: effector:loop-pr (6), effector:run-agent (6), effector:loop-propose (5), effector:discovery-scan (3), effector:loop-review (3)
-- **memory** (40) — What nOS has learned, kept in KEAP; RAM stays plain English. Most connected: table:party (13), table:invoice (5), table:journal-entry (4), table:posting (4), table:account (3)
-- **law** (52) — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Most connected: article:loop-contract (19), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#3.4 (5), doctrine:ssot/doctrine/loop-contract.md#5a (4), doctrine:ssot/doctrine/loop-contract.md#DECISION-2e (4)
-- **reflex** (43) — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Most connected: pulse:conductor:self-test-001 (9), pulse:librarian:brief-taxonomy (9), pulse:librarian:describe-taxonomy (9), pulse:librarian:judge-lint-queue (9), pulse:surveyor:surface-survey (9)
+- **habitat** (6) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner; nOS never installs or touches it by default, only through opt-in toggles the owner sets (configure_dock, install_mas_apps and their kin in the host-desktop layer). Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Most connected: backend:minimax (8), backend:ollama (6), backend:anthropic (3)
+- **sense** (72) — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Most connected: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5)
+- **limb** (113) — A tool that acts. Most connected: effector:loop-pr (6), effector:run-agent (6), effector:loop-propose (5)
+- **memory** (40) — What nOS has learned, kept in KEAP; RAM stays plain English. Most connected: table:party (13), table:invoice (5), table:journal-entry (4)
+- **law** (52) — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Most connected: article:loop-contract (19), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#3.4 (5)
+- **reflex** (43) — An automatic, scheduled response of an organ; Pulse runs each one on its clock. Most connected: pulse:conductor:self-test-001 (9), pulse:librarian:brief-taxonomy (9), pulse:librarian:describe-taxonomy (9)
 - **heartbeat** (1) — A periodic signal that proves something is still alive. Most connected: daemon:eu.thisisait.nos.heartbeat (0)
 
 Hidden plumbing: 74 internal nodes. Look closer: `tools/body.py <level>` or `tools/body.py <node>`.
@@ -64,43 +64,22 @@ Start with the first one.
 - `tools/rem-status.py` — What the security queue says, right now.
 - `tools/identity-status.py` — the declared account roster vs what each realm holds.
 - `tools/plugin-wiring-report.py` — Plugin wiring report — capability matrix + contract checks.
-- `tools/workload-digest-status.py` — image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker.
-- `tools/caddy-status.py` — Can the caddy answer, is the ear listening, and what did it hear.
-- `tools/brew-pin-status.py` — How old is the version brew wants to give us, and is it old enough to adopt?
-- `tools/cortex-status.py` — What the cortex organ is, all of it — not just the part KEAP serves.
-- `tools/tissue-status.py` — Which tissues the estate declares (state/tissues/), their members, and whether each holds: schema, every id resolved, Article 30 inherited complete. Also the loader anatomy-graph-gen imports.
-- `tools/router-status.py` — The WAN router as a declared estate fact: presence probe + intent from state/habitat/router.yml; UNKNOWN when it cannot look.
-- `tools/e2e-status.py` — What the last estate e2e run (tests/e2e/estate) said, read back from `~/.nos/e2e/results.jsonl`: counts, the failing nodeids, age (red past 7 days); UNKNOWN without the record.
-- `tools/elsewhere-status.py` — Estate work happening OUTSIDE the control centre, and how to get to it.
-- `tools/loop-status.py` — Which weakness sources actually produce proposals, and what came of them.
-- `tools/geo-status.py` — rows per geo layer counted back from PostGIS, last load beside it; UNKNOWN when unreachable.
-- `tools/permission-status.py` — What macOS will and will not let this estate do, in one place.
-- `tools/undeclared-status.py` — What runs on this host that nOS never declared: launchd plists/labels, exposed or Docker-published ports, crontab — vs sets derived from the graph, manifest (`host_programs`) and rendered compose; the owner's own software is declared in config.yml as `habitat_processes`.
-- `tools/santa-status.py` — What Santa (monitor mode, `install_santa`) saw execute outside the declared trees (Pulse runner trees + OS/Homebrew/Applications), any DENY, and a mode other than Monitor; UNKNOWN when the log or santactl is unreadable.
-- `tools/openhuman-status.py` — Is OpenHuman on this Mac set up to stay on this Mac: per profile (`users/*/config.toml`) privacy mode, analytics, updaters, model route, memory and background routes; MCP servers (RED if the RW token is in them), install, running, any non-loopback socket (`lsof`), and a second Ollama (another binary, or a port other than 11434); UNKNOWN without a config or a running process. `--selftest` needs no app.
-- `tools/tailscale-status.py` — Can the tailnet reach nOS by name (`nos_edge: lan_tailscale`): Tailscale installed, up, hostname, the `nos_lan_ip/32` route advertised vs approved, `dig @nos_lan_ip` answering, Funnel (RED when on); UNKNOWN without the CLI. Cannot see the tailnet's split-DNS setting (no API key by design).
-- `tools/managed-status.py` — Every managed dir: what a blank does to it × what the backup does with it, one table from the artifacts (`--gaps`, `--json`; the cc pane `managed`).
-- `tools/stale-config-status.py` — Containers running config the estate has already replaced.
-- `tools/roadmap-status.py` — What the roadmap says, right now.
-- `tools/skill-status.py` — What is on the shelf, who should be holding it, and who actually is.
-- `tools/snapshot-status.py` — Is there a net under the next converge, and what exactly does it hold?
-- `tools/stuck-status.py` — What has STOPPED MOVING — which is a different question from what is broken.
-- `tools/usage-status.py` — What each model budget has been spent on, and what is left.
-- `tools/wing-status.py` — What Wing actually is: every table, who writes it, who reads it, what it costs.
+
+23 more `*-status.py` readers, each with its question, are listed in tools/README.md §Readers: workload-digest-status.py, caddy-status.py, brew-pin-status.py, cortex-status.py, tissue-status.py, router-status.py, e2e-status.py, elsewhere-status.py, loop-status.py, geo-status.py, permission-status.py, undeclared-status.py, santa-status.py, openhuman-status.py, tailscale-status.py, managed-status.py, stale-config-status.py, roadmap-status.py, skill-status.py, snapshot-status.py, stuck-status.py, usage-status.py, wing-status.py.
 
 ## 5. How to act — task types and the two tables
 
-Every row on the board carries a `task_type`. Its contract says which tools, what it writes, who runs it, and what ends it.
+Every row on the board carries a `task_type`. Its contract says what it writes, who runs it and what ends it; the tools each may use are in state/genome/task-types.yml.
 
-- `investigate` — Read-only. Find something out and report it; change nothing. writes: none · agent-run · tools: read, grep, Explore, tools/*-status.py readers · done: findings as file:line + the claim + its evidence; zero edits made.
-- `code-fix` — Fix a defect at its ROOT (the shared function, not each caller). writes: code · agent-run · tools: read, grep, edit, bash, pytest · done: the pinning gate is GREEN and was shown RED against the pre-fix state (a gate you cannot fail on the broken tree does not pin anything); committed with the gate.
-- `seed-edit` — Change one row / seed file (a roadmap or dtt row, a *.seed.yml). writes: data · agent-run · tools: tools/roadmap-update.py, tools/roadmap-seed.py, edit · done: a READER (roadmap-status / the seed's loader) shows the new value.
-- `review` — Adversarially verify a claim — try to REFUTE it, not confirm it. writes: none · agent-run · tools: read, grep · done: a verdict (CONFIRMED | REFUTED) with a concrete failing-or-passing scenario.
-- `design` — Produce a spec or doctrine a builder can execute; write no code. writes: docs · agent-run · tools: read, write (docs/drafts) · done: a plan/doctrine doc concrete enough that another agent can build from it.
-- `doc` — Documentation — keep live doctrine true, narrate history in the devlog. writes: docs · agent-run · tools: edit, /devlog · done: the doc reflects reality; narrative/history goes to a devlog entry, not doctrine.
-- `security-remediation` — Close a remediation-queue row — a foreign CVE or an estate exposure. writes: code · agent-run · tools: tools/rem-status.py, tools/discovery-scan.py, edit, pytest · done: the queue row is resolved WITH resolved_by evidence AND the exposure is re-checked live — a pending row is not proof of exposure, and a closed row is not proof of a fix.
-- `converge` — Apply committed SOURCE to the running estate (the repo is not the system). writes: live · operator-run · tools: nos, ansible-playbook main.yml, tools/nos-smoke.py · done: PLAY RECAP failed=0 AND nos-smoke passes; the change is now actually serving.
-- `use-case` — A live use-case walkthrough / acceptance test of an end-to-end workflow, recorded with steps + expected + actual result. writes: docs · agent-run · tools: read, the running estate (UI, API, CLI), edit · done: a recorded walkthrough with steps + expected + actual result, actual matching expected or a filed defect.
+- `investigate` — Read-only. Find something out and report it; change nothing. writes: none · agent-run · done: findings as file:line + the claim + its evidence; zero edits made.
+- `code-fix` — Fix a defect at its ROOT (the shared function, not each caller). writes: code · agent-run · done: the pinning gate is GREEN and was shown RED against the pre-fix state (a gate you cannot fail on the broken tree does not pin anything); committed with the gate.
+- `seed-edit` — Change one row / seed file (a roadmap or dtt row, a *.seed.yml). writes: data · agent-run · done: a READER (roadmap-status / the seed's loader) shows the new value.
+- `review` — Adversarially verify a claim — try to REFUTE it, not confirm it. writes: none · agent-run · done: a verdict (CONFIRMED | REFUTED) with a concrete failing-or-passing scenario.
+- `design` — Produce a spec or doctrine a builder can execute; write no code. writes: docs · agent-run · done: a plan/doctrine doc concrete enough that another agent can build from it.
+- `doc` — Documentation — keep live doctrine true, narrate history in the devlog. writes: docs · agent-run · done: the doc reflects reality; narrative/history goes to a devlog entry, not doctrine.
+- `security-remediation` — Close a remediation-queue row — a foreign CVE or an estate exposure. writes: code · agent-run · done: the queue row is resolved WITH resolved_by evidence AND the exposure is re-checked live — a pending row is not proof of exposure, and a closed row is not proof of a fix.
+- `converge` — Apply committed SOURCE to the running estate (the repo is not the system). writes: live · operator-run · done: PLAY RECAP failed=0 AND nos-smoke passes; the change is now actually serving.
+- `use-case` — A live use-case walkthrough / acceptance test of an end-to-end workflow, recorded with steps + expected + actual result. writes: docs · agent-run · done: a recorded walkthrough with steps + expected + actual result, actual matching expected or a filed defect.
 
 The two tables (in KEAP):
 - `roadmap` — a row is the durable PLAN: releases, epics, tasks, fees, observations, self-nesting via `parent`. Written by: a human or an agent files it; a maintainer moves its **claim** (`status`); a **probe** writes its **verdict** (`verified`).
@@ -137,12 +116,7 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
 ```
 
 - Local models (Ollama, OpenAI-compatible): `http://127.0.0.1:11434/v1`, no token. Models the register names: `hermes3:8b`, `qwen3:14b`.
-- Web: Traefik owns ports 80/443. A service with a `domain_var` in state/manifest.yml (54 of 74) answers at that variable, by default `<name>.{{ tenant_domain }}` with `tenant_domain: dev.local`. This host's value: `tools/estate-status.py --config tenant_domain`.
-  Routed: authentik, infisical, portainer, traefik, grafana, wordpress, apex, nextcloud, n8n, nodered, kiwix,
-  nos_forum, offline_maps, geolibre, jellyfin, open_webui, uptime_kuma, calibre_web, homeassistant, rustfs, face,
-  keap, vaultwarden, ntfy, miniflux, mailpit, smtp_stalwart, snappymail, gitea, gitlab, woodpecker, paperclip,
-  code_server, erpnext, freescout, outline, hedgedoc, bookstack, firefly, dolibarr, onlyoffice, mikopbx, qgis_server,
-  metabase, superset, influxdb, mcp_gateway, openclaw, hermes, device_gateway, wing, bone, cortex, backrest.
+- Web: Traefik owns ports 80/443. A service with a `domain_var` in state/manifest.yml (54 of 74) answers at that variable, by default `<name>.{{ tenant_domain }}` with `tenant_domain: dev.local`. This host's value: `tools/estate-status.py --config tenant_domain`. The routed ids are those rows' `id`s.
 
 The public organ systems (the apex ruling publishes 13; 466 of 529 ruled nodes are withheld):
 
@@ -162,24 +136,19 @@ The public organ systems (the apex ruling publishes 13; 466 of 529 ruled nodes a
 
 ## 7. The level words
 
-- **genome** (genome) — The declared facts every part of nOS inherits. Most live in state/genome/ (genes, schemas, this lexicon, the task types); the skill library lives in files/anatomy/skills/, beside the code that hands skills out. Not: law, definition.
+The level names are glossed in section 3 (their `Not:` lists: docs/glossary.md). The other words of each level:
+
 - **gene** (genome) — One declared kind of entity in the genome. Not: plugin.
 - **skill** (genome) — A declared how-to in files/anatomy/skills/ that a cell or a runtime is handed. Not: law, definition, reflex.
 - **schema** (genome) — The declared shape a file must validate against: the JSON Schemas in state/schema/ (manifest, plugin, app, state, upgrade, migration) and the genome's own entity schema. A schema says what may be written; it holds no rows. Not: gene, law, a database schema (a vendor's tables).
-- **cell** (cell) — One model in one specialization; in code it is called an agent. Not: sense, stem cell, AWS/Slack cell (an isolated full-stack replica).
 - **stem cell** (cell) — A model that has not yet differentiated into one specialization. Not: cell.
 - **definition** (cell) — One cell's own prompt and tool allow-list, versioned and hashed. Not: genome, law.
 - **caddy** (cell) — The role of the cell the operator speaks to through Ears; jeff holds it today. Not: cell, the Caddy web server inside FrankenPHP.
 - **conductor** (cell) — The cell that self-tests the estate after a converge and weekly; it directs no other cell. Not: Pulse, ceremony.
 - **cell roster** (cell) — The set of cells nOS declares, one directory per cell under files/anatomy/agents/. Not: account roster, tissue.
 - **organelles** (cell) — The cell's machinery that turns a definition into an acting cell: the runtime that loads the definition (ribosome), binds the model (mitochondria), admits tools and lets actions out only through the approval gate (membrane). In code: AgentKit. Not: plugin, gene, tissue, organ, limb, cell. Mechanism: agent runtime / harness.
-- **tissue** (tissue) — The transplantable pack of one specialization's cells with their skills, tables and services. Not: plugin, organ. Mechanism: bounded context (domain-driven design).
-- **organ** (organ) — One service or host daemon with one job; one row in state/manifest.yml. Not: organ system, cell, digest.
 - **atom** (organ) — One published node on the public apex page: an organ shown only by its `speaks:` sentence, with no name; the public key `atoms` is frozen with the page. Not: organ, vein, an anatomy-graph node (named, never published as such).
-- **organ system** (organ system) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Not: organ, organism.
 - **vein** (organ system) — An anonymised edge between two organ systems on the public apex page; the public key `veins` is frozen with the page's schema. Not: atom, an anatomy-graph edge (a link between two named nodes).
-- **organism** (organism) — One nOS install on one machine, all its organ systems together. Not: habitat, anatomy.
-- **habitat** (habitat) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner; nOS never installs or touches it by default, only through opt-in toggles the owner sets (configure_dock, install_mas_apps and their kin in the host-desktop layer). Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Not: organism, symbiont.
 
 ## Sources
 

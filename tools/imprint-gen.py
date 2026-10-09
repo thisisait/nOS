@@ -3,7 +3,7 @@
 
 Roadmap row `imprint`. Every line is rendered from a source file (listed at the
 bottom of the page); the only hand-written text is the short fixed preamble of
-section 2 and the section headings. Hard cap 200 lines.
+section 2 and the section headings. Hard caps: 200 lines, 16,000 chars.
 
 Regenerate-and-diff, as body-plan-gen.py: byte-stable, no clock, no network.
 Gate: tests/anatomy/test_imprint_is_rendered.py.
@@ -18,7 +18,6 @@ import importlib.util
 import json
 import re
 import sys
-import textwrap
 from pathlib import Path
 
 import yaml
@@ -29,7 +28,7 @@ MAX_LINES = 200
 # OpenHuman cuts each AGENTS.md layer at 20,000 chars (agent/prompts/types.rs
 # BOOTSTRAP_MAX_CHARS); under 16k leaves a harness room for its own prompt.
 MAX_CHARS = 16000
-TOP = 5
+TOP = 3
 
 SOURCES = {
     "charter": "CLAUDE.md",
@@ -100,13 +99,16 @@ def body_plan() -> list[str]:
     return out
 
 
+def _reader_rows() -> dict[str, str]:
+    return dict(re.findall(r"^- `([^`]+)` — (.+)$", _section(_read("readers"), "Readers — what is true right now"), re.M))
+
+
 def readers() -> list[tuple[str, str]]:
-    """§Readers rows: `*-status.py` (the set Apgar asks about) + the readers CLAUDE.md names."""
-    rows = dict(re.findall(r"^- `([^`]+)` — (.+)$", _section(_read("readers"), "Readers — what is true right now"), re.M))
+    """The §Readers rows CLAUDE.md names: what is red, what ran, what is declared."""
+    rows = _reader_rows()
     named = re.findall(r"^tools/(\S+\.py)", _read("charter"), re.M)
-    order = [n for n in named if n in rows] + [n for n in rows if n.endswith("-status.py")]
     out = []
-    for name in dict.fromkeys(order):
+    for name in dict.fromkeys(n for n in named if n in rows):
         desc = re.sub(rf"^(READER: |{re.escape(Path(name).stem)}\s+—\s+)", "", rows[name]).strip()
         out.append((name, desc))
     return out
@@ -115,7 +117,11 @@ def readers() -> list[tuple[str, str]]:
 def senses() -> list[str]:
     out = ["A reader only reads, exits 0, and reports what it cannot read as UNKNOWN, never green.",
            "Start with the first one.", ""]
-    return out + [f"- `tools/{n}` — {d}" for n, d in readers()]
+    out += [f"- `tools/{n}` — {d}" for n, d in readers()]
+    shown = {n for n, _ in readers()}
+    rest = [n for n in _reader_rows() if n.endswith("-status.py") and n not in shown]
+    return out + ["", f"{len(rest)} more `*-status.py` readers, each with its question, are listed in "
+                  f"{SOURCES['readers']} §Readers: " + ", ".join(rest) + "."]
 
 
 def _skill_table(skill: str) -> list[str]:
@@ -137,11 +143,12 @@ def _never(skill: str) -> list[str]:
 def act() -> list[str]:
     types = yaml.safe_load(_read("tasks"))["task_types"]
     skill = _read("skill")
-    out = ["Every row on the board carries a `task_type`. Its contract says which tools, what it writes, who runs it, and what ends it.", ""]
+    out = ["Every row on the board carries a `task_type`. Its contract says what it writes, who runs it and what ends it; "
+           f"the tools each may use are in {SOURCES['tasks']}.", ""]
     for name, c in types.items():
         who = "operator-run" if c["needs_operator"] else "agent-run"
         out.append(f"- `{name}` — {c['summary']} writes: {c['writes']} · {who} · "
-                   f"tools: {', '.join(c['tools'])} · done: {' '.join(c['done'].split())}")
+                   f"done: {' '.join(c['done'].split())}")
     out += ["", "The two tables (in KEAP):"] + _skill_table(skill)
     out += ["", "The `nos dtt` verbs:", "", "```"] + _dtt_verbs(skill) + ["```"]
     mcp = _module(SOURCES["mcp"], "mcp_tables_server")
@@ -175,9 +182,9 @@ def doors() -> list[str]:
         f"Models the register names: {', '.join(f'`{m}`' for m in ollama['sizes_b'].values())}.",
         f"- Web: Traefik owns ports 80/443. A service with a `domain_var` in state/manifest.yml ({len(routed)} of {len(rows)}) "
         f"answers at that variable, by default `<name>.{{{{ tenant_domain }}}}` with `tenant_domain: {cfg['tenant_domain']}`. "
-        "This host's value: `tools/estate-status.py --config tenant_domain`.",
+        "This host's value: `tools/estate-status.py --config tenant_domain`. "
+        "The routed ids are those rows' `id`s.",
     ]
-    out += textwrap.wrap("  Routed: " + ", ".join(routed) + ".", 118, subsequent_indent="  ")
     proj = _module("files/anatomy/apex/projection.py", "projection")
     art, ruling = proj.load_artifact(), proj.load_ruling()
     public = json.loads(proj.public_json(art, ruling))
@@ -189,7 +196,11 @@ def doors() -> list[str]:
 
 
 def level_words() -> list[str]:
-    return [ln for ln in _section(_read("glossary"), "Levels").splitlines() if ln.startswith("- ")]
+    """The glossary's level words, minus each level's own name (section 3 glosses it)."""
+    lines = [ln for ln in _section(_read("glossary"), "Levels").splitlines() if ln.startswith("- ")]
+    rest = [ln for ln in lines if not re.match(r"- \*\*(.+)\*\* \(\1\) ", ln)]
+    return [f"The level names are glossed in section 3 (their `Not:` lists: {SOURCES['glossary']}). "
+            "The other words of each level:", ""] + rest
 
 
 SECTIONS = [
@@ -221,6 +232,9 @@ def main() -> int:
     n = text.count("\n")
     if n > MAX_LINES:
         print(f"imprint: render is {n} lines, over the {MAX_LINES}-line cap", file=sys.stderr)
+        return 1
+    if len(text) > MAX_CHARS:
+        print(f"imprint: render is {len(text)} chars, over the {MAX_CHARS}-char cap", file=sys.stderr)
         return 1
     if args.check:
         if not TARGET.exists() or TARGET.read_text(encoding="utf-8") != text:
