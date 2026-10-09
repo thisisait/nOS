@@ -6,14 +6,17 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.15
 
 ---
 
-## v0.16-beta (2026-10-05 … 2026-10-07) — DRAFT, not yet cut
+## v0.16-beta (2026-10-05 … 2026-10-09) — DRAFT, not yet cut
 
 > **The body has a plan, and every part knows its name and its owner.**
-> 265 commits since `v0.15-beta` (777 files, +38.0k/−14.5k), measured with
-> `git log v0.15-beta..dev`. Still `-beta`. Converge on 2026-10-07 ended
-> `failed=0`, smoke 48/48, live E2E one red (Jellyfin SSO, known, row
-> `jellyfin-sso-provider-missing`). Whether CI is green on every lane at the
-> tag is checked at the cut, not promised here.
+> 366 commits since `v0.15-beta` (850 files, +41.6k/−14.8k), measured with
+> `git log v0.15-beta..dev`. Still `-beta`. A blank converge on 2026-10-09
+> (`nos --remove=data --confirm`, then `nos`) ended with one failed task: one
+> of 84 first logins timed out (WordPress → Authentik, row
+> `wordpress-oidc-timeout-on-first-converge`) and passed on `--tags
+> identities`. Smoke 50/50, `nos-smoke --strict` with the tester 49/50 (the
+> one red was the probe, fixed here), live E2E 339 passed, 0 failed. Whether
+> CI is green on every lane at the tag is checked at the cut, not promised here.
 
 This release is mostly about words and places: what each part of nOS is called,
 where its files live, and who owns it. Little changes on the running estate;
@@ -74,6 +77,35 @@ before it touches anything.
   root daemon, authored stop). Every daemon the playbook starts is bound to a
   row, and a row's scheduled jobs ride its own node in the anatomy graph.
 
+### A clean machine, not only a remembered one
+- The first deploy on a machine that had never run nOS needed twelve fixes,
+  each green on an estate that had converged hundreds of times (Homebrew 7
+  plist names, `/usr/local/bin` absent, pyenv and nvm paths, Authentik scope
+  mappings by managed id, the mkcert CA trusted where it is mounted …). Each
+  has its own gate; the account is hidden fee 60.
+- A `credentials.yml` copied with its `{{ }}` templates is refused at preflight.
+- `nos` exports `NOS_SEED_DIR` from `~/.nos/nos-cli.env`, so `nos dtt` reads
+  the operator's seed repo, not a stray copy.
+
+### Green means the user got in
+- `nos-smoke --strict` judges a row with no expectation of its own by
+  `[200, 204]`; a bounce to the Authentik login is no longer green. With the
+  tester it follows the bounce and signs in (the password is derived as
+  `tools/nos-secret.py` prints it); a row that expects the bounce (the atlas
+  gate) is not signed in. The EXPECT column shows the set a row is judged by.
+- New rows: nos-forum health and SSO, and the atlas ČÚZK parcel and building
+  layers through martin (signed in, tier 3).
+- E2E verdicts persist to `~/.nos/e2e/results.jsonl`; `tools/e2e-status.py`
+  reads them and red-status says UNKNOWN when no run is recorded.
+
+### A job knows whether it can run
+- `tools/job_readiness.py` is the one judge: a scheduled job whose model,
+  runtime or key is missing exits 78 with `HELD: <need>` instead of failing
+  every night; red-status names each missing need once; `--tags verify`
+  fails only when the config asks for something the host lacks.
+- `pazny.ollama` pulls every model the config names (`ollama_model`,
+  `ollama_small_model`, `ollama_vision_model`).
+
 ### Smaller changes you may notice
 - **Loki**: host-daemon logs (Wing, Bone, Pulse, Cortex) carry
   `job="host_daemon"`, no longer `job="organ"`. A query spanning the change
@@ -112,12 +144,14 @@ before it touches anything.
   government setting.
 - **OpenHuman — re-scoped by the operator (2026-10-08).** Row `rel-016`
   MUST (4) now reads "OpenHuman role present and converging; acceptance
-  (onboarding loop) deferred to v0.17". The role exists (every profile
-  configured, session and MCP by the vendor CLI, a reader `openhuman-status`),
-  but a local login resets the app's onboarding flag every time (upstream
-  defect, row `openhuman-upstream-prs`), so the five acceptance questions are
-  not answered in this release. The headless core (`apps/openhuman.yml.draft`)
-  is a draft.
+  (onboarding loop) deferred to v0.17". The role installs the app, makes the
+  local session with the vendor CLI, writes the wizard's tool list, marks
+  onboarding done, turns cron off and copies `IMPRINT.md` (now under 16,000
+  characters, gated) as the twin's `AGENTS.md`; `tools/openhuman-status.py`
+  reads each of those. A Caskroom record left by a trashed app is reinstalled,
+  not read as installed. The five acceptance questions are not answered in
+  this release; the upstream onboarding reset is row `openhuman-upstream-prs`.
+  The headless core (`apps/openhuman.yml.draft`) is a draft.
 - **Wing → face migration.** The face is a core organ now, but Wing stays the
   operator dashboard through v0.16; the move is roadmap work after it
   (epic `wing-organ-without-face` and its children).
@@ -125,7 +159,8 @@ before it touches anything.
   recall stops at one hop, reflect is only the curator's schedule, no single
   retain/recall/reflect door. KEAP stays the memory organ; the gaps are
   measured, not closed.
-- **Jellyfin SSO** waits for the planned blank, as in v0.15.
+- **Jellyfin SSO.** The blank ran (2026-10-09); the SSO provider is still
+  written only when the admin can sign in, and is not proven live.
 
 ## v0.15-beta (2026-10-01 … 2026-10-05)
 
