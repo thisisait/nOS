@@ -521,18 +521,15 @@ def _secret(name: str) -> str | None:
 
 
 def resolve_tester_password(cli: str | None, vars_dict: dict) -> str | None:
-    """CLI, else a literal override, else the v2 leaf as tools/nos-secret.py
-    derives it. The default is a `{{ }}` template, never a password."""
+    """CLI, else a literal override, else what tools/nos-secret.py prints (v2;
+    it refuses under v1). The default is a `{{ }}` template, never a password."""
     literal = vars_dict.get("nos_tester_password")
     if cli or (literal and "{{" not in str(literal)):
         return cli or str(literal)
-    master = _secret("nos_secret_master")
-    if _secret("nos_secret_scheme") != "v2" or not master:
-        return None
-    sys.path.insert(0, str(REPO / "files/anatomy/module_utils"))
-    import nos_secret_derive as derive
-    row = derive.load_registry(str(REPO / "files/anatomy/secrets/registry.yml")).get("nos_tester")
-    return derive.estate_leaf(derive.master_bytes(master), row["service"], row["purpose"]) if row else None
+    import subprocess
+    r = subprocess.run([sys.executable, str(REPO / "tools/nos-secret.py"), "nos_tester"],
+                       capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else None
 
 
 def _dotted(data, path: str):
