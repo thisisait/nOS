@@ -174,7 +174,7 @@ def judge_twin(base: pathlib.Path, imprint: pathlib.Path) -> list[dict]:
         out = [line("session", RED, f"{user} has no auth-profiles.json — the login screen will show", str(auth))]
     cfg_src, state_src = prof / "config.toml", prof / "workspace/state/app-state.json"
     if out[0]["state"] != OK:
-        out += [line(n, UNKNOWN, "no session", s) for n, s in (("onboarding", cfg_src), ("tools", state_src))]
+        out += [line(n, UNKNOWN, "no session", str(s)) for n, s in (("onboarding", cfg_src), ("tools", state_src))]
     else:
         try:
             done = tomllib.loads(cfg_src.read_text()).get("onboarding_completed", False)
@@ -371,6 +371,7 @@ agentic_provider = "ollama:hermes3:8b"\ncoding_provider = "ollama:hermes3:8b"
         imp.write_text("# imprint\n")
         tw = lambda: {r["check"]: r["state"] for r in judge_twin(base, imp)}  # noqa: E731
         assert {tw()[k] for k in ("session", "onboarding", "tools", "imprint")} == {UNKNOWN}, tw()
+        json.dumps(judge_twin(base, imp))                             # --json is what verify reads
         (base / "active_user.toml").write_text('user_id = "local-x"\n')
         prof = base / "users/local-x"
         (prof / "workspace/state").mkdir(parents=True)
