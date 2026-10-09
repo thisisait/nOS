@@ -153,3 +153,34 @@ def test_discovery_scan_judges_the_joined_queue(tmp_path, monkeypatch):
     scan.probe_queue_vs_running({"iiab-nodered-1": "nodered/node-red:4.1.14"}, res)
     assert not res.findings, [f.title for f in res.findings]
     assert "obs-queue-rem-156" in res.judged
+
+
+def test_discovery_scan_dispose_line_is_shell_safe(tmp_path, monkeypatch):
+    """The copy-paste `tools/rem-dispose.py ...` line was hand-quoted with
+    `\"`; an image or name holding `"`, `$(` or a backtick printed a line the
+    shell would read differently from what the probe meant."""
+    import importlib.util
+    import shlex
+
+    _write_queue(tmp_path, [{
+        "id": "REM-156", "status": "pending", "severity": "HIGH",
+        "component": "nodered", "fix_version": "4.1.13",
+    }])
+    monkeypatch.setenv("NOS_SECURITY_DIR", str(tmp_path))
+    monkeypatch.setenv("VULNSCAN_SECURITY_DIR", str(tmp_path))
+    spec = importlib.util.spec_from_file_location(
+        "discovery_scan_quote", REPO / "tools/discovery-scan.py")
+    scan = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = scan
+    spec.loader.exec_module(scan)
+    res = scan.ScanResult()
+    name, image = "iiab-nodered-1", 'evil"$(id)`x`/node-red:4.1.14'
+    scan.probe_queue_vs_running({name: image}, res)
+    assert len(res.findings) == 1, [f.title for f in res.findings]
+    line = next(ln for ln in res.findings[0].body.splitlines()
+                if "tools/rem-dispose.py" in ln)
+    line = line[line.index("tools/rem-dispose.py"):]
+    assert shlex.split(line) == [
+        "tools/rem-dispose.py", "REM-156", "--status", "resolved",
+        "--by", f"discovery-scan: {name} runs {image} >= 4.1.13",
+    ]
