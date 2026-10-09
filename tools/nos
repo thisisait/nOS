@@ -42,6 +42,9 @@ _nos_src_env="${NOS_SRC:-}"; _nos_py_env="${NOS_PY:-}"; _nos_seed_env="${NOS_SEE
 [ -n "$_nos_src_env" ] && NOS_SRC="$_nos_src_env"
 [ -n "$_nos_py_env" ] && NOS_PY="$_nos_py_env"
 [ -n "$_nos_seed_env" ] && NOS_SEED_DIR="$_nos_seed_env"
+# Sourced, not exported: without this the dtt tools never see the env file's
+# seed dir and fall back to ~/nos-seed (2026-10-09).
+[ -n "${NOS_SEED_DIR:-}" ] && export NOS_SEED_DIR
 NOS_SRC="${NOS_SRC:-$HOME/projects/nOS}"
 
 # ── `nos dtt <verb>` — DataTables ops, not a converge ────────────────────────
