@@ -7702,7 +7702,7 @@
       "from": "reader:red-status",
       "to": "doctrine:ssot/doctrine/loop-contract.md#7",
       "kind": "governed_by",
-      "via": "cited at tools/red-status.py:675",
+      "via": "cited at tools/red-status.py:710",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
