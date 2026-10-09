@@ -11,7 +11,7 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
-    "sense": 71,
+    "sense": 72,
     "limb": 113,
     "memory": 40,
     "law": 52,
@@ -1334,6 +1334,10 @@
       "kind": "reader"
     },
     "reader:e2e-plan": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:e2e-status": {
       "level": "sense",
       "kind": "reader"
     },

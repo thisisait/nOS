@@ -25,7 +25,7 @@ from nos_identity import is_local_domain  # noqa: E402  the one local-TLD list
 
 TIERS = {1: "provider", 2: "manager", 3: "user", 4: "guest"}
 
-# ── verdicts are written down (ssot/doctrine/gates.md) ─────────────────────
+# ── verdicts are written down, a reader reads them back ─────────────────────
 # One JSON line per probe, the shape tools/nos-smoke.py uses for ~/.nos/events;
 # tools/e2e-status.py reads the last run back. NOS_E2E_RESULTS="" turns it off.
 RUN_ID = "e2e_" + datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%SZ")

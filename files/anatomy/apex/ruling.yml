@@ -810,6 +810,9 @@ nodes:
   "reader:workload-digest-status": withheld  # 2026-10-07: renamed from digest-status
   "effector:discovery-scan": withheld
   "reader:doctrine-cite": withheld
+  # 2026-10-09 reader:e2e-status (e2e-results-persist): the last estate e2e run
+  # read back from its JSONL record. WITHHELD; the published set is unchanged.
+  "reader:e2e-status": withheld
   "reader:elsewhere-status": withheld
   "reader:estate-status": withheld
   "reader:face-wiring-report": withheld

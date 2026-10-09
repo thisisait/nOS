@@ -44,7 +44,7 @@ Each line: level (count) — what it means (the lexicon's words), then the most 
 - **organ system** (13) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Most connected: organ_system:archive (9), organ_system:watch (8), organ_system:voice (6), organ_system:backoffice (5), organ_system:forge (5)
 - **organism** (0) — One nOS install on one machine, all its organ systems together. Most connected: none — no node stands for the whole; the whole is this graph
 - **habitat** (6) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner; nOS never installs or touches it by default, only through opt-in toggles the owner sets (configure_dock, install_mas_apps and their kin in the host-desktop layer). Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Most connected: backend:minimax (8), backend:ollama (6), backend:anthropic (3), backend:openclaw (1), backend:mistral-eu (0)
-- **sense** (71) — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Most connected: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), tool_ro:mcp-bone (5)
+- **sense** (72) — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Most connected: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5), judge:pytest-anatomy (5), tool_ro:mcp-bone (5)
 - **limb** (113) — A tool that acts. Most connected: effector:loop-pr (6), effector:run-agent (6), effector:loop-propose (5), effector:discovery-scan (3), effector:loop-review (3)
 - **memory** (40) — What nOS has learned, kept in KEAP; RAM stays plain English. Most connected: table:party (13), table:invoice (5), table:journal-entry (4), table:posting (4), table:account (3)
 - **law** (52) — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Most connected: article:loop-contract (19), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#3.4 (5), doctrine:ssot/doctrine/loop-contract.md#5a (4), doctrine:ssot/doctrine/loop-contract.md#DECISION-2e (4)
@@ -70,6 +70,7 @@ Start with the first one.
 - `tools/cortex-status.py` — What the cortex organ is, all of it — not just the part KEAP serves.
 - `tools/tissue-status.py` — Which tissues the estate declares (state/tissues/), their members, and whether each holds: schema, every id resolved, Article 30 inherited complete. Also the loader anatomy-graph-gen imports.
 - `tools/router-status.py` — The WAN router as a declared estate fact: presence probe + intent from state/habitat/router.yml; UNKNOWN when it cannot look.
+- `tools/e2e-status.py` — What the last estate e2e run (tests/e2e/estate) said, read back from `~/.nos/e2e/results.jsonl`: counts, the failing nodeids, age (red past 7 days); UNKNOWN without the record.
 - `tools/elsewhere-status.py` — Estate work happening OUTSIDE the control centre, and how to get to it.
 - `tools/loop-status.py` — Which weakness sources actually produce proposals, and what came of them.
 - `tools/geo-status.py` — rows per geo layer counted back from PostGIS, last load beside it; UNKNOWN when unreachable.
@@ -143,7 +144,7 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
   code_server, erpnext, freescout, outline, hedgedoc, bookstack, firefly, dolibarr, onlyoffice, mikopbx, qgis_server,
   metabase, superset, influxdb, mcp_gateway, openclaw, hermes, device_gateway, wing, bone, cortex, backrest.
 
-The public organ systems (the apex ruling publishes 13; 465 of 528 ruled nodes are withheld):
+The public organ systems (the apex ruling publishes 13; 466 of 529 ruled nodes are withheld):
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)
