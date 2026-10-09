@@ -675,11 +675,15 @@
       changed_when: true
       failed_when: false
 
-    - name: "[Restore][keap-db] Snapshot current keap.db (non-clobbering)"
-      ansible.builtin.command: >-
-        mv -n "{{ keap_db_target }}" "{{ keap_db_target }}.pre-restore-{{ restore_date }}"
-      args:
-        removes: "{{ keap_db_target }}"
+    # The WAL and SHM go with the DB: left beside the restored file, KEAP replays
+    # the old WAL into it and dies on SQLITE_CORRUPT (2026-10-10).
+    - name: "[Restore][keap-db] Snapshot current keap.db and its WAL (non-clobbering)"
+      ansible.builtin.shell: |
+        for s in "" -wal -shm; do
+          [ -e "{{ keap_db_target }}$s" ] || continue
+          mv -n "{{ keap_db_target }}$s" "{{ keap_db_target }}.pre-restore-{{ restore_date }}$s"
+          rm -f "{{ keap_db_target }}$s"
+        done
       changed_when: true
       failed_when: false
 
@@ -703,10 +707,11 @@
         }] }}"
   rescue:
     - name: "[Restore][keap-db] FAILED — roll the pre-restore snapshot back"
-      ansible.builtin.command: >-
-        mv -f "{{ keap_db_target }}.pre-restore-{{ restore_date }}" "{{ keap_db_target }}"
-      args:
-        removes: "{{ keap_db_target }}.pre-restore-{{ restore_date }}"
+      ansible.builtin.shell: |
+        for s in "" -wal -shm; do
+          [ -e "{{ keap_db_target }}.pre-restore-{{ restore_date }}$s" ] || continue
+          mv -f "{{ keap_db_target }}.pre-restore-{{ restore_date }}$s" "{{ keap_db_target }}$s"
+        done
       changed_when: true
       failed_when: false
 
