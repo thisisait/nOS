@@ -3,8 +3,9 @@
 
 Reads every OpenHuman profile config (~/.openhuman/users/*/config.toml), the
 app bundle, the process table and `lsof`, and reports profiles, privacy mode,
-analytics, updater, model route, memory, MCP servers, install, running, egress
-and a second Ollama — each as OK / RED / UNKNOWN with the source it read. Step 0 of roadmap row `openhuman`;
+analytics, updater, model route, memory, cron, MCP servers, install, running, egress
+and a second Ollama; for the active profile also session, onboarding, tools and
+imprint (is it the onboarded twin) — each as OK / RED / UNKNOWN with the source it read. Step 0 of roadmap row `openhuman`;
 the recipe is docs/systems/openhuman/README.md.
 
 Reads only. Exit 0 always. A source it cannot read is UNKNOWN, never green.
@@ -15,7 +16,9 @@ Usage:
     tools/openhuman-status.py --selftest      # fixture configs, no app needed
 Env (tests): NOS_OPENHUMAN_DIR (default ~/.openhuman), NOS_OPENHUMAN_APP,
 NOS_OPENHUMAN_CASKROOM, NOS_OPENHUMAN_PROVIDER (ollama | claude-code, the declared one),
-NOS_OPENHUMAN_OLLAMA_PREFIX (default /opt/homebrew: where the one Ollama lives).
+NOS_OPENHUMAN_OLLAMA_PREFIX (default /opt/homebrew: where the one Ollama lives),
+NOS_OPENHUMAN_IMPRINT (default IMPRINT.md next to tools/: what AGENTS.md must be a copy of).
+Never prints a token: auth-profiles.json is checked for existence only.
 """
 
 from __future__ import annotations
@@ -42,6 +45,10 @@ WORKLOADS = ("chat_provider", "reasoning_provider", "agentic_provider", "coding_
 # Background workloads: unset means cloud. learning_provider is retired after v0.64.10, so judged only when present.
 BACKGROUND = ("memory_provider", "embeddings_provider")
 OLLAMA_PORT = "11434"
+# OpenHuman's per-layer cap on AGENTS.md; the rest is cut with "[... truncated]" (agent/prompts/types.rs, v0.64.10).
+BOOTSTRAP_MAX_CHARS = 20_000
+RELOGIN = ("the wizard will show; an in-app local re-login resets it (upstream) — "
+           "quit the app, run --tags openhuman")
 
 
 def root() -> pathlib.Path:
@@ -54,15 +61,19 @@ def profiles(base: pathlib.Path) -> list[pathlib.Path]:
     return found or ([base / "config.toml"] if (base / "config.toml").is_file() else [])
 
 
-def config_path(base: pathlib.Path) -> pathlib.Path | None:
-    """The loader's order: active_user.toml's user, then the pre-login `local` user."""
-    user = None
+def active_user(base: pathlib.Path) -> str | None:
     marker = base / "active_user.toml"
     if marker.is_file() and tomllib:
         try:
-            user = tomllib.loads(marker.read_text()).get("user_id")
+            return tomllib.loads(marker.read_text()).get("user_id") or None
         except (OSError, tomllib.TOMLDecodeError):
-            user = None
+            return None
+    return None
+
+
+def config_path(base: pathlib.Path) -> pathlib.Path | None:
+    """The loader's order: active_user.toml's user, then the pre-login `local` user."""
+    user = active_user(base)
     for cand in ([base / "users" / str(user) / "config.toml"] if user else []) + [
             base / "users" / "local" / "config.toml", base / "config.toml"]:
         if cand.is_file():
@@ -138,6 +149,64 @@ def judge_config(cfg: dict | None, src: str, provider: str | None = None) -> lis
     gb = _get(cfg, "gitbooks.enabled", True)
     out.append(line("gitbooks MCP (remote)", RED if gb else OK, f"enabled={str(gb).lower()}", src))
     return out
+
+
+def judge_cron(cfg: dict | None, src: str, provider: str | None = None) -> dict:
+    """A reference twin is quiet: cron defaults on (config/schema/cron.rs) and onboarding seeds proactive jobs."""
+    if cfg is None:
+        return line("cron", UNKNOWN, "no config.toml read", src)
+    on = _get(cfg, "cron.enabled", True)
+    local = (provider or os.environ.get("NOS_OPENHUMAN_PROVIDER", "ollama")) == "ollama"
+    return line("cron", RED if on and local else OK, f"enabled={str(on).lower()}"
+                + ("; proactive jobs run on the local model unasked" if on and local else ""), src)
+
+
+def judge_twin(base: pathlib.Path, imprint: pathlib.Path) -> list[dict]:
+    """The active profile as the onboarded twin: session, onboarding, the stored tool list, AGENTS.md."""
+    user = active_user(base)
+    prof = base / "users" / str(user)
+    auth = prof / "auth-profiles.json"
+    if not user:
+        out = [line("session", UNKNOWN, "active_user.toml names nobody", str(base / "active_user.toml"))]
+    elif auth.is_file():
+        out = [line("session", OK, f"active: {user}", str(auth))]
+    else:
+        out = [line("session", RED, f"{user} has no auth-profiles.json — the login screen will show", str(auth))]
+    cfg_src, state_src = prof / "config.toml", prof / "workspace/state/app-state.json"
+    if out[0]["state"] != OK:
+        out += [line(n, UNKNOWN, "no session", s) for n, s in (("onboarding", cfg_src), ("tools", state_src))]
+    else:
+        try:
+            done = tomllib.loads(cfg_src.read_text()).get("onboarding_completed", False)
+            out.append(line("onboarding", OK if done else RED,
+                            "onboarding_completed=true" if done else f"onboarding_completed=false: {RELOGIN}", str(cfg_src)))
+        except (OSError, tomllib.TOMLDecodeError, AttributeError) as exc:
+            out.append(line("onboarding", UNKNOWN, f"unreadable ({type(exc).__name__})", str(cfg_src)))
+        try:
+            raw = json.loads(state_src.read_text()) if state_src.is_file() else {}
+            tools = ((raw.get("onboardingTasks") or {}).get("enabledTools") or [])
+            out.append(line("tools", OK if tools else RED, f"{len(tools)} enabled_tools stored" if tools else
+                            "no enabled_tools stored: every opt-in tool is on (tools/user_filter.rs)", str(state_src)))
+        except (OSError, ValueError, AttributeError) as exc:
+            out.append(line("tools", UNKNOWN, f"unreadable ({type(exc).__name__})", str(state_src)))
+    agents = prof / "workspace/AGENTS.md"
+    if not user:
+        return out + [line("imprint", UNKNOWN, "no session", str(agents))]
+    try:
+        want = imprint.read_text()
+    except OSError:
+        return out + [line("imprint", UNKNOWN, f"{imprint} unreadable", str(imprint))]
+    try:
+        text = agents.read_text()
+    except OSError:
+        return out + [line("imprint", RED, "no AGENTS.md — run --tags openhuman", str(agents))]
+    bad = []
+    if text.split("\n", 1)[-1] != want:
+        bad.append("differs from IMPRINT.md — run --tags openhuman")
+    if len(text) > BOOTSTRAP_MAX_CHARS:
+        bad.append(f"truncated by OpenHuman: {len(text)} chars > {BOOTSTRAP_MAX_CHARS} (BOOTSTRAP_MAX_CHARS)")
+    return out + [line("imprint", RED if bad else OK, "; ".join(bad) or f"copy of IMPRINT.md, {len(text)} chars",
+                       f"{agents}, {imprint}")]
 
 
 def judge_mcp(base: pathlib.Path, cfg: dict | None, raw: str) -> dict:
@@ -240,10 +309,13 @@ def collect() -> list[dict]:
             except (OSError, tomllib.TOMLDecodeError) as exc:
                 src += f" ({type(exc).__name__})"
         name = path.parent.name if path else "local"
-        out += [dict(r, detail=f"[{name}] {r['detail']}") for r in judge_config(cfg, src)]
+        out += [dict(r, detail=f"[{name}] {r['detail']}") for r in judge_config(cfg, src) + [judge_cron(cfg, src)]]
         servers += _get(cfg or {}, "mcp_client.servers", []) or []
         raws.append(raw)
     cfg = {"mcp_client": {"servers": servers}} if any(raws) else None
+    if tomllib:
+        imprint = os.environ.get("NOS_OPENHUMAN_IMPRINT", pathlib.Path(__file__).resolve().parents[1] / "IMPRINT.md")
+        out += judge_twin(base, pathlib.Path(imprint))
     raw = "\n".join(raws)
     out.append(line("desktop updater", UNKNOWN if app.exists() else OK,
                     "Tauri updater active, no documented switch — watch egress to github.com"
