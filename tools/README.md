@@ -113,6 +113,7 @@ the graph's `judge:` nodes; these scripts are not graph nodes.
 - `prepush-score.py` — Score what a push would carry before `nos-push` pushes it: deterministic signals (file:line) per threat-checklist section 1-6, then a small local Ollama model's per-aspect scores (UNAVAILABLE on failure, never a number); bar chart, checker+prompt SHA-256, one JSONL line in `~/.nos/events/prepush-scores.jsonl`. Advisory; `--strict` refuses at 70.
 - `local-model-bench.py` — Measure a local model on the one job the estate has for it, with code as judge.
 - `nos-smoke.py` — nos-smoke.py — post-run web-UI smoke test for nOS.
+- `job_readiness.py` — Can this job succeed here? Needs from the agent backend, claude spawners and `needs:`, against the resolved config + `claude`/`ollama list`. `--job`/`--agent` = fire-time gate (exit 78 + `HELD:` on stdout); bare = table; `--verify` exits 1 only on a need the config requires and the host lacks. Imported by the vision loops.
 
 ## Limbs — tools that act
 
