@@ -520,6 +520,21 @@ def _secret(name: str) -> str | None:
     return str(value) if value else None
 
 
+def resolve_tester_password(cli: str | None, vars_dict: dict) -> str | None:
+    """CLI, else a literal override, else the v2 leaf as tools/nos-secret.py
+    derives it. The default is a `{{ }}` template, never a password."""
+    literal = vars_dict.get("nos_tester_password")
+    if cli or (literal and "{{" not in str(literal)):
+        return cli or str(literal)
+    master = _secret("nos_secret_master")
+    if _secret("nos_secret_scheme") != "v2" or not master:
+        return None
+    sys.path.insert(0, str(REPO / "files/anatomy/module_utils"))
+    import nos_secret_derive as derive
+    row = derive.load_registry(str(REPO / "files/anatomy/secrets/registry.yml")).get("nos_tester")
+    return derive.estate_leaf(derive.master_bytes(master), row["service"], row["purpose"]) if row else None
+
+
 def _dotted(data, path: str):
     """`data.stages[0].result.rows` → the value, or None if any hop is missing."""
     cur = data
@@ -589,6 +604,21 @@ def _probe_api(entry: dict, ctx, timeout: float) -> tuple[int | None, str | None
     return status, None, None
 
 
+def effective_expect(entry: dict, strict: bool) -> set:
+    """The status set a row is judged by — what probe() checks and the table shows."""
+    explicit = None if entry.get("_expect_defaulted") else entry.get("expect")
+    explicit_strict = entry.get("expect_strict")
+    if strict:
+        expect = explicit_strict if explicit_strict is not None else (
+            explicit if explicit is not None else [200, 204]
+        )
+    else:
+        expect = explicit if explicit is not None else [200, 301, 302, 308]
+    if isinstance(expect, int):
+        expect = [expect]
+    return set(expect or [200])
+
+
 def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
           tester_password: str | None = None,
           authentik_domain: str | None = None) -> ProbeResult:
@@ -603,18 +633,7 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
     timeout = float(entry.get("timeout", 5))
     auth_mode = entry.get("auth", "anon")
 
-    # Pick expect set based on strict mode + entry override.
-    explicit = None if entry.get("_expect_defaulted") else entry.get("expect")
-    explicit_strict = entry.get("expect_strict")
-    if strict:
-        expect = explicit_strict if explicit_strict is not None else (
-            explicit if explicit is not None else [200, 204]
-        )
-    else:
-        expect = explicit if explicit is not None else [200, 301, 302, 308]
-    if isinstance(expect, int):
-        expect = [expect]
-    expect = set(expect or [200])
+    expect = effective_expect(entry, strict)
 
     ctx = _make_ssl_context(entry.get("insecure", True))
     started = time.monotonic()
@@ -749,8 +768,9 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
         if strict and auth_mode == "tester" and not (tester_user and tester_password):
             err = err or "auth: tester requested but no --tester-user/--tester-password"
         # A bounce to the IdP says the row needs the tester; under --strict, with
-        # credentials, follow it instead of failing (2026-10-09).
-        if not (strict and bounced and tester_user and tester_password):
+        # credentials, follow it instead of failing (2026-10-09) — unless the row
+        # expects the bounce: then the 302 IS the verdict (the gate holds).
+        if not (strict and bounced and code not in expect and tester_user and tester_password):
             duration_ms = int((time.monotonic() - started) * 1000)
             return ProbeResult(entry, code, duration_ms, err, code in expect)
 
@@ -821,7 +841,7 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
 # Render output
 # ---------------------------------------------------------------------------
 
-def render_table(results: list[ProbeResult], failed_only: bool = False) -> str:
+def render_table(results: list[ProbeResult], failed_only: bool = False, strict: bool = False) -> str:
     """Pretty-print a results table."""
     rows = []
     rows.append(("ID", "URL", "EXPECT", "GOT", "MS", "RESULT"))
@@ -831,7 +851,7 @@ def render_table(results: list[ProbeResult], failed_only: bool = False) -> str:
         if failed_only and r.ok:
             continue
         e = r.entry
-        expect_str = ",".join(str(x) for x in (e["expect"] if isinstance(e["expect"], list) else [e["expect"]]))
+        expect_str = ",".join(str(x) for x in sorted(effective_expect(e, strict)))
         got = str(r.status) if r.status is not None else "UNREACH"
         flag = "✅" if r.ok else "❌"
         row = (
@@ -1049,7 +1069,7 @@ def main() -> int:
     # (auth-flow entries simply won't auth-flow if credentials are absent —
     # they'll fall back to anon and the strict-mode check will catch the 30x).
     tester_user = args.tester_user or vars_dict.get("nos_tester_username") or "nos-tester"
-    tester_password = args.tester_password or vars_dict.get("nos_tester_password")
+    tester_password = resolve_tester_password(args.tester_password, vars_dict)
     authentik_domain = (
         args.authentik_domain
         or vars_dict.get("authentik_domain")
@@ -1082,7 +1102,7 @@ def main() -> int:
                 "tier": r.entry.get("tier", 3),
             }, ensure_ascii=False))
     else:
-        print(render_table(results, failed_only=args.failed_only))
+        print(render_table(results, failed_only=args.failed_only, strict=args.strict))
         ok = sum(1 for r in results if r.ok)
         # A probe that got no answer at all is UNREACHABLE, not a service that
         # answered wrongly. From the host those look identical and are not:
