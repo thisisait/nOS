@@ -10,6 +10,7 @@
     - slug: "{{ keap_roadmap_table_id }}"
       def: "{{ lookup('file', playbook_dir + '/state/keap-tables/roadmap.table.yml') | from_yaml }}"
       rows: []
+      create_only: true   # the estate's table predates the def (refs text, a `when` column)
     - slug: "current-state"
       def: "{{ lookup('file', playbook_dir + '/state/keap-tables/current-state.table.yml') | from_yaml }}"
       rows: []

@@ -81,6 +81,8 @@
   # in Jinja and would drift from it. Idempotence of EFFECT is asserted by
   # KEAP's table-schema-reconcile.test.ts.
   changed_when: _face_tbl_create.status | default(0) in [200, 201]
+  # create_only: a table older than its definition (the hand-made roadmap) is left as it is.
+  when: not (_face_tbl.create_only | default(false) and _face_tbl_probe.status | default(0) == 200)
 
 - name: "[pazny.keap] Retry DataTable {{ _face_tbl.slug }} without view (rowRef facet pin-lag)"
   ansible.builtin.uri:
