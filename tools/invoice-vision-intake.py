@@ -44,6 +44,7 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "files" / "anatomy" / "module_utils"))
 import digest_absorb  # noqa: E402  (reuse the ONE KEAP write path)
+import job_readiness  # noqa: E402
 from keap_api import proxy_header  # noqa: E402
 import nos_digest  # noqa: E402
 import yaml  # noqa: E402
@@ -181,6 +182,11 @@ def main(argv: list[str] | None = None) -> int:
     if not imgs and not extract_dirs:
         print(f"no intake images or extracts under {walked} — nothing to sweep", file=sys.stderr)
         return 0
+
+    if imgs:  # only extraction needs the models; the queue pass below does not
+        held = job_readiness.hold("invoice-vision:intake-sweep")
+        if held:
+            return held
 
     extracted = 0
     for inc, img in imgs:

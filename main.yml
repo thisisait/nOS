@@ -3045,6 +3045,23 @@
     # Output goes to stdout and ~/.nos/events/smoke.jsonl (cross-tool hook).
     # Non-fatal by default — set -e nos_smoke_strict=true to fail the run.
     # Reader for the best-effort blueprint apply — see the file header.
+    # Reader for job readiness (tools/job_readiness.py): the table of what each
+    # armed job lacks. Fails ONLY on a need the config requires and the host
+    # still lacks — a configured tier model that did not pull, claude absent
+    # with install_claude_cli_vendor on. A need the config leaves off holds.
+    - name: "[Verify] Every armed job has what it needs"
+      ansible.builtin.command:
+        argv: [python3, "{{ playbook_dir }}/tools/job_readiness.py", --verify]
+      register: _verify_job_readiness
+      changed_when: false
+      check_mode: false
+      tags: ['always', 'verify']
+
+    - name: "[Verify] Job readiness table"
+      ansible.builtin.debug:
+        var: _verify_job_readiness.stdout_lines
+      tags: ['always', 'verify']
+
     - name: "[Verify] Forward-auth routes are backed by Applications"
       ansible.builtin.import_tasks: tasks/verify-authentik-apps.yml
       tags: ['always', 'verify']

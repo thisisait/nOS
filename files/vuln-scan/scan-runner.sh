@@ -64,6 +64,16 @@ if [ ! -f "$STATE_FILE" ]; then
     exit 1
 fi
 
+# Readiness (2026-10-09): a scan that cannot succeed is HELD (exit 78, its need on
+# stdout), not failed. A judge crash is not a hold — the check below still runs.
+_ready_rc=0
+python3 "$(cd "$(dirname "$0")/../.." && pwd)/tools/job_readiness.py" \
+    --job conductor:vulnerability-scan || _ready_rc=$?
+if [ "$_ready_rc" -eq 78 ]; then
+    log "HELD: scan not dispatched — the need is on the line above"
+    exit 78
+fi
+
 if ! command -v claude &>/dev/null; then
     log "ERROR: claude CLI not found in PATH"
     exit 1

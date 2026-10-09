@@ -37,6 +37,7 @@ import tempfile
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools"))
 from invoice_fixture import parse_image_txt  # noqa: E402
+import job_readiness  # noqa: E402
 
 import yaml  # noqa: E402
 
@@ -136,6 +137,10 @@ def main() -> int:
     ap.add_argument("--threshold", type=float, default=0.85, help="pooled accuracy floor")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
+    # A run whose model is not configured, pulled or armed is HELD (exit 78).
+    held = job_readiness.hold("loop:vision-bench")
+    if held:
+        return held
 
     fx = pathlib.Path(args.fixture)
     images = pathlib.Path(args.images) if args.images else fx / "images"

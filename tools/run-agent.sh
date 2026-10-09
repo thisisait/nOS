@@ -254,6 +254,19 @@ if [[ -n "${NOS_AGENT_TASK:-}" ]] \
     PASSTHRU+=("--prompt=$NOS_AGENT_TASK")
 fi
 
+# READINESS (2026-10-09). A run that cannot succeed — no armed backend, no
+# claude CLI, a tier model not configured or not pulled — is HELD: the judge
+# prints its need on stdout and exits 78, before any session or spend. Any other
+# judge exit is the judge's own failure, not a hold, and the run proceeds.
+if [[ -n "$AGENT_NAME" ]]; then
+    _ready_rc=0
+    python3 "$REPO_ROOT/tools/job_readiness.py" --agent "$AGENT_NAME" || _ready_rc=$?
+    if [[ "$_ready_rc" -eq 78 ]]; then exit 78; fi
+    if [[ "$_ready_rc" -ne 0 ]]; then
+        echo "[run-agent] WARN: readiness judge exited $_ready_rc — running unjudged" >&2
+    fi
+fi
+
 # A bound run is about to spend real money at a third party. Say which backend
 # before it happens, so the operator watching can stop it if it is the wrong one.
 echo "[run-agent] armed backends: ${NOS_ARMED_BACKENDS:-<none>}" >&2

@@ -81,6 +81,8 @@ pulse:
       category: knowledge
       # exit 1 = invoices await operator verify — the job's purpose, not a crash.
       findings_exit_codes: [1]
+      # Read by tools/job_readiness.py: images with neither agent servable are HELD (exit 78).
+      needs: ["agent:invoice-vision-ocr", "agent:invoice-extract"]
       writes:
         - target: "table:pending-invoice-verify"
           via: "one row per held vision sidecar, upserted by slug via

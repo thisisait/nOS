@@ -42,3 +42,5 @@ pulse:
   max_runtime_s: 1800             # 6 images x 1 repeat measured ~13 min + slack
   jitter_min: 10
   findings_exit_codes: [3]        # rc=3 == pooled accuracy below floor (a finding, not a crash)
+  # Read by tools/job_readiness.py: a run without these is HELD (exit 78), not failed.
+  needs: ["agent:invoice-vision-ocr", "agent:invoice-extract"]

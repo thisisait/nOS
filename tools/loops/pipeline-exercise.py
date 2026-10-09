@@ -71,6 +71,7 @@ sys.path.insert(0, str(REPO / "tools"))
 sys.path.insert(0, str(REPO / "files" / "anatomy" / "module_utils"))
 from invoice_fixture import parse_image_txt  # noqa: E402
 import digest_absorb  # noqa: E402
+import job_readiness  # noqa: E402
 import nos_digest  # noqa: E402
 
 FIXTURE = REPO / "state" / "fixtures" / "consulting-firm"
@@ -348,6 +349,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--doc", help="force the document (skips the planner's choice)")
     ap.add_argument("--degrade", help="force the degradation profile")
     args = ap.parse_args(argv)
+    # A run whose model is not configured, pulled or armed is HELD (exit 78).
+    held = job_readiness.hold("loop:pipeline-exercise")
+    if held:
+        return held
 
     if not DOCS:
         print(f"REFUSING: no *.image.txt fixtures under {FIXTURE}", file=sys.stderr)
