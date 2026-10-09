@@ -24,11 +24,15 @@ enabled = false
 # A reference twin is quiet: cron defaults on (config/schema/cron.rs) and onboarding seeds proactive jobs.
 enabled = false
 [memory]
-# auto_save is the schema's memory switch; [memory.conversations]/[memory.recall] are not v0.64.10 keys (dropped on save).
+# auto_save is the v0.64.10 switch; 0.64.15 adds [memory.conversations]/[memory.recall], default on.
 auto_save = false
 embedding_provider = "ollama"
 embedding_model = "{{ openhuman_embed_model }}"
 embedding_dimensions = {{ openhuman_embed_dimensions }}
+[memory.conversations]
+enabled = false
+[memory.recall]
+enabled = false
 [memory_tree]
 llm_extractor_model = "{{ _oh_local_model }}"
 llm_summariser_model = "{{ _oh_local_model }}"

@@ -87,17 +87,7 @@
     mode: "0700"
   loop: "{{ _oh_profiles | map('regex_replace', '$', '/workspace') | list + [openhuman_home ~ '/skills'] }}"
 
-# 2/4 Declared keys win, every other key stays (a TOML merge, not an overwrite). Schema keys only.
-- name: "[openhuman] config.toml — declared keys merged into every profile"
-  ansible.builtin.command:
-    argv: ["{{ ansible_playbook_python }}", "{{ role_path }}/files/toml_merge.py", "{{ item }}/config.toml"]
-    stdin: "{{ lookup('ansible.builtin.template', 'config.toml.j2') }}"
-  loop: "{{ _oh_profiles }}"
-  register: _oh_config
-  changed_when: _oh_config.stdout == 'changed'
-  when: not _oh_running | bool
-
-# 3/4 The wizard's tool choice: none stored = every opt-in tool on (tools/user_filter.rs).
+# 2/4 The wizard's tool choice: none stored = every opt-in tool on (tools/user_filter.rs).
 # The RPC replaces onboardingTasks whole, so stored fields are carried over.
 - name: "[openhuman] Tool list, the wizard's default (app_state_update_local_state)"
   ansible.builtin.command:
@@ -112,7 +102,7 @@
     - _oh_active == _oh_local_id
     - _stored.enabledTools | default([], true) | length == 0
 
-# 4/4 Local login (also an in-app re-login) resets onboarding_completed; the RPC (not the flag) also seeds the proactive cron jobs.
+# 3/4 Local login (also an in-app re-login) resets onboarding_completed; the RPC (not the flag) also seeds the proactive cron jobs.
 - name: "[openhuman] Onboarding completed (config_set_onboarding_completed)"
   ansible.builtin.command:
     argv: ["{{ _oh_bin }}", core, call, --method, openhuman.config_set_onboarding_completed, --params, '{"value": true}']
@@ -121,6 +111,17 @@
     - _oh_active == _oh_local_id
     - lookup('ansible.builtin.file', openhuman_home ~ '/users/' ~ _oh_local_id ~ '/config.toml', errors='ignore')
       | default('', true) | regex_search('(?m)^onboarding_completed\s*=\s*true') is none
+
+# 4/4 Declared keys win, every other key stays (a TOML merge, not an overwrite). Schema keys only.
+# Last of the four: the vendor RPCs above save the whole profile with the app's defaults.
+- name: "[openhuman] config.toml — declared keys merged into every profile"
+  ansible.builtin.command:
+    argv: ["{{ ansible_playbook_python }}", "{{ role_path }}/files/toml_merge.py", "{{ item }}/config.toml"]
+    stdin: "{{ lookup('ansible.builtin.template', 'config.toml.j2') }}"
+  loop: "{{ _oh_profiles }}"
+  register: _oh_config
+  changed_when: _oh_config.stdout == 'changed'
+  when: not _oh_running | bool
 
 # The core reads <profile>/workspace/AGENTS.md (agent/prompts/agents_md.rs).
 - name: "[openhuman] AGENTS.md — the imprint, re-copied every converge"
