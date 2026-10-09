@@ -50,7 +50,7 @@
     msg: "OpenHuman is running. Quit it and run --tags openhuman again; verify reports what it has now."
   when: _oh_running | bool
 
-# 1/3 The "Set it up myself" local session, done by the vendor CLI in-process (no GUI, no token).
+# 1/4 The "Set it up myself" local session, done by the vendor CLI in-process (no GUI, no token).
 # Only before any login: a marker naming a user (local or cloud) is never replaced.
 - name: "[openhuman] Local session (auth_set_credential)"
   ansible.builtin.command:
@@ -87,7 +87,7 @@
     mode: "0700"
   loop: "{{ _oh_profiles | map('regex_replace', '$', '/workspace') | list + [openhuman_home ~ '/skills'] }}"
 
-# 2/3 Declared keys win, every other key stays (a TOML merge, not an overwrite). Schema keys only.
+# 2/4 Declared keys win, every other key stays (a TOML merge, not an overwrite). Schema keys only.
 - name: "[openhuman] config.toml — declared keys merged into every profile"
   ansible.builtin.command:
     argv: ["{{ ansible_playbook_python }}", "{{ role_path }}/files/toml_merge.py", "{{ item }}/config.toml"]
@@ -97,7 +97,22 @@
   changed_when: _oh_config.stdout == 'changed'
   when: not _oh_running | bool
 
-# 3/3 Local login resets onboarding_completed; the RPC (not the flag) also seeds the proactive cron jobs.
+# 3/4 The wizard's tool choice: none stored = every opt-in tool on (tools/user_filter.rs).
+# The RPC replaces onboardingTasks whole, so stored fields are carried over.
+- name: "[openhuman] Tool list, the wizard's default (app_state_update_local_state)"
+  ansible.builtin.command:
+    argv: ["{{ _oh_bin }}", core, call, --method, openhuman.app_state_update_local_state, --params, "{{ {'onboardingTasks': _tasks} | to_json }}"]
+  vars:
+    _state: "{{ lookup('ansible.builtin.file', openhuman_home ~ '/users/' ~ _oh_local_id ~ '/workspace/state/app-state.json',
+      errors='ignore') | default('{}', true) | from_json }}"
+    _stored: "{{ _state.onboardingTasks | default({}, true) }}"
+    _tasks: "{{ _stored | combine({'enabledTools': openhuman_enabled_tools, 'updatedAtMs': (now().timestamp() * 1000) | int}) }}"
+  when:
+    - _oh_bin_stat.stat.exists and not _oh_running | bool
+    - _oh_active == _oh_local_id
+    - _stored.enabledTools | default([], true) | length == 0
+
+# 4/4 Local login (also an in-app re-login) resets onboarding_completed; the RPC (not the flag) also seeds the proactive cron jobs.
 - name: "[openhuman] Onboarding completed (config_set_onboarding_completed)"
   ansible.builtin.command:
     argv: ["{{ _oh_bin }}", core, call, --method, openhuman.config_set_onboarding_completed, --params, '{"value": true}']

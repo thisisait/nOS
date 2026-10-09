@@ -12,3 +12,8 @@ openhuman_source_dir: "{{ playbook_dir }}"
 # KEAP's embedder (pazny.keap keap_embed_model), already pulled by nOS; 768 is its width.
 openhuman_embed_model: nomic-embed-text
 openhuman_embed_dimensions: 768
+# The wizard's default tool list: getEnabledRustToolNames(getDefaultEnabledTools()), every
+# defaultEnabled entry of app/src/utils/toolDefinitions.ts (v0.64.10). Stored once, never over a choice.
+openhuman_enabled_tools: [shell, git_operations, file_read, read_diff, csv_export, file_write, update_memory_md, image_info,
+                          web_search_tool, memory_store, memory_recall, memory_forget, cron_add, cron_list, cron_remove,
+                          cron_update, cron_run, cron_runs, schedule]

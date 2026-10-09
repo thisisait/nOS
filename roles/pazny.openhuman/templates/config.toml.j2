@@ -20,6 +20,9 @@ enabled = false
 rpc_mutations_enabled = false
 [gitbooks]
 enabled = false
+[cron]
+# A reference twin is quiet: cron defaults on (config/schema/cron.rs) and onboarding seeds proactive jobs.
+enabled = false
 [memory]
 # auto_save is the schema's memory switch; [memory.conversations]/[memory.recall] are not v0.64.10 keys (dropped on save).
 auto_save = false
