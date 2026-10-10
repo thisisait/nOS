@@ -50,7 +50,7 @@ schema:
     # column) is the gate's documented exception, tracked to the keap
     # boolean-concept proposal (2026-09-06); remove it once KEAP ships e.g.
     # lifecycle.active and this becomes an honest boolean binding.
-    - { key: enabled,     label: "Enabled",     kind: boolean, role: dimension, concept: lifecycle.status }
+    - { key: enabled,     label: "Enabled",     kind: boolean, role: dimension }   # lifecycle.status binds select/text only
     # Who will read the row, named rather than assumed — a config row whose
     # reader nobody can point at is how a toggle ends up half-armed.
     - { key: read_by,     label: "Read by",     kind: text,    role: attribute, concept: prov.ref }

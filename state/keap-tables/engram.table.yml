@@ -15,5 +15,5 @@ schema:
     - {key: role, label: "Role", kind: text, role: attribute}                            # user|assistant|system|tool
     - {key: text, label: "Text", kind: text, role: attribute, required: true}
     - {key: labels, label: "Labels", kind: json, role: attribute}
-    - {key: observed_at, label: "Observed at", kind: text, role: attribute, concept: time.occurred_at}              # RFC3339 as sent
+    - {key: observed_at, label: "Observed at", kind: text, role: attribute}              # RFC3339 as sent
     - {key: idempotency_key, label: "Idempotency key", kind: text, role: attribute, required: true, concept: prov.ref}
