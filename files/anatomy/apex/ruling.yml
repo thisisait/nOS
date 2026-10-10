@@ -728,6 +728,9 @@ nodes:
   "table:invoice": withheld
   "table:invoice-line": withheld
   "table:book-access": withheld
+  # OpenHuman's memory (keap hippocampus, 2026-10-10). WITHHELD like every table
+  # node — what an agent remembered of a conversation never leaves the machine.
+  "table:engram": withheld
   # ARES / nespolehlivý-plátce registry status per party (n8n ARES pack fills
   # it). WITHHELD like every table node — whose counterparties the estate
   # watches is the firm's business, never the public front door.

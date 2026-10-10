@@ -13,12 +13,12 @@
     "habitat": 6,
     "sense": 72,
     "limb": 113,
-    "memory": 40,
+    "memory": 41,
     "law": 52,
     "reflex": 43,
     "heartbeat": 1,
     "internal": 74,
-    "edges": 426
+    "edges": 427
   },
   "nodes": {
     "agent:conductor": {
@@ -1901,6 +1901,10 @@
       "level": "memory",
       "kind": "table"
     },
+    "table:engram": {
+      "level": "memory",
+      "kind": "table"
+    },
     "table:invoice": {
       "level": "memory",
       "kind": "table"
@@ -3197,6 +3201,11 @@
     {
       "from": "service:keap",
       "to": "service:n8n",
+      "kind": "data"
+    },
+    {
+      "from": "service:keap",
+      "to": "service:openhuman",
       "kind": "data"
     },
     {

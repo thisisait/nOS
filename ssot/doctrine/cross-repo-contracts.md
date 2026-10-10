@@ -93,10 +93,11 @@ written. Spec + gates author on the operator's go — the store/doors spec
 **after** the `dtt-share-model` zod, so the visibility invariant cites a
 real module, not a promised one.
 
-**The measurement that made this a re-labelling, not a refactor:** 40
+**The measurement that made this a re-labelling, not a refactor:** 41
 DataTable DEFINITIONS live in nOS git (`state/keap-tables/*.table.yml`, gated
-by `test_keap_table_concepts.py`); 31 of them are SYSTEM (estate tables nOS
-emits — `cnb-fx` joined 2026-09-21 with the n8n packs, `party-site` 2026-10-03 with geo);
+by `test_keap_table_concepts.py`); 32 of them are SYSTEM (estate tables nOS
+emits — `cnb-fx` joined 2026-09-21 with the n8n packs, `party-site` 2026-10-03 with geo,
+`engram` 2026-10-10 with the hippocampus);
 9 are fixture/user-shaped (`print-*`, `kolben-*`) — tenant-demo
 furniture that happens to live in git, not KEAP-born USER tables. Zero
 definitions are KEAP's; every row-store consumer is nOS. KEAP PROVIDES the
@@ -115,7 +116,7 @@ McpTablesTool, dtt-capture, apps_runner, face). Producer KEAP.
 **The three clauses (the objections, kept because each names an incident):**
 
 1. **System vs user tables (definitions scope).** The definitions half covers
-   only the code-declared SYSTEM tables (the 31). USER tables are KEAP-born (the
+   only the code-declared SYSTEM tables (the 32). USER tables are KEAP-born (the
    human door mints them, `POST /api/tables`), never in nOS git, governed by the
    doors half + `dtt-share-model` — and EXPLICITLY outside the definitions
    contract, so a definitions-side gate MUST NOT prune a table nOS did not
@@ -124,7 +125,7 @@ McpTablesTool, dtt-capture, apps_runner, face). Producer KEAP.
    system/user split.
 2. **Schema-pin gate (highest value).** The definitions-side gate validates
    every git-owned `.table.yml` against KEAP's zod schema **at the pinned
-   `keap_repo_ref` (`v2.0.1`)** (a vendored schema snapshot pinned to the
+   `keap_repo_ref` (`v2.1.0`)** (a vendored schema snapshot pinned to the
    tag, never dev HEAD). This makes "a definition runs ahead of the pin"
    structurally impossible instead of a matter of release discipline — the
    `caddy-sessions` incident (`style: chat` against a schema only an orphan tag

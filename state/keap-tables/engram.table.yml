@@ -10,10 +10,10 @@ sharedWith: []
 schema:
   columns:
     - {key: agent, label: "Agent", kind: text, role: dimension, required: true, concept: access.owner}
-    - {key: scope, label: "Scope", kind: text, role: dimension, required: true}
-    - {key: modality, label: "Modality", kind: text, role: dimension, required: true}   # document|observation|conversation
+    - {key: scope, label: "Scope", kind: text, role: dimension, required: true, concept: class.group}
+    - {key: modality, label: "Modality", kind: text, role: dimension, required: true, concept: class.kind}   # document|observation|conversation
     - {key: role, label: "Role", kind: text, role: attribute}                            # user|assistant|system|tool
     - {key: text, label: "Text", kind: text, role: attribute, required: true}
     - {key: labels, label: "Labels", kind: json, role: attribute}
-    - {key: observed_at, label: "Observed at", kind: text, role: attribute}              # RFC3339 as sent
-    - {key: idempotency_key, label: "Idempotency key", kind: text, role: attribute, required: true}
+    - {key: observed_at, label: "Observed at", kind: text, role: attribute, concept: time.occurred_at}              # RFC3339 as sent
+    - {key: idempotency_key, label: "Idempotency key", kind: text, role: attribute, required: true, concept: prov.ref}

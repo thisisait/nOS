@@ -29,6 +29,14 @@ requires:
 # No authentik block = SSO mode none: a desktop app has no web surface.
 
 depends_on:
+  - upstream: "service:keap"
+    kind: data
+    via: >-
+      memory.engine = cortexdb at http://127.0.0.1:<keap_port>/hippocampus (keap v2.1.0); every memory is a row of the engram DataTable (roles/pazny.openhuman/templates/config.toml.j2)
+    measured: "2026-10-10"
+    unenforced: >-
+      KEAP is not auto-enabled by OpenHuman; without install_keap the role
+      declares memory.engine = none and OpenHuman runs without memory.
   - upstream: "service:ollama"
     kind: data
     via: >-
