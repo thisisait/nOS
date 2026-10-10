@@ -977,6 +977,7 @@ nodes:
   # 2026-10-06 skill:cortex-query → skill:keap-recall (lexicon step 3: it
   # recalls from KEAP, not the cortex). Renamed in place, still WITHHELD.
   "skill:keap-recall": withheld
+  "skill:nos-for-openhuman": withheld
   "skill:devlog": withheld
   "skill:dtt-capture": withheld
   "skill:judge": withheld

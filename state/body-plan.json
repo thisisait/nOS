@@ -4,7 +4,7 @@
   "projects": "state/anatomy-graph.json",
   "levels_from": "state/genome/lexicon.yml",
   "counts": {
-    "genome": 20,
+    "genome": 21,
     "cell": 16,
     "tissue": 1,
     "organ": 78,
@@ -1838,6 +1838,10 @@
       "kind": "skill"
     },
     "skill:nos-devops": {
+      "level": "genome",
+      "kind": "skill"
+    },
+    "skill:nos-for-openhuman": {
       "level": "genome",
       "kind": "skill"
     },

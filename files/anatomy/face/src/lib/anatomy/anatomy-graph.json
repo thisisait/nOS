@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 530,
+    "nodes": 531,
     "edges": 544,
     "nodes_pulse": 43,
     "nodes_judge": 5,
@@ -26,7 +26,7 @@
     "nodes_faceapp": 7,
     "nodes_agent": 16,
     "nodes_tasktype": 9,
-    "nodes_skill": 11,
+    "nodes_skill": 12,
     "nodes_reader": 54,
     "nodes_effector": 106,
     "nodes_article": 26,
@@ -4756,6 +4756,13 @@
       "title": "DevOps skills for the nOS Ansible playbook - orchestrating the Docker stack, delegating to Claude Code / a local dense model, logging agentic work.",
       "anchor": "02.02.09",
       "description": "Skill 'nos-devops' (files/anatomy/skills/nos-devops/SKILL.md): DevOps skills for the nOS Ansible playbook - orchestrating the Docker stack, delegating to Claude Code / a local dense model, logging agentic work."
+    },
+    "skill:nos-for-openhuman": {
+      "kind": "skill",
+      "source": "files/anatomy/skills/nos-for-openhuman/SKILL.md",
+      "title": "What nOS holds, what you (the OpenHuman twin) may do in it, and what to say when a request needs a write you do not have. Use it whenever the user asks you to store, note, file, change or look up something \"in nOS\".",
+      "anchor": "02.02.09",
+      "description": "Skill 'nos-for-openhuman' (files/anatomy/skills/nos-for-openhuman/SKILL.md): What nOS holds, what you (the OpenHuman twin) may do in it, and what to say when a request needs a write you do not have. Use it whenever the user asks you to store, note, file, change or look up something \"in nOS\"."
     },
     "skill:nos-manifest-app": {
       "kind": "skill",
