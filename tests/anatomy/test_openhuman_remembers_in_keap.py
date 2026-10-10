@@ -88,3 +88,14 @@ def test_the_reader_says_whether_the_hippocampus_answers(status, state):
     503 when KEAP holds no key, 404 on a KEAP older than v2.1.0."""
     mod = _reader()
     assert mod.judge_hippocampus(status, "http://127.0.0.1:8091/hippocampus")["state"] == getattr(mod, state)
+
+
+def test_keap_post_start_verifies_the_hippocampus_answers():
+    """The effect is KEAP's to verify, after its rebuild: with OpenHuman on, a keyless
+    health call must be 401 (live, key required) — 503 means KEAP got no key, 404 an old KEAP."""
+    tasks = yaml.safe_load((REPO / "roles/pazny.keap/tasks/post.yml").read_text())
+    probes = [t for t in tasks if "/hippocampus/v1/admin/health" in str((t.get("ansible.builtin.uri") or {}).get("url", ""))]
+    assert probes, "no post-start probe of /hippocampus"
+    t = probes[0]
+    assert t["ansible.builtin.uri"]["status_code"] == [401], t
+    assert "install_openhuman" in str(t.get("when")), t

@@ -102,7 +102,7 @@ def _converge(tmp: Path, app_present: bool = False, config: str | None = None,
     (tmp / "ps.txt").write_text(f"{app}/Contents/MacOS/OpenHuman\n" if running else "/sbin/launchd\n")
     _exe(stubs / "ps", f'#!/bin/sh\ncat "{tmp / "ps.txt"}"\n')
     if app_present or cli:
-        app.mkdir(parents=True)
+        app.mkdir(parents=True, exist_ok=True)
     if cli:
         body = STUB.format(log=log)
         if onboard_writes is not None:   # the vendor RPC saves the whole active profile
@@ -385,3 +385,25 @@ def test_without_keap_memory_stays_off(tmp_path):
                                extra={"install_keap": False})
     mem = tomllib.loads((home / ".openhuman/users/local-studio-local/config.toml").read_text())["memory"]
     assert mem["engine"] == "none" and "memory_engine_set" not in calls, mem
+
+
+@needs_ansible
+def test_role_verify_does_not_judge_a_keap_it_ran_before(tmp_path):
+    """The role runs before stack-up rebuilds KEAP: an old KEAP answers 404 on /hippocampus.
+    That line is KEAP's post-start verify to own, not this role's."""
+    import http.server
+    import threading
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), http.server.SimpleHTTPRequestHandler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        home, _, out = _converge(tmp_path, cli=True, marker="local-studio-local",
+                                 profiles={"local-studio-local": "onboarding_completed = true\n"},
+                                 app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}},
+                                 extra={**HIPPO, "keap_port": srv.server_port})
+        (home / ".openhuman/users/local-studio-local/auth-profiles.json").write_text("{}")
+        _, _, out = _converge(tmp_path, verify_only=True, cli=True, marker="local-studio-local",
+                              profiles={"local-studio-local": (home / ".openhuman/users/local-studio-local/config.toml").read_text()},
+                              app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}},
+                              extra={**HIPPO, "keap_port": srv.server_port})
+    finally:
+        srv.shutdown()
