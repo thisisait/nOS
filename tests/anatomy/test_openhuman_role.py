@@ -202,9 +202,8 @@ def _declared(cfg: dict, small: str) -> list[str]:
             "observability.share_usage_data": False, "update.enabled": False, "gitbooks.enabled": False,
             "chat_provider": "ollama:" + small, "memory_provider": "ollama:" + small,
             "embeddings_provider": "ollama:nomic-embed-text", "learning_provider": "ollama:" + small,
-            "memory.auto_save": False, "memory.embedding_provider": "ollama", "memory.embedding_model": "nomic-embed-text",
-            "memory.embedding_dimensions": 768, "memory_tree.llm_extractor_model": small,
-            "memory_tree.llm_summariser_model": small}
+            "memory.engine": "none", "memory.embedding_provider": "ollama", "memory.embedding_model": "nomic-embed-text",
+            "memory.embedding_dimensions": 768}
     bad = []
     for dotted, val in want.items():
         cur = cfg
@@ -334,7 +333,7 @@ def test_the_twin_is_quiet_cron_is_off_in_every_profile(tmp_path):
 
 # OpenHuman 0.64.15 (2026-10-09) made [memory.conversations] and [memory.recall] real keys,
 # default on; the role declared only auto_save, and verify went RED on a fresh install.
-V0_64_15_MEMORY = "[memory]\nauto_save = true\n[memory.conversations]\nenabled = true\n" \
+V0_64_15_MEMORY = "[memory]\nengine = \"tinyhumans\"\nauto_save = true\n[memory.conversations]\nenabled = true\n" \
                   "[memory.recall]\nenabled = true\nbudget_tokens = 1200\n"
 
 
@@ -355,4 +354,4 @@ def test_the_declared_keys_outlive_the_onboarding_rpc(tmp_path):
                            app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}},
                            onboard_writes="onboarding_completed = true\n" + V0_64_15_MEMORY)
     cfg = tomllib.loads((home / ".openhuman/users/local-studio-local/config.toml").read_text())
-    assert cfg["memory"]["auto_save"] is False and cfg["onboarding_completed"] is True, cfg
+    assert cfg["memory"]["engine"] == "none" and cfg["onboarding_completed"] is True, cfg
