@@ -145,3 +145,15 @@ def test_the_reader_judges_the_memory_engine(memory, state):
     cfg = tomllib.loads(LOCAL + memory)
     row = next(r for r in mod.judge_config(cfg, "f") if r["check"] == "memory")
     assert row["state"] == getattr(mod, state), row
+
+
+def test_the_reader_judges_default_model_like_a_route():
+    """The session clones default_model over chat_provider; `hermes3:8b` reads as provider hermes3."""
+    spec = importlib.util.spec_from_file_location("ohs", REPO / "tools/openhuman-status.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    good = 'chat_provider = "ollama:x"\nreasoning_provider = "ollama:x"\nagentic_provider = "ollama:x"\n' \
+           'coding_provider = "ollama:x"\n'
+    route = lambda extra: next(r for r in mod.judge_config(tomllib.loads(extra + good), "f") if r["check"] == "model route")  # noqa: E731
+    assert route('default_model = "hermes3:8b"\n')["state"] == mod.RED
+    assert route('default_model = "ollama:hermes3:8b"\n')["state"] == mod.OK

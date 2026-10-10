@@ -407,3 +407,28 @@ def test_role_verify_does_not_judge_a_keap_it_ran_before(tmp_path):
                               extra={**HIPPO, "keap_port": srv.server_port})
     finally:
         srv.shutdown()
+
+
+# 2026-10-10: default_model = "hermes3:8b" (no provider) — the session clones it over chat_provider
+# (web_chat/session.rs), local_only refused provider `hermes3`, the first chat failed. And an 8192
+# window under a 35 kB system prompt evicted the user's own message (tinyagents message_trim).
+@needs_ansible
+def test_a_fresh_install_chats_on_the_declared_route(tmp_path):
+    home, _, _ = _converge(tmp_path, app_present=True, config="")
+    cfg = tomllib.loads((home / ".openhuman/users/local/config.toml").read_text())
+    assert cfg["default_model"] == cfg["chat_provider"], (cfg["default_model"], cfg["chat_provider"])
+    window = cfg["local_ai"]["num_ctx"]
+    assert window >= 16384, window
+    model = cfg["local_ai"]["chat_model_id"]
+    entry = next((e for e in cfg.get("model_registry", []) if e["id"] == model), None)
+    assert entry and entry["provider"] == "ollama" and entry["context_window"] == window, cfg.get("model_registry")
+    assert cfg["runtime"]["reasoning_effort"] == "none", cfg.get("runtime")
+
+
+def test_the_merge_keeps_the_apps_own_model_registry_entries():
+    spec = importlib.util.spec_from_file_location("tm", REPO / "roles/pazny.openhuman/files/toml_merge.py")
+    tm = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tm)
+    base = {"model_registry": [{"id": "gpt-x", "provider": "openai", "context_window": 128000}]}
+    out = tm.merge(base, {"model_registry": [{"id": "hermes3:8b", "provider": "ollama", "context_window": 16384}]})
+    assert [e["id"] for e in out["model_registry"]] == ["gpt-x", "hermes3:8b"], out
