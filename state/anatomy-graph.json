@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 529,
+    "nodes": 530,
     "edges": 543,
     "nodes_pulse": 43,
     "nodes_judge": 5,
@@ -21,7 +21,7 @@
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 60,
-    "nodes_table": 40,
+    "nodes_table": 41,
     "nodes_doctrine": 26,
     "nodes_faceapp": 7,
     "nodes_agent": 16,
@@ -4861,6 +4861,13 @@
       "title": "Device extractions",
       "anchor": "02.02.05",
       "description": "KEAP DataTable definition 'Device extractions' (state/keap-tables/device-extraction.table.yml)"
+    },
+    "table:engram": {
+      "kind": "table",
+      "source": "state/keap-tables/engram.table.yml",
+      "title": "Engram",
+      "anchor": "02.02.05",
+      "description": "KEAP DataTable definition 'Engram' (state/keap-tables/engram.table.yml)"
     },
     "table:invoice": {
       "kind": "table",
