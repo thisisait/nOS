@@ -60,15 +60,8 @@ function doorBody(def: Record<string, unknown>, dropConcept: Record<string, stri
  *  only the named column's concept before validating; each entry names the
  *  resolution that removes it. This is a real external gap, tracked to closure
  *  — never a place to park nOS's own drift. */
-const CONCEPT_EXCEPTIONS: Record<string, Record<string, string>> = {
-	'loop-config.table.yml': {
-		enabled:
-			'MUST be boolean (test_the_harness_toggle_defaults_off; the fixture ships ' +
-			'enabled: false, consumed as a boolean), but KEAP v1.44.0 has no ' +
-			'boolean-binding concept. Remove once KEAP ships one (keap boolean-concept ' +
-			'proposal, 2026-09-06) and re-vendor.'
-	}
-};
+// Empty since 2026-10-10: loop-config.enabled now declares no concept (pytest CONCEPTLESS holds why).
+const CONCEPT_EXCEPTIONS: Record<string, Record<string, string>> = {};
 
 const files = readdirSync(DEFS)
 	.filter((f) => f.endsWith('.table.yml'))
