@@ -122,3 +122,26 @@ def test_the_reader_is_red_on_a_brew_record_without_its_app(tmp_path, monkeypatc
     monkeypatch.setenv("NOS_OPENHUMAN_APP", str(tmp_path / "none.app"))
     monkeypatch.setenv("NOS_OPENHUMAN_CASKROOM", str(tmp_path / "Caskroom/openhuman"))
     assert {r["check"]: r["state"] for r in mod.collect()}["installed"] == mod.RED
+
+
+LOCAL = 'memory_provider = "ollama:x"\nembeddings_provider = "ollama:x"\n[memory]\nembedding_provider = "ollama"\n'
+
+
+@pytest.mark.parametrize("memory, state", [
+    ("", "RED"),                                                       # unset = tinyhumans, the cloud engine
+    ('engine = "tinyhumans"\n', "RED"),
+    ('engine = "none"\n', "OK"),
+    ('engine = "none"\nauto_save = true\n', "OK"),                      # a dead key decides nothing
+    ('engine = "cortexdb"\n[memory.engines.cortexdb]\nendpoint = "http://127.0.0.1:8091/hippocampus"\n'
+     '[memory.recall]\nenabled = true\n', "OK"),
+    ('engine = "cortexdb"\n[memory.engines.cortexdb]\nendpoint = "https://cortex.example.com"\n', "RED"),
+])
+def test_the_reader_judges_the_memory_engine(memory, state):
+    """v0.64.15 has no local memory store: `memory.engine` binds tinyhumans (cloud), cortexdb
+    (any endpoint) or none. The reader judged `auto_save`, a key the app ignores."""
+    spec = importlib.util.spec_from_file_location("ohs", REPO / "tools/openhuman-status.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    cfg = tomllib.loads(LOCAL + memory)
+    row = next(r for r in mod.judge_config(cfg, "f") if r["check"] == "memory")
+    assert row["state"] == getattr(mod, state), row
