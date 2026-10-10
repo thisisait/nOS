@@ -132,6 +132,7 @@ REFUSED = {
     # because an iframe host does not depend on its guest.
     ("metabase", "face"): "MB_EMBEDDING_APP_ORIGIN — a CORS origin, not an upstream",
     ("keap", "face"): "KEAP_EMBED_ORIGINS — a CORS origin, not an upstream",
+    ("keap", "openhuman"): "KEAP_HIPPOCAMPUS_KEYS — keap hands openhuman a key; the edge is openhuman → keap",
 }
 
 #: Declared edges whose provider is NOT one of the three auto-enabled ones.

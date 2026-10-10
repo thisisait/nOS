@@ -17,6 +17,8 @@ import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 
 needs_ansible = pytest.mark.skipif(shutil.which("ansible-playbook") is None
                                    and not os.path.exists(os.path.join(os.path.dirname(sys.executable), "ansible-playbook")),
@@ -43,7 +45,7 @@ def test_the_key_is_a_derived_secret():
 def _keap_env(tmp: Path, install_openhuman: bool) -> dict:
     out = tmp / "compose.yml"
     play = [{"hosts": "localhost", "connection": "local", "gather_facts": False,
-             "vars_files": [str(REPO / "default.config.yml"), str(REPO / "roles/pazny.keap/defaults/main.yml")],
+             "vars_files": [*map(str, ni.default_layers()), str(REPO / "roles/pazny.keap/defaults/main.yml")],
              "vars": {"ansible_facts": {"env": {"HOME": "/h"}}, "keap_image_tag": "t",
                       "nos_derived_secrets": {"keap_agent_ro": "a", "keap_agent_rw": "b", "keap_agent_capture": "c",
                                               "keap_proxy_shared": "d", "keap_hippocampus_openhuman": "K"}},
@@ -69,7 +71,7 @@ def test_keap_holds_the_openhuman_key_only_with_openhuman(tmp_path, install_open
 
 
 def test_keap_is_pinned_to_the_hippocampus_release():
-    cfg = yaml.safe_load((REPO / "default.config.yml").read_text())
+    cfg = ni.default_config()
     role = yaml.safe_load((REPO / "roles/pazny.keap/defaults/main.yml").read_text())
     assert tuple(map(int, cfg["keap_version"].split("."))) >= (2, 1, 0)
     assert tuple(map(int, role["keap_repo_ref"].lstrip("v").split("."))) >= (2, 1, 0)
