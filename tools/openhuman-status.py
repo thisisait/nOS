@@ -32,6 +32,8 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import urllib.error
+import urllib.request
 
 try:
     import tomllib
@@ -275,6 +277,26 @@ def judge_ollama(comms: str | None, listeners: str | None, prefix: str, path_dir
                 * bool(bad) + seen, src)
 
 
+def judge_hippocampus(status: int | None, url: str) -> dict:
+    """KEAP's hippocampus, asked without a key: 401 = live, 503 = KEAP holds no key, 404 = KEAP < v2.1.0."""
+    src = f"GET {url}/v1/admin/health (no key)"
+    if status is None:
+        return line("hippocampus", UNKNOWN, "KEAP unreachable", src)
+    why = {401: "live (a key is required)", 503: "KEAP holds no hippocampus key (KEAP_HIPPOCAMPUS_KEYS)",
+           404: "no /hippocampus route — KEAP older than v2.1.0"}
+    return line("hippocampus", OK if status == 401 else RED, why.get(status, f"HTTP {status}"), src)
+
+
+def _status(url: str) -> int | None:
+    try:
+        with urllib.request.urlopen(url, timeout=5) as r:
+            return r.status
+    except urllib.error.HTTPError as exc:
+        return exc.code
+    except (urllib.error.URLError, OSError):
+        return None
+
+
 def line(check: str, state: str, detail: str, source: str) -> dict:
     return {"check": check, "state": state, "detail": detail, "source": source}
 
@@ -326,6 +348,14 @@ def collect() -> list[dict]:
                     "Tauri updater active, no documented switch — watch egress to github.com"
                     if app.exists() else "no app", "upstream tauri.conf.json plugins.updater"))
     out.append(judge_mcp(base, cfg, raw))
+    try:
+        acfg = tomllib.loads(active.read_text()) if active and tomllib else {}
+    except (OSError, tomllib.TOMLDecodeError):
+        acfg = {}
+    if _get(acfg, "memory.engine") == "cortexdb":
+        url = str(_get(acfg, "memory.engines.cortexdb.endpoint", "")).rstrip("/")
+        if _loopback(url):
+            out.append(judge_hippocampus(_status(url + "/v1/admin/health"), url))
     out.append(judge_lsof(_run(["lsof", "-nP", "-iTCP", "-iUDP"]) if procs else ""))
     out.append(judge_ollama(_run(["ps", "-axo", "comm="]),
                             _run(["lsof", "-nP", "-a", "-iTCP", "-sTCP:LISTEN", "-c", "ollama"]),

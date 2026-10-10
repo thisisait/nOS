@@ -100,6 +100,10 @@ services:
       KEAP_AGENT_TOKEN_RO: "{{ keap_agent_token_ro }}"
       KEAP_AGENT_TOKEN_RW: "{{ keap_agent_token_rw }}"
       KEAP_AGENT_TOKEN_CAPTURE: "{{ keap_agent_token_capture }}"
+{% if install_openhuman | default(false) | bool %}
+      # OpenHuman's memory engine (cortexdb wire) → /hippocampus, rows in `engram`. Unset = 503.
+      KEAP_HIPPOCAMPUS_KEYS: "openhuman:{{ keap_hippocampus_key_openhuman }}"
+{% endif %}
       # SEC-02: proxy-trust secret. Set ⇒ /api/* requires header
       # x-keap-proxy-secret (timing-safe) before any X-Authentik-* is read;
       # Traefik's keap-proxy@file injects it at the outpost hop. /agent/v1,

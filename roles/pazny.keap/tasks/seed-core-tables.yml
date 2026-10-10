@@ -38,6 +38,9 @@
     - slug: "pending-invoice-verify"
       def: "{{ lookup('file', playbook_dir + '/state/keap-tables/pending-invoice-verify.table.yml') | from_yaml }}"
       rows: []
+    - slug: "engram"   # OpenHuman's memory, written by the hippocampus (keap v2.1.0)
+      def: "{{ lookup('file', playbook_dir + '/state/keap-tables/engram.table.yml') | from_yaml }}"
+      rows: []
     - slug: "book-access"
       def: "{{ lookup('file', playbook_dir + '/state/keap-tables/book-access.table.yml') | from_yaml }}"
       rows: []

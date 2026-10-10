@@ -9,6 +9,9 @@
     _oh_bin: "{{ openhuman_app }}/Contents/MacOS/OpenHuman"
     # Sliced as the core slices it (credentials/session_support.rs local_session_user_id).
     _oh_local_id: "local-{{ _slug or 'device' }}"
+    # Memory lives in KEAP: its hippocampus (keap v2.1.0) speaks the cortexdb wire.
+    _oh_hippocampus: "{{ install_keap | default(false) | bool }}"
+    _oh_hippocampus_url: "http://127.0.0.1:{{ keap_port | default(8091) }}/hippocampus"
   vars:
     _m: "{{ openhuman_model or (ollama_small_model if openhuman_provider == 'ollama' else openhuman_claude_default_model) }}"
     _slug: "{{ openhuman_hostname | lower | regex_replace('[^a-z0-9]+', '-') | regex_replace('^-+|-+$', '') }}"
@@ -112,6 +115,19 @@
     - lookup('ansible.builtin.file', openhuman_home ~ '/users/' ~ _oh_local_id ~ '/config.toml', errors='ignore')
       | default('', true) | regex_search('(?m)^onboarding_completed\s*=\s*true') is none
 
+# Re-asserted every run: the key lives in the keychain file, which the role does not read back.
+- name: "[openhuman] Memory engine: KEAP's hippocampus (memory_engine_set)"
+  ansible.builtin.command:
+    argv: ["{{ _oh_bin }}", core, call, --method, openhuman.memory_engine_set, --params, "{{ _p | to_json }}"]
+  vars:
+    _p: {engine: cortexdb, endpoint: "{{ _oh_hippocampus_url }}", api_key: "{{ keap_hippocampus_key_openhuman }}"}
+  no_log: true
+  changed_when: false
+  when:
+    - _oh_hippocampus | bool
+    - _oh_bin_stat.stat.exists and not _oh_running | bool
+    - _oh_active == _oh_local_id
+
 # 4/4 Declared keys win, every other key stays (a TOML merge, not an overwrite). Schema keys only.
 # Last of the four: the vendor RPCs above save the whole profile with the app's defaults.
 - name: "[openhuman] config.toml — declared keys merged into every profile"
@@ -155,6 +171,7 @@
       Once, by hand: import {{ openhuman_home }}/nos-openhuman.lsrules into Little Snitch.
 
 # The reader writes the verdict: RED fails the play, UNKNOWN (app idle, updater) does not.
+# hippocampus is left out: this role runs before stack-up rebuilds KEAP; keap post.yml verifies it.
 - name: "[openhuman] Verify with tools/openhuman-status.py"
   ansible.builtin.command:
     argv: ["{{ ansible_playbook_python }}", "{{ openhuman_source_dir }}/tools/openhuman-status.py", "--json"]
@@ -168,5 +185,6 @@
   changed_when: false
   failed_when: >-
     _oh_status.rc != 0 or
-    (_oh_status.stdout | from_json | selectattr('state', 'equalto', 'RED') | list | length) > 0
+    (_oh_status.stdout | from_json | selectattr('state', 'equalto', 'RED')
+     | rejectattr('check', 'equalto', 'hippocampus') | list | length) > 0
   tags: ['verify']

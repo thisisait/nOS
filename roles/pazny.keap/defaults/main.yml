@@ -84,7 +84,7 @@ keap_repo_url: "https://github.com/thisisait/nos-keap.git"
 # v2.0.1 — v2.0.0 (rc1 review wave) + lint resolving keaptable: refs, which
 # had graded all 111 table refs a broken medium (2026-10-01). Do not pin a
 # branch or raw SHA.
-keap_repo_ref: "v2.0.1"
+keap_repo_ref: "v2.1.0"
 
 # ── The cortex cutover (KEAP P-5) ────────────────────────────────────────────
 # false ⇒ KEAP answers /agent/v1/validate with its OWN typechecker (the shipped

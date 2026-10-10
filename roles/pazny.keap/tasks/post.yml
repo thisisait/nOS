@@ -182,6 +182,19 @@
   ansible.builtin.include_tasks: seed-core-tables.yml
   when: install_keap | default(false) | bool
 
+# OpenHuman's memory engine points here. Keyless health: 401 = live, 503 = no key, 404 = KEAP < v2.1.0.
+- name: "[pazny.keap] Verify the hippocampus answers (OpenHuman memory)"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ keap_port | default(8091) }}/hippocampus/v1/admin/health"
+    status_code: [401]
+  retries: 5
+  delay: 3
+  register: _hippo
+  until: _hippo.status == 401
+  when:
+    - install_keap | default(false) | bool
+    - install_openhuman | default(false) | bool
+
 # ── n8n pack DataTables (docs/doctrine/n8n-packs.md) ─────────────────────────
 - name: "[pazny.keap] Seed n8n pack DataTables (cnb-fx, party-registry-status)"
   ansible.builtin.include_tasks: seed-pack-tables.yml

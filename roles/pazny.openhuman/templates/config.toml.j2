@@ -25,15 +25,19 @@ enabled = false
 enabled = false
 [memory]
 # 0.64.15 has no local store: engine binds tinyhumans (cloud, the default), cortexdb or none.
-# conversations/recall default on; auto_save and [memory_tree] are ignored legacy keys.
-engine = "none"
+# With KEAP, cortexdb is KEAP's hippocampus on loopback (rows in `engram`); the key is in the keychain.
+engine = "{{ 'cortexdb' if _oh_hippocampus else 'none' }}"
 embedding_provider = "ollama"
 embedding_model = "{{ openhuman_embed_model }}"
 embedding_dimensions = {{ openhuman_embed_dimensions }}
+{% if _oh_hippocampus %}
+[memory.engines.cortexdb]
+endpoint = "{{ _oh_hippocampus_url }}"
+{% endif %}
 [memory.conversations]
-enabled = false
+enabled = {{ _oh_hippocampus | lower }}
 [memory.recall]
-enabled = false
+enabled = {{ _oh_hippocampus | lower }}
 [local_ai]
 runtime_enabled = true
 opt_in_confirmed = true

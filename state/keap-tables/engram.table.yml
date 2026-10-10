@@ -1,0 +1,19 @@
+# One row per memory event of an agent, written by KEAP's hippocampus (v2.1.0),
+# which serves the CortexDB Direct wire OpenHuman's memory engine speaks.
+title: "Engram"
+description: >-
+  One row per memory event of an OpenHuman agent, written by KEAP's hippocampus
+  (the CortexDB Direct wire). agent = the key's principal; one agent never reads another's rows.
+driver: libsql
+visibility: private
+sharedWith: []
+schema:
+  columns:
+    - {key: agent, label: "Agent", kind: text, role: dimension, required: true, concept: access.owner}
+    - {key: scope, label: "Scope", kind: text, role: dimension, required: true}
+    - {key: modality, label: "Modality", kind: text, role: dimension, required: true}   # document|observation|conversation
+    - {key: role, label: "Role", kind: text, role: attribute}                            # user|assistant|system|tool
+    - {key: text, label: "Text", kind: text, role: attribute, required: true}
+    - {key: labels, label: "Labels", kind: json, role: attribute}
+    - {key: observed_at, label: "Observed at", kind: text, role: attribute}              # RFC3339 as sent
+    - {key: idempotency_key, label: "Idempotency key", kind: text, role: attribute, required: true}
