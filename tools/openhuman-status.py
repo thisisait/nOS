@@ -125,6 +125,8 @@ def judge_config(cfg: dict | None, src: str, provider: str | None = None) -> lis
     out.append(line("core updater", OK if not upd and not mut else RED,
                     f"enabled={str(upd).lower()} rpc_mutations={str(mut).lower()}", src))
     routes = {w: _get(cfg, w) or "cloud" for w in WORKLOADS}
+    if "default_model" in cfg:   # the session clones it over chat_provider (web_chat/session.rs)
+        routes["default_model"] = cfg["default_model"] or "cloud"
     cloud = [w for w, v in routes.items() if not str(v).startswith(allowed)]
     base_url = _get(cfg, "local_ai.base_url")
     remote_base = bool(base_url) and not _loopback(base_url)

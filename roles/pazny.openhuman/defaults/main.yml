@@ -17,3 +17,5 @@ openhuman_embed_dimensions: 768
 openhuman_enabled_tools: [shell, git_operations, file_read, read_diff, csv_export, file_write, update_memory_md, image_info,
                           web_search_tool, memory_store, memory_recall, memory_forget, cron_add, cron_list, cron_remove,
                           cron_update, cron_run, cron_runs, schedule]
+# Ollama num_ctx and the declared window. The system prompt alone is ~9k tokens; KV grows with it.
+openhuman_context_window: 16384

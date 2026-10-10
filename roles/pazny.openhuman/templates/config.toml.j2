@@ -1,5 +1,6 @@
 {# The keys nOS declares; toml_merge.py keeps every other key already in the file. #}
-default_model = "{{ _oh_model }}"
+# The session clones default_model over chat_provider: it needs the provider prefix too.
+default_model = "{{ _oh_route }}"
 chat_provider = "{{ _oh_route }}"
 reasoning_provider = "{{ _oh_route }}"
 agentic_provider = "{{ _oh_route }}"
@@ -45,7 +46,16 @@ provider = "ollama"
 base_url = "http://127.0.0.1:11434"
 chat_model_id = "{{ ollama_small_model }}"
 embedding_model_id = "{{ openhuman_embed_model }}"
-num_ctx = 8192
+num_ctx = {{ openhuman_context_window }}
+[runtime]
+# Thinking off by default (a 14B qwen3 thought for minutes); raise it per thread in the composer.
+reasoning_effort = "none"
+# The window the prompt is trimmed to; without it a local model is guessed at 8192 and the
+# system prompt (~35 kB) evicts the user's message. Same number as num_ctx.
+[[model_registry]]
+id = "{{ _oh_local_model }}"
+provider = "ollama"
+context_window = {{ openhuman_context_window }}
 {% if openhuman_register_mcp | bool %}
 # The static MCP set read at boot (mcp::host::static_registry). env is literal, so the RO token is read by sh at spawn.
 [[mcp_client.servers]]

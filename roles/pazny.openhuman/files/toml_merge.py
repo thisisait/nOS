@@ -14,8 +14,12 @@ import sys
 import tomllib
 
 
-def _named(x) -> bool:
-    return isinstance(x, list) and all(isinstance(i, dict) and "name" in i for i in x)
+def _id(i: dict):
+    return i.get("name", i.get("id"))
+
+
+def _named(x) -> bool:   # [[mcp_client.servers]] by name, [[model_registry]] by id
+    return isinstance(x, list) and all(isinstance(i, dict) and _id(i) is not None for i in x)
 
 
 def merge(base: dict, over: dict) -> dict:
@@ -23,9 +27,9 @@ def merge(base: dict, over: dict) -> dict:
     for k, v in over.items():
         if isinstance(v, dict) and isinstance(out.get(k), dict):
             out[k] = merge(out[k], v)
-        elif v and _named(v) and _named(out.get(k)):  # [[mcp_client.servers]]: by name, foreign entries kept
-            mine = {i["name"]: i for i in v}
-            out[k] = [merge(i, mine.pop(i["name"])) if i["name"] in mine else i for i in out[k]] + list(mine.values())
+        elif v and _named(v) and _named(out.get(k)):  # keyed arrays: foreign entries kept
+            mine = {_id(i): i for i in v}
+            out[k] = [merge(i, mine.pop(_id(i))) if _id(i) in mine else i for i in out[k]] + list(mine.values())
         else:
             out[k] = v
     return out
