@@ -432,3 +432,12 @@ def test_the_merge_keeps_the_apps_own_model_registry_entries():
     base = {"model_registry": [{"id": "gpt-x", "provider": "openai", "context_window": 128000}]}
     out = tm.merge(base, {"model_registry": [{"id": "hermes3:8b", "provider": "ollama", "context_window": 16384}]})
     assert [e["id"] for e in out["model_registry"]] == ["gpt-x", "hermes3:8b"], out
+
+
+# 2026-10-10: asked to "add a note", a 27B model with only a read-only nOS tool wrote a shell
+# command appending to notes.txt. The twin needs the procedure: what nOS holds, what it may do.
+@needs_ansible
+def test_the_twin_gets_the_nos_procedure_skill(tmp_path):
+    home, _, _ = _converge(tmp_path, app_present=True, config="")
+    skill = home / ".openhuman/skills/nos-for-openhuman/SKILL.md"
+    assert skill.is_file() and not skill.parent.is_symlink(), "the nOS procedure skill was not copied"
