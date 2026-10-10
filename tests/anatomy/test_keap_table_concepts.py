@@ -85,6 +85,8 @@ CONCEPTLESS = {
     "caddy.value": "the value of an operator setting is not identity.* or lifecycle.status — needs config.value",
     "engram.role": "who spoke (user|assistant|tool) is not a class of the row — needs conv.speaker",
     "engram.text": "what was remembered is not identity.description — needs memory.content",
+    "loop-config.enabled": "an on/off switch is not lifecycle.status (select/text) — needs lifecycle.enabled",
+    "engram.observed_at": "RFC3339 text as the wire sends it — time.occurred_at is kind date — needs a text-time concept",
     "engram.labels": "the wire's envelope labels are not one category — needs class.tag",
     "caddy-sessions.model": "a model URI is not deploy.image (that is a container) — needs llm.model",
     "caddy-sessions.transcript": "a speech transcript is not identity.description — needs media.transcript",
@@ -279,6 +281,25 @@ def test_declared_concepts_exist_in_the_vendored_vocabulary():
         "concepts not in the vendored vocabulary — add them to KEAP's "
         "shared/contracts/field-concepts.ts and re-vendor first:\n  " + "\n  ".join(unknown)
     )
+
+
+def test_a_concept_binds_only_the_kinds_it_allows():
+    """KEAP refuses a concept on a column kind the vocabulary does not list for it
+    (400 on POST /agent/v1/tables). engram.observed_at bound time.occurred_at
+    (kinds: date) on a text column: offline green, and the 2026-10-10 converge
+    died on the seeder's retry."""
+    # The schema-pin copy (contracts/keap), the one KEAP's zod validates against — not the cortex copy.
+    text = (REPO / "files/anatomy/contracts/keap/field-concepts.ts").read_text()
+    kinds = {i: re.findall(r"'([^']+)'", k)
+             for i, k in re.findall(r"\{\s*id:\s*'([^']+)'[^}]*?kinds:\s*\[([^\]]*)\]", text)}
+    assert len(kinds) == len(re.findall(r"\{\s*id:\s*'", text)), "a vocabulary entry the parse missed"
+    bad = sorted(
+        f"{name}.{c['key']}: {c['concept']} binds {kinds[c['concept']]}, the column is {c['kind']}"
+        for name, doc in _definitions()
+        for c in doc["schema"]["columns"]
+        if c.get("concept") in kinds and c["kind"] not in kinds[c["concept"]]
+    )
+    assert not bad, "concept on a kind KEAP refuses:\n  " + "\n  ".join(bad)
 
 
 # Definitions that exist but are deliberately NOT seeded, with the reason.
