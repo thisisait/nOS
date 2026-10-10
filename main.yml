@@ -2463,6 +2463,28 @@
         - not (nos_allow_no_docker | default(false) | bool)
       tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
 
+    # Measured 2026-10-10: on a 10 GB VM the converge ran an hour and died on a
+    # 30 s KEAP timeout that named a table, not the cause. Refuse up front.
+    - name: "[Core] Refuse a Docker VM smaller than the estate needs"
+      ansible.builtin.fail:
+        msg: |
+          Docker has {{ nos_docker_memory_gib }} GiB of memory; this estate needs
+          at least {{ docker_min_memory_gib }} GiB (docker_min_memory_gib).
+
+          With less, the Docker VM spends its CPU short of memory, services
+          answer in seconds instead of milliseconds, and the run fails late on
+          a timeout in some unrelated task.
+
+          Docker Desktop → Settings → Resources → Memory: raise it to at least
+          {{ (docker_min_memory_gib | float + 0.5) | round(0, 'ceil') | int }} GB, apply, and re-run.
+          A smaller estate (fewer install_* on) may set a lower
+          docker_min_memory_gib in config.yml.
+      when:
+        - nos_docker_ready | default(true) | bool
+        - (nos_docker_memory_gib | default(0) | float) > 0
+        - (nos_docker_memory_gib | float) < (docker_min_memory_gib | float)
+      tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
+
     - name: "[Models] Drop resident local models before services come up"
       ansible.builtin.import_tasks: tasks/models-unload.yml
       tags: ['always']

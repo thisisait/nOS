@@ -175,7 +175,7 @@
 # and shared-network + core/stack/apps-up skip gracefully instead of erroring on
 # a missing binary. On a real host with Docker up it records true → no change.
 - name: "[Docker] Final daemon readiness probe"
-  ansible.builtin.command: "{{ docker_bin }} info"
+  ansible.builtin.command: "{{ docker_bin }} info --format json"
   register: _docker_final
   changed_when: false
   failed_when: false
@@ -184,3 +184,9 @@
 - name: "[Docker] Record stack-layer docker readiness"
   ansible.builtin.set_fact:
     nos_docker_ready: "{{ _docker_final.rc | default(1) == 0 }}"
+    # The VM's memory as Docker reports it (Docker Desktop's 11.5 GB slider
+    # reads 11.17 here); 0 when the daemon is down, which the refusal above it
+    # in main.yml already covers.
+    nos_docker_memory_gib: >-
+      {{ ((_docker_final.stdout | from_json).MemTotal / 1073741824) | round(2)
+         if (_docker_final.rc | default(1)) == 0 else 0 }}

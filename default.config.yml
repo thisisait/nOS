@@ -482,6 +482,10 @@ docker_mem_limit_light: "512m"           # Redis, Kiwix, Tileserver, exporters
 docker_cpus_heavy: "2.0"
 docker_cpus_standard: "1.0"
 docker_cpus_light: "0.5"
+# The smallest Docker VM (GiB, as `docker info` MemTotal reports it) a converge
+# starts on. Measured 2026-10-10, all-on: 10 GB (9.7 GiB) died on timeouts an
+# hour in, 11.5 GB (11.17 GiB) ran failed=0. A smaller estate may lower it.
+docker_min_memory_gib: 11
 
 # ==============================================================================
 # INSTALLATION QUEUE
