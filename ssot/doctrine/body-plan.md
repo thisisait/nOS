@@ -105,8 +105,9 @@ are habitat, third-party processors beside the organism.
 - **memory** is what nOS has learned, kept in KEAP. **verdicts** is the log
   of what each sense reported and what the operator judged. A symbiont's own
   scratch store (mcp_gateway server-memory at `/data/memory.json`; Hermes
-  `~/.hermes/memory.json`; OpenHuman `memory_tree`) is not nOS memory: it is
-  declared and left where it is, not switched off.
+  `~/.hermes/memory.json`) is not nOS memory: it is declared and left where it
+  is, not switched off. OpenHuman keeps no store of its own: its memory engine
+  is KEAP's hippocampus, so its engrams are KEAP rows.
 - **law** is the rules in force (`ssot/doctrine/`); it is kept apart from the genome.
 - **reflex**, **Pulse** and **heartbeat** are defined once, in
   [`loops.md`](loops.md) §10.

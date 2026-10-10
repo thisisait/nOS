@@ -417,7 +417,7 @@ words:
     not: [cortex, verdicts, stores]
     counter_example: >-
       a symbiont's own scratch store (mcp_gateway server-memory at /data/memory.json,
-      Hermes ~/.hermes/memory.json, OpenHuman memory_tree): declared, kept beside nOS,
+      Hermes ~/.hermes/memory.json): declared, kept beside nOS,
       never what nOS learned; likewise Wing's audit ledger (what happened, not what was learned)
     retired:
       - sense: "The Memory, the apex group of databases"
