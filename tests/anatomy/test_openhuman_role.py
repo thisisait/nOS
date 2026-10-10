@@ -89,7 +89,7 @@ def _converge(tmp: Path, app_present: bool = False, config: str | None = None,
               caskroom: bool = False, profiles: dict[str, str] | None = None,
               verify_only: bool = False, ok: bool = True, cli: bool = False, running: bool = False,
               marker: str | None = None, app_state: dict[str, dict] | None = None,
-              onboard_writes: str | None = None) -> tuple[Path, str, str]:
+              onboard_writes: str | None = None, extra: dict | None = None) -> tuple[Path, str, str]:
     home, stubs, brew = tmp / "home", tmp / "stubs", tmp / "brew"
     app = tmp / "Applications/OpenHuman.app"
     log = tmp / "calls.log"
@@ -131,7 +131,7 @@ def _converge(tmp: Path, app_present: bool = False, config: str | None = None,
                       **{k: defaults[k] for k in KEYS}, "homebrew_symbiont_casks": casks,
                       "install_openhuman": True, "homebrew_prefix": str(brew), "docker_bin": str(stubs / "docker"),
                       "nos_main_checkout": str(REPO), "openhuman_source_dir": str(REPO), "openhuman_app": str(app),
-                      "openhuman_hostname": HOSTNAME},
+                      "openhuman_hostname": HOSTNAME, **(extra or {})},
              "tasks": [{"include_role": {"name": "pazny.openhuman"}, "tags": ["verify"] if verify_only else []}]}]
     (tmp / "play.yml").write_text(yaml.safe_dump(play))
     path = f"{stubs}:/usr/bin:/bin:/usr/sbin:/sbin"
@@ -355,3 +355,33 @@ def test_the_declared_keys_outlive_the_onboarding_rpc(tmp_path):
                            onboard_writes="onboarding_completed = true\n" + V0_64_15_MEMORY)
     cfg = tomllib.loads((home / ".openhuman/users/local-studio-local/config.toml").read_text())
     assert cfg["memory"]["engine"] == "none" and cfg["onboarding_completed"] is True, cfg
+
+
+# OpenHuman v0.64.15 has no local memory: KEAP's hippocampus (v2.1.0) is the cortexdb engine.
+HIPPO = {"install_keap": True, "keap_port": 8091, "keap_hippocampus_key_openhuman": "SECRET-K"}
+
+
+@needs_ansible
+def test_memory_is_bound_to_the_keap_hippocampus(tmp_path):
+    home, calls, _ = _converge(tmp_path, cli=True, marker="local-studio-local",
+                               profiles={"local-studio-local": "onboarding_completed = true\n"},
+                               app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}},
+                               extra=HIPPO)
+    raw = (home / ".openhuman/users/local-studio-local/config.toml").read_text()
+    mem = tomllib.loads(raw)["memory"]
+    assert mem["engine"] == "cortexdb", mem
+    assert mem["engines"]["cortexdb"]["endpoint"] == "http://127.0.0.1:8091/hippocampus", mem
+    assert mem["conversations"]["enabled"] is True and mem["recall"]["enabled"] is True, mem
+    assert "SECRET-K" not in raw, "the key belongs in the keychain, not config.toml"
+    bind = [ln for ln in calls.splitlines() if "openhuman.memory_engine_set" in ln]
+    assert bind and "SECRET-K" in bind[0] and "/hippocampus" in bind[0], calls
+
+
+@needs_ansible
+def test_without_keap_memory_stays_off(tmp_path):
+    home, calls, _ = _converge(tmp_path, cli=True, marker="local-studio-local",
+                               profiles={"local-studio-local": "onboarding_completed = true\n"},
+                               app_state={"local-studio-local": {"onboardingTasks": {"enabledTools": ["shell"]}}},
+                               extra={"install_keap": False})
+    mem = tomllib.loads((home / ".openhuman/users/local-studio-local/config.toml").read_text())["memory"]
+    assert mem["engine"] == "none" and "memory_engine_set" not in calls, mem
