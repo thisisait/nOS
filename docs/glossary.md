@@ -93,6 +93,10 @@ genome → cell → tissue → organ → organ system → organism → habitat.
   Counter-example: state/anatomy-graph.json (the anatomy itself; the body plan is its projection).
 - **appendage** — An organ attached through one declared joint (a cross-repo contract: spec, fixture, symmetric gates), with its own code and licence, which no core organ depends on or imports; the organism survives its loss. A property of an organ, not a level. Not: tissue, symbiont, organ system, twin, limb, KEAP.
   Counter-example: KEAP: has a cross-repo contract and the core depends on it.
+- **engram** — One memory event of an agent, a row of the engram DataTable that the Hippocampus writes. Not: verdicts.
+  Counter-example: a chat transcript the app keeps (its history, not what it remembered).
+- **expression** (proposed, not yet ruled) — One component of the face's closed vocabulary: a renderer with a parameter schema that an agent chooses and fills with data during a conversation. The agent never writes markup. Not: skill, plugin.
+  Counter-example: a page of markup a model wrote (the vocabulary is closed; a model only chooses from it).
 
 ## Plumbing (hidden from the body plan)
 
@@ -120,6 +124,8 @@ genome → cell → tissue → organ → organ system → organism → habitat.
 - **Cortex** — The reasoning machinery (the cortex daemon, cortex-lang and Wing's executor); it is not KEAP. Not: memory, KEAP.
   Transitional debt (roadmap row `cortex-corpus-ruling`): The store inside Cortex is transitional: the Cortex corpus (a replica of memory held for the onto1 digest) with its libsql store, fs-sync, embeddings and ANN index. KEAP is memory; the store leaves Cortex after v0.17, and no new store code lands here.
 - **Face** — The web desktop.
+- **Hippocampus** — KEAP's door where an agent's memory is formed; it serves the CortexDB wire under /hippocampus and writes engrams. Not: Cortex, KEAP.
+- **Thalamus** — The Rust organ that relays each turn of a conversation to the organ that answers it and to Cortex. Cells act in it, and their organelles move into it from Wing's AgentKit one function at a time. Not: Cortex, Wing, organelles.
 - **Ears** — The speech organ, which hears and speaks.
 - **Apex** — The public page that shows the organ systems to strangers.
 - **KEAP** — The knowledge store where nOS keeps its memory. Not: Cortex.
