@@ -24,8 +24,9 @@ enabled = false
 # A reference twin is quiet: cron defaults on (config/schema/cron.rs) and onboarding seeds proactive jobs.
 enabled = false
 [memory]
-# auto_save is the v0.64.10 switch; 0.64.15 adds [memory.conversations]/[memory.recall], default on.
-auto_save = false
+# 0.64.15 has no local store: engine binds tinyhumans (cloud, the default), cortexdb or none.
+# conversations/recall default on; auto_save and [memory_tree] are ignored legacy keys.
+engine = "none"
 embedding_provider = "ollama"
 embedding_model = "{{ openhuman_embed_model }}"
 embedding_dimensions = {{ openhuman_embed_dimensions }}
@@ -33,9 +34,6 @@ embedding_dimensions = {{ openhuman_embed_dimensions }}
 enabled = false
 [memory.recall]
 enabled = false
-[memory_tree]
-llm_extractor_model = "{{ _oh_local_model }}"
-llm_summariser_model = "{{ _oh_local_model }}"
 [local_ai]
 runtime_enabled = true
 opt_in_confirmed = true
