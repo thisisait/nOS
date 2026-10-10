@@ -165,6 +165,11 @@ before it touches anything.
   the old path. After every host has run `nos --tags wing`, delete the
   symlink and the two fallback reads (`BindingResolver`, `readRegistry`); the
   gate `test_the_backend_register_compat_read.py` says which lines.
+- **Give Docker Desktop at least 12 GB of memory** for the all-on estate
+  (65 containers, 7.7 GiB resident, measured 2026-10-10). At 10 GB the VM
+  ran at 600–800 % CPU, KEAP answered in 2–20 s and two converges died on a
+  30 s timeout; at 11.5 GB the VM averaged 155 % and the converge ran
+  `failed=0`.
 
 ### Not promised in this release
 - **Gov readiness.** `profiles/gov-local.yml` exists, but the P0 blockers in
