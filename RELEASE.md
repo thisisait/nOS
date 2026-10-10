@@ -6,10 +6,10 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.15
 
 ---
 
-## v0.16-beta (2026-10-05 … 2026-10-09) — DRAFT, not yet cut
+## v0.16-beta (2026-10-05 … 2026-10-10) — DRAFT, not yet cut
 
 > **The body has a plan, and every part knows its name and its owner.**
-> 366 commits since `v0.15-beta` (850 files, +41.6k/−14.8k), measured with
+> 398 commits since `v0.15-beta` (858 files, +42.5k/−14.8k), measured with
 > `git log v0.15-beta..dev`. Still `-beta`. A blank converge on 2026-10-09
 > (`nos --remove=data --confirm`, then `nos`) ended with one failed task: one
 > of 84 first logins timed out (WordPress → Authentik, row
@@ -105,6 +105,35 @@ before it touches anything.
   fails only when the config asks for something the host lacks.
 - `pazny.ollama` pulls every model the config names (`ollama_model`,
   `ollama_small_model`, `ollama_vision_model`).
+
+### OpenHuman remembers in KEAP
+- KEAP v2.1.0 adds the **Hippocampus**: KEAP speaks OpenHuman's memory protocol
+  (CortexDB) under `/hippocampus`, and every memory becomes a row (an
+  **engram**) of the `engram` DataTable, in backups like every other table.
+  OpenHuman v0.64.15 has no local memory store, so without this its memory was
+  either their cloud or off.
+- The key is derived per agent and opens `/hippocampus` only; OpenHuman keeps
+  it in its keychain file, never in `config.toml`. Without KEAP the role
+  declares `memory.engine = "none"`. KEAP's post-start verify checks the
+  route; `tools/openhuman-status.py` shows the engine and the route.
+- A fresh install chats without touching the settings: `default_model` now
+  carries its provider (a bare `hermes3:8b` was refused under `local_only`),
+  the window is 16384 tokens (at 8192 the 35 kB system prompt pushed the
+  user's message out), and thinking is off unless chosen per thread.
+- Recall is word-based for now: KEAP's vector search covers tables up to 500
+  rows.
+
+### A blank can be undone
+- `nos --tags restore -e restore_from=<dir>` restores from a local backup set;
+  `--remove=data` wipes RustFS, so the S3 path is gone right after a blank.
+- A KEAP restore moves the old `keap.db-wal` and `-shm` aside with the
+  database; left in place, KEAP replayed them into the restored file and
+  crash-looped on `SQLITE_CORRUPT`.
+- A converge creates the tables the default tools address (the roadmap,
+  `current-state`, the books spine); a fresh install had none of them, and
+  Books errored. An existing roadmap is created, never reshaped.
+- A column's concept must fit its kind (a date concept on a text column is
+  refused by KEAP); a pytest gate now says so before the converge does.
 
 ### Smaller changes you may notice
 - **Loki**: host-daemon logs (Wing, Bone, Pulse, Cortex) carry

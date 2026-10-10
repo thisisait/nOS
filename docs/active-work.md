@@ -13,10 +13,12 @@
 1. **v0.16-beta is being drafted** (row `rel-016`; `RELEASE.md` section marked
    DRAFT). Blank converge 2026-10-09: one first-login timeout (passed on
    `--tags identities`), smoke 50/50, `--strict` with the tester 49/50 (probe
-   fixed), E2E 339/0. Open before the tag, per MUST: (1) CI on every lane at the
-   release PR; (2) atlas needs `install_martin: true` and one converge (the
-   operator's config call); (4) OpenHuman converges once the orphaned cask is
-   reinstalled (`nos --tags openhuman`, app quit); (6) one converge `failed=0`.
+   fixed), E2E 339/0. Converge `failed=0` on 2026-10-10 (MUST 6), after a KEAP
+   restore from the pre-blank set; OpenHuman memory lives in KEAP (hippocampus,
+   keap v2.1.0). Open before the tag: (1) CI on every lane at the release PR
+   (macOS integration only runs there); (2) atlas needs `install_martin: true`
+   and one converge, or the MUST moves to a release note (the operator's call);
+   one more `nos` to prove the OpenHuman chat route, then a second host.
    After the tag: `review-v015-followups`, `default-config-split`,
    `containerized-core`; v0.17 rows: Iris cell, OpenHuman acceptance.
 2. **Wing compat symlink** `state/llm-backends.yml` → `state/habitat/` stays until
