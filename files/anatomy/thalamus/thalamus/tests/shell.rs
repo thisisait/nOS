@@ -122,3 +122,47 @@ fn an_approval_is_decided_by_y_or_n_once() {
     assert_eq!(app.key(key(KeyCode::Char('n'))),
                Some(ToThalamus::ApprovalDecision { approval: APPROVAL.into(), decision: Decision::Reject, note: None }));
 }
+
+// --- the approval shows all it approves, or y approves nothing ---
+
+fn flat(t: &Terminal<TestBackend>) -> String {
+    let b = t.backend().buffer();
+    b.content().iter().map(|c| c.symbol()).collect()
+}
+
+fn diff_of(approval: &str, cells: &[(&str, serde_json::Value)]) -> ToShell {
+    use nos_contract::renderers::{CellChange, Component, RowDiffApproval};
+    let cells = cells.iter().map(|(k, v)| CellChange { key: k.to_string(), old: serde_json::Value::Null, new: v.clone() }).collect();
+    ToShell::ApprovalRequest { session: SESSION.into(), approval: approval.into(),
+                               component: Component::RowDiffApproval(RowDiffApproval { table: "todos".into(), row_id: "r1".into(), cells }) }
+}
+
+fn drawn(app: &App, w: u16, h: u16) -> Terminal<TestBackend> {
+    let mut t = Terminal::new(TestBackend::new(w, h)).unwrap();
+    t.draw(|f| shell::draw(f, app)).unwrap();
+    t
+}
+
+#[test]
+fn a_long_value_is_wrapped_never_cut_off() {
+    let mut app = App::default();
+    app.apply(diff_of(APPROVAL, &[("notes", serde_json::json!(format!("{} DROP EVERYTHING", "x".repeat(90))))]));
+    assert!(flat(&drawn(&app, 80, 10)).contains("DROP EVERYTHING"), "the new value is not on screen, yet y approves it");
+}
+
+#[test]
+fn an_approval_taller_than_the_screen_keeps_its_header_and_y_waits() {
+    let mut app = App::default();
+    for i in 0..30 {
+        app.apply(ToShell::Text { session: SESSION.into(), text: format!("noise {i}") });
+    }
+    let cells: Vec<(String, serde_json::Value)> = (0..20).map(|i| (format!("c{i}"), serde_json::json!(i))).collect();
+    let cells: Vec<(&str, serde_json::Value)> = cells.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
+    app.apply(diff_of(APPROVAL, &cells));
+    let small = flat(&drawn(&app, 80, 10));
+    assert!(small.contains("edit todos / r1"), "the header of the edit scrolled away");
+    assert!(app.key(key(KeyCode::Char('y'))).is_none(), "y approved cells that were not on screen");
+    drawn(&app, 80, 40);
+    assert_eq!(app.key(key(KeyCode::Char('y'))),
+               Some(ToThalamus::ApprovalDecision { approval: APPROVAL.into(), decision: Decision::Approve, note: None }));
+}
