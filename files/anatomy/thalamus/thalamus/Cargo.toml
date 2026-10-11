@@ -1,0 +1,9 @@
+[package]
+name = "thalamus"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "The relay organ: one person at the shell, tools run as that person through KEAP's human door."
+
+[dependencies]
+nos-contract = { path = "../contract" }
