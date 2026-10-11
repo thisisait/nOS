@@ -405,6 +405,7 @@ fn commit_without_a_decision_row_is_err() {
 fn reader(rig: &Rig, name: &str, py: &str) {
     let tools = rig.srv.repo.join("tools");
     std::fs::create_dir_all(&tools).unwrap();
+    std::fs::set_permissions(&tools, std::fs::Permissions::from_mode(0o700)).unwrap(); // bind()'s umask, as in dir()
     std::fs::write(tools.join(name), py).unwrap();
 }
 
