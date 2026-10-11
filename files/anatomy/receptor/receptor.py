@@ -8,6 +8,8 @@ roles/pazny.receptor; JSON, which is YAML), shape {"logins": {<login>:
 {"username", "groups": [...]}}}. A login not in the map is refused, never
 defaulted. Client X-Authentik-* and x-keap-proxy-secret are dropped; the
 receptor injects the person's headers plus the proxy secret only it holds.
+It refuses a head it would split differently than an upstream might (bare
+CR/LF, NUL, folds, non-token names, two lengths).
 
     receptor.py --socket ~/.nos/keap-identity.sock [--map ~/.nos/identity-map.yml] [--upstream 127.0.0.1:8091]
 
@@ -23,6 +25,7 @@ import asyncio
 import json
 import os
 import pwd
+import re
 import socket
 import struct
 import sys
@@ -30,7 +33,27 @@ import time
 
 SECRET = os.environ.get("KEAP_PROXY_SHARED_SECRET", "")
 DROP = ("x-authentik-", "x-keap-proxy-secret", "connection", "proxy-connection", "keep-alive", "upgrade")
-REASON = {403: "Forbidden", 502: "Bad Gateway", 503: "Service Unavailable"}
+REASON = {400: "Bad Request", 403: "Forbidden", 405: "Method Not Allowed", 502: "Bad Gateway",
+          503: "Service Unavailable"}
+TOKEN = re.compile(r"[!#$%&'*+.^_`|~0-9A-Za-z-]+")  # RFC 7230 header-name
+
+
+def malformed(head: bytes) -> str | None:
+    """Why this request head is refused, or None. An upstream that splits a head
+    differently than we do would see headers we never vetted."""
+    raw = head[:-4]
+    if b"\0" in raw or b"\r" in raw.replace(b"\r\n", b"") or b"\n" in raw.replace(b"\r\n", b""):
+        return "bare CR, LF or NUL in the request head"
+    lengths = 0
+    for h in raw.decode("latin-1").split("\r\n")[1:]:
+        if h[:1] in (" ", "\t"):
+            return "folded header line"
+        k, sep, _ = h.partition(":")
+        if not sep or not TOKEN.fullmatch(k):
+            return "header name is not a token"
+        lengths += k.lower() == "content-length"
+    return "duplicate Content-Length" if lengths > 1 else None
+
 
 
 def peer_uid(sock) -> int:
@@ -78,6 +101,11 @@ async def handle(reader, writer, upstream: tuple, map_path: str):
         return
     lines = head.decode("latin-1").split("\r\n")
     request_line = lines[0]
+    why = malformed(head)
+    if why:
+        print(f"400 {login or '?'} {request_line!r}", flush=True)
+        await reply(writer, 400, why)
+        return
     who = person(login, map_path) if login else None
     if not who:
         print(f"403 {login or '?'} {request_line}", flush=True)
