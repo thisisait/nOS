@@ -5,11 +5,11 @@
 
 use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, Session};
-use nos_contract::renderers::{Component, Row, TableResults};
-use nos_contract::wire::{decode_to_thalamus, encode, ToShell, ToThalamus};
+use nos_contract::renderers::{CellChange, Component, Row, RowDiffApproval, TableResults};
+use nos_contract::wire::{decode_to_thalamus, encode, Decision, ToShell, ToThalamus};
 use nos_contract::uid;
-use serde_json::{json, Value};
-use std::collections::{BTreeMap, BTreeSet};
+use serde_json::{json, Map, Value};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::os::unix::io::AsRawFd;
@@ -124,6 +124,8 @@ struct Open {
     model: Binding,
     messages: Vec<Value>,
     tokens: (i64, i64),
+    /// Approvals asked and not yet decided; a decision removes its id, so each is decided once.
+    pending: HashSet<String>,
 }
 
 fn send(out: &mut UnixStream, m: &ToShell) {
@@ -148,12 +150,21 @@ const SEARCH_ROWS: &str = "Find rows in one DataTable whose cells contain `q` (c
 read as the person). Renders table_results: the matching rows, shown to the person as a table; \
 projected is false because this is a substring match, not a semantic search.";
 
+const PROPOSE_ROW_EDIT: &str = "Propose new values for cells of one existing row. Renders row_diff_approval: \
+the person sees each changed cell old -> new and approves or rejects it. Nothing is written until they \
+approve; you are told only that the proposal waits for them.";
+
 fn tools() -> Value {
     json!([{"type": "function", "function": {"name": "search_rows", "description": SEARCH_ROWS,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "q"], "properties": {
             "table": {"type": "string", "description": "the table id"},
             "q": {"type": "string"},
-            "limit": {"type": "integer", "minimum": 1, "maximum": 20}}}}}])
+            "limit": {"type": "integer", "minimum": 1, "maximum": 20}}}}},
+        {"type": "function", "function": {"name": "propose_row_edit", "description": PROPOSE_ROW_EDIT,
+        "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "row_id", "values"], "properties": {
+            "table": {"type": "string", "description": "the table id"},
+            "row_id": {"type": "string", "description": "the row's __id from search_rows"},
+            "values": {"type": "object", "description": "column -> new value; null clears the cell"}}}}}])
 }
 
 impl Server {
@@ -205,7 +216,11 @@ impl Server {
                         self.turn(&who, &mut out, o, &text);
                     }
                 }
-                // ponytail: approvals land in increment 6, control views in 7.
+                Ok(ToThalamus::ApprovalDecision { approval, decision, note }) => match open.as_mut() {
+                    Some(o) if o.pending.contains(&approval) => self.decide(&who, &mut out, o, &approval, decision, note),
+                    _ => refuse(&mut out, "no open approval with that id"),
+                },
+                // ponytail: control views land in increment 7.
                 Ok(_) => refuse(&mut out, "not served yet in this slice"),
             }
         }
@@ -224,20 +239,65 @@ impl Server {
         self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.start(&s).map_err(|e| format!("ledger: {e}"))?;
         send(out, &ToShell::Session { session: session.clone(), actor, model_uri });
         let system = format!("You are Iris. You act for {} and see only what they may see.", who.username);
-        Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0) })
+        Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
+                  pending: HashSet::new() })
     }
 
-    fn record(&self, o: &Open, kind: Kind, tool: Option<&str>, v: Value) {
-        if let Ok(l) = self.ledger.lock() {
-            if let Err(e) = l.record(&o.session, kind, tool, &v) {
-                drop(l);
-                self.say(format!("ledger refused an event of {}: {e}", o.session));
-            }
+    /// One ledger event; the row id, or the reason it was refused (also logged).
+    fn record(&self, o: &Open, kind: Kind, tool: Option<&str>, v: Value) -> Result<i64, String> {
+        let r = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())
+            .and_then(|l| l.record(&o.session, kind, tool, &v).map_err(|e| e.to_string()));
+        if let Err(e) = &r {
+            self.say(format!("ledger refused an event of {}: {e}", o.session));
         }
+        r
+    }
+
+    /// Asks the person: the request is in the ledger before the shell sees it, or it is not asked.
+    fn ask(&self, o: &mut Open, out: &mut UnixStream, d: RowDiffApproval) -> Result<Value, String> {
+        let approval = mint_uuid().map_err(|e| format!("no approval id: {e}"))?;
+        self.record(o, Kind::ApprovalRequest, Some("propose_row_edit"),
+                    json!({"approval": approval, "table": d.table, "row_id": d.row_id, "cells": d.cells}))?;
+        o.pending.insert(approval.clone());
+        send(out, &ToShell::ApprovalRequest { session: o.session.clone(), approval: approval.clone(),
+                                              component: Component::RowDiffApproval(d) });
+        Ok(json!({"approval": approval, "status": "waiting for the person; nothing is written unless they approve"}))
+    }
+
+    fn decide(&self, who: &Person, out: &mut UnixStream, o: &mut Open, approval: &str, d: Decision, note: Option<String>) {
+        o.pending.remove(approval);
+        let said = if d == Decision::Approve { "approve" } else { "reject" };
+        let id = match self.record(o, Kind::ApprovalDecision, Some("propose_row_edit"),
+                                   json!({"approval": approval, "decision": said, "note": note})) {
+            Ok(id) => id,
+            Err(why) => return refuse(out, &format!("the decision was not recorded, so nothing is written: {why}")),
+        };
+        let (text, result) = match d {
+            Decision::Reject => ("Rejected: nothing was written.".to_string(), json!({"approval": approval, "written": false})),
+            Decision::Approve => match self.commit(who, id) {
+                Ok(row) => (format!("Approved: row {row} written."), json!({"approval": approval, "written": true, "row": row})),
+                Err(why) => (format!("Approved, but the write failed: {why}"), json!({"approval": approval, "error": why})),
+            },
+        };
+        let _ = self.record(o, Kind::ToolResult, Some("propose_row_edit"), result);
+        send(out, &ToShell::Text { session: o.session.clone(), text });
+    }
+
+    /// The only write path. It takes a decision row id and writes exactly what that row's
+    /// request showed the person; no approve row in the ledger, no POST.
+    pub fn commit(&self, who: &Person, decision: i64) -> Result<String, String> {
+        let (actor, table, row_id, values) = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.approved(decision)?;
+        if actor != format!("user:{}", who.uid()) {
+            return Err("the approval belongs to another person".into());
+        }
+        let url = format!("{}/api/tables/{}/rows", self.keap_url.trim_end_matches('/'), enc(&table));
+        // ponytail: KEAP upserts, so a row deleted since the proposal is recreated; needs an if-match on KEAP's side.
+        self.keap(who, &url, Some(&json!({"id": row_id, "values": values})))?;
+        Ok(row_id)
     }
 
     fn turn(&self, who: &Person, out: &mut UnixStream, o: &mut Open, text: &str) {
-        self.record(o, Kind::Message, None, json!({"role": "person", "text": text}));
+        let _ = self.record(o, Kind::Message, None, json!({"role": "person", "text": text}));
         o.messages.push(json!({"role": "user", "content": text}));
         let mut calls = 0;
         loop {
@@ -248,37 +308,36 @@ impl Server {
             o.messages.push(msg.clone());
             let Some(asked) = msg.get("tool_calls").and_then(Value::as_array).filter(|a| !a.is_empty()).cloned() else {
                 let text = msg.get("content").and_then(Value::as_str).unwrap_or("").to_string();
-                self.record(o, Kind::Message, None, json!({"role": "iris", "text": text}));
+                let _ = self.record(o, Kind::Message, None, json!({"role": "iris", "text": text}));
                 return send(out, &ToShell::Text { session: o.session.clone(), text });
             };
             for call in asked {
                 calls += 1;
                 if calls > MAX_TOOL_CALLS {
                     let text = format!("Stopped: more than {MAX_TOOL_CALLS} tool calls in one turn.");
-                    self.record(o, Kind::Message, None, json!({"role": "thalamus", "text": text}));
+                    let _ = self.record(o, Kind::Message, None, json!({"role": "thalamus", "text": text}));
                     return send(out, &ToShell::Text { session: o.session.clone(), text });
                 }
                 let name = call.pointer("/function/name").and_then(Value::as_str).unwrap_or("");
                 let args: Value = call.pointer("/function/arguments").and_then(Value::as_str)
                     .and_then(|a| serde_json::from_str(a).ok()).unwrap_or(Value::Null);
-                self.record(o, Kind::ToolUse, Some(name), json!({"args": args}));
+                let _ = self.record(o, Kind::ToolUse, Some(name), json!({"args": args}));
                 let result = match name {
-                    "search_rows" => self.search_rows(who, &args),
-                    _ => Err(format!("unknown tool {name:?}")),
-                };
-                let for_model = match result {
-                    Ok(t) => {
+                    "search_rows" => self.search_rows(who, &args).map(|t| {
                         let ids: Vec<&str> = t.rows.iter().map(|r| r.__id.as_str()).collect();
-                        self.record(o, Kind::ToolResult, Some(name), json!({"rows": ids}));
+                        let _ = self.record(o, Kind::ToolResult, Some(name), json!({"rows": ids}));
                         let v = json!({"table": t.table, "rows": t.rows});
                         send(out, &ToShell::Render { session: o.session.clone(), component: Component::TableResults(t) });
                         v
-                    }
-                    Err(why) => {
-                        self.record(o, Kind::ToolResult, Some(name), json!({"error": why}));
-                        json!({"error": why})
-                    }
+                    }),
+                    // Its tool_result is written by decide(), once the person has answered.
+                    "propose_row_edit" => self.propose_row_edit(who, &args).and_then(|d| self.ask(o, out, d)),
+                    _ => Err(format!("unknown tool {name:?}")),
                 };
+                let for_model = result.unwrap_or_else(|why| {
+                    let _ = self.record(o, Kind::ToolResult, Some(name), json!({"error": why}));
+                    json!({"error": why})
+                });
                 o.messages.push(json!({"role": "tool", "tool_call_id": call.get("id").cloned().unwrap_or(Value::Null),
                                        "content": for_model.to_string()}));
             }
@@ -310,49 +369,82 @@ impl Server {
         let q = args.get("q").and_then(Value::as_str).map(|q| q.trim().to_lowercase()).filter(|q| !q.is_empty())
             .ok_or("search_rows needs `q`")?;
         let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(20).clamp(1, 20) as usize;
-        if self.secret.is_empty() {
-            return Err("the thalamus holds no KEAP proxy secret".into());
-        }
-        let (mut hits, mut cursor) = (Vec::new(), None::<String>);
+        let mut hits: Vec<Row> = self.rows(who, table)?.into_iter()
+            .filter(|(_, v)| Value::Object(v.clone()).to_string().to_lowercase().contains(&q))
+            .map(|(id, v)| Row { __id: id, cells: v.into_iter().collect::<BTreeMap<_, _>>() })
+            .collect();
+        hits.truncate(limit);
+        let columns: BTreeSet<String> = hits.iter().flat_map(|r| r.cells.keys().cloned()).collect();
+        Ok(TableResults { table: table.to_string(), columns: columns.into_iter().collect(), rows: hits, projected: false })
+    }
+
+    /// Every row of one table the person may read: GET /api/tables/:id/rows, every page.
+    fn rows(&self, who: &Person, table: &str) -> Result<Vec<(String, Map<String, Value>)>, String> {
+        let (mut all, mut cursor) = (Vec::new(), None::<String>);
         for _ in 0..MAX_PAGES {
             let mut url = format!("{}/api/tables/{}/rows?limit=500", self.keap_url.trim_end_matches('/'), enc(table));
             if let Some(c) = &cursor {
                 url += &format!("&cursor={}", enc(c));
             }
-            let page = self.keap_get(who, &url)?;
+            let page = self.keap(who, &url, None)?;
             for r in page.pointer("/data/rows").and_then(Value::as_array).into_iter().flatten() {
-                let values = r.get("values").and_then(Value::as_object).cloned().unwrap_or_default();
-                if Value::Object(values.clone()).to_string().to_lowercase().contains(&q) {
-                    let id = r.get("id").and_then(Value::as_str).unwrap_or_default().to_string();
-                    hits.push(Row { __id: id, cells: values.into_iter().collect::<BTreeMap<_, _>>() });
-                }
+                let id = r.get("id").and_then(Value::as_str).unwrap_or_default().to_string();
+                all.push((id, r.get("values").and_then(Value::as_object).cloned().unwrap_or_default()));
             }
             cursor = page.pointer("/data/nextCursor").and_then(Value::as_str).map(str::to_string);
             if cursor.is_none() {
                 break;
             }
         }
-        hits.truncate(limit);
-        let columns: BTreeSet<String> = hits.iter().flat_map(|r| r.cells.keys().cloned()).collect();
-        Ok(TableResults { table: table.to_string(), columns: columns.into_iter().collect(), rows: hits, projected: false })
+        Ok(all)
     }
 
-    /// keapAs() in the face's upstream.ts: the person's headers behind the proxy secret.
-    fn keap_get(&self, who: &Person, url: &str) -> Result<Value, String> {
-        let t0 = std::time::Instant::now();
-        let mut r = agent(30)
-            .get(url)
-            .header("x-keap-proxy-secret", &self.secret)
+    /// The cell diff of one existing row the person can read; only changed cells survive.
+    fn propose_row_edit(&self, who: &Person, args: &Value) -> Result<RowDiffApproval, String> {
+        let s = |k: &str| args.get(k).and_then(Value::as_str).filter(|v| !v.is_empty()).ok_or(format!("propose_row_edit needs `{k}`"));
+        let (table, row_id) = (s("table")?, s("row_id")?);
+        let values = args.get("values").and_then(Value::as_object).filter(|v| !v.is_empty())
+            .ok_or("propose_row_edit needs a non-empty `values` object")?;
+        // KEAP reads __ keys as row sharing; changing who sees a row is not this tool's to propose.
+        if let Some(k) = values.keys().find(|k| k.is_empty() || k.starts_with("__")) {
+            return Err(format!("column {k:?} cannot be edited here"));
+        }
+        let current = self.rows(who, table)?.into_iter().find(|(id, _)| id == row_id).map(|(_, v)| v)
+            .ok_or(format!("no row {row_id:?} in {table} that you can read"))?;
+        let cells: Vec<CellChange> = values.iter()
+            .map(|(k, new)| CellChange { key: k.clone(), old: current.get(k).cloned().unwrap_or(Value::Null), new: new.clone() })
+            .filter(|c| c.old != c.new)
+            .collect();
+        if cells.is_empty() {
+            return Err("nothing would change".into());
+        }
+        Ok(RowDiffApproval { table: table.to_string(), row_id: row_id.to_string(), cells })
+    }
+
+    fn as_person<B>(&self, rb: ureq::RequestBuilder<B>, who: &Person) -> ureq::RequestBuilder<B> {
+        rb.header("x-keap-proxy-secret", &self.secret)
             .header("x-authentik-username", &who.username)
             .header("x-authentik-name", &who.username)
             .header("x-authentik-uid", &who.uid())
             .header("x-authentik-groups", &who.groups.join(","))
-            .call()
-            .map_err(|e| format!("KEAP unreachable: {e}"))?;
+    }
+
+    /// keapAs() in the face's upstream.ts: GET, or POST `body`, as the person behind the proxy secret.
+    fn keap(&self, who: &Person, url: &str, body: Option<&Value>) -> Result<Value, String> {
+        if self.secret.is_empty() {
+            return Err("the thalamus holds no KEAP proxy secret".into());
+        }
+        let t0 = std::time::Instant::now();
+        let a = agent(30);
+        let (method, sent) = match body {
+            None => ("GET", self.as_person(a.get(url), who).call()),
+            Some(b) => ("POST", self.as_person(a.post(url), who).send_json(b)),
+        };
+        let mut r = sent.map_err(|e| format!("KEAP unreachable: {e}"))?;
         let status = r.status().as_u16();
-        // The log names the path, never the query, the headers or the secret.
+        // The log names the path, never the query, the body, the headers or the secret.
         let path = url.split('?').next().unwrap_or("").splitn(4, '/').nth(3).unwrap_or("");
-        self.say(format!("{status} as {} GET /{path} {}ms", who.username, t0.elapsed().as_millis()));
+        self.say(format!("{status} as {} {method} /{path} {}ms", who.username, t0.elapsed().as_millis()));
         let v: Value = r.body_mut().read_json().map_err(|e| format!("KEAP answered {status} with no JSON: {e}"))?;
         if status != 200 {
             let why = v.get("error").and_then(Value::as_str).unwrap_or("").chars().take(300).collect::<String>();

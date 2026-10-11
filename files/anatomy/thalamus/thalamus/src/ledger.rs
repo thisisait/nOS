@@ -4,7 +4,7 @@
 //! stay NULL: the audit chain is off in slice 1, which Wing's schema allows.
 
 use rusqlite::{params, Connection};
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::path::Path;
 
 const SCHEMA: &str = r#"
@@ -115,6 +115,34 @@ impl Ledger {
             return Err(rusqlite::Error::QueryReturnedNoRows);
         }
         Ok(self.db.last_insert_rowid())
+    }
+
+    /// What a decision row approved: (actor, table, row_id, {key: new}). Err unless `decision`
+    /// is an approve row of an open session answering an earlier request in that session.
+    pub fn approved(&self, decision: i64) -> Result<(String, String, String, Map<String, Value>), String> {
+        let (actor, said, request): (String, Option<String>, String) = self
+            .db
+            .query_row(
+                "SELECT s.actor_id, json_extract(d.result_json, '$.decision'), r.result_json
+                 FROM events d JOIN sessions s ON s.uuid = d.run_id AND s.ended_at IS NULL
+                 JOIN events r ON r.run_id = d.run_id AND r.type = ?3 AND r.id < d.id
+                      AND json_extract(r.result_json, '$.approval') = json_extract(d.result_json, '$.approval')
+                 WHERE d.id = ?1 AND d.type = ?2",
+                params![decision, Kind::ApprovalDecision.as_str(), Kind::ApprovalRequest.as_str()],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .map_err(|e| format!("no approval behind event {decision}: {e}"))?;
+        if said.as_deref() != Some("approve") {
+            return Err(format!("event {decision} is not an approval"));
+        }
+        let req: Value = serde_json::from_str(&request).map_err(|e| format!("unreadable request: {e}"))?;
+        let field = |k: &str| req.get(k).and_then(Value::as_str).map(str::to_string).ok_or(format!("request has no {k}"));
+        let mut values = Map::new();
+        for c in req.get("cells").and_then(Value::as_array).ok_or("request has no cells")? {
+            let key = c.get("key").and_then(Value::as_str).ok_or("a cell has no key")?;
+            values.insert(key.to_string(), c.get("new").cloned().ok_or("a cell has no new value")?);
+        }
+        Ok((actor, field("table")?, field("row_id")?, values))
     }
 
     /// Writes agent_session_end, then closes the session so nothing more lands in it.
