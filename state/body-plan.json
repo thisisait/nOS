@@ -5,7 +5,7 @@
   "levels_from": "state/genome/lexicon.yml",
   "counts": {
     "genome": 21,
-    "cell": 16,
+    "cell": 17,
     "tissue": 1,
     "organ": 79,
     "organ system": 13,
@@ -18,7 +18,7 @@
     "reflex": 43,
     "heartbeat": 1,
     "internal": 74,
-    "edges": 428
+    "edges": 430
   },
   "nodes": {
     "agent:conductor": {
@@ -38,6 +38,10 @@
       "kind": "agent"
     },
     "agent:invoice-vision-ocr": {
+      "level": "cell",
+      "kind": "agent"
+    },
+    "agent:iris": {
       "level": "cell",
       "kind": "agent"
     },
@@ -2202,6 +2206,11 @@
       "kind": "part_of"
     },
     {
+      "from": "agent:iris",
+      "to": "tasktype:investigate",
+      "kind": "may_take"
+    },
+    {
       "from": "agent:jeff",
       "to": "tasktype:code-fix",
       "kind": "may_take"
@@ -2349,6 +2358,11 @@
     {
       "from": "backend:ollama",
       "to": "agent:invoice-vision-ocr",
+      "kind": "data"
+    },
+    {
+      "from": "backend:ollama",
+      "to": "agent:iris",
       "kind": "data"
     },
     {
