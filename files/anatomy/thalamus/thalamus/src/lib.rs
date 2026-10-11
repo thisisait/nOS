@@ -3,3 +3,4 @@
 pub mod binding;
 pub mod ledger;
 pub mod serve;
+pub mod shell;

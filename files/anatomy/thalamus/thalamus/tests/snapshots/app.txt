@@ -1,0 +1,40 @@
+session 0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b as user:pazny (ollama://qwen3:8b)
+iris: Two rows match.
+roadmap — 1 row(s), substring match, not semantic
+__id                     title                    status
+backup-restic-fork       Backup via restic        open
+inbox — 1 waiting
+  capture    Read later: HKDF notes  2026-10-11T08:00:00Z  (cap-01)
+  ? promotions: not yours to moderate
+2 awaiting you
+  consent   HIGH       2d  config.yml: install_thalamus
+                           docs/active-work.md · operator flips
+  rem       CRITICAL   5h  CVE in a pinned image
+                           tools/rem-status.py
+  ? source unreadable, so its state is UNKNOWN not empty: gitlab: token unreadab
+1 red
+  ✗ pulse job nightly-backup failed (3h)
+edit roadmap / backup-restic-fork — nothing is written unless you approve
+  status: "open" -> "done"
+  note: (empty) -> "landed"
+refused: login carol has no row in the identity map
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+approve this edit? y / n
+Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit

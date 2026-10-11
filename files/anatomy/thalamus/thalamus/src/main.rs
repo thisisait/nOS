@@ -1,5 +1,4 @@
 //! One binary, two modes: `thalamus serve` is the daemon, bare `thalamus` the shell.
-//! The shell lands in increment 7.
 
 use std::os::unix::fs::DirBuilderExt;
 use std::path::PathBuf;
@@ -48,7 +47,13 @@ fn main() -> ExitCode {
             Ok(()) => return ExitCode::SUCCESS,
             Err(why) => eprintln!("thalamus serve: {why}"),
         },
-        None => eprintln!("thalamus shell: not built yet"),
+        None => match std::env::var("HOME") {
+            Ok(home) => match thalamus::shell::run(&PathBuf::from(home).join(".nos/thalamus.sock")) {
+                Ok(()) => return ExitCode::SUCCESS,
+                Err(why) => eprintln!("thalamus: {why}"),
+            },
+            Err(_) => eprintln!("thalamus: HOME is not set"),
+        },
         Some(other) => {
             eprintln!("thalamus: unknown mode {other:?} (serve, or none for the shell)");
             return ExitCode::from(2);

@@ -1,0 +1,10 @@
+2 awaiting you
+  consent   HIGH       2d  config.yml: install_thalamus
+                           docs/active-work.md · operator flips
+  rem       CRITICAL   5h  CVE in a pinned image
+                           tools/rem-status.py
+  ? source unreadable, so its state is UNKNOWN not empty: gitlab: token unreadab
+
+
+
+

@@ -1,0 +1,10 @@
+1 red
+  ✗ pulse job nightly-backup failed (3h)
+
+
+
+
+
+
+
+
