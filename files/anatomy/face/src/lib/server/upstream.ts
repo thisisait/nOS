@@ -9,6 +9,7 @@
  * This module MUST NOT be imported from client code — `$env/dynamic/private`
  * and the tokens would leak. SvelteKit enforces that for `$lib/server/*`.
  */
+import { createHash } from 'node:crypto';
 import { env } from '$env/dynamic/private';
 import type { Identity } from '$lib/contracts';
 
@@ -373,8 +374,11 @@ function keapAs(who: Identity, json = false): Record<string, string> {
 	if (!who?.authenticated || !who.uid || !who.username) {
 		throw new UpstreamError(401, 'KEAP call refused: no edge-trusted identity');
 	}
+	const secret = KEAP_PROXY_SECRET();
+	// KEAP skips the hop check when its own secret is unset, so refuse here too.
+	if (!secret) throw new UpstreamError(503, 'KEAP call refused: no proxy secret on the face');
 	const h: Record<string, string> = {
-		'x-keap-proxy-secret': KEAP_PROXY_SECRET(),
+		'x-keap-proxy-secret': secret,
 		'x-authentik-username': who.username,
 		'x-authentik-uid': who.uid,
 		'x-authentik-groups': who.groups.join(',')
@@ -446,17 +450,32 @@ export async function keapUpsertRow(
 	return flat(data(await asJson(r)) as KeapRow);
 }
 
-/** Create a table — POST /api/tables. KEAP mints the id (a UUID, owned by the
- *  person); the agent door's slug-as-id is not on this door. */
+/** UUIDv5 (URL namespace) of `name` — the human door takes uuid ids only. */
+function uuidV5(name: string): string {
+	const ns = Buffer.from('6ba7b8119dad11d180b400c04fd430c8', 'hex');
+	const b = createHash('sha1').update(ns).update(name).digest().subarray(0, 16);
+	b[6] = (b[6] & 0x0f) | 0x50;
+	b[8] = (b[8] & 0x3f) | 0x80;
+	const x = b.toString('hex');
+	return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
+}
+
+/** Create a table — POST /api/tables, owned by the person. The id is derived
+ *  from uid + typed slug, so a re-submit hits KEAP's duplicate-id refusal
+ *  instead of minting a second table (zod would strip a bare `slug`). */
 export async function keapCreateTable(
 	body: Record<string, unknown>,
 	who: Identity
 ): Promise<unknown> {
+	const headers = keapAs(who, true);
+	const { slug, ...rest } = body;
+	const id =
+		typeof slug === 'string' && slug ? uuidV5(`keap-face-table:${who.uid}/${slug}`) : undefined;
 	return asJson(
 		await fetch(KEAP_TABLES(), {
 			method: 'POST',
-			headers: keapAs(who, true),
-			body: JSON.stringify(body)
+			headers,
+			body: JSON.stringify(id ? { ...rest, id } : rest)
 		})
 	);
 }

@@ -56,7 +56,7 @@
 		submitting = true;
 		try {
 			const body = buildCreateBody({ slug, title, description, anchor, columns });
-			// KEAP's human door mints the id (a UUID); open the table by it.
+			// The BFF derives the id from you + slug (a UUID); open the table by it.
 			const t = (await tablesCreateTable(body)) as { id?: unknown } | null;
 			oncreated(typeof t?.id === 'string' && t.id ? t.id : body.slug);
 		} catch (e) {
