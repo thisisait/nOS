@@ -1,5 +1,6 @@
 /**
- * Server-only upstream clients — the ONLY place the Bone/Wing/KEAP tokens live.
+ * Server-only upstream clients — the ONLY place the Bone/Wing tokens and the
+ * KEAP proxy secret live.
  *
  * The browser never holds a token: it calls the BFF `/bff/*` endpoints, which
  * (having pinned `uid` from the edge-trusted identity) call these helpers. Bone
@@ -9,6 +10,7 @@
  * and the tokens would leak. SvelteKit enforces that for `$lib/server/*`.
  */
 import { env } from '$env/dynamic/private';
+import type { Identity } from '$lib/contracts';
 
 const VFS_BASE = () => env.NOS_VFS_API_URL ?? 'http://host.docker.internal:8099/api/v1/vfs';
 const US_BASE = () =>
@@ -17,11 +19,10 @@ const US_BASE = () =>
 		'/userstate'
 	);
 const HUB_URL = () => env.NOS_HUB_API_URL ?? 'http://host.docker.internal:9000/api/v1/hub/systems';
-const KEAP_TABLES = () => env.NOS_KEAP_TABLES_URL ?? 'http://host.docker.internal:8790/api/tables';
+const KEAP_TABLES = () => env.NOS_KEAP_TABLES_URL ?? 'http://host.docker.internal:8091/api/tables';
 
 const VFS_TOKEN = () => env.NOS_VFS_API_TOKEN ?? '';
 const WING_EDGE = () => env.WING_EDGE_TOKEN ?? '';
-const KEAP_TOKEN = () => env.NOS_KEAP_API_TOKEN ?? '';
 
 function boneHeaders(json = false): Record<string, string> {
 	const h: Record<string, string> = { authorization: `Bearer ${VFS_TOKEN()}` };
@@ -348,92 +349,126 @@ export async function boneVfsProbe(uid: string): Promise<{ ok: boolean; detail: 
 	}
 }
 
-// ── KEAP DataTables (config catalog SoT; G2 fleshes out the row shape) ────────
+// ── KEAP DataTables — the human door, AS the person ─────────────────────────
+// KEAP's /api/* believes X-Authentik-* only behind x-keap-proxy-secret (the
+// secret Traefik injects), then enforces that person's table/row access and
+// stamps writes user:<uid>. The face holds no estate bearer: identity comes
+// from the hook-pinned locals.identity, and a missing one refuses here.
 
-// The agent door addresses a table by its ID. The config tables were created
-// with id == slug (face-layouts, …), so the human slug resolves directly. The
-// roadmap table predates that convention: its id is a UUID (the same one the
-// roadmap tools address — tools/roadmap-*.py), so GET /agent/v1/tables/roadmap
-// 404s. Map the human slug to the real id until KEAP's door resolves slugs
-// itself (the `tables` cross-repo contract) or the table is re-id'd; then this
-// one entry is deleted. `tableId` is identity for every id==slug table.
+// The roadmap table predates id == slug (its id is a UUID, the same one
+// tools/roadmap-*.py address); every other config table resolves as itself.
 const TABLE_ID: Record<string, string> = {
 	roadmap: '2d498264-bc9a-4324-9935-489e5e4d92f3'
 };
 const tableId = (slug: string): string => TABLE_ID[slug] ?? slug;
+const tableUrl = (slug: string, tail = '') =>
+	new URL(`${KEAP_TABLES()}/${encodeURIComponent(tableId(slug))}${tail}`);
 
-export async function keapTableRows(slug: string, uid: string): Promise<unknown> {
-	const u = new URL(`${KEAP_TABLES()}/${encodeURIComponent(tableId(slug))}/rows`);
-	u.searchParams.set('uid', uid);
-	const h: Record<string, string> = {};
-	if (KEAP_TOKEN()) h['authorization'] = `Bearer ${KEAP_TOKEN()}`;
-	return asJson(await fetch(u, { headers: h }));
+// process.env fallback: adapter-node dropped a compose var added after the image
+// was built from `$env/dynamic/private` (measured on the old RW token).
+const KEAP_PROXY_SECRET = () =>
+	env.KEAP_PROXY_SHARED_SECRET || process.env.KEAP_PROXY_SHARED_SECRET || '';
+
+function keapAs(who: Identity, json = false): Record<string, string> {
+	if (!who?.authenticated || !who.uid || !who.username) {
+		throw new UpstreamError(401, 'KEAP call refused: no edge-trusted identity');
+	}
+	const h: Record<string, string> = {
+		'x-keap-proxy-secret': KEAP_PROXY_SECRET(),
+		'x-authentik-username': who.username,
+		'x-authentik-uid': who.uid,
+		'x-authentik-groups': who.groups.join(',')
+	};
+	if (who.email) h['x-authentik-email'] = who.email;
+	if (who.name) h['x-authentik-name'] = who.name;
+	if (json) h['content-type'] = 'application/json';
+	return h;
+}
+
+const data = (raw: unknown): unknown =>
+	raw && typeof raw === 'object' && 'data' in raw ? (raw as { data: unknown }).data : raw;
+
+type KeapRow = { id: string; values?: Record<string, unknown>; sharing?: unknown };
+/** The /agent/v1 flat row shape every BFF consumer already reads. */
+const flat = (r: KeapRow) => ({
+	...r.values,
+	__id: r.id,
+	...(r.sharing ? { __sharing: r.sharing } : {})
+});
+
+// ponytail: 40 pages x 500 rows cap guards a cursor that never ends.
+export async function keapTableRows(slug: string, who: Identity): Promise<unknown> {
+	const rows: Record<string, unknown>[] = [];
+	let cursor: string | undefined;
+	for (let i = 0; i < 40; i++) {
+		const u = tableUrl(slug, '/rows');
+		u.searchParams.set('limit', '500');
+		if (cursor) u.searchParams.set('cursor', cursor);
+		const page = data(await asJson(await fetch(u, { headers: keapAs(who) }))) as {
+			rows?: KeapRow[];
+			nextCursor?: string;
+		};
+		rows.push(...(page.rows ?? []).map(flat));
+		cursor = page.nextCursor;
+		if (!cursor) break;
+	}
+	return { rows };
 }
 
 export function keapConfigured(): boolean {
 	return Boolean(env.NOS_KEAP_TABLES_URL);
 }
 
-// ── KEAP DataTables — WRITE path (agent RW token; gated in the BFF) ───────────
-// Reads use NOS_KEAP_API_TOKEN (RO); writes use a SEPARATE NOS_KEAP_API_TOKEN_RW
-// so the shell holds least privilege for the read path. The BFF is the RBAC gate
-// (manager+ tier only) — these helpers just carry the RW bearer to KEAP.
-
-// `$env/dynamic/private` dropped this var at runtime in adapter-node when it was
-// added to the compose env after the image was built (the RO token, present at
-// build, reads fine; the newly-added RW one came back empty). Fall back to
-// `process.env` — a purely-runtime server secret — so the write token is read
-// regardless of SvelteKit's build-time key set. Server-only module, so safe.
-const KEAP_TOKEN_RW = () => env.NOS_KEAP_API_TOKEN_RW || process.env.NOS_KEAP_API_TOKEN_RW || '';
-
-/** True when a write token is present (and KEAP is configured). */
+/** True when the face can prove the proxy hop (and KEAP is configured). */
 export function keapWriteConfigured(): boolean {
-	return keapConfigured() && Boolean(KEAP_TOKEN_RW());
+	return keapConfigured() && Boolean(KEAP_PROXY_SECRET());
 }
 
-function keapRwHeaders(): Record<string, string> {
-	return { authorization: `Bearer ${KEAP_TOKEN_RW()}`, 'content-type': 'application/json' };
+/** Table definition (columns/schema/view) — GET /api/tables/:id. */
+export async function keapTableDef(slug: string, who: Identity): Promise<unknown> {
+	return asJson(await fetch(tableUrl(slug), { headers: keapAs(who) }));
 }
 
-/** Table definition (columns/schema) — GET /agent/v1/tables/:slug (RO). */
-export async function keapTableDef(slug: string): Promise<unknown> {
-	const u = new URL(`${KEAP_TABLES()}/${encodeURIComponent(tableId(slug))}`);
-	const h: Record<string, string> = {};
-	if (KEAP_TOKEN()) h['authorization'] = `Bearer ${KEAP_TOKEN()}`;
-	return asJson(await fetch(u, { headers: h }));
+/** Upsert a row — POST /api/tables/:id/rows `{id?, values}`. `row` is the flat
+ *  cell bag; its `__id` (else `slug`) names the row, as on the agent door. */
+export async function keapUpsertRow(
+	slug: string,
+	row: Record<string, unknown>,
+	who: Identity
+): Promise<unknown> {
+	const { __id, ...values } = row;
+	const id = typeof __id === 'string' && __id ? __id : values.slug;
+	const r = await fetch(tableUrl(slug, '/rows'), {
+		method: 'POST',
+		headers: keapAs(who, true),
+		body: JSON.stringify({ ...(typeof id === 'string' && id ? { id } : {}), values })
+	});
+	return flat(data(await asJson(r)) as KeapRow);
 }
 
-/** Upsert a row — POST /agent/v1/tables/:slug/rows (RW). `row` is the flat cell
- *  bag keyed by column (the KEAP agent surface un-wraps it). */
-export async function keapUpsertRow(slug: string, row: Record<string, unknown>): Promise<unknown> {
-	const u = new URL(`${KEAP_TABLES()}/${encodeURIComponent(tableId(slug))}/rows`);
-	return asJson(
-		await fetch(u, { method: 'POST', headers: keapRwHeaders(), body: JSON.stringify(row) })
-	);
-}
-
-/** Create-or-return a table — POST /agent/v1/tables (RW). */
-export async function keapCreateTable(body: Record<string, unknown>): Promise<unknown> {
+/** Create a table — POST /api/tables. KEAP mints the id (a UUID, owned by the
+ *  person); the agent door's slug-as-id is not on this door. */
+export async function keapCreateTable(
+	body: Record<string, unknown>,
+	who: Identity
+): Promise<unknown> {
 	return asJson(
 		await fetch(KEAP_TABLES(), {
 			method: 'POST',
-			headers: keapRwHeaders(),
+			headers: keapAs(who, true),
 			body: JSON.stringify(body)
 		})
 	);
 }
 
-/** List all tables — GET /agent/v1/tables (RO). Returns the enveloped
- *  `TableInfo[]` for the Tables app's sidebar. */
-export async function keapListTables(): Promise<unknown> {
-	const h: Record<string, string> = {};
-	if (KEAP_TOKEN()) h['authorization'] = `Bearer ${KEAP_TOKEN()}`;
-	return asJson(await fetch(KEAP_TABLES(), { headers: h }));
+/** Tables this person may read — GET /api/tables (enveloped `TableInfo[]`). */
+export async function keapListTables(who: Identity): Promise<unknown> {
+	return asJson(await fetch(KEAP_TABLES(), { headers: keapAs(who) }));
 }
 
 /** Public KEAP URL the browser iframes for the "Explore" app. A URL, not a
  *  secret (Authentik-gated, same cookie-domain session). process.env fallback
- *  mirrors the RW-token note above — robust against SvelteKit's build-time set. */
+ *  mirrors the proxy-secret note above — robust against SvelteKit's build-time set. */
 export function keapExploreUrl(): string {
 	return env.NOS_KEAP_EXPLORE_URL || process.env.NOS_KEAP_EXPLORE_URL || '';
 }

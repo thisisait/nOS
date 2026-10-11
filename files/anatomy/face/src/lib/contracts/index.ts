@@ -60,6 +60,8 @@ export interface Identity {
 	uid: string;
 	username: string;
 	email: string;
+	/** Display name (X-Authentik-Name); optional, forwarded to KEAP as-is. */
+	name?: string;
 	/** Authentik groups → RBAC tier rank (nos-admins … nos-guests). */
 	groups: string[];
 	/** True once the BFF has verified BOTH the edge token and a non-empty uid. */

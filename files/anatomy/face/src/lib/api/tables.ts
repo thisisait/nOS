@@ -1,6 +1,6 @@
 /** Config-DataTable client (KEAP SoT + fallback) — read + gated write.
- *  Reads are open; writes hit the BFF which enforces manager-tier RBAC + holds
- *  the RW token (a non-manager caller gets a 403 with a clear message). */
+ *  Reads are open; writes hit the BFF which enforces manager-tier RBAC and calls
+ *  KEAP as the signed-in person (a non-manager caller gets a 403). */
 import { bffGet, bffPost } from './client';
 import type { DataTable } from '$lib/contracts';
 import type { TableSummary } from '$lib/tables/summary';
@@ -28,8 +28,8 @@ export async function tablesUpsertRow(
 	return bffPost('/bff/tables', { op: 'upsertRow', slug, row });
 }
 
-/** Create-or-return a table by slug (KEAP `{slug,title,description?,anchors?,
- *  schema:{columns}}` shape; assembled by `$lib/tables/createtable`). */
+/** Create a table (`{title,description?,anchors?,schema:{columns}}`, assembled
+ *  by `$lib/tables/createtable`). Resolves to KEAP's TableInfo; its `id` is new. */
 export async function tablesCreateTable(body: CreateTableBody): Promise<unknown> {
 	return bffPost('/bff/tables', { op: 'createTable', ...body });
 }

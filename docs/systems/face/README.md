@@ -51,7 +51,8 @@ face reaches host daemons over `host.docker.internal`; each degrades gracefully 
 |---------|--------|---------|
 | `NOS_HUB_API_URL` | Wing `:{{ wing_port }}` `/api/v1/hub/systems` | App catalog (which apps to show) |
 | `NOS_VFS_API_URL` | Bone `:{{ bone_port }}` `/api/v1/vfs` | File browser over the per-user tree |
-| `NOS_KEAP_TABLES_URL` | KEAP `:{{ keap_port }}` `/agent/v1/tables` | Config DataTables (shell layout SoT) |
+| `NOS_KEAP_TABLES_URL` | KEAP `:{{ keap_port }}` `/api/tables` (human door, as the person) | Config DataTables (shell layout SoT) |
+| `KEAP_PROXY_SHARED_SECRET` | `keap_proxy_shared_secret` (same as Traefik's keap-proxy) | Proves the proxy hop so KEAP trusts the forwarded identity |
 | `NOS_KEAP_EXPLORE_URL` | `https://{keap_domain}/explore` | Explore graph iframe |
 | `NOS_OLLAMA_URL` | host Ollama `:{{ ollama_port }}` | Command-palette "ask" LLM |
 

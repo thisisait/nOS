@@ -46,6 +46,7 @@ function readIdentity(request: Request, trusted: boolean): Identity {
 	if (!rawUid) return { ...ANON };
 	const username = (h.get('x-authentik-username') ?? rawUid).trim();
 	const email = (h.get('x-authentik-email') ?? '').trim();
+	const name = (h.get('x-authentik-name') ?? '').trim();
 	const groups = (h.get('x-authentik-groups') ?? '')
 		.split(/[|,]/)
 		.map((g) => g.trim())
@@ -60,6 +61,7 @@ function readIdentity(request: Request, trusted: boolean): Identity {
 		uid,
 		username,
 		email,
+		...(name ? { name } : {}),
 		groups,
 		authenticated: true
 	};

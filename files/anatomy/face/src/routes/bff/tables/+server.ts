@@ -1,13 +1,14 @@
 /** BFF · config DataTables (KEAP SoT + fallback + gated READ/WRITE).
  *
- * KEAP's agent surface (`/agent/v1/tables`, loopback bearer) is the source of
- * truth. Reads honour the table's visibility grade against edge-trusted
- * `identity.groups` (fail closed). Face config tables (face-layouts etc.) stay
+ * KEAP's human door (`/api/tables`, as the signed-in person — see
+ * $lib/server/upstream) is the source of truth; KEAP enforces that person's
+ * table/row access and owns writes as user:<uid>. Reads also honour the
+ * table's visibility grade against edge-trusted `identity.groups` (fail closed). Face config tables (face-layouts etc.) stay
  * readable to any authenticated caller — they are not client books. When KEAP
  * is unconfigured/down we serve vendored repo-default (SoC) rows for those
  * config tables so the desktop stays usable. WRITES (upsert row / create table)
- * are RBAC-gated to manager+ tiers here — the browser never gets the RW token
- * and can't set its own tier.
+ * are RBAC-gated to manager+ tiers here — the browser never sees the proxy
+ * secret and can't set its own identity or tier.
  */
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
@@ -26,7 +27,7 @@ import { BOOK_SCOPED, filterBookRows, mayWriteBookRow, type Row } from '$lib/sec
 import { toTableSummaries, type TableSummary } from '$lib/tables/summary';
 import { narrowView, decorateRowRefs } from '$lib/tables/view';
 import { postTableAudit } from '$lib/server/audit';
-import type { DataTable, DataTableRow, ColumnSpec } from '$lib/contracts';
+import type { DataTable, DataTableRow, ColumnSpec, Identity } from '$lib/contracts';
 import { FACE_LAYOUTS, FACE_WALLPAPERS, FACE_CONTROLS, FACE_DOCK } from '$lib/server/defaults';
 
 // Config tables with vendored repo-default rows (the SoC fallback when KEAP is
@@ -70,9 +71,8 @@ const FALLBACK_COLUMNS: Record<string, ColumnSpec[]> = {
 const toRows = (specs: { slug: string }[]): DataTableRow[] =>
 	specs.map((spec) => ({ id: spec.slug, ...spec }));
 
-/** Guarantee every row carries a stable, UNIQUE `id`. KEAP's agent surface
- *  returns flat rows keyed by a business column (slug/name) with NO `id` field,
- *  so a naive `{#each rows (row.id)}` sees N `undefined` keys and Svelte throws
+/** Guarantee every row carries a stable, UNIQUE `id`. Rows arrive flat, keyed
+ *  by a business column (slug/name), with `__id` but NO `id` field, so a naive `{#each rows (row.id)}` sees N `undefined` keys and Svelte throws
  *  `each_key_duplicate`, unmounting the table. Derive id from the natural key,
  *  falling back to the row index and de-duping on collision. */
 function withStableIds(rows: DataTableRow[]): DataTableRow[] {
@@ -93,7 +93,7 @@ const repoDefaults: Record<string, DataTableRow[]> = {
 	'face-dock': toRows(FACE_DOCK)
 };
 
-/** KEAP agent responses may be enveloped `{success,data}` or bare — unwrap. */
+/** KEAP responses may be enveloped `{success,data}` or bare — unwrap. */
 function unwrap<T = Record<string, unknown>>(raw: unknown): T {
 	const r = raw as { data?: T } | T;
 	return (r && typeof r === 'object' && 'data' in (r as object) ? (r as { data: T }).data : r) as T;
@@ -125,10 +125,8 @@ function mapColumns(def: unknown): ColumnSpec[] {
 		.filter((c): c is ColumnSpec => c !== null);
 }
 
-// TODO remove when KEAP GET /agent/v1/tables accepts the agent bearer: the
-// list-all endpoint currently requires forward-auth identity (401 on the bearer)
-// even though GET /agent/v1/tables/:slug accepts it. Until then, probe the known
-// config-table slugs via the working per-slug route so the Tables sidebar fills.
+// Fallback when the list-all call fails: probe the known config-table slugs via
+// the per-table route so the Tables sidebar still fills.
 const KNOWN_CONFIG_TABLES = ['face-layouts', 'face-wallpapers', 'face-controls', 'face-dock'];
 
 function isFaceConfigTable(slug: string): boolean {
@@ -144,14 +142,15 @@ function mayReadTable(
 	return isFaceConfigTable(slug) || canReadTable(visibility, groups);
 }
 
-async function fetchLiveRows(slug: string, uid: string): Promise<DataTableRow[]> {
-	const rowsData = unwrap<{ rows?: DataTableRow[] }>(await keapTableRows(slug, uid));
+async function fetchLiveRows(slug: string, who: Identity): Promise<DataTableRow[]> {
+	const rowsData = unwrap<{ rows?: DataTableRow[] }>(await keapTableRows(slug, who));
 	const live = rowsData.rows ?? (Array.isArray(rowsData) ? (rowsData as DataTableRow[]) : []);
 	return withStableIds(live);
 }
 
-async function scopeContext(uid: string, groups: readonly string[] | undefined, slug: string) {
-	const access = await fetchLiveRows('book-access', uid).catch(() => [] as DataTableRow[]);
+async function scopeContext(who: Identity, slug: string) {
+	const { uid, groups } = who;
+	const access = await fetchLiveRows('book-access', who).catch(() => [] as DataTableRow[]);
 	const needInv =
 		slug === 'invoice-line' ||
 		slug === 'journal-entry' ||
@@ -159,11 +158,11 @@ async function scopeContext(uid: string, groups: readonly string[] | undefined, 
 		slug === 'party' ||
 		slug === 'pending-invoice-verify';
 	const invoices = needInv
-		? await fetchLiveRows('invoice', uid).catch(() => [] as DataTableRow[])
+		? await fetchLiveRows('invoice', who).catch(() => [] as DataTableRow[])
 		: [];
 	const journals =
 		slug === 'posting'
-			? await fetchLiveRows('journal-entry', uid).catch(() => [] as DataTableRow[])
+			? await fetchLiveRows('journal-entry', who).catch(() => [] as DataTableRow[])
 			: [];
 	return { access, invoices, journals, groups, uid };
 }
@@ -175,7 +174,7 @@ function readableSummaries(
 	return tables.filter((t) => mayReadTable(t.slug, t.visibility, groups));
 }
 
-async function knownTableSummaries(): Promise<TableSummary[]> {
+async function knownTableSummaries(who: Identity): Promise<TableSummary[]> {
 	const out: TableSummary[] = [];
 	for (const slug of KNOWN_CONFIG_TABLES) {
 		try {
@@ -185,7 +184,7 @@ async function knownTableSummaries(): Promise<TableSummary[]> {
 				title?: string;
 				rowCount?: number;
 				visibility?: string;
-			}>(await keapTableDef(slug));
+			}>(await keapTableDef(slug, who));
 			out.push({
 				slug: (typeof def.id === 'string' && def.id) || slug,
 				title: typeof def.title === 'string' && def.title ? def.title : slug,
@@ -207,14 +206,13 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		if (!keapConfigured()) return json({ tables: [], source: 'fallback' });
 		try {
 			return json({
-				tables: readableSummaries(toTableSummaries(await keapListTables()), groups),
+				tables: readableSummaries(toTableSummaries(await keapListTables(locals.identity)), groups),
 				source: 'keap'
 			});
 		} catch (e) {
 			if (e instanceof UpstreamError) {
-				// KEAP list-all needs forward-auth (a KEAP gap) — probe known slugs.
 				return json({
-					tables: readableSummaries(await knownTableSummaries(), groups),
+					tables: readableSummaries(await knownTableSummaries(locals.identity), groups),
 					source: 'known-slugs'
 				});
 			}
@@ -242,7 +240,9 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	let def: { view?: DataTable['view']; visibility?: string } | undefined;
 	if (keapConfigured()) {
 		try {
-			def = unwrap<{ view?: DataTable['view']; visibility?: string }>(await keapTableDef(slug));
+			def = unwrap<{ view?: DataTable['view']; visibility?: string }>(
+				await keapTableDef(slug, locals.identity)
+			);
 		} catch (e) {
 			if (!(e instanceof UpstreamError)) throw e;
 		}
@@ -263,14 +263,14 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	if (keapConfigured()) {
 		try {
 			const rowsData = unwrap<{ rows?: DataTableRow[] }>(
-				await keapTableRows(slug, locals.identity.uid)
+				await keapTableRows(slug, locals.identity)
 			);
 			const liveRows =
 				rowsData.rows ?? (Array.isArray(rowsData) ? (rowsData as DataTableRow[]) : []);
 			table.rows = withStableIds(liveRows);
 			table.source = 'keap';
 			if (BOOK_SCOPED.has(slug) && !canViewAnatomy(groups)) {
-				const ctx = await scopeContext(locals.identity.uid, groups, slug);
+				const ctx = await scopeContext(locals.identity, slug);
 				const invoices = slug === 'invoice' ? table.rows : ctx.invoices;
 				const journals = slug === 'journal-entry' ? table.rows : ctx.journals;
 				table.rows = filterBookRows({
@@ -296,12 +296,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 				await Promise.all(
 					refTables.map(async (t) => {
 						try {
-							const rdef = unwrap<{ visibility?: string }>(await keapTableDef(t));
+							const rdef = unwrap<{ visibility?: string }>(await keapTableDef(t, locals.identity));
 							const rvis = typeof rdef.visibility === 'string' ? rdef.visibility : undefined;
 							if (!mayReadTable(t, rvis, groups)) return;
-							const rd = unwrap<{ rows?: DataTableRow[] }>(
-								await keapTableRows(t, locals.identity.uid)
-							);
+							const rd = unwrap<{ rows?: DataTableRow[] }>(await keapTableRows(t, locals.identity));
 							refRows[t] = rd.rows ?? (Array.isArray(rd) ? (rd as DataTableRow[]) : []);
 						} catch {
 							/* leave raw ids showing for this table */
@@ -337,7 +335,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		throw error(403, 'DataTable writes require the manager tier or higher.');
 	}
 	if (!keapWriteConfigured()) {
-		throw error(503, 'DataTables are read-only here (no KEAP write token configured).');
+		throw error(503, 'DataTables are read-only here (no KEAP proxy secret configured).');
 	}
 	const body = (await request.json().catch(() => ({}))) as Post;
 	const slug = (body.slug ?? '').trim();
@@ -347,7 +345,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		if (body.op === 'upsertRow') {
 			if (!body.row || typeof body.row !== 'object') throw error(400, 'row object required');
 			if (BOOK_SCOPED.has(slug)) {
-				const ctx = await scopeContext(locals.identity.uid, locals.identity.groups, slug);
+				const ctx = await scopeContext(locals.identity, slug);
 				const invoices = slug === 'invoice' ? ([body.row] as DataTableRow[]) : ctx.invoices;
 				if (
 					!mayWriteBookRow({
@@ -362,7 +360,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					throw error(403, 'this book is not assigned to you');
 				}
 			}
-			const result = json(unwrap(await keapUpsertRow(slug, body.row)));
+			const result = json(unwrap(await keapUpsertRow(slug, body.row, locals.identity)));
 			// Audit-only: fire-and-forget, never blocks or fails the write it's
 			// auditing (postTableAudit swallows its own errors). row_id is the
 			// natural key every table upserts by — KEAP's own response envelope
@@ -376,7 +374,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		if (body.op === 'createTable') {
 			const { op: _op, ...tableBody } = body;
 			void _op;
-			return json(unwrap(await keapCreateTable(tableBody)));
+			return json(unwrap(await keapCreateTable(tableBody, locals.identity)));
 		}
 		throw error(400, 'unsupported op');
 	} catch (e) {

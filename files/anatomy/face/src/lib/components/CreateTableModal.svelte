@@ -56,8 +56,9 @@
 		submitting = true;
 		try {
 			const body = buildCreateBody({ slug, title, description, anchor, columns });
-			await tablesCreateTable(body);
-			oncreated(body.slug);
+			// KEAP's human door mints the id (a UUID); open the table by it.
+			const t = (await tablesCreateTable(body)) as { id?: unknown } | null;
+			oncreated(typeof t?.id === 'string' && t.id ? t.id : body.slug);
 		} catch (e) {
 			err = e instanceof ApiError ? e.message : 'could not create table';
 		} finally {
