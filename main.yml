@@ -2485,6 +2485,35 @@
         - (nos_docker_memory_gib | float) < (docker_min_memory_gib | float)
       tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
 
+    # 2026-10-10, second Mac over SSH: the Docker credential helper reads the
+    # login keychain, which SSH cannot unlock; the build died ~50 min in.
+    - name: "[Core] Is the login keychain unlocked (SSH session)?"
+      ansible.builtin.command: security show-keychain-info {{ ansible_env.HOME }}/Library/Keychains/login.keychain-db
+      register: _nos_keychain
+      changed_when: false
+      failed_when: false
+      when:
+        - ansible_os_family == 'Darwin'
+        - lookup('env', 'SSH_CONNECTION') | length > 0
+        - nos_docker_ready | default(true) | bool
+      tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
+
+    - name: "[Core] Refuse a locked login keychain over SSH"
+      ansible.builtin.fail:
+        msg: |
+          This run is over SSH and the login keychain is locked
+          ({{ (_nos_keychain.stderr | default('')) | trim }}).
+
+          Docker reads its registry credentials from that keychain; an SSH
+          session cannot unlock it, so image builds fail late in the run.
+
+          Unlock it in this session, then re-run:
+            security -v unlock-keychain ~/Library/Keychains/login.keychain-db
+      when:
+        - _nos_keychain.rc is defined
+        - _nos_keychain.rc != 0
+      tags: ['iiab', 'docker', 'stacks', 'core', 'infra', 'observability']
+
     - name: "[Models] Drop resident local models before services come up"
       ansible.builtin.import_tasks: tasks/models-unload.yml
       tags: ['always']
