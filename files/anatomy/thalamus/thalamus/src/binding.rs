@@ -6,7 +6,7 @@
 use serde_yaml_ng::Value;
 use std::path::Path;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Binding {
     pub name: String,
     pub base_url: String,

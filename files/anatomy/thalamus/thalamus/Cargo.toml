@@ -6,7 +6,9 @@ publish = false
 description = "The relay organ: one person at the shell, tools run as that person through KEAP's human door."
 
 [dependencies]
+libc = "0.2.190"
 nos-contract = { path = "../contract" }
 rusqlite = { version = "0.40", features = ["bundled"] }
 serde_json = "1"
 serde_yaml_ng = "0.10"
+ureq = { version = "3.4.2", default-features = false, features = ["json"] }
