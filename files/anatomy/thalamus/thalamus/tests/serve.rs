@@ -107,6 +107,13 @@ fn rig(name: &str, map: serde_json::Value, keap_body: &str, model_bodies: Vec<St
     Rig { sock, ledger, log, keap, model }
 }
 
+/// A client that fails instead of hanging when serve forgets to answer or to close.
+fn connect(sock: &std::path::Path) -> UnixStream {
+    let s = UnixStream::connect(sock).unwrap();
+    s.set_read_timeout(Some(std::time::Duration::from_secs(10))).unwrap();
+    s
+}
+
 fn next(r: &mut BufReader<UnixStream>) -> Option<ToShell> {
     let mut line = String::new();
     (r.read_line(&mut line).unwrap() > 0).then(|| decode_to_shell(&line))
@@ -133,7 +140,7 @@ const ROWS: &str = r#"{"success": true, "data": {"rows": [
 fn serve_refuses_a_peer_the_identity_map_does_not_name() {
     let rig = rig("unmapped", serde_json::json!({"logins": {"someone-else": {"username": "bob", "groups": []}}}), ROWS,
         vec![answer("never")]);
-    let mut r = BufReader::new(UnixStream::connect(&rig.sock).unwrap());
+    let mut r = BufReader::new(connect(&rig.sock));
     match next(&mut r) {
         Some(ToShell::Refused { reason }) => assert!(reason.contains("identity map"), "{reason}"),
         other => panic!("an unmapped peer must be refused, got {other:?}"),
@@ -148,7 +155,7 @@ fn serve_refuses_a_map_it_cannot_read() {
     // username present, groups not a list: the receptor's loader refuses it, so does this one.
     let rig = rig("malformed", serde_json::json!({"logins": {me(): {"username": "alice", "groups": "nos-users"}}}), ROWS,
         vec![answer("never")]);
-    let mut r = BufReader::new(UnixStream::connect(&rig.sock).unwrap());
+    let mut r = BufReader::new(connect(&rig.sock));
     assert!(matches!(next(&mut r), Some(ToShell::Refused { .. })));
     assert!(next(&mut r).is_none());
 }
@@ -159,7 +166,7 @@ fn serve_searches_as_the_mapped_person_and_never_spills_the_secret() {
     let rig = rig("mapped", map, ROWS, vec![tool_call(r#"{"table": "todos", "q": "ALPHA"}"#), answer("Found one.")]);
     assert_eq!(std::fs::metadata(&rig.sock).unwrap().permissions().mode() & 0o777, 0o600);
 
-    let mut s = UnixStream::connect(&rig.sock).unwrap();
+    let mut s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
     s.write_all(b"not json\n").unwrap();
     assert!(matches!(next(&mut r), Some(ToShell::Refused { .. })), "an undecodable line is refused, not dropped");
@@ -204,7 +211,7 @@ fn serve_searches_as_the_mapped_person_and_never_spills_the_secret() {
     // The session ends when the connection does; the ledger then holds the whole turn.
     std::thread::sleep(std::time::Duration::from_millis(300));
     let log = String::from_utf8(rig.log.0.lock().unwrap().clone()).unwrap();
-    assert!(log.contains("alice"), "serve logs who it served:\n{log}");
+    assert!(log.contains("as Alice Smith"), "serve logs who it served:\n{log}");
     assert!(!log.contains(SECRET), "the proxy secret reached the log");
     let db = rusqlite::Connection::open(&rig.ledger).unwrap();
     let types: Vec<String> = db
