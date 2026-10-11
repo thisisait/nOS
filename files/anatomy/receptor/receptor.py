@@ -8,8 +8,8 @@ roles/pazny.receptor; JSON, which is YAML), shape {"logins": {<login>:
 {"username", "groups": [...]}}}. A login not in the map is refused, never
 defaulted. Client X-Authentik-* and x-keap-proxy-secret are dropped; the
 receptor injects the person's headers plus the proxy secret only it holds.
-It relays GET/HEAD only, and refuses a head it would split differently than
-an upstream might (bare CR/LF, NUL, folds, non-token names, two lengths).
+It relays GET/HEAD on /api only, and refuses a head it would split differently
+than an upstream might (bare CR/LF, NUL, folds, non-token names, two lengths).
 
     receptor.py --socket ~/.nos/keap-identity.sock [--map ~/.nos/identity-map.yml] [--upstream 127.0.0.1:8091]
 
@@ -54,6 +54,13 @@ def malformed(head: bytes) -> str | None:
         lengths += k.lower() == "content-length"
     return "duplicate Content-Length" if lengths > 1 else None
 
+
+def bad_target(target: str) -> bool:
+    """Only origin-form /api paths, with nothing an upstream might normalise elsewhere."""
+    path = target.split("?", 1)[0]
+    segs = path.split("/")
+    return (not (path == "/api" or path.startswith("/api/")) or "//" in path or "\\" in target
+            or "." in segs or ".." in segs or any(e in path.lower() for e in ("%2e", "%2f", "%5c")))
 
 
 def peer_uid(sock) -> int:
@@ -103,9 +110,9 @@ async def handle(reader, writer, upstream: tuple, map_path: str):
     request_line = lines[0]
     parts = request_line.split(" ")
     why = malformed(head) or (None if len(parts) == 3 and parts[2].startswith("HTTP/1.") else "bad request line")
-    if why:
+    if why or bad_target(parts[1]):
         print(f"400 {login or '?'} {request_line!r}", flush=True)
-        await reply(writer, 400, why)
+        await reply(writer, 400, why or "only /api paths are relayed")
         return
     # Read verbs only: the one consumer is OpenHuman, read-only by contract; approved
     # writes will take the Thalamus's own proxy-secret path (operator ruling 2026-10-11).
