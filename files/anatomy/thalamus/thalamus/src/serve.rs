@@ -25,7 +25,8 @@ pub const IDENTITY_MAP: &str = ".nos/identity-map.yml";
 const MAX_LINE: u64 = 1 << 20;
 const MAX_TOOL_CALLS: usize = 8;
 const MAX_PAGES: usize = 40;
-const READER_SECS: u64 = 120;
+/// How long a control's reader may take before it is killed.
+pub const READER_SECS: u64 = 120;
 
 pub struct Server {
     pub map: PathBuf,
@@ -35,6 +36,8 @@ pub struct Server {
     pub binding: Result<Binding, String>,
     /// The checkout whose tools/ readers the approvals and red-status controls run.
     pub repo: PathBuf,
+    /// READER_SECS in production; a gate shortens it.
+    pub reader_secs: u64,
     pub log: Mutex<Box<dyn Write + Send>>,
 }
 
@@ -518,9 +521,9 @@ impl Server {
         let pid = child.id() as libc::pid_t;
         let (tx, rx) = std::sync::mpsc::channel();
         std::thread::spawn(move || tx.send(child.wait_with_output()));
-        let done = rx.recv_timeout(Duration::from_secs(READER_SECS)).map_err(|_| {
+        let done = rx.recv_timeout(Duration::from_secs(self.reader_secs)).map_err(|_| {
             unsafe { libc::kill(pid, libc::SIGKILL) };
-            format!("{name}: no answer in {READER_SECS}s")
+            format!("{name}: no answer in {}s", self.reader_secs)
         })?;
         let o = done.map_err(|e| format!("{name}: {e}"))?;
         if !o.status.success() {

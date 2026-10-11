@@ -119,6 +119,7 @@ fn rig_full(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_
             Err("iris is disarmed".into())
         },
         repo: d.clone(),
+        reader_secs: 2,
         log: Mutex::new(Box::new(log.clone())),
     };
     let sock = d.join("t.sock");

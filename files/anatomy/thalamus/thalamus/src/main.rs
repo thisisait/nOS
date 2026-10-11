@@ -35,6 +35,7 @@ fn serve_main() -> Result<(), String> {
         ledger: Mutex::new(ledger),
         binding,
         repo,
+        reader_secs: serve::READER_SECS,
         log: Mutex::new(Box::new(std::io::stderr())),
     };
     serve::run(listener, Arc::new(srv));
