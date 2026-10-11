@@ -17,8 +17,13 @@ consumer:
     - files/anatomy/wing/app/Security/CanonicalUid.php  # fold, isCanonical
     - files/anatomy/wing/app/Security/EndUser.php       # the BFF proof and the actor
     - files/anatomy/wing/app/Presenters/Api/BaseApiPresenter.php
+# A second consumer: the thalamus contract crate (roadmap agentkit-rust-organ),
+# shared by the thalamus and its shell. Same fold, same fixture, same gate.
+thalamus:
+  code:
+    - files/anatomy/thalamus/contract/src/uid.rs        # fold, canonical, is_canonical
 gates:
-  both: tests/anatomy/test_face_wing_contract.py       # runs uid.ts (node) and CanonicalUid.php (php) on the fixture bytes
+  both: tests/anatomy/test_face_wing_contract.py       # runs uid.ts (node), CanonicalUid.php (php) and uid.rs (cargo) on the fixture bytes
   face: files/anatomy/face/src/lib/security/uid.contract.test.ts
   wing: tests/anatomy/test_face_user_owns_its_sessions.py
   live: tests/e2e/journeys/test_two_users_cannot_see_each_others_sessions.py

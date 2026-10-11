@@ -82,3 +82,6 @@ terraform/authentik/imports.generated.tf
 
 # apex public-site build output (preview only, never served from the repo)
 files/anatomy/apex/dist/
+
+# Rust build output (files/anatomy/thalamus)
+files/anatomy/thalamus/**/target/
