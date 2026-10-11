@@ -189,3 +189,24 @@ def test_api_paths_still_reach_keap(target):
     raw = f"GET {target} HTTP/1.1\r\nHost: keap\r\nConnection: close\r\n\r\n"
     _, status, seen = _run(MAPPED, raw=raw.encode())
     assert status == "200" and len(seen) == 1, (status, seen)
+
+
+def _role_tasks():
+    import yaml
+    return yaml.safe_load((REPO / "roles/pazny.receptor/tasks/main.yml").read_text())
+
+
+def test_the_verify_passes_only_on_a_200_from_a_known_read_route():
+    """A 502/500/404 is not a working receptor; the verify must say so."""
+    import jinja2
+    tasks = _role_tasks()
+    i = next(n for n, t in enumerate(tasks) if "Verify" in t.get("name", ""))
+    verify = tasks[i]
+    assert "/api/me" in verify["ansible.builtin.shell"], "probe a known authenticated read route"
+    assert any(t.get("ansible.builtin.meta") == "flush_handlers" for t in tasks[:i]), (
+        "flush handlers before verify, or a source change is verified against the old process")
+    expr = jinja2.Environment().compile_expression(verify["failed_when"])
+    for code in ("502", "500", "404", "403", "503", "000", "301"):
+        assert expr(_receptor_verify={"stdout": f"mode=600 code={code}"}), code
+    assert expr(_receptor_verify={"stdout": "mode=644 code=200"})
+    assert not expr(_receptor_verify={"stdout": "mode=600 code=200"})
