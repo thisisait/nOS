@@ -44,8 +44,13 @@ fn fake(bodies: Vec<String>) -> (String, Seen) {
             let mut body = vec![0; len];
             r.read_exact(&mut body).unwrap();
             s.lock().unwrap().push((head, String::from_utf8(body).unwrap()));
+            // A body may lead with "!<status> " to answer with that status.
             let out = &bodies[n.min(bodies.len() - 1)];
-            write!(c, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{out}", out.len())
+            let (status, out) = match out.strip_prefix('!') {
+                Some(rest) => rest.split_once(' ').unwrap(),
+                None => ("200", out.as_str()),
+            };
+            write!(c, "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{out}", out.len())
                 .unwrap();
         }
     });
@@ -92,6 +97,10 @@ fn rig(name: &str, map: serde_json::Value, keap_body: &str, model_bodies: Vec<St
 }
 
 fn rig_n(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_bodies: Vec<String>) -> Rig {
+    rig_full(name, map, keap_bodies, model_bodies, true)
+}
+
+fn rig_full(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_bodies: Vec<String>, bound: bool) -> Rig {
     let d = dir(name);
     let map_path = d.join("identity-map.yml");
     std::fs::write(&map_path, map.to_string()).unwrap();
@@ -104,7 +113,12 @@ fn rig_n(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_bod
         keap_url,
         secret: SECRET.into(),
         ledger: Mutex::new(Ledger::open(&ledger).unwrap()),
-        binding: Ok(Binding { name: "ollama".into(), base_url: model_url, auth_token: String::new(), model_id: "qwen3:14b".into() }),
+        binding: if bound {
+            Ok(Binding { name: "ollama".into(), base_url: model_url, auth_token: String::new(), model_id: "qwen3:14b".into() })
+        } else {
+            Err("iris is disarmed".into())
+        },
+        repo: d.clone(),
         log: Mutex::new(Box::new(log.clone())),
     };
     let sock = d.join("t.sock");
@@ -384,4 +398,117 @@ fn commit_without_a_decision_row_is_err() {
         &serde_json::json!({"approval": approval, "decision": "approve"})).unwrap();
     assert!(rig.srv.commit(&who, ok).is_ok());
     assert_eq!(posts(&rig).len(), 1);
+}
+
+// --- increment 7: the three controls, raised without the model ---
+
+fn reader(rig: &Rig, name: &str, py: &str) {
+    let tools = rig.srv.repo.join("tools");
+    std::fs::create_dir_all(&tools).unwrap();
+    std::fs::write(tools.join(name), py).unwrap();
+}
+
+/// Raises one control on a fresh connection; returns what came after the Session.
+fn raise(rig: &Rig, view: nos_contract::wire::ControlView) -> ToShell {
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    (&s).write_all(encode(&ToThalamus::Control { view }).as_bytes()).unwrap();
+    assert!(matches!(next(&mut r), Some(ToShell::Session { .. })), "a control opens the session");
+    next(&mut r).expect("an answer to the control")
+}
+
+const AWAITING: &str = r#"import json, sys
+assert sys.argv[1:] == ["--json"]
+print(json.dumps({"generated_at": "x", "unknown": ["gitlab: unreadable"], "items": [
+    {"kind": "signature", "severity": "high", "age": "-", "what": "ruling unsigned", "where": "ruling.yml", "note": None}]}))
+"#;
+
+#[test]
+fn approvals_runs_the_awaiting_reader_without_the_model() {
+    // Disarmed model: a control still answers, because the model is not involved.
+    let rig = rig_full("approvals", mapped(), vec![ROWS.into()], vec![answer("never")], false);
+    reader(&rig, "awaiting-operator.py", AWAITING);
+    match raise(&rig, nos_contract::wire::ControlView::Approvals) {
+        ToShell::Render { component: Component::ApprovalsList(a), .. } => {
+            assert_eq!(a.unknown, ["gitlab: unreadable"], "UNKNOWN sources reach the person");
+            assert_eq!(a.items.len(), 1);
+            assert_eq!(a.items[0].what, "ruling unsigned");
+        }
+        other => panic!("expected approvals_list, got {other:?}"),
+    }
+    assert!(rig.model.lock().unwrap().is_empty(), "a control reached the model");
+}
+
+#[test]
+fn red_status_runs_the_red_reader() {
+    let rig = rig_n("red", mapped(), vec![ROWS.into()], vec![answer("never")]);
+    reader(&rig, "red-status.py", r#"import json
+print(json.dumps({"sources_read": ["x"], "red_count": 1, "reds": ["pulse job failed"], "hold_count": 0, "holds": []}))
+"#);
+    match raise(&rig, nos_contract::wire::ControlView::RedStatus) {
+        ToShell::Render { component: Component::RedStatus(r), .. } => {
+            assert_eq!((r.red_count, r.reds.as_slice(), r.hold_count), (1, &["pulse job failed".to_string()][..], 0));
+        }
+        other => panic!("expected red_status, got {other:?}"),
+    }
+}
+
+#[test]
+fn a_reader_that_fails_or_lies_is_refused_never_empty() {
+    for (name, py) in [("exit", "import sys; sys.exit(3)"), ("garbage", "print('not json')"),
+                       ("shape", "import json; print(json.dumps({'items': [{'kind': 'x'}], 'unknown': []}))")] {
+        let rig = rig_n(name, mapped(), vec![ROWS.into()], vec![answer("never")]);
+        reader(&rig, "awaiting-operator.py", py);
+        assert!(matches!(raise(&rig, nos_contract::wire::ControlView::Approvals), ToShell::Refused { .. }), "{name}");
+    }
+}
+
+const CAPTURES: &str = r#"{"success": true, "data": [
+    {"id": "cap-1", "title": "HKDF notes", "createdAt": 1760000000, "metadata": null},
+    {"id": "cap-2", "title": "promoted already", "createdAt": 1760000001, "metadata": {"promotedTo": "obj-9"}}]}"#;
+
+#[test]
+fn inbox_shows_waiting_captures_and_names_the_queue_it_may_not_moderate() {
+    let rig = rig_n("inbox", mapped(), vec![CAPTURES.into(), r#"!403 {"success": false, "error": "admin privileges required"}"#.into()],
+        vec![answer("never")]);
+    match raise(&rig, nos_contract::wire::ControlView::Inbox) {
+        ToShell::Render { component: Component::InboxList(i), .. } => {
+            let ids: Vec<&str> = i.items.iter().map(|x| x.id.as_str()).collect();
+            assert_eq!(ids, ["cap-1"], "a promoted capture no longer waits");
+            assert_eq!(i.items[0].source, "capture");
+            assert_eq!(i.refused, ["promotions: not yours to moderate"], "a 403 is a refusal, never an empty queue");
+        }
+        other => panic!("expected inbox_list, got {other:?}"),
+    }
+    let keap = rig.keap.lock().unwrap().clone();
+    assert_eq!(keap.len(), 2);
+    assert!(keap[0].0.starts_with("GET /api/metadata "), "{}", keap[0].0);
+    assert!(keap[1].0.starts_with("GET /api/promotions?status=proposed "), "{}", keap[1].0);
+    assert!(keap.iter().all(|(h, _)| h.to_ascii_lowercase().contains("x-authentik-username: alice smith")), "not as the person");
+}
+
+#[test]
+fn inbox_for_a_moderator_holds_the_proposed_promotions() {
+    let promos = r#"{"success": true, "data": {"policy": "local", "items": [
+        {"id": "pr-1", "status": "proposed", "captureId": "cap-1", "object": {"name": "HKDF"}, "createdAt": "2026-10-11"}]}}"#;
+    let rig = rig_n("moder", mapped(), vec![CAPTURES.into(), promos.into()], vec![answer("never")]);
+    match raise(&rig, nos_contract::wire::ControlView::Inbox) {
+        ToShell::Render { component: Component::InboxList(i), .. } => {
+            assert!(i.refused.is_empty(), "{:?}", i.refused);
+            assert!(i.items.iter().any(|x| x.id == "pr-1" && x.source == "promotion" && x.title == "HKDF"), "{:?}", i.items);
+        }
+        other => panic!("expected inbox_list, got {other:?}"),
+    }
+}
+
+#[test]
+fn an_unreadable_capture_source_is_named_not_emptied() {
+    let rig = rig_n("capfail", mapped(), vec!["!500 {\"success\": false, \"error\": \"db\"}".into()], vec![answer("never")]);
+    match raise(&rig, nos_contract::wire::ControlView::Inbox) {
+        ToShell::Render { component: Component::InboxList(i), .. } => {
+            assert!(i.items.is_empty());
+            assert!(i.refused.iter().any(|r| r.starts_with("captures: ")), "{:?}", i.refused);
+        }
+        other => panic!("expected inbox_list, got {other:?}"),
+    }
 }
