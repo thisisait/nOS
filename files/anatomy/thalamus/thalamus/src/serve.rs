@@ -5,8 +5,9 @@
 
 use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, Session};
-use nos_contract::renderers::{CellChange, Component, Row, RowDiffApproval, TableResults};
-use nos_contract::wire::{decode_to_thalamus, encode, Decision, ToShell, ToThalamus};
+use nos_contract::renderers::{ApprovalsList, CellChange, Component, InboxItem, InboxList, RedStatus, Row, RowDiffApproval,
+                               TableResults};
+use nos_contract::wire::{decode_to_thalamus, encode, ControlView, Decision, ToShell, ToThalamus};
 use nos_contract::uid;
 use serde_json::{json, Map, Value};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -15,6 +16,7 @@ use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::os::unix::io::AsRawFd;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -23,6 +25,7 @@ pub const IDENTITY_MAP: &str = ".nos/identity-map.yml";
 const MAX_LINE: u64 = 1 << 20;
 const MAX_TOOL_CALLS: usize = 8;
 const MAX_PAGES: usize = 40;
+const READER_SECS: u64 = 120;
 
 pub struct Server {
     pub map: PathBuf,
@@ -30,6 +33,8 @@ pub struct Server {
     pub secret: String,
     pub ledger: Mutex<Ledger>,
     pub binding: Result<Binding, String>,
+    /// The checkout whose tools/ readers the approvals and red-status controls run.
+    pub repo: PathBuf,
     pub log: Mutex<Box<dyn Write + Send>>,
 }
 
@@ -121,7 +126,8 @@ fn enc(s: &str) -> String {
 /// One connection's open session: one person, one conversation with the model.
 struct Open {
     session: String,
-    model: Binding,
+    /// None when iris is unbound: controls still answer, turns are refused.
+    model: Option<Binding>,
     messages: Vec<Value>,
     tokens: (i64, i64),
     /// Approvals asked and not yet decided; a decision removes its id, so each is decided once.
@@ -203,25 +209,19 @@ impl Server {
                         refuse(&mut out, "session is not this connection's open session");
                         continue;
                     }
-                    if open.is_none() {
-                        match self.open(&who, &mut out) {
-                            Ok(o) => open = Some(o),
-                            Err(why) => {
-                                refuse(&mut out, &why);
-                                continue;
-                            }
-                        }
-                    }
-                    if let Some(o) = open.as_mut() {
+                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
                         self.turn(&who, &mut out, o, &text);
+                    }
+                }
+                Ok(ToThalamus::Control { view }) => {
+                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
+                        self.control(&who, &mut out, o, view);
                     }
                 }
                 Ok(ToThalamus::ApprovalDecision { approval, decision, note }) => match open.as_mut() {
                     Some(o) if o.pending.contains(&approval) => self.decide(&who, &mut out, o, &approval, decision, note),
                     _ => refuse(&mut out, "no open approval with that id"),
                 },
-                // ponytail: control views land in increment 7.
-                Ok(_) => refuse(&mut out, "not served yet in this slice"),
             }
         }
         if let Some(o) = open {
@@ -230,11 +230,22 @@ impl Server {
         }
     }
 
+    /// The connection's session, opened on its first Turn or Control; None was refused.
+    fn ensure<'a>(&self, who: &Person, out: &mut UnixStream, open: &'a mut Option<Open>) -> Option<&'a mut Open> {
+        if open.is_none() {
+            match self.open(who, out) {
+                Ok(o) => *open = Some(o),
+                Err(why) => refuse(out, &why),
+            }
+        }
+        open.as_mut()
+    }
+
     fn open(&self, who: &Person, out: &mut UnixStream) -> Result<Open, String> {
-        let model = self.binding.clone()?;
+        let model = self.binding.clone().ok();
         let session = mint_uuid().map_err(|e| format!("no session id: {e}"))?;
         let actor = format!("user:{}", who.uid());
-        let model_uri = format!("{}-{}", model.name, model.model_id);
+        let model_uri = model.as_ref().map_or("unbound".to_string(), |m| format!("{}-{}", m.name, m.model_id));
         let s = Session { uuid: &session, agent_name: "iris", agent_version: 1, actor: &actor, model_uri: &model_uri };
         self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.start(&s).map_err(|e| format!("ledger: {e}"))?;
         send(out, &ToShell::Session { session: session.clone(), actor, model_uri });
@@ -297,11 +308,15 @@ impl Server {
     }
 
     fn turn(&self, who: &Person, out: &mut UnixStream, o: &mut Open, text: &str) {
+        let Some(model) = o.model.clone() else {
+            let why = self.binding.as_ref().err().cloned().unwrap_or_default();
+            return refuse(out, &format!("iris has no model: {why}"));
+        };
         let _ = self.record(o, Kind::Message, None, json!({"role": "person", "text": text}));
         o.messages.push(json!({"role": "user", "content": text}));
         let mut calls = 0;
         loop {
-            let msg = match self.complete(o) {
+            let msg = match self.complete(&model, o) {
                 Ok(m) => m,
                 Err(why) => return refuse(out, &why),
             };
@@ -345,13 +360,13 @@ impl Server {
     }
 
     /// One chat-completions call; the model gets the conversation, never a KEAP header.
-    fn complete(&self, o: &mut Open) -> Result<Value, String> {
-        let url = format!("{}/chat/completions", o.model.base_url.trim_end_matches('/'));
+    fn complete(&self, model: &Binding, o: &mut Open) -> Result<Value, String> {
+        let url = format!("{}/chat/completions", model.base_url.trim_end_matches('/'));
         let mut req = agent(300).post(&url);
-        if !o.model.auth_token.is_empty() {
-            req = req.header("Authorization", &format!("Bearer {}", o.model.auth_token));
+        if !model.auth_token.is_empty() {
+            req = req.header("Authorization", &format!("Bearer {}", model.auth_token));
         }
-        let body = json!({"model": o.model.model_id, "messages": o.messages, "tools": tools()});
+        let body = json!({"model": model.model_id, "messages": o.messages, "tools": tools()});
         let mut r = req.send_json(&body).map_err(|e| format!("model unreachable: {e}"))?;
         let status = r.status().as_u16();
         let v: Value = r.body_mut().read_json().map_err(|e| format!("model answered {status} with no JSON: {e}"))?;
@@ -429,8 +444,18 @@ impl Server {
             .header("x-authentik-groups", &who.groups.join(","))
     }
 
-    /// keapAs() in the face's upstream.ts: GET, or POST `body`, as the person behind the proxy secret.
+    /// keapAs() in the face's upstream.ts: GET, or POST `body`, as the person; Err unless 200.
     fn keap(&self, who: &Person, url: &str, body: Option<&Value>) -> Result<Value, String> {
+        let (status, v) = self.keap_status(who, url, body)?;
+        if status != 200 {
+            let why = v.get("error").and_then(Value::as_str).unwrap_or("").chars().take(300).collect::<String>();
+            return Err(format!("KEAP answered {status}: {why}"));
+        }
+        Ok(v)
+    }
+
+    /// The status and JSON body of one call as the person behind the proxy secret.
+    fn keap_status(&self, who: &Person, url: &str, body: Option<&Value>) -> Result<(u16, Value), String> {
         if self.secret.is_empty() {
             return Err("the thalamus holds no KEAP proxy secret".into());
         }
@@ -446,10 +471,106 @@ impl Server {
         let path = url.split('?').next().unwrap_or("").splitn(4, '/').nth(3).unwrap_or("");
         self.say(format!("{status} as {} {method} /{path} {}ms", who.username, t0.elapsed().as_millis()));
         let v: Value = r.body_mut().read_json().map_err(|e| format!("KEAP answered {status} with no JSON: {e}"))?;
-        if status != 200 {
-            let why = v.get("error").and_then(Value::as_str).unwrap_or("").chars().take(300).collect::<String>();
-            return Err(format!("KEAP answered {status}: {why}"));
-        }
-        Ok(v)
+        Ok((status, v))
     }
+
+    /// A control view, raised by the person; the model is not asked and does not see it.
+    fn control(&self, who: &Person, out: &mut UnixStream, o: &mut Open, view: ControlView) {
+        let tool = match view {
+            ControlView::Inbox => "control_inbox",
+            ControlView::Approvals => "control_approvals",
+            ControlView::RedStatus => "control_red_status",
+        };
+        let _ = self.record(o, Kind::ToolUse, Some(tool), json!({}));
+        let c = match view {
+            ControlView::Inbox => Ok(Component::InboxList(self.inbox(who))),
+            ControlView::Approvals => self.reader("awaiting-operator.py").and_then(|v| {
+                let items = serde_json::from_value(v.get("items").cloned().unwrap_or(Value::Null));
+                let unknown = serde_json::from_value(v.get("unknown").cloned().unwrap_or(Value::Null));
+                match (items, unknown) {
+                    (Ok(items), Ok(unknown)) => Ok(Component::ApprovalsList(ApprovalsList { items, unknown })),
+                    (Err(e), _) | (_, Err(e)) => Err(format!("awaiting-operator.py: unexpected shape: {e}")),
+                }
+            }),
+            ControlView::RedStatus => self.reader("red-status.py").and_then(|v| {
+                let four = ["red_count", "reds", "hold_count", "holds"].map(|k| (k.to_string(), v.get(k).cloned().unwrap_or(Value::Null)));
+                serde_json::from_value::<RedStatus>(Value::Object(four.into_iter().collect()))
+                    .map(Component::RedStatus).map_err(|e| format!("red-status.py: unexpected shape: {e}"))
+            }),
+        };
+        match c {
+            Ok(component) => {
+                let _ = self.record(o, Kind::ToolResult, Some(tool), json!({"ok": true}));
+                send(out, &ToShell::Render { session: o.session.clone(), component });
+            }
+            Err(why) => {
+                let _ = self.record(o, Kind::ToolResult, Some(tool), json!({"error": why}));
+                refuse(out, &why);
+            }
+        }
+    }
+
+    /// `python3 tools/<name> --json` in the repo; Err on a non-zero exit, a timeout or no JSON.
+    fn reader(&self, name: &str) -> Result<Value, String> {
+        let child = std::process::Command::new("python3").arg(self.repo.join("tools").join(name)).arg("--json")
+            .current_dir(&self.repo).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null())
+            .spawn().map_err(|e| format!("{name}: {e}"))?;
+        let pid = child.id() as libc::pid_t;
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || tx.send(child.wait_with_output()));
+        let done = rx.recv_timeout(Duration::from_secs(READER_SECS)).map_err(|_| {
+            unsafe { libc::kill(pid, libc::SIGKILL) };
+            format!("{name}: no answer in {READER_SECS}s")
+        })?;
+        let o = done.map_err(|e| format!("{name}: {e}"))?;
+        if !o.status.success() {
+            return Err(format!("{name} exited {}", o.status));
+        }
+        serde_json::from_slice(&o.stdout).map_err(|e| format!("{name}: not JSON: {e}"))
+    }
+
+    /// Two sources on the human door, as the person: own captures not yet promoted, and the
+    /// moderation queue. A source that cannot be read is named in `refused`, never emptied.
+    fn inbox(&self, who: &Person) -> InboxList {
+        let base = self.keap_url.trim_end_matches('/');
+        let (mut items, mut refused) = (Vec::new(), Vec::new());
+        match self.keap(who, &format!("{base}/api/metadata"), None).and_then(|v| listed(&v, "/data", "capture")) {
+            Ok(i) => items.extend(i),
+            Err(why) => refused.push(format!("captures: {why}")),
+        }
+        match self.keap_status(who, &format!("{base}/api/promotions?status=proposed"), None) {
+            Ok((403, _)) => refused.push("promotions: not yours to moderate".into()),
+            Ok((200, v)) => match listed(&v, "/data/items", "promotion") {
+                Ok(i) => items.extend(i),
+                Err(why) => refused.push(format!("promotions: {why}")),
+            },
+            Ok((status, _)) => refused.push(format!("promotions: KEAP answered {status}")),
+            Err(why) => refused.push(format!("promotions: {why}")),
+        }
+        InboxList { items, refused }
+    }
+}
+
+/// The waiting entries of one inbox source; a row without an id or title fails the source.
+fn listed(v: &Value, at: &str, source: &str) -> Result<Vec<InboxItem>, String> {
+    let rows = v.pointer(at).and_then(Value::as_array).ok_or("no list in the answer")?;
+    let waiting = |r: &&Value| match source {
+        "capture" => r.pointer("/metadata/promotedTo").is_none_or(Value::is_null),
+        _ => r.get("status").and_then(Value::as_str) == Some("proposed"),
+    };
+    rows.iter().filter(waiting).map(|r| {
+        let s = |p: &str| r.pointer(p).and_then(Value::as_str).filter(|x| !x.is_empty()).map(str::to_string);
+        let id = s("/id").ok_or("a row without an id")?;
+        let title = match source {
+            "capture" => s("/title"),
+            _ => s("/object/name").or_else(|| s("/object/title")).or_else(|| s("/captureId")),
+        }.ok_or(format!("row {id} has no title"))?;
+        // ponytail: an epoch createdAt is shown as its number; format it when a person asks.
+        let created_at = match r.get("createdAt") {
+            Some(Value::String(t)) => t.clone(),
+            Some(n @ Value::Number(_)) => n.to_string(),
+            _ => String::new(),
+        };
+        Ok(InboxItem { id, title, source: source.into(), created_at })
+    }).collect()
 }
