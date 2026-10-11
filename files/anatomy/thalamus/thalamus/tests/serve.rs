@@ -457,12 +457,59 @@ print(json.dumps({"sources_read": ["x"], "red_count": 1, "reds": ["pulse job fai
 
 #[test]
 fn a_reader_that_fails_or_lies_is_refused_never_empty() {
-    for (name, py) in [("exit", "import sys; sys.exit(3)"), ("garbage", "print('not json')"),
-                       ("shape", "import json; print(json.dumps({'items': [{'kind': 'x'}], 'unknown': []}))")] {
+    for (name, py, want) in [("exit", "import sys; sys.exit(3)", "awaiting-operator.py exited"),
+                             ("garbage", "print('not json')", "awaiting-operator.py: not JSON"),
+                             ("shape", "import json; print(json.dumps({'items': [{'kind': 'x'}], 'unknown': []}))",
+                              "awaiting-operator.py: unexpected shape")] {
         let rig = rig_n(name, mapped(), vec![ROWS.into()], vec![answer("never")]);
         reader(&rig, "awaiting-operator.py", py);
-        assert!(matches!(raise(&rig, nos_contract::wire::ControlView::Approvals), ToShell::Refused { .. }), "{name}");
+        match raise(&rig, nos_contract::wire::ControlView::Approvals) {
+            // The reason names the reader's own failure, so a missing python3 or script cannot pass.
+            ToShell::Refused { reason } => assert!(reason.starts_with(want), "{name}: {reason}"),
+            other => panic!("{name}: expected a refusal, got {other:?}"),
+        }
     }
+}
+
+#[test]
+fn a_control_is_a_tool_use_and_result_pair_in_the_ledger() {
+    let rig = rig_n("pair", mapped(), vec![ROWS.into()], vec![answer("never")]);
+    reader(&rig, "awaiting-operator.py", AWAITING);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    (&s).write_all(encode(&ToThalamus::Control { view: nos_contract::wire::ControlView::Approvals }).as_bytes()).unwrap();
+    let Some(ToShell::Session { session, .. }) = next(&mut r) else { panic!("no session") };
+    assert!(matches!(next(&mut r), Some(ToShell::Render { .. })));
+    let db = rusqlite::Connection::open(&rig.ledger).unwrap();
+    let mut q = db.prepare("SELECT type, task FROM events WHERE run_id = ?1 AND task LIKE '%/tool:%' ORDER BY id").unwrap();
+    let got: Vec<(String, String)> = q.query_map([&session], |x| Ok((x.get(0)?, x.get(1)?))).unwrap().map(Result::unwrap).collect();
+    let pair = |t: &str| (t.to_string(), "agent:iris/tool:control_approvals".to_string());
+    assert_eq!(got, [pair("agent_tool_use"), pair("agent_tool_result")]);
+}
+
+#[test]
+fn a_reader_that_times_out_is_killed_with_what_it_spawned() {
+    let rig = rig_n("slow", mapped(), vec![ROWS.into()], vec![answer("never")]);
+    let pidfile = rig.srv.repo.join("grandchild.pid");
+    reader(&rig, "awaiting-operator.py", &format!(r#"import subprocess, time
+p = subprocess.Popen(["sleep", "60"])
+open({pidfile:?}, "w").write(str(p.pid))
+time.sleep(60)
+"#));
+    match raise(&rig, nos_contract::wire::ControlView::Approvals) {
+        ToShell::Refused { reason } => assert!(reason.contains("no answer in 2s"), "{reason}"),
+        other => panic!("expected a timeout refusal, got {other:?}"),
+    }
+    let pid: i32 = std::fs::read_to_string(&pidfile).unwrap().parse().unwrap();
+    let alive = || unsafe { libc::kill(pid, 0) } == 0;
+    for _ in 0..40 {
+        if !alive() {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    unsafe { libc::kill(pid, libc::SIGKILL) };
+    panic!("the reader's child {pid} outlived the timeout and holds its pipe");
 }
 
 const CAPTURES: &str = r#"{"success": true, "data": [
