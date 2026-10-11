@@ -5,10 +5,13 @@
 
 - name: "[pazny.receptor] Ensure runtime directories exist"
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ item.path }}"
     state: directory
-    mode: '0755'
-  loop: ["{{ receptor_runtime_dir }}", "{{ receptor_log_dir }}"]
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ receptor_runtime_dir }}", mode: '0755' }
+    # 0700: the logs name every login, person and request line; the dir guards the files.
+    - { path: "{{ receptor_log_dir }}", mode: '0700' }
 
 # The ONE identity map (ruling 1a). Read per request, so a new map needs no restart.
 - name: "[pazny.receptor] Render the identity map"
