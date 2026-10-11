@@ -59,6 +59,8 @@ def _upstream(seen: list):
             self.end_headers()
             self.wfile.write(body)
 
+        do_POST = do_PUT = do_PATCH = do_DELETE = do_GET
+
         def log_message(self, *a):
             pass
 
@@ -67,7 +69,7 @@ def _upstream(seen: list):
     return srv
 
 
-def _run(logins: dict, extra: str = "", secret: str = "s3cret"):
+def _run(logins: dict, extra: str = "", secret: str = "s3cret", raw: bytes | None = None):
     d = pathlib.Path(tempfile.mkdtemp(prefix="rcp-", dir="/tmp"))
     sock, mapf = d / "s", d / "identity-map.yml"
     mapf.write_text(json.dumps({"logins": logins}))
@@ -84,11 +86,15 @@ def _run(logins: dict, extra: str = "", secret: str = "s3cret"):
             time.sleep(0.05)
         mode = sock.stat().st_mode & 0o777
         c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        c.settimeout(15)  # a relay that waits on a body it was promised must fail, not hang
         c.connect(str(sock))
-        c.sendall(("GET /api/tables HTTP/1.1\r\nHost: keap\r\n" + extra + "Connection: close\r\n\r\n").encode())
+        c.sendall(raw or ("GET /api/tables HTTP/1.1\r\nHost: keap\r\n" + extra + "Connection: close\r\n\r\n").encode())
         reply = b""
-        while chunk := c.recv(65536):
-            reply += chunk
+        try:
+            while chunk := c.recv(65536):
+                reply += chunk
+        except socket.timeout:
+            reply = b"HTTP/1.1 TIMEOUT"
         c.close()
         return mode, reply.split(b" ", 2)[1].decode(), seen
     finally:
@@ -138,3 +144,20 @@ def test_the_default_map_is_derived_from_the_roster():
                               "iris": {"username": "iris", "groups": ["nos-users"]}}}, got
     over = {"studio": {"username": "pazny", "groups": ["nos-admins"]}}
     assert json.loads(env.from_string(tpl).render(**{**ctx, "nos_identity_map": over})) == {"logins": over}
+
+
+MAPPED = {ME: {"username": "alice", "groups": ["nos-users"]}}
+
+
+@needs_peercred
+@pytest.mark.parametrize("head", [
+    "X-Ok: 1\nX-Authentik-Username: akadmin\r\n",          # bare LF: an upstream that splits on \n sees a forgery
+    "X-Ok: 1\rX-Authentik-Username: akadmin\r\n",          # lone CR
+    "X-Ok: a\x00b\r\n",                                    # NUL
+    "X-Ok: 1\r\n X-Authentik-Username: akadmin\r\n",       # obs-fold continuation
+    "X Bad: 1\r\n",                                         # header name is not a token
+    "Content-Length: 0\r\nContent-Length: 5\r\n",          # duplicate Content-Length
+], ids=["bare-lf", "lone-cr", "nul", "obs-fold", "bad-name", "dup-content-length"])
+def test_a_smuggling_head_is_refused_and_keap_never_hears_it(head):
+    _, status, seen = _run(MAPPED, head)
+    assert (status, seen) == ("400", []), (status, seen)
