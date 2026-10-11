@@ -69,6 +69,8 @@ fn dir(name: &str) -> PathBuf {
     let d = PathBuf::from(format!("/tmp/th-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
+    // bind()'s umask is process-wide: a dir made by a racing test thread is born 0600.
+    std::fs::set_permissions(&d, std::fs::Permissions::from_mode(0o700)).unwrap();
     d
 }
 
