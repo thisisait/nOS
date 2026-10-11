@@ -15,6 +15,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::os::unix::io::AsRawFd;
 use std::os::unix::net::{UnixListener, UnixStream};
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::{Arc, Mutex};
@@ -517,12 +518,15 @@ impl Server {
     fn reader(&self, name: &str) -> Result<Value, String> {
         let child = std::process::Command::new("python3").arg(self.repo.join("tools").join(name)).arg("--json")
             .current_dir(&self.repo).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null())
-            .spawn().map_err(|e| format!("{name}: {e}"))?;
+            .process_group(0).spawn().map_err(|e| format!("{name}: {e}"))?;
         let pid = child.id() as libc::pid_t;
         let (tx, rx) = std::sync::mpsc::channel();
         std::thread::spawn(move || tx.send(child.wait_with_output()));
         let done = rx.recv_timeout(Duration::from_secs(self.reader_secs)).map_err(|_| {
-            unsafe { libc::kill(pid, libc::SIGKILL) };
+            // The whole group: a child the reader spawned holds the pipe the waiter reads.
+            // ponytail: a reader that setsid()s escapes; the group id could be reused in the
+            // instant between a late exit and this kill. A pidfd-style wait closes both.
+            unsafe { libc::kill(-pid, libc::SIGKILL) };
             format!("{name}: no answer in {}s", self.reader_secs)
         })?;
         let o = done.map_err(|e| format!("{name}: {e}"))?;
