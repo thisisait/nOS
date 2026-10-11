@@ -39,7 +39,17 @@ A login that is not in the map gets 403. It is never given a default person.
 - **OpenHuman.** Its `nos-tables` MCP server sets
   `KEAP_IDENTITY_URL=http+unix://<socket>` and `NOS_MCP_READ_ONLY=1`.
 - **Host tools.** `tools/keap_api.py` and `tools/mcp-tables-server.py` take the
-  human door through it when `KEAP_IDENTITY_URL` is set.
+  human door through it when `KEAP_IDENTITY_URL` is set, for reads only.
+
+## What it relays
+
+`GET` and `HEAD` on `/api` paths, nothing else. Any other method gets 405
+before KEAP is contacted: OpenHuman is read-only by contract and has a shell,
+so the client flag alone does not hold. Approved writes will take the
+Thalamus's own proxy-secret path (operator ruling 2026-10-11). A head with a
+bare CR or LF, a NUL, a folded line, a non-token header name, two
+`Content-Length`s, or a target outside `/api` (or with `..`, `.`, `//`, `\`,
+`%2e`/`%2f`/`%5c`) gets 400.
 
 ## Holders of the KEAP proxy secret
 
@@ -51,7 +61,8 @@ processes could read. That is the "runs as the user" class
 ## Health
 
 `ansible-playbook main.yml --tags receptor,verify`: the socket is 0600 and
-answers your login as a person (not 403, not 503). 502 means KEAP is down.
+answers your login as a person: `GET /api/me` must be 200. Anything else fails
+the play and names the status (403 = map, 503 = no secret, 502 = KEAP down).
 
 Sibling on the Linux DGX bootstrap: `bootstrap/minimal-linux-dgx/identity/keap-identity.py`
 (Linux groups instead of a map).
