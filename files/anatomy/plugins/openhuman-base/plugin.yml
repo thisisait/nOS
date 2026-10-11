@@ -49,12 +49,12 @@ depends_on:
   - upstream: "service:keap"
     kind: data
     via: >-
-      the nOS tables MCP server reads KEAP's agent API on 127.0.0.1:keap_port with
-      the RO token from `docker exec iiab-keap-1` (the [[mcp_client.servers]] entry in roles/pazny.openhuman/templates/config.toml.j2)
-    measured: "2026-10-06"
+      the nOS tables MCP server reads KEAP's human door as the operator, through the
+      receptor's socket (KEAP_IDENTITY_URL in the [[mcp_client.servers]] entry of roles/pazny.openhuman/templates/config.toml.j2)
+    measured: "2026-10-11"
     unenforced: >-
       No auto-enable block ties install_keap to install_openhuman. With KEAP down
-      the app still runs; only the nos-tables MCP server fails to start.
+      the app still runs; only the nos-tables MCP server answers with an error.
 
 gdpr:
   purpose: |
@@ -66,7 +66,7 @@ gdpr:
   balancing_test: >-
     Single user, the operator. The default model is local (Ollama, privacy
     local_only) and the firewall rule denies the app any non-local host;
-    the table token is read-only and read at spawn, never stored.
+    the tables MCP holds no token and refuses every write verb.
   data_source: from_subject
   data_categories:
     - operator_prompts
@@ -86,7 +86,7 @@ gdpr:
   security_measures:
     - "privacy.mode local_only on the default provider: the core refuses to build a cloud route"
     - "analytics, usage sharing, core updater, remote gitbooks MCP and memory off in config.toml"
-    - "nOS tables over MCP with the RO token, read from the KEAP container at spawn"
+    - "nOS tables over MCP as the operator through the receptor socket; no KEAP token; write verbs refused (NOS_MCP_READ_ONLY)"
     - "Little Snitch rule group rendered by the role: OpenHuman denied every non-local host"
     - "tools/openhuman-status.py verifies the config every converge; RED fails the play"
   notes: >-

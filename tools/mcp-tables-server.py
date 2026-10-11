@@ -242,6 +242,9 @@ def _human_call(args: dict) -> tuple[str, bool]:
 
 def _call_keap(args: dict) -> tuple[str, bool]:
     """Dispatch one verb to the KEAP door. Returns (text, is_error)."""
+    # A read-only caller (OpenHuman) may reach KEAP as an admin person: refuse before any door.
+    if os.environ.get("NOS_MCP_READ_ONLY") == "1" and VERBS.get(args.get("verb", "")) == "write":
+        return f"verb '{args.get('verb')}' writes; this caller is read-only (NOS_MCP_READ_ONLY)", True
     if os.environ.get("KEAP_IDENTITY_URL", "").startswith("http+unix://"):
         return _human_call(args)
     method, path, body, err = _route(args)

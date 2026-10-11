@@ -7,7 +7,7 @@
     "genome": 21,
     "cell": 16,
     "tissue": 1,
-    "organ": 78,
+    "organ": 79,
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
@@ -18,7 +18,7 @@
     "reflex": 43,
     "heartbeat": 1,
     "internal": 74,
-    "edges": 427
+    "edges": 428
   },
   "nodes": {
     "agent:conductor": {
@@ -1749,6 +1749,10 @@
       "level": "organ",
       "kind": "service"
     },
+    "service:receptor": {
+      "level": "organ",
+      "kind": "service"
+    },
     "service:redis": {
       "level": "organ",
       "kind": "service"
@@ -3215,6 +3219,11 @@
     {
       "from": "service:keap",
       "to": "service:openhuman",
+      "kind": "data"
+    },
+    {
+      "from": "service:keap",
+      "to": "service:receptor",
       "kind": "data"
     },
     {

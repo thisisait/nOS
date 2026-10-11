@@ -1,0 +1,13 @@
+---
+- name: Restart receptor
+  ansible.builtin.shell: |
+    {% if (nos_service_manager | default('launchd')) == 'systemd-user' %}
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    {{ nos_user_systemctl | default('systemctl --user') }} restart "{{ receptor_launchd_label }}.service"
+    {% else %}
+    LABEL="{{ receptor_launchd_label }}"; UID_NUM=$(id -u)
+    launchctl bootout "gui/${UID_NUM}/${LABEL}" 2>/dev/null || true
+    sleep 1
+    launchctl bootstrap "gui/${UID_NUM}" "$HOME/Library/LaunchAgents/${LABEL}.plist"
+    {% endif %}
+  changed_when: true

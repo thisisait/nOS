@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 112 (88 core services, 3 manifest apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (100)
+- **Processing activities:** 113 (89 core services, 3 manifest apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (101)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 17
 
@@ -1664,7 +1664,7 @@ Memory (conversation log, recall) is turned off by the role.
 - **Transfers outside EU:** No
 - **Retention:** transient (not persisted)
 - **Storage:** Host only: ~/.openhuman (config.toml, workspace/AGENTS.md, skills, the app's own session and MCP stores).
-- **Security measures:** `privacy.mode local_only on the default provider: the core refuses to build a cloud route`; `analytics, usage sharing, core updater, remote gitbooks MCP and memory off in config.toml`; `nOS tables over MCP with the RO token, read from the KEAP container at spawn`; `Little Snitch rule group rendered by the role: OpenHuman denied every non-local host`; `tools/openhuman-status.py verifies the config every converge; RED fails the play`
+- **Security measures:** `privacy.mode local_only on the default provider: the core refuses to build a cloud route`; `analytics, usage sharing, core updater, remote gitbooks MCP and memory off in config.toml`; `nOS tables over MCP as the operator through the receptor socket; no KEAP token; write verbs refused (NOS_MCP_READ_ONLY)`; `Little Snitch rule group rendered by the role: OpenHuman denied every non-local host`; `tools/openhuman-status.py verifies the config every converge; RED fails the play`
 
 #### Pulse — `svc_pulse`
 - **Purpose:** Pulse is the host-side scheduled-job runner. It processes aggregated job
@@ -1680,3 +1680,17 @@ operator authors or triggers jobs; no tenant end-user data is processed.
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
 - **Storage:** host service (non-Docker / launchd)
 - **Security measures:** platform baseline (see above)
+
+#### Receptor — `svc_receptor`
+- **Purpose:** Tell KEAP which person is behind a host login, so a host tool sees only
+what that person may see. Processing: the identity map (host login,
+Authentik username, groups) and one log line per request (status,
+login, username, request line, duration) in ~/receptor/log.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `account_identifiers`; `request_log`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** transient (not persisted)
+- **Storage:** Host only: ~/.nos/identity-map.yml (0600) and ~/receptor/log.
+- **Security measures:** `Caller identified by the kernel (SO_PEERCRED / LOCAL_PEERCRED), never by a header`; `Socket 0600 under ~/.nos (0700); a login not in the map is refused`; `Client X-Authentik-* and x-keap-proxy-secret dropped before KEAP`; `Proxy secret only in the 0600 plist / unit env`

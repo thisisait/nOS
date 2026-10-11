@@ -1038,6 +1038,16 @@ services:
       url_template: "http://localhost:{{ device_gateway_port }}/health"
       expect_status: 200
 
+  # A host login reaches KEAP's human door as a person (roles/pazny.receptor). Serves a
+  # unix socket, so no domain_var/port_var; its verify is the role's own --tags verify.
+  - id: receptor
+    software_owner: self
+    category: identity
+    stack: null
+    install_flag: install_receptor
+    version_source: launchd
+    launchd_label: "eu.thisisait.nos.receptor"
+
   - id: opencode
     software_owner: symbiont
     category: ai
@@ -1057,7 +1067,7 @@ services:
     install_flag: install_openhuman
     version_source: none
     host_process: "a desktop app (cask) the operator opens; no launchd job"
-    joint_pending: "attached through the nos-tables MCP server over KEAP's agent API (roles/pazny.openhuman/templates/nos-mcp.json.j2); no contract spec yet"
+    joint_pending: "attached through the nos-tables MCP server over KEAP's human door via the receptor socket (roles/pazny.openhuman/templates/config.toml.j2); no contract spec yet"
 
   - id: wing
     software_owner: self

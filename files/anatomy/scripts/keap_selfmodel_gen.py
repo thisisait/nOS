@@ -134,7 +134,7 @@ SYSTEM_NAME = {
     "metabase": "Metabase", "superset": "Superset", "influxdb": "InfluxDB",
     "mikopbx": "MikoPBX", "qgis-server": "QGIS Server",
     "alloy": "Grafana Alloy", "openclaw": "OpenClaw", "ollama": "Ollama", "hermes": "Hermes",
-    "device-gateway": "Device gateway",
+    "device-gateway": "Device gateway", "receptor": "Receptor",
     "opencode": "OpenCode", "openhuman": "OpenHuman", "wing": "Wing", "bone": "Bone", "pulse": "Pulse",
     "cortex": "Cortex", "ears": "Ears",
     "iiab-terminal": "IIAB Terminal", "backup": "Backup", "backrest": "Backrest",
@@ -538,6 +538,11 @@ SYSTEM_EN = {
         "device-code at Authentik, then serves a Bearer-gated allowlist of KEAP tables; the "
         "phone never holds the KEAP token. Unlike Face it is not a desktop, and unlike "
         "Hermes it does not bridge chat — it is the only organ a handheld is meant to call."
+    ),
+    "receptor": (
+        "The receptor, a unix socket in front of KEAP's human door. The kernel names the "
+        "calling host login, the identity map names the person, and KEAP sees that person; "
+        "unlike the device gateway it serves no network port and holds no KEAP token."
     ),
     "opencode": (
         "OpenCode, the agentic coding helper on the host. It works inside a checked-out "

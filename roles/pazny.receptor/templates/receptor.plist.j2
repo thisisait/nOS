@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ receptor_launchd_label }}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ receptor_python }}</string>
+        <string>{{ receptor_src }}</string>
+        <string>--socket</string>
+        <string>{{ receptor_socket }}</string>
+        <string>--map</string>
+        <string>{{ receptor_identity_map }}</string>
+        <string>--upstream</string>
+        <string>127.0.0.1:{{ keap_port | default(8091) }}</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>{{ receptor_runtime_dir }}</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>{{ ansible_facts['env']['HOME'] }}</string>
+        <key>KEAP_PROXY_SHARED_SECRET</key>
+        <string>{{ keap_proxy_shared_secret | default('') }}</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+    <key>StandardOutPath</key>
+    <string>{{ receptor_log_dir }}/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{ receptor_log_dir }}/launchd.err.log</string>
+</dict>
+</plist>

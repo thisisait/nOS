@@ -2703,6 +2703,13 @@
       when: install_device_gateway | default(false)
       tags: ['device-gateway', 'ai']
 
+    # Receptor: host login -> person in front of KEAP's human door (OpenHuman's MCP uses it).
+    - name: "Receptor (pazny.receptor role)"
+      ansible.builtin.import_role:
+        name: pazny.receptor
+      when: install_receptor | default(false) | bool
+      tags: ['receptor', 'keap']
+
     # ──────────────────────────────────────────────────────────────────────────
     # OpenCode - AI coding TUI (sst.dev) with local Ollama provider
     # Alternative to Claude Code / Cursor, but open-source and local.

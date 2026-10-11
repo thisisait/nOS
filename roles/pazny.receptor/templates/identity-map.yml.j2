@@ -1,0 +1,11 @@
+{#- Host login -> the person KEAP sees (operator ruling 2026-10-11, 1a). JSON, which is YAML:
+    the receptor reads it with the stdlib, the Thalamus will read the same file.
+    nos_identity_map wins whole; empty = the roster: each nos_extra_identities name is a login
+    of its own name, the operator's login is nos_primary_admin. A login not listed is refused. -#}
+{%- set ns = namespace(logins={}) -%}
+{%- for u in nos_extra_identities | default([]) -%}
+{%- set _ = ns.logins.update({u.name: {'username': u.name, 'groups': [(authentik_rbac_tiers | selectattr('tier', 'equalto', u.tier | int) | first).groups | last]}}) -%}
+{%- endfor -%}
+{%- set op = nos_identities | selectattr('name', 'equalto', nos_primary_admin) | first -%}
+{%- set _ = ns.logins.update({ansible_facts['user_id']: {'username': nos_primary_admin, 'groups': [(authentik_rbac_tiers | selectattr('tier', 'equalto', op.tier | int) | first).groups | last]}}) -%}
+{{ {'logins': nos_identity_map or ns.logins} | to_nice_json }}

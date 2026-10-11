@@ -822,6 +822,18 @@ words:
       one function at a time.
     no_surface_reason: "planned: roadmap row agentkit-rust-organ; nothing is built yet."
     not: [Cortex, Wing, organelles]
+  # 2026-10-11: the identity relay on the Mac (rulings 1a, 2); the Thalamus will take its job.
+  Receptor:
+    level: proper-name
+    proposed: true
+    means: >-
+      The host daemon that lets a host login reach KEAP's human door as a person: the kernel
+      names the login, ~/.nos/identity-map.yml names the person, and the receptor sends KEAP
+      that person's headers and the proxy secret.
+    names:
+      - path: roles/pazny.receptor/
+      - path: files/anatomy/receptor/receptor.py
+    not: [Thalamus, Hippocampus]
   engram:
     level: cross
     means: One memory event of an agent, a row of the engram DataTable that the Hippocampus writes.

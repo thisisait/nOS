@@ -1,0 +1,78 @@
+# =============================================================================
+# receptor-base — Article 30 record for the receptor (2026-10-11)
+#
+# The Art-30 entry, nothing else: the role is a host daemon on a unix socket.
+# What it is: docs/systems/receptor/README.md. Gate: tests/anatomy/test_receptor_relay.py.
+# =============================================================================
+
+name: receptor-base
+version: 0.1.0
+description: |
+  Receptor — a unix-socket relay in front of KEAP's human door. The kernel
+  names the caller's host login; ~/.nos/identity-map.yml names the person;
+  KEAP sees that person, never a header the caller sent.
+upstream: https://github.com/pazny-develop/nOS
+license: AGPL-3.0
+
+type:
+  - service
+
+_NOS_PLUGIN: "receptor-base"
+
+requires:
+  role: pazny.receptor
+  feature_flag: install_receptor
+  variables:
+    - receptor_socket
+
+# No authentik block = SSO mode none: it serves a socket, not a web surface.
+
+depends_on:
+  - upstream: "service:keap"
+    kind: data
+    via: >-
+      relays each request to KEAP's human /api door on 127.0.0.1:keap_port with the
+      person's X-Authentik-* headers and the proxy secret (files/anatomy/receptor/receptor.py)
+    measured: "2026-10-11"
+    unenforced: >-
+      No auto-enable block ties install_keap to install_receptor. With KEAP down
+      every call answers 502.
+
+gdpr:
+  purpose: |
+    Tell KEAP which person is behind a host login, so a host tool sees only
+    what that person may see. Processing: the identity map (host login,
+    Authentik username, groups) and one log line per request (status,
+    login, username, request line, duration) in ~/receptor/log.
+  legal_basis: legitimate_interests   # Art. 6(1)(f) — access control over the operator's own estate
+  balancing_test: >-
+    The data is the account roster the estate already holds; the receptor
+    adds no new category, only applies it. Logs hold no bodies and no headers.
+  data_source: from_subject
+  data_categories:
+    - account_identifiers          # host login, Authentik username, group names
+    - request_log                  # status, request line, duration
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: 0                # launchd log files; no rotation yet (host_daemon_logs block)
+  processors: []
+  eu_residency: true
+  transfers_outside_eu: false
+  storage_location: >-
+    Host only: ~/.nos/identity-map.yml (0600) and ~/receptor/log.
+  security_measures:
+    - "Caller identified by the kernel (SO_PEERCRED / LOCAL_PEERCRED), never by a header"
+    - "Socket 0600 under ~/.nos (0700); a login not in the map is refused"
+    - "Client X-Authentik-* and x-keap-proxy-secret dropped before KEAP"
+    - "Proxy secret only in the 0600 plist / unit env"
+  notes: >-
+    retention_enforced: false — the launchd logs are unbounded like every host
+    organ log today.
+
+notification:
+  on_critical: [wing-inbox]
+  on_high:     [wing-inbox]
+  on_medium:   []
+  on_low:      []
+  on_info:     []

@@ -1,0 +1,8 @@
+---
+# Internals only. The switch (install_receptor) and the map (nos_identity_map) live in default.config.yml.
+receptor_launchd_label: "eu.thisisait.nos.receptor"
+receptor_runtime_dir: "{{ ansible_facts['env']['HOME'] }}/receptor"
+receptor_src: "{{ receptor_runtime_dir }}/receptor.py"
+receptor_log_dir: "{{ receptor_runtime_dir }}/log"
+receptor_python: /usr/bin/python3
+receptor_identity_map: "{{ ansible_facts['env']['HOME'] }}/.nos/identity-map.yml"

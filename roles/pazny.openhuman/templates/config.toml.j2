@@ -57,10 +57,12 @@ id = "{{ _oh_local_model }}"
 provider = "ollama"
 context_window = {{ openhuman_context_window }}
 {% if openhuman_register_mcp | bool %}
-# The static MCP set read at boot (mcp::host::static_registry). env is literal, so the RO token is read by sh at spawn.
+# The static MCP set read at boot (mcp::host::static_registry). No estate bearer: the receptor's
+# socket names the person behind this login (roles/pazny.receptor), and the twin stays read-only.
 [[mcp_client.servers]]
 name = "nos-tables"
 description = "nOS DataTables, read-only"
-command = "/bin/sh"
-args = ["-c", "KEAP_AGENT_TOKEN_RO=$({{ docker_bin }} exec {{ openhuman_keap_container }} printenv KEAP_AGENT_TOKEN_RO) KEAP_API_URL=http://127.0.0.1:{{ keap_port }} NOS_MCP_AGENT=openhuman exec /usr/bin/python3 {{ nos_main_checkout }}/tools/mcp-tables-server.py"]
+command = "/usr/bin/python3"
+args = ["{{ nos_main_checkout }}/tools/mcp-tables-server.py"]
+env = { KEAP_IDENTITY_URL = "http+unix://{{ receptor_socket | urlencode | replace('/', '%2F') }}", NOS_MCP_READ_ONLY = "1", NOS_MCP_AGENT = "openhuman" }
 {% endif %}

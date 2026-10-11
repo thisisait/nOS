@@ -349,6 +349,9 @@ nodes:
   # I-12 (2026-10-07): local DNS for the edge got its own row. WITHHELD: how
   # the house resolves its own names is estate mechanics; published set unchanged.
   "service:dnsmasq": withheld
+  # 2026-10-11: the receptor (host login -> KEAP person). WITHHELD: identity plumbing
+  # is estate mechanics; published set unchanged.
+  "service:receptor": withheld
   "service:opencode":      { publish: wits, speaks: "a mind that writes code beside you" }
   # A third-party desktop agent on the operator's Mac: a public sentence is theirs to sign.
   "service:openhuman":     withheld
