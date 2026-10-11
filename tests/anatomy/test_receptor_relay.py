@@ -170,3 +170,22 @@ def test_a_write_verb_is_refused_before_the_upstream(method):
     raw = f"{method} /api/tables HTTP/1.1\r\nHost: keap\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{{}}"
     _, status, seen = _run(MAPPED, raw=raw.encode())
     assert (status, seen) == ("405", []), (status, seen)
+
+
+@needs_peercred
+@pytest.mark.parametrize("target", [
+    "/agent/v1/../admin", "http://keap/api/tables", "/agent/v1/tables", "/api/../agent/v1",
+    "/api/./tables", "/api//tables", "/api/%2E%2E/agent", "/api\\tables", "*",
+])
+def test_only_api_paths_are_relayed(target):
+    raw = f"GET {target} HTTP/1.1\r\nHost: keap\r\nConnection: close\r\n\r\n"
+    _, status, seen = _run(MAPPED, raw=raw.encode())
+    assert (status, seen) == ("400", []), (status, seen)
+
+
+@needs_peercred
+@pytest.mark.parametrize("target", ["/api", "/api/me", "/api/tables?q=a"])
+def test_api_paths_still_reach_keap(target):
+    raw = f"GET {target} HTTP/1.1\r\nHost: keap\r\nConnection: close\r\n\r\n"
+    _, status, seen = _run(MAPPED, raw=raw.encode())
+    assert status == "200" and len(seen) == 1, (status, seen)
