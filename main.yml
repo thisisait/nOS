@@ -815,7 +815,8 @@
     # We use direct launchctl unload/load - immediate effect.
     - name: Restart nginx
       ansible.builtin.shell: |
-        plist="$HOME/Library/LaunchAgents/homebrew.mxcl.nginx.plist"
+        plist="$HOME/Library/LaunchAgents/sh.brew.nginx.plist"
+        [ -f "$plist" ] || plist="$HOME/Library/LaunchAgents/homebrew.mxcl.nginx.plist"
         [ -f "$plist" ] && launchctl unload "$plist" 2>/dev/null
         sleep 1
         [ -f "$plist" ] && launchctl load "$plist" 2>/dev/null

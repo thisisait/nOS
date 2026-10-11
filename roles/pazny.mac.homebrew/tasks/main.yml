@@ -81,9 +81,11 @@
 # Reader first: the recursive chown below reports `changed` for the whole tree
 # and never says which path. CI pass 2 (run 37368276781) flipped here with no
 # file named; the live estate (299k files) walks clean. The list is the evidence.
+# var/run is pruned: root daemons (dnsmasq) rewrite their pid files as root.
 - name: Which files under homebrew_install_path are not owned by homebrew_user:group?
   command: >-
     find {{ homebrew_install_path | quote }}
+    -path {{ (homebrew_install_path ~ '/var/run') | quote }} -prune -o
     ( ! -user {{ homebrew_user | quote }} -o ! -group {{ homebrew_group | string | quote }} )
     -print
   register: _brew_misowned

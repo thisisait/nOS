@@ -44,30 +44,46 @@
   register: _pulse_pip_upgrade
   changed_when: _pulse_pip_upgrade.stdout | trim != ""
 
+# `pip install <dir>` reinstalls every run, and its fresh mtimes made the
+# staleness probe below bounce a current daemon on every converge (2026-10-11).
+# Install only when the source hash differs from the one the venv was built from.
+- name: "[pazny.pulse] Hash the pulse source"
+  ansible.builtin.shell: |
+    set -o pipefail
+    cd {{ (playbook_dir ~ '/files/anatomy/pulse') | quote }}
+    find pulse pyproject.toml -type f ! -path '*/__pycache__/*' | LC_ALL=C sort \
+      | xargs cat | { command -v sha256sum >/dev/null && sha256sum || shasum -a 256; } \
+      | cut -d' ' -f1
+  args:
+    executable: /bin/bash
+  register: _pulse_src_sha
+  changed_when: false
+  check_mode: false
+
+- name: "[pazny.pulse] Read the hash the venv was built from"
+  ansible.builtin.command: cat {{ pulse_venv }}/.nos-source-sha256
+  register: _pulse_built_sha
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
 - name: "[pazny.pulse] Install pulse package into venv"
   ansible.builtin.command:
     cmd: "{{ pulse_venv }}/bin/pip install --quiet --disable-pip-version-check --upgrade {{ playbook_dir }}/files/anatomy/pulse"
   register: _pulse_pip_install
-  changed_when: _pulse_pip_install.stdout | trim != ""
-  # Only the plist render notified the reload, so a change to the DAEMON SOURCE
-  # landed on disk and the running process kept executing the old code from
-  # memory. Measured 2026-07-31: `2704f4c4 fix(pulse): a job outliving one tick
-  # fired twice` shipped on 07-28, the venv copy had it, and the daemon had been
-  # running since 07-27 12:58 — four converges later it was still double-firing
-  # vulnerability-scan every night, exactly as the fix describes.
-  # pazny.bone already does this correctly (its source sync notifies Restart
-  # bone); pulse was the outlier.
-  #
-  # THIS NOTIFY IS A BACKSTOP AND CANNOT BE TRUSTED ALONE — measured 2026-08-01.
-  # `--quiet` prints nothing on ANY install, not just a no-op, so the
-  # `changed_when` above is ALWAYS false and this notify has never once fired:
-  # the handler ran twice in the estate's whole history, last at 2026-07-27
-  # 12:58:28, which is exactly the running daemon's start time. Three converges
-  # rewrote site-packages/pulse/*.py while the process kept executing 07-27 code.
-  # The real signal is the staleness probe below, which reads the EFFECT (is the
-  # running process older than the code?) instead of trusting the installer's
-  # own account of whether it did anything.
+  when: _pulse_src_sha.stdout != (_pulse_built_sha.stdout | default(''))
+  changed_when: true
+  # Source changes must restart the daemon (2026-07-31: it ran 07-27 code for
+  # four converges). The staleness probe below is the check on the effect;
+  # this notify fires whenever the install actually ran.
   notify: Reload pulse launchd
+
+- name: "[pazny.pulse] Record the hash the venv was built from"
+  ansible.builtin.copy:
+    content: "{{ _pulse_src_sha.stdout }}"
+    dest: "{{ pulse_venv }}/.nos-source-sha256"
+    mode: '0644'
+  when: _pulse_pip_install is not skipped
 
 # Observe the effect, do not trust the attempt.
 #

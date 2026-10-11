@@ -118,7 +118,8 @@
 # "already started" signal. Probe launchd state first so the start only
 # reports changed when nginx was not already loaded (re-run = changed=0).
 - name: Check whether nginx is already loaded in launchd
-  ansible.builtin.command: "launchctl list homebrew.mxcl.nginx"
+  # Homebrew 7 labels it sh.brew.nginx; older installs homebrew.mxcl.nginx.
+  ansible.builtin.shell: "launchctl list sh.brew.nginx || launchctl list homebrew.mxcl.nginx"
   register: nginx_loaded
   changed_when: false
   failed_when: false

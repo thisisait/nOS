@@ -135,48 +135,6 @@
     _cortex_fs_user_roots: "child-dirs={{ cortex_fs_users_root }},literal:{{ cortex_fs_shared_uids }}={{ cortex_fs_shared_root }}"
   when: cortex_fs_enabled | bool
 
-- name: "[pazny.cortex] Read the data root's volume UUID (recorded in the sentinel)"
-  # `diskutil info` takes a VOLUME, not an arbitrary path inside one: given
-  # {{ nos_data_root }} (a subdirectory of the mount) it exits 1 and prints a
-  # plist with no VolumeUUID, so the UUID could never be read on any estate
-  # whose data root is not itself a mount point. Resolve the mount point with
-  # `df` first and ask diskutil about that.
-  #
-  # /bin/df by absolute path, not `df`: this operator's PATH resolves `df` to
-  # Homebrew's `duf`, which has no -P and exits non-zero. The command must not
-  # depend on which shims happen to be ahead of /bin on a given host.
-  ansible.builtin.shell:
-    cmd: |
-      set -o pipefail
-      /usr/sbin/diskutil info -plist \
-        "$(/bin/df -P {{ nos_data_root | quote }} | tail -1 | awk '{ print $NF }')"
-    executable: /bin/bash
-  register: _cortex_diskutil
-  changed_when: false
-  failed_when: false
-  check_mode: false
-  when:
-    - cortex_fs_enabled | bool
-    - ansible_os_family == 'Darwin'
-
-- name: "[pazny.cortex] Extract the volume UUID"
-  ansible.builtin.set_fact:
-    # Best-effort: recorded for a human reading the sentinel, never asserted on.
-    # The tenant slug is the discriminator that matters — it is what catches a
-    # DIFFERENT volume mounted at the same path, which is the case where every
-    # uid goes missing at once and the per-uid guard cannot help.
-    #
-    # `+ ['']` is load-bearing, not defensive dressing: `regex_findall` yields []
-    # on no match and `first` RAISES on an empty sequence, so a trailing
-    # `| default('', true)` never runs — the filter has already thrown. That is
-    # what failed the converge here: a best-effort field aborted the play on a
-    # non-Darwin host, in check mode, or whenever diskutil printed no UUID.
-    _cortex_volume_uuid: >-
-      {{ ((_cortex_diskutil.stdout | default(''))
-          | regex_findall('<key>VolumeUUID</key>\s*<string>([^<]+)</string>')
-          + ['']) | first }}
-  when: cortex_fs_enabled | bool
-
 # ── S2: the mount sentinel ───────────────────────────────────────────────────
 # nos_data_root is a REMOVABLE volume, and the organ's fs mirror walks it. An
 # unmounted volume presents as an empty directory — or, after an eject, as a
@@ -237,6 +195,48 @@
     - cortex_fs_enabled | bool
     - not (_cortex_root_is_removable | bool)
     - not (_cortex_data_root.stat.isdir | default(false))
+
+- name: "[pazny.cortex] Read the data root's volume UUID (recorded in the sentinel)"
+  # `diskutil info` takes a VOLUME, not an arbitrary path inside one: given
+  # {{ nos_data_root }} (a subdirectory of the mount) it exits 1 and prints a
+  # plist with no VolumeUUID, so the UUID could never be read on any estate
+  # whose data root is not itself a mount point. Resolve the mount point with
+  # `df` first and ask diskutil about that.
+  #
+  # /bin/df by absolute path, not `df`: this operator's PATH resolves `df` to
+  # Homebrew's `duf`, which has no -P and exits non-zero. The command must not
+  # depend on which shims happen to be ahead of /bin on a given host.
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      /usr/sbin/diskutil info -plist \
+        "$(/bin/df -P {{ nos_data_root | quote }} | tail -1 | awk '{ print $NF }')"
+    executable: /bin/bash
+  register: _cortex_diskutil
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - cortex_fs_enabled | bool
+    - ansible_os_family == 'Darwin'
+
+- name: "[pazny.cortex] Extract the volume UUID"
+  ansible.builtin.set_fact:
+    # Best-effort: recorded for a human reading the sentinel, never asserted on.
+    # The tenant slug is the discriminator that matters — it is what catches a
+    # DIFFERENT volume mounted at the same path, which is the case where every
+    # uid goes missing at once and the per-uid guard cannot help.
+    #
+    # `+ ['']` is load-bearing, not defensive dressing: `regex_findall` yields []
+    # on no match and `first` RAISES on an empty sequence, so a trailing
+    # `| default('', true)` never runs — the filter has already thrown. That is
+    # what failed the converge here: a best-effort field aborted the play on a
+    # non-Darwin host, in check mode, or whenever diskutil printed no UUID.
+    _cortex_volume_uuid: >-
+      {{ ((_cortex_diskutil.stdout | default(''))
+          | regex_findall('<key>VolumeUUID</key>\s*<string>([^<]+)</string>')
+          + ['']) | first }}
+  when: cortex_fs_enabled | bool
 
 # writtenAt records when the sentinel's FACTS were written, so a converge
 # that finds the same tenant / volume / root keeps the old stamp. Re-stamping
