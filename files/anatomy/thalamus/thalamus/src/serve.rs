@@ -536,8 +536,9 @@ impl Server {
         serde_json::from_slice(&o.stdout).map_err(|e| format!("{name}: not JSON: {e}"))
     }
 
-    /// Two sources on the human door, as the person: own captures not yet promoted, and the
-    /// moderation queue. A source that cannot be read is named in `refused`, never emptied.
+    /// Two sources on the human door, as the person (ruling 3): captures not yet promoted (KEAP
+    /// returns an admin everyone's; a rejected one still waits), and the moderation queue.
+    /// A source that cannot be read is named in `refused`, never emptied.
     fn inbox(&self, who: &Person) -> InboxList {
         let base = self.keap_url.trim_end_matches('/');
         let (mut items, mut refused) = (Vec::new(), Vec::new());
@@ -572,12 +573,32 @@ fn listed(v: &Value, at: &str, source: &str) -> Result<Vec<InboxItem>, String> {
             "capture" => s("/title"),
             _ => s("/object/name").or_else(|| s("/object/title")).or_else(|| s("/captureId")),
         }.ok_or(format!("row {id} has no title"))?;
-        // ponytail: an epoch createdAt is shown as its number; format it when a person asks.
         let created_at = match r.get("createdAt") {
             Some(Value::String(t)) => t.clone(),
-            Some(n @ Value::Number(_)) => n.to_string(),
+            Some(Value::Number(n)) => n.as_i64().map_or(n.to_string(), iso),
             _ => String::new(),
         };
         Ok(InboxItem { id, title, source: source.into(), created_at })
     }).collect()
+}
+
+/// Epoch seconds (KEAP's created_at) as UTC ISO 8601; days to civil date per H. Hinnant.
+fn iso(t: i64) -> String {
+    let (days, secs) = (t.div_euclid(86_400), t.rem_euclid(86_400));
+    let z = days + 719_468;
+    let (era, doe) = (z.div_euclid(146_097), z.rem_euclid(146_097));
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let (d, m) = (doy - (153 * mp + 2) / 5 + 1, if mp < 10 { mp + 3 } else { mp - 9 });
+    let y = yoe + era * 400 + i64::from(m <= 2);
+    format!("{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z", secs / 3600, secs % 3600 / 60, secs % 60)
+}
+
+#[test]
+fn iso_matches_the_calendar_at_its_edges() {
+    for (t, want) in [(0, "1970-01-01T00:00:00Z"), (951_782_400, "2000-02-29T00:00:00Z"),
+                      (1_760_000_000, "2025-10-09T08:53:20Z"), (4_102_444_800, "2100-01-01T00:00:00Z")] {
+        assert_eq!(iso(t), want);
+    }
 }
