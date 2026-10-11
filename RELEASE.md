@@ -6,17 +6,19 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.15
 
 ---
 
-## v0.16-beta (2026-10-05 … 2026-10-10) — DRAFT, not yet cut
+## v0.16-beta (2026-10-05 … 2026-10-11)
 
 > **The body has a plan, and every part knows its name and its owner.**
-> 398 commits since `v0.15-beta` (858 files, +42.5k/−14.8k), measured with
+> 408 commits since `v0.15-beta` (862 files, +42.8k/−14.8k), measured with
 > `git log v0.15-beta..dev`. Still `-beta`. A blank converge on 2026-10-09
 > (`nos --remove=data --confirm`, then `nos`) ended with one failed task: one
 > of 84 first logins timed out (WordPress → Authentik, row
 > `wordpress-oidc-timeout-on-first-converge`) and passed on `--tags
 > identities`. Smoke 50/50, `nos-smoke --strict` with the tester 49/50 (the
-> one red was the probe, fixed here), live E2E 339 passed, 0 failed. Whether
-> CI is green on every lane at the tag is checked at the cut, not promised here.
+> one red was the probe, fixed here), live E2E 339 passed, 0 failed. At the
+> cut (2026-10-11) two hosts converged `failed=0`: the all-on Mac
+> (`nos-smoke --strict` 53/53) and a second Mac on **macOS 27.0.1**, the first
+> converge on 27 (31/31). CI on every lane is read on the release PR.
 
 This release is mostly about words and places: what each part of nOS is called,
 where its files live, and who owns it. Little changes on the running estate;
@@ -151,6 +153,11 @@ before it touches anything.
   `tools/tailscale-status.py` reads it.
 - **Profile builder** asks about the edge and the DNS host; Cloudflare
   DNS-only leads.
+- **Paperclip**: the role asks the server whether it accepts its own
+  hostname and restarts it when it does not. A restart left to a handler was
+  lost with a play that failed later, and Paperclip answered 403 for days.
+- **macOS 27**: converges; the `[macOS27]` preflight still warns, since the
+  tested ceiling stays 26 until CI carries 27.
 - **CI**: macOS 26 tested beside 15; macOS 14 left the matrix; runners pinned
   to `ubuntu-24.04`.
 - **The loop** may write any default layer but never `ssot/` (the budget
@@ -159,7 +166,7 @@ before it touches anything.
   as an alias for this release only and is dropped in the next one. The
   Uptime Kuma monitors of manifest apps carry both tags meanwhile.
 
-### One thing to do after the upgrade
+### What to do after the upgrade
 - `state/llm-backends.yml` is a **compat symlink** to
   `state/habitat/llm-backends.yml`, kept because the deployed Wing still reads
   the old path. After every host has run `nos --tags wing`, delete the
@@ -169,7 +176,9 @@ before it touches anything.
   (65 containers, 7.7 GiB resident, measured 2026-10-10). At 10 GB the VM
   ran at 600–800 % CPU, KEAP answered in 2–20 s and two converges died on a
   30 s timeout; at 11.5 GB the VM averaged 155 % and the converge ran
-  `failed=0`.
+  `failed=0`. A converge now refuses up front below `docker_min_memory_gib`
+  (11, as `docker info` reports it); a smaller estate may lower it in
+  `config.yml`.
 
 ### Not promised in this release
 - **Gov readiness.** `profiles/gov-local.yml` exists, but the P0 blockers in
