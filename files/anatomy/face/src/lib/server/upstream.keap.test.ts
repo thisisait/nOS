@@ -27,11 +27,14 @@ const ALICE: Identity = {
 	groups: ['nos-managers', 'nos-users'],
 	authenticated: true
 };
+// An admin, so the 200 the stub gives a write is what live KEAP would give.
+const ROOT: Identity = { ...ALICE, uid: 'root', username: 'root', groups: ['nos-admins'] };
 const SECRET = 'test-proxy-secret-not-a-real-credential';
 
 type Call = { url: string; init: RequestInit };
 let calls: Call[] = [];
 let replies: unknown[] = [];
+let status = 200;
 
 beforeEach(() => {
 	for (const k of Object.keys(ENV)) delete ENV[k];
@@ -42,12 +45,13 @@ beforeEach(() => {
 	ENV.NOS_KEAP_API_TOKEN_RW = 'estate-rw';
 	calls = [];
 	replies = [];
+	status = 200;
 	vi.stubGlobal(
 		'fetch',
 		vi.fn(async (url: URL | string, init: RequestInit = {}) => {
 			calls.push({ url: String(url), init });
 			const body = replies.length ? replies.shift() : { success: true, data: {} };
-			return new Response(JSON.stringify(body), { status: 200 });
+			return new Response(JSON.stringify(body), { status });
 		})
 	);
 });
@@ -114,6 +118,29 @@ describe('KEAP tables via the human door', () => {
 		for (const t of tries) await expect(t()).rejects.toBeInstanceOf(UpstreamError);
 		expect(calls).toHaveLength(0);
 	});
+
+	it('refuses without the proxy secret: no call KEAP would have to reject', async () => {
+		delete ENV.KEAP_PROXY_SHARED_SECRET;
+		const tries = [
+			() => keapTableRows('x', ALICE),
+			() => keapTableDef('x', ALICE),
+			() => keapListTables(ALICE),
+			() => keapUpsertRow('x', { slug: 'a' }, ALICE),
+			() => keapCreateTable({ title: 'T' }, ALICE)
+		];
+		for (const t of tries) await expect(t()).rejects.toBeInstanceOf(UpstreamError);
+		expect(calls).toHaveLength(0);
+	});
+
+	it('create keeps the typed slug: one id per person + slug, never a fresh one', async () => {
+		await keapCreateTable({ slug: 'budget', title: 'B' }, ALICE);
+		await keapCreateTable({ slug: 'budget', title: 'B' }, ALICE);
+		await keapCreateTable({ slug: 'budget', title: 'B' }, ROOT);
+		const ids = calls.map((c) => JSON.parse(String(c.init.body)).id);
+		expect(ids[0]).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+		expect(ids[1]).toBe(ids[0]);
+		expect(ids[2]).not.toBe(ids[0]);
+	});
 });
 
 describe('bff/tables POST takes the person from locals, never the browser', () => {
@@ -125,9 +152,27 @@ describe('bff/tables POST takes the person from locals, never the browser', () =
 			headers: { 'x-authentik-username': 'mallory', 'x-authentik-groups': 'nos-admins' },
 			body: JSON.stringify({ op: 'upsertRow', slug: 'face-layouts', row: { slug: 'a' } })
 		});
-		const res = await POST({ request, locals: { identity: ALICE } } as never);
+		const res = await POST({ request, locals: { identity: ROOT } } as never);
 		expect(res.status).toBe(200);
 		expect(calls).toHaveLength(1);
+		const h = headersOf(calls[0]);
+		expect(h.get('x-authentik-username')).toBe('root');
+		expect(h.get('x-authentik-groups')).toBe('nos-admins');
+	});
+
+	// Live KEAP (rbac.ts canWriteRowAs) refuses a manager who is neither owner,
+	// admin nor write-granted; the face must surface that 403, not a success.
+	it("KEAP's 403 to a non-owner manager reaches the browser as 403", async () => {
+		const { POST } = await import('../../routes/bff/tables/+server');
+		status = 403;
+		replies = [{ success: false, error: 'no write access to this table' }];
+		const request = new Request('http://face.test/bff/tables', {
+			method: 'POST',
+			body: JSON.stringify({ op: 'upsertRow', slug: 'face-layouts', row: { slug: 'a' } })
+		});
+		await expect(POST({ request, locals: { identity: ALICE } } as never)).rejects.toMatchObject({
+			status: 403
+		});
 		expectAsAlice(calls[0]);
 	});
 });
