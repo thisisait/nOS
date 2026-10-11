@@ -90,3 +90,7 @@ def test_a_read_only_caller_cannot_write_through_the_human_door(monkeypatch):
         assert err and "read-only" in text, (verb, text)
     text, err = mod._call_keap({"verb": "list-tables"})
     assert err and "unreachable" in text, "a read must still go to the door"
+    for on in ("true", "YES", "True"):  # a spelling of "on" is not a silent write grant
+        monkeypatch.setenv("NOS_MCP_READ_ONLY", on)
+        text, err = mod._call_keap({"verb": "patch-field", "table": "roadmap", "id": "x", "field": "f", "values": {"a": 1}})
+        assert err and "read-only" in text, (on, text)

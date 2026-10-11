@@ -161,3 +161,12 @@ MAPPED = {ME: {"username": "alice", "groups": ["nos-users"]}}
 def test_a_smuggling_head_is_refused_and_keap_never_hears_it(head):
     _, status, seen = _run(MAPPED, head)
     assert (status, seen) == ("400", []), (status, seen)
+
+
+@needs_peercred
+@pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE"])
+def test_a_write_verb_is_refused_before_the_upstream(method):
+    """The only consumer is OpenHuman, read-only by contract; the receptor enforces it."""
+    raw = f"{method} /api/tables HTTP/1.1\r\nHost: keap\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{{}}"
+    _, status, seen = _run(MAPPED, raw=raw.encode())
+    assert (status, seen) == ("405", []), (status, seen)
