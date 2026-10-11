@@ -509,6 +509,9 @@ nodes:
   # publishes nothing, D4's frozen set untouched.
   "agent:invoice-extract": withheld
   "agent:invoice-vision-ocr": withheld
+  # 2026-10-11 the thalamus's iris cell (local ollama). Withheld like every
+  # agent above; the digest is left stale for apex-sign --confirm.
+  "agent:iris": withheld
 
   # --- withheld: tool grants and LLM backends (2026-08-29) ------------------
   # Capability resources on the agents' side of the graph. The tool ids name
