@@ -45,6 +45,7 @@ HOST_DAEMONS = {
     "pazny.hermes": (("install hermes-agent",), "hermes"),
     "pazny.cortex": (("build dist-server",), "cortex"),
     "pazny.device_gateway": (("sync device-gateway source",), "device-gateway"),
+    "pazny.receptor": (("sync receptor source",), "receptor"),
 }
 
 # Roles that bootstrap something into launchd but are NOT a long-lived process

@@ -72,3 +72,21 @@ def test_the_server_is_stdlib_only():
         f"mcp-tables-server.py imports non-stdlib module(s) {foreign}; the tools/ "
         "readers are stdlib-only, and MCP stdio is small enough to hand-roll"
     )
+
+
+def test_a_read_only_caller_cannot_write_through_the_human_door(monkeypatch):
+    """OpenHuman reaches KEAP as its person through the receptor (2026-10-11),
+    and that person may be an admin. NOS_MCP_READ_ONLY keeps the twin's writes
+    refused before any socket is opened (skill nos-for-openhuman: read-only)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("mcp_tables_server", SERVER)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    monkeypatch.setenv("KEAP_IDENTITY_URL", "http+unix://%2Fnonexistent%2Fs")
+    monkeypatch.setenv("NOS_MCP_READ_ONLY", "1")
+    for verb in [v for v, plane in mod.VERBS.items() if plane == "write"]:
+        text, err = mod._call_keap({"verb": verb, "table": "roadmap", "id": "x", "field": "f",
+                                    "values": {"a": 1}})
+        assert err and "read-only" in text, (verb, text)
+    text, err = mod._call_keap({"verb": "list-tables"})
+    assert err and "unreachable" in text, "a read must still go to the door"

@@ -40,7 +40,7 @@ needs_ansible = pytest.mark.skipif(importlib.util.find_spec("ansible") is None, 
 STUB = '#!/bin/sh\necho "$(basename "$0") $*" >> "{log}"\nexit 0\n'
 RW_USE = re.compile(rb"KEAP_AGENT_TOKEN_RW\s*[=:]|printenv\s+KEAP_AGENT_TOKEN_RW")
 KEYS = ("homebrew_symbiont_casks", "ollama_small_model", "keap_port", "openhuman_provider",
-        "openhuman_model", "openhuman_register_mcp", "openhuman_skills")
+        "openhuman_model", "openhuman_register_mcp", "openhuman_skills", "receptor_socket")
 # The wizard's completeAndExit default, getEnabledRustToolNames(getDefaultEnabledTools())
 # (app/src/utils/toolDefinitions.ts at v0.64.10: every catalog entry with defaultEnabled: true).
 WIZARD_TOOLS = ["shell", "git_operations", "file_read", "read_diff", "csv_export", "file_write", "update_memory_md",
@@ -193,8 +193,14 @@ def test_agents_md_is_the_imprint_and_no_rw_token_is_written(tmp_path):
     assert "docker" not in calls, "the converge read a token; it must be read at spawn only"
     # [[mcp_client.servers]] is the static set the core reads at boot (mcp::host::static_registry).
     servers = {s["name"]: s for s in tomllib.loads(rendered.read_text())["mcp_client"]["servers"]}
-    cmd = " ".join(servers["nos-tables"]["args"])
-    assert "printenv KEAP_AGENT_TOKEN_RO" in cmd and str(REPO / "tools/mcp-tables-server.py") in cmd
+    # 2026-10-11: no estate bearer; the receptor's socket names the person (ruling 1a).
+    srv = servers["nos-tables"]
+    cmd = " ".join([srv["command"], *srv["args"]])
+    assert "KEAP_AGENT_TOKEN" not in cmd and "printenv" not in cmd, f"an estate bearer is read: {cmd}"
+    assert str(REPO / "tools/mcp-tables-server.py") in cmd, cmd
+    env = srv.get("env") or {}
+    assert env.get("KEAP_IDENTITY_URL", "").startswith("http+unix://") and "keap-identity.sock" in env[
+        "KEAP_IDENTITY_URL"] and env.get("NOS_MCP_READ_ONLY") == "1", env
 
 
 def _declared(cfg: dict, small: str) -> list[str]:
