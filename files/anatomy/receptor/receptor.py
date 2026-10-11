@@ -8,8 +8,8 @@ roles/pazny.receptor; JSON, which is YAML), shape {"logins": {<login>:
 {"username", "groups": [...]}}}. A login not in the map is refused, never
 defaulted. Client X-Authentik-* and x-keap-proxy-secret are dropped; the
 receptor injects the person's headers plus the proxy secret only it holds.
-It refuses a head it would split differently than an upstream might (bare
-CR/LF, NUL, folds, non-token names, two lengths).
+It relays GET/HEAD only, and refuses a head it would split differently than
+an upstream might (bare CR/LF, NUL, folds, non-token names, two lengths).
 
     receptor.py --socket ~/.nos/keap-identity.sock [--map ~/.nos/identity-map.yml] [--upstream 127.0.0.1:8091]
 
@@ -101,10 +101,17 @@ async def handle(reader, writer, upstream: tuple, map_path: str):
         return
     lines = head.decode("latin-1").split("\r\n")
     request_line = lines[0]
-    why = malformed(head)
+    parts = request_line.split(" ")
+    why = malformed(head) or (None if len(parts) == 3 and parts[2].startswith("HTTP/1.") else "bad request line")
     if why:
         print(f"400 {login or '?'} {request_line!r}", flush=True)
         await reply(writer, 400, why)
+        return
+    # Read verbs only: the one consumer is OpenHuman, read-only by contract; approved
+    # writes will take the Thalamus's own proxy-secret path (operator ruling 2026-10-11).
+    if parts[0] not in ("GET", "HEAD"):
+        print(f"405 {login or '?'} {request_line}", flush=True)
+        await reply(writer, 405, f"{parts[0]} is not relayed; the receptor serves reads only")
         return
     who = person(login, map_path) if login else None
     if not who:

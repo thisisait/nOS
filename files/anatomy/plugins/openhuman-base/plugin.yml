@@ -66,7 +66,8 @@ gdpr:
   balancing_test: >-
     Single user, the operator. The default model is local (Ollama, privacy
     local_only) and the firewall rule denies the app any non-local host;
-    the tables MCP holds no token and refuses every write verb.
+    the tables MCP holds no token, and the receptor it reads through relays
+    GET/HEAD on /api only, so no write reaches KEAP even from the app's shell.
   data_source: from_subject
   data_categories:
     - operator_prompts
@@ -86,7 +87,7 @@ gdpr:
   security_measures:
     - "privacy.mode local_only on the default provider: the core refuses to build a cloud route"
     - "analytics, usage sharing, core updater, remote gitbooks MCP and memory off in config.toml"
-    - "nOS tables over MCP as the operator through the receptor socket; no KEAP token; write verbs refused (NOS_MCP_READ_ONLY)"
+    - "nOS tables over MCP as the operator through the receptor socket; no KEAP token; the receptor relays GET/HEAD on /api only (405 for every other method)"
     - "Little Snitch rule group rendered by the role: OpenHuman denied every non-local host"
     - "tools/openhuman-status.py verifies the config every converge; RED fails the play"
   notes: >-
