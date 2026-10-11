@@ -63,4 +63,4 @@ open:
   - >-
     The component description the model sees in a tool's description is not
     in v1: in slice 1 the renderer is chosen by the tool or control, never by
-    the model (definition §5).
+    the model (deterministic first; a model-callable render tool is later).

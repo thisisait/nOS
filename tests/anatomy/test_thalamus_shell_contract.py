@@ -1,8 +1,8 @@
 """The thalamus<->shell wire: one Rust crate, one fixture, decoded both ways.
 
 WHY. The shell renders only what the wire names, and the thalamus acts only
-on what the wire names (definition §3). A component the shell cannot decode
-must surface as `refused`, never vanish (cross-repo-contracts.md §4
+on what the wire names. A component the shell cannot decode must surface
+as `refused`, never vanish (ssot/doctrine/cross-repo-contracts.md §4
 visibility). This runs nos-contract's `wire_fixture` example on
 files/anatomy/contracts/thalamus-shell.fixture.json and checks every sample
 re-encodes to itself and every refused line is refused.
