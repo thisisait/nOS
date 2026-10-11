@@ -107,6 +107,7 @@ fn asked() -> App {
     let mut app = App::default();
     let (_, m) = fixture().into_iter().find(|(c, _)| c == "a row edit awaits approval").unwrap();
     app.apply(m);
+    drawn(&app, 80, 24);
     app
 }
 

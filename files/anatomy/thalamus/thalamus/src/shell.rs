@@ -5,12 +5,13 @@
 use nos_contract::renderers::Component;
 use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ToShell, ToThalamus};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-use ratatui::layout::{Constraint, Layout};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::Line;
+use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 use serde_json::Value;
+use std::cell::Cell;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
@@ -25,8 +26,38 @@ pub struct App {
     pub session: Option<String>,
     pub lines: Vec<Line<'static>>,
     pub input: String,
-    /// The approval waiting for y or n; while it waits, no turn is sent.
-    pub pending: Option<String>,
+    /// The approval waiting for y or n, with its lines; while it waits, no turn is sent.
+    pub pending: Option<(String, Vec<Line<'static>>)>,
+    /// Whether the last frame showed the whole pending approval; y needs it.
+    shown_whole: Cell<bool>,
+}
+
+/// Hard-wraps to `w` columns, so no part of a value is ever cut off the screen.
+fn wrap(lines: &[Line<'static>], w: usize) -> Vec<Line<'static>> {
+    let mut out = Vec::new();
+    for l in lines {
+        let style = l.spans.first().map_or(l.style, |s| l.style.patch(s.style));
+        let (mut row, mut used) = (String::new(), 0);
+        for c in l.spans.iter().flat_map(|s| s.content.chars()) {
+            let c = if c.is_control() { '\u{fffd}' } else { c };
+            let cw = Span::raw(c.to_string()).width();
+            if used + cw > w.max(1) && !row.is_empty() {
+                out.push(Line::styled(std::mem::take(&mut row), style));
+                used = 0;
+            }
+            row.push(c);
+            used += cw;
+        }
+        out.push(Line::styled(row, style));
+    }
+    out
+}
+
+/// The last lines of `lines` that fit `area`, wrapped.
+fn tail(f: &mut Frame, lines: &[Line<'static>], area: Rect) {
+    let all = wrap(lines, area.width as usize);
+    let skip = all.len().saturating_sub(area.height as usize);
+    f.render_widget(Paragraph::new(all[skip..].to_vec()), area);
 }
 
 fn head(s: String) -> Line<'static> {
@@ -114,8 +145,8 @@ impl App {
             ToShell::Text { text, .. } => self.lines.extend(text.lines().map(|l| Line::from(format!("iris: {l}")))),
             ToShell::Render { component, .. } => self.lines.extend(component_lines(&component)),
             ToShell::ApprovalRequest { approval, component, .. } => {
-                self.lines.extend(component_lines(&component));
-                self.pending = Some(approval);
+                self.pending = Some((approval, component_lines(&component)));
+                self.shown_whole.set(false);
             }
             ToShell::Refused { reason } => self.lines.push(warn(format!("refused: {reason}"))),
         }
@@ -123,14 +154,14 @@ impl App {
 
     /// One key; Some is the message to send.
     pub fn key(&mut self, k: KeyEvent) -> Option<ToThalamus> {
-        if let Some(approval) = &self.pending {
+        if self.pending.is_some() {
             let decision = match k.code {
-                KeyCode::Char('y') => Decision::Approve,
+                KeyCode::Char('y') if self.shown_whole.get() => Decision::Approve,
                 KeyCode::Char('n') => Decision::Reject,
                 _ => return None,
             };
-            let approval = approval.clone();
-            self.pending = None;
+            let (approval, shown) = self.pending.take()?;
+            self.lines.extend(shown);
             self.lines.push(Line::from(format!("you: {}", if decision == Decision::Approve { "approve" } else { "reject" })));
             return Some(ToThalamus::ApprovalDecision { approval, decision, note: None });
         }
@@ -167,12 +198,23 @@ impl App {
 
 pub fn draw(f: &mut Frame, app: &App) {
     let [log, input, keys] = Layout::vertical([Constraint::Min(1), Constraint::Length(1), Constraint::Length(1)]).areas(f.area());
-    // No wrap, so the last lines that fit are exactly the tail.
-    let skip = app.lines.len().saturating_sub(log.height as usize);
-    f.render_widget(Paragraph::new(app.lines[skip..].to_vec()), log);
     let prompt = match &app.pending {
-        Some(_) => Line::styled("approve this edit? y / n", Style::new().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-        None => Line::from(format!("> {}", app.input)),
+        None => {
+            tail(f, &app.lines, log);
+            Line::from(format!("> {}", app.input))
+        }
+        // The approval is pinned from its header down; the scrollback gets what is left.
+        Some((_, shown)) => {
+            let diff = wrap(shown, log.width as usize);
+            let whole = diff.len() <= log.height as usize;
+            app.shown_whole.set(whole);
+            let [top, rest] = Layout::vertical([Constraint::Length(diff.len().min(log.height as usize) as u16), Constraint::Min(0)])
+                .areas(log);
+            f.render_widget(Paragraph::new(diff), top);
+            tail(f, &app.lines, rest);
+            let ask = if whole { "approve this edit? y / n" } else { "this edit does not fit: enlarge the terminal, or n rejects it" };
+            Line::styled(ask, Style::new().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        }
     };
     f.render_widget(Paragraph::new(prompt), input);
     f.render_widget(Paragraph::new(Line::styled(KEYS, Style::new().fg(Color::DarkGray))), keys);
