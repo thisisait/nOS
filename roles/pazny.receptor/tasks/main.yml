@@ -74,20 +74,21 @@
       KEAP_PROXY_SHARED_SECRET: "{{ keap_proxy_shared_secret | default('') }}"
   when: (nos_service_manager | default('launchd')) == 'systemd-user'
 
-# The effect, not the render: the socket is 0600 and this login is a person in the map.
-# 403 = the map refuses this login, 503 = no proxy secret; 502 = KEAP is down (not this role's verdict).
+- name: "[pazny.receptor] Flush handlers (apply a pending restart now)"
+  ansible.builtin.meta: flush_handlers
+
+# The effect, not the render: the socket is 0600 and this login reads KEAP as a person.
+# Only a 200 from /api/me passes; 403 = map refuses, 503 = no secret, 502 = KEAP down.
 - name: "[pazny.receptor] Verify — the socket answers this login as a person"
   ansible.builtin.shell: |
     set -e
     for _ in $(seq 1 20); do [ -S "{{ receptor_socket }}" ] && break; sleep 0.5; done
     MODE=$(stat -c '%a' "{{ receptor_socket }}" 2>/dev/null || stat -f '%Lp' "{{ receptor_socket }}")
-    CODE=$(curl -s -o /dev/null -w '%{http_code}' -m 10 --unix-socket "{{ receptor_socket }}" http://keap/api/tables || echo 000)
+    CODE=$(curl -s -o /dev/null -w '%{http_code}' -m 10 --unix-socket "{{ receptor_socket }}" http://keap/api/me || echo 000)
     echo "mode=${MODE} code=${CODE}"
   register: _receptor_verify
   changed_when: false
   failed_when: >-
     'mode=600' not in _receptor_verify.stdout
-    or 'code=403' in _receptor_verify.stdout
-    or 'code=503' in _receptor_verify.stdout
-    or 'code=000' in _receptor_verify.stdout
+    or 'code=200' not in _receptor_verify.stdout
   tags: ['verify']
