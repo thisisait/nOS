@@ -525,6 +525,7 @@ fn inbox_shows_waiting_captures_and_names_the_queue_it_may_not_moderate() {
             let ids: Vec<&str> = i.items.iter().map(|x| x.id.as_str()).collect();
             assert_eq!(ids, ["cap-1"], "a promoted capture no longer waits");
             assert_eq!(i.items[0].source, "capture");
+            assert_eq!(i.items[0].created_at, "2025-10-09T08:53:20Z", "KEAP's epoch seconds are shown as a raw number");
             assert_eq!(i.refused, ["promotions: not yours to moderate"], "a 403 is a refusal, never an empty queue");
         }
         other => panic!("expected inbox_list, got {other:?}"),
