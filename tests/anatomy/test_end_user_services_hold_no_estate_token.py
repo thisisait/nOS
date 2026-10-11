@@ -12,6 +12,10 @@ The forbidden tokens are DERIVED from roles/pazny.wing/tasks/post.yml: the
 ansible-provisioned mint and every mint whose literal scopes carry pulse.write.
 Each is set to a sentinel and every template of those roles is RENDERED; a
 sentinel in the output is red. A template that does not render is red too.
+
+KEAP's agent bearers count too (2026-10-11): /agent/v1 has no per-user filter, so
+even RO reads every private table. OpenHuman fetches RO at runtime (docker exec
+printenv), so a literal KEAP_AGENT_TOKEN_RO=/RW= in the output is red as well.
 """
 from __future__ import annotations
 
@@ -28,6 +32,12 @@ POST_YML = REPO / "roles/pazny.wing/tasks/post.yml"
 MANIFEST = REPO / "state/manifest.yml"
 #: End-user surfaces the manifest has no tier for, and why.
 EXTRA = {"openhuman": "desktop app an end user drives; attaches through MCP"}
+#: KEAP's estate-wide agent bearers: no per-user filter behind /agent/v1.
+KEAP_TOKENS = {"keap_agent_token_ro": "keap-agent-ro", "keap_agent_token_rw": "keap-agent-rw"}
+KEAP_LITERAL = re.compile(r"KEAP_AGENT_TOKEN_(RO|RW)=")
+#: Roles that may hold KEAP_TOKENS, and why.
+KEAP_EXCUSED = {"keap": "the issuer verifies its own bearers",
+                "n8n": "an operator tool, not end-user-facing (operator ruling 2026-10-11)"}
 
 
 def forbidden_tokens() -> dict[str, str]:
@@ -38,7 +48,7 @@ def forbidden_tokens() -> dict[str, str]:
         var, name, scopes = m.groups()
         if name == "ansible-provisioned" or "pulse.write" in scopes.split(","):
             out[var] = name
-    return out
+    return {**out, **KEAP_TOKENS}
 
 
 def end_user_roles() -> dict[str, Path]:
@@ -55,11 +65,16 @@ def end_user_roles() -> dict[str, Path]:
     return out
 
 
-def leaks(text: str) -> list[str]:
+def leaks(text: str, sid: str = "") -> list[str]:
     toks = forbidden_tokens()
+    if sid in KEAP_EXCUSED:
+        toks = {v: n for v, n in toks.items() if v not in KEAP_TOKENS}
     sentinel = {var: f"SENTINEL-{var}-0f3a" for var in toks}
     rendered = _env().from_string(text).render(**{**_vars("Darwin"), **sentinel})
-    return sorted(f"{toks[v]} ({v})" for v, s in sentinel.items() if s in rendered)
+    out = {f"{toks[v]} ({v})" for v, s in sentinel.items() if s in rendered}
+    if sid not in KEAP_EXCUSED:
+        out |= {f"keap-agent-{m.lower()} (KEAP_AGENT_TOKEN_{m}= at runtime)" for m in KEAP_LITERAL.findall(rendered)}
+    return sorted(out)
 
 
 def test_the_derivations_are_not_blind():
@@ -68,12 +83,17 @@ def test_the_derivations_are_not_blind():
     assert "face_bff_wing_api_token" not in toks, "face-bff is the token face SHOULD hold"
     roles = end_user_roles()
     assert {"face", "open_webui", "nextcloud", "openhuman"} <= set(roles), sorted(roles)
+    assert set(KEAP_EXCUSED) <= set(roles), "an excuse for a role the gate never scans is dead"
 
 
 def test_the_detector_sees_the_measured_shape():
     assert leaks('NOS_WING_API_TOKEN: "{{ wing_api_token | default(\'\') }}"\n') == [
         "ansible-provisioned (wing_api_token)"]
     assert leaks('NOS_WING_BFF_TOKEN: "{{ face_bff_wing_api_token }}"\n') == []
+    assert leaks('T: "{{ keap_agent_token_rw }}"\n') == ["keap-agent-rw (keap_agent_token_rw)"]
+    assert leaks('sh -c "KEAP_AGENT_TOKEN_RO=$(docker exec k printenv KEAP_AGENT_TOKEN_RO)"\n') == [
+        "keap-agent-ro (KEAP_AGENT_TOKEN_RO= at runtime)"]
+    assert leaks('T: "{{ keap_agent_token_ro }}"\n', "keap") == []
 
 
 def test_no_end_user_service_renders_an_estate_token():
@@ -81,7 +101,7 @@ def test_no_end_user_service_renders_an_estate_token():
     for sid, tdir in sorted(end_user_roles().items()):
         for path in sorted(tdir.glob("*.j2")):
             try:
-                bad += [f"{path.relative_to(REPO)}: {x}" for x in leaks(path.read_text(encoding="utf-8"))]
+                bad += [f"{path.relative_to(REPO)}: {x}" for x in leaks(path.read_text(encoding="utf-8"), sid)]
             except Exception as e:  # noqa: BLE001
                 blind.append(f"{path.relative_to(REPO)}: {e!r}")
     assert not blind, "templates the gate cannot render (blind, not green):\n  " + "\n  ".join(blind)
