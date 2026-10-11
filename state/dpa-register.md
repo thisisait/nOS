@@ -1664,7 +1664,7 @@ Memory (conversation log, recall) is turned off by the role.
 - **Transfers outside EU:** No
 - **Retention:** transient (not persisted)
 - **Storage:** Host only: ~/.openhuman (config.toml, workspace/AGENTS.md, skills, the app's own session and MCP stores).
-- **Security measures:** `privacy.mode local_only on the default provider: the core refuses to build a cloud route`; `analytics, usage sharing, core updater, remote gitbooks MCP and memory off in config.toml`; `nOS tables over MCP as the operator through the receptor socket; no KEAP token; write verbs refused (NOS_MCP_READ_ONLY)`; `Little Snitch rule group rendered by the role: OpenHuman denied every non-local host`; `tools/openhuman-status.py verifies the config every converge; RED fails the play`
+- **Security measures:** `privacy.mode local_only on the default provider: the core refuses to build a cloud route`; `analytics, usage sharing, core updater, remote gitbooks MCP and memory off in config.toml`; `nOS tables over MCP as the operator through the receptor socket; no KEAP token; the receptor relays GET/HEAD on /api only (405 for every other method)`; `Little Snitch rule group rendered by the role: OpenHuman denied every non-local host`; `tools/openhuman-status.py verifies the config every converge; RED fails the play`
 
 #### Pulse — `svc_pulse`
 - **Purpose:** Pulse is the host-side scheduled-job runner. It processes aggregated job
