@@ -167,3 +167,42 @@ fn an_approval_taller_than_the_screen_keeps_its_header_and_y_waits() {
     assert_eq!(app.key(key(KeyCode::Char('y'))),
                Some(ToThalamus::ApprovalDecision { approval: APPROVAL.into(), decision: Decision::Approve, note: None }));
 }
+
+// --- several approvals in one turn: each is shown and decided on its own ---
+
+const SECOND: &str = "8e2d3c4b-5f6a-4b7c-8d9e-2f3a4b5c6d7e";
+
+#[test]
+fn two_approvals_are_decided_one_at_a_time_in_order() {
+    let mut app = App::default();
+    app.apply(diff_of(APPROVAL, &[("first_cell", serde_json::json!("one"))]));
+    app.apply(diff_of(SECOND, &[("second_cell", serde_json::json!("two"))]));
+    let screen = flat(&drawn(&app, 80, 20));
+    assert!(screen.contains("first_cell") && !screen.contains("second_cell"), "both diffs above one y / n");
+    assert!(screen.contains("1 of 2"), "the person is not told another edit waits");
+    assert_eq!(app.key(key(KeyCode::Char('y'))),
+               Some(ToThalamus::ApprovalDecision { approval: APPROVAL.into(), decision: Decision::Approve, note: None }),
+               "y decided an edit other than the one on screen");
+    let screen = flat(&drawn(&app, 80, 20));
+    assert!(screen.contains("approve this edit? y / n") && screen.contains("second_cell"), "the second edit is not asked");
+    assert_eq!(app.key(key(KeyCode::Char('n'))),
+               Some(ToThalamus::ApprovalDecision { approval: SECOND.into(), decision: Decision::Reject, note: None }));
+    assert!(app.pending.is_empty(), "an approval stayed pending after both were decided");
+}
+
+#[test]
+fn the_controls_answer_while_an_approval_waits() {
+    let mut app = asked();
+    for (k, v) in [(2, ControlView::Inbox), (3, ControlView::Approvals), (4, ControlView::RedStatus)] {
+        assert_eq!(app.key(key(KeyCode::F(k))), Some(ToThalamus::Control { view: v }), "F{k} while an approval waits");
+    }
+    assert_eq!(app.pending.len(), 1, "a control decided the approval");
+}
+
+#[test]
+fn a_closed_connection_releases_what_waits_and_says_so() {
+    let mut app = asked();
+    app.closed("the thalamus closed the connection");
+    assert!(app.pending.is_empty(), "the shell stays locked on an approval nobody can decide");
+    assert!(flat(&drawn(&app, 80, 24)).contains("not decided"), "the undecided edit is dropped silently");
+}
