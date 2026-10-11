@@ -210,3 +210,11 @@ def test_the_verify_passes_only_on_a_200_from_a_known_read_route():
         assert expr(_receptor_verify={"stdout": f"mode=600 code={code}"}), code
     assert expr(_receptor_verify={"stdout": "mode=644 code=200"})
     assert not expr(_receptor_verify={"stdout": "mode=600 code=200"})
+
+
+def test_the_log_dir_is_not_world_readable():
+    """The logs name every login, person and request line: 0700 on the dir protects the files."""
+    task = next(t for t in _role_tasks() if "directories" in t.get("name", ""))
+    default = task["ansible.builtin.file"].get("mode")
+    modes = dict((i, default) if isinstance(i, str) else (i["path"], i.get("mode", default)) for i in task["loop"])
+    assert modes["{{ receptor_log_dir }}"] == "0700", modes
