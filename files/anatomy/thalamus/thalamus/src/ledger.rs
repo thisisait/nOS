@@ -1,0 +1,197 @@
+//! The thalamus ledger (~/thalamus/data/ledger.db). Its one writer is `thalamus serve`;
+//! the shell never opens it. Columns are a subset of Wing's agent_sessions and events,
+//! held there by tests/anatomy/test_thalamus_ledger_fields.py. prev_hash/row_hash
+//! stay NULL: the audit chain is off in slice 1, which Wing's schema allows.
+
+use rusqlite::{params, Connection};
+use serde_json::Value;
+use std::path::Path;
+
+const SCHEMA: &str = r#"
+CREATE TABLE IF NOT EXISTS sessions (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid            TEXT NOT NULL UNIQUE,
+    agent_name      TEXT NOT NULL,
+    agent_version   INTEGER NOT NULL,
+    status          TEXT NOT NULL,
+    trigger         TEXT NOT NULL,
+    actor_id        TEXT NOT NULL,
+    trace_id        TEXT NOT NULL,
+    model_uri       TEXT NOT NULL,
+    started_at      TEXT NOT NULL,
+    ended_at        TEXT,
+    stop_reason     TEXT,
+    tokens_input    INTEGER,
+    tokens_output   INTEGER
+);
+CREATE TABLE IF NOT EXISTS events (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts              TEXT NOT NULL,
+    run_id          TEXT NOT NULL,
+    type            TEXT NOT NULL,
+    task            TEXT,
+    result_json     TEXT,
+    source          TEXT,
+    actor_id        TEXT,
+    actor_action_id TEXT,
+    acted_at        TEXT,
+    prev_hash       TEXT,
+    row_hash        TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_events_run_id ON events(run_id);
+"#;
+
+/// The only event types the thalamus writes; each must be in event-types.yml.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Kind {
+    SessionStart,
+    SessionEnd,
+    Message,
+    ToolUse,
+    ToolResult,
+    ApprovalRequest,
+    ApprovalDecision,
+}
+
+impl Kind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Kind::SessionStart => "agent_session_start",
+            Kind::SessionEnd => "agent_session_end",
+            Kind::Message => "agent_message",
+            Kind::ToolUse => "agent_tool_use",
+            Kind::ToolResult => "agent_tool_result",
+            Kind::ApprovalRequest => "agent_approval_request",
+            Kind::ApprovalDecision => "agent_approval_decision",
+        }
+    }
+}
+
+pub struct Session<'a> {
+    pub uuid: &'a str,
+    pub agent_name: &'a str,
+    pub agent_version: i64,
+    pub actor: &'a str,
+    pub model_uri: &'a str,
+}
+
+pub struct Ledger {
+    db: Connection,
+}
+
+impl Ledger {
+    pub fn open(path: &Path) -> rusqlite::Result<Self> {
+        let db = Connection::open(path)?;
+        // WAL so a status reader can read while serve writes.
+        db.pragma_update_and_check(None, "journal_mode", "WAL", |r| r.get::<_, String>(0))?;
+        db.execute_batch(SCHEMA)?;
+        Ok(Ledger { db })
+    }
+
+    /// Opens a session and writes its agent_session_start. trace_id is the uuid's 32 hex.
+    pub fn start(&self, s: &Session) -> rusqlite::Result<i64> {
+        let tx = self.db.unchecked_transaction()?;
+        tx.execute(
+            "INSERT INTO sessions (uuid, agent_name, agent_version, status, trigger, actor_id, trace_id, model_uri, started_at)
+             VALUES (?1, ?2, ?3, 'running', 'shell', ?4, ?5, ?6, strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+            params![s.uuid, s.agent_name, s.agent_version, s.actor, s.uuid.replace('-', ""), s.model_uri],
+        )?;
+        let id = self.record(s.uuid, Kind::SessionStart, None, &serde_json::json!({"model_uri": s.model_uri}))?;
+        tx.commit()?;
+        Ok(id)
+    }
+
+    /// One event of an open session; the actor comes from the session row, never the caller.
+    /// Task is Runner.php's "agent:<name>" or "agent:<name>/tool:<tool>". No open session, no row.
+    pub fn record(&self, session: &str, kind: Kind, tool: Option<&str>, result: &Value) -> rusqlite::Result<i64> {
+        let n = self.db.execute(
+            "INSERT INTO events (ts, run_id, type, task, result_json, source, actor_id, actor_action_id, acted_at)
+             SELECT strftime('%Y-%m-%dT%H:%M:%fZ','now'), uuid, ?2, 'agent:' || agent_name || COALESCE('/tool:' || ?3, ''),
+                    ?4, 'thalamus', actor_id, uuid, strftime('%Y-%m-%dT%H:%M:%fZ','now')
+             FROM sessions WHERE uuid = ?1 AND ended_at IS NULL",
+            params![session, kind.as_str(), tool, result.to_string()],
+        )?;
+        if n == 0 {
+            return Err(rusqlite::Error::QueryReturnedNoRows);
+        }
+        Ok(self.db.last_insert_rowid())
+    }
+
+    /// Writes agent_session_end, then closes the session so nothing more lands in it.
+    pub fn end(&self, session: &str, stop_reason: &str, tokens: (Option<i64>, Option<i64>)) -> rusqlite::Result<()> {
+        let tx = self.db.unchecked_transaction()?;
+        self.record(session, Kind::SessionEnd, None, &serde_json::json!({"stop_reason": stop_reason}))?;
+        tx.execute(
+            "UPDATE sessions SET status = 'terminated', ended_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+                    stop_reason = ?2, tokens_input = ?3, tokens_output = ?4 WHERE uuid = ?1",
+            params![session, stop_reason, tokens.0, tokens.1],
+        )?;
+        tx.commit()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const UUID: &str = "0b7e6f3a-2c1d-4e5f-8a9b-1c2d3e4f5a6b";
+
+    fn ledger(name: &str) -> (Ledger, std::path::PathBuf) {
+        let p = std::env::temp_dir().join(format!("thalamus-ledger-{}-{name}.db", std::process::id()));
+        let _ = std::fs::remove_file(&p);
+        (Ledger::open(&p).unwrap(), p)
+    }
+
+    fn start(l: &Ledger) {
+        l.start(&Session { uuid: UUID, agent_name: "iris", agent_version: 1, actor: "user:alice", model_uri: "ollama-qwen" })
+            .unwrap();
+    }
+
+    #[test]
+    fn events_carry_the_sessions_actor_and_task() {
+        let (l, _) = ledger("carry");
+        start(&l);
+        l.record(UUID, Kind::ToolUse, Some("search_rows"), &serde_json::json!({"q": "x"})).unwrap();
+        l.end(UUID, "end_turn", (Some(10), Some(3))).unwrap();
+        let rows: Vec<(String, String, String, String, String, String)> = l
+            .db
+            .prepare("SELECT type, task, actor_id, actor_action_id, run_id, source FROM events ORDER BY id")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        let types: Vec<&str> = rows.iter().map(|r| r.0.as_str()).collect();
+        assert_eq!(types, ["agent_session_start", "agent_tool_use", "agent_session_end"]);
+        assert_eq!(rows[1].1, "agent:iris/tool:search_rows");
+        assert_eq!(rows[0].1, "agent:iris");
+        assert!(rows.iter().all(|r| r.2 == "user:alice" && r.3 == UUID && r.4 == UUID && r.5 == "thalamus"));
+        let (status, trace): (String, String) = l
+            .db
+            .query_row("SELECT status, trace_id FROM sessions WHERE uuid = ?1", [UUID], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap();
+        assert_eq!(status, "terminated");
+        assert_eq!(trace.len(), 32);
+    }
+
+    #[test]
+    fn no_open_session_no_event() {
+        let (l, _) = ledger("orphan");
+        assert!(l.record(UUID, Kind::Message, None, &Value::Null).is_err());
+        start(&l);
+        l.end(UUID, "end_turn", (None, None)).unwrap();
+        assert!(l.record(UUID, Kind::Message, None, &Value::Null).is_err());
+        let n: i64 = l.db.query_row("SELECT count(*) FROM events", [], |r| r.get(0)).unwrap();
+        assert_eq!(n, 2);
+    }
+
+    #[test]
+    fn reopening_keeps_the_rows() {
+        let (l, p) = ledger("reopen");
+        start(&l);
+        drop(l);
+        let l = Ledger::open(&p).unwrap();
+        let n: i64 = l.db.query_row("SELECT count(*) FROM sessions", [], |r| r.get(0)).unwrap();
+        assert_eq!(n, 1);
+    }
+}

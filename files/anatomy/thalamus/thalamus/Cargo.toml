@@ -7,3 +7,5 @@ description = "The relay organ: one person at the shell, tools run as that perso
 
 [dependencies]
 nos-contract = { path = "../contract" }
+rusqlite = { version = "0.40", features = ["bundled"] }
+serde_json = "1"
