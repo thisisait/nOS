@@ -1,0 +1,66 @@
+# thalamus <-> shell joint: what crosses ~/.nos/thalamus.sock.
+# Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
+# over the same bytes). Both sides link one Rust crate (nos-contract), so the
+# gate is the crate decoding the fixture; one copy only, both sides cite this.
+contract_version: 1
+fixture: files/anatomy/contracts/thalamus-shell.fixture.json
+
+producer:
+  organ: thalamus
+  code:
+    - files/anatomy/thalamus/contract/src/wire.rs        # ToThalamus, ToShell, decode_*
+    - files/anatomy/thalamus/contract/src/renderers.rs   # the closed component vocabulary
+consumer:
+  organ: thalamus   # the shell is the same binary's default mode
+  code:
+    - files/anatomy/thalamus/contract/examples/wire_fixture.rs
+gates:
+  both: tests/anatomy/test_thalamus_shell_contract.py   # decodes, re-encodes and refuses the fixture
+
+# ── 1. The wire ─────────────────────────────────────────────────────────────
+wire:
+  framing: "newline-delimited JSON, one message per line, UTF-8"
+  tag: "every message is an object whose `t` names its variant (snake_case)"
+  to_thalamus: [turn, approval_decision, control]
+  to_shell: [session, text, render, approval_request, refused]
+  decision: [approve, reject]
+  control_view: [inbox, approvals, red_status]
+  uid: >-
+    The actor is "user:<uid>", the uid of face-wing.yml §1 (nos_contract::uid),
+    pinned by the thalamus from the peer's login and the receptor's identity
+    map. The shell never names the actor; a message that does is refused.
+
+# ── 2. The component vocabulary (the shell renders these and nothing else) ──
+components:
+  kind: "a component is {kind, props}; props are typed and closed (unknown fields refused)"
+  vocabulary:
+    table_results: "rows of one DataTable: {table, columns[], rows[{__id, cells{}}], projected}"
+    row_diff_approval: "one row's proposed change, cell by cell: {table, row_id, cells[{key, old, new}]}"
+    inbox_list: "waiting captures and promotions: {items[{id, title, source, created_at}], refused[]}"
+    approvals_list: "tools/awaiting-operator.py --json: {items[{kind, severity, age, what, where, note?}], unknown[]}"
+    red_status: "tools/red-status.py --json: {red_count, reds[], hold_count, holds[]}"
+
+# ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ──────
+invariants:
+  identity: >-
+    `session` and `approval` are lowercase hyphenated uuids, minted by the
+    thalamus; `actor` is "user:<canonical uid>". A message with any other
+    shape is refused, so one person's turn can never be filed under a guess.
+  visibility: >-
+    A line the shell cannot decode (unknown `t`, unknown component kind,
+    unknown field) becomes a `refused` message naming why. It is shown,
+    never dropped: a component that silently fails to render is worse than
+    one that errors. `projected: false` on table_results says the search was
+    substring, not semantic. A source the person may not read (inbox
+    `refused`, approvals `unknown`) is listed as such, never as empty.
+  removal: >-
+    The fixture holds one sample of every variant and every component. A
+    variant or component leaving the enum fails to decode its sample and the
+    gate goes red; removing one is a contract_version bump with the fixture
+    in the same change.
+
+open:
+  - >-
+    The component description the model sees in a tool's description is not
+    in v1: in slice 1 the renderer is chosen by the tool or control, never by
+    the model (definition §5).

@@ -1,0 +1,48 @@
+{
+  "contract_version": 1,
+  "to_thalamus": [
+    {"case": "first turn opens a session", "msg": {"t": "turn", "session": null, "text": "find rows about backups in the roadmap"}},
+    {"case": "turn in a session", "msg": {"t": "turn", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "set its status to done"}},
+    {"case": "approve", "msg": {"t": "approval_decision", "approval": "7d1c2b3a-4e5f-4a6b-9c8d-1e2f3a4b5c6d", "decision": "approve", "note": null}},
+    {"case": "reject with a note", "msg": {"t": "approval_decision", "approval": "7d1c2b3a-4e5f-4a6b-9c8d-1e2f3a4b5c6d", "decision": "reject", "note": "wrong row"}},
+    {"case": "raise the inbox", "msg": {"t": "control", "view": "inbox"}},
+    {"case": "raise approvals", "msg": {"t": "control", "view": "approvals"}},
+    {"case": "raise red status", "msg": {"t": "control", "view": "red_status"}}
+  ],
+  "to_shell": [
+    {"case": "session opened", "msg": {"t": "session", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "actor": "user:pazny", "model_uri": "ollama://qwen3:8b"}},
+    {"case": "model text", "msg": {"t": "text", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "Two rows match."}},
+    {"case": "search results", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "table_results", "props": {
+      "table": "roadmap", "columns": ["title", "status"], "projected": false,
+      "rows": [{"__id": "backup-restic-fork", "cells": {"title": "Backup via restic", "status": "open", "priority": 2}}]}}}},
+    {"case": "inbox", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "inbox_list", "props": {
+      "items": [{"id": "cap-01", "title": "Read later: HKDF notes", "source": "capture", "created_at": "2026-10-11T08:00:00Z"}],
+      "refused": ["promotions: not yours to moderate"]}}}},
+    {"case": "approvals", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "approvals_list", "props": {
+      "items": [
+        {"kind": "consent", "severity": "high", "age": "2d", "what": "config.yml: install_thalamus", "where": "docs/active-work.md", "note": "operator flips"},
+        {"kind": "rem", "severity": "critical", "age": "5h", "what": "CVE in a pinned image", "where": "tools/rem-status.py"}],
+      "unknown": ["gitlab: token unreadable"]}}}},
+    {"case": "red status", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "red_status", "props": {
+      "red_count": 1, "reds": ["pulse job nightly-backup failed (3h)"], "hold_count": 0, "holds": []}}}},
+    {"case": "a row edit awaits approval", "msg": {"t": "approval_request", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "approval": "7d1c2b3a-4e5f-4a6b-9c8d-1e2f3a4b5c6d", "component": {"kind": "row_diff_approval", "props": {
+      "table": "roadmap", "row_id": "backup-restic-fork",
+      "cells": [{"key": "status", "old": "open", "new": "done"}, {"key": "note", "old": null, "new": "landed"}]}}}},
+    {"case": "refusal", "msg": {"t": "refused", "reason": "login carol has no row in the identity map"}}
+  ],
+  "refused": [
+    {"case": "unknown component kind is shown, not dropped", "line": "{\"t\":\"render\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"component\":{\"kind\":\"pie_chart\",\"props\":{}}}"},
+    {"case": "unknown field in a component", "line": "{\"t\":\"render\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"component\":{\"kind\":\"red_status\",\"props\":{\"red_count\":0,\"reds\":[],\"hold_count\":0,\"holds\":[],\"html\":\"<b>\"}}}"},
+    {"case": "unknown variant", "line": "{\"t\":\"exec\",\"cmd\":\"rm -rf ~\"}"},
+    {"case": "session is not a uuid", "line": "{\"t\":\"text\",\"session\":\"latest\",\"text\":\"hi\"}"},
+    {"case": "approval is an uppercase uuid", "line": "{\"t\":\"approval_request\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"approval\":\"7D1C2B3A-4E5F-4A6B-9C8D-1E2F3A4B5C6D\",\"component\":{\"kind\":\"red_status\",\"props\":{\"red_count\":0,\"reds\":[],\"hold_count\":0,\"holds\":[]}}}"},
+    {"case": "actor uid is not canonical", "line": "{\"t\":\"session\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"actor\":\"user:Pazny\",\"model_uri\":\"ollama://qwen3:8b\"}"},
+    {"case": "actor is not a person", "line": "{\"t\":\"session\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"actor\":\"agent:iris\",\"model_uri\":\"ollama://qwen3:8b\"}"},
+    {"case": "not json", "line": "hello"}
+  ],
+  "refused_to_thalamus": [
+    {"case": "the shell names the actor", "line": "{\"t\":\"turn\",\"session\":null,\"text\":\"hi\",\"actor\":\"user:akadmin\"}"},
+    {"case": "decision outside the two words", "line": "{\"t\":\"approval_decision\",\"approval\":\"7d1c2b3a-4e5f-4a6b-9c8d-1e2f3a4b5c6d\",\"decision\":\"maybe\",\"note\":null}"},
+    {"case": "turn session is not a uuid", "line": "{\"t\":\"turn\",\"session\":\"../x\",\"text\":\"hi\"}"}
+  ]
+}
