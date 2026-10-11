@@ -88,8 +88,14 @@ fn binding_undeclared_or_default_is_the_default() {
 fn binding_an_unlisted_backend_refuses_and_no_register_lists_nothing() {
     let cell = "name: c\nmodel: {primary: openai-local-sonnet, backend: nowhere}\n";
     assert!(refused(decide(cell, &register(), env(ARMED))).contains("does not list"));
-    let why = refused(resolve(Path::new("/nonexistent"), "iris", env(ARMED)));
-    assert!(!why.is_empty());
+    // A repo holding the real iris cell but no register: iris must refuse.
+    let bare = std::env::temp_dir().join(format!("thalamus-noreg-{}", std::process::id()));
+    let cell = bare.join("files/anatomy/agents/iris");
+    std::fs::create_dir_all(&cell).unwrap();
+    std::fs::copy(repo().join("files/anatomy/agents/iris/agent.yml"), cell.join("agent.yml")).unwrap();
+    let why = refused(resolve(&bare, "iris", env(ARMED)));
+    std::fs::remove_dir_all(&bare).unwrap();
+    assert!(why.contains("does not list"), "{why}");
 }
 
 #[test]
