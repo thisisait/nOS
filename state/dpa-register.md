@@ -20,10 +20,10 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 113 (89 core services, 3 manifest apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (101)
+- **Processing activities:** 114 (89 core services, 3 manifest apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (102)
 - **Transfers outside the EU:** 12 activities
-- **Activities engaging a third-party processor:** 17
+- **Activities engaging a third-party processor:** 18
 
 ## Transfers & processors (audit-sensitive subset)
 
@@ -33,6 +33,7 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 | curator (`agent_curator`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this ceremony. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support.; **Anthropic, PBC** (US) — LLM inference when this ceremony is driven on the claude-CLI path rather than the bound backend (--print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
 | invoice-extract (`agent_invoice-extract`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback, constrained to the ISDOC record schema. No third party. · safeguard: Not applicable. No transfer occurs. |
 | invoice-vision-ocr (`agent_invoice-vision-ocr`) | No | **on-device (operator's own hardware)** (CZ — this host) — Vision-model inference on this host via ollama's OpenAI-compatible surface on loopback. No third party: the image never leaves the machine. · safeguard: Not applicable. No transfer occurs. |
+| iris (`agent_iris`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. No third party sees the prompt or the rows, so there is no processor in the Article-28 sense; this entry says so rather than leaving the field blank. · safeguard: Not applicable. No transfer occurs. |
 | jeff (`agent_jeff`) | No | **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. No third party sees the prompt, so there is no processor in the Article-28 sense; this entry says so rather than leaving the field blank. · safeguard: Not applicable. No transfer occurs, which is stronger than any safeguard could describe. |
 | jeff-cloud (`agent_jeff-cloud`) | **Yes** | **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit). The bound backend for this agent. · safeguard: None established. Recorded as UNVERIFIED rather than asserted; the binding gate refuses a backend this record does not name, so this entry is what permits the routing and must not be written as a claim it cannot support. |
 | librarian (`agent_librarian`) | **Yes** | **Anthropic, PBC** (US) — LLM inference for the ceremony's reasoning (claude CLI, --print) · safeguard: None claimed. Assess SCCs / Art. 46 before this is relied on.; **MiniMax** (unverified — international endpoint api.minimax.io; entity and seat not established) — LLM inference via the Anthropic-compatible endpoint (SDK adapter, tool loop driven by AgentKit) · safeguard: None claimed, and none assessed. No SCCs, adequacy finding or derogation has been identified for this transfer.; **on-device (operator's own hardware)** (CZ — this host) — FALLBACK LLM inference on this host via ollama's OpenAI-compatible surface on loopback (model.fallback_backend), served only when the primary fails. No third party sees the prompt. · safeguard: Not applicable. No transfer occurs. |
@@ -1087,6 +1088,17 @@ transferred.
 - **Transfers outside EU:** No
 - **Retention:** transient (not persisted)
 - **Storage:** host service (non-Docker / launchd)
+- **Security measures:** platform baseline (see above)
+
+#### iris — `agent_iris`
+- **Purpose:** Helping one person find and change rows in a DataTable they can already read and write through KEAP's human door. Every read and write runs as that person; Iris adds no access. Legitimate interest, Art. 6(1)(f).
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `estate_users`
+- **Data categories:** `person_authored_prompts`; `datatable_row_contents`
+- **Recipients / processors:** **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. No third party sees the prompt or the rows, so there is no processor in the Article-28 sense; this entry says so rather than leaving the field blank. · safeguard: Not applicable. No transfer occurs.
+- **Transfers outside EU:** No
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** ~/thalamus/data/ledger.db on this host
 - **Security measures:** platform baseline (see above)
 
 #### jeff — `agent_jeff`

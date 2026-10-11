@@ -1,0 +1,79 @@
+name: iris
+version: 1
+description: >-
+  The thalamus's cell: one person at a terminal asks Iris to find rows in one
+  DataTable and change one row. The model picks the tools; the thalamus runs
+  them as that person through KEAP's human door, and no write lands without the
+  person approving the cell-level diff. Not run by Wing — the thalamus binds and
+  runs it (files/anatomy/thalamus/thalamus/src/binding.rs).
+
+model:
+  # sonnet tier -> NOS_LOCAL_MODEL, the same pin jeff reads. The thalamus
+  # resolves this exactly as BindingResolver does; ollama is the only backend
+  # this record covers, so a disarmed ollama refuses rather than degrades.
+  primary: openai-local-sonnet
+  backend: ollama
+
+audit:
+  capability_scopes:
+    - keap.read
+    - keap.write
+  pii_classification: low
+
+vault:
+  required_credentials:
+    # Local backend: the empty token is the honest value (resolver gate 7).
+    - scope: ollama-local
+      optional: true
+
+metadata:
+  specialization: person-assistant
+  runner_status: unproven
+
+exit_code_semantics:
+  emits_sentinel: false
+  exit_0: "The turn completed. A rejected edit is still exit 0 — the person decided, and the ledger records it."
+  exit_1: "Does not emit exit 1. Iris answers in the shell; there is no review queue behind it."
+  exit_2: "Binding, identity or KEAP error — nothing was read or written."
+
+gdpr:
+  purpose: >-
+    Helping one person find and change rows in a DataTable they can already
+    read and write through KEAP's human door. Every read and write runs as
+    that person; Iris adds no access. Legitimate interest, Art. 6(1)(f).
+  legal_basis: legitimate_interests
+  data_categories:
+    - person_authored_prompts
+    - datatable_row_contents
+  data_subjects:
+    - operators
+    - estate_users
+  # The thalamus ledger keeps the turn, the tool calls and the decision;
+  # the model keeps nothing between calls.
+  retention_days: -1
+  processors:
+    - name: on-device (operator's own hardware)
+      role: >-
+        LLM inference on this host via ollama's OpenAI-compatible surface on
+        loopback. No third party sees the prompt or the rows, so there is no
+        processor in the Article-28 sense; this entry says so rather than
+        leaving the field blank.
+      country: "CZ — this host"
+      safeguard: >-
+        Not applicable. No transfer occurs.
+  eu_residency: true
+  # Gate 8 makes this a mechanism: Iris cannot be pointed at a hosted backend,
+  # and refuses instead of degrading to the default when ollama is disarmed.
+  transfers_outside_eu: false
+  storage_location: "~/thalamus/data/ledger.db on this host"
+
+notification:
+  on_critical: [wing-inbox]
+  on_high:     []
+  on_medium:   []
+  on_low:      []
+  on_info:     []
+
+capabilities: []
+
+task_types: [investigate]

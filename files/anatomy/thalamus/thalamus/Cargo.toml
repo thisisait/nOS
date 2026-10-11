@@ -9,3 +9,4 @@ description = "The relay organ: one person at the shell, tools run as that perso
 nos-contract = { path = "../contract" }
 rusqlite = { version = "0.40", features = ["bundled"] }
 serde_json = "1"
+serde_yaml_ng = "0.10"

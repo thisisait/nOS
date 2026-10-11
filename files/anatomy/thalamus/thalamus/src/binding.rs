@@ -1,0 +1,125 @@
+//! A cell's `model.backend` resolved into a Binding, or refused — the gates of
+//! files/anatomy/wing/app/AgentKit/LLMClient/BindingResolver.php, in its order.
+//! No vault here: a backend that needs a key refuses, which is what the PHP
+//! resolver does when the key resolves to nothing.
+
+use serde_yaml_ng::Value;
+use std::path::Path;
+
+#[derive(Debug, PartialEq)]
+pub struct Binding {
+    pub name: String,
+    pub base_url: String,
+    pub auth_token: String,
+    pub model_id: String,
+}
+
+/// Default and Disarmed name no model: the thalamus has no default adapter, so
+/// only Bound can serve a turn.
+#[derive(Debug, PartialEq)]
+pub enum Decision {
+    Default,
+    Disarmed(String),
+    Bound(Binding),
+}
+
+/// Reads files/anatomy/agents/<cell>/agent.yml and the register under `repo`.
+pub fn resolve(repo: &Path, cell: &str, env: impl Fn(&str) -> Option<String>) -> Result<Decision, String> {
+    let path = repo.join("files/anatomy/agents").join(cell).join("agent.yml");
+    let agent = std::fs::read_to_string(&path).map_err(|e| format!("cell '{cell}': {}: {e}", path.display()))?;
+    // No register file → nothing non-default resolves (the PHP fail-closed shape).
+    let register = std::fs::read_to_string(repo.join("state/habitat/llm-backends.yml")).unwrap_or_default();
+    decide(&agent, &register, env)
+}
+
+fn at<'a>(v: &'a Value, path: &[&str]) -> &'a Value {
+    path.iter().fold(v, |v, k| v.get(*k).unwrap_or(&Value::Null))
+}
+
+fn text(v: &Value, path: &[&str]) -> String {
+    at(v, path).as_str().unwrap_or_default().to_string()
+}
+
+pub fn decide(agent_yml: &str, register_yml: &str, env: impl Fn(&str) -> Option<String>) -> Result<Decision, String> {
+    let agent: Value = serde_yaml_ng::from_str(agent_yml).map_err(|e| format!("agent.yml: {e}"))?;
+    let register: Value = if register_yml.trim().is_empty() {
+        Value::Null
+    } else {
+        serde_yaml_ng::from_str(register_yml).map_err(|e| format!("llm-backends.yml: {e}"))?
+    };
+    let name = text(&agent, &["name"]);
+    let uri = text(&agent, &["model", "primary"]);
+    let Some(declared) = at(&agent, &["model", "backend"]).as_str() else {
+        return Ok(Decision::Default);
+    };
+    let spec = at(&register, &["backends", declared]);
+    if spec.is_null() {
+        return Err(format!("agent '{name}' declares backend '{declared}', which state/habitat/llm-backends.yml does not list"));
+    }
+    if spec.get("default").and_then(Value::as_bool) == Some(true) {
+        return Ok(Decision::Default);
+    }
+
+    // Gate 7 — the provider (before the first '-') must speak the row's protocol.
+    let (provider, tail) = uri.split_once('-').unwrap_or(("", uri.get(1..).unwrap_or("")));
+    let speaks = match provider {
+        "claude" | "anthropic" => "anthropic",
+        "openai" | "openclaw" => "openai",
+        _ => "",
+    };
+    let protocol = spec.get("protocol").and_then(Value::as_str).unwrap_or("anthropic");
+    if speaks != protocol {
+        return Err(format!("agent '{name}': provider '{provider}' does not speak backend '{declared}'s wire protocol '{protocol}'"));
+    }
+
+    // Gate 5 — a deferred cell's record is truthful only while it never runs.
+    if text(&agent, &["metadata", "runner_status"]).to_lowercase() == "deferred" {
+        return Err(format!("agent '{name}' is runner_status=deferred; refusing to bind it"));
+    }
+
+    // Gates 4 + 8 — the cell's own Article-30 record must cover this row.
+    let processors = at(&agent, &["gdpr", "processors"]).as_sequence().cloned().unwrap_or_default();
+    let matcher = text(spec, &["processor_match"]);
+    if matcher.is_empty() || !processors.iter().any(|p| text(p, &["name"]).contains(&matcher)) {
+        return Err(format!("agent '{name}' routes to '{declared}' but its own gdpr.processors never names '{matcher}'"));
+    }
+    let eu_only = at(&agent, &["gdpr", "transfers_outside_eu"]).as_bool() == Some(false) && !processors.is_empty();
+    if eu_only && at(spec, &["residency", "eu"]).as_bool() != Some(true) {
+        return Err(format!("agent '{name}' declares transfers_outside_eu: false but routes to '{declared}', which is not EU-resident"));
+    }
+
+    // Gate 6 — the tier word in the URI tail; opus maps to null by ruling 1.
+    let tier = tail
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+        .find(|w| matches!(*w, "haiku" | "sonnet" | "opus" | "vision"))
+        .unwrap_or(tail);
+    let Some(model_env) = at(spec, &["model_env", tier]).as_str().map(str::to_string) else {
+        return Err(format!("agent '{name}' (tier '{tier}', from '{uri}') has no model mapping on backend '{declared}'"));
+    };
+
+    // Gate 3 — not armed is not an error, unless the record forbids degrading.
+    let armed = env("NOS_ARMED_BACKENDS").unwrap_or_default();
+    if !armed.split_whitespace().any(|b| b == declared) {
+        if eu_only {
+            return Err(format!("agent '{name}' declares transfers_outside_eu: false and its backend '{declared}' is not armed"));
+        }
+        return Ok(Decision::Disarmed(declared.to_string()));
+    }
+    let model_id = env(&model_env).unwrap_or_default();
+    if model_id.is_empty() {
+        return Err(format!("backend '{declared}' is armed but {model_env} is empty; refusing to send a blank model id"));
+    }
+
+    // Gate 7 (key half) — only a keyless local row binds without a vault.
+    let local = spec.get("local").and_then(Value::as_bool) == Some(true);
+    let secret = text(spec, &["auth_secret"]);
+    if !local || !secret.is_empty() {
+        return Err(format!("backend '{declared}' is armed but its auth_secret '{secret}' resolves to nothing here (the thalamus holds no vault)"));
+    }
+    Ok(Decision::Bound(Binding {
+        name: declared.to_string(),
+        base_url: text(spec, &["base_url"]),
+        auth_token: String::new(),
+        model_id,
+    }))
+}
