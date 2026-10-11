@@ -12,6 +12,7 @@ use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 use serde_json::Value;
 use std::cell::Cell;
+use std::collections::VecDeque;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
@@ -26,9 +27,10 @@ pub struct App {
     pub session: Option<String>,
     pub lines: Vec<Line<'static>>,
     pub input: String,
-    /// The approval waiting for y or n, with its lines; while it waits, no turn is sent.
-    pub pending: Option<(String, Vec<Line<'static>>)>,
-    /// Whether the last frame showed the whole pending approval; y needs it.
+    /// Approvals waiting for y or n, oldest first, with their lines; only the first is
+    /// shown and decided. While any waits, no turn is sent.
+    pub pending: VecDeque<(String, Vec<Line<'static>>)>,
+    /// Whether the last frame showed the whole first approval; y needs it.
     shown_whole: Cell<bool>,
 }
 
@@ -145,31 +147,42 @@ impl App {
             ToShell::Text { text, .. } => self.lines.extend(text.lines().map(|l| Line::from(format!("iris: {l}")))),
             ToShell::Render { component, .. } => self.lines.extend(component_lines(&component)),
             ToShell::ApprovalRequest { approval, component, .. } => {
-                self.pending = Some((approval, component_lines(&component)));
-                self.shown_whole.set(false);
+                self.pending.push_back((approval, component_lines(&component)));
             }
             ToShell::Refused { reason } => self.lines.push(warn(format!("refused: {reason}"))),
         }
     }
 
-    /// One key; Some is the message to send.
+    /// The connection is gone: what waits can no longer be decided, and the person is told.
+    pub fn closed(&mut self, reason: &str) {
+        for (approval, _) in self.pending.drain(..) {
+            self.lines.push(warn(format!("not decided, nothing written: approval {approval}")));
+        }
+        self.apply(ToShell::Refused { reason: reason.into() });
+    }
+
+    /// One key; Some is the message to send. The controls answer at any time.
     pub fn key(&mut self, k: KeyEvent) -> Option<ToThalamus> {
-        if self.pending.is_some() {
+        let control = |view| Some(ToThalamus::Control { view });
+        match k.code {
+            KeyCode::F(2) => return control(ControlView::Inbox),
+            KeyCode::F(3) => return control(ControlView::Approvals),
+            KeyCode::F(4) => return control(ControlView::RedStatus),
+            _ => {}
+        }
+        if !self.pending.is_empty() {
             let decision = match k.code {
                 KeyCode::Char('y') if self.shown_whole.get() => Decision::Approve,
                 KeyCode::Char('n') => Decision::Reject,
                 _ => return None,
             };
-            let (approval, shown) = self.pending.take()?;
+            let (approval, shown) = self.pending.pop_front()?;
+            self.shown_whole.set(false);
             self.lines.extend(shown);
             self.lines.push(Line::from(format!("you: {}", if decision == Decision::Approve { "approve" } else { "reject" })));
             return Some(ToThalamus::ApprovalDecision { approval, decision, note: None });
         }
-        let control = |view| Some(ToThalamus::Control { view });
         match k.code {
-            KeyCode::F(2) => control(ControlView::Inbox),
-            KeyCode::F(3) => control(ControlView::Approvals),
-            KeyCode::F(4) => control(ControlView::RedStatus),
             KeyCode::Char(c) if !k.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.input.push(c);
                 None
@@ -198,7 +211,7 @@ impl App {
 
 pub fn draw(f: &mut Frame, app: &App) {
     let [log, input, keys] = Layout::vertical([Constraint::Min(1), Constraint::Length(1), Constraint::Length(1)]).areas(f.area());
-    let prompt = match &app.pending {
+    let prompt = match app.pending.front() {
         None => {
             tail(f, &app.lines, log);
             Line::from(format!("> {}", app.input))
@@ -212,7 +225,9 @@ pub fn draw(f: &mut Frame, app: &App) {
                 .areas(log);
             f.render_widget(Paragraph::new(diff), top);
             tail(f, &app.lines, rest);
-            let ask = if whole { "approve this edit? y / n" } else { "this edit does not fit: enlarge the terminal, or n rejects it" };
+            let of = if app.pending.len() > 1 { format!(" (1 of {})", app.pending.len()) } else { String::new() };
+            let ask = if whole { format!("approve this edit{of}? y / n") }
+                      else { format!("this edit{of} does not fit: enlarge the terminal, or n rejects it") };
             Line::styled(ask, Style::new().fg(Color::Yellow).add_modifier(Modifier::BOLD))
         }
     };
@@ -232,20 +247,23 @@ pub fn run(sock: &Path) -> Result<(), String> {
             match r.by_ref().take(MAX_LINE).read_line(&mut line) {
                 Ok(0) | Err(_) => break,
                 Ok(_) => {
-                    if tx.send(decode_to_shell(&line)).is_err() {
+                    if tx.send(Some(decode_to_shell(&line))).is_err() {
                         break;
                     }
                 }
             }
         }
-        let _ = tx.send(ToShell::Refused { reason: "the thalamus closed the connection".into() });
+        let _ = tx.send(None);
     });
     let mut term = ratatui::init();
     let mut app = App::default();
     let r = (|| -> std::io::Result<()> {
         loop {
             while let Ok(m) = rx.try_recv() {
-                app.apply(m);
+                match m {
+                    Some(m) => app.apply(m),
+                    None => app.closed("the thalamus closed the connection"),
+                }
             }
             term.draw(|f| draw(f, &app))?;
             if !event::poll(Duration::from_millis(100))? {
