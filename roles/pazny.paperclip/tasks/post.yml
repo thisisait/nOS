@@ -108,7 +108,6 @@
     - _paperclip_hostname.rc | default(1) == 0
     - "'already allowed' not in (_paperclip_hostname.stdout | default(''))"
   failed_when: false
-  notify: Restart paperclip
 
 - name: "[pazny.paperclip Post] Hostname registration result"
   ansible.builtin.debug:
@@ -123,6 +122,44 @@
   when: service_extra_hosts | default([]) | length > 0
   failed_when: false
   changed_when: false
+
+# ASK THE SERVER, not the file (2026-10-11): config.json held the hostname, the
+# server (up two days) answered 403 "not allowed", and the handler that would
+# have restarted it was lost with a play that failed later. The answer decides.
+- name: "[pazny.paperclip Post] Does the server accept its own hostname?"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ paperclip_port }}/"
+    headers: { Host: "{{ paperclip_domain }}" }
+    return_content: true
+    status_code: [200, 301, 302, 401, 403]
+    timeout: 10
+  register: _paperclip_served
+  until: _paperclip_served.status | default(0) in [200, 301, 302, 401, 403]
+  retries: 10
+  delay: 3
+
+- name: "[pazny.paperclip Post] Restart so the server re-reads its hostnames"
+  ansible.builtin.shell: |
+    set -o pipefail
+    cid=$({{ docker_bin }} ps -q --filter "label=com.docker.compose.project=devops" --filter "label=com.docker.compose.service=paperclip")
+    {{ docker_bin }} restart "$cid"
+  args:
+    executable: /bin/bash
+  when: "'not allowed' in (_paperclip_served.content | default(''))"
+
+- name: "[pazny.paperclip Post] The server serves its hostname after the restart"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ paperclip_port }}/"
+    headers: { Host: "{{ paperclip_domain }}" }
+    return_content: true
+    status_code: [200, 301, 302, 401, 403]
+    timeout: 10
+  register: _paperclip_reserved
+  until: _paperclip_reserved.status | default(0) in [200, 301, 302, 401, 403]
+  retries: 20
+  delay: 3
+  failed_when: "'not allowed' in (_paperclip_reserved.content | default(''))"
+  when: "'not allowed' in (_paperclip_served.content | default(''))"
 
 # ── CEO bootstrap ─────────────────────────────────────────────────────────
 # Check whether any account rows already exist in the Paperclip DB before
