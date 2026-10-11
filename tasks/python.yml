@@ -12,6 +12,8 @@
       - zlib
       - bzip2
       - libffi
+      # Homebrew's `openssl` is openssl@4 now; Python 3.13 cannot build _ssl on it.
+      - openssl@3
     state: present
   when: nos_pkg_manager == 'homebrew'
 
@@ -37,6 +39,8 @@
   environment:
     PYENV_ROOT: "{{ ansible_facts['env']['HOME'] }}/.pyenv"
     PATH: "{{ ansible_facts['env']['HOME'] }}/.pyenv/bin:{{ homebrew_prefix }}/bin:{{ ansible_facts['env']['PATH'] | default('', true) }}"
+    # Without it python-build falls back to `openssl` = openssl@4 (2026-10-11).
+    PYTHON_BUILD_HOMEBREW_OPENSSL_FORMULA: "openssl@3"
   changed_when: false
   when: nos_pkg_manager == 'homebrew'
 
