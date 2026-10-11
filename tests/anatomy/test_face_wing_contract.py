@@ -120,3 +120,43 @@ def test_a_planted_divergence_goes_red(tmp_path):
     php.write_text(UID_PHP.read_text(encoding="utf-8").replace("$s = trim($s, '-');", ""), encoding="utf-8")
     assert _diff(_fixture()["fold"], _php(php)["fold"]), "PHP plant went unseen"
     assert _ts(ts)["fold"] != _php(UID_PHP)["fold"]
+
+
+# ── The thalamus contract crate: the third implementation, same bytes ───────
+# agentkit-rust-organ (ruled 2026-10-10): shell and thalamus share one Rust
+# contract crate, and the face<->Wing uid rule is its first consumer.
+CRATE = REPO / "files/anatomy/thalamus/contract"
+needs_cargo = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo runs the contract crate")
+
+
+def _rust(crate: pathlib.Path, target: pathlib.Path) -> dict:
+    r = subprocess.run(["cargo", "run", "--quiet", "--manifest-path", str(crate / "Cargo.toml"),
+                        "--example", "uid_fixture", "--", str(FIXTURE)],
+                       capture_output=True, text=True, timeout=600, check=False,
+                       env={**__import__("os").environ, "CARGO_TARGET_DIR": str(target)})
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout)
+
+
+@needs_cargo
+def test_the_thalamus_contract_folds_and_refuses_the_fixture(tmp_path_factory):
+    fx = _fixture()
+    out = _rust(CRATE, tmp_path_factory.getbasetemp() / "cargo-target")
+    bad = _diff(fx["fold"], out["fold"]) + _diff(fx["claims"], out["claims"])
+    assert not bad, "the thalamus contract crate drifted from the contract:\n  " + "\n  ".join(bad)
+    refused = dict(zip(fx["not_canonical"], out["refuses"]))
+    assert all(refused.values()), f"the crate accepts a non-canonical uid: {[u for u, ok in refused.items() if not ok]}"
+
+
+@needs_cargo
+def test_a_planted_divergence_in_the_crate_goes_red(tmp_path, tmp_path_factory):
+    """Drop the diacritic strip in the crate; the gate must name the cases."""
+    import shutil as sh
+    crate = tmp_path / "contract"
+    sh.copytree(CRATE, crate, ignore=sh.ignore_patterns("target"))
+    src = crate / "src" / "uid.rs"
+    planted = src.read_text(encoding="utf-8").replace("!is_combining_mark(*c)", "true")
+    assert planted != src.read_text(encoding="utf-8"), "plant did not apply"
+    src.write_text(planted, encoding="utf-8")
+    out = _rust(crate, tmp_path_factory.getbasetemp() / "cargo-target")
+    assert _diff(_fixture()["fold"], out["fold"]), "Rust plant went unseen"
