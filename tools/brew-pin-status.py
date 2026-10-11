@@ -49,6 +49,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from urllib.parse import urlparse
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "tools"))
@@ -86,7 +87,7 @@ def _get(url: str):
         "Accept": "application/vnd.github+json",
     })
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-    if token and "api.github.com" in url:
+    if token and urlparse(url).hostname == "api.github.com":
         req.add_header("Authorization", f"Bearer {token}")
     with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
         return json.loads(resp.read().decode("utf-8"))
