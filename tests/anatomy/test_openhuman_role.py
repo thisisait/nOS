@@ -179,10 +179,12 @@ def test_config_keeps_foreign_keys_and_gets_the_declared_ones(tmp_path):
 
 
 @needs_ansible
-def test_agents_md_is_the_imprint_and_no_rw_token_is_written(tmp_path):
-    home, calls, _ = _converge(tmp_path, app_present=True)
+@pytest.mark.parametrize("provider,page", [("ollama", "IMPRINT.short.md"), ("claude-code", "IMPRINT.md")])
+def test_agents_md_is_the_imprint_and_no_rw_token_is_written(tmp_path, provider, page):
+    """A local model gets the short imprint: the full one evicted the user's message (2026-10-10)."""
+    home, calls, _ = _converge(tmp_path, app_present=True, extra={"openhuman_provider": provider})
     head, body = (home / ".openhuman/users/local/workspace/AGENTS.md").read_text().split("\n", 1)
-    assert head.startswith("<!-- nOS:") and body == (REPO / "IMPRINT.md").read_text(), "AGENTS.md is not IMPRINT.md"
+    assert head.startswith("<!-- nOS:") and body == (REPO / page).read_text(), f"AGENTS.md is not {page}"
     assert (home / ".openhuman/skills/nos-datatables/SKILL.md").is_file(), "the skill was not copied"
     assert not (home / ".openhuman/skills/nos-datatables").is_symlink()
     # The copied skill names the RW token in prose; nothing may read or assign it.
