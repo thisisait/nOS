@@ -283,3 +283,48 @@ pub struct RedStatus {
     pub hold_count: usize,
     pub holds: Vec<String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn table(columns: usize, rows: usize, cell: &str) -> Component {
+        Component::Table(Table {
+            title: None,
+            columns: (0..columns).map(|i| i.to_string()).collect(),
+            rows: vec![vec![Value::String(cell.to_string()); columns]; rows],
+        })
+    }
+
+    fn list(n: usize) -> Component {
+        Component::List(List {
+            title: None,
+            ordered: false,
+            items: (0..n).map(|i| ListItem { text: i.to_string(), detail: None, tone: None }).collect(),
+        })
+    }
+
+    #[test]
+    fn check_rejects_more_than_12_columns() {
+        assert!(table(12, 1, "x").check().is_ok());
+        assert_eq!(table(13, 1, "x").check(), Err("table columns: 13, at most 12".into()));
+    }
+
+    #[test]
+    fn check_rejects_more_than_50_rows() {
+        assert!(table(1, 50, "x").check().is_ok());
+        assert_eq!(table(1, 51, "x").check(), Err("table rows: 51, at most 50".into()));
+    }
+
+    #[test]
+    fn check_rejects_a_cell_over_2000_chars() {
+        assert!(table(1, 1, &"x".repeat(2000)).check().is_ok());
+        assert_eq!(table(1, 1, &"x".repeat(2001)).check(), Err("a table cell is over 2000 chars".into()));
+    }
+
+    #[test]
+    fn check_rejects_more_than_50_list_items() {
+        assert!(list(50).check().is_ok());
+        assert_eq!(list(51).check(), Err("list items: 51, at most 50".into()));
+    }
+}
