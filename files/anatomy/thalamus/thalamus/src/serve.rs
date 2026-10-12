@@ -7,7 +7,7 @@ use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, Session};
 use nos_contract::renderers::{ApprovalsList, CellChange, Component, InboxItem, InboxList, RedStatus, Row, RowDiffApproval,
                                TableResults};
-use nos_contract::wire::{decode_to_thalamus, encode, ControlView, Decision, ToShell, ToThalamus};
+use nos_contract::wire::{decode_to_thalamus, encode, ControlView, Decision, Phase, ToShell, ToThalamus};
 use nos_contract::uid;
 use serde_json::{json, Map, Value};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -153,6 +153,11 @@ fn send(out: &mut UnixStream, m: &ToShell) {
     let _ = out.write_all(encode(m).as_bytes());
 }
 
+/// What this session is doing now; the pupil's eye shows it.
+fn activity(out: &mut UnixStream, o: &Open, phase: Phase) {
+    send(out, &ToShell::Activity { session: o.session.clone(), phase });
+}
+
 fn refuse(out: &mut UnixStream, why: &str) {
     send(out, &ToShell::Refused { reason: why.to_string() });
 }
@@ -226,6 +231,8 @@ impl Server {
                     }
                     if let Some(o) = self.ensure(&who, &mut out, &mut open) {
                         self.turn(&who, &mut out, o, &text);
+                        // However the turn ended (text, cap, refusal), it is over.
+                        activity(&mut out, o, Phase::Idle);
                     }
                 }
                 Ok(ToThalamus::Control { view }) => {
@@ -234,7 +241,10 @@ impl Server {
                     }
                 }
                 Ok(ToThalamus::ApprovalDecision { approval, decision, note }) => match open.as_mut() {
-                    Some(o) if o.pending.contains(&approval) => self.decide(&who, &mut out, o, &approval, decision, note),
+                    Some(o) if o.pending.contains(&approval) => {
+                        self.decide(&who, &mut out, o, &approval, decision, note);
+                        activity(&mut out, o, Phase::Idle);
+                    }
                     _ => refuse(&mut out, "no open approval with that id"),
                 },
             }
@@ -312,6 +322,9 @@ impl Server {
             Ok(id) => id,
             Err(why) => return refuse(out, &format!("the decision was not recorded, so nothing is written: {why}")),
         };
+        if d == Decision::Approve {
+            activity(out, o, Phase::Writing);
+        }
         let (text, result, heard) = match d {
             Decision::Reject => ("Rejected: nothing was written.".to_string(), json!({"approval": approval, "written": false}),
                                  format!("rejected: {}", note.as_deref().unwrap_or("no note"))),
@@ -358,6 +371,7 @@ impl Server {
         o.messages.push(json!({"role": "user", "content": text}));
         let mut calls = 0;
         loop {
+            activity(out, o, Phase::Thinking);
             let msg = match self.complete(&model, o) {
                 Ok(m) => m,
                 Err(why) => return refuse(out, &why),
@@ -384,6 +398,7 @@ impl Server {
                 let args: Value = call.pointer("/function/arguments").and_then(Value::as_str)
                     .and_then(|a| serde_json::from_str(a).ok()).unwrap_or(Value::Null);
                 let _ = self.record(o, Kind::ToolUse, Some(name), json!({"args": args}));
+                activity(out, o, Phase::Tool { name: name.to_string() });
                 let result = match name {
                     "search_rows" => self.search_rows(who, &args).map(|t| {
                         let ids: Vec<&str> = t.rows.iter().map(|r| r.__id.as_str()).collect();
