@@ -46,6 +46,7 @@ HOST_DAEMONS = {
     "pazny.cortex": (("build dist-server",), "cortex"),
     "pazny.device_gateway": (("sync device-gateway source",), "device-gateway"),
     "pazny.receptor": (("sync receptor source",), "receptor"),
+    "pazny.thalamus": (("install thalamus binary",), "thalamus"),
 }
 
 # Roles that bootstrap something into launchd but are NOT a long-lived process
