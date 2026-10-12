@@ -306,12 +306,20 @@ impl Server {
     /// The only write path. It takes a decision row id and writes exactly what that row's
     /// request showed the person; no approve row in the ledger, no POST.
     pub fn commit(&self, who: &Person, decision: i64) -> Result<String, String> {
-        let (actor, table, row_id, values) = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.approved(decision)?;
+        let (actor, table, row_id, values, old) =
+            self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.approved(decision)?;
         if actor != format!("user:{}", who.uid()) {
             return Err("the approval belongs to another person".into());
         }
+        // The person approved old -> new; a row that moved since is not what they saw.
+        let now = self.rows(who, &table)?.into_iter().find(|(id, _)| *id == row_id).map(|(_, v)| v)
+            .ok_or(format!("row {row_id} is gone since the proposal; nothing written"))?;
+        if let Some((k, _)) = old.iter().find(|(k, v)| now.get(*k).unwrap_or(&Value::Null) != *v) {
+            return Err(format!("cell {k} of row {row_id} changed since the proposal; nothing written"));
+        }
         let url = format!("{}/api/tables/{}/rows", self.keap_url.trim_end_matches('/'), enc(&table));
-        // ponytail: KEAP upserts, so a row deleted since the proposal is recreated; needs an if-match on KEAP's side.
+        // ponytail: a write between this re-read and the POST still lands under it; roadmap row
+        // keap-conditional-row-update (an if-match on KEAP's side) closes that race.
         self.keap(who, &url, Some(&json!({"id": row_id, "values": values})))?;
         Ok(row_id)
     }

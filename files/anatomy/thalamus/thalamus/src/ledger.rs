@@ -117,9 +117,10 @@ impl Ledger {
         Ok(self.db.last_insert_rowid())
     }
 
-    /// What a decision row approved: (actor, table, row_id, {key: new}). Err unless `decision`
-    /// is an approve row of an open session answering an earlier request in that session.
-    pub fn approved(&self, decision: i64) -> Result<(String, String, String, Map<String, Value>), String> {
+    /// What a decision row approved: (actor, table, row_id, {key: new}, {key: old}). Err unless
+    /// `decision` is an approve row of an open session answering an earlier request in that session.
+    #[allow(clippy::type_complexity)]
+    pub fn approved(&self, decision: i64) -> Result<(String, String, String, Map<String, Value>, Map<String, Value>), String> {
         let (actor, said, request): (String, Option<String>, String) = self
             .db
             .query_row(
@@ -137,12 +138,13 @@ impl Ledger {
         }
         let req: Value = serde_json::from_str(&request).map_err(|e| format!("unreadable request: {e}"))?;
         let field = |k: &str| req.get(k).and_then(Value::as_str).map(str::to_string).ok_or(format!("request has no {k}"));
-        let mut values = Map::new();
+        let (mut values, mut old) = (Map::new(), Map::new());
         for c in req.get("cells").and_then(Value::as_array).ok_or("request has no cells")? {
             let key = c.get("key").and_then(Value::as_str).ok_or("a cell has no key")?;
             values.insert(key.to_string(), c.get("new").cloned().ok_or("a cell has no new value")?);
+            old.insert(key.to_string(), c.get("old").cloned().ok_or("a cell has no old value")?);
         }
-        Ok((actor, field("table")?, field("row_id")?, values))
+        Ok((actor, field("table")?, field("row_id")?, values, old))
     }
 
     /// Writes agent_session_end, then closes the session so nothing more lands in it.
