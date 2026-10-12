@@ -4,7 +4,7 @@
 	"version": "0.1.0",
 	"identifier": "eu.thisisait.nos.pupil",
 	"build": {
-		"beforeDevCommand": "npm run build",
+		"beforeDevCommand": { "script": "npm run build", "wait": true },
 		"beforeBuildCommand": "npm run build",
 		"frontendDist": "../dist"
 	},
