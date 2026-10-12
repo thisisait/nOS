@@ -77,6 +77,14 @@ def test_the_role_renders_no_identity_map_of_its_own():
     assert not list(ROLE.glob("templates/identity*"))
 
 
+def test_the_role_refuses_a_receptor_map_the_binary_does_not_read():
+    """serve.rs fixes ~/.nos/identity-map.yml; an overridden receptor_identity_map would refuse everyone."""
+    asserts = [str(t["ansible.builtin.assert"]) for t in _tasks() if "ansible.builtin.assert" in t]
+    assert any("receptor_identity_map" in a and ".nos/identity-map.yml" in a for a in asserts), asserts
+    rs = (REPO / "files/anatomy/thalamus/thalamus/src/serve.rs").read_text()
+    assert 'IDENTITY_MAP: &str = ".nos/identity-map.yml"' in rs
+
+
 def test_the_build_is_locked_and_off_the_checkout():
     """--locked: the converge builds the Cargo.lock dependabot watches, not a fresh resolve."""
     build = next(t for t in _tasks() if "install thalamus binary" in t.get("name", "").lower())
