@@ -17,7 +17,7 @@
 		{:else if b.t === 'ul'}
 			<ul>{#each b.items as it}<li>{@render line(it)}</li>{/each}</ul>
 		{:else if b.t === 'ol'}
-			<ol>{#each b.items as it}<li>{@render line(it)}</li>{/each}</ol>
+			<ol>{#each b.items as it}<li value={it.n}>{@render line(it.inl)}</li>{/each}</ol>
 		{:else}
 			<pre><code>{b.text}</code></pre>
 		{/if}

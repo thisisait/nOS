@@ -10,7 +10,9 @@ export type Inline =
 export type Block =
 	| { t: 'h'; level: 1 | 2 | 3; inl: Inline[] }
 	| { t: 'p'; inl: Inline[] }
-	| { t: 'ul' | 'ol'; items: Inline[][] }
+	| { t: 'ul'; items: Inline[][] }
+	/** `n` is the number written on that line, so the marker is not 1, 2, 3. */
+	| { t: 'ol'; items: { n: number; inl: Inline[] }[] }
 	| { t: 'code'; text: string };
 
 const INLINE = /`([^`\n]+)`|\*\*(.+?)\*\*|\*([^*\s](?:[^*]*[^*\s])?)\*|\[([^\]\n]+)\]\(([^)\s]+)\)/g;
@@ -32,7 +34,8 @@ export function inline(s: string): Inline[] {
 }
 
 const HEADING = /^(#{1,3})\s+(.*)$/;
-const ITEM = { ul: /^\s*[-*+]\s+(.*)$/, ol: /^\s*\d+[.)]\s+(.*)$/ };
+const UL = /^\s*[-*+]\s+(.*)$/;
+const OL = /^\s*(\d+)[.)]\s+(.*)$/;
 
 export function parse(text: string): Block[] {
 	const lines = text.split(/\r?\n/);
@@ -52,16 +55,23 @@ export function parse(text: string): Block[] {
 			continue;
 		}
 		const h = HEADING.exec(l);
-		const kind = ITEM.ul.test(l) ? 'ul' : ITEM.ol.test(l) ? 'ol' : null;
+		const ul = UL.exec(l);
+		const ol = ul ? null : OL.exec(l);
 		if (h) {
 			flush();
 			out.push({ t: 'h', level: h[1].length as 1 | 2 | 3, inl: inline(h[2]) });
-		} else if (kind) {
+		} else if (ul || ol) {
 			flush();
-			const item = inline(ITEM[kind].exec(l)![1]);
 			const last = out[out.length - 1];
-			if (last?.t === kind) last.items.push(item);
-			else out.push({ t: kind, items: [item] });
+			if (ul) {
+				const item = inline(ul[1]);
+				if (last?.t === 'ul') last.items.push(item);
+				else out.push({ t: 'ul', items: [item] });
+			} else {
+				const item = { n: Number(ol![1]), inl: inline(ol![2]) };
+				if (last?.t === 'ol') last.items.push(item);
+				else out.push({ t: 'ol', items: [item] });
+			}
 		} else if (l.trim() === '') flush();
 		else para.push(l);
 	}
