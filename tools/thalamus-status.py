@@ -3,8 +3,9 @@
 
 Reads the socket (~/.nos/thalamus.sock: a socket, mode 0600, accepting a connect), the launchd job
 (eu.thisisait.nos.thalamus), the model serve last started with (~/thalamus/log/launchd.err.log),
-the ledger (~/thalamus/data/ledger.db, its dir 0700) and the ledger's last session.
-Each line is OK / RED / UNKNOWN with its source; serving without a model is UNKNOWN (degraded).
+the ledger (<--data-dir>/ledger.db, its dir 0700; the dir is read from the deployed plist, the path
+the daemon opens) and the ledger's last session. Each line is OK / RED / UNKNOWN with its source;
+serving without a model is UNKNOWN (degraded).
 
 Reads only (the connect opens no session). Exit 0 always. A source it cannot read is UNKNOWN, never green.
 `--tags thalamus,verify` fails on any line that is not OK.
@@ -20,6 +21,7 @@ import argparse
 import importlib.util
 import json
 import os
+import plistlib
 import pathlib
 import socket
 import sqlite3
@@ -30,6 +32,7 @@ import sys
 OK, RED, UNKNOWN = "OK", "RED", "UNKNOWN"
 HOME = pathlib.Path.home()
 LABEL = "eu.thisisait.nos.thalamus"
+PLIST = HOME / "Library/LaunchAgents" / f"{LABEL}.plist"
 
 
 def line(check: str, state: str, detail: str, source: str) -> dict:
@@ -78,6 +81,17 @@ def _open_ro(db: pathlib.Path):
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod.open_ledger_ro(db)
+
+
+def ledger_path(plist: pathlib.Path) -> tuple[pathlib.Path | None, str]:
+    """The ledger `serve --data-dir` opens, read from the plist; (None, why) when it cannot be read."""
+    try:
+        argv = plistlib.loads(plist.read_bytes()).get("ProgramArguments") or []
+    except (OSError, plistlib.InvalidFileException, ValueError, AttributeError) as exc:
+        return None, f"plist unreadable ({type(exc).__name__})"
+    if "--data-dir" in argv[:-1]:
+        return pathlib.Path(argv[argv.index("--data-dir") + 1]) / "ledger.db", ""
+    return None, "plist passes no --data-dir"
 
 
 def judge_ledger(db: pathlib.Path) -> list[dict]:
@@ -130,9 +144,14 @@ def _launchctl() -> tuple[int, str] | None:
 
 def collect() -> list[dict]:
     sock = pathlib.Path(os.environ.get("NOS_THALAMUS_SOCKET", HOME / ".nos/thalamus.sock"))
-    db = pathlib.Path(os.environ.get("NOS_THALAMUS_LEDGER", HOME / "thalamus/data/ledger.db"))
     log = pathlib.Path(os.environ.get("NOS_THALAMUS_LOG", HOME / "thalamus/log/launchd.err.log"))
-    return [judge_socket(sock), judge_launchd(_launchctl()), judge_model(log)] + judge_ledger(db)
+    head = [judge_socket(sock), judge_launchd(_launchctl()), judge_model(log)]
+    if os.environ.get("NOS_THALAMUS_LEDGER"):
+        return head + judge_ledger(pathlib.Path(os.environ["NOS_THALAMUS_LEDGER"]))
+    db, why = ledger_path(PLIST)
+    if db is None:
+        return head + [line("ledger", UNKNOWN, why, str(PLIST)), line("last session", UNKNOWN, "no ledger read", str(PLIST))]
+    return head + judge_ledger(db)
 
 
 def main() -> int:

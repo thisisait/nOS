@@ -107,6 +107,7 @@ snappymail_data_dir: "{{ nos_data_root }}/platform/services/snappymail/data"
 spacetimedb_data_dir: "{{ nos_data_root }}/platform/services/spacetimedb/data"
 stalwart_data_dir: "{{ nos_data_root }}/platform/services/stalwart/data"
 superset_data_dir: "{{ nos_data_root }}/platform/services/superset/data"
+thalamus_data_dir: "{{ nos_data_root }}/platform/services/thalamus/data"
 uptime_kuma_data_dir: "{{ nos_data_root }}/platform/services/uptime_kuma/data"
 vaultwarden_data_dir: "{{ nos_data_root }}/platform/services/vaultwarden/data"
 watchtower_data_dir: "{{ nos_data_root }}/platform/services/watchtower/data"
@@ -3112,6 +3113,7 @@ backup_coverage:
   spacetimedb_data_dir:        { class: unbacked, why: "nos-forum hot state; no dump path yet (nos-forum open question Q11)" }
   spacetimedb_keys_dir:        { class: unbacked, why: "JWT signing keys; rotation orphans every identity" }
   nos_forum_data_dir:          { class: unbacked, why: "module-owner CLI token; losing it = cannot republish the module (Q11)" }
+  thalamus_data_dir:           { class: unbacked, why: "ledger.db — Iris turns + approved cell edits; no sqlite dump of it yet" }
   infisical_data_dir:          { class: db, why: "secrets live in postgres.sql.gz" }
   metabase_data_dir:           { class: db, why: "app db in postgres.sql.gz; dir holds plugins" }
   superset_data_dir:           { class: db, why: "app db in postgres.sql.gz" }

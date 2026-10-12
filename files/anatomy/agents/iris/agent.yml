@@ -65,7 +65,7 @@ gdpr:
   # Gate 8 makes this a mechanism: Iris cannot be pointed at a hosted backend,
   # and refuses instead of degrading to the default when ollama is disarmed.
   transfers_outside_eu: false
-  storage_location: "~/thalamus/data/ledger.db on this host"
+  storage_location: "{nos_data_root}/platform/services/thalamus/data/ledger.db on this host"
 
 notification:
   on_critical: [wing-inbox]

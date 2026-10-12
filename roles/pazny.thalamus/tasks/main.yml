@@ -32,7 +32,7 @@
     - { path: "{{ thalamus_home }}/bin", mode: '0755' }
     # 0700: the logs name every person; the ledger holds turns and approved cell values.
     - { path: "{{ thalamus_log_dir }}", mode: '0700' }
-    - { path: "{{ thalamus_home }}/data", mode: '0700' }
+    - { path: "{{ thalamus_data_dir }}", mode: '0700' }
 
 # Build only when the source differs from the one the binary was built from (Pulse's pattern).
 - name: "[pazny.thalamus] Hash the thalamus source"

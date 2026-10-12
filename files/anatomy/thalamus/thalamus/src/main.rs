@@ -1,6 +1,6 @@
 //! One binary, two modes: `thalamus serve` is the daemon, bare `thalamus` the shell.
 
-use std::os::unix::fs::DirBuilderExt;
+use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::{Arc, Mutex};
@@ -8,7 +8,7 @@ use thalamus::binding::{self, Decision};
 use thalamus::ledger::Ledger;
 use thalamus::serve::{self, Server, IDENTITY_MAP};
 
-fn serve_main() -> Result<(), String> {
+fn serve_main(args: &[String]) -> Result<(), String> {
     let home = PathBuf::from(std::env::var("HOME").map_err(|_| "HOME is not set")?);
     let repo = PathBuf::from(std::env::var("NOS_REPO_ROOT").map_err(|_| "NOS_REPO_ROOT is not set")?);
     let secret = std::env::var("KEAP_PROXY_SHARED_SECRET").unwrap_or_default();
@@ -18,8 +18,15 @@ fn serve_main() -> Result<(), String> {
     if secret.is_empty() {
         return Err("KEAP_PROXY_SHARED_SECRET is unset or empty".into());
     }
-    let data = home.join("thalamus/data");
-    std::fs::DirBuilder::new().recursive(true).mode(0o700).create(&data).map_err(|e| format!("{}: {e}", data.display()))?;
+    // The role derives it from nos_data_root; no default, so a bare `serve` cannot write elsewhere.
+    let data = match args {
+        [flag, dir] if flag == "--data-dir" && !dir.is_empty() => PathBuf::from(dir),
+        _ => return Err("usage: thalamus serve --data-dir <dir>".into()),
+    };
+    let dir_err = |e: std::io::Error| format!("{}: {e}", data.display());
+    std::fs::DirBuilder::new().recursive(true).mode(0o700).create(&data).map_err(dir_err)?;
+    // create() leaves an existing dir as it was; a wider one would expose the ledger.
+    std::fs::set_permissions(&data, std::fs::Permissions::from_mode(0o700)).map_err(dir_err)?;
     let ledger = Ledger::open(&data.join("ledger.db")).map_err(|e| format!("ledger: {e}"))?;
     let binding = match binding::resolve(&repo, "iris", |k| std::env::var(k).ok()) {
         Ok(Decision::Bound(b)) => Ok(b),
@@ -53,8 +60,9 @@ fn serve_main() -> Result<(), String> {
 }
 
 fn main() -> ExitCode {
-    match std::env::args().nth(1).as_deref() {
-        Some("serve") => match serve_main() {
+    let args: Vec<String> = std::env::args().collect();
+    match args.get(1).map(String::as_str) {
+        Some("serve") => match serve_main(&args[2..]) {
             Ok(()) => return ExitCode::SUCCESS,
             Err(why) => eprintln!("thalamus serve: {why}"),
         },

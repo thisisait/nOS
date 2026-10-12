@@ -175,6 +175,9 @@
         (install_keap | default(false)) | ternary(
           [keap_data_dir | default(nos_data_root + '/platform/services/keap/data')], [])
         +
+        (install_thalamus | default(false)) | ternary(
+          [thalamus_data_dir | default(nos_data_root + '/platform/services/thalamus/data')], [])
+        +
         (install_authentik | default(false)) | ternary(
           [authentik_data_dir | default(ansible_facts['env']['HOME'] + '/authentik')], [])
         +

@@ -62,7 +62,7 @@ gdpr:
   eu_residency: true
   transfers_outside_eu: false
   storage_location: >-
-    Host only: ~/thalamus/data/ledger.db (dir 0700) and ~/thalamus/log (0700).
+    Host only: {nos_data_root}/platform/services/thalamus/data/ledger.db (dir 0700) and ~/thalamus/log (0700).
   security_measures:
     - "Caller identified by the kernel (getpeereid), never by a field on the wire"
     - "Socket 0600 under ~/.nos (0700); a login not in the map is refused, never defaulted"

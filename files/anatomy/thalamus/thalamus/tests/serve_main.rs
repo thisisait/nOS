@@ -38,9 +38,8 @@ fn serve_without_a_model_says_so_on_one_line_the_reader_parses() {
     let home = std::path::PathBuf::from(format!("/tmp/th-{}-nomodel", std::process::id()));
     let _ = std::fs::remove_dir_all(&home);
     std::fs::create_dir_all(home.join(".nos")).unwrap();
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thalamus"))
-        .arg("serve").env_clear().env("HOME", &home).env("NOS_REPO_ROOT", &home).env("KEAP_PROXY_SHARED_SECRET", "x")
-        .stdout(Stdio::null()).stderr(Stdio::piped()).spawn().unwrap();
+    let data = home.join("data");
+    let mut child = serve_with(&home, &["--data-dir".as_ref(), data.as_os_str()]);
     let err = child.stderr.take().unwrap();
     let (tx, rx) = std::sync::mpsc::channel();
     std::thread::spawn(move || {

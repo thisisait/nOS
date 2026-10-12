@@ -16,7 +16,7 @@
 | **Cell** | `iris` (`files/anatomy/agents/iris/agent.yml`), on ollama |
 | **Manifest id** | `thalamus` |
 | **launchd label** | `eu.thisisait.nos.thalamus` (no Linux unit yet) |
-| **Ledger** | `~/thalamus/data/ledger.db` (dir 0700) |
+| **Ledger** | `{nos_data_root}/platform/services/thalamus/data/ledger.db` (dir 0700; `thalamus_data_dir`, passed as `serve --data-dir`) |
 | **Logs** | `~/thalamus/log/` (0700) |
 | **Reader** | `tools/thalamus-status.py` |
 

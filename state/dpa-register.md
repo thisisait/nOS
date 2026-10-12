@@ -1098,7 +1098,7 @@ transferred.
 - **Recipients / processors:** **on-device (operator's own hardware)** (CZ — this host) — LLM inference on this host via ollama's OpenAI-compatible surface on loopback. No third party sees the prompt or the rows, so there is no processor in the Article-28 sense; this entry says so rather than leaving the field blank. · safeguard: Not applicable. No transfer occurs.
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
-- **Storage:** ~/thalamus/data/ledger.db on this host
+- **Storage:** {nos_data_root}/platform/services/thalamus/data/ledger.db on this host
 - **Security measures:** platform baseline (see above)
 
 #### jeff — `agent_jeff`
@@ -1718,5 +1718,5 @@ and approved cell values in the ledger, and one log line per request.
 - **Recipients / processors:** —
 - **Transfers outside EU:** No
 - **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
-- **Storage:** Host only: ~/thalamus/data/ledger.db (dir 0700) and ~/thalamus/log (0700).
+- **Storage:** Host only: {nos_data_root}/platform/services/thalamus/data/ledger.db (dir 0700) and ~/thalamus/log (0700).
 - **Security measures:** `Caller identified by the kernel (getpeereid), never by a field on the wire`; `Socket 0600 under ~/.nos (0700); a login not in the map is refused, never defaulted`; `No write without an approve decision row in the ledger for that session`; `Proxy secret only in the 0600 plist env, removed from the process env at start`
