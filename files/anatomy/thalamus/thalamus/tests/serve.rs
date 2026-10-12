@@ -562,3 +562,48 @@ fn an_unreadable_capture_source_is_named_not_emptied() {
         other => panic!("expected inbox_list, got {other:?}"),
     }
 }
+
+// --- review 2026-10-12: what the model is told when the thalamus stops it ---
+
+/// Every tool message's call id in the n-th body the model was sent.
+fn tool_ids(rig: &Rig, n: usize) -> Vec<String> {
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[n].1).unwrap();
+    body["messages"].as_array().unwrap().iter().filter(|m| m["role"] == "tool")
+        .map(|m| m["tool_call_id"].as_str().unwrap_or("").to_string()).collect()
+}
+
+/// Sends one Turn and reads until the turn's Text or Refused.
+fn turn(s: &UnixStream, r: &mut BufReader<UnixStream>, session: Option<String>, text: &str) -> Vec<ToShell> {
+    let mut w = s;
+    w.write_all(encode(&ToThalamus::Turn { session, text: text.into() }).as_bytes()).unwrap();
+    let mut got = Vec::new();
+    while let Some(m) = next(r) {
+        let end = matches!(m, ToShell::Text { .. } | ToShell::Refused { .. });
+        got.push(m);
+        if end {
+            break;
+        }
+    }
+    got
+}
+
+fn session_of(got: &[ToShell]) -> String {
+    got.iter().find_map(|m| match m { ToShell::Session { session, .. } => Some(session.clone()), _ => None }).unwrap()
+}
+
+#[test]
+fn a_stopped_turn_answers_every_call_it_was_asked() {
+    // Nine calls in one message; the cap is eight. An unanswered call is a shape providers reject.
+    let calls: Vec<_> = (0..9).map(|i| serde_json::json!({"id": format!("c{i}"), "type": "function",
+        "function": {"name": "search_rows", "arguments": r#"{"table": "todos", "q": "alpha"}"#}})).collect();
+    let nine = serde_json::json!({"choices": [{"message": {"role": "assistant", "content": null, "tool_calls": calls}}]}).to_string();
+    let rig = rig_n("cap", mapped(), vec![ROWS.into()], vec![nine, answer("ok")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let first = turn(&s, &mut r, None, "go");
+    assert!(matches!(first.last(), Some(ToShell::Text { text, .. }) if text.starts_with("Stopped")), "{first:?}");
+    turn(&s, &mut r, Some(session_of(&first)), "again");
+    let want: Vec<String> = (0..9).map(|i| format!("c{i}")).collect();
+    assert_eq!(tool_ids(&rig, 1), want, "every call the model made has its tool message");
+    assert!(rig.model.lock().unwrap()[1].1.contains("stopped: tool-call cap"));
+}
