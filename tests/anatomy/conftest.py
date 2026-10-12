@@ -44,7 +44,7 @@ def pytest_configure(config):
         f"skipped unless {_live_guard.ENV}=1, which lifts the offline boundary for it")
     config.addinivalue_line(
         "markers",
-        "docker_cli: docker compose config over a local -f file only; "
+        f"{_live_guard.DOCKER_CLI}: docker compose config over a local -f file only; "
         "no daemon and no estate — the other offline doors stay shut")
 
 
@@ -55,6 +55,9 @@ def _offline_boundary(request):
             pytest.skip(
                 f"{_live_guard.ENV} unset — @pytest.mark.live runs only with {_live_guard.ENV}=1")
         with _live_guard.lifted():
+            yield
+    elif request.node.get_closest_marker(_live_guard.DOCKER_CLI):
+        with _live_guard.docker_cli():
             yield
     else:
         yield

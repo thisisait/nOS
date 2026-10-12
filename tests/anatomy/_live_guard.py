@@ -22,6 +22,14 @@ for that test (a no-op while the run is already disarmed). After a converge:
 
     NOS_LIVE=1 python3 -m pytest tests/anatomy -m live
 
+A `@pytest.mark.docker_cli` test does not open the estate. HOME, secret
+environment variables, and loopback ports stay closed. Only the docker shim
+changes: it execs the real CLI for `docker compose -f <file>… config` with
+local flags (`-q`, `--format`, `-p`, …) and still exits 125 for every other
+invocation, including `DOCKER_HOST` and `-H`. `compose config` renders the
+files and does not contact a daemon. Use the mark to parse synthetic compose
+files. A probe of a container or of the estate stays `@pytest.mark.live`.
+
 The e2e suites live under tests/e2e and never load this. Gate:
 tests/anatomy/test_a_test_cannot_reach_the_live_estate.py.
 """
@@ -39,6 +47,7 @@ import tempfile
 
 ENV = "NOS_LIVE"
 MARK = "live"
+DOCKER_CLI = "docker_cli"
 EPHEMERAL_FLOOR = 32768                       # Linux default floor; macOS starts at 49152
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}
 SECRET_ENV = re.compile(r"(TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|APIKEY)$|^AWS_", re.I)
@@ -80,6 +89,122 @@ def _fake_home(real: pathlib.Path) -> pathlib.Path:
     atexit.register(shutil.rmtree, home, True)
     _farm(real, home, HIDDEN)
     return home
+
+
+_DAEMON_ENV = ("DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CERT_PATH", "DOCKER_TLS_VERIFY")
+_CONFIG_FLAGS = frozenset({
+    "-q", "--quiet", "--images", "--services", "--volumes", "--hash",
+    "--no-consistency", "--no-interpolate", "--no-normalize", "--no-path-resolution",
+})
+_CONFIG_VALUE_FLAGS = frozenset({"--format", "-o", "--output"})
+
+
+def real_docker() -> str | None:
+    """The docker binary on the pre-shim PATH, or None when the CLI is absent."""
+    path = _real.get("PATH") or os.environ.get("PATH", "")
+    for entry in path.split(os.pathsep):
+        if "nos-pytest-bin-" in entry or "nos-pytest-docker-cli-" in entry:
+            continue
+        cand = pathlib.Path(entry) / "docker"
+        if not cand.is_file() or not os.access(cand, os.X_OK):
+            continue
+        try:
+            head = cand.read_bytes()[:800]
+        except OSError:
+            continue
+        if b"refused by tests/anatomy/_live_guard.py" in head:
+            continue
+        return str(cand)
+    return None
+
+
+def compose_config_refusal(argv: list[str], env) -> str | None:
+    """None when `docker <argv>` may exec; otherwise why it stays refused.
+
+    Allowed shape: `compose` (`-f`/`--file` FILE)+ (`-p`/`--project-name` NAME)*
+    `config` [local flags]. At least one `-f` must name a regular file.
+    """
+    for key in _DAEMON_ENV:
+        if str(env.get(key, "")).strip():
+            return f"{key} is set"
+    if not argv or argv[0] != "compose":
+        return "not compose config"
+    i = 1
+    files: list[str] = []
+    while i < len(argv):
+        a = argv[i]
+        if a in ("-f", "--file"):
+            if i + 1 >= len(argv) or not argv[i + 1] or argv[i + 1].startswith("-"):
+                return "missing compose file"
+            files.append(argv[i + 1])
+            i += 2
+            continue
+        if a.startswith("--file="):
+            value = a.split("=", 1)[1]
+            if not value:
+                return "missing compose file"
+            files.append(value)
+            i += 1
+            continue
+        if a in ("-p", "--project-name"):
+            if i + 1 >= len(argv) or not argv[i + 1] or argv[i + 1].startswith("-"):
+                return "missing project name"
+            i += 2
+            continue
+        if a.startswith("--project-name="):
+            if not a.split("=", 1)[1]:
+                return "missing project name"
+            i += 1
+            continue
+        break
+    if i >= len(argv) or argv[i] != "config":
+        return "not compose config"
+    if not files:
+        return "compose config requires -f"
+    i += 1
+    while i < len(argv):
+        a = argv[i]
+        if a in _CONFIG_FLAGS:
+            i += 1
+            continue
+        name, eq, val = a.partition("=")
+        if eq and name in _CONFIG_VALUE_FLAGS and val:
+            i += 1
+            continue
+        if a in _CONFIG_VALUE_FLAGS:
+            if i + 1 >= len(argv) or not argv[i + 1] or argv[i + 1].startswith("-"):
+                return "missing flag value"
+            i += 2
+            continue
+        return f"flag not allowed: {a}"
+    for path in files:
+        if not os.path.isfile(path):
+            return "compose file is not a regular file"
+    return None
+
+
+def _docker_cli_shim() -> pathlib.Path:
+    d = pathlib.Path(tempfile.mkdtemp(prefix="nos-pytest-docker-cli-"))
+    atexit.register(shutil.rmtree, d, True)
+    anatomy = str(pathlib.Path(__file__).resolve().parent)
+    real = real_docker() or ""
+    script = d / "docker"
+    script.write_text("\n".join([
+        "#!/usr/bin/env python3",
+        "import os, sys",
+        f"sys.path.insert(0, {anatomy!r})",
+        "from _live_guard import REFUSAL, compose_config_refusal",
+        f"real = {real!r}",
+        "why = compose_config_refusal(sys.argv[1:], os.environ)",
+        "if why or not real:",
+        "    detail = why or 'docker CLI not on PATH'",
+        "    print(f'docker: {REFUSAL} ({detail})', file=sys.stderr)",
+        "    raise SystemExit(125)",
+        "os.execv(real, [real, *sys.argv[1:]])",
+        "",
+    ]))
+    script.chmod(0o755)
+    return d
 
 
 def _docker_shim() -> pathlib.Path:
@@ -131,6 +256,20 @@ def arm() -> None:
     socket.socket.connect = _connect
     socket.socket.connect_ex = _connect_ex
     _armed = True
+
+
+@contextlib.contextmanager
+def docker_cli():
+    """Prepend a shim that execs docker only for `compose -f <file> config`."""
+    if not _armed:
+        yield
+        return
+    saved = os.environ["PATH"]
+    os.environ["PATH"] = f"{_docker_cli_shim()}{os.pathsep}{saved}"
+    try:
+        yield
+    finally:
+        os.environ["PATH"] = saved
 
 
 @contextlib.contextmanager

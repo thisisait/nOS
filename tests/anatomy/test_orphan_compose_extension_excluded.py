@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
-import shutil
 import subprocess
 
 import pytest
 import yaml
+
+import _live_guard
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 _spec = importlib.util.spec_from_file_location("nos_prune_guard", REPO / "filter_plugins/nos_prune_guard.py")
@@ -59,8 +60,8 @@ def test_base_compose_file_counts_as_a_definition():
     assert guard.orphan_fragments(docs) == []
 
 
-@pytest.mark.live
-@pytest.mark.skipif(not shutil.which("docker"), reason="docker CLI not on PATH")
+@pytest.mark.docker_cli
+@pytest.mark.skipif(_live_guard.real_docker() is None, reason="docker CLI not on PATH")
 def test_compose_refuses_the_unfiltered_list_and_accepts_the_filtered_one(tmp_path):
     """Retro-verify: the unfiltered -f list is the 2026-10-03 error. `config` parses only."""
     stack = _stack(tmp_path, with_base=False)
