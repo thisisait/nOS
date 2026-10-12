@@ -6,9 +6,23 @@ publish = false
 description = "Iris's desktop window: a Tauri bridge onto ~/.nos/thalamus.sock. Spec: files/anatomy/contracts/thalamus-shell.yml"
 
 [build-dependencies]
-tauri-build = { version = "=2.7.2", features = [] }
+tauri-build = { version = "=2.7.2", features = [], optional = true }
 
 [dependencies]
 nos-contract = { path = "../../thalamus/contract" }
 serde_json = "=1.0.154"
-tauri = { version = "=2.12.3", features = [] }
+tauri = { version = "=2.12.3", features = [], optional = true }
+
+# The bridge (lib) builds without tauri, so its rules run where webkit2gtk is absent (CI).
+[features]
+default = ["app"]
+app = ["dep:tauri", "dep:tauri-build"]
+
+[lib]
+name = "nos_pupil"
+path = "src/lib.rs"
+
+[[bin]]
+name = "nos-pupil"
+path = "src/main.rs"
+required-features = ["app"]

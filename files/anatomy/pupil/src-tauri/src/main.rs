@@ -3,9 +3,8 @@
 //! `to_shell` / `link` events (bridge.rs owns the socket and the decoding).
 #![cfg_attr(test, allow(dead_code))]
 
-mod bridge;
-
 use nos_contract::wire::ToThalamus;
+use nos_pupil::bridge;
 use std::os::unix::net::UnixStream;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
