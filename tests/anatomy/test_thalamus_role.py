@@ -39,7 +39,7 @@ def _plist(**over) -> dict:
            "nos_tools_venv": "/h/.nos/tools-venv", "homebrew_prefix": "/opt/homebrew",
            "ansible_facts": {"env": {"HOME": "/h"}}, "keap_proxy_shared_secret": "s3cret", "keap_port": 8091,
            "ollama_enabled": True, "ollama_model": "qwen3:14b", "ollama_small_model": "hermes3:8b",
-           "authentik_rbac_tiers": _default_config()["authentik_rbac_tiers"], **over}
+           "authentik_rbac_tiers": _default_config()["authentik_rbac_tiers"], "thalamus_roadmap_table_id": "rt", **over}
     text = env.from_string((ROLE / "templates" / "thalamus.plist.j2").read_text()).render(**ctx)
     return plistlib.loads(text.encode())
 

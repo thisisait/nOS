@@ -8,3 +8,8 @@ thalamus_log_dir: "{{ thalamus_home }}/log"
 thalamus_target_dir: "{{ thalamus_home }}/target"
 thalamus_socket: "{{ ansible_facts['env']['HOME'] }}/.nos/thalamus.sock"
 thalamus_cargo: "{{ ansible_facts['env']['HOME'] }}/.cargo/bin/cargo"
+# serve maps the model's "roadmap" to this. pazny.keap's default is private to that role, so
+# it is read from its one file (an operator override of keap_roadmap_table_id still wins).
+thalamus_roadmap_table_id: >-
+  {{ keap_roadmap_table_id | default((lookup('file', playbook_dir ~ '/roles/pazny.keap/defaults/main.yml')
+  | from_yaml).keap_roadmap_table_id) }}

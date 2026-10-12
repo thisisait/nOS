@@ -119,6 +119,15 @@ fn agent(timeout: u64) -> ureq::Agent {
         .into()
 }
 
+/// The one alias the model may use: "roadmap" is NOS_ROADMAP_TABLE_ID (the plist renders
+/// keap_roadmap_table_id); any other name is passed to KEAP as the table id it is.
+fn table_id(t: &str) -> String {
+    match std::env::var("NOS_ROADMAP_TABLE_ID") {
+        Ok(id) if t == "roadmap" && !id.is_empty() => id,
+        _ => t.to_string(),
+    }
+}
+
 /// Percent-encodes one path or query component.
 fn enc(s: &str) -> String {
     s.bytes()
@@ -169,12 +178,12 @@ approve; you are told only that the proposal waits for them.";
 fn tools() -> Value {
     json!([{"type": "function", "function": {"name": "search_rows", "description": SEARCH_ROWS,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "q"], "properties": {
-            "table": {"type": "string", "description": "the table id"},
+            "table": {"type": "string", "description": "the table id, or \"roadmap\" for the roadmap"},
             "q": {"type": "string"},
             "limit": {"type": "integer", "minimum": 1, "maximum": 20}}}}},
         {"type": "function", "function": {"name": "propose_row_edit", "description": PROPOSE_ROW_EDIT,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "row_id", "values"], "properties": {
-            "table": {"type": "string", "description": "the table id"},
+            "table": {"type": "string", "description": "the table id, or \"roadmap\" for the roadmap"},
             "row_id": {"type": "string", "description": "the row's __id from search_rows"},
             "values": {"type": "object", "description": "column -> new value; null clears the cell"}}}}}])
 }
@@ -405,7 +414,8 @@ impl Server {
 
     /// GET /api/tables/:id/rows as the person, every page, then a substring filter.
     fn search_rows(&self, who: &Person, args: &Value) -> Result<TableResults, String> {
-        let table = args.get("table").and_then(Value::as_str).filter(|t| !t.is_empty()).ok_or("search_rows needs `table`")?;
+        let table = &table_id(args.get("table").and_then(Value::as_str).filter(|t| !t.is_empty())
+            .ok_or("search_rows needs `table`")?);
         let q = args.get("q").and_then(Value::as_str).map(|q| q.trim().to_lowercase()).filter(|q| !q.is_empty())
             .ok_or("search_rows needs `q`")?;
         let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(20).clamp(1, 20) as usize;
@@ -444,7 +454,7 @@ impl Server {
     /// The cell diff of one existing row the person can read; only changed cells survive.
     fn propose_row_edit(&self, who: &Person, args: &Value) -> Result<RowDiffApproval, String> {
         let s = |k: &str| args.get(k).and_then(Value::as_str).filter(|v| !v.is_empty()).ok_or(format!("propose_row_edit needs `{k}`"));
-        let (table, row_id) = (s("table")?, s("row_id")?);
+        let (table, row_id) = (&table_id(s("table")?), s("row_id")?);
         let values = args.get("values").and_then(Value::as_object).filter(|v| !v.is_empty())
             .ok_or("propose_row_edit needs a non-empty `values` object")?;
         // KEAP reads __ keys as row sharing; changing who sees a row is not this tool's to propose.

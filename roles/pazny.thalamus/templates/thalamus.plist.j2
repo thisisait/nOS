@@ -28,6 +28,9 @@
         <!-- Read once at start, then removed from the process env (src/main.rs). -->
         <key>KEAP_PROXY_SHARED_SECRET</key>
         <string>{{ keap_proxy_shared_secret }}</string>
+        <!-- The table serve answers for the model's "roadmap" (src/serve.rs table_id). -->
+        <key>NOS_ROADMAP_TABLE_ID</key>
+        <string>{{ thalamus_roadmap_table_id }}</string>
         <!-- Who sees the approvals and red-status controls: authentik_rbac_tiers tier 1. -->
         <key>NOS_TIER1_GROUPS</key>
         <string>{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | first).groups | join(',') }}</string>
