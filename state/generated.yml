@@ -37,6 +37,9 @@ files:
   IMPRINT.md:
     writer: tools/imprint-gen.py
     check: [tools/imprint-gen.py, --check]
+  IMPRINT.short.md:
+    writer: tools/imprint-gen.py
+    check: [tools/imprint-gen.py, --check]
   AGENTS.md:
     writer: tools/task-types-render.py
     check: [tools/task-types-render.py, --check]

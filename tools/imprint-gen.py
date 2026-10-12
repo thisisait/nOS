@@ -4,12 +4,14 @@
 Roadmap row `imprint`. Every line is rendered from a source file (listed at the
 bottom of the page); the only hand-written text is the short fixed preamble of
 section 2 and the section headings. Hard caps: 200 lines, 16,000 chars.
+IMPRINT.short.md is the same sections from the same sources, for local models
+(roadmap row `imprint-short-for-local-models`): capped at SHORT_MAX_TOKENS.
 
 Regenerate-and-diff, as body-plan-gen.py: byte-stable, no clock, no network.
 Gate: tests/anatomy/test_imprint_is_rendered.py.
 
-    python3 tools/imprint-gen.py            # write IMPRINT.md
-    python3 tools/imprint-gen.py --check    # exit 1 if IMPRINT.md is stale
+    python3 tools/imprint-gen.py            # write IMPRINT.md and IMPRINT.short.md
+    python3 tools/imprint-gen.py --check    # exit 1 if either is stale
 """
 from __future__ import annotations
 
@@ -29,6 +31,11 @@ MAX_LINES = 200
 # BOOTSTRAP_MAX_CHARS); under 16k leaves a harness room for its own prompt.
 MAX_CHARS = 16000
 TOP = 3
+SHORT_TARGET = REPO / "IMPRINT.short.md"
+# 2026-10-10: the full page under an 8192 window evicted the user's message (qwen3:14b).
+# No tokenizer is installed; chars / 3 over-counts English prose (~4 chars a token).
+SHORT_MAX_TOKENS = 2000
+CHARS_PER_TOKEN = 3
 
 SOURCES = {
     "charter": "CLAUDE.md",
@@ -70,6 +77,19 @@ def charter() -> list[str]:
     return _section(_read("charter"), "Working in nOS").strip("\n").splitlines()
 
 
+def charter_text() -> str:
+    return "\n".join(charter())
+
+
+def first_sentence(text: str) -> str:
+    return " ".join(text.split()).split(". ")[0].rstrip(".") + "."
+
+
+def charter_short() -> list[str]:
+    intro, *laws = charter_text().split("\n- ")
+    return [" ".join(intro.split()), ""] + [f"- {' '.join(b.split())}" for b in laws]
+
+
 def what_nos_is() -> list[str]:
     rows = yaml.safe_load(_read("manifest"))["services"]
     return [
@@ -99,6 +119,15 @@ def body_plan() -> list[str]:
     return out
 
 
+def body_plan_short() -> list[str]:
+    body = _module("tools/body.py", "body")
+    graph = json.loads(body.GRAPH.read_text(encoding="utf-8"))
+    deg = body._degree(graph)
+    levels = ", ".join(f"{lv} ({len(body._members(graph, deg, lv))})" for lv in body.LEVELS)
+    return [f"Levels, smallest to largest, then the cross-cutting systems: {levels}. "
+            "Look closer: `tools/body.py <level>` or `tools/body.py <node>`."]
+
+
 def _reader_rows() -> dict[str, str]:
     return dict(re.findall(r"^- `([^`]+)` — (.+)$", _section(_read("readers"), "Readers — what is true right now"), re.M))
 
@@ -124,6 +153,11 @@ def senses() -> list[str]:
                   f"{SOURCES['readers']} §Readers: " + ", ".join(rest) + "."]
 
 
+def senses_short() -> list[str]:
+    names = ", ".join(f"`tools/{n}`" for n, _ in readers())
+    return [senses()[0], f"Start with the first: {names}. More: {SOURCES['readers']} §Readers."]
+
+
 def _skill_table(skill: str) -> list[str]:
     rows = re.findall(r"^\| `([\w-]+)` \| ([^|]+) \| ([^|]+) \|$", skill, re.M)
     return [f"- `{t}` — a row is {what.strip()}. Written by: {who.strip()}." for t, what, who in rows[:2]]
@@ -137,7 +171,7 @@ def _dtt_verbs(skill: str) -> list[str]:
 
 def _never(skill: str) -> list[str]:
     bullets = re.split(r"\n- ", "\n" + _section(skill, "Never").strip())[1:]
-    return ["- " + " ".join(b.split()).split(". ")[0].rstrip(".") + "." for b in bullets]
+    return ["- " + first_sentence(b) for b in bullets]
 
 
 def act() -> list[str]:
@@ -154,15 +188,34 @@ def act() -> list[str]:
     mcp = _module(SOURCES["mcp"], "mcp_tables_server")
     out += ["", "The MCP tool `nos_tables`, one verb per call: " +
             ", ".join(f"`{v}` ({p})" for v, p in mcp.VERBS.items()) + "."]
+    return out + [""] + never(types, skill)
+
+
+def never(types: dict, skill: str) -> list[str]:
     op = [n for n, c in types.items() if c["needs_operator"]]
-    rule = next(b for b in "\n".join(charter()).split("\n- ") if "config.yml" in b)
-    out += ["", "What a model may never do:", "",
+    rule = next(b for b in charter_text().split("\n- ") if "config.yml" in b)
+    return ["What a model may never do:", "",
             f"- Run a task of type {', '.join(f'`{n}`' for n in op)}: only the operator runs it.",
             "- " + " ".join(rule.split())] + _never(skill)
-    return out
 
 
-def doors() -> list[str]:
+def act_short() -> list[str]:
+    types = yaml.safe_load(_read("tasks"))["task_types"]
+    skill = _read("skill")
+    tables = re.findall(r"^\| `([\w-]+)` \|", skill, re.M)[:2]
+    mcp = _module(SOURCES["mcp"], "mcp_tables_server")
+    out = [f"Every board row carries a `task_type` ({SOURCES['tasks']}):", ""]
+    out += [f"- `{n}` — {c['summary']}" for n, c in types.items()]
+    out += ["", f"The two KEAP tables: {', '.join(f'`{t}`' for t in tables)}. "
+            f"`nos dtt` verbs: {SOURCES['skill']}. MCP tool `nos_tables`: {', '.join(mcp.VERBS)}.", ""]
+    return out + never(types, skill)
+
+
+def doors_short() -> list[str]:
+    return [ln for ln in _doors() if ln.startswith("- ") and not ln.endswith(":")]
+
+
+def _doors() -> list[str]:
     ident = _module("tools/nos_identity.py", "nos_identity")
     cfg = ident.default_config()
     assert re.search(r"^keap_agent_token_ro:", _read("secrets"), re.M), "RO token key moved"
@@ -185,6 +238,11 @@ def doors() -> list[str]:
         "This host's value: `tools/estate-status.py --config tenant_domain`. "
         "The routed ids are those rows' `id`s.",
     ]
+    return out
+
+
+def doors() -> list[str]:
+    out = _doors()
     proj = _module("files/anatomy/apex/projection.py", "projection")
     art, ruling = proj.load_artifact(), proj.load_ruling()
     public = json.loads(proj.public_json(art, ruling))
@@ -203,6 +261,11 @@ def level_words() -> list[str]:
             "The other words of each level:", ""] + rest
 
 
+def level_words_short() -> list[str]:
+    words = re.findall(r"^- \*\*(.+?)\*\* \(", "\n".join(level_words()), re.M)
+    return [f"Also: {', '.join(words)} — glossed in {SOURCES['glossary']}."]
+
+
 SECTIONS = [
     ("1. The charter — read this first (verbatim from CLAUDE.md, \"Working in nOS\")", charter),
     ("2. What nOS is", what_nos_is),
@@ -214,9 +277,13 @@ SECTIONS = [
 ]
 
 
+# One short body per section: zip(strict=True) refuses a section added without one.
+SHORT = [charter_short, what_nos_is, body_plan_short, senses_short, act_short, doors_short, level_words_short]
+HEAD = "<!-- GENERATED by tools/imprint-gen.py — do not edit. Gate: tests/anatomy/test_imprint_is_rendered.py -->"
+
+
 def render() -> str:
-    out = ["<!-- GENERATED by tools/imprint-gen.py — do not edit. Gate: tests/anatomy/test_imprint_is_rendered.py -->",
-           "# IMPRINT — the first page a new model reads in nOS"]
+    out = [HEAD, "# IMPRINT — the first page a new model reads in nOS"]
     for title, fn in SECTIONS:
         out += ["", f"## {title}", ""] + fn()
     out += ["", "## Sources", "", "Every line above is rendered from these files:", ""]
@@ -224,11 +291,19 @@ def render() -> str:
     return "\n".join(out) + "\n"
 
 
+def render_short() -> str:
+    out = [HEAD, "# IMPRINT (short) — the first page a new local model reads in nOS", "",
+           "The same sections and laws as IMPRINT.md, shorter, from the same sources; the full page is IMPRINT.md."]
+    for (title, _), fn in zip(SECTIONS, SHORT, strict=True):
+        out += ["", f"## {title}", ""] + fn()
+    return "\n".join(out + ["", "## Sources", "", "The same files as IMPRINT.md §Sources."]) + "\n"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="render IMPRINT.md")
     ap.add_argument("--check", action="store_true", help="exit 1 if IMPRINT.md is stale")
     args = ap.parse_args()
-    text = render()
+    text, short = render(), render_short()
     n = text.count("\n")
     if n > MAX_LINES:
         print(f"imprint: render is {n} lines, over the {MAX_LINES}-line cap", file=sys.stderr)
@@ -236,14 +311,20 @@ def main() -> int:
     if len(text) > MAX_CHARS:
         print(f"imprint: render is {len(text)} chars, over the {MAX_CHARS}-char cap", file=sys.stderr)
         return 1
+    if -(-len(short) // CHARS_PER_TOKEN) > SHORT_MAX_TOKENS:
+        print(f"imprint: short render is {len(short)} chars, over ~{SHORT_MAX_TOKENS} tokens", file=sys.stderr)
+        return 1
+    pairs = ((TARGET, text), (SHORT_TARGET, short))
     if args.check:
-        if not TARGET.exists() or TARGET.read_text(encoding="utf-8") != text:
-            print("imprint: IMPRINT.md STALE — regenerate with tools/imprint-gen.py", file=sys.stderr)
+        stale = [p.name for p, t in pairs if not p.exists() or p.read_text(encoding="utf-8") != t]
+        if stale:
+            print(f"imprint: {', '.join(stale)} STALE — regenerate with tools/imprint-gen.py", file=sys.stderr)
             return 1
-        print(f"imprint current ({n} lines)")
+        print(f"imprint current ({n} lines; short {len(short)} chars)")
         return 0
-    TARGET.write_text(text, encoding="utf-8")
-    print(f"wrote IMPRINT.md ({n} lines)")
+    for p, t in pairs:
+        p.write_text(t, encoding="utf-8")
+    print(f"wrote IMPRINT.md ({n} lines) and IMPRINT.short.md ({len(short)} chars)")
     return 0
 
 

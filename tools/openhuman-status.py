@@ -17,7 +17,8 @@ Usage:
 Env (tests): NOS_OPENHUMAN_DIR (default ~/.openhuman), NOS_OPENHUMAN_APP,
 NOS_OPENHUMAN_CASKROOM, NOS_OPENHUMAN_PROVIDER (ollama | claude-code, the declared one),
 NOS_OPENHUMAN_OLLAMA_PREFIX (default /opt/homebrew: where the one Ollama lives),
-NOS_OPENHUMAN_IMPRINT (default IMPRINT.md next to tools/: what AGENTS.md must be a copy of).
+NOS_OPENHUMAN_IMPRINT (what AGENTS.md must be a copy of; default IMPRINT.short.md next to tools/ on
+the ollama route, IMPRINT.md otherwise).
 Never prints a token: auth-profiles.json is checked for existence only.
 """
 
@@ -208,10 +209,10 @@ def judge_twin(base: pathlib.Path, imprint: pathlib.Path) -> list[dict]:
         return out + [line("imprint", RED, "no AGENTS.md — run --tags openhuman", str(agents))]
     bad = []
     if text.split("\n", 1)[-1] != want:
-        bad.append("differs from IMPRINT.md — run --tags openhuman")
+        bad.append(f"differs from {imprint.name} — run --tags openhuman")
     if len(text) > BOOTSTRAP_MAX_CHARS:
         bad.append(f"truncated by OpenHuman: {len(text)} chars > {BOOTSTRAP_MAX_CHARS} (BOOTSTRAP_MAX_CHARS)")
-    return out + [line("imprint", RED if bad else OK, "; ".join(bad) or f"copy of IMPRINT.md, {len(text)} chars",
+    return out + [line("imprint", RED if bad else OK, "; ".join(bad) or f"copy of {imprint.name}, {len(text)} chars",
                        f"{agents}, {imprint}")]
 
 
@@ -343,7 +344,9 @@ def collect() -> list[dict]:
         raws.append(raw)
     cfg = {"mcp_client": {"servers": servers}} if any(raws) else None
     if tomllib:
-        imprint = os.environ.get("NOS_OPENHUMAN_IMPRINT", pathlib.Path(__file__).resolve().parents[1] / "IMPRINT.md")
+        short = os.environ.get("NOS_OPENHUMAN_PROVIDER", "ollama") == "ollama"   # the role's pick, by route
+        page = pathlib.Path(__file__).resolve().parents[1] / ("IMPRINT.short.md" if short else "IMPRINT.md")
+        imprint = os.environ.get("NOS_OPENHUMAN_IMPRINT", page)
         out += judge_twin(base, pathlib.Path(imprint))
     raw = "\n".join(raws)
     out.append(line("desktop updater", UNKNOWN if app.exists() else OK,

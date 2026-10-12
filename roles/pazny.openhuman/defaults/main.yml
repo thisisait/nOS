@@ -8,6 +8,9 @@ openhuman_app: /Applications/OpenHuman.app
 openhuman_claude_default_model: sonnet    # OpenHuman's own CLAUDE_CODE_DEFAULT_MODEL
 # The tree being converged: IMPRINT.md and the skills are COPIED from it (contents, not a path).
 openhuman_source_dir: "{{ playbook_dir }}"
+# Picked by route: a local model gets the short imprint (the full one under an 8192 window
+# evicted the user's message, 2026-10-10). A default, so --tags verify judges the same file.
+openhuman_imprint: "{{ openhuman_source_dir }}/{{ 'IMPRINT.short.md' if openhuman_provider == 'ollama' else 'IMPRINT.md' }}"
 # KEAP's embedder (pazny.keap keap_embed_model), already pulled by nOS; 768 is its width.
 openhuman_embed_model: nomic-embed-text
 openhuman_embed_dimensions: 768

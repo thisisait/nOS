@@ -142,12 +142,12 @@
 # The core reads <profile>/workspace/AGENTS.md (agent/prompts/agents_md.rs).
 - name: "[openhuman] AGENTS.md — the imprint, re-copied every converge"
   ansible.builtin.copy:
-    content: "{{ _hdr }}\n{{ lookup('ansible.builtin.file', openhuman_source_dir ~ '/IMPRINT.md', rstrip=False) }}"
+    content: "{{ _hdr }}\n{{ lookup('ansible.builtin.file', openhuman_imprint, rstrip=False) }}"
     dest: "{{ item }}/workspace/AGENTS.md"
     mode: "0600"
   loop: "{{ _oh_profiles }}"
   vars:
-    _hdr: "<!-- nOS: copy of IMPRINT.md, rewritten by pazny.openhuman every converge. Edit IMPRINT.md. -->"
+    _hdr: "<!-- nOS: copy of {{ openhuman_imprint | basename }}, rewritten by pazny.openhuman every converge. Run tools/imprint-gen.py. -->"
 
 # Copied, not linked: OpenHuman rejects symlinked skills.
 - name: "[openhuman] Skills"
@@ -180,6 +180,7 @@
     NOS_OPENHUMAN_APP: "{{ openhuman_app }}"
     NOS_OPENHUMAN_CASKROOM: "{{ homebrew_prefix }}/Caskroom/openhuman"
     NOS_OPENHUMAN_PROVIDER: "{{ openhuman_provider }}"
+    NOS_OPENHUMAN_IMPRINT: "{{ openhuman_imprint }}"
     NOS_OPENHUMAN_OLLAMA_PREFIX: "{{ homebrew_prefix }}"
   register: _oh_status
   changed_when: false

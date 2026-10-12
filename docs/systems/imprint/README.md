@@ -2,7 +2,9 @@
 
 The imprint is the one page a new model reads first: `IMPRINT.md` at the repo
 root. It is rendered by `tools/imprint-gen.py` and gated by
-`tests/anatomy/test_imprint_is_rendered.py`; never edit it by hand.
+`tests/anatomy/test_imprint_is_rendered.py`; never edit it by hand. Beside it,
+`IMPRINT.short.md` is the same sections from the same sources, capped at ~2000
+tokens for local models; pazny.openhuman copies it on the ollama route.
 
 ## Point an external agent app (e.g. OpenHuman) at nOS
 

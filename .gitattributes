@@ -11,6 +11,7 @@ files/anatomy/face/src/lib/anatomy/routing-graph.json merge=regen
 state/loop-graph.json merge=regen
 files/anatomy/face/src/lib/anatomy/loop-graph.json merge=regen
 IMPRINT.md merge=regen
+IMPRINT.short.md merge=regen
 AGENTS.md merge=regen
 docs/glossary.md merge=regen
 files/anatomy/module_utils/nos_entity.py merge=regen
