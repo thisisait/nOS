@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 3   # 2: activity (the eye's phase on every turn); 3: table_results name/query/matched/total, markdown, table, list, record
+contract_version: 3   # 2: activity (the eye's phase on every turn); 3: table_results name/query/matched/total, markdown, table, list, record, chart
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -47,6 +47,7 @@ components:
     table: "rows the model shows (show tool): {title?, columns[], rows[][]}; at most 12 columns, 50 rows, every row as long as columns, a cell 2000 chars"
     list: "items the model shows (show tool): {title?, ordered, items[{text, detail?, tone? ok|info|warn|bad}]}; at most 50 items, text 500, detail 2000"
     record: "one thing's fields (show tool): {title?, fields[{key, value}]}; at most 40 fields, a value 4000 chars as text; titles and names 120"
+    chart: "values plotted (show tool), bar or line only: {title?, chart, series[{name, points[[x, number]]}]}; at most 6 series, 60 points each, 60 x labels; a line's series share the same x"
 
 # ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ──────
 invariants:
@@ -71,6 +72,6 @@ invariants:
 open:
   - >-
     Since v3 the model chooses a renderer through the `show` tool, for table,
-    list, record and markdown only; table_results, row_diff_approval and the
+    list, record, markdown and chart only; table_results, row_diff_approval and the
     control views stay chosen by their tool or control, and an approval is
     minted only by propose_row_edit.

@@ -191,7 +191,7 @@ A component outside its shape or caps is refused and you are told why; nothing i
 approval: only propose_row_edit does, and query_rows draws its own table.";
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
-const SHOW_KINDS: [&str; 4] = ["table", "list", "record", "markdown"];
+const SHOW_KINDS: [&str; 5] = ["table", "list", "record", "markdown", "chart"];
 
 /// One `oneOf` branch per kind; the descriptions are thalamus-shell.yml's vocabulary lines.
 fn show_schema() -> Value {
@@ -213,7 +213,14 @@ fn show_schema() -> Value {
             closed(&["fields"], json!({"title": title, "fields": {"type": "array", "maxItems": 40,
                 "items": closed(&["key", "value"], json!({"key": {"type": "string", "maxLength": 120}, "value": {}}))}}))),
         branch("markdown", "text as markdown (headings 1-3, paragraphs, lists, code fences; links as text): {text} <=8000",
-            closed(&["text"], json!({"text": {"type": "string", "maxLength": 8000}})))]}}})
+            closed(&["text"], json!({"text": {"type": "string", "maxLength": 8000}}))),
+        branch("chart", "values plotted as bar or line: {title?, chart bar|line, series[{name, points[[x, number]] <=60}] <=6}; \
+a line's series share the same x in the same order",
+            closed(&["chart", "series"], json!({"title": title, "chart": {"enum": ["bar", "line"]},
+                "series": {"type": "array", "minItems": 1, "maxItems": 6, "items": closed(&["name", "points"], json!({
+                    "name": {"type": "string", "maxLength": 120},
+                    "points": {"type": "array", "maxItems": 60, "items": {"type": "array", "minItems": 2, "maxItems": 2,
+                        "prefixItems": [{"type": "string", "maxLength": 120}, {"type": "number"}]}}}))}})))]}}})
 }
 
 const QUERY_KEYS: [&str; 6] = ["table", "q", "where", "columns", "order_by", "limit"];
@@ -334,8 +341,8 @@ impl Server {
         send(out, &ToShell::Session { session: session.clone(), actor, model_uri });
         let iris = format!("You are Iris. You act for {} and see only what they may see. To read, count or filter \
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
-asked for, never to look at a row. To show structured output call show (table, list, record, markdown); plain text \
-may use markdown, nothing else.", who.username);
+asked for, never to look at a row. To show structured output call show (table, list, record, markdown, \
+chart); plain text may use markdown, nothing else.", who.username);
         let (model, system) = match imprint {
             Ok((m, t)) => (Ok(m), format!("{}\n\n{iris}", t.trim_end())),
             Err(why) => (Err(why), iris),

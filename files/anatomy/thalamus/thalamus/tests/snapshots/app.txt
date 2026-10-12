@@ -1,9 +1,6 @@
 edit roadmap / backup-restic-fork — nothing is written unless you approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-### Order
-
-1. query
 2. propose
 
 ```
@@ -35,6 +32,9 @@ pupil-i4
   status: active
   increments: {"done":["I4a","I4b"],"next":"I4c"}
   ordinal: 4
+bar chart Rows by status: 2 series, not drawn here
+  roadmap: next=23, active=4, done=95
+  ideas: next=7, active=1, done=12.5
 refused: login carol has no row in the identity map
 approve this edit? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit

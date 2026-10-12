@@ -18,6 +18,7 @@ pub enum Component {
     Table(Table),
     List(List),
     Record(Record),
+    Chart(Chart),
 }
 
 /// Model text as markdown; every consumer draws it as text nodes, never as HTML.
@@ -79,9 +80,61 @@ impl Component {
                     cap("a record value", &value_text(&f.value), 4000)
                 })
             }
+            Component::Chart(c) => {
+                title(&c.title)?;
+                most("chart series", c.series.len(), 6)?;
+                if c.series.is_empty() {
+                    return Err("a chart has no series".into());
+                }
+                let mut xs = std::collections::BTreeSet::new();
+                for s in &c.series {
+                    cap("a series name", &s.name, NAME_MAX)?;
+                    most(&format!("series {} points", s.name), s.points.len(), 60)?;
+                    let mut own = std::collections::BTreeSet::new();
+                    for (x, _) in &s.points {
+                        cap("an x label", x, NAME_MAX)?;
+                        if !own.insert(x) {
+                            return Err(format!("series {} has x {x:?} twice", s.name));
+                        }
+                    }
+                    xs.extend(own);
+                }
+                most("chart x labels", xs.len(), 60)?;
+                // A line joins the same x in every series; a bar may leave one out.
+                let first: Vec<&String> = c.series[0].points.iter().map(|p| &p.0).collect();
+                if c.chart == ChartKind::Line && c.series.iter().any(|s| s.points.iter().map(|p| &p.0).ne(first.iter().copied())) {
+                    return Err("every series of a line chart has the same x, in the same order".into());
+                }
+                Ok(())
+            }
             _ => Ok(()),
         }
     }
+}
+
+/// Values the model plots: bar or line, nothing else; drawn as SVG marks or as text.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Chart {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub chart: ChartKind,
+    pub series: Vec<Series>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ChartKind {
+    Bar,
+    Line,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Series {
+    pub name: String,
+    /// (x label, value); JSON has no NaN or infinity, so every value is finite.
+    pub points: Vec<(String, f64)>,
 }
 
 /// Rows the model shows: `columns` names each cell of every row, in order.

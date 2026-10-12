@@ -159,6 +159,16 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 out.push(Line::from(format!("  {}: {}", f.key, cell(&f.value))));
             }
         }
+        // A terminal draws no chart; every value is said as text.
+        Component::Chart(c) => {
+            let kind = cell(&serde_json::to_value(c.chart).unwrap_or_default());
+            let title = c.title.as_deref().map(|t| format!(" {t}")).unwrap_or_default();
+            out.push(head(format!("{kind} chart{title}: {} series, not drawn here", c.series.len())));
+            for s in &c.series {
+                let pts: Vec<String> = s.points.iter().map(|(x, y)| format!("{x}={y}")).collect();
+                out.push(Line::from(format!("  {}: {}", s.name, pts.join(", "))));
+            }
+        }
     }
     out
 }

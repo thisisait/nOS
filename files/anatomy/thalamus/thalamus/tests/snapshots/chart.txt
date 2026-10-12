@@ -1,0 +1,10 @@
+bar chart Rows by status: 2 series, not drawn here
+  roadmap: next=23, active=4, done=95
+  ideas: next=7, active=1, done=12.5
+
+
+
+
+
+
+

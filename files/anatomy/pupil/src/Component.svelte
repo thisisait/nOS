@@ -7,6 +7,7 @@
 	import Badge from '$ui/Badge.svelte';
 	import StatusNote from '$ui/StatusNote.svelte';
 	import { severityTone } from '$ui/tone';
+	import Chart from './Chart.svelte';
 	import Markdown from './Markdown.svelte';
 	import { cell, shown, type Component } from './wire';
 
@@ -110,6 +111,9 @@
 				<dd>{#if f.value !== null && typeof f.value === 'object'}<pre>{JSON.stringify(f.value, null, 1)}</pre>{:else}{cell(f.value)}{/if}</dd>
 			{/each}
 		</dl>
+	{:else if component.kind === 'chart'}
+		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
+		<Chart chart={component.props} />
 	{:else}
 		<!-- Unreachable past the bridge's decoder; said aloud if it ever is. -->
 		<StatusNote kind="error" title="refused">no renderer for component kind {(component as { kind: string }).kind}</StatusNote>

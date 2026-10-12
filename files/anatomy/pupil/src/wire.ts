@@ -13,7 +13,8 @@ export type Component =
 	| { kind: 'markdown'; props: { text: string } }
 	| { kind: 'table'; props: { title?: string; columns: string[]; rows: Value[][] } }
 	| { kind: 'list'; props: { title?: string; ordered: boolean; items: { text: string; detail?: string; tone?: 'ok' | 'info' | 'warn' | 'bad' }[] } }
-	| { kind: 'record'; props: { title?: string; fields: { key: string; value: Value }[] } };
+	| { kind: 'record'; props: { title?: string; fields: { key: string; value: Value }[] } }
+	| { kind: 'chart'; props: { title?: string; chart: 'bar' | 'line'; series: { name: string; points: [string, number][] }[] } };
 
 export type ToShell =
 	| { t: 'session'; session: string; actor: string; model_uri: string }
