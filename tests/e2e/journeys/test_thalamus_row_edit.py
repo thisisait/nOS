@@ -31,7 +31,6 @@ import uuid
 from pathlib import Path
 
 import pytest
-import yaml
 
 from ..lib.residue import ResidueProbe
 
