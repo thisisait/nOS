@@ -42,6 +42,10 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", f"{_live_guard.MARK}: reads ~/.nos, docker, or a loopback service; "
         f"skipped unless {_live_guard.ENV}=1, which lifts the offline boundary for it")
+    config.addinivalue_line(
+        "markers",
+        "docker_cli: docker compose config over a local -f file only; "
+        "no daemon and no estate — the other offline doors stay shut")
 
 
 @pytest.fixture(autouse=True)
