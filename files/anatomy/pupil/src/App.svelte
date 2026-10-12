@@ -109,6 +109,8 @@
 		{/each}
 	</div>
 	{#if q.pending[0]}
+		<!-- A fresh card per id: a reused scroll box could show the next edit's end first. -->
+		{#key q.pending[0].approval}
 		<ApprovalCard
 			waiting={q.pending[0]}
 			of={q.pending.length}
@@ -116,6 +118,7 @@
 			onseen={(id) => (q = seen(q, id))}
 			ondecide={decided}
 		/>
+		{/key}
 	{/if}
 	<form
 		class="composer"

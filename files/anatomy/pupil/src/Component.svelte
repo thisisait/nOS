@@ -109,6 +109,11 @@
 	.diff {
 		font-family: ui-monospace, monospace;
 	}
+	/* shell.rs wrap: no part of a value off screen, or the end marker lies about it. */
+	.diff li {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
 	.muted {
 		color: var(--muted);
 	}
