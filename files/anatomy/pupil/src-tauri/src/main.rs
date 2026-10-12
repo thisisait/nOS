@@ -55,11 +55,34 @@ fn send(msg: ToThalamus, link: State<'_, Link>) -> Result<(), String> {
 #[cfg(test)]
 fn main() {}
 
+#[cfg(test)]
+mod launch_hook {
+    use super::focus_on_launch;
+
+    /// Stores the hook and drops the builder. No context, so no window opens.
+    #[test]
+    fn focus_on_launch_is_a_setup_hook() {
+        let _ = tauri::Builder::default().setup(focus_on_launch);
+    }
+}
+
+/// Focus the main window once it exists.
+///
+/// macOS activates the app in applicationDidFinishLaunching. This window is
+/// built later, on Ready. Creation orders it front and does not activate, so
+/// the first launch sometimes stays behind. set_focus does both, once.
+fn focus_on_launch(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let window = app.get_webview_window("main").expect("main window");
+    window.set_focus()?;
+    Ok(())
+}
+
 #[cfg(not(test))]
 fn main() {
     tauri::Builder::default()
         .manage(Link::default())
         .invoke_handler(tauri::generate_handler![connect, send])
+        .setup(focus_on_launch)
         .run(tauri::generate_context!())
         .expect("the pupil failed to start");
 }
