@@ -79,3 +79,12 @@ def test_tauri_dev_opens_no_port():
     assert "tauri dev --no-dev-server" in scripts.get("dev", ""), f"package.json scripts.dev: {scripts.get('dev')!r}"
     loose = [k for k, v in scripts.items() if re.search(r"\btauri\b", v) and "--no-dev-server" not in v and "tauri build" not in v]
     assert not loose, f"a script that can start tauri's :1430 dev server: {loose}"
+
+
+def test_tauri_dev_waits_for_the_page_it_embeds():
+    """With no devUrl, tauri-codegen embeds dist at compile time, and `tauri dev` does not wait for
+    beforeDevCommand unless told: cargo embedded a dist vite was still emptying ("asset not found:
+    index.html", live 2026-10-12)."""
+    before = json.loads(CONF.read_text(encoding="utf-8"))["build"]["beforeDevCommand"]
+    assert isinstance(before, dict) and before.get("wait") is True, before
+    assert "build" in before.get("script", ""), before
