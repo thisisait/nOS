@@ -260,6 +260,11 @@ fn mapped() -> serde_json::Value {
     serde_json::json!({"logins": {me(): {"username": "Alice Smith", "groups": ["nos-users"]}}})
 }
 
+/// A person in a tier-1 group: the approvals and red-status controls answer them.
+fn admin() -> serde_json::Value {
+    serde_json::json!({"logins": {me(): {"username": "Alice Smith", "groups": ["nos-users", "nos-admins"]}}})
+}
+
 fn alice() -> serve::Person {
     serve::Person { username: "Alice Smith".into(), groups: vec!["nos-users".into()] }
 }
@@ -429,7 +434,7 @@ print(json.dumps({"generated_at": "x", "unknown": ["gitlab: unreadable"], "items
 #[test]
 fn approvals_runs_the_awaiting_reader_without_the_model() {
     // Disarmed model: a control still answers, because the model is not involved.
-    let rig = rig_full("approvals", mapped(), vec![ROWS.into()], vec![answer("never")], false);
+    let rig = rig_full("approvals", admin(), vec![ROWS.into()], vec![answer("never")], false);
     reader(&rig, "awaiting-operator.py", AWAITING);
     match raise(&rig, nos_contract::wire::ControlView::Approvals) {
         ToShell::Render { component: Component::ApprovalsList(a), .. } => {
@@ -444,7 +449,7 @@ fn approvals_runs_the_awaiting_reader_without_the_model() {
 
 #[test]
 fn red_status_runs_the_red_reader() {
-    let rig = rig_n("red", mapped(), vec![ROWS.into()], vec![answer("never")]);
+    let rig = rig_n("red", admin(), vec![ROWS.into()], vec![answer("never")]);
     reader(&rig, "red-status.py", r#"import json
 print(json.dumps({"sources_read": ["x"], "red_count": 1, "reds": ["pulse job failed"], "hold_count": 0, "holds": []}))
 "#);
@@ -462,7 +467,7 @@ fn a_reader_that_fails_or_lies_is_refused_never_empty() {
                              ("garbage", "print('not json')", "awaiting-operator.py: not JSON"),
                              ("shape", "import json; print(json.dumps({'items': [{'kind': 'x'}], 'unknown': []}))",
                               "awaiting-operator.py: unexpected shape")] {
-        let rig = rig_n(name, mapped(), vec![ROWS.into()], vec![answer("never")]);
+        let rig = rig_n(name, admin(), vec![ROWS.into()], vec![answer("never")]);
         reader(&rig, "awaiting-operator.py", py);
         match raise(&rig, nos_contract::wire::ControlView::Approvals) {
             // The reason names the reader's own failure, so a missing python3 or script cannot pass.
@@ -474,7 +479,7 @@ fn a_reader_that_fails_or_lies_is_refused_never_empty() {
 
 #[test]
 fn a_control_is_a_tool_use_and_result_pair_in_the_ledger() {
-    let rig = rig_n("pair", mapped(), vec![ROWS.into()], vec![answer("never")]);
+    let rig = rig_n("pair", admin(), vec![ROWS.into()], vec![answer("never")]);
     reader(&rig, "awaiting-operator.py", AWAITING);
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
@@ -490,7 +495,7 @@ fn a_control_is_a_tool_use_and_result_pair_in_the_ledger() {
 
 #[test]
 fn a_reader_that_times_out_is_killed_with_what_it_spawned() {
-    let rig = rig_n("slow", mapped(), vec![ROWS.into()], vec![answer("never")]);
+    let rig = rig_n("slow", admin(), vec![ROWS.into()], vec![answer("never")]);
     let pidfile = rig.srv.repo.join("grandchild.pid");
     reader(&rig, "awaiting-operator.py", &format!(r#"import subprocess, time
 p = subprocess.Popen(["sleep", "60"])
@@ -511,6 +516,21 @@ time.sleep(60)
     }
     unsafe { libc::kill(pid, libc::SIGKILL) };
     panic!("the reader's child {pid} outlived the timeout and holds its pipe");
+}
+
+#[test]
+fn approvals_and_red_status_are_tier_one_only() {
+    let rig = rig_n("tier", mapped(), vec![ROWS.into()], vec![answer("never")]);
+    reader(&rig, "awaiting-operator.py", AWAITING);
+    reader(&rig, "red-status.py", r#"import json
+print(json.dumps({"red_count": 0, "reds": [], "hold_count": 0, "holds": []}))
+"#);
+    for view in [nos_contract::wire::ControlView::Approvals, nos_contract::wire::ControlView::RedStatus] {
+        match raise(&rig, view) {
+            ToShell::Refused { reason } => assert_eq!(reason, "not yours to see"),
+            other => panic!("a nos-users person saw the operator's queue: {other:?}"),
+        }
+    }
 }
 
 const CAPTURES: &str = r#"{"success": true, "data": [

@@ -37,15 +37,28 @@ def _plist(**over) -> dict:
            "thalamus_home": "/h/thalamus", "thalamus_log_dir": "/h/thalamus/log", "nos_main_checkout": "/repo",
            "nos_tools_venv": "/h/.nos/tools-venv", "homebrew_prefix": "/opt/homebrew",
            "ansible_facts": {"env": {"HOME": "/h"}}, "keap_proxy_shared_secret": "s3cret", "keap_port": 8091,
-           "ollama_enabled": True, "ollama_model": "qwen3:14b", "ollama_small_model": "hermes3:8b", **over}
+           "ollama_enabled": True, "ollama_model": "qwen3:14b", "ollama_small_model": "hermes3:8b",
+           "authentik_rbac_tiers": _default_config()["authentik_rbac_tiers"], **over}
     text = env.from_string((ROLE / "templates" / "thalamus.plist.j2").read_text()).render(**ctx)
     return plistlib.loads(text.encode())
 
 
-def test_install_thalamus_defaults_false():
+def _default_config() -> dict:
     sys.path.insert(0, str(REPO / "tools"))
     import nos_identity
-    assert nos_identity.default_config()["install_thalamus"] is False
+    return nos_identity.default_config()
+
+
+def test_install_thalamus_defaults_false():
+    assert _default_config()["install_thalamus"] is False
+
+
+def test_the_plist_names_the_tier_one_groups_from_the_rbac_tiers():
+    """serve answers approvals/red-status only to tier 1; the groups come from one list, not Rust."""
+    tier1 = next(t for t in _default_config()["authentik_rbac_tiers"] if t["tier"] == 1)["groups"]
+    assert _plist()["EnvironmentVariables"]["NOS_TIER1_GROUPS"] == ",".join(tier1)
+    src = "".join(p.read_text() for p in (REPO / "files/anatomy/thalamus/thalamus/src").glob("*.rs"))
+    assert not [g for g in tier1 if f'"{g}"' in src], "a tier-1 group name is hard-coded in Rust"
 
 
 def test_the_plist_runs_serve_and_keeps_the_secret_out_of_argv():
