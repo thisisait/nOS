@@ -7,18 +7,18 @@
     "genome": 21,
     "cell": 17,
     "tissue": 1,
-    "organ": 79,
+    "organ": 80,
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
-    "sense": 72,
+    "sense": 73,
     "limb": 113,
     "memory": 41,
     "law": 52,
     "reflex": 43,
     "heartbeat": 1,
     "internal": 74,
-    "edges": 430
+    "edges": 431
   },
   "nodes": {
     "agent:conductor": {
@@ -1465,6 +1465,10 @@
       "level": "sense",
       "kind": "reader"
     },
+    "reader:thalamus-status": {
+      "level": "sense",
+      "kind": "reader"
+    },
     "reader:tissue-status": {
       "level": "sense",
       "kind": "reader"
@@ -1786,6 +1790,10 @@
       "kind": "service"
     },
     "service:tempo": {
+      "level": "organ",
+      "kind": "service"
+    },
+    "service:thalamus": {
       "level": "organ",
       "kind": "service"
     },
@@ -3238,6 +3246,11 @@
     {
       "from": "service:keap",
       "to": "service:receptor",
+      "kind": "data"
+    },
+    {
+      "from": "service:keap",
+      "to": "service:thalamus",
       "kind": "data"
     },
     {

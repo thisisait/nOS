@@ -20,8 +20,8 @@ _Standalone step: export the three `GDPR_*` env vars and re-run `tools/gdpr-dpa-
 
 ## Summary
 
-- **Processing activities:** 114 (89 core services, 3 manifest apps)
-- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (102)
+- **Processing activities:** 115 (90 core services, 3 manifest apps)
+- **Legal basis (Art. 6(1)):** contract (11), legal_obligation (1), legitimate_interests (103)
 - **Transfers outside the EU:** 12 activities
 - **Activities engaging a third-party processor:** 18
 
@@ -1706,3 +1706,17 @@ login, username, request line, duration) in ~/receptor/log.
 - **Retention:** transient (not persisted)
 - **Storage:** Host only: ~/.nos/identity-map.yml (0600) and ~/receptor/log.
 - **Security measures:** `Caller identified by the kernel (SO_PEERCRED / LOCAL_PEERCRED), never by a header`; `Socket 0600 under ~/.nos (0700); a login not in the map is refused`; `Client X-Authentik-* and x-keap-proxy-secret dropped before KEAP`; `Proxy secret only in the 0600 plist / unit env`
+
+#### Thalamus — `svc_thalamus`
+- **Purpose:** Let one person find and change rows in a DataTable they can already read
+and write, with Iris choosing the tools. Processing: the identity map
+(host login, Authentik username, groups), the turns, tool calls, row ids
+and approved cell values in the ledger, and one log line per request.
+- **Legal basis (Art. 6):** `legitimate_interests`
+- **Data subjects:** `operators`; `end_users`
+- **Data categories:** `account_identifiers`; `person_authored_prompts`; `datatable_row_contents`; `request_log`
+- **Recipients / processors:** —
+- **Transfers outside EU:** No
+- **Retention:** indefinite (lifecycle-managed; deletion via DSAR)
+- **Storage:** Host only: ~/thalamus/data/ledger.db (dir 0700) and ~/thalamus/log (0700).
+- **Security measures:** `Caller identified by the kernel (getpeereid), never by a field on the wire`; `Socket 0600 under ~/.nos (0700); a login not in the map is refused, never defaulted`; `No write without an approve decision row in the ledger for that session`; `Proxy secret only in the 0600 plist env, removed from the process env at start`

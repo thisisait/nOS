@@ -1,0 +1,80 @@
+# =============================================================================
+# thalamus-base — Article 30 record for the thalamus (2026-10-12)
+#
+# The Art-30 entry and the KEAP edge, nothing else: the role is a host daemon on a
+# unix socket. What it is: docs/systems/thalamus/README.md. Gates:
+# tests/anatomy/test_thalamus_role.py, test_thalamus_serve.py.
+# =============================================================================
+
+name: thalamus-base
+version: 0.1.0
+description: |
+  Thalamus — one person at a terminal works with Iris. The kernel names the
+  caller's host login; the receptor's ~/.nos/identity-map.yml names the person;
+  Iris's tools run as that person through KEAP's human door, and a write lands
+  only after the person approves its cell diff.
+upstream: https://github.com/pazny-develop/nOS
+license: AGPL-3.0
+
+type:
+  - service
+
+_NOS_PLUGIN: "thalamus-base"
+
+requires:
+  role: pazny.thalamus
+  feature_flag: install_thalamus
+
+# No authentik block = SSO mode none: it serves a socket, not a web surface.
+
+depends_on:
+  - upstream: "service:keap"
+    kind: data
+    via: >-
+      GET and POST /api/tables/:id/rows on 127.0.0.1:keap_port as the person, with
+      X-Authentik-* headers and the proxy secret (files/anatomy/thalamus/thalamus/src/serve.rs)
+    measured: "2026-10-12"
+    unenforced: >-
+      No auto-enable block ties install_keap to install_thalamus. With KEAP down
+      every tool call is refused and the shell says so.
+
+gdpr:
+  purpose: |
+    Let one person find and change rows in a DataTable they can already read
+    and write, with Iris choosing the tools. Processing: the identity map
+    (host login, Authentik username, groups), the turns, tool calls, row ids
+    and approved cell values in the ledger, and one log line per request.
+  legal_basis: legitimate_interests   # Art. 6(1)(f) — the person's own work on the operator's estate
+  balancing_test: >-
+    Every read and write runs as the person through KEAP's own access rules;
+    the thalamus adds no access. The model is local (ollama on loopback).
+  data_source: from_subject
+  data_categories:
+    - account_identifiers          # host login, Authentik username, group names
+    - person_authored_prompts      # the turns the person types
+    - datatable_row_contents       # row ids found; old/new values of an approved edit
+    - request_log                  # path, status, person, duration
+  data_subjects:
+    - operators
+    - end_users
+  retention_days: -1               # the ledger is the audit record; no pruning in slice 1
+  processors: []                   # on-device model (iris agent.yml); no Art-28 processor
+  eu_residency: true
+  transfers_outside_eu: false
+  storage_location: >-
+    Host only: ~/thalamus/data/ledger.db (dir 0700) and ~/thalamus/log (0700).
+  security_measures:
+    - "Caller identified by the kernel (getpeereid), never by a field on the wire"
+    - "Socket 0600 under ~/.nos (0700); a login not in the map is refused, never defaulted"
+    - "No write without an approve decision row in the ledger for that session"
+    - "Proxy secret only in the 0600 plist env, removed from the process env at start"
+  notes: >-
+    retention_enforced: false — the ledger and launchd logs are unbounded like
+    every host organ's today.
+
+notification:
+  on_critical: [wing-inbox]
+  on_high:     [wing-inbox]
+  on_medium:   []
+  on_low:      []
+  on_info:     []

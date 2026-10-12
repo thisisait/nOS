@@ -23,7 +23,7 @@ Values from `roles/pazny.receptor/`, `files/anatomy/receptor/receptor.py`,
 ## The identity map
 
 One file, rendered by this role, read on every request (a new map needs no
-restart). The Thalamus will read the same file. Shape (JSON, which is YAML):
+restart). The Thalamus reads the same file. Shape (JSON, which is YAML):
 
 ```yaml
 {"logins": {"<host login>": {"username": "<Authentik username>", "groups": ["nos-admins"]}}}
@@ -53,7 +53,7 @@ bare CR or LF, a NUL, a folded line, a non-token header name, two
 
 ## Holders of the KEAP proxy secret
 
-Traefik, face and the receptor (operator ruling 2026-10-11). On the Mac the
+Traefik, face, the receptor and the Thalamus (operator ruling 2026-10-11). On the Mac the
 receptor runs as your login, so the secret is in a 0600 plist your own
 processes could read. That is the "runs as the user" class
 (`ssot/doctrine/session-threat-model.md`); the socket mode keeps other logins out.

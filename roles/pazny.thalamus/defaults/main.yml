@@ -1,0 +1,10 @@
+---
+# Internals only. The switch (install_thalamus) lives in default.config.yml. The socket
+# (~/.nos/thalamus.sock) and the ledger dir (~/thalamus/data) are fixed in src/main.rs.
+thalamus_launchd_label: "eu.thisisait.nos.thalamus"
+thalamus_home: "{{ ansible_facts['env']['HOME'] }}/thalamus"
+thalamus_bin: "{{ thalamus_home }}/bin/thalamus"
+thalamus_log_dir: "{{ thalamus_home }}/log"
+thalamus_target_dir: "{{ thalamus_home }}/target"
+thalamus_socket: "{{ ansible_facts['env']['HOME'] }}/.nos/thalamus.sock"
+thalamus_cargo: "{{ ansible_facts['env']['HOME'] }}/.cargo/bin/cargo"

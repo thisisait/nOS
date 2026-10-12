@@ -1048,6 +1048,16 @@ services:
     version_source: launchd
     launchd_label: "eu.thisisait.nos.receptor"
 
+  # Iris at a terminal (roles/pazny.thalamus). Serves a unix socket, so no domain_var/port_var;
+  # its verify is the role's --tags verify, read by tools/thalamus-status.py.
+  - id: thalamus
+    software_owner: self
+    category: ai
+    stack: null
+    install_flag: install_thalamus
+    version_source: launchd
+    launchd_label: "eu.thisisait.nos.thalamus"
+
   - id: opencode
     software_owner: symbiont
     category: ai

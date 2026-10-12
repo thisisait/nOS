@@ -820,7 +820,9 @@ words:
       The Rust organ that relays each turn of a conversation to the organ that answers it
       and to Cortex. Cells act in it, and their organelles move into it from Wing's AgentKit
       one function at a time.
-    no_surface_reason: "planned: roadmap row agentkit-rust-organ; nothing is built yet."
+    names:
+      - path: roles/pazny.thalamus/
+      - path: files/anatomy/thalamus/
     not: [Cortex, Wing, organelles]
   # 2026-10-11: the identity relay on the Mac (rulings 1a, 2; name ruled the same day); the Thalamus will take its job.
   Receptor:

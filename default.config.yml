@@ -551,6 +551,10 @@ install_receptor: "{{ install_openhuman }}"
 nos_identity_map: {}
 # Under ~/.nos (0700), the socket 0600. Clients: KEAP_IDENTITY_URL=http+unix://<path, %-quoted>.
 receptor_socket: "{{ ansible_facts['env']['HOME'] }}/.nos/keap-identity.sock"
+# Thalamus: Iris at a terminal, tools run as you through KEAP's human door; a write lands
+# only after you approve its cell diff (roles/pazny.thalamus). Needs install_receptor: it
+# reads the receptor's identity map. Off until the operator proves it live.
+install_thalamus: false
 
 # ── Skill library (2026-08-27) ────────────────────────────────────────────────
 # One shelf at files/anatomy/skills/, symlinked onto every reader that should

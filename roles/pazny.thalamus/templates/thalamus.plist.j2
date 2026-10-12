@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ thalamus_launchd_label }}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ thalamus_bin }}</string>
+        <string>serve</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>{{ thalamus_home }}</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>{{ ansible_facts['env']['HOME'] }}</string>
+        <!-- python3 for the control readers (tools/*-status.py): the tools venv holds PyYAML. -->
+        <key>PATH</key>
+        <string>{{ nos_tools_venv }}/bin:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <!-- iris's agent.yml, the backend register and the control readers come from here. -->
+        <key>NOS_REPO_ROOT</key>
+        <string>{{ nos_main_checkout }}</string>
+        <key>KEAP_URL</key>
+        <string>http://127.0.0.1:{{ keap_port | default(8091) }}</string>
+        <!-- Read once at start, then removed from the process env (src/main.rs). -->
+        <key>KEAP_PROXY_SHARED_SECRET</key>
+        <string>{{ keap_proxy_shared_secret | default('') }}</string>
+        <!-- iris binds to ollama only (state/habitat/llm-backends.yml); local, so no token. -->
+        <key>NOS_ARMED_BACKENDS</key>
+        <string>{{ 'ollama' if ollama_enabled | default(false) | bool else '' }}</string>
+        <key>NOS_LOCAL_MODEL</key>
+        <string>{{ ollama_model | default('') }}</string>
+        <key>NOS_LOCAL_SMALL_MODEL</key>
+        <string>{{ ollama_small_model | default('') }}</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+    <key>StandardOutPath</key>
+    <string>{{ thalamus_log_dir }}/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{ thalamus_log_dir }}/launchd.err.log</string>
+</dict>
+</plist>

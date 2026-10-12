@@ -352,6 +352,9 @@ nodes:
   # 2026-10-11: the receptor (host login -> KEAP person). WITHHELD: identity plumbing
   # is estate mechanics; published set unchanged.
   "service:receptor": withheld
+  # 2026-10-12: the thalamus (Iris at a terminal). WITHHELD until it runs live;
+  # published set unchanged, digest left stale for apex-sign --confirm.
+  "service:thalamus": withheld
   "service:opencode":      { publish: wits, speaks: "a mind that writes code beside you" }
   # A third-party desktop agent on the operator's Mac: a public sentence is theirs to sign.
   "service:openhuman":     withheld
@@ -856,6 +859,7 @@ nodes:
   # 2026-10-06 reader:tailscale-status (edge-tailscale-wiring): names this host's
   # LAN address and tailnet state. WITHHELD; the published set is unchanged.
   "reader:tailscale-status": withheld
+  "reader:thalamus-status": withheld
   "effector:task-types-render": withheld
   "reader:tissue-status": withheld
   "reader:tls-uptake": withheld

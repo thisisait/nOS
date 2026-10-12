@@ -1,0 +1,105 @@
+---
+# pazny.thalamus — the relay organ (files/anatomy/thalamus/thalamus): `thalamus serve` on
+# ~/.nos/thalamus.sock, Iris's tools run as the peer's person through KEAP's human door.
+# Gated on install_thalamus in main.yml. The identity map is the receptor's (ruling 1).
+
+- name: "[pazny.thalamus] macOS only in slice 1"
+  ansible.builtin.fail:
+    msg: "The thalamus has no systemd --user unit yet (slice 1 converges macOS first)."
+  when: (nos_service_manager | default('launchd')) != 'launchd'
+
+# Without the map every peer is refused; say so now rather than serve a door nobody can use.
+- name: "[pazny.thalamus] The receptor renders the identity map it reads"
+  ansible.builtin.assert:
+    that: install_receptor | default(false) | bool
+    fail_msg: "install_thalamus needs install_receptor: true (pazny.receptor renders ~/.nos/identity-map.yml)."
+
+- name: "[pazny.thalamus] Ensure runtime directories exist"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ thalamus_home }}", mode: '0755' }
+    - { path: "{{ thalamus_home }}/bin", mode: '0755' }
+    # 0700: the logs name every person; the ledger holds turns and approved cell values.
+    - { path: "{{ thalamus_log_dir }}", mode: '0700' }
+    - { path: "{{ thalamus_home }}/data", mode: '0700' }
+
+# Build only when the source differs from the one the binary was built from (Pulse's pattern).
+- name: "[pazny.thalamus] Hash the thalamus source"
+  ansible.builtin.shell: |
+    set -o pipefail
+    cd {{ (playbook_dir ~ '/files/anatomy/thalamus') | quote }}
+    find thalamus/src thalamus/Cargo.toml thalamus/Cargo.lock contract/src contract/Cargo.toml -type f \
+      | LC_ALL=C sort | xargs cat | shasum -a 256 | cut -d' ' -f1
+  args:
+    executable: /bin/bash
+  register: _thalamus_src_sha
+  changed_when: false
+  check_mode: false
+
+- name: "[pazny.thalamus] Read the hash the binary was built from"
+  ansible.builtin.command: cat {{ thalamus_bin }}.source-sha256
+  register: _thalamus_built_sha
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+# --locked: the Cargo.lock dependabot watches is what ships. The target dir lives off the checkout.
+- name: "[pazny.thalamus] Install thalamus binary"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    export CARGO_TARGET_DIR={{ thalamus_target_dir | quote }}
+    {{ thalamus_cargo | quote }} build --release --locked --manifest-path {{ (playbook_dir ~ '/files/anatomy/thalamus/thalamus/Cargo.toml') | quote }}
+    install -m 0755 "$CARGO_TARGET_DIR/release/thalamus" {{ thalamus_bin | quote }}
+  args:
+    executable: /bin/bash
+  register: _thalamus_build
+  when: _thalamus_src_sha.stdout != (_thalamus_built_sha.stdout | default(''))
+  changed_when: true
+  notify: Restart thalamus
+
+- name: "[pazny.thalamus] Record the hash the binary was built from"
+  ansible.builtin.copy:
+    content: "{{ _thalamus_src_sha.stdout }}"
+    dest: "{{ thalamus_bin }}.source-sha256"
+    mode: '0644'
+  when: _thalamus_build is not skipped
+
+- name: "[pazny.thalamus] Render launchd plist"
+  ansible.builtin.template:
+    src: thalamus.plist.j2
+    dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ thalamus_launchd_label }}.plist"
+    mode: '0600'   # carries the KEAP proxy secret
+  register: _thalamus_plist
+  notify: Restart thalamus
+
+- name: "[pazny.thalamus] Bootstrap launchd job (idempotent)"
+  ansible.builtin.shell: |
+    set -e
+    PLIST=~/Library/LaunchAgents/{{ thalamus_launchd_label }}.plist
+    UID_NUM=$(id -u)
+    if launchctl print "gui/${UID_NUM}/{{ thalamus_launchd_label }}" >/dev/null 2>&1; then
+      echo "already-loaded"
+    else
+      launchctl bootstrap gui/${UID_NUM} "$PLIST"
+      echo "bootstrapped"
+    fi
+  register: _thalamus_bootstrap
+  changed_when: "'bootstrapped' in _thalamus_bootstrap.stdout"
+
+- name: "[pazny.thalamus] Flush handlers (apply a pending restart now)"
+  ansible.builtin.meta: flush_handlers
+
+# The effect, read by the reader: socket 0600, job loaded, ledger readable. Any line not OK fails.
+- name: "[pazny.thalamus] Verify — the reader sees the socket, the job and the ledger"
+  ansible.builtin.shell: |
+    for _ in $(seq 1 20); do [ -S {{ thalamus_socket | quote }} ] && break; sleep 0.5; done
+    /usr/bin/python3 {{ (playbook_dir ~ '/tools/thalamus-status.py') | quote }} --json
+  register: _thalamus_verify
+  changed_when: false
+  failed_when: >-
+    _thalamus_verify.rc != 0
+    or (_thalamus_verify.stdout | from_json | rejectattr('state', 'equalto', 'OK') | list | length) > 0
+  tags: ['verify']

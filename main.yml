@@ -2710,6 +2710,13 @@
       when: install_receptor | default(false) | bool
       tags: ['receptor', 'keap']
 
+    # Thalamus: Iris at a terminal, tools run as the person through KEAP's human door.
+    - name: "Thalamus (pazny.thalamus role)"
+      ansible.builtin.import_role:
+        name: pazny.thalamus
+      when: install_thalamus | default(false) | bool
+      tags: ['thalamus', 'keap']
+
     # ──────────────────────────────────────────────────────────────────────────
     # OpenCode - AI coding TUI (sst.dev) with local Ollama provider
     # Alternative to Claude Code / Cursor, but open-source and local.

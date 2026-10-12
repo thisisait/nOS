@@ -134,7 +134,7 @@ SYSTEM_NAME = {
     "metabase": "Metabase", "superset": "Superset", "influxdb": "InfluxDB",
     "mikopbx": "MikoPBX", "qgis-server": "QGIS Server",
     "alloy": "Grafana Alloy", "openclaw": "OpenClaw", "ollama": "Ollama", "hermes": "Hermes",
-    "device-gateway": "Device gateway", "receptor": "Receptor",
+    "device-gateway": "Device gateway", "receptor": "Receptor", "thalamus": "Thalamus",
     "opencode": "OpenCode", "openhuman": "OpenHuman", "wing": "Wing", "bone": "Bone", "pulse": "Pulse",
     "cortex": "Cortex", "ears": "Ears",
     "iiab-terminal": "IIAB Terminal", "backup": "Backup", "backrest": "Backrest",
@@ -543,6 +543,11 @@ SYSTEM_EN = {
         "The receptor, a unix socket in front of KEAP's human door. The kernel names the "
         "calling host login, the identity map names the person, and KEAP sees that person; "
         "unlike the device gateway it serves no network port and holds no KEAP token."
+    ),
+    "thalamus": (
+        "The thalamus, where one person at a terminal works with Iris. The model picks the "
+        "tools, the thalamus runs them as that person through KEAP's human door, and a write "
+        "lands only after the person approves its cell diff; unlike Wing it has no web surface."
     ),
     "opencode": (
         "OpenCode, the agentic coding helper on the host. It works inside a checked-out "
