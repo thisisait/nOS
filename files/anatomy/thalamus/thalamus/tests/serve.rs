@@ -677,6 +677,21 @@ fn one_approval_waits_at_a_time() {
 }
 
 #[test]
+fn the_model_may_name_the_roadmap_by_its_alias() {
+    // The plist renders NOS_ROADMAP_TABLE_ID from keap_roadmap_table_id; no other alias is mapped.
+    std::env::set_var("NOS_ROADMAP_TABLE_ID", "rt-2d49");
+    let rig = rig_n("alias", mapped(), vec![ROWS.into()],
+        vec![tool_call(r#"{"table": "roadmap", "q": "alpha"}"#), tool_call(r#"{"table": "current-state", "q": "alpha"}"#), answer("x")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "find alpha on the roadmap");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::TableResults(t), .. } if t.table == "rt-2d49")), "{got:?}");
+    let heads: Vec<String> = rig.keap.lock().unwrap().iter().map(|(h, _)| h.clone()).collect();
+    assert!(heads[0].starts_with("GET /api/tables/rt-2d49/rows?"), "{}", heads[0]);
+    assert!(heads[1].starts_with("GET /api/tables/current-state/rows?"), "{}", heads[1]);
+}
+
+#[test]
 fn approve_writes_nothing_over_a_row_that_moved_since_the_proposal() {
     let changed = r#"{"success": true, "data": {"rows": [{"id": "r1", "values": {"title": "Alpha one", "status": "blocked"}}]}}"#;
     let gone = r#"{"success": true, "data": {"rows": [{"id": "r2", "values": {"title": "beta"}}]}}"#;

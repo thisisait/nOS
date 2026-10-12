@@ -74,6 +74,20 @@ def test_the_plist_runs_serve_and_keeps_the_secret_out_of_argv():
     assert _plist(ollama_enabled=False)["EnvironmentVariables"]["NOS_ARMED_BACKENDS"] == ""
 
 
+def test_the_plist_names_the_roadmap_table_keap_seeds():
+    """serve maps the model's "roadmap" to this id; it must be the one pazny.keap creates."""
+    keap = yaml.safe_load((REPO / "roles/pazny.keap/defaults/main.yml").read_text())["keap_roadmap_table_id"]
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    env.filters["from_yaml"] = yaml.safe_load
+    env.globals["lookup"] = lambda kind, path: pathlib.Path(path).read_text()
+    default = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())["thalamus_roadmap_table_id"]
+    resolved = env.from_string(default).render(playbook_dir=str(REPO))
+    assert resolved == keap, "the thalamus would map roadmap to a table KEAP never seeded"
+    assert env.from_string(default).render(playbook_dir=str(REPO), keap_roadmap_table_id="x") == "x"
+    assert _plist(thalamus_roadmap_table_id=resolved)["EnvironmentVariables"]["NOS_ROADMAP_TABLE_ID"] == keap
+    assert keap not in (ROLE / "defaults" / "main.yml").read_text(), "a second literal of the id drifts"
+
+
 def test_the_plist_is_0600_and_the_logs_and_data_0700():
     tasks = _tasks()
     plist = next(t for t in tasks if "plist" in t.get("name", "").lower() and "ansible.builtin.template" in t)
