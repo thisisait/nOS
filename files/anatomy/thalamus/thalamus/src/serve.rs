@@ -403,6 +403,7 @@ impl Server {
     }
 
     /// Every row of one table the person may read: GET /api/tables/:id/rows, every page.
+    /// The whole table or an Err: a row without an id, or more pages than MAX_PAGES, is refused.
     fn rows(&self, who: &Person, table: &str) -> Result<Vec<(String, Map<String, Value>)>, String> {
         let (mut all, mut cursor) = (Vec::new(), None::<String>);
         for _ in 0..MAX_PAGES {
@@ -412,15 +413,16 @@ impl Server {
             }
             let page = self.keap(who, &url, None)?;
             for r in page.pointer("/data/rows").and_then(Value::as_array).into_iter().flatten() {
-                let id = r.get("id").and_then(Value::as_str).unwrap_or_default().to_string();
-                all.push((id, r.get("values").and_then(Value::as_object).cloned().unwrap_or_default()));
+                let id = r.get("id").and_then(Value::as_str).filter(|i| !i.is_empty())
+                    .ok_or(format!("KEAP returned a row without an id in {table}"))?;
+                all.push((id.to_string(), r.get("values").and_then(Value::as_object).cloned().unwrap_or_default()));
             }
             cursor = page.pointer("/data/nextCursor").and_then(Value::as_str).map(str::to_string);
             if cursor.is_none() {
-                break;
+                return Ok(all);
             }
         }
-        Ok(all)
+        Err(format!("{table} exceeds the {MAX_PAGES}-page read cap; refusing a partial table"))
     }
 
     /// The cell diff of one existing row the person can read; only changed cells survive.
