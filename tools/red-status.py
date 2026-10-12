@@ -959,6 +959,9 @@ def collect() -> dict:
     ee = e2e()
     report["e2e"] = ee["items"]
     report["sources_missing"] += ee["missing"]
+    dp = _sibling("docker-pressure")
+    report["docker_pressure"] = dp["items"]
+    report["sources_missing"] += dp["missing"]
     report["doctrine_reviews"] = doctrine_reviews()
 
     # Not a red source: None means "loops running", the healthy default, so it
@@ -970,6 +973,8 @@ def collect() -> dict:
 def reds(report: dict) -> list[str]:
     """One line per red. The order is the order to act in."""
     out: list[str] = []
+    # First: a starved VM is the cause of every timeout below it.
+    out.extend(report.get("docker_pressure") or [])
     chain = report.get("audit_chain")
     chain_broken = bool(chain and chain.get("ok") is False)
     if chain_broken:

@@ -486,6 +486,10 @@ docker_cpus_light: "0.5"
 # starts on. Measured 2026-10-10, all-on: 10 GB (9.7 GiB) died on timeouts an
 # hour in, 11.5 GB (11.17 GiB) ran failed=0. A smaller estate may lower it.
 docker_min_memory_gib: 11
+# Size is not enough: 2026-10-12 a VM that passed the size check read full
+# avg300=34.55 in /proc/pressure/memory and the converge died on an Authentik EOF;
+# idle the same VM reads ~0.3. Refused above this (avg60, read before any stack).
+docker_memory_pressure_max_full_avg60: 10
 
 # ==============================================================================
 # INSTALLATION QUEUE

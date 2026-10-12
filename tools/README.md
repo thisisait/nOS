@@ -48,6 +48,7 @@ Each line here is a `reader:` node of the anatomy graph, a sense.
 - `app-version.py` — What each container actually RUNS, against what the pin says it bundles.
 - `workload-digest-status.py` — READER: image ID per running container vs the converge's record (`~/.nos/workload-digests.json`); a changed one is DRIFT (red). UNKNOWN without a record or docker.
 - `awaiting-operator.py` — What is waiting for a HUMAN right now, across every source that asks for one.
+- `docker-pressure-status.py` — READER: is the Docker VM short of memory now (`/proc/pressure/memory` full avg60 vs `docker_memory_pressure_max_full_avg60`; on macOS via a throwaway alpine container); starved = red with the top 5 containers, UNKNOWN when unreadable. main.yml refuses a converge on its verdict.
 - `caddy-status.py` — Can the caddy answer, is the ear listening, and what did it hear.
 - `brew-pin-status.py` — How old is the version brew wants to give us, and is it old enough to adopt?
 - `cortex-status.py` — What the cortex organ is, all of it — not just the part KEAP serves.
