@@ -25,7 +25,8 @@ wire:
   framing: "newline-delimited JSON, one message per line, UTF-8"
   tag: "every message is an object whose `t` names its variant (snake_case)"
   to_thalamus: [turn, approval_decision, control]
-  to_shell: [session, text, render, approval_request, refused]
+  to_shell: [session, text, render, approval_request, refused, activity]
+  phase: [thinking, tool, writing, idle]   # activity.phase; tool is {tool: {name}}
   decision: [approve, reject]
   control_view: [inbox, approvals, red_status]
   uid: >-

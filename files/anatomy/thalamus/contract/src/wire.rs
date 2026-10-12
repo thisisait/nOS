@@ -22,6 +22,18 @@ pub enum ToShell {
     Render { session: String, component: Component },
     ApprovalRequest { session: String, approval: String, component: Component },
     Refused { reason: String },
+    /// What the thalamus is doing in this session; the pupil's eye shows it.
+    Activity { session: String, phase: Phase },
+}
+
+/// One step of a turn: "thinking" | {"tool": {"name": ..}} | "writing" | "idle".
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum Phase {
+    Thinking,
+    Tool { name: String },
+    Writing,
+    Idle,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -62,7 +74,9 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
                 _ => Err(format!("actor is not user:<canonical uid>: {actor:?}")),
             }
         }
-        ToShell::Text { session, .. } | ToShell::Render { session, .. } => need_uuid("session", session),
+        ToShell::Text { session, .. } | ToShell::Render { session, .. } | ToShell::Activity { session, .. } => {
+            need_uuid("session", session)
+        }
         ToShell::ApprovalRequest { session, approval, .. } => {
             need_uuid("session", session)?;
             need_uuid("approval", approval)

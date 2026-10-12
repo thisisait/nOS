@@ -150,6 +150,8 @@ impl App {
                 self.pending.push_back((approval, component_lines(&component)));
             }
             ToShell::Refused { reason } => self.lines.push(warn(format!("refused: {reason}"))),
+            // The pupil's eye shows it; the terminal's scrollback stays the conversation.
+            ToShell::Activity { .. } => {}
         }
     }
 
