@@ -2,7 +2,7 @@
 //! what the person typed or pressed, and renders only the closed component vocabulary.
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
-use nos_contract::renderers::Component;
+use nos_contract::renderers::{Component, Tone};
 use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ToShell, ToThalamus};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -136,6 +136,29 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
         }
         // Raw lines: the terminal draws no markup, so the markup is the honest text.
         Component::Markdown(m) => out.extend(m.text.lines().map(|l| Line::from(l.to_string()))),
+        Component::Table(t) => {
+            out.extend(t.title.clone().map(head));
+            out.push(Line::from(t.columns.iter().map(|c| fit(c, COL)).collect::<Vec<_>>().join(" ").trim_end().to_string()));
+            for r in &t.rows {
+                out.push(Line::from(r.iter().map(|v| fit(&cell(v), COL)).collect::<Vec<_>>().join(" ").trim_end().to_string()));
+            }
+        }
+        Component::List(l) => {
+            out.extend(l.title.clone().map(head));
+            for (i, x) in l.items.iter().enumerate() {
+                let mark = if l.ordered { format!("{}.", i + 1) } else { "-".into() };
+                let tone = x.tone.map(|t| format!("[{}] ", cell(&serde_json::to_value(t).unwrap_or_default()))).unwrap_or_default();
+                let detail = x.detail.as_deref().map(|d| format!(" — {d}")).unwrap_or_default();
+                let line = format!("  {mark} {tone}{}{detail}", x.text);
+                out.push(if matches!(x.tone, Some(Tone::Warn | Tone::Bad)) { warn(line) } else { Line::from(line) });
+            }
+        }
+        Component::Record(r) => {
+            out.extend(r.title.clone().map(head));
+            for f in &r.fields {
+                out.push(Line::from(format!("  {}: {}", f.key, cell(&f.value))));
+            }
+        }
     }
     out
 }

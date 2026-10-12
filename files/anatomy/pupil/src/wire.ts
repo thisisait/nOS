@@ -10,7 +10,10 @@ export type Component =
 	| { kind: 'inbox_list'; props: { items: { id: string; title: string; source: string; created_at: string }[]; refused: string[] } }
 	| { kind: 'approvals_list'; props: { items: { kind: string; severity: string; age: string; what: string; where: string; note?: string }[]; unknown: string[] } }
 	| { kind: 'red_status'; props: { red_count: number; reds: string[]; hold_count: number; holds: string[] } }
-	| { kind: 'markdown'; props: { text: string } };
+	| { kind: 'markdown'; props: { text: string } }
+	| { kind: 'table'; props: { title?: string; columns: string[]; rows: Value[][] } }
+	| { kind: 'list'; props: { title?: string; ordered: boolean; items: { text: string; detail?: string; tone?: 'ok' | 'info' | 'warn' | 'bad' }[] } }
+	| { kind: 'record'; props: { title?: string; fields: { key: string; value: Value }[] } };
 
 export type ToShell =
 	| { t: 'session'; session: string; actor: string; model_uri: string }

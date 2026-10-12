@@ -1,18 +1,6 @@
 edit roadmap / backup-restic-fork — nothing is written unless you approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-  status in [open, next] · order by ordinal asc · columns title, status
-__id                     title                    status
-backup-restic-fork       Backup via restic        open
-# Next on the roadmap
-
-Two rows are **next** and one is *active*; `nos dtt` lists them.
-
-## Steps
-
-- restic fork
-- pupil eye
-
 ### Order
 
 1. query
@@ -35,6 +23,18 @@ inbox — 1 waiting
 le
 1 red
   ✗ pulse job nightly-backup failed (3h)
+Steps by track
+track                    next                     done
+pupil                    I4c                      2
+keap                     row query                0
+Next steps
+  1. [ok] query_rows — landed in I4a
+  2. [warn] chart — not built yet
+  3. show
+pupil-i4
+  status: active
+  increments: {"done":["I4a","I4b"],"next":"I4c"}
+  ordinal: 4
 refused: login carol has no row in the identity map
 approve this edit? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit

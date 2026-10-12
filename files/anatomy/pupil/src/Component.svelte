@@ -85,6 +85,31 @@
 		{/if}
 	{:else if component.kind === 'markdown'}
 		<Markdown text={component.props.text} />
+	{:else if component.kind === 'table'}
+		{@const t = component.props}
+		{#if t.title}<h3>{t.title}</h3>{/if}
+		<div class="scroll">
+			<table>
+				<thead><tr>{#each t.columns as c}<th>{c}</th>{/each}</tr></thead>
+				<tbody>{#each t.rows as r}<tr>{#each r as v}<td>{cell(v)}</td>{/each}</tr>{/each}</tbody>
+			</table>
+		</div>
+	{:else if component.kind === 'list'}
+		{@const l = component.props}
+		{#if l.title}<h3>{l.title}</h3>{/if}
+		{#snippet item(x: (typeof l.items)[number])}
+			<li>{#if x.tone}<Badge tone={x.tone}>{x.tone}</Badge>{' '}{/if}{x.text}{#if x.detail}<span class="muted"> — {x.detail}</span>{/if}</li>
+		{/snippet}
+		{#if l.ordered}<ol>{#each l.items as x}{@render item(x)}{/each}</ol>{:else}<ul>{#each l.items as x}{@render item(x)}{/each}</ul>{/if}
+	{:else if component.kind === 'record'}
+		{@const r = component.props}
+		{#if r.title}<h3>{r.title}</h3>{/if}
+		<dl>
+			{#each r.fields as f}
+				<dt>{f.key}</dt>
+				<dd>{#if f.value !== null && typeof f.value === 'object'}<pre>{JSON.stringify(f.value, null, 1)}</pre>{:else}{cell(f.value)}{/if}</dd>
+			{/each}
+		</dl>
 	{:else}
 		<!-- Unreachable past the bridge's decoder; said aloud if it ever is. -->
 		<StatusNote kind="error" title="refused">no renderer for component kind {(component as { kind: string }).kind}</StatusNote>
@@ -148,7 +173,28 @@
 		overflow-wrap: anywhere;
 		line-height: 1.45;
 	}
-	ul {
+	dl {
+		margin: 0;
+		display: grid;
+		grid-template-columns: max-content 1fr;
+		gap: 3px 10px;
+		font-size: 12px;
+	}
+	dt {
+		font-weight: 600;
+	}
+	dd {
+		margin: 0;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+	pre {
+		margin: 0;
+		font-family: ui-monospace, monospace;
+		white-space: pre-wrap;
+	}
+	ul,
+	ol {
 		margin: 0;
 		padding-left: 16px;
 		font-size: 12px;

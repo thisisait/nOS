@@ -44,6 +44,10 @@ ruling 2026-10-11), it does not go through the receptor's socket.
   to the ledger as `agent_approval_request`, then shown as `row_diff_approval`.
   Only an approve decision for that request, in that session, by that person,
   lets the one POST through. Reject writes nothing to KEAP.
+- `show{component}`: draws one `table`, `list`, `record` or `markdown` the model
+  builds. Unknown fields and over-cap components are refused (`Component::check`,
+  also in every shell's decoder) and only the model hears why. It can never draw
+  an approval or a kind a tool or a control draws.
 
 The shell raises three views without the model: F2 inbox, F3 approvals
 (`tools/awaiting-operator.py`), F4 red status (`tools/red-status.py`).

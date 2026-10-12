@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 3   # 2: activity (the eye's phase on every turn); 3: table_results name/query/matched/total, markdown
+contract_version: 3   # 2: activity (the eye's phase on every turn); 3: table_results name/query/matched/total, markdown, table, list, record
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -44,6 +44,9 @@ components:
     approvals_list: "tools/awaiting-operator.py --json: {items[{kind, severity, age, what, where, note?}], unknown[]}"
     red_status: "tools/red-status.py --json: {red_count, reds[], hold_count, holds[]}"
     markdown: "model text as markdown, drawn as text nodes (headings 1-3, paragraphs, lists, code fences; links as text): {text}, at most 8000 chars"
+    table: "rows the model shows (show tool): {title?, columns[], rows[][]}; at most 12 columns, 50 rows, every row as long as columns, a cell 2000 chars"
+    list: "items the model shows (show tool): {title?, ordered, items[{text, detail?, tone? ok|info|warn|bad}]}; at most 50 items, text 500, detail 2000"
+    record: "one thing's fields (show tool): {title?, fields[{key, value}]}; at most 40 fields, a value 4000 chars as text; titles and names 120"
 
 # ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ──────
 invariants:
@@ -67,6 +70,7 @@ invariants:
 
 open:
   - >-
-    The component description the model sees in a tool's description is not
-    in v1: in slice 1 the renderer is chosen by the tool or control, never by
-    the model (deterministic first; a model-callable render tool is later).
+    Since v3 the model chooses a renderer through the `show` tool, for table,
+    list, record and markdown only; table_results, row_diff_approval and the
+    control views stay chosen by their tool or control, and an approval is
+    minted only by propose_row_edit.

@@ -186,6 +186,36 @@ the person sees each changed cell old -> new and approves or rejects it. Nothing
 approve; you are told only that the proposal waits for them. Only for a change the person asked for in this \
 conversation, on a row query_rows showed them; never to count, test or look at a row — query_rows does that.";
 
+const SHOW: &str = "Show the person structured output: one component of a closed vocabulary, drawn as text. \
+A component outside its shape or caps is refused and you are told why; nothing is drawn. It cannot ask for an \
+approval: only propose_row_edit does, and query_rows draws its own table.";
+
+/// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
+const SHOW_KINDS: [&str; 4] = ["table", "list", "record", "markdown"];
+
+/// One `oneOf` branch per kind; the descriptions are thalamus-shell.yml's vocabulary lines.
+fn show_schema() -> Value {
+    let title = json!({"type": "string", "maxLength": 120});
+    let branch = |kind: &str, about: &str, props: Value| json!({"type": "object", "additionalProperties": false,
+        "required": ["kind", "props"], "description": about, "properties": {"kind": {"const": kind}, "props": props}});
+    let closed = |required: &[&str], properties: Value| json!({"type": "object", "additionalProperties": false,
+        "required": required, "properties": properties});
+    json!({"type": "object", "additionalProperties": false, "required": ["component"], "properties": {"component": {"oneOf": [
+        branch("table", "rows the model shows: {title?, columns[] <=12, rows[][] <=50, each row as long as columns}",
+            closed(&["columns", "rows"], json!({"title": title, "columns": {"type": "array", "maxItems": 12, "items": {"type": "string"}},
+                "rows": {"type": "array", "maxItems": 50, "items": {"type": "array"}}}))),
+        branch("list", "items the model shows: {title?, ordered, items[{text, detail?, tone? ok|info|warn|bad}] <=50}",
+            closed(&["items", "ordered"], json!({"title": title, "ordered": {"type": "boolean"},
+                "items": {"type": "array", "maxItems": 50, "items": closed(&["text"], json!({
+                    "text": {"type": "string", "maxLength": 500}, "detail": {"type": "string", "maxLength": 2000},
+                    "tone": {"enum": ["ok", "info", "warn", "bad"]}}))}}))),
+        branch("record", "one thing's fields: {title?, fields[{key, value}] <=40}",
+            closed(&["fields"], json!({"title": title, "fields": {"type": "array", "maxItems": 40,
+                "items": closed(&["key", "value"], json!({"key": {"type": "string", "maxLength": 120}, "value": {}}))}}))),
+        branch("markdown", "text as markdown (headings 1-3, paragraphs, lists, code fences; links as text): {text} <=8000",
+            closed(&["text"], json!({"text": {"type": "string", "maxLength": 8000}})))]}}})
+}
+
 const QUERY_KEYS: [&str; 6] = ["table", "q", "where", "columns", "order_by", "limit"];
 const OPS: [&str; 4] = ["eq", "neq", "in", "contains"];
 
@@ -207,7 +237,8 @@ fn tools() -> Value {
         "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "row_id", "values"], "properties": {
             "table": {"type": "string", "description": "the table id, or \"roadmap\" for the roadmap"},
             "row_id": {"type": "string", "description": "the row's __id from query_rows"},
-            "values": {"type": "object", "description": "column -> new value; null clears the cell"}}}}}])
+            "values": {"type": "object", "description": "column -> new value; null clears the cell"}}}}},
+        {"type": "function", "function": {"name": "show", "description": SHOW, "parameters": show_schema()}}])
 }
 
 impl Server {
@@ -303,7 +334,8 @@ impl Server {
         send(out, &ToShell::Session { session: session.clone(), actor, model_uri });
         let iris = format!("You are Iris. You act for {} and see only what they may see. To read, count or filter \
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
-asked for, never to look at a row.", who.username);
+asked for, never to look at a row. To show structured output call show (table, list, record, markdown); plain text \
+may use markdown, nothing else.", who.username);
         let (model, system) = match imprint {
             Ok((m, t)) => (Ok(m), format!("{}\n\n{iris}", t.trim_end())),
             Err(why) => (Err(why), iris),
@@ -432,6 +464,13 @@ asked for, never to look at a row.", who.username);
                     // Its tool_result is written by decide(), once the person has answered.
                     "propose_row_edit" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
                     "propose_row_edit" => self.propose_row_edit(who, &args, &o.shown).and_then(|d| self.ask(o, out, d)),
+                    "show" => show(&args).map(|c| {
+                        let kind = serde_json::to_value(&c).ok().and_then(|v| v["kind"].as_str().map(str::to_string));
+                        let v = json!({"shown": kind});
+                        let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
+                        send(out, &ToShell::Render { session: o.session.clone(), component: c });
+                        v
+                    }),
                     _ => Err(format!("unknown tool {name:?}")),
                 };
                 let for_model = result.unwrap_or_else(|why| {
@@ -751,6 +790,21 @@ asked for, never to look at a row.", who.username);
         }
         InboxList { items, refused }
     }
+}
+
+/// The model's component, or why not: only a SHOW_KINDS kind, closed props, within its caps.
+/// It can only become a Render; an approval is minted by ask() alone.
+fn show(args: &Value) -> Result<Component, String> {
+    if let Some(k) = args.as_object().and_then(|a| a.keys().find(|k| *k != "component")) {
+        return Err(format!("show has no parameter `{k}`; it takes `component`"));
+    }
+    let kind = args.pointer("/component/kind").and_then(Value::as_str).unwrap_or("");
+    if !SHOW_KINDS.contains(&kind) {
+        return Err(format!("show draws {}, not {kind:?}", SHOW_KINDS.join(", ")));
+    }
+    let c = serde_json::from_value::<Component>(args["component"].clone()).map_err(|e| format!("show {kind}: {e}"))?;
+    c.check().map_err(|e| format!("show {kind}: {e}"))?;
+    Ok(c)
 }
 
 /// A cell as text, as the shells show it: null is empty, a string is itself.

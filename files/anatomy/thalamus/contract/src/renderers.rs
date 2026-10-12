@@ -15,21 +15,127 @@ pub enum Component {
     ApprovalsList(ApprovalsList),
     RedStatus(RedStatus),
     Markdown(Markdown),
+    Table(Table),
+    List(List),
+    Record(Record),
 }
 
 /// Model text as markdown; every consumer draws it as text nodes, never as HTML.
 pub const MARKDOWN_MAX: usize = 8000;
 
+/// A value as the shells draw it: a string is itself, anything else JSON (pretty when nested).
+pub fn value_text(v: &Value) -> String {
+    match v {
+        Value::Null => String::new(),
+        Value::String(s) => s.clone(),
+        Value::Array(_) | Value::Object(_) => serde_json::to_string_pretty(v).unwrap_or_default(),
+        v => v.to_string(),
+    }
+}
+
+fn cap(what: &str, s: &str, max: usize) -> Result<(), String> {
+    if s.chars().count() > max { Err(format!("{what} is over {max} chars")) } else { Ok(()) }
+}
+
+fn most(what: &str, n: usize, max: usize) -> Result<(), String> {
+    if n > max { Err(format!("{what}: {n}, at most {max}")) } else { Ok(()) }
+}
+
+/// Titles, column names and record keys.
+const NAME_MAX: usize = 120;
+
 impl Component {
     /// The caps serde cannot say; check_shell refuses a component over them.
     pub fn check(&self) -> Result<(), String> {
+        let title = |t: &Option<String>| t.as_deref().map_or(Ok(()), |t| cap("title", t, NAME_MAX));
         match self {
-            Component::Markdown(m) if m.text.chars().count() > MARKDOWN_MAX => {
-                Err(format!("markdown text is over {MARKDOWN_MAX} chars"))
+            Component::Markdown(m) => cap("markdown text", &m.text, MARKDOWN_MAX),
+            Component::Table(t) => {
+                title(&t.title)?;
+                most("table columns", t.columns.len(), 12)?;
+                most("table rows", t.rows.len(), 50)?;
+                t.columns.iter().try_for_each(|c| cap("a column name", c, NAME_MAX))?;
+                for (i, r) in t.rows.iter().enumerate() {
+                    if r.len() != t.columns.len() {
+                        return Err(format!("table row {} has {} cells, not {}", i + 1, r.len(), t.columns.len()));
+                    }
+                    r.iter().try_for_each(|v| cap("a table cell", &value_text(v), 2000))?;
+                }
+                Ok(())
+            }
+            Component::List(l) => {
+                title(&l.title)?;
+                most("list items", l.items.len(), 50)?;
+                l.items.iter().try_for_each(|x| {
+                    cap("a list item's text", &x.text, 500)?;
+                    x.detail.as_deref().map_or(Ok(()), |d| cap("a list item's detail", d, 2000))
+                })
+            }
+            Component::Record(r) => {
+                title(&r.title)?;
+                most("record fields", r.fields.len(), 40)?;
+                r.fields.iter().try_for_each(|f| {
+                    cap("a record key", &f.key, NAME_MAX)?;
+                    cap("a record value", &value_text(&f.value), 4000)
+                })
             }
             _ => Ok(()),
         }
     }
+}
+
+/// Rows the model shows: `columns` names each cell of every row, in order.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Table {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub columns: Vec<String>,
+    pub rows: Vec<Vec<Value>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct List {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub items: Vec<ListItem>,
+    pub ordered: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ListItem {
+    pub text: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tone: Option<Tone>,
+}
+
+/// The face's severity words (ui/tone.ts), said as text by both shells.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Tone {
+    Ok,
+    Info,
+    Warn,
+    Bad,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Record {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub fields: Vec<Field>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Field {
+    pub key: String,
+    pub value: Value,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
