@@ -330,9 +330,14 @@ impl Server {
                 let _ = self.record(o, Kind::Message, None, json!({"role": "iris", "text": text}));
                 return send(out, &ToShell::Text { session: o.session.clone(), text });
             };
-            for call in asked {
+            for (i, call) in asked.iter().enumerate() {
                 calls += 1;
                 if calls > MAX_TOOL_CALLS {
+                    // An unanswered call is a shape providers reject (Runner.php compactForSynthesis).
+                    for c in &asked[i..] {
+                        o.messages.push(json!({"role": "tool", "tool_call_id": c.get("id").cloned().unwrap_or(Value::Null),
+                                               "content": json!({"error": "stopped: tool-call cap"}).to_string()}));
+                    }
                     let text = format!("Stopped: more than {MAX_TOOL_CALLS} tool calls in one turn.");
                     let _ = self.record(o, Kind::Message, None, json!({"role": "thalamus", "text": text}));
                     return send(out, &ToShell::Text { session: o.session.clone(), text });
