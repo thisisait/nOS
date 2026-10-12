@@ -607,3 +607,18 @@ fn a_stopped_turn_answers_every_call_it_was_asked() {
     assert_eq!(tool_ids(&rig, 1), want, "every call the model made has its tool message");
     assert!(rig.model.lock().unwrap()[1].1.contains("stopped: tool-call cap"));
 }
+
+#[test]
+fn a_table_read_that_cannot_be_whole_is_an_error_not_a_short_answer() {
+    let endless = r#"{"success": true, "data": {"rows": [{"id": "r1", "values": {"title": "Alpha"}}], "nextCursor": "more"}}"#;
+    let no_id = r#"{"success": true, "data": {"rows": [{"values": {"title": "Alpha"}}]}}"#;
+    for (name, keap, want) in [("noid", no_id, "without an id"), ("pages", endless, "exceeds")] {
+        let rig = rig_n(name, mapped(), vec![keap.into()], vec![tool_call(r#"{"table": "todos", "q": "alpha"}"#), answer("x")]);
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let got = turn(&s, &mut r, None, "find alpha");
+        assert!(!got.iter().any(|m| matches!(m, ToShell::Render { .. })), "{name}: a partial table was shown: {got:?}");
+        let body = rig.model.lock().unwrap()[1].1.clone();
+        assert!(body.contains(want), "{name}: the model was not told: {body}");
+    }
+}
