@@ -10,7 +10,6 @@ from __future__ import annotations
 import pathlib
 import shutil
 import subprocess
-import sys
 
 import pytest
 
@@ -25,10 +24,10 @@ def test_pupil_approval_queue_holds_the_shell_invariants():
     assert r.returncode == 0, r.stdout[-4000:] + r.stderr[-2000:]
 
 
-# Tauri links webkit2gtk on Linux, which the CI image does not carry.
-@pytest.mark.skipif(not shutil.which("cargo") or sys.platform != "darwin", reason="cargo + macOS build the bridge")
+# Tauri links webkit2gtk on Linux, which the CI image does not carry: the bridge builds without it.
+@pytest.mark.skipif(not shutil.which("cargo"), reason="cargo builds the bridge")
 def test_pupil_bridge_refuses_what_the_shell_would_not_send():
-    r = subprocess.run(["cargo", "test", "--locked", "pending"], cwd=PUPIL / "src-tauri",
+    r = subprocess.run(["cargo", "test", "--locked", "--no-default-features", "--lib", "pending"], cwd=PUPIL / "src-tauri",
                        capture_output=True, text=True, timeout=1200, check=False)
     assert r.returncode == 0, r.stdout[-4000:] + r.stderr[-2000:]
     assert " 0 passed" not in r.stdout, "no bridge test matched `pending`"
