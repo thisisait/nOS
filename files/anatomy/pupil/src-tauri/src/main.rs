@@ -10,8 +10,9 @@ use std::os::unix::net::UnixStream;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
 
+/// The open socket and what it is waiting on; both go when the link closes.
 #[derive(Default)]
-struct Link(Mutex<Option<UnixStream>>);
+struct Link(Mutex<Option<(UnixStream, bridge::Pending)>>);
 
 fn link_event(app: &AppHandle, state: &str, reason: Option<String>) {
     let _ = app.emit("link", serde_json::json!({ "state": state, "reason": reason }));
@@ -25,10 +26,14 @@ fn connect(app: AppHandle, link: State<'_, Link>) -> Result<(), String> {
     }
     let stream = bridge::connect(&bridge::socket_path()?)?;
     let reader = stream.try_clone().map_err(|e| e.to_string())?;
-    *held = Some(stream);
+    *held = Some((stream, bridge::Pending::default()));
     link_event(&app, "connected", None);
     std::thread::spawn(move || {
         let why = bridge::pump(reader, |m| {
+            // Recorded before the webview sees it, so a decision is never ahead of its request.
+            if let Some((_, p)) = app.state::<Link>().0.lock().ok().as_mut().and_then(|h| h.as_mut()) {
+                p.saw(&m);
+            }
             let _ = app.emit("to_shell", m);
         });
         if let Ok(mut held) = app.state::<Link>().0.lock() {
@@ -42,7 +47,9 @@ fn connect(app: AppHandle, link: State<'_, Link>) -> Result<(), String> {
 #[tauri::command]
 fn send(msg: ToThalamus, link: State<'_, Link>) -> Result<(), String> {
     let mut held = link.0.lock().map_err(|e| e.to_string())?;
-    bridge::send(held.as_mut().ok_or("not connected")?, &msg)
+    let (stream, pending) = held.as_mut().ok_or("not connected")?;
+    pending.admit(&msg)?;
+    bridge::send(stream, &msg)
 }
 
 // generate_context! needs the built page (../dist); the bridge tests do not.

@@ -25,6 +25,34 @@ pub fn send(w: &mut impl Write, m: &ToThalamus) -> Result<(), String> {
     w.write_all(encode(m).as_bytes()).map_err(|e| format!("send failed: {e}"))
 }
 
+/// The approvals this connection was asked and has not answered, oldest first. The bridge,
+/// not the webview, refuses a turn while one waits and any decision but the oldest's, once
+/// (shell.rs:30-32, 173-179); serve refuses only an id it is not waiting on (serve.rs:237).
+#[derive(Default)]
+pub struct Pending(std::collections::VecDeque<String>);
+
+impl Pending {
+    pub fn saw(&mut self, m: &ToShell) {
+        if let ToShell::ApprovalRequest { approval, .. } = m {
+            self.0.push_back(approval.clone());
+        }
+    }
+
+    pub fn admit(&mut self, m: &ToThalamus) -> Result<(), String> {
+        match m {
+            ToThalamus::Turn { .. } if !self.0.is_empty() => Err("an approval is waiting: decide it first".into()),
+            ToThalamus::ApprovalDecision { approval, .. } if self.0.front() != Some(approval) => {
+                Err(format!("approval {approval} is not the oldest waiting one"))
+            }
+            ToThalamus::ApprovalDecision { .. } => {
+                self.0.pop_front();
+                Ok(())
+            }
+            _ => Ok(()),
+        }
+    }
+}
+
 /// Emits every line, decoded, until the socket ends; returns why it ended.
 pub fn pump(stream: UnixStream, mut emit: impl FnMut(ToShell)) -> String {
     let mut r = BufReader::new(stream);

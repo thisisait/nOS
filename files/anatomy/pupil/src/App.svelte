@@ -6,7 +6,9 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import StatusNote from '$ui/StatusNote.svelte';
+	import ApprovalCard from './ApprovalCard.svelte';
 	import Message from './Message.svelte';
+	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
 	import type { Link, ToShell, ToThalamus } from './wire';
 
 	type Tauri = {
@@ -15,9 +17,12 @@
 	};
 	const tauri = (globalThis as { __TAURI__?: Tauri }).__TAURI__;
 
-	type Entry = { me: string } | { msg: ToShell };
+	type Entry = { me: string } | { msg: ToShell } | { note: string };
 	let log: Entry[] = $state([]);
+	let q = $state(empty());
 	let link: Link = $state({ state: 'closed', reason: 'not connected yet' });
+	// No turn while an approval waits (shell.rs:173); the bridge refuses one anyway.
+	const open = $derived(link.state === 'connected' && composerOpen(q));
 	let session: string | null = $state(null);
 	let draft = $state('');
 	let column: HTMLElement | undefined = $state();
@@ -38,7 +43,7 @@
 
 	async function send() {
 		const text = draft.trim();
-		if (!text || link.state !== 'connected') return;
+		if (!text || !open) return;
 		const msg: ToThalamus = { t: 'turn', session, text };
 		try {
 			await tauri?.core.invoke('send', { msg });
@@ -46,6 +51,20 @@
 			push({ me: text });
 		} catch (e) {
 			push({ msg: { t: 'refused', reason: `not sent: ${e}` } });
+		}
+	}
+
+	// The decided edit joins the scrollback with the answer, as shell.rs:181-182 does.
+	async function decided(approval: string, d: Decision) {
+		const r = decide(q, approval, d);
+		if (!r.send || !r.decided) return;
+		q = r.q;
+		push({ msg: { t: 'approval_request', session: session ?? '', ...r.decided } });
+		push({ me: d });
+		try {
+			await tauri?.core.invoke('send', { msg: r.send });
+		} catch (e) {
+			push({ note: `not decided, nothing written: approval ${approval} (${e})` });
 		}
 	}
 
@@ -57,9 +76,16 @@
 		const off = [
 			tauri.event.listen<ToShell>('to_shell', ({ payload }) => {
 				if (payload.t === 'session') session = payload.session;
-				push({ msg: payload });
+				if (payload.t === 'approval_request') q = asked(q, payload);
+				else push({ msg: payload });
 			}),
-			tauri.event.listen<Link>('link', ({ payload }) => (link = payload))
+			tauri.event.listen<Link>('link', ({ payload }) => {
+				link = payload;
+				if (payload.state !== 'closed') return;
+				const r = closed(q);
+				q = r.q;
+				r.notes.forEach((note) => push({ note }));
+			})
 		];
 		Promise.all(off).then(connect); // listen first, or the first `link` is missed
 		return () => off.forEach((p) => p.then((f) => f()));
@@ -77,9 +103,20 @@
 	</header>
 	<div class="column" bind:this={column}>
 		{#each log as e}
-			{#if 'me' in e}<p class="me">{e.me}</p>{:else}<Message msg={e.msg} />{/if}
+			{#if 'me' in e}<p class="me">{e.me}</p>
+			{:else if 'note' in e}<StatusNote kind="error" block={false}>{e.note}</StatusNote>
+			{:else}<Message msg={e.msg} />{/if}
 		{/each}
 	</div>
+	{#if q.pending[0]}
+		<ApprovalCard
+			waiting={q.pending[0]}
+			of={q.pending.length}
+			whole={q.whole === q.pending[0].approval}
+			onseen={(id) => (q = seen(q, id))}
+			ondecide={decided}
+		/>
+	{/if}
 	<form
 		class="composer"
 		onsubmit={(e) => {
@@ -90,8 +127,8 @@
 		<textarea
 			bind:value={draft}
 			rows="2"
-			placeholder="Ask Iris…"
-			disabled={link.state !== 'connected'}
+			placeholder={q.pending.length ? 'decide the approval first' : 'Ask Iris…'}
+			disabled={!open}
 			onkeydown={(e) => {
 				if (e.key === 'Enter' && !e.shiftKey) {
 					e.preventDefault();
@@ -99,7 +136,7 @@
 				}
 			}}
 		></textarea>
-		<button type="submit" disabled={link.state !== 'connected' || !draft.trim()}>send</button>
+		<button type="submit" disabled={!open || !draft.trim()}>send</button>
 	</form>
 </main>
 

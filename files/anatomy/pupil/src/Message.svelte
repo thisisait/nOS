@@ -15,7 +15,8 @@
 	{:else if msg.t === 'render'}
 		<ComponentView component={msg.component} />
 	{:else if msg.t === 'approval_request'}
-		<p class="muted">approval {msg.approval} — this pupil cannot decide yet, so nothing is written</p>
+		<!-- Only a decided one reaches the log; the waiting one is App's ApprovalCard. -->
+		<p class="muted">approval {msg.approval}</p>
 		<ComponentView component={msg.component} />
 	{:else if msg.t === 'refused'}
 		<StatusNote kind="error" title="refused">{msg.reason}</StatusNote>
