@@ -14,6 +14,14 @@
     that: install_receptor | default(false) | bool
     fail_msg: "install_thalamus needs install_receptor: true (pazny.receptor renders ~/.nos/identity-map.yml)."
 
+# serve.rs reads only the fixed ~/.nos/identity-map.yml; a moved map would refuse every peer.
+- name: "[pazny.thalamus] The receptor's map is the path the binary reads"
+  ansible.builtin.assert:
+    that: >-
+      (receptor_identity_map | default(ansible_facts['env']['HOME'] ~ '/.nos/identity-map.yml'))
+      == ansible_facts['env']['HOME'] ~ '/.nos/identity-map.yml'
+    fail_msg: "receptor_identity_map is overridden; the thalamus reads only ~/.nos/identity-map.yml (src/serve.rs IDENTITY_MAP)."
+
 - name: "[pazny.thalamus] Ensure runtime directories exist"
   ansible.builtin.file:
     path: "{{ item.path }}"

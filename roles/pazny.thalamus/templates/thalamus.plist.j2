@@ -18,14 +18,16 @@
         <!-- python3 for the control readers (tools/*-status.py): the tools venv holds PyYAML. -->
         <key>PATH</key>
         <string>{{ nos_tools_venv }}/bin:{{ homebrew_prefix | default('/opt/homebrew') }}/bin:/usr/local/bin:/usr/bin:/bin</string>
-        <!-- iris's agent.yml, the backend register and the control readers come from here. -->
+        <!-- iris's agent.yml, the backend register and the control readers come from here. The binary
+             is built from playbook_dir: a worktree converge runs worktree code on main-checkout data
+             (the receptor does the same; preflight-checkout-current.yml warns). -->
         <key>NOS_REPO_ROOT</key>
         <string>{{ nos_main_checkout }}</string>
         <key>KEAP_URL</key>
         <string>http://127.0.0.1:{{ keap_port | default(8091) }}</string>
         <!-- Read once at start, then removed from the process env (src/main.rs). -->
         <key>KEAP_PROXY_SHARED_SECRET</key>
-        <string>{{ keap_proxy_shared_secret | default('') }}</string>
+        <string>{{ keap_proxy_shared_secret }}</string>
         <!-- iris binds to ollama only (state/habitat/llm-backends.yml); local, so no token. -->
         <key>NOS_ARMED_BACKENDS</key>
         <string>{{ 'ollama' if ollama_enabled | default(false) | bool else '' }}</string>

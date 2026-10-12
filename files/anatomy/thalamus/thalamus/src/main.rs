@@ -14,6 +14,10 @@ fn serve_main() -> Result<(), String> {
     let secret = std::env::var("KEAP_PROXY_SHARED_SECRET").unwrap_or_default();
     // Read once, then gone: no child this process spawns inherits the secret.
     std::env::remove_var("KEAP_PROXY_SHARED_SECRET");
+    // Without it KEAP refuses every call: exit, so launchd and the reader show a dead daemon.
+    if secret.is_empty() {
+        return Err("KEAP_PROXY_SHARED_SECRET is unset or empty".into());
+    }
     let data = home.join("thalamus/data");
     std::fs::DirBuilder::new().recursive(true).mode(0o700).create(&data).map_err(|e| format!("{}: {e}", data.display()))?;
     let ledger = Ledger::open(&data.join("ledger.db")).map_err(|e| format!("ledger: {e}"))?;
@@ -25,8 +29,7 @@ fn serve_main() -> Result<(), String> {
     let sock = home.join(".nos/thalamus.sock");
     let listener = serve::bind(&sock).map_err(|e| format!("{}: {e}", sock.display()))?;
     let keap_url = std::env::var("KEAP_URL").unwrap_or_else(|_| "http://127.0.0.1:8091".into());
-    eprintln!("thalamus: {} -> {keap_url} (map ~/{IDENTITY_MAP}, secret {}, model {})", sock.display(),
-              if secret.is_empty() { "UNSET" } else { "set" },
+    eprintln!("thalamus: {} -> {keap_url} (map ~/{IDENTITY_MAP}, model {})", sock.display(),
               binding.as_ref().map(|b| b.model_id.as_str()).unwrap_or("REFUSED"));
     let srv = Server {
         map: home.join(IDENTITY_MAP),
