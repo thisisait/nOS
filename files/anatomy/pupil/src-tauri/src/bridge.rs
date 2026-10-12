@@ -44,7 +44,7 @@ pub fn pump(stream: UnixStream, mut emit: impl FnMut(ToShell)) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nos_contract::wire::decode_to_thalamus;
+    use nos_contract::wire::{decode_to_thalamus, ControlView, Decision};
     use serde_json::Value;
     use std::os::unix::net::UnixListener;
 
@@ -94,5 +94,36 @@ mod tests {
         for m in &got[good.len()..] {
             assert!(matches!(m, ToShell::Refused { reason } if !reason.is_empty()), "accepted: {m:?}");
         }
+    }
+
+    fn asked(p: &mut Pending, id: &str) {
+        let c = serde_json::json!({ "kind": "red_status", "props": { "red_count": 0, "reds": [], "hold_count": 0, "holds": [] } });
+        p.saw(&serde_json::from_value(serde_json::json!({ "t": "approval_request", "session": "s", "approval": id, "component": c })).unwrap());
+    }
+    fn decision(id: &str) -> ToThalamus {
+        ToThalamus::ApprovalDecision { approval: id.into(), decision: Decision::Reject, note: None }
+    }
+
+    #[test]
+    fn pending_admits_one_decision_per_id_oldest_first() {
+        let mut p = Pending::default();
+        asked(&mut p, "a");
+        asked(&mut p, "b");
+        assert!(p.admit(&decision("b")).is_err(), "decided out of order");
+        assert!(p.admit(&decision("a")).is_ok());
+        assert!(p.admit(&decision("a")).is_err(), "decided twice");
+        assert!(p.admit(&decision("never-asked")).is_err());
+    }
+
+    #[test]
+    fn pending_refuses_a_turn_while_one_waits_but_not_a_control() {
+        let mut p = Pending::default();
+        let turn = ToThalamus::Turn { session: None, text: "hi".into() };
+        assert!(p.admit(&turn).is_ok());
+        asked(&mut p, "a");
+        assert!(p.admit(&turn).is_err(), "a turn went out while an approval waits (shell.rs:173)");
+        assert!(p.admit(&ToThalamus::Control { view: ControlView::Inbox }).is_ok());
+        assert!(p.admit(&decision("a")).is_ok());
+        assert!(p.admit(&turn).is_ok());
     }
 }
