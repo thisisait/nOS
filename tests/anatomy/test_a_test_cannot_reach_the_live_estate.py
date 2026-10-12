@@ -14,8 +14,11 @@ from __future__ import annotations
 
 import os
 import pathlib
+import re
 import socket
 import subprocess
+import sys
+import textwrap
 import urllib.error
 import urllib.request
 
@@ -71,3 +74,41 @@ def test_the_marker_lifts_the_boundary_for_one_test():
     assert os.environ["HOME"] == guard._real["HOME"]
     assert socket.socket.connect is guard._real["connect"]
     assert os.environ["PATH"] == guard._real["PATH"], "the docker shim is still on PATH"
+
+
+def test_a_live_mark_is_skipped_without_nos_live(tmp_path):
+    """A planted `@pytest.mark.live` test does not run unless NOS_LIVE=1.
+
+    MEASURED 2026-10-12: the mark lifted the boundary, so the test body ran
+    inside a plain `pytest tests/anatomy` and the verdict depended on whatever
+    the estate answered. The planted body only raises — it is not a live probe.
+    """
+    planted = tmp_path / "test_planted_live.py"
+    planted.write_text(textwrap.dedent("""\
+        import pytest
+
+        @pytest.mark.live
+        def test_planted_live():
+            raise AssertionError("ran without NOS_LIVE")
+    """))
+    anatomy = pathlib.Path(__file__).resolve().parent
+    (tmp_path / "conftest.py").write_text(textwrap.dedent(f"""\
+        import importlib.util
+        import sys
+        sys.path.insert(0, {str(anatomy)!r})
+        spec = importlib.util.spec_from_file_location(
+            "anatomy_conftest", {str(anatomy / "conftest.py")!r})
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        pytest_configure = mod.pytest_configure
+        _offline_boundary = mod._offline_boundary
+    """))
+    env = {k: v for k, v in os.environ.items() if k != guard.ENV}
+    r = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "-rs", "-p", "no:cacheprovider", str(tmp_path)],
+        cwd=tmp_path, env=env, capture_output=True, text=True, timeout=120,
+    )
+    out = r.stdout + r.stderr
+    assert r.returncode == 0, out[-1500:]
+    assert re.search(r"SKIPPED.*NOS_LIVE", out), out[-1500:]
+    assert "ran without NOS_LIVE" not in out, out[-1500:]
