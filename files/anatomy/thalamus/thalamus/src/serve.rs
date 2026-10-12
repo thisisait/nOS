@@ -652,3 +652,13 @@ fn iso_matches_the_calendar_at_its_edges() {
         assert_eq!(iso(t), want);
     }
 }
+
+// mistral-eu is https: an agent built without TLS refused it live ("TLS required").
+#[test]
+fn an_https_backend_gets_a_tls_handshake() {
+    let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("https://127.0.0.1:{}/", l.local_addr().unwrap().port());
+    std::thread::spawn(move || drop(l.accept()));
+    let e = agent(5).get(&url).call().unwrap_err();
+    assert!(!matches!(e, ureq::Error::TlsRequired), "{e}");
+}
