@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 3   # 2: activity (the eye's phase on every turn); 3: table_results name/query/matched/total
+contract_version: 3   # 2: activity (the eye's phase on every turn); 3: table_results name/query/matched/total, markdown
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -43,6 +43,7 @@ components:
     inbox_list: "waiting captures and promotions: {items[{id, title, source, created_at}], refused[]}"
     approvals_list: "tools/awaiting-operator.py --json: {items[{kind, severity, age, what, where, note?}], unknown[]}"
     red_status: "tools/red-status.py --json: {red_count, reds[], hold_count, holds[]}"
+    markdown: "model text as markdown, drawn as text nodes (headings 1-3, paragraphs, lists, code fences; links as text): {text}, at most 8000 chars"
 
 # ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ──────
 invariants:
@@ -52,7 +53,8 @@ invariants:
     shape is refused, so one person's turn can never be filed under a guess.
   visibility: >-
     A line the shell cannot decode (unknown `t`, unknown component kind,
-    unknown field) becomes a `refused` message naming why. It is shown,
+    unknown field, a component over its caps: renderers.rs Component::check)
+    becomes a `refused` message naming why. It is shown,
     never dropped: a component that silently fails to render is worse than
     one that errors. `projected: false` on table_results says the search was
     substring, not semantic. A source the person may not read (inbox

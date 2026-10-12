@@ -6,9 +6,19 @@ import { describe, expect, it } from 'vitest';
 import Message from './Message.svelte';
 import type { Component, ToShell, Value } from './wire';
 
-const FIXTURE = new URL('../../contracts/thalamus-shell.fixture.json', import.meta.url);
+// PUPIL_FIXTURE: a planted copy (tests/anatomy/test_pupil_renders_the_fixture.py) must go red here.
+const FIXTURE = process.env.PUPIL_FIXTURE ?? new URL('../../contracts/thalamus-shell.fixture.json', import.meta.url);
 const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as { to_shell: { case: string; msg: ToShell }[] };
-const KINDS = ['table_results', 'row_diff_approval', 'inbox_list', 'approvals_list', 'red_status'];
+// Each kind's props, as wire.ts types them: a prop the fixture renames is named here, not drawn as nothing.
+const PROPS: Record<string, string[]> = {
+	table_results: ['columns', 'matched', 'name', 'projected', 'query', 'rows', 'table', 'total'],
+	row_diff_approval: ['cells', 'row_id', 'table'],
+	inbox_list: ['items', 'refused'],
+	approvals_list: ['items', 'unknown'],
+	red_status: ['hold_count', 'holds', 'red_count', 'reds'],
+	markdown: ['text'],
+};
+const KINDS = Object.keys(PROPS);
 
 const text = (html: string) =>
 	html
@@ -34,6 +44,8 @@ function owed(v: Value | Component, skip: Set<string> = new Set()): string[] {
 }
 
 function owedBy(c: Component): string[] {
+	// Markdown owes its words, not its markup: the markdown tests below check each node.
+	if (c.kind === 'markdown') return ['Next on the roadmap', 'restic fork', 'nos dtt list roadmap'];
 	if (c.kind !== 'table_results') return owed(c.props as unknown as Value);
 	// The table's name, not its id (live 2026-10-12: the header showed the roadmap's UUID).
 	const { name, query, matched, total, columns, rows } = c.props;
@@ -47,6 +59,11 @@ describe('the pupil renders the contract fixture', () => {
 	it('the fixture holds every kind the pupil knows, and no other', () => {
 		expect(new Set(components.map((c) => c.kind))).toEqual(new Set(KINDS));
 	});
+
+	for (const c of components)
+		it(`${c.kind} carries the props the pupil reads`, () => {
+			expect(Object.keys(c.props).sort(), `${c.kind} props`).toEqual(PROPS[c.kind]);
+		});
 
 	for (const { case: name, msg } of fx.to_shell) {
 		it(`draws "${name}" (${msg.t})`, () => {
@@ -107,3 +124,45 @@ describe('the pupil renders the contract fixture', () => {
 		expect(html).toContain('&lt;img');
 	});
 });
+
+const html = (msg: ToShell) => render(Message, { props: { msg } }).body;
+const say = (text: string): ToShell => ({ t: 'text', session: 's', text });
+
+describe('markdown is drawn as nodes, never as markup', () => {
+	const sample = fx.to_shell.find((c) => 'component' in c.msg && c.msg.component.kind === 'markdown')!.msg;
+
+	it('the fixture sample draws every block type', () => {
+		const h = html(sample);
+		for (const tag of ['<h1', '<h2', '<h3', '<p', '<ul', '<ol', '<li', '<pre', '<strong', '<em', '<code'])
+			expect(h, tag).toContain(tag);
+		expect(h).not.toContain('**');
+		expect(h).not.toContain('```');
+	});
+
+	// Live 2026-10-12: the pupil drew `**49 řádků**` raw.
+	it('a text message in markdown draws <strong>, no literal **', () => {
+		const h = html(say('Tabulka má **49 řádků**.'));
+		expect(h).toContain('<strong>49 řádků</strong>');
+		expect(h).not.toContain('**');
+	});
+
+	it('a link is text: label (url) for http(s), the label alone otherwise, never an anchor', () => {
+		const h = html(sample);
+		expect(h).not.toMatch(/<a[\s>]/);
+		expect(text(h)).toContain('the doctrine (https://thisisait.eu)');
+		expect(text(h)).toContain('a local file');
+		expect(h).not.toContain('file:///etc/passwd');
+	});
+
+	it('markup inside markdown stays text', () => {
+		const h = html(say('**<img src=x onerror=alert(1)>** and `<script>`'));
+		expect(h).not.toContain('<img');
+		expect(h).not.toContain('<script');
+		expect(h).toContain('&lt;img');
+	});
+
+	it('text that is not markdown is one paragraph of itself', () => {
+		expect(text(html(say('a * b = c, 2 * 3')))).toContain('a * b = c, 2 * 3');
+	});
+});
+

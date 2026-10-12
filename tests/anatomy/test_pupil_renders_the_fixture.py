@@ -7,6 +7,8 @@ runs the pupil's vitest over the contract fixture and checks the spec names the 
 """
 from __future__ import annotations
 
+import json
+import os
 import pathlib
 import shutil
 import subprocess
@@ -16,6 +18,7 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 SPEC = REPO / "files/anatomy/contracts/thalamus-shell.yml"
+FIXTURE = REPO / "files/anatomy/contracts/thalamus-shell.fixture.json"
 PUPIL = REPO / "files/anatomy/pupil"
 needs_node = pytest.mark.skipif(not shutil.which("npx"), reason="npx runs the pupil's vitest")
 
@@ -33,3 +36,21 @@ def test_pupil_renders_the_fixture():
     r = subprocess.run(["npx", "vitest", "run", "src/fixture.test.ts"], cwd=PUPIL,
                        capture_output=True, text=True, timeout=600, check=False)
     assert r.returncode == 0, r.stdout[-4000:] + r.stderr[-2000:]
+
+
+@needs_node
+def test_a_planted_prop_rename_is_named(tmp_path):
+    """Rename one prop in a copy of the fixture; the pupil's vitest must go red naming the kind."""
+    fx = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    hit = [c["msg"]["component"]["props"] for c in fx["to_shell"]
+           if c["msg"].get("component", {}).get("kind") == "markdown"]
+    assert hit, "plant did not apply: no markdown sample in the fixture"
+    hit[0]["body"] = hit[0].pop("text")
+    planted = tmp_path / "fixture.json"
+    planted.write_text(json.dumps(fx), encoding="utf-8")
+    r = subprocess.run(["npx", "vitest", "run", "src/fixture.test.ts"], cwd=PUPIL,
+                       capture_output=True, text=True, timeout=600, check=False,
+                       env={**os.environ, "PUPIL_FIXTURE": str(planted)})
+    out = r.stdout + r.stderr
+    assert r.returncode != 0, "vitest stayed green on a renamed prop:\n" + out[-2000:]
+    assert "markdown props" in out, "vitest went red without naming the kind:\n" + out[-4000:]
