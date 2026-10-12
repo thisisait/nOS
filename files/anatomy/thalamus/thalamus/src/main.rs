@@ -28,7 +28,15 @@ fn serve_main(args: &[String]) -> Result<(), String> {
     // create() leaves an existing dir as it was; a wider one would expose the ledger.
     std::fs::set_permissions(&data, std::fs::Permissions::from_mode(0o700)).map_err(dir_err)?;
     let ledger = Ledger::open(&data.join("ledger.db")).map_err(|e| format!("ledger: {e}"))?;
-    let binding = match binding::resolve(&repo, "iris", |k| std::env::var(k).ok()) {
+    // The bound row's key (the role renders NOS_SECRET_<VAR> for auth_secret nos:<var>): read
+    // once and removed like the proxy secret; it leaves only as the model request's bearer.
+    let vault: Vec<(String, String)> = std::env::vars().filter(|(k, _)| k.starts_with("NOS_SECRET_")).collect();
+    vault.iter().for_each(|(k, _)| std::env::remove_var(k));
+    let lookup = |k: &str| match k.strip_prefix("nos:") {
+        Some(var) => vault.iter().find(|(n, _)| *n == format!("NOS_SECRET_{}", var.to_uppercase())).map(|(_, v)| v.clone()),
+        None => std::env::var(k).ok(),
+    };
+    let binding = match binding::resolve(&repo, "iris", lookup) {
         Ok(Decision::Bound(b)) => Ok(b),
         Ok(other) => Err(format!("iris has no model: {other:?}")),
         Err(why) => Err(why),

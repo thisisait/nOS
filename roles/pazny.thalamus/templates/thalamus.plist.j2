@@ -30,13 +30,18 @@
         <!-- Read once at start, then removed from the process env (src/main.rs). -->
         <key>KEAP_PROXY_SHARED_SECRET</key>
         <string>{{ keap_proxy_shared_secret }}</string>
+{% if thalamus_model_secret | default('') %}
+        <!-- The key of the row iris binds; read once, then removed; sent only as the model's bearer. -->
+        <key>NOS_SECRET_{{ thalamus_model_secret | upper }}</key>
+        <string>{{ thalamus_model_token }}</string>
+{% endif %}
         <!-- The table serve answers for the model's "roadmap" (src/serve.rs table_id). -->
         <key>NOS_ROADMAP_TABLE_ID</key>
         <string>{{ thalamus_roadmap_table_id }}</string>
         <!-- Who sees the approvals and red-status controls: authentik_rbac_tiers tier 1. -->
         <key>NOS_TIER1_GROUPS</key>
         <string>{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | first).groups | join(',') }}</string>
-        <!-- iris binds to ollama only (state/habitat/llm-backends.yml); local, so no token. -->
+        <!-- The binding env (defaults thalamus_binding_env, also the preflight's); iris binds mistral-eu. -->
 {% for name, value in thalamus_binding_env.items() %}
         <key>{{ name }}</key>
         <string>{{ value }}</string>
