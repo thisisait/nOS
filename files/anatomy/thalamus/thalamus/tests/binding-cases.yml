@@ -1,24 +1,36 @@
 # One set of cases, two resolvers: src/binding.rs (tests/binding.rs) and tools/nos_cell_binding.py
 # (tests/anatomy/test_llm_cell_requirement.py). Both read the REAL register; `cell:` reads the real cell.
 # expect.kind: default | disarmed | bound | refused; `model_id` for bound, `backend` for disarmed,
-# `contains` a fragment of the refusal.
+# `contains` a fragment of the refusal. A `nos:<var>` env key is the cell's key, as main.rs answers it.
 cases:
-  - name: iris armed binds the local model
-    cell: iris
+  - name: an armed local cell binds the local model
+    agent: "name: loc\nmodel: {primary: openai-local-sonnet, backend: ollama}\ngdpr: {processors: [{name: on-device}], transfers_outside_eu: false}\n"
     env: {NOS_ARMED_BACKENDS: ollama, NOS_LOCAL_MODEL: "qwen3:14b"}
     expect: {kind: bound, model_id: "qwen3:14b"}
   - name: the binding does not judge size
-    cell: iris
+    agent: "name: loc\nmodel: {primary: openai-local-sonnet, backend: ollama}\ngdpr: {processors: [{name: on-device}], transfers_outside_eu: false}\n"
     env: {NOS_ARMED_BACKENDS: ollama, NOS_LOCAL_MODEL: "llama3.2:3b"}
     expect: {kind: bound, model_id: "llama3.2:3b"}
-  - name: iris disarmed refuses rather than degrade
-    cell: iris
+  - name: a disarmed EU-only local cell refuses rather than degrade
+    agent: "name: loc\nmodel: {primary: openai-local-sonnet, backend: ollama}\ngdpr: {processors: [{name: on-device}], transfers_outside_eu: false}\n"
     env: {NOS_LOCAL_MODEL: "qwen3:14b"}
     expect: {kind: refused, contains: "not armed"}
   - name: armed with an empty model env refuses
-    cell: iris
+    agent: "name: loc\nmodel: {primary: openai-local-sonnet, backend: ollama}\ngdpr: {processors: [{name: on-device}], transfers_outside_eu: false}\n"
     env: {NOS_ARMED_BACKENDS: ollama}
     expect: {kind: refused, contains: "NOS_LOCAL_MODEL is empty"}
+  - name: iris armed with its key binds Mistral on the EU row
+    cell: iris
+    env: {NOS_ARMED_BACKENDS: mistral-eu, NOS_MISTRAL_MODEL: mistral-large-latest, "nos:mistral_api_key": k-test}
+    expect: {kind: bound, model_id: mistral-large-latest}
+  - name: iris armed without its key refuses and names credentials.yml
+    cell: iris
+    env: {NOS_ARMED_BACKENDS: mistral-eu, NOS_MISTRAL_MODEL: mistral-large-latest}
+    expect: {kind: refused, contains: "set mistral_api_key in credentials.yml"}
+  - name: iris disarmed refuses, never degrades to ollama
+    cell: iris
+    env: {NOS_ARMED_BACKENDS: ollama, NOS_LOCAL_MODEL: "qwen3:14b", NOS_MISTRAL_MODEL: mistral-large-latest, "nos:mistral_api_key": k-test}
+    expect: {kind: refused, contains: "not armed"}
   - name: a disarmed cloud cell may degrade
     agent: "name: cloudy\nmodel: {primary: claude-sonnet, backend: minimax}\ngdpr: {processors: [{name: MiniMax}], transfers_outside_eu: true}\n"
     env: {NOS_MINIMAX_MODEL: m1}

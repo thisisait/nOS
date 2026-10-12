@@ -1,9 +1,9 @@
 """A service whose cell is bound to a local model refuses to converge without one big enough.
 
-Ruling 2026-10-12: install_thalamus binds cell iris to ollama (local). If ollama is not enabled,
-or the model it would bind is under llm_cell_min_params_b (8) or of unknown size, the converge
-refuses in preflight — before anything is built — naming the service, cell, model, why, and
-the two fixes. A cloud-bound cell needs no ollama. The check reuses the thalamus's binding:
+install_thalamus needs cell iris. Bound to ollama (local), if ollama is not enabled, or the model
+it would bind is under llm_cell_min_params_b (8) or of unknown size, the converge refuses in
+preflight — before anything is built — naming the service, cell, model, why, and the two fixes.
+A cloud-bound cell (iris on mistral-eu, ruling 2026-10-12) needs no ollama. The check reuses the thalamus's binding:
 tools/nos_cell_binding.py ports src/binding.rs, and both run tests/binding-cases.yml.
 OpenHuman binds no cell (openhuman_provider, no agent.yml), so it is not checked.
 """
@@ -66,11 +66,28 @@ def test_the_port_agrees_with_the_rust_resolver_on_the_shared_cases():
     assert "binding_agrees_with_the_shared_cases" in (REPO / "files/anatomy/thalamus/thalamus/tests/binding.rs").read_text()
 
 
-def _iris(**env):
-    return _helper().requirement(REPO, "install_thalamus", "iris", _env(**env), 8)
+LOCAL_IRIS = ("name: iris\nmodel: {primary: openai-local-sonnet, backend: ollama}\n"
+              "gdpr: {processors: [{name: on-device}], transfers_outside_eu: false}\n")
 
 
-def test_iris_with_a_big_enough_local_model_passes():
+@pytest.fixture
+def local_repo(tmp_path):
+    """A repo where iris is bound to ollama: the real register, a local iris."""
+    (tmp_path / "files/anatomy/agents/iris").mkdir(parents=True)
+    (tmp_path / "files/anatomy/agents/iris/agent.yml").write_text(LOCAL_IRIS)
+    (tmp_path / "state/habitat").mkdir(parents=True)
+    shutil.copy(REPO / "state/habitat/llm-backends.yml", tmp_path / "state/habitat/llm-backends.yml")
+    return tmp_path
+
+
+def test_the_real_iris_is_cloud_bound_and_passes_without_ollama():
+    """Iris binds mistral-eu (ruling 2026-10-12): install_thalamus converges with ollama off."""
+    assert _helper().requirement(REPO, "install_thalamus", "iris", _env(), 8) is None
+    assert _helper().requirement(REPO, "install_thalamus", "iris", _env(NOS_ARMED_BACKENDS="mistral-eu"), 8) is None
+
+
+def test_iris_with_a_big_enough_local_model_passes(local_repo):
+    _iris = lambda **env: _helper().requirement(local_repo, "install_thalamus", "iris", _env(**env), 8)  # noqa: E731
     assert _iris(NOS_ARMED_BACKENDS="ollama", NOS_LOCAL_MODEL="qwen3:14b") is None
     assert _iris(NOS_ARMED_BACKENDS="ollama", NOS_LOCAL_MODEL="hermes3:8b") is None
 
@@ -82,8 +99,8 @@ def test_iris_with_a_big_enough_local_model_passes():
     ({}, "(none set)", "ollama is not enabled"),
     ({"NOS_ARMED_BACKENDS": "ollama"}, "(none set)", "NOS_LOCAL_MODEL is empty"),
 ])
-def test_iris_refuses_with_service_cell_model_why_and_both_fixes(env, model, why):
-    text = _iris(**env)
+def test_iris_refuses_with_service_cell_model_why_and_both_fixes(local_repo, env, model, why):
+    text = _helper().requirement(local_repo, "install_thalamus", "iris", _env(**env), 8)
     assert text, f"{env} was not refused"
     for part in ("install_thalamus", "'iris'", f"would bind is {model}", why,
                  "ollama_enabled: true", "ollama_model:", "hermes3:8b",

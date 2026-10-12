@@ -95,8 +95,17 @@ def test_the_plist_carries_the_bound_backends_key_in_env_only():
 
 
 def test_the_role_renders_the_key_iris_binds_and_no_other():
-    """The secret var comes from iris's backend row (auth_secret nos:<var>), its value from that one var."""
-    defaults = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())
+    """The secret var comes from iris's backend row (auth_secret nos:<var>), its value from that one var.
+
+    Read in tasks (set_fact), not defaults: defaults stay lookup-free. The value's set_fact is no_log.
+    """
+    tasks = _tasks()
+    facts = {k: v for t in tasks for k, v in (t.get("ansible.builtin.set_fact") or {}).items()}
+    defaults = {k: facts[k] for k in ("thalamus_model_secret", "thalamus_model_token")}
+    holder = next(t for t in tasks if "thalamus_model_token" in (t.get("ansible.builtin.set_fact") or {}))
+    assert holder.get("no_log") is True, "the key's set_fact logs its value"
+    plist = tasks.index(next(t for t in tasks if "ansible.builtin.template" in t))
+    assert tasks.index(holder) < plist, "the key is read after the plist renders"
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     env.filters["from_yaml"] = yaml.safe_load
     env.filters["regex_replace"] = lambda s, p, r: __import__("re").sub(p, r, s)
@@ -108,6 +117,16 @@ def test_the_role_renders_the_key_iris_binds_and_no_other():
     token = env.from_string(defaults["thalamus_model_token"]).render(thalamus_model_secret=secret)
     assert token == "sk-eu-91c2"
     assert env.from_string(defaults["thalamus_model_token"]).render(thalamus_model_secret="") == ""
+
+
+def test_the_key_never_reaches_a_log_or_the_preflight():
+    """The plist render is no_log (--diff would print the key); the preflight's env holds no key."""
+    render = next(t for t in _tasks() if "ansible.builtin.template" in t)
+    assert render.get("no_log") is True, "the plist render would show the key under --diff"
+    benv = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())["thalamus_binding_env"]
+    assert not [k for k, v in benv.items() if k.startswith("NOS_SECRET_") or "thalamus_model_token" in v]
+    pre = (ROLE / "tasks" / "llm-requirement.yml").read_text()
+    assert "thalamus_model_token" not in pre and "_api_key" not in pre, "the preflight handles the key"
 
 
 def test_the_plist_names_the_roadmap_table_keap_seeds():
