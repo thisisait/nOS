@@ -1,5 +1,5 @@
 {
-  "contract_version": 1,
+  "contract_version": 2,
   "to_thalamus": [
     {"case": "first turn opens a session", "msg": {"t": "turn", "session": null, "text": "find rows about backups in the roadmap"}},
     {"case": "turn in a session", "msg": {"t": "turn", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "set its status to done"}},
@@ -28,7 +28,11 @@
     {"case": "a row edit awaits approval", "msg": {"t": "approval_request", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "approval": "7d1c2b3a-4e5f-4a6b-9c8d-1e2f3a4b5c6d", "component": {"kind": "row_diff_approval", "props": {
       "table": "roadmap", "row_id": "backup-restic-fork",
       "cells": [{"key": "status", "old": "open", "new": "done"}, {"key": "note", "old": null, "new": "landed"}]}}}},
-    {"case": "refusal", "msg": {"t": "refused", "reason": "login carol has no row in the identity map"}}
+    {"case": "refusal", "msg": {"t": "refused", "reason": "login carol has no row in the identity map"}},
+    {"case": "the model is asked", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": "thinking"}},
+    {"case": "a tool runs", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": {"tool": {"name": "search_rows"}}}},
+    {"case": "an approved edit is written", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": "writing"}},
+    {"case": "the turn is over", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": "idle"}}
   ],
   "refused": [
     {"case": "unknown component kind is shown, not dropped", "line": "{\"t\":\"render\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"component\":{\"kind\":\"pie_chart\",\"props\":{}}}"},
@@ -38,6 +42,8 @@
     {"case": "approval is an uppercase uuid", "line": "{\"t\":\"approval_request\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"approval\":\"7D1C2B3A-4E5F-4A6B-9C8D-1E2F3A4B5C6D\",\"component\":{\"kind\":\"red_status\",\"props\":{\"red_count\":0,\"reds\":[],\"hold_count\":0,\"holds\":[]}}}"},
     {"case": "actor uid is not canonical", "line": "{\"t\":\"session\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"actor\":\"user:Pazny\",\"model_uri\":\"ollama://qwen3:8b\"}"},
     {"case": "actor is not a person", "line": "{\"t\":\"session\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"actor\":\"agent:iris\",\"model_uri\":\"ollama://qwen3:8b\"}"},
+    {"case": "unknown activity phase", "line": "{\"t\":\"activity\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"phase\":\"dreaming\"}"},
+    {"case": "unknown field in a tool phase", "line": "{\"t\":\"activity\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"phase\":{\"tool\":{\"name\":\"x\",\"args\":{}}}}"},
     {"case": "not json", "line": "hello"}
   ],
   "refused_to_thalamus": [

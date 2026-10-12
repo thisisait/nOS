@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 1
+contract_version: 2   # 2: activity (the eye's phase on every turn)
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:

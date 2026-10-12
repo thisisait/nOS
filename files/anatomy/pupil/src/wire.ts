@@ -16,7 +16,13 @@ export type ToShell =
 	| { t: 'text'; session: string; text: string }
 	| { t: 'render'; session: string; component: Component }
 	| { t: 'approval_request'; session: string; approval: string; component: Component }
-	| { t: 'refused'; reason: string };
+	| { t: 'refused'; reason: string }
+	| { t: 'activity'; session: string; phase: Phase };
+
+/** What the thalamus is doing (wire.rs Phase); the eye shows it, the log does not. */
+export type Phase = 'thinking' | { tool: { name: string } } | 'writing' | 'idle';
+
+export const phaseName = (p: Phase): string => (typeof p === 'string' ? p : `tool:${p.tool.name}`);
 
 export type ToThalamus =
 	| { t: 'turn'; session: string | null; text: string }

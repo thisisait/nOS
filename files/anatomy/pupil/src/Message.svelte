@@ -2,7 +2,7 @@
 <script lang="ts">
 	import StatusNote from '$ui/StatusNote.svelte';
 	import ComponentView from './Component.svelte';
-	import type { ToShell } from './wire';
+	import { phaseName, type ToShell } from './wire';
 
 	let { msg }: { msg: ToShell } = $props();
 </script>
@@ -20,6 +20,9 @@
 		<ComponentView component={msg.component} />
 	{:else if msg.t === 'refused'}
 		<StatusNote kind="error" title="refused">{msg.reason}</StatusNote>
+	{:else if msg.t === 'activity'}
+		<!-- App hands activity to the eye; drawn here only if it ever reaches the log. -->
+		<p class="muted">iris: {phaseName(msg.phase)}</p>
 	{/if}
 </div>
 
