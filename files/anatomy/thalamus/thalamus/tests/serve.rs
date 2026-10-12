@@ -981,6 +981,32 @@ fn query_rows_on_an_unknown_column_or_value_names_the_real_ones() {
 }
 
 #[test]
+fn query_rows_rejects_a_non_string_argument_and_an_unknown_key() {
+    // A non-string is not "left out", and where / order_by have no keys beyond the ones declared.
+    let cases = [
+        ("qtype", r#"{"table": "todos", "q": 1}"#, "`q` is a string"),
+        ("dirtype", r#"{"table": "todos", "order_by": {"column": "title", "dir": 1}}"#, "asc or desc"),
+        ("valtype", r#"{"table": "todos", "where": [{"column": "ordinal", "op": "eq", "value": 3}]}"#, "value is a string"),
+        ("intype", r#"{"table": "todos", "where": [{"column": "title", "op": "in", "value": [1]}]}"#, "list of strings"),
+        ("wherekey", r#"{"table": "todos", "where": [{"column": "status", "op": "eq", "value": "open", "note": "x"}]}"#, "note"),
+        ("orderkey", r#"{"table": "todos", "order_by": {"column": "title", "dir": "asc", "nulls": "last"}}"#, "nulls"),
+    ];
+    let mut bad = Vec::new();
+    for (name, args, want) in cases {
+        let rig = rig_n(name, mapped(), shown_then(&[]), vec![query(args), answer("x")]);
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let got = turn(&s, &mut r, None, "x");
+        let e = tool_result(&rig, 1);
+        let msg = e["error"].as_str().unwrap_or("");
+        if !msg.contains(want) || !renders(&got).is_empty() || rig.keap.lock().unwrap().len() != 1 {
+            bad.push(format!("{name}: {e}"));
+        }
+    }
+    assert!(bad.is_empty(), "query_rows accepted a bad argument:\n{}", bad.join("\n"));
+}
+
+#[test]
 fn a_proposal_for_a_row_never_shown_is_refused_without_a_read_or_a_card() {
     // Live 2026-10-12: the model called propose_row_edit to look at a row, not to change it.
     let rig = rig_n("probe", mapped(), shown_then(&[ROWS]),
