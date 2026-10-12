@@ -1,7 +1,7 @@
 ---
-# Preflight (main.yml pre_tasks): iris is bound to local ollama, so the thalamus refuses before
-# anything is built unless ollama is on with a model of at least llm_cell_min_params_b.
-# The env is the plist's; tools/nos_cell_binding.py ports src/binding.rs (ruling 2026-10-12).
+# Preflight (main.yml pre_tasks): if iris is bound to local ollama, the thalamus refuses before
+# anything is built unless ollama is on with a model of at least llm_cell_min_params_b; cloud-bound
+# (mistral-eu) passes. The env is the plist's, never the key; tools/nos_cell_binding.py ports src/binding.rs.
 - name: "[pazny.thalamus] Iris gets a local model big enough to run it"
   ansible.builtin.command: >-
     {{ ansible_playbook_python }} {{ playbook_dir }}/tools/nos_cell_binding.py

@@ -75,11 +75,26 @@
     mode: '0644'
   when: _thalamus_build is not skipped
 
+# The var behind the auth_secret (nos:<var>) of the row iris binds, read where the binary reads it;
+# "" for a keyless row. The plist renders that one var's value as NOS_SECRET_<VAR> (src/main.rs).
+- name: "[pazny.thalamus] The key var of the row iris binds"
+  ansible.builtin.set_fact:
+    thalamus_model_secret: >-
+      {{ ((lookup('file', nos_main_checkout ~ '/state/habitat/llm-backends.yml') | from_yaml).backends
+      [(lookup('file', nos_main_checkout ~ '/files/anatomy/agents/iris/agent.yml') | from_yaml).model.backend]
+      .auth_secret | default('', true)) | regex_replace('^nos:', '') }}
+
+- name: "[pazny.thalamus] Its value, for the plist only"
+  ansible.builtin.set_fact:
+    thalamus_model_token: "{{ lookup('vars', thalamus_model_secret, default='') if thalamus_model_secret else '' }}"
+  no_log: true
+
 - name: "[pazny.thalamus] Render launchd plist"
   ansible.builtin.template:
     src: thalamus.plist.j2
     dest: "{{ ansible_facts['env']['HOME'] }}/Library/LaunchAgents/{{ thalamus_launchd_label }}.plist"
-    mode: '0600'   # carries the KEAP proxy secret
+    mode: '0600'   # carries the KEAP proxy secret and the model key
+  no_log: true     # --diff would print both
   register: _thalamus_plist
   notify: Restart thalamus
 

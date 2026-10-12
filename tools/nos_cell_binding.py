@@ -94,9 +94,12 @@ def decide(agent_yml: str, register_yml: str, env) -> Decision:
     if not model_id:
         return Decision("refused", declared, model_env, why=f"backend '{declared}' is armed but {model_env} is empty; refusing to send a blank model id")
 
+    # Gate 7 (key half): a key, unless the row is local and names none. The env answers nos:<var>.
     secret = _text(spec, "auth_secret")
-    if spec.get("local") is not True or secret:
-        return Decision("refused", declared, model_env, model_id, why=f"backend '{declared}' is armed but its auth_secret '{secret}' resolves to nothing here (the thalamus holds no vault)")
+    token = (env(secret) or "") if secret else ""
+    if not token and (spec.get("local") is not True or secret):
+        var = secret.removeprefix("nos:")
+        return Decision("refused", declared, model_env, model_id, why=f"backend '{declared}' is armed but its auth_secret '{secret}' resolves to nothing: set {var} in credentials.yml and converge")
     return Decision("bound", declared, model_env, model_id)
 
 

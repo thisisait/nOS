@@ -3,13 +3,6 @@
 # nos_data_root) live in default.config.yml. The socket (~/.nos/thalamus.sock) is fixed in src/main.rs.
 thalamus_launchd_label: "eu.thisisait.nos.thalamus"
 thalamus_home: "{{ ansible_facts['env']['HOME'] }}/thalamus"
-# The var behind the auth_secret (nos:<var>) of the row iris binds, read where the binary reads it;
-# "" for a keyless row. The plist renders that one var's value as NOS_SECRET_<VAR> (src/main.rs).
-thalamus_model_secret: >-
-  {{ ((lookup('file', nos_main_checkout ~ '/state/habitat/llm-backends.yml') | from_yaml).backends
-  [(lookup('file', nos_main_checkout ~ '/files/anatomy/agents/iris/agent.yml') | from_yaml).model.backend]
-  .auth_secret | default('', true)) | regex_replace('^nos:', '') }}
-thalamus_model_token: "{{ lookup('vars', thalamus_model_secret, default='') if thalamus_model_secret else '' }}"
 thalamus_bin: "{{ thalamus_home }}/bin/thalamus"
 thalamus_log_dir: "{{ thalamus_home }}/log"
 thalamus_target_dir: "{{ thalamus_home }}/target"
