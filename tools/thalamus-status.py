@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Is the thalamus up, and what did it last do?
 
-Reads the socket (~/.nos/thalamus.sock: a socket, mode 0600), the launchd job
+Reads the socket (~/.nos/thalamus.sock: a socket, mode 0600, accepting a connect), the launchd job
 (eu.thisisait.nos.thalamus), the ledger (~/thalamus/data/ledger.db, its dir 0700)
 and the ledger's last session. Each line is OK / RED / UNKNOWN with its source.
 
-Reads only. Exit 0 always. A source it cannot read is UNKNOWN, never green.
+Reads only (the connect opens no session). Exit 0 always. A source it cannot read is UNKNOWN, never green.
 `--tags thalamus,verify` fails on any line that is not OK.
 
 Usage:
@@ -20,6 +20,7 @@ import importlib.util
 import json
 import os
 import pathlib
+import socket
 import sqlite3
 import stat
 import subprocess
@@ -44,7 +45,18 @@ def judge_socket(path: pathlib.Path) -> dict:
     if not stat.S_ISSOCK(st.st_mode):
         return line("socket", RED, "not a socket", str(path))
     mode = stat.S_IMODE(st.st_mode)
-    return line("socket", OK if mode == 0o600 else RED, f"mode {mode:o}", str(path))
+    if mode != 0o600:
+        return line("socket", RED, f"mode {mode:o}", str(path))
+    # A crashed daemon leaves its socket on disk: only an accepted connect() is serving.
+    with socket.socket(socket.AF_UNIX) as s:
+        s.settimeout(2)
+        try:
+            s.connect(str(path))
+        except (ConnectionRefusedError, FileNotFoundError):
+            return line("socket", RED, "mode 600, stale: nobody accepts", str(path))
+        except OSError as exc:
+            return line("socket", UNKNOWN, f"connect failed ({type(exc).__name__})", str(path))
+    return line("socket", OK, "mode 600, accepting", str(path))
 
 
 def judge_launchd(res: tuple[int, str] | None) -> dict:
@@ -55,7 +67,9 @@ def judge_launchd(res: tuple[int, str] | None) -> dict:
     if rc != 0:
         return line("launchd", RED, f"not loaded (rc {rc})", src)
     pid = next((ln.split("=", 1)[1].strip() for ln in out.splitlines() if ln.strip().startswith("pid =")), None)
-    return line("launchd", OK, f"loaded, pid {pid}" if pid else "loaded, not running", src)
+    if not pid:
+        return line("launchd", RED, "loaded, not running (crash loop?)", src)
+    return line("launchd", OK, f"loaded, pid {pid}", src)
 
 
 def _open_ro(db: pathlib.Path):
