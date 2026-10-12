@@ -127,3 +127,31 @@ fn binding_an_armed_keyed_backend_refuses_without_a_vault() {
     let e = env(&[("NOS_ARMED_BACKENDS", "minimax"), ("NOS_MINIMAX_MODEL", "m1")]);
     assert!(refused(decide(MINIMAX_CELL, &register(), e)).contains("auth_secret"));
 }
+
+/// tests/binding-cases.yml: the cases tools/nos_cell_binding.py (the converge preflight) also runs.
+#[test]
+fn binding_agrees_with_the_shared_cases() {
+    use serde_yaml_ng::Value;
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/binding-cases.yml");
+    let doc: Value = serde_yaml_ng::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    let s = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).unwrap_or_default().to_string();
+    let cases = doc["cases"].as_sequence().unwrap();
+    assert!(cases.len() >= 10, "the shared cases shrank");
+    for case in cases {
+        let agent = match case.get("cell").and_then(Value::as_str) {
+            Some(c) => std::fs::read_to_string(repo().join("files/anatomy/agents").join(c).join("agent.yml")).unwrap(),
+            None => s(case, "agent"),
+        };
+        let pairs: Vec<(String, String)> = case["env"].as_mapping().unwrap().iter()
+            .map(|(k, v)| (k.as_str().unwrap().to_string(), v.as_str().unwrap().to_string())).collect();
+        let got = decide(&agent, &register(), |k| pairs.iter().find(|(n, _)| n == k).map(|(_, v)| v.clone()));
+        let (name, want) = (s(case, "name"), &case["expect"]);
+        match (s(want, "kind").as_str(), got) {
+            ("default", Ok(Decision::Default)) => {}
+            ("disarmed", Ok(Decision::Disarmed(b))) => assert_eq!(b, s(want, "backend"), "{name}"),
+            ("bound", Ok(Decision::Bound(b))) => assert_eq!(b.model_id, s(want, "model_id"), "{name}"),
+            ("refused", Err(why)) => assert!(why.contains(&s(want, "contains")), "{name}: {why}"),
+            (kind, got) => panic!("{name}: expected {kind}, got {got:?}"),
+        }
+    }
+}

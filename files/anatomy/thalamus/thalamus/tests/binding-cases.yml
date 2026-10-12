@@ -1,0 +1,69 @@
+# One set of cases, two resolvers: src/binding.rs (tests/binding.rs) and tools/nos_cell_binding.py
+# (tests/anatomy/test_llm_cell_requirement.py). Both read the REAL register; `cell:` reads the real cell.
+# expect.kind: default | disarmed | bound | refused; `model_id` for bound, `backend` for disarmed,
+# `contains` a fragment of the refusal.
+cases:
+  - name: iris armed binds the local model
+    cell: iris
+    env: {NOS_ARMED_BACKENDS: ollama, NOS_LOCAL_MODEL: "qwen3:14b"}
+    expect: {kind: bound, model_id: "qwen3:14b"}
+  - name: the binding does not judge size
+    cell: iris
+    env: {NOS_ARMED_BACKENDS: ollama, NOS_LOCAL_MODEL: "llama3.2:3b"}
+    expect: {kind: bound, model_id: "llama3.2:3b"}
+  - name: iris disarmed refuses rather than degrade
+    cell: iris
+    env: {NOS_LOCAL_MODEL: "qwen3:14b"}
+    expect: {kind: refused, contains: "not armed"}
+  - name: armed with an empty model env refuses
+    cell: iris
+    env: {NOS_ARMED_BACKENDS: ollama}
+    expect: {kind: refused, contains: "NOS_LOCAL_MODEL is empty"}
+  - name: a disarmed cloud cell may degrade
+    agent: "name: cloudy\nmodel: {primary: claude-sonnet, backend: minimax}\ngdpr: {processors: [{name: MiniMax}], transfers_outside_eu: true}\n"
+    env: {NOS_MINIMAX_MODEL: m1}
+    expect: {kind: disarmed, backend: minimax}
+  - name: an armed keyed backend refuses without a vault
+    agent: "name: cloudy\nmodel: {primary: claude-sonnet, backend: minimax}\ngdpr: {processors: [{name: MiniMax}], transfers_outside_eu: true}\n"
+    env: {NOS_ARMED_BACKENDS: minimax, NOS_MINIMAX_MODEL: m1}
+    expect: {kind: refused, contains: "auth_secret"}
+  - name: no backend is the default
+    agent: "name: c\nmodel: {primary: claude-sonnet}\n"
+    env: {NOS_ARMED_BACKENDS: ollama}
+    expect: {kind: default}
+  - name: the default row is the default
+    agent: "name: c\nmodel: {primary: claude-sonnet, backend: anthropic}\n"
+    env: {}
+    expect: {kind: default}
+  - name: an unlisted backend refuses
+    agent: "name: c\nmodel: {primary: openai-local-sonnet, backend: nowhere}\n"
+    env: {}
+    expect: {kind: refused, contains: "does not list"}
+  - name: a provider that does not speak the protocol refuses
+    agent: "name: c\nmodel: {primary: claude-sonnet, backend: ollama}\ngdpr: {processors: [{name: on-device}]}\n"
+    env: {NOS_ARMED_BACKENDS: ollama, NOS_LOCAL_MODEL: "qwen3:14b"}
+    expect: {kind: refused, contains: "wire protocol"}
+  - name: deferred refuses
+    agent: "name: c\nmodel: {primary: openai-local-sonnet, backend: ollama}\nmetadata: {runner_status: deferred}\ngdpr: {processors: [{name: on-device}]}\n"
+    env: {NOS_ARMED_BACKENDS: ollama, NOS_LOCAL_MODEL: "qwen3:14b"}
+    expect: {kind: refused, contains: "deferred"}
+  - name: a record that does not name the processor refuses
+    agent: "name: c\nmodel: {primary: openai-local-sonnet, backend: ollama}\ngdpr: {processors: [{name: Anthropic}]}\n"
+    env: {NOS_ARMED_BACKENDS: ollama, NOS_LOCAL_MODEL: "qwen3:14b"}
+    expect: {kind: refused, contains: "never names 'on-device'"}
+  - name: an EU-only record never routes off the EU
+    agent: "name: c\nmodel: {primary: claude-sonnet, backend: minimax}\ngdpr: {processors: [{name: MiniMax}], transfers_outside_eu: false}\n"
+    env: {}
+    expect: {kind: refused, contains: "not EU-resident"}
+  - name: the opus tier refuses
+    agent: "name: c\nmodel: {primary: openai-local-opus, backend: ollama}\ngdpr: {processors: [{name: on-device}], transfers_outside_eu: false}\n"
+    env: {NOS_ARMED_BACKENDS: ollama, NOS_LOCAL_MODEL: "qwen3:14b"}
+    expect: {kind: refused, contains: "tier 'opus'"}
+  - name: no tier word refuses
+    agent: "name: c\nmodel: {primary: openai-gpt4, backend: ollama}\ngdpr: {processors: [{name: on-device}]}\n"
+    env: {NOS_ARMED_BACKENDS: ollama, NOS_LOCAL_MODEL: "qwen3:14b"}
+    expect: {kind: refused, contains: "no model mapping"}
+  - name: the haiku tier reads the small model
+    agent: "name: c\nmodel: {primary: openai-local-haiku, backend: ollama}\ngdpr: {processors: [{name: on-device}]}\n"
+    env: {NOS_ARMED_BACKENDS: ollama, NOS_LOCAL_SMALL_MODEL: "hermes3:8b"}
+    expect: {kind: bound, model_id: "hermes3:8b"}
