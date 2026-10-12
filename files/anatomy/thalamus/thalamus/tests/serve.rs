@@ -301,7 +301,8 @@ const EDIT: &str = r#"{"table": "todos", "row_id": "r1", "values": {"status": "d
 
 #[test]
 fn approve_posts_the_approved_cells_once_as_the_person() {
-    let rig = rig_n("approve", mapped(), vec![ROWS.into(), POSTED.into()],
+    // The proposal's read, commit's re-read, then the POST.
+    let rig = rig_n("approve", mapped(), vec![ROWS.into(), ROWS.into(), POSTED.into()],
         vec![call("propose_row_edit", EDIT), answer("Proposed.")]);
     let (s, mut r, session, approval, diff) = propose(&rig);
     assert_eq!(diff.table, "todos");
@@ -652,4 +653,22 @@ fn one_approval_waits_at_a_time() {
     let asks = got.iter().filter(|m| matches!(m, ToShell::ApprovalRequest { .. })).count();
     assert_eq!(asks, 1, "{got:?}");
     assert!(rig.model.lock().unwrap()[1].1.contains("an approval is already waiting"));
+}
+
+#[test]
+fn approve_writes_nothing_over_a_row_that_moved_since_the_proposal() {
+    let changed = r#"{"success": true, "data": {"rows": [{"id": "r1", "values": {"title": "Alpha one", "status": "blocked"}}]}}"#;
+    let gone = r#"{"success": true, "data": {"rows": [{"id": "r2", "values": {"title": "beta"}}]}}"#;
+    for (name, now, want) in [("moved", changed, "changed since"), ("gone", gone, "gone since")] {
+        let rig = rig_n(name, mapped(), vec![ROWS.into(), now.into(), POSTED.into()],
+            vec![call("propose_row_edit", EDIT), answer("Proposed.")]);
+        let (s, mut r, session, approval, _) = propose(&rig);
+        decide(&s, &approval, Decision::Approve);
+        assert!(matches!(next(&mut r), Some(ToShell::Text { text, .. }) if text.contains(want)), "{name}");
+        assert!(posts(&rig).is_empty(), "{name}: wrote over a row the person did not see");
+        let db = rusqlite::Connection::open(&rig.ledger).unwrap();
+        let why: String = db.query_row("SELECT result_json FROM events WHERE run_id = ?1 AND type = 'agent_tool_result' \
+            AND task LIKE '%propose_row_edit' ORDER BY id DESC LIMIT 1", [&session], |x| x.get(0)).unwrap();
+        assert!(why.contains(want), "{name}: the ledger does not say why: {why}");
+    }
 }
