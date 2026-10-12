@@ -40,13 +40,16 @@ _live_guard.arm()
 
 def pytest_configure(config):
     config.addinivalue_line(
-        "markers", f"{_live_guard.MARK}: this test may read ~/.nos, run docker and "
-        "reach loopback service ports (the boundary is lifted for it alone)")
+        "markers", f"{_live_guard.MARK}: reads ~/.nos, docker, or a loopback service; "
+        f"skipped unless {_live_guard.ENV}=1, which lifts the offline boundary for it")
 
 
 @pytest.fixture(autouse=True)
 def _offline_boundary(request):
     if request.node.get_closest_marker(_live_guard.MARK):
+        if not _live_guard.live_run():
+            pytest.skip(
+                f"{_live_guard.ENV} unset — @pytest.mark.live runs only with {_live_guard.ENV}=1")
         with _live_guard.lifted():
             yield
     else:

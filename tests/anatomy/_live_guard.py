@@ -16,8 +16,13 @@ spawns (HOME and PATH are inherited; the socket patch is in-process only):
   loopback ports    socket.connect to 127.0.0.1 / ::1 below the ephemeral
                     floor raises; a test's own server (port 0) still works
 
-Opt in per test with `@pytest.mark.live`; disarm a whole run with NOS_LIVE=1
-(the e2e suites live under tests/e2e and never load this). Gate:
+A `@pytest.mark.live` test is skipped unless the run sets NOS_LIVE=1.
+NOS_LIVE=1 disarms the boundary for the whole run; the mark then lifts it
+for that test (a no-op while the run is already disarmed). After a converge:
+
+    NOS_LIVE=1 python3 -m pytest tests/anatomy -m live
+
+The e2e suites live under tests/e2e and never load this. Gate:
 tests/anatomy/test_a_test_cannot_reach_the_live_estate.py.
 """
 
@@ -38,7 +43,7 @@ EPHEMERAL_FLOOR = 32768                       # Linux default floor; macOS start
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}
 SECRET_ENV = re.compile(r"(TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|APIKEY)$|^AWS_", re.I)
 REFUSAL = ("refused by tests/anatomy/_live_guard.py — tests/anatomy is offline; "
-           "mark the test @pytest.mark.live or run with NOS_LIVE=1")
+           "a @pytest.mark.live test runs only with NOS_LIVE=1")
 
 _real: dict = {}
 _armed = False

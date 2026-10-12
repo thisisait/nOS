@@ -8,7 +8,7 @@ memory) so it runs in CI without an SSO password.
 
 Run after a playbook to validate the auto-wiring's render path:
 
-    python3 -m pytest tests/anatomy/test_hub_render_smoke.py -v
+    NOS_LIVE=1 python3 -m pytest tests/anatomy/test_hub_render_smoke.py -v
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import subprocess
 
 import pytest
 
-# Read-only probes of the live Wing (token from the plist): the offline boundary is lifted for this file.
+# Read-only probes of the live Wing (token from the plist). Skipped unless NOS_LIVE=1.
 pytestmark = pytest.mark.live
 
 

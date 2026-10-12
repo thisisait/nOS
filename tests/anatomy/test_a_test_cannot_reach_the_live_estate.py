@@ -69,11 +69,15 @@ def test_secret_shaped_env_is_scrubbed():
     assert not [k for k in os.environ if guard.SECRET_ENV.search(k)]
 
 
-@pytest.mark.live
-def test_the_marker_lifts_the_boundary_for_one_test():
-    assert os.environ["HOME"] == guard._real["HOME"]
-    assert socket.socket.connect is guard._real["connect"]
-    assert os.environ["PATH"] == guard._real["PATH"], "the docker shim is still on PATH"
+def test_lifted_opens_the_boundary_for_one_block():
+    """`lifted()` is the door a live test gets once NOS_LIVE=1 has let it run."""
+    assert os.environ["HOME"] != guard._real["HOME"]
+    with guard.lifted():
+        assert os.environ["HOME"] == guard._real["HOME"]
+        assert socket.socket.connect is guard._real["connect"]
+        assert os.environ["PATH"] == guard._real["PATH"], "the docker shim is still on PATH"
+    assert os.environ["HOME"] != guard._real["HOME"]
+    assert socket.socket.connect is not guard._real["connect"]
 
 
 def test_a_live_mark_is_skipped_without_nos_live(tmp_path):
