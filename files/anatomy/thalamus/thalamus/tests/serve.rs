@@ -3,7 +3,7 @@
 //! that person and the proxy secret — which no log, ledger or model ever sees.
 
 use nos_contract::renderers::Component;
-use nos_contract::wire::{decode_to_shell, encode, Decision, ToShell, ToThalamus};
+use nos_contract::wire::{decode_to_shell, encode, Decision, Phase, ToShell, ToThalamus};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
 use std::os::unix::fs::PermissionsExt;
@@ -168,9 +168,20 @@ fn connect(sock: &std::path::Path) -> UnixStream {
     s
 }
 
-fn next(r: &mut BufReader<UnixStream>) -> Option<ToShell> {
+/// The next message, activity included.
+fn raw(r: &mut BufReader<UnixStream>) -> Option<ToShell> {
     let mut line = String::new();
     (r.read_line(&mut line).unwrap() > 0).then(|| decode_to_shell(&line))
+}
+
+/// The next message the conversation is made of; activity is the eye's, not the log's.
+fn next(r: &mut BufReader<UnixStream>) -> Option<ToShell> {
+    loop {
+        match raw(r) {
+            Some(ToShell::Activity { .. }) => continue,
+            m => return m,
+        }
+    }
 }
 
 fn tool_call(args: &str) -> String {
@@ -821,4 +832,50 @@ fn approve_writes_nothing_over_a_row_that_moved_since_the_proposal() {
             AND task LIKE '%propose_row_edit' ORDER BY id DESC LIMIT 1", [&session], |x| x.get(0)).unwrap();
         assert!(why.contains(want), "{name}: the ledger does not say why: {why}");
     }
+}
+
+// --- the eye (pupil I3): serve says what it is doing, every step of a turn ---
+
+fn phases(got: &[ToShell]) -> Vec<String> {
+    got.iter().map(|m| match m {
+        ToShell::Activity { phase: Phase::Tool { name }, .. } => format!("tool:{name}"),
+        ToShell::Activity { phase, .. } => serde_json::to_value(phase).unwrap().as_str().unwrap().to_string(),
+        m => serde_json::to_value(m).unwrap()["t"].as_str().unwrap().to_string(),
+    }).collect()
+}
+
+/// Raw messages up to and including the next Text or Refused.
+fn until_text(r: &mut BufReader<UnixStream>) -> Vec<ToShell> {
+    let mut got = Vec::new();
+    while let Some(m) = raw(r) {
+        let end = matches!(m, ToShell::Text { .. } | ToShell::Refused { .. });
+        got.push(m);
+        if end {
+            break;
+        }
+    }
+    got
+}
+
+#[test]
+fn a_turn_says_thinking_before_its_text_and_idle_at_the_end() {
+    let rig = rig("eye", mapped(), ROWS, vec![tool_call(r#"{"table": "todos", "q": "alpha"}"#), answer("Found one.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    (&s).write_all(encode(&ToThalamus::Turn { session: None, text: "find alpha".into() }).as_bytes()).unwrap();
+    let got = until_text(&mut r);
+    assert_eq!(phases(&got), ["session", "thinking", "tool:search_rows", "render", "thinking", "text"]);
+    let session = session_of(&got);
+    assert!(matches!(raw(&mut r), Some(ToShell::Activity { session: s2, phase: Phase::Idle }) if s2 == session));
+}
+
+#[test]
+fn an_approved_edit_says_writing_then_idle() {
+    let rig = rig_n("eye-write", mapped(), vec![ROWS.into(), ROWS.into(), POSTED.into()],
+        vec![call("propose_row_edit", EDIT), answer("Proposed.")]);
+    let (s, mut r, _, approval, _) = propose(&rig);
+    decide(&s, &approval, Decision::Approve);
+    let got = phases(&until_text(&mut r));
+    assert!(got.ends_with(&["writing".into(), "text".into()]), "{got:?}");
+    assert!(matches!(raw(&mut r), Some(ToShell::Activity { phase: Phase::Idle, .. })));
 }
