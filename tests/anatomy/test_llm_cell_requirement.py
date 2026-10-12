@@ -28,6 +28,7 @@ REGISTER = (REPO / "state/habitat/llm-backends.yml").read_text()
 def _helper():
     spec = importlib.util.spec_from_file_location("nos_cell_binding", HELPER)
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod          # @dataclass resolves its module by name
     spec.loader.exec_module(mod)
     return mod
 
@@ -77,7 +78,8 @@ def test_iris_with_a_big_enough_local_model_passes():
 @pytest.mark.parametrize("env,model,why", [
     ({"NOS_ARMED_BACKENDS": "ollama", "NOS_LOCAL_MODEL": "llama3.2:3b"}, "llama3.2:3b", "3B parameters, below the 8B minimum"),
     ({"NOS_ARMED_BACKENDS": "ollama", "NOS_LOCAL_MODEL": "qwen3:latest"}, "qwen3:latest", "UNKNOWN"),
-    ({"NOS_LOCAL_MODEL": "qwen3:14b"}, "(none set)", "ollama is not enabled"),
+    ({"NOS_LOCAL_MODEL": "qwen3:14b"}, "qwen3:14b", "ollama is not enabled"),
+    ({}, "(none set)", "ollama is not enabled"),
     ({"NOS_ARMED_BACKENDS": "ollama"}, "(none set)", "NOS_LOCAL_MODEL is empty"),
 ])
 def test_iris_refuses_with_service_cell_model_why_and_both_fixes(env, model, why):

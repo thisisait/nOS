@@ -37,12 +37,10 @@
         <key>NOS_TIER1_GROUPS</key>
         <string>{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | first).groups | join(',') }}</string>
         <!-- iris binds to ollama only (state/habitat/llm-backends.yml); local, so no token. -->
-        <key>NOS_ARMED_BACKENDS</key>
-        <string>{{ 'ollama' if ollama_enabled | default(false) | bool else '' }}</string>
-        <key>NOS_LOCAL_MODEL</key>
-        <string>{{ ollama_model | default('') }}</string>
-        <key>NOS_LOCAL_SMALL_MODEL</key>
-        <string>{{ ollama_small_model | default('') }}</string>
+{% for name, value in thalamus_binding_env.items() %}
+        <key>{{ name }}</key>
+        <string>{{ value }}</string>
+{% endfor %}
     </dict>
     <key>RunAtLoad</key>
     <true/>

@@ -10,3 +10,9 @@ thalamus_socket: "{{ ansible_facts['env']['HOME'] }}/.nos/thalamus.sock"
 thalamus_cargo: "{{ ansible_facts['env']['HOME'] }}/.cargo/bin/cargo"
 # serve maps the model's "roadmap" to this; declared once in default.config.yml.
 thalamus_roadmap_table_id: "{{ keap_roadmap_table_id }}"
+# The env src/binding.rs binds iris from: the plist renders it, the preflight
+# (tasks/llm-requirement.yml) judges it. ollama is armed only with its daemon installed.
+thalamus_binding_env:
+  NOS_ARMED_BACKENDS: "{{ 'ollama' if (ollama_enabled | default(false) | bool and install_ollama | default(false) | bool) else '' }}"
+  NOS_LOCAL_MODEL: "{{ ollama_model | default('') }}"
+  NOS_LOCAL_SMALL_MODEL: "{{ ollama_small_model | default('') }}"

@@ -334,6 +334,16 @@
     - import_tasks: tasks/preflight-apex-ruling.yml
       tags: ['always', 'preflight', 'apex']
 
+    # A cell bound to local ollama needs ollama on and a model of at least
+    # llm_cell_min_params_b; refuse now, not after an hour of stack-up (ruling 2026-10-12).
+    - name: "[preflight] The thalamus's cell gets a local model big enough"
+      ansible.builtin.include_role:
+        name: pazny.thalamus
+        tasks_from: llm-requirement.yml
+        apply: { tags: ['always', 'preflight'] }
+      when: install_thalamus | default(false) | bool
+      tags: ['always', 'preflight']
+
     # The git ref this converge is deploying FROM, computed once and stamped
     # into the host organs (pazny.bone file, pazny.wing plist env) so their
     # /health can answer `repo != running system` — the doctrine this repo is

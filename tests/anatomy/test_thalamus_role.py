@@ -42,8 +42,10 @@ def _plist(**over) -> dict:
            "thalamus_data_dir": "/n/platform/services/thalamus/data", "nos_main_checkout": "/repo",
            "nos_tools_venv": "/h/.nos/tools-venv", "homebrew_prefix": "/opt/homebrew",
            "ansible_facts": {"env": {"HOME": "/h"}}, "keap_proxy_shared_secret": "s3cret", "keap_port": 8091,
-           "ollama_enabled": True, "ollama_model": "qwen3:14b", "ollama_small_model": "hermes3:8b",
+           "ollama_enabled": True, "install_ollama": True, "ollama_model": "qwen3:14b", "ollama_small_model": "hermes3:8b",
            "authentik_rbac_tiers": _default_config()["authentik_rbac_tiers"], "thalamus_roadmap_table_id": "rt", **over}
+    benv = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())["thalamus_binding_env"]
+    ctx["thalamus_binding_env"] = {k: env.from_string(v).render(**ctx) for k, v in benv.items()}
     text = env.from_string((ROLE / "templates" / "thalamus.plist.j2").read_text()).render(**ctx)
     return plistlib.loads(text.encode())
 

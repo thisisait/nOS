@@ -968,6 +968,10 @@ ollama_small_model: "hermes3:8b"  # -> NOS_LOCAL_SMALL_MODEL (haiku tier)
 # names the id `ollama list` must show. See files/anatomy/agents/
 # invoice-vision-ocr/agent.yml for the consumer.
 ollama_vision_model: ""        # -> NOS_LOCAL_VISION_MODEL  (vision tier)
+# A service whose cell binds to local ollama (install_thalamus -> iris) refuses to converge
+# unless the model it would bind has at least this many billion parameters (size from the tag;
+# no size in the tag = refused). Ruling 2026-10-12; tools/nos_cell_binding.py.
+llm_cell_min_params_b: 8
 
 # THE PIN THAT DID NOT EXIST, AND WHAT ITS ABSENCE COST (added 2026-08-08).
 #
