@@ -2,15 +2,16 @@
 """Is the thalamus up, and what did it last do?
 
 Reads the socket (~/.nos/thalamus.sock: a socket, mode 0600, accepting a connect), the launchd job
-(eu.thisisait.nos.thalamus), the ledger (~/thalamus/data/ledger.db, its dir 0700)
-and the ledger's last session. Each line is OK / RED / UNKNOWN with its source.
+(eu.thisisait.nos.thalamus), the model serve last started with (~/thalamus/log/launchd.err.log),
+the ledger (~/thalamus/data/ledger.db, its dir 0700) and the ledger's last session.
+Each line is OK / RED / UNKNOWN with its source; serving without a model is UNKNOWN (degraded).
 
 Reads only (the connect opens no session). Exit 0 always. A source it cannot read is UNKNOWN, never green.
 `--tags thalamus,verify` fails on any line that is not OK.
 
 Usage:
     tools/thalamus-status.py [--json]
-Env (tests): NOS_THALAMUS_SOCKET, NOS_THALAMUS_LEDGER.
+Env (tests): NOS_THALAMUS_SOCKET, NOS_THALAMUS_LEDGER, NOS_THALAMUS_LOG.
 """
 
 from __future__ import annotations
@@ -102,6 +103,23 @@ def judge_ledger(db: pathlib.Path) -> list[dict]:
     return [led, line("last session", OK, detail, str(db))]
 
 
+def judge_model(log: pathlib.Path) -> dict:
+    """The last `thalamus: model ` line serve printed at start (src/main.rs) to launchd's stderr log."""
+    try:
+        with log.open("rb") as f:
+            f.seek(max(0, log.stat().st_size - (1 << 20)))
+            lines = f.read().decode(errors="replace").splitlines()
+    except OSError as exc:
+        return line("model", UNKNOWN, f"no start line read ({type(exc).__name__})", str(log))
+    said = next((ln[len("thalamus: model "):] for ln in reversed(lines) if ln.startswith("thalamus: model ")), None)
+    if said is None:
+        return line("model", UNKNOWN, "no start line in the log", str(log))
+    if said.startswith("bound "):
+        return line("model", OK, said, str(log))
+    # Controls still answer, turns are refused: degraded, never green.
+    return line("model", UNKNOWN, f"degraded: serving without a model: {said.removeprefix('UNBOUND: ')}", str(log))
+
+
 def _launchctl() -> tuple[int, str] | None:
     try:
         p = subprocess.run(["launchctl", "print", f"gui/{os.getuid()}/{LABEL}"], capture_output=True, text=True, timeout=10)
@@ -113,7 +131,8 @@ def _launchctl() -> tuple[int, str] | None:
 def collect() -> list[dict]:
     sock = pathlib.Path(os.environ.get("NOS_THALAMUS_SOCKET", HOME / ".nos/thalamus.sock"))
     db = pathlib.Path(os.environ.get("NOS_THALAMUS_LEDGER", HOME / "thalamus/data/ledger.db"))
-    return [judge_socket(sock), judge_launchd(_launchctl())] + judge_ledger(db)
+    log = pathlib.Path(os.environ.get("NOS_THALAMUS_LOG", HOME / "thalamus/log/launchd.err.log"))
+    return [judge_socket(sock), judge_launchd(_launchctl()), judge_model(log)] + judge_ledger(db)
 
 
 def main() -> int:

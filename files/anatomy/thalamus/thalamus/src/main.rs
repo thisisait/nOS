@@ -29,8 +29,12 @@ fn serve_main() -> Result<(), String> {
     let sock = home.join(".nos/thalamus.sock");
     let listener = serve::bind(&sock).map_err(|e| format!("{}: {e}", sock.display()))?;
     let keap_url = std::env::var("KEAP_URL").unwrap_or_else(|_| "http://127.0.0.1:8091".into());
-    eprintln!("thalamus: {} -> {keap_url} (map ~/{IDENTITY_MAP}, model {})", sock.display(),
-              binding.as_ref().map(|b| b.model_id.as_str()).unwrap_or("REFUSED"));
+    eprintln!("thalamus: {} -> {keap_url} (map ~/{IDENTITY_MAP})", sock.display());
+    // One line tools/thalamus-status.py reads from launchd's stderr log; the why stays on it.
+    match &binding {
+        Ok(b) => eprintln!("thalamus: model bound {}-{}", b.name, b.model_id),
+        Err(why) => eprintln!("thalamus: model UNBOUND: {}", why.replace('\n', " ")),
+    }
     let srv = Server {
         map: home.join(IDENTITY_MAP),
         keap_url,
