@@ -97,10 +97,23 @@ fn rig(name: &str, map: serde_json::Value, keap_body: &str, model_bodies: Vec<St
 }
 
 fn rig_n(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_bodies: Vec<String>) -> Rig {
-    rig_full(name, map, keap_bodies, model_bodies, true)
+    rig_full(name, map, keap_bodies, model_bodies, Some(local()))
 }
 
-fn rig_full(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_bodies: Vec<String>, bound: bool) -> Rig {
+/// The keyless local binding; rig_full points its base_url at the fake model.
+fn local() -> Binding {
+    Binding { name: "ollama".into(), base_url: String::new(), auth_token: String::new(), model_id: "qwen3:14b".into() }
+}
+
+const KEY: &str = "sk-eu-model-key-91c2";
+
+/// Iris's cloud binding (mistral-eu), keyed.
+fn cloud() -> Binding {
+    Binding { name: "mistral-eu".into(), base_url: String::new(), auth_token: KEY.into(), model_id: "mistral-large-latest".into() }
+}
+
+fn rig_full(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_bodies: Vec<String>,
+            bound: Option<Binding>) -> Rig {
     let d = dir(name);
     let map_path = d.join("identity-map.yml");
     std::fs::write(&map_path, map.to_string()).unwrap();
@@ -113,11 +126,7 @@ fn rig_full(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_
         keap_url,
         secret: SECRET.into(),
         ledger: Mutex::new(Ledger::open(&ledger).unwrap()),
-        binding: if bound {
-            Ok(Binding { name: "ollama".into(), base_url: model_url, auth_token: String::new(), model_id: "qwen3:14b".into() })
-        } else {
-            Err("iris is disarmed".into())
-        },
+        binding: bound.map(|b| Binding { base_url: model_url, ..b }).ok_or_else(|| "iris is disarmed".into()),
         repo: d.clone(),
         reader_secs: 2,
         tier1: vec!["nos-admins".into()],
@@ -251,6 +260,50 @@ fn serve_searches_as_the_mapped_person_and_never_spills_the_secret() {
         .prepare("SELECT COALESCE(result_json, '') || task FROM events").unwrap()
         .query_map([], |r| r.get::<_, String>(0)).unwrap().map(Result::unwrap).collect();
     assert!(!dump.contains(SECRET), "the proxy secret reached the ledger");
+}
+
+#[test]
+fn a_keyed_model_gets_the_bearer_and_nothing_else_sees_the_key() {
+    let map = serde_json::json!({"logins": {me(): {"username": "alice", "groups": ["nos-users"]}}});
+    let rig = rig_full("bearer", map, vec![ROWS.into()], vec![tool_call(r#"{"table": "todos", "q": "alpha"}"#),
+        answer("Found.")], Some(cloud()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "find alpha");
+    let session = session_of(&got);
+    assert!(got.iter().any(|m| matches!(m, ToShell::Session { model_uri, .. } if model_uri == "mistral-eu-mistral-large-latest")));
+    drop(s);
+    drop(r);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+
+    let model = rig.model.lock().unwrap().clone();
+    assert_eq!(model.len(), 2);
+    for (head, body) in &model {
+        assert!(head.to_ascii_lowercase().contains(&format!("authorization: bearer {}", KEY.to_ascii_lowercase())), "{head}");
+        assert!(!body.contains(KEY), "the key reached the model's messages");
+    }
+    let keap = rig.keap.lock().unwrap().clone();
+    assert!(keap.iter().all(|(h, b)| !h.contains(KEY) && !b.contains(KEY)), "KEAP saw the model key");
+    let log = String::from_utf8(rig.log.0.lock().unwrap().clone()).unwrap();
+    assert!(!log.contains(KEY), "the model key reached the log:\n{log}");
+    assert!(types_of(&rig.ledger, &session).len() >= 4, "the turn is in the ledger");
+    // Every byte of the ledger and its journal, not one column: no table holds the key.
+    for f in std::fs::read_dir(rig.ledger.parent().unwrap()).unwrap().map(|e| e.unwrap().path()) {
+        if f.to_string_lossy().contains("ledger.db") {
+            let bytes = std::fs::read(&f).unwrap();
+            assert!(!bytes.windows(KEY.len()).any(|w| w == KEY.as_bytes()), "the model key reached {}", f.display());
+        }
+    }
+}
+
+#[test]
+fn a_local_model_gets_no_authorization_header() {
+    let rig = rig("nobearer", mapped(), ROWS, vec![answer("hi")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "hello");
+    let model = rig.model.lock().unwrap().clone();
+    assert!(model.iter().all(|(h, _)| !h.to_ascii_lowercase().contains("authorization:")), "{model:?}");
 }
 
 // --- increment 6: a write renderer cannot commit without the approval event ---
@@ -435,7 +488,7 @@ print(json.dumps({"generated_at": "x", "unknown": ["gitlab: unreadable"], "items
 #[test]
 fn approvals_runs_the_awaiting_reader_without_the_model() {
     // Disarmed model: a control still answers, because the model is not involved.
-    let rig = rig_full("approvals", admin(), vec![ROWS.into()], vec![answer("never")], false);
+    let rig = rig_full("approvals", admin(), vec![ROWS.into()], vec![answer("never")], None);
     reader(&rig, "awaiting-operator.py", AWAITING);
     match raise(&rig, nos_contract::wire::ControlView::Approvals) {
         ToShell::Render { component: Component::ApprovalsList(a), .. } => {

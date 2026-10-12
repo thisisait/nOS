@@ -55,6 +55,109 @@ fn serve_without_a_model_says_so_on_one_line_the_reader_parses() {
     assert!(line.starts_with("thalamus: model UNBOUND: ") && line.contains("agent.yml"), "{line}");
 }
 
+const KEY: &str = "sk-eu-main-key-5d0a";
+
+/// A HOME whose repo holds the real iris cell and register, and a red-status reader that
+/// writes the env it inherited to <home>/child-env.json.
+fn iris_home(name: &str) -> std::path::PathBuf {
+    let home = std::path::PathBuf::from(format!("/tmp/th-{}-{name}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&home);
+    let real = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../..");
+    for f in ["files/anatomy/agents/iris/agent.yml", "state/habitat/llm-backends.yml"] {
+        std::fs::create_dir_all(home.join(f).parent().unwrap()).unwrap();
+        std::fs::copy(real.join(f), home.join(f)).unwrap();
+    }
+    std::fs::create_dir_all(home.join(".nos")).unwrap();
+    std::fs::create_dir_all(home.join("tools")).unwrap();
+    std::fs::write(home.join("tools/red-status.py"), format!(
+        "import json, os\nopen({:?}, 'w').write(json.dumps(dict(os.environ)))\n\
+         print(json.dumps({{'red_count': 0, 'reds': [], 'hold_count': 0, 'holds': []}}))\n",
+        home.join("child-env.json"))).unwrap();
+    let me = thalamus::serve::login(unsafe { libc::getuid() }).unwrap();
+    std::fs::write(home.join(".nos/identity-map.yml"),
+        serde_json::json!({"logins": {me: {"username": "alice", "groups": ["nos-admins"]}}}).to_string()).unwrap();
+    home
+}
+
+/// serve as the plist runs it with iris armed on mistral-eu; `key` is the plist's NOS_SECRET_ var.
+fn serve_iris(home: &std::path::Path, key: Option<&str>) -> (std::process::Child, std::sync::mpsc::Receiver<String>,
+                                                             std::sync::Arc<std::sync::Mutex<String>>) {
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_thalamus"));
+    cmd.arg("serve").arg("--data-dir").arg(home.join("data")).env_clear().env("HOME", home)
+        .env("NOS_REPO_ROOT", home).env("PATH", std::env::var("PATH").unwrap()).env("KEAP_PROXY_SHARED_SECRET", "s")
+        .env("NOS_ARMED_BACKENDS", "mistral-eu").env("NOS_MISTRAL_MODEL", "mistral-large-latest")
+        .env("NOS_TIER1_GROUPS", "nos-admins").stdout(Stdio::null()).stderr(Stdio::piped());
+    if let Some(k) = key {
+        cmd.env("NOS_SECRET_MISTRAL_API_KEY", k);
+    }
+    let mut child = cmd.spawn().unwrap();
+    let err = child.stderr.take().unwrap();
+    let all = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let (tx, rx) = std::sync::mpsc::channel();
+    let sink = all.clone();
+    std::thread::spawn(move || {
+        for l in std::io::BufRead::lines(std::io::BufReader::new(err)).map_while(Result::ok) {
+            sink.lock().unwrap().push_str(&format!("{l}\n"));
+            if l.starts_with("thalamus: model ") {
+                let _ = tx.send(l);
+            }
+        }
+    });
+    (child, rx, all)
+}
+
+#[test]
+fn serve_binds_iris_from_the_plist_key_and_no_child_inherits_it() {
+    use std::io::{BufRead, Write};
+    let home = iris_home("irisbound");
+    let (mut child, rx, all) = serve_iris(&home, Some(KEY));
+    let line = rx.recv_timeout(Duration::from_secs(5));
+    let sock = home.join(".nos/thalamus.sock");
+    let t = Instant::now();
+    while !sock.exists() && t.elapsed() < Duration::from_secs(5) {
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    // A control spawns a reader: it must see neither the model key nor the proxy secret.
+    let answered = std::os::unix::net::UnixStream::connect(&sock).map(|mut s| {
+        s.set_read_timeout(Some(Duration::from_secs(10))).unwrap();
+        let msg = nos_contract::wire::encode(&nos_contract::wire::ToThalamus::Control {
+            view: nos_contract::wire::ControlView::RedStatus });
+        s.write_all(msg.as_bytes()).unwrap();
+        let mut r = std::io::BufReader::new(s);
+        let mut l = String::new();
+        for _ in 0..2 {
+            l.clear();
+            r.read_line(&mut l).unwrap();
+        }
+        l
+    });
+    child.kill().unwrap();
+    child.wait().unwrap();
+    let line = line.expect("serve printed no `thalamus: model ` line");
+    assert_eq!(line, "thalamus: model bound mistral-eu-mistral-large-latest");
+    let answered = answered.expect("the socket answers");
+    assert!(answered.contains("red_status"), "{answered}");
+    let env: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(home.join("child-env.json")).unwrap()).unwrap();
+    let env = env.as_object().unwrap();
+    assert!(!env.keys().any(|k| k.starts_with("NOS_SECRET_") || k == "KEAP_PROXY_SHARED_SECRET"), "{:?}", env.keys());
+    assert!(!env.values().any(|v| v.as_str().unwrap_or("").contains(KEY)), "a child inherited the key");
+    assert!(!all.lock().unwrap().contains(KEY), "the key reached the log");
+    let _ = std::fs::remove_dir_all(&home);
+}
+
+#[test]
+fn serve_without_the_key_says_which_var_on_the_model_line() {
+    let home = iris_home("irisnokey");
+    let (mut child, rx, _) = serve_iris(&home, None);
+    let line = rx.recv_timeout(Duration::from_secs(5));
+    child.kill().unwrap();
+    child.wait().unwrap();
+    let line = line.expect("serve printed no `thalamus: model ` line");
+    assert!(line.starts_with("thalamus: model UNBOUND: ") && line.contains("mistral_api_key")
+            && line.contains("credentials.yml"), "{line}");
+    let _ = std::fs::remove_dir_all(&home);
+}
+
 fn serve_with(home: &std::path::Path, args: &[&std::ffi::OsStr]) -> std::process::Child {
     Command::new(env!("CARGO_BIN_EXE_thalamus"))
         .arg("serve").args(args).env_clear().env("HOME", home).env("NOS_REPO_ROOT", home)

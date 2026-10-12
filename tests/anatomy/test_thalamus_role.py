@@ -81,6 +81,35 @@ def test_the_plist_runs_serve_and_keeps_the_secret_out_of_argv():
     assert _plist(ollama_enabled=False)["EnvironmentVariables"]["NOS_ARMED_BACKENDS"] == ""
 
 
+def test_the_plist_carries_the_bound_backends_key_in_env_only():
+    """Iris binds mistral-eu (ruling 2026-10-12): its key rides the 0600 plist env, read once by main.rs."""
+    p = _plist(mistral_enabled=True, mistral_model="mistral-large-latest",
+               thalamus_model_secret="mistral_api_key", thalamus_model_token="sk-eu-91c2")
+    env = p["EnvironmentVariables"]
+    assert env["NOS_SECRET_MISTRAL_API_KEY"] == "sk-eu-91c2"
+    assert env["NOS_MISTRAL_MODEL"] == "mistral-large-latest"
+    assert env["NOS_ARMED_BACKENDS"].split() == ["mistral-eu", "ollama"]
+    assert "sk-eu-91c2" not in " ".join(p["ProgramArguments"])
+    keyless = _plist(thalamus_model_secret="", thalamus_model_token="")["EnvironmentVariables"]
+    assert not [k for k in keyless if k.startswith("NOS_SECRET_")], "a keyless binding renders no key"
+
+
+def test_the_role_renders_the_key_iris_binds_and_no_other():
+    """The secret var comes from iris's backend row (auth_secret nos:<var>), its value from that one var."""
+    defaults = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    env.filters["from_yaml"] = yaml.safe_load
+    env.filters["regex_replace"] = lambda s, p, r: __import__("re").sub(p, r, s)
+    held = {"mistral_api_key": "sk-eu-91c2", "minimax_api_key": "sk-other"}
+    env.globals["lookup"] = lambda kind, arg, default=None: (
+        pathlib.Path(arg).read_text() if kind == "file" else held.get(arg, default))
+    secret = env.from_string(defaults["thalamus_model_secret"]).render(nos_main_checkout=str(REPO)).strip()
+    assert secret == "mistral_api_key"
+    token = env.from_string(defaults["thalamus_model_token"]).render(thalamus_model_secret=secret)
+    assert token == "sk-eu-91c2"
+    assert env.from_string(defaults["thalamus_model_token"]).render(thalamus_model_secret="") == ""
+
+
 def test_the_plist_names_the_roadmap_table_keap_seeds():
     """serve maps the model's "roadmap" to this id; it must be the one pazny.keap creates.
 
