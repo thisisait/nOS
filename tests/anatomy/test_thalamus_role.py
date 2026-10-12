@@ -35,7 +35,8 @@ def _plist(**over) -> dict:
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     env.filters["bool"] = bool
     ctx = {"thalamus_launchd_label": "eu.thisisait.nos.thalamus", "thalamus_bin": "/h/thalamus/bin/thalamus",
-           "thalamus_home": "/h/thalamus", "thalamus_log_dir": "/h/thalamus/log", "nos_main_checkout": "/repo",
+           "thalamus_home": "/h/thalamus", "thalamus_log_dir": "/h/thalamus/log",
+           "thalamus_data_dir": "/n/platform/services/thalamus/data", "nos_main_checkout": "/repo",
            "nos_tools_venv": "/h/.nos/tools-venv", "homebrew_prefix": "/opt/homebrew",
            "ansible_facts": {"env": {"HOME": "/h"}}, "keap_proxy_shared_secret": "s3cret", "keap_port": 8091,
            "ollama_enabled": True, "ollama_model": "qwen3:14b", "ollama_small_model": "hermes3:8b",
@@ -64,7 +65,8 @@ def test_the_plist_names_the_tier_one_groups_from_the_rbac_tiers():
 
 def test_the_plist_runs_serve_and_keeps_the_secret_out_of_argv():
     p = _plist()
-    assert p["ProgramArguments"] == ["/h/thalamus/bin/thalamus", "serve"]
+    assert p["ProgramArguments"] == ["/h/thalamus/bin/thalamus", "serve",
+                                     "--data-dir", "/n/platform/services/thalamus/data"]
     env = p["EnvironmentVariables"]
     assert env["KEAP_PROXY_SHARED_SECRET"] == "s3cret"
     assert env["KEAP_URL"] == "http://127.0.0.1:8091"
@@ -94,7 +96,22 @@ def test_the_plist_is_0600_and_the_logs_and_data_0700():
     assert plist["ansible.builtin.template"]["mode"] == "0600"
     dirs = next(t for t in tasks if "directories" in t.get("name", ""))
     modes = {i["path"]: i["mode"] for i in dirs["loop"]}
-    assert modes["{{ thalamus_log_dir }}"] == "0700" and modes["{{ thalamus_home }}/data"] == "0700", modes
+    assert modes["{{ thalamus_log_dir }}"] == "0700" and modes["{{ thalamus_data_dir }}"] == "0700", modes
+
+
+def test_the_ledger_dir_derives_from_nos_data_root():
+    """Operator ruling: the ledger is data, so it lives under nos_data_root like every service's.
+
+    test_fs_doctrine_paths then holds its class prefix; the binary takes it from --data-dir only.
+    """
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity
+    cfg = nos_identity.default_config_text()
+    assert 'thalamus_data_dir: "{{ nos_data_root }}/platform/services/thalamus/data"' in cfg
+    for src in ("src/main.rs", "src/ledger.rs", "src/serve.rs"):
+        rs = (REPO / "files/anatomy/thalamus/thalamus" / src).read_text()
+        assert "thalamus/data" not in rs, f"{src} hard-codes the ledger dir"
+    assert "thalamus/data" not in READER.read_text(), "the reader guesses the ledger dir"
 
 
 def test_the_role_renders_no_identity_map_of_its_own():
@@ -187,6 +204,20 @@ def test_a_daemon_serving_without_a_model_is_never_green():
         log.write_text("200 as x GET /api/tables 3ms\n")
         assert r.judge_model(log)["state"] == "UNKNOWN", "a log with no start line says nothing"
     assert "judge_model(" in inspect.getsource(r.collect), "the reader never reports the model line"
+
+
+def test_the_reader_finds_the_ledger_the_plist_serves():
+    """The reader reads --data-dir from the deployed plist: the path the daemon opens, not a guess."""
+    r = _reader()
+    with tempfile.TemporaryDirectory() as d:
+        plist = pathlib.Path(d) / "t.plist"
+        assert r.ledger_path(plist)[0] is None                    # no plist: no ledger to read
+        plist.write_bytes(plistlib.dumps({"ProgramArguments": ["/b/thalamus", "serve"]}))
+        assert r.ledger_path(plist)[0] is None                    # no flag: no guess
+        plist.write_bytes(plistlib.dumps(_plist()))
+        assert r.ledger_path(plist)[0] == pathlib.Path("/n/platform/services/thalamus/data/ledger.db")
+        plist.write_bytes(b"garbage")
+        assert r.ledger_path(plist)[0] is None
 
 
 def test_the_reader_says_unknown_when_launchd_cannot_be_asked():
