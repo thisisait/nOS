@@ -141,8 +141,8 @@ fn enc(s: &str) -> String {
 /// One connection's open session: one person, one conversation with the model.
 struct Open {
     session: String,
-    /// None when iris is unbound: controls still answer, turns are refused.
-    model: Option<Binding>,
+    /// Err (why) when iris is unbound or its imprint is missing: controls still answer, turns are refused.
+    model: Result<Binding, String>,
     messages: Vec<Value>,
     tokens: (i64, i64),
     /// Approvals asked and not yet decided; a decision removes its id, so each is decided once.
@@ -257,14 +257,28 @@ impl Server {
     }
 
     fn open(&self, who: &Person, out: &mut UnixStream) -> Result<Open, String> {
-        let model = self.binding.clone().ok();
+        // The imprint the binding calls for: the short render fits a local model's window.
+        let imprint = self.binding.clone().and_then(|m| {
+            let file = if m.local { "IMPRINT.short.md" } else { "IMPRINT.md" };
+            match std::fs::read_to_string(self.repo.join(file)) {
+                Ok(t) if !t.trim().is_empty() => Ok((m, t)),
+                _ => Err(format!("{file} is missing or empty in {}; iris does not run without it", self.repo.display())),
+            }
+        });
+        if let (Ok(_), Err(why)) = (&self.binding, &imprint) {
+            self.say(format!("refusing turns: {why}"));
+        }
         let session = mint_uuid().map_err(|e| format!("no session id: {e}"))?;
         let actor = format!("user:{}", who.uid());
-        let model_uri = model.as_ref().map_or("unbound".to_string(), |m| format!("{}-{}", m.name, m.model_id));
+        let model_uri = self.binding.as_ref().map_or("unbound".to_string(), |m| format!("{}-{}", m.name, m.model_id));
         let s = Session { uuid: &session, agent_name: "iris", agent_version: 1, actor: &actor, model_uri: &model_uri };
         self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.start(&s).map_err(|e| format!("ledger: {e}"))?;
         send(out, &ToShell::Session { session: session.clone(), actor, model_uri });
-        let system = format!("You are Iris. You act for {} and see only what they may see.", who.username);
+        let iris = format!("You are Iris. You act for {} and see only what they may see.", who.username);
+        let (model, system) = match imprint {
+            Ok((m, t)) => (Ok(m), format!("{}\n\n{iris}", t.trim_end())),
+            Err(why) => (Err(why), iris),
+        };
         Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
                   pending: HashSet::new() })
     }
@@ -336,9 +350,9 @@ impl Server {
     }
 
     fn turn(&self, who: &Person, out: &mut UnixStream, o: &mut Open, text: &str) {
-        let Some(model) = o.model.clone() else {
-            let why = self.binding.as_ref().err().cloned().unwrap_or_default();
-            return refuse(out, &format!("iris has no model: {why}"));
+        let model = match o.model.clone() {
+            Ok(m) => m,
+            Err(why) => return refuse(out, &format!("iris has no model: {why}")),
         };
         let _ = self.record(o, Kind::Message, None, json!({"role": "person", "text": text}));
         o.messages.push(json!({"role": "user", "content": text}));

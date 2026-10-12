@@ -13,14 +13,16 @@ pub struct Binding {
     pub base_url: String,
     pub auth_token: String,
     pub model_id: String,
+    /// The row's `local: true`: the model runs on this host (serve picks the short imprint).
+    pub local: bool,
 }
 
 /// Never prints the key: a Binding is logged and panicked over.
 impl std::fmt::Debug for Binding {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let key = if self.auth_token.is_empty() { "none" } else { "set" };
-        write!(f, "Binding {{ name: {:?}, base_url: {:?}, auth_token: {key}, model_id: {:?} }}",
-               self.name, self.base_url, self.model_id)
+        write!(f, "Binding {{ name: {:?}, base_url: {:?}, auth_token: {key}, model_id: {:?}, local: {} }}",
+               self.name, self.base_url, self.model_id, self.local)
     }
 }
 
@@ -134,5 +136,6 @@ pub fn decide(agent_yml: &str, register_yml: &str, env: impl Fn(&str) -> Option<
         base_url: text(spec, &["base_url"]),
         auth_token,
         model_id,
+        local,
     }))
 }

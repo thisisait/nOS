@@ -13,7 +13,7 @@
 | **Shell** | `~/thalamus/bin/thalamus` (no argument) |
 | **Toggle** | `install_thalamus` (default `false`; needs `install_receptor`) |
 | **Map** | the receptor's `~/.nos/identity-map.yml` (`nos_identity_map`) |
-| **Cell** | `iris` (`files/anatomy/agents/iris/agent.yml`), on ollama |
+| **Cell** | `iris` (`files/anatomy/agents/iris/agent.yml`), on `mistral-eu` (Mistral Large, EU endpoint; ruling 2026-10-12) |
 | **Manifest id** | `thalamus` |
 | **launchd label** | `eu.thisisait.nos.thalamus` (no Linux unit yet) |
 | **Ledger** | `{nos_data_root}/platform/services/thalamus/data/ledger.db` (dir 0700; `thalamus_data_dir`, passed as `serve --data-dir`) |
@@ -43,6 +43,20 @@ ruling 2026-10-11), it does not go through the receptor's socket.
 
 The shell raises three views without the model: F2 inbox, F3 approvals
 (`tools/awaiting-operator.py`), F4 red status (`tools/red-status.py`).
+
+## The model
+
+`serve` binds iris at start as `BindingResolver.php` does (`src/binding.rs`).
+Iris's whole serving set is the `mistral-eu` row, so a disarmed row, an empty
+`mistral_model` or a missing key refuses; it never degrades to another backend.
+The key: the role renders the var behind the row's `auth_secret`
+(`mistral_api_key`) into the 0600 plist as `NOS_SECRET_MISTRAL_API_KEY`. The
+binary reads it once and removes it from its env. The key leaves only as the
+`Authorization: Bearer` on requests to the bound `base_url`.
+The system prompt starts with the imprint: `IMPRINT.md` for a cloud row,
+`IMPRINT.short.md` for a local one. If that file is missing or empty, turns
+are refused and the log says which file. The reader's model line shows why a
+model is unbound.
 
 ## The wire and the ledger
 
