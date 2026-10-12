@@ -10,6 +10,8 @@
 	import { cell, shown, type Component } from './wire';
 
 	let { component }: { component: Component } = $props();
+	// A column whose text runs long reads as prose under its row, not as a column that starves the rest.
+	const LONG = (s: string) => s.length > 80 || s.includes('\n');
 </script>
 
 <section class="component" data-kind={component.kind}>
@@ -19,14 +21,26 @@
 			{t.table} — {t.rows.length} row(s)
 			{#if t.projected}<Badge tone="info">semantic</Badge>{:else}<Badge tone="warn">substring match, not semantic</Badge>{/if}
 		</h3>
-		<table>
-			<thead><tr><th>__id</th>{#each t.columns as c}<th>{c}</th>{/each}</tr></thead>
-			<tbody>
-				{#each t.rows as r}
-					<tr><td class="mono">{r.__id}</td>{#each t.columns as c}<td>{cell(r.cells[c])}</td>{/each}</tr>
-				{/each}
-			</tbody>
-		</table>
+		{@const long = t.columns.filter((c) => t.rows.some((r) => LONG(cell(r.cells[c]))))}
+		{@const short = t.columns.filter((c) => !long.includes(c))}
+		<div class="scroll">
+			<table>
+				<thead><tr>{#each short as c}<th>{c}</th>{/each}</tr></thead>
+				<tbody>
+					{#each t.rows as r}
+						<tr>{#each short as c}<td>{cell(r.cells[c])}</td>{/each}</tr>
+						<tr class="more">
+							<td colspan={Math.max(short.length, 1)}>
+								<details>
+									<summary class="muted mono">{r.__id}{#each long as c}{' · '}{c}{/each}</summary>
+									{#each long as c}<div class="field"><b>{c}</b><div>{cell(r.cells[c])}</div></div>{/each}
+								</details>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{:else if component.kind === 'row_diff_approval'}
 		{@const d = component.props}
 		<h3>edit {d.table} / {d.row_id} — nothing is written unless you approve</h3>
@@ -92,13 +106,39 @@
 		font-size: 12px;
 		width: 100%;
 	}
+	.scroll {
+		overflow-x: auto;
+	}
 	th,
 	td {
 		text-align: left;
 		padding: 3px 8px;
 		border-bottom: 1px solid var(--glass-brd);
 		white-space: pre-wrap;
+		overflow-wrap: break-word;
+		min-width: 6ch;
+		vertical-align: top;
+	}
+	th {
+		white-space: nowrap;
+	}
+	tr:has(+ .more) td {
+		border-bottom: none;
+	}
+	.more td {
+		padding-top: 0;
+	}
+	summary {
+		cursor: pointer;
+		font-size: 11px;
+	}
+	.field {
+		margin: 6px 0;
+	}
+	.field div {
+		white-space: pre-wrap;
 		overflow-wrap: anywhere;
+		line-height: 1.45;
 	}
 	ul {
 		margin: 0;

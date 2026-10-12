@@ -89,7 +89,11 @@
 			tauri.event.listen<ToShell>('to_shell', ({ payload }) => {
 				see({ e: 'wire', msg: payload });
 				if (payload.t === 'session') session = payload.session;
-				if (payload.t === 'activity') return; // the eye's, not the log's
+				// The eye shows every phase; the log keeps only a tool run, so the person sees what was called.
+				if (payload.t === 'activity') {
+					if (typeof payload.phase === 'object') push({ msg: payload });
+					return;
+				}
 				if (payload.t === 'approval_request') q = asked(q, payload);
 				else push({ msg: payload });
 			}),

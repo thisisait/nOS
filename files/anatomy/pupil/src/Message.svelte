@@ -21,8 +21,8 @@
 	{:else if msg.t === 'refused'}
 		<StatusNote kind="error" title="refused">{msg.reason}</StatusNote>
 	{:else if msg.t === 'activity'}
-		<!-- App hands activity to the eye; drawn here only if it ever reaches the log. -->
-		<p class="muted">iris: {phaseName(msg.phase)}</p>
+		<!-- App logs only a tool run; every phase goes to the eye. -->
+		<p class="muted">→ {phaseName(msg.phase)}</p>
 	{/if}
 </div>
 
