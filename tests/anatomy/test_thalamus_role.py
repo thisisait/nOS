@@ -11,10 +11,13 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
+import json
 import os
 import pathlib
 import plistlib
+import re
 import socket
+import subprocess
 import sqlite3
 import sys
 import tempfile
@@ -227,3 +230,33 @@ def test_the_reader_says_unknown_when_launchd_cannot_be_asked():
     assert r.judge_launchd((0, "state = running\n\tpid = 42\n"))["state"] == "OK"
     # Loaded but crash-looping on KeepAlive: no pid is a dead daemon, not a green one.
     assert r.judge_launchd((0, "state = not running\n\tlast exit code = 1\n"))["state"] == "RED"
+
+
+def _verify_rows(**states) -> str:
+    checks = ["socket", "launchd", "model", "ledger", "last session"]
+    return json.dumps([{"check": c, "state": states.get(c.replace(" ", "_"), "OK")} for c in checks])
+
+
+def test_verify_warns_on_an_unbound_model_and_fails_on_anything_else():
+    """Ruling 2026-10-12: serving without a model is visible, not green and not a failure."""
+    env = jinja2.Environment()
+    env.filters["from_json"] = json.loads
+    tasks = [t for t in _tasks() if "verify" in (t.get("tags") or [])]
+    verify = next(t for t in tasks if "ansible.builtin.shell" in t)
+    warn = next((t for t in tasks if "ansible.builtin.fail" in t), None)
+    assert warn and warn.get("ignore_errors") is True, "no warn task, or one that fails the run"
+
+    def judged(expr: str, out: str) -> bool:
+        reg = {"rc": 0, "stdout": out}
+        return env.from_string("{{ (" + expr + ") | bool }}").render(_thalamus_verify=reg) == "True"
+
+    unbound = _verify_rows(model="UNKNOWN")
+    assert not judged(verify["failed_when"], unbound), "an unbound model failed verify"
+    assert judged(warn["when"], unbound), "an unbound model passed silently"
+    assert not judged(warn["when"], _verify_rows()), "a bound model warned"
+    for bad in ({"socket": "RED"}, {"launchd": "UNKNOWN"}, {"ledger": "RED"}, {"last_session": "UNKNOWN"}):
+        assert judged(verify["failed_when"], _verify_rows(model="UNKNOWN", **bad)), bad
+    # The wait loop stops on the same rule, or an unbound model costs every run 10 s of polling.
+    snippet = re.search(r"python3 -c '([^']+)'", verify["ansible.builtin.shell"])[1]
+    assert subprocess.run([sys.executable, "-c", snippet], input=unbound, text=True).returncode == 0
+    assert subprocess.run([sys.executable, "-c", snippet], input=_verify_rows(socket="RED"), text=True).returncode == 1
