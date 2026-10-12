@@ -181,7 +181,7 @@ mod tests {
     fn events_carry_the_sessions_actor_and_task() {
         let (l, _) = ledger("carry");
         start(&l);
-        l.record(UUID, Kind::ToolUse, Some("search_rows"), &serde_json::json!({"q": "x"})).unwrap();
+        l.record(UUID, Kind::ToolUse, Some("query_rows"), &serde_json::json!({"q": "x"})).unwrap();
         l.end(UUID, "end_turn", (Some(10), Some(3))).unwrap();
         let rows: Vec<(String, String, String, String, String, String)> = l
             .db
@@ -193,7 +193,7 @@ mod tests {
             .collect();
         let types: Vec<&str> = rows.iter().map(|r| r.0.as_str()).collect();
         assert_eq!(types, ["agent_session_start", "agent_tool_use", "agent_session_end"]);
-        assert_eq!(rows[1].1, "agent:iris/tool:search_rows");
+        assert_eq!(rows[1].1, "agent:iris/tool:query_rows");
         assert_eq!(rows[0].1, "agent:iris");
         assert!(rows.iter().all(|r| r.2 == "user:alice" && r.3 == UUID && r.4 == UUID && r.5 == "thalamus"));
         let (status, trace): (String, String) = l

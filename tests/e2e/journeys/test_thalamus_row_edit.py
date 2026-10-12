@@ -123,7 +123,7 @@ def test_thalamus_writes_one_cell_only_after_approval(journey):
         w = Wire(SOCK)
         with j.step("iris_proposes_the_edit") as s:
             w.send(t="turn", session=None, text=(
-                f'Call search_rows with table "roadmap" and q "{row_id}". Then call propose_row_edit with '
+                f'Call query_rows with table "roadmap" and q "{row_id}". Then call propose_row_edit with '
                 f'table "roadmap", row_id "{row_id}" and values {{"title": {json.dumps(new)}}}. Nothing else.'))
             got = w.until_end()
             session = next(m["session"] for m in got if m["t"] == "session")

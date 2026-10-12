@@ -44,7 +44,7 @@ gdpr:
     that person; Iris adds no access. Legitimate interest, Art. 6(1)(f).
   legal_basis: legitimate_interests
   # What reaches Mistral on each call: the person's turns and the row values
-  # the tool results carry (search_rows, propose_row_edit).
+  # the tool results carry (query_rows, propose_row_edit).
   data_categories:
     - person_authored_prompts
     - datatable_row_contents

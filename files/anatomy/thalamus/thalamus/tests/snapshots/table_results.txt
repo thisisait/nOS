@@ -1,7 +1,7 @@
-roadmap — 1 row(s), substring match, not semantic
+nOS Roadmap — 1 of 23 matched (122 rows) · substring match, not semantic
+  status in [open, next] · order by ordinal asc · columns title, status
 __id                     title                    status
 backup-restic-fork       Backup via restic        open
-
 
 
 

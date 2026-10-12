@@ -94,7 +94,8 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
     match c {
         Component::TableResults(t) => {
             let how = if t.projected { "semantic" } else { "substring match, not semantic" };
-            out.push(head(format!("{} — {} row(s), {how}", t.table, t.rows.len())));
+            out.push(head(format!("{} — {} of {} matched ({} rows) · {how}", t.name, t.rows.len(), t.matched, t.total)));
+            out.push(Line::styled(format!("  {}", t.query), Style::new().fg(Color::DarkGray)));
             let cols: Vec<&str> = std::iter::once("__id").chain(t.columns.iter().map(String::as_str)).collect();
             out.push(Line::from(cols.iter().map(|c| fit(c, COL)).collect::<Vec<_>>().join(" ").trim_end().to_string()));
             for r in &t.rows {

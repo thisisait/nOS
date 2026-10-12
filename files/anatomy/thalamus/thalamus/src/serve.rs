@@ -10,7 +10,8 @@ use nos_contract::renderers::{ApprovalsList, CellChange, Component, InboxItem, I
 use nos_contract::wire::{decode_to_thalamus, encode, ControlView, Decision, Phase, ToShell, ToThalamus};
 use nos_contract::uid;
 use serde_json::{json, Map, Value};
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::cmp::Ordering;
+use std::collections::{BTreeMap, HashSet};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::os::unix::io::AsRawFd;
@@ -147,6 +148,8 @@ struct Open {
     tokens: (i64, i64),
     /// Approvals asked and not yet decided; a decision removes its id, so each is decided once.
     pending: HashSet<String>,
+    /// (table, row id) of every row a query put in front of the person; only these may be proposed.
+    shown: HashSet<(String, String)>,
 }
 
 fn send(out: &mut UnixStream, m: &ToShell) {
@@ -172,24 +175,38 @@ fn mint_uuid() -> std::io::Result<String> {
     Ok(format!("{}-{}-{}-{}-{}", &h[..8], &h[8..12], &h[12..16], &h[16..20], &h[20..]))
 }
 
-const SEARCH_ROWS: &str = "Find rows in one DataTable whose cells contain `q` (case-insensitive substring, \
-read as the person). Renders table_results: the matching rows, shown to the person as a table; \
-projected is false because this is a substring match, not a semantic search.";
+const QUERY_ROWS: &str = "Read, count or filter the rows of one DataTable, as the person. Every parameter but \
+`table` is optional: no `q` and no `where` is every row, and `limit: 0` counts without rows. In the result, \
+`total` is the exact count of rows the person may read, `matched` the count after q and where, and `columns` \
+the table's columns with their kinds and select options. Renders table_results to the person; projected is \
+false because the thalamus filters by substring and equality, not by meaning.";
 
 const PROPOSE_ROW_EDIT: &str = "Propose new values for cells of one existing row. Renders row_diff_approval: \
 the person sees each changed cell old -> new and approves or rejects it. Nothing is written until they \
-approve; you are told only that the proposal waits for them.";
+approve; you are told only that the proposal waits for them. Only for a change the person asked for in this \
+conversation, on a row query_rows showed them; never to count, test or look at a row — query_rows does that.";
+
+const QUERY_KEYS: [&str; 6] = ["table", "q", "where", "columns", "order_by", "limit"];
+const OPS: [&str; 4] = ["eq", "neq", "in", "contains"];
 
 fn tools() -> Value {
-    json!([{"type": "function", "function": {"name": "search_rows", "description": SEARCH_ROWS,
-        "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "q"], "properties": {
+    json!([{"type": "function", "function": {"name": "query_rows", "description": QUERY_ROWS,
+        "parameters": {"type": "object", "additionalProperties": false, "required": ["table"], "properties": {
             "table": {"type": "string", "description": "the table id, or \"roadmap\" for the roadmap"},
-            "q": {"type": "string"},
-            "limit": {"type": "integer", "minimum": 1, "maximum": 20}}}}},
+            "q": {"type": "string", "description": "case-insensitive substring anywhere in the row"},
+            "where": {"type": "array", "maxItems": 8, "description": "every condition must hold",
+                "items": {"type": "object", "additionalProperties": false, "required": ["column", "op", "value"], "properties": {
+                    "column": {"type": "string"}, "op": {"enum": OPS},
+                    "value": {"description": "a string; for in, a list of strings"}}}},
+            "columns": {"type": "array", "maxItems": 12, "items": {"type": "string"},
+                "description": "the column keys to show; default every column, in the table's order"},
+            "order_by": {"type": "object", "additionalProperties": false, "required": ["column"], "properties": {
+                "column": {"type": "string"}, "dir": {"enum": ["asc", "desc"]}}},
+            "limit": {"type": "integer", "minimum": 0, "maximum": 50, "description": "rows returned, default 20; 0 counts only"}}}}},
         {"type": "function", "function": {"name": "propose_row_edit", "description": PROPOSE_ROW_EDIT,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "row_id", "values"], "properties": {
             "table": {"type": "string", "description": "the table id, or \"roadmap\" for the roadmap"},
-            "row_id": {"type": "string", "description": "the row's __id from search_rows"},
+            "row_id": {"type": "string", "description": "the row's __id from query_rows"},
             "values": {"type": "object", "description": "column -> new value; null clears the cell"}}}}}])
 }
 
@@ -284,13 +301,15 @@ impl Server {
         let s = Session { uuid: &session, agent_name: "iris", agent_version: 1, actor: &actor, model_uri: &model_uri };
         self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.start(&s).map_err(|e| format!("ledger: {e}"))?;
         send(out, &ToShell::Session { session: session.clone(), actor, model_uri });
-        let iris = format!("You are Iris. You act for {} and see only what they may see.", who.username);
+        let iris = format!("You are Iris. You act for {} and see only what they may see. To read, count or filter \
+rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
+asked for, never to look at a row.", who.username);
         let (model, system) = match imprint {
             Ok((m, t)) => (Ok(m), format!("{}\n\n{iris}", t.trim_end())),
             Err(why) => (Err(why), iris),
         };
         Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
-                  pending: HashSet::new() })
+                  pending: HashSet::new(), shown: HashSet::new() })
     }
 
     /// One ledger event; the row id, or the reason it was refused (also logged).
@@ -400,16 +419,19 @@ impl Server {
                 let _ = self.record(o, Kind::ToolUse, Some(name), json!({"args": args}));
                 activity(out, o, Phase::Tool { name: name.to_string() });
                 let result = match name {
-                    "search_rows" => self.search_rows(who, &args).map(|t| {
+                    "query_rows" => self.query_rows(who, &args).map(|(t, columns)| {
                         let ids: Vec<&str> = t.rows.iter().map(|r| r.__id.as_str()).collect();
-                        let _ = self.record(o, Kind::ToolResult, Some(name), json!({"rows": ids}));
-                        let v = json!({"table": t.table, "rows": t.rows});
+                        let _ = self.record(o, Kind::ToolResult, Some(name),
+                                            json!({"rows": ids, "matched": t.matched, "total": t.total}));
+                        o.shown.extend(t.rows.iter().map(|r| (t.table.clone(), r.__id.clone())));
+                        let v = json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total,
+                                       "columns": columns, "rows": t.rows});
                         send(out, &ToShell::Render { session: o.session.clone(), component: Component::TableResults(t) });
                         v
                     }),
                     // Its tool_result is written by decide(), once the person has answered.
                     "propose_row_edit" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
-                    "propose_row_edit" => self.propose_row_edit(who, &args).and_then(|d| self.ask(o, out, d)),
+                    "propose_row_edit" => self.propose_row_edit(who, &args, &o.shown).and_then(|d| self.ask(o, out, d)),
                     _ => Err(format!("unknown tool {name:?}")),
                 };
                 let for_model = result.unwrap_or_else(|why| {
@@ -441,20 +463,123 @@ impl Server {
         v.pointer("/choices/0/message").cloned().ok_or_else(|| "model answered without a message".into())
     }
 
-    /// GET /api/tables/:id/rows as the person, every page, then a substring filter.
-    fn search_rows(&self, who: &Person, args: &Value) -> Result<TableResults, String> {
-        let table = &table_id(args.get("table").and_then(Value::as_str).filter(|t| !t.is_empty())
-            .ok_or("search_rows needs `table`")?);
-        let q = args.get("q").and_then(Value::as_str).map(|q| q.trim().to_lowercase()).filter(|q| !q.is_empty())
-            .ok_or("search_rows needs `q`")?;
-        let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(20).clamp(1, 20) as usize;
-        let mut hits: Vec<Row> = self.rows(who, table)?.into_iter()
-            .filter(|(_, v)| Value::Object(v.clone()).to_string().to_lowercase().contains(&q))
-            .map(|(id, v)| Row { __id: id, cells: v.into_iter().collect::<BTreeMap<_, _>>() })
+    /// GET /api/tables/:id (title, columns) then every row as the person, filtered, sorted and cut
+    /// here: the whole table or an Err, so `total` is exact. Also returns the columns for the model.
+    fn query_rows(&self, who: &Person, args: &Value) -> Result<(TableResults, Value), String> {
+        let a = args.as_object().ok_or("query_rows takes an object")?;
+        if let Some(k) = a.keys().find(|k| !QUERY_KEYS.contains(&k.as_str())) {
+            return Err(format!("query_rows has no parameter `{k}`; it has {}", QUERY_KEYS.join(", ")));
+        }
+        let given = |k: &str| a.get(k).filter(|v| !v.is_null());
+        let alias = given("table").and_then(Value::as_str).filter(|t| !t.is_empty()).ok_or("query_rows needs `table`")?;
+        let table = table_id(alias);
+        let info = self.keap(who, &format!("{}/api/tables/{}", self.keap_url.trim_end_matches('/'), enc(&table)), None)?;
+        let name = info.pointer("/data/title").and_then(Value::as_str).filter(|t| !t.is_empty()).unwrap_or(alias).to_string();
+        let schema: Vec<&Map<String, Value>> = info.pointer("/data/schema/columns").and_then(Value::as_array)
+            .map(|c| c.iter().filter_map(Value::as_object).filter(|c| c.get("key").is_some_and(Value::is_string)).collect())
+            .filter(|c: &Vec<_>| !c.is_empty()).ok_or(format!("KEAP returned no column schema for {name}"))?;
+        let keys: Vec<&str> = schema.iter().filter_map(|c| c.get("key").and_then(Value::as_str)).collect();
+        let col = |k: &str| schema.iter().copied().find(|c| c.get("key").and_then(Value::as_str) == Some(k))
+            .ok_or(format!("no column `{k}` in {name}; columns: {}", keys.join(", ")));
+
+        let mut said = Vec::new();
+        let q = given("q").and_then(Value::as_str).map(|q| q.trim().to_lowercase()).filter(|q| !q.is_empty());
+        if let Some(q) = &q {
+            said.push(format!("contains {q:?}"));
+        }
+        let conds = match given("where") {
+            None => &vec![],
+            Some(Value::Array(w)) if w.len() <= 8 => w,
+            _ => return Err("`where` is a list of at most 8 conditions".into()),
+        };
+        let mut wh: Vec<(&str, &str, Vec<String>)> = Vec::new();
+        for c in conds {
+            let k = c.get("column").and_then(Value::as_str).ok_or("a `where` condition needs `column`")?;
+            let def = col(k)?;
+            let op = c.get("op").and_then(Value::as_str).filter(|o| OPS.contains(o))
+                .ok_or(format!("`where` on {k}: op is one of {}", OPS.join(", ")))?;
+            let vals: Vec<String> = match (op, c.get("value")) {
+                ("in", Some(Value::Array(v))) => v.iter().map(text).collect(),
+                ("in", _) => return Err(format!("`where` on {k}: in takes a list of values")),
+                (_, Some(v @ (Value::String(_) | Value::Number(_) | Value::Bool(_)))) => vec![text(v)],
+                _ => return Err(format!("`where` on {k}: value is a string")),
+            };
+            let options: Option<Vec<&str>> = def.get("options").and_then(Value::as_array)
+                .map(|o| o.iter().filter_map(Value::as_str).collect());
+            if let (Some(o), true) = (&options, op != "contains") {
+                if let Some(bad) = vals.iter().find(|v| !o.contains(&v.as_str())) {
+                    return Err(format!("{bad:?} is not a {k} value in {name}; options: {}", o.join(", ")));
+                }
+            }
+            said.push(match op {
+                "in" => format!("{k} in [{}]", vals.join(", ")),
+                "eq" => format!("{k} = {}", vals[0]),
+                "neq" => format!("{k} != {}", vals[0]),
+                _ => format!("{k} contains {:?}", vals[0]),
+            });
+            wh.push((k, op, vals));
+        }
+        let order = match given("order_by") {
+            None => None,
+            Some(o) => {
+                let k = o.get("column").and_then(Value::as_str).ok_or("`order_by` needs `column`")?;
+                col(k)?;
+                let desc = match o.get("dir").and_then(Value::as_str) {
+                    None | Some("asc") => false,
+                    Some("desc") => true,
+                    Some(d) => return Err(format!("`order_by` dir is asc or desc, not {d:?}")),
+                };
+                said.push(format!("order by {k} {}", if desc { "desc" } else { "asc" }));
+                Some((k, desc))
+            }
+        };
+        let columns: Vec<String> = match given("columns") {
+            None => keys.iter().map(|k| k.to_string()).collect(),
+            Some(Value::Array(c)) if c.len() <= 12 => {
+                let c = c.iter().map(|k| k.as_str().ok_or("`columns` holds column keys".to_string())
+                    .and_then(|k| col(k).map(|_| k.to_string()))).collect::<Result<Vec<_>, _>>()?;
+                said.push(format!("columns {}", c.join(", ")));
+                c
+            }
+            _ => return Err("`columns` is a list of at most 12 column keys".into()),
+        };
+        let limit = match given("limit") {
+            None => 20,
+            Some(n) => n.as_u64().filter(|n| *n <= 50).ok_or("`limit` is a whole number from 0 to 50")? as usize,
+        };
+
+        let all = self.rows(who, &table)?;
+        let total = all.len();
+        let mut hits: Vec<(String, Map<String, Value>)> = all.into_iter()
+            .filter(|(_, v)| q.as_ref().is_none_or(|q| Value::Object(v.clone()).to_string().to_lowercase().contains(q)))
+            .filter(|(_, v)| wh.iter().all(|(k, op, vals)| {
+                let c = text(v.get(*k).unwrap_or(&Value::Null));
+                match *op {
+                    "eq" | "in" => vals.contains(&c),
+                    "neq" => !vals.contains(&c),
+                    _ => c.to_lowercase().contains(&vals[0].to_lowercase()),
+                }
+            }))
             .collect();
+        let matched = hits.len();
+        if let Some((k, desc)) = order {
+            hits.sort_by(|x, y| by(x.1.get(k), y.1.get(k), desc));
+        }
         hits.truncate(limit);
-        let columns: BTreeSet<String> = hits.iter().flat_map(|r| r.cells.keys().cloned()).collect();
-        Ok(TableResults { table: table.to_string(), columns: columns.into_iter().collect(), rows: hits, projected: false })
+        let rows = hits.into_iter()
+            .map(|(id, v)| Row { __id: id, cells: v.into_iter().filter(|(k, _)| columns.contains(k)).collect::<BTreeMap<_, _>>() })
+            .collect();
+        let for_model: Vec<Value> = schema.iter().map(|c| {
+            let mut m = Map::new();
+            for k in ["key", "kind", "options"] {
+                if let Some(v) = c.get(k) {
+                    m.insert(k.into(), v.clone());
+                }
+            }
+            Value::Object(m)
+        }).collect();
+        let query = if said.is_empty() { "all rows".to_string() } else { said.join(" · ") };
+        Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Value::Array(for_model)))
     }
 
     /// Every row of one table the person may read: GET /api/tables/:id/rows, every page.
@@ -481,9 +606,13 @@ impl Server {
     }
 
     /// The cell diff of one existing row the person can read; only changed cells survive.
-    fn propose_row_edit(&self, who: &Person, args: &Value) -> Result<RowDiffApproval, String> {
+    fn propose_row_edit(&self, who: &Person, args: &Value, shown: &HashSet<(String, String)>) -> Result<RowDiffApproval, String> {
         let s = |k: &str| args.get(k).and_then(Value::as_str).filter(|v| !v.is_empty()).ok_or(format!("propose_row_edit needs `{k}`"));
         let (table, row_id) = (&table_id(s("table")?), s("row_id")?);
+        // Live 2026-10-12: a proposal used as a probe. Refused before any read, so no card.
+        if !shown.contains(&(table.clone(), row_id.to_string())) {
+            return Err(format!("row {row_id} was not shown to the person in this session; query it first"));
+        }
         let values = args.get("values").and_then(Value::as_object).filter(|v| !v.is_empty())
             .ok_or("propose_row_edit needs a non-empty `values` object")?;
         // KEAP reads __ keys as row sharing; changing who sees a row is not this tool's to propose.
@@ -621,6 +750,33 @@ impl Server {
             Err(why) => refused.push(format!("promotions: {why}")),
         }
         InboxList { items, refused }
+    }
+}
+
+/// A cell as text, as the shells show it: null is empty, a string is itself.
+fn text(v: &Value) -> String {
+    match v {
+        Value::Null => String::new(),
+        Value::String(s) => s.clone(),
+        v => v.to_string(),
+    }
+}
+
+/// Nulls last either way; numbers by value and before strings, strings case-insensitively.
+fn by(a: Option<&Value>, b: Option<&Value>, desc: bool) -> Ordering {
+    let key = |v: Option<&Value>| match v {
+        None | Some(Value::Null) => None,
+        Some(Value::Number(n)) => Some((0, n.as_f64().unwrap_or(0.0), String::new())),
+        Some(v) => Some((1, 0.0, text(v).to_lowercase())),
+    };
+    match (key(a), key(b)) {
+        (None, None) => Ordering::Equal,
+        (None, _) => Ordering::Greater,
+        (_, None) => Ordering::Less,
+        (Some(x), Some(y)) => {
+            let o = x.0.cmp(&y.0).then(x.1.total_cmp(&y.1)).then_with(|| x.2.cmp(&y.2));
+            if desc { o.reverse() } else { o }
+        }
     }
 }
 

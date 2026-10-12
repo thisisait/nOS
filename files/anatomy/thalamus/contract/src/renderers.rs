@@ -20,6 +20,13 @@ pub enum Component {
 #[serde(deny_unknown_fields)]
 pub struct TableResults {
     pub table: String,
+    /// The table's title, for the header; `table` is its id.
+    pub name: String,
+    /// What was asked, one line for a person to read; no consumer parses it.
+    pub query: String,
+    /// Rows after the query, and every row the person may read (the whole-table pull).
+    pub matched: usize,
+    pub total: usize,
     pub columns: Vec<String>,
     pub rows: Vec<Row>,
     pub projected: bool,

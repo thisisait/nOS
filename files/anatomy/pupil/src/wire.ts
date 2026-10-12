@@ -5,7 +5,7 @@
 export type Value = null | boolean | number | string | Value[] | { [k: string]: Value };
 
 export type Component =
-	| { kind: 'table_results'; props: { table: string; columns: string[]; rows: { __id: string; cells: Record<string, Value> }[]; projected: boolean } }
+	| { kind: 'table_results'; props: { table: string; name: string; query: string; matched: number; total: number; columns: string[]; rows: { __id: string; cells: Record<string, Value> }[]; projected: boolean } }
 	| { kind: 'row_diff_approval'; props: { table: string; row_id: string; cells: { key: string; old: Value; new: Value }[] } }
 	| { kind: 'inbox_list'; props: { items: { id: string; title: string; source: string; created_at: string }[]; refused: string[] } }
 	| { kind: 'approvals_list'; props: { items: { kind: string; severity: string; age: string; what: string; where: string; note?: string }[]; unknown: string[] } }

@@ -34,9 +34,13 @@ ruling 2026-10-11), it does not go through the receptor's socket.
 
 ## What Iris can do
 
-- `search_rows{table, q, limit<=20}`: every page of rows the person can see,
-  filtered by substring, shown as `table_results` with `projected:false`.
-- `propose_row_edit{table, row_id, values}`: the cells that change are written
+- `query_rows{table, q?, where?, columns?, order_by?, limit 0..50}`: one
+  `GET /api/tables/:id` for the title and columns, then every page of rows the
+  person can see, filtered, sorted and cut in the thalamus (never a partial
+  table). Shown as `table_results` with `name`, `query`, `matched` and `total`
+  (the exact count of readable rows, never KEAP's `rowCount`), `projected:false`.
+- `propose_row_edit{table, row_id, values}`: refused unless a `query_rows` in
+  this session showed that row (no KEAP read, no card). The cells that change are written
   to the ledger as `agent_approval_request`, then shown as `row_diff_approval`.
   Only an approve decision for that request, in that session, by that person,
   lets the one POST through. Reject writes nothing to KEAP.

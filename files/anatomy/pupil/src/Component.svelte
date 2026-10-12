@@ -18,9 +18,10 @@
 	{#if component.kind === 'table_results'}
 		{@const t = component.props}
 		<h3>
-			{t.table} — {t.rows.length} row(s)
+			{t.name} — {t.rows.length} of {t.matched} matched ({t.total} rows)
 			{#if t.projected}<Badge tone="info">semantic</Badge>{:else}<Badge tone="warn">substring match, not semantic</Badge>{/if}
 		</h3>
+		<p class="muted query">{t.query}</p>
 		{@const long = t.columns.filter((c) => t.rows.some((r) => LONG(cell(r.cells[c]))))}
 		{@const short = t.columns.filter((c) => !long.includes(c))}
 		<div class="scroll">
@@ -100,6 +101,10 @@
 		display: flex;
 		gap: 8px;
 		align-items: center;
+	}
+	.query {
+		margin: 0 0 6px;
+		font-size: 11px;
 	}
 	table {
 		border-collapse: collapse;

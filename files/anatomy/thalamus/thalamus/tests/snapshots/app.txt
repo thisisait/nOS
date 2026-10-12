@@ -3,7 +3,8 @@ edit roadmap / backup-restic-fork — nothing is written unless you approve
   note: (empty) -> "landed"
 session 0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b as user:pazny (ollama://qwen3:8b)
 iris: Two rows match.
-roadmap — 1 row(s), substring match, not semantic
+nOS Roadmap — 1 of 23 matched (122 rows) · substring match, not semantic
+  status in [open, next] · order by ordinal asc · columns title, status
 __id                     title                    status
 backup-restic-fork       Backup via restic        open
 inbox — 1 waiting
@@ -19,7 +20,6 @@ le
 1 red
   ✗ pulse job nightly-backup failed (3h)
 refused: login carol has no row in the identity map
-
 
 
 
