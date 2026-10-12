@@ -287,14 +287,19 @@ impl Server {
             Ok(id) => id,
             Err(why) => return refuse(out, &format!("the decision was not recorded, so nothing is written: {why}")),
         };
-        let (text, result) = match d {
-            Decision::Reject => ("Rejected: nothing was written.".to_string(), json!({"approval": approval, "written": false})),
+        let (text, result, heard) = match d {
+            Decision::Reject => ("Rejected: nothing was written.".to_string(), json!({"approval": approval, "written": false}),
+                                 format!("rejected: {}", note.as_deref().unwrap_or("no note"))),
             Decision::Approve => match self.commit(who, id) {
-                Ok(row) => (format!("Approved: row {row} written."), json!({"approval": approval, "written": true, "row": row})),
-                Err(why) => (format!("Approved, but the write failed: {why}"), json!({"approval": approval, "error": why})),
+                Ok(row) => (format!("Approved: row {row} written."), json!({"approval": approval, "written": true, "row": row}),
+                            "approved, row written".to_string()),
+                Err(why) => (format!("Approved, but the write failed: {why}"), json!({"approval": approval, "error": why}),
+                             format!("approved, but nothing was written: {why}")),
             },
         };
         let _ = self.record(o, Kind::ToolResult, Some("propose_row_edit"), result);
+        // The model was told only "waiting"; its next turn starts from what the person did.
+        o.messages.push(json!({"role": "user", "content": format!("[thalamus] approval {approval}: {heard}")}));
         send(out, &ToShell::Text { session: o.session.clone(), text });
     }
 
@@ -355,6 +360,7 @@ impl Server {
                         v
                     }),
                     // Its tool_result is written by decide(), once the person has answered.
+                    "propose_row_edit" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
                     "propose_row_edit" => self.propose_row_edit(who, &args).and_then(|d| self.ask(o, out, d)),
                     _ => Err(format!("unknown tool {name:?}")),
                 };
