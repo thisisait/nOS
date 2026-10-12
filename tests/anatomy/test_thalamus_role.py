@@ -10,6 +10,7 @@ Offline: the plist is rendered with jinja2, the reader is judged on fixtures.
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import os
 import pathlib
 import plistlib
@@ -154,6 +155,24 @@ def test_the_reader_reads_the_ledger_or_says_unknown():
         db.write_bytes(b"not a database")
         os.chmod(data, 0o700)
         assert r.judge_ledger(db)[0]["state"] == "UNKNOWN"
+
+
+def test_a_daemon_serving_without_a_model_is_never_green():
+    """serve keeps answering controls with no model; the reader must not call that whole."""
+    r = _reader()
+    with tempfile.TemporaryDirectory() as d:
+        log = pathlib.Path(d) / "launchd.err.log"
+        assert r.judge_model(log)["state"] == "UNKNOWN"                 # no log
+        log.write_text("thalamus: model bound ollama-qwen3:14b\n200 as x GET /api/tables 3ms\n"
+                       "thalamus: model UNBOUND: iris has no model: Disarmed(\"ollama\")\n")
+        m = r.judge_model(log)
+        assert m["state"] == "UNKNOWN" and "iris has no model" in m["detail"], m
+        assert m["detail"].startswith("degraded"), m
+        log.write_text(log.read_text() + "thalamus: model bound ollama-qwen3:14b\n")
+        assert r.judge_model(log) == r.line("model", "OK", "bound ollama-qwen3:14b", str(log))
+        log.write_text("200 as x GET /api/tables 3ms\n")
+        assert r.judge_model(log)["state"] == "UNKNOWN", "a log with no start line says nothing"
+    assert "judge_model(" in inspect.getsource(r.collect), "the reader never reports the model line"
 
 
 def test_the_reader_says_unknown_when_launchd_cannot_be_asked():
