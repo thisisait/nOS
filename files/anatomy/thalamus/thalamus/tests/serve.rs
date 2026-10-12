@@ -622,3 +622,34 @@ fn a_table_read_that_cannot_be_whole_is_an_error_not_a_short_answer() {
         assert!(body.contains(want), "{name}: the model was not told: {body}");
     }
 }
+
+#[test]
+fn the_model_hears_how_the_person_decided() {
+    for (name, d, note, want) in [("heard-yes", Decision::Approve, None, "approved, row written"),
+                                  ("heard-no", Decision::Reject, Some("not yet"), "rejected: not yet")] {
+        let rig = rig_n(name, mapped(), vec![ROWS.into(), ROWS.into(), POSTED.into()],
+            vec![call("propose_row_edit", EDIT), answer("Proposed.")]);
+        let (s, mut r, session, approval, _) = propose(&rig);
+        let mut w = &s;
+        w.write_all(encode(&ToThalamus::ApprovalDecision { approval: approval.clone(), decision: d,
+            note: note.map(str::to_string) }).as_bytes()).unwrap();
+        assert!(matches!(next(&mut r), Some(ToShell::Text { .. })));
+        turn(&s, &mut r, Some(session), "and?");
+        let body = rig.model.lock().unwrap()[2].1.clone();
+        assert!(body.contains(&format!("[thalamus] approval {approval}: {want}")), "{name}: {body}");
+    }
+}
+
+#[test]
+fn one_approval_waits_at_a_time() {
+    let two = serde_json::json!({"choices": [{"message": {"role": "assistant", "content": null, "tool_calls": [
+        {"id": "c1", "type": "function", "function": {"name": "propose_row_edit", "arguments": EDIT}},
+        {"id": "c2", "type": "function", "function": {"name": "propose_row_edit", "arguments": EDIT}}]}}]}).to_string();
+    let rig = rig_n("onepending", mapped(), vec![ROWS.into()], vec![two, answer("Proposed.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "close alpha twice");
+    let asks = got.iter().filter(|m| matches!(m, ToShell::ApprovalRequest { .. })).count();
+    assert_eq!(asks, 1, "{got:?}");
+    assert!(rig.model.lock().unwrap()[1].1.contains("an approval is already waiting"));
+}
