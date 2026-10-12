@@ -3,6 +3,7 @@
 // 221-223), reject at any time (176); one decision each (179); closed = not decided (157-161).
 // Gate: tests/anatomy/test_pupil_approvals_hold.py.
 import { readFileSync } from 'node:fs';
+import { compile } from 'svelte/compiler';
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import ApprovalCard from './ApprovalCard.svelte';
@@ -70,5 +71,17 @@ describe('the approval card', () => {
 		expect(html).toMatch(/<button[^>]*disabled[^>]*>approve<\/button>/);
 		expect(html).not.toMatch(/<button[^>]*disabled[^>]*>reject<\/button>/);
 		expect(draw(true)).not.toMatch(/<button[^>]*disabled[^>]*>approve<\/button>/);
+	});
+});
+
+describe('the diff list', () => {
+	// A value with no break point must wrap, not hide behind a side scroll the end
+	// marker cannot see: the GUI form of shell.rs wrap (no part of a value cut off).
+	it('wraps every value inside the card', () => {
+		const src = readFileSync(new URL('./Component.svelte', import.meta.url), 'utf8');
+		const css = compile(src, { filename: 'Component.svelte', css: 'external' }).css?.code ?? '';
+		const rule = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].find(([, sel]) => /\.diff[^,]*\bli\b/.test(sel));
+		expect(rule?.[2]).toMatch(/overflow-wrap:\s*anywhere/);
+		expect(rule?.[2]).toMatch(/white-space:\s*pre-wrap/);
 	});
 });
