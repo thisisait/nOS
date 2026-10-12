@@ -39,13 +39,14 @@ def test_pupil_renders_the_fixture():
 
 
 @needs_node
-def test_a_planted_prop_rename_is_named(tmp_path):
+@pytest.mark.parametrize("kind,old,new", [("markdown", "text", "body"), ("list", "items", "entries")])
+def test_a_planted_prop_rename_is_named(tmp_path, kind, old, new):
     """Rename one prop in a copy of the fixture; the pupil's vitest must go red naming the kind."""
     fx = json.loads(FIXTURE.read_text(encoding="utf-8"))
     hit = [c["msg"]["component"]["props"] for c in fx["to_shell"]
-           if c["msg"].get("component", {}).get("kind") == "markdown"]
-    assert hit, "plant did not apply: no markdown sample in the fixture"
-    hit[0]["body"] = hit[0].pop("text")
+           if c["msg"].get("component", {}).get("kind") == kind]
+    assert hit, f"plant did not apply: no {kind} sample in the fixture"
+    hit[0][new] = hit[0].pop(old)
     planted = tmp_path / "fixture.json"
     planted.write_text(json.dumps(fx), encoding="utf-8")
     r = subprocess.run(["npx", "vitest", "run", "src/fixture.test.ts"], cwd=PUPIL,
@@ -53,4 +54,4 @@ def test_a_planted_prop_rename_is_named(tmp_path):
                        env={**os.environ, "PUPIL_FIXTURE": str(planted)})
     out = r.stdout + r.stderr
     assert r.returncode != 0, "vitest stayed green on a renamed prop:\n" + out[-2000:]
-    assert "markdown props" in out, "vitest went red without naming the kind:\n" + out[-4000:]
+    assert f"{kind} props" in out, "vitest went red without naming the kind:\n" + out[-4000:]

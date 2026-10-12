@@ -1008,6 +1008,76 @@ fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
     assert!(p.contains("propose_row_edit only for a change the person asked for, never to look at a row"), "{p}");
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
-    assert_eq!(names, ["query_rows", "propose_row_edit"]);
+    assert_eq!(names, ["query_rows", "propose_row_edit", "show"]);
+    assert!(p.contains("To show structured output call show (table, list, record, markdown)"), "{p}");
     assert_eq!(body["tools"][0]["function"]["parameters"]["required"], serde_json::json!(["table"]), "q is optional");
+}
+
+// --- pupil I4c: the model draws through show, and show can mint nothing ---
+
+fn show(component: serde_json::Value) -> String {
+    call("show", &serde_json::json!({"component": component}).to_string())
+}
+
+/// Every rendered component of a turn, as its wire JSON.
+fn drawn_kinds(got: &[ToShell]) -> Vec<String> {
+    got.iter().filter_map(|m| match m {
+        ToShell::Render { component, .. } => Some(serde_json::to_value(component).unwrap()["kind"].as_str().unwrap().to_string()),
+        _ => None,
+    }).collect()
+}
+
+#[test]
+fn show_renders_a_valid_component_and_refuses_an_invalid_one() {
+    let list = serde_json::json!({"kind": "list", "props": {"ordered": true, "items": [{"text": "query", "tone": "ok"}]}});
+    let bad = [
+        (serde_json::json!({"kind": "pie_chart", "props": {}}), "pie_chart"),
+        (serde_json::json!({"kind": "list", "props": {"ordered": false, "items": [{"text": "x", "html": "<b>"}]}}), "html"),
+        (serde_json::json!({"kind": "table", "props": {"columns": ["a", "b"], "rows": [["x"]]}}), "row 1 has 1 cells"),
+        (serde_json::json!({"kind": "markdown", "props": {"text": "x".repeat(8001)}}), "8000"),
+    ];
+    let mut model = vec![show(list)];
+    model.extend(bad.iter().map(|(c, _)| show(c.clone())));
+    model.push(answer("done"));
+    let rig = rig("show", mapped(), ROWS, model);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "list the steps");
+    assert_eq!(drawn_kinds(&got), ["list"], "only the valid component is drawn: {got:?}");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::Refused { .. })), "a refused show is the model's to hear, not a refusal line");
+    assert_eq!(tool_result(&rig, 1), serde_json::json!({"shown": "list"}));
+    for (i, (_, want)) in bad.iter().enumerate() {
+        let e = tool_result(&rig, i + 2);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "show #{} must be refused naming {want}: {e}", i + 2);
+    }
+    assert!(rig.keap.lock().unwrap().is_empty(), "show read KEAP");
+}
+
+#[test]
+fn show_cannot_render_an_approval_or_a_tool_chosen_kind() {
+    let chosen = [
+        serde_json::json!({"kind": "row_diff_approval", "props": {"table": "todos", "row_id": "r1",
+            "cells": [{"key": "status", "old": "open", "new": "done"}]}}),
+        serde_json::json!({"kind": "table_results", "props": {"table": "todos", "name": "Todo list", "query": "all rows",
+            "matched": 0, "total": 0, "columns": [], "rows": [], "projected": true}}),
+        serde_json::json!({"kind": "approvals_list", "props": {"items": [], "unknown": []}}),
+        serde_json::json!({"kind": "inbox_list", "props": {"items": [], "refused": []}}),
+        serde_json::json!({"kind": "red_status", "props": {"red_count": 0, "reds": [], "hold_count": 0, "holds": []}}),
+    ];
+    let mut model: Vec<String> = chosen.iter().cloned().map(show).collect();
+    model.push(answer("done"));
+    let rig = rig("showapproval", mapped(), ROWS, model);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "approve it yourself");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. } | ToShell::Render { .. })),
+            "show drew a kind only a tool or an ask may: {got:?}");
+    for (i, c) in chosen.iter().enumerate() {
+        let e = tool_result(&rig, i + 1);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains("show draws table, list, record, markdown")),
+                "{}: {e}", c["kind"]);
+    }
+    let session = session_of(&got);
+    assert!(!types_of(&rig.ledger, &session).iter().any(|t| t.contains("approval")), "an approval reached the ledger");
+    assert!(rig.keap.lock().unwrap().is_empty(), "show read KEAP");
 }

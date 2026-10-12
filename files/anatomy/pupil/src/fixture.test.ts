@@ -17,6 +17,9 @@ const PROPS: Record<string, string[]> = {
 	approvals_list: ['items', 'unknown'],
 	red_status: ['hold_count', 'holds', 'red_count', 'reds'],
 	markdown: ['text'],
+	table: ['columns', 'rows', 'title'],
+	list: ['items', 'ordered', 'title'],
+	record: ['fields', 'title'],
 };
 const KINDS = Object.keys(PROPS);
 
@@ -166,3 +169,26 @@ describe('markdown is drawn as nodes, never as markup', () => {
 	});
 });
 
+
+describe('the kinds the model shows are drawn as their shapes', () => {
+	const of = (kind: string) => fx.to_shell.find((c) => 'component' in c.msg && c.msg.component.kind === kind)!.msg;
+
+	it('a table is a grid of its columns, with no row id', () => {
+		const h = html(of('table'));
+		const heads = [...h.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1].trim());
+		expect(heads).toEqual(['track', 'next', 'done']);
+		expect(h.match(/<tr/g)?.length).toBe(3);
+	});
+
+	it('an ordered list is an <ol>, and a tone is said in words', () => {
+		const h = html(of('list'));
+		expect(h).toContain('<ol');
+		expect(text(h)).toContain('warn chart — not built yet');
+	});
+
+	it('a record value that is not a scalar is drawn as JSON text in a <pre>', () => {
+		const h = html(of('record'));
+		expect(h).toContain('<pre');
+		expect(text(h)).toContain('"next": "I4c"');
+	});
+});
