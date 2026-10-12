@@ -1,17 +1,27 @@
 //! A cell's `model.backend` resolved into a Binding, or refused — the gates of
 //! files/anatomy/wing/app/AgentKit/LLMClient/BindingResolver.php, in its order.
-//! No vault here: a backend that needs a key refuses, which is what the PHP
-//! resolver does when the key resolves to nothing.
+//! The vault is the caller's env: `nos:<var>` is asked of it like any other name
+//! (main.rs answers it from the plist's NOS_SECRET_<VAR>, read once). An empty
+//! answer refuses, which is what the PHP resolver does when the key resolves to nothing.
 
 use serde_yaml_ng::Value;
 use std::path::Path;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Binding {
     pub name: String,
     pub base_url: String,
     pub auth_token: String,
     pub model_id: String,
+}
+
+/// Never prints the key: a Binding is logged and panicked over.
+impl std::fmt::Debug for Binding {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let key = if self.auth_token.is_empty() { "none" } else { "set" };
+        write!(f, "Binding {{ name: {:?}, base_url: {:?}, auth_token: {key}, model_id: {:?} }}",
+               self.name, self.base_url, self.model_id)
+    }
 }
 
 /// Default and Disarmed name no model: the thalamus has no default adapter, so
@@ -110,16 +120,19 @@ pub fn decide(agent_yml: &str, register_yml: &str, env: impl Fn(&str) -> Option<
         return Err(format!("backend '{declared}' is armed but {model_env} is empty; refusing to send a blank model id"));
     }
 
-    // Gate 7 (key half) — only a keyless local row binds without a vault.
+    // Gate 7 (key half) — a key, unless the row is local and names none.
     let local = spec.get("local").and_then(Value::as_bool) == Some(true);
     let secret = text(spec, &["auth_secret"]);
-    if !local || !secret.is_empty() {
-        return Err(format!("backend '{declared}' is armed but its auth_secret '{secret}' resolves to nothing here (the thalamus holds no vault)"));
+    let auth_token = if secret.is_empty() { String::new() } else { env(&secret).unwrap_or_default() };
+    if auth_token.is_empty() && (!local || !secret.is_empty()) {
+        let var = secret.strip_prefix("nos:").unwrap_or(&secret);
+        return Err(format!("backend '{declared}' is armed but its auth_secret '{secret}' resolves to nothing: \
+                            set {var} in credentials.yml and converge"));
     }
     Ok(Decision::Bound(Binding {
         name: declared.to_string(),
         base_url: text(spec, &["base_url"]),
-        auth_token: String::new(),
+        auth_token,
         model_id,
     }))
 }

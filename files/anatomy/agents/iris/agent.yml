@@ -8,11 +8,12 @@ description: >-
   runs it (files/anatomy/thalamus/thalamus/src/binding.rs).
 
 model:
-  # sonnet tier -> NOS_LOCAL_MODEL, the same pin jeff reads. The thalamus
-  # resolves this exactly as BindingResolver does; ollama is the only backend
-  # this record covers, so a disarmed ollama refuses rather than degrades.
-  primary: openai-local-sonnet
-  backend: ollama
+  # Operator ruling 2026-10-12: Mistral Large on the EU endpoint. sonnet tier ->
+  # NOS_MISTRAL_MODEL (mistral_model). The thalamus resolves this exactly as
+  # BindingResolver does; mistral-eu is the only backend this record covers, so
+  # a disarmed or keyless mistral-eu refuses rather than degrades (gate 8).
+  primary: openai-sonnet
+  backend: mistral-eu
 
 audit:
   capability_scopes:
@@ -22,9 +23,9 @@ audit:
 
 vault:
   required_credentials:
-    # Local backend: the empty token is the honest value (resolver gate 7).
-    - scope: ollama-local
-      optional: true
+    # mistral_api_key: the thalamus reads it from its 0600 plist env
+    # (roles/pazny.thalamus), not from Wing's vault — Wing does not run iris.
+    - scope: mistral-eu
 
 metadata:
   specialization: person-assistant
@@ -42,28 +43,34 @@ gdpr:
     read and write through KEAP's human door. Every read and write runs as
     that person; Iris adds no access. Legitimate interest, Art. 6(1)(f).
   legal_basis: legitimate_interests
+  # What reaches Mistral on each call: the person's turns and the row values
+  # the tool results carry (search_rows, propose_row_edit).
   data_categories:
     - person_authored_prompts
     - datatable_row_contents
   data_subjects:
     - operators
     - estate_users
-  # The thalamus ledger keeps the turn, the tool calls and the decision;
-  # the model keeps nothing between calls.
+  # The thalamus ledger keeps the turn, the tool calls and the decision. The
+  # processor's own retention is its terms', not this record's (see safeguard).
   retention_days: -1
   processors:
-    - name: on-device (operator's own hardware)
+    - name: "Mistral AI SAS"
       role: >-
-        LLM inference on this host via ollama's OpenAI-compatible surface on
-        loopback. No third party sees the prompt or the rows, so there is no
-        processor in the Article-28 sense; this entry says so rather than
-        leaving the field blank.
-      country: "CZ — this host"
+        LLM inference (Mistral Large) on the EU-regional endpoint
+        api.eu.mistral.ai, OpenAI-compatible chat completions with tools. Each
+        call carries the person's turn and the DataTable row values returned
+        by Iris's tools. Bound by state/habitat/llm-backends.yml row mistral-eu.
+      country: "FR — Paris; EU inference under the regional endpoint"
       safeguard: >-
-        Not applicable. No transfer occurs.
+        EU processor with an EU seat; no third-country transfer is claimed.
+        Caveats from the register row: the control plane (auth, billing, abuse)
+        is not regionalised, zero data retention is Scale-plan-only by request,
+        and training use needs an explicit opt-out. The Art. 28 DPA with Mistral
+        is the operator's to confirm.
   eu_residency: true
-  # Gate 8 makes this a mechanism: Iris cannot be pointed at a hosted backend,
-  # and refuses instead of degrading to the default when ollama is disarmed.
+  # False only because Iris's whole serving set is the EU row: gate 8 refuses
+  # a non-EU backend and refuses to degrade to the default when it is disarmed.
   transfers_outside_eu: false
   storage_location: "{nos_data_root}/platform/services/thalamus/data/ledger.db on this host"
 

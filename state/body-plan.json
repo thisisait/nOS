@@ -2363,6 +2363,11 @@
       "kind": "data"
     },
     {
+      "from": "backend:mistral-eu",
+      "to": "agent:iris",
+      "kind": "data"
+    },
+    {
       "from": "backend:ollama",
       "to": "agent:invoice-extract",
       "kind": "data"
@@ -2370,11 +2375,6 @@
     {
       "from": "backend:ollama",
       "to": "agent:invoice-vision-ocr",
-      "kind": "data"
-    },
-    {
-      "from": "backend:ollama",
-      "to": "agent:iris",
       "kind": "data"
     },
     {

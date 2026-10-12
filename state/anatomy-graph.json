@@ -134,12 +134,12 @@
       "source": "files/anatomy/agents/iris/agent.yml",
       "charter": "person-assistant",
       "runner_status": "unproven",
-      "primary_model": "openai-local-sonnet",
-      "backend": "ollama",
+      "primary_model": "openai-sonnet",
+      "backend": "mistral-eu",
       "backend_declared": true,
       "tools": [],
       "anchor": "02.02.09",
-      "description": "Agent cell 'iris' (person-assistant), mode=None, runner_status=unproven — primary openai-local-sonnet on backend ollama"
+      "description": "Agent cell 'iris' (person-assistant), mode=None, runner_status=unproven — primary openai-sonnet on backend mistral-eu"
     },
     "agent:jeff": {
       "kind": "agent",
@@ -5930,6 +5930,14 @@
       "evidence": "derived"
     },
     {
+      "from": "backend:mistral-eu",
+      "to": "agent:iris",
+      "kind": "data",
+      "via": "`model.backend: mistral-eu` binding, resolved through state/habitat/llm-backends.yml at session open",
+      "derived": "agent-backend",
+      "evidence": "derived"
+    },
+    {
       "from": "backend:ollama",
       "to": "agent:invoice-extract",
       "kind": "data",
@@ -5940,14 +5948,6 @@
     {
       "from": "backend:ollama",
       "to": "agent:invoice-vision-ocr",
-      "kind": "data",
-      "via": "`model.backend: ollama` binding, resolved through state/habitat/llm-backends.yml at session open",
-      "derived": "agent-backend",
-      "evidence": "derived"
-    },
-    {
-      "from": "backend:ollama",
-      "to": "agent:iris",
       "kind": "data",
       "via": "`model.backend: ollama` binding, resolved through state/habitat/llm-backends.yml at session open",
       "derived": "agent-backend",
