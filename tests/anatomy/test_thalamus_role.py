@@ -196,6 +196,26 @@ def test_the_build_is_locked_and_off_the_checkout():
     assert "--locked" in sh and "--release" in sh and "CARGO_TARGET_DIR" in sh, sh
 
 
+def test_the_binary_keeps_one_signing_identity_across_builds():
+    """macOS ties a removable-volume grant to the designated requirement. The linker's ad-hoc
+    DR is the cdhash, so every rebuild re-asked (measured 2026-10-12). A self-signed identity
+    in the login keychain makes the DR identifier + certificate: stable across builds."""
+    tasks = _tasks()
+    names = [t.get("name", "").lower() for t in tasks]
+    mint = next(t for t in tasks if "signing identity" in t.get("name", "").lower())
+    sh = mint["ansible.builtin.shell"]
+    assert "security find-certificate" in sh and sh.index("find-certificate") < sh.index("security import"), \
+        "the identity is minted only when the keychain lacks it"
+    assert "-T /usr/bin/codesign" in sh and "codeSigning" in sh, sh
+    sign = next(t for t in tasks if "sign the binary" in t.get("name", "").lower())
+    ssh = sign["ansible.builtin.shell"]
+    assert "codesign -f -s" in ssh and "-s -" not in ssh, "ad-hoc (-s -) keeps the cdhash DR"
+    assert "Restart thalamus" in str(sign.get("notify")), "a re-signed binary is a new process"
+    install = next(i for i, n in enumerate(names) if "install thalamus binary" in n)
+    boot = next(i for i, n in enumerate(names) if "bootstrap launchd" in n)
+    assert install < names.index(sign["name"].lower()) < boot, "sign after the build, before the job starts"
+
+
 def _reader():
     spec = importlib.util.spec_from_file_location("thalamus_status", READER)
     mod = importlib.util.module_from_spec(spec)
