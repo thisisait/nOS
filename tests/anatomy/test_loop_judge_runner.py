@@ -1084,7 +1084,10 @@ MEASURED_WORK = {
     # 155 skipped, 1 failed (this ratchet), so 7432. That is the OPERATOR
     # reading (vendor present). The judge sandbox has no wing/vendor and reads
     # 7291 / 301 skipped on the same tip; min_work derives from THAT number.
-    "pytest-anatomy": 7432,
+    # RE-DERIVED 2026-10-12 — fired at 7837 collected vs 7432 (thalamus slice 1,
+    # receptor, memory-pressure preflight). Fresh run: 7680 passed, 156 skipped,
+    # 1 failed (this ratchet), so 7681. Operator reading; min_work not re-derived.
+    "pytest-anatomy": 7681,
     "cortex-corpus-diff": 1,
 }
 
