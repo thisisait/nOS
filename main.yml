@@ -931,11 +931,6 @@
         restart homeassistant
       failed_when: false
 
-    - name: Restart openclaw
-      ansible.builtin.command: >
-        launchctl kickstart -k "gui/{{ ansible_facts['user_uid'] }}/com.openclaw.agent"
-      failed_when: false
-
     - name: Restart grafana
       ansible.builtin.shell: >
         {{ docker_bin }} compose -f "{{ stacks_dir }}/observability/docker-compose.yml" -p observability

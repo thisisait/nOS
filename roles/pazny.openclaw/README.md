@@ -17,7 +17,7 @@ OpenClaw is nOS' autonomous DevOps agent. This role installs Ollama, pulls the p
 9. Injects Ollama env vars into `~/.zshrc`, tightens `~/.openclaw` permissions to `0700`
 10. Creates a default nginx project landing page under `~/projects/default/`
 
-Notified handler `Restart openclaw` kicks the launchd agent `com.openclaw.agent`.
+The gateway runs as `ai.openclaw.gateway` (written by `openclaw gateway install`); the role has no restart handler.
 
 ## Requirements
 
@@ -25,7 +25,6 @@ Notified handler `Restart openclaw` kicks the launchd agent `com.openclaw.agent`
 - Node.js via NVM (handled by the main nOS playbook)
 - `community.general` collection for the `homebrew` module
 - The `files/openclaw/` and `files/project-openclaw/` trees staying inside the playbook repo
-- Play-level handler `Restart openclaw` defined in the consuming playbook (a role-local copy is also provided)
 
 ## Variables
 
