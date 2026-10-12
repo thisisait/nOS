@@ -7,6 +7,8 @@
 	import { onMount, tick } from 'svelte';
 	import StatusNote from '$ui/StatusNote.svelte';
 	import ApprovalCard from './ApprovalCard.svelte';
+	import Eye from './Eye.svelte';
+	import { SETTLE_MS, eye, look, step, type Input } from './eye';
 	import Message from './Message.svelte';
 	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
 	import type { Link, ToShell, ToThalamus } from './wire';
@@ -26,6 +28,16 @@
 	let session: string | null = $state(null);
 	let draft = $state('');
 	let column: HTMLElement | undefined = $state();
+	let ey = $state(eye());
+	const see = (i: Input) => (ey = step(ey, i));
+	// Waiting wins until the queue is empty (shell.rs:173), whatever the wire last said.
+	const view = $derived(look(ey, q.pending.length));
+	$effect(() => {
+		const { state, seq } = ey;
+		if (state !== 'said' && state !== 'refused') return;
+		const t = setTimeout(() => see({ e: 'settle', seq }), SETTLE_MS[state]);
+		return () => clearTimeout(t);
+	});
 
 	async function push(e: Entry) {
 		log.push(e);
@@ -75,12 +87,15 @@
 		}
 		const off = [
 			tauri.event.listen<ToShell>('to_shell', ({ payload }) => {
+				see({ e: 'wire', msg: payload });
 				if (payload.t === 'session') session = payload.session;
+				if (payload.t === 'activity') return; // the eye's, not the log's
 				if (payload.t === 'approval_request') q = asked(q, payload);
 				else push({ msg: payload });
 			}),
 			tauri.event.listen<Link>('link', ({ payload }) => {
 				link = payload;
+				see({ e: 'link', state: payload.state });
 				if (payload.state !== 'closed') return;
 				const r = closed(q);
 				q = r.q;
@@ -101,6 +116,7 @@
 			<button onclick={connect}>connect</button>
 		{/if}
 	</header>
+	<Eye {view} />
 	<div class="column" bind:this={column}>
 		{#each log as e}
 			{#if 'me' in e}<p class="me">{e.me}</p>
@@ -132,6 +148,7 @@
 			rows="2"
 			placeholder={q.pending.length ? 'decide the approval first' : 'Ask Iris…'}
 			disabled={!open}
+			oninput={(e) => see({ e: 'typing', text: e.currentTarget.value })}
 			onkeydown={(e) => {
 				if (e.key === 'Enter' && !e.shiftKey) {
 					e.preventDefault();

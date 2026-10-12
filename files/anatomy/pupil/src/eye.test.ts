@@ -109,6 +109,6 @@ describe('the eye drawn', () => {
 		const src = readFileSync(new URL('./Eye.svelte', import.meta.url), 'utf8');
 		const reduced = src.match(/@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\t\}/)?.[1] ?? '';
 		expect(reduced).toMatch(/animation: none/);
-		expect(src).not.toMatch(/<canvas|webgl|rive/i);
+		expect(src).not.toMatch(/<canvas|getContext\(|@rive-app|<img/); // code, not the comment's prose
 	});
 });
