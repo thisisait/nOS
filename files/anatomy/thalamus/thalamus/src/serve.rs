@@ -224,6 +224,8 @@ a line's series share the same x in the same order",
 }
 
 const QUERY_KEYS: [&str; 6] = ["table", "q", "where", "columns", "order_by", "limit"];
+const WHERE_KEYS: [&str; 3] = ["column", "op", "value"];
+const ORDER_KEYS: [&str; 2] = ["column", "dir"];
 const OPS: [&str; 4] = ["eq", "neq", "in", "contains"];
 
 fn tools() -> Value {
@@ -529,7 +531,14 @@ chart); plain text may use markdown, nothing else.", who.username);
             .ok_or(format!("no column `{k}` in {name}; columns: {}", keys.join(", ")));
 
         let mut said = Vec::new();
-        let q = given("q").and_then(Value::as_str).map(|q| q.trim().to_lowercase()).filter(|q| !q.is_empty());
+        let q = match given("q") {
+            None => None,
+            Some(Value::String(q)) => {
+                let q = q.trim().to_lowercase();
+                (!q.is_empty()).then_some(q)
+            }
+            Some(_) => return Err("`q` is a string".into()),
+        };
         if let Some(q) = &q {
             said.push(format!("contains {q:?}"));
         }
@@ -540,14 +549,20 @@ chart); plain text may use markdown, nothing else.", who.username);
         };
         let mut wh: Vec<(&str, &str, Vec<String>)> = Vec::new();
         for c in conds {
+            if let Some(k) = c.as_object().and_then(|o| o.keys().find(|k| !WHERE_KEYS.contains(&k.as_str()))) {
+                return Err(format!("a `where` condition has no key `{k}`; it has {}", WHERE_KEYS.join(", ")));
+            }
             let k = c.get("column").and_then(Value::as_str).ok_or("a `where` condition needs `column`")?;
             let def = col(k)?;
             let op = c.get("op").and_then(Value::as_str).filter(|o| OPS.contains(o))
                 .ok_or(format!("`where` on {k}: op is one of {}", OPS.join(", ")))?;
             let vals: Vec<String> = match (op, c.get("value")) {
-                ("in", Some(Value::Array(v))) => v.iter().map(text).collect(),
-                ("in", _) => return Err(format!("`where` on {k}: in takes a list of values")),
-                (_, Some(v @ (Value::String(_) | Value::Number(_) | Value::Bool(_)))) => vec![text(v)],
+                ("in", Some(Value::Array(v))) => v.iter().map(|x| match x.as_str() {
+                    Some(s) => Ok(s.to_string()),
+                    None => Err(format!("`where` on {k}: in takes a list of strings")),
+                }).collect::<Result<Vec<_>, _>>()?,
+                ("in", _) => return Err(format!("`where` on {k}: in takes a list of strings")),
+                (_, Some(Value::String(s))) => vec![s.clone()],
                 _ => return Err(format!("`where` on {k}: value is a string")),
             };
             let options: Option<Vec<&str>> = def.get("options").and_then(Value::as_array)
@@ -568,12 +583,16 @@ chart); plain text may use markdown, nothing else.", who.username);
         let order = match given("order_by") {
             None => None,
             Some(o) => {
+                if let Some(k) = o.as_object().and_then(|obj| obj.keys().find(|k| !ORDER_KEYS.contains(&k.as_str()))) {
+                    return Err(format!("`order_by` has no key `{k}`; it has {}", ORDER_KEYS.join(", ")));
+                }
                 let k = o.get("column").and_then(Value::as_str).ok_or("`order_by` needs `column`")?;
                 col(k)?;
-                let desc = match o.get("dir").and_then(Value::as_str) {
-                    None | Some("asc") => false,
-                    Some("desc") => true,
-                    Some(d) => return Err(format!("`order_by` dir is asc or desc, not {d:?}")),
+                let desc = match o.get("dir") {
+                    None => false,
+                    Some(Value::String(d)) if d == "asc" => false,
+                    Some(Value::String(d)) if d == "desc" => true,
+                    Some(d) => return Err(format!("`order_by` dir is asc or desc, not {d}")),
                 };
                 said.push(format!("order by {k} {}", if desc { "desc" } else { "asc" }));
                 Some((k, desc))
