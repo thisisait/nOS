@@ -100,21 +100,42 @@ fn rig_n(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_bod
     rig_full(name, map, keap_bodies, model_bodies, Some(local()))
 }
 
-/// The keyless local binding; rig_full points its base_url at the fake model.
+/// A binding as the resolver makes it from the real register; rig_full points base_url at the fake.
+fn bound(cell: &str, env: &[(&str, &str)]) -> Binding {
+    let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../..");
+    let register = std::fs::read_to_string(repo.join("state/habitat/llm-backends.yml")).unwrap();
+    let cell = match cell {
+        "iris" => std::fs::read_to_string(repo.join("files/anatomy/agents/iris/agent.yml")).unwrap(),
+        inline => inline.to_string(),
+    };
+    match thalamus::binding::decide(&cell, &register, |k| env.iter().find(|(n, _)| *n == k).map(|(_, v)| v.to_string())) {
+        Ok(thalamus::binding::Decision::Bound(b)) => b,
+        other => panic!("the rig's binding did not bind: {other:?}"),
+    }
+}
+
+/// A keyless local cell on ollama.
 fn local() -> Binding {
-    Binding { name: "ollama".into(), base_url: String::new(), auth_token: String::new(), model_id: "qwen3:14b".into() }
+    bound("name: c\nmodel: {primary: openai-local-sonnet, backend: ollama}\ngdpr: {processors: [{name: on-device}]}\n",
+          &[("NOS_ARMED_BACKENDS", "ollama"), ("NOS_LOCAL_MODEL", "qwen3:14b")])
 }
 
 const KEY: &str = "sk-eu-model-key-91c2";
 
 /// Iris's cloud binding (mistral-eu), keyed.
 fn cloud() -> Binding {
-    Binding { name: "mistral-eu".into(), base_url: String::new(), auth_token: KEY.into(), model_id: "mistral-large-latest".into() }
+    bound("iris", &[("NOS_ARMED_BACKENDS", "mistral-eu"), ("NOS_MISTRAL_MODEL", "mistral-large-latest"),
+                    ("nos:mistral_api_key", KEY)])
 }
+
+const SHORT: &str = "# Imprint (short)\nSHORT-IMPRINT-MARK\n";
+const FULL: &str = "# Imprint\nFULL-IMPRINT-MARK\n";
 
 fn rig_full(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_bodies: Vec<String>,
             bound: Option<Binding>) -> Rig {
     let d = dir(name);
+    std::fs::write(d.join("IMPRINT.short.md"), SHORT).unwrap();
+    std::fs::write(d.join("IMPRINT.md"), FULL).unwrap();
     let map_path = d.join("identity-map.yml");
     std::fs::write(&map_path, map.to_string()).unwrap();
     let (keap_url, keap) = fake(keap_bodies);
@@ -304,6 +325,46 @@ fn a_local_model_gets_no_authorization_header() {
     turn(&s, &mut r, None, "hello");
     let model = rig.model.lock().unwrap().clone();
     assert!(model.iter().all(|(h, _)| !h.to_ascii_lowercase().contains("authorization:")), "{model:?}");
+}
+
+/// The system message of the first request the model saw.
+fn system_prompt(rig: &Rig) -> String {
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
+    assert_eq!(body["messages"][0]["role"], "system");
+    body["messages"][0]["content"].as_str().unwrap().to_string()
+}
+
+#[test]
+fn the_prompt_carries_the_imprint_the_binding_calls_for() {
+    // Local model: the short imprint fits its window. Cloud (Mistral Large): the whole one.
+    for (name, b, want, not) in [("implocal", local(), SHORT, FULL), ("impcloud", cloud(), FULL, SHORT)] {
+        let rig = rig_full(name, mapped(), vec![ROWS.into()], vec![answer("hi")], Some(b));
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        turn(&s, &mut r, None, "hello");
+        let p = system_prompt(&rig);
+        assert!(p.starts_with(want), "{name}: the prompt does not lead with its imprint:\n{p}");
+        assert!(!p.contains(not.lines().nth(1).unwrap()), "{name}: the other imprint rode along");
+        assert!(p.contains("You are Iris. You act for Alice Smith and see only what they may see."), "{p}");
+    }
+}
+
+#[test]
+fn a_missing_imprint_refuses_the_turn_and_says_so() {
+    for (name, b, file) in [("noimpl", local(), "IMPRINT.short.md"), ("noimpc", cloud(), "IMPRINT.md")] {
+        let rig = rig_full(name, mapped(), vec![ROWS.into()], vec![answer("never")], Some(b));
+        std::fs::write(rig.srv.repo.join(file), " \n").unwrap(); // empty is missing
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let got = turn(&s, &mut r, None, "hello");
+        match got.last() {
+            Some(ToShell::Refused { reason }) => assert!(reason.contains(file), "{name}: {reason}"),
+            other => panic!("{name}: a turn without its imprint must be refused, got {other:?}"),
+        }
+        assert!(rig.model.lock().unwrap().is_empty(), "{name}: the model was called without its imprint");
+        let log = String::from_utf8(rig.log.0.lock().unwrap().clone()).unwrap();
+        assert!(log.contains(file), "{name}: the log does not name the missing imprint:\n{log}");
+    }
 }
 
 // --- increment 6: a write renderer cannot commit without the approval event ---
