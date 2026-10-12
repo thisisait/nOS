@@ -1,7 +1,7 @@
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import Markdown from './Markdown.svelte';
-import { parse } from './markdown';
+import { inline, parse } from './markdown';
 
 // An <ol> with no value numbers from 1. The digits in the source are the
 // numbers the person wrote; the tree and each <li value> must keep them.
@@ -21,5 +21,25 @@ describe('an ordered list keeps the numbers in the source', () => {
 				],
 			},
 		]);
+	});
+});
+
+// The inline regex re-read the suffix from every unclosed "[" (the label class
+// included "["): 32000 of them took ~600 ms. A linear scan is far under the bound.
+describe('unclosed inline markers do not backtrack', () => {
+	it('a long unclosed [, ** or * is literal text, quickly', () => {
+		const n = 32000;
+		const cases: [string, string][] = [
+			['[', '['.repeat(n)],
+			['**', '**' + 'a'.repeat(n)],
+			['*', '*' + 'a'.repeat(n)],
+		];
+		for (const [name, s] of cases) {
+			const t0 = performance.now();
+			const got = inline(s);
+			const ms = performance.now() - t0;
+			expect(ms, name).toBeLessThan(100);
+			expect(got, name).toEqual([{ t: 'text', text: s }]);
+		}
 	});
 });
