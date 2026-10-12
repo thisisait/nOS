@@ -47,6 +47,12 @@ def test_the_scan_sees_the_pupil():
     assert any(p.suffix == ".svelte" for p in _sources()), f"no Svelte under {PUPIL}/src"
 
 
+def test_the_scan_sees_every_renderer():
+    # The renderers of model strings: a new one outside src/ would draw unscanned.
+    names = {p.name for p in _sources()}
+    assert {"Component.svelte", "Markdown.svelte", "Chart.svelte"} <= names, sorted(names)
+
+
 def test_the_scan_catches_a_planted_sink():
     assert _hits("<p>{@html model}</p>") and _hits("el.innerHTML = s")
     assert not _hits("<!-- escaped; there is no {@html} path -->")

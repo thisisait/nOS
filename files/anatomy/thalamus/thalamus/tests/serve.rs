@@ -1009,7 +1009,7 @@ fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
     assert_eq!(names, ["query_rows", "propose_row_edit", "show"]);
-    assert!(p.contains("To show structured output call show (table, list, record, markdown)"), "{p}");
+    assert!(p.contains("To show structured output call show (table, list, record, markdown, chart)"), "{p}");
     assert_eq!(body["tools"][0]["function"]["parameters"]["required"], serde_json::json!(["table"]), "q is optional");
 }
 
@@ -1074,10 +1074,40 @@ fn show_cannot_render_an_approval_or_a_tool_chosen_kind() {
             "show drew a kind only a tool or an ask may: {got:?}");
     for (i, c) in chosen.iter().enumerate() {
         let e = tool_result(&rig, i + 1);
-        assert!(e["error"].as_str().is_some_and(|e| e.contains("show draws table, list, record, markdown")),
+        assert!(e["error"].as_str().is_some_and(|e| e.contains("show draws table, list, record, markdown, chart, not")),
                 "{}: {e}", c["kind"]);
     }
     let session = session_of(&got);
     assert!(!types_of(&rig.ledger, &session).iter().any(|t| t.contains("approval")), "an approval reached the ledger");
     assert!(rig.keap.lock().unwrap().is_empty(), "show read KEAP");
+}
+
+// --- pupil I4d: a chart is bar or line, within its caps ---
+
+#[test]
+fn show_draws_a_chart_and_refuses_a_pie_or_an_overfull_one() {
+    let pts = |n: usize| (0..n).map(|i| serde_json::json!([format!("x{i}"), i])).collect::<Vec<_>>();
+    let bar = serde_json::json!({"kind": "chart", "props": {"chart": "bar", "series": [{"name": "a", "points": pts(3)}]}});
+    let seven: Vec<_> = (0..7).map(|k| serde_json::json!({"name": format!("s{k}"), "points": pts(2)})).collect();
+    let bad = [
+        (serde_json::json!({"kind": "chart", "props": {"chart": "pie", "series": [{"name": "a", "points": pts(2)}]}}), "pie"),
+        (serde_json::json!({"kind": "chart", "props": {"chart": "bar", "series": seven}}), "chart series: 7, at most 6"),
+        (serde_json::json!({"kind": "chart", "props": {"chart": "line", "series": [{"name": "a", "points": pts(61)}]}}), "61, at most 60"),
+        (serde_json::json!({"kind": "chart", "props": {"chart": "line", "series": [{"name": "a", "points": pts(2)},
+            {"name": "b", "points": pts(1)}]}}), "the same x"),
+        (serde_json::json!({"kind": "chart", "props": {"chart": "bar", "series": [{"name": "a", "points": [["x", "1"]]}]}}), "invalid type"),
+    ];
+    let mut model = vec![show(bar)];
+    model.extend(bad.iter().map(|(c, _)| show(c.clone())));
+    model.push(answer("done"));
+    let rig = rig("chart", mapped(), ROWS, model);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "chart it");
+    assert_eq!(drawn_kinds(&got), ["chart"], "only the valid chart is drawn: {got:?}");
+    assert_eq!(tool_result(&rig, 1), serde_json::json!({"shown": "chart"}));
+    for (i, (_, want)) in bad.iter().enumerate() {
+        let e = tool_result(&rig, i + 2);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "show #{} must be refused naming {want}: {e}", i + 2);
+    }
 }

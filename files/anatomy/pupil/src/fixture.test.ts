@@ -20,6 +20,7 @@ const PROPS: Record<string, string[]> = {
 	table: ['columns', 'rows', 'title'],
 	list: ['items', 'ordered', 'title'],
 	record: ['fields', 'title'],
+	chart: ['chart', 'series', 'title'],
 };
 const KINDS = Object.keys(PROPS);
 
@@ -190,5 +191,66 @@ describe('the kinds the model shows are drawn as their shapes', () => {
 		const h = html(of('record'));
 		expect(h).toContain('<pre');
 		expect(text(h)).toContain('"next": "I4c"');
+	});
+});
+
+describe('a chart is SVG marks and text labels, inside its box', () => {
+	type Chart = Extract<Component, { kind: 'chart' }>;
+	const sample = fx.to_shell.find((c) => 'component' in c.msg && c.msg.component.kind === 'chart')!.msg;
+	const chart = (props: Chart['props']): ToShell => ({ t: 'render', session: 's', component: { kind: 'chart', props } });
+	// Every <text> as drawn: x, y, anchor, size, and the words.
+	const labels = (h: string) =>
+		[...h.matchAll(/<text([^>]*)>([^<]*)<\/text>/g)].map(([, a, t]) => {
+			const at = (k: string) => a.match(new RegExp(`${k}="([^"]*)"`))?.[1];
+			return { x: Number(at('x')), y: Number(at('y')), anchor: at('text-anchor') ?? 'start', size: Number(at('font-size')), t: text(t).trim() };
+		});
+
+	it('every value of a bar chart is a bar, said as series, x and value', () => {
+		const h = html(sample);
+		const c = (sample as Extract<ToShell, { t: 'render' }>).component as Chart;
+		expect(h).toContain('<svg');
+		expect(h.match(/<rect[^>]*class="bar/g)?.length).toBe(6);
+		for (const s of c.props.series) for (const [x, y] of s.points) expect(text(h)).toContain(`${s.name} · ${x}: ${y}`);
+		expect(text(h)).toContain('Rows by status');
+	});
+
+	it('the y axis is labelled from the data scale', () => {
+		const ys = labels(html(sample)).filter((l) => l.anchor === 'end').map((l) => l.t);
+		expect(ys).toContain('0');
+		expect(ys).toContain('95');
+	});
+
+	it('a line chart is one polyline per series, a vertex per point', () => {
+		const h = html(chart({ chart: 'line', series: [
+			{ name: 'open', points: [['mon', 3], ['tue', 5], ['wed', 2]] },
+			{ name: 'closed', points: [['mon', 1], ['tue', -2], ['wed', 4]] },
+		] }));
+		const lines = [...h.matchAll(/<polyline[^>]*points="([^"]*)"/g)].map((m) => m[1].trim().split(/\s+/));
+		expect(lines.map((l) => l.length)).toEqual([3, 3]);
+		expect(text(h)).toContain('closed · tue: -2');
+	});
+
+	it('every label stays inside the 320x160 box, even 6 series of 60 long, wide-ranged points', () => {
+		const series = Array.from({ length: 6 }, (_, k) => ({ name: `series number ${k}`,
+			points: Array.from({ length: 60 }, (_, i) => [`a rather long x label ${i}`, (i - 30) * 10 ** (k + 4)] as [string, number]) }));
+		for (const kind of ['bar', 'line'] as const) {
+			const all = labels(html(chart({ title: 'wide', chart: kind, series })));
+			expect(all.length).toBeGreaterThan(2);
+			for (const l of all) {
+				// A glyph is at most 0.6em wide in the UI font.
+				const w = l.t.length * l.size * 0.6;
+				const [lo, hi] = l.anchor === 'end' ? [l.x - w, l.x] : l.anchor === 'middle' ? [l.x - w / 2, l.x + w / 2] : [l.x, l.x + w];
+				expect(lo, `${kind}: ${l.t}`).toBeGreaterThanOrEqual(0);
+				expect(hi, `${kind}: ${l.t}`).toBeLessThanOrEqual(320);
+				expect(l.y - l.size, `${kind}: ${l.t}`).toBeGreaterThanOrEqual(0);
+				expect(l.y, `${kind}: ${l.t}`).toBeLessThanOrEqual(160);
+			}
+		}
+	});
+
+	it('a chart draws no link, no foreign markup, no script', () => {
+		const h = html(chart({ chart: 'bar', series: [{ name: '<script>x</script>', points: [['<img onerror=1>', 1]] }] }));
+		expect(h).not.toMatch(/<(a|foreignObject|script|img)[\s>]/);
+		expect(h).toContain('&lt;img');
 	});
 });
