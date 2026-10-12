@@ -106,14 +106,18 @@ mod tests {
         let bad: Vec<String> = fx["refused"].as_array().unwrap().iter().map(|c| c["line"].as_str().unwrap().to_owned()).collect();
         let (l, client) = fake("fixture");
         let (mut server, _) = l.accept().unwrap();
-        for line in good.iter().chain(&bad) {
-            server.write_all(format!("{line}\n").as_bytes()).unwrap();
-        }
-        server.write_all(b"\xff\xfe not utf-8\n").unwrap();
-        drop(server);
+        // Written beside the read: the fixture outgrew the socket buffer (an 8001-char line) and deadlocked.
+        let lines: Vec<String> = good.iter().chain(&bad).cloned().collect();
+        let writer = std::thread::spawn(move || {
+            for line in lines {
+                server.write_all(format!("{line}\n").as_bytes()).unwrap();
+            }
+            server.write_all(b"\xff\xfe not utf-8\n").unwrap();
+        });
 
         let mut got = Vec::new();
         let why = pump(client, |m| got.push(m));
+        writer.join().unwrap();
         assert_eq!(why, "the thalamus closed the connection");
         assert_eq!(got.len(), good.len() + bad.len() + 1, "a line was dropped: {got:?}");
         for (line, m) in good.iter().zip(&got) {

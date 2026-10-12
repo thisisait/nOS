@@ -64,7 +64,7 @@ fn need_uuid(field: &str, s: &str) -> Result<(), String> {
     if is_uuid(s) { Ok(()) } else { Err(format!("{field} is not a lowercase uuid: {s:?}")) }
 }
 
-/// The identity invariant on a decoded message; Err names the broken field.
+/// The identity invariant and the component caps on a decoded message; Err names what broke.
 fn check_shell(m: &ToShell) -> Result<(), String> {
     match m {
         ToShell::Session { session, actor, .. } => {
@@ -74,12 +74,15 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
                 _ => Err(format!("actor is not user:<canonical uid>: {actor:?}")),
             }
         }
-        ToShell::Text { session, .. } | ToShell::Render { session, .. } | ToShell::Activity { session, .. } => {
-            need_uuid("session", session)
-        }
-        ToShell::ApprovalRequest { session, approval, .. } => {
+        ToShell::Text { session, .. } | ToShell::Activity { session, .. } => need_uuid("session", session),
+        ToShell::Render { session, component } => {
             need_uuid("session", session)?;
-            need_uuid("approval", approval)
+            component.check()
+        }
+        ToShell::ApprovalRequest { session, approval, component } => {
+            need_uuid("session", session)?;
+            need_uuid("approval", approval)?;
+            component.check()
         }
         ToShell::Refused { .. } => Ok(()),
     }

@@ -134,6 +134,8 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 out.extend(r.holds.iter().map(|x| Line::from(format!("  ⏸ {x}"))));
             }
         }
+        // Raw lines: the terminal draws no markup, so the markup is the honest text.
+        Component::Markdown(m) => out.extend(m.text.lines().map(|l| Line::from(l.to_string()))),
     }
     out
 }

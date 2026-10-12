@@ -14,6 +14,28 @@ pub enum Component {
     InboxList(InboxList),
     ApprovalsList(ApprovalsList),
     RedStatus(RedStatus),
+    Markdown(Markdown),
+}
+
+/// Model text as markdown; every consumer draws it as text nodes, never as HTML.
+pub const MARKDOWN_MAX: usize = 8000;
+
+impl Component {
+    /// The caps serde cannot say; check_shell refuses a component over them.
+    pub fn check(&self) -> Result<(), String> {
+        match self {
+            Component::Markdown(m) if m.text.chars().count() > MARKDOWN_MAX => {
+                Err(format!("markdown text is over {MARKDOWN_MAX} chars"))
+            }
+            _ => Ok(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Markdown {
+    pub text: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -1,12 +1,28 @@
 edit roadmap / backup-restic-fork — nothing is written unless you approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-session 0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b as user:pazny (ollama://qwen3:8b)
-iris: Two rows match.
-nOS Roadmap — 1 of 23 matched (122 rows) · substring match, not semantic
   status in [open, next] · order by ordinal asc · columns title, status
 __id                     title                    status
 backup-restic-fork       Backup via restic        open
+# Next on the roadmap
+
+Two rows are **next** and one is *active*; `nos dtt` lists them.
+
+## Steps
+
+- restic fork
+- pupil eye
+
+### Order
+
+1. query
+2. propose
+
+```
+nos dtt list roadmap
+```
+
+See [the doctrine](https://thisisait.eu) and [a local file](file:///etc/passwd).
 inbox — 1 waiting
   capture    Read later: HKDF notes  2026-10-11T08:00:00Z  (cap-01)
   ? promotions: not yours to moderate
@@ -20,21 +36,5 @@ le
 1 red
   ✗ pulse job nightly-backup failed (3h)
 refused: login carol has no row in the identity map
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 approve this edit? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit

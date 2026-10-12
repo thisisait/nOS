@@ -7,6 +7,7 @@
 	import Badge from '$ui/Badge.svelte';
 	import StatusNote from '$ui/StatusNote.svelte';
 	import { severityTone } from '$ui/tone';
+	import Markdown from './Markdown.svelte';
 	import { cell, shown, type Component } from './wire';
 
 	let { component }: { component: Component } = $props();
@@ -82,6 +83,8 @@
 			<p>{r.hold_count} on hold (intentional)</p>
 			<ul>{#each r.holds as x}<li>⏸ {x}</li>{/each}</ul>
 		{/if}
+	{:else if component.kind === 'markdown'}
+		<Markdown text={component.props.text} />
 	{:else}
 		<!-- Unreachable past the bridge's decoder; said aloud if it ever is. -->
 		<StatusNote kind="error" title="refused">no renderer for component kind {(component as { kind: string }).kind}</StatusNote>
