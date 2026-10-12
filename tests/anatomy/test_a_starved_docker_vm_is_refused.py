@@ -132,9 +132,12 @@ def test_the_playbook_refuses_a_starved_vm_with_the_size_checks_tags():
 
 
 def test_the_threshold_is_declared_once():
-    text = (REPO / "default.config.yml").read_text(encoding="utf-8")
-    hits = re.findall(rf"^{VAR}:\s*([\d.]+)", text, re.M)
-    assert len(hits) == 1, f"{VAR} must be declared exactly once in default.config.yml"
+    import sys
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity
+    hits = [h for f in nos_identity.default_layers()
+            for h in re.findall(rf"^{VAR}:\s*([\d.]+)", f.read_text(encoding="utf-8"), re.M)]
+    assert len(hits) == 1, f"{VAR} must be declared exactly once across the default layers"
     assert 0.3 < float(hits[0]) < 34.55, (
         "the threshold must pass the quiet VM (0.28) and refuse the failed "
         "converge (34.55)")
