@@ -11,7 +11,7 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
-    "sense": 73,
+    "sense": 74,
     "limb": 113,
     "memory": 41,
     "law": 52,
@@ -1330,6 +1330,10 @@
       "kind": "reader"
     },
     "reader:cortex-status": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:docker-pressure-status": {
       "level": "sense",
       "kind": "reader"
     },
