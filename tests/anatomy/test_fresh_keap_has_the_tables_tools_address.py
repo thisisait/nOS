@@ -8,11 +8,14 @@ books spine the face's Books app reads were missing the same way.
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 TASKS = REPO / "roles/pazny.keap/tasks"
 REQUIRED = ["current-state", "party", "party-tax-identity", "account", "invoice", "invoice-line",
             "journal-entry", "posting", "pending-invoice-verify", "book-access"]
@@ -30,13 +33,14 @@ def _seeded_on_keap_alone() -> set[str]:
         when = [when] if isinstance(when, str) else (when or [])
         if inc and inc.startswith("seed-") and all("install_keap" in w for w in when):
             text = (TASKS / inc).read_text()
-            text = text.replace("{{ keap_roadmap_table_id }}", _role_default("keap_roadmap_table_id"))
+            text = text.replace("{{ keap_roadmap_table_id }}", _default("keap_roadmap_table_id"))
             out |= set(re.findall(r'slug: "([^"{]+)"', text))
     return out
 
 
-def _role_default(name: str) -> str:
-    return str((yaml.safe_load((REPO / "roles/pazny.keap/defaults/main.yml").read_text()) or {}).get(name, ""))
+def _default(name: str) -> str:
+    """The value the default layers declare (ruling 2026-10-12: no longer a keap role default)."""
+    return str(ni.default_config().get(name, ""))
 
 
 def test_every_addressed_table_is_created_by_a_converge():

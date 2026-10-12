@@ -80,17 +80,23 @@ def test_the_plist_runs_serve_and_keeps_the_secret_out_of_argv():
 
 
 def test_the_plist_names_the_roadmap_table_keap_seeds():
-    """serve maps the model's "roadmap" to this id; it must be the one pazny.keap creates."""
-    keap = yaml.safe_load((REPO / "roles/pazny.keap/defaults/main.yml").read_text())["keap_roadmap_table_id"]
-    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
-    env.filters["from_yaml"] = yaml.safe_load
-    env.globals["lookup"] = lambda kind, path: pathlib.Path(path).read_text()
-    default = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())["thalamus_roadmap_table_id"]
-    resolved = env.from_string(default).render(playbook_dir=str(REPO))
-    assert resolved == keap, "the thalamus would map roadmap to a table KEAP never seeded"
-    assert env.from_string(default).render(playbook_dir=str(REPO), keap_roadmap_table_id="x") == "x"
-    assert _plist(thalamus_roadmap_table_id=resolved)["EnvironmentVariables"]["NOS_ROADMAP_TABLE_ID"] == keap
-    assert keap not in (ROLE / "defaults" / "main.yml").read_text(), "a second literal of the id drifts"
+    """serve maps the model's "roadmap" to this id; it must be the one pazny.keap creates.
+
+    Ruling 2026-10-12: keap_roadmap_table_id is declared once in the default layers, so both
+    roles read it as a plain var — no lookup('file') into another role, no second literal.
+    """
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity
+    declared = [p.name for p in nos_identity.default_layers()
+                if "keap_roadmap_table_id" in (yaml.safe_load(p.read_text()) or {})]
+    assert len(declared) == 1, f"keap_roadmap_table_id is declared in {declared or 'no default layer'}"
+    keap = _default_config()["keap_roadmap_table_id"]
+    defaults = (ROLE / "defaults" / "main.yml").read_text()
+    assert yaml.safe_load(defaults)["thalamus_roadmap_table_id"] == "{{ keap_roadmap_table_id }}"
+    assert "lookup(" not in defaults, "the thalamus reaches into another role's file"
+    roles = [p for p in REPO.glob("roles/*/**/*") if p.is_file() and keap in p.read_text(errors="ignore")]
+    assert not roles, f"a second literal of the id drifts: {roles}"
+    assert _plist(thalamus_roadmap_table_id=keap)["EnvironmentVariables"]["NOS_ROADMAP_TABLE_ID"] == keap
 
 
 def test_the_plist_is_0600_and_the_logs_and_data_0700():

@@ -38,12 +38,12 @@ from ..lib.residue import ResidueProbe
 REPO = Path(__file__).resolve().parents[3]
 SOCK = Path(os.environ.get("THALAMUS_SOCK", Path.home() / ".nos/thalamus.sock"))
 MARK = "e2e-thalamus-"
-# The id the role renders into the plist; read from its one source, not copied.
-TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID") or yaml.safe_load(
-    (REPO / "roles/pazny.keap/defaults/main.yml").read_text())["keap_roadmap_table_id"]
-
 sys.path.insert(0, str(REPO / "tools"))
 import keap_api  # noqa: E402 — the estate's one KEAP resolver
+import nos_identity  # noqa: E402
+
+# The id the role renders into the plist; read from its one source (the default layers), not copied.
+TABLE = os.environ.get("NOS_ROADMAP_TABLE_ID") or nos_identity.default_config()["keap_roadmap_table_id"]
 
 
 def _status_reader():
