@@ -101,8 +101,11 @@ def test_the_reader_judges_the_socket_by_kind_and_mode():
         os.chmod(path, 0o644)
         assert r.judge_socket(path)["state"] == "RED"
         os.chmod(path, 0o600)
+        s.listen(1)
         assert r.judge_socket(path)["state"] == "OK"
         s.close()
+        # A dead daemon leaves its 0600 socket behind; nobody answers it.
+        assert r.judge_socket(path)["state"] == "RED", "a stale socket is not a serving daemon"
         path.unlink()
         path.write_text("x")
         assert r.judge_socket(path)["state"] == "RED"            # a file, not a socket
@@ -137,3 +140,5 @@ def test_the_reader_says_unknown_when_launchd_cannot_be_asked():
     assert r.judge_launchd(None)["state"] == "UNKNOWN"
     assert r.judge_launchd((113, ""))["state"] == "RED"
     assert r.judge_launchd((0, "state = running\n\tpid = 42\n"))["state"] == "OK"
+    # Loaded but crash-looping on KeepAlive: no pid is a dead daemon, not a green one.
+    assert r.judge_launchd((0, "state = not running\n\tlast exit code = 1\n"))["state"] == "RED"
