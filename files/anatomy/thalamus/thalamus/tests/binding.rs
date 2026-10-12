@@ -19,6 +19,17 @@ fn env<'a>(pairs: &'a [(&'a str, &'a str)]) -> impl Fn(&str) -> Option<String> +
 
 const ARMED: &[(&str, &str)] = &[("NOS_ARMED_BACKENDS", "ollama"), ("NOS_LOCAL_MODEL", "qwen3:14b")];
 
+/// Iris's serving set (operator ruling 2026-10-12): the EU row, armed, its model and its key.
+const EU: &[(&str, &str)] = &[("NOS_ARMED_BACKENDS", "mistral-eu"), ("NOS_MISTRAL_MODEL", "mistral-large-latest"),
+                              ("nos:mistral_api_key", "sk-eu-test")];
+
+/// A keyless local cell, the shape iris had before it moved to the EU row.
+const LOCAL_CELL: &str = "
+name: c
+model: {primary: openai-local-sonnet, backend: ollama}
+gdpr: {processors: [{name: on-device}], transfers_outside_eu: false}
+";
+
 /// A cell bound to minimax whose record says the transfer happens (so it may degrade).
 const MINIMAX_CELL: &str = "
 name: cloudy
@@ -34,15 +45,38 @@ fn refused(r: Result<Decision, String>) -> String {
 }
 
 #[test]
-fn binding_iris_armed_is_bound_to_the_local_model_with_no_key() {
-    match resolve(&repo(), "iris", env(ARMED)).unwrap() {
+fn binding_iris_is_bound_to_mistral_eu_with_its_key() {
+    match resolve(&repo(), "iris", env(EU)).unwrap() {
         Decision::Bound(b) => {
-            assert_eq!(b.name, "ollama");
-            assert_eq!(b.base_url, "http://127.0.0.1:11434/v1");
-            assert_eq!(b.auth_token, "");
-            assert_eq!(b.model_id, "qwen3:14b");
+            assert_eq!(b.name, "mistral-eu");
+            assert_eq!(b.base_url, "https://api.eu.mistral.ai/v1");
+            assert_eq!(b.auth_token, "sk-eu-test");
+            assert_eq!(b.model_id, "mistral-large-latest");
+            assert!(!format!("{b:?}").contains("sk-eu-test"), "Debug prints the key");
         }
         d => panic!("iris armed must bind, got {d:?}"),
+    }
+}
+
+#[test]
+fn binding_iris_without_its_key_refuses_and_names_the_var() {
+    let why = refused(resolve(&repo(), "iris", env(&EU[..2])));
+    assert!(why.contains("auth_secret") && why.contains("mistral_api_key"), "{why}");
+}
+
+#[test]
+fn binding_iris_never_degrades_to_ollama() {
+    // ollama armed with its model, mistral-eu not armed: iris refuses rather than run anywhere else.
+    let e = [ARMED, &EU[1..]].concat();
+    let why = refused(resolve(&repo(), "iris", env(&e)));
+    assert!(why.contains("not armed") && why.contains("mistral-eu"), "{why}");
+}
+
+#[test]
+fn binding_a_local_cell_binds_with_no_key() {
+    match decide(LOCAL_CELL, &register(), env(ARMED)).unwrap() {
+        Decision::Bound(b) => assert_eq!((b.name.as_str(), b.auth_token.as_str()), ("ollama", "")),
+        d => panic!("a local cell armed must bind, got {d:?}"),
     }
 }
 
@@ -54,14 +88,14 @@ fn binding_disarmed_falls_to_the_default_and_names_no_model() {
 
 #[test]
 fn binding_iris_disarmed_refuses_rather_than_degrade() {
-    let why = refused(resolve(&repo(), "iris", env(&[("NOS_LOCAL_MODEL", "qwen3:14b")])));
+    let why = refused(resolve(&repo(), "iris", env(&EU[1..])));
     assert!(why.contains("not armed"), "{why}");
 }
 
 #[test]
 fn binding_armed_with_an_empty_model_env_refuses() {
-    let why = refused(resolve(&repo(), "iris", env(&[("NOS_ARMED_BACKENDS", "ollama")])));
-    assert!(why.contains("NOS_LOCAL_MODEL"), "{why}");
+    let why = refused(resolve(&repo(), "iris", env(&[EU[0], EU[2]])));
+    assert!(why.contains("NOS_MISTRAL_MODEL"), "{why}");
 }
 
 #[test]

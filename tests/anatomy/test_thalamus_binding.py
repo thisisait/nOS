@@ -22,16 +22,20 @@ IRIS = REPO / "files/anatomy/agents/iris/agent.yml"
 REGISTER = REPO / "state/habitat/llm-backends.yml"
 
 
-def test_the_iris_cell_binds_to_ollama_alone():
-    """Ruling 4: the cell is iris, its backend is ollama, nothing leaves the host."""
+def test_the_iris_cell_binds_to_the_eu_row_alone():
+    """Ruling 2026-10-12 (supersedes ruling 4's ollama): iris binds mistral-eu, and nothing outside the EU serves it."""
     doc = yaml.safe_load(IRIS.read_text())
     assert doc["name"] == "iris"
-    assert doc["model"]["backend"] == "ollama"
+    assert doc["model"]["backend"] == "mistral-eu"
     assert doc["gdpr"]["transfers_outside_eu"] is False, (
-        "without it a disarmed ollama degrades iris to the hosted default")
+        "without it a disarmed mistral-eu degrades iris to the hosted default")
     tier = re.search(r"\b(haiku|sonnet|opus|vision)\b", doc["model"]["primary"])
-    spec = yaml.safe_load(REGISTER.read_text())["backends"]["ollama"]
-    assert tier and spec["model_env"].get(tier[1]), f"{doc['model']['primary']} has no model on ollama"
+    spec = yaml.safe_load(REGISTER.read_text())["backends"]["mistral-eu"]
+    assert tier and spec["model_env"].get(tier[1]), f"{doc['model']['primary']} has no model on mistral-eu"
+    assert spec["residency"]["eu"] is True
+    names = [p["name"] for p in doc["gdpr"]["processors"]]
+    assert names and all(spec["processor_match"] in n for n in names), (
+        f"every processor iris names must be the EU row's, got {names}")
 
 
 def test_the_rust_cases_read_the_register_not_a_copy():
