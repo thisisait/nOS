@@ -8,7 +8,7 @@ the daemon opens) and the ledger's last session. Each line is OK / RED / UNKNOWN
 serving without a model is UNKNOWN (degraded).
 
 Reads only (the connect opens no session). Exit 0 always. A source it cannot read is UNKNOWN, never green.
-`--tags thalamus,verify` fails on any line that is not OK.
+`--tags thalamus,verify` fails on any line that is not OK, except the model line, which warns.
 
 Usage:
     tools/thalamus-status.py [--json]

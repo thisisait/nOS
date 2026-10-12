@@ -241,6 +241,7 @@ def test_verify_warns_on_an_unbound_model_and_fails_on_anything_else():
     """Ruling 2026-10-12: serving without a model is visible, not green and not a failure."""
     env = jinja2.Environment()
     env.filters["from_json"] = json.loads
+    env.filters["bool"] = bool
     tasks = [t for t in _tasks() if "verify" in (t.get("tags") or [])]
     verify = next(t for t in tasks if "ansible.builtin.shell" in t)
     warn = next((t for t in tasks if "ansible.builtin.fail" in t), None)

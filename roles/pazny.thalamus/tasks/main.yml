@@ -100,13 +100,14 @@
 - name: "[pazny.thalamus] Flush handlers (apply a pending restart now)"
   ansible.builtin.meta: flush_handlers
 
-# The effect, read by the reader: socket 0600, job loaded, ledger readable. Any line not OK fails.
+# The effect, read by the reader: socket 0600, job loaded, ledger readable. Any line not OK fails,
+# except the model line: serving without one warns (ruling 2026-10-12) — the reader still says UNKNOWN.
 - name: "[pazny.thalamus] Verify — the reader sees the socket, the job and the ledger"
   ansible.builtin.shell: |
     # Wait for a socket that accepts: a stale one from a crashed run exists but answers nobody.
     for _ in $(seq 1 20); do
       out=$(/usr/bin/python3 {{ (playbook_dir ~ '/tools/thalamus-status.py') | quote }} --json) || exit 1
-      echo "$out" | /usr/bin/python3 -c 'import json,sys; sys.exit(any(r["state"] != "OK" for r in json.load(sys.stdin)))' && break
+      echo "$out" | /usr/bin/python3 -c 'import json,sys; sys.exit(any(r["state"] != "OK" for r in json.load(sys.stdin) if r["check"] != "model"))' && break
       sleep 0.5
     done
     echo "$out"
@@ -114,5 +115,18 @@
   changed_when: false
   failed_when: >-
     _thalamus_verify.rc != 0
-    or (_thalamus_verify.stdout | from_json | rejectattr('state', 'equalto', 'OK') | list | length) > 0
+    or (_thalamus_verify.stdout | from_json | rejectattr('check', 'equalto', 'model')
+        | rejectattr('state', 'equalto', 'OK') | list | length) > 0
+  tags: ['verify']
+
+# Red in the log, ignored=1 in the recap: visible, not green, not a failure.
+- name: "[pazny.thalamus] Verify — WARN: the thalamus serves without a model"
+  ansible.builtin.fail:
+    msg: >-
+      WARN (not a failure): {{ (_thalamus_verify.stdout | from_json | selectattr('check', 'equalto', 'model') | first).detail }}.
+      Controls answer, turns are refused until iris binds a model (tools/thalamus-status.py).
+  when: >-
+    (_thalamus_verify.stdout | from_json | selectattr('check', 'equalto', 'model')
+     | rejectattr('state', 'equalto', 'OK') | list | length) > 0
+  ignore_errors: true  # noqa: ignore-errors - a warning by ruling, counted as ignored in the recap
   tags: ['verify']
