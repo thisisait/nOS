@@ -22,9 +22,11 @@ const text = (html: string) =>
 
 const draw = (msg: ToShell) => text(render(Message, { props: { msg } }).body);
 
-/** The strings a renderer owes the person; table cells outside `columns` are not shown (as shell.rs). */
+/** The strings and counts a renderer owes the person; table cells outside `columns` are not shown (as shell.rs). */
 function owed(v: Value | Component, skip: Set<string> = new Set()): string[] {
 	if (typeof v === 'string') return [v];
+	// A zero count is said as words or left out ("nothing red"), as shell.rs does.
+	if (typeof v === 'number') return v === 0 ? [] : [String(v)];
 	if (Array.isArray(v)) return v.flatMap((x) => owed(x));
 	if (v && typeof v === 'object')
 		return Object.entries(v).flatMap(([k, x]) => (skip.has(k) ? [] : owed(x as Value)));
