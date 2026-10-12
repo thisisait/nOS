@@ -35,8 +35,10 @@ function owed(v: Value | Component, skip: Set<string> = new Set()): string[] {
 
 function owedBy(c: Component): string[] {
 	if (c.kind !== 'table_results') return owed(c.props as unknown as Value);
-	const { table, columns, rows } = c.props;
-	return [table, ...columns, ...rows.flatMap((r) => [r.__id, ...columns.flatMap((k) => owed(r.cells[k] ?? null))])];
+	// The table's name, not its id (live 2026-10-12: the header showed the roadmap's UUID).
+	const { name, query, matched, total, columns, rows } = c.props;
+	const counts = [`${rows.length} of ${matched} matched`, `(${total} rows)`];
+	return [name, query, ...counts, ...columns, ...rows.flatMap((r) => [r.__id, ...columns.flatMap((k) => owed(r.cells[k] ?? null))])];
 }
 
 describe('the pupil renders the contract fixture', () => {
@@ -66,6 +68,16 @@ describe('the pupil renders the contract fixture', () => {
 		expect(draw(semantic)).toContain('semantic');
 	});
 
+	it('a table is headed by its name and counts, never its id', () => {
+		const msg: ToShell = { t: 'render', session: 's', component: { kind: 'table_results', props: {
+			table: '0b6f6a1e-roadmap-uuid', name: 'nOS Roadmap', query: 'status = next', matched: 23, total: 122,
+			columns: ['title'], projected: false, rows: [] } } };
+		const page = draw(msg);
+		expect(page).toContain('nOS Roadmap — 0 of 23 matched (122 rows)');
+		expect(page).toContain('status = next');
+		expect(page).not.toContain('0b6f6a1e-roadmap-uuid');
+	});
+
 	it('an empty diff side reads (empty), not blank', () => {
 		const msg = fx.to_shell.find((c) => c.msg.t === 'approval_request')!.msg;
 		expect(draw(msg)).toContain('(empty) → "landed"');
@@ -75,7 +87,7 @@ describe('the pupil renders the contract fixture', () => {
 	it('a long-text column folds into the row, the short ones stay columns', () => {
 		const body = 'Session 2026-09-20 against FINISHING-REPORT.md. '.repeat(12);
 		const msg: ToShell = { t: 'render', session: 's', component: { kind: 'table_results', props: {
-			table: 'roadmap', columns: ['body', 'slug', 'status'], projected: false,
+			table: 'roadmap', name: 'nOS Roadmap', query: 'all rows', matched: 1, total: 1, columns: ['body', 'slug', 'status'], projected: false,
 			rows: [{ __id: 'r1', cells: { body, slug: 'pupil-eye', status: 'next' } }] } } };
 		const html = render(Message, { props: { msg } }).body;
 		const heads = [...html.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1].trim());
@@ -85,8 +97,8 @@ describe('the pupil renders the contract fixture', () => {
 	});
 
 	it('a tool the thalamus runs is said in the log', () => {
-		const html = draw({ t: 'activity', session: 's', phase: { tool: { name: 'search_rows' } } });
-		expect(html).toContain('search_rows');
+		const html = draw({ t: 'activity', session: 's', phase: { tool: { name: 'query_rows' } } });
+		expect(html).toContain('query_rows');
 	});
 
 	it('markup in a model string stays text', () => {

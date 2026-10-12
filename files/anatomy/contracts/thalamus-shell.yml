@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 2   # 2: activity (the eye's phase on every turn)
+contract_version: 3   # 2: activity (the eye's phase on every turn); 3: table_results name/query/matched/total
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -38,7 +38,7 @@ wire:
 components:
   kind: "a component is {kind, props}; props are typed and closed (unknown fields refused)"
   vocabulary:
-    table_results: "rows of one DataTable: {table, columns[], rows[{__id, cells{}}], projected}"
+    table_results: "rows of one DataTable: {table, name, query, matched, total, columns[], rows[{__id, cells{}}], projected}; total: rows readable, matched: after the query"
     row_diff_approval: "one row's proposed change, cell by cell: {table, row_id, cells[{key, old, new}]}"
     inbox_list: "waiting captures and promotions: {items[{id, title, source, created_at}], refused[]}"
     approvals_list: "tools/awaiting-operator.py --json: {items[{kind, severity, age, what, where, note?}], unknown[]}"

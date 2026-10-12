@@ -1,5 +1,5 @@
 {
-  "contract_version": 2,
+  "contract_version": 3,
   "to_thalamus": [
     {"case": "first turn opens a session", "msg": {"t": "turn", "session": null, "text": "find rows about backups in the roadmap"}},
     {"case": "turn in a session", "msg": {"t": "turn", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "set its status to done"}},
@@ -13,7 +13,8 @@
     {"case": "session opened", "msg": {"t": "session", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "actor": "user:pazny", "model_uri": "ollama://qwen3:8b"}},
     {"case": "model text", "msg": {"t": "text", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "Two rows match."}},
     {"case": "search results", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "table_results", "props": {
-      "table": "roadmap", "columns": ["title", "status"], "projected": false,
+      "table": "roadmap", "name": "nOS Roadmap", "query": "status in [open, next] · order by ordinal asc · columns title, status",
+      "matched": 23, "total": 122, "columns": ["title", "status"], "projected": false,
       "rows": [{"__id": "backup-restic-fork", "cells": {"title": "Backup via restic", "status": "open", "priority": 2}}]}}}},
     {"case": "inbox", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "inbox_list", "props": {
       "items": [{"id": "cap-01", "title": "Read later: HKDF notes", "source": "capture", "created_at": "2026-10-11T08:00:00Z"}],
@@ -30,7 +31,7 @@
       "cells": [{"key": "status", "old": "open", "new": "done"}, {"key": "note", "old": null, "new": "landed"}]}}}},
     {"case": "refusal", "msg": {"t": "refused", "reason": "login carol has no row in the identity map"}},
     {"case": "the model is asked", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": "thinking"}},
-    {"case": "a tool runs", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": {"tool": {"name": "search_rows"}}}},
+    {"case": "a tool runs", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": {"tool": {"name": "query_rows"}}}},
     {"case": "an approved edit is written", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": "writing"}},
     {"case": "the turn is over", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": "idle"}}
   ],

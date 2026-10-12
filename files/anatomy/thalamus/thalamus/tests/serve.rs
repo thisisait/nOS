@@ -184,8 +184,8 @@ fn next(r: &mut BufReader<UnixStream>) -> Option<ToShell> {
     }
 }
 
-fn tool_call(args: &str) -> String {
-    call("search_rows", args)
+fn query(args: &str) -> String {
+    call("query_rows", args)
 }
 
 fn call(tool: &str, args: &str) -> String {
@@ -202,8 +202,20 @@ fn answer(text: &str) -> String {
 }
 
 const ROWS: &str = r#"{"success": true, "data": {"rows": [
-    {"id": "r1", "values": {"title": "Alpha one", "status": "open"}},
-    {"id": "r2", "values": {"title": "beta"}}]}}"#;
+    {"id": "r1", "values": {"title": "Alpha one", "status": "open", "ordinal": 3}},
+    {"id": "r2", "values": {"title": "beta"}},
+    {"id": "r3", "values": {"title": "Gamma", "status": "open", "ordinal": 2}}]}}"#;
+
+/// GET /api/tables/todos: the title and column order; rowCount is the owner's, never `total`.
+const SCHEMA: &str = r#"{"success": true, "data": {"id": "todos", "title": "Todo list", "rowCount": 99, "schema": {"columns": [
+    {"key": "title", "label": "Title", "kind": "text"},
+    {"key": "status", "label": "Status", "kind": "select", "options": ["open", "done"]},
+    {"key": "ordinal", "label": "Ordinal", "kind": "number"}]}}}"#;
+
+/// A query's KEAP answers (schema, then rows), then `rest`.
+fn shown_then(rest: &[&str]) -> Vec<String> {
+    [SCHEMA, ROWS].iter().chain(rest).map(|b| b.to_string()).collect()
+}
 
 #[test]
 fn serve_refuses_a_peer_the_identity_map_does_not_name() {
@@ -232,7 +244,7 @@ fn serve_refuses_a_map_it_cannot_read() {
 #[test]
 fn serve_searches_as_the_mapped_person_and_never_spills_the_secret() {
     let map = serde_json::json!({"logins": {me(): {"username": "Alice Smith", "groups": ["nos-users", "nos-editors"]}}});
-    let rig = rig("mapped", map, ROWS, vec![tool_call(r#"{"table": "todos", "q": "ALPHA"}"#), answer("Found one.")]);
+    let rig = rig_n("mapped", map, shown_then(&[]), vec![query(r#"{"table": "todos", "q": "ALPHA"}"#), answer("Found one.")]);
     assert_eq!(std::fs::metadata(&rig.sock).unwrap().permissions().mode() & 0o777, 0o600);
 
     let mut s = connect(&rig.sock);
@@ -254,7 +266,7 @@ fn serve_searches_as_the_mapped_person_and_never_spills_the_secret() {
             assert_eq!(s2, session);
             assert_eq!(t.table, "todos");
             assert!(!t.projected, "substring search is not a projection");
-            assert_eq!(t.columns, ["status", "title"]);
+            assert_eq!(t.columns, ["title", "status", "ordinal"], "the schema's column order");
             assert_eq!(t.rows.len(), 1);
             assert_eq!(t.rows[0].__id, "r1");
         }
@@ -265,12 +277,15 @@ fn serve_searches_as_the_mapped_person_and_never_spills_the_secret() {
     drop(r);
 
     let keap = rig.keap.lock().unwrap().clone();
-    assert_eq!(keap.len(), 1);
-    let head = keap[0].0.to_ascii_lowercase();
-    assert!(head.starts_with("get /api/tables/todos/rows?limit=500 "), "{head}");
-    for h in ["x-authentik-username: alice smith", "x-authentik-uid: alice-smith",
-              "x-authentik-groups: nos-users,nos-editors", &format!("x-keap-proxy-secret: {SECRET}")] {
-        assert!(head.contains(h), "KEAP did not get {h:?}:\n{head}");
+    assert_eq!(keap.len(), 2, "one schema GET, one rows read");
+    assert!(keap[0].0.to_ascii_lowercase().starts_with("get /api/tables/todos "), "{}", keap[0].0);
+    assert!(keap[1].0.to_ascii_lowercase().starts_with("get /api/tables/todos/rows?limit=500 "), "{}", keap[1].0);
+    for (head, _) in &keap {
+        let head = head.to_ascii_lowercase();
+        for h in ["x-authentik-username: alice smith", "x-authentik-uid: alice-smith",
+                  "x-authentik-groups: nos-users,nos-editors", &format!("x-keap-proxy-secret: {SECRET}")] {
+            assert!(head.contains(h), "KEAP did not get {h:?}:\n{head}");
+        }
     }
     let model = rig.model.lock().unwrap().clone();
     assert_eq!(model.len(), 2);
@@ -297,7 +312,7 @@ fn serve_searches_as_the_mapped_person_and_never_spills_the_secret() {
 #[test]
 fn a_keyed_model_gets_the_bearer_and_nothing_else_sees_the_key() {
     let map = serde_json::json!({"logins": {me(): {"username": "alice", "groups": ["nos-users"]}}});
-    let rig = rig_full("bearer", map, vec![ROWS.into()], vec![tool_call(r#"{"table": "todos", "q": "alpha"}"#),
+    let rig = rig_full("bearer", map, shown_then(&[]), vec![query(r#"{"table": "todos", "q": "alpha"}"#),
         answer("Found.")], Some(cloud()));
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
@@ -401,12 +416,13 @@ fn types_of(ledger: &std::path::Path, session: &str) -> Vec<String> {
     q.query_map([session], |r| r.get(0)).unwrap().map(Result::unwrap).collect()
 }
 
-/// One turn that proposes `values` for r1; returns (stream, reader, session, approval, diff).
+/// One turn that shows r1, then proposes `values` for it; returns (stream, reader, session, approval, diff).
 fn propose(rig: &Rig) -> (UnixStream, BufReader<UnixStream>, String, String, nos_contract::renderers::RowDiffApproval) {
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
     (&s).write_all(encode(&ToThalamus::Turn { session: None, text: "close alpha".into() }).as_bytes()).unwrap();
     let Some(ToShell::Session { session, .. }) = next(&mut r) else { panic!("no session") };
+    assert!(matches!(next(&mut r), Some(ToShell::Render { component: Component::TableResults(_), .. })), "the row is shown first");
     let (approval, diff) = match next(&mut r) {
         Some(ToShell::ApprovalRequest { session: s2, approval, component: Component::RowDiffApproval(d) }) => {
             assert_eq!(s2, session);
@@ -430,11 +446,15 @@ fn posts(rig: &Rig) -> Vec<(String, String)> {
 
 const EDIT: &str = r#"{"table": "todos", "row_id": "r1", "values": {"status": "done", "title": "Alpha one"}}"#;
 
+/// The model's side of a turn that edits r1: it queries the row, then proposes.
+fn edit_turn() -> Vec<String> {
+    vec![query(r#"{"table": "todos", "q": "alpha"}"#), call("propose_row_edit", EDIT), answer("Proposed.")]
+}
+
 #[test]
 fn approve_posts_the_approved_cells_once_as_the_person() {
-    // The proposal's read, commit's re-read, then the POST.
-    let rig = rig_n("approve", mapped(), vec![ROWS.into(), ROWS.into(), POSTED.into()],
-        vec![call("propose_row_edit", EDIT), answer("Proposed.")]);
+    // The query, the proposal's read, commit's re-read, then the POST.
+    let rig = rig_n("approve", mapped(), shown_then(&[ROWS, ROWS, POSTED]), edit_turn());
     let (s, mut r, session, approval, diff) = propose(&rig);
     assert_eq!(diff.table, "todos");
     assert_eq!(diff.row_id, "r1");
@@ -466,8 +486,7 @@ fn approve_posts_the_approved_cells_once_as_the_person() {
 
 #[test]
 fn reject_never_posts() {
-    let rig = rig_n("reject", mapped(), vec![ROWS.into(), POSTED.into()],
-        vec![call("propose_row_edit", EDIT), answer("Proposed.")]);
+    let rig = rig_n("reject", mapped(), shown_then(&[ROWS, POSTED]), edit_turn());
     let (s, mut r, session, approval, _) = propose(&rig);
     decide(&s, &approval, Decision::Reject);
     assert!(matches!(next(&mut r), Some(ToShell::Text { .. })));
@@ -490,16 +509,18 @@ fn a_decision_for_an_unknown_approval_is_refused() {
 
 #[test]
 fn a_proposal_for_a_row_the_person_cannot_read_or_a_sharing_key_never_asks() {
-    for (name, args) in [("absent", r#"{"table": "todos", "row_id": "nope", "values": {"status": "done"}}"#),
-                         ("sharing", r#"{"table": "todos", "row_id": "r1", "values": {"__sharing": {"public": true}}}"#)] {
-        let rig = rig_n(name, mapped(), vec![ROWS.into(), POSTED.into()],
-            vec![call("propose_row_edit", args), answer("Could not.")]);
+    // Shown by the query, then gone by the proposal's read; or shown, but a sharing key.
+    let gone = r#"{"success": true, "data": {"rows": [{"id": "r2", "values": {"title": "beta"}}]}}"#;
+    let sharing = r#"{"table": "todos", "row_id": "r1", "values": {"__sharing": {"public": true}}}"#;
+    for (name, args, keap, want) in [("absent", EDIT, gone, "that you can read"), ("sharing", sharing, ROWS, "cannot be edited here")] {
+        let rig = rig_n(name, mapped(), shown_then(&[keap, POSTED]),
+            vec![query(r#"{"table": "todos", "q": "alpha"}"#), call("propose_row_edit", args), answer("Could not.")]);
         let s = connect(&rig.sock);
         let mut r = BufReader::new(s.try_clone().unwrap());
-        (&s).write_all(encode(&ToThalamus::Turn { session: None, text: "x".into() }).as_bytes()).unwrap();
-        assert!(matches!(next(&mut r), Some(ToShell::Session { .. })));
-        assert!(matches!(next(&mut r), Some(ToShell::Text { .. })), "{name}: no ApprovalRequest");
+        let got = turn(&s, &mut r, None, "x");
+        assert!(!got.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. })), "{name}: an ApprovalRequest: {got:?}");
         assert!(posts(&rig).is_empty(), "{name}: wrote");
+        assert!(rig.model.lock().unwrap()[2].1.contains(want), "{name}: the model was not told {want}");
     }
 }
 
@@ -742,9 +763,9 @@ fn session_of(got: &[ToShell]) -> String {
 fn a_stopped_turn_answers_every_call_it_was_asked() {
     // Nine calls in one message; the cap is eight. An unanswered call is a shape providers reject.
     let calls: Vec<_> = (0..9).map(|i| serde_json::json!({"id": format!("c{i}"), "type": "function",
-        "function": {"name": "search_rows", "arguments": r#"{"table": "todos", "q": "alpha"}"#}})).collect();
+        "function": {"name": "query_rows", "arguments": r#"{"table": "todos", "q": "alpha"}"#}})).collect();
     let nine = serde_json::json!({"choices": [{"message": {"role": "assistant", "content": null, "tool_calls": calls}}]}).to_string();
-    let rig = rig_n("cap", mapped(), vec![ROWS.into()], vec![nine, answer("ok")]);
+    let rig = rig_n("cap", mapped(), vec![SCHEMA.into(), ROWS.into()], vec![nine, answer("ok")]);
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
     let first = turn(&s, &mut r, None, "go");
@@ -760,7 +781,7 @@ fn a_table_read_that_cannot_be_whole_is_an_error_not_a_short_answer() {
     let endless = r#"{"success": true, "data": {"rows": [{"id": "r1", "values": {"title": "Alpha"}}], "nextCursor": "more"}}"#;
     let no_id = r#"{"success": true, "data": {"rows": [{"values": {"title": "Alpha"}}]}}"#;
     for (name, keap, want) in [("noid", no_id, "without an id"), ("pages", endless, "exceeds")] {
-        let rig = rig_n(name, mapped(), vec![keap.into()], vec![tool_call(r#"{"table": "todos", "q": "alpha"}"#), answer("x")]);
+        let rig = rig_n(name, mapped(), vec![SCHEMA.into(), keap.into()], vec![query(r#"{"table": "todos", "q": "alpha"}"#), answer("x")]);
         let s = connect(&rig.sock);
         let mut r = BufReader::new(s.try_clone().unwrap());
         let got = turn(&s, &mut r, None, "find alpha");
@@ -774,15 +795,14 @@ fn a_table_read_that_cannot_be_whole_is_an_error_not_a_short_answer() {
 fn the_model_hears_how_the_person_decided() {
     for (name, d, note, want) in [("heard-yes", Decision::Approve, None, "approved, row written"),
                                   ("heard-no", Decision::Reject, Some("not yet"), "rejected: not yet")] {
-        let rig = rig_n(name, mapped(), vec![ROWS.into(), ROWS.into(), POSTED.into()],
-            vec![call("propose_row_edit", EDIT), answer("Proposed.")]);
+        let rig = rig_n(name, mapped(), shown_then(&[ROWS, ROWS, POSTED]), edit_turn());
         let (s, mut r, session, approval, _) = propose(&rig);
         let mut w = &s;
         w.write_all(encode(&ToThalamus::ApprovalDecision { approval: approval.clone(), decision: d,
             note: note.map(str::to_string) }).as_bytes()).unwrap();
         assert!(matches!(next(&mut r), Some(ToShell::Text { .. })));
         turn(&s, &mut r, Some(session), "and?");
-        let body = rig.model.lock().unwrap()[2].1.clone();
+        let body = rig.model.lock().unwrap()[3].1.clone();
         assert!(body.contains(&format!("[thalamus] approval {approval}: {want}")), "{name}: {body}");
     }
 }
@@ -792,28 +812,30 @@ fn one_approval_waits_at_a_time() {
     let two = serde_json::json!({"choices": [{"message": {"role": "assistant", "content": null, "tool_calls": [
         {"id": "c1", "type": "function", "function": {"name": "propose_row_edit", "arguments": EDIT}},
         {"id": "c2", "type": "function", "function": {"name": "propose_row_edit", "arguments": EDIT}}]}}]}).to_string();
-    let rig = rig_n("onepending", mapped(), vec![ROWS.into()], vec![two, answer("Proposed.")]);
+    let rig = rig_n("onepending", mapped(), shown_then(&[]), vec![query(r#"{"table": "todos", "q": "alpha"}"#), two, answer("Proposed.")]);
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
     let got = turn(&s, &mut r, None, "close alpha twice");
     let asks = got.iter().filter(|m| matches!(m, ToShell::ApprovalRequest { .. })).count();
     assert_eq!(asks, 1, "{got:?}");
-    assert!(rig.model.lock().unwrap()[1].1.contains("an approval is already waiting"));
+    assert!(rig.model.lock().unwrap()[2].1.contains("an approval is already waiting"));
 }
 
 #[test]
 fn the_model_may_name_the_roadmap_by_its_alias() {
     // The plist renders NOS_ROADMAP_TABLE_ID from keap_roadmap_table_id; no other alias is mapped.
     std::env::set_var("NOS_ROADMAP_TABLE_ID", "rt-2d49");
-    let rig = rig_n("alias", mapped(), vec![ROWS.into()],
-        vec![tool_call(r#"{"table": "roadmap", "q": "alpha"}"#), tool_call(r#"{"table": "current-state", "q": "alpha"}"#), answer("x")]);
+    let rig = rig_n("alias", mapped(), vec![SCHEMA.into(), ROWS.into(), SCHEMA.into(), ROWS.into()],
+        vec![query(r#"{"table": "roadmap", "q": "alpha"}"#), query(r#"{"table": "current-state", "q": "alpha"}"#), answer("x")]);
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
     let got = turn(&s, &mut r, None, "find alpha on the roadmap");
     assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::TableResults(t), .. } if t.table == "rt-2d49")), "{got:?}");
     let heads: Vec<String> = rig.keap.lock().unwrap().iter().map(|(h, _)| h.clone()).collect();
-    assert!(heads[0].starts_with("GET /api/tables/rt-2d49/rows?"), "{}", heads[0]);
-    assert!(heads[1].starts_with("GET /api/tables/current-state/rows?"), "{}", heads[1]);
+    assert!(heads[0].starts_with("GET /api/tables/rt-2d49 "), "{}", heads[0]);
+    assert!(heads[1].starts_with("GET /api/tables/rt-2d49/rows?"), "{}", heads[1]);
+    assert!(heads[2].starts_with("GET /api/tables/current-state "), "{}", heads[2]);
+    assert!(heads[3].starts_with("GET /api/tables/current-state/rows?"), "{}", heads[3]);
 }
 
 #[test]
@@ -821,8 +843,7 @@ fn approve_writes_nothing_over_a_row_that_moved_since_the_proposal() {
     let changed = r#"{"success": true, "data": {"rows": [{"id": "r1", "values": {"title": "Alpha one", "status": "blocked"}}]}}"#;
     let gone = r#"{"success": true, "data": {"rows": [{"id": "r2", "values": {"title": "beta"}}]}}"#;
     for (name, now, want) in [("moved", changed, "changed since"), ("gone", gone, "gone since")] {
-        let rig = rig_n(name, mapped(), vec![ROWS.into(), now.into(), POSTED.into()],
-            vec![call("propose_row_edit", EDIT), answer("Proposed.")]);
+        let rig = rig_n(name, mapped(), shown_then(&[ROWS, now, POSTED]), edit_turn());
         let (s, mut r, session, approval, _) = propose(&rig);
         decide(&s, &approval, Decision::Approve);
         assert!(matches!(next(&mut r), Some(ToShell::Text { text, .. }) if text.contains(want)), "{name}");
@@ -859,23 +880,134 @@ fn until_text(r: &mut BufReader<UnixStream>) -> Vec<ToShell> {
 
 #[test]
 fn a_turn_says_thinking_before_its_text_and_idle_at_the_end() {
-    let rig = rig("eye", mapped(), ROWS, vec![tool_call(r#"{"table": "todos", "q": "alpha"}"#), answer("Found one.")]);
+    let rig = rig_n("eye", mapped(), shown_then(&[]), vec![query(r#"{"table": "todos", "q": "alpha"}"#), answer("Found one.")]);
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
     (&s).write_all(encode(&ToThalamus::Turn { session: None, text: "find alpha".into() }).as_bytes()).unwrap();
     let got = until_text(&mut r);
-    assert_eq!(phases(&got), ["session", "thinking", "tool:search_rows", "render", "thinking", "text"]);
+    assert_eq!(phases(&got), ["session", "thinking", "tool:query_rows", "render", "thinking", "text"]);
     let session = session_of(&got);
     assert!(matches!(raw(&mut r), Some(ToShell::Activity { session: s2, phase: Phase::Idle }) if s2 == session));
 }
 
 #[test]
 fn an_approved_edit_says_writing_then_idle() {
-    let rig = rig_n("eye-write", mapped(), vec![ROWS.into(), ROWS.into(), POSTED.into()],
-        vec![call("propose_row_edit", EDIT), answer("Proposed.")]);
+    let rig = rig_n("eye-write", mapped(), shown_then(&[ROWS, ROWS, POSTED]), edit_turn());
     let (s, mut r, _, approval, _) = propose(&rig);
     decide(&s, &approval, Decision::Approve);
     let got = phases(&until_text(&mut r));
     assert!(got.ends_with(&["writing".into(), "text".into()]), "{got:?}");
     assert!(matches!(raw(&mut r), Some(ToShell::Activity { phase: Phase::Idle, .. })));
+}
+
+// --- pupil I4a: query_rows reads, counts and filters; a proposal needs a row the person saw ---
+
+/// The last tool message of the n-th body the model was sent, as JSON.
+fn tool_result(rig: &Rig, n: usize) -> serde_json::Value {
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[n].1).unwrap();
+    let m = body["messages"].as_array().unwrap().iter().rev().find(|m| m["role"] == "tool").expect("a tool message").clone();
+    serde_json::from_str(m["content"].as_str().unwrap()).unwrap()
+}
+
+/// Every table_results the turn rendered, as its wire props.
+fn renders(got: &[ToShell]) -> Vec<serde_json::Value> {
+    got.iter().filter_map(|m| match m {
+        ToShell::Render { component: c @ Component::TableResults(_), .. } => Some(serde_json::to_value(c).unwrap()["props"].clone()),
+        _ => None,
+    }).collect()
+}
+
+#[test]
+fn query_rows_without_q_reads_every_row_and_counts_exactly() {
+    // Live 2026-10-12: `q` was required, so the model searched "the" and invented "49 rows".
+    let rig = rig_n("count", mapped(), shown_then(&[SCHEMA, ROWS]),
+        vec![query(r#"{"table": "todos", "limit": 0}"#), query(r#"{"table": "todos", "q": "  "}"#), answer("3 rows.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "how many rows?");
+    let count = tool_result(&rig, 1);
+    assert_eq!((&count["matched"], &count["total"], &count["rows"]), (&serde_json::json!(3), &serde_json::json!(3), &serde_json::json!([])),
+               "limit 0 is the exact count, not KEAP's rowCount: {count}");
+    let all = tool_result(&rig, 2);
+    assert!(all.get("error").is_none(), "a blank q is not an error: {all}");
+    assert_eq!(all["rows"].as_array().unwrap().len(), 3, "{all}");
+    let shown = renders(&got);
+    assert_eq!(shown.len(), 2, "{got:?}");
+    assert_eq!((&shown[0]["name"], &shown[0]["query"], &shown[0]["total"]),
+               (&serde_json::json!("Todo list"), &serde_json::json!("all rows"), &serde_json::json!(3)), "{}", shown[0]);
+}
+
+#[test]
+fn query_rows_filters_sorts_projects_and_names_the_table() {
+    let rig = rig_n("filter", mapped(), shown_then(&[SCHEMA, ROWS]), vec![
+        query(r#"{"table": "todos", "where": [{"column": "status", "op": "eq", "value": "open"}],
+                  "order_by": {"column": "ordinal", "dir": "asc"}, "columns": ["title"]}"#),
+        query(r#"{"table": "todos", "order_by": {"column": "title", "dir": "desc"}}"#), answer("x")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "open ones, in order");
+    let ids = |v: &serde_json::Value| v["rows"].as_array().unwrap().iter().map(|r| r["__id"].as_str().unwrap().to_string()).collect::<Vec<_>>();
+    let open = tool_result(&rig, 1);
+    assert_eq!(ids(&open), ["r3", "r1"], "status = open, ordinal ascending: {open}");
+    assert_eq!((&open["name"], &open["matched"], &open["total"]), (&serde_json::json!("Todo list"), &serde_json::json!(2), &serde_json::json!(3)));
+    // The model learns the real status vocabulary from the schema it is handed.
+    assert!(open["columns"].to_string().contains(r#""options":["open","done"]"#), "{open}");
+    let shown = renders(&got);
+    assert_eq!(shown[0]["columns"], serde_json::json!(["title"]), "projected to the asked columns");
+    assert!(shown[0]["rows"][0]["cells"].get("status").is_none(), "a cell outside the projection rode along: {}", shown[0]);
+    let q = shown[0]["query"].as_str().unwrap();
+    assert!(q.contains("status = open") && q.contains("order by ordinal asc") && q.contains("columns title"), "{q}");
+    // Strings sort case-insensitively: Gamma, beta, Alpha one.
+    assert_eq!(ids(&tool_result(&rig, 2)), ["r3", "r2", "r1"]);
+}
+
+#[test]
+fn query_rows_on_an_unknown_column_or_value_names_the_real_ones() {
+    for (name, args, want) in [
+        ("nocol", r#"{"table": "todos", "where": [{"column": "state", "op": "eq", "value": "open"}]}"#,
+         "no column `state` in Todo list; columns: title, status, ordinal"),
+        ("noval", r#"{"table": "todos", "where": [{"column": "status", "op": "in", "value": ["open", "next"]}]}"#,
+         "options: open, done"),
+        ("nosort", r#"{"table": "todos", "order_by": {"column": "rank", "dir": "asc"}}"#, "no column `rank`")] {
+        let rig = rig_n(name, mapped(), shown_then(&[]), vec![query(args), answer("x")]);
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let got = turn(&s, &mut r, None, "x");
+        assert!(renders(&got).is_empty(), "{name}: a wrong query rendered: {got:?}");
+        let e = tool_result(&rig, 1);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "{name}: {e}");
+        assert_eq!(rig.keap.lock().unwrap().len(), 1, "{name}: rows were read for a query the schema refuses");
+    }
+}
+
+#[test]
+fn a_proposal_for_a_row_never_shown_is_refused_without_a_read_or_a_card() {
+    // Live 2026-10-12: the model called propose_row_edit to look at a row, not to change it.
+    let rig = rig_n("probe", mapped(), shown_then(&[ROWS]),
+        vec![call("propose_row_edit", EDIT), answer("Could not."),
+             query(r#"{"table": "todos", "q": "alpha"}"#), call("propose_row_edit", EDIT), answer("Proposed.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let first = turn(&s, &mut r, None, "how many rows?");
+    assert!(!first.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. })), "a card for a row never shown: {first:?}");
+    assert!(rig.keap.lock().unwrap().is_empty(), "KEAP was read for a refused proposal");
+    let e = tool_result(&rig, 1);
+    assert!(e["error"].as_str().is_some_and(|e| e.contains("was not shown to the person in this session")), "{e}");
+    let second = turn(&s, &mut r, Some(session_of(&first)), "close alpha");
+    assert!(second.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. })), "a shown row is proposed as before: {second:?}");
+}
+
+#[test]
+fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
+    let rig = rig("prompt", mapped(), ROWS, vec![answer("hi")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "hello");
+    let p = system_prompt(&rig);
+    assert!(p.contains("call query_rows (its total is the exact count)"), "{p}");
+    assert!(p.contains("propose_row_edit only for a change the person asked for, never to look at a row"), "{p}");
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
+    let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
+    assert_eq!(names, ["query_rows", "propose_row_edit"]);
+    assert_eq!(body["tools"][0]["function"]["parameters"]["required"], serde_json::json!(["table"]), "q is optional");
 }

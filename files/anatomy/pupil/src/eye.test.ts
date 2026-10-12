@@ -22,8 +22,8 @@ describe('the eye reducer', () => {
 
 	it('follows the wire: thinking, tool:<name>, writing, idle', () => {
 		expect(run(act('thinking')).state).toBe('thinking');
-		const t = run(act({ tool: { name: 'search_rows' } }));
-		expect([t.state, t.tool, label(look(t, 0))]).toEqual(['tool', 'search_rows', 'tool: search_rows']);
+		const t = run(act({ tool: { name: 'query_rows' } }));
+		expect([t.state, t.tool, label(look(t, 0))]).toEqual(['tool', 'query_rows', 'tool: query_rows']);
 		expect(run(act('writing')).state).toBe('writing');
 		expect(run(act('thinking'), act('idle')).state).toBe('idle');
 	});
@@ -88,7 +88,7 @@ describe('the eye reducer', () => {
 describe('the eye drawn', () => {
 	const views: View[] = [
 		{ state: 'idle', tool: null }, { state: 'listening', tool: null }, { state: 'thinking', tool: null },
-		{ state: 'tool', tool: 'search_rows' }, { state: 'writing', tool: null }, { state: 'waiting', tool: null },
+		{ state: 'tool', tool: 'query_rows' }, { state: 'writing', tool: null }, { state: 'waiting', tool: null },
 		{ state: 'said', tool: null }, { state: 'refused', tool: null }, { state: 'disconnected', tool: null }
 	];
 
