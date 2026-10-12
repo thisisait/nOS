@@ -1,0 +1,6 @@
+{
+	"identifier": "main",
+	"description": "The pupil's window may listen to the bridge's events and call its two commands; nothing else.",
+	"windows": ["main"],
+	"permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+}

@@ -824,6 +824,16 @@ words:
       - path: roles/pazny.thalamus/
       - path: files/anatomy/thalamus/
     not: [Cortex, Wing, organelles]
+  # 2026-10-12: Iris's desktop window (name ruled the same day, pupil-definition §5).
+  Pupil:
+    level: proper-name
+    means: >-
+      Iris's desktop window: a Tauri app that opens the Thalamus socket as the logged-in user
+      and draws the same closed component vocabulary as the terminal shell. It holds no secret
+      and opens no port.
+    names:
+      - path: files/anatomy/pupil/
+    not: [Face, Thalamus]
   # 2026-10-11: the identity relay on the Mac (rulings 1a, 2; name ruled the same day); the Thalamus will take its job.
   Receptor:
     level: proper-name

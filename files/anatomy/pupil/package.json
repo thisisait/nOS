@@ -1,0 +1,22 @@
+{
+	"name": "nos-pupil",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "nOS pupil — Iris's desktop window onto ~/.nos/thalamus.sock (Tauri 2 + Svelte 5).",
+	"scripts": {
+		"build": "vite build",
+		"test": "vitest run",
+		"tauri": "tauri"
+	},
+	"devDependencies": {
+		"@sveltejs/vite-plugin-svelte": "5.1.1",
+		"@tauri-apps/cli": "2.12.2",
+		"svelte": "5.56.6",
+		"vite": "6.4.3",
+		"vitest": "4.1.11"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

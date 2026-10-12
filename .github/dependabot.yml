@@ -37,6 +37,16 @@ updates:
         applies-to: security-updates
         patterns:
           - "*"
+  - package-ecosystem: "npm"
+    directory: "/files/anatomy/pupil"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
   - package-ecosystem: "cargo"
     directory: "/files/anatomy/thalamus/contract"
     schedule:
@@ -49,6 +59,16 @@ updates:
           - "*"
   - package-ecosystem: "cargo"
     directory: "/files/anatomy/thalamus/thalamus"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+  - package-ecosystem: "cargo"
+    directory: "/files/anatomy/pupil/src-tauri"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 0

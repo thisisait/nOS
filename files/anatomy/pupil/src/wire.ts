@@ -1,0 +1,33 @@
+// The wire as the webview sees it: already decoded by the Rust bridge with
+// nos_contract::wire::decode_to_shell, so every message here is checked.
+// Spec: files/anatomy/contracts/thalamus-shell.yml.
+
+export type Value = null | boolean | number | string | Value[] | { [k: string]: Value };
+
+export type Component =
+	| { kind: 'table_results'; props: { table: string; columns: string[]; rows: { __id: string; cells: Record<string, Value> }[]; projected: boolean } }
+	| { kind: 'row_diff_approval'; props: { table: string; row_id: string; cells: { key: string; old: Value; new: Value }[] } }
+	| { kind: 'inbox_list'; props: { items: { id: string; title: string; source: string; created_at: string }[]; refused: string[] } }
+	| { kind: 'approvals_list'; props: { items: { kind: string; severity: string; age: string; what: string; where: string; note?: string }[]; unknown: string[] } }
+	| { kind: 'red_status'; props: { red_count: number; reds: string[]; hold_count: number; holds: string[] } };
+
+export type ToShell =
+	| { t: 'session'; session: string; actor: string; model_uri: string }
+	| { t: 'text'; session: string; text: string }
+	| { t: 'render'; session: string; component: Component }
+	| { t: 'approval_request'; session: string; approval: string; component: Component }
+	| { t: 'refused'; reason: string };
+
+export type ToThalamus =
+	| { t: 'turn'; session: string | null; text: string }
+	| { t: 'approval_decision'; approval: string; decision: 'approve' | 'reject'; note: string | null }
+	| { t: 'control'; view: 'inbox' | 'approvals' | 'red_status' };
+
+export type Link = { state: 'connected' | 'closed'; reason: string | null };
+
+/** A table cell as text; null is an empty cell, never the word "null". */
+export const cell = (v: Value | undefined): string =>
+	v === null || v === undefined ? '' : typeof v === 'string' ? v : JSON.stringify(v);
+
+/** A diff side: an empty cell must not look like an empty string (shell.rs `shown`). */
+export const shown = (v: Value): string => (v === null ? '(empty)' : JSON.stringify(v));

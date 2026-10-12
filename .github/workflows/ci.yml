@@ -165,6 +165,18 @@ jobs:
       - name: Install the wing vendor tree.
         run: composer install --no-progress --no-interaction --no-scripts -d files/anatomy/wing
 
+      # tests/anatomy/test_pupil_renders_the_fixture.py runs the pupil's vitest over
+      # the thalamus-shell fixture; without node_modules it is red, not skipped.
+      - name: Set up Node.
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: files/anatomy/pupil/package-lock.json
+
+      - name: Install the pupil's JS lane.
+        run: npm ci --prefix files/anatomy/pupil
+
       # fastapi: tests/bone_vfs mounts the Bone VFS router on a throwaway app to
       # exercise the containment + filename-hardening gates (nOS-face v0.2).
       # ansible-core comes from the FROZEN pin (tools/ci-freeze.env) rather

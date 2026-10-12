@@ -14,8 +14,11 @@ consumer:
   organ: thalamus   # the shell is the same binary's default mode
   code:
     - files/anatomy/thalamus/contract/examples/wire_fixture.rs
+    - files/anatomy/pupil/src-tauri/src/bridge.rs        # the pupil (desktop window) decodes with the same crate
+    - files/anatomy/pupil/src/fixture.test.ts            # and draws every fixture component
 gates:
   both: tests/anatomy/test_thalamus_shell_contract.py   # decodes, re-encodes and refuses the fixture
+  pupil: tests/anatomy/test_pupil_renders_the_fixture.py
 
 # ── 1. The wire ─────────────────────────────────────────────────────────────
 wire:
