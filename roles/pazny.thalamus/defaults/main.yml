@@ -7,6 +7,9 @@ thalamus_bin: "{{ thalamus_home }}/bin/thalamus"
 thalamus_log_dir: "{{ thalamus_home }}/log"
 thalamus_target_dir: "{{ thalamus_home }}/target"
 thalamus_socket: "{{ ansible_facts['env']['HOME'] }}/.nos/thalamus.sock"
+# One self-signed identity per host keeps the removable-volume grant across rebuilds (tasks/main.yml).
+thalamus_signing_cn: "nOS local code signing"
+thalamus_signing_keychain: "{{ ansible_facts['env']['HOME'] }}/Library/Keychains/login.keychain-db"
 thalamus_cargo: "{{ ansible_facts['env']['HOME'] }}/.cargo/bin/cargo"
 # serve maps the model's "roadmap" to this; declared once in default.config.yml.
 thalamus_roadmap_table_id: "{{ keap_roadmap_table_id }}"
