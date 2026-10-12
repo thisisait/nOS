@@ -120,6 +120,7 @@ fn rig_full(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_
         },
         repo: d.clone(),
         reader_secs: 2,
+        tier1: vec!["nos-admins".into()],
         log: Mutex::new(Box::new(log.clone())),
     };
     let sock = d.join("t.sock");

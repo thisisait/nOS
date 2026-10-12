@@ -39,6 +39,8 @@ pub struct Server {
     pub repo: PathBuf,
     /// READER_SECS in production; a gate shortens it.
     pub reader_secs: u64,
+    /// The groups that see the operator's views (NOS_TIER1_GROUPS, from authentik_rbac_tiers).
+    pub tier1: Vec<String>,
     pub log: Mutex<Box<dyn Write + Send>>,
 }
 
@@ -507,8 +509,11 @@ impl Server {
             ControlView::RedStatus => "control_red_status",
         };
         let _ = self.record(o, Kind::ToolUse, Some(tool), json!({}));
+        // The readers show the whole estate's queue; only tier 1 sees it. Inbox is per person.
+        let tier1 = who.groups.iter().any(|g| self.tier1.contains(g));
         let c = match view {
             ControlView::Inbox => Ok(Component::InboxList(self.inbox(who))),
+            _ if !tier1 => Err("not yours to see".to_string()),
             ControlView::Approvals => self.reader("awaiting-operator.py").and_then(|v| {
                 let items = serde_json::from_value(v.get("items").cloned().unwrap_or(Value::Null));
                 let unknown = serde_json::from_value(v.get("unknown").cloned().unwrap_or(Value::Null));

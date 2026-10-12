@@ -39,6 +39,9 @@ fn serve_main() -> Result<(), String> {
         binding,
         repo,
         reader_secs: serve::READER_SECS,
+        // Unset or empty: nobody is tier 1, so the operator views refuse everyone.
+        tier1: std::env::var("NOS_TIER1_GROUPS").unwrap_or_default().split(',').filter(|g| !g.is_empty())
+            .map(str::to_string).collect(),
         log: Mutex::new(Box::new(std::io::stderr())),
     };
     serve::run(listener, Arc::new(srv));
