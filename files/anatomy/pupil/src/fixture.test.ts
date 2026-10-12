@@ -71,6 +71,24 @@ describe('the pupil renders the contract fixture', () => {
 		expect(draw(msg)).toContain('(empty) → "landed"');
 	});
 
+	// Live 2026-10-12: a roadmap search drew `body` as a column and squeezed the rest to one letter wide.
+	it('a long-text column folds into the row, the short ones stay columns', () => {
+		const body = 'Session 2026-09-20 against FINISHING-REPORT.md. '.repeat(12);
+		const msg: ToShell = { t: 'render', session: 's', component: { kind: 'table_results', props: {
+			table: 'roadmap', columns: ['body', 'slug', 'status'], projected: false,
+			rows: [{ __id: 'r1', cells: { body, slug: 'pupil-eye', status: 'next' } }] } } };
+		const html = render(Message, { props: { msg } }).body;
+		const heads = [...html.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1].trim());
+		expect(heads).toEqual(['slug', 'status']);
+		expect(html).toContain('<details');
+		expect(text(html)).toContain(body.trim());
+	});
+
+	it('a tool the thalamus runs is said in the log', () => {
+		const html = draw({ t: 'activity', session: 's', phase: { tool: { name: 'search_rows' } } });
+		expect(html).toContain('search_rows');
+	});
+
 	it('markup in a model string stays text', () => {
 		const html = render(Message, { props: { msg: { t: 'text', session: 's', text: '<img src=x onerror=alert(1)>' } } }).body;
 		expect(html).not.toContain('<img');
