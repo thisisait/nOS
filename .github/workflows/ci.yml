@@ -174,8 +174,10 @@ jobs:
           cache: npm
           cache-dependency-path: files/anatomy/pupil/package-lock.json
 
+      # --ignore-scripts: no package's install script runs on the runner (esbuild's
+      # binary arrives as an optional dep); pinned by test_pupil_runtime_deps_are_the_allow_list.py.
       - name: Install the pupil's JS lane.
-        run: npm ci --prefix files/anatomy/pupil
+        run: npm ci --ignore-scripts --prefix files/anatomy/pupil
 
       # fastapi: tests/bone_vfs mounts the Bone VFS router on a throwaway app to
       # exercise the containment + filename-hardening gates (nOS-face v0.2).
