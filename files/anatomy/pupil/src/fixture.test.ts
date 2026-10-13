@@ -251,6 +251,24 @@ describe('a chart is SVG marks and text labels, inside its box', () => {
 		expect(text(h)).toContain('closed · tue: -2');
 	});
 
+	it('eight columns keep x labels readable and inside the box', () => {
+		const names = ['platform', 'pupilbox', 'billingx', 'hostingx', 'edgeboxx', 'vaultedx', 'memoryxx', 'faceappx'];
+		const h = html(chart({ chart: 'bar', series: [{ name: 'rows', points: names.map((x, i) => [x, i + 1]) }] }));
+		const drawn = labels(h).filter((l) => l.anchor === 'middle').map((l) => l.t);
+		expect(drawn).toEqual(names);
+		const axis = h.match(/<line[^>]*class="axis[^"]*"[^>]*/)?.[0] ?? '';
+		const num = (k: string) => Number(axis.match(new RegExp(`${k}="([^"]*)"`))?.[1]);
+		expect(num('x2') - num('x1'), 'plot width').toBeGreaterThanOrEqual(300);
+		for (const l of labels(h)) {
+			const w = l.t.length * l.size * 0.6;
+			const [lo, hi] = l.anchor === 'end' ? [l.x - w, l.x] : l.anchor === 'middle' ? [l.x - w / 2, l.x + w / 2] : [l.x, l.x + w];
+			expect(lo, l.t).toBeGreaterThanOrEqual(0);
+			expect(hi, l.t).toBeLessThanOrEqual(320);
+			expect(l.y - l.size, l.t).toBeGreaterThanOrEqual(0);
+			expect(l.y, l.t).toBeLessThanOrEqual(160);
+		}
+	});
+
 	it('every label stays inside the 320x160 box, even 6 series of 60 long, wide-ranged points', () => {
 		const series = Array.from({ length: 6 }, (_, k) => ({ name: `series number ${k}`,
 			points: Array.from({ length: 60 }, (_, i) => [`a rather long x label ${i}`, (i - 30) * 10 ** (k + 4)] as [string, number]) }));
