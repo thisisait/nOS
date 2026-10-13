@@ -15,7 +15,8 @@ export type Block =
 	| { t: 'ol'; items: { n: number; inl: Inline[] }[] }
 	| { t: 'code'; text: string };
 
-const INLINE = /`([^`\n]+)`|\*\*(.+?)\*\*|\*([^*\s](?:[^*]*[^*\s])?)\*|\[([^\]\n]+)\]\(([^)\s]+)\)/g;
+// A label holds no "[": else every unclosed "[" re-reads the rest (quadratic).
+const INLINE = /`([^`\n]+)`|\*\*(.+?)\*\*|\*([^*\s](?:[^*]*[^*\s])?)\*|\[([^[\]\n]+)\]\(([^)\s]+)\)/g;
 
 export function inline(s: string): Inline[] {
 	const out: Inline[] = [];
