@@ -44,6 +44,27 @@ describe('unclosed inline markers do not backtrack', () => {
 	});
 });
 
+// A "  - " under an item is a child list. The marker regex used to eat the indent,
+// so the child was another top-level item.
+describe('an indented dash is a second list level', () => {
+	const drawn = (src: string) =>
+		render(Markdown, { props: { text: src } }).body.replace(/<!--[\s\S]*?-->/g, '').replace(/ class="[^"]*"/g, '');
+
+	it('a "  - " under an item is nested, and the next "-" is not', () => {
+		const src = '- parent\n  - child\n- next';
+		expect(drawn(src)).toContain('<ul><li>parent<ul><li>child</li></ul></li><li>next</li></ul>');
+		expect(parse(src)).toEqual([
+			{
+				t: 'ul',
+				items: [
+					{ inl: [{ t: 'text', text: 'parent' }], sub: [[{ t: 'text', text: 'child' }]] },
+					{ inl: [{ t: 'text', text: 'next' }], sub: [] },
+				],
+			},
+		]);
+	});
+});
+
 // Live 2026-10-13: a model's `---` divider was drawn as three dashes.
 describe('a thematic break', () => {
 	it('--- between paragraphs is a rule, not text', () => {
