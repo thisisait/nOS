@@ -34,8 +34,9 @@ export type ToShell =
 	| { t: 'text'; session: string; text: string }
 	| { t: 'render'; session: string; component: Component }
 	| { t: 'approval_request'; session: string; approval: string; component: Component }
-	| { t: 'refused'; reason: string }
-	| { t: 'activity'; session: string; phase: Phase };
+	| { t: 'refused'; reason: string; widget?: string }
+	| { t: 'activity'; session: string; phase: Phase }
+	| { t: 'widget'; session: string; widget: string; component: Component };
 
 /** What the thalamus is doing (wire.rs Phase); the eye shows it, the log does not. */
 export type Phase = 'thinking' | { tool: { name: string } } | 'writing' | 'idle';
@@ -45,7 +46,14 @@ export const phaseName = (p: Phase): string => (typeof p === 'string' ? p : `too
 export type ToThalamus =
 	| { t: 'turn'; session: string | null; text: string }
 	| { t: 'approval_decision'; approval: string; decision: 'approve' | 'reject'; note: string | null }
-	| { t: 'control'; view: 'inbox' | 'approvals' | 'red_status' };
+	| { t: 'control'; view: 'inbox' | 'approvals' | 'red_status' }
+	| { t: 'widget'; widget: string; spec: WidgetSpec; trigger: 'click' | 'restore' | 'table_changed' };
+
+/** What a widget re-runs, as the person and without the model (wire.rs WidgetSpec): exactly one key. */
+export type WidgetSpec =
+	| { rows: Record<string, Value> }
+	| { chart: { query: { table: string; q?: string; where?: Value[] }; chart: 'bar' | 'line' | 'pie'; x: string; y?: string; op: 'count' | 'sum' | 'avg' } }
+	| { form: { table: string; columns?: string[] } };
 
 export type Link = { state: 'connected' | 'closed'; reason: string | null };
 

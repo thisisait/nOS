@@ -21,10 +21,14 @@
 		<p class="muted">approval {msg.approval}</p>
 		<ComponentView component={msg.component} />
 	{:else if msg.t === 'refused'}
-		<StatusNote kind="error" title="refused">{msg.reason}</StatusNote>
+		<StatusNote kind="error" title="refused">{#if msg.widget}widget {msg.widget}: {/if}{msg.reason}</StatusNote>
 	{:else if msg.t === 'activity'}
 		<!-- App logs only a tool run; every phase goes to the eye. -->
 		<p class="muted">→ {phaseName(msg.phase)}</p>
+	{:else if msg.t === 'widget'}
+		<!-- App routes these to their widget (widgets.ts); drawn here for any other host of a message. -->
+		<p class="muted">widget {msg.widget}</p>
+		<ComponentView component={msg.component} />
 	{/if}
 </div>
 

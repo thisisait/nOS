@@ -82,7 +82,7 @@
 
 <div class="chart" bind:clientWidth={width}>
 	{#if g.empty}
-		<p class="empty">no rows yet</p>
+		<p class="empty">{label}: no rows yet</p>
 	{:else}
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 		<svg bind:this={svg} viewBox="0 0 {g.W} {g.H}" role="group" aria-label={label} tabindex="0"

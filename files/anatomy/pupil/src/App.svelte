@@ -7,11 +7,13 @@
 	import { onMount, tick } from 'svelte';
 	import StatusNote from '$ui/StatusNote.svelte';
 	import ApprovalCard from './ApprovalCard.svelte';
+	import ComponentView from './Component.svelte';
 	import Eye from './Eye.svelte';
 	import { SETTLE_MS, eye, look, step, type Input } from './eye';
 	import Message from './Message.svelte';
 	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
 	import type { Link, ToShell, ToThalamus } from './wire';
+	import { route, type Widgets } from './widgets';
 
 	type Tauri = {
 		core: { invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown> };
@@ -21,6 +23,8 @@
 
 	type Entry = { me: string } | { msg: ToShell } | { note: string };
 	let log: Entry[] = $state([]);
+	// Each widget's latest answer by token; the workspace that lays them out is I5h.
+	let widgets: Widgets = $state({});
 	let q = $state(empty());
 	let link: Link = $state({ state: 'closed', reason: 'not connected yet' });
 	// No turn while an approval waits (shell.rs:173); the bridge refuses one anyway.
@@ -89,6 +93,11 @@
 			tauri.event.listen<ToShell>('to_shell', ({ payload }) => {
 				see({ e: 'wire', msg: payload });
 				if (payload.t === 'session') session = payload.session;
+				const w = route(widgets, payload, Date.now());
+				if (w) {
+					widgets = w;
+					return;
+				}
 				// The eye shows every phase; the log keeps only a tool run, so the person sees what was called.
 				if (payload.t === 'activity') {
 					if (typeof payload.phase === 'object') push({ msg: payload });
@@ -121,6 +130,16 @@
 		{/if}
 	</header>
 	<Eye {view} />
+	{#if Object.keys(widgets).length}
+		<section class="widgets">
+			{#each Object.entries(widgets) as [token, w] (token)}
+				<article class="widget" data-widget={token}>
+					{#if w.error}<StatusNote kind="error" block={false}>{w.error}</StatusNote>{/if}
+					{#if w.component}<ComponentView component={w.component} />{/if}
+				</article>
+			{/each}
+		</section>
+	{/if}
 	<div class="column" bind:this={column}>
 		{#each log as e}
 			{#if 'me' in e}<p class="me">{e.me}</p>
@@ -195,6 +214,18 @@
 		flex-direction: column;
 		gap: 12px;
 		padding: 8px 16px;
+	}
+	.widgets {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+		gap: 8px;
+		padding: 0 16px;
+	}
+	.widget {
+		padding: 8px;
+		border: 1px solid var(--glass-brd);
+		border-radius: 12px;
+		background: var(--glass);
 	}
 	.me {
 		align-self: flex-end;
