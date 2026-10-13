@@ -20,7 +20,7 @@ const PROPS: Record<string, string[]> = {
 	table: ['columns', 'rows', 'title'],
 	list: ['items', 'ordered', 'title'],
 	record: ['fields', 'title'],
-	chart: ['chart', 'series', 'title'],
+	chart: ['chart', 'series', 'title', 'x'],
 	tree: ['nodes', 'title'],
 	timeline: ['items', 'title'],
 };
@@ -303,6 +303,55 @@ describe('a chart is SVG marks and text labels, inside its box', () => {
 		const marks = h.match(/<rect[^>]*class="bar[^>]*>/g) ?? [];
 		expect(marks.length).toBe(6);
 		for (const m of marks) expect(m).toContain('tabindex="0"');
+	});
+
+	const tips = (h: string, c: Chart['props']) => {
+		for (const s of c.series) for (const [x, y] of s.points) expect(text(h)).toContain(`${s.name} · ${x}: ${y}`);
+	};
+
+	it('a pie is one <path> per value, each with its <title>', () => {
+		const c: Chart['props'] = { title: 'Share', chart: 'pie', x: 'category', series: [{ name: 'rows', points: [['pupil', 4], ['keap', 0], ['face', 6]] }] };
+		const h = html(chart(c));
+		expect(h.match(/<path[^>]*class="slice[^>]*>\s*<title>/g)?.length).toBe(3);
+		tips(h, c);
+		for (const x of ['pupil', 'keap', 'face']) expect(text(h)).toContain(x);
+	});
+
+	it('a scatter is one <circle> per point over a number axis', () => {
+		const c: Chart['props'] = { chart: 'scatter', x: 'number', series: [
+			{ name: 'p50', points: [['3', 5], ['10', 12.5]] }, { name: 'p99', points: [['3', 9], ['7', 30], ['-2', 1]] }] };
+		const h = html(chart(c));
+		expect(h.match(/<circle/g)?.length).toBe(5);
+		expect(h).not.toContain('<polyline');
+		tips(h, c);
+		expect(text(h)).toContain('number x');
+	});
+
+	it('an area is a filled path per series; a stacked bar a bar per value', () => {
+		const series = [{ name: 'open', points: [['mon', 3], ['tue', 5]] as [string, number][] }, { name: 'done', points: [['mon', 1], ['tue', 2]] as [string, number][] }];
+		const area = html(chart({ chart: 'area', x: 'category', series }));
+		expect(area.match(/<path[^>]*class="area/g)?.length).toBe(2);
+		const stacked = html(chart({ chart: 'stacked_bar', x: 'category', series }));
+		expect(stacked.match(/<rect[^>]*class="bar/g)?.length).toBe(4);
+		tips(stacked, { chart: 'stacked_bar', x: 'category', series });
+	});
+
+	it('a widget chart with no rows yet says so', () => {
+		const h = html(chart({ title: 'Expenses by kind', chart: 'bar', x: 'category', series: [{ name: 'rows', points: [] }] }));
+		expect(text(h)).toContain('no rows yet');
+		expect(h).not.toContain('<rect');
+	});
+
+	it('every kind, on every axis, keeps its labels inside the viewBox', () => {
+		const day = (i: number) => new Date(Date.UTC(2026, 0, 1 + i * 6)).toISOString().slice(0, 10);
+		const cases: Chart['props'][] = [
+			{ chart: 'line', x: 'time', series: [{ name: 'rows', points: Array.from({ length: 60 }, (_, i) => [day(i), i * 1e6] as [string, number]) }] },
+			{ chart: 'scatter', x: 'number', series: [{ name: 'rows', points: Array.from({ length: 60 }, (_, i) => [String(i * 12345.678 - 99999), -i] as [string, number]) }] },
+			{ chart: 'area', x: 'category', series: [{ name: 'rows', points: Array.from({ length: 60 }, (_, i) => [`a rather long x label ${i}`, i] as [string, number]) }] },
+			{ chart: 'stacked_bar', x: 'time', series: [0, 1].map((k) => ({ name: `s${k}`, points: Array.from({ length: 30 }, (_, i) => [day(i), i + k] as [string, number]) })) },
+			{ chart: 'pie', x: 'category', series: [{ name: 'rows', points: [['a', 1], ['b', 2]] }] },
+		];
+		for (const c of cases) inside(html(chart({ title: 'every axis', ...c })), `${c.chart}/${c.x}`);
 	});
 
 	it('a chart draws no link, no foreign markup, no script', () => {
