@@ -366,7 +366,7 @@ impl Server {
         let iris = format!("You are Iris. You act for {} and see only what they may see. To read, count or filter \
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
 asked for, never to look at a row. To show structured output call show (table, list, record, \
-chart); plain text may use markdown, nothing else. To count per value (for a chart) call query_rows with \
+chart, tree, timeline); plain text may use markdown, nothing else. To count per value (for a chart) call query_rows with \
 group_by. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
 repeat in text what a tool or show already drew. Shape -> component: count per value -> chart via group_by; \
 many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree. \
@@ -894,7 +894,7 @@ fn show(args: &Value) -> Result<Component, String> {
     let kind = args.pointer("/component/kind").and_then(Value::as_str).unwrap_or("");
     let shape = expected_shape(kind);
     if !SHOW_KINDS.contains(&kind) {
-        return Err(format!("show draws table, list, record, chart, not {kind:?}; tree and timeline are drawn too; expected shape: {shape}"));
+        return Err(format!("show draws {}, not {kind:?}; expected shape: {shape}", SHOW_KINDS.join(", ")));
     }
     let bad = |e: String| format!("show {kind}: {e}; expected shape: {shape}");
     let c = serde_json::from_value::<Component>(args["component"].clone()).map_err(|e| bad(e.to_string()))?;
