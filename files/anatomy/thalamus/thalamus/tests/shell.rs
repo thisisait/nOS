@@ -11,11 +11,14 @@ use std::path::PathBuf;
 use thalamus::shell::{self, App};
 
 fn fixture() -> Vec<(String, ToShell)> {
+    samples().into_iter().map(|(case, msg)| (case, decode_to_shell(&msg.to_string()))).collect()
+}
+
+/// The to_shell samples as the fixture writes them: (case, msg).
+fn samples() -> Vec<(String, serde_json::Value)> {
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../contracts/thalamus-shell.fixture.json");
     let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(p).unwrap()).unwrap();
-    v["to_shell"].as_array().unwrap().iter()
-        .map(|c| (c["case"].as_str().unwrap().to_string(), decode_to_shell(&c["msg"].to_string())))
-        .collect()
+    v["to_shell"].as_array().unwrap().iter().map(|c| (c["case"].as_str().unwrap().to_string(), c["msg"].clone())).collect()
 }
 
 fn text(t: &Terminal<TestBackend>) -> String {
@@ -38,10 +41,11 @@ fn snapshot(name: &str, got: &str) {
 #[test]
 fn every_fixture_component_matches_its_snapshot() {
     let mut kinds = Vec::new();
-    for (case, msg) in fixture() {
+    for ((case, msg), (_, sample)) in fixture().into_iter().zip(samples()) {
         let c = match msg {
             ToShell::Render { component, .. } | ToShell::ApprovalRequest { component, .. } => component,
-            ToShell::Refused { reason, .. } if case == "refusal" => { assert!(!reason.is_empty()); continue }
+            // A refusal the fixture holds as a sample decodes to itself; any other refusal is a sample that broke.
+            ToShell::Refused { .. } if serde_json::to_value(&msg).unwrap() == sample => continue,
             ToShell::Refused { reason, .. } => panic!("{case}: the fixture no longer decodes: {reason}"),
             _ => continue,
         };
