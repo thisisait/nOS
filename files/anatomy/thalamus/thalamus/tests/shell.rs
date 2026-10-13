@@ -146,6 +146,23 @@ fn drawn(app: &App, w: u16, h: u16) -> Terminal<TestBackend> {
 }
 
 #[test]
+fn a_table_cell_at_the_2000_limit_is_wrapped_not_cut() {
+    use nos_contract::renderers::{Component, Table};
+    let body = format!("{}ENDMARKER", "a".repeat(2000 - "ENDMARKER".len()));
+    assert_eq!(body.chars().count(), 2000);
+    let component = Component::Table(Table {
+        title: None,
+        columns: vec!["note".into()],
+        rows: vec![vec![serde_json::json!(body)]],
+    });
+    component.check().expect("2000 chars is a legal cell");
+    let mut app = App::default();
+    app.apply(ToShell::Render { session: SESSION.into(), component });
+    let screen = flat(&drawn(&app, 80, 40));
+    assert!(screen.contains("ENDMARKER"), "the cell was cut to 24; its tail is gone");
+}
+
+#[test]
 fn a_long_value_is_wrapped_never_cut_off() {
     let mut app = App::default();
     app.apply(diff_of(APPROVAL, &[("notes", serde_json::json!(format!("{} DROP EVERYTHING", "x".repeat(90))))]));
