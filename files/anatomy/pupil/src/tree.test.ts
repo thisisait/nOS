@@ -4,6 +4,7 @@
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import Component from './Component.svelte';
+import Timeline from './Timeline.svelte';
 
 const text = (html: string) =>
 	html
@@ -84,5 +85,38 @@ describe('tree and timeline are text, laid out by the shape', () => {
 		const g = draw({ kind: 'timeline', props: { items } });
 		expect(g.text).toContain('t6');
 		expect(g.html).toContain('data-layout="vertical"');
+	});
+
+	const spans = [
+		{ when: '2026-10-01', until: '2026-10-05', title: 'lanes and gates', lane: 'thalamus' },
+		{ when: '2026-10-06', until: '2026-10-09', title: 'chart axes', lane: 'pupil' },
+		{ when: '2026-10-13', title: 'timeline', lane: 'pupil', hi: true },
+	];
+
+	it('three dated items: a <rect> per span, a <circle> per instant, lanes as <text>', () => {
+		const g = draw({ kind: 'timeline', props: { title: 'I5', items: spans } });
+		expect(g.html.match(/<rect[^>]*class="span/g)?.length).toBe(2);
+		expect(g.html.match(/<circle[^>]*class="instant/g)?.length).toBe(1);
+		const texts = [...g.html.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map((m) => m[1].trim());
+		expect(texts).toContain('thalamus');
+		expect(texts).toContain('pupil');
+		for (const s of ['2026-10-05', 'chart axes', 'hi']) expect(g.text).toContain(s);
+		const svg = g.html.match(/<svg[^>]*>/)?.[0] ?? '';
+		expect(svg).toContain('role="group"');
+		expect(g.html).not.toContain('role="img"');
+		for (const m of g.html.match(/<(rect|circle)[^>]*class="(span|instant)[^>]*>/g) ?? []) expect(m).toContain('tabindex="0"');
+	});
+
+	it('three items named Q1/Q2/Q3 keep the ordinal drawing', () => {
+		const g = draw({ kind: 'timeline', props: { items: ['Q1', 'Q2', 'Q3'].map((when) => ({ when, title: `in ${when}` })) } });
+		expect(g.html).toContain('data-layout="horizontal"');
+		expect(g.html).not.toContain('<svg');
+		for (const s of ['Q1', 'in Q2', 'Q3']) expect(g.text).toContain(s);
+	});
+
+	it('a now rule only when now is inside the range', () => {
+		const at = (now: number) => render(Timeline, { props: { timeline: { items: spans }, now } }).body;
+		expect(at(Date.parse('2026-10-07'))).toMatch(/<line[^>]*class="now/);
+		expect(at(Date.parse('2026-11-07'))).not.toMatch(/class="now/);
 	});
 });
