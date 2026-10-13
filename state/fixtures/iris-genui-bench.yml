@@ -239,3 +239,31 @@
     - 2026-10-06 → 2026-10-09
     - "[pupil]"
     - "2026-10-13  timeline hi [pupil]"
+- id: graph-organs
+  kind: graph
+  component:
+    kind: graph
+    props:
+      title: How the organs talk
+      nodes:
+        - {id: bone, label: Bone, note: FastAPI bridge, tone: ok}
+        - {id: wing, label: Wing, note: dashboard}
+        - {id: pulse, label: Pulse, tone: warn}
+        - {id: keap, label: KEAP}
+      edges:
+        - {from: bone, to: wing, label: events}
+        - {from: pulse, to: bone, label: jobs}
+        - {from: wing, to: keap, dashed: true}
+        - {from: keap, to: bone, label: recall}
+  expect:
+    - How the organs talk
+    - "nodes:"
+    - bone Bone — FastAPI bridge [ok]
+    - wing Wing — dashboard
+    - pulse Pulse [warn]
+    - keap KEAP
+    - "edges:"
+    - bone -> wing (events)
+    - pulse -> bone (jobs)
+    - wing - -> keap
+    - keap -> bone (recall)

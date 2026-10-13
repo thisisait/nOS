@@ -650,6 +650,48 @@ mod tests {
         assert!(serde_json::from_str::<Component>(raw).is_err(), "x is required on the wire");
     }
 
+    fn graph(nodes: &str, edges: &str) -> Component {
+        decode(&format!(r#"{{"kind":"graph","props":{{"title":"Organs","nodes":[{nodes}],"edges":[{edges}]}}}}"#))
+    }
+
+    fn nodes(n: usize) -> String {
+        (0..n).map(|i| format!(r#"{{"id":"n{i}","label":"node {i}"}}"#)).collect::<Vec<_>>().join(",")
+    }
+
+    #[test]
+    fn a_graph_is_nodes_and_edges_between_them() {
+        let ok = graph(r#"{"id":"bone","label":"Bone","note":"the bridge","tone":"ok"},{"id":"wing","label":"Wing"}"#,
+                       r#"{"from":"bone","to":"wing","label":"events"},{"from":"wing","to":"bone","dashed":true}"#);
+        assert_eq!(ok.check(), Ok(()));
+        assert_eq!(graph(&nodes(1), r#"{"from":"n0","to":"n0"}"#).check(), Ok(()), "a loop is an edge");
+        assert_eq!(graph("", "").check(), Err("a graph has no nodes".into()));
+    }
+
+    #[test]
+    fn check_rejects_a_graph_edge_to_a_missing_node() {
+        assert_eq!(graph(&nodes(2), r#"{"from":"n0","to":"ghost"}"#).check(), Err(r#"graph edge n0 -> ghost names no node "ghost""#.into()));
+        assert_eq!(graph(&nodes(2), r#"{"from":"ghost","to":"n1"}"#).check(), Err(r#"graph edge ghost -> n1 names no node "ghost""#.into()));
+    }
+
+    #[test]
+    fn check_rejects_a_graph_over_its_caps() {
+        assert_eq!(graph(&nodes(60), "").check(), Ok(()));
+        assert_eq!(graph(&nodes(61), "").check(), Err("graph nodes: 61, at most 60".into()));
+        let edges = |n: usize| (0..n).map(|i| format!(r#"{{"from":"n{}","to":"n{}"}}"#, i % 60, (i + 1) % 60)).collect::<Vec<_>>().join(",");
+        assert_eq!(graph(&nodes(60), &edges(120)).check(), Ok(()));
+        assert_eq!(graph(&nodes(60), &edges(121)).check(), Err("graph edges: 121, at most 120".into()));
+        assert_eq!(graph(r#"{"id":"a","label":"A"},{"id":"a","label":"B"}"#, "").check(), Err(r#"graph node id "a" twice"#.into()));
+        for bad in ["", "a b", "a/b", "ünï", &"x".repeat(65)] {
+            let n = format!(r#"{{"id":{},"label":"A"}}"#, serde_json::to_string(bad).unwrap());
+            assert_eq!(graph(&n, "").check(), Err(format!("graph node id {bad:?} is not [A-Za-z0-9_-]{{1,64}}")), "{bad:?}");
+        }
+        assert_eq!(graph(&format!(r#"{{"id":"{}","label":"A"}}"#, "x".repeat(64)), "").check(), Ok(()));
+        assert_eq!(graph(&format!(r#"{{"id":"a","label":"{}"}}"#, "l".repeat(121)), "").check(), Err("a graph label is over 120 chars".into()));
+        assert_eq!(graph(&format!(r#"{{"id":"a","label":"A","note":"{}"}}"#, "n".repeat(2001)), "").check(), Err("a graph note is over 2000 chars".into()));
+        assert_eq!(graph(&nodes(1), &format!(r#"{{"from":"n0","to":"n0","label":"{}"}}"#, "l".repeat(121))).check(),
+                   Err("a graph edge label is over 120 chars".into()));
+    }
+
     /// Through check(), so the matcher is the one a time chart meets.
     fn is_date(x: &str) -> bool {
         chart("line", "time", &format!(r#"{{"name":"a","points":[[{}, 1]]}}"#, serde_json::to_string(x).unwrap())).check().is_ok()

@@ -1304,6 +1304,46 @@ fn show_offers_a_timeline_span_and_lane() {
     assert!(shape.contains("until?") && shape.contains("lane?"), "{shape}");
 }
 
+#[test]
+fn show_draws_a_graph_and_refuses_an_edge_to_nowhere() {
+    let graph = serde_json::json!({"kind": "graph", "props": {"title": "Organs", "nodes": [
+        {"id": "bone", "label": "Bone", "note": "the bridge"}, {"id": "wing", "label": "Wing", "tone": "warn"}],
+        "edges": [{"from": "bone", "to": "wing", "label": "events"}, {"from": "wing", "to": "bone", "dashed": true}]}});
+    let nowhere = serde_json::json!({"kind": "graph", "props": {"nodes": [{"id": "a", "label": "A"}],
+        "edges": [{"from": "a", "to": "ghost"}]}});
+    let nodes: Vec<_> = (0..61).map(|i| serde_json::json!({"id": format!("n{i}"), "label": format!("n{i}")})).collect();
+    let wide = serde_json::json!({"kind": "graph", "props": {"nodes": nodes, "edges": []}});
+    let bad = [(nowhere, r#"names no node "ghost""#), (wide, "graph nodes: 61, at most 60")];
+    let mut model = vec![show(graph)];
+    model.extend(bad.iter().map(|(c, _)| show(c.clone())));
+    model.push(answer("done"));
+    let rig = rig("graph", mapped(), ROWS, model);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "show how the organs connect");
+    assert_eq!(drawn_kinds(&got), ["graph"], "only the valid graph is drawn: {got:?}");
+    for (i, (_, want)) in bad.iter().enumerate() {
+        let e = tool_result(&rig, i + 2);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "show #{} must be refused naming {want}: {e}", i + 2);
+    }
+    let p = system_prompt(&rig);
+    assert!(p.contains("links between things -> graph"), "{p}");
+}
+
+/// The model is offered nodes, edges and their caps in both places it reads a shape.
+#[test]
+fn show_offers_a_graph() {
+    let schema = serve::show_schema();
+    let branch = schema["properties"]["component"]["oneOf"].as_array().unwrap().iter()
+        .find(|b| b["properties"]["kind"]["const"] == "graph").unwrap_or_else(|| panic!("no graph branch")).clone();
+    let props = &branch["properties"]["props"]["properties"];
+    assert_eq!(props["nodes"]["maxItems"], 60, "{props}");
+    assert_eq!(props["edges"]["maxItems"], 120, "{props}");
+    assert_eq!(props["nodes"]["items"]["properties"]["id"]["pattern"], "^[A-Za-z0-9_-]{1,64}$", "{props}");
+    let shape = serve::SHOW_SHAPE.iter().find(|(k, _)| *k == "graph").unwrap().1;
+    assert!(shape.contains("nodes[{id, label, note?, tone?}]") && shape.contains("edges[{from, to, label?, dashed?}]"), "{shape}");
+}
+
 // --- genui I5a: one list of show kinds, so a fifth hand-kept copy cannot drift ---
 
 /// The model-facing kinds named in four places in serve.rs and once in the spec must be one set.
