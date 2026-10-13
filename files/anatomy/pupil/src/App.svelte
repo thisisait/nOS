@@ -1,20 +1,24 @@
 <!--
-  The pupil: one chat column onto the thalamus. The webview holds no socket and
-  no secret; the Rust bridge owns ~/.nos/thalamus.sock and emits `to_shell`
-  (decoded) and `link` events. Window API comes from withGlobalTauri.
+  The pupil: the person's workspaces (tabs of widgets on a grid) under one floating chat onto
+  the thalamus. The webview holds no socket and no secret; the Rust bridge owns
+  ~/.nos/thalamus.sock and emits `to_shell` (decoded) and `link` events, and loads and saves the
+  layout (workspace.rs). Window API comes from withGlobalTauri.
 -->
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import StatusNote from '$ui/StatusNote.svelte';
+	import Tabs from '$ui/Tabs.svelte';
+	import AddWidget from './AddWidget.svelte';
 	import ApprovalCard from './ApprovalCard.svelte';
-	import ComponentView from './Component.svelte';
+	import Chat from './Chat.svelte';
 	import Eye from './Eye.svelte';
 	import { SETTLE_MS, eye, look, step, type Input } from './eye';
 	import Message from './Message.svelte';
 	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
-	import type { Link, ToShell, ToThalamus } from './wire';
-	import Form from './Form.svelte';
-	import { onTableChanged, route, submit, type Widgets } from './widgets';
+	import type { Link, ToShell, ToThalamus, WidgetSpec } from './wire';
+	import { route, submit, type Widgets } from './widgets';
+	import WorkspaceView from './Workspace.svelte';
+	import * as ws from './workspace';
 
 	type Tauri = {
 		core: { invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown> };
@@ -24,8 +28,14 @@
 
 	type Entry = { me: string } | { msg: ToShell } | { note: string };
 	let log: Entry[] = $state([]);
-	// Each widget's latest answer by token; the workspace that lays them out is I5h.
+	// Each widget's latest answer by token; the layout says where it sits and what it re-runs.
 	let widgets: Widgets = $state({});
+	let layout: ws.Layout = $state(ws.empty());
+	let loaded = $state(false);
+	let layoutNote: string | null = $state(null);
+	let top = $state('chat');
+	let adding = $state(false);
+	let now = $state(Date.now());
 	let q = $state(empty());
 	let link: Link = $state({ state: 'closed', reason: 'not connected yet' });
 	// No turn while an approval waits (shell.rs:173); the bridge refuses one anyway.
@@ -37,10 +47,20 @@
 	const see = (i: Input) => (ey = step(ey, i));
 	// Waiting wins until the queue is empty (shell.rs:173), whatever the wire last said.
 	const view = $derived(look(ey, q.pending.length));
+	const space = $derived(layout.workspaces.find((s) => s.id === layout.active) ?? layout.workspaces[0]);
 	$effect(() => {
 		const { state, seq } = ey;
 		if (state !== 'said' && state !== 'refused') return;
 		const t = setTimeout(() => see({ e: 'settle', seq }), SETTLE_MS[state]);
+		return () => clearTimeout(t);
+	});
+	// Saved a moment after the last change; the bridge checks it against workspace-layout.yml.
+	$effect(() => {
+		const snap = $state.snapshot(layout);
+		if (!loaded || !tauri) return;
+		const t = setTimeout(() => {
+			tauri.core.invoke('save_layout', { layout: snap }).catch((e) => (layoutNote = `layout not saved: ${e}`));
+		}, 300);
 		return () => clearTimeout(t);
 	});
 
@@ -92,6 +112,7 @@
 			widgets = route(widgets, { t: 'refused', reason: `not sent: ${e}`, widget }, Date.now()) ?? widgets;
 		}
 	}
+	const sendAll = (ms: ToThalamus[]) => ms.forEach((m) => m.t === 'widget' && wire(m, m.widget));
 
 	// The submit is the person's decision (genui Q1); the reducer sends it once while in flight.
 	function submitted(m: { form: string; widget: string; values: Record<string, string | number | boolean> }) {
@@ -100,20 +121,74 @@
 		if (r.send) wire(r.send, m.widget);
 	}
 
+	const viewport = () => ({ w: window.innerWidth, h: window.innerHeight });
+	const setChat = (c: ws.Chat) => (layout = { ...layout, chat: ws.clampChat(c, viewport()) });
+
+	function showTab(tab: string) {
+		const r = ws.show(layout, widgets, tab);
+		layout = r.layout;
+		widgets = r.w;
+		sendAll(r.send);
+	}
+
+	function added(title: string, spec: WidgetSpec) {
+		const id = `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+		const r = ws.addWidget(layout, id, title, spec);
+		if (!r.send) {
+			layoutNote = `a workspace holds at most ${ws.MAX_WIDGETS} widgets`;
+			return;
+		}
+		layout = r.layout;
+		widgets = { ...widgets, [id]: { component: null, error: null, at: 0, spec } };
+		adding = false;
+		sendAll([r.send]);
+	}
+
+	function rerun(id: string) {
+		const box = space.widgets.find((b) => b.id === id);
+		if (box) sendAll([{ t: 'widget', widget: id, spec: box.spec, trigger: 'click' }]);
+	}
+
+	function removed(id: string) {
+		layout = ws.removeWidget(layout, id);
+		const { [id]: _, ...rest } = widgets;
+		widgets = rest;
+	}
+
+	function newTab() {
+		const n = layout.workspaces.length + 1;
+		layout = ws.addSpace(layout, `ws${Date.now().toString(36)}`, `Workspace ${n}`);
+	}
+
+	async function loadLayout() {
+		try {
+			layout = (await tauri?.core.invoke('load_layout')) as ws.Layout;
+		} catch (e) {
+			layout = ws.empty();
+			layoutNote = `${e}; starting with one empty workspace`;
+		}
+		layout = { ...layout, chat: ws.clampChat(layout.chat, viewport()) };
+		loaded = true;
+	}
+
 	onMount(() => {
+		const tickAge = setInterval(() => (now = Date.now()), 1000);
+		const onResize = () => setChat(layout.chat);
+		window.addEventListener('resize', onResize);
 		if (!tauri) {
 			link = { state: 'closed', reason: 'no Tauri bridge (opened outside the pupil app)' };
-			return;
+			loaded = true;
+			return () => (clearInterval(tickAge), window.removeEventListener('resize', onResize));
 		}
 		const off = [
 			tauri.event.listen<ToShell>('to_shell', ({ payload }) => {
 				see({ e: 'wire', msg: payload });
 				if (payload.t === 'session') session = payload.session;
-				// A write landed: every widget on screen is active until the workspace has tabs (I5h).
+				// A write landed: the active tab re-runs what read that table, the others go stale.
 				if (payload.t === 'table_changed') {
-					const r = onTableChanged(widgets, payload.table, Object.keys(widgets));
+					const r = ws.onTableChanged(layout, widgets, payload.table);
 					widgets = r.w;
-					r.send.forEach((m) => m.t === 'widget' && wire(m, m.widget));
+					sendAll(r.send);
 					return;
 				}
 				const w = route(widgets, payload, Date.now());
@@ -126,46 +201,77 @@
 					if (typeof payload.phase === 'object') push({ msg: payload });
 					return;
 				}
-				if (payload.t === 'approval_request') q = asked(q, payload);
-				else push({ msg: payload });
+				if (payload.t === 'approval_request') {
+					q = asked(q, payload);
+					// The card lives in the chat: it opens and comes to the top.
+					const r = ws.approvalArrived(layout);
+					setChat(r.layout.chat);
+					top = r.top;
+				} else push({ msg: payload });
 			}),
 			tauri.event.listen<Link>('link', ({ payload }) => {
 				link = payload;
 				see({ e: 'link', state: payload.state });
-				if (payload.state !== 'closed') return;
+				// Connected: the active tab's widgets run as restore; the others when their tab is shown.
+				if (payload.state === 'connected') {
+					const r = ws.restore(layout);
+					widgets = r.w;
+					sendAll(r.send);
+					return;
+				}
 				const r = closed(q);
 				q = r.q;
 				r.notes.forEach((note) => push({ note }));
 			})
 		];
-		Promise.all(off).then(connect); // listen first, or the first `link` is missed
-		return () => off.forEach((p) => p.then((f) => f()));
+		// The layout first, so a restore on connect has its specs; listen before connect, or the first `link` is missed.
+		loadLayout().then(() => Promise.all(off)).then(connect);
+		return () => {
+			clearInterval(tickAge);
+			window.removeEventListener('resize', onResize);
+			off.forEach((p) => p.then((f) => f()));
+		};
 	});
 </script>
 
 <main>
-	<header>
+	<nav class="bar">
+		<Tabs
+			tabs={layout.workspaces.map((s) => ({ key: s.id, label: s.name }))}
+			bind:active={() => layout.active, (v) => showTab(v)}
+			label="Workspaces"
+		/>
+		<button class="ghost" onclick={newTab} disabled={layout.workspaces.length >= ws.MAX_SPACES} aria-label="add a workspace">+ tab</button>
+		{#if layout.workspaces.length > 1}
+			<button class="ghost" onclick={() => (layout = ws.removeSpace(layout, layout.active))} aria-label="close this workspace">close tab</button>
+		{/if}
+		<button onclick={() => (adding = !adding)} aria-expanded={adding}>+ widget</button>
+	</nav>
+	{#if layoutNote}<StatusNote kind="error" block={false}>{layoutNote}</StatusNote>{/if}
+	{#if adding}<AddWidget onadd={added} oncancel={() => (adding = false)} />{/if}
+	<WorkspaceView
+		{space}
+		{widgets}
+		{now}
+		{top}
+		onplace={(id, g) => (layout = ws.setBox(layout, id, g))}
+		ontop={(id) => (top = id)}
+		onrerun={rerun}
+		onremove={removed}
+		onsubmit={submitted}
+	/>
+</main>
+
+<Chat chat={layout.chat} top={top === 'chat'} onchat={setChat} ontop={() => (top = 'chat')}>
+	{#snippet head()}
 		<span class="dot" class:on={link.state === 'connected'}></span>
 		Iris
 		{#if link.state === 'closed'}
 			<StatusNote kind="unwired" block={false}>{link.reason ?? 'disconnected'}</StatusNote>
 			<button onclick={connect}>connect</button>
 		{/if}
-	</header>
+	{/snippet}
 	<Eye {view} />
-	{#if Object.keys(widgets).length}
-		<section class="widgets">
-			{#each Object.entries(widgets) as [token, w] (token)}
-				<article class="widget" data-widget={token}>
-					{#if w.error}<StatusNote kind="error" block={false}>{w.error}</StatusNote>{/if}
-					{#if w.component?.kind === 'form'}
-						<Form form={w.component.props} widget={token} inFlight={!!w.inFlight} onsubmit={submitted} />
-						{#if w.added}<p class="added">row {w.added} added</p>{/if}
-					{:else if w.component}<ComponentView component={w.component} />{/if}
-				</article>
-			{/each}
-		</section>
-	{/if}
 	<div class="column" bind:this={column}>
 		{#each log as e}
 			{#if 'me' in e}<p class="me">{e.me}</p>
@@ -207,22 +313,22 @@
 		></textarea>
 		<button type="submit" disabled={!open || !draft.trim()}>send</button>
 	</form>
-</main>
+</Chat>
 
 <style>
 	main {
-		display: flex;
-		flex-direction: column;
-		height: 100vh;
-		max-width: 860px;
-		margin: 0 auto;
+		min-height: 100vh;
+		overflow-y: auto;
 	}
-	header {
+	.bar {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		padding: 10px 16px;
-		font-weight: 600;
+		padding: 10px 16px 0;
+	}
+	.bar :global([role='tablist']) {
+		flex: 1;
+		overflow-x: auto;
 	}
 	.dot {
 		width: 8px;
@@ -241,23 +347,6 @@
 		gap: 12px;
 		padding: 8px 16px;
 	}
-	.widgets {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-		gap: 8px;
-		padding: 0 16px;
-	}
-	.widget {
-		padding: 8px;
-		border: 1px solid var(--glass-brd);
-		border-radius: 12px;
-		background: var(--glass);
-	}
-	.added {
-		margin: 4px 0 0;
-		color: var(--muted);
-		font-size: 11px;
-	}
 	.me {
 		align-self: flex-end;
 		margin: 0;
@@ -270,7 +359,7 @@
 	.composer {
 		display: flex;
 		gap: 8px;
-		margin: 8px 16px 16px;
+		margin: 8px 12px 12px;
 		padding: 8px;
 		border: 1px solid var(--glass-brd);
 		border-radius: 16px;
@@ -291,6 +380,10 @@
 		color: var(--bg);
 		border-radius: 10px;
 		padding: 4px 12px;
+	}
+	button.ghost {
+		background: none;
+		color: var(--muted);
 	}
 	button:disabled {
 		opacity: 0.4;

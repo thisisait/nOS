@@ -2,10 +2,10 @@
 // answer never joins the chat log; a refusal that names a widget is shown on that widget.
 import type { Component, ToShell, ToThalamus, Value, WidgetSpec } from './wire';
 
-/** `spec` is what the widget re-runs (the workspace sets it, I5h); `inFlight` locks a form's submit. */
+/** `spec` is what the widget re-runs (workspace.ts); `due`: restored, not run yet; `inFlight` locks a form's submit. */
 export type WidgetState = {
 	component: Component | null; error: string | null; at: number;
-	spec?: WidgetSpec; stale?: boolean; inFlight?: boolean; added?: string;
+	spec?: WidgetSpec; stale?: boolean; due?: boolean; inFlight?: boolean; added?: string;
 };
 export type Widgets = Record<string, WidgetState>;
 
