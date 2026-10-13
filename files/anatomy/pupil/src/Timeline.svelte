@@ -73,8 +73,6 @@
 	}
 </script>
 
-{#snippet title(tip: string)}<title>{tip}</title>{/snippet}
-
 {#if isTimed}
 	<div class="time" data-layout="time" bind:clientWidth={width}>
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
@@ -86,16 +84,16 @@
 			{#each g.lanes as l}<text class="lane" x={l.x} y={l.y} text-anchor="end" font-size={g.FONT}>{l.t}</text>{/each}
 			{#each g.xLabels as l}<text x={l.x} y={g.H - 5} text-anchor="middle" font-size={g.FONT}>{l.t}</text>{/each}
 			<g clip-path="url(#{clip})">
-				{#if g.now !== null}<line class="now" x1={g.now} y1={g.T} x2={g.now} y2={g.H - g.B}>{@render title('now')}</line>{/if}
+				{#if g.now !== null}<line class="now" x1={g.now} y1={g.T} x2={g.now} y2={g.H - g.B}><title>now</title></line>{/if}
 				{#each g.marks as m (m.id)}
 					{#if m.w !== undefined}
 						<rect class="span mark" class:hi={m.hi} class:dim={dimmed(sel, m.id)} x={m.x} y={m.y - (g.ROW - 6) / 2} width={m.w}
 							height={g.ROW - 6} rx="2" tabindex="0" role="button" aria-pressed={sel.includes(m.id)} onclick={() => (sel = toggle(sel, m.id))}
-							onkeydown={(e) => markKey(e, m.id)} onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}>{@render title(m.tip)}</rect>
+							onkeydown={(e) => markKey(e, m.id)} onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}><title>{m.tip}</title></rect>
 					{:else}
 						<circle class="instant mark" class:hi={m.hi} class:dim={dimmed(sel, m.id)} cx={m.x} cy={m.y} r="3" tabindex="0" role="button"
 							aria-pressed={sel.includes(m.id)} onclick={() => (sel = toggle(sel, m.id))} onkeydown={(e) => markKey(e, m.id)}
-							onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}>{@render title(m.tip)}</circle>
+							onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}><title>{m.tip}</title></circle>
 					{/if}
 					{#if m.label}<text x={m.label.x} y={m.label.y} font-size={g.FONT}>{m.label.t}</text>{/if}
 				{/each}

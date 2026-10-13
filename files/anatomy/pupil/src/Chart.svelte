@@ -80,8 +80,6 @@
 	}
 </script>
 
-{#snippet title(tip: string)}<title>{tip}</title>{/snippet}
-
 <div class="chart" bind:clientWidth={width}>
 	{#if g.empty}
 		<p class="empty">no rows yet</p>
@@ -106,15 +104,15 @@
 						{#if m.d !== undefined}
 							<path class="slice mark" class:dim={dimmed(sel, m.id)} d={m.d} style:fill={m.colour} tabindex="0" role="button"
 								aria-pressed={sel.includes(m.id)} onclick={() => pick(m.id)} onkeydown={(e) => markKey(e, m.id)}
-								onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}>{@render title(m.tip)}</path>
+								onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}><title>{m.tip}</title></path>
 						{:else if m.rx !== undefined}
 							<rect class="bar mark" class:dim={dimmed(sel, m.id)} x={m.rx} y={m.ry} width={m.rw} height={m.rh} style:fill={m.colour}
 								tabindex="0" role="button" aria-pressed={sel.includes(m.id)} onclick={() => pick(m.id)}
-								onkeydown={(e) => markKey(e, m.id)} onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}>{@render title(m.tip)}</rect>
+								onkeydown={(e) => markKey(e, m.id)} onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}><title>{m.tip}</title></rect>
 						{:else}
 							<circle class="mark" class:dim={dimmed(sel, m.id)} cx={m.cx} cy={m.cy} r={chart.chart === 'scatter' ? 2.5 : 1.5}
 								style:fill={m.colour} tabindex="0" role="button" aria-pressed={sel.includes(m.id)} onclick={() => pick(m.id)}
-								onkeydown={(e) => markKey(e, m.id)} onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}>{@render title(m.tip)}</circle>
+								onkeydown={(e) => markKey(e, m.id)} onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}><title>{m.tip}</title></circle>
 						{/if}
 					{/each}
 				{/each}
