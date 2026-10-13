@@ -1,8 +1,6 @@
 edit roadmap / backup-restic-fork — nothing is written unless you approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-  2026-10-12 → 2026-10-13  I4a — query_rows [thalamus]
-  2026-10-13 → 2026-10-14  chart hi [pupil]
 Organs
 nodes:
   bone Bone — FastAPI bridge [ok]
@@ -34,6 +32,8 @@ form Expenses (table expenses): fill it in the pupil
   Kind (select, required, options food|travel|tools)
   Paid (bool)
   not editable here: receipt (file)
+widget w4: row e3 added
+table expenses changed (row e3)
 refused: login carol has no row in the identity map
 refused (widget w2): no column `kinds` in Expenses; columns: when, kind, amount
 approve this edit? y / n

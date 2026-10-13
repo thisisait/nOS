@@ -24,8 +24,8 @@ gates:
 wire:
   framing: "newline-delimited JSON, one message per line, UTF-8"
   tag: "every message is an object whose `t` names its variant (snake_case)"
-  to_thalamus: [turn, approval_decision, control, widget]
-  to_shell: [session, text, render, approval_request, refused, activity, widget]
+  to_thalamus: [turn, approval_decision, control, widget, form_submit]
+  to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed]
   widget: >-
     A widget is a spec the person placed; the pupil re-runs it over `widget {widget, spec, trigger}`
     and the thalamus answers as that person, without the model, with `widget {session, widget,
@@ -36,6 +36,17 @@ wire:
     category x largest first, 59 and "other" past 60; date x by UTC day, the last 60; number x
     ascending, the 60 smallest), {form: {table, columns?}}. trigger: click|restore|table_changed,
     recorded with the spec in the ledger. A widget's rows never let the model propose an edit.
+  form_submit: >-
+    `form_submit {form, widget, values}` submits a widget form the thalamus sent on this connection
+    (form a uuid, widget its token, values {key: string|number|bool}). The submit is the person's
+    decision: the thalamus checks every value against that form's fields (only its keys, at most 20,
+    required ones present, text <= 4000 chars, a select one of its options, a date YYYY-MM-DD stored as
+    epoch seconds at UTC midnight), records request + decision + result under tool form_submit with
+    the peer {pid, exe}, and commit() inserts the row (KEAP mints its id). It answers `form_result
+    {session, widget, form, row}` or `refused {reason, widget}`; the model is not told.
+  table_changed: >-
+    `table_changed {session, table, row}` follows every write this connection approved (an insert
+    from a form or an approved row edit), so the pupil re-runs the widgets that read that table.
   phase: [thinking, tool, writing, idle]   # activity.phase; tool is {tool: {name}}
   decision: [approve, reject]
   control_view: [inbox, approvals, red_status]
@@ -109,5 +120,6 @@ open:
     list, record, chart, tree, timeline and graph (plain text already draws as markdown); table_results,
     row_diff_approval and the
     control views stay chosen by their tool or control, and an approval is
-    minted only by propose_row_edit. The model has no form: a form is a
-    widget the person made, and a widget runs without the model (wire.widget).
+    minted by propose_row_edit, or by a widget form the person submits
+    (wire.form_submit). The model has no form: a form is a widget the person
+    made, and a widget runs without the model (wire.widget).

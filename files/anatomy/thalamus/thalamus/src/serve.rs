@@ -4,7 +4,7 @@
 //! only this process holds. A peer the map does not name is refused, never defaulted.
 
 use crate::binding::Binding;
-use crate::ledger::{Kind, Ledger, Session};
+use crate::ledger::{Kind, Ledger, RowOp, Session};
 use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Component, FieldKind, Form, FormField,
                                InboxItem, InboxList, Omitted, RedStatus, Row, RowDiffApproval, Series, TableResults};
 use nos_contract::wire::{decode_to_thalamus, encode, ChartSpec, ControlView, Decision, Op, Phase, ToShell, ToThalamus, Trigger,
@@ -68,6 +68,40 @@ pub fn login(uid: u32) -> Option<String> {
         return None;
     }
     unsafe { std::ffi::CStr::from_ptr(pw.pw_name) }.to_str().ok().map(str::to_string)
+}
+
+/// The peer process as the kernel names it: {pid, exe}, null where it cannot say. Recorded on
+/// every decision; not yet enforced (genui Q10: refusing a non-pupil peer needs its installed path).
+fn peer(s: &UnixStream) -> Value {
+    let pid = peer_pid(s);
+    json!({"pid": pid, "exe": pid.and_then(exe_of)})
+}
+
+#[cfg(target_os = "macos")]
+fn peer_pid(s: &UnixStream) -> Option<i32> {
+    let (mut pid, mut len): (libc::pid_t, libc::socklen_t) = (0, std::mem::size_of::<libc::pid_t>() as libc::socklen_t);
+    let rc = unsafe { libc::getsockopt(s.as_raw_fd(), libc::SOL_LOCAL, libc::LOCAL_PEERPID, (&mut pid as *mut libc::pid_t).cast(), &mut len) };
+    (rc == 0 && pid > 0).then_some(pid)
+}
+
+#[cfg(target_os = "linux")]
+fn peer_pid(s: &UnixStream) -> Option<i32> {
+    let mut c: libc::ucred = unsafe { std::mem::zeroed() };
+    let mut len = std::mem::size_of::<libc::ucred>() as libc::socklen_t;
+    let rc = unsafe { libc::getsockopt(s.as_raw_fd(), libc::SOL_SOCKET, libc::SO_PEERCRED, (&mut c as *mut libc::ucred).cast(), &mut len) };
+    (rc == 0 && c.pid > 0).then_some(c.pid)
+}
+
+#[cfg(target_os = "macos")]
+fn exe_of(pid: i32) -> Option<String> {
+    let mut buf = vec![0u8; libc::PROC_PIDPATHINFO_MAXSIZE as usize];
+    let n = unsafe { libc::proc_pidpath(pid, buf.as_mut_ptr().cast(), buf.len() as u32) };
+    (n > 0).then(|| String::from_utf8_lossy(&buf[..n as usize]).into_owned())
+}
+
+#[cfg(target_os = "linux")]
+fn exe_of(pid: i32) -> Option<String> {
+    std::fs::read_link(format!("/proc/{pid}/exe")).ok().map(|p| p.to_string_lossy().into_owned())
 }
 
 fn peer_login(s: &UnixStream) -> Option<String> {
@@ -151,7 +185,12 @@ struct Open {
     pending: HashSet<String>,
     /// (table, row id) of every row a query put in front of the person; only these may be proposed.
     shown: HashSet<(String, String)>,
+    /// The widget forms this session sent, by widget token: a re-run replaces the old form id.
+    forms: HashMap<String, Form>,
 }
+
+/// How many widget forms one session holds open.
+const MAX_FORMS: usize = 24;
 
 /// A query's rows after q and where; group, order and limit ride along unapplied.
 struct Matched<'a> {
@@ -326,6 +365,7 @@ impl Server {
         let Ok(input) = out.try_clone() else { return };
         let mut input = BufReader::new(input);
         let mut open: Option<Open> = None;
+        let peer = peer(&out);
         loop {
             let mut line = String::new();
             match input.by_ref().take(MAX_LINE).read_line(&mut line) {
@@ -359,9 +399,13 @@ impl Server {
                         self.widget(&who, &mut out, o, &widget, &spec, trigger);
                     }
                 }
+                Ok(ToThalamus::FormSubmit { form, widget, values }) => match open.as_mut() {
+                    Some(o) => self.form_submit(&who, &mut out, o, &form, &widget, &values, &peer),
+                    None => send(&mut out, &ToShell::Refused { reason: "no form was sent on this connection".into(), widget: Some(widget) }),
+                },
                 Ok(ToThalamus::ApprovalDecision { approval, decision, note }) => match open.as_mut() {
                     Some(o) if o.pending.contains(&approval) => {
-                        self.decide(&who, &mut out, o, &approval, decision, note);
+                        self.decide(&who, &mut out, o, &approval, decision, note, &peer);
                         activity(&mut out, o, Phase::Idle);
                     }
                     _ => refuse(&mut out, "no open approval with that id"),
@@ -417,7 +461,7 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
             Err(why) => (Err(why), iris),
         };
         Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
-                  pending: HashSet::new(), shown: HashSet::new() })
+                  pending: HashSet::new(), shown: HashSet::new(), forms: HashMap::new() })
     }
 
     /// One ledger event; the row id, or the reason it was refused (also logged).
@@ -441,11 +485,12 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
         Ok(json!({"approval": approval, "status": "waiting for the person; nothing is written unless they approve"}))
     }
 
-    fn decide(&self, who: &Person, out: &mut UnixStream, o: &mut Open, approval: &str, d: Decision, note: Option<String>) {
+    #[allow(clippy::too_many_arguments)]
+    fn decide(&self, who: &Person, out: &mut UnixStream, o: &mut Open, approval: &str, d: Decision, note: Option<String>, peer: &Value) {
         o.pending.remove(approval);
         let said = if d == Decision::Approve { "approve" } else { "reject" };
         let id = match self.record(o, Kind::ApprovalDecision, Some("propose_row_edit"),
-                                   json!({"approval": approval, "decision": said, "note": note})) {
+                                   json!({"approval": approval, "decision": said, "note": note, "peer": peer})) {
             Ok(id) => id,
             Err(why) => return refuse(out, &format!("the decision was not recorded, so nothing is written: {why}")),
         };
@@ -455,7 +500,7 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
         let (text, result, heard) = match d {
             Decision::Reject => ("Rejected: nothing was written.".to_string(), json!({"approval": approval, "written": false}),
                                  format!("rejected: {}", note.as_deref().unwrap_or("no note"))),
-            Decision::Approve => match self.commit(who, id) {
+            Decision::Approve => match self.after_commit(who, out, o, id) {
                 Ok(row) => (format!("Approved: row {row} written."), json!({"approval": approval, "written": true, "row": row}),
                             "approved, row written".to_string()),
                 Err(why) => (format!("Approved, but the write failed: {why}"), json!({"approval": approval, "error": why}),
@@ -469,24 +514,87 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
     }
 
     /// The only write path. It takes a decision row id and writes exactly what that row's
-    /// request showed the person; no approve row in the ledger, no POST.
+    /// request showed the person; no approve row in the ledger, no POST. Returns the row's id:
+    /// the one updated, or the one KEAP minted for an insert.
     pub fn commit(&self, who: &Person, decision: i64) -> Result<String, String> {
-        let (actor, table, row_id, values, old) =
-            self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.approved(decision)?;
-        if actor != format!("user:{}", who.uid()) {
+        let a = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.approved(decision)?;
+        if a.actor != format!("user:{}", who.uid()) {
             return Err("the approval belongs to another person".into());
         }
+        let url = format!("{}/api/tables/{}/rows", self.keap_url.trim_end_matches('/'), enc(&a.table));
+        let Some(row_id) = a.row_id.filter(|_| a.op == RowOp::Update) else {
+            // KEAP mints the id; a body with one would overwrite that row (routes.ts upsert).
+            let v = self.keap(who, &url, Some(&json!({"values": a.values})))?;
+            return v.pointer("/data/id").and_then(Value::as_str).filter(|i| !i.is_empty()).map(str::to_string)
+                .ok_or("KEAP answered the insert without a row id".into());
+        };
+        let (table, values, old) = (a.table, a.values, a.old);
         // The person approved old -> new; a row that moved since is not what they saw.
         let now = self.rows(who, &table)?.into_iter().find(|(id, _)| *id == row_id).map(|(_, v)| v)
             .ok_or(format!("row {row_id} is gone since the proposal; nothing written"))?;
         if let Some((k, _)) = old.iter().find(|(k, v)| now.get(*k).unwrap_or(&Value::Null) != *v) {
             return Err(format!("cell {k} of row {row_id} changed since the proposal; nothing written"));
         }
-        let url = format!("{}/api/tables/{}/rows", self.keap_url.trim_end_matches('/'), enc(&table));
         // ponytail: a write between this re-read and the POST still lands under it; roadmap row
         // keap-conditional-row-update (an if-match on KEAP's side) closes that race.
         self.keap(who, &url, Some(&json!({"id": row_id, "values": values})))?;
         Ok(row_id)
+    }
+
+    /// commit(), then tell this connection the table changed so its widgets can re-run.
+    fn after_commit(&self, who: &Person, out: &mut UnixStream, o: &Open, decision: i64) -> Result<String, String> {
+        let row = self.commit(who, decision)?;
+        let table = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.approved(decision)?.table;
+        send(out, &ToShell::TableChanged { session: o.session.clone(), table, row: row.clone() });
+        Ok(row)
+    }
+
+    /// A widget form's submit: the person typed every value into fields they saw whole, under a
+    /// header the model cannot write, so the submit is their decision (genui Q1). Never `decide()`,
+    /// never `pending`, never the model's messages: request, decision, commit, result, all
+    /// under tool form_submit, each naming the peer.
+    #[allow(clippy::too_many_arguments)]
+    fn form_submit(&self, who: &Person, out: &mut UnixStream, o: &mut Open, form: &str, widget: &str,
+                   values: &Map<String, Value>, peer: &Value) {
+        let tool = Some("form_submit");
+        let refused = |out: &mut UnixStream, reason: String| send(out, &ToShell::Refused { reason, widget: Some(widget.to_string()) });
+        let f = o.forms.get(widget).filter(|f| f.form == form).cloned();
+        let keys: Vec<&String> = values.keys().collect();
+        let used = json!({"widget": widget, "form": form, "table": f.as_ref().map(|f| &f.table), "keys": keys});
+        if let Err(why) = self.record(o, Kind::ToolUse, tool, used) {
+            return refused(out, format!("not recorded, so not written: {why}"));
+        }
+        let fail = |o: &Open, out: &mut UnixStream, why: String| {
+            let _ = self.record(o, Kind::ToolResult, tool, json!({"error": why, "peer": peer}));
+            refused(out, why);
+        };
+        let f = match f {
+            Some(f) => f,
+            None => return fail(o, out, format!("form {form} is not a form this session sent to widget {widget}")),
+        };
+        let cells = match form_cells(&f, values) {
+            Ok(c) => c,
+            Err(why) => return fail(o, out, why),
+        };
+        let approval = match mint_uuid() {
+            Ok(a) => a,
+            Err(e) => return fail(o, out, format!("no approval id: {e}")),
+        };
+        let asked = self.record(o, Kind::ApprovalRequest, tool,
+                                json!({"approval": approval, "table": f.table, "op": "insert", "cells": cells, "peer": peer}))
+            .and_then(|_| self.record(o, Kind::ApprovalDecision, tool,
+                                      json!({"approval": approval, "decision": "approve", "note": "form submit", "peer": peer})));
+        let id = match asked {
+            Ok(id) => id,
+            Err(why) => return fail(o, out, format!("the submit was not recorded, so nothing is written: {why}")),
+        };
+        match self.after_commit(who, out, o, id) {
+            Ok(row) => {
+                let _ = self.record(o, Kind::ToolResult, tool, json!({"approval": approval, "written": true, "row": row, "peer": peer}));
+                send(out, &ToShell::FormResult { session: o.session.clone(), widget: widget.to_string(), form: form.to_string(), row });
+            }
+            Err(why) => fail(o, out, format!("the row was not written: {why}")),
+        }
     }
 
     fn turn(&self, who: &Person, out: &mut UnixStream, o: &mut Open, text: &str) {
@@ -956,8 +1064,12 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
         let ran = match spec {
             WidgetSpec::Rows(a) => self.widget_rows(who, a),
             WidgetSpec::Chart(c) => self.widget_chart(who, c).map(|c| (Component::Chart(c), json!({"ok": true}))),
-            WidgetSpec::Form(f) => self.form_from_schema(who, &f.table, f.columns.as_deref())
-                .map(|f| (json!({"form": f.form}), Component::Form(f))).map(|(v, c)| (c, v)),
+            WidgetSpec::Form(_) if o.forms.len() >= MAX_FORMS && !o.forms.contains_key(widget) =>
+                Err(format!("this session holds {MAX_FORMS} forms; remove one first")),
+            WidgetSpec::Form(f) => self.form_from_schema(who, &f.table, f.columns.as_deref()).map(|f| {
+                o.forms.insert(widget.to_string(), f.clone());
+                (Component::Form(f.clone()), json!({"form": f.form}))
+            }),
         };
         match ran {
             Ok((component, result)) => {
@@ -1150,6 +1262,71 @@ pub fn aggregate(rows: &[(String, Map<String, Value>)], x: &str, axis: Axis, y: 
         }
     }
     (groups.iter().map(|g| (g.0.clone(), value(g))).collect(), cut)
+}
+
+/// A submit's values as the cells of an insert: only the form's fields, each typed as its kind
+/// says, every required one present. A date "YYYY-MM-DD" becomes KEAP's epoch seconds.
+fn form_cells(f: &Form, values: &Map<String, Value>) -> Result<Vec<Value>, String> {
+    if values.len() > 20 {
+        return Err(format!("a submit holds at most 20 values, not {}", values.len()));
+    }
+    if let Some(k) = values.keys().find(|k| !f.fields.iter().any(|x| x.key == **k)) {
+        return Err(format!("the form has no field `{k}`"));
+    }
+    let mut cells = Vec::new();
+    for x in &f.fields {
+        let Some(v) = values.get(&x.key) else {
+            if x.required {
+                return Err(format!("{} is required", x.key));
+            }
+            continue;
+        };
+        let k = &x.key;
+        let new = match (x.kind, v) {
+            (FieldKind::Text, Value::String(s)) if s.chars().count() <= 4000 => json!(s),
+            (FieldKind::Text, Value::String(_)) => return Err(format!("{k} is at most 4000 characters")),
+            (FieldKind::Number, Value::Number(n)) => {
+                let n = n.as_f64().filter(|n| n.is_finite()).ok_or(format!("{k} is a number"))?;
+                if x.min.is_some_and(|m| n < m) || x.max.is_some_and(|m| n > m) {
+                    return Err(format!("{k} is outside its range"));
+                }
+                json!(n)
+            }
+            (FieldKind::Number, _) => return Err(format!("{k} is a number")),
+            (FieldKind::Bool, Value::Bool(b)) => json!(b),
+            (FieldKind::Bool, _) => return Err(format!("{k} is true or false")),
+            (FieldKind::Select, Value::String(s)) if x.options.as_ref().is_some_and(|o| o.contains(s)) => json!(s),
+            (FieldKind::Select, _) => return Err(format!("{k} is not one of {}", x.options.as_deref().unwrap_or_default().join(", "))),
+            (FieldKind::Date, Value::String(s)) => json!(day_epoch(s).ok_or(format!("{k} is a day, YYYY-MM-DD"))?),
+            (FieldKind::Date, _) => return Err(format!("{k} is a day, YYYY-MM-DD")),
+            (FieldKind::Text, _) => return Err(format!("{k} is text")),
+        };
+        cells.push(json!({"key": k, "new": new}));
+    }
+    Ok(cells)
+}
+
+/// Days since 1970-01-01 of a proleptic Gregorian date (H. Hinnant), the inverse of iso().
+fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let doy = (153 * (if m > 2 { m - 3 } else { m + 9 }) + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    era * 146_097 + doe - 719_468
+}
+
+/// "YYYY-MM-DD" as epoch seconds at its UTC midnight; None for anything else or a day that is not.
+fn day_epoch(s: &str) -> Option<i64> {
+    let b = s.as_bytes();
+    let digits = |r: std::ops::Range<usize>| b[r.clone()].iter().all(u8::is_ascii_digit).then(|| s[r].parse::<i64>().ok()).flatten();
+    if b.len() != 10 || b[4] != b'-' || b[7] != b'-' {
+        return None;
+    }
+    let (y, m, d) = (digits(0..4)?, digits(5..7)?, digits(8..10)?);
+    let t = days_from_civil(y, m, d) * 86_400;
+    // A day the calendar does not have (02-30, 13-01) comes back as another day.
+    (iso(t)[..10] == *s).then_some(t)
 }
 
 /// A cell as text, as the shells show it: null is empty, a string is itself.

@@ -14,6 +14,8 @@ pub enum ToThalamus {
     Control { view: ControlView },
     /// A widget the person placed: serve runs `spec` as them, without the model (genui I5f).
     Widget { widget: String, spec: WidgetSpec, trigger: Trigger },
+    /// The person's submit of a widget form serve sent (genui I5g): it is their decision to add the row.
+    FormSubmit { form: String, widget: String, values: serde_json::Map<String, serde_json::Value> },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -33,6 +35,10 @@ pub enum ToShell {
     Activity { session: String, phase: Phase },
     /// A widget's answer: table_results, a chart (which may have no points yet) or a form.
     Widget { session: String, widget: String, component: Component },
+    /// A widget form's row was written; `row` is the id KEAP minted.
+    FormResult { session: String, widget: String, form: String, row: String },
+    /// A write this connection approved landed in `table`; its widgets may re-run.
+    TableChanged { session: String, table: String, row: String },
 }
 
 /// What a widget re-runs: exactly one of rows (query_rows' arguments), a chart, a form.
@@ -162,7 +168,14 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
                 _ => Err(format!("actor is not user:<canonical uid>: {actor:?}")),
             }
         }
-        ToShell::Text { session, .. } | ToShell::Activity { session, .. } => need_uuid("session", session),
+        ToShell::Text { session, .. } | ToShell::Activity { session, .. } | ToShell::TableChanged { session, .. } => {
+            need_uuid("session", session)
+        }
+        ToShell::FormResult { session, widget, form, .. } => {
+            need_uuid("session", session)?;
+            need_token(widget)?;
+            need_uuid("form", form)
+        }
         ToShell::Render { session, component } => {
             need_uuid("session", session)?;
             component.check()?;
@@ -202,6 +215,13 @@ pub fn decode_to_thalamus(line: &str) -> Result<ToThalamus, String> {
         ToThalamus::Turn { session: Some(s), .. } => need_uuid("session", s)?,
         ToThalamus::ApprovalDecision { approval, .. } => need_uuid("approval", approval)?,
         ToThalamus::Widget { widget, .. } => need_token(widget)?,
+        ToThalamus::FormSubmit { form, widget, values } => {
+            need_uuid("form", form)?;
+            need_token(widget)?;
+            if let Some((k, _)) = values.iter().find(|(_, v)| !(v.is_string() || v.is_number() || v.is_boolean())) {
+                return Err(format!("form value {k:?} is not a string, number or bool"));
+            }
+        }
         _ => {}
     }
     Ok(m)

@@ -254,6 +254,10 @@ impl App {
                 self.lines.push(Line::styled(format!("widget {widget}:"), Style::new().fg(Color::DarkGray)));
                 self.lines.extend(component_lines(&component));
             }
+            ToShell::FormResult { widget, row, .. } => self.lines.push(Line::from(format!("widget {widget}: row {row} added"))),
+            ToShell::TableChanged { table, row, .. } => {
+                self.lines.push(Line::styled(format!("table {table} changed (row {row})"), Style::new().fg(Color::DarkGray)));
+            }
             // The pupil's eye shows it; the terminal's scrollback stays the conversation.
             ToShell::Activity { .. } => {}
         }

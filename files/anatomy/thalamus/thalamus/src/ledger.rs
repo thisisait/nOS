@@ -75,6 +75,26 @@ pub struct Session<'a> {
     pub model_uri: &'a str,
 }
 
+/// What a write may do: add a row KEAP names, or change cells of one that exists.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RowOp {
+    Insert,
+    Update,
+}
+
+/// One approved write, as the request showed it to the person.
+#[derive(Debug)]
+pub struct Approved {
+    pub actor: String,
+    pub table: String,
+    pub op: RowOp,
+    /// None for an insert.
+    pub row_id: Option<String>,
+    pub values: Map<String, Value>,
+    /// Empty for an insert.
+    pub old: Map<String, Value>,
+}
+
 pub struct Ledger {
     db: Connection,
 }
@@ -117,10 +137,11 @@ impl Ledger {
         Ok(self.db.last_insert_rowid())
     }
 
-    /// What a decision row approved: (actor, table, row_id, {key: new}, {key: old}). Err unless
-    /// `decision` is an approve row of an open session answering an earlier request in that session.
-    #[allow(clippy::type_complexity)]
-    pub fn approved(&self, decision: i64) -> Result<(String, String, String, Map<String, Value>, Map<String, Value>), String> {
+    /// What a decision row approved. Err unless `decision` is an approve row of an open session
+    /// answering an earlier request in that session, and the request is a write of a sound shape:
+    /// `op` insert (no row_id, no old) or update (absent too: row_id and old on every cell), and
+    /// no key empty or `__` (KEAP reads those as row sharing). Every write passes here.
+    pub fn approved(&self, decision: i64) -> Result<Approved, String> {
         let (actor, said, request): (String, Option<String>, String) = self
             .db
             .query_row(
@@ -138,13 +159,33 @@ impl Ledger {
         }
         let req: Value = serde_json::from_str(&request).map_err(|e| format!("unreadable request: {e}"))?;
         let field = |k: &str| req.get(k).and_then(Value::as_str).map(str::to_string).ok_or(format!("request has no {k}"));
+        let op = match req.get("op").map(|o| o.as_str()) {
+            None | Some(Some("update")) => RowOp::Update,
+            Some(Some("insert")) => RowOp::Insert,
+            Some(o) => return Err(format!("request op {o:?} is neither insert nor update")),
+        };
+        let row_id = match op {
+            RowOp::Update => Some(field("row_id")?),
+            RowOp::Insert if req.get("row_id").is_some() => return Err("an insert names no row".into()),
+            RowOp::Insert => None,
+        };
         let (mut values, mut old) = (Map::new(), Map::new());
         for c in req.get("cells").and_then(Value::as_array).ok_or("request has no cells")? {
             let key = c.get("key").and_then(Value::as_str).ok_or("a cell has no key")?;
+            if key.is_empty() || key.starts_with("__") {
+                return Err(format!("cell {key:?} cannot be written"));
+            }
             values.insert(key.to_string(), c.get("new").cloned().ok_or("a cell has no new value")?);
-            old.insert(key.to_string(), c.get("old").cloned().ok_or("a cell has no old value")?);
+            match (op, c.get("old")) {
+                (RowOp::Update, Some(v)) => {
+                    old.insert(key.to_string(), v.clone());
+                }
+                (RowOp::Update, None) => return Err("a cell has no old value".into()),
+                (RowOp::Insert, Some(_)) => return Err("an insert has no old value".into()),
+                (RowOp::Insert, None) => {}
+            }
         }
-        Ok((actor, field("table")?, field("row_id")?, values, old))
+        Ok(Approved { actor, table: field("table")?, op, row_id, values, old })
     }
 
     /// Writes agent_session_end, then closes the session so nothing more lands in it.
