@@ -470,6 +470,8 @@ fn approve_posts_the_approved_cells_once_as_the_person() {
     assert!(posts(&rig).is_empty(), "a proposal wrote before the person decided");
 
     decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::TableChanged { ref table, ref row, .. }) if table == "todos" && row == "r1"),
+            "the widgets hear the table changed");
     assert!(matches!(next(&mut r), Some(ToShell::Text { .. })), "the person hears the write landed");
     decide(&s, &approval, Decision::Approve);
     assert!(matches!(next(&mut r), Some(ToShell::Refused { .. })), "a second decision is refused");
@@ -805,6 +807,9 @@ fn the_model_hears_how_the_person_decided() {
         let mut w = &s;
         w.write_all(encode(&ToThalamus::ApprovalDecision { approval: approval.clone(), decision: d,
             note: note.map(str::to_string) }).as_bytes()).unwrap();
+        if d == Decision::Approve {
+            assert!(matches!(next(&mut r), Some(ToShell::TableChanged { .. })), "{name}: a write says its table changed");
+        }
         assert!(matches!(next(&mut r), Some(ToShell::Text { .. })));
         turn(&s, &mut r, Some(session), "and?");
         let body = rig.model.lock().unwrap()[3].1.clone();
@@ -901,7 +906,7 @@ fn an_approved_edit_says_writing_then_idle() {
     let (s, mut r, _, approval, _) = propose(&rig);
     decide(&s, &approval, Decision::Approve);
     let got = phases(&until_text(&mut r));
-    assert!(got.ends_with(&["writing".into(), "text".into()]), "{got:?}");
+    assert!(got.ends_with(&["writing".into(), "table_changed".into(), "text".into()]), "{got:?}");
     assert!(matches!(raw(&mut r), Some(ToShell::Activity { phase: Phase::Idle, .. })));
 }
 
