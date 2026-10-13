@@ -8,7 +8,7 @@
 
 	let { chart }: { chart: Extract<Component, { kind: 'chart' }>['props'] } = $props();
 
-	const W = 320, H = 160, L = 44, R = 8, T = 10, B = 18;
+	const W = 320, H = 160, T = 10, B = 18, GAP = 3;
 	const FONT = 8, GLYPH = FONT * 0.6; // the widest UI glyph, so a label's width is bounded
 	const COLOURS = ['--accent', '--warn', '--ok', '--bad', '--info', '--muted'].map((c) => `var(${c})`);
 	const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -22,17 +22,21 @@
 		const vals = chart.series.flatMap((s) => s.points.map(([, v]) => v));
 		const lo = Math.min(0, ...vals);
 		const hi = Math.max(0, ...vals) === lo ? lo + 1 : Math.max(0, ...vals);
+		const yVals = [...new Set([lo, 0, hi])];
+		// The gutter is the y labels, so the plot uses the rest of the box.
+		const L = r1(Math.max(...yVals.map((v) => fmt(v).length * GLYPH)) + GAP);
+		const R = GAP;
 		const y = (v: number) => r1(H - B - ((v - lo) / (hi - lo)) * (H - B - T));
 		const bw = (W - R - L) / Math.max(xs.length, 1);
 		const cx = (i: number) => r1(L + bw * (i + 0.5));
 		const step = Math.ceil(xs.length / 8);
-		const room = Math.max(Math.floor((bw * step) / GLYPH) - 1, 1);
+		const room = Math.max(Math.floor((bw * step) / GLYPH), 1);
 		const xLabels = xs.flatMap((x, i) => {
 			if (i % step) return [];
 			const t = clip(x, room), half = (t.length * GLYPH) / 2;
 			return [{ t, x: r1(Math.min(Math.max(cx(i), half), W - half)) }];
 		});
-		const yLabels = [...new Set([lo, 0, hi])].map((v) => ({ t: fmt(v), y: r1(y(v) + FONT / 3) }));
+		const yLabels = yVals.map((v) => ({ t: fmt(v), y: r1(y(v) + FONT / 3) }));
 		const n = chart.series.length, w = (bw * 0.8) / n;
 		const marks = chart.series.map((s, k) => ({
 			name: s.name,
@@ -42,14 +46,14 @@
 				return { x, v, i, cx: cx(i), cy: y(v), bx: r1(L + bw * i + bw * 0.1 + k * w), top: Math.min(y(v), y(0)), h: r1(Math.max(Math.abs(y(v) - y(0)), 0.5)) };
 			}),
 		}));
-		return { w: r1(w), base: y(0), xLabels, yLabels, marks };
+		return { w: r1(w), base: y(0), xLabels, yLabels, marks, L, R };
 	});
 </script>
 
 <svg viewBox="0 0 {W} {H}" role="img" aria-label="{chart.title ?? ''} {chart.chart} chart">
 	<title>{chart.title ? `${chart.title} — ` : ''}{chart.chart} chart</title>
-	<line class="axis" x1={L} y1={g.base} x2={W - R} y2={g.base} />
-	{#each g.yLabels as l}<text x={L - 3} y={l.y} text-anchor="end" font-size={FONT}>{l.t}</text>{/each}
+	<line class="axis" x1={g.L} y1={g.base} x2={W - g.R} y2={g.base} />
+	{#each g.yLabels as l}<text x={g.L - 3} y={l.y} text-anchor="end" font-size={FONT}>{l.t}</text>{/each}
 	{#each g.xLabels as l}<text x={l.x} y={H - 6} text-anchor="middle" font-size={FONT}>{l.t}</text>{/each}
 	{#each g.marks as m}
 		{#if chart.chart === 'bar'}
