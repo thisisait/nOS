@@ -191,7 +191,8 @@ A component outside its shape or caps is refused and you are told why; nothing i
 approval: only propose_row_edit does, and query_rows draws its own table.";
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
-const SHOW_KINDS: [&str; 5] = ["table", "list", "record", "markdown", "chart"];
+/// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
+const SHOW_KINDS: [&str; 4] = ["table", "list", "record", "chart"];
 
 /// One `oneOf` branch per kind; the descriptions are thalamus-shell.yml's vocabulary lines.
 fn show_schema() -> Value {
@@ -212,8 +213,6 @@ fn show_schema() -> Value {
         branch("record", "one thing's fields: {title?, fields[{key, value}] <=40}",
             closed(&["fields"], json!({"title": title, "fields": {"type": "array", "maxItems": 40,
                 "items": closed(&["key", "value"], json!({"key": {"type": "string", "maxLength": 120}, "value": {}}))}}))),
-        branch("markdown", "text as markdown (headings 1-3, paragraphs, lists, code fences; links as text): {text} <=8000",
-            closed(&["text"], json!({"text": {"type": "string", "maxLength": 8000}}))),
         branch("chart", "values plotted as bar or line: {title?, chart bar|line, series[{name, points[[x, number]] <=60}] <=6}; \
 a line's series share the same x in the same order",
             closed(&["chart", "series"], json!({"title": title, "chart": {"enum": ["bar", "line"]},
@@ -223,7 +222,7 @@ a line's series share the same x in the same order",
                         "prefixItems": [{"type": "string", "maxLength": 120}, {"type": "number"}]}}}))}})))]}}})
 }
 
-const QUERY_KEYS: [&str; 6] = ["table", "q", "where", "columns", "order_by", "limit"];
+const QUERY_KEYS: [&str; 7] = ["table", "q", "where", "columns", "order_by", "limit", "group_by"];
 const WHERE_KEYS: [&str; 3] = ["column", "op", "value"];
 const ORDER_KEYS: [&str; 2] = ["column", "dir"];
 const OPS: [&str; 4] = ["eq", "neq", "in", "contains"];
@@ -241,7 +240,8 @@ fn tools() -> Value {
                 "description": "the column keys to show; default every column, in the table's order"},
             "order_by": {"type": "object", "additionalProperties": false, "required": ["column"], "properties": {
                 "column": {"type": "string"}, "dir": {"enum": ["asc", "desc"]}}},
-            "limit": {"type": "integer", "minimum": 0, "maximum": 50, "description": "rows returned, default 20; 0 counts only"}}}}},
+            "limit": {"type": "integer", "minimum": 0, "maximum": 50, "description": "rows returned, default 20; 0 counts only"},
+            "group_by": {"type": "string", "description": "a column key: count the matched rows per value of it, instead of rows"}}}}},
         {"type": "function", "function": {"name": "propose_row_edit", "description": PROPOSE_ROW_EDIT,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "row_id", "values"], "properties": {
             "table": {"type": "string", "description": "the table id, or \"roadmap\" for the roadmap"},
@@ -343,8 +343,9 @@ impl Server {
         send(out, &ToShell::Session { session: session.clone(), actor, model_uri });
         let iris = format!("You are Iris. You act for {} and see only what they may see. To read, count or filter \
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
-asked for, never to look at a row. To show structured output call show (table, list, record, markdown, \
-chart); plain text may use markdown, nothing else.", who.username);
+asked for, never to look at a row. To show structured output call show (table, list, record, \
+chart); plain text may use markdown, nothing else. To count per value (for a chart) call query_rows with \
+group_by. When no tool can see what is asked, say so; never guess it. It is now {} UTC.", who.username, now_utc());
         let (model, system) = match imprint {
             Ok((m, t)) => (Ok(m), format!("{}\n\n{iris}", t.trim_end())),
             Err(why) => (Err(why), iris),
@@ -440,6 +441,8 @@ chart); plain text may use markdown, nothing else.", who.username);
             let Some(asked) = msg.get("tool_calls").and_then(Value::as_array).filter(|a| !a.is_empty()).cloned() else {
                 let text = msg.get("content").and_then(Value::as_str).unwrap_or("").to_string();
                 let _ = self.record(o, Kind::Message, None, json!({"role": "iris", "text": text}));
+                // Live 2026-10-13: a blank answer drew nothing, so the person could not tell it ended.
+                let text = if text.trim().is_empty() { "(Iris gave no answer.)".to_string() } else { text };
                 return send(out, &ToShell::Text { session: o.session.clone(), text });
             };
             for (i, call) in asked.iter().enumerate() {
@@ -460,13 +463,18 @@ chart); plain text may use markdown, nothing else.", who.username);
                 let _ = self.record(o, Kind::ToolUse, Some(name), json!({"args": args}));
                 activity(out, o, Phase::Tool { name: name.to_string() });
                 let result = match name {
-                    "query_rows" => self.query_rows(who, &args).map(|(t, columns)| {
+                    "query_rows" => self.query_rows(who, &args).map(|(t, extra, grouped)| {
                         let ids: Vec<&str> = t.rows.iter().map(|r| r.__id.as_str()).collect();
                         let _ = self.record(o, Kind::ToolResult, Some(name),
                                             json!({"rows": ids, "matched": t.matched, "total": t.total}));
-                        o.shown.extend(t.rows.iter().map(|r| (t.table.clone(), r.__id.clone())));
-                        let v = json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total,
-                                       "columns": columns, "rows": t.rows});
+                        // A group is a value, not a row: it never unlocks a proposal.
+                        let v = if grouped {
+                            json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total, "groups": extra})
+                        } else {
+                            o.shown.extend(t.rows.iter().map(|r| (t.table.clone(), r.__id.clone())));
+                            json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total,
+                                   "columns": extra, "rows": t.rows})
+                        };
                         send(out, &ToShell::Render { session: o.session.clone(), component: Component::TableResults(t) });
                         v
                     }),
@@ -513,7 +521,8 @@ chart); plain text may use markdown, nothing else.", who.username);
 
     /// GET /api/tables/:id (title, columns) then every row as the person, filtered, sorted and cut
     /// here: the whole table or an Err, so `total` is exact. Also returns the columns for the model.
-    fn query_rows(&self, who: &Person, args: &Value) -> Result<(TableResults, Value), String> {
+    /// The table, then for the model its columns (or, grouped, its groups), and whether it was grouped.
+    fn query_rows(&self, who: &Person, args: &Value) -> Result<(TableResults, Value, bool), String> {
         let a = args.as_object().ok_or("query_rows takes an object")?;
         if let Some(k) = a.keys().find(|k| !QUERY_KEYS.contains(&k.as_str())) {
             return Err(format!("query_rows has no parameter `{k}`; it has {}", QUERY_KEYS.join(", ")));
@@ -524,7 +533,9 @@ chart); plain text may use markdown, nothing else.", who.username);
         let info = self.keap(who, &format!("{}/api/tables/{}", self.keap_url.trim_end_matches('/'), enc(&table)), None)?;
         let name = info.pointer("/data/title").and_then(Value::as_str).filter(|t| !t.is_empty()).unwrap_or(alias).to_string();
         let schema: Vec<&Map<String, Value>> = info.pointer("/data/schema/columns").and_then(Value::as_array)
-            .map(|c| c.iter().filter_map(Value::as_object).filter(|c| c.get("key").is_some_and(Value::is_string)).collect())
+            .map(|c| c.iter().filter_map(Value::as_object).filter(|c| c.get("key").is_some_and(Value::is_string))
+                // An embedding is for the machine: 768 floats per row to the model, a column of noise on screen.
+                .filter(|c| c.get("kind").and_then(Value::as_str) != Some("vector")).collect())
             .filter(|c: &Vec<_>| !c.is_empty()).ok_or(format!("KEAP returned no column schema for {name}"))?;
         let keys: Vec<&str> = schema.iter().filter_map(|c| c.get("key").and_then(Value::as_str)).collect();
         let col = |k: &str| schema.iter().copied().find(|c| c.get("key").and_then(Value::as_str) == Some(k))
@@ -608,12 +619,24 @@ chart); plain text may use markdown, nothing else.", who.username);
             }
             _ => return Err("`columns` is a list of at most 12 column keys".into()),
         };
+        let group = match given("group_by") {
+            None => None,
+            Some(Value::String(k)) => {
+                col(k)?;
+                said.push(format!("grouped by {k}"));
+                Some(k.as_str())
+            }
+            Some(_) => return Err("`group_by` is a column key".into()),
+        };
         let limit = match given("limit") {
             None => 20,
             Some(n) => n.as_u64().filter(|n| *n <= 50).ok_or("`limit` is a whole number from 0 to 50")? as usize,
         };
 
-        let all = self.rows(who, &table)?;
+        let mut all = self.rows(who, &table)?;
+        for (_, v) in &mut all {
+            v.retain(|k, _| keys.contains(&k.as_str()));
+        }
         let total = all.len();
         let mut hits: Vec<(String, Map<String, Value>)> = all.into_iter()
             .filter(|(_, v)| q.as_ref().is_none_or(|q| Value::Object(v.clone()).to_string().to_lowercase().contains(q)))
@@ -627,6 +650,25 @@ chart); plain text may use markdown, nothing else.", who.username);
             }))
             .collect();
         let matched = hits.len();
+        let query = if said.is_empty() { "all rows".to_string() } else { said.join(" · ") };
+        if let Some(k) = group {
+            let mut counts: Vec<(Value, usize)> = Vec::new();
+            for (_, v) in &hits {
+                let x = v.get(k).cloned().filter(|x| !x.is_null() && text(x) != "").unwrap_or(Value::Null);
+                match counts.iter_mut().find(|(y, _)| *y == x) {
+                    Some((_, n)) => *n += 1,
+                    None => counts.push((x, 1)),
+                }
+            }
+            counts.sort_by(|a, b| b.1.cmp(&a.1));
+            let groups: Vec<Value> = counts.iter().map(|(x, n)| json!({"value": x, "count": n})).collect();
+            let rows = counts.into_iter().map(|(x, n)| {
+                let id = if x.is_null() { "(empty)".to_string() } else { text(&x) };
+                Row { __id: id, cells: BTreeMap::from([(k.to_string(), x), ("count".to_string(), json!(n))]) }
+            }).collect();
+            let columns = vec![k.to_string(), "count".to_string()];
+            return Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Value::Array(groups), true));
+        }
         if let Some((k, desc)) = order {
             hits.sort_by(|x, y| by(x.1.get(k), y.1.get(k), desc));
         }
@@ -643,8 +685,7 @@ chart); plain text may use markdown, nothing else.", who.username);
             }
             Value::Object(m)
         }).collect();
-        let query = if said.is_empty() { "all rows".to_string() } else { said.join(" · ") };
-        Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Value::Array(for_model)))
+        Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Value::Array(for_model), false))
     }
 
     /// Every row of one table the person may read: GET /api/tables/:id/rows, every page.
@@ -881,6 +922,12 @@ fn listed(v: &Value, at: &str, source: &str) -> Result<Vec<InboxItem>, String> {
         };
         Ok(InboxItem { id, title, source: source.into(), created_at })
     }).collect()
+}
+
+/// "YYYY-MM-DD HH:MM" now, for the prompt: a model has no clock and invents one.
+fn now_utc() -> String {
+    let t = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64);
+    iso(t)[..16].replace('T', " ")
 }
 
 /// Epoch seconds (KEAP's created_at) as UTC ISO 8601; days to civil date per H. Hinnant.

@@ -72,6 +72,7 @@ invariants:
 open:
   - >-
     Since v3 the model chooses a renderer through the `show` tool, for table,
-    list, record, markdown and chart only; table_results, row_diff_approval and the
+    list, record and chart only (plain text already draws as markdown); table_results,
+    row_diff_approval and the
     control views stay chosen by their tool or control, and an approval is
     minted only by propose_row_edit.

@@ -92,9 +92,9 @@ describe('the pupil renders the contract fixture', () => {
 	it('a table is headed by its name and counts, never its id', () => {
 		const msg: ToShell = { t: 'render', session: 's', component: { kind: 'table_results', props: {
 			table: '0b6f6a1e-roadmap-uuid', name: 'nOS Roadmap', query: 'status = next', matched: 23, total: 122,
-			columns: ['title'], projected: false, rows: [] } } };
+			columns: ['title'], projected: false, rows: [{ __id: 'r1', cells: { title: 'pupil-eye' } }] } } };
 		const page = draw(msg);
-		expect(page).toContain('nOS Roadmap — 0 of 23 matched (122 rows)');
+		expect(page).toContain('nOS Roadmap — 1 of 23 matched (122 rows)');
 		expect(page).toContain('status = next');
 		expect(page).not.toContain('0b6f6a1e-roadmap-uuid');
 	});

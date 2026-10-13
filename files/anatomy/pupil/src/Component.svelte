@@ -20,12 +20,14 @@
 	{#if component.kind === 'table_results'}
 		{@const t = component.props}
 		<h3>
-			{t.name} — {t.rows.length} of {t.matched} matched ({t.total} rows)
+			<!-- A count (limit 0) is the count; an empty grid of every column says nothing more. -->
+			{t.name} — {#if t.rows.length}{t.rows.length} of {/if}{t.matched} matched ({t.total} rows)
 			{#if t.projected}<Badge tone="info">semantic</Badge>{:else}<Badge tone="warn">substring match, not semantic</Badge>{/if}
 		</h3>
 		<p class="muted query">{t.query}</p>
 		{@const long = t.columns.filter((c) => t.rows.some((r) => LONG(cell(r.cells[c]))))}
 		{@const short = t.columns.filter((c) => !long.includes(c))}
+		{#if t.rows.length}
 		<div class="scroll">
 			<table>
 				<thead><tr>{#each short as c}<th>{c}</th>{/each}</tr></thead>
@@ -44,6 +46,7 @@
 				</tbody>
 			</table>
 		</div>
+		{/if}
 	{:else if component.kind === 'row_diff_approval'}
 		{@const d = component.props}
 		<h3>edit {d.table} / {d.row_id} — nothing is written unless you approve</h3>
