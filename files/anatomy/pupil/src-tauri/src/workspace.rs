@@ -162,6 +162,15 @@ mod tests {
     }
 
     #[test]
+    fn the_poc_workspace_decodes() {
+        // genui I5i: the layout poc.test.ts restores is one this decoder would load.
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../state/fixtures/genui-workspace-poc/workspace.json");
+        let text = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
+        let l = decode(&text).unwrap();
+        assert_eq!(serde_json::to_value(&l).unwrap(), serde_json::from_str::<serde_json::Value>(&text).unwrap());
+    }
+
+    #[test]
     fn save_then_load_round_trips_at_0600() {
         let dir = std::env::temp_dir().join(format!("pupil-ws-{}", std::process::id()));
         let path = dir.join("workspaces.json");

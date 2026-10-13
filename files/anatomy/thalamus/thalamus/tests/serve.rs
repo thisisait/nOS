@@ -1863,3 +1863,94 @@ fn form_submit_refuses_what_the_form_did_not_offer() {
     }
     assert!(events(&rig.ledger, &session).iter().all(|e| !e.0.starts_with("agent_approval")), "a refused submit asked");
 }
+
+// --- genui I5i: the PoC, offline: form, table and chart over one table, refreshed by a write ---
+
+/// state/fixtures/genui-workspace-poc/<name>: the expenses table the PoC runs over.
+fn poc(name: &str) -> String {
+    let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../state/fixtures/genui-workspace-poc").join(name);
+    std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()))
+}
+
+/// The next widget answer for `token`, as wire JSON.
+fn widget_answer(r: &mut BufReader<UnixStream>, token: &str) -> serde_json::Value {
+    loop {
+        let m = serde_json::to_value(next(r).expect("an answer")).unwrap();
+        if m["t"] == "session" {
+            continue;
+        }
+        assert_eq!((&m["t"], &m["widget"]), (&serde_json::json!("widget"), &serde_json::json!(token)), "{m}");
+        return m["component"].clone();
+    }
+}
+
+fn poc_chart() -> serde_json::Value {
+    serde_json::json!({"chart": {"query": {"table": "expenses"}, "chart": "bar", "x": "kind", "y": "amount", "op": "sum"}})
+}
+
+#[test]
+fn genui_workspace_poc() {
+    let seed: Vec<serde_json::Value> = serde_json::from_str(&poc("expenses.rows.json")).unwrap();
+    assert_eq!(seed.len(), 3, "the PoC seeds three rows");
+    let ((url, seen), held) = fake_table(&poc("expenses.schema.json"), seed);
+    let rig = rig_at("poc", mapped(), (url, seen), vec![answer("never")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+
+    // Three widgets, as the person adds them with "+ widget".
+    send_widget(&s, "rows", serde_json::json!({"rows": {"table": "expenses"}}), "click");
+    let Some(ToShell::Session { session, .. }) = next(&mut r) else { panic!("no session") };
+    assert_eq!(widget_answer(&mut r, "rows")["props"]["rows"].as_array().unwrap().len(), 3);
+    send_widget(&s, "chart", poc_chart(), "click");
+    assert_eq!(widget_answer(&mut r, "chart")["kind"], "chart");
+    let form = open_form(&s, &mut r, "form");
+
+    send_submit(&s, &form, "form", serde_json::json!({"kind": "tools", "amount": 42, "when": "2026-10-13"}));
+    let row = match next(&mut r) {
+        Some(ToShell::TableChanged { table, row, .. }) if table == "expenses" => row,
+        other => panic!("expected table_changed, got {other:?}"),
+    };
+    assert!(matches!(next(&mut r), Some(ToShell::FormResult { ref widget, row: ref r2, .. }) if widget == "form" && *r2 == row));
+    let p = posts(&rig);
+    assert_eq!(p.len(), 1, "{p:?}");
+    let body: serde_json::Value = serde_json::from_str(&p[0].1).unwrap();
+    assert!(body.get("id").is_none(), "KEAP mints the id: {body}");
+    let stored = held.lock().unwrap().clone();
+    assert_eq!(stored.len(), 4, "the fake stored the row");
+    assert!(stored.iter().any(|x| x["id"] == row.as_str() && x["values"]["when"] == 1_791_849_600), "{stored:?}");
+
+    // The pupil re-sends the two readers of the table; they answer what the fake now holds.
+    send_widget(&s, "rows", serde_json::json!({"rows": {"table": "expenses"}}), "table_changed");
+    let table = widget_answer(&mut r, "rows");
+    let got = table["props"]["rows"].as_array().unwrap();
+    let ids: Vec<&str> = got.iter().map(|x| x["__id"].as_str().unwrap()).collect();
+    let want: Vec<&str> = stored.iter().map(|x| x["id"].as_str().unwrap()).collect();
+    assert_eq!(ids, want, "{table}");
+    let new = got.iter().find(|x| x["__id"] == row.as_str()).unwrap();
+    assert_eq!((&new["cells"]["when"], &new["cells"]["kind"]), (&serde_json::json!("2026-10-13"), &serde_json::json!("tools")), "a day, not an epoch");
+    send_widget(&s, "chart", poc_chart(), "table_changed");
+    let chart = widget_answer(&mut r, "chart");
+    let tools: f64 = stored.iter().filter(|x| x["values"]["kind"] == "tools").map(|x| x["values"]["amount"].as_f64().unwrap()).sum();
+    assert!(points(&chart["props"]).contains(&("tools".to_string(), tools)), "the chart sums what the fake holds ({tools}): {chart}");
+    assert!(rig.model.lock().unwrap().is_empty(), "the PoC asked the model");
+
+    let tools_used: Vec<(String, String, serde_json::Value)> = events(&rig.ledger, &session).into_iter()
+        .filter(|e| e.1.starts_with("agent:iris/tool:")).map(|(t, k, v)| (t, k.trim_start_matches("agent:iris/tool:").to_string(), v)).collect();
+    let shape: Vec<(&str, &str)> = tools_used.iter().map(|e| (e.0.as_str(), e.1.as_str())).collect();
+    let pair = |t| [("agent_tool_use", t), ("agent_tool_result", t)];
+    let mut want = vec![];
+    for t in ["widget_rows", "widget_chart", "widget_form"] {
+        want.extend(pair(t));
+    }
+    want.extend([("agent_tool_use", "form_submit"), ("agent_approval_request", "form_submit"),
+                 ("agent_approval_decision", "form_submit"), ("agent_tool_result", "form_submit")]);
+    want.extend(pair("widget_rows"));
+    want.extend(pair("widget_chart"));
+    assert_eq!(shape, want, "{tools_used:?}");
+    for e in &tools_used[7..10] {
+        assert_eq!(e.2["peer"]["pid"], std::process::id(), "{e:?}");
+    }
+    for e in [&tools_used[10], &tools_used[12]] {
+        assert_eq!(e.2["trigger"], "table_changed", "{e:?}");
+    }
+}
