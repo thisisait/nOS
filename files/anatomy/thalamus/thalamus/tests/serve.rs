@@ -1235,6 +1235,8 @@ fn show_draws_a_tree_and_a_timeline_and_refuses_over_cap() {
         (deep, "tree depth: 5, at most 4"),
         (wide, "tree nodes: 101, at most 100"),
         (long, "timeline items: 31, at most 30"),
+        (serde_json::json!({"kind": "timeline", "props": {"items": [{"when": "2026-10-05", "until": "2026-10-01", "title": "I5a"}]}}),
+         "ends before it starts"),
     ];
     let mut model = vec![show(tree), show(timeline)];
     model.extend(bad.iter().map(|(c, _)| show(c.clone())));
@@ -1287,6 +1289,19 @@ fn the_prompt_picks_a_component_by_shape_and_a_refusal_shows_it() {
     assert!(msg.contains("html"), "the refusal must name the field: {msg}");
     assert!(msg.contains("expected shape:"), "the refusal must show the accepted shape: {msg}");
     assert!(msg.contains("items[{text, detail?, tone?"), "the list shape is missing: {msg}");
+}
+
+/// The model is offered spans and lanes in both places it reads a shape.
+#[test]
+fn show_offers_a_timeline_span_and_lane() {
+    let schema = serve::show_schema();
+    let branch = schema["properties"]["component"]["oneOf"].as_array().unwrap().iter()
+        .find(|b| b["properties"]["kind"]["const"] == "timeline").unwrap().clone();
+    let item = &branch["properties"]["props"]["properties"]["items"]["items"]["properties"];
+    assert_eq!(item["until"]["type"], "string", "{item}");
+    assert_eq!(item["lane"]["maxLength"], 40, "{item}");
+    let shape = serve::SHOW_SHAPE.iter().find(|(k, _)| *k == "timeline").unwrap().1;
+    assert!(shape.contains("until?") && shape.contains("lane?"), "{shape}");
 }
 
 // --- genui I5a: one list of show kinds, so a fifth hand-kept copy cannot drift ---

@@ -1,6 +1,6 @@
 History
-  2026-10-12  I4a — query_rows
-  2026-10-13  chart hi
+  2026-10-12 → 2026-10-13  I4a — query_rows [thalamus]
+  2026-10-13 → 2026-10-14  chart hi [pupil]
 
 
 

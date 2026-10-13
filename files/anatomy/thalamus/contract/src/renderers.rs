@@ -522,6 +522,31 @@ mod tests {
         assert_eq!(decode(r#"{"kind":"timeline","props":{"items":[]}}"#).check(), Err("a timeline has no items".into()));
     }
 
+    fn timeline(items: &str) -> Component {
+        decode(&format!(r#"{{"kind":"timeline","props":{{"items":[{items}]}}}}"#))
+    }
+
+    #[test]
+    fn a_timeline_item_may_span_and_sit_in_a_lane() {
+        let spans = timeline(r#"{"when":"2026-10-01","until":"2026-10-05","title":"I5a","lane":"thalamus"},{"when":"2026-10-03","title":"review"}"#);
+        assert_eq!(spans.check(), Ok(()));
+        assert_eq!(timeline(r#"{"when":"2026-10-01","until":"2026-10-01","title":"a day"}"#).check(), Ok(()), "a span may end where it starts");
+        // Not dates, so nothing to compare: the drawing is ordinal.
+        assert_eq!(timeline(r#"{"when":"Q3","until":"Q1","title":"later"}"#).check(), Ok(()));
+        assert_eq!(timeline(&format!(r#"{{"when":"Q1","title":"t","lane":"{}"}}"#, "l".repeat(40))).check(), Ok(()));
+        assert_eq!(timeline(&format!(r#"{{"when":"Q1","title":"t","lane":"{}"}}"#, "l".repeat(41))).check(),
+                   Err("a timeline lane is over 40 chars".into()));
+    }
+
+    #[test]
+    fn check_rejects_until_before_when() {
+        assert_eq!(timeline(r#"{"when":"2026-10-05","until":"2026-10-01","title":"I5a"}"#).check(),
+                   Err("timeline item I5a ends before it starts: until 2026-10-01 < when 2026-10-05".into()));
+        // An offset is an instant: 01:00+02:00 is 23:00Z the day before, so it ends before 23:30Z.
+        assert!(timeline(r#"{"when":"2026-10-12T23:30:00Z","until":"2026-10-13T01:00:00+02:00","title":"t"}"#).check().is_err());
+        assert_eq!(timeline(r#"{"when":"2026-10-12T22:30:00Z","until":"2026-10-13T01:00:00+02:00","title":"t"}"#).check(), Ok(()));
+    }
+
     fn chart(kind: &str, x: &str, series: &str) -> Component {
         decode(&format!(r#"{{"kind":"chart","props":{{"chart":"{kind}","x":"{x}","series":[{series}]}}}}"#))
     }

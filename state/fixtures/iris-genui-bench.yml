@@ -212,3 +212,30 @@
     - "2026-10-13"
     - chart
     - hi
+- id: timeline-spans
+  kind: timeline
+  component:
+    kind: timeline
+    props:
+      title: I5 build
+      items:
+        - when: "2026-10-01"
+          until: "2026-10-05"
+          title: lanes and gates
+          lane: thalamus
+        - when: "2026-10-06"
+          until: "2026-10-09"
+          title: chart axes
+          lane: pupil
+        - when: "2026-10-13"
+          title: timeline
+          lane: pupil
+          hi: true
+  expect:
+    - I5 build
+    - 2026-10-01 → 2026-10-05
+    - lanes and gates
+    - "[thalamus]"
+    - 2026-10-06 → 2026-10-09
+    - "[pupil]"
+    - "2026-10-13  timeline hi [pupil]"
