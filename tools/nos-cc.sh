@@ -206,6 +206,13 @@ tmux send-keys -t "$SESSION:loop" "tools/nos-pane.py loop" C-m
 tmux new-window -t "=$SESSION" -n caddy -c "$REPO_ROOT"
 tmux send-keys -t "$SESSION:caddy" "tools/nos-pane.py caddy" C-m
 
+# ── iris: the terminal shell onto the thalamus (works the same over ssh) ──────
+# Typed, not started: a client is not an agent kept alive (each turn is bounded
+# in serve), and a window that connects on attach is one you fight. Enter opens it;
+# the peer's login picks the person, so ssh in as yourself.
+tmux new-window -t "=$SESSION" -n iris -c "$REPO_ROOT"
+tmux send-keys -t "$SESSION:iris" "$HOME/thalamus/bin/thalamus"
+
 # ── code: what changed, and the ability to go and look ───────────────────────
 # `git log` is a READER too, and it is the one that answers "what did we just
 # do to ourselves" — the question every other pane here raises. The editor is
