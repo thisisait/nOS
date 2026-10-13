@@ -224,3 +224,12 @@ fn a_closed_connection_releases_what_waits_and_says_so() {
     assert!(app.pending.is_empty(), "the shell stays locked on an approval nobody can decide");
     assert!(flat(&drawn(&app, 80, 24)).contains("not decided"), "the undecided edit is dropped silently");
 }
+
+/// A widget's chart before its table has a row says so, not an empty line.
+#[test]
+fn an_empty_chart_says_no_rows_yet() {
+    let c: nos_contract::renderers::Component = serde_json::from_str(
+        r#"{"kind":"chart","props":{"chart":"bar","x":"category","series":[{"name":"rows","points":[]}]}}"#).unwrap();
+    let lines: Vec<String> = shell::component_lines(&c).iter().map(|l| l.to_string()).collect();
+    assert_eq!(lines, ["bar chart: 1 series over category x, not drawn here", "  rows: (no rows yet)"]);
+}
