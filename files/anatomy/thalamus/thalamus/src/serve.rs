@@ -345,7 +345,8 @@ impl Server {
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
 asked for, never to look at a row. To show structured output call show (table, list, record, \
 chart); plain text may use markdown, nothing else. To count per value (for a chart) call query_rows with \
-group_by. When no tool can see what is asked, say so; never guess it. It is now {} UTC.", who.username, now_utc());
+group_by. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
+repeat in text what a tool or show already drew. It is now {} UTC.", who.username, now_utc());
         let (model, system) = match imprint {
             Ok((m, t)) => (Ok(m), format!("{}\n\n{iris}", t.trim_end())),
             Err(why) => (Err(why), iris),

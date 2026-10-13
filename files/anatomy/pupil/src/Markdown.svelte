@@ -14,6 +14,8 @@
 			<svelte:element this={`h${b.level}`}>{@render line(b.inl)}</svelte:element>
 		{:else if b.t === 'p'}
 			<p>{@render line(b.inl)}</p>
+		{:else if b.t === 'hr'}
+			<hr />
 		{:else if b.t === 'ul'}
 			<ul>{#each b.items as it}<li>{@render line(it)}</li>{/each}</ul>
 		{:else if b.t === 'ol'}

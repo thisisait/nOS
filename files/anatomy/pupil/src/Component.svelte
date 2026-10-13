@@ -21,7 +21,7 @@
 		{@const t = component.props}
 		<h3>
 			<!-- A count (limit 0) is the count; an empty grid of every column says nothing more. -->
-			{t.name} — {#if t.rows.length}{t.rows.length} of {/if}{t.matched} matched ({t.total} rows)
+			{t.name} — {#if t.rows.length}{t.rows.length}{' of '}{/if}{t.matched} matched ({t.total} rows)
 			{#if t.projected}<Badge tone="info">semantic</Badge>{:else}<Badge tone="warn">substring match, not semantic</Badge>{/if}
 		</h3>
 		<p class="muted query">{t.query}</p>
@@ -34,6 +34,8 @@
 				<tbody>
 					{#each t.rows as r}
 						<tr>{#each short as c}<td>{cell(r.cells[c])}</td>{/each}</tr>
+						<!-- A fold only for long text; an id already on screen (a group's value) needs none. -->
+						{#if long.length || !short.some((c) => cell(r.cells[c]) === r.__id)}
 						<tr class="more">
 							<td colspan={Math.max(short.length, 1)}>
 								<details>
@@ -42,6 +44,7 @@
 								</details>
 							</td>
 						</tr>
+						{/if}
 					{/each}
 				</tbody>
 			</table>

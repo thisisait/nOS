@@ -13,7 +13,8 @@ export type Block =
 	| { t: 'ul'; items: Inline[][] }
 	/** `n` is the number written on that line, so the marker is not 1, 2, 3. */
 	| { t: 'ol'; items: { n: number; inl: Inline[] }[] }
-	| { t: 'code'; text: string };
+	| { t: 'code'; text: string }
+	| { t: 'hr' };
 
 // A label holds no "[": else every unclosed "[" re-reads the rest (quadratic).
 const INLINE = /`([^`\n]+)`|\*\*(.+?)\*\*|\*([^*\s](?:[^*]*[^*\s])?)\*|\[([^[\]\n]+)\]\(([^)\s]+)\)/g;
@@ -53,6 +54,11 @@ export function parse(text: string): Block[] {
 			const body: string[] = [];
 			while (++i < lines.length && !lines[i].trimStart().startsWith('```')) body.push(lines[i]);
 			out.push({ t: 'code', text: body.join('\n') });
+			continue;
+		}
+		if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)) {
+			flush();
+			out.push({ t: 'hr' });
 			continue;
 		}
 		const h = HEADING.exec(l);
