@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
+import { header } from './form';
 import Message from './Message.svelte';
 import type { Component, ToShell, Value } from './wire';
 
@@ -24,6 +25,7 @@ const PROPS: Record<string, string[]> = {
 	tree: ['nodes', 'title'],
 	timeline: ['items', 'title'],
 	graph: ['edges', 'nodes', 'title'],
+	form: ['fields', 'form', 'omitted', 'table', 'title'],
 };
 const KINDS = Object.keys(PROPS);
 
@@ -53,6 +55,10 @@ function owed(v: Value | Component, skip: Set<string> = new Set()): string[] {
 function owedBy(c: Component): string[] {
 	// Markdown owes its words, not its markup: the markdown tests below check each node.
 	if (c.kind === 'markdown') return ['Next on the roadmap', 'restic fork', 'nos dtt list roadmap'];
+	// A form owes its own header, each label and option, and what it cannot edit; not the minted id.
+	if (c.kind === 'form')
+		return [header(c.props), ...c.props.fields.flatMap((f) => [f.label, ...(f.options ?? [])]),
+			...c.props.omitted.map((o) => `${o.key} (${o.kind})`), 'Add row'];
 	if (c.kind !== 'table_results') return owed(c.props as unknown as Value);
 	// The table's name, not its id (live 2026-10-12: the header showed the roadmap's UUID).
 	const { name, query, matched, total, columns, rows } = c.props;
