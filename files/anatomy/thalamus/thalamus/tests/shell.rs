@@ -233,3 +233,18 @@ fn an_empty_chart_says_no_rows_yet() {
     let lines: Vec<String> = shell::component_lines(&c).iter().map(|l| l.to_string()).collect();
     assert_eq!(lines, ["bar chart: 1 series over category x, not drawn here", "  rows: (no rows yet)"]);
 }
+
+/// A widget form is filled in the pupil; the terminal says what it asks and nothing more.
+#[test]
+fn a_form_is_said_as_its_fields_and_filled_in_the_pupil() {
+    let c: nos_contract::renderers::Component = serde_json::from_str(r#"{"kind":"form","props":{
+        "form":"5f0c1b2a-3d4e-4f5a-8b6c-7d8e9f0a1b2c","table":"expenses","title":"Expenses","fields":[
+        {"key":"when","label":"When","kind":"date","required":false},
+        {"key":"kind","label":"Kind","kind":"select","required":true,"options":["food","travel","tools"]},
+        {"key":"amount","label":"Amount","kind":"number","required":true},
+        {"key":"paid","label":"Paid","kind":"bool","required":false}],
+        "omitted":[{"key":"receipt","kind":"file"}]}}"#).unwrap();
+    let mut t = Terminal::new(TestBackend::new(80, 10)).unwrap();
+    t.draw(|f| f.render_widget(Paragraph::new(shell::component_lines(&c)), f.area())).unwrap();
+    snapshot("form", &text(&t));
+}

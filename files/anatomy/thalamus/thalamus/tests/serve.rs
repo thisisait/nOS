@@ -1366,3 +1366,86 @@ fn show_kinds_agree_everywhere() {
     want.sort();
     assert_eq!(vocab, want, "thalamus-shell.yml vocabulary minus the tool-chosen kinds");
 }
+
+// --- genui I5e: a widget form is built by serve from the live schema, never by the model ---
+
+/// GET /api/tables/expenses as KEAP answers it: zod fills `required` (default false) on every
+/// stored column (keap shared/contracts/table.ts:55, served whole by server/routes.ts:604-619);
+/// `when` leaves it out here so an older row still reads as optional.
+fn expenses(extra: &str) -> String {
+    let many = (0..51).map(|i| format!(r#""o{i}""#)).collect::<Vec<_>>().join(",");
+    format!(r#"{{"success": true, "data": {{"id": "expenses", "title": "Expenses", "schema": {{"columns": [
+        {{"key": "note", "label": "Note", "kind": "text", "required": false}},
+        {{"key": "amount", "label": "Amount", "kind": "number", "required": true}},
+        {{"key": "when", "label": "When", "kind": "date"}},
+        {{"key": "kind", "label": "Kind", "kind": "select", "required": true, "options": ["food", "travel", "tools"]}},
+        {{"key": "paid", "label": "Paid", "kind": "boolean", "required": false}},
+        {{"key": "receipt", "label": "Receipt", "kind": "file", "required": false}},
+        {{"key": "__shared_with", "label": "Shared", "kind": "json", "required": false}},
+        {{"key": "many", "label": "Many", "kind": "select", "required": false, "options": [{many}]}},
+        {{"key": "none", "label": "None", "kind": "select", "required": false, "options": []}}{extra}]}}}}}}"#)
+}
+
+/// The form serve built, as its wire props without the minted id (checked to be a uuid).
+fn built(rig: &Rig, columns: Option<&[&str]>) -> Result<serde_json::Value, String> {
+    let cols: Option<Vec<String>> = columns.map(|c| c.iter().map(|s| s.to_string()).collect());
+    let f = rig.srv.form_from_schema(&alice(), "expenses", cols.as_deref())?;
+    let mut v = serde_json::to_value(Component::Form(f)).unwrap();
+    assert_eq!(v["kind"], "form");
+    let id = v["props"].as_object_mut().unwrap().remove("form").unwrap();
+    assert!(nos_contract::wire::is_uuid(id.as_str().unwrap()), "the form id is a uuid serve minted: {id}");
+    Ok(v["props"].clone())
+}
+
+#[test]
+fn form_from_schema_maps_each_column_to_a_field() {
+    let rig = rig("formmap", mapped(), &expenses(""), vec![answer("x")]);
+    let f = built(&rig, None).unwrap();
+    assert_eq!(f["table"], "expenses");
+    assert_eq!(f["title"], "Expenses", "the table's own title, never a model's");
+    assert_eq!(f["fields"], serde_json::json!([
+        {"key": "note", "label": "Note", "kind": "text", "required": false},
+        {"key": "amount", "label": "Amount", "kind": "number", "required": true},
+        {"key": "when", "label": "When", "kind": "date", "required": false},
+        {"key": "kind", "label": "Kind", "kind": "select", "required": true, "options": ["food", "travel", "tools"]},
+        {"key": "paid", "label": "Paid", "kind": "bool", "required": false},
+        {"key": "many", "label": "Many", "kind": "text", "required": false},
+        {"key": "none", "label": "None", "kind": "text", "required": false}]),
+        "boolean is bool; a select of 0 or 51 options is text; __shared_with is dropped");
+    assert_eq!(f["omitted"], serde_json::json!([{"key": "receipt", "kind": "file"}]), "an optional file has no field");
+    let seen = rig.keap.lock().unwrap().clone();
+    assert_eq!(seen.len(), 1, "one schema read, no rows: {seen:?}");
+    assert!(seen[0].0.starts_with("GET /api/tables/expenses "), "{}", seen[0].0);
+    assert!(seen[0].0.to_ascii_lowercase().contains("x-authentik-username: alice smith"), "read as the person");
+}
+
+#[test]
+fn form_from_schema_refuses_a_required_column_it_cannot_draw() {
+    let rig = rig("formreq", mapped(), &expenses(r#", {"key": "meta", "label": "Meta", "kind": "json", "required": true}"#), vec![answer("x")]);
+    assert_eq!(built(&rig, None), Err("column meta (json) is required and has no form field".into()));
+}
+
+#[test]
+fn form_from_schema_narrows_to_columns_and_keeps_a_required_refusal() {
+    let rig = rig("formcols", mapped(), &expenses(""), vec![answer("x")]);
+    let f = built(&rig, Some(&["kind", "amount"])).unwrap();
+    let keys: Vec<&str> = f["fields"].as_array().unwrap().iter().map(|x| x["key"].as_str().unwrap()).collect();
+    assert_eq!(keys, ["amount", "kind"], "the table's order, only the named columns");
+    assert_eq!(f["omitted"], serde_json::json!([]), "a column left out by `columns` is not 'not editable here'");
+    assert_eq!(built(&rig, Some(&["note"])), Err("column amount (number) is required and has no form field".into()));
+    assert_eq!(built(&rig, Some(&["ghost"])), Err("no column `ghost` in Expenses; columns: note, amount, when, kind, paid, receipt, many, none".into()));
+}
+
+#[test]
+fn show_refuses_form() {
+    let form = serde_json::json!({"kind": "form", "props": {"form": "5f0c1b2a-3d4e-4f5a-8b6c-7d8e9f0a1b2c", "table": "expenses",
+        "title": "Expenses", "fields": [{"key": "amount", "label": "Amount", "kind": "number", "required": true}], "omitted": []}});
+    let rig = rig("showform", mapped(), ROWS, vec![show(form), answer("done")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "give me a form to add an expense");
+    assert!(drawn_kinds(&got).is_empty(), "the model drew a form: {got:?}");
+    let e = tool_result(&rig, 1);
+    assert!(e["error"].as_str().is_some_and(|e| e.contains(r#"not "form""#)), "{e}");
+    assert!(rig.keap.lock().unwrap().is_empty(), "show read KEAP");
+}

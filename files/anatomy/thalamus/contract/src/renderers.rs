@@ -752,6 +752,70 @@ mod tests {
                    Err("a graph edge label is over 120 chars".into()));
     }
 
+    const FORM_ID: &str = "5f0c1b2a-3d4e-4f5a-8b6c-7d8e9f0a1b2c";
+
+    fn form(fields: &str) -> String {
+        format!(r#"{{"kind":"form","props":{{"form":"{FORM_ID}","table":"expenses","title":"Expenses","fields":[{fields}],"omitted":[{{"key":"receipt","kind":"file"}}]}}}}"#)
+    }
+
+    fn field(key: &str) -> String {
+        format!(r#"{{"key":"{key}","label":"{key}","kind":"text","required":false}}"#)
+    }
+
+    #[test]
+    fn a_form_is_fields_of_five_kinds() {
+        let ok = form(r#"{"key":"note","label":"Note","kind":"text","required":false,"placeholder":"what for"},
+            {"key":"amount","label":"Amount","kind":"number","required":true,"min":0,"max":10000},
+            {"key":"when","label":"When","kind":"date","required":false},
+            {"key":"kind","label":"Kind","kind":"select","required":true,"options":["food","travel","tools"]},
+            {"key":"paid","label":"Paid","kind":"bool","required":false}"#);
+        assert_eq!(decode(&ok).check(), Ok(()));
+        let fields = (0..20).map(|i| field(&format!("f{i}"))).collect::<Vec<_>>().join(",");
+        assert_eq!(decode(&form(&fields)).check(), Ok(()), "20 fields is the cap, not over it");
+    }
+
+    #[test]
+    fn check_rejects_a_form_over_its_caps() {
+        let fields = (0..21).map(|i| field(&format!("f{i}"))).collect::<Vec<_>>().join(",");
+        assert_eq!(decode(&form(&fields)).check(), Err("form fields: 21, at most 20".into()));
+        assert_eq!(decode(&form(&format!("{},{}", field("a"), field("a")))).check(), Err(r#"form field "a" twice"#.into()));
+        for bad in ["__shared_with", ""] {
+            assert_eq!(decode(&form(&field(bad))).check(), Err(format!("form field {bad:?} cannot be written here")), "{bad:?}");
+        }
+        let select = |n: usize| {
+            let o = (0..n).map(|i| format!(r#""o{i}""#)).collect::<Vec<_>>().join(",");
+            form(&format!(r#"{{"key":"s","label":"S","kind":"select","required":true,"options":[{o}]}}"#))
+        };
+        assert_eq!(decode(&select(50)).check(), Ok(()));
+        for n in [0, 51] {
+            assert_eq!(decode(&select(n)).check(), Err(format!("select field s has {n} options, 1 to 50")), "{n}");
+        }
+        let range = form(r#"{"key":"n","label":"N","kind":"number","required":false,"min":5,"max":1}"#);
+        assert_eq!(decode(&range).check(), Err("number field n: min 5 > max 1".into()));
+        let not_uuid = form(&field("a")).replace(FORM_ID, "latest");
+        assert_eq!(decode(&not_uuid).check(), Err(r#"form is not a lowercase uuid: "latest""#.into()));
+        let no_table = form(&field("a")).replace(r#""table":"expenses""#, r#""table":"""#);
+        assert_eq!(decode(&no_table).check(), Err("a form names no table".into()));
+    }
+
+    /// The model has no form: a form is drawn only inside the widget message the person asked for (I5f).
+    #[test]
+    fn a_render_or_an_approval_carrying_a_form_is_refused() {
+        use crate::wire::{decode_to_shell, ToShell};
+        let s = "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b";
+        let render = format!(r#"{{"t":"render","session":"{s}","component":{}}}"#, form(&field("a")));
+        let ask = format!(r#"{{"t":"approval_request","session":"{s}","approval":"{FORM_ID}","component":{}}}"#, form(&field("a")));
+        for line in [render, ask] {
+            match decode_to_shell(&line) {
+                ToShell::Refused { reason } => assert!(reason.contains("a form is drawn only as a widget the person made"), "{reason}"),
+                m => panic!("a form outside a widget was accepted: {m:?}"),
+            }
+        }
+        let fields = (0..21).map(|i| field(&format!("f{i}"))).collect::<Vec<_>>().join(",");
+        let over = format!(r#"{{"t":"render","session":"{s}","component":{}}}"#, form(&fields));
+        assert!(matches!(decode_to_shell(&over), ToShell::Refused { reason } if reason.contains("form fields: 21")));
+    }
+
     /// Through check(), so the matcher is the one a time chart meets.
     fn is_date(x: &str) -> bool {
         chart("line", "time", &format!(r#"{{"name":"a","points":[[{}, 1]]}}"#, serde_json::to_string(x).unwrap())).check().is_ok()
