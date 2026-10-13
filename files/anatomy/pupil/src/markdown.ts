@@ -1,5 +1,5 @@
 // The markdown a model writes, as a tree of text nodes for Markdown.svelte: never HTML.
-// Headings 1-3, paragraphs, one-level lists, code fences; inline strong, em, code, link.
+// Headings 1-3, paragraphs, lists of two levels, code fences; inline strong, em, code, link.
 // Anything else is literal text, so a string that is not markdown is one paragraph of itself.
 
 export type Inline =
@@ -10,7 +10,7 @@ export type Inline =
 export type Block =
 	| { t: 'h'; level: 1 | 2 | 3; inl: Inline[] }
 	| { t: 'p'; inl: Inline[] }
-	| { t: 'ul'; items: Inline[][] }
+	| { t: 'ul'; items: { inl: Inline[]; sub: Inline[][] }[] }
 	/** `n` is the number written on that line, so the marker is not 1, 2, 3. */
 	| { t: 'ol'; items: { n: number; inl: Inline[] }[] }
 	| { t: 'code'; text: string }
@@ -36,7 +36,7 @@ export function inline(s: string): Inline[] {
 }
 
 const HEADING = /^(#{1,3})\s+(.*)$/;
-const UL = /^\s*[-*+]\s+(.*)$/;
+const UL = /^(\s*)[-*+]\s+(.*)$/;
 const OL = /^\s*(\d+)[.)]\s+(.*)$/;
 
 export function parse(text: string): Block[] {
@@ -71,9 +71,11 @@ export function parse(text: string): Block[] {
 			flush();
 			const last = out[out.length - 1];
 			if (ul) {
-				const item = inline(ul[1]);
-				if (last?.t === 'ul') last.items.push(item);
-				else out.push({ t: 'ul', items: [item] });
+				const item = inline(ul[2]);
+				// Two spaces under an item is the second level; a deeper indent stays there.
+				if (ul[1].length >= 2 && last?.t === 'ul' && last.items.length) last.items[last.items.length - 1].sub.push(item);
+				else if (last?.t === 'ul') last.items.push({ inl: item, sub: [] });
+				else out.push({ t: 'ul', items: [{ inl: item, sub: [] }] });
 			} else {
 				const item = { n: Number(ol![1]), inl: inline(ol![2]) };
 				if (last?.t === 'ol') last.items.push(item);
