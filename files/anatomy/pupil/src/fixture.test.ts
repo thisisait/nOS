@@ -228,6 +228,25 @@ describe('a chart is SVG marks and text labels, inside its box', () => {
 			return { x: Number(at('x')), y: Number(at('y')), anchor: at('text-anchor') ?? 'start', size: Number(at('font-size')), t: text(t).trim() };
 		});
 
+	// The box the chart drew itself into: it follows its container, so read it, never assume it.
+	const box = (h: string) => {
+		const m = h.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+		expect(m, 'the svg has a viewBox').toBeTruthy();
+		return { W: Number(m![1]), H: Number(m![2]) };
+	};
+	const inside = (h: string, what: string) => {
+		const { W, H } = box(h);
+		for (const l of labels(h)) {
+			// A glyph is at most 0.6em wide in the UI font.
+			const w = l.t.length * l.size * 0.6;
+			const [lo, hi] = l.anchor === 'end' ? [l.x - w, l.x] : l.anchor === 'middle' ? [l.x - w / 2, l.x + w / 2] : [l.x, l.x + w];
+			expect(lo, `${what}: ${l.t}`).toBeGreaterThanOrEqual(0);
+			expect(hi, `${what}: ${l.t}`).toBeLessThanOrEqual(W);
+			expect(l.y - l.size, `${what}: ${l.t}`).toBeGreaterThanOrEqual(0);
+			expect(l.y, `${what}: ${l.t}`).toBeLessThanOrEqual(H);
+		}
+	};
+
 	it('every value of a bar chart is a bar, said as series, x and value', () => {
 		const h = html(sample);
 		const c = (sample as Extract<ToShell, { t: 'render' }>).component as Chart;
@@ -244,7 +263,7 @@ describe('a chart is SVG marks and text labels, inside its box', () => {
 	});
 
 	it('a line chart is one polyline per series, a vertex per point', () => {
-		const h = html(chart({ chart: 'line', series: [
+		const h = html(chart({ chart: 'line', x: 'category', series: [
 			{ name: 'open', points: [['mon', 3], ['tue', 5], ['wed', 2]] },
 			{ name: 'closed', points: [['mon', 1], ['tue', -2], ['wed', 4]] },
 		] }));
@@ -255,42 +274,39 @@ describe('a chart is SVG marks and text labels, inside its box', () => {
 
 	it('eight columns keep x labels readable and inside the box', () => {
 		const names = ['platform', 'pupilbox', 'billingx', 'hostingx', 'edgeboxx', 'vaultedx', 'memoryxx', 'faceappx'];
-		const h = html(chart({ chart: 'bar', series: [{ name: 'rows', points: names.map((x, i) => [x, i + 1]) }] }));
+		const h = html(chart({ chart: 'bar', x: 'category', series: [{ name: 'rows', points: names.map((x, i) => [x, i + 1]) }] }));
 		const drawn = labels(h).filter((l) => l.anchor === 'middle').map((l) => l.t);
 		expect(drawn).toEqual(names);
 		const axis = h.match(/<line[^>]*class="axis[^"]*"[^>]*/)?.[0] ?? '';
 		const num = (k: string) => Number(axis.match(new RegExp(`${k}="([^"]*)"`))?.[1]);
-		expect(num('x2') - num('x1'), 'plot width').toBeGreaterThanOrEqual(300);
-		for (const l of labels(h)) {
-			const w = l.t.length * l.size * 0.6;
-			const [lo, hi] = l.anchor === 'end' ? [l.x - w, l.x] : l.anchor === 'middle' ? [l.x - w / 2, l.x + w / 2] : [l.x, l.x + w];
-			expect(lo, l.t).toBeGreaterThanOrEqual(0);
-			expect(hi, l.t).toBeLessThanOrEqual(320);
-			expect(l.y - l.size, l.t).toBeGreaterThanOrEqual(0);
-			expect(l.y, l.t).toBeLessThanOrEqual(160);
-		}
+		expect(num('x2') - num('x1'), 'plot width').toBeGreaterThanOrEqual(box(h).W - 20);
+		inside(h, 'bar');
 	});
 
-	it('every label stays inside the 320x160 box, even 6 series of 60 long, wide-ranged points', () => {
+	it('every label stays inside the viewBox, even 6 series of 60 long, wide-ranged points', () => {
 		const series = Array.from({ length: 6 }, (_, k) => ({ name: `series number ${k}`,
 			points: Array.from({ length: 60 }, (_, i) => [`a rather long x label ${i}`, (i - 30) * 10 ** (k + 4)] as [string, number]) }));
 		for (const kind of ['bar', 'line'] as const) {
-			const all = labels(html(chart({ title: 'wide', chart: kind, series })));
-			expect(all.length).toBeGreaterThan(2);
-			for (const l of all) {
-				// A glyph is at most 0.6em wide in the UI font.
-				const w = l.t.length * l.size * 0.6;
-				const [lo, hi] = l.anchor === 'end' ? [l.x - w, l.x] : l.anchor === 'middle' ? [l.x - w / 2, l.x + w / 2] : [l.x, l.x + w];
-				expect(lo, `${kind}: ${l.t}`).toBeGreaterThanOrEqual(0);
-				expect(hi, `${kind}: ${l.t}`).toBeLessThanOrEqual(320);
-				expect(l.y - l.size, `${kind}: ${l.t}`).toBeGreaterThanOrEqual(0);
-				expect(l.y, `${kind}: ${l.t}`).toBeLessThanOrEqual(160);
-			}
+			const h = html(chart({ title: 'wide', chart: kind, x: 'category', series }));
+			expect(labels(h).length).toBeGreaterThan(2);
+			inside(h, kind);
 		}
 	});
 
+	// An image hides its marks from a screen reader; an interactive chart is a group of focusable marks.
+	it('a chart is a labelled group of focusable marks, not an image', () => {
+		const h = html(sample);
+		const svg = h.match(/<svg[^>]*>/)?.[0] ?? '';
+		expect(svg).toContain('role="group"');
+		expect(svg).toMatch(/aria-label="[^"]*Rows by status[^"]*"/);
+		expect(h).not.toContain('role="img"');
+		const marks = h.match(/<rect[^>]*class="bar[^>]*>/g) ?? [];
+		expect(marks.length).toBe(6);
+		for (const m of marks) expect(m).toContain('tabindex="0"');
+	});
+
 	it('a chart draws no link, no foreign markup, no script', () => {
-		const h = html(chart({ chart: 'bar', series: [{ name: '<script>x</script>', points: [['<img onerror=1>', 1]] }] }));
+		const h = html(chart({ chart: 'bar', x: 'category', series: [{ name: '<script>x</script>', points: [['<img onerror=1>', 1]] }] }));
 		expect(h).not.toMatch(/<(a|foreignObject|script|img)[\s>]/);
 		expect(h).toContain('&lt;img');
 	});
