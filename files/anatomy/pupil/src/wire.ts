@@ -17,7 +17,15 @@ export type Component =
 	| { kind: 'chart'; props: { title?: string; chart: 'bar' | 'stacked_bar' | 'line' | 'area' | 'scatter' | 'pie'; x: 'category' | 'number' | 'time'; series: { name: string; points: [string, number][] }[] } }
 	| { kind: 'tree'; props: { title?: string; nodes: TreeNode[] } }
 	| { kind: 'timeline'; props: { title?: string; items: { when: string; title: string; note?: string; hi?: boolean; until?: string; lane?: string }[] } }
-	| { kind: 'graph'; props: { title?: string; nodes: { id: string; label: string; note?: string; tone?: 'ok' | 'info' | 'warn' | 'bad' }[]; edges: { from: string; to: string; label?: string; dashed?: boolean }[] } };
+	| { kind: 'graph'; props: { title?: string; nodes: { id: string; label: string; note?: string; tone?: 'ok' | 'info' | 'warn' | 'bad' }[]; edges: { from: string; to: string; label?: string; dashed?: boolean }[] } }
+	| { kind: 'form'; props: FormProps };
+
+/** A widget form serve built from the table's schema (renderers.rs Form); never the model's. */
+export type FormProps = { form: string; table: string; title: string; fields: FormField[]; omitted: { key: string; kind: string }[] };
+export type FormField = {
+	key: string; label: string; kind: 'text' | 'number' | 'date' | 'select' | 'bool'; required: boolean;
+	options?: string[]; min?: number; max?: number; placeholder?: string;
+};
 
 export type TreeNode = { label: string; note?: string; children?: TreeNode[] };
 

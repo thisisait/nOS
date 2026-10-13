@@ -8,6 +8,7 @@
 	import StatusNote from '$ui/StatusNote.svelte';
 	import { severityTone } from '$ui/tone';
 	import Chart from './Chart.svelte';
+	import Form from './Form.svelte';
 	import Graph from './Graph.svelte';
 	import Markdown from './Markdown.svelte';
 	import Timeline from './Timeline.svelte';
@@ -155,6 +156,8 @@
 	{:else if component.kind === 'graph'}
 		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
 		<Graph graph={component.props} />
+	{:else if component.kind === 'form'}
+		<Form form={component.props} />
 	{:else}
 		<!-- Unreachable past the bridge's decoder; said aloud if it ever is. -->
 		<StatusNote kind="error" title="refused">no renderer for component kind {(component as { kind: string }).kind}</StatusNote>
