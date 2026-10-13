@@ -65,6 +65,31 @@ describe('an indented dash is a second list level', () => {
 	});
 });
 
+// An image is words. The url is not drawn and nothing is fetched.
+describe('an image is words, not a link', () => {
+	it('![alt](url) is [obrázek: alt], with no url and no img', () => {
+		const src = 'see ![plot](https://example.com/a.png) now';
+		const html = render(Markdown, { props: { text: src } }).body;
+		expect(html).toContain('[obrázek: plot]');
+		expect(html).not.toContain('example.com');
+		expect(html).not.toContain('<img');
+		expect(html).not.toContain('!plot');
+		expect(parse(src)).toEqual([
+			{
+				t: 'p',
+				inl: [
+					{ t: 'text', text: 'see ' },
+					{ t: 'text', text: '[obrázek: plot]' },
+					{ t: 'text', text: ' now' },
+				],
+			},
+		]);
+		expect(inline('[docs](https://thisisait.eu)')).toEqual([
+			{ t: 'link', text: 'docs', url: 'https://thisisait.eu' },
+		]);
+	});
+});
+
 // Live 2026-10-13: a model's `---` divider was drawn as three dashes.
 describe('a thematic break', () => {
 	it('--- between paragraphs is a rule, not text', () => {
