@@ -23,6 +23,7 @@ const PROPS: Record<string, string[]> = {
 	chart: ['chart', 'series', 'title', 'x'],
 	tree: ['nodes', 'title'],
 	timeline: ['items', 'title'],
+	graph: ['edges', 'nodes', 'title'],
 };
 const KINDS = Object.keys(PROPS);
 
@@ -358,5 +359,18 @@ describe('a chart is SVG marks and text labels, inside its box', () => {
 		const h = html(chart({ chart: 'bar', x: 'category', series: [{ name: '<script>x</script>', points: [['<img onerror=1>', 1]] }] }));
 		expect(h).not.toMatch(/<(a|foreignObject|script|img)[\s>]/);
 		expect(h).toContain('&lt;img');
+	});
+});
+
+describe('a graph is SVG nodes and edges, every word as text', () => {
+	const sample = fx.to_shell.find((c) => 'component' in c.msg && c.msg.component.kind === 'graph')!.msg;
+	const g = ((sample as Extract<ToShell, { t: 'render' }>).component as Extract<Component, { kind: 'graph' }>).props;
+
+	it('one <text> per node label and one <path> per edge', () => {
+		const h = html(sample);
+		const labels = [...h.matchAll(/<text[^>]*class="label[^"]*"[^>]*>([^<]*)<\/text>/g)].map((m) => text(m[1]).trim());
+		expect(labels).toEqual(g.nodes.map((n) => n.label));
+		expect(h.match(/<path[^>]*class="edge/g)?.length).toBe(g.edges.length);
+		for (const e of g.edges) if (e.label) expect(text(h)).toContain(e.label);
 	});
 });
