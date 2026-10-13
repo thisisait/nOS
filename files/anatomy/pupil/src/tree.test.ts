@@ -47,7 +47,23 @@ describe('tree and timeline are text, laid out by the shape', () => {
 		expect(g.text).toContain('<script>x</script>');
 	});
 
+	// Re-pinned (I5c): a timeline whose every when is a date is drawn on a time axis; in order only otherwise.
 	it('a timeline of at most 6 is horizontal, and hi is a word', () => {
+		const g = draw({
+			kind: 'timeline',
+			props: {
+				title: 'History',
+				items: [
+					{ when: 'Q3', title: 'I4a landed', note: 'query_rows' },
+					{ when: 'Q4', title: 'chart', hi: true },
+				],
+			},
+		});
+		for (const s of ['History', 'Q3', 'I4a landed', 'query_rows', 'Q4', 'chart', 'hi']) expect(g.text).toContain(s);
+		expect(g.html).toContain('data-layout="horizontal"');
+	});
+
+	it('a dated timeline is drawn on a time axis, every word still text', () => {
 		const g = draw({
 			kind: 'timeline',
 			props: {
@@ -59,7 +75,8 @@ describe('tree and timeline are text, laid out by the shape', () => {
 			},
 		});
 		for (const s of ['History', '2026-10-12', 'I4a landed', 'query_rows', '2026-10-13', 'chart', 'hi']) expect(g.text).toContain(s);
-		expect(g.html).toContain('data-layout="horizontal"');
+		expect(g.html).toContain('data-layout="time"');
+		expect(g.html).not.toContain('data-layout="horizontal"');
 	});
 
 	it('a timeline past 6 items is vertical', () => {
