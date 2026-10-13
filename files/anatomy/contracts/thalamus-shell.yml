@@ -58,6 +58,11 @@ components:
       when is a date (YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)]) it is drawn on a time axis: spans when -> until (until not
       before when), instants as dots, one row per lane (at most 40 chars), zoomable; otherwise in order,
       horizontal up to 6 items, vertical beyond; hi is said as a word
+    graph: >-
+      things and the links between them (show tool): {title?, nodes[{id, label, note?, tone? ok|info|warn|bad}],
+      edges[{from, to, label?, dashed?}]}; at most 60 nodes and 120 edges; ids [A-Za-z0-9_-]{1,64}, unique, and
+      every edge names two of them; drawn as layered columns (face graphLayered.ts), zoomable; the terminal says
+      every node and edge as text
 
 # ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ──────
 invariants:
@@ -82,7 +87,7 @@ invariants:
 open:
   - >-
     Since v4 the model chooses a renderer through the `show` tool, for table,
-    list, record, chart, tree and timeline (plain text already draws as markdown); table_results,
+    list, record, chart, tree, timeline and graph (plain text already draws as markdown); table_results,
     row_diff_approval and the
     control views stay chosen by their tool or control, and an approval is
     minted only by propose_row_edit.

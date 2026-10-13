@@ -192,7 +192,7 @@ approval: only propose_row_edit does, and query_rows draws its own table.";
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
-pub const SHOW_KINDS: [&str; 6] = ["table", "list", "record", "chart", "tree", "timeline"];
+pub const SHOW_KINDS: [&str; 7] = ["table", "list", "record", "chart", "tree", "timeline", "graph"];
 
 /// The props a kind accepts, so a refusal can show the shape to retry.
 pub const SHOW_SHAPE: &[(&str, &str)] = &[
@@ -205,6 +205,8 @@ series share the same x in order; scatter needs number or time x; pie is 1 serie
     ("tree", "{title?, nodes[{label, note?, children[]}]}, depth <=4, nodes <=100"),
     ("timeline", "{title?, items[{when, title, note?, hi?, until?, lane?}] <=30}; when and until as dates \
 (\"2026-10-13\") draw a time axis, until not before when; lane groups items on one row, <=40 chars"),
+    ("graph", "{title?, nodes[{id, label, note?, tone?}] <=60 (tone ok|info|warn|bad), edges[{from, to, label?, dashed?}] <=120}; \
+id is [A-Za-z0-9_-]{1,64} and unique; every edge's from and to name a node id"),
 ];
 
 fn expected_shape(kind: &str) -> String {
@@ -249,7 +251,16 @@ YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)] draws a time axis with until as a span's end (no
             closed(&["items"], json!({"title": title, "items": {"type": "array", "maxItems": 30, "items": closed(&["when", "title"], json!({
                 "when": {"type": "string", "maxLength": 120}, "title": {"type": "string", "maxLength": 500},
                 "note": {"type": "string", "maxLength": 2000}, "hi": {"type": "boolean"},
-                "until": {"type": "string", "maxLength": 120}, "lane": {"type": "string", "maxLength": 40}}))}})))]}}})
+                "until": {"type": "string", "maxLength": 120}, "lane": {"type": "string", "maxLength": 40}}))}}))),
+        branch("graph", "things and the links between them: {title?, nodes[{id, label, note?, tone?}] <=60, \
+edges[{from, to, label?, dashed?}] <=120}; ids unique, every edge names two node ids; drawn as layered columns",
+            closed(&["nodes", "edges"], json!({"title": title,
+                "nodes": {"type": "array", "minItems": 1, "maxItems": 60, "items": closed(&["id", "label"], json!({
+                    "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$"}, "label": {"type": "string", "maxLength": 120},
+                    "note": {"type": "string", "maxLength": 2000}, "tone": {"enum": ["ok", "info", "warn", "bad"]}}))},
+                "edges": {"type": "array", "maxItems": 120, "items": closed(&["from", "to"], json!({
+                    "from": {"type": "string"}, "to": {"type": "string"}, "label": {"type": "string", "maxLength": 120},
+                    "dashed": {"type": "boolean"}}))}})))]}}})
 }
 
 const QUERY_KEYS: [&str; 7] = ["table", "q", "where", "columns", "order_by", "limit", "group_by"];
@@ -377,7 +388,7 @@ asked for, never to look at a row. To show structured output call show ({}); pla
 nothing else. To count per value (for a chart) call query_rows with \
 group_by. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
 repeat in text what a tool or show already drew. Shape -> component: count per value -> chart via group_by; \
-many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree. \
+many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree; links between things -> graph. \
 Conclusion first, in one line. Never invent data: no numbers, no chart. Draw only when it helps: no visual for \
 small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.join(", "), now_utc());
         let (model, system) = match imprint {

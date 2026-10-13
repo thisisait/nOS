@@ -1,17 +1,6 @@
 edit roadmap / backup-restic-fork — nothing is written unless you approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-inbox — 1 waiting
-  capture    Read later: HKDF notes  2026-10-11T08:00:00Z  (cap-01)
-  ? promotions: not yours to moderate
-2 awaiting you
-  consent   HIGH       2d  config.yml: install_thalamus
-                           docs/active-work.md · operator flips
-  rem       CRITICAL   5h  CVE in a pinned image
-                           tools/rem-status.py
-  ? source unreadable, so its state is UNKNOWN not empty: gitlab: token unreadab
-le
-1 red
   ✗ pulse job nightly-backup failed (3h)
 Steps by track
 track                    next                     done
@@ -35,6 +24,17 @@ Roadmap
 History
   2026-10-12 → 2026-10-13  I4a — query_rows [thalamus]
   2026-10-13 → 2026-10-14  chart hi [pupil]
+Organs
+nodes:
+  bone Bone — FastAPI bridge [ok]
+  wing Wing — dashboard
+  pulse Pulse [warn]
+  keap KEAP
+edges:
+  bone -> wing (events)
+  pulse -> bone (jobs)
+  wing - -> keap
+  keap -> bone (recall)
 refused: login carol has no row in the identity map
 approve this edit? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit

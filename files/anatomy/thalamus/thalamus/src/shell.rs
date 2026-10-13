@@ -200,6 +200,23 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 out.push(Line::from(format!("  {}{until}  {}{note}{hi}{lane}", it.when, it.title)));
             }
         }
+        // A terminal draws no diagram; every node and edge is said as text.
+        Component::Graph(g) => {
+            out.extend(g.title.clone().map(head));
+            out.push(Line::from("nodes:"));
+            for n in &g.nodes {
+                let note = n.note.as_deref().map(|d| format!(" — {d}")).unwrap_or_default();
+                let tone = n.tone.map(|t| format!(" [{}]", cell(&serde_json::to_value(t).unwrap_or_default()))).unwrap_or_default();
+                let line = format!("  {} {}{note}{tone}", n.id, n.label);
+                out.push(if matches!(n.tone, Some(Tone::Warn | Tone::Bad)) { warn(line) } else { Line::from(line) });
+            }
+            out.push(Line::from("edges:"));
+            for e in &g.edges {
+                let arrow = if e.dashed { "- ->" } else { "->" };
+                let label = e.label.as_deref().map(|l| format!(" ({l})")).unwrap_or_default();
+                out.push(Line::from(format!("  {} {arrow} {}{label}", e.from, e.to)));
+            }
+        }
     }
     out
 }

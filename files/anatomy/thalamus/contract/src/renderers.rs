@@ -21,6 +21,7 @@ pub enum Component {
     Chart(Chart),
     Tree(Tree),
     Timeline(Timeline),
+    Graph(Graph),
 }
 
 /// Model text as markdown; every consumer draws it as text nodes, never as HTML.
@@ -181,6 +182,32 @@ impl Component {
                     }
                 })
             }
+            Component::Graph(g) => {
+                title(&g.title)?;
+                if g.nodes.is_empty() {
+                    return Err("a graph has no nodes".into());
+                }
+                most("graph nodes", g.nodes.len(), 60)?;
+                most("graph edges", g.edges.len(), 120)?;
+                let mut ids = std::collections::BTreeSet::new();
+                for n in &g.nodes {
+                    let ok = (1..=64).contains(&n.id.len()) && n.id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-');
+                    if !ok {
+                        return Err(format!("graph node id {:?} is not [A-Za-z0-9_-]{{1,64}}", n.id));
+                    }
+                    if !ids.insert(n.id.as_str()) {
+                        return Err(format!("graph node id {:?} twice", n.id));
+                    }
+                    cap("a graph label", &n.label, NAME_MAX)?;
+                    n.note.as_deref().map_or(Ok(()), |d| cap("a graph note", d, 2000))?;
+                }
+                g.edges.iter().try_for_each(|e| {
+                    if let Some(end) = [&e.from, &e.to].into_iter().find(|id| !ids.contains(id.as_str())) {
+                        return Err(format!("graph edge {} -> {} names no node {end:?}", e.from, e.to));
+                    }
+                    e.label.as_deref().map_or(Ok(()), |l| cap("a graph edge label", l, NAME_MAX))
+                })
+            }
             _ => Ok(()),
         }
     }
@@ -333,6 +360,39 @@ pub struct TimelineItem {
     /// Items that share a lane are drawn on one row of a time-scaled timeline; at most 40 chars.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lane: Option<String>,
+}
+
+/// Things and the links between them, drawn as a layered diagram (one column per rank).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Graph {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub nodes: Vec<GraphNode>,
+    pub edges: Vec<GraphEdge>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GraphNode {
+    /// `[A-Za-z0-9_-]{1,64}`, unique in the graph; edges name it.
+    pub id: String,
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tone: Option<Tone>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GraphEdge {
+    pub from: String,
+    pub to: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub dashed: bool,
 }
 
 /// Rows the model shows: `columns` names each cell of every row, in order.
