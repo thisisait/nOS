@@ -1,0 +1,10 @@
+form Expenses (table expenses): fill it in the pupil
+  When (date)
+  Kind (select, required, options food|travel|tools)
+  Amount (number, required)
+  Paid (bool)
+  not editable here: receipt (file)
+
+
+
+

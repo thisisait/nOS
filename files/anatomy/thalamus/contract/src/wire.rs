@@ -64,6 +64,14 @@ fn need_uuid(field: &str, s: &str) -> Result<(), String> {
     if is_uuid(s) { Ok(()) } else { Err(format!("{field} is not a lowercase uuid: {s:?}")) }
 }
 
+/// The model has no form: one is drawn only inside the widget message the person asked for.
+fn not_a_form(c: &Component) -> Result<(), String> {
+    match c {
+        Component::Form(_) => Err("a form is drawn only as a widget the person made, never in a render or an approval".into()),
+        _ => Ok(()),
+    }
+}
+
 /// The identity invariant and the component caps on a decoded message; Err names what broke.
 fn check_shell(m: &ToShell) -> Result<(), String> {
     match m {
@@ -77,12 +85,14 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
         ToShell::Text { session, .. } | ToShell::Activity { session, .. } => need_uuid("session", session),
         ToShell::Render { session, component } => {
             need_uuid("session", session)?;
-            component.check()
+            component.check()?;
+            not_a_form(component)
         }
         ToShell::ApprovalRequest { session, approval, component } => {
             need_uuid("session", session)?;
             need_uuid("approval", approval)?;
-            component.check()
+            component.check()?;
+            not_a_form(component)
         }
         ToShell::Refused { .. } => Ok(()),
     }

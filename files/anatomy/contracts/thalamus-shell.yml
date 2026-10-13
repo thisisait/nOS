@@ -63,6 +63,17 @@ components:
       edges[{from, to, label?, dashed?}]}; at most 60 nodes and 120 edges; ids [A-Za-z0-9_-]{1,64}, unique, and
       every edge names two of them; drawn as layered columns (face graphLayered.ts), zoomable; the terminal says
       every node and edge as text
+  # A form is in the crate's vocabulary but crosses the wire only inside the `widget` message
+  # (genui I5f), so it joins `vocabulary` with its first accepted fixture sample; until then a
+  # render or approval_request carrying one is refused (wire.rs not_a_form).
+  widget_only:
+    form: >-
+      a widget form serve builds from the table's live schema (form_from_schema), never the model:
+      {form uuid, table, title (the KEAP table's), fields[{key, label, kind text|number|date|select|bool,
+      required, options?, min?, max?, placeholder?}], omitted[{key, kind}]}; at most 20 fields, keys unique,
+      never empty or __-prefixed, a select has 1-50 options, min <= max; the pupil draws its own header
+      "Adds a row to <title> (<table>)" and button "Add row"; the terminal says the fields and
+      "fill it in the pupil"
 
 # ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ──────
 invariants:
@@ -90,4 +101,5 @@ open:
     list, record, chart, tree, timeline and graph (plain text already draws as markdown); table_results,
     row_diff_approval and the
     control views stay chosen by their tool or control, and an approval is
-    minted only by propose_row_edit.
+    minted only by propose_row_edit. The model has no form: a form is a
+    widget the person made (widget_only above).

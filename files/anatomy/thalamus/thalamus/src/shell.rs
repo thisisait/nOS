@@ -200,6 +200,20 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 out.push(Line::from(format!("  {}{until}  {}{note}{hi}{lane}", it.when, it.title)));
             }
         }
+        // Filled in the pupil only: the terminal says what it asks, and Enter sends nothing.
+        Component::Form(f) => {
+            out.push(head(format!("form {} (table {}): fill it in the pupil", f.title, f.table)));
+            for x in &f.fields {
+                let kind = cell(&serde_json::to_value(x.kind).unwrap_or_default());
+                let req = if x.required { ", required" } else { "" };
+                let opts = x.options.as_ref().map(|o| format!(", options {}", o.join("|"))).unwrap_or_default();
+                out.push(Line::from(format!("  {} ({kind}{req}{opts})", x.label)));
+            }
+            if !f.omitted.is_empty() {
+                let o: Vec<String> = f.omitted.iter().map(|o| format!("{} ({})", o.key, o.kind)).collect();
+                out.push(Line::styled(format!("  not editable here: {}", o.join(", ")), Style::new().fg(Color::DarkGray)));
+            }
+        }
         // A terminal draws no diagram; every node and edge is said as text.
         Component::Graph(g) => {
             out.extend(g.title.clone().map(head));

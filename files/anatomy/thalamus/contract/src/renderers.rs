@@ -22,6 +22,7 @@ pub enum Component {
     Tree(Tree),
     Timeline(Timeline),
     Graph(Graph),
+    Form(Form),
 }
 
 /// Model text as markdown; every consumer draws it as text nodes, never as HTML.
@@ -208,6 +209,42 @@ impl Component {
                     e.label.as_deref().map_or(Ok(()), |l| cap("a graph edge label", l, NAME_MAX))
                 })
             }
+            Component::Form(f) => {
+                if !crate::wire::is_uuid(&f.form) {
+                    return Err(format!("form is not a lowercase uuid: {:?}", f.form));
+                }
+                if f.table.is_empty() {
+                    return Err("a form names no table".into());
+                }
+                cap("a form table", &f.table, NAME_MAX)?;
+                cap("title", &f.title, NAME_MAX)?;
+                most("form fields", f.fields.len(), 20)?;
+                most("form omitted columns", f.omitted.len(), 40)?;
+                let mut keys = std::collections::BTreeSet::new();
+                for x in &f.fields {
+                    // KEAP reads __ keys as row sharing; a form never writes one.
+                    if x.key.is_empty() || x.key.starts_with("__") {
+                        return Err(format!("form field {:?} cannot be written here", x.key));
+                    }
+                    cap("a form field key", &x.key, 64)?;
+                    if !keys.insert(x.key.as_str()) {
+                        return Err(format!("form field {:?} twice", x.key));
+                    }
+                    cap("a form field label", &x.label, NAME_MAX)?;
+                    x.placeholder.as_deref().map_or(Ok(()), |p| cap("a form placeholder", p, NAME_MAX))?;
+                    let options = x.options.as_deref().unwrap_or_default();
+                    if x.kind == FieldKind::Select && !(1..=50).contains(&options.len()) {
+                        return Err(format!("select field {} has {} options, 1 to 50", x.key, options.len()));
+                    }
+                    options.iter().try_for_each(|o| cap("a select option", o, NAME_MAX))?;
+                    if let (Some(lo), Some(hi)) = (x.min, x.max) {
+                        if lo > hi {
+                            return Err(format!("number field {}: min {lo} > max {hi}", x.key));
+                        }
+                    }
+                }
+                f.omitted.iter().try_for_each(|o| cap("an omitted column", &o.key, 64))
+            }
             _ => Ok(()),
         }
     }
@@ -393,6 +430,55 @@ pub struct GraphEdge {
     pub label: Option<String>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub dashed: bool,
+}
+
+/// A widget form serve builds from a table's live schema (form_from_schema); the model never
+/// writes one. The pupil draws its own header and button; `title` is the KEAP table's title.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Form {
+    /// A uuid serve minted; a submit names it.
+    pub form: String,
+    pub table: String,
+    pub title: String,
+    pub fields: Vec<FormField>,
+    /// Columns with no form field (a file, a json...), said as "not editable here".
+    pub omitted: Vec<Omitted>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FormField {
+    pub key: String,
+    pub label: String,
+    pub kind: FieldKind,
+    pub required: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub options: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub placeholder: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FieldKind {
+    Text,
+    Number,
+    Date,
+    Select,
+    Bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Omitted {
+    pub key: String,
+    /// The KEAP column kind, as KEAP names it.
+    pub kind: String,
 }
 
 /// Rows the model shows: `columns` names each cell of every row, in order.

@@ -5,8 +5,8 @@
 
 use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, Session};
-use nos_contract::renderers::{ApprovalsList, CellChange, Component, InboxItem, InboxList, RedStatus, Row, RowDiffApproval,
-                               TableResults};
+use nos_contract::renderers::{ApprovalsList, CellChange, Component, FieldKind, Form, FormField, InboxItem, InboxList, Omitted,
+                               RedStatus, Row, RowDiffApproval, TableResults};
 use nos_contract::wire::{decode_to_thalamus, encode, ControlView, Decision, Phase, ToShell, ToThalamus};
 use nos_contract::uid;
 use serde_json::{json, Map, Value};
@@ -754,6 +754,57 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
             }
         }
         Err(format!("{table} exceeds the {MAX_PAGES}-page read cap; refusing a partial table"))
+    }
+
+    /// A widget form from the table's live schema, read as the person: one field per text, number,
+    /// boolean, date or select column (a select of 0 or over 50 options is text), in the table's
+    /// order, narrowed to `columns` when given. `__` columns are dropped; an optional column of any
+    /// other kind is listed in `omitted`; a required column the form cannot fill refuses the form.
+    pub fn form_from_schema(&self, who: &Person, table: &str, columns: Option<&[String]>) -> Result<Form, String> {
+        let table = table_id(table);
+        let info = self.keap(who, &format!("{}/api/tables/{}", self.keap_url.trim_end_matches('/'), enc(&table)), None)?;
+        let title = info.pointer("/data/title").and_then(Value::as_str).filter(|t| !t.is_empty()).unwrap_or(&table).to_string();
+        let schema: Vec<&Map<String, Value>> = info.pointer("/data/schema/columns").and_then(Value::as_array)
+            .map(|c| c.iter().filter_map(Value::as_object)
+                .filter(|c| c.get("key").and_then(Value::as_str).is_some_and(|k| !k.is_empty() && !k.starts_with("__"))).collect())
+            .filter(|c: &Vec<_>| !c.is_empty()).ok_or(format!("KEAP returned no column schema for {title}"))?;
+        let s = |c: &Map<String, Value>, k: &str| c.get(k).and_then(Value::as_str).unwrap_or("").to_string();
+        let keys: Vec<String> = schema.iter().map(|c| s(c, "key")).collect();
+        if let Some(k) = columns.into_iter().flatten().find(|k| !keys.contains(k)) {
+            return Err(format!("no column `{k}` in {title}; columns: {}", keys.join(", ")));
+        }
+        let (mut fields, mut omitted) = (Vec::new(), Vec::new());
+        for c in schema {
+            let (key, kind) = (s(c, "key"), s(c, "kind"));
+            let required = c.get("required").and_then(Value::as_bool).unwrap_or(false);
+            let options: Option<Vec<String>> = c.get("options").and_then(Value::as_array)
+                .map(|o| o.iter().filter_map(Value::as_str).map(str::to_string).collect());
+            let field = match kind.as_str() {
+                "text" => Some(FieldKind::Text),
+                "number" => Some(FieldKind::Number),
+                "boolean" => Some(FieldKind::Bool),
+                "date" => Some(FieldKind::Date),
+                "select" if options.as_ref().is_some_and(|o| (1..=50).contains(&o.len())) => Some(FieldKind::Select),
+                "select" => Some(FieldKind::Text),
+                _ => None,
+            };
+            let wanted = columns.is_none_or(|cols| cols.contains(&key));
+            match (field, wanted) {
+                (Some(kind), true) => fields.push(FormField {
+                    label: Some(s(c, "label")).filter(|l| !l.is_empty()).unwrap_or_else(|| key.clone()),
+                    options: options.filter(|_| kind == FieldKind::Select),
+                    key, kind, required, min: None, max: None, placeholder: None,
+                }),
+                // KEAP refuses a row without it, so a form that cannot fill it would only fail later.
+                _ if required => return Err(format!("column {key} ({kind}) is required and has no form field")),
+                (None, true) => omitted.push(Omitted { key, kind }),
+                (_, false) => {}
+            }
+        }
+        let form = mint_uuid().map_err(|e| format!("no form id: {e}"))?;
+        let f = Form { form, table, title, fields, omitted };
+        Component::Form(f.clone()).check()?;
+        Ok(f)
     }
 
     /// The cell diff of one existing row the person can read; only changed cells survive.
