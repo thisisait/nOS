@@ -192,10 +192,10 @@ approval: only propose_row_edit does, and query_rows draws its own table.";
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
-const SHOW_KINDS: [&str; 6] = ["table", "list", "record", "chart", "tree", "timeline"];
+pub const SHOW_KINDS: [&str; 6] = ["table", "list", "record", "chart", "tree", "timeline"];
 
 /// The props a kind accepts, so a refusal can show the shape to retry.
-const SHOW_SHAPE: &[(&str, &str)] = &[
+pub const SHOW_SHAPE: &[(&str, &str)] = &[
     ("table", "{title?, columns[] <=12, rows[][] <=50, each row as long as columns}"),
     ("list", "{title?, ordered, items[{text, detail?, tone? ok|info|warn|bad}] <=50}"),
     ("record", "{title?, fields[{key, value}] <=40}"),
@@ -211,7 +211,7 @@ fn expected_shape(kind: &str) -> String {
 }
 
 /// One `oneOf` branch per kind; the descriptions are thalamus-shell.yml's vocabulary lines.
-fn show_schema() -> Value {
+pub fn show_schema() -> Value {
     let title = json!({"type": "string", "maxLength": 120});
     let branch = |kind: &str, about: &str, props: Value| json!({"type": "object", "additionalProperties": false,
         "required": ["kind", "props"], "description": about, "properties": {"kind": {"const": kind}, "props": props}});
@@ -365,13 +365,13 @@ impl Server {
         send(out, &ToShell::Session { session: session.clone(), actor, model_uri });
         let iris = format!("You are Iris. You act for {} and see only what they may see. To read, count or filter \
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
-asked for, never to look at a row. To show structured output call show (table, list, record, \
-chart, tree, timeline); plain text may use markdown, nothing else. To count per value (for a chart) call query_rows with \
+asked for, never to look at a row. To show structured output call show ({}); plain text may use markdown, \
+nothing else. To count per value (for a chart) call query_rows with \
 group_by. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
 repeat in text what a tool or show already drew. Shape -> component: count per value -> chart via group_by; \
 many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree. \
 Conclusion first, in one line. Never invent data: no numbers, no chart. Draw only when it helps: no visual for \
-small talk or a one-line answer. It is now {} UTC.", who.username, now_utc());
+small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.join(", "), now_utc());
         let (model, system) = match imprint {
             Ok((m, t)) => (Ok(m), format!("{}\n\n{iris}", t.trim_end())),
             Err(why) => (Err(why), iris),

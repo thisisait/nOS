@@ -1035,7 +1035,7 @@ fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
     assert_eq!(names, ["query_rows", "propose_row_edit", "show"]);
-    assert!(p.contains("To show structured output call show (table, list, record, chart, tree, timeline)"), "{p}");
+    assert!(p.contains(&format!("To show structured output call show ({})", serve::SHOW_KINDS.join(", "))), "{p}");
     assert_eq!(body["tools"][0]["function"]["parameters"]["required"], serde_json::json!(["table"]), "q is optional");
 }
 
@@ -1057,11 +1057,11 @@ fn drawn_kinds(got: &[ToShell]) -> Vec<String> {
 fn show_renders_a_valid_component_and_refuses_an_invalid_one() {
     let list = serde_json::json!({"kind": "list", "props": {"ordered": true, "items": [{"text": "query", "tone": "ok"}]}});
     let bad = [
-        (serde_json::json!({"kind": "pie_chart", "props": {}}), "pie_chart"),
-        (serde_json::json!({"kind": "list", "props": {"ordered": false, "items": [{"text": "x", "html": "<b>"}]}}), "html"),
-        (serde_json::json!({"kind": "table", "props": {"columns": ["a", "b"], "rows": [["x"]]}}), "row 1 has 1 cells"),
+        (serde_json::json!({"kind": "pie_chart", "props": {}}), "pie_chart".to_string()),
+        (serde_json::json!({"kind": "list", "props": {"ordered": false, "items": [{"text": "x", "html": "<b>"}]}}), "html".to_string()),
+        (serde_json::json!({"kind": "table", "props": {"columns": ["a", "b"], "rows": [["x"]]}}), "row 1 has 1 cells".to_string()),
         // Live 2026-10-13: a markdown show was then said again as text; text already draws as markdown.
-        (serde_json::json!({"kind": "markdown", "props": {"text": "x"}}), r#"show draws table, list, record, chart, tree, timeline, not "markdown""#),
+        (serde_json::json!({"kind": "markdown", "props": {"text": "x"}}), format!(r#"show draws {}, not "markdown""#, serve::SHOW_KINDS.join(", "))),
     ];
     let mut model = vec![show(list)];
     model.extend(bad.iter().map(|(c, _)| show(c.clone())));
@@ -1101,7 +1101,7 @@ fn show_cannot_render_an_approval_or_a_tool_chosen_kind() {
             "show drew a kind only a tool or an ask may: {got:?}");
     for (i, c) in chosen.iter().enumerate() {
         let e = tool_result(&rig, i + 1);
-        assert!(e["error"].as_str().is_some_and(|e| e.contains("show draws table, list, record, chart, tree, timeline, not")),
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(&format!("show draws {}, not", serve::SHOW_KINDS.join(", ")))),
                 "{}: {e}", c["kind"]);
     }
     let session = session_of(&got);
