@@ -13,7 +13,8 @@
 	import Message from './Message.svelte';
 	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
 	import type { Link, ToShell, ToThalamus } from './wire';
-	import { route, type Widgets } from './widgets';
+	import Form from './Form.svelte';
+	import { onTableChanged, route, submit, type Widgets } from './widgets';
 
 	type Tauri = {
 		core: { invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown> };
@@ -84,6 +85,21 @@
 		}
 	}
 
+	async function wire(msg: ToThalamus, widget: string) {
+		try {
+			await tauri?.core.invoke('send', { msg });
+		} catch (e) {
+			widgets = route(widgets, { t: 'refused', reason: `not sent: ${e}`, widget }, Date.now()) ?? widgets;
+		}
+	}
+
+	// The submit is the person's decision (genui Q1); the reducer sends it once while in flight.
+	function submitted(m: { form: string; widget: string; values: Record<string, string | number | boolean> }) {
+		const r = submit(widgets, m.widget, m);
+		widgets = r.w;
+		if (r.send) wire(r.send, m.widget);
+	}
+
 	onMount(() => {
 		if (!tauri) {
 			link = { state: 'closed', reason: 'no Tauri bridge (opened outside the pupil app)' };
@@ -93,6 +109,13 @@
 			tauri.event.listen<ToShell>('to_shell', ({ payload }) => {
 				see({ e: 'wire', msg: payload });
 				if (payload.t === 'session') session = payload.session;
+				// A write landed: every widget on screen is active until the workspace has tabs (I5h).
+				if (payload.t === 'table_changed') {
+					const r = onTableChanged(widgets, payload.table, Object.keys(widgets));
+					widgets = r.w;
+					r.send.forEach((m) => m.t === 'widget' && wire(m, m.widget));
+					return;
+				}
 				const w = route(widgets, payload, Date.now());
 				if (w) {
 					widgets = w;
@@ -135,7 +158,10 @@
 			{#each Object.entries(widgets) as [token, w] (token)}
 				<article class="widget" data-widget={token}>
 					{#if w.error}<StatusNote kind="error" block={false}>{w.error}</StatusNote>{/if}
-					{#if w.component}<ComponentView component={w.component} />{/if}
+					{#if w.component?.kind === 'form'}
+						<Form form={w.component.props} widget={token} inFlight={!!w.inFlight} onsubmit={submitted} />
+						{#if w.added}<p class="added">row {w.added} added</p>{/if}
+					{:else if w.component}<ComponentView component={w.component} />{/if}
 				</article>
 			{/each}
 		</section>
@@ -226,6 +252,11 @@
 		border: 1px solid var(--glass-brd);
 		border-radius: 12px;
 		background: var(--glass);
+	}
+	.added {
+		margin: 4px 0 0;
+		color: var(--muted);
+		font-size: 11px;
 	}
 	.me {
 		align-self: flex-end;

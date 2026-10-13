@@ -36,7 +36,9 @@ export type ToShell =
 	| { t: 'approval_request'; session: string; approval: string; component: Component }
 	| { t: 'refused'; reason: string; widget?: string }
 	| { t: 'activity'; session: string; phase: Phase }
-	| { t: 'widget'; session: string; widget: string; component: Component };
+	| { t: 'widget'; session: string; widget: string; component: Component }
+	| { t: 'form_result'; session: string; widget: string; form: string; row: string }
+	| { t: 'table_changed'; session: string; table: string; row: string };
 
 /** What the thalamus is doing (wire.rs Phase); the eye shows it, the log does not. */
 export type Phase = 'thinking' | { tool: { name: string } } | 'writing' | 'idle';
@@ -47,7 +49,8 @@ export type ToThalamus =
 	| { t: 'turn'; session: string | null; text: string }
 	| { t: 'approval_decision'; approval: string; decision: 'approve' | 'reject'; note: string | null }
 	| { t: 'control'; view: 'inbox' | 'approvals' | 'red_status' }
-	| { t: 'widget'; widget: string; spec: WidgetSpec; trigger: 'click' | 'restore' | 'table_changed' };
+	| { t: 'widget'; widget: string; spec: WidgetSpec; trigger: 'click' | 'restore' | 'table_changed' }
+	| { t: 'form_submit'; form: string; widget: string; values: Record<string, string | number | boolean> };
 
 /** What a widget re-runs, as the person and without the model (wire.rs WidgetSpec): exactly one key. */
 export type WidgetSpec =

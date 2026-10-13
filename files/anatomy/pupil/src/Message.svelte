@@ -29,6 +29,10 @@
 		<!-- App routes these to their widget (widgets.ts); drawn here for any other host of a message. -->
 		<p class="muted">widget {msg.widget}</p>
 		<ComponentView component={msg.component} />
+	{:else if msg.t === 'form_result'}
+		<p class="muted">widget {msg.widget}: row {msg.row} added (form {msg.form})</p>
+	{:else if msg.t === 'table_changed'}
+		<p class="muted">table {msg.table} changed (row {msg.row})</p>
 	{/if}
 </div>
 
