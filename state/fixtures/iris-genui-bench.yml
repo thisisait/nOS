@@ -67,6 +67,7 @@
     props:
       title: Steps by track
       chart: bar
+      x: category
       series:
         - name: query_rows
           points:
@@ -77,6 +78,101 @@
     - query_rows
     - I4c
     - "2"
+    - category x
+# The model quotes a numeric x: x is always a string on the wire, whatever the axis.
+- id: chart-scatter-numeric-x
+  kind: chart
+  component:
+    kind: chart
+    props:
+      title: Latency by load
+      chart: scatter
+      x: number
+      series:
+        - name: p50
+          points:
+            - ["3", 5]
+            - ["10", 12.5]
+            - ["-2", 1]
+  expect:
+    - Latency by load
+    - scatter
+    - number x
+    - p50
+    - 3=5
+    - 10=12.5
+    - -2=1
+- id: chart-time-line
+  kind: chart
+  component:
+    kind: chart
+    props:
+      title: Rows per day
+      chart: line
+      x: time
+      series:
+        - name: rows
+          points:
+            - ["2026-10-11", 3]
+            - ["2026-10-12T08:00:00Z", 4]
+            - ["2026-10-13T08:00:00+02:00", 9]
+  expect:
+    - Rows per day
+    - time x
+    - 2026-10-11=3
+    - 2026-10-13T08:00:00+02:00=9
+- id: chart-area
+  kind: chart
+  component:
+    kind: chart
+    props:
+      chart: area
+      x: category
+      series:
+        - name: open
+          points: [[mon, 3], [tue, 5]]
+        - name: done
+          points: [[mon, 1], [tue, 2]]
+  expect:
+    - area chart
+    - open
+    - tue=5
+    - done
+    - mon=1
+- id: chart-stacked-bar
+  kind: chart
+  component:
+    kind: chart
+    props:
+      title: Rows by track and status
+      chart: stacked_bar
+      x: category
+      series:
+        - name: next
+          points: [[pupil, 4], [keap, 2]]
+        - name: done
+          points: [[pupil, 9], [keap, 7]]
+  expect:
+    - stacked_bar chart Rows by track and status
+    - next
+    - keap=2
+    - pupil=9
+- id: chart-pie
+  kind: chart
+  component:
+    kind: chart
+    props:
+      title: Share by track
+      chart: pie
+      x: category
+      series:
+        - name: rows
+          points: [[pupil, 4], [keap, 0], [face, 6]]
+  expect:
+    - pie chart Share by track
+    - pupil=4
+    - keap=0
+    - face=6
 - id: tree-steps
   kind: tree
   component:

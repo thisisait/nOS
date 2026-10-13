@@ -1109,20 +1109,24 @@ fn show_cannot_render_an_approval_or_a_tool_chosen_kind() {
     assert!(rig.keap.lock().unwrap().is_empty(), "show read KEAP");
 }
 
-// --- pupil I4d: a chart is bar or line, within its caps ---
+// --- pupil I4d: a chart is drawn within its caps; I5b: six kinds over a named x axis ---
 
 #[test]
-fn show_draws_a_chart_and_refuses_a_pie_or_an_overfull_one() {
+fn show_draws_a_chart_and_refuses_a_two_series_pie_or_an_overfull_one() {
     let pts = |n: usize| (0..n).map(|i| serde_json::json!([format!("x{i}"), i])).collect::<Vec<_>>();
-    let bar = serde_json::json!({"kind": "chart", "props": {"chart": "bar", "series": [{"name": "a", "points": pts(3)}]}});
+    let chart = |kind: &str, x: &str, series: serde_json::Value| serde_json::json!({"kind": "chart", "props": {"chart": kind, "x": x, "series": series}});
+    let bar = chart("bar", "category", serde_json::json!([{"name": "a", "points": pts(3)}]));
     let seven: Vec<_> = (0..7).map(|k| serde_json::json!({"name": format!("s{k}"), "points": pts(2)})).collect();
+    // At most 8 tool calls a turn; the number and missing-x caps are pinned in renderers.rs and the fixture.
     let bad = [
-        (serde_json::json!({"kind": "chart", "props": {"chart": "pie", "series": [{"name": "a", "points": pts(2)}]}}), "pie"),
-        (serde_json::json!({"kind": "chart", "props": {"chart": "bar", "series": seven}}), "chart series: 7, at most 6"),
-        (serde_json::json!({"kind": "chart", "props": {"chart": "line", "series": [{"name": "a", "points": pts(61)}]}}), "61, at most 60"),
-        (serde_json::json!({"kind": "chart", "props": {"chart": "line", "series": [{"name": "a", "points": pts(2)},
-            {"name": "b", "points": pts(1)}]}}), "the same x"),
-        (serde_json::json!({"kind": "chart", "props": {"chart": "bar", "series": [{"name": "a", "points": [["x", "1"]]}]}}), "invalid type"),
+        (chart("pie", "category", serde_json::json!([{"name": "a", "points": pts(2)}, {"name": "b", "points": pts(2)}])), "exactly 1 series"),
+        (chart("bar", "category", serde_json::json!(seven)), "chart series: 7, at most 6"),
+        (chart("line", "category", serde_json::json!([{"name": "a", "points": pts(61)}])), "61, at most 60"),
+        (chart("line", "category", serde_json::json!([{"name": "a", "points": pts(2)}, {"name": "b", "points": pts(1)}])), "the same x"),
+        (chart("bar", "category", serde_json::json!([{"name": "a", "points": [["x", "1"]]}])), "invalid type"),
+        (chart("line", "time", serde_json::json!([{"name": "a", "points": [["yesterday", 1]]}])), "is not a date"),
+        // Only a widget's chart may be empty (check_allow_empty); the model's has something to plot.
+        (chart("bar", "category", serde_json::json!([{"name": "a", "points": []}])), "a chart has no points"),
     ];
     let mut model = vec![show(bar)];
     model.extend(bad.iter().map(|(c, _)| show(c.clone())));
@@ -1136,6 +1140,27 @@ fn show_draws_a_chart_and_refuses_a_pie_or_an_overfull_one() {
     for (i, (_, want)) in bad.iter().enumerate() {
         let e = tool_result(&rig, i + 2);
         assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "show #{} must be refused naming {want}: {e}", i + 2);
+    }
+}
+
+/// The model is offered every kind the contract decodes, and told x is always a quoted string.
+#[test]
+fn show_offers_every_chart_kind_and_axis() {
+    let schema = serve::show_schema();
+    let chart = schema["properties"]["component"]["oneOf"].as_array().unwrap().iter()
+        .find(|b| b["properties"]["kind"]["const"] == "chart").unwrap()["properties"]["props"].clone();
+    let kinds = ["bar", "stacked_bar", "line", "area", "scatter", "pie"];
+    assert_eq!(chart["properties"]["chart"]["enum"], serde_json::json!(kinds));
+    assert_eq!(chart["properties"]["x"]["enum"], serde_json::json!(["category", "number", "time"]));
+    assert!(chart["required"].as_array().unwrap().contains(&serde_json::json!("x")), "{chart}");
+    let shape = serve::SHOW_SHAPE.iter().find(|(k, _)| *k == "chart").unwrap().1;
+    for word in kinds.iter().chain(&["category|number|time", "x is a string"]) {
+        assert!(shape.contains(word), "SHOW_SHAPE chart lacks {word:?}: {shape}");
+    }
+    for k in kinds {
+        let c = serde_json::json!({"kind": "chart", "props": {"chart": k, "x": "number", "series": [{"name": "a", "points": [["3", 5]]}]}});
+        let c: nos_contract::renderers::Component = serde_json::from_value(c).unwrap_or_else(|e| panic!("{k}: {e}"));
+        assert_eq!(c.check(), Ok(()), "{k}");
     }
 }
 

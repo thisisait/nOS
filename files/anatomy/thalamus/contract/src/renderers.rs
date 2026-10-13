@@ -440,4 +440,88 @@ mod tests {
         assert_eq!(decode(&format!(r#"{{"kind":"timeline","props":{{"items":[{}]}}}}"#, items(31))).check(), Err("timeline items: 31, at most 30".into()));
         assert_eq!(decode(r#"{"kind":"timeline","props":{"items":[]}}"#).check(), Err("a timeline has no items".into()));
     }
+
+    fn chart(kind: &str, x: &str, series: &str) -> Component {
+        decode(&format!(r#"{{"kind":"chart","props":{{"chart":"{kind}","x":"{x}","series":[{series}]}}}}"#))
+    }
+
+    #[test]
+    fn every_chart_kind_and_axis_decodes() {
+        for kind in ["bar", "stacked_bar", "line", "area", "pie"] {
+            assert_eq!(chart(kind, "category", r#"{"name":"a","points":[["x",1],["y",2]]}"#).check(), Ok(()), "{kind}");
+        }
+        assert_eq!(chart("scatter", "number", r#"{"name":"a","points":[["3",5],["-1.5e2",2]]}"#).check(), Ok(()));
+        assert_eq!(chart("line", "time", r#"{"name":"a","points":[["2026-10-12",5],["2026-10-13T08:30:00Z",2]]}"#).check(), Ok(()));
+    }
+
+    #[test]
+    fn check_rejects_a_number_x_that_is_not_a_number() {
+        assert_eq!(chart("scatter", "number", r#"{"name":"a","points":[["abc",1]]}"#).check(),
+                   Err(r#"x "abc" is not a number (x: number)"#.into()));
+    }
+
+    #[test]
+    fn check_rejects_a_time_x_that_is_not_a_date() {
+        assert_eq!(chart("line", "time", r#"{"name":"a","points":[["yesterday",1]]}"#).check(),
+                   Err(r#"x "yesterday" is not a date YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)] (x: time)"#.into()));
+    }
+
+    #[test]
+    fn check_rejects_a_scatter_over_categories() {
+        assert_eq!(chart("scatter", "category", r#"{"name":"a","points":[["x",1]]}"#).check(),
+                   Err("a scatter's x is number or time".into()));
+    }
+
+    #[test]
+    fn check_rejects_a_pie_with_two_series() {
+        let one = r#"{"name":"a","points":[["x",1]]}"#;
+        assert_eq!(chart("pie", "category", &format!("{one},{one}")).check(), Err("a pie has exactly 1 series, not 2".into()));
+        assert_eq!(chart("pie", "category", r#"{"name":"a","points":[["x",-1]]}"#).check(), Err("a pie value is below 0: x -1".into()));
+    }
+
+    #[test]
+    fn check_rejects_stacked_or_area_series_that_disagree_on_x() {
+        for kind in ["stacked_bar", "area", "line"] {
+            let e = chart(kind, "category", r#"{"name":"a","points":[["x",1],["y",2]]},{"name":"b","points":[["y",1],["x",2]]}"#).check();
+            assert_eq!(e, Err(format!("every series of a {kind} chart has the same x, in the same order")), "{kind}");
+        }
+        // A grouped bar may leave an x out.
+        assert_eq!(chart("bar", "category", r#"{"name":"a","points":[["x",1],["y",2]]},{"name":"b","points":[["y",1]]}"#).check(), Ok(()));
+    }
+
+    #[test]
+    fn a_widget_chart_may_be_empty_a_model_chart_may_not() {
+        let empty = chart("bar", "category", r#"{"name":"rows","points":[]}"#);
+        assert_eq!(empty.check(), Err("a chart has no points".into()));
+        assert_eq!(empty.check_allow_empty(), Ok(()));
+        let none = decode(r#"{"kind":"chart","props":{"chart":"bar","x":"category","series":[]}}"#);
+        assert_eq!(none.check_allow_empty(), Err("a chart has no series".into()));
+        // Empty is allowed only as itself; anything else still meets every cap.
+        assert!(chart("pie", "category", r#"{"name":"a","points":[["x",1]]},{"name":"b","points":[]}"#).check_allow_empty().is_err());
+    }
+
+    #[test]
+    fn a_chart_names_its_axis() {
+        let raw = r#"{"kind":"chart","props":{"chart":"bar","series":[{"name":"a","points":[["x",1]]}]}}"#;
+        assert!(serde_json::from_str::<Component>(raw).is_err(), "x is required on the wire");
+    }
+
+    /// Through check(), so the matcher is the one a time chart meets.
+    fn is_date(x: &str) -> bool {
+        chart("line", "time", &format!(r#"{{"name":"a","points":[[{}, 1]]}}"#, serde_json::to_string(x).unwrap())).check().is_ok()
+    }
+
+    #[test]
+    fn date_matcher_table() {
+        for ok in ["2026-10-13", "2024-02-29", "2000-02-29", "2026-12-31T23:59:59Z", "2026-01-01T00:00:00+02:00",
+                   "2026-01-01T00:00:00-11:30", "0001-01-01"] {
+            assert!(is_date(ok), "{ok} is a date");
+        }
+        for bad in ["2026-02-30", "2025-02-29", "1900-02-29", "2026-13-01", "2026-00-10", "2026-04-31", "2026-10-1",
+                    "26-10-13", "2026/10/13", "2026-10-13T", "2026-10-13T10:00", "2026-10-13T10:00:00", "2026-10-13T24:00:00Z",
+                    "2026-10-13T10:60:00Z", "2026-10-13T10:00:60Z", "2026-10-13T10:00:00+2:00", "2026-10-13T10:00:00+24:00",
+                    "2026-10-13 10:00:00Z", "2026-10-13T10:00:00.5Z", " 2026-10-13", "２０２６-10-13", "yesterday", ""] {
+            assert!(!is_date(bad), "{bad:?} is not a date");
+        }
+    }
 }
