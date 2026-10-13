@@ -194,6 +194,20 @@ approval: only propose_row_edit does, and query_rows draws its own table.";
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
 const SHOW_KINDS: [&str; 4] = ["table", "list", "record", "chart"];
 
+/// The props a kind accepts, so a refusal can show the shape to retry.
+const SHOW_SHAPE: &[(&str, &str)] = &[
+    ("table", "{title?, columns[] <=12, rows[][] <=50, each row as long as columns}"),
+    ("list", "{title?, ordered, items[{text, detail?, tone? ok|info|warn|bad}] <=50}"),
+    ("record", "{title?, fields[{key, value}] <=40}"),
+    ("chart", "{title?, chart bar|line, series[{name, points[[x, number]] <=60}] <=6}; a line's series share the same x"),
+];
+
+fn expected_shape(kind: &str) -> String {
+    SHOW_SHAPE.iter().find(|(k, _)| *k == kind).map(|(_, s)| (*s).to_string()).unwrap_or_else(|| {
+        SHOW_SHAPE.iter().map(|(k, s)| format!("{k} {s}")).collect::<Vec<_>>().join("; ")
+    })
+}
+
 /// One `oneOf` branch per kind; the descriptions are thalamus-shell.yml's vocabulary lines.
 fn show_schema() -> Value {
     let title = json!({"type": "string", "maxLength": 120});
@@ -346,7 +360,10 @@ rows of a DataTable call query_rows (its total is the exact count); propose_row_
 asked for, never to look at a row. To show structured output call show (table, list, record, \
 chart); plain text may use markdown, nothing else. To count per value (for a chart) call query_rows with \
 group_by. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
-repeat in text what a tool or show already drew. It is now {} UTC.", who.username, now_utc());
+repeat in text what a tool or show already drew. Shape -> component: count per value -> chart via group_by; \
+many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree. \
+Conclusion first, in one line. Never invent data: no numbers, no chart. Draw only when it helps: no visual for \
+small talk or a one-line answer. It is now {} UTC.", who.username, now_utc());
         let (model, system) = match imprint {
             Ok((m, t)) => (Ok(m), format!("{}\n\n{iris}", t.trim_end())),
             Err(why) => (Err(why), iris),
@@ -864,14 +881,16 @@ repeat in text what a tool or show already drew. It is now {} UTC.", who.usernam
 /// It can only become a Render; an approval is minted by ask() alone.
 fn show(args: &Value) -> Result<Component, String> {
     if let Some(k) = args.as_object().and_then(|a| a.keys().find(|k| *k != "component")) {
-        return Err(format!("show has no parameter `{k}`; it takes `component`"));
+        return Err(format!("show has no parameter `{k}`; it takes `component`; expected shape: {}", expected_shape("")));
     }
     let kind = args.pointer("/component/kind").and_then(Value::as_str).unwrap_or("");
+    let shape = expected_shape(kind);
     if !SHOW_KINDS.contains(&kind) {
-        return Err(format!("show draws {}, not {kind:?}", SHOW_KINDS.join(", ")));
+        return Err(format!("show draws {}, not {kind:?}; expected shape: {shape}", SHOW_KINDS.join(", ")));
     }
-    let c = serde_json::from_value::<Component>(args["component"].clone()).map_err(|e| format!("show {kind}: {e}"))?;
-    c.check().map_err(|e| format!("show {kind}: {e}"))?;
+    let bad = |e: String| format!("show {kind}: {e}; expected shape: {shape}");
+    let c = serde_json::from_value::<Component>(args["component"].clone()).map_err(|e| bad(e.to_string()))?;
+    c.check().map_err(bad)?;
     Ok(c)
 }
 
