@@ -41,3 +41,13 @@ fn every_fixture_case_is_checked_and_drawn() {
         }
     }
 }
+
+/// A show kind with no bench case is a renderer the bench never draws.
+#[test]
+fn every_show_kind_has_a_bench_case() {
+    let raw = std::fs::read_to_string(repo().join("state/fixtures/iris-genui-bench.yml")).unwrap();
+    let cases: Vec<serde_yaml_ng::Value> = serde_yaml_ng::from_str(&raw).unwrap();
+    let benched: std::collections::BTreeSet<&str> = cases.iter().filter_map(|c| c["kind"].as_str()).collect();
+    let missing: Vec<&str> = thalamus::serve::SHOW_KINDS.iter().copied().filter(|k| !benched.contains(k)).collect();
+    assert!(missing.is_empty(), "show kinds with no case in iris-genui-bench.yml: {missing:?}");
+}

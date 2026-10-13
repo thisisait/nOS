@@ -1263,3 +1263,26 @@ fn the_prompt_picks_a_component_by_shape_and_a_refusal_shows_it() {
     assert!(msg.contains("expected shape:"), "the refusal must show the accepted shape: {msg}");
     assert!(msg.contains("items[{text, detail?, tone?"), "the list shape is missing: {msg}");
 }
+
+// --- genui I5a: one list of show kinds, so a fifth hand-kept copy cannot drift ---
+
+/// The model-facing kinds named in four places in serve.rs and once in the spec must be one set.
+#[test]
+fn show_kinds_agree_everywhere() {
+    let kinds: Vec<&str> = serve::SHOW_KINDS.to_vec();
+    let shape: Vec<&str> = serve::SHOW_SHAPE.iter().map(|(k, _)| *k).collect();
+    assert_eq!(shape, kinds, "SHOW_SHAPE keys");
+    let schema = serve::show_schema();
+    let consts: Vec<&str> = schema["properties"]["component"]["oneOf"].as_array().unwrap().iter()
+        .map(|b| b["properties"]["kind"]["const"].as_str().unwrap()).collect();
+    assert_eq!(consts, kinds, "show_schema oneOf kind consts");
+    let spec = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../contracts/thalamus-shell.yml")).unwrap();
+    let spec: serde_yaml_ng::Value = serde_yaml_ng::from_str(&spec).unwrap();
+    let tool_chosen = ["table_results", "row_diff_approval", "inbox_list", "approvals_list", "red_status", "markdown", "form"];
+    let mut vocab: Vec<String> = spec["components"]["vocabulary"].as_mapping().unwrap().keys()
+        .map(|k| k.as_str().unwrap().to_string()).filter(|k| !tool_chosen.contains(&k.as_str())).collect();
+    let mut want: Vec<String> = kinds.iter().map(|k| k.to_string()).collect();
+    vocab.sort();
+    want.sort();
+    assert_eq!(vocab, want, "thalamus-shell.yml vocabulary minus the tool-chosen kinds");
+}
