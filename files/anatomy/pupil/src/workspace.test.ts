@@ -125,7 +125,8 @@ describe('the chat panel', () => {
 describe('age', () => {
 	it('says how old an answer is, or that it went stale', () => {
 		expect(age({ component: null, error: null, at: 1000 }, 13_400)).toBe('12 s ago');
-		expect(age({ component: null, error: null, at: 0 }, 180_000)).toBe('3 min ago');
+		expect(age({ component: null, error: null, at: 1 }, 180_000)).toBe('3 min ago');
+		expect(age({ component: null, error: null, at: 0 }, 9), 'at 0: restored, no answer yet').toBe('not run yet');
 		expect(age({ component: null, error: null, at: 1000, stale: true }, 2000)).toBe('stale: the table changed');
 		expect(age(undefined, 1)).toBe('not run yet');
 	});
