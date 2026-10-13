@@ -9,6 +9,7 @@
 	import { severityTone } from '$ui/tone';
 	import Chart from './Chart.svelte';
 	import Markdown from './Markdown.svelte';
+	import Timeline from './Timeline.svelte';
 	import { cell, shown, type Component, type TreeNode } from './wire';
 
 	let { component }: { component: Component } = $props();
@@ -148,18 +149,8 @@
 			<ul class="tree" data-layout="list">{@render listNodes(t.nodes)}</ul>
 		{/if}
 	{:else if component.kind === 'timeline'}
-		{@const t = component.props}
-		{#if t.title}<h3>{t.title}</h3>{/if}
-		<ol class="timeline" data-layout={t.items.length <= 6 ? 'horizontal' : 'vertical'}>
-			{#each t.items as it}
-				<li>
-					<span class="when">{it.when}</span>
-					<span>{it.title}</span>
-					{#if it.note}<span class="muted"> — {it.note}</span>{/if}
-					{#if it.hi}<span class="hi">hi</span>{/if}
-				</li>
-			{/each}
-		</ol>
+		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
+		<Timeline timeline={component.props} />
 	{:else}
 		<!-- Unreachable past the bridge's decoder; said aloud if it ever is. -->
 		<StatusNote kind="error" title="refused">no renderer for component kind {(component as { kind: string }).kind}</StatusNote>
@@ -280,28 +271,6 @@
 		border-top: 1px solid var(--glass-brd);
 		margin-top: 6px;
 		padding-top: 8px;
-	}
-	.timeline {
-		display: flex;
-		gap: 10px;
-		list-style: none;
-		margin: 0;
-		padding: 0;
-	}
-	.timeline[data-layout='vertical'] {
-		flex-direction: column;
-	}
-	.timeline li {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-	.when,
-	.hi {
-		font-family: ui-monospace, monospace;
-	}
-	.hi {
-		font-weight: 700;
 	}
 	.muted {
 		color: var(--muted);
