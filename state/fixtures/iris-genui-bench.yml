@@ -77,3 +77,42 @@
     - query_rows
     - I4c
     - "2"
+- id: tree-steps
+  kind: tree
+  component:
+    kind: tree
+    props:
+      title: Roadmap
+      nodes:
+        - label: nOS
+          children:
+            - label: pupil
+              note: the eye
+            - label: keap
+  expect:
+    - Roadmap
+    - nOS
+    - pupil
+    - the eye
+    - keap
+- id: timeline-steps
+  kind: timeline
+  component:
+    kind: timeline
+    props:
+      title: History
+      items:
+        - when: "2026-10-12"
+          title: I4a landed
+          note: query_rows
+        - when: "2026-10-13"
+          title: chart
+          hi: true
+  expect:
+    - History
+    - "2026-10-12"
+    - I4a landed
+    - query_rows
+    - "2026-10-13"
+    - chart
+    - hi

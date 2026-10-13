@@ -327,4 +327,38 @@ mod tests {
         assert!(list(50).check().is_ok());
         assert_eq!(list(51).check(), Err("list items: 51, at most 50".into()));
     }
+
+    fn decode(raw: &str) -> Component {
+        serde_json::from_str(raw).unwrap_or_else(|e| panic!("component does not decode: {e}"))
+    }
+
+    /// A chain of `depth` nodes, root first.
+    fn chain(depth: usize) -> String {
+        let mut n = r#"{"label":"leaf"}"#.to_string();
+        for i in (0..depth - 1).rev() {
+            n = format!(r#"{{"label":"n{i}","children":[{n}]}}"#);
+        }
+        format!(r#"{{"kind":"tree","props":{{"nodes":[{n}]}}}}"#)
+    }
+
+    #[test]
+    fn check_rejects_a_tree_deeper_than_4_or_over_100_nodes() {
+        let ok = r#"{"kind":"tree","props":{"title":"Roadmap","nodes":[{"label":"nOS","children":[{"label":"pupil","note":"the eye"},{"label":"keap"}]}]}}"#;
+        assert!(decode(ok).check().is_ok());
+        assert!(decode(&chain(4)).check().is_ok());
+        assert_eq!(decode(&chain(5)).check(), Err("tree depth: 5, at most 4".into()));
+        let nodes = (0..101).map(|i| format!(r#"{{"label":"n{i}"}}"#)).collect::<Vec<_>>().join(",");
+        assert_eq!(decode(&format!(r#"{{"kind":"tree","props":{{"nodes":[{nodes}]}}}}"#)).check(), Err("tree nodes: 101, at most 100".into()));
+        assert_eq!(decode(r#"{"kind":"tree","props":{"nodes":[]}}"#).check(), Err("a tree has no nodes".into()));
+    }
+
+    #[test]
+    fn check_rejects_a_timeline_over_30_items() {
+        let ok = r#"{"kind":"timeline","props":{"title":"History","items":[{"when":"2026-10-12","title":"I4a landed","note":"query_rows"},{"when":"2026-10-13","title":"chart","hi":true}]}}"#;
+        assert!(decode(ok).check().is_ok());
+        let items = |n: usize| (0..n).map(|i| format!(r#"{{"when":"d{i}","title":"t{i}"}}"#)).collect::<Vec<_>>().join(",");
+        assert!(decode(&format!(r#"{{"kind":"timeline","props":{{"items":[{}]}}}}"#, items(30))).check().is_ok());
+        assert_eq!(decode(&format!(r#"{{"kind":"timeline","props":{{"items":[{}]}}}}"#, items(31))).check(), Err("timeline items: 31, at most 30".into()));
+        assert_eq!(decode(r#"{"kind":"timeline","props":{"items":[]}}"#).check(), Err("a timeline has no items".into()));
+    }
 }

@@ -1191,6 +1191,41 @@ fn the_prompt_says_the_time_and_to_admit_what_no_tool_sees() {
 }
 
 #[test]
+fn show_draws_a_tree_and_a_timeline_and_refuses_over_cap() {
+    let tree = serde_json::json!({"kind": "tree", "props": {"title": "Roadmap", "nodes": [
+        {"label": "nOS", "children": [{"label": "pupil", "note": "the eye"}, {"label": "keap"}]}]}});
+    let timeline = serde_json::json!({"kind": "timeline", "props": {"title": "History", "items": [
+        {"when": "2026-10-12", "title": "I4a landed", "note": "query_rows"},
+        {"when": "2026-10-13", "title": "chart", "hi": true}]}});
+    let mut deep = serde_json::json!({"label": "leaf"});
+    for i in (0..4).rev() {
+        deep = serde_json::json!({"label": format!("n{i}"), "children": [deep]});
+    }
+    let deep = serde_json::json!({"kind": "tree", "props": {"nodes": [deep]}});
+    let nodes: Vec<_> = (0..101).map(|i| serde_json::json!({"label": format!("n{i}")})).collect();
+    let wide = serde_json::json!({"kind": "tree", "props": {"nodes": nodes}});
+    let items: Vec<_> = (0..31).map(|i| serde_json::json!({"when": format!("d{i}"), "title": format!("t{i}")})).collect();
+    let long = serde_json::json!({"kind": "timeline", "props": {"items": items}});
+    let bad = [
+        (deep, "tree depth: 5, at most 4"),
+        (wide, "tree nodes: 101, at most 100"),
+        (long, "timeline items: 31, at most 30"),
+    ];
+    let mut model = vec![show(tree), show(timeline)];
+    model.extend(bad.iter().map(|(c, _)| show(c.clone())));
+    model.push(answer("done"));
+    let rig = rig("treetime", mapped(), ROWS, model);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "show the shape");
+    assert_eq!(drawn_kinds(&got), ["tree", "timeline"], "only the valid kinds are drawn: {got:?}");
+    for (i, (_, want)) in bad.iter().enumerate() {
+        let e = tool_result(&rig, i + 3);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "show #{} must be refused naming {want}: {e}", i + 3);
+    }
+}
+
+#[test]
 fn a_blank_answer_is_said_not_drawn_empty() {
     let rig = rig("blank", mapped(), ROWS, vec![answer("  ")]);
     let s = connect(&rig.sock);
