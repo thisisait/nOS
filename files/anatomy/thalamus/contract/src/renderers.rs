@@ -19,6 +19,8 @@ pub enum Component {
     List(List),
     Record(Record),
     Chart(Chart),
+    Tree(Tree),
+    Timeline(Timeline),
 }
 
 /// Model text as markdown; every consumer draws it as text nodes, never as HTML.
@@ -40,6 +42,23 @@ fn cap(what: &str, s: &str, max: usize) -> Result<(), String> {
 
 fn most(what: &str, n: usize, max: usize) -> Result<(), String> {
     if n > max { Err(format!("{what}: {n}, at most {max}")) } else { Ok(()) }
+}
+
+fn is_false(b: &bool) -> bool {
+    !*b
+}
+
+/// Depth 1 is the root. Over 4, or over 100 nodes in the whole tree, is refused.
+fn tree_nodes(n: &TreeNode, depth: usize, count: &mut usize) -> Result<(), String> {
+    *count += 1;
+    if depth > 4 {
+        return Err(format!("tree depth: {depth}, at most 4"));
+    }
+    cap("a tree label", &n.label, NAME_MAX)?;
+    if let Some(note) = &n.note {
+        cap("a tree note", note, 2000)?;
+    }
+    n.children.iter().try_for_each(|c| tree_nodes(c, depth + 1, count))
 }
 
 /// Titles, column names and record keys.
@@ -107,6 +126,27 @@ impl Component {
                 }
                 Ok(())
             }
+            Component::Tree(t) => {
+                title(&t.title)?;
+                if t.nodes.is_empty() {
+                    return Err("a tree has no nodes".into());
+                }
+                let mut count = 0;
+                t.nodes.iter().try_for_each(|n| tree_nodes(n, 1, &mut count))?;
+                most("tree nodes", count, 100)
+            }
+            Component::Timeline(t) => {
+                title(&t.title)?;
+                if t.items.is_empty() {
+                    return Err("a timeline has no items".into());
+                }
+                most("timeline items", t.items.len(), 30)?;
+                t.items.iter().try_for_each(|it| {
+                    cap("a timeline when", &it.when, NAME_MAX)?;
+                    cap("a timeline title", &it.title, 500)?;
+                    it.note.as_deref().map_or(Ok(()), |d| cap("a timeline note", d, 2000))
+                })
+            }
             _ => Ok(()),
         }
     }
@@ -135,6 +175,45 @@ pub struct Series {
     pub name: String,
     /// (x label, value); JSON has no NaN or infinity, so every value is finite.
     pub points: Vec<(String, f64)>,
+}
+
+/// A hierarchy. One root with 2–4 children is drawn as an org chart; otherwise a nested list.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Tree {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub nodes: Vec<TreeNode>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TreeNode {
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<TreeNode>,
+}
+
+/// A history. Horizontal up to 6 items, vertical beyond. `hi` is said as a word.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Timeline {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub items: Vec<TimelineItem>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TimelineItem {
+    pub when: String,
+    pub title: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub hi: bool,
 }
 
 /// Rows the model shows: `columns` names each cell of every row, in order.

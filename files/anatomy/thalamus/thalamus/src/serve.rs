@@ -192,7 +192,7 @@ approval: only propose_row_edit does, and query_rows draws its own table.";
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
-const SHOW_KINDS: [&str; 4] = ["table", "list", "record", "chart"];
+const SHOW_KINDS: [&str; 6] = ["table", "list", "record", "chart", "tree", "timeline"];
 
 /// The props a kind accepts, so a refusal can show the shape to retry.
 const SHOW_SHAPE: &[(&str, &str)] = &[
@@ -200,6 +200,8 @@ const SHOW_SHAPE: &[(&str, &str)] = &[
     ("list", "{title?, ordered, items[{text, detail?, tone? ok|info|warn|bad}] <=50}"),
     ("record", "{title?, fields[{key, value}] <=40}"),
     ("chart", "{title?, chart bar|line, series[{name, points[[x, number]] <=60}] <=6}; a line's series share the same x"),
+    ("tree", "{title?, nodes[{label, note?, children[]}]}, depth <=4, nodes <=100"),
+    ("timeline", "{title?, items[{when, title, note?, hi?}] <=30}"),
 ];
 
 fn expected_shape(kind: &str) -> String {
@@ -233,7 +235,13 @@ a line's series share the same x in the same order",
                 "series": {"type": "array", "minItems": 1, "maxItems": 6, "items": closed(&["name", "points"], json!({
                     "name": {"type": "string", "maxLength": 120},
                     "points": {"type": "array", "maxItems": 60, "items": {"type": "array", "minItems": 2, "maxItems": 2,
-                        "prefixItems": [{"type": "string", "maxLength": 120}, {"type": "number"}]}}}))}})))]}}})
+                        "prefixItems": [{"type": "string", "maxLength": 120}, {"type": "number"}]}}}))}}))),
+        branch("tree", "a hierarchy: {title?, nodes[{label, note?, children[]}]}, depth <=4, at most 100 nodes",
+            closed(&["nodes"], json!({"title": title, "nodes": {"type": "array", "maxItems": 100}}))),
+        branch("timeline", "a history: {title?, items[{when, title, note?, hi?}] <=30}",
+            closed(&["items"], json!({"title": title, "items": {"type": "array", "maxItems": 30, "items": closed(&["when", "title"], json!({
+                "when": {"type": "string", "maxLength": 120}, "title": {"type": "string", "maxLength": 500},
+                "note": {"type": "string", "maxLength": 2000}, "hi": {"type": "boolean"}}))}})))]}}})
 }
 
 const QUERY_KEYS: [&str; 7] = ["table", "q", "where", "columns", "order_by", "limit", "group_by"];
@@ -886,7 +894,7 @@ fn show(args: &Value) -> Result<Component, String> {
     let kind = args.pointer("/component/kind").and_then(Value::as_str).unwrap_or("");
     let shape = expected_shape(kind);
     if !SHOW_KINDS.contains(&kind) {
-        return Err(format!("show draws {}, not {kind:?}; expected shape: {shape}", SHOW_KINDS.join(", ")));
+        return Err(format!("show draws table, list, record, chart, not {kind:?}; tree and timeline are drawn too; expected shape: {shape}"));
     }
     let bad = |e: String| format!("show {kind}: {e}; expected shape: {shape}");
     let c = serde_json::from_value::<Component>(args["component"].clone()).map_err(|e| bad(e.to_string()))?;

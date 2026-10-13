@@ -1,13 +1,6 @@
 edit roadmap / backup-restic-fork — nothing is written unless you approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-2. propose
-
-```
-nos dtt list roadmap
-```
-
-See [the doctrine](https://thisisait.eu) and [a local file](file:///etc/passwd).
 inbox — 1 waiting
   capture    Read later: HKDF notes  2026-10-11T08:00:00Z  (cap-01)
   ? promotions: not yours to moderate
@@ -35,6 +28,13 @@ pupil-i4
 bar chart Rows by status: 2 series, not drawn here
   roadmap: next=23, active=4, done=95
   ideas: next=7, active=1, done=12.5
+Roadmap
+  nOS
+    pupil — the eye
+    keak
+History
+  2026-10-12  I4a — query_rows
+  2026-10-13  chart hi
 refused: login carol has no row in the identity map
 approve this edit? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit

@@ -1,5 +1,5 @@
 {
-  "contract_version": 3,
+  "contract_version": 4,
   "to_thalamus": [
     {"case": "first turn opens a session", "msg": {"t": "turn", "session": null, "text": "find rows about backups in the roadmap"}},
     {"case": "turn in a session", "msg": {"t": "turn", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "text": "set its status to done"}},
@@ -31,6 +31,8 @@
     {"case": "a list the model shows", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "list", "props": {"title": "Next steps", "ordered": true, "items": [{"text": "query_rows", "detail": "landed in I4a", "tone": "ok"}, {"text": "chart", "detail": "not built yet", "tone": "warn"}, {"text": "show"}]}}}},
     {"case": "a record the model shows", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "record", "props": {"title": "pupil-i4", "fields": [{"key": "status", "value": "active"}, {"key": "increments", "value": {"done": ["I4a", "I4b"], "next": "I4c"}}, {"key": "ordinal", "value": 4}]}}}},
     {"case": "a chart the model shows", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "chart", "props": {"title": "Rows by status", "chart": "bar", "series": [{"name": "roadmap", "points": [["next", 23.0], ["active", 4.0], ["done", 95.0]]}, {"name": "ideas", "points": [["next", 7.0], ["active", 1.0], ["done", 12.5]]}]}}}},
+    {"case": "a tree the model shows", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "tree", "props": {"title": "Roadmap", "nodes": [{"label": "nOS", "children": [{"label": "pupil", "note": "the eye"}, {"label": "keak"}]}]}}}},
+    {"case": "a timeline the model shows", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "timeline", "props": {"title": "History", "items": [{"when": "2026-10-12", "title": "I4a", "note": "query_rows"}, {"when": "2026-10-13", "title": "chart", "hi": true}]}}}},
     {"case": "a row edit awaits approval", "msg": {"t": "approval_request", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "approval": "7d1c2b3a-4e5f-4a6b-9c8d-1e2f3a4b5c6d", "component": {"kind": "row_diff_approval", "props": {
       "table": "roadmap", "row_id": "backup-restic-fork",
       "cells": [{"key": "status", "old": "open", "new": "done"}, {"key": "note", "old": null, "new": "landed"}]}}}},

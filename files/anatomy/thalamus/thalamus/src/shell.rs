@@ -2,7 +2,7 @@
 //! what the person typed or pressed, and renders only the closed component vocabulary.
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
-use nos_contract::renderers::{Component, Tone};
+use nos_contract::renderers::{Component, Tone, TreeNode};
 use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ToShell, ToThalamus};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -173,6 +173,27 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
             for s in &c.series {
                 let pts: Vec<String> = s.points.iter().map(|(x, y)| format!("{x}={y}")).collect();
                 out.push(Line::from(format!("  {}: {}", s.name, pts.join(", "))));
+            }
+        }
+        Component::Tree(t) => {
+            out.extend(t.title.clone().map(head));
+            fn walk(out: &mut Vec<Line<'static>>, n: &TreeNode, depth: usize) {
+                let note = n.note.as_deref().map(|d| format!(" — {d}")).unwrap_or_default();
+                out.push(Line::from(format!("{}{}{note}", "  ".repeat(depth), n.label)));
+                for c in &n.children {
+                    walk(out, c, depth + 1);
+                }
+            }
+            for n in &t.nodes {
+                walk(&mut out, n, 1);
+            }
+        }
+        Component::Timeline(t) => {
+            out.extend(t.title.clone().map(head));
+            for it in &t.items {
+                let note = it.note.as_deref().map(|d| format!(" — {d}")).unwrap_or_default();
+                let hi = if it.hi { " hi" } else { "" };
+                out.push(Line::from(format!("  {}  {}{note}{hi}", it.when, it.title)));
             }
         }
     }

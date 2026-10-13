@@ -53,7 +53,7 @@ fn every_fixture_component_matches_its_snapshot() {
     }
     kinds.sort();
     assert_eq!(kinds, ["approvals_list", "chart", "inbox_list", "list", "markdown", "record", "red_status", "row_diff_approval", "table",
-                       "table_results"],
+                       "table_results", "timeline", "tree"],
                "one snapshot per component in the closed vocabulary");
 }
 

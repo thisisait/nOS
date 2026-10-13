@@ -5,7 +5,14 @@ import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import Component from './Component.svelte';
 
-const text = (html: string) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+const text = (html: string) =>
+	html
+		.replace(/<[^>]*>/g, ' ')
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&amp;/g, '&')
+		.replace(/\s+/g, ' ')
+		.trim();
 const draw = (component: object) => {
 	const html = render(Component, { props: { component: component as never } }).body;
 	return { html, text: text(html) };

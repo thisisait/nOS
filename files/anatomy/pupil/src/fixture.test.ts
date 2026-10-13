@@ -21,6 +21,8 @@ const PROPS: Record<string, string[]> = {
 	list: ['items', 'ordered', 'title'],
 	record: ['fields', 'title'],
 	chart: ['chart', 'series', 'title'],
+	tree: ['nodes', 'title'],
+	timeline: ['items', 'title'],
 };
 const KINDS = Object.keys(PROPS);
 
