@@ -83,7 +83,8 @@ describe('the time layout', () => {
 			const t = layoutTimeline(many, 320, zoom, 0);
 			const texts = [...t.lanes.map((l) => ({ t: l.t, x: l.x, anchor: 'end' })), ...t.xLabels.map((l) => ({ ...l, anchor: 'middle' })),
 				...t.marks.flatMap((m) => (m.label ? [{ ...m.label, anchor: 'start' }] : []))];
-			expect(texts.length).toBeGreaterThan(30);
+			// At rest every row is labelled; zoomed in, most items are out of view and drop their label.
+			expect(texts.length).toBeGreaterThan(zoom === IDENTITY ? 30 : 4);
 			for (const l of texts) {
 				const w = l.t.length * t.FONT * 0.6;
 				const lo = l.anchor === 'end' ? l.x - w : l.anchor === 'middle' ? l.x - w / 2 : l.x;
