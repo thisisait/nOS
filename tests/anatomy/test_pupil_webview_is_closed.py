@@ -16,6 +16,10 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 PUPIL = REPO / "files/anatomy/pupil"
 CONF = PUPIL / "src-tauri/tauri.conf.json"
 RAW_HTML = re.compile(r"\{@html|innerHTML|outerHTML|insertAdjacentHTML|document\.write|DOMParser")
+# Markup that loads, links or embeds: a model string never needs one, and each is a way out.
+LINKING = re.compile(r"<foreignObject|<image\b|<a\b|<script|\bhref=|xlink:href")
+#: a .svelte file's own <script> / <script module> blocks open at column 0; markup is indented
+OWN_SCRIPT = re.compile(r"^</?script\b[^>]*>", re.M)
 PKG = PUPIL / "package.json"
 FACE_UI = REPO / "files/anatomy/face/src/lib/components/ui"  # vite.config.ts `$ui`
 # Every CSP source the pupil may name; style-src alone may also inline.
@@ -94,3 +98,22 @@ def test_tauri_dev_waits_for_the_page_it_embeds():
     before = json.loads(CONF.read_text(encoding="utf-8"))["build"]["beforeDevCommand"]
     assert isinstance(before, dict) and before.get("wait") is True, before
     assert "build" in before.get("script", ""), before
+
+
+def _linking(text: str) -> list[str]:
+    return LINKING.findall(OWN_SCRIPT.sub("", re.sub(r"<!--.*?-->", "", text, flags=re.S)))
+
+
+def test_the_link_scan_catches_a_planted_link():
+    for planted in ('\t<a href="https://x">x</a>', "\t<foreignObject>", '\t<image href="x"/>', "\t\t<script>x</script>",
+                    '<use xlink:href="#a"/>'):
+        assert _linking(planted), planted
+    assert not _linking('<script lang="ts">\n\tlet a = 1;\n</script>\n<circle fill="url(#eye-core)" />')
+
+
+def test_no_link_or_foreign_markup_in_the_pupil():
+    # Shipped files only: the tests name these strings to assert they never render.
+    files = [p for ext in ("svelte", "ts", "js") for p in (PUPIL / "src").rglob(f"*.{ext}") if not p.name.endswith(".test.ts")]
+    assert any(p.name == "Eye.svelte" for p in files), "the link scan does not see Eye.svelte"
+    bad = [f"{p.relative_to(REPO)}: {h}" for p in files for h in _linking(p.read_text(encoding="utf-8"))]
+    assert not bad, "a link, script or embed in the pupil (draw text, link nothing):\n  " + "\n  ".join(bad)
