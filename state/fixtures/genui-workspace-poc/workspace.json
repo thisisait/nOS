@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "active": "poc",
+  "chat": {"x": 880, "y": 16, "w": 380, "h": 560, "open": true},
+  "workspaces": [
+    {
+      "id": "poc",
+      "name": "Expenses",
+      "widgets": [
+        {"id": "rows", "title": "Expenses", "spec": {"rows": {"table": "expenses"}}, "x": 0, "y": 0, "w": 6, "h": 8},
+        {"id": "chart", "title": "Spend by kind", "spec": {"chart": {"query": {"table": "expenses"}, "chart": "bar", "x": "kind", "y": "amount", "op": "sum"}}, "x": 6, "y": 0, "w": 6, "h": 8},
+        {"id": "form", "title": "Add an expense", "spec": {"form": {"table": "expenses"}}, "x": 0, "y": 8, "w": 6, "h": 8}
+      ]
+    }
+  ]
+}

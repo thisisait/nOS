@@ -1,0 +1,4 @@
+{"success": true, "data": {"id": "expenses", "title": "Expenses", "schema": {"columns": [
+  {"key": "when", "label": "When", "kind": "date", "required": false},
+  {"key": "kind", "label": "Kind", "kind": "select", "required": false, "options": ["food", "travel", "tools"]},
+  {"key": "amount", "label": "Amount", "kind": "number", "required": true}]}}}

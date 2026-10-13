@@ -44,14 +44,32 @@ ruling 2026-10-11), it does not go through the receptor's socket.
   to the ledger as `agent_approval_request`, then shown as `row_diff_approval`.
   Only an approve decision for that request, in that session, by that person,
   lets the one POST through. Reject writes nothing to KEAP.
-- `show{component}`: draws one `table`, `list`, `record`, `markdown` or `chart`
-  (bar or line; inline SVG in the pupil, values as text in the terminal) the model
-  builds. Unknown fields and over-cap components are refused (`Component::check`,
+- `show{component}`: draws one component of `SHOW_KINDS` (serve.rs; among them
+  `chart` in six kinds over a category, number or time axis, `timeline`, `graph`;
+  inline SVG in the pupil, values as text in the terminal) the model builds. Unknown fields and over-cap components are refused (`Component::check`,
   also in every shell's decoder) and only the model hears why. It can never draw
   an approval or a kind a tool or a control draws.
 
 The shell raises three views without the model: F2 inbox, F3 approvals
 (`tools/awaiting-operator.py`), F4 red status (`tools/red-status.py`).
+
+## Widgets and forms
+
+A widget is a spec the pupil stores in its workspace layout
+(`files/anatomy/contracts/workspace-layout.yml`) and re-runs as the person over a
+`widget` message, without the model: `rows` (a `query_rows`), `chart` (serve
+groups and sums, counts or averages one column server side) or `form` (built by
+serve from the live KEAP schema; the model has no form). A widget run never
+extends what the model was shown, and each one is a ToolUse/ToolResult pair
+(`widget_rows|widget_chart|widget_form`) with its spec and `trigger`.
+
+Submitting a widget form is the person's decision: under tool `form_submit` the
+ledger gets the request (`op: insert`), the decision and the result, each with
+the peer's `{pid, exe}` (recorded, not yet enforced); `commit()` does the one
+POST, and the shell gets `form_result` and `table_changed`. The pupil then
+re-runs the widgets on the active tab that read that table; the rest go stale
+until their tab is shown. The whole path runs offline in
+`tests/anatomy/test_genui_workspace_poc.py` over `state/fixtures/genui-workspace-poc/`.
 
 ## The model
 

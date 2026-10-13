@@ -1,0 +1,5 @@
+[
+  {"id": "x1", "values": {"when": 1790812800, "kind": "food", "amount": 12.5}},
+  {"id": "x2", "values": {"when": 1791158400, "kind": "travel", "amount": 80}},
+  {"id": "x3", "values": {"when": 1791590400, "kind": "tools", "amount": 7}}
+]
