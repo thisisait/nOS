@@ -16,7 +16,8 @@ export type Component =
 	| { kind: 'record'; props: { title?: string; fields: { key: string; value: Value }[] } }
 	| { kind: 'chart'; props: { title?: string; chart: 'bar' | 'stacked_bar' | 'line' | 'area' | 'scatter' | 'pie'; x: 'category' | 'number' | 'time'; series: { name: string; points: [string, number][] }[] } }
 	| { kind: 'tree'; props: { title?: string; nodes: TreeNode[] } }
-	| { kind: 'timeline'; props: { title?: string; items: { when: string; title: string; note?: string; hi?: boolean; until?: string; lane?: string }[] } };
+	| { kind: 'timeline'; props: { title?: string; items: { when: string; title: string; note?: string; hi?: boolean; until?: string; lane?: string }[] } }
+	| { kind: 'graph'; props: { title?: string; nodes: { id: string; label: string; note?: string; tone?: 'ok' | 'info' | 'warn' | 'bad' }[]; edges: { from: string; to: string; label?: string; dashed?: boolean }[] } };
 
 export type TreeNode = { label: string; note?: string; children?: TreeNode[] };
 
