@@ -117,6 +117,16 @@ describe('the pupil renders the contract fixture', () => {
 		expect(text(html)).toContain(body.trim());
 	});
 
+	// Live 2026-10-13: a count (limit 0) drew "0 of 118 matched" over a header row of every column.
+	it('a count draws the count, not an empty table', () => {
+		const msg: ToShell = { t: 'render', session: 's', component: { kind: 'table_results', props: {
+			table: 'roadmap', name: 'nOS Roadmap', query: 'track = security', matched: 118, total: 700,
+			columns: ['slug', 'body'], projected: false, rows: [] } } };
+		const html = render(Message, { props: { msg } }).body;
+		expect(html).not.toContain('<table');
+		expect(text(html)).toContain('nOS Roadmap — 118 matched (700 rows)');
+	});
+
 	it('a tool the thalamus runs is said in the log', () => {
 		const html = draw({ t: 'activity', session: 's', phase: { tool: { name: 'query_rows' } } });
 		expect(html).toContain('query_rows');

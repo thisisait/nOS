@@ -1035,7 +1035,7 @@ fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
     assert_eq!(names, ["query_rows", "propose_row_edit", "show"]);
-    assert!(p.contains("To show structured output call show (table, list, record, markdown, chart)"), "{p}");
+    assert!(p.contains("To show structured output call show (table, list, record, chart)"), "{p}");
     assert_eq!(body["tools"][0]["function"]["parameters"]["required"], serde_json::json!(["table"]), "q is optional");
 }
 
@@ -1060,7 +1060,8 @@ fn show_renders_a_valid_component_and_refuses_an_invalid_one() {
         (serde_json::json!({"kind": "pie_chart", "props": {}}), "pie_chart"),
         (serde_json::json!({"kind": "list", "props": {"ordered": false, "items": [{"text": "x", "html": "<b>"}]}}), "html"),
         (serde_json::json!({"kind": "table", "props": {"columns": ["a", "b"], "rows": [["x"]]}}), "row 1 has 1 cells"),
-        (serde_json::json!({"kind": "markdown", "props": {"text": "x".repeat(8001)}}), "8000"),
+        // Live 2026-10-13: a markdown show was then said again as text; text already draws as markdown.
+        (serde_json::json!({"kind": "markdown", "props": {"text": "x"}}), r#"show draws table, list, record, chart, not "markdown""#),
     ];
     let mut model = vec![show(list)];
     model.extend(bad.iter().map(|(c, _)| show(c.clone())));
@@ -1100,7 +1101,7 @@ fn show_cannot_render_an_approval_or_a_tool_chosen_kind() {
             "show drew a kind only a tool or an ask may: {got:?}");
     for (i, c) in chosen.iter().enumerate() {
         let e = tool_result(&rig, i + 1);
-        assert!(e["error"].as_str().is_some_and(|e| e.contains("show draws table, list, record, markdown, chart, not")),
+        assert!(e["error"].as_str().is_some_and(|e| e.contains("show draws table, list, record, chart, not")),
                 "{}: {e}", c["kind"]);
     }
     let session = session_of(&got);
@@ -1136,4 +1137,62 @@ fn show_draws_a_chart_and_refuses_a_pie_or_an_overfull_one() {
         let e = tool_result(&rig, i + 2);
         assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "show #{} must be refused naming {want}: {e}", i + 2);
     }
+}
+
+// --- live 2026-10-13: a chart by track, the time, a blank answer ---
+
+#[test]
+fn query_rows_groups_by_a_column_and_counts_exactly() {
+    // Live: "next rows as a chart by track" got 50 of 136 rows and no count per track, so no chart.
+    let rig = rig_n("group", mapped(), shown_then(&[]),
+        vec![query(r#"{"table": "todos", "group_by": "status"}"#), call("propose_row_edit", r#"{"table": "todos", "row_id": "open", "cells": {"title": "x"}}"#), answer("2 open.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "how many per status?");
+    let g = tool_result(&rig, 1);
+    assert_eq!(g["groups"], serde_json::json!([{"value": "open", "count": 2}, {"value": null, "count": 1}]), "{g}");
+    assert_eq!((&g["matched"], &g["total"]), (&serde_json::json!(3), &serde_json::json!(3)), "{g}");
+    let shown = renders(&got);
+    assert_eq!(shown[0]["columns"], serde_json::json!(["status", "count"]), "{}", shown[0]);
+    assert!(shown[0]["query"].as_str().unwrap().contains("grouped by status"), "{}", shown[0]);
+    // A group is not a row: its value never unlocks a proposal.
+    let e = tool_result(&rig, 2);
+    assert!(e["error"].as_str().is_some_and(|e| e.contains("was not shown")), "{e}");
+}
+
+#[test]
+fn a_vector_column_never_reaches_the_model_or_the_screen() {
+    // Live: every roadmap row carried a 768-float embedding to the model and a column to the pupil.
+    const VSCHEMA: &str = r#"{"success": true, "data": {"title": "Todo list", "schema": {"columns": [
+        {"key": "title", "kind": "text"}, {"key": "embedding", "kind": "vector"}]}}}"#;
+    const VROWS: &str = r#"{"success": true, "data": {"rows": [{"id": "r1", "values": {"title": "a", "embedding": [0.1, 0.2]}}]}}"#;
+    let rig = rig_n("vector", mapped(), vec![VSCHEMA.into(), VROWS.into()], vec![query(r#"{"table": "todos"}"#), answer("x")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "rows");
+    let t = tool_result(&rig, 1);
+    assert!(!t.to_string().contains("embedding"), "{t}");
+    assert!(!serde_json::to_string(&renders(&got)).unwrap().contains("embedding"), "{got:?}");
+}
+
+#[test]
+fn the_prompt_says_the_time_and_to_admit_what_no_tool_sees() {
+    // Live: Iris answered "10:50 UTC" at 05:15 and read "red status" as roadmap rows.
+    let rig = rig("now", mapped(), ROWS, vec![answer("hi")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "what time is it?");
+    let p = system_prompt(&rig);
+    let now = p.split("It is now ").nth(1).and_then(|t| t.split(" UTC").next()).unwrap_or_else(|| panic!("{p}"));
+    assert!(now.len() == 16 && now.starts_with("20") && &now[10..11] == " ", "YYYY-MM-DD HH:MM, got {now:?}");
+    assert!(p.contains("When no tool can see what is asked, say so"), "{p}");
+}
+
+#[test]
+fn a_blank_answer_is_said_not_drawn_empty() {
+    let rig = rig("blank", mapped(), ROWS, vec![answer("  ")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "chart it");
+    assert!(matches!(got.last(), Some(ToShell::Text { text, .. }) if text.contains("no answer")), "{got:?}");
 }
