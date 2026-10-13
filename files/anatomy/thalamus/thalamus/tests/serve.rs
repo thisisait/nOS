@@ -1714,3 +1714,147 @@ fn a_widget_reads_every_page_of_the_stateful_fake() {
     let count = widget_chart("wpages", rows, serde_json::json!({"query": {"table": "sheet"}, "chart": "bar", "x": "status", "op": "count"}));
     assert_eq!(points(&count), pts(&[("open", 802.0), ("done", 401.0)]));
 }
+
+// --- genui I5g: a widget form's submit is the person's decision; commit() inserts the row ---
+
+fn send_submit(s: &UnixStream, form: &str, widget: &str, values: serde_json::Value) {
+    let mut w = s;
+    let m = serde_json::json!({"t": "form_submit", "form": form, "widget": widget, "values": values});
+    w.write_all(format!("{m}\n").as_bytes()).unwrap();
+}
+
+/// A widget form on this connection; its minted form id.
+fn open_form(s: &UnixStream, r: &mut BufReader<UnixStream>, token: &str) -> String {
+    send_widget(s, token, serde_json::json!({"form": {"table": "expenses"}}), "click");
+    loop {
+        match next(r) {
+            Some(ToShell::Widget { widget, component: Component::Form(f), .. }) if widget == token => return f.form,
+            Some(ToShell::Session { .. }) => continue,
+            other => panic!("expected the widget form, got {other:?}"),
+        }
+    }
+}
+
+fn same_file(a: &str, b: &std::path::Path) -> bool {
+    std::fs::canonicalize(a).ok() == std::fs::canonicalize(b).ok()
+}
+
+#[test]
+fn form_submit_inserts_through_commit() {
+    let ((url, seen), held) = fake_table(&expenses(""), vec![keap_row("e1", serde_json::json!({"kind": "food", "amount": 3}))]);
+    let model = vec![query(r#"{"table": "expenses"}"#), call("propose_row_edit", r#"{"table": "expenses", "row_id": "e1", "values": {"amount": 4}}"#),
+                     answer("Proposed."), answer("ok")];
+    let rig = rig_at("fsubmit", mapped(), (url, seen), model, Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    // A model card waits while the person fills a form: the submit must leave it waiting.
+    let got = turn(&s, &mut r, None, "set e1 to 4");
+    let session = session_of(&got);
+    let card = got.iter().find_map(|m| match m { ToShell::ApprovalRequest { approval, .. } => Some(approval.clone()), _ => None })
+        .expect("the model's card waits");
+    let form = open_form(&s, &mut r, "f1");
+    send_submit(&s, &form, "f1", serde_json::json!({"kind": "tools", "amount": 42, "when": "2026-10-13", "note": "pens", "paid": true}));
+    match next(&mut r) {
+        Some(ToShell::TableChanged { session: s2, table, row }) => assert_eq!((s2, table, row.as_str()), (session.clone(), "expenses".into(), "minted-2")),
+        other => panic!("expected table_changed, got {other:?}"),
+    }
+    match next(&mut r) {
+        Some(ToShell::FormResult { session: s2, widget, form: f2, row }) =>
+            assert_eq!((s2, widget.as_str(), f2, row.as_str()), (session.clone(), "f1", form.clone(), "minted-2")),
+        other => panic!("expected form_result, got {other:?}"),
+    }
+    let p = posts(&rig);
+    assert_eq!(p.len(), 1, "one insert: {p:?}");
+    assert!(p[0].0.starts_with("POST /api/tables/expenses/rows "), "{}", p[0].0);
+    assert_eq!(serde_json::from_str::<serde_json::Value>(&p[0].1).unwrap(),
+               serde_json::json!({"values": {"kind": "tools", "amount": 42.0, "when": 1_791_849_600, "note": "pens", "paid": true}}),
+               "no id (KEAP mints it); the day as its UTC-midnight epoch");
+    assert_eq!(held.lock().unwrap().len(), 2, "the fake holds the new row");
+
+    // The model's card is still the one waiting, and its approve takes the update path.
+    decide(&s, &card, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::TableChanged { ref table, ref row, .. }) if table == "expenses" && row == "e1"));
+    assert!(matches!(next(&mut r), Some(ToShell::Text { ref text, .. }) if text.contains("row e1 written")));
+    let p = posts(&rig);
+    assert_eq!(serde_json::from_str::<serde_json::Value>(&p[1].1).unwrap(), serde_json::json!({"id": "e1", "values": {"amount": 4}}));
+    // The model hears of its own card and nothing of the form.
+    turn(&s, &mut r, Some(session.clone()), "thanks");
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[3].1).unwrap();
+    let said: Vec<&str> = body["messages"].as_array().unwrap().iter().filter_map(|m| m["content"].as_str())
+        .filter(|c| c.starts_with("[thalamus]")).collect();
+    assert_eq!(said.len(), 1, "{said:?}");
+    assert!(said[0].contains(&card) && !body.to_string().contains("minted-2"), "the model heard of the form: {said:?}");
+
+    let ev: Vec<_> = events(&rig.ledger, &session).into_iter().filter(|e| e.1 == "agent:iris/tool:form_submit").collect();
+    let kinds: Vec<&str> = ev.iter().map(|e| e.0.as_str()).collect();
+    assert_eq!(kinds, ["agent_tool_use", "agent_approval_request", "agent_approval_decision", "agent_tool_result"], "{ev:?}");
+    let (req, dec, res) = (&ev[1].2, &ev[2].2, &ev[3].2);
+    assert_eq!((&req["op"], &req["table"], req.get("row_id")), (&serde_json::json!("insert"), &serde_json::json!("expenses"), None), "{req}");
+    assert!(req["cells"].as_array().unwrap().iter().all(|c| c.get("old").is_none()), "{req}");
+    assert!(req["cells"].as_array().unwrap().iter().any(|c| c["key"] == "when" && c["new"] == 1_791_849_600), "{req}");
+    assert_eq!((&dec["decision"], &dec["note"], &dec["approval"]), (&serde_json::json!("approve"), &serde_json::json!("form submit"), &req["approval"]));
+    assert_eq!(res["row"], "minted-2");
+    let me = std::env::current_exe().unwrap();
+    for e in [req, dec, res] {
+        assert_eq!(e["peer"]["pid"], std::process::id(), "{e}");
+        assert!(e["peer"]["exe"].as_str().is_some_and(|x| same_file(x, &me)), "peer.exe is not this test binary: {e}");
+    }
+    // The card's own decision names its peer too.
+    let card_dec = events(&rig.ledger, &session).into_iter()
+        .find(|e| e.0 == "agent_approval_decision" && e.1 == "agent:iris/tool:propose_row_edit").expect("the card's decision");
+    assert!(card_dec.2["peer"]["exe"].as_str().is_some_and(|x| same_file(x, &me)), "{:?}", card_dec.2);
+}
+
+#[test]
+fn form_submit_refuses_what_the_form_did_not_offer() {
+    let ((url, seen), held) = fake_table(&expenses(""), vec![]);
+    let rig = rig_at("frefuse", mapped(), (url, seen), vec![answer("never")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let form = open_form(&s, &mut r, "f1");
+    let other = "1b7e6f3a-2c1d-4e5f-8a9b-1c2d3e4f5a6b";
+    let ok = serde_json::json!({"kind": "tools", "amount": 42});
+    let with = |k: &str, v: serde_json::Value| {
+        let mut x = ok.clone();
+        x[k] = v;
+        x
+    };
+    let many: serde_json::Map<String, serde_json::Value> = (0..21).map(|i| (format!("k{i}"), serde_json::json!(1))).collect();
+    let cases = [
+        ("unknown form", other, "f1", ok.clone(), "not a form"),
+        ("another widget's form", form.as_str(), "f2", ok.clone(), "not a form"),
+        ("unknown key", form.as_str(), "f1", with("ghost", serde_json::json!("x")), "no field `ghost`"),
+        ("a sharing key", form.as_str(), "f1", with("__shared_with", serde_json::json!("x")), "no field `__shared_with`"),
+        ("an omitted column", form.as_str(), "f1", with("receipt", serde_json::json!("x")), "no field `receipt`"),
+        ("select outside options", form.as_str(), "f1", with("kind", serde_json::json!("rent")), "not one of"),
+        ("missing required", form.as_str(), "f1", serde_json::json!({"kind": "tools"}), "amount is required"),
+        ("a string for a number", form.as_str(), "f1", with("amount", serde_json::json!("abc")), "amount is a number"),
+        ("a 4001-char text", form.as_str(), "f1", with("note", serde_json::json!("x".repeat(4001))), "4000"),
+        ("not a day", form.as_str(), "f1", with("when", serde_json::json!("2026-02-30")), "YYYY-MM-DD"),
+        ("a number for a bool", form.as_str(), "f1", with("paid", serde_json::json!(1)), "paid is true or false"),
+        ("21 keys", form.as_str(), "f1", serde_json::Value::Object(many), "at most 20"),
+    ];
+    for (name, f, w, values, want) in &cases {
+        send_submit(&s, f, w, values.clone());
+        match next(&mut r) {
+            Some(ToShell::Refused { reason, widget }) => {
+                assert_eq!(widget.as_deref(), Some(*w), "{name}: {reason}");
+                assert!(reason.contains(want), "{name}: {reason}");
+            }
+            other => panic!("{name}: expected refused, got {other:?}"),
+        }
+    }
+    assert!(posts(&rig).is_empty(), "a refused submit wrote");
+    assert!(held.lock().unwrap().is_empty());
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let session: String = rusqlite::Connection::open(&rig.ledger).unwrap()
+        .query_row("SELECT uuid FROM sessions", [], |r| r.get(0)).unwrap();
+    let ev: Vec<_> = events(&rig.ledger, &session).into_iter().filter(|e| e.1 == "agent:iris/tool:form_submit").collect();
+    assert_eq!(ev.len(), 2 * cases.len(), "a ToolUse and a ToolResult per refusal: {ev:?}");
+    for pair in ev.chunks(2) {
+        assert_eq!((pair[0].0.as_str(), pair[1].0.as_str()), ("agent_tool_use", "agent_tool_result"), "{pair:?}");
+        assert!(pair[1].2["error"].is_string(), "{pair:?}");
+    }
+    assert!(events(&rig.ledger, &session).iter().all(|e| !e.0.starts_with("agent_approval")), "a refused submit asked");
+}

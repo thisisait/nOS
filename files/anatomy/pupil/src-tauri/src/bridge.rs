@@ -158,6 +158,16 @@ mod tests {
     }
 
     #[test]
+    fn admit_passes_form_submit() {
+        let mut p = Pending::default();
+        asked(&mut p, "a");
+        let f = serde_json::json!({ "t": "form_submit", "form": "5f0c1b2a-3d4e-4f5a-8b6c-7d8e9f0a1b2c", "widget": "w4", "values": { "amount": 42 } });
+        let f: ToThalamus = serde_json::from_value(f).expect("a form submit decodes");
+        assert!(p.admit(&f).is_ok(), "a submit is the person's own decision, never the model card's turn");
+        assert!(p.admit(&decision("a")).is_ok(), "a submit is not the card's decision: the approval still waits");
+    }
+
+    #[test]
     fn pending_refuses_a_turn_while_one_waits_but_not_a_control() {
         let mut p = Pending::default();
         let turn = ToThalamus::Turn { session: None, text: "hi".into() };

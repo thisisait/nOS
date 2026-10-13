@@ -268,3 +268,15 @@ fn a_widget_is_said_under_its_token() {
     }
     assert!(!said.contains("undecodable"), "{said}");
 }
+
+#[test]
+fn a_form_result_and_a_table_change_are_said() {
+    let mut app = App::default();
+    for (case, m) in fixture() {
+        if case == "a widget form added a row" || case == "a write changed a table" {
+            app.apply(m);
+        }
+    }
+    let said: String = app.lines.iter().map(|l| format!("{l}\n")).collect();
+    assert_eq!(said, "widget w4: row e3 added\ntable expenses changed (row e3)\n");
+}

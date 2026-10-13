@@ -215,6 +215,55 @@ mod tests {
         assert_eq!(n, 2);
     }
 
+    /// A request then its approve in the open session; the decision's row id.
+    fn approve(l: &Ledger, approval: &str, req: Value) -> i64 {
+        let mut req = req;
+        req["approval"] = serde_json::json!(approval);
+        l.record(UUID, Kind::ApprovalRequest, Some("form_submit"), &req).unwrap();
+        l.record(UUID, Kind::ApprovalDecision, Some("form_submit"), &serde_json::json!({"approval": approval, "decision": "approve"}))
+            .unwrap()
+    }
+
+    #[test]
+    fn approved_defaults_op_to_update() {
+        let (l, _) = ledger("op-default");
+        start(&l);
+        let d = approve(&l, "a1", serde_json::json!({"table": "t", "row_id": "r1", "cells": [{"key": "k", "old": 1, "new": 2}]}));
+        let a = l.approved(d).unwrap();
+        assert_eq!((a.actor.as_str(), a.table.as_str(), a.op, a.row_id.as_deref()), ("user:alice", "t", RowOp::Update, Some("r1")));
+        assert_eq!((Value::Object(a.values), Value::Object(a.old)), (serde_json::json!({"k": 2}), serde_json::json!({"k": 1})));
+    }
+
+    #[test]
+    fn approved_insert_has_no_row_and_no_old() {
+        let (l, _) = ledger("op-insert");
+        start(&l);
+        let d = approve(&l, "a1", serde_json::json!({"table": "t", "op": "insert", "cells": [{"key": "k", "new": 2}, {"key": "when", "new": 1_791_849_600}]}));
+        let a = l.approved(d).unwrap();
+        assert_eq!((a.op, a.row_id), (RowOp::Insert, None));
+        assert_eq!(Value::Object(a.values), serde_json::json!({"k": 2, "when": 1_791_849_600}));
+        assert!(a.old.is_empty());
+    }
+
+    #[test]
+    fn approved_refuses_a_write_of_the_wrong_shape() {
+        let (l, _) = ledger("op-shape");
+        start(&l);
+        for (i, (why, req)) in [
+            ("an insert names a row", serde_json::json!({"table": "t", "op": "insert", "row_id": "r1", "cells": [{"key": "k", "new": 2}]})),
+            ("an insert carries an old value", serde_json::json!({"table": "t", "op": "insert", "cells": [{"key": "k", "old": 1, "new": 2}]})),
+            ("an insert writes a sharing key", serde_json::json!({"table": "t", "op": "insert", "cells": [{"key": "__shared_with", "new": ["x"]}]})),
+            ("an update writes a sharing key", serde_json::json!({"table": "t", "row_id": "r1", "cells": [{"key": "__shared_with", "old": null, "new": ["x"]}]})),
+            ("an empty key", serde_json::json!({"table": "t", "op": "insert", "cells": [{"key": "", "new": 2}]})),
+            ("an unknown op", serde_json::json!({"table": "t", "op": "delete", "row_id": "r1", "cells": [{"key": "k", "old": 1, "new": 2}]})),
+            ("an update without a row", serde_json::json!({"table": "t", "op": "update", "cells": [{"key": "k", "old": 1, "new": 2}]})),
+            ("an update without old", serde_json::json!({"table": "t", "row_id": "r1", "cells": [{"key": "k", "new": 2}]})),
+        ].into_iter().enumerate() {
+            let d = approve(&l, &format!("a{i}"), req);
+            assert!(l.approved(d).is_err(), "{why} was approved as a write");
+        }
+    }
+
     #[test]
     fn reopening_keeps_the_rows() {
         let (l, p) = ledger("reopen");

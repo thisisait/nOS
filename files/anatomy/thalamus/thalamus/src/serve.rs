@@ -1229,6 +1229,17 @@ fn iso_matches_the_calendar_at_its_edges() {
     }
 }
 
+#[test]
+fn days_from_civil_matches_iso() {
+    for t in [0, -86_400, 951_782_400, 1_759_968_000, 1_791_849_600, 4_102_444_800] {
+        assert_eq!(day_epoch(&iso(t)[..10]), Some(t), "{}", iso(t));
+    }
+    assert_eq!(day_epoch("2026-10-13"), Some(1_791_849_600));
+    for bad in ["2026-02-29", "2100-02-29", "2026-13-01", "2026-00-10", "2026-10-32", "2026-1-01", "26-10-13", "2026-10-13T00:00:00Z", "abcd-ef-gh", ""] {
+        assert_eq!(day_epoch(bad), None, "{bad:?} read as a day");
+    }
+}
+
 // mistral-eu is https: an agent built without TLS refused it live ("TLS required").
 #[test]
 fn an_https_backend_gets_a_tls_handshake() {
