@@ -105,6 +105,9 @@ impl Component {
                 if c.series.is_empty() {
                     return Err("a chart has no series".into());
                 }
+                if c.series.iter().all(|s| s.points.is_empty()) {
+                    return Err("a chart has no points".into());
+                }
                 let mut xs = std::collections::BTreeSet::new();
                 for s in &c.series {
                     cap("a series name", &s.name, NAME_MAX)?;
@@ -115,14 +118,36 @@ impl Component {
                         if !own.insert(x) {
                             return Err(format!("series {} has x {x:?} twice", s.name));
                         }
+                        match c.x {
+                            Axis::Number if !x.trim().parse::<f64>().is_ok_and(f64::is_finite) || x.trim() != x => {
+                                return Err(format!("x {x:?} is not a number (x: number)"))
+                            }
+                            Axis::Time if !is_date(x) => {
+                                return Err(format!("x {x:?} is not a date YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)] (x: time)"))
+                            }
+                            _ => {}
+                        }
                     }
                     xs.extend(own);
                 }
                 most("chart x labels", xs.len(), 60)?;
-                // A line joins the same x in every series; a bar may leave one out.
-                let first: Vec<&String> = c.series[0].points.iter().map(|p| &p.0).collect();
-                if c.chart == ChartKind::Line && c.series.iter().any(|s| s.points.iter().map(|p| &p.0).ne(first.iter().copied())) {
-                    return Err("every series of a line chart has the same x, in the same order".into());
+                match c.chart {
+                    ChartKind::Scatter if c.x == Axis::Category => return Err("a scatter's x is number or time".into()),
+                    ChartKind::Pie if c.series.len() != 1 => return Err(format!("a pie has exactly 1 series, not {}", c.series.len())),
+                    ChartKind::Pie => {
+                        if let Some((x, y)) = c.series[0].points.iter().find(|p| p.1 < 0.0) {
+                            return Err(format!("a pie value is below 0: {x} {y}"));
+                        }
+                    }
+                    // A line, an area or a stack joins the same x in every series; a bar or a scatter may leave one out.
+                    ChartKind::Line | ChartKind::Area | ChartKind::StackedBar => {
+                        let first: Vec<&String> = c.series[0].points.iter().map(|p| &p.0).collect();
+                        if c.series.iter().any(|s| s.points.iter().map(|p| &p.0).ne(first.iter().copied())) {
+                            let kind = serde_json::to_value(c.chart).ok().and_then(|v| v.as_str().map(str::to_string)).unwrap_or_default();
+                            return Err(format!("every series of a {kind} chart has the same x, in the same order"));
+                        }
+                    }
+                    _ => {}
                 }
                 Ok(())
             }
@@ -150,15 +175,58 @@ impl Component {
             _ => Ok(()),
         }
     }
+
+    /// A widget's chart may be one series with no points yet ("no rows yet"); the model's may not.
+    pub fn check_allow_empty(&self) -> Result<(), String> {
+        match self {
+            Component::Chart(c) if c.series.len() == 1 && c.series[0].points.is_empty() => {
+                c.title.as_deref().map_or(Ok(()), |t| cap("title", t, NAME_MAX))?;
+                cap("a series name", &c.series[0].name, NAME_MAX)
+            }
+            _ => self.check(),
+        }
+    }
 }
 
-/// Values the model plots: bar or line, nothing else; drawn as SVG marks or as text.
+/// `YYYY-MM-DD[THH:MM:SS(Z|±HH:MM)]`, a real calendar day; a bare date is UTC midnight. No date crate.
+pub fn is_date(s: &str) -> bool {
+    let b = s.as_bytes();
+    let num = |r: std::ops::Range<usize>| -> Option<u32> {
+        let d = b.get(r)?;
+        d.iter().all(u8::is_ascii_digit).then(|| d.iter().fold(0, |n, c| n * 10 + u32::from(c - b'0')))
+    };
+    let at = |i: usize, c: u8| b.get(i) == Some(&c);
+    let (Some(y), Some(m), Some(d)) = (num(0..4), num(5..7), num(8..10)) else { return false };
+    let leap = y % 4 == 0 && (y % 100 != 0 || y % 400 == 0);
+    let days = [31, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    if !(at(4, b'-') && at(7, b'-') && (1..=12).contains(&m) && d >= 1 && d <= days[m as usize - 1]) {
+        return false;
+    }
+    if b.len() == 10 {
+        return true;
+    }
+    let clock = |i: usize, sep: bool| -> bool {
+        matches!((num(i..i + 2), num(i + 3..i + 5)), (Some(h), Some(mi)) if h < 24 && mi < 60) && at(i + 2, b':') && (!sep || at(i + 5, b':'))
+    };
+    if !(at(10, b'T') && clock(11, true) && num(17..19).is_some_and(|sec| sec < 60)) {
+        return false;
+    }
+    match b.get(19) {
+        Some(b'Z') => b.len() == 20,
+        Some(b'+' | b'-') => b.len() == 25 && clock(20, false),
+        _ => false,
+    }
+}
+
+/// Values the model plots, drawn as SVG marks or as text. `x` says how to read every x label;
+/// the label is a string on the wire whatever the axis.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Chart {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     pub chart: ChartKind,
+    pub x: Axis,
     pub series: Vec<Series>,
 }
 
@@ -166,7 +234,20 @@ pub struct Chart {
 #[serde(rename_all = "snake_case")]
 pub enum ChartKind {
     Bar,
+    StackedBar,
     Line,
+    Area,
+    Scatter,
+    Pie,
+}
+
+/// category: labels in order; number: each x parses as a finite f64; time: each x is_date().
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Axis {
+    Category,
+    Number,
+    Time,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

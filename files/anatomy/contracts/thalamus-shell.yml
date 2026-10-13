@@ -47,7 +47,11 @@ components:
     table: "rows the model shows (show tool): {title?, columns[], rows[][]}; at most 12 columns, 50 rows, every row as long as columns, a cell 2000 chars"
     list: "items the model shows (show tool): {title?, ordered, items[{text, detail?, tone? ok|info|warn|bad}]}; at most 50 items, text 500, detail 2000"
     record: "one thing's fields (show tool): {title?, fields[{key, value}]}; at most 40 fields, a value 4000 chars as text; titles and names 120"
-    chart: "values plotted (show tool), bar or line only: {title?, chart, series[{name, points[[x, number]]}]}; at most 6 series, 60 points each, 60 x labels; a line's series share the same x"
+    chart: >-
+      values plotted (show tool): {title?, chart bar|stacked_bar|line|area|scatter|pie, x category|number|time,
+      series[{name, points[[x, number]]}]}; x is a string on every axis (a number parses as one, a time is
+      YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)]); at most 6 series, 60 points each, 60 x labels; line, area and stacked_bar
+      series share the same x; scatter is number or time x; pie is 1 series of values >= 0
     tree: "a hierarchy (show tool): {title?, nodes[{label, note?, children[]}]}; depth at most 4, at most 100 nodes; one root with 2-4 children is an org chart, otherwise a nested list"
     timeline: "a history (show tool): {title?, items[{when, title, note?, hi?}]}; at most 30; horizontal up to 6 items, vertical beyond; hi is said as a word"
 

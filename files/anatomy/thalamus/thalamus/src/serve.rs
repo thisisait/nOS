@@ -199,7 +199,9 @@ pub const SHOW_SHAPE: &[(&str, &str)] = &[
     ("table", "{title?, columns[] <=12, rows[][] <=50, each row as long as columns}"),
     ("list", "{title?, ordered, items[{text, detail?, tone? ok|info|warn|bad}] <=50}"),
     ("record", "{title?, fields[{key, value}] <=40}"),
-    ("chart", "{title?, chart bar|line, series[{name, points[[x, number]] <=60}] <=6}; a line's series share the same x"),
+    ("chart", "{title?, chart bar|stacked_bar|line|area|scatter|pie, x category|number|time, series[{name, points[[x, number]] <=60}] <=6}; \
+x is a string even for number (\"3\") or time (\"2026-10-13\" or \"2026-10-13T08:00:00Z\"); line, area and stacked_bar \
+series share the same x in order; scatter needs number or time x; pie is 1 series, values >= 0"),
     ("tree", "{title?, nodes[{label, note?, children[]}]}, depth <=4, nodes <=100"),
     ("timeline", "{title?, items[{when, title, note?, hi?}] <=30}"),
 ];
@@ -229,9 +231,12 @@ pub fn show_schema() -> Value {
         branch("record", "one thing's fields: {title?, fields[{key, value}] <=40}",
             closed(&["fields"], json!({"title": title, "fields": {"type": "array", "maxItems": 40,
                 "items": closed(&["key", "value"], json!({"key": {"type": "string", "maxLength": 120}, "value": {}}))}}))),
-        branch("chart", "values plotted as bar or line: {title?, chart bar|line, series[{name, points[[x, number]] <=60}] <=6}; \
-a line's series share the same x in the same order",
-            closed(&["chart", "series"], json!({"title": title, "chart": {"enum": ["bar", "line"]},
+        branch("chart", "values plotted: {title?, chart bar|stacked_bar|line|area|scatter|pie, x category|number|time, \
+series[{name, points[[x, number]] <=60}] <=6}; x is always a string (\"3\", \"2026-10-13\"); line, area and stacked_bar series \
+share the same x in the same order; scatter needs number or time x; pie is one series of values >= 0",
+            closed(&["chart", "x", "series"], json!({"title": title,
+                "chart": {"enum": ["bar", "stacked_bar", "line", "area", "scatter", "pie"]},
+                "x": {"enum": ["category", "number", "time"], "description": "how to read every x string"},
                 "series": {"type": "array", "minItems": 1, "maxItems": 6, "items": closed(&["name", "points"], json!({
                     "name": {"type": "string", "maxLength": 120},
                     "points": {"type": "array", "maxItems": 60, "items": {"type": "array", "minItems": 2, "maxItems": 2,
