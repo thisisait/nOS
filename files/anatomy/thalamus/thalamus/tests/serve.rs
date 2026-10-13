@@ -133,12 +133,17 @@ const FULL: &str = "# Imprint\nFULL-IMPRINT-MARK\n";
 
 fn rig_full(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_bodies: Vec<String>,
             bound: Option<Binding>) -> Rig {
+    rig_at(name, map, fake(keap_bodies), model_bodies, bound)
+}
+
+/// The rig over a KEAP already listening at (url, seen): the canned fake or fake_table.
+fn rig_at(name: &str, map: serde_json::Value, (keap_url, keap): (String, Seen), model_bodies: Vec<String>,
+          bound: Option<Binding>) -> Rig {
     let d = dir(name);
     std::fs::write(d.join("IMPRINT.short.md"), SHORT).unwrap();
     std::fs::write(d.join("IMPRINT.md"), FULL).unwrap();
     let map_path = d.join("identity-map.yml");
     std::fs::write(&map_path, map.to_string()).unwrap();
-    let (keap_url, keap) = fake(keap_bodies);
     let (model_url, model) = fake(model_bodies);
     let log = Log::default();
     let ledger = d.join("ledger.db");
@@ -223,7 +228,7 @@ fn serve_refuses_a_peer_the_identity_map_does_not_name() {
         vec![answer("never")]);
     let mut r = BufReader::new(connect(&rig.sock));
     match next(&mut r) {
-        Some(ToShell::Refused { reason }) => assert!(reason.contains("identity map"), "{reason}"),
+        Some(ToShell::Refused { reason, .. }) => assert!(reason.contains("identity map"), "{reason}"),
         other => panic!("an unmapped peer must be refused, got {other:?}"),
     }
     assert!(next(&mut r).is_none(), "the refused connection is closed");
@@ -384,7 +389,7 @@ fn a_missing_imprint_refuses_the_turn_and_says_so() {
         let mut r = BufReader::new(s.try_clone().unwrap());
         let got = turn(&s, &mut r, None, "hello");
         match got.last() {
-            Some(ToShell::Refused { reason }) => assert!(reason.contains(file), "{name}: {reason}"),
+            Some(ToShell::Refused { reason, .. }) => assert!(reason.contains(file), "{name}: {reason}"),
             other => panic!("{name}: a turn without its imprint must be refused, got {other:?}"),
         }
         assert!(rig.model.lock().unwrap().is_empty(), "{name}: the model was called without its imprint");
@@ -618,7 +623,7 @@ fn a_reader_that_fails_or_lies_is_refused_never_empty() {
         reader(&rig, "awaiting-operator.py", py);
         match raise(&rig, nos_contract::wire::ControlView::Approvals) {
             // The reason names the reader's own failure, so a missing python3 or script cannot pass.
-            ToShell::Refused { reason } => assert!(reason.starts_with(want), "{name}: {reason}"),
+            ToShell::Refused { reason, .. } => assert!(reason.starts_with(want), "{name}: {reason}"),
             other => panic!("{name}: expected a refusal, got {other:?}"),
         }
     }
@@ -650,7 +655,7 @@ open({pidfile:?}, "w").write(str(p.pid))
 time.sleep(60)
 "#));
     match raise(&rig, nos_contract::wire::ControlView::Approvals) {
-        ToShell::Refused { reason } => assert!(reason.contains("no answer in 2s"), "{reason}"),
+        ToShell::Refused { reason, .. } => assert!(reason.contains("no answer in 2s"), "{reason}"),
         other => panic!("expected a timeout refusal, got {other:?}"),
     }
     let pid: i32 = std::fs::read_to_string(&pidfile).unwrap().parse().unwrap();
@@ -674,7 +679,7 @@ print(json.dumps({"red_count": 0, "reds": [], "hold_count": 0, "holds": []}))
 "#);
     for view in [nos_contract::wire::ControlView::Approvals, nos_contract::wire::ControlView::RedStatus] {
         match raise(&rig, view) {
-            ToShell::Refused { reason } => assert_eq!(reason, "not yours to see"),
+            ToShell::Refused { reason, .. } => assert_eq!(reason, "not yours to see"),
             other => panic!("a nos-users person saw the operator's queue: {other:?}"),
         }
     }
@@ -1448,4 +1453,263 @@ fn show_refuses_form() {
     let e = tool_result(&rig, 1);
     assert!(e["error"].as_str().is_some_and(|e| e.contains(r#"not "form""#)), "{e}");
     assert!(rig.keap.lock().unwrap().is_empty(), "show read KEAP");
+}
+
+// --- genui I5f: a widget runs as the person without the model; its chart is aggregated here ---
+
+/// KEAP's table routes over one in-memory table: GET the schema, GET the rows paged as KEAP
+/// pages them (`limit`, then `cursor` while `nextCursor` is set), POST an upsert that mints an
+/// id when none is given. `schema` is the whole GET /api/tables/:id body. Every request is seen.
+fn fake_table(schema: &str, rows: Vec<serde_json::Value>) -> ((String, Seen), Arc<Mutex<Vec<serde_json::Value>>>) {
+    let info: serde_json::Value = serde_json::from_str(schema).unwrap();
+    let base = format!("/api/tables/{}", info["data"]["id"].as_str().unwrap());
+    let schema = schema.to_string();
+    let table = Arc::new(Mutex::new(rows));
+    let held = table.clone();
+    let l = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", l.local_addr().unwrap());
+    let seen: Seen = Arc::default();
+    let s = seen.clone();
+    std::thread::spawn(move || {
+        for c in l.incoming() {
+            let mut c = c.unwrap();
+            let mut r = BufReader::new(c.try_clone().unwrap());
+            let mut head = String::new();
+            loop {
+                let mut line = String::new();
+                if r.read_line(&mut line).unwrap() == 0 || line == "\r\n" {
+                    break;
+                }
+                head.push_str(&line);
+            }
+            let len = head.lines()
+                .find_map(|h| h.to_ascii_lowercase().strip_prefix("content-length:").map(|v| v.trim().parse().unwrap()))
+                .unwrap_or(0);
+            let mut body = vec![0; len];
+            r.read_exact(&mut body).unwrap();
+            let body = String::from_utf8(body).unwrap();
+            s.lock().unwrap().push((head.clone(), body.clone()));
+            let mut words = head.split_whitespace();
+            let (method, target) = (words.next().unwrap_or(""), words.next().unwrap_or(""));
+            let (path, query) = target.split_once('?').unwrap_or((target, ""));
+            let arg = |k: &str| query.split('&').find_map(|p| p.strip_prefix(&format!("{k}="))).and_then(|v| v.parse::<usize>().ok());
+            let mut rows = table.lock().unwrap();
+            let (status, out) = match (method, path) {
+                ("GET", p) if p == base => (200, schema.clone()),
+                ("GET", p) if p == format!("{base}/rows") => {
+                    let (from, limit) = (arg("cursor").unwrap_or(0), arg("limit").unwrap_or(50));
+                    let to = (from + limit).min(rows.len());
+                    let next = (to < rows.len()).then(|| to.to_string());
+                    (200, serde_json::json!({"success": true, "data": {"rows": rows[from..to], "nextCursor": next}}).to_string())
+                }
+                ("POST", p) if p == format!("{base}/rows") => {
+                    let b: serde_json::Value = serde_json::from_str(&body).unwrap();
+                    let id = b["id"].as_str().map(str::to_string).unwrap_or_else(|| format!("minted-{}", rows.len() + 1));
+                    let row = serde_json::json!({"id": id, "values": b["values"]});
+                    match rows.iter_mut().find(|r| r["id"] == row["id"]) {
+                        Some(r) => *r = row.clone(),
+                        None => rows.push(row.clone()),
+                    }
+                    (200, serde_json::json!({"success": true, "data": row}).to_string())
+                }
+                _ => (404, r#"{"success": false, "error": "no such route"}"#.to_string()),
+            };
+            write!(c, "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{out}", out.len())
+                .unwrap();
+        }
+    });
+    ((url, seen), held)
+}
+
+fn keap_row(id: &str, values: serde_json::Value) -> serde_json::Value {
+    serde_json::json!({"id": id, "values": values})
+}
+
+/// GET /api/tables/sheet: a select, a number, a date (KEAP: epoch seconds), a text and a count.
+const SHEET: &str = r#"{"success": true, "data": {"id": "sheet", "title": "Sheet", "schema": {"columns": [
+    {"key": "status", "label": "Status", "kind": "select", "options": ["open", "done"], "required": false},
+    {"key": "amount", "label": "Amount", "kind": "number", "required": false},
+    {"key": "when", "label": "When", "kind": "date", "required": false},
+    {"key": "note", "label": "Note", "kind": "text", "required": false},
+    {"key": "n", "label": "N", "kind": "number", "required": false}]}}}"#;
+
+fn send_widget(s: &UnixStream, token: &str, spec: serde_json::Value, trigger: &str) {
+    let mut w = s;
+    let m = serde_json::json!({"t": "widget", "widget": token, "spec": spec, "trigger": trigger});
+    w.write_all(format!("{m}\n").as_bytes()).unwrap();
+}
+
+/// (type, task, result) of every ledger event of a session, in order.
+fn events(ledger: &std::path::Path, session: &str) -> Vec<(String, String, serde_json::Value)> {
+    let db = rusqlite::Connection::open(ledger).unwrap();
+    let mut q = db.prepare("SELECT type, COALESCE(task, ''), COALESCE(result_json, 'null') FROM events WHERE run_id = ?1 ORDER BY id").unwrap();
+    q.query_map([session], |r| Ok((r.get(0)?, r.get(1)?, r.get::<_, String>(2)?))).unwrap().map(Result::unwrap)
+        .map(|(t, k, v)| (t, k, serde_json::from_str(&v).unwrap())).collect()
+}
+
+/// One widget run on a fresh connection: (session, the answer as wire JSON).
+fn run_widget(rig: &Rig, token: &str, spec: serde_json::Value) -> (String, serde_json::Value) {
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    send_widget(&s, token, spec, "click");
+    let session = match next(&mut r) {
+        Some(ToShell::Session { session, .. }) => session,
+        other => panic!("a widget opens the session first, got {other:?}"),
+    };
+    (session, serde_json::to_value(next(&mut r).expect("an answer")).unwrap())
+}
+
+fn sheet_rig(name: &str, rows: Vec<serde_json::Value>) -> Rig {
+    rig_at(name, mapped(), fake_table(SHEET, rows).0, vec![answer("never")], Some(local()))
+}
+
+/// The chart a widget spec over `rows` of the sheet answers, as wire props; panics on anything else.
+fn widget_chart(name: &str, rows: Vec<serde_json::Value>, spec: serde_json::Value) -> serde_json::Value {
+    let rig = sheet_rig(name, rows);
+    let (_, w) = run_widget(&rig, "c1", serde_json::json!({"chart": spec}));
+    assert_eq!((&w["t"], &w["widget"], &w["component"]["kind"]), (&serde_json::json!("widget"), &serde_json::json!("c1"), &serde_json::json!("chart")),
+               "{name}: {w}");
+    assert!(rig.model.lock().unwrap().is_empty(), "{name}: a widget asked the model");
+    w["component"]["props"].clone()
+}
+
+fn points(props: &serde_json::Value) -> Vec<(String, f64)> {
+    let series = props["series"].as_array().unwrap();
+    assert_eq!(series.len(), 1, "a widget chart is one series: {props}");
+    series[0]["points"].as_array().unwrap().iter().map(|p| (p[0].as_str().unwrap().to_string(), p[1].as_f64().unwrap())).collect()
+}
+
+fn pts(want: &[(&str, f64)]) -> Vec<(String, f64)> {
+    want.iter().map(|(x, y)| (x.to_string(), *y)).collect()
+}
+
+fn statuses() -> Vec<serde_json::Value> {
+    [("a", "open", 1), ("b", "done", 10), ("c", "open", 2), ("d", "open", 3)].iter()
+        .map(|(id, st, n)| keap_row(id, serde_json::json!({"status": st, "amount": n}))).collect()
+}
+
+#[test]
+fn widget_rows_runs_as_the_person_without_the_model() {
+    let rows = vec![keap_row("r1", serde_json::json!({"title": "Alpha one", "status": "open", "ordinal": 3})),
+                    keap_row("r2", serde_json::json!({"title": "beta"}))];
+    let rig = rig_at("wrows", mapped(), fake_table(SCHEMA, rows).0, vec![call("propose_row_edit", EDIT), answer("x")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    send_widget(&s, "w-1", serde_json::json!({"rows": {"table": "todos"}}), "restore");
+    let Some(ToShell::Session { session, .. }) = next(&mut r) else { panic!("no session") };
+    let w = serde_json::to_value(next(&mut r).unwrap()).unwrap();
+    assert_eq!((&w["t"], &w["session"], &w["widget"]), (&serde_json::json!("widget"), &serde_json::json!(session), &serde_json::json!("w-1")), "{w}");
+    let ids: Vec<&str> = w["component"]["props"]["rows"].as_array().unwrap().iter().map(|r| r["__id"].as_str().unwrap()).collect();
+    assert_eq!(ids, ["r1", "r2"], "{w}");
+    assert!(rig.model.lock().unwrap().is_empty(), "a widget asked the model");
+    let ev = events(&rig.ledger, &session);
+    let used: Vec<_> = ev.iter().filter(|e| e.0 == "agent_tool_use").collect();
+    assert_eq!(used.len(), 1, "{ev:?}");
+    assert_eq!(used[0].1, "agent:iris/tool:widget_rows");
+    assert_eq!((&used[0].2["table"], &used[0].2["kind"], &used[0].2["trigger"], &used[0].2["widget"]),
+               (&serde_json::json!("todos"), &serde_json::json!("rows"), &serde_json::json!("restore"), &serde_json::json!("w-1")), "{:?}", used[0]);
+    assert!(ev.iter().any(|e| e.0 == "agent_tool_result" && e.1 == "agent:iris/tool:widget_rows" && e.2["rows"] == serde_json::json!(["r1", "r2"])), "{ev:?}");
+    // The model never saw r1, so it may not propose an edit to it.
+    turn(&s, &mut r, Some(session), "close alpha");
+    let e = tool_result(&rig, 1);
+    assert!(e["error"].as_str().is_some_and(|e| e.contains("was not shown to the person")), "{e}");
+    assert!(posts(&rig).is_empty());
+}
+
+#[test]
+fn widget_chart_aggregates_server_side() {
+    let count = widget_chart("wcount", statuses(), serde_json::json!({"query": {"table": "sheet"}, "chart": "bar", "x": "status", "op": "count"}));
+    assert_eq!(count["x"], "category");
+    assert_eq!(count["chart"], "bar");
+    assert_eq!(points(&count), pts(&[("open", 3.0), ("done", 1.0)]));
+    let sum = widget_chart("wsum", statuses(), serde_json::json!({"query": {"table": "sheet"}, "chart": "pie", "x": "status", "y": "amount", "op": "sum"}));
+    assert_eq!(points(&sum), pts(&[("done", 10.0), ("open", 6.0)]), "by value, largest first");
+    let avg = widget_chart("wavg", statuses(), serde_json::json!({"query": {"table": "sheet", "where": [{"column": "status", "op": "eq", "value": "open"}]},
+        "chart": "bar", "x": "status", "y": "amount", "op": "avg"}));
+    assert_eq!(points(&avg), pts(&[("open", 2.0)]), "the query's where narrows the rows first");
+    let mut empty = statuses();
+    empty.push(keap_row("e", serde_json::json!({"amount": 5})));
+    assert_eq!(points(&widget_chart("wempty", empty, serde_json::json!({"query": {"table": "sheet"}, "chart": "bar", "x": "status", "op": "count"}))),
+               pts(&[("open", 3.0), ("done", 1.0), ("(empty)", 1.0)]));
+
+    let many: Vec<_> = (0..70).map(|i| keap_row(&format!("m{i}"), serde_json::json!({"note": format!("c{i:02}"), "amount": 70 - i}))).collect();
+    let over = points(&widget_chart("wover", many, serde_json::json!({"query": {"table": "sheet"}, "chart": "bar", "x": "note", "y": "amount", "op": "sum"})));
+    assert_eq!(over.len(), 60, "59 and other");
+    assert_eq!(over[0], ("c00".to_string(), 70.0));
+    assert_eq!(over[58], ("c58".to_string(), 12.0));
+    assert_eq!(over[59], ("other".to_string(), (1..=11).sum::<i32>() as f64), "the rest is summed into other");
+
+    // A date column is days on a time axis, oldest first: the last 60 days, no "other".
+    const DAY0: i64 = 1_785_542_400; // 2026-08-01T00:00:00Z
+    let days: Vec<_> = (0..70).flat_map(|d| [0, 3600].map(|t| keap_row(&format!("d{d}-{t}"), serde_json::json!({"when": DAY0 + d * 86_400 + t}))))
+        .rev().collect();
+    let time = widget_chart("wtime", days, serde_json::json!({"query": {"table": "sheet"}, "chart": "line", "x": "when", "op": "count"}));
+    assert_eq!(time["x"], "time");
+    let p = points(&time);
+    assert_eq!(p.len(), 60);
+    assert_eq!((p[0].clone(), p[59].clone()), (("2026-08-11".to_string(), 2.0), ("2026-10-09".to_string(), 2.0)), "two rows a day, bucketed to the UTC day");
+    assert!(p.iter().all(|(x, _)| x != "other"), "time has no other");
+    assert!(time["title"].as_str().is_some_and(|t| t.contains("last 60 days")), "{time}");
+
+    let nums: Vec<_> = [5, -1, 3, 5].iter().enumerate().map(|(i, n)| keap_row(&format!("n{i}"), serde_json::json!({"n": n}))).collect();
+    let num = widget_chart("wnum", nums, serde_json::json!({"query": {"table": "sheet"}, "chart": "line", "x": "n", "op": "count"}));
+    assert_eq!(num["x"], "number");
+    assert_eq!(points(&num), pts(&[("-1", 1.0), ("3", 1.0), ("5", 2.0)]), "a number x ascending");
+
+    // Nothing matched: one series, no points, which a widget may carry and the model may not.
+    let none = widget_chart("wnone", statuses(), serde_json::json!({"query": {"table": "sheet", "q": "nothing like this"},
+        "chart": "bar", "x": "status", "op": "count"}));
+    assert_eq!(points(&none), vec![]);
+}
+
+#[test]
+fn widget_refused_names_the_widget() {
+    for (name, spec, want) in [
+        ("wbadcol", serde_json::json!({"rows": {"table": "sheet", "where": [{"column": "kinds", "op": "eq", "value": "x"}]}}), "no column `kinds`"),
+        ("wnoy", serde_json::json!({"chart": {"query": {"table": "sheet"}, "chart": "bar", "x": "status", "op": "sum"}}), "sum needs `y`"),
+        ("wtexty", serde_json::json!({"chart": {"query": {"table": "sheet"}, "chart": "bar", "x": "status", "y": "note", "op": "avg"}}), "not a number column"),
+        ("wnox", serde_json::json!({"chart": {"query": {"table": "sheet"}, "chart": "bar", "x": "ghost", "op": "count"}}), "no column `ghost`"),
+    ] {
+        let rig = sheet_rig(name, statuses());
+        let (session, w) = run_widget(&rig, "w9", spec);
+        assert_eq!((&w["t"], &w["widget"]), (&serde_json::json!("refused"), &serde_json::json!("w9")), "{name}: {w}");
+        assert!(w["reason"].as_str().is_some_and(|r| r.contains(want)), "{name}: {w}");
+        let ev = events(&rig.ledger, &session);
+        let kinds: Vec<&str> = ev.iter().map(|e| e.0.as_str()).collect();
+        assert_eq!(kinds, ["agent_session_start", "agent_tool_use", "agent_tool_result"], "{name}: {ev:?}");
+        assert!(ev[2].2["error"].as_str().is_some_and(|e| e.contains(want)), "{name}: {ev:?}");
+        assert!(posts(&rig).is_empty() && rig.model.lock().unwrap().is_empty(), "{name}");
+    }
+}
+
+#[test]
+fn widget_form_expands_the_schema() {
+    let rig = rig_at("wform", mapped(), fake_table(&expenses(""), vec![]).0, vec![answer("never")], Some(local()));
+    let (session, w) = run_widget(&rig, "f1", serde_json::json!({"form": {"table": "expenses", "columns": ["kind", "amount"]}}));
+    assert_eq!((&w["t"], &w["widget"], &w["component"]["kind"]), (&serde_json::json!("widget"), &serde_json::json!("f1"), &serde_json::json!("form")), "{w}");
+    let f = &w["component"]["props"];
+    assert_eq!((&f["table"], &f["title"]), (&serde_json::json!("expenses"), &serde_json::json!("Expenses")));
+    let keys: Vec<&str> = f["fields"].as_array().unwrap().iter().map(|x| x["key"].as_str().unwrap()).collect();
+    assert_eq!(keys, ["amount", "kind"]);
+    assert!(nos_contract::wire::is_uuid(f["form"].as_str().unwrap()));
+    let ev = events(&rig.ledger, &session);
+    assert!(ev.iter().any(|e| e.0 == "agent_tool_use" && e.1 == "agent:iris/tool:widget_form" && e.2["table"] == "expenses"), "{ev:?}");
+    assert!(ev.iter().all(|e| e.0 != "agent_approval_request"), "building a form asks nothing");
+    assert!(posts(&rig).is_empty());
+}
+
+#[test]
+fn widget_rows_renders_dates_as_days() {
+    let rig = sheet_rig("wdays", vec![keap_row("a", serde_json::json!({"when": 1_760_283_000, "amount": 4}))]);
+    let (_, w) = run_widget(&rig, "w1", serde_json::json!({"rows": {"table": "sheet"}}));
+    let cells = &w["component"]["props"]["rows"][0]["cells"];
+    assert_eq!((&cells["when"], &cells["amount"]), (&serde_json::json!("2025-10-12"), &serde_json::json!(4)), "{w}");
+}
+
+#[test]
+fn a_widget_reads_every_page_of_the_stateful_fake() {
+    // The fake pages as KEAP does, so serve's whole-table read is exercised, not one canned body.
+    let rows: Vec<_> = (0..1203).map(|i| keap_row(&format!("p{i}"), serde_json::json!({"status": if i % 3 == 0 { "done" } else { "open" }}))).collect();
+    let count = widget_chart("wpages", rows, serde_json::json!({"query": {"table": "sheet"}, "chart": "bar", "x": "status", "op": "count"}));
+    assert_eq!(points(&count), pts(&[("open", 802.0), ("done", 401.0)]));
 }

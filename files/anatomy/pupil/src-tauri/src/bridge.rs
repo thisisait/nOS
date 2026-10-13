@@ -148,6 +148,16 @@ mod tests {
     }
 
     #[test]
+    fn admit_passes_widget_while_an_approval_waits() {
+        let mut p = Pending::default();
+        asked(&mut p, "a");
+        let w = serde_json::json!({ "t": "widget", "widget": "w1", "spec": { "rows": { "table": "expenses" } }, "trigger": "click" });
+        let w: ToThalamus = serde_json::from_value(w).expect("a widget message decodes");
+        assert!(p.admit(&w).is_ok(), "a widget runs without the model, so it never waits on an approval");
+        assert!(p.admit(&decision("a")).is_ok(), "a widget is not a decision: the approval still waits");
+    }
+
+    #[test]
     fn pending_refuses_a_turn_while_one_waits_but_not_a_control() {
         let mut p = Pending::default();
         let turn = ToThalamus::Turn { session: None, text: "hi".into() };

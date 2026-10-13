@@ -41,8 +41,8 @@ fn every_fixture_component_matches_its_snapshot() {
     for (case, msg) in fixture() {
         let c = match msg {
             ToShell::Render { component, .. } | ToShell::ApprovalRequest { component, .. } => component,
-            ToShell::Refused { reason } if case == "refusal" => { assert!(!reason.is_empty()); continue }
-            ToShell::Refused { reason } => panic!("{case}: the fixture no longer decodes: {reason}"),
+            ToShell::Refused { reason, .. } if case == "refusal" => { assert!(!reason.is_empty()); continue }
+            ToShell::Refused { reason, .. } => panic!("{case}: the fixture no longer decodes: {reason}"),
             _ => continue,
         };
         let kind = serde_json::to_value(&c).unwrap()["kind"].as_str().unwrap().to_string();
@@ -247,4 +247,20 @@ fn a_form_is_said_as_its_fields_and_filled_in_the_pupil() {
     let mut t = Terminal::new(TestBackend::new(80, 10)).unwrap();
     t.draw(|f| f.render_widget(Paragraph::new(shell::component_lines(&c)), f.area())).unwrap();
     snapshot("form", &text(&t));
+}
+
+#[test]
+fn a_widget_is_said_under_its_token() {
+    let mut app = App::default();
+    for (case, m) in fixture() {
+        if case.starts_with("a widget") || case == "a refused widget names it" {
+            app.apply(m);
+        }
+    }
+    let said: String = app.lines.iter().map(|l| format!("{l}\n")).collect();
+    for want in ["widget w4:", "form Expenses (table expenses): fill it in the pupil", "widget w5:", "  count: (no rows yet)",
+                 "widget w-expenses_1:", "refused (widget w2): no column `kinds` in Expenses"] {
+        assert!(said.contains(want), "{want:?} not in:\n{said}");
+    }
+    assert!(!said.contains("undecodable"), "{said}");
 }
