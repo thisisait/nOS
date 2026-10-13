@@ -1859,6 +1859,7 @@ name = "nos-pupil"
 version = "0.1.0"
 dependencies = [
  "nos-contract",
+ "serde",
  "serde_json",
  "tauri",
  "tauri-build",

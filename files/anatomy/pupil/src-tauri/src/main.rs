@@ -1,11 +1,13 @@
 //! The pupil: Iris's desktop window. It holds no secret and opens no port; the
-//! webview reaches the thalamus only through these two commands and the
-//! `to_shell` / `link` events (bridge.rs owns the socket and the decoding).
+//! webview reaches the thalamus only through `connect` / `send` and the
+//! `to_shell` / `link` events (bridge.rs owns the socket and the decoding), and
+//! its own layout file only through `load_layout` / `save_layout` (workspace.rs).
 #![cfg_attr(test, allow(dead_code))]
 
 use nos_contract::wire::ToThalamus;
-use nos_pupil::bridge;
+use nos_pupil::{bridge, workspace};
 use std::os::unix::net::UnixStream;
+use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -51,6 +53,21 @@ fn send(msg: ToThalamus, link: State<'_, Link>) -> Result<(), String> {
     bridge::send(stream, &msg)
 }
 
+fn layout_path(app: &AppHandle) -> Result<PathBuf, String> {
+    app.path().app_data_dir().map(|d| d.join("workspaces.json")).map_err(|e| e.to_string())
+}
+
+/// The saved layout, or one empty workspace; Err when a broken file was set aside.
+#[tauri::command]
+fn load_layout(app: AppHandle) -> Result<workspace::Layout, String> {
+    workspace::load(&layout_path(&app)?)
+}
+
+#[tauri::command]
+fn save_layout(app: AppHandle, layout: workspace::Layout) -> Result<(), String> {
+    workspace::save(&layout_path(&app)?, &layout)
+}
+
 // generate_context! needs the built page (../dist); the bridge tests do not.
 #[cfg(test)]
 fn main() {}
@@ -81,7 +98,7 @@ fn focus_on_launch(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error
 fn main() {
     tauri::Builder::default()
         .manage(Link::default())
-        .invoke_handler(tauri::generate_handler![connect, send])
+        .invoke_handler(tauri::generate_handler![connect, send, load_layout, save_layout])
         .setup(focus_on_launch)
         .run(tauri::generate_context!())
         .expect("the pupil failed to start");

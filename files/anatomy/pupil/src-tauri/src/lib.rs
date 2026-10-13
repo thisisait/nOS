@@ -1,4 +1,5 @@
 pub mod bridge;
+pub mod workspace;
 
 #[cfg(test)]
 mod launch_focus {
