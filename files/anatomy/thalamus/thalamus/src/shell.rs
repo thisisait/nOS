@@ -247,7 +247,13 @@ impl App {
             ToShell::ApprovalRequest { approval, component, .. } => {
                 self.pending.push_back((approval, component_lines(&component)));
             }
-            ToShell::Refused { reason } => self.lines.push(warn(format!("refused: {reason}"))),
+            ToShell::Refused { reason, widget: None } => self.lines.push(warn(format!("refused: {reason}"))),
+            ToShell::Refused { reason, widget: Some(w) } => self.lines.push(warn(format!("refused (widget {w}): {reason}"))),
+            // The terminal has no workspace: a widget's answer joins the scrollback under its token.
+            ToShell::Widget { widget, component, .. } => {
+                self.lines.push(Line::styled(format!("widget {widget}:"), Style::new().fg(Color::DarkGray)));
+                self.lines.extend(component_lines(&component));
+            }
             // The pupil's eye shows it; the terminal's scrollback stays the conversation.
             ToShell::Activity { .. } => {}
         }
@@ -258,7 +264,7 @@ impl App {
         for (approval, _) in self.pending.drain(..) {
             self.lines.push(warn(format!("not decided, nothing written: approval {approval}")));
         }
-        self.apply(ToShell::Refused { reason: reason.into() });
+        self.apply(ToShell::Refused { reason: reason.into(), widget: None });
     }
 
     /// One key; Some is the message to send. The controls answer at any time.
@@ -378,7 +384,7 @@ pub fn run(sock: &Path) -> Result<(), String> {
             }
             if let Some(m) = app.key(k) {
                 if let Err(e) = out.write_all(encode(&m).as_bytes()) {
-                    app.apply(ToShell::Refused { reason: format!("not sent: {e}") });
+                    app.apply(ToShell::Refused { reason: format!("not sent: {e}"), widget: None });
                 }
             }
         }

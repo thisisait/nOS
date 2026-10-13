@@ -5,13 +5,14 @@
 
 use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, Session};
-use nos_contract::renderers::{ApprovalsList, CellChange, Component, FieldKind, Form, FormField, InboxItem, InboxList, Omitted,
-                               RedStatus, Row, RowDiffApproval, TableResults};
-use nos_contract::wire::{decode_to_thalamus, encode, ControlView, Decision, Phase, ToShell, ToThalamus};
+use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Component, FieldKind, Form, FormField,
+                               InboxItem, InboxList, Omitted, RedStatus, Row, RowDiffApproval, Series, TableResults};
+use nos_contract::wire::{decode_to_thalamus, encode, ChartSpec, ControlView, Decision, Op, Phase, ToShell, ToThalamus, Trigger,
+                         WidgetChart, WidgetSpec};
 use nos_contract::uid;
 use serde_json::{json, Map, Value};
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::os::unix::io::AsRawFd;
@@ -152,6 +153,21 @@ struct Open {
     shown: HashSet<(String, String)>,
 }
 
+/// A query's rows after q and where; group, order and limit ride along unapplied.
+struct Matched<'a> {
+    table: String,
+    name: String,
+    /// What was asked, said for a person.
+    query: String,
+    total: usize,
+    schema: Vec<Map<String, Value>>,
+    hits: Vec<(String, Map<String, Value>)>,
+    group: Option<&'a str>,
+    order: Option<(&'a str, bool)>,
+    limit: usize,
+    columns: Vec<String>,
+}
+
 fn send(out: &mut UnixStream, m: &ToShell) {
     let _ = out.write_all(encode(m).as_bytes());
 }
@@ -162,7 +178,7 @@ fn activity(out: &mut UnixStream, o: &Open, phase: Phase) {
 }
 
 fn refuse(out: &mut UnixStream, why: &str) {
-    send(out, &ToShell::Refused { reason: why.to_string() });
+    send(out, &ToShell::Refused { reason: why.to_string(), widget: None });
 }
 
 /// A v4 uuid from the kernel's randomness.
@@ -336,6 +352,11 @@ impl Server {
                 Ok(ToThalamus::Control { view }) => {
                     if let Some(o) = self.ensure(&who, &mut out, &mut open) {
                         self.control(&who, &mut out, o, view);
+                    }
+                }
+                Ok(ToThalamus::Widget { widget, spec, trigger }) => {
+                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
+                        self.widget(&who, &mut out, o, &widget, &spec, trigger);
                     }
                 }
                 Ok(ToThalamus::ApprovalDecision { approval, decision, note }) => match open.as_mut() {
@@ -568,6 +589,48 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
     /// here: the whole table or an Err, so `total` is exact. Also returns the columns for the model.
     /// The table, then for the model its columns (or, grouped, its groups), and whether it was grouped.
     fn query_rows(&self, who: &Person, args: &Value) -> Result<(TableResults, Value, bool), String> {
+        let Matched { table, name, query, total, schema, mut hits, group, order, limit, columns } = self.matched(who, args)?;
+        let matched = hits.len();
+        if let Some(k) = group {
+            let mut counts: Vec<(Value, usize)> = Vec::new();
+            for (_, v) in &hits {
+                let x = v.get(k).cloned().filter(|x| !x.is_null() && text(x) != "").unwrap_or(Value::Null);
+                match counts.iter_mut().find(|(y, _)| *y == x) {
+                    Some((_, n)) => *n += 1,
+                    None => counts.push((x, 1)),
+                }
+            }
+            counts.sort_by(|a, b| b.1.cmp(&a.1));
+            let groups: Vec<Value> = counts.iter().map(|(x, n)| json!({"value": x, "count": n})).collect();
+            let rows = counts.into_iter().map(|(x, n)| {
+                let id = if x.is_null() { "(empty)".to_string() } else { text(&x) };
+                Row { __id: id, cells: BTreeMap::from([(k.to_string(), x), ("count".to_string(), json!(n))]) }
+            }).collect();
+            let columns = vec![k.to_string(), "count".to_string()];
+            return Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Value::Array(groups), true));
+        }
+        if let Some((k, desc)) = order {
+            hits.sort_by(|x, y| by(x.1.get(k), y.1.get(k), desc));
+        }
+        hits.truncate(limit);
+        let rows = hits.into_iter()
+            .map(|(id, v)| Row { __id: id, cells: v.into_iter().filter(|(k, _)| columns.contains(k)).collect::<BTreeMap<_, _>>() })
+            .collect();
+        let for_model: Vec<Value> = schema.iter().map(|c| {
+            let mut m = Map::new();
+            for k in ["key", "kind", "options"] {
+                if let Some(v) = c.get(k) {
+                    m.insert(k.into(), v.clone());
+                }
+            }
+            Value::Object(m)
+        }).collect();
+        Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Value::Array(for_model), false))
+    }
+
+    /// query_rows' arguments checked against the live schema, and every row they match (after q
+    /// and where; before group_by, order_by and limit, which travel along unapplied).
+    fn matched<'a>(&self, who: &Person, args: &'a Value) -> Result<Matched<'a>, String> {
         let a = args.as_object().ok_or("query_rows takes an object")?;
         if let Some(k) = a.keys().find(|k| !QUERY_KEYS.contains(&k.as_str())) {
             return Err(format!("query_rows has no parameter `{k}`; it has {}", QUERY_KEYS.join(", ")));
@@ -683,7 +746,7 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
             v.retain(|k, _| keys.contains(&k.as_str()));
         }
         let total = all.len();
-        let mut hits: Vec<(String, Map<String, Value>)> = all.into_iter()
+        let hits: Vec<(String, Map<String, Value>)> = all.into_iter()
             .filter(|(_, v)| q.as_ref().is_none_or(|q| Value::Object(v.clone()).to_string().to_lowercase().contains(q)))
             .filter(|(_, v)| wh.iter().all(|(k, op, vals)| {
                 let c = text(v.get(*k).unwrap_or(&Value::Null));
@@ -694,43 +757,9 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
                 }
             }))
             .collect();
-        let matched = hits.len();
         let query = if said.is_empty() { "all rows".to_string() } else { said.join(" · ") };
-        if let Some(k) = group {
-            let mut counts: Vec<(Value, usize)> = Vec::new();
-            for (_, v) in &hits {
-                let x = v.get(k).cloned().filter(|x| !x.is_null() && text(x) != "").unwrap_or(Value::Null);
-                match counts.iter_mut().find(|(y, _)| *y == x) {
-                    Some((_, n)) => *n += 1,
-                    None => counts.push((x, 1)),
-                }
-            }
-            counts.sort_by(|a, b| b.1.cmp(&a.1));
-            let groups: Vec<Value> = counts.iter().map(|(x, n)| json!({"value": x, "count": n})).collect();
-            let rows = counts.into_iter().map(|(x, n)| {
-                let id = if x.is_null() { "(empty)".to_string() } else { text(&x) };
-                Row { __id: id, cells: BTreeMap::from([(k.to_string(), x), ("count".to_string(), json!(n))]) }
-            }).collect();
-            let columns = vec![k.to_string(), "count".to_string()];
-            return Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Value::Array(groups), true));
-        }
-        if let Some((k, desc)) = order {
-            hits.sort_by(|x, y| by(x.1.get(k), y.1.get(k), desc));
-        }
-        hits.truncate(limit);
-        let rows = hits.into_iter()
-            .map(|(id, v)| Row { __id: id, cells: v.into_iter().filter(|(k, _)| columns.contains(k)).collect::<BTreeMap<_, _>>() })
-            .collect();
-        let for_model: Vec<Value> = schema.iter().map(|c| {
-            let mut m = Map::new();
-            for k in ["key", "kind", "options"] {
-                if let Some(v) = c.get(k) {
-                    m.insert(k.into(), v.clone());
-                }
-            }
-            Value::Object(m)
-        }).collect();
-        Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Value::Array(for_model), false))
+        let schema = schema.into_iter().cloned().collect();
+        Ok(Matched { table, name, query, total, schema, hits, group, order, limit, columns })
     }
 
     /// Every row of one table the person may read: GET /api/tables/:id/rows, every page.
@@ -910,6 +939,100 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
         }
     }
 
+    /// A widget the person placed, run as them without the model. It never extends `shown`: the
+    /// model did not see these rows. The ToolUse names the spec and why it ran, before it runs.
+    fn widget(&self, who: &Person, out: &mut UnixStream, o: &mut Open, widget: &str, spec: &WidgetSpec, trigger: Trigger) {
+        let (tool, mut used) = match spec {
+            WidgetSpec::Rows(a) => ("widget_rows", json!({"table": a.get("table"), "kind": "rows"})),
+            WidgetSpec::Chart(c) => ("widget_chart", json!({"table": c.query.table, "kind": c.chart, "op": c.op})),
+            WidgetSpec::Form(f) => ("widget_form", json!({"table": f.table, "kind": "form"})),
+        };
+        used["widget"] = json!(widget);
+        used["trigger"] = json!(trigger);
+        let refused = |out: &mut UnixStream, reason: String| send(out, &ToShell::Refused { reason, widget: Some(widget.to_string()) });
+        if let Err(why) = self.record(o, Kind::ToolUse, Some(tool), used) {
+            return refused(out, format!("not recorded, so not run: {why}"));
+        }
+        let ran = match spec {
+            WidgetSpec::Rows(a) => self.widget_rows(who, a),
+            WidgetSpec::Chart(c) => self.widget_chart(who, c).map(|c| (Component::Chart(c), json!({"ok": true}))),
+            WidgetSpec::Form(f) => self.form_from_schema(who, &f.table, f.columns.as_deref())
+                .map(|f| (json!({"form": f.form}), Component::Form(f))).map(|(v, c)| (c, v)),
+        };
+        match ran {
+            Ok((component, result)) => {
+                let _ = self.record(o, Kind::ToolResult, Some(tool), result);
+                send(out, &ToShell::Widget { session: o.session.clone(), widget: widget.to_string(), component });
+            }
+            Err(why) => {
+                let _ = self.record(o, Kind::ToolResult, Some(tool), json!({"error": why}));
+                refused(out, why);
+            }
+        }
+    }
+
+    /// query_rows as the person, with date cells said as their UTC day (KEAP keeps epoch seconds).
+    fn widget_rows(&self, who: &Person, args: &Value) -> Result<(Component, Value), String> {
+        let (mut t, columns, grouped) = self.query_rows(who, args)?;
+        let dates: Vec<String> = if grouped { vec![] } else {
+            columns.as_array().into_iter().flatten().filter(|c| c["kind"] == "date")
+                .filter_map(|c| c["key"].as_str().map(str::to_string)).collect()
+        };
+        for r in &mut t.rows {
+            for k in &dates {
+                if let Some(day) = r.cells.get(k).and_then(Value::as_f64).map(|t| iso(t.floor() as i64)[..10].to_string()) {
+                    r.cells.insert(k.clone(), json!(day));
+                }
+            }
+        }
+        let ids: Vec<&str> = t.rows.iter().map(|r| r.__id.as_str()).collect();
+        let result = json!({"rows": ids, "matched": t.matched, "total": t.total});
+        Ok((Component::TableResults(t), result))
+    }
+
+    /// One series over the query's rows, aggregated here (aggregate()); x's column kind picks the axis.
+    fn widget_chart(&self, who: &Person, c: &ChartSpec) -> Result<Chart, String> {
+        let mut args = json!({"table": c.query.table});
+        if let Some(q) = &c.query.q {
+            args["q"] = json!(q);
+        }
+        if let Some(w) = &c.query.where_ {
+            args["where"] = w.clone();
+        }
+        let m = self.matched(who, &args)?;
+        let kind_of = |k: &str| {
+            m.schema.iter().find(|col| col.get("key").and_then(Value::as_str) == Some(k))
+                .map(|col| col.get("kind").and_then(Value::as_str).unwrap_or("").to_string())
+                .ok_or_else(|| format!("no column `{k}` in {}; columns: {}", m.name,
+                    m.schema.iter().filter_map(|col| col.get("key").and_then(Value::as_str)).collect::<Vec<_>>().join(", ")))
+        };
+        let op = text(&json!(c.op));
+        let axis = match kind_of(&c.x)?.as_str() {
+            "number" => Axis::Number,
+            "date" => Axis::Time,
+            _ => Axis::Category,
+        };
+        let y = match (c.op, &c.y) {
+            (Op::Count, _) => None,
+            (_, None) => return Err(format!("{op} needs `y`, a number column")),
+            (_, Some(y)) => match kind_of(y)?.as_str() {
+                "number" => Some(y.as_str()),
+                k => return Err(format!("`{y}` is not a number column ({k}); {op} needs one")),
+            },
+        };
+        let (points, cut) = aggregate(&m.hits, &c.x, axis, y, c.op);
+        let name = y.map_or(op.clone(), |y| format!("{op} of {y}"));
+        let title = format!("{name} by {}{}", c.x, if cut && axis == Axis::Time { " (last 60 days)" } else { "" });
+        let chart = match c.chart {
+            WidgetChart::Bar => ChartKind::Bar,
+            WidgetChart::Line => ChartKind::Line,
+            WidgetChart::Pie => ChartKind::Pie,
+        };
+        let chart = Chart { title: Some(title), chart, x: axis, series: vec![Series { name, points }] };
+        Component::Chart(chart.clone()).check_allow_empty()?;
+        Ok(chart)
+    }
+
     /// `python3 tools/<name> --json` in the repo; Err on a non-zero exit, a timeout or no JSON.
     fn reader(&self, name: &str) -> Result<Value, String> {
         let child = std::process::Command::new("python3").arg(self.repo.join("tools").join(name)).arg("--json")
@@ -970,6 +1093,63 @@ fn show(args: &Value) -> Result<Component, String> {
     let c = serde_json::from_value::<Component>(args["component"].clone()).map_err(|e| bad(e.to_string()))?;
     c.check().map_err(bad)?;
     Ok(c)
+}
+
+/// One series from matched rows: `op` of `y` per value of `x` (count counts rows; sum and avg
+/// read the rows whose `y` is a number). Category: largest first, the 59 largest and "other"
+/// past 60; time: the UTC day, oldest first, the last 60 days; number: ascending, the 60 smallest.
+/// The bool says rows were cut (time) or folded into "other" (category).
+pub fn aggregate(rows: &[(String, Map<String, Value>)], x: &str, axis: Axis, y: Option<&str>, op: Op) -> (Vec<(String, f64)>, bool) {
+    let (mut groups, mut at): (Vec<(String, f64, usize)>, HashMap<String, usize>) = Default::default();
+    for (_, v) in rows {
+        let cell = v.get(x).unwrap_or(&Value::Null);
+        let label = match axis {
+            Axis::Time => match cell {
+                Value::String(s) if is_date(s) => Some(s[..10].to_string()),
+                c => c.as_f64().map(|t| iso(t.floor() as i64)[..10].to_string()),
+            },
+            Axis::Number => cell.as_f64().map(|_| text(cell)),
+            Axis::Category => Some(match text(cell) {
+                t if t.is_empty() => "(empty)".to_string(),
+                t => t.chars().take(120).collect(),
+            }),
+        };
+        let Some(label) = label else { continue };
+        let i = *at.entry(label.clone()).or_insert_with(|| {
+            groups.push((label, 0.0, 0));
+            groups.len() - 1
+        });
+        match (op, y.and_then(|y| v.get(y)).and_then(Value::as_f64)) {
+            (Op::Count, _) => groups[i].2 += 1,
+            (_, Some(f)) => (groups[i].1, groups[i].2) = (groups[i].1 + f, groups[i].2 + 1),
+            (_, None) => {}
+        }
+    }
+    let value = |g: &(String, f64, usize)| match op {
+        Op::Count => g.2 as f64,
+        Op::Sum => g.1,
+        Op::Avg if g.2 == 0 => 0.0,
+        Op::Avg => g.1 / g.2 as f64,
+    };
+    let cut = groups.len() > 60;
+    match axis {
+        Axis::Category => {
+            groups.sort_by(|a, b| value(b).total_cmp(&value(a)));
+            if cut {
+                let rest = groups.split_off(59);
+                groups.push(rest.into_iter().fold(("other".into(), 0.0, 0), |o, g| (o.0, o.1 + g.1, o.2 + g.2)));
+            }
+        }
+        Axis::Time => {
+            groups.sort_by(|a, b| a.0.cmp(&b.0));
+            groups.drain(..groups.len().saturating_sub(60));
+        }
+        Axis::Number => {
+            groups.sort_by(|a, b| a.0.parse::<f64>().unwrap_or(0.0).total_cmp(&b.0.parse().unwrap_or(0.0)));
+            groups.truncate(60);
+        }
+    }
+    (groups.iter().map(|g| (g.0.clone(), value(g))).collect(), cut)
 }
 
 /// A cell as text, as the shells show it: null is empty, a string is itself.

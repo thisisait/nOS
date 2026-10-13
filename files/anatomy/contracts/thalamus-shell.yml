@@ -24,8 +24,18 @@ gates:
 wire:
   framing: "newline-delimited JSON, one message per line, UTF-8"
   tag: "every message is an object whose `t` names its variant (snake_case)"
-  to_thalamus: [turn, approval_decision, control]
-  to_shell: [session, text, render, approval_request, refused, activity]
+  to_thalamus: [turn, approval_decision, control, widget]
+  to_shell: [session, text, render, approval_request, refused, activity, widget]
+  widget: >-
+    A widget is a spec the person placed; the pupil re-runs it over `widget {widget, spec, trigger}`
+    and the thalamus answers as that person, without the model, with `widget {session, widget,
+    component}` (table_results, a chart that may have no points yet, or a form) or `refused
+    {reason, widget}`. `widget` is the pupil's token [A-Za-z0-9_-]{1,64}, echoed, never a thalamus
+    id. spec is exactly one of {rows: query_rows arguments}, {chart: {query {table, q?, where?},
+    chart bar|line|pie, x column, y? number column, op count|sum|avg}} (aggregated by the thalamus:
+    category x largest first, 59 and "other" past 60; date x by UTC day, the last 60; number x
+    ascending, the 60 smallest), {form: {table, columns?}}. trigger: click|restore|table_changed,
+    recorded with the spec in the ledger. A widget's rows never let the model propose an edit.
   phase: [thinking, tool, writing, idle]   # activity.phase; tool is {tool: {name}}
   decision: [approve, reject]
   control_view: [inbox, approvals, red_status]
@@ -63,10 +73,8 @@ components:
       edges[{from, to, label?, dashed?}]}; at most 60 nodes and 120 edges; ids [A-Za-z0-9_-]{1,64}, unique, and
       every edge names two of them; drawn as layered columns (face graphLayered.ts), zoomable; the terminal says
       every node and edge as text
-  # A form is in the crate's vocabulary but crosses the wire only inside the `widget` message
-  # (genui I5f), so it joins `vocabulary` with its first accepted fixture sample; until then a
-  # render or approval_request carrying one is refused (wire.rs not_a_form).
-  widget_only:
+    # Crosses the wire only inside a `widget` message: a render or approval_request carrying one is
+    # refused (wire.rs not_a_form).
     form: >-
       a widget form serve builds from the table's live schema (form_from_schema), never the model:
       {form uuid, table, title (the KEAP table's), fields[{key, label, kind text|number|date|select|bool,
@@ -102,4 +110,4 @@ open:
     row_diff_approval and the
     control views stay chosen by their tool or control, and an approval is
     minted only by propose_row_edit. The model has no form: a form is a
-    widget the person made (widget_only above).
+    widget the person made, and a widget runs without the model (wire.widget).

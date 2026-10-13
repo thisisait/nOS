@@ -1,27 +1,6 @@
 edit roadmap / backup-restic-fork — nothing is written unless you approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-  ✗ pulse job nightly-backup failed (3h)
-Steps by track
-track                    next                     done
-pupil                    I4c                      2
-keap                     row query                0
-Next steps
-  1. [ok] query_rows — landed in I4a
-  2. [warn] chart — not built yet
-  3. show
-pupil-i4
-  status: active
-  increments: {"done":["I4a","I4b"],"next":"I4c"}
-  ordinal: 4
-bar chart Rows by status: 2 series over category x, not drawn here
-  roadmap: next=23, active=4, done=95
-  ideas: next=7, active=1, done=12.5
-Roadmap
-  nOS
-    pupil — the eye
-    keak
-History
   2026-10-12 → 2026-10-13  I4a — query_rows [thalamus]
   2026-10-13 → 2026-10-14  chart hi [pupil]
 Organs
@@ -35,6 +14,27 @@ edges:
   pulse -> bone (jobs)
   wing - -> keap
   keap -> bone (recall)
+widget w-expenses_1:
+Expenses — 2 of 2 matched (2 rows) · substring match, not semantic
+  order by when desc
+__id                     when                     kind                     amoun
+t
+e2                       2026-10-13               tools                    42
+e1                       2026-10-01               travel                   420
+widget w2:
+bar chart sum of amount by kind: 1 series over category x, not drawn here
+  sum of amount: travel=420, tools=42, (empty)=3.5
+widget w5:
+line chart count by when: 1 series over time x, not drawn here
+  count: (no rows yet)
+widget w4:
+form Expenses (table expenses): fill it in the pupil
+  Amount (number, required)
+  When (date)
+  Kind (select, required, options food|travel|tools)
+  Paid (bool)
+  not editable here: receipt (file)
 refused: login carol has no row in the identity map
+refused (widget w2): no column `kinds` in Expenses; columns: when, kind, amount
 approve this edit? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit

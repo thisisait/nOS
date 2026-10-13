@@ -1674,7 +1674,8 @@ fn widget_refused_names_the_widget() {
         let (session, w) = run_widget(&rig, "w9", spec);
         assert_eq!((&w["t"], &w["widget"]), (&serde_json::json!("refused"), &serde_json::json!("w9")), "{name}: {w}");
         assert!(w["reason"].as_str().is_some_and(|r| r.contains(want)), "{name}: {w}");
-        let ev = events(&rig.ledger, &session);
+        // The connection is gone by now, so its session_end may or may not have landed.
+        let ev: Vec<_> = events(&rig.ledger, &session).into_iter().filter(|e| e.0 != "agent_session_end").collect();
         let kinds: Vec<&str> = ev.iter().map(|e| e.0.as_str()).collect();
         assert_eq!(kinds, ["agent_session_start", "agent_tool_use", "agent_tool_result"], "{name}: {ev:?}");
         assert!(ev[2].2["error"].as_str().is_some_and(|e| e.contains(want)), "{name}: {ev:?}");

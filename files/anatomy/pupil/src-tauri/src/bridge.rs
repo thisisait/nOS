@@ -62,7 +62,7 @@ pub fn pump(stream: UnixStream, mut emit: impl FnMut(ToShell)) -> String {
             Ok(0) => return "the thalamus closed the connection".into(),
             Ok(_) => emit(match std::str::from_utf8(&buf) {
                 Ok(line) => decode_to_shell(line),
-                Err(e) => ToShell::Refused { reason: format!("undecodable message: not UTF-8 ({e})") },
+                Err(e) => ToShell::Refused { reason: format!("undecodable message: not UTF-8 ({e})"), widget: None },
             }),
             Err(e) => return format!("read failed: {e}"),
         }
@@ -124,7 +124,7 @@ mod tests {
             assert_eq!(serde_json::to_value(m).unwrap(), serde_json::from_str::<Value>(line).unwrap());
         }
         for m in &got[good.len()..] {
-            assert!(matches!(m, ToShell::Refused { reason } if !reason.is_empty()), "accepted: {m:?}");
+            assert!(matches!(m, ToShell::Refused { reason, .. } if !reason.is_empty()), "accepted: {m:?}");
         }
     }
 

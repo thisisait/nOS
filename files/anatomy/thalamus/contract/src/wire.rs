@@ -12,6 +12,8 @@ pub enum ToThalamus {
     Turn { session: Option<String>, text: String },
     ApprovalDecision { approval: String, decision: Decision, note: Option<String> },
     Control { view: ControlView },
+    /// A widget the person placed: serve runs `spec` as them, without the model (genui I5f).
+    Widget { widget: String, spec: WidgetSpec, trigger: Trigger },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -21,9 +23,81 @@ pub enum ToShell {
     Text { session: String, text: String },
     Render { session: String, component: Component },
     ApprovalRequest { session: String, approval: String, component: Component },
-    Refused { reason: String },
+    /// `widget` names the widget whose run was refused; absent for anything else.
+    Refused {
+        reason: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        widget: Option<String>,
+    },
     /// What the thalamus is doing in this session; the pupil's eye shows it.
     Activity { session: String, phase: Phase },
+    /// A widget's answer: table_results, a chart (which may have no points yet) or a form.
+    Widget { session: String, widget: String, component: Component },
+}
+
+/// What a widget re-runs: exactly one of rows (query_rows' arguments), a chart, a form.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum WidgetSpec {
+    Rows(serde_json::Value),
+    Chart(ChartSpec),
+    Form(FormSpec),
+}
+
+/// One series aggregated by serve: `op` of `y` per value of `x`; count needs no `y`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ChartSpec {
+    pub query: ChartQuery,
+    pub chart: WidgetChart,
+    pub x: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub y: Option<String>,
+    pub op: Op,
+}
+
+/// The rows a chart reads: query_rows' table, q and where.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ChartQuery {
+    pub table: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub q: Option<String>,
+    #[serde(default, rename = "where", skip_serializing_if = "Option::is_none")]
+    pub where_: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WidgetChart {
+    Bar,
+    Line,
+    Pie,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Op {
+    Count,
+    Sum,
+    Avg,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FormSpec {
+    pub table: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub columns: Option<Vec<String>>,
+}
+
+/// Why a widget ran: the person clicked, a layout was restored, or a write changed its table.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Trigger {
+    Click,
+    Restore,
+    TableChanged,
 }
 
 /// One step of a turn: "thinking" | {"tool": {"name": ..}} | "writing" | "idle".
@@ -64,6 +138,12 @@ fn need_uuid(field: &str, s: &str) -> Result<(), String> {
     if is_uuid(s) { Ok(()) } else { Err(format!("{field} is not a lowercase uuid: {s:?}")) }
 }
 
+/// The pupil's correlation token, echoed back; never a thalamus id.
+fn need_token(s: &str) -> Result<(), String> {
+    let ok = (1..=64).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-');
+    if ok { Ok(()) } else { Err(format!("widget is not [A-Za-z0-9_-]{{1,64}}: {s:?}")) }
+}
+
 /// The model has no form: one is drawn only inside the widget message the person asked for.
 fn not_a_form(c: &Component) -> Result<(), String> {
     match c {
@@ -94,7 +174,16 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             component.check()?;
             not_a_form(component)
         }
-        ToShell::Refused { .. } => Ok(()),
+        ToShell::Refused { widget, .. } => widget.as_deref().map_or(Ok(()), need_token),
+        ToShell::Widget { session, widget, component } => {
+            need_uuid("session", session)?;
+            need_token(widget)?;
+            match component {
+                Component::Chart(_) => component.check_allow_empty(),
+                Component::TableResults(_) | Component::Form(_) => component.check(),
+                _ => Err("a widget carries table_results, a chart or a form".into()),
+            }
+        }
     }
 }
 
@@ -103,7 +192,7 @@ pub fn decode_to_shell(line: &str) -> ToShell {
     let checked = serde_json::from_str::<ToShell>(line)
         .map_err(|e| format!("undecodable message: {e}"))
         .and_then(|m| check_shell(&m).map(|_| m));
-    checked.unwrap_or_else(|reason| ToShell::Refused { reason })
+    checked.unwrap_or_else(|reason| ToShell::Refused { reason, widget: None })
 }
 
 /// The thalamus's decoder: Err is the reason it answers with `Refused`.
@@ -112,6 +201,7 @@ pub fn decode_to_thalamus(line: &str) -> Result<ToThalamus, String> {
     match &m {
         ToThalamus::Turn { session: Some(s), .. } => need_uuid("session", s)?,
         ToThalamus::ApprovalDecision { approval, .. } => need_uuid("approval", approval)?,
+        ToThalamus::Widget { widget, .. } => need_token(widget)?,
         _ => {}
     }
     Ok(m)

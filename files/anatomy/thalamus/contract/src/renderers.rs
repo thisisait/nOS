@@ -893,13 +893,13 @@ mod tests {
         let ask = format!(r#"{{"t":"approval_request","session":"{s}","approval":"{FORM_ID}","component":{}}}"#, form(&field("a")));
         for line in [render, ask] {
             match decode_to_shell(&line) {
-                ToShell::Refused { reason } => assert!(reason.contains("a form is drawn only as a widget the person made"), "{reason}"),
+                ToShell::Refused { reason, .. } => assert!(reason.contains("a form is drawn only as a widget the person made"), "{reason}"),
                 m => panic!("a form outside a widget was accepted: {m:?}"),
             }
         }
         let fields = (0..21).map(|i| field(&format!("f{i}"))).collect::<Vec<_>>().join(",");
         let over = format!(r#"{{"t":"render","session":"{s}","component":{}}}"#, form(&fields));
-        assert!(matches!(decode_to_shell(&over), ToShell::Refused { reason } if reason.contains("form fields: 21")));
+        assert!(matches!(decode_to_shell(&over), ToShell::Refused { reason, .. } if reason.contains("form fields: 21")));
     }
 
     /// Through check(), so the matcher is the one a time chart meets.
