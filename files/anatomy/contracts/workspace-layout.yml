@@ -1,0 +1,29 @@
+# The pupil's workspace layout: what the person laid out, saved on their Mac.
+# Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates over
+# the same bytes). No wire message reads or writes it: the model never sees a layout.
+version: 1
+fixture: files/anatomy/contracts/workspace-layout.fixture.json
+
+producer:
+  organ: pupil
+  code:
+    - files/anatomy/pupil/src/workspace.ts               # the reducers that change it
+consumer:
+  organ: pupil
+  code:
+    - files/anatomy/pupil/src-tauri/src/workspace.rs     # decodes and checks on every load and save
+    - files/anatomy/pupil/src/workspace.test.ts          # restores every fixture sample
+gates:
+  both: tests/anatomy/test_workspace_layout_contract.py
+
+file: "<tauri app_data_dir>/workspaces.json, written atomically (tmp + rename), mode 0600; one that fails to decode is renamed .broken-<unix seconds> and the pupil starts with one empty workspace and says so"
+
+layout:
+  shape: "{version: 1, active: id, chat: {x, y, w, h, open}, workspaces[1..12]{id, name, widgets[0..24]{id, title, spec, x, y, w, h}}}; unknown keys refused"
+  ids: "workspace and widget ids are [A-Za-z0-9_-]{1,64}, unique in the file; a widget id is its wire token; active names a workspace"
+  name: "at most 40 chars"
+  title: "at most 120 chars"
+  grid: "x, y, w, h are integer grid units: 12 columns, rows of 40 px; x from 0, w 2..12, x + w <= 12; y 0..400, h 2..40"
+  spec: "exactly one WidgetSpec of thalamus-shell.yml `widget` (rows | chart | form); two keys or an unknown key refused"
+  chat: "CSS px of the window (integers; w, h >= 0); clampChat keeps it on screen on load and on resize"
+  face: "integer twelfths map onto face LayoutCellSpec fractions (x/12); the face reuses the format, not the code"

@@ -1,0 +1,656 @@
+{
+ "version": 1,
+ "samples": [
+  {
+   "case": "poc: rows, chart and form on one tab",
+   "layout": {
+    "version": 1,
+    "active": "main",
+    "chat": {
+     "x": 880,
+     "y": 80,
+     "w": 380,
+     "h": 560,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "main",
+      "name": "Expenses",
+      "widgets": [
+       {
+        "id": "w1",
+        "title": "All expenses",
+        "spec": {
+         "rows": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       },
+       {
+        "id": "w2",
+        "title": "Spend by kind",
+        "spec": {
+         "chart": {
+          "query": {
+           "table": "expenses"
+          },
+          "chart": "bar",
+          "x": "kind",
+          "y": "amount",
+          "op": "sum"
+         }
+        },
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       },
+       {
+        "id": "w3",
+        "title": "Add an expense",
+        "spec": {
+         "form": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 8,
+        "w": 4,
+        "h": 6
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "case": "two tabs, the second active, chat closed, widgets at the grid edges",
+   "layout": {
+    "version": 1,
+    "active": "b",
+    "chat": {
+     "x": 880,
+     "y": 80,
+     "w": 380,
+     "h": 560,
+     "open": false
+    },
+    "workspaces": [
+     {
+      "id": "a",
+      "name": "A",
+      "widgets": [
+       {
+        "id": "w1",
+        "title": "widget 1",
+        "spec": {
+         "rows": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       }
+      ]
+     },
+     {
+      "id": "b",
+      "name": "B",
+      "widgets": [
+       {
+        "id": "w2",
+        "title": "widget 2",
+        "spec": {
+         "chart": {
+          "query": {
+           "table": "expenses"
+          },
+          "chart": "bar",
+          "x": "kind",
+          "y": "amount",
+          "op": "sum"
+         }
+        },
+        "x": 0,
+        "y": 360,
+        "w": 12,
+        "h": 40
+       },
+       {
+        "id": "w3",
+        "title": "widget 3",
+        "spec": {
+         "rows": {
+          "table": "notes",
+          "q": "x"
+         }
+        },
+        "x": 10,
+        "y": 0,
+        "w": 2,
+        "h": 2
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "case": "one empty workspace",
+   "layout": {
+    "version": 1,
+    "active": "ws1",
+    "chat": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "ws1",
+      "name": "Workspace",
+      "widgets": []
+     }
+    ]
+   }
+  }
+ ],
+ "refused": [
+  {
+   "case": "a 13th workspace",
+   "layout": {
+    "version": 1,
+    "active": "ws0",
+    "chat": {
+     "x": 880,
+     "y": 80,
+     "w": 380,
+     "h": 560,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "ws0",
+      "name": "W0",
+      "widgets": []
+     },
+     {
+      "id": "ws1",
+      "name": "W1",
+      "widgets": []
+     },
+     {
+      "id": "ws2",
+      "name": "W2",
+      "widgets": []
+     },
+     {
+      "id": "ws3",
+      "name": "W3",
+      "widgets": []
+     },
+     {
+      "id": "ws4",
+      "name": "W4",
+      "widgets": []
+     },
+     {
+      "id": "ws5",
+      "name": "W5",
+      "widgets": []
+     },
+     {
+      "id": "ws6",
+      "name": "W6",
+      "widgets": []
+     },
+     {
+      "id": "ws7",
+      "name": "W7",
+      "widgets": []
+     },
+     {
+      "id": "ws8",
+      "name": "W8",
+      "widgets": []
+     },
+     {
+      "id": "ws9",
+      "name": "W9",
+      "widgets": []
+     },
+     {
+      "id": "ws10",
+      "name": "W10",
+      "widgets": []
+     },
+     {
+      "id": "ws11",
+      "name": "W11",
+      "widgets": []
+     },
+     {
+      "id": "ws12",
+      "name": "W12",
+      "widgets": []
+     }
+    ]
+   }
+  },
+  {
+   "case": "a widget w: 1",
+   "layout": {
+    "version": 1,
+    "active": "main",
+    "chat": {
+     "x": 880,
+     "y": 80,
+     "w": 380,
+     "h": 560,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "main",
+      "name": "Expenses",
+      "widgets": [
+       {
+        "id": "w1",
+        "title": "All expenses",
+        "spec": {
+         "rows": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 8
+       },
+       {
+        "id": "w2",
+        "title": "Spend by kind",
+        "spec": {
+         "chart": {
+          "query": {
+           "table": "expenses"
+          },
+          "chart": "bar",
+          "x": "kind",
+          "y": "amount",
+          "op": "sum"
+         }
+        },
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       },
+       {
+        "id": "w3",
+        "title": "Add an expense",
+        "spec": {
+         "form": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 8,
+        "w": 4,
+        "h": 6
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "case": "an unknown key",
+   "layout": {
+    "version": 1,
+    "active": "main",
+    "chat": {
+     "x": 880,
+     "y": 80,
+     "w": 380,
+     "h": 560,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "main",
+      "name": "Expenses",
+      "widgets": [
+       {
+        "id": "w1",
+        "title": "All expenses",
+        "spec": {
+         "rows": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       },
+       {
+        "id": "w2",
+        "title": "Spend by kind",
+        "spec": {
+         "chart": {
+          "query": {
+           "table": "expenses"
+          },
+          "chart": "bar",
+          "x": "kind",
+          "y": "amount",
+          "op": "sum"
+         }
+        },
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       },
+       {
+        "id": "w3",
+        "title": "Add an expense",
+        "spec": {
+         "form": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 8,
+        "w": 4,
+        "h": 6
+       }
+      ]
+     }
+    ],
+    "theme": "dark"
+   }
+  },
+  {
+   "case": "a spec with two keys",
+   "layout": {
+    "version": 1,
+    "active": "main",
+    "chat": {
+     "x": 880,
+     "y": 80,
+     "w": 380,
+     "h": 560,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "main",
+      "name": "Expenses",
+      "widgets": [
+       {
+        "id": "w1",
+        "title": "All expenses",
+        "spec": {
+         "rows": {
+          "table": "expenses"
+         },
+         "form": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       },
+       {
+        "id": "w2",
+        "title": "Spend by kind",
+        "spec": {
+         "chart": {
+          "query": {
+           "table": "expenses"
+          },
+          "chart": "bar",
+          "x": "kind",
+          "y": "amount",
+          "op": "sum"
+         }
+        },
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       },
+       {
+        "id": "w3",
+        "title": "Add an expense",
+        "spec": {
+         "form": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 8,
+        "w": 4,
+        "h": 6
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "case": "a widget past column 12",
+   "layout": {
+    "version": 1,
+    "active": "main",
+    "chat": {
+     "x": 880,
+     "y": 80,
+     "w": 380,
+     "h": 560,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "main",
+      "name": "Expenses",
+      "widgets": [
+       {
+        "id": "w1",
+        "title": "All expenses",
+        "spec": {
+         "rows": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       },
+       {
+        "id": "w2",
+        "title": "Spend by kind",
+        "spec": {
+         "chart": {
+          "query": {
+           "table": "expenses"
+          },
+          "chart": "bar",
+          "x": "kind",
+          "y": "amount",
+          "op": "sum"
+         }
+        },
+        "x": 7,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       },
+       {
+        "id": "w3",
+        "title": "Add an expense",
+        "spec": {
+         "form": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 8,
+        "w": 4,
+        "h": 6
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "case": "active names no workspace",
+   "layout": {
+    "version": 1,
+    "active": "nowhere",
+    "chat": {
+     "x": 880,
+     "y": 80,
+     "w": 380,
+     "h": 560,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "main",
+      "name": "Expenses",
+      "widgets": [
+       {
+        "id": "w1",
+        "title": "All expenses",
+        "spec": {
+         "rows": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       },
+       {
+        "id": "w2",
+        "title": "Spend by kind",
+        "spec": {
+         "chart": {
+          "query": {
+           "table": "expenses"
+          },
+          "chart": "bar",
+          "x": "kind",
+          "y": "amount",
+          "op": "sum"
+         }
+        },
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       },
+       {
+        "id": "w3",
+        "title": "Add an expense",
+        "spec": {
+         "form": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 8,
+        "w": 4,
+        "h": 6
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "case": "two widgets share an id",
+   "layout": {
+    "version": 1,
+    "active": "main",
+    "chat": {
+     "x": 880,
+     "y": 80,
+     "w": 380,
+     "h": 560,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "main",
+      "name": "Expenses",
+      "widgets": [
+       {
+        "id": "w1",
+        "title": "All expenses",
+        "spec": {
+         "rows": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       },
+       {
+        "id": "w1",
+        "title": "Spend by kind",
+        "spec": {
+         "chart": {
+          "query": {
+           "table": "expenses"
+          },
+          "chart": "bar",
+          "x": "kind",
+          "y": "amount",
+          "op": "sum"
+         }
+        },
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 8
+       },
+       {
+        "id": "w3",
+        "title": "Add an expense",
+        "spec": {
+         "form": {
+          "table": "expenses"
+         }
+        },
+        "x": 0,
+        "y": 8,
+        "w": 4,
+        "h": 6
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}
