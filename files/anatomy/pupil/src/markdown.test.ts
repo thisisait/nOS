@@ -43,3 +43,11 @@ describe('unclosed inline markers do not backtrack', () => {
 		}
 	});
 });
+
+// Live 2026-10-13: a model's `---` divider was drawn as three dashes.
+describe('a thematic break', () => {
+	it('--- between paragraphs is a rule, not text', () => {
+		expect(parse('a\n---\nb')).toEqual([
+			{ t: 'p', inl: [{ t: 'text', text: 'a' }] }, { t: 'hr' }, { t: 'p', inl: [{ t: 'text', text: 'b' }] }]);
+	});
+});

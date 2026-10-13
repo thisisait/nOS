@@ -1186,6 +1186,8 @@ fn the_prompt_says_the_time_and_to_admit_what_no_tool_sees() {
     let now = p.split("It is now ").nth(1).and_then(|t| t.split(" UTC").next()).unwrap_or_else(|| panic!("{p}"));
     assert!(now.len() == 16 && now.starts_with("20") && &now[10..11] == " ", "YYYY-MM-DD HH:MM, got {now:?}");
     assert!(p.contains("When no tool can see what is asked, say so"), "{p}");
+    // Live: after a chart, Iris listed its numbers again and linked a placeholder image.
+    assert!(p.contains("never repeat in text what a tool or show already drew"), "{p}");
 }
 
 #[test]

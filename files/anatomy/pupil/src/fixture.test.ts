@@ -127,6 +127,17 @@ describe('the pupil renders the contract fixture', () => {
 		expect(text(html)).toContain('nOS Roadmap — 118 matched (700 rows)');
 	});
 
+	// Live 2026-10-13: a grouped count drew "8 of136" and a "▶ platform" fold under every group.
+	it('a group table has its spaces and no fold of what is already on screen', () => {
+		const msg: ToShell = { t: 'render', session: 's', component: { kind: 'table_results', props: {
+			table: 'roadmap', name: 'nOS Roadmap', query: 'grouped by track', matched: 136, total: 700,
+			columns: ['track', 'count'], projected: false,
+			rows: [{ __id: 'platform', cells: { track: 'platform', count: 62 } }] } } };
+		const html = render(Message, { props: { msg } }).body;
+		expect(text(html)).toContain('1 of 136 matched');
+		expect(html).not.toContain('<details');
+	});
+
 	it('a tool the thalamus runs is said in the log', () => {
 		const html = draw({ t: 'activity', session: 's', phase: { tool: { name: 'query_rows' } } });
 		expect(html).toContain('query_rows');
