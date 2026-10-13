@@ -1198,3 +1198,33 @@ fn a_blank_answer_is_said_not_drawn_empty() {
     let got = turn(&s, &mut r, None, "chart it");
     assert!(matches!(got.last(), Some(ToShell::Text { text, .. }) if text.contains("no answer")), "{got:?}");
 }
+
+#[test]
+fn the_prompt_picks_a_component_by_shape_and_a_refusal_shows_it() {
+    // A bad field must come back naming that field and the shape the kind accepts.
+    let bad = serde_json::json!({"kind": "list", "props": {"ordered": false, "items": [{"text": "x", "html": "<b>"}]}});
+    let rig = rig("pick", mapped(), ROWS, vec![show(bad), answer("done")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "hi");
+    assert!(drawn_kinds(&got).is_empty(), "a refused show was drawn: {got:?}");
+    let p = system_prompt(&rig);
+    for line in [
+        "count per value -> chart",
+        "many rows -> query_rows",
+        "one thing -> record",
+        "steps -> list",
+        "history -> timeline",
+        "hierarchy -> tree",
+        "Conclusion first, in one line",
+        "Never invent data",
+        "no numbers, no chart",
+        "no visual for small talk or a one-line answer",
+    ] {
+        assert!(p.contains(line), "prompt missing {line:?}:\n{p}");
+    }
+    let msg = tool_result(&rig, 1)["error"].as_str().unwrap_or("").to_string();
+    assert!(msg.contains("html"), "the refusal must name the field: {msg}");
+    assert!(msg.contains("expected shape:"), "the refusal must show the accepted shape: {msg}");
+    assert!(msg.contains("items[{text, detail?, tone?"), "the list shape is missing: {msg}");
+}
