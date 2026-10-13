@@ -203,7 +203,8 @@ pub const SHOW_SHAPE: &[(&str, &str)] = &[
 x is a string even for number (\"3\") or time (\"2026-10-13\" or \"2026-10-13T08:00:00Z\"); line, area and stacked_bar \
 series share the same x in order; scatter needs number or time x; pie is 1 series, values >= 0"),
     ("tree", "{title?, nodes[{label, note?, children[]}]}, depth <=4, nodes <=100"),
-    ("timeline", "{title?, items[{when, title, note?, hi?}] <=30}"),
+    ("timeline", "{title?, items[{when, title, note?, hi?, until?, lane?}] <=30}; when and until as dates \
+(\"2026-10-13\") draw a time axis, until not before when; lane groups items on one row, <=40 chars"),
 ];
 
 fn expected_shape(kind: &str) -> String {
@@ -243,10 +244,12 @@ share the same x in the same order; scatter needs number or time x; pie is one s
                         "prefixItems": [{"type": "string", "maxLength": 120}, {"type": "number"}]}}}))}}))),
         branch("tree", "a hierarchy: {title?, nodes[{label, note?, children[]}]}, depth <=4, at most 100 nodes",
             closed(&["nodes"], json!({"title": title, "nodes": {"type": "array", "maxItems": 100}}))),
-        branch("timeline", "a history: {title?, items[{when, title, note?, hi?}] <=30}",
+        branch("timeline", "a history: {title?, items[{when, title, note?, hi?, until?, lane?}] <=30}; every when a date \
+YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)] draws a time axis with until as a span's end (not before when) and lane as its row",
             closed(&["items"], json!({"title": title, "items": {"type": "array", "maxItems": 30, "items": closed(&["when", "title"], json!({
                 "when": {"type": "string", "maxLength": 120}, "title": {"type": "string", "maxLength": 500},
-                "note": {"type": "string", "maxLength": 2000}, "hi": {"type": "boolean"}}))}})))]}}})
+                "note": {"type": "string", "maxLength": 2000}, "hi": {"type": "boolean"},
+                "until": {"type": "string", "maxLength": 120}, "lane": {"type": "string", "maxLength": 40}}))}})))]}}})
 }
 
 const QUERY_KEYS: [&str; 7] = ["table", "q", "where", "columns", "order_by", "limit", "group_by"];

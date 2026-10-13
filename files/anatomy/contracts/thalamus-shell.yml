@@ -53,7 +53,11 @@ components:
       YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)]); at most 6 series, 60 points each, 60 x labels; line, area and stacked_bar
       series share the same x; scatter is number or time x; pie is 1 series of values >= 0
     tree: "a hierarchy (show tool): {title?, nodes[{label, note?, children[]}]}; depth at most 4, at most 100 nodes; one root with 2-4 children is an org chart, otherwise a nested list"
-    timeline: "a history (show tool): {title?, items[{when, title, note?, hi?}]}; at most 30; horizontal up to 6 items, vertical beyond; hi is said as a word"
+    timeline: >-
+      a history (show tool): {title?, items[{when, title, note?, hi?, until?, lane?}]}; at most 30; when every
+      when is a date (YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)]) it is drawn on a time axis: spans when -> until (until not
+      before when), instants as dots, one row per lane (at most 40 chars), zoomable; otherwise in order,
+      horizontal up to 6 items, vertical beyond; hi is said as a word
 
 # ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ──────
 invariants:

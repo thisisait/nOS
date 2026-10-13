@@ -169,7 +169,16 @@ impl Component {
                 t.items.iter().try_for_each(|it| {
                     cap("a timeline when", &it.when, NAME_MAX)?;
                     cap("a timeline title", &it.title, 500)?;
-                    it.note.as_deref().map_or(Ok(()), |d| cap("a timeline note", d, 2000))
+                    it.note.as_deref().map_or(Ok(()), |d| cap("a timeline note", d, 2000))?;
+                    it.lane.as_deref().map_or(Ok(()), |l| cap("a timeline lane", l, 40))?;
+                    let Some(until) = &it.until else { return Ok(()) };
+                    cap("a timeline until", until, NAME_MAX)?;
+                    match (instant(&it.when), instant(until)) {
+                        (Some(w), Some(u)) if u < w => {
+                            Err(format!("timeline item {} ends before it starts: until {until} < when {}", it.title, it.when))
+                        }
+                        _ => Ok(()),
+                    }
                 })
             }
             _ => Ok(()),
@@ -216,6 +225,28 @@ pub fn is_date(s: &str) -> bool {
         Some(b'+' | b'-') => b.len() == 25 && clock(20, false),
         _ => false,
     }
+}
+
+/// Seconds since 1970 UTC of an is_date() string; None when it is not one.
+fn instant(s: &str) -> Option<i64> {
+    if !is_date(s) {
+        return None;
+    }
+    let n = |r: std::ops::Range<usize>| s[r].parse::<i64>().unwrap_or(0);
+    // days_from_civil (Hinnant): the day number of y-m-d, 1970-01-01 = 0.
+    let (y, m, d) = (n(0..4) - i64::from(n(5..7) <= 2), n(5..7), n(8..10));
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let doy = (153 * (m + if m > 2 { -3 } else { 9 }) + 2) / 5 + d - 1;
+    let days = era * 146_097 + yoe * 365 + yoe / 4 - yoe / 100 + doy - 719_468;
+    if s.len() == 10 {
+        return Some(days * 86_400);
+    }
+    let offset = match &s[19..20] {
+        "Z" => 0,
+        sign => (n(20..22) * 3600 + n(23..25) * 60) * if sign == "-" { -1 } else { 1 },
+    };
+    Some(days * 86_400 + n(11..13) * 3600 + n(14..16) * 60 + n(17..19) - offset)
 }
 
 /// Values the model plots, drawn as SVG marks or as text. `x` says how to read every x label;
@@ -277,7 +308,8 @@ pub struct TreeNode {
     pub children: Vec<TreeNode>,
 }
 
-/// A history. Horizontal up to 6 items, vertical beyond. `hi` is said as a word.
+/// A history. Every `when` a date: drawn on a time axis, spans and lanes; otherwise in order,
+/// horizontal up to 6 items, vertical beyond. `hi` is said as a word.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Timeline {
@@ -295,6 +327,12 @@ pub struct TimelineItem {
     pub note: Option<String>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub hi: bool,
+    /// A span ends here; when both are dates it is not before `when`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub until: Option<String>,
+    /// Items that share a lane are drawn on one row of a time-scaled timeline; at most 40 chars.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lane: Option<String>,
 }
 
 /// Rows the model shows: `columns` names each cell of every row, in order.

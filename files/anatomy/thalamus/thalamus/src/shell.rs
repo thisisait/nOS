@@ -195,7 +195,9 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
             for it in &t.items {
                 let note = it.note.as_deref().map(|d| format!(" — {d}")).unwrap_or_default();
                 let hi = if it.hi { " hi" } else { "" };
-                out.push(Line::from(format!("  {}  {}{note}{hi}", it.when, it.title)));
+                let until = it.until.as_deref().map(|u| format!(" → {u}")).unwrap_or_default();
+                let lane = it.lane.as_deref().map(|l| format!(" [{l}]")).unwrap_or_default();
+                out.push(Line::from(format!("  {}{until}  {}{note}{hi}{lane}", it.when, it.title)));
             }
         }
     }
