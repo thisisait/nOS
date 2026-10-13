@@ -88,6 +88,12 @@ fn fit(s: &str, w: usize) -> String {
     if s.chars().count() <= w { format!("{s:w$}") } else { s.chars().take(w - 1).chain(['…']).collect() }
 }
 
+/// A cell that fits the column stays padded. A longer one is kept whole; `wrap` breaks it.
+fn cell_col(s: &str) -> String {
+    let s = s.replace(['\n', '\r', '\t'], " ");
+    if s.chars().count() <= COL { format!("{s:COL$}") } else { s }
+}
+
 /// One component as plain lines: the same text in the terminal and in its snapshot.
 pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
     let mut out = Vec::new();
@@ -101,7 +107,7 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
             for r in &t.rows {
                 let vals = std::iter::once(r.__id.clone())
                     .chain(t.columns.iter().map(|k| r.cells.get(k).map(cell).unwrap_or_default()));
-                out.push(Line::from(vals.map(|v| fit(&v, COL)).collect::<Vec<_>>().join(" ").trim_end().to_string()));
+                out.push(Line::from(vals.map(|v| cell_col(&v)).collect::<Vec<_>>().join(" ").trim_end().to_string()));
             }
         }
         Component::RowDiffApproval(d) => {
@@ -140,7 +146,7 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
             out.extend(t.title.clone().map(head));
             out.push(Line::from(t.columns.iter().map(|c| fit(c, COL)).collect::<Vec<_>>().join(" ").trim_end().to_string()));
             for r in &t.rows {
-                out.push(Line::from(r.iter().map(|v| fit(&cell(v), COL)).collect::<Vec<_>>().join(" ").trim_end().to_string()));
+                out.push(Line::from(r.iter().map(|v| cell_col(&cell(v))).collect::<Vec<_>>().join(" ").trim_end().to_string()));
             }
         }
         Component::List(l) => {
