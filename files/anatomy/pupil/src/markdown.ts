@@ -1,5 +1,6 @@
 // The markdown a model writes, as a tree of text nodes for Markdown.svelte: never HTML.
 // Headings 1-3, paragraphs, lists of two levels, code fences; inline strong, em, code, link.
+// An image is words, [obrázek: alt]. Its url is not drawn and nothing is fetched.
 // Anything else is literal text, so a string that is not markdown is one paragraph of itself.
 
 export type Inline =
@@ -17,17 +18,18 @@ export type Block =
 	| { t: 'hr' };
 
 // A label holds no "[": else every unclosed "[" re-reads the rest (quadratic).
-const INLINE = /`([^`\n]+)`|\*\*(.+?)\*\*|\*([^*\s](?:[^*]*[^*\s])?)\*|\[([^[\]\n]+)\]\(([^)\s]+)\)/g;
+const INLINE = /`([^`\n]+)`|\*\*(.+?)\*\*|\*([^*\s](?:[^*]*[^*\s])?)\*|!\[([^[\]\n]*)\]\(([^)\s]+)\)|\[([^[\]\n]+)\]\(([^)\s]+)\)/g;
 
 export function inline(s: string): Inline[] {
 	const out: Inline[] = [];
 	let at = 0;
 	for (const m of s.matchAll(INLINE)) {
 		if (m.index > at) out.push({ t: 'text', text: s.slice(at, m.index) });
-		const [, code, strong, em, label, url] = m;
+		const [, code, strong, em, image, , label, url] = m;
 		if (code !== undefined) out.push({ t: 'code', text: code });
 		else if (strong !== undefined) out.push({ t: 'strong', text: strong });
 		else if (em !== undefined) out.push({ t: 'em', text: em });
+		else if (image !== undefined) out.push({ t: 'text', text: `[obrázek: ${image}]` });
 		else out.push({ t: 'link', text: label, url: /^https?:\/\//i.test(url) ? url : null });
 		at = m.index + m[0].length;
 	}
