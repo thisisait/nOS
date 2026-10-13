@@ -268,6 +268,8 @@ def test_the_layout_builds_without_touching_other_sessions():
             capture_output=True, text=True, env=env,
         ).stdout.split()
         assert "ops" in windows, f"no ops window; got {windows}"
+        # Iris over ssh: the terminal shell has its own window, typed but not started.
+        assert "iris" in windows, f"no iris window; got {windows}"
 
         # The layout ACTUALLY built, not the one the code reads like. tmux
         # renumbers panes by position on every split, so a send-keys interleaved
