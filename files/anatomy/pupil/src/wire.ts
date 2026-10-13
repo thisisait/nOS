@@ -14,7 +14,7 @@ export type Component =
 	| { kind: 'table'; props: { title?: string; columns: string[]; rows: Value[][] } }
 	| { kind: 'list'; props: { title?: string; ordered: boolean; items: { text: string; detail?: string; tone?: 'ok' | 'info' | 'warn' | 'bad' }[] } }
 	| { kind: 'record'; props: { title?: string; fields: { key: string; value: Value }[] } }
-	| { kind: 'chart'; props: { title?: string; chart: 'bar' | 'line'; series: { name: string; points: [string, number][] }[] } }
+	| { kind: 'chart'; props: { title?: string; chart: 'bar' | 'stacked_bar' | 'line' | 'area' | 'scatter' | 'pie'; x: 'category' | 'number' | 'time'; series: { name: string; points: [string, number][] }[] } }
 	| { kind: 'tree'; props: { title?: string; nodes: TreeNode[] } }
 	| { kind: 'timeline'; props: { title?: string; items: { when: string; title: string; note?: string; hi?: boolean }[] } };
 

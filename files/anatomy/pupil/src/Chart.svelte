@@ -1,83 +1,146 @@
 <!--
-  A chart the model shows (renderers.rs Chart): bar or line as inline SVG, no library.
-  Every value is a mark with a <title> saying series, x and value; every label is a
-  text node placed inside the 320x160 box (gate: fixture.test.ts "a chart is SVG marks").
+  A chart the model shows (renderers.rs Chart) as inline SVG, no library: the marks and labels
+  come from chart/geometry.ts. Every value is a focusable mark with a <title> (series · x: value);
+  every label is a text node inside the viewBox, which follows the container's width at a fixed
+  aspect (gate: fixture.test.ts "a chart is SVG marks"). Lines, areas and scatters zoom along x.
 -->
 <script lang="ts">
 	import type { Component } from './wire';
+	import { layout } from './chart/geometry';
+	import { dimmed, toggle } from './chart/select';
+	import { IDENTITY, drag, key, wheel, type Zoom } from './chart/zoom';
 
 	let { chart }: { chart: Extract<Component, { kind: 'chart' }>['props'] } = $props();
 
-	const W = 320, H = 160, T = 10, B = 18, GAP = 3;
-	const FONT = 8, GLYPH = FONT * 0.6; // the widest UI glyph, so a label's width is bounded
-	const COLOURS = ['--accent', '--warn', '--ok', '--bad', '--info', '--muted'].map((c) => `var(${c})`);
-	const r1 = (n: number) => Math.round(n * 10) / 10;
-	// At most 8 glyphs, so a y label fits left of the axis.
-	const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
-	const fmt = (v: number) => (compact.format(v).length <= 7 ? compact.format(v) : v.toExponential(1));
-	const clip = (s: string, n: number) => (s.length <= n ? s : s.slice(0, Math.max(n - 1, 0)) + '…');
+	// One viewBox unit is 1.4 px once the container is wider than the 320-unit floor, so text keeps its size.
+	const SCALE = 1.4;
+	const clip = $props.id();
+	let width = $state(0);
+	let zoom: Zoom = $state(IDENTITY);
+	let sel: string[] = $state([]);
+	let focused = $state('');
+	let svg: SVGSVGElement | undefined = $state();
 
-	const g = $derived.by(() => {
-		const xs = [...new Set(chart.series.flatMap((s) => s.points.map(([x]) => x)))];
-		const vals = chart.series.flatMap((s) => s.points.map(([, v]) => v));
-		const lo = Math.min(0, ...vals);
-		const hi = Math.max(0, ...vals) === lo ? lo + 1 : Math.max(0, ...vals);
-		const yVals = [...new Set([lo, 0, hi])];
-		// The gutter is the y labels, so the plot uses the rest of the box.
-		const L = r1(Math.max(...yVals.map((v) => fmt(v).length * GLYPH)) + GAP);
-		const R = GAP;
-		const y = (v: number) => r1(H - B - ((v - lo) / (hi - lo)) * (H - B - T));
-		const bw = (W - R - L) / Math.max(xs.length, 1);
-		const cx = (i: number) => r1(L + bw * (i + 0.5));
-		const step = Math.ceil(xs.length / 8);
-		const room = Math.max(Math.floor((bw * step) / GLYPH), 1);
-		const xLabels = xs.flatMap((x, i) => {
-			if (i % step) return [];
-			const t = clip(x, room), half = (t.length * GLYPH) / 2;
-			return [{ t, x: r1(Math.min(Math.max(cx(i), half), W - half)) }];
-		});
-		const yLabels = yVals.map((v) => ({ t: fmt(v), y: r1(y(v) + FONT / 3) }));
-		const n = chart.series.length, w = (bw * 0.8) / n;
-		const marks = chart.series.map((s, k) => ({
-			name: s.name,
-			colour: COLOURS[k % COLOURS.length],
-			points: s.points.map(([x, v]) => {
-				const i = xs.indexOf(x);
-				return { x, v, i, cx: cx(i), cy: y(v), bx: r1(L + bw * i + bw * 0.1 + k * w), top: Math.min(y(v), y(0)), h: r1(Math.max(Math.abs(y(v) - y(0)), 0.5)) };
-			}),
-		}));
-		return { w: r1(w), base: y(0), xLabels, yLabels, marks, L, R };
+	const g = $derived(layout(chart, Math.max(320, Math.round(width / SCALE)), zoom));
+	const box = $derived({ w: g.W - g.L - g.R, h: g.H, xOnly: true });
+	const marks = $derived(g.series.flatMap((s) => s.marks));
+	const live = $derived(focused || marks.filter((m) => sel.includes(m.id)).map((m) => m.tip).join('; '));
+	const label = $derived(`${chart.title ? `${chart.title} — ` : ''}${chart.chart} chart, ${chart.x} x`);
+
+	/** A client point as plot units, left edge of the plot = 0. */
+	const plotPoint = (e: MouseEvent): [number, number] => {
+		const r = svg!.getBoundingClientRect();
+		const k = g.W / (r.width || g.W);
+		return [(e.clientX - r.left) * k - g.L, (e.clientY - r.top) * k];
+	};
+
+	$effect(() => {
+		const el = svg;
+		if (!el || !g.zoomable) return;
+		const on = (e: WheelEvent) => {
+			e.preventDefault();
+			zoom = wheel(zoom, plotPoint(e), e.deltaY, box);
+		};
+		el.addEventListener('wheel', on, { passive: false });
+		return () => el.removeEventListener('wheel', on);
 	});
+
+	// Capture only once the pointer has moved: capturing on press would steal a mark's click.
+	let press: { id: number; x: number; moved: boolean } | null = null;
+	function down(e: PointerEvent) {
+		if (g.zoomable && e.button === 0) press = { id: e.pointerId, x: plotPoint(e)[0], moved: false };
+	}
+	function move(e: PointerEvent) {
+		if (!press || press.id !== e.pointerId) return;
+		const [x] = plotPoint(e);
+		if (!press.moved && Math.abs(x - press.x) < 3) return;
+		if (!press.moved) svg?.setPointerCapture(e.pointerId);
+		zoom = drag(zoom, x - press.x, 0, box);
+		press = { ...press, x, moved: true };
+	}
+	function up(e: PointerEvent) {
+		if (press?.moved && svg?.hasPointerCapture(e.pointerId)) svg.releasePointerCapture(e.pointerId);
+		press = null;
+	}
+	function keys(e: KeyboardEvent) {
+		const z = g.zoomable ? key(zoom, e.key, box) : null;
+		if (z) {
+			zoom = z;
+			e.preventDefault();
+		}
+	}
+	function pick(id: string) {
+		sel = toggle(sel, id);
+	}
+	function markKey(e: KeyboardEvent, id: string) {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			pick(id);
+		}
+	}
 </script>
 
-<svg viewBox="0 0 {W} {H}" role="img" aria-label="{chart.title ?? ''} {chart.chart} chart">
-	<title>{chart.title ? `${chart.title} — ` : ''}{chart.chart} chart</title>
-	<line class="axis" x1={g.L} y1={g.base} x2={W - g.R} y2={g.base} />
-	{#each g.yLabels as l}<text x={g.L - 3} y={l.y} text-anchor="end" font-size={FONT}>{l.t}</text>{/each}
-	{#each g.xLabels as l}<text x={l.x} y={H - 6} text-anchor="middle" font-size={FONT}>{l.t}</text>{/each}
-	{#each g.marks as m}
-		{#if chart.chart === 'bar'}
-			{#each m.points as p}
-				<rect class="bar" x={p.bx} y={p.top} width={g.w} height={p.h} style:fill={m.colour}><title>{m.name} · {p.x}: {p.v}</title></rect>
-			{/each}
-		{:else}
-			<polyline points={m.points.map((p) => `${p.cx},${p.cy}`).join(' ')} style:stroke={m.colour} />
-			{#each m.points as p}
-				<circle cx={p.cx} cy={p.cy} r="1.5" style:fill={m.colour}><title>{m.name} · {p.x}: {p.v}</title></circle>
-			{/each}
+{#snippet title(tip: string)}<title>{tip}</title>{/snippet}
+
+<div class="chart" bind:clientWidth={width}>
+	{#if g.empty}
+		<p class="empty">no rows yet</p>
+	{:else}
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+		<svg bind:this={svg} viewBox="0 0 {g.W} {g.H}" role="group" aria-label={label} tabindex="0"
+			onkeydown={keys} onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}>
+			<title>{label}</title>
+			{#if g.zoomable}
+				<defs><clipPath id={clip}><rect x={g.L} y="0" width={g.W - g.L - g.R} height={g.H} /></clipPath></defs>
+			{/if}
+			{#if chart.chart !== 'pie'}
+				<line class="axis" x1={g.L} y1={g.base} x2={g.W - g.R} y2={g.base} />
+				{#each g.yLabels as l}<text x={g.L - 3} y={l.y} text-anchor="end" font-size={g.FONT}>{l.t}</text>{/each}
+				{#each g.xLabels as l}<text x={l.x} y={g.H - 6} text-anchor="middle" font-size={g.FONT}>{l.t}</text>{/each}
+			{/if}
+			<g clip-path={g.zoomable ? `url(#${clip})` : undefined}>
+				{#each g.series as s}
+					{#if s.area}<path class="area" d={s.area} style:fill={s.colour} style:stroke={s.colour} />{/if}
+					{#if s.line && !s.area}<polyline points={s.line} style:stroke={s.colour} />{/if}
+					{#each s.marks as m (m.id)}
+						{#if m.d !== undefined}
+							<path class="slice mark" class:dim={dimmed(sel, m.id)} d={m.d} style:fill={m.colour} tabindex="0" role="button"
+								aria-pressed={sel.includes(m.id)} onclick={() => pick(m.id)} onkeydown={(e) => markKey(e, m.id)}
+								onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}>{@render title(m.tip)}</path>
+						{:else if m.rx !== undefined}
+							<rect class="bar mark" class:dim={dimmed(sel, m.id)} x={m.rx} y={m.ry} width={m.rw} height={m.rh} style:fill={m.colour}
+								tabindex="0" role="button" aria-pressed={sel.includes(m.id)} onclick={() => pick(m.id)}
+								onkeydown={(e) => markKey(e, m.id)} onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}>{@render title(m.tip)}</rect>
+						{:else}
+							<circle class="mark" class:dim={dimmed(sel, m.id)} cx={m.cx} cy={m.cy} r={chart.chart === 'scatter' ? 2.5 : 1.5}
+								style:fill={m.colour} tabindex="0" role="button" aria-pressed={sel.includes(m.id)} onclick={() => pick(m.id)}
+								onkeydown={(e) => markKey(e, m.id)} onfocus={() => (focused = m.tip)} onblur={() => (focused = '')}>{@render title(m.tip)}</circle>
+						{/if}
+					{/each}
+				{/each}
+			</g>
+		</svg>
+	{/if}
+	<p class="live" aria-live="polite">{live}</p>
+	<div class="foot">
+		<ul class="legend">
+			{#each g.legend as m}<li><span class="swatch" style:background={m.colour}></span>{m.name}</li>{/each}
+		</ul>
+		{#if g.zoomable && !g.empty}
+			<button type="button" onclick={() => (zoom = IDENTITY)} disabled={zoom.k === 1 && zoom.tx === 0}>Reset zoom</button>
 		{/if}
-	{/each}
-</svg>
-<ul class="legend">
-	{#each g.marks as m}<li><span class="swatch" style:background={m.colour}></span>{m.name}</li>{/each}
-</ul>
+	</div>
+</div>
 
 <style>
+	.chart {
+		width: 100%;
+	}
 	svg {
 		width: 100%;
-		max-width: 640px;
 		display: block;
 		color: var(--muted);
+		touch-action: pan-y;
 	}
 	text {
 		fill: var(--muted);
@@ -89,6 +152,38 @@
 	polyline {
 		fill: none;
 		stroke-width: 1.5;
+	}
+	.area {
+		fill-opacity: 0.25;
+		stroke-width: 1.5;
+	}
+	.mark {
+		cursor: pointer;
+		transition: opacity 120ms;
+	}
+	.mark:focus-visible {
+		outline: none;
+		stroke: var(--accent);
+		stroke-width: 1;
+	}
+	.dim {
+		opacity: 0.3;
+	}
+	.live {
+		min-height: 1.2em;
+		margin: 2px 0 0;
+		font-size: 11px;
+		color: var(--muted);
+	}
+	.empty {
+		color: var(--muted);
+		font-style: italic;
+	}
+	.foot {
+		display: flex;
+		align-items: start;
+		justify-content: space-between;
+		gap: 8px;
 	}
 	.legend {
 		list-style: none;
@@ -105,5 +200,13 @@
 		height: 8px;
 		border-radius: 2px;
 		margin-right: 4px;
+	}
+	button {
+		font-size: 11px;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.mark {
+			transition: none;
+		}
 	}
 </style>
