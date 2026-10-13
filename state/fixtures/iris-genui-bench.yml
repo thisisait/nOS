@@ -1,0 +1,79 @@
+---
+# Recorded shows. The thalamus test iris_genui renders each case; it does not score the YAML against itself.
+- id: table-steps
+  kind: table
+  component:
+    kind: table
+    props:
+      title: Steps by track
+      columns: [track, next, done]
+      rows:
+        - [pupil, I4c, 2]
+  expect:
+    - Steps by track
+    - track
+    - next
+    - done
+    - pupil
+    - I4c
+    - "2"
+- id: list-steps
+  kind: list
+  component:
+    kind: list
+    props:
+      title: Next steps
+      ordered: true
+      items:
+        - text: query_rows
+          detail: landed in I4a
+          tone: "ok"
+        - text: show
+  expect:
+    - Next steps
+    - query_rows
+    - landed in I4a
+    - "ok"
+    - show
+- id: record-steps
+  kind: record
+  component:
+    kind: record
+    props:
+      title: One step
+      fields:
+        - key: tool
+          value: query_rows
+        - key: track
+          value: I4c
+  expect:
+    - One step
+    - tool
+    - query_rows
+    - track
+    - I4c
+- id: markdown-steps
+  kind: markdown
+  component:
+    kind: markdown
+    props:
+      text: "## Next step\nquery_rows"
+  expect:
+    - query_rows
+- id: chart-steps
+  kind: chart
+  component:
+    kind: chart
+    props:
+      title: Steps by track
+      chart: bar
+      series:
+        - name: query_rows
+          points:
+            - [I4c, 2]
+  expect:
+    - Steps by track
+    - bar
+    - query_rows
+    - I4c
+    - "2"
