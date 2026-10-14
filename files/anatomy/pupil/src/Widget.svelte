@@ -60,7 +60,8 @@
 	<div class="body">
 		{#if state?.error}<StatusNote kind="error" block={false}>{state.error}</StatusNote>{/if}
 		{#if state?.component?.kind === 'form'}
-			<Form form={state.component.props} widget={box.id} inFlight={!!state.inFlight} {onsubmit} />
+			<!-- A new row redraws the form empty: Add row waits until it is filled again. -->
+			{#key state.added}<Form form={state.component.props} widget={box.id} inFlight={!!state.inFlight} {onsubmit} />{/key}
 			{#if state.added}<p class="added">row {state.added} added</p>{/if}
 		{:else if state?.component}<ComponentView component={state.component} />{/if}
 	</div>
