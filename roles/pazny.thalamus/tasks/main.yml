@@ -54,6 +54,24 @@
   failed_when: false
   check_mode: false
 
+# rustup's cargo when the host has one; else Homebrew's rust (nOS installs no rustup). Live 2026-10-14:
+# a fresh client had neither, and the build died with "No such file or directory".
+- name: "[pazny.thalamus] Find a Rust toolchain"
+  ansible.builtin.stat:
+    path: "{{ thalamus_cargo }}"
+  register: _thalamus_cargo_stat
+
+- name: "[pazny.thalamus] Install Homebrew's rust when there is no cargo"
+  community.general.homebrew:
+    name: rust
+    state: present
+  when: not (_thalamus_cargo_stat.stat.executable | default(false))
+
+- name: "[pazny.thalamus] Use Homebrew's cargo"
+  ansible.builtin.set_fact:
+    thalamus_cargo: "{{ homebrew_prefix }}/bin/cargo"
+  when: not (_thalamus_cargo_stat.stat.executable | default(false))
+
 # --locked: the Cargo.lock dependabot watches is what ships. The target dir lives off the checkout.
 - name: "[pazny.thalamus] Install thalamus binary"
   ansible.builtin.shell: |
