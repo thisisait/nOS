@@ -2230,24 +2230,37 @@ fn a_choice_reply_reaches_the_model_as_data_and_iris_goes_on() {
     assert_eq!(phases(&got), ["thinking", "text"], "the model's next turn runs: {got:?}");
     assert!(matches!(got.last(), Some(ToShell::Text { text, .. }) if text == "Charting it."), "{got:?}");
     assert!(matches!(raw(&mut r), Some(ToShell::Activity { phase: Phase::Idle, .. })));
-    let body = rig.model.lock().unwrap()[2].1.clone();
-    assert!(body.contains(&format!(r#"[thalamus] choice {id}: picked \"expenses\""#)), "{body}");
-    assert!(!body.contains("untouched"), "a changed pick is not the suggestion: {body}");
+    assert_eq!(heard(&rig, 2), format!(r#"[thalamus] choice {id}: picked "expenses""#), "a changed pick is not the suggestion");
 }
 
-/// Untouched is not agreement: the model hears that the default was left as it was.
+/// The one line the model hears of a reply, exactly; it never carries a word of agreement.
+fn heard(rig: &Rig, n: usize) -> String {
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[n].1).unwrap();
+    let said: Vec<String> = body["messages"].as_array().unwrap().iter()
+        .filter_map(|m| m["content"].as_str().filter(|c| m["role"] == "user" && c.starts_with("[thalamus] choice ")).map(String::from))
+        .collect();
+    assert_eq!(said.len(), 1, "one reply line: {said:?}");
+    let low = said[0].to_lowercase();
+    for word in ["agree", "approv", "accept", "confirm", "consent", "yes", "untouched"] {
+        assert!(!low.contains(word), "{word:?} in what the model heard: {}", said[0]);
+    }
+    said[0].clone()
+}
+
+/// A pick equal to the suggestion is not agreement, and not "untouched" either: the pupil
+/// preselects it, the terminal does not, and serve cannot tell which one answered.
 #[test]
-fn a_suggestion_left_as_it_was_is_said_untouched() {
+fn a_pick_equal_to_the_suggestion_is_said_as_such_and_no_more() {
+    const SAME: &str = "; that is your suggestion, which the pupil preselects, so it may have been left as it was";
     for (name, multi, picked, want) in [
-        ("untouched", false, vec!["todos"], r#"picked \"todos\"; the suggestion (\"todos\") was kept untouched"#),
-        ("untouched2", true, vec!["expenses", "todos"], r#"picked \"expenses\", \"todos\"; the suggestion (\"todos\", \"expenses\") was kept untouched"#),
+        ("untouched", false, vec!["todos"], format!(r#"picked "todos"{SAME}"#)),
+        ("untouched2", true, vec!["expenses", "todos"], format!(r#"picked "expenses", "todos"{SAME}"#)),
     ] {
         let rig = rig(name, mapped(), ROWS, choice_turns(multi));
         let (s, mut r, session, id) = asked_choice(&rig);
         choose(&s, &session, &id, &picked);
         until_text(&mut r);
-        let body = rig.model.lock().unwrap()[2].1.clone();
-        assert!(body.contains(&format!("[thalamus] choice {id}: {want}")), "{name}: {body}");
+        assert_eq!(heard(&rig, 2), format!("[thalamus] choice {id}: {want}"), "{name}");
     }
 }
 

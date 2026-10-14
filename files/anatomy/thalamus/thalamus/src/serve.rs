@@ -753,10 +753,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             if picked.len() > 1 && !c.multi {
                 return Err(format!("this choice takes one pick, not {}", picked.len()));
             }
-            let same = picked.iter().collect::<HashSet<_>>() == c.suggested.iter().collect::<HashSet<_>>();
-            Ok(same.then(|| c.suggested.clone()))
+            Ok(picked.iter().collect::<HashSet<_>>() == c.suggested.iter().collect::<HashSet<_>>())
         })();
-        let untouched = match checked {
+        let same = match checked {
             Ok(u) => u,
             Err(why) => {
                 let _ = self.record(o, Kind::ToolResult, tool, json!({"error": why}));
@@ -764,15 +763,15 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 return false;
             }
         };
-        let result = json!({"choice": choice, "picked": picked, "untouched": untouched.is_some()});
+        let result = json!({"choice": choice, "picked": picked, "untouched": same});
         if let Err(why) = self.record(o, Kind::ToolResult, tool, result) {
             refuse(out, &format!("not recorded, so Iris was not told: {why}"));
             return false;
         }
         o.choices.remove(choice);
         let quoted = |v: &[String]| v.iter().map(|l| json!(l).to_string()).collect::<Vec<_>>().join(", ");
-        // Untouched is not agreement: the person may not have read past the default.
-        let kept = untouched.map(|s| format!("; the suggestion ({}) was kept untouched", quoted(&s))).unwrap_or_default();
+        // Equal is not agreement, nor proof it was left alone: only the pupil preselects.
+        let kept = if same { "; that is your suggestion, which the pupil preselects, so it may have been left as it was" } else { "" };
         o.messages.push(json!({"role": "user", "content": format!("[thalamus] choice {choice}: picked {}{kept}", quoted(picked))}));
         true
     }
