@@ -1249,6 +1249,9 @@ pub fn source_spec(c: &Component, src: Value) -> Result<ChartSpec, String> {
                                 text(&json!(k)))),
     };
     let mut v = src;
+    if !v.is_object() {
+        return Err(format!("show's `source` is an object {{query {{table, q?, where?}}, x, y?, op}}, not {}", text(&v)));
+    }
     if v.get("chart").is_some() {
         return Err("show's `source` has no `chart`; the component's chart names it".into());
     }
