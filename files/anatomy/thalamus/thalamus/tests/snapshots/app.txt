@@ -1,17 +1,17 @@
 edit roadmap / backup-restic-fork — nothing is written unless you approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-Organs
-nodes:
-  bone Bone — FastAPI bridge [ok]
-  wing Wing — dashboard
-  pulse Pulse [warn]
   keap KEAP
 edges:
   bone -> wing (events)
   pulse -> bone (jobs)
   wing - -> keap
   keap -> bone (recall)
+? Which table should I chart first?
+  1. todos — the open work, by status (suggested)
+  2. expenses — this month's spending
+  3. both
+  answer with /choose <number>
 widget w-expenses_1:
 Expenses — 2 of 2 matched (2 rows) · substring match, not semantic
   order by when desc

@@ -1,0 +1,10 @@
+? Which table should I chart first?
+  1. todos — the open work, by status (suggested)
+  2. expenses — this month's spending
+  3. both
+  answer with /choose <number>
+
+
+
+
+

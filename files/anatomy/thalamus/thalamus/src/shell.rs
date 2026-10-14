@@ -2,7 +2,7 @@
 //! what the person typed or pressed, and renders only the closed component vocabulary.
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
-use nos_contract::renderers::{Component, Tone, TreeNode};
+use nos_contract::renderers::{Choice, Component, Tone, TreeNode};
 use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ToShell, ToThalamus};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -32,6 +32,8 @@ pub struct App {
     pub pending: VecDeque<(String, Vec<Line<'static>>)>,
     /// Whether the last frame showed the whole first approval; y needs it.
     shown_whole: Cell<bool>,
+    /// Choices asked and not yet answered, with their session; /choose answers the latest.
+    choices: Vec<(String, Choice)>,
 }
 
 /// Hard-wraps to `w` columns, so no part of a value is ever cut off the screen.
@@ -214,7 +216,17 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 out.push(Line::styled(format!("  not editable here: {}", o.join(", ")), Style::new().fg(Color::DarkGray)));
             }
         }
-        Component::Choice(_) => {}
+        // Answered here with /choose; the pupil draws radios.
+        Component::Choice(c) => {
+            out.push(head(format!("? {}", c.question)));
+            for (i, o) in c.options.iter().enumerate() {
+                let note = o.note.as_deref().map(|n| format!(" — {n}")).unwrap_or_default();
+                let mark = if c.suggested.contains(&o.label) { " (suggested)" } else { "" };
+                out.push(Line::from(format!("  {}. {}{note}{mark}", i + 1, o.label)));
+            }
+            let how = if c.multi { "/choose 1,3 (one or more)" } else { "/choose <number>" };
+            out.push(Line::styled(format!("  answer with {how}"), Style::new().fg(Color::DarkGray)));
+        }
         // A terminal draws no diagram; every node and edge is said as text.
         Component::Graph(g) => {
             out.extend(g.title.clone().map(head));
@@ -244,8 +256,11 @@ impl App {
                 self.session = Some(session);
             }
             ToShell::Text { text, .. } => self.lines.extend(text.lines().map(|l| Line::from(format!("iris: {l}")))),
-            ToShell::Render { component, pin, .. } => {
+            ToShell::Render { session, component, pin } => {
                 self.lines.extend(component_lines(&component));
+                if let Component::Choice(c) = component {
+                    self.choices.push((session, c));
+                }
                 // The workspace is the pupil's; here a pin is only said.
                 if pin.is_some() {
                     self.lines.push(Line::styled("(pinnable in the pupil)", Style::new().fg(Color::DarkGray)));
@@ -315,6 +330,7 @@ impl App {
                     "/inbox" => control(ControlView::Inbox),
                     "/approvals" => control(ControlView::Approvals),
                     "/red" => control(ControlView::RedStatus),
+                    t if t == "/choose" || t.starts_with("/choose ") => self.choose(&t["/choose".len()..]),
                     _ => {
                         self.lines.push(Line::styled(format!("you: {text}"), Style::new().fg(Color::Cyan)));
                         Some(ToThalamus::Turn { session: self.session.clone(), text })
@@ -323,6 +339,28 @@ impl App {
             }
             _ => None,
         }
+    }
+}
+
+impl App {
+    /// `/choose 2` (or `1,3` when multi) answers the latest open choice with those labels, once.
+    fn choose(&mut self, arg: &str) -> Option<ToThalamus> {
+        let Some((_, c)) = self.choices.last() else {
+            self.lines.push(warn("no open choice to answer".into()));
+            return None;
+        };
+        let n = c.options.len();
+        let nums: Option<Vec<usize>> = arg.split(',').map(|x| x.trim().parse().ok().filter(|i| (1..=n).contains(i))).collect();
+        let ok = nums.filter(|v| (v.len() == 1 || c.multi) && v.iter().enumerate().all(|(i, x)| !v[..i].contains(x)));
+        let Some(nums) = ok else {
+            let how = if c.multi { format!("one or more of 1-{n}, like 1,3") } else { format!("one number, 1-{n}") };
+            self.lines.push(warn(format!("not sent: /choose takes {how}")));
+            return None;
+        };
+        let (session, c) = self.choices.pop()?;
+        let picked: Vec<String> = nums.iter().map(|i| c.options[i - 1].label.clone()).collect();
+        self.lines.push(Line::styled(format!("you: {}", picked.join(", ")), Style::new().fg(Color::Cyan)));
+        Some(ToThalamus::ChoiceReply { session, choice: c.id?, picked })
     }
 }
 
