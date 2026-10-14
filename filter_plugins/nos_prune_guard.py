@@ -302,11 +302,12 @@ def orphan_fragments(docs):
     return sorted(p for p, d in docs.items() if set(_services(d)) - defined)
 
 
-def stack_orphans(stack_dir):
-    """Read <stack>/docker-compose.yml + overrides/*.yml from disk."""
+def stack_orphans(stack_dir, skip=()):
+    """Read <stack>/docker-compose.yml + overrides/*.yml from disk, minus `skip`."""
     import yaml  # noqa: PLC0415 — Ansible ships it; the reader host has it
     root = Path(stack_dir)
-    files = [root / "docker-compose.yml", *sorted((root / "overrides").glob("*.yml"))]
+    files = [root / "docker-compose.yml",
+             *(f for f in sorted((root / "overrides").glob("*.yml")) if str(f) not in skip)]
     docs = {}
     for f in files:
         if f.is_file():
@@ -317,11 +318,30 @@ def stack_orphans(stack_dir):
     return [p for p in orphan_fragments(docs) if "/overrides/" in p]
 
 
-def nos_split_orphans(found, stacks_dir):
-    """{stack: [find file dicts]} -> {'keep': same shape, 'orphans': [paths]}."""
-    orphans = [p for stack in found for p in stack_orphans(Path(stacks_dir) / stack)]
-    keep = {k: [f for f in v if f.get("path") not in orphans] for k, v in found.items()}
-    return {"keep": keep, "orphans": orphans}
+def nos_split_orphans(found, stacks_dir, disabled=()):
+    """{stack: [find file dicts]} -> {'keep', 'orphans': [paths], 'disabled': [paths]}.
+
+    `disabled` (nos_up_excluded) is left out FIRST, so a plugin extension of an
+    off service becomes an orphan instead of a merge error."""
+    skip = set(disabled or ())
+    orphans = [p for stack in found for p in stack_orphans(Path(stacks_dir) / stack, skip)]
+    dropped = sorted(f["path"] for v in found.values() for f in v if f.get("path") in skip)
+    keep = {k: [f for f in v if f.get("path") not in orphans and f.get("path") not in skip]
+            for k, v in found.items()}
+    return {"keep": keep, "orphans": orphans, "disabled": dropped}
+
+
+# ── Declared off stays down (2026-10-14) ───────────────────────────────────
+# prune-disabled STOPPED the off services, then `up` merged their fragments and
+# started them again: 31 containers `Up 5 minutes` after a green converge. The
+# fragments a plan may act on are also the ones `up` leaves out; compose drops
+# their containers via --remove-orphans, volumes untouched.
+def nos_up_excluded(plan, *more):
+    """Fragments to leave out of `up`. ANY refused plan -> [] (nothing excluded)."""
+    plans = [plan, *more]
+    if any((p or {}).get("unauthored_destructive") for p in plans):
+        return []
+    return sorted({f for p in plans for f in (p or {}).get("fragments") or []})
 
 
 class FilterModule(object):
@@ -330,4 +350,5 @@ class FilterModule(object):
             "nos_prune_plan": nos_prune_plan,
             "nos_host_daemon_plan": nos_host_daemon_plan,
             "nos_split_orphans": nos_split_orphans,
+            "nos_up_excluded": nos_up_excluded,
         }

@@ -199,7 +199,7 @@
 - name: "[Stacks] Exclude orphan compose extensions (no base defines the service)"
   tags: ['stacks', 'always']
   ansible.builtin.set_fact:
-    _orphan_split: "{{ _stack_overrides_map | nos_split_orphans(stacks_dir) }}"
+    _orphan_split: "{{ _stack_overrides_map | nos_split_orphans(stacks_dir, _disabled_up_excluded | default([])) }}"
 
 - name: "[Stacks] Merge only fragments whose services are defined"
   tags: ['stacks', 'always']
@@ -213,6 +213,17 @@
       Not merged (their service has no image/build in any fragment):
       {{ _orphan_split.orphans | join(', ') }}. tools/red-status.py names them too.
   when: _orphan_split.orphans | length > 0
+
+# Declared off stays down (2026-10-14): prune-disabled stopped them, then this
+# `up` merged their fragments and started them again. Fragments stay on disk.
+- name: "[Stacks] REPORT — disabled services left out of `up`"
+  tags: ['stacks', 'always']
+  ansible.builtin.debug:
+    msg: >-
+      Declared install_*: false, so not merged (compose removes their containers;
+      volumes and data stay; re-enable + converge restores them):
+      {{ _orphan_split.disabled | map('basename') | join(', ') }}.
+  when: _orphan_split.disabled | default([]) | length > 0
 
 # A stack whose every service is off has a base file with `services: {}` and
 # no overrides, and `docker compose up` on it exits 1 ("no service selected").

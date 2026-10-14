@@ -1,0 +1,39 @@
+---
+# Stop every running container of one compose project (`_stop_project`).
+# For a whole stack switched off (install_observability, apps_runner_enabled):
+# nothing brings it up, so nothing else would take it down (2026-10-14).
+# STOP only — never rm/down/volume: re-enabling + converging restores it.
+# Selection is the exact compose project label, never a name substring
+# (2026-09-01: a substring match destroyed nine observability containers).
+
+- name: "[Stacks] Running containers of the switched-off project"
+  ansible.builtin.command:
+    argv:
+      - "{{ docker_bin | default('docker') }}"
+      - ps
+      - --filter
+      - "label=com.docker.compose.project={{ _stop_project }}"
+      - --format
+      - "{{ '{{' }}.Names{{ '}}' }}"
+  register: _stop_project_ps
+  changed_when: false
+  failed_when: false
+  tags: ['stacks', 'core', 'apps', 'always']
+
+- name: "[Stacks] Stop them"
+  ansible.builtin.command:
+    argv: ["{{ docker_bin | default('docker') }}", "stop", "{{ item }}"]
+  loop: "{{ _stop_project_ps.stdout_lines | default([]) }}"
+  register: _stop_project_stopped
+  changed_when: _stop_project_stopped.rc == 0
+  failed_when: false
+  tags: ['stacks', 'core', 'apps', 'always']
+
+- name: "[Stacks] Report what was stopped"
+  ansible.builtin.debug:
+    msg: >-
+      Project {{ _stop_project }} is switched off: stopped
+      {{ _stop_project_ps.stdout_lines | default([]) | join(', ') }}.
+      Volumes and data untouched — re-enabling and converging brings them back.
+  when: _stop_project_ps.stdout_lines | default([]) | length > 0
+  tags: ['stacks', 'core', 'apps', 'always']

@@ -188,3 +188,12 @@
       {% endif %}
       Drop a manifest at apps/<name>.yml (see apps/_template.yml) and re-run.
   when: (_apps_render is not defined) or ((_apps_render.apps | default([])) | length == 0)
+
+# apps_runner_enabled: false rendered nothing and brought nothing up, so the
+# running apps stayed up (documenso, roundcube, twofauth; 2026-10-14). Stop only.
+- name: "[Apps] Stop the apps stack when the runner is switched off"
+  ansible.builtin.include_tasks: stop-project.yml
+  vars:
+    _stop_project: apps
+  when: not (apps_runner_enabled | default(true) | bool)
+  tags: ['apps', 'manifest-app', 'tier2', 'apps-runner']

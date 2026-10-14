@@ -456,7 +456,7 @@
     _core_orphan_split: >-
       {{ {'infra': _infra_overrides.files | default([]),
           'observability': _observability_overrides.files | default([])}
-         | nos_split_orphans(stacks_dir) }}
+         | nos_split_orphans(stacks_dir, _disabled_up_excluded | default([])) }}
 
 - name: "[Core] Merge only fragments whose services are defined"
   tags: ['core', 'always']
@@ -471,6 +471,24 @@
       Not merged (their service has no image/build in any fragment):
       {{ _core_orphan_split.orphans | join(', ') }}. tools/red-status.py names them too.
   when: _core_orphan_split.orphans | length > 0
+
+- name: "[Core] REPORT — disabled services left out of `up`"
+  tags: ['core', 'always']
+  ansible.builtin.debug:
+    msg: >-
+      Declared install_*: false, so not merged (compose removes their containers;
+      volumes and data stay; re-enable + converge restores them):
+      {{ _core_orphan_split.disabled | map('basename') | join(', ') }}.
+  when: _core_orphan_split.disabled | default([]) | length > 0
+
+# install_observability: false never brought the stack up, and nothing took the
+# running one down (2026-10-14). Stop only — no volume is touched.
+- name: "[Core] Stop the observability stack when it is switched off"
+  ansible.builtin.include_tasks: stop-project.yml
+  vars:
+    _stop_project: observability
+  when: not (_core_observability_enabled | bool)
+  tags: ['core', 'always']
 
 # ── External-volume mount preflight (macOS / Docker Desktop) ────────────────
 # Catch a stale VM /host_mnt reference (external disk remounted after Docker
