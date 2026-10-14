@@ -2504,8 +2504,26 @@ fn show_offers_a_sequence() {
     let shapes: Vec<Vec<String>> = props["steps"]["items"]["oneOf"].as_array().unwrap_or_else(|| panic!("steps offer no shapes: {props}")).iter()
         .map(|b| b["required"].as_array().unwrap().iter().map(|k| k.as_str().unwrap().to_string()).collect()).collect();
     assert_eq!(shapes, [vec!["from", "to", "text"], vec!["note", "over"], vec!["phase"]], "{props}");
+    // Each offered cap is check()'s own: the cap itself passes, one over is refused.
+    let steps = props["steps"]["items"]["oneOf"].as_array().unwrap();
+    let draw = |step: serde_json::Value| serde_json::from_value::<Component>(serde_json::json!({"kind": "sequence",
+        "props": {"participants": ["p0", "p1", "p2"], "steps": [step]}})).unwrap().check();
+    for (i, key) in [(0, "text"), (1, "note"), (2, "phase")] {
+        let cap = steps[i]["properties"][key]["maxLength"].as_u64().unwrap_or_else(|| panic!("{key} offers no maxLength: {props}")) as usize;
+        let step = |n: usize| match key {
+            "text" => serde_json::json!({"from": "p0", "to": "p1", "text": "t".repeat(n)}),
+            "note" => serde_json::json!({"note": "n".repeat(n), "over": ["p0"]}),
+            _ => serde_json::json!({"phase": "f".repeat(n)}),
+        };
+        assert_eq!(draw(step(cap)), Ok(()), "{key} at its offered cap {cap}");
+        assert!(draw(step(cap + 1)).is_err(), "{key} one over its offered cap {cap} is drawn");
+    }
+    let over = &steps[1]["properties"]["over"];
+    assert_eq!((&over["minItems"], &over["maxItems"]), (&serde_json::json!(1), &serde_json::json!(2)), "{over}");
+    let note = |over: &[&str]| draw(serde_json::json!({"note": "n", "over": over}));
+    assert!(note(&[]).is_err() && note(&["p0", "p1", "p2"]).is_err() && note(&["p0", "p1"]).is_ok(), "over is 1-2 in check() too");
     let shape = serve::SHOW_SHAPE.iter().find(|(k, _)| *k == "sequence").unwrap().1;
-    for want in ["participants[]", "{from, to, text, dashed?}", "{note, over[]}", "{phase}"] {
+    for want in ["participants[]", "{from, to, text, dashed?}", "{note, over[]}", "{phase}", "text <=120", "note <=200 over 1-2", "{phase} (<=60)"] {
         assert!(shape.contains(want), "SHOW_SHAPE sequence lacks {want}: {shape}");
     }
 }
