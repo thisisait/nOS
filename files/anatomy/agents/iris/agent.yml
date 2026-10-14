@@ -14,6 +14,9 @@ model:
   # a disarmed or keyless mistral-eu refuses rather than degrades (gate 8).
   primary: openai-sonnet
   backend: mistral-eu
+  # Ruling 2026-10-14: a host may choose the on-device row instead (iris_backend: ollama in
+  # config.yml -> NOS_CELL_BACKEND). A choice, never a fallback; both rows are EU-resident.
+  backends_allowed: [mistral-eu, ollama]
 
 audit:
   capability_scopes:
@@ -68,6 +71,13 @@ gdpr:
         is not regionalised, zero data retention is Scale-plan-only by request,
         and training use needs an explicit opt-out. The Art. 28 DPA with Mistral
         is the operator's to confirm.
+    - name: "This host (on-device, Ollama)"
+      role: >-
+        Only when the host chose iris_backend: ollama. LLM inference on this machine through
+        Ollama's OpenAI-compatible endpoint on 127.0.0.1; nothing leaves the host. Bound by
+        state/habitat/llm-backends.yml row ollama.
+      country: "this host"
+      safeguard: "Local processing; no processor outside the operator's control."
   eu_residency: true
   # False only because Iris's whole serving set is the EU row: gate 8 refuses
   # a non-EU backend and refuses to degrade to the default when it is disarmed.

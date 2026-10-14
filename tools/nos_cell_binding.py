@@ -47,6 +47,18 @@ def _text(v, *path) -> str:
     return x if isinstance(x, str) else ""
 
 
+def chosen_backend(agent, env) -> tuple[str, str]:
+    """binding.rs: a host's NOS_CELL_BACKEND, only a row model.backends_allowed lists (ruling 2026-10-14)."""
+    chosen = (env("NOS_CELL_BACKEND") or "").strip()
+    if not chosen:
+        return "", ""
+    allowed = [b for b in (_at(agent, "model", "backends_allowed") or []) if isinstance(b, str)]
+    if chosen not in allowed:
+        listed = ", ".join(allowed) or _text(agent, "model", "backend")
+        return chosen, f"agent '{_text(agent, 'name')}' may bind only {listed}; this host chose '{chosen}'"
+    return chosen, ""
+
+
 def decide(agent_yml: str, register_yml: str, env) -> Decision:
     """binding.rs decide(): Default / Disarmed / Bound, or refused with the same reason."""
     agent = yaml.safe_load(agent_yml) or {}
@@ -55,6 +67,10 @@ def decide(agent_yml: str, register_yml: str, env) -> Decision:
     declared = _at(agent, "model", "backend")
     if not isinstance(declared, str):
         return Decision("default")
+    chosen, why = chosen_backend(agent, env)
+    if why:
+        return Decision("refused", chosen, why=why)
+    declared = chosen or declared
     spec = _at(register, "backends", declared)
     if spec is None:
         return Decision("refused", declared, why=f"agent '{name}' declares backend '{declared}', which {REGISTER} does not list")
@@ -121,7 +137,8 @@ def requirement(repo: Path, service: str, cell: str, env, min_b: float) -> str |
     agent_path = repo / "files/anatomy/agents" / cell / "agent.yml"
     agent_yml, register_yml = agent_path.read_text(), (repo / REGISTER).read_text()
     register = yaml.safe_load(register_yml) or {}
-    declared = _at(yaml.safe_load(agent_yml), "model", "backend")
+    agent = yaml.safe_load(agent_yml)
+    declared = chosen_backend(agent, env)[0] or _at(agent, "model", "backend")
     spec = _at(register, "backends", declared) if isinstance(declared, str) else None
     if not isinstance(spec, dict) or spec.get("local") is not True:
         return None                      # cloud (or the default): no local model needed

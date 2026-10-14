@@ -61,8 +61,20 @@ pub fn decide(agent_yml: &str, register_yml: &str, env: impl Fn(&str) -> Option<
     };
     let name = text(&agent, &["name"]);
     let uri = text(&agent, &["model", "primary"]);
-    let Some(declared) = at(&agent, &["model", "backend"]).as_str() else {
+    let Some(own) = at(&agent, &["model", "backend"]).as_str() else {
         return Ok(Decision::Default);
+    };
+    // A host's explicit choice of row (NOS_CELL_BACKEND, ruling 2026-10-14): only one the record allows,
+    // and then judged by every gate below — a choice, never a fallback.
+    let chosen = env("NOS_CELL_BACKEND").unwrap_or_default();
+    let declared = if chosen.trim().is_empty() { own } else {
+        let allowed: Vec<&str> = at(&agent, &["model", "backends_allowed"]).as_sequence()
+            .map(|v| v.iter().filter_map(Value::as_str).collect()).unwrap_or_default();
+        if !allowed.contains(&chosen.trim()) {
+            return Err(format!("agent '{name}' may bind only {}; this host chose '{}'",
+                               if allowed.is_empty() { own.to_string() } else { allowed.join(", ") }, chosen.trim()));
+        }
+        allowed.into_iter().find(|b| *b == chosen.trim()).unwrap_or(own)
     };
     let spec = at(&register, &["backends", declared]);
     if spec.is_null() {

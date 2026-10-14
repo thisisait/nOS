@@ -35,3 +35,4 @@ thalamus_binding_env:
   NOS_LOCAL_MODEL: "{{ ollama_model | default('') }}"
   NOS_LOCAL_SMALL_MODEL: "{{ ollama_small_model | default('') }}"
   NOS_MISTRAL_MODEL: "{{ mistral_model | default('') }}"
+  NOS_CELL_BACKEND: "{{ iris_backend | default('') }}"
