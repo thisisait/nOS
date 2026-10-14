@@ -131,6 +131,12 @@ fn cloud() -> Binding {
 const SHORT: &str = "# Imprint (short)\nSHORT-IMPRINT-MARK\n";
 const FULL: &str = "# Imprint\nFULL-IMPRINT-MARK\n";
 
+thread_local! {
+    /// A reader's wall clock in the rig: a cold python3 under a parallel suite took over 2 s (CI and
+    /// local, 2026-10-14), so a reader that answers gets 10; the timeout test sets its own 2.
+    static READER_SECS: std::cell::Cell<u64> = const { std::cell::Cell::new(10) };
+}
+
 fn rig_full(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_bodies: Vec<String>,
             bound: Option<Binding>) -> Rig {
     rig_at(name, map, fake(keap_bodies), model_bodies, bound)
@@ -160,7 +166,7 @@ fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, S
         ledger: Mutex::new(Ledger::open(&ledger).unwrap()),
         binding: bound.map(|b| Binding { base_url: model_url, ..b }).ok_or_else(|| "iris is disarmed".into()),
         repo: d.clone(),
-        reader_secs: 2,
+        reader_secs: READER_SECS.with(|c| c.get()),
         tier1: vec!["nos-admins".into()],
         deciders,
         log: Mutex::new(Box::new(log.clone())),
@@ -656,6 +662,7 @@ fn a_control_is_a_tool_use_and_result_pair_in_the_ledger() {
 
 #[test]
 fn a_reader_that_times_out_is_killed_with_what_it_spawned() {
+    READER_SECS.with(|c| c.set(2));
     let rig = rig_n("slow", admin(), vec![ROWS.into()], vec![answer("never")]);
     let pidfile = rig.srv.repo.join("grandchild.pid");
     reader(&rig, "awaiting-operator.py", &format!(r#"import subprocess, time
