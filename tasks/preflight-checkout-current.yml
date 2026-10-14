@@ -146,6 +146,42 @@
          else playbook_dir }}
   tags: ['always', 'preflight']
 
+# A worktree converge persists the MAIN checkout's paths (plists, Pulse jobs, NOS_REPO_ROOT), and some
+# roles read source from it during the run. 2026-10-14: the main worktree sat 354 commits behind the
+# converged worktree and the thalamus role read a stale tree. Same commit, or stop here.
+- name: "[preflight] Compare this tree with the main checkout"
+  ansible.builtin.shell: |
+    set -o pipefail
+    here=$(git -C {{ playbook_dir | quote }} rev-parse HEAD 2>/dev/null) || { echo NOGIT; exit 0; }
+    main=$(git -C {{ nos_main_checkout | quote }} rev-parse HEAD 2>/dev/null) || { echo NOGIT; exit 0; }
+    if [ "$here" = "$main" ]; then echo "SAME $here"; else echo "SPLIT ${here:0:8} ${main:0:8}"; fi
+  args:
+    executable: /bin/bash
+  register: _ckt_split
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  tags: ['always', 'preflight']
+
+- name: "[preflight] REFUSE: a worktree ahead of or apart from the main checkout"
+  ansible.builtin.fail:
+    msg: |
+      You are converging {{ playbook_dir }} at {{ (_ckt_split.stdout.split() + ['', '', ''])[1] }},
+      but the estate runs from the main checkout {{ nos_main_checkout }} at {{ (_ckt_split.stdout.split() + ['', '', ''])[2] }}.
+      What outlives this run (launchd plists, Pulse jobs, the thalamus's NOS_REPO_ROOT) points at the
+      main checkout, and some roles read source from it now — so they would run the other commit.
+
+      Bring the main checkout to this commit (it must be a fast-forward):
+        git -C {{ nos_main_checkout }} merge --ff-only {{ (_ckt_split.stdout.split() + ['', '', ''])[1] }}
+      or converge from the main checkout itself. A host whose estate lives in a worktree of a
+      development clone should get its own clone: tools/estate-adopt.sh (dry-run first).
+
+      Override for a deliberate split:  -e allow_worktree_converge=true
+  when:
+    - (_ckt_split.stdout | default('')).startswith('SPLIT')
+    - not (allow_worktree_converge | default(false) | bool)
+  tags: ['always', 'preflight']
+
 - name: "[preflight] Persisted paths point at the main checkout"
   ansible.builtin.debug:
     msg: >-
