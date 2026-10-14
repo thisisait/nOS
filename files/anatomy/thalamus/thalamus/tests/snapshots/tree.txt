@@ -1,9 +1,9 @@
 Roadmap
   nOS
     pupil — the eye
-    keak
-
-
+~   keak
+-   cortex
+-     old lobe
 
 
 

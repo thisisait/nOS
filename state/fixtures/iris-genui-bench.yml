@@ -307,3 +307,75 @@
     - "(suggested)"
     - "2. expenses"
     - /choose
+# A dry run: what an action would add, remove or change, said as + - ~ before the line (iris-genui-change-markers).
+- id: tree-delta
+  kind: tree
+  component:
+    kind: tree
+    props:
+      title: What the converge would change
+      nodes:
+        - label: nOS
+          delta: changed
+          children:
+            - label: pupil
+              delta: added
+              children:
+                - label: eye
+            - label: keap
+              delta: removed
+              children:
+                - label: lobe
+            - label: wing
+  expect:
+    - "~ nOS"
+    - "+   pupil"
+    - "+     eye"
+    - "-   keap"
+    - "-     lobe"
+    - "    wing"
+- id: list-delta
+  kind: list
+  component:
+    kind: list
+    props:
+      title: Jobs after the change
+      ordered: false
+      items:
+        - text: nightly-backup
+          delta: changed
+          detail: 02:00 -> 03:00
+        - text: digest-import
+          delta: added
+        - text: old-sync
+          delta: removed
+        - text: red-status
+  expect:
+    - "~ - nightly-backup — 02:00 -> 03:00"
+    - "+ - digest-import"
+    - "- - old-sync"
+    - "  - red-status"
+- id: record-delta
+  kind: record
+  component:
+    kind: record
+    props:
+      title: backup-restic-fork
+      fields:
+        - key: status
+          value: done
+          delta: changed
+          was: open
+        - key: owner
+          value: iris
+          delta: added
+        - key: blocker
+          value: virtiofs
+          delta: removed
+        - key: track
+          value: backup
+  expect:
+    - "~ status: open -> done"
+    - "+ owner: iris"
+    - "- blocker: virtiofs"
+    - "  track: backup"

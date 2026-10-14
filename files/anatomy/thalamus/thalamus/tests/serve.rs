@@ -2393,3 +2393,30 @@ fn red_status_for_iris_is_tier_one_only() {
     assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::RedStatus(_), .. })), "{got:?}");
     assert!(tool_result(&rig, 1)["error"].as_str().is_some_and(|e| e.contains("not yours to see")));
 }
+
+// --- iris-genui-change-markers: a dry run's delta, offered in every place the model reads a shape ---
+
+#[test]
+fn show_offers_a_delta_on_tree_list_and_record() {
+    let schema = serve::show_schema();
+    let props = |kind: &str| schema["properties"]["component"]["oneOf"].as_array().unwrap().iter()
+        .find(|b| b["properties"]["kind"]["const"] == kind).unwrap()["properties"]["props"].clone();
+    let words = serde_json::json!(["added", "removed", "changed"]);
+    assert_eq!(props("list")["properties"]["items"]["items"]["properties"]["delta"]["enum"], words);
+    let field = props("record")["properties"]["fields"]["items"]["properties"].clone();
+    assert_eq!(field["delta"]["enum"], words, "{field}");
+    assert!(field["was"]["description"].as_str().is_some_and(|d| d.contains("changed")), "{field}");
+    let tree = schema["properties"]["component"]["oneOf"].as_array().unwrap().iter()
+        .find(|b| b["properties"]["kind"]["const"] == "tree").unwrap()["description"].as_str().unwrap_or("").to_string();
+    assert!(tree.contains("delta?") && tree.contains("an added or removed parent"), "the tree branch says delta and what a child inherits: {tree}");
+    for (kind, want) in [("list", "delta?"), ("record", "was?"), ("tree", "delta?")] {
+        let shape = serve::SHOW_SHAPE.iter().find(|(k, _)| *k == kind).unwrap().1;
+        assert!(shape.contains(want) && shape.contains("added|removed|changed"), "SHOW_SHAPE {kind} lacks {want}: {shape}");
+    }
+    let rig = rig("delta", mapped(), ROWS, vec![answer("hi")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "hello");
+    let p = system_prompt(&rig);
+    assert!(p.contains("what an action would change -> mark delta"), "{p}");
+}
