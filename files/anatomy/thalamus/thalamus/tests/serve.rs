@@ -2191,6 +2191,7 @@ fn asked_choice(rig: &Rig) -> (UnixStream, BufReader<UnixStream>, String, String
         _ => None,
     }).unwrap_or_else(|| panic!("no choice was rendered with an id: {got:?}"));
     assert!(nos_contract::wire::is_uuid(&id), "{id}");
+    assert!(matches!(raw(&mut r), Some(ToShell::Activity { phase: Phase::Idle, .. })), "the asking turn ends idle");
     (s, r, session_of(&got), id)
 }
 

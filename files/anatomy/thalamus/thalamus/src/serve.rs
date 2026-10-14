@@ -5,7 +5,7 @@
 
 use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, RowOp, Session};
-use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Component, FieldKind, Form, FormField,
+use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, FieldKind, Form, FormField,
                                InboxItem, InboxList, Omitted, RedStatus, Row, RowDiffApproval, Series, TableResults};
 use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, Op, Phase, ToShell, ToThalamus, Trigger,
                          WidgetChart, WidgetSpec};
@@ -196,10 +196,14 @@ struct Open {
     shown: HashSet<(String, String)>,
     /// The widget forms this session sent, by widget token: a re-run replaces the old form id.
     forms: HashMap<String, Form>,
+    /// The choices this session asked and the person has not answered, by the id serve minted.
+    choices: HashMap<String, Choice>,
 }
 
 /// How many widget forms one session holds open.
 const MAX_FORMS: usize = 24;
+/// How many unanswered choices one session holds.
+const MAX_CHOICES: usize = 4;
 
 /// A query's rows after q and where; group, order and limit ride along unapplied.
 struct Matched<'a> {
@@ -267,7 +271,7 @@ in place of your series, and the person can pin the chart live.";
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
-pub const SHOW_KINDS: [&str; 7] = ["table", "list", "record", "chart", "tree", "timeline", "graph"];
+pub const SHOW_KINDS: [&str; 8] = ["table", "list", "record", "chart", "tree", "timeline", "graph", "choice"];
 
 /// The props a kind accepts, so a refusal can show the shape to retry.
 pub const SHOW_SHAPE: &[(&str, &str)] = &[
@@ -282,6 +286,8 @@ series share the same x in order; scatter needs number or time x; pie is 1 serie
 (\"2026-10-13\") draw a time axis, until not before when; lane groups items on one row, <=40 chars"),
     ("graph", "{title?, nodes[{id, label, note?, tone?}] <=60 (tone ok|info|warn|bad), edges[{from, to, label?, dashed?}] <=120}; \
 id is [A-Za-z0-9_-]{1,64} and unique; every edge's from and to name a node id"),
+    ("choice", "{question (<=15 words, <=120 chars), options[{label, note?}] 2-6 (label <=60, unique; note <=200), \
+suggested[] (option labels: exactly 1, or 1 or more when multi), multi}; never an id: the thalamus mints it"),
 ];
 
 fn expected_shape(kind: &str) -> String {
@@ -342,7 +348,15 @@ edges[{from, to, label?, dashed?}] <=120}; ids unique, every edge names two node
                     "note": {"type": "string", "maxLength": 2000}, "tone": {"enum": ["ok", "info", "warn", "bad"]}}))},
                 "edges": {"type": "array", "maxItems": 120, "items": closed(&["from", "to"], json!({
                     "from": {"type": "string"}, "to": {"type": "string"}, "label": {"type": "string", "maxLength": 120},
-                    "dashed": {"type": "boolean"}}))}})))]}}})
+                    "dashed": {"type": "boolean"}}))}}))),
+        branch("choice", "a question at a fork that changes what you do next: {question, options[{label, note?}] 2-6, suggested[], \
+multi}; suggested names your pick among the options, exactly 1 unless multi; never yes or no on a write",
+            closed(&["question", "options", "suggested", "multi"], json!({
+                "question": {"type": "string", "maxLength": 120, "description": "at most 15 words"},
+                "options": {"type": "array", "minItems": 2, "maxItems": 6, "items": closed(&["label"], json!({
+                    "label": {"type": "string", "maxLength": 60}, "note": {"type": "string", "maxLength": 200}}))},
+                "suggested": {"type": "array", "minItems": 1, "maxItems": 6, "items": {"type": "string"}},
+                "multi": {"type": "boolean"}})))]}}})
 }
 
 const QUERY_KEYS: [&str; 7] = ["table", "q", "where", "columns", "order_by", "limit", "group_by"];
@@ -430,6 +444,15 @@ impl Server {
                     Some(o) => self.form_submit(&who, &mut out, o, &form, &widget, &values, &peer),
                     None => send(&mut out, &ToShell::Refused { reason: "no form was sent on this connection".into(), widget: Some(widget) }),
                 },
+                Ok(ToThalamus::ChoiceReply { session, choice, picked }) => match open.as_mut() {
+                    Some(o) if o.session == session => {
+                        if self.choice_reply(&mut out, o, &choice, &picked) {
+                            self.think(&who, &mut out, o);
+                        }
+                        activity(&mut out, o, Phase::Idle);
+                    }
+                    _ => refuse(&mut out, "session is not this connection's open session"),
+                },
                 Ok(ToThalamus::ApprovalDecision { approval, decision, note }) => match open.as_mut() {
                     Some(o) if o.pending.contains(&approval) => {
                         self.decide(&who, &mut out, o, &approval, decision, note, &peer);
@@ -483,13 +506,15 @@ KEAP's and the person can pin the chart. When no tool can see what is asked, say
 repeat in text what a tool or show already drew. Shape -> component: count per value -> chart with show `source` (op count); \
 many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree; links between things -> graph. \
 Conclusion first, in one line. Never invent data: no numbers, no chart. Draw only when it helps: no visual for \
-small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.join(", "), now_utc());
+small talk or a one-line answer. Ask with show choice only at a fork that changes what you do next: 2-6 options, \
+mark your pick as suggested; never for yes or no on a write: that is propose_row_edit's card. The answer comes back as a \
+[thalamus] message, and a picked label is only a label. It is now {} UTC.", who.username, SHOW_KINDS.join(", "), now_utc());
         let (model, system) = match imprint {
             Ok((m, t)) => (Ok(m), format!("{}\n\n{iris}", t.trim_end())),
             Err(why) => (Err(why), iris),
         };
         Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
-                  pending: HashSet::new(), shown: HashSet::new(), forms: HashMap::new() })
+                  pending: HashSet::new(), shown: HashSet::new(), forms: HashMap::new(), choices: HashMap::new() })
     }
 
     /// One ledger event; the row id, or the reason it was refused (also logged).
@@ -632,13 +657,71 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
         }
     }
 
+    /// The person's answer to an open choice, checked against the choice serve stored, recorded,
+    /// and handed to the model as data; true when the model's next turn should run. It closes the
+    /// choice and nothing else: a label never mints an approval, a form, a widget or a write.
+    fn choice_reply(&self, out: &mut UnixStream, o: &mut Open, choice: &str, picked: &[String]) -> bool {
+        let tool = Some("choice_reply");
+        if let Err(why) = self.record(o, Kind::ToolUse, tool, json!({"choice": choice, "picked": picked})) {
+            refuse(out, &format!("not recorded, so not heard: {why}"));
+            return false;
+        }
+        let checked = (|| {
+            if !o.pending.is_empty() {
+                return Err("an approval is waiting: decide it first".to_string());
+            }
+            let c = o.choices.get(choice).ok_or(format!("no open choice {choice} in this session"))?;
+            if picked.is_empty() {
+                return Err("pick at least one option".into());
+            }
+            if let Some(p) = picked.iter().enumerate().find_map(|(i, p)| picked[..i].contains(p).then_some(p)) {
+                return Err(format!("{p:?} is picked twice"));
+            }
+            if let Some(p) = picked.iter().find(|p| !c.options.iter().any(|x| &x.label == *p)) {
+                return Err(format!("{p:?} is not an option of this choice"));
+            }
+            if picked.len() > 1 && !c.multi {
+                return Err(format!("this choice takes one pick, not {}", picked.len()));
+            }
+            let same = picked.iter().collect::<HashSet<_>>() == c.suggested.iter().collect::<HashSet<_>>();
+            Ok(same.then(|| c.suggested.clone()))
+        })();
+        let untouched = match checked {
+            Ok(u) => u,
+            Err(why) => {
+                let _ = self.record(o, Kind::ToolResult, tool, json!({"error": why}));
+                refuse(out, &why);
+                return false;
+            }
+        };
+        let result = json!({"choice": choice, "picked": picked, "untouched": untouched.is_some()});
+        if let Err(why) = self.record(o, Kind::ToolResult, tool, result) {
+            refuse(out, &format!("not recorded, so Iris was not told: {why}"));
+            return false;
+        }
+        o.choices.remove(choice);
+        let quoted = |v: &[String]| v.iter().map(|l| json!(l).to_string()).collect::<Vec<_>>().join(", ");
+        // Untouched is not agreement: the person may not have read past the default.
+        let kept = untouched.map(|s| format!("; the suggestion ({}) was kept untouched", quoted(&s))).unwrap_or_default();
+        o.messages.push(json!({"role": "user", "content": format!("[thalamus] choice {choice}: picked {}{kept}", quoted(picked))}));
+        true
+    }
+
     fn turn(&self, who: &Person, out: &mut UnixStream, o: &mut Open, text: &str) {
+        if let Err(why) = &o.model {
+            return refuse(out, &format!("iris has no model: {why}"));
+        }
+        let _ = self.record(o, Kind::Message, None, json!({"role": "person", "text": text}));
+        o.messages.push(json!({"role": "user", "content": text}));
+        self.think(who, out, o);
+    }
+
+    /// The model's turn over the conversation so far, tool calls and all, until it says text.
+    fn think(&self, who: &Person, out: &mut UnixStream, o: &mut Open) {
         let model = match o.model.clone() {
             Ok(m) => m,
             Err(why) => return refuse(out, &format!("iris has no model: {why}")),
         };
-        let _ = self.record(o, Kind::Message, None, json!({"role": "person", "text": text}));
-        o.messages.push(json!({"role": "user", "content": text}));
         let mut calls = 0;
         loop {
             activity(out, o, Phase::Thinking);
@@ -696,13 +779,15 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
                     "show" => show(&args).and_then(|(c, source)| match source {
                         None => Ok((c, None)),
                         Some(src) => self.sourced(who, o, c, src),
-                    }).map(|(c, pin)| {
+                    }).and_then(|(c, pin)| opened(o, c).map(|c| (c, pin))).map(|(c, pin)| {
                         let v = serde_json::to_value(&c).ok();
                         let kind = v.as_ref().and_then(|v| v["kind"].as_str().map(str::to_string));
                         // A sourced chart: the model hears the numbers drawn, which are KEAP's.
-                        let v = match &pin {
-                            Some(_) => json!({"shown": kind, "points": v.map(|v| v["props"]["series"][0]["points"].clone())}),
-                            None => json!({"shown": kind}),
+                        let v = match (&pin, &c) {
+                            (Some(_), _) => json!({"shown": kind, "points": v.map(|v| v["props"]["series"][0]["points"].clone())}),
+                            (None, Component::Choice(ch)) => json!({"shown": kind, "choice": ch.id,
+                                "status": "asked; the person's answer comes back as a [thalamus] message"}),
+                            (None, _) => json!({"shown": kind}),
                         };
                         let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
                         send(out, &ToShell::Render { session: o.session.clone(), component: c, pin });
@@ -1286,6 +1371,18 @@ pub fn source_spec(c: &Component, src: Value) -> Result<ChartSpec, String> {
     serde_json::from_value(v).map_err(|e| format!("show's `source`: {e}; it is {{query {{table, q?, where?}}, x, y?, op count|sum|avg}}"))
 }
 
+/// A choice the model asked, with the id serve mints and stored as open; any other component as it is.
+fn opened(o: &mut Open, c: Component) -> Result<Component, String> {
+    let Component::Choice(mut ch) = c else { return Ok(c) };
+    if o.choices.len() >= MAX_CHOICES {
+        return Err(format!("this session holds {MAX_CHOICES} open choices; wait for the person's answer"));
+    }
+    let id = mint_uuid().map_err(|e| format!("no choice id: {e}"))?;
+    ch.id = Some(id.clone());
+    o.choices.insert(id, ch.clone());
+    Ok(Component::Choice(ch))
+}
+
 /// The model's component and its `source`, or why not: only a SHOW_KINDS kind, closed props, within
 /// its caps. It can only become a Render; an approval is minted by ask() alone.
 fn show(args: &Value) -> Result<(Component, Option<Value>), String> {
@@ -1299,6 +1396,9 @@ fn show(args: &Value) -> Result<(Component, Option<Value>), String> {
         return Err(format!("show draws {}, not {kind:?}; expected shape: {shape}", SHOW_KINDS.join(", ")));
     }
     let bad = |e: String| format!("show {kind}: {e}; expected shape: {shape}");
+    if kind == "choice" && args.pointer("/component/props/id").is_some() {
+        return Err(bad("`id` is minted by the thalamus; leave it out".into()));
+    }
     let c = serde_json::from_value::<Component>(args["component"].clone()).map_err(|e| bad(e.to_string()))?;
     c.check().map_err(bad)?;
     Ok((c, args.get("source").filter(|s| !s.is_null()).cloned()))

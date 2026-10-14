@@ -214,6 +214,7 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 out.push(Line::styled(format!("  not editable here: {}", o.join(", ")), Style::new().fg(Color::DarkGray)));
             }
         }
+        Component::Choice(_) => {}
         // A terminal draws no diagram; every node and edge is said as text.
         Component::Graph(g) => {
             out.extend(g.title.clone().map(head));
