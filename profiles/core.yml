@@ -34,6 +34,11 @@ install_thalamus: true          # Iris; macOS only; needs a model binding (mistr
 docker_min_memory_gib: 6        # core measured 3.2 GiB with leftovers (client, 2026-10-14); the
                                 # memory-pressure refusal still stops a run the VM cannot carry
 
+# ── Authentik is half the core's memory: fewer threads, the minimum web workers ──
+authentik_web_workers: 2        # gunicorn's floor
+authentik_web_threads: 2        # 4 by default
+authentik_worker_threads: 1     # 2 by default
+
 # ── Off: no core part needs them ─────────────────────────────────────────────
 install_infisical: false        # only Wing invite provisioning reads it, off by default
 install_observability: false    # ~700 MiB; Traefik tracing then logs export errors

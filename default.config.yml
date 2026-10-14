@@ -483,6 +483,15 @@ docker_mem_limit_light: "512m"           # Redis, Kiwix, Tileserver, exporters
 docker_cpus_heavy: "2.0"
 docker_cpus_standard: "1.0"
 docker_cpus_light: "0.5"
+# Authentik is half the core's memory (2026-10-14): its workers, threads and limits are knobs here,
+# not role defaults, so a profile (profiles/core.yml) can size them. Web workers: gunicorn's minimum is 2.
+authentik_mem_limit: "{{ docker_mem_limit_critical | default('2g') }}"
+authentik_worker_mem_limit: "{{ docker_mem_limit_standard | default('1g') }}"
+authentik_cpus: "{{ docker_cpus_standard | default('1.0') }}"
+authentik_web_workers: 2
+authentik_web_threads: 4
+authentik_worker_processes: 1
+authentik_worker_threads: 2
 # The smallest Docker VM (GiB, as `docker info` MemTotal reports it) a converge
 # starts on. Measured 2026-10-10, all-on: 10 GB (9.7 GiB) died on timeouts an
 # hour in, 11.5 GB (11.17 GiB) ran failed=0. A smaller estate may lower it.
