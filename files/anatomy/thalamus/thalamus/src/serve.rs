@@ -275,7 +275,7 @@ in place of your series, and the person can pin the chart live.";
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
-pub const SHOW_KINDS: [&str; 8] = ["table", "list", "record", "chart", "tree", "timeline", "graph", "choice"];
+pub const SHOW_KINDS: [&str; 9] = ["table", "list", "record", "chart", "tree", "timeline", "graph", "sequence", "choice"];
 
 /// The props a kind accepts, so a refusal can show the shape to retry.
 pub const SHOW_SHAPE: &[(&str, &str)] = &[
@@ -291,6 +291,8 @@ a child of an added or removed node is that too: leave its delta out"),
 (\"2026-10-13\") draw a time axis, until not before when; lane groups items on one row, <=40 chars"),
     ("graph", "{title?, nodes[{id, label, note?, tone?}] <=60 (tone ok|info|warn|bad), edges[{from, to, label?, dashed?}] <=120}; \
 id is [A-Za-z0-9_-]{1,64} and unique; every edge's from and to name a node id"),
+    ("sequence", "{title?, participants[] 2-8 (unique, <=40 chars), steps[] <=40, each {from, to, text, dashed?} (text <=120; \
+dashed for a reply) or {note, over[]} (note <=200 over 1-2 participants) or {phase} (<=60)}; from, to and over name participants exactly"),
     ("choice", "{question (<=15 words, <=120 chars), options[{label, note?}] 2-6 (label <=60, unique; note <=200), \
 suggested[] (option labels: exactly 1, or 1 or more when multi), multi}; never an id: the thalamus mints it"),
 ];
@@ -357,6 +359,16 @@ edges[{from, to, label?, dashed?}] <=120}; ids unique, every edge names two node
                 "edges": {"type": "array", "maxItems": 120, "items": closed(&["from", "to"], json!({
                     "from": {"type": "string"}, "to": {"type": "string"}, "label": {"type": "string", "maxLength": 120},
                     "dashed": {"type": "boolean"}}))}}))),
+        branch("sequence", "who sends what to whom, in order: {title?, participants[] 2-8, steps[] <=40}; a step is a message \
+{from, to, text, dashed?} (dashed for a reply), a note {note, over[1-2]} or a phase {phase}; from, to and over name participants",
+            closed(&["participants", "steps"], json!({"title": title,
+                "participants": {"type": "array", "minItems": 2, "maxItems": 8, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 40}},
+                "steps": {"type": "array", "minItems": 1, "maxItems": 40, "items": {"oneOf": [
+                    closed(&["from", "to", "text"], json!({"from": {"type": "string"}, "to": {"type": "string"},
+                        "text": {"type": "string", "maxLength": 120}, "dashed": {"type": "boolean"}})),
+                    closed(&["note", "over"], json!({"note": {"type": "string", "maxLength": 200},
+                        "over": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"type": "string"}}})),
+                    closed(&["phase"], json!({"phase": {"type": "string", "maxLength": 60}}))]}}}))),
         branch("choice", "a question at a fork that changes what you do next: {question, options[{label, note?}] 2-6, suggested[], \
 multi}; suggested names your pick among the options, exactly 1 unless multi; never yes or no on a write",
             closed(&["question", "options", "suggested", "multi"], json!({
@@ -514,7 +526,7 @@ nothing else. To count per value (for a chart) call query_rows with \
 group_by; to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
 KEAP's and the person can pin the chart. For what is red or broken on the estate call red_status. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
 repeat in text what a tool or show already drew. Shape -> component: count per value -> chart with show `source` (op count); \
-many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree; links between things -> graph; \
+many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree; links between things -> graph; who sends what to whom -> sequence; \
 what an action would change -> mark delta added|removed|changed on tree nodes, list items or record fields (was: the old value). \
 Conclusion first, in one line. Never invent data: no numbers, no chart. Draw only when it helps: no visual for \
 small talk or a one-line answer. Ask with show choice only at a fork that changes what you do next: 2-6 options, \

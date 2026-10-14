@@ -1,17 +1,17 @@
 edit roadmap / backup-restic-fork — nothing is written unless you approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-  keap KEAP
-edges:
-  bone -> wing (events)
-  pulse -> bone (jobs)
-  wing - -> keap
-  keap -> bone (recall)
-? Which table should I chart first?
-  1. todos — the open work, by status (suggested)
-  2. expenses — this month's spending
-  3. both
-  answer with /choose <number>
+  == propose ==
+pupil -> thalamus: turn: close backup-restic-fork
+thalamus -> KEAP: query_rows roadmap
+KEAP --> thalamus: 1 row
+thalamus -> pupil: approval_request
+  note pupil: the person decides
+  == commit ==
+pupil -> thalamus: approve
+thalamus -> KEAP: commit()
+KEAP --> thalamus: row written
+  note thalamus, KEAP: recorded in the ledger
 widget w-expenses_1:
 Expenses — 2 of 2 matched (2 rows) · substring match, not semantic
   order by when desc

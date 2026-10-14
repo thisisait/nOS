@@ -1,0 +1,10 @@
+An approval's path
+participants: pupil, thalamus, KEAP
+  == propose ==
+pupil -> thalamus: turn: close backup-restic-fork
+thalamus -> KEAP: query_rows roadmap
+KEAP --> thalamus: 1 row
+thalamus -> pupil: approval_request
+  note pupil: the person decides
+  == commit ==
+pupil -> thalamus: approve

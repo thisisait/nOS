@@ -2,7 +2,7 @@
 //! what the person typed or pressed, and renders only the closed component vocabulary.
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
-use nos_contract::renderers::{Choice, Component, Delta, Tone, TreeNode};
+use nos_contract::renderers::{Choice, Component, Delta, Step, Tone, TreeNode};
 use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ToShell, ToThalamus};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -233,6 +233,18 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
             }
             let how = if c.multi { "/choose 1,3 (one or more)" } else { "/choose <number>" };
             out.push(Line::styled(format!("  answer with {how}"), Style::new().fg(Color::DarkGray)));
+        }
+        // A terminal draws no lifelines: messages as A -> B: text, notes and phases indented.
+        Component::Sequence(q) => {
+            out.extend(q.title.clone().map(head));
+            out.push(Line::from(format!("participants: {}", q.participants.join(", "))));
+            for step in &q.steps {
+                out.push(Line::from(match step {
+                    Step::Message { from, to, text, dashed } => format!("{from} {} {to}: {text}", if *dashed { "-->" } else { "->" }),
+                    Step::Note { note, over } => format!("  note {}: {note}", over.join(", ")),
+                    Step::Phase { phase } => format!("  == {phase} =="),
+                }));
+            }
         }
         // A terminal draws no diagram; every node and edge is said as text.
         Component::Graph(g) => {
