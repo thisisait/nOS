@@ -263,6 +263,10 @@ the person sees each changed cell old -> new and approves or rejects it. Nothing
 approve; you are told only that the proposal waits for them. Only for a change the person asked for in this \
 conversation, on a row query_rows showed them; never to count, test or look at a row — query_rows does that.";
 
+const RED_STATUS: &str = "What is red on the estate right now, and what is on hold on purpose, from \
+tools/red-status.py run as the operator. Renders red_status to the person. Tier 1 only. If it cannot be read, \
+the state is UNKNOWN: say so, never zero and never green.";
+
 const SHOW: &str = "Show the person structured output: one component of a closed vocabulary, drawn as text. \
 A component outside its shape or caps is refused and you are told why; nothing is drawn. It cannot ask for an \
 approval: only propose_row_edit does, and query_rows draws its own table. For a bar, line or pie chart of a \
@@ -384,7 +388,9 @@ fn tools() -> Value {
             "table": {"type": "string", "description": "the table id, or \"roadmap\" for the roadmap"},
             "row_id": {"type": "string", "description": "the row's __id from query_rows"},
             "values": {"type": "object", "description": "column -> new value; null clears the cell"}}}}},
-        {"type": "function", "function": {"name": "show", "description": SHOW, "parameters": show_schema()}}])
+        {"type": "function", "function": {"name": "show", "description": SHOW, "parameters": show_schema()}},
+        {"type": "function", "function": {"name": "red_status", "description": RED_STATUS,
+        "parameters": {"type": "object", "additionalProperties": false, "properties": {}}}}])
 }
 
 impl Server {
@@ -502,7 +508,7 @@ rows of a DataTable call query_rows (its total is the exact count); propose_row_
 asked for, never to look at a row. To show structured output call show ({}); plain text may use markdown, \
 nothing else. To count per value (for a chart) call query_rows with \
 group_by; to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
-KEAP's and the person can pin the chart. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
+KEAP's and the person can pin the chart. For what is red or broken on the estate call red_status. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
 repeat in text what a tool or show already drew. Shape -> component: count per value -> chart with show `source` (op count); \
 many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree; links between things -> graph. \
 Conclusion first, in one line. Never invent data: no numbers, no chart. Draw only when it helps: no visual for \
@@ -793,6 +799,13 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                         send(out, &ToShell::Render { session: o.session.clone(), component: c, pin });
                         v
                     }),
+                    "red_status" => self.red(who).map_err(|why| format!("{why}; the estate's red state is UNKNOWN, not zero"))
+                        .map(|r| {
+                            let v = serde_json::to_value(&r).unwrap_or(Value::Null);
+                            let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
+                            send(out, &ToShell::Render { session: o.session.clone(), component: Component::RedStatus(r), pin: None });
+                            v
+                        }),
                     _ => Err(format!("unknown tool {name:?}")),
                 };
                 let for_model = result.unwrap_or_else(|why| {
@@ -1140,6 +1153,17 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     }
 
     /// A control view, raised by the person; the model is not asked and does not see it.
+    /// red-status.py as the operator: the F4 control and Iris's red_status tool read it the same way.
+    fn red(&self, who: &Person) -> Result<RedStatus, String> {
+        if !who.groups.iter().any(|g| self.tier1.contains(g)) {
+            return Err("not yours to see".into());
+        }
+        let v = self.reader("red-status.py")?;
+        let four = ["red_count", "reds", "hold_count", "holds"].map(|k| (k.to_string(), v.get(k).cloned().unwrap_or(Value::Null)));
+        serde_json::from_value::<RedStatus>(Value::Object(four.into_iter().collect()))
+            .map_err(|e| format!("red-status.py: unexpected shape: {e}"))
+    }
+
     fn control(&self, who: &Person, out: &mut UnixStream, o: &mut Open, view: ControlView) {
         let tool = match view {
             ControlView::Inbox => "control_inbox",
@@ -1160,11 +1184,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                     (Err(e), _) | (_, Err(e)) => Err(format!("awaiting-operator.py: unexpected shape: {e}")),
                 }
             }),
-            ControlView::RedStatus => self.reader("red-status.py").and_then(|v| {
-                let four = ["red_count", "reds", "hold_count", "holds"].map(|k| (k.to_string(), v.get(k).cloned().unwrap_or(Value::Null)));
-                serde_json::from_value::<RedStatus>(Value::Object(four.into_iter().collect()))
-                    .map(Component::RedStatus).map_err(|e| format!("red-status.py: unexpected shape: {e}"))
-            }),
+            ControlView::RedStatus => self.red(who).map(Component::RedStatus),
         };
         match c {
             Ok(component) => {
