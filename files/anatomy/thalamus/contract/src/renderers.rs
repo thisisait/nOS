@@ -51,8 +51,9 @@ fn is_false(b: &bool) -> bool {
     !*b
 }
 
-/// Depth 1 is the root. Over 4, or over 100 nodes in the whole tree, is refused.
-fn tree_nodes(n: &TreeNode, depth: usize, count: &mut usize) -> Result<(), String> {
+/// Depth 1 is the root. Over 4, or over 100 nodes in the whole tree, is refused; so is a node
+/// whose delta contradicts an added or removed parent's.
+fn tree_nodes(n: &TreeNode, depth: usize, count: &mut usize, parent: Option<Delta>) -> Result<(), String> {
     *count += 1;
     if depth > 4 {
         return Err(format!("tree depth: {depth}, at most 4"));
@@ -61,7 +62,49 @@ fn tree_nodes(n: &TreeNode, depth: usize, count: &mut usize) -> Result<(), Strin
     if let Some(note) = &n.note {
         cap("a tree note", note, 2000)?;
     }
-    n.children.iter().try_for_each(|c| tree_nodes(c, depth + 1, count))
+    let delta = Delta::inherit(n.delta, parent);
+    if let (Some(own), Some(p)) = (n.delta, parent) {
+        if delta != Some(own) {
+            return Err(format!("tree node {:?} is {} under a {} parent", n.label, own.word(), p.word()));
+        }
+    }
+    n.children.iter().try_for_each(|c| tree_nodes(c, depth + 1, count, delta))
+}
+
+/// What an action would do to a tree node, a list item or a record field (iris-genui-change-markers).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Delta {
+    Added,
+    Removed,
+    Changed,
+}
+
+impl Delta {
+    /// An added or removed parent passes its state down; a changed one passes nothing.
+    pub fn inherit(own: Option<Delta>, parent: Option<Delta>) -> Option<Delta> {
+        match parent {
+            Some(p @ (Delta::Added | Delta::Removed)) => Some(p),
+            _ => own,
+        }
+    }
+
+    pub fn word(self) -> &'static str {
+        match self {
+            Delta::Added => "added",
+            Delta::Removed => "removed",
+            Delta::Changed => "changed",
+        }
+    }
+
+    /// The text mark the terminal prefixes a line with.
+    pub fn mark(self) -> char {
+        match self {
+            Delta::Added => '+',
+            Delta::Removed => '-',
+            Delta::Changed => '~',
+        }
+    }
 }
 
 /// Titles, column names and record keys.
@@ -99,7 +142,12 @@ impl Component {
                 most("record fields", r.fields.len(), 40)?;
                 r.fields.iter().try_for_each(|f| {
                     cap("a record key", &f.key, NAME_MAX)?;
-                    cap("a record value", &value_text(&f.value), 4000)
+                    cap("a record value", &value_text(&f.value), 4000)?;
+                    let Some(was) = &f.was else { return Ok(()) };
+                    if f.delta != Some(Delta::Changed) {
+                        return Err(format!("record field {}: was is only on a changed field", f.key));
+                    }
+                    cap("a record was", &value_text(was), 4000)
                 })
             }
             Component::Chart(c) => {
@@ -160,7 +208,7 @@ impl Component {
                     return Err("a tree has no nodes".into());
                 }
                 let mut count = 0;
-                t.nodes.iter().try_for_each(|n| tree_nodes(n, 1, &mut count))?;
+                t.nodes.iter().try_for_each(|n| tree_nodes(n, 1, &mut count, None))?;
                 most("tree nodes", count, 100)
             }
             Component::Timeline(t) => {
@@ -405,6 +453,8 @@ pub struct TreeNode {
     pub label: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delta: Option<Delta>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub children: Vec<TreeNode>,
 }
@@ -567,6 +617,8 @@ pub struct ListItem {
     pub detail: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tone: Option<Tone>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delta: Option<Delta>,
 }
 
 /// The face's severity words (ui/tone.ts), said as text by both shells.
@@ -592,6 +644,11 @@ pub struct Record {
 pub struct Field {
     pub key: String,
     pub value: Value,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delta: Option<Delta>,
+    /// The old value of a changed field; a JSON null reads as absent (ponytail: "was empty" is unsayable).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub was: Option<Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -703,7 +760,7 @@ mod tests {
         Component::List(List {
             title: None,
             ordered: false,
-            items: (0..n).map(|i| ListItem { text: i.to_string(), detail: None, tone: None }).collect(),
+            items: (0..n).map(|i| ListItem { text: i.to_string(), detail: None, tone: None, delta: None }).collect(),
         })
     }
 
