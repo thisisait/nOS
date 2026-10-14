@@ -65,12 +65,16 @@
   community.general.homebrew:
     name: rust
     state: present
-  when: not (_thalamus_cargo_stat.stat.executable | default(false))
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - not (_thalamus_cargo_stat.stat.executable | default(false))
 
 - name: "[pazny.thalamus] Use Homebrew's cargo"
   ansible.builtin.set_fact:
     thalamus_cargo: "{{ homebrew_prefix }}/bin/cargo"
-  when: not (_thalamus_cargo_stat.stat.executable | default(false))
+  when:
+    - nos_pkg_manager == 'homebrew'
+    - not (_thalamus_cargo_stat.stat.executable | default(false))
 
 # --locked: the Cargo.lock dependabot watches is what ships. The target dir lives off the checkout.
 - name: "[pazny.thalamus] Install thalamus binary"
