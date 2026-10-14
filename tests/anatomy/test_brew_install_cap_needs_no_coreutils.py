@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import time
@@ -101,3 +102,14 @@ def test_hanging_brew_is_cut_without_coreutils(tmp_path, task_name, cap_var):
     assert elapsed < 8, f"{task_name}: took {elapsed:.1f}s with a 1s cap"
     assert "TIMEOUT:" in proc.stdout, proc.stdout + proc.stderr
     assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+@pytest.mark.parametrize("task_name,cap_var", sorted(LOOPS.items()))
+def test_the_timeout_is_known_by_a_mark_not_by_the_watchdog_still_living(task_name, cap_var):
+    """Full suite 2026-10-14: 1 run in 3 ended rc 143 with no TIMEOUT line. The watchdog had sent its kill but
+    had not yet exited, so `kill -0 "$dog"` found it alive and the cap read 'brew finished'. The watchdog's own
+    exit (it ignores TERM once it fires) is what says a timeout happened."""
+    sh = _script(task_name)
+    assert 'kill -0 "$dog"' not in sh, "a live watchdog is not proof that it did not fire"
+    assert re.search(r"sleep \"\$secs\" && trap '' TERM && kill -TERM", sh), sh
+    assert 'wait "$dog" && rc=124' in sh, sh
