@@ -122,3 +122,44 @@ def test_verify_reads_the_installed_binary():
     assert "codesign --verify" in sh and "thalamus_pupil_identifier" in sh, sh
     rec = _task("record the installed pupil's sha256")["ansible.builtin.shell"]
     assert "shasum -a 256 {{ thalamus_pupil_exe | quote }}" in rec and ".sha256" in rec
+
+
+_BORROW = re.compile(r"""(?:from|import)\s+['"](\$face|\$ui|\.{1,2})(/[^'"]*)['"]""")
+_ALIAS = {"$face": REPO / "files" / "anatomy" / "face" / "src",
+          "$ui": REPO / "files" / "anatomy" / "face" / "src" / "lib" / "components" / "ui"}
+
+
+def _resolve(base: pathlib.Path, rel: str) -> pathlib.Path:
+    p = (base / rel.lstrip("/")).resolve()
+    hit = next((c for c in (p, *(p.with_name(p.name + e) for e in (".ts", ".svelte", ".js"))) if c.is_file()), None)
+    assert hit, f"{rel} from {base} resolves to no file"
+    return hit
+
+
+def test_the_source_hash_covers_what_vite_borrows_from_the_face():
+    """vite.config.ts aliases ../face/src: every face file the pupil imports, and theirs, rebuilds it."""
+    vite = (PUPIL / "vite.config.ts").read_text()
+    aliases = set(re.findall(r"(\$\w+):", vite.split("alias:", 1)[1].split("}", 1)[0]))
+    assert aliases == set(_ALIAS), f"vite aliases {aliases}: teach this gate the new one"
+    seen: set[pathlib.Path] = set()
+    todo = [(f, m.group(1), m.group(2)) for f in PUPIL.joinpath("src").rglob("*")
+            if f.suffix in {".ts", ".svelte"} and not f.name.endswith(".test.ts")
+            for m in _BORROW.finditer(f.read_text()) if m.group(1) in _ALIAS]
+    assert todo, "the pupil borrows nothing from the face: drop ../face from this gate"
+    while todo:
+        f, head, rel = todo.pop()
+        hit = _resolve(_ALIAS[head], rel) if head in _ALIAS else _resolve(f.parent, head + rel)
+        if hit in seen:
+            continue
+        seen.add(hit)
+        if hit.suffix in {".ts", ".svelte", ".js"}:
+            todo += [(hit, m.group(1), m.group(2)) for m in _BORROW.finditer(hit.read_text())]
+    sh = _task("hash the pupil source")["ansible.builtin.shell"]
+    tail = "| xargs cat | shasum -a 256 | cut -d' ' -f1"
+    assert tail in sh, sh
+    listed = subprocess.run(["/bin/bash", "-c", _render(sh.replace(tail, ""), playbook_dir=str(REPO))],
+                            capture_output=True, text=True, check=True, cwd=PUPIL).stdout.split()
+    hashed = {(PUPIL / p).resolve() for p in listed}
+    missed = sorted(str(p.relative_to(REPO)) for p in seen if p.is_relative_to(_ALIAS["$face"]) and p not in hashed)
+    assert not missed, f"a change to these rebuilds no pupil: {missed}"
+
