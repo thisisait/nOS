@@ -78,7 +78,8 @@ export function placed(l: Layout, w: Widgets, id: string, title: string, spec: W
 export function pin(l: Layout, w: Widgets, id: string, m: ToShell): { layout: Layout; w: Widgets; send: ToThalamus | null } {
 	if (m.t !== 'render' || !m.pin) return { layout: l, w, send: null };
 	const p = m.component.props as { title?: string; name?: string };
-	const spec = structuredClone(m.pin);
+	// msg lives in $state: a Proxy, which structuredClone refuses. JSON is all a spec is.
+	const spec = JSON.parse(JSON.stringify(m.pin)) as WidgetSpec;
 	const table = 'rows' in spec ? String(spec.rows.table ?? '') : 'chart' in spec ? spec.chart.query.table : spec.form.table;
 	return placed(l, w, id, p.title || p.name || table, spec);
 }

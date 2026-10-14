@@ -26,7 +26,10 @@
 	{:else if msg.t === 'render'}
 		<ComponentView component={msg.component} />
 		{#if msg.pin}
-			<button class="pin" type="button" onclick={() => onpin?.(msg)}>Připnout na plochu</button>
+			<button class="pin" type="button" aria-label="Připnout na plochu" title="Připnout na plochu" onclick={() => onpin?.(msg)}>
+				<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="M10 1l5 5-2 1-3 3 1 4-1 1-4-4-4 4-1-1 4-4-4-4 1-1 4 1 3-3z" fill="currentColor" /></svg>
+				pin
+			</button>
 		{:else if msg.component.kind === 'chart'}
 			<p class="muted">jen náhled — Iris neuvedla zdroj čísel</p>
 		{/if}
@@ -58,11 +61,20 @@
 	}
 	.pin {
 		align-self: flex-start;
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
 		border: 1px solid var(--glass-brd);
-		background: var(--accent);
-		color: var(--bg);
-		border-radius: 10px;
-		padding: 4px 12px;
+		background: transparent;
+		color: var(--muted);
+		border-radius: 6px;
+		padding: 1px 6px;
+		font-size: 11px;
+		cursor: pointer;
+	}
+	.pin:hover {
+		color: var(--accent);
+		border-color: var(--accent);
 	}
 	.muted {
 		margin: 0;
