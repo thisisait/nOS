@@ -13,6 +13,23 @@ Claude Code alike; this file only covers the fork-and-PR mechanics.
    own values (domain, email, paths, passwords).
 4. Keep your fork's `dev` current: `git fetch upstream && git rebase upstream/dev`.
 
+### If you also run an estate on this machine
+
+Do not converge from a worktree of your development clone: what outlives a
+converge points at the repo's **main** checkout, so the estate would run
+whatever that clone has checked out (the preflight refuses the split). Give the
+estate its own main clone of `thisisait/nOS`, with your fork as a second remote:
+
+```bash
+tools/estate-adopt.sh --dir ~/project/nos --fork https://github.com/<you>/nOS.git \
+    [--from <the checkout that holds your config.yml>]          # dry run
+tools/estate-adopt.sh ... --confirm                            # then: cd ~/project/nos && nos
+```
+
+Update the estate with `git -C ~/project/nos pull --ff-only`. Fix in a worktree
+of it (`git worktree add ../nos-fix-<x> -b fix/<x> origin/dev`), push the branch
+to `fork`, open the PR against `dev`.
+
 ## Before you open a PR
 
 Run the offline gates. They need no running estate, no Docker and no secrets:
