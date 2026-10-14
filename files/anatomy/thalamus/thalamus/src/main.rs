@@ -61,6 +61,9 @@ fn serve_main(args: &[String]) -> Result<(), String> {
         // Unset or empty: nobody is tier 1, so the operator views refuse everyone.
         tier1: std::env::var("NOS_TIER1_GROUPS").unwrap_or_default().split(',').filter(|g| !g.is_empty())
             .map(str::to_string).collect(),
+        // Off unless the operator sets thalamus_decider_exes: the role renders it ':'-joined.
+        deciders: std::env::var("NOS_DECIDER_EXES").unwrap_or_default().split(':').filter(|p| !p.is_empty())
+            .map(PathBuf::from).collect(),
         log: Mutex::new(Box::new(std::io::stderr())),
     };
     serve::run(listener, Arc::new(srv));

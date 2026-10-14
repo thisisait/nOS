@@ -2478,10 +2478,7 @@ fn show_offers_a_sequence() {
 
 /// A path that names no file until `admit` links it to this test binary (the peer).
 fn decider_link(name: &str) -> PathBuf {
-    let d = PathBuf::from(format!("/tmp/th-{}-{name}-exe", std::process::id()));
-    let _ = std::fs::remove_dir_all(&d);
-    std::fs::create_dir_all(&d).unwrap();
-    d.join("nos-pupil")
+    dir(&format!("{name}-exe")).join("nos-pupil")
 }
 
 fn admit(link: &std::path::Path) {

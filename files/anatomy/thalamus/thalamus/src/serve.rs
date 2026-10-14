@@ -43,6 +43,8 @@ pub struct Server {
     pub reader_secs: u64,
     /// The groups that see the operator's views (NOS_TIER1_GROUPS, from authentik_rbac_tiers).
     pub tier1: Vec<String>,
+    /// NOS_DECIDER_EXES: the executables that may decide; empty records the peer only.
+    pub deciders: Vec<PathBuf>,
     pub log: Mutex<Box<dyn Write + Send>>,
 }
 
@@ -71,7 +73,7 @@ pub fn login(uid: u32) -> Option<String> {
 }
 
 /// The peer process as the kernel names it: {pid, exe}, null where it cannot say. Recorded on
-/// every decision; not yet enforced (genui Q10: refusing a non-pupil peer needs its installed path).
+/// every decision; enforced by decider_refusal when the decider list is set.
 fn peer(s: &UnixStream) -> Value {
     let pid = peer_pid(s);
     json!({"pid": pid, "exe": pid.and_then(exe_of)})
@@ -102,6 +104,18 @@ fn exe_of(pid: i32) -> Option<String> {
 #[cfg(target_os = "linux")]
 fn exe_of(pid: i32) -> Option<String> {
     std::fs::read_link(format!("/proc/{pid}/exe")).ok().map(|p| p.to_string_lossy().into_owned())
+}
+
+/// Why this peer exe may not decide, or None. An empty list is off (record only); a listed entry
+/// counts only when absolute, and both sides are canonicalized, so a symlink names its target.
+pub fn decider_refusal(deciders: &[PathBuf], exe: Option<&str>) -> Option<String> {
+    if deciders.is_empty() {
+        return None;
+    }
+    let Some(exe) = exe else { return Some("the peer's executable cannot be determined, and only a listed decider decides".into()) };
+    let Ok(real) = std::fs::canonicalize(exe) else { return Some(format!("{exe} cannot be resolved, and only a listed decider decides")) };
+    let listed = deciders.iter().any(|d| d.is_absolute() && std::fs::canonicalize(d).is_ok_and(|c| c == real));
+    (!listed).then(|| format!("{} is not a listed decider (thalamus_decider_exes)", real.display()))
 }
 
 fn peer_login(s: &UnixStream) -> Option<String> {
@@ -463,11 +477,16 @@ impl Server {
                     }
                 }
                 Ok(ToThalamus::FormSubmit { form, widget, values }) => match open.as_mut() {
-                    Some(o) => self.form_submit(&who, &mut out, o, &form, &widget, &values, &peer),
+                    Some(o) => if self.may_decide(o, &mut out, "form_submit", &form, &peer, Some(&widget)) {
+                        self.form_submit(&who, &mut out, o, &form, &widget, &values, &peer)
+                    },
                     None => send(&mut out, &ToShell::Refused { reason: "no form was sent on this connection".into(), widget: Some(widget) }),
                 },
                 Ok(ToThalamus::ChoiceReply { session, choice, picked }) => match open.as_mut() {
                     Some(o) if o.session == session => {
+                        if !self.may_decide(o, &mut out, "choice_reply", &choice, &peer, None) {
+                            continue;
+                        }
                         if self.choice_reply(&mut out, o, &choice, &picked) {
                             self.think(&who, &mut out, o);
                         }
@@ -477,6 +496,9 @@ impl Server {
                 },
                 Ok(ToThalamus::ApprovalDecision { approval, decision, note }) => match open.as_mut() {
                     Some(o) if o.pending.contains(&approval) => {
+                        if !self.may_decide(o, &mut out, "propose_row_edit", &approval, &peer, None) {
+                            continue;
+                        }
                         self.decide(&who, &mut out, o, &approval, decision, note, &peer);
                         activity(&mut out, o, Phase::Idle);
                     }
@@ -538,6 +560,16 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         };
         Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
                   pending: HashSet::new(), shown: HashSet::new(), forms: HashMap::new(), choices: HashMap::new() })
+    }
+
+    /// The decider gate before a submit, a decision or a choice reply: a refused peer is told and
+    /// recorded (its {pid, exe}, the reason), and nothing pending is consumed or cancelled.
+    fn may_decide(&self, o: &Open, out: &mut UnixStream, tool: &str, about: &str, peer: &Value, widget: Option<&str>) -> bool {
+        let Some(why) = decider_refusal(&self.deciders, peer["exe"].as_str()) else { return true };
+        let _ = self.record(o, Kind::ToolResult, Some(tool), json!({"refused": why, "for": about, "peer": peer}));
+        self.say(format!("refused a {tool} from {peer}: {why}"));
+        send(out, &ToShell::Refused { reason: why, widget: widget.map(str::to_string) });
+        false
     }
 
     /// One ledger event; the row id, or the reason it was refused (also logged).

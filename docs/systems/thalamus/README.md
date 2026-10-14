@@ -65,8 +65,15 @@ extends what the model was shown, and each one is a ToolUse/ToolResult pair
 
 Submitting a widget form is the person's decision: under tool `form_submit` the
 ledger gets the request (`op: insert`), the decision and the result, each with
-the peer's `{pid, exe}` (recorded, not yet enforced); `commit()` does the one
-POST, and the shell gets `form_result` and `table_changed`. The pupil then
+the peer's `{pid, exe}`; `commit()` does the one
+POST, and the shell gets `form_result` and `table_changed`.
+
+Who may decide: `thalamus_decider_exes` (role default `[]`, off: the peer is only
+recorded). When the operator sets it in `config.yml` — recommended
+`[thalamus_pupil_exe, thalamus_bin]`, the pupil and the y/n terminal shell — serve
+refuses a `form_submit`, `approval_decision` or `choice_reply` from any other
+(canonicalized) executable, or one it cannot name. The refusal is said, recorded
+with the peer and reason, and the approval, form or choice stays open. The pupil then
 re-runs the widgets on the active tab that read that table; the rest go stale
 until their tab is shown. The whole path runs offline in
 `tests/anatomy/test_genui_workspace_poc.py` over `state/fixtures/genui-workspace-poc/`.

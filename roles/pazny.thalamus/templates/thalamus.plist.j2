@@ -41,6 +41,11 @@
         <!-- Who sees the approvals and red-status controls: authentik_rbac_tiers tier 1. -->
         <key>NOS_TIER1_GROUPS</key>
         <string>{{ (authentik_rbac_tiers | selectattr('tier', 'equalto', 1) | first).groups | join(',') }}</string>
+{% if thalamus_decider_exes | default([]) | length %}
+        <!-- Only these executables decide (defaults thalamus_decider_exes; src/serve.rs decider_refusal). -->
+        <key>NOS_DECIDER_EXES</key>
+        <string>{{ thalamus_decider_exes | join(':') }}</string>
+{% endif %}
         <!-- The binding env (defaults thalamus_binding_env, also the preflight's); iris binds mistral-eu. -->
 {% for name, value in thalamus_binding_env.items() %}
         <key>{{ name }}</key>
