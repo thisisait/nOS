@@ -161,6 +161,7 @@
 # except the model line: serving without one warns (ruling 2026-10-12) — the reader still says UNKNOWN.
 - name: "[pazny.thalamus] Verify — the reader sees the socket, the job and the ledger"
   ansible.builtin.shell: |
+    set -o pipefail
     # Wait for a socket that accepts: a stale one from a crashed run exists but answers nobody.
     for _ in $(seq 1 20); do
       out=$(/usr/bin/python3 {{ (playbook_dir ~ '/tools/thalamus-status.py') | quote }} --json) || exit 1
@@ -168,6 +169,8 @@
       sleep 0.5
     done
     echo "$out"
+  args:
+    executable: /bin/bash
   register: _thalamus_verify
   changed_when: false
   failed_when: >-
