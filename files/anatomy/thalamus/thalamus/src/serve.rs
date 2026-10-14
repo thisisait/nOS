@@ -122,10 +122,21 @@ pub fn decider_refusal(deciders: &[PathBuf], exe: Option<&str>) -> Option<String
     (!listed).then(|| format!("{exe} is not a listed decider (thalamus_decider_exes)"))
 }
 
+#[cfg(target_os = "macos")]
 fn peer_login(s: &UnixStream) -> Option<String> {
     let (mut uid, mut gid) = (0, 0);
     (unsafe { libc::getpeereid(s.as_raw_fd(), &mut uid, &mut gid) } == 0).then_some(())?;
     login(uid)
+}
+
+/// Linux has no getpeereid: SO_PEERCRED carries the connector's uid (CI builds here).
+#[cfg(target_os = "linux")]
+fn peer_login(s: &UnixStream) -> Option<String> {
+    let mut c: libc::ucred = unsafe { std::mem::zeroed() };
+    let mut len = std::mem::size_of::<libc::ucred>() as libc::socklen_t;
+    let rc = unsafe { libc::getsockopt(s.as_raw_fd(), libc::SOL_SOCKET, libc::SO_PEERCRED, (&mut c as *mut libc::ucred).cast(), &mut len) };
+    (rc == 0).then_some(())?;
+    login(c.uid)
 }
 
 /// The receptor's loader rules: unknown, unreadable or malformed is None.
