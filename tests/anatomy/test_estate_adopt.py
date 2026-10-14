@@ -28,6 +28,9 @@ def _world(tmp: pathlib.Path):
     _git(tmp, "clone", "-q", "--bare", str(seed), str(up))
     old = tmp / "old"
     old.mkdir()
+    # A galaxy role lives in roles/ but is gitignored, so a clone never carries it.
+    (old / "roles" / "elliotweiser.osx-command-line-tools" / "tasks").mkdir(parents=True)
+    (old / "roles" / "elliotweiser.osx-command-line-tools" / "tasks" / "main.yml").write_text("---\n")
     (old / "config.yml").write_text("install_keap: true\n")
     (old / "credentials.yml").write_text("k: v\n")
     (old / "config.bak.yml").write_text("x: 1\n")
@@ -66,6 +69,9 @@ def test_confirm_builds_the_layout_and_carries_the_config(tmp_path):
     assert f"NOS_SRC={est}" in env and "NOS_PY=/py" in env and "NOS_SRC=/old" not in env, env
     assert (home / ".nos" / "nos-cli.env.prev").read_text().startswith("NOS_SRC=/old")
     assert (old / "config.yml").exists(), "the old checkout is never touched"
+    # Live 2026-10-14: the first converge from the adopted clone died "role elliotweiser.osx-command-line-tools
+    # was not found" — galaxy roles are gitignored. --from carries the ones the old tree verified.
+    assert (est / "roles" / "elliotweiser.osx-command-line-tools" / "tasks" / "main.yml").exists()
 
 
 def test_it_refuses_a_directory_in_use_and_a_source_without_config(tmp_path):
