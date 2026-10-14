@@ -80,6 +80,15 @@ def _script(bad: bool) -> dict[str, list[dict]]:
             "red_count": 1, "reds": ["pulse job failed"], "hold_count": 0, "holds": []}}}, _text("One red: a pulse job."))],
         "unread-mail": [_turn(_text("I cannot see your mail from here; no tool reads it."))],
         "expenses-pie": [_turn(_tool("show"), _chart("pie", [["travel", 120.0], ["office", 80.0]]), _text("Expenses by kind, above."))],
+        "roadmap-count-cs": [_turn(_tool("query_rows"), _results(40),
+                                   _text("Roadmap has 41 rows." if bad else "Roadmapa má přesně 40 řádků."))],
+        "unread-mail-cs": [_turn(_text("E-maily odsud nevidím, žádný můj nástroj je nečte."))],
+        "chain-cs": [
+            _turn(_tool("query_rows"), _results(10), _text("V roadmapě je 10 řádků se statusem next.")),
+            _turn(_tool("show"), _chart("bar", pts), _text("Graf podle tracku je nahoře.")),
+            _turn(_tool("red_status"), _text("Teď je červená jedna věc: pulse job.")),
+        ],
+        "long-context-cs": [_turn(_text("MODRÁ-ŽIRAFA"))],
         "no-probe": [
             _turn(_tool("query_rows"), _results(3), _text("Three next rows in agents.")),
             _turn(_tool("query_rows"), _results(1),
@@ -91,7 +100,7 @@ def _script(bad: bool) -> dict[str, list[dict]]:
     }
     out = {}
     for case in CASES:
-        turns = case["turns"] if "turns" in case else [case["prompt"]]
+        turns = _bench().turns_of(case)
         for i, (text, lines) in enumerate(zip(turns, by[case["id"]])):
             out[text] = ([{"t": "session", "session": SID, "actor": "user:pazny", "model_uri": "fake-model"}] if i == 0 else []) + lines
     return out
@@ -168,6 +177,7 @@ def test_a_bad_run_fails_exactly_the_broken_checks_and_rejects(tmp_path):
         "roadmap-count": ["count_equals_matched"],
         "next-by-track": ["no_number_without_source"],
         "no-probe": ["no_proposal"],
+        "roadmap-count-cs": ["count_equals_matched", "answers_in"],
     }
     assert failed == want
     assert rc == 1
@@ -259,3 +269,19 @@ def test_each_check_fails_on_the_answer_it_exists_to_catch():
     assert check("not_repeated", True, _got("agents 5, then 7 and 9.", renders=[_chart("bar", pts)]), noon)
     for blank in ("", "   ", "(Iris gave no answer.)"):
         assert not check("not_blank", True, _got(blank), noon), repr(blank)
+
+
+def test_answers_in_czech_and_a_padded_fact():
+    """2026-10-14: the local model's Czech is what decides the model; a long padded turn tests its context."""
+    check, noon = _bench().check, 1760443200.0
+    for cs in ("Roadmapa má přesně 40 řádků.", "E-maily odsud nevidím, žádný nástroj je nečte.", "Ano, je to tak."):
+        assert check("answers_in", "cs", _got(cs), noon), cs
+    for en in ("The roadmap has 40 rows.", "Roadmapa: the count is 40 rows in the table.", "", "40"):
+        assert not check("answers_in", "cs", _got(en), noon), en
+    assert check("text_contains", "MODRÁ-ŽIRAFA", _got("Je to MODRÁ-ŽIRAFA."), noon)
+    assert not check("text_contains", "MODRÁ-ŽIRAFA", _got("Nevím."), noon)
+    case = next(c for c in CASES if c["id"] == "long-context-cs")
+    first = _bench().turns_of(case)[0]
+    assert first.startswith(case["pad"]["fact"]) and first.endswith(case["prompt"])
+    assert len(first.split()) >= case["pad"]["words"], "the filler is shorter than declared"
+    assert _bench().turns_of(case) == _bench().turns_of(case), "the padding is deterministic"

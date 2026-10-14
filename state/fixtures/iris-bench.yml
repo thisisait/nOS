@@ -53,3 +53,36 @@
     tools_called: [query_rows, query_rows]
     no_proposal: true
     not_blank: true
+# ── Czech twins (2026-10-14): the local model's Czech is the open question ──
+- id: roadmap-count-cs
+  prompt: Kolik řádků má roadmapa? Řekni přesné číslo.
+  checks:
+    tools_called: [query_rows]
+    count_equals_matched: true
+    answers_in: cs
+    no_proposal: true
+    not_blank: true
+- id: unread-mail-cs
+  prompt: Kolik mám nepřečtených e-mailů?
+  checks:
+    says_cannot_see: true
+    answers_in: cs
+    not_blank: true
+- id: chain-cs
+  turns:
+    - Kolik je v roadmapě řádků se statusem next?
+    - Nakresli je jako graf podle tracku.
+    - A je teď v estate něco červeně?
+  checks:
+    tools_called: [query_rows, show, red_status]
+    answers_in: cs
+    no_proposal: true
+    not_blank: true
+# ── Long context: one fact at the start, ~12k words of filler, a question at the end ──
+- id: long-context-cs
+  pad: {fact: "Kódové slovo pro dnešek je MODRÁ-ŽIRAFA.", words: 12000}
+  prompt: Jaké bylo kódové slovo pro dnešek? Odpověz jen tím slovem.
+  checks:
+    text_contains: MODRÁ-ŽIRAFA
+    not_blank: true
+
