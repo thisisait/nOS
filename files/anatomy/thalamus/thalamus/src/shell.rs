@@ -243,7 +243,13 @@ impl App {
                 self.session = Some(session);
             }
             ToShell::Text { text, .. } => self.lines.extend(text.lines().map(|l| Line::from(format!("iris: {l}")))),
-            ToShell::Render { component, .. } => self.lines.extend(component_lines(&component)),
+            ToShell::Render { component, pin, .. } => {
+                self.lines.extend(component_lines(&component));
+                // The workspace is the pupil's; here a pin is only said.
+                if pin.is_some() {
+                    self.lines.push(Line::styled("(pinnable in the pupil)", Style::new().fg(Color::DarkGray)));
+                }
+            }
             ToShell::ApprovalRequest { approval, component, .. } => {
                 self.pending.push_back((approval, component_lines(&component)));
             }
