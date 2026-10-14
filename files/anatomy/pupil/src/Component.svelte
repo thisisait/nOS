@@ -18,6 +18,8 @@
 
 	// view: Před / Změny / Po of a component that marks a delta (delta.ts); the switch sets it.
 	let { component, view = $bindable('changes') }: { component: Component; view?: View } = $props();
+	// One name per switch: one group for the keyboard and a screen reader; two switches never merge.
+	const switchName = $props.id();
 	// A column whose text runs long reads as prose under its row, not as a column that starves the rest.
 	const LONG = (s: string) => s.length > 80 || s.includes('\n');
 </script>
@@ -30,7 +32,7 @@
 			<span class="mono">{tally(ds)}</span>
 			<fieldset class="views">
 				<legend class="sr">pohled</legend>
-				{#each VIEWS as [v, label]}<label><input type="radio" bind:group={view} value={v} />{label}</label>{/each}
+				{#each VIEWS as [v, label]}<label><input type="radio" name={switchName} bind:group={view} value={v} />{label}</label>{/each}
 			</fieldset>
 		</div>
 	{/if}
@@ -126,9 +128,10 @@
 		{@const l = component.props}
 		{#if l.title}<h3>{l.title}</h3>{/if}
 		{@render deltaBar(l.items.map((x) => x.delta))}
-		{@const items = l.items.filter((x) => shownIn(x.delta, view))}
-		{#snippet item(x: (typeof l.items)[number])}
-			<li data-delta={x.delta}>{@render mark(x.delta)}{#if x.tone}<Badge tone={x.tone}>{x.tone}</Badge>{' '}{/if}{x.text}{#if x.detail}<span class="muted"> — {x.detail}</span>{/if}</li>
+		<!-- Each item keeps its number in the whole list (shell.rs), so Před and Po do not renumber. -->
+		{@const items = l.items.map((x, i) => ({ ...x, n: i + 1 })).filter((x) => shownIn(x.delta, view))}
+		{#snippet item(x: (typeof items)[number])}
+			<li data-delta={x.delta} value={l.ordered ? x.n : undefined}>{@render mark(x.delta)}{#if x.tone}<Badge tone={x.tone}>{x.tone}</Badge>{' '}{/if}{x.text}{#if x.detail}<span class="muted"> — {x.detail}</span>{/if}</li>
 		{/snippet}
 		{#if l.ordered}<ol>{#each items as x}{@render item(x)}{/each}</ol>{:else}<ul>{#each items as x}{@render item(x)}{/each}</ul>{/if}
 	{:else if component.kind === 'record'}

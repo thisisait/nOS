@@ -1,6 +1,8 @@
 // Change markers (iris-genui-change-markers): what an action would add, remove or change, as text
 // (+ − ~) beside each item, a "+N −M ~K" row and a Před / Změny / Po switch. An added or removed
 // parent passes its state to its children; renderers.rs check() refuses a child that says otherwise.
+import { readFileSync } from 'node:fs';
+import { parse } from 'svelte/compiler';
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import Component from './Component.svelte';
@@ -115,5 +117,52 @@ describe('change markers are text, and a removed parent marks its children', () 
 		expect(after).toContain('status done');
 		expect(after).not.toContain('open');
 		expect(after).not.toContain('virtiofs');
+	});
+});
+
+// SSR cannot click, so the switch is read off the markup and the AST: one named group, bound to view.
+describe('the Před / Změny / Po switch is one group that sets the view', () => {
+	const radios = (h: string) => h.match(/<input[^>]*type="radio"[^>]*>/g) ?? [];
+	const name = (i: string) => i.match(/name="([^"]+)"/)?.[1];
+
+	it('the three radios share one name', () => {
+		const a = radios(draw(list).html);
+		expect(a.length).toBe(3);
+		expect(a.map(name).every((n) => n && n === name(a[0])), a.join('\n')).toBe(true);
+	});
+
+	it('every radio binds the bindable view, so a click is the view the body is drawn in', () => {
+		type N = { type?: string; name?: string; [k: string]: unknown };
+		const src = readFileSync(new URL('./Component.svelte', import.meta.url), 'utf8');
+		const els: N[] = [];
+		const walk = (n: unknown): void => {
+			if (!n || typeof n !== 'object') return;
+			if (Array.isArray(n)) return n.forEach(walk);
+			if ((n as N).type === 'RegularElement' && (n as N).name === 'input') els.push(n as N);
+			for (const [k, v] of Object.entries(n)) if (k !== 'metadata' && k !== 'parent') walk(v);
+		};
+		walk(parse(src, { modern: true }).fragment);
+		const attrs = (e: N) => e.attributes as N[];
+		const radio = els.filter((e) => attrs(e).some((a) => a.name === 'type' && JSON.stringify(a.value).includes('"radio"')));
+		expect(radio.length).toBe(1);
+		const group = attrs(radio[0]).find((a) => a.type === 'BindDirective' && a.name === 'group');
+		expect((group?.expression as N)?.type === 'Identifier' && (group?.expression as N).name, 'bind:group={view}').toBe('view');
+		// $props.id() is unique per instance, so two switches on one page are two groups.
+		const named = attrs(radio[0]).find((a) => a.type === 'Attribute' && a.name === 'name');
+		const id = ((named?.value as N)?.expression as N)?.name;
+		expect(id, 'name={<an identifier>}').toBeTruthy();
+		expect(src).toMatch(new RegExp(`const ${id} = \\$props\\.id\\(\\);`));
+		expect(src).toMatch(/\bview = \$bindable\(/);
+	});
+});
+
+describe('an ordered list keeps the terminal numbers in every view', () => {
+	const ol = { kind: 'list', props: { ordered: true, items: [{ text: 'one', delta: 'added' }, { text: 'two', delta: 'removed' }, { text: 'three' }] } };
+	const values = (h: string) => [...h.matchAll(/<li[^>]*?value="(\d+)"/g)].map((m) => Number(m[1]));
+
+	it('Před keeps 2, 3; Po keeps 1, 3; Změny 1, 2, 3 (shell.rs numbers the whole list)', () => {
+		expect(values(draw(ol, 'before').html)).toEqual([2, 3]);
+		expect(values(draw(ol, 'after').html)).toEqual([1, 3]);
+		expect(values(draw(ol, 'changes').html)).toEqual([1, 2, 3]);
 	});
 });
