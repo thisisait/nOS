@@ -201,10 +201,13 @@
         cap() {
           local secs=$1; shift
           set -m; "$@" & local pid=$!; set +m
-          ( sleep "$secs" && kill -TERM -- "-$pid" ) </dev/null >/dev/null 2>&1 &
+          # A watchdog that fires ignores TERM from then on and exits 0; one still asleep dies of our TERM.
+          # Its exit says whether it fired; "is it still alive" did not (it can be mid-exit after the kill).
+          ( sleep "$secs" && trap '' TERM && kill -TERM -- "-$pid" ) </dev/null >/dev/null 2>&1 &
           local dog=$!
           wait "$pid"; local rc=$?
-          if kill -0 "$dog" 2>/dev/null; then kill "$dog" 2>/dev/null; else rc=124; fi
+          kill "$dog" 2>/dev/null
+          wait "$dog" && rc=124
           return $rc
         }
         out=$(cap {{ homebrew_cask_install_timeout }} brew install --cask "${cask_name}" --appdir="{{ homebrew_cask_appdir }}" 2>&1)
@@ -497,10 +500,13 @@
         cap() {
           local secs=$1; shift
           set -m; "$@" & local pid=$!; set +m
-          ( sleep "$secs" && kill -TERM -- "-$pid" ) </dev/null >/dev/null 2>&1 &
+          # A watchdog that fires ignores TERM from then on and exits 0; one still asleep dies of our TERM.
+          # Its exit says whether it fired; "is it still alive" did not (it can be mid-exit after the kill).
+          ( sleep "$secs" && trap '' TERM && kill -TERM -- "-$pid" ) </dev/null >/dev/null 2>&1 &
           local dog=$!
           wait "$pid"; local rc=$?
-          if kill -0 "$dog" 2>/dev/null; then kill "$dog" 2>/dev/null; else rc=124; fi
+          kill "$dog" 2>/dev/null
+          wait "$dog" && rc=124
           return $rc
         }
         cap {{ homebrew_formula_install_timeout }} brew install "${pkg_name}" {{ item.install_options | default('') }} 2>&1
