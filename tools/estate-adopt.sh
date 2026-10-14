@@ -60,6 +60,7 @@ echo "plan:"
 echo "  clone   $UPSTREAM -> $DIR (origin, push disabled), branch estate tracking origin/$BRANCH"
 if [ -n "$FORK" ]; then echo "  remote  fork = $FORK"; fi
 if [ ${#carry[@]} -gt 0 ]; then echo "  copy    ${carry[*]} from $FROM (credentials* chmod 600)"; fi
+echo "  galaxy  roles from ${FROM:-ansible-galaxy (requirements.yml)} into $DIR/roles"
 echo "  env     NOS_SRC=$DIR in $ENVF (previous kept as $ENVF.prev)"
 if [ "$CONFIRM" -ne 1 ]; then
   echo "dry run: nothing changed. Re-run with --confirm."
@@ -74,6 +75,18 @@ for f in "${carry[@]+"${carry[@]}"}"; do
   cp -p "$FROM/$f" "$DIR/$f"
   case "$f" in credentials*) chmod 600 "$DIR/$f" ;; esac
 done
+# Galaxy roles (requirements.yml) install into roles/ but are gitignored, so a clone has none.
+# From the old tree: the roles it ran with, i.e. every roles/ dir the fresh clone does not track.
+if [ -n "$FROM" ] && [ -d "$FROM/roles" ]; then
+  for d in "$FROM"/roles/*/; do
+    n="$(basename "$d")"
+    if [ ! -e "$DIR/roles/$n" ]; then cp -R "$d" "$DIR/roles/$n"; echo "  galaxy  $n (from $FROM)"; fi
+  done
+elif command -v ansible-galaxy >/dev/null; then
+  (cd "$DIR" && ansible-galaxy role install -r requirements.yml -p roles)
+else
+  echo "  galaxy  ansible-galaxy not on PATH: run 'ansible-galaxy role install -r requirements.yml -p roles' in $DIR" >&2
+fi
 mkdir -p "$(dirname "$ENVF")"
 if [ -f "$ENVF" ]; then
   cp -p "$ENVF" "$ENVF.prev"
