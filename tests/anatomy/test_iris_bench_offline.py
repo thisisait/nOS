@@ -322,3 +322,11 @@ def test_an_empty_table_is_no_data_not_a_failure():
     assert b.no_data(case, empty)
     assert not b.no_data(case, _got("x", renders=[_results(4)]))
     assert not b.no_data(next(c for c in CASES if c["id"] == "time-now"), empty), "only a needs_rows case"
+    # Client bench: a 404 read no table at all, and the case was marked NO-DATA. Unread is not empty.
+    assert not b.no_data(case, _got("I cannot access the table (404).", tools=["query_rows"])), "nothing was read"
+
+
+def test_a_result_records_what_each_query_asked():
+    """The bench sees no tool arguments; the query line on each table_results is the next best witness."""
+    got = _got("x", renders=[_results(3)])
+    assert _bench().queries(got) == [{"query": "all", "matched": 3, "total": 3}]
