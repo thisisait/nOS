@@ -337,3 +337,18 @@ def test_verify_warns_on_an_unbound_model_and_fails_on_anything_else():
     snippet = re.search(r"python3 -c '([^']+)'", verify["ansible.builtin.shell"])[1]
     assert subprocess.run([sys.executable, "-c", snippet], input=unbound, text=True).returncode == 0
     assert subprocess.run([sys.executable, "-c", snippet], input=_verify_rows(socket="RED"), text=True).returncode == 1
+
+
+def test_the_decider_list_is_off_by_default_and_rendered_only_when_set():
+    """Row thalamus-pupil-peer-exe: an empty list records the peer only, so no converge locks the
+    operator out; the plist carries NOS_DECIDER_EXES only when the operator sets the list."""
+    defaults = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())
+    assert defaults["thalamus_decider_exes"] == []
+    for f in ("default.config.yml", "config.yml"):
+        p = REPO / f
+        assert not (p.exists() and "thalamus_decider_exes" in p.read_text()), f"{f} sets the decider list"
+    assert "NOS_DECIDER_EXES" not in _plist(thalamus_decider_exes=[])["EnvironmentVariables"]
+    exes = ["/h/thalamus/bin/nos-pupil", "/h/thalamus/bin/thalamus"]
+    assert _plist(thalamus_decider_exes=exes)["EnvironmentVariables"]["NOS_DECIDER_EXES"] == ":".join(exes)
+    main = (REPO / "files/anatomy/thalamus/thalamus/src/main.rs").read_text()
+    assert '"NOS_DECIDER_EXES"' in main, "serve does not read the list the plist renders"

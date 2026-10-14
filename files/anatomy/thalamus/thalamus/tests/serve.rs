@@ -137,8 +137,14 @@ fn rig_full(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_
 }
 
 /// The rig over a KEAP already listening at (url, seen): the canned fake or fake_table.
-fn rig_at(name: &str, map: serde_json::Value, (keap_url, keap): (String, Seen), model_bodies: Vec<String>,
+fn rig_at(name: &str, map: serde_json::Value, keap: (String, Seen), model_bodies: Vec<String>,
           bound: Option<Binding>) -> Rig {
+    rig_deciders(name, map, keap, model_bodies, bound, vec![])
+}
+
+/// rig_at with serve's decider list (NOS_DECIDER_EXES); empty is off.
+fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, Seen), model_bodies: Vec<String>,
+                bound: Option<Binding>, deciders: Vec<PathBuf>) -> Rig {
     let d = dir(name);
     std::fs::write(d.join("IMPRINT.short.md"), SHORT).unwrap();
     std::fs::write(d.join("IMPRINT.md"), FULL).unwrap();
@@ -156,6 +162,7 @@ fn rig_at(name: &str, map: serde_json::Value, (keap_url, keap): (String, Seen), 
         repo: d.clone(),
         reader_secs: 2,
         tier1: vec!["nos-admins".into()],
+        deciders,
         log: Mutex::new(Box::new(log.clone())),
     };
     let sock = d.join("t.sock");
@@ -2465,4 +2472,118 @@ fn show_offers_a_sequence() {
     for want in ["participants[]", "{from, to, text, dashed?}", "{note, over[]}", "{phase}"] {
         assert!(shape.contains(want), "SHOW_SHAPE sequence lacks {want}: {shape}");
     }
+}
+
+// --- row thalamus-pupil-peer-exe: with a decider list set, only a listed executable decides ---
+
+/// A path that names no file until `admit` links it to this test binary (the peer).
+fn decider_link(name: &str) -> PathBuf {
+    let d = PathBuf::from(format!("/tmp/th-{}-{name}-exe", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).unwrap();
+    d.join("nos-pupil")
+}
+
+fn admit(link: &std::path::Path) {
+    std::os::unix::fs::symlink(std::env::current_exe().unwrap(), link).unwrap();
+}
+
+/// The refusals a session's ledger holds for `tool`, each naming the peer.
+fn refusals(rig: &Rig, session: &str, tool: &str) -> Vec<serde_json::Value> {
+    let me = std::env::current_exe().unwrap();
+    let got: Vec<_> = events(&rig.ledger, session).into_iter()
+        .filter(|e| e.0 == "agent_tool_result" && e.1 == format!("agent:iris/tool:{tool}") && e.2.get("refused").is_some())
+        .map(|e| e.2).collect();
+    for e in &got {
+        assert_eq!(e["peer"]["pid"], std::process::id(), "{e}");
+        assert!(e["peer"]["exe"].as_str().is_some_and(|x| same_file(x, &me)), "the refusal names no peer exe: {e}");
+    }
+    got
+}
+
+#[test]
+fn a_decider_refusal_needs_a_listed_resolvable_exe_and_none_when_off() {
+    let me = std::env::current_exe().unwrap();
+    let link = decider_link("pure");
+    let mine = me.to_str().unwrap();
+    assert_eq!(serve::decider_refusal(&[], None), None, "an empty list is off: recorded only");
+    assert_eq!(serve::decider_refusal(&[], Some("/nowhere")), None);
+    assert!(serve::decider_refusal(&[me.clone()], None).is_some(), "an undeterminable exe decides nothing");
+    assert!(serve::decider_refusal(&[me.clone()], Some("/nowhere/at/all")).is_some(), "an unresolvable exe decides nothing");
+    assert!(serve::decider_refusal(&[link.clone()], Some(mine)).is_some(), "a listed path that names no file admits nobody");
+    assert!(serve::decider_refusal(&["relative/exe".into()], Some(mine)).is_some(), "only an absolute entry counts");
+    admit(&link);
+    assert_eq!(serve::decider_refusal(&[link], Some(mine)), None, "a listed symlink is resolved");
+    assert_eq!(serve::decider_refusal(&[me.clone()], Some(mine)), None);
+}
+
+#[test]
+fn an_unlisted_decider_is_refused_and_the_approval_still_waits() {
+    let link = decider_link("adecide");
+    let rig = rig_deciders("adecide", mapped(), fake(shown_then(&[ROWS, ROWS, POSTED])), edit_turn(), Some(local()), vec![link.clone()]);
+    let (s, mut r, session, approval, _) = propose(&rig);
+    decide(&s, &approval, Decision::Approve);
+    match next(&mut r) {
+        Some(ToShell::Refused { reason, .. }) => assert!(reason.contains("decider"), "{reason}"),
+        other => panic!("an unlisted decider must be refused, got {other:?}"),
+    }
+    assert!(posts(&rig).is_empty(), "a refused decider wrote");
+    // Still pending: the same card, from a listed exe, takes the write path.
+    admit(&link);
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::TableChanged { ref row, .. }) if row == "r1"));
+    assert!(matches!(next(&mut r), Some(ToShell::Text { ref text, .. }) if text.contains("row r1 written")));
+    assert_eq!(posts(&rig).len(), 1);
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let refused = refusals(&rig, &session, "propose_row_edit");
+    assert_eq!(refused.len(), 1, "{refused:?}");
+    assert_eq!(refused[0]["for"], serde_json::json!(approval));
+    let decisions = events(&rig.ledger, &session).into_iter().filter(|e| e.0 == "agent_approval_decision").count();
+    assert_eq!(decisions, 1, "the refused decision is no decision row");
+}
+
+#[test]
+fn an_unlisted_decider_cannot_submit_a_form_or_answer_a_choice() {
+    let link = decider_link("fdecide");
+    let ((url, seen), held) = fake_table(&expenses(""), vec![]);
+    let rig = rig_deciders("fdecide", mapped(), (url, seen), vec![answer("never")], Some(local()), vec![link.clone()]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let form = open_form(&s, &mut r, "f1");
+    let values = serde_json::json!({"kind": "tools", "amount": 42});
+    send_submit(&s, &form, "f1", values.clone());
+    match next(&mut r) {
+        Some(ToShell::Refused { reason, widget }) => assert!(reason.contains("decider") && widget.as_deref() == Some("f1"), "{reason}"),
+        other => panic!("an unlisted decider's submit must be refused, got {other:?}"),
+    }
+    assert!(posts(&rig).is_empty() && held.lock().unwrap().is_empty(), "a refused submit wrote");
+    // The form stays open: a listed exe submits it.
+    admit(&link);
+    send_submit(&s, &form, "f1", values);
+    assert!(matches!(next(&mut r), Some(ToShell::TableChanged { .. })));
+    assert!(matches!(next(&mut r), Some(ToShell::FormResult { .. })));
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let session: String = rusqlite::Connection::open(&rig.ledger).unwrap()
+        .query_row("SELECT uuid FROM sessions", [], |x| x.get(0)).unwrap();
+    let refused = refusals(&rig, &session, "form_submit");
+    assert_eq!(refused.len(), 1, "{refused:?}");
+    assert_eq!(refused[0]["for"], serde_json::json!(form));
+
+    let link = decider_link("cdecide");
+    let rig = rig_deciders("cdecide", mapped(), fake(vec![ROWS.into()]), choice_turns(false), Some(local()), vec![link.clone()]);
+    let (s, mut r, session, id) = asked_choice(&rig);
+    choose(&s, &session, &id, &["expenses"]);
+    match next(&mut r) {
+        Some(ToShell::Refused { reason, .. }) => assert!(reason.contains("decider"), "{reason}"),
+        other => panic!("an unlisted decider's choice must be refused, got {other:?}"),
+    }
+    assert_eq!(rig.model.lock().unwrap().len(), 2, "a refused choice reached the model");
+    admit(&link);
+    choose(&s, &session, &id, &["expenses"]);
+    assert!(matches!(until_text(&mut r).last(), Some(ToShell::Text { text, .. }) if text == "Charting it."), "the choice stayed open");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    assert_eq!(refusals(&rig, &session, "choice_reply").len(), 1);
 }
