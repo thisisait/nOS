@@ -167,6 +167,18 @@ mod tests {
         assert!(p.admit(&decision("a")).is_ok(), "a submit is not the card's decision: the approval still waits");
     }
 
+    /// A reply runs the model's next turn, so it waits on an approval as a turn does.
+    #[test]
+    fn pending_refuses_a_choice_reply_while_one_waits() {
+        let mut p = Pending::default();
+        let reply = ToThalamus::ChoiceReply { session: "s".into(), choice: "c".into(), picked: vec!["todos".into()] };
+        assert!(p.admit(&reply).is_ok());
+        asked(&mut p, "a");
+        assert!(p.admit(&reply).is_err(), "a choice reply went out while an approval waits");
+        assert!(p.admit(&decision("a")).is_ok());
+        assert!(p.admit(&reply).is_ok());
+    }
+
     #[test]
     fn pending_refuses_a_turn_while_one_waits_but_not_a_control() {
         let mut p = Pending::default();

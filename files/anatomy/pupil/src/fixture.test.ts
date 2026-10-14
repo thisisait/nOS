@@ -26,6 +26,7 @@ const PROPS: Record<string, string[]> = {
 	timeline: ['items', 'title'],
 	graph: ['edges', 'nodes', 'title'],
 	form: ['fields', 'form', 'omitted', 'table', 'title'],
+	choice: ['id', 'multi', 'options', 'question', 'suggested'],
 };
 const KINDS = Object.keys(PROPS);
 
@@ -59,6 +60,9 @@ function owedBy(c: Component): string[] {
 	if (c.kind === 'form')
 		return [header(c.props), ...c.props.fields.flatMap((f) => [f.label, ...(f.options ?? [])]),
 			...c.props.omitted.map((o) => `${o.key} (${o.kind})`), 'Add row'];
+	// A choice owes its question, every label and note, the suggestion's mark and the button; not the minted id.
+	if (c.kind === 'choice')
+		return [c.props.question, ...c.props.options.flatMap((o) => [o.label, ...(o.note ? [o.note] : [])]), 'navrženo', 'Odpovědět'];
 	if (c.kind !== 'table_results') return owed(c.props as unknown as Value);
 	// The table's name, not its id (live 2026-10-12: the header showed the roadmap's UUID).
 	const { name, query, matched, total, columns, rows } = c.props;

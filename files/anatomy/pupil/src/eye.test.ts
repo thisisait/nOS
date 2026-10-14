@@ -65,6 +65,14 @@ describe('the eye reducer', () => {
 		expect(look(run(act('thinking')), 0).state).toBe('thinking');
 	});
 
+	it('an open choice waits for the person like an approval does', () => {
+		const x = run(act('idle'));
+		expect(look(x, 0, 1)).toEqual({ state: 'waiting', tool: 'choice' });
+		expect(label(look(x, 0, 1))).toBe('waiting for your answer');
+		expect(label(look(x, 1, 1))).toBe('waiting for your approval');
+		expect(look(x, 0, 0).state).toBe('idle');
+	});
+
 	it('disconnected on link.closed, over waiting, and deaf to the wire until connected', () => {
 		const c = step(run(act('thinking')), { e: 'link', state: 'closed' });
 		expect(look(c, 2).state).toBe('disconnected');
