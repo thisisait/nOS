@@ -1,0 +1,64 @@
+# =============================================================================
+# profiles/core.yml — face, Iris, KEAP, Wing, Bone and the SSO/edge they need
+#
+# axis: service-set
+# plain: The smallest working nOS — desktop, assistant, memory and dashboard behind SSO.
+#
+#   nos -e @profiles/core.yml
+#
+# MEASURED 2026-10-14 on a 32 GiB client host running a near-full set: 43 containers,
+# 7.6 GiB inside a Docker VM that held its whole 12 GiB cap. This keeps 8: traefik,
+# docker-socket-proxy, postgresql, redis, authentik server+worker, keap, face —
+# estimated ~1.2-1.6 GiB idle, UNMEASURED until tools/docker-pressure-status.py reads it.
+# A converge with this profile prunes the disabled services' containers
+# (tasks/stacks/prune-disabled.yml); their data stays.
+# The Docker VM cap (Docker Desktop MemoryMiB) is the hard lever and not a config value.
+# =============================================================================
+
+# ── L0 + SSO + edge: what every core route depends on ────────────────────────
+install_postgresql: true        # Authentik's store; KEAP keeps its own /data
+install_mariadb: false          # no core consumer (bookstack/firefly/nextcloud/... only)
+install_authentik: true         # SSO is mandatory; forces redis_docker on (main.yml)
+install_traefik: true           # the edge; preflight refuses with no edge proxy
+install_nginx: false
+
+# ── The core itself ───────────────────────────────────────────────────────────
+install_keap: true              # memory organ; DataTables (dtt) live here
+install_face: true              # web desktop
+install_wing: true              # dashboard; FrankenPHP + SQLite on the host
+install_bone: true              # face's file store + Wing's event sink
+install_receptor: true          # the thalamus role asserts it
+install_thalamus: true          # Iris; macOS only; needs a model binding (mistral-eu)
+
+# ── Off: no core part needs them ─────────────────────────────────────────────
+install_infisical: false        # only Wing invite provisioning reads it, off by default
+install_observability: false    # ~700 MiB; Traefik tracing then logs export errors
+install_pulse: false            # scheduled jobs; Wing/face show them as absent
+install_cortex: false           # keap_cortex_cutover false: KEAP serves its own path
+install_ollama: false           # Iris is cloud-bound; KEAP's local-model path errors softly
+install_openclaw: false
+install_ears: false
+install_backup: false
+install_apex: false
+install_gitea: false
+apps_runner_enabled: false      # manifest apps (documenso, roundcube, twofauth, ...)
+
+# ── Every other service flag that defaults true ──────────────────────────────
+install_bluesky_pds: false
+install_calibreweb: false
+install_freescout: false
+install_kiwix: false
+install_mailpit: false
+install_metabase: false
+install_n8n: false
+install_nextcloud: false
+install_onlyoffice: false
+install_openwebui: false
+install_outline: false
+install_paperclip: false
+install_portainer: false
+install_rustfs: false
+install_superset: false
+install_uptime_kuma: false
+install_vaultwarden: false
+install_watchtower: false
