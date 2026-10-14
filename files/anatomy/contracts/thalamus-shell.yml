@@ -36,6 +36,13 @@ wire:
     category x largest first, 59 and "other" past 60; date x by UTC day, the last 60; number x
     ascending, the 60 smallest), {form: {table, columns?}}. trigger: click|restore|table_changed,
     recorded with the spec in the ledger. A widget's rows never let the model propose an edit.
+  pin: >-
+    `render {session, component, pin?}`: `pin` is the widget spec (as above, and checked as a widget
+    message's spec is: a table, and y for sum or avg) the person may place from that render with
+    one click; only the thalamus sets it. A query_rows table carries {rows: its arguments}; a show
+    chart carries {chart: ...} only when the model named its source and the thalamus drew KEAP's
+    aggregate in place of the model's numbers. The model never adds a widget; the person's click
+    does, and the pupil stores the spec, never the rows. The terminal says "(pinnable in the pupil)".
   form_submit: >-
     `form_submit {form, widget, values}` submits a widget form the thalamus sent on this connection
     (form a uuid, widget its token, values {key: string|number|bool}). The submit is the person's

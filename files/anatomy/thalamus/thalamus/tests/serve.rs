@@ -267,7 +267,7 @@ fn serve_searches_as_the_mapped_person_and_never_spills_the_secret() {
         other => panic!("expected Session, got {other:?}"),
     };
     match next(&mut r) {
-        Some(ToShell::Render { session: s2, component: Component::TableResults(t) }) => {
+        Some(ToShell::Render { session: s2, component: Component::TableResults(t), .. }) => {
             assert_eq!(s2, session);
             assert_eq!(t.table, "todos");
             assert!(!t.projected, "substring search is not a projection");

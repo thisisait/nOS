@@ -161,7 +161,7 @@ fn a_table_cell_at_the_2000_limit_is_wrapped_not_cut() {
     });
     component.check().expect("2000 chars is a legal cell");
     let mut app = App::default();
-    app.apply(ToShell::Render { session: SESSION.into(), component });
+    app.apply(ToShell::Render { session: SESSION.into(), component, pin: None });
     let screen = flat(&drawn(&app, 80, 40));
     assert!(screen.contains("ENDMARKER"), "the cell was cut to 24; its tail is gone");
 }

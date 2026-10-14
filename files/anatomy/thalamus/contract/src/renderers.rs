@@ -905,7 +905,7 @@ mod tests {
     /// A pin is a spec the person may place, so it meets the check a widget message's spec meets (I6).
     #[test]
     fn a_render_whose_pin_fails_widget_validation_is_refused() {
-        use crate::wire::{decode_to_shell, decode_to_thalamus, ToShell};
+        use crate::wire::{check_spec, decode_to_shell, decode_to_thalamus, ToShell, ToThalamus};
         let s = "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b";
         let pie = r#"{"kind":"chart","props":{"chart":"pie","x":"category","series":[{"name":"count","points":[["open",2]]}]}}"#;
         let render = |pin: &str| format!(r#"{{"t":"render","session":"{s}","component":{pie},"pin":{pin}}}"#);
@@ -922,7 +922,9 @@ mod tests {
                 m => panic!("a render pinned {pin} was accepted: {m:?}"),
             }
             let widget = format!(r#"{{"t":"widget","widget":"w1","spec":{pin},"trigger":"click"}}"#);
-            assert!(decode_to_thalamus(&widget).is_err_and(|e| e.contains(want)), "the same spec as a widget: {pin}");
+            // serve::widget runs check_spec first, so the same spec as a widget is refused the same way.
+            let Ok(ToThalamus::Widget { spec, .. }) = decode_to_thalamus(&widget) else { panic!("{widget}") };
+            assert!(check_spec(&spec).is_err_and(|e| e.contains(want)), "the same spec as a widget: {pin}");
         }
     }
 

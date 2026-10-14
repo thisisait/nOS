@@ -7,7 +7,7 @@ use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, RowOp, Session};
 use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Component, FieldKind, Form, FormField,
                                InboxItem, InboxList, Omitted, RedStatus, Row, RowDiffApproval, Series, TableResults};
-use nos_contract::wire::{decode_to_thalamus, encode, ChartSpec, ControlView, Decision, Op, Phase, ToShell, ToThalamus, Trigger,
+use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, Op, Phase, ToShell, ToThalamus, Trigger,
                          WidgetChart, WidgetSpec};
 use nos_contract::uid;
 use serde_json::{json, Map, Value};
@@ -649,7 +649,7 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
                             json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total,
                                    "columns": extra, "rows": t.rows})
                         };
-                        send(out, &ToShell::Render { session: o.session.clone(), component: Component::TableResults(t) });
+                        send(out, &ToShell::Render { session: o.session.clone(), component: Component::TableResults(t), pin: None });
                         v
                     }),
                     // Its tool_result is written by decide(), once the person has answered.
@@ -659,7 +659,7 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
                         let kind = serde_json::to_value(&c).ok().and_then(|v| v["kind"].as_str().map(str::to_string));
                         let v = json!({"shown": kind});
                         let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
-                        send(out, &ToShell::Render { session: o.session.clone(), component: c });
+                        send(out, &ToShell::Render { session: o.session.clone(), component: c, pin: None });
                         v
                     }),
                     _ => Err(format!("unknown tool {name:?}")),
@@ -1038,7 +1038,7 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
         match c {
             Ok(component) => {
                 let _ = self.record(o, Kind::ToolResult, Some(tool), json!({"ok": true}));
-                send(out, &ToShell::Render { session: o.session.clone(), component });
+                send(out, &ToShell::Render { session: o.session.clone(), component, pin: None });
             }
             Err(why) => {
                 let _ = self.record(o, Kind::ToolResult, Some(tool), json!({"error": why}));
@@ -1061,7 +1061,8 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
         if let Err(why) = self.record(o, Kind::ToolUse, Some(tool), used) {
             return refused(out, format!("not recorded, so not run: {why}"));
         }
-        let ran = match spec {
+        // The check a pin met before the person could place it (wire.rs check_spec).
+        let ran = check_spec(spec).and_then(|_| match spec {
             WidgetSpec::Rows(a) => self.widget_rows(who, a),
             WidgetSpec::Chart(c) => self.widget_chart(who, c).map(|c| (Component::Chart(c), json!({"ok": true}))),
             WidgetSpec::Form(_) if o.forms.len() >= MAX_FORMS && !o.forms.contains_key(widget) =>
@@ -1070,7 +1071,7 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
                 o.forms.insert(widget.to_string(), f.clone());
                 (Component::Form(f.clone()), json!({"form": f.form}))
             }),
-        };
+        });
         match ran {
             Ok((component, result)) => {
                 let _ = self.record(o, Kind::ToolResult, Some(tool), result);

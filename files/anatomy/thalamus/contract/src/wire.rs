@@ -23,7 +23,13 @@ pub enum ToThalamus {
 pub enum ToShell {
     Session { session: String, actor: String, model_uri: String },
     Text { session: String, text: String },
-    Render { session: String, component: Component },
+    /// `pin`: the spec a widget of this render would re-run; only serve sets it (genui I6).
+    Render {
+        session: String,
+        component: Component,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pin: Option<WidgetSpec>,
+    },
     ApprovalRequest { session: String, approval: String, component: Component },
     /// `widget` names the widget whose run was refused; absent for anything else.
     Refused {
@@ -158,6 +164,23 @@ fn not_a_form(c: &Component) -> Result<(), String> {
     }
 }
 
+/// What a widget spec needs before serve runs it (serve::widget) or the pupil may pin it
+/// (check_shell): a table, and `y` for sum or avg. Column names need the live schema; serve checks those.
+pub fn check_spec(spec: &WidgetSpec) -> Result<(), String> {
+    let table = match spec {
+        WidgetSpec::Rows(v) => v.as_object().ok_or("a rows spec is an object of query_rows arguments")?
+            .get("table").and_then(serde_json::Value::as_str).unwrap_or(""),
+        WidgetSpec::Chart(c) => {
+            if c.op != Op::Count && c.y.as_deref().is_none_or(str::is_empty) {
+                return Err(format!("{} needs `y`, a number column", if c.op == Op::Sum { "sum" } else { "avg" }));
+            }
+            &c.query.table
+        }
+        WidgetSpec::Form(f) => &f.table,
+    };
+    if table.is_empty() { Err("a widget spec names no table".into()) } else { Ok(()) }
+}
+
 /// The identity invariant and the component caps on a decoded message; Err names what broke.
 fn check_shell(m: &ToShell) -> Result<(), String> {
     match m {
@@ -176,10 +199,11 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             need_token(widget)?;
             need_uuid("form", form)
         }
-        ToShell::Render { session, component } => {
+        ToShell::Render { session, component, pin } => {
             need_uuid("session", session)?;
             component.check()?;
-            not_a_form(component)
+            not_a_form(component)?;
+            pin.as_ref().map_or(Ok(()), check_spec)
         }
         ToShell::ApprovalRequest { session, approval, component } => {
             need_uuid("session", session)?;
