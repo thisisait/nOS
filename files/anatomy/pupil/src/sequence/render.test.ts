@@ -59,13 +59,19 @@ const crowd: SequenceProps = {
 	}),
 };
 
+/** Two short lifelines under a phase wider than everything else: the phase sets W. */
+const narrow: SequenceProps = {
+	participants: ['a', 'b'],
+	steps: [{ phase: 'W@% '.repeat(15).trim() }, { from: 'a', to: 'b', text: 'x' }, { note: 'n', over: ['a'] }],
+};
+
 describe('the sequence layout', () => {
 	it('the same sequence lands in the same place, and draws the same markup', () => {
 		expect(layoutSequence(crowd)).toEqual(layoutSequence(crowd));
 		expect(html(crowd)).toBe(html(crowd));
 	});
 
-	for (const [name, q] of [['an approval', path], ['8 participants with the longest labels', crowd]] as const)
+	for (const [name, q] of [['an approval', path], ['8 participants with the longest labels', crowd], ['a phase wider than the diagram', narrow]] as const)
 		it(`every label is inside the viewBox and no two overlap: ${name}`, () => {
 			const h = html(q);
 			const { W, H } = box(h);
@@ -95,6 +101,20 @@ describe('the sequence layout', () => {
 			}
 	});
 
+	it('a phase wider than the diagram widens it, its pill inside, the lifelines centred under it', () => {
+		const g = layoutSequence(narrow);
+		const ph = g.steps.find((s) => s.kind === 'phase')!;
+		if (ph.kind !== 'phase') throw new Error('no phase');
+		expect(ph.rect.x).toBeGreaterThanOrEqual(0);
+		expect(ph.rect.x + ph.rect.w).toBeLessThanOrEqual(g.W);
+		expect(ph.rect.w).toBeGreaterThanOrEqual(measure(ph.label.t, g.FONT));
+		expect(ph.rule.x1).toBeGreaterThanOrEqual(0);
+		expect(ph.rule.x2).toBeLessThanOrEqual(g.W);
+		const [a, b] = g.actors;
+		const lo = a.box.x, hi = b.box.x + b.box.w;
+		expect(Math.abs(lo - (g.W - hi)), `margins ${lo} | ${g.W - hi}`).toBeLessThanOrEqual(1);
+	});
+
 	it('every step is one fixed-height row', () => {
 		const g = layoutSequence(path);
 		const tops = g.steps.map((s) => s.top);
@@ -106,6 +126,21 @@ describe('the sequence layout', () => {
 		expect(measure('a', 10)).toBeGreaterThan(measure('i', 10));
 		expect(measure('漢', 10)).toBe(10);
 		expect(measure('', 10)).toBe(0);
+	});
+
+	// Helvetica's advance widths (Adobe Core14 AFM, per 1000 em): the reference sans the estimate must not undercut.
+	const HELVETICA: Record<string, number> = Object.fromEntries(
+		[...' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'].map((c, i) => [c, [
+			278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556, 556, 556, 556, 556,
+			556, 556, 278, 278, 584, 584, 584, 556, 1015, 667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833, 722, 778,
+			667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278, 278, 278, 469, 556, 333, 556, 556, 500, 556, 556, 278, 556,
+			556, 222, 222, 500, 222, 833, 556, 556, 556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334, 260, 334, 584][i]]),
+	);
+
+	it('no printable ASCII glyph is measured narrower than Helvetica draws it', () => {
+		expect(Object.keys(HELVETICA).length).toBe(95);
+		const short = Object.entries(HELVETICA).filter(([c, w]) => measure(c, 1000) < w).map(([c, w]) => `${c} ${measure(c, 1000)} < ${w}`);
+		expect(short).toEqual([]);
 	});
 });
 

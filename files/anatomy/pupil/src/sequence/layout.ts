@@ -30,17 +30,19 @@ const MARGIN = 12, TOP = 8, ACTOR_H = 28, PAD = 14, LABEL_PAD = 16, SELF = 30;
 
 const CJK = /[⺀-鿿가-힯豈-﫿︰-﹏＀-￯　-〿]/;
 const NARROW = new Set([...'iljtfrI.,:;|!\'`()[]{}']);
-const WIDE = new Set([...'mwMWOQGD@%&']);
+const WIDE = new Set([...'mwMOQGD&']);
+const WIDEST = new Set([...'W@%']);
 
-/** Estimated width of `s` at `size` by glyph class; it errs wide, so a label never overflows its room. */
+/** Estimated width of `s` at `size` by glyph class; it errs wide (never under Helvetica's AFM), so a label never overflows its room. */
 export function measure(s: string, size = FONT): number {
 	let em = 0;
 	for (const ch of s) {
 		if (CJK.test(ch) || ch.codePointAt(0)! >= 0x2000) em += 1; // CJK, and symbols, arrows, dashes
 		else if (ch === ' ') em += 0.3;
-		else if (NARROW.has(ch)) em += 0.32;
+		else if (NARROW.has(ch)) em += 0.34;
+		else if (WIDEST.has(ch)) em += 1.02;
 		else if (WIDE.has(ch)) em += 0.86;
-		else if (ch >= 'A' && ch <= 'Z') em += 0.68;
+		else if ((ch >= 'A' && ch <= 'Z') || '+<=>~'.includes(ch)) em += 0.73;
 		else em += 0.56;
 	}
 	return Math.round(em * size * 100) / 100;
