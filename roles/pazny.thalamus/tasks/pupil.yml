@@ -1,0 +1,99 @@
+---
+# The pupil (files/anatomy/pupil): Iris's desktop window, built from this checkout and installed at
+# thalamus_pupil_exe, signed like the thalamus. macOS only: main.yml refuses a non-launchd host first.
+# Not a daemon: the operator opens it, so a rebuild needs no restart.
+
+- name: "[pazny.thalamus] Hash the pupil source"
+  ansible.builtin.shell: |
+    set -o pipefail
+    cd {{ (playbook_dir ~ '/files/anatomy/pupil') | quote }}
+    find index.html package.json package-lock.json vite.config.ts src src-tauri/src src-tauri/Cargo.toml \
+      src-tauri/Cargo.lock src-tauri/build.rs src-tauri/tauri.conf.json src-tauri/capabilities src-tauri/icons \
+      ../thalamus/contract/src ../thalamus/contract/Cargo.toml -type f \
+      | LC_ALL=C sort | xargs cat | shasum -a 256 | cut -d' ' -f1
+  args:
+    executable: /bin/bash
+  register: _pupil_src_sha
+  changed_when: false
+  check_mode: false
+
+- name: "[pazny.thalamus] Read the hash the pupil was built from"
+  ansible.builtin.command: cat {{ thalamus_pupil_exe }}.source-sha256
+  register: _pupil_built_sha
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+# --ignore-scripts: no dependency runs code on the host. cargo embeds ../dist, so vite builds first;
+# custom-protocol is what `tauri build` adds (without it the binary is cfg(dev)). The checkout keeps
+# only the gitignored node_modules/ and dist/; cargo's target dir lives off it.
+- name: "[pazny.thalamus] Install the pupil binary"
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"  # nvm.sh is not -u safe: sourced before set -u
+    [ -s {{ (homebrew_prefix | default('/opt/homebrew') ~ '/opt/nvm/nvm.sh') | quote }} ] && source {{ (homebrew_prefix | default('/opt/homebrew') ~ '/opt/nvm/nvm.sh') | quote }}
+    [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+    nvm use default >/dev/null 2>&1 || true
+    set -euo pipefail
+    cd {{ (playbook_dir ~ '/files/anatomy/pupil') | quote }}
+    npm ci --ignore-scripts --no-audit --no-fund
+    npm run build
+    export CARGO_TARGET_DIR={{ thalamus_pupil_target_dir | quote }}
+    {{ thalamus_cargo | quote }} build --release --locked --features tauri/custom-protocol --manifest-path src-tauri/Cargo.toml
+    install -m 0755 "$CARGO_TARGET_DIR/release/nos-pupil" {{ thalamus_pupil_exe | quote }}
+  args:
+    executable: /bin/bash
+  register: _pupil_build
+  when: _pupil_src_sha.stdout != (_pupil_built_sha.stdout | default(''))
+  changed_when: true
+
+- name: "[pazny.thalamus] Record the hash the pupil was built from"
+  ansible.builtin.copy:
+    content: "{{ _pupil_src_sha.stdout }}"
+    dest: "{{ thalamus_pupil_exe }}.source-sha256"
+    mode: '0644'
+  when: _pupil_build is not skipped
+
+# The same identity as the thalamus, its own identifier: one certificate, two designated requirements.
+- name: "[pazny.thalamus] Sign the pupil with it (same identity every build)"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    H={{ _thalamus_signing.stdout_lines[-1] | quote }}
+    want="certificate leaf = H\"$(printf %s "$H" | tr 'A-F' 'a-f')\""
+    if codesign -d -r- {{ thalamus_pupil_exe | quote }} 2>&1 | grep -qF "$want"; then echo same; exit 0; fi
+    codesign -f -s "$H" -i {{ thalamus_pupil_identifier | quote }} {{ thalamus_pupil_exe | quote }}
+    echo signed
+  args:
+    executable: /bin/bash
+  register: _pupil_signed
+  changed_when: "'signed' in _pupil_signed.stdout"
+  when: _thalamus_signing.stdout_lines | default([]) | length > 0  # --check mints nothing
+
+# Signing rewrites the file, so its hash is taken after: the one a peer check compares.
+- name: "[pazny.thalamus] Record the installed pupil's sha256"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    now=$(shasum -a 256 {{ thalamus_pupil_exe | quote }} | cut -d' ' -f1)
+    [ "$(cat {{ (thalamus_pupil_exe ~ '.sha256') | quote }} 2>/dev/null)" = "$now" ] && { echo same; exit 0; }
+    printf %s "$now" > {{ (thalamus_pupil_exe ~ '.sha256') | quote }}
+    echo recorded
+  args:
+    executable: /bin/bash
+  register: _pupil_sha
+  changed_when: "'recorded' in _pupil_sha.stdout"
+
+# The effect, read off the file at the fixed path: its hash is the recorded one, its signature
+# verifies and names the pupil's identifier.
+- name: "[pazny.thalamus] Verify — the installed pupil is the recorded, signed binary"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    now=$(shasum -a 256 {{ thalamus_pupil_exe | quote }} | cut -d' ' -f1)
+    want=$(cat {{ (thalamus_pupil_exe ~ '.sha256') | quote }})
+    [ "$now" = "$want" ] || { echo "installed $now, recorded $want" >&2; exit 1; }
+    codesign --verify --strict {{ thalamus_pupil_exe | quote }}
+    codesign -d -r- {{ thalamus_pupil_exe | quote }} 2>&1 | grep -qF 'identifier "'{{ thalamus_pupil_identifier | quote }}'"'
+    echo "$now"
+  args:
+    executable: /bin/bash
+  register: _pupil_verify
+  changed_when: false
+  tags: ['verify']

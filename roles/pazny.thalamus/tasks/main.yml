@@ -114,6 +114,9 @@
   when: _thalamus_signing.stdout_lines | default([]) | length > 0  # --check mints nothing
   notify: Restart thalamus
 
+# Static, so --tags thalamus reaches it; signs with the identity minted above.
+- ansible.builtin.import_tasks: pupil.yml
+
 # The var behind the auth_secret (nos:<var>) of the row iris binds, read where the binary reads it;
 # "" for a keyless row. The plist renders that one var's value as NOS_SECRET_<VAR> (src/main.rs).
 - name: "[pazny.thalamus] The key var of the row iris binds"

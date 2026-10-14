@@ -11,6 +11,11 @@ thalamus_socket: "{{ ansible_facts['env']['HOME'] }}/.nos/thalamus.sock"
 thalamus_signing_cn: "nOS local code signing"
 thalamus_signing_keychain: "{{ ansible_facts['env']['HOME'] }}/Library/Keychains/login.keychain-db"
 thalamus_cargo: "{{ ansible_facts['env']['HOME'] }}/.cargo/bin/cargo"
+# The pupil (files/anatomy/pupil), built and signed by tasks/pupil.yml. This fixed path is what
+# row thalamus-pupil-peer-exe makes serve enforce; nothing enforces it yet. The id is tauri.conf.json's.
+thalamus_pupil_exe: "{{ thalamus_home }}/bin/nos-pupil"
+thalamus_pupil_identifier: "eu.thisisait.nos.pupil"
+thalamus_pupil_target_dir: "{{ thalamus_home }}/pupil-target"
 # serve maps the model's "roadmap" to this; declared once in default.config.yml.
 thalamus_roadmap_table_id: "{{ keap_roadmap_table_id }}"
 # The env src/binding.rs binds iris from: the plist renders it, the preflight
