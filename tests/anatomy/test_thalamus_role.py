@@ -354,3 +354,32 @@ def test_the_decider_list_is_off_by_default_and_rendered_only_when_set():
     assert _plist(thalamus_decider_exes=exes)["EnvironmentVariables"]["NOS_DECIDER_EXES"] == ":".join(exes)
     main = (REPO / "files/anatomy/thalamus/thalamus/src/main.rs").read_text()
     assert '"NOS_DECIDER_EXES"' in main, "serve does not read the list the plist renders"
+
+
+def test_a_decider_list_that_admits_nobody_is_refused_at_render():
+    """Row thalamus-decider-guard-followups: a string joins its characters, an empty or relative
+    entry and a missing file each admit nobody; the role refuses them, before the plist and after
+    the pupil is built, rather than serve a guard that silently refuses every decision."""
+    env = jinja2.Environment()
+    env.tests["match"] = lambda v, pat: re.match(pat, v) is not None
+    tasks = _tasks()
+    names = [t.get("name", "") for t in tasks]
+    shape = next(t for t in tasks if t.get("name", "").endswith("is a list of absolute paths"))
+    exists = next(t for t in tasks if t.get("name", "").endswith("A decider that names no file is refused"))
+    assert names.index(shape["name"]) < names.index("[pazny.thalamus] Render launchd plist")
+    pupil = next(i for i, t in enumerate(tasks) if t.get("ansible.builtin.import_tasks") == "pupil.yml")
+    assert pupil < names.index(exists["name"]), "the existence check runs before the pupil is built"
+
+    def ok(that, **ctx) -> bool:
+        that = that if isinstance(that, list) else [that]
+        return all(env.from_string("{{ (" + e + ") }}").render(**ctx) == "True" for e in that)
+
+    good = ["/h/thalamus/bin/nos-pupil", "/h/thalamus/bin/thalamus"]
+    assert ok(shape["ansible.builtin.assert"]["that"], thalamus_decider_exes=[])
+    assert ok(shape["ansible.builtin.assert"]["that"], thalamus_decider_exes=good)
+    for bad in ("/h/thalamus/bin/nos-pupil", ["/h/x", ""], ["rel/exe"], ["/a:/b"], [7], {"/h/x": 1}):
+        assert not ok(shape["ansible.builtin.assert"]["that"], thalamus_decider_exes=bad), bad
+    reg = lambda *e: {"results": [{"item": p, "stat": {"exists": x}} for p, x in e]}
+    assert ok(exists["ansible.builtin.assert"]["that"], _thalamus_deciders=reg())
+    assert ok(exists["ansible.builtin.assert"]["that"], _thalamus_deciders=reg((good[0], True)))
+    assert not ok(exists["ansible.builtin.assert"]["that"], _thalamus_deciders=reg((good[0], True), (good[1], False)))

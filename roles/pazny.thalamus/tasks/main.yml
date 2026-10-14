@@ -128,6 +128,16 @@
     thalamus_model_token: "{{ lookup('vars', thalamus_model_secret, default='') if thalamus_model_secret else '' }}"
   no_log: true
 
+# serve splits NOS_DECIDER_EXES on ':' and a mis-set entry admits nobody (src/serve.rs deciders):
+# a string would join its characters, an empty or relative entry matches no peer.
+- name: "[pazny.thalamus] thalamus_decider_exes is a list of absolute paths"
+  ansible.builtin.assert:
+    that:
+      - thalamus_decider_exes is iterable and thalamus_decider_exes is not string and thalamus_decider_exes is not mapping
+      - thalamus_decider_exes | reject('string') | list | length == 0
+      - thalamus_decider_exes | select('string') | reject('match', '^/[^:]+$') | list | length == 0
+    fail_msg: "thalamus_decider_exes must be a list of absolute paths without ':', e.g. [\"{{ thalamus_pupil_exe }}\", \"{{ thalamus_bin }}\"]."
+
 - name: "[pazny.thalamus] Render launchd plist"
   ansible.builtin.template:
     src: thalamus.plist.j2
@@ -157,6 +167,22 @@
 # Static, so --tags thalamus reaches it; signs with the identity minted above. After the daemon
 # serves, so a failed pupil build (npm, tauri) never holds back the plist or the bootstrap.
 - ansible.builtin.import_tasks: pupil.yml
+
+# After pupil.yml built nos-pupil: a listed path that names no file admits nobody, silently.
+- name: "[pazny.thalamus] Each listed decider exists"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ thalamus_decider_exes }}"
+  register: _thalamus_deciders
+
+- name: "[pazny.thalamus] A decider that names no file is refused"
+  ansible.builtin.assert:
+    that: _thalamus_deciders.results | rejectattr('stat.exists') | list | length == 0
+    fail_msg: >-
+      thalamus_decider_exes names no file:
+      {{ _thalamus_deciders.results | rejectattr('stat.exists') | map(attribute='item') | join(', ') }};
+      it would admit nobody (src/serve.rs decider_refusal).
+  when: not ansible_check_mode  # --check builds no pupil
 
 # The effect, read by the reader: socket 0600, job loaded, ledger readable. Any line not OK fails,
 # except the model line: serving without one warns (ruling 2026-10-12) — the reader still says UNKNOWN.
