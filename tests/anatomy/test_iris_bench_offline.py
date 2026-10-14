@@ -76,7 +76,9 @@ def _script(bad: bool) -> dict[str, list[dict]]:
         "next-by-track": [_turn(_tool("query_rows"), _results(10, [("agents", 5), ("pupil", 3), ("face", 2)]),
                                 _tool("show"), _chart("bar", pts, pinned=not bad), _text("Next rows by track, drawn above."))],
         "time-now": [_turn(_text(f"It is {now} UTC."))],
-        "red-status": [_turn(_text("I cannot see the red status from here; no tool reads it."))],
+        "red-status": [_turn(_tool("red_status"), {"t": "render", "session": SID, "component": {"kind": "red_status", "props": {
+            "red_count": 1, "reds": ["pulse job failed"], "hold_count": 0, "holds": []}}}, _text("One red: a pulse job."))],
+        "unread-mail": [_turn(_text("I cannot see your mail from here; no tool reads it."))],
         "expenses-pie": [_turn(_tool("show"), _chart("pie", [["travel", 120.0], ["office", 80.0]]), _text("Expenses by kind, above."))],
         "no-probe": [
             _turn(_tool("query_rows"), _results(3), _text("Three next rows in agents.")),

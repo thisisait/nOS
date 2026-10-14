@@ -26,6 +26,13 @@
 - id: red-status
   prompt: What is red in the estate right now?
   checks:
+    tools_called: [red_status]
+    kinds_drawn: [red_status]
+    no_proposal: true
+    not_blank: true
+- id: unread-mail
+  prompt: How many unread e-mails do I have?
+  checks:
     says_cannot_see: true
     no_proposal: true
     not_blank: true
