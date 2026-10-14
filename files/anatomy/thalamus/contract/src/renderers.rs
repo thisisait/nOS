@@ -1149,13 +1149,29 @@ mod tests {
         for (s, n) in [("", 0), (r#""o0","o1""#, 2)] {
             assert_eq!(choice(&opts(2), s, "").check(), Err(format!("a choice suggests exactly 1 option, not {n}; multi suggests 1 or more")), "{s}");
         }
+        let multi = |s: &str| decode(&format!(r#"{{"kind":"choice","props":{{"question":"Which?","options":[{}],"suggested":[{s}],"multi":true}}}}"#, opts(3)));
+        for (s, n) in [("", 0), (r#""o0","o0""#, 2)] {
+            assert_eq!(multi(s).check(), Err(format!("a choice suggests exactly 1 option, not {n}; multi suggests 1 or more")), "multi {s}");
+        }
         assert_eq!(choice(&opts(2), r#""o0""#, r#","id":"latest""#).check(), Err(r#"choice id is not a lowercase uuid: "latest""#.into()));
-        let q = |q: &str| decode(&format!(r#"{{"kind":"choice","props":{{"question":{},"options":[{}],"suggested":["o0"],"multi":false}}}}"#,
+        let q =|q: &str| decode(&format!(r#"{{"kind":"choice","props":{{"question":{},"options":[{}],"suggested":["o0"],"multi":false}}}}"#,
                                           serde_json::to_string(q).unwrap(), opts(2)));
         assert_eq!(q(&vec!["w"; 15].join(" ")).check(), Ok(()));
         assert_eq!(q(&vec!["w"; 16].join(" ")).check(), Err("a choice question is over 15 words".into()));
         assert_eq!(q(&"q".repeat(121)).check(), Err("a choice question is over 120 chars".into()));
         assert_eq!(q("  ").check(), Err("a choice asks no question".into()));
+    }
+
+    /// A reply is decoded to at most 6 labels of at most 60 chars, before serve looks at the choice.
+    #[test]
+    fn decode_caps_a_choice_reply() {
+        use crate::wire::decode_to_thalamus;
+        let s = "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b";
+        let reply = |picked: Vec<String>| decode_to_thalamus(&serde_json::json!({"t": "choice_reply", "session": s, "choice": CHOICE_ID, "picked": picked}).to_string());
+        assert!(reply(vec!["l".repeat(60)]).is_ok());
+        assert_eq!(reply(vec!["l".repeat(61)]).err(), Some("a picked label is over 60 chars".into()));
+        assert!(reply((0..6).map(|i| format!("o{i}")).collect()).is_ok());
+        assert_eq!(reply((0..7).map(|i| format!("o{i}")).collect()).err(), Some("a choice reply picks at most 6 labels, not 7".into()));
     }
 
     /// serve mints the id: a render without one, or a choice in an approval, is refused.
