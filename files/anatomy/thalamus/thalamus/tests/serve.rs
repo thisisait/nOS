@@ -2012,7 +2012,7 @@ fn a_sourced_chart_draws_keaps_aggregate_and_carries_a_chart_pin() {
     assert_eq!((&ev[0].2["table"], &ev[0].2["op"]), (&serde_json::json!("sheet"), &serde_json::json!("count")), "{:?}", ev[0]);
     // The aggregate read rows the model never saw: none of them may be proposed.
     turn(&s, &mut r, Some(session), "set a to 4");
-    let e = tool_result(&rig, 2);
+    let e = tool_result(&rig, 3);
     assert!(e["error"].as_str().is_some_and(|e| e.contains("was not shown to the person")), "{e}");
     assert!(posts(&rig).is_empty());
 }
@@ -2023,7 +2023,7 @@ fn a_chart_with_a_bad_source_is_refused_and_one_without_has_no_pin() {
         (serde_json::json!({"query": {"table": "sheet"}, "x": "ghost", "op": "count"}), "pie", "no column `ghost`"),
         (serde_json::json!({"query": {"table": "sheet"}, "x": "status", "op": "sum"}), "pie", "sum needs `y`"),
         (serde_json::json!({"query": {"table": "sheet"}, "x": "status", "op": "count", "chart": "bar"}), "pie", "chart"),
-        (serde_json::json!({"query": {"table": "sheet"}, "x": "status", "op": "count"}), "scatter", "bar, line or pie"),
+        (serde_json::json!({"query": {"table": "sheet"}, "x": "status", "op": "count"}), "area", "bar, line or pie"),
     ];
     let mut model: Vec<String> = bad.iter().map(|(s, c, _)| sourced(c, s.clone())).collect();
     model.push(show(serde_json::json!({"kind": "chart", "props": {"chart": "bar", "x": "category", "series": [{"name": "m", "points": [["a", 1]]}]}})));

@@ -243,7 +243,9 @@ conversation, on a row query_rows showed them; never to count, test or look at a
 
 const SHOW: &str = "Show the person structured output: one component of a closed vocabulary, drawn as text. \
 A component outside its shape or caps is refused and you are told why; nothing is drawn. It cannot ask for an \
-approval: only propose_row_edit does, and query_rows draws its own table.";
+approval: only propose_row_edit does, and query_rows draws its own table. For a bar, line or pie chart of a \
+table's rows pass `source`: the thalamus counts, sums or averages the rows as the person and draws those numbers \
+in place of your series, and the person can pin the chart live.";
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
@@ -277,7 +279,14 @@ pub fn show_schema() -> Value {
         "required": ["kind", "props"], "description": about, "properties": {"kind": {"const": kind}, "props": props}});
     let closed = |required: &[&str], properties: Value| json!({"type": "object", "additionalProperties": false,
         "required": required, "properties": properties});
-    json!({"type": "object", "additionalProperties": false, "required": ["component"], "properties": {"component": {"oneOf": [
+    let mut source = closed(&["query", "x", "op"], json!({
+        "query": closed(&["table"], json!({"table": {"type": "string", "description": "the table id, or \"roadmap\""},
+            "q": {"type": "string"}, "where": {"type": "array", "maxItems": 8, "description": "as query_rows' where"}})),
+        "x": {"type": "string", "description": "the column whose values are the chart's x"},
+        "y": {"type": "string", "description": "a number column; sum and avg need it"},
+        "op": {"enum": ["count", "sum", "avg"]}}));
+    source["description"] = json!("for a bar, line or pie chart of a table's rows: what to aggregate; the drawn numbers are KEAP's");
+    json!({"type": "object", "additionalProperties": false, "required": ["component"], "properties": {"source": source, "component": {"oneOf": [
         branch("table", "rows the model shows: {title?, columns[] <=12, rows[][] <=50, each row as long as columns}",
             closed(&["columns", "rows"], json!({"title": title, "columns": {"type": "array", "maxItems": 12, "items": {"type": "string"}},
                 "rows": {"type": "array", "maxItems": 50, "items": {"type": "array"}}}))),
@@ -451,7 +460,8 @@ impl Server {
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
 asked for, never to look at a row. To show structured output call show ({}); plain text may use markdown, \
 nothing else. To count per value (for a chart) call query_rows with \
-group_by. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
+group_by; to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
+KEAP's and the person can pin the chart. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
 repeat in text what a tool or show already drew. Shape -> component: count per value -> chart via group_by; \
 many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree; links between things -> graph. \
 Conclusion first, in one line. Never invent data: no numbers, no chart. Draw only when it helps: no visual for \
@@ -649,17 +659,28 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
                             json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total,
                                    "columns": extra, "rows": t.rows})
                         };
-                        send(out, &ToShell::Render { session: o.session.clone(), component: Component::TableResults(t), pin: None });
+                        // What a widget of this table re-runs: the arguments that drew it.
+                        let pin = WidgetSpec::Rows(Value::Object(args.as_object().into_iter().flatten()
+                            .filter(|(_, v)| !v.is_null()).map(|(k, v)| (k.clone(), v.clone())).collect()));
+                        send(out, &ToShell::Render { session: o.session.clone(), component: Component::TableResults(t), pin: Some(pin) });
                         v
                     }),
                     // Its tool_result is written by decide(), once the person has answered.
                     "propose_row_edit" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
                     "propose_row_edit" => self.propose_row_edit(who, &args, &o.shown).and_then(|d| self.ask(o, out, d)),
-                    "show" => show(&args).map(|c| {
-                        let kind = serde_json::to_value(&c).ok().and_then(|v| v["kind"].as_str().map(str::to_string));
-                        let v = json!({"shown": kind});
+                    "show" => show(&args).and_then(|(c, source)| match source {
+                        None => Ok((c, None)),
+                        Some(src) => self.sourced(who, o, c, src),
+                    }).map(|(c, pin)| {
+                        let v = serde_json::to_value(&c).ok();
+                        let kind = v.as_ref().and_then(|v| v["kind"].as_str().map(str::to_string));
+                        // A sourced chart: the model hears the numbers drawn, which are KEAP's.
+                        let v = match &pin {
+                            Some(_) => json!({"shown": kind, "points": v.map(|v| v["props"]["series"][0]["points"].clone())}),
+                            None => json!({"shown": kind}),
+                        };
                         let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
-                        send(out, &ToShell::Render { session: o.session.clone(), component: c, pin: None });
+                        send(out, &ToShell::Render { session: o.session.clone(), component: c, pin });
                         v
                     }),
                     _ => Err(format!("unknown tool {name:?}")),
@@ -1146,6 +1167,41 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
         Ok(chart)
     }
 
+    /// show's chart drawn from its `source`: the aggregate a chart widget of that spec answers, run as
+    /// the person and recorded like a widget run, replaces the model's series. Never extends `shown`.
+    fn sourced(&self, who: &Person, o: &Open, c: Component, src: Value) -> Result<(Component, Option<WidgetSpec>), String> {
+        let Component::Chart(model) = c else { return Err("show's `source` is only for a chart".into()) };
+        let kind = match model.chart {
+            ChartKind::Bar => WidgetChart::Bar,
+            ChartKind::Line => WidgetChart::Line,
+            ChartKind::Pie => WidgetChart::Pie,
+            k => return Err(format!("show's `source` draws a bar, line or pie chart, not {}; drop source or pick one of those",
+                                    text(&json!(k)))),
+        };
+        let mut v = src;
+        if v.get("chart").is_some() {
+            return Err("show's `source` has no `chart`; the component's chart names it".into());
+        }
+        v["chart"] = json!(kind);
+        let spec: ChartSpec = serde_json::from_value(v)
+            .map_err(|e| format!("show's `source`: {e}; it is {{query {{table, q?, where?}}, x, y?, op count|sum|avg}}"))?;
+        let tool = Some("show_source");
+        self.record(o, Kind::ToolUse, tool, json!({"table": spec.query.table, "kind": spec.chart, "op": spec.op}))
+            .map_err(|why| format!("not recorded, so not drawn: {why}"))?;
+        let pin = WidgetSpec::Chart(spec.clone());
+        let drawn = check_spec(&pin).and_then(|_| self.widget_chart(who, &spec)).and_then(|mut chart| {
+            chart.title = model.title.clone().or(chart.title);
+            let c = Component::Chart(chart);
+            c.check().map_err(|e| format!("the source drew nothing to show ({e})"))?;
+            Ok(c)
+        });
+        let _ = self.record(o, Kind::ToolResult, tool, match &drawn {
+            Ok(_) => json!({"ok": true}),
+            Err(why) => json!({"error": why}),
+        });
+        Ok((drawn?, Some(pin)))
+    }
+
     /// `python3 tools/<name> --json` in the repo; Err on a non-zero exit, a timeout or no JSON.
     fn reader(&self, name: &str) -> Result<Value, String> {
         let child = std::process::Command::new("python3").arg(self.repo.join("tools").join(name)).arg("--json")
@@ -1191,11 +1247,12 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
     }
 }
 
-/// The model's component, or why not: only a SHOW_KINDS kind, closed props, within its caps.
-/// It can only become a Render; an approval is minted by ask() alone.
-fn show(args: &Value) -> Result<Component, String> {
-    if let Some(k) = args.as_object().and_then(|a| a.keys().find(|k| *k != "component")) {
-        return Err(format!("show has no parameter `{k}`; it takes `component`; expected shape: {}", expected_shape("")));
+/// The model's component and its `source`, or why not: only a SHOW_KINDS kind, closed props, within
+/// its caps. It can only become a Render; an approval is minted by ask() alone.
+fn show(args: &Value) -> Result<(Component, Option<Value>), String> {
+    if let Some(k) = args.as_object().and_then(|a| a.keys().find(|k| *k != "component" && *k != "source")) {
+        return Err(format!("show has no parameter `{k}`; it takes `component` and, for a chart, `source`; expected shape: {}",
+                           expected_shape("")));
     }
     let kind = args.pointer("/component/kind").and_then(Value::as_str).unwrap_or("");
     let shape = expected_shape(kind);
@@ -1205,7 +1262,7 @@ fn show(args: &Value) -> Result<Component, String> {
     let bad = |e: String| format!("show {kind}: {e}; expected shape: {shape}");
     let c = serde_json::from_value::<Component>(args["component"].clone()).map_err(|e| bad(e.to_string()))?;
     c.check().map_err(bad)?;
-    Ok(c)
+    Ok((c, args.get("source").filter(|s| !s.is_null()).cloned()))
 }
 
 /// One series from matched rows: `op` of `y` per value of `x` (count counts rows; sum and avg
