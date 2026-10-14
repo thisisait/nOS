@@ -223,7 +223,14 @@ def seed() -> int:
 def no_data(case: dict, got: dict) -> bool:
     """A case that needs rows, where every table it read was empty: the host has no data, the model is not judged."""
     tr = [r for r in got["renders"] if r["component"].get("kind") == "table_results"]
-    return bool(case.get("needs_rows")) and (not tr or all(int(r["component"]["props"].get("total", 0)) == 0 for r in tr))
+    # Only a table that was READ and was empty: a 404 or no query read nothing, and that is the model's miss.
+    return bool(case.get("needs_rows")) and bool(tr) and all(int(r["component"]["props"].get("total", 0)) == 0 for r in tr)
+
+
+def queries(got: dict) -> list[dict]:
+    """What each table read asked, as the render says it: the bench sees no tool arguments."""
+    return [{k: r["component"]["props"].get(k) for k in ("query", "matched", "total")}
+            for r in got["renders"] if r["component"].get("kind") == "table_results"]
 
 
 def score(case: dict, got: dict, now: float) -> list[str]:
@@ -261,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
         nd = bool(failed) and no_data(case, got)
         results.append({"id": case["id"], "pass": not failed, "no_data": nd, "failed": failed, "seconds": secs,
                         "model_uri": got["model_uri"], "tools": got["tools"], "approvals_rejected": len(got["approvals"]),
-                        "refused": got["refused"], "text": got["text"]})
+                        "refused": got["refused"], "queries": queries(got), "text": got["text"]})
     run = {"ran_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "sock": sock,
            "model_uri": sorted({r["model_uri"] for r in results if r["model_uri"]}), "cases": results}
     out = Path(a.out)
