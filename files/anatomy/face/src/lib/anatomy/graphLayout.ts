@@ -43,7 +43,16 @@ import {
 } from 'd3-force';
 import { PAD, rankNodes, type Layout, type LayoutInput, type PlacedNode } from './graphLayered';
 
-export { COL_W, PAD, ROW_H, layout, rankNodes, type Layout, type LayoutInput, type PlacedNode } from './graphLayered';
+export {
+	COL_W,
+	PAD,
+	ROW_H,
+	layout,
+	rankNodes,
+	type Layout,
+	type LayoutInput,
+	type PlacedNode
+} from './graphLayered';
 
 // ── force mode ──────────────────────────────────────────────────────────────
 
