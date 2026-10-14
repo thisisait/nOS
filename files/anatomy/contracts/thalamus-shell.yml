@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 4   # 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice
+contract_version: 4   # 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -83,14 +83,17 @@ components:
     red_status: "tools/red-status.py --json: {red_count, reds[], hold_count, holds[]}"
     markdown: "model text as markdown, drawn as text nodes (headings 1-3, paragraphs, lists, code fences; links as text): {text}, at most 8000 chars"
     table: "rows the model shows (show tool): {title?, columns[], rows[][]}; at most 12 columns, 50 rows, every row as long as columns, a cell 2000 chars"
-    list: "items the model shows (show tool): {title?, ordered, items[{text, detail?, tone? ok|info|warn|bad}]}; at most 50 items, text 500, detail 2000"
-    record: "one thing's fields (show tool): {title?, fields[{key, value}]}; at most 40 fields, a value 4000 chars as text; titles and names 120"
+    list: "items the model shows (show tool): {title?, ordered, items[{text, detail?, tone? ok|info|warn|bad, delta?}]}; at most 50 items, text 500, detail 2000"
+    record: "one thing's fields (show tool): {title?, fields[{key, value, delta?, was?}]}; at most 40 fields, a value (and was) 4000 chars as text; was only on a changed field; titles and names 120"
     chart: >-
       values plotted (show tool): {title?, chart bar|stacked_bar|line|area|scatter|pie, x category|number|time,
       series[{name, points[[x, number]]}]}; x is a string on every axis (a number parses as one, a time is
       YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)]); at most 6 series, 60 points each, 60 x labels; line, area and stacked_bar
       series share the same x; scatter is number or time x; pie is 1 series of values >= 0
-    tree: "a hierarchy (show tool): {title?, nodes[{label, note?, children[]}]}; depth at most 4, at most 100 nodes; one root with 2-4 children is an org chart, otherwise a nested list"
+    # delta added|removed|changed marks what an action would change (iris-genui-change-markers). A child of an
+    # added or removed node is that too: check() refuses a child that says otherwise. Both shells say the mark
+    # as text (+ - ~), never as colour only; the pupil adds a "+N −M ~K" row and a Před / Změny / Po switch.
+    tree: "a hierarchy (show tool): {title?, nodes[{label, note?, delta?, children[]}]}; depth at most 4, at most 100 nodes; one root with 2-4 children is an org chart, otherwise a nested list"
     timeline: >-
       a history (show tool): {title?, items[{when, title, note?, hi?, until?, lane?}]}; at most 30; when every
       when is a date (YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)]) it is drawn on a time axis: spans when -> until (until not

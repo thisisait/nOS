@@ -1052,6 +1052,48 @@ mod tests {
         }
     }
 
+    // --- iris-genui-change-markers: what an action would add, remove or change ---
+
+    #[test]
+    fn a_tree_list_and_record_may_mark_a_delta() {
+        let tree = r#"{"kind":"tree","props":{"nodes":[{"label":"nOS","delta":"changed","children":[
+            {"label":"pupil","delta":"added","children":[{"label":"eye"},{"label":"lid","delta":"added"}]},
+            {"label":"keak","delta":"removed","children":[{"label":"old"}]},{"label":"wing"}]}]}}"#;
+        assert_eq!(decode(tree).check(), Ok(()), "a child may restate its parent's state, or say none");
+        let list = r#"{"kind":"list","props":{"ordered":false,"items":[{"text":"a","delta":"added"},{"text":"b","delta":"removed"},{"text":"c","delta":"changed"},{"text":"d"}]}}"#;
+        assert_eq!(decode(list).check(), Ok(()));
+        let record = r#"{"kind":"record","props":{"fields":[{"key":"status","value":"active","delta":"changed","was":"draft"},
+            {"key":"owner","value":"iris","delta":"added"},{"key":"lane","value":"x","delta":"changed"}]}}"#;
+        assert_eq!(decode(record).check(), Ok(()), "was is optional on a changed field");
+        let back = serde_json::to_string(&decode(record)).unwrap();
+        assert!(back.contains(r#""delta":"changed","was":"draft""#), "{back}");
+        assert!(!serde_json::to_string(&decode(r#"{"kind":"list","props":{"ordered":false,"items":[{"text":"d"}]}}"#)).unwrap().contains("delta"),
+                "no delta is not said on the wire");
+    }
+
+    #[test]
+    fn check_rejects_a_child_that_contradicts_an_added_or_removed_parent() {
+        let under = |parent: &str, child: &str| decode(&format!(
+            r#"{{"kind":"tree","props":{{"nodes":[{{"label":"root","delta":"{parent}","children":[{{"label":"mid","children":[{{"label":"leaf","delta":"{child}"}}]}}]}}]}}}}"#));
+        for (p, c) in [("removed", "added"), ("removed", "changed"), ("added", "removed"), ("added", "changed")] {
+            assert_eq!(under(p, c).check(), Err(format!(r#"tree node "leaf" is {c} under a {p} parent"#)), "{p}/{c}");
+        }
+        for c in ["added", "removed", "changed"] {
+            assert_eq!(under("changed", c).check(), Ok(()), "a changed parent passes nothing down: {c}");
+        }
+    }
+
+    #[test]
+    fn check_rejects_a_was_on_a_field_that_did_not_change() {
+        let field = |extra: &str| decode(&format!(r#"{{"kind":"record","props":{{"fields":[{{"key":"status","value":"active"{extra}}}]}}}}"#));
+        for extra in [r#","was":"draft""#, r#","delta":"added","was":"draft""#, r#","delta":"removed","was":"draft""#] {
+            assert_eq!(field(extra).check(), Err("record field status: was is only on a changed field".into()), "{extra}");
+        }
+        assert_eq!(field(&format!(r#","delta":"changed","was":"{}""#, "w".repeat(4001))).check(), Err("a record was is over 4000 chars".into()));
+        assert!(serde_json::from_str::<Component>(r#"{"kind":"list","props":{"ordered":false,"items":[{"text":"a","delta":"moved"}]}}"#).is_err(),
+                "a delta is added, removed or changed");
+    }
+
     /// Through check(), so the matcher is the one a time chart meets.
     fn is_date(x: &str) -> bool {
         chart("line", "time", &format!(r#"{{"name":"a","points":[[{}, 1]]}}"#, serde_json::to_string(x).unwrap())).check().is_ok()
