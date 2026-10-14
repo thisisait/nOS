@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 4   # 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta
+contract_version: 4   # 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -104,6 +104,13 @@ components:
       edges[{from, to, label?, dashed?}]}; at most 60 nodes and 120 edges; ids [A-Za-z0-9_-]{1,64}, unique, and
       every edge names two of them; drawn as layered columns (face graphLayered.ts), zoomable; the terminal says
       every node and edge as text
+    sequence: >-
+      who sends what to whom, in order (show tool): {title?, participants[], steps[{from, to, text, dashed?} |
+      {note, over[]} | {phase}]}; 2-8 participants, unique, at most 40 chars; at most 40 steps; a message text at
+      most 120 (from may equal to), a note at most 200 over 1-2 participants, a phase at most 60; from, to and over
+      name participants exactly. The pupil draws SVG lifelines (pupil/src/sequence/layout.ts widens a gap until its
+      labels fit), solid arrows, dashed replies, every word a text node; the terminal says "A -> B: text" (dashed
+      "A --> B"), notes and phases as indented lines
     choice: >-
       a question Iris asks at a fork that changes what she does next (show tool): {id?, question, options[{label,
       note?}], suggested[], multi}; question at most 15 words and 120 chars, 2-6 options, labels at most 60 chars
@@ -145,7 +152,7 @@ invariants:
 open:
   - >-
     Since v4 the model chooses a renderer through the `show` tool, for table,
-    list, record, chart, tree, timeline, graph and choice (plain text already draws as markdown); table_results,
+    list, record, chart, tree, timeline, graph, sequence and choice (plain text already draws as markdown); table_results,
     row_diff_approval and the
     control views stay chosen by their tool or control, and an approval is
     minted by propose_row_edit, or by a widget form the person submits

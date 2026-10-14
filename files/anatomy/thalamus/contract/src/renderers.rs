@@ -1151,6 +1151,70 @@ mod tests {
                 "a delta is added, removed or changed");
     }
 
+    // --- iris-genui-sequence: who sends what to whom, in order ---
+
+    /// An approval's path; `steps` is spliced in after the participants.
+    fn sequence(participants: &str, steps: &str) -> Component {
+        decode(&format!(r#"{{"kind":"sequence","props":{{"title":"An approval","participants":[{participants}],"steps":[{steps}]}}}}"#))
+    }
+
+    const PEOPLE: &str = r#""pupil","thalamus","KEAP""#;
+
+    fn names(n: usize) -> String {
+        (0..n).map(|i| format!(r#""p{i}""#)).collect::<Vec<_>>().join(",")
+    }
+
+    #[test]
+    fn a_sequence_is_participants_and_steps_of_three_shapes() {
+        let ok = sequence(PEOPLE, r#"{"phase":"propose"},{"from":"pupil","to":"thalamus","text":"close the row"},
+            {"from":"KEAP","to":"thalamus","text":"1 row","dashed":true},{"note":"the person decides","over":["pupil"]},
+            {"note":"in the ledger","over":["thalamus","KEAP"]},{"from":"thalamus","to":"thalamus","text":"check caps"}"#);
+        assert_eq!(ok.check(), Ok(()), "a message to itself is a step");
+        let back = serde_json::to_string(&ok).unwrap();
+        assert!(back.contains(r#"{"from":"KEAP","to":"thalamus","text":"1 row","dashed":true}"#) && back.contains(r#"{"phase":"propose"}"#), "{back}");
+        assert!(!back.contains(r#""dashed":false"#), "a solid message says no dashed: {back}");
+        assert_eq!(sequence(&names(8), &(0..40).map(|i| format!(r#"{{"from":"p{}","to":"p{}","text":"m"}}"#, i % 8, (i + 1) % 8)).collect::<Vec<_>>().join(",")).check(), Ok(()),
+                   "8 participants and 40 steps is the cap, not over it");
+        assert!(serde_json::from_str::<Component>(&serde_json::to_string(&ok).unwrap().replace(r#""phase":"propose""#, r#""phase":"propose","approve":true"#)).is_err(),
+                "a step is closed: an unknown field is refused");
+    }
+
+    #[test]
+    fn check_rejects_a_sequence_over_its_caps() {
+        let step = r#"{"from":"p0","to":"p1","text":"m"}"#;
+        for n in [0, 1, 9] {
+            assert_eq!(sequence(&names(n), step).check(), Err(format!("sequence participants: {n}, 2 to 8")), "{n}");
+        }
+        assert_eq!(sequence(r#""p0","p1","p0""#, step).check(), Err(r#"sequence participant "p0" twice"#.into()));
+        assert_eq!(sequence(r#""p0"," ""#, step).check(), Err("a sequence participant is empty".into()));
+        assert_eq!(sequence(&format!(r#""p0","{}""#, "p".repeat(41)), step).check(), Err("a sequence participant is over 40 chars".into()));
+        assert_eq!(sequence(&names(2), "").check(), Err("a sequence has no steps".into()));
+        assert_eq!(sequence(&names(2), &vec![step; 41].join(",")).check(), Err("sequence steps: 41, at most 40".into()));
+        assert_eq!(sequence(&names(2), &format!(r#"{{"from":"p0","to":"p1","text":"{}"}}"#, "t".repeat(121))).check(),
+                   Err("a sequence message is over 120 chars".into()));
+        assert_eq!(sequence(&names(2), &format!(r#"{{"note":"{}","over":["p0"]}}"#, "n".repeat(201))).check(),
+                   Err("a sequence note is over 200 chars".into()));
+        assert_eq!(sequence(&names(2), &format!(r#"{{"phase":"{}"}}"#, "f".repeat(61))).check(), Err("a sequence phase is over 60 chars".into()));
+        assert_eq!(sequence(&names(2), &format!(r#"{step},{{"phase":"{}"}}"#, "f".repeat(60))).check(), Ok(()));
+        let title = decode(&format!(r#"{{"kind":"sequence","props":{{"title":"{}","participants":[{}],"steps":[{step}]}}}}"#, "t".repeat(121), names(2)));
+        assert_eq!(title.check(), Err("title is over 120 chars".into()));
+    }
+
+    #[test]
+    fn check_rejects_a_sequence_step_naming_no_participant() {
+        assert_eq!(sequence(PEOPLE, r#"{"from":"pupil","to":"ghost","text":"m"}"#).check(),
+                   Err(r#"sequence step 1: pupil -> ghost names no participant "ghost""#.into()));
+        assert_eq!(sequence(PEOPLE, r#"{"phase":"p"},{"from":"Pupil","to":"KEAP","text":"m"}"#).check(),
+                   Err(r#"sequence step 2: Pupil -> KEAP names no participant "Pupil""#.into()), "a name is matched exactly");
+        assert_eq!(sequence(PEOPLE, r#"{"note":"n","over":["pupil","ghost"]}"#).check(),
+                   Err(r#"sequence step 1: a note over "ghost" names no participant"#.into()));
+        for over in ["", r#""pupil","thalamus","KEAP""#] {
+            let n = if over.is_empty() { 0 } else { 3 };
+            assert_eq!(sequence(PEOPLE, &format!(r#"{{"note":"n","over":[{over}]}}"#)).check(),
+                       Err(format!("sequence step 1: a note is over {n} participants, 1 to 2")), "{over}");
+        }
+    }
+
     /// Through check(), so the matcher is the one a time chart meets.
     fn is_date(x: &str) -> bool {
         chart("line", "time", &format!(r#"{{"name":"a","points":[[{}, 1]]}}"#, serde_json::to_string(x).unwrap())).check().is_ok()
