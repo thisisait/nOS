@@ -280,12 +280,13 @@ pub const SHOW_KINDS: [&str; 8] = ["table", "list", "record", "chart", "tree", "
 /// The props a kind accepts, so a refusal can show the shape to retry.
 pub const SHOW_SHAPE: &[(&str, &str)] = &[
     ("table", "{title?, columns[] <=12, rows[][] <=50, each row as long as columns}"),
-    ("list", "{title?, ordered, items[{text, detail?, tone? ok|info|warn|bad}] <=50}"),
-    ("record", "{title?, fields[{key, value}] <=40}"),
+    ("list", "{title?, ordered, items[{text, detail?, tone? ok|info|warn|bad, delta? added|removed|changed}] <=50}"),
+    ("record", "{title?, fields[{key, value, delta? added|removed|changed, was?}] <=40}; was is the old value, only when changed"),
     ("chart", "{title?, chart bar|stacked_bar|line|area|scatter|pie, x category|number|time, series[{name, points[[x, number]] <=60}] <=6}; \
 x is a string even for number (\"3\") or time (\"2026-10-13\" or \"2026-10-13T08:00:00Z\"); line, area and stacked_bar \
 series share the same x in order; scatter needs number or time x; pie is 1 series, values >= 0"),
-    ("tree", "{title?, nodes[{label, note?, children[]}]}, depth <=4, nodes <=100"),
+    ("tree", "{title?, nodes[{label, note?, delta? added|removed|changed, children[]}]}, depth <=4, nodes <=100; \
+a child of an added or removed node is that too: leave its delta out"),
     ("timeline", "{title?, items[{when, title, note?, hi?, until?, lane?}] <=30}; when and until as dates \
 (\"2026-10-13\") draw a time axis, until not before when; lane groups items on one row, <=40 chars"),
     ("graph", "{title?, nodes[{id, label, note?, tone?}] <=60 (tone ok|info|warn|bad), edges[{from, to, label?, dashed?}] <=120}; \
@@ -303,6 +304,7 @@ fn expected_shape(kind: &str) -> String {
 /// One `oneOf` branch per kind; the descriptions are thalamus-shell.yml's vocabulary lines.
 pub fn show_schema() -> Value {
     let title = json!({"type": "string", "maxLength": 120});
+    let delta = json!({"enum": ["added", "removed", "changed"], "description": "what an action would do to it, for a dry run"});
     let branch = |kind: &str, about: &str, props: Value| json!({"type": "object", "additionalProperties": false,
         "required": ["kind", "props"], "description": about, "properties": {"kind": {"const": kind}, "props": props}});
     let closed = |required: &[&str], properties: Value| json!({"type": "object", "additionalProperties": false,
@@ -318,14 +320,15 @@ pub fn show_schema() -> Value {
         branch("table", "rows the model shows: {title?, columns[] <=12, rows[][] <=50, each row as long as columns}",
             closed(&["columns", "rows"], json!({"title": title, "columns": {"type": "array", "maxItems": 12, "items": {"type": "string"}},
                 "rows": {"type": "array", "maxItems": 50, "items": {"type": "array"}}}))),
-        branch("list", "items the model shows: {title?, ordered, items[{text, detail?, tone? ok|info|warn|bad}] <=50}",
+        branch("list", "items the model shows: {title?, ordered, items[{text, detail?, tone? ok|info|warn|bad, delta?}] <=50}",
             closed(&["items", "ordered"], json!({"title": title, "ordered": {"type": "boolean"},
                 "items": {"type": "array", "maxItems": 50, "items": closed(&["text"], json!({
                     "text": {"type": "string", "maxLength": 500}, "detail": {"type": "string", "maxLength": 2000},
-                    "tone": {"enum": ["ok", "info", "warn", "bad"]}}))}}))),
-        branch("record", "one thing's fields: {title?, fields[{key, value}] <=40}",
+                    "tone": {"enum": ["ok", "info", "warn", "bad"]}, "delta": delta}))}}))),
+        branch("record", "one thing's fields: {title?, fields[{key, value, delta?, was?}] <=40}",
             closed(&["fields"], json!({"title": title, "fields": {"type": "array", "maxItems": 40,
-                "items": closed(&["key", "value"], json!({"key": {"type": "string", "maxLength": 120}, "value": {}}))}}))),
+                "items": closed(&["key", "value"], json!({"key": {"type": "string", "maxLength": 120}, "value": {}, "delta": delta,
+                    "was": {"description": "the old value of a changed field; only with delta changed"}}))}}))),
         branch("chart", "values plotted: {title?, chart bar|stacked_bar|line|area|scatter|pie, x category|number|time, \
 series[{name, points[[x, number]] <=60}] <=6}; x is always a string (\"3\", \"2026-10-13\"); line, area and stacked_bar series \
 share the same x in the same order; scatter needs number or time x; pie is one series of values >= 0",
@@ -336,7 +339,8 @@ share the same x in the same order; scatter needs number or time x; pie is one s
                     "name": {"type": "string", "maxLength": 120},
                     "points": {"type": "array", "maxItems": 60, "items": {"type": "array", "minItems": 2, "maxItems": 2,
                         "prefixItems": [{"type": "string", "maxLength": 120}, {"type": "number"}]}}}))}}))),
-        branch("tree", "a hierarchy: {title?, nodes[{label, note?, children[]}]}, depth <=4, at most 100 nodes",
+        branch("tree", "a hierarchy: {title?, nodes[{label, note?, delta?, children[]}]}, depth <=4, at most 100 nodes; \
+delta added|removed|changed; a child of an added or removed parent is that too, never the other",
             closed(&["nodes"], json!({"title": title, "nodes": {"type": "array", "maxItems": 100}}))),
         branch("timeline", "a history: {title?, items[{when, title, note?, hi?, until?, lane?}] <=30}; every when a date \
 YYYY-MM-DD[THH:MM:SS(Z|+HH:MM)] draws a time axis with until as a span's end (not before when) and lane as its row",
@@ -510,7 +514,8 @@ nothing else. To count per value (for a chart) call query_rows with \
 group_by; to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
 KEAP's and the person can pin the chart. For what is red or broken on the estate call red_status. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
 repeat in text what a tool or show already drew. Shape -> component: count per value -> chart with show `source` (op count); \
-many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree; links between things -> graph. \
+many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree; links between things -> graph; \
+what an action would change -> mark delta added|removed|changed on tree nodes, list items or record fields (was: the old value). \
 Conclusion first, in one line. Never invent data: no numbers, no chart. Draw only when it helps: no visual for \
 small talk or a one-line answer. Ask with show choice only at a fork that changes what you do next: 2-6 options, \
 mark your pick as suggested; never for yes or no on a write: that is propose_row_edit's card. The answer comes back as a \

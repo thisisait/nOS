@@ -2,7 +2,7 @@
 //! what the person typed or pressed, and renders only the closed component vocabulary.
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
-use nos_contract::renderers::{Choice, Component, Tone, TreeNode};
+use nos_contract::renderers::{Choice, Component, Delta, Tone, TreeNode};
 use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ToShell, ToThalamus};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -97,6 +97,11 @@ fn cell_col(s: &str) -> String {
 }
 
 /// One component as plain lines: the same text in the terminal and in its snapshot.
+/// A line's first column: + - ~ for what an action would do to it, a space when nothing.
+fn marked(d: Option<Delta>) -> char {
+    d.map_or(' ', Delta::mark)
+}
+
 pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
     let mut out = Vec::new();
     match c {
@@ -157,14 +162,15 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 let mark = if l.ordered { format!("{}.", i + 1) } else { "-".into() };
                 let tone = x.tone.map(|t| format!("[{}] ", cell(&serde_json::to_value(t).unwrap_or_default()))).unwrap_or_default();
                 let detail = x.detail.as_deref().map(|d| format!(" — {d}")).unwrap_or_default();
-                let line = format!("  {mark} {tone}{}{detail}", x.text);
+                let line = format!("{} {mark} {tone}{}{detail}", marked(x.delta), x.text);
                 out.push(if matches!(x.tone, Some(Tone::Warn | Tone::Bad)) { warn(line) } else { Line::from(line) });
             }
         }
         Component::Record(r) => {
             out.extend(r.title.clone().map(head));
             for f in &r.fields {
-                out.push(Line::from(format!("  {}: {}", f.key, cell(&f.value))));
+                let was = f.was.as_ref().map(|w| format!("{} -> ", cell(w))).unwrap_or_default();
+                out.push(Line::from(format!("{} {}: {was}{}", marked(f.delta), f.key, cell(&f.value))));
             }
         }
         // A terminal draws no chart; every value is said as text.
@@ -181,15 +187,16 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
         }
         Component::Tree(t) => {
             out.extend(t.title.clone().map(head));
-            fn walk(out: &mut Vec<Line<'static>>, n: &TreeNode, depth: usize) {
+            fn walk(out: &mut Vec<Line<'static>>, n: &TreeNode, depth: usize, parent: Option<Delta>) {
                 let note = n.note.as_deref().map(|d| format!(" — {d}")).unwrap_or_default();
-                out.push(Line::from(format!("{}{}{note}", "  ".repeat(depth), n.label)));
+                let delta = Delta::inherit(n.delta, parent);
+                out.push(Line::from(format!("{} {}{}{note}", marked(delta), "  ".repeat(depth - 1), n.label)));
                 for c in &n.children {
-                    walk(out, c, depth + 1);
+                    walk(out, c, depth + 1, delta);
                 }
             }
             for n in &t.nodes {
-                walk(&mut out, n, 1);
+                walk(&mut out, n, 1, None);
             }
         }
         Component::Timeline(t) => {
