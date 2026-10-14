@@ -5,7 +5,7 @@ import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import Choice from './Choice.svelte';
 import Message from './Message.svelte';
-import { initial, reply, toggle } from './choice';
+import { answer, initial, reply, toggle } from './choice';
 import type { ChoiceProps, ToShell } from './wire';
 
 const S = '0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b';
@@ -70,6 +70,15 @@ describe('the reply', () => {
 		expect(reply(S, many, [], false)).toBeNull();
 		expect(reply(S, one, ['promotions'], false)).toBeNull();
 		expect(reply(S, one, ['todos', 'expenses'], false)).toBeNull();
+	});
+
+	it('the card is answered only once the reply was accepted; a refused one can be sent again', async () => {
+		const m = reply(S, one, ['expenses'], false);
+		if (m?.t !== 'choice_reply') throw new Error('no reply');
+		expect(await answer(m, async () => true)).toEqual(['expenses']);
+		expect(await answer(m, async () => false)).toBeNull();
+		expect(await answer(m, async () => { throw new Error('an approval is waiting: decide it first'); })).toBeNull();
+		expect(await answer(m)).toBeNull();
 	});
 
 	it('an answered choice says the answer and holds its inputs and button', () => {
