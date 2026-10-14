@@ -78,6 +78,7 @@ done
 # Galaxy roles (requirements.yml) install into roles/ but are gitignored, so a clone has none.
 # From the old tree: the roles it ran with, i.e. every roles/ dir the fresh clone does not track.
 if [ -n "$FROM" ] && [ -d "$FROM/roles" ]; then
+  mkdir -p "$DIR/roles"
   for d in "$FROM"/roles/*/; do
     n="$(basename "$d")"
     if [ ! -e "$DIR/roles/$n" ]; then cp -R "$d" "$DIR/roles/$n"; echo "  galaxy  $n (from $FROM)"; fi
