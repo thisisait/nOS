@@ -71,8 +71,10 @@ POST, and the shell gets `form_result` and `table_changed`.
 Who may decide: `thalamus_decider_exes` (role default `[]`, off: the peer is only
 recorded). When the operator sets it in `config.yml` — recommended
 `[thalamus_pupil_exe, thalamus_bin]`, the pupil and the y/n terminal shell — serve
-refuses a `form_submit`, `approval_decision` or `choice_reply` from any other
-(canonicalized) executable, or one it cannot name. The refusal is said, recorded
+refuses a `form_submit`, `approval_decision` or `choice_reply` sent by any other
+executable, or one it cannot name. The sender is read per line (macOS `LOCAL_PEERPID`,
+the last process to use the socket) and its kernel path is compared to the
+canonicalized entries; on Linux a set list refuses every decision. The refusal is said, recorded
 with the peer and reason, and the approval, form or choice stays open. The pupil then
 re-runs the widgets on the active tab that read that table; the rest go stale
 until their tab is shown. The whole path runs offline in

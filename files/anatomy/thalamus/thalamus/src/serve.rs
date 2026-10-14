@@ -72,8 +72,9 @@ pub fn login(uid: u32) -> Option<String> {
     unsafe { std::ffi::CStr::from_ptr(pw.pw_name) }.to_str().ok().map(str::to_string)
 }
 
-/// The peer process as the kernel names it: {pid, exe}, null where it cannot say. Recorded on
-/// every decision; enforced by decider_refusal when the decider list is set.
+/// The peer process as the kernel names it: {pid, exe}, null where it cannot say. Read per line:
+/// on macOS LOCAL_PEERPID is the last process to use the peer socket, i.e. this line's sender.
+/// Linux SO_PEERCRED names only the connector, so a set decider list fails closed there.
 fn peer(s: &UnixStream) -> Value {
     let pid = peer_pid(s);
     json!({"pid": pid, "exe": pid.and_then(exe_of)})
@@ -107,15 +108,18 @@ fn exe_of(pid: i32) -> Option<String> {
 }
 
 /// Why this peer exe may not decide, or None. An empty list is off (record only); a listed entry
-/// counts only when absolute, and both sides are canonicalized, so a symlink names its target.
+/// counts only when absolute and is canonicalized. The exe is the kernel's resolved path, taken
+/// as given: resolving it again would follow a symlink swapped into it since it was read.
 pub fn decider_refusal(deciders: &[PathBuf], exe: Option<&str>) -> Option<String> {
     if deciders.is_empty() {
         return None;
     }
+    if cfg!(not(target_os = "macos")) {
+        return Some("this kernel names the connecting process, not the sender, so no decider is trusted".into());
+    }
     let Some(exe) = exe else { return Some("the peer's executable cannot be determined, and only a listed decider decides".into()) };
-    let Ok(real) = std::fs::canonicalize(exe) else { return Some(format!("{exe} cannot be resolved, and only a listed decider decides")) };
-    let listed = deciders.iter().any(|d| d.is_absolute() && std::fs::canonicalize(d).is_ok_and(|c| c == real));
-    (!listed).then(|| format!("{} is not a listed decider (thalamus_decider_exes)", real.display()))
+    let listed = deciders.iter().any(|d| d.is_absolute() && std::fs::canonicalize(d).is_ok_and(|c| c.as_os_str() == exe));
+    (!listed).then(|| format!("{exe} is not a listed decider (thalamus_decider_exes)"))
 }
 
 fn peer_login(s: &UnixStream) -> Option<String> {
@@ -442,7 +446,6 @@ impl Server {
         let Ok(input) = out.try_clone() else { return };
         let mut input = BufReader::new(input);
         let mut open: Option<Open> = None;
-        let peer = peer(&out);
         loop {
             let mut line = String::new();
             match input.by_ref().take(MAX_LINE).read_line(&mut line) {
@@ -453,6 +456,7 @@ impl Server {
                 }
                 Ok(_) => {}
             }
+            let peer = peer(&out);
             match decode_to_thalamus(&line) {
                 Err(why) => refuse(&mut out, &why),
                 Ok(ToThalamus::Turn { session, text }) => {
