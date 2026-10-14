@@ -2584,3 +2584,38 @@ fn an_unlisted_decider_cannot_submit_a_form_or_answer_a_choice() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     assert_eq!(refusals(&rig, &session, "choice_reply").len(), 1);
 }
+
+#[test]
+fn a_decider_path_is_taken_as_the_kernel_reported_it() {
+    // The exe string was read earlier; a symlink swapped into it since must not make it a listed file.
+    let d = std::fs::canonicalize(dir("swap")).unwrap();
+    std::fs::create_dir_all(d.join("listed")).unwrap();
+    std::fs::write(d.join("listed/nos-pupil"), "").unwrap();
+    std::os::unix::fs::symlink(d.join("listed"), d.join("own")).unwrap();
+    let stale = d.join("own/nos-pupil");
+    assert!(serve::decider_refusal(&[d.join("listed/nos-pupil")], stale.to_str()).is_some(), "a stale path resolved onto a listed file");
+    assert_eq!(serve::decider_refusal(&[d.join("own/nos-pupil")], d.join("listed/nos-pupil").to_str()), None, "a listed symlink names its target");
+}
+
+/// macOS: LOCAL_PEERPID names the process that last used the peer socket, so the sender is
+/// checked per decision. Linux SO_PEERCRED names only the connector (serve fails closed there).
+#[cfg(target_os = "macos")]
+#[test]
+fn a_decision_sent_by_an_unlisted_process_on_a_listed_connection_is_refused() {
+    let link = decider_link("sender");
+    admit(&link);
+    let rig = rig_deciders("sender", mapped(), fake(shown_then(&[ROWS, ROWS, POSTED])), edit_turn(), Some(local()), vec![link]);
+    let (s, mut r, _session, approval, _) = propose(&rig);
+    // The listed test binary connected; an unlisted /bin/sh holding the same socket decides.
+    let line = encode(&ToThalamus::ApprovalDecision { approval: approval.clone(), decision: Decision::Approve, note: None });
+    let st = std::process::Command::new("/bin/sh").args(["-c", "printf '%s' \"$L\"; sleep 1"]).env("L", &line)
+        .stdout(std::process::Stdio::from(std::os::fd::OwnedFd::from(s.try_clone().unwrap()))).status().unwrap();
+    assert!(st.success());
+    match next(&mut r) {
+        Some(ToShell::Refused { reason, .. }) => assert!(reason.contains("decider"), "{reason}"),
+        other => panic!("an unlisted sender must be refused, got {other:?}"),
+    }
+    assert!(posts(&rig).is_empty(), "an unlisted sender's approval wrote");
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::TableChanged { ref row, .. }) if row == "r1"), "the listed sender is still admitted");
+}
