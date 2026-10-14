@@ -173,6 +173,27 @@
     - pupil=4
     - keap=0
     - face=6
+# A chart of table rows names its source: the thalamus draws KEAP's aggregate and the person may pin it.
+- id: chart-pie-sourced
+  kind: chart
+  component:
+    kind: chart
+    props:
+      title: Expenses by kind
+      chart: pie
+      x: category
+      series:
+        - name: sum of amount
+          points: [[travel, 120], [food, 42]]
+  source:
+    query: {table: expenses}
+    x: kind
+    y: amount
+    op: sum
+  expect:
+    - pie chart Expenses by kind
+    - travel=120
+    - food=42
 - id: tree-steps
   kind: tree
   component:

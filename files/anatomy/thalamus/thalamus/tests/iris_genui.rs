@@ -51,3 +51,20 @@ fn every_show_kind_has_a_bench_case() {
     let missing: Vec<&str> = thalamus::serve::SHOW_KINDS.iter().copied().filter(|k| !benched.contains(k)).collect();
     assert!(missing.is_empty(), "show kinds with no case in iris-genui-bench.yml: {missing:?}");
 }
+
+/// A case that names a source is one serve would pin: the source parses for its component's chart
+/// kind and meets the widget check (genui I6). KEAP's numbers are pinned in tests/serve.rs.
+#[test]
+fn a_sourced_case_is_a_pinnable_chart() {
+    let raw = std::fs::read_to_string(repo().join("state/fixtures/iris-genui-bench.yml")).unwrap();
+    let cases: Vec<serde_yaml_ng::Value> = serde_yaml_ng::from_str(&raw).unwrap();
+    let sourced: Vec<_> = cases.iter().filter(|c| !c["source"].is_null()).collect();
+    assert!(!sourced.is_empty(), "no bench case names a source");
+    for case in sourced {
+        let id = case["id"].as_str().unwrap();
+        let component: Component = serde_yaml_ng::from_value(case["component"].clone()).unwrap();
+        let source: serde_json::Value = serde_yaml_ng::from_value(case["source"].clone()).unwrap();
+        let spec = thalamus::serve::source_spec(&component, source).unwrap_or_else(|e| panic!("{id}: {e}"));
+        nos_contract::wire::check_spec(&nos_contract::wire::WidgetSpec::Chart(spec)).unwrap_or_else(|e| panic!("{id}: {e}"));
+    }
+}
