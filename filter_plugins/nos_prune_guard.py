@@ -344,6 +344,19 @@ def nos_up_excluded(plan, *more):
     return sorted({f for p in plans for f in (p or {}).get("fragments") or []})
 
 
+def nos_dep_consumers(graph, deps):
+    """{dep: [install flags of its consumers]} from the graph's `data` edges
+    (service:<dep> -> service:<consumer>). A dep with no edge maps to []."""
+    nodes = (graph or {}).get("nodes") or {}
+    out = {d: set() for d in deps or ()}
+    for e in (graph or {}).get("edges") or []:
+        dep = str(e.get("from", "")).removeprefix("service:")
+        flag = (nodes.get(e.get("to")) or {}).get("install_flag")
+        if e.get("kind") == "data" and dep in out and flag:
+            out[dep].add(flag)
+    return {d: sorted(f) for d, f in out.items()}
+
+
 class FilterModule(object):
     def filters(self):
         return {
@@ -351,4 +364,5 @@ class FilterModule(object):
             "nos_host_daemon_plan": nos_host_daemon_plan,
             "nos_split_orphans": nos_split_orphans,
             "nos_up_excluded": nos_up_excluded,
+            "nos_dep_consumers": nos_dep_consumers,
         }

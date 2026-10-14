@@ -218,19 +218,27 @@
 # Stopping alone lost to `up`: it merged the off service's fragment and started
 # it again. What the plan may act on is also left out of `up` (stack-up,
 # core-up); --remove-orphans drops the container, volumes and data stay.
-# Auto-enabled deps (mariadb) are out of _disabled_services; once main.yml's
-# auto-enable has run, a still-false flag means no consumer — same guard, no
-# deletion. Any refused plan -> nothing excluded.
-- name: "[Stacks] Reset the still-off dependency accumulator"
+# Auto-enabled deps (mariadb) are out of _disabled_services. A false flag is
+# not "no consumer": extra-vars outrank main.yml's set_fact, and martin/
+# mcp_gateway use postgresql from no auto-enable block. Off = flag false AND
+# every graph data-edge consumer off; no edges = not judged. Refused -> none.
+- name: "[Stacks] Who consumes each auto-enabled dependency (anatomy graph)"
   ansible.builtin.set_fact:
-    _deps_off: []
+    _dep_consumers: >-
+      {{ lookup('file', playbook_dir ~ '/state/anatomy-graph.json') | from_json
+         | nos_dep_consumers(_auto_enabled) }}
   tags: ['stacks', 'core', 'always']
 
-- name: "[Stacks] Auto-enabled dependencies that are still off"
+- name: "[Stacks] Auto-enabled dependencies off with no consumer on"
   ansible.builtin.set_fact:
-    _deps_off: "{{ _deps_off + [item] }}"
-  loop: "{{ _auto_enabled | unique }}"
-  when: not (lookup('vars', 'install_' ~ item, default=false) | bool)
+    _deps_off: >-
+      {%- set ns = namespace(off=[]) -%}
+      {%- for _d, _c in _dep_consumers.items() -%}
+      {%- if _c and not (lookup('vars', 'install_' ~ _d, default=false) | bool)
+             and not (query('vars', *_c, default=false) | map('bool') | select | list) -%}
+      {%- set ns.off = ns.off + [_d] -%}
+      {%- endif -%}{%- endfor -%}
+      {{ ns.off }}
   tags: ['stacks', 'core', 'always']
 
 - name: "[Stacks] Fragments `up` leaves out (declared off, attributed)"
