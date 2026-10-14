@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 6,
     "sense": 74,
-    "limb": 114,
+    "limb": 115,
     "memory": 41,
     "law": 52,
     "reflex": 43,
@@ -678,6 +678,10 @@
       "kind": "effector"
     },
     "effector:espo-party-sync": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:estate-adopt": {
       "level": "limb",
       "kind": "effector"
     },

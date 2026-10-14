@@ -917,6 +917,9 @@ nodes:
   "effector:gen-invoice-images": withheld
   "effector:genome-codegen": withheld
   "effector:import-coolify-template": withheld
+  # 2026-10-14 effector:estate-adopt: gives a host's estate its own main clone
+  # (operator-run, dry-run unless --confirm). WITHHELD; the published set is unchanged.
+  "effector:estate-adopt": withheld
   "effector:imprint-gen": withheld
   "effector:invoice-verify": withheld
   # 2026-10-14 effector:iris-bench (iris-live-bench): scores Iris from the
