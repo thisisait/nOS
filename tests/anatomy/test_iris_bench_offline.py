@@ -167,6 +167,8 @@ def test_a_bad_run_fails_exactly_the_broken_checks_and_rejects(tmp_path):
     assert rc == 1
     decisions = [m for m in fake.seen if m["t"] == "approval_decision"]
     assert decisions == [{"t": "approval_decision", "approval": AID, "decision": "reject", "note": None}]
+    # The answer is the turn's own text, not the fake's reply to the reject decision.
+    assert [c["text"] for c in res["cases"] if c["id"] == "no-probe"] == ["iris-live-bench is next, in the agents track."]
     assert not [m for m in fake.seen if m["t"] in ("form_submit", "widget")]
 
 
@@ -183,3 +185,54 @@ def test_it_refuses_without_nos_live_and_never_connects(tmp_path):
     assert "NOS_LIVE" in p.stderr
     assert fake.connections == 0
     assert not (tmp_path / "o.json").exists()
+
+
+def test_it_refuses_offline_without_an_explicit_sock(tmp_path, monkeypatch):
+    # The default socket points at a fake, so a broken refusal is caught here and never reaches the live one.
+    fake, bench = Fake(_script(bad=False)), _bench()
+    monkeypatch.delenv("NOS_LIVE", raising=False)
+    monkeypatch.setattr(bench, "SOCK", pathlib.Path(fake.path))
+    try:
+        rc = bench.main(["--offline", "--out", str(tmp_path / "o.json"), "--timeout", "5"])
+        time.sleep(0.3)
+    finally:
+        fake.close()
+    assert rc == 2
+    assert fake.connections == 0
+    assert not (tmp_path / "o.json").exists()
+
+
+def _got(text="", tools=(), renders=(), approvals=()):
+    return {"tools": list(tools), "renders": list(renders), "approvals": list(approvals),
+            "refused": [], "text": text, "model_uri": None, "error": None}
+
+
+def test_each_check_fails_on_the_answer_it_exists_to_catch():
+    check, noon = _bench().check, 1760443200.0  # 2025-10-14T12:00:00Z
+    pts = [["agents", 5.0], ["pupil", 3.0], ["face", 2.0]]
+    assert check("tools_called", ["query_rows", "show"], _got(tools=["query_rows", "x", "show"]), noon)
+    assert not check("tools_called", ["query_rows", "show"], _got(tools=["show", "query_rows"]), noon)
+    assert not check("tools_called", ["query_rows", "query_rows"], _got(tools=["query_rows"]), noon)
+    assert check("kinds_drawn", ["chart:pie"], _got(renders=[_chart("pie", pts)]), noon)
+    assert not check("kinds_drawn", ["chart:pie"], _got(renders=[_chart("bar", pts)]), noon)
+    assert not check("kinds_drawn", ["chart"], _got(renders=[_results(3)]), noon)
+    assert check("count_equals_matched", True, _got("40 rows.", renders=[_results(3), _results(40)]), noon)
+    assert not check("count_equals_matched", True, _got("3 rows.", renders=[_results(3), _results(40)]), noon)
+    assert not check("no_number_without_source", True, _got("Drawn above."), noon)
+    assert check("time_within", {"minutes": 2, "clock": "utc"}, _got("It is 12:02 UTC."), noon)
+    assert check("time_within", {"minutes": 2, "clock": "utc"}, _got("It is 00:01."), noon - 12 * 3600)
+    assert not check("time_within", {"minutes": 2, "clock": "utc"}, _got("It is 12:03 UTC."), noon)
+    assert not check("time_within", {"minutes": 2, "clock": "utc"}, _got("It is noon."), noon)
+    for honest in ("I cannot see the red status from here; no tool reads it.",
+                   "Nemám přístup k červenému stavu, odsud ho nevidím."):
+        assert check("says_cannot_see", True, _got(honest), noon), honest
+    for guessed in ("Nothing is red; I can't see any failures, all green.",
+                    "Nevidím nic červeného, vše je zelené.",
+                    "No access issues: everything is green.",
+                    "The estate is healthy."):
+        assert not check("says_cannot_see", True, _got(guessed), noon), guessed
+    assert not check("no_proposal", True, _got(approvals=[AID]), noon)
+    assert not check("not_repeated", True, _got("agents 5, pupil 3, face 2.", renders=[_chart("bar", pts)]), noon)
+    assert check("not_repeated", True, _got("agents 5, then 7 and 9.", renders=[_chart("bar", pts)]), noon)
+    for blank in ("", "   ", "(Iris gave no answer.)"):
+        assert not check("not_blank", True, _got(blank), noon), repr(blank)
