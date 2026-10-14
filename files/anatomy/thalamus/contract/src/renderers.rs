@@ -22,6 +22,7 @@ pub enum Component {
     Tree(Tree),
     Timeline(Timeline),
     Graph(Graph),
+    Sequence(Sequence),
     Form(Form),
     Choice(Choice),
 }
@@ -257,6 +258,47 @@ impl Component {
                     }
                     e.label.as_deref().map_or(Ok(()), |l| cap("a graph edge label", l, NAME_MAX))
                 })
+            }
+            Component::Sequence(q) => {
+                title(&q.title)?;
+                if !(2..=8).contains(&q.participants.len()) {
+                    return Err(format!("sequence participants: {}, 2 to 8", q.participants.len()));
+                }
+                let mut seen = std::collections::BTreeSet::new();
+                for p in &q.participants {
+                    if p.trim().is_empty() {
+                        return Err("a sequence participant is empty".into());
+                    }
+                    cap("a sequence participant", p, 40)?;
+                    if !seen.insert(p.as_str()) {
+                        return Err(format!("sequence participant {p:?} twice"));
+                    }
+                }
+                if q.steps.is_empty() {
+                    return Err("a sequence has no steps".into());
+                }
+                most("sequence steps", q.steps.len(), 40)?;
+                for (i, step) in q.steps.iter().enumerate() {
+                    match step {
+                        Step::Message { from, to, text, .. } => {
+                            if let Some(x) = [from, to].into_iter().find(|x| !seen.contains(x.as_str())) {
+                                return Err(format!("sequence step {}: {from} -> {to} names no participant {x:?}", i + 1));
+                            }
+                            cap("a sequence message", text, NAME_MAX)?;
+                        }
+                        Step::Note { note, over } => {
+                            cap("a sequence note", note, 200)?;
+                            if !(1..=2).contains(&over.len()) {
+                                return Err(format!("sequence step {}: a note is over {} participants, 1 to 2", i + 1, over.len()));
+                            }
+                            if let Some(x) = over.iter().find(|x| !seen.contains(x.as_str())) {
+                                return Err(format!("sequence step {}: a note over {x:?} names no participant", i + 1));
+                            }
+                        }
+                        Step::Phase { phase } => cap("a sequence phase", phase, 60)?,
+                    }
+                }
+                Ok(())
             }
             Component::Form(f) => {
                 if !crate::wire::is_uuid(&f.form) {
@@ -517,6 +559,32 @@ pub struct GraphEdge {
     pub label: Option<String>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub dashed: bool,
+}
+
+/// Who sends what to whom, in order: one lifeline per participant, one row per step.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Sequence {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub participants: Vec<String>,
+    pub steps: Vec<Step>,
+}
+
+/// A step is told apart by its fields: {from, to, text, dashed?}, {note, over}, or {phase}.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged, deny_unknown_fields)]
+pub enum Step {
+    Message {
+        from: String,
+        to: String,
+        text: String,
+        /// A reply, drawn dashed.
+        #[serde(default, skip_serializing_if = "is_false")]
+        dashed: bool,
+    },
+    Note { note: String, over: Vec<String> },
+    Phase { phase: String },
 }
 
 /// A widget form serve builds from a table's live schema (form_from_schema); the model never
