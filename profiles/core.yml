@@ -41,12 +41,16 @@ install_ears: false
 install_backup: false
 install_apex: false
 install_gitea: false
+install_woodpecker: false       # CI, needs gitea
 apps_runner_enabled: false      # manifest apps (documenso, roundcube, twofauth, ...)
 
-# ── Every other service flag that defaults true ──────────────────────────────
+# ── Every other service flag that defaults true, or that a host's config.yml often sets ──
 install_bluesky_pds: false
 install_calibreweb: false
 install_freescout: false
+install_hedgedoc: false
+install_bookstack: false
+install_dolibarr: false
 install_kiwix: false
 install_mailpit: false
 install_metabase: false
