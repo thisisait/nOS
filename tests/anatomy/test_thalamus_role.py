@@ -344,9 +344,11 @@ def test_the_decider_list_is_off_by_default_and_rendered_only_when_set():
     operator out; the plist carries NOS_DECIDER_EXES only when the operator sets the list."""
     defaults = yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())
     assert defaults["thalamus_decider_exes"] == []
-    for f in ("default.config.yml", "config.yml"):
-        p = REPO / f
-        assert not (p.exists() and "thalamus_decider_exes" in p.read_text()), f"{f} sets the decider list"
+    # The committed layers only: the operator opting in through config.yml is the documented path.
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity
+    for p in nos_identity.default_layers():
+        assert "thalamus_decider_exes" not in p.read_text(), f"{p.name} sets the decider list"
     assert "NOS_DECIDER_EXES" not in _plist(thalamus_decider_exes=[])["EnvironmentVariables"]
     exes = ["/h/thalamus/bin/nos-pupil", "/h/thalamus/bin/thalamus"]
     assert _plist(thalamus_decider_exes=exes)["EnvironmentVariables"]["NOS_DECIDER_EXES"] == ":".join(exes)
