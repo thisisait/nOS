@@ -259,3 +259,13 @@ def test_verify_fails_a_leaf_that_is_not_the_keychain_identity(tmp_path):
     (tmp_path / "none").mkdir()
     r = _run_verify(tmp_path / "none", keychain="")
     assert r.returncode != 0, "no identity in the keychain is no leaf to match, not a pass"
+
+
+def test_the_icon_is_committed_not_converted_at_converge():
+    """Live 2026-10-14: sips failed under ansible (Error 13 writing its temp file), so the build
+    failed after cargo had finished. The icns is built once and committed; converge only copies it."""
+    sh = _task("install the pupil binary")["ansible.builtin.shell"]
+    assert "sips" not in sh and "iconutil" not in sh, sh
+    assert "src-tauri/icons/Iris.icns" in sh, sh
+    icns = PUPIL / "src-tauri" / "icons" / "Iris.icns"
+    assert icns.read_bytes()[:4] == b"icns", "not an icns file"
