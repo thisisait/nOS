@@ -44,9 +44,28 @@ NUM = re.compile(r"\d+(?:\.\d+)?")
 CLOCK = re.compile(r"\b([01]?\d|2[0-3]):([0-5]\d)\b")
 
 
+FILLER = "Toto je výplňový text bez dalšího významu, jen zabírá místo v kontextu."
+# Czech vs English by function words and diacritics: crude, but a reply in the wrong language fails it.
+CS_WORDS = {"je", "a", "v", "se", "na", "to", "že", "má", "mám", "jsou", "není", "nevidím", "ano", "ne", "tak", "z", "s",
+            "o", "do", "pro", "jen", "jako", "už", "teď", "odsud", "žádný", "jedna", "jeden", "nahoře", "podle"}
+EN_WORDS = {"the", "is", "are", "and", "of", "in", "has", "have", "it", "this", "there", "rows", "count", "with", "for"}
+DIACRITICS = set("áčďéěíňóřšťúůýž")
+
+
+def turns_of(case: dict) -> list[str]:
+    """The case's turns; a `pad` puts its fact first and filler words before the first question."""
+    turns = list(case["turns"]) if "turns" in case else [case["prompt"]]
+    pad = case.get("pad")
+    if pad:
+        n = len(FILLER.split())
+        filler = " ".join([FILLER] * (-(-int(pad["words"]) // n)))
+        turns[0] = f"{pad['fact']} {filler}\n\n{turns[0]}"
+    return turns
+
+
 def run_case(case: dict, sock: str, timeout: float) -> dict:
     """Send the case's turns over one connection; what came back, per kind."""
-    turns = case["turns"] if "turns" in case else [case["prompt"]]
+    turns = turns_of(case)
     got = {"tools": [], "renders": [], "approvals": [], "refused": [], "text": "", "model_uri": None, "error": None}
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.settimeout(timeout)
@@ -144,6 +163,15 @@ def check(name: str, arg, got: dict, now: float) -> bool:
             if run >= 3:
                 return False
         return True
+    if name == "answers_in":
+        if arg != "cs":
+            raise ValueError(f"answers_in knows only cs, not {arg!r}")
+        words = re.findall(r"[^\W\d_]+", text.lower())
+        cs = sum(w in CS_WORDS for w in words) + (1 if DIACRITICS & set(text.lower()) else 0)
+        en = sum(w in EN_WORDS for w in words)
+        return cs >= 2 and cs > en
+    if name == "text_contains":
+        return str(arg) in text
     if name == "not_blank":
         return bool(text.strip()) and text.strip() != BLANK
     raise ValueError(f"unknown check {name!r}")
