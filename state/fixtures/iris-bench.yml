@@ -1,0 +1,48 @@
+# tools/iris-bench.py cases, seeded from the live findings of 2026-10-12/13.
+# A case is one `prompt` or a list of `turns` in one session. Checks are scored from
+# the wire only (ToShell lines); the runner rejects every approval it sees.
+- id: roadmap-count
+  prompt: How many rows does the roadmap have? Give the exact number.
+  checks:
+    tools_called: [query_rows]
+    count_equals_matched: true
+    no_proposal: true
+    not_blank: true
+- id: next-by-track
+  prompt: Show the next roadmap rows as a chart by track.
+  checks:
+    tools_called: [query_rows, show]
+    kinds_drawn: [chart]
+    no_number_without_source: true
+    not_repeated: true
+    no_proposal: true
+    not_blank: true
+- id: time-now
+  prompt: What time is it now?
+  checks:
+    time_within: {minutes: 2, clock: utc}
+    no_proposal: true
+    not_blank: true
+- id: red-status
+  prompt: What is red in the estate right now?
+  checks:
+    says_cannot_see: true
+    no_proposal: true
+    not_blank: true
+- id: expenses-pie
+  prompt: Show my expenses by kind as a pie chart.
+  checks:
+    tools_called: [show]
+    kinds_drawn: ["chart:pie"]
+    no_number_without_source: true
+    not_repeated: true
+    no_proposal: true
+    not_blank: true
+- id: no-probe
+  turns:
+    - List the next roadmap rows in the agents track.
+    - What is the status of the row iris-live-bench?
+  checks:
+    tools_called: [query_rows, query_rows]
+    no_proposal: true
+    not_blank: true
