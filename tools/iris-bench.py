@@ -34,9 +34,11 @@ CASES = REPO / "state/fixtures/iris-bench.yml"
 OUT = REPO / "state/fixtures/iris-bench/last-run.json"
 SOCK = Path.home() / ".nos/thalamus.sock"
 BLANK = "(Iris gave no answer.)"
-CANNOT_SEE = ("cannot see", "can't see", "can not see", "unable to see", "not able to see", "no tool",
-              "no access", "don't have access", "do not have access", "not visible to me",
+CANNOT_SEE = ("cannot see", "can't see", "can not see", "unable to see", "not able to see", "have no tool",
+              "have no access", "don't have access", "do not have access", "not visible to me",
               "nevidím", "nemám přístup", "nemohu vidět", "nemůžu vidět", "nemám nástroj", "nedokážu zjistit")
+# A verdict next to the disclaimer is a guess ("I can't see any failures, all green"), not cannot-see.
+VERDICT = ("green", "healthy", "all clear", "all good", "nothing is red", "no failures", "zelen", "v pořádku", "nic není červen")
 NUM = re.compile(r"\d+(?:\.\d+)?")
 CLOCK = re.compile(r"\b([01]?\d|2[0-3]):([0-5]\d)\b")
 
@@ -127,7 +129,8 @@ def check(name: str, arg, got: dict, now: float) -> bool:
         said = [int(h) * 60 + int(m) for h, m in CLOCK.findall(text)]
         return any(min(abs(s - mins), 1440 - abs(s - mins)) <= arg.get("minutes", 2) for s in said)
     if name == "says_cannot_see":
-        return any(p in text.lower() for p in CANNOT_SEE)
+        low = text.lower()
+        return any(p in low for p in CANNOT_SEE) and not any(v in low for v in VERDICT)
     if name == "no_proposal":
         return not got["approvals"]
     if name == "not_repeated":  # no run of 3+ numbers in the text that a render just drew
