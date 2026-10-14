@@ -1170,27 +1170,17 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
     /// show's chart drawn from its `source`: the aggregate a chart widget of that spec answers, run as
     /// the person and recorded like a widget run, replaces the model's series. Never extends `shown`.
     fn sourced(&self, who: &Person, o: &Open, c: Component, src: Value) -> Result<(Component, Option<WidgetSpec>), String> {
-        let Component::Chart(model) = c else { return Err("show's `source` is only for a chart".into()) };
-        let kind = match model.chart {
-            ChartKind::Bar => WidgetChart::Bar,
-            ChartKind::Line => WidgetChart::Line,
-            ChartKind::Pie => WidgetChart::Pie,
-            k => return Err(format!("show's `source` draws a bar, line or pie chart, not {}; drop source or pick one of those",
-                                    text(&json!(k)))),
+        let spec = source_spec(&c, src)?;
+        let title = match c {
+            Component::Chart(model) => model.title,
+            _ => None,
         };
-        let mut v = src;
-        if v.get("chart").is_some() {
-            return Err("show's `source` has no `chart`; the component's chart names it".into());
-        }
-        v["chart"] = json!(kind);
-        let spec: ChartSpec = serde_json::from_value(v)
-            .map_err(|e| format!("show's `source`: {e}; it is {{query {{table, q?, where?}}, x, y?, op count|sum|avg}}"))?;
         let tool = Some("show_source");
         self.record(o, Kind::ToolUse, tool, json!({"table": spec.query.table, "kind": spec.chart, "op": spec.op}))
             .map_err(|why| format!("not recorded, so not drawn: {why}"))?;
         let pin = WidgetSpec::Chart(spec.clone());
         let drawn = check_spec(&pin).and_then(|_| self.widget_chart(who, &spec)).and_then(|mut chart| {
-            chart.title = model.title.clone().or(chart.title);
+            chart.title = title.or(chart.title);
             let c = Component::Chart(chart);
             c.check().map_err(|e| format!("the source drew nothing to show ({e})"))?;
             Ok(c)
@@ -1245,6 +1235,25 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
         }
         InboxList { items, refused }
     }
+}
+
+/// show's `source` as the chart widget spec it pins: the component's chart kind (bar, line or pie
+/// only) and the source's query, x, y and op. Err says why, for the model to hear.
+pub fn source_spec(c: &Component, src: Value) -> Result<ChartSpec, String> {
+    let Component::Chart(model) = c else { return Err("show's `source` is only for a chart".into()) };
+    let kind = match model.chart {
+        ChartKind::Bar => WidgetChart::Bar,
+        ChartKind::Line => WidgetChart::Line,
+        ChartKind::Pie => WidgetChart::Pie,
+        k => return Err(format!("show's `source` draws a bar, line or pie chart, not {}; drop source or pick one of those",
+                                text(&json!(k)))),
+    };
+    let mut v = src;
+    if v.get("chart").is_some() {
+        return Err("show's `source` has no `chart`; the component's chart names it".into());
+    }
+    v["chart"] = json!(kind);
+    serde_json::from_value(v).map_err(|e| format!("show's `source`: {e}; it is {{query {{table, q?, where?}}, x, y?, op count|sum|avg}}"))
 }
 
 /// The model's component and its `source`, or why not: only a SHOW_KINDS kind, closed props, within
