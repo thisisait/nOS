@@ -206,4 +206,50 @@ mod tests {
         assert_eq!(aside, 1);
         std::fs::remove_dir_all(dir).unwrap();
     }
+
+    /// One sample layout with `edit` applied: Ok when the decoder takes it.
+    fn takes(edit: impl Fn(&mut serde_json::Value)) -> Result<Layout, String> {
+        let (_, mut v) = cases("samples").remove(0);
+        edit(&mut v);
+        decode(&v.to_string())
+    }
+
+    #[test]
+    fn each_cap_takes_its_edge_and_refuses_one_past() {
+        let w0 = |v: &mut serde_json::Value| v["workspaces"][0]["widgets"][0].clone();
+        let widgets = |n: usize| move |v: &mut serde_json::Value| {
+            let one = w0(v);
+            v["workspaces"][0]["widgets"] = (0..n).map(|i| { let mut w = one.clone(); w["id"] = format!("n{i}").into(); w["y"] = (i * 2).into(); w }).collect();
+        };
+        let set = |ptr: &'static str, val: serde_json::Value| move |v: &mut serde_json::Value| *v.pointer_mut(ptr).unwrap() = val.clone();
+        let edges: Vec<(&str, Box<dyn Fn(&mut serde_json::Value)>, Box<dyn Fn(&mut serde_json::Value)>)> = vec![
+            ("24 widgets", Box::new(widgets(24)), Box::new(widgets(25))),
+            ("title 120", Box::new(set("/workspaces/0/widgets/0/title", "t".repeat(120).into())),
+                          Box::new(set("/workspaces/0/widgets/0/title", "t".repeat(121).into()))),
+            ("name 40", Box::new(set("/workspaces/0/name", "n".repeat(40).into())), Box::new(set("/workspaces/0/name", "n".repeat(41).into()))),
+            ("h 2", Box::new(set("/workspaces/0/widgets/0/h", 2.into())), Box::new(set("/workspaces/0/widgets/0/h", 1.into()))),
+            ("h 40", Box::new(set("/workspaces/0/widgets/0/h", 40.into())), Box::new(set("/workspaces/0/widgets/0/h", 41.into()))),
+            ("version 1", Box::new(set("/version", 1.into())), Box::new(set("/version", 2.into()))),
+            ("id charset", Box::new(set("/workspaces/0/widgets/0/id", "A-z_9".into())), Box::new(set("/workspaces/0/widgets/0/id", "a.b".into()))),
+            ("id 64", Box::new(set("/workspaces/0/widgets/0/id", "i".repeat(64).into())), Box::new(set("/workspaces/0/widgets/0/id", "i".repeat(65).into()))),
+        ];
+        for (cap, edge, past) in &edges {
+            takes(edge).unwrap_or_else(|e| panic!("{cap}: the edge was refused: {e}"));
+            assert!(takes(past).is_err(), "{cap}: one past the cap was accepted");
+        }
+    }
+
+    #[test]
+    fn an_unreadable_file_is_set_aside_too() {
+        // Invalid UTF-8 failed read_to_string, was never renamed, and refused every launch after.
+        let dir = std::env::temp_dir().join(format!("pupil-ws-utf8-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("workspaces.json");
+        std::fs::write(&path, b"{\"version\": \xff}").unwrap();
+        let why = load(&path).unwrap_err();
+        assert!(why.contains("broken-"), "{why}");
+        assert!(!path.exists(), "the unreadable file is still where the next load reads it");
+        assert_eq!(load(&path).unwrap(), Layout::empty(), "the next load starts empty");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
 }
