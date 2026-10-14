@@ -2329,6 +2329,22 @@ fn a_choice_reply_is_recorded_first_and_mints_nothing() {
     assert!(ev.iter().any(|e| e.1 == "agent:iris/tool:show" && e.0 == "agent_tool_result" && e.2["choice"] == serde_json::json!(id)), "{ev:?}");
 }
 
+/// A reply the ledger did not take is never heard: the model is not asked and the choice stays open.
+#[test]
+fn a_choice_reply_the_ledger_refuses_never_reaches_the_model() {
+    let rig = rig("cledger", mapped(), ROWS, choice_turns(false));
+    let (s, mut r, session, id) = asked_choice(&rig);
+    rusqlite::Connection::open(&rig.ledger).unwrap().execute_batch("CREATE TRIGGER no_reply BEFORE INSERT ON events \
+        WHEN NEW.type = 'agent_tool_result' AND NEW.task LIKE '%choice_reply' BEGIN SELECT RAISE(ABORT, 'ledger full'); END;").unwrap();
+    choose(&s, &session, &id, &["expenses"]);
+    assert!(matches!(next(&mut r), Some(ToShell::Refused { reason, .. }) if reason.contains("not recorded, so Iris was not told")));
+    assert_eq!(rig.model.lock().unwrap().len(), 2, "the model heard a reply the ledger does not hold");
+    rusqlite::Connection::open(&rig.ledger).unwrap().execute_batch("DROP TRIGGER no_reply;").unwrap();
+    choose(&s, &session, &id, &["expenses"]);
+    until_text(&mut r);
+    assert_eq!(heard(&rig, 2), format!(r#"[thalamus] choice {id}: picked "expenses""#), "the choice stayed open, heard once");
+}
+
 #[test]
 fn a_choice_reply_while_an_approval_waits_is_refused() {
     let model = vec![query(r#"{"table": "todos", "q": "alpha"}"#), show(ask(false)), call("propose_row_edit", EDIT), answer("Proposed.")];
