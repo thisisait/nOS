@@ -95,7 +95,9 @@
     # The bundle is sealed: a changed plist or icon fails --verify though the DR still matches.
     if codesign --verify --strict {{ thalamus_pupil_app | quote }} 2>/dev/null \
       && codesign -d -r- {{ thalamus_pupil_app | quote }} 2>&1 | grep -qF "$want"; then echo same; exit 0; fi
-    codesign -f -s "$H" -i {{ thalamus_pupil_identifier | quote }} {{ thalamus_pupil_app | quote }}
+    out=$(codesign -f -s "$H" -i {{ thalamus_pupil_identifier | quote }} {{ thalamus_pupil_app | quote }} 2>&1) || { echo "$out" >&2; grep -q errSecInternalComponent <<<"$out" && { echo "codesign could not reach the signing key (errSecInternalComponent). Over SSH the keychain cannot ask
+      'allow codesign?'. Once, in this session (it asks the login password), then re-run:
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s {{ thalamus_signing_keychain | quote }}" >&2; exit 1; }; exit 1; }
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f {{ thalamus_pupil_app | quote }} || true
     echo signed
   args:

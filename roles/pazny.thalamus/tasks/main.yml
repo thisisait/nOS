@@ -123,7 +123,9 @@
     H={{ _thalamus_signing.stdout_lines[-1] | quote }}
     want="certificate leaf = H\"$(printf %s "$H" | tr 'A-F' 'a-f')\""
     if codesign -d -r- {{ thalamus_bin | quote }} 2>&1 | grep -qF "$want"; then echo same; exit 0; fi
-    codesign -f -s "$H" -i {{ thalamus_launchd_label | quote }} {{ thalamus_bin | quote }}
+    out=$(codesign -f -s "$H" -i {{ thalamus_launchd_label | quote }} {{ thalamus_bin | quote }} 2>&1) || { echo "$out" >&2; grep -q errSecInternalComponent <<<"$out" && { echo "codesign could not reach the signing key (errSecInternalComponent). Over SSH the keychain cannot ask
+      'allow codesign?'. Once, in this session (it asks the login password), then re-run:
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s {{ thalamus_signing_keychain | quote }}" >&2; exit 1; }; exit 1; }
     echo signed
   args:
     executable: /bin/bash
