@@ -280,3 +280,17 @@ fn a_form_result_and_a_table_change_are_said() {
     let said: String = app.lines.iter().map(|l| format!("{l}\n")).collect();
     assert_eq!(said, "widget w4: row e3 added\ntable expenses changed (row e3)\n");
 }
+
+/// The terminal has no workspace: a pin is one muted line, and an unpinned render says nothing of it (genui I6).
+#[test]
+fn a_pinnable_render_is_one_muted_line() {
+    let mut app = App::default();
+    for (case, m) in fixture() {
+        if ["search results", "a chart the model shows", "a table the model shows"].contains(&case.as_str()) {
+            app.apply(m);
+        }
+    }
+    let pinned: Vec<_> = app.lines.iter().filter(|l| l.to_string() == "(pinnable in the pupil)").collect();
+    assert_eq!(pinned.len(), 2, "one line per pinned render, none for the table");
+    assert!(pinned.iter().all(|l| l.style.fg == Some(ratatui::style::Color::DarkGray)), "{pinned:?}");
+}
