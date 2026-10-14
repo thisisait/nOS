@@ -161,6 +161,82 @@ def test_prune_disabled_computes_the_exclusion_from_the_plan():
     assert re.search(r"_auto_enabled.*nos_prune_plan", body, re.S)
 
 
+# ── Auto-enabled dependencies: off only when nothing that needs them is on ──
+# Review 2026-10-14: `-e install_postgresql=false` with Authentik on left
+# postgresql.yml out of infra `up`. default.config.yml's `false` is the auto
+# default, and extra-vars outrank main.yml's set_fact; martin and mcp_gateway
+# use postgresql but are in no auto-enable block. The graph's data edges decide.
+
+_PRUNE = "tasks/stacks/prune-disabled.yml"
+_PG = "/s/infra/overrides/postgresql.yml"
+
+
+def _deps_ctx(flags, consumers=None):
+    """Render the dependency tasks the way Ansible would, flags as resolved."""
+    env = NativeEnvironment()
+    env.filters.update(bool=lambda v: str(v).lower() in ("true", "yes", "1", "on"),
+                       from_json=__import__("json").loads,
+                       nos_dep_consumers=guard.nos_dep_consumers,
+                       nos_prune_plan=guard.nos_prune_plan,
+                       nos_up_excluded=guard.nos_up_excluded)
+
+    def lookup(kind, *terms, default=None, **_):
+        if kind == "file":
+            return pathlib.Path(terms[0]).read_text()
+        return flags.get(terms[0], default)
+
+    env.globals.update(lookup=lookup,
+                       query=lambda kind, *t, default=None, **_: [flags.get(x, default) for x in t])
+    ctx = {"playbook_dir": str(REPO), "_auto_enabled": ["mariadb", "postgresql"],
+           "_on_disk_flags": {"install_postgresql": False, "install_mariadb": True},
+           "_override_services": {_PG: ["postgresql"]},
+           "_prune_plan": guard.nos_prune_plan([], {}, {}, [])}
+    for name in ("[Stacks] Who consumes each auto-enabled dependency (anatomy graph)",
+                 "[Stacks] Auto-enabled dependencies off with no consumer on",
+                 "[Stacks] Fragments `up` leaves out (declared off, attributed)"):
+        for key, expr in _task(_PRUNE, name)["ansible.builtin.set_fact"].items():
+            ctx[key] = env.from_string(expr).render(ctx)
+            if key == "_dep_consumers" and consumers is not None:
+                ctx[key] = consumers
+    return ctx
+
+
+def test_the_graph_names_every_postgresql_consumer():
+    graph = __import__("json").loads((REPO / "state/anatomy-graph.json").read_text())
+    pg = guard.nos_dep_consumers(graph, ["postgresql"])["postgresql"]
+    assert {"install_authentik", "install_infisical", "install_martin", "install_mcp_gateway"} <= set(pg)
+
+
+def test_one_command_off_database_stays_up_while_authentik_is_on():
+    ctx = _deps_ctx({"install_postgresql": False, "install_authentik": True})
+    assert "postgresql" not in ctx["_deps_off"]
+    assert ctx["_disabled_up_excluded"] == []
+
+
+def test_a_consumer_outside_the_auto_enable_list_keeps_the_database():
+    ctx = _deps_ctx({"install_postgresql": False, "install_martin": True})
+    assert "postgresql" not in ctx["_deps_off"]
+    assert _PG not in ctx["_disabled_up_excluded"]
+
+
+def test_a_database_nothing_needs_is_left_out_of_up():
+    ctx = _deps_ctx({"install_postgresql": False, "install_mariadb": True})
+    assert ctx["_deps_off"] == ["postgresql"]
+    assert ctx["_disabled_up_excluded"] == [_PG]
+
+
+def test_a_dependency_the_graph_knows_no_consumer_of_is_not_judged():
+    """No edge is absence of evidence, not proof that nothing needs it."""
+    ctx = _deps_ctx({"install_postgresql": False}, consumers={"postgresql": []})
+    assert ctx["_deps_off"] == []
+
+
+def test_an_auto_enabled_database_is_never_left_out():
+    ctx = _deps_ctx({"install_postgresql": True, "install_mariadb": True})
+    assert ctx["_deps_off"] == []
+    assert ctx["_disabled_up_excluded"] == []
+
+
 # ── Whole stacks switched off: observability, the apps runner ──────────────
 
 
