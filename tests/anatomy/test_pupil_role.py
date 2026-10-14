@@ -51,16 +51,42 @@ def test_the_role_reaches_the_pupil_statically_after_the_thalamus_is_signed():
 
 
 def test_the_install_path_is_fixed_in_role_defaults_only():
-    """The path thalamus-pupil-peer-exe enforces: one place, never a knob in the default layers."""
+    """The path thalamus-pupil-peer-exe enforces: one place, never a knob in the default layers.
+    2026-10-14: an app the person opens from Launchpad, so the binary lives inside Iris.app."""
     d = _defaults()
-    assert d["thalamus_pupil_exe"] == "{{ thalamus_home }}/bin/nos-pupil"
-    assert _render(d["thalamus_pupil_exe"], thalamus_home="/h/thalamus") == "/h/thalamus/bin/nos-pupil"
+    assert d["thalamus_pupil_app"] == "{{ ansible_facts['env']['HOME'] }}/Applications/Iris.app"
+    assert d["thalamus_pupil_exe"] == "{{ thalamus_pupil_app }}/Contents/MacOS/nos-pupil"
+    app = _render(d["thalamus_pupil_app"], ansible_facts={"env": {"HOME": "/Users/a"}})
+    assert _render(d["thalamus_pupil_exe"], thalamus_pupil_app=app) == "/Users/a/Applications/Iris.app/Contents/MacOS/nos-pupil"
     sys.path.insert(0, str(REPO / "tools"))
     import nos_identity
-    layered = [p.name for p in nos_identity.default_layers() if "thalamus_pupil_exe" in p.read_text()]
-    assert not layered, f"thalamus_pupil_exe is declared in {layered}"
+    for var in ("thalamus_pupil_exe", "thalamus_pupil_app", "thalamus_pupil_state"):
+        layered = [p.name for p in nos_identity.default_layers() if var in p.read_text()]
+        assert not layered, f"{var} is declared in {layered}"
     build = _task("install the pupil binary")["ansible.builtin.shell"]
     assert re.search(r"install -m 0755 \S+/release/nos-pupil\" \{\{ thalamus_pupil_exe \| quote \}\}", build), build
+
+
+def test_no_sidecar_lives_inside_the_signed_bundle():
+    """A file added to a signed bundle breaks codesign --verify --strict: hashes sit beside the app."""
+    d = _defaults()
+    assert d["thalamus_pupil_state"] == "{{ thalamus_home }}/bin/nos-pupil"
+    text = (ROLE / "tasks" / "pupil.yml").read_text()
+    assert ".sha256" in text and "thalamus_pupil_exe }}.s" not in text and "thalamus_pupil_exe ~ '.s" not in text, \
+        "a .sha256 next to the binary is inside Iris.app"
+
+
+def test_the_bundle_names_iris_and_runs_the_pupil():
+    plist = _task("info.plist")["ansible.builtin.copy"]
+    body = _render(plist["content"], thalamus_pupil_identifier=_ID)
+    import plistlib
+    p = plistlib.loads(body.encode())
+    assert (p["CFBundleExecutable"], p["CFBundleIdentifier"], p["CFBundleName"], p["CFBundlePackageType"]) == \
+        ("nos-pupil", _ID, "Iris", "APPL"), p
+    assert plist["dest"] == "{{ thalamus_pupil_app }}/Contents/Info.plist"
+    names = [t.get("name", "").lower() for t in _pupil()]
+    assert next(i for i, n in enumerate(names) if "info.plist" in n) < next(i for i, n in enumerate(names) if "sign the pupil" in n), \
+        "the plist is sealed by the signature, so it is written first"
 
 
 def test_the_build_ignores_npm_scripts_and_builds_the_locked_release():
@@ -77,10 +103,12 @@ def test_the_build_is_skipped_when_the_source_is_unchanged():
     build = _task("install the pupil binary")
     assert build["when"] == "_pupil_src_sha.stdout != (_pupil_built_sha.stdout | default(''))", build["when"]
     record = _task("record the hash the pupil was built from")
-    assert record["ansible.builtin.copy"]["dest"] == "{{ thalamus_pupil_exe }}.source-sha256"
+    assert record["ansible.builtin.copy"]["dest"] == "{{ thalamus_pupil_state }}.source-sha256"
     assert record["when"] == "_pupil_build is not skipped"
     read = _task("read the hash the pupil was built from")
-    assert "{{ thalamus_pupil_exe }}.source-sha256" in read["ansible.builtin.command"]
+    sh = read["ansible.builtin.shell"]
+    assert "thalamus_pupil_state ~ '.source-sha256'" in sh, sh
+    assert sh.startswith("test -x {{ thalamus_pupil_exe | quote }} &&"), "no app at the path must rebuild, whatever the hash"
 
 
 def test_the_source_hash_covers_the_frontend_the_bridge_and_the_contract():
@@ -99,7 +127,8 @@ def test_the_pupil_is_signed_with_the_identity_and_its_own_identifier():
     sh = sign["ansible.builtin.shell"]
     assert "codesign -f -s \"$H\"" in sh and "-s -" not in sh, "ad-hoc (-s -) keeps the cdhash DR"
     assert "_thalamus_signing.stdout_lines[-1]" in sh, "a second identity, not the one thalamus uses"
-    assert "-i {{ thalamus_pupil_identifier | quote }}" in sh
+    assert "-i {{ thalamus_pupil_identifier | quote }} {{ thalamus_pupil_app | quote }}" in sh, "the bundle is signed, not the bare binary"
+    assert "codesign --verify --strict {{ thalamus_pupil_app | quote }}" in sh, "a changed plist re-signs though the DR matches"
     conf = json.loads((PUPIL / "src-tauri" / "tauri.conf.json").read_text())
     assert _defaults()["thalamus_pupil_identifier"] == conf["identifier"] == "eu.thisisait.nos.pupil"
     assert _defaults()["thalamus_pupil_identifier"] != _defaults()["thalamus_launchd_label"]
@@ -119,7 +148,7 @@ def test_verify_reads_the_installed_binary():
     assert "verify" in v["tags"] and v["changed_when"] is False
     sh = v["ansible.builtin.shell"]
     assert "shasum -a 256 {{ thalamus_pupil_exe | quote }}" in sh, sh
-    assert "codesign --verify" in sh and "thalamus_pupil_identifier" in sh, sh
+    assert "codesign --verify --strict {{ thalamus_pupil_app | quote }}" in sh and "thalamus_pupil_identifier" in sh, sh
     rec = _task("record the installed pupil's sha256")["ansible.builtin.shell"]
     assert "shasum -a 256 {{ thalamus_pupil_exe | quote }}" in rec and ".sha256" in rec
 
@@ -180,7 +209,9 @@ _ID = "eu.thisisait.nos.pupil"
 def _run_verify(tmp: pathlib.Path, *, recorded: str | None = None, verify_rc: int = 0,
                 ident: str = _ID, leaf: str = _LEAF, keychain: str = _LEAF.upper()) -> subprocess.CompletedProcess:
     """The verify script on a fake binary, codesign and security stubbed: what the file and its DR say."""
-    exe = tmp / "nos-pupil"
+    app = tmp / "Iris.app"
+    (app / "Contents" / "MacOS").mkdir(parents=True)
+    exe = app / "Contents" / "MacOS" / "nos-pupil"
     exe.write_bytes(b"pupil")
     now = subprocess.run(["shasum", "-a", "256", str(exe)], capture_output=True, text=True, check=True).stdout.split()[0]
     (tmp / "nos-pupil.sha256").write_text(now if recorded is None else recorded)
@@ -193,7 +224,8 @@ def _run_verify(tmp: pathlib.Path, *, recorded: str | None = None, verify_rc: in
     (bin_ / "security").write_text("#!/bin/bash\necho 'SHA-1 hash: %s'\n" % keychain)
     for s in bin_.iterdir():
         s.chmod(0o755)
-    sh = _render(_task("verify")["ansible.builtin.shell"], thalamus_pupil_exe=str(exe), thalamus_pupil_identifier=_ID,
+    sh = _render(_task("verify")["ansible.builtin.shell"], thalamus_pupil_exe=str(exe), thalamus_pupil_app=str(app),
+                 thalamus_pupil_state=str(tmp / "nos-pupil"), thalamus_pupil_identifier=_ID,
                  thalamus_signing_cn="nOS local code signing", thalamus_signing_keychain=str(tmp / "login.keychain-db"))
     import os
     return subprocess.run(["/bin/bash", "-c", sh], capture_output=True, text=True,
