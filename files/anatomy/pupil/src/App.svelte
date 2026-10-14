@@ -131,17 +131,24 @@
 		sendAll(r.send);
 	}
 
-	function added(title: string, spec: WidgetSpec) {
-		const id = `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-		const r = ws.addWidget(layout, id, title, spec);
+	const newId = () => `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+	function place(r: { layout: ws.Layout; w: Widgets; send: ToThalamus | null }) {
 		if (!r.send) {
 			layoutNote = `a workspace holds at most ${ws.MAX_WIDGETS} widgets`;
 			return;
 		}
 		layout = r.layout;
-		widgets = { ...widgets, [id]: { component: null, error: null, at: 0, spec } };
+		widgets = r.w;
 		adding = false;
 		sendAll([r.send]);
+	}
+
+	const added = (title: string, spec: WidgetSpec) => place(ws.placed(layout, widgets, newId(), title, spec));
+
+	// The person's click on "Připnout na plochu"; the model has no message that adds a widget.
+	function pinned(m: ToShell) {
+		place(ws.pin(layout, widgets, newId(), m));
 	}
 
 	function rerun(id: string) {
@@ -276,7 +283,7 @@
 		{#each log as e}
 			{#if 'me' in e}<p class="me">{e.me}</p>
 			{:else if 'note' in e}<StatusNote kind="error" block={false}>{e.note}</StatusNote>
-			{:else}<Message msg={e.msg} />{/if}
+			{:else}<Message msg={e.msg} onpin={pinned} />{/if}
 		{/each}
 	</div>
 	{#if q.pending[0]}

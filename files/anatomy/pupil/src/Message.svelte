@@ -5,7 +5,8 @@
 	import Markdown from './Markdown.svelte';
 	import { phaseName, type ToShell } from './wire';
 
-	let { msg }: { msg: ToShell } = $props();
+	// onpin: the person clicked "Připnout na plochu" under a render serve gave a pin (genui I6).
+	let { msg, onpin }: { msg: ToShell; onpin?: (m: ToShell) => void } = $props();
 </script>
 
 <div class="msg" data-t={msg.t}>
@@ -16,6 +17,11 @@
 		<Markdown text={msg.text} />
 	{:else if msg.t === 'render'}
 		<ComponentView component={msg.component} />
+		{#if msg.pin}
+			<button class="pin" type="button" onclick={() => onpin?.(msg)}>Připnout na plochu</button>
+		{:else if msg.component.kind === 'chart'}
+			<p class="muted">jen náhled — Iris neuvedla zdroj čísel</p>
+		{/if}
 	{:else if msg.t === 'approval_request'}
 		<!-- Only a decided one reaches the log; the waiting one is App's ApprovalCard. -->
 		<p class="muted">approval {msg.approval}</p>
@@ -41,6 +47,14 @@
 		display: flex;
 		flex-direction: column;
 		gap: 6px;
+	}
+	.pin {
+		align-self: flex-start;
+		border: 1px solid var(--glass-brd);
+		background: var(--accent);
+		color: var(--bg);
+		border-radius: 10px;
+		padding: 4px 12px;
 	}
 	.muted {
 		margin: 0;

@@ -1,7 +1,7 @@
 // The person's workspaces: tabs of widgets on a 12-column grid and a floating chat
 // (files/anatomy/contracts/workspace-layout.yml). Pure reducers; the Rust bridge checks
 // and stores the layout, the model never sees it.
-import type { ToThalamus, WidgetSpec } from './wire';
+import type { ToShell, ToThalamus, WidgetSpec } from './wire';
 import { onTableChanged as staleOrSend, type WidgetState, type Widgets } from './widgets';
 
 export type Grid = { x: number; y: number; w: number; h: number };
@@ -65,6 +65,22 @@ export function addWidget(l: Layout, id: string, title: string, spec: WidgetSpec
 		layout: { ...l, workspaces: l.workspaces.map((s) => (s === here ? { ...s, widgets: [...s.widgets, box] } : s)) },
 		send: { t: 'widget', widget: id, spec, trigger: 'click' }
 	};
+}
+
+/** addWidget, and the widget's state: its spec, not run yet. */
+export function placed(l: Layout, w: Widgets, id: string, title: string, spec: WidgetSpec): { layout: Layout; w: Widgets; send: ToThalamus | null } {
+	const r = addWidget(l, id, title, spec);
+	if (!r.send) return { layout: l, w, send: null };
+	return { layout: r.layout, w: { ...w, [id]: { component: null, error: null, at: 0, spec } }, send: r.send };
+}
+
+/** The person's click on a render's pin: a widget of a copy of that spec, titled as the render. Nothing for no pin. */
+export function pin(l: Layout, w: Widgets, id: string, m: ToShell): { layout: Layout; w: Widgets; send: ToThalamus | null } {
+	if (m.t !== 'render' || !m.pin) return { layout: l, w, send: null };
+	const p = m.component.props as { title?: string; name?: string };
+	const spec = structuredClone(m.pin);
+	const table = 'rows' in spec ? String(spec.rows.table ?? '') : 'chart' in spec ? spec.chart.query.table : spec.form.table;
+	return placed(l, w, id, p.title || p.name || table, spec);
 }
 
 export const removeWidget = (l: Layout, id: string): Layout => mapWidgets(l, (ws) => ws.filter((w) => w.id !== id));

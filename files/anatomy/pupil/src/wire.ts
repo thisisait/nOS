@@ -32,7 +32,7 @@ export type TreeNode = { label: string; note?: string; children?: TreeNode[] };
 export type ToShell =
 	| { t: 'session'; session: string; actor: string; model_uri: string }
 	| { t: 'text'; session: string; text: string }
-	| { t: 'render'; session: string; component: Component }
+	| { t: 'render'; session: string; component: Component; pin?: WidgetSpec }
 	| { t: 'approval_request'; session: string; approval: string; component: Component }
 	| { t: 'refused'; reason: string; widget?: string }
 	| { t: 'activity'; session: string; phase: Phase }
