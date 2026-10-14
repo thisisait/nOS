@@ -919,6 +919,9 @@ nodes:
   "effector:import-coolify-template": withheld
   "effector:imprint-gen": withheld
   "effector:invoice-verify": withheld
+  # 2026-10-14 effector:iris-bench (iris-live-bench): scores Iris from the
+  # thalamus wire. WITHHELD; the published set is unchanged.
+  "effector:iris-bench": withheld
   "effector:invoice-vision-intake": withheld
   "effector:invoice-vision-pipeline": withheld
   "effector:keap-apply-view": withheld

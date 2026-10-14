@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 6,
     "sense": 74,
-    "limb": 113,
+    "limb": 114,
     "memory": 41,
     "law": 52,
     "reflex": 43,
@@ -726,6 +726,10 @@
       "kind": "effector"
     },
     "effector:invoice-vision-pipeline": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:iris-bench": {
       "level": "limb",
       "kind": "effector"
     },
