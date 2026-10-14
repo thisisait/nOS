@@ -902,6 +902,30 @@ mod tests {
         assert!(matches!(decode_to_shell(&over), ToShell::Refused { reason, .. } if reason.contains("form fields: 21")));
     }
 
+    /// A pin is a spec the person may place, so it meets the check a widget message's spec meets (I6).
+    #[test]
+    fn a_render_whose_pin_fails_widget_validation_is_refused() {
+        use crate::wire::{decode_to_shell, decode_to_thalamus, ToShell};
+        let s = "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b";
+        let pie = r#"{"kind":"chart","props":{"chart":"pie","x":"category","series":[{"name":"count","points":[["open",2]]}]}}"#;
+        let render = |pin: &str| format!(r#"{{"t":"render","session":"{s}","component":{pie},"pin":{pin}}}"#);
+        let good = r#"{"chart":{"query":{"table":"todos"},"chart":"pie","x":"status","op":"count"}}"#;
+        assert!(matches!(decode_to_shell(&render(good)), ToShell::Render { pin: Some(_), .. }), "a valid pin decodes");
+        for (pin, want) in [
+            (r#"{"chart":{"query":{"table":"todos"},"chart":"pie","x":"status","op":"sum"}}"#, "sum needs `y`"),
+            (r#"{"chart":{"query":{"table":""},"chart":"pie","x":"status","op":"count"}}"#, "names no table"),
+            (r#"{"rows":{"q":"x"}}"#, "names no table"),
+            (r#"{"rows":["todos"]}"#, "rows spec is an object"),
+        ] {
+            match decode_to_shell(&render(pin)) {
+                ToShell::Refused { reason, .. } => assert!(reason.contains(want), "{pin}: {reason}"),
+                m => panic!("a render pinned {pin} was accepted: {m:?}"),
+            }
+            let widget = format!(r#"{{"t":"widget","widget":"w1","spec":{pin},"trigger":"click"}}"#);
+            assert!(decode_to_thalamus(&widget).is_err_and(|e| e.contains(want)), "the same spec as a widget: {pin}");
+        }
+    }
+
     /// Through check(), so the matcher is the one a time chart meets.
     fn is_date(x: &str) -> bool {
         chart("line", "time", &format!(r#"{{"name":"a","points":[[{}, 1]]}}"#, serde_json::to_string(x).unwrap())).check().is_ok()
