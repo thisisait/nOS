@@ -37,7 +37,9 @@ SOCK = Path.home() / ".nos/thalamus.sock"
 BLANK = "(Iris gave no answer.)"
 CANNOT_SEE = ("cannot see", "can't see", "can not see", "unable to see", "not able to see", "have no tool",
               "have no access", "don't have access", "do not have access", "not visible to me",
-              "nevidím", "nemám přístup", "nemohu vidět", "nemůžu vidět", "nemám nástroj", "nedokážu zjistit")
+              "cannot read", "can't read", "can not read", "unable to read", "not able to read",
+              "nevidím", "nemám přístup", "nemohu vidět", "nemůžu vidět", "nemám nástroj", "nedokážu zjistit",
+              "nemohu číst", "nemůžu číst", "nedokážu přečíst", "nemohu přečíst")
 # A verdict next to the disclaimer is a guess ("I can't see any failures, all green"), not cannot-see.
 VERDICT = ("green", "healthy", "all clear", "all good", "nothing is red", "no failures", "zelen", "v pořádku", "nic není červen")
 NUM = re.compile(r"\d+(?:\.\d+)?")
@@ -200,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
     results = []
     for case in cases:
         t0 = time.monotonic()
-        got = run_case(case, sock, a.timeout)
+        got = run_case(case, sock, float(case.get("timeout", a.timeout)))
         secs = round(time.monotonic() - t0, 2)
         failed = score(case, got, time.time())
         results.append({"id": case["id"], "pass": not failed, "failed": failed, "seconds": secs,

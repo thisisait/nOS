@@ -36,8 +36,8 @@
     says_cannot_see: true
     no_proposal: true
     not_blank: true
-- id: expenses-pie
-  prompt: Show my expenses by kind as a pie chart.
+- id: roadmap-status-pie
+  prompt: Show the roadmap rows by status as a pie chart.
   checks:
     tools_called: [show]
     kinds_drawn: ["chart:pie"]
@@ -81,6 +81,7 @@
 # ── Long context: one fact at the start, ~12k words of filler, a question at the end ──
 - id: long-context-cs
   pad: {fact: "Kódové slovo pro dnešek je MODRÁ-ŽIRAFA.", words: 12000}
+  timeout: 900   # no line arrives while the model reads ~16k tokens
   prompt: Jaké bylo kódové slovo pro dnešek? Odpověz jen tím slovem.
   checks:
     text_contains: MODRÁ-ŽIRAFA
