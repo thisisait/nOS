@@ -1954,3 +1954,90 @@ fn genui_workspace_poc() {
         assert_eq!(e.2["trigger"], "table_changed", "{e:?}");
     }
 }
+
+// --- genui I6: a render the person may pin; a sourced chart draws KEAP's numbers, not the model's ---
+
+/// Every render of a turn as wire JSON: {component, pin?}.
+fn rendered(got: &[ToShell]) -> Vec<serde_json::Value> {
+    got.iter().filter(|m| matches!(m, ToShell::Render { .. })).map(|m| serde_json::to_value(m).unwrap()).collect()
+}
+
+#[test]
+fn a_query_rows_render_carries_its_args_as_a_rows_pin() {
+    let args = [r#"{"table": "sheet", "where": [{"column": "status", "op": "eq", "value": "open"}], "order_by": {"column": "amount", "dir": "desc"}, "columns": ["status", "amount"], "limit": 5}"#,
+                r#"{"table": "sheet", "group_by": "status"}"#];
+    let rig = rig_at("pinrows", mapped(), fake_table(SHEET, statuses()).0, vec![query(args[0]), query(args[1]), answer("x")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "open ones, and per status");
+    let pins: Vec<serde_json::Value> = rendered(&got).iter().map(|m| m["pin"].clone()).collect();
+    let want: Vec<serde_json::Value> = args.iter().map(|a| serde_json::json!({"rows": serde_json::from_str::<serde_json::Value>(a).unwrap()})).collect();
+    assert_eq!(pins, want, "the pin is exactly what a widget re-run sends, group_by included");
+}
+
+fn sourced(chart: &str, source: serde_json::Value) -> String {
+    call("show", &serde_json::json!({"component": {"kind": "chart", "props": {"title": "By status", "chart": chart, "x": "category",
+        "series": [{"name": "model", "points": [["open", 999]]}]}}, "source": source}).to_string())
+}
+
+#[test]
+fn a_sourced_chart_draws_keaps_aggregate_and_carries_a_chart_pin() {
+    let source = serde_json::json!({"query": {"table": "sheet"}, "x": "status", "op": "count"});
+    let rig = rig_at("pinchart", mapped(), fake_table(SHEET, statuses()).0,
+        vec![sourced("pie", source.clone()), answer("Drawn."), call("propose_row_edit", r#"{"table": "sheet", "row_id": "a", "values": {"amount": 4}}"#), answer("x")],
+        Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "chart per status");
+    let drawn = rendered(&got);
+    assert_eq!(drawn.len(), 1, "{got:?}");
+    let props = &drawn[0]["component"]["props"];
+    assert_eq!(points(props), pts(&[("open", 3.0), ("done", 1.0)]), "the model's 999 is replaced by KEAP's counts: {props}");
+    assert_eq!((&props["chart"], &props["title"]), (&serde_json::json!("pie"), &serde_json::json!("By status")), "{props}");
+    let mut want = source.clone();
+    want["chart"] = serde_json::json!("pie");
+    assert_eq!(drawn[0]["pin"], serde_json::json!({"chart": want}), "the pin is the source with the component's chart kind");
+    let told = tool_result(&rig, 1);
+    assert!(!told.to_string().contains("999"), "{told}");
+    // The model is told, in the prompt and the tool, to name the source of a chart of table rows.
+    assert!(system_prompt(&rig).contains("pass show's `source`"), "{}", system_prompt(&rig));
+    let offered = &serve::show_schema()["properties"]["source"];
+    assert_eq!(offered["required"], serde_json::json!(["query", "x", "op"]), "{offered}");
+    assert_eq!(offered["properties"]["op"]["enum"], serde_json::json!(["count", "sum", "avg"]), "{offered}");
+    // Recorded like a widget run, before and after; the model was asked once for the show.
+    let session = session_of(&got);
+    let ev: Vec<_> = events(&rig.ledger, &session).into_iter().filter(|e| e.1 == "agent:iris/tool:show_source").collect();
+    let kinds: Vec<&str> = ev.iter().map(|e| e.0.as_str()).collect();
+    assert_eq!(kinds, ["agent_tool_use", "agent_tool_result"], "{ev:?}");
+    assert_eq!((&ev[0].2["table"], &ev[0].2["op"]), (&serde_json::json!("sheet"), &serde_json::json!("count")), "{:?}", ev[0]);
+    // The aggregate read rows the model never saw: none of them may be proposed.
+    turn(&s, &mut r, Some(session), "set a to 4");
+    let e = tool_result(&rig, 2);
+    assert!(e["error"].as_str().is_some_and(|e| e.contains("was not shown to the person")), "{e}");
+    assert!(posts(&rig).is_empty());
+}
+
+#[test]
+fn a_chart_with_a_bad_source_is_refused_and_one_without_has_no_pin() {
+    let bad = [
+        (serde_json::json!({"query": {"table": "sheet"}, "x": "ghost", "op": "count"}), "pie", "no column `ghost`"),
+        (serde_json::json!({"query": {"table": "sheet"}, "x": "status", "op": "sum"}), "pie", "sum needs `y`"),
+        (serde_json::json!({"query": {"table": "sheet"}, "x": "status", "op": "count", "chart": "bar"}), "pie", "chart"),
+        (serde_json::json!({"query": {"table": "sheet"}, "x": "status", "op": "count"}), "scatter", "bar, line or pie"),
+    ];
+    let mut model: Vec<String> = bad.iter().map(|(s, c, _)| sourced(c, s.clone())).collect();
+    model.push(show(serde_json::json!({"kind": "chart", "props": {"chart": "bar", "x": "category", "series": [{"name": "m", "points": [["a", 1]]}]}})));
+    model.push(answer("done"));
+    let rig = rig_at("pinbad", mapped(), fake_table(SHEET, statuses()).0, model, Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "chart it");
+    for (i, (_, _, want)) in bad.iter().enumerate() {
+        let e = tool_result(&rig, i + 1);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "source #{i} must be refused naming {want}: {e}");
+    }
+    let drawn = rendered(&got);
+    assert_eq!(drawn.len(), 1, "only the unsourced chart is drawn: {got:?}");
+    assert!(drawn[0].get("pin").is_none(), "a chart without a source is a picture, not a pin: {}", drawn[0]);
+    assert_eq!(points(&drawn[0]["component"]["props"]), pts(&[("a", 1.0)]), "without a source the model's numbers are drawn");
+}
