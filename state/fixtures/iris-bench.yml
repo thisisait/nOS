@@ -8,10 +8,12 @@
     count_equals_matched: true
     no_proposal: true
     not_blank: true
+# Chart cases read the iris-bench table (tools/iris-bench.py --seed): a host's roadmap may be empty.
 - id: next-by-track
-  prompt: Show the next roadmap rows as a chart by track.
+  prompt: In the iris-bench table, show the rows with status next as a chart by track.
+  needs_rows: true
   checks:
-    tools_called: [query_rows, show]
+    tools_called: [list_tables, query_rows, show]
     kinds_drawn: [chart]
     no_number_without_source: true
     not_repeated: true
@@ -36,10 +38,11 @@
     says_cannot_see: true
     no_proposal: true
     not_blank: true
-- id: roadmap-status-pie
-  prompt: Show the roadmap rows by status as a pie chart.
+- id: status-pie
+  prompt: Show the iris-bench table's rows by status as a pie chart.
+  needs_rows: true
   checks:
-    tools_called: [show]
+    tools_called: [list_tables, show]
     kinds_drawn: ["chart:pie"]
     no_number_without_source: true
     not_repeated: true
@@ -69,8 +72,9 @@
     answers_in: cs
     not_blank: true
 - id: chain-cs
+  needs_rows: true
   turns:
-    - Kolik je v roadmapě řádků se statusem next?
+    - Kolik je v tabulce iris-bench řádků se statusem next?
     - Nakresli je jako graf podle tracku.
     - A je teď v estate něco červeně?
   checks:

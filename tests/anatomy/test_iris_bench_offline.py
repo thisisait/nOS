@@ -73,18 +73,18 @@ def _script(bad: bool) -> dict[str, list[dict]]:
     pts = [["agents", 5.0], ["pupil", 3.0], ["face", 2.0]]
     by = {
         "roadmap-count": [_turn(_tool("query_rows"), _results(40), _text("The roadmap has 41 rows." if bad else "The roadmap has 40 rows."))],
-        "next-by-track": [_turn(_tool("query_rows"), _results(10, [("agents", 5), ("pupil", 3), ("face", 2)]),
+        "next-by-track": [_turn(_tool("list_tables"), _tool("query_rows"), _results(10, [("agents", 5), ("pupil", 3), ("face", 2)]),
                                 _tool("show"), _chart("bar", pts, pinned=not bad), _text("Next rows by track, drawn above."))],
         "time-now": [_turn(_text(f"It is {now} UTC."))],
         "red-status": [_turn(_tool("red_status"), {"t": "render", "session": SID, "component": {"kind": "red_status", "props": {
             "red_count": 1, "reds": ["pulse job failed"], "hold_count": 0, "holds": []}}}, _text("One red: a pulse job."))],
         "unread-mail": [_turn(_text("I cannot see your mail from here; no tool reads it."))],
-        "roadmap-status-pie": [_turn(_tool("show"), _chart("pie", [["next", 12.0], ["shipped", 30.0]]), _text("The roadmap by status, above."))],
+        "status-pie": [_turn(_tool("list_tables"), _tool("show"), _chart("pie", [["next", 12.0], ["shipped", 30.0]]), _text("The iris-bench rows by status, above."))],
         "roadmap-count-cs": [_turn(_tool("query_rows"), _results(40),
                                    _text("Roadmap has 41 rows." if bad else "Roadmapa má přesně 40 řádků."))],
         "unread-mail-cs": [_turn(_text("E-maily odsud nevidím, žádný můj nástroj je nečte."))],
         "chain-cs": [
-            _turn(_tool("query_rows"), _results(10), _text("V roadmapě je 10 řádků se statusem next.")),
+            _turn(_tool("list_tables"), _tool("query_rows"), _results(10), _text("V tabulce iris-bench je 10 řádků se statusem next.")),
             _turn(_tool("show"), _chart("bar", pts), _text("Graf podle tracku je nahoře.")),
             _turn(_tool("red_status"), _text("Teď je červená jedna věc: pulse job.")),
         ],
@@ -297,3 +297,28 @@ def test_a_case_may_wait_longer_than_the_default():
     src = TOOL.read_text()
     assert 'run_case(case, sock, float(case.get("timeout", a.timeout)))' in src
     assert not [c for c in CASES if "expenses" in json.dumps(c)], "a case must read a table every estate has"
+    assert all("iris-bench" in json.dumps(c) for c in CASES if c.get("needs_rows")), "a data case reads the seeded table"
+
+
+def test_the_seed_is_fixed_and_charts_can_tell_tracks_apart():
+    """--seed (2026-10-14): one table every host can have, so chart cases do not depend on a roadmap."""
+    rows = _bench().seed_rows()
+    assert rows == _bench().seed_rows() and len(rows) == 24
+    assert {r["status"] for r in rows} == {"next", "queued", "shipped"}
+    nxt = {r["track"] for r in rows if r["status"] == "next"}
+    assert len(nxt) >= 3, "a chart by track needs several tracks with next rows"
+
+
+def test_seeding_writes_only_with_nos_live(tmp_path, monkeypatch):
+    monkeypatch.delenv("NOS_LIVE", raising=False)
+    assert _bench().main(["--seed"]) == 2
+
+
+def test_an_empty_table_is_no_data_not_a_failure():
+    """The client's roadmap was empty: every model 'failed' the chart cases by answering correctly."""
+    b, noon = _bench(), 1760443200.0
+    case = next(c for c in CASES if c["id"] == "next-by-track")
+    empty = _got("The table is empty.", tools=["list_tables", "query_rows"], renders=[_results(0)])
+    assert b.no_data(case, empty)
+    assert not b.no_data(case, _got("x", renders=[_results(4)]))
+    assert not b.no_data(next(c for c in CASES if c["id"] == "time-now"), empty), "only a needs_rows case"
