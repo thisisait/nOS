@@ -80,6 +80,19 @@ re-runs the widgets on the active tab that read that table; the rest go stale
 until their tab is shown. The whole path runs offline in
 `tests/anatomy/test_genui_workspace_poc.py` over `state/fixtures/genui-workspace-poc/`.
 
+With the list set, a client not on it (`tools/iris-bench.py`, any python socket client)
+gets a `refused` for its decision and no `idle`. A mis-set list admits nobody, so the role refuses it at render (a string, an empty,
+relative or `:` entry, or a path that names no file once the pupil is built) and serve warns
+at start (`serve::deciders`).
+
+What path identity cannot stop: anything that runs code inside a listed binary. Both are
+signed with the local identity but without the hardened runtime (`codesign --options
+runtime`), so `DYLD_INSERT_LIBRARIES` or a debugger attach by the same user still decides
+as the pupil, and so does whoever can replace the file at a listed path. The list stops
+another program from sending a decision; it is not a defence against code running as you.
+Turning the hardened runtime on is an open operator decision (it must be tried live against
+the pupil's webview first).
+
 ## The model
 
 `serve` binds iris at start as `BindingResolver.php` does (`src/binding.rs`).
