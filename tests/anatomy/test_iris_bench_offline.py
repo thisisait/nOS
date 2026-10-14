@@ -98,7 +98,8 @@ def _script(bad: bool) -> dict[str, list[dict]]:
 
 
 class Fake:
-    def __init__(self, script):
+    def __init__(self, script, refuse_decisions=False):
+        self.refuse_decisions = refuse_decisions
         self.dir = tempfile.mkdtemp(prefix="ib", dir="/tmp")
         self.path = os.path.join(self.dir, "t.sock")
         self.script, self.seen, self.connections = script, [], 0
@@ -125,6 +126,9 @@ class Fake:
             self.seen.append(m)
             if m["t"] == "turn":
                 lines = self.script[m["text"]]
+            elif m["t"] == "approval_decision" and self.refuse_decisions:
+                # serve with thalamus_decider_exes set: a python client is no listed decider; no idle follows.
+                lines = [{"t": "refused", "reason": "/usr/bin/python3 is not a listed decider (thalamus_decider_exes)"}]
             elif m["t"] == "approval_decision":
                 lines = [_text("Rejected: nothing was written."), _idle()]
             else:
@@ -172,6 +176,23 @@ def test_a_bad_run_fails_exactly_the_broken_checks_and_rejects(tmp_path):
     # The answer is the turn's own text, not the fake's reply to the reject decision.
     assert [c["text"] for c in res["cases"] if c["id"] == "no-probe"] == ["iris-live-bench is next, in the agents track."]
     assert not [m for m in fake.seen if m["t"] in ("form_submit", "widget")]
+
+
+def test_a_refused_decision_ends_the_wait(tmp_path):
+    """Row thalamus-decider-guard-followups: with the decider guard on, serve answers the bench's
+    reject with `refused` and no idle; the case ends there, recorded, not on the read timeout."""
+    case = next(c for c in CASES if c["id"] == "no-probe")
+    fake = Fake(_script(bad=True), refuse_decisions=True)
+    try:
+        t0 = time.monotonic()
+        got = _bench().run_case(case, fake.path, 3.0)
+        took = time.monotonic() - t0
+    finally:
+        fake.close()
+    assert got["error"] is None, got["error"]
+    assert took < 2.5, f"the case waited {took:.1f} s for an idle that never comes"
+    assert got["approvals"] == [AID] and any("decider" in r for r in got["refused"]), got
+    assert got["text"] == "iris-live-bench is next, in the agents track."
 
 
 def test_it_refuses_without_nos_live_and_never_connects(tmp_path):

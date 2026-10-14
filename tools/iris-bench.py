@@ -4,7 +4,8 @@
 Each case in state/fixtures/iris-bench.yml (one `prompt`, or `turns` in one
 session) goes to the thalamus socket as ToThalamus turn messages; the ToShell
 lines that come back are the whole evidence. A turn ends on activity `idle`
-(serve sends one after every turn, however it ended, and one after a decision).
+(serve sends one after every turn, however it ended, and one after a decision);
+a decision serve refuses (thalamus_decider_exes set) ends on `refused` instead.
 
 It only reads. Every approval_request is rejected with the decision the pupil
 sends for reject, so nothing is written; it never sends form_submit or widget,
@@ -84,6 +85,9 @@ def run_case(case: dict, sock: str, timeout: float) -> dict:
                     answer = m.get("text", "")
                 elif t == "refused":
                     got["refused"].append(m.get("reason"))
+                    # A refused decision (decider guard on: this client is not listed) gets no idle.
+                    if want > 1:
+                        want -= 1
             got["text"] = answer
     except (OSError, ValueError, ConnectionError) as e:
         got["error"] = f"{type(e).__name__}: {e}"
