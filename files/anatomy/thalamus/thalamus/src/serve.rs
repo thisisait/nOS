@@ -6,7 +6,7 @@
 use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, RowOp, Session};
 use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, FieldKind, Form, FormField,
-                               InboxItem, InboxList, Omitted, RedStatus, Row, RowDiffApproval, Series, TableResults};
+                               InboxItem, InboxList, Omitted, RedStatus, Row, RowDiffApproval, Series, Table, TableResults};
 use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, Op, Phase, ToShell, ToThalamus, Trigger,
                          WidgetChart, WidgetSpec};
 use nos_contract::uid;
@@ -313,6 +313,9 @@ the person sees each changed cell old -> new and approves or rejects it. Nothing
 approve; you are told only that the proposal waits for them. Only for a change the person asked for in this \
 conversation, on a row query_rows showed them; never to count, test or look at a row — query_rows does that.";
 
+const LIST_TABLES: &str = "The DataTables the person can read in KEAP: each id and title. Renders a table to \
+the person. Call it before query_rows when the person names a table you do not have the id of.";
+
 const RED_STATUS: &str = "What is red on the estate right now, and what is on hold on purpose, from \
 tools/red-status.py run as the operator. Renders red_status to the person. Tier 1 only. If it cannot be read, \
 the state is UNKNOWN: say so, never zero and never green.";
@@ -456,6 +459,8 @@ fn tools() -> Value {
             "values": {"type": "object", "description": "column -> new value; null clears the cell"}}}}},
         {"type": "function", "function": {"name": "show", "description": SHOW, "parameters": show_schema()}},
         {"type": "function", "function": {"name": "red_status", "description": RED_STATUS,
+        "parameters": {"type": "object", "additionalProperties": false, "properties": {}}}},
+        {"type": "function", "function": {"name": "list_tables", "description": LIST_TABLES,
         "parameters": {"type": "object", "additionalProperties": false, "properties": {}}}}])
 }
 
@@ -582,7 +587,7 @@ rows of a DataTable call query_rows (its total is the exact count); propose_row_
 asked for, never to look at a row. To show structured output call show ({}); plain text may use markdown, \
 nothing else. To count per value (for a chart) call query_rows with \
 group_by; to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
-KEAP's and the person can pin the chart. For what is red or broken on the estate call red_status. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
+KEAP's and the person can pin the chart. To see which DataTables the person has, call list_tables, then query_rows with an id. For what is red or broken on the estate call red_status. When no tool can see what is asked, say so; never guess it. Say what you found in a line, and never \
 repeat in text what a tool or show already drew. Shape -> component: count per value -> chart with show `source` (op count); \
 many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree; links between things -> graph; who sends what to whom -> sequence; \
 what an action would change -> mark delta added|removed|changed on tree nodes, list items or record fields (was: the old value). \
@@ -881,6 +886,11 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                         };
                         let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
                         send(out, &ToShell::Render { session: o.session.clone(), component: c, pin });
+                        v
+                    }),
+                    "list_tables" => self.list_tables(who).map(|(table, v)| {
+                        let _ = self.record(o, Kind::ToolResult, Some(name), v.clone());
+                        send(out, &ToShell::Render { session: o.session.clone(), component: Component::Table(table), pin: None });
                         v
                     }),
                     "red_status" => self.red(who).map_err(|why| format!("{why}; the estate's red state is UNKNOWN, not zero"))
@@ -1237,6 +1247,19 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     }
 
     /// A control view, raised by the person; the model is not asked and does not see it.
+    /// GET /api/tables as the person: what they may read, never the owner's view of anyone else's.
+    fn list_tables(&self, who: &Person) -> Result<(Table, Value), String> {
+        let v = self.keap(who, &format!("{}/api/tables", self.keap_url.trim_end_matches('/')), None)?;
+        let all = v.get("data").and_then(Value::as_array).ok_or("KEAP answered no table list")?;
+        let rows: Vec<(String, String)> = all.iter().take(100).filter_map(|t| {
+            let id = t.get("id").and_then(Value::as_str)?;
+            Some((id.to_string(), t.get("title").and_then(Value::as_str).unwrap_or(id).to_string()))
+        }).collect();
+        let table = Table { title: Some("DataTables".into()), columns: vec!["title".into(), "id".into()],
+                            rows: rows.iter().map(|(id, t)| vec![json!(t), json!(id)]).collect() };
+        Ok((table, json!({"tables": rows.iter().map(|(id, t)| json!({"id": id, "title": t})).collect::<Vec<_>>()})))
+    }
+
     /// red-status.py as the operator: the F4 control and Iris's red_status tool read it the same way.
     fn red(&self, who: &Person) -> Result<RedStatus, String> {
         if !who.groups.iter().any(|g| self.tier1.contains(g)) {

@@ -2736,7 +2736,7 @@ fn list_tables_names_the_tables_the_person_can_read() {
     assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::Table(x), .. } if x.rows.len() == 2)), "{got:?}");
     assert!(system_prompt(&rig).contains("call list_tables"), "{}", system_prompt(&rig));
     let keap = rig.keap.lock().unwrap();
-    assert!(keap[0].0.ends_with("/api/tables"), "{:?}", keap[0].0);
+    assert!(keap[0].0.starts_with("GET /api/tables "), "{:?}", keap[0].0);
 }
 
 #[test]
