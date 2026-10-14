@@ -390,3 +390,20 @@ def test_the_cell_backend_choice_rides_the_binding_env():
     assert _default_config()["iris_backend"] == ""
     assert _plist(iris_backend="ollama")["EnvironmentVariables"]["NOS_CELL_BACKEND"] == "ollama"
     assert _plist(iris_backend="")["EnvironmentVariables"]["NOS_CELL_BACKEND"] == ""
+
+
+def test_a_host_without_rustup_gets_a_toolchain_before_the_build():
+    """Live 2026-10-14, a fresh client: ~/.cargo/bin/cargo did not exist (rustup never installed), so the
+    build died with 'No such file or directory'. The role finds cargo or installs Homebrew's rust first."""
+    tasks = yaml.safe_load((ROLE / "tasks" / "main.yml").read_text())
+    names = [t.get("name", "").lower() for t in tasks]
+    find = next(i for i, n in enumerate(names) if "find a rust toolchain" in n)
+    brew = next(i for i, n in enumerate(names) if "install homebrew's rust" in n)
+    build = names.index("[pazny.thalamus] install thalamus binary")
+    assert find < brew < build, (find, brew, build)
+    t = tasks[brew]
+    mod = t.get("community.general.homebrew") or t.get("homebrew")
+    assert mod and mod["name"] in ("rust", ["rust"]) and mod.get("state", "present") == "present", t
+    assert "_thalamus_cargo_stat" in str(t["when"]), "brew installs rust only when cargo is missing"
+    fact = next(x for x in tasks if "use homebrew's cargo" in x.get("name", "").lower())
+    assert fact["ansible.builtin.set_fact"]["thalamus_cargo"] == "{{ homebrew_prefix }}/bin/cargo"
