@@ -1044,7 +1044,7 @@ fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
     assert!(p.contains("propose_row_edit only for a change the person asked for, never to look at a row"), "{p}");
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
-    assert_eq!(names, ["query_rows", "propose_row_edit", "show"]);
+    assert_eq!(names, ["query_rows", "propose_row_edit", "show", "red_status"]);
     assert!(p.contains(&format!("To show structured output call show ({})", serve::SHOW_KINDS.join(", "))), "{p}");
     assert_eq!(body["tools"][0]["function"]["parameters"]["required"], serde_json::json!(["table"]), "q is optional");
 }
@@ -2348,4 +2348,48 @@ fn the_prompt_asks_only_at_a_fork_and_never_for_a_write() {
     }
     let shape = serve::SHOW_SHAPE.iter().find(|(k, _)| *k == "choice").map(|(_, s)| *s).unwrap_or("");
     assert!(shape.contains("options[{label, note?}]") && shape.contains("suggested[]"), "{shape}");
+}
+
+// --- live 2026-10-13: asked for red status, Iris had no tool and counted roadmap rows instead ---
+
+const RED: &str = r#"import json
+print(json.dumps({"sources_read": ["x"], "red_count": 1, "reds": ["pulse job failed"], "hold_count": 0, "holds": []}))
+"#;
+
+#[test]
+fn iris_reads_red_status_through_the_same_reader() {
+    let rig = rig_n("ired", admin(), vec![], vec![call("red_status", "{}"), answer("One red: a pulse job.")]);
+    reader(&rig, "red-status.py", RED);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "kolik máme red statusů?");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::RedStatus(x), .. } if x.red_count == 1)), "{got:?}");
+    let t = tool_result(&rig, 1);
+    assert_eq!((&t["red_count"], &t["reds"][0]), (&serde_json::json!(1), &serde_json::json!("pulse job failed")), "{t}");
+    assert!(system_prompt(&rig).contains("call red_status"), "{}", system_prompt(&rig));
+}
+
+#[test]
+fn an_unreadable_red_status_is_unknown_never_zero() {
+    for (name, py) in [("exit", "import sys; sys.exit(3)"), ("garbage", "print('not json')")] {
+        let rig = rig_n(name, admin(), vec![], vec![call("red_status", "{}"), answer("x")]);
+        reader(&rig, "red-status.py", py);
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let got = turn(&s, &mut r, None, "is anything red?");
+        assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::RedStatus(_), .. })), "{name}: drew a red status it could not read");
+        let e = tool_result(&rig, 1);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains("UNKNOWN")), "{name}: {e}");
+    }
+}
+
+#[test]
+fn red_status_for_iris_is_tier_one_only() {
+    let rig = rig_n("ired-tier", mapped(), vec![], vec![call("red_status", "{}"), answer("x")]);
+    reader(&rig, "red-status.py", RED);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "red?");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::RedStatus(_), .. })), "{got:?}");
+    assert!(tool_result(&rig, 1)["error"].as_str().is_some_and(|e| e.contains("not yours to see")));
 }
