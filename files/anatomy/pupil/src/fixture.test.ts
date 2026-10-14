@@ -25,6 +25,7 @@ const PROPS: Record<string, string[]> = {
 	tree: ['nodes', 'title'],
 	timeline: ['items', 'title'],
 	graph: ['edges', 'nodes', 'title'],
+	sequence: ['participants', 'steps', 'title'],
 	form: ['fields', 'form', 'omitted', 'table', 'title'],
 	choice: ['id', 'multi', 'options', 'question', 'suggested'],
 };
@@ -382,5 +383,18 @@ describe('a graph is SVG nodes and edges, every word as text', () => {
 		expect(labels).toEqual(g.nodes.map((n) => n.label));
 		expect(h.match(/<path[^>]*class="edge/g)?.length).toBe(g.edges.length);
 		for (const e of g.edges) if (e.label) expect(text(h)).toContain(e.label);
+	});
+});
+
+describe('a sequence is SVG lifelines and arrows, every word as text', () => {
+	const sample = fx.to_shell.find((c) => 'component' in c.msg && c.msg.component.kind === 'sequence')!.msg;
+	const q = ((sample as Extract<ToShell, { t: 'render' }>).component as Extract<Component, { kind: 'sequence' }>).props;
+
+	it('a <text> per participant and step, a <path> per message', () => {
+		const h = html(sample);
+		const drawn = [...h.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map((m) => text(m[1]).trim());
+		for (const p of q.participants) expect(drawn).toContain(p);
+		for (const s of q.steps) expect(drawn).toContain('text' in s ? s.text : 'note' in s ? s.note : s.phase);
+		expect(h.match(/<path[^>]*class="msg/g)?.length).toBe(q.steps.filter((s) => 'from' in s).length);
 	});
 });
