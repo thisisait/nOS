@@ -919,7 +919,11 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         if !model.auth_token.is_empty() {
             req = req.header("Authorization", &format!("Bearer {}", model.auth_token));
         }
-        let body = json!({"model": model.model_id, "messages": o.messages, "tools": tools()});
+        let mut body = json!({"model": model.model_id, "messages": o.messages, "tools": tools()});
+        // Ollama maps "none" to think:false; a cloud row is left alone, it may refuse an unknown field.
+        if model.local {
+            body["reasoning_effort"] = json!("none");
+        }
         let mut r = req.send_json(&body).map_err(|e| format!("model unreachable: {e}"))?;
         let status = r.status().as_u16();
         let v: Value = r.body_mut().read_json().map_err(|e| format!("model answered {status} with no JSON: {e}"))?;
