@@ -1,0 +1,124 @@
+"""The pupil on the host: pazny.thalamus builds it, installs it at one fixed path, signs it.
+
+Roadmap row pupil-build-role. Today the pupil runs from `npm run dev` in the repo, so there is no
+path a peer check could name. thalamus_pupil_exe is that path; row thalamus-pupil-peer-exe
+enforces it in serve. Offline: the tasks are parsed, the source hash script is run on this tree.
+"""
+from __future__ import annotations
+
+import json
+import pathlib
+import re
+import shlex
+import subprocess
+import sys
+
+import jinja2
+import yaml
+
+REPO = pathlib.Path(__file__).resolve().parents[2]
+ROLE = REPO / "roles" / "pazny.thalamus"
+PUPIL = REPO / "files" / "anatomy" / "pupil"
+
+
+def _pupil() -> list[dict]:
+    return yaml.safe_load((ROLE / "tasks" / "pupil.yml").read_text())
+
+
+def _task(needle: str) -> dict:
+    return next(t for t in _pupil() if needle in t.get("name", "").lower())
+
+
+def _defaults() -> dict:
+    return yaml.safe_load((ROLE / "defaults" / "main.yml").read_text())
+
+
+def _render(text: str, **ctx) -> str:
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    env.filters["quote"] = shlex.quote
+    return env.from_string(text).render(**ctx)
+
+
+def test_the_role_reaches_the_pupil_statically_after_the_thalamus_is_signed():
+    """import_tasks, not include_tasks: --tags thalamus reaches a static import, not a dynamic one."""
+    main = yaml.safe_load((ROLE / "tasks" / "main.yml").read_text())
+    names = [t.get("name", "").lower() for t in main]
+    at = next(i for i, t in enumerate(main) if t.get("ansible.builtin.import_tasks") == "pupil.yml")
+    assert names.index("[pazny.thalamus] sign the binary with it (same identity every build)") < at, \
+        "the pupil is signed with the identity minted above it"
+    assert main[0]["ansible.builtin.fail"] and "launchd" in str(main[0]["when"]), \
+        "Linux is refused before the pupil (no systemd unit, no codesign): the stated skip"
+
+
+def test_the_install_path_is_fixed_in_role_defaults_only():
+    """The path thalamus-pupil-peer-exe enforces: one place, never a knob in the default layers."""
+    d = _defaults()
+    assert d["thalamus_pupil_exe"] == "{{ thalamus_home }}/bin/nos-pupil"
+    assert _render(d["thalamus_pupil_exe"], thalamus_home="/h/thalamus") == "/h/thalamus/bin/nos-pupil"
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity
+    layered = [p.name for p in nos_identity.default_layers() if "thalamus_pupil_exe" in p.read_text()]
+    assert not layered, f"thalamus_pupil_exe is declared in {layered}"
+    build = _task("install the pupil binary")["ansible.builtin.shell"]
+    assert re.search(r"install -m 0755 \S+/release/nos-pupil\" \{\{ thalamus_pupil_exe \| quote \}\}", build), build
+
+
+def test_the_build_ignores_npm_scripts_and_builds_the_locked_release():
+    sh = _task("install the pupil binary")["ansible.builtin.shell"]
+    assert "npm ci --ignore-scripts" in sh, "a dependency's install script runs on the host"
+    assert "--release" in sh and "--locked" in sh and "CARGO_TARGET_DIR" in sh, sh
+    # Without custom-protocol tauri builds cfg(dev): no embedded frontend, a dev binary.
+    assert "--features tauri/custom-protocol" in sh, sh
+    assert sh.index("npm ci") < sh.index("npm run build") < sh.index("build --release"), \
+        "cargo embeds ../dist, so the frontend is built first"
+
+
+def test_the_build_is_skipped_when_the_source_is_unchanged():
+    build = _task("install the pupil binary")
+    assert build["when"] == "_pupil_src_sha.stdout != (_pupil_built_sha.stdout | default(''))", build["when"]
+    record = _task("record the hash the pupil was built from")
+    assert record["ansible.builtin.copy"]["dest"] == "{{ thalamus_pupil_exe }}.source-sha256"
+    assert record["when"] == "_pupil_build is not skipped"
+    read = _task("read the hash the pupil was built from")
+    assert "{{ thalamus_pupil_exe }}.source-sha256" in read["ansible.builtin.command"]
+
+
+def test_the_source_hash_covers_the_frontend_the_bridge_and_the_contract():
+    """Run the hash script on this tree: it must answer, and see the path dep and the lock."""
+    sh = _task("hash the pupil source")["ansible.builtin.shell"]
+    for part in ("src", "package-lock.json", "src-tauri/src", "src-tauri/Cargo.lock",
+                 "src-tauri/tauri.conf.json", "../thalamus/contract/src"):
+        assert f" {part}" in sh, f"{part} can change without a rebuild"
+    out = subprocess.run(["/bin/bash", "-c", _render(sh, playbook_dir=str(REPO))],
+                         capture_output=True, text=True, check=True).stdout.strip()
+    assert re.fullmatch(r"[0-9a-f]{64}", out), out
+
+
+def test_the_pupil_is_signed_with_the_identity_and_its_own_identifier():
+    sign = _task("sign the pupil")
+    sh = sign["ansible.builtin.shell"]
+    assert "codesign -f -s \"$H\"" in sh and "-s -" not in sh, "ad-hoc (-s -) keeps the cdhash DR"
+    assert "_thalamus_signing.stdout_lines[-1]" in sh, "a second identity, not the one thalamus uses"
+    assert "-i {{ thalamus_pupil_identifier | quote }}" in sh
+    conf = json.loads((PUPIL / "src-tauri" / "tauri.conf.json").read_text())
+    assert _defaults()["thalamus_pupil_identifier"] == conf["identifier"] == "eu.thisisait.nos.pupil"
+    assert _defaults()["thalamus_pupil_identifier"] != _defaults()["thalamus_launchd_label"]
+    assert "_thalamus_signing" in sign["when"], "--check mints nothing, so there is nothing to sign with"
+
+
+def test_build_then_sign_then_record_then_verify():
+    names = [t.get("name", "").lower() for t in _pupil()]
+    order = ["install the pupil binary", "sign the pupil", "record the installed pupil's sha256", "verify"]
+    at = [next(i for i, n in enumerate(names) if o in n) for o in order]
+    assert at == sorted(at), dict(zip(order, at))
+
+
+def test_verify_reads_the_installed_binary():
+    """The effect: the hash of the file at the fixed path, and the signature on it — not the build's word."""
+    v = _task("verify")
+    assert "verify" in v["tags"] and v["changed_when"] is False
+    sh = v["ansible.builtin.shell"]
+    assert "shasum -a 256 {{ thalamus_pupil_exe | quote }}" in sh, sh
+    assert "codesign --verify" in sh and "thalamus_pupil_identifier" in sh, sh
+    rec = _task("record the installed pupil's sha256")["ansible.builtin.shell"]
+    assert "shasum -a 256 {{ thalamus_pupil_exe | quote }}" in rec and ".sha256" in rec
