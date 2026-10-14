@@ -2552,6 +2552,8 @@ fn refusals(rig: &Rig, session: &str, tool: &str) -> Vec<serde_json::Value> {
     got
 }
 
+/// macOS only: these admit a listed exe, and off macOS serve refuses every decider (below).
+#[cfg(target_os = "macos")]
 #[test]
 fn a_decider_refusal_needs_a_listed_resolvable_exe_and_none_when_off() {
     let me = std::env::current_exe().unwrap();
@@ -2588,6 +2590,8 @@ fn a_decider_list_that_admits_nobody_is_said_at_start() {
     assert_eq!(serve::deciders(&format!(":{mine}")).0, vec![me], "the list itself is as before");
 }
 
+/// macOS only: these admit a listed exe, and off macOS serve refuses every decider (below).
+#[cfg(target_os = "macos")]
 #[test]
 fn an_unlisted_decider_is_refused_and_the_approval_still_waits() {
     let link = decider_link("adecide");
@@ -2614,6 +2618,8 @@ fn an_unlisted_decider_is_refused_and_the_approval_still_waits() {
     assert_eq!(decisions, 1, "the refused decision is no decision row");
 }
 
+/// macOS only: these admit a listed exe, and off macOS serve refuses every decider (below).
+#[cfg(target_os = "macos")]
 #[test]
 fn an_unlisted_decider_cannot_submit_a_form_or_answer_a_choice() {
     let link = decider_link("fdecide");
@@ -2659,6 +2665,8 @@ fn an_unlisted_decider_cannot_submit_a_form_or_answer_a_choice() {
     assert_eq!(refusals(&rig, &session, "choice_reply").len(), 1);
 }
 
+/// macOS only: these admit a listed exe, and off macOS serve refuses every decider (below).
+#[cfg(target_os = "macos")]
 #[test]
 fn a_decider_path_is_taken_as_the_kernel_reported_it() {
     // The exe string was read earlier; a symlink swapped into it since must not make it a listed file.
@@ -2669,6 +2677,23 @@ fn a_decider_path_is_taken_as_the_kernel_reported_it() {
     let stale = d.join("own/nos-pupil");
     assert!(serve::decider_refusal(&[d.join("listed/nos-pupil")], stale.to_str()).is_some(), "a stale path resolved onto a listed file");
     assert_eq!(serve::decider_refusal(&[d.join("own/nos-pupil")], d.join("listed/nos-pupil").to_str()), None, "a listed symlink names its target");
+}
+
+/// Off macOS the kernel names only the connector, so even a listed, resolvable exe is refused.
+#[cfg(not(target_os = "macos"))]
+#[test]
+fn off_macos_a_listed_decider_is_refused_too() {
+    let me = std::env::current_exe().unwrap();
+    assert_eq!(serve::decider_refusal(&[], Some(me.to_str().unwrap())), None, "an empty list is off");
+    assert!(serve::decider_refusal(&[me.clone()], me.to_str()).is_some(), "a listed exe decided off macOS");
+    let rig = rig_deciders("linuxdecide", mapped(), fake(shown_then(&[ROWS, ROWS, POSTED])), edit_turn(), Some(local()), vec![me]);
+    let (s, mut r, _session, approval, _) = propose(&rig);
+    decide(&s, &approval, Decision::Approve);
+    match next(&mut r) {
+        Some(ToShell::Refused { reason, .. }) => assert!(reason.contains("decider"), "{reason}"),
+        other => panic!("a listed decider off macOS must be refused, got {other:?}"),
+    }
+    assert!(posts(&rig).is_empty(), "a decider off macOS wrote");
 }
 
 /// macOS: LOCAL_PEERPID names the process that last used the peer socket, so the sender is
