@@ -2748,3 +2748,22 @@ fn list_tables_says_when_keap_cannot_be_read() {
     turn(&s, &mut r, None, "tables?");
     assert!(tool_result(&rig, 1)["error"].as_str().is_some(), "{}", tool_result(&rig, 1));
 }
+
+
+#[test]
+fn a_local_model_is_asked_not_to_think_and_a_cloud_one_is_left_alone() {
+    // 2026-10-14: local models think by default; on a tool turn that costs seconds and breaks
+    // tool-call parsing (ollama issues 14645, 14745). Ollama maps reasoning_effort "none" to think:false.
+    let rig = rig("nothink", mapped(), ROWS, vec![answer("hi")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "hello");
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
+    assert_eq!(body["reasoning_effort"], "none", "{body}");
+    let rig = rig_full("think-cloud", mapped(), vec![ROWS.into()], vec![answer("hi")], Some(cloud()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "hello");
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
+    assert!(body.get("reasoning_effort").is_none(), "a cloud row may refuse an unknown field: {body}");
+}
