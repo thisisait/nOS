@@ -1,6 +1,8 @@
 // A widget form (renderers.rs Form), built by serve from the table's schema: the pupil draws its
 // own header and button, prefills nothing, and lets a submit go only when every required field
 // holds a value and no submit is in flight. Sending it is I5g; here it is the drawing and the rule.
+import { readFileSync } from 'node:fs';
+import { parse } from 'svelte/compiler';
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import Component from './Component.svelte';
@@ -100,5 +102,28 @@ describe('a form is drawn as native inputs under its own header', () => {
 		const h = render(Component, { props: { component: { kind: 'form', props: expenses } } }).body;
 		expect(h).not.toContain('no renderer for component kind');
 		expect(text(h)).toContain('Adds a row to Expenses (expenses)');
+	});
+});
+
+type Node = { type?: string; name?: string; [k: string]: unknown };
+/** Every node of `n` with its ancestors, outermost first. */
+function walk(n: unknown, up: Node[], out: [Node, Node[]][]) {
+	if (!n || typeof n !== 'object') return;
+	if (Array.isArray(n)) return n.forEach((x) => walk(x, up, out));
+	const node = n as Node;
+	if (node.type) out.push([node, up]);
+	for (const [k, v] of Object.entries(node)) if (k !== 'metadata' && k !== 'parent') walk(v, node.type ? [...up, node] : up, out);
+}
+
+describe('a written row clears the draft', () => {
+	it('Widget redraws its Form for each form_result, so one more click adds nothing', () => {
+		// I5 review: the draft outlived the insert, so a second click would add the same row again.
+		const ast = parse(readFileSync(new URL('./Widget.svelte', import.meta.url), 'utf8'), { modern: true }) as unknown as { fragment: unknown };
+		const all: [Node, Node[]][] = [];
+		walk(ast.fragment, [], all);
+		const forms = all.filter(([n]) => n.type === 'Component' && n.name === 'Form');
+		expect(forms.length).toBe(1);
+		const key = forms[0][1].filter((a) => a.type === 'KeyBlock').at(-1)?.expression as Node | undefined;
+		expect((key?.property as Node | undefined)?.name, 'Form is not keyed on state.added').toBe('added');
 	});
 });
