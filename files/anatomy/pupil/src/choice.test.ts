@@ -1,6 +1,8 @@
 // A choice Iris asks at a fork (renderers.rs Choice): native radios, or checkboxes when multi,
 // the suggestion preselected and marked "navrženo", every label a text node; "Odpovědět" sends
 // choice_reply once, with exactly the picked labels. Nothing is sent without that click.
+import { readFileSync } from 'node:fs';
+import { parse } from 'svelte/compiler';
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import Choice from './Choice.svelte';
@@ -95,5 +97,52 @@ describe('the message log routes a choice to its card', () => {
 		expect(h).not.toContain('no renderer for component kind');
 		expect(text(h)).toContain('Odpovědět');
 		expect(h).not.toContain('Připnout');
+	});
+});
+
+// SSR runs no effect, so 'drawing it sends nothing' above cannot see one; this reads the AST.
+type Node = { type?: string; name?: string; [k: string]: unknown };
+function walk(n: unknown, up: Node[], out: [Node, Node[]][]) {
+	if (!n || typeof n !== 'object') return;
+	if (Array.isArray(n)) return n.forEach((x) => walk(x, up, out));
+	const node = n as Node;
+	if (node.type) out.push([node, up]);
+	for (const [k, v] of Object.entries(node)) if (k !== 'metadata' && k !== 'parent') walk(v, node.type ? [...up, node] : up, out);
+}
+const nodes = (file: string) => {
+	const all: [Node, Node[]][] = [];
+	walk(parse(readFileSync(new URL(file, import.meta.url), 'utf8'), { modern: true }), [], all);
+	return all;
+};
+const declares = (name: string) => (a: Node) => a.type === 'VariableDeclarator' && (a.id as Node).name === name;
+const isProps = (a: Node) => a.type === 'VariableDeclarator' && ((a.init as Node)?.callee as Node)?.name === '$props';
+const uses = (all: [Node, Node[]][], name: string) => all.filter(([n, up]) => n.type === 'Identifier' && n.name === name && up.at(-1)?.id !== n);
+
+describe('nothing is sent without the click', () => {
+	it.each(['Choice.svelte', 'Message.svelte'])('%s runs no effect and no mount hook', (f) => {
+		const hooks = nodes(f).filter(([n]) => n.type === 'Identifier' && ['$effect', 'onMount', 'beforeUpdate', 'afterUpdate'].includes(n.name ?? ''));
+		expect(hooks.map(([n]) => n.name)).toEqual([]);
+	});
+
+	it('Choice: send is called only by the button click, and onreply only inside send', () => {
+		const all = nodes('Choice.svelte');
+		const sends = uses(all, 'send');
+		expect(sends.length).toBe(1);
+		for (const [, up] of sends) {
+			const at = up.findIndex((a) => a.type === 'Attribute' && a.name === 'onclick');
+			expect(at > 0 && up[at - 1].type === 'RegularElement' && up[at - 1].name === 'button', 'send outside a button onclick').toBe(true);
+		}
+		const replies = uses(all, 'onreply');
+		expect(replies.some(([, up]) => up.some(declares('send')))).toBe(true);
+		for (const [, up] of replies) expect(up.some(declares('send')) || up.some(isProps), 'onreply outside send').toBe(true);
+	});
+
+	it('Message: onchoose only reaches the Choice card as its onreply', () => {
+		const all = uses(nodes('Message.svelte'), 'onchoose');
+		expect(all.some(([, up]) => up.some((a) => a.type === 'Component' && a.name === 'Choice'))).toBe(true);
+		for (const [, up] of all) {
+			const at = up.findIndex((a) => a.type === 'Attribute' && a.name === 'onreply');
+			expect(up.some(isProps) || (at > 0 && up[at - 1].type === 'Component' && up[at - 1].name === 'Choice'), 'onchoose outside Choice').toBe(true);
+		}
 	});
 });
