@@ -407,3 +407,38 @@ def test_a_host_without_rustup_gets_a_toolchain_before_the_build():
     assert "_thalamus_cargo_stat" in str(t["when"]), "brew installs rust only when cargo is missing"
     fact = next(x for x in tasks if "use homebrew's cargo" in x.get("name", "").lower())
     assert fact["ansible.builtin.set_fact"]["thalamus_cargo"] == "{{ homebrew_prefix }}/bin/cargo"
+
+
+def _run_sign(tmp, task_yml, ctx):
+    """A sign task on a stub codesign that cannot reach the key, as over SSH (errSecInternalComponent)."""
+    import os
+    import shlex
+    import subprocess
+    bin_ = tmp / "stub"
+    bin_.mkdir()
+    (bin_ / "codesign").write_text("#!/bin/bash\n[ \"$1\" = -d ] && exit 0\n"
+                                   "echo \"$3: errSecInternalComponent\" >&2; exit 1\n")
+    (bin_ / "codesign").chmod(0o755)
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    env.filters["quote"] = shlex.quote
+    sh = env.from_string(task_yml["ansible.builtin.shell"]).render(**ctx)
+    return subprocess.run(["/bin/bash", "-c", sh], capture_output=True, text=True,
+                          env={**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}"})
+
+
+def test_a_sign_that_cannot_reach_the_key_says_the_one_command(tmp_path):
+    """Live 2026-10-14 on a client over SSH: codesign answered errSecInternalComponent — the key's partition
+    list never allowed codesign without the GUI prompt SSH cannot show. The task names the fix."""
+    tasks = yaml.safe_load((ROLE / "tasks" / "main.yml").read_text())
+    t = next(x for x in tasks if "sign the binary with it" in x.get("name", "").lower())
+    ctx = {"_thalamus_signing": {"stdout_lines": ["ABCDEF0123"]}, "thalamus_bin": str(tmp_path / "thalamus"),
+           "thalamus_launchd_label": "eu.thisisait.nos.thalamus", "thalamus_signing_keychain": "/k/login.keychain-db"}
+    r = _run_sign(tmp_path, t, ctx)
+    assert r.returncode != 0
+    assert "security set-key-partition-list -S apple-tool:,apple:,codesign: -s /k/login.keychain-db" in r.stderr, r.stderr
+    pupil = yaml.safe_load((ROLE / "tasks" / "pupil.yml").read_text())
+    p = next(x for x in pupil if "sign the pupil" in x.get("name", "").lower())
+    (tmp_path / "p").mkdir()
+    r = _run_sign(tmp_path / "p", p, {**ctx, "thalamus_pupil_app": str(tmp_path / "Iris.app"),
+                                      "thalamus_pupil_identifier": "eu.thisisait.nos.pupil"})
+    assert r.returncode != 0 and "set-key-partition-list" in r.stderr, r.stderr
