@@ -2172,3 +2172,179 @@ fn a_widget_spec_a_pin_would_fail_is_refused_with_the_pin_reason() {
         assert!(w["reason"].as_str().is_some_and(|r| r.contains(want)), "{spec}: {w}");
     }
 }
+
+// --- iris-genui-forms step 1: Iris asks at a fork; the answer comes back typed, as data ---
+
+fn ask(multi: bool) -> serde_json::Value {
+    let suggested = if multi { serde_json::json!(["todos", "expenses"]) } else { serde_json::json!(["todos"]) };
+    serde_json::json!({"kind": "choice", "props": {"question": "Which table should I chart?", "multi": multi, "suggested": suggested,
+        "options": [{"label": "todos", "note": "the open work"}, {"label": "expenses"}, {"label": "roadmap"}]}})
+}
+
+/// A turn whose model shows `multi`'s choice, then says a line; returns (stream, reader, session, choice id).
+fn asked_choice(rig: &Rig) -> (UnixStream, BufReader<UnixStream>, String, String) {
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "chart something");
+    let id = got.iter().find_map(|m| match m {
+        ToShell::Render { component: Component::Choice(c), pin: None, .. } => c.id.clone(),
+        _ => None,
+    }).unwrap_or_else(|| panic!("no choice was rendered with an id: {got:?}"));
+    assert!(nos_contract::wire::is_uuid(&id), "{id}");
+    (s, r, session_of(&got), id)
+}
+
+fn choose(s: &UnixStream, session: &str, choice: &str, picked: &[&str]) {
+    let m = ToThalamus::ChoiceReply { session: session.into(), choice: choice.into(), picked: picked.iter().map(|p| p.to_string()).collect() };
+    let mut w = s;
+    w.write_all(encode(&m).as_bytes()).unwrap();
+}
+
+/// The model's side: show the choice, say a line, then (after the reply) answer.
+fn choice_turns(multi: bool) -> Vec<String> {
+    vec![show(ask(multi)), answer("Which one?"), answer("Charting it.")]
+}
+
+#[test]
+fn a_choice_reply_reaches_the_model_as_data_and_iris_goes_on() {
+    let rig = rig("choice", mapped(), ROWS, choice_turns(false));
+    let (s, mut r, session, id) = asked_choice(&rig);
+    assert_eq!(tool_result(&rig, 1)["choice"], serde_json::json!(id), "the model hears the id serve minted");
+    choose(&s, &session, &id, &["expenses"]);
+    let got = until_text(&mut r);
+    assert_eq!(phases(&got), ["thinking", "text"], "the model's next turn runs: {got:?}");
+    assert!(matches!(got.last(), Some(ToShell::Text { text, .. }) if text == "Charting it."), "{got:?}");
+    assert!(matches!(raw(&mut r), Some(ToShell::Activity { phase: Phase::Idle, .. })));
+    let body = rig.model.lock().unwrap()[2].1.clone();
+    assert!(body.contains(&format!(r#"[thalamus] choice {id}: picked \"expenses\""#)), "{body}");
+    assert!(!body.contains("untouched"), "a changed pick is not the suggestion: {body}");
+}
+
+/// Untouched is not agreement: the model hears that the default was left as it was.
+#[test]
+fn a_suggestion_left_as_it_was_is_said_untouched() {
+    for (name, multi, picked, want) in [
+        ("untouched", false, vec!["todos"], r#"picked \"todos\"; the suggestion (\"todos\") was kept untouched"#),
+        ("untouched2", true, vec!["expenses", "todos"], r#"picked \"expenses\", \"todos\"; the suggestion (\"todos\", \"expenses\") was kept untouched"#),
+    ] {
+        let rig = rig(name, mapped(), ROWS, choice_turns(multi));
+        let (s, mut r, session, id) = asked_choice(&rig);
+        choose(&s, &session, &id, &picked);
+        until_text(&mut r);
+        let body = rig.model.lock().unwrap()[2].1.clone();
+        assert!(body.contains(&format!("[thalamus] choice {id}: {want}")), "{name}: {body}");
+    }
+}
+
+#[test]
+fn a_choice_reply_the_stored_choice_does_not_allow_is_refused_and_recorded() {
+    let unknown = "9f8e7d6c-5b4a-4c3d-8e2f-1a0b9c8d7e6f";
+    for (name, multi, choice, picked, want) in [
+        ("cunknown", false, Some(unknown), vec!["todos"], "no open choice"),
+        ("cnotoffered", false, None, vec!["promotions"], r#""promotions" is not an option of this choice"#),
+        ("ctwo", false, None, vec!["todos", "expenses"], "this choice takes one pick, not 2"),
+        ("cnone", true, None, vec![], "pick at least one option"),
+        ("ctwice", true, None, vec!["todos", "todos"], r#""todos" is picked twice"#),
+    ] {
+        let rig = rig(name, mapped(), ROWS, choice_turns(multi));
+        let (s, mut r, session, id) = asked_choice(&rig);
+        choose(&s, &session, choice.unwrap_or(&id), &picked);
+        match next(&mut r) {
+            Some(ToShell::Refused { reason, widget: None }) => assert!(reason.contains(want), "{name}: {reason}"),
+            other => panic!("{name}: the reply was not refused: {other:?}"),
+        }
+        assert_eq!(rig.model.lock().unwrap().len(), 2, "{name}: a refused reply asked the model");
+        let ev = events(&rig.ledger, &session);
+        let last = ev.last().unwrap();
+        assert_eq!((last.0.as_str(), last.1.as_str()), ("agent_tool_result", "agent:iris/tool:choice_reply"), "{name}: {ev:?}");
+        assert!(last.2["error"].as_str().is_some_and(|e| e.contains(want)), "{name}: {last:?}");
+    }
+}
+
+#[test]
+fn a_choice_is_answered_once() {
+    let rig = rig("conce", mapped(), ROWS, choice_turns(false));
+    let (s, mut r, session, id) = asked_choice(&rig);
+    choose(&s, &session, &id, &["roadmap"]);
+    until_text(&mut r);
+    choose(&s, &session, &id, &["todos"]);
+    assert!(matches!(next(&mut r), Some(ToShell::Refused { reason, .. }) if reason.contains("no open choice")));
+    assert_eq!(rig.model.lock().unwrap().len(), 3, "a closed choice asked the model again");
+}
+
+#[test]
+fn a_choice_reply_for_another_session_is_refused() {
+    let rig = rig("csession", mapped(), ROWS, choice_turns(false));
+    let (s, mut r, _, id) = asked_choice(&rig);
+    choose(&s, "9f8e7d6c-5b4a-4c3d-8e2f-1a0b9c8d7e6f", &id, &["todos"]);
+    assert!(matches!(next(&mut r), Some(ToShell::Refused { reason, .. }) if reason.contains("not this connection's open session")));
+}
+
+/// Ledger-first, and nothing but a label: no approval, no form, no widget, no write, no KEAP call.
+#[test]
+fn a_choice_reply_is_recorded_first_and_mints_nothing() {
+    let rig = rig("cnothing", mapped(), ROWS, choice_turns(false));
+    let (s, mut r, session, id) = asked_choice(&rig);
+    choose(&s, &session, &id, &["expenses"]);
+    let got = until_text(&mut r);
+    assert!(!got.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. } | ToShell::Widget { .. } | ToShell::FormResult { .. }
+        | ToShell::TableChanged { .. } | ToShell::Render { .. })), "{got:?}");
+    assert!(rig.keap.lock().unwrap().is_empty(), "a choice reached KEAP");
+    let ev = events(&rig.ledger, &session);
+    assert!(!ev.iter().any(|(t, _, _)| t.contains("approval")), "{ev:?}");
+    let at = |t: &str, task: &str| ev.iter().position(|e| e.0 == t && e.1 == task).unwrap_or_else(|| panic!("no {t} {task}: {ev:?}"));
+    let (used, result) = (at("agent_tool_use", "agent:iris/tool:choice_reply"), at("agent_tool_result", "agent:iris/tool:choice_reply"));
+    let said = ev.iter().rposition(|e| e.0 == "agent_message").unwrap();
+    assert!(used < result && result < said, "the reply is in the ledger before Iris answers: {ev:?}");
+    assert_eq!(ev[result].2, serde_json::json!({"choice": id, "picked": ["expenses"], "untouched": false}));
+    // The show's result names the id it minted, before the render went out.
+    assert!(ev.iter().any(|e| e.1 == "agent:iris/tool:show" && e.0 == "agent_tool_result" && e.2["choice"] == serde_json::json!(id)), "{ev:?}");
+}
+
+#[test]
+fn a_choice_reply_while_an_approval_waits_is_refused() {
+    let model = vec![query(r#"{"table": "todos", "q": "alpha"}"#), show(ask(false)), call("propose_row_edit", EDIT), answer("Proposed.")];
+    let rig = rig_n("cwaits", mapped(), shown_then(&[ROWS]), model);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "close alpha");
+    let id = got.iter().find_map(|m| match m { ToShell::Render { component: Component::Choice(c), .. } => c.id.clone(), _ => None }).unwrap();
+    assert!(got.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. })), "{got:?}");
+    choose(&s, &session_of(&got), &id, &["todos"]);
+    assert!(matches!(next(&mut r), Some(ToShell::Refused { reason, .. }) if reason.contains("an approval is waiting")));
+    assert_eq!(rig.model.lock().unwrap().len(), 4, "the reply ran the model while an approval waits");
+}
+
+#[test]
+fn the_model_sends_no_choice_id_and_holds_four_open_choices() {
+    let mut with_id = ask(false);
+    with_id["props"]["id"] = serde_json::json!("3c9e1d2f-4a5b-4c6d-8e7f-9a0b1c2d3e4f");
+    let mut model = vec![show(with_id)];
+    model.extend((0..5).map(|_| show(ask(false))));
+    model.push(answer("asked"));
+    let rig = rig("cfour", mapped(), ROWS, model);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "ask me");
+    assert!(tool_result(&rig, 1)["error"].as_str().is_some_and(|e| e.contains("`id` is minted by the thalamus")), "{}", tool_result(&rig, 1));
+    let ids: std::collections::HashSet<String> = got.iter().filter_map(|m| match m {
+        ToShell::Render { component: Component::Choice(c), .. } => c.id.clone(), _ => None }).collect();
+    assert_eq!(ids.len(), 4, "four choices, each its own id: {got:?}");
+    let fifth = tool_result(&rig, 6);
+    assert!(fifth["error"].as_str().is_some_and(|e| e.contains("this session holds 4 open choices")), "{fifth}");
+}
+
+#[test]
+fn the_prompt_asks_only_at_a_fork_and_never_for_a_write() {
+    let rig = rig("cprompt", mapped(), ROWS, vec![answer("hi")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "hello");
+    let p = system_prompt(&rig);
+    for line in ["show choice only at a fork that changes what you do next", "2-6 options", "mark your pick as suggested",
+                 "never for yes or no on a write: that is propose_row_edit's card"] {
+        assert!(p.contains(line), "prompt missing {line:?}:\n{p}");
+    }
+    let shape = serve::SHOW_SHAPE.iter().find(|(k, _)| *k == "choice").map(|(_, s)| *s).unwrap_or("");
+    assert!(shape.contains("options[{label, note?}]") && shape.contains("suggested[]"), "{shape}");
+}
