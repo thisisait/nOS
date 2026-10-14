@@ -288,3 +288,22 @@
     - pulse -> bone (jobs)
     - wing - -> keap
     - keap -> bone (recall)
+- id: choice-fork
+  kind: choice
+  component:
+    kind: choice
+    props:
+      question: Which table should I chart first?
+      options:
+        - label: todos
+          note: the open work
+        - label: expenses
+      suggested: [todos]
+      multi: false
+  expect:
+    - Which table should I chart first?
+    - "1. todos"
+    - the open work
+    - "(suggested)"
+    - "2. expenses"
+    - /choose

@@ -56,7 +56,7 @@ fn every_fixture_component_matches_its_snapshot() {
         kinds.push(kind);
     }
     kinds.sort();
-    assert_eq!(kinds, ["approvals_list", "chart", "graph", "inbox_list", "list", "markdown", "record", "red_status", "row_diff_approval", "table",
+    assert_eq!(kinds, ["approvals_list", "chart", "choice", "graph", "inbox_list", "list", "markdown", "record", "red_status", "row_diff_approval", "table",
                        "table_results", "timeline", "tree"],
                "one snapshot per component in the closed vocabulary");
 }
@@ -293,4 +293,53 @@ fn a_pinnable_render_is_one_muted_line() {
     let pinned: Vec<_> = app.lines.iter().filter(|l| l.to_string() == "(pinnable in the pupil)").collect();
     assert_eq!(pinned.len(), 2, "one line per pinned render, none for the table");
     assert!(pinned.iter().all(|l| l.style.fg == Some(ratatui::style::Color::DarkGray)), "{pinned:?}");
+}
+
+const CHOICE: &str = "3c9e1d2f-4a5b-4c6d-8e7f-9a0b1c2d3e4f";
+
+fn choice_app() -> App {
+    let mut app = App::default();
+    let (_, m) = fixture().into_iter().find(|(c, _)| c == "Iris asks at a fork").unwrap();
+    app.apply(m);
+    app
+}
+
+/// iris-genui-forms step 1: the terminal numbers the options, marks the suggestion, and
+/// answers with /choose; the reply names the choice and the labels, nothing else.
+#[test]
+fn a_choice_is_answered_by_its_number_once() {
+    let mut app = choice_app();
+    let shown = flat(&drawn(&app, 80, 24));
+    assert!(shown.contains("1. todos — the open work, by status (suggested)"), "{shown}");
+    assert!(shown.contains("/choose"), "{shown}");
+    for bad in ["/choose 9", "/choose 0", "/choose 1,2", "/choose x", "/choose"] {
+        assert_eq!(typed(&mut app, bad), None, "{bad} sent a reply");
+    }
+    assert_eq!(typed(&mut app, "/choose 2"),
+               Some(ToThalamus::ChoiceReply { session: SESSION.into(), choice: CHOICE.into(), picked: vec!["expenses".into()] }));
+    assert!(flat(&drawn(&app, 80, 24)).contains("you: expenses"));
+    assert_eq!(typed(&mut app, "/choose 1"), None, "a choice is answered once");
+    assert!(flat(&drawn(&app, 80, 24)).contains("no open choice"));
+}
+
+#[test]
+fn a_multi_choice_takes_several_numbers() {
+    let m = serde_json::json!({"t": "render", "session": SESSION, "component": {"kind": "choice", "props": {"id": CHOICE,
+        "question": "Which tracks?", "options": [{"label": "pupil"}, {"label": "thalamus"}, {"label": "keap"}],
+        "suggested": ["pupil", "thalamus"], "multi": true}}});
+    let mut app = App::default();
+    app.apply(decode_to_shell(&m.to_string()));
+    assert!(flat(&drawn(&app, 80, 24)).contains("2. thalamus (suggested)"));
+    assert_eq!(typed(&mut app, "/choose 1,1"), None, "a number twice");
+    assert_eq!(typed(&mut app, "/choose 1, 3"),
+               Some(ToThalamus::ChoiceReply { session: SESSION.into(), choice: CHOICE.into(), picked: vec!["pupil".into(), "keap".into()] }));
+}
+
+#[test]
+fn a_choice_waits_while_an_approval_does() {
+    let mut app = choice_app();
+    let (_, m) = fixture().into_iter().find(|(c, _)| c == "a row edit awaits approval").unwrap();
+    app.apply(m);
+    drawn(&app, 80, 24);
+    assert_eq!(typed(&mut app, "/choose 2"), None, "a reply went out while an approval waits");
 }
