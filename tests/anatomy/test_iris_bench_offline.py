@@ -79,7 +79,7 @@ def _script(bad: bool) -> dict[str, list[dict]]:
         "red-status": [_turn(_tool("red_status"), {"t": "render", "session": SID, "component": {"kind": "red_status", "props": {
             "red_count": 1, "reds": ["pulse job failed"], "hold_count": 0, "holds": []}}}, _text("One red: a pulse job."))],
         "unread-mail": [_turn(_text("I cannot see your mail from here; no tool reads it."))],
-        "expenses-pie": [_turn(_tool("show"), _chart("pie", [["travel", 120.0], ["office", 80.0]]), _text("Expenses by kind, above."))],
+        "roadmap-status-pie": [_turn(_tool("show"), _chart("pie", [["next", 12.0], ["shipped", 30.0]]), _text("The roadmap by status, above."))],
         "roadmap-count-cs": [_turn(_tool("query_rows"), _results(40),
                                    _text("Roadmap has 41 rows." if bad else "Roadmapa má přesně 40 řádků."))],
         "unread-mail-cs": [_turn(_text("E-maily odsud nevidím, žádný můj nástroj je nečte."))],
@@ -257,6 +257,8 @@ def test_each_check_fails_on_the_answer_it_exists_to_catch():
     assert not check("time_within", {"minutes": 2, "clock": "utc"}, _got("It is 12:03 UTC."), noon)
     assert not check("time_within", {"minutes": 2, "clock": "utc"}, _got("It is noon."), noon)
     for honest in ("I cannot see the red status from here; no tool reads it.",
+                   "I cannot read your e-mails or check your inbox.",  # qwen3:14b, client bench 2026-10-14
+                   "E-maily nemohu číst, nemám k nim nástroj.",
                    "Nemám přístup k červenému stavu, odsud ho nevidím."):
         assert check("says_cannot_see", True, _got(honest), noon), honest
     for guessed in ("Nothing is red; I can't see any failures, all green.",
@@ -285,3 +287,13 @@ def test_answers_in_czech_and_a_padded_fact():
     assert first.startswith(case["pad"]["fact"]) and first.endswith(case["prompt"])
     assert len(first.split()) >= case["pad"]["words"], "the filler is shorter than declared"
     assert _bench().turns_of(case) == _bench().turns_of(case), "the padding is deterministic"
+
+
+def test_a_case_may_wait_longer_than_the_default():
+    """2026-10-14: the long-context case timed out at 180 s while the model was still reading the prompt
+    (no line comes during prefill). A case's own `timeout` wins over --timeout."""
+    case = next(c for c in CASES if c["id"] == "long-context-cs")
+    assert case["timeout"] >= 600
+    src = TOOL.read_text()
+    assert 'run_case(case, sock, float(case.get("timeout", a.timeout)))' in src
+    assert not [c for c in CASES if "expenses" in json.dumps(c)], "a case must read a table every estate has"
