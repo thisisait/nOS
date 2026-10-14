@@ -2001,6 +2001,8 @@ fn a_sourced_chart_draws_keaps_aggregate_and_carries_a_chart_pin() {
     assert!(!told.to_string().contains("999"), "{told}");
     // The model is told, in the prompt and the tool, to name the source of a chart of table rows.
     assert!(system_prompt(&rig).contains("pass show's `source`"), "{}", system_prompt(&rig));
+    // The shape map must not send a count chart the unsourced way, or it cannot be pinned.
+    assert!(system_prompt(&rig).contains("count per value -> chart with show `source` (op count)"), "{}", system_prompt(&rig));
     let offered = &serve::show_schema()["properties"]["source"];
     assert_eq!(offered["required"], serde_json::json!(["query", "x", "op"]), "{offered}");
     assert_eq!(offered["properties"]["op"]["enum"], serde_json::json!(["count", "sum", "avg"]), "{offered}");
