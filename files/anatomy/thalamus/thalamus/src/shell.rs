@@ -32,8 +32,10 @@ pub struct App {
     pub pending: VecDeque<(String, Vec<Line<'static>>)>,
     /// Whether the last frame showed the whole first approval; y needs it.
     shown_whole: Cell<bool>,
-    /// Choices asked and not yet answered, with their session; /choose answers the latest.
-    choices: Vec<(String, Choice)>,
+    /// Choices asked and not yet answered, as (#n, session, choice); /choose answers the
+    /// latest, /choose #n that one. `asked` numbers them, never reused in a run.
+    choices: Vec<(usize, String, Choice)>,
+    asked: usize,
 }
 
 /// Hard-wraps to `w` columns, so no part of a value is ever cut off the screen.
@@ -278,7 +280,10 @@ impl App {
             ToShell::Render { session, component, pin } => {
                 self.lines.extend(component_lines(&component));
                 if let Component::Choice(c) = component {
-                    self.choices.push((session, c));
+                    self.asked += 1;
+                    let n = self.asked;
+                    self.lines.push(Line::styled(format!("  choice #{n}: /choose #{n} <number> answers this one"), Style::new().fg(Color::DarkGray)));
+                    self.choices.push((n, session, c));
                 }
                 // The workspace is the pupil's; here a pin is only said.
                 if pin.is_some() {
@@ -362,12 +367,26 @@ impl App {
 }
 
 impl App {
-    /// `/choose 2` (or `1,3` when multi) answers the latest open choice with those labels, once.
+    /// `/choose 2` (or `1,3` when multi) answers the latest open choice with those labels, once;
+    /// `/choose #1 2` answers choice #1.
     fn choose(&mut self, arg: &str) -> Option<ToThalamus> {
-        let Some((_, c)) = self.choices.last() else {
+        let (at, arg) = match arg.trim().strip_prefix('#') {
+            None => (self.choices.len().checked_sub(1), arg),
+            Some(rest) => {
+                let (n, arg) = rest.split_once(' ').unwrap_or((rest, ""));
+                let at = n.parse().ok().and_then(|n: usize| self.choices.iter().position(|x| x.0 == n));
+                if at.is_none() {
+                    self.lines.push(warn(format!("no open choice #{n}")));
+                    return None;
+                }
+                (at, arg)
+            }
+        };
+        let Some(at) = at else {
             self.lines.push(warn("no open choice to answer".into()));
             return None;
         };
+        let c = &self.choices[at].2;
         let n = c.options.len();
         let nums: Option<Vec<usize>> = arg.split(',').map(|x| x.trim().parse().ok().filter(|i| (1..=n).contains(i))).collect();
         let ok = nums.filter(|v| (v.len() == 1 || c.multi) && v.iter().enumerate().all(|(i, x)| !v[..i].contains(x)));
@@ -376,7 +395,7 @@ impl App {
             self.lines.push(warn(format!("not sent: /choose takes {how}")));
             return None;
         };
-        let (session, c) = self.choices.pop()?;
+        let (_, session, c) = self.choices.remove(at);
         let picked: Vec<String> = nums.iter().map(|i| c.options[i - 1].label.clone()).collect();
         self.lines.push(Line::styled(format!("you: {}", picked.join(", ")), Style::new().fg(Color::Cyan)));
         Some(ToThalamus::ChoiceReply { session, choice: c.id?, picked })

@@ -335,6 +335,28 @@ fn a_multi_choice_takes_several_numbers() {
                Some(ToThalamus::ChoiceReply { session: SESSION.into(), choice: CHOICE.into(), picked: vec!["pupil".into(), "keap".into()] }));
 }
 
+/// Up to four choices may be open: each is numbered, and /choose #n answers that one, not the latest.
+#[test]
+fn an_open_choice_is_answered_by_its_own_number() {
+    const OTHER: &str = "4d0f2e3a-5b6c-4d7e-8f90-a1b2c3d4e5f6";
+    let mut app = App::default();
+    for (id, q) in [(CHOICE, "Which table?"), (OTHER, "Which chart?")] {
+        let m = serde_json::json!({"t": "render", "session": SESSION, "component": {"kind": "choice", "props": {"id": id,
+            "question": q, "options": [{"label": "a"}, {"label": "b"}], "suggested": ["a"], "multi": false}}});
+        app.apply(decode_to_shell(&m.to_string()));
+    }
+    let shown = flat(&drawn(&app, 80, 24));
+    assert!(shown.contains("choice #1") && shown.contains("choice #2"), "{shown}");
+    for bad in ["/choose #3 1", "/choose #0 1", "/choose #x 1", "/choose #1", "/choose #1 3"] {
+        assert_eq!(typed(&mut app, bad), None, "{bad} sent a reply");
+    }
+    let reply = |choice: &str, l: &str| Some(ToThalamus::ChoiceReply { session: SESSION.into(), choice: choice.into(), picked: vec![l.into()] });
+    assert_eq!(typed(&mut app, "/choose #1 2"), reply(CHOICE, "b"), "#1 is the first asked, not the latest");
+    assert_eq!(typed(&mut app, "/choose #1 1"), None, "#1 is answered once");
+    assert!(flat(&drawn(&app, 80, 24)).contains("no open choice #1"));
+    assert_eq!(typed(&mut app, "/choose 1"), reply(OTHER, "a"), "a bare /choose still answers the latest");
+}
+
 #[test]
 fn a_choice_waits_while_an_approval_does() {
     let mut app = choice_app();
