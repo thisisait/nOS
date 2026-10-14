@@ -2041,3 +2041,36 @@ fn a_chart_with_a_bad_source_is_refused_and_one_without_has_no_pin() {
     assert!(drawn[0].get("pin").is_none(), "a chart without a source is a picture, not a pin: {}", drawn[0]);
     assert_eq!(points(&drawn[0]["component"]["props"]), pts(&[("a", 1.0)]), "without a source the model's numbers are drawn");
 }
+
+/// A source that is not an object is refused, and the turn goes on: it used to panic serve's
+/// connection thread, so the show had no result and the session never ended.
+#[test]
+fn a_source_that_is_not_an_object_is_refused_and_the_turn_ends() {
+    // A string (a double-encoded object too), a number, an array, a bool.
+    let bad = [serde_json::json!(r#"{"query": {"table": "sheet"}, "x": "status", "op": "count"}"#), serde_json::json!(7),
+               serde_json::json!(["sheet"]), serde_json::json!(true)];
+    let mut model: Vec<String> = bad.iter().map(|s| sourced("pie", s.clone())).collect();
+    model.push(answer("done"));
+    let rig = rig_at("pinnotobj", mapped(), fake_table(SHEET, statuses()).0, model, Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "chart it");
+    for i in 0..bad.len() {
+        let e = tool_result(&rig, i + 1);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains("is an object")), "source #{i} must be refused: {e}");
+    }
+    assert!(rendered(&got).is_empty(), "{got:?}");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Text { text, .. } if text == "done")), "the turn ends: {got:?}");
+}
+
+/// A pin and a widget refuse one spec alike: serve::widget runs the pin's check_spec first (I6).
+#[test]
+fn a_widget_spec_a_pin_would_fail_is_refused_with_the_pin_reason() {
+    let rig = sheet_rig("wspec", statuses());
+    for (spec, want) in [(serde_json::json!({"rows": {"q": "x"}}), "names no table"),
+                         (serde_json::json!({"chart": {"query": {"table": ""}, "chart": "pie", "x": "status", "op": "count"}}), "names no table")] {
+        let (_, w) = run_widget(&rig, "w1", spec.clone());
+        assert_eq!((&w["t"], &w["widget"]), (&serde_json::json!("refused"), &serde_json::json!("w1")), "{spec}: {w}");
+        assert!(w["reason"].as_str().is_some_and(|r| r.contains(want)), "{spec}: {w}");
+    }
+}
