@@ -23,6 +23,7 @@ pub enum Component {
     Timeline(Timeline),
     Graph(Graph),
     Form(Form),
+    Choice(Choice),
 }
 
 /// Model text as markdown; every consumer draws it as text nodes, never as HTML.
@@ -244,6 +245,42 @@ impl Component {
                     }
                 }
                 f.omitted.iter().try_for_each(|o| cap("an omitted column", &o.key, 64))
+            }
+            Component::Choice(c) => {
+                if let Some(id) = &c.id {
+                    if !crate::wire::is_uuid(id) {
+                        return Err(format!("choice id is not a lowercase uuid: {id:?}"));
+                    }
+                }
+                if c.question.trim().is_empty() {
+                    return Err("a choice asks no question".into());
+                }
+                cap("a choice question", &c.question, NAME_MAX)?;
+                if c.question.split_whitespace().count() > 15 {
+                    return Err("a choice question is over 15 words".into());
+                }
+                if !(2..=6).contains(&c.options.len()) {
+                    return Err(format!("choice options: {}, 2 to 6", c.options.len()));
+                }
+                let mut seen = std::collections::BTreeSet::new();
+                for o in &c.options {
+                    if o.label.trim().is_empty() {
+                        return Err("a choice option label is empty".into());
+                    }
+                    cap("a choice option label", &o.label, 60)?;
+                    o.note.as_deref().map_or(Ok(()), |n| cap("a choice option note", n, 200))?;
+                    if !seen.insert(o.label.trim().to_lowercase()) {
+                        return Err(format!("choice option {:?} twice (case and spaces aside)", o.label));
+                    }
+                }
+                if let Some(s) = c.suggested.iter().find(|s| !c.options.iter().any(|o| &o.label == *s)) {
+                    return Err(format!("suggested {s:?} is not an option"));
+                }
+                let distinct: std::collections::BTreeSet<&String> = c.suggested.iter().collect();
+                if distinct.len() != c.suggested.len() || (c.multi && c.suggested.is_empty()) || (!c.multi && c.suggested.len() != 1) {
+                    return Err(format!("a choice suggests exactly 1 option, not {}; multi suggests 1 or more", c.suggested.len()));
+                }
+                Ok(())
             }
             _ => Ok(()),
         }
@@ -479,6 +516,28 @@ pub struct Omitted {
     pub key: String,
     /// The KEAP column kind, as KEAP names it.
     pub kind: String,
+}
+
+/// A question Iris asks at a fork that changes what she does next. The model never sends `id`:
+/// serve mints it and a render carries it; the answer comes back as choice_reply, as data.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Choice {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    pub question: String,
+    pub options: Vec<ChoiceOption>,
+    /// Iris's pick, preselected for the person: exactly one label, or one or more when multi.
+    pub suggested: Vec<String>,
+    pub multi: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ChoiceOption {
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
 }
 
 /// Rows the model shows: `columns` names each cell of every row, in order.

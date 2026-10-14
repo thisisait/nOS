@@ -16,6 +16,8 @@ pub enum ToThalamus {
     Widget { widget: String, spec: WidgetSpec, trigger: Trigger },
     /// The person's submit of a widget form serve sent (genui I5g): it is their decision to add the row.
     FormSubmit { form: String, widget: String, values: serde_json::Map<String, serde_json::Value> },
+    /// The person's answer to a choice serve rendered: labels only, never a decision to write.
+    ChoiceReply { session: String, choice: String, picked: Vec<String> },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -203,13 +205,20 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             need_uuid("session", session)?;
             component.check()?;
             not_a_form(component)?;
+            if matches!(component, Component::Choice(c) if c.id.is_none()) {
+                return Err("a choice the thalamus sends carries the id it minted".into());
+            }
             pin.as_ref().map_or(Ok(()), check_spec)
         }
         ToShell::ApprovalRequest { session, approval, component } => {
             need_uuid("session", session)?;
             need_uuid("approval", approval)?;
             component.check()?;
-            not_a_form(component)
+            not_a_form(component)?;
+            match component {
+                Component::Choice(_) => Err("a choice is asked in a render, never in an approval".into()),
+                _ => Ok(()),
+            }
         }
         ToShell::Refused { widget, .. } => widget.as_deref().map_or(Ok(()), need_token),
         ToShell::Widget { session, widget, component } => {
@@ -244,6 +253,16 @@ pub fn decode_to_thalamus(line: &str) -> Result<ToThalamus, String> {
             need_token(widget)?;
             if let Some((k, _)) = values.iter().find(|(_, v)| !(v.is_string() || v.is_number() || v.is_boolean())) {
                 return Err(format!("form value {k:?} is not a string, number or bool"));
+            }
+        }
+        ToThalamus::ChoiceReply { session, choice, picked } => {
+            need_uuid("session", session)?;
+            need_uuid("choice", choice)?;
+            if picked.len() > 6 {
+                return Err(format!("a choice reply picks at most 6 labels, not {}", picked.len()));
+            }
+            if picked.iter().any(|l| l.chars().count() > 60) {
+                return Err("a picked label is over 60 chars".into());
             }
         }
         _ => {}
