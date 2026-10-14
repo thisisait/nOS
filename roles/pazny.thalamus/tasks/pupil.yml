@@ -84,7 +84,7 @@
   changed_when: "'recorded' in _pupil_sha.stdout"
 
 # The effect, read off the file at the fixed path: its hash is the recorded one, its signature
-# verifies and names the pupil's identifier.
+# verifies, names the pupil's identifier and the keychain identity's leaf (any valid signature verifies).
 - name: "[pazny.thalamus] Verify — the installed pupil is the recorded, signed binary"
   ansible.builtin.shell: |
     set -euo pipefail
@@ -92,7 +92,12 @@
     want=$(cat {{ (thalamus_pupil_exe ~ '.sha256') | quote }})
     [ "$now" = "$want" ] || { echo "installed $now, recorded $want" >&2; exit 1; }
     codesign --verify --strict {{ thalamus_pupil_exe | quote }}
-    codesign -d -r- {{ thalamus_pupil_exe | quote }} 2>&1 | grep -qF 'identifier "'{{ thalamus_pupil_identifier | quote }}'"'
+    dr=$(codesign -d -r- {{ thalamus_pupil_exe | quote }} 2>&1)
+    H=$(security find-certificate -c {{ thalamus_signing_cn | quote }} -Z {{ thalamus_signing_keychain | quote }} \
+      | awk '/SHA-1 hash/ {print tolower($3); exit}')
+    [ -n "$H" ] || { echo "no signing identity in the keychain" >&2; exit 1; }
+    grep -qF 'identifier "'{{ thalamus_pupil_identifier | quote }}'"' <<<"$dr" || { echo "not the pupil's identifier: $dr" >&2; exit 1; }
+    grep -qF "certificate leaf = H\"$H\"" <<<"$dr" || { echo "not signed by the keychain identity $H: $dr" >&2; exit 1; }
     echo "$now"
   args:
     executable: /bin/bash

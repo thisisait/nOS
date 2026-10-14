@@ -172,3 +172,58 @@ def test_the_pupil_comes_after_the_thalamus_is_serving():
         before = next(i for i, t in enumerate(main) if needle in t.get("name", "").lower())
         assert before < at, f"the pupil is imported before '{needle}'"
 
+
+_LEAF = "0123456789abcdef0123456789abcdef01234567"
+_ID = "eu.thisisait.nos.pupil"
+
+
+def _run_verify(tmp: pathlib.Path, *, recorded: str | None = None, verify_rc: int = 0,
+                ident: str = _ID, leaf: str = _LEAF, keychain: str = _LEAF.upper()) -> subprocess.CompletedProcess:
+    """The verify script on a fake binary, codesign and security stubbed: what the file and its DR say."""
+    exe = tmp / "nos-pupil"
+    exe.write_bytes(b"pupil")
+    now = subprocess.run(["shasum", "-a", "256", str(exe)], capture_output=True, text=True, check=True).stdout.split()[0]
+    (tmp / "nos-pupil.sha256").write_text(now if recorded is None else recorded)
+    bin_ = tmp / "stub"
+    bin_.mkdir()
+    (bin_ / "codesign").write_text(
+        "#!/bin/bash\ncase \"$1\" in --verify) exit %d ;; -d) "
+        "echo 'designated => identifier \"%s\" and certificate leaf = H\"%s\"' >&2 ;; *) exit 9 ;; esac\n"
+        % (verify_rc, ident, leaf))
+    (bin_ / "security").write_text("#!/bin/bash\necho 'SHA-1 hash: %s'\n" % keychain)
+    for s in bin_.iterdir():
+        s.chmod(0o755)
+    sh = _render(_task("verify")["ansible.builtin.shell"], thalamus_pupil_exe=str(exe), thalamus_pupil_identifier=_ID,
+                 thalamus_signing_cn="nOS local code signing", thalamus_signing_keychain=str(tmp / "login.keychain-db"))
+    import os
+    return subprocess.run(["/bin/bash", "-c", sh], capture_output=True, text=True,
+                          env={**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}"})
+
+
+def test_verify_passes_the_recorded_binary_signed_by_the_identity(tmp_path):
+    r = _run_verify(tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert re.fullmatch(r"[0-9a-f]{64}", r.stdout.strip()), r.stdout
+
+
+def test_verify_fails_a_binary_that_is_not_the_recorded_one(tmp_path):
+    r = _run_verify(tmp_path, recorded="0" * 64)
+    assert r.returncode != 0 and "recorded" in r.stderr, (r.stdout, r.stderr)
+
+
+def test_verify_fails_a_signature_that_does_not_verify(tmp_path):
+    assert _run_verify(tmp_path, verify_rc=1).returncode != 0
+
+
+def test_verify_fails_another_identifier(tmp_path):
+    r = _run_verify(tmp_path, ident="eu.thisisait.nos.thalamus")
+    assert r.returncode != 0, (r.stdout, r.stderr)
+
+
+def test_verify_fails_a_leaf_that_is_not_the_keychain_identity(tmp_path):
+    """Any valid signature verifies; only the leaf says it is the identity the TCC grant binds to."""
+    r = _run_verify(tmp_path, leaf="f" * 40)
+    assert r.returncode != 0, (r.stdout, r.stderr)
+    (tmp_path / "none").mkdir()
+    r = _run_verify(tmp_path / "none", keychain="")
+    assert r.returncode != 0, "no identity in the keychain is no leaf to match, not a pass"
