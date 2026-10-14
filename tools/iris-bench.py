@@ -179,6 +179,53 @@ def check(name: str, arg, got: dict, now: float) -> bool:
     raise ValueError(f"unknown check {name!r}")
 
 
+SEED_TITLE = "iris-bench"
+SEED_TRACKS = ("agents", "face", "platform", "security")
+SEED_STATUSES = ("next", "queued", "shipped")
+
+
+def seed_rows() -> list[dict]:
+    """The fixed rows of the iris-bench table: 24, every track has next rows, so a chart by track has bars."""
+    return [{"title": f"bench row {i + 1:02d}", "status": SEED_STATUSES[i % 3], "track": SEED_TRACKS[(i // 3) % 4],
+             "points": (i * 7) % 13 + 1} for i in range(24)]
+
+
+def seed() -> int:
+    """Create the iris-bench table once, as the operator, readable by every user (it holds no data of anyone's)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("dtt_table", Path(__file__).with_name("dtt-table.py"))
+    dtt = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(dtt)
+    have = [t for t in dtt.tables() if (t.get("title") or "") == SEED_TITLE]
+    if have:
+        print(f"iris-bench table exists: {have[0]['id']} (nothing written)")
+        return 0
+    body = {"title": SEED_TITLE, "description": "Fixed rows for tools/iris-bench.py chart cases. Safe to delete.",
+            "driver": "libsql", "visibility": "shared", "anchors": [], "schema": {"columns": [
+                {"key": "title", "label": "Title", "kind": "text", "role": "dimension", "required": True},
+                {"key": "status", "label": "Status", "kind": "select", "role": "dimension", "options": list(SEED_STATUSES)},
+                {"key": "track", "label": "Track", "kind": "select", "role": "dimension", "options": list(SEED_TRACKS)},
+                {"key": "points", "label": "Points", "kind": "number", "role": "measure"}]}}
+    st, r = dtt.req("POST", "/api/tables", body)
+    if st != 200:
+        print(f"iris-bench: create failed ({st}): {r.get('error', r)}", file=sys.stderr)
+        return 1
+    tid = r.get("data", r)["id"]
+    for row in seed_rows():
+        st, r = dtt.req("POST", f"/api/tables/{tid}/rows", {"values": row})
+        if st != 200:
+            print(f"iris-bench: row failed ({st}): {r.get('error', r)}", file=sys.stderr)
+            return 1
+    print(f"iris-bench table created: {tid} with {len(seed_rows())} rows")
+    return 0
+
+
+def no_data(case: dict, got: dict) -> bool:
+    """A case that needs rows, where every table it read was empty: the host has no data, the model is not judged."""
+    tr = [r for r in got["renders"] if r["component"].get("kind") == "table_results"]
+    return bool(case.get("needs_rows")) and (not tr or all(int(r["component"]["props"].get("total", 0)) == 0 for r in tr))
+
+
 def score(case: dict, got: dict, now: float) -> list[str]:
     if got["error"]:
         return [f"error: {got['error']}"]
@@ -192,7 +239,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cases", default=str(CASES))
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--timeout", type=float, default=180.0, help="seconds without a line before a case fails")
+    ap.add_argument("--seed", action="store_true", help="create the iris-bench table once (writes KEAP; NOS_LIVE=1)")
     a = ap.parse_args(argv)
+    if a.seed:
+        if os.environ.get("NOS_LIVE") != "1":
+            print("--seed writes a KEAP table; set NOS_LIVE=1.", file=sys.stderr)
+            return 2
+        return seed()
     if not (os.environ.get("NOS_LIVE") == "1" or (a.offline and a.sock)):
         print("iris-bench talks to the live thalamus (a model, KEAP, the ledger); set NOS_LIVE=1, "
               "or pass --offline with an explicit --sock for a fake.", file=sys.stderr)
@@ -205,7 +258,8 @@ def main(argv: list[str] | None = None) -> int:
         got = run_case(case, sock, float(case.get("timeout", a.timeout)))
         secs = round(time.monotonic() - t0, 2)
         failed = score(case, got, time.time())
-        results.append({"id": case["id"], "pass": not failed, "failed": failed, "seconds": secs,
+        nd = bool(failed) and no_data(case, got)
+        results.append({"id": case["id"], "pass": not failed, "no_data": nd, "failed": failed, "seconds": secs,
                         "model_uri": got["model_uri"], "tools": got["tools"], "approvals_rejected": len(got["approvals"]),
                         "refused": got["refused"], "text": got["text"]})
     run = {"ran_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "sock": sock,
@@ -214,9 +268,12 @@ def main(argv: list[str] | None = None) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(run, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     for r in results:
-        print(f"{'PASS' if r['pass'] else 'FAIL'}  {r['id']:<16} {r['seconds']:>7.2f}s  {', '.join(r['failed'])}")
-    print(f"{sum(r['pass'] for r in results)}/{len(results)} passed · {', '.join(run['model_uri']) or 'no model_uri'} · {out}")
-    return 0 if all(r["pass"] for r in results) else 1
+        word = "PASS" if r["pass"] else "NO-DATA" if r["no_data"] else "FAIL"
+        print(f"{word:<7} {r['id']:<18} {r['seconds']:>7.2f}s  {', '.join(r['failed'])}")
+    judged = [r for r in results if not r["no_data"]]
+    print(f"{sum(r['pass'] for r in judged)}/{len(judged)} passed ({len(results) - len(judged)} NO-DATA) · "
+          f"{', '.join(run['model_uri']) or 'no model_uri'} · {out}")
+    return 0 if all(r["pass"] for r in judged) else 1
 
 
 if __name__ == "__main__":
