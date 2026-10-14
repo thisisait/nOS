@@ -97,6 +97,9 @@ describe('nothing adds a widget without a click', () => {
 		expect(uses.length).toBeGreaterThan(0);
 		expect(uses.map(([, up]) => attr(up))).toEqual(uses.map(() => 'onclick'));
 		expect(named(script, 'onpin').filter(([n, up]) => up.at(-1)?.type === 'CallExpression' && up.at(-1)?.callee === n)).toEqual([]);
+		// The script names onpin only in its $props() declaration: an alias or an effect would call it unclicked.
+		const inProps = (up: Node[]) => up.some((a) => a.type === 'VariableDeclarator' && ((a.init as Node)?.callee as Node)?.name === '$props');
+		expect(named(script, 'onpin').filter(([, up]) => !inProps(up)).map(([n]) => n.start)).toEqual([]);
 	});
 
 	it('App places a pin only in the handler it gives Message as onpin', () => {
@@ -107,5 +110,7 @@ describe('nothing adds a widget without a click', () => {
 		const fn = calls[0][1].filter((a) => a.type === 'FunctionDeclaration').at(-1);
 		expect((fn?.id as Node)?.name).toBe('pinned');
 		expect(named(template, 'pinned').map(([, up]) => attr(up))).toEqual(['onpin']);
+		// The script names pinned only where it declares it: a call on an incoming render pins unclicked.
+		expect(named(script, 'pinned').map(([n, up]) => up.at(-1)?.type === 'FunctionDeclaration' && up.at(-1)?.id === n)).toEqual([true]);
 	});
 });
