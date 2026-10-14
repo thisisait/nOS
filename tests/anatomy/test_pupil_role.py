@@ -173,7 +173,7 @@ def test_the_pupil_comes_after_the_thalamus_is_serving():
         assert before < at, f"the pupil is imported before '{needle}'"
 
 
-_LEAF = "0123456789abcdef0123456789abcdef01234567"
+_LEAF = "ab" * 20  # a leaf-shaped placeholder, not credential-shaped
 _ID = "eu.thisisait.nos.pupil"
 
 
