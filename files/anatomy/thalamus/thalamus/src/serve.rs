@@ -122,6 +122,27 @@ pub fn decider_refusal(deciders: &[PathBuf], exe: Option<&str>) -> Option<String
     (!listed).then(|| format!("{exe} is not a listed decider (thalamus_decider_exes)"))
 }
 
+/// NOS_DECIDER_EXES as serve takes it (':'-split, empties dropped) and what is wrong with it, said
+/// once at start: an entry that admits nobody is not silent. The role refuses these at render too.
+pub fn deciders(raw: &str) -> (Vec<PathBuf>, Vec<String>) {
+    let list: Vec<PathBuf> = raw.split(':').filter(|p| !p.is_empty()).map(PathBuf::from).collect();
+    let mut warn = Vec::new();
+    if raw.split(':').any(str::is_empty) && !raw.is_empty() {
+        warn.push(format!("NOS_DECIDER_EXES {raw:?} has an empty entry"));
+    }
+    for d in &list {
+        if !d.is_absolute() {
+            warn.push(format!("decider {} is not absolute, so it admits nobody", d.display()));
+        } else if std::fs::canonicalize(d).is_err() {
+            warn.push(format!("decider {} names no file, so it admits nobody", d.display()));
+        }
+    }
+    if !list.is_empty() && cfg!(not(target_os = "macos")) {
+        warn.push("this kernel cannot name the sender, so every decision is refused".into());
+    }
+    (list, warn)
+}
+
 #[cfg(target_os = "macos")]
 fn peer_login(s: &UnixStream) -> Option<String> {
     let (mut uid, mut gid) = (0, 0);

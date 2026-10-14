@@ -2573,6 +2573,22 @@ fn a_decider_refusal_needs_a_listed_resolvable_exe_and_none_when_off() {
 }
 
 #[test]
+fn a_decider_list_that_admits_nobody_is_said_at_start() {
+    let me = std::env::current_exe().unwrap();
+    let mine = me.to_str().unwrap();
+    assert_eq!(serve::deciders(""), (vec![], vec![]), "unset is off and says nothing");
+    let (list, warn) = serve::deciders(mine);
+    assert_eq!(list, vec![me.clone()]);
+    assert_eq!(warn.is_empty(), cfg!(target_os = "macos"), "{warn:?}");
+    for (raw, says) in [(format!("{mine}::{mine}"), "empty entry"), ("rel/exe".into(), "not absolute"),
+                        ("/nowhere/at/all".into(), "names no file"), ("/:o:/:p".into(), "not absolute")] {
+        let (_, warn) = serve::deciders(&raw);
+        assert!(warn.iter().any(|w| w.contains(says)), "{raw:?} said {warn:?}, not {says:?}");
+    }
+    assert_eq!(serve::deciders(&format!(":{mine}")).0, vec![me], "the list itself is as before");
+}
+
+#[test]
 fn an_unlisted_decider_is_refused_and_the_approval_still_waits() {
     let link = decider_link("adecide");
     let rig = rig_deciders("adecide", mapped(), fake(shown_then(&[ROWS, ROWS, POSTED])), edit_turn(), Some(local()), vec![link.clone()]);

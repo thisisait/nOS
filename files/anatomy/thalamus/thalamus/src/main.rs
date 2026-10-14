@@ -50,6 +50,8 @@ fn serve_main(args: &[String]) -> Result<(), String> {
         Ok(b) => eprintln!("thalamus: model bound {}-{}", b.name, b.model_id),
         Err(why) => eprintln!("thalamus: model UNBOUND: {}", why.replace('\n', " ")),
     }
+    let (deciders, warnings) = serve::deciders(&std::env::var("NOS_DECIDER_EXES").unwrap_or_default());
+    warnings.iter().for_each(|w| eprintln!("thalamus: WARNING {w}"));
     let srv = Server {
         map: home.join(IDENTITY_MAP),
         keap_url,
@@ -62,8 +64,7 @@ fn serve_main(args: &[String]) -> Result<(), String> {
         tier1: std::env::var("NOS_TIER1_GROUPS").unwrap_or_default().split(',').filter(|g| !g.is_empty())
             .map(str::to_string).collect(),
         // Off unless the operator sets thalamus_decider_exes: the role renders it ':'-joined.
-        deciders: std::env::var("NOS_DECIDER_EXES").unwrap_or_default().split(':').filter(|p| !p.is_empty())
-            .map(PathBuf::from).collect(),
+        deciders,
         log: Mutex::new(Box::new(std::io::stderr())),
     };
     serve::run(listener, Arc::new(srv));
