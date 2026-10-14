@@ -44,7 +44,7 @@
     {{ thalamus_cargo | quote }} build --release --locked --features tauri/custom-protocol --manifest-path src-tauri/Cargo.toml
     mkdir -p {{ (thalamus_pupil_app ~ '/Contents/MacOS') | quote }} {{ (thalamus_pupil_app ~ '/Contents/Resources') | quote }}
     install -m 0755 "$CARGO_TARGET_DIR/release/nos-pupil" {{ thalamus_pupil_exe | quote }}
-    sips -s format icns src-tauri/icons/icon.png --out {{ (thalamus_pupil_app ~ '/Contents/Resources/Iris.icns') | quote }} >/dev/null
+    install -m 0644 src-tauri/icons/Iris.icns {{ (thalamus_pupil_app ~ '/Contents/Resources/Iris.icns') | quote }}
   args:
     executable: /bin/bash
   register: _pupil_build
