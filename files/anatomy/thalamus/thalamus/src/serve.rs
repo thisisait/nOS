@@ -164,6 +164,15 @@ fn table_id(t: &str) -> String {
     }
 }
 
+/// Every name a spec may give `table`: its id, and "roadmap" when that alias resolves to it.
+fn table_names(table: &str) -> Vec<String> {
+    let mut names = vec![table.to_string()];
+    if table != "roadmap" && table_id("roadmap") == table {
+        names.push("roadmap".into());
+    }
+    names
+}
+
 /// Percent-encodes one path or query component.
 fn enc(s: &str) -> String {
     s.bytes()
@@ -214,6 +223,15 @@ fn send(out: &mut UnixStream, m: &ToShell) {
 /// What this session is doing now; the pupil's eye shows it.
 fn activity(out: &mut UnixStream, o: &Open, phase: Phase) {
     send(out, &ToShell::Activity { session: o.session.clone(), phase });
+}
+
+/// A write landed in `table` (already in the ledger): this connection's widgets may re-run, under
+/// every name a spec may give it. ponytail: this connection only; other shells of the person learn
+/// on their next run (roadmap thalamus-table-changed-broadcast).
+fn changed(out: &mut UnixStream, o: &Open, table: &str, row: &str) {
+    for table in table_names(table) {
+        send(out, &ToShell::TableChanged { session: o.session.clone(), table, row: row.to_string() });
+    }
 }
 
 fn refuse(out: &mut UnixStream, why: &str) {
@@ -507,17 +525,24 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
         if d == Decision::Approve {
             activity(out, o, Phase::Writing);
         }
+        let mut written = None;
         let (text, result, heard) = match d {
             Decision::Reject => ("Rejected: nothing was written.".to_string(), json!({"approval": approval, "written": false}),
                                  format!("rejected: {}", note.as_deref().unwrap_or("no note"))),
-            Decision::Approve => match self.after_commit(who, out, o, id) {
-                Ok(row) => (format!("Approved: row {row} written."), json!({"approval": approval, "written": true, "row": row}),
-                            "approved, row written".to_string()),
+            Decision::Approve => match self.committed(who, id) {
+                Ok((row, table)) => {
+                    written = Some((table, row.clone()));
+                    (format!("Approved: row {row} written."), json!({"approval": approval, "written": true, "row": row}),
+                     "approved, row written".to_string())
+                }
                 Err(why) => (format!("Approved, but the write failed: {why}"), json!({"approval": approval, "error": why}),
                              format!("approved, but nothing was written: {why}")),
             },
         };
         let _ = self.record(o, Kind::ToolResult, Some("propose_row_edit"), result);
+        if let Some((table, row)) = written {
+            changed(out, o, &table, &row);
+        }
         // The model was told only "waiting"; its next turn starts from what the person did.
         o.messages.push(json!({"role": "user", "content": format!("[thalamus] approval {approval}: {heard}")}));
         send(out, &ToShell::Text { session: o.session.clone(), text });
@@ -551,12 +576,11 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
         Ok(row_id)
     }
 
-    /// commit(), then tell this connection the table changed so its widgets can re-run.
-    fn after_commit(&self, who: &Person, out: &mut UnixStream, o: &Open, decision: i64) -> Result<String, String> {
+    /// commit(), and (row, table): the caller records its result, then says changed().
+    fn committed(&self, who: &Person, decision: i64) -> Result<(String, String), String> {
         let row = self.commit(who, decision)?;
         let table = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.approved(decision)?.table;
-        send(out, &ToShell::TableChanged { session: o.session.clone(), table, row: row.clone() });
-        Ok(row)
+        Ok((row, table))
     }
 
     /// A widget form's submit: the person typed every value into fields they saw whole, under a
@@ -598,9 +622,10 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
             Ok(id) => id,
             Err(why) => return fail(o, out, format!("the submit was not recorded, so nothing is written: {why}")),
         };
-        match self.after_commit(who, out, o, id) {
-            Ok(row) => {
+        match self.committed(who, id) {
+            Ok((row, table)) => {
                 let _ = self.record(o, Kind::ToolResult, tool, json!({"approval": approval, "written": true, "row": row, "peer": peer}));
+                changed(out, o, &table, &row);
                 send(out, &ToShell::FormResult { session: o.session.clone(), widget: widget.to_string(), form: form.to_string(), row });
             }
             Err(why) => fail(o, out, format!("the row was not written: {why}")),
@@ -1082,11 +1107,13 @@ small talk or a one-line answer. It is now {} UTC.", who.username, SHOW_KINDS.jo
         if let Err(why) = self.record(o, Kind::ToolUse, Some(tool), used) {
             return refused(out, format!("not recorded, so not run: {why}"));
         }
+        // A re-run replaces what the token was: its old form id no longer submits.
+        o.forms.remove(widget);
         // The check a pin met before the person could place it (wire.rs check_spec).
         let ran = check_spec(spec).and_then(|_| match spec {
             WidgetSpec::Rows(a) => self.widget_rows(who, a),
             WidgetSpec::Chart(c) => self.widget_chart(who, c).map(|c| (Component::Chart(c), json!({"ok": true}))),
-            WidgetSpec::Form(_) if o.forms.len() >= MAX_FORMS && !o.forms.contains_key(widget) =>
+            WidgetSpec::Form(_) if o.forms.len() >= MAX_FORMS =>
                 Err(format!("this session holds {MAX_FORMS} forms; remove one first")),
             WidgetSpec::Form(f) => self.form_from_schema(who, &f.table, f.columns.as_deref()).map(|f| {
                 o.forms.insert(widget.to_string(), f.clone());
