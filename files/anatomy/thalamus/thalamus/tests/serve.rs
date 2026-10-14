@@ -2767,3 +2767,31 @@ fn a_local_model_is_asked_not_to_think_and_a_cloud_one_is_left_alone() {
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     assert!(body.get("reasoning_effort").is_none(), "a cloud row may refuse an unknown field: {body}");
 }
+
+
+// --- client bench 2026-10-14: qwen3.5 passed the table's TITLE as `table` and got KEAP's 404 ---
+
+const TITLED: &str = r#"{"success": true, "data": [{"id": "todos", "title": "Todo list"}, {"id": "other", "title": "Other"}]}"#;
+
+#[test]
+fn query_rows_finds_a_table_by_its_title() {
+    let rig = rig_n("bytitle", mapped(), vec![r#"!404 {"success": false, "error": "no such table"}"#.into(), TITLED.into(), SCHEMA.into(), ROWS.into()],
+                    vec![query(r#"{"table": "todo LIST", "limit": 0}"#), answer("3.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "how many in Todo list?");
+    let t = tool_result(&rig, 1);
+    assert_eq!((&t["table"], &t["matched"]), (&serde_json::json!("todos"), &serde_json::json!(3)), "{t}");
+}
+
+#[test]
+fn an_unknown_table_names_the_ones_there_are() {
+    let rig = rig_n("notitle", mapped(), vec![r#"!404 {"success": false, "error": "no such table"}"#.into(), TITLED.into()],
+                    vec![query(r#"{"table": "expenses", "limit": 0}"#), answer("x")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "expenses?");
+    let e = tool_result(&rig, 1);
+    let e = e["error"].as_str().unwrap_or_default();
+    assert!(e.contains("no table `expenses`") && e.contains("Todo list (todos)") && e.contains("list_tables"), "{e}");
+}
