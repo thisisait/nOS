@@ -163,3 +163,12 @@ def test_the_source_hash_covers_what_vite_borrows_from_the_face():
     missed = sorted(str(p.relative_to(REPO)) for p in seen if p.is_relative_to(_ALIAS["$face"]) and p not in hashed)
     assert not missed, f"a change to these rebuilds no pupil: {missed}"
 
+
+def test_the_pupil_comes_after_the_thalamus_is_serving():
+    """A failed pupil build (npm, tauri) must not hold back the daemon's plist and bootstrap."""
+    main = yaml.safe_load((ROLE / "tasks" / "main.yml").read_text())
+    at = next(i for i, t in enumerate(main) if t.get("ansible.builtin.import_tasks") == "pupil.yml")
+    for needle in ("render launchd plist", "bootstrap launchd job", "flush handlers"):
+        before = next(i for i, t in enumerate(main) if needle in t.get("name", "").lower())
+        assert before < at, f"the pupil is imported before '{needle}'"
+

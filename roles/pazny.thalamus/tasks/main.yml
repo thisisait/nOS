@@ -114,9 +114,6 @@
   when: _thalamus_signing.stdout_lines | default([]) | length > 0  # --check mints nothing
   notify: Restart thalamus
 
-# Static, so --tags thalamus reaches it; signs with the identity minted above.
-- ansible.builtin.import_tasks: pupil.yml
-
 # The var behind the auth_secret (nos:<var>) of the row iris binds, read where the binary reads it;
 # "" for a keyless row. The plist renders that one var's value as NOS_SECRET_<VAR> (src/main.rs).
 - name: "[pazny.thalamus] The key var of the row iris binds"
@@ -156,6 +153,10 @@
 
 - name: "[pazny.thalamus] Flush handlers (apply a pending restart now)"
   ansible.builtin.meta: flush_handlers
+
+# Static, so --tags thalamus reaches it; signs with the identity minted above. After the daemon
+# serves, so a failed pupil build (npm, tauri) never holds back the plist or the bootstrap.
+- ansible.builtin.import_tasks: pupil.yml
 
 # The effect, read by the reader: socket 0600, job loaded, ledger readable. Any line not OK fails,
 # except the model line: serving without one warns (ruling 2026-10-12) — the reader still says UNKNOWN.
