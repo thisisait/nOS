@@ -2562,7 +2562,11 @@ fn a_decider_refusal_needs_a_listed_resolvable_exe_and_none_when_off() {
     assert!(serve::decider_refusal(&[me.clone()], None).is_some(), "an undeterminable exe decides nothing");
     assert!(serve::decider_refusal(&[me.clone()], Some("/nowhere/at/all")).is_some(), "an unresolvable exe decides nothing");
     assert!(serve::decider_refusal(&[link.clone()], Some(mine)).is_some(), "a listed path that names no file admits nobody");
-    assert!(serve::decider_refusal(&["relative/exe".into()], Some(mine)).is_some(), "only an absolute entry counts");
+    // A relative entry that does resolve to this very exe (extra ../ stop at the root), so only
+    // the absolute rule can refuse it: the entry would mean another file under another cwd.
+    let rel = PathBuf::from(format!("{}{}", "../".repeat(64), mine.trim_start_matches('/')));
+    assert!(std::fs::canonicalize(&rel).is_ok_and(|c| c.as_os_str() == mine), "{rel:?} does not resolve to the peer");
+    assert!(serve::decider_refusal(&[rel], Some(mine)).is_some(), "only an absolute entry counts");
     admit(&link);
     assert_eq!(serve::decider_refusal(&[link], Some(mine)), None, "a listed symlink is resolved");
     assert_eq!(serve::decider_refusal(&[me.clone()], Some(mine)), None);
