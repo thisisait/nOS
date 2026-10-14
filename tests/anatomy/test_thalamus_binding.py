@@ -22,20 +22,25 @@ IRIS = REPO / "files/anatomy/agents/iris/agent.yml"
 REGISTER = REPO / "state/habitat/llm-backends.yml"
 
 
-def test_the_iris_cell_binds_to_the_eu_row_alone():
-    """Ruling 2026-10-12 (supersedes ruling 4's ollama): iris binds mistral-eu, and nothing outside the EU serves it."""
+def test_the_iris_cell_binds_to_the_eu_row_by_default():
+    """Ruling 2026-10-12: iris binds mistral-eu. Ruling 2026-10-14: a host may choose the on-device row
+    instead (iris_backend: ollama) — chosen explicitly, never as a fallback; nothing outside the EU serves it."""
     doc = yaml.safe_load(IRIS.read_text())
     assert doc["name"] == "iris"
     assert doc["model"]["backend"] == "mistral-eu"
+    assert doc["model"]["backends_allowed"] == ["mistral-eu", "ollama"]
     assert doc["gdpr"]["transfers_outside_eu"] is False, (
         "without it a disarmed mistral-eu degrades iris to the hosted default")
     tier = re.search(r"\b(haiku|sonnet|opus|vision)\b", doc["model"]["primary"])
-    spec = yaml.safe_load(REGISTER.read_text())["backends"]["mistral-eu"]
-    assert tier and spec["model_env"].get(tier[1]), f"{doc['model']['primary']} has no model on mistral-eu"
-    assert spec["residency"]["eu"] is True
+    rows = yaml.safe_load(REGISTER.read_text())["backends"]
+    for b in doc["model"]["backends_allowed"]:
+        assert tier and rows[b]["model_env"].get(tier[1]), f"{doc['model']['primary']} has no model on {b}"
+        assert rows[b]["residency"]["eu"] is True, f"{b} is not EU-resident"
     names = [p["name"] for p in doc["gdpr"]["processors"]]
-    assert names and all(spec["processor_match"] in n for n in names), (
-        f"every processor iris names must be the EU row's, got {names}")
+    for b in doc["model"]["backends_allowed"]:
+        assert any(rows[b]["processor_match"] in n for n in names), f"no processor of iris names the {b} row"
+    assert all(any(rows[b]["processor_match"] in n for b in doc["model"]["backends_allowed"]) for n in names), (
+        f"every processor iris names must belong to an allowed row, got {names}")
 
 
 def test_the_rust_cases_read_the_register_not_a_copy():

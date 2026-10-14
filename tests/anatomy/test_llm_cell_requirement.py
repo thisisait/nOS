@@ -165,3 +165,10 @@ def test_the_plist_and_the_preflight_read_one_binding_env():
             assert got[name] == ctx[var], f"{name} is not filled from {var}"
     plist = (ROLE / "templates/thalamus.plist.j2").read_text()
     assert "thalamus_binding_env" in plist and "ollama_model" not in plist, "the plist renders a second env"
+
+
+def test_the_real_iris_on_a_host_that_chose_ollama_is_judged_on_its_model():
+    """Ruling 2026-10-14: iris_backend: ollama makes the real iris local, so the size gate applies."""
+    req = lambda **env: _helper().requirement(REPO, "install_thalamus", "iris", _env(NOS_CELL_BACKEND="ollama", **env), 8)  # noqa: E731
+    assert req(NOS_ARMED_BACKENDS="ollama", NOS_LOCAL_MODEL="qwen3:14b") is None
+    assert "below the 8B minimum" in (req(NOS_ARMED_BACKENDS="ollama", NOS_LOCAL_MODEL="llama3.2:3b") or "")

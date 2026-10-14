@@ -383,3 +383,10 @@ def test_a_decider_list_that_admits_nobody_is_refused_at_render():
     assert ok(exists["ansible.builtin.assert"]["that"], _thalamus_deciders=reg())
     assert ok(exists["ansible.builtin.assert"]["that"], _thalamus_deciders=reg((good[0], True)))
     assert not ok(exists["ansible.builtin.assert"]["that"], _thalamus_deciders=reg((good[0], True), (good[1], False)))
+
+
+def test_the_cell_backend_choice_rides_the_binding_env():
+    """iris_backend (default.config.yml, empty = the cell's own backend) reaches serve and the preflight."""
+    assert _default_config()["iris_backend"] == ""
+    assert _plist(iris_backend="ollama")["EnvironmentVariables"]["NOS_CELL_BACKEND"] == "ollama"
+    assert _plist(iris_backend="")["EnvironmentVariables"]["NOS_CELL_BACKEND"] == ""
