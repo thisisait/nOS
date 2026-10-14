@@ -18,7 +18,11 @@ export type Component =
 	| { kind: 'tree'; props: { title?: string; nodes: TreeNode[] } }
 	| { kind: 'timeline'; props: { title?: string; items: { when: string; title: string; note?: string; hi?: boolean; until?: string; lane?: string }[] } }
 	| { kind: 'graph'; props: { title?: string; nodes: { id: string; label: string; note?: string; tone?: 'ok' | 'info' | 'warn' | 'bad' }[]; edges: { from: string; to: string; label?: string; dashed?: boolean }[] } }
-	| { kind: 'form'; props: FormProps };
+	| { kind: 'form'; props: FormProps }
+	| { kind: 'choice'; props: ChoiceProps };
+
+/** A question Iris asks at a fork (renderers.rs Choice); `id` is the one serve minted. */
+export type ChoiceProps = { id?: string; question: string; options: { label: string; note?: string }[]; suggested: string[]; multi: boolean };
 
 /** A widget form serve built from the table's schema (renderers.rs Form); never the model's. */
 export type FormProps = { form: string; table: string; title: string; fields: FormField[]; omitted: { key: string; kind: string }[] };
@@ -50,7 +54,8 @@ export type ToThalamus =
 	| { t: 'approval_decision'; approval: string; decision: 'approve' | 'reject'; note: string | null }
 	| { t: 'control'; view: 'inbox' | 'approvals' | 'red_status' }
 	| { t: 'widget'; widget: string; spec: WidgetSpec; trigger: 'click' | 'restore' | 'table_changed' }
-	| { t: 'form_submit'; form: string; widget: string; values: Record<string, string | number | boolean> };
+	| { t: 'form_submit'; form: string; widget: string; values: Record<string, string | number | boolean> }
+	| { t: 'choice_reply'; session: string; choice: string; picked: string[] };
 
 /** What a widget re-runs, as the person and without the model (wire.rs WidgetSpec): exactly one key. */
 export type WidgetSpec =

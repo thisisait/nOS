@@ -45,8 +45,10 @@
 	let column: HTMLElement | undefined = $state();
 	let ey = $state(eye());
 	const see = (i: Input) => (ey = step(ey, i));
+	// Choices asked and not yet answered, by id; the eye waits on them as on an approval.
+	let asking: string[] = $state([]);
 	// Waiting wins until the queue is empty (shell.rs:173), whatever the wire last said.
-	const view = $derived(look(ey, q.pending.length));
+	const view = $derived(look(ey, q.pending.length, asking.length));
 	const space = $derived(layout.workspaces.find((s) => s.id === layout.active) ?? layout.workspaces[0]);
 	$effect(() => {
 		const { state, seq } = ey;
@@ -102,6 +104,17 @@
 			await tauri?.core.invoke('send', { msg: r.send });
 		} catch (e) {
 			push({ note: `not decided, nothing written: approval ${approval} (${e})` });
+		}
+	}
+
+	// The person's answer to a choice: sent once by its card; serve hands it to Iris as data.
+	async function answered(m: Extract<ToThalamus, { t: 'choice_reply' }>) {
+		asking = asking.filter((id) => id !== m.choice);
+		push({ me: m.picked.join(', ') });
+		try {
+			await tauri?.core.invoke('send', { msg: m });
+		} catch (e) {
+			push({ msg: { t: 'refused', reason: `not sent: ${e}` } });
 		}
 	}
 
@@ -214,7 +227,11 @@
 					const r = ws.approvalArrived(layout);
 					setChat(r.layout.chat);
 					top = r.top;
-				} else push({ msg: payload });
+				} else {
+					if (payload.t === 'render' && payload.component.kind === 'choice' && payload.component.props.id)
+						asking = [...asking, payload.component.props.id];
+					push({ msg: payload });
+				}
 			}),
 			tauri.event.listen<Link>('link', ({ payload }) => {
 				link = payload;
@@ -228,6 +245,8 @@
 				}
 				const r = closed(q);
 				q = r.q;
+				// The session is gone, and its choices with it.
+				asking = [];
 				r.notes.forEach((note) => push({ note }));
 			})
 		];
@@ -283,7 +302,7 @@
 		{#each log as e}
 			{#if 'me' in e}<p class="me">{e.me}</p>
 			{:else if 'note' in e}<StatusNote kind="error" block={false}>{e.note}</StatusNote>
-			{:else}<Message msg={e.msg} onpin={pinned} />{/if}
+			{:else}<Message msg={e.msg} onpin={pinned} onchoose={answered} />{/if}
 		{/each}
 	</div>
 	{#if q.pending[0]}

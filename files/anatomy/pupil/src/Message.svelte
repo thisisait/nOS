@@ -1,12 +1,18 @@
 <!-- One ToShell message in the chat column. A refusal is shown, never dropped. -->
 <script lang="ts">
 	import StatusNote from '$ui/StatusNote.svelte';
+	import Choice from './Choice.svelte';
 	import ComponentView from './Component.svelte';
 	import Markdown from './Markdown.svelte';
-	import { phaseName, type ToShell } from './wire';
+	import { phaseName, type ToShell, type ToThalamus } from './wire';
 
 	// onpin: the person clicked "Připnout na plochu" under a render serve gave a pin (genui I6).
-	let { msg, onpin }: { msg: ToShell; onpin?: (m: ToShell) => void } = $props();
+	// onchoose: the person answered a choice with "Odpovědět"; drawing one sends nothing.
+	let { msg, onpin, onchoose }: {
+		msg: ToShell;
+		onpin?: (m: ToShell) => void;
+		onchoose?: (m: Extract<ToThalamus, { t: 'choice_reply' }>) => void;
+	} = $props();
 </script>
 
 <div class="msg" data-t={msg.t}>
@@ -15,6 +21,8 @@
 	{:else if msg.t === 'text'}
 		<!-- Models write markdown in plain text; a string that is not parses to itself. -->
 		<Markdown text={msg.text} />
+	{:else if msg.t === 'render' && msg.component.kind === 'choice'}
+		<Choice choice={msg.component.props} session={msg.session} onreply={onchoose} />
 	{:else if msg.t === 'render'}
 		<ComponentView component={msg.component} />
 		{#if msg.pin}

@@ -40,7 +40,10 @@ impl Pending {
 
     pub fn admit(&mut self, m: &ToThalamus) -> Result<(), String> {
         match m {
-            ToThalamus::Turn { .. } if !self.0.is_empty() => Err("an approval is waiting: decide it first".into()),
+            // A choice reply runs the model's next turn, so it waits as a turn does.
+            ToThalamus::Turn { .. } | ToThalamus::ChoiceReply { .. } if !self.0.is_empty() => {
+                Err("an approval is waiting: decide it first".into())
+            }
             ToThalamus::ApprovalDecision { approval, .. } if self.0.front() != Some(approval) => {
                 Err(format!("approval {approval} is not the oldest waiting one"))
             }

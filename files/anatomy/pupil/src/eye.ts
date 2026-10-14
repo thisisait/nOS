@@ -1,7 +1,8 @@
 // The eye's state: what the thalamus says it is doing (wire `activity`, text, refused),
 // the link, and one local input — the person typing — which is labelled as local.
 // Pure; the 600 ms / 1.5 s timers come back as `settle` carrying the seq they were set for.
-// Waiting is not a state here: it is the approval queue (pending > 0), and it wins in look().
+// Waiting is not a state here: it is the approval queue (pending > 0) or an open choice
+// (asking > 0), and it wins in look().
 import type { Link, ToShell } from './wire';
 
 export type State = 'disconnected' | 'idle' | 'listening' | 'thinking' | 'tool' | 'writing' | 'said' | 'refused';
@@ -48,8 +49,11 @@ export function step(x: Eye, i: Input): Eye {
 	return go(x, to);
 }
 
-export const look = (x: Eye, pending: number): View =>
-	x.state === 'disconnected' ? at('disconnected') : pending > 0 ? { state: 'waiting', tool: null } : at(x.state, x.tool);
+export const look = (x: Eye, pending: number, asking = 0): View =>
+	x.state === 'disconnected' ? at('disconnected')
+	: pending > 0 ? { state: 'waiting', tool: null }
+	: asking > 0 ? { state: 'waiting', tool: 'choice' }
+	: at(x.state, x.tool);
 
 const WORDS: Record<View['state'], string> = {
 	disconnected: 'disconnected',
@@ -63,4 +67,5 @@ const WORDS: Record<View['state'], string> = {
 	refused: 'refused'
 };
 
-export const label = (v: View): string => (v.state === 'tool' ? `tool: ${v.tool}` : WORDS[v.state]);
+export const label = (v: View): string =>
+	v.state === 'tool' ? `tool: ${v.tool}` : v.state === 'waiting' && v.tool === 'choice' ? 'waiting for your answer' : WORDS[v.state];
