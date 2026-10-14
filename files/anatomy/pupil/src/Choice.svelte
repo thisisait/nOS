@@ -1,32 +1,35 @@
 <!--
   A choice Iris asks at a fork (renderers.rs Choice) as native radios, or checkboxes when multi.
   The suggestion starts picked and is marked "navrženo"; every label is a text node. "Odpovědět"
-  hands one choice_reply to `onreply` (choice.ts reply); then the card shows the answer, held.
+  hands one choice_reply to `onreply` (choice.ts reply); the card shows the answer, held, only once
+  `onreply` says it was accepted (choice.ts answer); a refused one stays sendable.
 -->
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { initial, reply, toggle } from './choice';
+	import { answer, initial, reply, toggle } from './choice';
 	import type { ChoiceProps, ToThalamus } from './wire';
 
 	let { choice, session, answered = null, onreply }: {
 		choice: ChoiceProps;
 		session: string;
 		answered?: string[] | null;
-		onreply?: (m: Extract<ToThalamus, { t: 'choice_reply' }>) => void;
+		onreply?: (m: Extract<ToThalamus, { t: 'choice_reply' }>) => Promise<boolean>;
 	} = $props();
 
 	// A card is drawn once per render message: its props are where it starts, never re-read.
 	let picked = $state(untrack(() => initial(choice)));
 	let sent: string[] | null = $state(untrack(() => answered));
-	const send = () => {
-		const m = reply(session, choice, picked, sent !== null);
+	let busy = $state(false);
+	const send = async () => {
+		const m = reply(session, choice, picked, sent !== null || busy);
 		if (m?.t !== 'choice_reply') return;
-		sent = m.picked;
-		onreply?.(m);
+		busy = true;
+		sent = await answer(m, onreply);
+		busy = false;
 	};
 </script>
 
-<fieldset class="choice" disabled={sent !== null}>
+<fieldset class="choice" disabled={sent !== null || busy}>
 	<legend>{choice.question}</legend>
 	{#each choice.options as o (o.label)}
 		<label class="option">
@@ -43,7 +46,7 @@
 		</label>
 	{/each}
 	{#if sent !== null}<p class="muted">odpověď: {sent.join(', ')}</p>{/if}
-	<button type="button" disabled={sent !== null || !picked.length} onclick={send}>Odpovědět</button>
+	<button type="button" disabled={sent !== null || busy || !picked.length} onclick={send}>Odpovědět</button>
 </fieldset>
 
 <style>

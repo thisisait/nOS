@@ -11,7 +11,7 @@
 	let { msg, onpin, onchoose }: {
 		msg: ToShell;
 		onpin?: (m: ToShell) => void;
-		onchoose?: (m: Extract<ToThalamus, { t: 'choice_reply' }>) => void;
+		onchoose?: (m: Extract<ToThalamus, { t: 'choice_reply' }>) => Promise<boolean>;
 	} = $props();
 </script>
 

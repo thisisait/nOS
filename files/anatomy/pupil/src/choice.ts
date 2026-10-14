@@ -16,3 +16,12 @@ export function reply(session: string, c: ChoiceProps, picked: string[], sent: b
 	if (sent || !c.id || !picked.length || !ok || (!c.multi && picked.length > 1)) return null;
 	return { t: 'choice_reply', session, choice: c.id, picked: c.options.map((o) => o.label).filter((l) => picked.includes(l)) };
 }
+
+/** What the card shows as answered: m.picked once `onreply` accepted it, else null (send again). */
+export async function answer(m: Extract<ToThalamus, { t: 'choice_reply' }>, onreply?: (m: Extract<ToThalamus, { t: 'choice_reply' }>) => Promise<boolean>): Promise<string[] | null> {
+	try {
+		return (await onreply?.(m)) ? m.picked : null;
+	} catch {
+		return null;
+	}
+}

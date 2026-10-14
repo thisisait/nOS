@@ -107,15 +107,18 @@
 		}
 	}
 
-	// The person's answer to a choice: sent once by its card; serve hands it to Iris as data.
-	async function answered(m: Extract<ToThalamus, { t: 'choice_reply' }>) {
-		asking = asking.filter((id) => id !== m.choice);
-		push({ me: m.picked.join(', ') });
+	// The person's answer to a choice: answered only once the bridge took it (an approval waiting
+	// refuses it); a refused one leaves the card sendable and the eye waiting.
+	async function answered(m: Extract<ToThalamus, { t: 'choice_reply' }>): Promise<boolean> {
 		try {
 			await tauri?.core.invoke('send', { msg: m });
 		} catch (e) {
 			push({ msg: { t: 'refused', reason: `not sent: ${e}` } });
+			return false;
 		}
+		asking = asking.filter((id) => id !== m.choice);
+		push({ me: m.picked.join(', ') });
+		return true;
 	}
 
 	async function wire(msg: ToThalamus, widget: string) {
