@@ -149,6 +149,7 @@ posts, restarts or renders something.
 
 ### Agents and the loop
 
+- `iris-bench.py` — Score Iris from the thalamus wire alone (cases in `state/fixtures/iris-bench.yml`): tools, kinds, count = matched, sourced charts, time, cannot-see, no proposal; rejects every approval, writes only `state/fixtures/iris-bench/last-run.json`; NOS_LIVE=1 or `--offline --sock` (fake).
 - `loop-diff.py` — Build a valid unified diff from a replacement an agent can state in words.
 - `loop-graph-gen.py` — Compile the loop harness from ledger.py into loop-graph.json (the Planner Loops view + its gate).
 - `loop-pr.py` — The loop's driver: what happens after the judges say pass.
