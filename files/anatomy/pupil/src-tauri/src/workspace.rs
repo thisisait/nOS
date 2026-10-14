@@ -108,15 +108,14 @@ pub fn decode(text: &str) -> Result<Layout, String> {
     Ok(l)
 }
 
-/// No file is one empty workspace; a file that fails to decode is renamed
-/// `.broken-<unix seconds>` and Err says so, so the caller starts empty and tells the person.
+/// No file is one empty workspace; a file that fails to read (invalid UTF-8 too) or decode is
+/// renamed `.broken-<unix seconds>` and Err says so, so the caller starts empty and tells the person.
 pub fn load(path: &Path) -> Result<Layout, String> {
-    let text = match std::fs::read_to_string(path) {
-        Ok(t) => t,
+    let read = match std::fs::read_to_string(path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Layout::empty()),
-        Err(e) => return Err(format!("{}: {e}", path.display())),
+        r => r.map_err(|e| format!("unreadable: {e}")),
     };
-    decode(&text).map_err(|why| {
+    read.and_then(|text| decode(&text)).map_err(|why| {
         let ts = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
         let aside = path.with_extension(format!("json.broken-{ts}"));
         let moved = std::fs::rename(path, &aside).map(|_| format!("; kept as {}", aside.display())).unwrap_or_default();
