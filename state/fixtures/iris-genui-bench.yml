@@ -307,6 +307,29 @@
     - "(suggested)"
     - "2. expenses"
     - /choose
+- id: sequence-approval
+  kind: sequence
+  component:
+    kind: sequence
+    props:
+      title: How an approval travels
+      participants: [pupil, thalamus, KEAP]
+      steps:
+        - {phase: propose}
+        - {from: pupil, to: thalamus, text: "turn: close the row"}
+        - {from: thalamus, to: KEAP, text: query_rows}
+        - {from: KEAP, to: thalamus, text: 1 row, dashed: true}
+        - {note: the person decides, over: [pupil]}
+        - {note: recorded in the ledger, over: [thalamus, KEAP]}
+  expect:
+    - How an approval travels
+    - "participants: pupil, thalamus, KEAP"
+    - "  == propose =="
+    - "pupil -> thalamus: turn: close the row"
+    - "thalamus -> KEAP: query_rows"
+    - "KEAP --> thalamus: 1 row"
+    - "  note pupil: the person decides"
+    - "  note thalamus, KEAP: recorded in the ledger"
 # A dry run: what an action would add, remove or change, said as + - ~ before the line (iris-genui-change-markers).
 - id: tree-delta
   kind: tree

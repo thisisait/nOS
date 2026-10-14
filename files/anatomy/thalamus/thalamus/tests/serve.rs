@@ -2420,3 +2420,49 @@ fn show_offers_a_delta_on_tree_list_and_record() {
     let p = system_prompt(&rig);
     assert!(p.contains("what an action would change -> mark delta"), "{p}");
 }
+
+// --- iris-genui-sequence: who sends what to whom, offered and checked like every show kind ---
+
+#[test]
+fn show_draws_a_sequence_and_refuses_an_unknown_participant_or_a_crowd() {
+    let path = serde_json::json!({"kind": "sequence", "props": {"participants": ["pupil", "thalamus", "KEAP"], "steps": [
+        {"phase": "propose"}, {"from": "pupil", "to": "thalamus", "text": "close the row"},
+        {"from": "KEAP", "to": "thalamus", "text": "1 row", "dashed": true}, {"note": "the person decides", "over": ["pupil"]}]}});
+    let ghost = serde_json::json!({"kind": "sequence", "props": {"participants": ["a", "b"], "steps": [{"from": "a", "to": "ghost", "text": "m"}]}});
+    let crowd: Vec<String> = (0..9).map(|i| format!("p{i}")).collect();
+    let crowd = serde_json::json!({"kind": "sequence", "props": {"participants": crowd, "steps": [{"from": "p0", "to": "p1", "text": "m"}]}});
+    let bad = [(ghost, r#"names no participant "ghost""#), (crowd, "sequence participants: 9, 2 to 8")];
+    let mut model = vec![show(path)];
+    model.extend(bad.iter().map(|(c, _)| show(c.clone())));
+    model.push(answer("done"));
+    let rig = rig("sequence", mapped(), ROWS, model);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "show how an approval travels");
+    assert_eq!(drawn_kinds(&got), ["sequence"], "only the valid sequence is drawn: {got:?}");
+    for (i, (_, want)) in bad.iter().enumerate() {
+        let e = tool_result(&rig, i + 2);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(want) && e.contains("participants[]")), "show #{} must be refused naming {want}: {e}", i + 2);
+    }
+    let p = system_prompt(&rig);
+    assert!(p.contains("who sends what to whom -> sequence"), "{p}");
+}
+
+/// The model is offered participants, the three step shapes and their caps in both places it reads a shape.
+#[test]
+fn show_offers_a_sequence() {
+    let schema = serve::show_schema();
+    let branch = schema["properties"]["component"]["oneOf"].as_array().unwrap().iter()
+        .find(|b| b["properties"]["kind"]["const"] == "sequence").unwrap_or_else(|| panic!("no sequence branch")).clone();
+    let props = &branch["properties"]["props"]["properties"];
+    assert_eq!((&props["participants"]["minItems"], &props["participants"]["maxItems"]), (&serde_json::json!(2), &serde_json::json!(8)), "{props}");
+    assert_eq!(props["participants"]["items"]["maxLength"], 40, "{props}");
+    assert_eq!(props["steps"]["maxItems"], 40, "{props}");
+    let shapes: Vec<Vec<String>> = props["steps"]["items"]["oneOf"].as_array().unwrap_or_else(|| panic!("steps offer no shapes: {props}")).iter()
+        .map(|b| b["required"].as_array().unwrap().iter().map(|k| k.as_str().unwrap().to_string()).collect()).collect();
+    assert_eq!(shapes, [vec!["from", "to", "text"], vec!["note", "over"], vec!["phase"]], "{props}");
+    let shape = serve::SHOW_SHAPE.iter().find(|(k, _)| *k == "sequence").unwrap().1;
+    for want in ["participants[]", "{from, to, text, dashed?}", "{note, over[]}", "{phase}"] {
+        assert!(shape.contains(want), "SHOW_SHAPE sequence lacks {want}: {shape}");
+    }
+}
