@@ -1864,6 +1864,102 @@ fn form_submit_refuses_what_the_form_did_not_offer() {
     assert!(events(&rig.ledger, &session).iter().all(|e| !e.0.starts_with("agent_approval")), "a refused submit asked");
 }
 
+// --- thalamus-table-changed-broadcast: aliases, ledger-first, the form cap ---
+
+#[test]
+fn a_write_to_the_roadmap_says_table_changed_under_its_alias_too() {
+    // A widget spec may say "roadmap"; the write lands in its id. Same value as the other alias test.
+    std::env::set_var("NOS_ROADMAP_TABLE_ID", "rt-2d49");
+    let schema = expenses("").replace(r#""id": "expenses""#, r#""id": "rt-2d49""#);
+    let rig = rig_at("falias", mapped(), fake_table(&schema, vec![]).0, vec![answer("never")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    send_widget(&s, "f1", serde_json::json!({"form": {"table": "roadmap"}}), "click");
+    let Some(ToShell::Session { .. }) = next(&mut r) else { panic!("no session") };
+    let Some(ToShell::Widget { component: Component::Form(f), .. }) = next(&mut r) else { panic!("no form") };
+    send_submit(&s, &f.form, "f1", serde_json::json!({"kind": "tools", "amount": 1}));
+    let mut said = vec![];
+    loop {
+        match next(&mut r) {
+            Some(ToShell::TableChanged { table, .. }) => said.push(table),
+            Some(ToShell::FormResult { .. }) => break,
+            other => panic!("expected table_changed or form_result, got {other:?}"),
+        }
+    }
+    assert_eq!(said, ["rt-2d49", "roadmap"], "a widget naming the alias never re-runs");
+}
+
+#[test]
+fn a_form_submit_is_in_the_ledger_before_the_shell_hears_it() {
+    let rig = rig_at("fledger", mapped(), fake_table(&expenses(""), vec![]).0, vec![answer("never")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let form = open_form(&s, &mut r, "f1");
+    let session: String = rusqlite::Connection::open(&rig.ledger).unwrap()
+        .query_row("SELECT uuid FROM sessions", [], |r| r.get(0)).unwrap();
+    // From the insert's POST on, the ledger's write lock is held: a result not yet recorded waits under it.
+    let (seen, db) = (rig.keap.clone(), rig.ledger.clone());
+    let holder = std::thread::spawn(move || {
+        let c = rusqlite::Connection::open(db).unwrap();
+        while !seen.lock().unwrap().iter().any(|(h, _)| h.starts_with("POST ")) {}
+        c.execute_batch("BEGIN IMMEDIATE").unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        c.execute_batch("ROLLBACK").unwrap();
+    });
+    send_submit(&s, &form, "f1", serde_json::json!({"kind": "tools", "amount": 1}));
+    for want in ["table_changed", "form_result"] {
+        let got = next(&mut r).expect("an answer");
+        assert_eq!(serde_json::to_value(&got).unwrap()["t"], want);
+        let ev = events(&rig.ledger, &session);
+        assert!(ev.iter().any(|e| e.0 == "agent_tool_result" && e.1 == "agent:iris/tool:form_submit" && e.2["written"] == true),
+                "{want} reached the shell before its result was recorded: {ev:?}");
+    }
+    holder.join().unwrap();
+}
+
+#[test]
+fn a_widget_re_run_drops_its_old_form() {
+    let rig = rig_at("frerun", mapped(), fake_table(&expenses(""), vec![]).0, vec![answer("never")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ok = serde_json::json!({"kind": "tools", "amount": 1});
+    let refused = |r: &mut BufReader<UnixStream>| match next(r) {
+        Some(ToShell::Refused { reason, .. }) => assert!(reason.contains("not a form"), "{reason}"),
+        other => panic!("expected refused, got {other:?}"),
+    };
+    // Re-run as a form: the old id is gone, the new one is the form.
+    let old = open_form(&s, &mut r, "f1");
+    let new = open_form(&s, &mut r, "f1");
+    send_submit(&s, &old, "f1", ok.clone());
+    refused(&mut r);
+    // Re-run as rows: the form id no longer submits.
+    send_widget(&s, "f1", serde_json::json!({"rows": {"table": "expenses"}}), "click");
+    assert!(matches!(next(&mut r), Some(ToShell::Widget { component: Component::TableResults(_), .. })));
+    send_submit(&s, &new, "f1", ok);
+    refused(&mut r);
+    assert!(posts(&rig).is_empty(), "a dropped form wrote");
+}
+
+#[test]
+fn a_session_holds_at_most_24_forms() {
+    let rig = rig_at("fcap", mapped(), fake_table(&expenses(""), vec![]).0, vec![answer("never")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    for i in 0..24 {
+        open_form(&s, &mut r, &format!("f{i}"));
+    }
+    // A re-run of one held is not a 25th.
+    open_form(&s, &mut r, "f0");
+    send_widget(&s, "f24", serde_json::json!({"form": {"table": "expenses"}}), "click");
+    match next(&mut r) {
+        Some(ToShell::Refused { reason, widget }) => {
+            assert_eq!(widget.as_deref(), Some("f24"));
+            assert!(reason.contains("24 forms"), "{reason}");
+        }
+        other => panic!("the 25th form was not refused: {other:?}"),
+    }
+}
+
 // --- genui I5i: the PoC, offline: form, table and chart over one table, refreshed by a write ---
 
 /// state/fixtures/genui-workspace-poc/<name>: the expenses table the PoC runs over.
