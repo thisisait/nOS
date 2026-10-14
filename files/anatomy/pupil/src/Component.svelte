@@ -10,6 +10,7 @@
 	import Chart from './Chart.svelte';
 	import Form from './Form.svelte';
 	import Graph from './Graph.svelte';
+	import Sequence from './Sequence.svelte';
 	import Markdown from './Markdown.svelte';
 	import Timeline from './Timeline.svelte';
 	import { inherit, MARK, shownIn, tally, treeDeltas, VIEWS, type Delta, type View } from './delta';
@@ -190,6 +191,9 @@
 	{:else if component.kind === 'graph'}
 		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
 		<Graph graph={component.props} />
+	{:else if component.kind === 'sequence'}
+		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
+		<Sequence sequence={component.props} />
 	{:else if component.kind === 'form'}
 		<Form form={component.props} />
 	{:else}

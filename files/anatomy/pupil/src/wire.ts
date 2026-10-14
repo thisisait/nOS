@@ -19,6 +19,7 @@ export type Component =
 	| { kind: 'tree'; props: { title?: string; nodes: TreeNode[] } }
 	| { kind: 'timeline'; props: { title?: string; items: { when: string; title: string; note?: string; hi?: boolean; until?: string; lane?: string }[] } }
 	| { kind: 'graph'; props: { title?: string; nodes: { id: string; label: string; note?: string; tone?: 'ok' | 'info' | 'warn' | 'bad' }[]; edges: { from: string; to: string; label?: string; dashed?: boolean }[] } }
+	| { kind: 'sequence'; props: { title?: string; participants: string[]; steps: SequenceStep[] } }
 	| { kind: 'form'; props: FormProps }
 	| { kind: 'choice'; props: ChoiceProps };
 
@@ -31,6 +32,9 @@ export type FormField = {
 	key: string; label: string; kind: 'text' | 'number' | 'date' | 'select' | 'bool'; required: boolean;
 	options?: string[]; min?: number; max?: number; placeholder?: string;
 };
+
+/** A sequence step (renderers.rs Step), told apart by its fields. */
+export type SequenceStep = { from: string; to: string; text: string; dashed?: boolean } | { note: string; over: string[] } | { phase: string };
 
 export type TreeNode = { label: string; note?: string; delta?: Delta; children?: TreeNode[] };
 
