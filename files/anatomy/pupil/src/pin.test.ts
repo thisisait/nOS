@@ -22,12 +22,16 @@ const rows: ToShell = { t: 'render', session: S, component: table, pin: rowsPin 
 const list: ToShell = { t: 'render', session: S, component: { kind: 'list', props: { ordered: false, items: [{ text: 'x' }] } } };
 
 const html = (msg: ToShell) => render(Message, { props: { msg, onpin: () => {} } }).body;
-const BUTTON = 'Připnout na plochu';
+const BUTTON = 'Připnout na plochu'; // the accessible name; the face of it is an icon and "pin"
 const NOTE = 'jen náhled — Iris neuvedla zdroj čísel';
 
 describe('the pin button and the preview note', () => {
 	it('the button is drawn only for a render with a pin', () => {
-		for (const m of [sourced, rows]) expect(html(m)).toMatch(new RegExp(`<button[^>]*>${BUTTON}</button>`));
+		for (const m of [sourced, rows]) {
+			expect(html(m)).toMatch(new RegExp(`<button[^>]*aria-label="${BUTTON}"[^>]*>`));
+			// Operator 2026-10-14: a small button, an icon and the word pin.
+			expect(html(m)).toMatch(/<button[^>]*>\s*<svg[^>]*aria-hidden="true"[\s\S]*<\/svg>\s*pin\s*<\/button>/);
+		}
 		for (const m of [picture, list]) expect(html(m)).not.toContain(BUTTON);
 	});
 
@@ -51,6 +55,19 @@ describe('a click places the pin', () => {
 		expect(JSON.stringify(r.layout), "the model's numbers are not stored").not.toMatch(/120|42|travel/);
 		expect(r.w.w1).toEqual({ component: null, error: null, at: 0, spec: chartPin });
 		expect(r.send).toEqual({ t: 'widget', widget: 'w1', spec: chartPin, trigger: 'click' });
+	});
+
+	// Live 2026-10-14: the log keeps messages in $state, so msg.pin is a Proxy, and structuredClone
+	// threw DataCloneError on the click: nothing was pinned and nothing was said.
+	it('a pin held in reactive state (a Proxy) still places a plain copy', () => {
+		const proxied = (o: object): object => new Proxy(o, { get: (t, k) => {
+			const v = Reflect.get(t, k);
+			return v && typeof v === 'object' ? proxied(v) : v;
+		} });
+		const m = { ...sourced, pin: proxied(structuredClone(chartPin)) } as ToShell;
+		const r = pin(two, {}, 'w4', m);
+		expect(r.layout.workspaces[1].widgets[0].spec).toEqual(chartPin);
+		expect(() => structuredClone(r.layout)).not.toThrow();
 	});
 
 	it('a table pin is titled by its table name; the stored spec is a copy', () => {
