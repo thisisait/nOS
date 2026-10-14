@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 4   # 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline
+contract_version: 4   # 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -24,7 +24,7 @@ gates:
 wire:
   framing: "newline-delimited JSON, one message per line, UTF-8"
   tag: "every message is an object whose `t` names its variant (snake_case)"
-  to_thalamus: [turn, approval_decision, control, widget, form_submit]
+  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply]
   to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed]
   widget: >-
     A widget is a spec the person placed; the pupil re-runs it over `widget {widget, spec, trigger}`
@@ -51,6 +51,16 @@ wire:
     epoch seconds at UTC midnight), records request + decision + result under tool form_submit with
     the peer {pid, exe}, and commit() inserts the row (KEAP mints its id). It answers `form_result
     {session, widget, form, row}` or `refused {reason, widget}`; the model is not told.
+  choice_reply: >-
+    `choice_reply {session, choice, picked[]}` answers a choice the thalamus rendered in this session
+    (choice the uuid it minted, picked the option labels, at most 6). The thalamus checks it against
+    the choice it stored: an unknown or closed id, a label not offered, more than one pick without
+    multi, or no pick is refused (said to the person, recorded in the ledger); so is a reply while an
+    approval waits. A valid reply closes the choice, is recorded under tool choice_reply before
+    anything is sent, and reaches the model as data: "[thalamus] choice <id>: picked <labels>", plus
+    "the suggestion (<labels>) was kept untouched" when the picks are the suggestion, which is not
+    agreement. Then the model's next turn runs. A reply never mints an approval, a form, a widget or a
+    write; a picked label is only a label.
   table_changed: >-
     `table_changed {session, table, row}` follows every write this connection approved (an insert
     from a form or an approved row edit), so the pupil re-runs the widgets that read that table.
@@ -91,6 +101,14 @@ components:
       edges[{from, to, label?, dashed?}]}; at most 60 nodes and 120 edges; ids [A-Za-z0-9_-]{1,64}, unique, and
       every edge names two of them; drawn as layered columns (face graphLayered.ts), zoomable; the terminal says
       every node and edge as text
+    choice: >-
+      a question Iris asks at a fork that changes what she does next (show tool): {id?, question, options[{label,
+      note?}], suggested[], multi}; question at most 15 words and 120 chars, 2-6 options, labels at most 60 chars
+      and unique (case and spaces aside), a note at most 200, suggested names options: exactly 1, or 1 or more
+      when multi. The model sends no id: the thalamus mints a uuid and a render carries it (a render without one
+      is refused), and an approval_request never carries a choice. The pupil draws native radios (checkboxes
+      when multi) with the suggestion preselected and marked "navrženo", and sends choice_reply once on
+      "Odpovědět"; the terminal numbers the options and answers with /choose 2 (or 1,3)
     # Crosses the wire only inside a `widget` message: a render or approval_request carrying one is
     # refused (wire.rs not_a_form).
     form: >-
@@ -124,9 +142,10 @@ invariants:
 open:
   - >-
     Since v4 the model chooses a renderer through the `show` tool, for table,
-    list, record, chart, tree, timeline and graph (plain text already draws as markdown); table_results,
+    list, record, chart, tree, timeline, graph and choice (plain text already draws as markdown); table_results,
     row_diff_approval and the
     control views stay chosen by their tool or control, and an approval is
     minted by propose_row_edit, or by a widget form the person submits
     (wire.form_submit). The model has no form: a form is a widget the person
-    made, and a widget runs without the model (wire.widget).
+    made, and a widget runs without the model (wire.widget). A choice asks; its
+    answer is data for the model, never an approval (wire.choice_reply).

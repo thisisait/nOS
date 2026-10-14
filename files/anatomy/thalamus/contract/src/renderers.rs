@@ -928,6 +928,71 @@ mod tests {
         }
     }
 
+    const CHOICE_ID: &str = "3c9e1d2f-4a5b-4c6d-8e7f-9a0b1c2d3e4f";
+
+    /// Iris's question at a fork (iris-genui-forms step 1); `extra` is spliced into props.
+    fn choice(options: &str, suggested: &str, extra: &str) -> Component {
+        decode(&format!(r#"{{"kind":"choice","props":{{"question":"Which table should I chart?","options":[{options}],"suggested":[{suggested}],"multi":false{extra}}}}}"#))
+    }
+
+    fn opts(n: usize) -> String {
+        (0..n).map(|i| format!(r#"{{"label":"o{i}"}}"#)).collect::<Vec<_>>().join(",")
+    }
+
+    #[test]
+    fn a_choice_is_a_question_and_two_to_six_options() {
+        let ok = choice(r#"{"label":"todos","note":"the open work"},{"label":"expenses"}"#, r#""todos""#, "");
+        assert_eq!(ok.check(), Ok(()), "the model's choice carries no id");
+        assert_eq!(choice(&opts(6), r#""o0""#, "").check(), Ok(()));
+        let multi = decode(&format!(r#"{{"kind":"choice","props":{{"question":"Which?","options":[{}],"suggested":["o0","o2"],"multi":true}}}}"#, opts(3)));
+        assert_eq!(multi.check(), Ok(()), "multi may suggest more than one");
+        assert_eq!(choice(&opts(2), r#""o0""#, &format!(r#","id":"{CHOICE_ID}""#)).check(), Ok(()));
+    }
+
+    #[test]
+    fn check_rejects_a_choice_over_its_caps() {
+        for n in [0, 1, 7] {
+            assert_eq!(choice(&opts(n), r#""o0""#, "").check(), Err(format!("choice options: {n}, 2 to 6")), "{n}");
+        }
+        assert_eq!(choice(r#"{"label":"Todos"},{"label":" todos "}"#, r#""Todos""#, "").check(),
+                   Err(r#"choice option " todos " twice (case and spaces aside)"#.into()));
+        assert_eq!(choice(r#"{"label":" "},{"label":"b"}"#, r#""b""#, "").check(), Err("a choice option label is empty".into()));
+        assert_eq!(choice(&format!(r#"{{"label":"{}"}},{{"label":"b"}}"#, "l".repeat(61)), r#""b""#, "").check(),
+                   Err("a choice option label is over 60 chars".into()));
+        assert_eq!(choice(&format!(r#"{{"label":"a","note":"{}"}},{{"label":"b"}}"#, "n".repeat(201)), r#""b""#, "").check(),
+                   Err("a choice option note is over 200 chars".into()));
+        assert_eq!(choice(&opts(2), r#""o9""#, "").check(), Err(r#"suggested "o9" is not an option"#.into()));
+        for (s, n) in [("", 0), (r#""o0","o1""#, 2)] {
+            assert_eq!(choice(&opts(2), s, "").check(), Err(format!("a choice suggests exactly 1 option, not {n}; multi suggests 1 or more")), "{s}");
+        }
+        assert_eq!(choice(&opts(2), r#""o0""#, r#","id":"latest""#).check(), Err(r#"choice id is not a lowercase uuid: "latest""#.into()));
+        let q = |q: &str| decode(&format!(r#"{{"kind":"choice","props":{{"question":{},"options":[{}],"suggested":["o0"],"multi":false}}}}"#,
+                                          serde_json::to_string(q).unwrap(), opts(2)));
+        assert_eq!(q(&vec!["w"; 15].join(" ")).check(), Ok(()));
+        assert_eq!(q(&vec!["w"; 16].join(" ")).check(), Err("a choice question is over 15 words".into()));
+        assert_eq!(q(&"q".repeat(121)).check(), Err("a choice question is over 120 chars".into()));
+        assert_eq!(q("  ").check(), Err("a choice asks no question".into()));
+    }
+
+    /// serve mints the id: a render without one, or a choice in an approval, is refused.
+    #[test]
+    fn a_choice_render_carries_the_minted_id_and_never_rides_an_approval() {
+        use crate::wire::{decode_to_shell, ToShell};
+        let s = "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b";
+        let c = |extra: &str| serde_json::to_string(&choice(&opts(2), r#""o0""#, extra)).unwrap();
+        let with = c(&format!(r#","id":"{CHOICE_ID}""#));
+        assert!(matches!(decode_to_shell(&format!(r#"{{"t":"render","session":"{s}","component":{with}}}"#)), ToShell::Render { .. }));
+        for (line, want) in [
+            (format!(r#"{{"t":"render","session":"{s}","component":{}}}"#, c("")), "a choice the thalamus sends carries the id it minted"),
+            (format!(r#"{{"t":"approval_request","session":"{s}","approval":"{FORM_ID}","component":{with}}}"#), "a choice is asked in a render, never in an approval"),
+        ] {
+            match decode_to_shell(&line) {
+                ToShell::Refused { reason, .. } => assert!(reason.contains(want), "{reason}"),
+                m => panic!("accepted: {m:?}"),
+            }
+        }
+    }
+
     /// Through check(), so the matcher is the one a time chart meets.
     fn is_date(x: &str) -> bool {
         chart("line", "time", &format!(r#"{{"name":"a","points":[[{}, 1]]}}"#, serde_json::to_string(x).unwrap())).check().is_ok()
