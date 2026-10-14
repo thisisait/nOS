@@ -1058,7 +1058,7 @@ fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
     assert!(p.contains("propose_row_edit only for a change the person asked for, never to look at a row"), "{p}");
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
-    assert_eq!(names, ["query_rows", "propose_row_edit", "show", "red_status"]);
+    assert_eq!(names, ["query_rows", "propose_row_edit", "show", "red_status", "list_tables"]);
     assert!(p.contains(&format!("To show structured output call show ({})", serve::SHOW_KINDS.join(", "))), "{p}");
     assert_eq!(body["tools"][0]["function"]["parameters"]["required"], serde_json::json!(["table"]), "q is optional");
 }
@@ -2717,4 +2717,34 @@ fn a_decision_sent_by_an_unlisted_process_on_a_listed_connection_is_refused() {
     assert!(posts(&rig).is_empty(), "an unlisted sender's approval wrote");
     decide(&s, &approval, Decision::Approve);
     assert!(matches!(next(&mut r), Some(ToShell::TableChanged { ref row, .. }) if row == "r1"), "the listed sender is still admitted");
+}
+
+// --- live 2026-10-14 on a client: Iris said she had no tool to list tables ---
+
+const TABLES: &str = r#"{"success": true, "data": [
+    {"id": "dd74acfd", "title": "expenses", "visibility": "private"},
+    {"id": "rt-1", "title": "nOS Roadmap", "visibility": "shared"}]}"#;
+
+#[test]
+fn list_tables_names_the_tables_the_person_can_read() {
+    let rig = rig_n("tables", mapped(), vec![TABLES.into()], vec![call("list_tables", "{}"), answer("Two tables.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "jaké mám tabulky?");
+    let t = tool_result(&rig, 1);
+    assert_eq!(t["tables"], serde_json::json!([{"id": "dd74acfd", "title": "expenses"}, {"id": "rt-1", "title": "nOS Roadmap"}]), "{t}");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::Table(x), .. } if x.rows.len() == 2)), "{got:?}");
+    assert!(system_prompt(&rig).contains("call list_tables"), "{}", system_prompt(&rig));
+    let keap = rig.keap.lock().unwrap();
+    assert!(keap[0].0.ends_with("/api/tables"), "{:?}", keap[0].0);
+}
+
+#[test]
+fn list_tables_says_when_keap_cannot_be_read() {
+    let rig = rig_n("tables-err", mapped(), vec![r#"!500 {"success": false, "error": "down"}"#.into()],
+                    vec![call("list_tables", "{}"), answer("x")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "tables?");
+    assert!(tool_result(&rig, 1)["error"].as_str().is_some(), "{}", tool_result(&rig, 1));
 }
