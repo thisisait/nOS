@@ -12,12 +12,29 @@
 	import Graph from './Graph.svelte';
 	import Markdown from './Markdown.svelte';
 	import Timeline from './Timeline.svelte';
-	import { cell, shown, type Component, type TreeNode } from './wire';
+	import { inherit, MARK, shownIn, tally, treeDeltas, VIEWS, type Delta, type View } from './delta';
+	import { cell, shown, type Component, type TreeNode, type Value } from './wire';
 
-	let { component }: { component: Component } = $props();
+	// view: Před / Změny / Po of a component that marks a delta (delta.ts); the switch sets it.
+	let { component, view = $bindable('changes') }: { component: Component; view?: View } = $props();
 	// A column whose text runs long reads as prose under its row, not as a column that starves the rest.
 	const LONG = (s: string) => s.length > 80 || s.includes('\n');
 </script>
+
+<!-- The mark is text (+ − ~) and its word for a screen reader; the colour is only on top. -->
+{#snippet mark(d: Delta | undefined)}{#if d}<span class="mark" data-delta={d}>{MARK[d]}</span><span class="sr">{d}</span>{' '}{/if}{/snippet}
+{#snippet deltaBar(ds: (Delta | undefined)[])}
+	{#if ds.some(Boolean)}
+		<div class="delta-bar">
+			<span class="mono">{tally(ds)}</span>
+			<fieldset class="views">
+				<legend class="sr">pohled</legend>
+				{#each VIEWS as [v, label]}<label><input type="radio" bind:group={view} value={v} />{label}</label>{/each}
+			</fieldset>
+		</div>
+	{/if}
+{/snippet}
+{#snippet value(v: Value | undefined)}{#if v !== null && typeof v === 'object'}<pre>{JSON.stringify(v, null, 1)}</pre>{:else}{cell(v)}{/if}{/snippet}
 
 <section class="component" data-kind={component.kind}>
 	{#if component.kind === 'table_results'}
@@ -107,17 +124,27 @@
 	{:else if component.kind === 'list'}
 		{@const l = component.props}
 		{#if l.title}<h3>{l.title}</h3>{/if}
+		{@render deltaBar(l.items.map((x) => x.delta))}
+		{@const items = l.items.filter((x) => shownIn(x.delta, view))}
 		{#snippet item(x: (typeof l.items)[number])}
-			<li>{#if x.tone}<Badge tone={x.tone}>{x.tone}</Badge>{' '}{/if}{x.text}{#if x.detail}<span class="muted"> — {x.detail}</span>{/if}</li>
+			<li data-delta={x.delta}>{@render mark(x.delta)}{#if x.tone}<Badge tone={x.tone}>{x.tone}</Badge>{' '}{/if}{x.text}{#if x.detail}<span class="muted"> — {x.detail}</span>{/if}</li>
 		{/snippet}
-		{#if l.ordered}<ol>{#each l.items as x}{@render item(x)}{/each}</ol>{:else}<ul>{#each l.items as x}{@render item(x)}{/each}</ul>{/if}
+		{#if l.ordered}<ol>{#each items as x}{@render item(x)}{/each}</ol>{:else}<ul>{#each items as x}{@render item(x)}{/each}</ul>{/if}
 	{:else if component.kind === 'record'}
 		{@const r = component.props}
 		{#if r.title}<h3>{r.title}</h3>{/if}
+		{@render deltaBar(r.fields.map((f) => f.delta))}
 		<dl>
-			{#each r.fields as f}
-				<dt>{f.key}</dt>
-				<dd>{#if f.value !== null && typeof f.value === 'object'}<pre>{JSON.stringify(f.value, null, 1)}</pre>{:else}{cell(f.value)}{/if}</dd>
+			{#each r.fields.filter((f) => shownIn(f.delta, view)) as f}
+				{@const was = f.delta === 'changed' && f.was !== undefined}
+				<dt data-delta={f.delta}>{@render mark(f.delta)}{f.key}</dt>
+				<dd>
+					{#if view === 'before' && f.delta === 'changed'}
+						{#if was}{@render value(f.was)}{:else}<span class="muted">(dřív neuvedeno)</span>{/if}
+					{:else if view === 'changes' && was}
+						<span class="old">{@render value(f.was)}</span> → <span class="new">{@render value(f.value)}</span>
+					{:else}{@render value(f.value)}{/if}
+				</dd>
 			{/each}
 		</dl>
 	{:else if component.kind === 'chart'}
@@ -127,28 +154,35 @@
 		{@const t = component.props}
 		{@const kids = t.nodes[0]?.children?.length ?? 0}
 		{@const org = t.nodes.length === 1 && kids >= 2 && kids <= 4}
-		{#snippet orgNode(n: TreeNode)}
-			<div class="node">
-				<span class="label">{n.label}</span>
-				{#if n.note}<span class="note">{n.note}</span>{/if}
-				{#if n.children?.length}
-					<div class="kids">{#each n.children as c}{@render orgNode(c)}{/each}</div>
-				{/if}
-			</div>
+		{#snippet orgNode(n: TreeNode, parent: Delta | undefined)}
+			{@const d = inherit(n.delta, parent)}
+			{#if shownIn(d, view)}
+				<div class="node" data-delta={d}>
+					<span class="label">{@render mark(d)}{n.label}</span>
+					{#if n.note}<span class="note">{n.note}</span>{/if}
+					{#if n.children?.length}
+						<div class="kids">{#each n.children as c}{@render orgNode(c, d)}{/each}</div>
+					{/if}
+				</div>
+			{/if}
 		{/snippet}
-		{#snippet listNodes(nodes: TreeNode[])}
+		{#snippet listNodes(nodes: TreeNode[], parent: Delta | undefined)}
 			{#each nodes as n}
-				<li>
-					{n.label}{#if n.note}<span class="muted"> — {n.note}</span>{/if}
-					{#if n.children?.length}<ul>{@render listNodes(n.children)}</ul>{/if}
-				</li>
+				{@const d = inherit(n.delta, parent)}
+				{#if shownIn(d, view)}
+					<li data-delta={d}>
+						{@render mark(d)}{n.label}{#if n.note}<span class="muted"> — {n.note}</span>{/if}
+						{#if n.children?.length}<ul>{@render listNodes(n.children, d)}</ul>{/if}
+					</li>
+				{/if}
 			{/each}
 		{/snippet}
 		{#if t.title}<h3>{t.title}</h3>{/if}
+		{@render deltaBar(treeDeltas(t.nodes))}
 		{#if org}
-			<div class="org" data-layout="org">{@render orgNode(t.nodes[0])}</div>
+			<div class="org" data-layout="org">{@render orgNode(t.nodes[0], undefined)}</div>
 		{:else}
-			<ul class="tree" data-layout="list">{@render listNodes(t.nodes)}</ul>
+			<ul class="tree" data-layout="list">{@render listNodes(t.nodes, undefined)}</ul>
 		{/if}
 	{:else if component.kind === 'timeline'}
 		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
@@ -288,5 +322,40 @@
 	}
 	.new {
 		color: var(--ok-ink);
+	}
+	.mark {
+		font-family: ui-monospace, monospace;
+		font-weight: 700;
+	}
+	.mark[data-delta='added'] {
+		color: var(--ok-ink);
+	}
+	.mark[data-delta='removed'] {
+		color: var(--bad-ink);
+	}
+	.mark[data-delta='changed'] {
+		color: var(--warn-ink);
+	}
+	.delta-bar {
+		display: flex;
+		gap: 10px;
+		align-items: center;
+		margin: 0 0 6px;
+		font-size: 11px;
+	}
+	.views {
+		display: flex;
+		gap: 8px;
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+	.sr {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
 	}
 </style>

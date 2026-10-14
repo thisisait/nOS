@@ -1,6 +1,7 @@
 // The wire as the webview sees it: already decoded by the Rust bridge with
 // nos_contract::wire::decode_to_shell, so every message here is checked.
 // Spec: files/anatomy/contracts/thalamus-shell.yml.
+import type { Delta } from './delta';
 
 export type Value = null | boolean | number | string | Value[] | { [k: string]: Value };
 
@@ -12,8 +13,8 @@ export type Component =
 	| { kind: 'red_status'; props: { red_count: number; reds: string[]; hold_count: number; holds: string[] } }
 	| { kind: 'markdown'; props: { text: string } }
 	| { kind: 'table'; props: { title?: string; columns: string[]; rows: Value[][] } }
-	| { kind: 'list'; props: { title?: string; ordered: boolean; items: { text: string; detail?: string; tone?: 'ok' | 'info' | 'warn' | 'bad' }[] } }
-	| { kind: 'record'; props: { title?: string; fields: { key: string; value: Value }[] } }
+	| { kind: 'list'; props: { title?: string; ordered: boolean; items: { text: string; detail?: string; tone?: 'ok' | 'info' | 'warn' | 'bad'; delta?: Delta }[] } }
+	| { kind: 'record'; props: { title?: string; fields: { key: string; value: Value; delta?: Delta; was?: Value }[] } }
 	| { kind: 'chart'; props: { title?: string; chart: 'bar' | 'stacked_bar' | 'line' | 'area' | 'scatter' | 'pie'; x: 'category' | 'number' | 'time'; series: { name: string; points: [string, number][] }[] } }
 	| { kind: 'tree'; props: { title?: string; nodes: TreeNode[] } }
 	| { kind: 'timeline'; props: { title?: string; items: { when: string; title: string; note?: string; hi?: boolean; until?: string; lane?: string }[] } }
@@ -31,7 +32,7 @@ export type FormField = {
 	options?: string[]; min?: number; max?: number; placeholder?: string;
 };
 
-export type TreeNode = { label: string; note?: string; children?: TreeNode[] };
+export type TreeNode = { label: string; note?: string; delta?: Delta; children?: TreeNode[] };
 
 export type ToShell =
 	| { t: 'session'; session: string; actor: string; model_uri: string }
