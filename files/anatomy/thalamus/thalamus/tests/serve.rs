@@ -1059,9 +1059,10 @@ fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
     let p = system_prompt(&rig);
     assert!(p.contains("call query_rows (its total is the exact count)"), "{p}");
     assert!(p.contains("propose_row_edit only for a change the person asked for, never to look at a row"), "{p}");
+    assert!(p.contains("propose_row_insert only for a new row the person asked for, in a table query_rows showed them"), "{p}");
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
-    assert_eq!(names, ["query_rows", "propose_row_edit", "show", "red_status", "list_tables",
+    assert_eq!(names, ["query_rows", "propose_row_edit", "propose_row_insert", "show", "red_status", "list_tables",
                        "estate_services", "approvals_awaiting", "inbox", "search_memory"]);
     assert!(p.contains("call search_memory"), "{p}");
     assert!(p.contains("Before recommending software, call estate_services: prefer a service the estate already has."), "{p}");
@@ -3094,4 +3095,150 @@ fn unreadable_memory_is_unknown_and_no_hit_is_no_render() {
     let (got, _) = tool_turn(&rig, "what did I note about zorblax-41?");
     assert_eq!(tool_result(&rig, 1)["items"], serde_json::json!([]), "{}", tool_result(&rig, 1));
     assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::List(_), .. })), "{got:?}");
+}
+
+// --- propose_row_insert: a new row is a card the person decides, on a table they queried ---
+
+/// GET /api/tables/cards: a required title, a select and a number.
+const CARDS: &str = r#"{"success": true, "data": {"id": "cards", "title": "Card deck", "schema": {"columns": [
+    {"key": "title", "label": "Title", "kind": "text", "required": true},
+    {"key": "status", "label": "Status", "kind": "select", "options": ["queued", "shipped"]},
+    {"key": "points", "label": "Points", "kind": "number"}]}}}"#;
+
+fn cards(name: &str, model_bodies: Vec<String>) -> Rig {
+    let (keap, _) = fake_table(CARDS, vec![keap_row("c1", serde_json::json!({"title": "one", "status": "queued", "points": 1})),
+                                           keap_row("c2", serde_json::json!({"title": "two"}))]);
+    rig_at(name, mapped(), keap, model_bodies, Some(local()))
+}
+
+const INSERT: &str = r#"{"table": "Card deck", "values": {"title": "new", "status": "queued", "points": 5}}"#;
+
+fn card_of(got: &[ToShell]) -> Option<(String, nos_contract::renderers::RowDiffApproval)> {
+    got.iter().find_map(|m| match m {
+        ToShell::ApprovalRequest { approval, component: Component::RowDiffApproval(d), .. } => Some((approval.clone(), d.clone())),
+        _ => None,
+    })
+}
+
+/// Reads until the decision's Text.
+fn until_said(r: &mut BufReader<UnixStream>) {
+    while let Some(m) = next(r) {
+        if matches!(m, ToShell::Text { .. } | ToShell::Refused { .. }) {
+            break;
+        }
+    }
+}
+
+#[test]
+fn an_insert_card_by_title_posts_without_an_id_on_approve() {
+    let rig = cards("ins", vec![query(r#"{"table": "cards"}"#), call("propose_row_insert", INSERT), answer("Proposed.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "add a card titled new");
+    let (approval, d) = card_of(&got).unwrap_or_else(|| panic!("no card: {got:?}"));
+    assert_eq!((d.table.as_str(), d.title.as_str(), d.op, d.row_id.as_deref()),
+               ("cards", "Card deck", nos_contract::renderers::RowOp::Insert, None));
+    let keys: Vec<&str> = d.cells.iter().map(|c| c.key.as_str()).collect();
+    assert_eq!(keys, ["title", "status", "points"], "every proposed cell is on the card");
+    assert!(d.cells.iter().all(|c| c.old.is_null()) && d.read_from.is_empty(), "{d:?}");
+    assert!(posts(&rig).is_empty(), "a proposal wrote before the person decided");
+
+    decide(&s, &approval, Decision::Approve);
+    until_said(&mut r);
+    let p = posts(&rig);
+    assert_eq!(p.len(), 1, "{p:?}");
+    assert!(p[0].0.starts_with("POST /api/tables/cards/rows "), "{}", p[0].0);
+    let body: serde_json::Value = serde_json::from_str(&p[0].1).unwrap();
+    assert!(body.get("id").is_none(), "an insert named a row: {body}");
+    assert_eq!((&body["values"]["title"], &body["values"]["status"], body["values"]["points"].as_f64()),
+               (&serde_json::json!("new"), &serde_json::json!("queued"), Some(5.0)));
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let ev: Vec<_> = events(&rig.ledger, &session_of(&got)).into_iter()
+        .filter(|e| e.1 == "agent:iris/tool:propose_row_insert").collect();
+    let req = ev.iter().find(|e| e.0 == "agent_approval_request").expect("the request is under propose_row_insert");
+    assert!(req.2.get("row_id").is_none() && req.2["op"] == "insert", "{}", req.2);
+    assert!(req.2["cells"].as_array().unwrap().iter().all(|c| c.get("old").is_none()), "{}", req.2);
+    assert!(ev.iter().any(|e| e.0 == "agent_approval_decision"), "{ev:?}");
+}
+
+#[test]
+fn an_insert_on_a_table_never_queried_or_only_grouped_or_listed_is_refused_without_a_card() {
+    for (name, first) in [("ins-none", None), ("ins-grp", Some(query(r#"{"table": "cards", "group_by": "status"}"#))),
+                          ("ins-list", Some(call("list_tables", "{}")))] {
+        let mut bodies: Vec<String> = first.into_iter().collect();
+        let n = bodies.len();
+        bodies.extend([call("propose_row_insert", INSERT), answer("Could not.")]);
+        let rig = cards(name, bodies);
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let read = |rig: &Rig| rig.keap.lock().unwrap().len();
+        let got = turn(&s, &mut r, None, "add a card");
+        assert!(card_of(&got).is_none(), "{name}: a card for a table never queried: {got:?}");
+        let e = tool_result(&rig, n + 1);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains("query it first")), "{name}: {e}");
+        if n == 0 {
+            assert_eq!(read(&rig), 0, "{name}: KEAP was read for a refused proposal");
+        }
+        assert!(posts(&rig).is_empty(), "{name}: wrote");
+    }
+}
+
+#[test]
+fn an_insert_of_nothing_a_sharing_key_or_no_required_column_never_asks() {
+    for (name, values, want, read) in [
+        ("ins-empty", "{}", "non-empty `values`", false),
+        ("ins-share", r#"{"title": "x", "__sharing": {"public": true}}"#, "cannot be written", false),
+        ("ins-req", r#"{"status": "queued"}"#, "title", true),
+    ] {
+        let args = format!(r#"{{"table": "cards", "values": {values}}}"#);
+        let rig = cards(name, vec![query(r#"{"table": "cards"}"#), call("propose_row_insert", &args), answer("Could not.")]);
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let got = turn(&s, &mut r, None, "add a card");
+        assert!(card_of(&got).is_none(), "{name}: {got:?}");
+        let e = tool_result(&rig, 2);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "{name}: {e}");
+        if !read {
+            assert_eq!(rig.keap.lock().unwrap().len(), 2, "{name}: refused after a read, not before");
+        }
+    }
+}
+
+#[test]
+fn an_edit_that_fills_an_empty_cell_is_written_on_approve() {
+    let rig = cards("fill", vec![query(r#"{"table": "cards"}"#),
+        call("propose_row_edit", r#"{"table": "cards", "row_id": "c2", "values": {"status": "shipped"}}"#), answer("Proposed.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "ship two");
+    let (approval, d) = card_of(&got).unwrap_or_else(|| panic!("no card: {got:?}"));
+    assert!(d.cells[0].old.is_null(), "{d:?}");
+    decide(&s, &approval, Decision::Approve);
+    until_said(&mut r);
+    let p = posts(&rig);
+    assert_eq!(p.len(), 1, "an update of an empty cell was refused");
+    assert_eq!(serde_json::from_str::<serde_json::Value>(&p[0].1).unwrap(),
+               serde_json::json!({"id": "c2", "values": {"status": "shipped"}}));
+}
+
+#[test]
+fn a_card_after_a_free_text_read_says_so_and_one_waits_at_a_time() {
+    let rig = cards("ins-read", vec![query(r#"{"table": "cards"}"#), call("inbox", "{}"), call("propose_row_insert", INSERT),
+        answer("Proposed."), call("propose_row_insert", INSERT), answer("Waiting."), call("propose_row_insert", INSERT), answer("Again.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let first = turn(&s, &mut r, None, "file what my inbox says as a card");
+    let (approval, d) = card_of(&first).unwrap_or_else(|| panic!("no card: {first:?}"));
+    assert_eq!(d.read_from, ["inbox"], "the card head names the free text the turn read");
+    let session = session_of(&first);
+    let second = turn(&s, &mut r, Some(session.clone()), "and another");
+    assert!(card_of(&second).is_none(), "two approvals waited: {second:?}");
+    assert!(tool_result(&rig, 5)["error"].as_str().is_some_and(|e| e.contains("already waiting")), "{}", tool_result(&rig, 5));
+    decide(&s, &approval, Decision::Reject);
+    until_said(&mut r);
+    let third = turn(&s, &mut r, Some(session), "add it again");
+    let (_, d) = card_of(&third).unwrap_or_else(|| panic!("no card: {third:?}"));
+    assert!(d.read_from.is_empty(), "a turn that read no free text is not marked: {d:?}");
+    assert!(posts(&rig).is_empty(), "a rejected or undecided card wrote");
 }

@@ -295,10 +295,27 @@ mod tests {
             ("an unknown op", serde_json::json!({"table": "t", "op": "delete", "row_id": "r1", "cells": [{"key": "k", "old": 1, "new": 2}]})),
             ("an update without a row", serde_json::json!({"table": "t", "op": "update", "cells": [{"key": "k", "old": 1, "new": 2}]})),
             ("an update without old", serde_json::json!({"table": "t", "row_id": "r1", "cells": [{"key": "k", "new": 2}]})),
+            ("an insert of no cells", serde_json::json!({"table": "t", "op": "insert", "cells": []})),
+            ("an update of no cells", serde_json::json!({"table": "t", "row_id": "r1", "cells": []})),
         ].into_iter().enumerate() {
             let d = approve(&l, &format!("a{i}"), req);
             assert!(l.approved(d).is_err(), "{why} was approved as a write");
         }
+    }
+
+    #[test]
+    fn approved_takes_the_card_shaped_records_serve_writes() {
+        let (l, _) = ledger("op-card");
+        start(&l);
+        // ask()'s insert record: the card minus row_id and every old.
+        let d = approve(&l, "a1", serde_json::json!({"table": "t", "title": "T", "op": "insert", "read_from": ["inbox"],
+            "cells": [{"key": "k", "new": 2}]}));
+        assert_eq!(l.approved(d).map(|a| a.op), Ok(RowOp::Insert));
+        // An update filling an empty cell: a real null old is present, not absent.
+        let d = approve(&l, "a2", serde_json::json!({"table": "t", "title": "T", "op": "update", "row_id": "r1",
+            "cells": [{"key": "k", "old": null, "new": 2}]}));
+        let a = l.approved(d).unwrap();
+        assert_eq!(Value::Object(a.old), serde_json::json!({"k": null}));
     }
 
     #[test]
