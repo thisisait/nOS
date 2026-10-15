@@ -3940,6 +3940,29 @@ fn a_row_ref_field_lists_the_parent_labels_and_a_submit_writes_the_parent_id() {
     assert_eq!(v["props"]["fields"][0], serde_json::json!({"key": "card", "label": "Card", "kind": "text", "required": true}));
 }
 
+#[test]
+fn a_lens_on_a_row_ref_picks_a_parent_label_that_filters_the_lines_and_prefills_the_form() {
+    let lines = vec![keap_row("l1", serde_json::json!({"card": "c1", "item": "a"})), keap_row("l2", serde_json::json!({"card": "c2", "item": "b"}))];
+    let rows = serde_json::json!({"title": "Lines", "rows": {"table": "card-lines"}});
+    let form = serde_json::json!({"title": "Add a line", "form": {"table": "card-lines"}});
+    // Either widget order: the lens is a select of the parent labels, never a raw id or a text box.
+    for (name, widgets) in [("lensref-rf", [&rows, &form]), ("lensref-fr", [&form, &rows])] {
+        let args = serde_json::json!({"name": "Lines", "lens": [{"column": "card", "op": "eq"}], "widgets": widgets});
+        let (rig, got, _) = offer_over(name, fake_tables(vec![(CARDS, deck()), (LINES, lines.clone())]).0, args);
+        let d = dashboards(&got);
+        assert_eq!(d.len(), 1, "{got:?}");
+        assert_eq!((&d[0]["lens"][0]["kind"], &d[0]["lens"][0]["options"]), (&serde_json::json!("select"), &serde_json::json!(["one", "two"])),
+                   "{name}: {}", d[0]);
+        // The label the person picks filters the lines by the parent's id.
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        send_widget(&s, "rows", serde_json::json!({"rows": {"table": "card-lines", "where": [{"column": "card", "op": "eq", "value": "two"}]}}), "click");
+        let t = widget_answer(&mut r, "rows");
+        let ids: Vec<&str> = t["props"]["rows"].as_array().unwrap().iter().map(|x| x["__id"].as_str().unwrap()).collect();
+        assert_eq!(ids, ["l2"], "{name}: {t}");
+    }
+}
+
 const WITH_LINES: &str = r#"{"table": "cards", "values": {"title": "new"},
     "lines": {"table": "card-lines", "rows": [{"item": "a", "qty": 1}, {"item": "b", "qty": 2}]}}"#;
 
