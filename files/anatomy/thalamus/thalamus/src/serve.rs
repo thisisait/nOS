@@ -5,8 +5,9 @@
 
 use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, RowOp, Session};
-use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, FieldKind, Form, FormField,
-                               InboxItem, InboxList, List, ListItem, Omitted, RedStatus, Row, RowDiffApproval, Series, Table, TableResults};
+use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget,
+                               Dropped, FieldKind, Form, FormField, InboxItem, InboxList, Lens, LensOp, List, ListItem, Omitted, RedStatus,
+                               Row, RowDiffApproval, Series, Table, TableResults};
 use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, Op, Phase, ToShell, ToThalamus, Trigger,
                          WidgetChart, WidgetSpec};
 use nos_contract::uid;
@@ -365,6 +366,13 @@ approval: only propose_row_edit and propose_row_insert do, and query_rows draws 
 table's rows pass `source`: the thalamus counts, sums or averages the rows as the person and draws those numbers \
 in place of your series, and the person can pin the chart live.";
 
+const OFFER_DASHBOARD: &str = "Offer the person a dashboard: a new tab of 1-8 widgets, each {title} and one of rows \
+(query_rows arguments), chart ({query {table, q?, where?}, chart bar|line|pie, x, y?, op count|sum|avg}: show's source \
+plus its chart) or form ({table, columns?}: a form that adds a row), and up to 4 lens filters {column, op, value} the \
+tab applies to every rows and chart widget (an empty value: the person picks). Nothing runs and nothing is placed: the \
+person sees the offer and may place it; you never see its rows. A widget that does not fit its table is left out and \
+you are told why.";
+
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
 pub const SHOW_KINDS: [&str; 9] = ["table", "list", "record", "chart", "tree", "timeline", "graph", "sequence", "choice"];
@@ -475,6 +483,7 @@ const QUERY_KEYS: [&str; 9] = ["table", "q", "where", "columns", "order_by", "li
 const WHERE_KEYS: [&str; 3] = ["column", "op", "value"];
 const ORDER_KEYS: [&str; 2] = ["column", "dir"];
 const OPS: [&str; 6] = ["eq", "neq", "in", "contains", "lt", "gt"];
+const LENS_OPS: [&str; 5] = ["eq", "neq", "lt", "gt", "contains"];
 
 fn tools() -> Value {
     json!([{"type": "function", "function": {"name": "query_rows", "description": QUERY_ROWS,
@@ -516,7 +525,18 @@ fn tools() -> Value {
         "parameters": {"type": "object", "additionalProperties": false, "properties": {}}}},
         {"type": "function", "function": {"name": "search_memory", "description": SEARCH_MEMORY,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["q"], "properties": {
-            "q": {"type": "string", "minLength": 1}, "limit": {"type": "integer", "minimum": 1, "maximum": 20}}}}}])
+            "q": {"type": "string", "minLength": 1}, "limit": {"type": "integer", "minimum": 1, "maximum": 20}}}}},
+        {"type": "function", "function": {"name": "offer_dashboard", "description": OFFER_DASHBOARD,
+        "parameters": {"type": "object", "additionalProperties": false, "required": ["name", "widgets"], "properties": {
+            "name": {"type": "string", "maxLength": 40},
+            "lens": {"type": "array", "maxItems": 4, "items": {"type": "object", "additionalProperties": false, "required": ["column"],
+                "properties": {"column": {"type": "string"}, "op": {"enum": LENS_OPS, "description": "default eq; lt is before, gt is after"},
+                    "value": {"type": "string", "description": "empty or left out: the person picks; a date is YYYY-MM-DD"}}}},
+            "widgets": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "object", "additionalProperties": false,
+                "required": ["title"], "properties": {"title": {"type": "string", "maxLength": 120},
+                    "rows": {"type": "object", "description": "query_rows arguments"},
+                    "chart": {"type": "object", "description": "{query {table, q?, where?}, chart bar|line|pie, x, y?, op count|sum|avg}"},
+                    "form": {"type": "object", "description": "{table, columns?}"}}}}}}}}])
 }
 
 impl Server {
@@ -643,7 +663,7 @@ asked for, never to look at a row; propose_row_insert only for a new row the per
 `where` on that column; order_by and limit never filter. To show structured output call show ({}); plain text may use markdown, \
 nothing else. To count per value (for a chart) call query_rows with \
 group_by; for a sum or average per value add op and y, then show chart (the source is inferred and the chart pins); to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
-KEAP's and the person can pin the chart. To see which DataTables the person has, call list_tables, then query_rows with an id. For what is red or broken on the estate call red_status. Before recommending software, call estate_services: \
+KEAP's and the person can pin the chart. For a dashboard call offer_dashboard; to put a chart you drew on a dashboard, pass the same source; nothing runs until the person places it. To see which DataTables the person has, call list_tables, then query_rows with an id. For what is red or broken on the estate call red_status. Before recommending software, call estate_services: \
 prefer a service the estate already has. For what waits for the operator's approval call approvals_awaiting; \
 for what waits in the person's own inbox call inbox; \
 for what the person or KEAP already knows or noted call search_memory. No tool reads e-mail, calendar or chat: \
@@ -1041,6 +1061,16 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                         }
                         v
                     }),
+                    // Checked as the person against the live schema only: no row is read and no widget runs.
+                    "offer_dashboard" => self.offer_dashboard(who, &args).map(|d| {
+                        let kind = |s: &WidgetSpec| match s { WidgetSpec::Rows(_) => "rows", WidgetSpec::Chart(_) => "chart", WidgetSpec::Form(_) => "form" };
+                        let _ = self.record(o, Kind::ToolResult, Some(name), json!({"name": d.name, "dropped": d.dropped.len(),
+                            "widgets": d.widgets.iter().map(|w| json!({"kind": kind(&w.spec), "table": spec_table(&w.spec)})).collect::<Vec<_>>()}));
+                        let v = json!({"offered": d.name, "widgets": d.widgets.iter().map(|w| &w.title).collect::<Vec<_>>(), "dropped": d.dropped,
+                            "status": "drawn for the person; nothing ran and nothing is placed until they place it"});
+                        send(out, &ToShell::Render { session: o.session.clone(), component: Component::Dashboard(d), pin: None });
+                        v
+                    }),
                     _ => Err(format!("unknown tool {name:?}")),
                 };
                 if result.is_ok() && FREE_TEXT.contains(&name) && !o.read_free.iter().any(|t| t == name) {
@@ -1093,7 +1123,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// here: the whole table or an Err, so `total` is exact. Also returns the columns for the model.
     /// The table, then for the model its columns (or, grouped, its groups), and whether it was grouped.
     fn query_rows(&self, who: &Person, args: &Value) -> Result<(TableResults, Value, bool), String> {
-        let Matched { table, name, query, total, schema, mut hits, group, agg: (op, y), order, limit, columns } = self.matched(who, args)?;
+        let Matched { table, name, query, total, schema, mut hits, group, agg: (op, y), order, limit, columns } = self.matched(who, args, true)?;
         let matched = hits.len();
         if let Some(k) = group {
             let axis = axis_of(&schema, k);
@@ -1149,7 +1179,8 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// query_rows' arguments checked against the live schema, and every row they match (after q
     /// and where; before group_by, order_by and limit, which travel along unapplied).
-    fn matched<'a>(&self, who: &Person, args: &'a Value) -> Result<Matched<'a>, String> {
+    /// `read: false` stops before the rows: the arguments are checked against the schema and nothing more.
+    fn matched<'a>(&self, who: &Person, args: &'a Value, read: bool) -> Result<Matched<'a>, String> {
         let a = args.as_object().ok_or("query_rows takes an object")?;
         if let Some(k) = a.keys().find(|k| !QUERY_KEYS.contains(&k.as_str())) {
             return Err(format!("query_rows has no parameter `{k}`; it has {}", QUERY_KEYS.join(", ")));
@@ -1307,6 +1338,11 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             None => 20,
             Some(n) => n.as_u64().filter(|n| *n <= 50).ok_or("`limit` is a whole number from 0 to 50")? as usize,
         };
+        let query = if said.is_empty() { "all rows".to_string() } else { said.join(" · ") };
+        if !read {
+            let schema = schema.into_iter().cloned().collect();
+            return Ok(Matched { table, name, query, total: 0, schema, hits: vec![], group, agg: (op, y), order, limit, columns });
+        }
 
         let mut all = self.rows(who, &table)?;
         for (_, v) in &mut all {
@@ -1331,7 +1367,6 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 }
             }))
             .collect();
-        let query = if said.is_empty() { "all rows".to_string() } else { said.join(" · ") };
         let schema = schema.into_iter().cloned().collect();
         Ok(Matched { table, name, query, total, schema, hits, group, agg: (op, y), order, limit, columns })
     }
@@ -1664,19 +1699,8 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// One series over the query's rows, aggregated here (aggregate()); x's column kind picks the axis.
     fn widget_chart(&self, who: &Person, c: &ChartSpec) -> Result<Chart, String> {
-        let mut args = json!({"table": c.query.table});
-        if let Some(q) = &c.query.q {
-            args["q"] = json!(q);
-        }
-        if let Some(w) = &c.query.where_ {
-            args["where"] = w.clone();
-        }
-        args["group_by"] = json!(c.x);
-        args["op"] = json!(c.op);
-        if let Some(y) = &c.y {
-            args["y"] = json!(y);
-        }
-        let m = self.matched(who, &args)?;
+        let args = chart_args(c);
+        let m = self.matched(who, &args, true)?;
         let (op, y) = (text(&json!(c.op)), m.agg.1);
         let axis = axis_of(&m.schema, &c.x);
         let (points, cut) = aggregate(&m.hits, &c.x, axis, y, c.op);
@@ -1715,6 +1739,100 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => json!({"error": why}),
         });
         Ok((drawn?, Some(pin)))
+    }
+
+    /// offer_dashboard's arguments as a Dashboard: each widget's spec checked against its table's live
+    /// schema as the person, with the lens's set conditions merged as a run would (unset: the column must
+    /// exist). A widget that fails is dropped with why; none left, or a lens column no table has, is refused.
+    fn offer_dashboard(&self, who: &Person, args: &Value) -> Result<Dashboard, String> {
+        let a = args.as_object().ok_or("offer_dashboard takes an object {name, lens?, widgets}")?;
+        if let Some(k) = a.keys().find(|k| !["name", "lens", "widgets"].contains(&k.as_str())) {
+            return Err(format!("offer_dashboard has no parameter `{k}`; it has name, lens, widgets"));
+        }
+        let name: String = a.get("name").and_then(Value::as_str).map(str::trim).filter(|n| !n.is_empty())
+            .ok_or("offer_dashboard needs `name`")?.chars().take(40).collect();
+        let lens = match a.get("lens") {
+            None | Some(Value::Null) => vec![],
+            Some(Value::Array(l)) if l.len() <= 4 => l.iter().map(lens_of).collect::<Result<Vec<_>, _>>()?,
+            _ => return Err("`lens` is a list of at most 4 {column, op, value}".into()),
+        };
+        let widgets = match a.get("widgets") {
+            Some(Value::Array(w)) if (1..=8).contains(&w.len()) => w,
+            _ => return Err("`widgets` is a list of 1 to 8 {title, rows|chart|form}".into()),
+        };
+        let (mut kept, mut dropped, mut columns) = (Vec::new(), Vec::new(), Vec::new());
+        for w in widgets {
+            let title: String = w.get("title").and_then(Value::as_str).map(str::trim).filter(|t| !t.is_empty())
+                .unwrap_or("(untitled)").chars().take(120).collect();
+            match self.offered(who, w, &lens) {
+                Ok((spec, cols)) => {
+                    columns.extend(cols);
+                    kept.push(DashboardWidget { title, spec });
+                }
+                Err(why) => dropped.push(Dropped { title, why: why.chars().take(500).collect() }),
+            }
+        }
+        if kept.is_empty() {
+            let why: Vec<String> = dropped.iter().map(|d| format!("{}: {}", d.title, d.why)).collect();
+            return Err(format!("no widget fits its table: {}", why.join("; ")));
+        }
+        // The person's input for each condition: the column's options, or a date picker.
+        let lens = lens.into_iter().map(|mut l| {
+            let c = columns.iter().find(|c: &&Map<String, Value>| c.get("key").and_then(Value::as_str) == Some(l.column.as_str()))
+                .ok_or(format!("lens column `{}` is in no widget's table", l.column))?;
+            l.options = c.get("options").and_then(Value::as_array).map(|o| o.iter().filter_map(Value::as_str).map(str::to_string).collect())
+                .filter(|o: &Vec<String>| (1..=50).contains(&o.len()));
+            l.kind = match c.get("kind").and_then(Value::as_str) {
+                Some("date") => Some(FieldKind::Date),
+                Some("number") => Some(FieldKind::Number),
+                Some("boolean") => Some(FieldKind::Bool),
+                _ if l.options.is_some() => Some(FieldKind::Select),
+                _ => None,
+            };
+            Ok::<_, String>(l)
+        }).collect::<Result<Vec<_>, _>>()?;
+        let d = Dashboard { name, lens, widgets: kept, dropped };
+        Component::Dashboard(d.clone()).check()?;
+        Ok(d)
+    }
+
+    /// One offered widget as a spec, and its table's columns; Err is why it is left out. Repairs shapes
+    /// only (a bare table name, a limit said as a string); never invents a widget.
+    fn offered(&self, who: &Person, w: &Value, lens: &[Lens]) -> Result<(WidgetSpec, Vec<Map<String, Value>>), String> {
+        let o = w.as_object().ok_or("a widget is {title, rows|chart|form}")?;
+        let keys: Vec<&String> = o.keys().filter(|k| *k != "title").collect();
+        let [k] = keys.as_slice() else { return Err("a widget is {title} and exactly one of rows, chart, form".into()) };
+        let mut v = o[*k].clone();
+        if let (Value::String(t), "rows" | "form") = (&v, k.as_str()) {
+            v = json!({"table": t});
+        }
+        if let Some(n) = v.get("limit").and_then(Value::as_str).and_then(|n| n.trim().parse::<u64>().ok()) {
+            v["limit"] = json!(n);
+        }
+        let spec: WidgetSpec = serde_json::from_value(json!({ k.as_str(): v })).map_err(|e| format!("{k}: {e}"))?;
+        check_spec(&spec)?;
+        // A set condition joins where as a run sends it; an unset one only has to name a column.
+        let conds: Vec<Value> = lens.iter().map(|l| if l.value.is_empty() { json!({"column": l.column, "op": "contains", "value": ""}) }
+            else { json!({"column": l.column, "op": l.op, "value": l.value}) }).collect();
+        // A `where` that is not a list stays as it is, so matched() names it.
+        let lensed = |mut a: Value| {
+            let w = match a.get("where") {
+                None | Some(Value::Null) => vec![],
+                Some(Value::Array(w)) => w.clone(),
+                Some(_) => return a,
+            };
+            if !conds.is_empty() {
+                a["where"] = Value::Array([w, conds.clone()].concat());
+            }
+            a
+        };
+        let cols = match &spec {
+            WidgetSpec::Rows(a) => self.matched(who, &lensed(a.clone()), false)?.schema,
+            WidgetSpec::Chart(c) => self.matched(who, &lensed(chart_args(c)), false)?.schema,
+            WidgetSpec::Form(f) => self.form_from_schema(who, &f.table, f.columns.as_deref())?.fields.iter()
+                .map(|f| json!({"key": f.key, "kind": f.kind, "options": f.options}).as_object().cloned().unwrap_or_default()).collect(),
+        };
+        Ok((spec, cols))
     }
 
     /// `python3 tools/<name> --json` in the repo; Err on a non-zero exit, a timeout or no JSON.
@@ -1809,6 +1927,45 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         }
         InboxList { items, refused }
     }
+}
+
+/// A chart spec as the query_rows arguments that aggregate it (group_by x, op, y).
+fn chart_args(c: &ChartSpec) -> Value {
+    let mut args = json!({"table": c.query.table, "group_by": c.x, "op": c.op});
+    if let Some(q) = &c.query.q {
+        args["q"] = json!(q);
+    }
+    if let Some(w) = &c.query.where_ {
+        args["where"] = w.clone();
+    }
+    if let Some(y) = &c.y {
+        args["y"] = json!(y);
+    }
+    args
+}
+
+fn spec_table(s: &WidgetSpec) -> String {
+    match s {
+        WidgetSpec::Rows(a) => text(&a["table"]),
+        WidgetSpec::Chart(c) => c.query.table.clone(),
+        WidgetSpec::Form(f) => f.table.clone(),
+    }
+}
+
+/// One offered lens condition: op defaults to eq (before/after are lt/gt), a value is said as a string.
+fn lens_of(v: &Value) -> Result<Lens, String> {
+    let column = v.get("column").and_then(Value::as_str).filter(|c| !c.is_empty()).ok_or("a lens condition needs `column`")?;
+    let op = match v.get("op").and_then(Value::as_str).unwrap_or("eq") {
+        "before" => "lt",
+        "after" => "gt",
+        o => o,
+    };
+    let op: LensOp = serde_json::from_value(json!(op)).map_err(|_| format!("lens on {column}: op is one of {}", LENS_OPS.join(", ")))?;
+    let value = match v.get("value") {
+        None | Some(Value::Null) => String::new(),
+        Some(x) => text(x),
+    };
+    Ok(Lens { column: column.to_string(), op, value, kind: None, options: None })
 }
 
 /// show's `source` as the chart widget spec it pins: the component's chart kind (bar, line or pie
