@@ -1106,6 +1106,34 @@ fn propose_columns(rig: &Rig) -> (UnixStream, BufReader<UnixStream>, String, Str
     (s, r, session_of(&got), card.0, card.1)
 }
 
+#[test]
+fn a_created_table_kept_otherwise_than_approved_is_not_called_created() {
+    let (keap, _) = fake_table(SCHEMA, todo_rows());
+    let create = r#"{"title": "Expenses", "columns": ["Item", {"label": "lossy", "kind": "number"}]}"#;
+    let rig = rig_at("tlossy", mapped(), keap, vec![call("propose_table_create", create), answer("Proposed.")], Some(local()));
+    let (s, mut r, _session, approval, _card) = propose_table(&rig);
+    decide(&s, &approval, Decision::Approve);
+    let said = match next(&mut r) {
+        Some(ToShell::Text { text, .. }) => text,
+        other => panic!("the person hears nothing of the create: {other:?}"),
+    };
+    assert!(said.contains("not created") && said.contains("otherwise than approved"), "a 200 with a column held under another label passed: {said}");
+}
+
+#[test]
+fn columns_kept_otherwise_than_approved_are_not_called_added() {
+    let (keap, _) = fake_table(SCHEMA, todo_rows());
+    let add = r#"{"table": "Todo list", "columns": [{"label": "lossy", "kind": "number"}]}"#;
+    let rig = rig_at("clossy", mapped(), keap, add_turn(add), Some(local()));
+    let (s, mut r, _session, approval, _card) = propose_columns(&rig);
+    decide(&s, &approval, Decision::Approve);
+    let said = match next(&mut r) {
+        Some(ToShell::Text { text, .. }) => text,
+        other => panic!("the person hears nothing of the add: {other:?}"),
+    };
+    assert!(said.contains("no column was added") && said.contains("otherwise than approved"), "a 200 with a column held under another label passed: {said}");
+}
+
 fn add_turn(add: &str) -> Vec<String> {
     vec![query(r#"{"table": "todos", "q": "alpha"}"#), call("propose_column_add", add), answer("Proposed.")]
 }
@@ -1878,7 +1906,7 @@ fn fake_tables(tables: Vec<(&str, Vec<serde_json::Value>)>) -> ((String, Seen), 
                 let b: serde_json::Value = serde_json::from_str(&body).unwrap();
                 let id = format!("t-minted-{}", tables.len());
                 let out = serde_json::json!({"success": true, "data": {"id": id, "title": b["title"], "visibility": b["visibility"],
-                    "ownerId": "u-alice", "schema": b["schema"]}}).to_string();
+                    "ownerId": "u-alice", "schema": lossy(&b["schema"])}}).to_string();
                 tables.push((format!("/api/tables/{id}"), out.clone(), Arc::default()));
                 write!(c, "HTTP/1.1 200 X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{out}", out.len()).unwrap();
                 continue;
@@ -1889,7 +1917,7 @@ fn fake_tables(tables: Vec<(&str, Vec<serde_json::Value>)>) -> ((String, Seen), 
                     (403, r#"{"success": false, "error": "only the owner may change this table's schema"}"#.to_string())
                 } else {
                     let mut info: serde_json::Value = serde_json::from_str(&tables[i].1).unwrap();
-                    info["data"]["schema"] = serde_json::from_str::<serde_json::Value>(&body).unwrap()["schema"].clone();
+                    info["data"]["schema"] = lossy(&serde_json::from_str::<serde_json::Value>(&body).unwrap()["schema"]);
                     tables[i].1 = info.to_string();
                     (200, tables[i].1.clone())
                 };
@@ -1938,6 +1966,15 @@ fn fake_tables(tables: Vec<(&str, Vec<serde_json::Value>)>) -> ((String, Seen), 
         }
     });
     ((url, seen), held)
+}
+
+/// The fake holds a column keyed "lossy" under another label, whatever was sent: a KEAP that answers 200 but keeps otherwise.
+fn lossy(schema: &serde_json::Value) -> serde_json::Value {
+    let mut s = schema.clone();
+    for c in s["columns"].as_array_mut().into_iter().flatten().filter(|c| c["key"] == "lossy") {
+        c["label"] = serde_json::json!("Held otherwise");
+    }
+    s
 }
 
 fn keap_row(id: &str, values: serde_json::Value) -> serde_json::Value {
