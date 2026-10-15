@@ -1246,6 +1246,8 @@ fn the_prompt_says_the_time_and_to_admit_what_no_tool_sees() {
     assert!(p.contains("When no tool can see what is asked, say so"), "{p}");
     // Live: after a chart, Iris listed its numbers again and linked a placeholder image.
     assert!(p.contains("never repeat in text what a tool or show already drew"), "{p}");
+    // Client bench v2: asked in Czech, Iris refused in English.
+    assert!(p.contains("Answer in the language of the person's last message."), "{p}");
 }
 
 #[test]
