@@ -152,11 +152,11 @@ class Fake:
         self.srv.close()
 
 
-def _run(script, tmp_path):
+def _run(script, tmp_path, *extra):
     fake = Fake(script)
     out = tmp_path / "last-run.json"
     try:
-        rc = _bench().main(["--sock", fake.path, "--offline", "--out", str(out), "--timeout", "10"])
+        rc = _bench().main(["--sock", fake.path, "--offline", "--out", str(out), "--timeout", "10", *extra])
     finally:
         fake.close()
     return rc, json.loads(out.read_text()), fake
@@ -262,6 +262,9 @@ def test_each_check_fails_on_the_answer_it_exists_to_catch():
                    "[thalamus] No access to email services for this question.",
                    "I can't directly read your email inbox.",  # qwen3.5, round 3
                    "I am not able to check your e-mail from here.",
+                   "I cannot answer that: the tables I can read hold no inbox.",  # round 4
+                   "Žádný systém pro e-maily tu není vidět.",
+                   "Tyto údaje nemám k dispozici.",
                    "E-maily nemohu číst, nemám k nim nástroj.",
                    "Nemám přístup k červenému stavu, odsud ho nevidím."):
         assert check("says_cannot_see", True, _got(honest), noon), honest
@@ -334,3 +337,17 @@ def test_a_result_records_what_each_query_asked():
     """The bench sees no tool arguments; the query line on each table_results is the next best witness."""
     got = _got("x", renders=[_results(3)])
     assert _bench().queries(got) == [{"query": "all", "matched": 3, "total": 3}]
+
+
+def test_list_tables_is_optional_now_titles_resolve():
+    """Round 4: the chart was right, but the case demanded list_tables, which a title no longer needs."""
+    for c in CASES:
+        if c["id"] in ("next-by-track", "status-pie"):
+            assert "list_tables" not in c["checks"]["tools_called"], c["id"]
+
+
+def test_repeat_reports_a_pass_rate(tmp_path):
+    """One run is a coin flip at this variance (9/11 then 6/11): --repeat N scores each case k/N, majority passes."""
+    rc, res, fake = _run(_script(bad=False), tmp_path, "--repeat", "3")
+    assert all(c["runs"] == 3 and c["passes"] == 3 and c["pass"] for c in res["cases"]), res["cases"][0]
+    assert sum(1 for m in fake.seen if m["t"] == "turn") == 3 * sum(len(_bench().turns_of(c)) for c in CASES)
