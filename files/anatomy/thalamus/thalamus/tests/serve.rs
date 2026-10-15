@@ -1524,6 +1524,7 @@ fn fake_table(schema: &str, rows: Vec<serde_json::Value>) -> ((String, Seen), Ar
             let mut rows = table.lock().unwrap();
             let (status, out) = match (method, path) {
                 ("GET", p) if p == base => (200, schema.clone()),
+                ("GET", "/api/search/semantic") => (200, memory(false, serde_json::json!([]))),
                 ("GET", p) if p == format!("{base}/rows") => {
                     let (from, limit) = (arg("cursor").unwrap_or(0), arg("limit").unwrap_or(50));
                     let to = (from + limit).min(rows.len());
@@ -3106,9 +3107,13 @@ const CARDS: &str = r#"{"success": true, "data": {"id": "cards", "title": "Card 
     {"key": "points", "label": "Points", "kind": "number"}]}}}"#;
 
 fn cards(name: &str, model_bodies: Vec<String>) -> Rig {
+    cards_as(name, mapped(), model_bodies)
+}
+
+fn cards_as(name: &str, map: serde_json::Value, model_bodies: Vec<String>) -> Rig {
     let (keap, _) = fake_table(CARDS, vec![keap_row("c1", serde_json::json!({"title": "one", "status": "queued", "points": 1})),
                                            keap_row("c2", serde_json::json!({"title": "two"}))]);
-    rig_at(name, mapped(), keap, model_bodies, Some(local()))
+    rig_at(name, map, keap, model_bodies, Some(local()))
 }
 
 const INSERT: &str = r#"{"table": "Card deck", "values": {"title": "new", "status": "queued", "points": 5}}"#;
@@ -3150,6 +3155,7 @@ fn an_insert_card_by_title_posts_without_an_id_on_approve() {
     assert!(p[0].0.starts_with("POST /api/tables/cards/rows "), "{}", p[0].0);
     let body: serde_json::Value = serde_json::from_str(&p[0].1).unwrap();
     assert!(body.get("id").is_none(), "an insert named a row: {body}");
+    assert!(d.cells.iter().all(|c| body["values"][&c.key] == c.new), "the card showed other values than were written: {d:?} {body}");
     assert_eq!((&body["values"]["title"], &body["values"]["status"], body["values"]["points"].as_f64()),
                (&serde_json::json!("new"), &serde_json::json!("queued"), Some(5.0)));
     drop((s, r));
@@ -3181,6 +3187,36 @@ fn an_insert_on_a_table_never_queried_or_only_grouped_or_listed_is_refused_witho
             assert_eq!(read(&rig), 0, "{name}: KEAP was read for a refused proposal");
         }
         assert!(posts(&rig).is_empty(), "{name}: wrote");
+    }
+}
+
+#[test]
+fn an_insert_aimed_at_a_table_other_than_the_one_queried_is_refused_before_a_read() {
+    // `sheet` by id, then a title that matches no queried table: neither may fall back to `cards`.
+    for alias in ["sheet", "Sheet ledger"] {
+        let args = format!(r#"{{"table": "{alias}", "values": {{"title": "new"}}}}"#);
+        let rig = cards(alias, vec![query(r#"{"table": "cards"}"#), call("propose_row_insert", &args), answer("Could not.")]);
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let got = turn(&s, &mut r, None, "add a sheet row");
+        assert!(card_of(&got).is_none(), "{alias}: a card for a table never queried: {got:?}");
+        let e = tool_result(&rig, 2);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains("query it first")), "{alias}: {e}");
+        assert_eq!(rig.keap.lock().unwrap().len(), 2, "{alias}: KEAP was read for a refused proposal");
+    }
+}
+
+#[test]
+fn a_card_after_search_memory_or_approvals_awaiting_says_so() {
+    for (tool, args, map) in [("search_memory", r#"{"q": "cards"}"#, mapped()), ("approvals_awaiting", "{}", admin())] {
+        let rig = cards_as(&format!("ins-{tool}"), map,
+                           vec![query(r#"{"table": "cards"}"#), call(tool, args), call("propose_row_insert", INSERT), answer("Proposed.")]);
+        reader(&rig, "awaiting-operator.py", AWAITING);
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let got = turn(&s, &mut r, None, "file it as a card");
+        let (_, d) = card_of(&got).unwrap_or_else(|| panic!("{tool}: no card: {got:?}"));
+        assert_eq!(d.read_from, [tool], "{tool}: the card head names the free text the turn read");
     }
 }
 
