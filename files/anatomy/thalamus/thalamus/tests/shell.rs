@@ -59,7 +59,7 @@ fn every_fixture_component_matches_its_snapshot() {
     }
     kinds.sort();
     kinds.dedup();
-    assert_eq!(kinds, ["approvals_list", "chart", "choice", "graph", "inbox_list", "list", "markdown", "record", "red_status", "row_diff_approval", "sequence", "table",
+    assert_eq!(kinds, ["approvals_list", "chart", "choice", "dashboard", "graph", "inbox_list", "list", "markdown", "record", "red_status", "row_diff_approval", "sequence", "table",
                        "table_results", "timeline", "tree"],
                "one snapshot per component in the closed vocabulary");
 }
@@ -283,6 +283,19 @@ fn a_form_result_and_a_table_change_are_said() {
     }
     let said: String = app.lines.iter().map(|l| format!("{l}\n")).collect();
     assert_eq!(said, "widget w4: row e3 added\ntable expenses changed (row e3)\n");
+}
+
+/// The terminal places nothing: an offered dashboard is said, each widget and what was left out, and where to place it.
+#[test]
+fn an_offered_dashboard_is_said_and_placed_in_the_pupil() {
+    let (_, m) = fixture().into_iter().find(|(case, _)| case == "Iris offers a dashboard").expect("the fixture's dashboard");
+    let ToShell::Render { component, .. } = m else { panic!("the dashboard sample no longer decodes: {m:?}") };
+    let said: String = shell::component_lines(&component).iter().map(|l| format!("{l}\n")).collect();
+    for want in ["dashboard Bench board: 3 widgets, place it in the pupil", "  lens: track = platform; due < (unset)",
+                 "  rows: Next rows (table iris-bench-2)", "  chart: Points by track (bar, sum of points by track, table iris-bench-2)",
+                 "  form: Add a row (table iris-bench-2)", "  left out: By owner — no column `owner` in iris-bench-2"] {
+        assert!(said.contains(want), "{want:?} not in:\n{said}");
+    }
 }
 
 /// The terminal has no workspace: a pin is one muted line, and an unpinned render says nothing of it (genui I6).

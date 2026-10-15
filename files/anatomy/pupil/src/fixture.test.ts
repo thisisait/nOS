@@ -28,6 +28,7 @@ const PROPS: Record<string, string[]> = {
 	sequence: ['participants', 'steps', 'title'],
 	form: ['fields', 'form', 'omitted', 'table', 'title'],
 	choice: ['id', 'multi', 'options', 'question', 'suggested'],
+	dashboard: ['dropped', 'lens', 'name', 'widgets'],
 };
 const KINDS = Object.keys(PROPS);
 // Props a sample may leave out (an insert names no row); any other missing or extra prop is a rename.
@@ -66,6 +67,10 @@ function owedBy(c: Component): string[] {
 	// A choice owes its question, every label and note, the suggestion's mark and the button; not the minted id.
 	if (c.kind === 'choice')
 		return [c.props.question, ...c.props.options.flatMap((o) => [o.label, ...(o.note ? [o.note] : [])]), 'navrženo', 'Odpovědět'];
+	// An offer owes its name, each lens column and set value, each widget title, what was left out and why, and the button.
+	if (c.kind === 'dashboard')
+		return [c.props.name, ...c.props.lens.flatMap((l) => [l.column, ...(l.value ? [l.value] : [])]),
+			...c.props.widgets.map((w) => w.title), ...c.props.dropped.flatMap((d) => [d.title, d.why]), 'Place on a new tab'];
 	if (c.kind !== 'table_results') return owed(c.props as unknown as Value);
 	// The table's name, not its id (live 2026-10-12: the header showed the roadmap's UUID).
 	const { name, query, matched, total, columns, rows } = c.props;

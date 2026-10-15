@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 5   # 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 6   # 6: dashboard; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -131,6 +131,16 @@ components:
       never empty or __-prefixed, a select has 1-50 options, min <= max; the pupil draws its own header
       "Adds a row to <title> (<table>)" and button "Add row"; the terminal says the fields and
       "fill it in the pupil"
+    # Rendered only (wire.rs: never in an approval, never as a widget's answer); nothing runs at offer.
+    dashboard: >-
+      a tab of widgets Iris offers (offer_dashboard): {name, lens[{column, op eq|neq|lt|gt|contains, value,
+      kind?, options?}] <=4, widgets[{title, spec}] 1-8, dropped[{title, why}]}; name 1-40 chars, a spec is a
+      WidgetSpec of wire.widget and passes check_spec, an empty lens value is unset; kind and options are the
+      column's, for the person's lens input. serve validated each widget against the live schema as the person
+      (no row read) and moved the ones that failed to dropped with why, always present. The pupil draws it
+      with "Place on a new tab": the click makes a tab with that lens and runs each widget once (trigger
+      click); the lens joins every rows and chart widget's where at send time, a form takes its eq values
+      as prefill; the terminal says it and "place it in the pupil"
 
 # ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ──────
 invariants:
