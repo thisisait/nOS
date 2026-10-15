@@ -7,7 +7,7 @@ import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import Component from './Component.svelte';
 import Form from './Form.svelte';
-import { canSubmit, formValues, header } from './form';
+import { canSubmit, formValues, header, shown } from './form';
 import type { FormField, FormProps } from './wire';
 
 const fields: FormField[] = [
@@ -125,5 +125,36 @@ describe('a written row clears the draft', () => {
 		expect(forms.length).toBe(1);
 		const key = forms[0][1].filter((a) => a.type === 'KeyBlock').at(-1)?.expression as Node | undefined;
 		expect((key?.property as Node | undefined)?.name, 'Form is not keyed on state.added').toBe('added');
+	});
+});
+
+// iris-v3 B2: a field may show only while another holds a value; the spec's prefill is the draft's start.
+describe('a form with prefill and when', () => {
+	const shownWhen: FormField[] = [
+		{ key: 'kind', label: 'Kind', kind: 'select', required: true, options: ['food', 'travel', 'tools'] },
+		{ key: 'trip', label: 'Trip', kind: 'text', required: false, when: { key: 'kind', op: 'eq', value: 'travel' } },
+		{ key: 'paid', label: 'Paid', kind: 'bool', required: false, when: { key: 'kind', op: 'neq', value: 'food' } },
+	];
+	const travel: FormProps = { ...expenses, fields: shownWhen, omitted: [], prefill: { kind: 'travel', trip: 'Brno' } };
+
+	it('a field whose condition fails is not drawn and sends nothing, a bool included', () => {
+		expect(shown(shownWhen[1], { kind: 'travel' })).toBe(true);
+		expect(shown(shownWhen[1], { kind: 'food' })).toBe(false);
+		expect(shown(shownWhen[2], {})).toBe(true);
+		expect(formValues(shownWhen, { kind: 'food', trip: 'Brno', paid: true })).toEqual({ kind: 'food' });
+		expect(formValues(shownWhen, { kind: 'travel', trip: 'Brno' })).toEqual({ kind: 'travel', trip: 'Brno', paid: false });
+		const h = text(html({ ...travel, prefill: { kind: 'food' } }));
+		expect(h).not.toContain('Trip');
+		expect(h).not.toContain('Paid');
+	});
+
+	it('the prefill is drawn as the draft the person may change, and the lens wins over it', () => {
+		const h = html(travel);
+		expect(h).toMatch(/<option value="travel"[^>]*\bselected\b/);
+		expect(h).toMatch(/<input[^>]*type="text"[^>]*value="Brno"/);
+		expect(h).not.toMatch(/<button[^>]*\bdisabled\b/);
+		const lensed = render(Form, { props: { form: travel, prefill: { kind: 'tools' } } }).body;
+		expect(lensed).toMatch(/<option value="tools"[^>]*\bselected\b/);
+		expect(text(lensed)).not.toContain('Trip');
 	});
 });
