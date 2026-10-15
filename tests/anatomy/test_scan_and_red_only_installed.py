@@ -109,3 +109,18 @@ def test_pulse_unknown_is_not_green() -> None:
     assert pulse["running"] is None
     lines = red.reds({"overdue_jobs": OVERDUE, "pulse": pulse})
     assert len([ln for ln in lines if "did not fire" in ln]) == 30
+
+
+def test_infra_main_yml_switches_on_counts_as_installed() -> None:
+    """redis's flag is redis_docker, and main.yml's set_fact turns redis/postgresql on for
+    Authentik (REVIEW I3: core and the defaults dropped redis, the defaults postgresql)."""
+    seed = json.loads(SEED.read_text())["components"]
+    for layers in (_core_flags(), ni.install_flags(ni.profile_layers(REPO / "profiles" / "all-on.yml")),
+                   ni.install_flags([p for p in ni.layer_paths() if p != REPO / "config.yml"])):
+        assert {"redis", "postgres", "postgresql"} <= set(ni.installed_names(seed, layers)), layers
+
+
+def test_nginx_key_follows_install_nginx_not_apex_image() -> None:
+    """'nginx' is host nginx (install_nginx), not apex's nginx image."""
+    assert ni.installed_names(["nginx"], {"install_nginx": True, "install_apex": False}) == ["nginx"]
+    assert ni.installed_names(["nginx"], {"install_nginx": False, "install_apex": True}) == []
