@@ -19,6 +19,8 @@ PROFILE = "profiles/core.yml"
 ALLOWED_OVERRIDES = {
     "install_thalamus": "pazny.thalamus fails on systemd hosts (macOS-only in slice 1)",
     "install_cortex": "operator 2026-10-01: KEAP + cortex ride the Linux leg",
+    "install_pulse": "host organ; bonus lanes skip host rows, this is its only blocking lane",
+    "install_backup": "host organ; bonus lanes skip host rows, this is its only blocking lane",
 }
 
 
