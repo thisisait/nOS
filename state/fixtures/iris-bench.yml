@@ -277,3 +277,11 @@
     turn_text_contains: {turn: 2, text: "12"}
     proposes_nothing: true
     not_blank: true
+# dashboards (iris-v3 B1): the offer is drawn; nothing runs and the runner never places it
+- id: dashboard-offer
+  prompt: Make me a dashboard of iris-bench-2 with its rows and a bar chart of rows by track, with a filter on track.
+  checks:
+    tools_called: [offer_dashboard]
+    dashboard_has: {widgets: 2, kinds: [rows, chart], lens: [track]}
+    proposes_nothing: true
+    not_blank: true

@@ -120,6 +120,12 @@ def _show(kind, props):
     return {"t": "render", "session": SID, "pin": None, "component": {"kind": kind, "props": props}}
 
 
+def _dash(lens, kinds):
+    """An offer_dashboard render: a lens condition per column, a widget per spec kind (iris-v3 B1)."""
+    return _show("dashboard", {"name": "Bench board", "lens": [{"column": c, "op": "eq", "value": ""} for c in lens],
+                               "widgets": [{"title": k, "spec": {k: {"table": "iris-bench-2"}}} for k in kinds], "dropped": []})
+
+
 def _v2(bad: bool) -> dict[str, list[list[dict]]]:
     """The iris-bench-2 cases (definition 3.4): a good script, and per new check one bad case that breaks it."""
     t = "iris-bench-2"
@@ -174,6 +180,8 @@ def _v2(bad: bool) -> dict[str, list[list[dict]]]:
                          _turn(_tool("query_rows"), _read({"table": t, "q": "bench row 10"}, ten[:1]), _text("It points to bench row 10, above.")),
                          _turn(_text("Bench row 10 has 9 points." if bad else "Bench row 10 has 12 points."))],
         "long-context-en": [_turn(_text("BLUE-GIRAFFE"))],
+        "dashboard-offer": [_turn(_tool("offer_dashboard"), _dash([] if bad else ["track"], ["rows", "chart"]),
+                                  _text("The dashboard is above; it runs when you place it."))],
     }
 
 
@@ -269,6 +277,7 @@ def test_a_bad_run_fails_exactly_the_broken_checks_and_rejects(tmp_path):
         "injection-row": ["tools_not_called"],
         "injection-row-ask": ["text_not_equals", "answers_in"],
         "memory-chain": ["turn_text_contains"],
+        "dashboard-offer": ["dashboard_has"],
     }
     assert failed == want
     assert not [c["id"] for c in res["cases"] if c["no_data"]], "a bad answer is judged, never NO-DATA"
@@ -523,6 +532,15 @@ def test_each_check_fails_on_the_answer_it_exists_to_catch():
     found = {"t": "render", "component": {"kind": "list", "props": {"items": [{"text": "Grafana", "detail": "https://grafana.lan/d/x"}]}}}
     assert check("no_invented_link", True, _got("See [Grafana](https://grafana.lan/d/x).", renders=[found]), noon)
     assert check("no_invented_link", True, _got("Drawn above.", renders=[_chart("bar", pts)]), noon)
+    # iris-v3 B1 dashboard-offer: the LAST offer holds at least n widgets, these spec kinds and lens columns.
+    board = {"widgets": 2, "kinds": ["rows", "chart"], "lens": ["track"]}
+    assert check("dashboard_has", board, _got(renders=[_dash(["track"], ["rows", "chart"])]), noon)
+    assert check("dashboard_has", board, _got(renders=[_dash(["status", "track"], ["rows", "chart", "form"])]), noon)
+    assert not check("dashboard_has", board, _got(renders=[_dash([], ["rows", "chart"])]), noon), "no lens"
+    assert not check("dashboard_has", board, _got(renders=[_dash(["track"], ["rows"])]), noon), "one widget"
+    assert not check("dashboard_has", board, _got(renders=[_dash(["track"], ["rows", "form"])]), noon), "no chart"
+    assert not check("dashboard_has", board, _got(renders=[_dash(["track"], ["rows", "chart"]), _dash([], ["rows"])]), noon), "the last"
+    assert not check("dashboard_has", board, _got(renders=[_results(3)]), noon), "no offer"
 
 
 def test_answers_in_czech_and_a_padded_fact():
