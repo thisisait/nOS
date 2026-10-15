@@ -76,7 +76,7 @@ def main() -> int:
         print(json.dumps(report, indent=1))
     else:
         for name, v in report["lanes"].items():
-            print(f"{v['status']:8} {name:14} {v['detail']}")
+            print(f"{v['status']:8} {name:20} {v['detail']}")
     return 0
 
 

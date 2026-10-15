@@ -741,9 +741,10 @@ jobs:
           if-no-files-found: warn
 
   # ──────────────────────────────────────────────────────────────────────────
-  # BONUS – one converge per manifest stack outside profiles/core.yml. The lanes
-  # come from tools/test-tiers.py: a push or PR runs the stacks whose role/plugin
-  # paths changed, the nightly run one slice of a weekly rotation. Not required;
+  # BONUS – one converge per manifest stack outside profiles/core.yml (iiab: one per
+  # category; own organs are core, never here). The lanes come from tools/test-tiers.py:
+  # a push or PR runs the stacks whose role/plugin paths changed, the nightly run one
+  # slice of a weekly rotation. Not required;
   # tools/ci-tier-status.py reds a stack not green in 7 days. Gate: test_every_ci_lane_is_derived.
   # ──────────────────────────────────────────────────────────────────────────
   bonus-select:

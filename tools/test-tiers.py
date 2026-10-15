@@ -2,8 +2,9 @@
 """Which CI tier owns each anatomy test, and which bonus converge lane each stack gets.
 
 Derived, never hand-listed: core = the install_* flags profiles/core.yml turns on, every
-host row (no `stack:`) and every own organ (software_owner: self, ruling 2026-10-15). Each other manifest `stack:` is one bonus lane: its rows'
-install flags and the paths that should trigger it (roles/pazny.<id>/ and every plugin dir
+host row (no `stack:`) and every own organ (software_owner: self, ruling 2026-10-15). Each
+other manifest `stack:` is one bonus lane (iiab: one per `category:`, iiab-<category>): its
+rows' install flags and the paths that should trigger it (roles/pazny.<id>/ and every plugin dir
 whose requires.feature_flag is one of those flags). A test file is T0 when its name says
 security/secret/contract/lockfile/gitleaks, a lane when it names only that lane's flags,
 roles or plugins, else core. Ownership only: the sharded pytest lane still runs every test.
@@ -27,6 +28,7 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 ALWAYS = re.compile(r"secur|secret|contract|lockfile|gitleak")
+SPLIT = "iiab"  # too big for one hosted runner: one lane per category (ruling 2026-10-15)
 
 
 def _load(rel: str):
@@ -44,7 +46,8 @@ def derive() -> dict:
     flag_stacks: dict[str, set] = {}
     for r in rows:
         if r.get("stack") and r.get("install_flag") not in core and r.get("software_owner") != "self":
-            flag_stacks.setdefault(r["install_flag"], set()).add(r["stack"])
+            lane = f"{SPLIT}-{r['category']}" if r["stack"] == SPLIT else r["stack"]
+            flag_stacks.setdefault(r["install_flag"], set()).add(lane)
     flag_tier = {f: next(iter(s)) if len(s) == 1 else "core" for f, s in flag_stacks.items()}
     lanes: dict[str, dict] = {}
     token_tier: dict[str, str] = {}
