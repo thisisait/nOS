@@ -920,6 +920,9 @@ nodes:
   # 2026-10-14 effector:estate-adopt: gives a host's estate its own main clone
   # (operator-run, dry-run unless --confirm). WITHHELD; the published set is unchanged.
   "effector:estate-adopt": withheld
+  # 2026-10-15 effector:ears-asr-bench: scores Czech ASR on the operator's recordings
+  # (operator-run). WITHHELD; the published set is unchanged.
+  "effector:ears-asr-bench": withheld
   "effector:imprint-gen": withheld
   "effector:invoice-verify": withheld
   # 2026-10-14 effector:iris-bench (iris-live-bench): scores Iris from the
