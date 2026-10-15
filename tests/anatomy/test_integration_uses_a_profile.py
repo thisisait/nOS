@@ -54,3 +54,34 @@ def test_linux_install_overrides_only_named_flags() -> None:
     assert not extra, (
         f"integration-linux overrides {sorted(extra)} on top of {PROFILE}; set it in the "
         "profile, or add it to ALLOWED_OVERRIDES with the platform fact or ruling behind it")
+
+
+
+def _load(rel: str) -> dict:
+    return yaml.safe_load((REPO / rel).read_text(encoding="utf-8")) or {}
+
+
+def _linux_host_organs() -> set[str]:
+    """install_flag of each host row (no `stack:`) whose main.yml role is not Darwin-only."""
+    rows = yaml.safe_load((REPO / "state/manifest.yml").read_text(encoding="utf-8"))
+    rows = rows if isinstance(rows, list) else next(v for v in rows.values() if isinstance(v, list))
+    play = yaml.safe_load((REPO / "main.yml").read_text(encoding="utf-8"))[0]
+    darwin_only = {
+        (t.get("ansible.builtin.import_role") or t.get("ansible.builtin.include_role") or {}).get("name")
+        for sect in ("pre_tasks", "tasks", "post_tasks") for t in play.get(sect) or []
+        if "Darwin" in str(t.get("when", ""))}
+    return {r["install_flag"] for r in rows
+            if r.get("stack") is None and f"pazny.{r['id']}" not in darwin_only}
+
+
+def test_linux_install_keeps_the_host_organs() -> None:
+    # Bonus lanes skip host rows, so this converge is their only blocking lane: an organ the
+    # old run (tests/config.yml over defaults) converged must stay on. Precedence: blob > profile > config.
+    base = {k: v for f in sorted(REPO.glob("config.d/*.yml")) for k, v in _load(str(f)).items()}
+    base.update({**_load("default.config.yml"), **_load("tests/config.yml")})
+    now = {**base, **_load(PROFILE)}
+    for run in _converges():
+        for blob in re.findall(r"-e\s+'(\{.*?\})'", run):
+            now.update(json.loads(blob))
+    lost = sorted(f for f in _linux_host_organs() if base.get(f) is True and now.get(f) is not True)
+    assert not lost, f"integration-linux no longer converges host organs {lost}; turn them on there"
