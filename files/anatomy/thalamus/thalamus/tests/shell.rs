@@ -404,3 +404,18 @@ fn a_form_says_its_prefill_and_when_a_field_shows() {
         assert!(said.contains(want), "{want:?} not in:\n{said}");
     }
 }
+
+// --- Q4: a delete card says delete, in red, and what goes ---
+
+#[test]
+fn a_delete_card_says_delete_in_red_and_every_value_going() {
+    let (_, m) = fixture().into_iter().find(|(c, _)| c == "a row delete awaits approval").unwrap();
+    let ToShell::ApprovalRequest { component, .. } = m else { panic!("the delete sample no longer decodes: {m:?}") };
+    let lines = shell::component_lines(&component);
+    let said: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
+    assert!(lines.iter().any(|l| l.style.fg == Some(ratatui::style::Color::Red) && l.to_string().contains("deletes the whole row")), "{said:?}");
+    assert!(said.iter().any(|l| l.contains("delete Expenses (expenses) / e3")), "{said:?}");
+    for v in ["kind: \"travel\" -> (deleted)", "amount: 420 -> (deleted)"] {
+        assert!(said.iter().any(|l| l.contains(v)), "{v} not in {said:?}");
+    }
+}

@@ -5,6 +5,7 @@ import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import { number, shownValue, signed } from './fmt';
 import { header } from './form';
+import ApprovalCard from './ApprovalCard.svelte';
 import Message from './Message.svelte';
 import type { Component, ToShell, Value } from './wire';
 
@@ -139,6 +140,17 @@ describe('the pupil renders the contract fixture', () => {
 		expect(insert).toContain('insert a new row in Expenses (expenses) — nothing is written unless you approve');
 		expect(insert).toContain('contains text from search_memory');
 		expect(card('a row edit awaits approval')).not.toContain('contains text from');
+	});
+
+	it('a delete card says delete in red, and every value it removes', () => {
+		const msg = fx.to_shell.find((c) => c.case === 'a row delete awaits approval')!.msg;
+		const html = render(Message, { props: { msg } }).body;
+		expect(text(html)).toContain('delete Expenses (expenses) / e3');
+		expect(text(html)).toContain('kind : "travel" → (deleted)');
+		expect(html).toMatch(/class="bad[^"]*"[^>]*>[^<]*deletes the whole row/);
+		const waiting = { approval: 'a', component: (msg as Extract<ToShell, { t: 'approval_request' }>).component };
+		const card = render(ApprovalCard, { props: { waiting, of: 1, whole: true, onseen: () => {}, ondecide: () => {} } }).body;
+		expect(text(card)).toContain('approve deleting this row?');
 	});
 
 	it('an empty diff side reads (empty), not blank', () => {

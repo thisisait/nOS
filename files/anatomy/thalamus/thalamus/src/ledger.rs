@@ -372,6 +372,27 @@ mod tests {
     }
 
     #[test]
+    fn approved_delete_keeps_every_old_and_writes_no_value() {
+        let (l, _) = ledger("op-delete");
+        start(&l);
+        let d = approve(&l, "a1", serde_json::json!({"table": "t", "op": "delete", "row_id": "r1",
+            "cells": [{"key": "k", "old": 1, "new": null}, {"key": "when", "old": 1_791_849_600, "new": null}]}));
+        let a = l.approved(d).unwrap();
+        assert_eq!((a.op, a.row_id.as_deref()), (RowOp::Delete, Some("r1")));
+        assert!(a.values.is_empty(), "a delete writes no value");
+        assert_eq!(Value::Object(a.old), serde_json::json!({"k": 1, "when": 1_791_849_600}));
+        for (i, (why, req)) in [
+            ("a delete without a row", serde_json::json!({"table": "t", "op": "delete", "cells": [{"key": "k", "old": 1, "new": null}]})),
+            ("a delete with a new value", serde_json::json!({"table": "t", "op": "delete", "row_id": "r1", "cells": [{"key": "k", "old": 1, "new": 2}]})),
+            ("a delete without old", serde_json::json!({"table": "t", "op": "delete", "row_id": "r1", "cells": [{"key": "k", "new": null}]})),
+            ("a delete of no cells", serde_json::json!({"table": "t", "op": "delete", "row_id": "r1", "cells": []})),
+        ].into_iter().enumerate() {
+            let d = approve(&l, &format!("b{i}"), req);
+            assert!(l.approved(d).is_err(), "{why} was approved as a delete");
+        }
+    }
+
+    #[test]
     fn approved_takes_a_parent_and_its_lines_and_refuses_a_bad_set() {
         let (l, _) = ledger("op-many");
         start(&l);

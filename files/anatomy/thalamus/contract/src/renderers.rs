@@ -1094,6 +1094,20 @@ mod tests {
     }
 
     #[test]
+    fn a_delete_card_names_its_row_and_shows_every_value_going() {
+        let gone = |row_id: Option<&str>, old: Value, new: Value| Component::RowDiffApproval(RowDiffApproval {
+            table: "t1".into(), title: "Todo list".into(), op: RowOp::Delete, row_id: row_id.map(str::to_string),
+            cells: vec![CellChange { key: "status".into(), old, new }], read_from: vec![], lines: None,
+        });
+        assert!(gone(Some("r1"), json!("open"), Value::Null).check().is_ok());
+        assert_eq!(serde_json::to_value(gone(Some("r1"), json!("open"), Value::Null)).unwrap()["props"]["op"], "delete");
+        assert_eq!(gone(None, json!("open"), Value::Null).check(), Err("a delete names its row".into()));
+        assert_eq!(gone(Some(""), json!("open"), Value::Null).check(), Err("a delete names its row".into()));
+        assert_eq!(gone(Some("r1"), json!("open"), json!("x")).check(), Err("a delete leaves every cell empty".into()));
+        assert_eq!(gone(Some("r1"), Value::Null, Value::Null).check(), Err("a delete shows each value it removes".into()));
+    }
+
+    #[test]
     fn an_insert_card_carries_no_row_id_and_keeps_a_null_old() {
         let v = serde_json::to_value(card(RowOp::Insert, None, Value::Null)).unwrap();
         assert_eq!(v["props"]["op"], "insert");

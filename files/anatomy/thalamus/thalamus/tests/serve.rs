@@ -882,6 +882,93 @@ fn approve_writes_nothing_over_a_row_that_moved_since_the_proposal() {
     }
 }
 
+// --- Q4: a delete is one card that shows every value going ---
+
+/// r1 with three values, r2 with one; the stateful fake deletes for real.
+fn todo_rows() -> Vec<serde_json::Value> {
+    vec![keap_row("r1", serde_json::json!({"title": "Alpha one", "status": "open", "ordinal": 3})),
+         keap_row("r2", serde_json::json!({"title": "beta"}))]
+}
+
+/// By the table's title, as a local model names it.
+const DELETE: &str = r#"{"table": "Todo list", "row_id": "r1"}"#;
+
+fn delete_turn() -> Vec<String> {
+    vec![query(r#"{"table": "todos", "q": "alpha"}"#), call("propose_row_delete", DELETE), answer("Proposed.")]
+}
+
+fn deletes(rig: &Rig) -> Vec<String> {
+    rig.keap.lock().unwrap().iter().filter(|(h, _)| h.starts_with("DELETE ")).map(|(h, _)| h.clone()).collect()
+}
+
+#[test]
+fn approve_deletes_the_shown_row_once_as_the_person() {
+    let (keap, held) = fake_table(SCHEMA, todo_rows());
+    let rig = rig_at("delete", mapped(), keap, delete_turn(), Some(local()));
+    let (s, mut r, session, approval, diff) = propose(&rig);
+    assert_eq!((diff.op, diff.row_id.as_deref(), diff.title.as_str(), diff.table.as_str()),
+               (nos_contract::renderers::RowOp::Delete, Some("r1"), "Todo list", "todos"));
+    let mut cells: Vec<(String, serde_json::Value, serde_json::Value)> =
+        diff.cells.iter().map(|c| (c.key.clone(), c.old.clone(), c.new.clone())).collect();
+    cells.sort_by(|a, b| a.0.cmp(&b.0));
+    let null = serde_json::Value::Null;
+    assert_eq!(cells, [("ordinal".into(), serde_json::json!(3), null.clone()), ("status".into(), serde_json::json!("open"), null.clone()),
+                       ("title".into(), serde_json::json!("Alpha one"), null)], "every value the row holds, each going to nothing");
+    assert!(deletes(&rig).is_empty() && posts(&rig).is_empty(), "a proposal deleted before the person decided");
+
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::TableChanged { ref table, ref row, .. }) if table == "todos" && row == "r1"));
+    assert!(matches!(next(&mut r), Some(ToShell::Text { ref text, .. }) if text.contains("r1 deleted")), "the person hears the row is gone");
+    let d = deletes(&rig);
+    assert_eq!(d.len(), 1, "Approve DELETEs exactly once");
+    let head = d[0].to_ascii_lowercase();
+    assert!(head.starts_with("delete /api/tables/todos/rows/r1 "), "{head}");
+    assert!(head.contains("x-authentik-username: alice smith") && head.contains(&format!("x-keap-proxy-secret: {SECRET}")));
+    assert!(posts(&rig).is_empty(), "a delete posts nothing");
+    assert!(held.lock().unwrap().iter().all(|r| r["id"] != "r1"));
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let ev = events(&rig.ledger, &session);
+    for kind in ["agent_approval_request", "agent_approval_decision", "agent_tool_result"] {
+        assert!(ev.iter().any(|e| e.0 == kind && e.1 == "agent:iris/tool:propose_row_delete"), "the ledger has no {kind} of the delete: {ev:?}");
+    }
+}
+
+#[test]
+fn a_delete_of_a_row_never_shown_asks_nothing() {
+    let (keap, held) = fake_table(SCHEMA, todo_rows());
+    let rig = rig_at("del-probe", mapped(), keap, vec![call("propose_row_delete", DELETE), answer("Could not.")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "delete alpha");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. })), "{got:?}");
+    assert!(deletes(&rig).is_empty() && held.lock().unwrap().len() == 2);
+    assert!(rig.model.lock().unwrap()[1].1.contains("was not shown"), "the model was not told why");
+}
+
+#[test]
+fn approve_deletes_nothing_once_the_row_moved_and_reject_deletes_nothing() {
+    for (name, d, want) in [("del-moved", Decision::Approve, "changed since"), ("del-grew", Decision::Approve, "changed since"),
+                            ("del-gone", Decision::Approve, "gone since"), ("del-reject", Decision::Reject, "Rejected")] {
+        let (keap, held) = fake_table(SCHEMA, todo_rows());
+        let rig = rig_at(name, mapped(), keap, delete_turn(), Some(local()));
+        let (s, mut r, _, approval, _) = propose(&rig);
+        {
+            let mut rows = held.lock().unwrap();
+            match name {
+                "del-moved" => rows[0]["values"]["status"] = serde_json::json!("done"),
+                // A value the card never showed would go unseen.
+                "del-grew" => rows[0]["values"]["note"] = serde_json::json!("added since"),
+                "del-gone" => { rows.remove(0); }
+                _ => {}
+            }
+        }
+        decide(&s, &approval, d);
+        assert!(matches!(next(&mut r), Some(ToShell::Text { ref text, .. }) if text.contains(want)), "{name}");
+        assert!(deletes(&rig).is_empty(), "{name}: deleted a row the person did not see");
+    }
+}
+
 // --- the eye (pupil I3): serve says what it is doing, every step of a turn ---
 
 fn phases(got: &[ToShell]) -> Vec<String> {
@@ -1529,7 +1616,8 @@ fn fake_tables(tables: Vec<(&str, Vec<serde_json::Value>)>) -> ((String, Seen), 
             let (method, target) = (words.next().unwrap_or(""), words.next().unwrap_or(""));
             let (path, query) = target.split_once('?').unwrap_or((target, ""));
             let arg = |k: &str| query.split('&').find_map(|p| p.strip_prefix(&format!("{k}="))).and_then(|v| v.parse::<usize>().ok());
-            let (base, schema, table) = tables.iter().find(|t| path == t.0 || path == format!("{}/rows", t.0)).unwrap_or(&tables[0]);
+            let (base, schema, table) = tables.iter().find(|t| path == t.0 || path == format!("{}/rows", t.0) || path.starts_with(&format!("{}/rows/", t.0)))
+                .unwrap_or(&tables[0]);
             let mut rows = table.lock().unwrap();
             let (status, out) = match (method, path) {
                 ("GET", p) if p == base => (200, schema.clone()),
@@ -1555,6 +1643,13 @@ fn fake_tables(tables: Vec<(&str, Vec<serde_json::Value>)>) -> ((String, Seen), 
                         None => rows.push(row.clone()),
                     }
                     (200, serde_json::json!({"success": true, "data": row}).to_string())
+                }
+                ("DELETE", p) if p.starts_with(&format!("{base}/rows/")) => {
+                    let id = &p[base.len() + 6..];
+                    match rows.iter().position(|r| r["id"] == id) {
+                        Some(i) => { rows.remove(i); (200, r#"{"success": true}"#.to_string()) }
+                        None => (404, r#"{"success": false, "error": "unknown row"}"#.to_string()),
+                    }
                 }
                 _ => (404, r#"{"success": false, "error": "no such route"}"#.to_string()),
             };

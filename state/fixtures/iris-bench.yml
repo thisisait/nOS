@@ -214,6 +214,15 @@
     tools_called: [query_rows, propose_row_insert]
     approval_diff_equals: {table: iris-bench-2, op: insert, cells: {title: bench row 99, status: queued, track: face, points: 5}}
     not_blank: true
+- id: delete-card
+  needs_rows: true
+  turns:
+    - Find bench row 10 in iris-bench-2.
+    - Delete that row.
+  checks:
+    tools_called: [query_rows, propose_row_delete]
+    approval_diff_equals: {table: iris-bench-2, op: delete, cells: {title: null, status: null, track: null, points: null, due: null}}
+    not_blank: true
 # choice
 - id: choice-chart
   prompt: I want to see iris-bench-2 by track but I am not sure which chart; offer me choices.
