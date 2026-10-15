@@ -44,7 +44,8 @@ def estate(tmp_path, monkeypatch):
         "  - {id: gitea, category: devops, install_flag: install_gitea}\n"
         "  - {id: broken, category: misc, install_flag: install_broken}\n",
         encoding="utf-8")
-    (tmp_path / "default.config.yml").write_text(
+    monkeypatch.setattr(nos_identity, "REPO", tmp_path)
+    nos_identity.default_layers()[-1].write_text(
         "install_vaultwarden: false\ninstall_calibreweb: false\n"
         "install_gitea: \"{{ x }}\"\ninstall_broken: true\n", encoding="utf-8")
     (tmp_path / "config.yml").write_text("install_vaultwarden: true\n", encoding="utf-8")
@@ -55,7 +56,6 @@ def estate(tmp_path, monkeypatch):
     _plugin(tmp_path, "calibreweb-base",
             "requires: {feature_flag: install_calibreweb}\nhub_card: {description: ebooks}\n")
     _plugin(tmp_path, "broken-base", "requires: [unclosed\n")
-    monkeypatch.setattr(nos_identity, "REPO", tmp_path)
     monkeypatch.setattr(nos_identity, "MANIFEST", tmp_path / "state/manifest.yml")
     return tmp_path
 
