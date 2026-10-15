@@ -11,7 +11,7 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
-    "sense": 74,
+    "sense": 75,
     "limb": 116,
     "memory": 41,
     "law": 52,
@@ -1458,6 +1458,10 @@
       "kind": "reader"
     },
     "reader:santa-status": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:services-status": {
       "level": "sense",
       "kind": "reader"
     },

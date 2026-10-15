@@ -852,6 +852,9 @@ nodes:
   "effector:reload-stale-config": withheld
   "effector:rem-dispose": withheld
   "reader:rem-status": withheld
+  # 2026-10-15 reader:services-status: the service catalogue Iris's
+  # estate_services reads. WITHHELD; the published set is unchanged.
+  "reader:services-status": withheld
   "reader:roadmap-status": withheld
   "reader:router-status": withheld
   "reader:santa-status": withheld
