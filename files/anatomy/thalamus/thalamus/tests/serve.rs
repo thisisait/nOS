@@ -3460,11 +3460,13 @@ fn a_grouped_date_is_by_day_and_says_the_rows_it_leaves_out() {
 }
 
 #[test]
-fn an_op_or_y_without_group_by_is_refused_naming_the_rule() {
-    for (name, args) in [("opnog", r#"{"table": "sheet", "op": "sum", "y": "amount"}"#), ("ynog", r#"{"table": "sheet", "y": "amount"}"#)] {
-        let e = tool_result_of(name, args);
-        assert!(e["error"].as_str().is_some_and(|e| e.contains("only with `group_by`")), "{name}: {e}");
-    }
+fn an_op_without_group_by_is_one_total_and_a_bare_y_is_refused() {
+    // Gap #3 (map-invoices §5): "how much in total" was refused here; one total is the answer now.
+    let t = tool_result_of("opnog", r#"{"table": "sheet", "op": "sum", "y": "amount"}"#);
+    assert_eq!((&t["total_op"], &t["y"], &t["value"], &t["over"]),
+               (&serde_json::json!("sum"), &serde_json::json!("amount"), &serde_json::json!(16.0), &serde_json::json!(4)), "{t}");
+    let e = tool_result_of("ynog", r#"{"table": "sheet", "y": "amount"}"#);
+    assert!(e["error"].as_str().is_some_and(|e| e.contains("give `op`")), "{e}");
     let e = tool_result_of("opnoy", r#"{"table": "sheet", "group_by": "status", "op": "sum"}"#);
     assert!(e["error"].as_str().is_some_and(|e| e.contains("sum needs `y`")), "{e}");
 }
