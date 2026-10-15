@@ -1,7 +1,7 @@
 // The person's workspaces: tabs of widgets on a 12-column grid and a floating chat
 // (files/anatomy/contracts/workspace-layout.yml). Pure reducers; the Rust bridge checks
 // and stores the layout, the model never sees it.
-import type { DashboardProps, Lens, ToShell, ToThalamus, WidgetSpec } from './wire';
+import type { DashboardProps, Lens, SavedDashboard, ToShell, ToThalamus, WidgetSpec } from './wire';
 import { onTableChanged as staleOrSend, type WidgetState, type Widgets } from './widgets';
 
 export type Grid = { x: number; y: number; w: number; h: number };
@@ -154,19 +154,46 @@ export function setLens(l: Layout, tab: string, i: number, value: string): { lay
 	};
 }
 
-/** The person's click on "Place on a new tab": a tab with the offer's lens, two widgets a row; each runs once, as a click. */
-export function placeOffer(l: Layout, w: Widgets, tab: string, d: DashboardProps, id: () => string): { layout: Layout; w: Widgets; send: Send } {
-	if (l.workspaces.length >= MAX_SPACES) return { layout: l, w, send: [] };
+/** A dashboard's widgets as boxes, two a row, each with a fresh id. */
+const boxesOf = (widgets: SavedDashboard['widgets'], id: () => string): WidgetBox[] =>
+	widgets.slice(0, MAX_WIDGETS).map((x, i) => ({ id: id(), title: x.title.slice(0, 120), spec: x.spec, ...place({ x: (i % 2) * 6, y: Math.floor(i / 2) * 8, w: 6, h: 8 }) }));
+
+/** The person's click on "Place on a new tab": a tab with the offer's lens, two widgets a row; each runs once, as a click.
+ *  `save` keeps it in KEAP for the person under the tab id (the thalamus names the owner). */
+export function placeOffer(l: Layout, w: Widgets, tab: string, d: DashboardProps, id: () => string): { layout: Layout; w: Widgets; send: Send; save: ToThalamus | null } {
+	if (l.workspaces.length >= MAX_SPACES) return { layout: l, w, send: [], save: null };
 	// The offer lives in $state: a Proxy. JSON is all an offer is.
 	const { name, lens, widgets } = JSON.parse(JSON.stringify(d)) as DashboardProps;
-	const boxes: WidgetBox[] = widgets.slice(0, MAX_WIDGETS).map((x, i) => ({ id: id(), title: x.title.slice(0, 120), spec: x.spec, ...place({ x: (i % 2) * 6, y: Math.floor(i / 2) * 8, w: 6, h: 8 }) }));
+	const boxes = boxesOf(widgets, id);
 	const out = { ...w };
 	for (const b of boxes) out[b.id] = { component: null, error: null, at: 0, spec: b.spec };
 	return {
 		layout: { ...l, active: tab, workspaces: [...l.workspaces, { id: tab, name: name.slice(0, 40), lens, widgets: boxes }] },
 		w: out,
-		send: boxes.map((b) => ({ t: 'widget', widget: b.id, spec: lensed(b.spec, lens), trigger: 'click' }))
+		send: boxes.map((b) => ({ t: 'widget', widget: b.id, spec: lensed(b.spec, lens), trigger: 'click' })),
+		save: { t: 'dashboard_save', dashboard: { slug: tab, name: name.slice(0, 40), lens, widgets: widgets.map(({ title, spec }) => ({ title, spec })) } }
 	};
+}
+
+/** The person's dashboards from KEAP: each one this file lacks becomes a tab whose widgets wait to be shown.
+ *  A tab the file has stays as this Mac left it; `full` names those that did not fit (past 12 tabs, an id taken). */
+// ponytail: a later move, lens edit or close stays on this Mac (KEAP keeps the placed one); add save-on-change if asked.
+export function loadSaved(l: Layout, w: Widgets, ds: SavedDashboard[], id: () => string): { layout: Layout; w: Widgets; full: string[] } {
+	const out = { ...w };
+	const spaces = [...l.workspaces];
+	const full: string[] = [];
+	for (const d of ds) {
+		if (spaces.some((s) => s.id === d.slug)) continue;
+		// A slug that is a widget id here, or a 13th tab, would make a layout the bridge refuses to save.
+		if (spaces.length >= MAX_SPACES || spaces.some((s) => s.widgets.some((b) => b.id === d.slug))) {
+			full.push(d.name);
+			continue;
+		}
+		const boxes = boxesOf(d.widgets, id);
+		for (const b of boxes) out[b.id] = { component: null, error: null, at: 0, spec: b.spec, due: true };
+		spaces.push({ id: d.slug, name: d.name.slice(0, 40), lens: d.lens, widgets: boxes });
+	}
+	return { layout: { ...l, workspaces: spaces }, w: out, full };
 }
 
 /** An approval waits: the chat opens on top, since its card lives there. */

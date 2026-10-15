@@ -177,6 +177,8 @@
 		layout = r.layout;
 		widgets = r.w;
 		sendAll(r.send);
+		// Kept in KEAP for the person (dashboard_saved or a refusal comes back); the tab is placed either way.
+		if (r.save) tauri?.core.invoke('send', { msg: r.save }).catch((e) => push({ note: `dashboard not saved in KEAP: ${e}` }));
 		return true;
 	}
 
@@ -227,6 +229,13 @@
 				see({ e: 'wire', msg: payload });
 				if (payload.t === 'session') session = payload.session;
 				// A write landed: the active tab re-runs what read that table, the others go stale.
+				// The person's dashboards from KEAP: tabs this file lacks join it; the file is the fallback.
+				if (payload.t === 'dashboards') {
+					const r = ws.loadSaved(layout, widgets, payload.dashboards, newId);
+					layout = r.layout;
+					widgets = r.w;
+					if (r.full.length) layoutNote = `not opened (12 tabs, or an id taken): ${r.full.join(', ')}`;
+				}
 				if (payload.t === 'table_changed') {
 					const r = ws.onTableChanged(layout, widgets, payload.table);
 					widgets = r.w;
@@ -263,6 +272,7 @@
 					const r = ws.restore(layout);
 					widgets = r.w;
 					sendAll(r.send);
+					tauri.core.invoke('send', { msg: { t: 'dashboard_list' } }).catch((e) => push({ note: `dashboards not read from KEAP: ${e}` }));
 					return;
 				}
 				const r = closed(q);
