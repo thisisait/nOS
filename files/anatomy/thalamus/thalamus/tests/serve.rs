@@ -3986,3 +3986,27 @@ fn propose_row_insert_offers_lines_under_a_new_or_shown_row() {
     assert!(p["properties"]["row_id"].is_object(), "{p}");
     assert!(t["function"]["description"].as_str().unwrap().contains("one card and one approval"), "{t}");
 }
+
+// --- local bench 2026-10-15 (mistral-eu): 13 of 34 cases died on one "model answered 429" ---
+
+const LIMITED: &str = r#"!429 {"object": "error", "message": "Requests rate limit exceeded"}"#;
+
+#[test]
+fn a_rate_limited_model_call_is_tried_again() {
+    let rig = rig_n("ratelim", mapped(), vec![], vec![LIMITED.into(), answer("Hi.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "hello");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Text { text, .. } if text == "Hi.")), "{got:?}");
+    assert_eq!(rig.model.lock().unwrap().len(), 2, "one retry, then the answer");
+}
+
+#[test]
+fn a_model_that_stays_rate_limited_is_refused_naming_429() {
+    let rig = rig_n("ratestay", mapped(), vec![], vec![LIMITED.into()]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "hello");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Refused { reason, .. } if reason.contains("429"))), "{got:?}");
+    assert_eq!(rig.model.lock().unwrap().len(), 3, "a bounded number of tries");
+}
