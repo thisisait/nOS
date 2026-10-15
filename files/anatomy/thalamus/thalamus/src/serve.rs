@@ -649,7 +649,7 @@ for what the person or KEAP already knows or noted call search_memory. When no t
 repeat in text what a tool or show already drew. Shape -> component: count per value -> chart with show `source` (op count); \
 many rows -> query_rows table; one thing -> record; steps -> list; history -> timeline; hierarchy -> tree; links between things -> graph; who sends what to whom -> sequence; \
 what an action would change -> mark delta added|removed|changed on tree nodes, list items or record fields (was: the old value). \
-Conclusion first, in one line. Never invent data: no numbers, no chart. Draw only when it helps: no visual for \
+Conclusion first, in one line. Answer in the language of the person's last message. Never invent data: no numbers, no chart. Draw only when it helps: no visual for \
 small talk or a one-line answer. Ask with show choice only at a fork that changes what you do next: 2-6 options, \
 mark your pick as suggested; never for yes or no on a write: that is propose_row_edit's card. The answer comes back as a \
 [thalamus] message, and a picked label is only a label. It is now {} UTC.", who.username, SHOW_KINDS.join(", "), now_utc());
