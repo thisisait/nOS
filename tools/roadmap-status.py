@@ -28,6 +28,7 @@ Usage:
     tools/roadmap-status.py --all        # every row, nested under its parent
     tools/roadmap-status.py --track face # one track
     tools/roadmap-status.py --schema     # declared columns vs the live table
+    tools/roadmap-status.py --knowledge > roadmap.md   # one file to attach to a cloud chat
     tools/roadmap-status.py --json       # for a caller
 
 Exit 0 when it could read the table. Exit 2 when it could NOT — an unreachable
@@ -38,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import datetime
 import json
 import os
 import sys
@@ -51,6 +53,7 @@ DEF = REPO / "state/keap-tables/roadmap.table.yml"
 #: Same table id and forward-auth headers as the seeder. Loopback only — the
 #: agent surface is bound to 127.0.0.1 and the estate's edge never sees this.
 from keap_api import human_base, human_headers, paged  # noqa: E402 — sibling helper in tools/
+from roadmap_seed_lib import knowledge_pack, rank  # noqa: E402
 #: NOS_ROADMAP_TABLE_ID overrides for an estate whose roadmap table was minted
 #: through the agent door (id == slug, e.g. "roadmap"); KEAP_API_URL for a
 #: non-default loopback publish. Defaults are the operator estate's values.
@@ -61,11 +64,6 @@ BASE = f"{human_base()}/api/tables/{TABLE}"
 #: by keap_api). Without the secret every /api call here 401s since KEAP P1.
 HEADERS = human_headers()
 
-#: Board order: what is moving, then what is waiting, then what is done. A
-#: status the seeder invents tomorrow sorts last under its own name rather than
-#: being dropped — an unknown lane is information, not noise.
-STATUS_ORDER = ["doing", "active", "next", "review", "blocked",
-                "triaged", "queued", "inbox", "parked", "shipped", "dropped"]
 
 
 def get(url: str) -> dict:
@@ -87,11 +85,6 @@ def get(url: str) -> dict:
     return d
 
 
-def rank(status: str | None) -> tuple[int, str]:
-    s = status or ""
-    return (STATUS_ORDER.index(s) if s in STATUS_ORDER else len(STATUS_ORDER), s)
-
-
 def declared_columns() -> list[str]:
     try:
         import yaml
@@ -109,6 +102,8 @@ def main() -> int:
     ap.add_argument("--track", help="restrict to one track")
     ap.add_argument("--schema", action="store_true", help="declared columns vs the live table")
     ap.add_argument("--json", action="store_true", help="machine-readable")
+    ap.add_argument("--knowledge", action="store_true",
+                    help="one markdown file of the board (bodies whole) to attach to a conversation")
     args = ap.parse_args()
 
     try:
@@ -139,6 +134,11 @@ def main() -> int:
 
     if args.track:
         rows = [r for r in rows if r.get("track") == args.track]
+
+    if args.knowledge:
+        sys.stdout.write(knowledge_pack(rows, table.get("title") or TABLE,
+                                        datetime.date.today().isoformat(), settled=args.all))
+        return 0
 
     if args.json:
         json.dump({"table": table.get("title"), "rows": rows,

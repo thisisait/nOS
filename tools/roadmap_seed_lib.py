@@ -199,6 +199,39 @@ def load_rows(directory: str | None = None) -> list[dict]:
     return rows
 
 
+#: Board order: what is moving, then what is waiting, then what is done. A
+#: status the seeder invents tomorrow sorts last under its own name rather than
+#: being dropped — an unknown lane is information, not noise.
+STATUS_ORDER = ["doing", "active", "next", "review", "blocked",
+                "triaged", "queued", "inbox", "parked", "shipped", "dropped"]
+SETTLED = ("shipped", "dropped")
+
+
+def rank(status: str | None) -> tuple[int, str]:
+    s = status or ""
+    return (STATUS_ORDER.index(s) if s in STATUS_ORDER else len(STATUS_ORDER), s)
+
+
+def knowledge_pack(rows: list[dict], title: str, day: str, settled: bool = False) -> str:
+    """The live board as one markdown file, to attach to a conversation as knowledge.
+    Rows come from the TABLE (it owns status); bodies are kept whole."""
+    show = [r for r in rows if settled or r.get("status") not in SETTLED]
+    out = [f"# {title}", "", f"Snapshot of the live table, {day}: {len(show)} rows, grouped by status."
+           " Status is a claim; the body is the row's own prose.", ""]
+    lanes: dict[str, list[dict]] = {}
+    for r in sorted(show, key=lambda r: (rank(r.get("status")), r.get("slug") or "")):
+        lanes.setdefault(r.get("status") or "(none)", []).append(r)
+    for status, group in lanes.items():
+        out += [f"## {status} ({len(group)})", ""]
+        for r in group:
+            meta = " · ".join(f"{k}: {r[k]}" for k in ("track", "parent", "refs", "release") if r.get(k))
+            out += [f"### {r.get('slug')} — {r.get('title') or ''}"] + ([meta] if meta else [])
+            out += ["", (r.get("body") or "").strip(), ""] if (r.get("body") or "").strip() else [""]
+    if len(show) < len(rows):
+        out.append(f"+{len(rows) - len(show)} shipped/dropped not included (`--all` adds them).")
+    return "\n".join(out).rstrip() + "\n"
+
+
 if __name__ == "__main__":
     import json
     import sys
