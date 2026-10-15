@@ -83,7 +83,7 @@ nos dtt extract [--write]            # one-time: live table -> per-row seed file
 ```
 
 - **Set `NOS_SEED_DIR`** to your private seed repo (export it in your shell
-  profile once); `nos dtt` inherits it. Default `~/nos-seed`.
+  profile once); `nos dtt` inherits it. Default `~/projects/nos-seed`.
 - `nos dtt` needs `$NOS_SRC` to be a **pulled** checkout — a tool added on a
   branch is reachable only after that branch is pulled into `$NOS_SRC` (the same
   repo≠running-system lag as a converge). The CLI says so if the tool is absent.

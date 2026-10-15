@@ -5,7 +5,7 @@ WAS a 2286-line monolith that inlined every row's prose — which broke twice un
 hand-editing (2026-09-04) AND published every idea into the PUBLIC nOS repo. Now
 it is a READER OF FILES (dtt-seed-per-row-file, docs/plans/datatables-subsystem.md
 §6): one row = one `<slug>.md` in a SEPARATE PRIVATE repo (NOS_SEED_DIR, default
-~/nos-seed), readable and atomic for parallel agents. This file carries the
+~/projects/nos-seed), readable and atomic for parallel agents. This file carries the
 machinery; the row content lives in the operator's private repo and never here.
 
 First-time setup: `tools/roadmap-extract.py --write` writes the live table into

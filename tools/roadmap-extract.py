@@ -3,7 +3,7 @@
 
 The migration step for dtt-seed-per-row-file. Reads every row from the live KEAP
 roadmap table and writes one markdown+frontmatter file per row into the seed dir
-(NOS_SEED_DIR, default ~/nos-seed) — which must be your PRIVATE repo, because the
+(NOS_SEED_DIR, default ~/projects/nos-seed) — which must be your PRIVATE repo, because the
 row bodies are your ideas and nOS is public.
 
     NOS_SEED_DIR=~/projects/nos-seed tools/roadmap-extract.py            # dry run

@@ -56,11 +56,12 @@ def seed_dir() -> str:
     """Resolve the PRIVATE seed repo path. NOS_SEED_DIR wins; else the default.
 
     Never inside the public checkout — the whole point is that row content is
-    not committed to nOS. Default is ~/nos-seed; override with NOS_SEED_DIR.
+    not committed to nOS. Default is ~/projects/nos-seed, beside the default
+    NOS_SRC ~/projects/nOS; override with NOS_SEED_DIR.
     """
     d = os.environ.get("NOS_SEED_DIR", "").strip()
     if not d:
-        d = os.path.join(os.path.expanduser("~"), "nos-seed")
+        d = os.path.join(os.path.expanduser("~"), "projects", "nos-seed")
     return os.path.abspath(os.path.expanduser(d))
 
 
