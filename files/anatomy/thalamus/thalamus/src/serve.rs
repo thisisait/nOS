@@ -1447,6 +1447,14 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 "gt" => format!("{k} > {}", vals[0]),
                 _ => format!("{k} contains {:?}", vals[0]),
             });
+            // A rowRef cell holds the parent's id; a label the person picked (a lens select) names one.
+            let vals = match (def.get("kind").and_then(Value::as_str), op) {
+                (Some("rowRef"), "eq" | "neq" | "in") => match self.parents(who, def, k)? {
+                    Some((labels, ids)) => vals.into_iter().map(|v| labels.iter().position(|l| *l == v).map_or(v, |i| ids[i].clone())).collect(),
+                    None => vals,
+                },
+                _ => vals,
+            };
             wh.push((k, op, vals, kind));
         }
         let order = match given("order_by") {
@@ -1570,6 +1578,16 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// boolean, date or select column (a select of 0 or over 50 options is text), in the table's
     /// order, narrowed to `columns` when given. `__` columns are dropped; an optional column of any
     /// other kind is listed in `omitted`; a required column the form cannot fill refuses the form.
+    /// A rowRef column's parent rows as (labels, ids), read as the person: refDisplay, else the id.
+    /// None over 50 rows or a label twice, where a label would not name one parent.
+    fn parents(&self, who: &Person, def: &Map<String, Value>, key: &str) -> Result<Option<(Vec<String>, Vec<String>)>, String> {
+        let (table, display) = (def.get("refTable").and_then(Value::as_str).unwrap_or(""), def.get("refDisplay").and_then(Value::as_str).unwrap_or(""));
+        let rows = self.rows(who, table).map_err(|e| format!("column {key} lists rows of {table}: {e}"))?;
+        let labels: Vec<String> = rows.iter().map(|(id, v)| v.get(display).filter(|v| !v.is_null()).map_or(id.clone(), text)).collect();
+        let unique = labels.iter().collect::<HashSet<_>>().len() == labels.len();
+        Ok(((1..=50).contains(&labels.len()) && unique).then(|| (labels, rows.into_iter().map(|r| r.0).collect())))
+    }
+
     pub fn form_from_schema(&self, who: &Person, table: &str, columns: Option<&[String]>) -> Result<Form, String> {
         let table = table_id(table);
         let info = self.keap(who, &format!("{}/api/tables/{}", self.keap_url.trim_end_matches('/'), enc(&table)), None)?;
@@ -1595,17 +1613,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             let parent = match (kind.as_str(), wanted) {
                 ("rowRef", true) => {
                     let p = Parent { table: s(c, "refTable"), display: s(c, "refDisplay"), ids: vec![] };
-                    let rows = self.rows(who, &p.table).map_err(|e| format!("column {key} lists rows of {}: {e}", p.table))?;
-                    let label = |(id, v): &(String, Map<String, Value>)| v.get(&p.display).filter(|v| !v.is_null()).map_or(id.clone(), text);
-                    let labels: Vec<String> = rows.iter().map(label).collect();
-                    let unique = labels.iter().collect::<HashSet<_>>().len() == labels.len();
-                    if (1..=50).contains(&labels.len()) && unique {
-                        options = Some(labels);
-                        Some(Parent { ids: rows.into_iter().map(|r| r.0).collect(), ..p })
-                    } else {
-                        options = None;
-                        Some(p)
-                    }
+                    let (labels, ids) = self.parents(who, c, &key)?.unzip();
+                    options = labels;
+                    Some(Parent { ids: ids.unwrap_or_default(), ..p })
                 }
                 _ => None,
             };
@@ -2027,8 +2037,10 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let lens = lens.into_iter().map(|mut l| {
             let c = columns.iter().find(|c: &&Map<String, Value>| c.get("key").and_then(Value::as_str) == Some(l.column.as_str()))
                 .ok_or(format!("lens column `{}` is in no widget's table", l.column))?;
-            l.options = c.get("options").and_then(Value::as_array).map(|o| o.iter().filter_map(Value::as_str).map(str::to_string).collect())
-                .filter(|o: &Vec<String>| (1..=50).contains(&o.len()));
+            l.options = match c.get("kind").and_then(Value::as_str) {
+                Some("rowRef") => self.parents(who, c, &l.column)?.map(|p| p.0),
+                _ => c.get("options").and_then(Value::as_array).map(|o| o.iter().filter_map(Value::as_str).map(str::to_string).collect()),
+            }.filter(|o: &Vec<String>| (1..=50).contains(&o.len()));
             l.kind = match c.get("kind").and_then(Value::as_str) {
                 Some("date") => Some(FieldKind::Date),
                 Some("number") => Some(FieldKind::Number),
