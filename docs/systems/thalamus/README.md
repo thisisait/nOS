@@ -42,7 +42,7 @@ ruling 2026-10-11), it does not go through the receptor's socket.
   `group_by` (+ `op`, `y`) counts, sums or averages per value; `op` without
   `group_by` is one total over every matched row. A `where` may be `between`
   `[from, to]` (inclusive), and a date column takes `today` … `this_year`,
-  resolved in UTC and said resolved in `query`. An exact text miss adds a `hint`.
+  resolved on the host's calendar and said resolved in `query`. An exact text miss adds a `hint`.
 - `propose_row_edit{table, row_id, values}`: refused unless a `query_rows` in
   this session showed that row (no KEAP read, no card). The cells that change are written
   to the ledger as `agent_approval_request`, then shown as `row_diff_approval`.

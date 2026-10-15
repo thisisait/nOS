@@ -1460,8 +1460,10 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             if def.get("kind").and_then(Value::as_str) == Some("text") && matches!(op, "eq" | "contains") {
                 texts.push((k, vals[0].clone()));
             }
-            // Gap #4: "this month" is a range the model would compute wrong; resolved here, now, in UTC.
-            let today = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64) / 86_400;
+            // Gap #4: "this month" is a range the model would compute wrong; resolved here, now, on the
+            // host's calendar (the person sits at this host), so 00:30 CET on the 1st is the new month.
+            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64);
+            let today = local_day(now, host_offset(now));
             let rel = match (kind, vals.as_slice()) {
                 (Some("date"), [w]) if matches!(op, "eq" | "between" | "lt" | "gt") => relative(w, today).map(|r| (w.clone(), r)),
                 _ => None,
@@ -2771,7 +2773,19 @@ fn day_epoch(s: &str) -> Option<i64> {
     (iso(t)[..10] == *s).then_some(t)
 }
 
-/// A relative day word as its first and last UTC day, from `today` (days since the epoch); a week is
+/// Days since the epoch on a calendar `offset` seconds east of UTC.
+fn local_day(t: i64, offset: i64) -> i64 {
+    (t + offset).div_euclid(86_400)
+}
+
+/// The host's UTC offset at `t` in seconds (DST included); 0 when the zone cannot be read.
+fn host_offset(t: i64) -> i64 {
+    let mut tm: libc::tm = unsafe { std::mem::zeroed() };
+    let ok = !unsafe { libc::localtime_r(&(t as libc::time_t), &mut tm) }.is_null();
+    if ok { tm.tm_gmtoff as i64 } else { 0 }
+}
+
+/// A relative day word as its first and last day, from `today` (days since the epoch); a week is
 /// Monday to Sunday. None for any other word.
 fn relative(word: &str, today: i64) -> Option<(String, String)> {
     let d = |n: i64| iso(n * 86_400)[..10].to_string();
