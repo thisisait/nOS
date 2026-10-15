@@ -447,7 +447,10 @@ def main(argv: list[str] | None = None) -> int:
                         "no_data": all(r[3] for r in runs), "failed": [] if passes * 2 > n else failed,
                         "seconds": round(sum(r[2] for r in runs) / n, 2), "model_uri": got["model_uri"], "tools": got["tools"],
                         "approvals_rejected": sum(len(r[0]["approvals"]) for r in runs), "refused": got["refused"],
-                        "queries": queries(got), "text": got["text"]})
+                        "queries": queries(got), "text": got["text"],
+                        # Why an offered widget was left out (round 2: the model only paraphrased it).
+                        "dropped": [d for r in got["renders"] if r["component"].get("kind") == "dashboard"
+                                    for d in r["component"].get("props", {}).get("dropped") or []]})
     run = {"ran_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "sock": sock,
            "model_uri": sorted({r["model_uri"] for r in results if r["model_uri"]}), "cases": results}
     out = Path(a.out)
