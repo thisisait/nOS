@@ -265,13 +265,17 @@ def check(name: str, arg, got: dict, now: float) -> bool:
     if name == "no_invented_link":  # a markdown link or image only to a URL a render in this run carried
         seen, targets = json.dumps(got["renders"]), re.findall(r"\]\(([^)\s]*)", text)
         return ("![" not in text or bool(targets)) and all(t and t in seen for t in targets)
-    if name == "dashboard_has":  # the LAST offered dashboard: at least n widgets, these spec kinds and lens columns
+    if name == "dashboard_has":  # the LAST offered dashboard: at least n widgets, these spec kinds and lens columns,
+        # and a form widget whose prefill holds these values (iris-v3 B2)
         boards = [r["component"].get("props", {}) for r in got["renders"] if r["component"].get("kind") == "dashboard"]
         if not boards:
             return False
         widgets, lens = boards[-1].get("widgets", []), {c.get("column") for c in boards[-1].get("lens", [])}
         kinds = {k for w in widgets for k in (w.get("spec") or {})}
-        return len(widgets) >= arg.get("widgets", 1) and set(arg.get("kinds", [])) <= kinds and set(arg.get("lens", [])) <= lens
+        fills = [(w.get("spec") or {}).get("form", {}).get("prefill") or {} for w in widgets]
+        prefilled = any(all(str(f.get(k)) == str(v) for k, v in arg["prefill"].items()) for f in fills) if arg.get("prefill") else True
+        return (len(widgets) >= arg.get("widgets", 1) and set(arg.get("kinds", [])) <= kinds and set(arg.get("lens", [])) <= lens
+                and prefilled)
     if name == "not_blank":
         return bool(text.strip()) and text.strip() != BLANK
     raise ValueError(f"unknown check {name!r}")
