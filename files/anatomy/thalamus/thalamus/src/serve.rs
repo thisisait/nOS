@@ -1007,7 +1007,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     }
 
     /// The only create path: the approved card, POSTed as the person (owner them, private), then read
-    /// back; the reader, not the POST's 200, says it is there as approved. Returns (table id, card).
+    /// back; the reader, not the POST's 200, says it is there as approved (every field sent). Returns (table id, card).
     fn create_table(&self, who: &Person, decision: i64) -> Result<(String, TableSchemaApproval), String> {
         let (actor, t) = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.approved_table(decision)?;
         if actor != format!("user:{}", who.uid()) {
@@ -1023,10 +1023,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let id = v.pointer("/data/id").and_then(Value::as_str).filter(|i| !i.is_empty()).map(str::to_string)
             .ok_or("KEAP answered the create without a table id")?;
         let back = self.keap(who, &format!("{base}/{}", enc(&id)), None)?;
-        let held: Vec<(&str, &str)> = back.pointer("/data/schema/columns").and_then(Value::as_array).into_iter().flatten()
-            .map(|c| (c["key"].as_str().unwrap_or(""), c["kind"].as_str().unwrap_or(""))).collect();
-        let want: Vec<(&str, &str)> = t.columns.iter().map(|c| (c.key.as_str(), c.kind.as_str())).collect();
-        if back.pointer("/data/title") != Some(&json!(t.title)) || back.pointer("/data/visibility") != Some(&json!("private")) || held != want {
+        let held = back.pointer("/data/schema/columns").and_then(Value::as_array).cloned().unwrap_or_default();
+        if back.pointer("/data/title") != Some(&json!(t.title)) || back.pointer("/data/visibility") != Some(&json!("private"))
+            || !held_as_sent(&held, &columns) {
             return Err(format!("table {id} was created, but KEAP holds it otherwise than approved (title, visibility or columns)"));
         }
         Ok((id, t))
@@ -1056,9 +1055,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             s => return Err(format!("KEAP answered {s}: {why}")),
         }
         let back = cols(&self.keap(who, &url, None)?);
-        let want: Vec<(String, String)> = t.existing.iter().map(|c| (c.key.clone(), c.kind.clone()))
-            .chain(t.columns.iter().map(|c| (c.key.clone(), c.kind.as_str().to_string()))).collect();
-        if held(&back) != want {
+        let n = t.existing.len();
+        let kept = held(&back[..n.min(back.len())]).into_iter().eq(t.existing.iter().map(|c| (c.key.clone(), c.kind.clone())));
+        if !kept || !held_as_sent(&back[n.min(back.len())..], &all[n..]) {
             return Err(format!("the columns of {} were changed, but KEAP holds them otherwise than approved", t.title));
         }
         let dates = held(&back).into_iter().filter(|c| c.1 == "date").map(|c| c.0).collect();
@@ -2570,6 +2569,12 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 /// A chart spec as the query_rows arguments that aggregate it (group_by x, op, y).
 /// The table id a query this session resolved `alias` (id or title) to, or why not.
 /// A card column as KEAP's columnDefSchema takes it (camelCase refs; zod fills role and onDelete).
+/// The read-back of an approved schema: each column KEAP holds carries every field sent, as sent
+/// (KEAP adds its defaults, role and onDelete, so extra fields are fine); same count, same order.
+fn held_as_sent(held: &[Value], sent: &[Value]) -> bool {
+    held.len() == sent.len() && held.iter().zip(sent).all(|(h, s)| s.as_object().is_some_and(|o| o.iter().all(|(k, v)| h.get(k) == Some(v))))
+}
+
 fn keap_column(c: &SchemaColumn) -> Value {
     let mut v = json!({"key": c.key, "label": c.label, "kind": c.kind.as_str(), "required": c.required});
     for (k, x) in [("options", c.options.as_ref().map(|o| json!(o))), ("refTable", c.ref_table.as_ref().map(|r| json!(r))),
