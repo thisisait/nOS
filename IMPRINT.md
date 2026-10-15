@@ -44,7 +44,7 @@ Each line: level (count) — what it means (the lexicon's words), then the most 
 - **organ system** (13) — A public group of organs serving one function; the apex page shows thirteen. Its source is the apex ruling's `organ_systems:` key. Most connected: organ_system:archive (9), organ_system:watch (8), organ_system:voice (6)
 - **organism** (0) — One nOS install on one machine, all its organ systems together. Most connected: none — no node stands for the whole; the whole is this graph
 - **habitat** (6) — The machine and what lives beside the organism: its software by origin (self / symbiont / habitat). Software of origin habitat belongs to the machine's owner; nOS never installs or touches it by default, only through opt-in toggles the owner sets (configure_dock, install_mas_apps and their kin in the host-desktop layer). Ruled 2026-10-06: the git forges nOS hosts itself are not habitat (they are organ jobs); the LLM backends nOS's cells call are habitat, third-party processors beside it. Most connected: backend:minimax (8), backend:ollama (6), backend:anthropic (3)
-- **sense** (75) — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Most connected: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5)
+- **sense** (77) — A reader or judge that only reads; an immune indicator is a sense with an indicator contract. Most connected: tool_ro:mcp-wing-read (10), tool_ro:bash-read-only (8), judge:cortex-corpus-diff (5)
 - **limb** (116) — A tool that acts. Most connected: effector:loop-pr (6), effector:run-agent (6), effector:loop-propose (5)
 - **memory** (41) — What nOS has learned, kept in KEAP; RAM stays plain English. Most connected: table:party (13), table:invoice (5), table:journal-entry (4)
 - **law** (52) — The rules in force, kept in ssot/doctrine/ and kept apart from the genome. Most connected: article:loop-contract (19), doctrine:ssot/doctrine/loop-contract.md#5.1 (6), doctrine:ssot/doctrine/loop-contract.md#3.4 (5)
@@ -65,7 +65,7 @@ Start with the first one.
 - `tools/identity-status.py` — the declared account roster vs what each realm holds.
 - `tools/plugin-wiring-report.py` — Plugin wiring report — capability matrix + contract checks.
 
-26 more `*-status.py` readers, each with its question, are listed in tools/README.md §Readers: workload-digest-status.py, docker-pressure-status.py, caddy-status.py, brew-pin-status.py, cortex-status.py, tissue-status.py, router-status.py, e2e-status.py, elsewhere-status.py, services-status.py, loop-status.py, geo-status.py, permission-status.py, undeclared-status.py, santa-status.py, openhuman-status.py, thalamus-status.py, tailscale-status.py, managed-status.py, stale-config-status.py, roadmap-status.py, skill-status.py, snapshot-status.py, stuck-status.py, usage-status.py, wing-status.py.
+27 more `*-status.py` readers, each with its question, are listed in tools/README.md §Readers: workload-digest-status.py, docker-pressure-status.py, caddy-status.py, brew-pin-status.py, cortex-status.py, tissue-status.py, router-status.py, e2e-status.py, ci-tier-status.py, elsewhere-status.py, services-status.py, loop-status.py, geo-status.py, permission-status.py, undeclared-status.py, santa-status.py, openhuman-status.py, thalamus-status.py, tailscale-status.py, managed-status.py, stale-config-status.py, roadmap-status.py, skill-status.py, snapshot-status.py, stuck-status.py, usage-status.py, wing-status.py.
 
 ## 5. How to act — task types and the two tables
 
@@ -118,7 +118,7 @@ KEAP_API_URL=http://127.0.0.1:8091 KEAP_AGENT_TOKEN_RO=<keap_agent_token_ro> pyt
 - Local models (Ollama, OpenAI-compatible): `http://127.0.0.1:11434/v1`, no token. Models the register names: `hermes3:8b`, `qwen3:14b`.
 - Web: Traefik owns ports 80/443. A service with a `domain_var` in state/manifest.yml (54 of 76) answers at that variable, by default `<name>.{{ tenant_domain }}` with `tenant_domain: dev.local`. This host's value: `tools/estate-status.py --config tenant_domain`. The routed ids are those rows' `id`s.
 
-The public organ systems (the apex ruling publishes 13; 477 of 540 ruled nodes are withheld):
+The public organ systems (the apex ruling publishes 13; 479 of 542 ruled nodes are withheld):
 
 - The Gatehouse — Access is decided in one place. (4 parts)
 - The Spine — The estate governs and audits itself. (5 parts)

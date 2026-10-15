@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 540,
+    "nodes": 542,
     "edges": 548,
     "nodes_pulse": 43,
     "nodes_judge": 5,
@@ -27,7 +27,7 @@
     "nodes_agent": 17,
     "nodes_tasktype": 9,
     "nodes_skill": 12,
-    "nodes_reader": 57,
+    "nodes_reader": 59,
     "nodes_effector": 109,
     "nodes_article": 26,
     "nodes_organ_system": 13,
@@ -3313,6 +3313,13 @@
       "anchor": "02.02.04",
       "description": "Reader tools/caddy-status.py: Can the caddy answer, is the ear listening, and what did it hear."
     },
+    "reader:ci-tier-status": {
+      "kind": "reader",
+      "source": "tools/ci-tier-status.py",
+      "title": "Has each bonus CI lane (one manifest stack) been green on GitHub within 7 days; RED when not, including no run; UNKNOWN when `gh` is unreadable.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/ci-tier-status.py: Has each bonus CI lane (one manifest stack) been green on GitHub within 7 days; RED when not, including no run; UNKNOWN when `gh` is unreadable."
+    },
     "reader:cortex-drift": {
       "kind": "reader",
       "source": "tools/cortex-drift.py",
@@ -3571,6 +3578,13 @@
       "title": "Can the tailnet reach nOS by name (`nos_edge: lan_tailscale`): Tailscale installed, up, hostname, the `nos_lan_ip/32` route advertised vs approved, `dig @nos_lan_ip` answering, Funnel (RED when on); UNKNOWN without the CLI. Cannot see the tailnet's split-DNS setting (no API key by design).",
       "anchor": "02.02.04",
       "description": "Reader tools/tailscale-status.py: Can the tailnet reach nOS by name (`nos_edge: lan_tailscale`): Tailscale installed, up, hostname, the `nos_lan_ip/32` route advertised vs approved, `dig @nos_lan_ip` answering, Funnel (RED when on); UNKNOWN without the CLI. Cannot see the tailnet's split-DNS setting (no API key by design)."
+    },
+    "reader:test-tiers": {
+      "kind": "reader",
+      "source": "tools/test-tiers.py",
+      "title": "Which CI tier (T0, core, a stack) owns each anatomy test, and each stack's bonus lane: install flags + trigger paths, derived from the manifest, profiles/core.yml and plugins; `--select` prints the workflow matrix.",
+      "anchor": "02.02.04",
+      "description": "Reader tools/test-tiers.py: Which CI tier (T0, core, a stack) owns each anatomy test, and each stack's bonus lane: install flags + trigger paths, derived from the manifest, profiles/core.yml and plugins; `--select` prints the workflow matrix."
     },
     "reader:thalamus-status": {
       "kind": "reader",

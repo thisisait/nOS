@@ -736,3 +736,99 @@ jobs:
           name: traefik-dynamic-linux
           path: ~/stacks/infra/traefik/conf.d/
           if-no-files-found: warn
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # BONUS – one converge per manifest stack outside profiles/core.yml. The lanes
+  # come from tools/test-tiers.py: a push or PR runs the stacks whose role/plugin
+  # paths changed, the nightly run one slice of a weekly rotation. Not required;
+  # tools/ci-tier-status.py reds a stack not green in 7 days. Gate: test_every_ci_lane_is_derived.
+  # ──────────────────────────────────────────────────────────────────────────
+  bonus-select:
+    name: Bonus lanes (select)
+    runs-on: ubuntu-24.04
+    outputs:
+      lanes: ${{ steps.pick.outputs.lanes }}
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Pick the lanes.
+        id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          pip3 install pyyaml
+          if [ "$EVENT" = schedule ]; then
+            lanes=$(python3 tools/test-tiers.py --select --nightly)
+          else
+            # A new branch has no `before`; fall back to the last commit.
+            { git diff --name-only "$BASE" HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD; } > "$RUNNER_TEMP/changed"
+            lanes=$(python3 tools/test-tiers.py --select < "$RUNNER_TEMP/changed")
+          fi
+          echo "lanes=$lanes" >> "$GITHUB_OUTPUT"
+          echo "lanes: $lanes"
+
+  bonus:
+    name: Bonus (${{ matrix.stack }})
+    needs: bonus-select
+    if: needs.bonus-select.outputs.lanes != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      PYTHONNOUSERSITE: '1'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.bonus-select.outputs.lanes) }}
+    # ponytail: setup copies integration-linux's; extract a composite action if a third converge job appears.
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.
+        id: python-setup
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Install test dependencies.
+        env:
+          PY: ${{ steps.python-setup.outputs.python-path }}
+        run: |
+          . "${GITHUB_WORKSPACE}/tools/ci-freeze.env"
+          "$PY" -m venv "$RUNNER_TEMP/nosvenv"
+          "$RUNNER_TEMP/nosvenv/bin/pip" install "$NOS_ANSIBLE_CORE" pyyaml jsonschema
+          echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
+          "$PY" -m pip install --break-system-packages "$NOS_ANSIBLE_CORE" pyyaml jsonschema
+
+      - name: Set up the test environment.
+        env:
+          PY: ${{ steps.python-setup.outputs.python-path }}
+        run: |
+          cp tests/ansible.cfg ./ansible.cfg
+          echo "interpreter_python = $PY" >> ./ansible.cfg
+          cp tests/inventory ./inventory
+          cp tests/config.yml ./config.yml
+          for attempt in 1 2 3 4 5 6; do
+            ansible-galaxy install -r requirements.lock.yml && exit 0
+            echo "ansible-galaxy attempt ${attempt} failed; sleeping ${attempt}0s"
+            sleep "${attempt}0"
+          done
+          exit 1
+
+      # Core plus the stack's derived flags; thalamus is macOS-only (see integration-linux).
+      - name: Converge core plus the stack.
+        run: >-
+          ansible-playbook main.yml
+          -e allow_weak_prefix=true
+          -e @profiles/core.yml
+          -e '{"install_thalamus": false}'
+          -e "$LANE_FLAGS"
+          -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
+        env:
+          LANE_FLAGS: ${{ matrix.flags }}
+          ANSIBLE_FORCE_COLOR: '1'
+          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}

@@ -60,6 +60,8 @@ Each line here is a `reader:` node of the anatomy graph, a sense.
 - `tissue-status.py` — Which tissues the estate declares (state/tissues/), their members, and whether each holds: schema, every id resolved, Article 30 inherited complete. Also the loader anatomy-graph-gen imports.
 - `router-status.py` — The WAN router as a declared estate fact: presence probe + intent from state/habitat/router.yml; UNKNOWN when it cannot look.
 - `e2e-status.py` — What the last estate e2e run (tests/e2e/estate) said, read back from `~/.nos/e2e/results.jsonl`: counts, the failing nodeids, age (red past 7 days); UNKNOWN without the record.
+- `ci-tier-status.py` — Has each bonus CI lane (one manifest stack) been green on GitHub within 7 days; RED when not, including no run; UNKNOWN when `gh` is unreadable.
+- `test-tiers.py` — Which CI tier (T0, core, a stack) owns each anatomy test, and each stack's bonus lane: install flags + trigger paths, derived from the manifest, profiles/core.yml and plugins; `--select` prints the workflow matrix.
 - `elsewhere-status.py` — Estate work happening OUTSIDE the control centre, and how to get to it.
 - `estate-status.py` — What is TRUE right now, across the three places a fact about nOS can live.
 - `services-status.py` — What nOS offers: every manifest service, its resolved install flag (null when Jinja/undeclared) and hub_card description; Iris's estate_services catalogue. Exit 0; unreadable sources in `unknown`.

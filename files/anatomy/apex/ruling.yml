@@ -828,6 +828,10 @@ nodes:
   # 2026-10-09 reader:e2e-status (e2e-results-persist): the last estate e2e run
   # read back from its JSONL record. WITHHELD; the published set is unchanged.
   "reader:e2e-status": withheld
+  # 2026-10-15 reader:ci-tier-status, reader:test-tiers (ci-tiers): bonus CI lanes per
+  # manifest stack and their last green. WITHHELD; the published set is unchanged.
+  "reader:ci-tier-status": withheld
+  "reader:test-tiers": withheld
   "reader:elsewhere-status": withheld
   "reader:estate-status": withheld
   "reader:face-wiring-report": withheld
