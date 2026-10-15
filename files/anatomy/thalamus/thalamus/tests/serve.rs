@@ -1741,13 +1741,14 @@ fn widget_rows_renders_dates_as_days() {
 // --- iris v3 A1: a date is a day to the model and the person; KEAP and the ledger keep epoch ---
 
 /// 2026-11-01, 2026-11-20 and an empty day; 2026-11-15 sits between them (UTC midnights).
+/// Amount 10 sorts before "5" as text, so `gt 5` tells a number compare from a text one.
 const NOV_1: i64 = 1_793_491_200;
 const NOV_20: i64 = 1_795_132_800;
 
 fn dated_rows() -> Vec<serde_json::Value> {
     vec![keap_row("a", serde_json::json!({"when": NOV_1, "amount": 4})),
          keap_row("b", serde_json::json!({"when": NOV_20, "amount": 9})),
-         keap_row("c", serde_json::json!({"amount": 7}))]
+         keap_row("c", serde_json::json!({"amount": 10}))]
 }
 
 #[test]
