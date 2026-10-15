@@ -59,6 +59,8 @@ def test_every_stack_outside_core_has_one_lane_and_its_paths() -> None:
     lanes = t.derive()["lanes"]
     rows = yaml.safe_load((REPO / "state" / "manifest.yml").read_text(encoding="utf-8"))["services"]
     core = t.core_flags()
+    # Own organs (software_owner: self) are core: test_own_organs_never_ride_a_bonus_lane.
+    rows = [r for r in rows if r.get("software_owner") != "self"]
     want = {r["stack"] for r in rows if r.get("stack") and r.get("install_flag") not in core}
     assert set(lanes) == want, f"lanes {sorted(lanes)} != stacks outside core {sorted(want)}"
     for r in rows:
