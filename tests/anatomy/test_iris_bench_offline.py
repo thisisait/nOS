@@ -120,9 +120,9 @@ def _show(kind, props):
     return {"t": "render", "session": SID, "pin": None, "component": {"kind": kind, "props": props}}
 
 
-def _dash(lens, kinds, prefill=None):
+def _dash(lens, kinds, prefill=None, table="iris-bench-2"):
     """An offer_dashboard render: a lens condition per column, a widget per spec kind (iris-v3 B1); a form takes `prefill` (B2)."""
-    spec = lambda k: {"table": "iris-bench-2", **({"prefill": prefill} if prefill and k == "form" else {})}
+    spec = lambda k: {"table": table, **({"prefill": prefill} if prefill and k == "form" else {})}
     return _show("dashboard", {"name": "Bench board", "lens": [{"column": c, "op": "eq", "value": ""} for c in lens],
                                "widgets": [{"title": k, "spec": {k: spec(k)}} for k in kinds], "dropped": []})
 
@@ -185,6 +185,9 @@ def _v2(bad: bool) -> dict[str, list[list[dict]]]:
                                   _text("The dashboard is above; it runs when you place it."))],
         "form-offer": [_turn(_tool("offer_dashboard"), _dash([], ["form"], None if bad else {"track": "platform"}),
                              _text("The form is above; place it to add rows."))],
+        "lines-dashboard": [_turn(_tool("offer_dashboard"), _dash(["bench_row"], ["rows", "form"],
+                                                                  table="iris-bench-2" if bad else "iris-bench-2-lines"),
+                                  _text("The lines dashboard is above; place it to add lines."))],
     }
 
 
@@ -282,6 +285,7 @@ def test_a_bad_run_fails_exactly_the_broken_checks_and_rejects(tmp_path):
         "memory-chain": ["turn_text_contains"],
         "dashboard-offer": ["dashboard_has"],
         "form-offer": ["dashboard_has"],
+        "lines-dashboard": ["dashboard_has"],
     }
     assert failed == want
     assert not [c["id"] for c in res["cases"] if c["no_data"]], "a bad answer is judged, never NO-DATA"
@@ -551,6 +555,10 @@ def test_each_check_fails_on_the_answer_it_exists_to_catch():
     assert not check("dashboard_has", form, _got(renders=[_dash([], ["form"])]), noon), "no prefill"
     assert not check("dashboard_has", form, _got(renders=[_dash([], ["form"], {"track": "face"})]), noon), "another value"
     assert not check("dashboard_has", form, _got(renders=[_dash([], ["rows", "chart"], {"track": "platform"})]), noon), "no form"
+    # iris-v3 B3 lines-dashboard: every widget on the lines table, the lens on the row they point at.
+    lines = {"widgets": 2, "kinds": ["rows", "form"], "lens": ["bench_row"], "tables": ["iris-bench-2-lines"]}
+    assert check("dashboard_has", lines, _got(renders=[_dash(["bench_row"], ["rows", "form"], table="iris-bench-2-lines")]), noon)
+    assert not check("dashboard_has", lines, _got(renders=[_dash(["bench_row"], ["rows", "form"])]), noon), "the parent table"
 
 
 def test_answers_in_czech_and_a_padded_fact():
@@ -608,6 +616,19 @@ def test_seed_v2_holds_the_numbers_the_cases_assert():
     assert by["bench row 26"]["note"] == "see row 10" and by["bench row 10"]["points"] == 12
     due = [r["due"] for r in rows]
     assert len(set(due)) == 28 and min(due) == 1793491200 and all(d % 86400 == 0 for d in due), "28 UTC days from 2026-11-01"
+
+
+def test_seed_has_line_items_pointing_at_the_bench_rows():
+    """iris-v3 B3: iris-bench-2-lines, each line a rowRef to a seeded bench row by title, so a lines dashboard has rows."""
+    b = _bench()
+    assert b.SEED_LINES_TITLE == "iris-bench-2-lines"
+    col = next(c for c in b.lines_schema("t-parent")["columns"] if c["key"] == "bench_row")
+    assert col == {"key": "bench_row", "label": "Bench row", "kind": "rowRef", "role": "dimension", "required": True,
+                   "refTable": "t-parent", "refDisplay": "title", "onDelete": "restrict"}
+    ids = {r["title"]: f"id-{i}" for i, r in enumerate(b.seed_rows())}
+    lines = b.seed_lines(ids)
+    assert lines == b.seed_lines(ids) and len(lines) >= 4
+    assert {ln["bench_row"] for ln in lines} <= set(ids.values()) and len({ln["bench_row"] for ln in lines}) >= 2
 
 
 def test_every_scripted_case_is_a_case_and_draws_a_contract_kind():
