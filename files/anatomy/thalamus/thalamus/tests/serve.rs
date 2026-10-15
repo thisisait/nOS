@@ -1736,6 +1736,70 @@ fn widget_rows_renders_dates_as_days() {
     assert_eq!((&cells["when"], &cells["amount"]), (&serde_json::json!("2025-10-12"), &serde_json::json!(4)), "{w}");
 }
 
+// --- iris v3 A1: a date is a day to the model and the person; KEAP and the ledger keep epoch ---
+
+/// 2026-11-01, 2026-11-20 and an empty day; 2026-11-15 sits between them (UTC midnights).
+const NOV_1: i64 = 1_793_491_200;
+const NOV_20: i64 = 1_795_132_800;
+
+fn dated_rows() -> Vec<serde_json::Value> {
+    vec![keap_row("a", serde_json::json!({"when": NOV_1, "amount": 4})),
+         keap_row("b", serde_json::json!({"when": NOV_20, "amount": 9})),
+         keap_row("c", serde_json::json!({"amount": 7}))]
+}
+
+#[test]
+fn a_date_cell_reaches_the_model_and_the_person_as_a_day() {
+    // Client bench v2 line-due: the model heard 1793491200 and could not say "before the 15th".
+    let rig = rig_at("days", mapped(), fake_table(SHEET, dated_rows()).0, vec![query(r#"{"table": "sheet"}"#), answer("x")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "rows");
+    let heard = tool_result(&rig, 1);
+    assert_eq!(heard["rows"][0]["cells"]["when"], serde_json::json!("2026-11-01"), "{heard}");
+    let when = heard["columns"].as_array().unwrap().iter().find(|c| c["key"] == "when").unwrap();
+    assert_eq!(when["format"], serde_json::json!("YYYY-MM-DD"), "{heard}");
+    assert_eq!(renders(&got)[0]["rows"][1]["cells"]["when"], serde_json::json!("2026-11-20"), "the person sees the day too");
+}
+
+#[test]
+fn where_takes_lt_and_gt_on_days_and_numbers_and_refuses_a_non_day() {
+    let rig = rig_at("ltgt", mapped(), fake_table(SHEET, dated_rows()).0, vec![
+        query(r#"{"table": "sheet", "where": [{"column": "when", "op": "lt", "value": "2026-11-15"}]}"#),
+        query(r#"{"table": "sheet", "where": [{"column": "when", "op": "after", "value": "2026-11-15"}]}"#),
+        query(r#"{"table": "sheet", "where": [{"column": "amount", "op": "gt", "value": "5"}]}"#),
+        query(r#"{"table": "sheet", "where": [{"column": "when", "op": "eq", "value": "2026-11-01"}]}"#),
+        query(r#"{"table": "sheet", "where": [{"column": "when", "op": "lt", "value": "soon"}]}"#),
+        answer("x")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "before the 15th");
+    let ids = |n: usize| tool_result(&rig, n)["rows"].as_array().map(|r| r.iter().map(|r| r["__id"].as_str().unwrap().to_string()).collect::<Vec<_>>());
+    assert_eq!(ids(1), Some(vec!["a".into()]), "lt a day: {}", tool_result(&rig, 1));
+    assert_eq!(ids(2), Some(vec!["b".into()]), "after is gt: {}", tool_result(&rig, 2));
+    assert_eq!(ids(3), Some(vec!["b".into(), "c".into()]), "gt compares numbers: {}", tool_result(&rig, 3));
+    assert_eq!(ids(4), Some(vec!["a".into()]), "eq a day: {}", tool_result(&rig, 4));
+    let e = tool_result(&rig, 5);
+    assert!(e["error"].as_str().is_some_and(|e| e.contains("YYYY-MM-DD")), "{e}");
+}
+
+#[test]
+fn an_edit_of_a_date_cell_writes_epoch_and_the_card_says_days() {
+    let ((url, seen), held) = fake_table(SHEET, dated_rows());
+    let rig = rig_at("dateedit", mapped(), (url, seen), vec![query(r#"{"table": "sheet", "limit": 1}"#),
+        call("propose_row_edit", r#"{"table": "sheet", "row_id": "a", "values": {"when": "2026-11-20"}}"#), answer("Proposed.")], Some(local()));
+    let (s, mut r, session, approval, diff) = propose(&rig);
+    assert_eq!((&diff.cells[0].old, &diff.cells[0].new), (&serde_json::json!("2026-11-01"), &serde_json::json!("2026-11-20")), "{diff:?}");
+    let ev = events(&rig.ledger, &session);
+    let rec = &ev.iter().find(|e| e.0 == "agent_approval_request").expect("the card is recorded").2;
+    assert_eq!((&rec["cells"][0]["old"], &rec["cells"][0]["new"]), (&serde_json::json!(NOV_1), &serde_json::json!(NOV_20)), "{rec}");
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::TableChanged { .. })), "the write landed");
+    let p = posts(&rig);
+    assert_eq!(serde_json::from_str::<serde_json::Value>(&p[0].1).unwrap()["values"], serde_json::json!({"when": NOV_20}));
+    assert_eq!(held.lock().unwrap()[0]["values"]["when"], serde_json::json!(NOV_20));
+}
+
 #[test]
 fn a_widget_reads_every_page_of_the_stateful_fake() {
     // The fake pages as KEAP does, so serve's whole-table read is exercised, not one canned body.
