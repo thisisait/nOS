@@ -100,14 +100,45 @@ def profile_layers(profile: Path) -> list[Path]:
     return [p for p in layer_paths() if p != REPO / "config.yml"] + [profile]
 
 
+def _auto_enables() -> list[tuple[str, list[str]]]:
+    """main.yml's `set_fact: {X: true}` whose when is only `(flag | default(false)) or ...`:
+    (X, triggers). Any other shape is skipped, not guessed."""
+    term = re.compile(r"\(\s*(\w+)\s*\|\s*default\(false\)\s*\)")
+    out = []
+
+    def walk(node):
+        if isinstance(node, list):
+            for n in node:
+                walk(n)
+        elif isinstance(node, dict):
+            sf = node.get("ansible.builtin.set_fact") or node.get("set_fact")
+            when = node.get("when")
+            if isinstance(sf, dict) and len(sf) == 1 and list(sf.values()) == [True] and isinstance(when, str):
+                parts = [x.strip() for x in when.split(" or ")]
+                if all(term.fullmatch(x) for x in parts):
+                    out.append((next(iter(sf)), [term.fullmatch(x).group(1) for x in parts]))
+            for v in node.values():
+                walk(v)
+    main = REPO / "main.yml"
+    if main.exists():  # an estate without the playbook switches nothing on
+        walk(yaml.safe_load(main.read_text(encoding="utf-8")))
+    return out
+
+
 def install_flags(paths: list[Path] | None = None) -> dict[str, bool]:
-    """Every top-level install_* resolved like resolve_flag. A Jinja value is omitted, not guessed."""
+    """Every install_* and manifest install_flag (redis_docker) resolved like resolve_flag, then
+    main.yml's auto-enables applied. A Jinja value is omitted, not guessed."""
     paths = layer_paths() if paths is None else paths
     names = {m for p in paths
              for m in re.findall(r"^(install_\w+):", p.read_text(encoding="utf-8"), re.MULTILINE)}
+    names |= {r["install_flag"] for r in services() if r.get("install_flag")}
     bools = {"true": True, "yes": True, "false": False, "no": False}
-    out = {f: bools.get(resolve_flag(f, paths)[-1][1].lower()) for f in sorted(names)}
-    return {f: v for f, v in out.items() if v is not None}
+    out = {f: bools.get(seen[-1][1].lower()) for f in sorted(names) if (seen := resolve_flag(f, paths))}
+    out = {f: v for f, v in out.items() if v is not None}
+    for flag, triggers in _auto_enables():
+        if any(out.get(t) for t in triggers):
+            out[flag] = True
+    return out
 
 
 def synthetic_identities(merged: dict | None = None) -> list[dict]:
@@ -134,15 +165,17 @@ def installed(flags: dict, rows: list[dict] | None = None) -> list[dict]:
 
 
 def installed_names(names, flags: dict, rows: list[dict] | None = None) -> list[str]:
-    """The names (scan-state keys) this host runs. A name matches a row by a spelling the
-    row records — id, fragment, image basename, install_<name> — else its own install_<name>
-    flag. A name nothing records (freepbx) is not installed."""
+    """The names (scan-state keys) this host runs. A name matches a row by id, fragment or
+    install_<name>, else its own install_<name> flag, else an image basename (postgres).
+    A name nothing records (freepbx) is not installed."""
     rows = services() if rows is None else rows
     on = {r["id"] for r in installed(flags, rows)}
 
-    def row(n):
-        return next((r for r in rows if n in (r["id"], fragment_stem(r), str(r.get("image", "")).rsplit("/", 1)[-1])
-                     or r.get("install_flag") == f"install_{n}"), None)
+    def row(n):  # an own install_<n> flag outranks an image basename ('nginx' is not apex)
+        return (next((r for r in rows if n in (r["id"], fragment_stem(r))
+                      or r.get("install_flag") == f"install_{n}"), None)
+                or (None if f"install_{n}" in flags else
+                    next((r for r in rows if str(r.get("image", "")).rsplit("/", 1)[-1] == n), None)))
     return [n for n in names if (r := row(n)) and r["id"] in on or not r and _on(flags.get(f"install_{n}"))]
 
 
