@@ -42,6 +42,9 @@ import sys
 
 import yaml
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tools"))
+import nos_identity  # noqa: E402
+
 
 def _env(name: str, default: str = "") -> str:
     """Return an env var, falling back to default. Empty-string default
@@ -297,13 +300,21 @@ def main() -> int:
                 )
                 raise SystemExit(2)
 
-    catalog: list[dict] = []
+    # NOS_INSTALL_FLAGS (post.yml): a plugin job whose owner is not installed
+    # is emitted `installed: false` — post.yml deletes it instead of upserting.
+    # Unset (tools, tests): the whole catalog. Agents and loops declare no owner.
+    flags = json.loads(_env("NOS_INSTALL_FLAGS") or "null")
+    docs: dict[str, dict] = {}
     for path in _scan_sources(playbook_dir):
         try:
             with open(path) as fh:
-                doc = yaml.safe_load(fh) or {}
+                docs[path] = yaml.safe_load(fh) or {}
         except Exception:
             continue
+    plugins = {d.get("name"): d for p, d in docs.items() if p.endswith("/plugin.yml")}
+
+    catalog: list[dict] = []
+    for path, doc in docs.items():
         is_loop = path.endswith(".loop.yml")
         block = _loop_pulse_block(doc) if is_loop else (doc.get("pulse") or {})
         plugin_name = "loop" if is_loop else (
@@ -317,6 +328,8 @@ def main() -> int:
                 "source": path.split("/anatomy/")[-1],
                 "plugin_name": plugin_name,
                 "job": expanded,
+                "installed": flags is None or not path.endswith("/plugin.yml")
+                or nos_identity.plugin_installed(plugin_name, plugins, flags),
             })
 
     print(json.dumps(catalog))

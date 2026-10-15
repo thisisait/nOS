@@ -514,6 +514,9 @@
     # the task, for nothing. Removed rather than left as harmless: an unused
     # secret in flight is still a secret in flight.
     NOS_PLAYBOOK_DIR: "{{ nos_main_checkout }}"
+    # Every resolved install_* flag: a plugin job whose owner is off comes back
+    # installed:false and is dropped below (tools/nos_identity.plugin_installed).
+    NOS_INSTALL_FLAGS: "{{ dict(query('varnames', '^install_') | zip(query('vars', *query('varnames', '^install_')))) | to_json }}"
     # conductor vulnerability-scan: VULNSCAN_SECURITY_DIR is
     # {{ ansible_facts['env']['HOME'] }}/.nos/security. The catalog is
     # str.replace, so the facts token needs a NOS_* value here — inheriting
@@ -607,6 +610,23 @@
   loop: "{{ wing_pulse_retired_jobs }}"
   changed_when: false
 
+- name: "[pazny.wing] Drop Pulse jobs of services not installed"
+  # A converge that switches a service off removes its jobs here; switching it
+  # back on re-upserts them. Before the upsert, so a shared id is registered.
+  # Gate: tests/anatomy/test_pulse_jobs_only_for_installed.py
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ wing_port | default(9000) }}/api/v1/pulse_jobs/{{ item.plugin_name | regex_replace('-base$', '') }}:{{ item.job.name }}"
+    method: DELETE
+    headers:
+      Authorization: "Bearer {{ wing_api_token }}"
+    status_code: [200, 404]
+  loop: "{{ _pulse_catalog | rejectattr('installed') | list }}"
+  loop_control:
+    label: "{{ item.plugin_name }}:{{ item.job.name }}"
+  register: _pulse_jobs_drop
+  changed_when: _pulse_jobs_drop.status == 200
+  no_log: true
+
 - name: "[pazny.wing] Register discovered Pulse jobs (idempotent upsert)"
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ wing_port | default(9000) }}/api/v1/pulse_jobs"
@@ -644,7 +664,7 @@
       paused: "{{ (item.job.paused | default(false)) | bool | ternary(1, 0) }}"
       paused_reason: "{{ item.job.paused_reason | default(omit) }}"
     status_code: [200, 201]
-  loop: "{{ _pulse_catalog }}"
+  loop: "{{ _pulse_catalog | selectattr('installed') | list }}"
   loop_control:
     label: "{{ item.plugin_name }}:{{ item.job.name }}"
   register: _pulse_jobs_reg

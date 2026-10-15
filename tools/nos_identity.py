@@ -122,11 +122,23 @@ def services() -> list[dict]:
     return yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))["services"]
 
 
+def _on(value) -> bool:
+    return str(value).lower() in ("true", "yes", "1")
+
+
 def installed(flags: dict, rows: list[dict] | None = None) -> list[dict]:
     """The manifest rows THIS host runs: install_flag resolved on in `flags`.
     The one derivation — services-status, and the registry via filter nos_installed."""
-    return [r for r in (services() if rows is None else rows)
-            if str(flags.get(r.get("install_flag"))).lower() in ("true", "yes", "1")]
+    return [r for r in (services() if rows is None else rows) if _on(flags.get(r.get("install_flag")))]
+
+
+def plugin_installed(name: str, plugins: dict[str, dict], flags: dict) -> bool:
+    """A plugin is live when its requires.feature_flag is on and every requires.plugin
+    peer is live. The Pulse catalog filters its jobs by this."""
+    req = (plugins.get(name) or {}).get("requires") or {}
+    peers = req.get("plugin") or []
+    return (name in plugins and (not req.get("feature_flag") or _on(flags.get(req["feature_flag"])))
+            and all(plugin_installed(p, plugins, flags) for p in ([peers] if isinstance(peers, str) else peers)))
 
 
 def by_flag(flag: str) -> dict | None:

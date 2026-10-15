@@ -44,8 +44,10 @@ declare(strict_types=1);
  */
 
 $wingDb = getenv('WING_DB_PATH') ?: ($_SERVER['HOME'] . '/wing/app/data/wing.db');
-$ntfyUrl = getenv('NTFY_URL') ?: 'http://127.0.0.1:2586';
-$mailHost = getenv('MAIL_HOST') ?: '127.0.0.1';
+// Set-but-empty is the off switch (no sink installed); `?:` used to turn "" back
+// into the default and fail every minute against an absent ntfy (2026-10-15).
+$ntfyUrl = getenv('NTFY_URL') === false ? 'http://127.0.0.1:2586' : getenv('NTFY_URL');
+$mailHost = getenv('MAIL_HOST') === false ? '127.0.0.1' : getenv('MAIL_HOST');
 $mailPort = (int) (getenv('MAIL_PORT') ?: 1025);
 $mailFrom = getenv('MAIL_FROM') ?: 'wing@dev.local';
 $mailRecipient = getenv('MAIL_RECIPIENT') ?: '';
@@ -689,6 +691,9 @@ if ($mailHost === '' || $mailRecipient === '') {
 
 $db->close();
 
+if ($ntfyUrl === '' && ($mailHost === '' || $mailRecipient === '')) {
+	echo "sinks: none-configured (no ntfy, no mail installed); nothing delivered\n";
+}
 echo "summary: delivered ntfy={$delivered['ntfy']} mail={$delivered['mail']}; failed ntfy={$failed['ntfy']} mail={$failed['mail']}\n";
 
 exit($partial ? 2 : 0);
