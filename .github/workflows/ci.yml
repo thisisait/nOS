@@ -19,6 +19,8 @@ name: CI
   # Nightly (ruling 2026-10-15): the macOS install lane runs only here.
   schedule:
     - cron: "0 5 * * *"
+  # By hand: runs everything a PR would, plus the all-on lane.
+  workflow_dispatch:
 
 # Default minimum permissions for every job — read-only access to the
 # repository. Closes GitHub Code Scanning's actions/missing-workflow-
@@ -832,3 +834,80 @@ jobs:
           LANE_FLAGS: ${{ matrix.flags }}
           ANSIBLE_FORCE_COLOR: '1'
           ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # ALL-ON – every known-good service at once, the only lane that proves the
+  # bundles together. Expected cost (unmeasured): ~60-90 min, may exceed the
+  # hosted runner's ~14 GB free disk or 16 GB RAM. Non-blocking until one
+  # measured run (ruling 2026-10-15). Gate: test_all_on_lane_is_not_required_yet.
+  # ──────────────────────────────────────────────────────────────────────────
+  all-on:
+    name: All-on install (ubuntu-24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    continue-on-error: true
+    env:
+      PYTHONNOUSERSITE: '1'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.base_ref == 'master')
+    # ponytail: setup copies the bonus job's; extract a composite action when it next changes.
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v7
+
+      # Toolchains the playbook never uses; all-on pulls dozens of images.
+      - name: Free runner disk.
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Set up Python 3.
+        id: python-setup
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Install test dependencies.
+        env:
+          PY: ${{ steps.python-setup.outputs.python-path }}
+        run: |
+          . "${GITHUB_WORKSPACE}/tools/ci-freeze.env"
+          "$PY" -m venv "$RUNNER_TEMP/nosvenv"
+          "$RUNNER_TEMP/nosvenv/bin/pip" install "$NOS_ANSIBLE_CORE" pyyaml jsonschema
+          echo "$RUNNER_TEMP/nosvenv/bin" >> "$GITHUB_PATH"
+          "$PY" -m pip install --break-system-packages "$NOS_ANSIBLE_CORE" pyyaml jsonschema
+
+      - name: Set up the test environment.
+        env:
+          PY: ${{ steps.python-setup.outputs.python-path }}
+        run: |
+          cp tests/ansible.cfg ./ansible.cfg
+          echo "interpreter_python = $PY" >> ./ansible.cfg
+          cp tests/inventory ./inventory
+          cp tests/config.yml ./config.yml
+          for attempt in 1 2 3 4 5 6; do
+            ansible-galaxy install -r requirements.lock.yml && exit 0
+            echo "ansible-galaxy attempt ${attempt} failed; sleeping ${attempt}0s"
+            sleep "${attempt}0"
+          done
+          exit 1
+
+      # thalamus is macOS-only (see integration-linux).
+      - name: Install every known-good service.
+        run: >-
+          ansible-playbook main.yml
+          -e allow_weak_prefix=true
+          -e @profiles/all-on.yml
+          -e '{"install_thalamus": false}'
+          -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
+        env:
+          ANSIBLE_FORCE_COLOR: '1'
+          ANSIBLE_PYTHON_INTERPRETER: ${{ steps.python-setup.outputs.python-path }}
+
+      # The measurement the ruling waits on: fit on the runner, read with the step times.
+      - name: Record runner fit.
+        if: ${{ !cancelled() }}
+        run: |
+          df -h /
+          free -m
+          docker system df || true
+          docker ps --format '{{.Names}}' | wc -l
