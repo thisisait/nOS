@@ -1,17 +1,21 @@
 <!--
   A widget form (renderers.rs Form) as native inputs. The header and the button are the pupil's own
-  words; the props only name the table. Nothing is prefilled, and the button waits for every
-  required field (form.ts canSubmit). It posts nowhere: a submit is handed to `onsubmit` (I5g).
+  words; the props only name the table. Only the tab's lens prefills (form.ts lensPrefill), and the
+  person may change it; the button waits for every required field (form.ts canSubmit). It posts
+  nowhere: a submit is handed to `onsubmit` (I5g).
 -->
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { canSubmit, formValues, header, type Draft } from './form';
 	import type { FormProps } from './wire';
 
 	type Submit = { form: string; widget: string; values: Record<string, string | number | boolean> };
-	let { form, widget = '', inFlight = false, onsubmit }: { form: FormProps; widget?: string; inFlight?: boolean; onsubmit?: (m: Submit) => void } =
-		$props();
+	let { form, widget = '', inFlight = false, prefill = {}, onsubmit }: {
+		form: FormProps; widget?: string; inFlight?: boolean; prefill?: Draft; onsubmit?: (m: Submit) => void;
+	} = $props();
 
-	let draft: Draft = $state({});
+	// A form is drawn once per answer: the prefill is where the draft starts, never re-read.
+	let draft: Draft = $state(untrack(() => ({ ...prefill })));
 	const ready = $derived(canSubmit(form.fields, draft, inFlight));
 
 	const submit = (e: SubmitEvent) => {

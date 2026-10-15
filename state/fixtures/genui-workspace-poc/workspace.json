@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "active": "poc",
   "chat": {"x": 880, "y": 16, "w": 380, "h": 560, "open": true},
   "workspaces": [

@@ -15,7 +15,7 @@
 	import { SETTLE_MS, eye, look, step, type Input } from './eye';
 	import Message from './Message.svelte';
 	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
-	import type { Link, ToShell, ToThalamus, WidgetSpec } from './wire';
+	import type { DashboardProps, Link, ToShell, ToThalamus, WidgetSpec } from './wire';
 	import { route, submit, type Widgets } from './widgets';
 	import WorkspaceView from './Workspace.svelte';
 	import * as ws from './workspace';
@@ -167,9 +167,28 @@
 		place(ws.pin(layout, widgets, newId(), m));
 	}
 
+	// The person's click on "Place on a new tab"; the model has no message that places or runs one.
+	function placedOffer(d: DashboardProps): boolean {
+		const r = ws.placeOffer(layout, widgets, `ws${Date.now().toString(36)}`, d, newId);
+		if (!r.send.length) {
+			layoutNote = `at most ${ws.MAX_SPACES} tabs: close one to place this dashboard`;
+			return false;
+		}
+		layout = r.layout;
+		widgets = r.w;
+		sendAll(r.send);
+		return true;
+	}
+
+	function relens(i: number, value: string) {
+		const r = ws.setLens(layout, layout.active, i, value);
+		layout = r.layout;
+		sendAll(r.send);
+	}
+
 	function rerun(id: string) {
 		const box = space.widgets.find((b) => b.id === id);
-		if (box) sendAll([{ t: 'widget', widget: id, spec: box.spec, trigger: 'click' }]);
+		if (box) sendAll([{ t: 'widget', widget: id, spec: ws.lensed(box.spec, space.lens), trigger: 'click' }]);
 	}
 
 	function removed(id: string) {
@@ -288,6 +307,7 @@
 		onrerun={rerun}
 		onremove={removed}
 		onsubmit={submitted}
+		onlens={relens}
 	/>
 </main>
 
@@ -305,7 +325,7 @@
 		{#each log as e}
 			{#if 'me' in e}<p class="me">{e.me}</p>
 			{:else if 'note' in e}<StatusNote kind="error" block={false}>{e.note}</StatusNote>
-			{:else}<Message msg={e.msg} onpin={pinned} onchoose={answered} />{/if}
+			{:else}<Message msg={e.msg} onpin={pinned} onchoose={answered} onplace={placedOffer} />{/if}
 		{/each}
 	</div>
 	{#if q.pending[0]}

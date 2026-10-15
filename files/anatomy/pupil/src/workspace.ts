@@ -1,14 +1,15 @@
 // The person's workspaces: tabs of widgets on a 12-column grid and a floating chat
 // (files/anatomy/contracts/workspace-layout.yml). Pure reducers; the Rust bridge checks
 // and stores the layout, the model never sees it.
-import type { ToShell, ToThalamus, WidgetSpec } from './wire';
+import type { DashboardProps, Lens, ToShell, ToThalamus, WidgetSpec } from './wire';
 import { onTableChanged as staleOrSend, type WidgetState, type Widgets } from './widgets';
 
 export type Grid = { x: number; y: number; w: number; h: number };
 export type WidgetBox = Grid & { id: string; title: string; spec: WidgetSpec };
-export type Space = { id: string; name: string; widgets: WidgetBox[] };
+/** `lens`: the tab's shared filter (a placed dashboard's); it joins a widget's where only when it is sent. */
+export type Space = { id: string; name: string; lens?: Lens[]; widgets: WidgetBox[] };
 export type Chat = { x: number; y: number; w: number; h: number; open: boolean };
-export type Layout = { version: 1; active: string; chat: Chat; workspaces: Space[] };
+export type Layout = { version: 2; active: string; chat: Chat; workspaces: Space[] };
 type Send = ToThalamus[];
 
 export const COLS = 12;
@@ -18,7 +19,7 @@ export const MAX_WIDGETS = 24;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 export const empty = (): Layout => ({
-	version: 1, active: 'ws1', chat: { x: 0, y: 0, w: 0, h: 0, open: true },
+	version: 2, active: 'ws1', chat: { x: 0, y: 0, w: 0, h: 0, open: true },
 	workspaces: [{ id: 'ws1', name: 'Workspace', widgets: [] }]
 });
 
@@ -46,6 +47,14 @@ export function byKey(g: Grid, key: string, shift: boolean): Grid | null {
 
 const activeSpace = (l: Layout) => l.workspaces.find((s) => s.id === l.active) ?? l.workspaces[0];
 
+/** The lens on a spec as it is sent: each set condition joins a rows or chart where, after its own; a form is untouched. */
+export function lensed(spec: WidgetSpec, lens: Lens[] = []): WidgetSpec {
+	const add = lens.filter((c) => c.value !== '').map(({ column, op, value }) => ({ column, op, value }));
+	if (!add.length || 'form' in spec) return spec;
+	if ('rows' in spec) return { rows: { ...spec.rows, where: [...(Array.isArray(spec.rows.where) ? spec.rows.where : []), ...add] } };
+	return { chart: { ...spec.chart, query: { ...spec.chart.query, where: [...(spec.chart.query.where ?? []), ...add] } } };
+}
+
 const mapWidgets = (l: Layout, f: (w: WidgetBox[]) => WidgetBox[]): Layout => ({
 	...l, workspaces: l.workspaces.map((s) => ({ ...s, widgets: f(s.widgets) }))
 });
@@ -63,7 +72,7 @@ export function addWidget(l: Layout, id: string, title: string, spec: WidgetSpec
 	const box: WidgetBox = { id, title: title.slice(0, 120), spec, ...place({ x: 0, y, w: 6, h: 8 }) };
 	return {
 		layout: { ...l, workspaces: l.workspaces.map((s) => (s === here ? { ...s, widgets: [...s.widgets, box] } : s)) },
-		send: { t: 'widget', widget: id, spec, trigger: 'click' }
+		send: { t: 'widget', widget: id, spec: lensed(spec, here.lens), trigger: 'click' }
 	};
 }
 
@@ -103,10 +112,11 @@ const run = (w: WidgetState): 'restore' | 'table_changed' => (w.stale ? 'table_c
 function due(l: Layout, w: Widgets): { w: Widgets; send: Send } {
 	const out = { ...w };
 	const send: Send = [];
-	for (const box of activeSpace(l).widgets) {
+	const here = activeSpace(l);
+	for (const box of here.widgets) {
 		const s = out[box.id];
 		if (!s || !(s.stale || s.due)) continue;
-		send.push({ t: 'widget', widget: box.id, spec: box.spec, trigger: run(s) });
+		send.push({ t: 'widget', widget: box.id, spec: lensed(box.spec, here.lens), trigger: run(s) });
 		out[box.id] = { ...s, stale: false, due: false };
 	}
 	return { w: out, send };
@@ -128,7 +138,35 @@ export function show(l: Layout, w: Widgets, tab: string): { layout: Layout; w: W
 
 /** A write landed in `table`: the active tab's readers re-run, the rest go stale. */
 export function onTableChanged(l: Layout, w: Widgets, table: string): { w: Widgets; send: Send } {
-	return staleOrSend(w, table, activeSpace(l).widgets.map((b) => b.id));
+	const here = activeSpace(l);
+	const r = staleOrSend(w, table, here.widgets.map((b) => b.id));
+	return { w: r.w, send: r.send.map((m) => (m.t === 'widget' ? { ...m, spec: lensed(m.spec, here.lens) } : m)) };
+}
+
+/** The person set lens condition `i` of `tab`: every widget there re-runs, as a click. */
+export function setLens(l: Layout, tab: string, i: number, value: string): { layout: Layout; send: Send } {
+	const s = l.workspaces.find((x) => x.id === tab);
+	if (!s?.lens?.[i]) return { layout: l, send: [] };
+	const lens = s.lens.map((c, j) => (j === i ? { ...c, value: value.slice(0, 120) } : c));
+	return {
+		layout: { ...l, workspaces: l.workspaces.map((x) => (x === s ? { ...s, lens } : x)) },
+		send: s.widgets.map((b) => ({ t: 'widget', widget: b.id, spec: lensed(b.spec, lens), trigger: 'click' }))
+	};
+}
+
+/** The person's click on "Place on a new tab": a tab with the offer's lens, two widgets a row; each runs once, as a click. */
+export function placeOffer(l: Layout, w: Widgets, tab: string, d: DashboardProps, id: () => string): { layout: Layout; w: Widgets; send: Send } {
+	if (l.workspaces.length >= MAX_SPACES) return { layout: l, w, send: [] };
+	// The offer lives in $state: a Proxy. JSON is all an offer is.
+	const { name, lens, widgets } = JSON.parse(JSON.stringify(d)) as DashboardProps;
+	const boxes: WidgetBox[] = widgets.slice(0, MAX_WIDGETS).map((x, i) => ({ id: id(), title: x.title.slice(0, 120), spec: x.spec, ...place({ x: (i % 2) * 6, y: Math.floor(i / 2) * 8, w: 6, h: 8 }) }));
+	const out = { ...w };
+	for (const b of boxes) out[b.id] = { component: null, error: null, at: 0, spec: b.spec };
+	return {
+		layout: { ...l, active: tab, workspaces: [...l.workspaces, { id: tab, name: name.slice(0, 40), lens, widgets: boxes }] },
+		w: out,
+		send: boxes.map((b) => ({ t: 'widget', widget: b.id, spec: lensed(b.spec, lens), trigger: 'click' }))
+	};
 }
 
 /** An approval waits: the chat opens on top, since its card lives there. */

@@ -2,6 +2,7 @@
 //! files/anatomy/contracts/workspace-layout.yml; gate:
 //! tests/anatomy/test_workspace_layout_contract.py. No wire message reaches it.
 
+use nos_contract::renderers::{check_lens, Lens};
 use nos_contract::wire::WidgetSpec;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -34,6 +35,9 @@ pub struct Chat {
 pub struct Workspace {
     pub id: String,
     pub name: String,
+    /// The tab's shared filter (a dashboard's lens); the webview merges it at send time.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub lens: Vec<Lens>,
     pub widgets: Vec<Widget>,
 }
 
@@ -57,17 +61,17 @@ fn id_ok(s: &str) -> bool {
 impl Layout {
     pub fn empty() -> Layout {
         Layout {
-            version: 1,
+            version: 2,
             active: "ws1".into(),
             chat: Chat { x: 0, y: 0, w: 0, h: 0, open: true },
-            workspaces: vec![Workspace { id: "ws1".into(), name: "Workspace".into(), widgets: vec![] }],
+            workspaces: vec![Workspace { id: "ws1".into(), name: "Workspace".into(), lens: vec![], widgets: vec![] }],
         }
     }
 
     /// The caps serde cannot say; Err names the first that broke.
     pub fn check(&self) -> Result<(), String> {
-        if self.version != 1 {
-            return Err(format!("version {} is not 1", self.version));
+        if self.version != 2 {
+            return Err(format!("version {} is not 2", self.version));
         }
         if !(1..=12).contains(&self.workspaces.len()) {
             return Err(format!("{} workspaces, 1..12 allowed", self.workspaces.len()));
@@ -80,6 +84,7 @@ impl Layout {
             if ws.name.chars().count() > 40 {
                 return Err(format!("workspace {} name over 40 chars", ws.id));
             }
+            check_lens(&ws.lens).map_err(|e| format!("workspace {}: {e}", ws.id))?;
             if ws.widgets.len() > 24 {
                 return Err(format!("workspace {} has {} widgets, 24 allowed", ws.id, ws.widgets.len()));
             }
@@ -102,8 +107,12 @@ impl Layout {
     }
 }
 
+/// A version 1 file is a version 2 one with no lens (workspace-layout.yml).
 pub fn decode(text: &str) -> Result<Layout, String> {
-    let l: Layout = serde_json::from_str(text).map_err(|e| format!("undecodable layout: {e}"))?;
+    let mut l: Layout = serde_json::from_str(text).map_err(|e| format!("undecodable layout: {e}"))?;
+    if l.version == 1 {
+        l.version = 2;
+    }
     l.check()?;
     Ok(l)
 }

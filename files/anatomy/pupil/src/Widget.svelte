@@ -7,12 +7,14 @@
 	import StatusNote from '$ui/StatusNote.svelte';
 	import ComponentView from './Component.svelte';
 	import Form from './Form.svelte';
+	import { lensPrefill } from './form';
+	import type { Lens } from './wire';
 	import type { WidgetState } from './widgets';
 	import { age, byKey, byPointer, type Grid, type WidgetBox } from './workspace';
 
 	type Submit = { form: string; widget: string; values: Record<string, string | number | boolean> };
-	let { box, state, now, top, unit, onplace, ontop, onrerun, onremove, onsubmit }: {
-		box: WidgetBox; state: WidgetState | undefined; now: number; top: boolean; unit: () => { col: number; row: number };
+	let { box, state, lens = [], now, top, unit, onplace, ontop, onrerun, onremove, onsubmit }: {
+		box: WidgetBox; state: WidgetState | undefined; lens?: Lens[]; now: number; top: boolean; unit: () => { col: number; row: number };
 		onplace: (g: Grid) => void; ontop: () => void; onrerun: () => void; onremove: () => void; onsubmit: (m: Submit) => void;
 	} = $props();
 
@@ -60,8 +62,10 @@
 	<div class="body">
 		{#if state?.error}<StatusNote kind="error" block={false}>{state.error}</StatusNote>{/if}
 		{#if state?.component?.kind === 'form'}
-			<!-- A new row redraws the form empty: Add row waits until it is filled again. -->
-			{#key state.added}<Form form={state.component.props} widget={box.id} inFlight={!!state.inFlight} {onsubmit} />{/key}
+			<!-- A new row or a re-run redraws the form from the lens: Add row waits until it is filled again. -->
+			{#key state.at}{#key state.added}
+				<Form form={state.component.props} widget={box.id} inFlight={!!state.inFlight} prefill={lensPrefill(lens, state.component.props.fields)} {onsubmit} />
+			{/key}{/key}
 			{#if state.added}<p class="added">row {state.added} added</p>{/if}
 		{:else if state?.component}<ComponentView component={state.component} />{/if}
 	</div>
