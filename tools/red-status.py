@@ -54,6 +54,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "tools"))  # nos_identity, imported lazily
 WING_DB = pathlib.Path.home() / "wing" / "app" / "data" / "wing.db"
 #: The runtime sentinel `nos loops pause` writes. Its presence is a HOLD, not a
 #: red and not a green — an operator paused the SERE agent loops on purpose.
@@ -358,6 +359,37 @@ def overdue_jobs(conn: sqlite3.Connection) -> list[dict]:
     return sorted(out, key=lambda item: item["due_at"])
 
 
+def judge_pulse(res: tuple[int, str] | None, src: str) -> dict:
+    """(rc, stdout) of the service-manager probe -> running True/False/None (UNKNOWN)."""
+    if res is None:
+        return {"running": None, "how": f"{src} unavailable"}
+    rc, out = res
+    if rc != 0:
+        return {"running": False, "how": f"{src}: not loaded (rc {rc})"}
+    if "pid =" not in out and "active" not in out.split():
+        return {"running": False, "how": f"{src}: loaded, no process"}
+    return {"running": True, "how": src}
+
+
+def pulse_daemon() -> dict:
+    """Is the Pulse daemon loaded? Its label is the manifest row's launchd_label."""
+    try:
+        import nos_identity  # noqa: PLC0415
+        label = next(r["launchd_label"] for r in nos_identity.services() if r["id"] == "pulse")
+    except Exception:  # noqa: BLE001
+        return judge_pulse(None, "state/manifest.yml pulse row")
+    if sys.platform == "darwin":
+        cmd = ["launchctl", "print", f"gui/{os.getuid()}/{label}"]
+    else:
+        cmd = ["systemctl", "--user", "is-active", label]
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        res = (p.returncode, p.stdout)
+    except (OSError, subprocess.SubprocessError):
+        res = None
+    return judge_pulse(res, " ".join(cmd))
+
+
 def _queue_pending() -> dict[str, int] | None:
     """Pending counts by severity, from the queue file. None if unreadable."""
     try:
@@ -600,7 +632,17 @@ def audit_chain(conn: sqlite3.Connection) -> dict | None:
     }
 
 
-def security_scan() -> dict | None:
+def _install_flags() -> dict | None:
+    """This host's resolved install_* flags, or None (UNKNOWN) when unreadable."""
+    try:
+        import nos_identity  # noqa: PLC0415
+        return nos_identity.install_flags()
+    except Exception:  # noqa: BLE001 — UNKNOWN, never a traceback
+        return None
+
+
+def security_scan(flags: dict | None | bool = True) -> dict | None:
+    """`flags` True = resolve this host's; None = unknown, so nothing is dropped."""
     if not SCAN_STATE.is_file():
         return None
     data = json.loads(SCAN_STATE.read_text(encoding="utf-8"))
@@ -611,6 +653,11 @@ def security_scan() -> dict | None:
         name for name, comp in components.items()
         if isinstance(comp, dict) and comp.get("status") == "scan_failed"
     )
+    # scan_failed for a component this host never installed is not a finding.
+    flags = _install_flags() if flags is True else flags
+    if flags is not None:
+        import nos_identity  # noqa: PLC0415
+        failed = nos_identity.installed_names(failed, flags)
     last = _parse_iso(data.get("last_full_scan"))
     out = {
         "last_full_scan": data.get("last_full_scan"),
@@ -964,6 +1011,10 @@ def collect() -> dict:
     report["sources_missing"] += dp["missing"]
     report["doctrine_reviews"] = doctrine_reviews()
 
+    report["pulse"] = pulse_daemon()
+    if report["pulse"]["running"] is None:
+        report["sources_missing"].append(f"Pulse daemon ({report['pulse']['how']})")
+
     # Not a red source: None means "loops running", the healthy default, so it
     # never becomes an UNKNOWN. Its presence is a HOLD, reported by hold_lines().
     report["loops_paused"] = loops_paused()
@@ -1055,7 +1106,14 @@ def reds(report: dict) -> list[str]:
     for doc in report.get("doctrine_reviews") or []:
         out.append(f"doctrine review overdue: ssot/doctrine/{doc['doc']} last reviewed "
                    f"{doc['last_reviewed']}, due {doc['due']} — review it, then move last_reviewed")
-    for job in report.get("overdue_jobs", []):
+    pulse = report.get("pulse") or {}
+    overdue = report.get("overdue_jobs") or []
+    if pulse.get("running") is False and overdue:
+        # One cause, one line; the per-job lines return once Pulse runs.
+        out.append(f"Pulse is not running ({pulse['how']}) — {len(overdue)} job(s) due "
+                   "and not fired; each is listed again once it runs")
+        overdue = []
+    for job in overdue:
         out.append(
             f"{job['job']} was due {job['due_at']} and did not fire "
             f"(overdue {job['overdue_by']}, schedule `{job['schedule']}`)"

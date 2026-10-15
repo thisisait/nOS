@@ -12,6 +12,7 @@ Importable, not a CLI: `sys.path.insert(0, "<repo>/tools")`.
 
 from __future__ import annotations
 
+import json
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -130,6 +131,26 @@ def installed(flags: dict, rows: list[dict] | None = None) -> list[dict]:
     """The manifest rows THIS host runs: install_flag resolved on in `flags`.
     The one derivation — services-status, and the registry via filter nos_installed."""
     return [r for r in (services() if rows is None else rows) if _on(flags.get(r.get("install_flag")))]
+
+
+def installed_names(names, flags: dict, rows: list[dict] | None = None) -> list[str]:
+    """The names (scan-state keys) this host runs. A name matches a row by a spelling the
+    row records — id, fragment, image basename, install_<name> — else its own install_<name>
+    flag. A name nothing records (freepbx) is not installed."""
+    rows = services() if rows is None else rows
+    on = {r["id"] for r in installed(flags, rows)}
+
+    def row(n):
+        return next((r for r in rows if n in (r["id"], fragment_stem(r), str(r.get("image", "")).rsplit("/", 1)[-1])
+                     or r.get("install_flag") == f"install_{n}"), None)
+    return [n for n in names if (r := row(n)) and r["id"] in on or not r and _on(flags.get(f"install_{n}"))]
+
+
+def scan_batch(state, batch: int, flags: dict | None = None) -> list[str]:
+    """scan-runner.sh's batch: the oldest-checked notebook components this host installed."""
+    comps = json.loads(Path(state).read_text(encoding="utf-8")).get("components") or {}
+    names = installed_names(comps, install_flags() if flags is None else flags)
+    return sorted(names, key=lambda n: (comps[n] or {}).get("last_checked") or "1970-01-01T00:00:00Z")[:batch]
 
 
 def plugin_installed(name: str, plugins: dict[str, dict], flags: dict) -> bool:

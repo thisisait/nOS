@@ -90,13 +90,14 @@ log "Batch size: $BATCH_SIZE"
 
 # ── Select batch (oldest_first strategy) ──────────────────────────────────────
 
-# Extract components sorted by last_checked (null = epoch 0 = highest priority)
-BATCH=$(jq -r '
-  .components | to_entries
-  | sort_by(.value.last_checked // "1970-01-01T00:00:00Z")
-  | .[0:'"$BATCH_SIZE"']
-  | .[].key
-' "$STATE_FILE")
+# Oldest-checked first, ONLY components this host installed: a scan_failed for one
+# it never ran is not a finding (core host, 2026-10-15). Unreadable config = refuse.
+BATCH=$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import nos_identity as n
+print("\n".join(n.scan_batch(sys.argv[2], int(sys.argv[3]))))' \
+    "$(cd "$(dirname "$0")/../.." && pwd)/tools" "$STATE_FILE" "$BATCH_SIZE") || {
+    log "ERROR: nos_identity.scan_batch could not resolve the installed set — not scanning"
+    exit 1
+}
 
 if [ -z "$BATCH" ]; then
     log "No components to scan"
