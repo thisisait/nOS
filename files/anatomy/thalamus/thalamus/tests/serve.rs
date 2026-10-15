@@ -2845,3 +2845,40 @@ fn a_source_group_by_is_its_x() {
         "source": {"op": "count", "query": {"group_by": "status", "table": "t"}, "x": "", "y": ""}}));
     assert_eq!(v["source"], serde_json::json!({"op": "count", "query": {"table": "t"}, "x": "status"}), "{v}");
 }
+
+
+// --- operator 2026-10-15: charts never had a pin; the model groups with query_rows, then draws its own numbers ---
+
+fn unsourced_chart(pts: serde_json::Value) -> String {
+    call("show", &serde_json::json!({"component": {"kind": "chart", "props": {"title": "By status", "chart": "bar",
+        "x": "category", "series": [{"name": "rows", "points": pts}]}}}).to_string())
+}
+
+#[test]
+fn a_chart_of_the_groups_just_counted_gets_their_source_and_a_pin() {
+    let rig = rig_at("infer", mapped(), fake_table(SHEET, statuses()).0,
+        vec![query(r#"{"table": "sheet", "group_by": "status"}"#),
+             unsourced_chart(serde_json::json!([["open", 3], ["done", 1]])), answer("Drawn.")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "chart rows by status");
+    let charts: Vec<_> = rendered(&got).into_iter().filter(|m| m["component"]["kind"] == "chart").collect();
+    assert_eq!(charts.len(), 1, "{got:?}");
+    assert_eq!(charts[0]["pin"]["chart"]["x"], "status", "{}", charts[0]);
+    assert_eq!(charts[0]["pin"]["chart"]["op"], "count", "{}", charts[0]);
+    assert_eq!(points(&charts[0]["component"]["props"]), pts(&[("open", 3.0), ("done", 1.0)]));
+}
+
+#[test]
+fn a_chart_whose_numbers_are_not_the_counts_stays_a_preview() {
+    // The same groups, other numbers (a sum, a guess): no source can be claimed for them.
+    let rig = rig_at("noinfer", mapped(), fake_table(SHEET, statuses()).0,
+        vec![query(r#"{"table": "sheet", "group_by": "status"}"#),
+             unsourced_chart(serde_json::json!([["open", 17], ["done", 4]])), answer("Drawn.")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "chart points by status");
+    let charts: Vec<_> = rendered(&got).into_iter().filter(|m| m["component"]["kind"] == "chart").collect();
+    assert_eq!(charts.len(), 1, "{got:?}");
+    assert!(charts[0].get("pin").is_none_or(|p| p.is_null()), "a pin over the model's own numbers: {}", charts[0]);
+}
