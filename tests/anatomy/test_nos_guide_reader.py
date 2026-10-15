@@ -51,7 +51,7 @@ def estate(tmp_path, monkeypatch):
        "  - {id: uptime_kuma, category: observability, install_flag: install_uptime_kuma}\n")
     monkeypatch.setattr(nos_identity, "REPO", tmp_path)
     monkeypatch.setattr(nos_identity, "MANIFEST", tmp_path / "state/manifest.yml")
-    _w(tmp_path, "default.config.yml", "install_n8n: false\ninstall_uptime_kuma: false\n")
+    nos_identity.default_layers()[-1].write_text("install_n8n: false\ninstall_uptime_kuma: false\n", encoding="utf-8")
     _w(tmp_path, "config.yml", "install_uptime_kuma: true\n")
     _w(tmp_path, "main.yml", "- hosts: all\n  tasks:\n    - import_tasks: tasks/stacks/stack-up.yml\n")
     _w(tmp_path, "tasks/stacks/stack-up.yml", STACK_UP)
