@@ -56,6 +56,8 @@ entries:
       expression: |
 {{ nos_roles_expression | indent(8, true) }}
 {% endif %}
+{% set _on_slugs = [] %}
+{% for c in _all_clients if c.enabled | default(false) | bool %}{% set _ = _on_slugs.append(c.slug) %}{% endfor %}
 {% for c in _all_clients %}
 {% if c.enabled | default(false) | bool %}
 {%- set _type_legacy = c.type | default(none) -%}
@@ -171,6 +173,18 @@ entries:
       policy_engine_mode: "any"
       open_in_new_tab: true
 {% endif %}
+{% elif c.slug not in _on_slugs %}
+{# Switched off: remove what only fronted it, as the tofu destroy guard does. #}
+{%- set _name = c.name | default(c.slug | replace('-', ' ') | title) -%}
+{%- set _mode = c.mode | default(c.provider_type) | default('native_oidc' if c.type | default(none) != 'proxy' else 'forward_auth') %}
+  - model: authentik_core.application
+    state: absent
+    identifiers:
+      slug: "{{ c.slug }}"
+  - model: {{ 'authentik_providers_proxy.proxyprovider' if _mode in ['forward_auth', 'proxy', 'header_oidc', 'proxy_auth'] else 'authentik_providers_oauth2.oauth2provider' }}
+    state: absent
+    identifiers:
+      name: "{{ _name }}"
 {% endif %}
 {% endfor %}
 

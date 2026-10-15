@@ -36,7 +36,7 @@ tofu_authentik_services:
   name: Documenso
   mode: forward_auth
   tier: 2
-  enabled: true
+  enabled: '{{ (apps_runner_enabled | default(true) | bool) and "documenso" not in (apps_skip | default([])) }}'
   external_host: https://documenso.apps.{{ tenant_domain | default('dev.local') }}
 - slug: dolibarr
   name: Dolibarr
@@ -314,7 +314,7 @@ tofu_authentik_services:
   name: Roundcube
   mode: forward_auth
   tier: 3
-  enabled: true
+  enabled: '{{ (apps_runner_enabled | default(true) | bool) and "roundcube" not in (apps_skip | default([])) }}'
   external_host: https://roundcube.apps.{{ tenant_domain | default('dev.local') }}
 - slug: snappymail
   name: SnappyMail
@@ -343,7 +343,7 @@ tofu_authentik_services:
   name: 2FAuth
   mode: forward_auth
   tier: 3
-  enabled: true
+  enabled: '{{ (apps_runner_enabled | default(true) | bool) and "twofauth" not in (apps_skip | default([])) }}'
   external_host: https://twofauth.apps.{{ tenant_domain | default('dev.local') }}
 - slug: uptime-kuma
   name: Uptime Kuma

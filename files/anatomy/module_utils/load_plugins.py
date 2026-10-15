@@ -330,7 +330,8 @@ def run_aggregators(plugins: list[Plugin],
                     # Feature-flag gate (D1.2): when running with
                     # template_vars, skip peers whose feature_flag is off.
                     flag = (p.requires or {}).get("feature_flag")
-                    if tvars and flag and flag in tvars and not tvars.get(flag):
+                    off = bool(tvars and flag and flag in tvars and not tvars.get(flag))
+                    if off and not spec.get("keep_disabled"):
                         continue
                     block = p.manifest.get(block_path)
                     if isinstance(block, dict):
@@ -343,6 +344,8 @@ def run_aggregators(plugins: list[Plugin],
                         block.setdefault("slug", p.name.replace("-base", ""))
                         block.setdefault("plugin_name", p.name)
                         _suppress_oauth2_identity_for_proxy(block, block_path)
+                        if off:  # keep_disabled: the consumer renders its removal
+                            block["enabled"] = False
                         harvested.append(block)
             elif from_kind == "consumer_kind":
                 # phi-hub-card-icon-gap: harvest a top-level SCALAR manifest
@@ -401,8 +404,14 @@ def run_aggregators(plugins: list[Plugin],
                 for app in app_manifests:
                     block = app.get(block_path)
                     if isinstance(block, dict):
-                        block = _deep_render(block, tvars) if tvars else dict(block)
                         meta = app.get("meta") or {}
+                        # An app is installed only when apps_runner deploys it; Jinja
+                        # so the tofu registry (no template_vars) resolves it too.
+                        if block.get("enabled", True) is True:
+                            block = dict(block, enabled=(
+                                "{{ (apps_runner_enabled | default(true) | bool) and \"%s\" "
+                                "not in (apps_skip | default([])) }}" % meta.get("name")))
+                        block = _deep_render(block, tvars) if tvars else dict(block)
                         nginx = app.get("nginx") or {}
                         block.setdefault("slug", meta.get("name"))
                         block.setdefault("plugin_name",

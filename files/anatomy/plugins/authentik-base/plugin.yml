@@ -95,6 +95,9 @@ aggregates:
   - from: consumer_block
     block_path: authentik
     output_var: clients
+    # A switched-off peer is kept (enabled false) so 10-oidc-apps renders its
+    # application+provider `state: absent` — a blueprint never deletes what it drops.
+    keep_disabled: true
   # X.3 (2026-05-08): manifest apps emit `authentik:` blocks alongside
   # Tier-1 plugins. The renderer iterates `inputs.clients` (which now
   # contains both tiers) — proxy outpost gets a provider for every
