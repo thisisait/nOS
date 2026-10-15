@@ -3429,3 +3429,16 @@ fn the_model_hears_its_query_said_and_a_column_word_is_a_where() {
     let p = system_prompt(&rig);
     assert!(p.contains("A status, track or other column word in the question is a `where` on that column; order_by and limit never filter."), "{p}");
 }
+
+#[test]
+fn a_choice_takes_plain_string_options_and_asked_for_options_is_a_choice() {
+    // Client bench v2 choice-chart: asked for options, the model wrote a numbered list in prose.
+    let v = serve::normalize_show(&serde_json::json!({"component": {"kind": "choice", "props": {"question": "Which?",
+        "options": ["bar", "pie"], "suggested": "bar"}}}));
+    assert_eq!(v["component"]["props"]["options"], serde_json::json!([{"label": "bar"}, {"label": "pie"}]), "{v}");
+    assert_eq!(v["component"]["props"]["suggested"], serde_json::json!(["bar"]), "{v}");
+    let rig = rig("choptions", mapped(), ROWS, vec![answer("hi")]);
+    tool_turn(&rig, "hello");
+    let p = system_prompt(&rig);
+    assert!(p.contains("If the person asks for choices or options, call show choice; never a numbered list."), "{p}");
+}
