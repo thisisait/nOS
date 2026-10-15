@@ -4028,3 +4028,21 @@ fn a_model_that_stays_rate_limited_is_refused_naming_429() {
     assert!(got.iter().any(|m| matches!(m, ToShell::Refused { reason, .. } if reason.contains("429"))), "{got:?}");
     assert_eq!(rig.model.lock().unwrap().len(), 3, "a bounded number of tries");
 }
+
+// --- local bench round 2 (mistral-eu): 20 of 28 rows came back and the model said row 10 did not exist ---
+
+#[test]
+fn rows_past_the_limit_are_said_to_exist() {
+    let rig = rig_n("pastlimit", mapped(), shown_then(&[]), vec![query(r#"{"table": "todos", "limit": 2}"#), answer("x")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "all rows");
+    let t = tool_result(&rig, 1);
+    let more = t["more"].as_str().unwrap_or_default();
+    assert!(more.contains("2 of the 3") && more.contains("not missing"), "{t}");
+    let all = rig_n("alllimit", mapped(), shown_then(&[]), vec![query(r#"{"table": "todos"}"#), answer("x")]);
+    let s = connect(&all.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "all rows");
+    assert!(tool_result(&all, 1).get("more").is_none(), "every matched row was shown");
+}
