@@ -41,11 +41,11 @@ CANNOT_SEE = ("cannot see", "can't see", "can not see", "unable to see", "not ab
               "nevidím", "nemám přístup", "nemohu vidět", "nemůžu vidět", "nemám nástroj", "nedokážu zjistit",
               "nemohu číst", "nemůžu číst", "nedokážu přečíst", "nemohu přečíst",
               "není vidět", "nemám k dispozici", "nemám údaje", "nemám informace",
-              "nothing found", "nic jsem nenašel", "nic nenašel")
+              "nothing found", "found nothing", "nic jsem nenašel", "nic nenašel", "nic nenašla")
 # "can't directly read", "am not able to check": a refusal with a word or two between.
 CANNOT_RE = re.compile(r"\b(cannot|can't|can not|unable to|not able to)(\s+\w+){0,2}\s+(see|read|access|check|view|answer|tell|know)\b")
 # A verdict next to the disclaimer is a guess ("I can't see any failures, all green"), not cannot-see.
-VERDICT = ("green", "healthy", "all clear", "all good", "nothing is red", "no failures", "zelen", "v pořádku", "nic není červen")
+VERDICT = ("green", "healthy", "nothing red", "all clear", "all good", "nothing is red", "no failures", "zelen", "v pořádku", "nic není červen")
 NUM = re.compile(r"\d+(?:\.\d+)?")
 CLOCK = re.compile(r"\b([01]?\d|2[0-3]):([0-5]\d)\b")
 

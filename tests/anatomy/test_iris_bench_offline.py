@@ -507,7 +507,8 @@ def test_each_check_fails_on_the_answer_it_exists_to_catch():
     for guessed in ("Nothing is red; I can't see any failures, all green.",
                     "Nevidím nic červeného, vše je zelené.",
                     "No access issues: everything is green.",
-                    "The estate is healthy."):
+                    "The estate is healthy.",
+                    "I found nothing red."):
         assert not check("says_cannot_see", True, _got(guessed), noon), guessed
     assert not check("no_proposal", True, _got(approvals=[AID]), noon)
     assert not check("not_repeated", True, _got("agents 5, pupil 3, face 2.", renders=[_chart("bar", pts)]), noon)
