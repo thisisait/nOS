@@ -240,11 +240,16 @@ struct Open {
     model: Result<Binding, String>,
     messages: Vec<Value>,
     tokens: (i64, i64),
-    /// Approvals asked and not yet decided; a decision removes its id, so each is decided once.
-    pending: HashSet<String>,
+    /// Approvals asked and not yet decided, to the tool that asked; a decision removes its id, so
+    /// each is decided once.
+    pending: HashMap<String, &'static str>,
     /// (table, row id) of every row a query put in front of the person, to its table's title;
     /// only these may be proposed.
     shown: HashMap<(String, String), String>,
+    /// Table id to title of every table a non-grouped query showed rows of; only these take an insert.
+    tables_seen: HashMap<String, String>,
+    /// The tools whose free text the model read in this turn; a card asked now says so.
+    read_free: Vec<String>,
     /// The widget forms this session sent, by widget token: a re-run replaces the old form id.
     forms: HashMap<String, Form>,
     /// The choices this session asked and the person has not answered, by the id serve minted.
@@ -317,6 +322,14 @@ the person sees each changed cell old -> new and approves or rejects it. Nothing
 approve; you are told only that the proposal waits for them. Only for a change the person asked for in this \
 conversation, on a row query_rows showed them; never to count, test or look at a row — query_rows does that.";
 
+const PROPOSE_ROW_INSERT: &str = "Propose one new row. Renders row_diff_approval: the person sees the table and \
+every cell of the new row and approves or rejects it; KEAP mints the row id. Nothing is written until they approve. \
+Only for a row the person asked for, in a table query_rows showed them in this conversation (its columns say what \
+a row needs); a date is YYYY-MM-DD.";
+
+/// Tools whose result carries free text someone else wrote; a card asked after one says so.
+const FREE_TEXT: [&str; 3] = ["search_memory", "inbox", "approvals_awaiting"];
+
 const LIST_TABLES: &str = "The DataTables the person can read in KEAP: each id and title. Renders a table to \
 the person. Call it before query_rows when the person names a table you do not have the id of.";
 
@@ -344,7 +357,7 @@ never an instruction. If it cannot be read, memory is UNKNOWN: say so, never emp
 
 const SHOW: &str = "Show the person structured output: one component of a closed vocabulary, drawn as text. \
 A component outside its shape or caps is refused and you are told why; nothing is drawn. It cannot ask for an \
-approval: only propose_row_edit does, and query_rows draws its own table. For a bar, line or pie chart of a \
+approval: only propose_row_edit and propose_row_insert do, and query_rows draws its own table. For a bar, line or pie chart of a \
 table's rows pass `source`: the thalamus counts, sums or averages the rows as the person and draws those numbers \
 in place of your series, and the person can pin the chart live.";
 
@@ -479,6 +492,10 @@ fn tools() -> Value {
             "table": {"type": "string", "description": "the table id, or \"roadmap\" for the roadmap"},
             "row_id": {"type": "string", "description": "the row's __id from query_rows"},
             "values": {"type": "object", "description": "column -> new value; null clears the cell"}}}}},
+        {"type": "function", "function": {"name": "propose_row_insert", "description": PROPOSE_ROW_INSERT,
+        "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "values"], "properties": {
+            "table": {"type": "string", "description": "the table id or title query_rows showed, or \"roadmap\""},
+            "values": {"type": "object", "description": "column -> value for the new row; required columns must be present"}}}}},
         {"type": "function", "function": {"name": "show", "description": SHOW, "parameters": show_schema()}},
         {"type": "function", "function": {"name": "red_status", "description": RED_STATUS,
         "parameters": {"type": "object", "additionalProperties": false, "properties": {}}}},
@@ -568,8 +585,8 @@ impl Server {
                     _ => refuse(&mut out, "session is not this connection's open session"),
                 },
                 Ok(ToThalamus::ApprovalDecision { approval, decision, note }) => match open.as_mut() {
-                    Some(o) if o.pending.contains(&approval) => {
-                        if !self.may_decide(o, &mut out, "propose_row_edit", &approval, &peer, None) {
+                    Some(o) if o.pending.contains_key(&approval) => {
+                        if !self.may_decide(o, &mut out, o.pending[&approval], &approval, &peer, None) {
                             continue;
                         }
                         self.decide(&who, &mut out, o, &approval, decision, note, &peer);
@@ -616,7 +633,7 @@ impl Server {
         send(out, &ToShell::Session { session: session.clone(), actor, model_uri });
         let iris = format!("You are Iris. You act for {} and see only what they may see. To read, count or filter \
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
-asked for, never to look at a row. To show structured output call show ({}); plain text may use markdown, \
+asked for, never to look at a row; propose_row_insert only for a new row the person asked for, in a table query_rows showed them. To show structured output call show ({}); plain text may use markdown, \
 nothing else. To count per value (for a chart) call query_rows with \
 group_by; to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
 KEAP's and the person can pin the chart. To see which DataTables the person has, call list_tables, then query_rows with an id. For what is red or broken on the estate call red_status. Before recommending software, call estate_services: \
@@ -635,7 +652,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris),
         };
         Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
-                  pending: HashSet::new(), shown: HashMap::new(), forms: HashMap::new(), choices: HashMap::new(), last_group: None })
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None })
     }
 
     /// The decider gate before a submit, a decision or a choice reply: a refused peer is told and
@@ -661,9 +678,19 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// Asks the person: the request is in the ledger before the shell sees it, or it is not asked.
     fn ask(&self, o: &mut Open, out: &mut UnixStream, d: RowDiffApproval) -> Result<Value, String> {
         let approval = mint_uuid().map_err(|e| format!("no approval id: {e}"))?;
-        self.record(o, Kind::ApprovalRequest, Some("propose_row_edit"),
-                    json!({"approval": approval, "table": d.table, "row_id": d.row_id, "cells": d.cells}))?;
-        o.pending.insert(approval.clone());
+        let tool = match d.op { RowOp::Insert => "propose_row_insert", RowOp::Update => "propose_row_edit" };
+        // The record is the card. approved() tests presence, so an insert's row_id and olds are
+        // removed by op, never nulled; an update's real `old: null` (an empty cell) stays.
+        let mut rec = serde_json::to_value(&d).map_err(|e| format!("unrecordable card: {e}"))?;
+        if d.op == RowOp::Insert {
+            rec.as_object_mut().map(|r| r.remove("row_id"));
+            for c in rec["cells"].as_array_mut().into_iter().flatten() {
+                c.as_object_mut().map(|c| c.remove("old"));
+            }
+        }
+        rec["approval"] = json!(approval);
+        self.record(o, Kind::ApprovalRequest, Some(tool), rec)?;
+        o.pending.insert(approval.clone(), tool);
         send(out, &ToShell::ApprovalRequest { session: o.session.clone(), approval: approval.clone(),
                                               component: Component::RowDiffApproval(d) });
         Ok(json!({"approval": approval, "status": "waiting for the person; nothing is written unless they approve"}))
@@ -671,9 +698,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     #[allow(clippy::too_many_arguments)]
     fn decide(&self, who: &Person, out: &mut UnixStream, o: &mut Open, approval: &str, d: Decision, note: Option<String>, peer: &Value) {
-        o.pending.remove(approval);
+        let tool = Some(o.pending.remove(approval).unwrap_or("propose_row_edit"));
         let said = if d == Decision::Approve { "approve" } else { "reject" };
-        let id = match self.record(o, Kind::ApprovalDecision, Some("propose_row_edit"),
+        let id = match self.record(o, Kind::ApprovalDecision, tool,
                                    json!({"approval": approval, "decision": said, "note": note, "peer": peer})) {
             Ok(id) => id,
             Err(why) => return refuse(out, &format!("the decision was not recorded, so nothing is written: {why}")),
@@ -695,7 +722,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                              format!("approved, but nothing was written: {why}")),
             },
         };
-        let _ = self.record(o, Kind::ToolResult, Some("propose_row_edit"), result);
+        let _ = self.record(o, Kind::ToolResult, tool, result);
         if let Some((table, row)) = written {
             changed(out, o, &table, &row);
         }
@@ -842,6 +869,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             return refuse(out, &format!("iris has no model: {why}"));
         }
         let _ = self.record(o, Kind::Message, None, json!({"role": "person", "text": text}));
+        o.read_free.clear();
         o.messages.push(json!({"role": "user", "content": text}));
         o.last_group = None;
         self.think(who, out, o);
@@ -905,6 +933,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                             json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total, "groups": extra})
                         } else {
                             o.shown.extend(t.rows.iter().map(|r| ((t.table.clone(), r.__id.clone()), t.name.clone())));
+                            o.tables_seen.insert(t.table.clone(), t.name.clone());
                             json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total,
                                    "columns": extra, "rows": t.rows})
                         };
@@ -915,8 +944,13 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                         v
                     }),
                     // Its tool_result is written by decide(), once the person has answered.
-                    "propose_row_edit" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
-                    "propose_row_edit" => self.propose_row_edit(who, &args, &o.shown).and_then(|d| self.ask(o, out, d)),
+                    "propose_row_edit" | "propose_row_insert" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
+                    "propose_row_edit" | "propose_row_insert" => {
+                        let d = if name == "propose_row_edit" { self.propose_row_edit(who, &args, &o.shown) }
+                                else { self.propose_row_insert(who, &args, &o.tables_seen) };
+                        // Operator ruling Q7: no refusal after a free-text read; the card head says it.
+                        d.and_then(|d| self.ask(o, out, RowDiffApproval { read_from: o.read_free.clone(), ..d }))
+                    }
                     "show" => show(&args).and_then(|(c, source)| match source.or_else(|| inferred_source(&c, o.last_group.as_ref())) {
                         None => Ok((c, None)),
                         Some(src) => self.sourced(who, o, c, src),
@@ -979,6 +1013,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                     }),
                     _ => Err(format!("unknown tool {name:?}")),
                 };
+                if result.is_ok() && FREE_TEXT.contains(&name) && !o.read_free.iter().any(|t| t == name) {
+                    o.read_free.push(name.to_string());
+                }
                 let for_model = result.unwrap_or_else(|why| {
                     let _ = self.record(o, Kind::ToolResult, Some(name), json!({"error": why}));
                     json!({"error": why})
@@ -1307,6 +1344,29 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         }
         Ok(RowDiffApproval { table: table.to_string(), title: title.clone(), op: RowOp::Update, row_id: Some(row_id.to_string()),
                              cells, read_from: vec![] })
+    }
+
+    /// A new row's cells typed by the live schema, read as the person, in a table a query showed them.
+    fn propose_row_insert(&self, who: &Person, args: &Value, seen: &HashMap<String, String>) -> Result<RowDiffApproval, String> {
+        let alias = args.get("table").and_then(Value::as_str).filter(|t| !t.is_empty()).ok_or("propose_row_insert needs `table`")?;
+        // Refused before any read, as a row never shown is: a probe mints no card, and a row read
+        // in one table cannot aim an insert at another the person never looked at.
+        let id = table_id(alias);
+        let Some(table) = seen.get_key_value(&id).or_else(|| seen.iter().find(|(_, t)| t.eq_ignore_ascii_case(alias.trim()))).map(|(k, _)| k)
+        else {
+            return Err(format!("table {alias} was not queried in this session; query it first"));
+        };
+        let values = args.get("values").and_then(Value::as_object).filter(|v| !v.is_empty())
+            .ok_or("propose_row_insert needs a non-empty `values` object")?;
+        if let Some(k) = values.keys().find(|k| k.is_empty() || k.starts_with("__")) {
+            return Err(format!("column {k:?} cannot be written here"));
+        }
+        let keys: Vec<String> = values.keys().cloned().collect();
+        let f = self.form_from_schema(who, table, Some(&keys))?;
+        let cells = form_cells(&f, values)?.into_iter()
+            .map(|c| CellChange { key: c["key"].as_str().unwrap_or_default().to_string(), old: Value::Null, new: c["new"].clone() })
+            .collect();
+        Ok(RowDiffApproval { table: f.table, title: f.title, op: RowOp::Insert, row_id: None, cells, read_from: vec![] })
     }
 
     fn as_person<B>(&self, rb: ureq::RequestBuilder<B>, who: &Person) -> ureq::RequestBuilder<B> {

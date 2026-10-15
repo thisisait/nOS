@@ -181,6 +181,9 @@ impl Ledger {
                 (RowOp::Insert, None) => {}
             }
         }
+        if values.is_empty() {
+            return Err("a write changes at least one cell".into());
+        }
         Ok(Approved { actor, table: field("table")?, op, row_id, values, old })
     }
 
