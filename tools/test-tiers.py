@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Which CI tier owns each anatomy test, and which bonus converge lane each stack gets.
 
-Derived, never hand-listed: core = the install_* flags profiles/core.yml turns on, plus
-every host row (no `stack:`). Each other manifest `stack:` is one bonus lane: its rows'
+Derived, never hand-listed: core = the install_* flags profiles/core.yml turns on, every
+host row (no `stack:`) and every own organ (software_owner: self, ruling 2026-10-15). Each other manifest `stack:` is one bonus lane: its rows'
 install flags and the paths that should trigger it (roles/pazny.<id>/ and every plugin dir
 whose requires.feature_flag is one of those flags). A test file is T0 when its name says
 security/secret/contract/lockfile/gitleaks, a lane when it names only that lane's flags,
@@ -43,7 +43,7 @@ def derive() -> dict:
     rows = _load("state/manifest.yml")["services"]
     flag_stacks: dict[str, set] = {}
     for r in rows:
-        if r.get("stack") and r.get("install_flag") not in core:
+        if r.get("stack") and r.get("install_flag") not in core and r.get("software_owner") != "self":
             flag_stacks.setdefault(r["install_flag"], set()).add(r["stack"])
     flag_tier = {f: next(iter(s)) if len(s) == 1 else "core" for f, s in flag_stacks.items()}
     lanes: dict[str, dict] = {}
