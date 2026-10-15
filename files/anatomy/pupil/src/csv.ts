@@ -1,11 +1,11 @@
 // A widget's rows as CSV (RFC 4180): raw values, not the locale reading fmt.ts draws. A text cell a
-// spreadsheet would run as a formula (= + - @) gets a leading apostrophe; a number stays a number.
+// spreadsheet would run as a formula (= + - @, tab, CR) gets a leading apostrophe; a number stays a number.
 import { cell, type Component, type Value } from './wire';
 
 type Results = Extract<Component, { kind: 'table_results' }>['props'];
 
 const field = (v: Value | undefined): string => {
-	let s = typeof v === 'string' ? (/^[=+\-@]/.test(v) ? `'${v}` : v) : cell(v ?? null);
+	let s = typeof v === 'string' ? (/^[=+\-@\t\r]/.test(v) ? `'${v}` : v) : cell(v ?? null);
 	if (/[",\r\n]/.test(s)) s = `"${s.replace(/"/g, '""')}"`;
 	return s;
 };
