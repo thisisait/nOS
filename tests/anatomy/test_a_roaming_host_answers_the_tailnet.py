@@ -119,3 +119,22 @@ def test_traefik_publishes_443_on_every_interface():
     src = (REPO / "roles/pazny.traefik/templates/compose.yml.j2").read_text()
     line = next(m for m in re.findall(r'-\s*"([^"]*:443)"', src))
     assert _render(line) == "443:443", f"a host IP on the 443 mapping hides Traefik from the tailnet: {line}"
+
+
+def test_dnsmasq_declared_off_retires_the_tailnet_instance_too():
+    """install_dnsmasq: false skips tasks/dnsmasq.yml whole, so the not-roaming removal
+    never runs; the authored stop must take the tailnet daemon with the system one."""
+    import json
+    import shlex
+    sys.path.insert(0, str(REPO / "filter_plugins"))
+    import nos_prune_guard as g
+    graph = json.loads((REPO / "state/anatomy-graph.json").read_text())
+    item = {"label": LABEL, "install_flag": "install_dnsmasq", "domain": "system"}
+    assert item in g.nos_host_daemon_plan(graph, "system")
+    play = yaml.safe_load((REPO / "main.yml").read_text())
+    task = next(t for p in play for t in p.get("tasks") or []
+                if t.get("name") == "[Host daemons] Retire declared-off root LaunchDaemons")
+    env = jinja2.Environment()
+    env.filters["quote"] = shlex.quote
+    sh = env.from_string(task["ansible.builtin.shell"]).render(item=item, dnsmasq_tailnet_conf=CONF)
+    assert f"launchctl bootout system/{LABEL}" in sh and f"rm -f -- {PLIST}" in sh and f"rm -f -- {CONF}" in sh
