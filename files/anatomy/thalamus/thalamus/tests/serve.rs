@@ -4261,6 +4261,28 @@ fn a_relative_day_resolves_now_in_utc_and_is_said_resolved() {
     assert!(q.starts_with("when between ") && q.contains("-01 and ") && q.ends_with("(this_month)"), "{q}");
 }
 
+/// Today on the host's calendar, as the epoch second of that day's UTC midnight (a date cell's form).
+fn host_today() -> i64 {
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
+    let mut tm: libc::tm = unsafe { std::mem::zeroed() };
+    unsafe { libc::localtime_r(&(now as libc::time_t), &mut tm) };
+    (now + tm.tm_gmtoff as i64).div_euclid(86_400) * 86_400
+}
+
+// "before this_month" is before its first day, "after" past its last, eq the whole month.
+#[test]
+fn a_relative_day_under_lt_gt_eq_is_its_first_last_or_whole_range() {
+    let t = host_today();
+    let rows = vec![keap_row("before", serde_json::json!({"when": t - 60 * 86_400})), keap_row("in", serde_json::json!({"when": t})),
+                    keap_row("after", serde_json::json!({"when": t + 60 * 86_400}))];
+    for (op, want) in [("lt", "before"), ("gt", "after"), ("eq", "in")] {
+        let args = format!(r#"{{"table": "sheet", "where": [{{"column": "when", "op": "{op}", "value": "this_month"}}]}}"#);
+        let (r, _) = result_over(&format!("rel{op}"), rows.clone(), &args);
+        assert_eq!(r["matched"], 1, "{op}: {r}");
+        assert!(r.to_string().contains(&format!("\"{want}\"")), "{op} matched the wrong row: {r}");
+    }
+}
+
 #[test]
 fn between_wants_two_ends_on_a_date_or_number_column() {
     for (name, w, says) in [("bone", r#"{"column": "amount", "op": "between", "value": "5"}"#, "between takes [from, to]"),
