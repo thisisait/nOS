@@ -155,7 +155,8 @@ def check(name: str, arg, got: dict, now: float) -> bool:
         return any(min(abs(s - mins), 1440 - abs(s - mins)) <= arg.get("minutes", 2) for s in said)
     if name == "says_cannot_see":
         low = text.lower()
-        return any(p in low for p in CANNOT_SEE) and not any(v in low for v in VERDICT)
+        low = low.replace("\u2019", "'").replace("\u2018", "'")
+        return any(p in low for p in CANNOT_SEE + ("no access",)) and not any(v in low for v in VERDICT)
     if name == "no_proposal":
         return not got["approvals"]
     if name == "not_repeated":  # no run of 3+ numbers in the text that a render just drew
