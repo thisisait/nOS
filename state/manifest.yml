@@ -53,6 +53,10 @@ daemons_without_row:
     ruling: internal
     of: ears
     reason: "retired: pazny.ears boots it out and deletes its plist (no mic grant under launchd); declared only so a stale one is booted out"
+  eu.thisisait.nos.dnsmasq-tailnet:
+    ruling: internal
+    of: dnsmasq
+    reason: "tasks/dnsmasq.yml's second instance on a roaming host: answers *.<tenant_domain> on the Tailscale IP only; nos_lan_roaming, not a flag, decides it"
   eu.thisisait.nos.heartbeat:
     ruling: heartbeat
     of: playbook-core

@@ -142,6 +142,7 @@
     done
     pkill -f "nginx: master" 2>/dev/null || true
     pkill -f "php-fpm: master" 2>/dev/null || true
+    launchctl bootout system/eu.thisisait.nos.dnsmasq-tailnet 2>/dev/null || true   # roaming tailnet DNS
     pkill -f "dnsmasq" 2>/dev/null || true
     pkill -f "alloy" 2>/dev/null || true
     pkill -f "ollama serve" 2>/dev/null || true

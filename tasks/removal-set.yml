@@ -253,6 +253,9 @@
         +
         (install_wing | default(true)) | ternary(
           [wing_app_dir | default(ansible_facts['env']['HOME'] + '/wing/app')], [])
+        +
+        ['/Library/LaunchDaemons/eu.thisisait.nos.dnsmasq-tailnet.plist',
+         dnsmasq_tailnet_conf | default(homebrew_prefix + '/etc/dnsmasq-tailnet.conf')]
       }}
 
 # nos_data_root covers every service on `platform/services/*` (even DISABLED ones)

@@ -3888,7 +3888,8 @@
       "category": "infra",
       "install_flag": "install_dnsmasq",
       "launchd_labels": [
-        "homebrew.mxcl.dnsmasq"
+        "homebrew.mxcl.dnsmasq",
+        "eu.thisisait.nos.dnsmasq-tailnet"
       ],
       "dependency_survey": "no-manifest",
       "anchor": "02.02.04",

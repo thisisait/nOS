@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>eu.thisisait.nos.dnsmasq-tailnet</string>
+  <!-- The utun address appears after boot: bind fails, launchd retries every 10 s. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{ homebrew_prefix }}/opt/dnsmasq/sbin/dnsmasq</string>
+    <string>--keep-in-foreground</string>
+    <string>-C</string>
+    <string>{{ dnsmasq_tailnet_conf }}</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+</dict>
+</plist>

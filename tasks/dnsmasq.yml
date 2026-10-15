@@ -202,3 +202,111 @@
       dnsmasq resolves *.{{ dnsmasq_dev_domain | default('dev.local') }} →
       {{ dns_check.stdout | default('') | trim }}
   when: ansible_os_family == 'Darwin'
+
+# ── Tailnet instance: a roaming host answers its Tailscale IP to the tailnet ─────
+# The system instance above stays on 127.0.0.1; a second dnsmasq binds the Tailscale
+# address only, so the person's phone (split DNS in the tailnet admin console) reaches
+# the same vhosts. Gate: tests/anatomy/test_a_roaming_host_answers_the_tailnet.py.
+- name: "[dnsmasq] Tailnet: read this host's Tailscale IPv4"
+  ansible.builtin.shell: |
+    for c in "$(command -v tailscale 2>/dev/null)" {{ _ts_candidates | default([homebrew_prefix ~ '/bin/tailscale',
+        '/usr/local/bin/tailscale', '/Applications/Tailscale.app/Contents/MacOS/Tailscale']) | map('quote') | join(' ') }}; do
+      if [ -n "$c" ] && [ -x "$c" ]; then exec "$c" ip -4; fi
+    done
+    exit 1
+  register: _dnsmasq_ts_raw
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - ansible_os_family == 'Darwin'
+    - nos_lan_roaming | default(false) | bool
+  tags: ['verify']
+
+- name: "[dnsmasq] Tailnet: decide"
+  ansible.builtin.set_fact:
+    _dnsmasq_ts_ip: >-
+      {{ ((_dnsmasq_ts_raw.stdout | default('')).split() + [''])[0] if _dnsmasq_ts_raw.rc | default(1) == 0
+         and ((_dnsmasq_ts_raw.stdout | default('')).split() + [''])[0].replace('.', '').isdigit() else '' }}
+    _dnsmasq_tailnet: "{{ ansible_os_family == 'Darwin' and (nos_lan_roaming | default(false) | bool) and _dnsmasq_ts_ip | length > 0 }}"
+  tags: ['verify']
+
+- name: "[dnsmasq] Tailnet: render the config"
+  ansible.builtin.template:
+    src: dnsmasq-tailnet.conf.j2
+    dest: "{{ dnsmasq_tailnet_conf }}"
+    mode: '0644'
+  register: _dnsmasq_tn_conf
+  when: _dnsmasq_tailnet | bool
+
+- name: "[dnsmasq] Tailnet: install the LaunchDaemon"
+  ansible.builtin.template:
+    src: eu.thisisait.nos.dnsmasq-tailnet.plist.j2
+    dest: /Library/LaunchDaemons/eu.thisisait.nos.dnsmasq-tailnet.plist
+    owner: root
+    group: wheel
+    mode: '0644'
+  become: true
+  register: _dnsmasq_tn_plist
+  when: _dnsmasq_tailnet | bool
+
+# launchd re-reads a plist (and dnsmasq its config) only on bootout + bootstrap.
+- name: "[dnsmasq] Tailnet: load it"
+  ansible.builtin.shell: |
+    {% if _dnsmasq_tn_conf is changed or _dnsmasq_tn_plist is changed %}
+    launchctl bootout system/eu.thisisait.nos.dnsmasq-tailnet 2>/dev/null && sleep 1
+    {% endif %}
+    launchctl print system/eu.thisisait.nos.dnsmasq-tailnet >/dev/null 2>&1 && exit 0
+    launchctl bootstrap system /Library/LaunchDaemons/eu.thisisait.nos.dnsmasq-tailnet.plist && echo loaded
+  become: true
+  register: _dnsmasq_tn_load
+  changed_when: "'loaded' in (_dnsmasq_tn_load.stdout | default(''))"
+  when: _dnsmasq_tailnet | bool
+
+- name: "[dnsmasq] Tailnet: remove it when not roaming"
+  ansible.builtin.shell: |
+    p=/Library/LaunchDaemons/eu.thisisait.nos.dnsmasq-tailnet.plist
+    if [ -f "$p" ]; then launchctl bootout system/eu.thisisait.nos.dnsmasq-tailnet 2>/dev/null; rm -f "$p"; echo removed; fi
+    if [ -f {{ dnsmasq_tailnet_conf | quote }} ]; then rm -f {{ dnsmasq_tailnet_conf | quote }}; echo removed; fi
+    true
+  become: true
+  register: _dnsmasq_tn_gone
+  changed_when: "'removed' in (_dnsmasq_tn_gone.stdout | default(''))"
+  when: not (nos_lan_roaming | default(false) | bool)
+
+- name: "[dnsmasq] Tailnet verify: ask it"
+  ansible.builtin.command:
+    argv: ["dig", "+short", "+time=2", "+tries=1", "@{{ _dnsmasq_ts_ip }}", "grafana{{ _host_alias_seg | default('') }}.{{ dnsmasq_dev_domain }}"]
+  register: _dnsmasq_tn_dig
+  until: _dnsmasq_ts_ip in (_dnsmasq_tn_dig.stdout | default('')).split()
+  retries: 5
+  delay: 2
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _dnsmasq_tailnet | bool
+  tags: ['verify']
+
+# Reported on a converge, fails under --tags verify (as tasks/tailscale.yml does).
+- name: "[dnsmasq] Tailnet verify: judge"
+  ansible.builtin.assert:
+    that: _dnsmasq_ts_ip in (_dnsmasq_tn_dig.stdout | default('')).split()
+    fail_msg: >-
+      RED: `dig @{{ _dnsmasq_ts_ip }} grafana{{ _host_alias_seg | default('') }}.{{ dnsmasq_dev_domain }}`
+      answered '{{ _dnsmasq_tn_dig.stdout | default('') | trim }}', not {{ _dnsmasq_ts_ip }}. Look at
+      `sudo launchctl print system/eu.thisisait.nos.dnsmasq-tailnet`; docs/systems/dnsmasq/README.md.
+    success_msg: "OK: the tailnet dnsmasq answers *.{{ dnsmasq_dev_domain }} -> {{ _dnsmasq_ts_ip }}"
+  register: _dnsmasq_tn_assert
+  failed_when: _dnsmasq_tn_assert.failed | default(false) and 'verify' in ansible_run_tags
+  when: _dnsmasq_tailnet | bool
+  tags: ['verify']
+
+- name: "[dnsmasq] Tailnet verify: UNKNOWN without a Tailscale IP"
+  ansible.builtin.debug:
+    msg: >-
+      UNKNOWN: nos_lan_roaming is on but this host has no Tailscale IPv4 (Tailscale down or
+      logged out). The tailnet DNS instance was skipped and nothing about it was checked.
+  when:
+    - nos_lan_roaming | default(false) | bool
+    - not (_dnsmasq_tailnet | bool)
+  tags: ['verify']
