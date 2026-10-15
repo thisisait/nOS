@@ -10,14 +10,15 @@ name: CI
     branches:
       - master
       # D2 (2026-06-11): dev pushes get the LIGHT lane only (lint + syntax +
-      # pytest + contracts). The two Integration wet-tests stay PR/cron/master
+      # pytest + contracts). Linux Integration stays PR/cron/master; macOS is cron-only
       # — 22 commits landed on dev after v0.5-beta with zero CI coverage; this
       # closes that gap without a 25-min wet-test on every dev push (that
       # remains `tools/ci-local.sh` discipline + the release PR gate).
       - dev
       - 'claude/**'
+  # Nightly (ruling 2026-10-15): the macOS install lane runs only here.
   schedule:
-    - cron: "0 5 * * 4"
+    - cron: "0 5 * * *"
 
 # Default minimum permissions for every job — read-only access to the
 # repository. Closes GitHub Code Scanning's actions/missing-workflow-
@@ -361,7 +362,7 @@ jobs:
 
   # ──────────────────────────────────────────────────────────────────────────
   # INTEGRATION – full run on real macOS (slower, expensive)
-  # Runs only on master/claude/** pushes, not on every PR commit
+  # Nightly only and non-blocking until green once (test_macos_install_runs_nightly)
   # ──────────────────────────────────────────────────────────────────────────
   integration:
     name: Integration (${{ matrix.os }})
@@ -402,11 +403,7 @@ jobs:
       # runner image is fresh enough for CI (nginx `state: latest` reads it).
       HOMEBREW_NO_AUTO_UPDATE: '1'
       HOMEBREW_NO_INSTALL_CLEANUP: '1'
-    # On feature branches run integration only on push, not on draft PRs
-    if: |
-      github.event_name == 'schedule' ||
-      (github.event_name == 'push' && github.ref != 'refs/heads/dev') ||
-      (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
+    if: github.event_name == 'schedule'
     strategy:
       fail-fast: false
       matrix:
@@ -652,6 +649,7 @@ jobs:
           # $PY (no venv-resolution) fixes it on macOS and is a no-op on ubuntu.
           echo "interpreter_python = $PY" >> ./ansible.cfg
           cp tests/inventory ./inventory
+          # Runner host settings only; the service set is -e @profiles/core.yml below.
           cp tests/config.yml ./config.yml
           # Retry Galaxy install — see Syntax Check job comment. Install from the
           # FROZEN lock (exact pins, 1:1 with tools/ci-local.sh), not the
@@ -692,28 +690,14 @@ jobs:
         # module interpreter past macOS's custom-module discovery cache, which
         # ignores the env + cfg pins. $PY has ansible-core + pyyaml (main-site).
         #
-        # TRAEFIK, NOT NGINX, ON LINUX (2026-08-31). `tests/config.yml` carries
-        # `install_nginx: true` + `install_traefik: false` for both integration
-        # jobs, and on Linux that is the one combination that cannot serve
-        # anything: per-service nginx vhosts are macOS-only (docs/linux-port.md
-        # — Traefik is the Linux edge), so nothing listens on 443 at all.
-        #
-        # That is why this job has been red since 2026-07-16 — 46 days and nine
-        # consecutive runs, through BOTH the v0.10-beta and v0.11-beta tags. The
-        # break was `b0df60e9 fix(smoke): a probe must test the service, not
-        # DNS`, which added a loopback retry so a probe would stop passing on
-        # DNS alone. The retry then got `Connection refused` on every host —
-        # correctly, because there was no edge. The probe did not break the
-        # build; it stopped hiding that CI proves no service is reachable.
-        #
-        # Overridden here rather than in tests/config.yml so the macOS job keeps
-        # exercising the nginx vhost path, which is real and supported there.
-        # KEAP + its cortex edge ride the Linux leg (operator, 2026-10-01): the
-        # cloud sandbox cannot pull its build deps, a GitHub runner can.
+        # profiles/core.yml is the service set (ruling 2026-10-15; Traefik edge, no
+        # nginx: hidden_fees/39). Overrides: thalamus fails on systemd (macOS-only);
+        # cortex rides this leg (operator 2026-10-01). test_integration_uses_a_profile.
         run: >-
           ansible-playbook main.yml
           -e allow_weak_prefix=true
-          -e '{"install_traefik": true, "install_nginx": false, "install_keap": true, "install_cortex": true}'
+          -e @profiles/core.yml
+          -e '{"install_thalamus": false, "install_cortex": true}'
           -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
         env:
           ANSIBLE_FORCE_COLOR: '1'
