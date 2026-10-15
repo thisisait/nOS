@@ -3,11 +3,11 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { lensPrefill } from './form';
-import type { DashboardProps, FormField, Lens, WidgetSpec } from './wire';
+import type { DashboardProps, FormField, Lens, SavedDashboard, WidgetSpec } from './wire';
 import type { Widgets } from './widgets';
 import {
-	addSpace, addWidget, age, approvalArrived, byKey, byPointer, clampChat, lensed, onTableChanged, place, placeOffer, removeWidget,
-	restore, setLens, show, type Layout
+	addSpace, addWidget, age, approvalArrived, byKey, byPointer, clampChat, lensed, loadSaved, onTableChanged, place, placeOffer,
+	removeWidget, restore, setLens, show, type Layout
 } from './workspace';
 
 const FIXTURE = new URL('../../contracts/workspace-layout.fixture.json', import.meta.url);
@@ -229,6 +229,53 @@ describe('an offered dashboard is placed by the person', () => {
 		let full = sample(0);
 		for (let i = 0; i < 11; i++) full = addSpace(full, `t${i}`, `T${i}`);
 		const r = placeOffer(full, {}, 'tab9', offer, id);
-		expect([r.layout, r.send]).toEqual([full, []]);
+		expect([r.layout, r.send, r.save]).toEqual([full, [], null]);
+	});
+
+	it('is saved for the person under the tab id: the offer as placed, no dropped, no owner', () => {
+		n = 0;
+		const r = placeOffer(sample(0), {}, 'tab9', offer, id);
+		expect(r.save).toEqual({ t: 'dashboard_save', dashboard: { slug: 'tab9', name: 'Bench board', lens: offer.lens,
+			widgets: offer.widgets.map(({ title, spec }) => ({ title, spec })) } });
+	});
+});
+
+describe("the person's dashboards from KEAP join the file", () => {
+	const saved = (slug: string, name = 'Bench board'): SavedDashboard => ({
+		slug, name, lens: [{ column: 'track', op: 'eq', value: 'face' }],
+		widgets: [{ title: 'Rows', spec: { rows: { table: 'bench' } } }, { title: 'Add', spec: { form: { table: 'bench' } } }]
+	});
+	let n = 0;
+	const id = () => `k${++n}`;
+
+	it('each one the file lacks is a tab, not active, its widgets waiting for it; nothing runs now', () => {
+		n = 0;
+		const l = sample(0);
+		const r = loadSaved(l, {}, [saved('wsk1')], id);
+		expect(r.layout.active, 'the person stays where they were').toBe(l.active);
+		const tab = r.layout.workspaces.at(-1)!;
+		expect([tab.id, tab.name, tab.lens]).toEqual(['wsk1', 'Bench board', saved('wsk1').lens]);
+		expect(tab.widgets.map((x) => [x.id, x.title, x.spec])).toEqual([['k1', 'Rows', { rows: { table: 'bench' } }], ['k2', 'Add', { form: { table: 'bench' } }]]);
+		expect(inGrid(r.layout)).toBe(true);
+		expect(r.full).toEqual([]);
+		const shown = show(r.layout, r.w, 'wsk1');
+		expect(shown.send.map((m) => m.t === 'widget' && [m.widget, m.trigger, m.spec])).toEqual([
+			['k1', 'restore', { rows: { table: 'bench', where: [{ column: 'track', op: 'eq', value: 'face' }] } }],
+			['k2', 'restore', { form: { table: 'bench' } }]]);
+	});
+
+	it('a tab the file already has stays as this Mac left it', () => {
+		const l = loadSaved(sample(0), {}, [saved('wsk1')], id).layout;
+		const moved = { ...l, workspaces: l.workspaces.map((s) => (s.id === 'wsk1' ? { ...s, name: 'Renamed here' } : s)) };
+		const r = loadSaved(moved, {}, [saved('wsk1'), saved('wsk2', 'Other')], id);
+		expect(r.layout.workspaces.map((s) => s.name).slice(-2)).toEqual(['Renamed here', 'Other']);
+	});
+
+	it('past 12 tabs the rest are named, never dropped silently', () => {
+		let full = sample(0);
+		for (let i = 0; i < 10; i++) full = addSpace(full, `t${i}`, `T${i}`);
+		const r = loadSaved(full, {}, [saved('a1', 'A'), saved('b1', 'B'), saved('c1', 'C')], id);
+		expect(r.layout.workspaces.length).toBe(12);
+		expect(r.full).toEqual(['B', 'C']);
 	});
 });
