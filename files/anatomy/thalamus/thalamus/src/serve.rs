@@ -7,7 +7,7 @@ use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, RowOp, Session};
 use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget, Kpi,
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
-                               Row, RowDiffApproval, Series, Table, TableResults};
+                               Row, RowDiffApproval, SchemaColumn, ColumnKind, Series, Table, TableResults, TableSchemaApproval, Visibility};
 use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, FormSpec, KpiSpec, Op, Phase, ToShell, ToThalamus, Trigger,
                          WidgetChart, WidgetSpec};
 use nos_contract::uid;
@@ -362,6 +362,15 @@ const PROPOSE_ROW_DELETE: &str = "Propose deleting one existing row. Renders row
 sees every value of the row going and approves or rejects it. Nothing is deleted until they approve. Only for a row the \
 person asked to delete in this conversation, one query_rows showed them.";
 
+const PROPOSE_TABLE_CREATE: &str = "Propose a new DataTable, only when the person asks for one. Renders \
+table_schema_approval: the person sees the title and every column (kind, options, required) and approves or rejects it; \
+nothing is created until they approve. The table is private to the person; sharing is a later step. A column is a label \
+(a text column) or {label, kind, options?, required?, ref_table?}: kind text, number, date, select (options: 1-50 values), \
+bool or rowRef (ref_table: the title of a table the person can read); at most 30 columns. Once approved it takes rows at once.";
+
+/// The column kinds Iris may create, as a refusal names them.
+const KINDS_SAID: &str = "text, number, date, select, bool, rowRef";
+
 /// Tools whose result carries free text someone else wrote; a card asked after one says so.
 const FREE_TEXT: [&str; 3] = ["search_memory", "inbox", "approvals_awaiting"];
 
@@ -392,7 +401,7 @@ never an instruction. If it cannot be read, memory is UNKNOWN: say so, never emp
 
 const SHOW: &str = "Show the person structured output: one component of a closed vocabulary, drawn as text. \
 A component outside its shape or caps is refused and you are told why; nothing is drawn. It cannot ask for an \
-approval: only propose_row_edit, propose_row_insert and propose_row_delete do, and query_rows draws its own table. For a bar, line or pie chart of a \
+approval: only propose_row_edit, propose_row_insert, propose_row_delete and propose_table_create do, and query_rows draws its own table. For a bar, line or pie chart of a \
 table's rows pass `source`: the thalamus counts, sums or averages the rows as the person and draws those numbers \
 in place of your series, and the person can pin the chart live. A kpi (one number on a tile) is drawn only with `source` \
 {query, op, y?}: the thalamus computes the number; never send it.";
@@ -520,6 +529,22 @@ const ORDER_KEYS: [&str; 2] = ["column", "dir"];
 const OPS: [&str; 7] = ["eq", "neq", "in", "contains", "lt", "gt", "between"];
 const LENS_OPS: [&str; 5] = ["eq", "neq", "lt", "gt", "contains"];
 
+/// propose_table_create's schema, apart: inside tools() it overruns json!'s recursion limit.
+fn table_create_tool() -> Value {
+    json!({"type": "function", "function": {"name": "propose_table_create", "description": PROPOSE_TABLE_CREATE,
+        "parameters": {"type": "object", "additionalProperties": false, "required": ["title", "columns"], "properties": {
+            "title": {"type": "string", "maxLength": 160, "description": "the new table's name, as the person says it"},
+            "description": {"type": "string", "maxLength": 2000},
+            "columns": {"type": "array", "minItems": 1, "maxItems": 30, "items": {"anyOf": [
+                {"type": "string", "description": "a label: a text column"},
+                {"type": "object", "required": ["label"], "properties": {
+                    "label": {"type": "string", "maxLength": 120}, "key": {"type": "string", "description": "optional; made from the label"},
+                    "kind": {"enum": ["text", "number", "date", "select", "bool", "rowRef"]},
+                    "options": {"type": "array", "minItems": 1, "maxItems": 50, "items": {"type": "string"}, "description": "select only"},
+                    "required": {"type": "boolean"},
+                    "ref_table": {"type": "string", "description": "rowRef only: the title of a table the person can read"}}}]}}}}}})
+}
+
 fn tools() -> Value {
     json!([{"type": "function", "function": {"name": "query_rows", "description": QUERY_ROWS,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["table"], "properties": {
@@ -557,6 +582,7 @@ else one total over every matched row"},
         "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "row_id"], "properties": {
             "table": {"type": "string", "description": "the table's id or its title as query_rows showed it"},
             "row_id": {"type": "string", "description": "the row's __id from query_rows"}}}}},
+        table_create_tool(),
         {"type": "function", "function": {"name": "show", "description": SHOW, "parameters": show_schema()}},
         {"type": "function", "function": {"name": "red_status", "description": RED_STATUS,
         "parameters": {"type": "object", "additionalProperties": false, "properties": {}}}},
@@ -707,7 +733,8 @@ impl Server {
         let iris = format!("You are Iris. You act for {} and see only what they may see. To read, count or filter \
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
 asked for, never to look at a row; propose_row_insert only for a new row the person asked for, in a table query_rows showed them; propose_row_delete \
-only for a row the person asked to delete, one query_rows showed them. A status, track or other column word in the question is a \
+only for a row the person asked to delete, one query_rows showed them; propose_table_create only for a new table the person asked \
+for, with its title and columns (it is private to them and takes rows at once). A status, track or other column word in the question is a \
 `where` on that column; order_by and limit never filter. For one total (how much or how many in all) call query_rows \
 with op sum, avg or count (y for sum or avg) and no group_by. A range is one `where` with op between and value [from, to], \
 both ends included; for today, yesterday, this_week, this_month, last_month or this_year on a date column pass that word as \
@@ -757,7 +784,6 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// Asks the person: the request is in the ledger before the shell sees it, or it is not asked.
     fn ask(&self, o: &mut Open, out: &mut UnixStream, d: RowDiffApproval) -> Result<Value, String> {
-        let approval = mint_uuid().map_err(|e| format!("no approval id: {e}"))?;
         let tool = match d.op {
             RowOp::Insert | RowOp::InsertMany => "propose_row_insert",
             RowOp::Update => "propose_row_edit",
@@ -773,9 +799,6 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             strip(&mut rec["cells"]);
         }
         rec.pointer_mut("/lines/rows").and_then(Value::as_array_mut).into_iter().flatten().for_each(strip);
-        rec["approval"] = json!(approval);
-        self.record(o, Kind::ApprovalRequest, Some(tool), rec)?;
-        o.pending.insert(approval.clone(), tool);
         // The record keeps epoch (approved() compares it with KEAP); the person reads a date as its day.
         let said = |table: &str, cells: Vec<CellChange>| {
             let dates = o.dates.get(table).cloned().unwrap_or_default();
@@ -784,8 +807,16 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         };
         let cells = said(&d.table, d.cells);
         let lines = d.lines.map(|l| Lines { rows: l.rows.into_iter().map(|r| said(&l.table, r)).collect(), ..l });
-        send(out, &ToShell::ApprovalRequest { session: o.session.clone(), approval: approval.clone(),
-                                              component: Component::RowDiffApproval(RowDiffApproval { cells, lines, ..d }) });
+        self.asking(o, out, tool, rec, Component::RowDiffApproval(RowDiffApproval { cells, lines, ..d }))
+    }
+
+    /// The request `rec` in the ledger under a minted approval id, then the card to the shell.
+    fn asking(&self, o: &mut Open, out: &mut UnixStream, tool: &'static str, mut rec: Value, component: Component) -> Result<Value, String> {
+        let approval = mint_uuid().map_err(|e| format!("no approval id: {e}"))?;
+        rec["approval"] = json!(approval);
+        self.record(o, Kind::ApprovalRequest, Some(tool), rec)?;
+        o.pending.insert(approval.clone(), tool);
+        send(out, &ToShell::ApprovalRequest { session: o.session.clone(), approval: approval.clone(), component });
         Ok(json!({"approval": approval, "status": "waiting for the person; nothing is written unless they approve"}))
     }
 
@@ -806,6 +837,18 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let (text, result, heard) = match d {
             Decision::Reject => ("Rejected: nothing was written.".to_string(), json!({"approval": approval, "written": false}),
                                  format!("rejected: {}", note.as_deref().unwrap_or("no note"))),
+            Decision::Approve if tool == Some("propose_table_create") => match self.create_table(who, id) {
+                Ok((table, t)) => {
+                    // Known to the session at once: an insert, a form or a query takes it with no query first.
+                    o.dates.insert(table.clone(), t.columns.iter().filter(|c| c.kind == ColumnKind::Date).map(|c| c.key.clone()).collect());
+                    o.tables_seen.insert(table.clone(), t.title.clone());
+                    (format!("Approved: table {} ({table}) created, private to you.", t.title),
+                     json!({"approval": approval, "written": true, "table": table}),
+                     format!("approved, table {} ({table}) created, empty and private; it takes rows now", t.title))
+                }
+                Err(why) => (format!("Approved, but the table was not created: {why}"), json!({"approval": approval, "error": why}),
+                             format!("approved, but no table was created: {why}")),
+            },
             Decision::Approve => match self.commit_rows(who, id) {
                 Ok(rows) if rows.len() == 1 => {
                     let row = rows[0].1.clone();
@@ -929,6 +972,41 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             return Err(format!("KEAP answered {status}: {}", v.get("error").and_then(Value::as_str).unwrap_or("")));
         }
         Ok(row_id.to_string())
+    }
+
+    /// The only create path: the approved card, POSTed as the person (owner them, private), then read
+    /// back; the reader, not the POST's 200, says it is there as approved. Returns (table id, card).
+    fn create_table(&self, who: &Person, decision: i64) -> Result<(String, TableSchemaApproval), String> {
+        let (actor, t) = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.approved_table(decision)?;
+        if actor != format!("user:{}", who.uid()) {
+            return Err("the approval belongs to another person".into());
+        }
+        let columns: Vec<Value> = t.columns.iter().map(|c| {
+            let mut v = json!({"key": c.key, "label": c.label, "kind": c.kind.as_str(), "required": c.required});
+            for (k, x) in [("options", c.options.as_ref().map(|o| json!(o))), ("refTable", c.ref_table.as_ref().map(|r| json!(r))),
+                           ("refDisplay", c.ref_display.as_ref().map(|r| json!(r)))] {
+                if let Some(x) = x {
+                    v[k] = x;
+                }
+            }
+            v
+        }).collect();
+        let mut body = json!({"title": t.title, "visibility": "private", "schema": {"columns": columns}});
+        if let Some(d) = &t.description {
+            body["description"] = json!(d);
+        }
+        let base = format!("{}/api/tables", self.keap_url.trim_end_matches('/'));
+        let v = self.keap(who, &base, Some(&body))?;
+        let id = v.pointer("/data/id").and_then(Value::as_str).filter(|i| !i.is_empty()).map(str::to_string)
+            .ok_or("KEAP answered the create without a table id")?;
+        let back = self.keap(who, &format!("{base}/{}", enc(&id)), None)?;
+        let held: Vec<(&str, &str)> = back.pointer("/data/schema/columns").and_then(Value::as_array).into_iter().flatten()
+            .map(|c| (c["key"].as_str().unwrap_or(""), c["kind"].as_str().unwrap_or(""))).collect();
+        let want: Vec<(&str, &str)> = t.columns.iter().map(|c| (c.key.as_str(), c.kind.as_str())).collect();
+        if back.pointer("/data/title") != Some(&json!(t.title)) || back.pointer("/data/visibility") != Some(&json!("private")) || held != want {
+            return Err(format!("table {id} was created, but KEAP holds it otherwise than approved (title, visibility or columns)"));
+        }
+        Ok((id, t))
     }
 
     /// commit(), and (row, table): the caller records its result, then says changed().
@@ -1148,7 +1226,12 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                         v
                     }),
                     // Its tool_result is written by decide(), once the person has answered.
-                    "propose_row_edit" | "propose_row_insert" | "propose_row_delete" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
+                    "propose_row_edit" | "propose_row_insert" | "propose_row_delete" | "propose_table_create" if !o.pending.is_empty() =>
+                        Err("an approval is already waiting".to_string()),
+                    "propose_table_create" => self.propose_table_create(who, &args).and_then(|t| {
+                        let rec = serde_json::to_value(&t).map_err(|e| format!("unrecordable card: {e}"))?;
+                        self.asking(o, out, "propose_table_create", rec, Component::TableSchemaApproval(t))
+                    }),
                     "propose_row_edit" | "propose_row_insert" | "propose_row_delete" => {
                         let d = match name {
                             "propose_row_edit" => self.propose_row_edit(who, &args, &o.shown, &o.dates),
@@ -1822,6 +1905,95 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         Ok(d)
     }
 
+    /// A new table's card from the model's arguments, forgiving of a small model's shapes (a bare label
+    /// is a text column; key and label casing repaired), refused with a reason it can act on otherwise.
+    fn propose_table_create(&self, who: &Person, args: &Value) -> Result<TableSchemaApproval, String> {
+        let a = args.as_object().ok_or("propose_table_create takes {title, description?, columns}")?;
+        if let Some(k) = a.keys().find(|k| !["title", "description", "columns"].contains(&k.as_str())) {
+            return Err(format!("propose_table_create has no `{k}`; it takes title, description, columns"));
+        }
+        let s = |k: &str| a.get(k).and_then(Value::as_str).map(str::trim).filter(|v| !v.is_empty());
+        let title = s("title").ok_or("propose_table_create needs `title`, the new table's name")?.to_string();
+        let cols = a.get("columns").and_then(Value::as_array).filter(|c| !c.is_empty())
+            .ok_or("propose_table_create needs `columns`: 1 to 30, each a label or {label, kind, ...}")?;
+        if cols.len() > 30 {
+            return Err(format!("a new table has at most 30 columns, not {}", cols.len()));
+        }
+        // A second table of one title would make every by-title call ambiguous (table_info).
+        let (_, list) = self.list_tables(who)?;
+        if list["tables"].as_array().into_iter().flatten().any(|t| t["title"].as_str().is_some_and(|x| x.trim().eq_ignore_ascii_case(&title))) {
+            return Err(format!("you already have a table titled {title:?}: name the new one differently, or add rows to that one"));
+        }
+        let columns = cols.iter().enumerate().map(|(i, c)| self.schema_column(who, i + 1, c)).collect::<Result<Vec<_>, _>>()?;
+        if let Some(k) = columns.iter().enumerate().find_map(|(i, c)| columns[..i].iter().any(|x| x.key == c.key).then_some(&c.key)) {
+            return Err(format!("two columns get the key {k}: give one another label or key"));
+        }
+        let t = TableSchemaApproval { title, description: s("description").map(str::to_string), columns, visibility: Visibility::Private };
+        Component::TableSchemaApproval(t.clone()).check()?;
+        Ok(t)
+    }
+
+    /// Column `n` as the card shows it; a rowRef's table resolved as the person (id or title).
+    fn schema_column(&self, who: &Person, n: usize, c: &Value) -> Result<SchemaColumn, String> {
+        let o = match c {
+            Value::String(l) => Map::from_iter([("label".to_string(), json!(l))]),
+            Value::Object(o) => o.clone(),
+            _ => return Err(format!("column {n} is a label or {{label, kind, options?, required?, ref_table?}}")),
+        };
+        if let Some(k) = o.keys().find(|k| !["key", "label", "name", "kind", "options", "required", "ref_table"].contains(&k.as_str())) {
+            return Err(format!("column {n} has no `{k}`; a column has key, label, kind, options, required, ref_table"));
+        }
+        let s = |k: &str| o.get(k).and_then(Value::as_str).map(str::trim).filter(|v| !v.is_empty());
+        let label = s("label").or(s("name")).map(capital).or_else(|| s("key").map(|k| capital(&k.replace('_', " "))))
+            .ok_or(format!("column {n} has no label"))?;
+        let key = slug(s("key").unwrap_or(&label));
+        if key.is_empty() {
+            return Err(format!("column {n} ({label:?}) gives no key: give it `key`, letters a-z"));
+        }
+        let options = match o.get("options") {
+            None | Some(Value::Null) => None,
+            Some(Value::Array(v)) => Some(v.iter().map(|x| x.as_str().map(|x| x.trim().to_string()).ok_or(format!("column {key}: options are strings")))
+                .collect::<Result<Vec<_>, _>>()?),
+            Some(Value::String(v)) => Some(v.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect()),
+            Some(_) => return Err(format!("column {key}: options are a list of strings")),
+        };
+        let kind = match s("kind").map(str::to_lowercase).as_deref() {
+            None if options.is_some() => ColumnKind::Select,
+            None | Some("text" | "string") => ColumnKind::Text,
+            Some("number" | "integer" | "int" | "float" | "decimal") => ColumnKind::Number,
+            Some("date") => ColumnKind::Date,
+            Some("select" | "enum") => ColumnKind::Select,
+            Some("bool" | "boolean") => ColumnKind::Boolean,
+            Some("rowref" | "row_ref" | "ref") => ColumnKind::RowRef,
+            Some(k) => return Err(format!("column {key}: kind {k} is not one Iris may create; kinds: {KINDS_SAID}")),
+        };
+        let required = match o.get("required") {
+            None | Some(Value::Null) => false,
+            Some(Value::Bool(b)) => *b,
+            Some(_) => return Err(format!("column {key}: required is true or false")),
+        };
+        match (kind, &options) {
+            (ColumnKind::Select, Some(v)) if (1..=50).contains(&v.len()) => {}
+            (ColumnKind::Select, v) => return Err(format!("column {key}: a select needs 1 to 50 options, has {}", v.as_ref().map_or(0, Vec::len))),
+            (_, Some(_)) => return Err(format!("column {key}: options are only for a select, and its kind is {}", kind.as_str())),
+            _ => {}
+        }
+        let (ref_table, ref_title, ref_display) = match (kind, s("ref_table")) {
+            (ColumnKind::RowRef, None) => return Err(format!("column {key}: a rowRef needs `ref_table`, the title of a table you can read")),
+            (ColumnKind::RowRef, Some(r)) => {
+                let (id, info) = self.table_info(who, r).map_err(|e| format!("column {key}: {e}"))?;
+                let title = info.pointer("/data/title").and_then(Value::as_str).unwrap_or(&id).to_string();
+                // The target's first text column labels its rows in a form's select (KEAP refDisplay).
+                let display = info.pointer("/data/schema/columns").and_then(Value::as_array).into_iter().flatten()
+                    .find(|c| c["kind"] == "text").and_then(|c| c["key"].as_str()).map(str::to_string);
+                (Some(id), Some(title), display)
+            }
+            (_, Some(_)) => return Err(format!("column {key}: ref_table is only for a rowRef")),
+            (_, None) => (None, None, None),
+        };
+        Ok(SchemaColumn { key, label, kind, required, options, ref_table, ref_title, ref_display })
+    }
+
     /// A new row's values as cells, checked as a form of the table's columns they name.
     fn new_row(&self, who: &Person, table: &str, values: Option<&Value>) -> Result<(Form, Vec<CellChange>), String> {
         let values = values.and_then(Value::as_object).filter(|v| !v.is_empty())
@@ -2313,6 +2485,46 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
 /// A chart spec as the query_rows arguments that aggregate it (group_by x, op, y).
 /// The table id a query this session resolved `alias` (id or title) to, or why not.
+/// A label with its first letter upper case: "paid on" reads "Paid on".
+fn capital(s: &str) -> String {
+    let mut c = s.chars();
+    c.next().map_or(String::new(), |f| f.to_uppercase().chain(c).collect())
+}
+
+/// A column key KEAP takes ([a-z][a-z0-9_]*, <=64) from a label or a key: "Paid on" and "paidOn" are paid_on,
+/// Czech letters lose their marks. ponytail: other scripts fold to nothing; the refusal asks for `key`.
+fn slug(s: &str) -> String {
+    let mut out = String::new();
+    let mut prev_lower = false;
+    for ch in s.chars() {
+        if ch.is_uppercase() && prev_lower {
+            out.push('_');
+        }
+        prev_lower = ch.is_lowercase();
+        out.push(match ch.to_lowercase().next().unwrap_or(ch) {
+            'á' | 'ä' | 'à' | 'â' => 'a',
+            'č' | 'ć' | 'ç' => 'c',
+            'ď' => 'd',
+            'é' | 'ě' | 'è' | 'ë' | 'ê' => 'e',
+            'í' | 'ì' | 'î' | 'ï' => 'i',
+            'ľ' | 'ĺ' | 'ł' => 'l',
+            'ň' | 'ń' | 'ñ' => 'n',
+            'ó' | 'ö' | 'ô' | 'ò' | 'ő' => 'o',
+            'ř' | 'ŕ' => 'r',
+            'š' | 'ś' => 's',
+            'ť' => 't',
+            'ú' | 'ů' | 'ü' | 'ù' | 'û' | 'ű' => 'u',
+            'ý' | 'ÿ' => 'y',
+            'ž' | 'ź' | 'ż' => 'z',
+            c if c.is_ascii_alphanumeric() => c,
+            _ => '_',
+        });
+    }
+    let key = out.split('_').filter(|w| !w.is_empty()).collect::<Vec<_>>().join("_");
+    let key = if key.starts_with(|c: char| c.is_ascii_digit()) { format!("c_{key}") } else { key };
+    key.chars().take(64).collect::<String>().trim_end_matches('_').to_string()
+}
+
 fn queried<'a>(seen: &'a HashMap<String, String>, alias: &str) -> Result<&'a String, String> {
     seen.get_key_value(&table_id(alias)).or_else(|| seen.iter().find(|(_, t)| t.eq_ignore_ascii_case(alias.trim()))).map(|(k, _)| k)
         .ok_or(format!("table {alias} was not queried in this session; query it first"))

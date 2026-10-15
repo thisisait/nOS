@@ -146,6 +146,26 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 }
             }
         }
+        Component::TableSchemaApproval(t) => {
+            out.push(head(format!("create table {}, private to you — nothing is created unless you approve", t.title)));
+            out.extend(t.description.iter().map(|d| Line::from(format!("  {d}"))));
+            for c in &t.columns {
+                let mut s = format!("  {} ({}): {}", c.key, c.label, c.kind.as_str());
+                if c.required {
+                    s += ", required";
+                }
+                if let Some(o) = &c.options {
+                    s += &format!(" of {}", o.join(", "));
+                }
+                if let Some(r) = &c.ref_table {
+                    s += &format!(" -> {} ({r})", c.ref_title.as_deref().unwrap_or(r));
+                }
+                if let Some(d) = &c.ref_display {
+                    s += &format!(", shown by {d}");
+                }
+                out.push(Line::from(s));
+            }
+        }
         Component::InboxList(i) => {
             out.push(head(format!("inbox — {} waiting", i.items.len())));
             for x in &i.items {

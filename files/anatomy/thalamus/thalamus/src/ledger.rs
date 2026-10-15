@@ -77,6 +77,7 @@ pub struct Session<'a> {
 
 /// What a write may do: add a row KEAP names, or change cells of one that exists (the card's op).
 pub use nos_contract::renderers::RowOp;
+use nos_contract::renderers::{Component, TableSchemaApproval};
 
 /// One approved write, as the request showed it to the person.
 #[derive(Debug)]
@@ -150,22 +151,7 @@ impl Ledger {
     /// insert_many (a new parent, or a row_id shown with old == new, plus approved_lines), and
     /// no key empty or `__` (KEAP reads those as row sharing). Every write passes here.
     pub fn approved(&self, decision: i64) -> Result<Approved, String> {
-        let (actor, said, request): (String, Option<String>, String) = self
-            .db
-            .query_row(
-                "SELECT s.actor_id, json_extract(d.result_json, '$.decision'), r.result_json
-                 FROM events d JOIN sessions s ON s.uuid = d.run_id AND s.ended_at IS NULL
-                 JOIN events r ON r.run_id = d.run_id AND r.type = ?3 AND r.id < d.id
-                      AND json_extract(r.result_json, '$.approval') = json_extract(d.result_json, '$.approval')
-                 WHERE d.id = ?1 AND d.type = ?2",
-                params![decision, Kind::ApprovalDecision.as_str(), Kind::ApprovalRequest.as_str()],
-                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-            )
-            .map_err(|e| format!("no approval behind event {decision}: {e}"))?;
-        if said.as_deref() != Some("approve") {
-            return Err(format!("event {decision} is not an approval"));
-        }
-        let req: Value = serde_json::from_str(&request).map_err(|e| format!("unreadable request: {e}"))?;
+        let (actor, req) = self.request(decision)?;
         let field = |k: &str| req.get(k).and_then(Value::as_str).map(str::to_string).ok_or(format!("request has no {k}"));
         let op = match req.get("op").map(|o| o.as_str()) {
             None | Some(Some("update")) => RowOp::Update,
@@ -217,6 +203,37 @@ impl Ledger {
             return Err("a write changes at least one cell".into());
         }
         Ok(Approved { actor, table: field("table")?, op, row_id, values, old, lines })
+    }
+
+    /// The request an approve decision answers, in an open session, and the session's actor.
+    fn request(&self, decision: i64) -> Result<(String, Value), String> {
+        let (actor, said, request): (String, Option<String>, String) = self
+            .db
+            .query_row(
+                "SELECT s.actor_id, json_extract(d.result_json, '$.decision'), r.result_json
+                 FROM events d JOIN sessions s ON s.uuid = d.run_id AND s.ended_at IS NULL
+                 JOIN events r ON r.run_id = d.run_id AND r.type = ?3 AND r.id < d.id
+                      AND json_extract(r.result_json, '$.approval') = json_extract(d.result_json, '$.approval')
+                 WHERE d.id = ?1 AND d.type = ?2",
+                params![decision, Kind::ApprovalDecision.as_str(), Kind::ApprovalRequest.as_str()],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .map_err(|e| format!("no approval behind event {decision}: {e}"))?;
+        if said.as_deref() != Some("approve") {
+            return Err(format!("event {decision} is not an approval"));
+        }
+        let req: Value = serde_json::from_str(&request).map_err(|e| format!("unreadable request: {e}"))?;
+        Ok((actor, req))
+    }
+
+    /// What a decision approved creating: the table card itself, re-checked as the contract checks it.
+    /// Err unless the request is a whole table_schema_approval (private, <=30 columns, KEAP's kinds).
+    pub fn approved_table(&self, decision: i64) -> Result<(String, TableSchemaApproval), String> {
+        let (actor, mut req) = self.request(decision)?;
+        req.as_object_mut().map(|r| r.remove("approval"));
+        let t: TableSchemaApproval = serde_json::from_value(req).map_err(|e| format!("the request is no table create: {e}"))?;
+        Component::TableSchemaApproval(t.clone()).check()?;
+        Ok((actor, t))
     }
 
     /// Writes agent_session_end, then closes the session so nothing more lands in it.

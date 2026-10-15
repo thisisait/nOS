@@ -48,6 +48,13 @@ ruling 2026-10-11), it does not go through the receptor's socket.
   to the ledger as `agent_approval_request`, then shown as `row_diff_approval`.
   Only an approve decision for that request, in that session, by that person,
   lets the one POST through. Reject writes nothing to KEAP.
+- `propose_table_create{title, description?, columns}`: a new DataTable, private to
+  the person, as one `table_schema_approval` card (every column's kind, options,
+  required). At most 30 columns of text, number, date, select (1-50 options), bool
+  or rowRef (to a table the person can read, by title); a bare label is a text
+  column and key/label casing is repaired, anything else is refused with why. A
+  title the person already has is refused. Approve POSTs `/api/tables` as the
+  person, reads it back, and the session can insert into it at once.
 - `show{component}`: draws one component of `SHOW_KINDS` (serve.rs; among them
   `chart` in six kinds over a category, number or time axis, `timeline`, `graph`;
   inline SVG in the pupil, values as text in the terminal) the model builds. Unknown fields and over-cap components are refused (`Component::check`,

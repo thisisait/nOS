@@ -75,7 +75,7 @@ def turns_of(case: dict) -> list[str]:
 def run_case(case: dict, sock: str, timeout: float) -> dict:
     """Send the case's turns over one connection; what came back, per kind."""
     turns = turns_of(case)
-    got = {"tools": [], "renders": [], "approvals": [], "cards": [], "refused": [], "text": "", "texts": [],
+    got = {"tools": [], "renders": [], "approvals": [], "cards": [], "card_kinds": [], "refused": [], "text": "", "texts": [],
            "model_uri": None, "error": None}
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.settimeout(timeout)
@@ -107,6 +107,7 @@ def run_case(case: dict, sock: str, timeout: float) -> dict:
                 elif t == "approval_request":
                     got["approvals"].append(m.get("approval"))
                     got["cards"].append((m.get("component") or {}).get("props", {}))
+                    got["card_kinds"].append((m.get("component") or {}).get("kind"))
                     # The decision the pupil sends for reject (approvals.ts); serve answers it with text + idle.
                     f.write(json.dumps({"t": "approval_decision", "approval": m.get("approval"),
                                         "decision": "reject", "note": None}) + "\n")
@@ -221,6 +222,13 @@ def check(name: str, arg, got: dict, now: float) -> bool:
                 and all(_same(new[k], v) for k, v in arg["cells"].items())
                 and (p.get("op") != "insert" or all(c.get("old") is None for c in cells))
                 and (p.get("op") != "delete" or all(c.get("old") is not None for c in cells)))
+    if name == "approval_kind":  # the LAST card is this component kind
+        kinds = got.get("card_kinds") or []
+        return bool(kinds) and kinds[-1] == arg
+    if name == "approval_columns":  # the LAST card creates exactly these columns {key: kind}, private
+        p = got["cards"][-1] if got["cards"] else {}
+        cols = {c.get("key"): c.get("kind") for c in p.get("columns", [])}
+        return p.get("visibility") == "private" and cols == arg
     if name == "proposes_nothing":  # no card, and no proposal serve refused before drawing one
         return not got["approvals"] and not any(str(t).startswith("propose_") for t in got["tools"])
     if name == "tools_not_called":

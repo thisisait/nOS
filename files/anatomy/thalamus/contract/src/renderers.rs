@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 pub enum Component {
     TableResults(TableResults),
     RowDiffApproval(RowDiffApproval),
+    TableSchemaApproval(TableSchemaApproval),
     InboxList(InboxList),
     ApprovalsList(ApprovalsList),
     RedStatus(RedStatus),
@@ -448,6 +449,21 @@ impl Component {
                     (RowOp::Delete, _) => Err("a delete names its row".into()),
                 }
             }
+            Component::TableSchemaApproval(t) => {
+                if t.title.trim().is_empty() {
+                    return Err("a new table has a title".into());
+                }
+                cap("a table title", &t.title, 160)?;
+                t.description.as_deref().map_or(Ok(()), |d| cap("a table description", d, 2000))?;
+                if !(1..=30).contains(&t.columns.len()) {
+                    return Err(format!("a table has 1 to 30 columns, not {}", t.columns.len()));
+                }
+                let twice = |v: &[String]| v.iter().enumerate().find_map(|(i, x)| v[..i].contains(x).then(|| x.clone()));
+                if let Some(k) = twice(&t.columns.iter().map(|c| c.key.clone()).collect::<Vec<_>>()) {
+                    return Err(format!("column key {k} appears twice"));
+                }
+                t.columns.iter().try_for_each(check_column)
+            }
             _ => Ok(()),
         }
     }
@@ -811,6 +827,40 @@ pub enum LensOp {
     Contains,
 }
 
+/// One column of a new table as KEAP's createTable takes it (keap shared/contracts/table.ts columnDefSchema).
+fn check_column(c: &SchemaColumn) -> Result<(), String> {
+    let k = &c.key;
+    let snake = c.key.len() <= 64 && c.key.starts_with(|x: char| x.is_ascii_lowercase())
+        && c.key.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_');
+    if !snake {
+        return Err(format!("column key {k:?} is not snake_case ([a-z][a-z0-9_]*, at most 64)"));
+    }
+    if c.label.trim().is_empty() {
+        return Err(format!("column {k} has no label"));
+    }
+    cap("a column label", &c.label, NAME_MAX)?;
+    match (c.kind, &c.options) {
+        (ColumnKind::Select, Some(o)) if (1..=50).contains(&o.len()) => {
+            if let Some(x) = o.iter().find(|x| x.trim().is_empty() || x.chars().count() > NAME_MAX) {
+                return Err(format!("column {k}: option {x:?} is empty or over {NAME_MAX} chars"));
+            }
+            if let Some(x) = o.iter().enumerate().find_map(|(i, x)| o[..i].contains(x).then_some(x)) {
+                return Err(format!("column {k}: option {x:?} appears twice"));
+            }
+        }
+        (ColumnKind::Select, _) => return Err(format!("column {k}: a select has 1 to 50 options")),
+        (_, Some(_)) => return Err(format!("column {k}: only a select has options")),
+        _ => {}
+    }
+    let refs = c.ref_table.is_some() || c.ref_title.is_some() || c.ref_display.is_some();
+    match c.kind {
+        ColumnKind::RowRef if c.ref_table.as_deref().is_none_or(str::is_empty) => Err(format!("column {k}: a rowRef names the table it points into")),
+        ColumnKind::RowRef => Ok(()),
+        _ if refs => Err(format!("column {k}: only a rowRef points into a table")),
+        _ => Ok(()),
+    }
+}
+
 /// 1 to 20 lines, each writing at least one cell with no old and never the parent's own column.
 fn check_lines(l: &Lines) -> Result<(), String> {
     if !(1..=20).contains(&l.rows.len()) {
@@ -984,6 +1034,68 @@ pub struct Lines {
     /// The rowRef column serve fills with the parent's id; no line carries it.
     pub ref_key: String,
     pub rows: Vec<Vec<CellChange>>,
+}
+
+/// A new DataTable under one approval (propose_table_create): what KEAP's POST /api/tables gets.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TableSchemaApproval {
+    pub title: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    pub columns: Vec<SchemaColumn>,
+    pub visibility: Visibility,
+}
+
+/// Only private: the person owns the new table; sharing is a later step (operator 2026-10-15).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Visibility {
+    Private,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SchemaColumn {
+    pub key: String,
+    pub label: String,
+    pub kind: ColumnKind,
+    #[serde(default)]
+    pub required: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub options: Option<Vec<String>>,
+    /// rowRef: the target table's id and title, and its column a row is shown by (KEAP refDisplay).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ref_table: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ref_title: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ref_display: Option<String>,
+}
+
+/// The KEAP column kinds Iris may create; KEAP's others (json, file, vector, ...) are not hers to make.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ColumnKind {
+    Text,
+    Number,
+    Date,
+    Select,
+    Boolean,
+    RowRef,
+}
+
+impl ColumnKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ColumnKind::Text => "text",
+            ColumnKind::Number => "number",
+            ColumnKind::Date => "date",
+            ColumnKind::Select => "select",
+            ColumnKind::Boolean => "boolean",
+            ColumnKind::RowRef => "rowRef",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

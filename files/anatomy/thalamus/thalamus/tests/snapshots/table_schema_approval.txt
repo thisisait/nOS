@@ -1,0 +1,10 @@
+create table Expenses, private to you — nothing is created unless you approve
+  What I spend on trips
+  item (Item): text, required
+  amount (Amount): number
+  paid_on (Paid on): date
+  category (Category): select of travel, food
+  settled (Settled): boolean
+  trip (Trip): rowRef -> Trips (t-trips), shown by name
+
+

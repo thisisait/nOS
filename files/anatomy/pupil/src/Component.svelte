@@ -101,6 +101,18 @@
 				</ul>
 			{/each}
 		{/if}
+	{:else if component.kind === 'table_schema_approval'}
+		{@const t = component.props}
+		<h3>create table {t.title}, {t.visibility} to you — nothing is created unless you approve</h3>
+		{#if t.description}<p class="muted">{t.description}</p>{/if}
+		<ul class="diff">
+			{#each t.columns as c}
+				<li>
+					<b>{c.key}</b> ({c.label}): {c.kind + (c.required ? ', required' : '') + (c.options ? ` of ${c.options.join(', ')}` : '')
+						+ (c.ref_table ? ` → ${c.ref_title ?? c.ref_table} (${c.ref_table})` : '') + (c.ref_display ? `, shown by ${c.ref_display}` : '')}
+				</li>
+			{/each}
+		</ul>
 	{:else if component.kind === 'inbox_list'}
 		{@const i = component.props}
 		<h3>inbox — {i.items.length} waiting</h3>

@@ -8,6 +8,7 @@ export type Value = null | boolean | number | string | Value[] | { [k: string]: 
 export type Component =
 	| { kind: 'table_results'; props: { table: string; name: string; query: string; matched: number; total: number; columns: string[]; rows: { __id: string; cells: Record<string, Value> }[]; projected: boolean } }
 	| { kind: 'row_diff_approval'; props: { table: string; title: string; op: 'insert' | 'update' | 'insert_many' | 'delete'; row_id?: string; cells: CellChange[]; read_from?: string[]; lines?: Lines } }
+	| { kind: 'table_schema_approval'; props: TableSchemaProps }
 	| { kind: 'inbox_list'; props: { items: { id: string; title: string; source: string; created_at: string }[]; refused: string[] } }
 	| { kind: 'approvals_list'; props: { items: { kind: string; severity: string; age: string; what: string; where: string; note?: string }[]; unknown: string[] } }
 	| { kind: 'red_status'; props: { red_count: number; reds: string[]; hold_count: number; holds: string[] } }
@@ -27,6 +28,13 @@ export type Component =
 
 /** One number serve computed from a table (renderers.rs Kpi); never the model's. */
 export type KpiProps = { title: string; value: number; unit?: string; delta?: number; delta_label?: string; source?: string };
+
+/** A new private table Iris proposes (renderers.rs TableSchemaApproval): every column, under one approval. */
+export type TableSchemaProps = { title: string; description?: string; visibility: 'private'; columns: SchemaColumn[] };
+export type SchemaColumn = {
+	key: string; label: string; kind: 'text' | 'number' | 'date' | 'select' | 'boolean' | 'rowRef'; required: boolean;
+	options?: string[]; ref_table?: string; ref_title?: string; ref_display?: string;
+};
 
 /** A tab Iris offers (renderers.rs Dashboard): nothing runs until the person places it. */
 export type DashboardProps = { name: string; lens: Lens[]; widgets: { title: string; spec: WidgetSpec }[]; dropped: { title: string; why: string }[] };
