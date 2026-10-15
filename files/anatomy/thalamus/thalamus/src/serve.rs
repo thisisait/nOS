@@ -1170,10 +1170,11 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// One chat-completions call; the model gets the conversation, never a KEAP header.
     fn complete(&self, model: &Binding, o: &mut Open) -> Result<Value, String> {
         let url = format!("{}/chat/completions", model.base_url.trim_end_matches('/'));
-        let mut req = agent(300).post(&url);
-        if !model.auth_token.is_empty() {
-            req = req.header("Authorization", &format!("Bearer {}", model.auth_token));
-        }
+        let a = agent(300);
+        let req = || {
+            let rb = a.post(&url);
+            if model.auth_token.is_empty() { rb } else { rb.header("Authorization", &format!("Bearer {}", model.auth_token)) }
+        };
         let mut body = json!({"model": model.model_id, "messages": o.messages, "tools": tools()});
         // Ollama maps "none" to think:false; a cloud row is left alone, it may refuse an unknown field.
         if model.local {
@@ -1182,7 +1183,17 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 body["temperature"] = json!(t);
             }
         }
-        let mut r = req.send_json(&body).map_err(|e| format!("model unreachable: {e}"))?;
+        // A 429 is a rate limit, not an answer (local bench, mistral-eu: 13/34 cases): wait its
+        // Retry-After (capped) or 1 s, 2 s, then try again; a third 429 is refused as before.
+        let mut r = req().send_json(&body).map_err(|e| format!("model unreachable: {e}"))?;
+        for wait in [1u64, 2] {
+            if r.status().as_u16() != 429 {
+                break;
+            }
+            let after = r.headers().get("retry-after").and_then(|v| v.to_str().ok()?.trim().parse::<u64>().ok());
+            std::thread::sleep(std::time::Duration::from_secs(after.unwrap_or(wait).min(20)));
+            r = req().send_json(&body).map_err(|e| format!("model unreachable: {e}"))?;
+        }
         let status = r.status().as_u16();
         let v: Value = r.body_mut().read_json().map_err(|e| format!("model answered {status} with no JSON: {e}"))?;
         if status != 200 {
