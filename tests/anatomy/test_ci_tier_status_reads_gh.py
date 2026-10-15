@@ -50,10 +50,10 @@ def test_unreadable_gh_is_unknown_never_green(tmp_path):
 def test_green_needs_a_success_and_absence_is_red(tmp_path):
     runs = [{"databaseId": 1, "headSha": "a" * 40, "createdAt": _now()},
             {"databaseId": 2, "headSha": "b" * 40, "createdAt": _now()}]
-    lanes = _run(tmp_path, {"list.json": runs, "view-1.json": _jobs(devops="success", iiab="failure"),
-                            "view-2.json": _jobs(iiab="cancelled")})
+    lanes = _run(tmp_path, {"list.json": runs, "view-1.json": _jobs(devops="success", b2b="failure"),
+                            "view-2.json": _jobs(b2b="cancelled")})
     assert lanes.pop("devops") == "GREEN"
-    assert lanes.pop("iiab") == "RED"
+    assert lanes.pop("b2b") == "RED"
     assert set(lanes.values()) == {"RED"}, f"a lane with no run must be red: {lanes}"
 
 
