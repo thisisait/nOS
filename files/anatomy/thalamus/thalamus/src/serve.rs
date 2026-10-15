@@ -1532,7 +1532,62 @@ fn opened(o: &mut Open, c: Component) -> Result<Component, String> {
 
 /// The model's component and its `source`, or why not: only a SHOW_KINDS kind, closed props, within
 /// its caps. It can only become a Render; an approval is minted by ask() alone.
+/// Client bench 2026-10-14: a local model sends show as `component` = a JSON string, `type` for `kind`, props
+/// flattened, a kind's bare name ("pie-chart"), or a `source` alone. Read them as the one shape; the checks
+/// below and Component::check() judge the result exactly as before.
+pub fn normalize_show(args: &Value) -> Value {
+    let mut out = args.clone();
+    let Some(o) = out.as_object_mut() else { return out };
+    let chart_word = |w: &str| -> Option<&'static str> {
+        let w = w.to_lowercase();
+        if w.contains("pie") { Some("pie") } else if w.contains("line") { Some("line") }
+        else if w.contains("bar") || w.contains("chart") { Some("bar") } else { None }
+    };
+    let mut comp = match o.remove("component") {
+        Some(Value::String(t)) => serde_json::from_str::<Value>(&t).unwrap_or(Value::String(t)),
+        Some(v) => v,
+        None if o.contains_key("source") => json!({"kind": "chart", "props": {"chart": "bar"}}),
+        None => Value::Null,
+    };
+    if let Value::String(name) = &comp {
+        comp = match chart_word(name) {
+            Some(c) => json!({"kind": "chart", "props": {"chart": c}}),
+            None => json!({"kind": name}),
+        };
+    }
+    if let Some(c) = comp.as_object_mut() {
+        if !c.contains_key("kind") {
+            if let Some(t) = c.remove("type").and_then(|t| t.as_str().map(str::to_string)) {
+                let kind = if SHOW_KINDS.contains(&t.as_str()) { t.clone() } else if chart_word(&t).is_some() { "chart".into() } else { t.clone() };
+                if !c.contains_key("props") {
+                    let props: Map<String, Value> = c.iter().filter(|(k, _)| k.as_str() != "kind").map(|(k, v)| (k.clone(), v.clone())).collect();
+                    c.retain(|_, _| false);
+                    c.insert("props".into(), Value::Object(props));
+                }
+                if kind == "chart" && t != "chart" {
+                    if let (Some(p), Some(w)) = (c.get_mut("props").and_then(Value::as_object_mut), chart_word(&t)) {
+                        p.entry("chart").or_insert(json!(w));
+                    }
+                }
+                c.insert("kind".into(), json!(kind));
+            }
+        }
+    }
+    // A sourced chart's series comes from KEAP: give the model's bare chart the shape check() wants.
+    if o.contains_key("source") && comp["kind"] == "chart" {
+        if let Some(p) = comp.get_mut("props").and_then(Value::as_object_mut) {
+            p.entry("x").or_insert(json!("category"));
+            p.entry("series").or_insert(json!([{"name": "rows", "points": [["", 0]]}]));
+        }
+    }
+    if !comp.is_null() {
+        o.insert("component".into(), comp);
+    }
+    out
+}
+
 fn show(args: &Value) -> Result<(Component, Option<Value>), String> {
+    let args = &normalize_show(args);
     if let Some(k) = args.as_object().and_then(|a| a.keys().find(|k| *k != "component" && *k != "source")) {
         return Err(format!("show has no parameter `{k}`; it takes `component` and, for a chart, `source`; expected shape: {}",
                            expected_shape("")));
