@@ -2,7 +2,7 @@
 //! what the person typed or pressed, and renders only the closed component vocabulary.
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
-use nos_contract::renderers::{Choice, Component, Delta, LensOp, Step, Tone, TreeNode};
+use nos_contract::renderers::{Choice, Component, Delta, LensOp, Step, Tone, TreeNode, WhenOp};
 use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ToShell, ToThalamus, WidgetSpec};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -225,7 +225,10 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 let kind = cell(&serde_json::to_value(x.kind).unwrap_or_default());
                 let req = if x.required { ", required" } else { "" };
                 let opts = x.options.as_ref().map(|o| format!(", options {}", o.join("|"))).unwrap_or_default();
-                out.push(Line::from(format!("  {} ({kind}{req}{opts})", x.label)));
+                let pre = f.prefill.as_ref().and_then(|p| p.get(&x.key)).map(|v| format!(", prefilled {}", cell(v))).unwrap_or_default();
+                let when = x.when.as_ref().map(|w| format!(", shown when {} {} {}", w.key, if w.op == WhenOp::Eq { "=" } else { "!=" }, w.value))
+                    .unwrap_or_default();
+                out.push(Line::from(format!("  {} ({kind}{req}{opts}{pre}{when})", x.label)));
             }
             if !f.omitted.is_empty() {
                 let o: Vec<String> = f.omitted.iter().map(|o| format!("{} ({})", o.key, o.kind)).collect();

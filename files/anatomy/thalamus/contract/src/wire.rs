@@ -2,7 +2,7 @@
 //! Spec: files/anatomy/contracts/thalamus-shell.yml; gate:
 //! tests/anatomy/test_thalamus_shell_contract.py.
 
-use crate::renderers::{Component, Dropped, SavedDashboard};
+use crate::renderers::{Component, Dropped, SavedDashboard, When};
 use crate::uid;
 use serde::{Deserialize, Serialize};
 
@@ -111,6 +111,12 @@ pub struct FormSpec {
     pub table: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub columns: Option<Vec<String>>,
+    /// The draft's first values by field key; serve checks them as a submit (form_cells).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prefill: Option<serde_json::Map<String, serde_json::Value>>,
+    /// By field key, the condition that field is drawn on; only an optional field takes one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub when: Option<std::collections::BTreeMap<String, When>>,
 }
 
 /// Why a widget ran: the person clicked, a layout was restored, or a write changed its table.

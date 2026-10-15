@@ -37,7 +37,9 @@ wire:
     id. spec is exactly one of {rows: query_rows arguments}, {chart: {query {table, q?, where?},
     chart bar|line|pie, x column, y? number column, op count|sum|avg}} (aggregated by the thalamus:
     category x largest first, 59 and "other" past 60; date x by UTC day, the last 60; number x
-    ascending, the 60 smallest), {form: {table, columns?}}. trigger: click|restore|table_changed,
+    ascending, the 60 smallest), {form: {table, columns?, prefill? {key: value}, when? {key: {key, op
+    eq|neq, value}}}} (prefill and when are checked as the form's submit is, and copied onto the form
+    it answers). trigger: click|restore|table_changed,
     recorded with the spec in the ledger. A widget's rows never let the model propose an edit.
   pin: >-
     `render {session, component, pin?}`: `pin` is the widget spec (as above, and checked as a widget
@@ -145,8 +147,11 @@ components:
     form: >-
       a widget form serve builds from the table's live schema (form_from_schema), never the model:
       {form uuid, table, title (the KEAP table's), fields[{key, label, kind text|number|date|select|bool,
-      required, options?, min?, max?, placeholder?}], omitted[{key, kind}]}; at most 20 fields, keys unique,
-      never empty or __-prefixed, a select has 1-50 options, min <= max; the pupil draws its own header
+      required, options?, min?, max?, placeholder?, when? {key, op eq|neq, value}}], omitted[{key, kind}],
+      prefill? {key: value}}; at most 20 fields, keys unique, never empty or __-prefixed, a select has 1-50
+      options, min <= max; `when` names another field and never sits on a required one (the pupil hides the
+      field while it fails and sends no value for it); prefill names fields only and is where the person's
+      draft starts, never a value sent (KEAP's column def has no min/max, so serve sets none); the pupil draws its own header
       "Adds a row to <title> (<table>)" and button "Add row"; the terminal says the fields and
       "fill it in the pupil"
     # Rendered only (wire.rs: never in an approval, never as a widget's answer); nothing runs at offer.

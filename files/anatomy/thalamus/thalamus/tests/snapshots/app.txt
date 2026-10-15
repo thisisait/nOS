@@ -18,9 +18,9 @@ line chart count by when: 1 series over time x, not drawn here
 widget w4:
 form Expenses (table expenses): fill it in the pupil
   Amount (number, required)
-  When (date)
-  Kind (select, required, options food|travel|tools)
-  Paid (bool)
+  When (date, prefilled 2026-10-20)
+  Kind (select, required, options food|travel|tools, prefilled travel)
+  Paid (bool, shown when kind != food)
   not editable here: receipt (file)
 widget w4: row e3 added
 table expenses changed (row e3)

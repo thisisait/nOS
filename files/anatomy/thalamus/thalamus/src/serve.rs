@@ -8,7 +8,7 @@ use crate::ledger::{Kind, Ledger, RowOp, Session};
 use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget,
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, Lens, LensOp, List, ListItem, Omitted, RedStatus,
                                Row, RowDiffApproval, SavedDashboard, Series, Table, TableResults};
-use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, Op, Phase, ToShell, ToThalamus, Trigger,
+use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, FormSpec, Op, Phase, ToShell, ToThalamus, Trigger,
                          WidgetChart, WidgetSpec};
 use nos_contract::uid;
 use serde_json::{json, Map, Value};
@@ -370,10 +370,11 @@ in place of your series, and the person can pin the chart live.";
 
 const OFFER_DASHBOARD: &str = "Offer the person a dashboard: a new tab of 1-8 widgets, each {title} and one of rows \
 (query_rows arguments), chart ({query {table, q?, where?}, chart bar|line|pie, x, y?, op count|sum|avg}: show's source \
-plus its chart) or form ({table, columns?}: a form that adds a row), and up to 4 lens filters {column, op, value} the \
-tab applies to every rows and chart widget (an empty value: the person picks). Nothing runs and nothing is placed: the \
-person sees the offer and may place it; you never see its rows. A widget that does not fit its table is left out and \
-you are told why.";
+plus its chart) or form ({table, columns?, prefill? {column: value}, when? {column: {key, op eq|neq, value}}}: a form \
+that adds a row; prefill is where the person's draft starts, when shows an optional field only while another field \
+holds a value), and up to 4 lens filters {column, op, value} the tab applies to every rows and chart widget (an empty \
+value: the person picks). Nothing runs and nothing is placed: the person sees the offer and may place it; you never \
+see its rows. A widget that does not fit its table is left out and you are told why.";
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
@@ -538,7 +539,7 @@ fn tools() -> Value {
                 "required": ["title"], "properties": {"title": {"type": "string", "maxLength": 120},
                     "rows": {"type": "object", "description": "query_rows arguments"},
                     "chart": {"type": "object", "description": "{query {table, q?, where?}, chart bar|line|pie, x, y?, op count|sum|avg}"},
-                    "form": {"type": "object", "description": "{table, columns?}"}}}}}}}}])
+                    "form": {"type": "object", "description": "{table, columns?, prefill? {column: value}, when? {column: {key, op eq|neq, value}}}"}}}}}}}}])
 }
 
 impl Server {
@@ -1529,7 +1530,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 (Some(kind), true) => fields.push(FormField {
                     label: Some(s(c, "label")).filter(|l| !l.is_empty()).unwrap_or_else(|| key.clone()),
                     options: options.filter(|_| kind == FieldKind::Select),
-                    key, kind, required, min: None, max: None, placeholder: None,
+                    key, kind, required, min: None, max: None, placeholder: None, when: None,
                 }),
                 // KEAP refuses a row without it, so a form that cannot fill it would only fail later.
                 _ if required => return Err(format!("column {key} ({kind}) is required and has no form field")),
@@ -1538,7 +1539,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             }
         }
         let form = mint_uuid().map_err(|e| format!("no form id: {e}"))?;
-        let f = Form { form, table, title, fields, omitted };
+        let f = Form { form, table, title, fields, omitted, prefill: None };
         Component::Form(f.clone()).check()?;
         Ok(f)
     }
@@ -1770,7 +1771,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             WidgetSpec::Chart(c) => self.widget_chart(who, c).map(|c| (Component::Chart(c), json!({"ok": true}))),
             WidgetSpec::Form(_) if o.forms.len() >= MAX_FORMS =>
                 Err(format!("this session holds {MAX_FORMS} forms; remove one first")),
-            WidgetSpec::Form(f) => self.form_from_schema(who, &f.table, f.columns.as_deref()).map(|f| {
+            WidgetSpec::Form(f) => self.form_from_schema(who, &f.table, f.columns.as_deref()).and_then(|x| shaped(x, f)).map(|f| {
                 o.forms.insert(widget.to_string(), f.clone());
                 (Component::Form(f.clone()), json!({"form": f.form}))
             }),
@@ -1927,7 +1928,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let cols = match &spec {
             WidgetSpec::Rows(a) => self.matched(who, &lensed(a.clone()), false)?.schema,
             WidgetSpec::Chart(c) => self.matched(who, &lensed(chart_args(c)), false)?.schema,
-            WidgetSpec::Form(f) => self.form_from_schema(who, &f.table, f.columns.as_deref())?.fields.iter()
+            WidgetSpec::Form(f) => shaped(self.form_from_schema(who, &f.table, f.columns.as_deref())?, f)?.fields.iter()
                 .map(|f| json!({"key": f.key, "kind": f.kind, "options": f.options}).as_object().cloned().unwrap_or_default()).collect(),
         };
         Ok((spec, cols))
@@ -2304,6 +2305,25 @@ pub fn aggregate(rows: &[(String, Map<String, Value>)], x: &str, axis: Axis, y: 
         }
     }
     (groups.iter().map(|g| (g.0.clone(), value(g))).collect(), cut)
+}
+
+/// A spec's prefill and conditions on the form serve built (iris-v3 B2): each prefill value passes the
+/// submit's own rules (form_cells, required aside), and a condition on a select names one of its
+/// options. Component::check refuses a condition on a required field, on itself or on no field.
+fn shaped(mut f: Form, spec: &FormSpec) -> Result<Form, String> {
+    if let Some(p) = spec.prefill.as_ref().filter(|p| !p.is_empty()) {
+        let only = Form { fields: f.fields.iter().filter(|x| p.contains_key(&x.key)).cloned().collect(), ..f.clone() };
+        form_cells(&only, p).map_err(|e| format!("prefill: {e}"))?;
+        f.prefill = Some(p.clone());
+    }
+    for (k, w) in spec.when.iter().flatten() {
+        if let Some(o) = f.fields.iter().find(|x| x.key == w.key).and_then(|x| x.options.as_ref()).filter(|o| !o.contains(&w.value)) {
+            return Err(format!("{k} is shown when {} is {}, not one of {}", w.key, w.value, o.join(", ")));
+        }
+        f.fields.iter_mut().find(|x| x.key == *k).ok_or(format!("the form has no field `{k}`"))?.when = Some(w.clone());
+    }
+    Component::Form(f.clone()).check()?;
+    Ok(f)
 }
 
 /// A submit's values as the cells of an insert: only the form's fields, each typed as its kind

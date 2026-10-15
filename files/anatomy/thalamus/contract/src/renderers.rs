@@ -335,6 +335,22 @@ impl Component {
                         }
                     }
                 }
+                for (x, w) in f.fields.iter().filter_map(|x| x.when.as_ref().map(|w| (x, w))) {
+                    // A hidden field sends nothing, so a required one would make the form unsendable.
+                    if x.required {
+                        return Err(format!("{} is required, so it is never hidden", x.key));
+                    }
+                    if w.key == x.key {
+                        return Err(format!("{} is shown on itself", x.key));
+                    }
+                    if !keys.contains(w.key.as_str()) {
+                        return Err(format!("{} is shown when `{}`, a field the form does not have", x.key, w.key));
+                    }
+                    cap("a when value", &w.value, NAME_MAX)?;
+                }
+                if let Some(k) = f.prefill.iter().flatten().map(|(k, _)| k).find(|k| !keys.contains(k.as_str())) {
+                    return Err(format!("the prefill names `{k}`, a field the form does not have"));
+                }
                 f.omitted.iter().try_for_each(|o| cap("an omitted column", &o.key, 64))
             }
             Component::Choice(c) => {
@@ -628,6 +644,9 @@ pub struct Form {
     pub fields: Vec<FormField>,
     /// Columns with no form field (a file, a json...), said as "not editable here".
     pub omitted: Vec<Omitted>,
+    /// Where the person's draft starts, by field key (FormSpec prefill, checked as a submit is); never a value sent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prefill: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -645,6 +664,25 @@ pub struct FormField {
     pub max: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub placeholder: Option<String>,
+    /// Drawn and sent only while the condition holds; a required field never carries one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub when: Option<When>,
+}
+
+/// Another field of the same form holds (eq) or does not hold (neq) `value`, as the pupil's draft says it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct When {
+    pub key: String,
+    pub op: WhenOp,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WhenOp {
+    Eq,
+    Neq,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
