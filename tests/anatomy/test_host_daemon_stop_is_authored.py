@@ -92,7 +92,9 @@ def _system(tmp: Path, config: str | None, extra: list[str]) -> list[str]:
 def test_dnsmasq_off_is_authored_and_takes_its_resolvers_along(tmp_path):
     assert _system(tmp_path, None, ["-e", "install_dnsmasq=false"]) == [], "a one-off -e boots dnsmasq out"
     ran = _system(tmp_path, "install_dnsmasq: false\n", [])
-    assert len(ran) == 1 and "bootout" in str(ran[0]), f"positive control: authored off retires nothing: {ran}"
+    # dnsmasq owns two root daemons: the system one and the roaming tailnet one (2026-10-15).
+    assert len(ran) == 2 and all("bootout" in str(r) for r in ran), f"positive control: authored off retires nothing: {ran}"
+    assert "/Library/LaunchDaemons/eu.thisisait.nos.dnsmasq-tailnet.plist" in str(ran[1]), "the tailnet plist stays"
     script = ran[0] if isinstance(ran[0], str) else ""
     assert "/etc/resolver" in script, "dnsmasq is booted out while /etc/resolver still points at it"
     # Run the rendered script against a sandbox: launchctl stubbed, /etc/resolver relocated.
