@@ -1534,6 +1534,10 @@ fn fake_tables(tables: Vec<(&str, Vec<serde_json::Value>)>) -> ((String, Seen), 
             let (status, out) = match (method, path) {
                 ("GET", p) if p == base => (200, schema.clone()),
                 ("GET", "/api/search/semantic") => (200, memory(false, serde_json::json!([]))),
+                ("GET", "/api/tables") => (200, serde_json::json!({"success": true, "data": tables.iter().map(|t| {
+                    let i: serde_json::Value = serde_json::from_str(&t.1).unwrap();
+                    serde_json::json!({"id": i["data"]["id"], "title": i["data"]["title"]})
+                }).collect::<Vec<_>>()}).to_string()),
                 ("GET", p) if p == format!("{base}/rows") => {
                     let (from, limit) = (arg("cursor").unwrap_or(0), arg("limit").unwrap_or(50));
                     let to = (from + limit).min(rows.len());
@@ -4099,4 +4103,14 @@ fn a_link_a_tool_returned_is_left_as_it_is() {
     let mut r = BufReader::new(s.try_clone().unwrap());
     let got = turn(&s, &mut r, None, "link?");
     assert!(got.iter().any(|m| matches!(m, ToShell::Text { text, .. } if text == "It is [a](https://x.example/a).")), "{got:?}");
+}
+
+// --- local bench r3 (mistral-eu): lines-dashboard dropped its form: "KEAP answered 404: unknown table" ---
+
+#[test]
+fn a_form_names_its_table_by_title_as_query_rows_does() {
+    let rig = rig_at("ftitle", mapped(), fake_table(&expenses(""), vec![]).0, vec![answer("never")], Some(local()));
+    let (_, w) = run_widget(&rig, "f1", serde_json::json!({"form": {"table": "EXPENSES"}}));
+    assert_eq!(w["component"]["kind"], "form", "{w}");
+    assert_eq!(w["component"]["props"]["table"], "expenses", "the form writes to the resolved id: {w}");
 }
