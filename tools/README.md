@@ -62,6 +62,7 @@ Each line here is a `reader:` node of the anatomy graph, a sense.
 - `e2e-status.py` — What the last estate e2e run (tests/e2e/estate) said, read back from `~/.nos/e2e/results.jsonl`: counts, the failing nodeids, age (red past 7 days); UNKNOWN without the record.
 - `elsewhere-status.py` — Estate work happening OUTSIDE the control centre, and how to get to it.
 - `estate-status.py` — What is TRUE right now, across the three places a fact about nOS can live.
+- `services-status.py` — What nOS offers: every manifest service, its resolved install flag (null when Jinja/undeclared) and hub_card description; Iris's estate_services catalogue. Exit 0; unreadable sources in `unknown`.
 - `face-wiring-report.py` — nOS-face wiring report — the hard-doctrine linter for the web-desktop shell.
 - `identity-status.py` — identity-status — the declared account roster vs what each realm holds.
 - `loader-vars-report.py` — D1 scoping tool (2026-06-11) — the plugin-loader variable contract.
