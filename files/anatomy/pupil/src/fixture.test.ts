@@ -123,6 +123,17 @@ describe('the pupil renders the contract fixture', () => {
 		expect(draw(semantic)).toContain('semantic');
 	});
 
+	it('a table and a record read their values in the shell locale', () => {
+		const table = draw({ t: 'render', session: 's', component: { kind: 'table', props: {
+			columns: ['amount', 'due'], rows: [[1234.5, '2026-03-05']] } } });
+		expect(table).toContain('CZK 1,234.50');
+		expect(table).toContain('3/5/2026');
+		const record = draw({ t: 'render', session: 's', component: { kind: 'record', props: {
+			fields: [{ key: 'amount', value: 1234.5 }, { key: 'due', value: '2026-03-05' }] } } });
+		expect(record).toContain('CZK 1,234.50');
+		expect(record).toContain('3/5/2026');
+	});
+
 	it('a table is headed by its name and counts, never its id', () => {
 		const msg: ToShell = { t: 'render', session: 's', component: { kind: 'table_results', props: {
 			table: '0b6f6a1e-roadmap-uuid', name: 'nOS Roadmap', query: 'status = next', matched: 23, total: 122,

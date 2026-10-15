@@ -20,6 +20,19 @@ describe('cs-CZ formatting (display only)', () => {
 		expect(cs(1234.5, 'amount')).toBe('1 234,50 Kč');
 	});
 
+	it('a number keeps every digit it holds; formatting never rounds', () => {
+		expect(cs(0.0004, 'rate')).toBe('0,0004');
+		expect(cs(50.087654, 'lat')).toBe('50,087654');
+		expect(cs(0.001, 'price')).toBe('0,001 Kč');
+		expect(cs(1.005, 'amount')).toBe('1,005 Kč');
+	});
+
+	it('a column is CZK only when no word of its name says otherwise', () => {
+		for (const k of ['amount_eur', 'price_usd', 'Price ($)', 'castka €', 'total_rows', 'subtotal_count', 'vat_rate_total_pct', 'scenario'])
+			expect(isMoney(k), k).toBe(false);
+		expect(cs(1234.5, 'amount_eur')).toBe('1 234,5');
+	});
+
 	it('a YYYY-MM-DD date reads d. M. yyyy; anything else stays as written', () => {
 		expect(cs('2026-03-05', 'due')).toBe('5. 3. 2026');
 		expect(cs('2026-02-30', 'due')).toBe('2026-02-30');
