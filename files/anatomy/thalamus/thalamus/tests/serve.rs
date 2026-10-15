@@ -4046,3 +4046,57 @@ fn rows_past_the_limit_are_said_to_exist() {
     turn(&s, &mut r, None, "all rows");
     assert!(tool_result(&all, 1).get("more").is_none(), "every matched row was shown");
 }
+
+// --- local bench r2 (mistral-eu): injection-row-ask-cs obeyed a row's note 2/3 (operator Q2: add the cell mark) ---
+
+#[test]
+fn a_text_cell_reaches_the_model_inside_data_marks_and_the_person_without() {
+    let rig = rig_n("cellmark", mapped(), shown_then(&[]), vec![query(r#"{"table": "todos", "q": "alpha"}"#), answer("x")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "alpha?");
+    let t = tool_result(&rig, 1);
+    let cells = &t["rows"][0]["cells"];
+    assert_eq!((&cells["title"], &cells["status"], &cells["ordinal"]),
+               (&serde_json::json!("⟦Alpha one⟧"), &serde_json::json!("open"), &serde_json::json!(3)), "only text cells: {t}");
+    assert!(t["notice"].as_str().unwrap().contains("⟦"), "{t}");
+    let shown = rendered(&got);
+    assert!(shown[0].to_string().contains("\"Alpha one\"") && !shown[0].to_string().contains('⟦'), "the person sees the cell as it is");
+}
+
+#[test]
+fn a_mark_the_model_copies_back_is_never_written_or_searched() {
+    let rig = rig_n("unmark", mapped(), shown_then(&[ROWS, ROWS]), vec![
+        query(r#"{"table": "todos", "where": [{"column": "title", "op": "eq", "value": "⟦Alpha one⟧"}]}"#),
+        call("propose_row_edit", r#"{"table": "todos", "row_id": "r1", "values": {"title": "⟦Alpha two⟧"}}"#), answer("Proposed.")]);
+    let (_s, _r, _session, _approval, diff) = propose(&rig);
+    assert_eq!(tool_result(&rig, 1)["matched"], 1, "the where matched through the mark");
+    assert_eq!(diff.cells[0].new, serde_json::json!("Alpha two"), "{diff:?}");
+}
+
+// --- local bench r2 (mistral-eu): pie, bar and line answers carried ![chart](https://placehold.co/...) ---
+
+#[test]
+fn a_link_no_tool_returned_is_marked_for_the_person_and_kept_in_the_ledger() {
+    let rig = rig_n("inventlink", mapped(), vec![], vec![answer("Here: ![Pie](https://placehold.co/p.png) and [docs](https://x.example/d).")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "pie");
+    let text = got.iter().find_map(|m| match m { ToShell::Text { text, .. } => Some(text.clone()), _ => None }).unwrap();
+    assert_eq!(text, "Here: Pie [unverified link: https://placehold.co/p.png] and docs [unverified link: https://x.example/d].");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    assert!(events(&rig.ledger, &session_of(&got)).iter().any(|e| e.2["text"].as_str().is_some_and(|t| t.contains("](https://placehold.co/p.png)"))),
+            "the ledger keeps what was said");
+}
+
+#[test]
+fn a_link_a_tool_returned_is_left_as_it_is() {
+    let rows = r#"{"success": true, "data": {"rows": [{"id": "r1", "values": {"title": "see https://x.example/a", "status": "open"}}]}}"#;
+    let rig = rig_n("toollink", mapped(), vec![SCHEMA.into(), rows.into()],
+        vec![query(r#"{"table": "todos"}"#), answer("It is [a](https://x.example/a).")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "link?");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Text { text, .. } if text == "It is [a](https://x.example/a).")), "{got:?}");
+}
