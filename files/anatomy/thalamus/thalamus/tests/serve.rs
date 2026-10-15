@@ -3754,3 +3754,86 @@ fn an_unreadable_dashboard_table_is_refused_never_an_empty_list() {
         other => panic!("expected refused, got {other:?}"),
     }
 }
+
+// --- iris-v3 B2: a form spec carries prefill and when; serve checks both as a submit is checked ---
+
+/// One offer of a single form widget on expenses: (rig, the turn, the model's tool result).
+fn form_offer(name: &str, form: serde_json::Value) -> (Rig, Vec<ToShell>, serde_json::Value) {
+    let args = serde_json::json!({"name": "Add", "widgets": [{"title": "Add an expense", "form": form}]});
+    let rig = rig_at(name, mapped(), fake_table(&expenses(""), vec![]).0,
+                     vec![call("offer_dashboard", &args.to_string()), answer("Offered.")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "a form for expenses");
+    let result = tool_result(&rig, 1);
+    (rig, got, result)
+}
+
+#[test]
+fn an_offered_form_keeps_a_prefill_and_a_when_that_pass_the_form_s_rules() {
+    let form = serde_json::json!({"table": "expenses", "prefill": {"kind": "travel", "when": "2026-11-01"},
+                                  "when": {"note": {"key": "kind", "op": "eq", "value": "travel"}}});
+    let (rig, got, _) = form_offer("pfok", form.clone());
+    let d = dashboards(&got);
+    assert_eq!(d.len(), 1, "{got:?}");
+    assert_eq!(d[0]["widgets"][0]["spec"]["form"], form, "{}", d[0]);
+    assert!(rig.keap.lock().unwrap().iter().all(|(h, _)| !h.contains("/rows")), "nothing ran at offer");
+}
+
+#[test]
+fn a_form_offer_refuses_a_prefill_off_its_rules_and_a_when_on_a_required_field() {
+    let when = |field: &str, key: &str, value: &str| serde_json::json!({"table": "expenses", "when": {field: {"key": key, "op": "eq", "value": value}}});
+    for (name, form, want) in [
+        ("pfopt", serde_json::json!({"table": "expenses", "prefill": {"kind": "rent"}}), "kind is not one of food, travel, tools"),
+        ("pfday", serde_json::json!({"table": "expenses", "prefill": {"when": "2026-02-30"}}), "when is a day, YYYY-MM-DD"),
+        ("pfghost", serde_json::json!({"table": "expenses", "prefill": {"ghost": "x"}}), "no field `ghost`"),
+        ("pfcols", serde_json::json!({"table": "expenses", "columns": ["amount", "kind"], "prefill": {"note": "x"}}), "no field `note`"),
+        ("whenreq", when("amount", "kind", "travel"), "amount is required, so it is never hidden"),
+        ("whenghost", when("note", "ghost", "x"), "`ghost`"),
+        ("whenself", when("note", "note", "x"), "on itself"),
+        ("whenopt", when("note", "kind", "rent"), "not one of food, travel, tools"),
+    ] {
+        let (rig, got, result) = form_offer(name, form);
+        assert!(dashboards(&got).is_empty(), "{name}: drawn anyway: {got:?}");
+        assert!(result["error"].as_str().is_some_and(|e| e.contains("no widget fits") && e.contains(want)), "{name}: {result}");
+        assert!(rig.keap.lock().unwrap().iter().all(|(h, _)| !h.contains("/rows")), "{name}: a row was read");
+    }
+}
+
+#[test]
+fn a_widget_form_carries_its_prefill_and_when_and_refuses_a_bad_one() {
+    let rig = rig_at("pfwidget", mapped(), fake_table(&expenses(""), vec![]).0, vec![answer("never")], Some(local()));
+    let (_, w) = run_widget(&rig, "f1", serde_json::json!({"form": {"table": "expenses", "prefill": {"kind": "travel"},
+        "when": {"note": {"key": "kind", "op": "neq", "value": "food"}}}}));
+    let f = &w["component"]["props"];
+    assert_eq!(f["prefill"], serde_json::json!({"kind": "travel"}), "{w}");
+    let note = f["fields"].as_array().unwrap().iter().find(|x| x["key"] == "note").unwrap();
+    assert_eq!(note["when"], serde_json::json!({"key": "kind", "op": "neq", "value": "food"}), "{w}");
+    assert!(f["fields"].as_array().unwrap().iter().filter(|x| x["key"] != "note").all(|x| x.get("when").is_none()), "{w}");
+    // A saved layout is not trusted either: the run checks the prefill again.
+    let (_, w) = run_widget(&rig, "f2", serde_json::json!({"form": {"table": "expenses", "prefill": {"kind": "rent"}}}));
+    assert_eq!(w["t"], "refused", "{w}");
+    assert!(w["reason"].as_str().is_some_and(|r| r.contains("not one of")), "{w}");
+}
+
+#[test]
+fn a_prefilled_form_s_submit_is_still_only_what_the_person_sent() {
+    let ((url, seen), held) = fake_table(&expenses(""), vec![]);
+    let rig = rig_at("pfsubmit", mapped(), (url, seen), vec![answer("never")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    send_widget(&s, "f1", serde_json::json!({"form": {"table": "expenses", "prefill": {"kind": "travel", "amount": 5}}}), "click");
+    let form = loop {
+        match next(&mut r) {
+            Some(ToShell::Widget { component: Component::Form(f), .. }) => break f.form,
+            Some(ToShell::Session { .. }) => continue,
+            other => panic!("expected the widget form, got {other:?}"),
+        }
+    };
+    // The prefill is a draft in the pupil, never a value serve adds: a submit without kind is refused.
+    send_submit(&s, &form, "f1", serde_json::json!({"amount": 5}));
+    assert!(matches!(next(&mut r), Some(ToShell::Refused { ref reason, .. }) if reason.contains("kind is required")));
+    send_submit(&s, &form, "f1", serde_json::json!({"amount": 7, "kind": "food"}));
+    assert!(matches!(next(&mut r), Some(ToShell::TableChanged { .. })));
+    assert_eq!(held.lock().unwrap()[0]["values"], serde_json::json!({"amount": 7.0, "kind": "food"}), "the person's values, not the prefill");
+}

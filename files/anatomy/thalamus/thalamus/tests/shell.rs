@@ -406,3 +406,15 @@ fn saved_dashboards_are_said_as_text() {
                       \x20 left out: Old board — widget \"x\": a widget spec names no table\n\
                       dashboard wsbench1 saved in KEAP (row d1)\n");
 }
+
+/// iris-v3 B2: a form says what it starts with and when a field shows; the pupil holds the draft.
+#[test]
+fn a_form_says_its_prefill_and_when_a_field_shows() {
+    let (_, m) = fixture().into_iter().find(|(case, _)| case == "a widget form").expect("the fixture's form");
+    let ToShell::Widget { component, .. } = m else { panic!("the form sample no longer decodes: {m:?}") };
+    let said: String = shell::component_lines(&component).iter().map(|l| format!("{l}\n")).collect();
+    for want in ["  When (date, prefilled 2026-10-20)", "  Kind (select, required, options food|travel|tools, prefilled travel)",
+                 "  Paid (bool, shown when kind != food)"] {
+        assert!(said.contains(want), "{want:?} not in:\n{said}");
+    }
+}
