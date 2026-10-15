@@ -101,7 +101,8 @@ def test_a_service_switched_off_has_its_jobs_dropped() -> None:
 
 
 def test_a_service_switched_on_adds_its_jobs() -> None:
-    flags = dict(_flags(), install_gitea=True, install_n8n=True)
+    # trunk-sync is also owned by install_loops (ruling 2026-10-15), off on core
+    flags = dict(_flags(), install_gitea=True, install_n8n=True, install_loops=True)
     on = registered(flags)
     assert {"gitea:trunk-sync", "n8n:exec-watch"} <= on
     assert not {"gitea:trunk-sync", "n8n:exec-watch"} & dropped(flags)
