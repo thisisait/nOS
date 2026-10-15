@@ -274,8 +274,10 @@ def check(name: str, arg, got: dict, now: float) -> bool:
         kinds = {k for w in widgets for k in (w.get("spec") or {})}
         fills = [(w.get("spec") or {}).get("form", {}).get("prefill") or {} for w in widgets]
         prefilled = any(all(str(f.get(k)) == str(v) for k, v in arg["prefill"].items()) for f in fills) if arg.get("prefill") else True
+        # tables (iris-v3 B3): every widget reads one of these tables
+        tables = {(spec.get("query") or spec).get("table") for w in widgets for spec in (w.get("spec") or {}).values()}
         return (len(widgets) >= arg.get("widgets", 1) and set(arg.get("kinds", [])) <= kinds and set(arg.get("lens", [])) <= lens
-                and prefilled)
+                and prefilled and (not arg.get("tables") or tables <= set(arg["tables"])))
     if name == "not_blank":
         return bool(text.strip()) and text.strip() != BLANK
     raise ValueError(f"unknown check {name!r}")
@@ -301,8 +303,25 @@ def seed_rows() -> list[dict]:
     return [dict(r, due=SEED_DAY0 + i * 86400) for i, r in enumerate(rows)]
 
 
+SEED_LINES_TITLE = "iris-bench-2-lines"  # iris-v3 B3: line items, each pointing at a bench row
+
+
+def lines_schema(parent_id: str) -> dict:
+    return {"columns": [
+        {"key": "bench_row", "label": "Bench row", "kind": "rowRef", "role": "dimension", "required": True,
+         "refTable": parent_id, "refDisplay": "title", "onDelete": "restrict"},
+        {"key": "item", "label": "Item", "kind": "text", "role": "dimension", "required": True},
+        {"key": "qty", "label": "Qty", "kind": "number", "role": "measure"}]}
+
+
+def seed_lines(ids: dict) -> list[dict]:
+    """Two lines under each of bench rows 01-03; `ids` maps a bench row's title to its KEAP row id."""
+    return [{"bench_row": ids[f"bench row {n:02d}"], "item": f"part {n}{c}", "qty": n + i}
+            for n in (1, 2, 3) for i, c in enumerate("ab")]
+
+
 def seed() -> int:
-    """Create the iris-bench-2 table once, as the operator, readable by every user (it holds no data of anyone's)."""
+    """Create the iris-bench-2 table (and its lines) once, as the operator, readable by every user (no one's data)."""
     import importlib.util
     spec = importlib.util.spec_from_file_location("dtt_table", Path(__file__).with_name("dtt-table.py"))
     dtt = importlib.util.module_from_spec(spec)
@@ -310,7 +329,7 @@ def seed() -> int:
     have = [t for t in dtt.tables() if (t.get("title") or "") == SEED_TITLE]
     if have:
         print(f"{SEED_TITLE} table exists: {have[0]['id']} (nothing written)")
-        return 0
+        return seed_lines_table(dtt, have[0]["id"])
     body = {"title": SEED_TITLE, "description": "Fixed rows for tools/iris-bench.py cases. Safe to delete.",
             "driver": "libsql", "visibility": "shared", "anchors": [], "schema": {"columns": [
                 {"key": "title", "label": "Title", "kind": "text", "role": "dimension", "required": True},
@@ -330,6 +349,33 @@ def seed() -> int:
             print(f"{SEED_TITLE}: row failed ({st}): {r.get('error', r)}", file=sys.stderr)
             return 1
     print(f"{SEED_TITLE} table created: {tid} with {len(seed_rows())} rows")
+    return seed_lines_table(dtt, tid)
+
+
+def seed_lines_table(dtt, parent_id: str) -> int:
+    """iris-bench-2-lines once; its rows point at the parent's rows by id (KEAP validates refTable at create)."""
+    have = [t for t in dtt.tables() if (t.get("title") or "") == SEED_LINES_TITLE]
+    if have:
+        print(f"{SEED_LINES_TITLE} table exists: {have[0]['id']} (nothing written)")
+        return 0
+    st, r = dtt.req("GET", f"/api/tables/{parent_id}/rows?limit=500")
+    if st != 200:
+        print(f"{SEED_TITLE}: rows unreadable ({st}): {r.get('error', r)}", file=sys.stderr)
+        return 1
+    ids = {(x.get("values") or {}).get("title"): x["id"] for x in r.get("data", {}).get("rows", [])}
+    body = {"title": SEED_LINES_TITLE, "description": "Line items of iris-bench-2 for tools/iris-bench.py. Safe to delete.",
+            "driver": "libsql", "visibility": "shared", "anchors": [], "schema": lines_schema(parent_id)}
+    st, r = dtt.req("POST", "/api/tables", body)
+    if st != 200:
+        print(f"{SEED_LINES_TITLE}: create failed ({st}): {r.get('error', r)}", file=sys.stderr)
+        return 1
+    tid = r.get("data", r)["id"]
+    for row in seed_lines(ids):
+        st, r = dtt.req("POST", f"/api/tables/{tid}/rows", {"values": row})
+        if st != 200:
+            print(f"{SEED_LINES_TITLE}: row failed ({st}): {r.get('error', r)}", file=sys.stderr)
+            return 1
+    print(f"{SEED_LINES_TITLE} table created: {tid} with {len(seed_lines(ids))} lines")
     return 0
 
 
@@ -363,7 +409,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--timeout", type=float, default=180.0, help="seconds without a line before a case fails")
     ap.add_argument("--repeat", type=int, default=1, help="run each case N times; a majority of passing runs passes")
-    ap.add_argument("--seed", action="store_true", help="create the iris-bench-2 table once (writes KEAP; NOS_LIVE=1)")
+    ap.add_argument("--seed", action="store_true", help="create the iris-bench-2 tables once (writes KEAP; NOS_LIVE=1)")
     a = ap.parse_args(argv)
     if a.seed:
         if os.environ.get("NOS_LIVE") != "1":
