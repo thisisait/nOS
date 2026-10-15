@@ -2682,6 +2682,8 @@ fn a_decider_path_is_taken_as_the_kernel_reported_it() {
     // The exe string was read earlier; a symlink swapped into it since must not make it a listed file.
     let d = std::fs::canonicalize(dir("swap")).unwrap();
     std::fs::create_dir_all(d.join("listed")).unwrap();
+    // As in dir(): a racing bind()'s umask can birth it 0600.
+    std::fs::set_permissions(d.join("listed"), std::fs::Permissions::from_mode(0o700)).unwrap();
     std::fs::write(d.join("listed/nos-pupil"), "").unwrap();
     std::os::unix::fs::symlink(d.join("listed"), d.join("own")).unwrap();
     let stale = d.join("own/nos-pupil");
