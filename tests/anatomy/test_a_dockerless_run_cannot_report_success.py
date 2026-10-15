@@ -103,9 +103,9 @@ def test_only_the_dockerless_ci_lane_claims_the_escape():
         assert "main.yml" in ln, (
             f"{FLAG} appears somewhere other than a playbook invocation, where "
             f"its scope is not obvious:\n  {ln}")
-    # The Linux integration job's invocation is a block scalar naming install_traefik.
-    linux = re.search(r"install_traefik.*?\n(?:.*\n){0,6}", ci)
-    assert linux and FLAG not in linux.group(0), (
+    linux = yaml.safe_load(ci)["jobs"]["integration-linux"]["steps"]
+    runs = [str(s.get("run", "")) for s in linux]
+    assert any("ansible-playbook main.yml" in r for r in runs) and not any(FLAG in r for r in runs), (
         "the Linux integration lane carries the no-Docker escape. That job is "
         "the one wet-test that must prove the compose layer; with the escape it "
         "would pass an empty estate the way hidden fee 08 describes")

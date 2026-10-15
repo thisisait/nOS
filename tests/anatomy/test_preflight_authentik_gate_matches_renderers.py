@@ -206,14 +206,21 @@ CI = REPO / ".github" / "workflows" / "ci.yml"
 CI_CONFIG = REPO / "tests" / "config.yml"
 
 
-def _linux_edge_extra_vars() -> dict:
+def _linux_step_run() -> str:
     wf = yaml.safe_load(CI.read_text())
     job = wf["jobs"]["integration-linux"]
-    step = next(
+    return next(
         s for s in job["steps"]
         if "Test the playbook (Linux)" in (s.get("name") or "")
-    )
-    blobs = re.findall(r"-e '(\{.*?\})'", step["run"])
+    )["run"]
+
+
+def _linux_profiles() -> list[Path]:
+    return [REPO / f for f in re.findall(r"-e @(\S+)", _linux_step_run())]
+
+
+def _linux_edge_extra_vars() -> dict:
+    blobs = re.findall(r"-e '(\{.*?\})'", _linux_step_run())
     assert blobs, (
         "Linux Integration no longer passes a JSON extra-vars blob; this gate "
         "cannot see the Traefik overlay that trips the Authentik preflight"
@@ -222,7 +229,8 @@ def _linux_edge_extra_vars() -> dict:
 
 
 def _ci_linux_extra() -> list[str]:
-    return [f"@{CI_CONFIG}", json.dumps(_linux_edge_extra_vars())]
+    return ([f"@{CI_CONFIG}"] + [f"@{p}" for p in _linux_profiles()]
+            + [json.dumps(_linux_edge_extra_vars())])
 
 
 def test_linux_integration_does_not_publish_forward_auth_without_authentik():
@@ -235,7 +243,10 @@ def test_linux_integration_does_not_publish_forward_auth_without_authentik():
     """
     if shutil.which("ansible-playbook") is None:
         pytest.skip("ansible-playbook unavailable in this lane")
-    overlay = {**(yaml.safe_load(CI_CONFIG.read_text()) or {}), **_linux_edge_extra_vars()}
+    overlay = yaml.safe_load(CI_CONFIG.read_text()) or {}
+    for profile in _linux_profiles():
+        overlay.update(yaml.safe_load(profile.read_text()) or {})
+    overlay.update(_linux_edge_extra_vars())
     if not overlay.get("install_traefik"):
         pytest.skip("Linux Integration extra-vars no longer enable Traefik")
     if overlay.get("install_authentik"):
