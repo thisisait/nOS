@@ -248,6 +248,8 @@ struct Open {
     shown: HashMap<(String, String), String>,
     /// Table id to title of every table a non-grouped query showed rows of; only these take an insert.
     tables_seen: HashMap<String, String>,
+    /// Table id to its date column keys, from the queries that showed it: an edit's day becomes epoch.
+    dates: HashMap<String, Vec<String>>,
     /// The tools whose free text the model read in this turn; a card asked now says so.
     read_free: Vec<String>,
     /// The widget forms this session sent, by widget token: a re-run replaces the old form id.
@@ -470,7 +472,7 @@ multi}; suggested names your pick among the options, exactly 1 unless multi; nev
 const QUERY_KEYS: [&str; 7] = ["table", "q", "where", "columns", "order_by", "limit", "group_by"];
 const WHERE_KEYS: [&str; 3] = ["column", "op", "value"];
 const ORDER_KEYS: [&str; 2] = ["column", "dir"];
-const OPS: [&str; 4] = ["eq", "neq", "in", "contains"];
+const OPS: [&str; 6] = ["eq", "neq", "in", "contains", "lt", "gt"];
 
 fn tools() -> Value {
     json!([{"type": "function", "function": {"name": "query_rows", "description": QUERY_ROWS,
@@ -479,8 +481,8 @@ fn tools() -> Value {
             "q": {"type": "string", "description": "case-insensitive substring anywhere in the row"},
             "where": {"type": "array", "maxItems": 8, "description": "every condition must hold",
                 "items": {"type": "object", "additionalProperties": false, "required": ["column", "op", "value"], "properties": {
-                    "column": {"type": "string"}, "op": {"enum": OPS},
-                    "value": {"description": "a string; for in, a list of strings"}}}},
+                    "column": {"type": "string"}, "op": {"enum": OPS, "description": "lt is before, gt is after"},
+                    "value": {"description": "a string; for in, a list of strings; a date is YYYY-MM-DD"}}}},
             "columns": {"type": "array", "maxItems": 12, "items": {"type": "string"},
                 "description": "the column keys to show; default every column, in the table's order"},
             "order_by": {"type": "object", "additionalProperties": false, "required": ["column"], "properties": {
@@ -652,7 +654,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris),
         };
         Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None })
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None })
     }
 
     /// The decider gate before a submit, a decision or a choice reply: a refused peer is told and
@@ -691,8 +693,12 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         rec["approval"] = json!(approval);
         self.record(o, Kind::ApprovalRequest, Some(tool), rec)?;
         o.pending.insert(approval.clone(), tool);
+        // The record keeps epoch (approved() compares it with KEAP); the person reads a date as its day.
+        let dates = o.dates.get(&d.table).cloned().unwrap_or_default();
+        let say = |v: Value| day(&v).map_or(v, Value::from);
+        let cells = d.cells.into_iter().map(|c| if dates.contains(&c.key) { CellChange { old: say(c.old), new: say(c.new), ..c } } else { c }).collect();
         send(out, &ToShell::ApprovalRequest { session: o.session.clone(), approval: approval.clone(),
-                                              component: Component::RowDiffApproval(d) });
+                                              component: Component::RowDiffApproval(RowDiffApproval { cells, ..d }) });
         Ok(json!({"approval": approval, "status": "waiting for the person; nothing is written unless they approve"}))
     }
 
@@ -934,6 +940,8 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                         } else {
                             o.shown.extend(t.rows.iter().map(|r| ((t.table.clone(), r.__id.clone()), t.name.clone())));
                             o.tables_seen.insert(t.table.clone(), t.name.clone());
+                            o.dates.insert(t.table.clone(), extra.as_array().into_iter().flatten().filter(|c| c["kind"] == "date")
+                                .filter_map(|c| c["key"].as_str().map(str::to_string)).collect());
                             json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total,
                                    "columns": extra, "rows": t.rows})
                         };
@@ -946,7 +954,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                     // Its tool_result is written by decide(), once the person has answered.
                     "propose_row_edit" | "propose_row_insert" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
                     "propose_row_edit" | "propose_row_insert" => {
-                        let d = if name == "propose_row_edit" { self.propose_row_edit(who, &args, &o.shown) }
+                        let d = if name == "propose_row_edit" { self.propose_row_edit(who, &args, &o.shown, &o.dates) }
                                 else { self.propose_row_insert(who, &args, &o.tables_seen) };
                         // Operator ruling Q7: no refusal after a free-text read; the card head says it.
                         d.and_then(|d| self.ask(o, out, RowDiffApproval { read_from: o.read_free.clone(), ..d }))
@@ -1080,8 +1088,13 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             hits.sort_by(|x, y| by(x.1.get(k), y.1.get(k), desc));
         }
         hits.truncate(limit);
+        // KEAP keeps epoch seconds; the model and the person hear the day (client bench v2, line-due).
+        let dates: Vec<&str> = schema.iter().filter(|c| c.get("kind").and_then(Value::as_str) == Some("date"))
+            .filter_map(|c| c.get("key").and_then(Value::as_str)).collect();
         let rows = hits.into_iter()
-            .map(|(id, v)| Row { __id: id, cells: v.into_iter().filter(|(k, _)| columns.contains(k)).collect::<BTreeMap<_, _>>() })
+            .map(|(id, v)| Row { __id: id, cells: v.into_iter().filter(|(k, _)| columns.contains(k))
+                .map(|(k, v)| { let v = day(&v).filter(|_| dates.contains(&k.as_str())).map_or(v, Value::from); (k, v) })
+                .collect::<BTreeMap<_, _>>() })
             .collect();
         let for_model: Vec<Value> = schema.iter().map(|c| {
             let mut m = Map::new();
@@ -1089,6 +1102,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 if let Some(v) = c.get(k) {
                     m.insert(k.into(), v.clone());
                 }
+            }
+            if m.get("kind").and_then(Value::as_str) == Some("date") {
+                m.insert("format".into(), json!("YYYY-MM-DD"));
             }
             Value::Object(m)
         }).collect();
@@ -1149,15 +1165,15 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Some(Value::Array(w)) if w.len() <= 8 => w,
             _ => return Err("`where` is a list of at most 8 conditions".into()),
         };
-        let mut wh: Vec<(&str, &str, Vec<String>)> = Vec::new();
+        let mut wh: Vec<(&str, &str, Vec<String>, Option<&str>)> = Vec::new();
         for c in conds {
             if let Some(k) = c.as_object().and_then(|o| o.keys().find(|k| !WHERE_KEYS.contains(&k.as_str()))) {
                 return Err(format!("a `where` condition has no key `{k}`; it has {}", WHERE_KEYS.join(", ")));
             }
             let k = c.get("column").and_then(Value::as_str).ok_or("a `where` condition needs `column`")?;
             let def = col(k)?;
-            let op = c.get("op").and_then(Value::as_str).filter(|o| OPS.contains(o))
-                .ok_or(format!("`where` on {k}: op is one of {}", OPS.join(", ")))?;
+            let op = c.get("op").and_then(Value::as_str).map(|o| match o { "before" => "lt", "after" => "gt", o => o })
+                .filter(|o| OPS.contains(o)).ok_or(format!("`where` on {k}: op is one of {}", OPS.join(", ")))?;
             let vals: Vec<String> = match (op, c.get("value")) {
                 ("in", Some(Value::Array(v))) => v.iter().map(|x| match x.as_str() {
                     Some(s) => Ok(s.to_string()),
@@ -1167,6 +1183,16 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 (_, Some(Value::String(s))) => vec![s.clone()],
                 _ => return Err(format!("`where` on {k}: value is a string")),
             };
+            // A date is compared as its UTC day, so lexical order is the calendar's.
+            let kind = def.get("kind").and_then(Value::as_str).filter(|k| ["date", "number"].contains(k));
+            if let Some(bad) = vals.iter().find(|v| match kind {
+                Some("date") => op != "contains" && day_epoch(v).is_none(),
+                Some(_) => matches!(op, "lt" | "gt") && v.parse::<f64>().is_err(),
+                None => false,
+            }) {
+                let want = if kind == Some("date") { "a day, YYYY-MM-DD" } else { "a number" };
+                return Err(format!("`where` on {k}: {bad:?} is not {want}"));
+            }
             let options: Option<Vec<&str>> = def.get("options").and_then(Value::as_array)
                 .map(|o| o.iter().filter_map(Value::as_str).collect());
             if let (Some(o), true) = (&options, op != "contains") {
@@ -1178,9 +1204,11 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 "in" => format!("{k} in [{}]", vals.join(", ")),
                 "eq" => format!("{k} = {}", vals[0]),
                 "neq" => format!("{k} != {}", vals[0]),
+                "lt" => format!("{k} < {}", vals[0]),
+                "gt" => format!("{k} > {}", vals[0]),
                 _ => format!("{k} contains {:?}", vals[0]),
             });
-            wh.push((k, op, vals));
+            wh.push((k, op, vals, kind));
         }
         let order = match given("order_by") {
             None => None,
@@ -1231,11 +1259,18 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let total = all.len();
         let hits: Vec<(String, Map<String, Value>)> = all.into_iter()
             .filter(|(_, v)| q.as_ref().is_none_or(|q| Value::Object(v.clone()).to_string().to_lowercase().contains(q)))
-            .filter(|(_, v)| wh.iter().all(|(k, op, vals)| {
-                let c = text(v.get(*k).unwrap_or(&Value::Null));
+            .filter(|(_, v)| wh.iter().all(|(k, op, vals, kind)| {
+                let cell = v.get(*k).unwrap_or(&Value::Null);
+                let c = if *kind == Some("date") { day(cell).unwrap_or_else(|| text(cell)) } else { text(cell) };
+                let cmp = || match kind {
+                    Some("number") => c.parse::<f64>().ok().and_then(|n| n.partial_cmp(&vals[0].parse::<f64>().ok()?)),
+                    _ => (!c.is_empty()).then(|| c.as_str().cmp(&vals[0])),
+                };
                 match *op {
                     "eq" | "in" => vals.contains(&c),
                     "neq" => !vals.contains(&c),
+                    "lt" => cmp() == Some(Ordering::Less),
+                    "gt" => cmp() == Some(Ordering::Greater),
                     _ => c.to_lowercase().contains(&vals[0].to_lowercase()),
                 }
             }))
@@ -1320,7 +1355,8 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     }
 
     /// The cell diff of one existing row the person can read; only changed cells survive.
-    fn propose_row_edit(&self, who: &Person, args: &Value, shown: &HashMap<(String, String), String>) -> Result<RowDiffApproval, String> {
+    fn propose_row_edit(&self, who: &Person, args: &Value, shown: &HashMap<(String, String), String>,
+                        dates: &HashMap<String, Vec<String>>) -> Result<RowDiffApproval, String> {
         let s = |k: &str| args.get(k).and_then(Value::as_str).filter(|v| !v.is_empty()).ok_or(format!("propose_row_edit needs `{k}`"));
         let (alias, row_id) = (s("table")?, s("row_id")?);
         // Live 2026-10-12: a proposal used as a probe. Refused before any read, so no card.
@@ -1336,10 +1372,18 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         if let Some(k) = values.keys().find(|k| k.is_empty() || k.starts_with("__")) {
             return Err(format!("column {k:?} cannot be edited here"));
         }
+        // A day on a date column is written as KEAP's epoch seconds, as a form submit is.
+        let date = |k: &String| dates.get(table).is_some_and(|d| d.contains(k));
+        let values: Vec<(&String, Value)> = values.iter().map(|(k, v)| match v {
+            Value::String(s) if date(k) => day_epoch(s).map(|t| (k, json!(t))).ok_or(format!("{k} is a day, YYYY-MM-DD")),
+            Value::Null => Ok((k, Value::Null)),
+            _ if date(k) => Err(format!("{k} is a day, YYYY-MM-DD")),
+            v => Ok((k, v.clone())),
+        }).collect::<Result<_, _>>()?;
         let current = self.rows(who, table)?.into_iter().find(|(id, _)| id == row_id).map(|(_, v)| v)
             .ok_or(format!("no row {row_id:?} in {table} that you can read"))?;
-        let cells: Vec<CellChange> = values.iter()
-            .map(|(k, new)| CellChange { key: k.clone(), old: current.get(k).cloned().unwrap_or(Value::Null), new: new.clone() })
+        let cells: Vec<CellChange> = values.into_iter()
+            .map(|(k, new)| CellChange { key: k.clone(), old: current.get(k).cloned().unwrap_or(Value::Null), new })
             .filter(|c| c.old != c.new)
             .collect();
         if cells.is_empty() {
@@ -1554,20 +1598,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         }
     }
 
-    /// query_rows as the person, with date cells said as their UTC day (KEAP keeps epoch seconds).
+    /// query_rows as the person (date cells said as their UTC day there).
     fn widget_rows(&self, who: &Person, args: &Value) -> Result<(Component, Value), String> {
-        let (mut t, columns, grouped) = self.query_rows(who, args)?;
-        let dates: Vec<String> = if grouped { vec![] } else {
-            columns.as_array().into_iter().flatten().filter(|c| c["kind"] == "date")
-                .filter_map(|c| c["key"].as_str().map(str::to_string)).collect()
-        };
-        for r in &mut t.rows {
-            for k in &dates {
-                if let Some(day) = r.cells.get(k).and_then(Value::as_f64).map(|t| iso(t.floor() as i64)[..10].to_string()) {
-                    r.cells.insert(k.clone(), json!(day));
-                }
-            }
-        }
+        let (t, _, _) = self.query_rows(who, args)?;
         let ids: Vec<&str> = t.rows.iter().map(|r| r.__id.as_str()).collect();
         let result = json!({"rows": ids, "matched": t.matched, "total": t.total});
         Ok((Component::TableResults(t), result))
@@ -1989,6 +2022,11 @@ fn day_epoch(s: &str) -> Option<i64> {
     let t = days_from_civil(y, m, d) * 86_400;
     // A day the calendar does not have (02-30, 13-01) comes back as another day.
     (iso(t)[..10] == *s).then_some(t)
+}
+
+/// An epoch-seconds cell as its UTC day, "YYYY-MM-DD"; None for anything that is not a number.
+fn day(v: &Value) -> Option<String> {
+    v.as_f64().map(|t| iso(t.floor() as i64)[..10].to_string())
 }
 
 /// A cell as text, as the shells show it: null is empty, a string is itself.

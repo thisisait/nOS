@@ -145,7 +145,8 @@ def _v2(bad: bool) -> dict[str, list[list[dict]]]:
         "by-title": [_turn(_tool("query_rows"), _read({"table": t, "limit": 5}, ten + ten[:2]), _text("The first five rows, above."))],
         "bar-sum-points": [_turn(_tool("show"), _pinned_chart("bar", "track", "count") if bad else
                                  _pinned_chart("bar", "track", "sum", "points", EQ_NEXT), _text("Next points per track, drawn above."))],
-        "line-due": [_turn(_tool("show"), _pinned_chart("line", "due", "count", where=EQ_NEXT), _text("Next rows by due day, drawn above."))],
+        "line-due": [_turn(_tool("show"), _pinned_chart("line", "due", "count", where=[{"column": "due", "op": "lt", "value": "2026-11-15"}]),
+                          _text("Rows due before 2026-11-15, by day, drawn above."))],
         "edit-card": [_turn(_tool("query_rows"), _read({"table": t, "q": "bench row 10"}, ten[:1]), _text("Bench row 10 is next.")),
                       _turn(_tool("propose_row_edit"), _ask(_card("update", {"status": "queued" if bad else "shipped"}, row_id="r10")),
                             _text("The change is in the card; nothing is written unless you approve."))],
