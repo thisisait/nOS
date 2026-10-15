@@ -55,6 +55,7 @@ type:
 # =============================================================================
 
 requires:
+  feature_flag: install_loops
   variables:
     - playbook_dir         # repo root → tools/discovery-scan.py
 

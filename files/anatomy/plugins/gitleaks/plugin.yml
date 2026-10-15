@@ -31,8 +31,9 @@ type:
 # =============================================================================
 
 requires:
-  # gitleaks is installed unconditionally via the homebrew packages list in
-  # default.config.yml — no install_gitleaks flag needed.
+  # The binary comes from the homebrew list unconditionally; the findings land
+  # in Wing, so Wing's flag owns the job (no ownerless Pulse job, 2026-10-15).
+  feature_flag: install_wing
   variables:
     - wing_api_token       # Wing API token (from default.credentials.yml)
     - playbook_dir         # Ansible playbook_dir → repo root for NOS_SCAN_DIR

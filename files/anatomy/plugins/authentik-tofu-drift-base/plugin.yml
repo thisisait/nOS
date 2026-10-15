@@ -34,6 +34,7 @@ type:
 requires:
   # Wing/Bone substrate: Pulse registration + the A9 notification endpoint.
   role: pazny.wing
+  feature_flag: install_wing
 
 # =============================================================================
 # PULSE JOB — harvested by files/anatomy/scripts/discover-pulse-catalog.py and
@@ -47,6 +48,7 @@ requires:
 pulse:
   jobs:
     - name: tofu-drift-plan
+      owner: install_authentik   # plans terraform/authentik/: no Authentik, no job
       category: security
       runner: subprocess
       command: "{{ playbook_dir }}/files/anatomy/plugins/authentik-tofu-drift-base/skills/run-tofu-drift.sh"
@@ -140,7 +142,7 @@ gdpr:
   eu_residency: true
 
 e2e:
-  enabled: "{{ (install_wing | default(false)) }}"
+  enabled: "{{ (install_wing | default(false)) and (install_authentik | default(false)) }}"
   probes:
     - name: tofu-drift-plan-registered-in-wing
       url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs

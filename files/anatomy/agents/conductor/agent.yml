@@ -1,5 +1,6 @@
 name: conductor
 version: 1
+owner: install_wing
 description: |
   nOS conductor — first non-operator-identity agent. Runs after each playbook
   blank+converge to verify the platform end-to-end. Pulse-fired weekly (Sun

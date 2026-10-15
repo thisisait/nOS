@@ -1,5 +1,6 @@
 name: ops-triage
 version: 1
+owner: install_loops
 description: >-
   The ops plane's SECOND measurement subject, and the first that is not
   extraction. ONE model call that reads a reported weakness and answers where

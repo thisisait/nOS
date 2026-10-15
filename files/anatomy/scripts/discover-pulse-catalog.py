@@ -302,7 +302,8 @@ def main() -> int:
 
     # NOS_INSTALL_FLAGS (post.yml): a plugin job whose owner is not installed
     # is emitted `installed: false` — post.yml deletes it instead of upserting.
-    # Unset (tools, tests): the whole catalog. Agents and loops declare no owner.
+    # Unset (tools, tests): the whole catalog. Agents and loops name an `owner:`
+    # flag, a job may add its own; gate: test_every_pulse_job_has_an_owner.py.
     flags = json.loads(_env("NOS_INSTALL_FLAGS") or "null")
     docs: dict[str, dict] = {}
     for path in _scan_sources(playbook_dir):
@@ -328,8 +329,10 @@ def main() -> int:
                 "source": path.split("/anatomy/")[-1],
                 "plugin_name": plugin_name,
                 "job": expanded,
-                "installed": flags is None or not path.endswith("/plugin.yml")
-                or nos_identity.plugin_installed(plugin_name, plugins, flags),
+                "installed": flags is None or (
+                    (nos_identity.plugin_installed(plugin_name, plugins, flags)
+                     if path.endswith("/plugin.yml") else nos_identity._on(flags.get(doc.get("owner"))))
+                    and (not job.get("owner") or nos_identity._on(flags.get(job["owner"])))),
             })
 
     print(json.dumps(catalog))

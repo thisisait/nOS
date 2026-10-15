@@ -11,6 +11,7 @@
 # which is deliberately DISABLED (state/fixtures/loop-config.seed.yml) — so this
 # ships as a measuring loop, not a self-improving one.
 id: vision-bench
+owner: install_loops       # a development loop (ruling 2026-10-15)
 label: "vision-bench — invoice extraction accuracy vs the rendered ground truth"
 blurb: >-
   Daily, run the vision pipeline over the consulting-firm fixture images and score

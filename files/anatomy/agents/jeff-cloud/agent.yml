@@ -1,5 +1,6 @@
 name: jeff-cloud
 version: 1
+owner: install_ears
 description: >-
   `jeff`'s cloud twin: the same assistant, the same prompt discipline, routed to
   a hosted model when the local 14B is not enough. It is a SEPARATE agent rather

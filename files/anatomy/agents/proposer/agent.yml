@@ -1,5 +1,6 @@
 name: proposer
 version: 1
+owner: install_loops
 description: >-
   The loop's entry. Takes ONE weakness, reads the budget it must stay inside,
   authors one bounded patch and RECORDS it with the engine before editing

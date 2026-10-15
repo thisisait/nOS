@@ -1,5 +1,6 @@
 name: inspektor
 version: 1
+owner: install_wing
 description: |
   nOS inspektor — pentest agent. Surveys the platform's security
   posture: triggers scan substrates (gitleaks, future trivy/grype/nuclei),

@@ -1,5 +1,6 @@
 name: upgrade-architect
 version: 1
+owner: install_loops
 description: |
   nOS upgrade-architect — authors upgrade recipes for the gaps the
   upgrade-advisor can't act on. For a service whose installed version matches

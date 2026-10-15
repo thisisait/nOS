@@ -1,5 +1,6 @@
 name: iris
 version: 1
+owner: install_thalamus
 description: >-
   The thalamus's cell: one person at a terminal asks Iris to find rows in one
   DataTable and change one row. The model picks the tools; the thalamus runs

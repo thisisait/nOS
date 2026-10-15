@@ -48,6 +48,7 @@ type:
 # =============================================================================
 
 requires:
+  feature_flag: install_pulse
   variables:
     - playbook_dir         # repo root → tools/npm-ioc-scan.py
 

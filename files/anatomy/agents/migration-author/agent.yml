@@ -1,5 +1,6 @@
 name: migration-author
 version: 1
+owner: install_loops
 description: |
   nOS migration-author — promotes a MERGED upgrade recipe into the real
   committed codebase change. For a service whose recipe the operator has

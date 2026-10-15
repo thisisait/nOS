@@ -358,6 +358,11 @@ mail_digest_cron: "0 9 * * *"
 # per minute, no crash-loop). Endpoints land alongside A7 (gitleaks plugin).
 install_pulse: true
 
+# The maintainer's development loops: loops/*.loop.yml, loop-base (propose,
+# drive, review), trunk-sync and the cells that serve only them (proposer,
+# surveyor, upgrade-architect, ...). A client host turns it off (profiles/core.yml).
+install_loops: true
+
 # wing_telemetry_enabled lives in main.yml as a PLAY-level var (not here)
 # because Ansible callback plugins can only see play.get_vars(), not the
 # vars_files-loaded scope. Override per-run with `-e wing_telemetry_enabled=false`.

@@ -4,6 +4,7 @@
 # was renamed: the dry-run report is now `tools/forge-sync.py` with no flags.
 ---
 id: repo-check
+owner: install_loops       # a development loop (ruling 2026-10-15)
 label: "repo-check — red / estate / forge, report only"
 blurb: >-
   On a four-hour cadence, read what is red, what the three holders of truth

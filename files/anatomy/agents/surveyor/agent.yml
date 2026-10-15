@@ -1,5 +1,6 @@
 name: surveyor
 version: 1
+owner: install_loops
 description: |
   nOS surveyor — walks the estate and reports what a control surface
   should SHOW. Reads the estate's own declarations (state/manifest.yml,

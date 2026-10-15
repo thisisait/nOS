@@ -7,6 +7,7 @@
 # per feed — a step declared once, rendered as N. Add a feed, get a node.
 ---
 id: news-scout
+owner: install_loops       # a development loop (ruling 2026-10-15)
 label: "news-scout — feed scouting + consolidation"
 blurb: >-
   On a daily cadence, fetch the declared external feeds, extract and dedup, then

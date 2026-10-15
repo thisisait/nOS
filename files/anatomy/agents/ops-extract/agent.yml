@@ -1,5 +1,6 @@
 name: ops-extract
 version: 1
+owner: install_loops
 description: >-
   The ops plane's measurement subject: ONE model call that turns a short
   business document into a typed JSON object, and nothing else. It exists to be

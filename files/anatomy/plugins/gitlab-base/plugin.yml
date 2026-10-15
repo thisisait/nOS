@@ -129,6 +129,7 @@ gdpr:
 pulse:
   jobs:
     - name: trunk-sync
+      owner: install_loops   # syncs the nOS trunk: a development loop (2026-10-15)
       runner: subprocess
       command: "{{ playbook_dir }}/tools/sync-trunk-to-gitlab.sh"
       schedule: "*/20 * * * *"

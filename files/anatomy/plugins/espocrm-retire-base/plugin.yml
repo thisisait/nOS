@@ -20,6 +20,7 @@ type:
   - composition
 
 requires:
+  feature_flag: install_authentik
   variables:
     - tenant_domain
 

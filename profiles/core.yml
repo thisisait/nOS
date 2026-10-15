@@ -1,5 +1,5 @@
 # =============================================================================
-# profiles/core.yml — face, Iris, KEAP, Wing, Bone and the SSO/edge they need
+# profiles/core.yml — face, Iris, KEAP, Wing, Bone, Pulse and the SSO/edge they need
 #
 # axis: service-set
 # plain: The smallest working nOS — desktop, assistant, memory and dashboard behind SSO.
@@ -28,6 +28,7 @@ install_face: true              # web desktop
 install_wing: true              # dashboard; FrankenPHP + SQLite on the host
 install_bone: true              # face's file store + Wing's event sink
 install_receptor: true          # the thalamus role asserts it
+install_pulse: true             # core organ (ruling 2026-10-15): runs the installed owners' jobs only
 install_thalamus: true          # Iris; macOS only; needs a model binding (mistral-eu)
 
 # ── Docker VM: the all-on minimum (11 GiB, measured 2026-10-10) is far above the core's need ──
@@ -41,8 +42,8 @@ authentik_worker_threads: 1     # 2 by default
 
 # ── Off: no core part needs them ─────────────────────────────────────────────
 install_infisical: false        # only Wing invite provisioning reads it, off by default
+install_loops: false            # the maintainer's development loops and the cells serving them
 install_observability: false    # ~700 MiB; Traefik tracing then logs export errors
-install_pulse: false            # scheduled jobs; Wing/face show them as absent
 install_cortex: false           # keap_cortex_cutover false: KEAP serves its own path
 install_ollama: false           # Iris is cloud-bound; KEAP's local-model path errors softly
 install_openclaw: false

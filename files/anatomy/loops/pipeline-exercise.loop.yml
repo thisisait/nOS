@@ -14,6 +14,7 @@
 # bundle of the slugs it knows, not a whole-table reset, so a cycle can run
 # beside real rows without touching them.
 id: pipeline-exercise
+owner: install_loops       # a development loop (ruling 2026-10-15)
 label: "pipeline-exercise — a degraded document through intake, verify, absorb"
 blurb: >-
   Nightly, take the least-tried (document, degradation) cell — crumpled,

@@ -1,5 +1,6 @@
 name: invoice-extract
 version: 1
+owner: install_ollama
 description: >-
   Stage B of the local invoice extractor (invoice-structured-extractor unit).
   ONE call that turns Stage A's (invoice-vision-ocr) OCR text into the ISDOC

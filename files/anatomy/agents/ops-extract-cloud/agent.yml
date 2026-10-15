@@ -1,5 +1,6 @@
 name: ops-extract-cloud
 version: 1
+owner: install_loops
 description: >-
   `ops-extract`'s cloud twin: byte-identical prompt and schema, routed to a
   hosted model instead of a local one. It exists for ONE comparison — does a

@@ -1,5 +1,6 @@
 name: curator
 version: 1
+owner: install_keap
 description: |
   nOS curator — the librarian's active sibling and the taxonomy's
   reconciler. Where the librarian FILLS (describes, briefs, judges lint)

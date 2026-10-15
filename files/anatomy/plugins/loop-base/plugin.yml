@@ -50,6 +50,7 @@ pulse:
     # operator act in Wing /pulse; the tool itself stays dry-run-by-default,
     # so the cadence must pass --invoke explicitly.
     - name: propose
+      owner: install_loops   # a development loop (ruling 2026-10-15)
       runner: subprocess
       command: "{{ playbook_dir }}/tools/loop-propose.py"
       args: ["--invoke"]
@@ -89,6 +90,7 @@ pulse:
     # then take every passed proposal to a branch on both forges + a GitLab MR.
     # Never merges (its own gate: test_the_driver_lands_without_merging).
     - name: drive
+      owner: install_loops   # a development loop (ruling 2026-10-15)
       runner: subprocess
       command: "{{ playbook_dir }}/tools/loop-pr.py"
       args: ["--open-mr", "--rejudge"]
@@ -106,6 +108,7 @@ pulse:
     # an MR whose pipeline is still running is INDETERMINATE and simply waits
     # for tomorrow's tick — an unanswered question is not a yes.
     - name: review
+      owner: install_loops   # a development loop (ruling 2026-10-15)
       runner: subprocess
       command: "{{ playbook_dir }}/tools/loop-review.py"
       args: ["--merge"]
@@ -150,7 +153,7 @@ gdpr:
     ceremonies' records (see pulse-base gdpr notes, 2026-08-13 clarification).
 
 e2e:
-  enabled: "{{ (install_wing | default(false)) and (install_bone | default(false)) }}"
+  enabled: "{{ (install_wing | default(false)) and (install_bone | default(false)) and (install_loops | default(false)) }}"
   probes:
     - name: propose-registered-in-wing
       url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs

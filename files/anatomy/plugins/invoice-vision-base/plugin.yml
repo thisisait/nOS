@@ -42,6 +42,7 @@ type:
 # =============================================================================
 
 requires:
+  feature_flag: install_ollama
   variables:
     - playbook_dir           # repo root → tools/invoice-vision-intake.py
 

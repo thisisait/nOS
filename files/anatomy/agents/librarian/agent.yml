@@ -1,5 +1,6 @@
 name: librarian
 version: 1
+owner: install_keap
 description: |
   nOS librarian — knowledge / RAG agent. Surfaces "have we seen this
   before?" context from prior agent runs + remediation history, and

@@ -1,5 +1,6 @@
 name: ops-triage-cloud
 version: 1
+owner: install_loops
 description: >-
   `ops-triage`'s cloud twin: byte-identical prompt and schema, routed to a
   hosted model. One comparison only — does a larger model triage this estate's

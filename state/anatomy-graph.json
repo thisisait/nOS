@@ -7823,7 +7823,7 @@
       "from": "pulse:loop:propose",
       "to": "doctrine:ssot/doctrine/loop-contract.md#10",
       "kind": "governed_by",
-      "via": "cited at files/anatomy/plugins/loop-base/plugin.yml:69",
+      "via": "cited at files/anatomy/plugins/loop-base/plugin.yml:70",
       "citations": 2,
       "derived": "doctrine-cite",
       "evidence": "derived"
