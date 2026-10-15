@@ -2343,6 +2343,8 @@ fn a_chart_with_a_bad_source_is_refused_and_one_without_has_no_pin() {
         (serde_json::json!({"query": {"table": "sheet"}, "x": "status", "op": "sum"}), "pie", "sum needs `y`"),
         (serde_json::json!({"query": {"table": "sheet"}, "x": "status", "op": "count", "chart": "bar"}), "pie", "chart"),
         (serde_json::json!({"query": {"table": "sheet"}, "x": "status", "op": "count"}), "area", "bar, line or pie"),
+        // show_schema requires only [query, op] (a kpi has no x); a chart's x is required by ChartSpec.
+        (serde_json::json!({"query": {"table": "sheet"}, "op": "count"}), "pie", "missing field `x`"),
     ];
     let mut model: Vec<String> = bad.iter().map(|(s, c, _)| sourced(c, s.clone())).collect();
     model.push(show(serde_json::json!({"kind": "chart", "props": {"chart": "bar", "x": "category", "series": [{"name": "m", "points": [["a", 1]]}]}})));

@@ -183,6 +183,7 @@
     {"case": "a choice reply picking seven", "line": "{\"t\":\"choice_reply\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"choice\":\"3c9e1d2f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"picked\":[\"o0\",\"o1\",\"o2\",\"o3\",\"o4\",\"o5\",\"o6\"]}"},
     {"case": "a choice reply picking a value that is not a label", "line": "{\"t\":\"choice_reply\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"choice\":\"3c9e1d2f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"picked\":[{\"$ne\":\"\"}]}"},
     {"case": "a form when op the wire does not name", "line": "{\"t\": \"widget\", \"widget\": \"w4\", \"spec\": {\"form\": {\"table\": \"expenses\", \"when\": {\"note\": {\"key\": \"kind\", \"op\": \"lt\", \"value\": \"travel\"}}}}, \"trigger\": \"click\"}"},
+    {"case": "a chart widget spec with no x", "line": "{\"t\":\"widget\",\"widget\":\"w5\",\"spec\":{\"chart\":{\"query\":{\"table\":\"expenses\"},\"chart\":\"bar\",\"op\":\"count\"}},\"trigger\":\"click\"}"},
     {"case": "a kpi widget spec with an x", "line": "{\"t\":\"widget\",\"widget\":\"w5\",\"spec\":{\"kpi\":{\"query\":{\"table\":\"expenses\"},\"op\":\"count\",\"x\":\"kind\"}},\"trigger\":\"click\"}"}
   ]
 }
