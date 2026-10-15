@@ -31,6 +31,16 @@ once, only on a node that is not up; a node already up gets the route via `tails
 macOS, iOS and Windows clients use approved routes by default; a Linux client needs
 `tailscale up --accept-routes`.
 
+## A roaming host (`nos_lan_roaming: true`)
+
+A Mac that travels advertises no LAN route; the tailnet reaches it by its own Tailscale
+IP. A second dnsmasq answers `*.<tenant_domain>` with that IP to the tailnet, so the
+split DNS points at the Tailscale IP instead of `nos_lan_ip` — admin console → DNS →
+Nameservers → Custom… → the Mac's `tailscale ip -4`, "Restrict to domain"
+`<tenant_domain>`. MagicDNS gives only the machine name, not the `*.<tenant_domain>`
+vhosts. The phone must trust the mkcert root CA. Details:
+[dnsmasq](../dnsmasq/README.md#roaming-host-nos_lan_roaming-true).
+
 ## Is it working
 
 - `ansible-playbook main.yml --tags verify` — RED (fails the play) unless the node is

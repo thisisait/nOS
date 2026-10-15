@@ -20,6 +20,42 @@
 Public TLDs use real DNS; `dnsmasq_force_local_domains: true` keeps the local answer
 beside them (hybrid mode).
 
+## Roaming host (`nos_lan_roaming: true`)
+
+A Mac that leaves its office LAN cannot bake one LAN address into its answers.
+
+| Who asks | Instance | Listens on | Answers `*.<tenant_domain>` with |
+|---|---|---|---|
+| the Mac itself (`/etc/resolver`) | system, `homebrew.mxcl.dnsmasq` | `127.0.0.1` only | `127.0.0.1` |
+| the tailnet (split DNS) | tailnet, `eu.thisisait.nos.dnsmasq-tailnet` | the Tailscale IP only | the Tailscale IP |
+
+The tailnet instance is a second root LaunchDaemon with its own config
+(`dnsmasq_tailnet_conf`, `/Library/LaunchDaemons/eu.thisisait.nos.dnsmasq-tailnet.plist`):
+`bind-interfaces` on the Tailscale address, so it never meets the system instance on
+`127.0.0.1:53`; `no-resolv`, so it answers the tenant domain and nothing else. launchd
+retries it every 10 s until the Tailscale address exists after boot. Traefik publishes
+443 on every interface, so `https://<svc>.<tenant_domain>` over the tailnet lands on it.
+
+- Roaming with no Tailscale IPv4 (Tailscale down, logged out): the converge says so and
+  skips; nothing fails. Not roaming: the instance is removed if present.
+- Every removal level (`nos --remove=data` and up) boots it out and deletes both files.
+
+**One manual step, in the person's own Tailscale admin console** (the converge has no
+API key, by design): login.tailscale.com/admin/dns → Nameservers → Add nameserver →
+Custom… → Nameserver: the Mac's Tailscale IP (`tailscale ip -4`) → turn on "Restrict
+to domain" → Domain: `<tenant_domain>` → Save. MagicDNS alone is not enough: it names
+the machine (`<host>.<tailnet>.ts.net`), never the `*.<tenant_domain>` vhosts Traefik
+routes on.
+
+**The phone must trust the mkcert root CA** (a local TLD gets mkcert certificates):
+send `$(mkcert -CAROOT)/rootCA.pem` to the phone; iOS: install the profile, then
+Settings → General → About → Certificate Trust Settings → enable it. Without it every
+page is a certificate warning.
+
+Check: `ansible-playbook main.yml --tags verify` digs `@<tailscale ip>` for one service
+name — RED if it does not answer the Tailscale IP, UNKNOWN when Tailscale is down.
+Gate: `tests/anatomy/test_a_roaming_host_answers_the_tailnet.py`.
+
 ## Off
 
 `install_dnsmasq: false` must be AUTHORED in `config.yml`: the authored stop boots the
