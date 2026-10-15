@@ -3538,3 +3538,93 @@ fn text_someone_else_wrote_reaches_iris_under_a_data_notice() {
         assert!(recorded(rig, &session, tool).get("notice").is_none(), "{tool}: the ledger keeps no notice");
     }
 }
+
+// --- iris-v3 B1: the model offers a dashboard; the person places it; nothing runs at offer ---
+
+/// One offer_dashboard call over the sheet, then a line of text: (rig, the turn, the model's tool result).
+fn offer(name: &str, args: serde_json::Value) -> (Rig, Vec<ToShell>, serde_json::Value) {
+    let rows = vec![keap_row("a", serde_json::json!({"status": "open", "amount": 3, "note": "trip to Brno"}))];
+    let rig = rig_at(name, mapped(), fake_table(SHEET, rows).0, vec![call("offer_dashboard", &args.to_string()), answer("Offered.")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "make me a dashboard of the sheet");
+    let result = tool_result(&rig, 1);
+    (rig, got, result)
+}
+
+fn dashboards(got: &[ToShell]) -> Vec<serde_json::Value> {
+    got.iter().filter_map(|m| match m {
+        ToShell::Render { component: c @ Component::Dashboard(_), pin, .. } => {
+            assert!(pin.is_none(), "an offer pins nothing: {m:?}");
+            Some(serde_json::to_value(c).unwrap()["props"].clone())
+        }
+        _ => None,
+    }).collect()
+}
+
+#[test]
+fn an_offered_dashboard_is_checked_against_the_schema_and_runs_nothing() {
+    let (rig, got, result) = offer("dash", serde_json::json!({"name": "Sheet board",
+        "lens": [{"column": "status", "op": "eq", "value": "open"}, {"column": "when", "op": "after"}],
+        "widgets": [
+            {"title": "Rows", "rows": "sheet"},
+            {"title": "Amount by status", "chart": {"query": {"table": "sheet"}, "chart": "bar", "x": "status", "y": "amount", "op": "sum"}},
+            {"title": "Add", "form": {"table": "sheet"}},
+            {"title": "By owner", "chart": {"query": {"table": "sheet"}, "chart": "bar", "x": "owner", "op": "count"}}]}));
+    let d = dashboards(&got);
+    assert_eq!(d.len(), 1, "one offer drawn: {got:?}");
+    let d = &d[0];
+    assert_eq!(d["name"], "Sheet board");
+    let titles: Vec<&str> = d["widgets"].as_array().unwrap().iter().map(|w| w["title"].as_str().unwrap()).collect();
+    assert_eq!(titles, ["Rows", "Amount by status", "Add"], "{d}");
+    assert_eq!(d["widgets"][0]["spec"], serde_json::json!({"rows": {"table": "sheet"}}), "a bare table name is a rows spec");
+    assert_eq!(d["dropped"][0]["title"], "By owner", "{d}");
+    assert!(d["dropped"][0]["why"].as_str().unwrap().contains("no column `owner`"), "{d}");
+    // The lens carries what the person's input needs: the column's options, or that it is a date.
+    assert_eq!(d["lens"], serde_json::json!([
+        {"column": "status", "op": "eq", "value": "open", "kind": "select", "options": ["open", "done"]},
+        {"column": "when", "op": "gt", "value": "", "kind": "date"}]), "{d}");
+    // Nothing runs at offer: schema reads only, no row read, no widget run in the ledger.
+    let seen = rig.keap.lock().unwrap().clone();
+    assert!(!seen.is_empty() && seen.iter().all(|(h, _)| !h.contains("/rows")), "a row was read at offer: {seen:?}");
+    let session = session_of(&got);
+    let ev = events(&rig.ledger, &session);
+    assert!(ev.iter().all(|e| !e.1.contains("widget_")), "a widget ran at offer: {ev:?}");
+    assert!(ev.iter().any(|e| e.0 == "agent_tool_result" && e.1 == "agent:iris/tool:offer_dashboard"), "{ev:?}");
+    // The model hears what was offered and left out, never a row.
+    assert_eq!(result["dropped"][0]["title"], "By owner", "{result}");
+    assert!(!result.to_string().contains("trip to Brno"), "{result}");
+    assert!(result["status"].as_str().is_some_and(|s| s.contains("nothing ran")), "{result}");
+}
+
+#[test]
+fn an_offer_with_no_widget_that_fits_is_refused_and_draws_nothing() {
+    for (name, args, want) in [
+        ("dashnone", serde_json::json!({"name": "x", "widgets": [{"title": "a", "rows": {"table": "sheet", "columns": ["nope"]}},
+                                                                 {"title": "b", "chart": {"query": {"table": "sheet"}, "chart": "bar", "x": "status", "op": "sum"}}]}),
+         "no widget fits"),
+        ("dashtwo", serde_json::json!({"name": "x", "widgets": [{"title": "a", "rows": {"table": "sheet"}, "form": {"table": "sheet"}}]}),
+         "exactly one of rows, chart, form"),
+        ("dashlens", serde_json::json!({"name": "x", "lens": [{"column": "owner", "op": "eq", "value": ""}], "widgets": [{"title": "a", "form": "sheet"}]}),
+         "lens column `owner` is in no widget's table"),
+        ("dashnine", serde_json::json!({"name": "x", "widgets": vec![serde_json::json!({"title": "a", "rows": "sheet"}); 9]}), "1 to 8"),
+    ] {
+        let (rig, got, result) = offer(name, args);
+        assert!(dashboards(&got).is_empty(), "{name}: drawn anyway: {got:?}");
+        assert!(result["error"].as_str().is_some_and(|e| e.contains(want)), "{name}: {result}");
+        assert!(rig.keap.lock().unwrap().iter().all(|(h, _)| !h.contains("/rows")), "{name}: a row was read");
+    }
+}
+
+#[test]
+fn the_prompt_says_how_to_offer_a_dashboard() {
+    let rig = rig("dashprompt", mapped(), ROWS, vec![answer("hi")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "hello");
+    let p = system_prompt(&rig);
+    assert!(p.contains("For a dashboard call offer_dashboard"), "{p}");
+    assert!(p.contains("to put a chart you drew on a dashboard, pass the same source"), "{p}");
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
+    assert!(body["tools"].as_array().unwrap().iter().any(|t| t["function"]["name"] == "offer_dashboard"), "the tool is offered");
+}
