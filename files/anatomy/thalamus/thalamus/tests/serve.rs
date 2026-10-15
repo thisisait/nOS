@@ -1121,6 +1121,22 @@ fn a_created_table_kept_otherwise_than_approved_is_not_called_created() {
 }
 
 #[test]
+fn a_table_held_public_or_renamed_is_not_called_created() {
+    for (i, title) in ["Kept public", "Renamed"].into_iter().enumerate() {
+        let (keap, _) = fake_table(SCHEMA, todo_rows());
+        let create = format!(r#"{{"title": "{title}", "columns": ["Item"]}}"#);
+        let rig = rig_at(&format!("tkept{i}"), mapped(), keap, vec![call("propose_table_create", &create), answer("Proposed.")], Some(local()));
+        let (s, mut r, _session, approval, _card) = propose_table(&rig);
+        decide(&s, &approval, Decision::Approve);
+        let said = match next(&mut r) {
+            Some(ToShell::Text { text, .. }) => text,
+            other => panic!("the person hears nothing of the create: {other:?}"),
+        };
+        assert!(said.contains("not created") && said.contains("otherwise than approved"), "{title}: {said}");
+    }
+}
+
+#[test]
 fn columns_kept_otherwise_than_approved_are_not_called_added() {
     let (keap, _) = fake_table(SCHEMA, todo_rows());
     let add = r#"{"table": "Todo list", "columns": [{"label": "lossy", "kind": "number"}]}"#;
@@ -1905,7 +1921,10 @@ fn fake_tables(tables: Vec<(&str, Vec<serde_json::Value>)>) -> ((String, Seen), 
             if (method, path) == ("POST", "/api/tables") {
                 let b: serde_json::Value = serde_json::from_str(&body).unwrap();
                 let id = format!("t-minted-{}", tables.len());
-                let out = serde_json::json!({"success": true, "data": {"id": id, "title": b["title"], "visibility": b["visibility"],
+                // Two KEAPs that answer 200 but keep otherwise: "Kept public" is held public, "Renamed" under another title.
+                let visibility = if b["title"] == "Kept public" { serde_json::json!("public") } else { b["visibility"].clone() };
+                let title = if b["title"] == "Renamed" { serde_json::json!("Renamed by KEAP") } else { b["title"].clone() };
+                let out = serde_json::json!({"success": true, "data": {"id": id, "title": title, "visibility": visibility,
                     "ownerId": "u-alice", "schema": lossy(&b["schema"])}}).to_string();
                 tables.push((format!("/api/tables/{id}"), out.clone(), Arc::default()));
                 write!(c, "HTTP/1.1 200 X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{out}", out.len()).unwrap();
