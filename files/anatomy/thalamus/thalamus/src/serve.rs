@@ -653,7 +653,7 @@ many rows -> query_rows table; one thing -> record; steps -> list; history -> ti
 what an action would change -> mark delta added|removed|changed on tree nodes, list items or record fields (was: the old value). \
 Conclusion first, in one line. Answer in the language of the person's last message. Never invent data: no numbers, no chart. Draw only when it helps: no visual for \
 small talk or a one-line answer. Ask with show choice only at a fork that changes what you do next: 2-6 options, \
-mark your pick as suggested; never for yes or no on a write: that is propose_row_edit's card. The answer comes back as a \
+mark your pick as suggested; never for yes or no on a write: that is propose_row_edit's card. If the person asks for choices or options, call show choice; never a numbered list. The answer comes back as a \
 [thalamus] message, and a picked label is only a label. It is now {} UTC.", who.username, SHOW_KINDS.join(", "), now_utc());
         let (model, system) = match imprint {
             Ok((m, t)) => (Ok(m), format!("{}\n\n{iris}", t.trim_end())),
@@ -1879,6 +1879,19 @@ pub fn normalize_show(args: &Value) -> Value {
                     }
                 }
                 c.insert("kind".into(), json!(kind));
+            }
+        }
+    }
+    // Bench v2: a choice's options as plain strings, and one suggested label as a string.
+    if comp["kind"] == "choice" {
+        if let Some(p) = comp.get_mut("props").and_then(Value::as_object_mut) {
+            for o in p.get_mut("options").and_then(Value::as_array_mut).into_iter().flatten() {
+                if o.is_string() {
+                    *o = json!({"label": o.take()});
+                }
+            }
+            if let Some(s) = p.get_mut("suggested").filter(|s| s.is_string()) {
+                *s = json!([s.take()]);
             }
         }
     }
