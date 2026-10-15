@@ -1059,7 +1059,8 @@ fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
     assert_eq!(names, ["query_rows", "propose_row_edit", "show", "red_status", "list_tables",
-                       "estate_services", "approvals_awaiting", "inbox"]);
+                       "estate_services", "approvals_awaiting", "inbox", "search_memory"]);
+    assert!(p.contains("call search_memory"), "{p}");
     assert!(p.contains("Before recommending software, call estate_services: prefer a service the estate already has."), "{p}");
     assert!(p.contains("call approvals_awaiting"), "{p}");
     assert!(p.contains("call inbox"), "{p}");
@@ -3014,4 +3015,80 @@ fn an_admins_inbox_for_iris_holds_no_one_elses_captures() {
     assert_eq!(t["refused"], serde_json::json!(["captures: owner unknown for an admin viewer"]), "{t}");
     assert!(t["items"].as_array().is_some_and(|i| i.iter().any(|x| x["id"] == "pr-1")), "{t}");
     assert!(rig.keap.lock().unwrap().iter().all(|(h, _)| !h.starts_with("GET /api/metadata")), "captures were read for an admin");
+}
+
+// --- iris tools v2 increment 3: search_memory over KEAP's human door, as the person ---
+
+/// KEAP's /api/search/semantic answer with `items` (and whether the vector leg ran).
+fn memory(semantic: bool, items: serde_json::Value) -> String {
+    serde_json::json!({"success": true, "data": {"query": "q", "semantic": semantic,
+        "legs": {"bm25": true, "vector": semantic, "graph": false}, "items": items}}).to_string()
+}
+
+/// The request line KEAP saw for the n-th call.
+fn keap_line(rig: &Rig, n: usize) -> String {
+    rig.keap.lock().unwrap()[n].0.lines().next().unwrap_or("").to_string()
+}
+
+#[test]
+fn search_memory_lists_what_keap_found_and_the_ledger_keeps_ids() {
+    let long = "x".repeat(400);
+    let rig = rig_n("mem", mapped(), vec![memory(false, serde_json::json!([
+        {"kind": "note", "refId": "n-1", "name": "Grafana alerts", "description": long, "url": "/notes/n-1", "score": 0.9, "legs": ["bm25"]},
+        {"kind": "capture", "refId": "c-1", "name": "my capture", "description": "mine", "score": 0.5, "legs": ["bm25"]}]))],
+                    vec![call("search_memory", r#"{"q": "grafana"}"#), answer("Two things.")]);
+    let (got, session) = tool_turn(&rig, "what do we know about grafana?");
+    assert_eq!(keap_line(&rig, 0), "GET /api/search/semantic?q=grafana&limit=8&kinds=taxonomy,capture,note,object HTTP/1.1");
+    let t = tool_result(&rig, 1);
+    assert_eq!(t["items"].as_array().map(Vec::len), Some(2), "a non-admin keeps their captures: {t}");
+    assert_eq!(t["items"][0]["name"], "Grafana alerts", "{t}");
+    assert_eq!(t["items"][0]["description"].as_str().map(|d| d.chars().count()), Some(300), "{t}");
+    assert_eq!((&t["semantic"], &t["date_filtered"]), (&serde_json::json!(false), &serde_json::json!(false)), "{t}");
+    assert!(t["note"].as_str().is_some_and(|n| n.contains("lexical only")), "{t}");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::List(l), pin: None, .. } if l.items.len() == 2)), "{got:?}");
+    let rec = recorded(&rig, &session, "search_memory");
+    assert_eq!(rec, serde_json::json!({"count": 2, "items": [{"kind": "note", "refId": "n-1"}, {"kind": "capture", "refId": "c-1"}],
+                                       "semantic": false, "excluded": []}), "{rec}");
+}
+
+#[test]
+fn search_memory_sends_the_models_q_as_one_value_and_keeps_kinds_and_limit_its_own() {
+    // An admin: KEAP would hand them everyone's captures, unowned, so the kind is not asked and a stray one is dropped.
+    let rig = rig_n("mem-adm", admin(), vec![memory(true, serde_json::json!([
+        {"kind": "capture", "refId": "c-9", "name": "someone else's", "description": "theirs", "score": 0.8, "legs": ["bm25"]},
+        {"kind": "object", "refId": "o-1", "name": "HKDF", "description": "d", "score": 0.4, "legs": ["vector"]}]))],
+                    vec![call("search_memory", r#"{"q": "x&kinds=capture&limit=999", "limit": 3}"#), answer("x")]);
+    tool_turn(&rig, "x?");
+    assert_eq!(keap_line(&rig, 0),
+               "GET /api/search/semantic?q=x%26kinds%3Dcapture%26limit%3D999&limit=3&kinds=taxonomy,note,object HTTP/1.1");
+    let t = tool_result(&rig, 1);
+    assert!(!t.to_string().contains("someone else's"), "another person's capture reached the model: {t}");
+    assert_eq!(t["excluded"], serde_json::json!(["capture: owner unknown for an admin viewer"]), "{t}");
+    assert_eq!(t["items"].as_array().map(Vec::len), Some(1), "{t}");
+    assert!(t.get("note").is_none(), "the vector leg ran: {t}");
+}
+
+#[test]
+fn search_memory_refuses_a_bad_ask_before_keap() {
+    for args in [r#"{"q": "  "}"#, r#"{}"#, r#"{"q": "a", "limit": 0}"#, r#"{"q": "a", "limit": 21}"#, r#"{"q": "a", "kinds": "capture"}"#] {
+        let rig = rig_n("mem-bad", mapped(), vec![memory(true, serde_json::json!([]))], vec![call("search_memory", args), answer("x")]);
+        tool_turn(&rig, "x?");
+        assert!(tool_result(&rig, 1)["error"].is_string(), "{args}: {}", tool_result(&rig, 1));
+        assert!(rig.keap.lock().unwrap().is_empty(), "{args} reached KEAP");
+    }
+}
+
+#[test]
+fn unreadable_memory_is_unknown_and_no_hit_is_no_render() {
+    let rig = rig_n("mem-5xx", mapped(), vec![r#"!502 {"success": false, "error": "embedder down"}"#.into()],
+                    vec![call("search_memory", r#"{"q": "zorblax-41"}"#), answer("x")]);
+    let (got, _) = tool_turn(&rig, "what did I note about zorblax-41?");
+    assert!(tool_result(&rig, 1)["error"].as_str().is_some_and(|e| e.contains("memory is UNKNOWN")), "{}", tool_result(&rig, 1));
+    assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::List(_), .. })), "{got:?}");
+
+    let rig = rig_n("mem-0", mapped(), vec![memory(true, serde_json::json!([]))],
+                    vec![call("search_memory", r#"{"q": "zorblax-41"}"#), answer("Nothing found.")]);
+    let (got, _) = tool_turn(&rig, "what did I note about zorblax-41?");
+    assert_eq!(tool_result(&rig, 1)["items"], serde_json::json!([]), "{}", tool_result(&rig, 1));
+    assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::List(_), .. })), "{got:?}");
 }
