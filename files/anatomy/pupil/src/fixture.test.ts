@@ -16,6 +16,7 @@ const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as { to_shell: { case: stri
 const PROPS: Record<string, string[]> = {
 	table_results: ['columns', 'matched', 'name', 'projected', 'query', 'rows', 'table', 'total'],
 	row_diff_approval: ['cells', 'lines', 'op', 'read_from', 'row_id', 'table', 'title'],
+	table_schema_approval: ['columns', 'description', 'title', 'visibility'],
 	inbox_list: ['items', 'refused'],
 	approvals_list: ['items', 'unknown'],
 	red_status: ['hold_count', 'holds', 'red_count', 'reds'],
@@ -35,7 +36,7 @@ const PROPS: Record<string, string[]> = {
 };
 const KINDS = Object.keys(PROPS);
 // Props a sample may leave out (an insert names no row); any other missing or extra prop is a rename.
-const OPTIONAL: Record<string, string[]> = { row_diff_approval: ['lines', 'read_from', 'row_id'], form: ['prefill'], kpi: ['delta', 'delta_label', 'source', 'unit'] };
+const OPTIONAL: Record<string, string[]> = { row_diff_approval: ['lines', 'read_from', 'row_id'], table_schema_approval: ['description'], form: ['prefill'], kpi: ['delta', 'delta_label', 'source', 'unit'] };
 
 const text = (html: string) =>
 	html
