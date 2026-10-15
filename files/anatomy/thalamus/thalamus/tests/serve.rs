@@ -2795,3 +2795,42 @@ fn an_unknown_table_names_the_ones_there_are() {
     let e = e["error"].as_str().unwrap_or_default();
     assert!(e.contains("no table `expenses`") && e.contains("Todo list (todos)") && e.contains("list_tables"), "{e}");
 }
+
+
+// --- client bench 2026-10-14: qwen3.5:9b's show calls, from the ledger, all refused as kind "" ---
+
+#[test]
+fn show_reads_the_shapes_a_local_model_sends() {
+    let n = |v: serde_json::Value| serve::normalize_show(&v);
+    // component as a JSON string, `type` for `kind`, props flattened
+    let a = n(serde_json::json!({"component": "{\"type\": \"bar chart\", \"title\": \"T\", \"x\": [\"a\"], \"y\": [1]}"}));
+    assert_eq!((&a["component"]["kind"], &a["component"]["props"]["chart"], &a["component"]["props"]["title"]),
+               (&serde_json::json!("chart"), &serde_json::json!("bar"), &serde_json::json!("T")), "{a}");
+    // a source alone: the chart it asks for, drawn from KEAP
+    let src = serde_json::json!({"query": {"table": "sheet"}, "x": "status", "op": "count"});
+    let b = n(serde_json::json!({"source": src.clone()}));
+    assert_eq!((&b["component"]["kind"], &b["component"]["props"]["chart"], &b["source"]),
+               (&serde_json::json!("chart"), &serde_json::json!("bar"), &src), "{b}");
+    // the kind's name alone
+    let c = n(serde_json::json!({"component": "pie-chart", "source": src.clone()}));
+    assert_eq!(c["component"]["props"]["chart"], "pie", "{c}");
+    // a list keeps its own kind; the canonical shape passes through untouched
+    let d = serde_json::json!({"component": {"kind": "list", "props": {"ordered": false, "items": [{"text": "x"}]}}});
+    assert_eq!(n(d.clone()), d);
+    let e = n(serde_json::json!({"component": "{\"type\": \"list\", \"ordered\": true, \"items\": [{\"text\": \"x\"}]}"}));
+    assert_eq!((&e["component"]["kind"], &e["component"]["props"]["ordered"]), (&serde_json::json!("list"), &serde_json::json!(true)), "{e}");
+}
+
+#[test]
+fn a_source_alone_draws_a_pinned_chart() {
+    let source = serde_json::json!({"query": {"table": "sheet"}, "x": "status", "op": "count"});
+    let rig = rig_at("srconly", mapped(), fake_table(SHEET, statuses()).0,
+        vec![call("show", &serde_json::json!({"source": source}).to_string()), answer("Drawn.")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "chart per status");
+    let drawn = rendered(&got);
+    assert_eq!(drawn.len(), 1, "{got:?}");
+    assert_eq!(points(&drawn[0]["component"]["props"]), pts(&[("open", 3.0), ("done", 1.0)]));
+    assert!(drawn[0]["pin"].get("chart").is_some(), "{}", drawn[0]);
+}
