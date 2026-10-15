@@ -3414,3 +3414,18 @@ fn a_chart_of_the_sums_just_grouped_pins_with_that_op_and_y() {
     let p = system_prompt(&rig);
     assert!(p.contains("sum or average per value"), "{p}");
 }
+
+#[test]
+fn the_model_hears_its_query_said_and_a_column_word_is_a_where() {
+    // Client bench v2 top3-next: order_by points desc, limit 3, and no where status = next; the model
+    // never saw the sentence that would have shown the filter missing.
+    let rig = rig_at("qsaid", mapped(), fake_table(SHEET, statuses()).0,
+        vec![query(r#"{"table": "sheet", "where": [{"column": "status", "op": "eq", "value": "open"}], "order_by": {"column": "amount", "dir": "desc"}, "limit": 2}"#),
+             answer("x")], Some(local()));
+    tool_turn(&rig, "top two open by amount");
+    let told = tool_result(&rig, 1);
+    let q = told["query"].as_str().unwrap_or_else(|| panic!("no query sentence: {told}"));
+    assert!(q.contains("status = open") && q.contains("order by amount desc"), "{q}");
+    let p = system_prompt(&rig);
+    assert!(p.contains("A status, track or other column word in the question is a `where` on that column; order_by and limit never filter."), "{p}");
+}
