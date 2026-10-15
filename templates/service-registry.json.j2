@@ -11,516 +11,417 @@
   "hostname": "{{ ansible_facts['hostname'] }}",
   "domain": "{{ tenant_domain | default(dnsmasq_dev_domain | default('dev.local')) }}",
   "services": [
-{% set _services = [] %}
-{# ── Tier 1: Services with a domain (HTTPS) ───────────────────────────── #}
-{% if install_observability | default(true) %}
-{% set _ = _services.append({
+{# Membership is the installed set — nos_identity.installed via filter nos_installed,
+   the services-status derivation. A row has a card (domain/url) when Traefik routes
+   it. _meta below is display metadata only (name, description, health_url), keyed
+   by manifest id. Gate: tests/anatomy/test_service_registry_is_the_installed_set.py #}
+{% set _meta = {} %}
+{% set _ = _meta.update({'grafana': {
   "name": "Grafana",
-  "id": "grafana",
   "category": "observability",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_observability",
-  "domain": grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": grafana_port | default(3000),
-  "url": "https://" ~ (grafana_domain | default('grafana' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "observability",
   "description": "Monitoring and dashboards"
-}) %}
-{% endif %}
-{% if install_wordpress | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'wordpress': {
   "name": "WordPress",
   "category": "web",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_wordpress",
-  "domain": wordpress_domain | default('wordpress' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": wordpress_port | default(8084),
-  "url": "https://" ~ (wordpress_domain | default('wordpress' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "iiab",
   "description": "CMS and blog"
-}) %}
-{% endif %}
-{% if install_nextcloud | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'nextcloud': {
   "name": "Nextcloud",
   "category": "cloud",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_nextcloud",
-  "domain": nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": nextcloud_port | default(8085),
-  "url": "https://" ~ (nextcloud_domain | default('cloud' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "iiab",
   "description": "Cloud storage and files"
-}) %}
-{% endif %}
-{% if install_n8n | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'n8n': {
   "name": "n8n",
   "category": "automation",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_n8n",
-  "domain": n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": n8n_port | default(5678),
-  "url": "https://" ~ (n8n_domain | default('n8n' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "iiab",
   "description": "Workflow automation"
-}) %}
-{% endif %}
-{% if install_kiwix | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'kiwix': {
   "name": "Kiwix",
   "category": "knowledge",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_kiwix",
-  "domain": kiwix_domain | default('kiwix' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": kiwix_port | default(8888),
-  "url": "https://" ~ (kiwix_domain | default('kiwix' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "iiab",
   "description": "Offline Wikipedia and encyclopedias"
-}) %}
-{% endif %}
-{% if install_jellyfin | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'jellyfin': {
   "name": "Jellyfin",
   "category": "media",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_jellyfin",
-  "domain": jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": jellyfin_port | default(8096),
   "health_url": "http://127.0.0.1:" ~ (jellyfin_port | default(8096)) ~ "/health",
-  "url": "https://" ~ (jellyfin_domain | default('media' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "iiab",
   "description": "Media server (movies, shows, music)"
-}) %}
-{% endif %}
-{% if install_gitea | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'gitea': {
   "name": "Gitea",
   "category": "devops",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_gitea",
-  "domain": gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": gitea_port | default(3003),
-  "url": "https://" ~ (gitea_domain | default('git' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "devops",
   "description": "Self-hosted Git server"
-}) %}
-{% endif %}
-{% if install_gitlab | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'gitlab': {
   "name": "GitLab",
   "category": "devops",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_gitlab",
-  "domain": gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": gitlab_http_port | default(8929),
-  "url": "https://" ~ (gitlab_domain | default('gitlab' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "devops",
   "description": "DevOps platform"
-}) %}
-{% endif %}
-{% if install_woodpecker | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'woodpecker': {
   "name": "Woodpecker CI",
   "category": "devops",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_woodpecker",
-  "domain": woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": woodpecker_port | default(8060),
-  "url": "https://" ~ (woodpecker_domain | default('ci' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "devops",
   "description": "CI/CD pipeline"
-}) %}
-{% endif %}
-{% if install_openwebui | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'open_webui': {
   "name": "Open WebUI",
   "category": "ai",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_openwebui",
-  "domain": openwebui_domain | default('ai' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": openwebui_port | default(3004),
-  "url": "https://" ~ (openwebui_domain | default('ai' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "iiab",
   "description": "Chat UI for Ollama LLMs"
-}) %}
-{% endif %}
-{% if install_portainer | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'portainer': {
   "name": "Portainer",
   "category": "infra",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_portainer",
-  "domain": portainer_domain | default('portainer' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": portainer_port | default(9002),
-  "url": "https://" ~ (portainer_domain | default('portainer' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "infra",
   "description": "Docker management UI"
-}) %}
-{% endif %}
-{% if install_erpnext | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'erpnext': {
   "name": "ERPNext",
   "category": "b2b",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_erpnext",
-  "domain": erpnext_domain | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": erpnext_port | default(8082),
-  "url": "https://" ~ (erpnext_domain | default('erp' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "b2b",
   "description": "CRM/ERP system (Frappe framework)"
-}) %}
-{% endif %}
-{% if install_freescout | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'freescout': {
   "name": "FreeScout",
   "category": "b2b",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_freescout",
-  "domain": freescout_domain | default('helpdesk' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": freescout_port | default(8090),
-  "url": "https://" ~ (freescout_domain | default('helpdesk' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "b2b",
   "description": "Helpdesk and ticketing"
-}) %}
-{% endif %}
-{% if install_outline | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'outline': {
   "name": "Outline",
   "category": "b2b",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_outline",
-  "domain": outline_domain | default('wiki' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": outline_port | default(3005),
-  "url": "https://" ~ (outline_domain | default('wiki' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "b2b",
   "description": "Team wiki and knowledge base"
-}) %}
-{% endif %}
-{% if install_metabase | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'metabase': {
   "name": "Metabase",
   "category": "data",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_metabase",
-  "domain": metabase_domain | default('bi' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": metabase_port | default(3002),
-  "url": "https://" ~ (metabase_domain | default('bi' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "data",
   "description": "Business Intelligence dashboards"
-}) %}
-{% endif %}
-{% if install_superset | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'superset': {
   "name": "Apache Superset",
   "category": "data",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_superset",
-  "domain": superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": superset_port | default(8089),
-  "url": "https://" ~ (superset_domain | default('superset' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "data",
   "description": "Data exploration and visualization"
-}) %}
-{% endif %}
-{% if install_qgis_server | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'qgis_server': {
   "name": "QGIS Server",
   "category": "engineering",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_qgis_server",
-  "domain": qgis_domain | default('gis' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": qgis_port | default(8071),
-  "url": "https://" ~ (qgis_domain | default('gis' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "engineering",
   "description": "GIS map server"
-}) %}
-{% endif %}
-{% if install_bluesky_pds | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'bluesky_pds': {
   "name": "Bluesky PDS",
   "category": "identity",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_bluesky_pds",
-  "domain": bluesky_pds_hostname | default('bsky.dev.lan'),
   "port": bluesky_pds_port | default(2583),
-  "url": "https://" ~ (bluesky_pds_hostname | default('bsky.dev.lan')),
   "type": "docker",
   "stack": "infra",
   "description": "AT Protocol Personal Data Server"
-}) %}
-{% endif %}
-{% if install_authentik | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'authentik': {
   "name": "Authentik",
   "category": "iam",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_authentik",
-  "domain": authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": authentik_port | default(9000),
-  "url": "https://" ~ (authentik_domain | default('auth' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "infra",
   "description": "SSO / Identity Provider (OIDC, SAML, LDAP)"
-}) %}
-{% endif %}
-{% if install_infisical | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'infisical': {
   "name": "Infisical",
   "category": "iam",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_infisical",
-  "domain": infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": infisical_port | default(8075),
-  "url": "https://" ~ (infisical_domain | default('vault' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "infra",
   "description": "Secrets vault (REST API, CLI, SDK)"
-}) %}
-{% endif %}
-{% if install_vaultwarden | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'vaultwarden': {
   "name": "Vaultwarden",
   "category": "iam",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_vaultwarden",
-  "domain": vaultwarden_domain | default('pass' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": vaultwarden_port | default(8062),
-  "url": "https://" ~ (vaultwarden_domain | default('pass' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "iiab",
   "description": "Bitwarden-compatible password vault"
-}) %}
-{% endif %}
-{% if install_paperclip | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'paperclip': {
   "name": "Paperclip",
   "category": "ai",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_paperclip",
-  "domain": paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": paperclip_port | default(3006),
-  "url": "https://" ~ (paperclip_domain | default('paperclip' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "devops",
   "description": "Multi-agent orchestration (OpenClaw, Claude Code)"
-}) %}
-{% endif %}
-{% if install_wing | default(install_php | default(true)) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'wing': {
   "name": "Wing",
   "category": "security",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_wing",
-  "domain": wing_domain | default('wing' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": 443,
-  "url": "https://" ~ (wing_domain | default('wing' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "php",
   "stack": "native",
   "description": "Security Research Dashboard (Nette + SQLite)"
-}) %}
-{% endif %}
-{% if install_offline_maps | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'offline_maps': {
   "name": "Tileserver GL",
   "category": "maps",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_offline_maps",
-  "domain": maps_domain | default('maps' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": maps_port | default(8070),
-  "url": "https://" ~ (maps_domain | default('maps' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "iiab",
   "description": "Offline maps"
-}) %}
-{% endif %}
-{# ── Wave A + Wave B (new roles, 9 services with a domain) ────────────── #}
-{% if install_ntfy | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'ntfy': {
   "name": "ntfy",
   "category": "notifications",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_ntfy",
-  "domain": ntfy_domain | default('ntfy' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": ntfy_port | default(2586),
-  "url": "https://" ~ (ntfy_domain | default('ntfy' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "iiab",
   "version": ntfy_version | default('v2.21.0'),
   "description": "Self-hosted push notifications (pub/sub)"
-}) %}
-{% endif %}
-{% if install_miniflux | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'miniflux': {
   "name": "Miniflux",
   "category": "knowledge",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_miniflux",
-  "domain": miniflux_domain | default('rss' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": miniflux_port | default(3011),
-  "url": "https://" ~ (miniflux_domain | default('rss' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "iiab",
   "version": miniflux_version | default('2.2.19'),
   "description": "Minimalist RSS/Atom reader"
-}) %}
-{% endif %}
-{% if install_code_server | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'code_server': {
   "name": "code-server",
   "category": "devops",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_code_server",
-  "domain": code_server_domain | default('code' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": code_server_port | default(3009),
-  "url": "https://" ~ (code_server_domain | default('code' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "devops",
   "version": code_server_version | default('4.115.0-ls332'),
   "description": "VS Code in the browser (browser IDE)"
-}) %}
-{% endif %}
-{% if install_hedgedoc | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'hedgedoc': {
   "name": "HedgeDoc",
   "category": "b2b",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_hedgedoc",
-  "domain": hedgedoc_domain | default('hedgedoc' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": hedgedoc_port | default(3012),
-  "url": "https://" ~ (hedgedoc_domain | default('hedgedoc' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "b2b",
   "version": hedgedoc_version | default('1.10.7'),
   "description": "Real-time collaborative markdown editor"
-}) %}
-{% endif %}
-{% if install_bookstack | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'bookstack': {
   "name": "BookStack",
   "category": "b2b",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_bookstack",
-  "domain": bookstack_domain | default('bookstack' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": bookstack_port | default(3013),
-  "url": "https://" ~ (bookstack_domain | default('bookstack' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "b2b",
   "version": bookstack_version | default('v26.03.3-ls256'),
   "description": "Wiki platform (shelf/book/chapter/page)"
-}) %}
-{% endif %}
-{% if install_firefly | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'firefly': {
   "name": "Firefly III",
   "category": "b2b",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_firefly",
-  "domain": firefly_domain | default('firefly' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": firefly_port | default(3014),
-  "url": "https://" ~ (firefly_domain | default('firefly' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "b2b",
   "version": firefly_version | default('version-6.2.21'),
   "description": "Personal finance and accounting"
-}) %}
-{% endif %}
-{% if install_onlyoffice | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'onlyoffice': {
   "name": "ONLYOFFICE",
   "category": "b2b",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_onlyoffice",
-  "domain": onlyoffice_domain | default('office' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": onlyoffice_port | default(3015),
-  "url": "https://" ~ (onlyoffice_domain | default('office' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "b2b",
   "version": onlyoffice_version | default('9.3.1.2'),
   "description": "Document Server (embeddable editor backend)"
-}) %}
-{% endif %}
-{% if install_nodered | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'nodered': {
   "name": "Node-RED",
   "category": "automation",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_nodered",
-  "domain": nodered_domain | default('nodered' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": nodered_port | default(1880),
-  "url": "https://" ~ (nodered_domain | default('nodered' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "iiab",
   "version": nodered_version | default('4.0.9'),
   "description": "Low-code flow-based automation"
-}) %}
-{% endif %}
-{% if install_influxdb | default(false) %}
-{% set _ = _services.append({
+}}) %}
+{% set _ = _meta.update({'influxdb': {
   "name": "InfluxDB",
   "category": "observability",
-  "tier": 1,
-  "enabled": true,
-  "toggle_var": "install_influxdb",
-  "domain": influxdb_domain | default('influx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))),
   "port": influxdb_port | default(8086),
-  "url": "https://" ~ (influxdb_domain | default('influx' ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local')))),
   "type": "docker",
   "stack": "observability",
   "version": influxdb_version | default('2.7.12'),
   "description": "Time-series database (OSS 2.x)"
-}) %}
-{% endif %}
-{# ── Tier 2: Services with a port (no domain) ──────────────────────────── #}
+}}) %}
+{% set _ = _meta.update({'dnsmasq': {
+  "name": "dnsmasq",
+  "category": "network",
+  "port": dnsmasq_port | default(53),
+  "type": "homebrew",
+  "description": "DNS resolver (*." ~ (dnsmasq_dev_domain | default('dev.local')) ~ ")"
+}}) %}
+{% set _ = _meta.update({'mariadb': {
+  "name": "MariaDB",
+  "category": "database",
+  "port": mariadb_port | default(3306),
+  "health_url": "tcp://127.0.0.1:" ~ (mariadb_port | default(3306)),
+  "type": "docker",
+  "stack": "infra",
+  "description": "Relational database"
+}}) %}
+{% set _ = _meta.update({'postgresql': {
+  "name": "PostgreSQL",
+  "category": "database",
+  "port": postgresql_port | default(5432),
+  "health_url": "tcp://127.0.0.1:" ~ (postgresql_port | default(5432)),
+  "type": "docker",
+  "stack": "infra",
+  "description": "Relational database (Outline, Metabase, Superset)"
+}}) %}
+{% set _ = _meta.update({'redis': {
+  "name": "Redis (Docker)",
+  "category": "cache",
+  "port": redis_port | default(6379),
+  "health_url": "tcp://127.0.0.1:" ~ (redis_port | default(6379)),
+  "type": "docker",
+  "stack": "infra",
+  "description": "In-memory cache (shared across stacks)"
+}}) %}
+{% set _ = _meta.update({'prometheus': {
+  "name": "Prometheus",
+  "category": "observability",
+  "port": prometheus_port | default(9090),
+  "health_url": "http://127.0.0.1:" ~ (prometheus_port | default(9090)) ~ "/-/healthy",
+  "type": "docker",
+  "stack": "observability",
+  "description": "Metrics and alerting"
+}}) %}
+{% set _ = _meta.update({'loki': {
+  "name": "Loki",
+  "category": "observability",
+  "port": loki_port | default(3100),
+  "health_url": "http://127.0.0.1:" ~ (loki_port | default(3100)) ~ "/ready",
+  "type": "docker",
+  "stack": "observability",
+  "description": "Log aggregation"
+}}) %}
+{% set _ = _meta.update({'tempo': {
+  "name": "Tempo",
+  "category": "observability",
+  "port": tempo_http_port | default(3200),
+  "health_url": "http://127.0.0.1:" ~ (tempo_http_port | default(3200)) ~ "/ready",
+  "type": "docker",
+  "stack": "observability",
+  "description": "Distributed tracing"
+}}) %}
+{% set _ = _meta.update({'alloy': {
+  "name": "Alloy",
+  "category": "observability",
+  "port": alloy_ui_port | default(12345),
+  "health_url": "http://127.0.0.1:" ~ (alloy_ui_port | default(12345)) ~ "/-/ready",
+  "type": "homebrew",
+  "description": "Metrics and logs collector"
+}}) %}
+{% set _ = _meta.update({'ollama': {
+  "name": "Ollama",
+  "category": "ai",
+  "port": 11434,
+  "health_url": "http://127.0.0.1:11434/api/version",
+  "type": "homebrew",
+  "description": "LLM inference engine"
+}}) %}
+{% set _ = _meta.update({'uptime_kuma': {
+  "name": "Uptime Kuma",
+  "category": "monitoring",
+  "port": uptime_kuma_port | default(3001),
+  "health_url": "http://127.0.0.1:" ~ (uptime_kuma_port | default(3001)),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "Availability monitoring"
+}}) %}
+{% set _ = _meta.update({'calibre_web': {
+  "name": "Calibre-Web",
+  "category": "knowledge",
+  "port": calibreweb_port | default(8083),
+  "health_url": "http://127.0.0.1:" ~ (calibreweb_port | default(8083)),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "eBook server"
+}}) %}
+{% set _ = _meta.update({'homeassistant': {
+  "name": "Home Assistant",
+  "category": "iot",
+  "port": homeassistant_port | default(8123),
+  "health_url": "http://127.0.0.1:" ~ (homeassistant_port | default(8123)),
+  "type": "docker",
+  "stack": "iiab",
+  "description": "Home automation"
+}}) %}
+{% set _ = _meta.update({'rustfs': {
+  "name": "RustFS",
+  "category": "storage",
+  "port": rustfs_api_port | default(9010),
+  "health_url": "http://127.0.0.1:" ~ (rustfs_api_port | default(9010)) ~ "/health",
+  "type": "docker",
+  "stack": "iiab",
+  "description": "S3-compatible object storage"
+}}) %}
+{% set _rows = (lookup('file', playbook_dir ~ '/state/manifest.yml') | from_yaml).services %}
+{% set _skip = (lookup('file', playbook_dir ~ '/roles/pazny.traefik/vars/main.yml') | from_yaml).traefik_skip_ids %}
+{% set _flags = {} %}
+{% for r in _rows if r.install_flag is defined %}
+{%   set _ = _flags.update({r.install_flag: lookup('vars', r.install_flag, default=false)}) %}
+{% endfor %}
+{% set _services = [] %}
+{% for r in _flags | nos_installed(_rows) %}
+{%   set _svc = {"id": r.id, "name": r.id | replace('_', ' ') | title, "category": r.category,
+                 "tier": 2, "enabled": true, "toggle_var": r.install_flag,
+                 "type": "docker" if r.stack else "host", "stack": r.stack} %}
+{%   if r.port_var is defined %}{% set _ = _svc.update({"port": lookup('vars', r.port_var, default=none)}) %}{% endif %}
+{%   if r.domain_var is defined and (r.id not in _skip or (r.id == 'traefik' and traefik_dashboard_route_enabled | default(true) | bool)) %}
+{%     set _host = lookup('vars', r.domain_var, default=(r.id | replace('_', '-')) ~ (_host_alias_seg | default('')) ~ '.' ~ (tenant_domain | default('dev.local'))) %}
+{%     set _ = _svc.update({"tier": 1, "domain": _host, "url": "https://" ~ _host}) %}
+{%   endif %}
+{%   set _ = _services.append(_svc | combine(_meta.get(r.id, {}))) %}
+{% endfor %}
+{# ── Host nginx + exporters: install_nginx, no manifest row ───────────── #}
 {% if install_nginx | default(true) %}
 {% set _ = _services.append({
   "name": "Nginx",
@@ -546,119 +447,6 @@
   "description": "PHP FastCGI (socket)"
 }) %}
 {% endif %}
-{% if install_dnsmasq | default(true) %}
-{% set _ = _services.append({
-  "name": "dnsmasq",
-  "id": "dnsmasq",
-  "category": "network",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_dnsmasq",
-  "port": dnsmasq_port | default(53),
-  "type": "homebrew",
-  "description": "DNS resolver (*." ~ (dnsmasq_dev_domain | default('dev.local')) ~ ")"
-}) %}
-{% endif %}
-{% if install_mariadb | default(false) %}
-{% set _ = _services.append({
-  "name": "MariaDB",
-  "id": "mariadb",
-  "category": "database",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_mariadb",
-  "port": mariadb_port | default(3306),
-  "health_url": "tcp://127.0.0.1:" ~ (mariadb_port | default(3306)),
-  "type": "docker",
-  "stack": "infra",
-  "description": "Relational database"
-}) %}
-{% endif %}
-{% if install_postgresql | default(false) %}
-{% set _ = _services.append({
-  "name": "PostgreSQL",
-  "id": "postgresql",
-  "category": "database",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_postgresql",
-  "port": postgresql_port | default(5432),
-  "health_url": "tcp://127.0.0.1:" ~ (postgresql_port | default(5432)),
-  "type": "docker",
-  "stack": "infra",
-  "description": "Relational database (Outline, Metabase, Superset)"
-}) %}
-{% endif %}
-{% if redis_docker | default(false) %}
-{% set _ = _services.append({
-  "name": "Redis (Docker)",
-  "id": "redis_docker",
-  "category": "cache",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "redis_docker",
-  "port": redis_port | default(6379),
-  "health_url": "tcp://127.0.0.1:" ~ (redis_port | default(6379)),
-  "type": "docker",
-  "stack": "infra",
-  "description": "In-memory cache (shared across stacks)"
-}) %}
-{% endif %}
-{% if install_observability | default(true) %}
-{% set _ = _services.append({
-  "name": "Prometheus",
-  "id": "prometheus",
-  "category": "observability",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_observability",
-  "port": prometheus_port | default(9090),
-  "health_url": "http://127.0.0.1:" ~ (prometheus_port | default(9090)) ~ "/-/healthy",
-  "type": "docker",
-  "stack": "observability",
-  "description": "Metrics and alerting"
-}) %}
-{% set _ = _services.append({
-  "name": "Loki",
-  "id": "loki",
-  "category": "observability",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_observability",
-  "port": loki_port | default(3100),
-  "health_url": "http://127.0.0.1:" ~ (loki_port | default(3100)) ~ "/ready",
-  "type": "docker",
-  "stack": "observability",
-  "description": "Log aggregation"
-}) %}
-{% set _ = _services.append({
-  "name": "Tempo",
-  "id": "tempo",
-  "category": "observability",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_observability",
-  "port": tempo_http_port | default(3200),
-  "health_url": "http://127.0.0.1:" ~ (tempo_http_port | default(3200)) ~ "/ready",
-  "type": "docker",
-  "stack": "observability",
-  "description": "Distributed tracing"
-}) %}
-{% set _ = _services.append({
-  "name": "Alloy",
-  "id": "alloy",
-  "category": "observability",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_observability",
-  "port": alloy_ui_port | default(12345),
-  "health_url": "http://127.0.0.1:" ~ (alloy_ui_port | default(12345)) ~ "/-/ready",
-  "type": "homebrew",
-  "description": "Metrics and logs collector"
-}) %}
-{# node_exporter intentionally absent: removed from the playbook ("Alloy's
-   prometheus.exporter.unix replaces it") — the stale entry advertised an
-   eternally-down service on the Hub (W6.4 follow-up, 2026-06-11). #}
 {% if install_nginx | default(false) %}
 {% set _ = _services.append({
   "name": "nginx-exporter",
@@ -685,95 +473,6 @@
   "health_url": "http://127.0.0.1:" ~ (phpfpm_exporter_port | default(9253)) ~ "/metrics",
   "type": "binary",
   "description": "PHP-FPM metrics"
-}) %}
-{% endif %}
-{% endif %}
-{% if install_php | default(true) %}
-{% set _ = _services.append({
-  "name": "Redis",
-  "id": "redis",
-  "category": "cache",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_php",
-  "port": redis_port | default(6379),
-  "health_url": "tcp://127.0.0.1:" ~ (redis_port | default(6379)),
-  "type": "homebrew",
-  "description": "In-memory cache"
-}) %}
-{% endif %}
-{% if install_openclaw | default(true) %}
-{% set _ = _services.append({
-  "name": "Ollama",
-  "id": "openclaw",
-  "category": "ai",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_openclaw",
-  "port": 11434,
-  "health_url": "http://127.0.0.1:11434/api/version",
-  "type": "homebrew",
-  "description": "LLM inference engine"
-}) %}
-{% endif %}
-{% if install_uptime_kuma | default(false) %}
-{% set _ = _services.append({
-  "name": "Uptime Kuma",
-  "id": "uptime_kuma",
-  "category": "monitoring",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_uptime_kuma",
-  "port": uptime_kuma_port | default(3001),
-  "health_url": "http://127.0.0.1:" ~ (uptime_kuma_port | default(3001)),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "Availability monitoring"
-}) %}
-{% endif %}
-{% if install_calibreweb | default(false) %}
-{% set _ = _services.append({
-  "name": "Calibre-Web",
-  "id": "calibreweb",
-  "category": "knowledge",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_calibreweb",
-  "port": calibreweb_port | default(8083),
-  "health_url": "http://127.0.0.1:" ~ (calibreweb_port | default(8083)),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "eBook server"
-}) %}
-{% endif %}
-{% if install_homeassistant | default(false) %}
-{% set _ = _services.append({
-  "name": "Home Assistant",
-  "id": "homeassistant",
-  "category": "iot",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_homeassistant",
-  "port": homeassistant_port | default(8123),
-  "health_url": "http://127.0.0.1:" ~ (homeassistant_port | default(8123)),
-  "type": "docker",
-  "stack": "iiab",
-  "description": "Home automation"
-}) %}
-{% endif %}
-{% if install_rustfs | default(false) %}
-{% set _ = _services.append({
-  "name": "RustFS",
-  "id": "rustfs",
-  "category": "storage",
-  "tier": 2,
-  "enabled": true,
-  "toggle_var": "install_rustfs",
-  "port": rustfs_api_port | default(9010),
-  "health_url": "http://127.0.0.1:" ~ (rustfs_api_port | default(9010)) ~ "/health",
-  "type": "docker",
-  "stack": "iiab",
-  "description": "S3-compatible object storage"
 }) %}
 {% endif %}
 {# ── Tier-2: apps onboarded via pazny.apps_runner ──────────────────────── #}

@@ -52,9 +52,10 @@ def collect() -> dict:
     except Exception:  # noqa: BLE001
         unknown.append("config layers")
     cards = _cards(unknown)
+    on = {r.get("id") for r in nos_identity.installed(flags, rows)}
     items = [{"id": r.get("id"), "category": r.get("category"),
               "install_flag": r.get("install_flag"),
-              "enabled": flags.get(r.get("install_flag")),
+              "enabled": (r.get("id") in on) if r.get("install_flag") in flags else None,
               "description": cards.get(r.get("install_flag"))} for r in rows]
     return {"items": items, "unknown": unknown}
 

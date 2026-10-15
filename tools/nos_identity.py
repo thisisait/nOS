@@ -122,6 +122,13 @@ def services() -> list[dict]:
     return yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))["services"]
 
 
+def installed(flags: dict, rows: list[dict] | None = None) -> list[dict]:
+    """The manifest rows THIS host runs: install_flag resolved on in `flags`.
+    The one derivation — services-status, and the registry via filter nos_installed."""
+    return [r for r in (services() if rows is None else rows)
+            if str(flags.get(r.get("install_flag"))).lower() in ("true", "yes", "1")]
+
+
 def by_flag(flag: str) -> dict | None:
     """install_<x> -> the row, or None. The hop no consumer may guess."""
     return next((s for s in services() if s.get("install_flag") == flag), None)
