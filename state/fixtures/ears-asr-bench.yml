@@ -1,0 +1,33 @@
+# tools/ears-asr-bench.py: what the operator reads aloud, once, through the ear's own mic (EARS_INPUT).
+# kind: wake (the wake phrase must be heard), command (opcode/service words), general (Czech prose:
+# ř/ů/ě, numbers, dates), short (one or two words, the case parakeet misread as English on 2026-08-31).
+- {id: wake-01, kind: wake, text: "hej jeffe"}
+- {id: wake-02, kind: wake, text: "hej jeffe, kolik máme řádků v roadmapě"}
+- {id: wake-03, kind: wake, text: "hej jeffe ukaž mi red status"}
+- {id: wake-04, kind: wake, text: "hej jeffe, makej jeffe"}
+- {id: wake-05, kind: wake, text: "hej jeffe, zapiš nový řádek do tabulky výdaje"}
+- {id: cmd-01, kind: command, text: "ukaž roadmapu podle statusu jako koláčový graf"}
+- {id: cmd-02, kind: command, text: "spusť converge s tagem thalamus"}
+- {id: cmd-03, kind: command, text: "kolik řádků má tabulka iris bench se statusem next"}
+- {id: cmd-04, kind: command, text: "otevři nextcloud a najdi fakturu za září"}
+- {id: cmd-05, kind: command, text: "přidej do keapu poznámku o schůzce s klientem"}
+- {id: cmd-06, kind: command, text: "jaký je stav autentiku a traefiku"}
+- {id: cmd-07, kind: command, text: "zaúčtuj výdaj dvanáct set korun na kancelářské potřeby"}
+- {id: cmd-08, kind: command, text: "najdi v knihách daňový kód dva nula dva"}
+- {id: cmd-09, kind: command, text: "pošli mi přehled schválení, která čekají"}
+- {id: cmd-10, kind: command, text: "změň status řádku pupil eye na shipped"}
+- {id: gen-01, kind: general, text: "Dnes je středa patnáctého října dva tisíce dvacet šest."}
+- {id: gen-02, kind: general, text: "Příliš žluťoučký kůň úpěl ďábelské ódy."}
+- {id: gen-03, kind: general, text: "Faktura číslo dvě stě třicet osm je splatná do konce měsíce."}
+- {id: gen-04, kind: general, text: "Řeřicha roste na okně v kuchyni už třetí týden."}
+- {id: gen-05, kind: general, text: "Na schůzku přijdu ve čtvrt na deset, pokud nebude zácpa."}
+- {id: gen-06, kind: general, text: "Účetní uzávěrka musí být hotová do třicátého června."}
+- {id: gen-07, kind: general, text: "Zálohu na server děláme každou noc ve dvě hodiny."}
+- {id: gen-08, kind: general, text: "Klient chce nabídku na tři licence a jedno školení."}
+- {id: gen-09, kind: general, text: "Teplota v serverovně vystoupala na dvacet osm stupňů."}
+- {id: gen-10, kind: general, text: "Iris, shrň mi prosím dnešní poznámky do pěti bodů."}
+- {id: short-01, kind: short, text: "ano"}
+- {id: short-02, kind: short, text: "ne"}
+- {id: short-03, kind: short, text: "stop"}
+- {id: short-04, kind: short, text: "makej jeffe"}
+- {id: short-05, kind: short, text: "díky"}
