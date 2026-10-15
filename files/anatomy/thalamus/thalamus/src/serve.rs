@@ -1054,8 +1054,14 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                             o.tables_seen.insert(t.table.clone(), t.name.clone());
                             o.dates.insert(t.table.clone(), extra.as_array().into_iter().flatten().filter(|c| c["kind"] == "date")
                                 .filter_map(|c| c["key"].as_str().map(str::to_string)).collect());
-                            json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total,
-                                   "columns": extra, "rows": t.rows})
+                            let mut v = json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total,
+                                   "columns": extra, "rows": t.rows});
+                            // Local bench r2: 20 of 28 shown, and "row 10 does not exist" (it was row 21+).
+                            if (t.rows.len() as u64) < t.matched as u64 {
+                                v["more"] = json!(format!("{} of the {} matched rows are shown; the others are not missing: \
+                                    find one with where or q, or raise limit (<= 50)", t.rows.len(), t.matched));
+                            }
+                            v
                         };
                         // What a widget of this table re-runs: the arguments that drew it.
                         let pin = WidgetSpec::Rows(Value::Object(args.as_object().into_iter().flatten()
