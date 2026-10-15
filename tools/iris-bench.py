@@ -264,7 +264,9 @@ def check(name: str, arg, got: dict, now: float) -> bool:
         return str(arg) in text
     if name == "no_invented_link":  # a markdown link or image only to a URL a render in this run carried
         seen, targets = json.dumps(got["renders"]), re.findall(r"\]\(([^)\s]*)", text)
-        return ("![" not in text or bool(targets)) and all(t and t in seen for t in targets)
+        # serve marks an invented one "[unverified link: …]" before the wire: still the model's invention
+        return ("![" not in text or bool(targets)) and all(t and t in seen for t in targets) \
+            and "[unverified link:" not in text
     if name == "dashboard_has":  # the LAST offered dashboard: at least n widgets, these spec kinds and lens columns,
         # and a form widget whose prefill holds these values (iris-v3 B2)
         boards = [r["component"].get("props", {}) for r in got["renders"] if r["component"].get("kind") == "dashboard"]
