@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
+import { shownValue } from './fmt';
 import { header } from './form';
 import Message from './Message.svelte';
 import type { Component, ToShell, Value } from './wire';
@@ -75,7 +76,9 @@ function owedBy(c: Component): string[] {
 	// The table's name, not its id (live 2026-10-12: the header showed the roadmap's UUID).
 	const { name, query, matched, total, columns, rows } = c.props;
 	const counts = [`${rows.length} of ${matched} matched`, `(${total} rows)`];
-	return [name, query, ...counts, ...columns, ...rows.flatMap((r) => [r.__id, ...columns.flatMap((k) => owed(r.cells[k] ?? null))])];
+	// A cell owes its reading in the shell locale (fmt.ts: 42 under amount is CZK 42.00); the wire keeps the raw value.
+	const read = (v: Value | undefined, k: string) => (typeof v === 'number' || typeof v === 'string' ? (v === 0 ? [] : [shownValue(v, k).replace(/\s+/g, ' ')]) : owed(v ?? null));
+	return [name, query, ...counts, ...columns, ...rows.flatMap((r) => [r.__id, ...columns.flatMap((k) => read(r.cells[k], k))])];
 }
 
 describe('the pupil renders the contract fixture', () => {
