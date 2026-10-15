@@ -2834,3 +2834,12 @@ fn a_source_alone_draws_a_pinned_chart() {
     assert_eq!(points(&drawn[0]["component"]["props"]), pts(&[("open", 3.0), ("done", 1.0)]));
     assert!(drawn[0]["pin"].get("chart").is_some(), "{}", drawn[0]);
 }
+
+
+#[test]
+fn a_source_group_by_is_its_x() {
+    // Client bench round 3: {"query": {"group_by": "status", "table": ...}, "x": "", "y": ""}
+    let v = serve::normalize_show(&serde_json::json!({"component": "pie chart",
+        "source": {"op": "count", "query": {"group_by": "status", "table": "t"}, "x": "", "y": ""}}));
+    assert_eq!(v["source"], serde_json::json!({"op": "count", "query": {"table": "t"}, "x": "status"}), "{v}");
+}
