@@ -32,9 +32,10 @@ def _render(expr: str, **v) -> str:
 
 
 def _decide(roaming: bool, raw: dict, os_family: str = "Darwin") -> dict:
-    f = _tasks()["[dnsmasq] Tailnet: decide"]["ansible.builtin.set_fact"]
-    ip = _render(f["_dnsmasq_ts_ip"], _dnsmasq_ts_raw=raw)
-    on = _render(f["_dnsmasq_tailnet"], _dnsmasq_ts_ip=ip, nos_lan_roaming=roaming, ansible_os_family=os_family)
+    t = _tasks()
+    ip = _render(t["[dnsmasq] Tailnet: name the IP"]["ansible.builtin.set_fact"]["_dnsmasq_ts_ip"], _dnsmasq_ts_raw=raw)
+    on = _render(t["[dnsmasq] Tailnet: decide"]["ansible.builtin.set_fact"]["_dnsmasq_tailnet"],
+                 _dnsmasq_ts_ip=ip, nos_lan_roaming=roaming, ansible_os_family=os_family)
     return {"ip": ip, "on": on == "True"}
 
 
@@ -54,6 +55,16 @@ def test_the_instance_is_on_only_when_roaming_with_a_tailscale_ip():
     assert _decide(True, {"rc": 0, "stdout": "Tailscale is stopped."}) == {"ip": "", "on": False}
     assert _decide(False, UP)["on"] is False
     assert _decide(True, UP, "Debian")["on"] is False
+
+
+def test_no_set_fact_reads_a_sibling_key():
+    """Ansible resolves one set_fact's keys before any is set: a sibling reference is
+    undefined at run time, though a per-key jinja render passes (found by a harness)."""
+    for name, task in _tasks().items():
+        facts = task.get("ansible.builtin.set_fact") or {}
+        for k, v in facts.items():
+            sib = [o for o in facts if o != k and re.search(rf"\b{o}\b", str(v))]
+            assert not sib, f"{name}: {k} reads {sib} from the same set_fact"
 
 
 def test_install_tasks_run_only_when_on_and_removal_only_when_not_roaming():
