@@ -1,11 +1,12 @@
 //! The pupil: Iris's desktop window. It holds no secret and opens no port; the
 //! webview reaches the thalamus only through `connect` / `send` and the
 //! `to_shell` / `link` events (bridge.rs owns the socket and the decoding), and
-//! its own layout file only through `load_layout` / `save_layout` (workspace.rs).
+//! its own layout file only through `load_layout` / `save_layout` (workspace.rs), and writes a
+//! CSV only through `export_csv` (export.rs), a new file in Downloads on the person's click.
 #![cfg_attr(test, allow(dead_code))]
 
 use nos_contract::wire::ToThalamus;
-use nos_pupil::{bridge, workspace};
+use nos_pupil::{bridge, export, workspace};
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -68,6 +69,13 @@ fn save_layout(app: AppHandle, layout: workspace::Layout) -> Result<(), String> 
     workspace::save(&layout_path(&app)?, &layout)
 }
 
+/// The person's click on a widget's CSV button: the path written, said back to them.
+#[tauri::command]
+fn export_csv(app: AppHandle, name: String, csv: String) -> Result<String, String> {
+    let dir = app.path().download_dir().map_err(|e| e.to_string())?;
+    export::save_csv(&dir, &name, &csv).map(|p| p.display().to_string())
+}
+
 // generate_context! needs the built page (../dist); the bridge tests do not.
 #[cfg(test)]
 fn main() {}
@@ -98,7 +106,7 @@ fn focus_on_launch(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error
 fn main() {
     tauri::Builder::default()
         .manage(Link::default())
-        .invoke_handler(tauri::generate_handler![connect, send, load_layout, save_layout])
+        .invoke_handler(tauri::generate_handler![connect, send, load_layout, save_layout, export_csv])
         .setup(focus_on_launch)
         .run(tauri::generate_context!())
         .expect("the pupil failed to start");

@@ -5,10 +5,10 @@
 
 use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, RowOp, Session};
-use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget,
+use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget, Kpi,
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
                                Row, RowDiffApproval, Series, Table, TableResults};
-use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, FormSpec, Op, Phase, ToShell, ToThalamus, Trigger,
+use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, FormSpec, KpiSpec, Op, Phase, ToShell, ToThalamus, Trigger,
                          WidgetChart, WidgetSpec};
 use nos_contract::uid;
 use serde_json::{json, Map, Value};
@@ -376,19 +376,20 @@ const SHOW: &str = "Show the person structured output: one component of a closed
 A component outside its shape or caps is refused and you are told why; nothing is drawn. It cannot ask for an \
 approval: only propose_row_edit and propose_row_insert do, and query_rows draws its own table. For a bar, line or pie chart of a \
 table's rows pass `source`: the thalamus counts, sums or averages the rows as the person and draws those numbers \
-in place of your series, and the person can pin the chart live.";
+in place of your series, and the person can pin the chart live. A kpi (one number on a tile) is drawn only with `source` \
+{query, op, y?}: the thalamus computes the number; never send it.";
 
 const OFFER_DASHBOARD: &str = "Offer the person a dashboard: a new tab of 1-8 widgets, each {title} and one of rows \
 (query_rows arguments), chart ({query {table, q?, where?}, chart bar|line|pie, x, y?, op count|sum|avg}: show's source \
-plus its chart) or form ({table, columns?, prefill? {column: value}, when? {column: {key, op eq|neq, value}}}: a form \
+plus its chart), kpi ({query {table, q?, where?}, op count|sum|avg, y?, unit?}: one total on a tile) or form ({table, columns?, prefill? {column: value}, when? {column: {key, op eq|neq, value}}}: a form \
 that adds a row; prefill is where the person's draft starts, when shows an optional field only while another field \
-holds a value), and up to 4 lens filters {column, op, value} the tab applies to every rows and chart widget (an empty \
+holds a value), and up to 4 lens filters {column, op, value} the tab applies to every rows, chart and kpi widget (an empty \
 value: the person picks). Nothing runs and nothing is placed: the person sees the offer and may place it; you never \
 see its rows. A widget that does not fit its table is left out and you are told why.";
 
 /// The kinds the model may choose; the rest are drawn by a tool or a control, never by show.
 /// No markdown: plain text already draws as markdown, and a markdown show was then said again as text.
-pub const SHOW_KINDS: [&str; 9] = ["table", "list", "record", "chart", "tree", "timeline", "graph", "sequence", "choice"];
+pub const SHOW_KINDS: [&str; 10] = ["table", "list", "record", "chart", "tree", "timeline", "graph", "sequence", "choice", "kpi"];
 
 /// The props a kind accepts, so a refusal can show the shape to retry.
 pub const SHOW_SHAPE: &[(&str, &str)] = &[
@@ -408,6 +409,7 @@ id is [A-Za-z0-9_-]{1,64} and unique; every edge's from and to name a node id"),
 dashed for a reply) or {note, over[]} (note <=200 over 1-2 participants) or {phase} (<=60)}; from, to and over name participants exactly"),
     ("choice", "{question (<=15 words, <=120 chars), options[{label, note?}] 2-6 (label <=60, unique; note <=200), \
 suggested[] (option labels: exactly 1, or 1 or more when multi), multi}; never an id: the thalamus mints it"),
+    ("kpi", "{title, unit?} with show's source {query {table, q?, where?}, op count|sum|avg, y?}; never a value: the thalamus computes it"),
 ];
 
 fn expected_shape(kind: &str) -> String {
@@ -424,13 +426,13 @@ pub fn show_schema() -> Value {
         "required": ["kind", "props"], "description": about, "properties": {"kind": {"const": kind}, "props": props}});
     let closed = |required: &[&str], properties: Value| json!({"type": "object", "additionalProperties": false,
         "required": required, "properties": properties});
-    let mut source = closed(&["query", "x", "op"], json!({
+    let mut source = closed(&["query", "op"], json!({
         "query": closed(&["table"], json!({"table": {"type": "string", "description": "the table's id or title, or \"roadmap\""},
             "q": {"type": "string"}, "where": {"type": "array", "maxItems": 8, "description": "as query_rows' where"}})),
-        "x": {"type": "string", "description": "the column whose values are the chart's x"},
+        "x": {"type": "string", "description": "a chart's x column; a kpi has none"},
         "y": {"type": "string", "description": "a number column; sum and avg need it"},
         "op": {"enum": ["count", "sum", "avg"]}}));
-    source["description"] = json!("for a bar, line or pie chart of a table's rows: what to aggregate; the drawn numbers are KEAP's");
+    source["description"] = json!("for a bar, line or pie chart of a table's rows, or a kpi's one total: what to aggregate; the drawn numbers are KEAP's");
     json!({"type": "object", "additionalProperties": false, "required": ["component"], "properties": {"source": source, "component": {"oneOf": [
         branch("table", "rows the model shows: {title?, columns[] <=12, rows[][] <=50, each row as long as columns}",
             closed(&["columns", "rows"], json!({"title": title, "columns": {"type": "array", "maxItems": 12, "items": {"type": "string"}},
@@ -489,7 +491,9 @@ multi}; suggested names your pick among the options, exactly 1 unless multi; nev
                 "options": {"type": "array", "minItems": 2, "maxItems": 6, "items": closed(&["label"], json!({
                     "label": {"type": "string", "maxLength": 60}, "note": {"type": "string", "maxLength": 200}}))},
                 "suggested": {"type": "array", "minItems": 1, "maxItems": 6, "items": {"type": "string"}},
-                "multi": {"type": "boolean"}})))]}}})
+                "multi": {"type": "boolean"}}))),
+        branch("kpi", "one number on a tile, only with show's `source` {query, op, y?}: {title, unit?}; the thalamus computes the number",
+            closed(&["title"], json!({"title": title, "unit": {"type": "string", "maxLength": 16}})))]}}})
 }
 
 const QUERY_KEYS: [&str; 9] = ["table", "q", "where", "columns", "order_by", "limit", "group_by", "op", "y"];
@@ -556,7 +560,8 @@ else one total over every matched row"},
                 "required": ["title"], "properties": {"title": {"type": "string", "maxLength": 120},
                     "rows": {"type": "object", "description": "query_rows arguments"},
                     "chart": {"type": "object", "description": "{query {table, q?, where?}, chart bar|line|pie, x, y?, op count|sum|avg}"},
-                    "form": {"type": "object", "description": "{table, columns?, prefill? {column: value}, when? {column: {key, op eq|neq, value}}}"}}}}}}}}])
+                    "form": {"type": "object", "description": "{table, columns?, prefill? {column: value}, when? {column: {key, op eq|neq, value}}}"},
+                    "kpi": {"type": "object", "description": "{query {table, q?, where?}, op count|sum|avg, y?, unit?}"}}}}}}}}])
 }
 
 impl Server {
@@ -686,7 +691,8 @@ both ends included; for today, yesterday, this_week, this_month, last_month or t
 the value, never a day you worked out. To show structured output call show ({}); plain text may use markdown, \
 nothing else. To count per value (for a chart) call query_rows with \
 group_by; for a sum or average per value add op and y, then show chart (the source is inferred and the chart pins); to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
-KEAP's and the person can pin the chart. For a dashboard call offer_dashboard; to put a chart you drew on a dashboard, pass the same source plus its chart (bar, line or pie); nothing runs until the person places it. To see which DataTables the person has, call list_tables, then query_rows with an id. For what is red or broken on the estate call red_status. Before recommending software, call estate_services: \
+KEAP's and the person can pin the chart. For one number on a tile (a KPI) call show kpi with `source` {{query, op, y?}}: the thalamus \
+computes it; never write its number. For a dashboard call offer_dashboard; to put a chart you drew on a dashboard, pass the same source plus its chart (bar, line or pie); nothing runs until the person places it. To see which DataTables the person has, call list_tables, then query_rows with an id. For what is red or broken on the estate call red_status. Before recommending software, call estate_services: \
 prefer a service the estate already has. For what waits for the operator's approval call approvals_awaiting; \
 for what waits in the person's own inbox call inbox; \
 for what the person or KEAP already knows or noted call search_memory. No tool reads e-mail, calendar or chat: \
@@ -1115,6 +1121,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                         let pts = v.as_ref().and_then(|v| v["props"]["series"][0]["points"].as_array().cloned()).unwrap_or_default();
                         let top = pts.iter().max_by(|a, b| a[1].as_f64().partial_cmp(&b[1].as_f64()).unwrap_or(std::cmp::Ordering::Equal));
                         let v = match (&pin, &c) {
+                            (Some(_), Component::Kpi(k)) => json!({"shown": kind, "value": k.value}),
                             (Some(_), _) => json!({"shown": kind, "points_drawn": pts.len(), "top": top}),
                             (None, Component::Choice(ch)) => json!({"shown": kind, "choice": ch.id,
                                 "status": "asked; the person's answer comes back as a [thalamus] message"}),
@@ -1170,7 +1177,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                     }),
                     // Checked as the person against the live schema only: no row is read and no widget runs.
                     "offer_dashboard" => self.offer_dashboard(who, &args).map(|d| {
-                        let kind = |s: &WidgetSpec| match s { WidgetSpec::Rows(_) => "rows", WidgetSpec::Chart(_) => "chart", WidgetSpec::Form(_) => "form" };
+                        let kind = |s: &WidgetSpec| match s { WidgetSpec::Rows(_) => "rows", WidgetSpec::Chart(_) => "chart", WidgetSpec::Form(_) => "form", WidgetSpec::Kpi(_) => "kpi" };
                         let _ = self.record(o, Kind::ToolResult, Some(name), json!({"name": d.name, "dropped": d.dropped.len(),
                             "widgets": d.widgets.iter().map(|w| json!({"kind": kind(&w.spec), "table": spec_table(&w.spec)})).collect::<Vec<_>>()}));
                         let v = json!({"offered": d.name, "widgets": d.widgets.iter().map(|w| &w.title).collect::<Vec<_>>(), "dropped": d.dropped,
@@ -1922,6 +1929,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             WidgetSpec::Rows(a) => ("widget_rows", json!({"table": a.get("table"), "kind": "rows"})),
             WidgetSpec::Chart(c) => ("widget_chart", json!({"table": c.query.table, "kind": c.chart, "op": c.op})),
             WidgetSpec::Form(f) => ("widget_form", json!({"table": f.table, "kind": "form"})),
+            WidgetSpec::Kpi(k) => ("widget_kpi", json!({"table": k.query.table, "kind": "kpi", "op": k.op})),
         };
         used["widget"] = json!(widget);
         used["trigger"] = json!(trigger);
@@ -1935,6 +1943,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let ran = check_spec(spec).and_then(|_| match spec {
             WidgetSpec::Rows(a) => self.widget_rows(who, a),
             WidgetSpec::Chart(c) => self.widget_chart(who, c).map(|c| (Component::Chart(c), json!({"ok": true}))),
+            WidgetSpec::Kpi(k) => self.widget_kpi(who, k).map(|k| (Component::Kpi(k), json!({"ok": true}))),
             WidgetSpec::Form(_) if o.forms.len() >= MAX_FORMS =>
                 Err(format!("this session holds {MAX_FORMS} forms; remove one first")),
             WidgetSpec::Form(f) => self.form_from_schema(who, &f.table, f.columns.as_deref()).and_then(|x| shaped(x, f)).map(|f| {
@@ -1981,9 +1990,47 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         Ok(chart)
     }
 
+    /// One total over the query's rows (query_rows' one_total), titled and said as what it summed.
+    fn widget_kpi(&self, who: &Person, k: &KpiSpec) -> Result<Kpi, String> {
+        let (t, _, notes) = self.query_rows(who, &kpi_args(k))?;
+        let op = text(&json!(k.op));
+        let value = notes.get("value").and_then(Value::as_f64)
+            .ok_or_else(|| format!("no row has a number in {}; nothing to {op}", k.y.as_deref().unwrap_or("it")))?;
+        let source: String = format!("{} rows of {}: {}", t.matched, t.name, t.query).chars().take(200).collect();
+        let title = k.y.as_ref().map_or(op.clone(), |y| format!("{op} of {y}"));
+        let kpi = Kpi { title, value, unit: k.unit.clone(), delta: None, delta_label: None, source: Some(source) };
+        Component::Kpi(kpi.clone()).check()?;
+        Ok(kpi)
+    }
+
+    /// show kpi drawn from its `source` as a kpi widget of that spec answers; the model's title and unit stay.
+    fn sourced_kpi(&self, who: &Person, o: &Open, model: Kpi, mut v: Value) -> Result<(Component, Option<WidgetSpec>), String> {
+        if !v.is_object() {
+            return Err(format!("show kpi's `source` is an object {{query {{table, q?, where?}}, op, y?}}, not {}", text(&v)));
+        }
+        if let Some(u) = &model.unit {
+            v["unit"] = json!(u);
+        }
+        let spec: KpiSpec = serde_json::from_value(v)
+            .map_err(|e| format!("show kpi's `source`: {e}; it is {{query {{table, q?, where?}}, op count|sum|avg, y?}}"))?;
+        let tool = Some("show_source");
+        self.record(o, Kind::ToolUse, tool, json!({"table": spec.query.table, "kind": "kpi", "op": spec.op}))
+            .map_err(|why| format!("not recorded, so not drawn: {why}"))?;
+        let pin = WidgetSpec::Kpi(spec.clone());
+        let drawn = check_spec(&pin).and_then(|_| self.widget_kpi(who, &spec)).map(|k| Component::Kpi(Kpi { title: model.title, ..k }));
+        let _ = self.record(o, Kind::ToolResult, tool, match &drawn {
+            Ok(_) => json!({"ok": true}),
+            Err(why) => json!({"error": why}),
+        });
+        Ok((drawn?, Some(pin)))
+    }
+
     /// show's chart drawn from its `source`: the aggregate a chart widget of that spec answers, run as
     /// the person and recorded like a widget run, replaces the model's series. Never extends `shown`.
     fn sourced(&self, who: &Person, o: &Open, c: Component, src: Value) -> Result<(Component, Option<WidgetSpec>), String> {
+        if let Component::Kpi(k) = c {
+            return self.sourced_kpi(who, o, k, src);
+        }
         let spec = source_spec(&c, src)?;
         let title = match c {
             Component::Chart(model) => model.title,
@@ -2023,7 +2070,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         };
         let widgets = match a.get("widgets") {
             Some(Value::Array(w)) if (1..=8).contains(&w.len()) => w,
-            _ => return Err("`widgets` is a list of 1 to 8 {title, rows|chart|form}".into()),
+            _ => return Err("`widgets` is a list of 1 to 8 {title, rows|chart|form|kpi}".into()),
         };
         let (mut kept, mut dropped, mut columns) = (Vec::new(), Vec::new(), Vec::new());
         for w in widgets {
@@ -2066,9 +2113,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// One offered widget as a spec, and its table's columns; Err is why it is left out. Repairs shapes
     /// only (a bare table name, a limit said as a string); never invents a widget.
     fn offered(&self, who: &Person, w: &Value, lens: &[Lens]) -> Result<(WidgetSpec, Vec<Map<String, Value>>), String> {
-        let o = w.as_object().ok_or("a widget is {title, rows|chart|form}")?;
+        let o = w.as_object().ok_or("a widget is {title, rows|chart|form|kpi}")?;
         let keys: Vec<&String> = o.keys().filter(|k| *k != "title").collect();
-        let [k] = keys.as_slice() else { return Err("a widget is {title} and exactly one of rows, chart, form".into()) };
+        let [k] = keys.as_slice() else { return Err("a widget is {title} and exactly one of rows, chart, form or kpi".into()) };
         let mut v = o[*k].clone();
         if let (Value::String(t), "rows" | "form") = (&v, k.as_str()) {
             v = json!({"table": t});
@@ -2099,6 +2146,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let cols = match &spec {
             WidgetSpec::Rows(a) => self.matched(who, &lensed(a.clone()), false)?.schema,
             WidgetSpec::Chart(c) => self.matched(who, &lensed(chart_args(c)), false)?.schema,
+            WidgetSpec::Kpi(k) => self.matched(who, &lensed(kpi_args(k)), false)?.schema,
             WidgetSpec::Form(f) => shaped(self.form_from_schema(who, &f.table, f.columns.as_deref())?, f)?.fields.iter()
                 .map(|f| json!({"key": f.key, "kind": f.kind, "options": f.options}).as_object().cloned().unwrap_or_default()).collect(),
         };
@@ -2237,7 +2285,23 @@ fn spec_table(s: &WidgetSpec) -> String {
         WidgetSpec::Rows(a) => text(&a["table"]),
         WidgetSpec::Chart(c) => c.query.table.clone(),
         WidgetSpec::Form(f) => f.table.clone(),
+        WidgetSpec::Kpi(k) => k.query.table.clone(),
     }
+}
+
+/// A kpi's total as query_rows arguments: op and no group_by is one total (Q1).
+fn kpi_args(k: &KpiSpec) -> Value {
+    let mut args = json!({"table": k.query.table, "op": k.op});
+    if let Some(q) = &k.query.q {
+        args["q"] = json!(q);
+    }
+    if let Some(w) = &k.query.where_ {
+        args["where"] = w.clone();
+    }
+    if let Some(y) = &k.y {
+        args["y"] = json!(y);
+    }
+    args
 }
 
 /// One offered lens condition: op defaults to eq (before/after are lt/gt), a value is said as a string.
@@ -2439,6 +2503,13 @@ pub fn normalize_show(args: &Value) -> Value {
             p.entry("series").or_insert(json!([{"name": "rows", "points": [["", 0]]}]));
         }
     }
+    // A kpi's number, delta and source are the thalamus's: whatever the model sent there is dropped.
+    if comp["kind"] == "kpi" {
+        if let Some(p) = comp.get_mut("props").and_then(Value::as_object_mut) {
+            p.retain(|k, _| k == "title" || k == "unit");
+            p.insert("value".into(), json!(0));
+        }
+    }
     if !comp.is_null() {
         o.insert("component".into(), comp);
     }
@@ -2471,6 +2542,9 @@ fn show(args: &Value) -> Result<(Component, Option<Value>), String> {
         return Err(format!("show draws {}, not {kind:?}; expected shape: {shape}", SHOW_KINDS.join(", ")));
     }
     let bad = |e: String| format!("show {kind}: {e}; expected shape: {shape}");
+    if kind == "kpi" && args.get("source").is_none_or(Value::is_null) {
+        return Err(bad("a kpi needs `source` {query {table, q?, where?}, op count|sum|avg, y?}: the thalamus computes the number, never you".into()));
+    }
     if kind == "choice" && args.pointer("/component/props/id").is_some() {
         return Err(bad("`id` is minted by the thalamus; leave it out".into()));
     }

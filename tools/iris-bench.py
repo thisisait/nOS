@@ -181,9 +181,9 @@ def check(name: str, arg, got: dict, now: float) -> bool:
     if name == "count_equals_matched":
         tr = [r for r in got["renders"] if r["component"].get("kind") == "table_results"]
         return bool(tr) and float(tr[-1]["component"]["props"]["matched"]) in _nums(text)
-    if name == "no_number_without_source":
-        charts = [r for r in got["renders"] if r["component"].get("kind") == "chart"]
-        return bool(charts) and all(r.get("pin") for r in charts)
+    if name == "no_number_without_source":  # every chart and kpi tile drawn carries serve's pin
+        drawn = [r for r in got["renders"] if r["component"].get("kind") in ("chart", "kpi")]
+        return bool(drawn) and all(r.get("pin") for r in drawn)
     if name == "time_within":
         t = time.gmtime(now) if arg.get("clock", "utc") == "utc" else time.localtime(now)
         mins = t.tm_hour * 60 + t.tm_min

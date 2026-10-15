@@ -20,6 +20,10 @@ export const isMoney = (name: string) => MONEY.test(name.normalize('NFD').replac
 export const number = (v: number, money = false, locale = LOCALE) =>
 	new Intl.NumberFormat(locale, money ? { style: 'currency', currency: 'CZK' } : {}).format(v);
 
+/** A change as an arrow and a sign (↑ +320, ↓ −3.5, → 0), never as colour only. */
+export const signed = (d: number, locale = LOCALE) =>
+	`${d > 0 ? '↑ +' : d < 0 ? '↓ −' : '→ '}${number(Math.abs(d), false, locale)}`;
+
 /** A YYYY-MM-DD that is a real day, in the locale; null for anything else. */
 export function day(s: string, locale = LOCALE): string | null {
 	if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;

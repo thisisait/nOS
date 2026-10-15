@@ -9,10 +9,11 @@
 	import { COLS, ROW_PX, type Grid, type Space } from './workspace';
 
 	type Submit = { form: string; widget: string; values: Record<string, string | number | boolean> };
-	let { space, widgets, now, top, onplace, ontop, onrerun, onremove, onsubmit, onlens }: {
+	let { space, widgets, now, top, onplace, ontop, onrerun, onremove, onsubmit, onlens, onexport }: {
 		space: Space; widgets: Widgets; now: number; top: string;
 		onplace: (id: string, g: Grid) => void; ontop: (id: string) => void; onrerun: (id: string) => void;
 		onremove: (id: string) => void; onsubmit: (m: Submit) => void; onlens: (i: number, value: string) => void;
+		onexport?: (name: string, csv: string) => Promise<string>;
 	} = $props();
 	const OP = { eq: '=', neq: '≠', lt: 'before', gt: 'after', contains: 'contains' } as const;
 	const set = (i: number) => (e: Event) => onlens(i, (e.currentTarget as HTMLInputElement | HTMLSelectElement).value);
@@ -56,6 +57,7 @@
 			onrerun={() => onrerun(box.id)}
 			onremove={() => onremove(box.id)}
 			{onsubmit}
+			{onexport}
 		/>
 	{:else}
 		<p class="muted">No widgets yet: "+ widget" adds one.</p>

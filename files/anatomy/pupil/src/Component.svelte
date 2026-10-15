@@ -14,7 +14,7 @@
 	import Markdown from './Markdown.svelte';
 	import Timeline from './Timeline.svelte';
 	import { inherit, MARK, shownIn, tally, treeDeltas, VIEWS, type Delta, type View } from './delta';
-	import { shownValue } from './fmt';
+	import { isMoney, number, shownValue, signed } from './fmt';
 	import { cell, shown, type Component, type TreeNode, type Value } from './wire';
 
 	// view: Před / Změny / Po of a component that marks a delta (delta.ts); the switch sets it.
@@ -168,6 +168,15 @@
 				</dd>
 			{/each}
 		</dl>
+	{:else if component.kind === 'kpi'}
+		<!-- serve's number, one text node; the change is an arrow, a sign and a word, never colour only. -->
+		{@const k = component.props}
+		<h3>{k.title}</h3>
+		<p class="kpi-value">{k.unit ? `${number(k.value)} ${k.unit}` : number(k.value, isMoney(k.title))}</p>
+		{#if k.delta !== undefined}
+			<p class="kpi-delta">{signed(k.delta)}<span class="sr">{k.delta > 0 ? ' up' : k.delta < 0 ? ' down' : ' unchanged'}</span>{#if k.delta_label}{' '}{k.delta_label}{/if}</p>
+		{/if}
+		{#if k.source}<p class="muted">{k.source}</p>{/if}
 	{:else if component.kind === 'chart'}
 		{#if component.props.title}<h3>{component.props.title}</h3>{/if}
 		<Chart chart={component.props} />
@@ -336,6 +345,15 @@
 		border-top: 1px solid var(--glass-brd);
 		margin-top: 6px;
 		padding-top: 8px;
+	}
+	.kpi-value {
+		margin: 4px 0;
+		font-size: 32px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+	}
+	.kpi-delta {
+		margin: 0;
 	}
 	.muted {
 		color: var(--muted);

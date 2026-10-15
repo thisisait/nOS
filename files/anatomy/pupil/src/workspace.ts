@@ -2,7 +2,7 @@
 // (files/anatomy/contracts/workspace-layout.yml). Pure reducers; the Rust bridge checks
 // and stores the layout, the model never sees it.
 import type { DashboardProps, Lens, ToShell, ToThalamus, WidgetSpec } from './wire';
-import { onTableChanged as staleOrSend, type WidgetState, type Widgets } from './widgets';
+import { onTableChanged as staleOrSend, tableOf, type WidgetState, type Widgets } from './widgets';
 
 export type Grid = { x: number; y: number; w: number; h: number };
 export type WidgetBox = Grid & { id: string; title: string; spec: WidgetSpec };
@@ -47,11 +47,12 @@ export function byKey(g: Grid, key: string, shift: boolean): Grid | null {
 
 const activeSpace = (l: Layout) => l.workspaces.find((s) => s.id === l.active) ?? l.workspaces[0];
 
-/** The lens on a spec as it is sent: each set condition joins a rows or chart where, after its own; a form is untouched. */
+/** The lens on a spec as it is sent: each set condition joins a rows, chart or kpi where, after its own; a form is untouched. */
 export function lensed(spec: WidgetSpec, lens: Lens[] = []): WidgetSpec {
 	const add = lens.filter((c) => c.value !== '').map(({ column, op, value }) => ({ column, op, value }));
 	if (!add.length || 'form' in spec) return spec;
 	if ('rows' in spec) return { rows: { ...spec.rows, where: [...(Array.isArray(spec.rows.where) ? spec.rows.where : []), ...add] } };
+	if ('kpi' in spec) return { kpi: { ...spec.kpi, query: { ...spec.kpi.query, where: [...(spec.kpi.query.where ?? []), ...add] } } };
 	return { chart: { ...spec.chart, query: { ...spec.chart.query, where: [...(spec.chart.query.where ?? []), ...add] } } };
 }
 
@@ -89,8 +90,7 @@ export function pin(l: Layout, w: Widgets, id: string, m: ToShell): { layout: La
 	const p = m.component.props as { title?: string; name?: string };
 	// msg lives in $state: a Proxy, which structuredClone refuses. JSON is all a spec is.
 	const spec = JSON.parse(JSON.stringify(m.pin)) as WidgetSpec;
-	const table = 'rows' in spec ? String(spec.rows.table ?? '') : 'chart' in spec ? spec.chart.query.table : spec.form.table;
-	return placed(l, w, id, p.title || p.name || table, spec);
+	return placed(l, w, id, p.title || p.name || tableOf(spec), spec);
 }
 
 export const removeWidget = (l: Layout, id: string): Layout => mapWidgets(l, (ws) => ws.filter((w) => w.id !== id));

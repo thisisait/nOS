@@ -1,0 +1,10 @@
+Travel spend: 12450.5 Kč
+  down 320 vs last month
+  from sum of amount over 7 rows of Expenses (kind = travel)
+
+
+
+
+
+
+

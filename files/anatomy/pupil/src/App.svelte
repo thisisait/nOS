@@ -137,6 +137,10 @@
 		if (r.send) wire(r.send, m.widget);
 	}
 
+	// export.rs writes a new file in Downloads; outside Tauri there is nowhere to save, and that is said.
+	const exported = async (name: string, csv: string) =>
+		tauri ? `saved to ${await tauri.core.invoke('export_csv', { name, csv })}` : 'not saved: no desktop bridge';
+
 	const viewport = () => ({ w: window.innerWidth, h: window.innerHeight });
 	const setChat = (c: ws.Chat) => (layout = { ...layout, chat: ws.clampChat(c, viewport()) });
 
@@ -308,6 +312,7 @@
 		onremove={removed}
 		onsubmit={submitted}
 		onlens={relens}
+		onexport={exported}
 	/>
 </main>
 

@@ -11,7 +11,7 @@
 
 	let placed = $state(false);
 	const OP: Record<Lens['op'], string> = { eq: '=', neq: '≠', lt: '<', gt: '>', contains: 'contains' };
-	const kind = (s: WidgetSpec) => ('rows' in s ? 'rows' : 'chart' in s ? `${s.chart.chart} chart` : 'form');
+	const kind = (s: WidgetSpec) => ('rows' in s ? 'rows' : 'chart' in s ? `${s.chart.chart} chart` : 'kpi' in s ? 'kpi' : 'form');
 </script>
 
 <section class="dashboard">

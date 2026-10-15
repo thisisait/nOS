@@ -49,13 +49,26 @@ pub enum ToShell {
     TableChanged { session: String, table: String, row: String },
 }
 
-/// What a widget re-runs: exactly one of rows (query_rows' arguments), a chart, a form.
+/// What a widget re-runs: exactly one of rows (query_rows' arguments), a chart, a form, a kpi.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum WidgetSpec {
     Rows(serde_json::Value),
     Chart(ChartSpec),
     Form(FormSpec),
+    Kpi(KpiSpec),
+}
+
+/// One total by serve: `op` of `y` over the query's rows (query_rows with op and no group_by).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct KpiSpec {
+    pub query: ChartQuery,
+    pub op: Op,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub y: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unit: Option<String>,
 }
 
 /// One series aggregated by serve: `op` of `y` per value of `x`; count needs no `y`.
@@ -185,6 +198,12 @@ pub fn check_spec(spec: &WidgetSpec) -> Result<(), String> {
             &c.query.table
         }
         WidgetSpec::Form(f) => &f.table,
+        WidgetSpec::Kpi(k) => {
+            if k.op != Op::Count && k.y.as_deref().is_none_or(str::is_empty) {
+                return Err(format!("{} needs `y`, a number column", if k.op == Op::Sum { "sum" } else { "avg" }));
+            }
+            &k.query.table
+        }
     };
     if table.is_empty() { Err("a widget spec names no table".into()) } else { Ok(()) }
 }
@@ -214,6 +233,10 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             if matches!(component, Component::Choice(c) if c.id.is_none()) {
                 return Err("a choice the thalamus sends carries the id it minted".into());
             }
+            // The number is serve's: a kpi is drawn only beside the total that re-runs it.
+            if matches!(component, Component::Kpi(_)) && !matches!(pin, Some(WidgetSpec::Kpi(_))) {
+                return Err("a kpi render carries the kpi pin serve computed it from".into());
+            }
             pin.as_ref().map_or(Ok(()), check_spec)
         }
         ToShell::ApprovalRequest { session, approval, component } => {
@@ -224,6 +247,7 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             match component {
                 Component::Choice(_) => Err("a choice is asked in a render, never in an approval".into()),
                 Component::Dashboard(_) => Err("a dashboard is offered in a render, never in an approval".into()),
+                Component::Kpi(_) => Err("a kpi is drawn in a render or a widget, never in an approval".into()),
                 _ => Ok(()),
             }
         }
@@ -233,8 +257,8 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             need_token(widget)?;
             match component {
                 Component::Chart(_) => component.check_allow_empty(),
-                Component::TableResults(_) | Component::Form(_) => component.check(),
-                _ => Err("a widget carries table_results, a chart or a form".into()),
+                Component::TableResults(_) | Component::Form(_) | Component::Kpi(_) => component.check(),
+                _ => Err("a widget carries table_results, a chart, a form or a kpi".into()),
             }
         }
     }

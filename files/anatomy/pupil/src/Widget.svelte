@@ -6,6 +6,7 @@
 <script lang="ts">
 	import StatusNote from '$ui/StatusNote.svelte';
 	import ComponentView from './Component.svelte';
+	import { csvName, toCsv } from './csv';
 	import Form from './Form.svelte';
 	import { lensPrefill } from './form';
 	import type { Lens } from './wire';
@@ -13,10 +14,20 @@
 	import { age, byKey, byPointer, type Grid, type WidgetBox } from './workspace';
 
 	type Submit = { form: string; widget: string; values: Record<string, string | number | boolean> };
-	let { box, state, lens = [], now, top, unit, onplace, ontop, onrerun, onremove, onsubmit }: {
+	// onexport: the person's click on CSV; the host saves the text and says where (export.rs), or why not.
+	let { box, state: st, lens = [], now, top, unit, onplace, ontop, onrerun, onremove, onsubmit, onexport }: {
 		box: WidgetBox; state: WidgetState | undefined; lens?: Lens[]; now: number; top: boolean; unit: () => { col: number; row: number };
 		onplace: (g: Grid) => void; ontop: () => void; onrerun: () => void; onremove: () => void; onsubmit: (m: Submit) => void;
+		onexport?: (name: string, csv: string) => Promise<string>;
 	} = $props();
+
+	// `st`: a prop named state would make $state below read as a store.
+	let exported: string | null = $state(null);
+	const exportRows = async () => {
+		if (st?.component?.kind !== 'table_results' || !onexport) return;
+		const t = st.component.props;
+		exported = await onexport(csvName(t.name || box.title), toCsv(t)).catch((e) => `not saved: ${e}`);
+	};
 
 	let drag: { mode: 'move' | 'resize'; start: Grid; cx: number; cy: number; u: { col: number; row: number } } | null = null;
 
@@ -40,7 +51,7 @@
 <article
 	class="widget"
 	class:top
-	class:stale={state?.stale}
+	class:stale={st?.stale}
 	data-widget={box.id}
 	style="grid-column: {box.x + 1} / span {box.w}; grid-row: {box.y + 1} / span {box.h}"
 >
@@ -55,19 +66,23 @@
 			onkeydown={key(false)}>⠿</button
 		>
 		<h2>{box.title}</h2>
-		<span class="age">{age(state, now)}</span>
+		<span class="age">{age(st, now)}</span>
+		{#if st?.component?.kind === 'table_results'}
+			<button class="ghost" aria-label="export {box.title} as CSV" title="the rows shown, as CSV" onclick={exportRows}>CSV</button>
+		{/if}
 		<button class="ghost" aria-label="re-run {box.title}" onclick={onrerun}>↻</button>
 		<button class="ghost" aria-label="remove {box.title}" onclick={onremove}>×</button>
 	</header>
 	<div class="body">
-		{#if state?.error}<StatusNote kind="error" block={false}>{state.error}</StatusNote>{/if}
-		{#if state?.component?.kind === 'form'}
+		{#if st?.error}<StatusNote kind="error" block={false}>{st.error}</StatusNote>{/if}
+		{#if exported}<p class="added">{exported}</p>{/if}
+		{#if st?.component?.kind === 'form'}
 			<!-- A new row or a re-run redraws the form from the lens: Add row waits until it is filled again. -->
-			{#key state.at}{#key state.added}
-				<Form form={state.component.props} widget={box.id} inFlight={!!state.inFlight} prefill={lensPrefill(lens, state.component.props.fields)} {onsubmit} />
+			{#key st.at}{#key st.added}
+				<Form form={st.component.props} widget={box.id} inFlight={!!st.inFlight} prefill={lensPrefill(lens, st.component.props.fields)} {onsubmit} />
 			{/key}{/key}
-			{#if state.added}<p class="added">row {state.added} added</p>{/if}
-		{:else if state?.component}<ComponentView component={state.component} />{/if}
+			{#if st.added}<p class="added">row {st.added} added</p>{/if}
+		{:else if st?.component}<ComponentView component={st.component} />{/if}
 	</div>
 	<button
 		class="handle resize"

@@ -26,6 +26,7 @@ pub enum Component {
     Form(Form),
     Choice(Choice),
     Dashboard(Dashboard),
+    Kpi(Kpi),
 }
 
 /// Model text as markdown; every consumer draws it as text nodes, never as HTML.
@@ -405,6 +406,15 @@ impl Component {
                 most("dashboard dropped widgets", d.dropped.len(), 8)?;
                 d.dropped.iter().try_for_each(|x| cap("a dropped title", &x.title, NAME_MAX).and_then(|_| cap("a dropped why", &x.why, 500)))
             }
+            Component::Kpi(k) => {
+                if k.title.trim().is_empty() {
+                    return Err("a kpi has no title".into());
+                }
+                cap("title", &k.title, NAME_MAX)?;
+                k.unit.as_deref().map_or(Ok(()), |u| cap("a kpi unit", u, 16))?;
+                k.delta_label.as_deref().map_or(Ok(()), |l| cap("a kpi delta label", l, 60))?;
+                k.source.as_deref().map_or(Ok(()), |s| cap("a kpi source", s, 200))
+            }
             Component::RowDiffApproval(d) => {
                 if d.cells.is_empty() {
                     return Err("an approval changes at least one cell".into());
@@ -723,6 +733,23 @@ pub struct Omitted {
     pub key: String,
     /// The KEAP column kind, as KEAP names it.
     pub kind: String,
+}
+
+/// One number serve computed from a table (show kpi with a source, or a kpi widget); never the model's.
+/// `source` says what was totalled over which rows; `delta` is a change the pupil says as an arrow and a sign.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Kpi {
+    pub title: String,
+    pub value: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unit: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delta: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delta_label: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 /// A tab of widgets Iris offers (offer_dashboard); drawn with "Place on a new tab", it runs nothing

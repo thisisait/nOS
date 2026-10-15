@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 6   # 6: dashboard; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 6   # 6: dashboard, kpi; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -29,21 +29,24 @@ wire:
   widget: >-
     A widget is a spec the person placed; the pupil re-runs it over `widget {widget, spec, trigger}`
     and the thalamus answers as that person, without the model, with `widget {session, widget,
-    component}` (table_results, a chart that may have no points yet, or a form) or `refused
+    component}` (table_results, a chart that may have no points yet, a form or a kpi) or `refused
     {reason, widget}`. `widget` is the pupil's token [A-Za-z0-9_-]{1,64}, echoed, never a thalamus
     id. spec is exactly one of {rows: query_rows arguments}, {chart: {query {table, q?, where?},
     chart bar|line|pie, x column, y? number column, op count|sum|avg}} (aggregated by the thalamus:
     category x largest first, 59 and "other" past 60; date x by UTC day, the last 60; number x
     ascending, the 60 smallest), {form: {table, columns?, prefill? {key: value}, when? {key: {key, op
     eq|neq, value}}}} (prefill and when are checked as the form's submit is, and copied onto the form
-    it answers). trigger: click|restore|table_changed,
+    it answers), {kpi: {query {table, q?, where?}, op count|sum|avg, y? number column, unit?}} (one total
+    over the query's rows by the thalamus, as query_rows with op and no group_by; an avg over no number is
+    refused, never 0). trigger: click|restore|table_changed,
     recorded with the spec in the ledger. A widget's rows never let the model propose an edit.
   pin: >-
     `render {session, component, pin?}`: `pin` is the widget spec (as above, and checked as a widget
     message's spec is: a table, and y for sum or avg) the person may place from that render with
     one click; only the thalamus sets it. A query_rows table carries {rows: its arguments}; a show
     chart carries {chart: ...} only when the model named its source and the thalamus drew KEAP's
-    aggregate in place of the model's numbers. The model never adds a widget; the person's click
+    aggregate in place of the model's numbers; a kpi render always carries {kpi: ...} (one without it, or
+    with another spec, is refused: its number is the thalamus's). The model never adds a widget; the person's click
     does, and the pupil stores the spec, never the rows. The terminal says "(pinnable in the pupil)".
   form_submit: >-
     `form_submit {form, widget, values}` submits a widget form the thalamus sent on this connection
@@ -141,6 +144,14 @@ components:
       the parent rows' refDisplay labels (1-50, unique; else text, the parent's id) and the submit writes the picked row's id; the pupil draws its own header
       "Adds a row to <title> (<table>)" and button "Add row"; the terminal says the fields and
       "fill it in the pupil"
+    kpi: >-
+      one number serve computed from a table (show kind kpi, only with a source {query, op, y?}; or a kpi
+      widget): {title, value, unit?, delta?, delta_label?, source?}; title 1-120 chars, unit at most 16, delta_label
+      60, source 200 (what was totalled over which rows). The model never sends the number: serve drops its
+      value, delta and source and draws query_rows' total. Never in an approval. The pupil draws the value as one
+      big text node in the shell locale (unit after it, CZK when no unit and the title names money) and delta
+      as an arrow and a sign (↑ +320, ↓ −3.5) with its word for a screen reader; the terminal says
+      "<title>: <value> <unit>", "up|down <|delta|> <label>" and "from <source>"
     # Rendered only (wire.rs: never in an approval, never as a widget's answer); nothing runs at offer.
     dashboard: >-
       a tab of widgets Iris offers (offer_dashboard): {name, lens[{column, op eq|neq|lt|gt|contains, value,
@@ -150,7 +161,7 @@ components:
       and serve reads it as that parent's id). serve validated each widget against the live schema as the
       person (no row read but a rowRef's parents) and moved the ones that failed to dropped with why, always present. The pupil draws it
       with "Place on a new tab": the click makes a tab with that lens and runs each widget once (trigger
-      click); the lens joins every rows and chart widget's where at send time, a form takes its eq values
+      click); the lens joins every rows, chart and kpi widget's where at send time, a form takes its eq values
       as prefill; the terminal says it and "place it in the pupil"
 
 # ── 3. The three invariants (ssot/doctrine/cross-repo-contracts.md §4) ──────
@@ -176,7 +187,7 @@ invariants:
 open:
   - >-
     Since v4 the model chooses a renderer through the `show` tool, for table,
-    list, record, chart, tree, timeline, graph, sequence and choice (plain text already draws as markdown); table_results,
+    list, record, chart, tree, timeline, graph, sequence, choice and kpi (plain text already draws as markdown); table_results,
     row_diff_approval and the
     control views stay chosen by their tool or control, and an approval is
     minted by propose_row_edit, or by a widget form the person submits

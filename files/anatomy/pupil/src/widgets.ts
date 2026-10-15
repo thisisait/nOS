@@ -26,7 +26,7 @@ export function submit(w: Widgets, widget: string, m: { form: string; values: Re
 }
 
 export const tableOf = (s: WidgetSpec): string =>
-	'rows' in s ? String((s.rows.table as Value) ?? '') : 'chart' in s ? s.chart.query.table : s.form.table;
+	'rows' in s ? String((s.rows.table as Value) ?? '') : 'chart' in s ? s.chart.query.table : 'kpi' in s ? s.kpi.query.table : s.form.table;
 
 /** A write landed in `table`: the active widgets that read it re-run, the others go stale. A form never re-runs. */
 export function onTableChanged(w: Widgets, table: string, active: readonly string[]): { w: Widgets; send: ToThalamus[] } {

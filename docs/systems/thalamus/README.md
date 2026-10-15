@@ -52,7 +52,10 @@ ruling 2026-10-11), it does not go through the receptor's socket.
   `chart` in six kinds over a category, number or time axis, `timeline`, `graph`;
   inline SVG in the pupil, values as text in the terminal) the model builds. Unknown fields and over-cap components are refused (`Component::check`,
   also in every shell's decoder) and only the model hears why. It can never draw
-  an approval or a kind a tool or a control draws.
+  an approval or a kind a tool or a control draws. A `kpi` (one number on a tile) is
+  drawn only with `source {query, op, y?}`: serve computes the total, drops any number
+  the model sent, and pins `{kpi}` so the tile re-runs. A rows widget exports the rows
+  it shows as CSV (pupil `csv.ts`, formula cells apostrophed) to a new file in Downloads.
 
 The shell raises three views without the model: F2 inbox, F3 approvals
 (`tools/awaiting-operator.py`), F4 red status (`tools/red-status.py`).

@@ -20,11 +20,11 @@ file: "<tauri app_data_dir>/workspaces.json, written atomically (tmp + rename), 
 
 layout:
   shape: "{version: 2, active: id, chat: {x, y, w, h, open}, workspaces[1..12]{id, name, lens?[0..4], widgets[0..24]{id, title, spec, x, y, w, h}}}; unknown keys refused; a version 1 file loads as version 2 with no lens (it is never set aside for the missing key)"
-  lens: "thalamus-shell.yml components.dashboard Lens {column, op eq|neq|lt|gt|contains, value, kind?, options?}: the tab's shared filter. Set (non-empty) values join every rows and chart widget's where when it is sent (workspace.ts lensed), never its saved spec; a form takes the eq values as prefill only. The person edits it in the bar over the tab; a change re-runs the tab (trigger click)"
+  lens: "thalamus-shell.yml components.dashboard Lens {column, op eq|neq|lt|gt|contains, value, kind?, options?}: the tab's shared filter. Set (non-empty) values join every rows, chart and kpi widget's where when it is sent (workspace.ts lensed), never its saved spec; a form takes the eq values as prefill only. The person edits it in the bar over the tab; a change re-runs the tab (trigger click)"
   ids: "workspace and widget ids are [A-Za-z0-9_-]{1,64}, unique in the file; a widget id is its wire token; active names a workspace"
   name: "at most 40 chars"
   title: "at most 120 chars"
   grid: "x, y, w, h are integer grid units: 12 columns, rows of 40 px; x from 0, w 2..12, x + w <= 12; y 0..400, h 2..40"
-  spec: "exactly one WidgetSpec of thalamus-shell.yml `widget` (rows | chart | form); two keys or an unknown key refused"
+  spec: "exactly one WidgetSpec of thalamus-shell.yml `widget` (rows | chart | form | kpi); two keys or an unknown key refused"
   chat: "CSS px of the window (integers; w, h >= 0); clampChat keeps it on screen on load and on resize"
   face: "integer twelfths map onto face LayoutCellSpec fractions (x/12); the face reuses the format, not the code"

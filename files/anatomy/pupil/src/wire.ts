@@ -22,7 +22,11 @@ export type Component =
 	| { kind: 'sequence'; props: { title?: string; participants: string[]; steps: SequenceStep[] } }
 	| { kind: 'form'; props: FormProps }
 	| { kind: 'choice'; props: ChoiceProps }
-	| { kind: 'dashboard'; props: DashboardProps };
+	| { kind: 'dashboard'; props: DashboardProps }
+	| { kind: 'kpi'; props: KpiProps };
+
+/** One number serve computed from a table (renderers.rs Kpi); never the model's. */
+export type KpiProps = { title: string; value: number; unit?: string; delta?: number; delta_label?: string; source?: string };
 
 /** A tab Iris offers (renderers.rs Dashboard): nothing runs until the person places it. */
 export type DashboardProps = { name: string; lens: Lens[]; widgets: { title: string; spec: WidgetSpec }[]; dropped: { title: string; why: string }[] };
@@ -80,7 +84,8 @@ export type ToThalamus =
 export type WidgetSpec =
 	| { rows: Record<string, Value> }
 	| { chart: { query: { table: string; q?: string; where?: Value[] }; chart: 'bar' | 'line' | 'pie'; x: string; y?: string; op: 'count' | 'sum' | 'avg' } }
-	| { form: { table: string; columns?: string[]; prefill?: Record<string, string | number | boolean>; when?: Record<string, When> } };
+	| { form: { table: string; columns?: string[]; prefill?: Record<string, string | number | boolean>; when?: Record<string, When> } }
+	| { kpi: { query: { table: string; q?: string; where?: Value[] }; op: 'count' | 'sum' | 'avg'; y?: string; unit?: string } };
 
 export type Link = { state: 'connected' | 'closed'; reason: string | null };
 

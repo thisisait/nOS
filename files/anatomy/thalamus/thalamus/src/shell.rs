@@ -204,6 +204,17 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 out.push(Line::from(format!("  {}: {pts}", s.name)));
             }
         }
+        // The number serve computed, its change in words, and what it totalled.
+        Component::Kpi(k) => {
+            let unit = k.unit.as_deref().map(|u| format!(" {u}")).unwrap_or_default();
+            out.push(head(format!("{}: {}{unit}", k.title, k.value)));
+            if let Some(d) = k.delta {
+                let word = if d > 0.0 { "up" } else if d < 0.0 { "down" } else { "unchanged" };
+                let label = k.delta_label.as_deref().map(|l| format!(" {l}")).unwrap_or_default();
+                out.push(Line::from(format!("  {word} {}{label}", d.abs())));
+            }
+            out.extend(k.source.as_ref().map(|s| Line::from(format!("  from {s}"))));
+        }
         Component::Tree(t) => {
             out.extend(t.title.clone().map(head));
             fn walk(out: &mut Vec<Line<'static>>, n: &TreeNode, depth: usize, parent: Option<Delta>) {
@@ -263,6 +274,11 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                         format!("  chart: {} ({kind}, {what} by {}, table {})", w.title, c.x, c.query.table)
                     }
                     WidgetSpec::Form(f) => format!("  form: {} (table {})", w.title, f.table),
+                    WidgetSpec::Kpi(k) => {
+                        let op = cell(&serde_json::to_value(k.op).unwrap_or_default());
+                        let what = k.y.as_ref().map_or(op.clone(), |y| format!("{op} of {y}"));
+                        format!("  kpi: {} ({what}, table {})", w.title, k.query.table)
+                    }
                 }));
             }
             out.extend(d.dropped.iter().map(|x| warn(format!("  left out: {} — {}", x.title, x.why))));
