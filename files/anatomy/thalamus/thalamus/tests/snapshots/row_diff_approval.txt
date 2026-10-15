@@ -1,4 +1,4 @@
-edit roadmap / backup-restic-fork — nothing is written unless you approve
+update nOS Roadmap (roadmap) / backup-restic-fork — nothing is written unless yo
   status: "open" -> "done"
   note: (empty) -> "landed"
 

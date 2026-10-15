@@ -475,7 +475,10 @@ fn approve_posts_the_approved_cells_once_as_the_person() {
     let rig = rig_n("approve", mapped(), shown_then(&[ROWS, ROWS, POSTED]), edit_turn());
     let (s, mut r, session, approval, diff) = propose(&rig);
     assert_eq!(diff.table, "todos");
-    assert_eq!(diff.row_id, "r1");
+    assert_eq!(diff.row_id.as_deref(), Some("r1"));
+    // The card names the table as the person knows it, and what the write does.
+    assert_eq!((diff.title.as_str(), diff.op), ("Todo list", nos_contract::renderers::RowOp::Update));
+    assert!(diff.read_from.is_empty());
     // An unchanged cell is not part of the diff, and not part of the write.
     assert_eq!(diff.cells.len(), 1);
     assert_eq!((diff.cells[0].key.as_str(), &diff.cells[0].old, &diff.cells[0].new),

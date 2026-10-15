@@ -1,0 +1,10 @@
+insert a new row in Expenses (expenses) — nothing is written unless you approve
+  contains text from search_memory
+  kind: (empty) -> "travel"
+  amount: (empty) -> 420
+
+
+
+
+
+

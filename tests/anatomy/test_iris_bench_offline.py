@@ -93,7 +93,8 @@ def _script(bad: bool) -> dict[str, list[dict]]:
             _turn(_tool("query_rows"), _results(3), _text("Three next rows in agents.")),
             _turn(_tool("query_rows"), _results(1),
                   *([_tool("propose_row_edit"), {"t": "approval_request", "session": SID, "approval": AID, "component": {
-                      "kind": "row_diff_approval", "props": {"table": "roadmap", "row_id": "iris-live-bench", "cells": []}}}]
+                      "kind": "row_diff_approval", "props": {"table": "roadmap", "title": "nOS Roadmap", "op": "update", "row_id": "iris-live-bench",
+                      "cells": [{"key": "status", "old": "next", "new": "shipped"}]}}}]
                     if bad else []),
                   _text("iris-live-bench is next, in the agents track.")),
         ],

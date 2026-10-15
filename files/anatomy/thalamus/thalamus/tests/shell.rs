@@ -52,10 +52,13 @@ fn every_fixture_component_matches_its_snapshot() {
         let kind = serde_json::to_value(&c).unwrap()["kind"].as_str().unwrap().to_string();
         let mut t = Terminal::new(TestBackend::new(80, 10)).unwrap();
         t.draw(|f| f.render_widget(Paragraph::new(shell::component_lines(&c)), f.area())).unwrap();
-        snapshot(&kind, &text(&t));
+        // A kind's second sample (the insert card) is its own snapshot.
+        let n = kinds.iter().filter(|k| **k == kind).count();
+        snapshot(&if n == 0 { kind.clone() } else { format!("{kind}.{}", n + 1) }, &text(&t));
         kinds.push(kind);
     }
     kinds.sort();
+    kinds.dedup();
     assert_eq!(kinds, ["approvals_list", "chart", "choice", "graph", "inbox_list", "list", "markdown", "record", "red_status", "row_diff_approval", "sequence", "table",
                        "table_results", "timeline", "tree"],
                "one snapshot per component in the closed vocabulary");
@@ -137,10 +140,11 @@ fn flat(t: &Terminal<TestBackend>) -> String {
 }
 
 fn diff_of(approval: &str, cells: &[(&str, serde_json::Value)]) -> ToShell {
-    use nos_contract::renderers::{CellChange, Component, RowDiffApproval};
+    use nos_contract::renderers::{CellChange, Component, RowDiffApproval, RowOp};
     let cells = cells.iter().map(|(k, v)| CellChange { key: k.to_string(), old: serde_json::Value::Null, new: v.clone() }).collect();
     ToShell::ApprovalRequest { session: SESSION.into(), approval: approval.into(),
-                               component: Component::RowDiffApproval(RowDiffApproval { table: "todos".into(), row_id: "r1".into(), cells }) }
+                               component: Component::RowDiffApproval(RowDiffApproval { table: "todos".into(), title: "Todo list".into(),
+                                   op: RowOp::Update, row_id: Some("r1".into()), cells, read_from: vec![] }) }
 }
 
 fn drawn(app: &App, w: u16, h: u16) -> Terminal<TestBackend> {
@@ -183,7 +187,7 @@ fn an_approval_taller_than_the_screen_keeps_its_header_and_y_waits() {
     let cells: Vec<(&str, serde_json::Value)> = cells.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
     app.apply(diff_of(APPROVAL, &cells));
     let small = flat(&drawn(&app, 80, 10));
-    assert!(small.contains("edit todos / r1"), "the header of the edit scrolled away");
+    assert!(small.contains("update Todo list (todos) / r1"), "the header of the edit scrolled away");
     assert!(app.key(key(KeyCode::Char('y'))).is_none(), "y approved cells that were not on screen");
     drawn(&app, 80, 40);
     assert_eq!(app.key(key(KeyCode::Char('y'))),
@@ -364,4 +368,13 @@ fn a_choice_waits_while_an_approval_does() {
     app.apply(m);
     drawn(&app, 80, 24);
     assert_eq!(typed(&mut app, "/choose 2"), None, "a reply went out while an approval waits");
+}
+
+#[test]
+fn an_insert_card_names_its_table_and_what_the_model_read() {
+    let (_, m) = fixture().into_iter().find(|(c, _)| c == "a new row awaits approval").unwrap();
+    let ToShell::ApprovalRequest { component, .. } = m else { panic!("not an approval") };
+    let lines: Vec<String> = shell::component_lines(&component).iter().map(|l| l.to_string()).collect();
+    assert_eq!(lines[0], "insert a new row in Expenses (expenses) — nothing is written unless you approve");
+    assert_eq!(lines[1].trim(), "contains text from search_memory");
 }

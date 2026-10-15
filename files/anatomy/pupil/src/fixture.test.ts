@@ -13,7 +13,7 @@ const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as { to_shell: { case: stri
 // Each kind's props, as wire.ts types them: a prop the fixture renames is named here, not drawn as nothing.
 const PROPS: Record<string, string[]> = {
 	table_results: ['columns', 'matched', 'name', 'projected', 'query', 'rows', 'table', 'total'],
-	row_diff_approval: ['cells', 'row_id', 'table'],
+	row_diff_approval: ['cells', 'op', 'read_from', 'row_id', 'table', 'title'],
 	inbox_list: ['items', 'refused'],
 	approvals_list: ['items', 'unknown'],
 	red_status: ['hold_count', 'holds', 'red_count', 'reds'],
@@ -30,6 +30,8 @@ const PROPS: Record<string, string[]> = {
 	choice: ['id', 'multi', 'options', 'question', 'suggested'],
 };
 const KINDS = Object.keys(PROPS);
+// Props a sample may leave out (an insert names no row); any other missing or extra prop is a rename.
+const OPTIONAL: Record<string, string[]> = { row_diff_approval: ['read_from', 'row_id'] };
 
 const text = (html: string) =>
 	html
@@ -80,7 +82,9 @@ describe('the pupil renders the contract fixture', () => {
 
 	for (const c of components)
 		it(`${c.kind} carries the props the pupil reads`, () => {
-			expect(Object.keys(c.props).sort(), `${c.kind} props`).toEqual(PROPS[c.kind]);
+			const keys = Object.keys(c.props).sort();
+			const opt = OPTIONAL[c.kind] ?? [];
+			expect(keys, `${c.kind} props`).toEqual(PROPS[c.kind].filter((k) => keys.includes(k) || !opt.includes(k)));
 		});
 
 	for (const { case: name, msg } of fx.to_shell) {
@@ -111,6 +115,15 @@ describe('the pupil renders the contract fixture', () => {
 		expect(page).toContain('nOS Roadmap — 1 of 23 matched (122 rows)');
 		expect(page).toContain('status = next');
 		expect(page).not.toContain('0b6f6a1e-roadmap-uuid');
+	});
+
+	it('an approval head names the table by title and id, and what the write does', () => {
+		const card = (name: string) => draw(fx.to_shell.find((c) => c.case === name)!.msg);
+		expect(card('a row edit awaits approval')).toContain('update nOS Roadmap (roadmap) / backup-restic-fork');
+		const insert = card('a new row awaits approval');
+		expect(insert).toContain('insert a new row in Expenses (expenses) — nothing is written unless you approve');
+		expect(insert).toContain('contains text from search_memory');
+		expect(card('a row edit awaits approval')).not.toContain('contains text from');
 	});
 
 	it('an empty diff side reads (empty), not blank', () => {
