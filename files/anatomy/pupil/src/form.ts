@@ -9,14 +9,18 @@ export const header = (f: { title: string; table: string }) => `Adds a row to ${
 
 const missing = (v: Draft[string]) => v === undefined || v === null || v === '';
 
+/** A field with no condition always shows; else the other field's draft, as text, must (eq) or must not (neq) be the value. */
+export const shown = (f: FormField, draft: Draft) =>
+	!f.when || (String(draft[f.when.key] ?? '') === f.when.value) === (f.when.op === 'eq');
+
 /** Every required field holds a value (a bool always does) and no submit is in flight. */
 export const canSubmit = (fields: FormField[], draft: Draft, inFlight: boolean) =>
 	!inFlight && fields.every((f) => !f.required || f.kind === 'bool' || !missing(draft[f.key]));
 
-/** The values a submit carries: typed by field, an empty optional field left out, a bool always sent. */
+/** The values a submit carries: typed by field, an empty optional field left out, a bool always sent, a hidden field never. */
 export function formValues(fields: FormField[], draft: Draft): Record<string, string | number | boolean> {
 	const out: Record<string, string | number | boolean> = {};
-	for (const f of fields) {
+	for (const f of fields.filter((x) => shown(x, draft))) {
 		const v = draft[f.key];
 		if (f.kind === 'bool') out[f.key] = v === true;
 		else if (!missing(v)) out[f.key] = f.kind === 'number' ? Number(v) : String(v);

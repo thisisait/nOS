@@ -1,11 +1,12 @@
 <!--
   A widget form (renderers.rs Form) as native inputs; the header and button are the pupil's own words.
-  Only the tab's lens prefills (form.ts lensPrefill), and the person may change it; the button waits
-  for every required field (form.ts canSubmit). It posts nowhere: a submit goes to `onsubmit` (I5g).
+  The spec's prefill, then the tab's lens (form.ts lensPrefill), start the draft the person may change; a field
+  whose `when` fails is not drawn nor sent (form.ts shown). The button waits for every required field
+  (form.ts canSubmit). It posts nowhere: a submit goes to `onsubmit` (I5g).
 -->
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { canSubmit, formValues, header, type Draft } from './form';
+	import { canSubmit, formValues, header, shown, type Draft } from './form';
 	import type { FormProps } from './wire';
 
 	type Submit = { form: string; widget: string; values: Record<string, string | number | boolean> };
@@ -14,7 +15,7 @@
 	} = $props();
 
 	// A form is drawn once per answer: the prefill is where the draft starts, never re-read.
-	let draft: Draft = $state(untrack(() => ({ ...prefill })));
+	let draft: Draft = $state(untrack(() => ({ ...form.prefill, ...prefill })));
 	const ready = $derived(canSubmit(form.fields, draft, inFlight));
 
 	const submit = (e: SubmitEvent) => {
@@ -25,7 +26,7 @@
 
 <form class="form" onsubmit={submit}>
 	<h3>{header(form)}</h3>
-	{#each form.fields as f (f.key)}
+	{#each form.fields.filter((x) => shown(x, draft)) as f (f.key)}
 		<label class="field">
 			<span>{f.label}{#if f.required}<span class="muted"> (required)</span>{/if}</span>
 			{#if f.kind === 'select'}

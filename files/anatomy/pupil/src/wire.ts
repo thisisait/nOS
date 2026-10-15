@@ -35,11 +35,16 @@ export type Lens = { column: string; op: 'eq' | 'neq' | 'lt' | 'gt' | 'contains'
 export type ChoiceProps = { id?: string; question: string; options: { label: string; note?: string }[]; suggested: string[]; multi: boolean };
 
 /** A widget form serve built from the table's schema (renderers.rs Form); never the model's. */
-export type FormProps = { form: string; table: string; title: string; fields: FormField[]; omitted: { key: string; kind: string }[] };
+export type FormProps = {
+	form: string; table: string; title: string; fields: FormField[]; omitted: { key: string; kind: string }[];
+	prefill?: Record<string, string | number | boolean>;
+};
 export type FormField = {
 	key: string; label: string; kind: 'text' | 'number' | 'date' | 'select' | 'bool'; required: boolean;
-	options?: string[]; min?: number; max?: number; placeholder?: string;
+	options?: string[]; min?: number; max?: number; placeholder?: string; when?: When;
 };
+/** A field is drawn and sent only while another field's draft holds (eq) or does not hold (neq) `value`. */
+export type When = { key: string; op: 'eq' | 'neq'; value: string };
 
 /** A sequence step (renderers.rs Step), told apart by its fields. */
 export type SequenceStep = { from: string; to: string; text: string; dashed?: boolean } | { note: string; over: string[] } | { phase: string };
@@ -78,7 +83,7 @@ export type ToThalamus =
 export type WidgetSpec =
 	| { rows: Record<string, Value> }
 	| { chart: { query: { table: string; q?: string; where?: Value[] }; chart: 'bar' | 'line' | 'pie'; x: string; y?: string; op: 'count' | 'sum' | 'avg' } }
-	| { form: { table: string; columns?: string[] } };
+	| { form: { table: string; columns?: string[]; prefill?: Record<string, string | number | boolean>; when?: Record<string, When> } };
 
 export type Link = { state: 'connected' | 'closed'; reason: string | null };
 
