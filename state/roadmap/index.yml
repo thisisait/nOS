@@ -12,6 +12,9 @@
 - slug: actor-attribution
   parent: state-surface
   track: platform
+- slug: agent-action-catalog
+  parent: ''
+  track: agents
 - slug: agent-fallback-dead
   parent: ''
   track: platform
@@ -60,6 +63,9 @@
 - slug: agents-nos-skill
   parent: agents
   track: agents
+- slug: anatomy-suite-reaches-live-hub
+  parent: ''
+  track: platform
 - slug: apex-and-cross-level-keys
   parent: repo-body-plan
   track: platform
@@ -105,6 +111,9 @@
 - slug: backup-unbacked-attachments
   parent: backup-restic-store
   track: platform
+- slug: bakeoff-scorecard-reader
+  parent: end-user-tool-bakeoff
+  track: agents
 - slug: bff-table-read-tier-gate
   parent: consulting-firm-deployment
   track: security
@@ -191,6 +200,9 @@
   track: release
 - slug: claude-cli-respects-existing
   parent: self-symbiont-host
+  track: platform
+- slug: cli-limbs-tidy
+  parent: repo-body-plan
   track: platform
 - slug: client-data-training-opt-in
   parent: consulting-firm-deployment
@@ -324,6 +336,9 @@
 - slug: cortex-vendor-staleness
   parent: ''
   track: cortex
+- slug: credential-doubles-collapse
+  parent: repo-body-plan
+  track: security
 - slug: csv-party-importer-leaks-id
   parent: digest-review-remediation
   track: security
@@ -459,6 +474,9 @@
 - slug: dnsmasq-manifest-row
   parent: body-organ
   track: platform
+- slug: docker-headroom-not-a-constant
+  parent: ''
+  track: platform
 - slug: docker-runtime-choice
   parent: self-symbiont-host
   track: platform
@@ -534,12 +552,18 @@
 - slug: e2e-restore-drill
   parent: e2e-lifecycle
   track: release
+- slug: e2e-results-miss-setup-skips
+  parent: ''
+  track: platform
 - slug: ears-app-bundle
   parent: local-llm
   track: platform
 - slug: ears-art30
   parent: sec
   track: security
+- slug: ears-whisper-cs-bench
+  parent: local-llm-voice-asr
+  track: agents
 - slug: edge-builder-questions
   parent: edge-two-doors
   track: platform
@@ -588,6 +612,9 @@
 - slug: espocrm-retire-cleanup
   parent: ''
   track: platform
+- slug: estate-token-gate-scans-tasks
+  parent: ''
+  track: security
 - slug: event-type-gate-dot-blind
   parent: wing-organ-without-face
   track: platform
@@ -603,6 +630,9 @@
 - slug: face-anatomy
   parent: face
   track: face
+- slug: face-animation-facets
+  parent: agent-action-catalog
+  track: face
 - slug: face-app-builder
   parent: face
   track: face
@@ -617,6 +647,9 @@
   track: face
 - slug: face-conversation
   parent: face-collab
+  track: face
+- slug: face-create-table-idempotent
+  parent: face-the-endpoint
   track: face
 - slug: face-document-viewer
   parent: ''
@@ -671,6 +704,9 @@
   track: face
 - slug: face-tauri
   parent: face
+  track: face
+- slug: face-terminal-organ-renderers
+  parent: face-the-endpoint
   track: face
 - slug: face-the-endpoint
   parent: face
@@ -774,6 +810,9 @@
 - slug: genome-ownership-facets
   parent: rel-017
   track: platform
+- slug: genui-renderers-2-followups
+  parent: iris-genui
+  track: face
 - slug: geo-vector-tiles
   parent: gis-property
   track: platform
@@ -786,6 +825,9 @@
 - slug: git-origin-watcher
   parent: loop-definition-model
   track: agents
+- slug: greenfield-first-deploy-lessons
+  parent: ''
+  track: release
 - slug: ha-ip-ban-bans-the-proxy
   parent: ''
   track: security
@@ -814,6 +856,12 @@
   parent: body-habitat
   track: platform
 - slug: host-disk-pressure
+  parent: ''
+  track: platform
+- slug: host-organ-home-removal
+  parent: ''
+  track: platform
+- slug: host-organ-retention
   parent: ''
   track: platform
 - slug: host-software-ownership
@@ -849,6 +897,9 @@
 - slug: imprint
   parent: body-cell
   track: platform
+- slug: imprint-short-for-local-models
+  parent: imprint
+  track: agents
 - slug: invoice-identity-cross-source
   parent: ''
   track: platform
@@ -873,6 +924,54 @@
 - slug: invoice-vision-model-pin
   parent: consulting-firm-deployment
   track: agents
+- slug: iris-choice-followups
+  parent: iris-genui-forms
+  track: agents
+- slug: iris-e2e-journeys
+  parent: iris-genui
+  track: agents
+- slug: iris-eye-affect
+  parent: ''
+  track: agents
+- slug: iris-genui
+  parent: ''
+  track: agents
+- slug: iris-genui-bench
+  parent: iris-genui
+  track: agents
+- slug: iris-genui-change-markers
+  parent: iris-genui
+  track: agents
+- slug: iris-genui-forms
+  parent: iris-genui
+  track: agents
+- slug: iris-genui-pick-rules
+  parent: iris-genui
+  track: agents
+- slug: iris-genui-sequence
+  parent: iris-genui
+  track: agents
+- slug: iris-genui-tree-timeline
+  parent: iris-genui
+  track: agents
+- slug: iris-genui-workspace-poc
+  parent: iris-genui
+  track: face
+- slug: iris-harness-revision-loop
+  parent: ''
+  track: agents
+- slug: iris-live-bench
+  parent: iris-genui-bench
+  track: agents
+- slug: iris-market-data-alerts
+  parent: iris-genui
+  track: agents
+- slug: iris-model-router
+  parent: iris-live-bench
+  track: agents
+- slug: iris-reads-red-status
+  parent: iris-genui
+  track: agents
 - slug: isdoc-vision-crosscheck
   parent: consulting-firm-deployment
   track: digest
@@ -885,16 +984,28 @@
 - slug: keap-anchor-merge-never-heals
   parent: ''
   track: cortex
+- slug: keap-conditional-row-update
+  parent: ''
+  track: platform
+- slug: keap-converge-stall
+  parent: ''
+  track: platform
 - slug: keap-demo-seed-proxy-auth
   parent: consulting-firm-deployment
   track: cortex
 - slug: keap-embed-queue-lost-row
   parent: ''
   track: cortex
+- slug: keap-human-door-row-query
+  parent: iris-genui
+  track: platform
 - slug: keap-is-memory-cortex-reasons
   parent: body-organ
   track: cortex
 - slug: keap-lint-disabled-refs
+  parent: ''
+  track: platform
+- slug: keap-manager-grants-land
   parent: ''
   track: platform
 - slug: keap-mcp-door
@@ -910,6 +1021,9 @@
   parent: body-organ
   track: cortex
 - slug: keap-slow-under-model-load
+  parent: ''
+  track: platform
+- slug: keap-tables-after-a-blank
   parent: ''
   track: platform
 - slug: kpro
@@ -939,6 +1053,9 @@
 - slug: ledger-payload-bound
   parent: ''
   track: platform
+- slug: lemma-platform-patterns
+  parent: agentkit-rust-organ
+  track: agents
 - slug: lexicon
   parent: body-genome
   track: platform
@@ -948,6 +1065,9 @@
 - slug: live-mark-consent
   parent: review-v015-followups
   track: security
+- slug: live-mark-docker-cli-lane
+  parent: anatomy-suite-reaches-live-hub
+  track: platform
 - slug: local-decision-tev1
   parent: local-llm
   track: agents
@@ -1071,6 +1191,9 @@
 - slug: loops-maintenance-pause
   parent: ''
   track: agents
+- slug: macos-idempotence-four-changes
+  parent: ''
+  track: release
 - slug: managed-resources-manifest
   parent: ''
   track: platform
@@ -1085,6 +1208,9 @@
   track: release
 - slug: memory-direction
   parent: body-plan
+  track: cortex
+- slug: memory-organ-gaps
+  parent: memory-direction
   track: cortex
 - slug: moderation-drain-loop
   parent: ''
@@ -1202,6 +1328,21 @@
   track: platform
 - slug: openhuman
   parent: body-organ
+  track: agents
+- slug: openhuman-acceptance-probe
+  parent: end-user-tool-bakeoff
+  track: agents
+- slug: openhuman-apgar-adapter
+  parent: end-user-tool-bakeoff
+  track: agents
+- slug: openhuman-capture-door
+  parent: openhuman
+  track: agents
+- slug: openhuman-no-host-write-tools
+  parent: openhuman
+  track: security
+- slug: openhuman-pin-and-tool-list-drift
+  parent: openhuman
   track: agents
 - slug: openhuman-upstream-prs
   parent: openhuman
@@ -1395,6 +1536,24 @@
 - slug: pulse-prefix-allowlist
   parent: workload-allowlist
   track: security
+- slug: pupil-build-role
+  parent: iris-genui
+  track: face
+- slug: pupil-chart-renderer-library
+  parent: iris-genui
+  track: face
+- slug: pupil-pin-from-render
+  parent: pupil-workspace-widgets
+  track: face
+- slug: pupil-push-to-talk
+  parent: voice-organ-tts
+  track: face
+- slug: pupil-web-remote
+  parent: ''
+  track: agents
+- slug: pupil-workspace-widgets
+  parent: iris-genui
+  track: face
 - slug: pytest-ratchet-remeasure
   parent: review-v015-followups
   track: platform
@@ -1449,6 +1608,12 @@
 - slug: review-v015-followups
   parent: ''
   track: security
+- slug: roadmap-closed-body-open-status
+  parent: ''
+  track: platform
+- slug: roadmap-table-id-literals
+  parent: ''
+  track: platform
 - slug: rsi-days-after-blank
   parent: rsi-evals
   track: agents
@@ -1458,6 +1623,12 @@
 - slug: rsi-ops-loop
   parent: rsi-evals
   track: agents
+- slug: rust-transplant-order
+  parent: ''
+  track: platform
+- slug: santa-is-an-organ
+  parent: workload-allowlist
+  track: security
 - slug: santa-monitor
   parent: workload-allowlist
   track: security
@@ -1587,12 +1758,18 @@
 - slug: sign-before-origin-primitive
   parent: agent-landing-zero-command-operator
   track: platform
+- slug: smoke-strict-default-is-200
+  parent: ''
+  track: platform
 - slug: specialization-packs
   parent: rel-017
   track: agents
 - slug: spine-tools-vs-cli-refusal
   parent: w-agentkit-spine
   track: agents
+- slug: ssh-converge-locked-keychain
+  parent: ''
+  track: platform
 - slug: sso-admin-auto-provision
   parent: ''
   track: platform
@@ -1662,6 +1839,27 @@
 - slug: tester-hardware-readiness
   parent: consulting-firm-deployment
   track: release
+- slug: thalamus-decider-guard-followups
+  parent: thalamus-pupil-peer-exe
+  track: security
+- slug: thalamus-ledger-backup
+  parent: ''
+  track: platform
+- slug: thalamus-otel
+  parent: ''
+  track: agents
+- slug: thalamus-pupil-peer-exe
+  parent: iris-genui
+  track: security
+- slug: thalamus-removable-volume-grant
+  parent: host-organ-retention
+  track: platform
+- slug: thalamus-table-changed-broadcast
+  parent: iris-genui
+  track: agents
+- slug: tier2-identifiers-alias
+  parent: repo-body-plan
+  track: platform
 - slug: tileserver-serves-nothing
   parent: gis-property
   track: platform
@@ -1674,6 +1872,9 @@
 - slug: tls-modern-never-applied
   parent: sec
   track: security
+- slug: tls-reader-gate-needs-live-docker
+  parent: ''
+  track: release
 - slug: tools-index-by-body-word
   parent: repo-body-plan
   track: platform
@@ -1683,6 +1884,9 @@
 - slug: twin
   parent: body-habitat
   track: release
+- slug: two-user-isolation-journey
+  parent: end-user-tool-bakeoff
+  track: agents
 - slug: uc-approve-held-invoice
   parent: consulting-firm-deployment
   track: digest
@@ -1785,6 +1989,9 @@
 - slug: vision-pipeline-uses-run-agent-sh
   parent: consulting-firm-deployment
   track: platform
+- slug: voice-organ-tts
+  parent: local-llm-voice-asr
+  track: agents
 - slug: w-agentkit-spine
   parent: rel-011
   track: agents
@@ -1884,6 +2091,9 @@
 - slug: wordpress-cve-2026-87902
   parent: ''
   track: security
+- slug: wordpress-oidc-timeout-on-first-converge
+  parent: ''
+  track: platform
 - slug: work-corpus-not-seed
   parent: cortex
   track: cortex
