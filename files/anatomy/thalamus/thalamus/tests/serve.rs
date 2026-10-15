@@ -2521,7 +2521,9 @@ fn iris_reads_red_status_through_the_same_reader() {
 
 #[test]
 fn an_unreadable_red_status_is_unknown_never_zero() {
-    for (name, py) in [("exit", "import sys; sys.exit(3)"), ("garbage", "print('not json')")] {
+    // A rig's dir is named per case: "exit"/"garbage" clashed with the approvals reader test
+    // in parallel, and dir() of one wiped the other's tools/ mid-run (python3 exit 2).
+    for (name, py) in [("red-exit", "import sys; sys.exit(3)"), ("red-garbage", "print('not json')")] {
         let rig = rig_n(name, admin(), vec![], vec![call("red_status", "{}"), answer("x")]);
         reader(&rig, "red-status.py", py);
         let s = connect(&rig.sock);
