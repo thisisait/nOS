@@ -2660,3 +2660,17 @@ fn an_https_backend_gets_a_tls_handshake() {
     let e = agent(5).get(&url).call().unwrap_err();
     assert!(!matches!(e, ureq::Error::TlsRequired), "{e}");
 }
+
+#[test]
+fn a_relative_day_is_a_range_of_utc_days() {
+    let on = |d: &str| day_epoch(d).unwrap() / 86_400;
+    let r = |w: &str, d: &str| relative(w, on(d)).map(|(a, b)| format!("{a}..{b}"));
+    assert_eq!(r("today", "2026-10-15").as_deref(), Some("2026-10-15..2026-10-15"));
+    assert_eq!(r("yesterday", "2026-03-01").as_deref(), Some("2026-02-28..2026-02-28"));
+    assert_eq!(r("this_week", "2026-10-15").as_deref(), Some("2026-10-12..2026-10-18"), "Monday to Sunday");
+    assert_eq!(r("this_week", "2026-10-12").as_deref(), Some("2026-10-12..2026-10-18"));
+    assert_eq!(r("this_month", "2028-02-10").as_deref(), Some("2028-02-01..2028-02-29"));
+    assert_eq!(r("last_month", "2027-01-05").as_deref(), Some("2026-12-01..2026-12-31"));
+    assert_eq!(r("this_year", "2026-10-15").as_deref(), Some("2026-01-01..2026-12-31"));
+    assert_eq!(r("soon", "2026-10-15"), None);
+}

@@ -166,6 +166,25 @@
     no_number_without_source: true
     proposes_nothing: true
     not_blank: true
+# quick wins Q1 (gaps #3, #4): one total with no group_by, and a closed date range in one condition
+- id: total-sum
+  prompt: How many points do the next rows of iris-bench-2 have in total?
+  needs_rows: true
+  checks:
+    tools_called: [query_rows]
+    query_uses: {where: [{column: status, op: eq, value: next}], op: sum, y: points, no_group_by: true}
+    text_contains: "50"   # 1+9+4+12+7+2+10+5
+    proposes_nothing: true
+    not_blank: true
+- id: due-between
+  prompt: Which iris-bench-2 rows are due from 2026-11-10 to 2026-11-14?
+  needs_rows: true
+  checks:
+    tools_called: [query_rows]
+    query_uses: {where: [{column: due, op: between, value: ["2026-11-10", "2026-11-14"]}]}
+    count_equals_matched: true   # bench rows 10-14
+    proposes_nothing: true
+    not_blank: true
 # writes: the runner rejects every card
 - id: edit-card
   needs_rows: true

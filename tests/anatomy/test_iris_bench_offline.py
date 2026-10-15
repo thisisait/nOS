@@ -154,6 +154,14 @@ def _v2(bad: bool) -> dict[str, list[list[dict]]]:
                                  _pinned_chart("bar", "track", "sum", "points", EQ_NEXT), _text("Next points per track, drawn above."))],
         "line-due": [_turn(_tool("show"), _pinned_chart("line", "due", "count", where=[{"column": "due", "op": "lt", "value": "2026-11-15"}]),
                           _text("Rows due before 2026-11-15, by day, drawn above."))],
+        "total-sum": [_turn(_tool("query_rows"), _read({"table": t, "where": EQ_NEXT, "group_by": "track", "op": "sum", "y": "points"}
+                                                       if bad else {"table": t, "where": EQ_NEXT, "op": "sum", "y": "points"}, ["total"]),
+                            _text("agents 10, face 12, platform 16, security 12." if bad else "The next rows have 50 points in total."))],
+        "due-between": [_turn(_tool("query_rows"), _read({"table": t, "where": [{"column": "due", "op": "gt", "value": "2026-11-09"},
+                                                                                 {"column": "due", "op": "lt", "value": "2026-11-15"}]} if bad else
+                                                          {"table": t, "where": [{"column": "due", "op": "between", "value": ["2026-11-10", "2026-11-14"]}]},
+                                                          [f"bench row {i}" for i in range(10, 15)]),
+                              _text("5 rows are due in that window, listed above."))],
         "edit-card": [_turn(_tool("query_rows"), _read({"table": t, "q": "bench row 10"}, ten[:1]), _text("Bench row 10 is next.")),
                       _turn(_tool("propose_row_edit"), _ask(_card("update", {"status": "queued" if bad else "shipped"}, row_id="r10")),
                             _text("The change is in the card; nothing is written unless you approve."))],
@@ -276,6 +284,8 @@ def test_a_bad_run_fails_exactly_the_broken_checks_and_rejects(tmp_path):
         "where-not-q": ["query_uses", "answers_in"],
         "top3-next": ["rows_order"],
         "bar-sum-points": ["chart_source"],
+        "total-sum": ["query_uses", "text_contains"],
+        "due-between": ["query_uses"],
         "edit-card": ["approval_diff_equals"],
         "choice-chart": ["proposes_nothing"],
         "services-known": ["text_from_render"],

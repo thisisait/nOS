@@ -4116,3 +4116,80 @@ fn a_form_names_its_table_by_title_as_query_rows_does() {
     assert_eq!(w["component"]["kind"], "form", "{w}");
     assert_eq!(w["component"]["props"]["table"], "expenses", "the form writes to the resolved id: {w}");
 }
+
+// --- iris quick wins Q1 (map-invoices §5 gaps #3, #4): totals, ranges, and a near miss said ---
+
+/// The model-facing result of one query_rows call with `args` over `rows` of SHEET, and what it rendered.
+fn result_over(rig_name: &str, rows: Vec<serde_json::Value>, args: &str) -> (serde_json::Value, Vec<ToShell>) {
+    let rig = rig_at(rig_name, mapped(), fake_table(SHEET, rows).0, vec![query(args), answer("x")], Some(local()));
+    let (got, _) = tool_turn(&rig, "q");
+    (tool_result(&rig, 1), got)
+}
+
+#[test]
+fn a_total_is_one_row_over_the_matched_rows_and_says_what_it_left_out() {
+    let open = r#"{"table": "sheet", "where": [{"column": "status", "op": "eq", "value": "open"}], "op": "avg", "y": "amount"}"#;
+    let (t, got) = result_over("tavg", statuses(), open);
+    assert_eq!((&t["total_op"], &t["value"], &t["over"], &t["matched"]),
+               (&serde_json::json!("avg"), &serde_json::json!(2.0), &serde_json::json!(3), &serde_json::json!(3)), "{t}");
+    assert!(t.get("groups").is_none() && t.get("rows").is_none(), "a total is not rows: {t}");
+    let r = &renders(&got)[0];
+    assert_eq!((&r["columns"], &r["rows"][0]["cells"]["avg of amount"]), (&serde_json::json!(["avg of amount", "rows"]), &serde_json::json!(2.0)), "{r}");
+    let (c, _) = result_over("tcount", statuses(), r#"{"table": "sheet", "op": "count"}"#);
+    assert_eq!((&c["total_op"], &c["value"]), (&serde_json::json!("count"), &serde_json::json!(4)), "{c}");
+    let mut rows = statuses();
+    rows.push(keap_row("e", serde_json::json!({"status": "open"})));
+    let (s, _) = result_over("tleft", rows, r#"{"table": "sheet", "op": "sum", "y": "amount"}"#);
+    assert_eq!((&s["value"], &s["over"]), (&serde_json::json!(16.0), &serde_json::json!(5)), "{s}");
+    assert!(s["left_out"].as_str().is_some_and(|l| l.starts_with("1 of the 5 matched rows have no amount")), "{s}");
+}
+
+#[test]
+fn between_is_inclusive_on_numbers_and_days() {
+    let (n, _) = result_over("bnum", statuses(), r#"{"table": "sheet", "where": [{"column": "amount", "op": "between", "value": [2, 10]}], "limit": 0}"#);
+    assert_eq!(n["matched"], 3, "{n}");
+    assert!(n["query"].as_str().is_some_and(|q| q.contains("amount between 2 and 10")), "{n}");
+    let days = vec![keap_row("a", serde_json::json!({"when": NOV_1})), keap_row("b", serde_json::json!({"when": NOV_1 + 86_400})),
+                    keap_row("c", serde_json::json!({"when": NOV_20})), keap_row("d", serde_json::json!({"note": "no day"}))];
+    let (d, _) = result_over("bday", days, r#"{"table": "sheet", "where": [{"column": "when", "op": "between", "value": ["2026-11-01", "2026-11-02"]}]}"#);
+    assert_eq!(d["matched"], 2, "{d}");
+}
+
+#[test]
+fn a_relative_day_resolves_now_in_utc_and_is_said_resolved() {
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
+    let rows = vec![keap_row("a", serde_json::json!({"when": now - now % 86_400})), keap_row("b", serde_json::json!({"when": now - 400 * 86_400}))];
+    let (t, _) = result_over("brel", rows, r#"{"table": "sheet", "where": [{"column": "when", "op": "between", "value": "this_month"}]}"#);
+    assert_eq!(t["matched"], 1, "{t}");
+    let q = t["query"].as_str().unwrap_or_default();
+    assert!(q.starts_with("when between ") && q.contains("-01 and ") && q.ends_with("(this_month)"), "{q}");
+}
+
+#[test]
+fn between_wants_two_ends_on_a_date_or_number_column() {
+    for (name, w, says) in [("bone", r#"{"column": "amount", "op": "between", "value": "5"}"#, "between takes [from, to]"),
+                            ("btext", r#"{"column": "note", "op": "between", "value": ["a", "b"]}"#, "a date or number column"),
+                            ("bbad", r#"{"column": "when", "op": "between", "value": ["2026-11-01", "soon"]}"#, "is not a day")] {
+        let e = tool_result_of(name, &format!(r#"{{"table": "sheet", "where": [{w}]}}"#));
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(says)), "{name}: {e}");
+    }
+}
+
+#[test]
+fn an_exact_text_miss_says_how_many_rows_contain_it() {
+    // Local bench: the model looked for title = 10; the row is "bench row 10".
+    let rows = vec![keap_row("a", serde_json::json!({"note": "Bench row 10"})), keap_row("b", serde_json::json!({"note": "row 2"}))];
+    let (t, _) = result_over("hint", rows.clone(), r#"{"table": "sheet", "where": [{"column": "note", "op": "eq", "value": "row 10"}]}"#);
+    assert_eq!(t["matched"], 0, "{t}");
+    assert!(t["hint"].as_str().is_some_and(|h| h.contains("1 row") && h.contains("contains \"row 10\"")), "{t}");
+    let (none, _) = result_over("nohint", rows, r#"{"table": "sheet", "where": [{"column": "note", "op": "eq", "value": "zzz"}]}"#);
+    assert!(none.get("hint").is_none(), "no row contains it: no hint {none}");
+}
+
+#[test]
+fn the_prompt_names_totals_and_between() {
+    let rig = rig_at("ptot", mapped(), fake_table(SHEET, statuses()).0, vec![answer("x")], Some(local()));
+    tool_turn(&rig, "q");
+    let p = system_prompt(&rig);
+    assert!(p.contains("one total") && p.contains("between") && p.contains("this_month"), "{p}");
+}
