@@ -229,8 +229,9 @@ def launchd_declarations(repo=None):
     """Every launchd label the repo declares, once: a `<x>_launchd_label` var
     in role defaults or default.config.yml — the var name, never the value's
     shape (an `eu.thisisait.nos.*` .app bundle id is not a job, 2026-10-05).
-    Flag: the role (`pazny.backrest` -> install_backrest), else `install_<x>` if
-    declared. Domain: `<x>_launchd_domain`, default gui. Shared with
+    Flag: the role (`pazny.backrest` -> install_backrest), else the longest
+    declared `install_<prefix of x>` (dnsmasq_tailnet -> install_dnsmasq).
+    Domain: `<x>_launchd_domain`, default gui. Shared with
     tools/anatomy-graph-gen.py harvest_daemons, so roster and plan agree."""
     repo = Path(repo) if repo else Path(__file__).resolve().parents[1]
     cfg = repo / "default.config.yml"
@@ -247,7 +248,10 @@ def launchd_declarations(repo=None):
             if not m or "legacy" in m.group(1):
                 continue
             x, label = m.groups()
-            flag = role_flag or (f"install_{x}" if f"install_{x}" in flags else None)
+            parts = x.split("_")
+            owner = next((f for f in (f"install_{'_'.join(parts[:i])}" for i in range(len(parts), 0, -1))
+                          if f in flags), None)
+            flag = role_flag or owner
             rows.setdefault(label, {"label": label, "install_flag": flag,
                                     "domain": domains.get(x, "gui")})
     return list(rows.values())

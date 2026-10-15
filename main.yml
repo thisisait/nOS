@@ -2657,6 +2657,10 @@
     - name: "[Host daemons] Retire declared-off root LaunchDaemons"
       ansible.builtin.shell: |
         launchctl bootout system/{{ item.label | quote }} || true
+        {% if item.label == 'eu.thisisait.nos.dnsmasq-tailnet' %}
+        rm -f -- /Library/LaunchDaemons/{{ item.label | quote }}.plist
+        {% if dnsmasq_tailnet_conf | default('') %}rm -f -- {{ dnsmasq_tailnet_conf | quote }}{% endif %}
+        {% endif %}
         {% if item.install_flag == 'install_dnsmasq' %}
         for f in /etc/resolver/*; do
           if grep -q -- '-> dnsmasq' "$f" 2>/dev/null; then rm -f -- "$f" || exit 1; fi

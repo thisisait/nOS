@@ -1885,6 +1885,8 @@ dnsmasq_port: 53                          # DNS port (53 = default)
 dnsmasq_lan_access: true                  # true = dnsmasq also listens on LAN (for TVs, mobiles, guests)
 dnsmasq_additional_addresses: []          # Additional custom DNS records
 dnsmasq_tailnet_conf: "{{ homebrew_prefix }}/etc/dnsmasq-tailnet.conf"  # roaming host: the tailnet instance's own config
+dnsmasq_tailnet_launchd_label: "eu.thisisait.nos.dnsmasq-tailnet"  # its root LaunchDaemon (literal in the plist template)
+dnsmasq_tailnet_launchd_domain: "system"
 # dnsmasq_additional_addresses:
 #   - domain: "api.external.test"
 #     address: "192.168.1.100"
