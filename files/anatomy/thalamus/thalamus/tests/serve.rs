@@ -3987,6 +3987,24 @@ fn propose_row_insert_offers_lines_under_a_new_or_shown_row() {
     assert!(t["function"]["description"].as_str().unwrap().contains("one card and one approval"), "{t}");
 }
 
+// --- local bench 2026-10-15 (mistral-eu): asked about iris-bench-2, it queried "roadmap" (721 rows) ---
+
+#[test]
+fn a_table_is_named_by_id_or_title_not_roadmap_by_default() {
+    let rig = rig("tabledesc", mapped(), ROWS, vec![answer("hi")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "hello");
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
+    for t in body["tools"].as_array().unwrap() {
+        let name = t["function"]["name"].as_str().unwrap();
+        if let Some(d) = t.pointer("/function/parameters/properties/table/description").and_then(|d| d.as_str()) {
+            assert!(d.contains("title"), "{name}: the table param never says a title works: {d}");
+            assert!(!d.contains("or \"roadmap\" for the roadmap"), "{name}: roadmap reads as the default: {d}");
+        }
+    }
+}
+
 // --- local bench 2026-10-15 (mistral-eu): 13 of 34 cases died on one "model answered 429" ---
 
 const LIMITED: &str = r#"!429 {"object": "error", "message": "Requests rate limit exceeded"}"#;
