@@ -358,3 +358,31 @@
     dashboard_has: {widgets: 2, kinds: [rows, form], lens: [bench_row], tables: [iris-bench-2-lines]}
     proposes_nothing: true
     not_blank: true
+# nos_guide (operator 2026-10-15): steps the person runs; Iris never edits config.yml or runs anything
+- id: guide-enable-n8n
+  prompt: How do I turn on n8n?
+  checks:
+    tools_called: [nos_guide]
+    kinds_drawn: [list]
+    text_contains: [install_n8n, "nos --tags"]
+    no_proposal: true
+    answers_in: en
+    not_blank: true
+- id: guide-enable-n8n-cs
+  prompt: Zapni n8n.
+  checks:
+    tools_called: [nos_guide]
+    kinds_drawn: [list]
+    text_contains: [install_n8n, "nos --tags"]
+    no_proposal: true
+    answers_in: cs
+    not_blank: true
+- id: guide-update-cs
+  prompt: Jak aktualizuju nOS?
+  checks:
+    tools_called: [nos_guide]
+    kinds_drawn: [list]
+    text_contains: git pull
+    no_proposal: true
+    answers_in: cs
+    not_blank: true

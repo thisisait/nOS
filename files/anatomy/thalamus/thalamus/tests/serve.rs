@@ -3510,6 +3510,65 @@ fn an_unreadable_service_catalogue_is_unknown_never_empty() {
     assert!(e["error"].as_str().is_some_and(|e| e.contains("services are UNKNOWN, not empty")), "{e}");
 }
 
+// --- nos_guide (operator 2026-10-15): how to do X with nOS, as steps the person runs ---
+
+/// A nos-guide.py that checks it got the question as one argv and prints two passages and a service.
+const GUIDE: &str = r#"import json, sys
+assert sys.argv[1:] == ["--json", "zapni n8n"], sys.argv
+print(json.dumps({"question": "zapni n8n", "unknown": ["docs/glossary.md"],
+  "service": {"id": "n8n", "install_flag": "install_n8n", "enabled": False, "config_line": "install_n8n: true",
+              "converge": "nos --tags n8n", "verify": "nos --tags n8n,verify"},
+  "passages": [
+    {"path": "docs/systems/n8n/README.md", "heading": "Quick Reference", "score": 5, "text": "DOCTEXT-41 set install_n8n"},
+    {"path": "docs/nos-cli.md", "heading": "Usage", "score": 2, "text": "DOCTEXT-42 nos --tags"}]}))
+"#;
+
+#[test]
+fn nos_guide_hears_a_notice_first_draws_the_sources_and_the_ledger_keeps_paths_only() {
+    let rig = rig_n("guide", mapped(), vec![], vec![call("nos_guide", r#"{"question": "zapni n8n"}"#), answer("x")]);
+    reader(&rig, "nos-guide.py", GUIDE);
+    let (got, session) = tool_turn(&rig, "zapni n8n");
+    let raw = tool_raw(&rig, 1);
+    assert!(raw.starts_with(r#"{"notice":""#), "{raw}");
+    assert!(raw.contains("DOCTEXT-41") && raw.contains("install_n8n: true"), "the model reads the passages and the steps: {raw}");
+    let rec = recorded(&rig, &session, "nos_guide");
+    assert!(!rec.to_string().contains("DOCTEXT") && !rec.to_string().contains("Quick Reference"), "no doc text in the ledger: {rec}");
+    assert_eq!(rec["passages"], serde_json::json!(["docs/systems/n8n/README.md", "docs/nos-cli.md"]), "{rec}");
+    assert_eq!(rec["service"], "n8n", "{rec}");
+    let items: Vec<(String, Option<String>)> = got.iter().find_map(|m| match m {
+        ToShell::Render { component: Component::List(l), .. } => Some(l.items.iter().map(|i| (i.text.clone(), i.detail.clone())).collect()),
+        _ => None,
+    }).unwrap_or_else(|| panic!("no list drawn: {got:?}"));
+    assert_eq!(items, [("Quick Reference".to_string(), Some("docs/systems/n8n/README.md".to_string())),
+                       ("Usage".to_string(), Some("docs/nos-cli.md".to_string()))]);
+}
+
+#[test]
+fn an_unreadable_guide_is_unknown_and_a_question_is_required() {
+    let rig = rig_n("guide-err", mapped(), vec![], vec![call("nos_guide", r#"{"question": "zapni n8n"}"#), answer("x")]);
+    reader(&rig, "nos-guide.py", "import sys; sys.exit(2)");
+    let (got, _) = tool_turn(&rig, "zapni n8n");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::List(_), .. })), "{got:?}");
+    assert!(tool_result(&rig, 1)["error"].as_str().is_some_and(|e| e.contains("the guide is UNKNOWN")), "{}", tool_result(&rig, 1));
+
+    let rig = rig_n("guide-noq", mapped(), vec![], vec![call("nos_guide", r#"{"question": " "}"#), answer("x")]);
+    reader(&rig, "nos-guide.py", GUIDE);
+    tool_turn(&rig, "?");
+    assert!(tool_result(&rig, 1)["error"].as_str().is_some_and(|e| e.contains("question")), "{}", tool_result(&rig, 1));
+}
+
+#[test]
+fn the_prompt_says_iris_never_edits_config_or_runs_the_steps() {
+    let rig = rig_n("guide-prompt", mapped(), vec![], vec![answer("hi")]);
+    tool_turn(&rig, "hello");
+    let p = system_prompt(&rig);
+    assert!(p.contains("call nos_guide"), "{p}");
+    assert!(p.contains("You never edit config.yml or run a command"), "{p}");
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
+    let g = body["tools"].as_array().unwrap().iter().find(|t| t["function"]["name"] == "nos_guide").expect("nos_guide is a tool");
+    assert_eq!(g["function"]["parameters"]["required"], serde_json::json!(["question"]), "{g}");
+}
+
 #[test]
 fn approvals_awaiting_is_tier_one_and_the_ledger_keeps_no_free_text() {
     let rig = rig_n("iappr", admin(), vec![], vec![call("approvals_awaiting", "{}"), answer("One signature waits.")]);

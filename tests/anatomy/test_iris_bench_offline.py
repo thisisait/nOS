@@ -157,6 +157,7 @@ def _v2(bad: bool) -> dict[str, list[list[dict]]]:
     queue = _show("approvals_list", {"items": [{"kind": "pr", "severity": "info", "age": "2h", "what": "review",
                                                 "where": "gitea"}], "unknown": []})
     found = _show("list", {"ordered": False, "items": [{"text": "taxonomy · Grafana — dashboards"}]})
+    guide = _show("list", {"ordered": True, "items": [{"text": "Quick Reference", "detail": "docs/systems/n8n/README.md"}]})
     return {
         "where-not-q": [_turn(_tool("query_rows"), _read({"table": t, "q": "next"} if bad else {"table": t, "where": EQ_NEXT}, ten * 2 + ten[:2]),
                               _text("8 řádků." if bad else "There are 8 rows with status next in the table."))],
@@ -223,6 +224,15 @@ def _v2(bad: bool) -> dict[str, list[list[dict]]]:
         "lines-dashboard": [_turn(_tool("offer_dashboard"), _dash(["bench_row"], ["rows", "form"],
                                                                   table="iris-bench-2" if bad else "iris-bench-2-lines"),
                                   _text("The lines dashboard is above; place it to add lines."))],
+        # nos_guide: bad en claims it did it without the guide; bad cs-enable proposes a card; bad update answers in English
+        "guide-enable-n8n": [_turn(_text("Done: n8n is on now.")) if bad else
+                             _turn(_tool("nos_guide"), guide, _text("Set `install_n8n: true` in config.yml, then run `nos --tags n8n`; "
+                                                                    "verify with `nos --tags n8n,verify` (docs/systems/n8n/README.md)."))],
+        "guide-enable-n8n-cs": [_turn(_tool("nos_guide"), guide, *([_tool("propose_row_edit"), _ask(_card("update", {"status": "on"}))] if bad else []),
+                                      _text("V config.yml nastav `install_n8n: true` a spusť `nos --tags n8n`; ověříš to přes `nos --tags n8n,verify`."))],
+        "guide-update-cs": [_turn(_tool("nos_guide"), guide,
+                                  _text("Run git pull in $NOS_SRC, then nos." if bad else
+                                        "V adresáři $NOS_SRC spusť `git pull` a pak `nos` (docs/nos-cli.md)."))],
     }
 
 
@@ -327,6 +337,9 @@ def test_a_bad_run_fails_exactly_the_broken_checks_and_rejects(tmp_path):
         "dashboard-offer": ["dashboard_has"],
         "form-offer": ["dashboard_has"],
         "lines-dashboard": ["dashboard_has"],
+        "guide-enable-n8n": ["tools_called", "kinds_drawn", "text_contains"],
+        "guide-enable-n8n-cs": ["no_proposal"],
+        "guide-update-cs": ["answers_in"],
     }
     assert failed == want
     assert not [c["id"] for c in res["cases"] if c["no_data"]], "a bad answer is judged, never NO-DATA"
@@ -674,6 +687,9 @@ def test_answers_in_czech_and_a_padded_fact():
         assert not check("answers_in", "cs", _got(en), noon), en
     assert check("text_contains", "MODRÁ-ŽIRAFA", _got("Je to MODRÁ-ŽIRAFA."), noon)
     assert not check("text_contains", "MODRÁ-ŽIRAFA", _got("Nevím."), noon)
+    # a list: every one is in the text (nos_guide: the config line AND the command)
+    assert check("text_contains", ["install_n8n", "nos --tags"], _got("Set install_n8n: true, run nos --tags n8n."), noon)
+    assert not check("text_contains", ["install_n8n", "nos --tags"], _got("Set install_n8n: true."), noon)
     case = next(c for c in CASES if c["id"] == "long-context-cs")
     first = _bench().turns_of(case)[0]
     assert first.startswith(case["pad"]["fact"]) and first.endswith(case["prompt"])
