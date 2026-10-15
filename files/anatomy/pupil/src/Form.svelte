@@ -1,8 +1,7 @@
 <!--
-  A widget form (renderers.rs Form) as native inputs. The header and the button are the pupil's own
-  words; the props only name the table. Only the tab's lens prefills (form.ts lensPrefill), and the
-  person may change it; the button waits for every required field (form.ts canSubmit). It posts
-  nowhere: a submit is handed to `onsubmit` (I5g).
+  A widget form (renderers.rs Form) as native inputs; the header and button are the pupil's own words.
+  Only the tab's lens prefills (form.ts lensPrefill), and the person may change it; the button waits
+  for every required field (form.ts canSubmit). It posts nowhere: a submit goes to `onsubmit` (I5g).
 -->
 <script lang="ts">
 	import { untrack } from 'svelte';
