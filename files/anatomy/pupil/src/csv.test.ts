@@ -29,6 +29,11 @@ describe('toCsv', () => {
 		expect(lines[3], 'a number stays the number it is').toBe('ok,-5');
 	});
 
+	it('a leading tab or carriage return is a formula prefix too (OWASP CSV injection)', () => {
+		const csv = toCsv(results(['a', 'b'], [{ a: '\t=HYPERLINK("http://e")', b: '\r=cmd' }]));
+		expect(csv).toBe(`a,b\r\n"'\t=HYPERLINK(""http://e"")","'\r=cmd"\r\n`);
+	});
+
 	it('a nested value is its JSON text, a bool its word', () => {
 		expect(toCsv(results(['v', 'b'], [{ v: { a: 1 }, b: true }]))).toBe('v,b\r\n"{""a"":1}",true\r\n');
 	});
