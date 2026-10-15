@@ -218,3 +218,20 @@ def test_the_log_dir_is_not_world_readable():
     default = task["ansible.builtin.file"].get("mode")
     modes = dict((i, default) if isinstance(i, str) else (i["path"], i.get("mode", default)) for i in task["loop"])
     assert modes["{{ receptor_log_dir }}"] == "0700", modes
+
+
+def test_the_receptor_comes_up_after_keap():
+    """The verify reads KEAP through the socket; before stack-up.yml KEAP is not up on a blank host.
+
+    CI bonus (devops) 2026-10-15: receptor ran at main.yml before stack-up -> 'mode=600 code=502'.
+    """
+    import yaml
+    tasks = yaml.safe_load((REPO / "main.yml").read_text())[0]["tasks"]
+
+    def at(pred):
+        return next(n for n, t in enumerate(tasks) if pred(t))
+
+    stacks = at(lambda t: t.get("import_tasks") == "tasks/stacks/stack-up.yml")
+    receptor = at(lambda t: t.get("ansible.builtin.import_role", {}).get("name") == "pazny.receptor")
+    thalamus = at(lambda t: t.get("ansible.builtin.import_role", {}).get("name") == "pazny.thalamus")
+    assert stacks < receptor < thalamus, (stacks, receptor, thalamus)
