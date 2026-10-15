@@ -442,3 +442,8 @@ def test_a_sign_that_cannot_reach_the_key_says_the_one_command(tmp_path):
     r = _run_sign(tmp_path / "p", p, {**ctx, "thalamus_pupil_app": str(tmp_path / "Iris.app"),
                                       "thalamus_pupil_identifier": "eu.thisisait.nos.pupil"})
     assert r.returncode != 0 and "set-key-partition-list" in r.stderr, r.stderr
+
+
+def test_the_local_temperature_is_a_config_knob_in_the_plist():
+    assert _default_config()["iris_local_temperature"] == 0.3
+    assert _plist(iris_local_temperature=0.1)["EnvironmentVariables"]["NOS_LOCAL_TEMPERATURE"] == "0.1"

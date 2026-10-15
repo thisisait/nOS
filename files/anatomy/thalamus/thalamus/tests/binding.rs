@@ -189,3 +189,21 @@ fn binding_agrees_with_the_shared_cases() {
         }
     }
 }
+
+
+#[test]
+fn a_local_binding_carries_a_low_temperature_a_cloud_one_none() {
+    // Client bench 2026-10-15: one model scored 9/11 then 6/11 at Ollama's default temperature.
+    let local = |extra: &[(&str, &str)]| {
+        let mut e = ARMED.to_vec();
+        e.extend_from_slice(extra);
+        match decide(LOCAL_CELL, &register(), env(&e)).unwrap() { Decision::Bound(b) => b, d => panic!("{d:?}") }
+    };
+    assert_eq!(local(&[]).temperature, Some(0.3));
+    assert_eq!(local(&[("NOS_LOCAL_TEMPERATURE", "0.1")]).temperature, Some(0.1));
+    assert_eq!(local(&[("NOS_LOCAL_TEMPERATURE", "warm")]).temperature, Some(0.3), "an unreadable value keeps the default");
+    match resolve(&repo(), "iris", env(EU)).unwrap() {
+        Decision::Bound(b) => assert_eq!(b.temperature, None, "the cloud row keeps its own default"),
+        d => panic!("{d:?}"),
+    }
+}

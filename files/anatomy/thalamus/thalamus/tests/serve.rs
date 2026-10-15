@@ -2760,12 +2760,14 @@ fn a_local_model_is_asked_not_to_think_and_a_cloud_one_is_left_alone() {
     turn(&s, &mut r, None, "hello");
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     assert_eq!(body["reasoning_effort"], "none", "{body}");
+    assert_eq!(body["temperature"], 0.3, "a local model runs cool: {body}");
     let rig = rig_full("think-cloud", mapped(), vec![ROWS.into()], vec![answer("hi")], Some(cloud()));
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
     turn(&s, &mut r, None, "hello");
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     assert!(body.get("reasoning_effort").is_none(), "a cloud row may refuse an unknown field: {body}");
+    assert!(body.get("temperature").is_none(), "{body}");
 }
 
 
