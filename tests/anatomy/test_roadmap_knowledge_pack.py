@@ -25,6 +25,15 @@ def test_a_pack_carries_live_status_and_whole_bodies_and_leaves_settled_out():
     assert "Old work" not in md and "+1 shipped/dropped" in md
 
 
+def test_a_body_heading_sits_below_its_row():
+    """Live bodies carry their own `## Design` headings; at ## they read as a
+    status lane of the board (first live run, 2026-10-15)."""
+    rows = [{"slug": "a", "title": "A", "status": "next", "body": "## Design\ntext\n#### deep"}]
+    md = knowledge_pack(rows, "R", "2026-10-15")
+    assert [ln for ln in md.splitlines() if ln.startswith("## ")] == ["## next (1)"], md
+    assert "##### Design" in md and "###### deep" in md
+
+
 def test_all_includes_the_settled_rows():
     md = knowledge_pack(ROWS, "nOS Roadmap", "2026-10-15", settled=True)
     assert "## shipped" in md and "### old — Old work" in md and "shipped/dropped" not in md
