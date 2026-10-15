@@ -39,9 +39,10 @@ CANNOT_SEE = ("cannot see", "can't see", "can not see", "unable to see", "not ab
               "have no access", "don't have access", "do not have access", "not visible to me",
               "cannot read", "can't read", "can not read", "unable to read", "not able to read",
               "nevidím", "nemám přístup", "nemohu vidět", "nemůžu vidět", "nemám nástroj", "nedokážu zjistit",
-              "nemohu číst", "nemůžu číst", "nedokážu přečíst", "nemohu přečíst")
+              "nemohu číst", "nemůžu číst", "nedokážu přečíst", "nemohu přečíst",
+              "není vidět", "nemám k dispozici", "nemám údaje", "nemám informace")
 # "can't directly read", "am not able to check": a refusal with a word or two between.
-CANNOT_RE = re.compile(r"\b(cannot|can't|can not|unable to|not able to)(\s+\w+){0,2}\s+(see|read|access|check|view)\b")
+CANNOT_RE = re.compile(r"\b(cannot|can't|can not|unable to|not able to)(\s+\w+){0,2}\s+(see|read|access|check|view|answer|tell|know)\b")
 # A verdict next to the disclaimer is a guess ("I can't see any failures, all green"), not cannot-see.
 VERDICT = ("green", "healthy", "all clear", "all good", "nothing is red", "no failures", "zelen", "v pořádku", "nic není červen")
 NUM = re.compile(r"\d+(?:\.\d+)?")
@@ -250,6 +251,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cases", default=str(CASES))
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--timeout", type=float, default=180.0, help="seconds without a line before a case fails")
+    ap.add_argument("--repeat", type=int, default=1, help="run each case N times; a majority of passing runs passes")
     ap.add_argument("--seed", action="store_true", help="create the iris-bench table once (writes KEAP; NOS_LIVE=1)")
     a = ap.parse_args(argv)
     if a.seed:
@@ -264,15 +266,21 @@ def main(argv: list[str] | None = None) -> int:
     sock = a.sock or str(SOCK)
     cases = yaml.safe_load(Path(a.cases).read_text(encoding="utf-8"))
     results = []
+    n = max(1, a.repeat)
     for case in cases:
-        t0 = time.monotonic()
-        got = run_case(case, sock, float(case.get("timeout", a.timeout)))
-        secs = round(time.monotonic() - t0, 2)
-        failed = score(case, got, time.time())
-        nd = bool(failed) and no_data(case, got)
-        results.append({"id": case["id"], "pass": not failed, "no_data": nd, "failed": failed, "seconds": secs,
-                        "model_uri": got["model_uri"], "tools": got["tools"], "approvals_rejected": len(got["approvals"]),
-                        "refused": got["refused"], "queries": queries(got), "text": got["text"]})
+        runs = []
+        for _ in range(n):
+            t0 = time.monotonic()
+            got = run_case(case, sock, float(case.get("timeout", a.timeout)))
+            failed = score(case, got, time.time())
+            runs.append((got, failed, round(time.monotonic() - t0, 2), bool(failed) and no_data(case, got)))
+        passes = sum(1 for _, f, _, _ in runs if not f)
+        got, failed, _, _ = next((r for r in runs if r[1] and not r[3]), runs[-1])
+        results.append({"id": case["id"], "runs": n, "passes": passes, "pass": passes * 2 > n,
+                        "no_data": all(r[3] for r in runs), "failed": [] if passes * 2 > n else failed,
+                        "seconds": round(sum(r[2] for r in runs) / n, 2), "model_uri": got["model_uri"], "tools": got["tools"],
+                        "approvals_rejected": sum(len(r[0]["approvals"]) for r in runs), "refused": got["refused"],
+                        "queries": queries(got), "text": got["text"]})
     run = {"ran_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "sock": sock,
            "model_uri": sorted({r["model_uri"] for r in results if r["model_uri"]}), "cases": results}
     out = Path(a.out)
@@ -280,7 +288,7 @@ def main(argv: list[str] | None = None) -> int:
     out.write_text(json.dumps(run, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     for r in results:
         word = "PASS" if r["pass"] else "NO-DATA" if r["no_data"] else "FAIL"
-        print(f"{word:<7} {r['id']:<18} {r['seconds']:>7.2f}s  {', '.join(r['failed'])}")
+        print(f"{word:<7} {r['id']:<18} {r['passes']}/{r['runs']} {r['seconds']:>7.2f}s  {', '.join(r['failed'])}")
     judged = [r for r in results if not r["no_data"]]
     print(f"{sum(r['pass'] for r in judged)}/{len(judged)} passed ({len(results) - len(judged)} NO-DATA) · "
           f"{', '.join(run['model_uri']) or 'no model_uri'} · {out}")

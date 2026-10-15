@@ -13,7 +13,7 @@
   prompt: In the iris-bench table, show the rows with status next as a chart by track.
   needs_rows: true
   checks:
-    tools_called: [list_tables, query_rows, show]
+    tools_called: [query_rows, show]   # list_tables optional: a title resolves
     kinds_drawn: [chart]
     no_number_without_source: true
     not_repeated: true
@@ -42,7 +42,7 @@
   prompt: Show the iris-bench table's rows by status as a pie chart.
   needs_rows: true
   checks:
-    tools_called: [list_tables, show]
+    tools_called: [show]   # list_tables optional: a title resolves
     kinds_drawn: ["chart:pie"]
     no_number_without_source: true
     not_repeated: true
