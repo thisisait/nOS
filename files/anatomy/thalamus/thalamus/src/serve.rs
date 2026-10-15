@@ -2906,3 +2906,12 @@ fn a_relative_day_is_a_range_of_utc_days() {
     assert_eq!(r("this_year", "2026-10-15").as_deref(), Some("2026-01-01..2026-12-31"));
     assert_eq!(r("soon", "2026-10-15"), None);
 }
+
+// Review Q1: at 00:30 CET on 1 November the UTC day is still 31 October; "this_month" is November.
+#[test]
+fn a_relative_day_counts_from_the_hosts_calendar() {
+    let t = day_epoch("2026-10-31").unwrap() + 23 * 3600 + 30 * 60;
+    assert_eq!(relative("this_month", local_day(t, 3600)).map(|r| r.0).as_deref(), Some("2026-11-01"));
+    assert_eq!(relative("today", local_day(t, -5 * 3600)).map(|r| r.0).as_deref(), Some("2026-10-31"));
+    assert_eq!(local_day(t, 0), day_epoch("2026-10-31").unwrap() / 86_400);
+}
