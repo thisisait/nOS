@@ -2185,6 +2185,8 @@ fn a_sourced_chart_draws_keaps_aggregate_and_carries_a_chart_pin() {
     assert_eq!(drawn[0]["pin"], serde_json::json!({"chart": want}), "the pin is the source with the component's chart kind");
     let told = tool_result(&rig, 1);
     assert!(!told.to_string().contains("999"), "{told}");
+    // Operator Q3: the model hears how many points and the top one, never the series it would narrate.
+    assert_eq!(told, serde_json::json!({"shown": "chart", "points_drawn": 2, "top": ["open", 3.0]}), "{told}");
     // The model is told, in the prompt and the tool, to name the source of a chart of table rows.
     assert!(system_prompt(&rig).contains("pass show's `source`"), "{}", system_prompt(&rig));
     // The shape map must not send a count chart the unsourced way, or it cannot be pinned.
