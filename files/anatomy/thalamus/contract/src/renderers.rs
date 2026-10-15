@@ -1120,6 +1120,43 @@ mod tests {
         assert_eq!(gone(Some("r1"), Value::Null, Value::Null).check(), Err("a delete shows each value it removes".into()));
     }
 
+    fn col(key: &str, kind: ColumnKind) -> SchemaColumn {
+        SchemaColumn { key: key.into(), label: key.to_uppercase(), kind, required: false, options: None, ref_table: None, ref_title: None, ref_display: None }
+    }
+
+    fn new_table(columns: Vec<SchemaColumn>) -> Component {
+        Component::TableSchemaApproval(TableSchemaApproval { title: "Expenses".into(), description: None, columns, visibility: Visibility::Private })
+    }
+
+    #[test]
+    fn a_table_card_holds_what_keap_creates_and_no_more() {
+        let select = SchemaColumn { options: Some(vec!["travel".into(), "food".into()]), ..col("category", ColumnKind::Select) };
+        let link = SchemaColumn { ref_table: Some("t-trips".into()), ref_title: Some("Trips".into()), ..col("trip", ColumnKind::RowRef) };
+        let ok = new_table(vec![col("item", ColumnKind::Text), col("paid_on", ColumnKind::Date), select.clone(), link.clone()]);
+        assert!(ok.check().is_ok(), "{:?}", ok.check());
+        let v = serde_json::to_value(&ok).unwrap();
+        assert_eq!((v["kind"].as_str(), v["props"]["visibility"].as_str(), v["props"]["columns"][3]["kind"].as_str()),
+                   (Some("table_schema_approval"), Some("private"), Some("rowRef")));
+        assert!(serde_json::from_value::<Component>(json!({"kind": "table_schema_approval", "props": {"title": "x", "columns": [],
+            "visibility": "shared"}})).is_err(), "a create is private; sharing is a later step");
+        let refused = |c: Vec<SchemaColumn>| new_table(c).check().unwrap_err();
+        assert_eq!(refused(vec![]), "a table has 1 to 30 columns, not 0");
+        assert_eq!(refused((0..31).map(|i| col(&format!("c{i}"), ColumnKind::Text)).collect()), "a table has 1 to 30 columns, not 31");
+        assert!(refused(vec![col("Item", ColumnKind::Text)]).contains("snake_case"));
+        assert!(refused(vec![col("2nd", ColumnKind::Text)]).contains("snake_case"));
+        assert!(refused(vec![col("item", ColumnKind::Text), col("item", ColumnKind::Number)]).contains("twice"));
+        assert!(refused(vec![col("category", ColumnKind::Select)]).contains("1 to 50 options"));
+        assert!(refused(vec![SchemaColumn { options: Some(vec![]), ..select.clone() }]).contains("1 to 50 options"));
+        assert!(refused(vec![SchemaColumn { options: Some(vec!["a".into(), "a".into()]), ..select.clone() }]).contains("twice"));
+        assert!(refused(vec![SchemaColumn { options: Some(vec!["a".into()]), ..col("item", ColumnKind::Text) }]).contains("only a select"));
+        assert!(refused(vec![SchemaColumn { ref_table: None, ..link.clone() }]).contains("names the table"));
+        assert!(refused(vec![SchemaColumn { ref_table: Some("t".into()), ..col("item", ColumnKind::Text) }]).contains("only a rowRef"));
+        assert!(refused(vec![SchemaColumn { label: " ".into(), ..col("item", ColumnKind::Text) }]).contains("label"));
+        let Component::TableSchemaApproval(mut t) = ok else { unreachable!() };
+        t.title = " ".into();
+        assert_eq!(Component::TableSchemaApproval(t).check(), Err("a new table has a title".into()));
+    }
+
     #[test]
     fn an_insert_card_carries_no_row_id_and_keeps_a_null_old() {
         let v = serde_json::to_value(card(RowOp::Insert, None, Value::Null)).unwrap();

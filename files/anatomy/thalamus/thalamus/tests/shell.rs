@@ -419,3 +419,17 @@ fn a_delete_card_says_delete_in_red_and_every_value_going() {
         assert!(said.iter().any(|l| l.contains(v)), "{v} not in {said:?}");
     }
 }
+
+// --- T1: a table card says create, private, and every column whole ---
+
+#[test]
+fn a_table_card_says_every_column_its_kind_options_and_required() {
+    let (_, m) = fixture().into_iter().find(|(c, _)| c == "a new table awaits approval").unwrap();
+    let ToShell::ApprovalRequest { component, .. } = m else { panic!("the table sample no longer decodes: {m:?}") };
+    let said: Vec<String> = shell::component_lines(&component).iter().map(|l| l.to_string()).collect();
+    for want in ["create table Expenses, private to you — nothing is created unless you approve", "What I spend on trips",
+                 "item (Item): text, required", "amount (Amount): number", "category (Category): select of travel, food",
+                 "settled (Settled): boolean", "trip (Trip): rowRef -> Trips (t-trips), shown by name"] {
+        assert!(said.iter().any(|l| l.contains(want)), "{want:?} not in {said:?}");
+    }
+}

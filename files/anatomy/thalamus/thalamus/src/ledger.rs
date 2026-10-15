@@ -323,6 +323,32 @@ mod tests {
     }
 
     #[test]
+    fn approved_table_is_the_card_the_person_saw_and_nothing_else() {
+        let (l, _) = ledger("table-create");
+        start(&l);
+        let card = serde_json::json!({"title": "Expenses", "visibility": "private",
+            "columns": [{"key": "item", "label": "Item", "kind": "text", "required": true}]});
+        let d = approve(&l, "t1", card.clone());
+        let (actor, t) = l.approved_table(d).unwrap();
+        assert_eq!((actor.as_str(), t.title.as_str(), t.columns[0].key.as_str(), t.columns[0].required), ("user:alice", "Expenses", "item", true));
+        assert!(l.approved(d).is_err(), "a table card is no row write");
+        let row = approve(&l, "t2", serde_json::json!({"table": "t", "op": "insert", "cells": [{"key": "k", "new": 1}]}));
+        assert!(l.approved_table(row).is_err(), "a row card creates no table");
+        let mut shared = card.clone();
+        shared["visibility"] = serde_json::json!("shared");
+        let mut wide = card.clone();
+        wide["columns"] = serde_json::json!((0..31).map(|i| serde_json::json!({"key": format!("c{i}"), "label": "C", "kind": "text"})).collect::<Vec<_>>());
+        for (i, bad) in [shared, wide].into_iter().enumerate() {
+            let d = approve(&l, &format!("b{i}"), bad);
+            assert!(l.approved_table(d).is_err(), "case {i} was approved as a create");
+        }
+        l.record(UUID, Kind::ApprovalRequest, Some("propose_table_create"), &serde_json::json!({"approval": "r1", "title": "X", "visibility": "private",
+            "columns": [{"key": "item", "label": "Item", "kind": "text"}]})).unwrap();
+        let no = l.record(UUID, Kind::ApprovalDecision, None, &serde_json::json!({"approval": "r1", "decision": "reject"})).unwrap();
+        assert!(l.approved_table(no).is_err(), "a reject creates nothing");
+    }
+
+    #[test]
     fn approved_defaults_op_to_update() {
         let (l, _) = ledger("op-default");
         start(&l);

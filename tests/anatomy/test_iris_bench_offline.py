@@ -124,6 +124,11 @@ def _ask(card):
             "component": {"kind": "row_diff_approval", "props": card}}
 
 
+def _ask_table(columns):
+    return {"t": "approval_request", "session": SID, "approval": AID,
+            "component": {"kind": "table_schema_approval", "props": _new_table(columns)}}
+
+
 def _show(kind, props):
     return {"t": "render", "session": SID, "pin": None, "component": {"kind": kind, "props": props}}
 
@@ -180,6 +185,9 @@ def _v2(bad: bool) -> dict[str, list[list[dict]]]:
                               _text("The new row is in the card; nothing is written unless you approve."))],
         "delete-card": [_turn(_tool("query_rows"), _read({"table": t, "q": "bench row 10"}, ten[:1]), _text("Bench row 10 is next.")),
                         _turn(_tool("propose_row_delete"), _ask(_gone(bad)), _text("The delete is in the card; nothing is deleted unless you approve."))],
+        "table-create": [_turn(_tool("propose_table_create"), _ask_table({"item": "text", "amount": "number", "paid_on": "date",
+                                                                          "category": "select", "settled": "text" if bad else "boolean"}),
+                               _text("The new table is in the card; nothing is created unless you approve."))],
         "choice-chart": [_turn(*([_tool("propose_row_edit")] if bad else []), _tool("show"), choice, _text("Pick a chart above."))],
         # bad: no hit, so it draws its own invention with show; that is the fabrication, not NO-DATA.
         "no-memory-hit": [_turn(_tool("search_memory"), _tool("show"), made_up, _text("You noted that zorblax-41 is your Q3 codename."))
@@ -300,6 +308,7 @@ def test_a_bad_run_fails_exactly_the_broken_checks_and_rejects(tmp_path):
         "kpi-total": ["no_number_without_source"],
         "edit-card": ["approval_diff_equals"],
         "delete-card": ["approval_diff_equals"],
+        "table-create": ["approval_columns"],
         "choice-chart": ["proposes_nothing"],
         "services-known": ["text_from_render"],
         "no-memory-hit": ["says_cannot_see"],
@@ -395,6 +404,28 @@ def test_a_delete_card_shows_every_value_going():
     assert not check("approval_diff_equals", want, _got(cards=[_gone(hide_one=True)]), noon), "a value left off the card"
     blank = dict(_gone(), cells=[dict(c, old=None) for c in _gone()["cells"]])
     assert not check("approval_diff_equals", want, _got(cards=[blank]), noon), "a delete card with no old value"
+
+
+def _new_table(columns, visibility="private"):
+    """A table_schema_approval's props: one column per key, its kind; a select gets options."""
+    cols = [{"key": k, "label": k.capitalize(), "kind": v, "required": False, **({"options": ["travel"]} if v == "select" else {})}
+            for k, v in columns.items()]
+    return {"title": "bench trips", "visibility": visibility, "columns": cols}
+
+
+def test_a_table_card_is_judged_by_kind_columns_and_privacy():
+    """T1: the card must be the create, every asked column of its kind, and private."""
+    check, noon = _bench().check, 1760443200.0
+    want = {"item": "text", "amount": "number"}
+    kinds = lambda *k: dict(card_kinds=list(k))
+    assert check("approval_kind", "table_schema_approval", _got(cards=[_new_table(want)]) | kinds("table_schema_approval"), noon)
+    assert not check("approval_kind", "table_schema_approval", _got(cards=[_gone()]) | kinds("row_diff_approval"), noon)
+    assert not check("approval_kind", "table_schema_approval", _got(), noon), "no card at all"
+    assert check("approval_columns", want, _got(cards=[_new_table(want)]), noon)
+    assert not check("approval_columns", want, _got(cards=[_new_table({"item": "text"})]), noon), "a column left off"
+    assert not check("approval_columns", want, _got(cards=[_new_table(want | {"x": "text"})]), noon), "a column not asked for"
+    assert not check("approval_columns", want, _got(cards=[_new_table({"item": "text", "amount": "text"})]), noon), "a wrong kind"
+    assert not check("approval_columns", want, _got(cards=[_new_table(want, "shared")]), noon), "a create is private"
 
 
 def _read(args, rows=()):

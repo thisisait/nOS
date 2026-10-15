@@ -223,6 +223,14 @@
     tools_called: [query_rows, propose_row_delete]
     approval_diff_equals: {table: iris-bench-2, op: delete, cells: {title: null, status: null, track: null, points: null, due: null}}
     not_blank: true
+# T1: the bench rejects the card, so a live run creates no table
+- id: table-create
+  prompt: 'Create a new table "bench trips" with the columns Item (text), Amount (number), Paid on (date), Category (select: travel, food, office) and Settled (yes/no).'
+  checks:
+    tools_called: [propose_table_create]
+    approval_kind: table_schema_approval
+    approval_columns: {item: text, amount: number, paid_on: date, category: select, settled: boolean}
+    not_blank: true
 # choice
 - id: choice-chart
   prompt: I want to see iris-bench-2 by track but I am not sure which chart; offer me choices.

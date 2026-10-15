@@ -165,6 +165,18 @@ describe('the pupil renders the contract fixture', () => {
 		expect(text(card)).toContain('approve deleting this row?');
 	});
 
+	it('a table card says create, private, and every column whole', () => {
+		const msg = fx.to_shell.find((c) => c.case === 'a new table awaits approval')!.msg;
+		const page = draw(msg);
+		for (const want of ['create table Expenses, private to you — nothing is created unless you approve', 'What I spend on trips',
+			'item (Item): text, required', 'amount (Amount): number', 'category (Category): select of travel, food',
+			'settled (Settled): boolean', 'trip (Trip): rowRef → Trips (t-trips), shown by name'])
+			expect(page).toContain(want);
+		const waiting = { approval: 'a', component: (msg as Extract<ToShell, { t: 'approval_request' }>).component };
+		const card = render(ApprovalCard, { props: { waiting, of: 1, whole: true, onseen: () => {}, ondecide: () => {} } }).body;
+		expect(text(card)).toContain('approve creating this table?');
+	});
+
 	it('an empty diff side reads (empty), not blank', () => {
 		const msg = fx.to_shell.find((c) => c.msg.t === 'approval_request')!.msg;
 		expect(draw(msg)).toContain('(empty) → "landed"');

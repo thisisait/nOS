@@ -92,6 +92,14 @@ components:
       insert_many carries lines. A delete (v6) names its row and shows every value it holds, each old -> null (old never
       null); both shells say delete in red, and serve re-reads the row and deletes nothing if it changed since the card.
       A write that stops part-way is said with the rows written before it, never silently
+    table_schema_approval: >-
+      a new DataTable Iris proposes (propose_table_create, v6), asked only as an approval: {title 1-160, description?
+      <=2000, visibility private, columns[{key, label, kind text|number|date|select|boolean|rowRef, required,
+      options?, ref_table?, ref_title?, ref_display?}] 1-30}; keys snake_case ([a-z][a-z0-9_]*, <=64) and unique,
+      labels 1-120, a select has 1-50 unique options and only a select has options, a rowRef names the table it
+      points into (id, title, and the column a row is shown by) and only a rowRef does. visibility is private, the
+      person the owner: sharing is a later step, never part of the create. Both shells show every column with its
+      kind, options and required; on approve serve POSTs it as the person, reads it back and records the result
     inbox_list: "waiting captures and promotions: {items[{id, title, source, created_at}], refused[]}"
     approvals_list: "tools/awaiting-operator.py --json: {items[{kind, severity, age, what, where, note?}], unknown[]}"
     red_status: "tools/red-status.py --json: {red_count, reds[], hold_count, holds[]}"
@@ -192,7 +200,7 @@ open:
     list, record, chart, tree, timeline, graph, sequence, choice and kpi (plain text already draws as markdown); table_results,
     row_diff_approval and the
     control views stay chosen by their tool or control, and an approval is
-    minted by propose_row_edit, or by a widget form the person submits
+    minted by propose_row_edit (insert, delete, and propose_table_create for a new table), or by a widget form the person submits
     (wire.form_submit). The model has no form: a form is a widget the person
     made, and a widget runs without the model (wire.widget). A choice asks; its
     answer is data for the model, never an approval (wire.choice_reply). Since v6 offer_dashboard

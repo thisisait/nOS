@@ -969,6 +969,122 @@ fn approve_deletes_nothing_once_the_row_moved_and_reject_deletes_nothing() {
     }
 }
 
+// --- T1: Iris creates a table, private to the person, under one card ---
+
+/// Every column shape a 9B model sends: a bare label, a lowercase label, an alias kind, a rowRef by title.
+const CREATE: &str = r#"{"title": "Expenses", "description": "What I spend", "columns": ["Item",
+    {"label": "amount", "kind": "Number", "required": true}, {"label": "Paid on", "kind": "date"},
+    {"label": "Category", "options": ["travel", "food"]}, {"key": "Settled", "kind": "bool"},
+    {"label": "Todo", "kind": "rowRef", "ref_table": "todo list"}]}"#;
+
+fn creates(rig: &Rig) -> Vec<(String, String)> {
+    rig.keap.lock().unwrap().iter().filter(|(h, _)| h.starts_with("POST /api/tables ")).cloned().collect()
+}
+
+/// One turn that proposes CREATE; (stream, reader, session, approval, card).
+fn propose_table(rig: &Rig) -> (UnixStream, BufReader<UnixStream>, String, String, nos_contract::renderers::TableSchemaApproval) {
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    (&s).write_all(encode(&ToThalamus::Turn { session: None, text: "make me an expenses table".into() }).as_bytes()).unwrap();
+    let Some(ToShell::Session { session, .. }) = next(&mut r) else { panic!("no session") };
+    let (approval, card) = match next(&mut r) {
+        Some(ToShell::ApprovalRequest { approval, component: Component::TableSchemaApproval(t), .. }) => (approval, t),
+        other => panic!("expected a table_schema_approval, got {other:?}"),
+    };
+    assert!(matches!(next(&mut r), Some(ToShell::Text { .. })), "the model's turn ends while the person decides");
+    (s, r, session, approval, card)
+}
+
+#[test]
+fn approve_creates_the_table_private_as_the_person_and_it_takes_rows_at_once() {
+    use nos_contract::renderers::{ColumnKind, Visibility};
+    let (keap, _) = fake_table(SCHEMA, todo_rows());
+    let insert = r#"{"table": "Expenses", "values": {"item": "taxi", "amount": 12}}"#;
+    let rig = rig_at("tcreate", mapped(), keap, vec![call("propose_table_create", CREATE), answer("Proposed."),
+        call("propose_row_insert", insert), answer("Proposed.")], Some(local()));
+    let (s, mut r, session, approval, card) = propose_table(&rig);
+    assert_eq!((card.title.as_str(), card.description.as_deref(), card.visibility), ("Expenses", Some("What I spend"), Visibility::Private));
+    let cols: Vec<(&str, &str, ColumnKind, bool)> = card.columns.iter().map(|c| (c.key.as_str(), c.label.as_str(), c.kind, c.required)).collect();
+    assert_eq!(cols, [("item", "Item", ColumnKind::Text, false), ("amount", "Amount", ColumnKind::Number, true),
+                      ("paid_on", "Paid on", ColumnKind::Date, false), ("category", "Category", ColumnKind::Select, false),
+                      ("settled", "Settled", ColumnKind::Boolean, false), ("todo", "Todo", ColumnKind::RowRef, false)]);
+    assert_eq!(card.columns[3].options, Some(vec!["travel".to_string(), "food".to_string()]));
+    let link = &card.columns[5];
+    assert_eq!((link.ref_table.as_deref(), link.ref_title.as_deref(), link.ref_display.as_deref()), (Some("todos"), Some("Todo list"), Some("title")));
+    assert!(creates(&rig).is_empty(), "a proposal created a table before the person decided");
+
+    decide(&s, &approval, Decision::Approve);
+    let said = match next(&mut r) {
+        Some(ToShell::Text { text, .. }) => text,
+        other => panic!("the person hears nothing of the create: {other:?}"),
+    };
+    assert!(said.contains("Expenses") && said.contains("created") && said.contains("private"), "{said}");
+    let made = creates(&rig);
+    assert_eq!(made.len(), 1, "Approve creates exactly once");
+    let head = made[0].0.to_ascii_lowercase();
+    assert!(head.contains("x-authentik-username: alice smith") && head.contains(&format!("x-keap-proxy-secret: {SECRET}")));
+    let body: serde_json::Value = serde_json::from_str(&made[0].1).unwrap();
+    assert_eq!((body["title"].as_str(), body["visibility"].as_str()), (Some("Expenses"), Some("private")));
+    assert!(body.get("sharedWith").is_none(), "sharing is a later step, never part of the create");
+    let sent = &body["schema"]["columns"];
+    assert_eq!((sent[1]["required"].as_bool(), sent[4]["kind"].as_str(), sent[5]["refTable"].as_str(), sent[5]["refDisplay"].as_str()),
+               (Some(true), Some("boolean"), Some("todos"), Some("title")));
+    assert_eq!(sent[3]["options"], serde_json::json!(["travel", "food"]));
+    let reread = rig.keap.lock().unwrap().iter().any(|(h, _)| h.starts_with("GET /api/tables/t-minted-1 "));
+    assert!(reread, "the create is read back, not taken from the POST's 200");
+
+    // The new table takes a row at once, without a query_rows first.
+    let got = turn(&s, &mut r, Some(session.clone()), "add a taxi for 12");
+    let row = got.iter().find_map(|m| match m {
+        ToShell::ApprovalRequest { component: Component::RowDiffApproval(d), .. } => Some(d.clone()),
+        _ => None,
+    }).unwrap_or_else(|| panic!("no insert card for the new table: {got:?}"));
+    assert_eq!((row.table.as_str(), row.title.as_str()), ("t-minted-1", "Expenses"));
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let ev = events(&rig.ledger, &session);
+    for kind in ["agent_approval_request", "agent_approval_decision", "agent_tool_result"] {
+        assert!(ev.iter().any(|e| e.0 == kind && e.1 == "agent:iris/tool:propose_table_create"), "the ledger has no {kind} of the create: {ev:?}");
+    }
+    let result = ev.iter().find(|e| e.0 == "agent_tool_result" && e.1 == "agent:iris/tool:propose_table_create").unwrap();
+    assert_eq!((result.2["written"].as_bool(), result.2["table"].as_str()), (Some(true), Some("t-minted-1")));
+}
+
+#[test]
+fn reject_creates_no_table() {
+    let (keap, _) = fake_table(SCHEMA, todo_rows());
+    let rig = rig_at("treject", mapped(), keap, vec![call("propose_table_create", CREATE), answer("Proposed.")], Some(local()));
+    let (s, mut r, _, approval, _) = propose_table(&rig);
+    decide(&s, &approval, Decision::Reject);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { ref text, .. }) if text.contains("Rejected")));
+    assert!(creates(&rig).is_empty());
+}
+
+#[test]
+fn a_table_create_out_of_bounds_asks_nothing_and_says_why() {
+    let wide: Vec<String> = (0..31).map(|i| format!("c{i}")).collect();
+    for (name, args, why) in [
+        ("tc-dup", serde_json::json!({"title": "todo list", "columns": ["Item"]}), "already have a table titled"),
+        ("tc-wide", serde_json::json!({"title": "Wide", "columns": wide}), "at most 30 columns"),
+        ("tc-kind", serde_json::json!({"title": "T", "columns": [{"label": "Blob", "kind": "json"}]}), "kinds: text, number, date, select, bool, rowRef"),
+        ("tc-sel", serde_json::json!({"title": "T", "columns": [{"label": "Category", "kind": "select"}]}), "a select needs 1 to 50 options"),
+        ("tc-ref", serde_json::json!({"title": "T", "columns": [{"label": "Trip", "kind": "rowRef", "ref_table": "Nowhere"}]}), "no table `Nowhere`"),
+        ("tc-key", serde_json::json!({"title": "T", "columns": ["???"]}), "gives no key"),
+        ("tc-twice", serde_json::json!({"title": "T", "columns": ["Item", "item"]}), "two columns get the key item"),
+        ("tc-extra", serde_json::json!({"title": "T", "columns": [{"label": "Item", "colour": "red"}]}), "has no `colour`"),
+    ] {
+        let (keap, _) = fake_table(SCHEMA, todo_rows());
+        let rig = rig_at(name, mapped(), keap, vec![call("propose_table_create", &args.to_string()), answer("Could not.")], Some(local()));
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let got = turn(&s, &mut r, None, "make a table");
+        assert!(!got.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. })), "{name}: {got:?}");
+        assert!(creates(&rig).is_empty(), "{name}");
+        let heard = rig.model.lock().unwrap()[1].1.clone();
+        assert!(heard.contains(why), "{name}: the model was not told {why:?}: {heard}");
+    }
+}
+
 // --- the eye (pupil I3): serve says what it is doing, every step of a turn ---
 
 fn phases(got: &[ToShell]) -> Vec<String> {
@@ -1594,6 +1710,7 @@ fn fake_tables(tables: Vec<(&str, Vec<serde_json::Value>)>) -> ((String, Seen), 
     let seen: Seen = Arc::default();
     let s = seen.clone();
     std::thread::spawn(move || {
+        let mut tables = tables;
         for c in l.incoming() {
             let mut c = c.unwrap();
             let mut r = BufReader::new(c.try_clone().unwrap());
@@ -1616,6 +1733,16 @@ fn fake_tables(tables: Vec<(&str, Vec<serde_json::Value>)>) -> ((String, Seen), 
             let (method, target) = (words.next().unwrap_or(""), words.next().unwrap_or(""));
             let (path, query) = target.split_once('?').unwrap_or((target, ""));
             let arg = |k: &str| query.split('&').find_map(|p| p.strip_prefix(&format!("{k}="))).and_then(|v| v.parse::<usize>().ok());
+            // POST /api/tables creates an empty table KEAP-side: the caller owns it, at the visibility asked.
+            if (method, path) == ("POST", "/api/tables") {
+                let b: serde_json::Value = serde_json::from_str(&body).unwrap();
+                let id = format!("t-minted-{}", tables.len());
+                let out = serde_json::json!({"success": true, "data": {"id": id, "title": b["title"], "visibility": b["visibility"],
+                    "ownerId": "u-alice", "schema": b["schema"]}}).to_string();
+                tables.push((format!("/api/tables/{id}"), out.clone(), Arc::default()));
+                write!(c, "HTTP/1.1 200 X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{out}", out.len()).unwrap();
+                continue;
+            }
             let (base, schema, table) = tables.iter().find(|t| path == t.0 || path == format!("{}/rows", t.0) || path.starts_with(&format!("{}/rows/", t.0)))
                 .unwrap_or(&tables[0]);
             let mut rows = table.lock().unwrap();
