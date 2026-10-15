@@ -78,10 +78,13 @@
 		{@const d = component.props}
 		<h3>{d.row_id === undefined ? `${d.op} a new row in ${d.title} (${d.table})` : `${d.op} ${d.title} (${d.table}) / ${d.row_id}`} — nothing is written unless you approve</h3>
 		{#if d.read_from?.length}<p><Badge tone="warn">contains text from {d.read_from.join(', ')}</Badge></p>{/if}
+		{#if d.op === 'delete'}<p class="bad">approve deletes the whole row: every value below is gone</p>{/if}
 		<ul class="diff">
 			{#each d.cells as ch}
 				{#if d.op === 'insert_many' && d.row_id !== undefined}
 					<li><b>{ch.key}</b>: {shown(ch.new)} <span class="muted">(unchanged)</span></li>
+				{:else if d.op === 'delete'}
+					<li><b>{ch.key}</b>: <span class="old">{shown(ch.old)}</span> → <span class="bad">(deleted)</span></li>
 				{:else}
 					<li><b>{ch.key}</b>: <span class="old">{shown(ch.old)}</span> → <span class="new">{shown(ch.new)}</span></li>
 				{/if}

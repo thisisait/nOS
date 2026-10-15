@@ -125,6 +125,9 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 None => format!("{} a new row in {} ({})", d.op.as_str(), d.title, d.table),
             };
             out.push(head(format!("{what} — nothing is written unless you approve")));
+            if d.op == RowOp::Delete {
+                out.push(warn("  approve deletes the whole row: every value below is gone".into()));
+            }
             if !d.read_from.is_empty() {
                 out.push(warn(format!("  contains text from {}", d.read_from.join(", "))));
             }
@@ -132,6 +135,7 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 // An existing parent is shown as it is; its lines are what is written.
                 out.push(Line::from(match (&d.row_id, d.op) {
                     (Some(_), RowOp::InsertMany) => format!("  {}: {} (unchanged)", ch.key, shown(&ch.new)),
+                    (_, RowOp::Delete) => format!("  {}: {} -> (deleted)", ch.key, shown(&ch.old)),
                     _ => format!("  {}: {} -> {}", ch.key, shown(&ch.old), shown(&ch.new)),
                 }));
             }

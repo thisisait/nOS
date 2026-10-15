@@ -1,0 +1,10 @@
+delete Expenses (expenses) / e3 — nothing is written unless you approve
+  approve deletes the whole row: every value below is gone
+  kind: "travel" -> (deleted)
+  amount: 420 -> (deleted)
+
+
+
+
+
+

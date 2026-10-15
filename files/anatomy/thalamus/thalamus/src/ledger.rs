@@ -145,7 +145,8 @@ impl Ledger {
 
     /// What a decision row approved. Err unless `decision` is an approve row of an open session
     /// answering an earlier request in that session, and the request is a write of a sound shape:
-    /// `op` insert (no row_id, no old), update (absent too: row_id and old on every cell) or
+    /// `op` insert (no row_id, no old), update (absent too: row_id and old on every cell), delete
+    /// (row_id, old on every cell, every new null; values stay empty) or
     /// insert_many (a new parent, or a row_id shown with old == new, plus approved_lines), and
     /// no key empty or `__` (KEAP reads those as row sharing). Every write passes here.
     pub fn approved(&self, decision: i64) -> Result<Approved, String> {
@@ -170,10 +171,11 @@ impl Ledger {
             None | Some(Some("update")) => RowOp::Update,
             Some(Some("insert")) => RowOp::Insert,
             Some(Some("insert_many")) => RowOp::InsertMany,
-            Some(o) => return Err(format!("request op {o:?} is neither insert, insert_many nor update")),
+            Some(Some("delete")) => RowOp::Delete,
+            Some(o) => return Err(format!("request op {o:?} is neither insert, insert_many, update nor delete")),
         };
         let row_id = match op {
-            RowOp::Update => Some(field("row_id")?),
+            RowOp::Update | RowOp::Delete => Some(field("row_id")?),
             RowOp::Insert if req.get("row_id").is_some() => return Err("an insert names no row".into()),
             RowOp::Insert => None,
             RowOp::InsertMany => req.get("row_id").map(|_| field("row_id")).transpose()?,
@@ -199,13 +201,19 @@ impl Ledger {
                 (RowOp::Update, Some(v)) => {
                     old.insert(key.to_string(), v.clone());
                 }
-                (RowOp::Update, None) => return Err("a cell has no old value".into()),
+                (RowOp::Update | RowOp::Delete, None) => return Err("a cell has no old value".into()),
+                // A delete writes nothing: each old is what the person saw go, re-read before the DELETE.
+                (RowOp::Delete, Some(v)) if new.is_null() => {
+                    old.insert(key.to_string(), v.clone());
+                    continue;
+                }
+                (RowOp::Delete, _) => return Err("a delete leaves every cell empty".into()),
                 (_, Some(_)) => return Err("an insert has no old value".into()),
                 (_, None) => {}
             }
             values.insert(key.to_string(), new);
         }
-        if values.is_empty() && !existing {
+        if values.is_empty() && old.is_empty() && !existing {
             return Err("a write changes at least one cell".into());
         }
         Ok(Approved { actor, table: field("table")?, op, row_id, values, old, lines })

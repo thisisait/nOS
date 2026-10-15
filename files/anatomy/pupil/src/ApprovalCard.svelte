@@ -32,7 +32,11 @@
 		<div class="end" bind:this={end} aria-hidden="true"></div>
 	</div>
 	<div class="ask">
-		<span>{whole ? 'approve this edit?' : 'scroll to the end of the edit to approve it, or reject it'}</span>
+		{#if waiting.component.kind === 'row_diff_approval' && waiting.component.props.op === 'delete'}
+			<span class="bad">{whole ? 'approve deleting this row?' : 'scroll to the end to approve deleting this row, or reject it'}</span>
+		{:else}
+			<span>{whole ? 'approve this edit?' : 'scroll to the end of the edit to approve it, or reject it'}</span>
+		{/if}
 		<button disabled={!whole} onclick={() => ondecide(waiting.approval, 'approve')}>approve</button>
 		<button onclick={() => ondecide(waiting.approval, 'reject')}>reject</button>
 	</div>
@@ -67,6 +71,9 @@
 	}
 	.ask span {
 		flex: 1;
+	}
+	.ask .bad {
+		color: var(--bad-ink);
 	}
 	button {
 		border: 1px solid var(--glass-brd);

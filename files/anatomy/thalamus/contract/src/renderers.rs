@@ -436,6 +436,12 @@ impl Component {
                     (RowOp::Insert, Some(_)) => Err("an insert names no row; KEAP mints it".into()),
                     (RowOp::Insert, None) if d.cells.iter().any(|c| !c.old.is_null()) => Err("an insert has no old value".into()),
                     (RowOp::Insert, None) => Ok(()),
+                    (RowOp::Delete, Some(id)) if !id.is_empty() => d.cells.iter().try_for_each(|c| match (&c.old, &c.new) {
+                        (_, n) if !n.is_null() => Err("a delete leaves every cell empty".into()),
+                        (o, _) if o.is_null() => Err("a delete shows each value it removes".into()),
+                        _ => Ok(()),
+                    }),
+                    (RowOp::Delete, _) => Err("a delete names its row".into()),
                 }
             }
             _ => Ok(()),
@@ -953,7 +959,7 @@ pub struct RowDiffApproval {
     /// The table's title: the person sees WHICH table they write into, not only its id.
     pub title: String,
     pub op: RowOp,
-    /// The row an update changes; an insert names none (KEAP mints the id).
+    /// The row an update changes or a delete removes; an insert names none (KEAP mints the id).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub row_id: Option<String>,
     pub cells: Vec<CellChange>,
@@ -983,6 +989,8 @@ pub enum RowOp {
     Update,
     /// A parent (new, or an existing row unchanged) and its lines, under one approval.
     InsertMany,
+    /// One existing row removed: every value it holds shown old -> null.
+    Delete,
 }
 
 impl RowOp {
@@ -991,6 +999,7 @@ impl RowOp {
             RowOp::Insert => "insert",
             RowOp::Update => "update",
             RowOp::InsertMany => "insert_many",
+            RowOp::Delete => "delete",
         }
     }
 }

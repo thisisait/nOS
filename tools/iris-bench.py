@@ -219,7 +219,8 @@ def check(name: str, arg, got: dict, now: float) -> bool:
                 and all(_same(p.get(k), arg[k]) for k in ("op", "row_id") if k in arg)
                 and len(cells) == len(arg["cells"]) and new.keys() == arg["cells"].keys()
                 and all(_same(new[k], v) for k, v in arg["cells"].items())
-                and (p.get("op") != "insert" or all(c.get("old") is None for c in cells)))
+                and (p.get("op") != "insert" or all(c.get("old") is None for c in cells))
+                and (p.get("op") != "delete" or all(c.get("old") is not None for c in cells)))
     if name == "proposes_nothing":  # no card, and no proposal serve refused before drawing one
         return not got["approvals"] and not any(str(t).startswith("propose_") for t in got["tools"])
     if name == "tools_not_called":
