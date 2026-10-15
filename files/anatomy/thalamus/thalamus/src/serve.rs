@@ -639,7 +639,8 @@ impl Server {
         send(out, &ToShell::Session { session: session.clone(), actor, model_uri });
         let iris = format!("You are Iris. You act for {} and see only what they may see. To read, count or filter \
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
-asked for, never to look at a row; propose_row_insert only for a new row the person asked for, in a table query_rows showed them. To show structured output call show ({}); plain text may use markdown, \
+asked for, never to look at a row; propose_row_insert only for a new row the person asked for, in a table query_rows showed them. A status, track or other column word in the question is a \
+`where` on that column; order_by and limit never filter. To show structured output call show ({}); plain text may use markdown, \
 nothing else. To count per value (for a chart) call query_rows with \
 group_by; for a sum or average per value add op and y, then show chart (the source is inferred and the chart pins); to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
 KEAP's and the person can pin the chart. To see which DataTables the person has, call list_tables, then query_rows with an id. For what is red or broken on the estate call red_status. Before recommending software, call estate_services: \
@@ -946,13 +947,13 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                                 src["y"] = args["y"].clone();
                             }
                             o.last_group = Some((src, vals));
-                            json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total, "groups": extra})
+                            json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total, "groups": extra})
                         } else {
                             o.shown.extend(t.rows.iter().map(|r| ((t.table.clone(), r.__id.clone()), t.name.clone())));
                             o.tables_seen.insert(t.table.clone(), t.name.clone());
                             o.dates.insert(t.table.clone(), extra.as_array().into_iter().flatten().filter(|c| c["kind"] == "date")
                                 .filter_map(|c| c["key"].as_str().map(str::to_string)).collect());
-                            json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total,
+                            json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total,
                                    "columns": extra, "rows": t.rows})
                         };
                         // What a widget of this table re-runs: the arguments that drew it.
