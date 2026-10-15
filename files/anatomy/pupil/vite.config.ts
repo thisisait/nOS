@@ -17,5 +17,5 @@ export default defineConfig({
 	// face/tsconfig.json extends a generated .svelte-kit file; never read it.
 	esbuild: { tsconfigRaw: '{}' },
 	build: { outDir: 'dist', emptyOutDir: true },
-	test: { include: ['src/**/*.test.ts'], environment: 'node' }
+	test: { include: ['src/**/*.test.ts'], environment: 'node', setupFiles: ['src/test-locale.ts'] }
 });

@@ -14,6 +14,7 @@
 	import Markdown from './Markdown.svelte';
 	import Timeline from './Timeline.svelte';
 	import { inherit, MARK, shownIn, tally, treeDeltas, VIEWS, type Delta, type View } from './delta';
+	import { shownValue } from './fmt';
 	import { cell, shown, type Component, type TreeNode, type Value } from './wire';
 
 	// view: Před / Změny / Po of a component that marks a delta (delta.ts); the switch sets it.
@@ -37,7 +38,7 @@
 		</div>
 	{/if}
 {/snippet}
-{#snippet value(v: Value | undefined)}{#if v !== null && typeof v === 'object'}<pre>{JSON.stringify(v, null, 1)}</pre>{:else}{cell(v)}{/if}{/snippet}
+{#snippet value(v: Value | undefined, key: string)}{#if v !== null && typeof v === 'object'}<pre>{JSON.stringify(v, null, 1)}</pre>{:else}{shownValue(v, key)}{/if}{/snippet}
 
 <section class="component" data-kind={component.kind}>
 	{#if component.kind === 'table_results'}
@@ -56,7 +57,7 @@
 				<thead><tr>{#each short as c}<th>{c}</th>{/each}</tr></thead>
 				<tbody>
 					{#each t.rows as r}
-						<tr>{#each short as c}<td>{cell(r.cells[c])}</td>{/each}</tr>
+						<tr>{#each short as c}<td>{shownValue(r.cells[c], c)}</td>{/each}</tr>
 						<!-- A fold only for long text; an id already on screen (a group's value) needs none. -->
 						{#if long.length || !short.some((c) => cell(r.cells[c]) === r.__id)}
 						<tr class="more">
@@ -137,7 +138,7 @@
 		<div class="scroll">
 			<table>
 				<thead><tr>{#each t.columns as c}<th>{c}</th>{/each}</tr></thead>
-				<tbody>{#each t.rows as r}<tr>{#each r as v}<td>{cell(v)}</td>{/each}</tr>{/each}</tbody>
+				<tbody>{#each t.rows as r}<tr>{#each r as v, i}<td>{shownValue(v, t.columns[i] ?? '')}</td>{/each}</tr>{/each}</tbody>
 			</table>
 		</div>
 	{:else if component.kind === 'list'}
@@ -160,10 +161,10 @@
 				<dt data-delta={f.delta}>{@render mark(f.delta)}{f.key}</dt>
 				<dd>
 					{#if view === 'before' && f.delta === 'changed'}
-						{#if was}{@render value(f.was)}{:else}<span class="muted">(dřív neuvedeno)</span>{/if}
+						{#if was}{@render value(f.was, f.key)}{:else}<span class="muted">(dřív neuvedeno)</span>{/if}
 					{:else if view === 'changes' && was}
-						<span class="old">{@render value(f.was)}</span> → <span class="new">{@render value(f.value)}</span>
-					{:else}{@render value(f.value)}{/if}
+						<span class="old">{@render value(f.was, f.key)}</span> → <span class="new">{@render value(f.value, f.key)}</span>
+					{:else}{@render value(f.value, f.key)}{/if}
 				</dd>
 			{/each}
 		</dl>
