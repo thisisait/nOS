@@ -8,10 +8,13 @@ from __future__ import annotations
 import json
 import pathlib
 import re
+import sys
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 CI = REPO / ".github" / "workflows" / "ci.yml"
 PROFILE = "profiles/core.yml"
 
@@ -79,8 +82,7 @@ def _linux_host_organs() -> set[str]:
 def test_linux_install_keeps_the_host_organs() -> None:
     # Bonus lanes skip host rows, so this converge is their only blocking lane: an organ the
     # old run (tests/config.yml over defaults) converged must stay on. Precedence: blob > profile > config.
-    base = {k: v for f in sorted(REPO.glob("config.d/*.yml")) for k, v in _load(str(f)).items()}
-    base.update({**_load("default.config.yml"), **_load("tests/config.yml")})
+    base = {**ni.default_config(), **_load("tests/config.yml")}
     now = {**base, **_load(PROFILE)}
     for run in _converges():
         for blob in re.findall(r"-e\s+'(\{.*?\})'", run):
