@@ -161,6 +161,7 @@
     {"case": "a kpi render without its pin", "line": "{\"t\":\"render\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"component\":{\"kind\":\"kpi\",\"props\":{\"title\":\"Travel spend\",\"value\":1.0}}}"},
     {"case": "a kpi render pinned to a chart", "line": "{\"t\":\"render\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"component\":{\"kind\":\"kpi\",\"props\":{\"title\":\"Travel spend\",\"value\":1.0}},\"pin\":{\"chart\":{\"query\":{\"table\":\"expenses\"},\"chart\":\"bar\",\"x\":\"kind\",\"op\":\"count\"}}}"},
     {"case": "a kpi unit over 16 chars", "line": "{\"t\":\"widget\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"widget\":\"w5\",\"component\":{\"kind\":\"kpi\",\"props\":{\"title\":\"t\",\"value\":1.0,\"unit\":\"xxxxxxxxxxxxxxxxx\"}}}"},
+    {"case": "a kpi unit with a digit, which would read as part of the number", "line": "{\"t\":\"widget\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"widget\":\"w5\",\"component\":{\"kind\":\"kpi\",\"props\":{\"title\":\"t\",\"value\":6.0,\"unit\":\"000 Kč\"}}}"},
     {"case": "a kpi with no title", "line": "{\"t\":\"widget\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"widget\":\"w5\",\"component\":{\"kind\":\"kpi\",\"props\":{\"title\":\" \",\"value\":1.0}}}"},
     {"case": "a kpi in an approval", "line": "{\"t\":\"approval_request\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"approval\":\"7d1c2b3a-4e5f-4a6b-9c8d-1e2f3a4b5c6d\",\"component\":{\"kind\":\"kpi\",\"props\":{\"title\":\"Travel spend\",\"value\":1.0}}}"}
   ],
