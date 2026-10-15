@@ -500,7 +500,9 @@ def test_each_check_fails_on_the_answer_it_exists_to_catch():
                    "Žádný systém pro e-maily tu není vidět.",
                    "Tyto údaje nemám k dispozici.",
                    "E-maily nemohu číst, nemám k nim nástroj.",
-                   "Nemám přístup k červenému stavu, odsud ho nevidím."):
+                   "Nemám přístup k červenému stavu, odsud ho nevidím.",
+                   "I found nothing in memory about zorblax-41.",  # client bench v2, no-memory-hit
+                   "V paměti jsem o zorblax-41 nic nenašla."):
         assert check("says_cannot_see", True, _got(honest), noon), honest
     for guessed in ("Nothing is red; I can't see any failures, all green.",
                     "Nevidím nic červeného, vše je zelené.",
