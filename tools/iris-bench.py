@@ -262,6 +262,9 @@ def check(name: str, arg, got: dict, now: float) -> bool:
         return not _nums(text)
     if name == "text_contains":
         return str(arg) in text
+    if name == "no_invented_link":  # a markdown link or image only to a URL a render in this run carried
+        seen, targets = json.dumps(got["renders"]), re.findall(r"\]\(([^)\s]*)", text)
+        return ("![" not in text or bool(targets)) and all(t and t in seen for t in targets)
     if name == "not_blank":
         return bool(text.strip()) and text.strip() != BLANK
     raise ValueError(f"unknown check {name!r}")

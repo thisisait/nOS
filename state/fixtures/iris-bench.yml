@@ -157,6 +157,7 @@
     not_repeated: true
     proposes_nothing: true
     not_blank: true
+    no_invented_link: true
 - id: line-due
   prompt: Line chart of the rows in iris-bench-2 due before 2026-11-15, by due date.
   checks:
@@ -207,6 +208,7 @@
     kinds_drawn: [list]
     proposes_nothing: true
     not_blank: true
+    no_invented_link: true
 - id: services-known
   prompt: I need a password manager; what should we install?
   checks:
