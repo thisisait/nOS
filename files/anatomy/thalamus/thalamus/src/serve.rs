@@ -242,8 +242,9 @@ struct Open {
     tokens: (i64, i64),
     /// Approvals asked and not yet decided; a decision removes its id, so each is decided once.
     pending: HashSet<String>,
-    /// (table, row id) of every row a query put in front of the person; only these may be proposed.
-    shown: HashSet<(String, String)>,
+    /// (table, row id) of every row a query put in front of the person, to its table's title;
+    /// only these may be proposed.
+    shown: HashMap<(String, String), String>,
     /// The widget forms this session sent, by widget token: a re-run replaces the old form id.
     forms: HashMap<String, Form>,
     /// The choices this session asked and the person has not answered, by the id serve minted.
@@ -634,7 +635,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris),
         };
         Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
-                  pending: HashSet::new(), shown: HashSet::new(), forms: HashMap::new(), choices: HashMap::new(), last_group: None })
+                  pending: HashSet::new(), shown: HashMap::new(), forms: HashMap::new(), choices: HashMap::new(), last_group: None })
     }
 
     /// The decider gate before a submit, a decision or a choice reply: a refused peer is told and
@@ -903,7 +904,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                             o.last_group = Some((json!({"query": q, "x": args["group_by"], "op": "count"}), counts));
                             json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total, "groups": extra})
                         } else {
-                            o.shown.extend(t.rows.iter().map(|r| (t.table.clone(), r.__id.clone())));
+                            o.shown.extend(t.rows.iter().map(|r| ((t.table.clone(), r.__id.clone()), t.name.clone())));
                             json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total,
                                    "columns": extra, "rows": t.rows})
                         };
@@ -1282,13 +1283,13 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     }
 
     /// The cell diff of one existing row the person can read; only changed cells survive.
-    fn propose_row_edit(&self, who: &Person, args: &Value, shown: &HashSet<(String, String)>) -> Result<RowDiffApproval, String> {
+    fn propose_row_edit(&self, who: &Person, args: &Value, shown: &HashMap<(String, String), String>) -> Result<RowDiffApproval, String> {
         let s = |k: &str| args.get(k).and_then(Value::as_str).filter(|v| !v.is_empty()).ok_or(format!("propose_row_edit needs `{k}`"));
         let (table, row_id) = (&table_id(s("table")?), s("row_id")?);
         // Live 2026-10-12: a proposal used as a probe. Refused before any read, so no card.
-        if !shown.contains(&(table.clone(), row_id.to_string())) {
+        let Some(title) = shown.get(&(table.clone(), row_id.to_string())) else {
             return Err(format!("row {row_id} was not shown to the person in this session; query it first"));
-        }
+        };
         let values = args.get("values").and_then(Value::as_object).filter(|v| !v.is_empty())
             .ok_or("propose_row_edit needs a non-empty `values` object")?;
         // KEAP reads __ keys as row sharing; changing who sees a row is not this tool's to propose.
@@ -1304,7 +1305,8 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         if cells.is_empty() {
             return Err("nothing would change".into());
         }
-        Ok(RowDiffApproval { table: table.to_string(), row_id: row_id.to_string(), cells })
+        Ok(RowDiffApproval { table: table.to_string(), title: title.clone(), op: RowOp::Update, row_id: Some(row_id.to_string()),
+                             cells, read_from: vec![] })
     }
 
     fn as_person<B>(&self, rb: ureq::RequestBuilder<B>, who: &Person) -> ureq::RequestBuilder<B> {

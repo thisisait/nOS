@@ -372,6 +372,18 @@ impl Component {
                 }
                 Ok(())
             }
+            Component::RowDiffApproval(d) => {
+                if d.cells.is_empty() {
+                    return Err("an approval changes at least one cell".into());
+                }
+                match (d.op, d.row_id.as_deref()) {
+                    (RowOp::Update, Some(id)) if !id.is_empty() => Ok(()),
+                    (RowOp::Update, _) => Err("an update names its row".into()),
+                    (RowOp::Insert, Some(_)) => Err("an insert names no row; KEAP mints it".into()),
+                    (RowOp::Insert, None) if d.cells.iter().any(|c| !c.old.is_null()) => Err("an insert has no old value".into()),
+                    (RowOp::Insert, None) => Ok(()),
+                }
+            }
             _ => Ok(()),
         }
     }
@@ -752,8 +764,32 @@ pub struct Row {
 #[serde(deny_unknown_fields)]
 pub struct RowDiffApproval {
     pub table: String,
-    pub row_id: String,
+    /// The table's title: the person sees WHICH table they write into, not only its id.
+    pub title: String,
+    pub op: RowOp,
+    /// The row an update changes; an insert names none (KEAP mints the id).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub row_id: Option<String>,
     pub cells: Vec<CellChange>,
+    /// Tools whose free text the model read this turn; the card head says so (operator ruling Q7).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub read_from: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RowOp {
+    Insert,
+    Update,
+}
+
+impl RowOp {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RowOp::Insert => "insert",
+            RowOp::Update => "update",
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -815,6 +851,7 @@ pub struct RedStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     fn table(columns: usize, rows: usize, cell: &str) -> Component {
         Component::Table(Table {
@@ -830,6 +867,35 @@ mod tests {
             ordered: false,
             items: (0..n).map(|i| ListItem { text: i.to_string(), detail: None, tone: None, delta: None }).collect(),
         })
+    }
+
+    fn card(op: RowOp, row_id: Option<&str>, old: Value) -> Component {
+        Component::RowDiffApproval(RowDiffApproval {
+            table: "t1".into(), title: "Todo list".into(), op, row_id: row_id.map(str::to_string),
+            cells: vec![CellChange { key: "status".into(), old, new: json!("done") }], read_from: vec![],
+        })
+    }
+
+    #[test]
+    fn check_holds_an_approval_to_its_op() {
+        assert!(card(RowOp::Update, Some("r1"), json!("open")).check().is_ok());
+        assert!(card(RowOp::Update, Some("r1"), Value::Null).check().is_ok(), "an update may fill an empty cell");
+        assert!(card(RowOp::Insert, None, Value::Null).check().is_ok());
+        assert_eq!(card(RowOp::Update, None, Value::Null).check(), Err("an update names its row".into()));
+        assert_eq!(card(RowOp::Update, Some(""), Value::Null).check(), Err("an update names its row".into()));
+        assert_eq!(card(RowOp::Insert, Some("r1"), Value::Null).check(), Err("an insert names no row; KEAP mints it".into()));
+        assert_eq!(card(RowOp::Insert, None, json!("open")).check(), Err("an insert has no old value".into()));
+        let Component::RowDiffApproval(mut d) = card(RowOp::Insert, None, Value::Null) else { unreachable!() };
+        d.cells.clear();
+        assert_eq!(Component::RowDiffApproval(d).check(), Err("an approval changes at least one cell".into()));
+    }
+
+    #[test]
+    fn an_insert_card_carries_no_row_id_and_keeps_a_null_old() {
+        let v = serde_json::to_value(card(RowOp::Insert, None, Value::Null)).unwrap();
+        assert_eq!(v["props"]["op"], "insert");
+        assert!(v["props"].get("row_id").is_none() && v["props"].get("read_from").is_none());
+        assert_eq!(v["props"]["cells"][0].get("old"), Some(&Value::Null), "old stays a plain null, never dropped");
     }
 
     #[test]

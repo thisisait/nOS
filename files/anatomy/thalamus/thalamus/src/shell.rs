@@ -120,7 +120,14 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
             }
         }
         Component::RowDiffApproval(d) => {
-            out.push(head(format!("edit {} / {} — nothing is written unless you approve", d.table, d.row_id)));
+            let what = match &d.row_id {
+                Some(row) => format!("{} {} ({}) / {row}", d.op.as_str(), d.title, d.table),
+                None => format!("{} a new row in {} ({})", d.op.as_str(), d.title, d.table),
+            };
+            out.push(head(format!("{what} — nothing is written unless you approve")));
+            if !d.read_from.is_empty() {
+                out.push(warn(format!("  contains text from {}", d.read_from.join(", "))));
+            }
             for ch in &d.cells {
                 out.push(Line::from(format!("  {}: {} -> {}", ch.key, shown(&ch.old), shown(&ch.new))));
             }

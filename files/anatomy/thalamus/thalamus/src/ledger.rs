@@ -75,12 +75,8 @@ pub struct Session<'a> {
     pub model_uri: &'a str,
 }
 
-/// What a write may do: add a row KEAP names, or change cells of one that exists.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RowOp {
-    Insert,
-    Update,
-}
+/// What a write may do: add a row KEAP names, or change cells of one that exists (the card's op).
+pub use nos_contract::renderers::RowOp;
 
 /// One approved write, as the request showed it to the person.
 #[derive(Debug)]
