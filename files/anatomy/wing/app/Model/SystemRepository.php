@@ -464,6 +464,13 @@ final class SystemRepository
 		// registry counterparts by name, then delete the orphans.
 		$merged = $this->dedup();
 
+		// `enabled` = in THIS registry: the security seed (bin/migrate.php) and
+		// manual rows stay for /remediation, but face and /hub list enabled only.
+		$this->db->table('systems')
+			->where('category != ?', 'stack')
+			->where('id NOT IN ?', array_keys($importedIds) ?: [''])
+			->update(['enabled' => 0]);
+
 		return [
 			'imported' => $imported,
 			'stacks_created' => $stacksCreated,

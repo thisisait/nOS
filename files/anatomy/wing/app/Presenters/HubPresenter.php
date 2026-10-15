@@ -92,6 +92,14 @@ final class HubPresenter extends BasePresenter
 		return $this->backendOnly;
 	}
 
+	/** A /hub tile: installed (registry-enabled), a public host, a browser UI. */
+	public static function isListed(array $sys, array $backendOnly): bool
+	{
+		return !empty($sys['enabled'])
+			&& !empty($sys['domain_url'])   // TCP-only / no public host
+			&& !in_array($sys['id'] ?? '', $backendOnly, true);   // backend; via Grafana / clients
+	}
+
 	public function renderDefault(): void
 	{
 		$stats = $this->systems->stats();
@@ -104,15 +112,7 @@ final class HubPresenter extends BasePresenter
 		// backend services without a root UI. Render-time only; no DB write.
 		$cardsBySlug = $this->cards->bySlug();
 		$backendOnly = $this->backendOnlySlugs();
-		$isClickable = static function (array $sys) use ($backendOnly): bool {
-			if (empty($sys['domain_url'])) {
-				return false;   // TCP-only / no public host
-			}
-			if (in_array($sys['id'] ?? '', $backendOnly, true)) {
-				return false;   // backend; surfaces via Grafana / clients
-			}
-			return true;
-		};
+		$isClickable = static fn(array $sys): bool => self::isListed($sys, $backendOnly);
 
 		foreach ($byStack as $stack => $systems) {
 			$kept = [];
