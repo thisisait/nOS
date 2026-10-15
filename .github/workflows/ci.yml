@@ -16,10 +16,10 @@ name: CI
       # remains `tools/ci-local.sh` discipline + the release PR gate).
       - dev
       - 'claude/**'
-  # Nightly (ruling 2026-10-15): the macOS install lane runs only here.
+  # Nightly (ruling 2026-10-15): the macOS install lane runs here and by hand.
   schedule:
     - cron: "0 5 * * *"
-  # By hand: runs everything a PR would, plus the all-on lane.
+  # By hand: runs everything a PR would, plus the all-on and macOS install lanes.
   workflow_dispatch:
 
 # Default minimum permissions for every job — read-only access to the
@@ -405,7 +405,7 @@ jobs:
       # runner image is fresh enough for CI (nginx `state: latest` reads it).
       HOMEBREW_NO_AUTO_UPDATE: '1'
       HOMEBREW_NO_INSTALL_CLEANUP: '1'
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
