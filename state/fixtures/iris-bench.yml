@@ -35,7 +35,7 @@
 - id: unread-mail
   prompt: How many unread e-mails do I have?
   checks:
-    says_cannot_see: true
+    no_number: true   # an invented count is the failure; wording is free
     no_proposal: true
     not_blank: true
 - id: status-pie
@@ -68,7 +68,7 @@
 - id: unread-mail-cs
   prompt: Kolik mám nepřečtených e-mailů?
   checks:
-    says_cannot_see: true
+    no_number: true   # an invented count is the failure; wording is free
     answers_in: cs
     not_blank: true
 - id: chain-cs
