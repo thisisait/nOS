@@ -217,6 +217,7 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             not_a_form(component)?;
             match component {
                 Component::Choice(_) => Err("a choice is asked in a render, never in an approval".into()),
+                Component::Dashboard(_) => Err("a dashboard is offered in a render, never in an approval".into()),
                 _ => Ok(()),
             }
         }

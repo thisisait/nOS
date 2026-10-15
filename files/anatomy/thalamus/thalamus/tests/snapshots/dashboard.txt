@@ -1,0 +1,10 @@
+dashboard Bench board: 3 widgets, place it in the pupil
+  lens: track = platform; due < (unset)
+  rows: Next rows (table iris-bench-2)
+  chart: Points by track (bar, sum of points by track, table iris-bench-2)
+  form: Add a row (table iris-bench-2)
+  left out: By owner — no column `owner` in iris-bench-2; columns: title, status
+
+
+
+

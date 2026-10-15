@@ -2,8 +2,8 @@
 //! what the person typed or pressed, and renders only the closed component vocabulary.
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
-use nos_contract::renderers::{Choice, Component, Delta, Step, Tone, TreeNode};
-use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ToShell, ToThalamus};
+use nos_contract::renderers::{Choice, Component, Delta, LensOp, Step, Tone, TreeNode};
+use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ToShell, ToThalamus, WidgetSpec};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
@@ -231,6 +231,28 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 let o: Vec<String> = f.omitted.iter().map(|o| format!("{} ({})", o.key, o.kind)).collect();
                 out.push(Line::styled(format!("  not editable here: {}", o.join(", ")), Style::new().fg(Color::DarkGray)));
             }
+        }
+        // Placed in the pupil only: the terminal says the offer; nothing here places or runs it.
+        Component::Dashboard(d) => {
+            out.push(head(format!("dashboard {}: {} widgets, place it in the pupil", d.name, d.widgets.len())));
+            if !d.lens.is_empty() {
+                let op = |o: LensOp| match o { LensOp::Eq => "=", LensOp::Neq => "!=", LensOp::Lt => "<", LensOp::Gt => ">", LensOp::Contains => "contains" };
+                let l: Vec<String> = d.lens.iter()
+                    .map(|l| format!("{} {} {}", l.column, op(l.op), if l.value.is_empty() { "(unset)" } else { &l.value })).collect();
+                out.push(Line::from(format!("  lens: {}", l.join("; "))));
+            }
+            for w in &d.widgets {
+                out.push(Line::from(match &w.spec {
+                    WidgetSpec::Rows(a) => format!("  rows: {} (table {})", w.title, a.get("table").map(cell).unwrap_or_default()),
+                    WidgetSpec::Chart(c) => {
+                        let (kind, op) = (cell(&serde_json::to_value(c.chart).unwrap_or_default()), cell(&serde_json::to_value(c.op).unwrap_or_default()));
+                        let what = c.y.as_ref().map_or(op.clone(), |y| format!("{op} of {y}"));
+                        format!("  chart: {} ({kind}, {what} by {}, table {})", w.title, c.x, c.query.table)
+                    }
+                    WidgetSpec::Form(f) => format!("  form: {} (table {})", w.title, f.table),
+                }));
+            }
+            out.extend(d.dropped.iter().map(|x| warn(format!("  left out: {} — {}", x.title, x.why))));
         }
         // Answered here with /choose; the pupil draws radios.
         Component::Choice(c) => {

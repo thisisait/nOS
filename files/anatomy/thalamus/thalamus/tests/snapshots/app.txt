@@ -2,13 +2,6 @@ update nOS Roadmap (roadmap) / backup-restic-fork — nothing is written unless 
 u approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-pupil -> thalamus: turn: close backup-restic-fork
-thalamus -> KEAP: query_rows roadmap
-KEAP --> thalamus: 1 row
-thalamus -> pupil: approval_request
-  note pupil: the person decides
-  == commit ==
-pupil -> thalamus: approve
 thalamus -> KEAP: commit()
 KEAP --> thalamus: row written
   note thalamus, KEAP: recorded in the ledger
@@ -36,5 +29,12 @@ widget w4: row e3 added
 table expenses changed (row e3)
 refused: login carol has no row in the identity map
 refused (widget w2): no column `kinds` in Expenses; columns: when, kind, amount
+dashboard Bench board: 3 widgets, place it in the pupil
+  lens: track = platform; due < (unset)
+  rows: Next rows (table iris-bench-2)
+  chart: Points by track (bar, sum of points by track, table iris-bench-2)
+  form: Add a row (table iris-bench-2)
+  left out: By owner — no column `owner` in iris-bench-2; columns: title, status
+, track, points, note, due
 approve this edit (1 of 2)? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit

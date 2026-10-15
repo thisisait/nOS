@@ -171,4 +171,5 @@ open:
     minted by propose_row_edit, or by a widget form the person submits
     (wire.form_submit). The model has no form: a form is a widget the person
     made, and a widget runs without the model (wire.widget). A choice asks; its
-    answer is data for the model, never an approval (wire.choice_reply).
+    answer is data for the model, never an approval (wire.choice_reply). Since v6 offer_dashboard
+    offers a tab of widgets (components.dashboard); only the person's click places it and runs it.

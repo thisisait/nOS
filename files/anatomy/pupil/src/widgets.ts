@@ -25,7 +25,7 @@ export function submit(w: Widgets, widget: string, m: { form: string; values: Re
 	return { w: { ...w, [widget]: { ...w[widget], inFlight: true } }, send: { t: 'form_submit', form: m.form, widget, values: m.values } };
 }
 
-const tableOf = (s: WidgetSpec): string =>
+export const tableOf = (s: WidgetSpec): string =>
 	'rows' in s ? String((s.rows.table as Value) ?? '') : 'chart' in s ? s.chart.query.table : s.form.table;
 
 /** A write landed in `table`: the active widgets that read it re-run, the others go stale. A form never re-runs. */

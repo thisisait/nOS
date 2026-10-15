@@ -25,6 +25,7 @@ pub enum Component {
     Sequence(Sequence),
     Form(Form),
     Choice(Choice),
+    Dashboard(Dashboard),
 }
 
 /// Model text as markdown; every consumer draws it as text nodes, never as HTML.
@@ -372,6 +373,22 @@ impl Component {
                 }
                 Ok(())
             }
+            Component::Dashboard(d) => {
+                if d.name.trim().is_empty() {
+                    return Err("a dashboard has no name".into());
+                }
+                cap("a dashboard name", &d.name, 40)?;
+                check_lens(&d.lens)?;
+                if !(1..=8).contains(&d.widgets.len()) {
+                    return Err(format!("dashboard widgets: {}, 1 to 8", d.widgets.len()));
+                }
+                for w in &d.widgets {
+                    cap("a widget title", &w.title, NAME_MAX)?;
+                    crate::wire::check_spec(&w.spec).map_err(|e| format!("widget {:?}: {e}", w.title))?;
+                }
+                most("dashboard dropped widgets", d.dropped.len(), 8)?;
+                d.dropped.iter().try_for_each(|x| cap("a dropped title", &x.title, NAME_MAX).and_then(|_| cap("a dropped why", &x.why, 500)))
+            }
             Component::RowDiffApproval(d) => {
                 if d.cells.is_empty() {
                     return Err("an approval changes at least one cell".into());
@@ -646,6 +663,72 @@ pub struct Omitted {
     pub key: String,
     /// The KEAP column kind, as KEAP names it.
     pub kind: String,
+}
+
+/// A tab of widgets Iris offers (offer_dashboard); drawn with "Place on a new tab", it runs nothing
+/// until the person places it. `dropped` is every widget serve left out, with why.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Dashboard {
+    pub name: String,
+    pub lens: Vec<Lens>,
+    pub widgets: Vec<DashboardWidget>,
+    pub dropped: Vec<Dropped>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DashboardWidget {
+    pub title: String,
+    pub spec: crate::wire::WidgetSpec,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Dropped {
+    pub title: String,
+    pub why: String,
+}
+
+/// One tab-wide condition: it joins every rows and chart widget's `where` when the widget is sent,
+/// never its saved spec. An empty value is unset. kind and options say how the person picks a value.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Lens {
+    pub column: String,
+    pub op: LensOp,
+    pub value: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<FieldKind>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub options: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LensOp {
+    Eq,
+    Neq,
+    Lt,
+    Gt,
+    Contains,
+}
+
+/// At most 4 conditions, each naming a column; a dashboard and a saved tab (workspace-layout.yml) share it.
+pub fn check_lens(lens: &[Lens]) -> Result<(), String> {
+    most("lens conditions", lens.len(), 4)?;
+    lens.iter().try_for_each(|l| {
+        if l.column.is_empty() {
+            return Err("a lens condition names no column".into());
+        }
+        cap("a lens column", &l.column, 64)?;
+        cap("a lens value", &l.value, NAME_MAX)?;
+        let options = l.options.as_deref().unwrap_or_default();
+        if l.options.is_some() && !(1..=50).contains(&options.len()) {
+            return Err(format!("lens {} has {} options, 1 to 50", l.column, options.len()));
+        }
+        options.iter().try_for_each(|o| cap("a lens option", o, NAME_MAX))
+    })
 }
 
 /// A question Iris asks at a fork that changes what she does next. The model never sends `id`:

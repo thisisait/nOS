@@ -21,7 +21,13 @@ export type Component =
 	| { kind: 'graph'; props: { title?: string; nodes: { id: string; label: string; note?: string; tone?: 'ok' | 'info' | 'warn' | 'bad' }[]; edges: { from: string; to: string; label?: string; dashed?: boolean }[] } }
 	| { kind: 'sequence'; props: { title?: string; participants: string[]; steps: SequenceStep[] } }
 	| { kind: 'form'; props: FormProps }
-	| { kind: 'choice'; props: ChoiceProps };
+	| { kind: 'choice'; props: ChoiceProps }
+	| { kind: 'dashboard'; props: DashboardProps };
+
+/** A tab Iris offers (renderers.rs Dashboard): nothing runs until the person places it. */
+export type DashboardProps = { name: string; lens: Lens[]; widgets: { title: string; spec: WidgetSpec }[]; dropped: { title: string; why: string }[] };
+/** A tab-wide condition (renderers.rs Lens); an empty value is unset. */
+export type Lens = { column: string; op: 'eq' | 'neq' | 'lt' | 'gt' | 'contains'; value: string; kind?: FormField['kind']; options?: string[] };
 
 /** A question Iris asks at a fork (renderers.rs Choice); `id` is the one serve minted. */
 export type ChoiceProps = { id?: string; question: string; options: { label: string; note?: string }[]; suggested: string[]; multi: boolean };

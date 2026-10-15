@@ -3,15 +3,18 @@
 	import StatusNote from '$ui/StatusNote.svelte';
 	import Choice from './Choice.svelte';
 	import ComponentView from './Component.svelte';
+	import DashboardCard from './DashboardCard.svelte';
 	import Markdown from './Markdown.svelte';
-	import { phaseName, type ToShell, type ToThalamus } from './wire';
+	import { phaseName, type DashboardProps, type ToShell, type ToThalamus } from './wire';
 
 	// onpin: the person clicked "Připnout na plochu" under a render serve gave a pin (genui I6).
 	// onchoose: the person answered a choice with "Odpovědět"; drawing one sends nothing.
-	let { msg, onpin, onchoose }: {
+	// onplace: the person clicked "Place on a new tab" under an offered dashboard; true when it was placed.
+	let { msg, onpin, onchoose, onplace }: {
 		msg: ToShell;
 		onpin?: (m: ToShell) => void;
 		onchoose?: (m: Extract<ToThalamus, { t: 'choice_reply' }>) => Promise<boolean>;
+		onplace?: (d: DashboardProps) => boolean;
 	} = $props();
 </script>
 
@@ -23,6 +26,8 @@
 		<Markdown text={msg.text} />
 	{:else if msg.t === 'render' && msg.component.kind === 'choice'}
 		<Choice choice={msg.component.props} session={msg.session} onreply={onchoose} />
+	{:else if msg.t === 'render' && msg.component.kind === 'dashboard'}
+		<DashboardCard dashboard={msg.component.props} {onplace} />
 	{:else if msg.t === 'render'}
 		<ComponentView component={msg.component} />
 		{#if msg.pin}
