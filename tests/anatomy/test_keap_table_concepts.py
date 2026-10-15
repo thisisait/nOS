@@ -88,7 +88,6 @@ CONCEPTLESS = {
     "loop-config.enabled": "an on/off switch is not lifecycle.status (select/text) — needs lifecycle.enabled",
     "engram.observed_at": "RFC3339 text as the wire sends it — time.occurred_at is kind date — needs a text-time concept",
     "engram.labels": "the wire's envelope labels are not one category — needs class.tag",
-    "iris-dashboards.lens": "a tab's shared filter is not its layout (ui.layout is widgets, once per table) — needs ui.filter",
     "caddy-sessions.model": "a model URI is not deploy.image (that is a container) — needs llm.model",
     "caddy-sessions.transcript": "a speech transcript is not identity.description — needs media.transcript",
     "caddy-sessions.chain": "a cortex-lang program is not any closed concept — needs lang.program",
