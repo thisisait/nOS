@@ -3075,6 +3075,15 @@ fn inbox_for_iris_names_a_refused_source_and_keeps_titles_out_of_the_ledger() {
     let rec = recorded(&rig, &session, "inbox");
     assert_eq!(rec, serde_json::json!({"count": 1, "items": [{"kind": "capture", "refId": "cap-1"}],
                                        "refused": ["promotions: not yours to moderate"]}), "{rec}");
+    // Client bench v2: an empty inbox was told as "0 unread e-mails". The head says what it is; a small model
+    // weights the head, so it is the raw message's first key, and the ledger never records it.
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[1].1).unwrap();
+    let raw = body["messages"].as_array().unwrap().iter().rev().find(|m| m["role"] == "tool").unwrap()["content"].as_str().unwrap().to_string();
+    assert!(raw.starts_with(r#"{"what":"KEAP captures and promotions, not mail","#), "{raw}");
+    let inbox = body["tools"].as_array().unwrap().iter().find(|t| t["function"]["name"] == "inbox").unwrap();
+    assert!(inbox["function"]["description"].as_str().unwrap().contains("not mail"), "{inbox}");
+    let p = system_prompt(&rig);
+    assert!(p.contains("No tool reads e-mail, calendar or chat: say so, with no number."), "{p}");
 }
 
 #[test]
