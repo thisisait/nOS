@@ -4252,9 +4252,9 @@ fn between_is_inclusive_on_numbers_and_days() {
 }
 
 #[test]
-fn a_relative_day_resolves_now_in_utc_and_is_said_resolved() {
-    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
-    let rows = vec![keap_row("a", serde_json::json!({"when": now - now % 86_400})), keap_row("b", serde_json::json!({"when": now - 400 * 86_400}))];
+fn a_relative_day_resolves_now_and_is_said_resolved() {
+    let t = host_today();
+    let rows = vec![keap_row("a", serde_json::json!({"when": t})), keap_row("b", serde_json::json!({"when": t - 400 * 86_400}))];
     let (t, _) = result_over("brel", rows, r#"{"table": "sheet", "where": [{"column": "when", "op": "between", "value": "this_month"}]}"#);
     assert_eq!(t["matched"], 1, "{t}");
     let q = t["query"].as_str().unwrap_or_default();
