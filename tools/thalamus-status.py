@@ -10,8 +10,11 @@ serving without a model is UNKNOWN (degraded).
 Reads only (the connect opens no session). Exit 0 always. A source it cannot read is UNKNOWN, never green.
 `--tags thalamus,verify` fails on any line that is not OK, except the model line, which warns.
 
+`--dashboards` adds one line: how many iris-dashboards rows each owner has in KEAP (UNKNOWN when KEAP
+cannot be read). It is opt-in so the verify lines never wait on KEAP.
+
 Usage:
-    tools/thalamus-status.py [--json]
+    tools/thalamus-status.py [--json] [--dashboards]
 Env (tests): NOS_THALAMUS_SOCKET, NOS_THALAMUS_LEDGER, NOS_THALAMUS_LOG.
 """
 
@@ -134,6 +137,39 @@ def judge_model(log: pathlib.Path) -> dict:
     return line("model", UNKNOWN, f"degraded: serving without a model: {said.removeprefix('UNBOUND: ')}", str(log))
 
 
+def judge_dashboards(rows: list | None, why: str = "") -> dict:
+    """iris-dashboards rows per owner; None is a table that could not be read."""
+    src = "KEAP /api/tables/iris-dashboards/rows"
+    if rows is None:
+        return line("dashboards", UNKNOWN, why or "unreadable", src)
+    counts: dict[str, int] = {}
+    for r in rows:
+        owner = str((r.get("values") or {}).get("owner") or "(no owner)")
+        counts[owner] = counts.get(owner, 0) + 1
+    detail = ", ".join(f"{o} {n}" for o, n in sorted(counts.items(), key=lambda x: -x[1])) or "none yet"
+    return line("dashboards", OK, detail, src)
+
+
+def _dashboard_rows() -> tuple[list | None, str]:
+    """Every page of iris-dashboards as the admin identity (counts only leave this function)."""
+    import urllib.request
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+    try:
+        from keap_api import human_base, human_headers
+        rows, cursor = [], ""
+        for _ in range(40):
+            url = f"{human_base()}/api/tables/iris-dashboards/rows?limit=500" + (f"&cursor={cursor}" if cursor else "")
+            with urllib.request.urlopen(urllib.request.Request(url, headers=human_headers()), timeout=10) as resp:
+                data = json.loads(resp.read())["data"]
+            rows += data["rows"]
+            cursor = data.get("nextCursor") or ""
+            if not cursor:
+                return rows, ""
+        return None, "over 40 pages; not counted"
+    except Exception as exc:                                    # noqa: BLE001 — any failure is UNKNOWN
+        return None, f"KEAP unreadable: {type(exc).__name__}: {exc}"[:120]
+
+
 def _launchctl() -> tuple[int, str] | None:
     try:
         p = subprocess.run(["launchctl", "print", f"gui/{os.getuid()}/{LABEL}"], capture_output=True, text=True, timeout=10)
@@ -157,8 +193,9 @@ def collect() -> list[dict]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--dashboards", action="store_true", help="also count iris-dashboards per owner in KEAP")
     args = ap.parse_args()
-    rows = collect()
+    rows = collect() + ([judge_dashboards(*_dashboard_rows())] if args.dashboards else [])
     if args.json:
         print(json.dumps(rows, indent=2))
     else:
