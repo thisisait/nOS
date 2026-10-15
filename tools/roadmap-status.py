@@ -29,6 +29,7 @@ Usage:
     tools/roadmap-status.py --track face # one track
     tools/roadmap-status.py --schema     # declared columns vs the live table
     tools/roadmap-status.py --knowledge > roadmap.md   # one file to attach to a cloud chat
+    tools/roadmap-status.py --knowledge --status active,next --track face
     tools/roadmap-status.py --json       # for a caller
 
 Exit 0 when it could read the table. Exit 2 when it could NOT — an unreachable
@@ -100,6 +101,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--all", action="store_true", help="every row, not only the ones in motion")
     ap.add_argument("--track", help="restrict to one track")
+    ap.add_argument("--status", help="restrict to these statuses, comma-separated (e.g. active,next)")
     ap.add_argument("--schema", action="store_true", help="declared columns vs the live table")
     ap.add_argument("--json", action="store_true", help="machine-readable")
     ap.add_argument("--knowledge", action="store_true",
@@ -134,6 +136,11 @@ def main() -> int:
 
     if args.track:
         rows = [r for r in rows if r.get("track") == args.track]
+    if args.status:
+        # Naming a status is asking for it: a settled one shows without --all.
+        wanted = {x.strip() for x in args.status.split(",") if x.strip()}
+        rows = [r for r in rows if r.get("status") in wanted]
+        args.all = True
 
     if args.knowledge:
         sys.stdout.write(knowledge_pack(rows, table.get("title") or TABLE,
