@@ -974,9 +974,12 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                     }).and_then(|(c, pin)| opened(o, c).map(|c| (c, pin))).map(|(c, pin)| {
                         let v = serde_json::to_value(&c).ok();
                         let kind = v.as_ref().and_then(|v| v["kind"].as_str().map(str::to_string));
-                        // A sourced chart: the model hears the numbers drawn, which are KEAP's.
+                        // A sourced chart: the model hears how many points and the top one (Q3); the series
+                        // stays on screen, or a small model narrates every value again.
+                        let pts = v.as_ref().and_then(|v| v["props"]["series"][0]["points"].as_array().cloned()).unwrap_or_default();
+                        let top = pts.iter().max_by(|a, b| a[1].as_f64().partial_cmp(&b[1].as_f64()).unwrap_or(std::cmp::Ordering::Equal));
                         let v = match (&pin, &c) {
-                            (Some(_), _) => json!({"shown": kind, "points": v.map(|v| v["props"]["series"][0]["points"].clone())}),
+                            (Some(_), _) => json!({"shown": kind, "points_drawn": pts.len(), "top": top}),
                             (None, Component::Choice(ch)) => json!({"shown": kind, "choice": ch.id,
                                 "status": "asked; the person's answer comes back as a [thalamus] message"}),
                             (None, _) => json!({"shown": kind}),
