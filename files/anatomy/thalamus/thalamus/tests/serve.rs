@@ -3355,3 +3355,49 @@ fn an_edit_names_the_table_by_the_title_it_was_queried_by() {
     let (_s, _r, _session, _approval, diff) = propose(&rig);
     assert_eq!((diff.table.as_str(), diff.row_id.as_deref(), diff.title.as_str()), ("todos", Some("r1"), "Todo list"));
 }
+
+// --- iris v3 A2: a sum or average per value is query_rows group_by with op and y (bench bar-sum-points) ---
+
+const SUM_BY_STATUS: &str = r#"{"table": "sheet", "group_by": "status", "op": "sum", "y": "amount"}"#;
+
+#[test]
+fn query_rows_sums_a_column_per_group() {
+    let rig = rig_at("gsum", mapped(), fake_table(SHEET, statuses()).0, vec![query(SUM_BY_STATUS), answer("x")], Some(local()));
+    let (got, _) = tool_turn(&rig, "sum of amount per status");
+    let g = tool_result(&rig, 1);
+    assert_eq!(g["groups"], serde_json::json!([{"value": "done", "count": 1, "sum": 10.0}, {"value": "open", "count": 3, "sum": 6.0}]), "{g}");
+    assert_eq!(renders(&got)[0]["columns"], serde_json::json!(["status", "count", "sum"]), "{got:?}");
+    let a = tool_result_of("gavg", r#"{"table": "sheet", "group_by": "status", "op": "avg", "y": "amount"}"#);
+    assert_eq!(a["groups"][1], serde_json::json!({"value": "open", "count": 3, "avg": 2.0}), "{a}");
+}
+
+/// The model-facing result of one query_rows call with `args`.
+fn tool_result_of(rig_name: &str, args: &str) -> serde_json::Value {
+    let rig = rig_at(rig_name, mapped(), fake_table(SHEET, statuses()).0, vec![query(args), answer("x")], Some(local()));
+    tool_turn(&rig, "q");
+    tool_result(&rig, 1)
+}
+
+#[test]
+fn an_op_or_y_without_group_by_is_refused_naming_the_rule() {
+    for (name, args) in [("opnog", r#"{"table": "sheet", "op": "sum", "y": "amount"}"#), ("ynog", r#"{"table": "sheet", "y": "amount"}"#)] {
+        let e = tool_result_of(name, args);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains("only with `group_by`")), "{name}: {e}");
+    }
+    let e = tool_result_of("opnoy", r#"{"table": "sheet", "group_by": "status", "op": "sum"}"#);
+    assert!(e["error"].as_str().is_some_and(|e| e.contains("sum needs `y`")), "{e}");
+}
+
+#[test]
+fn a_chart_of_the_sums_just_grouped_pins_with_that_op_and_y() {
+    let rig = rig_at("infersum", mapped(), fake_table(SHEET, statuses()).0,
+        vec![query(SUM_BY_STATUS), unsourced_chart(serde_json::json!([["done", 10], ["open", 6]])), answer("Drawn.")], Some(local()));
+    let (got, _) = tool_turn(&rig, "chart the sum of amount per status");
+    let charts: Vec<_> = rendered(&got).into_iter().filter(|m| m["component"]["kind"] == "chart").collect();
+    assert_eq!(charts.len(), 1, "{got:?}");
+    let pin = &charts[0]["pin"]["chart"];
+    assert_eq!((&pin["x"], &pin["op"], &pin["y"]), (&serde_json::json!("status"), &serde_json::json!("sum"), &serde_json::json!("amount")), "{}", charts[0]);
+    assert_eq!(points(&charts[0]["component"]["props"]), pts(&[("done", 10.0), ("open", 6.0)]));
+    let p = system_prompt(&rig);
+    assert!(p.contains("sum or average per value"), "{p}");
+}
