@@ -1393,7 +1393,7 @@ fn show_kinds_agree_everywhere() {
     assert_eq!(consts, kinds, "show_schema oneOf kind consts");
     let spec = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../contracts/thalamus-shell.yml")).unwrap();
     let spec: serde_yaml_ng::Value = serde_yaml_ng::from_str(&spec).unwrap();
-    let tool_chosen = ["table_results", "row_diff_approval", "inbox_list", "approvals_list", "red_status", "markdown", "form"];
+    let tool_chosen = ["table_results", "row_diff_approval", "inbox_list", "approvals_list", "red_status", "markdown", "form", "dashboard"];
     let mut vocab: Vec<String> = spec["components"]["vocabulary"].as_mapping().unwrap().keys()
         .map(|k| k.as_str().unwrap().to_string()).filter(|k| !tool_chosen.contains(&k.as_str())).collect();
     let mut want: Vec<String> = kinds.iter().map(|k| k.to_string()).collect();
