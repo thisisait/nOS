@@ -35,39 +35,16 @@
     - external_storage_root is defined
     - external_storage_root | default('') | length > 0
 
-# Services like ERPNext auto-enable MariaDB/Redis, but main.yml
-# auto-deps have not run yet. We must resolve them here too, otherwise DB data won't be removed.
-- name: "[Removal-set] Resolve auto-dependencies for cleanup"
+# main.yml's auto-enable has not run yet: resolve the same manifest forced_by
+# here, or a forced provider's data (firefly -> MariaDB) survives the removal.
+# Relative to this file, not playbook_dir: the shim harness plays from tmp_path.
+- name: "[Removal-set] Resolve auto-dependencies for cleanup (manifest forced_by)"
   ansible.builtin.set_fact:
-    install_mariadb: >-
-      {{ install_mariadb | default(false) or
-         install_wordpress | default(false) or
-         install_nextcloud | default(false) or
-         install_erpnext | default(false) or
-         install_freescout | default(false) or
-         install_bookstack | default(false) or
-         install_firefly | default(false) or
-         install_dolibarr | default(false) }}
-    install_postgresql: >-
-      {{ install_postgresql | default(false) or
-         install_authentik | default(false) or
-         install_infisical | default(false) or
-         install_paperclip | default(false) or
-         install_outline | default(false) or
-         install_metabase | default(false) or
-         install_superset | default(false) or
-         install_miniflux | default(false) or
-         install_hedgedoc | default(false) }}
-    redis_docker: >-
-      {{ redis_docker | default(false) or
-         install_authentik | default(false) or
-         install_infisical | default(false) or
-         install_erpnext | default(false) or
-         install_outline | default(false) or
-         install_superset | default(false) or
-         install_bookstack | default(false) or
-         install_firefly | default(false) or
-         install_onlyoffice | default(false) }}
+    "{{ item.install_flag }}": true
+  loop: "{{ (lookup('file', '../state/manifest.yml') | from_yaml).services | selectattr('forced_by', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.id }}"
+  when: query('vars', *item.forced_by, default=false) | map('bool') | select | list | length > 0
 
 - name: "[Removal-set] Build list of data directories to remove (level: data)"
   ansible.builtin.set_fact:

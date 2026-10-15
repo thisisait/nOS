@@ -37,7 +37,7 @@
 #     install_mariadb and redis_docker to true at run time from other flags, so
 #     `false` in default.config.yml is their correct DEFAULT. Pruning
 #     postgresql's fragment would tear down the database every estate depends
-#     on. The list is read from main.yml's own `Auto-enable …` tasks, so a
+#     on. The list is state/manifest.yml forced_by (main.yml applies it), so a
 #     fourth dependency needs no edit here.
 #  2. TIER-2 MANIFEST APPS. `apps/<name>.yml` owns their bring-up, not a toggle,
 #     so the toggle is not the thing that would have switched them off.
@@ -93,13 +93,13 @@
 # it, the flag should become the default and this note should be deleted.
 # ==============================================================================
 
-- name: "[Stacks] Read the auto-enabled dependency flags from main.yml"
-  # DERIVED, never restated. A hard-coded list here would be the fourth place
-  # the same fact lives, and the one nobody updates.
+- name: "[Stacks] Read the auto-enabled dependency flags (manifest forced_by)"
+  # DERIVED, never restated: the providers state/manifest.yml forced_by declares.
   ansible.builtin.set_fact:
     _auto_enabled: >-
-      {{ lookup('file', playbook_dir ~ '/main.yml')
-         | regex_findall('^\s*install_([a-z0-9_]+):\s*true\s*$', multiline=True) }}
+      {{ (lookup('file', playbook_dir ~ '/state/manifest.yml') | from_yaml).services
+         | selectattr('forced_by', 'defined') | map(attribute='install_flag')
+         | select('match', '^install_') | map('regex_replace', '^install_', '') | list }}
   tags: ['stacks', 'core', 'always']
 
 - name: "[Stacks] Names of the Tier-2 manifest apps"

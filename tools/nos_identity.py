@@ -100,34 +100,15 @@ def profile_layers(profile: Path) -> list[Path]:
     return [p for p in layer_paths() if p != REPO / "config.yml"] + [profile]
 
 
-def _auto_enables() -> list[tuple[str, list[str]]]:
-    """main.yml's `set_fact: {X: true}` whose when is only `(flag | default(false)) or ...`:
-    (X, triggers). Any other shape is skipped, not guessed."""
-    term = re.compile(r"\(\s*(\w+)\s*\|\s*default\(false\)\s*\)")
-    out = []
-
-    def walk(node):
-        if isinstance(node, list):
-            for n in node:
-                walk(n)
-        elif isinstance(node, dict):
-            sf = node.get("ansible.builtin.set_fact") or node.get("set_fact")
-            when = node.get("when")
-            if isinstance(sf, dict) and len(sf) == 1 and list(sf.values()) == [True] and isinstance(when, str):
-                parts = [x.strip() for x in when.split(" or ")]
-                if all(term.fullmatch(x) for x in parts):
-                    out.append((next(iter(sf)), [term.fullmatch(x).group(1) for x in parts]))
-            for v in node.values():
-                walk(v)
-    main = REPO / "main.yml"
-    if main.exists():  # an estate without the playbook switches nothing on
-        walk(yaml.safe_load(main.read_text(encoding="utf-8")))
-    return out
+def forced_installs() -> dict[str, list[str]]:
+    """Provider flag -> the flags that force it on at run time: state/manifest.yml
+    forced_by, the one list main.yml and tasks/removal-set.yml also read."""
+    return {r["install_flag"]: list(r["forced_by"]) for r in services() if r.get("forced_by")}
 
 
 def install_flags(paths: list[Path] | None = None) -> dict[str, bool]:
     """Every install_* and manifest install_flag (redis_docker) resolved like resolve_flag, then
-    main.yml's auto-enables applied. A Jinja value is omitted, not guessed."""
+    the manifest's forced_by applied. A Jinja value is omitted, not guessed."""
     paths = layer_paths() if paths is None else paths
     names = {m for p in paths
              for m in re.findall(r"^(install_\w+):", p.read_text(encoding="utf-8"), re.MULTILINE)}
@@ -135,7 +116,7 @@ def install_flags(paths: list[Path] | None = None) -> dict[str, bool]:
     bools = {"true": True, "yes": True, "false": False, "no": False}
     out = {f: bools.get(seen[-1][1].lower()) for f in sorted(names) if (seen := resolve_flag(f, paths))}
     out = {f: v for f, v in out.items() if v is not None}
-    for flag, triggers in _auto_enables():
+    for flag, triggers in forced_installs().items():
         if any(out.get(t) for t in triggers):
             out[flag] = True
     return out

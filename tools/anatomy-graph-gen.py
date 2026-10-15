@@ -1373,52 +1373,25 @@ def _cron_minute(schedule: str | None) -> int | None:
     return int(parts[1]) * 60 + int(parts[0])
 
 
-#: `set_fact` key → the service that fact turns on, for main.yml's three
-#: `Auto-enable <provider> for services that require it` blocks. `install_redis`
-#: is deliberately absent: the Redis toggle is `redis_docker`, and the manifest
-#: row's `install_flag: install_redis` names a variable no config file defines.
-_AUTO_ENABLE_FACTS = {
-    "install_mariadb": "mariadb",
-    "install_postgresql": "postgresql",
-    "redis_docker": "redis",
-}
-
-
 def auto_enabled_pairs() -> dict[tuple[str, str], str]:
-    """(consumer_flag_service, provider) → the block that guarantees it.
+    """(consumer_flag_service, provider) → the declaration that guarantees it.
 
-    Parsed from main.yml so the ARTIFACT can say which declared edges the
-    playbook actually backs. Without it all service edges read as one claim
-    with one backing, and they are not: `install_woodpecker: true` with
-    `install_gitea: false` brings Woodpecker up pointed at nothing, and
-    roles/pazny.woodpecker/tasks/post.yml:14 then skips the OAuth wiring in
-    silence. A declaration nothing enforces is an aspiration in a fact's
-    clothes, and the reader must be able to tell which is which.
+    Read from state/manifest.yml forced_by (main.yml applies it) so the ARTIFACT
+    can say which declared edges the playbook actually backs. Without it all
+    service edges read as one claim with one backing, and they are not:
+    `install_woodpecker: true` with `install_gitea: false` brings Woodpecker up
+    pointed at nothing, and roles/pazny.woodpecker/tasks/post.yml:14 then skips
+    the OAuth wiring in silence. A declaration nothing enforces is an
+    aspiration in a fact's clothes, and the reader must be able to tell which.
     """
-    text = (REPO / "main.yml").read_text(encoding="utf-8")
+    rows = [s for s in (yaml.safe_load(MANIFEST.read_text(encoding="utf-8")).get("services") or [])
+            if isinstance(s, dict) and s.get("id")]
     by_flag = {}
-    for svc in (yaml.safe_load(MANIFEST.read_text(encoding="utf-8")).get("services") or []):
-        if isinstance(svc, dict) and svc.get("id") and svc.get("install_flag"):
+    for svc in rows:
+        if svc.get("install_flag"):
             by_flag.setdefault(svc["install_flag"], svc["id"])
-    out: dict[tuple[str, str], str] = {}
-    provider = None
-    block = ""
-    for line in text.splitlines():
-        name = re.match(r"^\s{4}- name:\s*(.+?)\s*$", line)
-        if name:
-            provider, block = None, name.group(1)
-            continue
-        fact = re.match(r"^\s{8}([a-z_]+):\s*true\s*$", line)
-        if fact and fact.group(1) in _AUTO_ENABLE_FACTS:
-            provider = _AUTO_ENABLE_FACTS[fact.group(1)]
-            continue
-        if provider is None:
-            continue
-        for flag in re.findall(r"\(install_([a-z_0-9]+)\s*\|", line):
-            svc = by_flag.get(f"install_{flag}")
-            if svc:
-                out[(svc, provider)] = f"main.yml: {block}"
-    return out
+    return {(by_flag[flag], row["id"]): f"state/manifest.yml: {row['id']} forced_by"
+            for row in rows for flag in row.get("forced_by") or [] if flag in by_flag}
 
 
 def compile_declared(raw_edges: list, nodes: dict) -> list[dict]:
@@ -1481,11 +1454,11 @@ def compile_declared(raw_edges: list, nodes: dict) -> list[dict]:
                          f"{block} DOES enable it — drop the field rather than carry a "
                          f"disclaimer the playbook contradicts")
                 if not block and not reason:
-                    _die(f"{consumer} ({src}): no `Auto-enable …` block in main.yml turns "
+                    _die(f"{consumer} ({src}): no state/manifest.yml forced_by turns "
                          f"{on} on for this consumer, so the playbook can bring the "
                          f"consumer up with no provider. Say so in `unenforced:` (one "
                          f"sentence, what happens when it is missing) or add the flag to "
-                         f"the block — silence would make this read like the 22 edges the "
+                         f"forced_by — silence would make this read like the 22 edges the "
                          f"playbook does guarantee")
                 edge["enforced_by"] = block
                 if reason:

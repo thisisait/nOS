@@ -6786,7 +6786,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DB_HOST=mariadb (roles/pazny.bookstack/templates/compose.yml.j2:26) — schema `bookstack`",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "enforced_by": "state/manifest.yml: mariadb forced_by",
       "evidence": "measured"
     },
     {
@@ -6795,7 +6795,7 @@
       "kind": "data",
       "measured": "2026-09-21",
       "via": "DOLI_DB_HOST=mariadb + schema `dolibarr` (roles/pazny.dolibarr/templates/compose.yml.j2)",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "enforced_by": "state/manifest.yml: mariadb forced_by",
       "evidence": "measured"
     },
     {
@@ -6804,7 +6804,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DB_HOST=mariadb on all five bench containers plus the configurator's `bench new-site --db-root-password` (roles/pazny.erpnext/templates/compose.yml.j2:32,47) — schema `erpnext`",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "enforced_by": "state/manifest.yml: mariadb forced_by",
       "evidence": "measured"
     },
     {
@@ -6813,7 +6813,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DB_CONNECTION=mysql + DB_HOST=mariadb (roles/pazny.firefly/templates/compose.yml.j2:43-44) — schema `firefly`",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "enforced_by": "state/manifest.yml: mariadb forced_by",
       "evidence": "measured"
     },
     {
@@ -6822,7 +6822,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DB_HOST=mariadb (roles/pazny.freescout/templates/compose.yml.j2:25) — schema `freescout`",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "enforced_by": "state/manifest.yml: mariadb forced_by",
       "evidence": "measured"
     },
     {
@@ -6831,7 +6831,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "MYSQL_HOST=mariadb (roles/pazny.nextcloud/templates/compose.yml.j2:24) — schema `nextcloud`, created by mariadb_databases (default.config.yml:1219)",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "enforced_by": "state/manifest.yml: mariadb forced_by",
       "evidence": "measured"
     },
     {
@@ -6840,7 +6840,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "WORDPRESS_DB_HOST=mariadb (roles/pazny.wordpress/templates/compose.yml.j2:26) — schema `wordpress`, created by mariadb_databases (default.config.yml:1219)",
-      "enforced_by": "main.yml: Auto-enable MariaDB for services that require it",
+      "enforced_by": "state/manifest.yml: mariadb forced_by",
       "evidence": "measured"
     },
     {
@@ -6915,7 +6915,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "AUTHENTIK_POSTGRESQL__HOST=postgresql on BOTH the server and the worker (roles/pazny.authentik/templates/compose.yml.j2:36,97) — database `authentik`, created by roles/pazny.postgresql/tasks/post.yml:104-119",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "enforced_by": "state/manifest.yml: postgresql forced_by",
       "evidence": "measured"
     },
     {
@@ -6924,7 +6924,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "CMD_DB_URL=postgres://…@postgresql:5432 (roles/pazny.hedgedoc/templates/compose.yml.j2:26) — database `hedgedoc`",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "enforced_by": "state/manifest.yml: postgresql forced_by",
       "evidence": "measured"
     },
     {
@@ -6933,7 +6933,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DB_CONNECTION_URI=postgresql://…@postgresql:5432 (roles/pazny.infisical/templates/compose.yml.j2:23) — database `infisical`",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "enforced_by": "state/manifest.yml: postgresql forced_by",
       "evidence": "measured"
     },
     {
@@ -6962,7 +6962,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "MB_DB_TYPE=postgres + MB_DB_HOST=postgresql (roles/pazny.metabase/templates/compose.yml.j2:23,28) — database `metabase`",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "enforced_by": "state/manifest.yml: postgresql forced_by",
       "evidence": "measured"
     },
     {
@@ -6971,7 +6971,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DATABASE_URL=postgres://…@postgresql:5432 (roles/pazny.miniflux/templates/compose.yml.j2:18) — database `miniflux`",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "enforced_by": "state/manifest.yml: postgresql forced_by",
       "evidence": "measured"
     },
     {
@@ -6980,7 +6980,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DATABASE_URL=postgres://…@postgresql:5432 (roles/pazny.outline/templates/compose.yml.j2:23) — database `outline`",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "enforced_by": "state/manifest.yml: postgresql forced_by",
       "evidence": "measured"
     },
     {
@@ -6989,7 +6989,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DATABASE_URL=postgresql://…@postgresql:5432 (roles/pazny.paperclip/templates/compose.yml.j2:30) — database `paperclip`",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "enforced_by": "state/manifest.yml: postgresql forced_by",
       "evidence": "measured"
     },
     {
@@ -6998,7 +6998,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "DATABASE_HOST=postgresql — Superset's own metadata database (roles/pazny.superset/templates/compose.yml.j2:35), not a chart datasource",
-      "enforced_by": "main.yml: Auto-enable PostgreSQL for services that require it",
+      "enforced_by": "state/manifest.yml: postgresql forced_by",
       "evidence": "measured"
     },
     {
@@ -7017,7 +7017,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "AUTHENTIK_REDIS__HOST=redis on both server and worker (roles/pazny.authentik/templates/compose.yml.j2:34,95) — task queue + cache",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "enforced_by": "state/manifest.yml: redis forced_by",
       "evidence": "measured"
     },
     {
@@ -7026,7 +7026,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "REDIS_SERVERS=redis:6379:0 — session + cache store (roles/pazny.bookstack/templates/compose.yml.j2:35)",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "enforced_by": "state/manifest.yml: redis forced_by",
       "evidence": "measured"
     },
     {
@@ -7035,7 +7035,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "REDIS_CACHE/REDIS_QUEUE/REDIS_SOCKETIO at redis:6379/{0,1,2}, set both in the configurator and on every worker (roles/pazny.erpnext/templates/compose.yml.j2:34-36,51-52)",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "enforced_by": "state/manifest.yml: redis forced_by",
       "evidence": "measured"
     },
     {
@@ -7044,7 +7044,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "REDIS_HOST=redis — cache + session driver (roles/pazny.firefly/templates/compose.yml.j2:53)",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "enforced_by": "state/manifest.yml: redis forced_by",
       "evidence": "measured"
     },
     {
@@ -7053,7 +7053,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "REDIS_URL=redis://…@redis:6379 (roles/pazny.infisical/templates/compose.yml.j2:24)",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "enforced_by": "state/manifest.yml: redis forced_by",
       "evidence": "measured"
     },
     {
@@ -7062,7 +7062,7 @@
       "kind": "data",
       "measured": "2026-09-01",
       "via": "REDIS_SERVER_HOST=redis:6379 (roles/pazny.onlyoffice/templates/compose.yml.j2:38-42), gated on redis_docker. main.yml auto-enables redis for install_onlyoffice.",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "enforced_by": "state/manifest.yml: redis forced_by",
       "evidence": "measured"
     },
     {
@@ -7071,7 +7071,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "REDIS_URL=redis://…@redis:6379 — websocket collaboration state (roles/pazny.outline/templates/compose.yml.j2:25)",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "enforced_by": "state/manifest.yml: redis forced_by",
       "evidence": "measured"
     },
     {
@@ -7080,7 +7080,7 @@
       "kind": "data",
       "measured": "2026-08-07",
       "via": "REDIS_HOST=redis — Celery broker + results backend (roles/pazny.superset/templates/compose.yml.j2:40)",
-      "enforced_by": "main.yml: Auto-enable Redis Docker for services that require it",
+      "enforced_by": "state/manifest.yml: redis forced_by",
       "evidence": "measured"
     },
     {
@@ -7499,7 +7499,7 @@
       "from": "effector:anatomy-graph-gen",
       "to": "doctrine:ssot/doctrine/layers.md#3",
       "kind": "governed_by",
-      "via": "cited at tools/anatomy-graph-gen.py:1926",
+      "via": "cited at tools/anatomy-graph-gen.py:1899",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7508,7 +7508,7 @@
       "from": "effector:anatomy-graph-gen",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at tools/anatomy-graph-gen.py:1594",
+      "via": "cited at tools/anatomy-graph-gen.py:1567",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"

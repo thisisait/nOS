@@ -73,6 +73,8 @@ services:
     category: database
     stack: infra
     install_flag: install_postgresql
+    # forced on by these (main.yml, removal-set.yml, nos_identity read this list)
+    forced_by: [install_authentik, install_infisical, install_paperclip, install_outline, install_metabase, install_superset, install_miniflux, install_hedgedoc]
     version_var: postgresql_version
     version_source: docker_image
     image: postgres
@@ -92,6 +94,7 @@ services:
     category: database
     stack: infra
     install_flag: install_mariadb
+    forced_by: [install_wordpress, install_nextcloud, install_erpnext, install_freescout, install_bookstack, install_firefly, install_dolibarr]
     version_var: mariadb_version
     version_source: docker_image
     image: mariadb
@@ -113,6 +116,7 @@ services:
     # redis_docker, not install_redis: the flag chooses Docker over the Homebrew
     # build, and that distinction is why it is not spelled install_*.
     install_flag: redis_docker
+    forced_by: [install_authentik, install_infisical, install_erpnext, install_outline, install_superset, install_bookstack, install_firefly, install_onlyoffice]
     version_var: redis_version
     version_source: docker_image
     image: redis

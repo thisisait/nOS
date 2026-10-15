@@ -1,6 +1,6 @@
 """Profile-builder contradiction rules, DERIVED from what the estate declares, and
 the offline sweep that proves the page cannot write a config they refuse.
-  auto     main.yml's Auto-enable blocks — the playbook turns the provider on itself.
+  auto     state/manifest.yml forced_by — the playbook turns the provider on itself.
   refused  every fail/assert the page can reach (main.yml, preflights, role mains).
   silent   depends_on `unenforced:` edges, `authentik:` blocks, blueprint accounts,
            profile knobs only one service reads — the service would come up unwired.
@@ -118,22 +118,13 @@ def flag_of_role() -> dict:
 
 # ── auto ────────────────────────────────────────────────────────────────────
 def auto_rules() -> list[dict]:
-    out = []
-    for _, tasks in _task_files():
-        for t in tasks:
-            sf = t.get("ansible.builtin.set_fact") or {}
-            if str(t.get("name", "")).startswith("Auto-enable") and len(sf) == 1 and list(sf.values()) == [True]:
-                up = next(iter(sf))
-                for c in re.findall(r"\(([a-z_0-9]+)\s*\|", " ".join(_when(t))):
-                    out.append({"cls": "auto", "consumer": {"flag": c}, "upstream": [up], "source": f"main.yml: {t['name']}"})
-    return out
+    return [{"cls": "auto", "consumer": {"flag": c}, "upstream": [up], "source": f"state/manifest.yml: {up} forced_by"}
+            for up, cs in ni.forced_installs().items() for c in cs]
 
 
 def auto_tasks() -> list[tuple[str, str]]:
-    """(fact, when) as main.yml writes them — the oracle evaluates these."""
-    return [(next(iter(t["ansible.builtin.set_fact"])), " ".join(_when(t)))
-            for _, ts in _task_files() for t in ts
-            if str(t.get("name", "")).startswith("Auto-enable") and len(t.get("ansible.builtin.set_fact") or {}) == 1]
+    """(fact, when) as main.yml applies forced_by — the oracle evaluates these."""
+    return [(up, " or ".join(f"({c} | default(false))" for c in cs)) for up, cs in ni.forced_installs().items()]
 
 
 # ── silent ──────────────────────────────────────────────────────────────────

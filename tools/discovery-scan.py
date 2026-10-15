@@ -59,7 +59,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import default_config_text, layer_paths, resolve_flag  # noqa: E402
+from nos_identity import default_config_text, forced_installs, layer_paths, resolve_flag  # noqa: E402
 from nos_security import GIT_REL, load_queue_items, security_dir  # noqa: E402
 
 CLAUDE_MD = REPO / "CLAUDE.md"
@@ -905,15 +905,10 @@ def probe_disabled_vs_running(images: dict[str, str], res: ScanResult) -> None:
     while the container runs is an open exposure that has been talked out of
     being counted. This probe now distinguishes the two.
     """
-    # DERIVED, not restated: main.yml's "Auto-enable …" tasks flip some flags to
-    # true at run time from other flags, so `false` in default.config.yml is the
-    # correct DEFAULT for them and a running container is no contradiction at
-    # all. Reading the list from main.yml means a fourth auto-enabled dependency
-    # needs no edit here. The first run of this probe reported install_postgresql
-    # as a finding, which is exactly the noise this tool's own docstring says
-    # gets a detector muted.
-    auto = set(re.findall(r"^\s*(install_[a-z0-9_]+|redis_docker):\s*true\s*$",
-                          (REPO / "main.yml").read_text(encoding="utf-8"), re.MULTILINE))
+    # DERIVED, not restated: state/manifest.yml forced_by flips some flags to true
+    # at run time, so `false` in default.config.yml is their correct DEFAULT and a
+    # running container is no contradiction (the first run reported postgresql).
+    auto = set(forced_installs())
     live: list[tuple[str, str, str]] = []
     for var, declared in sorted(resolved_install_flags().items()):
         if declared not in ("false", "no"):

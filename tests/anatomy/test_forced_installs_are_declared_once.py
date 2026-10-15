@@ -49,14 +49,16 @@ def test_no_task_hand_lists_a_forced_provider() -> None:
     assert not bad, "a second hand list of forced providers:\n" + "\n".join(bad)
 
 
-def test_installed_counts_a_forced_provider(tmp_path: Path) -> None:
+def test_installed_counts_a_forced_provider(tmp_path: Path, monkeypatch) -> None:
     """Every forced_by entry switches its provider on in install_flags, and core runs redis."""
     defaults = [p for p in ni.layer_paths() if p != REPO / "config.yml"]
+    monkeypatch.setattr(ni, "REPO", Path("/"))  # resolve_flag names layers relative to REPO
     for rid, flag in FORCED.items():
         for trigger in ROWS[rid]["forced_by"]:
             off = tmp_path / f"{rid}-{trigger}.yml"
-            off.write_text("".join(f"{f}: false\n" for r in FORCED for f in ROWS[r]["forced_by"])
+            off.write_text("".join(f"{f}: false\n" for r in FORCED for f in ROWS[r]["forced_by"] if f != trigger)
                            + f"{flag}: false\n{trigger}: true\n")
             assert ni.install_flags([*defaults, off]).get(flag) is True, f"{trigger} does not force {rid}"
+    monkeypatch.undo()
     core = ni.install_flags(ni.profile_layers(REPO / "profiles" / "core.yml"))
     assert "redis" in {r["id"] for r in ni.installed(core)}

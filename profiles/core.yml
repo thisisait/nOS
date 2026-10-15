@@ -18,7 +18,7 @@
 # ── L0 + SSO + edge: what every core route depends on ────────────────────────
 install_postgresql: true        # Authentik's store; KEAP keeps its own /data
 install_mariadb: false          # no core consumer (bookstack/firefly/nextcloud/... only)
-install_authentik: true         # SSO is mandatory; forces redis_docker on (main.yml)
+install_authentik: true         # SSO is mandatory; forces postgresql + redis on (manifest forced_by)
 install_traefik: true           # the edge; preflight refuses with no edge proxy
 install_nginx: false
 
