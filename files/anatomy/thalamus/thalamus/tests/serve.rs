@@ -3280,3 +3280,14 @@ fn a_card_after_a_free_text_read_says_so_and_one_waits_at_a_time() {
     assert!(d.read_from.is_empty(), "a turn that read no free text is not marked: {d:?}");
     assert!(posts(&rig).is_empty(), "a rejected or undecided card wrote");
 }
+
+// --- client bench v2 2026-10-15: edit-card 0/3, the row was queried by the table's TITLE ---
+
+#[test]
+fn an_edit_names_the_table_by_the_title_it_was_queried_by() {
+    let keap = vec![r#"!404 {"success": false, "error": "no such table"}"#.into(), TITLED.into(), SCHEMA.into(), ROWS.into(), ROWS.into()];
+    let rig = rig_n("edtitle", mapped(), keap, vec![query(r#"{"table": "todo LIST", "q": "alpha"}"#),
+        call("propose_row_edit", r#"{"table": "Todo list", "row_id": "r1", "values": {"status": "done"}}"#), answer("Proposed.")]);
+    let (_s, _r, _session, _approval, diff) = propose(&rig);
+    assert_eq!((diff.table.as_str(), diff.row_id.as_deref(), diff.title.as_str()), ("todos", Some("r1"), "Todo list"));
+}
