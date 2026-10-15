@@ -1780,7 +1780,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                          "semantic": semantic, "excluded": excluded});
         let list = (!items.is_empty()).then(|| List { title: Some("Memory".into()), ordered: true, items: items.iter().map(|i| ListItem {
             text: format!("{} · {}", i["kind"].as_str().unwrap_or("?"), i["name"].as_str().unwrap_or("")),
-            detail: i["description"].as_str().filter(|d| !d.is_empty()).map(str::to_string), tone: None, delta: None }).collect() });
+            // The url the model may link is drawn too: a link is honest only if the person sees its source.
+            detail: Some([&i["description"], &i["url"]].iter().filter_map(|v| v.as_str()).filter(|s| !s.is_empty())
+                .collect::<Vec<_>>().join(" · ")).filter(|d| !d.is_empty()), tone: None, delta: None }).collect() });
         Ok((list, out, rec))
     }
 
