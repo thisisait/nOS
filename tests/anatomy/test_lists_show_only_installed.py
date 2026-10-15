@@ -141,13 +141,13 @@ echo json_encode($out);
 
 
 def _registry(flags: dict, dest: Path) -> set[str]:
-    """Render templates/service-registry.json.j2 for `flags`; return its ids."""
-    env = lp._jinja_env()
-    env.undefined = jinja2.ChainableUndefined
-    ctx = dict(flags, tenant_domain="dev.local", ansible_facts={"hostname": "h", "env": {"HOME": "/h"}})
-    text = env.from_string((REPO / "templates/service-registry.json.j2").read_text(encoding="utf-8")).render(ctx)
-    dest.write_text(text, encoding="utf-8")
-    return {s["id"] for s in json.loads(text)["services"]}
+    """Render templates/service-registry.json.j2 for `flags` (the registry gate's
+    renderer: lookup + nos_installed as Ansible has them); return its ids."""
+    sys.path.insert(0, str(Path(__file__).parent))
+    from test_service_registry_is_the_installed_set import render_registry  # noqa: PLC0415
+    doc = render_registry(flags)
+    dest.write_text(json.dumps(doc), encoding="utf-8")
+    return {s["id"] for s in doc["services"]}
 
 
 def _wing(flags: dict, tmp: Path) -> tuple[set[str], list[dict]]:

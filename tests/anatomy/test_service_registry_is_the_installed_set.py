@@ -37,8 +37,8 @@ def _flags(profile: str) -> dict:
     return {**ni.install_flags(layers), "redis_docker": ni.resolve_flag("redis_docker", layers)[-1][1]}
 
 
-def render(flags: dict) -> list[dict]:
-    """The registry's services for `flags`, rendered as Ansible would."""
+def render_registry(flags: dict) -> dict:
+    """service-registry.json for `flags`, rendered as Ansible would."""
     env = lp._jinja_env()
     env.undefined = jinja2.ChainableUndefined
     if FILTER.is_file():
@@ -50,7 +50,11 @@ def render(flags: dict) -> list[dict]:
                ansible_facts={"hostname": "h", "env": {"HOME": "/h"}})
     ctx["lookup"] = lambda kind, name, default=None: (
         Path(name).read_text(encoding="utf-8") if kind == "file" else ctx.get(name, default))
-    return json.loads(env.from_string(TEMPLATE.read_text(encoding="utf-8")).render(ctx))["services"]
+    return json.loads(env.from_string(TEMPLATE.read_text(encoding="utf-8")).render(ctx))
+
+
+def render(flags: dict) -> list[dict]:
+    return render_registry(flags)["services"]
 
 
 def _with_ui(services: list[dict]) -> set[str]:
