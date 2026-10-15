@@ -237,6 +237,9 @@ nos_edge: "{{ 'lan_tailscale' if tenant_domain_is_local else 'cloudflare' }}"
 # as a /32 route. Ansible's default-route fact; pin the router's DHCP reservation
 # here (config.yml) when the host has more than one interface.
 nos_lan_ip: "{{ ansible_facts['default_ipv4']['address'] | default('') }}"
+# A host that leaves its LAN (a Mac taken home): dnsmasq answers 127.0.0.1 so the host
+# still reaches itself by name; no LAN route is advertised, reach it by its Tailscale IP.
+nos_lan_roaming: false
 
 # ── TLS cert paths ───────────────────────────────────────────────────────────
 # Cert tree lives under the infra stack dir. mkcert writes here for local

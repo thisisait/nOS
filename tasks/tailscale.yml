@@ -27,7 +27,7 @@
     _ts_bin: "{{ _ts_find.stdout | default('', true) or (homebrew_prefix ~ '/bin/tailscale') }}"
     _ts_route: "{{ nos_lan_ip }}/32"
     _ts_short: "{{ (tailscale_hostname | default('')).split('.')[0] }}"
-    _ts_lan: "{{ (nos_edge | default('cloudflare')) == 'lan_tailscale' }}"
+    _ts_lan: "{{ (nos_edge | default('cloudflare')) == 'lan_tailscale' and not (nos_lan_roaming | default(false) | bool) }}"
   tags: ['verify']
 
 - name: "[Tailscale] Refuse a lan_tailscale edge without a LAN address"

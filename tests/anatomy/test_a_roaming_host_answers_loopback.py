@@ -5,12 +5,15 @@ nos_lan_roaming: dnsmasq answers 127.0.0.1 and listens on loopback only, and the
 tailnet advertises no LAN route (reach the host by its Tailscale address instead)."""
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import jinja2
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 ENV = jinja2.Environment()
 ENV.filters["bool"] = lambda v: v.strip().lower() in ("true", "1", "yes") if isinstance(v, str) else bool(v)
 
@@ -46,4 +49,4 @@ def test_a_roaming_host_advertises_no_lan_route():
 
 
 def test_roaming_is_declared_off_by_default():
-    assert yaml.safe_load((REPO / "default.config.yml").read_text())["nos_lan_roaming"] is False
+    assert ni.default_config()["nos_lan_roaming"] is False

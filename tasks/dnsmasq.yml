@@ -19,9 +19,10 @@
   when: nos_pkg_manager == 'homebrew'
 
 # lan_tailscale: LAN devices and the tailnet's split DNS ask this host, so it must listen there.
+# nos_lan_roaming: a host that changes networks answers 127.0.0.1 on loopback only.
 - name: "[dnsmasq] Decide whether to answer on the LAN"
   ansible.builtin.set_fact:
-    _dnsmasq_lan: "{{ (dnsmasq_lan_access | default(true) | bool) or (nos_edge | default('cloudflare')) == 'lan_tailscale' }}"
+    _dnsmasq_lan: "{{ ((dnsmasq_lan_access | default(true) | bool) or (nos_edge | default('cloudflare')) == 'lan_tailscale') and not (nos_lan_roaming | default(false) | bool) }}"
 
 # The LAN address is ONE declared fact (nos_lan_ip); Tailscale advertises the same one.
 - name: "[dnsmasq] Build listen addresses"
