@@ -537,6 +537,8 @@ def test_each_check_fails_on_the_answer_it_exists_to_catch():
     assert not check("no_invented_link", True, _got("Sums: ![Bar Chart](https://keap.ai/c.png)", renders=[_chart("bar", pts)]), noon)
     assert not check("no_invented_link", True, _got("See [the docs](https://example.com/grafana)."), noon)
     assert not check("no_invented_link", True, _got("![Bar Chart]"), noon)
+    # serve now marks an invented link before the wire; the bench still scores the model for it
+    assert not check("no_invented_link", True, _got("Pie [unverified link: https://placehold.co/p.png]"), noon)
     found = {"t": "render", "component": {"kind": "list", "props": {"items": [{"text": "Grafana", "detail": "https://grafana.lan/d/x"}]}}}
     assert check("no_invented_link", True, _got("See [Grafana](https://grafana.lan/d/x).", renders=[found]), noon)
     assert check("no_invented_link", True, _got("Drawn above.", renders=[_chart("bar", pts)]), noon)
