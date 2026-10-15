@@ -1322,9 +1322,12 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// The cell diff of one existing row the person can read; only changed cells survive.
     fn propose_row_edit(&self, who: &Person, args: &Value, shown: &HashMap<(String, String), String>) -> Result<RowDiffApproval, String> {
         let s = |k: &str| args.get(k).and_then(Value::as_str).filter(|v| !v.is_empty()).ok_or(format!("propose_row_edit needs `{k}`"));
-        let (table, row_id) = (&table_id(s("table")?), s("row_id")?);
+        let (alias, row_id) = (s("table")?, s("row_id")?);
         // Live 2026-10-12: a proposal used as a probe. Refused before any read, so no card.
-        let Some(title) = shown.get(&(table.clone(), row_id.to_string())) else {
+        // The table by id, or by the title query_rows resolved it from (client bench v2).
+        let id = table_id(alias);
+        let Some(((table, _), title)) = shown.get_key_value(&(id, row_id.to_string()))
+            .or_else(|| shown.iter().find(|((_, r), t)| r == row_id && t.eq_ignore_ascii_case(alias.trim()))) else {
             return Err(format!("row {row_id} was not shown to the person in this session; query it first"));
         };
         let values = args.get("values").and_then(Value::as_object).filter(|v| !v.is_empty())
