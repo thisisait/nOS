@@ -227,7 +227,10 @@ def knowledge_pack(rows: list[dict], title: str, day: str, settled: bool = False
         for r in group:
             meta = " · ".join(f"{k}: {r[k]}" for k in ("track", "parent", "refs", "release") if r.get(k))
             out += [f"### {r.get('slug')} — {r.get('title') or ''}"] + ([meta] if meta else [])
-            out += ["", (r.get("body") or "").strip(), ""] if (r.get("body") or "").strip() else [""]
+            # A body's own headings go three levels down, below the row's ###.
+            body = re.sub(r"^(#{1,6})(?=\s)", lambda m: "#" * min(6, len(m.group(1)) + 3),
+                          (r.get("body") or "").strip(), flags=re.M)
+            out += ["", body, ""] if body else [""]
     if len(show) < len(rows):
         out.append(f"+{len(rows) - len(show)} shipped/dropped not included (`--all` adds them).")
     return "\n".join(out).rstrip() + "\n"
