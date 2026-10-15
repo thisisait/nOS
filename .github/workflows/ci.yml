@@ -694,12 +694,13 @@ jobs:
         #
         # profiles/core.yml is the service set (ruling 2026-10-15; Traefik edge, no
         # nginx: hidden_fees/39). Overrides: thalamus fails on systemd (macOS-only);
-        # cortex rides this leg (operator 2026-10-01). test_integration_uses_a_profile.
+        # cortex rides this leg (operator 2026-10-01); pulse + backup are host organs
+        # no bonus lane converges. test_integration_uses_a_profile.
         run: >-
           ansible-playbook main.yml
           -e allow_weak_prefix=true
           -e @profiles/core.yml
-          -e '{"install_thalamus": false, "install_cortex": true}'
+          -e '{"install_thalamus": false, "install_cortex": true, "install_pulse": true, "install_backup": true}'
           -e ansible_python_interpreter="${{ steps.python-setup.outputs.python-path }}"
         env:
           ANSIBLE_FORCE_COLOR: '1'
