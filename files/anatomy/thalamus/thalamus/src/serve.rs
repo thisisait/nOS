@@ -947,7 +947,14 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                                 src["y"] = args["y"].clone();
                             }
                             o.last_group = Some((src, vals));
-                            json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total, "groups": extra})
+                            let mut v = json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total, "groups": extra});
+                            // aggregate() keeps 60 days or 60 numbers and skips a row with no value there; say so.
+                            let grouped: u64 = extra.as_array().into_iter().flatten().filter_map(|g| g["count"].as_u64()).sum();
+                            if let Some(n) = (t.matched as u64).checked_sub(grouped).filter(|n| *n > 0) {
+                                v["left_out"] = json!(format!("{n} of the {} matched rows are in no group: a date keeps the last 60 days, \
+                                    a number the 60 smallest, and a row with no {} is left out", t.matched, text(&args["group_by"])));
+                            }
+                            v
                         } else {
                             o.shown.extend(t.rows.iter().map(|r| ((t.table.clone(), r.__id.clone()), t.name.clone())));
                             o.tables_seen.insert(t.table.clone(), t.name.clone());
