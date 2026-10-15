@@ -1573,6 +1573,18 @@ pub fn normalize_show(args: &Value) -> Value {
             }
         }
     }
+    // Round 3: `group_by` inside source.query with an empty x means "x is that column"; an empty y is no y.
+    if let Some(src) = o.get_mut("source").and_then(Value::as_object_mut) {
+        let gb = src.get_mut("query").and_then(Value::as_object_mut).and_then(|q| q.remove("group_by"));
+        if src.get("x").and_then(Value::as_str).is_none_or(str::is_empty) {
+            if let Some(g) = gb.filter(|g| g.as_str().is_some_and(|g| !g.is_empty())) {
+                src.insert("x".into(), g);
+            }
+        }
+        if src.get("y").and_then(Value::as_str) == Some("") {
+            src.remove("y");
+        }
+    }
     // A sourced chart's series comes from KEAP: give the model's bare chart the shape check() wants.
     if o.contains_key("source") && comp["kind"] == "chart" {
         if let Some(p) = comp.get_mut("props").and_then(Value::as_object_mut) {
