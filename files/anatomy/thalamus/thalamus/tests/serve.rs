@@ -3628,3 +3628,129 @@ fn the_prompt_says_how_to_offer_a_dashboard() {
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     assert!(body["tools"].as_array().unwrap().iter().any(|t| t["function"]["name"] == "offer_dashboard"), "the tool is offered");
 }
+
+// --- iris v3 B4: a placed dashboard persists in KEAP's iris-dashboards, the person's own ---
+
+const BOARDS: &str = r#"{"success": true, "data": {"id": "iris-dashboards", "title": "Iris dashboards", "schema": {"columns": [
+    {"key": "owner", "label": "Owner", "kind": "text", "required": true},
+    {"key": "slug", "label": "Slug", "kind": "text", "required": true},
+    {"key": "name", "label": "Name", "kind": "text", "required": true},
+    {"key": "lens", "label": "Lens", "kind": "json"},
+    {"key": "widgets", "label": "Widgets", "kind": "json"}]}}}"#;
+
+/// A dashboard as the pupil saves it on Place: the offer, under the tab's id.
+fn board(slug: &str) -> serde_json::Value {
+    serde_json::json!({"slug": slug, "name": "Bench board",
+        "lens": [{"column": "status", "op": "eq", "value": "", "kind": "select", "options": ["open", "done"]}],
+        "widgets": [{"title": "Rows", "spec": {"rows": {"table": "sheet"}}},
+                    {"title": "By status", "spec": {"chart": {"query": {"table": "sheet"}, "chart": "bar", "x": "status", "op": "count"}}}]})
+}
+
+fn owner() -> String {
+    format!("user:{}", alice().uid())
+}
+
+/// A KEAP row of iris-dashboards for `who`, as serve would write it.
+fn board_row(id: &str, who: &str, slug: &str) -> serde_json::Value {
+    let b = board(slug);
+    keap_row(id, serde_json::json!({"owner": who, "slug": slug, "name": b["name"], "lens": b["lens"], "widgets": b["widgets"]}))
+}
+
+fn send_json(s: &UnixStream, m: serde_json::Value) {
+    let mut w = s;
+    w.write_all(format!("{m}\n").as_bytes()).unwrap();
+}
+
+/// The next message after the session this line opened.
+fn after_session(r: &mut BufReader<UnixStream>) -> (String, Option<ToShell>) {
+    let Some(ToShell::Session { session, .. }) = next(r) else { panic!("no session") };
+    (session, next(r))
+}
+
+#[test]
+fn place_saves_the_dashboard_as_the_person_through_commit() {
+    let ((url, seen), held) = fake_table(BOARDS, vec![]);
+    let rig = rig_at("dbsave", mapped(), (url, seen), vec![], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    send_json(&s, serde_json::json!({"t": "dashboard_save", "dashboard": board("wsb1")}));
+    let (session, m) = after_session(&mut r);
+    match m {
+        Some(ToShell::DashboardSaved { session: s2, slug, row }) => assert_eq!((s2, slug.as_str(), row.as_str()), (session.clone(), "wsb1", "minted-1")),
+        other => panic!("expected dashboard_saved, got {other:?}"),
+    }
+    let p = posts(&rig);
+    assert_eq!(p.len(), 1, "{p:?}");
+    assert!(p[0].0.starts_with("POST /api/tables/iris-dashboards/rows "), "{}", p[0].0);
+    assert!(p[0].0.to_ascii_lowercase().contains("x-authentik-username: alice smith"), "as the person: {}", p[0].0);
+    let b = board("wsb1");
+    assert_eq!(serde_json::from_str::<serde_json::Value>(&p[0].1).unwrap(),
+               serde_json::json!({"values": {"owner": owner(), "slug": "wsb1", "name": "Bench board", "lens": b["lens"], "widgets": b["widgets"]}}),
+               "owner is serve's, never the pupil's; KEAP mints the id");
+    assert_eq!(held.lock().unwrap().len(), 1);
+    let ev: Vec<_> = events(&rig.ledger, &session).into_iter().filter(|e| e.1 == "agent:iris/tool:dashboard_save").collect();
+    let kinds: Vec<&str> = ev.iter().map(|e| e.0.as_str()).collect();
+    assert_eq!(kinds, ["agent_tool_use", "agent_approval_request", "agent_approval_decision", "agent_tool_result"], "{ev:?}");
+    assert_eq!((&ev[1].2["table"], &ev[1].2["op"]), (&serde_json::json!("iris-dashboards"), &serde_json::json!("insert")));
+    assert_eq!(ev[2].2["note"], "dashboard placed");
+    assert!(ev.iter().all(|e| e.2["peer"]["pid"] == std::process::id()), "every record names the peer: {ev:?}");
+    assert!(rig.model.lock().unwrap().is_empty(), "the model is not asked, and never told");
+}
+
+#[test]
+fn a_slug_the_person_saved_is_refused_another_person_s_is_not_theirs() {
+    let ((url, seen), _) = fake_table(BOARDS, vec![board_row("d1", &owner(), "wsb1"), board_row("d2", "user:bob", "wsb2")]);
+    let rig = rig_at("dbtwice", mapped(), (url, seen), vec![], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    send_json(&s, serde_json::json!({"t": "dashboard_save", "dashboard": board("wsb1")}));
+    match after_session(&mut r).1 {
+        Some(ToShell::Refused { reason, .. }) => assert!(reason.contains("wsb1") && reason.contains("already"), "{reason}"),
+        other => panic!("expected refused, got {other:?}"),
+    }
+    assert!(posts(&rig).is_empty(), "nothing written");
+    send_json(&s, serde_json::json!({"t": "dashboard_save", "dashboard": board("wsb2")}));
+    assert!(matches!(next(&mut r), Some(ToShell::DashboardSaved { ref slug, .. }) if slug == "wsb2"), "bob's slug is not alice's");
+}
+
+#[test]
+fn the_list_holds_only_the_person_s_dashboards_and_names_what_it_left_out() {
+    let mut bad = board_row("d3", &owner(), "wsold");
+    bad["values"]["name"] = serde_json::json!("Old board");
+    bad["values"]["widgets"] = serde_json::json!([{"title": "x", "spec": {"rows": {}}}]);
+    let mut text = board_row("d4", &owner(), "wstext");
+    text["values"]["lens"] = serde_json::json!(text["values"]["lens"].to_string());
+    text["values"]["widgets"] = serde_json::json!(text["values"]["widgets"].to_string());
+    let rows = vec![board_row("d1", &owner(), "wsb1"), board_row("d2", "user:bob", "wsbob"), bad, text];
+    let ((url, seen), _) = fake_table(BOARDS, rows);
+    let rig = rig_at("dblist", mapped(), (url, seen), vec![], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    send_json(&s, serde_json::json!({"t": "dashboard_list"}));
+    let (session, m) = after_session(&mut r);
+    let Some(ToShell::Dashboards { session: s2, dashboards, left_out }) = m else { panic!("expected dashboards, got {m:?}") };
+    assert_eq!(s2, session);
+    let slugs: Vec<&str> = dashboards.iter().map(|d| d.slug.as_str()).collect();
+    assert_eq!(slugs, ["wsb1", "wstext"], "a json cell KEAP hands back as text still loads");
+    assert_eq!(serde_json::to_value(&dashboards[0]).unwrap(), board("wsb1"));
+    assert_eq!(left_out.len(), 1, "{left_out:?}");
+    assert!(left_out[0].title == "Old board" && left_out[0].why.contains("names no table"), "{left_out:?}");
+    let wire = serde_json::to_string(&(&dashboards, &left_out)).unwrap();
+    assert!(!wire.contains("wsbob") && !wire.contains("user:bob"), "another person's dashboard was listed: {wire}");
+    assert!(posts(&rig).is_empty());
+    let ev: Vec<_> = events(&rig.ledger, &session).into_iter().filter(|e| e.1 == "agent:iris/tool:dashboard_list").collect();
+    assert_eq!(ev.len(), 2, "{ev:?}");
+    assert_eq!((&ev[1].2["count"], &ev[1].2["left_out"]), (&serde_json::json!(2), &serde_json::json!(1)), "{ev:?}");
+}
+
+#[test]
+fn an_unreadable_dashboard_table_is_refused_never_an_empty_list() {
+    let rig = rig("dbdown", mapped(), r#"!500 {"success": false, "error": "store down"}"#, vec![]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    send_json(&s, serde_json::json!({"t": "dashboard_list"}));
+    match after_session(&mut r).1 {
+        Some(ToShell::Refused { reason, .. }) => assert!(reason.contains("dashboards are UNKNOWN") && reason.contains("500"), "{reason}"),
+        other => panic!("expected refused, got {other:?}"),
+    }
+}

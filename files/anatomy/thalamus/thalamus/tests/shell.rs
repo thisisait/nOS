@@ -391,3 +391,18 @@ fn an_insert_card_names_its_table_and_what_the_model_read() {
     assert_eq!(lines[0], "insert a new row in Expenses (expenses) — nothing is written unless you approve");
     assert_eq!(lines[1].trim(), "contains text from search_memory");
 }
+
+/// The terminal keeps no dashboards: a list or a save the pupil asked for is said, what was left out with why.
+#[test]
+fn saved_dashboards_are_said_as_text() {
+    let mut app = App::default();
+    for (case, m) in fixture() {
+        if case == "the person's dashboards from KEAP" || case == "a placed dashboard was saved" {
+            app.apply(m);
+        }
+    }
+    let said: String = app.lines.iter().map(|l| format!("{l}\n")).collect();
+    assert_eq!(said, "dashboards in KEAP: Bench board (wsbench1, 2 widgets)\n\
+                      \x20 left out: Old board — widget \"x\": a widget spec names no table\n\
+                      dashboard wsbench1 saved in KEAP (row d1)\n");
+}

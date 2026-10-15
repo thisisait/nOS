@@ -78,6 +78,10 @@ function owedBy(c: Component): string[] {
 	return [name, query, ...counts, ...columns, ...rows.flatMap((r) => [r.__id, ...columns.flatMap((k) => owed(r.cells[k] ?? null))])];
 }
 
+/** A list from KEAP owes each dashboard's name and slug, and what was left out with why; the specs are the tabs'. */
+const savedOwed = (m: Extract<ToShell, { t: 'dashboards' }>): string[] =>
+	[...m.dashboards.flatMap((d) => [d.name, d.slug]), ...m.left_out.flatMap((x) => [x.title, x.why])];
+
 describe('the pupil renders the contract fixture', () => {
 	const components = fx.to_shell.flatMap((c) => ('component' in c.msg ? [c.msg.component] : []));
 
@@ -98,7 +102,7 @@ describe('the pupil renders the contract fixture', () => {
 			expect(page).not.toContain('no renderer for component kind');
 			// A chat line's session id is the banner's to show, not every line's.
 			const skip = new Set(msg.t === 'session' ? ['t'] : ['t', 'session']);
-			const want = 'component' in msg ? owedBy(msg.component) : owed(msg as unknown as Value, skip);
+			const want = 'component' in msg ? owedBy(msg.component) : msg.t === 'dashboards' ? savedOwed(msg) : owed(msg as unknown as Value, skip);
 			for (const s of want) expect(page.toLowerCase(), `${name}: ${s}`).toContain(s.toLowerCase());
 		});
 	}
