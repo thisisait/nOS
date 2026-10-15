@@ -412,6 +412,10 @@ impl Component {
                 }
                 cap("title", &k.title, NAME_MAX)?;
                 k.unit.as_deref().map_or(Ok(()), |u| cap("a kpi unit", u, 16))?;
+                // A digit in the unit reads as part of KEAP's number ("000 Kč" turns 6 into 6 000).
+                if k.unit.as_deref().is_some_and(|u| u.chars().any(char::is_numeric)) {
+                    return Err("a kpi unit has no digit; the number is the thalamus's".into());
+                }
                 k.delta_label.as_deref().map_or(Ok(()), |l| cap("a kpi delta label", l, 60))?;
                 k.source.as_deref().map_or(Ok(()), |s| cap("a kpi source", s, 200))
             }
