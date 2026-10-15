@@ -27,6 +27,21 @@ the playbook-side asserts are the real guards.
   playbook refuses versions below `nos_cli_version_floor` so a stale installed
   `nos` can never emit vocabulary a future playbook no longer reads.
 
+## Update nOS (pull, then converge)
+
+nOS updates from its checkout; only a converge moves the new source into the
+running estate.
+
+```bash
+cd "$NOS_SRC"   # the checkout nos uses (~/.nos/nos-cli.env; fallback ~/projects/nOS)
+git pull        # new source; nothing running changes yet
+nos             # converge: the estate now runs what was pulled
+```
+
+A pull keeps your `config.yml` (gitignored); new defaults arrive with
+`default.config.yml`. Verify: `tools/estate-status.py` (host vs repo vs
+origin), then `tools/red-status.py` (what is red after the run).
+
 ## Usage
 
 ```

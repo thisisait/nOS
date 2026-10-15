@@ -65,6 +65,7 @@ Each line here is a `reader:` node of the anatomy graph, a sense.
 - `elsewhere-status.py` — Estate work happening OUTSIDE the control centre, and how to get to it.
 - `estate-status.py` — What is TRUE right now, across the three places a fact about nOS can live.
 - `services-status.py` — What nOS offers: every manifest service, its resolved install flag (null when Jinja/undeclared) and hub_card description; Iris's estate_services catalogue. Exit 0; unreadable sources in `unknown`.
+- `nos-guide.py` — How do I do X with nOS: the top 3 doc passages (docs/systems, nos-cli, README, glossary, profile headers; cs/en) and, for a named service, the config.yml line and the derived `nos --tags` converge/verify; Iris's nos_guide. Runs nothing. Exit 0; unreadable sources in `unknown`.
 - `face-wiring-report.py` — nOS-face wiring report — the hard-doctrine linter for the web-desktop shell.
 - `identity-status.py` — identity-status — the declared account roster vs what each realm holds.
 - `loader-vars-report.py` — D1 scoping tool (2026-06-11) — the plugin-loader variable contract.
