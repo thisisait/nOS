@@ -2225,7 +2225,8 @@ fn a_sourced_chart_draws_keaps_aggregate_and_carries_a_chart_pin() {
     // The shape map must not send a count chart the unsourced way, or it cannot be pinned.
     assert!(system_prompt(&rig).contains("count per value -> chart with show `source` (op count)"), "{}", system_prompt(&rig));
     let offered = &serve::show_schema()["properties"]["source"];
-    assert_eq!(offered["required"], serde_json::json!(["query", "x", "op"]), "{offered}");
+    // A kpi's source is one total, so x is a chart's only: the schema cannot require it (Q3).
+    assert_eq!(offered["required"], serde_json::json!(["query", "op"]), "{offered}");
     assert_eq!(offered["properties"]["op"]["enum"], serde_json::json!(["count", "sum", "avg"]), "{offered}");
     // Recorded like a widget run, before and after; the model was asked once for the show.
     let session = session_of(&got);
