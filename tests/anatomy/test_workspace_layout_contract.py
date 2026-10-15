@@ -24,7 +24,7 @@ SPEC = REPO / "files/anatomy/contracts/workspace-layout.yml"
 FIXTURE = REPO / "files/anatomy/contracts/workspace-layout.fixture.json"
 CRATE = REPO / "files/anatomy/pupil/src-tauri"
 # The cases the definition names; the fixture may hold more, never fewer.
-MUST_REFUSE = {"a 13th workspace", "a widget w: 1", "an unknown key", "a spec with two keys"}
+MUST_REFUSE = {"a 13th workspace", "a widget w: 1", "an unknown key", "a spec with two keys", "5 lens conditions"}
 
 
 def _spec() -> dict:
@@ -37,7 +37,7 @@ def _fixture() -> dict:
 
 def test_the_spec_names_this_fixture_and_these_files():
     spec = _spec()
-    assert spec["version"] == _fixture()["version"] == 1
+    assert spec["version"] == _fixture()["version"] == 2
     assert REPO / spec["fixture"] == FIXTURE
     for side in ("producer", "consumer"):
         for path in spec[side]["code"]:

@@ -231,6 +231,7 @@ mod tests {
             let one = w0(v);
             v["workspaces"][0]["widgets"] = (0..n).map(|i| { let mut w = one.clone(); w["id"] = format!("n{i}").into(); w["y"] = (i * 2).into(); w }).collect();
         };
+        let lens = |n: usize| move |v: &mut serde_json::Value| v["workspaces"][0]["lens"] = vec![serde_json::json!({"column": "kind", "op": "eq", "value": ""}); n].into();
         let set = |ptr: &'static str, val: serde_json::Value| move |v: &mut serde_json::Value| *v.pointer_mut(ptr).unwrap() = val.clone();
         let edges: Vec<(&str, Box<dyn Fn(&mut serde_json::Value)>, Box<dyn Fn(&mut serde_json::Value)>)> = vec![
             ("24 widgets", Box::new(widgets(24)), Box::new(widgets(25))),
@@ -239,7 +240,8 @@ mod tests {
             ("name 40", Box::new(set("/workspaces/0/name", "n".repeat(40).into())), Box::new(set("/workspaces/0/name", "n".repeat(41).into()))),
             ("h 2", Box::new(set("/workspaces/0/widgets/0/h", 2.into())), Box::new(set("/workspaces/0/widgets/0/h", 1.into()))),
             ("h 40", Box::new(set("/workspaces/0/widgets/0/h", 40.into())), Box::new(set("/workspaces/0/widgets/0/h", 41.into()))),
-            ("version 1", Box::new(set("/version", 1.into())), Box::new(set("/version", 2.into()))),
+            ("version 2", Box::new(set("/version", 2.into())), Box::new(set("/version", 3.into()))),
+            ("lens 4", Box::new(lens(4)), Box::new(lens(5))),
             ("id charset", Box::new(set("/workspaces/0/widgets/0/id", "A-z_9".into())), Box::new(set("/workspaces/0/widgets/0/id", "a.b".into()))),
             ("id 64", Box::new(set("/workspaces/0/widgets/0/id", "i".repeat(64).into())), Box::new(set("/workspaces/0/widgets/0/id", "i".repeat(65).into()))),
         ];
