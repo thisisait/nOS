@@ -223,11 +223,15 @@
     - nos_lan_roaming | default(false) | bool
   tags: ['verify']
 
-- name: "[dnsmasq] Tailnet: decide"
+- name: "[dnsmasq] Tailnet: name the IP"
   ansible.builtin.set_fact:
     _dnsmasq_ts_ip: >-
       {{ ((_dnsmasq_ts_raw.stdout | default('')).split() + [''])[0] if _dnsmasq_ts_raw.rc | default(1) == 0
          and ((_dnsmasq_ts_raw.stdout | default('')).split() + [''])[0].replace('.', '').isdigit() else '' }}
+  tags: ['verify']
+
+- name: "[dnsmasq] Tailnet: decide"
+  ansible.builtin.set_fact:
     _dnsmasq_tailnet: "{{ ansible_os_family == 'Darwin' and (nos_lan_roaming | default(false) | bool) and _dnsmasq_ts_ip | length > 0 }}"
   tags: ['verify']
 
