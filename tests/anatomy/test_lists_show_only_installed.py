@@ -4,7 +4,7 @@ MEASURED 2026-10-15 on a client host converged with profiles/core.yml: the
 Authentik user library, Wing /hub and the face dock all listed applications
 that host does not run. Three surfaces, two sources of truth to check against:
 
-  * Authentik — 10-oidc-apps.yaml rendered from the loader's own harvest. Tier-2
+  * Authentik — 10-oidc-apps.yaml rendered from the loader's own harvest. Manifest
     apps carried `enabled: true` whatever apps_runner_enabled said, and a service
     switched off simply dropped out of the blueprint, which never deletes.
   * Wing /hub and the face dock — both read Wing's `systems` table. Rows the
@@ -82,7 +82,7 @@ def _authentik(tvars: dict) -> dict[str, list[str]]:
 
 def _slug_flags() -> dict[str, str]:
     """slug -> the variable that installs it: the plugin block's own `enabled`
-    expression, or apps_runner_enabled for a Tier-2 app."""
+    expression, or apps_runner_enabled for a manifest app."""
     out = {a["authentik"]["slug"]: "apps_runner_enabled" for a in _apps() if a.get("authentik")}
     for p in sorted((REPO / "files/anatomy/plugins").glob("*/plugin.yml")):
         block = (yaml.safe_load(p.read_text(encoding="utf-8")) or {}).get("authentik") or {}
