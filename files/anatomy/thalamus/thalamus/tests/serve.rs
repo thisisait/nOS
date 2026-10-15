@@ -1804,6 +1804,25 @@ fn an_edit_of_a_date_cell_writes_epoch_and_the_card_says_days() {
 }
 
 #[test]
+fn an_edit_of_a_date_cell_refuses_what_is_not_a_day() {
+    // Without the refusal "soon" would reach KEAP as a string in an epoch column.
+    let ((url, seen), held) = fake_table(SHEET, dated_rows());
+    let rig = rig_at("datebad", mapped(), (url, seen), vec![query(r#"{"table": "sheet", "limit": 1}"#),
+        call("propose_row_edit", r#"{"table": "sheet", "row_id": "a", "values": {"when": "soon"}}"#),
+        call("propose_row_edit", r#"{"table": "sheet", "row_id": "a", "values": {"when": 5}}"#), answer("Could not.")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "move it to soon");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. })), "a card for a non-day: {got:?}");
+    for n in [2, 3] {
+        let e = tool_result(&rig, n);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains("YYYY-MM-DD")), "{e}");
+    }
+    assert!(posts(&rig).is_empty());
+    assert_eq!(held.lock().unwrap()[0]["values"]["when"], serde_json::json!(NOV_1));
+}
+
+#[test]
 fn a_widget_reads_every_page_of_the_stateful_fake() {
     // The fake pages as KEAP does, so serve's whole-table read is exercised, not one canned body.
     let rows: Vec<_> = (0..1203).map(|i| keap_row(&format!("p{i}"), serde_json::json!({"status": if i % 3 == 0 { "done" } else { "open" }}))).collect();
