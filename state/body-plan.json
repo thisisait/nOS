@@ -11,7 +11,7 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 6,
-    "sense": 77,
+    "sense": 78,
     "limb": 116,
     "memory": 41,
     "law": 52,
@@ -1414,6 +1414,10 @@
       "kind": "reader"
     },
     "reader:moderation-drain": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:nos-guide": {
       "level": "sense",
       "kind": "reader"
     },

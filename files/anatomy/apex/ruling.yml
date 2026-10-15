@@ -847,6 +847,9 @@ nodes:
   "reader:managed-status": withheld
   "effector:maps-style-vendor": withheld
   "reader:npm-ioc-scan": withheld
+  # 2026-10-15 reader:nos-guide: the how-to passages Iris's nos_guide
+  # reads. WITHHELD; the published set is unchanged.
+  "reader:nos-guide": withheld
   "reader:openhuman-status": withheld
   "reader:permission-status": withheld
   "reader:plugin-wiring-report": withheld
