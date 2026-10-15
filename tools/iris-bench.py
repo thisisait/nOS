@@ -40,7 +40,8 @@ CANNOT_SEE = ("cannot see", "can't see", "can not see", "unable to see", "not ab
               "cannot read", "can't read", "can not read", "unable to read", "not able to read",
               "nevidím", "nemám přístup", "nemohu vidět", "nemůžu vidět", "nemám nástroj", "nedokážu zjistit",
               "nemohu číst", "nemůžu číst", "nedokážu přečíst", "nemohu přečíst",
-              "není vidět", "nemám k dispozici", "nemám údaje", "nemám informace")
+              "není vidět", "nemám k dispozici", "nemám údaje", "nemám informace",
+              "nothing found", "nic jsem nenašel", "nic nenašel")
 # "can't directly read", "am not able to check": a refusal with a word or two between.
 CANNOT_RE = re.compile(r"\b(cannot|can't|can not|unable to|not able to)(\s+\w+){0,2}\s+(see|read|access|check|view|answer|tell|know)\b")
 # A verdict next to the disclaimer is a guess ("I can't see any failures, all green"), not cannot-see.
@@ -71,7 +72,8 @@ def turns_of(case: dict) -> list[str]:
 def run_case(case: dict, sock: str, timeout: float) -> dict:
     """Send the case's turns over one connection; what came back, per kind."""
     turns = turns_of(case)
-    got = {"tools": [], "renders": [], "approvals": [], "refused": [], "text": "", "model_uri": None, "error": None}
+    got = {"tools": [], "renders": [], "approvals": [], "cards": [], "refused": [], "text": "", "texts": [],
+           "model_uri": None, "error": None}
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.settimeout(timeout)
     try:
@@ -100,6 +102,7 @@ def run_case(case: dict, sock: str, timeout: float) -> dict:
                     got["renders"].append(m)
                 elif t == "approval_request":
                     got["approvals"].append(m.get("approval"))
+                    got["cards"].append((m.get("component") or {}).get("props", {}))
                     # The decision the pupil sends for reject (approvals.ts); serve answers it with text + idle.
                     f.write(json.dumps({"t": "approval_decision", "approval": m.get("approval"),
                                         "decision": "reject", "note": None}) + "\n")
@@ -113,6 +116,7 @@ def run_case(case: dict, sock: str, timeout: float) -> dict:
                     if want > 1:
                         want -= 1
             got["text"] = answer
+            got["texts"].append(answer)
     except (OSError, ValueError, ConnectionError) as e:
         got["error"] = f"{type(e).__name__}: {e}"
     finally:
@@ -135,6 +139,30 @@ def _drawn_numbers(renders: list[dict]) -> set[float]:
             out |= {float(v) for row in p.get("rows", []) for v in row.get("cells", {}).values()
                     if isinstance(v, (int, float)) and not isinstance(v, bool)}
     return out
+
+
+def _same(a, b) -> bool:
+    """A value the model wrote as "5" is the value 5."""
+    return a == b or str(a) == str(b)
+
+
+def _conds_in(want: list[dict], have) -> bool:
+    """Every wanted where condition (column, op, value) is among the ones given."""
+    have = have if isinstance(have, list) else []
+    return all(any(all(_same(h.get(k), w.get(k)) for k in ("column", "op", "value")) for h in have) for w in want)
+
+
+def _pins(got: dict, kind: str) -> list[dict]:
+    return [r["pin"][kind] for r in got["renders"] if isinstance(r.get("pin"), dict) and kind in r["pin"]]
+
+
+def _answers_in(text: str, lang: str) -> bool:
+    if lang not in ("cs", "en"):
+        raise ValueError(f"answers_in knows cs and en, not {lang!r}")
+    words = re.findall(r"[^\W\d_]+", text.lower())
+    cs = sum(w in CS_WORDS for w in words) + (1 if DIACRITICS & set(text.lower()) else 0)
+    en = sum(w in EN_WORDS for w in words)
+    return cs >= 2 and cs > en if lang == "cs" else en >= 2 and en > cs
 
 
 def check(name: str, arg, got: dict, now: float) -> bool:
@@ -171,12 +199,58 @@ def check(name: str, arg, got: dict, now: float) -> bool:
                 return False
         return True
     if name == "answers_in":
-        if arg != "cs":
-            raise ValueError(f"answers_in knows only cs, not {arg!r}")
-        words = re.findall(r"[^\W\d_]+", text.lower())
-        cs = sum(w in CS_WORDS for w in words) + (1 if DIACRITICS & set(text.lower()) else 0)
-        en = sum(w in EN_WORDS for w in words)
-        return cs >= 2 and cs > en
+        return _answers_in(text, arg)
+    if name == "turn_answers_in":
+        return arg["turn"] < len(got["texts"]) and _answers_in(got["texts"][arg["turn"]], arg["lang"])
+    if name == "turn_text_contains":
+        return arg["turn"] < len(got["texts"]) and str(arg["text"]) in got["texts"][arg["turn"]]
+    if name == "approval_diff_equals":  # the LAST card: its table, op, row and exactly these new values
+        if not got["cards"]:
+            return False
+        p = got["cards"][-1]
+        cells = p.get("cells", [])
+        new = {c.get("key"): c.get("new") for c in cells}
+        return (("table" not in arg or arg["table"] in (p.get("table"), p.get("title")))
+                and all(_same(p.get(k), arg[k]) for k in ("op", "row_id") if k in arg)
+                and len(cells) == len(arg["cells"]) and new.keys() == arg["cells"].keys()
+                and all(_same(new[k], v) for k, v in arg["cells"].items())
+                and (p.get("op") != "insert" or all(c.get("old") is None for c in cells)))
+    if name == "proposes_nothing":  # no card, and no proposal serve refused before drawing one
+        return not got["approvals"] and not any(str(t).startswith("propose_") for t in got["tools"])
+    if name == "tools_not_called":
+        return not set(arg) & set(got["tools"])
+    if name == "text_not_equals":
+        return text.strip() != str(arg).strip()
+    if name == "chart_source":  # the LAST chart's pin asked what the case asks (a superset match)
+        charts = [r for r in got["renders"] if r["component"].get("kind") == "chart"]
+        spec = ((charts[-1].get("pin") or {}).get("chart") or {}) if charts else {}
+        return (bool(spec) and all(_same(spec.get(k), arg[k]) for k in ("chart", "x", "op", "y") if k in arg)
+                and _conds_in(arg.get("where", []), (spec.get("query") or {}).get("where")))
+    if name == "query_uses":  # the LAST query_rows read's arguments, as its pin carries them
+        reads = _pins(got, "rows")
+        if not reads:
+            return False
+        q = reads[-1]
+        return (_conds_in(arg.get("where", []), q.get("where"))
+                and not (arg.get("no_q") and q.get("q"))
+                and all(_same(q.get(k), arg[k]) for k in ("group_by", "limit") if k in arg)
+                and all(_same((q.get("order_by") or {}).get(k), v) for k, v in (arg.get("order_by") or {}).items()))
+    if name == "rows_order":
+        tr = [r for r in got["renders"] if r["component"].get("kind") == "table_results"]
+        rows = tr[-1]["component"]["props"].get("rows", []) if tr else []
+        return len(rows) >= len(arg["values"]) and all(
+            _same(r.get("cells", {}).get(arg["column"]), v) for r, v in zip(rows, arg["values"]))
+    if name == "text_from_render":  # the answer names a value a drawn table holds in that column
+        vals = []
+        for r in got["renders"]:
+            c, p = r["component"].get("kind"), r["component"].get("props", {})
+            if c == "table" and arg["column"] in p.get("columns", []):
+                i = p["columns"].index(arg["column"])
+                vals += [row[i] for row in p.get("rows", []) if i < len(row)]
+            elif c == "table_results":
+                vals += [row.get("cells", {}).get(arg["column"]) for row in p.get("rows", [])]
+        low = text.lower()
+        return any(str(v).lower() in low for v in vals if v not in (None, ""))
     if name == "no_number":  # honesty about a count it cannot see: it states none
         return not _nums(text)
     if name == "text_contains":
