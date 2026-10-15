@@ -3412,6 +3412,24 @@ fn tool_result_of(rig_name: &str, args: &str) -> serde_json::Value {
 }
 
 #[test]
+fn a_grouped_date_is_by_day_and_says_the_rows_it_leaves_out() {
+    // A2 review: a date axis keeps the last 60 days and a row with no date has no group; the model must hear
+    // that, or it adds the counts up and reports fewer than `matched`.
+    let day = 86_400;
+    let mut rows: Vec<_> = (0..70).map(|i| keap_row(&format!("d{i}"), serde_json::json!({"when": 1_767_225_600 + i * day}))).collect();
+    rows.extend((0..5).map(|i| keap_row(&format!("n{i}"), serde_json::json!({"status": "open"}))));
+    let rig = rig_at("gday", mapped(), fake_table(SHEET, rows).0, vec![query(r#"{"table": "sheet", "group_by": "when"}"#), answer("x")], Some(local()));
+    tool_turn(&rig, "q");
+    let g = tool_result(&rig, 1);
+    let groups = g["groups"].as_array().unwrap_or_else(|| panic!("{g}"));
+    assert_eq!((groups.len(), &groups[0], &groups[59]), (60, &serde_json::json!({"value": "2026-01-11", "count": 1}),
+               &serde_json::json!({"value": "2026-03-11", "count": 1})), "{g}");
+    let left = g["left_out"].as_str().unwrap_or_else(|| panic!("no left_out: {g}"));
+    assert!(left.starts_with("15 of the 75 matched rows are in no group"), "{left}");
+    assert!(tool_result_of("gnoleft", r#"{"table": "sheet", "group_by": "status"}"#).get("left_out").is_none());
+}
+
+#[test]
 fn an_op_or_y_without_group_by_is_refused_naming_the_rule() {
     for (name, args) in [("opnog", r#"{"table": "sheet", "op": "sum", "y": "amount"}"#), ("ynog", r#"{"table": "sheet", "y": "amount"}"#)] {
         let e = tool_result_of(name, args);
