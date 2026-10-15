@@ -219,6 +219,14 @@ class Fake:
         self.srv.close()
 
 
+def _reject():
+    return {"t": "approval_decision", "approval": AID, "decision": "reject", "note": None}
+
+
+def _cards(script):
+    return sum(m["t"] == "approval_request" for lines in script.values() for m in lines)
+
+
 def _run(script, tmp_path, *extra):
     fake = Fake(script)
     out = tmp_path / "last-run.json"
@@ -234,7 +242,9 @@ def test_a_good_run_passes_every_check(tmp_path):
     assert {c["id"]: c["failed"] for c in res["cases"]} == {c["id"]: [] for c in CASES}
     assert rc == 0
     assert all(c["model_uri"] == "fake-model" and c["seconds"] >= 0 for c in res["cases"])
-    assert {m["t"] for m in fake.seen} == {"turn"}
+    # The write cases draw a card: the runner may answer it, and only with reject (no approve, form or widget).
+    assert {m["t"] for m in fake.seen} <= {"turn", "approval_decision"}
+    assert [m for m in fake.seen if m["t"] == "approval_decision"] == [_reject()] * _cards(_script(bad=False))
 
 
 def test_a_bad_run_fails_exactly_the_broken_checks_and_rejects(tmp_path):
@@ -258,7 +268,7 @@ def test_a_bad_run_fails_exactly_the_broken_checks_and_rejects(tmp_path):
     assert failed == want
     assert rc == 1
     decisions = [m for m in fake.seen if m["t"] == "approval_decision"]
-    assert decisions == [{"t": "approval_decision", "approval": AID, "decision": "reject", "note": None}]
+    assert decisions == [_reject()] * _cards(_script(bad=True))
     # The answer is the turn's own text, not the fake's reply to the reject decision.
     assert [c["text"] for c in res["cases"] if c["id"] == "no-probe"] == ["iris-live-bench is next, in the agents track."]
     assert not [m for m in fake.seen if m["t"] in ("form_submit", "widget")]
