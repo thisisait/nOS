@@ -3931,6 +3931,13 @@ fn a_row_ref_field_lists_the_parent_labels_and_a_submit_writes_the_parent_id() {
     let f = rig.srv.form_from_schema(&alice(), "card-lines", Some(&["card".to_string(), "item".to_string()])).unwrap();
     let v = serde_json::to_value(Component::Form(f)).unwrap();
     assert_eq!(v["props"]["fields"][0], serde_json::json!({"key": "card", "label": "Card", "kind": "text", "required": true}));
+
+    // A label twice is text too: a select would write the first parent's id for the second.
+    let twins = vec![keap_row("c1", serde_json::json!({"title": "one"})), keap_row("c2", serde_json::json!({"title": "one"}))];
+    let (rig, _) = lines_rig("ref-form-twins", twins, vec![answer("x")]);
+    let f = rig.srv.form_from_schema(&alice(), "card-lines", None).unwrap();
+    let v = serde_json::to_value(Component::Form(f)).unwrap();
+    assert_eq!(v["props"]["fields"][0], serde_json::json!({"key": "card", "label": "Card", "kind": "text", "required": true}));
 }
 
 const WITH_LINES: &str = r#"{"table": "cards", "values": {"title": "new"},
