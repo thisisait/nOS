@@ -220,31 +220,6 @@ jobs:
         run: test "${{ needs.pytest.result }}" = success
 
   # ──────────────────────────────────────────────────────────────────────────
-  # PYTEST-APPS – focused subset on tests/apps/ for fast per-submodule
-  # failure visibility. Tier-2 apps_runner + Coolify importer regressions
-  # surface here before they bleed into the full pytest suite. Runs in
-  # parallel with the full pytest job; same Python pin so coverage is
-  # consistent. ~0.2s today.
-  # ──────────────────────────────────────────────────────────────────────────
-  pytest-apps:
-    name: Pytest (apps + importer)
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Check out the codebase.
-        uses: actions/checkout@v7
-
-      - name: Set up Python 3.
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.13'
-
-      - name: Install test dependencies.
-        run: pip3 install pytest pyyaml jsonschema
-
-      - name: Run apps + importer tests.
-        run: python3 -m pytest tests/apps/ -v
-
-  # ──────────────────────────────────────────────────────────────────────────
   # FACE – nOS-face shell (vendored SvelteKit, files/anatomy/face). The repo's
   # first JS toolchain (v0.2, 2026-07-18): type-check + lint + vitest. The
   # python doctrine/security gates (test_face_*.py) ride the pytest job.
