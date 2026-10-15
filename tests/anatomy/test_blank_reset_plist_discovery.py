@@ -400,6 +400,19 @@ def test_blank_reset_patterns_all_exist_in_some_role():
         )
 
 
+def _root_daemons_the_data_level_removes() -> set[str]:
+    """A root LaunchDaemon is not under ~/Library/LaunchAgents, so the find above
+    cannot see it; it is covered when the RENDERED remove=data set names its
+    /Library/LaunchDaemons path (the roaming tailnet dnsmasq, 2026-10-15)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("managed_status", REPO_ROOT / "tools/managed-status.py")
+    ms = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ms)
+    env = ms.jinja()
+    data, _all, _keep = ms.removal_levels(env, ms.config_ctx(env))
+    return {p.rsplit("/", 1)[1] for p in data if p.startswith("/Library/LaunchDaemons/")}
+
+
 def test_blank_reset_covers_every_repo_managed_plist():
     """Completeness gate (stronger than the role-map check): EVERY plist the
     playbook writes into ~/Library/LaunchAgents must be a blank-reset pattern.
@@ -412,6 +425,7 @@ def test_blank_reset_covers_every_repo_managed_plist():
     """
     patterns = set(_blank_reset_plist_patterns())
     managed = _repo_managed_plist_filenames()
+    root_daemons = _root_daemons_the_data_level_removes()
 
     uncovered = sorted(
         name
@@ -419,6 +433,7 @@ def test_blank_reset_covers_every_repo_managed_plist():
         if name not in patterns
         and name not in SELF_CLEANED_PLISTS
         and name not in LEGACY_CLEANUP_PATTERNS
+        and name not in root_daemons
     )
 
     if uncovered:
