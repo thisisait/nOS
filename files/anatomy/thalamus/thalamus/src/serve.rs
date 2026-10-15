@@ -1273,6 +1273,31 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Value::Array(for_model), false))
     }
 
+    /// A table's id and its GET /api/tables/<id>, named by id or by title, as the person.
+    /// Client bench 2026-10-14: a local model passes the table's title. One title match is the table;
+    /// none names the tables there are, so the next call can be right. Local bench r3: a form too.
+    fn table_info(&self, who: &Person, alias: &str) -> Result<(String, Value), String> {
+        let table = table_id(alias);
+        let base = self.keap_url.trim_end_matches('/').to_string();
+        let (status, info) = self.keap_status(who, &format!("{base}/api/tables/{}", enc(&table)), None)?;
+        match status {
+            200 => Ok((table, info)),
+            404 => {
+                let (_, list) = self.list_tables(who)?;
+                let all = list["tables"].as_array().cloned().unwrap_or_default();
+                let hit: Vec<&Value> = all.iter().filter(|t| t["title"].as_str().is_some_and(|x| x.eq_ignore_ascii_case(alias.trim()))).collect();
+                let [one] = hit.as_slice() else {
+                    let names: Vec<String> = all.iter().map(|t| format!("{} ({})", t["title"].as_str().unwrap_or(""), t["id"].as_str().unwrap_or(""))).collect();
+                    return Err(format!("no table `{alias}`; tables: {} (list_tables names them)", names.join(", ")));
+                };
+                let id = one["id"].as_str().unwrap_or_default().to_string();
+                let info = self.keap(who, &format!("{base}/api/tables/{}", enc(&id)), None)?;
+                Ok((id, info))
+            }
+            _ => Err(format!("KEAP answered {status} for table `{alias}`")),
+        }
+    }
+
     /// query_rows' arguments checked against the live schema, and every row they match (after q
     /// and where; before group_by, order_by and limit, which travel along unapplied).
     /// `read: false` stops before the rows: the arguments are checked against the schema and nothing more.
@@ -1283,24 +1308,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         }
         let given = |k: &str| a.get(k).filter(|v| !v.is_null());
         let alias = given("table").and_then(Value::as_str).filter(|t| !t.is_empty()).ok_or("query_rows needs `table`")?;
-        let mut table = table_id(alias);
-        let base = self.keap_url.trim_end_matches('/').to_string();
-        let (status, mut info) = self.keap_status(who, &format!("{base}/api/tables/{}", enc(&table)), None)?;
-        // Client bench 2026-10-14: a local model passes the table's title. One title match is the table;
-        // none names the tables there are, so the next call can be right.
-        if status == 404 {
-            let (_, list) = self.list_tables(who)?;
-            let all = list["tables"].as_array().cloned().unwrap_or_default();
-            let hit: Vec<&Value> = all.iter().filter(|t| t["title"].as_str().is_some_and(|x| x.eq_ignore_ascii_case(alias.trim()))).collect();
-            let [one] = hit.as_slice() else {
-                let names: Vec<String> = all.iter().map(|t| format!("{} ({})", t["title"].as_str().unwrap_or(""), t["id"].as_str().unwrap_or(""))).collect();
-                return Err(format!("no table `{alias}`; tables: {} (list_tables names them)", names.join(", ")));
-            };
-            table = one["id"].as_str().unwrap_or_default().to_string();
-            info = self.keap(who, &format!("{base}/api/tables/{}", enc(&table)), None)?;
-        } else if status != 200 {
-            return Err(format!("KEAP answered {status} for table `{alias}`"));
-        }
+        let (table, info) = self.table_info(who, alias)?;
         let name = info.pointer("/data/title").and_then(Value::as_str).filter(|t| !t.is_empty()).unwrap_or(alias).to_string();
         let schema: Vec<&Map<String, Value>> = info.pointer("/data/schema/columns").and_then(Value::as_array)
             .map(|c| c.iter().filter_map(Value::as_object).filter(|c| c.get("key").is_some_and(Value::is_string))
@@ -1513,8 +1521,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     }
 
     pub fn form_from_schema(&self, who: &Person, table: &str, columns: Option<&[String]>) -> Result<Form, String> {
-        let table = table_id(table);
-        let info = self.keap(who, &format!("{}/api/tables/{}", self.keap_url.trim_end_matches('/'), enc(&table)), None)?;
+        let (table, info) = self.table_info(who, table)?;
         let title = info.pointer("/data/title").and_then(Value::as_str).filter(|t| !t.is_empty()).unwrap_or(&table).to_string();
         let schema: Vec<&Map<String, Value>> = info.pointer("/data/schema/columns").and_then(Value::as_array)
             .map(|c| c.iter().filter_map(Value::as_object)

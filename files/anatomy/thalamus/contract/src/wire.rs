@@ -2,7 +2,7 @@
 //! Spec: files/anatomy/contracts/thalamus-shell.yml; gate:
 //! tests/anatomy/test_thalamus_shell_contract.py.
 
-use crate::renderers::{Component, Dropped, When};
+use crate::renderers::{Component, When};
 use crate::uid;
 use serde::{Deserialize, Serialize};
 
