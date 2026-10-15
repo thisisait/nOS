@@ -109,3 +109,12 @@ _TEMPLATE_MIN = (
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_the_default_seed_dir_is_the_sibling_clone(monkeypatch, tmp_path):
+    """Unset NOS_SEED_DIR fell back to ~/nos-seed, a stray 8-file dir on this
+    estate (2026-10-09 and again 2026-10-15), while the clone is ~/projects/nos-seed,
+    beside the default NOS_SRC ~/projects/nOS. The default is that sibling."""
+    monkeypatch.delenv("NOS_SEED_DIR", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert lib.seed_dir() == str(tmp_path / "projects" / "nos-seed")
