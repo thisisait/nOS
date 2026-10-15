@@ -79,9 +79,24 @@
 		{#if d.read_from?.length}<p><Badge tone="warn">contains text from {d.read_from.join(', ')}</Badge></p>{/if}
 		<ul class="diff">
 			{#each d.cells as ch}
-				<li><b>{ch.key}</b>: <span class="old">{shown(ch.old)}</span> → <span class="new">{shown(ch.new)}</span></li>
+				{#if d.op === 'insert_many' && d.row_id !== undefined}
+					<li><b>{ch.key}</b>: {shown(ch.new)} <span class="muted">(unchanged)</span></li>
+				{:else}
+					<li><b>{ch.key}</b>: <span class="old">{shown(ch.old)}</span> → <span class="new">{shown(ch.new)}</span></li>
+				{/if}
 			{/each}
 		</ul>
+		{#if d.lines}
+			{@const l = d.lines}
+			{#each l.rows as row, i}
+				<p class="muted">+ line {i + 1} of {l.rows.length} in {l.title} ({l.table}), its {l.ref_key} → the row above</p>
+				<ul class="diff">
+					{#each row as ch}
+						<li><b>{ch.key}</b>: <span class="old">{shown(ch.old)}</span> → <span class="new">{shown(ch.new)}</span></li>
+					{/each}
+				</ul>
+			{/each}
+		{/if}
 	{:else if component.kind === 'inbox_list'}
 		{@const i = component.props}
 		<h3>inbox — {i.items.length} waiting</h3>

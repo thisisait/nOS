@@ -7,7 +7,7 @@ export type Value = null | boolean | number | string | Value[] | { [k: string]: 
 
 export type Component =
 	| { kind: 'table_results'; props: { table: string; name: string; query: string; matched: number; total: number; columns: string[]; rows: { __id: string; cells: Record<string, Value> }[]; projected: boolean } }
-	| { kind: 'row_diff_approval'; props: { table: string; title: string; op: 'insert' | 'update'; row_id?: string; cells: { key: string; old: Value; new: Value }[]; read_from?: string[] } }
+	| { kind: 'row_diff_approval'; props: { table: string; title: string; op: 'insert' | 'update' | 'insert_many'; row_id?: string; cells: CellChange[]; read_from?: string[]; lines?: Lines } }
 	| { kind: 'inbox_list'; props: { items: { id: string; title: string; source: string; created_at: string }[]; refused: string[] } }
 	| { kind: 'approvals_list'; props: { items: { kind: string; severity: string; age: string; what: string; where: string; note?: string }[]; unknown: string[] } }
 	| { kind: 'red_status'; props: { red_count: number; reds: string[]; hold_count: number; holds: string[] } }
@@ -29,6 +29,9 @@ export type DashboardProps = { name: string; lens: Lens[]; widgets: { title: str
 /** A placed dashboard as KEAP keeps it for the person (renderers.rs SavedDashboard): the offer under its tab id. */
 export type SavedDashboard = { slug: string; name: string; lens: Lens[]; widgets: { title: string; spec: WidgetSpec }[] };
 /** A tab-wide condition (renderers.rs Lens); an empty value is unset. */
+export type CellChange = { key: string; old: Value; new: Value };
+/** insert_many: line items written after the parent, each with ref_key = the parent's id (one approval). */
+export type Lines = { table: string; title: string; ref_key: string; rows: CellChange[][] };
 export type Lens = { column: string; op: 'eq' | 'neq' | 'lt' | 'gt' | 'contains'; value: string; kind?: FormField['kind']; options?: string[] };
 
 /** A question Iris asks at a fork (renderers.rs Choice); `id` is the one serve minted. */
