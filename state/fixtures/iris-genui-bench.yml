@@ -402,3 +402,19 @@
     - "+ owner: iris"
     - "- blocker: virtiofs"
     - "  track: backup"
+# A KPI as serve draws it from show's source (the model never sends the number; serve.rs refuses a kpi without one).
+- id: kpi-total
+  kind: kpi
+  component:
+    kind: kpi
+    props:
+      title: Travel spend
+      value: 12450.5
+      unit: Kč
+      delta: -320
+      delta_label: vs last month
+      source: sum of amount over 7 rows of Expenses (kind = travel)
+  expect:
+    - "Travel spend: 12450.5 Kč"
+    - "down 320 vs last month"
+    - sum of amount over 7 rows of Expenses (kind = travel)

@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
-import { shownValue } from './fmt';
+import { number, shownValue, signed } from './fmt';
 import { header } from './form';
 import Message from './Message.svelte';
 import type { Component, ToShell, Value } from './wire';
@@ -30,10 +30,11 @@ const PROPS: Record<string, string[]> = {
 	form: ['fields', 'form', 'omitted', 'prefill', 'table', 'title'],
 	choice: ['id', 'multi', 'options', 'question', 'suggested'],
 	dashboard: ['dropped', 'lens', 'name', 'widgets'],
+	kpi: ['delta', 'delta_label', 'source', 'title', 'unit', 'value'],
 };
 const KINDS = Object.keys(PROPS);
 // Props a sample may leave out (an insert names no row); any other missing or extra prop is a rename.
-const OPTIONAL: Record<string, string[]> = { row_diff_approval: ['lines', 'read_from', 'row_id'], form: ['prefill'] };
+const OPTIONAL: Record<string, string[]> = { row_diff_approval: ['lines', 'read_from', 'row_id'], form: ['prefill'], kpi: ['delta', 'delta_label', 'source', 'unit'] };
 
 const text = (html: string) =>
 	html
@@ -72,6 +73,12 @@ function owedBy(c: Component): string[] {
 	if (c.kind === 'dashboard')
 		return [c.props.name, ...c.props.lens.flatMap((l) => [l.column, ...(l.value ? [l.value] : [])]),
 			...c.props.widgets.map((w) => w.title), ...c.props.dropped.flatMap((d) => [d.title, d.why]), 'Place on a new tab'];
+	// A KPI owes its number in the shell locale, its unit, the delta as a signed word-free arrow, and where it came from.
+	if (c.kind === 'kpi') {
+		const k = c.props;
+		return [k.title, number(k.value).replace(/\s+/g, ' '), ...(k.unit ? [k.unit] : []),
+			...(k.delta !== undefined ? [signed(k.delta).replace(/\s+/g, ' ')] : []), ...(k.delta_label ? [k.delta_label] : []), ...(k.source ? [k.source] : [])];
+	}
 	if (c.kind !== 'table_results') return owed(c.props as unknown as Value);
 	// The table's name, not its id (live 2026-10-12: the header showed the roadmap's UUID).
 	const { name, query, matched, total, columns, rows } = c.props;
@@ -417,5 +424,37 @@ describe('a sequence is SVG lifelines and arrows, every word as text', () => {
 		for (const p of q.participants) expect(drawn).toContain(p);
 		for (const s of q.steps) expect(drawn).toContain('text' in s ? s.text : 'note' in s ? s.note : s.phase);
 		expect(h.match(/<path[^>]*class="msg/g)?.length).toBe(q.steps.filter((s) => 'from' in s).length);
+	});
+});
+
+describe('a kpi is one big number, its delta said as text', () => {
+	type Kpi = Extract<Component, { kind: 'kpi' }>['props'];
+	const kpi = (props: Kpi): ToShell => ({ t: 'widget', session: 's', widget: 'k', component: { kind: 'kpi', props } });
+
+	it('the number is the big text node, read in the shell locale with its unit', () => {
+		const h = html(kpi({ title: 'Travel spend', value: 12450.5, unit: 'Kč' }));
+		expect(h).toMatch(/class="kpi-value[^"]*"[^>]*>12,450.5 Kč</);
+		expect(text(h)).toContain('Travel spend');
+	});
+
+	it('money reads as CZK when the title names it and no unit is given', () => {
+		expect(text(html(kpi({ title: 'sum of amount', value: 42 })))).toContain(number(42, true).replace(/\s+/g, ' '));
+	});
+
+	it('a delta is an arrow and a sign in text, its word for a screen reader; none is drawn when there is none', () => {
+		const up = text(html(kpi({ title: 't', value: 1, delta: 320, delta_label: 'vs last month' })));
+		expect(up).toContain('↑ +320');
+		expect(up).toContain('up');
+		expect(up).toContain('vs last month');
+		const down = text(html(kpi({ title: 't', value: 1, delta: -3.5 })));
+		expect(down).toContain('↓ −3.5');
+		expect(down).toContain('down');
+		expect(html(kpi({ title: 't', value: 1 }))).not.toContain('kpi-delta');
+	});
+
+	it('a kpi draws no link, no markup from its strings', () => {
+		const h = html(kpi({ title: '<img onerror=1>', value: 1, source: '<script>x</script>' }));
+		expect(h).not.toMatch(/<(a|script|img)[\s>]/);
+		expect(h).toContain('&lt;img');
 	});
 });

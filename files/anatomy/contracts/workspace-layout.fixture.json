@@ -156,6 +156,73 @@
    }
   },
   {
+   "case": "a kpi tile beside the rows it totals",
+   "layout": {
+    "version": 2,
+    "active": "k",
+    "chat": {
+     "x": 880,
+     "y": 80,
+     "w": 380,
+     "h": 560,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "k",
+      "name": "Travel",
+      "widgets": [
+       {
+        "id": "w1",
+        "title": "Travel spend",
+        "spec": {
+         "kpi": {
+          "query": {
+           "table": "expenses",
+           "where": [
+            {
+             "column": "kind",
+             "op": "eq",
+             "value": "travel"
+            }
+           ]
+          },
+          "op": "sum",
+          "y": "amount",
+          "unit": "Kč"
+         }
+        },
+        "x": 0,
+        "y": 0,
+        "w": 3,
+        "h": 3
+       },
+       {
+        "id": "w2",
+        "title": "Trips",
+        "spec": {
+         "rows": {
+          "table": "expenses",
+          "where": [
+           {
+            "column": "kind",
+            "op": "eq",
+            "value": "travel"
+           }
+          ]
+         }
+        },
+        "x": 3,
+        "y": 0,
+        "w": 9,
+        "h": 8
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
    "case": "one empty workspace",
    "layout": {
     "version": 2,

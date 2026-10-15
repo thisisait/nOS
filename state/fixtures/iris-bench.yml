@@ -185,6 +185,16 @@
     count_equals_matched: true   # bench rows 10-14
     proposes_nothing: true
     not_blank: true
+# quick wins Q3 (gap #8): a KPI tile is a total serve computes from show's source; the model never writes the number
+- id: kpi-total
+  prompt: Put the total points of the next rows of iris-bench-2 on a KPI tile.
+  needs_rows: true
+  checks:
+    tools_called: [show]
+    kinds_drawn: [kpi]
+    no_number_without_source: true
+    proposes_nothing: true
+    not_blank: true
 # writes: the runner rejects every card
 - id: edit-card
   needs_rows: true

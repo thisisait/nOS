@@ -4193,3 +4193,91 @@ fn the_prompt_names_totals_and_between() {
     let p = system_prompt(&rig);
     assert!(p.contains("one total") && p.contains("between") && p.contains("this_month"), "{p}");
 }
+
+// --- quick wins Q3 (gap #8): a KPI tile is a total serve computed, never the model's number ---
+
+fn kpi_show(props: serde_json::Value, source: Option<serde_json::Value>) -> String {
+    let mut args = serde_json::json!({"component": {"kind": "kpi", "props": props}});
+    if let Some(s) = source {
+        args["source"] = s;
+    }
+    call("show", &args.to_string())
+}
+
+#[test]
+fn a_kpi_is_keaps_total_and_pins_a_kpi_spec() {
+    let source = serde_json::json!({"query": {"table": "sheet", "where": [{"column": "status", "op": "eq", "value": "open"}]}, "op": "sum", "y": "amount"});
+    let rig = rig_at("kpi", mapped(), fake_table(SHEET, statuses()).0,
+        vec![kpi_show(serde_json::json!({"title": "Open amount", "unit": "Kč", "value": 999, "delta": 5}), Some(source.clone())), answer("Drawn.")],
+        Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "open amount as a tile");
+    let drawn = rendered(&got);
+    assert_eq!(drawn.len(), 1, "{got:?}");
+    let props = &drawn[0]["component"]["props"];
+    assert_eq!(drawn[0]["component"]["kind"], "kpi", "{props}");
+    assert_eq!((&props["title"], &props["value"], &props["unit"]), (&serde_json::json!("Open amount"), &serde_json::json!(6.0), &serde_json::json!("Kč")),
+               "the model's 999 is replaced by KEAP's sum: {props}");
+    assert!(props.get("delta").is_none(), "a delta is never the model's: {props}");
+    assert!(props["source"].as_str().is_some_and(|s| s.contains("sum of amount") && s.contains("3 rows")), "{props}");
+    let mut want = source.clone();
+    want["unit"] = serde_json::json!("Kč");
+    assert_eq!(drawn[0]["pin"], serde_json::json!({"kpi": want}), "the pin re-runs the total");
+    assert_eq!(tool_result(&rig, 1), serde_json::json!({"shown": "kpi", "value": 6.0}));
+    let session = session_of(&got);
+    let ev: Vec<_> = events(&rig.ledger, &session).into_iter().filter(|e| e.1 == "agent:iris/tool:show_source").collect();
+    assert_eq!(ev.iter().map(|e| e.0.as_str()).collect::<Vec<_>>(), ["agent_tool_use", "agent_tool_result"], "{ev:?}");
+    assert_eq!(ev[0].2["kind"], "kpi", "{:?}", ev[0]);
+    let p = system_prompt(&rig);
+    assert!(p.contains("show kpi with `source`") && p.contains("never write its number"), "{p}");
+}
+
+#[test]
+fn a_kpi_without_a_source_or_with_a_bad_one_is_refused_and_draws_nothing() {
+    let bad = [
+        (None, "needs `source`"),
+        (Some(serde_json::json!({"query": {"table": "sheet"}, "op": "sum"})), "sum needs `y`"),
+        (Some(serde_json::json!({"query": {"table": "sheet"}, "op": "count", "x": "status"})), "unknown field `x`"),
+        (Some(serde_json::json!({"query": {"table": "sheet"}, "op": "avg", "y": "ghost"})), "no column `ghost`"),
+    ];
+    let mut model: Vec<String> = bad.iter().map(|(s, _)| kpi_show(serde_json::json!({"title": "Total", "value": 42}), s.clone())).collect();
+    model.push(answer("done"));
+    let rig = rig_at("kpibad", mapped(), fake_table(SHEET, statuses()).0, model, Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "a tile");
+    for (i, (_, want)) in bad.iter().enumerate() {
+        let e = tool_result(&rig, i + 1);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "kpi #{i} must be refused naming {want}: {e}");
+    }
+    assert!(rendered(&got).is_empty(), "no number without a source: {got:?}");
+    assert!(serve::SHOW_KINDS.contains(&"kpi"), "the model may ask for a kpi");
+}
+
+#[test]
+fn a_kpi_widget_re_runs_the_total_as_the_person() {
+    let rig = sheet_rig("kpiw", statuses());
+    let (session, w) = run_widget(&rig, "k1", serde_json::json!({"kpi": {"query": {"table": "sheet"}, "op": "count"}}));
+    assert_eq!((&w["t"], &w["component"]["kind"], &w["component"]["props"]["value"]),
+               (&serde_json::json!("widget"), &serde_json::json!("kpi"), &serde_json::json!(4.0)), "{w}");
+    assert_eq!(w["component"]["props"]["title"], "count", "{w}");
+    assert!(rig.model.lock().unwrap().is_empty(), "a widget asked the model");
+    let ev = events(&rig.ledger, &session);
+    assert!(ev.iter().any(|e| e.0 == "agent_tool_use" && e.1 == "agent:iris/tool:widget_kpi" && e.2["op"] == "count"), "{ev:?}");
+    // An average over no number is no number: the widget is told why, never drawn as 0.
+    let (_, none) = run_widget(&sheet_rig("kpinone", vec![]), "k2", serde_json::json!({"kpi": {"query": {"table": "sheet"}, "op": "avg", "y": "amount"}}));
+    assert_eq!((&none["t"], &none["widget"]), (&serde_json::json!("refused"), &serde_json::json!("k2")), "{none}");
+    assert!(none["reason"].as_str().is_some_and(|r| r.contains("no row has a number in amount")), "{none}");
+}
+
+#[test]
+fn an_offered_dashboard_takes_a_kpi_widget_checked_like_a_chart() {
+    let (_, got, _) = offer("dashkpi", serde_json::json!({"name": "Totals", "widgets": [
+        {"title": "Open amount", "kpi": {"query": {"table": "sheet"}, "op": "sum", "y": "amount", "unit": "Kč"}},
+        {"title": "Ghost", "kpi": {"query": {"table": "sheet"}, "op": "sum", "y": "ghost"}}]}));
+    let d = &dashboards(&got)[0];
+    assert_eq!(d["widgets"][0]["spec"], serde_json::json!({"kpi": {"query": {"table": "sheet"}, "op": "sum", "y": "amount", "unit": "Kč"}}), "{d}");
+    assert_eq!(d["dropped"][0]["title"], "Ghost", "{d}");
+    assert!(d["dropped"][0]["why"].as_str().unwrap().contains("no column `ghost`"), "{d}");
+}

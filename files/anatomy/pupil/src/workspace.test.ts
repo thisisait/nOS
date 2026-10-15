@@ -152,6 +152,8 @@ describe('a lens is merged at send time', () => {
 		expect(lensed({ rows: { table: 'expenses', where: [own] } }, [travel])).toEqual({ rows: { table: 'expenses', where: [own, ...w] } });
 		expect(lensed(chart, [travel])).toEqual({ chart: { query: { table: 'expenses', where: w }, chart: 'bar', x: 'kind', op: 'count' } });
 		expect(lensed({ form: { table: 'expenses' } }, [travel]), 'a form takes the lens as prefill only').toEqual({ form: { table: 'expenses' } });
+		const kpi = { kpi: { query: { table: 'expenses' }, op: 'sum', y: 'amount' } } as const;
+		expect(lensed(kpi, [travel]), 'a kpi total is over the lensed rows').toEqual({ kpi: { query: { table: 'expenses', where: w }, op: 'sum', y: 'amount' } });
 		expect(lensed(rows, [unset])).toEqual(rows);
 		expect(lensed(rows, undefined)).toEqual(rows);
 	});

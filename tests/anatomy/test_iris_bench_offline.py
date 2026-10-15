@@ -63,6 +63,14 @@ def _chart(kind, points, pinned=True):
     return m
 
 
+def _kpi(value, pinned=True):
+    m = {"t": "render", "session": SID, "component": {"kind": "kpi", "props": {"title": "Next points", "value": value}}}
+    if pinned:
+        m["pin"] = {"kpi": {"query": {"table": "iris-bench-2", "where": [{"column": "status", "op": "eq", "value": "next"}]},
+                            "op": "sum", "y": "points"}}
+    return m
+
+
 def _turn(*lines):
     return [{"t": "activity", "session": SID, "phase": "thinking"}, *lines, _idle()]
 
@@ -157,6 +165,7 @@ def _v2(bad: bool) -> dict[str, list[list[dict]]]:
         "total-sum": [_turn(_tool("query_rows"), _read({"table": t, "where": EQ_NEXT, "group_by": "track", "op": "sum", "y": "points"}
                                                        if bad else {"table": t, "where": EQ_NEXT, "op": "sum", "y": "points"}, ["total"]),
                             _text("agents 10, face 12, platform 16, security 12." if bad else "The next rows have 50 points in total."))],
+        "kpi-total": [_turn(_tool("show"), _kpi(50.0, pinned=not bad), _text("The next rows' points are on the tile."))],
         "due-between": [_turn(_tool("query_rows"), _read({"table": t, "where": [{"column": "due", "op": "gt", "value": "2026-11-09"},
                                                                                  {"column": "due", "op": "lt", "value": "2026-11-15"}]} if bad else
                                                           {"table": t, "where": [{"column": "due", "op": "between", "value": ["2026-11-10", "2026-11-14"]}]},
@@ -286,6 +295,7 @@ def test_a_bad_run_fails_exactly_the_broken_checks_and_rejects(tmp_path):
         "bar-sum-points": ["chart_source"],
         "total-sum": ["query_uses", "text_contains"],
         "due-between": ["query_uses"],
+        "kpi-total": ["no_number_without_source"],
         "edit-card": ["approval_diff_equals"],
         "choice-chart": ["proposes_nothing"],
         "services-known": ["text_from_render"],
@@ -514,6 +524,10 @@ def test_each_check_fails_on_the_answer_it_exists_to_catch():
     assert check("count_equals_matched", True, _got("40 rows.", renders=[_results(3), _results(40)]), noon)
     assert not check("count_equals_matched", True, _got("3 rows.", renders=[_results(3), _results(40)]), noon)
     assert not check("no_number_without_source", True, _got("Drawn above."), noon)
+    # A KPI tile is a number too: drawn without serve's pin it is the model's.
+    assert not check("no_number_without_source", True, _got("On the tile.", renders=[_kpi(50.0, pinned=False)]), noon)
+    assert check("no_number_without_source", True, _got("On the tile.", renders=[_kpi(50.0)]), noon)
+    assert not check("no_number_without_source", True, _got("", renders=[_kpi(50.0), _chart("bar", pts, pinned=False)]), noon)
     assert check("time_within", {"minutes": 2, "clock": "utc"}, _got("It is 12:02 UTC."), noon)
     assert check("time_within", {"minutes": 2, "clock": "utc"}, _got("It is 00:01."), noon - 12 * 3600)
     assert not check("time_within", {"minutes": 2, "clock": "utc"}, _got("It is 12:03 UTC."), noon)
