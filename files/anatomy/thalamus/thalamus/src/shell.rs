@@ -346,13 +346,6 @@ impl App {
             ToShell::TableChanged { table, row, .. } => {
                 self.lines.push(Line::styled(format!("table {table} changed (row {row})"), Style::new().fg(Color::DarkGray)));
             }
-            // The terminal keeps no tabs: what the pupil asked of KEAP is only said.
-            ToShell::Dashboards { dashboards, left_out, .. } => {
-                let each: Vec<String> = dashboards.iter().map(|d| format!("{} ({}, {} widgets)", d.name, d.slug, d.widgets.len())).collect();
-                self.lines.push(Line::from(format!("dashboards in KEAP: {}", if each.is_empty() { "none".into() } else { each.join(", ") })));
-                self.lines.extend(left_out.iter().map(|x| warn(format!("  left out: {} — {}", x.title, x.why))));
-            }
-            ToShell::DashboardSaved { slug, row, .. } => self.lines.push(Line::from(format!("dashboard {slug} saved in KEAP (row {row})"))),
             // The pupil's eye shows it; the terminal's scrollback stays the conversation.
             ToShell::Activity { .. } => {}
         }

@@ -750,38 +750,6 @@ pub struct Dropped {
     pub why: String,
 }
 
-/// A dashboard the person placed, as KEAP's iris-dashboards keeps it for them: the offer under the
-/// pupil's tab id. The owner is never in it: the thalamus writes and filters by the peer's person.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct SavedDashboard {
-    pub slug: String,
-    pub name: String,
-    pub lens: Vec<Lens>,
-    pub widgets: Vec<DashboardWidget>,
-}
-
-impl SavedDashboard {
-    /// A slug is a workspace id ([A-Za-z0-9_-]{1,64}); name, lens and widgets as an offer's.
-    pub fn check(&self) -> Result<(), String> {
-        if !crate::wire::is_token(&self.slug) {
-            return Err(format!("dashboard slug is not [A-Za-z0-9_-]{{1,64}}: {:?}", self.slug));
-        }
-        if self.name.trim().is_empty() {
-            return Err("a dashboard has no name".into());
-        }
-        cap("a dashboard name", &self.name, 40)?;
-        check_lens(&self.lens)?;
-        if !(1..=8).contains(&self.widgets.len()) {
-            return Err(format!("dashboard widgets: {}, 1 to 8", self.widgets.len()));
-        }
-        self.widgets.iter().try_for_each(|w| {
-            cap("a widget title", &w.title, NAME_MAX)?;
-            crate::wire::check_spec(&w.spec).map_err(|e| format!("widget {:?}: {e}", w.title))
-        })
-    }
-}
-
 /// One tab-wide condition: it joins every rows and chart widget's `where` when the widget is sent,
 /// never its saved spec. An empty value is unset. kind and options say how the person picks a value.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

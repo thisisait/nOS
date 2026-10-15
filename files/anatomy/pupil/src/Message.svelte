@@ -55,13 +55,6 @@
 		<p class="muted">widget {msg.widget}: row {msg.row} added (form {msg.form})</p>
 	{:else if msg.t === 'table_changed'}
 		<p class="muted">table {msg.table} changed (row {msg.row})</p>
-	{:else if msg.t === 'dashboards'}
-		<p class="muted">
-			dashboards in KEAP: {#each msg.dashboards as d, i}{i ? ', ' : ''}{d.name} ({d.slug}, {d.widgets.length} widgets){:else}none{/each}
-		</p>
-		{#each msg.left_out as x}<StatusNote kind="error" block={false}>left out: {x.title} — {x.why}</StatusNote>{/each}
-	{:else if msg.t === 'dashboard_saved'}
-		<p class="muted">dashboard {msg.slug} saved in KEAP (row {msg.row})</p>
 	{/if}
 </div>
 
