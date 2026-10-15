@@ -248,6 +248,9 @@ struct Open {
     forms: HashMap<String, Form>,
     /// The choices this session asked and the person has not answered, by the id serve minted.
     choices: HashMap<String, Choice>,
+    /// This turn's last grouped query_rows: its chart source and the counts it returned. A chart drawn
+    /// right after it with exactly those counts is that source's chart, so it can be pinned (2026-10-15).
+    last_group: Option<(Value, Vec<(String, f64)>)>,
 }
 
 /// How many widget forms one session holds open.
@@ -600,7 +603,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris),
         };
         Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
-                  pending: HashSet::new(), shown: HashSet::new(), forms: HashMap::new(), choices: HashMap::new() })
+                  pending: HashSet::new(), shown: HashSet::new(), forms: HashMap::new(), choices: HashMap::new(), last_group: None })
     }
 
     /// The decider gate before a submit, a decision or a choice reply: a refused peer is told and
@@ -808,6 +811,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         }
         let _ = self.record(o, Kind::Message, None, json!({"role": "person", "text": text}));
         o.messages.push(json!({"role": "user", "content": text}));
+        o.last_group = None;
         self.think(who, out, o);
     }
 
@@ -856,6 +860,16 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                                             json!({"rows": ids, "matched": t.matched, "total": t.total}));
                         // A group is a value, not a row: it never unlocks a proposal.
                         let v = if grouped {
+                            let mut q = json!({"table": t.table});
+                            for k in ["q", "where"] {
+                                if let Some(x) = args.get(k).filter(|x| !x.is_null()) {
+                                    q[k] = x.clone();
+                                }
+                            }
+                            let counts = extra.as_array().into_iter().flatten().filter_map(|g| {
+                                Some((g.get("value").filter(|v| !v.is_null()).map(text)?, g.get("count")?.as_f64()?))
+                            }).collect();
+                            o.last_group = Some((json!({"query": q, "x": args["group_by"], "op": "count"}), counts));
                             json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total, "groups": extra})
                         } else {
                             o.shown.extend(t.rows.iter().map(|r| (t.table.clone(), r.__id.clone())));
@@ -871,7 +885,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                     // Its tool_result is written by decide(), once the person has answered.
                     "propose_row_edit" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
                     "propose_row_edit" => self.propose_row_edit(who, &args, &o.shown).and_then(|d| self.ask(o, out, d)),
-                    "show" => show(&args).and_then(|(c, source)| match source {
+                    "show" => show(&args).and_then(|(c, source)| match source.or_else(|| inferred_source(&c, o.last_group.as_ref())) {
                         None => Ok((c, None)),
                         Some(src) => self.sourced(who, o, c, src),
                     }).and_then(|(c, pin)| opened(o, c).map(|c| (c, pin))).map(|(c, pin)| {
@@ -1599,6 +1613,20 @@ pub fn normalize_show(args: &Value) -> Value {
         o.insert("component".into(), comp);
     }
     out
+}
+
+/// The grouped query just run is a chart's source when the chart plots exactly its counts, label for label.
+fn inferred_source(c: &Component, last: Option<&(Value, Vec<(String, f64)>)>) -> Option<Value> {
+    let (src, counts) = last?;
+    let Component::Chart(_) = c else { return None };
+    let v = serde_json::to_value(c).ok()?;
+    let series = v.pointer("/props/series")?.as_array()?;
+    let [one] = series.as_slice() else { return None };
+    let pts: Vec<(String, f64)> = one["points"].as_array()?.iter()
+        .filter_map(|p| Some((p.get(0)?.as_str()?.to_string(), p.get(1)?.as_f64()?))).collect();
+    let same = pts.len() == counts.len() && !pts.is_empty()
+        && pts.iter().all(|(x, y)| counts.iter().any(|(k, n)| k == x && (n - y).abs() < 1e-9));
+    same.then(|| src.clone())
 }
 
 fn show(args: &Value) -> Result<(Component, Option<Value>), String> {
