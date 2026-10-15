@@ -671,6 +671,15 @@ def test_an_empty_table_is_no_data_not_a_failure():
     assert not b.no_data(case, _got("I cannot access the table (404).", tools=["query_rows"])), "nothing was read"
 
 
+def test_a_rate_limited_run_is_no_data():
+    """Local bench (mistral-eu): 13 of 34 cases were scored FAIL on a blank the provider's 429 left."""
+    b = _bench()
+    limited = dict(_got(""), refused=["model answered 429"])
+    for cid in ("by-title", "time-now"):
+        assert b.no_data(next(c for c in CASES if c["id"] == cid), limited), cid
+    assert not b.no_data(next(c for c in CASES if c["id"] == "time-now"), dict(_got(""), refused=["decider refused"]))
+
+
 def test_a_result_records_what_each_query_asked():
     """The bench sees no tool arguments; the query line on each table_results is the next best witness."""
     got = _got("x", renders=[_results(3)])
