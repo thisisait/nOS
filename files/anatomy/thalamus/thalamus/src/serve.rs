@@ -276,6 +276,8 @@ struct Matched<'a> {
     schema: Vec<Map<String, Value>>,
     hits: Vec<(String, Map<String, Value>)>,
     group: Option<&'a str>,
+    /// What each group says: count, or sum|avg of a number column (only with group).
+    agg: (Op, Option<&'a str>),
     order: Option<(&'a str, bool)>,
     limit: usize,
     columns: Vec<String>,
@@ -469,7 +471,7 @@ multi}; suggested names your pick among the options, exactly 1 unless multi; nev
                 "multi": {"type": "boolean"}})))]}}})
 }
 
-const QUERY_KEYS: [&str; 7] = ["table", "q", "where", "columns", "order_by", "limit", "group_by"];
+const QUERY_KEYS: [&str; 9] = ["table", "q", "where", "columns", "order_by", "limit", "group_by", "op", "y"];
 const WHERE_KEYS: [&str; 3] = ["column", "op", "value"];
 const ORDER_KEYS: [&str; 2] = ["column", "dir"];
 const OPS: [&str; 6] = ["eq", "neq", "in", "contains", "lt", "gt"];
@@ -488,7 +490,9 @@ fn tools() -> Value {
             "order_by": {"type": "object", "additionalProperties": false, "required": ["column"], "properties": {
                 "column": {"type": "string"}, "dir": {"enum": ["asc", "desc"]}}},
             "limit": {"type": "integer", "minimum": 0, "maximum": 50, "description": "rows returned, default 20; 0 counts only"},
-            "group_by": {"type": "string", "description": "a column key: count the matched rows per value of it, instead of rows"}}}}},
+            "group_by": {"type": "string", "description": "a column key: count the matched rows per value of it, instead of rows"},
+            "op": {"enum": ["count", "sum", "avg"], "description": "only with group_by: count rows (default), or sum or avg of y, per value"},
+            "y": {"type": "string", "description": "only with group_by and op sum or avg: a number column key"}}}}},
         {"type": "function", "function": {"name": "propose_row_edit", "description": PROPOSE_ROW_EDIT,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "row_id", "values"], "properties": {
             "table": {"type": "string", "description": "the table id, or \"roadmap\" for the roadmap"},
@@ -637,7 +641,7 @@ impl Server {
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
 asked for, never to look at a row; propose_row_insert only for a new row the person asked for, in a table query_rows showed them. To show structured output call show ({}); plain text may use markdown, \
 nothing else. To count per value (for a chart) call query_rows with \
-group_by; to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
+group_by; for a sum or average per value add op and y, then show chart (the source is inferred and the chart pins); to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
 KEAP's and the person can pin the chart. To see which DataTables the person has, call list_tables, then query_rows with an id. For what is red or broken on the estate call red_status. Before recommending software, call estate_services: \
 prefer a service the estate already has. For what waits for the operator's approval call approvals_awaiting; \
 for what waits in the person's own inbox call inbox; \
@@ -932,10 +936,15 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                                     q[k] = x.clone();
                                 }
                             }
-                            let counts = extra.as_array().into_iter().flatten().filter_map(|g| {
-                                Some((g.get("value").filter(|v| !v.is_null()).map(text)?, g.get("count")?.as_f64()?))
+                            let op = args.get("op").and_then(Value::as_str).unwrap_or("count");
+                            let vals = extra.as_array().into_iter().flatten().filter_map(|g| {
+                                Some((g["value"].as_str().unwrap_or("(empty)").to_string(), g.get(op)?.as_f64()?))
                             }).collect();
-                            o.last_group = Some((json!({"query": q, "x": args["group_by"], "op": "count"}), counts));
+                            let mut src = json!({"query": q, "x": args["group_by"], "op": op});
+                            if op != "count" {
+                                src["y"] = args["y"].clone();
+                            }
+                            o.last_group = Some((src, vals));
                             json!({"table": t.table, "name": t.name, "matched": t.matched, "total": t.total, "groups": extra})
                         } else {
                             o.shown.extend(t.rows.iter().map(|r| ((t.table.clone(), r.__id.clone()), t.name.clone())));
@@ -1064,24 +1073,31 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// here: the whole table or an Err, so `total` is exact. Also returns the columns for the model.
     /// The table, then for the model its columns (or, grouped, its groups), and whether it was grouped.
     fn query_rows(&self, who: &Person, args: &Value) -> Result<(TableResults, Value, bool), String> {
-        let Matched { table, name, query, total, schema, mut hits, group, order, limit, columns } = self.matched(who, args)?;
+        let Matched { table, name, query, total, schema, mut hits, group, agg: (op, y), order, limit, columns } = self.matched(who, args)?;
         let matched = hits.len();
         if let Some(k) = group {
-            let mut counts: Vec<(Value, usize)> = Vec::new();
-            for (_, v) in &hits {
-                let x = v.get(k).cloned().filter(|x| !x.is_null() && text(x) != "").unwrap_or(Value::Null);
-                match counts.iter_mut().find(|(y, _)| *y == x) {
-                    Some((_, n)) => *n += 1,
-                    None => counts.push((x, 1)),
+            let axis = axis_of(&schema, k);
+            let (counts, _) = aggregate(&hits, k, axis, None, Op::Count);
+            // ponytail: past 60 groups each op folds its own "other", so that row's count is approximate.
+            let vals = if op == Op::Count { counts.clone() } else { aggregate(&hits, k, axis, y, op).0 };
+            let opname = text(&json!(op));
+            let (mut groups, mut rows) = (Vec::new(), Vec::new());
+            for (label, v) in vals {
+                let n = counts.iter().find(|(l, _)| *l == label).map_or(0, |c| c.1 as usize);
+                let value = if label == "(empty)" { Value::Null } else { json!(label) };
+                let mut g = json!({"value": value, "count": n});
+                let mut cells = BTreeMap::from([(k.to_string(), value), ("count".to_string(), json!(n))]);
+                if op != Op::Count {
+                    g[&opname] = json!(v);
+                    cells.insert(opname.clone(), json!(v));
                 }
+                groups.push(g);
+                rows.push(Row { __id: label, cells });
             }
-            counts.sort_by(|a, b| b.1.cmp(&a.1));
-            let groups: Vec<Value> = counts.iter().map(|(x, n)| json!({"value": x, "count": n})).collect();
-            let rows = counts.into_iter().map(|(x, n)| {
-                let id = if x.is_null() { "(empty)".to_string() } else { text(&x) };
-                Row { __id: id, cells: BTreeMap::from([(k.to_string(), x), ("count".to_string(), json!(n))]) }
-            }).collect();
-            let columns = vec![k.to_string(), "count".to_string()];
+            let mut columns = vec![k.to_string(), "count".to_string()];
+            if op != Op::Count {
+                columns.push(opname);
+            }
             return Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Value::Array(groups), true));
         }
         if let Some((k, desc)) = order {
@@ -1247,6 +1263,26 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             }
             Some(_) => return Err("`group_by` is a column key".into()),
         };
+        let op = match given("op") {
+            None => Op::Count,
+            Some(o) => serde_json::from_value::<Op>(o.clone()).map_err(|_| format!("`op` is count, sum or avg, not {o}"))?,
+        };
+        if group.is_none() && (given("op").is_some() || given("y").is_some()) {
+            return Err("`op` and `y` say what each group holds: only with `group_by`".into());
+        }
+        let opname = text(&json!(op));
+        let y = match (op, given("y")) {
+            (Op::Count, _) => None,
+            (_, None) => return Err(format!("{opname} needs `y`, a number column")),
+            (_, Some(Value::String(y))) => match col(y)?.get("kind").and_then(Value::as_str).unwrap_or("") {
+                "number" => {
+                    said.push(format!("{opname} of {y}"));
+                    Some(y.as_str())
+                }
+                k => return Err(format!("`{y}` is not a number column ({k}); {opname} needs one")),
+            },
+            (_, Some(_)) => return Err("`y` is a column key".into()),
+        };
         let limit = match given("limit") {
             None => 20,
             Some(n) => n.as_u64().filter(|n| *n <= 50).ok_or("`limit` is a whole number from 0 to 50")? as usize,
@@ -1277,7 +1313,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             .collect();
         let query = if said.is_empty() { "all rows".to_string() } else { said.join(" · ") };
         let schema = schema.into_iter().cloned().collect();
-        Ok(Matched { table, name, query, total, schema, hits, group, order, limit, columns })
+        Ok(Matched { table, name, query, total, schema, hits, group, agg: (op, y), order, limit, columns })
     }
 
     /// Every row of one table the person may read: GET /api/tables/:id/rows, every page.
@@ -1615,27 +1651,14 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         if let Some(w) = &c.query.where_ {
             args["where"] = w.clone();
         }
+        args["group_by"] = json!(c.x);
+        args["op"] = json!(c.op);
+        if let Some(y) = &c.y {
+            args["y"] = json!(y);
+        }
         let m = self.matched(who, &args)?;
-        let kind_of = |k: &str| {
-            m.schema.iter().find(|col| col.get("key").and_then(Value::as_str) == Some(k))
-                .map(|col| col.get("kind").and_then(Value::as_str).unwrap_or("").to_string())
-                .ok_or_else(|| format!("no column `{k}` in {}; columns: {}", m.name,
-                    m.schema.iter().filter_map(|col| col.get("key").and_then(Value::as_str)).collect::<Vec<_>>().join(", ")))
-        };
-        let op = text(&json!(c.op));
-        let axis = match kind_of(&c.x)?.as_str() {
-            "number" => Axis::Number,
-            "date" => Axis::Time,
-            _ => Axis::Category,
-        };
-        let y = match (c.op, &c.y) {
-            (Op::Count, _) => None,
-            (_, None) => return Err(format!("{op} needs `y`, a number column")),
-            (_, Some(y)) => match kind_of(y)?.as_str() {
-                "number" => Some(y.as_str()),
-                k => return Err(format!("`{y}` is not a number column ({k}); {op} needs one")),
-            },
-        };
+        let (op, y) = (text(&json!(c.op)), m.agg.1);
+        let axis = axis_of(&m.schema, &c.x);
         let (points, cut) = aggregate(&m.hits, &c.x, axis, y, c.op);
         let name = y.map_or(op.clone(), |y| format!("{op} of {y}"));
         let title = format!("{name} by {}{}", c.x, if cut && axis == Axis::Time { " (last 60 days)" } else { "" });
@@ -1900,6 +1923,15 @@ fn show(args: &Value) -> Result<(Component, Option<Value>), String> {
     let c = serde_json::from_value::<Component>(args["component"].clone()).map_err(|e| bad(e.to_string()))?;
     c.check().map_err(bad)?;
     Ok((c, args.get("source").filter(|s| !s.is_null()).cloned()))
+}
+
+/// The chart axis a column's kind asks for: number, a day, or a category.
+fn axis_of(schema: &[Map<String, Value>], k: &str) -> Axis {
+    match schema.iter().find(|c| c.get("key").and_then(Value::as_str) == Some(k)).and_then(|c| c.get("kind")?.as_str()) {
+        Some("number") => Axis::Number,
+        Some("date") => Axis::Time,
+        _ => Axis::Category,
+    }
 }
 
 /// One series from matched rows: `op` of `y` per value of `x` (count counts rows; sum and avg
