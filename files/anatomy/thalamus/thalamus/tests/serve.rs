@@ -3183,6 +3183,21 @@ fn search_memory_refuses_a_bad_ask_before_keap() {
 }
 
 #[test]
+fn a_memory_url_the_model_may_link_is_drawn_too() {
+    // The bench's no_invented_link sees only renders, so a URL the model is handed must be in one.
+    let rig = rig_n("mem-url", mapped(), vec![memory(true, serde_json::json!([
+        {"kind": "note", "refId": "n-1", "name": "Grafana alerts", "description": "d", "url": "/notes/n-1", "score": 0.9},
+        {"kind": "note", "refId": "n-2", "name": "bare", "description": "", "url": "/notes/n-2", "score": 0.5}]))],
+                    vec![call("search_memory", r#"{"q": "grafana"}"#), answer("x")]);
+    let (got, _) = tool_turn(&rig, "grafana?");
+    let details: Vec<Option<String>> = got.iter().find_map(|m| match m {
+        ToShell::Render { component: Component::List(l), .. } => Some(l.items.iter().map(|i| i.detail.clone()).collect()),
+        _ => None,
+    }).expect("a List render");
+    assert_eq!(details, vec![Some("d · /notes/n-1".into()), Some("/notes/n-2".into())]);
+}
+
+#[test]
 fn unreadable_memory_is_unknown_and_no_hit_is_no_render() {
     let rig = rig_n("mem-5xx", mapped(), vec![r#"!502 {"success": false, "error": "embedder down"}"#.into()],
                     vec![call("search_memory", r#"{"q": "zorblax-41"}"#), answer("x")]);
