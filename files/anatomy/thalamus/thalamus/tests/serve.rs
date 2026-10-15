@@ -1491,11 +1491,17 @@ fn show_refuses_form() {
 /// pages them (`limit`, then `cursor` while `nextCursor` is set), POST an upsert that mints an
 /// id when none is given. `schema` is the whole GET /api/tables/:id body. Every request is seen.
 fn fake_table(schema: &str, rows: Vec<serde_json::Value>) -> ((String, Seen), Arc<Mutex<Vec<serde_json::Value>>>) {
-    let info: serde_json::Value = serde_json::from_str(schema).unwrap();
-    let base = format!("/api/tables/{}", info["data"]["id"].as_str().unwrap());
-    let schema = schema.to_string();
-    let table = Arc::new(Mutex::new(rows));
-    let held = table.clone();
+    let (keap, mut held) = fake_tables(vec![(schema, rows)]);
+    (keap, held.remove(0))
+}
+
+/// fake_table over several tables, each at its own id; a POST whose values hold "!refuse" is a 400.
+fn fake_tables(tables: Vec<(&str, Vec<serde_json::Value>)>) -> ((String, Seen), Vec<Arc<Mutex<Vec<serde_json::Value>>>>) {
+    let tables: Vec<(String, String, Arc<Mutex<Vec<serde_json::Value>>>)> = tables.into_iter().map(|(schema, rows)| {
+        let info: serde_json::Value = serde_json::from_str(schema).unwrap();
+        (format!("/api/tables/{}", info["data"]["id"].as_str().unwrap()), schema.to_string(), Arc::new(Mutex::new(rows)))
+    }).collect();
+    let held = tables.iter().map(|t| t.2.clone()).collect();
     let l = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}", l.local_addr().unwrap());
     let seen: Seen = Arc::default();
@@ -1523,6 +1529,7 @@ fn fake_table(schema: &str, rows: Vec<serde_json::Value>) -> ((String, Seen), Ar
             let (method, target) = (words.next().unwrap_or(""), words.next().unwrap_or(""));
             let (path, query) = target.split_once('?').unwrap_or((target, ""));
             let arg = |k: &str| query.split('&').find_map(|p| p.strip_prefix(&format!("{k}="))).and_then(|v| v.parse::<usize>().ok());
+            let (base, schema, table) = tables.iter().find(|t| path == t.0 || path == format!("{}/rows", t.0)).unwrap_or(&tables[0]);
             let mut rows = table.lock().unwrap();
             let (status, out) = match (method, path) {
                 ("GET", p) if p == base => (200, schema.clone()),
@@ -1533,6 +1540,8 @@ fn fake_table(schema: &str, rows: Vec<serde_json::Value>) -> ((String, Seen), Ar
                     let next = (to < rows.len()).then(|| to.to_string());
                     (200, serde_json::json!({"success": true, "data": {"rows": rows[from..to], "nextCursor": next}}).to_string())
                 }
+                ("POST", p) if p == format!("{base}/rows") && body.contains("!refuse") =>
+                    (400, r#"{"success": false, "error": "refused by the fake"}"#.to_string()),
                 ("POST", p) if p == format!("{base}/rows") => {
                     let b: serde_json::Value = serde_json::from_str(&body).unwrap();
                     let id = b["id"].as_str().map(str::to_string).unwrap_or_else(|| format!("minted-{}", rows.len() + 1));
@@ -3836,4 +3845,186 @@ fn a_prefilled_form_s_submit_is_still_only_what_the_person_sent() {
     send_submit(&s, &form, "f1", serde_json::json!({"amount": 7, "kind": "food"}));
     assert!(matches!(next(&mut r), Some(ToShell::TableChanged { .. })));
     assert_eq!(held.lock().unwrap()[0]["values"], serde_json::json!({"amount": 7.0, "kind": "food"}), "the person's values, not the prefill");
+}
+
+// --- iris-v3 B3: line items. A rowRef field is a select of the parent's labels; a parent and its
+// lines are one card and one approval (operator ruling Q4), written parent first, as the person ---
+
+/// GET /api/tables/card-lines: each line points at a row of `cards` (shown by its title).
+const LINES: &str = r#"{"success": true, "data": {"id": "card-lines", "title": "Card lines", "schema": {"columns": [
+    {"key": "card", "label": "Card", "kind": "rowRef", "refTable": "cards", "refDisplay": "title", "onDelete": "restrict", "required": true},
+    {"key": "item", "label": "Item", "kind": "text", "required": true},
+    {"key": "qty", "label": "Qty", "kind": "number"}]}}}"#;
+
+fn deck() -> Vec<serde_json::Value> {
+    vec![keap_row("c1", serde_json::json!({"title": "one", "status": "queued", "points": 1})), keap_row("c2", serde_json::json!({"title": "two"}))]
+}
+
+/// A rig over `cards` (two rows unless given) and an empty `card-lines`; the held rows of each.
+fn lines_rig(name: &str, parents: Vec<serde_json::Value>, model: Vec<String>) -> (Rig, Vec<Arc<Mutex<Vec<serde_json::Value>>>>) {
+    let (keap, held) = fake_tables(vec![(CARDS, parents), (LINES, vec![])]);
+    (rig_at(name, mapped(), keap, model, Some(local())), held)
+}
+
+#[test]
+fn a_row_ref_field_lists_the_parent_labels_and_a_submit_writes_the_parent_id() {
+    let (rig, held) = lines_rig("ref-form", deck(), vec![answer("x")]);
+    let f = rig.srv.form_from_schema(&alice(), "card-lines", None).unwrap();
+    let v = serde_json::to_value(Component::Form(f)).unwrap();
+    assert_eq!(v["props"]["fields"][0], serde_json::json!({"key": "card", "label": "Card", "kind": "select", "required": true,
+                                                            "options": ["one", "two"]}), "the parent's titles, never its ids");
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    send_widget(&s, "f1", serde_json::json!({"form": {"table": "card-lines"}}), "click");
+    let form = loop {
+        match next(&mut r) {
+            Some(ToShell::Widget { component: Component::Form(f), .. }) => break f.form,
+            Some(ToShell::Session { .. }) => continue,
+            other => panic!("expected the widget form, got {other:?}"),
+        }
+    };
+    send_submit(&s, &form, "f1", serde_json::json!({"card": "two", "item": "pens"}));
+    assert!(matches!(next(&mut r), Some(ToShell::TableChanged { ref table, .. }) if table == "card-lines"));
+    assert_eq!(held[1].lock().unwrap()[0]["values"], serde_json::json!({"card": "c2", "item": "pens"}), "the label's row id is written");
+
+    // Over 50 parents the field is text: the person types the parent's id.
+    let many = (0..51).map(|i| keap_row(&format!("c{i}"), serde_json::json!({"title": format!("t{i}")}))).collect();
+    let (rig, _) = lines_rig("ref-form-many", many, vec![answer("x")]);
+    let f = rig.srv.form_from_schema(&alice(), "card-lines", Some(&["card".to_string(), "item".to_string()])).unwrap();
+    let v = serde_json::to_value(Component::Form(f)).unwrap();
+    assert_eq!(v["props"]["fields"][0], serde_json::json!({"key": "card", "label": "Card", "kind": "text", "required": true}));
+}
+
+const WITH_LINES: &str = r#"{"table": "cards", "values": {"title": "new"},
+    "lines": {"table": "card-lines", "rows": [{"item": "a", "qty": 1}, {"item": "b", "qty": 2}]}}"#;
+
+fn lines_turn(args: &str) -> Vec<String> {
+    vec![query(r#"{"table": "cards"}"#), query(r#"{"table": "card-lines"}"#), call("propose_row_insert", args), answer("Proposed.")]
+}
+
+/// The card as wire props.
+fn card_props(got: &[ToShell]) -> (String, serde_json::Value) {
+    let (approval, d) = card_of(got).unwrap_or_else(|| panic!("no card: {got:?}"));
+    (approval, serde_json::to_value(Component::RowDiffApproval(d)).unwrap()["props"].clone())
+}
+
+/// Every message until the decision's Text (or a refusal), in order.
+fn until_said_all(r: &mut BufReader<UnixStream>) -> Vec<ToShell> {
+    let mut got = Vec::new();
+    while let Some(m) = next(r) {
+        let end = matches!(m, ToShell::Text { .. } | ToShell::Refused { .. });
+        got.push(m);
+        if end {
+            break;
+        }
+    }
+    got
+}
+
+#[test]
+fn a_parent_and_its_lines_are_one_card_one_approval_written_parent_first() {
+    let (rig, held) = lines_rig("lines", deck(), lines_turn(WITH_LINES));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "add card new with lines a and b");
+    let (approval, p) = card_props(&got);
+    let row = |item: &str, qty: f64| serde_json::json!([{"key": "item", "old": null, "new": item}, {"key": "qty", "old": null, "new": qty}]);
+    assert_eq!(p, serde_json::json!({"table": "cards", "title": "Card deck", "op": "insert_many",
+        "cells": [{"key": "title", "old": null, "new": "new"}],
+        "lines": {"table": "card-lines", "title": "Card lines", "ref_key": "card", "rows": [row("a", 1.0), row("b", 2.0)]}}),
+        "the parent and every line with all its cells");
+    assert!(posts(&rig).is_empty(), "a proposal wrote before the person decided");
+
+    decide(&s, &approval, Decision::Approve);
+    let said = until_said_all(&mut r);
+    let p = posts(&rig);
+    let bodies: Vec<(String, serde_json::Value)> = p.iter()
+        .map(|(h, b)| (h.split_whitespace().nth(1).unwrap().to_string(), serde_json::from_str(b).unwrap())).collect();
+    assert_eq!(bodies, vec![
+        ("/api/tables/cards/rows".to_string(), serde_json::json!({"values": {"title": "new"}})),
+        ("/api/tables/card-lines/rows".to_string(), serde_json::json!({"values": {"item": "a", "qty": 1.0, "card": "minted-3"}})),
+        ("/api/tables/card-lines/rows".to_string(), serde_json::json!({"values": {"item": "b", "qty": 2.0, "card": "minted-3"}}))],
+        "the parent, then each line in order pointing at it; no id (KEAP mints them)");
+    assert!(p.iter().all(|(h, _)| h.to_ascii_lowercase().contains("x-authentik-username: alice smith")), "written as the person");
+    assert_eq!((held[0].lock().unwrap().len(), held[1].lock().unwrap().len()), (3, 2));
+    let changed: Vec<(String, String)> = said.iter().filter_map(|m| match m {
+        ToShell::TableChanged { table, row, .. } => Some((table.clone(), row.clone())), _ => None }).collect();
+    assert_eq!(changed, [("cards".into(), "minted-3".into()), ("card-lines".into(), "minted-1".into()), ("card-lines".into(), "minted-2".into())]);
+    assert!(matches!(said.last(), Some(ToShell::Text { text, .. }) if text.contains("3 rows written")), "{said:?}");
+
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let ev: Vec<_> = events(&rig.ledger, &session_of(&got)).into_iter()
+        .filter(|e| e.1 == "agent:iris/tool:propose_row_insert" && e.0 != "agent_tool_use").collect();
+    let kinds: Vec<&str> = ev.iter().map(|e| e.0.as_str()).collect();
+    assert_eq!(kinds, ["agent_approval_request", "agent_approval_decision", "agent_tool_result"], "one request, one decision");
+    let req = &ev[0].2;
+    assert!(req.get("row_id").is_none() && req["op"] == "insert_many", "{req}");
+    assert!(req["cells"].as_array().unwrap().iter().chain(req["lines"]["rows"].as_array().unwrap().iter().flat_map(|l| l.as_array().unwrap()))
+        .all(|c| c.get("old").is_none()), "an insert's olds are removed, never nulled: {req}");
+    assert_eq!(ev[2].2["rows"], serde_json::json!([{"table": "cards", "row": "minted-3"}, {"table": "card-lines", "row": "minted-1"},
+                                                   {"table": "card-lines", "row": "minted-2"}]), "per-row results: {}", ev[2].2);
+}
+
+#[test]
+fn a_line_that_fails_part_way_says_what_was_written() {
+    let args = r#"{"table": "cards", "values": {"title": "new"}, "lines": {"table": "card-lines", "rows": [{"item": "a"}, {"item": "!refuse"}, {"item": "c"}]}}"#;
+    let (rig, held) = lines_rig("lines-part", deck(), lines_turn(args));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "add card new with three lines");
+    let (approval, _) = card_props(&got);
+    decide(&s, &approval, Decision::Approve);
+    let said = until_said_all(&mut r);
+    assert_eq!(posts(&rig).len(), 3, "it stops at the refused line, the third is never sent");
+    assert_eq!(held[1].lock().unwrap().len(), 1);
+    let Some(ToShell::Text { text, .. }) = said.last() else { panic!("{said:?}") };
+    assert!(text.contains("line 2") && text.contains("cards/minted-3") && text.contains("card-lines/minted-1"),
+            "the person is told where it stopped and what was written: {text}");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let res = events(&rig.ledger, &session_of(&got)).into_iter()
+        .filter(|e| e.1 == "agent:iris/tool:propose_row_insert" && e.0 == "agent_tool_result").last().unwrap().2;
+    assert!(res["error"].as_str().is_some_and(|e| e.contains("line 2")), "{res}");
+    assert_eq!(res["rows"], serde_json::json!([{"table": "cards", "row": "minted-3"}, {"table": "card-lines", "row": "minted-1"}]), "{res}");
+}
+
+#[test]
+fn lines_under_a_shown_parent_write_only_the_lines() {
+    let args = r#"{"table": "cards", "row_id": "c1", "lines": {"table": "card-lines", "rows": [{"item": "a"}]}}"#;
+    let (rig, held) = lines_rig("lines-under", deck(), lines_turn(args));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "add line a to card one");
+    let (approval, p) = card_props(&got);
+    assert_eq!((&p["op"], &p["row_id"], &p["cells"]), (&serde_json::json!("insert_many"), &serde_json::json!("c1"),
+               &serde_json::json!([{"key": "title", "old": "one", "new": "one"}])), "the parent as it is, unchanged: {p}");
+    decide(&s, &approval, Decision::Approve);
+    until_said_all(&mut r);
+    let p = posts(&rig);
+    assert_eq!(p.len(), 1, "{p:?}");
+    assert_eq!(serde_json::from_str::<serde_json::Value>(&p[0].1).unwrap(), serde_json::json!({"values": {"item": "a", "card": "c1"}}));
+    assert_eq!(held[0].lock().unwrap().len(), 2, "the parent is not written");
+}
+
+#[test]
+fn lines_of_a_bad_shape_never_ask() {
+    for (name, args, want) in [
+        ("lines-unshown", r#"{"table": "cards", "row_id": "c9", "lines": {"table": "card-lines", "rows": [{"item": "a"}]}}"#, "was not shown"),
+        ("lines-both", r#"{"table": "cards", "row_id": "c1", "values": {"title": "x"}, "lines": {"table": "card-lines", "rows": [{"item": "a"}]}}"#, "either"),
+        ("lines-ref", r#"{"table": "cards", "values": {"title": "x"}, "lines": {"table": "card-lines", "rows": [{"item": "a", "card": "c2"}]}}"#, "points at the parent"),
+        ("lines-none", r#"{"table": "cards", "values": {"title": "x"}, "lines": {"table": "card-lines", "rows": []}}"#, "1 to 20"),
+        ("lines-noref", r#"{"table": "cards", "values": {"title": "x"}, "lines": {"table": "cards", "rows": [{"title": "a"}]}}"#, "points at cards"),
+        ("lines-req", r#"{"table": "cards", "values": {"title": "x"}, "lines": {"table": "card-lines", "rows": [{"qty": 1}]}}"#, "item is required"),
+        ("row-no-lines", r#"{"table": "cards", "row_id": "c1", "values": {"title": "x"}}"#, "row_id"),
+    ] {
+        let (rig, _) = lines_rig(name, deck(), lines_turn(args));
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let got = turn(&s, &mut r, None, "add lines");
+        assert!(card_of(&got).is_none(), "{name}: a card: {got:?}");
+        let e = tool_result(&rig, 3);
+        assert!(e["error"].as_str().is_some_and(|e| e.contains(want)), "{name}: {e}");
+        assert!(posts(&rig).is_empty(), "{name}: wrote");
+    }
 }

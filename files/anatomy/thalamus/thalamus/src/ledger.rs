@@ -322,6 +322,39 @@ mod tests {
     }
 
     #[test]
+    fn approved_takes_a_parent_and_its_lines_and_refuses_a_bad_set() {
+        let (l, _) = ledger("op-many");
+        start(&l);
+        let lines = |rows: Value| serde_json::json!({"table": "lines", "title": "Lines", "ref_key": "card", "rows": rows});
+        let one = serde_json::json!([[{"key": "item", "new": "a"}]]);
+        for (i, req) in [
+            serde_json::json!({"table": "t", "op": "insert_many", "cells": [{"key": "k", "new": 2}], "lines": lines(one.clone())}),
+            serde_json::json!({"table": "t", "op": "insert_many", "row_id": "r1", "cells": [{"key": "k", "old": 2, "new": 2}], "lines": lines(one.clone())}),
+        ].into_iter().enumerate() {
+            let d = approve(&l, &format!("ok{i}"), req.clone());
+            assert!(l.approved(d).is_ok(), "{req} was refused: {:?}", l.approved(d));
+        }
+        for (i, (why, req)) in [
+            ("no lines", serde_json::json!({"table": "t", "op": "insert_many", "cells": [{"key": "k", "new": 2}]})),
+            ("no line", serde_json::json!({"table": "t", "op": "insert_many", "cells": [{"key": "k", "new": 2}], "lines": lines(serde_json::json!([]))})),
+            ("an empty line", serde_json::json!({"table": "t", "op": "insert_many", "cells": [{"key": "k", "new": 2}], "lines": lines(serde_json::json!([[]]))})),
+            ("a line naming the parent", serde_json::json!({"table": "t", "op": "insert_many", "cells": [{"key": "k", "new": 2}],
+                "lines": lines(serde_json::json!([[{"key": "card", "new": "r9"}]]))})),
+            ("a line with an old", serde_json::json!({"table": "t", "op": "insert_many", "cells": [{"key": "k", "new": 2}],
+                "lines": lines(serde_json::json!([[{"key": "item", "old": "x", "new": "a"}]]))})),
+            ("a line sharing", serde_json::json!({"table": "t", "op": "insert_many", "cells": [{"key": "k", "new": 2}],
+                "lines": lines(serde_json::json!([[{"key": "__shared_with", "new": ["x"]}]]))})),
+            ("a changed existing parent", serde_json::json!({"table": "t", "op": "insert_many", "row_id": "r1",
+                "cells": [{"key": "k", "old": 1, "new": 2}], "lines": lines(one.clone())})),
+            ("a new parent with an old", serde_json::json!({"table": "t", "op": "insert_many", "cells": [{"key": "k", "old": 1, "new": 2}], "lines": lines(one.clone())})),
+            ("lines on an insert", serde_json::json!({"table": "t", "op": "insert", "cells": [{"key": "k", "new": 2}], "lines": lines(one.clone())})),
+        ].into_iter().enumerate() {
+            let d = approve(&l, &format!("bad{i}"), req);
+            assert!(l.approved(d).is_err(), "{why} was approved as a write");
+        }
+    }
+
+    #[test]
     fn reopening_keeps_the_rows() {
         let (l, p) = ledger("reopen");
         start(&l);
