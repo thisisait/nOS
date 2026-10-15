@@ -3442,3 +3442,12 @@ fn a_choice_takes_plain_string_options_and_asked_for_options_is_a_choice() {
     let p = system_prompt(&rig);
     assert!(p.contains("If the person asks for choices or options, call show choice; never a numbered list."), "{p}");
 }
+
+#[test]
+fn the_prompt_forbids_a_link_no_tool_returned() {
+    // Client bench v2 bar-sum-points: `![Bar Chart](https://keap.ai/...)`, a URL no tool returned (operator Q6).
+    let rig = rig("nolink", mapped(), ROWS, vec![answer("hi")]);
+    tool_turn(&rig, "hello");
+    let p = system_prompt(&rig);
+    assert!(p.contains("Never write a markdown image or a URL a tool did not return."), "{p}");
+}

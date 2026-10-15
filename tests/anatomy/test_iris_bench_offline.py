@@ -516,6 +516,13 @@ def test_each_check_fails_on_the_answer_it_exists_to_catch():
     assert check("not_repeated", True, _got("agents 5, then 7 and 9.", renders=[_chart("bar", pts)]), noon)
     for blank in ("", "   ", "(Iris gave no answer.)"):
         assert not check("not_blank", True, _got(blank), noon), repr(blank)
+    # Client bench v2 bar-sum-points: a sourceless chart plus a markdown image of a URL no tool returned.
+    assert not check("no_invented_link", True, _got("Sums: ![Bar Chart](https://keap.ai/c.png)", renders=[_chart("bar", pts)]), noon)
+    assert not check("no_invented_link", True, _got("See [the docs](https://example.com/grafana)."), noon)
+    assert not check("no_invented_link", True, _got("![Bar Chart]"), noon)
+    found = {"t": "render", "component": {"kind": "list", "props": {"items": [{"text": "Grafana", "detail": "https://grafana.lan/d/x"}]}}}
+    assert check("no_invented_link", True, _got("See [Grafana](https://grafana.lan/d/x).", renders=[found]), noon)
+    assert check("no_invented_link", True, _got("Drawn above.", renders=[_chart("bar", pts)]), noon)
 
 
 def test_answers_in_czech_and_a_padded_fact():
