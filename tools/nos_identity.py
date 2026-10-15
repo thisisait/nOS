@@ -72,11 +72,11 @@ def is_local_domain(name: str) -> bool:
     return name == "localhost" or name.endswith(local_tld_suffixes())
 
 
-def resolve_flag(flag: str) -> list[tuple[str, str]]:
+def resolve_flag(flag: str, paths: list[Path] | None = None) -> list[tuple[str, str]]:
     """Every layer that declares it, in precedence order. The LAST one wins."""
     pattern = re.compile(rf"^{re.escape(flag)}:\s*(\S+)", re.MULTILINE)
     seen: list[tuple[str, str]] = []
-    for path in layer_paths():
+    for path in layer_paths() if paths is None else paths:
         m = pattern.search(path.read_text(encoding="utf-8"))
         if m:
             seen.append((str(path.relative_to(REPO)), m.group(1).strip().strip('"\'')))
@@ -94,12 +94,18 @@ def resolve_list(name: str, paths: list[Path] | None = None) -> list:
     return value
 
 
-def install_flags() -> dict[str, bool]:
+def profile_layers(profile: Path) -> list[Path]:
+    """The committed layers with `profile` on top (as `-e @profile`), no config.yml."""
+    return [p for p in layer_paths() if p != REPO / "config.yml"] + [profile]
+
+
+def install_flags(paths: list[Path] | None = None) -> dict[str, bool]:
     """Every top-level install_* resolved like resolve_flag. A Jinja value is omitted, not guessed."""
-    names = {m for p in layer_paths()
+    paths = layer_paths() if paths is None else paths
+    names = {m for p in paths
              for m in re.findall(r"^(install_\w+):", p.read_text(encoding="utf-8"), re.MULTILINE)}
     bools = {"true": True, "yes": True, "false": False, "no": False}
-    out = {f: bools.get(resolve_flag(f)[-1][1].lower()) for f in sorted(names)}
+    out = {f: bools.get(resolve_flag(f, paths)[-1][1].lower()) for f in sorted(names)}
     return {f: v for f, v in out.items() if v is not None}
 
 
