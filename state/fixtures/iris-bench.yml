@@ -213,7 +213,7 @@
   checks:
     tools_called: [estate_services]
     kinds_drawn: [table]
-    text_from_render: {column: id}   # names a service the estate lists, whichever the host has
+    text_from_render: {column: id, tool: estate_services}   # names a service the estate lists, whichever the host has
     proposes_nothing: true
     not_blank: true
 - id: approvals-tier

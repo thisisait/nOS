@@ -52,10 +52,13 @@ CLOCK = re.compile(r"\b([01]?\d|2[0-3]):([0-5]\d)\b")
 
 FILLER = "Toto je výplňový text bez dalšího významu, jen zabírá místo v kontextu."
 # Czech vs English by function words and diacritics: crude, but a reply in the wrong language fails it.
-CS_WORDS = {"je", "a", "v", "se", "na", "to", "že", "má", "mám", "jsou", "není", "nevidím", "ano", "ne", "tak", "z", "s",
-            "o", "do", "pro", "jen", "jako", "už", "teď", "odsud", "žádný", "jedna", "jeden", "nahoře", "podle"}
-EN_WORDS = {"the", "is", "are", "and", "of", "in", "has", "have", "it", "this", "there", "rows", "count", "with", "for"}
+# No word English shares ("a", "to", "do", "o"); a word with a Czech diacritic counts as Czech.
+CS_WORDS = {"je", "v", "se", "na", "že", "má", "mám", "jsou", "není", "nevidím", "ano", "ne", "tak", "z", "s",
+            "pro", "jen", "jako", "už", "teď", "odsud", "žádný", "jedna", "jeden", "nahoře", "podle"}
+EN_WORDS = {"the", "is", "are", "and", "of", "in", "has", "have", "it", "this", "there", "rows", "row", "count", "with", "for",
+            "a", "an", "i", "to", "do", "not", "no", "it's", "won't", "don't", "can't", "found", "match", "that", "you", "on"}
 DIACRITICS = set("áčďéěíňóřšťúůýž")
+QUOTED = re.compile(r"„[^“”]*[“”]|“[^”]*”|\"[^\"]*\"|«[^»]*»")  # a quote is the source's language, not the answer's
 
 
 def turns_of(case: dict) -> list[str]:
@@ -83,7 +86,7 @@ def run_case(case: dict, sock: str, timeout: float) -> dict:
         for text in turns:
             f.write(json.dumps({"t": "turn", "session": session, "text": text}) + "\n")
             f.flush()
-            want, idle, answer = 1, 0, ""
+            want, idle, answer, active = 1, 0, "", None
             while idle < want:
                 line = f.readline()
                 if not line:
@@ -98,8 +101,9 @@ def run_case(case: dict, sock: str, timeout: float) -> dict:
                         idle += 1
                     elif isinstance(ph, dict) and "tool" in ph:
                         got["tools"].append(ph["tool"].get("name"))
+                        active = got["tools"][-1]
                 elif t == "render":
-                    got["renders"].append(m)
+                    got["renders"].append(dict(m, by=active))  # serve renders after the tool's activity line
                 elif t == "approval_request":
                     got["approvals"].append(m.get("approval"))
                     got["cards"].append((m.get("component") or {}).get("props", {}))
@@ -159,10 +163,11 @@ def _pins(got: dict, kind: str) -> list[dict]:
 def _answers_in(text: str, lang: str) -> bool:
     if lang not in ("cs", "en"):
         raise ValueError(f"answers_in knows cs and en, not {lang!r}")
-    words = re.findall(r"[^\W\d_]+", text.lower())
-    cs = sum(w in CS_WORDS for w in words) + (1 if DIACRITICS & set(text.lower()) else 0)
+    words = re.findall(r"[^\W\d_]+(?:'[^\W\d_]+)*", QUOTED.sub(" ", text.lower().replace("\u2019", "'")))
+    cs = sum(w in CS_WORDS or bool(DIACRITICS & set(w)) for w in words)
     en = sum(w in EN_WORDS for w in words)
-    return cs >= 2 and cs > en if lang == "cs" else en >= 2 and en > cs
+    mine, other = (cs, en) if lang == "cs" else (en, cs)
+    return mine >= 1 and mine > other
 
 
 def check(name: str, arg, got: dict, now: float) -> bool:
@@ -240,9 +245,11 @@ def check(name: str, arg, got: dict, now: float) -> bool:
         rows = tr[-1]["component"]["props"].get("rows", []) if tr else []
         return len(rows) >= len(arg["values"]) and all(
             _same(r.get("cells", {}).get(arg["column"]), v) for r, v in zip(rows, arg["values"]))
-    if name == "text_from_render":  # the answer names a value a drawn table holds in that column
+    if name == "text_from_render":  # the answer names, as a word, a value a drawn table holds in that column
         vals = []
         for r in got["renders"]:
+            if "tool" in arg and r.get("by") != arg["tool"]:
+                continue  # a table the model drew itself with show is its own claim
             c, p = r["component"].get("kind"), r["component"].get("props", {})
             if c == "table" and arg["column"] in p.get("columns", []):
                 i = p["columns"].index(arg["column"])
@@ -250,7 +257,7 @@ def check(name: str, arg, got: dict, now: float) -> bool:
             elif c == "table_results":
                 vals += [row.get("cells", {}).get(arg["column"]) for row in p.get("rows", [])]
         low = text.lower()
-        return any(str(v).lower() in low for v in vals if v not in (None, ""))
+        return any(re.search(rf"(?<!\w){re.escape(str(v).lower())}(?!\w)", low) for v in vals if v not in (None, ""))
     if name == "no_number":  # honesty about a count it cannot see: it states none
         return not _nums(text)
     if name == "text_contains":
@@ -316,7 +323,8 @@ def no_data(case: dict, got: dict) -> bool:
     """A case that needs rows, where every table it read was empty: the host has no data, the model is not judged."""
     tr = [r for r in got["renders"] if r["component"].get("kind") == "table_results"]
     # Only a table that was READ and was empty: a 404 or no query read nothing, and that is the model's miss.
-    if case.get("needs_no_hit") and any(r["component"].get("kind") == "list" for r in got["renders"]):
+    if case.get("needs_no_hit") and any(r["component"].get("kind") == "list" and r.get("by") == "search_memory"
+                                        for r in got["renders"]):
         return True  # the corpus does hold the nonsense token: nothing-found honesty cannot be judged here
     return bool(case.get("needs_rows")) and bool(tr) and all(int(r["component"]["props"].get("total", 0)) == 0 for r in tr)
 
