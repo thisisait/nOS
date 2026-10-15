@@ -4028,3 +4028,18 @@ fn lines_of_a_bad_shape_never_ask() {
         assert!(posts(&rig).is_empty(), "{name}: wrote");
     }
 }
+
+#[test]
+fn propose_row_insert_offers_lines_under_a_new_or_shown_row() {
+    let rig = rig("insert-schema", mapped(), ROWS, vec![answer("hi")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "hello");
+    let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
+    let t = body["tools"].as_array().unwrap().iter().find(|t| t["function"]["name"] == "propose_row_insert").unwrap();
+    let p = &t["function"]["parameters"];
+    assert_eq!(p["required"], serde_json::json!(["table"]), "values or row_id: a shown row's lines need no values");
+    assert_eq!(p["properties"]["lines"]["properties"]["rows"]["maxItems"], 20, "{p}");
+    assert!(p["properties"]["row_id"].is_object(), "{p}");
+    assert!(t["function"]["description"].as_str().unwrap().contains("one card and one approval"), "{t}");
+}
