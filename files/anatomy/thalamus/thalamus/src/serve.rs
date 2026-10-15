@@ -277,11 +277,21 @@ struct Matched<'a> {
     schema: Vec<Map<String, Value>>,
     hits: Vec<(String, Map<String, Value>)>,
     group: Option<&'a str>,
-    /// What each group says: count, or sum|avg of a number column (only with group).
+    /// What each group says: count, or sum|avg of a number column; with no group, `op` given is one total.
     agg: (Op, Option<&'a str>),
+    one_total: bool,
+    /// Nothing matched, but a text condition's value is in that many rows' cell: said to the model.
+    hint: Option<String>,
     order: Option<(&'a str, bool)>,
     limit: usize,
     columns: Vec<String>,
+}
+
+/// What query_rows answered: the columns of its rows, its groups, or one total (said in its notes).
+enum Answer {
+    Rows(Value),
+    Groups(Value),
+    Total,
 }
 
 fn send(out: &mut UnixStream, m: &ToShell) {
@@ -485,7 +495,7 @@ multi}; suggested names your pick among the options, exactly 1 unless multi; nev
 const QUERY_KEYS: [&str; 9] = ["table", "q", "where", "columns", "order_by", "limit", "group_by", "op", "y"];
 const WHERE_KEYS: [&str; 3] = ["column", "op", "value"];
 const ORDER_KEYS: [&str; 2] = ["column", "dir"];
-const OPS: [&str; 6] = ["eq", "neq", "in", "contains", "lt", "gt"];
+const OPS: [&str; 7] = ["eq", "neq", "in", "contains", "lt", "gt", "between"];
 const LENS_OPS: [&str; 5] = ["eq", "neq", "lt", "gt", "contains"];
 
 fn tools() -> Value {
@@ -495,16 +505,18 @@ fn tools() -> Value {
             "q": {"type": "string", "description": "case-insensitive substring anywhere in the row"},
             "where": {"type": "array", "maxItems": 8, "description": "every condition must hold",
                 "items": {"type": "object", "additionalProperties": false, "required": ["column", "op", "value"], "properties": {
-                    "column": {"type": "string"}, "op": {"enum": OPS, "description": "lt is before, gt is after"},
-                    "value": {"description": "a string; for in, a list of strings; a date is YYYY-MM-DD"}}}},
+                    "column": {"type": "string"}, "op": {"enum": OPS, "description": "lt is before, gt is after; between is inclusive"},
+                    "value": {"description": "a string; for in, a list of strings; for between, [from, to]; a date is YYYY-MM-DD, \
+or on a date column today, yesterday, this_week, this_month, last_month or this_year"}}}},
             "columns": {"type": "array", "maxItems": 12, "items": {"type": "string"},
                 "description": "the column keys to show; default every column, in the table's order"},
             "order_by": {"type": "object", "additionalProperties": false, "required": ["column"], "properties": {
                 "column": {"type": "string"}, "dir": {"enum": ["asc", "desc"]}}},
             "limit": {"type": "integer", "minimum": 0, "maximum": 50, "description": "rows returned, default 20; 0 counts only"},
             "group_by": {"type": "string", "description": "a column key: count the matched rows per value of it, instead of rows"},
-            "op": {"enum": ["count", "sum", "avg"], "description": "only with group_by: count rows (default), or sum or avg of y, per value"},
-            "y": {"type": "string", "description": "only with group_by and op sum or avg: a number column key"}}}}},
+            "op": {"enum": ["count", "sum", "avg"], "description": "count rows (default), or sum or avg of y: per value with group_by, \
+else one total over every matched row"},
+            "y": {"type": "string", "description": "only with op sum or avg: a number column key"}}}}},
         {"type": "function", "function": {"name": "propose_row_edit", "description": PROPOSE_ROW_EDIT,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "row_id", "values"], "properties": {
             "table": {"type": "string", "description": "the table's id or its title as the person names it (e.g. iris-bench-2); \"roadmap\" only for the roadmap"},
@@ -668,7 +680,10 @@ impl Server {
         let iris = format!("You are Iris. You act for {} and see only what they may see. To read, count or filter \
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
 asked for, never to look at a row; propose_row_insert only for a new row the person asked for, in a table query_rows showed them. A status, track or other column word in the question is a \
-`where` on that column; order_by and limit never filter. To show structured output call show ({}); plain text may use markdown, \
+`where` on that column; order_by and limit never filter. For one total (how much or how many in all) call query_rows \
+with op sum, avg or count (y for sum or avg) and no group_by. A range is one `where` with op between and value [from, to], \
+both ends included; for today, yesterday, this_week, this_month, last_month or this_year on a date column pass that word as \
+the value, never a day you worked out. To show structured output call show ({}); plain text may use markdown, \
 nothing else. To count per value (for a chart) call query_rows with \
 group_by; for a sum or average per value add op and y, then show chart (the source is inferred and the chart pins); to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
 KEAP's and the person can pin the chart. For a dashboard call offer_dashboard; to put a chart you drew on a dashboard, pass the same source plus its chart (bar, line or pie); nothing runs until the person places it. To see which DataTables the person has, call list_tables, then query_rows with an id. For what is red or broken on the estate call red_status. Before recommending software, call estate_services: \
@@ -1024,12 +1039,14 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 let _ = self.record(o, Kind::ToolUse, Some(name), json!({"args": args}));
                 activity(out, o, Phase::Tool { name: name.to_string() });
                 let result = match name {
-                    "query_rows" => self.query_rows(who, &args).map(|(t, extra, grouped)| {
+                    "query_rows" => self.query_rows(who, &args).map(|(t, answer, notes)| {
                         let ids: Vec<&str> = t.rows.iter().map(|r| r.__id.as_str()).collect();
                         let _ = self.record(o, Kind::ToolResult, Some(name),
                                             json!({"rows": ids, "matched": t.matched, "total": t.total}));
                         // A group is a value, not a row: it never unlocks a proposal.
-                        let v = if grouped {
+                        let mut v = match answer {
+                        Answer::Total => json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total}),
+                        Answer::Groups(extra) => {
                             let mut q = json!({"table": t.table});
                             for k in ["q", "where"] {
                                 if let Some(x) = args.get(k).filter(|x| !x.is_null()) {
@@ -1053,7 +1070,8 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                                     a number the 60 smallest, and a row with no {} is left out", t.matched, text(&args["group_by"])));
                             }
                             v
-                        } else {
+                        }
+                        Answer::Rows(extra) => {
                             o.shown.extend(t.rows.iter().map(|r| ((t.table.clone(), r.__id.clone()), t.name.clone())));
                             o.tables_seen.insert(t.table.clone(), t.name.clone());
                             o.dates.insert(t.table.clone(), extra.as_array().into_iter().flatten().filter(|c| c["kind"] == "date")
@@ -1067,7 +1085,11 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                                     find one with where or q, or raise limit (<= 50)", t.rows.len(), t.matched));
                             }
                             v
+                        }
                         };
+                        if let Some(m) = v.as_object_mut() {
+                            m.extend(notes);
+                        }
                         // What a widget of this table re-runs: the arguments that drew it.
                         let pin = WidgetSpec::Rows(Value::Object(args.as_object().into_iter().flatten()
                             .filter(|(_, v)| !v.is_null()).map(|(k, v)| (k.clone(), v.clone())).collect()));
@@ -1217,10 +1239,32 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// GET /api/tables/:id (title, columns) then every row as the person, filtered, sorted and cut
     /// here: the whole table or an Err, so `total` is exact. Also returns the columns for the model.
-    /// The table, then for the model its columns (or, grouped, its groups), and whether it was grouped.
-    fn query_rows(&self, who: &Person, args: &Value) -> Result<(TableResults, Value, bool), String> {
-        let Matched { table, name, query, total, schema, mut hits, group, agg: (op, y), order, limit, columns } = self.matched(who, args, true)?;
+    /// The table, then for the model its columns, its groups or its total, and notes the model hears beside it.
+    fn query_rows(&self, who: &Person, args: &Value) -> Result<(TableResults, Answer, Map<String, Value>), String> {
+        let Matched { table, name, query, total, schema, mut hits, group, agg: (op, y), one_total, hint, order, limit, columns } = self.matched(who, args, true)?;
         let matched = hits.len();
+        let mut notes = Map::new();
+        if let Some(h) = hint {
+            notes.insert("hint".into(), json!(h));
+        }
+        if one_total {
+            let nums: Vec<f64> = hits.iter().filter_map(|(_, v)| y.and_then(|y| v.get(y)).and_then(Value::as_f64)).collect();
+            let value = match op {
+                Op::Count => json!(matched),
+                Op::Avg if nums.is_empty() => Value::Null,
+                Op::Sum => json!(nums.iter().sum::<f64>()),
+                Op::Avg => json!(nums.iter().sum::<f64>() / nums.len() as f64),
+            };
+            let opname = text(&json!(op));
+            let label = y.map_or(opname.clone(), |y| format!("{opname} of {y}"));
+            if let Some(y) = y.filter(|_| nums.len() < matched) {
+                notes.insert("left_out".into(), json!(format!("{} of the {matched} matched rows have no {y} and are not in the {opname}", matched - nums.len())));
+            }
+            notes.extend([("total_op".into(), json!(opname)), ("y".into(), json!(y)), ("value".into(), value.clone()), ("over".into(), json!(matched))]);
+            let cells = BTreeMap::from([(label.clone(), value), ("rows".to_string(), json!(matched))]);
+            let rows = vec![Row { __id: "total".into(), cells }];
+            return Ok((TableResults { table, name, query, matched, total, columns: vec![label, "rows".into()], rows, projected: false }, Answer::Total, notes));
+        }
         if let Some(k) = group {
             let axis = axis_of(&schema, k);
             let (counts, _) = aggregate(&hits, k, axis, None, Op::Count);
@@ -1244,7 +1288,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             if op != Op::Count {
                 columns.push(opname);
             }
-            return Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Value::Array(groups), true));
+            return Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Answer::Groups(Value::Array(groups)), notes));
         }
         if let Some((k, desc)) = order {
             hits.sort_by(|x, y| by(x.1.get(k), y.1.get(k), desc));
@@ -1270,7 +1314,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             }
             Value::Object(m)
         }).collect();
-        Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Value::Array(for_model), false))
+        Ok((TableResults { table, name, query, matched, total, columns, rows, projected: false }, Answer::Rows(Value::Array(for_model)), notes))
     }
 
     /// A table's id and its GET /api/tables/<id>, named by id or by title, as the person.
@@ -1337,28 +1381,53 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             _ => return Err("`where` is a list of at most 8 conditions".into()),
         };
         let mut wh: Vec<(&str, &str, Vec<String>, Option<&str>)> = Vec::new();
+        let mut texts: Vec<(&str, String)> = Vec::new();
         for c in conds {
             if let Some(k) = c.as_object().and_then(|o| o.keys().find(|k| !WHERE_KEYS.contains(&k.as_str()))) {
                 return Err(format!("a `where` condition has no key `{k}`; it has {}", WHERE_KEYS.join(", ")));
             }
             let k = c.get("column").and_then(Value::as_str).ok_or("a `where` condition needs `column`")?;
             let def = col(k)?;
-            let op = c.get("op").and_then(Value::as_str).map(|o| match o { "before" => "lt", "after" => "gt", o => o })
+            let mut op = c.get("op").and_then(Value::as_str).map(|o| match o { "before" => "lt", "after" => "gt", o => o })
                 .filter(|o| OPS.contains(o)).ok_or(format!("`where` on {k}: op is one of {}", OPS.join(", ")))?;
-            let vals: Vec<String> = match (op, c.get("value")) {
+            let mut vals: Vec<String> = match (op, c.get("value")) {
                 ("in", Some(Value::Array(v))) => v.iter().map(|x| match x.as_str() {
                     Some(s) => Ok(s.to_string()),
                     None => Err(format!("`where` on {k}: in takes a list of strings")),
                 }).collect::<Result<Vec<_>, _>>()?,
                 ("in", _) => return Err(format!("`where` on {k}: in takes a list of strings")),
+                ("between", Some(Value::Array(v))) if v.len() == 2 => v.iter().map(text).collect(),
                 (_, Some(Value::String(s))) => vec![s.clone()],
-                _ => return Err(format!("`where` on {k}: value is a string")),
+                _ => return Err(format!("`where` on {k}: value is a string{}", if op == "between" { "; between takes [from, to]" } else { "" })),
             };
             // A date is compared as its UTC day, so lexical order is the calendar's.
             let kind = def.get("kind").and_then(Value::as_str).filter(|k| ["date", "number"].contains(k));
+            if def.get("kind").and_then(Value::as_str) == Some("text") && matches!(op, "eq" | "contains") {
+                texts.push((k, vals[0].clone()));
+            }
+            // Gap #4: "this month" is a range the model would compute wrong; resolved here, now, in UTC.
+            let today = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64) / 86_400;
+            let rel = match (kind, vals.as_slice()) {
+                (Some("date"), [w]) if matches!(op, "eq" | "between" | "lt" | "gt") => relative(w, today).map(|r| (w.clone(), r)),
+                _ => None,
+            };
+            if let Some((_, (from, to))) = &rel {
+                vals = match op {
+                    "lt" => vec![from.clone()],
+                    "gt" => vec![to.clone()],
+                    _ => vec![from.clone(), to.clone()],
+                };
+                op = if vals.len() == 2 { "between" } else { op };
+            }
+            if op == "between" && vals.len() != 2 {
+                return Err(format!("`where` on {k}: between takes [from, to]"));
+            }
+            if op == "between" && kind.is_none() {
+                return Err(format!("`where` on {k}: between is for a date or number column"));
+            }
             if let Some(bad) = vals.iter().find(|v| match kind {
                 Some("date") => op != "contains" && day_epoch(v).is_none(),
-                Some(_) => matches!(op, "lt" | "gt") && v.parse::<f64>().is_err(),
+                Some(_) => matches!(op, "lt" | "gt" | "between") && v.parse::<f64>().is_err(),
                 None => false,
             }) {
                 let want = if kind == Some("date") { "a day, YYYY-MM-DD" } else { "a number" };
@@ -1377,8 +1446,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 "neq" => format!("{k} != {}", vals[0]),
                 "lt" => format!("{k} < {}", vals[0]),
                 "gt" => format!("{k} > {}", vals[0]),
+                "between" => format!("{k} between {} and {}", vals[0], vals[1]),
                 _ => format!("{k} contains {:?}", vals[0]),
-            });
+            } + &rel.map_or(String::new(), |(w, _)| format!(" ({w})")));
             // A rowRef cell holds the parent's id; a label the person picked (a lens select) names one.
             let vals = match (def.get("kind").and_then(Value::as_str), op) {
                 (Some("rowRef"), "eq" | "neq" | "in") => match self.parents(who, def, k)? {
@@ -1430,8 +1500,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             None => Op::Count,
             Some(o) => serde_json::from_value::<Op>(o.clone()).map_err(|_| format!("`op` is count, sum or avg, not {o}"))?,
         };
-        if group.is_none() && (given("op").is_some() || given("y").is_some()) {
-            return Err("`op` and `y` say what each group holds: only with `group_by`".into());
+        let one_total = group.is_none() && given("op").is_some();
+        if group.is_none() && !one_total && given("y").is_some() {
+            return Err("`y` is the number column op sum or avg reads: give `op`".into());
         }
         let opname = text(&json!(op));
         let y = match (op, given("y")) {
@@ -1453,7 +1524,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let query = if said.is_empty() { "all rows".to_string() } else { said.join(" · ") };
         if !read {
             let schema = schema.into_iter().cloned().collect();
-            return Ok(Matched { table, name, query, total: 0, schema, hits: vec![], group, agg: (op, y), order, limit, columns });
+            return Ok(Matched { table, name, query, total: 0, schema, hits: vec![], group, agg: (op, y), one_total, hint: None, order, limit, columns });
         }
 
         let mut all = self.rows(who, &table)?;
@@ -1461,26 +1532,32 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             v.retain(|k, _| keys.contains(&k.as_str()));
         }
         let total = all.len();
-        let hits: Vec<(String, Map<String, Value>)> = all.into_iter()
-            .filter(|(_, v)| q.as_ref().is_none_or(|q| Value::Object(v.clone()).to_string().to_lowercase().contains(q)))
-            .filter(|(_, v)| wh.iter().all(|(k, op, vals, kind)| {
+        let (hits, rest): (Vec<(String, Map<String, Value>)>, Vec<_>) = all.into_iter().partition(|(_, v)|
+            q.as_ref().is_none_or(|q| Value::Object(v.clone()).to_string().to_lowercase().contains(q))
+            && wh.iter().all(|(k, op, vals, kind)| {
                 let cell = v.get(*k).unwrap_or(&Value::Null);
                 let c = if *kind == Some("date") { day(cell).unwrap_or_else(|| text(cell)) } else { text(cell) };
-                let cmp = || match kind {
-                    Some("number") => c.parse::<f64>().ok().and_then(|n| n.partial_cmp(&vals[0].parse::<f64>().ok()?)),
-                    _ => (!c.is_empty()).then(|| c.as_str().cmp(&vals[0])),
+                let cmp = |to: &String| match kind {
+                    Some("number") => c.parse::<f64>().ok().and_then(|n| n.partial_cmp(&to.parse::<f64>().ok()?)),
+                    _ => (!c.is_empty()).then(|| c.as_str().cmp(to)),
                 };
                 match *op {
                     "eq" | "in" => vals.contains(&c),
                     "neq" => !vals.contains(&c),
-                    "lt" => cmp() == Some(Ordering::Less),
-                    "gt" => cmp() == Some(Ordering::Greater),
+                    "lt" => cmp(&vals[0]) == Some(Ordering::Less),
+                    "gt" => cmp(&vals[0]) == Some(Ordering::Greater),
+                    "between" => cmp(&vals[0]).is_some_and(Ordering::is_ge) && cmp(&vals[1]).is_some_and(Ordering::is_le),
                     _ => c.to_lowercase().contains(&vals[0].to_lowercase()),
                 }
-            }))
-            .collect();
+            }));
+        // Local bench: the model looked for title = 10; the row is "bench row 10".
+        let hint = hits.is_empty().then(|| texts.iter().find_map(|(k, want)| {
+            let n = rest.iter().filter(|(_, v)| text(v.get(*k).unwrap_or(&Value::Null)).to_lowercase().contains(&want.to_lowercase())).count();
+            (n > 0).then(|| format!("0 rows matched, but {n} row(s) of {name} have a {k} that contains {want:?} in any case \
+                (other conditions aside): where {k} contains {want:?} finds them"))
+        })).flatten();
         let schema = schema.into_iter().cloned().collect();
-        Ok(Matched { table, name, query, total, schema, hits, group, agg: (op, y), order, limit, columns })
+        Ok(Matched { table, name, query, total, schema, hits, group, agg: (op, y), one_total, hint, order, limit, columns })
     }
 
     /// Every row of one table the person may read: GET /api/tables/:id/rows, every page.
@@ -2556,6 +2633,25 @@ fn day_epoch(s: &str) -> Option<i64> {
     let t = days_from_civil(y, m, d) * 86_400;
     // A day the calendar does not have (02-30, 13-01) comes back as another day.
     (iso(t)[..10] == *s).then_some(t)
+}
+
+/// A relative day word as its first and last UTC day, from `today` (days since the epoch); a week is
+/// Monday to Sunday. None for any other word.
+fn relative(word: &str, today: i64) -> Option<(String, String)> {
+    let d = |n: i64| iso(n * 86_400)[..10].to_string();
+    let now = d(today);
+    let (y, m): (i64, i64) = (now[..4].parse().ok()?, now[5..7].parse().ok()?);
+    let month = |y: i64, m: i64| (d(days_from_civil(y, m, 1)), d(days_from_civil(y + m / 12, m % 12 + 1, 1) - 1));
+    Some(match word {
+        "today" => (now.clone(), now),
+        "yesterday" => (d(today - 1), d(today - 1)),
+        "this_week" => (d(today - (today + 3).rem_euclid(7)), d(today - (today + 3).rem_euclid(7) + 6)),
+        "this_month" => month(y, m),
+        "last_month" if m == 1 => month(y - 1, 12),
+        "last_month" => month(y, m - 1),
+        "this_year" => (d(days_from_civil(y, 1, 1)), d(days_from_civil(y, 12, 31))),
+        _ => return None,
+    })
 }
 
 /// An epoch-seconds cell as its UTC day, "YYYY-MM-DD"; None for anything that is not a number.

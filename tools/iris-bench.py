@@ -237,8 +237,8 @@ def check(name: str, arg, got: dict, now: float) -> bool:
             return False
         q = reads[-1]
         return (_conds_in(arg.get("where", []), q.get("where"))
-                and not (arg.get("no_q") and q.get("q"))
-                and all(_same(q.get(k), arg[k]) for k in ("group_by", "limit") if k in arg)
+                and not (arg.get("no_q") and q.get("q")) and not (arg.get("no_group_by") and q.get("group_by"))
+                and all(_same(q.get(k), arg[k]) for k in ("group_by", "limit", "op", "y") if k in arg)
                 and all(_same((q.get("order_by") or {}).get(k), v) for k, v in (arg.get("order_by") or {}).items()))
     if name == "rows_order":
         tr = [r for r in got["renders"] if r["component"].get("kind") == "table_results"]
