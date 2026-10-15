@@ -415,7 +415,7 @@ pub fn show_schema() -> Value {
     let closed = |required: &[&str], properties: Value| json!({"type": "object", "additionalProperties": false,
         "required": required, "properties": properties});
     let mut source = closed(&["query", "x", "op"], json!({
-        "query": closed(&["table"], json!({"table": {"type": "string", "description": "the table id, or \"roadmap\""},
+        "query": closed(&["table"], json!({"table": {"type": "string", "description": "the table's id or title, or \"roadmap\""},
             "q": {"type": "string"}, "where": {"type": "array", "maxItems": 8, "description": "as query_rows' where"}})),
         "x": {"type": "string", "description": "the column whose values are the chart's x"},
         "y": {"type": "string", "description": "a number column; sum and avg need it"},
@@ -491,7 +491,7 @@ const LENS_OPS: [&str; 5] = ["eq", "neq", "lt", "gt", "contains"];
 fn tools() -> Value {
     json!([{"type": "function", "function": {"name": "query_rows", "description": QUERY_ROWS,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["table"], "properties": {
-            "table": {"type": "string", "description": "the table id, or \"roadmap\" for the roadmap"},
+            "table": {"type": "string", "description": "the table's id or its title as the person names it (e.g. iris-bench-2); \"roadmap\" only for the roadmap"},
             "q": {"type": "string", "description": "case-insensitive substring anywhere in the row"},
             "where": {"type": "array", "maxItems": 8, "description": "every condition must hold",
                 "items": {"type": "object", "additionalProperties": false, "required": ["column", "op", "value"], "properties": {
@@ -507,7 +507,7 @@ fn tools() -> Value {
             "y": {"type": "string", "description": "only with group_by and op sum or avg: a number column key"}}}}},
         {"type": "function", "function": {"name": "propose_row_edit", "description": PROPOSE_ROW_EDIT,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "row_id", "values"], "properties": {
-            "table": {"type": "string", "description": "the table id, or \"roadmap\" for the roadmap"},
+            "table": {"type": "string", "description": "the table's id or its title as the person names it (e.g. iris-bench-2); \"roadmap\" only for the roadmap"},
             "row_id": {"type": "string", "description": "the row's __id from query_rows"},
             "values": {"type": "object", "description": "column -> new value; null clears the cell"}}}}},
         {"type": "function", "function": {"name": "propose_row_insert", "description": PROPOSE_ROW_INSERT,
