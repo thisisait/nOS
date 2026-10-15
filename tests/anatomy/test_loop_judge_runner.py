@@ -1087,7 +1087,10 @@ MEASURED_WORK = {
     # RE-DERIVED 2026-10-12 — fired at 7837 collected vs 7432 (thalamus slice 1,
     # receptor, memory-pressure preflight). Fresh run: 7680 passed, 156 skipped,
     # 1 failed (this ratchet), so 7681. Operator reading; min_work not re-derived.
-    "pytest-anatomy": 7681,
+    # RE-DERIVED 2026-10-15 — fired at 8122 collected vs 7681 (iris v3, quick wins, CI tiers,
+    # installed set). Operator run (vendor): 7956 passed, 165 skipped, 1 failed, so 7957.
+    # Judge-env run (no wing/vendor): 7807 passed, 314 skipped, 1 failed -> min_work 7808-120.
+    "pytest-anatomy": 7957,
     "cortex-corpus-diff": 1,
 }
 
