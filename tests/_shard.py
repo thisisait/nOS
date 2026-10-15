@@ -27,7 +27,7 @@ def assign(nodeids, n: int) -> dict[str, int]:
 
 @pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(config, items):
-    spec = os.environ.get(ENV, "").strip()
+    spec = os.environ.pop(ENV, "").strip()  # read once: a pytest a test spawns must not inherit it
     if not spec:
         return
     m = re.fullmatch(r"(\d+)/(\d+)", spec)
