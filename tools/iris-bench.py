@@ -358,11 +358,19 @@ def seed_lines_table(dtt, parent_id: str) -> int:
     if have:
         print(f"{SEED_LINES_TITLE} table exists: {have[0]['id']} (nothing written)")
         return 0
-    st, r = dtt.req("GET", f"/api/tables/{parent_id}/rows?limit=500")
-    if st != 200:
-        print(f"{SEED_TITLE}: rows unreadable ({st}): {r.get('error', r)}", file=sys.stderr)
+    from keap_api import paged  # sibling in tools/; every page, not the first 500
+
+    def fetch(url: str) -> dict:
+        st, r = dtt.req("GET", url)
+        if st != 200:
+            raise RuntimeError(f"rows unreadable ({st}): {r.get('error', r)}")
+        return r
+    try:
+        rows = paged(fetch, f"/api/tables/{parent_id}/rows")["data"]["rows"]
+    except RuntimeError as e:
+        print(f"{SEED_TITLE}: {e}", file=sys.stderr)
         return 1
-    ids = {(x.get("values") or {}).get("title"): x["id"] for x in r.get("data", {}).get("rows", [])}
+    ids = {(x.get("values") or {}).get("title"): x["id"] for x in rows}
     body = {"title": SEED_LINES_TITLE, "description": "Line items of iris-bench-2 for tools/iris-bench.py. Safe to delete.",
             "driver": "libsql", "visibility": "shared", "anchors": [], "schema": lines_schema(parent_id)}
     st, r = dtt.req("POST", "/api/tables", body)
