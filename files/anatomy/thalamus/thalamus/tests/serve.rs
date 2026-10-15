@@ -1058,7 +1058,11 @@ fn the_tools_and_prompt_name_query_rows_and_bound_proposals() {
     assert!(p.contains("propose_row_edit only for a change the person asked for, never to look at a row"), "{p}");
     let body: serde_json::Value = serde_json::from_str(&rig.model.lock().unwrap()[0].1).unwrap();
     let names: Vec<&str> = body["tools"].as_array().unwrap().iter().map(|t| t["function"]["name"].as_str().unwrap()).collect();
-    assert_eq!(names, ["query_rows", "propose_row_edit", "show", "red_status", "list_tables"]);
+    assert_eq!(names, ["query_rows", "propose_row_edit", "show", "red_status", "list_tables",
+                       "estate_services", "approvals_awaiting", "inbox"]);
+    assert!(p.contains("Before recommending software, call estate_services: prefer a service the estate already has."), "{p}");
+    assert!(p.contains("call approvals_awaiting"), "{p}");
+    assert!(p.contains("call inbox"), "{p}");
     assert!(p.contains(&format!("To show structured output call show ({})", serve::SHOW_KINDS.join(", "))), "{p}");
     assert_eq!(body["tools"][0]["function"]["parameters"]["required"], serde_json::json!(["table"]), "q is optional");
 }
@@ -2881,4 +2885,132 @@ fn a_chart_whose_numbers_are_not_the_counts_stays_a_preview() {
     let charts: Vec<_> = rendered(&got).into_iter().filter(|m| m["component"]["kind"] == "chart").collect();
     assert_eq!(charts.len(), 1, "{got:?}");
     assert!(charts[0].get("pin").is_none_or(|p| p.is_null()), "a pin over the model's own numbers: {}", charts[0]);
+}
+
+// --- iris tools v2 increment 2: estate_services, approvals_awaiting and inbox for the model ---
+
+/// A services-status.py that prints `items` (and a fixed unknown source).
+fn services_py(items: serde_json::Value) -> String {
+    format!("import json, sys\nassert sys.argv[1:] == ['--json']\nprint(json.dumps({{'items': json.loads({:?}), 'unknown': ['files/anatomy/plugins/x/plugin.yml']}}))\n",
+            items.to_string())
+}
+
+fn catalogue() -> serde_json::Value {
+    serde_json::json!([
+        {"id": "vaultwarden", "category": "security", "install_flag": "install_vaultwarden", "enabled": true, "description": "Password manager"},
+        {"id": "passbolt", "category": "security", "install_flag": "install_passbolt", "enabled": false, "description": "Team PASSWORD vault"},
+        {"id": "redis", "category": "cache", "install_flag": "install_redis", "enabled": null, "description": null}])
+}
+
+/// One turn of `tool` with `args`; returns (what the shell got, the session).
+fn tool_turn(rig: &Rig, text: &str) -> (Vec<ToShell>, String) {
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, text);
+    let session = session_of(&got);
+    (got, session)
+}
+
+/// The ToolResult record the ledger holds for `tool` in `session`.
+fn recorded(rig: &Rig, session: &str, tool: &str) -> serde_json::Value {
+    events(&rig.ledger, session).into_iter()
+        .find(|(t, k, _)| t == "agent_tool_result" && k.ends_with(&format!("/tool:{tool}")))
+        .unwrap_or_else(|| panic!("no {tool} result in the ledger")).2
+}
+
+#[test]
+fn estate_services_offers_what_is_enabled_and_hides_unknown_sources_below_tier_one() {
+    let rig = rig_n("svc", mapped(), vec![], vec![call("estate_services", "{}"), answer("Vaultwarden is on.")]);
+    reader(&rig, "services-status.py", &services_py(catalogue()));
+    let (got, _) = tool_turn(&rig, "I need a password manager");
+    let t = tool_result(&rig, 1);
+    let ids: Vec<&str> = t["items"].as_array().unwrap_or_else(|| panic!("{t}")).iter().map(|i| i["id"].as_str().unwrap()).collect();
+    assert_eq!(ids, ["vaultwarden"], "no q: only what is enabled, {t}");
+    assert_eq!(t["items"][0]["enabled"], true, "{t}");
+    assert!(t.get("unknown").is_none() && t.get("running").is_none(), "live state is tier 1: {t}");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::Table(x), .. } if x.rows.len() == 1)), "{got:?}");
+}
+
+#[test]
+fn estate_services_filters_by_q_over_every_state_and_tier_one_sees_unknown() {
+    let rig = rig_n("svc-q", admin(), vec![], vec![call("estate_services", r#"{"q": "password"}"#), answer("x")]);
+    reader(&rig, "services-status.py", &services_py(catalogue()));
+    tool_turn(&rig, "password?");
+    let t = tool_result(&rig, 1);
+    let ids: Vec<&str> = t["items"].as_array().unwrap_or_else(|| panic!("{t}")).iter().map(|i| i["id"].as_str().unwrap()).collect();
+    assert_eq!(ids, ["vaultwarden", "passbolt"], "q is case-insensitive and keeps a disabled service: {t}");
+    assert_eq!(t["unknown"], serde_json::json!(["files/anatomy/plugins/x/plugin.yml"]), "{t}");
+}
+
+#[test]
+fn estate_services_over_fifty_rows_is_cut_and_said_never_refused() {
+    let many: Vec<serde_json::Value> = (0..60).map(|i| serde_json::json!(
+        {"id": format!("svc{i}"), "category": "x", "install_flag": format!("install_svc{i}"), "enabled": true, "description": "d"})).collect();
+    let rig = rig_n("svc-60", mapped(), vec![], vec![call("estate_services", "{}"), answer("x")]);
+    reader(&rig, "services-status.py", &services_py(serde_json::json!(many)));
+    let (got, _) = tool_turn(&rig, "everything");
+    let t = tool_result(&rig, 1);
+    assert_eq!((t["items"].as_array().map(Vec::len), &t["truncated"]), (Some(50), &serde_json::json!(10)), "{t}");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::Table(x), .. } if x.rows.len() == 50)), "{got:?}");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::Refused { .. })), "{got:?}");
+}
+
+#[test]
+fn an_unreadable_service_catalogue_is_unknown_never_empty() {
+    let rig = rig_n("svc-err", mapped(), vec![], vec![call("estate_services", "{}"), answer("x")]);
+    reader(&rig, "services-status.py", "import sys; sys.exit(2)");
+    let (got, _) = tool_turn(&rig, "services?");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::Table(_), .. })), "{got:?}");
+    let e = tool_result(&rig, 1);
+    assert!(e["error"].as_str().is_some_and(|e| e.contains("services are UNKNOWN, not empty")), "{e}");
+}
+
+#[test]
+fn approvals_awaiting_is_tier_one_and_the_ledger_keeps_no_free_text() {
+    let rig = rig_n("iappr", admin(), vec![], vec![call("approvals_awaiting", "{}"), answer("One signature waits.")]);
+    reader(&rig, "awaiting-operator.py", AWAITING);
+    let (got, session) = tool_turn(&rig, "what waits for me?");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::ApprovalsList(a), .. } if a.items.len() == 1)), "{got:?}");
+    assert_eq!(tool_result(&rig, 1)["items"][0]["what"], "ruling unsigned", "the model reads the item");
+    let rec = recorded(&rig, &session, "approvals_awaiting");
+    assert_eq!(rec, serde_json::json!({"count": 1, "items": [{"kind": "signature", "where": "ruling.yml"}]}), "{rec}");
+
+    let rig = rig_n("iappr-tier", mapped(), vec![], vec![call("approvals_awaiting", "{}"), answer("x")]);
+    reader(&rig, "awaiting-operator.py", AWAITING);
+    let (got, _) = tool_turn(&rig, "what waits?");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::ApprovalsList(_), .. })), "{got:?}");
+    assert!(tool_result(&rig, 1)["error"].as_str().is_some_and(|e| e.contains("not yours to see")), "{}", tool_result(&rig, 1));
+
+    let rig = rig_n("iappr-err", admin(), vec![], vec![call("approvals_awaiting", "{}"), answer("x")]);
+    reader(&rig, "awaiting-operator.py", "print('not json')");
+    tool_turn(&rig, "what waits?");
+    assert!(tool_result(&rig, 1)["error"].as_str().is_some_and(|e| e.contains("the queue is UNKNOWN, not empty")), "{}", tool_result(&rig, 1));
+}
+
+#[test]
+fn inbox_for_iris_names_a_refused_source_and_keeps_titles_out_of_the_ledger() {
+    let rig = rig_n("iinbox", mapped(), vec![CAPTURES.into(), r#"!403 {"success": false, "error": "admin privileges required"}"#.into()],
+                    vec![call("inbox", "{}"), answer("One capture waits.")]);
+    let (got, session) = tool_turn(&rig, "what is in my inbox?");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::InboxList(i), .. } if i.items.len() == 1)), "{got:?}");
+    let t = tool_result(&rig, 1);
+    assert_eq!(t["refused"], serde_json::json!(["promotions: not yours to moderate"]), "{t}");
+    assert_eq!(t["items"][0]["title"], "HKDF notes", "{t}");
+    let rec = recorded(&rig, &session, "inbox");
+    assert_eq!(rec, serde_json::json!({"count": 1, "items": [{"kind": "capture", "refId": "cap-1"}],
+                                       "refused": ["promotions: not yours to moderate"]}), "{rec}");
+}
+
+#[test]
+fn an_admins_inbox_for_iris_holds_no_one_elses_captures() {
+    // KEAP hands an admin every person's captures, unowned; the model would call them "yours".
+    let promos = r#"{"success": true, "data": {"policy": "local", "items": [
+        {"id": "pr-1", "status": "proposed", "captureId": "cap-1", "object": {"name": "HKDF"}, "createdAt": "2026-10-11"}]}}"#;
+    let rig = rig_n("iinbox-adm", admin(), vec![CAPTURES.into(), promos.into()], vec![call("inbox", "{}"), answer("x")]);
+    tool_turn(&rig, "inbox?");
+    let t = tool_result(&rig, 1);
+    assert!(!t.to_string().contains("HKDF notes"), "another person's capture reached the model: {t}");
+    assert_eq!(t["refused"], serde_json::json!(["captures: owner unknown for an admin viewer"]), "{t}");
+    assert!(t["items"].as_array().is_some_and(|i| i.iter().any(|x| x["id"] == "pr-1")), "{t}");
+    assert!(rig.keap.lock().unwrap().iter().all(|(h, _)| !h.starts_with("GET /api/metadata")), "captures were read for an admin");
 }
