@@ -3006,7 +3006,8 @@ fn an_admins_inbox_for_iris_holds_no_one_elses_captures() {
     // KEAP hands an admin every person's captures, unowned; the model would call them "yours".
     let promos = r#"{"success": true, "data": {"policy": "local", "items": [
         {"id": "pr-1", "status": "proposed", "captureId": "cap-1", "object": {"name": "HKDF"}, "createdAt": "2026-10-11"}]}}"#;
-    let rig = rig_n("iinbox-adm", admin(), vec![CAPTURES.into(), promos.into()], vec![call("inbox", "{}"), answer("x")]);
+    // KEAP answers every request with the promotions: a capture read would be the only way to see HKDF notes.
+    let rig = rig_n("iinbox-adm", admin(), vec![promos.into()], vec![call("inbox", "{}"), answer("x")]);
     tool_turn(&rig, "inbox?");
     let t = tool_result(&rig, 1);
     assert!(!t.to_string().contains("HKDF notes"), "another person's capture reached the model: {t}");
