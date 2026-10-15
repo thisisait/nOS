@@ -120,10 +120,11 @@ def _show(kind, props):
     return {"t": "render", "session": SID, "pin": None, "component": {"kind": kind, "props": props}}
 
 
-def _dash(lens, kinds):
-    """An offer_dashboard render: a lens condition per column, a widget per spec kind (iris-v3 B1)."""
+def _dash(lens, kinds, prefill=None):
+    """An offer_dashboard render: a lens condition per column, a widget per spec kind (iris-v3 B1); a form takes `prefill` (B2)."""
+    spec = lambda k: {"table": "iris-bench-2", **({"prefill": prefill} if prefill and k == "form" else {})}
     return _show("dashboard", {"name": "Bench board", "lens": [{"column": c, "op": "eq", "value": ""} for c in lens],
-                               "widgets": [{"title": k, "spec": {k: {"table": "iris-bench-2"}}} for k in kinds], "dropped": []})
+                               "widgets": [{"title": k, "spec": {k: spec(k)}} for k in kinds], "dropped": []})
 
 
 def _v2(bad: bool) -> dict[str, list[list[dict]]]:
@@ -182,6 +183,8 @@ def _v2(bad: bool) -> dict[str, list[list[dict]]]:
         "long-context-en": [_turn(_text("BLUE-GIRAFFE"))],
         "dashboard-offer": [_turn(_tool("offer_dashboard"), _dash([] if bad else ["track"], ["rows", "chart"]),
                                   _text("The dashboard is above; it runs when you place it."))],
+        "form-offer": [_turn(_tool("offer_dashboard"), _dash([], ["form"], None if bad else {"track": "platform"}),
+                             _text("The form is above; place it to add rows."))],
     }
 
 
@@ -278,6 +281,7 @@ def test_a_bad_run_fails_exactly_the_broken_checks_and_rejects(tmp_path):
         "injection-row-ask": ["text_not_equals", "answers_in"],
         "memory-chain": ["turn_text_contains"],
         "dashboard-offer": ["dashboard_has"],
+        "form-offer": ["dashboard_has"],
     }
     assert failed == want
     assert not [c["id"] for c in res["cases"] if c["no_data"]], "a bad answer is judged, never NO-DATA"
@@ -541,6 +545,12 @@ def test_each_check_fails_on_the_answer_it_exists_to_catch():
     assert not check("dashboard_has", board, _got(renders=[_dash(["track"], ["rows", "form"])]), noon), "no chart"
     assert not check("dashboard_has", board, _got(renders=[_dash(["track"], ["rows", "chart"]), _dash([], ["rows"])]), noon), "the last"
     assert not check("dashboard_has", board, _got(renders=[_results(3)]), noon), "no offer"
+    # iris-v3 B2 form-offer: a form widget of the last offer starts from this prefill.
+    form = {"widgets": 1, "kinds": ["form"], "prefill": {"track": "platform"}}
+    assert check("dashboard_has", form, _got(renders=[_dash([], ["form"], {"track": "platform", "status": "next"})]), noon)
+    assert not check("dashboard_has", form, _got(renders=[_dash([], ["form"])]), noon), "no prefill"
+    assert not check("dashboard_has", form, _got(renders=[_dash([], ["form"], {"track": "face"})]), noon), "another value"
+    assert not check("dashboard_has", form, _got(renders=[_dash([], ["rows", "chart"], {"track": "platform"})]), noon), "no form"
 
 
 def test_answers_in_czech_and_a_padded_fact():

@@ -285,3 +285,11 @@
     dashboard_has: {widgets: 2, kinds: [rows, chart], lens: [track]}
     proposes_nothing: true
     not_blank: true
+# iris-v3 B2: the form serve builds has selects (status, track), a date (due) and a required title; track is prefilled
+- id: form-offer
+  prompt: Make me a dashboard with a form that adds a row to iris-bench-2, with track already set to platform.
+  checks:
+    tools_called: [offer_dashboard]
+    dashboard_has: {widgets: 1, kinds: [form], prefill: {track: platform}}
+    proposes_nothing: true
+    not_blank: true
