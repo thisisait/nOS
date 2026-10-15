@@ -28,7 +28,7 @@ this file exists rather than a one-line "the task is imported" check:
   2. MANIFEST APPS. `apps/<name>.yml` owns their bring-up, so the toggle
      is not what would have switched them off.
 
-Both lists are DERIVED — from main.yml's own auto-enable tasks and from the
+Both lists are DERIVED — from state/manifest.yml forced_by and from the
 apps/ directory — so a fourth dependency or a new manifest app needs no edit.
 """
 
@@ -112,20 +112,18 @@ def test_auto_enabled_dependencies_are_derived_not_listed(tasks) -> None:
     """The postgresql trap, pinned.
 
     A hard-coded exclusion list is a fourth place the same fact lives. Reading
-    main.yml's own auto-enable tasks means a fourth dependency is covered the
-    day it is written.
+    state/manifest.yml forced_by (what main.yml applies) means a fourth
+    dependency is covered the day it is written.
     """
     body = TASK.read_text(encoding="utf-8")
-    assert "main.yml" in body and "regex_findall" in body, (
-        "the auto-enabled set is no longer read from main.yml. If it became a "
-        "literal list, the next dependency added there will be pruned here."
+    assert "state/manifest.yml" in body and "forced_by" in body, (
+        "the auto-enabled set is no longer read from the manifest's forced_by. If "
+        "it became a literal list, the next dependency added there will be pruned here."
     )
-    # And main.yml must still declare them in the shape the reconciler reads.
-    main = (REPO / "main.yml").read_text(encoding="utf-8")
-    found = re.findall(r"^\s*install_([a-z0-9_]+):\s*true\s*$", main, re.M)
-    assert "postgresql" in found and "mariadb" in found, (
-        "main.yml no longer auto-enables postgresql/mariadb in a shape this "
-        f"reconciler can read (found: {found}). It would prune the database."
+    forced = {r["install_flag"] for r in ni.services() if r.get("forced_by")}
+    assert {"install_postgresql", "install_mariadb"} <= forced, (
+        f"the manifest no longer forces postgresql/mariadb on (found: {forced}). "
+        "This reconciler would prune the database."
     )
 
 

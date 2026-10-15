@@ -15,7 +15,7 @@ R1 added a FIFTH, and a fifth representation is only worth having if something
 compares it to the others. That is this file's whole job, and it is why it
 derives BOTH sides mechanically instead of transcribing either:
 
-  A. auto_enable_pairs()          main.yml's three blocks, parsed
+  A. auto_enable_pairs()          state/manifest.yml forced_by (main.yml applies it)
   B. service_edge_probe.sweep()   EVERY (consumer, provider) pair the code
                                   performs, over all 63 manifest services
   C. the committed graph          the declared edges
@@ -55,19 +55,7 @@ from service_edge_probe import (config_layer_keys, performs, provider_aliases,
 
 REPO = Path(__file__).resolve().parents[2]
 GRAPH = REPO / "state" / "anatomy-graph.json"
-MAIN = REPO / "main.yml"
 MANIFEST = REPO / "state" / "manifest.yml"
-
-#: `set_fact` key → the manifest service the block turns on. `install_redis`
-#: is deliberately NOT the key here: the Redis toggle is `redis_docker`
-#: (roles/pazny.redis/defaults/main.yml:5 says so outright), and the manifest
-#: row's `install_flag: install_redis` names a variable that exists in no
-#: config file — see test_the_phantom_install_flags_are_named.
-PROVIDER_BY_FACT = {
-    "install_mariadb": "mariadb",
-    "install_postgresql": "postgresql",
-    "redis_docker": "redis",
-}
 
 #: (consumer, provider) pairs main.yml auto-enables but the consumer's code
 #: does not wire. MEASURED, asserted as an equality so the set can neither grow
@@ -160,33 +148,17 @@ def _service_by_flag() -> dict[str, str]:
 
 
 def auto_enable_pairs() -> set[tuple[str, str]]:
-    """(consumer_service, provider_service) from main.yml's three blocks.
-
-    Text-scan on purpose: the fact lives in a `when:` folded-scalar, and
-    yaml.safe_load gives no line numbers to report against.
-    """
-    lines = MAIN.read_text(encoding="utf-8").splitlines()
+    """(consumer_service, provider_service) from state/manifest.yml forced_by,
+    the one declaration main.yml applies (since 2026-10-15)."""
     by_flag = _service_by_flag()
     pairs: set[tuple[str, str]] = set()
-    provider: str | None = None
-    for line in lines:
-        fact = re.match(r"^\s{8}([a-z_]+):\s*true\s*$", line)
-        if fact and fact.group(1) in PROVIDER_BY_FACT:
-            provider = PROVIDER_BY_FACT[fact.group(1)]
-            continue
-        if provider is None:
-            continue
-        if re.match(r"^\s{4}- name:", line) or re.match(r"^\s{4}#", line):
-            provider = None
-            continue
-        for flag in re.findall(r"\(install_([a-z_0-9]+)\s*\|", line):
-            svc = by_flag.get(f"install_{flag}")
-            assert svc, (
-                f"main.yml auto-enables {provider} for install_{flag}, which names no "
-                f"service in state/manifest.yml — the imperative declaration and the "
-                f"registry have drifted apart"
+    for svc in yaml.safe_load(MANIFEST.read_text(encoding="utf-8")).get("services") or []:
+        for flag in svc.get("forced_by") or []:
+            assert flag in by_flag, (
+                f"{svc['id']} is forced on by {flag}, which names no service in "
+                f"state/manifest.yml — the declaration and the registry have drifted apart"
             )
-            pairs.add((svc, provider))
+            pairs.add((by_flag[flag], svc["id"]))
     return pairs
 
 
@@ -208,19 +180,18 @@ def declared_pairs(graph: dict) -> set[tuple[str, str]]:
 
 
 def test_the_imperative_blocks_still_parse():
-    """A positive control on the parser, so a main.yml refactor that empties
+    """A positive control on the reader, so a manifest refactor that empties
     it reads as broken rather than as agreement."""
     pairs = auto_enable_pairs()
     assert len(pairs) >= 20, (
-        f"only {len(pairs)} auto-enable pairs parsed out of main.yml — the three "
-        f"`Auto-enable <provider> for services that require it` blocks moved or "
-        f"changed shape; fix this parser before trusting any comparison below"
+        f"only {len(pairs)} auto-enable pairs read from state/manifest.yml forced_by — "
+        f"fix this reader before trusting any comparison below"
     )
     assert {p for _, p in pairs} == {"mariadb", "postgresql", "redis"}
 
 
 def test_the_two_parsers_of_main_yml_agree(gen):
-    """This file and the compiler each parse main.yml's auto-enable blocks —
+    """This file and the compiler each read the forced_by declaration —
     one to compare, one to stamp `enforced_by` on the edge. Two parsers of one
     fact is the defect R1 exists to end, so they are held equal rather than
     left to drift on the strength of looking similar."""

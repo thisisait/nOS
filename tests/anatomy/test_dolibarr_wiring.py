@@ -25,7 +25,6 @@ PRAXIS = REPO / "profiles/praxis.yml"
 KEAP = REPO / "files/anatomy/plugins/keap-base/plugin.yml"
 TRAEFIK = REPO / "roles/pazny.traefik/vars/main.yml"
 STACK_UP = REPO / "tasks/stacks/stack-up.yml"
-MAIN = REPO / "main.yml"
 REGISTRY = REPO / "files/anatomy/secrets/registry.yml"
 MANIFEST = REPO / "state/manifest.yml"
 
@@ -100,8 +99,8 @@ def test_dolibarr_is_wired_through_stack_traefik_manifest_and_mariadb_autodep():
     row = next(s for s in man["services"] if s["id"] == "dolibarr")
     assert row["install_flag"] == "install_dolibarr"
     assert row["oidc"] == "native"
-    main = MAIN.read_text(encoding="utf-8")
-    assert "install_dolibarr" in main
+    mariadb = next(s for s in man["services"] if s["id"] == "mariadb")
+    assert "install_dolibarr" in mariadb["forced_by"], "the MariaDB autodep (manifest forced_by)"
     secrets = REGISTRY.read_text(encoding="utf-8")
     assert "oidc_dolibarr:" in secrets
     assert "dolibarr_admin:" in secrets
