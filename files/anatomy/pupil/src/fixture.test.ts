@@ -26,13 +26,13 @@ const PROPS: Record<string, string[]> = {
 	timeline: ['items', 'title'],
 	graph: ['edges', 'nodes', 'title'],
 	sequence: ['participants', 'steps', 'title'],
-	form: ['fields', 'form', 'omitted', 'table', 'title'],
+	form: ['fields', 'form', 'omitted', 'prefill', 'table', 'title'],
 	choice: ['id', 'multi', 'options', 'question', 'suggested'],
 	dashboard: ['dropped', 'lens', 'name', 'widgets'],
 };
 const KINDS = Object.keys(PROPS);
 // Props a sample may leave out (an insert names no row); any other missing or extra prop is a rename.
-const OPTIONAL: Record<string, string[]> = { row_diff_approval: ['read_from', 'row_id'] };
+const OPTIONAL: Record<string, string[]> = { row_diff_approval: ['read_from', 'row_id'], form: ['prefill'] };
 
 const text = (html: string) =>
 	html
