@@ -1,7 +1,7 @@
 # The pupil's workspace layout: what the person laid out, saved on their Mac.
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates over
 # the same bytes). No wire message reads or writes it: the model never sees a layout.
-version: 1
+version: 2   # 2: a workspace's lens; a v1 file loads as v2 with no lens
 fixture: files/anatomy/contracts/workspace-layout.fixture.json
 
 producer:
@@ -19,7 +19,8 @@ gates:
 file: "<tauri app_data_dir>/workspaces.json, written atomically (tmp + rename), mode 0600; one that fails to decode is renamed .broken-<unix seconds> and the pupil starts with one empty workspace and says so"
 
 layout:
-  shape: "{version: 1, active: id, chat: {x, y, w, h, open}, workspaces[1..12]{id, name, widgets[0..24]{id, title, spec, x, y, w, h}}}; unknown keys refused"
+  shape: "{version: 2, active: id, chat: {x, y, w, h, open}, workspaces[1..12]{id, name, lens?[0..4], widgets[0..24]{id, title, spec, x, y, w, h}}}; unknown keys refused; a version 1 file loads as version 2 with no lens (it is never set aside for the missing key)"
+  lens: "thalamus-shell.yml components.dashboard Lens {column, op eq|neq|lt|gt|contains, value, kind?, options?}: the tab's shared filter. Set (non-empty) values join every rows and chart widget's where when it is sent (workspace.ts lensed), never its saved spec; a form takes the eq values as prefill only. The person edits it in the bar over the tab; a change re-runs the tab (trigger click)"
   ids: "workspace and widget ids are [A-Za-z0-9_-]{1,64}, unique in the file; a widget id is its wire token; active names a workspace"
   name: "at most 40 chars"
   title: "at most 120 chars"

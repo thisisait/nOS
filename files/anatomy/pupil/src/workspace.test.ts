@@ -2,11 +2,12 @@
 // Every move, resize, restore and re-run goes through these pure reducers.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import type { WidgetSpec } from './wire';
+import { lensPrefill } from './form';
+import type { DashboardProps, FormField, Lens, WidgetSpec } from './wire';
 import type { Widgets } from './widgets';
 import {
-	addWidget, age, approvalArrived, byKey, byPointer, clampChat, onTableChanged, place, removeWidget, restore, show,
-	type Layout
+	addSpace, addWidget, age, approvalArrived, byKey, byPointer, clampChat, lensed, onTableChanged, place, placeOffer, removeWidget,
+	restore, setLens, show, type Layout
 } from './workspace';
 
 const FIXTURE = new URL('../../contracts/workspace-layout.fixture.json', import.meta.url);
@@ -129,5 +130,105 @@ describe('age', () => {
 		expect(age({ component: null, error: null, at: 0 }, 9), 'at 0: restored, no answer yet').toBe('not run yet');
 		expect(age({ component: null, error: null, at: 1000, stale: true }, 2000)).toBe('stale: the table changed');
 		expect(age(undefined, 1)).toBe('not run yet');
+	});
+});
+
+// iris-v3 B1: a dashboard is a tab with a lens; the lens joins a widget's where when it is sent, never its saved spec.
+describe('a lens is merged at send time', () => {
+	const travel: Lens = { column: 'kind', op: 'eq', value: 'travel' };
+	const unset: Lens = { column: 'note', op: 'contains', value: '' };
+	const w = [{ column: 'kind', op: 'eq', value: 'travel' }];
+	const chart: WidgetSpec = { chart: { query: { table: 'expenses' }, chart: 'bar', x: 'kind', op: 'count' } };
+	const ran = (l: Layout): Widgets => {
+		const out: Widgets = {};
+		for (const s of l.workspaces) for (const x of s.widgets) out[x.id] = { component: { kind: 'markdown', props: { text: '' } }, error: null, at: 1, spec: x.spec };
+		return out;
+	};
+	const lensOn = (l: Layout, tab: string, lens: Lens[]): Layout => ({ ...l, workspaces: l.workspaces.map((s) => (s.id === tab ? { ...s, lens } : s)) });
+
+	it('joins a rows and a chart where after their own, never a form, and skips an unset value', () => {
+		expect(lensed(rows, [travel, unset])).toEqual({ rows: { table: 'expenses', where: w } });
+		const own = { column: 'amount', op: 'gt', value: '3' };
+		expect(lensed({ rows: { table: 'expenses', where: [own] } }, [travel])).toEqual({ rows: { table: 'expenses', where: [own, ...w] } });
+		expect(lensed(chart, [travel])).toEqual({ chart: { query: { table: 'expenses', where: w }, chart: 'bar', x: 'kind', op: 'count' } });
+		expect(lensed({ form: { table: 'expenses' } }, [travel]), 'a form takes the lens as prefill only').toEqual({ form: { table: 'expenses' } });
+		expect(lensed(rows, [unset])).toEqual(rows);
+		expect(lensed(rows, undefined)).toEqual(rows);
+	});
+
+	it('restore, a shown tab and a table change send the lens; the layout keeps the spec as saved', () => {
+		const l = lensOn(sample(1), 'b', [travel]);
+		const r = restore(l);
+		expect(r.send.map((m) => m.t === 'widget' && m.spec)).toEqual([lensed(l.workspaces[1].widgets[0].spec, [travel]),
+			{ rows: { table: 'notes', q: 'x', where: w } }]);
+		expect(l.workspaces[1].widgets[1].spec, 'the saved spec is untouched').toEqual({ rows: { table: 'notes', q: 'x' } });
+		const changed = onTableChanged(l, ran(l), 'expenses');
+		expect(changed.send.map((m) => m.t === 'widget' && m.spec)).toEqual([lensed(l.workspaces[1].widgets[0].spec, [travel])]);
+		const other = lensOn(sample(1), 'a', [travel]);
+		const shown = show(other, onTableChanged(other, ran(other), 'expenses').w, 'a');
+		expect(shown.send).toEqual([{ t: 'widget', widget: 'w1', spec: { rows: { table: 'expenses', where: w } }, trigger: 'table_changed' }]);
+		const added = addWidget(lensOn(sample(0), 'main', [travel]), 'wn', 'New', rows);
+		expect(added.send).toEqual({ t: 'widget', widget: 'wn', spec: { rows: { table: 'expenses', where: w } }, trigger: 'click' });
+		expect(added.layout.workspaces[0].widgets.at(-1)!.spec).toEqual(rows);
+	});
+
+	it('a lens edit re-runs every widget of its tab, as a click', () => {
+		const l = lensOn(sample(1), 'b', [{ ...travel, value: '' }]);
+		const r = setLens(l, 'b', 0, 'tools');
+		expect(r.layout.workspaces[1].lens).toEqual([{ ...travel, value: 'tools' }]);
+		const tw = [{ column: 'kind', op: 'eq', value: 'tools' }];
+		expect(r.send).toEqual([
+			{ t: 'widget', widget: 'w2', spec: lensed(l.workspaces[1].widgets[0].spec, [{ ...travel, value: 'tools' }]), trigger: 'click' },
+			{ t: 'widget', widget: 'w3', spec: { rows: { table: 'notes', q: 'x', where: tw } }, trigger: 'click' }]);
+		expect(setLens(l, 'b', 3, 'x').send, 'no such condition').toEqual([]);
+	});
+
+	it('a form takes the lens eq values as prefill, typed by field, and nothing else', () => {
+		const fields: FormField[] = [
+			{ key: 'kind', label: 'Kind', kind: 'select', required: true, options: ['food', 'travel'] },
+			{ key: 'amount', label: 'Amount', kind: 'number', required: false },
+			{ key: 'note', label: 'Note', kind: 'text', required: false }];
+		const lens: Lens[] = [travel, { column: 'amount', op: 'eq', value: '3' }, { column: 'note', op: 'contains', value: 'trip' },
+			{ column: 'other', op: 'eq', value: 'x' }];
+		expect(lensPrefill(lens, fields)).toEqual({ kind: 'travel', amount: 3 });
+		expect(lensPrefill([{ ...travel, value: 'tools' }], fields), 'a value the select does not offer').toEqual({});
+	});
+});
+
+describe('an offered dashboard is placed by the person', () => {
+	const where = [{ column: 'track', op: 'eq', value: 'face' }];
+	const offer: DashboardProps = {
+		name: 'Bench board', lens: [{ column: 'track', op: 'eq', value: 'face', kind: 'select', options: ['face', 'agents'] }],
+		widgets: [
+			{ title: 'Rows', spec: { rows: { table: 'bench' } } },
+			{ title: 'By track', spec: { chart: { query: { table: 'bench' }, chart: 'bar', x: 'track', op: 'count' } } },
+			{ title: 'Add', spec: { form: { table: 'bench' } } }],
+		dropped: [{ title: 'Owner', why: 'no column owner' }]
+	};
+	let n = 0;
+	const id = () => `d${++n}`;
+
+	it('is a new active tab with its lens; each widget runs once, as a click, with the lens', () => {
+		n = 0;
+		const r = placeOffer(sample(0), {}, 'tab9', offer, id);
+		expect(r.layout.active).toBe('tab9');
+		const tab = r.layout.workspaces.at(-1)!;
+		expect([tab.id, tab.name, tab.lens]).toEqual(['tab9', 'Bench board', offer.lens]);
+		expect(tab.widgets.map((x) => [x.id, x.title, x.spec]), 'saved as offered').toEqual(offer.widgets.map((x, i) => [`d${i + 1}`, x.title, x.spec]));
+		expect(inGrid(r.layout)).toBe(true);
+		expect(new Set(tab.widgets.map((x) => `${x.x},${x.y}`)).size, 'no two widgets on one spot').toBe(3);
+		expect(r.send).toEqual([
+			{ t: 'widget', widget: 'd1', spec: { rows: { table: 'bench', where } }, trigger: 'click' },
+			{ t: 'widget', widget: 'd2', spec: { chart: { query: { table: 'bench', where }, chart: 'bar', x: 'track', op: 'count' } }, trigger: 'click' },
+			{ t: 'widget', widget: 'd3', spec: { form: { table: 'bench' } }, trigger: 'click' }]);
+		expect(Object.keys(r.w)).toEqual(['d1', 'd2', 'd3']);
+		expect(r.layout.workspaces.slice(0, -1), 'the other tabs are untouched').toEqual(sample(0).workspaces);
+	});
+
+	it('is refused, sending nothing, when 12 tabs are open', () => {
+		let full = sample(0);
+		for (let i = 0; i < 11; i++) full = addSpace(full, `t${i}`, `T${i}`);
+		const r = placeOffer(full, {}, 'tab9', offer, id);
+		expect([r.layout, r.send]).toEqual([full, []]);
 	});
 });

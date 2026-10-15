@@ -1,10 +1,10 @@
 {
- "version": 1,
+ "version": 2,
  "samples": [
   {
    "case": "poc: rows, chart and form on one tab",
    "layout": {
-    "version": 1,
+    "version": 2,
     "active": "main",
     "chat": {
      "x": 880,
@@ -63,6 +63,19 @@
         "w": 4,
         "h": 6
        }
+      ],
+      "lens": [
+       {
+        "column": "kind",
+        "op": "eq",
+        "value": "",
+        "kind": "select",
+        "options": [
+         "food",
+         "travel",
+         "tools"
+        ]
+       }
       ]
      }
     ]
@@ -71,7 +84,7 @@
   {
    "case": "two tabs, the second active, chat closed, widgets at the grid edges",
    "layout": {
-    "version": 1,
+    "version": 2,
     "active": "b",
     "chat": {
      "x": 880,
@@ -145,7 +158,7 @@
   {
    "case": "one empty workspace",
    "layout": {
-    "version": 1,
+    "version": 2,
     "active": "ws1",
     "chat": {
      "x": 0,
@@ -158,7 +171,20 @@
      {
       "id": "ws1",
       "name": "Workspace",
-      "widgets": []
+      "widgets": [],
+      "lens": [
+       {
+        "column": "when",
+        "op": "gt",
+        "value": "2026-10-01",
+        "kind": "date"
+       },
+       {
+        "column": "note",
+        "op": "contains",
+        "value": "trip"
+       }
+      ]
      }
     ]
    }
@@ -168,7 +194,7 @@
   {
    "case": "a 13th workspace",
    "layout": {
-    "version": 1,
+    "version": 2,
     "active": "ws0",
     "chat": {
      "x": 880,
@@ -249,7 +275,7 @@
   {
    "case": "a widget w: 1",
    "layout": {
-    "version": 1,
+    "version": 2,
     "active": "main",
     "chat": {
      "x": 880,
@@ -316,7 +342,7 @@
   {
    "case": "an unknown key",
    "layout": {
-    "version": 1,
+    "version": 2,
     "active": "main",
     "chat": {
      "x": 880,
@@ -384,7 +410,7 @@
   {
    "case": "a spec with two keys",
    "layout": {
-    "version": 1,
+    "version": 2,
     "active": "main",
     "chat": {
      "x": 880,
@@ -454,7 +480,7 @@
   {
    "case": "a widget past column 12",
    "layout": {
-    "version": 1,
+    "version": 2,
     "active": "main",
     "chat": {
      "x": 880,
@@ -521,7 +547,7 @@
   {
    "case": "active names no workspace",
    "layout": {
-    "version": 1,
+    "version": 2,
     "active": "nowhere",
     "chat": {
      "x": 880,
@@ -588,7 +614,7 @@
   {
    "case": "two widgets share an id",
    "layout": {
-    "version": 1,
+    "version": 2,
     "active": "main",
     "chat": {
      "x": 880,
@@ -646,6 +672,139 @@
         "y": 8,
         "w": 4,
         "h": 6
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "case": "5 lens conditions",
+   "layout": {
+    "version": 2,
+    "active": "ws1",
+    "chat": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "ws1",
+      "name": "Workspace",
+      "widgets": [],
+      "lens": [
+       {
+        "column": "note",
+        "op": "contains",
+        "value": ""
+       },
+       {
+        "column": "note",
+        "op": "contains",
+        "value": ""
+       },
+       {
+        "column": "note",
+        "op": "contains",
+        "value": ""
+       },
+       {
+        "column": "note",
+        "op": "contains",
+        "value": ""
+       },
+       {
+        "column": "note",
+        "op": "contains",
+        "value": ""
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "case": "a lens op the wire does not name",
+   "layout": {
+    "version": 2,
+    "active": "ws1",
+    "chat": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "ws1",
+      "name": "Workspace",
+      "widgets": [],
+      "lens": [
+       {
+        "column": "note",
+        "op": "in",
+        "value": "a"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "case": "an unknown lens key",
+   "layout": {
+    "version": 2,
+    "active": "ws1",
+    "chat": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "ws1",
+      "name": "Workspace",
+      "widgets": [],
+      "lens": [
+       {
+        "column": "note",
+        "op": "contains",
+        "value": "",
+        "note": "x"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "case": "a lens with no column",
+   "layout": {
+    "version": 2,
+    "active": "ws1",
+    "chat": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0,
+     "open": true
+    },
+    "workspaces": [
+     {
+      "id": "ws1",
+      "name": "Workspace",
+      "widgets": [],
+      "lens": [
+       {
+        "column": "",
+        "op": "contains",
+        "value": ""
        }
       ]
      }

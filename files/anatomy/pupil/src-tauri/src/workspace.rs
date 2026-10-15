@@ -161,6 +161,17 @@ mod tests {
     }
 
     #[test]
+    fn a_v1_file_loads_as_v2_with_no_lens() {
+        // workspace-layout.yml 1 -> 2 (iris-v3 B1): the missing lens is not a reason to set a file aside.
+        let (_, mut v) = cases("samples").remove(1);
+        v["version"] = 1.into();
+        let l = decode(&v.to_string()).unwrap_or_else(|e| panic!("a v1 file was refused: {e}"));
+        let back = serde_json::to_value(&l).unwrap();
+        assert_eq!(back["version"], 2, "{back}");
+        assert!(back["workspaces"].as_array().unwrap().iter().all(|w| w.get("lens").is_none()), "{back}");
+    }
+
+    #[test]
     fn the_poc_workspace_decodes() {
         // genui I5i: the layout poc.test.ts restores is one this decoder would load.
         let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../state/fixtures/genui-workspace-poc/workspace.json");
