@@ -15,6 +15,8 @@ pub struct Binding {
     pub model_id: String,
     /// The row's `local: true`: the model runs on this host (serve picks the short imprint).
     pub local: bool,
+    /// A local row's sampling temperature (NOS_LOCAL_TEMPERATURE, default 0.3); None leaves a cloud row's own.
+    pub temperature: Option<f64>,
 }
 
 /// Never prints the key: a Binding is logged and panicked over.
@@ -149,5 +151,8 @@ pub fn decide(agent_yml: &str, register_yml: &str, env: impl Fn(&str) -> Option<
         auth_token,
         model_id,
         local,
+        // Client bench 2026-10-15: one model scored 9/11 then 6/11 at Ollama's default temperature.
+        temperature: local.then(|| env("NOS_LOCAL_TEMPERATURE").and_then(|t| t.trim().parse::<f64>().ok())
+            .filter(|t| (0.0..=2.0).contains(t)).unwrap_or(0.3)),
     }))
 }

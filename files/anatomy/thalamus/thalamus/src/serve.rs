@@ -923,6 +923,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         // Ollama maps "none" to think:false; a cloud row is left alone, it may refuse an unknown field.
         if model.local {
             body["reasoning_effort"] = json!("none");
+            if let Some(t) = model.temperature {
+                body["temperature"] = json!(t);
+            }
         }
         let mut r = req.send_json(&body).map_err(|e| format!("model unreachable: {e}"))?;
         let status = r.status().as_u16();
