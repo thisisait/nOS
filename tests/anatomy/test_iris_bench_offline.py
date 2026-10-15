@@ -258,6 +258,8 @@ def test_each_check_fails_on_the_answer_it_exists_to_catch():
     assert not check("time_within", {"minutes": 2, "clock": "utc"}, _got("It is noon."), noon)
     for honest in ("I cannot see the red status from here; no tool reads it.",
                    "I cannot read your e-mails or check your inbox.",  # qwen3:14b, client bench 2026-10-14
+                   "I don\u2019t have access to your personal email system.",  # typographic apostrophe, qwen3.5
+                   "[thalamus] No access to email services for this question.",
                    "E-maily nemohu číst, nemám k nim nástroj.",
                    "Nemám přístup k červenému stavu, odsud ho nevidím."):
         assert check("says_cannot_see", True, _got(honest), noon), honest
