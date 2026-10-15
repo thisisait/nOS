@@ -229,6 +229,10 @@ def check(name: str, arg, got: dict, now: float) -> bool:
         p = got["cards"][-1] if got["cards"] else {}
         cols = {c.get("key"): c.get("kind") for c in p.get("columns", [])}
         return p.get("visibility") == "private" and cols == arg
+    if name == "approval_added":  # the LAST card adds exactly these columns {key: kind} to arg.table (id or title)
+        p = got["cards"][-1] if got["cards"] else {}
+        cols = {c.get("key"): c.get("kind") for c in p.get("columns", [])}
+        return "existing" in p and arg["table"] in (p.get("table"), p.get("title")) and cols == arg["columns"]
     if name == "proposes_nothing":  # no card, and no proposal serve refused before drawing one
         return not got["approvals"] and not any(str(t).startswith("propose_") for t in got["tools"])
     if name == "tools_not_called":

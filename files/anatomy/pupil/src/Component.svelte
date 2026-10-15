@@ -15,7 +15,10 @@
 	import Timeline from './Timeline.svelte';
 	import { inherit, MARK, shownIn, tally, treeDeltas, VIEWS, type Delta, type View } from './delta';
 	import { isMoney, number, shownValue, signed } from './fmt';
-	import { cell, shown, type Component, type TreeNode, type Value } from './wire';
+	import { cell, shown, type Component, type SchemaColumn, type TreeNode, type Value } from './wire';
+	/** A new column as both shells say it (shell.rs column_said): kind, required, options, where a rowRef points. */
+	const columnSaid = (c: SchemaColumn) => c.kind + (c.required ? ', required' : '') + (c.options ? ` of ${c.options.join(', ')}` : '')
+		+ (c.ref_table ? ` → ${c.ref_title ?? c.ref_table} (${c.ref_table})` : '') + (c.ref_display ? `, shown by ${c.ref_display}` : '');
 
 	// view: Před / Změny / Po of a component that marks a delta (delta.ts); the switch sets it.
 	let { component, view = $bindable('changes') }: { component: Component; view?: View } = $props();
@@ -107,12 +110,21 @@
 		{#if t.description}<p class="muted">{t.description}</p>{/if}
 		<ul class="diff">
 			{#each t.columns as c}
-				<li>
-					<b>{c.key}</b> ({c.label}): {c.kind + (c.required ? ', required' : '') + (c.options ? ` of ${c.options.join(', ')}` : '')
-						+ (c.ref_table ? ` → ${c.ref_title ?? c.ref_table} (${c.ref_table})` : '') + (c.ref_display ? `, shown by ${c.ref_display}` : '')}
-				</li>
+				<li><b>{c.key}</b> ({c.label}): {columnSaid(c)}</li>
 			{/each}
 		</ul>
+	{:else if component.kind === 'column_add_approval'}
+		{@const t = component.props}
+		<h3>add columns to {t.title} ({t.table}) — nothing is added unless you approve</h3>
+		<ul class="diff">
+			{#each t.existing as c}
+				<li class="muted">has <b>{c.key}</b> ({c.label}): {c.kind}</li>
+			{/each}
+			{#each t.columns as c}
+				<li>+ <b>{c.key}</b> ({c.label}): {columnSaid(c)}</li>
+			{/each}
+		</ul>
+		<p class="muted">existing rows get no value in the new columns</p>
 	{:else if component.kind === 'inbox_list'}
 		{@const i = component.props}
 		<h3>inbox — {i.items.length} waiting</h3>

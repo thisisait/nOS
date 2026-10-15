@@ -77,7 +77,7 @@ pub struct Session<'a> {
 
 /// What a write may do: add a row KEAP names, or change cells of one that exists (the card's op).
 pub use nos_contract::renderers::RowOp;
-use nos_contract::renderers::{Component, TableSchemaApproval};
+use nos_contract::renderers::{ColumnAddApproval, Component, TableSchemaApproval};
 
 /// One approved write, as the request showed it to the person.
 #[derive(Debug)]
@@ -233,6 +233,15 @@ impl Ledger {
         req.as_object_mut().map(|r| r.remove("approval"));
         let t: TableSchemaApproval = serde_json::from_value(req).map_err(|e| format!("the request is no table create: {e}"))?;
         Component::TableSchemaApproval(t.clone()).check()?;
+        Ok((actor, t))
+    }
+
+    /// What a decision approved adding: the column card itself, re-checked as the contract checks it.
+    pub fn approved_columns(&self, decision: i64) -> Result<(String, ColumnAddApproval), String> {
+        let (actor, mut req) = self.request(decision)?;
+        req.as_object_mut().map(|r| r.remove("approval"));
+        let t: ColumnAddApproval = serde_json::from_value(req).map_err(|e| format!("the request is no column add: {e}"))?;
+        Component::ColumnAddApproval(t.clone()).check()?;
         Ok((actor, t))
     }
 

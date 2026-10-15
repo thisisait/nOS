@@ -12,6 +12,7 @@ pub enum Component {
     TableResults(TableResults),
     RowDiffApproval(RowDiffApproval),
     TableSchemaApproval(TableSchemaApproval),
+    ColumnAddApproval(ColumnAddApproval),
     InboxList(InboxList),
     ApprovalsList(ApprovalsList),
     RedStatus(RedStatus),
@@ -463,6 +464,31 @@ impl Component {
                     return Err(format!("column key {k} appears twice"));
                 }
                 t.columns.iter().try_for_each(check_column)
+            }
+            Component::ColumnAddApproval(t) => {
+                if t.table.trim().is_empty() {
+                    return Err("a column add names its table".into());
+                }
+                if !(1..=30).contains(&t.columns.len()) {
+                    return Err(format!("a column add has 1 to 30 new columns, not {}", t.columns.len()));
+                }
+                let n = t.existing.len() + t.columns.len();
+                if n > 120 {
+                    return Err(format!("a table has at most 120 columns (KEAP); {} would have {n}", t.title));
+                }
+                for (i, c) in t.columns.iter().enumerate() {
+                    if t.existing.iter().any(|e| e.key == c.key) {
+                        return Err(format!("table {} already has a column {}", t.title, c.key));
+                    }
+                    if t.columns[..i].iter().any(|x| x.key == c.key) {
+                        return Err(format!("column key {} appears twice", c.key));
+                    }
+                    if c.required {
+                        return Err(format!("column {}: a column added to a table is optional (its rows have no value for it)", c.key));
+                    }
+                    check_column(c)?;
+                }
+                Ok(())
             }
             _ => Ok(()),
         }
@@ -1045,6 +1071,26 @@ pub struct TableSchemaApproval {
     pub description: Option<String>,
     pub columns: Vec<SchemaColumn>,
     pub visibility: Visibility,
+}
+
+/// New columns for a table the person can read (propose_column_add): `existing` is the table at the
+/// card, shown read-only; serve re-reads it on approve and adds nothing if it moved.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ColumnAddApproval {
+    pub table: String,
+    pub title: String,
+    pub existing: Vec<ExistingColumn>,
+    pub columns: Vec<SchemaColumn>,
+}
+
+/// A column the table already holds, of any KEAP kind (json, file, ...): shown, never changed.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExistingColumn {
+    pub key: String,
+    pub label: String,
+    pub kind: String,
 }
 
 /// Only private: the person owns the new table; sharing is a later step (operator 2026-10-15).

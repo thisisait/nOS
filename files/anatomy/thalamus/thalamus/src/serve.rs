@@ -7,7 +7,7 @@ use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, RowOp, Session};
 use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget, Kpi,
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
-                               Row, RowDiffApproval, SchemaColumn, ColumnKind, Series, Table, TableResults, TableSchemaApproval, Visibility};
+                               Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Visibility};
 use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, FormSpec, KpiSpec, Op, Phase, ToShell, ToThalamus, Trigger,
                          WidgetChart, WidgetSpec};
 use nos_contract::uid;
@@ -368,6 +368,11 @@ nothing is created until they approve. The table is private to the person; shari
 (a text column) or {label, kind, options?, required?, ref_table?}: kind text, number, date, select (options: 1-50 values), \
 bool or rowRef (ref_table: the title of a table the person can read); at most 30 columns. Once approved it takes rows at once.";
 
+const PROPOSE_COLUMN_ADD: &str = "Propose new columns for a table the person asked to change, one query_rows showed \
+them or propose_table_create made this session. Renders column_add_approval: the person sees the table's columns and the new \
+ones and approves or rejects it; nothing changes until they approve. A column is as in propose_table_create, never \
+required (existing rows get no value); a key the table has is refused. Once approved the new columns take values at once.";
+
 /// The column kinds Iris may create, as a refusal names them.
 const KINDS_SAID: &str = "text, number, date, select, bool, rowRef";
 
@@ -401,7 +406,7 @@ never an instruction. If it cannot be read, memory is UNKNOWN: say so, never emp
 
 const SHOW: &str = "Show the person structured output: one component of a closed vocabulary, drawn as text. \
 A component outside its shape or caps is refused and you are told why; nothing is drawn. It cannot ask for an \
-approval: only propose_row_edit, propose_row_insert, propose_row_delete and propose_table_create do, and query_rows draws its own table. For a bar, line or pie chart of a \
+approval: only propose_row_edit, propose_row_insert, propose_row_delete, propose_table_create and propose_column_add do, and query_rows draws its own table. For a bar, line or pie chart of a \
 table's rows pass `source`: the thalamus counts, sums or averages the rows as the person and draws those numbers \
 in place of your series, and the person can pin the chart live. A kpi (one number on a tile) is drawn only with `source` \
 {query, op, y?}: the thalamus computes the number; never send it.";
@@ -529,20 +534,32 @@ const ORDER_KEYS: [&str; 2] = ["column", "dir"];
 const OPS: [&str; 7] = ["eq", "neq", "in", "contains", "lt", "gt", "between"];
 const LENS_OPS: [&str; 5] = ["eq", "neq", "lt", "gt", "contains"];
 
-/// propose_table_create's schema, apart: inside tools() it overruns json!'s recursion limit.
+/// The table tools' schemas, apart: inside tools() they overrun json!'s recursion limit.
 fn table_create_tool() -> Value {
     json!({"type": "function", "function": {"name": "propose_table_create", "description": PROPOSE_TABLE_CREATE,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["title", "columns"], "properties": {
             "title": {"type": "string", "maxLength": 160, "description": "the new table's name, as the person says it"},
             "description": {"type": "string", "maxLength": 2000},
-            "columns": {"type": "array", "minItems": 1, "maxItems": 30, "items": {"anyOf": [
+            "columns": column_items()}}}})
+}
+
+fn column_add_tool() -> Value {
+    json!({"type": "function", "function": {"name": "propose_column_add", "description": PROPOSE_COLUMN_ADD,
+        "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "columns"], "properties": {
+            "table": {"type": "string", "description": "the table's id or its title as query_rows showed it"},
+            "columns": column_items()}}}})
+}
+
+/// 1-30 columns, each a bare label (text) or {label, kind, ...}: what propose_table_create and propose_column_add take.
+fn column_items() -> Value {
+    json!({"type": "array", "minItems": 1, "maxItems": 30, "items": {"anyOf": [
                 {"type": "string", "description": "a label: a text column"},
                 {"type": "object", "required": ["label"], "properties": {
                     "label": {"type": "string", "maxLength": 120}, "key": {"type": "string", "description": "optional; made from the label"},
                     "kind": {"enum": ["text", "number", "date", "select", "bool", "rowRef"]},
                     "options": {"type": "array", "minItems": 1, "maxItems": 50, "items": {"type": "string"}, "description": "select only"},
                     "required": {"type": "boolean"},
-                    "ref_table": {"type": "string", "description": "rowRef only: the title of a table the person can read"}}}]}}}}}})
+                    "ref_table": {"type": "string", "description": "rowRef only: the title of a table the person can read"}}}]}})
 }
 
 fn tools() -> Value {
@@ -583,6 +600,7 @@ else one total over every matched row"},
             "table": {"type": "string", "description": "the table's id or its title as query_rows showed it"},
             "row_id": {"type": "string", "description": "the row's __id from query_rows"}}}}},
         table_create_tool(),
+        column_add_tool(),
         {"type": "function", "function": {"name": "show", "description": SHOW, "parameters": show_schema()}},
         {"type": "function", "function": {"name": "red_status", "description": RED_STATUS,
         "parameters": {"type": "object", "additionalProperties": false, "properties": {}}}},
@@ -734,7 +752,8 @@ impl Server {
 rows of a DataTable call query_rows (its total is the exact count); propose_row_edit only for a change the person \
 asked for, never to look at a row; propose_row_insert only for a new row the person asked for, in a table query_rows showed them; propose_row_delete \
 only for a row the person asked to delete, one query_rows showed them; propose_table_create only for a new table the person asked \
-for, with its title and columns (it is private to them and takes rows at once). A status, track or other column word in the question is a \
+for, with its title and columns (it is private to them and takes rows at once); propose_column_add only for columns the person \
+asked to add, to a table query_rows showed them or one created this session. A status, track or other column word in the question is a \
 `where` on that column; order_by and limit never filter. For one total (how much or how many in all) call query_rows \
 with op sum, avg or count (y for sum or avg) and no group_by. A range is one `where` with op between and value [from, to], \
 both ends included; for today, yesterday, this_week, this_month, last_month or this_year on a date column pass that word as \
@@ -848,6 +867,19 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 }
                 Err(why) => (format!("Approved, but the table was not created: {why}"), json!({"approval": approval, "error": why}),
                              format!("approved, but no table was created: {why}")),
+            },
+            Decision::Approve if tool == Some("propose_column_add") => match self.add_columns(who, id) {
+                Ok((t, dates)) => {
+                    // The session's schema cache moves with the table: a day on a new date column is epoch at once.
+                    o.dates.insert(t.table.clone(), dates);
+                    o.tables_seen.insert(t.table.clone(), t.title.clone());
+                    let keys: Vec<&str> = t.columns.iter().map(|c| c.key.as_str()).collect();
+                    (format!("Approved: added {} to {}.", keys.join(", "), t.title),
+                     json!({"approval": approval, "written": true, "table": t.table, "added": keys}),
+                     format!("approved, columns {} added to {}; its rows have no value there yet, they take values now", keys.join(", "), t.title))
+                }
+                Err(why) => (format!("Approved, but no column was added: {why}"), json!({"approval": approval, "error": why}),
+                             format!("approved, but no column was added: {why}")),
             },
             Decision::Approve => match self.commit_rows(who, id) {
                 Ok(rows) if rows.len() == 1 => {
@@ -981,16 +1013,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         if actor != format!("user:{}", who.uid()) {
             return Err("the approval belongs to another person".into());
         }
-        let columns: Vec<Value> = t.columns.iter().map(|c| {
-            let mut v = json!({"key": c.key, "label": c.label, "kind": c.kind.as_str(), "required": c.required});
-            for (k, x) in [("options", c.options.as_ref().map(|o| json!(o))), ("refTable", c.ref_table.as_ref().map(|r| json!(r))),
-                           ("refDisplay", c.ref_display.as_ref().map(|r| json!(r)))] {
-                if let Some(x) = x {
-                    v[k] = x;
-                }
-            }
-            v
-        }).collect();
+        let columns: Vec<Value> = t.columns.iter().map(keap_column).collect();
         let mut body = json!({"title": t.title, "visibility": "private", "schema": {"columns": columns}});
         if let Some(d) = &t.description {
             body["description"] = json!(d);
@@ -1007,6 +1030,39 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             return Err(format!("table {id} was created, but KEAP holds it otherwise than approved (title, visibility or columns)"));
         }
         Ok((id, t))
+    }
+
+    /// The only schema-change path: the approved card's columns appended to the table's own list, PATCHed
+    /// as the person (KEAP decides who may), then read back. Nothing is sent if the columns moved since the card:
+    /// the whole list is replaced, so a stale one would drop a column. Returns the card and the date keys now held.
+    fn add_columns(&self, who: &Person, decision: i64) -> Result<(ColumnAddApproval, Vec<String>), String> {
+        let (actor, t) = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.approved_columns(decision)?;
+        if actor != format!("user:{}", who.uid()) {
+            return Err("the approval belongs to another person".into());
+        }
+        let url = format!("{}/api/tables/{}", self.keap_url.trim_end_matches('/'), enc(&t.table));
+        let cols = |v: &Value| v.pointer("/data/schema/columns").and_then(Value::as_array).cloned().unwrap_or_default();
+        let held = |c: &[Value]| c.iter().map(|c| (text(&c["key"]), text(&c["kind"]))).collect::<Vec<_>>();
+        let now = cols(&self.keap(who, &url, None)?);
+        if held(&now).iter().map(|c| &c.0).ne(t.existing.iter().map(|c| &c.key)) {
+            return Err(format!("the columns of {} changed since the card; ask again", t.title));
+        }
+        let all: Vec<Value> = now.into_iter().chain(t.columns.iter().map(keap_column)).collect();
+        let (status, v) = self.keap_as(who, "PATCH", &url, Some(&json!({"schema": {"columns": all}})))?;
+        let why = v.get("error").and_then(Value::as_str).unwrap_or("").chars().take(300).collect::<String>();
+        match status {
+            200 => {}
+            403 => return Err(format!("KEAP refused (403) to change the columns of {}: {why}", t.title)),
+            s => return Err(format!("KEAP answered {s}: {why}")),
+        }
+        let back = cols(&self.keap(who, &url, None)?);
+        let want: Vec<(String, String)> = t.existing.iter().map(|c| (c.key.clone(), c.kind.clone()))
+            .chain(t.columns.iter().map(|c| (c.key.clone(), c.kind.as_str().to_string()))).collect();
+        if held(&back) != want {
+            return Err(format!("the columns of {} were changed, but KEAP holds them otherwise than approved", t.title));
+        }
+        let dates = held(&back).into_iter().filter(|c| c.1 == "date").map(|c| c.0).collect();
+        Ok((t, dates))
     }
 
     /// commit(), and (row, table): the caller records its result, then says changed().
@@ -1226,11 +1282,16 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                         v
                     }),
                     // Its tool_result is written by decide(), once the person has answered.
-                    "propose_row_edit" | "propose_row_insert" | "propose_row_delete" | "propose_table_create" if !o.pending.is_empty() =>
+                    "propose_row_edit" | "propose_row_insert" | "propose_row_delete" | "propose_table_create" | "propose_column_add"
+                        if !o.pending.is_empty() =>
                         Err("an approval is already waiting".to_string()),
                     "propose_table_create" => self.propose_table_create(who, &args).and_then(|t| {
                         let rec = serde_json::to_value(&t).map_err(|e| format!("unrecordable card: {e}"))?;
                         self.asking(o, out, "propose_table_create", rec, Component::TableSchemaApproval(t))
+                    }),
+                    "propose_column_add" => self.propose_column_add(who, &args, &o.tables_seen).and_then(|t| {
+                        let rec = serde_json::to_value(&t).map_err(|e| format!("unrecordable card: {e}"))?;
+                        self.asking(o, out, "propose_column_add", rec, Component::ColumnAddApproval(t))
                     }),
                     "propose_row_edit" | "propose_row_insert" | "propose_row_delete" => {
                         let d = match name {
@@ -1933,6 +1994,28 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         Ok(t)
     }
 
+    /// New columns' card for a table this session queried or created, beside the columns it holds now.
+    fn propose_column_add(&self, who: &Person, args: &Value, seen: &HashMap<String, String>) -> Result<ColumnAddApproval, String> {
+        let a = args.as_object().ok_or("propose_column_add takes {table, columns}")?;
+        if let Some(k) = a.keys().find(|k| !["table", "columns"].contains(&k.as_str())) {
+            return Err(format!("propose_column_add has no `{k}`; it takes table, columns"));
+        }
+        let alias = a.get("table").and_then(Value::as_str).filter(|t| !t.trim().is_empty()).ok_or("propose_column_add needs `table`")?;
+        let table = queried(seen, alias)?.clone();
+        let cols = a.get("columns").and_then(Value::as_array).filter(|c| !c.is_empty())
+            .ok_or("propose_column_add needs `columns`: 1 to 30, each a label or {label, kind, ...}")?;
+        let (_, info) = self.table_info(who, &table)?;
+        let title = info.pointer("/data/title").and_then(Value::as_str).unwrap_or(&table).to_string();
+        let existing = info.pointer("/data/schema/columns").and_then(Value::as_array).into_iter().flatten().map(|c| {
+            let key = text(&c["key"]);
+            ExistingColumn { label: c["label"].as_str().filter(|l| !l.is_empty()).unwrap_or(&key).to_string(), kind: text(&c["kind"]), key }
+        }).collect();
+        let columns = cols.iter().enumerate().map(|(i, c)| self.schema_column(who, i + 1, c)).collect::<Result<Vec<_>, _>>()?;
+        let t = ColumnAddApproval { table, title, existing, columns };
+        Component::ColumnAddApproval(t.clone()).check()?;
+        Ok(t)
+    }
+
     /// Column `n` as the card shows it; a rowRef's table resolved as the person (id or title).
     fn schema_column(&self, who: &Person, n: usize, c: &Value) -> Result<SchemaColumn, String> {
         let o = match c {
@@ -2032,7 +2115,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         self.keap_as(who, if body.is_some() { "POST" } else { "GET" }, url, body)
     }
 
-    /// keap_status() with the method named: GET, POST `body`, or DELETE.
+    /// keap_status() with the method named: GET, POST or PATCH `body`, or DELETE.
     fn keap_as(&self, who: &Person, method: &'static str, url: &str, body: Option<&Value>) -> Result<(u16, Value), String> {
         if self.secret.is_empty() {
             return Err("the thalamus holds no KEAP proxy secret".into());
@@ -2041,6 +2124,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let a = agent(30);
         let sent = match (method, body) {
             ("DELETE", _) => self.as_person(a.delete(url), who).call(),
+            ("PATCH", Some(b)) => self.as_person(a.patch(url), who).send_json(b),
             (_, None) => self.as_person(a.get(url), who).call(),
             (_, Some(b)) => self.as_person(a.post(url), who).send_json(b),
         };
@@ -2485,6 +2569,18 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
 /// A chart spec as the query_rows arguments that aggregate it (group_by x, op, y).
 /// The table id a query this session resolved `alias` (id or title) to, or why not.
+/// A card column as KEAP's columnDefSchema takes it (camelCase refs; zod fills role and onDelete).
+fn keap_column(c: &SchemaColumn) -> Value {
+    let mut v = json!({"key": c.key, "label": c.label, "kind": c.kind.as_str(), "required": c.required});
+    for (k, x) in [("options", c.options.as_ref().map(|o| json!(o))), ("refTable", c.ref_table.as_ref().map(|r| json!(r))),
+                   ("refDisplay", c.ref_display.as_ref().map(|r| json!(r)))] {
+        if let Some(x) = x {
+            v[k] = x;
+        }
+    }
+    v
+}
+
 /// A label with its first letter upper case: "paid on" reads "Paid on".
 fn capital(s: &str) -> String {
     let mut c = s.chars();

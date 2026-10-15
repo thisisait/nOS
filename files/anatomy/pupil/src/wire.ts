@@ -9,6 +9,7 @@ export type Component =
 	| { kind: 'table_results'; props: { table: string; name: string; query: string; matched: number; total: number; columns: string[]; rows: { __id: string; cells: Record<string, Value> }[]; projected: boolean } }
 	| { kind: 'row_diff_approval'; props: { table: string; title: string; op: 'insert' | 'update' | 'insert_many' | 'delete'; row_id?: string; cells: CellChange[]; read_from?: string[]; lines?: Lines } }
 	| { kind: 'table_schema_approval'; props: TableSchemaProps }
+	| { kind: 'column_add_approval'; props: ColumnAddProps }
 	| { kind: 'inbox_list'; props: { items: { id: string; title: string; source: string; created_at: string }[]; refused: string[] } }
 	| { kind: 'approvals_list'; props: { items: { kind: string; severity: string; age: string; what: string; where: string; note?: string }[]; unknown: string[] } }
 	| { kind: 'red_status'; props: { red_count: number; reds: string[]; hold_count: number; holds: string[] } }
@@ -35,6 +36,9 @@ export type SchemaColumn = {
 	key: string; label: string; kind: 'text' | 'number' | 'date' | 'select' | 'boolean' | 'rowRef'; required: boolean;
 	options?: string[]; ref_table?: string; ref_title?: string; ref_display?: string;
 };
+
+/** New columns for a table the person can read (renderers.rs ColumnAddApproval); `existing` is shown, never changed. */
+export type ColumnAddProps = { table: string; title: string; existing: { key: string; label: string; kind: string }[]; columns: SchemaColumn[] };
 
 /** A tab Iris offers (renderers.rs Dashboard): nothing runs until the person places it. */
 export type DashboardProps = { name: string; lens: Lens[]; widgets: { title: string; spec: WidgetSpec }[]; dropped: { title: string; why: string }[] };

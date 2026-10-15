@@ -34,6 +34,8 @@
 	<div class="ask">
 		{#if waiting.component.kind === 'row_diff_approval' && waiting.component.props.op === 'delete'}
 			<span class="bad">{whole ? 'approve deleting this row?' : 'scroll to the end to approve deleting this row, or reject it'}</span>
+		{:else if waiting.component.kind === 'column_add_approval'}
+			<span>{whole ? 'approve adding these columns?' : 'scroll to the last column to approve adding these columns, or reject it'}</span>
 		{:else if waiting.component.kind === 'table_schema_approval'}
 			<span>{whole ? 'approve creating this table?' : 'scroll to the last column to approve creating this table, or reject it'}</span>
 		{:else}

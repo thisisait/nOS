@@ -1,0 +1,10 @@
+add columns to Expenses (expenses) — nothing is added unless you approve
+  has item (Item): text
+  has receipt (Receipt): file
+  + paid_on (Paid on): date
+  + category (Category): select of travel, food
+  existing rows get no value in the new columns
+
+
+
+

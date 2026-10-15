@@ -55,6 +55,12 @@ ruling 2026-10-11), it does not go through the receptor's socket.
   column and key/label casing is repaired, anything else is refused with why. A
   title the person already has is refused. Approve POSTs `/api/tables` as the
   person, reads it back, and the session can insert into it at once.
+- `propose_column_add{table, columns}`: new columns for a table this session queried
+  or created, as one `column_add_approval` card (the table's columns read-only, then
+  the new ones). Columns as in a create, never required (existing rows get no
+  value); a key the table has is refused. Approve re-reads the table and adds
+  nothing if its columns moved, PATCHes the whole list as the person (a 403 is said),
+  reads it back, and the new columns take values at once.
 - `show{component}`: draws one component of `SHOW_KINDS` (serve.rs; among them
   `chart` in six kinds over a category, number or time axis, `timeline`, `graph`;
   inline SVG in the pupil, values as text in the terminal) the model builds. Unknown fields and over-cap components are refused (`Component::check`,

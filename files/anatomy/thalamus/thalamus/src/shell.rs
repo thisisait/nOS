@@ -2,7 +2,7 @@
 //! what the person typed or pressed, and renders only the closed component vocabulary.
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
-use nos_contract::renderers::{Choice, Component, Delta, LensOp, RowOp, Step, Tone, TreeNode, WhenOp};
+use nos_contract::renderers::{Choice, Component, Delta, LensOp, RowOp, SchemaColumn, Step, Tone, TreeNode, WhenOp};
 use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ToShell, ToThalamus, WidgetSpec};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -104,6 +104,24 @@ fn marked(d: Option<Delta>) -> char {
     d.map_or(' ', Delta::mark)
 }
 
+/// One column of a table or column card: key (label): kind, required, options, where a rowRef points.
+fn column_said(c: &SchemaColumn) -> String {
+    let mut s = format!("{} ({}): {}", c.key, c.label, c.kind.as_str());
+    if c.required {
+        s += ", required";
+    }
+    if let Some(o) = &c.options {
+        s += &format!(" of {}", o.join(", "));
+    }
+    if let Some(r) = &c.ref_table {
+        s += &format!(" -> {} ({r})", c.ref_title.as_deref().unwrap_or(r));
+    }
+    if let Some(d) = &c.ref_display {
+        s += &format!(", shown by {d}");
+    }
+    s
+}
+
 pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
     let mut out = Vec::new();
     match c {
@@ -149,22 +167,13 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
         Component::TableSchemaApproval(t) => {
             out.push(head(format!("create table {}, private to you — nothing is created unless you approve", t.title)));
             out.extend(t.description.iter().map(|d| Line::from(format!("  {d}"))));
-            for c in &t.columns {
-                let mut s = format!("  {} ({}): {}", c.key, c.label, c.kind.as_str());
-                if c.required {
-                    s += ", required";
-                }
-                if let Some(o) = &c.options {
-                    s += &format!(" of {}", o.join(", "));
-                }
-                if let Some(r) = &c.ref_table {
-                    s += &format!(" -> {} ({r})", c.ref_title.as_deref().unwrap_or(r));
-                }
-                if let Some(d) = &c.ref_display {
-                    s += &format!(", shown by {d}");
-                }
-                out.push(Line::from(s));
-            }
+            out.extend(t.columns.iter().map(|c| Line::from(format!("  {}", column_said(c)))));
+        }
+        Component::ColumnAddApproval(t) => {
+            out.push(head(format!("add columns to {} ({}) — nothing is added unless you approve", t.title, t.table)));
+            out.extend(t.existing.iter().map(|c| Line::from(format!("  has {} ({}): {}", c.key, c.label, c.kind))));
+            out.extend(t.columns.iter().map(|c| Line::from(format!("  + {}", column_said(c)))));
+            out.push(Line::from("  existing rows get no value in the new columns"));
         }
         Component::InboxList(i) => {
             out.push(head(format!("inbox — {} waiting", i.items.len())));
