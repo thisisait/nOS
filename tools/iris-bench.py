@@ -389,6 +389,8 @@ def seed_lines_table(dtt, parent_id: str) -> int:
 
 def no_data(case: dict, got: dict) -> bool:
     """A case that needs rows, where every table it read was empty: the host has no data, the model is not judged."""
+    if any("model answered 429" in (r or "") for r in got["refused"]):
+        return True  # the provider's rate limit outlasted serve's retries: the model never answered
     tr = [r for r in got["renders"] if r["component"].get("kind") == "table_results"]
     # Only a table that was READ and was empty: a 404 or no query read nothing, and that is the model's miss.
     if case.get("needs_no_hit") and any(r["component"].get("kind") == "list" and r.get("by") == "search_memory"
