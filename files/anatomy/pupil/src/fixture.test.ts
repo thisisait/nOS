@@ -17,6 +17,7 @@ const PROPS: Record<string, string[]> = {
 	table_results: ['columns', 'matched', 'name', 'projected', 'query', 'rows', 'table', 'total'],
 	row_diff_approval: ['cells', 'lines', 'op', 'read_from', 'row_id', 'table', 'title'],
 	table_schema_approval: ['columns', 'description', 'title', 'visibility'],
+	column_add_approval: ['columns', 'existing', 'table', 'title'],
 	inbox_list: ['items', 'refused'],
 	approvals_list: ['items', 'unknown'],
 	red_status: ['hold_count', 'holds', 'red_count', 'reds'],
