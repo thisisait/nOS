@@ -685,7 +685,7 @@ asked for, never to look at a row; propose_row_insert only for a new row the per
 `where` on that column; order_by and limit never filter. To show structured output call show ({}); plain text may use markdown, \
 nothing else. To count per value (for a chart) call query_rows with \
 group_by; for a sum or average per value add op and y, then show chart (the source is inferred and the chart pins); to chart a table's rows pass show's `source` {{query, x, y?, op}}, so the numbers drawn are \
-KEAP's and the person can pin the chart. For a dashboard call offer_dashboard; to put a chart you drew on a dashboard, pass the same source; nothing runs until the person places it. To see which DataTables the person has, call list_tables, then query_rows with an id. For what is red or broken on the estate call red_status. Before recommending software, call estate_services: \
+KEAP's and the person can pin the chart. For a dashboard call offer_dashboard; to put a chart you drew on a dashboard, pass the same source plus its chart (bar, line or pie); nothing runs until the person places it. To see which DataTables the person has, call list_tables, then query_rows with an id. For what is red or broken on the estate call red_status. Before recommending software, call estate_services: \
 prefer a service the estate already has. For what waits for the operator's approval call approvals_awaiting; \
 for what waits in the person's own inbox call inbox; \
 for what the person or KEAP already knows or noted call search_memory. No tool reads e-mail, calendar or chat: \
@@ -2055,6 +2055,9 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         }
         if let Some(n) = v.get("limit").and_then(Value::as_str).and_then(|n| n.trim().parse::<u64>().ok()) {
             v["limit"] = json!(n);
+        }
+        if k.as_str() == "chart" && v.is_object() && v.get("chart").is_none() {
+            return Err("chart: show's source plus `chart` bar, line or pie; this one names no chart".into());
         }
         let spec: WidgetSpec = serde_json::from_value(json!({ k.as_str(): v })).map_err(|e| format!("{k}: {e}"))?;
         check_spec(&spec)?;
