@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 6   # 6: dashboard; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 6   # 6: dashboard (+ saved); 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -16,6 +16,8 @@ consumer:
     - files/anatomy/thalamus/contract/examples/wire_fixture.rs
     - files/anatomy/pupil/src-tauri/src/bridge.rs        # the pupil (desktop window) decodes with the same crate
     - files/anatomy/pupil/src/fixture.test.ts            # and draws every fixture component
+  # Not built: the face would read the person's iris-dashboards rows from KEAP, not this wire.
+  future: [face]
 gates:
   both: tests/anatomy/test_thalamus_shell_contract.py   # decodes, re-encodes and refuses the fixture
   pupil: tests/anatomy/test_pupil_renders_the_fixture.py
@@ -24,8 +26,9 @@ gates:
 wire:
   framing: "newline-delimited JSON, one message per line, UTF-8"
   tag: "every message is an object whose `t` names its variant (snake_case)"
-  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply]
-  to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed]
+  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, dashboard_save, dashboard_list]
+  to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, dashboards,
+             dashboard_saved]
   widget: >-
     A widget is a spec the person placed; the pupil re-runs it over `widget {widget, spec, trigger}`
     and the thalamus answers as that person, without the model, with `widget {session, widget,
@@ -64,6 +67,21 @@ wire:
   table_changed: >-
     `table_changed {session, table, row}` follows every write this connection approved (an insert
     from a form or an approved row edit), so the pupil re-runs the widgets that read that table.
+  dashboard_save: >-
+    `dashboard_save {dashboard {slug, name, lens[], widgets[{title, spec}]}}` is the person's click on
+    "Place on a new tab": slug is the pupil's new tab id ([A-Za-z0-9_-]{1,64}), the rest is the offer as
+    placed (components.dashboard caps, no dropped). It names no owner; a message that does is refused.
+    The thalamus refuses a slug the person already saved, else records request + decision + result under
+    tool dashboard_save with the peer and commit() inserts a row of KEAP's iris-dashboards
+    (state/keap-tables/iris-dashboards.table.yml) as the person, owner "user:<uid>". It answers
+    `dashboard_saved {session, slug, row}` or `refused {reason}`; the model is not told.
+  dashboard_list: >-
+    `dashboard_list {}` asks for the person's saved dashboards; the thalamus reads iris-dashboards as
+    them and answers `dashboards {session, dashboards[] <=12, left_out[{title, why}]}` with only the rows
+    whose owner is them (KEAP isolates no rows yet: the filter is the thalamus's); a row that does not
+    decode or check is left out with why, never dropped. An unreadable table is `refused`, never an
+    empty list. The pupil adds each one its own file lacks as a tab (the file keeps what this Mac
+    changed); refused, it keeps its file. Nothing runs until the tab is shown.
   phase: [thinking, tool, writing, idle]   # activity.phase; tool is {tool: {name}}
   decision: [approve, reject]
   control_view: [inbox, approvals, red_status]

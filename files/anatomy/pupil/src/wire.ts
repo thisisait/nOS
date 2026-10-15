@@ -26,6 +26,8 @@ export type Component =
 
 /** A tab Iris offers (renderers.rs Dashboard): nothing runs until the person places it. */
 export type DashboardProps = { name: string; lens: Lens[]; widgets: { title: string; spec: WidgetSpec }[]; dropped: { title: string; why: string }[] };
+/** A placed dashboard as KEAP keeps it for the person (renderers.rs SavedDashboard): the offer under its tab id. */
+export type SavedDashboard = { slug: string; name: string; lens: Lens[]; widgets: { title: string; spec: WidgetSpec }[] };
 /** A tab-wide condition (renderers.rs Lens); an empty value is unset. */
 export type Lens = { column: string; op: 'eq' | 'neq' | 'lt' | 'gt' | 'contains'; value: string; kind?: FormField['kind']; options?: string[] };
 
@@ -53,7 +55,9 @@ export type ToShell =
 	| { t: 'activity'; session: string; phase: Phase }
 	| { t: 'widget'; session: string; widget: string; component: Component }
 	| { t: 'form_result'; session: string; widget: string; form: string; row: string }
-	| { t: 'table_changed'; session: string; table: string; row: string };
+	| { t: 'table_changed'; session: string; table: string; row: string }
+	| { t: 'dashboards'; session: string; dashboards: SavedDashboard[]; left_out: { title: string; why: string }[] }
+	| { t: 'dashboard_saved'; session: string; slug: string; row: string };
 
 /** What the thalamus is doing (wire.rs Phase); the eye shows it, the log does not. */
 export type Phase = 'thinking' | { tool: { name: string } } | 'writing' | 'idle';
@@ -66,7 +70,9 @@ export type ToThalamus =
 	| { t: 'control'; view: 'inbox' | 'approvals' | 'red_status' }
 	| { t: 'widget'; widget: string; spec: WidgetSpec; trigger: 'click' | 'restore' | 'table_changed' }
 	| { t: 'form_submit'; form: string; widget: string; values: Record<string, string | number | boolean> }
-	| { t: 'choice_reply'; session: string; choice: string; picked: string[] };
+	| { t: 'choice_reply'; session: string; choice: string; picked: string[] }
+	| { t: 'dashboard_save'; dashboard: SavedDashboard }
+	| { t: 'dashboard_list' };
 
 /** What a widget re-runs, as the person and without the model (wire.rs WidgetSpec): exactly one key. */
 export type WidgetSpec =

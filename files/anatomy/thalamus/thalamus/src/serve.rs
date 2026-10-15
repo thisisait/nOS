@@ -7,7 +7,7 @@ use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, RowOp, Session};
 use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget,
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, Lens, LensOp, List, ListItem, Omitted, RedStatus,
-                               Row, RowDiffApproval, Series, Table, TableResults};
+                               Row, RowDiffApproval, SavedDashboard, Series, Table, TableResults};
 use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, Op, Phase, ToShell, ToThalamus, Trigger,
                          WidgetChart, WidgetSpec};
 use nos_contract::uid;
@@ -29,6 +29,8 @@ pub const IDENTITY_MAP: &str = ".nos/identity-map.yml";
 const MAX_LINE: u64 = 1 << 20;
 const MAX_TOOL_CALLS: usize = 8;
 const MAX_PAGES: usize = 40;
+/// KEAP's table of placed dashboards (state/keap-tables/iris-dashboards.table.yml).
+const DASHBOARDS: &str = "iris-dashboards";
 /// How long a control's reader may take before it is killed.
 pub const READER_SECS: u64 = 120;
 
@@ -610,6 +612,18 @@ impl Server {
                     }
                     _ => refuse(&mut out, "session is not this connection's open session"),
                 },
+                Ok(ToThalamus::DashboardList {}) => {
+                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
+                        self.dashboard_list(&who, &mut out, o);
+                    }
+                }
+                Ok(ToThalamus::DashboardSave { dashboard }) => {
+                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
+                        if self.may_decide(o, &mut out, "dashboard_save", &dashboard.slug, &peer, None) {
+                            self.dashboard_save(&who, &mut out, o, &dashboard, &peer);
+                        }
+                    }
+                }
                 Ok(ToThalamus::ApprovalDecision { approval, decision, note }) => match open.as_mut() {
                     Some(o) if o.pending.contains_key(&approval) => {
                         if !self.may_decide(o, &mut out, o.pending[&approval], &approval, &peer, None) {
@@ -844,6 +858,90 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 send(out, &ToShell::FormResult { session: o.session.clone(), widget: widget.to_string(), form: form.to_string(), row });
             }
             Err(why) => fail(o, out, format!("the row was not written: {why}")),
+        }
+    }
+
+    /// The person's rows of iris-dashboards. KEAP isolates no rows yet (visibility.ts: row
+    /// __owner is later), so this filter is the only thing between a person and another's dashboards.
+    fn my_dashboards(&self, who: &Person) -> Result<Vec<Map<String, Value>>, String> {
+        let me = format!("user:{}", who.uid());
+        Ok(self.rows(who, DASHBOARDS)?.into_iter().map(|(_, v)| v).filter(|v| v.get("owner").and_then(Value::as_str) == Some(&me)).collect())
+    }
+
+    /// dashboard_list: the person's saved dashboards, at most 12; a row that fails to decode or check
+    /// is left out with why. Unreadable is refused, never an empty list. The model is not told.
+    fn dashboard_list(&self, who: &Person, out: &mut UnixStream, o: &mut Open) {
+        let tool = Some("dashboard_list");
+        if let Err(why) = self.record(o, Kind::ToolUse, tool, json!({})) {
+            return refuse(out, &format!("not recorded, so not read: {why}"));
+        }
+        let rows = match self.my_dashboards(who) {
+            Ok(r) => r,
+            Err(why) => {
+                let why = format!("{why}; dashboards are UNKNOWN, not empty (the pupil keeps its own file)");
+                let _ = self.record(o, Kind::ToolResult, tool, json!({"error": why}));
+                return refuse(out, &why);
+            }
+        };
+        let (mut dashboards, mut left_out) = (Vec::new(), Vec::new());
+        for v in rows {
+            // A json cell may come back as its text; either is the same value.
+            let cell = |k: &str| match v.get(k) {
+                Some(Value::String(t)) if k == "lens" || k == "widgets" => serde_json::from_str(t).unwrap_or(Value::Null),
+                x => x.cloned().unwrap_or(Value::Null),
+            };
+            let d = json!({"slug": cell("slug"), "name": cell("name"), "lens": cell("lens"), "widgets": cell("widgets")});
+            let title = [cell("name"), cell("slug")].iter().find_map(|t| t.as_str().map(str::to_string)).unwrap_or("(unnamed)".into());
+            match serde_json::from_value::<SavedDashboard>(d).map_err(|e| e.to_string()).and_then(|d| d.check().map(|_| d)) {
+                Ok(d) if dashboards.len() < 12 => dashboards.push(d),
+                Ok(_) => left_out.push(Dropped { title, why: "over 12 dashboards; the pupil holds 12 tabs".into() }),
+                Err(why) => left_out.push(Dropped { title: title.chars().take(120).collect(), why: why.chars().take(500).collect() }),
+            }
+        }
+        left_out.truncate(50);
+        let slugs: Vec<&str> = dashboards.iter().map(|d| d.slug.as_str()).collect();
+        let _ = self.record(o, Kind::ToolResult, tool, json!({"count": dashboards.len(), "slugs": slugs, "left_out": left_out.len()}));
+        send(out, &ToShell::Dashboards { session: o.session.clone(), dashboards, left_out });
+    }
+
+    /// dashboard_save: the person's click on Place, so their decision, as a form submit is: request,
+    /// decision, commit, result under tool dashboard_save, each naming the peer. The owner is serve's.
+    fn dashboard_save(&self, who: &Person, out: &mut UnixStream, o: &mut Open, d: &SavedDashboard, peer: &Value) {
+        let tool = Some("dashboard_save");
+        let used = json!({"slug": d.slug, "widgets": d.widgets.len(), "peer": peer});
+        if let Err(why) = self.record(o, Kind::ToolUse, tool, used) {
+            return refuse(out, &format!("not recorded, so not saved: {why}"));
+        }
+        let fail = |o: &Open, out: &mut UnixStream, why: String| {
+            let _ = self.record(o, Kind::ToolResult, tool, json!({"error": why, "peer": peer}));
+            refuse(out, &why);
+        };
+        match self.my_dashboards(who) {
+            Err(why) => return fail(o, out, format!("dashboard {} not saved: {why}", d.slug)),
+            Ok(mine) if mine.iter().any(|v| v.get("slug").and_then(Value::as_str) == Some(&d.slug)) =>
+                return fail(o, out, format!("dashboard {} is already saved; nothing written", d.slug)),
+            Ok(_) => {}
+        }
+        let approval = match mint_uuid() {
+            Ok(a) => a,
+            Err(e) => return fail(o, out, format!("no approval id: {e}")),
+        };
+        let cells = json!([{"key": "owner", "new": format!("user:{}", who.uid())}, {"key": "slug", "new": d.slug},
+                           {"key": "name", "new": d.name}, {"key": "lens", "new": d.lens}, {"key": "widgets", "new": d.widgets}]);
+        let asked = self.record(o, Kind::ApprovalRequest, tool,
+                                json!({"approval": approval, "table": DASHBOARDS, "op": "insert", "cells": cells, "peer": peer}))
+            .and_then(|_| self.record(o, Kind::ApprovalDecision, tool,
+                                      json!({"approval": approval, "decision": "approve", "note": "dashboard placed", "peer": peer})));
+        let id = match asked {
+            Ok(id) => id,
+            Err(why) => return fail(o, out, format!("the save was not recorded, so nothing is written: {why}")),
+        };
+        match self.commit(who, id) {
+            Ok(row) => {
+                let _ = self.record(o, Kind::ToolResult, tool, json!({"approval": approval, "written": true, "row": row, "peer": peer}));
+                send(out, &ToShell::DashboardSaved { session: o.session.clone(), slug: d.slug.clone(), row });
+            }
+            Err(why) => fail(o, out, format!("dashboard {} not saved: {why}", d.slug)),
         }
     }
 

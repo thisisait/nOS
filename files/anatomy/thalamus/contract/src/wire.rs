@@ -2,7 +2,7 @@
 //! Spec: files/anatomy/contracts/thalamus-shell.yml; gate:
 //! tests/anatomy/test_thalamus_shell_contract.py.
 
-use crate::renderers::Component;
+use crate::renderers::{Component, Dropped, SavedDashboard};
 use crate::uid;
 use serde::{Deserialize, Serialize};
 
@@ -18,6 +18,10 @@ pub enum ToThalamus {
     FormSubmit { form: String, widget: String, values: serde_json::Map<String, serde_json::Value> },
     /// The person's answer to a choice serve rendered: labels only, never a decision to write.
     ChoiceReply { session: String, choice: String, picked: Vec<String> },
+    /// The person's click on Place: the thalamus keeps the dashboard in KEAP as theirs.
+    DashboardSave { dashboard: SavedDashboard },
+    /// The pupil asks for the person's saved dashboards; it names no one.
+    DashboardList {},
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -47,6 +51,10 @@ pub enum ToShell {
     FormResult { session: String, widget: String, form: String, row: String },
     /// A write this connection approved landed in `table`; its widgets may re-run.
     TableChanged { session: String, table: String, row: String },
+    /// The person's own dashboards in KEAP (at most 12); a row that does not decode is left out with why.
+    Dashboards { session: String, dashboards: Vec<SavedDashboard>, left_out: Vec<Dropped> },
+    /// A placed dashboard was written; `row` is the id KEAP minted.
+    DashboardSaved { session: String, slug: String, row: String },
 }
 
 /// What a widget re-runs: exactly one of rows (query_rows' arguments), a chart, a form.
@@ -154,8 +162,12 @@ fn need_uuid(field: &str, s: &str) -> Result<(), String> {
 
 /// The pupil's correlation token, echoed back; never a thalamus id.
 fn need_token(s: &str) -> Result<(), String> {
-    let ok = (1..=64).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-');
-    if ok { Ok(()) } else { Err(format!("widget is not [A-Za-z0-9_-]{{1,64}}: {s:?}")) }
+    if is_token(s) { Ok(()) } else { Err(format!("widget is not [A-Za-z0-9_-]{{1,64}}: {s:?}")) }
+}
+
+/// [A-Za-z0-9_-]{1,64}: a widget token, and a workspace id (a saved dashboard's slug).
+pub fn is_token(s: &str) -> bool {
+    (1..=64).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
 }
 
 /// The model has no form: one is drawn only inside the widget message the person asked for.
@@ -222,6 +234,17 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             }
         }
         ToShell::Refused { widget, .. } => widget.as_deref().map_or(Ok(()), need_token),
+        ToShell::Dashboards { session, dashboards, left_out } => {
+            need_uuid("session", session)?;
+            if dashboards.len() > 12 || left_out.len() > 50 {
+                return Err(format!("dashboards: {} listed, {} left out; at most 12 and 50", dashboards.len(), left_out.len()));
+            }
+            dashboards.iter().try_for_each(SavedDashboard::check)
+        }
+        ToShell::DashboardSaved { session, slug, .. } => {
+            need_uuid("session", session)?;
+            if is_token(slug) { Ok(()) } else { Err(format!("dashboard slug is not [A-Za-z0-9_-]{{1,64}}: {slug:?}")) }
+        }
         ToShell::Widget { session, widget, component } => {
             need_uuid("session", session)?;
             need_token(widget)?;
@@ -266,6 +289,7 @@ pub fn decode_to_thalamus(line: &str) -> Result<ToThalamus, String> {
                 return Err("a picked label is over 60 chars".into());
             }
         }
+        ToThalamus::DashboardSave { dashboard } => dashboard.check()?,
         _ => {}
     }
     Ok(m)
