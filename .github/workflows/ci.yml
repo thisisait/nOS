@@ -111,14 +111,20 @@ jobs:
         run: ansible-playbook main.yml --syntax-check
 
   # ──────────────────────────────────────────────────────────────────────────
-  # PYTEST – Python unit tests covering the callback plugin, migrate
-  # engine, schema-handler consistency, upgrade actions, and state manager.
-  # Fast (~2s) — runs on every PR. Excludes wing-api/wing-frontend (PHP).
+  # PYTEST – the offline suite (tests/ minus wing-api/wing-frontend/e2e),
+  # split by whole file over 4 runners (tests/_shard.py); one serial job took
+  # 17-25 min. `pytest-result` carries the check name and is red unless every
+  # shard was green. Pinned by test_pytest_lane_is_sharded_and_complete.py.
   # ──────────────────────────────────────────────────────────────────────────
   pytest:
-    name: Pytest (Python tests)
+    name: Pytest shard ${{ matrix.shard }}/4
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     env:
+      NOS_PYTEST_SHARD: ${{ matrix.shard }}/4
       # THE ENVIRONMENT CONTRACT (tests/anatomy/_environment_contract.py):
       # every tool named here must resolve on PATH or the anatomy suite
       # ABORTS before running a single test. This job is where the
@@ -202,6 +208,16 @@ jobs:
           --ignore=tests/wing-frontend
           --ignore=tests/e2e
           -q
+          --durations=15
+
+  pytest-result:
+    name: Pytest (Python tests)
+    needs: pytest
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Every shard passed.
+        run: test "${{ needs.pytest.result }}" = success
 
   # ──────────────────────────────────────────────────────────────────────────
   # PYTEST-APPS – focused subset on tests/apps/ for fast per-submodule

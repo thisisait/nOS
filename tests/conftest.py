@@ -21,9 +21,12 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.abspath(os.path.join(_HERE, os.pardir))
 _ANATOMY = os.path.join(_REPO_ROOT, "files", "anatomy")
 
-for _p in (_REPO_ROOT, _ANATOMY):
+for _p in (_REPO_ROOT, _ANATOMY, _HERE):
     if _p not in sys.path:
         sys.path.insert(0, _p)
+
+# CI splits the suite across runners (NOS_PYTEST_SHARD=k/N); unset = everything.
+from _shard import pytest_collection_modifyitems  # noqa: E402,F401
 
 # A test's playbook run must not write the operator's ~/.nos/ansible.log:
 # after a leave it recreated ~/.nos, and its expected fatals read as a failed run.
