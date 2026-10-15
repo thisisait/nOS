@@ -2,6 +2,7 @@
 import type { Component } from '../wire';
 import { band, linear, ticks, timeTicks, type Tick } from './scale';
 import { arcPath, areaPath, pieAngles, stack, type Pt } from './shape';
+import { day, LOCALE } from '../fmt';
 import { tip } from './tooltip';
 import type { Zoom } from './zoom';
 
@@ -34,15 +35,17 @@ export const FONT = 8, GLYPH = FONT * 0.6; // the widest UI glyph, so a label's 
 const T = 10, B = 18, GAP = 3;
 const COLOURS = ['--accent', '--warn', '--ok', '--bad', '--info', '--muted'].map((c) => `var(${c})`);
 const r1 = (n: number) => Math.round(n * 10) / 10;
-// At most 8 glyphs, so a y label fits left of the axis.
-const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
-export const fmt = (v: number) => (compact.format(v).length <= 7 ? compact.format(v) : v.toExponential(1));
+// At most 9 glyphs ("12,3 tis."), so a y label fits left of the axis; a decimal goes before the exponent does.
+export const fmt = (v: number, locale = LOCALE) => {
+	const at = (d: number) => new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: d }).format(v);
+	return [at(1), at(0)].find((t) => t.length <= 9) ?? v.toExponential(1);
+};
 const clip = (s: string, n: number) => (s.length <= n ? s : s.slice(0, Math.max(n - 1, 0)) + '…');
 
 /** Lines, areas and scatters zoom along x; a bar's x is its band and a pie has none. */
 export const zooms = (c: Chart) => c.chart === 'line' || c.chart === 'area' || c.chart === 'scatter';
 
-export function layout(chart: Chart, W: number, zoom: Zoom): Layout {
+export function layout(chart: Chart, W: number, zoom: Zoom, locale = LOCALE): Layout {
 	const H = r1(W / 2);
 	const pts = chart.series.flatMap((s) => s.points);
 	const empty = pts.length === 0;
@@ -57,7 +60,7 @@ export function layout(chart: Chart, W: number, zoom: Zoom): Layout {
 		const s = chart.series[0];
 		const r = (H - 2 * T) / 2, cx = W / 2, cy = H / 2;
 		const angles = pieAngles(s.points.map(([, v]) => v));
-		const marks = s.points.map(([x, v], i) => ({ id: `0:${i}`, tip: tip(s.name, x, v), colour: colourOf(i), d: arcPath(r1(cx), r1(cy), r1(r), ...angles[i]) }));
+		const marks = s.points.map(([x, v], i) => ({ id: `0:${i}`, tip: tip(s.name, x, v, locale), colour: colourOf(i), d: arcPath(r1(cx), r1(cy), r1(r), ...angles[i]) }));
 		return { ...out, series: [{ name: s.name, colour: colourOf(0), marks }] };
 	}
 
@@ -73,7 +76,7 @@ export function layout(chart: Chart, W: number, zoom: Zoom): Layout {
 	const hi = Math.max(0, ...vals) === lo ? lo + 1 : Math.max(0, ...vals);
 	const yVals = [...new Set([lo, 0, hi])];
 	// The gutter is the y labels, so the plot uses the rest of the box.
-	const L = r1(Math.max(...yVals.map((v) => fmt(v).length * GLYPH)) + GAP);
+	const L = r1(Math.max(...yVals.map((v) => fmt(v, locale).length * GLYPH)) + GAP);
 	const R = GAP, pw = W - R - L;
 	const y = linear(lo, hi, H - B, T);
 	const yr = (v: number) => r1(y(v));
@@ -99,21 +102,21 @@ export function layout(chart: Chart, W: number, zoom: Zoom): Layout {
 		const inv = linear(PAD, pw - PAD, d0, d1);
 		const [v0, v1] = [inv((0 - z.tx) / z.k), inv((pw - z.tx) / z.k)];
 		const n = Math.max(2, Math.floor(pw / 60));
-		const tk: Tick[] = chart.x === 'time' ? timeTicks(v0, v1, n) : ticks(v0, v1, n).map((v) => ({ v, label: fmt(v) }));
+		const tk: Tick[] = chart.x === 'time' ? timeTicks(v0, v1, n) : ticks(v0, v1, n).map((v) => ({ v, label: fmt(v, locale) }));
 		xLabels = tk.map((t) => ({ t: t.label, px: L + world(t.v) * z.k + z.tx })).filter((t) => inPlot(t.px)).map((t) => place(t.t, t.px));
 	} else {
 		const step = Math.ceil(xs.length / (8 * z.k));
 		const room = Math.max(Math.floor((bnd.step * z.k * step) / GLYPH), 1);
-		xLabels = xs.flatMap((x, i) => (i % step || !inPlot(at(x)) ? [] : [place(clip(x, room), at(x))]));
+		xLabels = xs.flatMap((x, i) => (i % step || !inPlot(at(x)) ? [] : [place(clip(day(x, locale) ?? x, room), at(x))]));
 	}
-	const yLabels = yVals.map((v) => ({ t: fmt(v), y: r1(y(v) + FONT / 3) }));
+	const yLabels = yVals.map((v) => ({ t: fmt(v, locale), y: r1(y(v) + FONT / 3) }));
 
 	const n = chart.series.length;
 	const bw = bnd.step * 0.8, w = stacked ? bw : bw / n;
 	const series: Drawn[] = chart.series.map((s, k) => {
 		const colour = colourOf(k);
 		const marks: Mark[] = s.points.flatMap(([x, v], i) => {
-			const id = `${k}:${i}`, t = tip(s.name, x, v);
+			const id = `${k}:${i}`, t = tip(s.name, x, v, locale);
 			if (bars) {
 				const j = xs.indexOf(x);
 				const [b0, b1] = ranges ? ranges[k][j] : [Math.min(v, 0), Math.max(v, 0)];
