@@ -100,6 +100,13 @@ components:
       points into (id, title, and the column a row is shown by) and only a rowRef does. visibility is private, the
       person the owner: sharing is a later step, never part of the create. Both shells show every column with its
       kind, options and required; on approve serve POSTs it as the person, reads it back and records the result
+    column_add_approval: >-
+      new columns for a DataTable the person queried or created this session (propose_column_add, v6), asked only as
+      an approval: {table, title, existing[{key, label, kind}], columns[...as table_schema_approval] 1-30}; existing
+      is the table's columns at the card, shown read-only; a new key is none of them, a new column is never required
+      (its rows have no value), and the table holds at most 120. Both shells show the existing and the new columns;
+      on approve serve re-reads the table, adds nothing if its columns moved, PATCHes the whole column list as the
+      person (KEAP decides; a 403 is said), reads it back and records the result
     inbox_list: "waiting captures and promotions: {items[{id, title, source, created_at}], refused[]}"
     approvals_list: "tools/awaiting-operator.py --json: {items[{kind, severity, age, what, where, note?}], unknown[]}"
     red_status: "tools/red-status.py --json: {red_count, reds[], hold_count, holds[]}"
@@ -200,7 +207,7 @@ open:
     list, record, chart, tree, timeline, graph, sequence, choice and kpi (plain text already draws as markdown); table_results,
     row_diff_approval and the
     control views stay chosen by their tool or control, and an approval is
-    minted by propose_row_edit (insert, delete, and propose_table_create for a new table), or by a widget form the person submits
+    minted by propose_row_edit (insert, delete, propose_table_create for a new table, propose_column_add for new columns), or by a widget form the person submits
     (wire.form_submit). The model has no form: a form is a widget the person
     made, and a widget runs without the model (wire.widget). A choice asks; its
     answer is data for the model, never an approval (wire.choice_reply). Since v6 offer_dashboard

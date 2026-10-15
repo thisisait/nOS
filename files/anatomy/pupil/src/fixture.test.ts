@@ -178,6 +178,18 @@ describe('the pupil renders the contract fixture', () => {
 		expect(text(card)).toContain('approve creating this table?');
 	});
 
+	it('a column add card shows the table read-only and every new column whole', () => {
+		const msg = fx.to_shell.find((c) => c.case === 'new columns await approval')!.msg;
+		const page = draw(msg);
+		for (const want of ['add columns to Expenses (expenses) — nothing is added unless you approve', 'has item (Item): text',
+			'has receipt (Receipt): file', '+ paid_on (Paid on): date', '+ category (Category): select of travel, food',
+			'existing rows get no value in the new columns'])
+			expect(page).toContain(want);
+		const waiting = { approval: 'a', component: (msg as Extract<ToShell, { t: 'approval_request' }>).component };
+		const card = render(ApprovalCard, { props: { waiting, of: 1, whole: true, onseen: () => {}, ondecide: () => {} } }).body;
+		expect(text(card)).toContain('approve adding these columns?');
+	});
+
 	it('an empty diff side reads (empty), not blank', () => {
 		const msg = fx.to_shell.find((c) => c.msg.t === 'approval_request')!.msg;
 		expect(draw(msg)).toContain('(empty) → "landed"');

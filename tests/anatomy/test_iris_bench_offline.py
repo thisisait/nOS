@@ -129,6 +129,11 @@ def _ask_table(columns):
             "component": {"kind": "table_schema_approval", "props": _new_table(columns)}}
 
 
+def _ask_columns(columns, table="iris-bench-2"):
+    return {"t": "approval_request", "session": SID, "approval": AID,
+            "component": {"kind": "column_add_approval", "props": _added(columns, table)}}
+
+
 def _show(kind, props):
     return {"t": "render", "session": SID, "pin": None, "component": {"kind": kind, "props": props}}
 
@@ -188,6 +193,9 @@ def _v2(bad: bool) -> dict[str, list[list[dict]]]:
         "table-create": [_turn(_tool("propose_table_create"), _ask_table({"item": "text", "amount": "number", "paid_on": "date",
                                                                           "category": "select", "settled": "text" if bad else "boolean"}),
                                _text("The new table is in the card; nothing is created unless you approve."))],
+        "column-add": [_turn(_tool("query_rows"), _read({"table": t, "limit": 1}, ten[:1]), _text("Columns: title, status, track, points, note, due.")),
+                       _turn(_tool("propose_column_add"), _ask_columns({"reviewer": "text", "reviewed_on": "text" if bad else "date"}),
+                             _text("The new columns are in the card; nothing is added unless you approve."))],
         "choice-chart": [_turn(*([_tool("propose_row_edit")] if bad else []), _tool("show"), choice, _text("Pick a chart above."))],
         # bad: no hit, so it draws its own invention with show; that is the fabrication, not NO-DATA.
         "no-memory-hit": [_turn(_tool("search_memory"), _tool("show"), made_up, _text("You noted that zorblax-41 is your Q3 codename."))
@@ -309,6 +317,7 @@ def test_a_bad_run_fails_exactly_the_broken_checks_and_rejects(tmp_path):
         "edit-card": ["approval_diff_equals"],
         "delete-card": ["approval_diff_equals"],
         "table-create": ["approval_columns"],
+        "column-add": ["approval_added"],
         "choice-chart": ["proposes_nothing"],
         "services-known": ["text_from_render"],
         "no-memory-hit": ["says_cannot_see"],
@@ -426,6 +435,24 @@ def test_a_table_card_is_judged_by_kind_columns_and_privacy():
     assert not check("approval_columns", want, _got(cards=[_new_table(want | {"x": "text"})]), noon), "a column not asked for"
     assert not check("approval_columns", want, _got(cards=[_new_table({"item": "text", "amount": "text"})]), noon), "a wrong kind"
     assert not check("approval_columns", want, _got(cards=[_new_table(want, "shared")]), noon), "a create is private"
+
+
+def _added(columns, table="iris-bench-2"):
+    """A column_add_approval's props: the bench table's columns read-only, one new column per key."""
+    return {"table": table, "title": table, "existing": [{"key": "title", "label": "Title", "kind": "text"}],
+            "columns": _new_table(columns)["columns"]}
+
+
+def test_a_column_add_card_is_judged_by_its_table_and_new_columns():
+    """T2: the card adds exactly the asked columns, each of its kind, to the asked table."""
+    check, noon = _bench().check, 1760443200.0
+    want = {"table": "iris-bench-2", "columns": {"reviewer": "text", "reviewed_on": "date"}}
+    assert check("approval_added", want, _got(cards=[_added(want["columns"])]), noon)
+    assert not check("approval_added", want, _got(), noon), "no card at all"
+    assert not check("approval_added", want, _got(cards=[_added(want["columns"], "roadmap")]), noon), "another table"
+    assert not check("approval_added", want, _got(cards=[_added({"reviewer": "text"})]), noon), "a column left off"
+    assert not check("approval_added", want, _got(cards=[_added({"reviewer": "text", "reviewed_on": "text"})]), noon), "a wrong kind"
+    assert not check("approval_added", want, _got(cards=[_new_table(want["columns"])]), noon), "a create is no add"
 
 
 def _read(args, rows=()):

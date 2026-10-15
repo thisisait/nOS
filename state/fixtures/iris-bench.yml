@@ -231,6 +231,17 @@
     approval_kind: table_schema_approval
     approval_columns: {item: text, amount: number, paid_on: date, category: select, settled: boolean}
     not_blank: true
+# T2: the bench rejects the card, so a live run adds no column to iris-bench-2
+- id: column-add
+  needs_rows: true
+  turns:
+    - List the columns of iris-bench-2.
+    - Add two columns to iris-bench-2, Reviewer (text) and Reviewed on (date).
+  checks:
+    tools_called: [query_rows, propose_column_add]
+    approval_kind: column_add_approval
+    approval_added: {table: iris-bench-2, columns: {reviewer: text, reviewed_on: date}}
+    not_blank: true
 # choice
 - id: choice-chart
   prompt: I want to see iris-bench-2 by track but I am not sure which chart; offer me choices.

@@ -1269,6 +1269,36 @@ mod tests {
         assert_eq!(Component::TableSchemaApproval(t).check(), Err("a new table has a title".into()));
     }
 
+    fn has(key: &str, kind: &str) -> ExistingColumn {
+        ExistingColumn { key: key.into(), label: key.to_uppercase(), kind: kind.into() }
+    }
+
+    fn add(columns: Vec<SchemaColumn>) -> Component {
+        Component::ColumnAddApproval(ColumnAddApproval { table: "expenses".into(), title: "Expenses".into(),
+                                                         existing: vec![has("item", "text"), has("blob", "json")], columns })
+    }
+
+    #[test]
+    fn a_column_add_card_holds_new_optional_columns_beside_the_existing() {
+        let ok = add(vec![col("paid_on", ColumnKind::Date), SchemaColumn { options: Some(vec!["a".into()]), ..col("category", ColumnKind::Select) }]);
+        assert!(ok.check().is_ok(), "{:?}", ok.check());
+        let v = serde_json::to_value(&ok).unwrap();
+        assert_eq!((v["kind"].as_str(), v["props"]["existing"][1]["kind"].as_str(), v["props"]["columns"][0]["key"].as_str()),
+                   (Some("column_add_approval"), Some("json"), Some("paid_on")));
+        let refused = |c: Vec<SchemaColumn>| add(c).check().unwrap_err();
+        assert_eq!(refused(vec![]), "a column add has 1 to 30 new columns, not 0");
+        assert_eq!(refused((0..31).map(|i| col(&format!("c{i}"), ColumnKind::Text)).collect()), "a column add has 1 to 30 new columns, not 31");
+        assert_eq!(refused(vec![col("item", ColumnKind::Number)]), "table Expenses already has a column item");
+        assert!(refused(vec![col("note", ColumnKind::Text), col("note", ColumnKind::Text)]).contains("twice"));
+        assert!(refused(vec![SchemaColumn { required: true, ..col("note", ColumnKind::Text) }]).contains("optional"));
+        assert!(refused(vec![col("Note", ColumnKind::Text)]).contains("snake_case"));
+        let Component::ColumnAddApproval(mut t) = ok else { unreachable!() };
+        t.existing = (0..119).map(|i| has(&format!("e{i}"), "text")).collect();
+        assert!(Component::ColumnAddApproval(t.clone()).check().unwrap_err().contains("at most 120"));
+        t.table = String::new();
+        assert_eq!(Component::ColumnAddApproval(t).check(), Err("a column add names its table".into()));
+    }
+
     #[test]
     fn an_insert_card_carries_no_row_id_and_keeps_a_null_old() {
         let v = serde_json::to_value(card(RowOp::Insert, None, Value::Null)).unwrap();

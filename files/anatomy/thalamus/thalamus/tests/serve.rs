@@ -1085,6 +1085,146 @@ fn a_table_create_out_of_bounds_asks_nothing_and_says_why() {
     }
 }
 
+// --- T2: Iris adds columns to a table the person queried, under one card ---
+
+/// A bare label and a date column, the table named by its title.
+const ADD: &str = r#"{"table": "Todo list", "columns": ["owner", {"label": "Due on", "kind": "date"}]}"#;
+
+fn patches(rig: &Rig) -> Vec<(String, String)> {
+    rig.keap.lock().unwrap().iter().filter(|(h, _)| h.starts_with("PATCH /api/tables/")).cloned().collect()
+}
+
+/// One turn that queries todos, then proposes `add`; (stream, reader, session, approval, card).
+fn propose_columns(rig: &Rig) -> (UnixStream, BufReader<UnixStream>, String, String, nos_contract::renderers::ColumnAddApproval) {
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "add an owner and a due date to my todos");
+    let card = got.iter().find_map(|m| match m {
+        ToShell::ApprovalRequest { approval, component: Component::ColumnAddApproval(c), .. } => Some((approval.clone(), c.clone())),
+        _ => None,
+    }).unwrap_or_else(|| panic!("expected a column_add_approval, got {got:?}"));
+    (s, r, session_of(&got), card.0, card.1)
+}
+
+fn add_turn(add: &str) -> Vec<String> {
+    vec![query(r#"{"table": "todos", "q": "alpha"}"#), call("propose_column_add", add), answer("Proposed.")]
+}
+
+#[test]
+fn approve_adds_the_columns_as_the_person_and_they_take_values_at_once() {
+    use nos_contract::renderers::ColumnKind;
+    let (keap, _) = fake_table(SCHEMA, todo_rows());
+    let edit = r#"{"table": "todos", "row_id": "r1", "values": {"due_on": "2026-11-10", "owner": "bob"}}"#;
+    let rig = rig_at("cadd", mapped(), keap, [add_turn(ADD), vec![call("propose_row_edit", edit), answer("Proposed.")]].concat(), Some(local()));
+    let (s, mut r, session, approval, card) = propose_columns(&rig);
+    assert_eq!((card.table.as_str(), card.title.as_str()), ("todos", "Todo list"));
+    let has: Vec<(&str, &str)> = card.existing.iter().map(|c| (c.key.as_str(), c.kind.as_str())).collect();
+    assert_eq!(has, [("title", "text"), ("status", "select"), ("ordinal", "number")], "the card shows the table's columns as they are");
+    let new: Vec<(&str, &str, ColumnKind, bool)> = card.columns.iter().map(|c| (c.key.as_str(), c.label.as_str(), c.kind, c.required)).collect();
+    assert_eq!(new, [("owner", "Owner", ColumnKind::Text, false), ("due_on", "Due on", ColumnKind::Date, false)]);
+    assert!(patches(&rig).is_empty(), "a proposal changed the table before the person decided");
+
+    decide(&s, &approval, Decision::Approve);
+    let said = match next(&mut r) {
+        Some(ToShell::Text { text, .. }) => text,
+        other => panic!("the person hears nothing of the add: {other:?}"),
+    };
+    assert!(said.contains("Todo list") && said.contains("added") && said.contains("due_on"), "{said}");
+    let made = patches(&rig);
+    assert_eq!(made.len(), 1, "Approve changes the schema exactly once");
+    let head = made[0].0.to_ascii_lowercase();
+    assert!(head.starts_with("patch /api/tables/todos ") && head.contains("x-authentik-username: alice smith")
+            && head.contains(&format!("x-keap-proxy-secret: {SECRET}")), "{head}");
+    let body: serde_json::Value = serde_json::from_str(&made[0].1).unwrap();
+    assert_eq!(body.as_object().unwrap().keys().collect::<Vec<_>>(), ["schema"], "an add changes the columns and nothing else");
+    let sent = body["schema"]["columns"].as_array().unwrap();
+    let keys: Vec<&str> = sent.iter().map(|c| c["key"].as_str().unwrap()).collect();
+    assert_eq!(keys, ["title", "status", "ordinal", "owner", "due_on"], "KEAP gets the whole list: the old columns first, as they were");
+    assert_eq!((sent[1]["options"].clone(), sent[4]["kind"].as_str()), (serde_json::json!(["open", "done"]), Some("date")));
+    let seen = rig.keap.lock().unwrap().clone();
+    let at = seen.iter().position(|(h, _)| h.starts_with("PATCH ")).unwrap();
+    assert!(seen[at + 1..].iter().any(|(h, _)| h.starts_with("GET /api/tables/todos ")), "the add is read back, not taken from the PATCH's 200");
+
+    // The new date column takes a day at once: the session's schema cache moved with the table.
+    let got = turn(&s, &mut r, Some(session.clone()), "owner bob, due 2026-11-10");
+    assert!(got.iter().any(|m| matches!(m, ToShell::ApprovalRequest { component: Component::RowDiffApproval(_), .. })), "{got:?}");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let ev = events(&rig.ledger, &session);
+    for kind in ["agent_approval_request", "agent_approval_decision", "agent_tool_result"] {
+        assert!(ev.iter().any(|e| e.0 == kind && e.1 == "agent:iris/tool:propose_column_add"), "the ledger has no {kind} of the add: {ev:?}");
+    }
+    let result = ev.iter().find(|e| e.0 == "agent_tool_result" && e.1 == "agent:iris/tool:propose_column_add").unwrap();
+    assert_eq!((result.2["written"].as_bool(), result.2["table"].as_str(), result.2["added"].clone()),
+               (Some(true), Some("todos"), serde_json::json!(["owner", "due_on"])));
+    let edit = ev.iter().find(|e| e.0 == "agent_approval_request" && e.1 == "agent:iris/tool:propose_row_edit").unwrap();
+    let due = edit.2["cells"].as_array().unwrap().iter().find(|c| c["key"] == "due_on").unwrap();
+    assert!(due["new"].is_number(), "the new date column's day is written as epoch: {due}");
+}
+
+#[test]
+fn reject_adds_no_column() {
+    let (keap, _) = fake_table(SCHEMA, todo_rows());
+    let rig = rig_at("creject", mapped(), keap, add_turn(ADD), Some(local()));
+    let (s, mut r, _, approval, _) = propose_columns(&rig);
+    decide(&s, &approval, Decision::Reject);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { ref text, .. }) if text.contains("Rejected")));
+    assert!(patches(&rig).is_empty());
+}
+
+#[test]
+fn a_column_add_out_of_bounds_asks_nothing_and_says_why() {
+    for (name, model, why) in [
+        ("ca-unseen", vec![call("propose_column_add", ADD), answer("Could not.")], "was not queried in this session"),
+        ("ca-has", add_turn(r#"{"table": "todos", "columns": ["Status"]}"#), "already has a column status"),
+        ("ca-req", add_turn(r#"{"table": "todos", "columns": [{"label": "Owner", "required": true}]}"#), "optional"),
+        ("ca-kind", add_turn(r#"{"table": "todos", "columns": [{"label": "Blob", "kind": "json"}]}"#), "kinds: text, number, date, select, bool, rowRef"),
+        ("ca-extra", add_turn(r#"{"table": "todos", "columns": ["Owner"], "visibility": "shared"}"#), "has no `visibility`"),
+        ("ca-none", add_turn(r#"{"table": "todos", "columns": []}"#), "1 to 30"),
+    ] {
+        let (keap, _) = fake_table(SCHEMA, todo_rows());
+        let rig = rig_at(name, mapped(), keap, model, Some(local()));
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let got = turn(&s, &mut r, None, "add a column");
+        assert!(!got.iter().any(|m| matches!(m, ToShell::ApprovalRequest { .. })), "{name}: {got:?}");
+        assert!(patches(&rig).is_empty(), "{name}");
+        let heard = rig.model.lock().unwrap().last().unwrap().1.clone();
+        assert!(heard.contains(why), "{name}: the model was not told {why:?}: {heard}");
+    }
+}
+
+#[test]
+fn keap_refusing_the_schema_change_is_said_with_its_status() {
+    let bob = SCHEMA.replace(r#""rowCount": 99"#, r#""rowCount": 99, "ownerId": "u-bob""#);
+    let (keap, _) = fake_table(&bob, todo_rows());
+    let rig = rig_at("c403", mapped(), keap, add_turn(ADD), Some(local()));
+    let (s, mut r, _, approval, _) = propose_columns(&rig);
+    decide(&s, &approval, Decision::Approve);
+    let said = match next(&mut r) {
+        Some(ToShell::Text { text, .. }) => text,
+        other => panic!("the person hears nothing: {other:?}"),
+    };
+    assert!(said.contains("403") && said.contains("columns of Todo list") && said.contains("no column was added"), "{said}");
+}
+
+#[test]
+fn an_add_over_columns_that_moved_since_the_card_adds_nothing() {
+    let (keap, _) = fake_table(SCHEMA, todo_rows());
+    let rig = rig_at("cmoved", mapped(), keap, [add_turn(ADD), add_turn(r#"{"table": "todos", "columns": ["Note"]}"#)].concat(), Some(local()));
+    let (a, mut ar, _, first, _) = propose_columns(&rig);
+    let (b, mut br, _, second, _) = propose_columns(&rig);
+    decide(&b, &second, Decision::Approve);
+    assert!(matches!(next(&mut br), Some(ToShell::Text { ref text, .. }) if text.contains("added")));
+    decide(&a, &first, Decision::Approve);
+    let said = match next(&mut ar) {
+        Some(ToShell::Text { text, .. }) => text,
+        other => panic!("the person hears nothing: {other:?}"),
+    };
+    assert!(said.contains("changed since the card"), "{said}");
+    assert_eq!(patches(&rig).len(), 1, "a stale card's PATCH would drop the column added since");
+}
+
 // --- the eye (pupil I3): serve says what it is doing, every step of a turn ---
 
 fn phases(got: &[ToShell]) -> Vec<String> {
@@ -1741,6 +1881,19 @@ fn fake_tables(tables: Vec<(&str, Vec<serde_json::Value>)>) -> ((String, Seen), 
                     "ownerId": "u-alice", "schema": b["schema"]}}).to_string();
                 tables.push((format!("/api/tables/{id}"), out.clone(), Arc::default()));
                 write!(c, "HTTP/1.1 200 X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{out}", out.len()).unwrap();
+                continue;
+            }
+            // PATCH /api/tables/<id> replaces the column list; a table bob owns refuses alice (KEAP's owner check).
+            if let Some(i) = tables.iter().position(|t| method == "PATCH" && path == t.0) {
+                let (status, out) = if tables[i].1.contains("u-bob") {
+                    (403, r#"{"success": false, "error": "only the owner may change this table's schema"}"#.to_string())
+                } else {
+                    let mut info: serde_json::Value = serde_json::from_str(&tables[i].1).unwrap();
+                    info["data"]["schema"] = serde_json::from_str::<serde_json::Value>(&body).unwrap()["schema"].clone();
+                    tables[i].1 = info.to_string();
+                    (200, tables[i].1.clone())
+                };
+                write!(c, "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{out}", out.len()).unwrap();
                 continue;
             }
             let (base, schema, table) = tables.iter().find(|t| path == t.0 || path == format!("{}/rows", t.0) || path.starts_with(&format!("{}/rows/", t.0)))

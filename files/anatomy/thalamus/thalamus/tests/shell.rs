@@ -433,3 +433,17 @@ fn a_table_card_says_every_column_its_kind_options_and_required() {
         assert!(said.iter().any(|l| l.contains(want)), "{want:?} not in {said:?}");
     }
 }
+
+// --- T2: a column add card shows the table's columns read-only and every new one whole ---
+
+#[test]
+fn a_column_add_card_says_what_the_table_has_and_what_it_gains() {
+    let (_, m) = fixture().into_iter().find(|(c, _)| c == "new columns await approval").unwrap();
+    let ToShell::ApprovalRequest { component, .. } = m else { panic!("the column add sample no longer decodes: {m:?}") };
+    let said: Vec<String> = shell::component_lines(&component).iter().map(|l| l.to_string()).collect();
+    for want in ["add columns to Expenses (expenses) — nothing is added unless you approve", "has item (Item): text",
+                 "has receipt (Receipt): file", "+ paid_on (Paid on): date", "+ category (Category): select of travel, food",
+                 "existing rows get no value in the new columns"] {
+        assert!(said.iter().any(|l| l.contains(want)), "{want:?} not in {said:?}");
+    }
+}

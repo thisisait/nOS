@@ -340,6 +340,28 @@ mod tests {
     }
 
     #[test]
+    fn approved_columns_is_the_add_card_and_never_a_create() {
+        let (l, _) = ledger("column-add");
+        start(&l);
+        let card = serde_json::json!({"table": "expenses", "title": "Expenses", "existing": [{"key": "item", "label": "Item", "kind": "text"}],
+            "columns": [{"key": "paid_on", "label": "Paid on", "kind": "date"}]});
+        let d = approve(&l, "c1", card.clone());
+        let (actor, t) = l.approved_columns(d).unwrap();
+        assert_eq!((actor.as_str(), t.table.as_str(), t.existing[0].key.as_str(), t.columns[0].key.as_str()), ("user:alice", "expenses", "item", "paid_on"));
+        assert!(l.approved_table(d).is_err(), "an add card creates no table");
+        let create = approve(&l, "c2", serde_json::json!({"title": "X", "visibility": "private", "columns": [{"key": "a", "label": "A", "kind": "text"}]}));
+        assert!(l.approved_columns(create).is_err(), "a create card adds no column");
+        let mut clash = card.clone();
+        clash["columns"][0]["key"] = serde_json::json!("item");
+        let mut required = card.clone();
+        required["columns"][0]["required"] = serde_json::json!(true);
+        for (i, bad) in [clash, required].into_iter().enumerate() {
+            let d = approve(&l, &format!("b{i}"), bad);
+            assert!(l.approved_columns(d).is_err(), "case {i} was approved as an add");
+        }
+    }
+
+    #[test]
     fn approved_table_is_the_card_the_person_saw_and_nothing_else() {
         let (l, _) = ledger("table-create");
         start(&l);
