@@ -3553,7 +3553,12 @@ fn text_someone_else_wrote_reaches_iris_under_a_data_notice() {
 /// One offer_dashboard call over the sheet, then a line of text: (rig, the turn, the model's tool result).
 fn offer(name: &str, args: serde_json::Value) -> (Rig, Vec<ToShell>, serde_json::Value) {
     let rows = vec![keap_row("a", serde_json::json!({"status": "open", "amount": 3, "note": "trip to Brno"}))];
-    let rig = rig_at(name, mapped(), fake_table(SHEET, rows).0, vec![call("offer_dashboard", &args.to_string()), answer("Offered.")], Some(local()));
+    offer_over(name, fake_table(SHEET, rows).0, args)
+}
+
+/// offer over any fake KEAP (two tables, say).
+fn offer_over(name: &str, keap: (String, Seen), args: serde_json::Value) -> (Rig, Vec<ToShell>, serde_json::Value) {
+    let rig = rig_at(name, mapped(), keap, vec![call("offer_dashboard", &args.to_string()), answer("Offered.")], Some(local()));
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
     let got = turn(&s, &mut r, None, "make me a dashboard of the sheet");
@@ -3623,6 +3628,39 @@ fn an_offer_with_no_widget_that_fits_is_refused_and_draws_nothing() {
         assert!(result["error"].as_str().is_some_and(|e| e.contains(want)), "{name}: {result}");
         assert!(rig.keap.lock().unwrap().iter().all(|(h, _)| !h.contains("/rows")), "{name}: a row was read");
     }
+}
+
+#[test]
+fn a_lens_is_checked_against_every_widget_it_filters() {
+    // The lens joins each rows and chart widget's where as a run would; a widget it breaks is left out.
+    let chart = serde_json::json!({"query": {"table": "sheet"}, "chart": "bar", "x": "status", "op": "count"});
+    for (name, lens, widgets, why) in [
+        ("lensopt", serde_json::json!([{"column": "status", "op": "eq", "value": "archived"}]),
+         serde_json::json!([{"title": "W", "rows": "sheet"}, {"title": "Add", "form": "sheet"}]), "\"archived\" is not a status value"),
+        ("lensday", serde_json::json!([{"column": "when", "op": "after", "value": "tomorrow"}]),
+         serde_json::json!([{"title": "W", "chart": chart}, {"title": "Add", "form": "sheet"}]), "is not a day"),
+        ("lenscol", serde_json::json!([{"column": "when", "op": "after"}]),
+         serde_json::json!([{"title": "Sheet", "rows": "sheet"}, {"title": "W", "rows": "cards"}]), "no column `when`"),
+    ] {
+        let keap = fake_tables(vec![(SHEET, vec![]), (CARDS, vec![])]).0;
+        let (_, got, _) = offer_over(name, keap, serde_json::json!({"name": "x", "lens": lens, "widgets": widgets}));
+        let d = dashboards(&got);
+        assert_eq!(d.len(), 1, "{name}: {got:?}");
+        assert_eq!(d[0]["dropped"][0]["title"], "W", "{name}: {}", d[0]);
+        assert!(d[0]["dropped"][0]["why"].as_str().unwrap().contains(why), "{name}: {}", d[0]);
+    }
+}
+
+#[test]
+fn a_chart_offered_with_shows_source_alone_is_told_to_add_its_chart() {
+    let (rig, got, result) = offer("dashsrc", serde_json::json!({"name": "x", "widgets": [{"title": "Rows", "rows": "sheet"},
+        {"title": "W", "chart": {"query": {"table": "sheet"}, "x": "status", "op": "count"}}]}));
+    let d = &dashboards(&got)[0];
+    assert_eq!(d["dropped"][0]["title"], "W", "{d}");
+    assert!(d["dropped"][0]["why"].as_str().unwrap().contains("plus `chart` bar, line or pie"), "{d}");
+    assert!(result.to_string().contains("plus `chart` bar, line or pie"), "the model hears it: {result}");
+    let p = system_prompt(&rig);
+    assert!(p.contains("pass the same source plus its chart (bar, line or pie)"), "the prompt says so too: {p}");
 }
 
 #[test]
