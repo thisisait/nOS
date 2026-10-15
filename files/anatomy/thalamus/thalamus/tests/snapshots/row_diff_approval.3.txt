@@ -1,0 +1,10 @@
+insert_many a new row in Invoices (invoices) — nothing is written unless you app
+  client: (empty) -> "Acme"
+  + line 1 of 2 in Invoice lines (invoice-lines), its invoice -> the row above
+    item: (empty) -> "hosting"
+    amount: (empty) -> 120
+  + line 2 of 2 in Invoice lines (invoice-lines), its invoice -> the row above
+    item: (empty) -> "support"
+    amount: (empty) -> 80
+
+

@@ -36,5 +36,5 @@ dashboard Bench board: 3 widgets, place it in the pupil
 dashboards in KEAP: Bench board (wsbench1, 2 widgets)
   left out: Old board — widget "x": a widget spec names no table
 dashboard wsbench1 saved in KEAP (row d1)
-approve this edit (1 of 2)? y / n
+approve this edit (1 of 4)? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit

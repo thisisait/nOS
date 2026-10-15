@@ -144,7 +144,7 @@ fn diff_of(approval: &str, cells: &[(&str, serde_json::Value)]) -> ToShell {
     let cells = cells.iter().map(|(k, v)| CellChange { key: k.to_string(), old: serde_json::Value::Null, new: v.clone() }).collect();
     ToShell::ApprovalRequest { session: SESSION.into(), approval: approval.into(),
                                component: Component::RowDiffApproval(RowDiffApproval { table: "todos".into(), title: "Todo list".into(),
-                                   op: RowOp::Update, row_id: Some("r1".into()), cells, read_from: vec![] }) }
+                                   op: RowOp::Update, row_id: Some("r1".into()), cells, read_from: vec![], lines: None }) }
 }
 
 fn drawn(app: &App, w: u16, h: u16) -> Terminal<TestBackend> {

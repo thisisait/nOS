@@ -98,9 +98,13 @@ components:
   vocabulary:
     table_results: "rows of one DataTable: {table, name, query, matched, total, columns[], rows[{__id, cells{}}], projected}; total: rows readable, matched: after the query"
     row_diff_approval: >-
-      one row's proposed write, cell by cell: {table, title, op insert|update, row_id?, cells[{key, old, new}] >=1, read_from[]?};
-      an update names its row, an insert names none and every old is null; read_from names the tools whose
-      free text the model read that turn, and the card head says "contains text from" them
+      one row's proposed write, cell by cell: {table, title, op insert|update|insert_many, row_id?, cells[{key, old, new}] >=1,
+      read_from[]?, lines?}; an update names its row, an insert names none and every old is null; read_from names the tools whose
+      free text the model read that turn, and the card head says "contains text from" them. insert_many (v6) is a parent and
+      its line items under ONE approval: the parent is new (no row_id, olds null) or an existing row shown unchanged (row_id,
+      each old == new, never written); lines {table, title, ref_key, rows[[{key, old null, new}]] 1-20, each >=1 cell, never
+      ref_key} are written after the parent in order, each with ref_key = the parent's id; both shells show every line. Only
+      insert_many carries lines. A write that stops part-way is said with the rows written before it, never silently
     inbox_list: "waiting captures and promotions: {items[{id, title, source, created_at}], refused[]}"
     approvals_list: "tools/awaiting-operator.py --json: {items[{kind, severity, age, what, where, note?}], unknown[]}"
     red_status: "tools/red-status.py --json: {red_count, reds[], hold_count, holds[]}"
@@ -151,7 +155,8 @@ components:
       prefill? {key: value}}; at most 20 fields, keys unique, never empty or __-prefixed, a select has 1-50
       options, min <= max; `when` names another field and never sits on a required one (the pupil hides the
       field while it fails and sends no value for it); prefill names fields only and is where the person's
-      draft starts, never a value sent (KEAP's column def has no min/max, so serve sets none); the pupil draws its own header
+      draft starts, never a value sent (KEAP's column def has no min/max, so serve sets none); a rowRef column is a select of
+      the parent rows' refDisplay labels (1-50, unique; else text, the parent's id) and the submit writes the picked row's id; the pupil draws its own header
       "Adds a row to <title> (<table>)" and button "Add row"; the terminal says the fields and
       "fill it in the pupil"
     # Rendered only (wire.rs: never in an approval, never as a widget's answer); nothing runs at offer.

@@ -6,7 +6,7 @@
 use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, RowOp, Session};
 use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget,
-                               Dropped, FieldKind, Form, FormField, InboxItem, InboxList, Lens, LensOp, List, ListItem, Omitted, RedStatus,
+                               Dropped, FieldKind, Form, FormField, InboxItem, InboxList, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
                                Row, RowDiffApproval, SavedDashboard, Series, Table, TableResults};
 use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, FormSpec, Op, Phase, ToShell, ToThalamus, Trigger,
                          WidgetChart, WidgetSpec};
@@ -332,7 +332,9 @@ conversation, on a row query_rows showed them; never to count, test or look at a
 const PROPOSE_ROW_INSERT: &str = "Propose one new row. Renders row_diff_approval: the person sees the table and \
 every cell of the new row and approves or rejects it; KEAP mints the row id. Nothing is written until they approve. \
 Only for a row the person asked for, in a table query_rows showed them in this conversation (its columns say what \
-a row needs); a date is YYYY-MM-DD.";
+a row needs); a date is YYYY-MM-DD. Line items (rows of another queried table that point at this one) go in `lines` \
+under the new row, or under a row query_rows showed (`row_id`, no `values`): the row and every line are one card and \
+one approval; never put the pointing column in a line.";
 
 /// Tools whose result carries free text someone else wrote; a card asked after one says so.
 const FREE_TEXT: [&str; 3] = ["search_memory", "inbox", "approvals_awaiting"];
@@ -511,9 +513,14 @@ fn tools() -> Value {
             "row_id": {"type": "string", "description": "the row's __id from query_rows"},
             "values": {"type": "object", "description": "column -> new value; null clears the cell"}}}}},
         {"type": "function", "function": {"name": "propose_row_insert", "description": PROPOSE_ROW_INSERT,
-        "parameters": {"type": "object", "additionalProperties": false, "required": ["table", "values"], "properties": {
+        "parameters": {"type": "object", "additionalProperties": false, "required": ["table"], "properties": {
             "table": {"type": "string", "description": "the table id or title query_rows showed, or \"roadmap\""},
-            "values": {"type": "object", "description": "column -> value for the new row; required columns must be present"}}}}},
+            "values": {"type": "object", "description": "column -> value for the new row; required columns must be present"},
+            "row_id": {"type": "string", "description": "only with lines: the __id of a row query_rows showed, in place of values"},
+            "lines": {"type": "object", "additionalProperties": false, "required": ["table", "rows"], "properties": {
+                "table": {"type": "string", "description": "the line table's id or title query_rows showed"},
+                "rows": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "object"},
+                    "description": "each line: column -> value, without the column that points at the row"}}}}}}},
         {"type": "function", "function": {"name": "show", "description": SHOW, "parameters": show_schema()}},
         {"type": "function", "function": {"name": "red_status", "description": RED_STATUS,
         "parameters": {"type": "object", "additionalProperties": false, "properties": {}}}},
@@ -721,25 +728,30 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// Asks the person: the request is in the ledger before the shell sees it, or it is not asked.
     fn ask(&self, o: &mut Open, out: &mut UnixStream, d: RowDiffApproval) -> Result<Value, String> {
         let approval = mint_uuid().map_err(|e| format!("no approval id: {e}"))?;
-        let tool = match d.op { RowOp::Insert => "propose_row_insert", RowOp::Update => "propose_row_edit" };
+        let tool = match d.op { RowOp::Insert | RowOp::InsertMany => "propose_row_insert", RowOp::Update => "propose_row_edit" };
         // The record is the card. approved() tests presence, so an insert's row_id and olds are
-        // removed by op, never nulled; an update's real `old: null` (an empty cell) stays.
+        // removed by op, never nulled; an update's real `old: null` (an empty cell) stays, and so
+        // does an existing parent's old (== new). A line is always an insert.
         let mut rec = serde_json::to_value(&d).map_err(|e| format!("unrecordable card: {e}"))?;
-        if d.op == RowOp::Insert {
+        let strip = |cells: &mut Value| cells.as_array_mut().into_iter().flatten().for_each(|c| { c.as_object_mut().map(|c| c.remove("old")); });
+        if d.op == RowOp::Insert || (d.op == RowOp::InsertMany && d.row_id.is_none()) {
             rec.as_object_mut().map(|r| r.remove("row_id"));
-            for c in rec["cells"].as_array_mut().into_iter().flatten() {
-                c.as_object_mut().map(|c| c.remove("old"));
-            }
+            strip(&mut rec["cells"]);
         }
+        rec.pointer_mut("/lines/rows").and_then(Value::as_array_mut).into_iter().flatten().for_each(strip);
         rec["approval"] = json!(approval);
         self.record(o, Kind::ApprovalRequest, Some(tool), rec)?;
         o.pending.insert(approval.clone(), tool);
         // The record keeps epoch (approved() compares it with KEAP); the person reads a date as its day.
-        let dates = o.dates.get(&d.table).cloned().unwrap_or_default();
-        let say = |v: Value| day(&v).map_or(v, Value::from);
-        let cells = d.cells.into_iter().map(|c| if dates.contains(&c.key) { CellChange { old: say(c.old), new: say(c.new), ..c } } else { c }).collect();
+        let said = |table: &str, cells: Vec<CellChange>| {
+            let dates = o.dates.get(table).cloned().unwrap_or_default();
+            let say = |v: Value| day(&v).map_or(v, Value::from);
+            cells.into_iter().map(|c| if dates.contains(&c.key) { CellChange { old: say(c.old), new: say(c.new), ..c } } else { c }).collect()
+        };
+        let cells = said(&d.table, d.cells);
+        let lines = d.lines.map(|l| Lines { rows: l.rows.into_iter().map(|r| said(&l.table, r)).collect(), ..l });
         send(out, &ToShell::ApprovalRequest { session: o.session.clone(), approval: approval.clone(),
-                                              component: Component::RowDiffApproval(RowDiffApproval { cells, ..d }) });
+                                              component: Component::RowDiffApproval(RowDiffApproval { cells, lines, ..d }) });
         Ok(json!({"approval": approval, "status": "waiting for the person; nothing is written unless they approve"}))
     }
 
@@ -755,22 +767,36 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         if d == Decision::Approve {
             activity(out, o, Phase::Writing);
         }
-        let mut written = None;
+        let mut written = vec![];
         let (text, result, heard) = match d {
             Decision::Reject => ("Rejected: nothing was written.".to_string(), json!({"approval": approval, "written": false}),
                                  format!("rejected: {}", note.as_deref().unwrap_or("no note"))),
-            Decision::Approve => match self.committed(who, id) {
-                Ok((row, table)) => {
-                    written = Some((table, row.clone()));
+            Decision::Approve => match self.commit_rows(who, id) {
+                Ok(rows) if rows.len() == 1 => {
+                    let row = rows[0].1.clone();
+                    written = rows;
                     (format!("Approved: row {row} written."), json!({"approval": approval, "written": true, "row": row}),
                      "approved, row written".to_string())
                 }
-                Err(why) => (format!("Approved, but the write failed: {why}"), json!({"approval": approval, "error": why}),
-                             format!("approved, but nothing was written: {why}")),
+                Ok(rows) => {
+                    let text = format!("Approved: {} rows written: {}.", rows.len(), said_rows(&rows));
+                    let rec = json!({"approval": approval, "written": true, "rows": rows_json(&rows)});
+                    written = rows;
+                    (text, rec, "approved, every row written".to_string())
+                }
+                Err((why, rows)) if rows.is_empty() => (format!("Approved, but the write failed: {why}"), json!({"approval": approval, "error": why}),
+                                                        format!("approved, but nothing was written: {why}")),
+                // No silent partial: the person and the model hear where it stopped and what is in KEAP.
+                Err((why, rows)) => {
+                    let text = format!("Approved, but the write stopped: {why}. Written before it stopped: {}.", said_rows(&rows));
+                    let rec = json!({"approval": approval, "error": why, "written": "partial", "rows": rows_json(&rows)});
+                    written = rows;
+                    (text.clone(), rec, text)
+                }
             },
         };
         let _ = self.record(o, Kind::ToolResult, tool, result);
-        if let Some((table, row)) = written {
+        for (table, row) in written {
             changed(out, o, &table, &row);
         }
         // The model was told only "waiting"; its next turn starts from what the person did.
@@ -782,20 +808,67 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// request showed the person; no approve row in the ledger, no POST. Returns the row's id:
     /// the one updated, or the one KEAP minted for an insert.
     pub fn commit(&self, who: &Person, decision: i64) -> Result<String, String> {
-        let a = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.approved(decision)?;
-        if a.actor != format!("user:{}", who.uid()) {
-            return Err("the approval belongs to another person".into());
+        match self.commit_rows(who, decision) {
+            Ok(rows) => rows.first().map(|r| r.1.clone()).ok_or("nothing was written".into()),
+            Err((why, rows)) if rows.is_empty() => Err(why),
+            Err((why, rows)) => Err(format!("{why}; written before it stopped: {}", said_rows(&rows))),
         }
-        let url = format!("{}/api/tables/{}/rows", self.keap_url.trim_end_matches('/'), enc(&a.table));
-        let Some(row_id) = a.row_id.filter(|_| a.op == RowOp::Update) else {
-            // KEAP mints the id; a body with one would overwrite that row (routes.ts upsert).
-            let v = self.keap(who, &url, Some(&json!({"values": a.values})))?;
-            return v.pointer("/data/id").and_then(Value::as_str).filter(|i| !i.is_empty()).map(str::to_string)
-                .ok_or("KEAP answered the insert without a row id".into());
-        };
-        let (table, values, old) = (a.table, a.values, a.old);
+    }
+
+    /// commit() row by row: every (table, row) written in order, or why it stopped and what it
+    /// wrote before. insert_many writes the parent (unless it exists), then each line pointing at it.
+    fn commit_rows(&self, who: &Person, decision: i64) -> Result<Written, (String, Written)> {
+        let none = |e: String| (e, vec![]);
+        let a = self.ledger.lock().map_err(|_| none("ledger poisoned".into()))?.approved(decision).map_err(none)?;
+        if a.actor != format!("user:{}", who.uid()) {
+            return Err(none("the approval belongs to another person".into()));
+        }
+        match (a.op, a.row_id, a.lines) {
+            (RowOp::Update, Some(row), _) => self.update(who, &a.table, &row, a.values, a.old).map(|r| vec![(a.table, r)]).map_err(none),
+            (RowOp::InsertMany, parent, Some(l)) => {
+                let mut done = vec![];
+                let parent = match parent {
+                    // The lines hang on the row the person saw; gone since, nothing is written.
+                    Some(id) => match self.rows(who, &a.table) {
+                        Ok(rows) if rows.iter().any(|(r, _)| *r == id) => id,
+                        Ok(_) => return Err(none(format!("row {id} is gone since the proposal; nothing written"))),
+                        Err(e) => return Err(none(e)),
+                    },
+                    None => {
+                        let id = self.insert(who, &a.table, a.values).map_err(none)?;
+                        done.push((a.table.clone(), id.clone()));
+                        id
+                    }
+                };
+                let n = l.rows.len();
+                for (i, mut values) in l.rows.into_iter().enumerate() {
+                    values.insert(l.ref_key.clone(), json!(parent));
+                    match self.insert(who, &l.table, values) {
+                        Ok(id) => done.push((l.table.clone(), id)),
+                        Err(e) => return Err((format!("line {} of {n} was not written: {e}", i + 1), done)),
+                    }
+                }
+                Ok(done)
+            }
+            (RowOp::Insert, None, None) => self.insert(who, &a.table, a.values).map(|r| vec![(a.table, r)]).map_err(none),
+            _ => Err(none("the approval is of no write shape; nothing written".into())),
+        }
+    }
+
+    /// One new row; KEAP mints the id. A body with one would overwrite that row (routes.ts upsert).
+    fn insert(&self, who: &Person, table: &str, values: Map<String, Value>) -> Result<String, String> {
+        let url = format!("{}/api/tables/{}/rows", self.keap_url.trim_end_matches('/'), enc(table));
+        let v = self.keap(who, &url, Some(&json!({"values": values})))?;
+        v.pointer("/data/id").and_then(Value::as_str).filter(|i| !i.is_empty()).map(str::to_string)
+            .ok_or("KEAP answered the insert without a row id".into())
+    }
+
+    /// One approved update, unless a cell the person saw has moved since.
+    fn update(&self, who: &Person, table: &str, row_id: &str, values: Map<String, Value>, old: Map<String, Value>) -> Result<String, String> {
+        let url = format!("{}/api/tables/{}/rows", self.keap_url.trim_end_matches('/'), enc(table));
+        let row_id = row_id.to_string();
         // The person approved old -> new; a row that moved since is not what they saw.
-        let now = self.rows(who, &table)?.into_iter().find(|(id, _)| *id == row_id).map(|(_, v)| v)
+        let now = self.rows(who, table)?.into_iter().find(|(id, _)| *id == row_id).map(|(_, v)| v)
             .ok_or(format!("row {row_id} is gone since the proposal; nothing written"))?;
         if let Some((k, _)) = old.iter().find(|(k, v)| now.get(*k).unwrap_or(&Value::Null) != *v) {
             return Err(format!("cell {k} of row {row_id} changed since the proposal; nothing written"));
@@ -1092,7 +1165,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                     "propose_row_edit" | "propose_row_insert" if !o.pending.is_empty() => Err("an approval is already waiting".to_string()),
                     "propose_row_edit" | "propose_row_insert" => {
                         let d = if name == "propose_row_edit" { self.propose_row_edit(who, &args, &o.shown, &o.dates) }
-                                else { self.propose_row_insert(who, &args, &o.tables_seen) };
+                                else { self.propose_row_insert(who, &args, &o.tables_seen, &o.shown) };
                         // Operator ruling Q7: no refusal after a free-text read; the card head says it.
                         d.and_then(|d| self.ask(o, out, RowDiffApproval { read_from: o.read_free.clone(), ..d }))
                     }
@@ -1514,9 +1587,31 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         for c in schema {
             let (key, kind) = (s(c, "key"), s(c, "kind"));
             let required = c.get("required").and_then(Value::as_bool).unwrap_or(false);
-            let options: Option<Vec<String>> = c.get("options").and_then(Value::as_array)
+            let mut options: Option<Vec<String>> = c.get("options").and_then(Value::as_array)
                 .map(|o| o.iter().filter_map(Value::as_str).map(str::to_string).collect());
+            let wanted = columns.is_none_or(|cols| cols.contains(&key));
+            // A rowRef is a select of the parent rows' labels (refDisplay), read as the person; over 50
+            // or a label twice, text (the parent's id). The submit writes the id the label names.
+            let parent = match (kind.as_str(), wanted) {
+                ("rowRef", true) => {
+                    let p = Parent { table: s(c, "refTable"), display: s(c, "refDisplay"), ids: vec![] };
+                    let rows = self.rows(who, &p.table).map_err(|e| format!("column {key} lists rows of {}: {e}", p.table))?;
+                    let label = |(id, v): &(String, Map<String, Value>)| v.get(&p.display).filter(|v| !v.is_null()).map_or(id.clone(), text);
+                    let labels: Vec<String> = rows.iter().map(label).collect();
+                    let unique = labels.iter().collect::<HashSet<_>>().len() == labels.len();
+                    if (1..=50).contains(&labels.len()) && unique {
+                        options = Some(labels);
+                        Some(Parent { ids: rows.into_iter().map(|r| r.0).collect(), ..p })
+                    } else {
+                        options = None;
+                        Some(p)
+                    }
+                }
+                _ => None,
+            };
             let field = match kind.as_str() {
+                "rowRef" if options.is_some() => Some(FieldKind::Select),
+                "rowRef" => Some(FieldKind::Text),
                 "text" => Some(FieldKind::Text),
                 "number" => Some(FieldKind::Number),
                 "boolean" => Some(FieldKind::Bool),
@@ -1525,12 +1620,11 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 "select" => Some(FieldKind::Text),
                 _ => None,
             };
-            let wanted = columns.is_none_or(|cols| cols.contains(&key));
             match (field, wanted) {
                 (Some(kind), true) => fields.push(FormField {
                     label: Some(s(c, "label")).filter(|l| !l.is_empty()).unwrap_or_else(|| key.clone()),
                     options: options.filter(|_| kind == FieldKind::Select),
-                    key, kind, required, min: None, max: None, placeholder: None, when: None,
+                    key, kind, required, min: None, max: None, placeholder: None, when: None, parent,
                 }),
                 // KEAP refuses a row without it, so a form that cannot fill it would only fail later.
                 _ if required => return Err(format!("column {key} ({kind}) is required and has no form field")),
@@ -1580,20 +1674,74 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             return Err("nothing would change".into());
         }
         Ok(RowDiffApproval { table: table.to_string(), title: title.clone(), op: RowOp::Update, row_id: Some(row_id.to_string()),
-                             cells, read_from: vec![] })
+                             cells, read_from: vec![], lines: None })
     }
 
     /// A new row's cells typed by the live schema, read as the person, in a table a query showed them.
-    fn propose_row_insert(&self, who: &Person, args: &Value, seen: &HashMap<String, String>) -> Result<RowDiffApproval, String> {
+    /// With `lines`, the row (new, or one shown by `row_id`) and its lines are one insert_many card.
+    fn propose_row_insert(&self, who: &Person, args: &Value, seen: &HashMap<String, String>,
+                          shown: &HashMap<(String, String), String>) -> Result<RowDiffApproval, String> {
         let alias = args.get("table").and_then(Value::as_str).filter(|t| !t.is_empty()).ok_or("propose_row_insert needs `table`")?;
         // Refused before any read, as a row never shown is: a probe mints no card, and a row read
         // in one table cannot aim an insert at another the person never looked at.
-        let id = table_id(alias);
-        let Some(table) = seen.get_key_value(&id).or_else(|| seen.iter().find(|(_, t)| t.eq_ignore_ascii_case(alias.trim()))).map(|(k, _)| k)
-        else {
-            return Err(format!("table {alias} was not queried in this session; query it first"));
+        let table = queried(seen, alias)?;
+        let row_id = args.get("row_id").and_then(Value::as_str).filter(|r| !r.is_empty());
+        let Some(lines) = args.get("lines").filter(|l| !l.is_null()) else {
+            if row_id.is_some() {
+                return Err("row_id names an existing row only for its `lines`; a new row is `values`".into());
+            }
+            let (f, cells) = self.new_row(who, table, args.get("values"))?;
+            return Ok(RowDiffApproval { table: f.table, title: f.title, op: RowOp::Insert, row_id: None, cells, read_from: vec![], lines: None });
         };
-        let values = args.get("values").and_then(Value::as_object).filter(|v| !v.is_empty())
+        let lt = lines.get("table").and_then(Value::as_str).filter(|t| !t.is_empty()).ok_or("`lines` needs `table`")?;
+        let lt = queried(seen, lt)?;
+        let rows = lines.get("rows").and_then(Value::as_array).filter(|r| (1..=20).contains(&r.len()))
+            .ok_or("`lines.rows` holds 1 to 20 rows, each {column: value}")?;
+        let lf = self.form_from_schema(who, lt, None)?;
+        let refs: Vec<&FormField> = lf.fields.iter().filter(|x| x.parent.as_ref().is_some_and(|p| p.table == *table)).collect();
+        let [link] = refs.as_slice() else {
+            return Err(format!("lines need exactly one column of {} ({}) that points at {table}; it has {}", lf.title, lf.table, refs.len()));
+        };
+        let (ref_key, display) = (link.key.clone(), link.parent.as_ref().map(|p| p.display.clone()).unwrap_or_default());
+        let line_form = Form { fields: lf.fields.iter().filter(|x| x.key != ref_key).cloned().collect(), ..lf.clone() };
+        let rows = rows.iter().enumerate().map(|(i, r)| {
+            let r = r.as_object().filter(|r| !r.is_empty()).ok_or(format!("line {} is a non-empty {{column: value}}", i + 1))?;
+            if r.contains_key(&ref_key) {
+                return Err(format!("leave {ref_key} out of line {}: it points at the parent row", i + 1));
+            }
+            let cells = form_cells(&line_form, r).map_err(|e| format!("line {}: {e}", i + 1))?;
+            Ok(cells.into_iter().map(|c| CellChange { key: c["key"].as_str().unwrap_or_default().to_string(), old: Value::Null, new: c["new"].clone() })
+                .collect())
+        }).collect::<Result<Vec<_>, String>>()?;
+        let (title, cells) = match (args.get("values").filter(|v| !v.is_null()), row_id) {
+            (Some(_), None) => {
+                let (f, cells) = self.new_row(who, table, args.get("values"))?;
+                (f.title, cells)
+            }
+            (None, Some(id)) => {
+                let title = shown.get(&(table.clone(), id.to_string()))
+                    .ok_or(format!("row {id} was not shown to the person in this session; query it first"))?;
+                if display.is_empty() {
+                    return Err(format!("column {ref_key} names no refDisplay to show its row by"));
+                }
+                // The parent as the person knows it, unchanged: old and new are the same value.
+                let now = self.rows(who, table)?.into_iter().find(|(r, _)| r == id).map(|(_, v)| v)
+                    .ok_or(format!("no row {id:?} in {table} that you can read"))?;
+                let v = now.get(&display).cloned().unwrap_or(Value::Null);
+                (title.clone(), vec![CellChange { key: display, old: v.clone(), new: v }])
+            }
+            (Some(_), Some(_)) => return Err("lines hang on either a new row (`values`) or a shown one (`row_id`), not both".into()),
+            (None, None) => return Err("lines hang on a new row (`values`) or a shown one (`row_id`)".into()),
+        };
+        let d = RowDiffApproval { table: table.clone(), title, op: RowOp::InsertMany, row_id: row_id.map(str::to_string), cells, read_from: vec![],
+                                  lines: Some(Lines { table: lf.table, title: lf.title, ref_key, rows }) };
+        Component::RowDiffApproval(d.clone()).check()?;
+        Ok(d)
+    }
+
+    /// A new row's values as cells, checked as a form of the table's columns they name.
+    fn new_row(&self, who: &Person, table: &str, values: Option<&Value>) -> Result<(Form, Vec<CellChange>), String> {
+        let values = values.and_then(Value::as_object).filter(|v| !v.is_empty())
             .ok_or("propose_row_insert needs a non-empty `values` object")?;
         if let Some(k) = values.keys().find(|k| k.is_empty() || k.starts_with("__")) {
             return Err(format!("column {k:?} cannot be written here"));
@@ -1603,7 +1751,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let cells = form_cells(&f, values)?.into_iter()
             .map(|c| CellChange { key: c["key"].as_str().unwrap_or_default().to_string(), old: Value::Null, new: c["new"].clone() })
             .collect();
-        Ok(RowDiffApproval { table: f.table, title: f.title, op: RowOp::Insert, row_id: None, cells, read_from: vec![] })
+        Ok((f, cells))
     }
 
     fn as_person<B>(&self, rb: ureq::RequestBuilder<B>, who: &Person) -> ureq::RequestBuilder<B> {
@@ -2029,6 +2177,24 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 }
 
 /// A chart spec as the query_rows arguments that aggregate it (group_by x, op, y).
+/// The table id a query this session resolved `alias` (id or title) to, or why not.
+fn queried<'a>(seen: &'a HashMap<String, String>, alias: &str) -> Result<&'a String, String> {
+    seen.get_key_value(&table_id(alias)).or_else(|| seen.iter().find(|(_, t)| t.eq_ignore_ascii_case(alias.trim()))).map(|(k, _)| k)
+        .ok_or(format!("table {alias} was not queried in this session; query it first"))
+}
+
+/// (table, row) per row a commit wrote, in order.
+type Written = Vec<(String, String)>;
+
+/// Written rows as the person reads them: "table/row, ...".
+fn said_rows(rows: &[(String, String)]) -> String {
+    rows.iter().map(|(t, r)| format!("{t}/{r}")).collect::<Vec<_>>().join(", ")
+}
+
+fn rows_json(rows: &[(String, String)]) -> Value {
+    rows.iter().map(|(t, r)| json!({"table": t, "row": r})).collect()
+}
+
 fn chart_args(c: &ChartSpec) -> Value {
     let mut args = json!({"table": c.query.table, "group_by": c.x, "op": c.op});
     if let Some(q) = &c.query.q {
@@ -2357,7 +2523,13 @@ fn form_cells(f: &Form, values: &Map<String, Value>) -> Result<Vec<Value>, Strin
             (FieldKind::Number, _) => return Err(format!("{k} is a number")),
             (FieldKind::Bool, Value::Bool(b)) => json!(b),
             (FieldKind::Bool, _) => return Err(format!("{k} is true or false")),
-            (FieldKind::Select, Value::String(s)) if x.options.as_ref().is_some_and(|o| o.contains(s)) => json!(s),
+            // A rowRef select writes the parent's id: the label the person picked, or an id it names.
+            (FieldKind::Select, Value::String(s)) if x.parent.as_ref().is_some_and(|p| p.ids.contains(s)) => json!(s),
+            (FieldKind::Select, Value::String(s)) if x.options.as_ref().is_some_and(|o| o.contains(s)) =>
+                match (&x.parent, x.options.as_ref().and_then(|o| o.iter().position(|l| l == s))) {
+                    (Some(p), Some(i)) => json!(p.ids[i]),
+                    _ => json!(s),
+                },
             (FieldKind::Select, _) => return Err(format!("{k} is not one of {}", x.options.as_deref().unwrap_or_default().join(", "))),
             (FieldKind::Date, Value::String(s)) => json!(day_epoch(s).ok_or(format!("{k} is a day, YYYY-MM-DD"))?),
             (FieldKind::Date, _) => return Err(format!("{k} is a day, YYYY-MM-DD")),

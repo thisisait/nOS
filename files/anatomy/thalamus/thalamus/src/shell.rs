@@ -2,7 +2,7 @@
 //! what the person typed or pressed, and renders only the closed component vocabulary.
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
-use nos_contract::renderers::{Choice, Component, Delta, LensOp, Step, Tone, TreeNode, WhenOp};
+use nos_contract::renderers::{Choice, Component, Delta, LensOp, RowOp, Step, Tone, TreeNode, WhenOp};
 use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ToShell, ToThalamus, WidgetSpec};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -129,7 +129,17 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 out.push(warn(format!("  contains text from {}", d.read_from.join(", "))));
             }
             for ch in &d.cells {
-                out.push(Line::from(format!("  {}: {} -> {}", ch.key, shown(&ch.old), shown(&ch.new))));
+                // An existing parent is shown as it is; its lines are what is written.
+                out.push(Line::from(match (&d.row_id, d.op) {
+                    (Some(_), RowOp::InsertMany) => format!("  {}: {} (unchanged)", ch.key, shown(&ch.new)),
+                    _ => format!("  {}: {} -> {}", ch.key, shown(&ch.old), shown(&ch.new)),
+                }));
+            }
+            if let Some(l) = &d.lines {
+                for (i, row) in l.rows.iter().enumerate() {
+                    out.push(head(format!("  + line {} of {} in {} ({}), its {} -> the row above", i + 1, l.rows.len(), l.title, l.table, l.ref_key)));
+                    out.extend(row.iter().map(|ch| Line::from(format!("    {}: {} -> {}", ch.key, shown(&ch.old), shown(&ch.new)))));
+                }
             }
         }
         Component::InboxList(i) => {

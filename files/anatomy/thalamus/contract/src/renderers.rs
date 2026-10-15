@@ -409,7 +409,18 @@ impl Component {
                 if d.cells.is_empty() {
                     return Err("an approval changes at least one cell".into());
                 }
+                match (d.op, &d.lines) {
+                    (RowOp::InsertMany, None) => return Err("insert_many carries its lines".into()),
+                    (RowOp::InsertMany, Some(l)) => check_lines(l)?,
+                    (_, Some(_)) => return Err("only insert_many carries lines".into()),
+                    (_, None) => {}
+                }
                 match (d.op, d.row_id.as_deref()) {
+                    (RowOp::InsertMany, Some(id)) if id.is_empty() => Err("an existing parent names its row".into()),
+                    (RowOp::InsertMany, Some(_)) if d.cells.iter().any(|c| c.old != c.new) => Err("an existing parent is not changed here".into()),
+                    (RowOp::InsertMany, Some(_)) => Ok(()),
+                    (RowOp::InsertMany, None) if d.cells.iter().any(|c| !c.old.is_null()) => Err("an insert has no old value".into()),
+                    (RowOp::InsertMany, None) => Ok(()),
                     (RowOp::Update, Some(id)) if !id.is_empty() => Ok(()),
                     (RowOp::Update, _) => Err("an update names its row".into()),
                     (RowOp::Insert, Some(_)) => Err("an insert names no row; KEAP mints it".into()),
@@ -667,6 +678,17 @@ pub struct FormField {
     /// Drawn and sent only while the condition holds; a required field never carries one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub when: Option<When>,
+    /// serve's, never on the wire: a rowRef field's parent table and the row ids its options name.
+    #[serde(skip)]
+    pub parent: Option<Parent>,
+}
+
+/// The parent of a rowRef field: `ids[i]` is the row `options[i]` shows (empty when the field is text).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Parent {
+    pub table: String,
+    pub display: String,
+    pub ids: Vec<String>,
 }
 
 /// Another field of the same form holds (eq) or does not hold (neq) `value`, as the pupil's draft says it.
@@ -782,6 +804,22 @@ pub enum LensOp {
     Lt,
     Gt,
     Contains,
+}
+
+/// 1 to 20 lines, each writing at least one cell with no old and never the parent's own column.
+fn check_lines(l: &Lines) -> Result<(), String> {
+    if !(1..=20).contains(&l.rows.len()) {
+        return Err(format!("lines: {}, 1 to 20", l.rows.len()));
+    }
+    if l.ref_key.is_empty() {
+        return Err("lines name the column that points at the parent".into());
+    }
+    l.rows.iter().try_for_each(|r| match r {
+        _ if r.is_empty() => Err("a line writes at least one cell".into()),
+        _ if r.iter().any(|c| c.key == l.ref_key) => Err(format!("a line's {} is the parent's; serve fills it", l.ref_key)),
+        _ if r.iter().any(|c| !c.old.is_null()) => Err("a line has no old value".into()),
+        _ => Ok(()),
+    })
 }
 
 /// At most 4 conditions, each naming a column; a dashboard and a saved tab (workspace-layout.yml) share it.
@@ -927,13 +965,29 @@ pub struct RowDiffApproval {
     /// Tools whose free text the model read this turn; the card head says so (operator ruling Q7).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub read_from: Vec<String>,
+    /// insert_many only: the rows written after the parent, each pointing at it by `ref_key`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lines: Option<Lines>,
+}
+
+/// The line items of one insert_many card (operator ruling Q4): every line, every cell, no old.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Lines {
+    pub table: String,
+    pub title: String,
+    /// The rowRef column serve fills with the parent's id; no line carries it.
+    pub ref_key: String,
+    pub rows: Vec<Vec<CellChange>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum RowOp {
     Insert,
     Update,
+    /// A parent (new, or an existing row unchanged) and its lines, under one approval.
+    InsertMany,
 }
 
 impl RowOp {
@@ -941,6 +995,7 @@ impl RowOp {
         match self {
             RowOp::Insert => "insert",
             RowOp::Update => "update",
+            RowOp::InsertMany => "insert_many",
         }
     }
 }
@@ -1025,7 +1080,7 @@ mod tests {
     fn card(op: RowOp, row_id: Option<&str>, old: Value) -> Component {
         Component::RowDiffApproval(RowDiffApproval {
             table: "t1".into(), title: "Todo list".into(), op, row_id: row_id.map(str::to_string),
-            cells: vec![CellChange { key: "status".into(), old, new: json!("done") }], read_from: vec![],
+            cells: vec![CellChange { key: "status".into(), old, new: json!("done") }], read_from: vec![], lines: None,
         })
     }
 

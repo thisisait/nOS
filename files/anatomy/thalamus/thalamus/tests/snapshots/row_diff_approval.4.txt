@@ -1,0 +1,10 @@
+insert_many Invoices (invoices) / inv-7 — nothing is written unless you approve
+  client: "Acme" (unchanged)
+  + line 1 of 1 in Invoice lines (invoice-lines), its invoice -> the row above
+    item: (empty) -> "domain"
+    amount: (empty) -> 15
+
+
+
+
+
