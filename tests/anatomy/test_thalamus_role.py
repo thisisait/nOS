@@ -386,8 +386,8 @@ def test_a_decider_list_that_admits_nobody_is_refused_at_render():
 
 
 def test_the_cell_backend_choice_rides_the_binding_env():
-    """iris_backend (default.config.yml, empty = the cell's own backend) reaches serve and the preflight."""
-    assert _default_config()["iris_backend"] == ""
+    """iris_backend (default.config.yml; ollama while llm_on_host, "" = the cell's own) reaches serve and the preflight."""
+    assert "llm_on_host" in _default_config()["iris_backend"]
     assert _plist(iris_backend="ollama")["EnvironmentVariables"]["NOS_CELL_BACKEND"] == "ollama"
     assert _plist(iris_backend="")["EnvironmentVariables"]["NOS_CELL_BACKEND"] == ""
 

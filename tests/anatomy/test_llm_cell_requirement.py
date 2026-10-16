@@ -1,7 +1,7 @@
 """A service whose cell is bound to a local model refuses to converge without one big enough.
 
 install_thalamus needs cell iris. Bound to ollama (local), if ollama is not enabled, or the model
-it would bind is under llm_cell_min_params_b (8) or of unknown size, the converge refuses in
+it would bind is under llm_cell_min_params_b (3, ruling 2026-10-16) or of unknown size, the converge refuses in
 preflight — before anything is built — naming the service, cell, model, why, and the two fixes.
 A cloud-bound cell (iris on mistral-eu, ruling 2026-10-12) needs no ollama. The check reuses the thalamus's binding:
 tools/nos_cell_binding.py ports src/binding.rs, and both run tests/binding-cases.yml.
@@ -127,7 +127,7 @@ def _default_config() -> dict:
 
 
 def test_the_minimum_is_a_default_layer_var():
-    assert _default_config()["llm_cell_min_params_b"] == 8
+    assert _default_config()["llm_cell_min_params_b"] == 3
 
 
 def test_the_preflight_runs_before_anything_is_built():
