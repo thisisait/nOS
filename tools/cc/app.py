@@ -28,6 +28,7 @@ from textual.widgets import DataTable, Footer, Header, Static
 
 from . import contract
 from . import panes as registry
+from . import theme
 
 
 class PaneProvider(Provider):
@@ -75,6 +76,7 @@ class ControlCentreApp(App):
 
     def __init__(self, pane_id: str, demo: bool = False):
         super().__init__()
+        theme.register(self)  # the design system's glass-face, generated — see theme.py
         self.panes = registry.all_panes()
         self.current = pane_id
         self.demo = demo
