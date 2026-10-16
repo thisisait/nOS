@@ -172,9 +172,21 @@
 # same rows — both rendered from the one mapper, so /gdpr and the markdown agree.
 # --tier host --resolved (2026-10-16): plus the agent rows, each naming only the processor
 # that serves THIS host (active, served_by, transfers recomputed); the md stays the union.
+# The converge's own values (-e, profiles) reach the tool via NOS_GDPR_VARS, not only the layers.
+- name: "[pazny.wing] Name the vars the resolved GDPR records read"
+  ansible.builtin.command:
+    cmd: "python3 {{ playbook_dir }}/tools/gdpr-records.py --choice-vars"
+  register: _gdpr_choice_vars
+  changed_when: false
+  check_mode: false
+
 - name: "[pazny.wing] Emit Tier-1 GDPR Article-30 records (canonical mapper)"
   ansible.builtin.command:
     cmd: "python3 {{ playbook_dir }}/tools/gdpr-records.py --tier host --resolved"
+  environment:
+    NOS_GDPR_VARS: >-
+      {{ dict(_gdpr_choice_vars.stdout | from_json
+      | zip(query('vars', *(_gdpr_choice_vars.stdout | from_json), default=''))) | to_json }}
   register: _gdpr_records_raw
   changed_when: false
   check_mode: false

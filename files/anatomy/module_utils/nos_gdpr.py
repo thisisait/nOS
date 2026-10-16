@@ -393,6 +393,10 @@ def effective_records(records: list[dict], choices: dict, backends: dict) -> lis
             elif not any(m in n for m in others):
                 kept.append(p)
                 foreign = True  # not a model row: its own claim stands
+        for k in rows:  # a row serving here that the record does not name (disarmed -> default)
+            if match[k] and not any(match[k] in str((p or {}).get("name") or "") for p in kept):
+                kept.append({"name": match[k], "country": (backends[k].get("residency") or {}).get("country", ""),
+                             "role": f"LLM inference: serves here as row {k}; the agent's record does not name it"})
         non_eu = any(not (backends[k].get("residency") or {}).get("eu") for k in rows)
         owner = b.get("owner")
         on = str((choices.get("flags") or {}).get(owner, False)).lower() in ("true", "yes", "1")
