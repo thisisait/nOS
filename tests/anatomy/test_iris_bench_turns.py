@@ -166,3 +166,84 @@ def test_seed_domain_needs_nos_live(tmp_path, monkeypatch):
     b = OFF._bench()
     monkeypatch.setattr(b, "_dtt", lambda: pytest.fail("reached KEAP without NOS_LIVE"))
     assert b.main(["--seed", "--domain", "d1"]) == 2
+
+
+def _wire(*slices, error=None):
+    whole = OFF._got(text=" ".join(s["text"] for s in slices))
+    return whole | {"per_turn": list(slices), "error": error, "renders": [r for s in slices for r in s["renders"]]}
+
+
+def test_a_broken_wire_is_reported_even_after_a_failed_turn():
+    case = {"id": "c", "turns": [{"say": f"q{i}", "checks": {"not_blank": True}} for i in range(3)]}
+    failed, turns = OFF._bench().judge(case, _wire(OFF._got(text=""), error="OSError: x"), 0)
+    assert [t["status"] for t in turns] == ["fail", "not_reached", "not_reached"]
+    assert failed == ["turn 0: not_blank", "error: OSError: x"]
+
+
+def test_a_got_without_per_turn_is_its_own_single_turn():
+    b = OFF._bench()
+    assert b.score({"prompt": "q", "checks": {"not_blank": True}}, OFF._got(text="yes"), 0) == []
+    assert b.score({"prompt": "q", "checks": {"not_blank": True}}, OFF._got(text=""), 0) == ["not_blank"]
+
+
+def test_a_number_is_contained_as_a_number_not_a_substring():
+    b = OFF._bench()
+    assert b.check("text_contains", "9", OFF._got(text="There are 9 rows."), 0)
+    assert not b.check("text_contains", "9", OFF._got(text="There are 19 rows."), 0)
+    assert not b.check("text_contains", "9", OFF._got(text="It is 9.5."), 0)
+    assert b.check("text_contains", "CANARY-27", OFF._got(text="It says CANARY-27."), 0)
+
+
+def test_a_majority_pass_reports_a_passing_run(tmp_path, monkeypatch):
+    case = {"id": "c", "turns": [{"say": "q0", "checks": {"not_blank": True}}, {"say": "q1", "checks": {"not_blank": True}}]}
+    p = tmp_path / "cases.yml"
+    p.write_text(yaml.safe_dump([case]), encoding="utf-8")
+    b, ok, bad = OFF._bench(), _wire(OFF._got(text="a"), OFF._got(text="b")), _wire(OFF._got(text=""))
+    gots = iter([bad, ok, ok])
+    monkeypatch.setattr(b, "run_case", lambda *a: next(gots))
+    out = tmp_path / "run.json"
+    assert b.main(["--sock", "x", "--offline", "--cases", str(p), "--out", str(out), "--repeat", "3"]) == 0
+    r = json.loads(out.read_text())["cases"][0]
+    assert r["pass"] and r["passes"] == 2 and r["depth"] == 2 and [t["status"] for t in r["turns"]] == ["pass", "pass"]
+
+
+def test_oneshot_names_the_turn_checks_it_cannot_judge():
+    poc = _load("oneshot_poc", "tools/oneshot-poc.py")
+    failed, nt = poc.score(CASE, [{"tool": "query_rows", "args": {"table": "t", "where": NEXT}}])
+    assert "turn 0: query_uses" in nt and "turn 1: chart_source" in nt and "turn 2: query_uses" in nt
+
+
+class RefKeap(FakeKeap):
+    """Rows a parent table holds come back on GET, so the seeder can map a rowRef label to its row id."""
+
+    def __init__(self):
+        super().__init__()
+        self.rows = {}
+
+    def req(self, method, path, body=None):
+        if method == "GET":
+            tid = path.split("/")[3]
+            return 200, {"data": {"rows": [{"id": f"{tid}-r{i}", "values": v} for i, v in enumerate(self.rows.get(tid, []))]}}
+        st, r = super().req(method, path, body)
+        if path.endswith("/rows"):
+            self.rows.setdefault(path.split("/")[3], []).append(body["values"])
+        return st, r
+
+
+def test_seed_domain_creates_a_parent_first_and_maps_its_row_refs(tmp_path, monkeypatch):
+    root = _domain(tmp_path)
+    (root / "domains/d1/tables/a-lines.table.yml").write_text(yaml.safe_dump({
+        "title": "lines", "driver": "libsql", "visibility": "shared", "anchors": [],
+        "schema": {"columns": [{"key": "item", "label": "Item", "kind": "text"},
+                               {"key": "part", "label": "Part", "kind": "rowRef", "refTable": "parts", "refDisplay": "name"}]},
+        "rows": [{"item": "x", "part": "nut"}]}), encoding="utf-8")
+    monkeypatch.setenv("NOS_ASSAY_DIR", str(root))
+    monkeypatch.setenv("NOS_LIVE", "1")
+    monkeypatch.syspath_prepend(str(REPO / "tools"))  # keap_api, as when run as a script
+    b, keap = OFF._bench(), RefKeap()
+    monkeypatch.setattr(b, "_dtt", lambda: keap)
+    assert b.main(["--seed", "--domain", "d1"]) == 0
+    creates = [p for p in keap.posts if p[1] == "/api/tables"]
+    assert [c[2]["title"] for c in creates] == ["parts", "lines"]
+    assert creates[1][2]["schema"]["columns"][1]["refTable"] == "new-1"
+    assert keap.rows["new-4"] == [{"item": "x", "part": "new-1-r1"}]
