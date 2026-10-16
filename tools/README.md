@@ -161,6 +161,11 @@ posts, restarts or renders something.
     3. Read `clef_mlx.py` (and the joint-head code it loads) before running it.
     4. `python clef_mlx.py serve --port 8000` (127.0.0.1, no auth, one request at a time)
     5. `NOS_LIVE=1 python3 tools/oneshot-poc.py --backend http --base-url http://127.0.0.1:8000`
+  - Local d3-flash (9B) / d3-mini (4B), vLLM-SR Decision 3.0, Apache-2.0, **operator-run, review first**:
+    1. Faithful path (the GGUF card's own line, needs llama.cpp with ggml-org/llama.cpp PR 30383): `llama serve -hf ggml-org/vllm-d3-flash-GGUF` (or `vllm-d3-mini-GGUF`); it serves `/v1/systemone` with a probability per option.
+    2. `NOS_LIVE=1 python3 tools/oneshot-poc.py --backend d3 --base-url http://127.0.0.1:<port it prints>` (default 8899 = `vllm-sr serve -e vllm-sr/d3-flash`).
+    3. Ollama path, unverified: `ollama pull hf.co/ggml-org/vllm-d3-flash-GGUF:Q8_0` (Ollama's generic hf.co syntax, not on the card), then `NOS_LIVE=1 python3 tools/oneshot-poc.py --backend d3-ollama --decision-model hf.co/ggml-org/vllm-d3-flash-GGUF:Q8_0`. The GGUF declares non-causal attention and a code readout; Ollama chat may run it causally, so answers can drift from d3's, and they are one-hot (uncalibrated).
+    - Structured output (`format`) works on Ollama's llama.cpp engine (GGUF), not on its MLX engine (HTTP 501, mxfp8 models); `--format-mode auto` falls back to plain chat there.
   - Workers AI / TypeSafe are cloud processors (US): `--allow-remote --token-env <VAR>` only with a DPA and an Article 30 entry.
 - `loop-diff.py` — Build a valid unified diff from a replacement an agent can state in words.
 - `loop-graph-gen.py` — Compile the loop harness from ledger.py into loop-graph.json (the Planner Loops view + its gate).

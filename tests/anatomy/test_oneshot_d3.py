@@ -88,14 +88,14 @@ def test_a_malformed_d3_answer_is_refused_and_escalated(d3):
           {"id": "s1.ok", "kind": "yesno", "text": "ok?"},
           {"id": "s1.dir", "kind": "choice", "text": "which way?", "options": ["asc", "desc"]}]
     wave = poc.systemone_decider("r", {"backend": "d3", "base_url": d3.url, "model": "m"},
-                                 lambda q: asked.append(q["id"]) or (q["options"][0] if q["options"] else True))
+                                 lambda q: asked.append(q["id"]) or (q["options"][0] if q.get("options") else True))
     assert list(wave(qs)) == ["a", True, "asc"]
     assert asked == ["s1.table", "s1.ok", "s1.dir"]
     assert all(q["by"] == "llm" and q["escalated"] for q in qs), qs
 
 
 def test_the_gguf_in_ollama_gets_d3s_own_prompt_and_one_code_back(ollama):  # noqa: F811
-    poc, replies = _poc(), iter(["B", "A", "C", "maybe"])
+    poc, replies = _poc(), iter(["B", "B", "C", "maybe"])
     ollama.no_format = False
     ollama.reply = lambda body: next(replies)
     body = {"model": "m", "state": "Checkout fails", "questions": {
