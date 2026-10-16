@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 546,
+    "nodes": 547,
     "edges": 550,
     "nodes_pulse": 43,
     "nodes_judge": 5,
@@ -26,7 +26,7 @@
     "nodes_faceapp": 7,
     "nodes_agent": 17,
     "nodes_tasktype": 9,
-    "nodes_skill": 12,
+    "nodes_skill": 13,
     "nodes_reader": 61,
     "nodes_effector": 111,
     "nodes_article": 26,
@@ -4912,6 +4912,13 @@
       "title": "Record one bounded change with the nOS loop engine before making it — read the budget, POST the proposal, obey the refusal. Use when acting on a weakness from weakness-scan, or whenever a change is meant to be judged and remembered rather than just applied.",
       "anchor": "02.02.09",
       "description": "Skill 'propose' (.claude/plugins/nos-loop/skills/propose/SKILL.md): Record one bounded change with the nOS loop engine before making it — read the budget, POST the proposal, obey the refusal. Use when acting on a weakness from weakness-scan, or whenever a change is meant to be judged and remembered rather than just applied."
+    },
+    "skill:release-prep": {
+      "kind": "skill",
+      "source": ".claude/skills/release-prep/SKILL.md",
+      "title": "Prepare a nOS release from dev to master - stoppers, roadmap revision, hidden fees paid or written, quick wins, RELEASE.md, devlog, generators and signatures, then the cut. Use when the operator says \"prepare a release\", \"release checklist\", \"připrav release\". Defaults to a read-only preflight; every write and the cut itself wait for the operator.",
+      "anchor": "02.02.09",
+      "description": "Skill 'release-prep' (.claude/skills/release-prep/SKILL.md): Prepare a nOS release from dev to master - stoppers, roadmap revision, hidden fees paid or written, quick wins, RELEASE.md, devlog, generators and signatures, then the cut. Use when the operator says \"prepare a release\", \"release checklist\", \"připrav release\". Defaults to a read-only preflight; every write and the cut itself wait for the operator."
     },
     "skill:weakness-scan": {
       "kind": "skill",

@@ -1024,6 +1024,9 @@ nodes:
   "skill:nos-devops": withheld
   "skill:nos-manifest-app": withheld
   "skill:propose": withheld
+  # 2026-10-16 skill:release-prep: the release checklist (preflight, prepare, cut by
+  # the operator). WITHHELD; the published set is unchanged.
+  "skill:release-prep": withheld
   "skill:weakness-scan": withheld
   "tasktype:code-fix": withheld
   "tasktype:converge": withheld
