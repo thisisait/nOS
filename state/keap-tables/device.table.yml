@@ -15,7 +15,7 @@ description: >-
   One physical unit the operator owns. Identifiers are hashes only; extraction
   runs live in device-extraction so a second backup does not mint a second device.
 driver: libsql
-visibility: tier-managers
+visibility: private   # personal data: owner + admin only (septum, R5)
 client_scope: personal
 schema:
   columns:

@@ -19,10 +19,13 @@ description: >-
   field. The invoice itself never absorbs while it sits here.
 driver: libsql
 visibility: tier-managers
-client_scope: unresolved
+# Which client the invoice is for (septum, R5). Optional: own-firm AP has none.
+client_scope: book_owner
 anchors: ["nos.digest.invoice-review"]
 schema:
   columns:
     - { key: slug,            label: "Slug",            kind: text, role: dimension, required: true, concept: identity.slug }
     - { key: document_number, label: "Document no.",    kind: text, role: dimension, required: true, concept: identity.name }
     - { key: mismatches,      label: "Mismatches",      kind: json, role: attribute, concept: evidence.observation }
+    - { key: book_owner,  label: "Book owner",  kind: rowRef, role: dimension, required: false,
+        refTable: "party", refDisplay: "legal_name", onDelete: "restrict" }

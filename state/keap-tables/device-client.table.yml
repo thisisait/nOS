@@ -12,7 +12,7 @@ description: >-
   Paired callers of the device gateway. One row per client; unpair is
   status=revoked. Identifiers are hashes only.
 driver: libsql
-visibility: tier-managers
+visibility: private   # personal data: owner + admin only (septum, R5)
 client_scope: personal
 schema:
   columns:

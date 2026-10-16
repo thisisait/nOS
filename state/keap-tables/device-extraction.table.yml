@@ -10,7 +10,7 @@ description: >-
   Consent refs and retain_until live here; unnamed artifact classes are counted,
   never stored as rows.
 driver: libsql
-visibility: tier-managers
+visibility: private   # personal data: owner + admin only (septum, R5)
 client_scope: personal
 schema:
   columns:
