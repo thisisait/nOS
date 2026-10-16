@@ -230,3 +230,21 @@ def test_a_new_page_goes_red(tmp_path):
 def test_the_dead_static_dashboard_is_gone():
     # 928-line pre-Nette index.html: nothing served or linked it.
     assert not (WING / "index.html").exists()
+
+
+def test_the_scanner_has_no_side_doors(tmp_path):
+    # Double quotes, a split call, a module subfolder, a template off Templates/.
+    (tmp_path / "app/Core").mkdir(parents=True)
+    (tmp_path / "app/Core/RouterFactory.php").write_text(
+        '$router->addRoute("dq", "Dq:default");\n$router->addRoute(\n\t\'split\',\n\t\'Split:default\'\n);')
+    (tmp_path / "app/Presenters/Mod").mkdir(parents=True)
+    (tmp_path / "app/Presenters/Mod/SubPresenter.php").write_text("function renderDefault() {}")
+    (tmp_path / "app/Presenters/Api").mkdir(parents=True)
+    (tmp_path / "app/Presenters/Api/JsonPresenter.php").write_text("function actionDefault() {}")
+    (tmp_path / "app/Other").mkdir(parents=True)
+    (tmp_path / "app/Other/x.latte").write_text("")
+    found = surface(tmp_path)
+    assert {"dq -> Dq:default", "split -> Split:default"} <= found["routes"]
+    assert "Mod/Sub:renderDefault" in found["renders"]
+    assert not any(a.startswith("Api/") for a in found["actions"])  # $api stays out
+    assert "../Other/x.latte" in found["templates"]
