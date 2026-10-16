@@ -390,8 +390,9 @@ def seed_domain(domain: str) -> int:
             print(f"{p.name}: create failed ({st}): {r.get('error', r)}", file=sys.stderr)
             return 1
         tid = ids[d.get("title")] = r.get("data", r)["id"]
+        dates = {c["key"] for c in (d.get("schema") or {}).get("columns", []) if c.get("kind") == "date"}
         for k, row in enumerate(rows):
-            row = {c: labels[c].get(v, v) if c in labels else v for c, v in row.items()}
+            row = {c: labels[c].get(v, v) if c in labels else _day_epoch(v) if c in dates else v for c, v in row.items()}
             st, r = dtt.req("POST", f"/api/tables/{tid}/rows", {"values": row})
             if st != 200:
                 print(f"{p.name}: row failed ({st}): {r.get('error', r)}; table {tid} now holds {k} of {len(rows)} rows "
@@ -399,6 +400,14 @@ def seed_domain(domain: str) -> int:
                 return 1
         print(f"{d.get('title')} table created: {tid} with {len(rows)} rows")
     return 0
+
+
+def _day_epoch(v):
+    """KEAP stores a date as day-epoch seconds (UTC midnight); the assay tables write ISO days."""
+    if isinstance(v, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+        import datetime
+        return int(datetime.datetime.strptime(v, "%Y-%m-%d").replace(tzinfo=datetime.timezone.utc).timestamp())
+    return v
 
 
 def _row_ids(dtt, tid: str, col: str) -> dict:
