@@ -61,6 +61,7 @@ import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -317,6 +318,35 @@ def axis_organs(res: Result) -> None:
                     "the checkout is deliberately off the deployed ref", DISAGREE)
 
 
+def axis_blank(res: Result) -> None:
+    """The newest confirmed blank (main.yml opens the line, post-smoke closes it)."""
+    path = Path.home() / ".nos" / "blank-runs.jsonl"
+    try:
+        rows = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    except (OSError, ValueError) as exc:
+        res.add("blank", "newest blank", f"UNKNOWN — no readable record ({type(exc).__name__}: {path})", UNREADABLE)
+        return
+    if not rows:
+        res.add("blank", "newest blank", f"UNKNOWN — {path} is empty", UNREADABLE)
+        return
+    started = max(r.get("started") or "" for r in rows)
+    last = [r for r in rows if r.get("started") == started][-1]
+    try:
+        age = datetime.now(timezone.utc) - datetime.strptime(started, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except ValueError:
+        res.add("blank", "newest blank", f"UNKNOWN — unparseable started {started!r}", UNREADABLE)
+        return
+    when = f"{started} ({age.days}d ago) at {last.get('nos_commit')}"
+    smoke = last.get("smoke_strict")
+    strict = f"smoke --strict {smoke['passed']}/{smoke['total']}" if smoke else "no strict smoke"
+    if not last.get("finished"):
+        res.add("blank", "newest blank", f"{when} never finished (still running, or the run died)", DISAGREE)
+    elif last.get("failed"):
+        res.add("blank", "newest blank", f"{when} FAILED · {strict}", DISAGREE)
+    else:
+        res.add("blank", "newest blank", f"{when} · {strict}")
+
+
 # ── axis 3: the toolchain ───────────────────────────────────────────────────
 
 
@@ -433,6 +463,7 @@ def main() -> int:
     else:
         axis_repos(res, do_fetch=not args.no_fetch)
         axis_organs(res)
+        axis_blank(res)
         axis_toolchain(res)
 
     if args.json:

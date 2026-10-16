@@ -41,7 +41,25 @@
     --fail-ratio {{ 0.0 if (nos_smoke_strict | default(false) | bool) else (nos_smoke_max_fail_ratio | default(0.5)) }}
   register: _nos_smoke
   changed_when: false
-  failed_when: _nos_smoke.rc | default(0) != 0
+  failed_when: false
+  tags: ['always', 'smoke']
+
+# Close the blank's record BEFORE the verdict can end the play: a blank whose
+# smoke fails is exactly the one the release gate must see. main.yml opens it.
+# ponytail: a failure after this task (first-login) still reads as failed=false.
+- name: "[smoke] Close the blank-run record"
+  vars:
+    _counts: "{{ (_nos_smoke.stdout | default('')) | regex_search('(\\d+) / (\\d+) OK', '\\1', '\\2') }}"
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_facts['env']['HOME'] }}/.nos/blank-runs.jsonl"
+    line: "{{ {'started': nos_blank_started, 'finished': now(utc=true, fmt='%Y-%m-%dT%H:%M:%SZ'),
+               'nos_commit': nos_deployed_ref | default('unknown'),
+               'failed': _nos_smoke.rc | default(0) != 0,
+               'smoke_strict': ({'passed': _counts[0] | int, 'total': _counts[1] | int}
+                                if (_counts and nos_smoke_strict | default(false) | bool) else none)} | to_json }}"
+    insertafter: EOF
+    mode: '0600'
+  when: nos_blank_started is defined
   tags: ['always', 'smoke']
 
 - name: "[smoke] Show smoke results"
@@ -61,4 +79,10 @@
   when:
     - _nos_smoke.rc | default(0) | int == 0
     - "'❌' in (_nos_smoke.stdout | default(''))"
+  tags: ['always', 'smoke']
+
+- name: "[smoke] Fail the run on the smoke verdict"
+  ansible.builtin.fail:
+    msg: "nos-smoke exited {{ _nos_smoke.rc }} — see the table above."
+  when: _nos_smoke.rc | default(0) != 0
   tags: ['always', 'smoke']

@@ -1728,6 +1728,24 @@
       when: nos_removing
       tags: ['always']
 
+    # Open the blank's record AFTER removal (remove=all deletes ~/.nos); the
+    # finish line is appended by tasks/post-smoke.yml. An open line with no
+    # finish = the run died. Reader: tools/estate-status.py (blank axis).
+    - name: "[Blank] Record that a confirmed blank started"
+      when: nos_removing and nos_confirmed and not nos_leaving
+      tags: ['always']
+      block:
+        - name: "[Blank] Stamp the start"
+          ansible.builtin.set_fact:
+            nos_blank_started: "{{ now(utc=true, fmt='%Y-%m-%dT%H:%M:%SZ') }}"
+        - name: "[Blank] Append the open record"
+          ansible.builtin.lineinfile:
+            path: "{{ ansible_facts['env']['HOME'] }}/.nos/blank-runs.jsonl"
+            line: "{{ {'started': nos_blank_started, 'finished': none, 'nos_commit': nos_deployed_ref | default('unknown'),
+                       'failed': none, 'smoke_strict': none} | to_json }}"
+            create: true
+            mode: '0600'
+
     # Membership idiom on the RAW var — meta: filter-less rule (see the
     # comment in tasks/run-mode.yml's dry-run stop).
     # end_play skips post_tasks, where the askpass helper (the sudo password)

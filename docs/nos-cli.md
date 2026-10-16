@@ -272,6 +272,11 @@ remove-source pause; PREFIX = rotation prompt (ENTER = keep); SUDO =
 | `nos --remove=DATA` | — | **CLI exit 64**; raw `-e remove=DATA` also hard-fails in the playbook |
 | `nos --print-cmd --remove=all -y` | prints argv, exit 0 | nothing executed |
 
+Every confirmed removal that reconverges (no `--leave`) appends to
+`~/.nos/blank-runs.jsonl`: an open line after removal-verify, a closing line
+`{started, finished, nos_commit, failed, smoke_strict}` after the post-run smoke.
+`tools/estate-status.py` shows the newest one and its age (no record = UNKNOWN).
+
 ### New vocabulary — raw `ansible-playbook` (protected equally)
 
 | Invocation | Behavior |
