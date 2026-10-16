@@ -170,6 +170,7 @@ posts, restarts or renders something.
 
 ### Roadmap, devlog, docs
 
+- `design-sync.py` — Vendor the AIT design system (thisisait/design tokens.json + components.css) and regenerate its consumers (the nos-cc theme, the face tokens); `--check` diffs only.
 - `devlog-compile.py` — devlog-compile — validate nos-core devlog entries, emit the committed bundle.
 - `devlog-post.py` — devlog-post — publish a devlog entry to an ON-SITE namespace via WP REST.
 - `devlog-release.sh` — mechanical pre-flight for a release cut.
