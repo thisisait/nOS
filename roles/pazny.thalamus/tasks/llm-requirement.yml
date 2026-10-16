@@ -1,11 +1,12 @@
 ---
 # Preflight (main.yml pre_tasks): if iris is bound to local ollama, the thalamus refuses before
-# anything is built unless ollama is on with a model of at least llm_cell_min_params_b; cloud-bound
-# (mistral-eu) passes. The env is the plist's, never the key; tools/nos_cell_binding.py ports src/binding.rs.
+# anything is built unless ollama is on with a model of at least llm_cell_min_params_b, and prints a
+# WARN below llm_cell_recommended_params_b; cloud-bound passes. tools/nos_cell_binding.py ports src/binding.rs.
 - name: "[pazny.thalamus] Iris gets a local model big enough to run it"
   ansible.builtin.command: >-
     {{ ansible_playbook_python }} {{ playbook_dir }}/tools/nos_cell_binding.py
     --service install_thalamus --cell iris --min-params-b {{ llm_cell_min_params_b }}
+    --warn-below-b {{ llm_cell_recommended_params_b }}
     --repo {{ playbook_dir }}
   environment: "{{ thalamus_binding_env }}"
   delegate_to: localhost
@@ -18,3 +19,8 @@
   ansible.builtin.fail:
     msg: "{{ _thalamus_llm_requirement.stdout ~ _thalamus_llm_requirement.stderr }}"
   when: _thalamus_llm_requirement.rc != 0
+
+- name: "[pazny.thalamus] Warn about a local model below the recommended size"
+  ansible.builtin.debug:
+    msg: "{{ _thalamus_llm_requirement.stdout }}"
+  when: _thalamus_llm_requirement.rc == 0 and _thalamus_llm_requirement.stdout.startswith('WARN')

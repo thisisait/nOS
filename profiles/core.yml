@@ -29,7 +29,8 @@ install_wing: true              # dashboard; FrankenPHP + SQLite on the host
 install_bone: true              # face's file store + Wing's event sink
 install_receptor: true          # the thalamus role asserts it
 install_pulse: true             # core organ (ruling 2026-10-15): runs the installed owners' jobs only
-install_thalamus: true          # Iris; macOS only; needs a model binding (mistral-eu)
+install_thalamus: true          # Iris; macOS only; binds the on-host model below
+llm_on_host: true               # Iris on qwen3:4b via ollama, no key needed (ruling 2026-10-16)
 
 # ── Docker VM: the all-on minimum (11 GiB, measured 2026-10-10) is far above the core's need ──
 docker_min_memory_gib: 6        # core measured 3.2 GiB with leftovers (client, 2026-10-14); the
@@ -45,7 +46,6 @@ install_infisical: false        # only Wing invite provisioning reads it, off by
 install_loops: false            # the maintainer's development loops and the cells serving them
 install_observability: false    # ~700 MiB; Traefik tracing then logs export errors
 install_cortex: false           # keap_cortex_cutover false: KEAP serves its own path
-install_ollama: false           # Iris is cloud-bound; KEAP's local-model path errors softly
 install_openclaw: false
 install_ears: false
 install_backup: false

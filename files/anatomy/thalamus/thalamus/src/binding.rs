@@ -156,3 +156,32 @@ pub fn decide(agent_yml: &str, register_yml: &str, env: impl Fn(&str) -> Option<
             .filter(|t| (0.0..=2.0).contains(t)).unwrap_or(0.3)),
     }))
 }
+
+/// Parameters in billions from an ollama tag (qwen3:14b -> 14, mixtral:8x7b -> 56); None = unknown.
+/// tools/nos_cell_binding.py params_b: the first `-`/`_` segment of the tag that reads [Nx]N[.N]b|m.
+pub fn params_b(model: &str) -> Option<f64> {
+    let whole = |s: &str| (!s.is_empty() && s.bytes().all(|c| c.is_ascii_digit())).then(|| s.parse::<f64>().ok()).flatten();
+    let (_, tag) = model.rsplit_once(':')?;
+    tag.split(['-', '_']).find_map(|seg| {
+        let div = match seg.bytes().last()? { b'b' | b'B' => 1.0, b'm' | b'M' => 1000.0, _ => return None };
+        let num = &seg[..seg.len() - 1];
+        let (times, n) = match num.split_once(['x', 'X']) { Some((t, n)) => (whole(t)?, n), None => (1.0, num) };
+        let (a, b) = n.split_once('.').unwrap_or((n, "0"));
+        whole(a)?;
+        whole(b)?;
+        Some(n.parse::<f64>().ok()? * times / div)
+    })
+}
+
+/// The size floors (llm_cell_min_params_b refuses, llm_cell_recommended_params_b warns), the
+/// texts of tools/nos_cell_binding.py size_floor: Err = refused, Ok(Some) = a warning, Ok(None) = fine.
+pub fn size_floor(model: &str, min_b: f64, warn_b: f64) -> Result<Option<String>, String> {
+    let Some(size) = params_b(model) else {
+        return Err(format!("the size of '{model}' is UNKNOWN (no NNb in its tag), so it cannot be shown to be at least {min_b}B"));
+    };
+    if size < min_b {
+        return Err(format!("'{model}' has {size}B parameters, below the {min_b}B minimum (llm_cell_min_params_b)"));
+    }
+    Ok((size < warn_b).then(|| format!("'{model}' has {size}B parameters, below the {warn_b}B recommended \
+                                         (llm_cell_recommended_params_b): it runs, badly")))
+}

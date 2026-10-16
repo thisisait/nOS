@@ -6,8 +6,9 @@ same gates, same order). Both run the cases in files/anatomy/thalamus/thalamus/t
 so a gate added to one and not the other goes red (tests/anatomy/test_llm_cell_requirement.py).
 
 Usage (env = the binding env the service renders, e.g. pazny.thalamus thalamus_binding_env):
-    tools/nos_cell_binding.py --service install_thalamus --cell iris --min-params-b 8 [--repo DIR]
-Exit 0: no requirement or it is met. Exit 2: refused; the reason and the two fixes on stdout.
+    tools/nos_cell_binding.py --service install_thalamus --cell iris --min-params-b 3 [--warn-below-b 8] [--repo DIR]
+Exit 0: no requirement or it is met (a `WARN:` line when under --warn-below-b). Exit 2: refused;
+the reason and the two fixes on stdout. size_floor() is binding.rs size_floor (binding-cases.yml sizes:).
 """
 from __future__ import annotations
 
@@ -132,8 +133,20 @@ def params_b(model: str) -> float | None:
     return n / 1000 if m[3].lower() == "m" else n
 
 
-def requirement(repo: Path, service: str, cell: str, env, min_b: float) -> str | None:
-    """None when the cell is cloud-bound or gets a big enough local model; else the refusal text."""
+def size_floor(model: str, min_b: float, warn_b: float) -> tuple[str, str]:
+    """(refusal, warning), "" when it does not apply: below min_b or unknown refuses, below warn_b warns."""
+    size = params_b(model)
+    if size is None:
+        return f"the size of '{model}' is UNKNOWN (no NNb in its tag), so it cannot be shown to be at least {min_b:g}B", ""
+    if size < min_b:
+        return f"'{model}' has {size:g}B parameters, below the {min_b:g}B minimum (llm_cell_min_params_b)", ""
+    if size < warn_b:
+        return "", f"'{model}' has {size:g}B parameters, below the {warn_b:g}B recommended (llm_cell_recommended_params_b): it runs, badly"
+    return "", ""
+
+
+def _local_binding(repo: Path, cell: str, env) -> tuple[Decision, str, dict] | None:
+    """decide() for a cell whose row is local, with that row; None when cloud-bound (or the default)."""
     agent_path = repo / "files/anatomy/agents" / cell / "agent.yml"
     agent_yml, register_yml = agent_path.read_text(), (repo / REGISTER).read_text()
     register = yaml.safe_load(register_yml) or {}
@@ -141,23 +154,38 @@ def requirement(repo: Path, service: str, cell: str, env, min_b: float) -> str |
     declared = chosen_backend(agent, env)[0] or _at(agent, "model", "backend")
     spec = _at(register, "backends", declared) if isinstance(declared, str) else None
     if not isinstance(spec, dict) or spec.get("local") is not True:
+        return None
+    return decide(agent_yml, register_yml, env), declared, spec
+
+
+def warning(repo: Path, cell: str, env, warn_b: float) -> str:
+    """The WARN line for a bound local model under warn_b; "" otherwise."""
+    got = _local_binding(repo, cell, env)
+    if not got or got[0].kind != "bound":
+        return ""
+    why = size_floor(got[0].model_id, 0, warn_b)[1]
+    return f"WARN: cell '{cell}' binds {why}" if why else ""
+
+
+def requirement(repo: Path, service: str, cell: str, env, min_b: float) -> str | None:
+    """None when the cell is cloud-bound or gets a big enough local model; else the refusal text."""
+    got = _local_binding(repo, cell, env)
+    if got is None:
         return None                      # cloud (or the default): no local model needed
-    d = decide(agent_yml, register_yml, env)
-    ok_size = params_b(d.model_id) if d.kind == "bound" else None
-    if ok_size is not None and ok_size >= min_b:
+    d, declared, spec = got
+    too_small = size_floor(d.model_id, min_b, 0)[0] if d.kind == "bound" else ""
+    if d.kind == "bound" and not too_small:
         return None
     if declared not in (env("NOS_ARMED_BACKENDS") or "").split():
         why = f"{declared} is not enabled (ollama_enabled and install_ollama must both be true)"
     elif d.kind != "bound":
         why = f"the binding refuses it: {d.why}"
-    elif ok_size is None:
-        why = f"the size of '{d.model_id}' is UNKNOWN (no NNb in its tag), so it cannot be shown to be at least {min_b:g}B"
     else:
-        why = f"'{d.model_id}' has {ok_size:g}B parameters, below the {min_b:g}B minimum (llm_cell_min_params_b)"
+        why = too_small
     sizes = spec.get("sizes_b") or {}
     example = next((sizes[k] for k in sorted(sizes) if k >= min_b), f"a {min_b:g}b model")
     var = CONFIG_VAR.get(d.model_env, d.model_env or "the model var")
-    rel = agent_path.relative_to(repo)
+    rel = Path("files/anatomy/agents") / cell / "agent.yml"
     model = d.model_id or (env(d.model_env) if d.model_env else "") or "(none set)"
     return (f"Refusing {service}: it needs cell '{cell}', which is bound to the local backend '{declared}', "
             f"and the model it would bind is {model}"
@@ -175,10 +203,12 @@ def main() -> int:
     ap.add_argument("--service", required=True)
     ap.add_argument("--cell", required=True)
     ap.add_argument("--min-params-b", type=float, required=True)
+    ap.add_argument("--warn-below-b", type=float, default=0, help="WARN (exit 0) under this size")
     ap.add_argument("--repo", type=Path, default=REPO)
     a = ap.parse_args()
     refusal = requirement(a.repo, a.service, a.cell, os.environ.get, a.min_params_b)
-    print(refusal or f"{a.service}: cell '{a.cell}' needs no local model, or gets one of at least {a.min_params_b:g}B")
+    print(refusal or warning(a.repo, a.cell, os.environ.get, a.warn_below_b)
+          or f"{a.service}: cell '{a.cell}' needs no local model, or gets one of at least {a.min_params_b:g}B")
     return 2 if refusal else 0
 
 

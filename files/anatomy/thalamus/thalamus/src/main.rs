@@ -36,8 +36,15 @@ fn serve_main(args: &[String]) -> Result<(), String> {
         Some(var) => vault.iter().find(|(n, _)| *n == format!("NOS_SECRET_{}", var.to_uppercase())).map(|(_, v)| v.clone()),
         None => std::env::var(k).ok(),
     };
+    // The role renders both floors (llm_cell_*_params_b); unset = judged only by the converge preflight.
+    let floor = |k: &str| std::env::var(k).ok().and_then(|v| v.trim().parse::<f64>().ok());
+    let mut warning = None;
     let binding = match binding::resolve(&repo, "iris", lookup) {
-        Ok(Decision::Bound(b)) => Ok(b),
+        Ok(Decision::Bound(b)) => match floor("NOS_LLM_MIN_PARAMS_B") {
+            Some(min) if b.local => binding::size_floor(&b.model_id, min, floor("NOS_LLM_RECOMMENDED_PARAMS_B").unwrap_or(min))
+                .map(|w| { warning = w; b }),
+            _ => Ok(b),
+        },
         Ok(other) => Err(format!("iris has no model: {other:?}")),
         Err(why) => Err(why),
     };
@@ -49,6 +56,9 @@ fn serve_main(args: &[String]) -> Result<(), String> {
     match &binding {
         Ok(b) => eprintln!("thalamus: model bound {}-{}", b.name, b.model_id),
         Err(why) => eprintln!("thalamus: model UNBOUND: {}", why.replace('\n', " ")),
+    }
+    if let Some(w) = warning {
+        eprintln!("thalamus: WARNING {w}");
     }
     let (deciders, warnings) = serve::deciders(&std::env::var("NOS_DECIDER_EXES").unwrap_or_default());
     warnings.iter().for_each(|w| eprintln!("thalamus: WARNING {w}"));

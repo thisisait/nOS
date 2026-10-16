@@ -120,7 +120,7 @@ the graph's `judge:` nodes; these scripts are not graph nodes.
 - `prepush-score.py` — Score what a push would carry before `nos-push` pushes it: deterministic signals (file:line) per threat-checklist section 1-6, then a small local Ollama model's per-aspect scores (UNAVAILABLE on failure, never a number); bar chart, checker+prompt SHA-256, one JSONL line in `~/.nos/events/prepush-scores.jsonl`. Advisory; `--strict` refuses at 70.
 - `local-model-bench.py` — Measure a local model on the one job the estate has for it, with code as judge.
 - `nos-smoke.py` — nos-smoke.py — post-run web-UI smoke test for nOS.
-- `job_readiness.py` — Can this job succeed here? Needs from the agent backend, claude spawners and `needs:`, against the resolved config + `claude`/`ollama list`. `--job`/`--agent` = fire-time gate (exit 78 + `HELD:` on stdout); bare = table; `--verify` exits 1 only on a need the config requires and the host lacks. Imported by the vision loops.
+- `job_readiness.py` — Can this job succeed here? Needs from the agent backend, claude spawners and `needs:`, against the resolved config + `claude`/`ollama list`. `--job`/`--agent` = fire-time gate (exit 78 + `HELD:` on stdout; a `WARN:` line never holds); bare = table; `--verify` exits 1 only on a need the config requires and the host lacks. Imported by the vision loops.
 
 ## Limbs — tools that act
 
@@ -278,7 +278,7 @@ Imported by the tools above; not run on their own, not graph nodes.
 - `_ledger_open.py` — One way to open the Wing ledger read-only, for readers that must not write.
 - `_geo_db.py` — The shared "is there a geo database here" check: absent idles, a stopped container is an outage.
 - `nos_identity.py` — The manifest row is the only place a service's spellings meet.
-- `nos_cell_binding.py` — binding.rs ported (same cases) + the preflight: a cell bound to local ollama refuses without a model of at least llm_cell_min_params_b.
+- `nos_cell_binding.py` — binding.rs ported (same cases) + the preflight: a cell bound to local ollama refuses without a model of at least llm_cell_min_params_b, and prints `WARN:` under llm_cell_recommended_params_b (`--warn-below-b`).
 - `nos_security.py` — Resolve the live security notebook (`~/.nos/security`), not the git promotion copy.
 - `nos_work_uri.py` — Parse + match the nos-work:// routing address (dtt-routing-address); the planner's capability/assignment matcher.
 - `digest_absorb.py` — Shared absorb for digest importers (strip _prov, ensure output table exists, upsert by slug skipping present). Library, not a CLI.

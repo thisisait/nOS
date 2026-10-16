@@ -120,8 +120,10 @@ Iris's whole serving set is the `mistral-eu` row, so a disarmed row, an empty
 `mistral_model` or a missing key refuses; it never degrades to another backend.
 A host may instead choose the on-device row (ruling 2026-10-14): `iris_backend: ollama`
 with `install_ollama`, `ollama_enabled` and an `ollama_model` of at least
-`llm_cell_min_params_b` (e.g. `qwen3:14b`). It is a choice the record allows
-(`model.backends_allowed`), not a fallback; the preflight then judges the local model.
+`llm_cell_min_params_b` (3). `llm_on_host: true` (the default, ruling 2026-10-16) sets all
+of that with `qwen3:4b`; under `llm_cell_recommended_params_b` (8) the preflight and `serve`
+print a WARN. It is a choice the record allows (`model.backends_allowed`), not a fallback;
+the preflight then judges the local model, and `serve` judges it again at start.
 The key: the role renders the var behind the row's `auth_secret`
 (`mistral_api_key`) into the 0600 plist as `NOS_SECRET_MISTRAL_API_KEY`. The
 binary reads it once and removes it from its env. The key leaves only as the

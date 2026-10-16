@@ -59,10 +59,11 @@ class Need(str):
     the host lacks it — the only kind the verify play fails on."""
 
     required: bool = False
+    warn: bool = False      # said, never held (a model under llm_cell_recommended_params_b)
 
-    def __new__(cls, text: str, required: bool = False):
+    def __new__(cls, text: str, required: bool = False, warn: bool = False):
         obj = super().__new__(cls, text)
-        obj.required = required
+        obj.required, obj.warn = required, warn
         return obj
 
 
@@ -77,14 +78,10 @@ def _env_vars() -> dict[str, str]:
 
 
 def resolved_config() -> dict:
-    """The values the judge reads, through every layer (config.yml wins)."""
-    names = {"install_claude_cli_vendor", "llm_cell_min_params_b", *_env_vars().values()}
+    """The values the judge reads, through every layer (config.yml wins), Jinja defaults rendered."""
+    names = {"install_claude_cli_vendor", "llm_cell_min_params_b", "llm_cell_recommended_params_b", *_env_vars().values()}
     names |= {row["enabled_flag"] for row in _backends().values() if row.get("enabled_flag")}
-    out = {}
-    for name in names:
-        seen = nos_identity.resolve_flag(name)
-        out[name] = seen[-1][1] if seen else ""
-    return out
+    return {k: "" if v is None else v for k, v in nos_identity.resolved(names).items()}
 
 
 def host_facts() -> dict:
@@ -152,12 +149,13 @@ def agent_needs(name: str, cfg: dict, host: dict) -> list[Need]:
                 needs.append(Need(f"{tier} model not configured ({var} is empty)"))
             if needs or declared != "ollama":
                 return needs
-            if rebound and _too_small(model_id, cfg):
-                return _too_small(model_id, cfg)
+            size = _too_small(model_id, cfg) if rebound else []
+            if [n for n in size if not n.warn]:
+                return size
             have = host.get("ollama_models")
             if have is None:
                 return [Need("ollama not answering (ollama list failed)", required=True)]
-            return [] if _pulled(model_id, have) else [Need(f"model {model_id} not pulled", required=True)]
+            return size + ([] if _pulled(model_id, have) else [Need(f"model {model_id} not pulled", required=True)])
         if _on(cfg.get(flag)):
             return [] if model_id else [Need(f"{declared} backend armed but {var} is empty")]
         eu_only = gdpr.get("transfers_outside_eu") is False and bool(gdpr.get("processors"))
@@ -197,13 +195,14 @@ def _host_choice_refusal(name: str, doc: dict, chosen: str) -> str:
 
 
 def _too_small(model_id: str, cfg: dict) -> list[Need]:
-    """The llm_cell_min_params_b rule (tools/nos_cell_binding.py) for an agent agents_backend rebound."""
-    from nos_cell_binding import params_b
-    floor, size = float(cfg.get("llm_cell_min_params_b") or 8), params_b(model_id)
-    if size is not None and size >= floor:
-        return []
-    return [Need(f"model {model_id} is {'of unknown size' if size is None else f'{size:g}B'}, below the "
-                 f"{floor:g}B llm_cell_min_params_b agents_backend asks for")]
+    """The size floors (tools/nos_cell_binding.py size_floor) for an agent agents_backend rebound:
+    under llm_cell_min_params_b holds, under llm_cell_recommended_params_b only warns."""
+    from nos_cell_binding import size_floor
+    floor = float(cfg.get("llm_cell_min_params_b") or 3)
+    refusal, warning = size_floor(model_id, floor, float(cfg.get("llm_cell_recommended_params_b") or floor))
+    if refusal:
+        return [Need(f"{refusal}, the floor agents_backend asks for")]
+    return [Need(warning, warn=True)] if warning else []
 
 
 def job_needs(job: dict, cfg: dict, host: dict) -> list[Need]:
@@ -245,7 +244,8 @@ def catalog() -> dict[str, dict]:
 def table(cfg: dict | None = None, host: dict | None = None) -> list[dict]:
     cfg = resolved_config() if cfg is None else cfg
     host = host_facts() if host is None else host
-    return [{"job": jid, "needs": list(needs), "required": [n for n in needs if n.required]}
+    return [{"job": jid, "needs": [n for n in needs if not n.warn], "required": [n for n in needs if n.required],
+             "warnings": [n for n in needs if n.warn]}
             for jid, job in sorted(catalog().items()) if not job.get("paused")
             for needs in [job_needs(job, cfg, host)]]
 
@@ -259,8 +259,8 @@ def hold(job_id: str | None = None, agents: tuple[str, ...] = (),
     job["needs"] = [*(job.get("needs") or []), *(f"agent:{a}" for a in agents)]
     needs = job_needs(job, cfg, host)
     for need in needs:
-        print(f"HELD: {need}", flush=True)
-    return HOLD_EXIT if needs else 0
+        print(f"{'WARN' if need.warn else 'HELD'}: {need}", flush=True)
+    return HOLD_EXIT if [n for n in needs if not n.warn] else 0
 
 
 def grouped(rows: list[dict]) -> dict[str, list[str]]:
@@ -291,6 +291,8 @@ def main() -> int:
     for need, jobs in grouped(rows).items():
         mark = "MISSING" if need in required else "held"
         print(f"  {mark}: {len(jobs)} job(s) — {need}: {', '.join(jobs)}")
+    for warn in sorted({w for r in rows for w in r["warnings"]}):
+        print(f"  warn: {warn}")
     return 1 if args.verify and required else 0
 
 

@@ -84,6 +84,29 @@ def resolve_flag(flag: str, paths: list[Path] | None = None) -> list[tuple[str, 
     return seen
 
 
+def resolved(names, paths: list[Path] | None = None) -> dict:
+    """Each var through the layers as YAML reads it (the last wins), a Jinja value rendered against
+    the same layers (llm_on_host -> ollama_enabled). One that needs a filter or a fact reads ""."""
+    from jinja2 import meta
+    from jinja2.nativetypes import NativeEnvironment
+    merged: dict = {}
+    for p in layer_paths() if paths is None else paths:
+        doc = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        merged.update(doc if isinstance(doc, dict) else {})
+    env = NativeEnvironment()
+
+    def value(name, seen=()):
+        v = merged.get(name, "")
+        if not (isinstance(v, str) and "{{" in v) or name in seen:
+            return v
+        try:
+            deps = meta.find_undeclared_variables(env.parse(v))
+            return env.from_string(v).render({d: value(d, (*seen, name)) for d in deps if d in merged})
+        except Exception:  # noqa: BLE001 — an unrenderable default is unknown, not a crash
+            return ""
+    return {n: value(n) for n in names}
+
+
 def resolve_list(name: str, paths: list[Path] | None = None) -> list:
     """A top-level list var through the layers; the LAST layer that declares it
     wins, an empty list included. `paths` is for tests; default layer_paths()."""
