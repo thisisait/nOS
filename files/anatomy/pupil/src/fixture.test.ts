@@ -166,6 +166,15 @@ describe('the pupil renders the contract fixture', () => {
 		expect(text(card)).toContain('approve deleting this row?');
 	});
 
+	// Local bench 2026-10-16: asked for bench row 10, the card was for row 19.
+	it('a card for a row other than the one named says so in red, before its cells', () => {
+		const msg = fx.to_shell.find((c) => c.case === 'a delete of a row other than the one named')!.msg;
+		const html = render(Message, { props: { msg } }).body;
+		expect(html).toMatch(/class="bad[^"]*"[^>]*>[^<]*you asked for "10"; this row is "bench row 19"/);
+		expect(html.indexOf('you asked for')).toBeLessThan(html.indexOf('title'));
+		expect(draw(fx.to_shell.find((c) => c.case === 'a row delete awaits approval')!.msg)).not.toContain('you asked for');
+	});
+
 	it('a table card says create, private, and every column whole', () => {
 		const msg = fx.to_shell.find((c) => c.case === 'a new table awaits approval')!.msg;
 		const page = draw(msg);

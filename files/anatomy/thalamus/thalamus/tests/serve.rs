@@ -969,6 +969,37 @@ fn approve_deletes_nothing_once_the_row_moved_and_reject_deletes_nothing() {
     }
 }
 
+/// Local bench 2026-10-16: asked to delete "bench row 10", Mistral proposed row 19 (and an edit for 09).
+/// The card says so and still asks; a row that matches says nothing.
+#[test]
+fn a_card_for_a_row_other_than_the_one_named_says_so() {
+    let bench = || vec![keap_row("r09", serde_json::json!({"title": "bench row 09", "status": "open"})),
+                        keap_row("r10", serde_json::json!({"title": "bench row 10", "status": "open"})),
+                        keap_row("r19", serde_json::json!({"title": "bench row 19", "status": "open"}))];
+    for (name, tool, args, second, want) in [
+        ("warn-del", "propose_row_delete", r#"{"table": "todos", "row_id": "r19"}"#, "Delete that row.",
+         Some(r#"you asked for "10"; this row is "bench row 19""#)),
+        ("warn-edit", "propose_row_edit", r#"{"table": "todos", "row_id": "r09", "values": {"status": "done"}}"#, "Set its status to done.",
+         Some(r#"you asked for "10"; this row is "bench row 09""#)),
+        ("warn-none", "propose_row_delete", r#"{"table": "todos", "row_id": "r10"}"#, "Delete that row.", None),
+        // A number that is the new value names no row.
+        ("warn-value", "propose_row_edit", r#"{"table": "todos", "row_id": "r10", "values": {"status": "5"}}"#, "Set row 10 to 5.", None),
+    ] {
+        let (keap, _) = fake_table(SCHEMA, bench());
+        let model = vec![query(r#"{"table": "todos"}"#), answer("Here it is."), call(tool, args), answer("Proposed.")];
+        let rig = rig_at(name, mapped(), keap, model, Some(local()));
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let first = turn(&s, &mut r, None, "Find bench row 10 in iris-bench-2.");
+        let got = turn(&s, &mut r, Some(session_of(&first)), second);
+        let card = got.iter().find_map(|m| match m {
+            ToShell::ApprovalRequest { component: Component::RowDiffApproval(d), .. } => Some(d.clone()),
+            _ => None,
+        }).unwrap_or_else(|| panic!("{name}: no card, the person decides: {got:?}"));
+        assert_eq!(card.warning.as_deref(), want, "{name}");
+    }
+}
+
 // --- T1: Iris creates a table, private to the person, under one card ---
 
 /// Every column shape a 9B model sends: a bare label, a lowercase label, an alias kind, a rowRef by title.

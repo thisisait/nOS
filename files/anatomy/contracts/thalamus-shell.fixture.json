@@ -74,6 +74,9 @@
     {"case": "a row delete awaits approval", "msg": {"t": "approval_request", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "approval": "1b5a6f7e-8c9d-4e0f-9a1b-5c6d7e8f9a0b", "component": {"kind": "row_diff_approval", "props": {
       "table": "expenses", "title": "Expenses", "op": "delete", "row_id": "e3",
       "cells": [{"key": "kind", "old": "travel", "new": null}, {"key": "amount", "old": 420, "new": null}]}}}},
+    {"case": "a delete of a row other than the one named", "msg": {"t": "approval_request", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "approval": "2c6b7a8f-9d0e-4f1a-8b2c-6d7e8f9a0b1c", "component": {"kind": "row_diff_approval", "props": {
+      "table": "iris-bench-2", "title": "iris-bench-2", "op": "delete", "row_id": "r19", "warning": "you asked for \"10\"; this row is \"bench row 19\"",
+      "cells": [{"key": "title", "old": "bench row 19", "new": null}]}}}},
     {"case": "refusal", "msg": {"t": "refused", "reason": "login carol has no row in the identity map"}},
     {"case": "a refused widget names it", "msg": {"t": "refused", "reason": "no column `kinds` in Expenses; columns: when, kind, amount", "widget": "w2"}},
     {"case": "the model is asked", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": "thinking"}},
