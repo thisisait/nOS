@@ -52,3 +52,8 @@ def test_a_plain_case_has_no_depth():
     assert b.case_depth({"prompt": "p"}, [{"index": 0, "status": "fail", "failed": []}]) is None
     turns = [{"index": 0, "status": "pass"}, {"index": 1, "status": "fail"}]
     assert b.case_depth({"turns": [{"say": "a", "checks": {}}, {"say": "b", "checks": {}}]}, turns) == 1
+
+
+def test_a_domain_with_only_generated_cases_runs(assay):
+    (assay / "domains/d1/cases.yml").unlink()
+    assert [c["id"] for c in _bench().load_cases("x.yml", "d1", "smoke")] == ["s"]
