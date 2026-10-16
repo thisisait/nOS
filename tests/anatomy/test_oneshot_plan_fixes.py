@@ -63,4 +63,4 @@ def test_a_later_step_question_names_the_steps_so_far():
         texts[qn["id"]] = qn["text"]
         return answers.get(qn["id"], False)
     poc.build("r", ask)
-    assert "list_tables" in texts["s2.tool"]
+    assert "list_tables" in texts["s2.more"]  # battery v2: the yes/no before step 2 names the plan

@@ -60,7 +60,7 @@ def test_every_tool_question_offers_the_full_tool_list(tmp_path, monkeypatch):
     assert sorted(poc.SCHEMAS) == sorted(names), "the pinned tool list drifted from serve.rs"
     _, _, trace = _run(tmp_path, monkeypatch)
     asked = [r for r in trace if r["id"].endswith(".tool")]
-    assert len(asked) == 6  # 3 one-call cases ask one step; edit-card (multi_step) 2 steps + "done"
+    assert len(asked) == 5  # 3 one-call cases ask one step; edit-card 2 (its "no more" is s3.more)
     assert all(r["options"] == list(poc.SCHEMAS) + ["done"] for r in asked), asked
 
 

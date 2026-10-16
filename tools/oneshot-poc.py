@@ -123,6 +123,9 @@ def build(request: str, ask) -> dict:
     plan = []
     for n in range(1, (MAX_STEPS if triage["multi_step"] else 1) + 1):  # a one-call request asks no step 2
         so_far = f" Already planned: {', '.join(s['tool'] for s in plan)}." if plan else ""
+        if plan and not ask({"id": f"s{n}.more", "kind": "yesno",  # "done" hid among 15 tools: never chosen
+                             "text": f"{so_far.strip()} Does the request need another tool call?"}):
+            break
         tool = ask({"id": f"s{n}.tool", "kind": "choice", "options": list(SCHEMAS) + [DONE],
                     "text": f"Step {n}: which tool runs next?{so_far} done = nothing more."})
         if tool == DONE:
@@ -183,13 +186,14 @@ def _walk(sch, pid, name, ask, ctx, required, parent=None):
         if items is None:
             return NONE
         lo, hi = (sch.get("minItems", 0) if required else 0), sch.get("maxItems", 8)
-        n = ask({"id": f"{pid}.n", "kind": "int", "text": f"{what} how many?", "min": lo, "max": hi})
-        if n == 0 and not required:
-            return NONE
-        if "prefixItems" in items:
-            return [[_walk(p, f"{pid}.{i}.{j}", "", ask, ctx, True) for j, p in enumerate(items["prefixItems"])]
-                    for i in range(n)]
-        return [_walk(items, f"{pid}.{i}", name, ask, ctx, True) for i in range(n)]
+        out = []
+        for i in range(hi):  # one yes at a time: "how many?" was answered with duplicated items
+            if i >= lo and not ask({"id": f"{pid}.{i}.add", "kind": "yesno",
+                                    "text": f"{what} add {'an' if i == 0 else 'another'} item?"}):
+                break
+            out.append([_walk(p, f"{pid}.{i}.{j}", "", ask, ctx, True) for j, p in enumerate(items["prefixItems"])]
+                       if "prefixItems" in items else _walk(items, f"{pid}.{i}", name, ask, ctx, True))
+        return out if out or required else NONE
     if t == "object":
         props = sch.get("properties")
         if not props:
@@ -315,6 +319,9 @@ def build_waves(request: str, answer_wave, known: dict) -> dict:
 
 LOCAL = {"127.0.0.1", "localhost", "::1"}
 TOOL_DESC = {t["function"]["name"]: t["function"]["description"].split(". ")[0] for t in TOOLS} | {DONE: "nothing more"}
+for _n, _s in SCHEMAS.items():  # show's first sentence named no kind: every chart went to offer_dashboard
+    if _kinds := [b["properties"]["kind"]["const"] for b in _s.get("properties", {}).get("component", {}).get("oneOf", [])]:
+        TOOL_DESC[_n] += f"; one component: {', '.join(_kinds)} (a chart or kpi computed from a table query)"
 
 
 def to_systemone(qn):

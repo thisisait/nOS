@@ -6,7 +6,7 @@ top3-next:
   answers:
     s1.tool: query_rows
     s1.table: iris-bench-2
-    s1.columns.n: 0
+    s1.columns.0.add: false
     s1.group_by: (none)
     s1.limit.use: true
     s1.limit: 3
@@ -15,7 +15,8 @@ top3-next:
     s1.order_by.column: points
     s1.order_by.dir: desc
     s1.q.use: false
-    s1.where.n: 1
+    s1.where.0.add: true
+    s1.where.1.add: false
     s1.where.0.column: status
     s1.where.0.op: eq
     s1.where.0.value: next
@@ -26,14 +27,15 @@ where-not-q:
   answers:
     s1.tool: query_rows
     s1.table: iris-bench-2
-    s1.columns.n: 0
+    s1.columns.0.add: false
     s1.group_by: (none)
     s1.limit.use: true
     s1.limit: 0
     s1.op: count
     s1.order_by.use: false
     s1.q.use: false
-    s1.where.n: 1
+    s1.where.0.add: true
+    s1.where.1.add: false
     s1.where.0.column: status
     s1.where.0.op: eq
     s1.where.0.value: next
@@ -46,7 +48,8 @@ bar-sum-points:
     s1.source.use: true
     s1.source.query.table: iris-bench-2
     s1.source.query.q.use: false
-    s1.source.query.where.n: 1
+    s1.source.query.where.0.add: true
+    s1.source.query.where.1.add: false
     s1.source.query.where.0.column: status
     s1.source.query.where.0.op: eq
     s1.source.query.where.0.value: next
@@ -65,18 +68,20 @@ edit-card:  # two turns; the normaliser resolves "its" to bench row 10
   answers:
     s1.tool: query_rows
     s1.table: iris-bench-2
-    s1.columns.n: 0
+    s1.columns.0.add: false
     s1.group_by: (none)
     s1.limit.use: true
     s1.limit: 1
     s1.op: (none)
     s1.order_by.use: false
     s1.q.use: false
-    s1.where.n: 1
+    s1.where.0.add: true
+    s1.where.1.add: false
     s1.where.0.column: title
     s1.where.0.op: eq
     s1.where.0.value: bench row 10
     s1.y: (none)
+    s2.more: true
     s2.tool: propose_row_edit
     s2.table: iris-bench-2
     s2.row_id: $step1.rows[0].__id
@@ -86,4 +91,5 @@ edit-card:  # two turns; the normaliser resolves "its" to bench row 10
     s2.values.points.use: false
     s2.values.note.use: false
     s2.values.due.use: false
+    s3.more: false
     s3.tool: done
