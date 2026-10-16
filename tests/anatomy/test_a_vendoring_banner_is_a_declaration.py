@@ -36,7 +36,6 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TOOL = REPO / "tools/cortex-drift.py"
-ORGAN = REPO / "files/anatomy/cortex"
 
 
 def _mod():
@@ -48,12 +47,16 @@ def _mod():
 
 
 def test_the_banner_the_organ_actually_writes_is_recognised() -> None:
+    """Synthetic: the banner measured on docs/specs/recall-gate.md, verbatim.
+    The real copies are gone from the organ, so a real-file read always skipped."""
     m = _mod()
-    real = (ORGAN / "docs/specs/recall-gate.md")
-    if not real.is_file():
-        import pytest
-        pytest.skip("the vendored organ is not in this checkout")
-    assert m.VENDOR_BANNER.search(real.read_text(encoding="utf-8")), (
+    real = (
+        "# Recall gate\n\n"
+        "> Vendored from thisisait/nos-keap @ v1.28.0 (94acbfe) docs/specs/recall-gate.md —\n"
+        ">   organ-side copy, P-4b Docs stage 2026-07-25. The KEAP original remains\n"
+        ">   authoritative until the post-C4 docs cleanup.\n"
+    )
+    assert m.VENDOR_BANNER.search(real), (
         "the banner on a real vendored spec is not recognised as a "
         "declaration, so seven docs stand in front of the code drifts")
 
