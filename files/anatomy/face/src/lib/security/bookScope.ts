@@ -12,6 +12,7 @@ import { canViewAnatomy } from './tier';
 
 export const BOOK_SCOPED = new Set([
 	'invoice',
+	'invoice-review',
 	'invoice-line',
 	'journal-entry',
 	'posting',
@@ -84,6 +85,7 @@ export function filterBookRows(opts: {
 			case 'book-access':
 				return cell(r, 'principal') === opts.uid;
 			case 'invoice':
+			case 'invoice-review':
 				return owners.has(cell(r, 'book_owner'));
 			case 'invoice-line':
 				return invSlugs.has(cell(r, 'invoice'));

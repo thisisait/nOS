@@ -8,9 +8,10 @@
 Reads `client_scope:` from state/keap-tables/*.table.yml (vocabulary and gate:
 tests/anatomy/test_septum_scope_declared.py). RED: a table with no or an unknown
 scope, `unresolved` (holds client data, no column names the client), or orphan
-rows (a set ref whose target row is gone: offboarding would miss them). WARN: a
-`personal` table that is not `visibility: private`. Live: parties by role, and
-per scoped table how many rows walk to which client. KEAP unreachable = UNKNOWN.
+rows (a set ref whose target row is gone: offboarding would miss them), a live
+table whose visibility is not its def's (KEAP may set it on create only). WARN: a
+`personal` table that is not `visibility: private`; unstamped rows (book_owner-scoped,
+no book_owner). Live: parties by role, rows per client. KEAP unreachable = UNKNOWN.
 A declaration only: KEAP enforces no per-row owner yet. A READER, exits 0.
 """
 from __future__ import annotations
@@ -18,6 +19,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import urllib.error
+import urllib.request
 from collections import Counter
 from pathlib import Path
 
@@ -28,6 +31,7 @@ TABLES = REPO / "state" / "keap-tables"
 FIXED = {"none", "personal", "self", "book_owner", "unresolved"}
 WALKS = {"self", "book_owner"}
 ORPHAN = "\0orphan"  # a ref is set but its target row is gone: no path to any owner
+UNSTAMPED = "\0unstamped"  # a book_owner-scoped row that names no book: whose is unknown
 
 
 def load_defs(root: Path = TABLES) -> dict[str, dict]:
@@ -73,6 +77,8 @@ def client_of(table: str, row: dict, defs: dict, rows: dict, roles: dict, depth:
         return slug if roles.get(slug) == "client" else None
     col = "book_owner" if s == "book_owner" else s.split(":", 1)[1]
     target, val = _ref_table(defs[table], col), row.get(col)
+    if not val and s == "book_owner" and depth == 0:
+        return UNSTAMPED
     if not val or not target:
         return None
     if target == "party":
@@ -89,15 +95,37 @@ def live(defs: dict, rows: dict) -> dict:
             continue
         per = Counter(client_of(name, r, defs, rows, roles) for r in rows.get(name) or [])
         out["tables"][name] = {"rows": sum(per.values()), "not_a_client": per.pop(None, 0),
-                               "orphans": per.pop(ORPHAN, 0), "by_client": dict(per)}
+                               "orphans": per.pop(ORPHAN, 0), "unstamped": per.pop(UNSTAMPED, 0),
+                               "by_client": dict(per)}
     return out
+
+
+def visibility_drift(defs: dict, live_vis: dict) -> list[str]:
+    """Red lines for live tables whose grade is not the def's. None = table not created yet."""
+    return [f"{n}: def says visibility {d.get('visibility')!r}, live table is {live_vis[n]!r}"
+            for n, d in defs.items() if live_vis.get(n) and live_vis[n] != d.get("visibility")]
+
+
+def _live_visibility(table: str, hdr: dict) -> str | None:
+    from digest_absorb import AGENT, _open  # noqa: E402
+    try:
+        with _open(urllib.request.Request(f"{AGENT}/{table}", headers=hdr)) as r:
+            body = json.loads(r.read() or b"{}")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        raise
+    return (body.get("data") or body).get("visibility")
 
 
 def read_live(defs: dict) -> dict:
     sys.path.insert(0, str(REPO / "tools"))
-    from digest_absorb import read_rows  # noqa: E402
+    from digest_absorb import proxy_header, read_rows, ro_token  # noqa: E402
     need = {"party"} | {n for n, d in defs.items() if walks(d.get("client_scope"))}
-    return {t: read_rows(t) for t in sorted(need)}
+    hdr = {"Authorization": f"Bearer {ro_token()}", **proxy_header()}
+    rows = {t: read_rows(t, hdr) for t in sorted(need)}
+    rows["_visibility"] = {n: _live_visibility(n, hdr) for n in sorted(defs)}
+    return rows
 
 
 def main() -> int:
@@ -114,14 +142,19 @@ def main() -> int:
     try:
         rows = (json.loads(Path(a.rows_json).read_text(encoding="utf-8")) if a.rows_json
                 else read_live(defs))
+        vis = rows.pop("_visibility", None)
         state, why = live(defs, rows), None
     except Exception as exc:  # any failure to read KEAP is UNKNOWN, never green
-        state, why = None, f"{type(exc).__name__}: {exc}"
+        state, vis, why = None, None, f"{type(exc).__name__}: {exc}"
+    red += visibility_drift(defs, vis or {})
+    warn += [f"{n}: {t['unstamped']} unstamped rows — book_owner-scoped, no book_owner"
+             for n, t in sorted((state or {}).get("tables", {}).items()) if t["unstamped"]]
     red += [f"{n}: {t['orphans']} orphan rows — a ref points at a row that is gone"
             for n, t in sorted((state or {}).get("tables", {}).items()) if t["orphans"]]
-    verdict = "RED" if red else ("UNKNOWN" if state is None else "OK")
+    verdict = "RED" if red else ("UNKNOWN" if state is None or vis is None else "OK")
     if a.json:
         print(json.dumps({"verdict": verdict, "red": red, "warn": warn, "live": state,
+                          "live_visibility": vis,
                           "live_unknown": why, "scopes": {n: d.get("client_scope") for n, d in defs.items()}},
                          indent=2, ensure_ascii=False))
         return 0
@@ -131,6 +164,8 @@ def main() -> int:
         print(f"  red:  {line}")
     for line in warn:
         print(f"  warn: {line}")
+    if vis is None:
+        print("  visibility: UNKNOWN — live table grades not read")
     if state is None:
         print(f"  live: UNKNOWN — KEAP rows unreadable ({why})")
         return 0
@@ -138,7 +173,7 @@ def main() -> int:
     for name, t in sorted(state["tables"].items()):
         by = ", ".join(f"{k} {v}" for k, v in sorted(t["by_client"].items())) or "—"
         print(f"  {name:<24} {t['rows']:>5} rows  clients: {by}  not a client's: {t['not_a_client']}  "
-              f"orphans: {t['orphans']}")
+              f"orphans: {t['orphans']}  unstamped: {t['unstamped']}")
     return 0
 
 
