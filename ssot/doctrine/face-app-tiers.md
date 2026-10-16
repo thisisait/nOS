@@ -77,8 +77,8 @@ a one-shot success and an over- or under-engineered app.
 
 "UI" is in parentheses throughout: an app MAY be a **headless scheduled
 task** (a Pulse job / cron) with no UI — it is still an nOS app, and it is
-still **visible + operable via wing-face** (Wing `/pulse`, `/timeline`,
-`/agents`).
+still **visible + operable in nOS face** (the Anatomy app's Pulse and Wing
+views; Wing's own Latte pages only shrink — `test_wing_latte_ratchet.py`).
 
 ## 3. The tiers — the `build` axis
 
@@ -87,8 +87,8 @@ still **visible + operable via wing-face** (Wing `/pulse`, `/timeline`,
 | **F1** | Utils (static + KV) | Small structured per-user state; no schema | **user-state** (`/api/v1/userstate`), optionally **VFS** | One face component + a `usSet/usGet` namespace. No DB, no migrations. | face-native window (dock tile) |
 | **F2** | Structured app | Dedicated tables, real files, per-tenant data | **apps_runner** (`apps/<name>.yml`: compose + GDPR + Authentik), Postgres/MariaDB, **VFS**, euro-office | A private submodule: docs + code + **schema + idempotent migrations** + idempotent setup commands. Optional Next.js frontend. Default **RBAC tier-3, promotable**. | apps_runner `wing_system` + `/hub` tile (companion) |
 | **F3** | Multi-organ app | Business logic spanning services | **F2 organs +** Infisical (secrets), Woodpecker (CI), Stalwart (email), Authentik/2FAuth (2FA), Nextcloud/RustFS (storage), **AgentKit** (agent steps) | F2 recipe + wiring manifests per organ (each organ has a documented capability block). | companion app + deep-links into the organs it uses |
-| **F4** | Flow-defined (no-code) | Event/cron pipelines, little/no bespoke code | **n8n** or **Node-RED** flow definitions | The app IS a flow export + a thin trigger/config manifest. | flow visible in its host; status in wing-face |
-| H | Headless / cron (orthogonal) | A scheduled job, any tier's data | **Pulse** (`pulse_jobs:`) + whatever it touches | A Pulse job manifest + the script. No UI. | **wing-face** visibility only (Pulse/timeline) |
+| **F4** | Flow-defined (no-code) | Event/cron pipelines, little/no bespoke code | **n8n** or **Node-RED** flow definitions | The app IS a flow export + a thin trigger/config manifest. | flow visible in its host; status in nOS face |
+| H | Headless / cron (orthogonal) | A scheduled job, any tier's data | **Pulse** (`pulse_jobs:`) + whatever it touches | A Pulse job manifest + the script. No UI. | **nOS face** visibility only (Pulse/timeline) |
 
 Tiers compose upward: an F3 app still uses F1 user-state for its per-user
 prefs and F2's DB for its records. Pick the **lowest** tier that covers the
@@ -135,7 +135,7 @@ by the face-base GDPR row).
   see `docs/sso-and-attribution.md`). Apps default to **RBAC tier-3,
   promotable**.
 - **Everything is visible in a face.** UI apps appear as companion tiles in
-  nOS face; headless jobs appear in wing-face. There SHALL be no invisible
+  nOS face; headless jobs appear in its Anatomy app. There SHALL be no invisible
   app.
 
 ## 6. Roadmap hooks (not built yet)
