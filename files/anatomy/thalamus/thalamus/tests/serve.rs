@@ -5304,10 +5304,11 @@ fn a_pick_is_recorded_and_the_next_turn_uses_it() {
 
 #[test]
 fn a_pick_is_a_session_rebind_the_next_request_hears_once() {
-    let rig = picker("mrebind", picks_of("iris", BOTH), vec![PULLED.into(), answer("ahoj"), answer("znovu")]);
+    let rig = picker("mrebind", picks_of("iris", BOTH), vec![answer("nazdar"), PULLED.into(), answer("ahoj"), answer("znovu")]);
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
-    let ToShell::ModelOptions { session, .. } = said_to(&s, &mut r, pick("mistral-eu", "mistral-large-latest")) else { panic!("pick not taken") };
+    let session = session_of(&turn(&s, &mut r, None, "first"));
+    let ToShell::ModelOptions { .. } = said_to(&s, &mut r, pick("mistral-eu", "mistral-large-latest")) else { panic!("pick not taken") };
     turn(&s, &mut r, Some(session.clone()), "hi");
     turn(&s, &mut r, Some(session.clone()), "again");
     drop((s, r));
@@ -5318,9 +5319,9 @@ fn a_pick_is_a_session_rebind_the_next_request_hears_once() {
     assert!(rec.2["reason"].is_string() && from != "mistral-eu-mistral-large-latest", "{rec:?}");
     let line = format!("This session moved from {from} to mistral-eu-mistral-large-latest (person); earlier turns were answered by {from}.");
     let bodies = rig.model.lock().unwrap().iter().filter(|(h, _)| h.starts_with("POST")).map(|(_, b)| b.clone()).collect::<Vec<_>>();
-    assert_eq!(bodies.len(), 2, "two turns, two requests");
+    assert_eq!(bodies.len(), 3, "three turns, three requests");
     let heard: Vec<usize> = bodies.iter().map(|b| b.matches(&line).count()).collect();
-    assert_eq!(heard, [1, 0], "the first request after the rebind says it once, the next does not");
+    assert_eq!(heard, [0, 1, 0], "the first request after the rebind says it once, the next does not");
 }
 
 #[test]
