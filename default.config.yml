@@ -426,6 +426,12 @@ watchtower_mode: "notify"                 # notify | apply (per-host opt-in)
 # behind an append-only rest-server (or the bucket's own lock). Leave both
 # orchestrators off until restic_repo points at a MOUNTED disk / reachable host.
 configure_backup: false
+# THE one derivation of the backup path. Copy #1 needs its RustFS target; without
+# it (core profile) there is no copy #1 and configure_backup's restic run stages
+# the DB dumps itself and snapshots them with the data dirs (ruling 2026-10-16).
+backup_copy1_enabled: "{{ (install_backup | default(false) | bool) and (install_rustfs | default(false) | bool) }}"
+backup_staging_dir: "{{ ansible_facts['env']['HOME'] }}/backups/staging"
+backup_restic_status_file: "{{ ansible_facts['env']['HOME'] }}/.nos/backup-restic-status.json"
 restic_repo: ""
 # S3-compatible targets only (restic_repo starts with "s3:"): the key pair the
 # repo is opened with. Empty = not an S3 target. Exported as AWS_ACCESS_KEY_ID /

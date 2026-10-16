@@ -12,6 +12,8 @@
 # on macOS TCC (rc=1). DR: `restic restore` the repo back into rustfs_data_dir,
 # then `--tags restore`. Scheduled AFTER the RustFS run so it mirrors a COMPLETE
 # copy #1. Label is `.offsite` (de-collided from the RustFS `.rustfs` agent).
+# No copy #1 (backup_copy1_enabled false: no RustFS) = the wrapper stages the DB
+# dumps itself and snapshots them with the data dirs straight into restic_repo.
 # ==============================================================================
 
 - name: "[Backup] Verify restic is installed"
@@ -30,6 +32,7 @@
     path: "{{ item }}"
   loop: "{{ restic_backup_paths }}"
   register: _restic_src_stats
+  when: backup_copy1_enabled | bool
 
 - name: "[Backup] Fail fast if any restic source path is absent"
   ansible.builtin.fail:
@@ -40,7 +43,9 @@
   loop: "{{ _restic_src_stats.results }}"
   loop_control:
     label: "{{ item.item }}"
-  when: not item.stat.exists
+  when:
+    - backup_copy1_enabled | bool
+    - not item.stat.exists
 
 - name: "[Backup] Ensure backups directory exists"
   ansible.builtin.file:
@@ -98,9 +103,11 @@
 
 # ── Restic backup (mirror of the RustFS bucket dir) ──────────────────────────
 # No DB dumps here — copy #1 (pazny.backup) already wrote the canonical encrypted
-# dumps into rustfs_data_dir. We just replicate that dir off-site.
+# dumps into rustfs_data_dir. We just replicate that dir off-site. Without copy #1
+# the wrapper below does the whole run (dumps + dirs) and is executed after it.
 
 - name: "[Backup] Run restic backup"
+  when: backup_copy1_enabled | bool
   ansible.builtin.command: >
     restic -r {{ restic_repo }} backup
     --exclude-file={{ restic_excludefile }}
@@ -129,6 +136,7 @@
     RESTIC_PASSWORD: "{{ restic_password }}"
   changed_when: false
   failed_when: false
+  when: backup_copy1_enabled | bool
 
 - name: "[Backup] Prune old snapshots"
   ansible.builtin.command: >
@@ -140,6 +148,7 @@
   environment:
     RESTIC_PASSWORD: "{{ restic_password }}"
   register: _restic_prune
+  when: backup_copy1_enabled | bool
   # Prune is retention HOUSEKEEPING — the backup snapshot (copy #2) already
   # succeeded above. A prune hiccup must NOT abort the play and discard a good
   # backup; surface it as a warning. no_log dropped (password is in environment,
@@ -173,6 +182,12 @@
       export AWS_ACCESS_KEY_ID={{ restic_s3_access_key | quote }}
       export AWS_SECRET_ACCESS_KEY={{ restic_s3_secret_key | quote }}
       {% endif %}
+      {% if not backup_copy1_enabled | bool and backup_databases_postgresql | bool -%}
+      export NOS_PG_PASSWORD={{ postgresql_root_password | quote }}
+      {% endif %}
+      {% if not backup_copy1_enabled | bool and backup_databases_mariadb | bool -%}
+      export NOS_MARIADB_PASSWORD={{ mariadb_root_password | quote }}
+      {% endif %}
     dest: "{{ ansible_facts['env']['HOME'] }}/.nos/restic.env"
     mode: '0600'
   no_log: true
@@ -202,9 +217,56 @@
       trap notify_fail ERR
       . "{{ ansible_facts['env']['HOME'] }}/.nos/restic.env"
       echo "=== Off-site mirror started: $(date -Iseconds) ==="
+      {% if backup_copy1_enabled | bool %}
       restic backup \
         --exclude-file="{{ restic_excludefile }}" \
         {{ restic_backup_paths | join(' ') }}
+      {% else %}
+      # No copy #1 (no RustFS): stage the DB dumps here, then snapshot them with
+      # the data dirs. An off service's NON-EMPTY dir stays in (its last copy must
+      # not age out); an empty or absent one is ignored. rows: "name ok off".
+      STAGE="{{ backup_staging_dir }}"
+      mkdir -p "$STAGE" && chmod 700 "$STAGE"
+      PATHS=("$STAGE")
+      ROWS=()
+      stage_dump() {
+        local name="$1"; shift
+        if "$@" | gzip -c > "$STAGE/$name.sql.gz.part"; then
+          mv -f "$STAGE/$name.sql.gz.part" "$STAGE/$name.sql.gz"; ROWS+=("$name 1 0")
+        else
+          rm -f "$STAGE/$name.sql.gz.part" "$STAGE/$name.sql.gz"; ROWS+=("$name 0 0")
+        fi
+      }
+      add_dir() {  # name path installed empty_ok
+        local full; full="$(ls -A "$2" 2>/dev/null | head -1 || true)"
+        if [[ "$3" == true ]]; then
+          if [[ -d "$2" && ( -n "$full" || "$4" == true ) ]]; then PATHS+=("$2"); ROWS+=("dir-$1 1 0")
+          else echo "dir-$1: $2 absent or empty"; ROWS+=("dir-$1 0 0"); fi
+        elif [[ -n "$full" ]]; then PATHS+=("$2"); ROWS+=("dir-$1 1 1"); fi
+      }
+      {% if backup_databases_postgresql | bool %}
+      stage_dump postgres docker exec -i -e "PGPASSWORD=${NOS_PG_PASSWORD}" {{ postgresql_container_name }} pg_dumpall -U {{ postgresql_root_user }}
+      {% endif %}
+      {% if backup_databases_mariadb | bool %}
+      stage_dump mariadb docker exec -i {{ mariadb_container_name }} mariadb-dump --all-databases \
+        --single-transaction --quick --routines --triggers -uroot "-p${NOS_MARIADB_PASSWORD}"
+      {% endif %}
+      {% for d in backup_dirs_to_dump %}
+      {% set on = d.flag is not defined or (lookup('vars', d.flag, default=false) | bool) %}
+      add_dir "{{ d.name }}" "{{ d.path }}" {{ 'true' if on else 'false' }} {{ 'true' if (d.empty_ok | default(false) | bool) else 'false' }}
+      {% endfor %}
+      rc=0
+      restic backup --exclude-file="{{ restic_excludefile }}" --exclude='*.part' "${PATHS[@]}" || rc=$?
+      FAILED="$(python3 - "{{ backup_restic_status_file }}" "$rc" "${ROWS[@]+"${ROWS[@]}"}" <<'PY'
+      import json, sys, time
+      path, rc, rows = sys.argv[1], int(sys.argv[2]), [r.split() for r in sys.argv[3:]]
+      now = int(time.time())
+      src = [{"name": n, "success": ok == "1" and rc == 0, "off": off == "1", "timestamp": now} for n, ok, off in rows]
+      json.dump({"last_run": now, "restic_rc": rc, "sources": src}, open(path, "w"), indent=2)
+      print(",".join(s["name"] for s in src if not s["success"]) or ("restic" if rc else ""))
+      PY
+      )"
+      {% endif %}
       restic unlock || true
       # Retention failing is NOT the backup failing — the snapshot is already
       # written — so this stays guarded. It notifies rather than only echoing,
@@ -220,10 +282,22 @@
             "restic forget --prune failed; the snapshot is safe, old ones were not pruned." \
             "wing-inbox,ntfy" "backup-offsite-retention" || true
         }
+      {% if not backup_copy1_enabled | bool %}
+      if [[ -n "$FAILED" ]]; then echo "FAILED: $FAILED"; notify_fail; exit 1; fi
+      {% endif %}
       echo "=== Off-site mirror finished: $(date -Iseconds) ==="
     dest: "{{ ansible_facts['env']['HOME'] }}/agents/backup-run.sh"
     mode: '0700'
   no_log: true
+
+# Without copy #1 the wrapper IS the backup (dumps + dirs); run it once like the
+# mirror leg above runs once. Its log: ~/backups/backup.log.
+- name: "[Backup] Run the direct restic backup once (no copy #1)"
+  ansible.builtin.command: "/bin/bash {{ ansible_facts['env']['HOME'] }}/agents/backup-run.sh"
+  async: 3600
+  poll: 30
+  changed_when: true
+  when: not (backup_copy1_enabled | bool)
 
 # De-collision: the legacy Restic plist shared the label/path
 # eu.thisisait.nos.backup with the RustFS role. Boot out + remove it so the
