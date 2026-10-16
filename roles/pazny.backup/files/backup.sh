@@ -37,11 +37,13 @@ VOLUMES=({% for v in backup_volumes_to_dump %}"{{ v }}" {% endfor %})
 # Host-bind service data dirs (gitea/gitlab repos, etc.) — name|path pairs.
 # These hold filesystem state that NO logical DB dump can reconstruct (git
 # repos, uploads). Tarred whole and restored back to the same host path.
-# Only entries whose service `flag` is on render (the installed set): an off
-# service is neither backed up nor reported (2026-10-16). On + absent = FAILED.
-DIR_NAMES=({% for d in backup_dirs_to_dump if d.flag is not defined or (lookup('vars', d.flag, default=false) | bool) %}"{{ d.name }}" {% endfor %})
-DIR_PATHS=({% for d in backup_dirs_to_dump if d.flag is not defined or (lookup('vars', d.flag, default=false) | bool) %}"{{ d.path }}" {% endfor %})
-DIR_EMPTY_OK=({% for d in backup_dirs_to_dump if d.flag is not defined or (lookup('vars', d.flag, default=false) | bool) %}"{{ 'true' if (d.empty_ok | default(false) | bool) else 'false' }}" {% endfor %})
+# DIR_ENABLED = the service `flag`. On + absent = FAILED. Off + data = backed up,
+# its row marked `off` so its last copy does not age out; off + empty or absent
+# = ignored (operator ruling 2026-10-16).
+DIR_NAMES=({% for d in backup_dirs_to_dump %}"{{ d.name }}" {% endfor %})
+DIR_PATHS=({% for d in backup_dirs_to_dump %}"{{ d.path }}" {% endfor %})
+DIR_EMPTY_OK=({% for d in backup_dirs_to_dump %}"{{ 'true' if (d.empty_ok | default(false) | bool) else 'false' }}" {% endfor %})
+DIR_ENABLED=({% for d in backup_dirs_to_dump %}"{{ 'true' if (d.flag is not defined or (lookup('vars', d.flag, default=false) | bool)) else 'false' }}" {% endfor %})
 
 # Wing SQLite store (security findings, audit hash-chain, agent sessions) — a
 # host file, NOT a container. Dumped with `sqlite3 .dump` for portability.
@@ -211,6 +213,7 @@ s["sources"].append({
     "duration_ms": int("${duration}" or 0),
     "success": bool(int("${success}" or 0)),
     "empty_ok": bool(int("${empty_ok}" or 0)),
+    "off": bool(int("${STATUS_OFF:-0}")),
     "timestamp": int(time.time()),
 })
 with open(path, "w") as f:
@@ -899,11 +902,19 @@ run_dirs() {
     # ${!arr[@]} index form is empty-safe under set -u in bash 3.2 (verified) —
     # no array-length form here (its brace-hash would break the Jinja render).
     local date_str key start dur rc size i name path src_entries tar_list tar_members
+    # Dynamic scope: status_append reads STATUS_OFF to mark an off service's row.
+    local STATUS_OFF=0
     date_str="$(date -u +%Y-%m-%d)"
     for i in "${!DIR_NAMES[@]}"; do
         name="${DIR_NAMES[$i]}"
         path="${DIR_PATHS[$i]}"
         [[ -z "${name}" || -z "${path}" ]] && continue
+        STATUS_OFF=0
+        [[ "${DIR_ENABLED[$i]}" == "true" ]] || STATUS_OFF=1
+        if [[ ! -d "${path}" && "${STATUS_OFF}" == "1" ]]; then
+            log "dir/${name}: service off and ${path} absent — nothing to back up"
+            continue
+        fi
         if [[ ! -d "${path}" ]]; then
             # Enabled but absent = FAILED, never a silent skip. An unmounted SSD
             # or a moved nos_data_root would otherwise drop gitea/gitlab out of
@@ -934,6 +945,10 @@ run_dirs() {
         # from these dirs all along while the backup silently did not.
         src_entries=$(docker run --rm -v "${path}:/data:ro" "${ALPINE_IMAGE}" \
                         sh -c 'ls -A /data 2>/dev/null | wc -l' 2>/dev/null | tr -d ' ')
+        if [[ ( -z "${src_entries}" || "${src_entries}" -eq 0 ) && "${STATUS_OFF}" == "1" ]]; then
+            log "dir/${name}: service off and ${path} empty — nothing to back up"
+            continue
+        fi
         if [[ -z "${src_entries}" || "${src_entries}" -eq 0 ]]; then
             # An attachment store with no uploads yet is empty because it is
             # empty (the container count above rules out an unreadable mount).

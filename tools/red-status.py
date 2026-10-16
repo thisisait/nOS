@@ -688,15 +688,19 @@ def backups() -> dict | None:
     if isinstance(sources, dict):
         sources = [{"name": k, **v} for k, v in sources.items() if isinstance(v, dict)]
     failed = [s.get("name") for s in sources if not s.get("success")]
-    # A source this host never installed is no finding (an older render listed it).
+    # A source this host never installed is no finding (an older render listed it);
+    # an `off` row is: the run backed up an off service's data on purpose.
+    off = {s.get("name") for s in sources if s.get("off")}
     if (flags := _install_flags()) is not None:
         import nos_identity  # noqa: PLC0415
-        failed = nos_identity.backup_sources_installed(failed, flags)
+        keep = set(nos_identity.backup_sources_installed(failed, flags)) | off
+        failed = [n for n in failed if n in keep]
     stamps = [s.get("timestamp") for s in sources if isinstance(s.get("timestamp"), (int, float))]
     when = datetime.fromtimestamp(max(stamps), timezone.utc) if stamps else None
     return {
         "sources": len(sources),
         "failed": failed,
+        "backed_up_while_off": [s.get("name") for s in sources if s.get("off") and s.get("success")],
         "last_source_at": when.isoformat() if when else None,
         "age": _age(when),
         "stale": when is None or when < _now() - STALE_AFTER,
@@ -1227,6 +1231,8 @@ def hold_lines(report: dict) -> list[str]:
         out.append(
             f"{r['job']} last run skipped — loops paused (maintenance) ({r['age']})"
         )
+    if off := (report.get("backups") or {}).get("backed_up_while_off"):
+        out.append(f"backed up while off: {', '.join(off)} (service off, its data kept in the set)")
     return out
 
 
