@@ -903,7 +903,7 @@ def emit_jsonl(path: pathlib.Path, run_id: str, results: list[ProbeResult]) -> N
 # ---------------------------------------------------------------------------
 
 def load_vars(host_alias: str | None = None, tenant_domain: str | None = None,
-              apps_subdomain: str | None = None) -> dict:
+              apps_subdomain: str | None = None, overrides: dict | None = None) -> dict:
     """The resolved variables every estate reader probes against: defaults,
     the operator's config.yml, the run's own state.yml, CLI-style overrides,
     the domain helpers the lite resolver cannot compute. Shared by
@@ -922,6 +922,7 @@ def load_vars(host_alias: str | None = None, tenant_domain: str | None = None,
     # macOS, so on Linux its install flag (default true) must not summon a
     # probe for a daemon the playbook never started (cloud lane, 2026-09-26).
     vars_dict.setdefault("nos_is_macos", sys.platform == "darwin")
+    vars_dict.update(overrides or {})  # the run's -e values, which no file shows
 
     # ── Track F: apply CLI overrides BEFORE helper computation ───────────────
     # These mirror Ansible -e flags. Without them, the subprocess can't see
@@ -972,6 +973,32 @@ def load_vars(host_alias: str | None = None, tenant_domain: str | None = None,
             vars_dict[k] = resolve_jinja_lite(v, vars_dict)
 
     return vars_dict
+
+
+def build_catalog(vars_dict: dict) -> list[dict]:
+    """Every probe this run asks, before --tier / --include filters."""
+    manifest = load_yaml(REPO / "state" / "manifest.yml")
+    catalog = load_yaml(REPO / "state" / "smoke-catalog.yml")
+
+    defaults = catalog.get("smoke_defaults") or {}
+    extras = list(catalog.get("smoke_endpoints") or [])
+
+    runtime_path = pathlib.Path.home() / ".nos" / "smoke-catalog.runtime.yml"
+    if not runtime_path.is_file():
+        # Compat: written into the checkout before 2026-10-07; drop after the next converge.
+        runtime_path = REPO / "state" / "smoke-catalog.runtime.yml"
+    if runtime_path.is_file():
+        runtime_catalog = load_yaml(runtime_path)
+        runtime_extras = runtime_catalog.get("smoke_endpoints") or []
+        # Append after the static entries so static IDs win on duplicate keys
+        # (matching the same precedence rule merge_catalog applies to manifest
+        # vs. catalog entries — last-writer-wins becomes first-wins via the
+        # merge_catalog dedup logic).
+        extras = extras + list(runtime_extras)
+
+    manifest_entries = derive_from_manifest(
+        manifest, vars_dict, defaults, skip_ids=unrouted_ids(REPO))
+    return merge_catalog(manifest_entries, extras, defaults, vars_dict)
 
 
 def main() -> int:
@@ -1027,28 +1054,7 @@ def main() -> int:
     #                                   apps/<name>.yml manifest. Same shape
     #                                   as the static catalog so this loader
     #                                   stays simple. Missing file = no-op.
-    manifest = load_yaml(REPO / "state" / "manifest.yml")
-    catalog = load_yaml(REPO / "state" / "smoke-catalog.yml")
-
-    defaults = catalog.get("smoke_defaults") or {}
-    extras = list(catalog.get("smoke_endpoints") or [])
-
-    runtime_path = pathlib.Path.home() / ".nos" / "smoke-catalog.runtime.yml"
-    if not runtime_path.is_file():
-        # Compat: written into the checkout before 2026-10-07; drop after the next converge.
-        runtime_path = REPO / "state" / "smoke-catalog.runtime.yml"
-    if runtime_path.is_file():
-        runtime_catalog = load_yaml(runtime_path)
-        runtime_extras = runtime_catalog.get("smoke_endpoints") or []
-        # Append after the static entries so static IDs win on duplicate keys
-        # (matching the same precedence rule merge_catalog applies to manifest
-        # vs. catalog entries — last-writer-wins becomes first-wins via the
-        # merge_catalog dedup logic).
-        extras = extras + list(runtime_extras)
-
-    manifest_entries = derive_from_manifest(
-        manifest, vars_dict, defaults, skip_ids=unrouted_ids(REPO))
-    all_entries = merge_catalog(manifest_entries, extras, defaults, vars_dict)
+    all_entries = build_catalog(vars_dict)
 
     # ── Filters ────────────────────────────────────────────────────────────
     if args.tier:
