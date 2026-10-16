@@ -56,13 +56,18 @@ decision for the operator, not a default.
    with `nos dtt update`, rows captured but not yet seeded show in
    `nos dtt seed --dry-run`. Writes to the table are the operator's
    (`nos dtt seed`, `verify`, `update`): prepare the commands, do not run them.
-3. **Hidden fees: pay or write.** Collect the lessons since the last tag: memory
-   files modified since the tag date, `fix:` commits whose body says why it hid,
-   reverted commits, workflow verify findings. For each: **paid** (a fix + the gate
-   that pins it, cite both) or **written** as `docs/hidden_fees/NN-slug.md` in the
-   shape of [docs/hidden_fees/README.md](../../../docs/hidden_fees/README.md) (the
-   fee, when the bill comes due, how it was found, what closes it). Not a fee if
-   it is failing (a bug) or planned (a roadmap row).
+3. **Hidden fees: make the deferred costs visible; actionable work goes to the roadmap.**
+   A hidden fee is a cost we chose to carry and can see - a `ponytail:` comment's
+   ceiling, a known limit, a workaround - not a task. Collect since the last tag:
+   new `ponytail:` comments (`git log -p <last-tag>..dev -S'ponytail:'`), memory files
+   modified since the tag date, `fix:` commits whose body says why it hid, workflow
+   verify findings. Sort each one:
+   - **actionable** (someone can do it) -> a roadmap row (`/dtt-capture`), never a fee;
+   - **paid** -> cite the fix and the gate that pins it;
+   - **carried** -> `docs/hidden_fees/NN-slug.md` in the shape of
+     [docs/hidden_fees/README.md](../../../docs/hidden_fees/README.md) (the fee, when
+     the bill comes due, how it was found, what closes it), the ponytail's upgrade
+     path included.
 4. **Quick wins.** From the roadmap, rows that fit before the cut: small, a gate
    included, no live-host step. Propose at most five, the operator picks.
 5. **RELEASE.md.** A new `## vX.Y-beta` section above the previous one, in its
