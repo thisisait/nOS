@@ -3,13 +3,13 @@
 //! and every KEAP call goes to the human door as that person behind the proxy secret
 //! only this process holds. A peer the map does not name is refused, never defaulted.
 
-use crate::binding::Binding;
+use crate::binding::{self, Binding, Pick};
 use crate::ledger::{Kind, Ledger, RowOp, Session};
 use crate::septum::Septum;
 use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget, Kpi,
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
                                Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Visibility};
-use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, FormSpec, KpiSpec, Op, Phase, Scope, ToShell, ToThalamus, Trigger,
+use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, FormSpec, KpiSpec, Op, Phase, Scope, ModelOption, ToShell, ToThalamus, Trigger,
                          WidgetChart, WidgetSpec};
 use nos_contract::uid;
 use serde_json::{json, Map, Value};
@@ -48,6 +48,10 @@ pub struct Server {
     /// NOS_DECIDER_EXES: the executables that may decide; empty records the peer only.
     pub deciders: Vec<PathBuf>,
     pub log: Mutex<Box<dyn Write + Send>>,
+    /// iris's model.backends_allowed as this host serves them: what a session may pick (W5).
+    pub picks: Vec<Pick>,
+    /// (llm_cell_min_params_b, llm_cell_recommended_params_b) a local pick is judged by; None judges none.
+    pub floors: Option<(f64, f64)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -242,6 +246,8 @@ struct Open {
     session: String,
     /// Err (why) when iris is unbound or its imprint is missing: controls still answer, turns are refused.
     model: Result<Binding, String>,
+    /// The prompt after the imprint: a pick that changes local/cloud re-reads the imprint before it.
+    iris: String,
     messages: Vec<Value>,
     tokens: (i64, i64),
     /// Approvals asked and not yet decided, to the tool that asked; a decision removes its id, so
@@ -702,6 +708,16 @@ impl Server {
                         self.working_for(&mut who, &mut out, o, &scope, &peer);
                     }
                 }
+                Ok(ToThalamus::ModelOptions) => {
+                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
+                        self.model_options(&mut out, o);
+                    }
+                }
+                Ok(ToThalamus::ModelPick { backend, model }) => {
+                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
+                        self.model_pick(&mut out, o, &backend, &model, &peer);
+                    }
+                }
                 Ok(ToThalamus::Widget { widget, spec, trigger }) => {
                     if let Some(o) = self.ensure(&who, &mut out, &mut open) {
                         self.widget(&who, &mut out, o, &widget, &spec, trigger);
@@ -756,13 +772,7 @@ impl Server {
 
     fn open(&self, who: &Person, out: &mut UnixStream) -> Result<Open, String> {
         // The imprint the binding calls for: the short render fits a local model's window.
-        let imprint = self.binding.clone().and_then(|m| {
-            let file = if m.local { "IMPRINT.short.md" } else { "IMPRINT.md" };
-            match std::fs::read_to_string(self.repo.join(file)) {
-                Ok(t) if !t.trim().is_empty() => Ok((m, t)),
-                _ => Err(format!("{file} is missing or empty in {}; iris does not run without it", self.repo.display())),
-            }
-        });
+        let imprint = self.binding.clone().and_then(|m| self.imprint(&m).map(|t| (m, t)));
         if let (Ok(_), Err(why)) = (&self.binding, &imprint) {
             self.say(format!("refusing turns: {why}"));
         }
@@ -802,10 +812,104 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 [thalamus] message, and a picked label is only a label. It is now {} UTC.", who.username, SHOW_KINDS.join(", "), now_utc());
         let (model, system) = match imprint {
             Ok((m, t)) => (Ok(m), format!("{}\n\n{iris}", t.trim_end())),
-            Err(why) => (Err(why), iris),
+            Err(why) => (Err(why), iris.clone()),
         };
-        Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
+        Ok(Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
                   pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new() })
+    }
+
+    fn imprint(&self, m: &Binding) -> Result<String, String> {
+        let file = if m.local { "IMPRINT.short.md" } else { "IMPRINT.md" };
+        match std::fs::read_to_string(self.repo.join(file)) {
+            Ok(t) if !t.trim().is_empty() => Ok(t),
+            _ => Err(format!("{file} is missing or empty in {}; iris does not run without it", self.repo.display())),
+        }
+    }
+
+    /// What this session may bind (W5): every allowed, armed row the gates and the posture pass; a local
+    /// row once per pulled model over the floor. Each left out is said in the second list as "<row> [model]: why".
+    fn options(&self, o: &Open) -> (Vec<(ModelOption, Binding)>, Vec<String>) {
+        let (mut ok, mut refused) = (vec![], vec![]);
+        if let Err(why) = &self.binding {
+            refused.push(format!("iris has no model on this host, so none is picked: {why}"));
+            return (ok, refused);
+        }
+        let now = o.model.as_ref().ok().map(|m| (m.name.clone(), m.model_id.clone()));
+        for p in &self.picks {
+            let b = match &p.bound {
+                Ok(b) => b,
+                Err(why) => {
+                    refused.push(format!("{}: {why}", p.row));
+                    continue;
+                }
+            };
+            let models = if b.local { self.pulled(b).map_err(|why| refused.push(format!("{}: {why}", p.row))).unwrap_or_default() }
+                         else { vec![b.model_id.clone()] };
+            for m in models {
+                let warning = match self.floors.filter(|_| b.local).map(|(min, warn)| binding::size_floor(&m, min, warn)) {
+                    Some(Err(why)) => {
+                        refused.push(format!("{} {m}: {why}", p.row));
+                        continue;
+                    }
+                    Some(Ok(w)) => w,
+                    None => None,
+                };
+                let current = now.as_ref() == Some(&(b.name.clone(), m.clone()));
+                ok.push((ModelOption { backend: p.row.clone(), model: m.clone(), processor: p.processor.clone(),
+                                       transfers_outside_eu: p.outside_eu, warning, current },
+                         Binding { model_id: m, ..b.clone() }));
+            }
+        }
+        (ok, refused)
+    }
+
+    /// The models a local row's server has pulled (OpenAI GET /models; ollama answers it).
+    fn pulled(&self, b: &Binding) -> Result<Vec<String>, String> {
+        let url = format!("{}/models", b.base_url.trim_end_matches('/'));
+        let mut r = agent(10).get(&url).call().map_err(|e| format!("its models are unreadable: {e}"))?;
+        let v: Value = r.body_mut().read_json().map_err(|e| format!("its models are unreadable: {e}"))?;
+        let ids = v["data"].as_array().ok_or("its models are unreadable: no data list")?;
+        Ok(ids.iter().filter_map(|m| m["id"].as_str().map(str::to_string)).collect())
+    }
+
+    fn model_options(&self, out: &mut UnixStream, o: &Open) {
+        let (ok, refused) = self.options(o);
+        send(out, &ToShell::ModelOptions { session: o.session.clone(), options: ok.into_iter().map(|(m, _)| m).collect(), refused });
+    }
+
+    /// The person's pick: judged again, recorded, then the session's binding from its next turn.
+    fn model_pick(&self, out: &mut UnixStream, o: &mut Open, backend: &str, model: &str, peer: &Value) {
+        let (mut ok, refused) = self.options(o);
+        let Some(i) = ok.iter().position(|(m, _)| m.backend == backend && m.model == model) else {
+            let named = format!("{backend} {model}: ");
+            let why = refused.iter().find(|w| w.starts_with(&named) || w.starts_with(&format!("{backend}: ")))
+                .cloned()
+                .unwrap_or_else(|| match self.picks.iter().find(|p| p.row == backend) {
+                    Some(p) if p.bound.as_ref().is_ok_and(|b| b.local) => format!("{named}'{model}' is not pulled on this host (ollama list)"),
+                    Some(_) => format!("{named}'{backend}' serves only the model it is armed with here"),
+                    None => format!("{named}iris may bind only {}", self.picks.iter().map(|p| p.row.as_str()).collect::<Vec<_>>().join(", ")),
+                });
+            let _ = self.record(o, Kind::ToolResult, Some("model"), json!({"backend": backend, "model": model, "error": why, "peer": peer}));
+            return refuse(out, &why);
+        };
+        let (opt, b) = ok[i].clone();
+        let system = match self.imprint(&b) {
+            Ok(t) => format!("{}\n\n{}", t.trim_end(), o.iris),
+            Err(why) => return refuse(out, &why),
+        };
+        let rec = json!({"backend": backend, "model": model, "chosen_by": "person", "processor": opt.processor,
+                         "transfers_outside_eu": opt.transfers_outside_eu, "warning": opt.warning, "peer": peer});
+        let uri = format!("{}-{}", b.name, b.model_id);
+        let rebound = self.record(o, Kind::ToolResult, Some("model"), rec)
+            .and_then(|_| self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.rebind(&o.session, &uri).map_err(|e| e.to_string()));
+        if let Err(why) = rebound {
+            return refuse(out, &format!("not recorded, so not picked: {why}"));
+        }
+        self.say(format!("{} picked {uri}", o.session));
+        o.model = Ok(b);
+        o.messages[0] = json!({"role": "system", "content": system});
+        ok.iter_mut().for_each(|(m, _)| m.current = m.backend == backend && m.model == model);
+        send(out, &ToShell::ModelOptions { session: o.session.clone(), options: ok.into_iter().map(|(m, _)| m).collect(), refused });
     }
 
     /// The decider gate before a submit, a decision or a choice reply: a refused peer is told and

@@ -334,6 +334,14 @@ def records_from_importers(importers_dir: str | pathlib.Path) -> list[dict]:
     return out
 
 
+def _pickable(spec, names: list[str], claim_eu: bool, posture: str) -> bool:
+    """binding.rs picks(): a non-default row the record names, EU-resident unless posture none."""
+    match = str((spec or {}).get("processor_match") or "")
+    if not spec or spec.get("default") or not (match and any(match in n for n in names)):
+        return False
+    return not (claim_eu and not (spec.get("residency") or {}).get("eu") and posture != "none")
+
+
 def _serving(b: dict, name: str, rec: dict, choices: dict, backends: dict) -> list[str]:
     """The rows that serve agent `name` here, by the binders' rules; [] = refused or unarmed."""
     armed = set(choices.get("armed") or ())
@@ -365,6 +373,8 @@ def _serving(b: dict, name: str, rec: dict, choices: dict, backends: dict) -> li
     if claim_eu and not (spec.get("residency") or {}).get("eu") and posture != "none":
         return []
     rows = [row or default]
+    if allowed is not None:  # W5: the person may pick any other allowed row per session (serve's model_pick)
+        rows += [r for r in allowed if r not in rows and r in armed and _pickable(backends.get(r), names, claim_eu, posture)]
     fb = b.get("fallback_backend")
     return rows + [fb] if fb and fb in armed and fb not in rows else rows
 

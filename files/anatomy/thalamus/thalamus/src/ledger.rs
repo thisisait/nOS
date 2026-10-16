@@ -255,6 +255,12 @@ impl Ledger {
         ).optional().map(Option::flatten)
     }
 
+    /// The person picked another model (W5): the open session's row names the one it now uses.
+    pub fn rebind(&self, session: &str, model_uri: &str) -> rusqlite::Result<()> {
+        let n = self.db.execute("UPDATE sessions SET model_uri = ?2 WHERE uuid = ?1 AND ended_at IS NULL", params![session, model_uri])?;
+        if n == 0 { Err(rusqlite::Error::QueryReturnedNoRows) } else { Ok(()) }
+    }
+
     /// Writes agent_session_end, then closes the session so nothing more lands in it.
     pub fn end(&self, session: &str, stop_reason: &str, tokens: (Option<i64>, Option<i64>)) -> rusqlite::Result<()> {
         let tx = self.db.unchecked_transaction()?;

@@ -39,7 +39,9 @@ fn serve_main(args: &[String]) -> Result<(), String> {
     // The role renders both floors (llm_cell_*_params_b); unset = judged only by the converge preflight.
     let floor = |k: &str| std::env::var(k).ok().and_then(|v| v.trim().parse::<f64>().ok());
     let mut warning = None;
-    let binding = match binding::resolve(&repo, "iris", lookup) {
+    let picks = binding::resolve_picks(&repo, "iris", &lookup);
+    let floors = floor("NOS_LLM_MIN_PARAMS_B").map(|min| (min, floor("NOS_LLM_RECOMMENDED_PARAMS_B").unwrap_or(min)));
+    let binding = match binding::resolve(&repo, "iris", &lookup) {
         Ok(Decision::Bound(b)) => match floor("NOS_LLM_MIN_PARAMS_B") {
             Some(min) if b.local => binding::size_floor(&b.model_id, min, floor("NOS_LLM_RECOMMENDED_PARAMS_B").unwrap_or(min))
                 .map(|w| { warning = w; b }),
@@ -76,6 +78,8 @@ fn serve_main(args: &[String]) -> Result<(), String> {
         // Off unless the operator sets thalamus_decider_exes: the role renders it ':'-joined.
         deciders,
         log: Mutex::new(Box::new(std::io::stderr())),
+        picks,
+        floors,
     };
     serve::run(listener, Arc::new(srv));
     Ok(())

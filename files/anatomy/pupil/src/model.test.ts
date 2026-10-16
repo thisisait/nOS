@@ -29,11 +29,11 @@ describe('the model picker', () => {
 		const h = render(ModelPicker, { props: { options: [big, small, eu], onpick: () => {} } }).body;
 		expect(h).toContain('<select');
 		for (const s of ['qwen3:14b', 'qwen3:4b', 'Mistral AI SAS']) expect(h).toContain(s);
-		expect(h).not.toContain('class="warn"');
+		expect(h).not.toMatch(/class="warn[ "]/);
 	});
 
 	it('a current model under the recommended size carries the warn badge', () => {
 		const h = render(ModelPicker, { props: { options: [{ ...big, current: false }, { ...small, current: true }], onpick: () => {} } }).body;
-		expect(h).toMatch(/class="warn"[^>]*title="'qwen3:4b' has 4B parameters/);
+		expect(h).toMatch(/class="warn[ "][^>]*title="'qwen3:4b' has 4B parameters/);
 	});
 });

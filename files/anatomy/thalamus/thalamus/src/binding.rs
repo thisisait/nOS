@@ -157,6 +157,52 @@ pub fn decide(agent_yml: &str, register_yml: &str, env: impl Fn(&str) -> Option<
     }))
 }
 
+/// One row of the cell's model.backends_allowed as this host could serve it (W5: the person's
+/// per-session pick): who processes the turns, whether they leave the EU, the binding or why not.
+#[derive(Debug, Clone)]
+pub struct Pick {
+    pub row: String,
+    pub processor: String,
+    pub outside_eu: bool,
+    pub bound: Result<Binding, String>,
+}
+
+/// Every allowed row judged as if the host had chosen it, plus gdpr_posture: a non-EU row serves
+/// only under none (tools/nos_cell_binding.py requirement).
+pub fn picks(agent_yml: &str, register_yml: &str, env: impl Fn(&str) -> Option<String>) -> Vec<Pick> {
+    let (Ok(agent), Ok(register)) = (serde_yaml_ng::from_str::<Value>(agent_yml), serde_yaml_ng::from_str::<Value>(register_yml)) else {
+        return vec![];
+    };
+    let posture = env("NOS_GDPR_POSTURE").filter(|p| !p.trim().is_empty()).unwrap_or_else(|| "standard".into());
+    let processors = at(&agent, &["gdpr", "processors"]).as_sequence().cloned().unwrap_or_default();
+    let allowed = at(&agent, &["model", "backends_allowed"]).as_sequence().cloned().unwrap_or_default();
+    allowed.iter().filter_map(Value::as_str).map(|row| {
+        let spec = at(&register, &["backends", row]);
+        let matcher = text(spec, &["processor_match"]);
+        let processor = processors.iter().map(|p| text(p, &["name"])).find(|n| !matcher.is_empty() && n.contains(&matcher)).unwrap_or(matcher);
+        let outside_eu = at(spec, &["residency", "eu"]).as_bool() != Some(true);
+        let bound = if outside_eu && posture.trim() != "none" {
+            Err(format!("'{row}' is not EU-resident and gdpr_posture is '{}': a non-EU row serves only under gdpr_posture: none",
+                        posture.trim()))
+        } else {
+            match decide(agent_yml, register_yml, |k| if k == "NOS_CELL_BACKEND" { Some(row.to_string()) } else { env(k) }) {
+                Ok(Decision::Bound(b)) => Ok(b),
+                Ok(Decision::Disarmed(_)) => Err(format!("'{row}' is not armed on this host")),
+                Ok(Decision::Default) => Err(format!("'{row}' is the default row, which the thalamus cannot serve")),
+                Err(why) => Err(why),
+            }
+        };
+        Pick { row: row.to_string(), processor, outside_eu, bound }
+    }).collect()
+}
+
+/// Reads the cell and the register under `repo` as resolve() does; none readable, no picks.
+pub fn resolve_picks(repo: &Path, cell: &str, env: impl Fn(&str) -> Option<String>) -> Vec<Pick> {
+    let agent = std::fs::read_to_string(repo.join("files/anatomy/agents").join(cell).join("agent.yml")).unwrap_or_default();
+    let register = std::fs::read_to_string(repo.join("state/habitat/llm-backends.yml")).unwrap_or_default();
+    picks(&agent, &register, env)
+}
+
 /// Parameters in billions from an ollama tag (qwen3:14b -> 14, mixtral:8x7b -> 56); None = unknown.
 /// tools/nos_cell_binding.py params_b: the first `-`/`_` segment of the tag that reads [Nx]N[.N]b|m.
 pub fn params_b(model: &str) -> Option<f64> {

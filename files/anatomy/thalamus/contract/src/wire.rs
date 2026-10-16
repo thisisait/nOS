@@ -20,6 +20,24 @@ pub enum ToThalamus {
     ChoiceReply { session: String, choice: String, picked: Vec<String> },
     /// Whom the person works for in this session (the septum): every table read honours it.
     WorkingFor { scope: Scope },
+    /// Which models Iris may use in this session (W5); serve answers model_options.
+    ModelOptions,
+    /// The person's pick for this session: serve judges it again and rebinds from the next turn.
+    ModelPick { backend: String, model: String },
+}
+
+/// One model the person may pick: who processes the turns, whether they leave the EU, and
+/// `warning` when it is below the recommended size (it runs, badly).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ModelOption {
+    pub backend: String,
+    pub model: String,
+    pub processor: String,
+    pub transfers_outside_eu: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warning: Option<String>,
+    pub current: bool,
 }
 
 /// all: no wall (a session before one is said); personal; or one client party (id, slug or name).
@@ -60,6 +78,8 @@ pub enum ToShell {
     TableChanged { session: String, table: String, row: String },
     /// The scope serve set, the client resolved to its party id; `name` is what both shells show.
     WorkingFor { session: String, scope: Scope, name: String },
+    /// What the session may bind (`current` is its binding); `refused` says each one left out and why.
+    ModelOptions { session: String, options: Vec<ModelOption>, refused: Vec<String> },
 }
 
 /// What a widget re-runs: exactly one of rows (query_rows' arguments), a chart, a form, a kpi.
@@ -197,6 +217,15 @@ fn need_scope(s: &Scope) -> Result<(), String> {
     }
 }
 
+/// A pick names a register row (lowercase, digits, '-') and a model id of 1-200 chars.
+fn need_model(backend: &str, model: &str) -> Result<(), String> {
+    let row = (1..=64).contains(&backend.len()) && backend.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
+    if !row {
+        return Err(format!("backend is not a register row name: {backend:?}"));
+    }
+    if model.trim().is_empty() || model.chars().count() > 200 { Err("a model is named by 1-200 chars".into()) } else { Ok(()) }
+}
+
 /// The model has no form: one is drawn only inside the widget message the person asked for.
 fn not_a_form(c: &Component) -> Result<(), String> {
     match c {
@@ -277,6 +306,19 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             need_scope(scope)?;
             if name.trim().is_empty() || name.chars().count() > 200 { Err("a scope is said by a name of 1-200 chars".into()) } else { Ok(()) }
         }
+        ToShell::ModelOptions { session, options, refused } => {
+            need_uuid("session", session)?;
+            if options.len() > 64 || refused.len() > 64 {
+                return Err("model_options holds at most 64 options and 64 refusals".into());
+            }
+            if options.iter().filter(|o| o.current).count() > 1 {
+                return Err("at most one model is current".into());
+            }
+            options.iter().try_for_each(|o| {
+                need_model(&o.backend, &o.model)?;
+                if o.processor.trim().is_empty() { Err(format!("{} {} names no processor", o.backend, o.model)) } else { Ok(()) }
+            })
+        }
         ToShell::Widget { session, widget, component } => {
             need_uuid("session", session)?;
             need_token(widget)?;
@@ -322,6 +364,7 @@ pub fn decode_to_thalamus(line: &str) -> Result<ToThalamus, String> {
             }
         }
         ToThalamus::WorkingFor { scope } => need_scope(scope)?,
+        ToThalamus::ModelPick { backend, model } => need_model(backend, model)?,
         _ => {}
     }
     Ok(m)

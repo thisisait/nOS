@@ -57,6 +57,12 @@
 		<p class="scope">
 			{#if msg.scope === 'all'}working for everything (no wall){:else if msg.scope === 'personal'}working on {msg.name} data{:else}working for {msg.name} ({msg.scope.client}){/if}
 		</p>
+	{:else if msg.t === 'model_options'}
+		<!-- App draws these in the header's picker; said here for any other host of a message. -->
+		<ul class="muted">
+			{#each msg.options as o}<li>{o.backend} {o.model} · {o.processor} · {o.transfers_outside_eu ? 'leaves the EU' : 'EU'}{#if o.current} (current){/if}{#if o.warning} — {o.warning}{/if}</li>{/each}
+			{#each msg.refused as r}<li>not offered: {r}</li>{/each}
+		</ul>
 	{:else if msg.t === 'table_changed'}
 		<p class="muted">table {msg.table} changed (row {msg.row})</p>
 	{/if}

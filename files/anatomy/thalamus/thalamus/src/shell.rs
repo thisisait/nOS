@@ -3,7 +3,7 @@
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
 use nos_contract::renderers::{Choice, Component, Delta, LensOp, RowOp, SchemaColumn, Step, Tone, TreeNode, WhenOp};
-use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, Scope, ToShell, ToThalamus, WidgetSpec};
+use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ModelOption, Scope, ToShell, ToThalamus, WidgetSpec};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
@@ -38,6 +38,8 @@ pub struct App {
     asked: usize,
     /// Whom the person works for, as serve said it (working_for); None is no wall.
     scope: Option<String>,
+    /// The models serve last offered (model_options); /model <n> picks the n-th.
+    models: Vec<ModelOption>,
 }
 
 /// Hard-wraps to `w` columns, so no part of a value is ever cut off the screen.
@@ -400,6 +402,17 @@ impl App {
                     Scope::Client(_) => format!("working for {name}"),
                 }));
             }
+            ToShell::ModelOptions { options, refused, .. } => {
+                self.lines.push(head("models for this session; a pick takes effect on the next turn:".into()));
+                for (n, o) in options.iter().enumerate() {
+                    let eu = if o.transfers_outside_eu { "LEAVES THE EU" } else { "in the EU" };
+                    let now = if o.current { " (current)" } else { "" };
+                    self.lines.push(Line::from(format!("  {}. {} {} — {}, {eu}{now}", n + 1, o.backend, o.model, o.processor)));
+                    self.lines.extend(o.warning.as_ref().map(|w| warn(format!("     {w}"))));
+                }
+                self.lines.extend(refused.iter().map(|r| Line::styled(format!("  not offered: {r}"), Style::new().fg(Color::DarkGray))));
+                self.models = options;
+            }
             ToShell::Refused { reason, widget: None } => self.lines.push(warn(format!("refused: {reason}"))),
             ToShell::Refused { reason, widget: Some(w) } => self.lines.push(warn(format!("refused (widget {w}): {reason}"))),
             // The terminal has no workspace: a widget's answer joins the scrollback under its token.
@@ -462,6 +475,19 @@ impl App {
                     "/approvals" => control(ControlView::Approvals),
                     "/red" => control(ControlView::RedStatus),
                     t if t == "/choose" || t.starts_with("/choose ") => self.choose(&t["/choose".len()..]),
+                    "/model" => Some(ToThalamus::ModelOptions),
+                    t if t.starts_with("/model ") => {
+                        let arg = t["/model".len()..].trim();
+                        let picked = match arg.split_once(' ') {
+                            Some((backend, model)) => Some((backend.to_string(), model.trim().to_string())),
+                            None => arg.parse::<usize>().ok().and_then(|n| self.models.get(n.wrapping_sub(1)))
+                                .map(|o| (o.backend.clone(), o.model.clone())),
+                        };
+                        if picked.is_none() {
+                            self.lines.push(warn("not sent: /model lists the models; /model <n> or /model <backend> <model> picks one".into()));
+                        }
+                        picked.map(|(backend, model)| ToThalamus::ModelPick { backend, model })
+                    }
                     t if t == "/for" || t.starts_with("/for ") => {
                         let scope = match t["/for".len()..].trim() {
                             "" => {

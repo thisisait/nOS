@@ -14,9 +14,10 @@
 	import Eye from './Eye.svelte';
 	import { SETTLE_MS, eye, look, step, type Input } from './eye';
 	import Message from './Message.svelte';
+	import ModelPicker from './ModelPicker.svelte';
 	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
 	import { forCommand, rewall } from './scope';
-	import type { DashboardProps, Link, Scope, ToShell, ToThalamus, WidgetSpec } from './wire';
+	import type { DashboardProps, Link, ModelOption, Scope, ToShell, ToThalamus, WidgetSpec } from './wire';
 	import { route, submit, type Widgets } from './widgets';
 	import WorkspaceView from './Workspace.svelte';
 	import * as ws from './workspace';
@@ -46,6 +47,9 @@
 	let scope: string | null = $state(null);
 	// What the person last set; said again on a new link, whose serve starts with no wall.
 	let want: Scope | null = null;
+	// The models this session may bind, as serve last offered them (model_options); the header picks.
+	let models: ModelOption[] = $state([]);
+	let notOffered: string[] = $state([]);
 	let draft = $state('');
 	let column: HTMLElement | undefined = $state();
 	let ey = $state(eye());
@@ -242,6 +246,11 @@
 			tauri.event.listen<ToShell>('to_shell', ({ payload }) => {
 				see({ e: 'wire', msg: payload });
 				if (payload.t === 'session') session = payload.session;
+				if (payload.t === 'model_options') {
+					models = payload.options;
+					notOffered = payload.refused;
+					return;
+				}
 				if (payload.t === 'working_for') {
 					scope = payload.scope === 'all' ? null : payload.name;
 					want = payload.scope === 'all' ? null : payload.scope;
@@ -283,13 +292,15 @@
 				see({ e: 'link', state: payload.state });
 				// Connected: the active tab's widgets run as restore; the others when their tab is shown.
 				if (payload.state === 'connected') {
+					tauri.core.invoke('send', { msg: { t: 'model_options' } }).catch((e) => push({ note: `the models were not asked: ${e}` }));
 					const r = rewall(want, layout, 'connected');
 					widgets = r.w ?? widgets;
 					sendAll(r.send);
 					return;
 				}
-				// No link, no wall: the chip waits for serve to say it again.
+				// No link, no wall: the chip waits for serve to say it again; a new session opens on the host's model.
 				scope = null;
+				models = [];
 				const r = closed(q);
 				q = r.q;
 				// The session is gone, and its choices with it.
@@ -342,6 +353,13 @@
 		<span class="dot" class:on={link.state === 'connected'}></span>
 		Iris
 		{#if scope}<span class="for">for {scope}</span>{/if}
+		{#if models.length}
+			<ModelPicker
+				options={models}
+				refused={notOffered}
+				onpick={(m) => tauri?.core.invoke('send', { msg: m }).catch((e) => push({ msg: { t: 'refused', reason: `not picked: ${e}` } }))}
+			/>
+		{/if}
 		{#if link.state === 'closed'}
 			<StatusNote kind="unwired" block={false}>{link.reason ?? 'disconnected'}</StatusNote>
 			<button onclick={connect}>connect</button>
