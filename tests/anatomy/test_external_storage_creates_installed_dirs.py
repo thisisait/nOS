@@ -38,7 +38,7 @@ def test_core_creates_no_dir_of_a_service_it_does_not_run():
     task = _task()
     created = []
     for item in task["loop"]:
-        on = env.from_string(str(item["enabled"])).render(**cfg, **flags)
+        on = env.from_string(str(item["enabled"])).render({**cfg, **flags})
         if on.strip().lower() in ("true", "1"):
             created.append(re.sub(r"[{} ]", "", item["path"]))
     assert "when" in task and "item.enabled" in str(task["when"]), task.get("when")
