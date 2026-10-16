@@ -80,6 +80,10 @@ notification:
 pulse:
   jobs:
     - name: backup-restore-drill
+      # The drill reads copy #1's bucket; without RustFS absent.yml deletes the
+      # script, so the job is dropped (ruling 2026-10-16). Plugin flag + this =
+      # backup_copy1_enabled. The direct restic path has no drill yet.
+      owner: install_rustfs
       category: platform
       runner: subprocess
       # Absolute path, /Users/ prefix — inside PulsePresenter's SEC-8 allowlist,
@@ -139,7 +143,7 @@ gdpr:
   transfers_outside_eu: false    # local bucket; copy #2 off-site is backrest's row
 
 e2e:
-  enabled: "{{ (install_wing | default(false)) and (install_backup | default(false)) }}"
+  enabled: "{{ (install_wing | default(false)) and (install_backup | default(false)) and (install_rustfs | default(false)) }}"
   probes:
     - name: backup-restore-drill-registered-in-wing
       url: http://127.0.0.1:{{ wing_port }}/api/v1/pulse_jobs
