@@ -10,6 +10,8 @@ processor, active false. A non-EU row under an EU claim serves only at gdpr_post
 from __future__ import annotations
 
 import importlib.util
+import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -82,6 +84,13 @@ def test_a_non_eu_row_under_an_eu_claim_serves_only_at_posture_none():
     assert served["transfers_outside_eu"] == 1 and served["served_by"] == "minimax"
 
 
+def test_a_disarmed_row_names_the_default_that_serves():
+    # minimax not armed: BindingResolver runs jeff-cloud on the default, so Anthropic is named
+    rec, names = _one("jeff-cloud")
+    assert rec["served_by"] == "anthropic" and rec["transfers_outside_eu"] == 1
+    assert any("Anthropic" in n for n in names) and not any("MiniMax" in n for n in names)
+
+
 def test_a_plugin_record_passes_through():
     rec = {"id": "svc_x", "processors": [{"name": "Anthropic"}], "transfers_outside_eu": 1}
     assert nos_gdpr.effective_records([rec], {}, BACKENDS) == [rec]
@@ -103,6 +112,27 @@ def test_the_records_tool_emits_the_resolved_host_set():
     rows = {r["id"]: r for r in yaml.safe_load(out)}
     assert "svc_wing" in rows and "agent_iris" in rows
     assert {"active", "served_by"} <= set(rows["agent_iris"])
+
+
+def test_the_records_tool_honours_the_converge_vars():
+    # -e / profile values reach the tool through NOS_GDPR_VARS, not only the layer files
+    tool = [sys.executable, str(REPO / "tools/gdpr-records.py")]
+    names = json.loads(subprocess.run([*tool, "--choice-vars"], capture_output=True, text=True,
+                                      timeout=120, check=True).stdout)
+    assert {"iris_backend", "install_thalamus", "ollama_enabled", "install_ollama"} <= set(names)
+    env = {**os.environ, "NOS_GDPR_VARS": json.dumps({"install_thalamus": True, "install_ollama": True,
+                                                      "ollama_enabled": True, "iris_backend": "ollama"})}
+    out = subprocess.run([*tool, "--tier", "host", "--resolved"], capture_output=True, text=True,
+                         timeout=120, check=True, env=env).stdout
+    iris = next(r for r in json.loads(out) if r["id"] == "agent_iris")
+    assert iris["served_by"] == "ollama" and iris["active"] is True
+
+
+def test_wing_hands_the_converge_vars_to_the_tool():
+    tasks = yaml.safe_load(POST.read_text())
+    cmd = next(t for t in tasks if "Emit Tier-1 GDPR" in str(t.get("name")))
+    assert "query('vars'" in str(cmd.get("environment", {}).get("NOS_GDPR_VARS", ""))
+    assert any("--choice-vars" in str(t) for t in tasks)
 
 
 def test_wing_upserts_the_resolved_rows_with_both_columns():
