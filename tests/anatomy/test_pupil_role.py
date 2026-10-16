@@ -181,7 +181,7 @@ def test_the_source_hash_covers_what_vite_borrows_from_the_face():
         if hit in seen:
             continue
         seen.add(hit)
-        if hit.suffix in {".ts", ".svelte", ".js"}:
+        if hit.suffix in {".ts", ".svelte", ".js", ".css"}:  # a CSS @import is a borrow too
             todo += [(hit, m.group(1), m.group(2)) for m in _BORROW.finditer(hit.read_text())]
     sh = _task("hash the pupil source")["ansible.builtin.shell"]
     tail = "| xargs cat | shasum -a 256 | cut -d' ' -f1"
