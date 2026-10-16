@@ -249,6 +249,8 @@ struct Open {
     /// The prompt after the imprint: a pick that changes local/cloud re-reads the imprint before it.
     iris: String,
     messages: Vec<Value>,
+    /// The rebind line the next model request carries once, then cleared.
+    moved: Option<String>,
     tokens: (i64, i64),
     /// Approvals asked and not yet decided, to the tool that asked; a decision removes its id, so
     /// each is decided once.
@@ -814,7 +816,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Ok((m, t)) => (Ok(m), format!("{}\n\n{iris}", t.trim_end())),
             Err(why) => (Err(why), iris.clone()),
         };
-        Ok(Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
+        Ok(Open { session, model, iris, messages: vec![json!({"role": "system", "content": system})], moved: None, tokens: (0, 0),
                   pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new() })
     }
 
@@ -897,16 +899,19 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Ok(t) => format!("{}\n\n{}", t.trim_end(), o.iris),
             Err(why) => return refuse(out, &why),
         };
-        let rec = json!({"backend": backend, "model": model, "chosen_by": "person", "processor": opt.processor,
-                         "transfers_outside_eu": opt.transfers_outside_eu, "warning": opt.warning, "peer": peer});
+        let from = o.model.as_ref().map_or("unbound".to_string(), |m| format!("{}-{}", m.name, m.model_id));
         let uri = format!("{}-{}", b.name, b.model_id);
-        let rebound = self.record(o, Kind::ToolResult, Some("model"), rec)
+        let rec = json!({"from_model_uri": from, "to_model_uri": uri, "by": "person", "reason": "picked in the model picker",
+                         "backend": backend, "model": model, "processor": opt.processor,
+                         "transfers_outside_eu": opt.transfers_outside_eu, "warning": opt.warning, "peer": peer});
+        let rebound = self.record(o, Kind::SessionRebind, None, rec)
             .and_then(|_| self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.rebind(&o.session, &uri).map_err(|e| e.to_string()));
         if let Err(why) = rebound {
             return refuse(out, &format!("not recorded, so not picked: {why}"));
         }
         self.say(format!("{} picked {uri}", o.session));
         o.model = Ok(b);
+        o.moved = (from != uri).then(|| format!("This session moved from {from} to {uri} (person); earlier turns were answered by {from}."));
         o.messages[0] = json!({"role": "system", "content": system});
         ok.iter_mut().for_each(|(m, _)| m.current = m.backend == backend && m.model == model);
         send(out, &ToShell::ModelOptions { session: o.session.clone(), options: ok.into_iter().map(|(m, _)| m).collect(), refused });
@@ -1638,6 +1643,11 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             if model.auth_token.is_empty() { rb } else { rb.header("Authorization", &format!("Bearer {}", model.auth_token)) }
         };
         let mut body = json!({"model": model.model_id, "messages": o.messages, "tools": tools()});
+        // A rebind is said once, in the first request after it; o.messages never keeps it.
+        if let Some(line) = o.moved.take() {
+            let head = &mut body["messages"][0]["content"];
+            *head = json!(format!("{}\n\n{line}", head.as_str().unwrap_or_default()));
+        }
         // Ollama maps "none" to think:false; a cloud row is left alone, it may refuse an unknown field.
         if model.local {
             body["reasoning_effort"] = json!("none");

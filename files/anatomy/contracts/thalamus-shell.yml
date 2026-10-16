@@ -91,9 +91,10 @@ wire:
     why. `current` marks the session's binding (at most one); a session opens on the host's iris_backend.
   model_pick: >-
     `model_pick {backend, model}` is the person choosing one of those options for this session: serve
-    judges it again, refuses one not offered by its name and reason, records it (agent_tool_result
-    tool:model with backend, model, processor, transfers_outside_eu, chosen_by person), rebinds the
-    session from its next turn and answers `model_options` with the pick current.
+    judges it again, refuses one not offered by its name and reason, records it (agent_session_rebind
+    {from_model_uri, to_model_uri, by person, reason} plus backend, model, processor,
+    transfers_outside_eu), rebinds the session from its next turn, whose first model request says the
+    move once, and answers `model_options` with the pick current. A refused pick stays agent_tool_result tool:model.
   phase: [thinking, tool, writing, idle]   # activity.phase; tool is {tool: {name}}
   decision: [approve, reject]
   control_view: [inbox, approvals, red_status]
