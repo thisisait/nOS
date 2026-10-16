@@ -36,8 +36,8 @@ WING_LIST = WING_APP / "Model/EventRepository.php"
 BONE_LIST = REPO / "files/anatomy/bone/events.py"
 
 #: `$this->audit->emit(type: 'x', …)` and `emit('x', …)`, literal only.
-EMIT_NAMED = re.compile(r"->emit\(\s*type:\s*'([a-z][a-z0-9_]+)'")
-EMIT_POSITIONAL = re.compile(r"->emit\(\s*'([a-z][a-z0-9_]+)'")
+EMIT_NAMED = re.compile(r"->emit\(\s*type:\s*'([a-z][a-z0-9_.]+)'")
+EMIT_POSITIONAL = re.compile(r"->emit\(\s*'([a-z][a-z0-9_.]+)'")
 
 
 def _emitted_types() -> dict[str, set[str]]:
@@ -72,7 +72,7 @@ def _whitelist(path: pathlib.Path) -> set[str]:
     start = stripped.index("VALID_TYPES")
     closer = "]" if path.suffix == ".php" else "}"
     end = stripped.index(closer, start)
-    return set(re.findall(r"['\"]([a-z][a-z0-9_]+)['\"]", stripped[start:end]))
+    return set(re.findall(r"['\"]([a-z][a-z0-9_.]+)['\"]", stripped[start:end]))
 
 
 def test_the_extractor_finds_emitters_at_all():
