@@ -501,14 +501,13 @@
       when: query('ansible.builtin.varnames', '^tailscale_funnel') | length > 0
       tags: ['always', 'preflight']
 
-    # Same `when` as the tasks/backup.yml import; refused here, not ~680 tasks in.
-    # Gate: tests/anatomy/test_backup_preflight_refuses_empty_repo.py.
-    - name: "[Preflight] Refuse configure_backup without a restic_repo"
+    # Both backup paths (tasks/backup.yml, pazny.backrest) run restic against restic_repo;
+    # refused here, not ~680 tasks in. Gate: tests/anatomy/test_backup_preflight_refuses_empty_repo.py.
+    - name: "[Preflight] Refuse a backup without a restic_repo"
       ansible.builtin.fail:
-        msg: "restic_repo is empty — set it in config.yml (e.g., /Volumes/Backup/restic, s3:endpoint/bucket, sftp:user@host:/path)"
+        msg: "restic_repo is empty (configure_backup or install_backrest is on) — set it in config.yml (e.g., /Volumes/Backup/restic, s3:endpoint/bucket, sftp:user@host:/path)"
       when:
-        - configure_backup | default(false) | bool
-        - not (install_backrest | default(false) | bool)
+        - (configure_backup | default(false) | bool) or (install_backrest | default(false) | bool)
         - restic_repo | default('') | length == 0
       tags: ['always', 'preflight']
 

@@ -341,7 +341,10 @@ def build(lock_path: Path | None = None, config_path: Path | None = None) -> dic
                                      if all(flag_default.get(k) == v for k, v in o["flags"].items())), None)}
     page_vars = {f["key"] for f in fl if not f["auto"]} | set(knob_defaults) | {k for p in profs for k in p["knobs"]} \
         | {f["key"] for s in STEPS for f in s["fields"]}
-    checked = {f["key"] for s in STEPS for f in s["fields"] if f.get("check") and f["check"] != "acme_token"}
+    # A checked field is checked while its `when` is on, so a refusal on the pair is the page's own;
+    # the contradiction sweep (rules_oracle) still judges every such rule.
+    checked = {k for s in STEPS for f in s["fields"] if f.get("check") and f["check"] != "acme_token"
+               for k in (f["key"], f.get("when")) if k}
     ref = rules.refusals(page_vars, checked)
     derived = rules.auto_rules() + rules.silent_rules([(p["id"], k) for p in profs for k in p["knobs"]])
     return {"axes": AXES, "axis_questions": AXIS_QUESTIONS, "steps": STEPS, "defaults": defaults(profs),
