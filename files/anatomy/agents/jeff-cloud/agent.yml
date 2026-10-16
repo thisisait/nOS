@@ -88,6 +88,10 @@ gdpr:
         binding gate refuses a backend this record does not name, so this entry
         is what permits the routing and must not be written as a claim it
         cannot support.
+    - name: "Anthropic, PBC"
+      role: "FALLBACK LLM inference on the hosted default (anthropic row) when minimax is not armed; the binder degrades, never refuses"
+      country: "US"
+      safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
   eu_residency: false
   # TRUE, and it is why this file exists. Unlike the ops-plane twins, whose
   # inputs are invented fixtures, THIS agent's input is whatever the operator

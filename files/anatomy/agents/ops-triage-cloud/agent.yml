@@ -64,6 +64,10 @@ gdpr:
       safeguard: >-
         None claimed, and none assessed. No SCCs, adequacy finding or
         derogation has been identified for this transfer.
+    - name: "Anthropic, PBC"
+      role: "FALLBACK LLM inference on the hosted default (anthropic row) when minimax is not armed; the binder degrades, never refuses"
+      country: "US"
+      safeguard: "None claimed. Assess SCCs / Art. 46 before this is relied on."
   eu_residency: false
   # THE DISCLOSURE THAT BUYS THE COMPARISON, and it costs more here than it
   # does for ops-extract-cloud. That twin sends invented invoices; this one
