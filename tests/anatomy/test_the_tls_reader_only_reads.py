@@ -26,7 +26,8 @@ temptations are the usual two and one unusual third:
 WHAT IS PINNED. No write SQL. No mutating docker verb. No filesystem write.
 An unreachable source reports UNKNOWN with the reason. Exit 0 whatever it
 finds. And the redis secret appears nowhere in the tool's output in either
-render — offline against a fake docker, and again live under NOS_LIVE=1.
+render — offline against a fake docker here, and live in
+tests/e2e/estate/test_tls_reader_leak.py.
 
 WHAT IT CANNOT DO. It does not check that the ratios are the RIGHT measure, or
 that the verdict thresholds are wise. It checks that the tool cannot lie in the
@@ -40,7 +41,6 @@ import ast
 import json
 import os
 import pathlib
-import shutil
 import subprocess
 import sys
 
@@ -139,46 +139,6 @@ def test_it_exits_zero_even_when_everything_is_cleartext():
             assert d.get("error"), f"{d['datastore']} is UNKNOWN with no reason given"
 
 
-@pytest.mark.live   # a read-only docker inspect of the live container
-@pytest.mark.skipif(shutil.which("docker") is None,
-                    reason="docker absent — the leak check needs the live container")
-def test_the_redis_secret_never_appears_in_the_output():
-    """The reader parses an argv that holds the estate's shared redis secret.
-    This is the only check that can prove it did not carry it out."""
-    probe = subprocess.run(
-        ["docker", "inspect", "infra-redis-1", "--format", "{{json .Config.Cmd}}"],
-        capture_output=True, text=True, timeout=60)
-    if probe.returncode != 0:
-        pytest.skip("infra-redis-1 not running — nothing to leak")
-    argv = json.loads(probe.stdout or "[]")
-    # `--requirepass` and its value are SEPARATE argv entries. The first cut of
-    # this check split the flag token and found an empty tail, so it skipped
-    # itself with the message "remediation (1) has landed" — a check reporting
-    # the fix it was written to wait for. Exactly the shape this suite exists
-    # to refuse, and it took two minutes to make.
-    secrets = []
-    for i, tok in enumerate(argv):
-        if not isinstance(tok, str):
-            continue
-        if tok.strip() == "--requirepass" and i + 1 < len(argv):
-            secrets.append(str(argv[i + 1]).strip().strip('"'))
-        elif tok.startswith("--requirepass") and len(tok) > len("--requirepass "):
-            secrets.append(tok.split("requirepass", 1)[1].strip().strip('"'))
-    secrets = [s for s in secrets if len(s) >= 6]
-    if not secrets:
-        pytest.skip("no secret on the redis command line — remediation (1) has landed")
-
-    for flags in ([], ["--json"]):
-        p = subprocess.run([sys.executable, str(TOOL), *flags],
-                           capture_output=True, text=True, timeout=120, cwd=REPO)
-        blob = p.stdout + p.stderr
-        for secret in secrets:
-            assert secret not in blob, (
-                f"tools/tls-uptake.py {' '.join(flags)} printed the redis AUTH "
-                "secret it inspected — the reader became a second copy of the "
-                "exposure it reports")
-
-
 #: A fake `docker` for the offline leak check: `inspect` of the redis container
 #: answers with an argv carrying FAKE_SECRET in both shapes the live check
 #: parses; every other call exits 1 at once (container absent).
@@ -196,7 +156,8 @@ exit 1
 def test_the_redis_secret_never_appears_in_the_output_offline(tmp_path):
     """The same leak check as the live one, against a fake docker on PATH, so
     it runs in every offline pass and never waits on the Docker VM's speed
-    (2026-10-11: the live run took 190 s against a 120 s timeout)."""
+    (2026-10-11: the live run took 190 s against a 120 s timeout). The live
+twin is tests/e2e/estate/test_tls_reader_leak.py."""
     fake = tmp_path / "docker"
     fake.write_text(FAKE_DOCKER)
     fake.chmod(0o755)
