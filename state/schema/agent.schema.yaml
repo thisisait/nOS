@@ -32,8 +32,8 @@ properties:
     description: "One-paragraph human description for the /agents UI + audit trail."
   owner:
     type: string
-    pattern: "^install_[a-z0-9_]+$"
-    description: "The install flag that owns this cell: its Pulse jobs run only while it is on."
+    pattern: "^(install_[a-z0-9_]+|[a-z0-9_]+_on_host)$"
+    description: "The install flag or *_on_host switch that owns this cell: its Pulse jobs run only while it is on."
   task_types:
     type: array
     uniqueItems: true
