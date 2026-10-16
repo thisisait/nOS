@@ -249,7 +249,7 @@ struct Open {
     /// The prompt after the imprint: a pick that changes local/cloud re-reads the imprint before it.
     iris: String,
     messages: Vec<Value>,
-    /// The rebind line the next model request carries once, then cleared.
+    /// The model that answered the turns before a pick; the next answered request hears it once.
     moved: Option<String>,
     tokens: (i64, i64),
     /// Approvals asked and not yet decided, to the tool that asked; a decision removes its id, so
@@ -904,14 +904,19 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let rec = json!({"from_model_uri": from, "to_model_uri": uri, "by": "person", "reason": "picked in the model picker",
                          "backend": backend, "model": model, "processor": opt.processor,
                          "transfers_outside_eu": opt.transfers_outside_eu, "warning": opt.warning, "peer": peer});
-        let rebound = self.record(o, Kind::SessionRebind, None, rec)
-            .and_then(|_| self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.rebind(&o.session, &uri).map_err(|e| e.to_string()));
-        if let Err(why) = rebound {
-            return refuse(out, &format!("not recorded, so not picked: {why}"));
+        // Picking the model already bound moves nothing, so it is no rebind.
+        if from != uri {
+            let rebound = self.record(o, Kind::SessionRebind, None, rec)
+                .and_then(|_| self.ledger.lock().map_err(|_| "ledger poisoned".to_string())?.rebind(&o.session, &uri).map_err(|e| e.to_string()));
+            if let Err(why) = rebound {
+                return refuse(out, &format!("not recorded, so not picked: {why}"));
+            }
         }
         self.say(format!("{} picked {uri}", o.session));
         o.model = Ok(b);
-        o.moved = (from != uri).then(|| format!("This session moved from {from} to {uri} (person); earlier turns were answered by {from}."));
+        // The line names who answered: kept across picks, dropped when the pick returns to it.
+        let answered = o.messages.iter().any(|m| m["role"] == "assistant");
+        o.moved = o.moved.take().or_else(|| answered.then_some(from)).filter(|f| *f != uri);
         o.messages[0] = json!({"role": "system", "content": system});
         ok.iter_mut().for_each(|(m, _)| m.current = m.backend == backend && m.model == model);
         send(out, &ToShell::ModelOptions { session: o.session.clone(), options: ok.into_iter().map(|(m, _)| m).collect(), refused });
@@ -1643,8 +1648,9 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             if model.auth_token.is_empty() { rb } else { rb.header("Authorization", &format!("Bearer {}", model.auth_token)) }
         };
         let mut body = json!({"model": model.model_id, "messages": o.messages, "tools": tools()});
-        // A rebind is said once, in the first request after it; o.messages never keeps it.
-        if let Some(line) = o.moved.take() {
+        // A rebind is said until a request is answered; o.messages never keeps it.
+        if let Some(from) = &o.moved {
+            let line = format!("This session moved from {from} to {}-{} (person); earlier turns were answered by {from}.", model.name, model.model_id);
             let head = &mut body["messages"][0]["content"];
             *head = json!(format!("{}\n\n{line}", head.as_str().unwrap_or_default()));
         }
@@ -1671,6 +1677,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         if status != 200 {
             return Err(format!("model answered {status}"));
         }
+        o.moved = None;
         o.tokens.0 += v.pointer("/usage/prompt_tokens").and_then(Value::as_i64).unwrap_or(0);
         o.tokens.1 += v.pointer("/usage/completion_tokens").and_then(Value::as_i64).unwrap_or(0);
         v.pointer("/choices/0/message").cloned().ok_or_else(|| "model answered without a message".into())
