@@ -2,14 +2,6 @@ update nOS Roadmap (roadmap) / backup-restic-fork — nothing is written unless 
 u approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-e1                       2026-10-01               travel                   420
-widget w2:
-bar chart sum of amount by kind: 1 series over category x, not drawn here
-  sum of amount: travel=420, tools=42, (empty)=3.5
-widget w5:
-line chart count by when: 1 series over time x, not drawn here
-  count: (no rows yet)
-widget w4:
 form Expenses (table expenses): fill it in the pupil
   Amount (number, required)
   When (date, prefilled 2026-10-20)
@@ -36,5 +28,13 @@ dashboard Bench board: 3 widgets, place it in the pupil
 , track, points, note, due
 working for ACME s.r.o.
 working on personal data
+models for this session; a pick takes effect on the next turn:
+  1. ollama qwen3:14b — This host (on-device, Ollama), in the EU (current)
+  2. ollama qwen3:4b — This host (on-device, Ollama), in the EU
+     'qwen3:4b' has 4B parameters, below the 8B recommended (llm_cell_recommende
+d_params_b): it runs, badly
+  3. mistral-eu mistral-large-latest — Mistral AI SAS, in the EU
+  not offered: ollama qwen3:1.7b: 'qwen3:1.7b' has 1.7B parameters, below the 3B
+ minimum (llm_cell_min_params_b)
 approve this edit (1 of 8)? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit
