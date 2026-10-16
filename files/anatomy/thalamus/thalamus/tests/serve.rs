@@ -5333,3 +5333,64 @@ fn no_rebind_no_moved_line() {
     let (_, body) = rig.model.lock().unwrap().last().cloned().unwrap();
     assert!(!body.contains("This session moved"), "no rebind, no line");
 }
+
+/// The model request bodies the rig's fake model saw, in order.
+fn model_posts(rig: &Rig) -> Vec<String> {
+    rig.model.lock().unwrap().iter().filter(|(h, _)| h.starts_with("POST")).map(|(_, b)| b.clone()).collect()
+}
+
+#[test]
+fn a_pick_before_any_turn_names_no_earlier_turns() {
+    let rig = picker("mfirstpick", picks_of("iris", BOTH), vec![PULLED.into(), answer("ahoj")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ToShell::ModelOptions { session, .. } = said_to(&s, &mut r, pick("mistral-eu", "mistral-large-latest")) else { panic!("pick not taken") };
+    turn(&s, &mut r, Some(session.clone()), "hi");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    assert!(events(&rig.ledger, &session).iter().any(|e| e.0 == "agent_session_rebind"), "the pick is still a rebind");
+    assert!(!model_posts(&rig).iter().any(|b| b.contains("This session moved")), "no turn was answered, so none is said to be");
+}
+
+#[test]
+fn two_picks_name_the_model_that_answered() {
+    let rig = picker("mtwopicks", picks_of("iris", BOTH), vec![answer("nazdar"), PULLED.into(), PULLED.into(), answer("ahoj")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let session = session_of(&turn(&s, &mut r, None, "first"));
+    said_to(&s, &mut r, pick("mistral-eu", "mistral-large-latest"));
+    said_to(&s, &mut r, pick("ollama", "qwen3:4b"));
+    turn(&s, &mut r, Some(session.clone()), "hi");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let first = events(&rig.ledger, &session).into_iter().find(|e| e.0 == "agent_session_rebind").expect("a rebind");
+    let a = first.2["from_model_uri"].as_str().unwrap().to_string();
+    let line = format!("This session moved from {a} to ollama-qwen3:4b (person); earlier turns were answered by {a}.");
+    assert_eq!(model_posts(&rig).last().unwrap().matches(&line).count(), 1, "the line names who answered, not the pick between");
+}
+
+#[test]
+fn a_repick_of_the_bound_model_is_no_rebind() {
+    let rig = picker("mrepick", picks_of("iris", BOTH), vec![PULLED.into(), PULLED.into()]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ToShell::ModelOptions { session, .. } = said_to(&s, &mut r, pick("mistral-eu", "mistral-large-latest")) else { panic!("pick not taken") };
+    let ToShell::ModelOptions { .. } = said_to(&s, &mut r, pick("mistral-eu", "mistral-large-latest")) else { panic!("re-pick refused") };
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let n = events(&rig.ledger, &session).iter().filter(|e| e.0 == "agent_session_rebind").count();
+    assert_eq!(n, 1, "picking the model already bound moves nothing");
+}
+
+#[test]
+fn a_failed_request_keeps_the_rebind_line() {
+    let rig = picker("mfailmoved", picks_of("iris", BOTH), vec![answer("nazdar"), PULLED.into(), "!500 {}".into(), answer("ahoj")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let session = session_of(&turn(&s, &mut r, None, "first"));
+    said_to(&s, &mut r, pick("mistral-eu", "mistral-large-latest"));
+    turn(&s, &mut r, Some(session.clone()), "hi");
+    turn(&s, &mut r, Some(session.clone()), "hi again");
+    let heard: Vec<bool> = model_posts(&rig).iter().map(|b| b.contains("This session moved")).collect();
+    assert_eq!(heard, [false, true, true], "a request the model never answered did not tell it");
+}
