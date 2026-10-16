@@ -247,3 +247,18 @@ def test_seed_domain_creates_a_parent_first_and_maps_its_row_refs(tmp_path, monk
     assert [c[2]["title"] for c in creates] == ["parts", "lines"]
     assert creates[1][2]["schema"]["columns"][1]["refTable"] == "new-1"
     assert keap.rows["new-4"] == [{"item": "x", "part": "new-1-r1"}]
+
+
+def test_seed_domain_sends_a_date_as_keap_day_epoch(tmp_path, monkeypatch):
+    """KEAP refused '2026-10-04' for a date column (400, expected epoch seconds) on 2026-10-16."""
+    d = tmp_path / "domains/d1/tables"
+    d.mkdir(parents=True)
+    (d / "inv.table.yml").write_text(yaml.safe_dump({
+        "title": "inv", "schema": {"columns": [{"key": "issued", "label": "Issued", "kind": "date", "role": "dimension"}]},
+        "rows": [{"issued": "2026-10-04"}, {"issued": 1793491200}]}), encoding="utf-8")
+    monkeypatch.setenv("NOS_ASSAY_DIR", str(tmp_path))
+    monkeypatch.setenv("NOS_LIVE", "1")
+    b, keap = OFF._bench(), FakeKeap()
+    monkeypatch.setattr(b, "_dtt", lambda: keap)
+    assert b.main(["--seed", "--domain", "d1"]) == 0
+    assert [p[2]["values"]["issued"] for p in keap.posts[1:]] == [1791072000, 1793491200]
