@@ -216,9 +216,10 @@ def test_an_off_service_dir_with_data_stays_in_the_set(tmp_path) -> None:
         backup_retention_daily=7, backup_retention_weekly=4, backup_retention_monthly=6,
     )
     defs = text.rsplit('\nmain "$@"', 1)[0]
-    # docker run --rm -v <path>:/data:ro IMAGE sh -c '<ls|tar>': answer from the host path.
+    # docker run --rm -v <path>:/data:ro IMAGE sh -c '<ls|tar>': answer from the host path
+    # (busybox `tar -v` lists `./member`; bsdtar does not, so find stands in).
     probe = ('\ndocker() { local p="${4%%:/data:ro}"; case "$*" in *"ls -A"*) ls -A "$p" | wc -l;; '
-             '*tar*) (cd "$p" && tar -czvf - .);; esac; }\naws() { cat >/dev/null 2>&1; echo 0; }\n'
+             '*tar*) (cd "$p" && find . -type f >&2 && tar -czf - .);; esac; }\naws() { cat >/dev/null 2>&1; echo 0; }\n'
              'run_dirs; true')
     subprocess.run(["bash", "-c", defs + probe], capture_output=True, text=True)
     by = {s["name"]: s for s in json.loads((tmp_path / "status.json").read_text())["sources"]}
