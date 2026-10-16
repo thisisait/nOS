@@ -4796,3 +4796,18 @@ fn an_offered_dashboard_takes_a_kpi_widget_checked_like_a_chart() {
     assert_eq!(d["dropped"][0]["title"], "Ghost", "{d}");
     assert!(d["dropped"][0]["why"].as_str().unwrap().contains("no column `ghost`"), "{d}");
 }
+
+// --- local bench v4 (mistral-eu): answers echoed the data mark, "**⟦bench row 10⟧** — 12 points" ---
+
+#[test]
+fn the_person_never_sees_the_data_mark_and_the_ledger_keeps_it() {
+    let rig = rig_n("stripmark", mapped(), vec![], vec![answer("Row **⟦bench row 10⟧** has 12 points.")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "row 10?");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Text { text, .. } if text == "Row **bench row 10** has 12 points.")), "{got:?}");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    assert!(events(&rig.ledger, &session_of(&got)).iter().any(|e| e.2["text"].as_str().is_some_and(|t| t.contains("⟦bench row 10⟧"))),
+            "the ledger keeps what was said");
+}
