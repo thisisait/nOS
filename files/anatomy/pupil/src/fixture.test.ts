@@ -15,7 +15,7 @@ const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as { to_shell: { case: stri
 // Each kind's props, as wire.ts types them: a prop the fixture renames is named here, not drawn as nothing.
 const PROPS: Record<string, string[]> = {
 	table_results: ['columns', 'matched', 'name', 'projected', 'query', 'rows', 'table', 'total'],
-	row_diff_approval: ['cells', 'lines', 'op', 'read_from', 'row_id', 'table', 'title'],
+	row_diff_approval: ['cells', 'lines', 'op', 'read_from', 'row_id', 'table', 'title', 'warning'],
 	table_schema_approval: ['columns', 'description', 'title', 'visibility'],
 	column_add_approval: ['columns', 'existing', 'table', 'title'],
 	inbox_list: ['items', 'refused'],
@@ -37,7 +37,7 @@ const PROPS: Record<string, string[]> = {
 };
 const KINDS = Object.keys(PROPS);
 // Props a sample may leave out (an insert names no row); any other missing or extra prop is a rename.
-const OPTIONAL: Record<string, string[]> = { row_diff_approval: ['lines', 'read_from', 'row_id'], table_schema_approval: ['description'], form: ['prefill'], kpi: ['delta', 'delta_label', 'source', 'unit'] };
+const OPTIONAL: Record<string, string[]> = { row_diff_approval: ['lines', 'read_from', 'row_id', 'warning'], table_schema_approval: ['description'], form: ['prefill'], kpi: ['delta', 'delta_label', 'source', 'unit'] };
 
 const text = (html: string) =>
 	html
