@@ -1200,7 +1200,8 @@ final class Runner
 			$compacted[] = Message::userText(self::SYNTHESIS_PROMPT);
 			// No tools, for the same reason as the call-cap turn: an affordance
 			// beats an instruction.
-			$response = $llm->send($agent->systemPrompt ?? '', $compacted, [], $agent->maxOutputTokens);
+			$response = $llm->send($this->systemFor($agent, $llm->identifier(), 'fallback'), $compacted, [], $agent->maxOutputTokens);
+			$this->answered($agent, $llm->identifier(), 'fallback', 'ceiling_synthesis');
 			$totalIn += $response->tokensInput;
 			$totalOut += $response->tokensOutput;
 			$this->sessionTokensIn += $response->tokensInput;
