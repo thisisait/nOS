@@ -169,6 +169,44 @@ describe('KEAP tables via the human door', () => {
 		expect(store.size).toBe(1);
 		expect(b.data.id).toBe(a.data.id);
 	});
+	// A tiny KEAP: POST refuses a duplicate id or a bad body (400), GET reads one.
+	function tinyKeap(): Map<string, unknown> {
+		const store = new Map<string, unknown>();
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async (url: URL | string, init: RequestInit = {}) => {
+				const id = String(url).split('/api/tables/')[1];
+				if (init.method === 'POST') {
+					const t = JSON.parse(String(init.body));
+					if (!t.title || store.has(t.id)) return new Response('{"error":"bad"}', { status: 400 });
+					store.set(t.id, t);
+					return new Response(JSON.stringify({ success: true, data: t }));
+				}
+				const t = id && store.get(decodeURIComponent(id));
+				return t
+					? new Response(JSON.stringify({ success: true, data: t }))
+					: new Response('{}', { status: 404 });
+			})
+		);
+		return store;
+	}
+	const cols = (...keys: string[]) => ({ schema: { columns: keys.map((key) => ({ key })) } });
+	it('a real validation 400 surfaces as that 400, never an empty success', async () => {
+		tinyKeap();
+		const r = keapCreateTable({ slug: 'budget', title: '' }, ALICE);
+		await expect(r).rejects.toMatchObject({ status: 400 });
+	});
+	it('a re-submit that changes the table is refused (409), not silently reused', async () => {
+		const store = tinyKeap();
+		const base = { slug: 'budget', title: 'B', visibility: 'tier-managers', ...cols('a') };
+		await keapCreateTable(base, ALICE);
+		for (const change of [{ title: 'C' }, { visibility: 'shared' }, cols('a', 'b')])
+			await expect(keapCreateTable({ ...base, ...change }, ALICE)).rejects.toMatchObject({
+				status: 409
+			});
+		await expect(keapCreateTable(base, ALICE)).resolves.toBeTruthy();
+		expect(store.size).toBe(1);
+	});
 });
 
 describe('bff/tables POST takes the person from locals, never the browser', () => {
