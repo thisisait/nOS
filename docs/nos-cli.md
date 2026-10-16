@@ -275,7 +275,7 @@ remove-source pause; PREFIX = rotation prompt (ENTER = keep); SUDO =
 Every confirmed removal that reconverges (no `--leave`) appends to
 `~/.nos/blank-runs.jsonl`: an open line after removal-verify, a closing line
 `{started, finished, nos_commit, failed, smoke_strict}` after the post-run smoke.
-`tools/estate-status.py` shows the newest one and its age (no record = UNKNOWN).
+`tools/estate-status.py` shows the newest one and its age (no record = UNKNOWN; no strict smoke = red).
 
 ### New vocabulary — raw `ansible-playbook` (protected equally)
 

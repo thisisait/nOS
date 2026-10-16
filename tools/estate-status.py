@@ -329,20 +329,22 @@ def axis_blank(res: Result) -> None:
     if not rows:
         res.add("blank", "newest blank", f"UNKNOWN — {path} is empty", UNREADABLE)
         return
-    started = max(r.get("started") or "" for r in rows)
-    last = [r for r in rows if r.get("started") == started][-1]
-    try:
+    try:  # any row shape we cannot read is UNKNOWN, never a crash
+        started = max(r.get("started") or "" for r in rows)
+        last = [r for r in rows if r.get("started") == started][-1]
         age = datetime.now(timezone.utc) - datetime.strptime(started, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-    except ValueError:
-        res.add("blank", "newest blank", f"UNKNOWN — unparseable started {started!r}", UNREADABLE)
+        smoke = last.get("smoke_strict")
+        strict = f"smoke --strict {smoke['passed']}/{smoke['total']}" if smoke else "no strict smoke"
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        res.add("blank", "newest blank", f"UNKNOWN — unreadable record ({type(exc).__name__}: {path})", UNREADABLE)
         return
     when = f"{started} ({age.days}d ago) at {last.get('nos_commit')}"
-    smoke = last.get("smoke_strict")
-    strict = f"smoke --strict {smoke['passed']}/{smoke['total']}" if smoke else "no strict smoke"
     if not last.get("finished"):
         res.add("blank", "newest blank", f"{when} never finished (still running, or the run died)", DISAGREE)
     elif last.get("failed"):
         res.add("blank", "newest blank", f"{when} FAILED · {strict}", DISAGREE)
+    elif not smoke:  # skipped or non-strict smoke: the release gate needs --strict
+        res.add("blank", "newest blank", f"{when} · {strict} (release gate unmet)", DISAGREE)
     else:
         res.add("blank", "newest blank", f"{when} · {strict}")
 
