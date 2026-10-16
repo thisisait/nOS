@@ -8,6 +8,7 @@ import {
 	buildCreateBody,
 	type DraftColumn
 } from './createtable';
+import { canReadTable } from '$lib/security/tier';
 
 describe('slugFromTitle', () => {
 	it('lowercases and dashes spaces/dots/underscores', () => {
@@ -157,5 +158,17 @@ describe('buildCreateBody — KEAP wire shape', () => {
 	it('never emits a body whose only column list is nested', () => {
 		const body = buildCreateBody(draft) as unknown as Record<string, unknown>;
 		expect(body.columns, 'top-level columns missing => server-side zod "Required"').toBeDefined();
+	});
+});
+
+describe('buildCreateBody visibility', () => {
+	const base = { slug: 's', title: 'S', description: '', anchor: '', columns: defaultColumns() };
+	it('defaults to a grade the manager who made it can read in face', () => {
+		const body = buildCreateBody(base);
+		expect(body.visibility).toBe('tier-managers');
+		expect(canReadTable(body.visibility, ['nos-managers'])).toBe(true);
+	});
+	it('carries the grade picked in the modal', () => {
+		expect(buildCreateBody({ ...base, visibility: 'shared' }).visibility).toBe('shared');
 	});
 });

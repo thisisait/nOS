@@ -141,6 +141,34 @@ describe('KEAP tables via the human door', () => {
 		expect(ids[1]).toBe(ids[0]);
 		expect(ids[2]).not.toBe(ids[0]);
 	});
+	it('a second submit of one slug reuses the table KEAP already holds', async () => {
+		// A tiny KEAP: POST refuses a duplicate id (400, as routes.ts does), GET reads one.
+		const store = new Map<string, unknown>();
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async (url: URL | string, init: RequestInit = {}) => {
+				const id = String(url).split('/api/tables/')[1];
+				if (init.method === 'POST') {
+					const t = JSON.parse(String(init.body));
+					if (store.has(t.id)) return new Response('{"success":false}', { status: 400 });
+					store.set(t.id, t);
+					return new Response(JSON.stringify({ success: true, data: t }));
+				}
+				const t = id && store.get(decodeURIComponent(id));
+				return t
+					? new Response(JSON.stringify({ success: true, data: t }))
+					: new Response('{}', { status: 404 });
+			})
+		);
+		const a = (await keapCreateTable({ slug: 'budget', title: 'B' }, ALICE)) as {
+			data: { id: string };
+		};
+		const b = (await keapCreateTable({ slug: 'budget', title: 'B' }, ALICE)) as {
+			data: { id: string };
+		};
+		expect(store.size).toBe(1);
+		expect(b.data.id).toBe(a.data.id);
+	});
 });
 
 describe('bff/tables POST takes the person from locals, never the browser', () => {
