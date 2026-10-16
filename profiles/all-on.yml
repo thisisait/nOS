@@ -109,6 +109,7 @@ install_bone: true
 install_pulse: true
 install_wing: true
 install_openclaw: true
+vlm_on_host: true               # invoice vision intake (R2: owned by the switch, not install_ollama)
 install_backup: true
 install_backrest: true           # restic UI/scheduler host daemon (off-site copy-#2 orchestrator)
 restic_repo: "{{ ansible_facts['env']['HOME'] }}/nos-backups/restic"  # Backrest needs a repo (preflight refuses an empty one); local is enough for a test host
