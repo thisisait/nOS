@@ -2478,7 +2478,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": true,
       "mutates_worktree": true,
-      "min_work": 7688,
+      "min_work": 7943,
       "argv": [
         "python3",
         "-m",
@@ -2489,7 +2489,7 @@
       "claims": [],
       "requires": [],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=7688, deterministic=True"
+      "description": "Loop judge: gate command `python3 -m pytest tests/anatomy -q` — work floor min_work=7943, deterministic=True"
     },
     "lock:agent-run-lock": {
       "kind": "lock",

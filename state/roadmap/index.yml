@@ -30,6 +30,9 @@
 - slug: agent-scope-single-authority
   parent: ''
   track: platform
+- slug: agent-session-rebind-event
+  parent: ''
+  track: agents
 - slug: agent-tests-must-not-reach-live-infra
   parent: ''
   track: platform
@@ -72,6 +75,9 @@
 - slug: apex-organ-systems
   parent: body-organ
   track: platform
+- slug: apex-signature-in-ci
+  parent: ''
+  track: release
 - slug: apgar
   parent: body-cell
   track: agents
@@ -120,6 +126,9 @@
 - slug: blank-keeps-nextcloud-user-files
   parent: managed-resources-manifest
   track: platform
+- slug: blank-run-record
+  parent: ''
+  track: release
 - slug: body-cell
   parent: body-plan
   track: platform
@@ -924,8 +933,20 @@
 - slug: invoice-vision-model-pin
   parent: consulting-firm-deployment
   track: agents
+- slug: iris-bench-harbor-export
+  parent: iris-genui-bench
+  track: agents
 - slug: iris-choice-followups
   parent: iris-genui-forms
+  track: agents
+- slug: iris-dashboards-in-keap
+  parent: iris-genui-workspace-poc
+  track: face
+- slug: iris-data-points-beyond-tables
+  parent: iris-genui-bench
+  track: agents
+- slug: iris-data-scope-toggle
+  parent: iris-genui-bench
   track: agents
 - slug: iris-e2e-journeys
   parent: iris-genui
@@ -972,6 +993,9 @@
 - slug: iris-reads-red-status
   parent: iris-genui
   track: agents
+- slug: iris-speaks-cortex-lang
+  parent: iris-genui-bench
+  track: cortex
 - slug: isdoc-vision-crosscheck
   parent: consulting-firm-deployment
   track: digest
@@ -1020,6 +1044,9 @@
 - slug: keap-rowref-facet-upstream
   parent: body-organ
   track: cortex
+- slug: keap-scoped-graph-walk
+  parent: iris-genui-bench
+  track: agents
 - slug: keap-slow-under-model-load
   parent: ''
   track: platform
@@ -1212,6 +1239,12 @@
 - slug: memory-organ-gaps
   parent: memory-direction
   track: cortex
+- slug: model-catalog-with-quality
+  parent: ''
+  track: agents
+- slug: model-digest-lock
+  parent: ''
+  track: security
 - slug: moderation-drain-loop
   parent: ''
   track: cortex
@@ -1236,6 +1269,9 @@
 - slug: nextcloud-sso-state-lost
   parent: e2e-lifecycle
   track: platform
+- slug: nos-assay
+  parent: iris-genui-bench
+  track: agents
 - slug: nos-atlas
   parent: gis-property
   track: platform
@@ -1809,6 +1845,9 @@
 - slug: stable-contract
   parent: rel-017
   track: release
+- slug: stacks-one-list
+  parent: ''
+  track: platform
 - slug: stalwart-never-left-bootstrap
   parent: ''
   track: platform
