@@ -259,8 +259,9 @@ secret.
 
 ### Smoke probe fails for a manifest app
 
-`tools/nos-smoke.py` reads `~/.nos/smoke-catalog.runtime.yml` (auto-
-written by the runner) on top of `state/smoke-catalog.yml`. Each
+`tools/nos-smoke.py` derives one probe per installed app
+(`nos_identity.installed_apps`: `apps_runner_enabled` minus `apps_skip`) at
+`<id>[.<host_alias>].<apps_subdomain>.<tenant_domain>`. Each
 manifest-app entry expects 200 / 301 / 302 / 308 / 401. 401 covers the
 Authentik proxy gate before the user logs in. Anything else (e.g.
 404, 502, 503) means the container is up but something is wrong with

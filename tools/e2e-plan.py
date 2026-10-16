@@ -26,7 +26,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 PLUGINS = REPO / "files/anatomy/plugins"
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import SYNTHETIC_FLAG, synthetic_identities  # noqa: E402
+from nos_identity import SYNTHETIC_FLAG, installed_apps, synthetic_identities  # noqa: E402
 MODES = ("native_oidc", "forward_auth", "header_oidc")
 
 _spec = importlib.util.spec_from_file_location("nos_smoke", REPO / "tools/nos-smoke.py")
@@ -163,7 +163,7 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
     # invisible to a plugin-only walk: documenso, twofauth, roundcube.
     # Same rendering, same edge rule.
     by_slug = {r["slug"]: r for r in rows}
-    skip = set(vars_.get("apps_skip") or [])
+    apps_on = set(installed_apps(vars_))
     for path in sorted((REPO / "apps").glob("*.yml")):
         if path.name.startswith("_"):
             continue
@@ -172,7 +172,7 @@ def plan(vars_: dict | None = None, include_disabled: bool = False) -> list[dict
             continue
         r = _render(env, {k: v for k, v in ak.items() if k != "client_secret"})
         slug = r.get("slug") or path.stem
-        enabled = _truthy(vars_.get("apps_runner_enabled", False)) and path.stem not in skip
+        enabled = path.stem in apps_on
         if slug in by_slug:
             by_slug[slug]["launch_url"] = by_slug[slug]["launch_url"] or r.get("launch_url")
             continue

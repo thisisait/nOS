@@ -37,6 +37,7 @@
     --tenant-domain {{ tenant_domain | default('dev.local') | quote }}
     --host-alias {{ host_alias | default('') | quote }}
     --apps-subdomain {{ apps_subdomain | default('apps') | quote }}
+    --apps-runner-enabled {{ apps_runner_enabled | default(true) | bool | lower }}
     --fail-ratio {{ 0.0 if (nos_smoke_strict | default(false) | bool) else (nos_smoke_max_fail_ratio | default(0.5)) }}
   register: _nos_smoke
   changed_when: false

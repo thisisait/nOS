@@ -48,7 +48,7 @@ except ImportError:
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
 sys.path.insert(0, str(REPO / "tools"))
-from nos_identity import default_layers, is_local_domain, resolve_flag  # noqa: E402
+from nos_identity import default_layers, installed_apps, is_local_domain, resolve_flag  # noqa: E402
 
 # Lazy ANSI colors — disabled when stdout isn't a TTY.
 _TTY = sys.stdout.isatty()
@@ -299,6 +299,19 @@ def derive_from_manifest(manifest: dict, vars_dict: dict, defaults: dict,
             "_source": "manifest",
         })
     return out
+
+
+def derive_from_apps(vars_dict: dict) -> list[dict]:
+    """One probe per installed manifest app, at nos_apps_render._fqdn_for's name."""
+    seg = [vars_dict.get("_host_alias_normalized"), vars_dict.get("_apps_subdomain_normalized"),
+           vars_dict.get("tenant_domain")]
+    return [{
+        "id": f"app_{name}",
+        "url": "https://%s/" % ".".join([name, *(s for s in seg if s)]),
+        "expect": [200, 301, 302, 308, 401, 502],
+        "tier": 2,
+        "note": "Tier-2 app onboarded via apps_runner",
+    } for name in installed_apps(vars_dict)]
 
 
 def merge_catalog(manifest_entries: list[dict], extra_entries: list[dict],
@@ -983,18 +996,10 @@ def build_catalog(vars_dict: dict) -> list[dict]:
     defaults = catalog.get("smoke_defaults") or {}
     extras = list(catalog.get("smoke_endpoints") or [])
 
-    runtime_path = pathlib.Path.home() / ".nos" / "smoke-catalog.runtime.yml"
-    if not runtime_path.is_file():
-        # Compat: written into the checkout before 2026-10-07; drop after the next converge.
-        runtime_path = REPO / "state" / "smoke-catalog.runtime.yml"
-    if runtime_path.is_file():
-        runtime_catalog = load_yaml(runtime_path)
-        runtime_extras = runtime_catalog.get("smoke_endpoints") or []
-        # Append after the static entries so static IDs win on duplicate keys
-        # (matching the same precedence rule merge_catalog applies to manifest
-        # vs. catalog entries — last-writer-wins becomes first-wins via the
-        # merge_catalog dedup logic).
-        extras = extras + list(runtime_extras)
+    # Manifest apps from the installed set at this run's names: the runtime file
+    # apps_runner wrote outlived the install that wrote it (client, 2026-10-16:
+    # app_* probed at *.apps.dev.local with apps_runner off, tld jan.internal).
+    extras += derive_from_apps(vars_dict)
 
     manifest_entries = derive_from_manifest(
         manifest, vars_dict, defaults, skip_ids=unrouted_ids(REPO))
@@ -1025,6 +1030,8 @@ def main() -> int:
                    help="override tenant_domain from YAML (mirrors -e tenant_domain=...)")
     p.add_argument("--apps-subdomain", dest="apps_subdomain", default=None,
                    help="override apps_subdomain from YAML")
+    p.add_argument("--apps-runner-enabled", dest="apps_runner_enabled", default=None,
+                   choices=["true", "false"], help="override apps_runner_enabled from YAML")
     # ── Track G: strict mode + tester credentials ──────────────────────────
     # Strict mode tightens default expect to [200, 204] and treats any 30x
     # without a successful tester auth-flow as failure (per AIT philosophy:
@@ -1045,15 +1052,10 @@ def main() -> int:
                         "When unset, exit code is the raw failed count (min 127).")
     args = p.parse_args()
 
-    vars_dict = load_vars(args.host_alias, args.tenant_domain, args.apps_subdomain)
+    vars_dict = load_vars(args.host_alias, args.tenant_domain, args.apps_subdomain, overrides={
+        "apps_runner_enabled": args.apps_runner_enabled == "true"} if args.apps_runner_enabled else None)
 
-    # ── Load manifest + smoke catalog (static + runtime) ───────────────────
-    # state/smoke-catalog.yml         — checked-in, edited by humans
-    # ~/.nos/smoke-catalog.runtime.yml — auto-written by pazny.apps_runner
-    #                                   tasks/post.yml; one entry per Tier-2
-    #                                   apps/<name>.yml manifest. Same shape
-    #                                   as the static catalog so this loader
-    #                                   stays simple. Missing file = no-op.
+    # manifest rows + state/smoke-catalog.yml + installed manifest apps
     all_entries = build_catalog(vars_dict)
 
     # ── Filters ────────────────────────────────────────────────────────────

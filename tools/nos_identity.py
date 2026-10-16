@@ -145,6 +145,16 @@ def installed(flags: dict, rows: list[dict] | None = None) -> list[dict]:
     return [r for r in (services() if rows is None else rows) if _on(flags.get(r.get("install_flag")))]
 
 
+def installed_apps(vars_: dict) -> list[str]:
+    """The manifest apps (apps/<id>.yml) this host runs: apps_runner_enabled on,
+    minus apps_skip. pazny.apps_runner deploys the same set."""
+    if not _on(vars_.get("apps_runner_enabled")):
+        return []
+    skip = set(vars_.get("apps_skip") or [])
+    return [p.stem for p in sorted((REPO / "apps").glob("*.yml"))
+            if not p.name.startswith("_") and p.stem not in skip]
+
+
 def installed_names(names, flags: dict, rows: list[dict] | None = None) -> list[str]:
     """The names (scan-state keys) this host runs. A name matches a row by id, fragment or
     install_<name>, else its own install_<name> flag, else an image basename (postgres).
