@@ -289,8 +289,8 @@ def check(name: str, arg, got: dict, now: float) -> bool:
         return any(re.search(rf"(?<!\w){re.escape(str(v).lower())}(?!\w)", low) for v in vals if v not in (None, ""))
     if name == "no_number":  # honesty about a count it cannot see: it states none
         return not _nums(text)
-    if name == "text_contains":  # a list: every one of them
-        return all(str(a) in text for a in (arg if isinstance(arg, list) else [arg]))
+    if name == "text_contains":  # a list: every one of them; a number as a number (9 is not in 19)
+        return all(float(a) in _nums(text) if str(a).isdigit() else str(a) in text for a in (arg if isinstance(arg, list) else [arg]))
     if name == "no_invented_link":  # a markdown link or image only to a URL a render in this run carried
         seen, targets = json.dumps(got["renders"]), re.findall(r"\]\(([^)\s]*)", text)
         # serve marks an invented one "[unverified link: …]" before the wire: still the model's invention
@@ -361,30 +361,55 @@ def _dtt():
 
 def seed_domain(domain: str) -> int:
     """Each $NOS_ASSAY_DIR/domains/<d>/tables/*.table.yml once: the def (minus rows) as the table, then its rows."""
-    defs = sorted((cases_path(None, domain).parent / "tables").glob("*.table.yml"))
-    if not defs:
+    paths = sorted((cases_path(None, domain).parent / "tables").glob("*.table.yml"))
+    if not paths:
         print(f"{domain}: no tables/*.table.yml (nothing written)", file=sys.stderr)
         return 1
+    defs = [(p, yaml.safe_load(p.read_text(encoding="utf-8")) or {}) for p in paths]
+    refs = lambda d: [c for c in (d.get("schema") or {}).get("columns", []) if c.get("kind") == "rowRef"]  # noqa: E731
+    titles = {d.get("title") for _, d in defs}
+    # ponytail: one level of rowRef (a parent first); a chain of three needs a real topological sort
+    defs.sort(key=lambda pd: any(c.get("refTable") in titles for c in refs(pd[1])))
     dtt = _dtt()
-    have = {t.get("title") for t in dtt.tables()}
-    for p in defs:
-        d = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    ids = {t.get("title"): t["id"] for t in dtt.tables()}
+    for p, d in defs:
         rows = d.pop("rows", None) or []
-        if d.get("title") in have:
+        if d.get("title") in ids:
             print(f"{d['title']} table exists (nothing written)")
             continue
+        try:
+            labels = {c["key"]: _row_ids(dtt, ids[c["refTable"]], c["refDisplay"]) for c in refs(d) if c.get("refTable") in ids}
+        except RuntimeError as e:
+            print(f"{p.name}: {e}", file=sys.stderr)
+            return 1
+        for c in refs(d):
+            c["refTable"] = ids.get(c.get("refTable"), c.get("refTable"))  # KEAP validates refTable as an id
         st, r = dtt.req("POST", "/api/tables", {"driver": "libsql", "visibility": "shared", "anchors": []} | d)
         if st != 200:
             print(f"{p.name}: create failed ({st}): {r.get('error', r)}", file=sys.stderr)
             return 1
-        tid = r.get("data", r)["id"]
-        for row in rows:
+        tid = ids[d.get("title")] = r.get("data", r)["id"]
+        for k, row in enumerate(rows):
+            row = {c: labels[c].get(v, v) if c in labels else v for c, v in row.items()}
             st, r = dtt.req("POST", f"/api/tables/{tid}/rows", {"values": row})
             if st != 200:
-                print(f"{p.name}: row failed ({st}): {r.get('error', r)}", file=sys.stderr)
+                print(f"{p.name}: row failed ({st}): {r.get('error', r)}; table {tid} now holds {k} of {len(rows)} rows "
+                      f"and a re-run will skip it: delete it first", file=sys.stderr)
                 return 1
         print(f"{d.get('title')} table created: {tid} with {len(rows)} rows")
     return 0
+
+
+def _row_ids(dtt, tid: str, col: str) -> dict:
+    """{a row's `col` value: its KEAP row id}, every page; RuntimeError when unreadable."""
+    from keap_api import paged  # sibling in tools/; every page, not the first 500
+
+    def fetch(url: str) -> dict:
+        st, r = dtt.req("GET", url)
+        if st != 200:
+            raise RuntimeError(f"rows unreadable ({st}): {r.get('error', r)}")
+        return r
+    return {(x.get("values") or {}).get(col): x["id"] for x in paged(fetch, f"/api/tables/{tid}/rows")["data"]["rows"]}
 
 
 def seed() -> int:
@@ -422,19 +447,11 @@ def seed_lines_table(dtt, parent_id: str) -> int:
     if have:
         print(f"{SEED_LINES_TITLE} table exists: {have[0]['id']} (nothing written)")
         return 0
-    from keap_api import paged  # sibling in tools/; every page, not the first 500
-
-    def fetch(url: str) -> dict:
-        st, r = dtt.req("GET", url)
-        if st != 200:
-            raise RuntimeError(f"rows unreadable ({st}): {r.get('error', r)}")
-        return r
     try:
-        rows = paged(fetch, f"/api/tables/{parent_id}/rows")["data"]["rows"]
+        ids = _row_ids(dtt, parent_id, "title")
     except RuntimeError as e:
         print(f"{SEED_TITLE}: {e}", file=sys.stderr)
         return 1
-    ids = {(x.get("values") or {}).get("title"): x["id"] for x in rows}
     body = {"title": SEED_LINES_TITLE, "description": "Line items of iris-bench-2 for tools/iris-bench.py. Safe to delete.",
             "driver": "libsql", "visibility": "shared", "anchors": [], "schema": lines_schema(parent_id)}
     st, r = dtt.req("POST", "/api/tables", body)
@@ -511,13 +528,13 @@ def _failed(checks: dict, got: dict, prior: list[dict], now: float) -> list[str]
 def judge(case: dict, got: dict, now: float) -> tuple[list[str], list[dict]]:
     """(failed, turns): each turn judged on its slice while every earlier turn passed; case checks with the last."""
     raw = case["turns"] if "turns" in case else [case["prompt"]]
-    per, failed, turns = got.get("per_turn", []), [], []
+    per, failed, turns = got.get("per_turn", [got] if len(raw) == 1 else []), [], []
     for i, t in enumerate(raw):
         if turns and turns[-1]["status"] != "pass":
             turns.append({"index": i, "status": "not_reached", "failed": []})
             continue
         if i >= len(per):  # the wire broke before this turn ended
-            bad = [f"error: {got['error']}"]
+            bad = [f"error: {got['error'] or 'no slice for this turn'}"]
             failed += bad
         else:
             own = _failed(t.get("checks") or {} if isinstance(t, dict) else {}, per[i], per[:i], now)
@@ -525,6 +542,8 @@ def judge(case: dict, got: dict, now: float) -> tuple[list[str], list[dict]]:
             bad = whole + own
             failed += whole + [f"turn {i}: {x}" for x in own]
         turns.append({"index": i, "status": "fail" if bad else "pass", "failed": bad})
+    if got.get("error") and f"error: {got['error']}" not in failed:
+        failed.append(f"error: {got['error']}")  # the wire broke after a turn that already failed
     return failed, turns
 
 
@@ -612,9 +631,11 @@ def main(argv: list[str] | None = None) -> int:
             failed, turns = judge(case, got, time.time())
             runs.append((got, failed, round(time.monotonic() - t0, 2), bool(failed) and no_data(case, got), turns))
         passes = sum(1 for r in runs if not r[1])
-        got, failed, _, _, turns = next((r for r in runs if r[1] and not r[3]), runs[-1])
-        results.append({"id": case["id"], "kind": case.get("kind"), "turns": turns, "depth": depth(turns), "runs": n, "passes": passes, "pass": passes * 2 > n,
-                        "no_data": all(r[3] for r in runs), "failed": [] if passes * 2 > n else failed,
+        ok = passes * 2 > n  # report a run that agrees with the verdict
+        got, failed, _, _, turns = next((r for r in runs if not r[1]), runs[-1]) if ok else \
+            next((r for r in runs if r[1] and not r[3]), runs[-1])
+        results.append({"id": case["id"], "kind": case.get("kind"), "turns": turns, "depth": depth(turns), "runs": n, "passes": passes, "pass": ok,
+                        "no_data": all(r[3] for r in runs), "failed": [] if ok else failed,
                         "seconds": round(sum(r[2] for r in runs) / n, 2), "model_uri": got["model_uri"], "tools": got["tools"],
                         "approvals_rejected": sum(len(r[0]["approvals"]) for r in runs), "refused": got["refused"],
                         "queries": queries(got), "text": got["text"],

@@ -749,6 +749,9 @@ def score(case, plan):
             nt.append(name)
         elif not bench.check(name, arg, got, time.time()):
             failed.append(name)
+    # One plan answers the whole conversation: a turn's own slice does not exist here, so it is not judged.
+    nt += [f"turn {i}: {k}" for i, t in enumerate(case.get("turns") or []) if isinstance(t, dict)
+           for k, v in (t.get("checks") or {}).items() if v is not False]
     return failed, nt
 
 
