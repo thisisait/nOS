@@ -1,6 +1,6 @@
 name: invoice-vision-ocr
 version: 1
-owner: install_ollama
+owner: vlm_on_host
 description: >-
   Stage A of the local invoice extractor (invoice-structured-extractor unit).
   ONE vision-model call that reads an invoice scan/PDF page and emits its

@@ -514,9 +514,9 @@
     # the task, for nothing. Removed rather than left as harmless: an unused
     # secret in flight is still a secret in flight.
     NOS_PLAYBOOK_DIR: "{{ nos_main_checkout }}"
-    # Every resolved install_* flag: a plugin job whose owner is off comes back
+    # Every resolved install_* flag and *_on_host switch: a plugin job whose owner is off comes back
     # installed:false and is dropped below (tools/nos_identity.plugin_installed).
-    NOS_INSTALL_FLAGS: "{{ dict(query('varnames', '^install_') | zip(query('vars', *query('varnames', '^install_')))) | to_json }}"
+    NOS_INSTALL_FLAGS: "{{ dict(query('varnames', '^(install_|.*_on_host$)') | zip(query('vars', *query('varnames', '^(install_|.*_on_host$)')))) | to_json }}"
     # conductor vulnerability-scan: VULNSCAN_SECURITY_DIR is
     # {{ ansible_facts['env']['HOME'] }}/.nos/security. The catalog is
     # str.replace, so the facts token needs a NOS_* value here — inheriting

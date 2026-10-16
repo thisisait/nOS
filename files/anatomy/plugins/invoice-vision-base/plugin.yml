@@ -42,7 +42,7 @@ type:
 # =============================================================================
 
 requires:
-  feature_flag: install_ollama
+  feature_flag: vlm_on_host       # ruling R2: the VLM, not just the daemon
   variables:
     - playbook_dir           # repo root → tools/invoice-vision-intake.py
 

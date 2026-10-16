@@ -130,11 +130,11 @@ def forced_installs() -> dict[str, list[str]]:
 
 
 def install_flags(paths: list[Path] | None = None) -> dict[str, bool]:
-    """Every install_* and manifest install_flag (redis_docker) resolved like resolve_flag, then
+    """Every install_*, *_on_host switch and manifest install_flag (redis_docker) resolved like resolve_flag, then
     the manifest's forced_by applied. A Jinja value is omitted, not guessed."""
     paths = layer_paths() if paths is None else paths
     names = {m for p in paths
-             for m in re.findall(r"^(install_\w+):", p.read_text(encoding="utf-8"), re.MULTILINE)}
+             for m in re.findall(r"^(install_\w+|\w+_on_host):", p.read_text(encoding="utf-8"), re.MULTILINE)}
     names |= {r["install_flag"] for r in services() if r.get("install_flag")}
     bools = {"true": True, "yes": True, "false": False, "no": False}
     out = {f: bools.get(seen[-1][1].lower()) for f in sorted(names) if (seen := resolve_flag(f, paths))}
