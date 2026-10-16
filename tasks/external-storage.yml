@@ -32,61 +32,65 @@
   ansible.builtin.include_tasks: "tasks/stacks/external-paths.yml"
 
 # ── Create directory structure on SSD ────────────────────────────────────
-# Loop over overridden variables from external-paths.yml - no hard-coded
-# list, adding a new service = only set_fact in external-paths.yml.
+# Loop over the overridden vars from external-paths.yml, each with the flag its
+# service runs under: only installed services get a dir (2026-10-16), an empty
+# pre-created dir of an off service read as a backup source.
 
 - name: "[External SSD] Create data directories from override vars"
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ item.path }}"
     state: directory
     mode: '0755'
+  loop_control:
+    label: "{{ item.path }}"
+  when: item.enabled | bool
   loop:
     # Core infra
-    - "{{ mariadb_data_dir }}"
-    - "{{ postgresql_data_dir }}"
-    - "{{ redis_data_dir }}"
-    - "{{ authentik_data_dir }}"
-    - "{{ infisical_data_dir }}"
-    - "{{ vaultwarden_data_dir }}"
-    - "{{ bluesky_pds_data_dir }}"
-    - "{{ traefik_config_dir }}"
+    - { path: "{{ mariadb_data_dir }}", enabled: "{{ install_mariadb | default(false) }}" }
+    - { path: "{{ postgresql_data_dir }}", enabled: "{{ install_postgresql | default(false) }}" }
+    - { path: "{{ redis_data_dir }}", enabled: "{{ redis_docker | default(false) }}" }
+    - { path: "{{ authentik_data_dir }}", enabled: "{{ install_authentik | default(false) }}" }
+    - { path: "{{ infisical_data_dir }}", enabled: "{{ install_infisical | default(false) }}" }
+    - { path: "{{ vaultwarden_data_dir }}", enabled: "{{ install_vaultwarden | default(false) }}" }
+    - { path: "{{ bluesky_pds_data_dir }}", enabled: "{{ install_bluesky_pds | default(false) }}" }
+    - { path: "{{ traefik_config_dir }}", enabled: "{{ install_traefik | default(false) }}" }
     # IIAB
-    - "{{ wordpress_dir }}"
-    - "{{ nextcloud_dir }}"
-    - "{{ nextcloud_data_dir }}"
-    - "{{ kiwix_data_dir }}"
-    - "{{ maps_data_dir }}"
-    - "{{ calibreweb_books_dir }}"
-    - "{{ n8n_data_dir }}"
-    - "{{ openwebui_data_dir }}"
-    - "{{ portainer_data_dir }}"
-    - "{{ uptime_kuma_data_dir }}"
-    - "{{ homeassistant_config_dir }}"
-    - "{{ rustfs_data_dir }}"
-    - "{{ jellyfin_config_dir }}"
-    - "{{ jellyfin_cache_dir }}"
-    - "{{ jellyfin_movies_dir }}"
-    - "{{ jellyfin_shows_dir }}"
-    - "{{ jellyfin_music_dir }}"
+    - { path: "{{ wordpress_dir }}", enabled: "{{ install_wordpress | default(false) }}" }
+    - { path: "{{ nextcloud_dir }}", enabled: "{{ install_nextcloud | default(false) }}" }
+    - { path: "{{ nextcloud_data_dir }}", enabled: "{{ install_nextcloud | default(false) }}" }
+    - { path: "{{ kiwix_data_dir }}", enabled: "{{ install_kiwix | default(false) }}" }
+    - { path: "{{ maps_data_dir }}", enabled: "{{ install_offline_maps | default(false) }}" }
+    - { path: "{{ calibreweb_books_dir }}", enabled: "{{ install_calibreweb | default(false) }}" }
+    - { path: "{{ n8n_data_dir }}", enabled: "{{ install_n8n | default(false) }}" }
+    - { path: "{{ openwebui_data_dir }}", enabled: "{{ install_openwebui | default(false) }}" }
+    - { path: "{{ portainer_data_dir }}", enabled: "{{ install_portainer | default(false) }}" }
+    - { path: "{{ uptime_kuma_data_dir }}", enabled: "{{ install_uptime_kuma | default(false) }}" }
+    - { path: "{{ homeassistant_config_dir }}", enabled: "{{ install_homeassistant | default(false) }}" }
+    - { path: "{{ rustfs_data_dir }}", enabled: "{{ install_rustfs | default(false) }}" }
+    - { path: "{{ jellyfin_config_dir }}", enabled: "{{ install_jellyfin | default(false) }}" }
+    - { path: "{{ jellyfin_cache_dir }}", enabled: "{{ install_jellyfin | default(false) }}" }
+    - { path: "{{ jellyfin_movies_dir }}", enabled: "{{ install_jellyfin | default(false) }}" }
+    - { path: "{{ jellyfin_shows_dir }}", enabled: "{{ install_jellyfin | default(false) }}" }
+    - { path: "{{ jellyfin_music_dir }}", enabled: "{{ install_jellyfin | default(false) }}" }
     # DevOps
-    - "{{ gitea_data_dir }}"
-    - "{{ gitlab_data_dir }}"
-    - "{{ gitlab_config_dir }}"
-    - "{{ woodpecker_data_dir }}"
-    - "{{ paperclip_data_dir }}"
+    - { path: "{{ gitea_data_dir }}", enabled: "{{ install_gitea | default(false) }}" }
+    - { path: "{{ gitlab_data_dir }}", enabled: "{{ install_gitlab | default(false) }}" }
+    - { path: "{{ gitlab_config_dir }}", enabled: "{{ install_gitlab | default(false) }}" }
+    - { path: "{{ woodpecker_data_dir }}", enabled: "{{ install_woodpecker | default(false) }}" }
+    - { path: "{{ paperclip_data_dir }}", enabled: "{{ install_paperclip | default(false) }}" }
     # B2B (erpnext_data_dir deprecated - named volume, see P0.1 commit 3b88162)
-    - "{{ freescout_data_dir }}"
-    - "{{ outline_data_dir }}"
+    - { path: "{{ freescout_data_dir }}", enabled: "{{ install_freescout | default(false) }}" }
+    - { path: "{{ outline_data_dir }}", enabled: "{{ install_outline | default(false) }}" }
     # VoIP / Engineering / Data
-    - "{{ mikopbx_data_dir }}"
-    - "{{ qgis_data_dir }}"
-    - "{{ metabase_data_dir }}"
-    - "{{ superset_data_dir }}"
+    - { path: "{{ mikopbx_data_dir }}", enabled: "{{ install_mikopbx | default(false) }}" }
+    - { path: "{{ qgis_data_dir }}", enabled: "{{ install_qgis_server | default(false) }}" }
+    - { path: "{{ metabase_data_dir }}", enabled: "{{ install_metabase | default(false) }}" }
+    - { path: "{{ superset_data_dir }}", enabled: "{{ install_superset | default(false) }}" }
     # Observability TSDBs
-    - "{{ prometheus_storage_path }}"
-    - "{{ loki_storage_path }}"
-    - "{{ tempo_storage_path }}"
-    - "{{ grafana_data_dir }}"
+    - { path: "{{ prometheus_storage_path }}", enabled: "{{ install_observability | default(false) }}" }
+    - { path: "{{ loki_storage_path }}", enabled: "{{ install_observability | default(false) }}" }
+    - { path: "{{ tempo_storage_path }}", enabled: "{{ install_observability | default(false) }}" }
+    - { path: "{{ grafana_data_dir }}", enabled: "{{ install_observability | default(false) }}" }
 
 # ── Ollama modely (persistent across --blank) ──────────────────────────────
 # Path is set by external-paths.yml: ollama_models_dir → {{ external_storage_root }}/llmModels
