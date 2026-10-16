@@ -45,7 +45,48 @@ final class BindingResolver
 
 	public function resolve(Agent $agent): BindingDecision
 	{
-		return $this->decide($agent, $agent->backendName, $agent->modelPrimaryUri);
+		$chosen = self::hostChoice();
+		if ($chosen === '' || $chosen === $agent->backendName) {
+			return $this->decide($agent, $agent->backendName, $agent->modelPrimaryUri);
+		}
+		return $this->decideHostChoice($agent, $chosen);
+	}
+
+	/** agents_backend (ruling 2026-10-16), rendered into wing.plist as NOS_AGENTS_BACKEND. */
+	public static function hostChoice(): string
+	{
+		return trim((string) getenv('NOS_AGENTS_BACKEND'));
+	}
+
+	/**
+	 * This host binds every agent to one row: a choice, never a fallback. Served bound or refused
+	 * by name; the primary keeps its tier, and a provider that does not speak the row's protocol
+	 * becomes `<protocol>-<tier>`. A claude-* agent is refused: the CLI's own tool loop has no row.
+	 */
+	private function decideHostChoice(Agent $agent, string $chosen): BindingDecision
+	{
+		$why = "agent '{$agent->name}' cannot run on this host's agents_backend '{$chosen}'";
+		$uri = $agent->modelPrimaryUri;
+		$provider = substr($uri, 0, (int) strpos($uri, '-'));
+		if ($provider === 'claude') {
+			throw new BindingRefused("{$why}: it runs on the claude CLI, which no registry row serves.");
+		}
+		$speaks = ['anthropic' => 'anthropic', 'openai' => 'openai', 'openclaw' => 'openai'];
+		$protocol = (string) ((self::readRegistry($this->registryPath)[$chosen] ?? [])['protocol'] ?? 'anthropic');
+		if (($speaks[$provider] ?? null) !== $protocol) {
+			$tail = substr($uri, strlen($provider) + 1);
+			$uri = $protocol . '-' . (preg_match('/\b(haiku|sonnet|opus|vision)\b/', $tail, $m) ? $m[1] : $tail);
+		}
+		try {
+			$d = $this->decide($agent, $chosen, $uri);
+		} catch (BindingRefused $e) {
+			throw new BindingRefused("{$why}: " . $e->getMessage(), previous: $e);
+		}
+		if ($d->binding === null) {
+			throw new BindingRefused("{$why}: it is " . ($d->declaredDisarmed !== null ? 'not armed' : 'the default')
+				. ' — a host choice is served bound or not at all.');
+		}
+		return BindingDecision::bound($d->binding, $uri);
 	}
 
 	/**
@@ -56,6 +97,11 @@ final class BindingResolver
 	public function resolveFallback(Agent $agent): Binding
 	{
 		$declared = (string) $agent->fallbackBackendName;
+		$chosen = self::hostChoice();
+		if ($chosen !== '' && $chosen !== $declared) {
+			throw new BindingRefused("agent '{$agent->name}': this host's agents_backend is '{$chosen}'; "
+				. "a fallback to '{$declared}' would leave it.");
+		}
 		$d = $this->decide($agent, $declared, (string) $agent->modelFallbackUri);
 		if ($d->binding === null) {
 			throw new BindingRefused(
@@ -307,6 +353,8 @@ final class BindingDecision
 	private function __construct(
 		public readonly ?Binding $binding,
 		public readonly ?string $declaredDisarmed,
+		/** The URI served instead of model.primary, set only under agents_backend. */
+		public readonly ?string $uri = null,
 	) {
 	}
 
@@ -320,9 +368,9 @@ final class BindingDecision
 		return new self(null, $declared);
 	}
 
-	public static function bound(Binding $binding): self
+	public static function bound(Binding $binding, ?string $uri = null): self
 	{
-		return new self($binding, null);
+		return new self($binding, null, $uri);
 	}
 
 	public function backendName(): string

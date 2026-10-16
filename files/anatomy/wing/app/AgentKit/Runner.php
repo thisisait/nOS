@@ -256,7 +256,7 @@ final class Runner
 		// record does not declare) must abort at the door, not mid-lineage.
 		// No resolver wired → the default decision, byte-identical behaviour.
 		$decision = $this->bindingResolver?->resolve($agent) ?? BindingDecision::default();
-		$llm = $this->llmFactory->fromUri($agent->modelPrimaryUri, $decision->binding);
+		$llm = $this->llmFactory->fromUri($decision->uri ?? $agent->modelPrimaryUri, $decision->binding);
 		$this->activeBinding = $decision->binding;
 		$this->servedByUri = null;
 		$this->sessionTokensIn = 0;
@@ -338,6 +338,9 @@ final class Runner
 				// event should not grow a field that restates the URI.
 				$decision->binding !== null
 					? ['model_effective' => $decision->binding->modelId] : [],
+				// agents_backend chose the row, not the agent.yml: say so, and what served.
+				$decision->uri !== null
+					? ['chosen_by' => 'agents_backend', 'model_served' => $decision->uri] : [],
 			),
 			traceId: $traceId,
 		);

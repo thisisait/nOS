@@ -935,6 +935,10 @@ ollama_flash_attention: 1      # Flash attention for MLX (faster, less memory)
 # secret nos:minimax_api_key; the cost_basis honesty path in
 # pulse-run-agent.sh is unchanged (foreign backend → dollar figure dropped).
 minimax_enabled: false
+# Every AgentKit agent's row on THIS host: "" = each agent's own model.backend; "ollama" = all on
+# the local Ollama (needs install_ollama + ollama_enabled + an ollama_model of llm_cell_min_params_b
+# or more). A choice, never a fallback: an agent whose record does not name the row is refused.
+agents_backend: ""
 # The tier remaps: AgentKit tiers (claude-haiku/-sonnet primaries) map through
 # these to MiniMax model ids. EMPTY by default — the operator fills them from
 # MiniMax's catalog when arming; an armed backend with an empty model id

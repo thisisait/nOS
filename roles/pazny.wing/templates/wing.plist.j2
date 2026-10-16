@@ -248,6 +248,9 @@
              resolved as nos:minimax_api_key at session open. -->
         <key>NOS_ARMED_BACKENDS</key>
         <string>{{ (('minimax ' if minimax_enabled | default(false) | bool else '') ~ ('mistral-eu ' if mistral_enabled | default(false) | bool else '') ~ ('xai ' if xai_enabled | default(false) | bool else '') ~ ('ollama ' if ollama_enabled | default(false) | bool else '') ~ ('openclaw' if openclaw_backend_enabled | default(false) | bool else '')) | trim }}</string>
+        <!-- agents_backend: one row every agent binds to ("" = each agent's own). -->
+        <key>NOS_AGENTS_BACKEND</key>
+        <string>{{ agents_backend | default('') }}</string>
         <key>NOS_MINIMAX_MODEL</key>
         <string>{{ minimax_model | default('') }}</string>
         <key>NOS_MINIMAX_SMALL_MODEL</key>

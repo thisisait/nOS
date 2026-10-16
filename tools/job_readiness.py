@@ -78,7 +78,7 @@ def _env_vars() -> dict[str, str]:
 
 def resolved_config() -> dict:
     """The values the judge reads, through every layer (config.yml wins)."""
-    names = {"install_claude_cli_vendor", *_env_vars().values()}
+    names = {"install_claude_cli_vendor", "llm_cell_min_params_b", *_env_vars().values()}
     names |= {row["enabled_flag"] for row in _backends().values() if row.get("enabled_flag")}
     out = {}
     for name in names:
@@ -129,6 +129,13 @@ def agent_needs(name: str, cfg: dict, host: dict) -> list[Need]:
     model, gdpr = doc.get("model") or {}, doc.get("gdpr") or {}
     primary, declared = str(model.get("primary") or ""), model.get("backend")
     provider = primary.split("-", 1)[0]
+    chosen = str(cfg.get("agents_backend") or "").strip()
+    rebound = bool(chosen) and chosen != declared
+    if rebound:
+        refused = _host_choice_refusal(name, doc, chosen)
+        if refused:
+            return [Need(refused)]
+        declared = chosen
     if declared:
         row = _backends().get(declared) or {}
         flag = row.get("enabled_flag") or ""
@@ -145,6 +152,8 @@ def agent_needs(name: str, cfg: dict, host: dict) -> list[Need]:
                 needs.append(Need(f"{tier} model not configured ({var} is empty)"))
             if needs or declared != "ollama":
                 return needs
+            if rebound and _too_small(model_id, cfg):
+                return _too_small(model_id, cfg)
             have = host.get("ollama_models")
             if have is None:
                 return [Need("ollama not answering (ollama list failed)", required=True)]
@@ -152,7 +161,7 @@ def agent_needs(name: str, cfg: dict, host: dict) -> list[Need]:
         if _on(cfg.get(flag)):
             return [] if model_id else [Need(f"{declared} backend armed but {var} is empty")]
         eu_only = gdpr.get("transfers_outside_eu") is False and bool(gdpr.get("processors"))
-        if eu_only:
+        if eu_only or rebound:
             return [Need(f"{declared} backend not armed (set {flag}: true)")]
         if provider == "anthropic" and not host.get("anthropic_key"):
             return [Need(f"{declared} backend not armed — set {flag}: true and {var} "
@@ -162,6 +171,39 @@ def agent_needs(name: str, cfg: dict, host: dict) -> list[Need]:
     if provider == "anthropic" and not declared and not host.get("anthropic_key"):
         return [Need(f"{primary} needs ANTHROPIC_API_KEY or a model.backend")]
     return []
+
+
+def _host_choice_refusal(name: str, doc: dict, chosen: str) -> str:
+    """BindingResolver::decideHostChoice's refusals: agents_backend never rebinds an agent silently."""
+    why = f"agent '{name}' cannot run on this host's agents_backend '{chosen}'"
+    model, gdpr = doc.get("model") or {}, doc.get("gdpr") or {}
+    primary = str(model.get("primary") or "")
+    row = _backends().get(chosen)
+    if primary.split("-", 1)[0] == "claude":
+        return f"{why}: it runs on the claude CLI, which no registry row serves"
+    if not isinstance(row, dict) or row.get("default"):
+        return f"{why}: '{chosen}' is not a bindable row of {BACKENDS.relative_to(REPO)}"
+    if str((doc.get("metadata") or {}).get("runner_status") or "").lower() == "deferred":
+        return f"{why}: it is runner_status=deferred"
+    match = str(row.get("processor_match") or "")
+    if not match or not any(match in str((p or {}).get("name") or "") for p in gdpr.get("processors") or []):
+        return f"{why}: its gdpr.processors never names '{match}'"
+    if gdpr.get("transfers_outside_eu") is False and not (row.get("residency") or {}).get("eu"):
+        return f"{why}: its record says transfers_outside_eu: false and '{chosen}' is not EU-resident"
+    m = re.search(r"\b(haiku|sonnet|opus|vision)\b", primary.split("-", 1)[-1])
+    if not m or not (row.get("model_env") or {}).get(m.group(1)):
+        return f"{why}: its tier has no model on '{chosen}'"
+    return ""
+
+
+def _too_small(model_id: str, cfg: dict) -> list[Need]:
+    """The llm_cell_min_params_b rule (tools/nos_cell_binding.py) for an agent agents_backend rebound."""
+    from nos_cell_binding import params_b
+    floor, size = float(cfg.get("llm_cell_min_params_b") or 8), params_b(model_id)
+    if size is not None and size >= floor:
+        return []
+    return [Need(f"model {model_id} is {'of unknown size' if size is None else f'{size:g}B'}, below the "
+                 f"{floor:g}B llm_cell_min_params_b agents_backend asks for")]
 
 
 def job_needs(job: dict, cfg: dict, host: dict) -> list[Need]:
