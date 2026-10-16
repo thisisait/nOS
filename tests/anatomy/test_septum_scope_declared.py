@@ -11,7 +11,8 @@ state/keap-tables/*.table.yml names the path from a row to the client party:
               tools/septum-status.py reports it red)
 This is a DECLARATION, not row isolation: KEAP enforces no per-row owner yet.
 A missing key, an unwalkable path, or `none`/`personal` on a table whose rowRefs
-reach `party` is red. Reader: tools/septum-status.py.
+reach `party` is red. Committed defs carry no `unresolved`, and every `personal`
+table is `visibility: private` (operator ruling R5, 2026-10-16). Reader: tools/septum-status.py.
 """
 
 from __future__ import annotations
@@ -75,6 +76,14 @@ DEFS = _defs()
 @pytest.mark.parametrize("name", sorted(DEFS))
 def test_table_declares_its_client_scope(name):
     assert errors(name, DEFS) == []
+
+
+@pytest.mark.parametrize("name", sorted(DEFS))
+def test_table_names_its_client_and_hides_the_personal(name):
+    d = DEFS[name]
+    assert d.get("client_scope") != "unresolved", f"{name}: add a book_owner rowRef → party"
+    if d.get("client_scope") == "personal":
+        assert d.get("visibility") == "private", f"{name}: personal data at {d.get('visibility')!r}"
 
 
 def test_the_gate_has_teeth():
