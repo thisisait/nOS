@@ -120,7 +120,9 @@ def test_the_records_tool_honours_the_converge_vars():
     names = json.loads(subprocess.run([*tool, "--choice-vars"], capture_output=True, text=True,
                                       timeout=120, check=True).stdout)
     assert {"iris_backend", "install_thalamus", "ollama_enabled", "install_ollama"} <= set(names)
-    env = {**os.environ, "NOS_GDPR_VARS": json.dumps({"install_thalamus": True, "install_ollama": True,
+    # every other backend off, so a host whose config.yml arms one (mistral_enabled) reads the same
+    off = {n: False for n in names if n.endswith("_enabled") and n != "ollama_enabled"}
+    env = {**os.environ, "NOS_GDPR_VARS": json.dumps({**off, "install_thalamus": True, "install_ollama": True,
                                                       "ollama_enabled": True, "iris_backend": "ollama"})}
     out = subprocess.run([*tool, "--tier", "host", "--resolved"], capture_output=True, text=True,
                          timeout=120, check=True, env=env).stdout
