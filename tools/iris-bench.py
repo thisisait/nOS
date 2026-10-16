@@ -16,6 +16,7 @@ Usage:
     NOS_LIVE=1 tools/iris-bench.py                  # ~/.nos/thalamus.sock
     tools/iris-bench.py --sock /tmp/fake.sock --offline --out /tmp/run.json
     NOS_LIVE=1 NOS_ASSAY_DIR=~/projects/nos-assay tools/iris-bench.py --domain home-lab-tables
+    NOS_LIVE=1 NOS_ASSAY_DIR=~/projects/nos-assay tools/iris-bench.py --domain accounting --tier smoke
 
 A turn is a string or {say, checks}: a dict turn's checks see only that turn's slice of the wire,
 and turn N is judged only while every earlier turn passed (else not_reached); case-level `checks`
@@ -551,6 +552,11 @@ def depth(turns: list[dict]) -> int:
     return next((i for i, t in enumerate(turns) if t["status"] != "pass"), len(turns))
 
 
+def case_depth(case: dict, turns: list[dict]):
+    """Depth only for a case scored turn by turn; a plain case has none (None, not len - 1)."""
+    return depth(turns) if any(isinstance(t, dict) for t in case.get("turns") or []) else None
+
+
 def score(case: dict, got: dict, now: float) -> list[str]:
     return judge(case, got, now)[0]
 
@@ -598,12 +604,29 @@ def cases_path(cases, domain):
     return Path(os.environ["NOS_ASSAY_DIR"]).expanduser() / "domains" / domain / "cases.yml"
 
 
+TIERS = ("smoke", "standard", "full")  # each holds the smaller ones (nos-assay assay-gen)
+
+
+def load_cases(cases, domain, tier=None) -> list[dict]:
+    """--cases, or the domain's hand-written cases; --tier adds its generated cases (smoke < standard < full)."""
+    if tier is not None and tier not in TIERS:
+        sys.exit(f"--tier {tier!r}: one of {', '.join(TIERS)}")
+    path = cases_path(cases, domain)
+    out = yaml.safe_load(path.read_text(encoding="utf-8")) or []
+    gen = path.with_name("cases.generated.yml")
+    if domain and tier and gen.exists():
+        top = TIERS.index(tier)
+        out += [c for c in yaml.safe_load(gen.read_text(encoding="utf-8")) or [] if TIERS.index(c.get("tier", "full")) <= top]
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--sock")
     ap.add_argument("--offline", action="store_true", help="test path: needs an explicit --sock")
     ap.add_argument("--cases", default=str(CASES))
     ap.add_argument("--domain", help="read $NOS_ASSAY_DIR/domains/<domain>/cases.yml instead of --cases")
+    ap.add_argument("--tier", choices=TIERS, help="with --domain: add its generated cases up to this tier")
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--timeout", type=float, default=180.0, help="seconds without a line before a case fails")
     ap.add_argument("--repeat", type=int, default=1, help="run each case N times; a majority of passing runs passes")
@@ -620,7 +643,7 @@ def main(argv: list[str] | None = None) -> int:
               "or pass --offline with an explicit --sock for a fake.", file=sys.stderr)
         return 2
     sock = a.sock or str(SOCK)
-    cases = yaml.safe_load(cases_path(a.cases, a.domain).read_text(encoding="utf-8"))
+    cases = load_cases(a.cases, a.domain, a.tier)
     results = []
     n = max(1, a.repeat)
     for case in cases:
@@ -634,7 +657,7 @@ def main(argv: list[str] | None = None) -> int:
         ok = passes * 2 > n  # report a run that agrees with the verdict
         got, failed, _, _, turns = next((r for r in runs if not r[1]), runs[-1]) if ok else \
             next((r for r in runs if r[1] and not r[3]), runs[-1])
-        results.append({"id": case["id"], "kind": case.get("kind"), "turns": turns, "depth": depth(turns), "runs": n, "passes": passes, "pass": ok,
+        results.append({"id": case["id"], "kind": case.get("kind"), "turns": turns, "depth": case_depth(case, turns), "runs": n, "passes": passes, "pass": ok,
                         "no_data": all(r[3] for r in runs), "failed": [] if ok else failed,
                         "seconds": round(sum(r[2] for r in runs) / n, 2), "model_uri": got["model_uri"], "tools": got["tools"],
                         "approvals_rejected": sum(len(r[0]["approvals"]) for r in runs), "refused": got["refused"],
@@ -652,7 +675,8 @@ def main(argv: list[str] | None = None) -> int:
         word = "PASS" if r["pass"] else "NO-DATA" if r["no_data"] else "FAIL"
         print(f"{word:<7} {r['id']:<18} {r['passes']}/{r['runs']} {r['seconds']:>7.2f}s  {', '.join(r['failed'])}")
     judged = [r for r in results if not r["no_data"]]
-    mean = sum(r["depth"] for r in judged) / len(judged) if judged else 0.0
+    deep = [r["depth"] for r in judged if r["depth"] is not None]
+    mean = sum(deep) / len(deep) if deep else 0.0
     print(f"{sum(r['pass'] for r in judged)}/{len(judged)} passed ({len(results) - len(judged)} NO-DATA) · mean depth {mean:.2f} · "
           f"{', '.join(run['model_uri']) or 'no model_uri'} · {out}")
     return 0 if all(r["pass"] for r in judged) else 1
