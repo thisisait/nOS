@@ -23,7 +23,7 @@ import nos_identity  # noqa: E402
 
 CASES = REPO / "files/anatomy/thalamus/thalamus/tests/binding-cases.yml"
 NAMES = ("llm_on_host", "vlm_on_host", "decision_model_on_host", "ollama_enabled", "ollama_model",
-         "ollama_vision_model", "ollama_decision_model", "iris_backend", "agents_backend", "install_ollama")
+         "ollama_vision_model", "ollama_decision_model", "iris_backend", "agents_backend", "install_ollama", "ollama_small_model")
 
 
 def _load(name: str, path: str):
@@ -56,7 +56,8 @@ def test_a_fresh_host_binds_iris_on_device(tmp_path):
     assert got["ollama_enabled"] is True and got["install_ollama"] is True
     assert (got["ollama_model"], got["iris_backend"]) == ("qwen3:4b", "ollama")
     assert (got["ollama_vision_model"], got["ollama_decision_model"]) == ("", "")
-    assert got["agents_backend"] == "", "agents keep their own rows (definition A)"
+    assert got["agents_backend"] == "", "agents keep their own rows (ruling R4)"
+    assert got["ollama_small_model"] == "hermes3:8b", "both small models stay (ruling R3)"
 
 
 def test_each_switch_names_its_model(tmp_path):
@@ -121,3 +122,20 @@ def test_pulse_holds_below_the_floor_and_warns_below_the_recommendation(model, h
     assert bool([n for n in needs if not n.warn]) is held, needs
     assert bool([n for n in needs if n.warn]) is warned, needs
     assert (j.hold(agents=("librarian",), cfg={**CFG, "ollama_model": model}, host=host) == j.HOLD_EXIT) is held
+
+
+VISION = ("files/anatomy/plugins/invoice-vision-base/plugin.yml", "files/anatomy/agents/invoice-extract/agent.yml",
+          "files/anatomy/agents/invoice-vision-ocr/agent.yml")
+
+
+def test_the_vision_work_is_owned_by_vlm_on_host():
+    """Ruling R2: invoice vision needs the VLM, not just the daemon."""
+    docs = [yaml.safe_load((REPO / p).read_text()) for p in VISION]
+    assert [docs[0]["requires"]["feature_flag"], docs[1]["owner"], docs[2]["owner"]] == ["vlm_on_host"] * 3
+
+
+def test_install_flags_read_the_on_host_switches():
+    flags = nos_identity.install_flags(nos_identity.profile_layers(REPO / "profiles/core.yml"))
+    assert (flags.get("llm_on_host"), flags.get("vlm_on_host"), flags.get("decision_model_on_host")) == (True, False, False)
+    post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
+    assert "_on_host" in next(l for l in post.splitlines() if "NOS_INSTALL_FLAGS:" in l), "Pulse never sees the switch"
