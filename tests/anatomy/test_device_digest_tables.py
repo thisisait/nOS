@@ -32,7 +32,7 @@ def _seed() -> dict:
 def test_defs_load():
     for slug in ("device", "device-extraction"):
         doc = yaml.safe_load((TABLES_DIR / f"{slug}.table.yml").read_text())
-        assert doc["visibility"] == "tier-managers"
+        assert doc["visibility"] == "private"  # personal data (septum, R5)
         assert "graph" not in doc
         keys = [c["key"] for c in doc["schema"]["columns"]]
         assert "slug" in keys
@@ -48,7 +48,7 @@ _REGISTRY_KEYS = frozenset({
 
 def test_device_client_is_the_pairing_registry():
     pairing = yaml.safe_load((TABLES_DIR / "device-client.table.yml").read_text())
-    assert pairing["visibility"] == "tier-managers"
+    assert pairing["visibility"] == "private"  # personal data (septum, R5)
     assert "graph" not in pairing
     keys = {c["key"] for c in pairing["schema"]["columns"]}
     for col in ("slug", "type", "owner", "fingerprint", "scopes", "paired_at", "last_seen", "status"):
