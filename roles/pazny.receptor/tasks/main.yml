@@ -84,7 +84,7 @@
 # Only a 200 from /api/me passes; 403 = map refuses, 503 = no secret, 502 = KEAP down.
 - name: "[pazny.receptor] Verify — the socket answers this login as a person"
   ansible.builtin.shell: |
-    set -e
+    set -eo pipefail
     for _ in $(seq 1 20); do [ -S "{{ receptor_socket }}" ] && break; sleep 0.5; done
     MODE=$(stat -c '%a' "{{ receptor_socket }}" 2>/dev/null || stat -f '%Lp' "{{ receptor_socket }}")
     # A restart leaves the old file a moment (client 2026-10-16): retry what is transient (000/502), ~30 s.
@@ -93,6 +93,8 @@
       case "$CODE" in 000|502) sleep 1 ;; *) break ;; esac
     done
     echo "mode=${MODE} code=${CODE}"
+  args:
+    executable: /bin/bash
   register: _receptor_verify
   changed_when: false
   failed_when: >-
