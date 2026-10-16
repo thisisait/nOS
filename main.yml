@@ -2672,14 +2672,14 @@
       when: git_user_name | default('') | length > 0
       tags: ['git']
 
-    # R2: invoice intake runs only under vlm_on_host; a model named without it
-    # pulls the weights while Pulse drops the jobs, silently.
+    # R2: invoice intake runs only under vlm_on_host. It follows a named model,
+    # so this fires only when config.yml turns it off by hand.
     - name: "[Models] Warn: ollama_vision_model is set but vlm_on_host is off"
       ansible.builtin.debug:
         msg: >-
           WARNING: ollama_vision_model={{ ollama_vision_model }} but vlm_on_host is false, so
           invoice intake (intake-sweep, invoice-extract, invoice-vision-ocr) is not scheduled.
-          Add `vlm_on_host: true` to config.yml to keep it.
+          Drop `vlm_on_host: false` from config.yml to keep it.
       when:
         - ollama_vision_model | default('') | length > 0
         - not (vlm_on_host | default(false))

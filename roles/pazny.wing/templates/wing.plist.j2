@@ -273,7 +273,7 @@
         <key>NOS_LOCAL_SMALL_MODEL</key>
         <string>{{ ollama_small_model | default('') }}</string>
         <key>NOS_LOCAL_VISION_MODEL</key>
-        <string>{{ ollama_vision_model | default('') }}</string>
+        <string>{{ vlm_model | default('') }}</string>
         <!-- openclaw: the gateway's AGENT TARGET, not a model id (its OpenAI
              surface routes `model` to an agent). Token stays in secrets.yml. -->
         <key>NOS_OPENCLAW_AGENT</key>

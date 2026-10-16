@@ -995,7 +995,7 @@ xai_small_model: ""            # -> NOS_XAI_SMALL_MODEL     (haiku tier)
 # On-host models (ruling 2026-10-16): three switches over the knobs below; a later layer still
 # sets any knob itself (iris_backend: mistral-eu, ollama_model: qwen3:14b, ...).
 llm_on_host: true              # text model on the host: Iris works with no key, even badly
-vlm_on_host: false             # vision model (ollama_vision_model)
+vlm_on_host: "{{ ollama_vision_model != '' }}"  # vision model (vlm_model); on whenever ollama_vision_model is named
 decision_model_on_host: false  # decision model (ollama_decision_model, /v1/systemone, ollama >= 0.35)
 ollama_enabled: "{{ llm_on_host or vlm_on_host or decision_model_on_host }}"
 ollama_model: "{{ 'qwen3:4b' if llm_on_host else '' }}"  # -> NOS_LOCAL_MODEL (sonnet tier); Apache-2.0, ~2.5 GB q4
@@ -1008,7 +1008,10 @@ ollama_small_model: "hermes3:8b"  # -> NOS_LOCAL_SMALL_MODEL (haiku tier)
 # `qwen2.5vl:7b`, ~6GB at q4_K_M). The operator pulls it — this file only
 # names the id `ollama list` must show. See files/anatomy/agents/
 # invoice-vision-ocr/agent.yml for the consumer.
-ollama_vision_model: "{{ 'qwen2.5vl:7b' if vlm_on_host else '' }}"  # -> NOS_LOCAL_VISION_MODEL (vision tier)
+# The id an operator names; vlm_on_host follows it. `vlm_on_host: true` alone is served qwen2.5vl:7b
+# through vlm_model, since naming it back here would make the two vars a loop Ansible refuses.
+ollama_vision_model: ""
+vlm_model: "{{ ollama_vision_model or ('qwen2.5vl:7b' if vlm_on_host else '') }}"  # -> NOS_LOCAL_VISION_MODEL (vision tier)
 ollama_decision_model: "{{ 'tev1:4b' if decision_model_on_host else '' }}"  # pulled; no tier binds it yet
 # A cell bound to local ollama (install_thalamus -> iris, an agents_backend rebind) refuses below
 # llm_cell_min_params_b billion parameters (size from the tag; none = refused) and warns below

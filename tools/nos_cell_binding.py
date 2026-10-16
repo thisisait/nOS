@@ -25,7 +25,7 @@ REPO = Path(__file__).resolve().parents[1]
 REGISTER = "state/habitat/llm-backends.yml"
 # The config var that fills each local model env (the thalamus plist and wing.plist render these).
 CONFIG_VAR = {"NOS_LOCAL_MODEL": "ollama_model", "NOS_LOCAL_SMALL_MODEL": "ollama_small_model",
-              "NOS_LOCAL_VISION_MODEL": "ollama_vision_model"}
+              "NOS_LOCAL_VISION_MODEL": "vlm_model"}
 
 
 @dataclass
