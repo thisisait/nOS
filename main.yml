@@ -2837,7 +2837,19 @@
     - name: "Backup orchestrator (pazny.backup role)"
       ansible.builtin.import_role:
         name: pazny.backup
-      when: install_backup | default(false)
+      when:
+        - install_backup | default(false)
+        - backup_copy1_enabled | bool
+      tags: ['backup', 'ops']
+
+    # No copy #1 (no RustFS or install_backup off): remove a stale agent + backup.sh.
+    - name: "Backup orchestrator copy #1 absent (pazny.backup tasks_from absent)"
+      ansible.builtin.include_role:
+        name: pazny.backup
+        tasks_from: absent
+        apply:
+          tags: ['backup', 'ops']
+      when: not (backup_copy1_enabled | bool)
       tags: ['backup', 'ops']
 
     # ──────────────────────────────────────────────────────────────────────────

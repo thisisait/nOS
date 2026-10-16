@@ -82,6 +82,8 @@ SCAN_STATE_PROMOTED = REPO / "docs/llm/security/scan-state.json"
 #: `_still_holds`. A file, like every other source here.
 REMEDIATION_QUEUE = REPO / "docs/llm/security/remediation-queue.json"
 BACKUP_STATUS = pathlib.Path.home() / ".nos" / "backup-status.json"
+#: Written by backup-run.sh when copy #1 is off (restic takes the dumps directly).
+BACKUP_RESTIC_STATUS = pathlib.Path.home() / ".nos" / "backup-restic-status.json"
 STACKS_DIR = pathlib.Path(os.environ.get("NOS_STACKS_DIR", str(pathlib.Path.home() / "stacks")))
 
 # Backup freshness only. Job lateness is measured against each job's own
@@ -681,9 +683,14 @@ def security_scan(flags: dict | None | bool = True) -> dict | None:
 
 
 def backups() -> dict | None:
-    if not BACKUP_STATUS.is_file():
+    # Copy #1 off: its backup-status.json is a leftover, the direct restic run is the truth.
+    if (flags := _install_flags()) is not None:
+        import nos_identity  # noqa: PLC0415
+    copy1 = flags is None or nos_identity.copy1_installed(flags)
+    path = BACKUP_STATUS if copy1 else BACKUP_RESTIC_STATUS
+    if not path.is_file():
         return None
-    data = json.loads(BACKUP_STATUS.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
     sources = data.get("sources") or []
     if isinstance(sources, dict):
         sources = [{"name": k, **v} for k, v in sources.items() if isinstance(v, dict)]
@@ -691,13 +698,13 @@ def backups() -> dict | None:
     # A source this host never installed is no finding (an older render listed it);
     # an `off` row is: the run backed up an off service's data on purpose.
     off = {s.get("name") for s in sources if s.get("off")}
-    if (flags := _install_flags()) is not None:
-        import nos_identity  # noqa: PLC0415
+    if flags is not None:
         keep = set(nos_identity.backup_sources_installed(failed, flags)) | off
         failed = [n for n in failed if n in keep]
     stamps = [s.get("timestamp") for s in sources if isinstance(s.get("timestamp"), (int, float))]
     when = datetime.fromtimestamp(max(stamps), timezone.utc) if stamps else None
     return {
+        "copy1": copy1,
         "sources": len(sources),
         "failed": failed,
         "backed_up_while_off": [s.get("name") for s in sources if s.get("off") and s.get("success")],
@@ -989,7 +996,7 @@ def collect() -> dict:
 
     for label, path, fn in (
         ("security_scan", SCAN_STATE, security_scan),
-        ("backups", BACKUP_STATUS, backups),
+        ("backups", pathlib.Path(f"{BACKUP_STATUS} (copy #1) | {BACKUP_RESTIC_STATUS} (direct)"), backups),
         ("orphan_extensions", STACKS_DIR, orphan_extensions),
         ("loop_verdicts", REPO / "tools" / "loop-status.py", stalled_verdicts),
         ("restore_drill", pathlib.Path.home() / ".nos" / "backup-verify.json", restore_drill),
@@ -1231,6 +1238,8 @@ def hold_lines(report: dict) -> list[str]:
         out.append(
             f"{r['job']} last run skipped — loops paused (maintenance) ({r['age']})"
         )
+    if (report.get("backups") or {}).get("copy1") is False:
+        out.append("copy #1 not installed (no RustFS) — restic takes the dumps directly")
     if off := (report.get("backups") or {}).get("backed_up_while_off"):
         out.append(f"backed up while off: {', '.join(off)} (service off, its data kept in the set)")
     return out

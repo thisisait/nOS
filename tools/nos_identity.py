@@ -185,6 +185,12 @@ def backup_sources_installed(names, flags: dict, cfg: dict | None = None) -> lis
     return [n for n in names if by.get(n) not in flags or _on(flags[by[n]])]
 
 
+def copy1_installed(flags: dict, cfg: dict | None = None) -> bool:
+    """backup_copy1_enabled for `flags`: every install flag its own Jinja names is on."""
+    cfg = default_config() if cfg is None else cfg
+    return all(_on(flags.get(f)) for f in re.findall(r"install_\w+", str(cfg.get("backup_copy1_enabled"))))
+
+
 def scan_batch(state, batch: int, flags: dict | None = None) -> list[str]:
     """scan-runner.sh's batch: the oldest-checked notebook components this host installed."""
     comps = json.loads(Path(state).read_text(encoding="utf-8")).get("components") or {}

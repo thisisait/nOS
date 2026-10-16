@@ -1,0 +1,45 @@
+---
+# Copy #1 OFF (backup_copy1_enabled false: no RustFS or install_backup off).
+# An agent left by an earlier fuller install would keep running an old
+# backup.sh against a RustFS that is gone, and its exporter would keep
+# publishing that run's stale status. Remove both, plus the scripts.
+
+- name: "[backup] Boot out the copy-#1 agents (launchd)"
+  ansible.builtin.command: "launchctl bootout gui/{{ ansible_facts['user_uid'] | default(lookup('pipe', 'id -u')) }}/{{ item }}"
+  loop:
+    - "{{ backup_launchd_label }}"
+    - "{{ backup_exporter_launchd_label }}"
+  register: _backup_absent_bootout
+  changed_when: _backup_absent_bootout.rc == 0
+  failed_when: false
+  when: (nos_service_manager | default('launchd')) == 'launchd'
+
+- name: "[backup] Stop + disable the copy-#1 units (systemd --user)"  # noqa: command-instead-of-module
+  # command, not the systemd module: a unit that never existed errors there.
+  ansible.builtin.command: "{{ nos_user_systemctl | default('systemctl --user') }} disable --now {{ item }}"
+  loop:
+    - "{{ backup_launchd_label }}.timer"
+    - "{{ backup_launchd_label }}.service"
+    - "{{ backup_exporter_launchd_label }}.timer"
+    - "{{ backup_exporter_launchd_label }}.service"
+  register: _backup_absent_disable
+  changed_when: "'Removed' in (_backup_absent_disable.stdout | default('') ~ _backup_absent_disable.stderr | default(''))"
+  failed_when: false
+  when: (nos_service_manager | default('launchd')) == 'systemd-user'
+
+# Ungated by platform: a path that is not there is a no-op.
+- name: "[backup] Remove the copy-#1 agents, units and scripts"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ backup_launchd_plist }}"
+    - "{{ backup_exporter_launchd_plist }}"
+    - "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/{{ backup_launchd_label }}.timer"
+    - "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/{{ backup_launchd_label }}.service"
+    - "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/{{ backup_exporter_launchd_label }}.timer"
+    - "{{ ansible_facts['env']['HOME'] }}/.config/systemd/user/{{ backup_exporter_launchd_label }}.service"
+    - "{{ backup_script_path }}"
+    - "{{ backup_verify_script_path }}"
+    - "{{ backup_exporter_script_path }}"
+    - "{{ node_exporter_textfile_dir }}/backup.prom"
