@@ -682,12 +682,29 @@ def security_scan(flags: dict | None | bool = True) -> dict | None:
     return out
 
 
+def _configure_backup() -> bool | None:
+    """configure_backup through the layers (config.yml wins), or None when unreadable."""
+    try:
+        import nos_identity  # noqa: PLC0415
+        seen = nos_identity.resolve_flag("configure_backup")
+        return {"true": True, "yes": True, "false": False, "no": False}.get(seen[-1][1].lower()) if seen else None
+    except Exception:  # noqa: BLE001 — UNKNOWN, never a traceback
+        return None
+
+
 def backups() -> dict | None:
     # Copy #1 off: its backup-status.json is a leftover, the direct restic run is the truth.
     if (flags := _install_flags()) is not None:
         import nos_identity  # noqa: PLC0415
     copy1 = flags is None or nos_identity.copy1_installed(flags)
     path = BACKUP_STATUS if copy1 else BACKUP_RESTIC_STATUS
+    if not copy1:
+        # Rulings 2026-10-16: no backup at all is RED, and Backrest (reads copy #1's staging) is unsupported here.
+        backrest = bool(flags.get("install_backrest"))
+        configure = _configure_backup()
+        if backrest or configure is False or (configure and not path.is_file()):
+            return {"copy1": False, "absent": "backrest" if backrest else
+                    "none" if configure is False else "never-ran", "failed": [], "backed_up_while_off": []}
     if not path.is_file():
         return None
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -1094,6 +1111,14 @@ def reds(report: dict) -> list[str]:
             f"({scan['promoted_age']}); a fresh checkout reads the older one"
         )
     bk = report.get("backups")
+    absent = (bk or {}).get("absent")
+    if absent == "backrest":
+        out.append("Backrest without copy #1 is unsupported — its nos-dumps plan reads copy #1's staging "
+                   "(empty here); set install_backrest: false and use configure_backup")
+    elif absent == "none":
+        out.append("no backup at all — copy #1 not installed (no RustFS) and configure_backup is off")
+    elif absent == "never-ran":
+        out.append(f"no direct restic backup recorded — {BACKUP_RESTIC_STATUS} absent (run a converge with configure_backup)")
     if bk and bk.get("failed"):
         out.append(f"backup sources failed: {', '.join(str(f) for f in bk['failed'])}")
     elif bk and bk.get("stale"):
