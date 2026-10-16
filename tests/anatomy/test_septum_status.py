@@ -62,3 +62,17 @@ def test_cli_reads_a_rows_file(tmp_path):
                        capture_output=True, text=True, timeout=60)
     assert r.returncode == 0, r.stderr
     assert json.loads(r.stdout)["live"]["tables"]["invoice"]["by_client"] == {"alfa": 1}
+
+
+def test_a_dangling_ref_is_an_orphan_and_never_green(tmp_path):
+    # l3 points at an invoice that is gone: not "not a client's", an orphan offboarding would miss.
+    st = septum.live(septum.load_defs(), ROWS)
+    assert st["tables"]["invoice-line"]["orphans"] == 1
+    assert st["tables"]["invoice-line"]["not_a_client"] == 1
+    f = tmp_path / "rows.json"
+    f.write_text(json.dumps(ROWS), encoding="utf-8")
+    r = subprocess.run([sys.executable, str(TOOL), "--rows-json", str(f), "--json"],
+                       capture_output=True, text=True, timeout=60)
+    out = json.loads(r.stdout)
+    assert out["verdict"] != "OK"
+    assert any("invoice-line" in line and "orphan" in line for line in out["red"])
