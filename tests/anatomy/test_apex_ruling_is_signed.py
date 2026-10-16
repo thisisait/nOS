@@ -34,10 +34,11 @@ def test_the_committed_ruling_is_signed():
     assert unsigned(RULING) is None, unsigned(RULING)
 
 
-def test_a_changed_node_line_is_caught(tmp_path):
+def test_an_added_node_line_is_caught(tmp_path):
+    # The 2026-10-16 shape: a node gained a withheld entry. Appending needs no
+    # existing line, so rewording the ruling cannot break this self-test.
     copy = tmp_path / "ruling.yml"
-    text = RULING.read_text(encoding="utf-8")
-    line = next(l for l in text.splitlines() if l.startswith('  "service:authentik":'))
-    copy.write_text(text.replace(line, line.replace("gatehouse", "withheld")), encoding="utf-8")
+    copy.write_text(RULING.read_text(encoding="utf-8") + '  "service:new-node": { publish: withheld }\n',
+                    encoding="utf-8")
     msg = unsigned(copy)
     assert msg and "tools/apex-sign.py --confirm" in msg, msg
