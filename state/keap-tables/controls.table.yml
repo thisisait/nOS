@@ -23,6 +23,7 @@ description: >-
   editor, or a raw DataTable). Repo seeds the built-ins; operators add rows.
 driver: libsql
 visibility: tier-users            # every authenticated user sees the control panel
+client_scope: none
 anchors: ["nos.iiab.face"]
 
 schema:

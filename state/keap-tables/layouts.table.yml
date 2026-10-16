@@ -23,6 +23,7 @@ description: >-
   windows into. Repo seeds the built-ins; users add their own layouts.
 driver: libsql
 visibility: tier-users            # every authenticated user sees + adds layouts
+client_scope: none
 # Taxonomy anchor — the star this table's card orbits. Resolved by the seeder to
 # the real node id under the nOS self-model constellation ("nOS / Face").
 anchors: ["nos.iiab.face"]

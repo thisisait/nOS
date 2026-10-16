@@ -12,6 +12,7 @@ description: >-
   through print-job-step (the N:N junction), never by a column here.
 driver: libsql
 visibility: tier-managers
+client_scope: none
 anchors: ["nos.fixture.print"]
 
 schema:

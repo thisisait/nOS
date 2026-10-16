@@ -22,6 +22,7 @@ description: >-
   and graph relationships, all queryable and rendered in /explore.
 driver: libsql
 visibility: tier-users            # every authenticated user sees the catalog
+client_scope: none
 # Taxonomy anchor(s) — the star this table's card orbits. Resolved by the seeder
 # to the real node id under the nOS self-model constellation ("nOS / Applications").
 anchors: ["nos.applications"]

@@ -14,6 +14,7 @@ description: >-
 driver: libsql
 anchors: ["nos.accounting"]
 visibility: tier-managers
+client_scope: rowRef:source
 graph:
   mode: rows
   node: { idColumn: slug, labelColumn: description, kind: journal-entry }

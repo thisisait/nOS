@@ -15,6 +15,7 @@ description: >-
   values are synthetic by gate until the fixture's register entry exists.
 driver: libsql
 visibility: tier-managers
+client_scope: rowRef:party
 anchors: ["nos.fixture.party"]
 
 schema:

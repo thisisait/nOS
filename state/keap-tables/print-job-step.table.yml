@@ -19,6 +19,7 @@ description: >-
   with per-edge attributes: step order, planned window, actual times, status.
 driver: libsql
 visibility: tier-managers
+client_scope: rowRef:job
 anchors: ["nos.fixture.print"]
 
 schema:

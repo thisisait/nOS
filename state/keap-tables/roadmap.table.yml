@@ -60,6 +60,7 @@ description: >-
   verification are separate columns on purpose.
 driver: libsql
 visibility: tier-managers
+client_scope: none
 anchors: ["nos.roadmap"]
 
 schema:

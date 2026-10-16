@@ -33,6 +33,7 @@ description: >-
   never one the loop may take for itself.
 driver: libsql
 visibility: tier-managers
+client_scope: none
 anchors: ["nos.loop"]
 
 schema:

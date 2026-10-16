@@ -6,6 +6,7 @@ description: >-
   (the CortexDB Direct wire). agent = the key's principal; one agent never reads another's rows.
 driver: libsql
 visibility: private
+client_scope: personal
 sharedWith: []
 schema:
   columns:

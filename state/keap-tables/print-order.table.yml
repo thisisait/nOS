@@ -18,6 +18,7 @@ description: >-
   placed and when it is due. Jobs nest under orders via print-job.order.
 driver: libsql
 visibility: tier-managers
+client_scope: rowRef:customer
 anchors: ["nos.fixture.print"]
 
 schema:

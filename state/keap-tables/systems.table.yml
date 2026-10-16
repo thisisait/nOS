@@ -19,6 +19,7 @@ description: >-
   version, criticality, and dependency edges, queryable and rendered in /explore.
 driver: libsql
 visibility: tier-managers          # operator/manager inventory
+client_scope: none
 anchors: ["nos.systems"]
 
 schema:

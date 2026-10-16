@@ -17,6 +17,7 @@ description: >-
   nightly into PostGIS for the map.
 driver: libsql
 visibility: tier-managers
+client_scope: rowRef:party
 anchors: ["nos.fixture.party"]
 schema:
   columns:

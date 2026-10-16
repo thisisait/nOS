@@ -6,6 +6,7 @@ description: >-
   quantity is counted in. Jobs reference a material by rowRef.
 driver: libsql
 visibility: tier-managers
+client_scope: none
 anchors: ["nos.fixture.print"]
 
 schema:

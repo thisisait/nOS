@@ -19,6 +19,7 @@ description: >-
   field. The invoice itself never absorbs while it sits here.
 driver: libsql
 visibility: tier-managers
+client_scope: unresolved
 anchors: ["nos.digest.invoice-review"]
 schema:
   columns:

@@ -19,6 +19,7 @@ description: >-
 driver: libsql
 anchors: ["nos.digest.application"]
 visibility: tier-managers
+client_scope: rowRef:repo
 schema:
   columns:
     - { key: slug,      label: "Slug",      kind: text,   role: dimension, required: true, concept: identity.slug }

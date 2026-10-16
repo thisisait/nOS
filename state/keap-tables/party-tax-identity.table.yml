@@ -16,6 +16,7 @@ description: >-
   window; the party is a rowRef, restrict-on-delete.
 driver: libsql
 visibility: tier-managers
+client_scope: rowRef:party
 anchors: ["nos.fixture.party"]
 
 schema:

@@ -15,6 +15,7 @@ description: >-
   it exists.
 driver: libsql
 visibility: tier-managers
+client_scope: rowRef:order
 anchors: ["nos.fixture.print"]
 
 schema:

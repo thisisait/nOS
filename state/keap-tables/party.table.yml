@@ -38,6 +38,7 @@ description: >-
   one party has many facets without this table growing columns.
 driver: libsql
 visibility: tier-managers
+client_scope: self
 anchors: ["nos.fixture.party"]
 # Row projection (keap v1.47.0): each party materializes as a knowledge_object
 # → keap-embed-sync embeds it → semantic search / dedupe over the party spine.

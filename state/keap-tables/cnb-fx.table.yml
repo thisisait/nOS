@@ -19,6 +19,7 @@ description: >-
   `currency`. Filled by the n8n ČNB pack on its schedule.
 driver: libsql
 visibility: tier-managers
+client_scope: none
 anchors: []
 schema:
   columns:

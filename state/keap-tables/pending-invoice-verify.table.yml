@@ -24,6 +24,7 @@ driver: libsql
 # node first if this queue ever deserves its own branch.
 anchors: ["nos.digest.invoice"]
 visibility: tier-managers
+client_scope: unresolved
 graph:
   mode: rows
   node: { idColumn: slug, labelColumn: sidecar_id, kind: pending-invoice-verify }
