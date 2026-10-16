@@ -286,6 +286,9 @@ instance_org: ""                          # Client organization name
 gdpr_controller_name: "{{ instance_org | default('') }}"   # Art-30(1)(a)/Art-33(3) controller identity
 gdpr_dpo_name: ""                                          # Art-33(3)(b) DPO / contact-point name
 gdpr_dpo_contact: "{{ default_admin_email }}"              # Art-33(3)(b) DPO contact (defaults to admin email)
+# strict | standard | none (ruling 2026-10-16). Today only: a non-EU row serves an agent whose
+# record claims the EU only at none (nos_gdpr.effective_records, the thalamus preflight).
+gdpr_posture: standard
 instance_role: "standalone"               # standalone | headquarters | factory | office | division
 instance_parent: ""                       # Slug of parent box (for hierarchy)
 

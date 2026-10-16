@@ -170,9 +170,11 @@
 # the apps_runner uses for Tier-2 (--id=svc_<name> here vs app_<name> there).
 # The static DPA register (state/dpa-register.md) is the offline twin of these
 # same rows — both rendered from the one mapper, so /gdpr and the markdown agree.
+# --tier host --resolved (2026-10-16): plus the agent rows, each naming only the processor
+# that serves THIS host (active, served_by, transfers recomputed); the md stays the union.
 - name: "[pazny.wing] Emit Tier-1 GDPR Article-30 records (canonical mapper)"
   ansible.builtin.command:
-    cmd: "python3 {{ playbook_dir }}/tools/gdpr-records.py --tier core"
+    cmd: "python3 {{ playbook_dir }}/tools/gdpr-records.py --tier host --resolved"
   register: _gdpr_records_raw
   changed_when: false
   check_mode: false

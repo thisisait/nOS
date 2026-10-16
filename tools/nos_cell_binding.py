@@ -169,6 +169,13 @@ def warning(repo: Path, cell: str, env, warn_b: float) -> str:
 
 def requirement(repo: Path, service: str, cell: str, env, min_b: float) -> str | None:
     """None when the cell is cloud-bound or gets a big enough local model; else the refusal text."""
+    chosen = (env("NOS_CELL_BACKEND") or "").strip()
+    row = _at(yaml.safe_load((repo / REGISTER).read_text()), "backends", chosen) if chosen else None
+    posture = (env("NOS_GDPR_POSTURE") or "standard").strip()
+    if isinstance(row, dict) and _at(row, "residency", "eu") is not True and posture != "none":
+        return (f"Refusing {service}: iris_backend '{chosen}' is not EU-resident and gdpr_posture is "
+                f"'{posture}'. A non-EU row serves cell '{cell}' only under gdpr_posture: none.\n"
+                f"Fix: choose an EU row (iris_backend: ollama, or \"\" for the declared one).")
     got = _local_binding(repo, cell, env)
     if got is None:
         return None                      # cloud (or the default): no local model needed

@@ -278,6 +278,14 @@ def records_from_agents(agents_dir: str | pathlib.Path) -> list[dict]:
                 source_plugin=f"agents/{entry.name}/agent.yml",
             )
         )
+        model = m.get("model") or {}
+        # render-only: what effective_records() binds this record by
+        out[-1]["binding"] = {
+            "owner": m.get("owner"), "primary": str(model.get("primary") or ""),
+            "backend": model.get("backend"), "fallback_backend": model.get("fallback_backend"),
+            "backends_allowed": model.get("backends_allowed"),
+            "runner_status": str((m.get("metadata") or {}).get("runner_status") or ""),
+        }
     out.sort(key=lambda r: r["id"])
     return out
 
@@ -323,6 +331,74 @@ def records_from_importers(importers_dir: str | pathlib.Path) -> list[dict]:
             )
         )
     out.sort(key=lambda r: r["id"])
+    return out
+
+
+def _serving(b: dict, name: str, rec: dict, choices: dict, backends: dict) -> list[str]:
+    """The rows that serve agent `name` here, by the binders' rules; [] = refused or unarmed."""
+    armed = set(choices.get("armed") or ())
+    names = [str((p or {}).get("name") or "") for p in rec.get("processors") or []]
+    claim_eu = not rec.get("transfers_outside_eu") and bool(names)
+    posture = choices.get("posture") or "standard"
+    declared, primary = b.get("backend"), b.get("primary") or ""
+    allowed = b.get("backends_allowed")
+    if allowed is not None:  # a cell: the host's choice among its allowed rows (binding.rs)
+        row = (choices.get("cells") or {}).get(name) or declared
+        if row not in allowed:
+            return []
+    else:  # AgentKit: agents_backend rebinds, never silently (job_readiness._host_choice_refusal)
+        row = choices.get("agents_backend") or declared
+        if row != declared and primary.startswith("claude"):
+            return []
+    if b.get("runner_status") == "deferred":
+        return []
+    default = next((k for k, r in backends.items() if r.get("default")), "")
+    spec = backends.get(row or default)
+    if spec is None:
+        return []
+    match = str(spec.get("processor_match") or "")
+    if not spec.get("default") and not (match and any(match in n for n in names)):
+        return []  # gate 4: the record must name the row's processor
+    if not spec.get("default") and row not in armed:
+        # disarmed degrades to the hosted default, unless the record claims the EU (gate 8)
+        return [] if claim_eu or row != declared else [default]
+    if claim_eu and not (spec.get("residency") or {}).get("eu") and posture != "none":
+        return []
+    rows = [row or default]
+    fb = b.get("fallback_backend")
+    return rows + [fb] if fb and fb in armed and fb not in rows else rows
+
+
+def effective_records(records: list[dict], choices: dict, backends: dict) -> list[dict]:
+    """The records as THIS host serves them: an agent record keeps only the processors of its
+    serving rows (choices: armed rows, cells' choice, agents_backend, owner flags, posture),
+    transfers_outside_eu recomputed from their residency, stamped active + served_by.
+    Records without a `binding` (plugins, apps) pass through. Pure: the caller resolves config."""
+    out = []
+    for rec in records:
+        b = rec.get("binding")
+        if b is None:
+            out.append(rec)
+            continue
+        name = rec["id"].removeprefix("agent_")
+        rows = _serving(b, name, rec, choices, backends)
+        match = {k: str(r.get("processor_match") or "") for k, r in backends.items()}
+        own = [m for k, m in match.items() if k in rows and m]
+        others = [m for k, m in match.items() if k not in rows and m]
+        kept, foreign = [], False
+        for p in rec.get("processors") or []:
+            n = str((p or {}).get("name") or "")
+            if any(m in n for m in own):
+                kept.append(p)
+            elif not any(m in n for m in others):
+                kept.append(p)
+                foreign = True  # not a model row: its own claim stands
+        non_eu = any(not (backends[k].get("residency") or {}).get("eu") for k in rows)
+        owner = b.get("owner")
+        on = str((choices.get("flags") or {}).get(owner, False)).lower() in ("true", "yes", "1")
+        out.append({**rec, "processors": kept, "served_by": ", ".join(rows),
+                    "transfers_outside_eu": 1 if non_eu or (foreign and rec.get("transfers_outside_eu")) else 0,
+                    "active": bool(rows) and (owner is None or on)})
     return out
 
 

@@ -37,6 +37,7 @@
 				<th>Legal basis</th>
 				<th>Retention</th>
 				<th>Outside EU</th>
+				<th>Served by</th>
 				<th>Updated</th>
 			</tr>
 		</thead>
@@ -48,6 +49,7 @@
 					<td>{$p['legal_basis']}</td>
 					<td>{$p['retention_days'] ?? '—'} {if $p['retention_days']}days{/if}</td>
 					<td>{$p['transfers_outside_eu'] ? 'yes' : 'no'}</td>
+					<td>{$p['served_by'] ?? '—'}{if isset($p['active']) && !$p['active']} (inactive){/if}</td>
 					<td>{$p['updated_at']}</td>
 				</tr>
 			{/foreach}

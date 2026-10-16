@@ -402,6 +402,13 @@ $addMissingColumns($db, 'remediation_items', [
 	'security_floor' => 'TEXT',
 ]);
 
+// gdpr_processing.{active,served_by} — the live Art-30 row names what serves THIS host
+// (nos_gdpr.effective_records, 2026-10-16); state/dpa-register.md stays the union.
+$addMissingColumns($db, 'gdpr_processing', [
+	'active'    => 'INTEGER NOT NULL DEFAULT 1',
+	'served_by' => 'TEXT',
+]);
+
 // events.patch_id — correlate events with apply-patches runs.
 $addMissingColumns($db, 'events', [
 	'patch_id' => 'TEXT',

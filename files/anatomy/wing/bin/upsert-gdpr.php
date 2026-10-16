@@ -28,6 +28,7 @@ declare(strict_types=1);
  *   security_measures   ← record.security_measures   (JSON array)
  *   retention_days      ← record.retention_days
  *   transfers_outside_eu ← record.transfers_outside_eu (0/1)
+ *   active / served_by  ← gdpr-records.py --resolved (agent rows; absent = untouched)
  *   notes               ← record.notes
  *
  * The repository (App\Model\GdprRepository) handles JSON-encoding the
@@ -137,6 +138,8 @@ $copyKeys = [
     // it here, callers (apps_runner) couldn't satisfy the constraint even
     // when supplying the column — the array filter dropped it silently.
     'storage_location',
+    // served_by: the rows serving an agent row here (gdpr-records.py --resolved).
+    'served_by',
 ];
 
 foreach ($records as $i => $row) {
@@ -163,6 +166,9 @@ foreach ($records as $i => $row) {
     }
     if (array_key_exists('transfers_outside_eu', $row)) {
         $payload['transfers_outside_eu'] = $row['transfers_outside_eu'] ? 1 : 0;
+    }
+    if (array_key_exists('active', $row)) {
+        $payload['active'] = $row['active'] ? 1 : 0;
     }
     // Default the human-readable name to the id if the caller forgot — the
     // /gdpr UI uses it for the table heading.

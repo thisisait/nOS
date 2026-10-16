@@ -171,6 +171,8 @@ CREATE TABLE IF NOT EXISTS gdpr_processing (
     processors          TEXT NOT NULL DEFAULT '[]', -- JSON array of third-party processors
     security_measures   TEXT NOT NULL DEFAULT '[]', -- JSON array of mitigations
     notes               TEXT,                       -- free-form
+    active              INTEGER NOT NULL DEFAULT 1, -- 0 = its owner switch is off or nothing serves it here
+    served_by           TEXT,                       -- llm-backends rows serving an agent row here (gdpr-records --resolved)
     updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

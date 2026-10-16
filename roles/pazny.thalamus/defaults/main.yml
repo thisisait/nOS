@@ -36,6 +36,7 @@ thalamus_binding_env:
   NOS_LOCAL_SMALL_MODEL: "{{ ollama_small_model | default('') }}"
   NOS_MISTRAL_MODEL: "{{ mistral_model | default('') }}"
   NOS_CELL_BACKEND: "{{ iris_backend | default('') }}"
+  NOS_GDPR_POSTURE: "{{ gdpr_posture | default('standard') }}"
   NOS_LOCAL_TEMPERATURE: "{{ iris_local_temperature | default(0.3) }}"
   # The size floors src/binding.rs judges a local model by (refuse / warn); empty = not judged there.
   NOS_LLM_MIN_PARAMS_B: "{{ llm_cell_min_params_b | default('') }}"
