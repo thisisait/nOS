@@ -183,16 +183,17 @@ def test_the_dir_arrays_render_in_lockstep() -> None:
         backup_retention_daily=7, backup_retention_weekly=4, backup_retention_monthly=6,
     )
     defs = text.rsplit('\nmain "$@"', 1)[0]
-    out = subprocess.run(["bash", "-c", defs + '\necho "${#DIR_NAMES[@]} ${#DIR_PATHS[@]} ${#DIR_EMPTY_OK[@]} ${#DIR_ENABLED[@]} '
-                          '${DIR_NAMES[1]} ${DIR_PATHS[1]} ${DIR_ENABLED[1]} ${DIR_EMPTY_OK[2]}"'],
+    out = subprocess.run(["bash", "-c", defs + '\necho "${#DIR_NAMES[@]} ${#DIR_PATHS[@]} ${#DIR_EMPTY_OK[@]} '
+                          '${DIR_NAMES[1]} ${DIR_PATHS[1]} ${DIR_EMPTY_OK[1]}"'],
                          capture_output=True, text=True, check=True).stdout.split()
-    assert out == ["3", "3", "3", "3", "gitlab", "/gl", "false", "true"], out
+    assert out == ["2", "2", "2", "outline", "/o", "true"], out
 
 
-def test_an_off_service_dir_is_skipped_only_when_absent(tmp_path) -> None:
-    """Review 2026-10-04: filtering on the flag alone dropped an off service's
-    leftover data from the nightly set, silently, until retention aged it out.
-    Runs the real run_dirs loop with tar/S3 stubbed out."""
+def test_an_off_service_dir_is_not_in_the_set(tmp_path) -> None:
+    """2026-10-16 (supersedes review 2026-10-04): an off service is not
+    installed, so its dir is neither backed up nor reported, present or not —
+    external-storage.yml pre-creates it empty and it FAILED nightly. On + absent
+    stays FAILED. Runs the real run_dirs loop with tar/S3 stubbed out."""
     import subprocess
     present = tmp_path / "vault"
     present.mkdir()
@@ -204,7 +205,7 @@ def test_an_off_service_dir_is_skipped_only_when_absent(tmp_path) -> None:
         backup_dirs_to_dump=[
             {"name": "mikopbx", "path": str(tmp_path / "none"), "flag": "install_mikopbx"},  # off, absent
             {"name": "gitea", "path": str(tmp_path / "gone"), "flag": "install_gitea"},     # on, absent
-            {"name": "vaultwarden", "path": str(present), "flag": "install_vaultwarden"},  # off, present: last
+            {"name": "vaultwarden", "path": str(present), "flag": "install_vaultwarden"},  # off, present
         ],
         backup_encryption_enabled=False, backup_overwrite_same_day=True,
         backup_retention_daily=7, backup_retention_weekly=4, backup_retention_monthly=6,
@@ -213,10 +214,8 @@ def test_an_off_service_dir_is_skipped_only_when_absent(tmp_path) -> None:
     probe = ('\nlog() { echo "LOG $*"; }\nstatus_append() { echo "STATUS $1 $4"; }\n'
              'docker() { return 1; }\naws() { return 1; }\nrun_dirs 2>/dev/null; true')
     out = subprocess.run(["bash", "-c", defs + probe], capture_output=True, text=True).stdout
-    assert "STATUS dir-mikopbx" not in out, "off and absent must be skipped"
+    assert "mikopbx" not in out and "vaultwarden" not in out, f"an off service's dir was touched: {out}"
     assert "STATUS dir-gitea 0" in out, "on and absent must be FAILED"
-    assert "dir/vaultwarden: service off" not in out and "vaultwarden" in out, (
-        "off but present must still be attempted, not skipped")
 
 
 def test_a_directories_only_archive_counts_as_empty() -> None:
