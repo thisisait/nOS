@@ -7,8 +7,10 @@
 	import ComponentView from './Component.svelte';
 	import type { Decision, Waiting } from './approvals';
 
-	let { waiting, of, whole, onseen, ondecide }: {
+	// scope: whom the person works for; the bridge refuses a switch while a card waits, so it is the card's.
+	let { waiting, of, whole, scope = null, onseen, ondecide }: {
 		waiting: Waiting;
+		scope?: string | null;
 		of: number;
 		whole: boolean;
 		onseen: (approval: string) => void;
@@ -27,7 +29,7 @@
 
 <section class="card" data-approval={waiting.approval}>
 	<div class="edit">
-		<p class="head">approval {waiting.approval}{of > 1 ? ` (1 of ${of})` : ''}</p>
+		<p class="head">approval {waiting.approval}{of > 1 ? ` (1 of ${of})` : ''}{scope ? ` · asked for ${scope}` : ''}</p>
 		<ComponentView component={waiting.component} />
 		<div class="end" bind:this={end} aria-hidden="true"></div>
 	</div>

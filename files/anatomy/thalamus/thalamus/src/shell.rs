@@ -3,7 +3,7 @@
 //! Whatever it cannot decode is shown as a refusal (decode_to_shell), never dropped.
 
 use nos_contract::renderers::{Choice, Component, Delta, LensOp, RowOp, SchemaColumn, Step, Tone, TreeNode, WhenOp};
-use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, ToShell, ToThalamus, WidgetSpec};
+use nos_contract::wire::{decode_to_shell, encode, ControlView, Decision, Scope, ToShell, ToThalamus, WidgetSpec};
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
@@ -36,6 +36,8 @@ pub struct App {
     /// latest, /choose #n that one. `asked` numbers them, never reused in a run.
     choices: Vec<(usize, String, Choice)>,
     asked: usize,
+    /// Whom the person works for, as serve said it (working_for); None is no wall.
+    scope: Option<String>,
 }
 
 /// Hard-wraps to `w` columns, so no part of a value is ever cut off the screen.
@@ -383,7 +385,20 @@ impl App {
                 }
             }
             ToShell::ApprovalRequest { approval, component, .. } => {
-                self.pending.push_back((approval, component_lines(&component)));
+                let mut lines = component_lines(&component);
+                // serve refuses a switch while a card waits, so the scope now is the one it was asked under.
+                if let Some(s) = &self.scope {
+                    lines.insert(1.min(lines.len()), warn(format!("  asked for {s}")));
+                }
+                self.pending.push_back((approval, lines));
+            }
+            ToShell::WorkingFor { scope, name, .. } => {
+                self.scope = (scope != Scope::All).then(|| name.clone());
+                self.lines.push(head(match scope {
+                    Scope::All => "working for everything (no wall)".to_string(),
+                    Scope::Personal => "working on personal data".to_string(),
+                    Scope::Client(_) => format!("working for {name}"),
+                }));
             }
             ToShell::Refused { reason, widget: None } => self.lines.push(warn(format!("refused: {reason}"))),
             ToShell::Refused { reason, widget: Some(w) } => self.lines.push(warn(format!("refused (widget {w}): {reason}"))),
@@ -447,6 +462,18 @@ impl App {
                     "/approvals" => control(ControlView::Approvals),
                     "/red" => control(ControlView::RedStatus),
                     t if t == "/choose" || t.starts_with("/choose ") => self.choose(&t["/choose".len()..]),
+                    t if t == "/for" || t.starts_with("/for ") => {
+                        let scope = match t["/for".len()..].trim() {
+                            "" => {
+                                self.lines.push(warn("not sent: /for <client>, /for personal or /for all".into()));
+                                return None;
+                            }
+                            "all" => Scope::All,
+                            "personal" => Scope::Personal,
+                            c => Scope::Client(c.to_string()),
+                        };
+                        Some(ToThalamus::WorkingFor { scope })
+                    }
                     _ => {
                         self.lines.push(Line::styled(format!("you: {text}"), Style::new().fg(Color::Cyan)));
                         Some(ToThalamus::Turn { session: self.session.clone(), text })
@@ -499,7 +526,8 @@ pub fn draw(f: &mut Frame, app: &App) {
     let prompt = match app.pending.front() {
         None => {
             tail(f, &app.lines, log);
-            Line::from(format!("> {}", app.input))
+            let at = app.scope.as_ref().map(|s| format!("[{s}] ")).unwrap_or_default();
+            Line::from(format!("{at}> {}", app.input))
         }
         // The approval is pinned from its header down; the scrollback gets what is left.
         Some((_, shown)) => {

@@ -77,7 +77,11 @@ export type ToShell =
 	| { t: 'activity'; session: string; phase: Phase }
 	| { t: 'widget'; session: string; widget: string; component: Component }
 	| { t: 'form_result'; session: string; widget: string; form: string; row: string }
-	| { t: 'table_changed'; session: string; table: string; row: string };
+	| { t: 'table_changed'; session: string; table: string; row: string }
+	| { t: 'working_for'; session: string; scope: Scope; name: string };
+
+/** Whom the person works for (wire.rs Scope): no wall, personal data, or one client party. */
+export type Scope = 'all' | 'personal' | { client: string };
 
 /** What the thalamus is doing (wire.rs Phase); the eye shows it, the log does not. */
 export type Phase = 'thinking' | { tool: { name: string } } | 'writing' | 'idle';
@@ -90,7 +94,8 @@ export type ToThalamus =
 	| { t: 'control'; view: 'inbox' | 'approvals' | 'red_status' }
 	| { t: 'widget'; widget: string; spec: WidgetSpec; trigger: 'click' | 'restore' | 'table_changed' }
 	| { t: 'form_submit'; form: string; widget: string; values: Record<string, string | number | boolean> }
-	| { t: 'choice_reply'; session: string; choice: string; picked: string[] };
+	| { t: 'choice_reply'; session: string; choice: string; picked: string[] }
+	| { t: 'working_for'; scope: Scope };
 
 /** What a widget re-runs, as the person and without the model (wire.rs WidgetSpec): exactly one key. */
 export type WidgetSpec =

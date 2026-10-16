@@ -18,6 +18,17 @@ pub enum ToThalamus {
     FormSubmit { form: String, widget: String, values: serde_json::Map<String, serde_json::Value> },
     /// The person's answer to a choice serve rendered: labels only, never a decision to write.
     ChoiceReply { session: String, choice: String, picked: Vec<String> },
+    /// Whom the person works for in this session (the septum): every table read honours it.
+    WorkingFor { scope: Scope },
+}
+
+/// all: no wall (a session before one is said); personal; or one client party (id, slug or name).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Scope {
+    All,
+    Personal,
+    Client(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -47,6 +58,8 @@ pub enum ToShell {
     FormResult { session: String, widget: String, form: String, row: String },
     /// A write this connection approved landed in `table`; its widgets may re-run.
     TableChanged { session: String, table: String, row: String },
+    /// The scope serve set, the client resolved to its party id; `name` is what both shells show.
+    WorkingFor { session: String, scope: Scope, name: String },
 }
 
 /// What a widget re-runs: exactly one of rows (query_rows' arguments), a chart, a form, a kpi.
@@ -177,6 +190,13 @@ fn need_token(s: &str) -> Result<(), String> {
     if ok { Ok(()) } else { Err(format!("widget is not [A-Za-z0-9_-]{{1,64}}: {s:?}")) }
 }
 
+fn need_scope(s: &Scope) -> Result<(), String> {
+    match s {
+        Scope::Client(c) if c.trim().is_empty() || c.chars().count() > 120 => Err("a client is named by 1-120 chars".into()),
+        _ => Ok(()),
+    }
+}
+
 /// The model has no form: one is drawn only inside the widget message the person asked for.
 fn not_a_form(c: &Component) -> Result<(), String> {
     match c {
@@ -252,6 +272,11 @@ fn check_shell(m: &ToShell) -> Result<(), String> {
             }
         }
         ToShell::Refused { widget, .. } => widget.as_deref().map_or(Ok(()), need_token),
+        ToShell::WorkingFor { session, scope, name } => {
+            need_uuid("session", session)?;
+            need_scope(scope)?;
+            if name.trim().is_empty() || name.chars().count() > 200 { Err("a scope is said by a name of 1-200 chars".into()) } else { Ok(()) }
+        }
         ToShell::Widget { session, widget, component } => {
             need_uuid("session", session)?;
             need_token(widget)?;
@@ -296,6 +321,7 @@ pub fn decode_to_thalamus(line: &str) -> Result<ToThalamus, String> {
                 return Err("a picked label is over 60 chars".into());
             }
         }
+        ToThalamus::WorkingFor { scope } => need_scope(scope)?,
         _ => {}
     }
     Ok(m)

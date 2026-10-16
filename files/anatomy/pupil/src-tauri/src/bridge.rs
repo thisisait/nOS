@@ -40,8 +40,9 @@ impl Pending {
 
     pub fn admit(&mut self, m: &ToThalamus) -> Result<(), String> {
         match m {
-            // A choice reply runs the model's next turn, so it waits as a turn does.
-            ToThalamus::Turn { .. } | ToThalamus::ChoiceReply { .. } if !self.0.is_empty() => {
+            // A choice reply runs the model's next turn, so it waits as a turn does; a scope switch
+            // waits too, so a card keeps the scope it was asked under.
+            ToThalamus::Turn { .. } | ToThalamus::ChoiceReply { .. } | ToThalamus::WorkingFor { .. } if !self.0.is_empty() => {
                 Err("an approval is waiting: decide it first".into())
             }
             ToThalamus::ApprovalDecision { approval, .. } if self.0.front() != Some(approval) => {
@@ -180,6 +181,17 @@ mod tests {
         assert!(p.admit(&reply).is_err(), "a choice reply went out while an approval waits");
         assert!(p.admit(&decision("a")).is_ok());
         assert!(p.admit(&reply).is_ok());
+    }
+
+    /// A scope switch waits on an approval: the card keeps the scope it was asked under (D2).
+    #[test]
+    fn pending_refuses_a_scope_switch_while_one_waits() {
+        let mut p = Pending::default();
+        let switch = ToThalamus::WorkingFor { scope: nos_contract::wire::Scope::Personal };
+        asked(&mut p, "a");
+        assert!(p.admit(&switch).is_err(), "a scope switch went out while an approval waits");
+        assert!(p.admit(&decision("a")).is_ok());
+        assert!(p.admit(&switch).is_ok());
     }
 
     #[test]

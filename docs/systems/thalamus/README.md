@@ -73,6 +73,23 @@ ruling 2026-10-11), it does not go through the receptor's socket.
 The shell raises three views without the model: F2 inbox, F3 approvals
 (`tools/awaiting-operator.py`), F4 red status (`tools/red-status.py`).
 
+## Whom the person works for (the septum)
+
+`/for <client>`, `/for personal` or `/for all` (terminal and pupil composer) sends
+`working_for`. serve resolves the client against the party rows of role `client`
+(an unknown one is refused, naming the clients), reads each table def's
+`client_scope` from `state/keap-tables` (`src/septum.rs`, the vocabulary of
+`tools/septum-status.py`), records the switch in the ledger and forgets the rows
+shown before. Reads then honour it: a `book_owner`, `self` or `rowRef:` table keeps
+that client's rows only (personal: no client's) and the query says so; a personal
+table, a table Iris made for another client, or one no def declares is hidden from
+query_rows, widgets, forms and dashboard offers, and list_tables names it as hidden.
+A table Iris creates while working for a client is that client's (the create's
+ledger result names it). Both shells show the scope on the turn and on the card; a
+switch is refused while a card waits. Not yet covered: `search_memory` (KEAP's
+semantic search crosses the septum) and rowRef selects in forms (they list every
+parent row).
+
 ## Widgets and forms
 
 A widget is a spec the pupil stores in its workspace layout

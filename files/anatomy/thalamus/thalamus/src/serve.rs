@@ -5,10 +5,11 @@
 
 use crate::binding::Binding;
 use crate::ledger::{Kind, Ledger, RowOp, Session};
+use crate::septum::Septum;
 use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget, Kpi,
                                Dropped, FieldKind, Form, FormField, InboxItem, InboxList, Lens, LensOp, Lines, List, ListItem, Omitted, Parent, RedStatus,
                                Row, RowDiffApproval, SchemaColumn, ColumnAddApproval, ColumnKind, ExistingColumn, Series, Table, TableResults, TableSchemaApproval, Visibility};
-use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, FormSpec, KpiSpec, Op, Phase, ToShell, ToThalamus, Trigger,
+use nos_contract::wire::{check_spec, decode_to_thalamus, encode, ChartSpec, ControlView, Decision, FormSpec, KpiSpec, Op, Phase, Scope, ToShell, ToThalamus, Trigger,
                          WidgetChart, WidgetSpec};
 use nos_contract::uid;
 use serde_json::{json, Map, Value};
@@ -53,6 +54,8 @@ pub struct Server {
 pub struct Person {
     pub username: String,
     pub groups: Vec<String>,
+    /// Whom they work for in this connection (wire.working_for); None is no wall.
+    pub working_for: Option<Septum>,
 }
 
 impl Person {
@@ -168,7 +171,7 @@ pub fn person(login: &str, map: &Path) -> Option<Person> {
     let ok = |v: &Value| v.as_str().filter(|s| !s.is_empty() && !s.contains(['\r', '\n', ','])).map(str::to_string);
     let username = ok(entry.get("username")?)?;
     let groups = entry.get("groups")?.as_array()?.iter().map(ok).collect::<Option<Vec<_>>>()?;
-    Some(Person { username, groups })
+    Some(Person { username, groups, working_for: None })
 }
 
 /// Binds the socket 0600 from birth: no window where another uid may connect.
@@ -263,6 +266,9 @@ struct Open {
     /// right after it with exactly those counts is that source's chart, so it can be pinned (2026-10-15).
     last_group: Option<(Value, Vec<(String, f64)>)>,
 }
+
+/// A table's rows as serve reads them: (row id, values).
+type Rows = Vec<(String, Map<String, Value>)>;
 
 /// How many widget forms one session holds open.
 const MAX_FORMS: usize = 24;
@@ -651,7 +657,7 @@ impl Server {
     fn connection(&self, mut out: UnixStream) {
         let login = peer_login(&out);
         let who = login.as_deref().and_then(|l| person(l, &self.map));
-        let Some(who) = who.filter(|p| !p.uid().is_empty()) else {
+        let Some(mut who) = who.filter(|p| !p.uid().is_empty()) else {
             let l = login.unwrap_or_else(|| "unknown uid".into());
             self.say(format!("refused {l}: not in the identity map"));
             return refuse(&mut out, &format!("{l} is not in the identity map"));
@@ -687,6 +693,11 @@ impl Server {
                 Ok(ToThalamus::Control { view }) => {
                     if let Some(o) = self.ensure(&who, &mut out, &mut open) {
                         self.control(&who, &mut out, o, view);
+                    }
+                }
+                Ok(ToThalamus::WorkingFor { scope }) => {
+                    if let Some(o) = self.ensure(&who, &mut out, &mut open) {
+                        self.working_for(&mut who, &mut out, o, &scope, &peer);
                     }
                 }
                 Ok(ToThalamus::Widget { widget, spec, trigger }) => {
@@ -875,8 +886,11 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                     // Known to the session at once: an insert, a form or a query takes it with no query first.
                     o.dates.insert(table.clone(), t.columns.iter().filter(|c| c.kind == ColumnKind::Date).map(|c| c.key.clone()).collect());
                     o.tables_seen.insert(table.clone(), t.title.clone());
-                    (format!("Approved: table {} ({table}) created, private to you.", t.title),
-                     json!({"approval": approval, "written": true, "table": table}),
+                    // The ledger keeps whom it was made for: the septum shows it only while the person works for them.
+                    let made = who.working_for.as_ref().and_then(|s| s.client.as_ref());
+                    let whose = made.map(|c| format!(" It is {}'s: shown only while you work for them.", c.1)).unwrap_or_default();
+                    (format!("Approved: table {} ({table}) created, private to you.{whose}", t.title),
+                     json!({"approval": approval, "written": true, "table": table, "working_for": made.map(|c| &c.0)}),
                      format!("approved, table {} ({table}) created, empty and private; it takes rows now", t.title))
                 }
                 Err(why) => (format!("Approved, but the table was not created: {why}"), json!({"approval": approval, "error": why}),
@@ -1181,6 +1195,49 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let kept = if same { "; that is your suggestion, which the pupil preselects, so it may have been left as it was" } else { "" };
         o.messages.push(json!({"role": "user", "content": format!("[thalamus] choice {choice}: picked {}{kept}", quoted(picked))}));
         true
+    }
+
+    /// The person says whom they work for (D2): resolved and recorded before it is set, refused while a
+    /// card waits (it keeps the scope it was asked under); rows shown before are forgotten.
+    fn working_for(&self, who: &mut Person, out: &mut UnixStream, o: &mut Open, scope: &Scope, peer: &Value) {
+        let set = (|| {
+            if !o.pending.is_empty() {
+                return Err("an approval is waiting: decide it first, so its card keeps the scope it was asked under".to_string());
+            }
+            let want = match scope {
+                Scope::All => return Ok(None),
+                Scope::Personal => None,
+                Scope::Client(c) => Some(c.as_str()),
+            };
+            let me = Person { working_for: None, ..who.clone() };
+            let parties = self.rows(&me, "party").map_err(|e| format!("the clients are unreadable ({e}): the scope is not set"))?;
+            Septum::new(&self.repo.join("state/keap-tables"), &parties, want).map(Some)
+        })();
+        let septum = match set {
+            Ok(s) => s,
+            Err(why) => {
+                let _ = self.record(o, Kind::ToolResult, Some("working_for"), json!({"scope": scope, "error": why, "peer": peer}));
+                return refuse(out, &why);
+            }
+        };
+        let resolved = septum.as_ref().map_or(Scope::All, |s| s.client.as_ref().map_or(Scope::Personal, |c| Scope::Client(c.0.clone())));
+        let name = septum.as_ref().map_or("everything".to_string(), Septum::name);
+        if let Err(why) = self.record(o, Kind::ToolResult, Some("working_for"), json!({"scope": resolved, "name": name, "peer": peer})) {
+            return refuse(out, &format!("not recorded, so not set: {why}"));
+        }
+        let heard = match &septum {
+            None => "the person lifted the wall: every table and row they may read is shown".to_string(),
+            Some(s) => format!("the person now works {}: query_rows keeps only {} rows and says so; a personal table, another \
+client's, or one no def declares is hidden and said by name", s.said(), if s.client.is_some() { "that client's" } else { "no client's" }),
+        };
+        who.working_for = septum;
+        // A row shown under the old scope is not proposable under the new one.
+        o.shown.clear();
+        o.tables_seen.clear();
+        o.dates.clear();
+        o.last_group = None;
+        o.messages.push(json!({"role": "user", "content": format!("[thalamus] {heard}; query again before any proposal")}));
+        send(out, &ToShell::WorkingFor { session: o.session.clone(), scope: resolved, name });
     }
 
     fn turn(&self, who: &Person, out: &mut UnixStream, o: &mut Open, text: &str) {
@@ -1546,20 +1603,68 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// Client bench 2026-10-14: a local model passes the table's title. One title match is the table;
     /// none names the tables there are, so the next call can be right. Local bench r3: a form too.
     fn table_info(&self, who: &Person, alias: &str) -> Result<(String, Value), String> {
+        let (table, info) = self.table_info_any(who, alias)?;
+        match self.hidden(who, &table) {
+            Some(why) => Err(format!("{} ({table}) is {why}", info.pointer("/data/title").and_then(Value::as_str).unwrap_or(&table))),
+            None => Ok((table, info)),
+        }
+    }
+
+    /// Why the septum hides `table` from this person now; None is shown. An unreadable ledger hides an undeclared table.
+    fn hidden(&self, who: &Person, table: &str) -> Option<String> {
+        let s = who.working_for.as_ref()?;
+        if s.declares(table) {
+            return s.hides(table, None);
+        }
+        let made = self.ledger.lock().map_err(|_| "ledger poisoned".to_string())
+            .and_then(|l| l.made_for(&format!("user:{}", who.uid()), table).map_err(|e| e.to_string()));
+        match made {
+            Ok(m) => s.hides(table, m.as_deref()),
+            Err(e) => Some(format!("of an owner the ledger cannot tell ({e}); hidden while you work {}", s.said())),
+        }
+    }
+
+    /// The client a row walks to by its table's client_scope (septum-status.py client_of); None is no client's.
+    /// A parent that cannot be read fails the read: a row whose owner is unknown is never shown as someone's.
+    #[allow(clippy::too_many_arguments)]
+    fn owner(&self, who: &Person, s: &Septum, table: &str, id: &str, v: &Map<String, Value>,
+             read: &mut HashMap<String, Rows>, depth: usize) -> Result<Option<String>, String> {
+        if s.scope(table) == "self" {
+            return Ok(s.client_of(id).or_else(|| v.get("slug").and_then(Value::as_str).and_then(|x| s.client_of(x))));
+        }
+        let Some((col, parent)) = s.step(table) else { return Ok(None) };
+        let r = v.get(&col).map(text).unwrap_or_default();
+        if r.is_empty() || depth > 8 {
+            return Ok(None);
+        }
+        if s.scope(&parent) == "self" {
+            return Ok(s.client_of(&r));
+        }
+        if !read.contains_key(&parent) {
+            let rows = self.rows(who, &parent).map_err(|e| format!("whose rows {table} holds is read through {parent}: {e}"))?;
+            read.insert(parent.clone(), rows);
+        }
+        let up = read[&parent].iter().find(|(pid, pv)| *pid == r || pv.get("slug").and_then(Value::as_str) == Some(r.as_str())).cloned();
+        match up {
+            Some((pid, pv)) => self.owner(who, s, &parent, &pid, &pv, read, depth + 1),
+            None => Ok(None),
+        }
+    }
+
+    fn table_info_any(&self, who: &Person, alias: &str) -> Result<(String, Value), String> {
         let table = table_id(alias);
         let base = self.keap_url.trim_end_matches('/').to_string();
         let (status, info) = self.keap_status(who, &format!("{base}/api/tables/{}", enc(&table)), None)?;
         match status {
             200 => Ok((table, info)),
             404 => {
-                let (_, list) = self.list_tables(who)?;
-                let all = list["tables"].as_array().cloned().unwrap_or_default();
-                let hit: Vec<&Value> = all.iter().filter(|t| t["title"].as_str().is_some_and(|x| x.eq_ignore_ascii_case(alias.trim()))).collect();
+                let all = self.tables(who)?;
+                let hit: Vec<&(String, String)> = all.iter().filter(|t| t.1.eq_ignore_ascii_case(alias.trim())).collect();
                 let [one] = hit.as_slice() else {
-                    let names: Vec<String> = all.iter().map(|t| format!("{} ({})", t["title"].as_str().unwrap_or(""), t["id"].as_str().unwrap_or(""))).collect();
+                    let names: Vec<String> = all.iter().filter(|t| self.hidden(who, &t.0).is_none()).map(|(id, t)| format!("{t} ({id})")).collect();
                     return Err(format!("no table `{alias}`; tables: {} (list_tables names them)", names.join(", ")));
                 };
-                let id = one["id"].as_str().unwrap_or_default().to_string();
+                let id = one.0.clone();
                 let info = self.keap(who, &format!("{base}/api/tables/{}", enc(&id)), None)?;
                 Ok((id, info))
             }
@@ -1755,6 +1860,17 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         }
 
         let mut all = self.rows(who, &table)?;
+        let mut query = query;
+        if let Some(s) = who.working_for.as_ref().filter(|s| s.walks(&table)) {
+            let (mut read, mut kept) = (HashMap::new(), Vec::new());
+            for (id, v) in all {
+                if s.keeps(self.owner(who, s, &table, &id, &v, &mut read, 0)?.as_deref()) {
+                    kept.push((id, v));
+                }
+            }
+            all = kept;
+            query += &format!(" · {} only", s.said());
+        }
         for (_, v) in &mut all {
             v.retain(|k, _| keys.contains(&k.as_str()));
         }
@@ -2011,8 +2127,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             return Err(format!("a new table has at most 30 columns, not {}", cols.len()));
         }
         // A second table of one title would make every by-title call ambiguous (table_info).
-        let (_, list) = self.list_tables(who)?;
-        if list["tables"].as_array().into_iter().flatten().any(|t| t["title"].as_str().is_some_and(|x| x.trim().eq_ignore_ascii_case(&title))) {
+        if self.tables(who)?.iter().any(|t| t.1.trim().eq_ignore_ascii_case(&title)) {
             return Err(format!("you already have a table titled {title:?}: name the new one differently, or add rows to that one"));
         }
         let columns = cols.iter().enumerate().map(|(i, c)| self.schema_column(who, i + 1, c)).collect::<Result<Vec<_>, _>>()?;
@@ -2169,16 +2284,31 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// A control view, raised by the person; the model is not asked and does not see it.
     /// GET /api/tables as the person: what they may read, never the owner's view of anyone else's.
-    fn list_tables(&self, who: &Person) -> Result<(Table, Value), String> {
+    /// Every table KEAP lists for the person, as (id, title), the septum aside.
+    fn tables(&self, who: &Person) -> Result<Vec<(String, String)>, String> {
         let v = self.keap(who, &format!("{}/api/tables", self.keap_url.trim_end_matches('/')), None)?;
         let all = v.get("data").and_then(Value::as_array).ok_or("KEAP answered no table list")?;
-        let rows: Vec<(String, String)> = all.iter().take(100).filter_map(|t| {
+        Ok(all.iter().take(100).filter_map(|t| {
             let id = t.get("id").and_then(Value::as_str)?;
             Some((id.to_string(), t.get("title").and_then(Value::as_str).unwrap_or(id).to_string()))
-        }).collect();
-        let table = Table { title: Some("DataTables".into()), columns: vec!["title".into(), "id".into()],
-                            rows: rows.iter().map(|(id, t)| vec![json!(t), json!(id)]).collect() };
-        Ok((table, json!({"tables": rows.iter().map(|(id, t)| json!({"id": id, "title": t})).collect::<Vec<_>>()})))
+        }).collect())
+    }
+
+    /// list_tables: the tables shown in this scope, then the hidden ones by title and why, never by id.
+    fn list_tables(&self, who: &Person) -> Result<(Table, Value), String> {
+        let (mut rows, mut hidden) = (Vec::new(), Vec::new());
+        for (id, t) in self.tables(who)? {
+            match self.hidden(who, &id) {
+                Some(why) => hidden.push((t, why)),
+                None => rows.push((id, t)),
+            }
+        }
+        let title = who.working_for.as_ref().map_or("DataTables".to_string(), |s| format!("DataTables {}", s.said()));
+        let mut cells: Vec<Vec<Value>> = rows.iter().map(|(id, t)| vec![json!(t), json!(id)]).collect();
+        cells.extend(hidden.iter().map(|(t, why)| vec![json!(t), json!(format!("(hidden) {why}"))]));
+        let table = Table { title: Some(title), columns: vec!["title".into(), "id".into()], rows: cells };
+        Ok((table, json!({"tables": rows.iter().map(|(id, t)| json!({"id": id, "title": t})).collect::<Vec<_>>(),
+                          "hidden": hidden.iter().map(|(t, why)| json!({"title": t, "why": why})).collect::<Vec<_>>()})))
     }
 
     /// red-status.py as the operator: the F4 control and Iris's red_status tool read it the same way.

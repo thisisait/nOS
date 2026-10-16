@@ -2,5 +2,6 @@
 
 pub mod binding;
 pub mod ledger;
+pub mod septum;
 pub mod serve;
 pub mod shell;

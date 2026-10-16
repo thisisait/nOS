@@ -53,6 +53,10 @@
 		<ComponentView component={msg.component} />
 	{:else if msg.t === 'form_result'}
 		<p class="muted">widget {msg.widget}: row {msg.row} added (form {msg.form})</p>
+	{:else if msg.t === 'working_for'}
+		<p class="scope">
+			{#if msg.scope === 'all'}working for everything (no wall){:else if msg.scope === 'personal'}working on {msg.name} data{:else}working for {msg.name} ({msg.scope.client}){/if}
+		</p>
 	{:else if msg.t === 'table_changed'}
 		<p class="muted">table {msg.table} changed (row {msg.row})</p>
 	{/if}
@@ -80,6 +84,11 @@
 	.pin:hover {
 		color: var(--accent);
 		border-color: var(--accent);
+	}
+	.scope {
+		margin: 0;
+		font-weight: 600;
+		font-size: 12px;
 	}
 	.muted {
 		margin: 0;

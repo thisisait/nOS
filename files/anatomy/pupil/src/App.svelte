@@ -15,6 +15,7 @@
 	import { SETTLE_MS, eye, look, step, type Input } from './eye';
 	import Message from './Message.svelte';
 	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
+	import { forCommand } from './scope';
 	import type { DashboardProps, Link, ToShell, ToThalamus, WidgetSpec } from './wire';
 	import { route, submit, type Widgets } from './widgets';
 	import WorkspaceView from './Workspace.svelte';
@@ -41,6 +42,8 @@
 	// No turn while an approval waits (shell.rs:173); the bridge refuses one anyway.
 	const open = $derived(link.state === 'connected' && composerOpen(q));
 	let session: string | null = $state(null);
+	// Whom the person works for, as serve said it (working_for); null is no wall.
+	let scope: string | null = $state(null);
 	let draft = $state('');
 	let column: HTMLElement | undefined = $state();
 	let ey = $state(eye());
@@ -83,7 +86,9 @@
 	async function send() {
 		const text = draft.trim();
 		if (!text || !open) return;
-		const msg: ToThalamus = { t: 'turn', session, text };
+		const said = forCommand(text);
+		if (said === null) return void push({ note: 'not sent: /for <client>, /for personal or /for all' });
+		const msg: ToThalamus = said ? { t: 'working_for', scope: said } : { t: 'turn', session, text };
 		try {
 			await tauri?.core.invoke('send', { msg });
 			draft = '';
@@ -230,6 +235,7 @@
 			tauri.event.listen<ToShell>('to_shell', ({ payload }) => {
 				see({ e: 'wire', msg: payload });
 				if (payload.t === 'session') session = payload.session;
+				if (payload.t === 'working_for') scope = payload.scope === 'all' ? null : payload.name;
 				// A write landed: the active tab re-runs what read that table, the others go stale.
 				if (payload.t === 'table_changed') {
 					const r = ws.onTableChanged(layout, widgets, payload.table);
@@ -320,6 +326,7 @@
 	{#snippet head()}
 		<span class="dot" class:on={link.state === 'connected'}></span>
 		Iris
+		{#if scope}<span class="for">for {scope}</span>{/if}
 		{#if link.state === 'closed'}
 			<StatusNote kind="unwired" block={false}>{link.reason ?? 'disconnected'}</StatusNote>
 			<button onclick={connect}>connect</button>
@@ -340,6 +347,7 @@
 			waiting={q.pending[0]}
 			of={q.pending.length}
 			whole={q.whole === q.pending[0].approval}
+			{scope}
 			onseen={(id) => (q = seen(q, id))}
 			ondecide={decided}
 		/>
@@ -392,6 +400,12 @@
 	}
 	.dot.on {
 		background: var(--ok);
+	}
+	.for {
+		font-size: 11px;
+		border: 1px solid var(--glass-brd);
+		border-radius: 6px;
+		padding: 0 6px;
 	}
 	.column {
 		flex: 1;

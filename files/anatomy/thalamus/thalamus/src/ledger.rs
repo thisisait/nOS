@@ -3,7 +3,7 @@
 //! held there by tests/anatomy/test_thalamus_ledger_fields.py. prev_hash/row_hash
 //! stay NULL: the audit chain is off in slice 1, which Wing's schema allows.
 
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::{Map, Value};
 use std::path::Path;
 
@@ -243,6 +243,16 @@ impl Ledger {
         let t: ColumnAddApproval = serde_json::from_value(req).map_err(|e| format!("the request is no column add: {e}"))?;
         Component::ColumnAddApproval(t.clone()).check()?;
         Ok((actor, t))
+    }
+
+    /// The client a table Iris created was made for: its create's result names `working_for` (D2); None is no client.
+    pub fn made_for(&self, actor: &str, table: &str) -> rusqlite::Result<Option<String>> {
+        self.db.query_row(
+            "SELECT json_extract(result_json, '$.working_for') FROM events WHERE type = 'agent_tool_result'
+               AND task LIKE '%/tool:propose_table_create' AND actor_id = ?1 AND json_extract(result_json, '$.table') = ?2
+             ORDER BY id DESC LIMIT 1",
+            params![actor, table], |r| r.get::<_, Option<String>>(0),
+        ).optional().map(Option::flatten)
     }
 
     /// Writes agent_session_end, then closes the session so nothing more lands in it.
