@@ -4,9 +4,15 @@
 Pipeline: (a) a mid-size model only NORMALISES the person's turns into one canonical request;
 (b) a question battery is derived from the thalamus tool schemas (state/fixtures/oneshot/
 thalamus-tools.json, pinned to serve::tools() by thalamus/tests/tool_schemas.rs) and a table
-catalogue (state/fixtures/oneshot/catalogue.yml); (c) a small DECISION model answers each
-question as yes/no, one-of-N, a bounded int, a number or a short text, through Ollama's `format`
-JSON schema (think off, temperature 0); (d) the walker that asked the questions is also the
+catalogue (state/fixtures/oneshot/catalogue.yml); (c) the questions go out as a SystemOne body
+{model, state, questions: {id: {type: noul|choice|score, instructions, criteria}}} (the format of
+Jev, Clef and Clef-flash), one body per WAVE: the walk sends what it can ask before an answer steers
+it, split at --max-per-call (64). ask_systemone() has two backends: `ollama` (one `format` schema of
+enums, think off, temperature 0, one-hot answers, calibrated: false) and `http` (POST /v1/systemone
+to clef_mlx.py serve, SGLang, llama.cpp, Workers AI or TypeSafe; calibrated). An int over 10 values,
+a number or free text has no SystemOne type and goes to the normaliser model (`by: llm` in the
+trace), as does a calibrated answer under --abstain. A non-local http host is refused without
+--allow-remote; the trace records each answer's processor. (d) the walker that asked the questions is also the
 compiler: replayed over the recorded answers it yields the plan, a JSON tool-call sequence;
 (e) a dry run validates every call against its schema. Nothing is executed.
 
@@ -20,6 +26,7 @@ unscripted question fails that case. Live talks to Ollama (OLLAMA_HOST, default 
     python3 tools/oneshot-poc.py                                  # offline eval, scripted cases
     NOS_LIVE=1 python3 tools/oneshot-poc.py --case top3-next --decision-model qwen3.5:2b
     NOS_LIVE=1 python3 tools/oneshot-poc.py --decision-model qwen3.5:2b,gemma4:e2b --scorer embed
+    NOS_LIVE=1 python3 tools/oneshot-poc.py --backend http --base-url http://127.0.0.1:8000  # local Clef-flash
 Models: --normaliser-model (NOS_ONESHOT_NORMALISER, qwen3.5:9b), --decision-model (comma list,
 NOS_ONESHOT_DECISION, qwen3.5:2b), --embed-model (bge-m3).
 
@@ -29,7 +36,7 @@ need a real answer and are counted n/t), questions asked, total latency.
 
 Known limits: the catalogue is a fixture (live list_tables needs the socket); offer_dashboard's
 untyped widget objects are skipped; free text is not checked against the request (the trace
-flags `in_text`); a low margin is recorded but nothing escalates to the 9B yet; the plan is
+flags `in_text`); a low embed margin falls through to the decision model, not the 9B; the plan is
 validated, never run, so a wrong row reference or an empty result goes unseen.
 """
 
@@ -43,6 +50,7 @@ import os
 import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -85,9 +93,10 @@ def _table(title):
 
 def build(request: str, ask) -> dict:
     """Ask the battery through `ask(question) -> answer`; return {triage, plan}."""
-    triage = {s: ask({"id": f"sys.{s}", "kind": "yesno", "text": f"Does the request need {s.replace('_', ' ')}?"})
-              for s in CATALOGUE["systems"]}
-    triage["multi_step"] = ask({"id": "multi_step", "kind": "yesno", "text": "Does it need more than one tool call?"})
+    triage = {s: ask({"id": f"sys.{s}", "kind": "yesno", "leaf": True,
+                      "text": f"Does the request need {s.replace('_', ' ')}?"}) for s in CATALOGUE["systems"]}
+    triage["multi_step"] = ask({"id": "multi_step", "kind": "yesno", "leaf": True,
+                                "text": "Does it need more than one tool call?"})
     plan = []
     for n in range(1, MAX_STEPS + 1):
         tool = ask({"id": f"s{n}.tool", "kind": "choice", "options": list(SCHEMAS) + [DONE],
@@ -120,10 +129,12 @@ def _walk(sch, pid, name, ask, ctx, required, parent=None):
         return v
     if name in ("column", "group_by", "y", "x") and "enum" not in sch and table:
         cols = [c["key"] for c in table["columns"] if name != "y" or c["kind"] == "number"]
-        return q("choice", f"{what} which column?", options=cols + opt, entity=True)
+        return q("choice", f"{what} which column?", options=cols + opt, entity=True, leaf=name != "column")
     if name == "row_id":
         refs = [f"$step{i + 1}.rows[0].__id" for i, s in enumerate(ctx["steps"]) if s["tool"] == "query_rows"]
-        return q("choice", f"{what} which earlier read's row?", options=refs) if refs else q("text", what)
+        if refs:
+            return q("choice", f"{what} which earlier read's row?", options=refs, leaf=True)
+        return q("text", what, leaf=True)
     if name == "value" and parent is not None and table:
         return _where_value(pid, what, q, table, parent)
     if name == "values" and table:  # column -> value: one question per column of the chosen table
@@ -133,16 +144,16 @@ def _walk(sch, pid, name, ask, ctx, required, parent=None):
             if v != NONE:
                 out[c["key"]] = v
         return out
-    if "enum" in sch:
-        return q("choice", what, options=list(sch["enum"]) + opt)
+    if "enum" in sch:  # a where's op steers its value's question: not a leaf
+        return q("choice", what, options=list(sch["enum"]) + opt, leaf=name != "op")
     t = sch.get("type")
     if t == "boolean":
-        return q("choice", what, options=["yes", "no"] + opt) if opt else q("yesno", what)
+        return q("choice", what, options=["yes", "no"] + opt, leaf=True) if opt else q("yesno", what, leaf=True)
     if t in ("integer", "number"):
         if opt and not q("yesno", f"{what} set it?", id_suffix=".use"):
             return NONE
         lo, hi = sch.get("minimum"), sch.get("maximum")
-        return q("int", what, min=lo, max=hi) if t == "integer" else q("number", what)
+        return q("int", what, min=lo, max=hi, leaf=True) if t == "integer" else q("number", what, leaf=True)
     if t == "array":
         items = sch.get("items") or (SCHEMAS["query_rows"]["properties"]["where"]["items"] if name == "where" else None)
         if items is None:
@@ -177,10 +188,11 @@ def _walk(sch, pid, name, ask, ctx, required, parent=None):
         return out
     if opt and not q("yesno", f"{what} set it?", id_suffix=".use"):
         return NONE
-    return q("text", what)
+    return q("text", what, leaf=True)
 
 
 def _where_value(pid, what, q, table, parent):
+    q = lambda *a, _q=q, **kw: _q(*a, leaf=True, **kw)  # noqa: E731
     col = next((c for c in table["columns"] if c["key"] == parent.get("column")), {"kind": "text"})
     op = parent.get("op")
     if op == "between":
@@ -192,10 +204,11 @@ def _where_value(pid, what, q, table, parent):
 
 def _cell(pid, what, ask, col):
     if col["kind"] == "select":
-        return ask({"id": pid, "kind": "choice", "text": what, "options": col["options"] + [NONE], "entity": True})
+        return ask({"id": pid, "kind": "choice", "text": what, "options": col["options"] + [NONE], "entity": True,
+                    "leaf": True})
     if not ask({"id": f"{pid}.use", "kind": "yesno", "text": f"{what} set it?"}):
         return NONE
-    return ask({"id": pid, "kind": "number" if col["kind"] == "number" else "text", "text": what})
+    return ask({"id": pid, "kind": "number" if col["kind"] == "number" else "text", "text": what, "leaf": True})
 
 
 # ── (e) the dry run ──
@@ -242,21 +255,180 @@ def check_answer(qn, a):
     return a
 
 
+class _Wave(Exception):
+    """The walk reached a question whose answer steers it: send the wave first."""
+
+
+def build_waves(request: str, answer_wave, known: dict) -> dict:
+    """Walk over `known`; each unknown question joins the wave, a steering one ends it.
+
+    A leaf's placeholder never steers the walk, so every wave holds real-path questions only.
+    `answer_wave(questions)` fills `known`; the last walk, with nothing unknown, is the plan.
+    """
+    while True:
+        wave = []
+
+        def ask(qn):
+            k = qn["id"] + qn.get("id_suffix", "")
+            if k in known:
+                return known[k]
+            wave.append(qn)
+            if not qn.get("leaf"):
+                raise _Wave
+            return None
+        try:
+            out = build(request, ask)
+        except _Wave:
+            out = None
+        if not wave:
+            return out
+        answer_wave(wave)
+
+
+# ── SystemOne: the battery for one state, one body per wave (Jev, Clef, Clef-flash) ──
+
+LOCAL = {"127.0.0.1", "localhost", "::1"}
+TOOL_DESC = {t["function"]["name"]: t["function"]["description"].split(". ")[0] for t in TOOLS} | {DONE: "nothing more"}
+
+
+def to_systemone(qn):
+    """Our question as a SystemOne one, or None: int over 10 values, number and text have no type."""
+    k = qn["kind"]
+    if k == "yesno":
+        return {"type": "noul", "instructions": qn["text"]}
+    if k == "choice":
+        desc = TOOL_DESC if qn["id"].endswith(".tool") else {}
+        return {"type": "choice", "instructions": qn["text"],
+                "criteria": {str(o): desc.get(o, str(o)) for o in qn["options"]}}
+    lo, hi = qn.get("min"), qn.get("max")
+    if k == "int" and lo is not None and hi is not None and 2 <= hi - lo + 1 <= 10:
+        return {"type": "score", "instructions": qn["text"], "criteria": [str(v) for v in range(lo, hi + 1)]}
+    return None
+
+
+def from_systemone(qn, a):
+    """(answer, confidence): noul confidence is max(p, 1 - p); score takes its most probable level."""
+    if a["type"] == "noul":
+        return a["noul"] >= 0.5, max(a["noul"], 1 - a["noul"])
+    probs = a.get("probabilities") or {}
+    conf = a.get("confidence", max(probs.values(), default=None))
+    if a["type"] == "choice":
+        return {str(o): o for o in qn["options"]}[a["choice"]], conf
+    return qn["min"] + int(max(probs, key=probs.get)), conf
+
+
+def _host(url):
+    return urllib.parse.urlsplit(url).hostname or ""
+
+
+def ask_systemone(body: dict, backend: dict) -> dict:
+    """POST-shaped SystemOne call, split at max_per_call; `calibrated` says if confidence means anything."""
+    kind, url = backend["backend"], backend.get("base_url") or ""
+    if kind == "http" and _host(url) not in LOCAL and not backend.get("allow_remote"):
+        raise Refused(f"{_host(url)!r} is a remote processor: pass --allow-remote to send it the state")
+    ids, n = list(body["questions"]), backend.get("max_per_call") or 64
+    out = {"model": backend["model"], "answers": {}, "calls": 0, "calibrated": kind == "http",
+           "processor": _host(url or os.environ.get("OLLAMA_HOST", "http://localhost:11434"))}
+    for i in range(0, len(ids), n):
+        part = dict(body, model=backend["model"], questions={k: body["questions"][k] for k in ids[i:i + n]})
+        out["answers"] |= (_s1_http if kind == "http" else _s1_ollama)(part, backend)
+        out["calls"] += 1
+    return out
+
+
+def _s1_http(body, backend):
+    url = backend["base_url"].rstrip("/")
+    url += "" if urllib.parse.urlsplit(url).path.strip("/") else "/v1/systemone"  # Workers AI: the full run URL
+    headers = {"Content-Type": "application/json"}
+    if backend.get("token_env"):
+        headers["Authorization"] = f"Bearer {os.environ[backend['token_env']]}"
+    return _http(url, body, headers)["answers"]
+
+
+def _s1_ollama(body, backend):
+    """Every question one enum property of one `format` schema; the answers are one-hot, uncalibrated."""
+    qs = body["questions"]
+    enum = {k: ["yes", "no"] if q["type"] == "noul" else list(q["criteria"]) for k, q in qs.items()}
+    fmt = {"type": "object", "properties": {k: {"enum": e} for k, e in enum.items()}, "required": list(qs)}
+    ask = "\n".join(f"- {k}: {q.get('instructions', '')}" + (f" Options: {json.dumps(q['criteria'])}" if
+                    q["type"] != "noul" else " yes or no") for k, q in qs.items())
+    state = body["state"] if isinstance(body["state"], str) else json.dumps(body["state"])
+    got = json.loads(_chat(backend["model"], DECIDE, f"Request: {state}\nQuestions:\n{ask}", fmt,
+                           host=backend.get("base_url")))
+    out = {}
+    for k, q in qs.items():
+        if q["type"] == "noul":
+            out[k] = {"type": "noul", "noul": 1.0 if got[k] == "yes" else 0.0}
+        else:
+            keys = list(q["criteria"]) if q["type"] == "choice" else [str(i) for i in range(len(enum[k]))]
+            top = got[k] if q["type"] == "choice" else str(enum[k].index(got[k]))
+            out[k] = {"type": q["type"], q["type"]: top, "probabilities": {x: float(x == top) for x in keys}}
+    return out
+
+
+def systemone_decider(request, backend, llm_ask, abstain=0.6, scorer=None):
+    """A wave answerer: SystemOne-typed questions in one battery, the rest (and abstentions) to `llm_ask`."""
+    def wave(qns):
+        typed = {}
+        for qn in qns:
+            if scorer and qn["kind"] == "choice" and qn.get("entity"):
+                pick, margin = scorer(request, qn["options"])
+                qn["margin"] = round(margin, 4)
+                if pick is not None:
+                    qn["embed"] = pick
+                    continue
+            if (sq := to_systemone(qn)) is not None:
+                typed[qn["id"] + qn.get("id_suffix", "")] = sq
+        resp = ask_systemone({"model": backend["model"], "state": request, "questions": typed}, backend) if typed else {}
+        for qn in qns:
+            k = qn["id"] + qn.get("id_suffix", "")
+            if "embed" in qn:
+                qn["by"] = "embed"
+                yield qn.pop("embed")
+                continue
+            if k in typed:
+                a, conf = from_systemone(qn, resp["answers"][k])
+                qn.update(by=backend["model"], processor=resp["processor"], calibrated=resp["calibrated"])
+                if not resp["calibrated"]:
+                    yield a
+                    continue
+                qn["confidence"] = conf
+                if conf is not None and conf >= abstain:
+                    yield a
+                    continue
+                qn["abstained"] = qn.pop("confidence")
+            a = llm_ask(qn)
+            qn["by"] = "llm"
+            yield a
+    return wave
+
+
+def per_question(ask):
+    """The old one-question-per-call decider as a wave answerer."""
+    return lambda qns: (ask(qn) for qn in qns)
+
+
 # ── (a)+(c) models: Ollama in live mode, scripted fakes offline ──
 
-def _ollama(path, body):
-    host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-    req = urllib.request.Request(host.rstrip("/") + path, json.dumps(body).encode(), {"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=300) as r:
+def _http(url, body, headers):
+    """A local endpoint never goes through a proxy: a proxy is a processor too."""
+    proxy = {} if _host(url) in LOCAL else None
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler(proxy))
+    with opener.open(urllib.request.Request(url, json.dumps(body).encode(), headers), timeout=300) as r:
         return json.loads(r.read())
 
 
-def _chat(model, system, user, fmt=None):
+def _ollama(path, body, host=None):
+    host = host or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+    return _http(host.rstrip("/") + path, body, {"Content-Type": "application/json"})
+
+
+def _chat(model, system, user, fmt=None, host=None):
     body = {"model": model, "stream": False, "think": False, "options": {"temperature": 0},
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
     if fmt:
         body["format"] = fmt
-    return _ollama("/api/chat", body)["message"]["content"]
+    return _ollama("/api/chat", body, host)["message"]["content"]
 
 
 NORMALISE = ("Rewrite the person's turns as ONE self-contained request in English. Resolve pronouns and "
@@ -348,36 +520,39 @@ def run(case, normalise, decider_for, trace, model="fake"):
     norm_s = time.monotonic() - t0
     trace.write(json.dumps({"case": case["id"], "id": "normalised", "turns": turns, "answer": request,
                             "ms": round(norm_s * 1000)}, ensure_ascii=False) + "\n")
-    inner, answers, n = decider_for(request), {}, 0
+    inner, answers, n, calls = decider_for(request), {}, 0, 0
 
-    def ask(qn):
-        nonlocal n
-        n += 1
-        t, a, err = time.monotonic(), None, None
-        try:
-            a = check_answer(qn, inner(qn))
-        except (Refused, OSError, ValueError, KeyError) as e:  # a model that did not answer is a refusal too
-            err = f"{type(e).__name__}: {e}" if not isinstance(e, Refused) else str(e)
-        row = {"case": case["id"], "model": model, **{k: v for k, v in qn.items() if k != "id_suffix"},
-               "id": qn["id"] + qn.get("id_suffix", ""), "ms": round((time.monotonic() - t) * 1000), "answer": a}
-        if err:
-            row["refused"] = err
-        elif qn["kind"] == "text":
-            row["in_text"] = a.lower() in request.lower()
-        trace.write(json.dumps(row, ensure_ascii=False) + "\n")  # a refused question is traced too
-        if err:
-            raise Refused(err)
-        answers[row["id"]] = a
-        return a
+    def answer_wave(qns):
+        nonlocal n, calls
+        calls += 1
+        gen = inner(qns)
+        for qn in qns:
+            n += 1
+            t, a, err = time.monotonic(), None, None
+            try:  # a model that did not answer is a refusal too
+                a = check_answer(qn, next(gen))
+            except (Refused, OSError, ValueError, KeyError, StopIteration) as e:
+                err = f"{type(e).__name__}: {e}" if not isinstance(e, Refused) else str(e)
+            row = {"case": case["id"], "model": model, **{k: v for k, v in qn.items() if k not in ("id_suffix", "leaf")},
+                   "id": qn["id"] + qn.get("id_suffix", ""), "call": calls,
+                   "ms": round((time.monotonic() - t) * 1000), "answer": a}  # a batched call's ms land on its first row
+            if err:
+                row["refused"] = err
+            elif qn["kind"] == "text":
+                row["in_text"] = a.lower() in request.lower()
+            trace.write(json.dumps(row, ensure_ascii=False) + "\n")  # a refused question is traced too
+            if err:
+                raise Refused(err)
+            answers[row["id"]] = a
     res = {"id": case["id"], "request": request, "questions": 0, "plan": None, "error": None}
     try:
-        out = build(request, ask)
+        out = build_waves(request, answer_wave, answers)
         res["plan"], res["triage"] = validate(out["plan"]), out["triage"]
         replay = compile_answers(request, answers)  # the compiler from the recorded answers alone
         assert replay["plan"] == res["plan"], "the compiler disagrees with the live walk"
     except Refused as e:
         res["error"] = str(e)
-    res["questions"], res["seconds"] = n, round(time.monotonic() - t0, 2)
+    res["questions"], res["calls"], res["seconds"] = n, calls, round(time.monotonic() - t0, 2)
     res["failed"], res["nt"] = score(case, res["plan"]) if res["plan"] is not None else (["plan"], [])
     res["ok"] = res["plan"] is not None and not res["failed"]
     return res
@@ -444,8 +619,14 @@ def main(argv=None) -> int:
     ap.add_argument("--cases", default=str(REPO / "state/fixtures/iris-bench.yml"))
     ap.add_argument("--fake", default=str(FIX / "fake-answers.yml"), help="offline scripts")
     ap.add_argument("--normaliser-model", default=os.environ.get("NOS_ONESHOT_NORMALISER", "qwen3.5:9b"))
-    ap.add_argument("--decision-model", default=os.environ.get("NOS_ONESHOT_DECISION", "qwen3.5:2b"),
-                    help="comma list: the eval runs once per model")
+    ap.add_argument("--decision-model", default=os.environ.get("NOS_ONESHOT_DECISION"),
+                    help="comma list: the eval runs once per model (default qwen3.5:2b, http: clef-flash)")
+    ap.add_argument("--backend", choices=["ollama", "http"], default="ollama", help="the SystemOne answerer")
+    ap.add_argument("--base-url", help="ollama: OLLAMA_HOST; http: a /v1/systemone server (default 127.0.0.1:8000)")
+    ap.add_argument("--token-env", help="http: the env var holding a bearer token")
+    ap.add_argument("--max-per-call", type=int, default=64, help="questions per SystemOne call (Workers AI: 64)")
+    ap.add_argument("--abstain", type=float, default=0.6, help="calibrated confidence under this goes to the 9B")
+    ap.add_argument("--allow-remote", action="store_true", help="http: let a non-local processor see the state")
     ap.add_argument("--scorer", choices=["none", "embed"], default="none")
     ap.add_argument("--embed-model", default=os.environ.get("NOS_ONESHOT_EMBED", "bge-m3"))
     ap.add_argument("--margin", type=float, default=0.05, help="embed scorer: top-1 lead needed to skip the model")
@@ -453,6 +634,11 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=str(FIX / "last-run.json"))
     a = ap.parse_args(argv)
     live = os.environ.get("NOS_LIVE") == "1"
+    base = a.base_url or ("http://127.0.0.1:8000" if a.backend == "http" else None)
+    if a.backend == "http" and _host(base) not in LOCAL and not a.allow_remote:
+        print(f"refused: {_host(base)} is a remote processor; pass --allow-remote", file=sys.stderr)
+        return 2
+    a.decision_model = a.decision_model or ("clef-flash" if a.backend == "http" else "qwen3.5:2b")
     allc = yaml.safe_load(Path(a.cases).read_text(encoding="utf-8"))
     cases = [c for c in allc if c["id"] in a.case] if a.case else eval_cases(allc)
     scripts = {} if live else yaml.safe_load(Path(a.fake).read_text(encoding="utf-8"))
@@ -466,10 +652,14 @@ def main(argv=None) -> int:
             for case in cases:
                 if live:
                     scorer = embed_scorer(a.embed_model, a.margin) if a.scorer == "embed" else None
-                    norm, dec = live_normaliser(a.normaliser_model), (lambda r, m=model, s=scorer: live_decider(m, r, s))
+                    cfg = {"backend": a.backend, "base_url": base, "model": model, "token_env": a.token_env,
+                           "max_per_call": a.max_per_call, "allow_remote": a.allow_remote}
+                    norm, dec = live_normaliser(a.normaliser_model), (lambda r, c=cfg, s=scorer: systemone_decider(
+                        r, c, live_decider(a.normaliser_model, r), a.abstain, s))
                 elif case["id"] in scripts:
                     s = scripts[case["id"]]
-                    norm, dec = (lambda turns, s=s: s.get("normalised") or " ".join(turns)), (lambda r, s=s: fake_decider(s))
+                    norm = lambda turns, s=s: s.get("normalised") or " ".join(turns)  # noqa: E731
+                    dec = lambda r, s=s: per_question(fake_decider(s))  # noqa: E731
                 else:
                     results.append({"id": case["id"], "model": model, "ok": False, "questions": 0, "seconds": 0.0,
                                     "error": "no offline script", "failed": [], "nt": []})
@@ -477,10 +667,11 @@ def main(argv=None) -> int:
                 results.append(dict(run(case, norm, dec, trace, model), model=model))
     Path(a.out).write_text(json.dumps({"ran_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "live": live,
                                        "cases": results}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"{'case':<18} {'model':<14} {'plan ok':<8} {'#q':>4} {'secs':>7}  failed / n/t")
+    print(f"{'case':<18} {'model':<14} {'plan ok':<8} {'#q':>4} {'calls':>5} {'secs':>7}  failed / n/t")
     for r in results:
         why = r["error"] or ", ".join(r["failed"]) or "-"
-        print(f"{r['id']:<18} {r['model']:<14} {'yes' if r['ok'] else 'NO':<8} {r['questions']:>4} {r['seconds']:>7.2f}  "
+        print(f"{r['id']:<18} {r['model']:<14} {'yes' if r['ok'] else 'NO':<8} {r['questions']:>4} {r.get('calls', 0):>5} "
+              f"{r['seconds']:>7.2f}  "
               f"{why} / {', '.join(r['nt']) or '-'}")
     print(f"{sum(r['ok'] for r in results)}/{len(results)} plans ok · trace {a.trace}")
     return 0 if results and all(r["ok"] for r in results) else 1

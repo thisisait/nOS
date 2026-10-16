@@ -155,6 +155,13 @@ posts, restarts or renders something.
 
 - `iris-bench.py` — Score Iris from the thalamus wire alone (cases in `state/fixtures/iris-bench.yml`): tools, kinds, count = matched, sourced charts, time, cannot-see, no proposal; rejects every approval, writes only `state/fixtures/iris-bench/last-run.json`; NOS_LIVE=1 or `--offline --sock` (fake).
 - `oneshot-poc.py` — One-shot PoC: a small model answers a battery of constrained questions, a compiler turns them into a thalamus tool plan, a dry run validates it against `state/fixtures/oneshot/thalamus-tools.json` and the iris-bench checks; traces every question; offline fakes, Ollama only on NOS_LIVE=1.
+  - Local Clef-flash on a Mac (16 GB+), **operator-run, third-party code: review it first**:
+    1. `pip install "mlx-vlm>=0.7.4,<0.8" huggingface_hub` (in a venv of your own)
+    2. `hf download mlx-community/clef-flash-4bit --revision <pinned sha>` (about 6.2 GB; pin the sha you reviewed)
+    3. Read `clef_mlx.py` (and the joint-head code it loads) before running it.
+    4. `python clef_mlx.py serve --port 8000` (127.0.0.1, no auth, one request at a time)
+    5. `NOS_LIVE=1 python3 tools/oneshot-poc.py --backend http --base-url http://127.0.0.1:8000`
+  - Workers AI / TypeSafe are cloud processors (US): `--allow-remote --token-env <VAR>` only with a DPA and an Article 30 entry.
 - `loop-diff.py` — Build a valid unified diff from a replacement an agent can state in words.
 - `loop-graph-gen.py` — Compile the loop harness from ledger.py into loop-graph.json (the Planner Loops view + its gate).
 - `loop-pr.py` — The loop's driver: what happens after the judges say pass.
