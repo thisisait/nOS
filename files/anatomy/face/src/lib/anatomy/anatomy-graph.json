@@ -3561,9 +3561,9 @@
     "reader:septum-status": {
       "kind": "reader",
       "source": "tools/septum-status.py",
-      "title": "The septum between the person's data and each client's: `client_scope:` per KEAP table def (red when missing or `unresolved`, warn when a personal table is not private), parties by role and how many rows of each scoped table walk to which client (red on orphan rows whose ref target is gone); KEAP unreachable = UNKNOWN. A declaration only — KEAP isolates no rows yet.",
+      "title": "The septum between the person's data and each client's: `client_scope:` per KEAP table def (red when missing or `unresolved`, warn when a personal table is not private), parties by role and how many rows of each scoped table walk to which client (red on orphan rows whose ref target is gone, and on a live table whose visibility is not its def's — KEAP may set it on create only; warn on unstamped `book_owner`-scoped rows); KEAP unreachable = UNKNOWN. A declaration only — KEAP isolates no rows yet.",
       "anchor": "02.02.04",
-      "description": "Reader tools/septum-status.py: The septum between the person's data and each client's: `client_scope:` per KEAP table def (red when missing or `unresolved`, warn when a personal table is not private), parties by role and how many rows of each scoped table walk to which client (red on orphan rows whose ref target is gone); KEAP unreachable = UNKNOWN. A declaration only — KEAP isolates no rows yet."
+      "description": "Reader tools/septum-status.py: The septum between the person's data and each client's: `client_scope:` per KEAP table def (red when missing or `unresolved`, warn when a personal table is not private), parties by role and how many rows of each scoped table walk to which client (red on orphan rows whose ref target is gone, and on a live table whose visibility is not its def's — KEAP may set it on create only; warn on unstamped `book_owner`-scoped rows); KEAP unreachable = UNKNOWN. A declaration only — KEAP isolates no rows yet."
     },
     "reader:services-status": {
       "kind": "reader",
