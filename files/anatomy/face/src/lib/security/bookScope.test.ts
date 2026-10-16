@@ -123,3 +123,21 @@ describe('bookScope · second manager', () => {
 		).toBe(true);
 	});
 });
+
+describe('bookScope · invoice-review is a client book', () => {
+	const reviews = [
+		{ slug: 'rv-a', document_number: 'A1', book_owner: ALFA },
+		{ slug: 'rv-b', document_number: 'B1', book_owner: BETA }
+	];
+	it('shows a manager only the disputes of their assigned book', () => {
+		const rows = filterBookRows({
+			slug: 'invoice-review',
+			rows: reviews,
+			uid: 'mgr-a',
+			groups: ['nos-managers'],
+			access,
+			invoices
+		});
+		expect(rows.map((r) => r.slug)).toEqual(['rv-a']);
+	});
+});

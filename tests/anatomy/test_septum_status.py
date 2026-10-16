@@ -79,3 +79,44 @@ def test_a_dangling_ref_is_an_orphan_and_never_green(tmp_path):
     out = json.loads(r.stdout)
     assert out["verdict"] != "OK"
     assert any("invoice-line" in line and "orphan" in line for line in out["red"])
+
+
+def test_live_visibility_must_equal_the_declared_one():
+    # KEAP may apply visibility on create only: a def flipped to private later can stay open live.
+    defs = {"device": {"visibility": "private"}, "invoice": {"visibility": "tier-managers"},
+            "not-yet": {"visibility": "private"}}
+    red = septum.visibility_drift(defs, {"device": "tier-users", "invoice": "tier-managers",
+                                         "not-yet": None})
+    assert len(red) == 1 and red[0].startswith("device:")
+    assert "private" in red[0] and "tier-users" in red[0]
+
+
+def test_drift_is_red_and_absent_visibility_is_unknown(tmp_path):
+    f = tmp_path / "rows.json"
+    f.write_text(json.dumps({**ROWS, "_visibility": {"device": "tier-users"}}), encoding="utf-8")
+    r = subprocess.run([sys.executable, str(TOOL), "--rows-json", str(f), "--json"],
+                       capture_output=True, text=True, timeout=60)
+    out = json.loads(r.stdout)
+    assert out["verdict"] == "RED" and any(x.startswith("device:") for x in out["red"])
+    f.write_text(json.dumps(ROWS), encoding="utf-8")   # rows, but no table visibility read
+    r = subprocess.run([sys.executable, str(TOOL), "--rows-json", str(f)],
+                       capture_output=True, text=True, timeout=60)
+    assert "visibility: UNKNOWN" in r.stdout
+
+
+def test_unreadable_keap_leaves_visibility_unknown(monkeypatch, capsys):
+    def boom(_defs):
+        raise ConnectionRefusedError("no KEAP")
+    monkeypatch.setattr(septum, "read_live", boom)
+    monkeypatch.setattr(sys, "argv", ["septum-status.py"])
+    assert septum.main() == 0
+    assert "visibility: UNKNOWN" in capsys.readouterr().out
+
+
+def test_unstamped_book_rows_are_said_apart(tmp_path):
+    f = tmp_path / "rows.json"
+    f.write_text(json.dumps(ROWS), encoding="utf-8")
+    r = subprocess.run([sys.executable, str(TOOL), "--rows-json", str(f), "--json"],
+                       capture_output=True, text=True, timeout=60)
+    out = json.loads(r.stdout)
+    assert any(w.startswith("invoice:") and "unstamped" in w for w in out["warn"])

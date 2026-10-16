@@ -35,3 +35,15 @@ describe('tier · canReadTable', () => {
 		expect(canReadTable('', ['nos-managers'])).toBe(false);
 	});
 });
+
+// Septum: device*, caddy-sessions and engram are private. KEAP's contract reads
+// private as owner + admin (rank 1 = nos-admins/nos-providers), so the operator
+// reads a seeder-owned private table without an explicit share; a manager does not.
+describe('tier · canReadTable private', () => {
+	it('grants tier-1 admins, denies managers and below', () => {
+		expect(canReadTable('private', ['nos-admins'])).toBe(true);
+		expect(canReadTable('private', ['nos-providers'])).toBe(true);
+		expect(canReadTable('private', ['nos-managers'])).toBe(false);
+		expect(canReadTable('private', ['nos-users'])).toBe(false);
+	});
+});
