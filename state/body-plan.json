@@ -18,7 +18,7 @@
     "reflex": 43,
     "heartbeat": 1,
     "internal": 74,
-    "edges": 431
+    "edges": 433
   },
   "nodes": {
     "agent:conductor": {
@@ -4049,6 +4049,11 @@
     },
     {
       "from": "table:party",
+      "to": "table:invoice-review",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
       "to": "table:kolben-project",
       "kind": "references"
     },
@@ -4075,6 +4080,11 @@
     {
       "from": "table:party",
       "to": "table:party-tax-identity",
+      "kind": "references"
+    },
+    {
+      "from": "table:party",
+      "to": "table:pending-invoice-verify",
       "kind": "references"
     },
     {
