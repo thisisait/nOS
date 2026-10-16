@@ -1212,7 +1212,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 let text = if text.trim().is_empty() { "(Iris gave no answer.)".to_string() } else { text };
                 // The ledger above keeps what was said; the person sees a link no tool returned marked (operator 2026-10-15).
                 let known: String = o.messages.iter().filter(|m| m["role"] == "tool").filter_map(|m| m["content"].as_str()).collect();
-                let text = mark_links(&text, &known);
+                let text = mark_links(&text, &known).replace(['⟦', '⟧'], "");
                 return send(out, &ToShell::Text { session: o.session.clone(), text });
             };
             for (i, call) in asked.iter().enumerate() {
