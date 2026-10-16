@@ -167,7 +167,8 @@ the turns leave the EU; `refused` says what was left out and why. `model_pick` (
 is judged again, refused by name if not offered, recorded (`agent_session_rebind`:
 `from_model_uri`, `to_model_uri`, `by: person`, reason, plus backend, model, processor,
 `transfers_outside_eu`; the session row's `model_uri` follows) and binds from the next turn,
-imprint included; that turn's first model request carries one system line naming the move.
+imprint included; the first answered request after it carries one system line naming the model
+that answered before (none when no turn was answered). Re-picking the bound model is no rebind.
 A refused pick stays `agent_tool_result` tool `model`. A new session starts on
 the host's `iris_backend`. The live Art-30 record (`nos_gdpr.effective_records`) names every
 row a person could pick, not only the host's choice.
