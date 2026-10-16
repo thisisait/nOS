@@ -856,6 +856,10 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         let lines = d.lines.map(|l| Lines { rows: l.rows.into_iter().map(|r| said(&l.table, r)).collect(), ..l });
         let card = RowDiffApproval { cells, lines, ..d };
         let Some(w) = outside else { return self.asking(o, out, tool, rec, Component::RowDiffApproval(card)) };
+        // Whose it is rides the warning too, after a misnamed row's; the contract caps it at 400.
+        let warning: String = card.warning.iter().chain([&w]).map(String::as_str).collect::<Vec<_>>().join("; ").chars().take(400).collect();
+        rec["warning"] = json!(warning);
+        let card = RowDiffApproval { warning: Some(warning), ..card };
         let again = RowDiffApproval { title: format!("{} · {w}: approve once more to write it", card.title), ..card.clone() };
         let first = RowDiffApproval { title: format!("{} · {w}", card.title), ..card };
         let mut next = rec.clone();
@@ -2734,7 +2738,12 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         let v = self.keap(who, &url, None).map_err(|why| format!("{why}; memory is UNKNOWN, not empty"))?;
         let found = v.pointer("/data/items").and_then(Value::as_array).ok_or("KEAP answered no items; memory is UNKNOWN, not empty")?;
         let text = |i: &Value, k: &str, n: usize| i[k].as_str().unwrap_or("").chars().take(n).collect::<String>();
-        let hits: Vec<&Value> = found.iter().filter(|i| !(admin && i["kind"] == "capture")).take(limit as usize).collect();
+        // The septum (W4): for a client only the shared taxonomy is kept; a capture, note or object is the person's
+        // own, or of an owner the hit does not say. On personal data no memory hit walks to a client.
+        let walled = who.working_for.as_ref().filter(|s| s.client.is_some());
+        let shown: Vec<&Value> = found.iter().filter(|i| !(admin && i["kind"] == "capture")).collect();
+        let hits: Vec<&Value> = shown.iter().copied().filter(|i| walled.is_none() || i["kind"] == "taxonomy").take(limit as usize).collect();
+        let hidden = shown.iter().filter(|i| walled.is_some() && i["kind"] != "taxonomy").count();
         let items: Vec<Value> = hits.iter().map(|i| {
             let mut x = json!({"kind": i["kind"], "name": text(i, "name", 200), "description": text(i, "description", 300), "score": i["score"]});
             if let Some(u) = i["url"].as_str() {
@@ -2752,9 +2761,16 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         if admin {
             out["excluded"] = json!(excluded);
         }
-        let rec = json!({"count": hits.len(), "items": hits.iter().map(|i| json!({"kind": i["kind"], "refId": i["refId"]})).collect::<Vec<_>>(),
-                         "semantic": semantic, "excluded": excluded});
-        let list = (!items.is_empty()).then(|| List { title: Some("Memory".into()), ordered: true, items: items.iter().map(|i| ListItem {
+        let mut rec = json!({"count": hits.len(), "items": hits.iter().map(|i| json!({"kind": i["kind"], "refId": i["refId"]})).collect::<Vec<_>>(),
+                             "semantic": semantic, "excluded": excluded});
+        let mut title = "Memory".to_string();
+        if let Some(s) = who.working_for.as_ref() {
+            let said = format!("hidden by scope: {hidden}");
+            out["hidden"] = json!(format!("{said} (personal memory, hidden while you work {})", s.said()));
+            rec["hidden_by_scope"] = json!(hidden);
+            title = format!("Memory · {said}");
+        }
+        let list = (!items.is_empty()).then(|| List { title: Some(title), ordered: true, items: items.iter().map(|i| ListItem {
             text: format!("{} · {}", i["kind"].as_str().unwrap_or("?"), i["name"].as_str().unwrap_or("")),
             // The url the model may link is drawn too: a link is honest only if the person sees its source.
             detail: Some([&i["description"], &i["url"]].iter().filter_map(|v| v.as_str()).filter(|s| !s.is_empty())

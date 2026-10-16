@@ -87,11 +87,14 @@ query_rows, widgets, forms and dashboard offers, and list_tables names it as hid
 A table Iris creates while working for a client is that client's (the create's
 ledger result names it). Both shells show the scope on the turn and on the card; a
 switch is refused while a card waits. An insert or edit whose row would be another
-client's (or personal) names whose on its card and is written only on a second
-approve. serve holds the wall per connection; the pupil says it again on a reconnect
-and re-runs its widgets when it changes. Not yet covered: `search_memory` (KEAP's
-semantic search crosses the septum), rowRef selects in forms (they list every parent
-row), and an insert_many's lines (only the parent row is walked).
+client's (or personal) names whose in its title and warning (after a misnamed-row
+warning, joined) and is written only on a second approve. `search_memory` for a
+client keeps the shared taxonomy only: a capture, note or object is the person's (or
+its hit does not say whose), so it is dropped and the result says "hidden by scope: n";
+on personal data nothing is dropped (KEAP 2.1.0 search returns no DataTable rows).
+serve holds the wall per connection; the pupil says it again on a reconnect and re-runs
+its widgets when it changes. Not yet covered: rowRef selects in forms (they list every
+parent row), and an insert_many's lines (only the parent row is walked).
 
 ## Widgets and forms
 
