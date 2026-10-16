@@ -2,8 +2,6 @@ update nOS Roadmap (roadmap) / backup-restic-fork — nothing is written unless 
 u approve
   status: "open" -> "done"
   note: (empty) -> "landed"
-t
-e2                       2026-10-13               tools                    42
 e1                       2026-10-01               travel                   420
 widget w2:
 bar chart sum of amount by kind: 1 series over category x, not drawn here
@@ -36,5 +34,7 @@ dashboard Bench board: 3 widgets, place it in the pupil
   form: Add a row (table iris-bench-2)
   left out: By owner — no column `owner` in iris-bench-2; columns: title, status
 , track, points, note, due
+working for ACME s.r.o.
+working on personal data
 approve this edit (1 of 8)? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit

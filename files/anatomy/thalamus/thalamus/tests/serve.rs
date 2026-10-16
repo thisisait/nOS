@@ -425,7 +425,7 @@ fn admin() -> serde_json::Value {
 }
 
 fn alice() -> serve::Person {
-    serve::Person { username: "Alice Smith".into(), groups: vec!["nos-users".into()] }
+    serve::Person { username: "Alice Smith".into(), groups: vec!["nos-users".into()], working_for: None }
 }
 
 fn types_of(ledger: &std::path::Path, session: &str) -> Vec<String> {
@@ -4902,7 +4902,11 @@ fn septum_keap() -> (String, Seen) {
 /// The table defs serve reads from NOS_REPO_ROOT/state/keap-tables, as tools/septum-status.py does.
 fn septum_defs(rig: &Rig) {
     let d = rig.sock.parent().unwrap().join("state/keap-tables");
-    std::fs::create_dir_all(&d).unwrap();
+    // bind()'s umask is process-wide (see dir()): each level is made 0700 by hand.
+    for p in [d.parent().unwrap(), &d] {
+        let _ = std::fs::create_dir(p);
+        std::fs::set_permissions(p, std::fs::Permissions::from_mode(0o700)).unwrap();
+    }
     for (name, def) in [("party", "client_scope: self\n"),
                         ("invoice", "client_scope: book_owner\nschema: {columns: [{key: book_owner, refTable: party}]}\n"),
                         ("invoice-line", "client_scope: \"rowRef:invoice\"\nschema: {columns: [{key: invoice, refTable: invoice}]}\n"),
