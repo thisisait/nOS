@@ -130,6 +130,8 @@ CONCEPTLESS = {
     "invoice-line.vat_rate": "a percent — no rate concept — needs measure.rate",
     "invoice-line.vat_amount": "a money amount — no money/measure concept — needs measure.amount",
     "book-access.book_owner": "the client book this principal may read — graph.parent would claim access nests under the party — needs graph.counterparty",
+    "invoice-review.book_owner": "the client the disputed invoice is for (septum) — a review row does not nest under the party — needs graph.counterparty (same as invoice.book_owner)",
+    "pending-invoice-verify.book_owner": "the client the held sidecar is for (septum) — a queue row does not nest under the party — needs graph.counterparty (same as invoice.book_owner)",
     "account.code": "the ledger code 311 — an identifier, not identity.name — needs identity.code",
     "account.reporting_concept": "maps the account to a reporting-standard concept (taxonomy anchor) — a soft text link today; upgrade to a taxonomyRef kind + needs class.reporting_concept",
     "account.party": "the counterparty an analytical account is scoped to — graph.parent is claimed by `parent`; needs graph.counterparty (same as kolben-project.client)",
