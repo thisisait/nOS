@@ -5293,9 +5293,9 @@ fn a_pick_is_recorded_and_the_next_turn_uses_it() {
     assert!(body["messages"][0]["content"].as_str().unwrap().contains("FULL-IMPRINT-MARK"), "a cloud row reads the full imprint");
     drop((s, r));
     std::thread::sleep(std::time::Duration::from_millis(300));
-    let rec = events(&rig.ledger, &session).into_iter().find(|e| e.1.ends_with("/tool:model")).expect("the ledger records the pick");
-    assert_eq!((rec.0.as_str(), &rec.2["backend"], &rec.2["model"], &rec.2["chosen_by"], &rec.2["processor"], &rec.2["transfers_outside_eu"]),
-               ("agent_tool_result", &serde_json::json!("mistral-eu"), &serde_json::json!("mistral-large-latest"), &serde_json::json!("person"),
+    let rec = events(&rig.ledger, &session).into_iter().find(|e| e.0 == "agent_session_rebind").expect("the ledger records the pick");
+    assert_eq!((rec.0.as_str(), &rec.2["backend"], &rec.2["model"], &rec.2["by"], &rec.2["processor"], &rec.2["transfers_outside_eu"]),
+               ("agent_session_rebind", &serde_json::json!("mistral-eu"), &serde_json::json!("mistral-large-latest"), &serde_json::json!("person"),
                 &serde_json::json!("Mistral AI SAS"), &serde_json::json!(false)));
     let db = rusqlite::Connection::open(&rig.ledger).unwrap();
     let uri: String = db.query_row("SELECT model_uri FROM sessions WHERE uuid = ?1", [&session], |r| r.get(0)).unwrap();
