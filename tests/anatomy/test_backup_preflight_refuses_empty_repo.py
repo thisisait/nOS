@@ -1,5 +1,6 @@
-"""configure_backup with an empty restic_repo is refused in the preflight, in
-seconds, not by tasks/backup.yml after ~680 tasks (client host, 2026-10-16).
+"""configure_backup or install_backrest with an empty restic_repo is refused in
+the preflight, in seconds, not by tasks/backup.yml after ~680 tasks (client host,
+2026-10-16); Backrest seeds its repo from restic_repo, so it needs one too.
 Runs the real main.yml preflight task through Ansible; the rule lives once.
 """
 from __future__ import annotations
@@ -14,7 +15,7 @@ import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
-NAME = "[Preflight] Refuse configure_backup without a restic_repo"
+NAME = "[Preflight] Refuse a backup without a restic_repo"
 needs_ansible = pytest.mark.skipif(importlib.util.find_spec("ansible") is None, reason="runs the task through real Ansible")
 
 
@@ -29,7 +30,9 @@ def _preflight_task() -> dict | None:
     ({"configure_backup": True}, True),
     ({"configure_backup": True, "restic_repo": "/Volumes/Backup/restic"}, False),
     ({"configure_backup": False, "restic_repo": ""}, False),
-    ({"configure_backup": True, "restic_repo": "", "install_backrest": True}, False),
+    ({"configure_backup": True, "restic_repo": "", "install_backrest": True}, True),
+    ({"install_backrest": True, "restic_repo": ""}, True),
+    ({"install_backrest": True, "restic_repo": "/Volumes/Backup/restic"}, False),
 ])
 def test_the_preflight_refuses_backup_without_a_repo(tmp_path, extra, refused):
     task = _preflight_task()
