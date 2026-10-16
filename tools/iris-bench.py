@@ -15,6 +15,10 @@ with an explicit `--sock` is the test path (a fake thalamus).
 Usage:
     NOS_LIVE=1 tools/iris-bench.py                  # ~/.nos/thalamus.sock
     tools/iris-bench.py --sock /tmp/fake.sock --offline --out /tmp/run.json
+    NOS_LIVE=1 NOS_ASSAY_DIR=~/projects/nos-assay tools/iris-bench.py --domain home-lab-tables
+
+--out carries `provenance` (nOS commit, argv, each model's Ollama digest or null + why) so a
+run can be filed in nos-assay as evidence: a model name can be re-pointed upstream, a digest not.
 """
 
 from __future__ import annotations
@@ -24,8 +28,10 @@ import json
 import os
 import re
 import socket
+import subprocess
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 import yaml
@@ -426,11 +432,55 @@ def score(case: dict, got: dict, now: float) -> list[str]:
     return [name for name, arg in case.get("checks", {}).items() if arg is not False and not check(name, arg, got, now)]
 
 
+# ── provenance: a run says which weights answered (nos-assay keeps runs as evidence) ──
+
+def ollama_tags(base=None):
+    """({name: "sha256:…"}, None) from Ollama /api/tags, or ({}, why): a digest is read, never guessed."""
+    base = (base or os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")).rstrip("/")
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # a local Ollama, never via a proxy
+    try:
+        with opener.open(base + "/api/tags", timeout=5) as r:
+            return {m["name"]: "sha256:" + m["digest"].removeprefix("sha256:") for m in json.loads(r.read())["models"]}, None
+    except (OSError, ValueError, KeyError) as e:
+        return {}, f"{type(e).__name__}: {e}"
+
+
+def _tag(name, tags):
+    return name if name in tags else f"{name}:latest" if f"{name}:latest" in tags else None
+
+
+def provenance(models: dict, base=None, argv=None) -> dict:
+    """{nos_commit, argv, models: [{role, name, digest, source}]}; a model Ollama does not hold gets digest None."""
+    tags, why = ollama_tags(base)
+    head = subprocess.run(["git", "-C", str(REPO), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    out = {"nos_commit": head or None, "argv": list(sys.argv[1:] if argv is None else argv), "models": []}
+    for role, name in models.items():
+        t = _tag(name, tags)
+        out["models"].append({"role": role, "name": name, "digest": tags.get(t), "source": f"ollama:{t}" if t else None})
+    return out | ({"tags_error": why} if why else {})
+
+
+def uri_models(uris, base=None) -> dict:
+    """serve's model_uri is "<binding row>-<model id>": the Ollama tag it ends with, else the uri itself."""
+    tags, _ = ollama_tags(base)
+    return {u: next((t for t in sorted(tags, key=len, reverse=True) if u.endswith("-" + t)), u) for u in uris}
+
+
+def cases_path(cases, domain):
+    """--domain d reads $NOS_ASSAY_DIR/domains/d/cases.yml (the nos-assay corpus); else --cases."""
+    if not domain:
+        return Path(cases)
+    if not os.environ.get("NOS_ASSAY_DIR"):
+        sys.exit("--domain needs NOS_ASSAY_DIR (a nos-assay checkout)")
+    return Path(os.environ["NOS_ASSAY_DIR"]).expanduser() / "domains" / domain / "cases.yml"
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--sock")
     ap.add_argument("--offline", action="store_true", help="test path: needs an explicit --sock")
     ap.add_argument("--cases", default=str(CASES))
+    ap.add_argument("--domain", help="read $NOS_ASSAY_DIR/domains/<domain>/cases.yml instead of --cases")
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--timeout", type=float, default=180.0, help="seconds without a line before a case fails")
     ap.add_argument("--repeat", type=int, default=1, help="run each case N times; a majority of passing runs passes")
@@ -446,7 +496,7 @@ def main(argv: list[str] | None = None) -> int:
               "or pass --offline with an explicit --sock for a fake.", file=sys.stderr)
         return 2
     sock = a.sock or str(SOCK)
-    cases = yaml.safe_load(Path(a.cases).read_text(encoding="utf-8"))
+    cases = yaml.safe_load(cases_path(a.cases, a.domain).read_text(encoding="utf-8"))
     results = []
     n = max(1, a.repeat)
     for case in cases:
@@ -468,6 +518,7 @@ def main(argv: list[str] | None = None) -> int:
                                     for d in r["component"].get("props", {}).get("dropped") or []]})
     run = {"ran_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "sock": sock,
            "model_uri": sorted({r["model_uri"] for r in results if r["model_uri"]}), "cases": results}
+    run["provenance"] = provenance(uri_models(run["model_uri"]), argv=argv)
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(run, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

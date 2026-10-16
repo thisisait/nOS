@@ -48,6 +48,10 @@ vLLM-SR Decision 3.0 (d3-flash 9B, d3-mini 4B; Apache-2.0): `--backend d3` posts
 own System One server (llama serve, vllm-sr serve, d3_server.py; calibrated); `--backend d3-ollama`
 asks the GGUF in Ollama d3's code-readout prompt, one question per chat, and reads one code back
 (uncalibrated). Any answer that does not fit its question escalates, on every backend.
+
+--out carries iris-bench's `provenance` (nOS commit, argv, Ollama digests; an http/d3 decider has
+digest null: give the GGUF's sha256 when filing the run in nos-assay). --domain reads the nos-assay
+corpus at $NOS_ASSAY_DIR/domains/<domain>/cases.yml.
 """
 
 from __future__ import annotations
@@ -755,6 +759,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--case", action="append", help="a case id from iris-bench.yml (repeatable); default every eval case")
     ap.add_argument("--cases", default=str(REPO / "state/fixtures/iris-bench.yml"))
+    ap.add_argument("--domain", help="read $NOS_ASSAY_DIR/domains/<domain>/cases.yml instead of --cases")
     ap.add_argument("--fake", default=str(FIX / "fake-answers.yml"), help="offline scripts")
     ap.add_argument("--normaliser-model", default=os.environ.get("NOS_ONESHOT_NORMALISER", "qwen3.5:9b"))
     ap.add_argument("--decision-model", default=os.environ.get("NOS_ONESHOT_DECISION"),
@@ -783,7 +788,7 @@ def main(argv=None) -> int:
         return 2
     a.decision_model = a.decision_model or {"http": "clef-flash", "d3": "vllm-sr/d3-flash",
                                             "d3-ollama": "hf.co/ggml-org/vllm-d3-flash-GGUF:Q8_0"}.get(a.backend, "qwen3.5:2b")
-    allc = yaml.safe_load(Path(a.cases).read_text(encoding="utf-8"))
+    allc = yaml.safe_load(_bench().cases_path(a.cases, a.domain).read_text(encoding="utf-8"))
     cases = [c for c in allc if c["id"] in a.case] if a.case else eval_cases(allc)
     scripts = {} if live else yaml.safe_load(Path(a.fake).read_text(encoding="utf-8"))
     if not live:
@@ -809,8 +814,17 @@ def main(argv=None) -> int:
                                     "error": "no offline script", "failed": [], "nt": []})
                     continue
                 results.append(dict(run(case, norm, dec, trace, model), model=model))
+    roles = {"normaliser": a.normaliser_model} | {f"decision{i or ''}": m for i, m in enumerate(models)}
+    prov = _bench().provenance(roles if live else {}, argv=argv)
+    for m in prov["models"]:  # several decision models are all role decision
+        m["role"] = "decision" if m["role"].startswith("decision") else m["role"]
+        if m["role"] == "decision" and a.backend in ("http", "d3"):
+            m.update(digest=None, source=f"{a.backend}:{base}")  # not an Ollama model: the importer needs --digest
+    if not live:
+        prov["models"] = [{"role": r, "name": "fake", "digest": None, "source": "fake"} for r in ("decision", "normaliser")]
     Path(a.out).write_text(json.dumps({"ran_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "live": live,
-                                       "cases": results}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+                                       "provenance": prov, "cases": results}, indent=2, ensure_ascii=False) + "\n",
+                           encoding="utf-8")
     print(f"{'case':<18} {'model':<14} {'mode':<13} {'plan ok':<8} {'#q':>4} {'calls':>5} {'secs':>7}  failed / n/t")
     for r in results:
         why = r["error"] or ", ".join(r["failed"]) or "-"
