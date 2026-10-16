@@ -72,16 +72,27 @@ def _slug(name: str) -> str:
     return "piv-" + re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", name.lower())).strip("-")
 
 
-def verify_row(sidecar_name: str, sidecar: dict, source_path: str = "") -> dict:
+def book_owner_of(sc_path: pathlib.Path, parties: set) -> str | None:
+    """The client this sidecar's book belongs to: the accounting/<slug>/ leaf, only
+    when that slug is a party row (book_owner is a restrict rowRef). Pure."""
+    slug = nos_digest.infer_book_owner_slug(sc_path.parent)
+    return slug if slug in parties else None
+
+
+def verify_row(sidecar_name: str, sidecar: dict, source_path: str = "",
+               book_owner: str | None = None) -> dict:
     """The pending-invoice-verify row for a held sidecar. sidecar_id is the STABLE
     JOIN KEY VisionImporter.parse() looks up by (the sidecar filename).
     source_path is the USER-ROOT-RELATIVE path of the parked original (Bone VFS
     coordinates) so the approve surface can show WHAT is being approved —
     a queue row without the evidence next to it is a rubber stamp (operator,
     2026-09-23). Pure."""
-    return {"slug": _slug(sidecar_name), "sidecar_id": sidecar_name,
-            "fields": sidecar.get("fields") or {}, "resolution": "pending",
-            "source_path": source_path}
+    row = {"slug": _slug(sidecar_name), "sidecar_id": sidecar_name,
+           "fields": sidecar.get("fields") or {}, "resolution": "pending",
+           "source_path": source_path}
+    if book_owner:
+        row["book_owner"] = book_owner     # septum: client_scope book_owner
+    return row
 
 
 def source_rel(sc_path: pathlib.Path) -> str:
@@ -206,6 +217,7 @@ def main(argv: list[str] | None = None) -> int:
         digest_absorb.ensure_table(TABLE, hdr)
         present_rows = digest_absorb.read_rows(TABLE, hdr)
         present = {r.get("slug") for r in present_rows}
+        parties = {r.get("slug") for r in digest_absorb.read_rows("party", hdr)}
     except urllib.error.HTTPError as exc:
         print(f"REFUSING: {TABLE} schema HTTP {exc.code}", file=sys.stderr)
         return 2
@@ -220,19 +232,18 @@ def main(argv: list[str] | None = None) -> int:
         if not is_held(sidecar):
             continue
         held += 1
-        row = verify_row(sc_path.name, sidecar, source_rel(sc_path))
+        row = verify_row(sc_path.name, sidecar, source_rel(sc_path), book_owner_of(sc_path, parties))
         if row["slug"] in present:
             # Backfill: pre-source_path rows were approve-blind. POST is an
             # upsert by slug (the ARES pack overwrites its rows the same way),
             # and resolution is NOT resent — a live approved/rejected verdict
             # must never be reset by a re-sweep.
             live = next((r for r in present_rows if r.get("slug") == row["slug"]), {})
-            if row["source_path"] and not live.get("source_path"):
+            fill = {k: row[k] for k in ("source_path", "book_owner") if row.get(k) and not live.get(k)}
+            if fill:
                 try:
-                    digest_absorb._post_row(
-                        TABLE, {**live, "slug": row["slug"],
-                                "source_path": row["source_path"]}, hdr)
-                    print(f"  ~ {row['slug']}: backfilled source_path")
+                    digest_absorb._post_row(TABLE, {**live, "slug": row["slug"], **fill}, hdr)
+                    print(f"  ~ {row['slug']}: backfilled {', '.join(fill)}")
                 except urllib.error.HTTPError as e:
                     print(f"  FAILED backfill {row['slug']}: {e.code}", file=sys.stderr)
             else:

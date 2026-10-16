@@ -934,7 +934,10 @@ def reconcile_invoices(isdoc_records: list[dict], vision_records: list[dict],
             continue
         mismatches = invoice_cross_check(rec, vision, amount_tol)
         if mismatches:
-            review_items.append({"document_number": rec.get("id"), "mismatches": mismatches})
+            item = {"document_number": rec.get("id"), "mismatches": mismatches}
+            if rec.get("book_owner"):
+                item["book_owner"] = rec["book_owner"]   # septum: whose book the dispute is in
+            review_items.append(item)
         else:
             clean.append(rec)
     return clean, review_items
@@ -947,11 +950,14 @@ def compose_invoice_review(review_items: list[dict], *, batch_id: str) -> dict:
     rows = []
     for item in review_items or []:
         doc = item.get("document_number") or "?"
-        rows.append({
+        row = {
             "slug": f"invoice-review-{token}-{_batch_slug(doc)}",
             "document_number": doc,
             "mismatches": item.get("mismatches") or [],
-        })
+        }
+        if item.get("book_owner"):
+            row["book_owner"] = item["book_owner"]
+        rows.append(row)
     return {"invoice-review": rows} if rows else {}
 
 
