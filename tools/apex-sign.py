@@ -89,6 +89,8 @@ def main() -> int:
     RULING.write_text(re.sub(rf"^{FIELD} .*$", f"{FIELD} {want}", text, flags=re.M),
                       encoding="utf-8")
     print(f"signed: {want}")
+    rel = RULING.relative_to(REPO)  # the digest counts once committed: a push without it carries the old one
+    print(f"\nnow record it (before any push):\n  git add {rel} && git commit -m \"chore(apex): re-sign\" -- {rel}")
     return 0
 
 
