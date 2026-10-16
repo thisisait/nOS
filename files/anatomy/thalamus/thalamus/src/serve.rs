@@ -251,6 +251,8 @@ struct Open {
     tables_seen: HashMap<String, String>,
     /// Table id to its date column keys, from the queries that showed it: an edit's day becomes epoch.
     dates: HashMap<String, Vec<String>>,
+    /// Table id to the column a card names its row by: `title`, else the first text column.
+    names: HashMap<String, String>,
     /// The tools whose free text the model read in this turn; a card asked now says so.
     read_free: Vec<String>,
     /// The widget forms this session sent, by widget token: a re-run replaces the old form id.
@@ -790,7 +792,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris),
         };
         Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None })
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None })
     }
 
     /// The decider gate before a submit, a decision or a choice reply: a refused peer is told and
@@ -1272,6 +1274,11 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                             o.tables_seen.insert(t.table.clone(), t.name.clone());
                             o.dates.insert(t.table.clone(), extra.as_array().into_iter().flatten().filter(|c| c["kind"] == "date")
                                 .filter_map(|c| c["key"].as_str().map(str::to_string)).collect());
+                            let cols = extra.as_array().map(Vec::as_slice).unwrap_or_default();
+                            if let Some(k) = cols.iter().find(|c| c["key"] == "title").or_else(|| cols.iter().find(|c| c["kind"] == "text"))
+                                .and_then(|c| c["key"].as_str()) {
+                                o.names.insert(t.table.clone(), k.to_string());
+                            }
                             let mut v = json!({"table": t.table, "name": t.name, "query": t.query, "matched": t.matched, "total": t.total,
                                    "columns": extra, "rows": t.rows});
                             mark_text_cells(&mut v);
@@ -1307,8 +1314,8 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                     "propose_row_edit" | "propose_row_insert" | "propose_row_delete" => {
                         let named = said_numbers(&o.messages).to_string();
                         let d = match name {
-                            "propose_row_edit" => self.propose_row_edit(who, &args, &o.shown, &o.dates, &named),
-                            "propose_row_delete" => self.propose_row_delete(who, &args, &o.shown, &named),
+                            "propose_row_edit" => self.propose_row_edit(who, &args, &o.shown, &o.dates, &o.names, &named),
+                            "propose_row_delete" => self.propose_row_delete(who, &args, &o.shown, &o.names, &named),
                             _ => self.propose_row_insert(who, &args, &o.tables_seen, &o.shown, &named),
                         };
                         // Operator ruling Q7: no refusal after a free-text read; the card head says it.
@@ -1878,7 +1885,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// The cell diff of one existing row the person can read; only changed cells survive.
     fn propose_row_edit(&self, who: &Person, args: &Value, shown: &HashMap<(String, String), String>,
-                        dates: &HashMap<String, Vec<String>>, asked: &str) -> Result<RowDiffApproval, String> {
+                        dates: &HashMap<String, Vec<String>>, names: &HashMap<String, String>, asked: &str) -> Result<RowDiffApproval, String> {
         let s = |k: &str| args.get(k).and_then(Value::as_str).filter(|v| !v.is_empty()).ok_or(format!("propose_row_edit needs `{k}`"));
         let (alias, row_id) = (s("table")?, s("row_id")?);
         let (table, title) = shown_row(shown, alias, row_id)?;
@@ -1905,19 +1912,20 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         if cells.is_empty() {
             return Err("nothing would change".into());
         }
-        let warning = misnamed(asked, current.get("title"), &cells);
+        let warning = misnamed(asked, names.get(table).and_then(|k| current.get(k)), &cells);
         Ok(RowDiffApproval { table: table.to_string(), title: title.clone(), op: RowOp::Update, row_id: Some(row_id.to_string()),
                              cells, read_from: vec![], lines: None, warning })
     }
 
     /// Every value of one row the person was shown, each old -> null: what the delete removes.
-    fn propose_row_delete(&self, who: &Person, args: &Value, shown: &HashMap<(String, String), String>, asked: &str) -> Result<RowDiffApproval, String> {
+    fn propose_row_delete(&self, who: &Person, args: &Value, shown: &HashMap<(String, String), String>,
+                          names: &HashMap<String, String>, asked: &str) -> Result<RowDiffApproval, String> {
         let s = |k: &str| args.get(k).and_then(Value::as_str).filter(|v| !v.is_empty()).ok_or(format!("propose_row_delete needs `{k}`"));
         let (alias, row_id) = (s("table")?, s("row_id")?);
         let (table, title) = shown_row(shown, alias, row_id)?;
         let now = self.rows(who, table)?.into_iter().find(|(id, _)| id == row_id).map(|(_, v)| shown_values(v))
             .ok_or(format!("no row {row_id:?} in {table} that you can read"))?;
-        let warning = misnamed(asked, now.get("title"), &[]);
+        let warning = misnamed(asked, names.get(table).and_then(|k| now.get(k)), &[]);
         let cells = now.into_iter().map(|(key, old)| CellChange { key, old, new: Value::Null }).collect();
         let d = RowDiffApproval { table: table.clone(), title: title.clone(), op: RowOp::Delete, row_id: Some(row_id.to_string()),
                                   cells, read_from: vec![], lines: None, warning };
@@ -3181,7 +3189,8 @@ fn numbers(t: &str) -> Vec<&str> {
 
 /// Each number the person named, unless it is a value being written, is a number in the row's
 /// title, or the card says which (local bench 2026-10-16: asked row 10, card for 19). Never refuses.
-/// ponytail: reads only the `title` cell (or a parent's display); a table without one is not checked.
+/// ponytail: reads one cell, `title` else the first text column (or a parent's display); a table
+/// with no text column is not checked.
 fn misnamed(asked: &str, title: Option<&Value>, written: &[CellChange]) -> Option<String> {
     let title = Some(text(title?)).filter(|t| !t.is_empty())?;
     let runs = |s: &str| s.split(|c: char| !c.is_ascii_digit()).filter(|r| !r.is_empty())
