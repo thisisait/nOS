@@ -2,7 +2,7 @@
 # Protocol: ssot/doctrine/cross-repo-contracts.md §1 (spec + fixture + gates
 # over the same bytes). Both sides link one Rust crate (nos-contract), so the
 # gate is the crate decoding the fixture; one copy only, both sides cite this.
-contract_version: 6   # 6: dashboard, kpi, working_for; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
+contract_version: 6   # 6: dashboard, kpi, working_for, model_options, model_pick; 3: table_results name/query/matched/total, markdown, table, list, record, chart; 4: tree, timeline, graph, form, choice, delta, sequence; 5: row_diff_approval op/title/read_from
 fixture: files/anatomy/contracts/thalamus-shell.fixture.json
 
 producer:
@@ -24,8 +24,8 @@ gates:
 wire:
   framing: "newline-delimited JSON, one message per line, UTF-8"
   tag: "every message is an object whose `t` names its variant (snake_case)"
-  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for]
-  to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, working_for]
+  to_thalamus: [turn, approval_decision, control, widget, form_submit, choice_reply, working_for, model_options, model_pick]
+  to_shell: [session, text, render, approval_request, refused, activity, widget, form_result, table_changed, working_for, model_options]
   widget: >-
     A widget is a spec the person placed; the pupil re-runs it over `widget {widget, spec, trigger}`
     and the thalamus answers as that person, without the model, with `widget {session, widget,
@@ -81,6 +81,19 @@ wire:
     {session, scope, name}` (scope resolved to the party id, name what both shells show on the turn
     and on every card), records it, forgets the rows shown before, and refuses a switch while an
     approval waits, so a card is always asked under the scope the shells show.
+  model_options: >-
+    `model_options` is the person asking which model Iris may use in this session (W5); serve answers
+    `model_options {session, options, refused}`: one option {backend, model, processor,
+    transfers_outside_eu, warning?, current} per row of iris's model.backends_allowed that is armed
+    here and passes the binding gates and gdpr_posture (a non-EU row only under none), a local row once
+    per model the host has pulled that passes the size floor (llm_cell_min_params_b refuses, below
+    llm_cell_recommended_params_b `warning` says it runs badly); `refused` says each one left out and
+    why. `current` marks the session's binding (at most one); a session opens on the host's iris_backend.
+  model_pick: >-
+    `model_pick {backend, model}` is the person choosing one of those options for this session: serve
+    judges it again, refuses one not offered by its name and reason, records it (agent_tool_result
+    tool:model with backend, model, processor, transfers_outside_eu, chosen_by person), rebinds the
+    session from its next turn and answers `model_options` with the pick current.
   phase: [thinking, tool, writing, idle]   # activity.phase; tool is {tool: {name}}
   decision: [approve, reject]
   control_view: [inbox, approvals, red_status]

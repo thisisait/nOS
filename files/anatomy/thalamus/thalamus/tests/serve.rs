@@ -137,6 +137,11 @@ thread_local! {
     static READER_SECS: std::cell::Cell<u64> = const { std::cell::Cell::new(10) };
 }
 
+thread_local! {
+    /// The rows serve offers for a session pick (W5) and the size floors; the next rig takes them.
+    static PICKS: std::cell::RefCell<(Vec<thalamus::binding::Pick>, Option<(f64, f64)>)> = Default::default();
+}
+
 fn rig_full(name: &str, map: serde_json::Value, keap_bodies: Vec<String>, model_bodies: Vec<String>,
             bound: Option<Binding>) -> Rig {
     rig_at(name, map, fake(keap_bodies), model_bodies, bound)
@@ -158,18 +163,21 @@ fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, S
     std::fs::write(&map_path, map.to_string()).unwrap();
     let (model_url, model) = fake(model_bodies);
     let log = Log::default();
+    let (picks, floors) = PICKS.with(|p| p.take());
     let ledger = d.join("ledger.db");
     let srv = Server {
         map: map_path,
         keap_url,
         secret: SECRET.into(),
         ledger: Mutex::new(Ledger::open(&ledger).unwrap()),
-        binding: bound.map(|b| Binding { base_url: model_url, ..b }).ok_or_else(|| "iris is disarmed".into()),
+        binding: bound.map(|b| Binding { base_url: model_url.clone(), ..b }).ok_or_else(|| "iris is disarmed".into()),
         repo: d.clone(),
         reader_secs: READER_SECS.with(|c| c.get()),
         tier1: vec!["nos-admins".into()],
         deciders,
         log: Mutex::new(Box::new(log.clone())),
+        picks: picks.into_iter().map(|p| thalamus::binding::Pick { bound: p.bound.map(|b| Binding { base_url: model_url.clone(), ..b }), ..p }).collect(),
+        floors,
     };
     let sock = d.join("t.sock");
     let listener = serve::bind(&sock).unwrap();
@@ -5150,4 +5158,119 @@ fn an_outside_write_warns_whose_beside_a_misnamed_row() {
     assert_eq!(card_of(&got).unwrap().1.warning, Some(format!(r#"you asked for "7"; this row is "A-1"; {whose}"#)), "both warnings, joined");
     let (_rig, _s, _r, got) = septum_write("septwarn3", ("propose_row_insert", r#"{"table": "invoice", "values": {"number": "A-2", "book_owner": "acme"}}"#));
     assert_eq!(card_of(&got).unwrap().1.warning, None, "an inside write warns of nothing");
+}
+
+// --- W5: the person picks Iris's model for the session; serve rebinds from the next turn ---
+
+/// Both of iris's rows armed, the cloud one keyed.
+const BOTH: &[(&str, &str)] = &[("NOS_ARMED_BACKENDS", "mistral-eu ollama"), ("NOS_MISTRAL_MODEL", "mistral-large-latest"),
+                                ("nos:mistral_api_key", KEY), ("NOS_LOCAL_MODEL", "qwen3:14b")];
+
+/// What the host's ollama has pulled (GET <base_url>/models, the OpenAI shape).
+const PULLED: &str = r#"{"object": "list", "data": [{"id": "qwen3:14b"}, {"id": "qwen3:4b"}, {"id": "qwen3:1.7b"}, {"id": "nomic-embed-text:latest"}]}"#;
+
+fn picks_of(cell: &str, env: &[(&str, &str)]) -> Vec<thalamus::binding::Pick> {
+    let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../..");
+    let register = std::fs::read_to_string(repo.join("state/habitat/llm-backends.yml")).unwrap();
+    let cell = match cell {
+        "iris" => std::fs::read_to_string(repo.join("files/anatomy/agents/iris/agent.yml")).unwrap(),
+        inline => inline.to_string(),
+    };
+    thalamus::binding::picks(&cell, &register, |k| env.iter().find(|(n, _)| *n == k).map(|(_, v)| v.to_string()))
+}
+
+/// A rig on the host's local qwen3:14b whose session may pick among `picks`, floors 3B / 8B.
+fn picker(name: &str, picks: Vec<thalamus::binding::Pick>, model_bodies: Vec<String>) -> Rig {
+    PICKS.with(|p| *p.borrow_mut() = (picks, Some((3.0, 8.0))));
+    rig_full(name, mapped(), vec![ROWS.into()], model_bodies, Some(local()))
+}
+
+fn said_to(s: &UnixStream, r: &mut BufReader<UnixStream>, m: ToThalamus) -> ToShell {
+    (&*s).write_all(encode(&m).as_bytes()).unwrap();
+    loop {
+        match next(r) {
+            Some(ToShell::Session { .. }) => continue,
+            Some(m) => return m,
+            None => panic!("serve closed instead of answering"),
+        }
+    }
+}
+
+fn pick(backend: &str, model: &str) -> ToThalamus {
+    ToThalamus::ModelPick { backend: backend.into(), model: model.into() }
+}
+
+#[test]
+fn the_options_are_allowed_armed_pulled_and_above_the_floor() {
+    let rig = picker("mopts", picks_of("iris", BOTH), vec![PULLED.into()]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ToShell::ModelOptions { options, refused, .. } = said_to(&s, &mut r, ToThalamus::ModelOptions) else { panic!("no options") };
+    let got: Vec<(&str, &str, bool, bool)> = options.iter().map(|o| (o.backend.as_str(), o.model.as_str(), o.warning.is_some(), o.current)).collect();
+    assert_eq!(got, [("mistral-eu", "mistral-large-latest", false, false), ("ollama", "qwen3:14b", false, true), ("ollama", "qwen3:4b", true, false)],
+               "allowed ∩ armed ∩ pulled ∩ floor; the host's binding is current");
+    assert_eq!((options[0].processor.as_str(), options[0].transfers_outside_eu), ("Mistral AI SAS", false), "a cloud row names its processor");
+    assert_eq!(options[1].processor, "This host (on-device, Ollama)");
+    for left in ["qwen3:1.7b", "nomic-embed-text:latest"] {
+        assert!(refused.iter().any(|w| w.contains(left)), "{left} is said as left out: {refused:?}");
+    }
+    assert!(rig.model.lock().unwrap()[0].0.starts_with("GET /models"), "the pulled models are asked of ollama");
+}
+
+#[test]
+fn a_pick_below_the_floor_or_not_pulled_is_refused_by_name() {
+    let rig = picker("mfloor", picks_of("iris", BOTH), vec![PULLED.into()]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    match said_to(&s, &mut r, pick("ollama", "qwen3:1.7b")) {
+        ToShell::Refused { reason, .. } => assert!(reason.contains("qwen3:1.7b") && reason.contains("3B minimum"), "{reason}"),
+        other => panic!("a 1.7B pick was not refused: {other:?}"),
+    }
+    match said_to(&s, &mut r, pick("ollama", "llama3:70b")) {
+        ToShell::Refused { reason, .. } => assert!(reason.contains("llama3:70b") && reason.contains("not pulled"), "{reason}"),
+        other => panic!("a model the host has not pulled was not refused: {other:?}"),
+    }
+}
+
+#[test]
+fn a_cloud_pick_the_posture_forbids_is_refused_and_never_offered() {
+    let cell = "name: iris\nmodel: {primary: openai-sonnet, backend: mistral-eu, backends_allowed: [mistral-eu, minimax]}\n\
+                gdpr: {processors: [{name: Mistral AI SAS}, {name: MiniMax}], transfers_outside_eu: false}\n";
+    let env = [("NOS_ARMED_BACKENDS", "mistral-eu minimax"), ("NOS_MISTRAL_MODEL", "mistral-large-latest"), ("nos:mistral_api_key", KEY),
+               ("NOS_MINIMAX_MODEL", "MiniMax-M2"), ("nos:minimax_api_key", "k"), ("NOS_GDPR_POSTURE", "standard")];
+    let rig = picker("mposture", picks_of(cell, &env), vec![PULLED.into()]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ToShell::ModelOptions { options, refused, .. } = said_to(&s, &mut r, ToThalamus::ModelOptions) else { panic!("no options") };
+    assert!(options.iter().all(|o| o.backend != "minimax"), "{options:?}");
+    assert!(refused.iter().any(|w| w.starts_with("minimax") && w.contains("gdpr_posture")), "{refused:?}");
+    match said_to(&s, &mut r, pick("minimax", "MiniMax-M2")) {
+        ToShell::Refused { reason, .. } => assert!(reason.contains("gdpr_posture") && reason.contains("minimax"), "{reason}"),
+        other => panic!("a non-EU pick under standard was not refused: {other:?}"),
+    }
+}
+
+#[test]
+fn a_pick_is_recorded_and_the_next_turn_uses_it() {
+    let rig = picker("mpick", picks_of("iris", BOTH), vec![PULLED.into(), answer("ahoj")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ToShell::ModelOptions { session, options, .. } = said_to(&s, &mut r, pick("mistral-eu", "mistral-large-latest")) else { panic!("pick not taken") };
+    let current: Vec<&str> = options.iter().filter(|o| o.current).map(|o| o.model.as_str()).collect();
+    assert_eq!(current, ["mistral-large-latest"], "the answer marks the pick current");
+    turn(&s, &mut r, Some(session.clone()), "hi");
+    let (head, body) = rig.model.lock().unwrap().last().cloned().unwrap();
+    let body: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(body["model"], "mistral-large-latest", "the next turn goes to the picked model");
+    assert!(head.contains(&format!("Bearer {KEY}")), "with the picked row's key");
+    assert!(body["messages"][0]["content"].as_str().unwrap().contains("FULL-IMPRINT-MARK"), "a cloud row reads the full imprint");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let rec = events(&rig.ledger, &session).into_iter().find(|e| e.1.ends_with("/tool:model")).expect("the ledger records the pick");
+    assert_eq!((rec.0.as_str(), &rec.2["backend"], &rec.2["model"], &rec.2["chosen_by"], &rec.2["processor"], &rec.2["transfers_outside_eu"]),
+               ("agent_tool_result", &serde_json::json!("mistral-eu"), &serde_json::json!("mistral-large-latest"), &serde_json::json!("person"),
+                &serde_json::json!("Mistral AI SAS"), &serde_json::json!(false)));
+    let db = rusqlite::Connection::open(&rig.ledger).unwrap();
+    let uri: String = db.query_row("SELECT model_uri FROM sessions WHERE uuid = ?1", [&session], |r| r.get(0)).unwrap();
+    assert_eq!(uri, "mistral-eu-mistral-large-latest", "the session row names the model it now uses");
 }

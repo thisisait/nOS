@@ -17,7 +17,9 @@
     {"case": "the person answers a choice", "msg": {"t": "choice_reply", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "choice": "3c9e1d2f-4a5b-4c6d-8e7f-9a0b1c2d3e4f", "picked": ["expenses"]}},
     {"case": "the person works for a client", "msg": {"t": "working_for", "scope": {"client": "acme"}}},
     {"case": "the person works on personal data", "msg": {"t": "working_for", "scope": "personal"}},
-    {"case": "the person lifts the wall", "msg": {"t": "working_for", "scope": "all"}}
+    {"case": "the person lifts the wall", "msg": {"t": "working_for", "scope": "all"}},
+    {"case": "the person asks which models Iris may use", "msg": {"t": "model_options"}},
+    {"case": "the person picks a model for this session", "msg": {"t": "model_pick", "backend": "ollama", "model": "qwen3:4b"}}
   ],
   "to_shell": [
     {"case": "session opened", "msg": {"t": "session", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "actor": "user:pazny", "model_uri": "ollama://qwen3:8b"}},
@@ -88,7 +90,8 @@
     {"case": "the turn is over", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": "idle"}},
     {"case": "Iris offers a dashboard", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "dashboard", "props": {"name": "Bench board", "lens": [{"column": "track", "op": "eq", "value": "platform", "kind": "select", "options": ["agents", "face", "platform", "security"]}, {"column": "due", "op": "lt", "value": "", "kind": "date"}], "widgets": [{"title": "Next rows", "spec": {"rows": {"table": "iris-bench-2", "where": [{"column": "status", "op": "eq", "value": "next"}]}}}, {"title": "Points by track", "spec": {"chart": {"query": {"table": "iris-bench-2"}, "chart": "bar", "x": "track", "y": "points", "op": "sum"}}}, {"title": "Add a row", "spec": {"form": {"table": "iris-bench-2"}}}], "dropped": [{"title": "By owner", "why": "no column `owner` in iris-bench-2; columns: title, status, track, points, note, due"}]}}}},
     {"case": "Iris works for a client", "msg": {"t": "working_for", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "scope": {"client": "party-acme"}, "name": "ACME s.r.o."}},
-    {"case": "Iris works on personal data", "msg": {"t": "working_for", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "scope": "personal", "name": "personal"}}
+    {"case": "Iris works on personal data", "msg": {"t": "working_for", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "scope": "personal", "name": "personal"}},
+    {"case": "the models Iris may use here", "msg": {"t": "model_options", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "options": [{"backend": "ollama", "model": "qwen3:14b", "processor": "This host (on-device, Ollama)", "transfers_outside_eu": false, "current": true}, {"backend": "ollama", "model": "qwen3:4b", "processor": "This host (on-device, Ollama)", "transfers_outside_eu": false, "warning": "'qwen3:4b' has 4B parameters, below the 8B recommended (llm_cell_recommended_params_b): it runs, badly", "current": false}, {"backend": "mistral-eu", "model": "mistral-large-latest", "processor": "Mistral AI SAS", "transfers_outside_eu": false, "current": false}], "refused": ["ollama qwen3:1.7b: 'qwen3:1.7b' has 1.7B parameters, below the 3B minimum (llm_cell_min_params_b)"]}}
   ],
   "refused": [
     {"case": "unknown component kind is shown, not dropped", "line": "{\"t\":\"render\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"component\":{\"kind\":\"pie_chart\",\"props\":{}}}"},
@@ -195,7 +198,10 @@
     {"case": "a kpi with no title", "line": "{\"t\":\"widget\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"widget\":\"w5\",\"component\":{\"kind\":\"kpi\",\"props\":{\"title\":\" \",\"value\":1.0}}}"},
     {"case": "a kpi in an approval", "line": "{\"t\":\"approval_request\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"approval\":\"7d1c2b3a-4e5f-4a6b-9c8d-1e2f3a4b5c6d\",\"component\":{\"kind\":\"kpi\",\"props\":{\"title\":\"Travel spend\",\"value\":1.0}}}"},
     {"case": "a scope said by no name", "line": "{\"t\":\"working_for\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"scope\":\"all\",\"name\":\" \"}"},
-    {"case": "a scope whose session is not a uuid", "line": "{\"t\":\"working_for\",\"session\":\"latest\",\"scope\":\"all\",\"name\":\"everything\"}"}
+    {"case": "a scope whose session is not a uuid", "line": "{\"t\":\"working_for\",\"session\":\"latest\",\"scope\":\"all\",\"name\":\"everything\"}"},
+    {"case": "two models said to be current", "line": "{\"t\":\"model_options\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"options\":[{\"backend\":\"ollama\",\"model\":\"qwen3:4b\",\"processor\":\"This host\",\"transfers_outside_eu\":false,\"current\":true},{\"backend\":\"ollama\",\"model\":\"qwen3:4b\",\"processor\":\"This host\",\"transfers_outside_eu\":false,\"current\":true}],\"refused\":[]}"},
+    {"case": "a model option whose backend is not a row name", "line": "{\"t\":\"model_options\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"options\":[{\"backend\":\"my row\",\"model\":\"m\",\"processor\":\"p\",\"transfers_outside_eu\":false,\"current\":false}],\"refused\":[]}"},
+    {"case": "a model option that names no processor", "line": "{\"t\":\"model_options\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"options\":[{\"backend\":\"ollama\",\"model\":\"m\",\"processor\":\" \",\"transfers_outside_eu\":false,\"current\":false}],\"refused\":[]}"}
   ],
   "refused_to_thalamus": [
     {"case": "the shell names the actor", "line": "{\"t\":\"turn\",\"session\":null,\"text\":\"hi\",\"actor\":\"user:akadmin\"}"},
@@ -219,6 +225,9 @@
     {"case": "a kpi widget spec with an x", "line": "{\"t\":\"widget\",\"widget\":\"w5\",\"spec\":{\"kpi\":{\"query\":{\"table\":\"expenses\"},\"op\":\"count\",\"x\":\"kind\"}},\"trigger\":\"click\"}"},
     {"case": "a client named by nothing", "line": "{\"t\":\"working_for\",\"scope\":{\"client\":\" \"}}"},
     {"case": "a scope the wire does not name", "line": "{\"t\":\"working_for\",\"scope\":\"everyone\"}"},
-    {"case": "the shell names whom the scope is for", "line": "{\"t\":\"working_for\",\"scope\":\"personal\",\"actor\":\"user:akadmin\"}"}
+    {"case": "the shell names whom the scope is for", "line": "{\"t\":\"working_for\",\"scope\":\"personal\",\"actor\":\"user:akadmin\"}"},
+    {"case": "a pick that names no model", "line": "{\"t\":\"model_pick\",\"backend\":\"ollama\",\"model\":\" \"}"},
+    {"case": "a pick whose backend is not a row name", "line": "{\"t\":\"model_pick\",\"backend\":\"../ollama\",\"model\":\"qwen3:4b\"}"},
+    {"case": "the shell names who chose", "line": "{\"t\":\"model_pick\",\"backend\":\"ollama\",\"model\":\"qwen3:4b\",\"chosen_by\":\"operator\"}"}
   ]
 }

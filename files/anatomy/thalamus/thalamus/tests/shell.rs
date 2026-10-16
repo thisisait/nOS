@@ -466,3 +466,25 @@ fn for_says_whom_the_person_works_for_and_the_card_shows_it() {
     let card = flat(&drawn(&app, 80, 24));
     assert!(card.contains("asked for ACME s.r.o."), "the card shows the scope it was asked under: {card}");
 }
+
+// --- W5: /model lists the models Iris may use in this session and picks one ---
+
+#[test]
+fn model_lists_the_options_and_picks_one_for_the_next_turn() {
+    let mut app = App::default();
+    assert_eq!(typed(&mut app, "/model"), Some(ToThalamus::ModelOptions));
+    assert!(typed(&mut app, "/model 1").is_none(), "no list yet: nothing to pick by number");
+    let (_, m) = fixture().into_iter().find(|(c, _)| c == "the models Iris may use here").unwrap();
+    app.apply(m);
+    let shown = flat(&drawn(&app, 200, 20));
+    for want in ["1. ollama qwen3:14b — This host (on-device, Ollama), in the EU (current)",
+                 "2. ollama qwen3:4b — This host (on-device, Ollama), in the EU", "below the 8B recommended",
+                 "3. mistral-eu mistral-large-latest — Mistral AI SAS, in the EU",
+                 "not offered: ollama qwen3:1.7b", "the next turn"] {
+        assert!(shown.contains(want), "{want:?} not in {shown}");
+    }
+    let pick = |b: &str, m: &str| Some(ToThalamus::ModelPick { backend: b.into(), model: m.into() });
+    assert_eq!(typed(&mut app, "/model 3"), pick("mistral-eu", "mistral-large-latest"));
+    assert_eq!(typed(&mut app, "/model ollama qwen3:1.7b"), pick("ollama", "qwen3:1.7b"), "serve judges a pick by name");
+    assert!(typed(&mut app, "/model 9").is_none(), "a number past the list sends nothing");
+}

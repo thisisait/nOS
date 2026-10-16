@@ -226,3 +226,33 @@ fn binding_judges_size_like_the_shared_cases() {
         assert!(text.contains(&s("contains")), "{}: {text}", s("model"));
     }
 }
+
+// --- W5: the rows a person may pick for Iris in a session ---
+
+/// A cell that allows a non-EU row beside the EU one, under an EU claim.
+const PICKY_CELL: &str = "
+name: c
+model: {primary: openai-sonnet, backend: mistral-eu, backends_allowed: [mistral-eu, minimax]}
+gdpr: {processors: [{name: Mistral AI SAS}, {name: MiniMax}], transfers_outside_eu: false}
+";
+
+#[test]
+fn picks_are_the_allowed_rows_each_bound_or_refused_by_the_gates() {
+    let iris = std::fs::read_to_string(repo().join("files/anatomy/agents/iris/agent.yml")).unwrap();
+    let p = thalamus::binding::picks(&iris, &register(), env(ARMED));
+    assert_eq!(p.iter().map(|p| p.row.as_str()).collect::<Vec<_>>(), ["mistral-eu", "ollama"], "backends_allowed, in order");
+    assert!(p[0].bound.as_ref().is_err_and(|w| w.contains("not armed")), "an unarmed row is refused: {:?}", p[0].bound);
+    assert!(p[1].bound.as_ref().is_ok_and(|b| b.local && b.model_id == "qwen3:14b"), "{:?}", p[1].bound);
+    assert_eq!((p[0].processor.as_str(), p[0].outside_eu), ("Mistral AI SAS", false));
+    assert_eq!((p[1].processor.as_str(), p[1].outside_eu), ("This host (on-device, Ollama)", false));
+}
+
+#[test]
+fn a_non_eu_pick_is_refused_by_the_posture() {
+    let armed = [("NOS_ARMED_BACKENDS", "mistral-eu minimax"), ("NOS_GDPR_POSTURE", "standard")];
+    let p = thalamus::binding::picks(PICKY_CELL, &register(), env(&armed));
+    let minimax = p.iter().find(|p| p.row == "minimax").unwrap();
+    assert!(minimax.outside_eu && minimax.processor == "MiniMax");
+    let why = minimax.bound.as_ref().unwrap_err();
+    assert!(why.contains("gdpr_posture") && why.contains("'standard'") && why.contains("minimax"), "{why}");
+}
