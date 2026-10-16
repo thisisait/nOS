@@ -2001,7 +2001,9 @@ fn fake_tables(tables: Vec<(&str, Vec<serde_json::Value>)>) -> ((String, Seen), 
             let mut rows = table.lock().unwrap();
             let (status, out) = match (method, path) {
                 ("GET", p) if p == base => (200, schema.clone()),
-                ("GET", "/api/search/semantic") => (200, memory(false, serde_json::json!([]))),
+                // A `search-hits` table, when given, is what KEAP's memory finds.
+                ("GET", "/api/search/semantic") => (200, memory(false, serde_json::json!(tables.iter().find(|t| t.0 == "/api/tables/search-hits")
+                    .map_or(vec![], |t| t.2.lock().unwrap().clone())))),
                 ("GET", "/api/tables") => (200, serde_json::json!({"success": true, "data": tables.iter().map(|t| {
                     let i: serde_json::Value = serde_json::from_str(&t.1).unwrap();
                     serde_json::json!({"id": i["data"]["id"], "title": i["data"]["title"]})
@@ -4883,6 +4885,10 @@ const SYSTEMS: &str = r#"{"success": true, "data": {"id": "systems", "title": "S
 
 /// Two clients, the person's own firm and a seller; an invoice and a line of each book; a personal and an estate table.
 fn septum_keap() -> (String, Seen) {
+    septum_keap_and(vec![])
+}
+
+fn septum_keap_and(extra: Vec<(&'static str, Vec<serde_json::Value>)>) -> (String, Seen) {
     let p = |id: &str, name: &str, role: &str| keap_row(id, serde_json::json!({"slug": id, "legal_name": name, "role": role}));
     let (keap, _) = fake_tables(vec![
         (PARTY, vec![p("acme", "ACME s.r.o.", "client"), p("bolt", "Bolt a.s.", "client"), p("me", "My firm", "own_firm"),
@@ -4895,7 +4901,7 @@ fn septum_keap() -> (String, Seen) {
                      keap_row("l-own", serde_json::json!({"item": "own work", "invoice": "i-own"}))]),
         (ENGRAM, vec![keap_row("e1", serde_json::json!({"note": "my own thought"}))]),
         (SYSTEMS, vec![keap_row("s1", serde_json::json!({"name": "keap"}))]),
-    ]);
+    ].into_iter().chain(extra).collect());
     keap
 }
 
@@ -5018,12 +5024,16 @@ fn a_table_iris_makes_for_a_client_is_that_clients_and_hidden_from_another() {
 
 // D2 definition §4.3: a write outside the context asks once more; one inside asks once.
 fn septum_write(name: &str, write: (&str, &str)) -> (Rig, UnixStream, BufReader<UnixStream>, Vec<ToShell>) {
+    septum_write_said(name, write, "write it")
+}
+
+fn septum_write_said(name: &str, write: (&str, &str), said: &str) -> (Rig, UnixStream, BufReader<UnixStream>, Vec<ToShell>) {
     let rig = rig_at(name, mapped(), septum_keap(), vec![query(r#"{"table": "invoice"}"#), call(write.0, write.1), answer("Proposed.")], Some(local()));
     septum_defs(&rig);
     let s = connect(&rig.sock);
     let mut r = BufReader::new(s.try_clone().unwrap());
     let ToShell::WorkingFor { session, .. } = work_for(&s, &mut r, Scope::Client("acme".into())) else { panic!("acme not set") };
-    let got = turn(&s, &mut r, Some(session), "write it");
+    let got = turn(&s, &mut r, Some(session), said);
     (rig, s, r, got)
 }
 
@@ -5058,4 +5068,86 @@ fn a_write_inside_the_client_asks_once() {
     let said = until_said_all(&mut r);
     assert!(card_of(&said).is_none(), "an inside write was asked twice: {said:?}");
     assert_eq!(posts(&rig).iter().filter(|(h, _)| h.contains("/api/tables/invoice/rows")).count(), 1);
+}
+
+// W4 (a): the wall both ways — a table no def declares is personal under a client; a client's table hides on personal.
+const SCRATCH: &str = r#"{"success": true, "data": {"id": "scratch", "title": "Scratch", "schema": {"columns": [
+    {"key": "note", "label": "Note", "kind": "text"}]}}}"#;
+
+#[test]
+fn an_undeclared_table_hides_for_a_client_and_a_clients_table_hides_on_personal() {
+    let make = r#"{"title": "ACME notes", "columns": ["Note"]}"#;
+    let keap = septum_keap_and(vec![(SCRATCH, vec![keap_row("x1", serde_json::json!({"note": "scribble"}))])]);
+    let rig = rig_at("septboth", mapped(), keap,
+                     vec![query(r#"{"table": "scratch"}"#), answer("x"), call("propose_table_create", make), answer("Proposed."),
+                          query(r#"{"table": "ACME notes"}"#), query(r#"{"table": "scratch"}"#), answer("done")], Some(local()));
+    septum_defs(&rig);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ToShell::WorkingFor { session, .. } = work_for(&s, &mut r, Scope::Client("acme".into())) else { panic!("acme not set") };
+    let got = turn(&s, &mut r, Some(session.clone()), "my scratch");
+    assert!(!format!("{got:?}").contains("scribble"), "an undeclared table crossed to a client: {got:?}");
+    let model = rig.model.lock().unwrap().last().unwrap().1.clone();
+    assert!(model.contains("declared by no table def, so personal") && !model.contains("scribble"), "{model}");
+    let got = turn(&s, &mut r, Some(session.clone()), "make me a notes table");
+    let approval = got.iter().find_map(|m| match m { ToShell::ApprovalRequest { approval, .. } => Some(approval.clone()), _ => None }).expect("a card");
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { ref text, .. }) if text.contains("created")));
+    let ToShell::WorkingFor { .. } = work_for(&s, &mut r, Scope::Personal) else { panic!("personal not set") };
+    let got = turn(&s, &mut r, Some(session), "my notes");
+    assert_eq!(result_ids(&got, "scratch"), ["x1"], "an undeclared table is the person's own: shown on personal data");
+    let model = rig.model.lock().unwrap().last().unwrap().1.clone();
+    assert!(model.contains("ACME notes") && model.contains("ACME s.r.o.'s; hidden while you work on personal data"), "{model}");
+}
+
+// W4 (b): search_memory under a client keeps the shared taxonomy only and says how much it hid.
+const SEARCH_HITS: &str = r#"{"success": true, "data": {"id": "search-hits", "title": "Hits", "schema": {"columns": []}}}"#;
+
+#[test]
+fn search_memory_for_a_client_drops_personal_memory_and_counts_it() {
+    let hits = vec![serde_json::json!({"kind": "taxonomy", "refId": "t-1", "name": "VAT", "description": "tax", "score": 0.9}),
+                    serde_json::json!({"kind": "capture", "refId": "c-1", "name": "my holiday", "description": "mine", "score": 0.8}),
+                    serde_json::json!({"kind": "note", "refId": "n-1", "name": "my note", "description": "mine", "score": 0.7}),
+                    serde_json::json!({"kind": "object", "refId": "o-1", "name": "my card", "description": "mine", "score": 0.6})];
+    let rig = rig_at("septmem", mapped(), septum_keap_and(vec![(SEARCH_HITS, hits)]),
+                     vec![call("search_memory", r#"{"q": "vat"}"#), answer("x"), call("search_memory", r#"{"q": "vat"}"#), answer("y")],
+                     Some(local()));
+    septum_defs(&rig);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ToShell::WorkingFor { session, .. } = work_for(&s, &mut r, Scope::Client("acme".into())) else { panic!("acme not set") };
+    let got = turn(&s, &mut r, Some(session.clone()), "what is VAT?");
+    let n = rig.model.lock().unwrap().len();
+    let t = tool_result(&rig, n - 1);
+    let names: Vec<&str> = t["items"].as_array().unwrap().iter().filter_map(|i| i["name"].as_str()).collect();
+    assert_eq!(names, ["VAT"], "{t}");
+    assert!(t["hidden"].as_str().is_some_and(|h| h.contains("hidden by scope: 3")), "the result counts what it hid: {t}");
+    let title = got.iter().find_map(|m| match m { ToShell::Render { component: Component::List(l), .. } => l.title.clone(), _ => None });
+    assert!(title.as_deref().is_some_and(|t| t.contains("hidden by scope: 3")), "the person sees the count: {title:?}");
+    for mine in ["my holiday", "my note", "my card"] {
+        assert!(!format!("{got:?}").contains(mine) && !t.to_string().contains(mine), "{mine} crossed the septum");
+    }
+    let ToShell::WorkingFor { .. } = work_for(&s, &mut r, Scope::Personal) else { panic!("personal not set") };
+    turn(&s, &mut r, Some(session.clone()), "and on my own?");
+    let n = rig.model.lock().unwrap().len();
+    let t = tool_result(&rig, n - 1);
+    assert_eq!(t["items"].as_array().map(Vec::len), Some(4), "no memory hit walks to a client: {t}");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let recs: Vec<serde_json::Value> = events(&rig.ledger, &session).into_iter()
+        .filter(|(t, k, _)| t == "agent_tool_result" && k.ends_with("/tool:search_memory")).map(|e| e.2["hidden_by_scope"].clone()).collect();
+    assert_eq!(recs, [serde_json::json!(3), serde_json::json!(0)], "the ledger counts it too");
+}
+
+// W4 (c): an outside write says whose on the card's warning, joined with a misnamed-row warning.
+#[test]
+fn an_outside_write_warns_whose_beside_a_misnamed_row() {
+    let whose = "Bolt a.s.'s row, while you work for ACME s.r.o.";
+    let (_rig, _s, _r, got) = septum_write("septwarn", ("propose_row_insert", r#"{"table": "invoice", "values": {"number": "B-2", "book_owner": "bolt"}}"#));
+    assert_eq!(card_of(&got).unwrap().1.warning.as_deref(), Some(whose));
+    let (_rig, _s, _r, got) = septum_write_said("septwarn2", ("propose_row_edit", r#"{"table": "invoice", "row_id": "i-acme", "values": {"book_owner": "bolt"}}"#),
+                                                "move invoice 7 to bolt");
+    assert_eq!(card_of(&got).unwrap().1.warning, Some(format!(r#"you asked for "7"; this row is "A-1"; {whose}"#)), "both warnings, joined");
+    let (_rig, _s, _r, got) = septum_write("septwarn3", ("propose_row_insert", r#"{"table": "invoice", "values": {"number": "A-2", "book_owner": "acme"}}"#));
+    assert_eq!(card_of(&got).unwrap().1.warning, None, "an inside write warns of nothing");
 }
