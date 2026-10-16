@@ -67,3 +67,25 @@ def test_the_reader_does_not_report_a_source_this_host_never_installed(tmp_path,
     monkeypatch.setattr(red, "_install_flags", lambda: flags)
     assert red.backups()["failed"] == ["postgres", "dir-authentik", "keap-db", "nos-state"], (
         "an installed source that failed stays red; a never-installed one is no finding")
+
+
+def test_an_off_source_backed_up_is_a_hold_and_its_failure_stays_red(tmp_path, monkeypatch):
+    """Ruling 2026-10-16: an off service's dir with data is still backed up
+    (`off: true` in its row). The reader names it as an intentional hold, and
+    a FAILED off row is red: it was the last copy the ruling keeps."""
+    spec = importlib.util.spec_from_file_location("red_status", REPO / "tools/red-status.py")
+    red = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(red)
+    flags, *_ = _core()
+    flags = {**flags, "install_backup": True, "install_rustfs": True}   # copy #1 path
+    status = tmp_path / "backup-status.json"
+    status.write_text(json.dumps({"sources": [
+        {"name": "dir-vaultwarden", "success": True, "off": True, "timestamp": 1},
+        {"name": "dir-n8n", "success": False, "off": True, "timestamp": 1},
+        {"name": "dir-gitea", "success": False, "timestamp": 1}]}))
+    monkeypatch.setattr(red, "BACKUP_STATUS", status)
+    monkeypatch.setattr(red, "_install_flags", lambda: flags)
+    bk = red.backups()
+    assert bk["failed"] == ["dir-n8n"], bk
+    assert bk["backed_up_while_off"] == ["dir-vaultwarden"], bk
+    assert any("backed up while off: dir-vaultwarden" in h for h in red.hold_lines({"backups": bk}))

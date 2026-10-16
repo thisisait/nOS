@@ -130,3 +130,23 @@ def test_with_rustfs_the_wrapper_still_mirrors_the_bucket(tmp_path):
     calls = (tmp_path / "restic.calls").read_text()
     assert f"backup --exclude-file={tmp_path}/backups/.resticignore {bucket}" in calls, calls
     assert not (tmp_path / "backups/staging/postgres.sql.gz").exists(), "copy #1 owns the dumps there"
+
+
+def test_an_off_dir_with_data_rides_the_direct_snapshot(tmp_path):
+    """Ruling 2026-10-16, direct path: off + data = in, marked off; off +
+    empty/absent = ignored; on + absent = FAILED."""
+    vault, book = tmp_path / "vault", tmp_path / "book"
+    vault.mkdir()
+    book.mkdir()
+    (vault / "db.sqlite3").write_text("x")
+    dirs = [{"name": "vaultwarden", "flag": "install_vaultwarden", "path": str(vault)},
+            {"name": "bookstack", "flag": "install_bookstack", "path": str(book)},
+            {"name": "mikopbx", "flag": "install_mikopbx", "path": str(tmp_path / "none")},
+            {"name": "gitea", "flag": "install_gitea", "path": str(tmp_path / "gone")}]
+    script = render(tmp_path, "profiles/core.yml", {"backup_dirs_to_dump": dirs, "install_gitea": True})
+    execute(tmp_path, script)
+    snap = (tmp_path / "snapshot.txt").read_text()
+    by = {s["name"]: s for s in json.loads((tmp_path / ".nos/backup-restic-status.json").read_text())["sources"]}
+    assert str(vault / "db.sqlite3") in snap and by["dir-vaultwarden"]["off"] is True, by
+    assert "dir-bookstack" not in by and "dir-mikopbx" not in by, by
+    assert by["dir-gitea"]["success"] is False
