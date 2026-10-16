@@ -31,8 +31,10 @@ ROWS = {
 def test_rows_walk_the_declared_path_to_their_client():
     st = septum.live(septum.load_defs(), ROWS)
     assert st["parties"] == {"client": 1, "own_firm": 1}
-    assert st["tables"]["invoice"] == {"rows": 2, "not_a_client": 1, "by_client": {"alfa": 1}}
-    assert st["tables"]["invoice-line"] == {"rows": 3, "not_a_client": 2, "by_client": {"alfa": 1}}
+    assert st["tables"]["invoice"] == {"rows": 2, "not_a_client": 1, "orphans": 0,
+                                         "by_client": {"alfa": 1}}
+    assert st["tables"]["invoice-line"] == {"rows": 3, "not_a_client": 1, "orphans": 1,
+                                              "by_client": {"alfa": 1}}
     assert st["tables"]["posting"]["by_client"] == {"alfa": 1}  # posting → entry → invoice → party
     assert st["tables"]["party"]["by_client"] == {"alfa": 1}
 
