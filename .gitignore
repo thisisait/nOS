@@ -85,3 +85,5 @@ files/anatomy/apex/dist/
 
 # Rust build output (files/anatomy/thalamus)
 files/anatomy/thalamus/**/target/
+state/fixtures/oneshot/last-trace.jsonl
+state/fixtures/oneshot/last-run.json
