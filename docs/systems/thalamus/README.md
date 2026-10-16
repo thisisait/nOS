@@ -92,6 +92,8 @@ warning, joined) and is written only on a second approve. `search_memory` for a
 client keeps the shared taxonomy only: a capture, note or object is the person's (or
 its hit does not say whose), so it is dropped and the result says "hidden by scope: n";
 on personal data nothing is dropped (KEAP 2.1.0 search returns no DataTable rows).
+`inbox` for a client reads no captures and names them as refused ("personal");
+the moderation queue (proposed promotions) is still shown.
 serve holds the wall per connection; the pupil says it again on a reconnect and re-runs
 its widgets when it changes. Not yet covered: rowRef selects in forms (they list every
 parent row), and an insert_many's lines (only the parent row is walked).

@@ -2889,8 +2889,11 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     fn inbox(&self, who: &Person, captures: bool) -> InboxList {
         let base = self.keap_url.trim_end_matches('/');
         let (mut items, mut refused) = (Vec::new(), Vec::new());
-        match captures.then(|| self.keap(who, &format!("{base}/api/metadata"), None).and_then(|v| listed(&v, "/data", "capture"))) {
-            None => refused.push("captures: owner unknown for an admin viewer".into()),
+        // The septum (W4): a capture is the person's own and carries no client, so none is read for a client.
+        let client = who.working_for.as_ref().filter(|s| s.client.is_some());
+        match (captures && client.is_none()).then(|| self.keap(who, &format!("{base}/api/metadata"), None).and_then(|v| listed(&v, "/data", "capture"))) {
+            None => refused.push(client.map_or("captures: owner unknown for an admin viewer".into(),
+                                               |s| format!("captures: personal, hidden while you work {}", s.said()))),
             Some(Ok(i)) => items.extend(i),
             Some(Err(why)) => refused.push(format!("captures: {why}")),
         }
