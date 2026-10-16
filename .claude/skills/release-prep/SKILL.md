@@ -28,10 +28,12 @@ unless the operator names one.
 ## Steps (each ends with PASS, BLOCKER or DEBT, and the command that showed it)
 
 1. **Stoppers — the estate is green where it counts.**
-   - CI on dev, every lane incl. macOS nightly: `tools/ci-tier-status.py`,
-     `gh run list --branch dev --limit 5`. A red lane is a BLOCKER until its job
-     log names the cause (compare a passing run first, memory
-     `ci-diagnose-by-comparison`).
+   - CI on dev: `gh run list --branch dev --limit 5` and `tools/ci-tier-status.py`.
+     A red **blocking** lane (the main CI workflow, its pytest shards, the core
+     install) is a BLOCKER until its job log names the cause (compare a passing run
+     first, memory `ci-diagnose-by-comparison`). A red or stale **Bonus** lane
+     (per-stack, all-on, macOS nightly: non-blocking by design) is DEBT: name it in
+     RELEASE.md as unverified, never as working.
    - The full offline suite once, to a file, read the summary line (never
      `| tail`: memory `local-pytest-false-green`):
      `python3 -m pytest tests --ignore=tests/e2e -q -p no:cacheprovider > /tmp/rp-pytest.txt 2>&1`.
@@ -65,7 +67,9 @@ unless the operator names one.
    that did not ship.
 6. **Devlog.** The `/devlog` skill, `release` mode. Then `tools/devlog-release.sh vX.Y-beta`
    must exit 0.
-7. **Generated files and signatures.** Each as its own command:
+7. **Generated files and signatures.** Regenerate in this order when one is stale -
+   anatomy-graph, body-plan, imprint (each reads the one before) - then check each
+   as its own command:
    `python3 tools/anatomy-graph-gen.py --check`, `python3 tools/imprint-gen.py --check`,
    `python3 tools/design-sync.py --check`, `python3 tools/body-plan-gen.py --check`;
    `tools/apex-sign.py` (a diff = the operator signs, `--confirm`).

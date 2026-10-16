@@ -4,7 +4,7 @@
   "projects": "state/anatomy-graph.json",
   "levels_from": "state/genome/lexicon.yml",
   "counts": {
-    "genome": 21,
+    "genome": 22,
     "cell": 17,
     "tissue": 1,
     "organ": 80,
@@ -1910,6 +1910,10 @@
       "kind": "skill"
     },
     "skill:propose": {
+      "level": "genome",
+      "kind": "skill"
+    },
+    "skill:release-prep": {
       "level": "genome",
       "kind": "skill"
     },
