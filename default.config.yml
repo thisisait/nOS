@@ -3205,6 +3205,12 @@ backup_authentik_blueprints: "{{ install_authentik | default(false) }}"
 backup_wing_db: "{{ install_wing | default(true) }}"   # sqlite3 .dump of the Wing store
 backup_keap_db: "{{ install_keap | default(false) }}"  # sqlite3 .backup of the KEAP store (taxonomy, tables, vectors)
 backup_nos_state: true                                  # ~/.nos/{secrets,state}.yml (restore gated by restore_state)
+backup_wing_db_path: "{{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}/wing.db"
+# KEAP is snapshotted INSIDE this container (node:sqlite backup()), never by copying the live file.
+backup_keap_container: "iiab-keap-1"
+backup_keap_db_container_path: "/data/keap.db"
+backup_tofu_state: true                                 # terraform.tfstate(+.backup) + nos.auto.tfvars.json
+backup_tofu_state_dir: "{{ playbook_dir }}/terraform/authentik"
 # Client-side encryption (GDPR Art.32 / NIS2 at-rest). OFF only for a throw-away
 # dev target with no PII. The passphrase is the ONLY key to every object —
 # credentials.yml MUST survive off-box (see docs/backup-architecture.md custody).

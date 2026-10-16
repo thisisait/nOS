@@ -251,6 +251,53 @@
       stage_dump mariadb docker exec -i {{ mariadb_container_name }} mariadb-dump --all-databases \
         --single-transaction --quick --routines --triggers -uroot "-p${NOS_MARIADB_PASSWORD}"
       {% endif %}
+      {% if backup_wing_db | bool %}
+      # One read transaction = a consistent dump; -readonly fails on a missing file instead of creating it.
+      stage_dump wing-db sqlite3 -readonly "{{ backup_wing_db_path }}" .dump
+      {% endif %}
+      {% if backup_keap_db | bool %}
+      # KEAP: node:sqlite backup() INSIDE the container (page copy keeps the vector
+      # index; the host may not read the store), verified by counting the three
+      # core tables, then copied out. Never a copy of the live file.
+      keap_js() {
+        cat <<'KEAPJS'
+      const { DatabaseSync, backup } = require("node:sqlite");
+      const fs = require("fs");
+      const [src, dst] = process.argv.slice(2);
+      try { fs.unlinkSync(dst); } catch (e) {}
+      const db = new DatabaseSync(src, { readOnly: true });
+      backup(db, dst).then(() => {
+        db.close();
+        const v = new DatabaseSync(dst, { readOnly: true });
+        const n = ["taxonomy_nodes_ext", "relations", "knowledge_objects"].map((t) => v.prepare("select count(*) c from " + t).get().c);
+        v.close();
+        if (n.some((c) => c === 0)) { process.stderr.write("empty core table " + n.join("/") + "\n"); process.exit(1); }
+      }).catch((e) => { process.stderr.write("keap backup failed: " + e.message + "\n"); process.exit(1); });
+      KEAPJS
+      }
+      K="{{ backup_keap_container }}"; KT="/tmp/nos-keap-direct.$$"
+      if keap_js | docker exec -i "$K" sh -c "cat > $KT.js && node --no-warnings $KT.js '{{ backup_keap_db_container_path }}' $KT.db" \
+         && docker exec "$K" cat "$KT.db" | gzip -c > "$STAGE/keap-db.gz.part"; then
+        mv -f "$STAGE/keap-db.gz.part" "$STAGE/keap-db.gz"; ROWS+=("keap-db 1 0")
+      else
+        rm -f "$STAGE/keap-db.gz.part" "$STAGE/keap-db.gz"; ROWS+=("keap-db 0 0")
+      fi
+      docker exec "$K" rm -f "$KT.js" "$KT.db" >/dev/null 2>&1 || true
+      {% endif %}
+      # Secret-bearing state goes to restic IN PLACE (restic encrypts): no second plaintext copy.
+      add_files() {  # name dir file... : absent dir = FAILED, no file = nothing to back up
+        local name="$1" dir="$2" f n=0; shift 2
+        [[ -d "$dir" ]] || { ROWS+=("$name 0 0"); return 0; }
+        for f in "$@"; do [[ -f "$dir/$f" ]] && { PATHS+=("$dir/$f"); n=1; }; done
+        [[ "$n" == 1 ]] && ROWS+=("$name 1 0")
+        return 0
+      }
+      {% if backup_nos_state | bool %}
+      add_files nos-state "{{ ansible_facts['env']['HOME'] }}/.nos" secrets.yml state.yml
+      {% endif %}
+      {% if backup_tofu_state | bool %}
+      add_files tofu-state "{{ backup_tofu_state_dir }}" terraform.tfstate terraform.tfstate.backup nos.auto.tfvars.json
+      {% endif %}
       {% for d in backup_dirs_to_dump %}
       {% set on = d.flag is not defined or (lookup('vars', d.flag, default=false) | bool) %}
       add_dir "{{ d.name }}" "{{ d.path }}" {{ 'true' if on else 'false' }} {{ 'true' if (d.empty_ok | default(false) | bool) else 'false' }}

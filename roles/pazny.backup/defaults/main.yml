@@ -56,7 +56,6 @@ backup_authentik_blueprints: "{{ install_authentik | default(false) }}"
 # Wing SQLite store (security findings, audit hash-chain, agent sessions, GDPR
 # lineage) — a host file, not a container. sqlite3 .dump → wing-db.sql.gz.
 backup_wing_db: "{{ install_wing | default(true) }}"
-backup_wing_db_path: "{{ wing_data_dir | default(ansible_facts['env']['HOME'] + '/wing/app/data') }}/wing.db"
 backup_keap_db: "{{ install_keap | default(false) }}"
 backup_keap_db_path: "{{ keap_data_dir | default(ansible_facts['env']['HOME'] + '/keap/data') }}/keap.db"
 # Container that already has keap.db bind-mounted. The backup runs INSIDE it
@@ -67,8 +66,9 @@ backup_keap_db_path: "{{ keap_data_dir | default(ansible_facts['env']['HOME'] + 
 # Disk Access, which it is refused (corrected 2026-08-30; ask
 # tools/permission-status.py --grants rather than restating this).
 # `keap_db_container_path` is where the store lives INSIDE that container.
-backup_keap_container: "{{ keap_container_name | default('iiab-keap-1') }}"
-backup_keap_db_container_path: "/data/keap.db"
+# backup_keap_container / backup_keap_db_container_path / backup_wing_db_path /
+# backup_tofu_state(_dir) live in default.config.yml: the direct restic path
+# (tasks/backup.yml, no copy #1) reads them too.
 
 # Runtime state side-car: ~/.nos/{secrets,state}.yml → nos-state.tar.gz.
 # Restore of this is GATED behind restore_state=true (it can clobber a NEWER
@@ -84,8 +84,6 @@ backup_nos_state: true
 # Restore: the generic stage of tasks/restore.yml downloads + decrypts the tar
 # into the restore workdir; re-seating it into the checkout is a deliberate
 # MANUAL step (never auto-extract over a live git working tree).
-backup_tofu_state: true
-backup_tofu_state_dir: "{{ playbook_dir }}/terraform/authentik"
 
 # Docker NAMED volumes to tar+upload. mariadb_data was dropped — it is the raw
 # DB datadir, fully covered by the logical mariadb-dump (redundant). Add only
