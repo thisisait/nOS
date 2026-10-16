@@ -621,7 +621,8 @@ def load_cases(cases, domain, tier=None) -> list[dict]:
     if tier is not None and tier not in TIERS:
         sys.exit(f"--tier {tier!r}: one of {', '.join(TIERS)}")
     path = cases_path(cases, domain)
-    out = yaml.safe_load(path.read_text(encoding="utf-8")) or []
+    # a generated-only domain (most of nos-assay) has no hand-written cases.yml
+    out = (yaml.safe_load(path.read_text(encoding="utf-8")) or []) if path.exists() or not domain else []
     gen = path.with_name("cases.generated.yml")
     if domain and tier and gen.exists():
         top = TIERS.index(tier)
