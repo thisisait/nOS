@@ -1378,6 +1378,7 @@ final class Runner
 				previous: $cause ?? $e,
 			);
 		}
+		$from = $this->servedByUri ?? ($this->fallbackContext['primary'] ?? $agent->modelPrimaryUri);
 		$this->servedByUri = $fallback->identifier();
 		$ctx = $this->fallbackContext ?? [];
 
@@ -1398,6 +1399,23 @@ final class Runner
 			],
 			traceId: $ctx['trace_id'] ?? null,
 		);
+		// The session's model changed (ruling 2026-10-16). Once per change: a
+		// later call the same fallback serves again is not a second rebind.
+		if ($from !== $this->servedByUri) {
+			$this->audit->emit(
+				type: 'agent_session_rebind',
+				actorActionId: $ctx['session_uuid'] ?? null,
+				actorId: $ctx['actor_id'] ?? ('agent:' . $agent->name),
+				task: "agent:{$agent->name}",
+				result: [
+					'from_model_uri' => $from,
+					'to_model_uri' => $this->servedByUri,
+					'by' => 'fallback',
+					'reason' => $reason,
+				],
+				traceId: $ctx['trace_id'] ?? null,
+			);
+		}
 
 		return $fallback->send(
 			$agent->systemPrompt ?? '',

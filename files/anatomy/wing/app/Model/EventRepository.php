@@ -108,6 +108,9 @@ final class EventRepository
 		//     not armed; the default served. Mirrors prepared-not-armed, so a
 		//     committed binding cannot half-arm an estate.
 		'agent_model_fallback', 'agent_binding_disarmed',
+		//   agent_session_rebind — a session's model changed (ruling 2026-10-16);
+		//     {from_model_uri, to_model_uri, by: person|fallback|posture, reason}.
+		'agent_session_rebind',
 		// User invitations (A15 — operator-issued Authentik invites, 2026-05-17).
 		//   user_invitation_issued   — operator mints an invitation from /users/invite
 		//   user_invitation_revoked  — operator revokes an outstanding (unredeemed) invitation

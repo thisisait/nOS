@@ -59,7 +59,7 @@ files/anatomy/wing/app/AgentKit/
 | `agent_credentials` | one (vault, scope) pair | `secret_ref` is `env:NAME` or `infisical:/path` |
 | `agent_subscriptions` | one outbound webhook receiver | enabled/auto-disable + signing_secret |
 
-Plus 12 new event types in `events.type`: `agent_session_{start,end}`, `agent_thread_{start,end}`, `agent_iteration_{start,end}`, `agent_tool_{use,result}`, `agent_message`, `agent_grader_decision`, `agent_webhook_dispatch`, `agent_vault_resolved`. Every event carries `actor_action_id = agent_sessions.uuid`, so a single SELECT reconstructs the entire lineage.
+Plus 12 new event types in `events.type`: `agent_session_{start,end}`, `agent_thread_{start,end}`, `agent_iteration_{start,end}`, `agent_tool_{use,result}`, `agent_message`, `agent_grader_decision`, `agent_webhook_dispatch`, `agent_vault_resolved`. Every event carries `actor_action_id = agent_sessions.uuid`, so a single SELECT reconstructs the entire lineage. A session whose model changes also emits `agent_session_rebind` `{from_model_uri, to_model_uri, by: person|fallback|posture, reason}` (ruling 2026-10-16; Wing emits `by: fallback` from `Runner::serveFallback`).
 
 ### Three identity layers (kept distinct)
 

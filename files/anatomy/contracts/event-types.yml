@@ -26,6 +26,7 @@ types:
   - agent_run_end
   - agent_run_start
   - agent_session_end
+  - agent_session_rebind
   - agent_session_start
   - agent_thread_end
   - agent_thread_start

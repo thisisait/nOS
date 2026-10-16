@@ -128,6 +128,9 @@ VALID_TYPES = {
     #   emitted by Runner before either list carried them, and the mirror-parity
     #   gate stayed green because parity held with both halves missing.
     "agent_model_fallback", "agent_binding_disarmed",
+    #   A session's model changed (ruling 2026-10-16); result_json {from_model_uri,
+    #   to_model_uri, by: person|fallback|posture, reason}.
+    "agent_session_rebind",
     #   Agent approval workflow (A11 — /approvals UI).
     "agent_approval_request", "agent_approval_decision",
     # agents-inbox (2026-08-08). MIRROR of Wing's EventRepository::VALID_TYPES —

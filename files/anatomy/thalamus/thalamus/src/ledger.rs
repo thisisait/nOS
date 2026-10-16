@@ -46,6 +46,7 @@ CREATE INDEX IF NOT EXISTS idx_events_run_id ON events(run_id);
 pub enum Kind {
     SessionStart,
     SessionEnd,
+    SessionRebind,
     Message,
     ToolUse,
     ToolResult,
@@ -58,6 +59,7 @@ impl Kind {
         match self {
             Kind::SessionStart => "agent_session_start",
             Kind::SessionEnd => "agent_session_end",
+            Kind::SessionRebind => "agent_session_rebind",
             Kind::Message => "agent_message",
             Kind::ToolUse => "agent_tool_use",
             Kind::ToolResult => "agent_tool_result",
