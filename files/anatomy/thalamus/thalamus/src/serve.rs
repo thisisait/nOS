@@ -265,6 +265,8 @@ struct Open {
     /// This turn's last grouped query_rows: its chart source and the counts it returned. A chart drawn
     /// right after it with exactly those counts is that source's chart, so it can be pinned (2026-10-15).
     last_group: Option<(Value, Vec<(String, f64)>)>,
+    /// A card for a row outside whom the person works for, to the record and card its approve asks next (D2 §4.3).
+    again: HashMap<String, (Value, Component)>,
 }
 
 /// A table's rows as serve reads them: (row id, values).
@@ -803,7 +805,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Err(why) => (Err(why), iris),
         };
         Ok(Open { session, model, messages: vec![json!({"role": "system", "content": system})], tokens: (0, 0),
-                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None })
+                  pending: HashMap::new(), shown: HashMap::new(), tables_seen: HashMap::new(), dates: HashMap::new(), names: HashMap::new(), read_free: vec![], forms: HashMap::new(), choices: HashMap::new(), last_group: None, again: HashMap::new() })
     }
 
     /// The decider gate before a submit, a decision or a choice reply: a refused peer is told and
@@ -827,7 +829,8 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     }
 
     /// Asks the person: the request is in the ledger before the shell sees it, or it is not asked.
-    fn ask(&self, o: &mut Open, out: &mut UnixStream, d: RowDiffApproval) -> Result<Value, String> {
+    /// `outside` says whose the row is when that is not whom the person works for: its approve asks once more.
+    fn ask(&self, o: &mut Open, out: &mut UnixStream, d: RowDiffApproval, outside: Option<String>) -> Result<Value, String> {
         let tool = match d.op {
             RowOp::Insert | RowOp::InsertMany => "propose_row_insert",
             RowOp::Update => "propose_row_edit",
@@ -851,7 +854,30 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         };
         let cells = said(&d.table, d.cells);
         let lines = d.lines.map(|l| Lines { rows: l.rows.into_iter().map(|r| said(&l.table, r)).collect(), ..l });
-        self.asking(o, out, tool, rec, Component::RowDiffApproval(RowDiffApproval { cells, lines, ..d }))
+        let card = RowDiffApproval { cells, lines, ..d };
+        let Some(w) = outside else { return self.asking(o, out, tool, rec, Component::RowDiffApproval(card)) };
+        let again = RowDiffApproval { title: format!("{} · {w}: approve once more to write it", card.title), ..card.clone() };
+        let first = RowDiffApproval { title: format!("{} · {w}", card.title), ..card };
+        let mut next = rec.clone();
+        next["title"] = json!(again.title);
+        rec["title"] = json!(first.title);
+        let v = self.asking(o, out, tool, rec, Component::RowDiffApproval(first))?;
+        o.again.insert(text(&v["approval"]), (next, Component::RowDiffApproval(again)));
+        Ok(v)
+    }
+
+    /// Whose a written row would be when that is not whom the person works for (D2 §4.3); None is inside.
+    /// A delete, or lines on a shown row, touch only a row the walled query showed: inside.
+    fn outside(&self, who: &Person, d: &RowDiffApproval) -> Result<Option<String>, String> {
+        let Some(s) = who.working_for.as_ref().filter(|s| s.walks(&d.table)) else { return Ok(None) };
+        let mut row = match (d.op, d.row_id.as_deref()) {
+            (RowOp::Update, Some(id)) => self.rows(who, &d.table)?.into_iter().find(|(r, _)| r == id).map(|(_, v)| v).unwrap_or_default(),
+            (RowOp::Insert | RowOp::InsertMany, None) => Map::new(),
+            _ => return Ok(None),
+        };
+        row.extend(d.cells.iter().map(|c| (c.key.clone(), c.new.clone())));
+        let owner = self.owner(who, s, &d.table, d.row_id.as_deref().unwrap_or(""), &row, &mut HashMap::new(), 0)?;
+        Ok((!s.keeps(owner.as_deref())).then(|| format!("{} row, while you work {}", s.whose(owner.as_deref()), s.said())))
     }
 
     /// The request `rec` in the ledger under a minted approval id, then the card to the shell.
@@ -873,6 +899,16 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Ok(id) => id,
             Err(why) => return refuse(out, &format!("the decision was not recorded, so nothing is written: {why}")),
         };
+        if let (Some(t), Some((rec, card)), Decision::Approve) = (tool, o.again.remove(approval), d) {
+            let text = match self.asking(o, out, t, rec, card) {
+                Ok(v) => {
+                    let _ = self.record(o, Kind::ToolResult, tool, json!({"approval": approval, "asked_again": v["approval"]}));
+                    "Not written yet: the row is outside whom you work for, so it is asked once more.".to_string()
+                }
+                Err(why) => format!("Approved, but not asked once more, so nothing is written: {why}"),
+            };
+            return send(out, &ToShell::Text { session: o.session.clone(), text });
+        }
         if d == Decision::Approve {
             activity(out, o, Phase::Writing);
         }
@@ -1376,7 +1412,10 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                             _ => self.propose_row_insert(who, &args, &o.tables_seen, &o.shown, &named),
                         };
                         // Operator ruling Q7: no refusal after a free-text read; the card head says it.
-                        d.and_then(|d| self.ask(o, out, RowDiffApproval { read_from: o.read_free.clone(), ..d }))
+                        d.and_then(|d| {
+                            let outside = self.outside(who, &d)?;
+                            self.ask(o, out, RowDiffApproval { read_from: o.read_free.clone(), ..d }, outside)
+                        })
                     }
                     "show" => show(&args).and_then(|(c, source)| match source.or_else(|| inferred_source(&c, o.last_group.as_ref())) {
                         None => Ok((c, None)),

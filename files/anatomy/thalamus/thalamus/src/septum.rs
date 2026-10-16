@@ -101,6 +101,11 @@ impl Septum {
         Some(format!("{why}; hidden while you work {}", self.said()))
     }
 
+    /// Whose a row is that walked to `owner`: a client's name, or the person's own.
+    pub fn whose(&self, owner: Option<&str>) -> String {
+        owner.and_then(|o| self.clients.get(o)).map_or("a personal".into(), |c| format!("{}'s", c.1))
+    }
+
     /// The client a cell names (a party id or slug); None for a counterparty, the own firm or nothing.
     pub fn client_of(&self, v: &str) -> Option<String> {
         self.clients.get(v).map(|c| c.0.clone())

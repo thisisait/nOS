@@ -86,9 +86,12 @@ table, a table Iris made for another client, or one no def declares is hidden fr
 query_rows, widgets, forms and dashboard offers, and list_tables names it as hidden.
 A table Iris creates while working for a client is that client's (the create's
 ledger result names it). Both shells show the scope on the turn and on the card; a
-switch is refused while a card waits. Not yet covered: `search_memory` (KEAP's
-semantic search crosses the septum) and rowRef selects in forms (they list every
-parent row).
+switch is refused while a card waits. An insert or edit whose row would be another
+client's (or personal) names whose on its card and is written only on a second
+approve. serve holds the wall per connection; the pupil says it again on a reconnect
+and re-runs its widgets when it changes. Not yet covered: `search_memory` (KEAP's
+semantic search crosses the septum), rowRef selects in forms (they list every parent
+row), and an insert_many's lines (only the parent row is walked).
 
 ## Widgets and forms
 
