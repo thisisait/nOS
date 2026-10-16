@@ -45,6 +45,12 @@ function callerRank(groups: readonly string[] | undefined): number | undefined {
 	return best;
 }
 
+function isOwner(who?: { uid?: string; ownerId?: string }): boolean {
+	const uid = who?.uid?.trim();
+	const owner = who?.ownerId?.trim().replace(/^user:/, '');
+	return !!uid && !!owner && uid === owner;
+}
+
 /** True when the caller's groups include any write-tier group. */
 export function canWriteTables(groups: readonly string[] | undefined): boolean {
 	const set = groupSet(groups);
@@ -53,17 +59,19 @@ export function canWriteTables(groups: readonly string[] | undefined): boolean {
 
 /**
  * True when the caller may READ a table of this visibility grade.
- * Unknown / missing / private / system (non-admin) fail closed.
- * `shared` is any authenticated caller (the BFF already requires identity).
+ * Unknown / missing / private / system (non-admin) fail closed, except that the
+ * table's owner always reads it (KEAP: private = "owner + admin"; the owner is
+ * `user:<uid>` or a bare uid). `shared` is any authenticated caller.
  */
 export function canReadTable(
 	visibility: string | undefined | null,
-	groups: readonly string[] | undefined
+	groups: readonly string[] | undefined,
+	who?: { uid?: string; ownerId?: string }
 ): boolean {
 	if (typeof visibility !== 'string' || !visibility) return false;
 	const min = VISIBILITY_READ_RANK[visibility];
 	if (min === undefined) return false;
-	if (min === 0) return canViewAnatomy(groups);
+	if (min === 0) return canViewAnatomy(groups) || isOwner(who);
 	if (min === 99) return true;
 	const rank = callerRank(groups);
 	return rank !== undefined && rank <= min;

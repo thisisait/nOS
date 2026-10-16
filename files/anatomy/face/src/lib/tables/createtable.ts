@@ -118,6 +118,7 @@ export interface CreateColumn {
 /** Grades a creator can pick. `private` is left out: face reads fail closed on
  *  it for a non-admin, so the manager who made the table could not open it. */
 export const CREATE_VISIBILITIES = [
+	'private',
 	'tier-managers',
 	'tier-users',
 	'tier-guests',

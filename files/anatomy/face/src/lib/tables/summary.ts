@@ -12,6 +12,8 @@ export interface TableSummary {
 	 *  TablesApp.svelte. Absent for sources that don't return it (fallback
 	 *  probing) — treated as non-system. */
 	visibility?: string;
+	/** KEAP TableInfo.ownerId (`user:<uid>`); lets the owner read a private table. */
+	ownerId?: string;
 }
 
 /** Unwrap a possibly-enveloped `{data}` payload. */
@@ -37,7 +39,8 @@ export function toTableSummaries(raw: unknown): TableSummary[] {
 				slug,
 				title: typeof o.title === 'string' && o.title ? o.title : slug,
 				rowCount: typeof o.rowCount === 'number' ? o.rowCount : 0,
-				...(typeof o.visibility === 'string' ? { visibility: o.visibility } : {})
+				...(typeof o.visibility === 'string' ? { visibility: o.visibility } : {}),
+				...(typeof o.ownerId === 'string' && o.ownerId ? { ownerId: o.ownerId } : {})
 			} satisfies TableSummary;
 		})
 		.filter((t): t is TableSummary => t !== null)

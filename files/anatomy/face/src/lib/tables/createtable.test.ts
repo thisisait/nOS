@@ -168,6 +168,12 @@ describe('buildCreateBody visibility', () => {
 		expect(body.visibility).toBe('tier-managers');
 		expect(canReadTable(body.visibility, ['nos-managers'])).toBe(true);
 	});
+	it('offers private: its owner reads it back (owner + admin)', () => {
+		const body = buildCreateBody({ ...base, visibility: 'private' });
+		expect(body.visibility).toBe('private');
+		const who = { uid: 'alice', ownerId: 'user:alice' };
+		expect(canReadTable(body.visibility, ['nos-managers'], who)).toBe(true);
+	});
 	it('carries the grade picked in the modal', () => {
 		expect(buildCreateBody({ ...base, visibility: 'shared' }).visibility).toBe('shared');
 	});

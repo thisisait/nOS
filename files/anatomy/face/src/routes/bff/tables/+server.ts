@@ -137,9 +137,10 @@ function isFaceConfigTable(slug: string): boolean {
 function mayReadTable(
 	slug: string,
 	visibility: string | undefined,
-	groups: readonly string[] | undefined
+	groups: readonly string[] | undefined,
+	who?: { uid?: string; ownerId?: string }
 ): boolean {
-	return isFaceConfigTable(slug) || canReadTable(visibility, groups);
+	return isFaceConfigTable(slug) || canReadTable(visibility, groups, who);
 }
 
 async function fetchLiveRows(slug: string, who: Identity): Promise<DataTableRow[]> {
@@ -169,9 +170,12 @@ async function scopeContext(who: Identity, slug: string) {
 
 function readableSummaries(
 	tables: TableSummary[],
-	groups: readonly string[] | undefined
+	groups: readonly string[] | undefined,
+	uid: string
 ): TableSummary[] {
-	return tables.filter((t) => mayReadTable(t.slug, t.visibility, groups));
+	return tables.filter((t) =>
+		mayReadTable(t.slug, t.visibility, groups, { uid, ownerId: t.ownerId })
+	);
 }
 
 async function knownTableSummaries(who: Identity): Promise<TableSummary[]> {
@@ -184,12 +188,14 @@ async function knownTableSummaries(who: Identity): Promise<TableSummary[]> {
 				title?: string;
 				rowCount?: number;
 				visibility?: string;
+				ownerId?: string;
 			}>(await keapTableDef(slug, who));
 			out.push({
 				slug: (typeof def.id === 'string' && def.id) || slug,
 				title: typeof def.title === 'string' && def.title ? def.title : slug,
 				rowCount: typeof def.rowCount === 'number' ? def.rowCount : 0,
-				...(typeof def.visibility === 'string' ? { visibility: def.visibility } : {})
+				...(typeof def.visibility === 'string' ? { visibility: def.visibility } : {}),
+				...(typeof def.ownerId === 'string' ? { ownerId: def.ownerId } : {})
 			});
 		} catch {
 			/* table absent — skip it */
@@ -206,13 +212,21 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		if (!keapConfigured()) return json({ tables: [], source: 'fallback' });
 		try {
 			return json({
-				tables: readableSummaries(toTableSummaries(await keapListTables(locals.identity)), groups),
+				tables: readableSummaries(
+					toTableSummaries(await keapListTables(locals.identity)),
+					groups,
+					locals.identity.uid
+				),
 				source: 'keap'
 			});
 		} catch (e) {
 			if (e instanceof UpstreamError) {
 				return json({
-					tables: readableSummaries(await knownTableSummaries(locals.identity), groups),
+					tables: readableSummaries(
+						await knownTableSummaries(locals.identity),
+						groups,
+						locals.identity.uid
+					),
 					source: 'known-slugs'
 				});
 			}
@@ -237,10 +251,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		throw error(403, "DataTable reads require the table's visibility tier.");
 	};
 
-	let def: { view?: DataTable['view']; visibility?: string } | undefined;
+	let def: { view?: DataTable['view']; visibility?: string; ownerId?: string } | undefined;
 	if (keapConfigured()) {
 		try {
-			def = unwrap<{ view?: DataTable['view']; visibility?: string }>(
+			def = unwrap<{ view?: DataTable['view']; visibility?: string; ownerId?: string }>(
 				await keapTableDef(slug, locals.identity)
 			);
 		} catch (e) {
@@ -248,7 +262,8 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		}
 	}
 	const vis = typeof def?.visibility === 'string' ? def.visibility : undefined;
-	if (!mayReadTable(slug, vis, groups)) forbid();
+	const uid = locals.identity.uid;
+	if (!mayReadTable(slug, vis, groups, { uid, ownerId: def?.ownerId })) forbid();
 
 	if (def) {
 		const cols = mapColumns(def);
@@ -296,9 +311,11 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 				await Promise.all(
 					refTables.map(async (t) => {
 						try {
-							const rdef = unwrap<{ visibility?: string }>(await keapTableDef(t, locals.identity));
+							const rdef = unwrap<{ visibility?: string; ownerId?: string }>(
+								await keapTableDef(t, locals.identity)
+							);
 							const rvis = typeof rdef.visibility === 'string' ? rdef.visibility : undefined;
-							if (!mayReadTable(t, rvis, groups)) return;
+							if (!mayReadTable(t, rvis, groups, { uid, ownerId: rdef.ownerId })) return;
 							const rd = unwrap<{ rows?: DataTableRow[] }>(await keapTableRows(t, locals.identity));
 							refRows[t] = rd.rows ?? (Array.isArray(rd) ? (rd as DataTableRow[]) : []);
 						} catch {
