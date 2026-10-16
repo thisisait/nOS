@@ -461,8 +461,8 @@ function uuidV5(name: string): string {
 }
 
 /** Create a table — POST /api/tables, owned by the person. The id is derived
- *  from uid + typed slug, so a re-submit hits KEAP's duplicate-id refusal
- *  instead of minting a second table (zod would strip a bare `slug`). */
+ *  from uid + typed slug (zod would strip a bare `slug`); a re-submit hits
+ *  KEAP's duplicate-id 400, so read that id back and reuse the table. */
 export async function keapCreateTable(
 	body: Record<string, unknown>,
 	who: Identity
@@ -471,13 +471,19 @@ export async function keapCreateTable(
 	const { slug, ...rest } = body;
 	const id =
 		typeof slug === 'string' && slug ? uuidV5(`keap-face-table:${who.uid}/${slug}`) : undefined;
-	return asJson(
-		await fetch(KEAP_TABLES(), {
-			method: 'POST',
-			headers,
-			body: JSON.stringify(id ? { ...rest, id } : rest)
-		})
-	);
+	try {
+		return await asJson(
+			await fetch(KEAP_TABLES(), {
+				method: 'POST',
+				headers,
+				body: JSON.stringify(id ? { ...rest, id } : rest)
+			})
+		);
+	} catch (e) {
+		if (!id || !(e instanceof UpstreamError) || e.status !== 400) throw e;
+		// No such table → the 400 was a real validation error: surface that one.
+		return keapTableDef(id, who).catch(() => Promise.reject(e));
+	}
 }
 
 /** Tables this person may read — GET /api/tables (enveloped `TableInfo[]`). */

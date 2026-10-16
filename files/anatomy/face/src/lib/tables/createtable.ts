@@ -115,11 +115,22 @@ export interface CreateColumn {
  *  We emit BOTH spellings: `columns` is what the current server reads, `schema`
  *  is what this contract documented and what a tolerant server accepts. Neither
  *  is redundant while the two repos release independently. */
+/** Grades a creator can pick. `private` is left out: face reads fail closed on
+ *  it for a non-admin, so the manager who made the table could not open it. */
+export const CREATE_VISIBILITIES = [
+	'tier-managers',
+	'tier-users',
+	'tier-guests',
+	'shared'
+] as const;
+export type CreateVisibility = (typeof CREATE_VISIBILITIES)[number];
+
 export interface CreateTableBody {
 	slug: string;
 	title: string;
 	description?: string;
 	anchors?: string[];
+	visibility: CreateVisibility;
 	columns: CreateColumn[];
 	schema: { columns: CreateColumn[] };
 }
@@ -132,6 +143,7 @@ export function buildCreateBody(input: {
 	description: string;
 	anchor: string;
 	columns: DraftColumn[];
+	visibility?: CreateVisibility;
 }): CreateTableBody {
 	const columns: CreateColumn[] = input.columns.map((c) => {
 		const key = c.key.trim();
@@ -146,6 +158,7 @@ export function buildCreateBody(input: {
 	const body: CreateTableBody = {
 		slug: input.slug.trim(),
 		title: input.title.trim(),
+		visibility: input.visibility ?? 'tier-managers',
 		// Top-level `columns` is the one the server actually reads; `schema` mirrors
 		// it for a tolerant/older server. See the CreateTableBody note above.
 		columns,

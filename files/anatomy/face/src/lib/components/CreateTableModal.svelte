@@ -14,6 +14,8 @@
 		buildCreateBody,
 		defaultColumns,
 		CREATE_COLUMN_KINDS,
+		CREATE_VISIBILITIES,
+		type CreateVisibility,
 		type DraftColumn
 	} from '$lib/tables/createtable';
 
@@ -25,6 +27,7 @@
 	let slugTouched = $state(false);
 	let description = $state('');
 	let anchor = $state('');
+	let visibility = $state<CreateVisibility>('tier-managers');
 	let columns = $state<DraftColumn[]>(defaultColumns());
 	let submitting = $state(false);
 	let err = $state('');
@@ -55,7 +58,7 @@
 		}
 		submitting = true;
 		try {
-			const body = buildCreateBody({ slug, title, description, anchor, columns });
+			const body = buildCreateBody({ slug, title, description, anchor, columns, visibility });
 			// The BFF derives the id from you + slug (a UUID); open the table by it.
 			const t = (await tablesCreateTable(body)) as { id?: unknown } | null;
 			oncreated(typeof t?.id === 'string' && t.id ? t.id : body.slug);
@@ -104,6 +107,15 @@
 				<span class="lbl">Anchor</span>
 				<input type="text" bind:value={anchor} placeholder="e.g. nos.applications" />
 				<span class="sub">anchors this table into /explore (optional)</span>
+			</label>
+
+			<label class="field">
+				<span class="lbl">Who can read it</span>
+				<select bind:value={visibility}>
+					{#each CREATE_VISIBILITIES as v (v)}
+						<option value={v}>{v}</option>
+					{/each}
+				</select>
 			</label>
 
 			<div class="cols">
