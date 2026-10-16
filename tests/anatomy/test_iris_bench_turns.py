@@ -90,10 +90,10 @@ def test_plain_cases_score_as_before_and_carry_no_invented_kind(tmp_path):
     rc, r, _ = _run(tmp_path, _turns(), [plain])
     assert r["pass"] and r["failed"] == [] and r["kind"] is None and rc == 0
     # Case-level checks see the whole wire, so they are judged with the last turn.
-    assert [t["status"] for t in r["turns"]] == ["pass", "pass"] and r["depth"] == 2
+    assert [t["status"] for t in r["turns"]] == ["pass", "pass"] and r["depth"] is None  # ruling 2026-10-16: a plain case has no depth
     bad = dict(plain, checks={"tools_called": ["red_status"]})
     _, r, _ = _run(tmp_path, _turns(), [bad])
-    assert r["failed"] == ["tools_called"] and [t["status"] for t in r["turns"]] == ["pass", "fail"] and r["depth"] == 1
+    assert r["failed"] == ["tools_called"] and [t["status"] for t in r["turns"]] == ["pass", "fail"] and r["depth"] is None
 
 
 def test_same_as_turn_n_is_the_where_of_that_turns_last_query():
