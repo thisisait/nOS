@@ -1,0 +1,89 @@
+# tools/oneshot-poc.py offline: the scripted decision model, per iris-bench case. `sys` lists the
+# systems the triage says yes to; `answers` holds every other question id the battery asks.
+# An unscripted question fails the case, so a battery change shows up here first.
+top3-next:
+  sys: [keap_table]
+  answers:
+    s1.tool: query_rows
+    s1.table: iris-bench-2
+    s1.columns.n: 0
+    s1.group_by: (none)
+    s1.limit.use: true
+    s1.limit: 3
+    s1.op: (none)
+    s1.order_by.use: true
+    s1.order_by.column: points
+    s1.order_by.dir: desc
+    s1.q.use: false
+    s1.where.n: 1
+    s1.where.0.column: status
+    s1.where.0.op: eq
+    s1.where.0.value: next
+    s1.y: (none)
+    s2.tool: done
+where-not-q:
+  sys: [keap_table]
+  answers:
+    s1.tool: query_rows
+    s1.table: iris-bench-2
+    s1.columns.n: 0
+    s1.group_by: (none)
+    s1.limit.use: true
+    s1.limit: 0
+    s1.op: count
+    s1.order_by.use: false
+    s1.q.use: false
+    s1.where.n: 1
+    s1.where.0.column: status
+    s1.where.0.op: eq
+    s1.where.0.value: next
+    s1.y: (none)
+    s2.tool: done
+bar-sum-points:
+  sys: [keap_table]
+  answers:
+    s1.tool: show
+    s1.source.use: true
+    s1.source.query.table: iris-bench-2
+    s1.source.query.q.use: false
+    s1.source.query.where.n: 1
+    s1.source.query.where.0.column: status
+    s1.source.query.where.0.op: eq
+    s1.source.query.where.0.value: next
+    s1.source.op: sum
+    s1.source.x: track
+    s1.source.y: points
+    s1.component: chart
+    s1.component.props.chart: bar
+    s1.component.props.title.use: false
+    s1.component.props.x: category
+    s2.tool: done
+edit-card:  # two turns; the normaliser resolves "its" to bench row 10
+  normalised: In the iris-bench-2 table, set the status of bench row 10 to shipped.
+  sys: [keap_table]
+  multi_step: true
+  answers:
+    s1.tool: query_rows
+    s1.table: iris-bench-2
+    s1.columns.n: 0
+    s1.group_by: (none)
+    s1.limit.use: true
+    s1.limit: 1
+    s1.op: (none)
+    s1.order_by.use: false
+    s1.q.use: false
+    s1.where.n: 1
+    s1.where.0.column: title
+    s1.where.0.op: eq
+    s1.where.0.value: bench row 10
+    s1.y: (none)
+    s2.tool: propose_row_edit
+    s2.table: iris-bench-2
+    s2.row_id: $step1.rows[0].__id
+    s2.values.title.use: false
+    s2.values.status: shipped
+    s2.values.track: (none)
+    s2.values.points.use: false
+    s2.values.note.use: false
+    s2.values.due.use: false
+    s3.tool: done

@@ -1,0 +1,31 @@
+# tools/oneshot-poc.py: what the decision model may name. Offline stand-in for list_tables and
+# query_rows' columns (both need the thalamus socket). iris-bench-2 mirrors tools/iris-bench.py seed;
+# roadmap's columns are an assumption, not read from KEAP.
+systems:   # system -> the tools that reach it; the triage asks one yes/no per system
+  keap_table: [query_rows, propose_row_edit, propose_row_insert, propose_row_delete, propose_table_create,
+               propose_column_add, show, list_tables, offer_dashboard]
+  estate_red: [red_status]
+  estate_services: [estate_services]
+  memory: [search_memory]
+  inbox: [inbox]
+  approvals: [approvals_awaiting]
+  guide: [nos_guide]
+tables:
+  - title: iris-bench-2
+    columns:
+      - {key: title, kind: text}
+      - {key: status, kind: select, options: [next, queued, shipped]}
+      - {key: track, kind: select, options: [agents, face, platform, security]}
+      - {key: points, kind: number}
+      - {key: note, kind: text}
+      - {key: due, kind: date}
+  - title: iris-bench-2-lines
+    columns:
+      - {key: bench_row, kind: rowRef}
+      - {key: item, kind: text}
+      - {key: qty, kind: number}
+  - title: roadmap
+    columns:
+      - {key: title, kind: text}
+      - {key: status, kind: text}
+      - {key: track, kind: text}

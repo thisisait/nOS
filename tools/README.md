@@ -154,6 +154,7 @@ posts, restarts or renders something.
 ### Agents and the loop
 
 - `iris-bench.py` — Score Iris from the thalamus wire alone (cases in `state/fixtures/iris-bench.yml`): tools, kinds, count = matched, sourced charts, time, cannot-see, no proposal; rejects every approval, writes only `state/fixtures/iris-bench/last-run.json`; NOS_LIVE=1 or `--offline --sock` (fake).
+- `oneshot-poc.py` — One-shot PoC: a small model answers a battery of constrained questions, a compiler turns them into a thalamus tool plan, a dry run validates it against `state/fixtures/oneshot/thalamus-tools.json` and the iris-bench checks; traces every question; offline fakes, Ollama only on NOS_LIVE=1.
 - `loop-diff.py` — Build a valid unified diff from a replacement an agent can state in words.
 - `loop-graph-gen.py` — Compile the loop harness from ledger.py into loop-graph.json (the Planner Loops view + its gate).
 - `loop-pr.py` — The loop's driver: what happens after the judges say pass.

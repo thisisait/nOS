@@ -567,7 +567,8 @@ fn column_items() -> Value {
                     "ref_table": {"type": "string", "description": "rowRef only: the title of a table the person can read"}}}]}})
 }
 
-fn tools() -> Value {
+/// The model's tool list; tools/oneshot-poc.py validates its plans against a pinned copy (tests/tool_schemas.rs).
+pub fn tools() -> Value {
     json!([{"type": "function", "function": {"name": "query_rows", "description": QUERY_ROWS,
         "parameters": {"type": "object", "additionalProperties": false, "required": ["table"], "properties": {
             "table": {"type": "string", "description": "the table's id or its title as the person names it (e.g. iris-bench-2); \"roadmap\" only for the roadmap"},
