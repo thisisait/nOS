@@ -49,8 +49,8 @@ backup_encryption_passphrase: ""
 backup_encryption_keys_previous: []
 
 # -- Sources -------------------------------------------------------------------
-backup_databases_mariadb: true
-backup_databases_postgresql: true
+backup_databases_mariadb: "{{ install_mariadb | default(false) }}"        # the installed set (manifest forced_by applied at run time)
+backup_databases_postgresql: "{{ install_postgresql | default(false) }}"
 backup_authentik_blueprints: "{{ install_authentik | default(false) }}"
 
 # Wing SQLite store (security findings, audit hash-chain, agent sessions, GDPR

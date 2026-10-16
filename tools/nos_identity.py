@@ -170,6 +170,21 @@ def installed_names(names, flags: dict, rows: list[dict] | None = None) -> list[
     return [n for n in names if (r := row(n)) and r["id"] in on or not r and _on(flags.get(f"install_{n}"))]
 
 
+# backup.sh status name -> its toggle; the toggle's own Jinja names the install flag.
+_BACKUP_TOGGLES = {"mariadb": "backup_databases_mariadb", "postgres": "backup_databases_postgresql",
+                   "authentik-blueprints": "backup_authentik_blueprints",
+                   "wing-db": "backup_wing_db", "keap-db": "backup_keap_db"}
+
+
+def backup_sources_installed(names, flags: dict, cfg: dict | None = None) -> list[str]:
+    """The backup-status names this host backs up: one whose install flag `flags` holds
+    OFF is dropped. backup_dirs_to_dump carries `flag:`; an unmapped or unknown flag is kept."""
+    cfg = default_config() if cfg is None else cfg
+    by = {n: m.group(0) for n, v in _BACKUP_TOGGLES.items() if (m := re.search(r"install_\w+", str(cfg.get(v))))}
+    by |= {f"dir-{d['name']}": d["flag"] for d in cfg.get("backup_dirs_to_dump") or [] if d.get("flag")}
+    return [n for n in names if by.get(n) not in flags or _on(flags[by[n]])]
+
+
 def scan_batch(state, batch: int, flags: dict | None = None) -> list[str]:
     """scan-runner.sh's batch: the oldest-checked notebook components this host installed."""
     comps = json.loads(Path(state).read_text(encoding="utf-8")).get("components") or {}

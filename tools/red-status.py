@@ -688,6 +688,10 @@ def backups() -> dict | None:
     if isinstance(sources, dict):
         sources = [{"name": k, **v} for k, v in sources.items() if isinstance(v, dict)]
     failed = [s.get("name") for s in sources if not s.get("success")]
+    # A source this host never installed is no finding (an older render listed it).
+    if (flags := _install_flags()) is not None:
+        import nos_identity  # noqa: PLC0415
+        failed = nos_identity.backup_sources_installed(failed, flags)
     stamps = [s.get("timestamp") for s in sources if isinstance(s.get("timestamp"), (int, float))]
     when = datetime.fromtimestamp(max(stamps), timezone.utc) if stamps else None
     return {

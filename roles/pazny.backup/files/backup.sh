@@ -18,12 +18,12 @@ S3_BUCKET="{{ backup_target_bucket }}"
 MARIADB_CONTAINER="{{ backup_mariadb_container }}"
 MARIADB_USER="{{ backup_mariadb_user }}"
 MARIADB_PASSWORD="{{ backup_mariadb_password }}"
-DO_MARIADB="{{ 'true' if backup_databases_mariadb else 'false' }}"
+DO_MARIADB="{{ 'true' if backup_databases_mariadb | bool else 'false' }}"
 
 PG_CONTAINER="{{ backup_postgresql_container }}"
 PG_USER="{{ backup_postgresql_user }}"
 PG_PASSWORD="{{ backup_postgresql_password }}"
-DO_POSTGRES="{{ 'true' if backup_databases_postgresql else 'false' }}"
+DO_POSTGRES="{{ 'true' if backup_databases_postgresql | bool else 'false' }}"
 
 ESPOCRM_DB_CONTAINER="{{ backup_espocrm_db_container | default('espocrm-db') }}"
 ESPOCRM_VOLUMES=({% for v in backup_espocrm_volumes | default([]) %}"{{ v }}" {% endfor %})
@@ -37,13 +37,11 @@ VOLUMES=({% for v in backup_volumes_to_dump %}"{{ v }}" {% endfor %})
 # Host-bind service data dirs (gitea/gitlab repos, etc.) — name|path pairs.
 # These hold filesystem state that NO logical DB dump can reconstruct (git
 # repos, uploads). Tarred whole and restored back to the same host path.
-# Each entry carries its service `flag` (DIR_ENABLED). Off AND absent is skipped
-# (dir-mikopbx 2026-10-04); off but present is still backed up — its data would
-# otherwise age out of retention silently (review 2026-10-04). On + absent = FAILED.
-DIR_NAMES=({% for d in backup_dirs_to_dump %}"{{ d.name }}" {% endfor %})
-DIR_PATHS=({% for d in backup_dirs_to_dump %}"{{ d.path }}" {% endfor %})
-DIR_EMPTY_OK=({% for d in backup_dirs_to_dump %}"{{ 'true' if (d.empty_ok | default(false) | bool) else 'false' }}" {% endfor %})
-DIR_ENABLED=({% for d in backup_dirs_to_dump %}"{{ 'true' if (d.flag is not defined or (lookup('vars', d.flag, default=false) | bool)) else 'false' }}" {% endfor %})
+# Only entries whose service `flag` is on render (the installed set): an off
+# service is neither backed up nor reported (2026-10-16). On + absent = FAILED.
+DIR_NAMES=({% for d in backup_dirs_to_dump if d.flag is not defined or (lookup('vars', d.flag, default=false) | bool) %}"{{ d.name }}" {% endfor %})
+DIR_PATHS=({% for d in backup_dirs_to_dump if d.flag is not defined or (lookup('vars', d.flag, default=false) | bool) %}"{{ d.path }}" {% endfor %})
+DIR_EMPTY_OK=({% for d in backup_dirs_to_dump if d.flag is not defined or (lookup('vars', d.flag, default=false) | bool) %}"{{ 'true' if (d.empty_ok | default(false) | bool) else 'false' }}" {% endfor %})
 
 # Wing SQLite store (security findings, audit hash-chain, agent sessions) — a
 # host file, NOT a container. Dumped with `sqlite3 .dump` for portability.
@@ -906,10 +904,6 @@ run_dirs() {
         name="${DIR_NAMES[$i]}"
         path="${DIR_PATHS[$i]}"
         [[ -z "${name}" || -z "${path}" ]] && continue
-        if [[ ! -d "${path}" && "${DIR_ENABLED[$i]}" == "false" ]]; then
-            log "dir/${name}: service off and ${path} absent — nothing to back up"
-            continue
-        fi
         if [[ ! -d "${path}" ]]; then
             # Enabled but absent = FAILED, never a silent skip. An unmounted SSD
             # or a moved nos_data_root would otherwise drop gitea/gitlab out of

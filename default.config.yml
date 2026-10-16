@@ -3187,8 +3187,8 @@ backup_coverage:
   iiab_terminal_config_dir:    { class: derived, why: "rendered config" }
   node_exporter_textfile_dir:  { class: derived, why: "metrics scratch" }
 
-backup_databases_mariadb: true
-backup_databases_postgresql: true
+backup_databases_mariadb: "{{ install_mariadb | default(false) }}"        # the installed set (manifest forced_by applied at run time)
+backup_databases_postgresql: "{{ install_postgresql | default(false) }}"
 # A9 result notification (W6.1): backup outcome → Wing inbox (fail=high,
 # success=info heartbeat) via Bone HMAC. Empty wing_events_hmac_secret
 # (fresh install pre-regen) silently disables.
