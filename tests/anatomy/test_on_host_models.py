@@ -139,3 +139,25 @@ def test_install_flags_read_the_on_host_switches():
     assert (flags.get("llm_on_host"), flags.get("vlm_on_host"), flags.get("decision_model_on_host")) == (True, False, False)
     post = (REPO / "roles/pazny.wing/tasks/post.yml").read_text()
     assert "_on_host" in next(l for l in post.splitlines() if "NOS_INSTALL_FLAGS:" in l), "Pulse never sees the switch"
+
+
+def test_all_on_runs_the_vision_work():
+    """all-on is every known-good service; invoice intake is one since R2 moved it to vlm_on_host."""
+    assert yaml.safe_load((REPO / "profiles/all-on.yml").read_text()).get("vlm_on_host") is True
+
+
+@pytest.mark.parametrize("cfg,warned", [
+    ({"vlm_on_host": False, "ollama_vision_model": "qwen2.5vl:7b"}, True),
+    ({"vlm_on_host": False, "ollama_vision_model": ""}, False),
+    ({"vlm_on_host": True, "ollama_vision_model": "qwen2.5vl:7b"}, False),
+])
+def test_a_vision_model_with_its_switch_off_warns(cfg, warned):
+    """A host that names a vision model but not vlm_on_host loses invoice intake; the converge says so."""
+    import jinja2
+    plays = yaml.safe_load((REPO / "main.yml").read_text())
+    tasks = [t for p in plays for t in p.get("tasks", []) + p.get("pre_tasks", [])]
+    task = next((t for t in tasks if "vlm_on_host" in str(t.get("name", ""))), None)
+    assert task is not None, "no converge task warns about a vision model with vlm_on_host off"
+    env = jinja2.Environment()
+    whens = task["when"] if isinstance(task["when"], list) else [task["when"]]
+    assert all(env.compile_expression(w)(**cfg) for w in whens) is warned
