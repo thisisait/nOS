@@ -5015,3 +5015,47 @@ fn a_table_iris_makes_for_a_client_is_that_clients_and_hidden_from_another() {
     let model = rig.model.lock().unwrap().last().unwrap().1.clone();
     assert!(model.contains("ACME notes") && model.contains("hidden while you work for Bolt a.s."), "{model}");
 }
+
+// D2 definition §4.3: a write outside the context asks once more; one inside asks once.
+fn septum_write(name: &str, write: (&str, &str)) -> (Rig, UnixStream, BufReader<UnixStream>, Vec<ToShell>) {
+    let rig = rig_at(name, mapped(), septum_keap(), vec![query(r#"{"table": "invoice"}"#), call(write.0, write.1), answer("Proposed.")], Some(local()));
+    septum_defs(&rig);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ToShell::WorkingFor { session, .. } = work_for(&s, &mut r, Scope::Client("acme".into())) else { panic!("acme not set") };
+    let got = turn(&s, &mut r, Some(session), "write it");
+    (rig, s, r, got)
+}
+
+#[test]
+fn a_write_outside_the_client_asks_once_more_before_it_is_written() {
+    for (name, write, table) in [
+        ("septins", ("propose_row_insert", r#"{"table": "invoice", "values": {"number": "B-2", "book_owner": "bolt"}}"#), "/api/tables/invoice/rows"),
+        ("septedit", ("propose_row_edit", r#"{"table": "invoice", "row_id": "i-acme", "values": {"book_owner": "bolt"}}"#), "/api/tables/invoice/rows"),
+    ] {
+        let (rig, s, mut r, got) = septum_write(name, write);
+        let (first, d) = card_of(&got).unwrap_or_else(|| panic!("{name}: no card: {got:?}"));
+        assert!(d.title.contains("Bolt a.s.") && d.title.contains("ACME s.r.o."), "{name}: the card names whose row it is: {}", d.title);
+        decide(&s, &first, Decision::Approve);
+        let again = until_said_all(&mut r);
+        let (second, d2) = card_of(&again).unwrap_or_else(|| panic!("{name}: an outside write was not asked once more: {again:?}"));
+        assert_ne!(first, second);
+        assert!(d2.title.contains("once more"), "{name}: {}", d2.title);
+        let writes = |rig: &Rig| rig.keap.lock().unwrap().iter().filter(|(h, _)| (h.starts_with("POST ") || h.starts_with("PATCH ")) && h.contains(table)).count();
+        assert_eq!(writes(&rig), 0, "{name}: written on the first approve");
+        decide(&s, &second, Decision::Approve);
+        until_said(&mut r);
+        assert_eq!(writes(&rig), 1, "{name}: the second approve writes");
+    }
+}
+
+#[test]
+fn a_write_inside_the_client_asks_once() {
+    let (rig, s, mut r, got) = septum_write("septin", ("propose_row_insert", r#"{"table": "invoice", "values": {"number": "A-2", "book_owner": "acme"}}"#));
+    let (approval, d) = card_of(&got).unwrap_or_else(|| panic!("no card: {got:?}"));
+    assert!(!d.title.contains("Bolt") && !d.title.contains("once more"), "{}", d.title);
+    decide(&s, &approval, Decision::Approve);
+    let said = until_said_all(&mut r);
+    assert!(card_of(&said).is_none(), "an inside write was asked twice: {said:?}");
+    assert_eq!(posts(&rig).iter().filter(|(h, _)| h.contains("/api/tables/invoice/rows")).count(), 1);
+}
