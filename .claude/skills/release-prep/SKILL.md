@@ -22,8 +22,11 @@ and prepares the changes, it never cuts on its own.
 - The cut (step 10) is never a mode. The operator runs it, or says "cut" in the
   same conversation after reading the report.
 
-The version: the newest `v*` tag + 1 minor (`git tag --sort=-creatordate | head -1`),
-unless the operator names one.
+The version: the release's own roadmap row decides it (`rel-NNN`, read it with
+`tools/roadmap-status.py --all` - it may rule the name, e.g. dropping `-beta`); else
+the newest `v*` tag + 1 minor (`git tag --sort=-creatordate | head -1`). A row and the
+evidence that disagree (a row ruling "no -beta" whose exit criteria are not met) is a
+decision for the operator, not a default.
 
 ## Steps (each ends with PASS, BLOCKER or DEBT, and the command that showed it)
 
@@ -43,6 +46,8 @@ unless the operator names one.
      newest blank converge (`nos --remove=data --confirm`, then `nos`) and its
      `nos-smoke --strict` result. None since the last release → BLOCKER; the
      operator runs it (destructive), the skill only asks and reads the result.
+     No reader records blanks yet (roadmap row `blank-run-record`): name the source
+     you used (a RELEASE.md line, the operator's word) and say it is not a reader.
    - `tools/red-status.py`: every red line is either fixed, owned by a roadmap row,
      or written as a hidden fee (step 3). UNKNOWN is not green.
 2. **Roadmap revision.** `tools/roadmap-status.py --status active,next,blocked`
@@ -65,14 +70,18 @@ unless the operator names one.
    `git log <last-tag>..dev` / `git diff --shortstat`, the blank + smoke evidence
    from step 1, then sections by theme. Every claim names its evidence; nothing
    that did not ship.
-6. **Devlog.** The `/devlog` skill, `release` mode. Then `tools/devlog-release.sh vX.Y-beta`
-   must exit 0.
+6. **Devlog.** The `/devlog` skill, `release` mode. First check the PREVIOUS tag has
+   its release entry (`rg -l 'release: <last-tag>' docs/devlog/nos-core/`); a missing
+   one is caught up in this release, not skipped twice. Then
+   `tools/devlog-release.sh vX.Y-beta` must exit 0.
 7. **Generated files and signatures.** Regenerate in this order when one is stale -
    anatomy-graph, body-plan, imprint (each reads the one before) - then check each
    as its own command:
    `python3 tools/anatomy-graph-gen.py --check`, `python3 tools/imprint-gen.py --check`,
    `python3 tools/design-sync.py --check`, `python3 tools/body-plan-gen.py --check`;
-   `tools/apex-sign.py` (a diff = the operator signs, `--confirm`).
+   `tools/apex-sign.py` (a diff = the operator signs, `--confirm`, then commits the
+   ruling - the digest counts only once committed; CI does not check it, roadmap row
+   `apex-signature-in-ci`). Any commit that adds a graph node changes the ruling.
 8. **Client hosts.** A client estate follows a release tag, not dev: list each
    known client host's branch and the tag it will move to (memory
    `first-client-deploy-and-contributors`; never name the client).
