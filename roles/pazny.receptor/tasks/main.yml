@@ -87,7 +87,11 @@
     set -e
     for _ in $(seq 1 20); do [ -S "{{ receptor_socket }}" ] && break; sleep 0.5; done
     MODE=$(stat -c '%a' "{{ receptor_socket }}" 2>/dev/null || stat -f '%Lp' "{{ receptor_socket }}")
-    CODE=$(curl -s -o /dev/null -w '%{http_code}' -m 10 --unix-socket "{{ receptor_socket }}" http://keap/api/me || echo 000)
+    # A restart leaves the old file a moment (client 2026-10-16): retry what is transient (000/502), ~30 s.
+    for _ in $(seq 1 30); do
+      CODE=$(curl -s -o /dev/null -w '%{http_code}' -m 10 --unix-socket "{{ receptor_socket }}" http://keap/api/me) || CODE=000
+      case "$CODE" in 000|502) sleep 1 ;; *) break ;; esac
+    done
     echo "mode=${MODE} code=${CODE}"
   register: _receptor_verify
   changed_when: false
