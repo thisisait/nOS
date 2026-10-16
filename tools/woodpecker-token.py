@@ -28,7 +28,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from nos_sso import REACHED, login, loopback_for_unresolvable, walk  # noqa: E402
+from nos_sso import REACHED, login, loopback_for_unresolvable, tls_verify, walk  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -37,14 +37,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--auth-host", required=True)
     ap.add_argument("--gitea-public", required=True)
     ap.add_argument("--woodpecker-public", required=True)
-    ap.add_argument("--insecure", action="store_true", help="local TLDs with a mkcert CA")
+    ap.add_argument("--local-tld", action="store_true", help="a local TLD: verify against the mkcert root CA")
     a = ap.parse_args(argv)
     password = os.environ.get("SSO_PASSWORD", "")
     if not password:
         print("SSO_PASSWORD is empty", file=sys.stderr)
         return 2
-    verify = not a.insecure
-    if a.insecure:            # a local TLD: no DNS on Linux, the edge is on loopback
+    verify = tls_verify(a.local_tld)
+    if a.local_tld:           # no DNS on Linux, the edge is on loopback
         loopback_for_unresolvable()
     gitea, wp = a.gitea_public.rstrip("/"), a.woodpecker_public.rstrip("/")
 

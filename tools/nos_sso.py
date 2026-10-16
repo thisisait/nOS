@@ -11,6 +11,7 @@ or STUCK (with the trail, so a failure names the hop).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from urllib.parse import parse_qs, urljoin, urlparse
 
 import requests
@@ -83,6 +84,36 @@ def walk(sess: requests.Session, url: str, auth_host: str, verify: bool = True,
             return Walk(DENIED, url, r.status_code, trail + ["denied: Permission denied page"])
         return Walk(STUCK, url, r.status_code, trail)
     return Walk(STUCK, url, None, trail + ["too many hops"])
+
+
+def mkcert_root_ca() -> str | None:
+    """rootCA.pem of the CA tasks/tls-certs.yml minted: $CAROOT, `mkcert -CAROOT`,
+    then mkcert's per-OS default (Ansible's PATH may lack Homebrew)."""
+    import os
+    import shutil
+    import subprocess
+    import sys
+    dirs = [os.environ.get("CAROOT")]
+    if shutil.which("mkcert"):
+        dirs.append(subprocess.run(["mkcert", "-CAROOT"], capture_output=True, text=True).stdout.strip())
+    dirs.append(os.path.expanduser("~/Library/Application Support/mkcert" if sys.platform == "darwin"
+                                   else "~/.local/share/mkcert"))
+    return next((str(p) for d in dirs if d and (p := Path(d) / "rootCA.pem").is_file()), None)
+
+
+def tls_verify(local: bool) -> bool | str:
+    """requests' `verify` for this estate: a public TLD trusts the system bundle, a
+    local one the mkcert root. No root on disk: unverified, said once on stderr."""
+    if not local:
+        return True
+    ca = mkcert_root_ca()
+    if ca:
+        return ca
+    import sys
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    print("WARN no mkcert rootCA.pem found: TLS to the local TLD is NOT verified", file=sys.stderr)
+    return False
 
 
 def loopback_for_unresolvable() -> None:

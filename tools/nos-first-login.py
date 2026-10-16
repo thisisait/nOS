@@ -8,7 +8,7 @@ each enabled app's `authentik.first_login` (tools/e2e-plan.py — the plugins
 are the only list). Apps without a first_login are NAMED, never skipped silently.
 
   NOS_FIRST_LOGIN='[{"name": "akadmin", "password": "…"}]' \\
-      tools/nos-first-login.py --auth-host auth.example [--insecure]
+      tools/nos-first-login.py --auth-host auth.example [--local-tld]
 
 Prints one line per identity × app; exit 1 if any declared walk failed.
 "own_password": true marks a person whose password is theirs after the first
@@ -29,7 +29,7 @@ from urllib.parse import urljoin, urlparse
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from nos_sso import REACHED, login, loopback_for_unresolvable, walk  # noqa: E402
+from nos_sso import REACHED, login, loopback_for_unresolvable, tls_verify, walk  # noqa: E402
 
 
 def _plan() -> list[dict]:
@@ -72,11 +72,11 @@ def within_tier(ident: dict, row: dict) -> bool:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--auth-host", required=True)
-    ap.add_argument("--insecure", action="store_true", help="local TLDs with a mkcert CA")
+    ap.add_argument("--local-tld", action="store_true", help="a local TLD: verify against the mkcert root CA")
     a = ap.parse_args(argv)
     identities = json.loads(os.environ.get("NOS_FIRST_LOGIN", "[]"))
-    verify = not a.insecure
-    if a.insecure:            # a local TLD: no DNS on Linux, the edge is on loopback
+    verify = tls_verify(a.local_tld)
+    if a.local_tld:           # no DNS on Linux, the edge is on loopback
         loopback_for_unresolvable()
     apps = [r for r in _plan() if r["mode"] in ("native_oidc", "header_oidc")]
     for r in apps:

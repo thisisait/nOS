@@ -56,7 +56,7 @@
                '--auth-host=' ~ authentik_domain,
                '--gitea-public=https://' ~ gitea_domain,
                '--woodpecker-public=https://' ~ woodpecker_domain]
-              + (['--insecure'] if (tenant_domain_is_local | default(true) | bool) else []) }}"
+              + (['--local-tld'] if (tenant_domain_is_local | default(true) | bool) else []) }}"
   environment:
     SSO_PASSWORD: "{{ authentik_bootstrap_password }}"
   register: _woodpecker_mint
