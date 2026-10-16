@@ -1,33 +1,16 @@
+@import './lib/design/tokens.css';
+
 :root {
-	--bg: #0b0d12;
-	--fg: #e8ecf3;
-	--muted: #9aa4b2;
-	--glass: rgba(20, 24, 33, 0.55);
-	--glass-brd: rgba(255, 255, 255, 0.12);
-	--accent: #6aa2ff;
-
-	/* Semantic state tokens (2026-08-05). Before these, every component that
-	   needed "this is bad" picked its own red: #ff5a5a here, #ffb4b4 there,
-	   rgba(255,90,90,.22) in a third place — 51 hand-written colour rules
-	   across 18 components, so the same severity looked different depending on
-	   which screen you were on. Severity is a shared vocabulary; it belongs in
-	   one place.
-
-	   `ok` is deliberately NOT the default: a surface with nothing to say
-	   should use --muted, not green. Green is a claim, and this estate has
-	   been burned by things that claimed green. */
-	--ok: #5ec27a;
-	--info: #5a96ff;
-	--warn: #ffaa3c;
-	--bad: #ff5a5a;
-	--ok-soft: rgba(94, 194, 122, 0.16);
-	--info-soft: rgba(90, 150, 255, 0.16);
-	--warn-soft: rgba(255, 170, 60, 0.18);
-	--bad-soft: rgba(255, 90, 90, 0.18);
-	--ok-ink: #b6e8c6;
-	--info-ink: #bcd4ff;
-	--warn-ink: #ffdca8;
-	--bad-ink: #ffc9c9;
+	/* Colours and the glass filter are the design system's (lib/design/tokens.css, generated).
+	   The design has no state tints or state-coloured text yet: those stay face-owned, derived
+	   from the generated state colour so they follow it. `ok` is a claim — a surface with
+	   nothing to say uses --muted, not ok. */
+	--ok-soft: color-mix(in srgb, var(--ok) 16%, transparent);
+	--warn-soft: color-mix(in srgb, var(--warn) 18%, transparent);
+	--bad-soft: color-mix(in srgb, var(--bad) 18%, transparent);
+	--ok-ink: color-mix(in srgb, var(--ok) 40%, var(--fg));
+	--warn-ink: color-mix(in srgb, var(--warn) 40%, var(--fg));
+	--bad-ink: color-mix(in srgb, var(--bad) 40%, var(--fg));
 
 	color-scheme: dark light;
 }
@@ -50,8 +33,8 @@ body {
 .glass {
 	background: var(--glass);
 	border: 1px solid var(--glass-brd);
-	backdrop-filter: blur(18px) saturate(140%);
-	-webkit-backdrop-filter: blur(18px) saturate(140%);
+	backdrop-filter: var(--glass-filter);
+	-webkit-backdrop-filter: var(--glass-filter);
 	border-radius: 14px;
 }
 

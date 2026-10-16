@@ -34,3 +34,4 @@ docs/llm/security/attack-surface.json merge=regen
 docs/llm/security/pentest-journal.json merge=regen
 docs/llm/security/audit-manifest.json merge=regen
 tools/cc/theme.py merge=regen
+files/anatomy/face/src/lib/design/tokens.css merge=regen

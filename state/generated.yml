@@ -25,6 +25,9 @@ files:
   tools/cc/theme.py:
     writer: tools/design-sync.py
     check: [tools/design-sync.py, --check]
+  files/anatomy/face/src/lib/design/tokens.css:
+    writer: tools/design-sync.py
+    check: [tools/design-sync.py, --check]
   state/routing-graph.json:
     writer: tools/routing-graph-gen.py
     check: [tools/routing-graph-gen.py, --check]

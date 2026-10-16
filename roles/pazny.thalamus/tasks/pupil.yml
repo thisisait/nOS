@@ -11,7 +11,8 @@
     find index.html package.json package-lock.json vite.config.ts src src-tauri/src src-tauri/Cargo.toml \
       src-tauri/Cargo.lock src-tauri/build.rs src-tauri/tauri.conf.json src-tauri/capabilities src-tauri/icons \
       ../thalamus/contract/src ../thalamus/contract/Cargo.toml \
-      ../face/src/app.css ../face/src/lib/anatomy/graphLayered.ts ../face/src/lib/components/ui -type f \
+      ../face/src/app.css ../face/src/lib/design ../face/src/lib/anatomy/graphLayered.ts ../face/src/lib/components/ui \
+      -type f \
       | LC_ALL=C sort | xargs cat | shasum -a 256 | cut -d' ' -f1
   args:
     executable: /bin/bash

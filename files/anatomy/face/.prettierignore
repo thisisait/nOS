@@ -41,3 +41,5 @@ src/lib/keap-contracts/field-concepts.ts
 # (agent capability projection) — same one-authority rule as the graphs above;
 # pinned by tests/anatomy/test_routing_graph_is_sound.py.
 src/lib/anatomy/routing-graph.json
+# Same rule for the design tokens: tools/design-sync.py is their one writer.
+src/lib/design/tokens.css

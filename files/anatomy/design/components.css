@@ -1,0 +1,402 @@
+/* AIT design system — component layer (Civic family).
+   Every value comes from tokens.css (generated from tokens.json). Six themes,
+   three shapes: set data-theme on any wrapper and the same markup re-skins.
+     civic  / civic-dark   Classic — bevelled windows, blue title bars (default)
+     ledger / ledger-dark  Ledger  — flat planner sheet, hairlines, tab stripe
+     glass  / glass-dark   Glass   — Classic structure in liquid glass
+   Colour lives in the theme; SHAPE lives in the family blocks at the end. */
+
+/* ── base ─────────────────────────────────────────────────────────────── */
+.ait, .ait-screen, [data-theme] {
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 18px;
+  -webkit-font-smoothing: antialiased;
+}
+.ait *, .ait-screen * { box-sizing: border-box; }
+.ait-mono { font-family: var(--font-code); }
+.ait-caps {
+  font-family: var(--font-code);
+  font-size: 11px; line-height: 14px; font-weight: 600;
+  letter-spacing: 0.16em; text-transform: uppercase;
+}
+.ait-dim { color: var(--ink-dim); }
+.ait-mute { color: var(--ink-mute); }
+.ait-num { font-family: var(--font-code); font-variant-numeric: tabular-nums; }
+
+/* ── screen shell: topbar / panes / keybar ────────────────────────────── */
+.ait-screen {
+  position: relative;
+  display: grid;
+  grid-template-rows: var(--bar) 1fr var(--bar);
+  gap: var(--s-0);
+  height: 720px;
+  padding: var(--s-0);
+  background: var(--canvas);
+  overflow: hidden;
+}
+.ait-panes {
+  display: grid;
+  grid-template-columns: var(--rail) 1fr var(--inspector);
+  gap: var(--s-0);
+  min-height: 0;
+}
+.ait-stack { display: flex; flex-direction: column; gap: var(--s-0); min-height: 0; }
+.ait-stack > .ait-panel { flex: 1 1 auto; }
+.ait-stack > .ait-panel.is-fit { flex: 0 0 auto; }
+
+.ait-topbar {
+  display: flex; align-items: center; gap: var(--s-1);
+  padding: 0 var(--s-1);
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-code); font-size: 12px; white-space: nowrap;
+}
+.ait-topbar .ait-wordmark { font-weight: 600; letter-spacing: 0.18em; color: var(--ink); }
+.ait-topbar .ait-crumb { color: var(--ink-mute); }
+.ait-topbar .ait-crumb b { color: var(--ink); font-weight: 600; }
+.ait-topbar .ait-spacer { flex: 1; }
+.ait-topbar .ait-clock { color: var(--ink-mute); font-variant-numeric: tabular-nums; }
+.ait-sigil { /* the red chip of the wordmark: state colour, used once */
+  background: var(--signal); color: var(--on-signal);
+  padding: 0 5px; font-weight: 700;
+}
+
+/* ── Panel ────────────────────────────────────────────────────────────── */
+.ait-panel {
+  position: relative;
+  display: flex; flex-direction: column;
+  min-height: 0; min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-panel);
+}
+.ait-panel.is-lit { border-color: var(--line-hi); box-shadow: var(--shadow-lit); }
+.ait-panel__bar {
+  display: flex; align-items: center; gap: var(--s-1);
+  height: var(--bar); flex: 0 0 var(--bar);
+  padding: 0 var(--s-1);
+  background: var(--raise);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-code); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-mute); white-space: nowrap;
+}
+.ait-panel__bar::before { /* the 6px accent square: AIT's bullet */
+  content: ""; width: 6px; height: 6px; flex: 0 0 6px; background: var(--accent-hi);
+}
+.ait-panel__bar .ait-panel__meta { margin-left: auto; color: var(--ink-dim); letter-spacing: 0.06em; text-transform: none; font-weight: 400; }
+.ait-panel__body { flex: 1 1 auto; min-height: 0; overflow: hidden; padding: var(--s-1); position: relative; }
+.ait-panel__body.is-flush { padding: 0; }
+.ait-panel__body.is-sunk { background: var(--sunk); }
+
+/* ── Button ───────────────────────────────────────────────────────────── */
+.ait-btn {
+  display: inline-flex; align-items: center; gap: var(--s-0);
+  height: var(--control); padding: 0 var(--s-1);
+  font: 600 12px/1 var(--font-code); letter-spacing: 0.06em;
+  color: var(--ink); background: var(--raise);
+  border: 1px solid var(--line-hi); border-radius: var(--r-0);
+  box-shadow: var(--shadow-panel);
+  cursor: pointer;
+}
+.ait-btn:hover { border-color: var(--accent-hi); }
+.ait-btn:active, .ait-btn.is-pressed { box-shadow: var(--shadow-press); }
+.ait-btn:focus-visible { outline: none; box-shadow: var(--shadow-lit); }
+.ait-btn--primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent-hi); }
+.ait-btn--primary:hover { background: var(--accent-hi); }
+.ait-btn--ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--accent-soft); }
+.ait-btn--danger { background: var(--signal); color: var(--on-signal); border-color: var(--signal); }
+.ait-btn kbd, .ait-keybar kbd {
+  font: 700 11px/1 var(--font-code); color: var(--accent-soft);
+  padding: 2px 4px; background: var(--sunk); border: 1px solid var(--line);
+}
+.ait-btn--primary kbd { color: var(--on-accent); background: transparent; border-color: currentColor; }
+
+/* ── State tag: always a WORD, colour second ──────────────────────────── */
+.ait-tag {
+  --c: var(--ink-mute);
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 18px; padding: 0 6px;
+  font: 600 10px/1 var(--font-code); letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--c); border: 1px solid var(--c); white-space: nowrap;
+}
+.ait-tag::before { content: ""; width: 6px; height: 6px; background: var(--c); }
+.ait-tag.is-ok { --c: var(--ok); }
+.ait-tag.is-warn { --c: var(--warn); }
+.ait-tag.is-idle { --c: var(--ink-mute); }
+.ait-tag.is-unknown { --c: var(--unknown); border-style: dashed; }
+.ait-tag.is-unknown::before { background: transparent; border: 1px dashed var(--c); width: 4px; height: 4px; }
+.ait-tag.is-bad { --c: var(--signal); background: var(--signal); color: var(--on-signal); font-weight: 700; }
+.ait-tag.is-bad::before { background: var(--on-signal); }
+
+/* ── Meter: segmented power bar (FTL), value 0–1 in --v ───────────────── */
+.ait-meter { display: grid; gap: 3px; }
+.ait-meter__head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-1); }
+.ait-meter__label { font: 600 10px/12px var(--font-code); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-dim); }
+.ait-meter__value { font: 600 12px/14px var(--font-code); color: var(--ink); font-variant-numeric: tabular-nums; }
+.ait-meter__track {
+  --c: var(--ok);
+  height: 8px; background: var(--sunk); border: 1px solid var(--line); position: relative;
+}
+.ait-meter__track::after {
+  content: ""; position: absolute; inset: 1px auto 1px 1px;
+  width: calc((100% - 2px) * var(--v, 0.5));
+  background: repeating-linear-gradient(90deg, var(--c) 0 6px, transparent 6px 8px);
+}
+.ait-meter.is-warn .ait-meter__track { --c: var(--warn); }
+.ait-meter.is-bad .ait-meter__track { --c: var(--signal); }
+
+/* ── Stat readout ─────────────────────────────────────────────────────── */
+.ait-stat { display: grid; gap: 2px; padding: var(--s-0) var(--s-1); background: var(--raise); border: 1px solid var(--line); min-width: 0; }
+.ait-stat__label { font: 600 10px/12px var(--font-code); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-dim); white-space: nowrap; }
+.ait-stat__value { font: 600 22px/24px var(--font-code); color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ait-stat__value small { font-size: 11px; color: var(--ink-mute); font-weight: 400; margin-left: 3px; }
+.ait-stat__delta { font: 400 11px/14px var(--font-code); color: var(--ink-mute); }
+.ait-stat.is-warn .ait-stat__value { color: var(--warn); }
+.ait-stat.is-bad .ait-stat__value { color: var(--signal); }
+
+/* ── Data table: 22px rows ────────────────────────────────────────────── */
+.ait-table { width: 100%; border-collapse: collapse; font: 400 12px/16px var(--font-code); color: var(--ink-mute); }
+.ait-table th {
+  height: var(--row); padding: 0 var(--s-1); text-align: left;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-dim); background: var(--raise); border-bottom: 1px solid var(--line);
+  position: sticky; top: 0;
+}
+.ait-table td { height: var(--row); padding: 0 var(--s-1); border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+.ait-table td.is-num, .ait-table th.is-num { text-align: right; font-variant-numeric: tabular-nums; }
+.ait-table td b { color: var(--ink); font-weight: 600; }
+.ait-table tr:hover td { background: var(--accent-faint); }
+.ait-table tr.is-selected td { background: var(--select); color: var(--on-select); }
+.ait-table tr.is-selected td b { color: var(--on-select); }
+.ait-table tr.is-selected .ait-tag:not(.is-bad) { --c: var(--on-select); }
+.ait-table tr.is-selected td:first-child { box-shadow: inset 2px 0 0 var(--accent-hi); }
+
+/* ── List (rail items) ────────────────────────────────────────────────── */
+.ait-list { list-style: none; margin: 0; padding: 0; }
+.ait-list li {
+  display: flex; align-items: center; gap: var(--s-0);
+  height: var(--row); padding: 0 var(--s-1);
+  font-size: 12px; color: var(--ink-mute); border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.ait-list li .ait-count { margin-left: auto; font: 400 11px var(--font-code); color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.ait-list li.is-selected { background: var(--select); color: var(--on-select); }
+.ait-list li.is-selected .ait-count { color: var(--on-select); }
+.ait-list .ait-swatch { width: 8px; height: 8px; flex: 0 0 8px; background: var(--c, var(--accent)); }
+.ait-list .ait-check { width: 10px; height: 10px; flex: 0 0 10px; border: 1px solid var(--line-hi); }
+.ait-list .ait-check.is-on { background: var(--accent-hi); border-color: var(--accent-hi); box-shadow: inset 0 0 0 2px var(--sunk); }
+.ait-group-label { padding: var(--s-1) var(--s-1) var(--s-0); font: 600 10px/12px var(--font-code); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); }
+
+/* ── Key/value rows (inspector) ───────────────────────────────────────── */
+.ait-kv { display: grid; grid-template-columns: auto 1fr; font: 400 12px/16px var(--font-code); }
+.ait-kv dt { padding: 3px var(--s-1) 3px 0; color: var(--ink-dim); border-bottom: 1px solid var(--line); white-space: nowrap; }
+.ait-kv dd { margin: 0; padding: 3px 0; color: var(--ink); border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Keybar: tmux footer ──────────────────────────────────────────────── */
+.ait-keybar {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: 0 var(--s-1);
+  background: var(--panel); border-top: 1px solid var(--line);
+  font: 400 12px/1 var(--font-code); color: var(--ink-mute); white-space: nowrap;
+}
+.ait-keybar span { display: inline-flex; align-items: center; gap: 5px; }
+.ait-keybar .ait-spacer { flex: 1; }
+
+/* ── Service node (map) ───────────────────────────────────────────────── */
+.ait-node {
+  --c: var(--data-1);
+  position: absolute; width: 172px;
+  background: var(--panel); border: 1px solid var(--line);
+  box-shadow: var(--shadow-panel);
+  font: 400 11px/14px var(--font-code);
+}
+.ait-node::before { content: ""; position: absolute; inset: -1px auto -1px -1px; width: 3px; background: var(--c); }
+.ait-node__head { display: flex; align-items: center; gap: 5px; padding: 4px 6px 3px 9px; color: var(--ink); font-weight: 600; white-space: nowrap; overflow: hidden; }
+.ait-node__head i { width: 6px; height: 6px; flex: 0 0 6px; background: var(--ok); }
+.ait-node.is-warn .ait-node__head i { background: var(--warn); }
+.ait-node.is-bad .ait-node__head i { background: var(--signal); }
+.ait-node__head em { margin-left: auto; font-style: normal; color: var(--ink-dim); font-weight: 400; font-size: 10px; }
+.ait-node__metrics { display: grid; grid-template-columns: repeat(3, 1fr); padding: 0 6px 5px 9px; gap: 2px; }
+.ait-node__metrics span { display: grid; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ait-node__metrics span small { font-size: 9px; letter-spacing: 0.12em; color: var(--ink-dim); }
+.ait-node__metrics .is-warn { color: var(--warn); }
+.ait-node.is-lit { border-color: var(--line-hi); box-shadow: var(--shadow-lit); }
+
+/* ── Chat turn (Iris) ─────────────────────────────────────────────────── */
+.ait-turn { display: grid; gap: var(--s-0); margin-bottom: var(--s-1); }
+.ait-turn--user { justify-items: end; }
+.ait-turn--user .ait-turn__text {
+  max-width: 70%; padding: 5px var(--s-1);
+  background: var(--accent); color: var(--on-accent); font-size: 13px;
+}
+.ait-turn__meta { font: 400 10px/12px var(--font-code); color: var(--ink-dim); }
+.ait-turn__tool { font: 400 12px/16px var(--font-code); color: var(--accent-soft); }
+.ait-turn__tool::before { content: "→ "; color: var(--ink-dim); }
+.ait-turn__card { background: var(--sunk); border: 1px solid var(--line); }
+.ait-turn__card-head { display: flex; align-items: center; gap: var(--s-1); padding: 4px var(--s-1); border-bottom: 1px solid var(--line); font: 600 12px/16px var(--font-sans); color: var(--ink); }
+.ait-turn__card-head .ait-tag { margin-left: auto; }
+.ait-input {
+  display: flex; align-items: center; gap: var(--s-1);
+  height: 30px; padding: 0 var(--s-0) 0 var(--s-1);
+  background: var(--sunk); border: 1px solid var(--line-hi);
+  font: 400 13px var(--font-sans); color: var(--ink-dim);
+}
+.ait-input .ait-caret { width: 7px; height: 14px; background: var(--accent-hi); }
+.ait-input input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; font: inherit; color: var(--ink); }
+.ait-input input::placeholder { color: var(--ink-dim); }
+.ait-input .ait-btn { margin-left: auto; height: 22px; }
+
+/* ── Iris eye (<ait-iris-eye>, WebGL) — framed like a sunk well ───────── */
+ait-iris-eye { display: block; aspect-ratio: 2 / 1; box-shadow: var(--shadow-press); border: 1px solid var(--bevel-lo); }
+ait-iris-eye[framing="wide"] { aspect-ratio: 5 / 3; }
+[data-theme^="glass"] ait-iris-eye { border-radius: var(--r-2); border-color: var(--line); }
+
+/* ── Pupil (Iris' eye, flat fallback) ────────────────────────────────────────────────── */
+.ait-pupil {
+  width: 56px; height: 56px; border-radius: var(--r-pill);
+  background: radial-gradient(circle at 50% 50%, var(--signal) 0 5px, var(--sunk) 6px 60%, var(--raise) 61% 100%);
+  border: 2px solid var(--line-hi);
+  box-shadow: 0 0 0 4px var(--sunk), 0 0 24px var(--glow);
+}
+
+/* ── Map canvas ───────────────────────────────────────────────────────── */
+.ait-map { position: absolute; inset: 0; }
+.ait-map svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.ait-minimap svg { width: 100%; height: 100%; display: block; }
+.ait-minimap { position: absolute; right: var(--s-1); bottom: var(--s-1); width: 132px; height: 84px; background: var(--sunk); border: 1px solid var(--line-hi); opacity: 0.92; }
+.ait-zoom { position: absolute; left: var(--s-1); bottom: var(--s-1); display: grid; gap: 2px; }
+.ait-zoom .ait-btn { width: 24px; height: 22px; padding: 0; justify-content: center; }
+.ait-legend { position: absolute; left: var(--s-1); top: var(--s-1); display: flex; gap: var(--s-1); padding: 3px 6px; background: var(--panel); border: 1px solid var(--line); font: 400 10px/14px var(--font-code); color: var(--ink-mute); }
+.ait-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.ait-legend i { width: 8px; height: 8px; background: var(--c); }
+
+/* SVG paint classes — every graph mark is token-bound */
+.g-edge { stroke: var(--data-5); stroke-width: 0.7; fill: none; opacity: 0.8; }
+.g-edge.is-hot { stroke: var(--accent-hi); opacity: 0.55; }
+.g-route { fill: none; stroke-width: 2.5; stroke-linecap: square; }
+.g-dot { fill: var(--ink-faint); }
+.g-label { font: 500 10px var(--font-code); fill: var(--ink-mute); }
+.g-label-bg { fill: var(--panel); stroke: var(--line); }
+.g-halo { fill: var(--glow); }
+.g-halo-2 { fill: var(--glow-2); }
+.g-star { fill: var(--ink); opacity: 0.5; }
+.g-grid { stroke: var(--line); stroke-width: 0.5; fill: none; }
+.g-grid.is-minor { opacity: 0.45; }
+.g-gloss { fill: var(--bevel-hi); opacity: 0.55; }
+.g-axis { font: 400 10px var(--font-code); fill: var(--ink-dim); }
+.g-bar { fill: var(--data-1); }
+.g-bar-2 { fill: var(--data-2); }
+.c1 { fill: var(--data-1); } .c2 { fill: var(--data-2); } .c3 { fill: var(--data-3); } .c4 { fill: var(--data-4); } .c5 { fill: var(--data-5); }
+.s1 { stroke: var(--data-1); } .s2 { stroke: var(--data-2); } .s3 { stroke: var(--data-3); } .s4 { stroke: var(--data-4); } .s5 { stroke: var(--data-5); }
+.g-lit { stroke: var(--ink); stroke-width: 1.5; }
+.g-pulse { fill: var(--ink); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FAMILY SHAPES
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Classic (civic, civic-dark) — the default shape, unscoped on purpose so a
+   page with no data-theme still reads as Civic. Bevelled windows, accent title
+   bars, sunk wells, iso grid. */
+.ait-panel { border: 1px solid var(--bevel-lo); }
+.ait-panel__bar {
+  background: var(--accent); color: var(--on-accent); border-bottom: 1px solid var(--bevel-lo);
+  font-family: var(--font-sans); font-size: 12px; letter-spacing: 0.02em; text-transform: none; font-weight: 700;
+}
+.ait-panel__bar::before { background: var(--on-accent); }
+.ait-panel__bar .ait-panel__meta { color: var(--on-accent); opacity: 0.78; }
+.ait-panel__body.is-sunk { box-shadow: var(--shadow-press); }
+.ait-btn { border-color: var(--bevel-lo); font-family: var(--font-sans); letter-spacing: 0; border-radius: var(--r-1); }
+.ait-btn--primary, .ait-btn--danger { border-color: var(--bevel-lo); }
+.ait-topbar { background: var(--raise); box-shadow: var(--shadow-panel); font-family: var(--font-sans); border-bottom: 0; }
+.ait-keybar { box-shadow: var(--shadow-panel); border-top: 0; }
+.ait-stat { box-shadow: var(--shadow-press); background: var(--raise); border-color: transparent; }
+.ait-stat__value { color: var(--accent-soft); }
+.ait-meter__track { box-shadow: var(--shadow-press); }
+.ait-meter__track::after { background: var(--c); }
+.ait-table th { background: var(--panel); box-shadow: inset 1px 1px 0 var(--bevel-hi), inset -1px -1px 0 var(--bevel-lo); }
+.ait-tag.is-bad { color: var(--on-signal); }
+
+/* Ledger (ledger, ledger-dark) — flat planner sheet. No bevels: hairlines,
+   a 2px accent tab stripe on top of each panel, tint-and-bar selection. */
+[data-theme^="ledger"] .ait-panel { border: 1px solid var(--line); border-top: 2px solid var(--accent-hi); box-shadow: var(--shadow-panel); }
+[data-theme^="ledger"] .ait-panel.is-lit { border-color: var(--line-hi); border-top-color: var(--accent-hi); }
+[data-theme^="ledger"] .ait-panel__bar {
+  background: var(--panel); color: var(--ink); border-bottom: 1px solid var(--line);
+  font: 600 11px/1 var(--font-code); letter-spacing: 0.14em; text-transform: uppercase;
+}
+[data-theme^="ledger"] .ait-panel__bar::before { background: var(--accent-hi); }
+[data-theme^="ledger"] .ait-panel__bar .ait-panel__meta { color: var(--ink-dim); opacity: 1; }
+[data-theme^="ledger"] .ait-panel__body.is-sunk { box-shadow: none; }
+[data-theme^="ledger"] .ait-btn { border-color: var(--line-hi); box-shadow: none; background: var(--panel); }
+[data-theme^="ledger"] .ait-btn--primary { background: var(--accent); border-color: var(--accent); }
+[data-theme^="ledger"] .ait-btn--danger { background: var(--signal); border-color: var(--signal); }
+[data-theme^="ledger"] .ait-btn--ghost { background: transparent; border-color: transparent; }
+[data-theme^="ledger"] .ait-topbar { background: var(--panel); box-shadow: none; border-bottom: 1px solid var(--line); font-family: var(--font-code); }
+[data-theme^="ledger"] .ait-keybar { background: var(--panel); box-shadow: none; border-top: 1px solid var(--line); }
+[data-theme^="ledger"] .ait-stat { box-shadow: none; background: var(--panel); border: 1px solid var(--line); border-left: 2px solid var(--accent-hi); }
+[data-theme^="ledger"] .ait-stat.is-warn { border-left-color: var(--warn); }
+[data-theme^="ledger"] .ait-stat.is-bad { border-left-color: var(--signal); }
+[data-theme^="ledger"] .ait-meter__track { box-shadow: none; border-radius: var(--r-1); height: 6px; border: 0; background: var(--sunk); }
+[data-theme^="ledger"] .ait-meter__track::after { inset: 0 auto 0 0; width: calc(100% * var(--v, 0.5)); border-radius: var(--r-1); }
+[data-theme^="ledger"] .ait-table th { background: var(--raise); box-shadow: none; }
+[data-theme^="ledger"] .ait-table tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--accent-hi); }
+[data-theme^="ledger"] .ait-table tr.is-selected td b { color: var(--on-select); }
+[data-theme^="ledger"] .ait-list li.is-selected { box-shadow: inset 3px 0 0 var(--accent-hi); font-weight: 600; }
+[data-theme^="ledger"] .ait-tag { border-radius: var(--r-1); }
+[data-theme^="ledger"] .ait-node { border-radius: var(--r-1); overflow: hidden; }
+[data-theme^="ledger"] .ait-turn--user .ait-turn__text { border-radius: var(--r-1); }
+[data-theme^="ledger"] .ait-input { border-color: var(--line-hi); }
+[data-theme^="ledger"] .g-route { stroke-width: 2; }
+
+/* Glass (glass, glass-dark) — Classic's structure (blue title bars, dense
+   rows, iso map) poured into liquid glass: translucent panels over an aurora
+   ground, backdrop blur + saturation, a specular top rim, soft radii. */
+[data-theme^="glass"].ait-screen {
+  background:
+    radial-gradient(38% 52% at 12% 88%, var(--glow), transparent 70%),
+    radial-gradient(34% 46% at 88% 8%, var(--glow-2), transparent 70%),
+    radial-gradient(30% 40% at 58% 56%, var(--accent-faint), transparent 70%),
+    var(--canvas);
+}
+[data-theme^="glass"] .ait-panel, [data-theme^="glass"] .ait-topbar, [data-theme^="glass"] .ait-keybar,
+[data-theme^="glass"] .ait-node, [data-theme^="glass"] .ait-legend, [data-theme^="glass"] .ait-minimap {
+  -webkit-backdrop-filter: blur(18px) saturate(170%); backdrop-filter: blur(18px) saturate(170%);
+}
+[data-theme^="glass"] .ait-panel { border: 1px solid var(--line); border-radius: var(--r-3); box-shadow: var(--shadow-panel); overflow: hidden; }
+[data-theme^="glass"] .ait-panel.is-lit { border-color: var(--line-hi); box-shadow: var(--shadow-panel), var(--shadow-lit); }
+[data-theme^="glass"] .ait-panel__bar {
+  /* the Classic blue title bar, glazed: tinted pane + top highlight */
+  background: linear-gradient(180deg, var(--bevel-hi), transparent 85%) 0 0 / 100% 50% no-repeat, var(--accent);
+  border-bottom: 1px solid var(--line);
+}
+[data-theme^="glass"] .ait-panel__bar::before { border-radius: var(--r-pill); }
+[data-theme^="glass"] .ait-panel__body.is-sunk { box-shadow: none; }
+[data-theme^="glass"] .ait-topbar, [data-theme^="glass"] .ait-keybar { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-3); box-shadow: var(--shadow-panel); }
+[data-theme^="glass"] .ait-btn { border-radius: var(--r-2); border-color: var(--line); background: var(--raise); box-shadow: var(--shadow-panel); }
+[data-theme^="glass"] .ait-btn--primary {
+  background: linear-gradient(180deg, var(--bevel-hi), transparent 70%) 0 0 / 100% 45% no-repeat, var(--accent);
+  border-color: var(--accent-hi);
+}
+[data-theme^="glass"] .ait-btn--danger { background: var(--signal); border-color: var(--signal); }
+[data-theme^="glass"] .ait-btn--ghost { background: transparent; border-color: transparent; box-shadow: none; }
+[data-theme^="glass"] .ait-btn kbd, [data-theme^="glass"] .ait-keybar kbd { border-radius: var(--r-1); }
+[data-theme^="glass"] .ait-tag { border-radius: var(--r-2); }
+[data-theme^="glass"] .ait-tag::before { border-radius: var(--r-pill); }
+[data-theme^="glass"] .ait-stat { border-radius: var(--r-2); border: 1px solid var(--line); box-shadow: var(--shadow-press); background: var(--sunk); }
+[data-theme^="glass"] .ait-meter__track { border-radius: var(--r-pill); border-color: var(--line); overflow: hidden; }
+[data-theme^="glass"] .ait-meter__track::after { inset: 0 auto 0 0; width: calc(100% * var(--v, 0.5)); border-radius: var(--r-pill); }
+[data-theme^="glass"] .ait-table th { background: var(--raise); box-shadow: none; }
+[data-theme^="glass"] .ait-table td { border-bottom-color: var(--line); }
+[data-theme^="glass"] .ait-table tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--accent-hi); }
+[data-theme^="glass"] .ait-node { border-radius: var(--r-2); overflow: hidden; }
+[data-theme^="glass"] .ait-node::before { inset: 0 auto 0 0; }
+[data-theme^="glass"] .ait-turn--user .ait-turn__text { border-radius: var(--r-3) var(--r-3) var(--r-1) var(--r-3); box-shadow: var(--shadow-panel); }
+[data-theme^="glass"] .ait-turn__card { border-radius: var(--r-2); overflow: hidden; }
+[data-theme^="glass"] .ait-input { border-radius: var(--r-2); border-color: var(--line-hi); }
+[data-theme^="glass"] .ait-input .ait-caret { border-radius: var(--r-1); }
+[data-theme^="glass"] .ait-minimap, [data-theme^="glass"] .ait-legend { border-radius: var(--r-2); }
+[data-theme^="glass"] .ait-list .ait-check, [data-theme^="glass"] .ait-list .ait-swatch { border-radius: var(--r-1); }
+[data-theme^="glass"] .ait-pupil { box-shadow: 0 0 0 4px var(--sunk), 0 0 32px var(--glow), inset 0 2px 0 var(--bevel-hi); }
