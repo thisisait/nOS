@@ -10,8 +10,8 @@ tests/anatomy/test_septum_scope_declared.py). RED: a table with no or an unknown
 scope, `unresolved` (holds client data, no column names the client), or orphan
 rows (a set ref whose target row is gone: offboarding would miss them), a live
 table whose visibility is not its def's (KEAP may set it on create only). WARN: a
-`personal` table that is not `visibility: private`; unstamped rows (book_owner-scoped,
-no book_owner). Live: parties by role, rows per client. KEAP unreachable = UNKNOWN.
+`personal` table that is not `visibility: private`; unstamped rows (no book_owner on
+their path). Live: parties by role, rows per client. KEAP unreachable = UNKNOWN.
 A declaration only: KEAP enforces no per-row owner yet. A READER, exits 0.
 """
 from __future__ import annotations
@@ -77,7 +77,7 @@ def client_of(table: str, row: dict, defs: dict, rows: dict, roles: dict, depth:
         return slug if roles.get(slug) == "client" else None
     col = "book_owner" if s == "book_owner" else s.split(":", 1)[1]
     target, val = _ref_table(defs[table], col), row.get(col)
-    if not val and s == "book_owner" and depth == 0:
+    if not val and s == "book_owner":  # at any depth: a child inherits the unknown book
         return UNSTAMPED
     if not val or not target:
         return None
@@ -147,7 +147,7 @@ def main() -> int:
     except Exception as exc:  # any failure to read KEAP is UNKNOWN, never green
         state, vis, why = None, None, f"{type(exc).__name__}: {exc}"
     red += visibility_drift(defs, vis or {})
-    warn += [f"{n}: {t['unstamped']} unstamped rows — book_owner-scoped, no book_owner"
+    warn += [f"{n}: {t['unstamped']} unstamped rows — no book_owner on their path"
              for n, t in sorted((state or {}).get("tables", {}).items()) if t["unstamped"]]
     red += [f"{n}: {t['orphans']} orphan rows — a ref points at a row that is gone"
             for n, t in sorted((state or {}).get("tables", {}).items()) if t["orphans"]]
