@@ -161,3 +161,26 @@ def test_a_vision_model_with_its_switch_off_warns(cfg, warned):
     env = jinja2.Environment()
     whens = task["when"] if isinstance(task["when"], list) else [task["when"]]
     assert all(env.compile_expression(w)(**cfg) for w in whens) is warned
+
+
+def test_a_named_vision_model_arms_the_switch(tmp_path):
+    """W1: a config.yml that names a vision model (from before the switches) keeps invoice intake."""
+    got = _resolved(tmp_path, 'ollama_vision_model: "qwen2.5vl:3b"\n')
+    assert (got["vlm_on_host"], got["vlm_model"], got["ollama_enabled"]) == (True, "qwen2.5vl:3b", True)
+    paths = [p for p in nos_identity.layer_paths() if p != REPO / "config.yml"] + [tmp_path / "config.yml"]
+    assert nos_identity.install_flags(paths).get("vlm_on_host") is True, "readers miss the armed switch"
+    alone = _resolved(tmp_path, "vlm_on_host: true\n")
+    assert alone["vlm_model"] == "qwen2.5vl:7b", "the switch alone names no model"
+    assert _resolved(tmp_path)["vlm_model"] == "", "a fresh host serves a vision model"
+
+
+def test_the_model_vars_do_not_loop():
+    """Ansible refuses a var that reaches itself; nos_identity.resolved() reads the loop as a string."""
+    from jinja2 import Environment, meta
+    cfg, env = nos_identity.default_config(), Environment()
+    deps = {k: meta.find_undeclared_variables(env.parse(v)) & cfg.keys()
+            for k, v in cfg.items() if isinstance(v, str) and "{{" in v}
+
+    def reaches(start, name, seen=()):
+        return any(d == start or (d not in seen and reaches(start, d, (*seen, d))) for d in deps.get(name, ()))
+    assert not [n for n in NAMES + ("vlm_model",) if reaches(n, n)], "a model var loops"
