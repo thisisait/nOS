@@ -12,6 +12,7 @@ in tmp_path, HOME pointed there) and run with docker/restic stubbed on PATH.
 import gzip
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -24,7 +25,16 @@ BACKUP_YML = REPO / "tasks/backup.yml"
 sys.path.insert(0, str(REPO / "tools"))
 import nos_identity as ni  # noqa: E402
 
-STUB_DOCKER = '#!/bin/bash\necho "-- dumped by: $*"\n'
+# Every call is recorded. KEAP's in-container node program gets its stdin eaten
+# and "succeeds"; the follow-up `cat` of the snapshot returns marker bytes.
+STUB_DOCKER = """#!/bin/bash
+echo "$*" >> "$HOME/docker.calls"
+case "$*" in
+  *node*) cat > /dev/null ;;
+  *" cat /tmp/"*) printf 'KEAP-SNAPSHOT' ;;
+  *) echo "-- dumped by: $*" ;;
+esac
+"""
 # Records every call; for `backup` it lists the files the snapshot would hold.
 STUB_RESTIC = """#!/bin/bash
 echo "$*" >> "$HOME/restic.calls"
@@ -88,6 +98,13 @@ def core(tmp_path_factory):
     tenants = tmp / "nos/tenants/acme"
     tenants.mkdir(parents=True)
     (tenants / "invoice.pdf").write_text("pdf")
+    (tmp / "wing/app/data").mkdir(parents=True)
+    sqlite3.connect(tmp / "wing/app/data/wing.db").executescript("create table audit(x); insert into audit values ('w');")
+    (tmp / ".nos").mkdir()
+    (tmp / ".nos/secrets.yml").write_text("k: v\n")
+    (tmp / ".nos/state.yml").write_text("s: 1\n")
+    (tmp / "terraform/authentik").mkdir(parents=True)
+    (tmp / "terraform/authentik/terraform.tfstate").write_text("{}")
     script = render(tmp, "profiles/core.yml")
     return tmp, script, execute(tmp, script)
 
@@ -150,3 +167,38 @@ def test_an_off_dir_with_data_rides_the_direct_snapshot(tmp_path):
     assert str(vault / "db.sqlite3") in snap and by["dir-vaultwarden"]["off"] is True, by
     assert "dir-bookstack" not in by and "dir-mikopbx" not in by, by
     assert by["dir-gitea"]["success"] is False
+
+
+def test_the_core_snapshot_holds_keap_wing_state_and_tofu(core):
+    """Operator ruling 2026-10-16 (Q1): the direct path carries what copy #1 did."""
+    tmp, _, run = core
+    staging = tmp / "backups/staging"
+    snap = (tmp / "snapshot.txt").read_text().splitlines()
+    assert gzip.decompress((staging / "keap-db.gz").read_bytes()) == b"KEAP-SNAPSHOT", run.stderr
+    assert b"insert into" in gzip.decompress((staging / "wing-db.sql.gz").read_bytes()).lower()
+    for f in (staging / "keap-db.gz", staging / "wing-db.sql.gz", tmp / ".nos/secrets.yml",
+              tmp / ".nos/state.yml", tmp / "terraform/authentik/terraform.tfstate"):
+        assert str(f) in snap, f"{f} is not in the snapshot"
+    assert not list(staging.glob("*secrets*")) and not list(staging.glob("nos-state*")), (
+        "~/.nos state must reach restic in place, never as a second plaintext copy")
+    by = {s["name"]: s["success"] for s in json.loads((tmp / ".nos/backup-restic-status.json").read_text())["sources"]}
+    assert by.get("keap-db") and by.get("wing-db") and by.get("nos-state") and by.get("tofu-state"), by
+
+
+def test_the_keap_dump_is_taken_inside_the_container(core):
+    tmp, *_ = core
+    calls = (tmp / "docker.calls").read_text()
+    assert "exec -i iiab-keap-1 sh -c" in calls and "node --no-warnings" in calls, calls
+
+
+def test_rustfs_on_without_install_backup_does_not_mirror_the_bucket(tmp_path):
+    """Ruling 2026-10-16 (Q2): RustFS without copy #1 = the direct path only. A pin:
+    green since 0b3ba384, which derives copy #1 from both flags."""
+    bucket = tmp_path / "nos/platform/services/rustfs/data"
+    bucket.mkdir(parents=True)
+    (bucket / "obj").write_text("x")
+    script = render(tmp_path, "profiles/core.yml", {"install_rustfs": True})
+    assert (tmp_path / "copy1.txt").read_text().strip() == "False"
+    execute(tmp_path, script)
+    assert str(bucket) not in (tmp_path / "restic.calls").read_text()
+    assert (tmp_path / "backups/staging/postgres.sql.gz").is_file()
