@@ -447,3 +447,22 @@ fn a_column_add_card_says_what_the_table_has_and_what_it_gains() {
         assert!(said.iter().any(|l| l.contains(want)), "{want:?} not in {said:?}");
     }
 }
+
+// --- D2: /for says whom the person works for; the turn and every card show it ---
+
+#[test]
+fn for_says_whom_the_person_works_for_and_the_card_shows_it() {
+    use nos_contract::wire::Scope;
+    let mut app = App::default();
+    assert_eq!(typed(&mut app, "/for ACME s.r.o."), Some(ToThalamus::WorkingFor { scope: Scope::Client("ACME s.r.o.".into()) }));
+    assert_eq!(typed(&mut app, "/for personal"), Some(ToThalamus::WorkingFor { scope: Scope::Personal }));
+    assert_eq!(typed(&mut app, "/for all"), Some(ToThalamus::WorkingFor { scope: Scope::All }));
+    assert!(typed(&mut app, "/for").is_none(), "a /for naming no one sends nothing");
+    app.apply(ToShell::WorkingFor { session: SESSION.into(), scope: Scope::Client("acme".into()), name: "ACME s.r.o.".into() });
+    let idle = flat(&drawn(&app, 80, 12));
+    assert!(idle.contains("working for ACME s.r.o.") && idle.contains("[ACME s.r.o.] >"), "the turn shows the scope: {idle}");
+    let (_, m) = fixture().into_iter().find(|(c, _)| c == "a row edit awaits approval").unwrap();
+    app.apply(m);
+    let card = flat(&drawn(&app, 80, 24));
+    assert!(card.contains("asked for ACME s.r.o."), "the card shows the scope it was asked under: {card}");
+}

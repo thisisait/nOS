@@ -3,7 +3,7 @@
 //! that person and the proxy secret — which no log, ledger or model ever sees.
 
 use nos_contract::renderers::Component;
-use nos_contract::wire::{decode_to_shell, encode, Decision, Phase, ToShell, ToThalamus};
+use nos_contract::wire::{decode_to_shell, encode, Decision, Phase, Scope, ToShell, ToThalamus};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
 use std::os::unix::fs::PermissionsExt;
@@ -4863,4 +4863,151 @@ fn the_person_never_sees_the_data_mark_and_the_ledger_keeps_it() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     assert!(events(&rig.ledger, &session_of(&got)).iter().any(|e| e.2["text"].as_str().is_some_and(|t| t.contains("⟦bench row 10⟧"))),
             "the ledger keeps what was said");
+}
+
+// --- D2, the septum: the person says whom they work for; reads honour each table's client_scope ---
+
+const PARTY: &str = r#"{"success": true, "data": {"id": "party", "title": "Parties", "schema": {"columns": [
+    {"key": "slug", "label": "Slug", "kind": "text"}, {"key": "legal_name", "label": "Legal name", "kind": "text"},
+    {"key": "role", "label": "Role", "kind": "select", "options": ["counterparty", "client", "own_firm"]}]}}}"#;
+const INVOICES: &str = r#"{"success": true, "data": {"id": "invoice", "title": "Invoices", "schema": {"columns": [
+    {"key": "number", "label": "Number", "kind": "text"},
+    {"key": "book_owner", "label": "Book owner", "kind": "rowRef", "refTable": "party", "refDisplay": "legal_name"}]}}}"#;
+const INVOICE_LINES: &str = r#"{"success": true, "data": {"id": "invoice-line", "title": "Invoice lines", "schema": {"columns": [
+    {"key": "item", "label": "Item", "kind": "text"},
+    {"key": "invoice", "label": "Invoice", "kind": "rowRef", "refTable": "invoice", "refDisplay": "number"}]}}}"#;
+const ENGRAM: &str = r#"{"success": true, "data": {"id": "engram", "title": "Engram", "schema": {"columns": [
+    {"key": "note", "label": "Note", "kind": "text"}]}}}"#;
+const SYSTEMS: &str = r#"{"success": true, "data": {"id": "systems", "title": "Systems", "schema": {"columns": [
+    {"key": "name", "label": "Name", "kind": "text"}]}}}"#;
+
+/// Two clients, the person's own firm and a seller; an invoice and a line of each book; a personal and an estate table.
+fn septum_keap() -> (String, Seen) {
+    let p = |id: &str, name: &str, role: &str| keap_row(id, serde_json::json!({"slug": id, "legal_name": name, "role": role}));
+    let (keap, _) = fake_tables(vec![
+        (PARTY, vec![p("acme", "ACME s.r.o.", "client"), p("bolt", "Bolt a.s.", "client"), p("me", "My firm", "own_firm"),
+                     p("seller", "Paper Ltd", "counterparty")]),
+        (INVOICES, vec![keap_row("i-acme", serde_json::json!({"number": "A-1", "book_owner": "acme"})),
+                        keap_row("i-bolt", serde_json::json!({"number": "B-1", "book_owner": "bolt"})),
+                        keap_row("i-own", serde_json::json!({"number": "M-1", "book_owner": "me"}))]),
+        (INVOICE_LINES, vec![keap_row("l-acme", serde_json::json!({"item": "acme work", "invoice": "i-acme"})),
+                     keap_row("l-bolt", serde_json::json!({"item": "bolt work", "invoice": "i-bolt"})),
+                     keap_row("l-own", serde_json::json!({"item": "own work", "invoice": "i-own"}))]),
+        (ENGRAM, vec![keap_row("e1", serde_json::json!({"note": "my own thought"}))]),
+        (SYSTEMS, vec![keap_row("s1", serde_json::json!({"name": "keap"}))]),
+    ]);
+    keap
+}
+
+/// The table defs serve reads from NOS_REPO_ROOT/state/keap-tables, as tools/septum-status.py does.
+fn septum_defs(rig: &Rig) {
+    let d = rig.sock.parent().unwrap().join("state/keap-tables");
+    std::fs::create_dir_all(&d).unwrap();
+    for (name, def) in [("party", "client_scope: self\n"),
+                        ("invoice", "client_scope: book_owner\nschema: {columns: [{key: book_owner, refTable: party}]}\n"),
+                        ("invoice-line", "client_scope: \"rowRef:invoice\"\nschema: {columns: [{key: invoice, refTable: invoice}]}\n"),
+                        ("engram", "client_scope: personal\n"), ("systems", "client_scope: none\n")] {
+        std::fs::write(d.join(format!("{name}.table.yml")), def).unwrap();
+    }
+}
+
+fn work_for(s: &UnixStream, r: &mut BufReader<UnixStream>, scope: Scope) -> ToShell {
+    (&*s).write_all(encode(&ToThalamus::WorkingFor { scope }).as_bytes()).unwrap();
+    loop {
+        match next(r) {
+            Some(ToShell::Session { .. }) => continue,
+            Some(m) => return m,
+            None => panic!("serve closed instead of answering working_for"),
+        }
+    }
+}
+
+fn result_ids(got: &[ToShell], table: &str) -> Vec<String> {
+    got.iter().find_map(|m| match m {
+        ToShell::Render { component: Component::TableResults(t), .. } if t.table == table => Some(t.rows.iter().map(|r| r.__id.clone()).collect()),
+        _ => None,
+    }).unwrap_or_else(|| panic!("no table_results of {table}: {got:?}"))
+}
+
+fn septum_turn() -> Vec<String> {
+    vec![query(r#"{"table": "invoice"}"#), query(r#"{"table": "invoice-line"}"#), query(r#"{"table": "engram"}"#),
+         query(r#"{"table": "systems"}"#), call("list_tables", "{}"), answer("done")]
+}
+
+#[test]
+fn working_for_a_client_shows_that_clients_rows_and_names_what_it_hides() {
+    let rig = rig_at("septclient", mapped(), septum_keap(), septum_turn(), Some(local()));
+    septum_defs(&rig);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let said = work_for(&s, &mut r, Scope::Client("ACME s.r.o.".into()));
+    let ToShell::WorkingFor { session, scope, name } = said else { panic!("no working_for answer: {said:?}") };
+    assert_eq!((scope, name.as_str()), (Scope::Client("acme".into()), "ACME s.r.o."), "resolved to the party, said by name");
+    let got = turn(&s, &mut r, Some(session.clone()), "my invoices");
+    assert_eq!(result_ids(&got, "invoice"), ["i-acme"], "book_owner: ACME's invoice only");
+    assert_eq!(result_ids(&got, "invoice-line"), ["l-acme"], "rowRef:invoice walks to the invoice's book_owner");
+    assert_eq!(result_ids(&got, "systems"), ["s1"], "an estate table (none) is nobody's and stays shown");
+    let q = got.iter().find_map(|m| match m { ToShell::Render { component: Component::TableResults(t), .. } if t.table == "invoice" => Some(t.query.clone()), _ => None }).unwrap();
+    assert!(q.contains("for ACME s.r.o. only"), "the answer says the scope: {q}");
+    let wire = format!("{got:?}");
+    let model: String = rig.model.lock().unwrap().iter().map(|(_, b)| b.clone()).collect();
+    for foreign in ["i-bolt", "l-bolt", "B-1", "bolt work", "my own thought"] {
+        assert!(!wire.contains(foreign) && !model.contains(foreign), "{foreign} crossed the septum");
+    }
+    assert!(model.contains("Engram (engram) is personal") && model.contains("hidden while you work for ACME s.r.o."),
+            "a hidden table is said by name to the model: {model}");
+    let listed = got.iter().find_map(|m| match m { ToShell::Render { component: Component::Table(t), .. } => Some(format!("{:?}", t.rows)), _ => None }).unwrap();
+    assert!(listed.contains("Engram") && listed.contains("hidden"), "list_tables names the hidden table: {listed}");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let rec = events(&rig.ledger, &session).into_iter().find(|e| e.1.ends_with("/tool:working_for")).expect("the ledger records the context");
+    assert_eq!((rec.2["scope"].clone(), rec.2["name"].clone()), (serde_json::json!({"client": "acme"}), serde_json::json!("ACME s.r.o.")));
+}
+
+#[test]
+fn personal_hides_every_clients_rows_and_an_unknown_client_is_refused_by_name() {
+    let rig = rig_at("septpers", mapped(), septum_keap(),
+                     vec![query(r#"{"table": "invoice"}"#), query(r#"{"table": "invoice-line"}"#), query(r#"{"table": "engram"}"#), answer("done")],
+                     Some(local()));
+    septum_defs(&rig);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    match work_for(&s, &mut r, Scope::Client("Nobody GmbH".into())) {
+        ToShell::Refused { reason, .. } => assert!(reason.contains("ACME s.r.o.") && reason.contains("Bolt a.s.") && !reason.contains("Paper Ltd"),
+                                                   "an unknown client names the clients, only: {reason}"),
+        other => panic!("an unknown client was not refused: {other:?}"),
+    }
+    let ToShell::WorkingFor { session, scope, .. } = work_for(&s, &mut r, Scope::Personal) else { panic!("personal not set") };
+    assert_eq!(scope, Scope::Personal);
+    let got = turn(&s, &mut r, Some(session), "my stuff");
+    assert_eq!(result_ids(&got, "invoice"), ["i-own"], "the own firm's book is personal, no client's");
+    assert_eq!(result_ids(&got, "invoice-line"), ["l-own"]);
+    assert_eq!(result_ids(&got, "engram"), ["e1"], "a personal table shows on personal data");
+}
+
+#[test]
+fn a_table_iris_makes_for_a_client_is_that_clients_and_hidden_from_another() {
+    let make = r#"{"title": "ACME notes", "columns": ["Note"]}"#;
+    let rig = rig_at("septmade", mapped(), septum_keap(),
+                     vec![call("propose_table_create", make), answer("Proposed."), call("list_tables", "{}"),
+                          query(r#"{"table": "ACME notes"}"#), answer("done")], Some(local()));
+    septum_defs(&rig);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ToShell::WorkingFor { session, .. } = work_for(&s, &mut r, Scope::Client("acme".into())) else { panic!("acme not set") };
+    let got = turn(&s, &mut r, Some(session.clone()), "make me a notes table");
+    let approval = got.iter().find_map(|m| match m { ToShell::ApprovalRequest { approval, .. } => Some(approval.clone()), _ => None }).expect("a card");
+    match work_for(&s, &mut r, Scope::Client("bolt".into())) {
+        ToShell::Refused { reason, .. } => assert!(reason.contains("approval is waiting"), "{reason}"),
+        other => panic!("a switch under a waiting card was not refused: {other:?}"),
+    }
+    decide(&s, &approval, Decision::Approve);
+    assert!(matches!(next(&mut r), Some(ToShell::Text { ref text, .. }) if text.contains("created")));
+    let ToShell::WorkingFor { .. } = work_for(&s, &mut r, Scope::Client("bolt".into())) else { panic!("bolt not set") };
+    let got = turn(&s, &mut r, Some(session), "what tables do I have");
+    let listed = got.iter().find_map(|m| match m { ToShell::Render { component: Component::Table(t), .. } => Some(format!("{:?}", t.rows)), _ => None }).unwrap();
+    assert!(listed.contains("ACME notes") && listed.contains("ACME s.r.o.'s"), "the table is ACME's, named while hidden: {listed}");
+    assert!(!got.iter().any(|m| matches!(m, ToShell::Render { component: Component::TableResults(_), .. })), "{got:?}");
+    let model = rig.model.lock().unwrap().last().unwrap().1.clone();
+    assert!(model.contains("ACME notes") && model.contains("hidden while you work for Bolt a.s."), "{model}");
 }

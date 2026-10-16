@@ -14,7 +14,10 @@
     {"case": "a widget form", "msg": {"t": "widget", "widget": "w4", "spec": {"form": {"table": "expenses", "columns": ["amount", "kind", "paid"], "prefill": {"kind": "travel"}, "when": {"paid": {"key": "kind", "op": "neq", "value": "food"}}}}, "trigger": "click"}},
     {"case": "a widget form is submitted", "msg": {"t": "form_submit", "form": "5f0c1b2a-3d4e-4f5a-8b6c-7d8e9f0a1b2c", "widget": "w4", "values": {"amount": 42, "kind": "tools", "when": "2026-10-13", "paid": true}}},
     {"case": "a widget re-runs a kpi total", "msg": {"t": "widget", "widget": "w5", "spec": {"kpi": {"query": {"table": "expenses", "where": [{"column": "kind", "op": "eq", "value": "travel"}]}, "op": "sum", "y": "amount", "unit": "Kč"}}, "trigger": "table_changed"}},
-    {"case": "the person answers a choice", "msg": {"t": "choice_reply", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "choice": "3c9e1d2f-4a5b-4c6d-8e7f-9a0b1c2d3e4f", "picked": ["expenses"]}}
+    {"case": "the person answers a choice", "msg": {"t": "choice_reply", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "choice": "3c9e1d2f-4a5b-4c6d-8e7f-9a0b1c2d3e4f", "picked": ["expenses"]}},
+    {"case": "the person works for a client", "msg": {"t": "working_for", "scope": {"client": "acme"}}},
+    {"case": "the person works on personal data", "msg": {"t": "working_for", "scope": "personal"}},
+    {"case": "the person lifts the wall", "msg": {"t": "working_for", "scope": "all"}}
   ],
   "to_shell": [
     {"case": "session opened", "msg": {"t": "session", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "actor": "user:pazny", "model_uri": "ollama://qwen3:8b"}},
@@ -83,7 +86,9 @@
     {"case": "a tool runs", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": {"tool": {"name": "query_rows"}}}},
     {"case": "an approved edit is written", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": "writing"}},
     {"case": "the turn is over", "msg": {"t": "activity", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "phase": "idle"}},
-    {"case": "Iris offers a dashboard", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "dashboard", "props": {"name": "Bench board", "lens": [{"column": "track", "op": "eq", "value": "platform", "kind": "select", "options": ["agents", "face", "platform", "security"]}, {"column": "due", "op": "lt", "value": "", "kind": "date"}], "widgets": [{"title": "Next rows", "spec": {"rows": {"table": "iris-bench-2", "where": [{"column": "status", "op": "eq", "value": "next"}]}}}, {"title": "Points by track", "spec": {"chart": {"query": {"table": "iris-bench-2"}, "chart": "bar", "x": "track", "y": "points", "op": "sum"}}}, {"title": "Add a row", "spec": {"form": {"table": "iris-bench-2"}}}], "dropped": [{"title": "By owner", "why": "no column `owner` in iris-bench-2; columns: title, status, track, points, note, due"}]}}}}
+    {"case": "Iris offers a dashboard", "msg": {"t": "render", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "component": {"kind": "dashboard", "props": {"name": "Bench board", "lens": [{"column": "track", "op": "eq", "value": "platform", "kind": "select", "options": ["agents", "face", "platform", "security"]}, {"column": "due", "op": "lt", "value": "", "kind": "date"}], "widgets": [{"title": "Next rows", "spec": {"rows": {"table": "iris-bench-2", "where": [{"column": "status", "op": "eq", "value": "next"}]}}}, {"title": "Points by track", "spec": {"chart": {"query": {"table": "iris-bench-2"}, "chart": "bar", "x": "track", "y": "points", "op": "sum"}}}, {"title": "Add a row", "spec": {"form": {"table": "iris-bench-2"}}}], "dropped": [{"title": "By owner", "why": "no column `owner` in iris-bench-2; columns: title, status, track, points, note, due"}]}}}},
+    {"case": "Iris works for a client", "msg": {"t": "working_for", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "scope": {"client": "party-acme"}, "name": "ACME s.r.o."}},
+    {"case": "Iris works on personal data", "msg": {"t": "working_for", "session": "0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b", "scope": "personal", "name": "personal"}}
   ],
   "refused": [
     {"case": "unknown component kind is shown, not dropped", "line": "{\"t\":\"render\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"component\":{\"kind\":\"pie_chart\",\"props\":{}}}"},
@@ -188,7 +193,9 @@
     {"case": "a kpi unit over 16 chars", "line": "{\"t\":\"widget\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"widget\":\"w5\",\"component\":{\"kind\":\"kpi\",\"props\":{\"title\":\"t\",\"value\":1.0,\"unit\":\"xxxxxxxxxxxxxxxxx\"}}}"},
     {"case": "a kpi unit with a digit, which would read as part of the number", "line": "{\"t\":\"widget\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"widget\":\"w5\",\"component\":{\"kind\":\"kpi\",\"props\":{\"title\":\"t\",\"value\":6.0,\"unit\":\"000 Kč\"}}}"},
     {"case": "a kpi with no title", "line": "{\"t\":\"widget\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"widget\":\"w5\",\"component\":{\"kind\":\"kpi\",\"props\":{\"title\":\" \",\"value\":1.0}}}"},
-    {"case": "a kpi in an approval", "line": "{\"t\":\"approval_request\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"approval\":\"7d1c2b3a-4e5f-4a6b-9c8d-1e2f3a4b5c6d\",\"component\":{\"kind\":\"kpi\",\"props\":{\"title\":\"Travel spend\",\"value\":1.0}}}"}
+    {"case": "a kpi in an approval", "line": "{\"t\":\"approval_request\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"approval\":\"7d1c2b3a-4e5f-4a6b-9c8d-1e2f3a4b5c6d\",\"component\":{\"kind\":\"kpi\",\"props\":{\"title\":\"Travel spend\",\"value\":1.0}}}"},
+    {"case": "a scope said by no name", "line": "{\"t\":\"working_for\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"scope\":\"all\",\"name\":\" \"}"},
+    {"case": "a scope whose session is not a uuid", "line": "{\"t\":\"working_for\",\"session\":\"latest\",\"scope\":\"all\",\"name\":\"everything\"}"}
   ],
   "refused_to_thalamus": [
     {"case": "the shell names the actor", "line": "{\"t\":\"turn\",\"session\":null,\"text\":\"hi\",\"actor\":\"user:akadmin\"}"},
@@ -209,6 +216,9 @@
     {"case": "a choice reply picking a value that is not a label", "line": "{\"t\":\"choice_reply\",\"session\":\"0b6f6a1e-3c2d-4e5f-8a9b-0c1d2e3f4a5b\",\"choice\":\"3c9e1d2f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"picked\":[{\"$ne\":\"\"}]}"},
     {"case": "a form when op the wire does not name", "line": "{\"t\": \"widget\", \"widget\": \"w4\", \"spec\": {\"form\": {\"table\": \"expenses\", \"when\": {\"note\": {\"key\": \"kind\", \"op\": \"lt\", \"value\": \"travel\"}}}}, \"trigger\": \"click\"}"},
     {"case": "a chart widget spec with no x", "line": "{\"t\":\"widget\",\"widget\":\"w5\",\"spec\":{\"chart\":{\"query\":{\"table\":\"expenses\"},\"chart\":\"bar\",\"op\":\"count\"}},\"trigger\":\"click\"}"},
-    {"case": "a kpi widget spec with an x", "line": "{\"t\":\"widget\",\"widget\":\"w5\",\"spec\":{\"kpi\":{\"query\":{\"table\":\"expenses\"},\"op\":\"count\",\"x\":\"kind\"}},\"trigger\":\"click\"}"}
+    {"case": "a kpi widget spec with an x", "line": "{\"t\":\"widget\",\"widget\":\"w5\",\"spec\":{\"kpi\":{\"query\":{\"table\":\"expenses\"},\"op\":\"count\",\"x\":\"kind\"}},\"trigger\":\"click\"}"},
+    {"case": "a client named by nothing", "line": "{\"t\":\"working_for\",\"scope\":{\"client\":\" \"}}"},
+    {"case": "a scope the wire does not name", "line": "{\"t\":\"working_for\",\"scope\":\"everyone\"}"},
+    {"case": "the shell names whom the scope is for", "line": "{\"t\":\"working_for\",\"scope\":\"personal\",\"actor\":\"user:akadmin\"}"}
   ]
 }
