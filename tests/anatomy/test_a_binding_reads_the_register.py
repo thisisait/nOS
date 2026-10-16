@@ -164,7 +164,7 @@ def test_the_registry_is_well_formed_and_fail_closed():
         )
 
 
-def test_every_backend_ships_prepared_not_armed():
+def test_every_backend_ships_prepared_not_armed(tmp_path):
     """Derived from the registry, so the NEXT row is covered the day it lands.
 
     The prepared-not-armed contract, generalised from the minimax original
@@ -176,16 +176,24 @@ def test_every_backend_ships_prepared_not_armed():
     backend whose tier env nobody renders refuses every session with "armed
     without a model id", which is the resolver working but the converge's
     fault. A backend-shaped hole in any of the three layers is found here,
-    not on the night.
+    not on the night. Ruling R1 2026-10-16: a local, keyless row (ollama)
+    may default armed, but only through llm_on_host — off, it is off.
     """
     cfg = ni.default_config()
+    layers = [p for p in ni.layer_paths() if p != REPO / "config.yml"]
     plist = (REPO / "roles/pazny.wing/templates/wing.plist.j2").read_text()
     problems = []
     for name, b in _registry().items():
         if (b or {}).get("default"):
             continue
         flag = (b or {}).get("enabled_flag", "")
-        if cfg.get(flag) is not False:
+        keyless = b.get("local") is True and b.get("auth_secret") is None
+        if keyless and "llm_on_host" in str(cfg.get(flag)):
+            off = tmp_path / "off.yml"
+            off.write_text("llm_on_host: false\nvlm_on_host: false\ndecision_model_on_host: false\n")
+            if ni.resolved([flag], [*layers, off])[flag] is not False:
+                problems.append(f"{name}: {flag} stays armed with every *_on_host switch off")
+        elif cfg.get(flag) is not False:
             problems.append(
                 f"{name}: {flag or '(no enabled_flag)'} must exist and "
                 f"default false in default.config.yml, found {cfg.get(flag)!r}"
