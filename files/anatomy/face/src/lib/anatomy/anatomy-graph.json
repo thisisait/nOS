@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 543,
+    "nodes": 545,
     "edges": 548,
     "nodes_pulse": 43,
     "nodes_judge": 5,
@@ -28,7 +28,7 @@
     "nodes_tasktype": 9,
     "nodes_skill": 12,
     "nodes_reader": 60,
-    "nodes_effector": 109,
+    "nodes_effector": 111,
     "nodes_article": 26,
     "nodes_organ_system": 13,
     "nodes_tissue": 1,
@@ -1576,6 +1576,13 @@
       "anchor": "02.02.04",
       "description": "Effector tools/derive-postings.py: The invoice→ledger tie: reads invoices + accounts from KEAP, derives one BALANCED journal entry per invoice from --own-party's books (double-entry, gated). Dry by default; --absorb writes."
     },
+    "effector:design-sync": {
+      "kind": "effector",
+      "source": "tools/design-sync.py",
+      "title": "Vendor the AIT design system (thisisait/design tokens.json + components.css) and regenerate its consumers (the nos-cc theme, the face tokens); `--check` diffs only.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/design-sync.py: Vendor the AIT design system (thisisait/design tokens.json + components.css) and regenerate its consumers (the nos-cc theme, the face tokens); `--check` diffs only."
+    },
     "effector:devlog-compile": {
       "kind": "effector",
       "source": "tools/devlog-compile.py",
@@ -1981,6 +1988,13 @@
       "title": "Erase one client's book (book_owner slug): dry-run plan, `--confirm` rmtree inbox + KEAP DELETE leaf-first. Espo Account stays operator-run.",
       "anchor": "02.02.04",
       "description": "Effector tools/offboard-book-owner.py: Erase one client's book (book_owner slug): dry-run plan, `--confirm` rmtree inbox + KEAP DELETE leaf-first. Espo Account stays operator-run."
+    },
+    "effector:oneshot-poc": {
+      "kind": "effector",
+      "source": "tools/oneshot-poc.py",
+      "title": "One-shot PoC: a small model answers a battery of constrained questions, a compiler turns them into a thalamus tool plan, a dry run validates it against `state/fixtures/oneshot/thalamus-tools.json` and the iris-bench checks; traces every question; offline fakes, Ollama only on NOS_LIVE=1.",
+      "anchor": "02.02.04",
+      "description": "Effector tools/oneshot-poc.py: One-shot PoC: a small model answers a battery of constrained questions, a compiler turns them into a thalamus tool plan, a dry run validates it against `state/fixtures/oneshot/thalamus-tools.json` and the iris-bench checks; traces every question; offline fakes, Ollama only on NOS_LIVE=1."
     },
     "effector:outline-roles": {
       "kind": "effector",

@@ -12,7 +12,7 @@
     "organism": 0,
     "habitat": 6,
     "sense": 78,
-    "limb": 116,
+    "limb": 118,
     "memory": 41,
     "law": 52,
     "reflex": 43,
@@ -621,6 +621,10 @@
       "level": "limb",
       "kind": "effector"
     },
+    "effector:design-sync": {
+      "level": "limb",
+      "kind": "effector"
+    },
     "effector:devlog-compile": {
       "level": "limb",
       "kind": "effector"
@@ -850,6 +854,10 @@
       "kind": "effector"
     },
     "effector:offboard-book-owner": {
+      "level": "limb",
+      "kind": "effector"
+    },
+    "effector:oneshot-poc": {
       "level": "limb",
       "kind": "effector"
     },

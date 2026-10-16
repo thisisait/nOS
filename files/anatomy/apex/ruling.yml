@@ -911,6 +911,7 @@ nodes:
   "effector:devlog-post": withheld
   "effector:devlog-release": withheld
   "effector:devlog-render": withheld
+  "effector:design-sync": withheld  # 2026-10-16: vendors the design system; like its sibling tools
   "effector:digest-import": withheld
   "effector:digest-import-doli": withheld
   "effector:digest-import-isdoc": withheld
@@ -919,6 +920,7 @@ nodes:
   "effector:digest-teardown": withheld
   "effector:dtt-capture": withheld
   "effector:dtt-table": withheld
+  "effector:oneshot-poc": withheld  # 2026-10-16: one-shot decision PoC, offline unless NOS_LIVE=1
   "effector:e2e-auth-helper": withheld
   "effector:espo-party-sync": withheld
   "effector:fetch-authentik-bootstrap-token": withheld
