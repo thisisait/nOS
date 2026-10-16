@@ -7,7 +7,8 @@
 
 Reads `client_scope:` from state/keap-tables/*.table.yml (vocabulary and gate:
 tests/anatomy/test_septum_scope_declared.py). RED: a table with no or an unknown
-scope, or `unresolved` (holds client data, no column names the client). WARN: a
+scope, `unresolved` (holds client data, no column names the client), or orphan
+rows (a set ref whose target row is gone: offboarding would miss them). WARN: a
 `personal` table that is not `visibility: private`. Live: parties by role, and
 per scoped table how many rows walk to which client. KEAP unreachable = UNKNOWN.
 A declaration only: KEAP enforces no per-row owner yet. A READER, exits 0.
@@ -26,6 +27,7 @@ REPO = Path(__file__).resolve().parents[1]
 TABLES = REPO / "state" / "keap-tables"
 FIXED = {"none", "personal", "self", "book_owner", "unresolved"}
 WALKS = {"self", "book_owner"}
+ORPHAN = "\0orphan"  # a ref is set but its target row is gone: no path to any owner
 
 
 def load_defs(root: Path = TABLES) -> dict[str, dict]:
@@ -60,9 +62,11 @@ def _ref_table(d: dict, col: str) -> str | None:
 
 
 def client_of(table: str, row: dict, defs: dict, rows: dict, roles: dict, depth: int = 0):
-    """The client party slug this row walks to, or None (own books, counterparty, dangling)."""
+    """The client party slug this row walks to, None (own books, counterparty), or ORPHAN."""
     s = defs[table].get("client_scope")
-    if depth > 8 or not walks(s):
+    if depth > 8:
+        return ORPHAN
+    if not walks(s):
         return None
     if s == "self":
         slug = row.get("slug")
@@ -72,9 +76,9 @@ def client_of(table: str, row: dict, defs: dict, rows: dict, roles: dict, depth:
     if not val or not target:
         return None
     if target == "party":
-        return val if roles.get(val) == "client" else None
+        return ORPHAN if val not in roles else (val if roles[val] == "client" else None)
     parent = next((r for r in rows.get(target) or [] if r.get("slug") == val), None)
-    return client_of(target, parent, defs, rows, roles, depth + 1) if parent else None
+    return client_of(target, parent, defs, rows, roles, depth + 1) if parent else ORPHAN
 
 
 def live(defs: dict, rows: dict) -> dict:
@@ -85,7 +89,7 @@ def live(defs: dict, rows: dict) -> dict:
             continue
         per = Counter(client_of(name, r, defs, rows, roles) for r in rows.get(name) or [])
         out["tables"][name] = {"rows": sum(per.values()), "not_a_client": per.pop(None, 0),
-                               "by_client": dict(per)}
+                               "orphans": per.pop(ORPHAN, 0), "by_client": dict(per)}
     return out
 
 
@@ -113,6 +117,8 @@ def main() -> int:
         state, why = live(defs, rows), None
     except Exception as exc:  # any failure to read KEAP is UNKNOWN, never green
         state, why = None, f"{type(exc).__name__}: {exc}"
+    red += [f"{n}: {t['orphans']} orphan rows — a ref points at a row that is gone"
+            for n, t in sorted((state or {}).get("tables", {}).items()) if t["orphans"]]
     verdict = "RED" if red else ("UNKNOWN" if state is None else "OK")
     if a.json:
         print(json.dumps({"verdict": verdict, "red": red, "warn": warn, "live": state,
@@ -131,7 +137,8 @@ def main() -> int:
     print("  parties: " + (", ".join(f"{k} {v}" for k, v in sorted(state["parties"].items())) or "none"))
     for name, t in sorted(state["tables"].items()):
         by = ", ".join(f"{k} {v}" for k, v in sorted(t["by_client"].items())) or "—"
-        print(f"  {name:<24} {t['rows']:>5} rows  clients: {by}  not a client's: {t['not_a_client']}")
+        print(f"  {name:<24} {t['rows']:>5} rows  clients: {by}  not a client's: {t['not_a_client']}  "
+              f"orphans: {t['orphans']}")
     return 0
 
 
