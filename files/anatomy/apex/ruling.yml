@@ -867,6 +867,9 @@ nodes:
   "reader:santa-status": withheld
   "reader:skill-status": withheld
   "reader:snapshot-status": withheld
+  # 2026-10-16 reader:septum-status: whose data each KEAP table holds, and
+  # per-client row counts. WITHHELD; the published set is unchanged.
+  "reader:septum-status": withheld
   "reader:stale-config-status": withheld
   "reader:stuck-status": withheld
   # 2026-10-06 reader:tailscale-status (edge-tailscale-wiring): names this host's
