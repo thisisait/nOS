@@ -1305,10 +1305,11 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                         self.asking(o, out, "propose_column_add", rec, Component::ColumnAddApproval(t))
                     }),
                     "propose_row_edit" | "propose_row_insert" | "propose_row_delete" => {
+                        let named = said_numbers(&o.messages).to_string();
                         let d = match name {
-                            "propose_row_edit" => self.propose_row_edit(who, &args, &o.shown, &o.dates),
-                            "propose_row_delete" => self.propose_row_delete(who, &args, &o.shown),
-                            _ => self.propose_row_insert(who, &args, &o.tables_seen, &o.shown),
+                            "propose_row_edit" => self.propose_row_edit(who, &args, &o.shown, &o.dates, &named),
+                            "propose_row_delete" => self.propose_row_delete(who, &args, &o.shown, &named),
+                            _ => self.propose_row_insert(who, &args, &o.tables_seen, &o.shown, &named),
                         };
                         // Operator ruling Q7: no refusal after a free-text read; the card head says it.
                         d.and_then(|d| self.ask(o, out, RowDiffApproval { read_from: o.read_free.clone(), ..d }))
@@ -1877,7 +1878,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
 
     /// The cell diff of one existing row the person can read; only changed cells survive.
     fn propose_row_edit(&self, who: &Person, args: &Value, shown: &HashMap<(String, String), String>,
-                        dates: &HashMap<String, Vec<String>>) -> Result<RowDiffApproval, String> {
+                        dates: &HashMap<String, Vec<String>>, asked: &str) -> Result<RowDiffApproval, String> {
         let s = |k: &str| args.get(k).and_then(Value::as_str).filter(|v| !v.is_empty()).ok_or(format!("propose_row_edit needs `{k}`"));
         let (alias, row_id) = (s("table")?, s("row_id")?);
         let (table, title) = shown_row(shown, alias, row_id)?;
@@ -1904,20 +1905,22 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
         if cells.is_empty() {
             return Err("nothing would change".into());
         }
+        let warning = misnamed(asked, current.get("title"), &cells);
         Ok(RowDiffApproval { table: table.to_string(), title: title.clone(), op: RowOp::Update, row_id: Some(row_id.to_string()),
-                             cells, read_from: vec![], lines: None })
+                             cells, read_from: vec![], lines: None, warning })
     }
 
     /// Every value of one row the person was shown, each old -> null: what the delete removes.
-    fn propose_row_delete(&self, who: &Person, args: &Value, shown: &HashMap<(String, String), String>) -> Result<RowDiffApproval, String> {
+    fn propose_row_delete(&self, who: &Person, args: &Value, shown: &HashMap<(String, String), String>, asked: &str) -> Result<RowDiffApproval, String> {
         let s = |k: &str| args.get(k).and_then(Value::as_str).filter(|v| !v.is_empty()).ok_or(format!("propose_row_delete needs `{k}`"));
         let (alias, row_id) = (s("table")?, s("row_id")?);
         let (table, title) = shown_row(shown, alias, row_id)?;
         let now = self.rows(who, table)?.into_iter().find(|(id, _)| id == row_id).map(|(_, v)| shown_values(v))
             .ok_or(format!("no row {row_id:?} in {table} that you can read"))?;
+        let warning = misnamed(asked, now.get("title"), &[]);
         let cells = now.into_iter().map(|(key, old)| CellChange { key, old, new: Value::Null }).collect();
         let d = RowDiffApproval { table: table.clone(), title: title.clone(), op: RowOp::Delete, row_id: Some(row_id.to_string()),
-                                  cells, read_from: vec![], lines: None };
+                                  cells, read_from: vec![], lines: None, warning };
         Component::RowDiffApproval(d.clone()).check()?;
         Ok(d)
     }
@@ -1925,7 +1928,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
     /// A new row's cells typed by the live schema, read as the person, in a table a query showed them.
     /// With `lines`, the row (new, or one shown by `row_id`) and its lines are one insert_many card.
     fn propose_row_insert(&self, who: &Person, args: &Value, seen: &HashMap<String, String>,
-                          shown: &HashMap<(String, String), String>) -> Result<RowDiffApproval, String> {
+                          shown: &HashMap<(String, String), String>, asked: &str) -> Result<RowDiffApproval, String> {
         let alias = args.get("table").and_then(Value::as_str).filter(|t| !t.is_empty()).ok_or("propose_row_insert needs `table`")?;
         // Refused before any read, as a row never shown is: a probe mints no card, and a row read
         // in one table cannot aim an insert at another the person never looked at.
@@ -1936,7 +1939,7 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 return Err("row_id names an existing row only for its `lines`; a new row is `values`".into());
             }
             let (f, cells) = self.new_row(who, table, args.get("values"))?;
-            return Ok(RowDiffApproval { table: f.table, title: f.title, op: RowOp::Insert, row_id: None, cells, read_from: vec![], lines: None });
+            return Ok(RowDiffApproval { table: f.table, title: f.title, op: RowOp::Insert, row_id: None, cells, read_from: vec![], lines: None, warning: None });
         };
         let lt = lines.get("table").and_then(Value::as_str).filter(|t| !t.is_empty()).ok_or("`lines` needs `table`")?;
         let lt = queried(seen, lt)?;
@@ -1958,10 +1961,10 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
             Ok(cells.into_iter().map(|c| CellChange { key: c["key"].as_str().unwrap_or_default().to_string(), old: Value::Null, new: c["new"].clone() })
                 .collect())
         }).collect::<Result<Vec<_>, String>>()?;
-        let (title, cells) = match (args.get("values").filter(|v| !v.is_null()), row_id) {
+        let (title, cells, warning) = match (args.get("values").filter(|v| !v.is_null()), row_id) {
             (Some(_), None) => {
                 let (f, cells) = self.new_row(who, table, args.get("values"))?;
-                (f.title, cells)
+                (f.title, cells, None)
             }
             (None, Some(id)) => {
                 let title = shown.get(&(table.clone(), id.to_string()))
@@ -1973,13 +1976,14 @@ mark your pick as suggested; never for yes or no on a write: that is propose_row
                 let now = self.rows(who, table)?.into_iter().find(|(r, _)| r == id).map(|(_, v)| v)
                     .ok_or(format!("no row {id:?} in {table} that you can read"))?;
                 let v = now.get(&display).cloned().unwrap_or(Value::Null);
-                (title.clone(), vec![CellChange { key: display, old: v.clone(), new: v }])
+                let warning = misnamed(asked, Some(&v), &[]);
+                (title.clone(), vec![CellChange { key: display, old: v.clone(), new: v }], warning)
             }
             (Some(_), Some(_)) => return Err("lines hang on either a new row (`values`) or a shown one (`row_id`), not both".into()),
             (None, None) => return Err("lines hang on a new row (`values`) or a shown one (`row_id`)".into()),
         };
         let d = RowDiffApproval { table: table.clone(), title, op: RowOp::InsertMany, row_id: row_id.map(str::to_string), cells, read_from: vec![],
-                                  lines: Some(Lines { table: lf.table, title: lf.title, ref_key, rows }) };
+                                  lines: Some(Lines { table: lf.table, title: lf.title, ref_key, rows }), warning };
         Component::RowDiffApproval(d.clone()).check()?;
         Ok(d)
     }
@@ -3161,6 +3165,31 @@ fn relative(word: &str, today: i64) -> Option<(String, String)> {
 /// An epoch-seconds cell as its UTC day, "YYYY-MM-DD"; None for anything that is not a number.
 fn day(v: &Value) -> Option<String> {
     v.as_f64().map(|t| iso(t.floor() as i64)[..10].to_string())
+}
+
+/// The person's latest message that names a number; a `[thalamus]` line is not the person.
+fn said_numbers(messages: &[Value]) -> &str {
+    messages.iter().rev().filter(|m| m["role"] == "user").filter_map(|m| m["content"].as_str())
+        .filter(|t| !t.starts_with("[thalamus]")).find(|t| !numbers(t).is_empty()).unwrap_or("")
+}
+
+/// Standalone numbers ("10", "#10", "10."), never digits inside a name (iris-bench-2) or a date.
+fn numbers(t: &str) -> Vec<&str> {
+    t.split_whitespace().map(|w| w.trim_matches(|c: char| !c.is_alphanumeric()))
+        .filter(|w| !w.is_empty() && w.bytes().all(|b| b.is_ascii_digit())).collect()
+}
+
+/// Each number the person named, unless it is a value being written, is a number in the row's
+/// title, or the card says which (local bench 2026-10-16: asked row 10, card for 19). Never refuses.
+/// ponytail: reads only the `title` cell (or a parent's display); a table without one is not checked.
+fn misnamed(asked: &str, title: Option<&Value>, written: &[CellChange]) -> Option<String> {
+    let title = Some(text(title?)).filter(|t| !t.is_empty())?;
+    let runs = |s: &str| s.split(|c: char| !c.is_ascii_digit()).filter(|r| !r.is_empty())
+        .map(|r| r.trim_start_matches('0').to_string()).collect::<Vec<_>>();
+    let (has, new) = (runs(&title), written.iter().flat_map(|c| runs(&text(&c.new))).collect::<Vec<_>>());
+    let missing: Vec<String> = numbers(asked).into_iter().map(|n| (n, n.trim_start_matches('0').to_string()))
+        .filter(|(_, v)| !has.contains(v) && !new.contains(v)).map(|(n, _)| format!("\"{n}\"")).collect();
+    (!missing.is_empty()).then(|| format!("you asked for {}; this row is \"{title}\"", missing.join(", ")))
 }
 
 /// A cell as text, as the shells show it: null is empty, a string is itself.

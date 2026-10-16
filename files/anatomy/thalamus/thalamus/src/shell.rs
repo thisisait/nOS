@@ -143,6 +143,7 @@ pub fn component_lines(c: &Component) -> Vec<Line<'static>> {
                 None => format!("{} a new row in {} ({})", d.op.as_str(), d.title, d.table),
             };
             out.push(head(format!("{what} — nothing is written unless you approve")));
+            out.extend(d.warning.iter().map(|w| warn(format!("  ! {w}"))));
             if d.op == RowOp::Delete {
                 out.push(warn("  approve deletes the whole row: every value below is gone".into()));
             }

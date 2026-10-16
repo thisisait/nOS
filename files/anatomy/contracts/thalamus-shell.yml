@@ -84,14 +84,16 @@ components:
     table_results: "rows of one DataTable: {table, name, query, matched, total, columns[], rows[{__id, cells{}}], projected}; total: rows readable, matched: after the query"
     row_diff_approval: >-
       one row's proposed write, cell by cell: {table, title, op insert|update|insert_many|delete, row_id?, cells[{key, old, new}] >=1,
-      read_from[]?, lines?}; an update names its row, an insert names none and every old is null; read_from names the tools whose
+      read_from[]?, lines?, warning?}; an update names its row, an insert names none and every old is null; read_from names the tools whose
       free text the model read that turn, and the card head says "contains text from" them. insert_many (v6) is a parent and
       its line items under ONE approval: the parent is new (no row_id, olds null) or an existing row shown unchanged (row_id,
       each old == new, never written); lines {table, title, ref_key, rows[[{key, old null, new}]] 1-20, each >=1 cell, never
       ref_key} are written after the parent in order, each with ref_key = the parent's id; both shells show every line. Only
       insert_many carries lines. A delete (v6) names its row and shows every value it holds, each old -> null (old never
       null); both shells say delete in red, and serve re-reads the row and deletes nothing if it changed since the card.
-      A write that stops part-way is said with the rows written before it, never silently
+      warning (v6, <=400) says the row is not the one the person named (each standalone number of their latest
+      message naming one, unless written as a value, is a number in the row's title); both shells draw it in red
+      first; never a refusal. A write that stops part-way is said with the rows written before it, never silently
     table_schema_approval: >-
       a new DataTable Iris proposes (propose_table_create, v6), asked only as an approval: {title 1-160, description?
       <=2000, visibility private, columns[{key, label, kind text|number|date|select|boolean|rowRef, required,

@@ -80,6 +80,7 @@
 	{:else if component.kind === 'row_diff_approval'}
 		{@const d = component.props}
 		<h3>{d.row_id === undefined ? `${d.op} a new row in ${d.title} (${d.table})` : `${d.op} ${d.title} (${d.table}) / ${d.row_id}`} — nothing is written unless you approve</h3>
+		{#if d.warning}<p><strong class="bad">! {d.warning}</strong></p>{/if}
 		{#if d.read_from?.length}<p><Badge tone="warn">contains text from {d.read_from.join(', ')}</Badge></p>{/if}
 		{#if d.op === 'delete'}<p class="bad">approve deletes the whole row: every value below is gone</p>{/if}
 		<ul class="diff">

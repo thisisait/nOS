@@ -425,6 +425,7 @@ impl Component {
                 if d.cells.is_empty() {
                     return Err("an approval changes at least one cell".into());
                 }
+                d.warning.as_deref().map_or(Ok(()), |w| cap("a card warning", w, 400))?;
                 match (d.op, &d.lines) {
                     (RowOp::InsertMany, None) => return Err("insert_many carries its lines".into()),
                     (RowOp::InsertMany, Some(l)) => check_lines(l)?,
@@ -1049,6 +1050,9 @@ pub struct RowDiffApproval {
     /// insert_many only: the rows written after the parent, each pointing at it by `ref_key`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lines: Option<Lines>,
+    /// The row is not the one the person named (local bench 2026-10-16); said in red, never refused.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warning: Option<String>,
 }
 
 /// The line items of one insert_many card (operator ruling Q4): every line, every cell, no old.
@@ -1246,7 +1250,7 @@ mod tests {
     fn card(op: RowOp, row_id: Option<&str>, old: Value) -> Component {
         Component::RowDiffApproval(RowDiffApproval {
             table: "t1".into(), title: "Todo list".into(), op, row_id: row_id.map(str::to_string),
-            cells: vec![CellChange { key: "status".into(), old, new: json!("done") }], read_from: vec![], lines: None,
+            cells: vec![CellChange { key: "status".into(), old, new: json!("done") }], read_from: vec![], lines: None, warning: None,
         })
     }
 
@@ -1268,7 +1272,7 @@ mod tests {
     fn a_delete_card_names_its_row_and_shows_every_value_going() {
         let gone = |row_id: Option<&str>, old: Value, new: Value| Component::RowDiffApproval(RowDiffApproval {
             table: "t1".into(), title: "Todo list".into(), op: RowOp::Delete, row_id: row_id.map(str::to_string),
-            cells: vec![CellChange { key: "status".into(), old, new }], read_from: vec![], lines: None,
+            cells: vec![CellChange { key: "status".into(), old, new }], read_from: vec![], lines: None, warning: None,
         });
         assert!(gone(Some("r1"), json!("open"), Value::Null).check().is_ok());
         assert_eq!(serde_json::to_value(gone(Some("r1"), json!("open"), Value::Null)).unwrap()["props"]["op"], "delete");

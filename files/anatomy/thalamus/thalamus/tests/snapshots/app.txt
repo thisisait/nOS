@@ -36,5 +36,5 @@ dashboard Bench board: 3 widgets, place it in the pupil
   form: Add a row (table iris-bench-2)
   left out: By owner — no column `owner` in iris-bench-2; columns: title, status
 , track, points, note, due
-approve this edit (1 of 7)? y / n
+approve this edit (1 of 8)? y / n
 Enter send · F2 /inbox · F3 /approvals · F4 /red · Ctrl-C quit
