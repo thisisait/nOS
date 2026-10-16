@@ -18,7 +18,6 @@ import sys
 from pathlib import Path
 
 import pytest
-import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 AUTOLOAD = REPO / "files/anatomy/wing/vendor/autoload.php"
@@ -65,8 +64,9 @@ def test_a_forbidden_agent_is_refused_by_name():
 
 
 def test_the_default_is_each_agents_declared_backend():
-    doc = yaml.safe_load((REPO / "default.config.yml").read_text())
-    assert doc["agents_backend"] == ""
+    sys.path.insert(0, str(REPO / "tools"))
+    import nos_identity
+    assert nos_identity.default_config()["agents_backend"] == ""
     got = _needs("librarian:judge-lint-queue", agents_backend="")
     assert len(got) == 1 and got[0].startswith("minimax backend not armed"), got
 
