@@ -7,6 +7,7 @@ deleting one without deleting its line here is red too (the ratchet clicks).
 """
 from __future__ import annotations
 
+import os
 import pathlib
 import re
 
@@ -191,16 +192,20 @@ PINNED = {"templates": TEMPLATES, "routes": ROUTES, "renders": RENDERS,
 
 
 def surface(wing: pathlib.Path) -> dict[str, set[str]]:
-    tpl, www = wing / "app/Templates", wing / "www/assets"
-    router = wing / "app/Core/RouterFactory.php"
-    routes = re.findall(r"\$router->addRoute\('([^']*)',\s*'([^']*)'",
-                        router.read_text() if router.exists() else "")
-    found = {"templates": {p.relative_to(tpl).as_posix() for p in tpl.glob("**/*.latte")},
-             "routes": {f"{m} -> {t}" for m, t in routes},
+    app, www = wing / "app", wing / "www/assets"
+    tpl, router = app / "Templates", app / "Core/RouterFactory.php"
+    # either quote, any whitespace incl. newlines between the arguments
+    routes = re.findall(r"""\$router->addRoute\(\s*(['"])(.*?)\1\s*,\s*(['"])(.*?)\3""",
+                        router.read_text() if router.exists() else "", re.S)
+    found = {"templates": {os.path.relpath(p, tpl).replace(os.sep, "/") for p in app.glob("**/*.latte")},
+             "routes": {f"{m[1]} -> {m[3]}" for m in routes},
              "renders": set(), "actions": set(),
              "assets": {p.relative_to(www).as_posix() for p in www.glob("**/*") if p.is_file()}}
-    for p in (wing / "app/Presenters").glob("*Presenter.php"):
-        name = p.stem.removesuffix("Presenter")
+    pres = app / "Presenters"
+    for p in pres.glob("**/*Presenter.php"):
+        name = p.relative_to(pres).as_posix().removesuffix("Presenter.php")
+        if name.startswith("Api/"):
+            continue  # the $api module stays; only the browser surface is pinned
         for kind, rest in re.findall(r"function (render|action)(\w+)\s*\(", p.read_text()):
             found[kind + "s"].add(f"{name}:{kind}{rest}")
     return found
