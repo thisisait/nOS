@@ -28,7 +28,7 @@ def _judge():
 
 
 CFG = {"ollama_enabled": "true", "ollama_model": "qwen3:14b",
-       "ollama_small_model": "hermes3:8b", "ollama_vision_model": "qwen2.5vl:7b",
+       "ollama_small_model": "hermes3:8b", "vlm_model": "qwen2.5vl:7b",
        "minimax_enabled": "true", "minimax_model": "MiniMax-M2",
        "install_claude_cli_vendor": "false"}
 HOST = {"claude": "/Users/x/.local/bin/claude",
@@ -57,8 +57,8 @@ def test_claude_missing():
 
 
 def test_vision_model_unset():
-    got = _needs("loop:vision-bench", cfg={"ollama_vision_model": ""})
-    assert got == ["vision model not configured (ollama_vision_model is empty)"]
+    got = _needs("loop:vision-bench", cfg={"vlm_model": ""})
+    assert got == ["vision model not configured (vlm_model is empty)"]
     assert not got[0].required
 
 
@@ -69,9 +69,9 @@ def test_vision_model_not_pulled():
 
 
 def test_ollama_disabled():
-    got = _needs("loop:vision-bench", cfg={"ollama_enabled": "false", "ollama_vision_model": ""})
+    got = _needs("loop:vision-bench", cfg={"ollama_enabled": "false", "vlm_model": ""})
     assert "ollama disabled (set ollama_enabled: true)" in got
-    assert "vision model not configured (ollama_vision_model is empty)" in got
+    assert "vision model not configured (vlm_model is empty)" in got
 
 
 def test_an_agent_job_needs_its_armed_backend():
@@ -85,18 +85,18 @@ def test_an_agent_job_needs_its_armed_backend():
 def test_the_client_estate_reads_as_three_needs():
     """Today's client config: no claude, minimax off, vision model empty."""
     j = _judge()
-    cfg = {**CFG, "minimax_enabled": "false", "ollama_vision_model": ""}
+    cfg = {**CFG, "minimax_enabled": "false", "vlm_model": ""}
     rows = j.table(cfg, {**HOST, "claude": None})
     groups = j.grouped(rows)
     assert set(groups) >= {
         "claude CLI missing (set install_claude_cli_vendor: true, or install it)",
-        "vision model not configured (ollama_vision_model is empty)",
+        "vision model not configured (vlm_model is empty)",
     } and any(n.startswith("minimax backend not armed") for n in groups), groups
 
 
 def test_the_gate_holds_with_its_own_exit_code(capsys):
     j = _judge()
-    rc = j.hold("loop:vision-bench", cfg={**CFG, "ollama_vision_model": ""}, host=HOST)
+    rc = j.hold("loop:vision-bench", cfg={**CFG, "vlm_model": ""}, host=HOST)
     assert rc == j.HOLD_EXIT == 78
     assert "HELD: vision model not configured" in capsys.readouterr().out, (
         "the HELD line must be on STDOUT — Pulse records only stdout")

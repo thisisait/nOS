@@ -35,7 +35,7 @@ def _judge():
 
 # The client host: ollama on with qwen3.5:9b, minimax off, no claude CLI.
 CFG = {"ollama_enabled": "true", "ollama_model": "qwen3.5:9b", "ollama_small_model": "qwen3.5:9b",
-       "ollama_vision_model": "", "minimax_enabled": "false", "minimax_model": "",
+       "vlm_model": "", "minimax_enabled": "false", "minimax_model": "",
        "install_claude_cli_vendor": "false", "llm_cell_min_params_b": "8", "agents_backend": "ollama"}
 HOST = {"claude": None, "ollama_models": {"qwen3.5:9b"}, "anthropic_key": False}
 

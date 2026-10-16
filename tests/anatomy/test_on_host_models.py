@@ -23,7 +23,7 @@ import nos_identity  # noqa: E402
 
 CASES = REPO / "files/anatomy/thalamus/thalamus/tests/binding-cases.yml"
 NAMES = ("llm_on_host", "vlm_on_host", "decision_model_on_host", "ollama_enabled", "ollama_model",
-         "ollama_vision_model", "ollama_decision_model", "iris_backend", "agents_backend", "install_ollama", "ollama_small_model")
+         "ollama_vision_model", "vlm_model", "ollama_decision_model", "iris_backend", "agents_backend", "install_ollama", "ollama_small_model")
 
 
 def _load(name: str, path: str):
@@ -45,7 +45,8 @@ def _resolved(tmp_path, top: str = "") -> dict:
 
 def test_the_switches_and_floors_are_default_layer_vars():
     cfg = nos_identity.default_config()
-    assert (cfg["llm_on_host"], cfg["vlm_on_host"], cfg["decision_model_on_host"]) == (True, False, False)
+    assert (cfg["llm_on_host"], cfg["decision_model_on_host"]) == (True, False)
+    assert cfg["vlm_on_host"] == "{{ ollama_vision_model != '' }}", "W1: the vision switch follows a named model"
     assert (cfg["llm_cell_min_params_b"], cfg["llm_cell_recommended_params_b"]) == (3, 8)
     floors = yaml.safe_load(CASES.read_text())["floors"]
     assert floors == {"min_b": 3, "warn_b": 8}, "the shared cases judge other floors than the defaults"
@@ -63,7 +64,7 @@ def test_a_fresh_host_binds_iris_on_device(tmp_path):
 def test_each_switch_names_its_model(tmp_path):
     got = _resolved(tmp_path, "llm_on_host: false\nvlm_on_host: true\ndecision_model_on_host: true\n")
     assert got["ollama_enabled"] is True and (got["ollama_model"], got["iris_backend"]) == ("", "")
-    assert (got["ollama_vision_model"], got["ollama_decision_model"]) == ("qwen2.5vl:7b", "tev1:4b")
+    assert (got["vlm_model"], got["ollama_decision_model"]) == ("qwen2.5vl:7b", "tev1:4b")
     off = _resolved(tmp_path, "llm_on_host: false\n")
     assert off["ollama_enabled"] is False and off["iris_backend"] == ""
 
@@ -107,7 +108,7 @@ def test_the_thalamus_gets_both_floors():
     assert "--warn-below-b {{ llm_cell_recommended_params_b }}" in task
 
 
-CFG = {"ollama_enabled": "true", "ollama_small_model": "hermes3:8b", "ollama_vision_model": "",
+CFG = {"ollama_enabled": "true", "ollama_small_model": "hermes3:8b", "vlm_model": "",
        "minimax_enabled": "false", "install_claude_cli_vendor": "false", "agents_backend": "ollama",
        "llm_cell_min_params_b": "3", "llm_cell_recommended_params_b": "8"}
 
@@ -183,4 +184,4 @@ def test_the_model_vars_do_not_loop():
 
     def reaches(start, name, seen=()):
         return any(d == start or (d not in seen and reaches(start, d, (*seen, d))) for d in deps.get(name, ()))
-    assert not [n for n in NAMES + ("vlm_model",) if reaches(n, n)], "a model var loops"
+    assert not [n for n in NAMES if reaches(n, n)], "a model var loops"

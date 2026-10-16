@@ -39,19 +39,19 @@ def _pull_list(**cfg) -> list:
 
 def test_every_configured_tier_model_is_pulled():
     got = _pull_list(ollama_enabled=True, ollama_model="qwen3:14b",
-                     ollama_small_model="hermes3:8b", ollama_vision_model="qwen2.5vl:7b")
+                     ollama_small_model="hermes3:8b", vlm_model="qwen2.5vl:7b")
     assert sorted(got) == ["hermes3:8b", "qwen2.5vl:7b", "qwen3:14b"]
 
 
 def test_an_empty_tier_is_not_pulled_and_duplicates_collapse():
     got = _pull_list(ollama_enabled=True, ollama_model="qwen3:14b",
-                     ollama_small_model="qwen3:14b", ollama_vision_model="")
+                     ollama_small_model="qwen3:14b", vlm_model="")
     assert got == ["qwen3:14b"]
 
 
 def test_ollama_disabled_pulls_nothing():
     assert _pull_list(ollama_enabled=False, ollama_model="qwen3:14b",
-                      ollama_small_model="hermes3:8b", ollama_vision_model="x:1") == []
+                      ollama_small_model="hermes3:8b", vlm_model="x:1") == []
 
 
 def test_every_tier_the_ollama_backend_binds_is_in_the_pull_list():
