@@ -38,6 +38,11 @@ Known limits: the catalogue is a fixture (live list_tables needs the socket); of
 untyped widget objects are skipped; free text is not checked against the request (the trace
 flags `in_text`); a low embed margin falls through to the decision model, not the 9B; the plan is
 validated, never run, so a wrong row reference or an empty result goes unseen.
+
+--format-mode auto (default): an Ollama that answers HTTP 501 "structured output is unavailable"
+(the MLX engine) to a `format` is asked in plain chat for the rest of the run; the reply's first
+JSON object is checked against each question's options, and a bad or missing answer escalates.
+Every trace row says `constrained`; the switch's reason lands once, as `format_fallback`.
 """
 
 from __future__ import annotations
@@ -50,6 +55,7 @@ import os
 import re
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -72,6 +78,9 @@ DRAWS = {"query_rows": "table_results", "red_status": "red_status", "approvals_a
          "search_memory": "list", "nos_guide": "list", "estate_services": "table", "list_tables": "table",
          "inbox": "inbox_list", "offer_dashboard": "dashboard"}
 REF = re.compile(r"^\$step(\d+)\.rows\[0\]\.__id$")
+FORMAT_MODE = "auto"                   # --format-mode: auto | constrained | unconstrained
+UNCONSTRAINED, FALLBACK_NEWS = {}, []  # host -> why it lost `format`; reasons not yet traced
+NO_FORMAT = "structured output is unavailable"
 
 
 class Refused(Exception):
@@ -333,6 +342,7 @@ def ask_systemone(body: dict, backend: dict) -> dict:
         part = dict(body, model=backend["model"], questions={k: body["questions"][k] for k in ids[i:i + n]})
         out["answers"] |= (_s1_http if kind == "http" else _s1_ollama)(part, backend)
         out["calls"] += 1
+    out["constrained"] = kind == "http" or constrained(url or None)
     return out
 
 
@@ -353,10 +363,16 @@ def _s1_ollama(body, backend):
     ask = "\n".join(f"- {k}: {q.get('instructions', '')}" + (f" Options: {json.dumps(q['criteria'])}" if
                     q["type"] != "noul" else " yes or no") for k, q in qs.items())
     state = body["state"] if isinstance(body["state"], str) else json.dumps(body["state"])
-    got = json.loads(_chat(backend["model"], DECIDE, f"Request: {state}\nQuestions:\n{ask}", fmt,
-                           host=backend.get("base_url")))
+    try:
+        got = _json_reply(_chat(backend["model"], DECIDE, f"Request: {state}\nQuestions:\n{ask}", fmt,
+                                host=backend.get("base_url")))
+    except ValueError:
+        got = {}  # no JSON object: every question is missing, so every one escalates
     out = {}
     for k, q in qs.items():
+        if not isinstance(got.get(k), str) or got[k] not in enum[k]:
+            out[k] = {"type": q["type"], "refused": f"{k}: {got.get(k)!r} is not one of the listed answers"}
+            continue
         if q["type"] == "noul":
             out[k] = {"type": "noul", "noul": 1.0 if got[k] == "yes" else 0.0}
         else:
@@ -387,16 +403,21 @@ def systemone_decider(request, backend, llm_ask, abstain=0.6, scorer=None):
                 yield qn.pop("embed")
                 continue
             if k in typed:
-                a, conf = from_systemone(qn, resp["answers"][k])
-                qn.update(by=backend["model"], processor=resp["processor"], calibrated=resp["calibrated"])
-                if not resp["calibrated"]:
-                    yield a
-                    continue
-                qn["confidence"] = conf
-                if conf is not None and conf >= abstain:
-                    yield a
-                    continue
-                qn["abstained"] = qn.pop("confidence")
+                ans = resp["answers"][k]
+                qn.update(by=backend["model"], processor=resp["processor"], calibrated=resp["calibrated"],
+                          constrained=resp["constrained"])
+                if "refused" in ans:
+                    qn["escalated"] = ans["refused"]  # refused, never coerced: the 9B asks it again
+                else:
+                    a, conf = from_systemone(qn, ans)
+                    if not resp["calibrated"]:
+                        yield a
+                        continue
+                    qn["confidence"] = conf
+                    if conf is not None and conf >= abstain:
+                        yield a
+                        continue
+                    qn["abstained"] = qn.pop("confidence")
             a = llm_ask(qn)
             qn["by"] = "llm"
             yield a
@@ -418,17 +439,44 @@ def _http(url, body, headers):
         return json.loads(r.read())
 
 
+def _base(host=None):
+    return (host or os.environ.get("OLLAMA_HOST", "http://localhost:11434")).rstrip("/")
+
+
 def _ollama(path, body, host=None):
-    host = host or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-    return _http(host.rstrip("/") + path, body, {"Content-Type": "application/json"})
+    return _http(_base(host) + path, body, {"Content-Type": "application/json"})
+
+
+def constrained(host=None):
+    return FORMAT_MODE == "constrained" or FORMAT_MODE == "auto" and _base(host) not in UNCONSTRAINED
 
 
 def _chat(model, system, user, fmt=None, host=None):
     body = {"model": model, "stream": False, "think": False, "options": {"temperature": 0},
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
-    if fmt:
-        body["format"] = fmt
+    if fmt and constrained(host):
+        try:
+            return _ollama("/api/chat", dict(body, format=fmt), host)["message"]["content"]
+        except urllib.error.HTTPError as e:
+            why = e.read().decode("utf-8", "replace").strip()
+            if FORMAT_MODE == "constrained" or e.code != 501 or NO_FORMAT not in why:
+                raise
+            UNCONSTRAINED[_base(host)] = f"HTTP 501 {why} from {_base(host)}"
+            FALLBACK_NEWS.append(UNCONSTRAINED[_base(host)])
+    if fmt:  # unconstrained: the same keys and answers, asked in words, checked by the caller
+        keys = "\n".join(f"- {k}: " + (" | ".join(map(str, p["enum"])) if "enum" in p else json.dumps(p))
+                         for k, p in fmt["properties"].items())
+        body["messages"][0]["content"] += ("\nReply with ONE JSON object {key: answer} and nothing else. "
+                                           f"Use only these keys, each answer exactly one listed value:\n{keys}")
     return _ollama("/api/chat", body, host)["message"]["content"]
+
+
+def _json_reply(text):
+    """The first JSON object in a reply (a code fence or prose around it ignored), else ValueError."""
+    i = text.find("{")
+    if i < 0:
+        raise ValueError("no JSON object in the reply")
+    return json.JSONDecoder().raw_decode(text, i)[0]
 
 
 NORMALISE = ("Rewrite the person's turns as ONE self-contained request in English. Resolve pronouns and "
@@ -458,9 +506,9 @@ def live_decider(model, request, scorer=None):
             ("minimum", "min"), ("maximum", "max")) if qn.get(y) is not None}} if k == "int" else ANSWER[k]
         extra = f"\nTools:\n{tools}" if qn["id"].endswith(".tool") else ""
         opts = f"\nOptions: {', '.join(map(str, qn['options']))}" if k == "choice" else ""
-        a = json.loads(_chat(model, DECIDE, f"Request: {request}{extra}\nQuestion: {qn['text']}{opts}",
-                             {"type": "object", "properties": {"answer": s}, "required": ["answer"]}))["answer"]
-        qn["by"] = model
+        a = _json_reply(_chat(model, DECIDE, f"Request: {request}{extra}\nQuestion: {qn['text']}{opts}",
+                              {"type": "object", "properties": {"answer": s}, "required": ["answer"]}))["answer"]
+        qn.update(by=model, constrained=constrained())
         return a == "yes" if k == "yesno" else a
     return ask
 
@@ -519,8 +567,8 @@ def run(case, normalise, decider_for, trace, model="fake"):
                 "failed": [], "nt": [], "plan": None}
     norm_s = time.monotonic() - t0
     trace.write(json.dumps({"case": case["id"], "id": "normalised", "turns": turns, "answer": request,
-                            "ms": round(norm_s * 1000)}, ensure_ascii=False) + "\n")
-    inner, answers, n, calls = decider_for(request), {}, 0, 0
+                            "constrained": False, "ms": round(norm_s * 1000)}, ensure_ascii=False) + "\n")
+    inner, answers, n, calls, modes = decider_for(request), {}, 0, 0, set()
 
     def answer_wave(qns):
         nonlocal n, calls
@@ -533,9 +581,13 @@ def run(case, normalise, decider_for, trace, model="fake"):
                 a = check_answer(qn, next(gen))
             except (Refused, OSError, ValueError, KeyError, StopIteration) as e:
                 err = f"{type(e).__name__}: {e}" if not isinstance(e, Refused) else str(e)
-            row = {"case": case["id"], "model": model, **{k: v for k, v in qn.items() if k not in ("id_suffix", "leaf")},
+            # embed and the scripted fakes pick from the options by construction: constrained
+            row = {"case": case["id"], "model": model, "constrained": True, **{k: v for k, v in qn.items() if k not in ("id_suffix", "leaf")},
                    "id": qn["id"] + qn.get("id_suffix", ""), "call": calls,
                    "ms": round((time.monotonic() - t) * 1000), "answer": a}  # a batched call's ms land on its first row
+            if FALLBACK_NEWS:
+                row["format_fallback"] = FALLBACK_NEWS.pop()
+            modes.add(row["constrained"])
             if err:
                 row["refused"] = err
             elif qn["kind"] == "text":
@@ -553,6 +605,8 @@ def run(case, normalise, decider_for, trace, model="fake"):
     except Refused as e:
         res["error"] = str(e)
     res["questions"], res["calls"], res["seconds"] = n, calls, round(time.monotonic() - t0, 2)
+    res["mode"] = {frozenset({True}): "constrained", frozenset({False}): "unconstrained"}.get(
+        frozenset(modes), "mixed" if modes else "-")
     res["failed"], res["nt"] = score(case, res["plan"]) if res["plan"] is not None else (["plan"], [])
     res["ok"] = res["plan"] is not None and not res["failed"]
     return res
@@ -625,6 +679,8 @@ def main(argv=None) -> int:
     ap.add_argument("--base-url", help="ollama: OLLAMA_HOST; http: a /v1/systemone server (default 127.0.0.1:8000)")
     ap.add_argument("--token-env", help="http: the env var holding a bearer token")
     ap.add_argument("--max-per-call", type=int, default=64, help="questions per SystemOne call (Workers AI: 64)")
+    ap.add_argument("--format-mode", choices=["auto", "constrained", "unconstrained"], default="auto",
+                    help="ollama: auto drops `format` after a 501 'structured output is unavailable'")
     ap.add_argument("--abstain", type=float, default=0.6, help="calibrated confidence under this goes to the 9B")
     ap.add_argument("--allow-remote", action="store_true", help="http: let a non-local processor see the state")
     ap.add_argument("--scorer", choices=["none", "embed"], default="none")
@@ -633,6 +689,8 @@ def main(argv=None) -> int:
     ap.add_argument("--trace", default=str(FIX / "last-trace.jsonl"))
     ap.add_argument("--out", default=str(FIX / "last-run.json"))
     a = ap.parse_args(argv)
+    global FORMAT_MODE
+    FORMAT_MODE = a.format_mode
     live = os.environ.get("NOS_LIVE") == "1"
     base = a.base_url or ("http://127.0.0.1:8000" if a.backend == "http" else None)
     if a.backend == "http" and _host(base) not in LOCAL and not a.allow_remote:
@@ -667,10 +725,10 @@ def main(argv=None) -> int:
                 results.append(dict(run(case, norm, dec, trace, model), model=model))
     Path(a.out).write_text(json.dumps({"ran_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "live": live,
                                        "cases": results}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"{'case':<18} {'model':<14} {'plan ok':<8} {'#q':>4} {'calls':>5} {'secs':>7}  failed / n/t")
+    print(f"{'case':<18} {'model':<14} {'mode':<13} {'plan ok':<8} {'#q':>4} {'calls':>5} {'secs':>7}  failed / n/t")
     for r in results:
         why = r["error"] or ", ".join(r["failed"]) or "-"
-        print(f"{r['id']:<18} {r['model']:<14} {'yes' if r['ok'] else 'NO':<8} {r['questions']:>4} {r.get('calls', 0):>5} "
+        print(f"{r['id']:<18} {r['model']:<14} {r.get('mode', '-'):<13} {'yes' if r['ok'] else 'NO':<8} {r['questions']:>4} {r.get('calls', 0):>5} "
               f"{r['seconds']:>7.2f}  "
               f"{why} / {', '.join(r['nt']) or '-'}")
     print(f"{sum(r['ok'] for r in results)}/{len(results)} plans ok · trace {a.trace}")

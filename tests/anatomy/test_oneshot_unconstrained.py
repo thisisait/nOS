@@ -69,7 +69,7 @@ def test_a_501_switches_the_run_to_unconstrained_and_the_plan_compiles(ollama):
     trace = io.StringIO()
     res = poc.run(CASES["top3-next"], lambda t: script.get("normalised") or " ".join(t), dec, trace, "qwen3.5:2b")
     assert res["ok"], res
-    assert res["mode"] == "unconstrained"
+    assert res["mode"] == "mixed"  # the battery went unconstrained; the scripted 9B rows did not
     assert sum("format" in p for p in ollama.posts) == 1, "the fallback holds for the rest of the run"
     rows = [json.loads(x) for x in trace.getvalue().splitlines()]
     assert all(isinstance(r.get("constrained"), bool) for r in rows), rows
