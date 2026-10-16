@@ -27,11 +27,12 @@ def _start_task() -> dict:
     return hits[0]
 
 
-def _converge(tmp_path: Path, removing: bool) -> subprocess.CompletedProcess:
+def _converge(tmp_path: Path, removing: bool, confirmed: bool = True,
+              leaving: bool = False) -> subprocess.CompletedProcess:
     (tmp_path / "tools").mkdir()
     (tmp_path / "tools/nos-smoke.py").write_text(FAKE_SMOKE)
     play = [{"hosts": "localhost", "gather_facts": False, "connection": "local",
-             "vars": {"nos_removing": removing, "nos_confirmed": True, "nos_leaving": False,
+             "vars": {"nos_removing": removing, "nos_confirmed": confirmed, "nos_leaving": leaving,
                       "nos_smoke_strict": True, "nos_deployed_ref": "abc123",
                       "nos_docker_ready": True,
                       "ansible_facts": {"env": {"HOME": str(tmp_path)}}},
@@ -69,9 +70,32 @@ def test_a_blank_whose_smoke_fails_still_leaves_its_record(tmp_path, monkeypatch
 
 
 @pytest.mark.skipif(not shutil.which("ansible-playbook"), reason="runs through real Ansible")
-def test_an_ordinary_converge_writes_no_blank_record(tmp_path):
-    _converge(tmp_path, removing=False)
+@pytest.mark.parametrize("kw", [{"removing": False}, {"removing": True, "confirmed": False},
+                                {"removing": True, "leaving": True}], ids=["ordinary", "dry-run", "leave"])
+def test_only_a_confirmed_staying_blank_writes_a_record(tmp_path, kw):
+    _converge(tmp_path, **kw)
     assert not (tmp_path / ".nos/blank-runs.jsonl").exists()
+
+
+def _write(home: Path, *lines: str) -> None:
+    (home / ".nos").mkdir()
+    (home / ".nos/blank-runs.jsonl").write_text("\n".join(lines) + "\n")
+
+
+@pytest.mark.parametrize("body", ["[1, 2]", json.dumps(
+    {"started": "2026-10-09T08:00:00Z", "finished": "2026-10-09T09:00:00Z", "nos_commit": "x",
+     "failed": False, "smoke_strict": {"passed": 1}})], ids=["not-a-dict", "smoke-without-total"])
+def test_a_malformed_record_is_unknown_not_a_crash(tmp_path, monkeypatch, body):
+    _write(tmp_path, body)
+    mod, line = _blank_line(tmp_path, monkeypatch)
+    assert line.state == mod.UNREADABLE and "UNKNOWN" in line.detail
+
+
+def test_a_blank_without_a_strict_smoke_is_not_green(tmp_path, monkeypatch):
+    _write(tmp_path, json.dumps({"started": "2026-10-09T08:00:00Z", "finished": "2026-10-09T09:00:00Z",
+                                 "nos_commit": "x", "failed": False, "smoke_strict": None}))
+    mod, line = _blank_line(tmp_path, monkeypatch)
+    assert line.state != mod.OK and "no strict smoke" in line.detail
 
 
 def test_no_record_is_unknown_never_green(tmp_path, monkeypatch):
