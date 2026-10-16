@@ -125,6 +125,8 @@ Longer tour: [docs/architecture.md](docs/architecture.md).
 - **AgentKit:** audit-first agent runtime in Wing, agents in `files/anatomy/agents/<name>/`.
   [docs/ait-runtime-architecture.md](docs/ait-runtime-architecture.md).
 - **Platforms:** facts, not toggles — [docs/cross-platform.md](docs/cross-platform.md).
+- **Look:** decided in [thisisait/design](https://github.com/thisisait/design), vendored and gated here —
+  [docs/design-system.md](docs/design-system.md). Never hand-edit `tools/cc/theme.py`; run `tools/design-sync.py`.
 
 ## Adding things
 
