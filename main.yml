@@ -2731,20 +2731,6 @@
       when: install_device_gateway | default(false)
       tags: ['device-gateway', 'ai']
 
-    # Receptor: host login -> person in front of KEAP's human door (OpenHuman's MCP uses it).
-    - name: "Receptor (pazny.receptor role)"
-      ansible.builtin.import_role:
-        name: pazny.receptor
-      when: install_receptor | default(false) | bool
-      tags: ['receptor', 'keap']
-
-    # Thalamus: Iris at a terminal, tools run as the person through KEAP's human door.
-    - name: "Thalamus (pazny.thalamus role)"
-      ansible.builtin.import_role:
-        name: pazny.thalamus
-      when: install_thalamus | default(false) | bool
-      tags: ['thalamus', 'keap']
-
     # ──────────────────────────────────────────────────────────────────────────
     # OpenCode - AI coding TUI (sst.dev) with local Ollama provider
     # Alternative to Claude Code / Cursor, but open-source and local.
@@ -2928,6 +2914,21 @@
     - import_tasks: tasks/stacks/stack-up.yml
       when: nos_docker_ready | default(true)
       tags: ['iiab', 'stack', 'docker', 'stacks']
+
+    # Receptor: host login -> person in front of KEAP's human door (OpenHuman's MCP uses it).
+    # After stack-up: its verify reads KEAP, which is up only now (test_the_receptor_comes_up_after_keap).
+    - name: "Receptor (pazny.receptor role)"
+      ansible.builtin.import_role:
+        name: pazny.receptor
+      when: install_receptor | default(false) | bool
+      tags: ['receptor', 'keap']
+
+    # Thalamus: Iris at a terminal, tools run as the person through KEAP's human door.
+    - name: "Thalamus (pazny.thalamus role)"
+      ansible.builtin.import_role:
+        name: pazny.thalamus
+      when: install_thalamus | default(false) | bool
+      tags: ['thalamus', 'keap']
 
     # DB setup now runs INSIDE stack-up.yml (infra → DB setup → remaining stacks)
 
