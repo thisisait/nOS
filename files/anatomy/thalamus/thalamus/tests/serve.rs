@@ -2012,6 +2012,9 @@ fn fake_tables(tables: Vec<(&str, Vec<serde_json::Value>)>) -> ((String, Seen), 
                 // A `search-hits` table, when given, is what KEAP's memory finds.
                 ("GET", "/api/search/semantic") => (200, memory(false, serde_json::json!(tables.iter().find(|t| t.0 == "/api/tables/search-hits")
                     .map_or(vec![], |t| t.2.lock().unwrap().clone())))),
+                // A `captures` table, when given, is what KEAP's capture list holds.
+                ("GET", "/api/metadata") => (200, serde_json::json!({"success": true, "data": tables.iter().find(|t| t.0 == "/api/tables/captures")
+                    .map_or(vec![], |t| t.2.lock().unwrap().clone())}).to_string()),
                 ("GET", "/api/tables") => (200, serde_json::json!({"success": true, "data": tables.iter().map(|t| {
                     let i: serde_json::Value = serde_json::from_str(&t.1).unwrap();
                     serde_json::json!({"id": i["data"]["id"], "title": i["data"]["title"]})
@@ -5145,6 +5148,30 @@ fn search_memory_for_a_client_drops_personal_memory_and_counts_it() {
     let recs: Vec<serde_json::Value> = events(&rig.ledger, &session).into_iter()
         .filter(|(t, k, _)| t == "agent_tool_result" && k.ends_with("/tool:search_memory")).map(|e| e.2["hidden_by_scope"].clone()).collect();
     assert_eq!(recs, [serde_json::json!(3), serde_json::json!(0)], "the ledger counts it too");
+}
+
+// W4 (b'): the inbox's captures are the person's too: for a client they are not read, and the refusal says so.
+const CAPTURE_ROWS: &str = r#"{"success": true, "data": {"id": "captures", "title": "Captures", "schema": {"columns": []}}}"#;
+
+#[test]
+fn inbox_for_a_client_reads_no_captures_and_says_why() {
+    let caps = vec![serde_json::json!({"id": "cap-1", "title": "HKDF notes", "createdAt": 1760000000, "metadata": null})];
+    let rig = rig_at("septinbox", mapped(), septum_keap_and(vec![(CAPTURE_ROWS, caps)]),
+                     vec![call("inbox", "{}"), answer("x"), call("inbox", "{}"), answer("y")], Some(local()));
+    septum_defs(&rig);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ToShell::WorkingFor { session, .. } = work_for(&s, &mut r, Scope::Client("acme".into())) else { panic!("acme not set") };
+    let got = turn(&s, &mut r, Some(session.clone()), "my inbox");
+    let n = rig.model.lock().unwrap().len();
+    let t = tool_result(&rig, n - 1);
+    assert!(!format!("{got:?}").contains("HKDF notes") && !t.to_string().contains("HKDF notes"), "a capture crossed the septum: {t}");
+    assert!(t["refused"].as_array().is_some_and(|r| r.iter().any(|x| x == "captures: personal, hidden while you work for ACME s.r.o.")), "{t}");
+    assert!(rig.keap.lock().unwrap().iter().all(|(h, _)| !h.starts_with("GET /api/metadata")), "captures were read for a client");
+    let ToShell::WorkingFor { .. } = work_for(&s, &mut r, Scope::Personal) else { panic!("personal not set") };
+    let got = turn(&s, &mut r, Some(session), "and on my own?");
+    assert!(got.iter().any(|m| matches!(m, ToShell::Render { component: Component::InboxList(i), .. } if i.items.iter().any(|x| x.id == "cap-1"))),
+            "on personal data the person's captures are shown: {got:?}");
 }
 
 // W4 (c): an outside write says whose on the card's warning, joined with a misnamed-row warning.
