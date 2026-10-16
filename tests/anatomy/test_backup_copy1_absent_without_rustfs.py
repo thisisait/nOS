@@ -108,6 +108,7 @@ def test_the_reader_says_copy1_is_not_installed_and_ignores_its_stale_status(tmp
     monkeypatch.setattr(red, "BACKUP_STATUS", stale)
     monkeypatch.setattr(red, "BACKUP_RESTIC_STATUS", direct)
     monkeypatch.setattr(red, "_install_flags", lambda: flags)
+    monkeypatch.setattr(red, "_configure_backup", lambda: True)
     bk = red.backups()
     assert bk["copy1"] is False
     assert bk["failed"] == ["dir-tenants"], "the stale copy-#1 file was read, or the direct one was not"
@@ -129,3 +130,31 @@ def test_the_restore_drill_follows_copy1():
     assert drill({"install_backup": True, "install_rustfs": False}) is False, "drill scheduled with no copy #1"
     probe = yaml.safe_load((REPO / "files/anatomy/plugins/backup-base/plugin.yml").read_text())["e2e"]["enabled"]
     assert "install_rustfs" in probe, "the e2e probe still expects the drill without copy #1"
+
+
+def _no_copy1(tmp_path, monkeypatch, configure, extra=None):
+    red = _red()
+    flags = {**ni.install_flags(ni.profile_layers(REPO / "profiles/core.yml")), **(extra or {})}
+    monkeypatch.setattr(red, "BACKUP_STATUS", tmp_path / "absent-copy1.json")
+    monkeypatch.setattr(red, "BACKUP_RESTIC_STATUS", tmp_path / "absent-direct.json")
+    monkeypatch.setattr(red, "_install_flags", lambda: flags)
+    monkeypatch.setattr(red, "_configure_backup", lambda: configure)
+    bk = red.backups()
+    assert bk is not None, "a host with no backup is a finding, not UNKNOWN"
+    return " | ".join(red.reds({"backups": bk}))
+
+
+def test_a_host_with_no_backup_at_all_is_red(tmp_path, monkeypatch):
+    """Ruling 2026-10-16 (Q4): configure_backup off and no copy #1 = RED."""
+    assert "no backup at all" in _no_copy1(tmp_path, monkeypatch, False)
+
+
+def test_a_direct_path_that_never_ran_is_red(tmp_path, monkeypatch):
+    assert "no direct restic backup recorded" in _no_copy1(tmp_path, monkeypatch, True)
+
+
+def test_backrest_without_copy1_is_named_unsupported(tmp_path, monkeypatch):
+    """Ruling 2026-10-16 (Q3): Backrest's nos-dumps plan reads copy #1's staging;
+    without copy #1 it would snapshot an empty dir. Say so, in red."""
+    out = _no_copy1(tmp_path, monkeypatch, True, {"install_backrest": True})
+    assert "Backrest without copy #1 is unsupported" in out, out
