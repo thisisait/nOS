@@ -6,15 +6,20 @@ fallback logged only agent_model_fallback, so no reader could ask one question
 of both. Payload: {from_model_uri, to_model_uri, by, reason}, by in
 person | fallback | posture. Bone/Wing parity with the contract is held by
 test_event_types_match_the_contract.py; this file holds the contract to the
-type, the other mirrors, and the one run-time switch (Runner::serveFallback).
-Shape only: AgentKit has no PHP unit harness here (see the fallback gate).
+type, the other mirrors, and Wing's run-time switch, driven for real: the
+real Runner over stub clients, fallback and back, each switch one event and
+the first request it answers one line.
 """
 
 from __future__ import annotations
 
 import pathlib
+import json
 import re
+import shutil
+import subprocess
 
+import pytest
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -42,12 +47,70 @@ def test_an_agent_can_subscribe_to_it():
     assert TYPE in enum
 
 
-def test_the_fallback_switch_emits_a_rebind():
-    src = _read("files/anatomy/wing/app/AgentKit/Runner.php")
-    start = src.index("private function serveFallback(")
-    body = src[start:src.index("\n\tprivate function ", start + 1)]
-    emit = body[body.index(f"type: '{TYPE}'"):]
-    emit = emit[:emit.index(");")]
-    for key in PAYLOAD:
-        assert f"'{key}' =>" in emit, f"rebind payload lacks {key}"
-    assert "'by' => 'fallback'" in emit
+HARNESS = r"""<?php
+namespace App\Model { final class EventRepository { public array $rows = [];
+    public function insert(array $p): int { $this->rows[] = $p; return 1; } } }
+namespace App\AgentKit\LLMClient { final class Factory { public function __construct(public array $c) {}
+    public function fromUri(string $u, $b = null): LLMClientInterface { return $this->c[$u]; } } }
+namespace {
+use App\AgentKit\LLMClient\{LLMClientInterface, LLMPermanentError, LLMResponse};
+spl_autoload_register(function ($c) { $f = WING . '/app/' . str_replace('\\', '/', substr($c, 4)) . '.php';
+    if (str_starts_with($c, 'App\\') && is_file($f)) require $f; });
+final class Stub implements LLMClientInterface {
+    public array $plan = []; public array $heard = [];
+    public function __construct(private string $id) {}
+    public function identifier(): string { return $this->id; }
+    public function send(string $s, array $m, array $t = [], int $x = 4096): LLMResponse {
+        if (array_shift($this->plan) === 'fail') throw new LLMPermanentError('down');
+        $this->heard[] = $s; return new LLMResponse('end_turn', [], 1, 1);
+    }
+}
+$a = new Stub('a-primary'); $b = new Stub('b-fallback');
+$agent = new App\AgentKit\Agent(name: 'x', version: 1, description: '', modelPrimaryUri: 'a-primary',
+    modelFallbackUri: 'b-fallback', modelGraderUri: null, systemPrompt: 'SYS', tools: [], rubric: null,
+    maxIterations: 1, capabilityScopes: [], piiClassification: 'none', requiredCredentials: [],
+    subscriptions: [], metadata: [], sourceDir: '');
+$events = new App\Model\EventRepository();
+$out = [];
+foreach (json_decode($argv[1], true) as $plan) {
+    $a->plan = $plan; $a->heard = []; $b->heard = [];
+    $r = (new ReflectionClass(App\AgentKit\Runner::class))->newInstanceWithoutConstructor();
+    (function () use ($events, $a, $b) {
+        $this->audit = new App\AgentKit\Telemetry\AuditEmitter($events);
+        $this->llmFactory = new App\AgentKit\LLMClient\Factory(['b-fallback' => $b]);
+        $this->fallbackContext = ['session_uuid' => 's', 'primary' => 'a-primary'];
+    })->call($r);
+    $heard = [];
+    foreach ($plan as $_) {
+        $na = count($a->heard); $nb = count($b->heard);
+        (fn () => $this->callWithRetry($agent, $a, [], []))->call($r);
+        $heard[] = count($a->heard) > $na ? end($a->heard) : end($b->heard);
+    }
+    $out[] = $heard;
+}
+$rebinds = array_values(array_filter($events->rows, fn ($e) => $e['type'] === 'agent_session_rebind'));
+echo json_encode(['heard' => $out, 'rebinds' => array_map(fn ($e) => $e['result'], $rebinds)]);
+}
+"""
+
+
+def _line(frm: str, to: str) -> str:
+    return f"This session moved from {frm} to {to} (fallback); earlier turns were answered by {frm}."
+
+
+@pytest.mark.skipif(shutil.which("php") is None, reason="php not installed on this runner")
+def test_every_wing_switch_is_one_rebind_and_one_line(tmp_path):
+    """A answers, B (fallback) answers twice, A again, then B: four switches.
+    A session whose very first call falls back moves once and says no line:
+    no earlier turn exists for the line to speak of."""
+    script = tmp_path / "h.php"
+    script.write_text(HARNESS.replace("WING", repr(str(REPO / "files/anatomy/wing"))))
+    plans = [["ok", "fail", "fail", "ok", "fail"], ["fail"]]
+    got = json.loads(subprocess.run(["php", str(script), json.dumps(plans)],
+                                    capture_output=True, text=True, check=True).stdout)
+    ab, ba = _line("a-primary", "b-fallback"), _line("b-fallback", "a-primary")
+    assert got["heard"] == [["SYS", f"SYS\n\n{ab}", "SYS", f"SYS\n\n{ba}", f"SYS\n\n{ab}"], ["SYS"]]
+    moves = [(e["from_model_uri"], e["to_model_uri"], e["by"]) for e in got["rebinds"]]
+    assert moves == [("a-primary", "b-fallback", "fallback"), ("b-fallback", "a-primary", "fallback"),
+                     ("a-primary", "b-fallback", "fallback"), ("a-primary", "b-fallback", "fallback")]
+    assert all(e["reason"] for e in got["rebinds"])
