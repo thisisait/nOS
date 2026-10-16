@@ -117,9 +117,10 @@ def build(request: str, ask) -> dict:
     triage["multi_step"] = ask({"id": "multi_step", "kind": "yesno", "leaf": True,
                                 "text": "Does it need more than one tool call?"})
     plan = []
-    for n in range(1, MAX_STEPS + 1):
+    for n in range(1, (MAX_STEPS if triage["multi_step"] else 1) + 1):  # a one-call request asks no step 2
+        so_far = f" Already planned: {', '.join(s['tool'] for s in plan)}." if plan else ""
         tool = ask({"id": f"s{n}.tool", "kind": "choice", "options": list(SCHEMAS) + [DONE],
-                    "text": f"Step {n}: which tool runs next? done = nothing more."})
+                    "text": f"Step {n}: which tool runs next?{so_far} done = nothing more."})
         if tool == DONE:
             break
         ctx = {"tool": tool, "table": None, "steps": plan, "source": False}
@@ -188,6 +189,8 @@ def _walk(sch, pid, name, ask, ctx, required, parent=None):
     if t == "object":
         props = sch.get("properties")
         if not props:
+            if "." not in pid and not name:
+                return {}  # a tool without arguments (list_tables)
             if required:
                 raise Refused(f"{pid}: an untyped object; the battery has no question for it")
             return NONE  # ponytail: offer_dashboard's widget specs, add a sub-battery when dashboards matter
@@ -386,26 +389,35 @@ def _s1_http(body, backend):
     return _http(url, body, headers)["answers"]
 
 
+def _alias(k):
+    """A flat key: a small model nests or drops "s1.where.n" (client run, 56 of 56 triage answers)."""
+    return k.replace(".", "__")
+
+
 def _s1_ollama(body, backend):
     """Every question one enum property of one `format` schema; the answers are one-hot, uncalibrated."""
-    qs = body["questions"]
+    real = body["questions"]
+    qs = {_alias(k): q for k, q in real.items()}
     enum = {k: ["yes", "no"] if q["type"] == "noul" else list(q["criteria"]) for k, q in qs.items()}
     fmt = {"type": "object", "properties": {k: {"enum": e} for k, e in enum.items()}, "required": list(qs)}
     ask = "\n".join(f"- {k}: {q.get('instructions', '')}" + (f" Options: {json.dumps(q['criteria'])}" if
                     q["type"] != "noul" else " yes or no") for k, q in qs.items())
     state = body["state"] if isinstance(body["state"], str) else json.dumps(body["state"])
     try:
-        got = _json_reply(_chat(backend["model"], DECIDE, f"Request: {state}\nQuestions:\n{ask}", fmt,
-                                host=backend.get("base_url")))
+        got = _ask_json(backend["model"], DECIDE, f"Request: {state}\nQuestions:\n{ask}", fmt, backend.get("base_url"))
     except ValueError:
         got = {}  # no JSON object: every question is missing, so every one escalates
-    return _one_hot(qs, enum, got)
+    return {k: v for (a, v), k in zip(_one_hot(qs, enum, got).items(), real)}
 
 
 def _one_hot(qs, enum, got):
     """{id: enum value} as SystemOne answers with one-hot probabilities; a value off its enum is refused."""
     out = {}
     for k, q in qs.items():
+        if isinstance(got.get(k), bool) and enum[k][:2] == ["yes", "no"]:
+            got[k] = "yes" if got[k] else "no"  # true is the word yes, not a guess
+        elif isinstance(got.get(k), (int, float)) and str(got[k]) in enum[k]:
+            got[k] = str(got[k])  # 1 for the label "1"
         if not isinstance(got.get(k), str) or got[k] not in enum[k]:
             out[k] = {"type": q["type"], "refused": f"{got.get(k)!r} is not one of the listed answers"}
             continue
@@ -523,11 +535,24 @@ def _chat(model, system, user, fmt=None, host=None):
             UNCONSTRAINED[_base(host)] = f"HTTP 501 {why} from {_base(host)}"
             FALLBACK_NEWS.append(UNCONSTRAINED[_base(host)])
     if fmt:  # unconstrained: the same keys and answers, asked in words, checked by the caller
-        keys = "\n".join(f"- {k}: " + (" | ".join(map(str, p["enum"])) if "enum" in p else json.dumps(p))
-                         for k, p in fmt["properties"].items())
-        body["messages"][0]["content"] += ("\nReply with ONE JSON object {key: answer} and nothing else. "
-                                           f"Use only these keys, each answer exactly one listed value:\n{keys}")
+        props = fmt["properties"]
+        keys = "\n".join(f"- {k} -> " + (" | ".join(map(str, p["enum"])) if "enum" in p else json.dumps(p))
+                         for k, p in props.items())
+        example = json.dumps({k: p["enum"][0] if "enum" in p else "..." for k, p in list(props.items())[:2]})
+        body["messages"][0]["content"] += ("\nReply with ONE flat JSON object and nothing else, every key quoted, "
+                                           f"shaped like {example}. Each answer is exactly one listed value, never "
+                                           f"the question's text. Keys and their values:\n{keys}")
     return _ollama("/api/chat", body, host)["message"]["content"]
+
+
+def _ask_json(model, system, user, fmt=None, host=None):
+    """_chat parsed as JSON; a reply that is not JSON is asked once more with the parser's words."""
+    reply = _chat(model, system, user, fmt, host)
+    try:
+        return _json_reply(reply)
+    except ValueError as e:
+        again = f"{user}\n\nYour last reply was not valid JSON ({e}). Reply with only the JSON object."
+        return _json_reply(_chat(model, system, again, fmt, host))
 
 
 def _json_reply(text):
@@ -565,8 +590,8 @@ def live_decider(model, request, scorer=None):
             ("minimum", "min"), ("maximum", "max")) if qn.get(y) is not None}} if k == "int" else ANSWER[k]
         extra = f"\nTools:\n{tools}" if qn["id"].endswith(".tool") else ""
         opts = f"\nOptions: {', '.join(map(str, qn['options']))}" if k == "choice" else ""
-        a = _json_reply(_chat(model, DECIDE, f"Request: {request}{extra}\nQuestion: {qn['text']}{opts}",
-                              {"type": "object", "properties": {"answer": s}, "required": ["answer"]}))["answer"]
+        a = _ask_json(model, DECIDE, f"Request: {request}{extra}\nQuestion: {qn['text']}{opts}",
+                      {"type": "object", "properties": {"answer": s}, "required": ["answer"]})["answer"]
         qn.update(by=model, constrained=constrained())
         return a == "yes" if k == "yesno" else a
     return ask

@@ -129,7 +129,7 @@ def test_the_ollama_adapter_asks_enums_and_claims_no_calibration(monkeypatch):
     assert a["severity"]["probabilities"]["2"] == 1.0 and "confidence" not in a["severity"]
     # uncalibrated answers never abstain, whatever the cut-off
     qn = {"id": "s1.table", "kind": "choice", "text": "which table?", "options": ["a", "b"]}
-    monkeypatch.setattr(poc, "_ollama", lambda *a, **k: {"message": {"content": json.dumps({"s1.table": "b"})}})
+    monkeypatch.setattr(poc, "_ollama", lambda *a, **k: {"message": {"content": json.dumps({"s1__table": "b"})}})
     wave = poc.systemone_decider("r", {"backend": "ollama", "model": "m"}, lambda q: pytest.fail("escalated"), 0.99)
     assert list(wave([qn])) == ["b"] and qn["calibrated"] is False and "confidence" not in qn
 

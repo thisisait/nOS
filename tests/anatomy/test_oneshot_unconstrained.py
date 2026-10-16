@@ -61,7 +61,7 @@ def test_a_501_switches_the_run_to_unconstrained_and_the_plan_compiles(ollama):
 
     def reply(body):  # a fenced JSON object of every question the battery lists
         got = {k: ("yes" if v else "no") if isinstance(v, bool) else str(v)
-               for k in _keys(body) for v in [_scripted(script, k)]}
+               for k in _keys(body) for v in [_scripted(script, k.replace("__", "."))]}
         return "```json\n" + json.dumps(got) + "\n```"
     ollama.reply = reply
     backend = {"backend": "ollama", "model": "qwen3.5:2b"}
@@ -80,7 +80,7 @@ def test_a_501_switches_the_run_to_unconstrained_and_the_plan_compiles(ollama):
 
 def test_an_invalid_or_missing_answer_is_refused_and_escalated(ollama):
     poc, asked = _poc(), []
-    ollama.reply = lambda body: json.dumps({"s1.table": "c", "s1.dir": "desc"})  # "c" is no option; s1.ok absent
+    ollama.reply = lambda body: json.dumps({"s1__table": "c", "s1__dir": "desc"})  # "c" is no option; s1.ok absent
     qs = [{"id": "s1.table", "kind": "choice", "text": "which table?", "options": ["a", "b"]},
           {"id": "s1.dir", "kind": "choice", "text": "which way?", "options": ["asc", "desc"]},
           {"id": "s1.ok", "kind": "yesno", "text": "ok?"}]

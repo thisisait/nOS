@@ -20,8 +20,8 @@ def test_unconstrained_keys_are_flat_and_a_number_answers_its_label(ollama):  # 
     def reply(body):
         user = body["messages"][1]["content"]
         seen.append(body)
-        assert "s1.where.n" not in user and "s1_where_n" in user, user
-        return json.dumps({"sys_keap_table": "yes", "s1_where_n": 1})
+        assert "s1.where.n" not in user and "s1__where__n" in user, user
+        return json.dumps({"sys__keap_table": "yes", "s1__where__n": 1})
     ollama.reply = reply
     body = {"model": "m", "state": "s", "questions": {
         "sys.keap_table": {"type": "noul", "instructions": "Does the request need keap table?"},
@@ -30,7 +30,7 @@ def test_unconstrained_keys_are_flat_and_a_number_answers_its_label(ollama):  # 
     a = poc.ask_systemone(body, {"backend": "ollama", "model": "m"})["answers"]
     assert a["sys.keap_table"]["noul"] == 1.0, a
     assert a["s1.where.n"]["probabilities"]["1"] == 1.0, a
-    assert '"sys_keap_table"' in seen[0]["messages"][0]["content"]  # an example of the shape
+    assert '"sys__keap_table"' in seen[0]["messages"][0]["content"]  # an example of the shape
 
 
 def test_a_reply_that_is_not_json_is_asked_once_more(ollama):  # noqa: F811
