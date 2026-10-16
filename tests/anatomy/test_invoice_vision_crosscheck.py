@@ -68,3 +68,14 @@ def test_clean_match_or_no_vision_extract_emits_zero_review_rows():
     assert review_items == []
     _clean2, review_items2 = nos_digest.reconcile_invoices([ISDOC], [], amount_tol=0.01)
     assert review_items2 == []
+
+
+def test_review_row_names_the_client():
+    """client_scope: book_owner is only true if the producer stamps it (septum)."""
+    _clean, items = nos_digest.reconcile_invoices([dict(ISDOC, book_owner="client-a")],
+                                                  [dict(ISDOC, payable=9900.0)], amount_tol=0.01)
+    assert items[0]["book_owner"] == "client-a"
+    row = nos_digest.compose_invoice_review(items, batch_id="b")["invoice-review"][0]
+    assert row["book_owner"] == "client-a"
+    _clean, own = nos_digest.reconcile_invoices([ISDOC], [dict(ISDOC, payable=9900.0)], amount_tol=0.01)
+    assert "book_owner" not in nos_digest.compose_invoice_review(own, batch_id="b")["invoice-review"][0]

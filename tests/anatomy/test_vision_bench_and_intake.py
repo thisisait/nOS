@@ -99,3 +99,13 @@ def test_pulse_absorb_does_not_enable_fixture_mode():
     args = jobs["absorb-approved"].get("args") or []
     assert "--absorb" in args
     assert "--fixture-mode" not in args
+
+
+def test_intake_queue_row_names_the_client(tmp_path):
+    """client_scope: book_owner is only true if the producer stamps it (septum)."""
+    sc = tmp_path / "inbox" / "accounting" / "client-a" / "extracts" / "x.extract.json"
+    assert IV.book_owner_of(sc, {"client-a"}) == "client-a"
+    assert IV.book_owner_of(sc, {"other"}) is None            # not a party: a restrict rowRef would 400
+    assert IV.book_owner_of(tmp_path / "x.extract.json", {"client-a"}) is None   # flat dir names nobody
+    assert IV.verify_row("x.extract.json", {}, book_owner="client-a")["book_owner"] == "client-a"
+    assert "book_owner" not in IV.verify_row("x.extract.json", {})
