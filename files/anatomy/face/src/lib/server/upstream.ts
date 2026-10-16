@@ -482,8 +482,24 @@ export async function keapCreateTable(
 	} catch (e) {
 		if (!id || !(e instanceof UpstreamError) || e.status !== 400) throw e;
 		// No such table → the 400 was a real validation error: surface that one.
-		return keapTableDef(id, who).catch(() => Promise.reject(e));
+		const held = await keapTableDef(id, who).catch(() => Promise.reject(e));
+		if (sameTable(held, rest)) return held;
+		throw new UpstreamError(409, `"${slug}" already names a different table (${id})`);
 	}
+}
+
+/** Same title, visibility and column keys: a re-submit, safe to reuse. */
+function sameTable(held: unknown, sent: Record<string, unknown>): boolean {
+	const t = ((held as { data?: unknown })?.data ?? held) as Record<string, unknown>;
+	const keys = (x: Record<string, unknown>) =>
+		JSON.stringify(
+			((x?.schema as { columns?: { key?: unknown }[] })?.columns ?? []).map((c) => c.key)
+		);
+	return (
+		t?.title === sent.title &&
+		(t?.visibility ?? 'private') === (sent.visibility ?? 'private') &&
+		keys(t) === keys(sent)
+	);
 }
 
 /** Tables this person may read — GET /api/tables (enveloped `TableInfo[]`). */
