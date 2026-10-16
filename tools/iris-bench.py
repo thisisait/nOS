@@ -17,6 +17,11 @@ Usage:
     tools/iris-bench.py --sock /tmp/fake.sock --offline --out /tmp/run.json
     NOS_LIVE=1 NOS_ASSAY_DIR=~/projects/nos-assay tools/iris-bench.py --domain home-lab-tables
 
+A turn is a string or {say, checks}: a dict turn's checks see only that turn's slice of the wire,
+and turn N is judged only while every earlier turn passed (else not_reached); case-level `checks`
+see the whole wire and are judged with the last turn. A result carries turns, depth and `kind`.
+`--seed --domain d` creates $NOS_ASSAY_DIR/domains/d/tables/*.table.yml (a table def plus `rows:`).
+
 --out carries `provenance` (nOS commit, argv, each model's Ollama digest or null + why) so a
 run can be filed in nos-assay as evidence: a model name can be re-pointed upstream, a digest not.
 """
@@ -69,7 +74,7 @@ QUOTED = re.compile(r"„[^“”]*[“”]|“[^”]*”|\"[^\"]*\"|«[^»]*»"
 
 def turns_of(case: dict) -> list[str]:
     """The case's turns; a `pad` puts its fact first and filler words before the first question."""
-    turns = list(case["turns"]) if "turns" in case else [case["prompt"]]
+    turns = [t["say"] if isinstance(t, dict) else t for t in case["turns"]] if "turns" in case else [case["prompt"]]
     pad = case.get("pad")
     if pad:
         n = len(FILLER.split())
@@ -78,11 +83,14 @@ def turns_of(case: dict) -> list[str]:
     return turns
 
 
+SLICED = ("tools", "renders", "approvals", "cards", "card_kinds", "refused")
+
+
 def run_case(case: dict, sock: str, timeout: float) -> dict:
     """Send the case's turns over one connection; what came back, per kind."""
     turns = turns_of(case)
     got = {"tools": [], "renders": [], "approvals": [], "cards": [], "card_kinds": [], "refused": [], "text": "", "texts": [],
-           "model_uri": None, "error": None}
+           "model_uri": None, "error": None, "per_turn": []}
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.settimeout(timeout)
     try:
@@ -90,6 +98,7 @@ def run_case(case: dict, sock: str, timeout: float) -> dict:
         f = s.makefile("rw", encoding="utf-8")
         session = None
         for text in turns:
+            mark = {k: len(got[k]) for k in SLICED}
             f.write(json.dumps({"t": "turn", "session": session, "text": text}) + "\n")
             f.flush()
             want, idle, answer, active = 1, 0, "", None
@@ -128,6 +137,7 @@ def run_case(case: dict, sock: str, timeout: float) -> dict:
                         want -= 1
             got["text"] = answer
             got["texts"].append(answer)
+            got["per_turn"].append({k: got[k][mark[k]:] for k in SLICED} | {"text": answer, "texts": [answer], "error": None})
     except (OSError, ValueError, ConnectionError) as e:
         got["error"] = f"{type(e).__name__}: {e}"
     finally:
@@ -341,12 +351,45 @@ def seed_lines(ids: dict) -> list[dict]:
             for n in (1, 2, 3) for i, c in enumerate("ab")]
 
 
-def seed() -> int:
-    """Create the iris-bench-2 table (and its lines) once, as the operator, readable by every user (no one's data)."""
+def _dtt():
     import importlib.util
     spec = importlib.util.spec_from_file_location("dtt_table", Path(__file__).with_name("dtt-table.py"))
     dtt = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(dtt)
+    return dtt
+
+
+def seed_domain(domain: str) -> int:
+    """Each $NOS_ASSAY_DIR/domains/<d>/tables/*.table.yml once: the def (minus rows) as the table, then its rows."""
+    defs = sorted((cases_path(None, domain).parent / "tables").glob("*.table.yml"))
+    if not defs:
+        print(f"{domain}: no tables/*.table.yml (nothing written)", file=sys.stderr)
+        return 1
+    dtt = _dtt()
+    have = {t.get("title") for t in dtt.tables()}
+    for p in defs:
+        d = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        rows = d.pop("rows", None) or []
+        if d.get("title") in have:
+            print(f"{d['title']} table exists (nothing written)")
+            continue
+        st, r = dtt.req("POST", "/api/tables", {"driver": "libsql", "visibility": "shared", "anchors": []} | d)
+        if st != 200:
+            print(f"{p.name}: create failed ({st}): {r.get('error', r)}", file=sys.stderr)
+            return 1
+        tid = r.get("data", r)["id"]
+        for row in rows:
+            st, r = dtt.req("POST", f"/api/tables/{tid}/rows", {"values": row})
+            if st != 200:
+                print(f"{p.name}: row failed ({st}): {r.get('error', r)}", file=sys.stderr)
+                return 1
+        print(f"{d.get('title')} table created: {tid} with {len(rows)} rows")
+    return 0
+
+
+def seed() -> int:
+    """Create the iris-bench-2 table (and its lines) once, as the operator, readable by every user (no one's data)."""
+    dtt = _dtt()
     have = [t for t in dtt.tables() if (t.get("title") or "") == SEED_TITLE]
     if have:
         print(f"{SEED_TITLE} table exists: {have[0]['id']} (nothing written)")
@@ -426,10 +469,71 @@ def queries(got: dict) -> list[dict]:
             for r in got["renders"] if r["component"].get("kind") == "table_results"]
 
 
+SAME = re.compile(r"same as turn (\d+)")
+
+
+class NoTurn(LookupError):
+    pass
+
+
+def resolve_arg(arg, prior: list[dict]):
+    """"same as turn N" (the value, or its `where`) is the where list of turn N's LAST pinned query:
+    a query_rows read's pin, else a chart's or kpi's pin query. N is 0-based and must be an earlier turn."""
+    if isinstance(arg, str) and SAME.fullmatch(arg):
+        arg = {"where": arg}
+    m = SAME.fullmatch(arg["where"]) if isinstance(arg, dict) and isinstance(arg.get("where"), str) else None
+    if not m:
+        return arg
+    n = int(m[1])
+    pins = [r["pin"] for r in (prior[n]["renders"] if n < len(prior) else []) if isinstance(r.get("pin"), dict)]
+    qs = [p["rows"] if "rows" in p else (p.get("chart") or p.get("kpi") or {}).get("query") for p in pins]
+    qs = [q for q in qs if isinstance(q, dict)]
+    if not qs:
+        raise NoTurn(f"turn {n} has no query to be the same as")
+    return dict(arg, where=qs[-1].get("where") or [])
+
+
+def _failed(checks: dict, got: dict, prior: list[dict], now: float) -> list[str]:
+    out = []
+    for name, arg in checks.items():
+        if arg is False:
+            continue
+        try:
+            arg = resolve_arg(arg, prior) if name in ("query_uses", "chart_source") else arg
+        except NoTurn:
+            out.append(name)
+            continue
+        if not check(name, arg, got, now):
+            out.append(name)
+    return out
+
+
+def judge(case: dict, got: dict, now: float) -> tuple[list[str], list[dict]]:
+    """(failed, turns): each turn judged on its slice while every earlier turn passed; case checks with the last."""
+    raw = case["turns"] if "turns" in case else [case["prompt"]]
+    per, failed, turns = got.get("per_turn", []), [], []
+    for i, t in enumerate(raw):
+        if turns and turns[-1]["status"] != "pass":
+            turns.append({"index": i, "status": "not_reached", "failed": []})
+            continue
+        if i >= len(per):  # the wire broke before this turn ended
+            bad = [f"error: {got['error']}"]
+            failed += bad
+        else:
+            own = _failed(t.get("checks") or {} if isinstance(t, dict) else {}, per[i], per[:i], now)
+            whole = _failed(case.get("checks", {}), got, per, now) if i == len(raw) - 1 else []
+            bad = whole + own
+            failed += whole + [f"turn {i}: {x}" for x in own]
+        turns.append({"index": i, "status": "fail" if bad else "pass", "failed": bad})
+    return failed, turns
+
+
+def depth(turns: list[dict]) -> int:
+    return next((i for i, t in enumerate(turns) if t["status"] != "pass"), len(turns))
+
+
 def score(case: dict, got: dict, now: float) -> list[str]:
-    if got["error"]:
-        return [f"error: {got['error']}"]
-    return [name for name, arg in case.get("checks", {}).items() if arg is not False and not check(name, arg, got, now)]
+    return judge(case, got, now)[0]
 
 
 # ── provenance: a run says which weights answered (nos-assay keeps runs as evidence) ──
@@ -484,13 +588,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--timeout", type=float, default=180.0, help="seconds without a line before a case fails")
     ap.add_argument("--repeat", type=int, default=1, help="run each case N times; a majority of passing runs passes")
-    ap.add_argument("--seed", action="store_true", help="create the iris-bench-2 tables once (writes KEAP; NOS_LIVE=1)")
+    ap.add_argument("--seed", action="store_true",
+                    help="create the iris-bench-2 tables, or with --domain the domain's tables, once (writes KEAP; NOS_LIVE=1)")
     a = ap.parse_args(argv)
     if a.seed:
         if os.environ.get("NOS_LIVE") != "1":
             print("--seed writes a KEAP table; set NOS_LIVE=1.", file=sys.stderr)
             return 2
-        return seed()
+        return seed_domain(a.domain) if a.domain else seed()
     if not (os.environ.get("NOS_LIVE") == "1" or (a.offline and a.sock)):
         print("iris-bench talks to the live thalamus (a model, KEAP, the ledger); set NOS_LIVE=1, "
               "or pass --offline with an explicit --sock for a fake.", file=sys.stderr)
@@ -504,11 +609,11 @@ def main(argv: list[str] | None = None) -> int:
         for _ in range(n):
             t0 = time.monotonic()
             got = run_case(case, sock, float(case.get("timeout", a.timeout)))
-            failed = score(case, got, time.time())
-            runs.append((got, failed, round(time.monotonic() - t0, 2), bool(failed) and no_data(case, got)))
-        passes = sum(1 for _, f, _, _ in runs if not f)
-        got, failed, _, _ = next((r for r in runs if r[1] and not r[3]), runs[-1])
-        results.append({"id": case["id"], "runs": n, "passes": passes, "pass": passes * 2 > n,
+            failed, turns = judge(case, got, time.time())
+            runs.append((got, failed, round(time.monotonic() - t0, 2), bool(failed) and no_data(case, got), turns))
+        passes = sum(1 for r in runs if not r[1])
+        got, failed, _, _, turns = next((r for r in runs if r[1] and not r[3]), runs[-1])
+        results.append({"id": case["id"], "kind": case.get("kind"), "turns": turns, "depth": depth(turns), "runs": n, "passes": passes, "pass": passes * 2 > n,
                         "no_data": all(r[3] for r in runs), "failed": [] if passes * 2 > n else failed,
                         "seconds": round(sum(r[2] for r in runs) / n, 2), "model_uri": got["model_uri"], "tools": got["tools"],
                         "approvals_rejected": sum(len(r[0]["approvals"]) for r in runs), "refused": got["refused"],
@@ -526,7 +631,8 @@ def main(argv: list[str] | None = None) -> int:
         word = "PASS" if r["pass"] else "NO-DATA" if r["no_data"] else "FAIL"
         print(f"{word:<7} {r['id']:<18} {r['passes']}/{r['runs']} {r['seconds']:>7.2f}s  {', '.join(r['failed'])}")
     judged = [r for r in results if not r["no_data"]]
-    print(f"{sum(r['pass'] for r in judged)}/{len(judged)} passed ({len(results) - len(judged)} NO-DATA) · "
+    mean = sum(r["depth"] for r in judged) / len(judged) if judged else 0.0
+    print(f"{sum(r['pass'] for r in judged)}/{len(judged)} passed ({len(results) - len(judged)} NO-DATA) · mean depth {mean:.2f} · "
           f"{', '.join(run['model_uri']) or 'no model_uri'} · {out}")
     return 0 if all(r["pass"] for r in judged) else 1
 
