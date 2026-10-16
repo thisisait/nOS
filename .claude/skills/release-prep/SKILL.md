@@ -46,8 +46,9 @@ decision for the operator, not a default.
      newest blank converge (`nos --remove=data --confirm`, then `nos`) and its
      `nos-smoke --strict` result. None since the last release → BLOCKER; the
      operator runs it (destructive), the skill only asks and reads the result.
-     No reader records blanks yet (roadmap row `blank-run-record`): name the source
-     you used (a RELEASE.md line, the operator's word) and say it is not a reader.
+     Read it from `tools/estate-status.py` (the BLANK axis, `~/.nos/blank-runs.jsonl`);
+     UNKNOWN there means no blank was recorded since the record existed (2026-10-16) -
+     then name the source you used (a RELEASE.md line, the operator's word).
    - `tools/red-status.py`: every red line is either fixed, owned by a roadmap row,
      or written as a hidden fee (step 3). UNKNOWN is not green.
 2. **Roadmap revision.** `tools/roadmap-status.py --status active,next,blocked`
