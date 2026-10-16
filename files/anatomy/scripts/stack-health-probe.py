@@ -327,17 +327,30 @@ def dump_unready_logs(stacks: list[str], tail: int = 80) -> int:
     """
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pulse"))
     from pulse.redact import scrub_text
+    def _run(argv: list[str]) -> str:
+        try:
+            out = subprocess.run([DOCKER, *argv], capture_output=True, text=True, timeout=20)
+            return (out.stdout or "") + (out.stderr or "")
+        except Exception as exc:
+            return f"(docker {argv[0]} failed: {exc})"
+
     for stack in stacks:
         for name, status in _docker_ps(stack):
-            if _classify(status) == "ready":
+            # A crash loop can be Up at the last tick (CI 38881421960:
+            # woodpecker-server), so a restarted container is dumped too.
+            restarts, exit_code, oom, started = (
+                _run(["inspect", "-f", "{{.RestartCount}}|{{.State.ExitCode}}|"
+                      "{{.State.OOMKilled}}|{{.State.StartedAt}}", name]).strip().split("|") + ["", "", "", ""])[:4]
+            restarted = restarts.isdigit() and int(restarts) > 0
+            if _classify(status) == "ready" and not restarted:
                 continue
-            print(f"===== {name} [{status}] — docker logs --tail {tail} =====")
-            try:
-                out = subprocess.run([DOCKER, "logs", "--tail", str(tail), name],
-                                     capture_output=True, text=True, timeout=20)
-                print(scrub_text((out.stdout or "") + (out.stderr or "")).rstrip() or "(no output)")
-            except Exception as exc:
-                print(f"(docker logs failed: {exc})")
+            print(f"===== {name} [{status}] restarts={restarts or '?'} exit={exit_code or '?'} "
+                  f"oom={oom or '?'} — docker logs --tail {tail} =====")
+            print(scrub_text(_run(["logs", "--tail", str(tail), name])).rstrip() or "(no output)")
+            if restarted and started:
+                print(f"----- {name} run before {started} — docker logs --until {started} --tail 40 -----")
+                print(scrub_text(_run(["logs", "--until", started, "--tail", "40", name])).rstrip()
+                      or "(no output)")
     return 0
 
 
