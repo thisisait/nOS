@@ -52,7 +52,7 @@ artifact: state/anatomy-graph.json
 # file as AMENDED AFTER SIGNING and asks for a fresh signature. To re-sign:
 #   python3 tools/apex-sign.py            # prints the diff since the last sign
 #   python3 tools/apex-sign.py --confirm  # writes the new digest
-signed_digest: 740f5c5a39113304c41edc1207a748fa7e84acfee2ebbf7693f3907b7c093a0e
+signed_digest: 54d8ffcbe40dafb1340af45d8be542f2bd3c83dc296e91168b1b05a2568be34e
 
 
 # The declared split. The gate recounts the table below and refuses to run

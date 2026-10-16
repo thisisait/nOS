@@ -3,15 +3,15 @@
     {
       "n": 1,
       "doc": "alfa-002",
-      "degrade": "clean",
+      "degrade": "shadow",
       "seed": 1,
       "reason": "thinnest cell (1 prior visit(s))",
-      "wall_clock_s": 132.1,
+      "wall_clock_s": 114.2,
       "book_owner": "synthetic-client-alfa",
-      "accuracy": 1.0,
-      "verdict": "approve",
+      "accuracy": 0.9,
+      "verdict": "reject",
       "queued": true,
-      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-002.clean.1.jpg",
+      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-002.shadow.1.jpg",
       "fields": {
         "id": true,
         "issue": true,
@@ -21,37 +21,37 @@
         "net": true,
         "vat": true,
         "seller.ico": true,
-        "buyer.ico": true,
+        "buyer.ico": false,
         "rates": true
       },
       "absorb_rc": 0,
       "books": {
         "booked": 1,
-        "identity_ok": true,
-        "balanced": true,
+        "identity_ok": null,
+        "balanced": null,
         "slugs": [
           "invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002"
         ],
-        "ok": true,
-        "detail": ""
+        "ok": false,
+        "detail": "a rejected document reached the books"
       },
-      "ok": true,
-      "detail": "",
+      "ok": false,
+      "detail": "a rejected document reached the books",
       "created": [],
       "teardown": "deleted 1 \u00b7 retained 0 \u00b7 absent 0"
     },
     {
       "n": 2,
       "doc": "alfa-002",
-      "degrade": "crumple",
+      "degrade": "skew",
       "seed": 2,
       "reason": "thinnest cell (1 prior visit(s))",
-      "wall_clock_s": 105.2,
+      "wall_clock_s": 123.8,
       "book_owner": "synthetic-client-alfa",
       "accuracy": 1.0,
       "verdict": "approve",
       "queued": true,
-      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-002.crumple.2.jpg",
+      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-002.skew.2.jpg",
       "fields": {
         "id": true,
         "issue": true,
@@ -83,15 +83,15 @@
     {
       "n": 3,
       "doc": "alfa-002",
-      "degrade": "jpeg",
+      "degrade": "stains",
       "seed": 3,
       "reason": "thinnest cell (1 prior visit(s))",
-      "wall_clock_s": 108.7,
+      "wall_clock_s": 113.3,
       "book_owner": "synthetic-client-alfa",
       "accuracy": 1.0,
       "verdict": "approve",
       "queued": true,
-      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-002.jpeg.3.jpg",
+      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-002.stains.3.jpg",
       "fields": {
         "id": true,
         "issue": true,
@@ -122,16 +122,16 @@
     },
     {
       "n": 4,
-      "doc": "alfa-002",
-      "degrade": "lowres",
+      "doc": "beta-001",
+      "degrade": "clean",
       "seed": 4,
       "reason": "thinnest cell (1 prior visit(s))",
-      "wall_clock_s": 113.3,
-      "book_owner": "synthetic-client-alfa",
+      "wall_clock_s": 145.4,
+      "book_owner": "synthetic-client-beta",
       "accuracy": 1.0,
       "verdict": "approve",
       "queued": true,
-      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-002.lowres.4.jpg",
+      "source_path": "inbox/accounting/synthetic-client-beta/processed/beta-001.clean.4.jpg",
       "fields": {
         "id": true,
         "issue": true,
@@ -150,7 +150,7 @@
         "identity_ok": true,
         "balanced": true,
         "slugs": [
-          "invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002"
+          "invoice-synthetic-client-beta-synthetic-client-beta-2026-beta-001"
         ],
         "ok": true,
         "detail": ""
@@ -161,8 +161,49 @@
       "teardown": "deleted 1 \u00b7 retained 0 \u00b7 absent 0"
     }
   ],
-  "held": 4,
-  "findings": [],
+  "held": 3,
+  "findings": [
+    {
+      "n": 1,
+      "doc": "alfa-002",
+      "degrade": "shadow",
+      "seed": 1,
+      "reason": "thinnest cell (1 prior visit(s))",
+      "wall_clock_s": 114.2,
+      "book_owner": "synthetic-client-alfa",
+      "accuracy": 0.9,
+      "verdict": "reject",
+      "queued": true,
+      "source_path": "inbox/accounting/synthetic-client-alfa/processed/alfa-002.shadow.1.jpg",
+      "fields": {
+        "id": true,
+        "issue": true,
+        "due": true,
+        "currency": true,
+        "payable": true,
+        "net": true,
+        "vat": true,
+        "seller.ico": true,
+        "buyer.ico": false,
+        "rates": true
+      },
+      "absorb_rc": 0,
+      "books": {
+        "booked": 1,
+        "identity_ok": null,
+        "balanced": null,
+        "slugs": [
+          "invoice-synthetic-client-alfa-synthetic-alfa-vendor-2026-alfa-002"
+        ],
+        "ok": false,
+        "detail": "a rejected document reached the books"
+      },
+      "ok": false,
+      "detail": "a rejected document reached the books",
+      "created": [],
+      "teardown": "deleted 1 \u00b7 retained 0 \u00b7 absent 0"
+    }
+  ],
   "could_not_run": [],
   "coverage_cells": 42,
   "cells_visited": 42
