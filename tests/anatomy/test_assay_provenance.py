@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-D9 = "d63f830f28d515fefea546f213fca7a75e9dd5176ef51a6deabc952d1c99a911"
+D9 = "9" * 64  # a digest shape, never a real one (test_a_fixture_is_never_a_real_secret)
 
 
 def _load(name, path):
