@@ -170,6 +170,9 @@ final class Runner
 	 */
 	private ?string $servedByUri = null;
 
+	/** The model that answered the last call; null until one has. */
+	private ?string $answeredBy = null;
+
 	/** The binding serving THIS session, so the fallback can be held to it. */
 	private ?\App\AgentKit\LLMClient\Binding $activeBinding = null;
 
@@ -259,6 +262,7 @@ final class Runner
 		$llm = $this->llmFactory->fromUri($decision->uri ?? $agent->modelPrimaryUri, $decision->binding);
 		$this->activeBinding = $decision->binding;
 		$this->servedByUri = null;
+		$this->answeredBy = null;
 		$this->sessionTokensIn = 0;
 		$this->sessionTokensOut = 0;
 		$this->sessionLargestCall = 0;
@@ -1116,12 +1120,14 @@ final class Runner
 		$lastTransient = null;
 		foreach (self::TRANSIENT_RETRY_DELAYS_S as $delay) {
 			try {
-				return $llm->send(
-					$agent->systemPrompt ?? '',
+				$response = $llm->send(
+					$this->systemFor($agent, $llm->identifier(), 'fallback'),
 					$conversation,
 					$toolSchemas,
 					$agent->maxOutputTokens,
 				);
+				$this->answered($agent, $llm->identifier(), 'fallback', 'primary_answered');
+				return $response;
 			} catch (LLMTransientError $exc) {
 				$lastTransient = $exc;
 				$attempt++;
@@ -1378,7 +1384,6 @@ final class Runner
 				previous: $cause ?? $e,
 			);
 		}
-		$from = $this->servedByUri ?? ($this->fallbackContext['primary'] ?? $agent->modelPrimaryUri);
 		$this->servedByUri = $fallback->identifier();
 		$ctx = $this->fallbackContext ?? [];
 
@@ -1399,31 +1404,44 @@ final class Runner
 			],
 			traceId: $ctx['trace_id'] ?? null,
 		);
-		// The session's model changed (ruling 2026-10-16). Once per change: a
-		// later call the same fallback serves again is not a second rebind.
-		if ($from !== $this->servedByUri) {
-			$this->audit->emit(
-				type: 'agent_session_rebind',
-				actorActionId: $ctx['session_uuid'] ?? null,
-				actorId: $ctx['actor_id'] ?? ('agent:' . $agent->name),
-				task: "agent:{$agent->name}",
-				result: [
-					'from_model_uri' => $from,
-					'to_model_uri' => $this->servedByUri,
-					'by' => 'fallback',
-					'reason' => $reason,
-				],
-				traceId: $ctx['trace_id'] ?? null,
-			);
-		}
 
-		return $fallback->send(
-			$agent->systemPrompt ?? '',
+		$response = $fallback->send(
+			$this->systemFor($agent, $this->servedByUri, 'fallback'),
 			$conversation,
 			$toolSchemas,
 			// The SAME cap as the primary. A fallback that silently writes
 			// less would make a truncated answer look like a shorter one.
 			$agent->maxOutputTokens,
+		);
+		$this->answered($agent, $this->servedByUri, 'fallback', $reason);
+		return $response;
+	}
+
+	/** The system prompt, plus the rebind line when $to is not the model that answered last (ruling 2026-10-16). */
+	private function systemFor(Agent $agent, string $to, string $by): string
+	{
+		$from = $this->answeredBy;
+		$system = $agent->systemPrompt ?? '';
+		return $from === null || $from === $to ? $system
+			: "{$system}\n\nThis session moved from {$from} to {$to} ({$by}); earlier turns were answered by {$from}.";
+	}
+
+	/** $uri answered: a change of answerer is one agent_session_rebind, a repeat is none. */
+	private function answered(Agent $agent, string $uri, string $by, string $reason): void
+	{
+		$from = $this->answeredBy ?? ($this->fallbackContext['primary'] ?? $agent->modelPrimaryUri);
+		$this->answeredBy = $uri;
+		if ($from === $uri) {
+			return;
+		}
+		$ctx = $this->fallbackContext ?? [];
+		$this->audit->emit(
+			type: 'agent_session_rebind',
+			actorActionId: $ctx['session_uuid'] ?? null,
+			actorId: $ctx['actor_id'] ?? ('agent:' . $agent->name),
+			task: "agent:{$agent->name}",
+			result: ['from_model_uri' => $from, 'to_model_uri' => $uri, 'by' => $by, 'reason' => $reason],
+			traceId: $ctx['trace_id'] ?? null,
 		);
 	}
 
