@@ -15,8 +15,8 @@
 	import { SETTLE_MS, eye, look, step, type Input } from './eye';
 	import Message from './Message.svelte';
 	import { asked, closed, composerOpen, decide, empty, seen, type Decision } from './approvals';
-	import { forCommand } from './scope';
-	import type { DashboardProps, Link, ToShell, ToThalamus, WidgetSpec } from './wire';
+	import { forCommand, rewall } from './scope';
+	import type { DashboardProps, Link, Scope, ToShell, ToThalamus, WidgetSpec } from './wire';
 	import { route, submit, type Widgets } from './widgets';
 	import WorkspaceView from './Workspace.svelte';
 	import * as ws from './workspace';
@@ -44,6 +44,8 @@
 	let session: string | null = $state(null);
 	// Whom the person works for, as serve said it (working_for); null is no wall.
 	let scope: string | null = $state(null);
+	// What the person last set; said again on a new link, whose serve starts with no wall.
+	let want: Scope | null = null;
 	let draft = $state('');
 	let column: HTMLElement | undefined = $state();
 	let ey = $state(eye());
@@ -133,7 +135,12 @@
 			widgets = route(widgets, { t: 'refused', reason: `not sent: ${e}`, widget }, Date.now()) ?? widgets;
 		}
 	}
-	const sendAll = (ms: ToThalamus[]) => ms.forEach((m) => m.t === 'widget' && wire(m, m.widget));
+	const sendAll = (ms: ToThalamus[]) =>
+		ms.forEach((m) =>
+			m.t === 'widget'
+				? wire(m, m.widget)
+				: m.t === 'working_for' && tauri?.core.invoke('send', { msg: m }).catch((e) => push({ note: `the scope was not said again: ${e}` }))
+		);
 
 	// The submit is the person's decision (genui Q1); the reducer sends it once while in flight.
 	function submitted(m: { form: string; widget: string; values: Record<string, string | number | boolean> }) {
@@ -235,7 +242,13 @@
 			tauri.event.listen<ToShell>('to_shell', ({ payload }) => {
 				see({ e: 'wire', msg: payload });
 				if (payload.t === 'session') session = payload.session;
-				if (payload.t === 'working_for') scope = payload.scope === 'all' ? null : payload.name;
+				if (payload.t === 'working_for') {
+					scope = payload.scope === 'all' ? null : payload.name;
+					want = payload.scope === 'all' ? null : payload.scope;
+					const r = rewall(want, layout, 'working_for');
+					widgets = r.w ?? widgets;
+					sendAll(r.send);
+				}
 				// A write landed: the active tab re-runs what read that table, the others go stale.
 				if (payload.t === 'table_changed') {
 					const r = ws.onTableChanged(layout, widgets, payload.table);
@@ -270,11 +283,13 @@
 				see({ e: 'link', state: payload.state });
 				// Connected: the active tab's widgets run as restore; the others when their tab is shown.
 				if (payload.state === 'connected') {
-					const r = ws.restore(layout);
-					widgets = r.w;
+					const r = rewall(want, layout, 'connected');
+					widgets = r.w ?? widgets;
 					sendAll(r.send);
 					return;
 				}
+				// No link, no wall: the chip waits for serve to say it again.
+				scope = null;
 				const r = closed(q);
 				q = r.q;
 				// The session is gone, and its choices with it.
