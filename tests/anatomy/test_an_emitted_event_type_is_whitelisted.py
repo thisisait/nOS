@@ -122,3 +122,15 @@ def test_every_emitted_type_is_in_bones_whitelist():
         "event type(s) emitted but absent from Bone's VALID_TYPES:\n  "
         + "\n  ".join(f"{t} — emitted by {', '.join(w)}" for t, w in offenders.items())
     )
+
+
+def test_a_dotted_type_missing_from_a_mirror_is_caught(tmp_path):
+    """Synthetic fixture: the patterns once stopped at `.`, so `scan.batch_done`
+    was seen neither as emitted nor as listed (7 dotted types slipped, I-8)."""
+    php = "$this->audit->emit(type: 'scan.batch_done', payload: []);\n->emit('app.deployed');"
+    emitted = {m.group(1) for p in (EMIT_NAMED, EMIT_POSITIONAL) for m in p.finditer(php)}
+    mirror = tmp_path / "events.py"
+    mirror.write_text('VALID_TYPES = {\n    "app.deployed",  # a.b\n}\n')
+    assert emitted == {"scan.batch_done", "app.deployed"}
+    assert _whitelist(mirror) == {"app.deployed"}
+    assert emitted - _whitelist(mirror) == {"scan.batch_done"}
