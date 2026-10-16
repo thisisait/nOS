@@ -209,11 +209,14 @@
 # the same vhosts. Gate: tests/anatomy/test_a_roaming_host_answers_the_tailnet.py.
 - name: "[dnsmasq] Tailnet: read this host's Tailscale IPv4"
   ansible.builtin.shell: |
+    set -o pipefail
     for c in "$(command -v tailscale 2>/dev/null)" {{ _ts_candidates | default([homebrew_prefix ~ '/bin/tailscale',
         '/usr/local/bin/tailscale', '/Applications/Tailscale.app/Contents/MacOS/Tailscale']) | map('quote') | join(' ') }}; do
       if [ -n "$c" ] && [ -x "$c" ]; then exec "$c" ip -4; fi
     done
     exit 1
+  args:
+    executable: /bin/bash
   register: _dnsmasq_ts_raw
   changed_when: false
   failed_when: false
