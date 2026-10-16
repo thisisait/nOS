@@ -20,10 +20,7 @@
   changed_when: false
   failed_when: restic_which.rc != 0
 
-- name: "[Backup] Verify restic_repo is configured"
-  ansible.builtin.fail:
-    msg: "restic_repo is empty — set it in config.yml (e.g., /Volumes/Backup/restic, s3:endpoint/bucket, sftp:user@host:/path)"
-  when: restic_repo | default('') | length == 0
+# An empty restic_repo is refused in main.yml's preflight (one place for the rule).
 
 # Fail fast if a mirror source is missing: `restic backup <missing-path>` exits
 # rc=1 (FATAL, outside the tolerated [0,3]) and aborts the play with an opaque
