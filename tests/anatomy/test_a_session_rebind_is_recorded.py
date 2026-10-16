@@ -81,9 +81,11 @@ foreach (json_decode($argv[1], true) as $plan) {
         $this->fallbackContext = ['session_uuid' => 's', 'primary' => 'a-primary'];
     })->call($r);
     $heard = [];
-    foreach ($plan as $_) {
+    foreach ($plan as $step) {
         $na = count($a->heard); $nb = count($b->heard);
-        (fn () => $this->callWithRetry($agent, $a, [], []))->call($r);
+        $step === 'synth'
+            ? (function () use ($agent, $a) { $i = $o = 0; $this->synthesiseUnderCeiling($agent, $a, [], 's', 'x', 't', $i, $o); })->call($r)
+            : (fn () => $this->callWithRetry($agent, $a, [], []))->call($r);
         $heard[] = count($a->heard) > $na ? end($a->heard) : end($b->heard);
     }
     $out[] = $heard;
@@ -114,3 +116,16 @@ def test_every_wing_switch_is_one_rebind_and_one_line(tmp_path):
     assert moves == [("a-primary", "b-fallback", "fallback"), ("b-fallback", "a-primary", "fallback"),
                      ("a-primary", "b-fallback", "fallback"), ("a-primary", "b-fallback", "fallback")]
     assert all(e["reason"] for e in got["rebinds"])
+
+
+@pytest.mark.skipif(shutil.which("php") is None, reason="php not installed on this runner")
+def test_the_ceiling_wrap_up_is_a_switch_too(tmp_path):
+    """The wrap-up at a ceiling goes to the primary client; after a fallback
+    answered, that is a move back, recorded and said like any other."""
+    script = tmp_path / "h.php"
+    script.write_text(HARNESS.replace("WING", repr(str(REPO / "files/anatomy/wing"))))
+    got = json.loads(subprocess.run(["php", str(script), json.dumps([["ok", "fail", "synth"]])],
+                                    capture_output=True, text=True, check=True).stdout)
+    assert got["heard"][0][2] == f"SYS\n\n{_line('b-fallback', 'a-primary')}"
+    assert [(e["from_model_uri"], e["to_model_uri"]) for e in got["rebinds"]] == [
+        ("a-primary", "b-fallback"), ("b-fallback", "a-primary")]
