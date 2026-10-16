@@ -2,6 +2,20 @@
 # (tests/anatomy/test_llm_cell_requirement.py). Both read the REAL register; `cell:` reads the real cell.
 # expect.kind: default | disarmed | bound | refused; `model_id` for bound, `backend` for disarmed,
 # `contains` a fragment of the refusal. A `nos:<var>` env key is the cell's key, as main.rs answers it.
+# `sizes:` judge a bound local model against `floors` (llm_cell_min_params_b refuses,
+# llm_cell_recommended_params_b warns; tests/anatomy/test_on_host_models.py pins them to the defaults).
+floors: {min_b: 3, warn_b: 8}
+sizes:
+  - {model: "hermes3:8b", expect: silent}
+  - {model: "qwen3:14b-q4_K_M", expect: silent}
+  - {model: "qwen3:4b", expect: warned, contains: "'qwen3:4b' has 4B parameters, below the 8B recommended"}
+  - {model: "llama3.2:3b", expect: warned, contains: "below the 8B recommended"}
+  - {model: "phi3:3.8b", expect: warned, contains: "3.8B parameters"}
+  - {model: "qwen3:1.7b", expect: refused, contains: "'qwen3:1.7b' has 1.7B parameters, below the 3B minimum"}
+  - {model: "gemma3:270m", expect: refused, contains: "0.27B parameters"}
+  - {model: "qwen3:latest", expect: refused, contains: "the size of 'qwen3:latest' is UNKNOWN"}
+  - {model: "gemma3n:e2b", expect: refused, contains: "UNKNOWN"}
+  - {model: "", expect: refused, contains: "UNKNOWN"}
 cases:
   - name: an armed local cell binds the local model
     agent: "name: loc\nmodel: {primary: openai-local-sonnet, backend: ollama}\ngdpr: {processors: [{name: on-device}], transfers_outside_eu: false}\n"

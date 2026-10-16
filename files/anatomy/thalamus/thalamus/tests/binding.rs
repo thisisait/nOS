@@ -2,7 +2,7 @@
 //! register (state/habitat/llm-backends.yml) and the real iris cell — never a copy.
 
 use std::path::{Path, PathBuf};
-use thalamus::binding::{decide, resolve, Decision};
+use thalamus::binding::{decide, resolve, size_floor, Decision};
 
 fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../..")
@@ -205,5 +205,24 @@ fn a_local_binding_carries_a_low_temperature_a_cloud_one_none() {
     match resolve(&repo(), "iris", env(EU)).unwrap() {
         Decision::Bound(b) => assert_eq!(b.temperature, None, "the cloud row keeps its own default"),
         d => panic!("{d:?}"),
+    }
+}
+
+/// tests/binding-cases.yml `sizes:` — the floors tools/nos_cell_binding.py and job_readiness.py also judge.
+#[test]
+fn binding_judges_size_like_the_shared_cases() {
+    use serde_yaml_ng::Value;
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/binding-cases.yml");
+    let doc: Value = serde_yaml_ng::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    let floor = |k: &str| doc["floors"][k].as_f64().unwrap();
+    for case in doc["sizes"].as_sequence().unwrap() {
+        let s = |k: &str| case.get(k).and_then(Value::as_str).unwrap_or_default().to_string();
+        let (got, text) = match size_floor(&s("model"), floor("min_b"), floor("warn_b")) {
+            Err(why) => ("refused", why),
+            Ok(Some(warn)) => ("warned", warn),
+            Ok(None) => ("silent", String::new()),
+        };
+        assert_eq!(got, s("expect"), "{}: {text}", s("model"));
+        assert!(text.contains(&s("contains")), "{}: {text}", s("model"));
     }
 }
