@@ -257,6 +257,7 @@
       - { var: maps_cache_dir, level: never, why: "under artifact_cache_dir — the Planetiler base map takes ~10 min and GBs of downloads to rebuild" }
       - { var: calibreweb_books_dir, level: all, why: "user content — the tenant's shared library is SOURCE, not derived state" }
       - { var: erpnext_data_dir, level: all, why: "P0.1: sites live in a named volume (compose down -v); the var only names site_config.json" }
+      - { var: backup_staging_dir, level: all, why: "under ~/backups: the plaintext dumps the pre-wipe snapshot reads" }
       - { var: node_exporter_textfile_dir, level: all, why: "under ~/.nos, the runtime side-car; blank keeps it, uninstall takes it" }
       - { var: jellyfin_movies_dir, level: never, why: "operator media library under ~/media — never nOS-owned" }
       - { var: jellyfin_shows_dir, level: never, why: "operator media library under ~/media — never nOS-owned" }
