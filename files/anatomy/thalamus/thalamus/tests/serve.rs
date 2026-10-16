@@ -5301,3 +5301,34 @@ fn a_pick_is_recorded_and_the_next_turn_uses_it() {
     let uri: String = db.query_row("SELECT model_uri FROM sessions WHERE uuid = ?1", [&session], |r| r.get(0)).unwrap();
     assert_eq!(uri, "mistral-eu-mistral-large-latest", "the session row names the model it now uses");
 }
+
+#[test]
+fn a_pick_is_a_session_rebind_the_next_request_hears_once() {
+    let rig = picker("mrebind", picks_of("iris", BOTH), vec![PULLED.into(), answer("ahoj"), answer("znovu")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ToShell::ModelOptions { session, .. } = said_to(&s, &mut r, pick("mistral-eu", "mistral-large-latest")) else { panic!("pick not taken") };
+    turn(&s, &mut r, Some(session.clone()), "hi");
+    turn(&s, &mut r, Some(session.clone()), "again");
+    drop((s, r));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let rec = events(&rig.ledger, &session).into_iter().find(|e| e.0 == "agent_session_rebind").expect("the pick is a rebind event");
+    let from = rec.2["from_model_uri"].as_str().expect("from_model_uri").to_string();
+    assert_eq!((&rec.2["to_model_uri"], &rec.2["by"]), (&serde_json::json!("mistral-eu-mistral-large-latest"), &serde_json::json!("person")));
+    assert!(rec.2["reason"].is_string() && from != "mistral-eu-mistral-large-latest", "{rec:?}");
+    let line = format!("This session moved from {from} to mistral-eu-mistral-large-latest (person); earlier turns were answered by {from}.");
+    let bodies = rig.model.lock().unwrap().iter().filter(|(h, _)| h.starts_with("POST")).map(|(_, b)| b.clone()).collect::<Vec<_>>();
+    assert_eq!(bodies.len(), 2, "two turns, two requests");
+    let heard: Vec<usize> = bodies.iter().map(|b| b.matches(&line).count()).collect();
+    assert_eq!(heard, [1, 0], "the first request after the rebind says it once, the next does not");
+}
+
+#[test]
+fn no_rebind_no_moved_line() {
+    let rig = picker("mnorebind", picks_of("iris", BOTH), vec![answer("ahoj")]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    turn(&s, &mut r, None, "hi");
+    let (_, body) = rig.model.lock().unwrap().last().cloned().unwrap();
+    assert!(!body.contains("This session moved"), "no rebind, no line");
+}
