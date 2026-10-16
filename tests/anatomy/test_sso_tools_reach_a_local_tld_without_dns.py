@@ -2,7 +2,7 @@
 
 2026-10-01 Linux wet-test: every account walk failed with NameResolutionError
 for auth.dev.local — Linux has no /etc/resolver, the edge listens on 127.0.0.1.
-nos-smoke already retried that way; tools/nos_sso.py now does too (--insecure).
+nos-smoke already retried that way; tools/nos_sso.py now does too (--local-tld).
 """
 import http.server
 import sys
@@ -48,4 +48,4 @@ def test_both_sso_tools_arm_it_for_local_tlds():
     root = Path(__file__).resolve().parents[2] / "tools"
     for tool in ("nos-first-login.py", "woodpecker-token.py"):
         src = (root / tool).read_text()
-        assert "if a.insecure:" in src and "loopback_for_unresolvable()" in src, tool
+        assert "if a.local_tld:" in src and "loopback_for_unresolvable()" in src, tool
