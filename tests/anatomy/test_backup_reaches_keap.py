@@ -89,7 +89,8 @@ def test_keap_backup_does_not_use_vacuum_into():
 
 
 def test_keap_container_is_configurable():
-    d = yaml.safe_load(BACKUP_DEFAULTS.read_text())
+    # Declared in default.config.yml since 2026-10-16 (the direct restic path reads it too).
+    d = {**yaml.safe_load(BACKUP_DEFAULTS.read_text()), **yaml.safe_load((REPO / "default.config.yml").read_text())}
     assert "backup_keap_container" in d
     assert "backup_keap_db_container_path" in d
 

@@ -304,12 +304,13 @@ def test_tofu_state_backup_defaults_declared():
     repo's terraform/authentik dir. NOTE the default.config.yml shadow trap:
     backup_* vars there WIN over role defaults — if someone later shadows
     backup_tofu_state_dir, it must still target terraform/authentik."""
-    text = BACKUP_DEFAULTS.read_text()
+    # Declared in the default layers since 2026-10-16: the direct restic path reads it too.
+    text = BACKUP_DEFAULTS.read_text() + "\n" + ni.default_config_text()
     assert re.search(r"^backup_tofu_state:", text, re.M), (
-        "backup_tofu_state toggle missing from pazny.backup defaults"
+        "backup_tofu_state toggle missing from pazny.backup defaults / default layers"
     )
     m = re.search(r'^backup_tofu_state_dir:\s*"([^"]+)"', text, re.M)
-    assert m, "backup_tofu_state_dir not declared in pazny.backup defaults"
+    assert m, "backup_tofu_state_dir not declared in pazny.backup defaults / default layers"
     assert m.group(1).endswith("/terraform/authentik"), (
         f"backup_tofu_state_dir must point at terraform/authentik, got: {m.group(1)}"
     )
