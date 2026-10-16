@@ -167,16 +167,16 @@ def test_the_reconciler_adds_the_plan_to_a_daemon_that_predates_it(tmp_path: Pat
 
 
 def test_the_dir_arrays_render_in_lockstep() -> None:
-    """DIR_NAMES / DIR_PATHS / DIR_EMPTY_OK are parallel bash arrays indexed by
-    one `i`; a filter applied to one and not the others silently pairs a name
-    with the wrong path or verdict. Rendered with the gitlab skip active."""
+    """DIR_NAMES / DIR_PATHS / DIR_EMPTY_OK / DIR_ENABLED are parallel bash
+    arrays indexed by one `i`; a filter applied to one and not the others
+    silently pairs a name with the wrong path or verdict. gitlab's flag is off."""
     import subprocess
     env = _env()
     env.globals["lookup"] = lambda kind, name, default=False: {"install_gitlab": False}.get(name, True)
     text = env.from_string(BACKUP.read_text(encoding="utf-8")).render(
         backup_dirs_to_dump=[
             {"name": "gitea", "path": "/g", "flag": "install_gitea"},
-            {"name": "gitlab", "path": "/gl", "flag": "install_gitlab"},   # skipped: flag off
+            {"name": "gitlab", "path": "/gl", "flag": "install_gitlab"},   # off: still rendered
             {"name": "outline", "path": "/o", "empty_ok": True},
         ],
         backup_encryption_enabled=False, backup_overwrite_same_day=True,
@@ -184,38 +184,48 @@ def test_the_dir_arrays_render_in_lockstep() -> None:
     )
     defs = text.rsplit('\nmain "$@"', 1)[0]
     out = subprocess.run(["bash", "-c", defs + '\necho "${#DIR_NAMES[@]} ${#DIR_PATHS[@]} ${#DIR_EMPTY_OK[@]} '
-                          '${DIR_NAMES[1]} ${DIR_PATHS[1]} ${DIR_EMPTY_OK[1]}"'],
+                          '${#DIR_ENABLED[@]} ${DIR_NAMES[1]} ${DIR_PATHS[1]} ${DIR_ENABLED[1]} ${DIR_EMPTY_OK[2]}"'],
                          capture_output=True, text=True, check=True).stdout.split()
-    assert out == ["2", "2", "2", "outline", "/o", "true"], out
+    assert out == ["3", "3", "3", "3", "gitlab", "/gl", "false", "true"], out
 
 
-def test_an_off_service_dir_is_not_in_the_set(tmp_path) -> None:
-    """2026-10-16 (supersedes review 2026-10-04): an off service is not
-    installed, so its dir is neither backed up nor reported, present or not —
-    external-storage.yml pre-creates it empty and it FAILED nightly. On + absent
-    stays FAILED. Runs the real run_dirs loop with tar/S3 stubbed out."""
+def test_an_off_service_dir_with_data_stays_in_the_set(tmp_path) -> None:
+    """Ruling 2026-10-16 (supersedes 8c2cfc6a): a switched-off service whose
+    dir holds data stays in the set, marked `off`, so its last copy does not
+    age out; an off dir that is empty or absent is ignored (no FAILED). On +
+    absent stays FAILED. Runs the real run_dirs with docker/S3 stubbed."""
     import subprocess
-    present = tmp_path / "vault"
+    present, empty = tmp_path / "vault", tmp_path / "book"
     present.mkdir()
+    empty.mkdir()
     (present / "db.sqlite").write_text("x")
     env = _env()
-    flags = {"install_vaultwarden": False, "install_mikopbx": False, "install_gitea": True}
+    flags = {"install_vaultwarden": False, "install_mikopbx": False, "install_gitea": True,
+             "install_bookstack": False}
     env.globals["lookup"] = lambda kind, name, default=False: flags.get(name, default)
     text = env.from_string(BACKUP.read_text(encoding="utf-8")).render(
         backup_dirs_to_dump=[
             {"name": "mikopbx", "path": str(tmp_path / "none"), "flag": "install_mikopbx"},  # off, absent
             {"name": "gitea", "path": str(tmp_path / "gone"), "flag": "install_gitea"},     # on, absent
-            {"name": "vaultwarden", "path": str(present), "flag": "install_vaultwarden"},  # off, present
+            {"name": "vaultwarden", "path": str(present), "flag": "install_vaultwarden"},  # off, data
+            {"name": "bookstack", "path": str(empty), "flag": "install_bookstack"},        # off, empty
         ],
+        backup_staging_dir=str(tmp_path / "staging"), backup_status_file=str(tmp_path / "status.json"),
+        backup_log_file=str(tmp_path / "backup.log"),
         backup_encryption_enabled=False, backup_overwrite_same_day=True,
         backup_retention_daily=7, backup_retention_weekly=4, backup_retention_monthly=6,
     )
     defs = text.rsplit('\nmain "$@"', 1)[0]
-    probe = ('\nlog() { echo "LOG $*"; }\nstatus_append() { echo "STATUS $1 $4"; }\n'
-             'docker() { return 1; }\naws() { return 1; }\nrun_dirs 2>/dev/null; true')
-    out = subprocess.run(["bash", "-c", defs + probe], capture_output=True, text=True).stdout
-    assert "mikopbx" not in out and "vaultwarden" not in out, f"an off service's dir was touched: {out}"
-    assert "STATUS dir-gitea 0" in out, "on and absent must be FAILED"
+    # docker run --rm -v <path>:/data:ro IMAGE sh -c '<ls|tar>': answer from the host path.
+    probe = ('\ndocker() { local p="${4%%:/data:ro}"; case "$*" in *"ls -A"*) ls -A "$p" | wc -l;; '
+             '*tar*) (cd "$p" && tar -czvf - .);; esac; }\naws() { cat >/dev/null 2>&1; echo 0; }\n'
+             'run_dirs; true')
+    subprocess.run(["bash", "-c", defs + probe], capture_output=True, text=True)
+    by = {s["name"]: s for s in json.loads((tmp_path / "status.json").read_text())["sources"]}
+    assert by.get("dir-vaultwarden", {}).get("success") is True, by
+    assert by["dir-vaultwarden"].get("off") is True, "an off source must say so"
+    assert "dir-mikopbx" not in by and "dir-bookstack" not in by, f"an empty/absent off dir is a finding: {by}"
+    assert by["dir-gitea"]["success"] is False, "on and absent must be FAILED"
 
 
 def test_a_directories_only_archive_counts_as_empty() -> None:
