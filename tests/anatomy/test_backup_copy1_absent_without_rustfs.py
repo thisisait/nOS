@@ -112,3 +112,20 @@ def test_the_reader_says_copy1_is_not_installed_and_ignores_its_stale_status(tmp
     assert bk["copy1"] is False
     assert bk["failed"] == ["dir-tenants"], "the stale copy-#1 file was read, or the direct one was not"
     assert any("copy #1 not installed" in h for h in red.hold_lines({"backups": bk}))
+
+
+def test_the_restore_drill_follows_copy1():
+    """Ruling 2026-10-16 (Q4): the weekly drill runs ~/.nos/backup-verify.sh, which
+    absent.yml deletes without copy #1. With install_backup on and RustFS off the
+    catalog must drop the job (post.yml deletes it), not schedule a dead path."""
+    catalog = REPO / "files/anatomy/scripts/discover-pulse-catalog.py"
+
+    def drill(flags):
+        env = {**os.environ, "NOS_PLAYBOOK_DIR": str(REPO), "NOS_INSTALL_FLAGS": json.dumps(flags)}
+        out = subprocess.run([sys.executable, str(catalog)], capture_output=True, text=True, env=env, check=True)
+        return next(e["installed"] for e in json.loads(out.stdout) if e["job"]["name"] == "backup-restore-drill")
+
+    assert drill({"install_backup": True, "install_rustfs": True}) is True
+    assert drill({"install_backup": True, "install_rustfs": False}) is False, "drill scheduled with no copy #1"
+    probe = yaml.safe_load((REPO / "files/anatomy/plugins/backup-base/plugin.yml").read_text())["e2e"]["enabled"]
+    assert "install_rustfs" in probe, "the e2e probe still expects the drill without copy #1"
