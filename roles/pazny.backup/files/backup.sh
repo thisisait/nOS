@@ -986,7 +986,7 @@ run_dirs() {
         #
         # Count only lines the tar itself wrote (`./...`); docker's own stderr
         # would otherwise inflate an empty archive past the threshold.
-        tar_list="$(mktemp -t nosbackup)"
+        tar_list="$(mktemp -t nosbackup.XXXXXX)"
         docker run --rm -v "${path}:/data:ro" "${ALPINE_IMAGE}" \
             sh -c 'cd /data && tar -czvf - .' 2>"${tar_list}" \
           | encrypt_stream "${key}" \

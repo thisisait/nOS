@@ -195,7 +195,7 @@ print(json.dumps({
 }))
 PY
     )
-    mint_err="$(mktemp -t nos-agent-mint)"
+    mint_err="$(mktemp -t nos-agent-mint.XXXXXX)"
     if agent_ak_token="$(pulse_mint_agent_token "$grant_env" 2>"$mint_err")" \
        && [[ -n "$agent_ak_token" ]]; then
         export NOS_AUTHENTIK_TOKEN="$agent_ak_token"
@@ -283,7 +283,7 @@ echo "[run-agent] ceilings: tokens=${NOS_AGENT_SESSION_TOKEN_CEILING:-<default>}
 source "$REPO_ROOT/files/anatomy/scripts/agent-run-lock.sh"
 nos_agent_lock_acquire "${NOS_AGENT_NAME:-agentkit}" 300 agentkit || exit 2
 
-SUMMARY_FILE="$(mktemp -t nos-agent-summary)"
+SUMMARY_FILE="$(mktemp -t nos-agent-summary.XXXXXX)"
 trap 'nos_agent_lock_release; rm -f "$SUMMARY_FILE"' EXIT
 
 # THE SCHEDULER'S RUN AND THE AGENT'S SESSION ARE ONE THING (2026-08-29).
