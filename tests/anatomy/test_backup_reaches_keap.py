@@ -31,10 +31,13 @@ from __future__ import annotations
 
 import pathlib
 import re
+import sys
 
 import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools"))
+import nos_identity as ni  # noqa: E402
 BACKUP_SH = REPO / "roles" / "pazny.backup" / "files" / "backup.sh"
 BACKUP_DEFAULTS = REPO / "roles" / "pazny.backup" / "defaults" / "main.yml"
 WING_CLIENT = REPO / "files" / "anatomy" / "bone" / "clients" / "wing.py"
@@ -89,8 +92,8 @@ def test_keap_backup_does_not_use_vacuum_into():
 
 
 def test_keap_container_is_configurable():
-    # Declared in default.config.yml since 2026-10-16 (the direct restic path reads it too).
-    d = {**yaml.safe_load(BACKUP_DEFAULTS.read_text()), **yaml.safe_load((REPO / "default.config.yml").read_text())}
+    # Declared in the default layers since 2026-10-16 (the direct restic path reads it too).
+    d = {**yaml.safe_load(BACKUP_DEFAULTS.read_text()), **ni.default_config()}
     assert "backup_keap_container" in d
     assert "backup_keap_db_container_path" in d
 
