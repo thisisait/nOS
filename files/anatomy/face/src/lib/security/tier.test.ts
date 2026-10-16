@@ -47,3 +47,28 @@ describe('tier · canReadTable private', () => {
 		expect(canReadTable('private', ['nos-users'])).toBe(false);
 	});
 });
+
+// Operator ruling 2026-10-16: "if it creates it, it must read it". KEAP reads
+// private as owner + admin; face must not be stricter than the door it fronts.
+describe('tier · canReadTable owner', () => {
+	const me = { uid: 'alice', ownerId: 'user:alice' };
+	it('lets the owner read their private table', () => {
+		expect(canReadTable('private', ['nos-managers'], me)).toBe(true);
+		expect(canReadTable('private', ['nos-users'], { uid: 'alice', ownerId: 'alice' })).toBe(true);
+	});
+	it('denies a non-owner non-admin', () => {
+		expect(canReadTable('private', ['nos-managers'], { uid: 'bob', ownerId: 'user:alice' })).toBe(
+			false
+		);
+		expect(canReadTable('private', ['nos-managers'], { uid: 'bob' })).toBe(false);
+		expect(canReadTable('private', ['nos-managers'], { uid: '', ownerId: 'user:' })).toBe(false);
+	});
+	it('keeps admin access', () => {
+		expect(canReadTable('private', ['nos-admins'], { uid: 'bob', ownerId: 'user:alice' })).toBe(
+			true
+		);
+	});
+	it('does not widen other grades for an owner', () => {
+		expect(canReadTable('tier-managers', ['nos-users'], me)).toBe(false);
+	});
+});
