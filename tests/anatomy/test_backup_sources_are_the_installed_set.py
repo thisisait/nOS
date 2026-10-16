@@ -59,6 +59,7 @@ def test_the_reader_does_not_report_a_source_this_host_never_installed(tmp_path,
     red = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(red)
     flags, *_ = _core()
+    flags = {**flags, "install_backup": True, "install_rustfs": True}   # copy #1's status file
     status = tmp_path / "backup-status.json"
     names = ["mariadb", "postgres", "dir-gitea", "dir-dolibarr-documents", "dir-authentik",
              "keap-db", "nos-state"]
