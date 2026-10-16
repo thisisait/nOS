@@ -25,8 +25,8 @@ temptations are the usual two and one unusual third:
 
 WHAT IS PINNED. No write SQL. No mutating docker verb. No filesystem write.
 An unreachable source reports UNKNOWN with the reason. Exit 0 whatever it
-finds. And — live, when docker is present — the redis secret appears nowhere in
-the tool's output in either render.
+finds. And the redis secret appears nowhere in the tool's output in either
+render — offline against a fake docker, and again live under NOS_LIVE=1.
 
 WHAT IT CANNOT DO. It does not check that the ratios are the RIGHT measure, or
 that the verdict thresholds are wise. It checks that the tool cannot lie in the
@@ -177,6 +177,44 @@ def test_the_redis_secret_never_appears_in_the_output():
                 f"tools/tls-uptake.py {' '.join(flags)} printed the redis AUTH "
                 "secret it inspected — the reader became a second copy of the "
                 "exposure it reports")
+
+
+#: A fake `docker` for the offline leak check: `inspect` of the redis container
+#: answers with an argv carrying FAKE_SECRET in both shapes the live check
+#: parses; every other call exits 1 at once (container absent).
+FAKE_SECRET = "fake-redis-secret-7f3a9c"
+FAKE_DOCKER = f"""#!/bin/sh
+if [ "$1" = inspect ] && [ "$2" = infra-redis-1 ]; then
+  echo '["redis-server","--requirepass","{FAKE_SECRET}","--requirepass {FAKE_SECRET}2"]'
+  exit 0
+fi
+echo "Error: No such container" >&2
+exit 1
+"""
+
+
+def test_the_redis_secret_never_appears_in_the_output_offline(tmp_path):
+    """The same leak check as the live one, against a fake docker on PATH, so
+    it runs in every offline pass and never waits on the Docker VM's speed
+    (2026-10-11: the live run took 190 s against a 120 s timeout)."""
+    fake = tmp_path / "docker"
+    fake.write_text(FAKE_DOCKER)
+    fake.chmod(0o755)
+    env = {**os.environ, "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}"}
+    for flags in ([], ["--json"]):
+        p = subprocess.run([sys.executable, str(TOOL), *flags], env=env,
+                           capture_output=True, text=True, timeout=60, cwd=REPO)
+        assert p.returncode == 0, p.stderr
+        blob = p.stdout + p.stderr
+        if flags:
+            redis = next(d for d in json.loads(p.stdout)["datastores"]
+                         if d["datastore"] == "redis")
+            assert redis.get("secret_on_argv") is True, (
+                f"the fake docker was not consulted — this check proved nothing: {redis}")
+        assert FAKE_SECRET not in blob, (
+            f"tools/tls-uptake.py {' '.join(flags)} printed the redis AUTH "
+            "secret it inspected — the reader became a second copy of the "
+            "exposure it reports")
 
 
 #: `occ` subcommands that WRITE. The reader reads Nextcloud's dbdriveroptions
