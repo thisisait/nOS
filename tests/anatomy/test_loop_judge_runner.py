@@ -1090,7 +1090,10 @@ MEASURED_WORK = {
     # RE-DERIVED 2026-10-15 — fired at 8122 collected vs 7681 (iris v3, quick wins, CI tiers,
     # installed set). Operator run (vendor): 7956 passed, 165 skipped, 1 failed, so 7957.
     # Judge-env run (no wing/vendor): 7807 passed, 314 skipped, 1 failed -> min_work 7808-120.
-    "pytest-anatomy": 7957,
+    # RE-DERIVED 2026-10-16 — fired at 8381 collected vs 7957 (septum, model picker, rebind,
+    # bench provenance + per-turn scoring). Operator run (vendor): 8214 passed, 169 skipped,
+    # 1 failed, so 8215. Judge-env run (no wing/vendor): 8062 passed, 321 skipped, 1 failed -> 8063-120.
+    "pytest-anatomy": 8215,
     "cortex-corpus-diff": 1,
 }
 
