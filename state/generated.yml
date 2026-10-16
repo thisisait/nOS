@@ -22,6 +22,9 @@ files:
   state/body-plan.json:
     writer: tools/body-plan-gen.py
     check: [tools/body-plan-gen.py, --check]
+  tools/cc/theme.py:
+    writer: tools/design-sync.py
+    check: [tools/design-sync.py, --check]
   state/routing-graph.json:
     writer: tools/routing-graph-gen.py
     check: [tools/routing-graph-gen.py, --check]
