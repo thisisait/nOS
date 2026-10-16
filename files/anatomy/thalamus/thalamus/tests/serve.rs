@@ -1000,6 +1000,28 @@ fn a_card_for_a_row_other_than_the_one_named_says_so() {
     }
 }
 
+#[test]
+fn a_table_without_title_names_its_row_by_its_first_text_column() {
+    let schema = r#"{"success": true, "data": {"id": "todos", "title": "Todo list", "rowCount": 2, "schema": {"columns": [
+        {"key": "status", "label": "Status", "kind": "select", "options": ["open", "done"]},
+        {"key": "name", "label": "Name", "kind": "text"}, {"key": "note", "label": "Note", "kind": "text"}]}}}"#;
+    let rows = vec![keap_row("r10", serde_json::json!({"name": "bench row 10", "status": "open", "note": "x"})),
+                    keap_row("r19", serde_json::json!({"name": "bench row 19", "status": "open", "note": "x"}))];
+    let (keap, _) = fake_table(schema, rows);
+    let model = vec![query(r#"{"table": "todos"}"#), answer("Here it is."),
+                     call("propose_row_delete", r#"{"table": "todos", "row_id": "r19"}"#), answer("Proposed.")];
+    let rig = rig_at("warn-name", mapped(), keap, model, Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let first = turn(&s, &mut r, None, "Find bench row 10 in iris-bench-2.");
+    let got = turn(&s, &mut r, Some(session_of(&first)), "Delete that row.");
+    let card = got.iter().find_map(|m| match m {
+        ToShell::ApprovalRequest { component: Component::RowDiffApproval(d), .. } => Some(d.clone()),
+        _ => None,
+    }).unwrap_or_else(|| panic!("no card: {got:?}"));
+    assert_eq!(card.warning.as_deref(), Some(r#"you asked for "10"; this row is "bench row 19""#));
+}
+
 // --- T1: Iris creates a table, private to the person, under one card ---
 
 /// Every column shape a 9B model sends: a bare label, a lowercase label, an alias kind, a rowRef by title.
