@@ -90,3 +90,34 @@ def test_probe_logs_mode_scrubs_secrets(tmp_path: pathlib.Path) -> None:
     for secret in ("hunter2hunter2", "s3cretPassVal", "abcdefgh12345678xyz", "tok9876543210abcdef"):
         assert secret not in out.stdout, secret
     assert "DB_PASSWORD=<REDACTED> boot failed" in out.stdout
+
+
+def test_probe_logs_mode_dumps_a_restarted_container(tmp_path: pathlib.Path) -> None:
+    """CI 38881421960: woodpecker-server flapped ready/starting for 9 min (a
+    crash loop), was Up at the last tick, so the dump skipped it and the agent's
+    `connection refused` was the only clue. A container that restarted is
+    dumped too, with its exit code, OOM flag and the run before this start."""
+    fake = tmp_path / "docker"
+    fake.write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" = ps ]; then\n'
+        "  echo 'devops-gitea-1|Up 9 minutes (healthy)'\n"
+        "  echo 'devops-woodpecker-server-1|Up 20 seconds (healthy)'\n"
+        'elif [ "$1" = inspect ]; then\n'
+        '  case "$4" in *woodpecker*) echo "7|1|false|2026-10-16T10:00:40Z";;\n'
+        '  *) echo "0|0|false|2026-10-16T09:48:00Z";; esac\n'
+        'elif [ "$1" = logs ]; then\n'
+        '  if [ "$2" = --until ]; then echo "PREV-RUN-$6 until $3"; else echo "LOG-OF-$4"; fi\n'
+        "fi\n"
+    )
+    fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
+    out = subprocess.run(
+        [sys.executable, str(PROBE), "--logs", "devops"],
+        capture_output=True, text=True, timeout=30,
+        env={**os.environ, "NOS_DOCKER_BIN": str(fake)},
+    )
+    assert out.returncode == 0
+    assert "LOG-OF-devops-woodpecker-server-1" in out.stdout
+    assert "restarts=7 exit=1 oom=false" in out.stdout
+    assert "PREV-RUN-devops-woodpecker-server-1 until 2026-10-16T10:00:40Z" in out.stdout
+    assert "devops-gitea-1" not in out.stdout
