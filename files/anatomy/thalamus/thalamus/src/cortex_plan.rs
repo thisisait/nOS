@@ -89,12 +89,44 @@ pub fn extract(text: &str) -> String {
     text.lines().map(str::trim).find(|l| !l.is_empty() && !l.starts_with("```")).unwrap_or("").to_string()
 }
 
-/// The JSON schema the Ollama engine constrains the plan call to.
+/// A db: operand as the organ's lexer reads it: a dot only between two segments.
+pub const DB_OPERAND: &str = "^db:[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*$";
+
+/// One opcode's branch: (op, operand: none | db | db or none, params, required params).
+/// Per cortex-opcodes.ts v3; tests/cortex_plan.rs reads the registry and holds each branch to it.
+fn branch(op: &str, operand: Option<bool>, params: Value, required: &[&str]) -> Value {
+    let operand = match operand {
+        None => json!({"const": ""}),
+        Some(true) => json!({"type": "string", "pattern": DB_OPERAND}),
+        Some(false) => json!({"type": "string", "pattern": format!("^({})?$", &DB_OPERAND[1..DB_OPERAND.len() - 1])}),
+    };
+    json!({"type": "object", "additionalProperties": false, "required": ["op", "operand", "params"], "properties": {
+        "op": {"const": op}, "operand": operand,
+        "params": {"type": "object", "additionalProperties": false, "required": required, "properties": params}}})
+}
+
+/// The JSON schema the Ollama engine constrains the plan call to. `properties` is the union every
+/// stage may hold; `anyOf` is what each opcode takes, which is what a constrained decoder follows.
 pub fn ast_schema() -> Value {
+    let s = |d: &str| json!({"type": "string", "description": d});
+    let limit = json!({"type": "integer", "minimum": 1, "maximum": 50});
+    // an open union let the organ refuse filter(db:t), filter(limit=0) and aggregate(by=x) (probe 2026-10-17)
+    let per_op = json!([
+        branch("get", Some(true), json!({"limit": limit, "fields": s("comma-separated column keys")}), &[]),
+        branch("filter", None, json!({"where": s("<column> <op> <value>"), "q": s("text anywhere in the row")}), &[]),
+        branch("rank", None, json!({"by": s("a column key"), "dir": {"enum": ["asc", "desc"]}, "limit": limit}), &["by"]),
+        branch("aggregate", Some(false), json!({"op": {"enum": ["count", "sum", "avg"]}, "by": s("a column key to group by"),
+            "y": s("a number column key, for sum and avg")}), &["op"]),
+        branch("show", Some(false), json!({"kind": {"enum": ["chart", "kpi", "table"]}, "chart": {"enum": ["bar", "line", "pie"]},
+            "x": s("a column key"), "y": s("a number column key"), "title": s("the heading"), "unit": s("a kpi's unit")}), &["kind"]),
+        branch("insert", Some(true), json!({"set": {"type": "string", "minLength": 3, "description": "col=value;col=value"}}), &["set"]),
+        branch("update", Some(true), json!({"set": {"type": "string", "minLength": 3, "description": "col=value;col=value"}}), &["set"]),
+        branch("delete", Some(true), json!({}), &[]),
+    ]);
     json!({"type": "object", "additionalProperties": false, "required": ["stages"], "properties": {
         "stages": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "object", "additionalProperties": false,
             // a closed param set and a shaped operand: an open one let an 8B model write get(db="t")
-            "required": ["op", "operand", "params"], "properties": {
+            "required": ["op", "operand", "params"], "anyOf": per_op, "properties": {
                 "op": {"enum": MAPPED},
                 "operand": {"type": "string", "pattern": "^(db:[A-Za-z0-9_.-]+)?$", "description": "db:<table id>, or empty"},
                 "params": {"type": "object", "additionalProperties": false,
