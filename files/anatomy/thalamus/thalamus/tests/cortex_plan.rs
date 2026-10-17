@@ -295,7 +295,9 @@ fn every_fixture_pipeline_runs_as_its_tool_calls_or_falls_back() {
         let planned = say(&json!({"stages": c["stages"]}).to_string());
         // The plan, a repair when the organ refuses, then: the tool path's query (same_as_tool) or the answer.
         let mut bodies = vec![planned.clone()];
-        if c.get("errors").is_some() {
+        // a repair round follows an organ refusal and a mapper refusal; a registry mismatch has none
+        let repaired = c.get("errors").is_some() || (c.get("refused").is_some() && c.get("registry_hash").is_none());
+        if repaired {
             bodies.push(planned);
         }
         if let Some(t) = c.get("same_as_tool") {
@@ -319,7 +321,7 @@ fn every_fixture_pipeline_runs_as_its_tool_calls_or_falls_back() {
             .map(|(t, v)| json!([t.rsplit(':').next().unwrap(), v["args"]])).collect();
         if let Some(why) = c["refused"].as_str() {
             assert!(last["fallback"].as_str().is_some_and(|f| f.contains(why)), "{name}: fallback {last}");
-            let plans = 1 + usize::from(c.get("errors").is_some());
+            let plans = 1 + usize::from(repaired);
             let heard: String = said[plans]["messages"].as_array().unwrap().iter()
                 .filter_map(|m| m["content"].as_str()).filter(|t| t.starts_with("[thalamus]")).collect();
             assert!(heard.contains(&format!("[thalamus] cortex plan refused: {why}")), "{name}: the model hears why: {heard}");
