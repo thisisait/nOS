@@ -46,6 +46,16 @@
         <key>NOS_DECIDER_EXES</key>
         <string>{{ thalamus_decider_exes | join(':') }}</string>
 {% endif %}
+        <!-- iris_plan: cortex plans a turn as one cortex-lang pipeline the organ validates (src/cortex_plan.rs). -->
+        <key>NOS_IRIS_PLAN</key>
+        <string>{{ iris_plan | default('tools') }}</string>
+{% if iris_plan | default('tools') == 'cortex' and install_cortex | default(false) | bool %}
+        <key>NOS_CORTEX_URL</key>
+        <string>http://127.0.0.1:{{ cortex_port | default(8098) }}</string>
+        <!-- The organ's RO token (validate only); read once as nos:cortex_ro_token, then removed. -->
+        <key>NOS_SECRET_CORTEX_RO_TOKEN</key>
+        <string>{{ cortex_ro_token }}</string>
+{% endif %}
         <!-- The binding env (defaults thalamus_binding_env, also the preflight's); iris binds mistral-eu. -->
 {% for name, value in thalamus_binding_env.items() %}
         <key>{{ name }}</key>
