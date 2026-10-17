@@ -36,6 +36,12 @@ def _load(name, path):
 OFF = _load("iris_bench_offline", pathlib.Path(__file__).with_name("test_iris_bench_offline.py"))
 
 
+def _accepted(case):
+    """expect_pipeline is one plan or the list of plans any of which passes."""
+    want = case.get("expect_pipeline") or []
+    return [want] if isinstance(want, str) else want
+
+
 def test_the_plan_cases_carry_an_expected_pipeline_and_the_rest_do_not():
     by = {c["id"]: c for c in CASES}
     assert [i for i in PLANNED if not by[i].get("expect_pipeline")] == []
@@ -46,7 +52,7 @@ def test_the_plan_cases_carry_an_expected_pipeline_and_the_rest_do_not():
                     reason="cortex node_modules absent — run `npm ci` in files/anatomy/cortex")
 def test_every_expected_pipeline_is_valid_cortex_lang():
     """The vendored parser, not a regex: an expectation the validator refuses could never be met."""
-    srcs = [c["expect_pipeline"] for c in CASES if "expect_pipeline" in c]
+    srcs = [s for c in CASES if "expect_pipeline" in c for s in _accepted(c)]
     assert srcs
     js = ("import { analyzeCortex } from './server/cortex-lang';"
           "const s = JSON.parse(process.argv[1]);"
@@ -258,7 +264,7 @@ UNPLANNED = {
 def test_every_case_v3_expresses_carries_its_pipeline():
     assert set(UNPLANNED) <= {c["id"] for c in CASES}
     assert [c["id"] for c in CASES if (c["id"] in UNPLANNED) == bool(c.get("expect_pipeline"))] == []
-    assert [c["id"] for c in CASES if not c.get("expect_pipeline", "get(db:").startswith(("get(db:", "insert(db:"))] == []
+    assert [c["id"] for c in CASES if not all(s.startswith(("get(db:", "insert(db:")) for s in _accepted(c))] == []
 
 
 def test_a_multi_turn_case_without_a_plan_is_not_forced_to_fall_back():
