@@ -1404,7 +1404,9 @@
     # ──────────────────────────────────────────────────────────────────────────
     - name: "[Prefix] Prompt for password prefix (interactive confirmed removal)"
       ansible.builtin.pause:
-        prompt: "Prefix for all passwords (format: PREFIX_pw_SERVICE, Enter = {{ global_password_prefix }})"
+        # never the current value: it roots the derived passwords and a tee'd log keeps every prompt
+        prompt: "New prefix for all passwords (format: PREFIX_pw_SERVICE; Enter = keep the current one; input hidden)"
+        echo: false
       register: _prefix_prompt
       when: nos_removing and nos_confirmed and not nos_assume_yes
       tags: ['blank', 'reset']
