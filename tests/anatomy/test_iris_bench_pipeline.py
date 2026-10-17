@@ -318,3 +318,36 @@ def test_a_count_accepts_the_rows_or_their_count_and_a_chart_any_kind():
         assert by[i]["expect_pipeline"] == [base, f"{base} | aggregate(op=count)"], i
     charts = by["next-by-track"]["expect_pipeline"]
     assert [p.split("chart=")[1].split(",")[0] for p in charts] == ["bar", "pie", "line"]
+
+
+def _infra_ledger(path, rows):
+    """rows: {session: [result_json, ...]}: cortex_plan tool_result rows only, as serve's refused() writes
+    them when the estate failed before the model's plan existed (no tool_use row)."""
+    db = sqlite3.connect(path)
+    db.executescript("CREATE TABLE sessions (id INTEGER PRIMARY KEY, uuid TEXT UNIQUE, agent_name TEXT);"
+                     "CREATE TABLE events (id INTEGER PRIMARY KEY, ts TEXT, run_id TEXT, type TEXT, task TEXT,"
+                     " result_json TEXT, source TEXT);")
+    for sid, results in rows.items():
+        db.execute("INSERT INTO sessions (uuid, agent_name) VALUES (?, 'iris')", (sid,))
+        for r in results:
+            db.execute("INSERT INTO events (ts, run_id, type, task, result_json, source) VALUES "
+                       "('t', ?, 'agent_tool_result', 'agent:iris/tool:cortex_plan', ?, 'thalamus')", (sid, json.dumps(r)))
+    db.commit()
+    db.close()
+
+
+def test_an_estate_failure_is_no_data_not_a_plan_verdict(tmp_path, validator):
+    """serve.rs refused(): the organ down, the model unreachable or the catalogue unreadable write
+    {valid: false, fallback, fallback_kind: infra} and no tool_use. read_plan saw "never planned", so
+    every expect-fallback case PASSED and every expect-pipeline case was red - a verdict on the model
+    for the estate's failure."""
+    down = {"valid": False, "fallback": "the cortex organ is unreachable (refused)", "fallback_kind": "infra"}
+    led = tmp_path / "ledger.db"
+    _infra_ledger(led, {_sid(n): [down] for n in range(1, 6)})
+    b = OFF._bench()
+    for sid in (_sid(1), _sid(4)):
+        plan = b.read_plan(str(led), sid)
+        assert plan is not None and plan["fallback_kind"] == "infra" and "unreachable" in plan["fallback"], plan
+        for name, arg in (("pipeline_fell_back", True), ("pipeline_valid", True)):
+            with pytest.raises(b.Unjudged):
+                b.check(name, arg, {"plan": plan, "validate": lambda s: {"valid": True}}, 0.0)
