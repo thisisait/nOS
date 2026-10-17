@@ -541,3 +541,32 @@ fn a_param_the_mapper_does_not_read_is_refused_not_dropped() {
                  stage("delete", Some("db:todos"), json!({"dry_run": true}))];
     assert!(cortex_plan::plan(None, &w).is_ok());
 }
+
+/// The organ's own words for a refusal (cortex-lang.ts issue()): a generic message, the useful part in
+/// `detail` and `stage`. The repair round forwarded only `message`, so the model heard "required
+/// parameter is missing" with no opcode and no key, and failed the same way again.
+#[test]
+fn the_repair_round_hears_which_stage_and_key_the_organ_refused() {
+    let bad = "get(db:todos) | filter(where=\"status eq open\", limit=5) | aggregate(by=\"status\")";
+    let good = "get(db:todos, limit=5) | filter(where=\"status eq open\")";
+    let goods = known(&cases());
+    let (organ_url, _) = listen(Box::new(move |_, _, body, _| {
+        let src = serde_json::from_str::<Value>(body).unwrap()["source"].as_str().unwrap_or("").to_string();
+        if src == bad {
+            let errs = json!([
+                {"code": "unknown_param", "severity": "error", "message": "unknown parameter for this opcode", "stage": 1,
+                 "offset": 40, "length": 7, "line": 1, "column": 41, "detail": {"opcode": "filter", "key": "limit", "allowed": ["q", "where"]}},
+                {"code": "missing_required_param", "severity": "error", "message": "required parameter is missing", "stage": 2,
+                 "offset": 57, "length": 22, "line": 1, "column": 58, "detail": {"opcode": "aggregate", "key": "op"}}]);
+            return (200, json!({"success": true, "data": {"valid": false, "ast": null, "errors": errs, "warnings": []}}).to_string());
+        }
+        let (s, st, h, e) = goods.iter().find(|k| k.0 == src).cloned().unwrap_or((src.clone(), json!([]), String::new(), vec!["unknown".into()]));
+        (200, report(&s, &st, &h, &e))
+    }));
+    let rig = rig("detail", binding("mistral-eu", false), vec![say(bad), say(good), say("done")], Some(organ_url));
+    turn(&rig, None, "open todos");
+    let repair = models_said(&rig)[1]["messages"].as_array().unwrap().last().unwrap()["content"].as_str().unwrap().to_string();
+    for want in ["unknown_param", "filter()", "`limit`", "allowed: q, where", "missing_required_param", "aggregate()", "`op`", "stage 2", "stage 3"] {
+        assert!(repair.contains(want), "the repair names {want}: {repair}");
+    }
+}
