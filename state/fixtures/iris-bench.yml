@@ -1,6 +1,8 @@
 # tools/iris-bench.py cases, seeded from the live findings of 2026-10-12/13.
 # A case is one `prompt` or a list of `turns` in one session. Checks are scored from
 # the wire only (ToShell lines); the runner rejects every approval it sees.
+# expect_pipeline: the cortex-lang v3 plan --plan cortex must make; absent = plain tools are
+# correct (choice-chart, dashboard-offer: choice options and offer_dashboard are outside v3).
 - id: roadmap-count
   prompt: How many rows does the roadmap have? Give the exact number.
   checks:
@@ -124,6 +126,7 @@
     not_blank: true
 - id: top3-next
   prompt: Top 3 next rows in iris-bench-2 by points, highest first.
+  expect_pipeline: 'get(db:iris-bench-2) | filter(where="status eq next") | rank(by=points, dir=desc, limit=3)'
   needs_rows: true
   checks:
     query_uses: {order_by: {column: points, dir: desc}}
@@ -150,6 +153,7 @@
 # charts
 - id: bar-sum-points
   prompt: "Bar chart: sum of points of next rows per track, from iris-bench-2."
+  expect_pipeline: 'get(db:iris-bench-2) | filter(where="status eq next") | aggregate(op=sum, by=track, y=points) | show(kind=chart, chart=bar, x=track)'
   checks:
     kinds_drawn: ["chart:bar"]
     chart_source: {chart: bar, x: track, op: sum, y: points, where: [{column: status, op: eq, value: next}]}
@@ -160,6 +164,7 @@
     no_invented_link: true
 - id: line-due
   prompt: Line chart of the rows in iris-bench-2 due before 2026-11-15, by due date.
+  expect_pipeline: 'get(db:iris-bench-2) | filter(where="due lt 2026-11-15") | aggregate(op=count, by=due) | show(kind=chart, chart=line, x=due)'
   checks:
     kinds_drawn: ["chart:line"]
     chart_source: {chart: line, x: due, op: count, where: [{column: due, op: lt, value: "2026-11-15"}]}
@@ -169,6 +174,7 @@
 # quick wins Q1 (gaps #3, #4): one total with no group_by, and a closed date range in one condition
 - id: total-sum
   prompt: How many points do the next rows of iris-bench-2 have in total?
+  expect_pipeline: 'get(db:iris-bench-2) | filter(where="status eq next") | aggregate(op=sum, y=points)'
   needs_rows: true
   checks:
     tools_called: [query_rows]
@@ -178,6 +184,7 @@
     not_blank: true
 - id: due-between
   prompt: Which iris-bench-2 rows are due from 2026-11-10 to 2026-11-14?
+  expect_pipeline: 'get(db:iris-bench-2) | filter(where="due between 2026-11-10,2026-11-14")'
   needs_rows: true
   checks:
     tools_called: [query_rows]
@@ -188,6 +195,7 @@
 # quick wins Q3 (gap #8): a KPI tile is a total serve computes from show's source; the model never writes the number
 - id: kpi-total
   prompt: Put the total points of the next rows of iris-bench-2 on a KPI tile.
+  expect_pipeline: 'get(db:iris-bench-2) | filter(where="status eq next") | aggregate(op=sum, y=points) | show(kind=kpi)'
   needs_rows: true
   checks:
     tools_called: [show]

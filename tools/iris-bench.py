@@ -25,15 +25,23 @@ see the whole wire and are judged with the last turn. A result carries turns, de
 
 --out carries `provenance` (nOS commit, argv, each model's Ollama digest or null + why) so a
 run can be filed in nos-assay as evidence: a model name can be re-pointed upstream, a digest not.
+
+--plan cortex|tools says which Iris path the estate runs (iris_plan); it is recorded, not set.
+With cortex, each case is also judged on the pipeline the thalamus planned, read from --ledger
+(read-only) by the session uuid on the wire: pipeline_valid and pipeline_equals_expected go
+through POST <--validate-url>/agent/v1/validate (CORTEX_TOKEN_RO), op by op, never as text;
+a case without expect_pipeline must fall back (pipeline_fell_back).
 """
 
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import os
 import re
 import socket
+import sqlite3
 import subprocess
 import sys
 import time
@@ -91,7 +99,7 @@ def run_case(case: dict, sock: str, timeout: float) -> dict:
     """Send the case's turns over one connection; what came back, per kind."""
     turns = turns_of(case)
     got = {"tools": [], "renders": [], "approvals": [], "cards": [], "card_kinds": [], "refused": [], "text": "", "texts": [],
-           "model_uri": None, "error": None, "per_turn": []}
+           "model_uri": None, "session": None, "error": None, "per_turn": []}
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.settimeout(timeout)
     try:
@@ -111,6 +119,7 @@ def run_case(case: dict, sock: str, timeout: float) -> dict:
                 t = m.get("t")
                 if t == "session":
                     session, got["model_uri"] = m.get("session"), m.get("model_uri")
+                    got["session"] = session
                 elif t == "activity":
                     ph = m.get("phase")
                     if ph == "idle":
@@ -188,7 +197,102 @@ def _answers_in(text: str, lang: str) -> bool:
     return mine >= 1 and mine > other
 
 
+# ── the cortex plan path: the pipeline the ledger holds, judged by the validator ──
+
+COSMETIC = ("title", "unit")  # a show label is not the plan
+
+
+class Unjudged(RuntimeError):
+    """The judge could not answer (validator, ledger): the failure is named, never a wrong plan."""
+
+
+def validate_report(url: str, token: str, source: str) -> dict:
+    req = urllib.request.Request(url.rstrip("/") + "/agent/v1/validate", data=json.dumps({"source": source}).encode(),
+                                 headers={"authorization": f"Bearer {token}", "content-type": "application/json"},
+                                 method="POST")
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # loopback, never via a proxy
+    try:
+        with opener.open(req, timeout=25) as r:
+            return json.loads(r.read())["data"]
+    except (OSError, ValueError, KeyError) as e:
+        raise Unjudged(f"validator unreachable ({type(e).__name__}: {e})") from e
+
+
+def _stages(ast: dict):
+    # `?k=v` vs `k=v` (defaulted) and spans are spelling; opcode, operands and param values are the plan.
+    p = ast["pipeline"]
+    return p.get("source"), [(s["opcode"], [(o["ns"], o["surface"]) for o in s["operands"]],
+                              {k: v["value"] for k, v in s["params"].items() if k not in COSMETIC}) for s in p["stages"]]
+
+
+def same_pipeline(a: dict, b: dict) -> bool:
+    """Two /validate ASTs plan the same thing, stage by stage."""
+    return _stages(a) == _stages(b)
+
+
+def _ledger_open():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_ledger_open", Path(__file__).with_name("_ledger_open.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def read_plan(ledger: str, session):
+    """The session's last cortex_plan rows (mode=ro); None = it never planned; {"error"} = unreadable."""
+    if not session:
+        return {"error": "no session on the wire"}
+    conn, how = _ledger_open().open_ledger_ro(Path(ledger))
+    if conn is None:
+        return {"error": f"ledger unreadable: {how}"}
+    try:
+        rows = conn.execute("SELECT type, result_json FROM events WHERE run_id = ? AND task LIKE '%/tool:cortex_plan' "
+                            "ORDER BY id", (session,)).fetchall()
+    except sqlite3.Error as e:
+        return {"error": f"ledger unreadable: {e}"}
+    finally:
+        conn.close()
+    last = lambda kind: next((json.loads(r[1] or "{}") for r in reversed(rows) if r[0] == kind), None)  # noqa: E731
+    use, res = last("agent_tool_use"), last("agent_tool_result") or {}
+    if use is None:
+        return None
+    return {k: use.get(k) for k in ("source", "engine", "constrained", "grammar_sha256", "primer_sha256")} | {
+        "valid": res.get("valid"), "errors": res.get("errors"), "registry_hash": res.get("registry_hash"),
+        "fell_back": "plan" not in res}
+
+
+def _plan(got: dict):
+    if "plan" not in got:
+        raise Unjudged("not a --plan cortex run")
+    p = got["plan"]
+    if isinstance(p, dict) and "error" in p:
+        raise Unjudged(p["error"])
+    return p
+
+
+def plan_checks(case: dict, plan: str) -> dict:
+    """What --plan cortex adds to a case: its expected pipeline, or that it falls back."""
+    if plan != "cortex":
+        return {}
+    if case.get("expect_pipeline"):
+        return {"pipeline_valid": True, "pipeline_equals_expected": case["expect_pipeline"], "pipeline_fell_back": False}
+    return {"pipeline_fell_back": True}
+
+
 def check(name: str, arg, got: dict, now: float) -> bool:
+    if name == "pipeline_fell_back":  # no cortex_plan row, or one whose result fell back
+        plan = _plan(got)
+        return (plan is None or plan["fell_back"]) == bool(arg)
+    if name == "pipeline_valid":
+        plan = _plan(got)
+        ok = bool(plan and plan["source"]) and got["validate"](plan["source"]).get("valid") is True
+        return ok == bool(arg)
+    if name == "pipeline_equals_expected":
+        want, plan = got["validate"](arg), _plan(got)
+        if not want.get("valid"):
+            raise ValueError(f"expect_pipeline is not valid cortex-lang: {arg!r}: {want.get('errors')}")
+        have = got["validate"](plan["source"]) if plan and plan["source"] else {}
+        return bool(have.get("valid")) and same_pipeline(want["ast"], have["ast"])
     text = got["text"]
     kinds = [(r["component"].get("kind"), r["component"].get("props", {}).get("chart")) for r in got["renders"]]
     if name == "tools_called":  # a subsequence, in order
@@ -523,15 +627,18 @@ def resolve_arg(arg, prior: list[dict]):
 def _failed(checks: dict, got: dict, prior: list[dict], now: float) -> list[str]:
     out = []
     for name, arg in checks.items():
-        if arg is False:
+        if arg is False and name != "pipeline_fell_back":  # there False is the verdict wanted, not "off"
             continue
         try:
             arg = resolve_arg(arg, prior) if name in ("query_uses", "chart_source") else arg
         except NoTurn:
             out.append(name)
             continue
-        if not check(name, arg, got, now):
-            out.append(name)
+        try:
+            if not check(name, arg, got, now):
+                out.append(name)
+        except Unjudged as e:
+            out.append(f"{name}: {e}")
     return out
 
 
@@ -640,6 +747,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--timeout", type=float, default=180.0, help="seconds without a line before a case fails")
     ap.add_argument("--repeat", type=int, default=1, help="run each case N times; a majority of passing runs passes")
+    ap.add_argument("--plan", choices=("tools", "cortex"), default="tools",
+                    help="the Iris path the estate runs (iris_plan); cortex also judges the planned pipeline")
+    ap.add_argument("--ledger", help="with --plan cortex: the thalamus ledger.db, opened read-only (never defaulted)")
+    ap.add_argument("--validate-url", default="http://127.0.0.1:8098", help="the cortex organ; needs CORTEX_TOKEN_RO")
     ap.add_argument("--seed", action="store_true",
                     help="create the iris-bench-2 tables, or with --domain the domain's tables, once (writes KEAP; NOS_LIVE=1)")
     a = ap.parse_args(argv)
@@ -652,8 +763,18 @@ def main(argv: list[str] | None = None) -> int:
         print("iris-bench talks to the live thalamus (a model, KEAP, the ledger); set NOS_LIVE=1, "
               "or pass --offline with an explicit --sock for a fake.", file=sys.stderr)
         return 2
+    validate = None
+    if a.plan == "cortex":
+        if not (a.ledger and Path(a.ledger).is_file()):
+            print("--plan cortex reads the pipeline from the thalamus ledger: pass --ledger <ledger.db>.", file=sys.stderr)
+            return 2
+        token = os.environ.get("CORTEX_TOKEN_RO", "").strip()
+        if not token:
+            print("--plan cortex judges pipelines through /agent/v1/validate: set CORTEX_TOKEN_RO.", file=sys.stderr)
+            return 2
+        validate = functools.lru_cache(maxsize=None)(functools.partial(validate_report, a.validate_url, token))
     sock = a.sock or str(SOCK)
-    cases = load_cases(a.cases, a.domain, a.tier)
+    cases = [dict(c, checks=dict(c.get("checks") or {}) | plan_checks(c, a.plan)) for c in load_cases(a.cases, a.domain, a.tier)]
     results = []
     n = max(1, a.repeat)
     for case in cases:
@@ -661,6 +782,8 @@ def main(argv: list[str] | None = None) -> int:
         for _ in range(n):
             t0 = time.monotonic()
             got = run_case(case, sock, float(case.get("timeout", a.timeout)))
+            if validate:
+                got |= {"plan": read_plan(a.ledger, got["session"]), "validate": validate}
             failed, turns = judge(case, got, time.time())
             runs.append((got, failed, round(time.monotonic() - t0, 2), bool(failed) and no_data(case, got), turns))
         passes = sum(1 for r in runs if not r[1])
@@ -671,13 +794,18 @@ def main(argv: list[str] | None = None) -> int:
                         "no_data": all(r[3] for r in runs), "failed": [] if ok else failed,
                         "seconds": round(sum(r[2] for r in runs) / n, 2), "model_uri": got["model_uri"], "tools": got["tools"],
                         "approvals_rejected": sum(len(r[0]["approvals"]) for r in runs), "refused": got["refused"],
-                        "queries": queries(got), "text": got["text"],
+                        "queries": queries(got), "text": got["text"], "pipeline": got.get("plan"),
                         # Why an offered widget was left out (round 2: the model only paraphrased it).
                         "dropped": [d for r in got["renders"] if r["component"].get("kind") == "dashboard"
                                     for d in r["component"].get("props", {}).get("dropped") or []]})
     run = {"ran_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "sock": sock,
            "model_uri": sorted({r["model_uri"] for r in results if r["model_uri"]}), "cases": results}
-    run["provenance"] = provenance(uri_models(run["model_uri"]), argv=argv)
+    run["provenance"] = provenance(uri_models(run["model_uri"]), argv=argv) | {"plan": a.plan}
+    plans = [r["pipeline"] for r in results if isinstance(r["pipeline"], dict)]
+    run["plan_path"] = a.plan
+    for k in ("engine", "grammar_sha256", "primer_sha256", "registry_hash"):
+        seen = sorted({p[k] for p in plans if p.get(k)})
+        run[k] = seen[0] if len(seen) == 1 else seen or None  # read from the ledger, never guessed
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(run, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
