@@ -673,3 +673,17 @@ fn a_fallback_says_whether_the_model_or_the_estate_failed() {
     let r2: Vec<Value> = tools(&rig2, &s2).into_iter().filter(|(t, _)| t.ends_with("tool_result:cortex_plan")).map(|e| e.1).collect();
     assert_eq!(r2.last().unwrap()["fallback_kind"], "model", "{r2:?}");
 }
+
+/// tools/iris-bench.py compares a plan to its expectation up to how it names the table: the plan row
+/// says which table the mapper resolved, by the name the model said, its id and its title.
+#[test]
+fn a_plan_row_names_the_table_it_resolved() {
+    let all = cases();
+    let c = all.iter().find(|c| c["name"] == "a title and labels resolve, rank orders and cuts").unwrap();
+    let (organ_url, _) = organ(known(&all));
+    let rig = rig("tablerow", binding("ollama", true), vec![say(&json!({"stages": c["stages"]}).to_string()), say("done")], Some(organ_url));
+    let (session, _) = turn(&rig, None, "todos by amount");
+    let ev = tools(&rig, &session);
+    let last = ev.iter().rev().find(|(t, _)| t.ends_with("tool_result:cortex_plan")).unwrap();
+    assert_eq!(last.1["table"], json!({"said": "Todos", "id": "todos", "title": "Todos"}), "{ev:?}");
+}
