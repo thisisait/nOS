@@ -54,6 +54,7 @@ install_infisical: true
 install_vaultwarden: true
 install_portainer: true
 install_traefik: true
+install_nginx: false            # Traefik is the edge; over tests/config.yml (nginx) the preflight refuses both
 install_bluesky_pds: true
 
 # ── observability stack ────────────────────────────────────────────────────
