@@ -24,18 +24,20 @@ REGISTER = REPO / "state/habitat/llm-backends.yml"
 
 def test_the_iris_cell_binds_to_the_eu_row_by_default():
     """Ruling 2026-10-12: iris binds mistral-eu. Ruling 2026-10-14: a host may choose the on-device row
-    instead (iris_backend: ollama) — chosen explicitly, never as a fallback; nothing outside the EU serves it."""
+    instead (iris_backend: ollama) — chosen explicitly, never as a fallback. Ruling 2026-10-17: also the
+    non-EU anthropic-api / minimax-api rows, which gate 8 serves only at gdpr_posture: none."""
     doc = yaml.safe_load(IRIS.read_text())
     assert doc["name"] == "iris"
     assert doc["model"]["backend"] == "mistral-eu"
-    assert doc["model"]["backends_allowed"] == ["mistral-eu", "ollama"]
+    assert doc["model"]["backends_allowed"] == ["mistral-eu", "ollama", "anthropic-api", "minimax-api"]
+    non_eu = {"anthropic-api", "minimax-api"}
     assert doc["gdpr"]["transfers_outside_eu"] is False, (
         "without it a disarmed mistral-eu degrades iris to the hosted default")
     tier = re.search(r"\b(haiku|sonnet|opus|vision)\b", doc["model"]["primary"])
     rows = yaml.safe_load(REGISTER.read_text())["backends"]
     for b in doc["model"]["backends_allowed"]:
         assert tier and rows[b]["model_env"].get(tier[1]), f"{doc['model']['primary']} has no model on {b}"
-        assert rows[b]["residency"]["eu"] is True, f"{b} is not EU-resident"
+        assert rows[b]["residency"]["eu"] is (b not in non_eu), f"{b}: residency is not what the ruling says"
     names = [p["name"] for p in doc["gdpr"]["processors"]]
     for b in doc["model"]["backends_allowed"]:
         assert any(rows[b]["processor_match"] in n for n in names), f"no processor of iris names the {b} row"
