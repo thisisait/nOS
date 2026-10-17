@@ -592,3 +592,52 @@ fn a_mapper_refusal_gets_the_repair_round() {
     assert_eq!(last.1["valid"], json!(true), "{ev:?}");
     assert!(ev.iter().any(|(t, v)| t.ends_with("tool_use:query_rows") && v["args"]["limit"] == 5), "the repaired plan ran: {ev:?}");
 }
+
+/// Organ probe 2026-10-17: a free-text answer (Ollama MLX, a cloud row) is read by extract(), and its
+/// first line was the plan - so a fenced pipeline split over lines ran as its first stage alone, valid
+/// and wrong, and a line of prose before it burned the repair round.
+#[test]
+fn a_free_text_plan_is_read_whole() {
+    let three = "```\nget(db:todos)\n| filter(where=\"status eq open\")\n| show(kind=\"chart\", chart=\"bar\")\n```";
+    assert_eq!(cortex_plan::extract(three), "get(db:todos) | filter(where=\"status eq open\") | show(kind=\"chart\", chart=\"bar\")");
+    assert_eq!(cortex_plan::extract("Here is the plan:\n\nget(db:todos, limit=5) | rank(by=\"amount\")\nThat lists them."),
+               "get(db:todos, limit=5) | rank(by=\"amount\")");
+    assert_eq!(cortex_plan::extract("get(db:todos)"), "get(db:todos)");
+}
+
+/// The lexer types a bare -?\d+ as int and allows only ASCII [A-Za-z0-9_/-] in a bare word: rank(by=počet),
+/// filter(q=2024) and show(title=2024) are refused (probe 2026-10-17). The primer teaches the quoted form only.
+#[test]
+fn the_primer_quotes_every_string_value() {
+    let p = cortex_plan::primer(cortex_plan::Engine::Free, "- todos \"Todos\": title:text");
+    for line in p.lines().filter(|l| l.contains('(') && !l.starts_with("Tables")) {
+        let (mut quoted, mut depth, chars): (bool, i32, Vec<char>) = (false, 0, line.chars().collect());
+        for (i, c) in chars.iter().enumerate() {
+            match c {
+                '"' => quoted = !quoted,
+                '(' if !quoted => depth += 1,
+                ')' if !quoted => depth -= 1,
+                '=' if !quoted && depth > 0 => {
+                    let next = chars.get(i + 1).copied().unwrap_or(' ');
+                    assert!(next == '"' || next.is_ascii_digit() || next == 'N', "a bare value after `=`: {line}");
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+/// A model writes the where mini-syntax as it writes SQL or JSON: 'open' in single quotes (kept, so it
+/// matched nothing), `amount > 5`, `status = open` and `Status EQ open` (all refused) - probe 2026-10-17.
+#[test]
+fn a_where_reads_the_shapes_a_model_writes() {
+    let w = |s: &str| cortex_plan::parse_where(s).unwrap_or_else(|e| panic!("{s}: {e}"));
+    assert_eq!(w("status eq 'open'"), ("status".into(), "eq".into(), json!("open")));
+    assert_eq!(w("amount > 5"), ("amount".into(), "gt".into(), json!("5")));
+    assert_eq!(w("amount < 5").1, "lt");
+    assert_eq!(w("status = open"), ("status".into(), "eq".into(), json!("open")));
+    assert_eq!(w("status != done").1, "neq");
+    assert_eq!(w("Status EQ open"), ("Status".into(), "eq".into(), json!("open")));
+    // query_rows has no inclusive lt or gt: >= is refused with the syntax, never read as >
+    assert!(cortex_plan::parse_where("amount >= 5").is_err());
+}
