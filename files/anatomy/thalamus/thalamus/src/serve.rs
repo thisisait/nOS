@@ -3330,6 +3330,21 @@ pub fn normalize_show(args: &Value) -> Value {
             }
         }
     }
+    // Probe 2026-10-17: a chart named by its chart word ({kind: "pie"}), and a kind with no props at all.
+    if let Some(c) = comp.as_object_mut() {
+        // only a chart's exact name: an invented kind (pie_chart) stays refused by name
+        let exact = |k: &str| ["bar", "line", "pie"].contains(&k);
+        if let Some(w) = c.get("kind").and_then(Value::as_str).filter(|k| exact(k)).and_then(chart_word) {
+            c.insert("kind".into(), json!("chart"));
+            let p = c.entry("props").or_insert(json!({}));
+            if let Some(p) = p.as_object_mut() {
+                p.entry("chart").or_insert(json!(w));
+            }
+        }
+        if matches!(c.get("kind").and_then(Value::as_str), Some("chart" | "kpi" | "choice")) && !c.get("props").is_some_and(Value::is_object) {
+            c.insert("props".into(), json!({}));
+        }
+    }
     // Bench v2: a choice's options as plain strings, and one suggested label as a string.
     if comp["kind"] == "choice" {
         if let Some(p) = comp.get_mut("props").and_then(Value::as_object_mut) {
@@ -3338,8 +3353,26 @@ pub fn normalize_show(args: &Value) -> Value {
                     *o = json!({"label": o.take()});
                 }
             }
-            if let Some(s) = p.get_mut("suggested").filter(|s| s.is_string()) {
+            if let Some(s) = p.get_mut("suggested").filter(|s| s.is_string() || s.is_number()) {
                 *s = json!([s.take()]);
+            }
+            // Probe 2026-10-17: a pick by index or in another case is the option's label; multi follows from the picks.
+            let labels: Vec<String> = p.get("options").and_then(Value::as_array).into_iter().flatten()
+                .filter_map(|o| o["label"].as_str().map(str::to_string)).collect();
+            let key = |t: &str| t.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
+            for s in p.get_mut("suggested").and_then(Value::as_array_mut).into_iter().flatten() {
+                let hit = match &*s {
+                    Value::Number(n) => n.as_u64().and_then(|i| labels.get(i as usize)),
+                    Value::String(t) => labels.iter().find(|l| key(l) == key(t)),
+                    _ => None,
+                };
+                if let Some(l) = hit {
+                    *s = json!(l);
+                }
+            }
+            if !p.contains_key("multi") {
+                let many = p.get("suggested").and_then(Value::as_array).is_some_and(|s| s.len() > 1);
+                p.insert("multi".into(), json!(many));
             }
         }
     }
@@ -3355,17 +3388,43 @@ pub fn normalize_show(args: &Value) -> Value {
             src.remove("y");
         }
     }
-    // A sourced chart's series comes from KEAP: give the model's bare chart the shape check() wants.
-    if o.contains_key("source") && comp["kind"] == "chart" {
+    // A sourced chart's axis and series come from KEAP: the model's own (x a column, series []) are
+    // replaced by the shape check() wants, and a chart the source names moves to the component (probe 2026-10-17).
+    if comp["kind"] == "chart" && o.get("source").is_some_and(Value::is_object) {
+        // source.chart moves to the component unless the component names another: that conflict stays refused
+        let own = comp.pointer("/props/chart").cloned();
+        let src = o.get_mut("source").and_then(Value::as_object_mut);
+        let named = src.and_then(|s| match (s.get("chart"), &own) {
+            (Some(n), Some(c)) if n != c => None,
+            _ => s.remove("chart"),
+        });
         if let Some(p) = comp.get_mut("props").and_then(Value::as_object_mut) {
-            p.entry("x").or_insert(json!("category"));
-            p.entry("series").or_insert(json!([{"name": "rows", "points": [["", 0]]}]));
+            if let Some(w) = named.as_ref().and_then(Value::as_str).and_then(chart_word) {
+                p.entry("chart").or_insert(json!(w));
+            }
+            p.entry("chart").or_insert(json!("bar"));
+            if !p.get("x").and_then(Value::as_str).is_some_and(|x| ["category", "number", "time"].contains(&x)) {
+                p.insert("x".into(), json!("category"));
+            }
+            p.insert("series".into(), json!([{"name": "rows", "points": [["", 0]]}]));
         }
     }
     // A kpi's number, delta and source are the thalamus's: whatever the model sent there is dropped.
     if comp["kind"] == "kpi" {
+        // the shared source schema offers x; a kpi has none (probe 2026-10-17)
+        let src = o.get_mut("source").and_then(Value::as_object_mut);
+        let title = src.map(|s| {
+            // an empty x is the shared schema's filler; a named one groups the total and stays refused
+            if s.get("x").and_then(Value::as_str) == Some("") {
+                s.remove("x");
+            }
+            format!("{} of {}", s.get("op").and_then(Value::as_str).unwrap_or("count"), s.get("query").and_then(|q| q.get("table")).and_then(Value::as_str).unwrap_or("rows"))
+        });
         if let Some(p) = comp.get_mut("props").and_then(Value::as_object_mut) {
             p.retain(|k, _| k == "title" || k == "unit");
+            if !p.get("title").and_then(Value::as_str).is_some_and(|t| !t.trim().is_empty()) {
+                p.insert("title".into(), json!(title.unwrap_or_else(|| "total".into())));
+            }
             p.insert("value".into(), json!(0));
         }
     }
