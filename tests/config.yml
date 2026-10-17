@@ -165,3 +165,7 @@ nextcloud_admin_password: "ci-test-password"
 gitea_secret_key: "ci-test-secret-key-32-characters"
 openclaw_user: "runner"
 openclaw_base_dir: "/Users/runner"
+
+# CI runners serve no local model: llm_on_host (default true since 2026-10-16) would arm
+# ollama and job_readiness --verify would rightly call 3 jobs MISSING (release PR #58).
+llm_on_host: false
