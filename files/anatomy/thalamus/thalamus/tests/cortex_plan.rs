@@ -572,3 +572,23 @@ fn the_repair_round_hears_which_stage_and_key_the_organ_refused() {
         assert!(repair.contains(want), "the repair names {want}: {repair}");
     }
 }
+
+/// The mapper's refusals are the repairable kind ("no column `stat` in Todos; columns: ..."), the
+/// commonest small-model slip, but only the organ's got the repair round: a wrong column fell back.
+#[test]
+fn a_mapper_refusal_gets_the_repair_round() {
+    let bad = "get(db:todos) | filter(where=\"stat eq open\")";
+    let good = "get(db:todos, limit=5) | filter(where=\"status eq open\")";
+    let mut k = known(&cases());
+    k.push((bad.into(), json!([{"op": "get", "operand": "db:todos", "params": {}}, {"op": "filter", "params": {"where": "stat eq open"}}]),
+            cortex_plan::REGISTRY_HASH.into(), vec![]));
+    let (organ_url, _) = organ(k);
+    let rig = rig("maprepair", binding("mistral-eu", false), vec![say(bad), say(good), say("done")], Some(organ_url));
+    let (session, _) = turn(&rig, None, "open todos");
+    let said = models_said(&rig);
+    assert!(said[1].get("tools").is_none() && said[1].to_string().contains("no column `stat` in Todos"), "the repair hears the mapper: {}", said[1]);
+    let ev = tools(&rig, &session);
+    let last = ev.iter().rev().find(|(t, _)| t.ends_with("tool_result:cortex_plan")).unwrap();
+    assert_eq!(last.1["valid"], json!(true), "{ev:?}");
+    assert!(ev.iter().any(|(t, v)| t.ends_with("tool_use:query_rows") && v["args"]["limit"] == 5), "the repaired plan ran: {ev:?}");
+}
