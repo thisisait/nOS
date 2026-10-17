@@ -21,7 +21,7 @@ reaching for 32B by default.
 WHAT IS SCORED (state/fixtures/local-model-bench.yml carries the tasks)
 
     valid    the validator accepted the chain              hard pass/fail
-    opcode   it used the opcode the task asked for         did it understand?
+    opcode   the asked-for opcode and expect_params         did it understand?
     tokens   prompt_eval_count + eval_count from ollama    what it cost
     seconds  wall clock                                    what you wait for
 
@@ -263,6 +263,16 @@ def first_chain(text: str) -> str:
     return text.strip().splitlines()[0].strip() if text.strip() else ""
 
 
+def intent_ok(task: dict, chain: str) -> bool:
+    """The asked-for opcode, plus every `expect_params` key=value the task names.
+    ponytail: params are matched anywhere in the chain, not on the opcode's own
+    stage; parse the AST if two stages ever share a param name in one task."""
+    if not re.search(rf"\b{re.escape(task['expect_opcode'])}\s*\(", chain):
+        return False
+    return all(re.search(rf'\?{re.escape(k)}\s*=\s*"?{re.escape(str(v))}"?\s*[,)]', chain, re.I)
+               for k, v in (task.get("expect_params") or {}).items())
+
+
 def validate(chain: str, token: str) -> dict | None:
     """None means the judge could not answer — which is NOT a failing score.
 
@@ -369,7 +379,7 @@ def main() -> int:
                     # blame the model for taking the machine, which is a separate
                     # finding with its own column.
                     "valid": bool(verdict.get("valid")) if verdict is not None else None,
-                    "opcode_ok": bool(re.search(rf"\b{re.escape(task['expect_opcode'])}\s*\(", chain)),
+                    "opcode_ok": intent_ok(task, chain),
                     "tokens": gen["tokens"],
                     "eval_tokens": gen["eval_tokens"],
                     "seconds": round(gen["seconds"], 1),

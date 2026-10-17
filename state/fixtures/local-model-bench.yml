@@ -23,7 +23,7 @@
 #
 # HOW A TASK IS SCORED
 #   valid     the emitted chain passes KEAP's validator          (hard pass/fail)
-#   opcode    the chain uses the opcode the task asked for       (did it understand?)
+#   opcode    the asked-for opcode and any expect_params         (did it understand?)
 #   tokens    prompt_eval_count + eval_count                     (what it cost)
 #   seconds   wall clock, first token to last                    (what you wait)
 #
@@ -40,9 +40,13 @@ system: |
   no explanation, no markdown fence.
 
   Grammar:  @input | opcode(namespace:operand, ?param=value) | opcode(...)
-  Opcodes:  get map filter rank classify resolve embed        (read-only)
-            link insert update delete preserve route review   (mutating)
-  Namespaces: tax (taxonomy) rel (relations) kg ent db svc doc
+  Opcodes:  get map filter rank classify resolve embed aggregate show   (read-only)
+            link insert update delete preserve route review delegate    (mutating)
+  Namespaces: tax (taxonomy) rel (relations) kg ent db (tables) svc doc agent
+  Table params: filter ?where="<column> <op> <value>" · rank ?by ?dir=asc|desc ?limit
+            aggregate ?op=count|sum|avg ?by=<group column> ?y=<number column>
+            show ?kind=chart|kpi|choice|table|list|record ?title ?unit
+            insert/update ?set="key=value;key=value"
   A mutating opcode should carry ?commit=true when the user asked to change
   something for real.
 
@@ -133,3 +137,30 @@ tasks:
   - id: kg-trap
     prompt: "Get the knowledge-graph object for the input."
     expect_opcode: get
+
+  # Registry v3 (iris-speaks-cortex-lang increment 2): the table questions Iris
+  # gets. `reference` is the answer key the offline gate runs through the
+  # analyzer; `expect_params` is what the scorer requires beyond the opcode.
+  - id: sum-by-track
+    prompt: "From table invoices, sum the amount per track."
+    expect_opcode: aggregate
+    expect_params: {op: sum, by: track, y: amount}
+    reference: '@input | get(db:invoices) | aggregate(?op="sum", ?by="track", ?y="amount")'
+
+  - id: kpi-total
+    prompt: "Show the total amount of table invoices as one KPI number."
+    expect_opcode: show
+    expect_params: {kind: kpi}
+    reference: '@input | get(db:invoices) | aggregate(?op="sum", ?y="amount") | show(?kind="kpi")'
+
+  - id: top3-desc
+    prompt: "List the three invoices with the highest amount, largest first."
+    expect_opcode: rank
+    expect_params: {by: amount, dir: desc, limit: "3"}
+    reference: '@input | get(db:invoices) | rank(?by="amount", ?dir="desc", ?limit=3)'
+
+  - id: edit-set
+    prompt: "In table invoices, set the status of invoice 7 to paid. Really save it."
+    expect_opcode: update
+    expect_params: {set: "status=paid", commit: "true"}
+    reference: '@input | get(db:invoices) | filter(?where="id = 7") | update(db:invoices, ?set="status=paid", ?commit=true)'
