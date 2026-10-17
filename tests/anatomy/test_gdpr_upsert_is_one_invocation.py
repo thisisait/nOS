@@ -26,12 +26,9 @@ def test_tier1_gdpr_upsert_is_one_php_invocation():
     assert "loop" not in upsert, (
         f"{POST}: GDPR upsert still loops — that is one PHP boot per service"
     )
-    cmd = str(
-        (upsert.get("ansible.builtin.shell") or upsert.get("shell") or {}).get("cmd")
-        or upsert.get("ansible.builtin.shell")
-        or upsert.get("shell")
-        or ""
-    )
+    # EXISTING gate, widened 2026-10-17: the task may run as command (records on stdin, not env)
+    mod = next((upsert[k] for k in ("ansible.builtin.shell", "shell", "ansible.builtin.command", "command") if k in upsert), "")
+    cmd = str(mod.get("cmd") if isinstance(mod, dict) else mod or "")
     assert "--json=-" in cmd
     assert "--id=" not in cmd
 
