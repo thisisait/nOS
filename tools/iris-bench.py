@@ -30,7 +30,8 @@ run can be filed in nos-assay as evidence: a model name can be re-pointed upstre
 With cortex, each case is also judged on the pipeline the thalamus planned, read from --ledger
 (read-only) by the session uuid on the wire: pipeline_valid and pipeline_equals_expected go
 through POST <--validate-url>/agent/v1/validate (CORTEX_TOKEN_RO), op by op, never as text;
-a case without expect_pipeline must fall back (pipeline_fell_back).
+a single-prompt case without expect_pipeline must fall back (pipeline_fell_back); a plan check the
+judge cannot answer (validator, ledger) makes the case NO-DATA. --validate-url is loopback only.
 """
 
 from __future__ import annotations
@@ -45,6 +46,7 @@ import sqlite3
 import subprocess
 import sys
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -276,7 +278,16 @@ def plan_checks(case: dict, plan: str) -> dict:
         return {}
     if case.get("expect_pipeline"):
         return {"pipeline_valid": True, "pipeline_equals_expected": case["expect_pipeline"], "pipeline_fell_back": False}
-    return {"pipeline_fell_back": True}
+    # ponytail: the ledger is not sliced per turn, so a multi-turn case without a plan goes unjudged
+    return {} if "turns" in case else {"pipeline_fell_back": True}
+
+
+PLAN_CHECKS = ("pipeline_valid", "pipeline_equals_expected", "pipeline_fell_back")
+
+
+def unjudged(failed: list[str]) -> bool:
+    """Every failure is a plan check the judge could not answer ("name: why"): NO-DATA, not red."""
+    return bool(failed) and all(f.startswith(tuple(f"{n}: " for n in PLAN_CHECKS)) for f in failed)
 
 
 def check(name: str, arg, got: dict, now: float) -> bool:
@@ -768,6 +779,9 @@ def main(argv: list[str] | None = None) -> int:
         if not (a.ledger and Path(a.ledger).is_file()):
             print("--plan cortex reads the pipeline from the thalamus ledger: pass --ledger <ledger.db>.", file=sys.stderr)
             return 2
+        if urllib.parse.urlsplit(a.validate_url).hostname not in ("127.0.0.1", "localhost", "::1"):
+            print("--validate-url must be loopback: the RO token never leaves the host.", file=sys.stderr)
+            return 2
         token = os.environ.get("CORTEX_TOKEN_RO", "").strip()
         if not token:
             print("--plan cortex judges pipelines through /agent/v1/validate: set CORTEX_TOKEN_RO.", file=sys.stderr)
@@ -785,7 +799,7 @@ def main(argv: list[str] | None = None) -> int:
             if validate:
                 got |= {"plan": read_plan(a.ledger, got["session"]), "validate": validate}
             failed, turns = judge(case, got, time.time())
-            runs.append((got, failed, round(time.monotonic() - t0, 2), bool(failed) and no_data(case, got), turns))
+            runs.append((got, failed, round(time.monotonic() - t0, 2), bool(failed) and (no_data(case, got) or unjudged(failed)), turns))
         passes = sum(1 for r in runs if not r[1])
         ok = passes * 2 > n  # report a run that agrees with the verdict
         got, failed, _, _, turns = next((r for r in runs if not r[1]), runs[-1]) if ok else \
