@@ -44,15 +44,14 @@
   failed_when: false
   tags: ['always', 'smoke']
 
-# Close the blank's record BEFORE the verdict can end the play: a blank whose
-# smoke fails is exactly the one the release gate must see. main.yml opens it.
-# ponytail: a failure after this task (first-login) still reads as failed=false.
-- name: "[smoke] Close the blank-run record"
+# Record the smoke result BEFORE the verdict can end the play. Still unfinished:
+# callback_plugins/blank_record.py closes it with the play's outcome at the end.
+- name: "[smoke] Record the smoke result in the blank-run record"
   vars:
     _counts: "{{ (_nos_smoke.stdout | default('')) | regex_search('(\\d+) / (\\d+) OK', '\\1', '\\2') }}"
   ansible.builtin.lineinfile:
-    path: "{{ ansible_facts['env']['HOME'] }}/.nos/blank-runs.jsonl"
-    line: "{{ {'started': nos_blank_started, 'finished': now(utc=true, fmt='%Y-%m-%dT%H:%M:%SZ'),
+    path: "{{ nos_blank_record }}"
+    line: "{{ {'started': nos_blank_started, 'finished': none,
                'nos_commit': nos_deployed_ref | default('unknown'),
                'failed': _nos_smoke.rc | default(0) != 0,
                'smoke_strict': ({'passed': _counts[0] | int, 'total': _counts[1] | int}

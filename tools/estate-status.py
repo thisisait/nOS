@@ -319,7 +319,7 @@ def axis_organs(res: Result) -> None:
 
 
 def axis_blank(res: Result) -> None:
-    """The newest confirmed blank (main.yml opens the line, post-smoke closes it)."""
+    """The newest confirmed blank (main.yml opens it, callback_plugins/blank_record.py closes it)."""
     path = Path.home() / ".nos" / "blank-runs.jsonl"
     try:
         rows = [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
