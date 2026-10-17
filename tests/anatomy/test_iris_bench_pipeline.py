@@ -185,6 +185,9 @@ def test_a_cortex_run_is_judged_on_the_pipeline_the_ledger_holds(tmp_path, valid
     assert res["fallback-ok"]["pass"], res["fallback-ok"]["failed"]          # no plan row: fell back
     assert res["planned-anyway"]["failed"] == ["pipeline_fell_back"]        # absent expect = fallback is correct
     assert res["same-plan"]["pipeline"]["source"] == SAID and res["broken-plan"]["pipeline"]["fell_back"]
+    # nos-assay import-iris-bench turns these into per-check rewards
+    assert res["same-plan"]["plan_checks"] == ["pipeline_equals_expected", "pipeline_fell_back", "pipeline_valid"]
+    assert res["fallback-ok"]["plan_checks"] == ["pipeline_fell_back"]
     assert rc == 1
     assert run["plan_path"] == "cortex" and run["provenance"]["plan"] == "cortex"
     assert run["engine"] == "llamacpp-gbnf" and run["registry_hash"] == HASH
@@ -198,6 +201,7 @@ def test_a_cortex_run_is_judged_on_the_pipeline_the_ledger_holds(tmp_path, valid
 def test_the_tools_path_judges_no_pipeline(tmp_path, validator):
     rc, run, _ = _run(tmp_path, "--plan", "tools", "--validate-url", validator)
     assert rc == 0 and all(r["pass"] for r in run["cases"])
+    assert all(r["plan_checks"] == [] for r in run["cases"])
     assert run["plan_path"] == "tools" and run["provenance"]["plan"] == "tools"
     assert Validator.seen == []
 
