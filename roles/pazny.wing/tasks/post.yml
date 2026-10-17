@@ -196,15 +196,13 @@
   # (~23s). `--json=-` reads the array gdpr-records.py already emitted.
   # Idempotent: re-running rewrites each row. failed_when:false keeps a
   # single malformed record from aborting the run.
-  ansible.builtin.shell:
-    cmd: >-
-      set -o pipefail;
-      printf '%s' "$NOS_GDPR_JSON"
-      | {{ wing_php_cli }} bin/upsert-gdpr.php --json=-
+  # The records go on stdin: through an env var they died past Linux's 131072-byte
+  # MAX_ARG_STRLEN (142724 bytes, Integration ubuntu-24.04, 2026-10-17).
+  ansible.builtin.command:
+    cmd: "{{ wing_php_cli }} bin/upsert-gdpr.php --json=-"
     chdir: "{{ wing_app_dir }}"
-    executable: /bin/bash
-  environment:
-    NOS_GDPR_JSON: "{{ _gdpr_records_raw.stdout }}"
+    stdin: "{{ _gdpr_records_raw.stdout }}"
+    stdin_add_newline: false
   register: _gdpr_tier1_upserts
   changed_when: "'digest-changed=1' in (_gdpr_tier1_upserts.stdout | default(''))"
   failed_when: false
