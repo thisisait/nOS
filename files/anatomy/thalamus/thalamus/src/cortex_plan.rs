@@ -11,6 +11,12 @@ pub const REGISTRY_HASH: &str = "cx1:8250d05e5e32afb7";
 const OPS: [&str; 9] = ["eq", "neq", "in", "contains", "lt", "gt", "between", "before", "after"];
 /// The opcodes the mapper carries: the JSON-schema engine's enum.
 const MAPPED: [&str; 8] = ["get", "filter", "rank", "aggregate", "show", "insert", "update", "delete"];
+/// The params plan() reads, per opcode; the organ leaves a db: stage's params open, so any other is refused here.
+/// dry_run, commit and idempotency_key are read as nothing on purpose: the card is the gate.
+const READS: [(&str, &[&str]); 8] = [("get", &["limit", "fields"]), ("filter", &["where", "q"]), ("rank", &["by", "dir", "limit"]),
+    ("aggregate", &["op", "by", "y"]), ("show", &["kind", "chart", "x", "y", "title", "unit"]),
+    ("insert", &["set", "dry_run", "commit", "idempotency_key"]), ("update", &["set", "dry_run", "commit", "idempotency_key"]),
+    ("delete", &["dry_run", "commit", "idempotency_key"])];
 /// The v3 params the mapper reads (registry v3), each with its JSON type.
 const PARAMS: [(&str, &str); 14] = [("limit", "integer"), ("fields", "string"), ("where", "string"), ("q", "string"),
     ("by", "string"), ("dir", "string"), ("op", "string"), ("y", "string"), ("kind", "string"), ("chart", "string"),
@@ -213,6 +219,11 @@ pub fn plan(source: Option<&str>, stages: &[Stage]) -> Result<Plan, String> {
         }
         if !MAPPED.contains(&s.op.as_str()) {
             return Err(format!("{}() has no thalamus mapping", s.op));
+        }
+        let reads = READS.iter().find(|(o, _)| *o == s.op).map_or(&[][..], |r| r.1);
+        if let Some(k) = s.params.keys().find(|k| !reads.contains(&k.as_str())) {
+            return Err(format!("{}() has no param `{k}` the thalamus reads; it reads {}", s.op,
+                               reads.iter().filter(|r| !matches!(**r, "dry_run" | "commit" | "idempotency_key")).copied().collect::<Vec<_>>().join(", ")));
         }
         if let Some(o) = &s.operand {
             match o.split_once(':') {
