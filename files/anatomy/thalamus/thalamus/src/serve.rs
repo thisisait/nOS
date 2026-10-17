@@ -1500,7 +1500,8 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 Ok(Ok((stages, src, hash))) => {
                     let mapped = cortex_plan::plan(src.as_deref(), &stages).and_then(|p| cortex_plan::calls(&p,
                         |t| self.table_info(who, t),
-                        |args, read| self.matched(who, args, read).map(|m| m.hits.into_iter().map(|h| h.0).collect())));
+                        |args, read| self.matched(who, args, read).map(|m| m.hits.into_iter().map(|h| h.0).collect()))
+                        .map(|c| (p.table, c)));
                     return match mapped {
                         // the mapper's refusal is the repairable kind (a column, a where): one round, as the organ's
                         Err(why) if round == 0 => {
@@ -1510,9 +1511,13 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                             continue;
                         }
                         Err(why) => refused(o, why, "model", json!({"errors": [], "registry_hash": hash})),
-                        Ok(calls) => {
+                        Ok((said_table, calls)) => {
                             let plan: Vec<Value> = calls.iter().map(|(n, a)| json!([n, a])).collect();
-                            let _ = self.record(o, Kind::ToolResult, tool, json!({"valid": true, "errors": [], "registry_hash": hash, "plan": plan}));
+                            // which table the mapper read, by every name (tools/iris-bench.py same_pipeline)
+                            let table = self.table_info(who, &said_table).map(|(id, i)| json!({"said": said_table, "id": id,
+                                "title": i.pointer("/data/title").cloned().unwrap_or(Value::Null)})).unwrap_or(Value::Null);
+                            let _ = self.record(o, Kind::ToolResult, tool, json!({"valid": true, "errors": [], "registry_hash": hash, "plan": plan,
+                                                                                 "table": table}));
                             let tool_calls: Vec<Value> = calls.iter().enumerate().map(|(i, (n, a))| json!({"id": format!("cortex-{}", i + 1),
                                 "type": "function", "function": {"name": n, "arguments": a.to_string()}})).collect();
                             Some(json!({"role": "assistant", "content": null, "tool_calls": tool_calls}))
