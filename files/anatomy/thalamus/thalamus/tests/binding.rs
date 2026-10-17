@@ -240,7 +240,7 @@ gdpr: {processors: [{name: Mistral AI SAS}, {name: MiniMax}], transfers_outside_
 fn picks_are_the_allowed_rows_each_bound_or_refused_by_the_gates() {
     let iris = std::fs::read_to_string(repo().join("files/anatomy/agents/iris/agent.yml")).unwrap();
     let p = thalamus::binding::picks(&iris, &register(), env(ARMED));
-    assert_eq!(p.iter().map(|p| p.row.as_str()).collect::<Vec<_>>(), ["mistral-eu", "ollama"], "backends_allowed, in order");
+    assert_eq!(p.iter().map(|p| p.row.as_str()).collect::<Vec<_>>(), ["mistral-eu", "ollama", "anthropic-api", "minimax-api"], "backends_allowed, in order");
     assert!(p[0].bound.as_ref().is_err_and(|w| w.contains("not armed")), "an unarmed row is refused: {:?}", p[0].bound);
     assert!(p[1].bound.as_ref().is_ok_and(|b| b.local && b.model_id == "qwen3:14b"), "{:?}", p[1].bound);
     assert_eq!((p[0].processor.as_str(), p[0].outside_eu), ("Mistral AI SAS", false));

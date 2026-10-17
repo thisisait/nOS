@@ -84,39 +84,29 @@ def test_the_plist_runs_serve_and_keeps_the_secret_out_of_argv():
 def test_the_plist_carries_the_bound_backends_key_in_env_only():
     """Iris binds mistral-eu (ruling 2026-10-12): its key rides the 0600 plist env, read once by main.rs."""
     p = _plist(mistral_enabled=True, mistral_model="mistral-large-latest",
-               thalamus_model_secret="mistral_api_key", thalamus_model_token="sk-eu-91c2")
+               thalamus_model_secrets=["mistral_api_key"], thalamus_model_tokens={"mistral_api_key": "sk-eu-91c2"})
     env = p["EnvironmentVariables"]
     assert env["NOS_SECRET_MISTRAL_API_KEY"] == "sk-eu-91c2"
     assert env["NOS_MISTRAL_MODEL"] == "mistral-large-latest"
     assert env["NOS_ARMED_BACKENDS"].split() == ["mistral-eu", "ollama"]
     assert "sk-eu-91c2" not in " ".join(p["ProgramArguments"])
-    keyless = _plist(thalamus_model_secret="", thalamus_model_token="")["EnvironmentVariables"]
+    keyless = _plist(thalamus_model_secrets=[], thalamus_model_tokens={})["EnvironmentVariables"]
     assert not [k for k in keyless if k.startswith("NOS_SECRET_")], "a keyless binding renders no key"
 
 
 def test_the_role_renders_the_key_iris_binds_and_no_other():
-    """The secret var comes from iris's backend row (auth_secret nos:<var>), its value from that one var.
+    """The secret vars come from iris's armed rows (auth_secret nos:<var>), their values from those vars.
 
-    Read in tasks (set_fact), not defaults: defaults stay lookup-free. The value's set_fact is no_log.
+    Read in tasks (set_fact), not defaults: defaults stay lookup-free. The values' set_fact is no_log.
     """
     tasks = _tasks()
-    facts = {k: v for t in tasks for k, v in (t.get("ansible.builtin.set_fact") or {}).items()}
-    defaults = {k: facts[k] for k in ("thalamus_model_secret", "thalamus_model_token")}
-    holder = next(t for t in tasks if "thalamus_model_token" in (t.get("ansible.builtin.set_fact") or {}))
+    holder = next(t for t in tasks if "thalamus_model_tokens" in (t.get("ansible.builtin.set_fact") or {}))
     assert holder.get("no_log") is True, "the key's set_fact logs its value"
     plist = tasks.index(next(t for t in tasks if "ansible.builtin.template" in t))
     assert tasks.index(holder) < plist, "the key is read after the plist renders"
-    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
-    env.filters["from_yaml"] = yaml.safe_load
-    env.filters["regex_replace"] = lambda s, p, r: __import__("re").sub(p, r, s)
     held = {"mistral_api_key": "sk-eu-91c2", "minimax_api_key": "sk-other"}
-    env.globals["lookup"] = lambda kind, arg, default=None: (
-        pathlib.Path(arg).read_text() if kind == "file" else held.get(arg, default))
-    secret = env.from_string(defaults["thalamus_model_secret"]).render(nos_main_checkout=str(REPO)).strip()
-    assert secret == "mistral_api_key"
-    token = env.from_string(defaults["thalamus_model_token"]).render(thalamus_model_secret=secret)
-    assert token == "sk-eu-91c2"
-    assert env.from_string(defaults["thalamus_model_token"]).render(thalamus_model_secret="") == ""
+    assert _key_facts(**held, mistral_enabled=True) == (["mistral_api_key"], {"mistral_api_key": "sk-eu-91c2"})
+    assert _key_facts(**held) == ([], {}), "an unarmed row's key stays out"
 
 
 def _key_facts(**held) -> tuple[list, dict]:

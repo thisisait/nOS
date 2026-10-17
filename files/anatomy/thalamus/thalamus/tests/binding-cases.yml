@@ -100,7 +100,7 @@ cases:
   - name: a chosen row the cell does not allow refuses
     cell: iris
     env: {NOS_CELL_BACKEND: minimax, NOS_ARMED_BACKENDS: minimax, NOS_MINIMAX_MODEL: m1}
-    expect: {kind: refused, contains: "may bind only mistral-eu, ollama"}
+    expect: {kind: refused, contains: "may bind only mistral-eu, ollama, anthropic-api, minimax-api"}
   - name: the chosen on-device row unarmed refuses rather than degrade
     cell: iris
     env: {NOS_CELL_BACKEND: ollama, NOS_LOCAL_MODEL: "qwen3:14b", NOS_ARMED_BACKENDS: mistral-eu, NOS_MISTRAL_MODEL: m, "nos:mistral_api_key": k}
