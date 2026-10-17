@@ -1,10 +1,11 @@
 # tools/iris-bench.py cases, seeded from the live findings of 2026-10-12/13.
 # A case is one `prompt` or a list of `turns` in one session. Checks are scored from
 # the wire only (ToShell lines); the runner rejects every approval it sees.
-# expect_pipeline: the cortex-lang v3 plan --plan cortex must make (a multi-turn case: its last plan);
+# expect_pipeline: the cortex-lang v3 plan --plan cortex must make, or a list any of which passes
+# (a multi-turn case: its last plan);
 # absent = fallback is correct (UNPLANNED in tests/anatomy/test_iris_bench_pipeline.py says why).
 - id: roadmap-count
-  expect_pipeline: 'get(db:roadmap)'
+  expect_pipeline: ['get(db:roadmap)', 'get(db:roadmap) | aggregate(op=count)']
   prompt: How many rows does the roadmap have? Give the exact number.
   checks:
     tools_called: [query_rows]
@@ -13,8 +14,11 @@
     not_blank: true
 # Data cases read the iris-bench-2 table (tools/iris-bench.py --seed): a host's roadmap may be empty.
 - id: next-by-track
-  # ponytail: "a chart" names no kind, bar is the one plan; add an any-of expect if runs pick pie
-  expect_pipeline: 'get(db:iris-bench-2) | filter(where="status eq next") | aggregate(op=count, by=track) | show(kind=chart, chart=bar, x=track)'
+  # "a chart" names no kind: bar, pie and line all pass (ruling 2026-10-17)
+  expect_pipeline:
+    - 'get(db:iris-bench-2) | filter(where="status eq next") | aggregate(op=count, by=track) | show(kind=chart, chart=bar, x=track)'
+    - 'get(db:iris-bench-2) | filter(where="status eq next") | aggregate(op=count, by=track) | show(kind=chart, chart=pie, x=track)'
+    - 'get(db:iris-bench-2) | filter(where="status eq next") | aggregate(op=count, by=track) | show(kind=chart, chart=line, x=track)'
   prompt: In the iris-bench-2 table, show the rows with status next as a chart by track.
   needs_rows: true
   checks:
@@ -65,7 +69,7 @@
     not_blank: true
 # ── Czech twins (2026-10-14): the local model's Czech is the open question ──
 - id: roadmap-count-cs
-  expect_pipeline: 'get(db:roadmap)'
+  expect_pipeline: ['get(db:roadmap)', 'get(db:roadmap) | aggregate(op=count)']
   prompt: Kolik řádků má roadmapa? Řekni přesné číslo.
   checks:
     tools_called: [query_rows]
@@ -109,7 +113,7 @@
 # ── iris-bench-2 (2026-10-15): 28 seeded rows; a case with a -cs twin answers_in its language ──
 # tables
 - id: where-not-q
-  expect_pipeline: 'get(db:iris-bench-2) | filter(where="status eq next")'
+  expect_pipeline: ['get(db:iris-bench-2) | filter(where="status eq next")', 'get(db:iris-bench-2) | filter(where="status eq next") | aggregate(op=count)']
   prompt: In iris-bench-2, how many rows have status next? Use the status column, not text search.
   needs_rows: true
   checks:
@@ -121,7 +125,7 @@
     answers_in: en
     not_blank: true
 - id: where-not-q-cs
-  expect_pipeline: 'get(db:iris-bench-2) | filter(where="status eq next")'
+  expect_pipeline: ['get(db:iris-bench-2) | filter(where="status eq next")', 'get(db:iris-bench-2) | filter(where="status eq next") | aggregate(op=count)']
   prompt: Kolik řádků v iris-bench-2 má status next? Podle sloupce status, ne hledáním v textu.
   needs_rows: true
   checks:

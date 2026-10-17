@@ -299,11 +299,12 @@ def check(name: str, arg, got: dict, now: float) -> bool:
         ok = bool(plan and plan["source"]) and got["validate"](plan["source"]).get("valid") is True
         return ok == bool(arg)
     if name == "pipeline_equals_expected":
-        want, plan = got["validate"](arg), _plan(got)
-        if not want.get("valid"):
-            raise ValueError(f"expect_pipeline is not valid cortex-lang: {arg!r}: {want.get('errors')}")
+        wants, plan = [(a, got["validate"](a)) for a in ([arg] if isinstance(arg, str) else arg)], _plan(got)
+        for a, want in wants:  # one plan or a list: any accepted plan passes
+            if not want.get("valid"):
+                raise ValueError(f"expect_pipeline is not valid cortex-lang: {a!r}: {want.get('errors')}")
         have = got["validate"](plan["source"]) if plan and plan["source"] else {}
-        return bool(have.get("valid")) and same_pipeline(want["ast"], have["ast"])
+        return bool(have.get("valid")) and any(same_pipeline(w["ast"], have["ast"]) for _, w in wants)
     text = got["text"]
     kinds = [(r["component"].get("kind"), r["component"].get("props", {}).get("chart")) for r in got["renders"]]
     if name == "tools_called":  # a subsequence, in order
