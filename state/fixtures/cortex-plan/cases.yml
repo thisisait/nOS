@@ -155,6 +155,23 @@ cases:
       - {op: get, operand: "db:engram", params: {}}
     refused: "Engram (engram) is personal; hidden while you work for ACME s.r.o."
     same_as_tool: {table: engram}
+    primer_lacks: engram
+
+  - name: the mapper's own septum speaks before a hidden table's columns do
+    working_for: acme
+    pipeline: 'get(db:engram) | filter(where="colour eq red")'
+    stages:
+      - {op: get, operand: "db:engram", params: {}}
+      - {op: filter, params: {where: "colour eq red"}}
+    refused: "Engram (engram) is personal; hidden while you work for ACME s.r.o."
+
+  - name: a kpi over a grouped aggregate is refused, never a quiet total
+    pipeline: 'get(db:todos) | aggregate(by="track", op="sum", y="amount") | show(kind="kpi")'
+    stages:
+      - {op: get, operand: "db:todos", params: {}}
+      - {op: aggregate, params: {by: track, op: sum, y: amount}}
+      - {op: show, params: {kind: kpi}}
+    refused: "show(kind=kpi) is one total; aggregate(by=track) groups it"
 
   - name: a registry the mapper was not built for is refused
     registry_hash: "cx1:0000000000000000"

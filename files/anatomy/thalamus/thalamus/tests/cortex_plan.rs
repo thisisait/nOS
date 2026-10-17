@@ -311,6 +311,10 @@ fn every_fixture_pipeline_runs_as_its_tool_calls_or_falls_back() {
         let results: Vec<&Value> = ev.iter().filter(|(t, _)| t.ends_with("tool_result:cortex_plan")).map(|e| &e.1).collect();
         let last = *results.last().unwrap_or_else(|| panic!("{name}: no cortex_plan result: {ev:?}"));
         let said = models_said(&rig);
+        if let Some(t) = c["primer_lacks"].as_str() {
+            let primer = said[0]["messages"][0]["content"].as_str().unwrap();
+            assert!(primer.contains("- todos ") && !primer.contains(t), "{name}: the catalogue shows only what the septum shows: {primer}");
+        }
         let ran: Vec<Value> = ev.iter().filter(|(t, _)| t.starts_with("agent_tool_use:") && !t.ends_with(":cortex_plan") && !t.ends_with(":show_source"))
             .map(|(t, v)| json!([t.rsplit(':').next().unwrap(), v["args"]])).collect();
         if let Some(why) = c["refused"].as_str() {
