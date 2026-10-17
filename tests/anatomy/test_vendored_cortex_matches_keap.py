@@ -192,3 +192,14 @@ def test_the_two_registries_declare_the_same_contract(vendored) -> None:
         "Re-vendor from KEAP (the source of truth for this contract), then re-run "
         "both suites:\n" + "\n".join(lines)
     )
+
+
+def test_the_extractor_reads_every_param_of_an_opcode(vendored) -> None:
+    """Guard the guard, params too: `params_of` stopped at the first `},`, so it read get as (limit,)
+    and every v3 param addition (q, dir, set, by, y, chart, x, title, unit) was invisible to the
+    comparison above - two registries differing only there compared equal (audit 2026-10-17)."""
+    params = {o[0]: {p[0] for p in o[-1]} for o in vendored["opcodes"]}  # type: ignore[index]
+    assert params["get"] == {"limit", "fields"}, params["get"]
+    assert params["rank"] == {"by", "limit", "dir"}, params["rank"]
+    assert params["show"] == {"kind", "chart", "x", "y", "title", "unit"}, params["show"]
+    assert params["insert"] == {"dry_run", "commit", "idempotency_key", "set"}, params["insert"]
