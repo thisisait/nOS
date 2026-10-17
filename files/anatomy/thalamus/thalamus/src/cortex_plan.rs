@@ -40,6 +40,8 @@ pub enum Engine {
 impl Engine {
     pub fn of(backend: &str) -> Engine {
         match backend {
+            // ponytail: no llamacpp register row (ruling B(c) 2026-10-17), so Gbnf is unreachable;
+            // a llamacpp row/role comes only after the Ollama GGUF and MLX measurements.
             "llamacpp" => Engine::Gbnf,
             "ollama" => Engine::JsonSchema,
             _ => Engine::Free,
