@@ -184,6 +184,24 @@ backends:
     processor_match: "on-device"
     served_by: ollama            # manifest row whose daemon answers base_url (graph edge)
 
+  # llama.cpp's llama-server on this machine (ruling 2026-10-16): the engine that takes a GBNF grammar,
+  # so Iris's cortex plan cannot be a syntax error. A host CHOOSES it (iris_backend: llamacpp), never a
+  # fallback. The operator runs llama-server --port 8012 with the model; nOS installs nothing here.
+  llamacpp:
+    local: true
+    protocol: openai
+    residency:
+      country: "CZ (this host)"
+      eu: true
+    base_url: "http://127.0.0.1:8012/v1"
+    auth_secret: null
+    model_env:
+      haiku: NOS_LLAMACPP_MODEL
+      sonnet: NOS_LLAMACPP_MODEL
+      opus: null
+    enabled_flag: llamacpp_enabled
+    processor_match: "llama.cpp"
+
   # The OpenClaw gateway's OpenAI surface (2026-10-01). Measured: 2026.7.1
   # answers 404 on /v1/messages, /v1/chat/completions and /v1/responses until
   # gateway.http.endpoints.chatCompletions.enabled — roles/pazny.openclaw turns

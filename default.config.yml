@@ -1002,6 +1002,10 @@ ollama_model: "{{ 'qwen3:4b' if llm_on_host else '' }}"  # -> NOS_LOCAL_MODEL (s
 # hermes3:8b: the bound FALLBACK of every hosted-primary agent (2026-10-01) —
 # tool-capable, and small enough that KEAP keeps answering (14B starves it).
 ollama_small_model: "hermes3:8b"  # -> NOS_LOCAL_SMALL_MODEL (haiku tier)
+# llama.cpp's llama-server, run by the operator on 127.0.0.1:8012 (state/habitat/llm-backends.yml row
+# llamacpp): Iris binds it only when chosen (iris_backend: llamacpp); it takes the cortex-lang GBNF.
+llamacpp_enabled: false
+llamacpp_model: ""             # -> NOS_LLAMACPP_MODEL (the id llama-server answers to)
 # vision tier — a document/image-input model, distinct from the text tiers
 # above (BindingResolver's tier regex now also matches `vision`). Chosen
 # 2026-09-20 for the D1 invoice-vision path: qwen2.5vl:7b (Ollama library tag
