@@ -90,9 +90,24 @@ pub fn render(stages: &[Stage]) -> String {
     }).collect::<Vec<_>>().join(" | ")
 }
 
-/// A free-text answer's pipeline: the first non-empty line outside a code fence.
+/// A free-text answer's pipeline: from the first line that opens with an opcode call (or a source),
+/// joined with each following line that continues it (`| ...`, or after a trailing `|`); fences and
+/// prose around it are not the plan. No such line: the first non-empty one, for the organ to refuse.
 pub fn extract(text: &str) -> String {
-    text.lines().map(str::trim).find(|l| !l.is_empty() && !l.starts_with("```")).unwrap_or("").to_string()
+    let lines: Vec<&str> = text.lines().map(str::trim).filter(|l| !l.starts_with("```")).collect();
+    let opens = |l: &str| l.starts_with('@') || l.split_once('(').is_some_and(|(h, _)| !h.is_empty()
+        && h.starts_with(|c: char| c.is_ascii_lowercase()) && h.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-'));
+    let Some(at) = lines.iter().position(|l| opens(l)) else {
+        return lines.iter().find(|l| !l.is_empty()).unwrap_or(&"").to_string();
+    };
+    let mut out = lines[at].to_string();
+    for l in lines[at + 1..].iter().filter(|l| !l.is_empty()) {
+        if !(l.starts_with('|') || out.ends_with('|')) {
+            break;
+        }
+        out = format!("{out} {l}");
+    }
+    out
 }
 
 /// A db: operand as the organ's lexer reads it: a dot only between two segments.
@@ -146,23 +161,29 @@ pub fn primer(engine: Engine, catalogue: &str) -> String {
         _ => "Answer with the pipeline only: one line, no prose, no code fence.",
     };
     format!("You plan the person's request as ONE cortex-lang pipeline. {answer}
-Pipeline: opcode(db:<table id>, key=value, ...) | opcode(...); a string value in double quotes.
+Pipeline: opcode(db:<table id>, key=\"value\", ...) | opcode(...); every string value in double quotes, a number bare.
 get(db:T, limit=N, fields=\"col,col\")  rows of table T
 filter(where=\"<column> <op> <value>\", q=\"text\")  one condition per filter, chain filters for AND; op is eq neq in contains lt gt between; in and between take comma-separated values
-rank(by=col, dir=desc, limit=N)  order and cut
-aggregate(op=count|sum|avg, by=col, y=col)  count rows, or sum or avg the number column y; by groups
-show(kind=chart|kpi|table, chart=bar|line|pie, title=\"...\", unit=\"...\")  a chart needs aggregate by; a kpi is one total
+rank(by=\"col\", dir=\"desc\", limit=N)  order and cut
+aggregate(op=\"count\"|\"sum\"|\"avg\", by=\"col\", y=\"col\")  count rows, or sum or avg the number column y; by groups
+show(kind=\"chart\"|\"kpi\"|\"table\", chart=\"bar\"|\"line\"|\"pie\", x=\"col\", title=\"...\", unit=\"...\")  a chart needs aggregate by, x is that column; a kpi is one total
 insert(db:T, set=\"col=value;col=value\")  update(db:T, set=\"col=value\")  delete(db:T)  a write acts on exactly one row the filters find; the person approves it
-Example: open todos per status as a bar chart -> get(db:todos) | filter(where=\"status eq open\") | aggregate(op=count, by=status) | show(kind=chart, chart=bar)
+Example: open todos per status as a bar chart -> get(db:todos) | filter(where=\"status eq open\") | aggregate(op=\"count\", by=\"status\") | show(kind=\"chart\", chart=\"bar\", x=\"status\")
 Tables:
 {catalogue}")
 }
 
 /// `"<column> <op> <value>"`: (column, op, value); in and between give a list.
+/// The symbols a model writes for an op, as SQL does (probe 2026-10-17); no inclusive >= or <=.
+const SYMBOLS: [(&str, &str); 5] = [("!=", "neq"), ("<>", "neq"), ("=", "eq"), (">", "gt"), ("<", "lt")];
+
 pub fn parse_where(s: &str) -> Result<(String, String, Value), String> {
     let bad = || format!("where {s:?} is not \"<column> <op> <value>\" (op: eq, neq, in, contains, lt, gt, between)");
-    let (at, op) = OPS.iter().filter_map(|op| s.find(&format!(" {op} ")).map(|i| (i, *op))).min().ok_or_else(bad)?;
-    let (col, val) = (s[..at].trim(), s[at + op.len() + 2..].trim().trim_matches('"'));
+    // ASCII lowercase keeps byte offsets: EQ is eq
+    let low = s.to_ascii_lowercase();
+    let words = OPS.iter().map(|op| (*op, *op));
+    let (at, said, op) = words.chain(SYMBOLS).filter_map(|(w, op)| low.find(&format!(" {w} ")).map(|i| (i, w, op))).min().ok_or_else(bad)?;
+    let (col, val) = (s[..at].trim(), s[at + said.len() + 2..].trim().trim_matches(|c| c == '"' || c == '\''));
     if col.is_empty() || val.is_empty() {
         return Err(bad());
     }
