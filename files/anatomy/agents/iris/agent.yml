@@ -16,9 +16,8 @@ model:
   primary: openai-sonnet
   backend: mistral-eu
   # Ruling 2026-10-14: a host may choose the on-device row instead (iris_backend: ollama in
-  # config.yml -> NOS_CELL_BACKEND). A choice, never a fallback; every row is EU-resident.
-  # llamacpp (ruling 2026-10-16): on-device llama-server, the GBNF engine of the cortex plan.
-  backends_allowed: [mistral-eu, ollama, llamacpp]
+  # config.yml -> NOS_CELL_BACKEND). A choice, never a fallback; both rows are EU-resident.
+  backends_allowed: [mistral-eu, ollama]
 
 audit:
   capability_scopes:
@@ -78,13 +77,6 @@ gdpr:
         Only when the host chose iris_backend: ollama. LLM inference on this machine through
         Ollama's OpenAI-compatible endpoint on 127.0.0.1; nothing leaves the host. Bound by
         state/habitat/llm-backends.yml row ollama.
-      country: "this host"
-      safeguard: "Local processing; no processor outside the operator's control."
-    - name: "This host (llama.cpp)"
-      role: >-
-        Only when the host chose iris_backend: llamacpp. LLM inference on this machine through
-        llama-server's OpenAI-compatible endpoint on 127.0.0.1; nothing leaves the host. Bound by
-        state/habitat/llm-backends.yml row llamacpp.
       country: "this host"
       safeguard: "Local processing; no processor outside the operator's control."
   eu_residency: true

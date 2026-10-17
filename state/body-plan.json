@@ -10,7 +10,7 @@
     "organ": 80,
     "organ system": 13,
     "organism": 0,
-    "habitat": 7,
+    "habitat": 6,
     "sense": 79,
     "limb": 118,
     "memory": 41,
@@ -434,10 +434,6 @@
       "kind": "authentik"
     },
     "backend:anthropic": {
-      "level": "habitat",
-      "kind": "backend"
-    },
-    "backend:llamacpp": {
       "level": "habitat",
       "kind": "backend"
     },

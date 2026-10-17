@@ -528,9 +528,6 @@ nodes:
   "backend:minimax": withheld
   "backend:mistral-eu": withheld
   "backend:ollama": withheld
-  # 2026-10-17 llamacpp row (llama-server, the cortex plan's GBNF engine). Withheld like every
-  # backend row; NOT signed here: the signature is the operator's.
-  "backend:llamacpp": withheld
   # 2026-10-01 openclaw row (the gateway's OpenAI surface). Withheld like
   # every backend row; NOT signed here — the signature is the operator's.
   "backend:openclaw": withheld
