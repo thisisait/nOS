@@ -9,14 +9,20 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.16
 ## v0.17-beta (2026-10-11 … 2026-10-17) — DRAFT
 
 > **Iris gets a body: a terminal, a window, and a wall between clients.**
-> 814 commits since `v0.16-beta` (565 files, +57.3k/−3.1k), measured with
-> `git log v0.16-beta..dev` at `5ca7bbd6`. Still `-beta`: the operator ruled
+> 867 commits since `v0.16-beta` (579 files, +59.1k/−3.2k), measured with
+> `git log v0.16-beta..dev` at `30e96791`. Still `-beta`: the operator ruled
 > on 2026-10-16 that the maturity exit criteria (restore drill, UC13) are not
 > met, so dropping `-beta` waits (row `rel-017`).
-> PENDING: blank 2026-10-17 (`nos --remove=data --confirm`, then `nos`; the
-> first blank that leaves a record in `~/.nos/blank-runs.jsonl`).
-> PENDING: blank 2026-10-17 `nos-smoke --strict` result.
-> Offline at `5ca7bbd6` (2026-10-17): pytest 9055 passed, 1 failed
+> Blank on the operator host, 2026-10-17 12:34–13:03 UTC, at
+> `v0.16-beta-862-g17b5b64f`: `nos --remove=data --confirm`, then the converge.
+> PLAY RECAP ok=1443 changed=352 failed=0; the smoke inside the converge 32/32;
+> the blank record in `~/.nos/blank-runs.jsonl` closed `failed: false` (read by
+> `tools/estate-status.py`, BLANK axis). `tools/nos-smoke.py --strict` run
+> afterwards: 32/32 OK, 0 failed. That strict run is not in the record
+> (`smoke_strict: null`), so the reader still says "release gate unmet".
+> PENDING: client-host-1 converge (macOS, the pre-release) — result here.
+> Offline at `5ca7bbd6` (2026-10-17; not re-run on the 53 commits after it,
+> whose own gates ran in their commits and PR #57): pytest 9055 passed, 1 failed
 > (`test_service_dependency_edges`, fixed in `5ca7bbd6` itself; the 307
 > graph/apex/dependency gates then green), cargo thalamus + contract green,
 > face vitest 506/506, pupil 322/322, cortex vitest 241 passed with one known
@@ -49,9 +55,46 @@ after that person approves the change. All of it is off by default
   `llm_on_host` binds her to Ollama (`iris_backend`; refused under 8B); the person
   can pick the model per session, and every switch is a recorded rebind
   (`agent_session_rebind`).
+- Two cloud rows, `anthropic-api` and `minimax-api` (non-EU, each behind its own
+  flag and key; MiniMax as processor is UNVERIFIED), `57f9d8ad`. A key rides the
+  plist only for an armed allowed row; the smoke probes each, a missing key is
+  SKIP. **Gate change, operator-accepted 2026-10-17, in its own commit
+  `647fe3a3`:** gate 8 (`binding.rs` and its Python port) now follows
+  `gdpr_posture` — a non-EU row binds only at posture `none`; `standard` and
+  `strict` refuse exactly as before. Wing's PHP `BindingResolver` is unchanged
+  and still refuses: a known gap, not a fix.
 - `iris_plan: "cortex"` (opt-in; default `"tools"`) has Iris plan a turn as one
   cortex-lang pipeline that the cortex organ validates before it runs, with
   opcode registry v3. The bench judges that path; the switch waits for numbers.
+  Found live on `hermes3:8b`: the open params schema let the table land in
+  params (0/14), so the AST schema is closed (`e742ad12`); an empty param is
+  unset (`e3d68986`); one schema branch per opcode (`24508034`).
+
+### The reasoning-core review (PR #57)
+33 commits, each fix after its red gate; the seam map is
+`docs/llm/reasoning-core.md` (`5af0f982`). Nothing here is measured on a model
+yet.
+- **The main render finding:** Ollama keeps only `anyOf`/`type`/`items`/
+  `description`/`enum`/`properties`/`required` of a tool schema and drops
+  `oneOf`, `const` and `additionalProperties`. `show.component` was a `oneOf`, so
+  Iris received `component: {}` and never saw a component kind. It now also
+  carries `type`, a kind enum and every shape line in its description
+  (`85e2576f`; gate `every_tool_property_survives_what_ollama_keeps`).
+- `show` draws the shapes its own schema admits (`9f826ec8`); an inferred chart
+  needs no axis (`eb71946a`).
+- Plans: a param the mapper does not read is refused, not dropped (`f0e2d8f8`);
+  the repair round hears the organ's stage, key and allowed values (`3f607c75`)
+  and a mapper refusal gets a repair round too (`aa161eb9`); a free-text plan is
+  read whole (`a90bee14`).
+- Every plan row names its primer and grammar hashes and, on a fallback,
+  `fallback_kind: infra|model` (`3cfa4f37`); iris-bench scores an estate
+  failure as NO-DATA (`8f362861`); a plan row names the table it resolved
+  (`06ae6697`, `fae062b6`).
+- New gate: the mapper pins the registry hash the organ computes, shown red
+  against a registry with one more param (`a1df13bc`). The KEAP drift gate now
+  reads every param of an opcode, not the first (`4a7100c1`, stricter).
+- `tools/red-status.py`: an unreadable `agent_sessions` is UNKNOWN, not "no
+  orphans" (`3f96aaa6`).
 
 ### The pupil: Iris's window
 - `files/anatomy/pupil/` (Tauri) is installed by the thalamus role as
@@ -79,10 +122,18 @@ after that person approves the change. All of it is off by default
 - `tools/iris-bench.py` scores Iris from the wire: Czech, long context, cards,
   queries and the cortex plan path. A guess is not "cannot see", a fabrication is
   not credited, a 429 or an unjudged case is NO-DATA, never a pass.
-- `tools/local-model-bench.py` per-turn gated scoring with tiers; runs record
-  model digests. `tools/oneshot-poc.py` compiles a plan from a question battery
+- `tools/iris-bench.py`: per-turn gated scoring (`40421f25`), `--tier
+  smoke|standard|full` over a domain's generated cases (`7dfc1363`), cases read
+  from the nos-assay corpus (`--domain`, `$NOS_ASSAY_DIR`), and run provenance
+  with the nOS commit and each model's Ollama digest (`3465b07c`, gate
+  `test_assay_provenance`). `tools/oneshot-poc.py` compiles a plan from a question battery
   over two backends. A Czech ASR bench for the ears (`tools/ears-asr-bench.py`).
 - What these measure loosely is written down: hidden fee 62.
+- Baseline, before the #57 render fixes (nos-assay, synthetic data, client
+  host): Iris plain tool calling on `qwen3.5:9b` smoke 68/126, standard 143/284
+  (KPI 0/19, choice 0/19, chart 6/21); `hermes3:8b` 28/126; the first live
+  cortex-plan run on `hermes3:8b` 1/14 after the schema fixes. No number after
+  #57 exists yet, so no improvement is claimed.
 
 ### What is installed is what is counted
 - Authentik, Wing's hub, face, Pulse, the scanner, the smoke and the backup now
@@ -94,6 +145,16 @@ after that person approves the change. All of it is off by default
   the direct path); an empty `restic_repo` is refused; no backup at all is red.
 - `nos --remove=data --confirm` leaves a record (`~/.nos/blank-runs.jsonl`) that
   `tools/estate-status.py` reads as the BLANK axis; a bad row reads UNKNOWN.
+  The record is closed by a callback with the play outcome, so a failure after
+  the smoke now reads `failed: true` with its task (`1bcb16ce`).
+- The blank's password-prefix prompt showed the live prefix as its default, on
+  screen and in the tee'd log; it now names what Enter does and does not echo
+  (`fc4c3525`, gate `test_no_prompt_shows_a_secret`).
+- `tools/apex-sign.py --confirm` commits the ruling it signs (twice the push had
+  carried the old digest; `17b5b64f`, gate `test_apex_sign_commits`).
+- Wing's GDPR records go on stdin: on Linux the env string hit
+  `MAX_ARG_STRLEN` (142724 > 131072 bytes) in Integration ubuntu-24.04
+  (`30e96791`, gate `test_no_unbounded_output_rides_the_env`).
 
 ### CI and the host
 - The pytest lane runs in four shards; Linux install on the core profile, a
@@ -106,10 +167,11 @@ after that person approves the change. All of it is off by default
 
 ### Known and carried
 - Hidden fees 61 (four limits that answer normally when hit) and 62 (benches
-  and the CI split that measure loosely); roadmap rows
-  `blank-record-after-last-step` (a failure after the smoke still records the
-  blank as passed) and `pipeline-exercise-writes-checkout` (a Pulse job rewrites
-  committed fixtures in the repo checkout).
+  and the CI split that measure loosely); roadmap row
+  `pipeline-exercise-writes-checkout` (a Pulse job rewrites committed fixtures
+  in the repo checkout). Row `blank-record-after-last-step` is fixed by
+  `1bcb16ce`. The not-fixed findings of PR #57 (e.g. no reader of plan success
+  vs fallback on the live estate, ledger enums outside Wing's) are open.
 - Not promised: gov readiness; Iris on a client host (off by default);
   dropping `-beta`.
 
