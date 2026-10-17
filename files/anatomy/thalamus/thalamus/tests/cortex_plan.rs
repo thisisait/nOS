@@ -438,3 +438,17 @@ fn the_ast_schema_leaves_no_room_for_a_table_in_params() {
     assert!(required.contains(&"operand"), "the operand is always written (empty when the stage takes none)");
     assert_eq!(item["properties"]["operand"]["pattern"], json!("^(db:[A-Za-z0-9_.-]+)?$"));
 }
+
+/// Live 2026-10-17 after the closed schema: hermes3:8b fills every param it may, so a count came
+/// as aggregate(op="count", y="") and the mapper read "" as a column name and refused. An empty
+/// param is an unset one.
+#[test]
+fn an_empty_param_is_an_unset_one() {
+    let st = cortex_plan::stages_of(&json!({"stages": [
+        {"op": "get", "operand": "db:t", "params": {"limit": 5, "fields": ""}},
+        {"op": "filter", "operand": "", "params": {"where": "status eq next", "q": ""}},
+        {"op": "aggregate", "operand": "", "params": {"op": "count", "y": "", "by": ""}}]})).unwrap();
+    let p = cortex_plan::plan(None, &st).expect("a count with empty y and by plans");
+    assert_eq!(p.agg, Some(("count".to_string(), None, None)), "{:?}", p.agg);
+    assert!(p.q.is_none() && p.fields.is_empty());
+}
