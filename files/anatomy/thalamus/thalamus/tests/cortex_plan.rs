@@ -278,6 +278,19 @@ fn known(cases: &[Value]) -> Vec<(String, Value, String, Vec<String>)> {
         c["errors"].as_array().map(|e| e.iter().map(|m| m.as_str().unwrap().to_string()).collect()).unwrap_or_default())).collect()
 }
 
+/// A plan row with each sha256 it names shown as "hex" (64 lowercase hex), so the row still compares whole:
+/// tools/iris-bench.py reads primer_sha256 and grammar_sha256 into a run's provenance.
+fn fingerprinted(v: &Value) -> Value {
+    let mut v = v.clone();
+    for k in ["primer_sha256", "grammar_sha256"] {
+        if let Some(h) = v.get(k).and_then(Value::as_str).filter(|h| h.len() == 64 && h.chars().all(|c| matches!(c, '0'..='9' | 'a'..='f'))) {
+            let _ = h;
+            v[k] = json!("hex");
+        }
+    }
+    v
+}
+
 #[test]
 fn every_fixture_stage_list_renders_to_its_pipeline() {
     for c in cases() {
@@ -309,7 +322,8 @@ fn every_fixture_pipeline_runs_as_its_tool_calls_or_falls_back() {
         assert!(matches!(got.last(), Some(ToShell::Text { text, .. }) if text == "done"), "{name}: the turn ended in the answer: {got:?}");
         let ev = tools(&rig, &session);
         let uses: Vec<&Value> = ev.iter().filter(|(t, _)| t.ends_with("tool_use:cortex_plan")).map(|e| &e.1).collect();
-        assert_eq!(uses[0], &json!({"source": c["pipeline"], "engine": "ollama-json-schema", "constrained": true}), "{name}");
+        assert_eq!(fingerprinted(uses[0]), json!({"source": c["pipeline"], "engine": "ollama-json-schema", "constrained": true,
+            "primer_sha256": "hex", "grammar_sha256": "hex"}), "{name}");
         let results: Vec<&Value> = ev.iter().filter(|(t, _)| t.ends_with("tool_result:cortex_plan")).map(|e| &e.1).collect();
         let last = *results.last().unwrap_or_else(|| panic!("{name}: no cortex_plan result: {ev:?}"));
         let said = models_said(&rig);
@@ -366,7 +380,8 @@ fn the_unconstrained_engine_repairs_once_with_the_validators_errors() {
     let ev = tools(&rig, &session);
     let uses: Vec<&Value> = ev.iter().filter(|(t, _)| t.ends_with("tool_use:cortex_plan")).map(|e| &e.1).collect();
     assert_eq!(uses.len(), 2);
-    assert_eq!(uses[0], &json!({"source": "get(db:todos, colour=red)", "engine": "unconstrained", "constrained": false}), "the fence is stripped");
+    assert_eq!(fingerprinted(uses[0]), json!({"source": "get(db:todos, colour=red)", "engine": "unconstrained", "constrained": false,
+        "primer_sha256": "hex", "grammar_sha256": null}), "the fence is stripped; an unconstrained plan has no grammar");
     assert!(ev.iter().any(|(t, v)| t.ends_with("tool_use:query_rows") && v["args"]["limit"] == 5), "the repaired plan ran: {ev:?}");
 }
 
