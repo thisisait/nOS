@@ -3409,6 +3409,12 @@ pub fn normalize_show(args: &Value) -> Value {
             p.insert("series".into(), json!([{"name": "rows", "points": [["", 0]]}]));
         }
     }
+    // An unsourced chart's x strings read as categories unless it says otherwise (the inferred path, probe 2026-10-17).
+    if comp["kind"] == "chart" {
+        if let Some(p) = comp.get_mut("props").and_then(Value::as_object_mut) {
+            p.entry("x").or_insert(json!("category"));
+        }
+    }
     // A kpi's number, delta and source are the thalamus's: whatever the model sent there is dropped.
     if comp["kind"] == "kpi" {
         // the shared source schema offers x; a kpi has none (probe 2026-10-17)
@@ -3442,7 +3448,9 @@ fn inferred_source(c: &Component, last: Option<&(Value, Vec<(String, f64)>)>) ->
     let series = v.pointer("/props/series")?.as_array()?;
     let [one] = series.as_slice() else { return None };
     let pts: Vec<(String, f64)> = one["points"].as_array()?.iter()
-        .filter_map(|p| Some((p.get(0)?.as_str()?.to_string(), p.get(1)?.as_f64()?))).collect();
+        .filter_map(|p| Some((p.get(0)?.as_str()?.to_string(), p.get(1)?.as_f64()?)))
+        // the model read a valueless group as value null: its label is the group's "(empty)"
+        .map(|(x, y)| (if matches!(x.trim().to_lowercase().as_str(), "" | "null" | "none") { "(empty)".to_string() } else { x }, y)).collect();
     let same = pts.len() == counts.len() && !pts.is_empty()
         && pts.iter().all(|(x, y)| counts.iter().any(|(k, n)| k == x && (n - y).abs() < 1e-9));
     same.then(|| src.clone())
