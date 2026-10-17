@@ -12,6 +12,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import pathlib
+import re
 import subprocess
 
 import pytest
@@ -52,6 +53,7 @@ def _analyze(chains: list[str]) -> dict:
         'import {CORTEX_OPCODES} from "./server/cortex-opcodes";'
         'const chains = JSON.parse(process.argv[1]);'
         'console.log(JSON.stringify({opcodes: CORTEX_OPCODES.map(o => o.name),'
+        ' params: Object.fromEntries(CORTEX_OPCODES.map(o => [o.name, Object.keys(o.params)])),'
         ' errors: chains.map(c => analyzeCortex(c).errors.map(e => e.code))}));'
     )
     done = subprocess.run(["npx", "tsx", "-e", code, json.dumps(chains)],
@@ -78,9 +80,20 @@ def test_every_reference_chain_passes_the_analyzer() -> None:
 
 @needs_tsx
 def test_the_primer_names_every_registry_opcode() -> None:
-    system = _spec()["system"]
-    missing = [op for op in _analyze([])["opcodes"] if op not in system.split()]
-    assert not missing, f"the primer never teaches {missing}"
+    # Only the Opcodes block counts: `aggregate`/`show` also sit on the param lines.
+    block = re.search(r"Opcodes:(.*?)\n\s*Namespaces:", _spec()["system"], re.S)
+    assert block, "the primer has no Opcodes: block"
+    missing = [op for op in _analyze([])["opcodes"] if op not in block.group(1).split()]
+    assert not missing, f"the primer's Opcodes list never names {missing}"
+
+
+@needs_tsx
+def test_the_registry_declares_every_expected_param() -> None:
+    # A db: operand opens the stage's params, so the analyzer alone cannot see `set` vanish.
+    params = _analyze([])["params"]
+    lost = {tid: sorted(set(t["expect_params"]) - set(params.get(t["expect_opcode"], [])))
+            for tid, t in _tasks().items() if tid in V3_TASKS}
+    assert not any(lost.values()), f"registry lacks params the bench expects: {lost}"
 
 
 def test_the_scorer_credits_the_reference_and_not_a_neighbour() -> None:
