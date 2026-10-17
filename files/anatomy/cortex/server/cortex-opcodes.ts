@@ -31,7 +31,10 @@ import { createHash } from 'node:crypto';
 // contract bump and not a quiet addition: the namespace enum is published in the
 // `unknown_namespace` error's `expected` list, so a client that memorised seven
 // tokens now sees eight. Wing reads `contracts.cortex` at boot.
-export const CORTEX_CONTRACT_VERSION = 2;
+// v3 (2026-10-17) — `aggregate` and `show`, plus `q` on filter, `dir` on rank
+// and `set` on insert/update: what Iris needs to plan a chart, a KPI or an edit
+// card in one chain. Mini-syntaxes (`where`, `set`) stay strings by design.
+export const CORTEX_CONTRACT_VERSION = 3;
 
 // ---------------------------------------------------------------------------
 // Namespaces (grammar §3: a closed seven-symbol enum)
@@ -226,7 +229,10 @@ export const CORTEX_OPCODES = [
     name: 'filter',
     summary: 'keep the items of the input that match the operand',
     operands: { min: 0, max: 1, namespaces: ['tax', 'ent', 'kg'] },
-    params: { where: { type: 'string', required: false } },
+    params: {
+      where: { type: 'string', required: false },
+      q: { type: 'string', required: false },
+    },
     mutating: false,
     since: 1,
   },
@@ -237,6 +243,7 @@ export const CORTEX_OPCODES = [
     params: {
       by: { type: 'string', required: false },
       limit: { type: 'int', required: false },
+      dir: { type: 'string', required: false },
     },
     mutating: false,
     since: 1,
@@ -277,7 +284,11 @@ export const CORTEX_OPCODES = [
     name: 'insert',
     summary: 'create a record in the operand’s store',
     operands: { min: 1, max: 1, namespaces: ['db', 'svc'] },
-    params: MUTATION_PARAMS,
+    params: {
+      ...MUTATION_PARAMS,
+      // `key=value;key=value` — a string, so the registry never learns columns.
+      set: { type: 'string', required: false },
+    },
     mutating: true,
     since: 1,
   },
@@ -285,7 +296,11 @@ export const CORTEX_OPCODES = [
     name: 'update',
     summary: 'modify a record in the operand’s store',
     operands: { min: 1, max: 1, namespaces: ['db', 'svc'] },
-    params: MUTATION_PARAMS,
+    params: {
+      ...MUTATION_PARAMS,
+      // `key=value;key=value` — a string, so the registry never learns columns.
+      set: { type: 'string', required: false },
+    },
     mutating: true,
     since: 1,
   },
@@ -362,6 +377,38 @@ export const CORTEX_OPCODES = [
     },
     mutating: true,
     since: 2,
+  },
+  {
+    // `op` is count|sum|avg; the registry types it as a string and Wing's
+    // handler refuses any other value. ponytail: no enum param type yet, add
+    // one when a second opcode needs a closed value set.
+    name: 'aggregate',
+    summary: 'reduce the input to a count, sum or average, optionally grouped',
+    operands: { min: 0, max: 1, namespaces: ['db'] },
+    params: {
+      op: { type: 'string', required: true },
+      by: { type: 'string', required: false },
+      y: { type: 'string', required: false },
+    },
+    mutating: false,
+    since: 3,
+  },
+  {
+    // A SINK that changes nothing: it passes the input through with a render
+    // spec. `kind` is chart|kpi|choice|table|list|record (checked by Wing).
+    name: 'show',
+    summary: 'render the input as a chart, kpi, choice or table',
+    operands: { min: 0, max: 1, namespaces: ['db'] },
+    params: {
+      kind: { type: 'string', required: true },
+      chart: { type: 'string', required: false },
+      x: { type: 'string', required: false },
+      y: { type: 'string', required: false },
+      title: { type: 'string', required: false },
+      unit: { type: 'string', required: false },
+    },
+    mutating: false,
+    since: 3,
   },
 ] as const satisfies readonly CortexOpcodeSpec[];
 

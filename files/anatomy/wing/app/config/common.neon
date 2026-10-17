@@ -126,6 +126,8 @@ services:
 	- App\Cortex\Handler\RankHandler
 	- App\Cortex\Handler\ClassifyHandler
 	- App\Cortex\Handler\EmbedHandler
+	- App\Cortex\Handler\AggregateHandler
+	- App\Cortex\Handler\ShowHandler
 	cortexOpcodes:
 		factory: App\Cortex\CortexOpcodeRegistry
 		arguments:
@@ -137,6 +139,8 @@ services:
 				- @App\Cortex\Handler\RankHandler
 				- @App\Cortex\Handler\ClassifyHandler
 				- @App\Cortex\Handler\EmbedHandler
+				- @App\Cortex\Handler\AggregateHandler
+				- @App\Cortex\Handler\ShowHandler
 
 	# AgentKit core services
 	# %appDir% is the Bootstrap dir (Nette sets it to the dir of the file that

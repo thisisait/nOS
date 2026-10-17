@@ -75,6 +75,8 @@ opcodes:
   route:    {cs: "pošle to na {operand}",         en: "route it to {operand}"}
   review:   {cs: "pošle {operand} k revizi",      en: "send {operand} for review"}
   delegate: {cs: "předá to agentovi {id}",        en: "hand it to the agent {id}"}
+  aggregate: {cs: "spočítá souhrn",              en: "aggregate the result"}
+  show:     {cs: "zobrazí výsledek",              en: "show the result"}
 
 namespaces:
   tax:   {cs: "uzel taxonomie {id}",     en: "taxonomy node {id}"}

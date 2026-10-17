@@ -26,7 +26,7 @@
 # NOT from the primer in `state/fixtures/local-model-bench.yml`: the two differ on
 # purpose, because the primer teaches 7 namespaces and 14 opcodes (a prompt that
 # teaches the whole grammar measures the prompt), while the registry publishes
-# 8 and 15. A grammar written from the primer would forbid `agent:` and
+# 8 and 17 (contract v3). A grammar written from the primer would forbid `agent:` and
 # `delegate()` — legal cortex-lang the validator accepts.
 #
 # WHAT IT STILL DOES NOT ENFORCE, AND MUST NOT.
@@ -91,7 +91,7 @@ pipe1       ::= (ws "|" ws stage)?
 
 source      ::= "@input" | "@user" | "@ctx" | "@sel" | "@prev"
 
-stage       ::= s-get | s-map | s-filter | s-rank | s-classify | s-resolve | s-embed | s-link | s-insert | s-update | s-delete | s-preserve | s-route | s-review | s-delegate
+stage       ::= s-get | s-map | s-filter | s-rank | s-classify | s-resolve | s-embed | s-link | s-insert | s-update | s-delete | s-preserve | s-route | s-review | s-delegate | s-aggregate | s-show
 
 # --- read-only opcodes -------------------------------------------------------
 s-get       ::= "get" ws "(" ws e-get args ws ")"
@@ -101,6 +101,8 @@ s-rank      ::= "rank" ws "(" ws optional-e-rank ws ")"
 s-classify  ::= "classify" ws "(" ws e-classify args ws ")"
 s-resolve   ::= "resolve" ws "(" ws e-resolve args ws ")"
 s-embed     ::= "embed" ws "(" ws optional-e-embed ws ")"
+s-aggregate ::= "aggregate" ws "(" ws optional-e-aggregate ws ")"
+s-show      ::= "show" ws "(" ws optional-e-show ws ")"
 
 # --- mutating opcodes --------------------------------------------------------
 s-link      ::= "link" ws "(" ws e-link (ws "," ws e-link)? args ws ")"
@@ -117,6 +119,9 @@ optional-e-filter ::= (e-filter args | arg args)?
 optional-e-rank   ::= (e-rank args | arg args)?
 optional-e-embed  ::= (e-embed args | arg args)?
 optional-e-review ::= (e-review args | arg args)?
+# v3: `op` / `kind` are required params; params stay the validator's job.
+optional-e-aggregate ::= (e-aggregate args | arg args)?
+optional-e-show   ::= (e-show args | arg args)?
 
 args        ::= (ws "," ws arg)*
 arg         ::= param | kv
@@ -139,6 +144,8 @@ e-preserve  ::= ("kg" | "doc" | "db") ":" operand
 e-route     ::= ("svc" | "doc") ":" operand
 e-review    ::= ("tax" | "kg" | "ent") ":" operand
 e-delegate  ::= "agent" ":" operand
+e-aggregate ::= "db" ":" operand
+e-show      ::= "db" ":" operand
 
 operand     ::= dotted-id term?
 

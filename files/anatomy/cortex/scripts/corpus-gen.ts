@@ -97,15 +97,17 @@ function stagesFor(op: (typeof CORTEX_OPCODES)[number]): Stage[] {
       operands.push(sample);
   }
 
+  // Required params (v3: aggregate `op`, show `kind`) ride on every form; a
+  // form without them is a stage-local fault, not a composition the gate studies.
+  const entries = Object.entries(op.params ?? {}) as [string, { type: string; required: boolean }][];
+  const kv = (param: string, type: string) => `${param}=${PARAM_VALUE[type]}`;
+  const required = entries.filter(([, s]) => s.required).map(([k, s]) => kv(k, s.type));
   for (const operand of operands) {
-    push(`${op.name}(${operand})`);
-    for (const [param, spec] of Object.entries(op.params ?? {})) {
-      const value = PARAM_VALUE[(spec as { type: string }).type];
-      if (value === undefined) continue;
-      const args = operand
-        ? `${operand}, ${param}=${value}`
-        : `${param}=${value}`;
-      push(`${op.name}(${args})`);
+    const head = [operand, ...required].filter(Boolean);
+    push(`${op.name}(${head.join(", ")})`);
+    for (const [param, spec] of entries) {
+      if (spec.required || PARAM_VALUE[spec.type] === undefined) continue;
+      push(`${op.name}(${[...head, kv(param, spec.type)].join(", ")})`);
     }
   }
   return out;
