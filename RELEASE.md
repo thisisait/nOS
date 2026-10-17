@@ -20,7 +20,7 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.16
 > `tools/estate-status.py`, BLANK axis). `tools/nos-smoke.py --strict` run
 > afterwards: 32/32 OK, 0 failed. That strict run is not in the record
 > (`smoke_strict: null`), so the reader still says "release gate unmet".
-> PENDING: client-host-1 converge (macOS, the pre-release) — result here.
+> PENDING: second-host converge (an M1 Max Mac, macOS 27, the pre-release) — result here.
 > Offline at `57f9d8ad` (2026-10-17, PR #57 + the Iris cloud rows): pytest 9062
 > passed, 1 failed (`test_apex_ruling_is_signed` - the two new withheld rows were
 > unsigned; signed in `dabc7a48`), cargo thalamus + contract green, face vitest
@@ -129,8 +129,8 @@ yet.
   `test_assay_provenance`). `tools/oneshot-poc.py` compiles a plan from a question battery
   over two backends. A Czech ASR bench for the ears (`tools/ears-asr-bench.py`).
 - What these measure loosely is written down: hidden fee 62.
-- Baseline, before the #57 render fixes (nos-assay, synthetic data, client
-  host): Iris plain tool calling on `qwen3.5:9b` smoke 68/126, standard 143/284
+- Baseline, before the #57 render fixes (nos-assay, synthetic data, a
+  second host: M1 Max, 32 GB): Iris plain tool calling on `qwen3.5:9b` smoke 68/126, standard 143/284
   (KPI 0/19, choice 0/19, chart 6/21); `hermes3:8b` 28/126; the first live
   cortex-plan run on `hermes3:8b` 1/14 after the schema fixes. No number after
   #57 exists yet, so no improvement is claimed.
@@ -172,7 +172,7 @@ yet.
   in the repo checkout). Row `blank-record-after-last-step` is fixed by
   `1bcb16ce`. The not-fixed findings of PR #57 (e.g. no reader of plan success
   vs fallback on the live estate, ledger enums outside Wing's) are open.
-- Not promised: gov readiness; Iris on a client host (off by default);
+- Not promised: gov readiness; Iris on a host that did not opt in (off by default);
   dropping `-beta`.
 
 ---

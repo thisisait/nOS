@@ -22,7 +22,7 @@ blank record closed `failed: false`. `tools/nos-smoke.py --strict` afterwards:
 `tools/estate-status.py` still says the release gate is unmet — the reader is
 right about what it can see.
 
-PENDING: client-host-1 converge (macOS, the pre-release) — result here.
+PENDING: second-host converge (an M1 Max Mac, macOS 27, the pre-release) — result here.
 
 ## Iris at a terminal
 
@@ -81,7 +81,7 @@ it was asked under and whether a fallback was the model's fault or the
 estate's. The same day the live `hermes3:8b` runs found the plan schema open
 enough to put the table in params; it is closed now.
 
-The numbers before any of this (nos-assay, synthetic data, client host):
+The numbers before any of this (nos-assay, synthetic data, a second host: M1 Max, 32 GB):
 `qwen3.5:9b` plain tool calling 68/126 at smoke, 143/284 at standard, with KPI
 0/19, choice 0/19 and chart 6/21; `hermes3:8b` 28/126; the first live cortex
 plan run 1/14. Those are the baseline. Nothing after #57 has been measured, so
