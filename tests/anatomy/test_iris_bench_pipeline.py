@@ -351,3 +351,23 @@ def test_an_estate_failure_is_no_data_not_a_plan_verdict(tmp_path, validator):
         for name, arg in (("pipeline_fell_back", True), ("pipeline_valid", True)):
             with pytest.raises(b.Unjudged):
                 b.check(name, arg, {"plan": plan, "validate": lambda s: {"valid": True}}, 0.0)
+
+
+def test_a_plan_is_equal_to_its_expectation_up_to_how_it_names_the_table_and_the_mappers_defaults():
+    """The primer tells the model the operand is db:<table id> and the catalogue lists KEAP's ids (uuids),
+    while every expect_pipeline names db:iris-bench-2 - so a compliant plan never compared equal. The
+    plan row says which table the mapper resolved (said, id, title); either name is the same plan. And a
+    param the mapper fills when absent (rank dir=desc, a chart's x = the aggregate's by) is the same plan."""
+    b = OFF._bench()
+    uid = "4f1c2a9e-0d3b-4e5f-9a8b-7c6d5e4f3a2b"
+    said = _ast("s", ("get", [("db", uid)], {}), ("aggregate", [], {"op": "count", "by": "track"}),
+                ("show", [], {"kind": "chart", "chart": "bar"}))
+    want = _ast("w", ("get", T, {}), ("aggregate", [], {"op": "count", "by": "track"}),
+                ("show", [], {"kind": "chart", "chart": "bar", "x": "track"}))
+    table = {"said": uid, "id": uid, "title": "iris-bench-2"}
+    assert b.same_pipeline(want, said, table)
+    assert not b.same_pipeline(want, said, None), "without the mapper's resolution a uuid is another table"
+    assert not b.same_pipeline(_ast("x", ("get", [("db", "iris-bench-3")], {})), _ast("y", ("get", [("db", uid)], {})), table)
+    ranked = _ast("r", ("get", T, {}), ("rank", [], {"by": "points"}))
+    assert b.same_pipeline(_ast("r2", ("get", T, {}), ("rank", [], {"by": "points", "dir": "desc"})), ranked, table)
+    assert not b.same_pipeline(_ast("r3", ("get", T, {}), ("rank", [], {"by": "points", "dir": "asc"})), ranked, table)
