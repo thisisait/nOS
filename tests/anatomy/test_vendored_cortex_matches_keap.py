@@ -25,6 +25,7 @@ side's own vitest suite, and this gate deliberately does not restate it.
 
 from __future__ import annotations
 
+import os
 import pathlib
 import re
 
@@ -36,7 +37,9 @@ VENDORED = REPO / "files/anatomy/cortex/server/cortex-opcodes.ts"
 # on a fresh clone, so the comparison SKIPS rather than fails — a gate that goes
 # red because a sibling directory is missing gets disabled, and then it is gone
 # for the case it was written for.
-UPSTREAM = REPO.parent / "knowledge-explorer-and-preserver/server/cortex-opcodes.ts"
+# NOS_KEAP_CHECKOUT names a KEAP checkout elsewhere (a cloud session clones thisisait/nos-keap
+# under another name), so the comparison runs wherever a checkout exists.
+UPSTREAM = pathlib.Path(os.environ.get("NOS_KEAP_CHECKOUT") or REPO.parent / "knowledge-explorer-and-preserver") / "server/cortex-opcodes.ts"
 
 
 def _declarations(source: str) -> dict[str, object]:
@@ -85,10 +88,24 @@ def _declarations(source: str) -> dict[str, object]:
         )
 
     def params_of(body: str) -> tuple:
-        block = re.search(r"params:\s*(\{.*?\}|\w+),\s*\n", body, re.S)
-        if not block:
+        # The whole `params: { ... }` literal, braces balanced: a lazy `\{.*?\}` ended at the
+        # first param's own `}` and read get as (limit,) - every later param was invisible.
+        head = re.search(r"params:\s*", body)
+        if not head:
             return ()
-        text = block.group(1)
+        rest = body[head.end():]
+        if rest.startswith("{"):
+            depth = 0
+            for i, ch in enumerate(rest):
+                depth += {"{": 1, "}": -1}.get(ch, 0)
+                if depth == 0:
+                    text = rest[: i + 1]
+                    break
+            else:
+                return ()
+        else:
+            word = re.match(r"\w+", rest)
+            text = word.group(0) if word else ""
         found: list[tuple[str, str]] = []
         # A bare reference (`params: GATE_PARAMS`) or a spread inside a literal
         # (`params: { ...GATE_PARAMS, via: … }`) both pull the bundle in.
