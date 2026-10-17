@@ -18,7 +18,7 @@
     "reflex": 43,
     "heartbeat": 1,
     "internal": 74,
-    "edges": 433
+    "edges": 434
   },
   "nodes": {
     "agent:conductor": {
@@ -3179,6 +3179,11 @@
     {
       "from": "service:cortex",
       "to": "service:keap",
+      "kind": "data"
+    },
+    {
+      "from": "service:cortex",
+      "to": "service:thalamus",
       "kind": "data"
     },
     {

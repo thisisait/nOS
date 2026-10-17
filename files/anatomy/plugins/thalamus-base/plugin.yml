@@ -37,6 +37,15 @@ depends_on:
     unenforced: >-
       No auto-enable block ties install_keap to install_thalamus. With KEAP down
       every tool call is refused and the shell says so.
+  - upstream: "service:cortex"
+    kind: data
+    via: >-
+      POST /agent/v1/validate on NOS_CORTEX_URL (loopback) with the RO token, only when
+      iris_plan is cortex (files/anatomy/thalamus/thalamus/src/cortex_plan.rs)
+    measured: "2026-10-17"
+    unenforced: >-
+      iris_plan defaults to tools and nothing auto-enables install_cortex for it. With
+      the organ down the plan path is off for the turn and Iris falls back to plain tools.
 
 gdpr:
   purpose: |
