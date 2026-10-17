@@ -126,6 +126,9 @@
 - slug: blank-keeps-nextcloud-user-files
   parent: managed-resources-manifest
   track: platform
+- slug: blank-record-after-last-step
+  parent: blank-run-record
+  track: release
 - slug: blank-run-record
   parent: ''
   track: release
@@ -327,6 +330,12 @@
 - slug: cortex-lang
   parent: cortex
   track: cortex
+- slug: cortex-node-tests-in-ci
+  parent: ''
+  track: release
+- slug: cortex-plan-evidence-without-ledger
+  parent: iris-speaks-cortex-lang
+  track: agents
 - slug: cortex-query-skill
   parent: agents-nos-skill
   track: agents
@@ -342,6 +351,9 @@
 - slug: cortex-store-test-hook-timeout
   parent: ''
   track: cortex
+- slug: cortex-store-test-timeout
+  parent: ''
+  track: release
 - slug: cortex-vendor-staleness
   parent: ''
   track: cortex
@@ -993,6 +1005,9 @@
 - slug: iris-reads-red-status
   parent: iris-genui
   track: agents
+- slug: iris-routing-editor
+  parent: model-catalog-with-quality
+  track: agents
 - slug: iris-speaks-cortex-lang
   parent: iris-genui-bench
   track: cortex
@@ -1013,6 +1028,9 @@
   track: platform
 - slug: keap-converge-stall
   parent: ''
+  track: platform
+- slug: keap-create-table-409-and-slug
+  parent: face-create-table-idempotent
   track: platform
 - slug: keap-demo-seed-proxy-auth
   parent: consulting-firm-deployment
@@ -1446,6 +1464,9 @@
 - slug: pipeline-exercise-verdicts
   parent: ''
   track: platform
+- slug: pipeline-exercise-writes-checkout
+  parent: pipeline-exercise-loop-build
+  track: platform
 - slug: plan-homes-frozen-docs-realms
   parent: repo-body-plan
   track: platform
@@ -1619,6 +1640,9 @@
   track: release
 - slug: rel-017
   parent: ''
+  track: release
+- slug: release-to-release-upgrades
+  parent: multi-firm-distribution-hardening
   track: release
 - slug: rem-queue-commit-256-260-261
   parent: ''
@@ -1867,6 +1891,9 @@
   parent: self-symbiont-host
   track: platform
 - slug: synthetic-identities-apart
+  parent: ''
+  track: platform
+- slug: system-table-owner
   parent: ''
   track: platform
 - slug: tables
