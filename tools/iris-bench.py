@@ -255,12 +255,14 @@ def read_plan(ledger: str, session):
     finally:
         conn.close()
     last = lambda kind: next((json.loads(r[1] or "{}") for r in reversed(rows) if r[0] == kind), None)  # noqa: E731
-    use, res = last("agent_tool_use"), last("agent_tool_result") or {}
-    if use is None:
+    use, res = last("agent_tool_use"), last("agent_tool_result")
+    if use is None and res is None:
         return None
+    # serve's refused() may write a result with no tool_use: the estate failed before a plan existed
+    use, res = use or {}, res or {}
     return {k: use.get(k) for k in ("source", "engine", "constrained", "grammar_sha256", "primer_sha256")} | {
         "valid": res.get("valid"), "errors": res.get("errors"), "registry_hash": res.get("registry_hash"),
-        "fell_back": "plan" not in res}
+        "fell_back": "plan" not in res, "fallback": res.get("fallback"), "fallback_kind": res.get("fallback_kind")}
 
 
 def _plan(got: dict):
@@ -269,6 +271,9 @@ def _plan(got: dict):
     p = got["plan"]
     if isinstance(p, dict) and "error" in p:
         raise Unjudged(p["error"])
+    # the organ down, the model unreachable: no verdict on the plan either way (serve.rs fallback_kind)
+    if isinstance(p, dict) and p.get("fallback_kind") == "infra":
+        raise Unjudged(f"the estate failed, not the plan: {p.get('fallback')}")
     return p
 
 
