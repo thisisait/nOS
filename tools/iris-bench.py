@@ -795,6 +795,7 @@ def main(argv: list[str] | None = None) -> int:
                         "seconds": round(sum(r[2] for r in runs) / n, 2), "model_uri": got["model_uri"], "tools": got["tools"],
                         "approvals_rejected": sum(len(r[0]["approvals"]) for r in runs), "refused": got["refused"],
                         "queries": queries(got), "text": got["text"], "pipeline": got.get("plan"),
+                        "plan_checks": sorted(plan_checks(case, a.plan)),
                         # Why an offered widget was left out (round 2: the model only paraphrased it).
                         "dropped": [d for r in got["renders"] if r["component"].get("kind") == "dashboard"
                                     for d in r["component"].get("props", {}).get("dropped") or []]})
