@@ -11,6 +11,10 @@ pub const REGISTRY_HASH: &str = "cx1:8250d05e5e32afb7";
 const OPS: [&str; 9] = ["eq", "neq", "in", "contains", "lt", "gt", "between", "before", "after"];
 /// The opcodes the mapper carries: the JSON-schema engine's enum.
 const MAPPED: [&str; 8] = ["get", "filter", "rank", "aggregate", "show", "insert", "update", "delete"];
+/// The v3 params the mapper reads (registry v3), each with its JSON type.
+const PARAMS: [(&str, &str); 14] = [("limit", "integer"), ("fields", "string"), ("where", "string"), ("q", "string"),
+    ("by", "string"), ("dir", "string"), ("op", "string"), ("y", "string"), ("kind", "string"), ("chart", "string"),
+    ("x", "string"), ("title", "string"), ("unit", "string"), ("set", "string")];
 
 /// The organ on loopback and its read-only token (CORTEX_TOKEN_RO).
 #[derive(Debug, Clone)]
@@ -87,15 +91,18 @@ pub fn extract(text: &str) -> String {
 pub fn ast_schema() -> Value {
     json!({"type": "object", "additionalProperties": false, "required": ["stages"], "properties": {
         "stages": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"type": "object", "additionalProperties": false,
-            "required": ["op", "params"], "properties": {
-                "op": {"enum": MAPPED}, "operand": {"type": "string", "description": "db:<table id>"},
-                "params": {"type": "object", "additionalProperties": {"type": ["string", "integer", "boolean"]}}}}}}})
+            // a closed param set and a shaped operand: an open one let an 8B model write get(db="t")
+            "required": ["op", "operand", "params"], "properties": {
+                "op": {"enum": MAPPED},
+                "operand": {"type": "string", "pattern": "^(db:[A-Za-z0-9_.-]+)?$", "description": "db:<table id>, or empty"},
+                "params": {"type": "object", "additionalProperties": false,
+                           "properties": PARAMS.iter().map(|(k, t)| (k.to_string(), json!({"type": t}))).collect::<Map<String, Value>>()}}}}}})
 }
 
 /// The plan call's system prompt: the v3 lines the mapper carries, the mini-syntaxes, the tables.
 pub fn primer(engine: Engine, catalogue: &str) -> String {
     let answer = match engine {
-        Engine::JsonSchema => "Answer as JSON {\"stages\": [{\"op\", \"operand\"?, \"params\"}]}: one stage per opcode, operand \"db:<table id>\".",
+        Engine::JsonSchema => "Answer as JSON {\"stages\": [{\"op\", \"operand\", \"params\"}]}: one stage per opcode; operand is \"db:<table id>\" (never a param) or \"\" when the stage takes none.",
         _ => "Answer with the pipeline only: one line, no prose, no code fence.",
     };
     format!("You plan the person's request as ONE cortex-lang pipeline. {answer}
