@@ -266,6 +266,9 @@ pub fn calls(p: &Plan, info: impl Fn(&str) -> Result<(String, Value), String>,
         Some("chart") | Some("kpi") => {
             let s = p.show.as_ref().unwrap_or_else(|| unreachable!());
             let kpi = kind.as_deref() == Some("kpi");
+            if let Some(b) = by.as_ref().filter(|_| kpi) {
+                return Err(format!("show(kind=kpi) is one total; aggregate(by={b}) groups it"));
+            }
             let x = if kpi { None } else {
                 Some(str_of(s, "x").map(|x| col(&x).map(|c| c.0)).transpose()?.or(by).ok_or("show(kind=chart) needs aggregate(by=<column>) or x")?)
             };
