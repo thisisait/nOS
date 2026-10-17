@@ -238,3 +238,54 @@ def test_the_ast_comparison_is_op_by_op_not_text():
     other = _ast("c", ("get", [("db", "iris-bench-3")], {}))
     assert b.same_pipeline(kpi, titled)
     assert not b.same_pipeline(_ast("d", ("get", T, {})), other)
+
+
+# Every case v3 can write carries its plan; only these fall back (or, multi-turn, go unjudged).
+UNPLANNED = {
+    "time-now": "a clock, not a table", "red-status": "a reader, not a db: stage",
+    "unread-mail": "no mail table: honesty", "unread-mail-cs": "no mail table: honesty",
+    "long-context-cs": "recall from the prompt", "long-context-en": "recall from the prompt",
+    "table-create": "a schema card: no v3 verb", "column-add": "a schema card: no v3 verb",
+    "choice-chart": "choice options are outside v3", "no-memory-hit": "search_memory, not a db: table",
+    "memory-found": "search_memory, not a db: table", "services-known": "estate_services reader",
+    "approvals-tier": "approvals reader", "dashboard-offer": "offer_dashboard is outside v3",
+    "form-offer": "offer_dashboard is outside v3", "lines-dashboard": "offer_dashboard is outside v3",
+    "guide-enable-n8n": "nos_guide steps", "guide-enable-n8n-cs": "nos_guide steps",
+    "guide-update-cs": "nos_guide steps", "chain-cs": "its last turn is red_status",
+}
+
+
+def test_every_case_v3_expresses_carries_its_pipeline():
+    assert set(UNPLANNED) <= {c["id"] for c in CASES}
+    assert [c["id"] for c in CASES if (c["id"] in UNPLANNED) == bool(c.get("expect_pipeline"))] == []
+    assert [c["id"] for c in CASES if not c.get("expect_pipeline", "get(db:").startswith(("get(db:", "insert(db:"))] == []
+
+
+def test_a_multi_turn_case_without_a_plan_is_not_forced_to_fall_back():
+    b = OFF._bench()  # the ledger is not sliced per turn: its last row may be an earlier turn's plan
+    assert b.plan_checks({"id": "x", "turns": ["a", "b"]}, "cortex") == {}
+    assert b.plan_checks({"id": "x", "prompt": "a"}, "cortex") == {"pipeline_fell_back": True}
+
+
+def test_an_unjudged_plan_is_no_data_not_a_failure(tmp_path, monkeypatch):
+    monkeypatch.setenv("CORTEX_TOKEN_RO", "ro-test-token")
+    rc, run, _ = _run(tmp_path, "--plan", "cortex", "--validate-url", "http://127.0.0.1:9")
+    res = {r["id"]: r for r in run["cases"]}
+    assert res["same-plan"]["no_data"] and not res["same-plan"]["pass"]
+    assert not res["planned-anyway"]["no_data"]  # it planned when it should not: judged without the validator
+
+
+def test_the_ro_token_goes_to_loopback_only(tmp_path, monkeypatch):
+    monkeypatch.setenv("CORTEX_TOKEN_RO", "ro-test-token")
+    (tmp_path / "l.db").write_bytes(b"")
+    (tmp_path / "c.yml").write_text(yaml.safe_dump(CASE_FILE[:1]), encoding="utf-8")
+    b, sent = OFF._bench(), []
+    monkeypatch.setattr(b, "validate_report", lambda url, *_: sent.append(url) or {"valid": False})
+    fake = OFF.Fake(_script())
+    try:
+        assert b.main(["--sock", fake.path, "--offline", "--out", str(tmp_path / "o.json"), "--plan", "cortex",
+                       "--ledger", str(tmp_path / "l.db"), "--cases", str(tmp_path / "c.yml"), "--timeout", "10",
+                       "--validate-url", "http://validator.example:8098"]) == 2
+    finally:
+        fake.close()
+    assert sent == [] and fake.connections == 0 and not (tmp_path / "o.json").exists()
