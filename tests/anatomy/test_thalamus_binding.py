@@ -28,7 +28,7 @@ def test_the_iris_cell_binds_to_the_eu_row_by_default():
     doc = yaml.safe_load(IRIS.read_text())
     assert doc["name"] == "iris"
     assert doc["model"]["backend"] == "mistral-eu"
-    assert doc["model"]["backends_allowed"] == ["mistral-eu", "ollama"]
+    assert doc["model"]["backends_allowed"] == ["mistral-eu", "ollama", "llamacpp"]
     assert doc["gdpr"]["transfers_outside_eu"] is False, (
         "without it a disarmed mistral-eu degrades iris to the hosted default")
     tier = re.search(r"\b(haiku|sonnet|opus|vision)\b", doc["model"]["primary"])
