@@ -289,3 +289,26 @@ def test_the_ro_token_goes_to_loopback_only(tmp_path, monkeypatch):
     finally:
         fake.close()
     assert sent == [] and fake.connections == 0 and not (tmp_path / "o.json").exists()
+
+
+def test_an_expectation_may_list_the_plans_it_accepts():
+    b = OFF._bench()
+    got = {"plan": {"source": WRONG, "fell_back": False},
+           "validate": lambda s: {"valid": s in REPORTS, "ast": REPORTS.get(s)}}
+    assert b.check("pipeline_equals_expected", [EXPECT, WRONG], got, 0)
+    assert not b.check("pipeline_equals_expected", [EXPECT], got, 0)
+    with pytest.raises(ValueError):
+        b.check("pipeline_equals_expected", [WRONG, BROKEN], got, 0)
+
+
+# Ruling 2026-10-17: a count may stop at the rows or count them; "a chart" names no kind.
+COUNTS = ("roadmap-count", "roadmap-count-cs", "where-not-q", "where-not-q-cs")
+
+
+def test_a_count_accepts_the_rows_or_their_count_and_a_chart_any_kind():
+    by = {c["id"]: c for c in CASES}
+    for i in COUNTS:
+        base = by[i]["expect_pipeline"][0]
+        assert by[i]["expect_pipeline"] == [base, f"{base} | aggregate(op=count)"], i
+    charts = by["next-by-track"]["expect_pipeline"]
+    assert [p.split("chart=")[1].split(",")[0] for p in charts] == ["bar", "pie", "line"]
