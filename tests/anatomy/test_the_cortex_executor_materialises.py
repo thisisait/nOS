@@ -19,7 +19,7 @@ WHAT ELSE IT PINS, AND WHY EACH ONE IS HERE
     the throw. `test_the_coverage_gate_is_wired_into_dispatch` below pins the
     runtime call site, because a unit-only caller is how the claim went false.
 
-  * **Mutating opcodes are excluded from coverage.** KEAP publishes 14, seven of
+  * **Mutating opcodes are excluded from coverage.** KEAP publishes 17 (v3), eight of
     them mutating; P1 refuses mutating stages at the door. Demanding handlers
     for verbs the executor will not run would be a gate insisting on dead code,
     so the exclusion is asserted rather than assumed.
@@ -106,10 +106,11 @@ def php(script: str, tmp_path: Path) -> subprocess.CompletedProcess:
 
 
 def test_the_registry_is_not_empty():
-    assert len(registered_handlers()) == 7, (
-        f"{len(registered_handlers())} handlers registered; P1 is exactly the 7 "
-        "non-mutating opcodes KEAP publishes. If that set changed, change this "
-        "number deliberately — a floor of zero passes vacuously.")
+    assert len(registered_handlers()) == 9, (
+        f"{len(registered_handlers())} handlers registered; contract v3 is exactly "
+        "the 9 non-mutating opcodes KEAP publishes (P1's 7 + aggregate, show). If "
+        "that set changed, change this number deliberately — a floor of zero "
+        "passes vacuously.")
 
 
 @pytest.mark.parametrize("handler", registered_handlers())

@@ -779,7 +779,7 @@ describe('analysis invariants', () => {
 // ---------------------------------------------------------------------------
 
 describe('opcode registry', () => {
-  it('holds the 14 P1 opcodes plus v2 `delegate`, and excludes `branch`', () => {
+  it('holds the 14 P1 opcodes, v2 `delegate`, v3 `aggregate`/`show`; no `branch`', () => {
     expect(opcodeNames()).toEqual([
       'get',
       'map',
@@ -799,8 +799,32 @@ describe('opcode registry', () => {
       // order of the registry fingerprint; appending is the only shape of
       // addition that does not renumber everything before it.
       'delegate',
+      // v3, 2026-10-17: the two read verbs a chart or a KPI needs.
+      'aggregate',
+      'show',
     ]);
     expect(getOpcode('branch')).toBeUndefined();
+  });
+
+  it('v3 — aggregate and show are read verbs that require op / kind', () => {
+    expect(analyzeCortex('@input | aggregate(op="count")').errors).toEqual([]);
+    expect(analyzeCortex('@input | aggregate(db:tasks, op="sum", by="track", y="hours")').errors).toEqual([]);
+    expect(codes(analyzeCortex('@input | aggregate(by="track")').errors)).toEqual(['missing_required_param']);
+    expect(analyzeCortex('@input | show(kind="chart", chart="bar", x="track", y="count", title="t", unit="h")').errors).toEqual([]);
+    expect(codes(analyzeCortex('@input | show(title="t")').errors)).toEqual(['missing_required_param']);
+    expect(codes(analyzeCortex('@input | show(tax:01, kind="kpi")').errors)).toEqual(['namespace_not_accepted']);
+    expect(getOpcode('aggregate')).toMatchObject({ mutating: false, since: 3 });
+    expect(getOpcode('show')).toMatchObject({ mutating: false, since: 3 });
+  });
+
+  it('v3 — filter gains q, rank gains dir, insert/update type `set` as a string', () => {
+    expect(analyzeCortex('@input | filter(q="late")').errors).toEqual([]);
+    expect(analyzeCortex('@input | rank(by="due", dir="desc")').errors).toEqual([]);
+    for (const op of ['insert', 'update']) {
+      expect(analyzeCortex(`@input | ${op}(db:tasks, set="title=x;done=true")`).errors).toEqual([]);
+      // declared, so typed even on a Wing-owned operand
+      expect(codes(analyzeCortex(`@input | ${op}(db:tasks, set=3)`).errors)).toEqual(['invalid_param_value']);
+    }
   });
 
   it('every opcode is well-formed against §2.2', () => {

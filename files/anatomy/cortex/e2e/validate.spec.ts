@@ -348,7 +348,7 @@ test.describe('cortex validate', () => {
       contracts: Record<string, number>;
       ontology: { version: string; verbs: number };
     };
-    expect(health.contracts.cortex).toBe(2);
+    expect(health.contracts.cortex).toBe(3);
     // DEVIATION (1) from KEAP's copy, which asserts `contracts.selfmodel === 1`.
     // The organ serves no slug-tree surface, so it declares no slug-tree
     // contract. Asserting the ABSENCE rather than deleting the check means the
@@ -368,7 +368,7 @@ test.describe('cortex validate', () => {
       registryHash: string;
       opcodes: Array<{ name: string; mutating: boolean; operands: { min: number; max: number; namespaces: string[] } }>;
     };
-    expect(data.contract).toBe(2);
+    expect(data.contract).toBe(3);
     const names = data.opcodes.map((o) => o.name);
     expect(names).toContain('classify');
     expect(names).toContain('insert');
