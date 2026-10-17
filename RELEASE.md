@@ -2,7 +2,116 @@
 
 `nOS` is the open-source Ansible engine behind [**This is AIT — Agentic IT**](https://thisisait.eu): one command turns an Apple Silicon Mac or Ubuntu 24.04 host into a reproducible, self-hosted, self-managing cloud of 76 FOSS services behind one SSO.
 
-Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.15-beta`.
+Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.16-beta`.
+
+---
+
+## v0.17-beta (2026-10-11 … 2026-10-17) — DRAFT
+
+> **Iris gets a body: a terminal, a window, and a wall between clients.**
+> 814 commits since `v0.16-beta` (565 files, +57.3k/−3.1k), measured with
+> `git log v0.16-beta..dev` at `5ca7bbd6`. Still `-beta`: the operator ruled
+> on 2026-10-16 that the maturity exit criteria (restore drill, UC13) are not
+> met, so dropping `-beta` waits (row `rel-017`).
+> PENDING: blank 2026-10-17 (`nos --remove=data --confirm`, then `nos`; the
+> first blank that leaves a record in `~/.nos/blank-runs.jsonl`).
+> PENDING: blank 2026-10-17 `nos-smoke --strict` result.
+> Offline at `5ca7bbd6` (2026-10-17): pytest 9055 passed, 1 failed
+> (`test_service_dependency_edges`, fixed in `5ca7bbd6` itself; the 307
+> graph/apex/dependency gates then green), cargo thalamus + contract green,
+> face vitest 506/506, pupil 322/322, cortex vitest 241 passed with one known
+> load timeout (row `cortex-store-test-timeout`), ansible-lint and
+> syntax-check green. The Bonus CI lanes (per-stack, all-on, macOS nightly)
+> have had no green run since 2026-10-10: they are unverified, not working.
+
+Most of this release is one new organ and its window. Iris, the end user's
+caddy, used to live only in benches; now she answers at a terminal and in a
+native window, reads through KEAP as the person who asked, and writes only
+after that person approves the change. All of it is off by default
+(`install_thalamus: false`) until the operator proves it live.
+
+### The Thalamus: Iris at a terminal
+- `roles/pazny.thalamus` builds a Rust relay (`files/anatomy/thalamus/`): a
+  daemon that serves Iris over a socket, and a `ratatui` shell. Tools run as the
+  person through KEAP's human door; every call and decision goes to one ledger
+  with one writer (under `nos_data_root`).
+- **A write lands only when approved.** An edit, an insert (with its line
+  items), a delete, a new private table or new columns each show one card with
+  the cell diff; the row is re-read before the write, and the approved fields are
+  read back. One decision per card, the sender checked per decision.
+- Iris reads tables (`query_rows`: filters, `group_by` with sums and averages,
+  totals, relative days on the host's calendar), red status, services, the
+  approvals queue, the inbox (which says it is not mail), memory
+  (`search_memory` over KEAP) and the how-to guide (`nos_guide`). Text from the
+  data comes under a notice; a link no tool returned is marked.
+- Iris's prompt leads with the **imprint**, in a new short render for local
+  models. Her cell's own row is Mistral Large on the EU endpoint; a host with
+  `llm_on_host` binds her to Ollama (`iris_backend`; refused under 8B); the person
+  can pick the model per session, and every switch is a recorded rebind
+  (`agent_session_rebind`).
+- `iris_plan: "cortex"` (opt-in; default `"tools"`) has Iris plan a turn as one
+  cortex-lang pipeline that the cortex organ validates before it runs, with
+  opcode registry v3. The bench judges that path; the switch waits for numbers.
+
+### The pupil: Iris's window
+- `files/anatomy/pupil/` (Tauri) is installed by the thalamus role as
+  `Iris.app`, built and signed on the host. It draws what the shell draws:
+  markdown, tables, lists and records, six chart kinds, timelines, graphs,
+  sequence diagrams, change markers (before / changes / after), KPI tiles, CSV
+  export, choices and native forms (prefill, submit through the same approval).
+  Numbers and dates are in cs-CZ.
+- A workspace with tabs, a grid and floating chat; a render can be pinned to it.
+  Keeping dashboards in KEAP was built and **reverted**: placed dashboards stay
+  on the Mac.
+- `files/anatomy/thalamus/contract` is the one wire between shell and window,
+  with a fixture that samples every phase.
+
+### The receptor and the septum: who is asking, for whom
+- `roles/pazny.receptor` maps a host login to a person and groups for KEAP's
+  human door (`~/.nos/identity-map.yml`, one map). OpenHuman reads KEAP through
+  it, as a person, relaying read verbs only. On wherever OpenHuman is installed.
+- **The septum** is the wall between clients: each table carries a
+  `client_scope`, producers stamp `book_owner`, reads, memory and the card honour
+  it (`working_for`), a write outside the wall asks once more, and
+  `tools/septum-status.py` shows orphan and unstamped rows as red.
+
+### Benches that do not credit a guess
+- `tools/iris-bench.py` scores Iris from the wire: Czech, long context, cards,
+  queries and the cortex plan path. A guess is not "cannot see", a fabrication is
+  not credited, a 429 or an unjudged case is NO-DATA, never a pass.
+- `tools/local-model-bench.py` per-turn gated scoring with tiers; runs record
+  model digests. `tools/oneshot-poc.py` compiles a plan from a question battery
+  over two backends. A Czech ASR bench for the ears (`tools/ears-asr-bench.py`).
+- What these measure loosely is written down: hidden fee 62.
+
+### What is installed is what is counted
+- Authentik, Wing's hub, face, Pulse, the scanner, the smoke and the backup now
+  list the **installed** set, not a hand list: a job has an owning install flag,
+  a declared-off service stays down, a database something still uses is kept.
+- `profiles/core.yml`: the smallest working nOS, starts on a 6 GiB Docker VM;
+  a VM starved of memory is refused at preflight.
+- Backup: no RustFS, restic takes the dumps directly (keap, wing and state on
+  the direct path); an empty `restic_repo` is refused; no backup at all is red.
+- `nos --remove=data --confirm` leaves a record (`~/.nos/blank-runs.jsonl`) that
+  `tools/estate-status.py` reads as the BLANK axis; a bad row reads UNKNOWN.
+
+### CI and the host
+- The pytest lane runs in four shards; Linux install on the core profile, a
+  macOS install by hand and nightly; Bonus converge lanes per manifest stack and
+  one all-on lane, all non-blocking (and red since 2026-10-10, see above).
+- macOS: a second converge changes nothing; dnsmasq answers the tailnet on a
+  roaming host; a locked keychain over SSH and a worktree apart from main are
+  refused at preflight. `tools/estate-adopt.sh` gives an estate its own clone.
+- Look: nos-cc and face take their colours from the AIT design system.
+
+### Known and carried
+- Hidden fees 61 (four limits that answer normally when hit) and 62 (benches
+  and the CI split that measure loosely); roadmap rows
+  `blank-record-after-last-step` (a failure after the smoke still records the
+  blank as passed) and `pipeline-exercise-writes-checkout` (a Pulse job rewrites
+  committed fixtures in the repo checkout).
+- Not promised: gov readiness; Iris on a client host (off by default);
+  dropping `-beta`.
 
 ---
 
