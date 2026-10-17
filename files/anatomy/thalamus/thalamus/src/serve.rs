@@ -1487,6 +1487,13 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                         |t| self.table_info(who, t),
                         |args, read| self.matched(who, args, read).map(|m| m.hits.into_iter().map(|h| h.0).collect())));
                     return match mapped {
+                        // the mapper's refusal is the repairable kind (a column, a where): one round, as the organ's
+                        Err(why) if round == 0 => {
+                            let _ = self.record(o, Kind::ToolResult, tool, json!({"valid": true, "mapped": false, "errors": [why], "registry_hash": hash}));
+                            msgs.push(json!({"role": "assistant", "content": said}));
+                            msgs.push(json!({"role": "user", "content": format!("The thalamus cannot run it: {why}. Answer with the corrected pipeline only.")}));
+                            continue;
+                        }
                         Err(why) => refused(o, why, json!({"errors": [], "registry_hash": hash})),
                         Ok(calls) => {
                             let plan: Vec<Value> = calls.iter().map(|(n, a)| json!([n, a])).collect();
