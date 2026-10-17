@@ -571,7 +571,7 @@ def unread_inbox(conn: sqlite3.Connection) -> dict:
 ORPHAN_AFTER_HOURS = 4
 
 
-def orphaned_sessions(conn: sqlite3.Connection) -> list[dict]:
+def orphaned_sessions(conn: sqlite3.Connection) -> list[dict] | None:
     try:
         rows = conn.execute(
             """
@@ -582,8 +582,8 @@ def orphaned_sessions(conn: sqlite3.Connection) -> list[dict]:
             """
         ).fetchall()
     except sqlite3.Error:
-        # The table is Wing's; an older schema is an UNKNOWN, never a green.
-        return []
+        # The table is Wing's; an older schema is an UNKNOWN, never a green: None, and collect() says so.
+        return None
 
     out: list[dict] = []
     for row in rows:
@@ -1003,8 +1003,11 @@ def collect() -> dict:
                 report["overdue_jobs"] = overdue_jobs(conn)
                 report["inbox"] = unread_inbox(conn)
                 report["audit_chain"] = audit_chain(conn)
-                report["orphaned_sessions"] = orphaned_sessions(conn)
+                orphans = orphaned_sessions(conn)
+                report["orphaned_sessions"] = orphans or []
             report["sources_read"].append(str(WING_DB))
+            if orphans is None:
+                report["sources_missing"].append(f"{WING_DB} agent_sessions (unreadable: orphans UNKNOWN)")
         except sqlite3.Error as exc:
             # A wing.db with no schema (after a blank, before pazny.wing runs)
             # is a source the reader could not read: UNKNOWN, not a traceback.
