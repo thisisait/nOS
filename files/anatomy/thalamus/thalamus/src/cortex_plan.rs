@@ -67,7 +67,9 @@ pub fn stages_of(v: &Value) -> Result<Vec<Stage>, String> {
     st.iter().map(|s| Ok(Stage {
         op: s.get("op").and_then(Value::as_str).ok_or("a stage has no `op`")?.to_string(),
         operand: s.get("operand").and_then(Value::as_str).filter(|o| !o.is_empty()).map(str::to_string),
-        params: s.get("params").and_then(Value::as_object).cloned().unwrap_or_default(),
+        // the closed schema makes a small model fill every param it may: "" means unset (live 2026-10-17)
+        params: s.get("params").and_then(Value::as_object).into_iter().flatten()
+            .filter(|(_, v)| v.as_str() != Some("")).map(|(k, v)| (k.clone(), v.clone())).collect(),
     })).collect()
 }
 
@@ -164,7 +166,7 @@ pub struct Plan {
 }
 
 fn str_of(p: &Map<String, Value>, k: &str) -> Option<String> {
-    p.get(k).and_then(Value::as_str).map(str::to_string)
+    p.get(k).and_then(Value::as_str).filter(|v| !v.is_empty()).map(str::to_string)
 }
 
 /// The mapping table, by opcode and namespace; a source other than the person's turn is refused.
