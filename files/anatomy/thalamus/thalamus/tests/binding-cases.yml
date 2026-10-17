@@ -100,8 +100,16 @@ cases:
   - name: a chosen row the cell does not allow refuses
     cell: iris
     env: {NOS_CELL_BACKEND: minimax, NOS_ARMED_BACKENDS: minimax, NOS_MINIMAX_MODEL: m1}
-    expect: {kind: refused, contains: "may bind only mistral-eu, ollama"}
+    expect: {kind: refused, contains: "may bind only mistral-eu, ollama, llamacpp"}
   - name: the chosen on-device row unarmed refuses rather than degrade
     cell: iris
     env: {NOS_CELL_BACKEND: ollama, NOS_LOCAL_MODEL: "qwen3:14b", NOS_ARMED_BACKENDS: mistral-eu, NOS_MISTRAL_MODEL: m, "nos:mistral_api_key": k}
+    expect: {kind: refused, contains: "not armed"}
+  - name: iris on a host that chose llama.cpp binds its model
+    cell: iris
+    env: {NOS_CELL_BACKEND: llamacpp, NOS_ARMED_BACKENDS: llamacpp, NOS_LLAMACPP_MODEL: "qwen3-14b-q4"}
+    expect: {kind: bound, model_id: "qwen3-14b-q4"}
+  - name: llama.cpp is a choice, never a fallback - unarmed refuses
+    cell: iris
+    env: {NOS_CELL_BACKEND: llamacpp, NOS_LLAMACPP_MODEL: m, NOS_ARMED_BACKENDS: ollama, NOS_LOCAL_MODEL: "qwen3:14b"}
     expect: {kind: refused, contains: "not armed"}
