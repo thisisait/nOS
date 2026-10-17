@@ -491,7 +491,13 @@ pub fn show_schema() -> Value {
         "y": {"type": "string", "description": "a number column; sum and avg need it"},
         "op": {"enum": ["count", "sum", "avg"]}}));
     source["description"] = json!("for a bar, line or pie chart of a table's rows, or a kpi's one total: what to aggregate; the drawn numbers are KEAP's");
-    json!({"type": "object", "additionalProperties": false, "required": ["component"], "properties": {"source": source, "component": {"oneOf": [
+    // Ollama keeps no oneOf or const (api/types.go ToolProperty): without these the model got component: {} (live 2026-10-17).
+    let told: Vec<String> = SHOW_SHAPE.iter().map(|(k, s)| format!("{k} {s}")).collect();
+    let about = format!("{{kind, props}}: one kind and its props; a kind's props, exactly: {}", told.join("; "));
+    json!({"type": "object", "additionalProperties": false, "required": ["component"], "properties": {"source": source, "component": {
+        "type": "object", "description": about, "required": ["kind", "props"], "properties": {
+            "kind": {"type": "string", "enum": SHOW_KINDS}, "props": {"type": "object", "description": "the props of that kind, as the component says"}},
+        "oneOf": [
         branch("table", "rows the model shows: {title?, columns[] <=12, rows[][] <=50, each row as long as columns}",
             closed(&["columns", "rows"], json!({"title": title, "columns": {"type": "array", "maxItems": 12, "items": {"type": "string"}},
                 "rows": {"type": "array", "maxItems": 50, "items": {"type": "array"}}}))),
