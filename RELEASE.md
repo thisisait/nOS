@@ -21,13 +21,13 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.16
 > afterwards: 32/32 OK, 0 failed. That strict run is not in the record
 > (`smoke_strict: null`), so the reader still says "release gate unmet".
 > PENDING: client-host-1 converge (macOS, the pre-release) — result here.
-> Offline at `5ca7bbd6` (2026-10-17; not re-run on the 53 commits after it,
-> whose own gates ran in their commits and PR #57): pytest 9055 passed, 1 failed
-> (`test_service_dependency_edges`, fixed in `5ca7bbd6` itself; the 307
-> graph/apex/dependency gates then green), cargo thalamus + contract green,
-> face vitest 506/506, pupil 322/322, cortex vitest 241 passed with one known
-> load timeout (row `cortex-store-test-timeout`), ansible-lint and
-> syntax-check green. The Bonus CI lanes (per-stack, all-on, macOS nightly)
+> Offline at `57f9d8ad` (2026-10-17, PR #57 + the Iris cloud rows): pytest 9062
+> passed, 1 failed (`test_apex_ruling_is_signed` - the two new withheld rows were
+> unsigned; signed in `dabc7a48`), cargo thalamus + contract green, face vitest
+> 506/506, pupil 324/324, cortex vitest 241 passed with one known load timeout
+> (row `cortex-store-test-timeout`), ansible-lint and syntax-check green. The
+> seven commits after it (apex autocommit, prefix prompt, GDPR on stdin) ran
+> their own gates; CI on dev is the full re-run. The Bonus CI lanes (per-stack, all-on, macOS nightly)
 > have had no green run since 2026-10-10: they are unverified, not working.
 
 Most of this release is one new organ and its window. Iris, the end user's
