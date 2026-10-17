@@ -5440,3 +5440,22 @@ fn show_draws_what_its_schema_admits() {
         }
     }
 }
+
+/// Probe 2026-10-17: the system prompt says "query_rows group_by, then show chart (the source is
+/// inferred)", but an inferred chart had to spell x itself, and a group of rows with no value - which
+/// the model reads as value null - matched only the label "(empty)" it was never shown.
+#[test]
+fn an_inferred_chart_needs_no_axis_and_its_empty_group_matches() {
+    let mut rows = statuses();
+    rows.push(keap_row("e", serde_json::json!({"amount": 4})));
+    let bare = call("show", &serde_json::json!({"component": {"kind": "chart", "props": {"chart": "bar",
+        "series": [{"name": "rows", "points": [["open", 3], ["done", 1], ["", 1]]}]}}}).to_string());
+    let rig = rig_at("inferbare", mapped(), fake_table(SHEET, rows).0,
+        vec![query(r#"{"table": "sheet", "group_by": "status"}"#), bare, answer("Drawn.")], Some(local()));
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let got = turn(&s, &mut r, None, "chart rows by status");
+    let charts: Vec<_> = rendered(&got).into_iter().filter(|m| m["component"]["kind"] == "chart").collect();
+    assert_eq!(charts.len(), 1, "drawn: {got:?}; heard: {}", tool_result(&rig, 2));
+    assert_eq!(charts[0]["pin"]["chart"]["x"], "status", "the counts pin: {}", charts[0]);
+}
