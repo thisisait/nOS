@@ -452,3 +452,69 @@ fn an_empty_param_is_an_unset_one() {
     assert_eq!(p.agg, Some(("count".to_string(), None, None)), "{:?}", p.agg);
     assert!(p.q.is_none() && p.fields.is_empty());
 }
+
+/// One opcode's declaration in the organ's registry (cortex-opcodes.ts), read from the source:
+/// (operand min, operand namespaces, param names, required param names). Spread param sets
+/// (MUTATION_PARAMS) are not read: the plan schema never offers dry_run, commit or idempotency_key.
+fn registry_op(name: &str) -> (u32, Vec<String>, Vec<String>, Vec<String>) {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../cortex/server/cortex-opcodes.ts");
+    let src = std::fs::read_to_string(path).unwrap();
+    let reg = &src[src.find("export const CORTEX_OPCODES").unwrap()..];
+    let at = reg.find(&format!("name: '{name}'")).unwrap_or_else(|| panic!("{name} is not in the registry"));
+    let block = &reg[at..];
+    let block = &block[..block[1..].find("name: '").map_or(block.len(), |e| e + 1)];
+    let ops = &block[block.find("operands: {").unwrap()..];
+    let min: u32 = ops["operands: { min: ".len()..].split(',').next().unwrap().trim().parse().unwrap();
+    let ns = &ops[ops.find('[').unwrap() + 1..ops.find(']').unwrap()];
+    let ns = ns.split(',').map(|n| n.trim().trim_matches('\'').to_string()).filter(|n| !n.is_empty()).collect();
+    let (mut params, mut required) = (vec![], vec![]);
+    for line in block.lines().map(str::trim) {
+        if let Some((k, rest)) = line.split_once(": { type: '") {
+            params.push(k.to_string());
+            if rest.contains("required: true") {
+                required.push(k.to_string());
+            }
+        }
+    }
+    (min, ns, params, required)
+}
+
+/// Organ probe 2026-10-17: the flat schema offered every param and a db: operand on every stage, but
+/// the organ's registry is per opcode - filter(db:todos, ...) is namespace_not_accepted, filter(limit=0)
+/// unknown_param, aggregate(by=status) missing_required_param. A model that fills what it may (e742ad1,
+/// e3d6898) writes exactly those. Each opcode's branch offers only what the registry declares for it.
+#[test]
+fn the_ast_schema_offers_each_opcode_only_what_the_registry_takes() {
+    let s = cortex_plan::ast_schema();
+    let branches = s["properties"]["stages"]["items"]["anyOf"].as_array().expect("one anyOf branch per opcode");
+    let ops: Vec<&str> = branches.iter().filter_map(|b| b["properties"]["op"]["const"].as_str()).collect();
+    assert_eq!(ops, ["get", "filter", "rank", "aggregate", "show", "insert", "update", "delete"]);
+    for b in branches {
+        let op = b["properties"]["op"]["const"].as_str().unwrap();
+        let (min, ns, params, required) = registry_op(op);
+        assert_eq!(b["additionalProperties"], json!(false), "{op}: {b}");
+        let p = &b["properties"]["params"];
+        assert_eq!(p["additionalProperties"], json!(false), "{op}: params are closed: {p}");
+        for k in p["properties"].as_object().unwrap().keys() {
+            assert!(params.contains(k), "{op}: the schema offers `{k}`, the registry takes {params:?}");
+        }
+        let req: Vec<&str> = p["required"].as_array().into_iter().flatten().filter_map(Value::as_str).collect();
+        for k in &required {
+            assert!(req.contains(&k.as_str()), "{op}: the registry requires `{k}`, the schema lets it out: {p}");
+            assert!(p["properties"][k].get("enum").is_some() || p["properties"][k].get("minLength").is_some(),
+                    "{op}: a required `{k}` is never \"\" (e3d6898 reads \"\" as unset): {p}");
+        }
+        let operand = &b["properties"]["operand"];
+        // the lexer's dotted id: a dot only between two segments (organ probe: db:a..b and db:.a are syntax errors)
+        if !ns.contains(&"db".to_string()) {
+            assert_eq!(operand, &json!({"const": ""}), "{op} takes no db: operand ({ns:?})");
+        } else if min >= 1 {
+            assert_eq!(operand["pattern"], json!(DB), "{op} needs its db: table");
+        } else {
+            assert_eq!(operand["pattern"], json!(DB_OR_NONE), "{op} takes a db: table or none");
+        }
+    }
+}
+
+const DB: &str = "^db:[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*$";
+const DB_OR_NONE: &str = "^(db:[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*)?$";
