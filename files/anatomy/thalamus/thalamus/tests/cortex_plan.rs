@@ -656,3 +656,20 @@ fn a_where_reads_the_shapes_a_model_writes() {
     // query_rows has no inclusive lt or gt: >= is refused with the syntax, never read as >
     assert!(cortex_plan::parse_where("amount >= 5").is_err());
 }
+
+/// Every plan fallback said why in free text only, so a bench could not tell the organ being down
+/// (no verdict on the model) from the model writing a plan nothing runs: fallback_kind says which.
+#[test]
+fn a_fallback_says_whether_the_model_or_the_estate_failed() {
+    let dead = { let l = TcpListener::bind("127.0.0.1:0").unwrap(); format!("http://{}", l.local_addr().unwrap()) };
+    let rig1 = rig("kinddown", binding("ollama", true), vec![say("{\"stages\": [{\"op\": \"get\", \"operand\": \"db:todos\", \"params\": {}}]}"),
+                   say("done")], Some(dead));
+    let (s1, _) = turn(&rig1, None, "todos");
+    let r1: Vec<Value> = tools(&rig1, &s1).into_iter().filter(|(t, _)| t.ends_with("tool_result:cortex_plan")).map(|e| e.1).collect();
+    assert_eq!(r1.last().unwrap()["fallback_kind"], "infra", "{r1:?}");
+    let (organ_url, _) = organ(known(&cases()));
+    let rig2 = rig("kindmodel", binding("ollama", true), vec![say("not json at all"), say("done")], Some(organ_url));
+    let (s2, _) = turn(&rig2, None, "todos");
+    let r2: Vec<Value> = tools(&rig2, &s2).into_iter().filter(|(t, _)| t.ends_with("tool_result:cortex_plan")).map(|e| e.1).collect();
+    assert_eq!(r2.last().unwrap()["fallback_kind"], "model", "{r2:?}");
+}
