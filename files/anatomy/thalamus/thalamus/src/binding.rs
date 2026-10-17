@@ -110,8 +110,12 @@ pub fn decide(agent_yml: &str, register_yml: &str, env: impl Fn(&str) -> Option<
         return Err(format!("agent '{name}' routes to '{declared}' but its own gdpr.processors never names '{matcher}'"));
     }
     let eu_only = at(&agent, &["gdpr", "transfers_outside_eu"]).as_bool() == Some(false) && !processors.is_empty();
-    if eu_only && at(spec, &["residency", "eu"]).as_bool() != Some(true) {
-        return Err(format!("agent '{name}' declares transfers_outside_eu: false but routes to '{declared}', which is not EU-resident"));
+    // Gate 8 — an EU-claiming record reaches a non-EU row only where the host's gdpr_posture is none
+    // (ruling 2026-10-17); nos_gdpr.effective_records then records the transfer.
+    let posture = env("NOS_GDPR_POSTURE").filter(|p| !p.trim().is_empty()).unwrap_or_else(|| "standard".into());
+    if eu_only && at(spec, &["residency", "eu"]).as_bool() != Some(true) && posture.trim() != "none" {
+        return Err(format!("agent '{name}' declares transfers_outside_eu: false but routes to '{declared}', which is not \
+                            EU-resident, and gdpr_posture is '{}': a non-EU row serves only under gdpr_posture: none", posture.trim()));
     }
 
     // Gate 6 — the tier word in the URI tail; opus maps to null by ruling 1.

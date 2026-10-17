@@ -94,8 +94,10 @@ def decide(agent_yml: str, register_yml: str, env) -> Decision:
     if not matcher or not any(matcher in _text(p, "name") for p in processors):
         return Decision("refused", declared, why=f"agent '{name}' routes to '{declared}' but its own gdpr.processors never names '{matcher}'")
     eu_only = _at(agent, "gdpr", "transfers_outside_eu") is False and bool(processors)
-    if eu_only and _at(spec, "residency", "eu") is not True:
-        return Decision("refused", declared, why=f"agent '{name}' declares transfers_outside_eu: false but routes to '{declared}', which is not EU-resident")
+    posture = (env("NOS_GDPR_POSTURE") or "").strip() or "standard"
+    if eu_only and _at(spec, "residency", "eu") is not True and posture != "none":
+        return Decision("refused", declared, why=f"agent '{name}' declares transfers_outside_eu: false but routes to '{declared}', which is not "
+                                                  f"EU-resident, and gdpr_posture is '{posture}': a non-EU row serves only under gdpr_posture: none")
 
     words = re.split(r"[^A-Za-z0-9_]", tail)
     tier = next((w for w in words if w in ("haiku", "sonnet", "opus", "vision")), tail)
