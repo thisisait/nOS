@@ -22,7 +22,7 @@
   prompt: In the iris-bench-2 table, show the rows with status next as a chart by track.
   needs_rows: true
   checks:
-    tools_called: [query_rows, show]   # list_tables optional: a title resolves
+    tools_called: [show]   # query_rows and list_tables optional: show's source reads the rows (status-pie's rule)
     kinds_drawn: [chart]
     no_number_without_source: true
     not_repeated: true
