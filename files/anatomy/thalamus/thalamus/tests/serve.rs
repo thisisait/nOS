@@ -5395,3 +5395,48 @@ fn a_failed_request_keeps_the_rebind_line() {
     let heard: Vec<bool> = model_posts(&rig).iter().map(|b| b.contains("This session moved")).collect();
     assert_eq!(heard, [false, true, true], "a request the model never answered did not tell it");
 }
+
+/// show()'s order over its arguments, offline: normalize_show, the component's serde and check(),
+/// then the source a sourced chart or kpi is drawn from.
+fn shown_as(args: serde_json::Value) -> Result<Component, String> {
+    let a = serve::normalize_show(&args);
+    let c: Component = serde_json::from_value(a["component"].clone()).map_err(|e| e.to_string())?;
+    c.check()?;
+    match (&c, a.get("source")) {
+        (Component::Kpi(_), Some(s)) => serde_json::from_value::<nos_contract::wire::KpiSpec>(s.clone()).map(|_| ()).map_err(|e| e.to_string())?,
+        (Component::Chart(_), Some(s)) => serve::source_spec(&c, s.clone()).map(|_| ())?,
+        _ => {}
+    }
+    Ok(c)
+}
+
+/// Probe 2026-10-17 (scratch crate over normalize_show): shapes the show schema or its description
+/// admit, refused only by a detail the thalamus owns - a sourced chart's own x and series are replaced
+/// by KEAP's, a kpi's source has no x, a choice's multi follows from its suggestions.
+#[test]
+fn show_draws_what_its_schema_admits() {
+    let src = serde_json::json!({"query": {"table": "todos"}, "x": "track", "op": "count"});
+    let kpi_src = serde_json::json!({"query": {"table": "todos"}, "op": "sum", "y": "amount"});
+    for (why, args) in [
+        ("a sourced chart's x names the column, as source.x does",
+         serde_json::json!({"component": {"kind": "chart", "props": {"chart": "bar", "x": "track", "series": []}}, "source": src})),
+        ("a sourced chart with no props", serde_json::json!({"component": {"kind": "chart"}, "source": src})),
+        ("a sourced chart named by its chart word", serde_json::json!({"component": {"kind": "pie"}, "source": src})),
+        ("source.chart names the chart, as offer_dashboard's does",
+         serde_json::json!({"component": {"kind": "chart", "props": {}}, "source": {"query": {"table": "todos"}, "x": "track", "op": "count", "chart": "pie"}})),
+        ("a kpi's source with the shared schema's empty x",
+         serde_json::json!({"component": {"kind": "kpi", "props": {"title": "Points"}}, "source": {"query": {"table": "todos"}, "op": "sum", "y": "amount", "x": ""}})),
+        ("a kpi with no props: the thalamus titles it", serde_json::json!({"component": {"kind": "kpi"}, "source": kpi_src})),
+        ("a choice with no multi, its pick in another case",
+         serde_json::json!({"component": {"kind": "choice", "props": {"question": "Which chart?", "options": ["Bar chart", "Pie chart"], "suggested": "bar chart"}}})),
+    ] {
+        let c = shown_as(args.clone()).unwrap_or_else(|e| panic!("{why}: refused ({e}): {args}"));
+        if let Component::Choice(ch) = &c {
+            assert_eq!((ch.suggested.clone(), ch.multi), (vec!["Bar chart".to_string()], false), "{why}");
+        }
+        if let Component::Chart(ch) = &c {
+            let pie = args.to_string().contains("pie");
+            assert_eq!(serde_json::to_value(ch.chart).unwrap() == serde_json::json!("pie"), pie, "{why}: {ch:?}");
+        }
+    }
+}
