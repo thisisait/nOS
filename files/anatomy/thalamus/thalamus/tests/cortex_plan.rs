@@ -419,3 +419,22 @@ fn the_mini_syntaxes_parse_and_refuse_by_shape() {
     assert_eq!(cortex_plan::parse_set("a=1; b = x=y ;c=").unwrap(), vec![("a".into(), "1".into()), ("b".into(), "x=y".into()), ("c".into(), String::new())]);
     assert!(cortex_plan::parse_set("a").is_err() && cortex_plan::parse_set("").is_err() && cortex_plan::parse_set("a=1;a=2").is_err());
 }
+
+/// Live 2026-10-17, hermes3:8b under the JSON schema: `get(db="assay-suppliers")` - the table went
+/// into params because the schema allowed any param key, so every plan failed "wrong number of
+/// operands". The schema closes the param names to the v3 ones the mapper reads and shapes the operand.
+#[test]
+fn the_ast_schema_leaves_no_room_for_a_table_in_params() {
+    let s = cortex_plan::ast_schema();
+    let item = &s["properties"]["stages"]["items"];
+    let params = &item["properties"]["params"];
+    assert_eq!(params["additionalProperties"], json!(false), "params must be a closed set: {params}");
+    let names: Vec<&str> = params["properties"].as_object().unwrap().keys().map(String::as_str).collect();
+    for k in ["limit", "fields", "where", "q", "by", "dir", "op", "y", "kind", "chart", "x", "title", "unit", "set"] {
+        assert!(names.contains(&k), "{k} missing from {names:?}");
+    }
+    assert!(!names.contains(&"db"), "db is an operand, never a param");
+    let required: Vec<&str> = item["required"].as_array().unwrap().iter().filter_map(Value::as_str).collect();
+    assert!(required.contains(&"operand"), "the operand is always written (empty when the stage takes none)");
+    assert_eq!(item["properties"]["operand"]["pattern"], json!("^(db:[A-Za-z0-9_.-]+)?$"));
+}
