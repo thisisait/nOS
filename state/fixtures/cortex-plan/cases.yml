@@ -1,0 +1,171 @@
+# Pipelines -> the tool calls the thalamus maps them to (src/cortex_plan.rs; seed row
+# iris-speaks-cortex-lang, its mapping table). Gate: files/anatomy/thalamus/thalamus/tests/cortex_plan.rs.
+# `stages` is what the model answers on the JSON-schema engine and what the fake organ's
+# /agent/v1/validate hands back; `pipeline` is its rendering, the source that is validated.
+# `calls`: [tool, args] the turn then runs, in order. `refused`: a fragment of the
+# "[thalamus] cortex plan refused: ..." the model hears before plain tool calling.
+# `working_for` sets the septum first; `registry_hash` is the organ's (default the mapper's);
+# `errors` makes the organ answer invalid with those messages.
+# Tables (the gate's fake KEAP): todos "Todos" {title text, status select open|done, amount number,
+# track text}: t1 Write spec/open/3/core, t2 Ship it/done/5/core, t3 Review/open/2/face;
+# engram "Engram" (personal), party (self, client acme).
+cases:
+  - name: get and filter is one query_rows
+    pipeline: 'get(db:todos, limit=5) | filter(where="status eq open")'
+    stages:
+      - {op: get, operand: "db:todos", params: {limit: 5}}
+      - {op: filter, params: {where: "status eq open"}}
+    calls:
+      - [query_rows, {table: todos, limit: 5, where: [{column: status, op: eq, value: open}]}]
+
+  - name: a title and labels resolve, rank orders and cuts
+    pipeline: 'get(db:Todos, fields="Title,amount") | rank(by="Amount", dir="desc", limit=3)'
+    stages:
+      - {op: get, operand: "db:Todos", params: {fields: "Title,amount"}}
+      - {op: rank, params: {by: Amount, dir: desc, limit: 3}}
+    calls:
+      - [query_rows, {table: todos, columns: [title, amount], order_by: {column: amount, dir: desc}, limit: 3}]
+
+  - name: in takes comma-separated values, q rides along
+    pipeline: 'get(db:todos) | filter(q="spec", where="track in core,face")'
+    stages:
+      - {op: get, operand: "db:todos", params: {}}
+      - {op: filter, params: {where: "track in core,face", q: spec}}
+    calls:
+      - [query_rows, {table: todos, q: spec, where: [{column: track, op: in, value: [core, face]}]}]
+
+  - name: aggregate by is a grouped query_rows
+    pipeline: 'get(db:todos) | aggregate(by="track", op="sum", y="amount")'
+    stages:
+      - {op: get, operand: "db:todos", params: {}}
+      - {op: aggregate, params: {op: sum, by: track, y: amount}}
+    calls:
+      - [query_rows, {table: todos, group_by: track, op: sum, y: amount}]
+
+  - name: aggregate alone is one total
+    pipeline: 'aggregate(db:todos, op="count")'
+    stages:
+      - {op: aggregate, operand: "db:todos", params: {op: count}}
+    calls:
+      - [query_rows, {table: todos, op: count}]
+
+  - name: show kpi is show with a source, the number KEAP's
+    pipeline: 'get(db:todos) | filter(where="status eq open") | aggregate(op="count") | show(kind="kpi", title="Open todos")'
+    stages:
+      - {op: get, operand: "db:todos", params: {}}
+      - {op: filter, params: {where: "status eq open"}}
+      - {op: aggregate, params: {op: count}}
+      - {op: show, params: {kind: kpi, title: Open todos}}
+    calls:
+      - [show, {component: {kind: kpi, props: {title: Open todos}},
+                source: {query: {table: todos, where: [{column: status, op: eq, value: open}]}, op: count}}]
+
+  - name: show chart is show with a source
+    pipeline: 'get(db:todos) | aggregate(by="status", op="count") | show(chart="bar", kind="chart")'
+    stages:
+      - {op: get, operand: "db:todos", params: {}}
+      - {op: aggregate, params: {op: count, by: status}}
+      - {op: show, params: {kind: chart, chart: bar}}
+    calls:
+      - [show, {component: {kind: chart, props: {chart: bar, x: category, series: [{name: count, points: [["-", 0]]}]}},
+                source: {query: {table: todos}, x: status, op: count}}]
+
+  - name: show table is the query_rows render
+    pipeline: 'get(db:todos) | show(kind="table")'
+    stages:
+      - {op: get, operand: "db:todos", params: {}}
+      - {op: show, params: {kind: table}}
+    calls:
+      - [query_rows, {table: todos}]
+
+  - name: update of one shown row is its card, commit or not
+    pipeline: 'get(db:todos) | filter(where="title eq Review") | update(db:todos, commit=true, set="status=done;amount=7")'
+    stages:
+      - {op: get, operand: "db:todos", params: {}}
+      - {op: filter, params: {where: "title eq Review"}}
+      - {op: update, operand: "db:todos", params: {set: "status=done;amount=7", commit: true}}
+    calls:
+      - [query_rows, {table: todos, where: [{column: title, op: eq, value: Review}]}]
+      - [propose_row_edit, {table: todos, row_id: t3, values: {status: done, amount: 7}}]
+
+  - name: delete of one shown row is its card
+    pipeline: 'get(db:todos) | filter(where="title eq Ship it") | delete(db:todos)'
+    stages:
+      - {op: get, operand: "db:todos", params: {}}
+      - {op: filter, params: {where: "title eq Ship it"}}
+      - {op: delete, operand: "db:todos", params: {}}
+    calls:
+      - [query_rows, {table: todos, where: [{column: title, op: eq, value: Ship it}]}]
+      - [propose_row_delete, {table: todos, row_id: t2}]
+
+  - name: insert is a look at the table, then its card
+    pipeline: 'insert(db:todos, set="Title=New;status=open;amount=4")'
+    stages:
+      - {op: insert, operand: "db:todos", params: {set: "Title=New;status=open;amount=4"}}
+    calls:
+      - [query_rows, {table: todos, limit: 0}]
+      - [propose_row_insert, {table: todos, values: {title: New, status: open, amount: 4}}]
+
+  - name: an update that finds two rows is refused
+    pipeline: 'get(db:todos) | filter(where="status eq open") | update(db:todos, set="status=done")'
+    stages:
+      - {op: get, operand: "db:todos", params: {}}
+      - {op: filter, params: {where: "status eq open"}}
+      - {op: update, operand: "db:todos", params: {set: "status=done"}}
+    refused: "update acts on exactly one row; the pipeline matched 2 rows of Todos"
+
+  - name: an opcode with no mapping is refused
+    pipeline: 'get(db:todos) | classify(tax:03)'
+    stages:
+      - {op: get, operand: "db:todos", params: {}}
+      - {op: classify, operand: "tax:03", params: {}}
+    refused: "classify() has no thalamus mapping"
+
+  - name: a namespace with no mapping is refused
+    pipeline: 'get(svc:wing)'
+    stages:
+      - {op: get, operand: "svc:wing", params: {}}
+    refused: "get(svc:wing): namespace svc has no thalamus mapping; only db: tables do"
+
+  - name: an unknown column is refused by name
+    pipeline: 'get(db:todos) | filter(where="colour eq red")'
+    stages:
+      - {op: get, operand: "db:todos", params: {}}
+      - {op: filter, params: {where: "colour eq red"}}
+    refused: "no column `colour` in Todos; columns: title, status, amount, track"
+
+  - name: a where without an op is refused with its syntax
+    pipeline: 'get(db:todos) | filter(where="status open")'
+    stages:
+      - {op: get, operand: "db:todos", params: {}}
+      - {op: filter, params: {where: "status open"}}
+    refused: 'where "status open" is not "<column> <op> <value>"'
+
+  - name: a value the column does not take is refused as the tool path refuses it
+    pipeline: 'get(db:todos) | filter(where="status eq lost")'
+    stages:
+      - {op: get, operand: "db:todos", params: {}}
+      - {op: filter, params: {where: "status eq lost"}}
+    refused: '"lost" is not a status value in Todos; options: open, done'
+
+  - name: a table the septum hides is refused with the tool path's words
+    working_for: acme
+    pipeline: 'get(db:engram)'
+    stages:
+      - {op: get, operand: "db:engram", params: {}}
+    refused: "Engram (engram) is personal; hidden while you work for ACME s.r.o."
+    same_as_tool: {table: engram}
+
+  - name: a registry the mapper was not built for is refused
+    registry_hash: "cx1:0000000000000000"
+    pipeline: 'get(db:todos, limit=1)'
+    stages:
+      - {op: get, operand: "db:todos", params: {limit: 1}}
+    refused: "registry cx1:0000000000000000 is not the one this mapper was built for (cx1:8250d05e5e32afb7)"
+
+  - name: invalid after one repair round falls back
+    pipeline: 'get(db:todos, colour="red")'
+    stages:
+      - {op: get, operand: "db:todos", params: {colour: red}}
+    errors: ["unknown_param: get has no param colour"]
+    refused: "the validator refused it twice: unknown_param: get has no param colour"
