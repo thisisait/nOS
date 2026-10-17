@@ -105,3 +105,44 @@ cases:
     cell: iris
     env: {NOS_CELL_BACKEND: ollama, NOS_LOCAL_MODEL: "qwen3:14b", NOS_ARMED_BACKENDS: mistral-eu, NOS_MISTRAL_MODEL: m, "nos:mistral_api_key": k}
     expect: {kind: refused, contains: "not armed"}
+  # Operator ruling 2026-10-17: Iris may use Anthropic's and MiniMax's OpenAI-compatible endpoints like
+  # mistral-eu; only residency differs, so gate 8 lets them serve an EU-claiming record only at gdpr_posture: none.
+  - name: iris on anthropic-api at posture none binds the configured Claude model
+    cell: iris
+    env: {NOS_CELL_BACKEND: anthropic-api, NOS_ARMED_BACKENDS: anthropic-api, NOS_ANTHROPIC_API_MODEL: claude-haiku-5-5,
+          "nos:anthropic_api_key": k-test, NOS_GDPR_POSTURE: none}
+    expect: {kind: bound, model_id: claude-haiku-5-5}
+  - name: iris on anthropic-api at posture standard refuses (a client host)
+    cell: iris
+    env: {NOS_CELL_BACKEND: anthropic-api, NOS_ARMED_BACKENDS: anthropic-api, NOS_ANTHROPIC_API_MODEL: claude-haiku-5-5,
+          "nos:anthropic_api_key": k-test, NOS_GDPR_POSTURE: standard}
+    expect: {kind: refused, contains: "gdpr_posture is 'standard'"}
+  - name: iris on anthropic-api with no posture set is standard and refuses
+    cell: iris
+    env: {NOS_CELL_BACKEND: anthropic-api, NOS_ARMED_BACKENDS: anthropic-api, NOS_ANTHROPIC_API_MODEL: claude-haiku-5-5,
+          "nos:anthropic_api_key": k-test}
+    expect: {kind: refused, contains: "not EU-resident"}
+  - name: iris on anthropic-api armed without its key refuses and names credentials.yml
+    cell: iris
+    env: {NOS_CELL_BACKEND: anthropic-api, NOS_ARMED_BACKENDS: anthropic-api, NOS_ANTHROPIC_API_MODEL: claude-haiku-5-5,
+          NOS_GDPR_POSTURE: none}
+    expect: {kind: refused, contains: "set anthropic_api_key in credentials.yml"}
+  - name: iris on anthropic-api unarmed refuses, never degrades
+    cell: iris
+    env: {NOS_CELL_BACKEND: anthropic-api, NOS_ANTHROPIC_API_MODEL: claude-haiku-5-5, "nos:anthropic_api_key": k-test,
+          NOS_GDPR_POSTURE: none}
+    expect: {kind: refused, contains: "not armed"}
+  - name: iris on minimax-api at posture none binds the configured MiniMax model
+    cell: iris
+    env: {NOS_CELL_BACKEND: minimax-api, NOS_ARMED_BACKENDS: minimax-api, NOS_MINIMAX_MODEL: MiniMax-M2,
+          "nos:minimax_api_key": k-test, NOS_GDPR_POSTURE: none}
+    expect: {kind: bound, model_id: MiniMax-M2}
+  - name: iris on minimax-api with no model id refuses rather than send a blank one
+    cell: iris
+    env: {NOS_CELL_BACKEND: minimax-api, NOS_ARMED_BACKENDS: minimax-api, "nos:minimax_api_key": k-test, NOS_GDPR_POSTURE: none}
+    expect: {kind: refused, contains: "NOS_MINIMAX_MODEL is empty"}
+  - name: iris on minimax-api at posture standard refuses
+    cell: iris
+    env: {NOS_CELL_BACKEND: minimax-api, NOS_ARMED_BACKENDS: minimax-api, NOS_MINIMAX_MODEL: MiniMax-M2,
+          "nos:minimax_api_key": k-test, NOS_GDPR_POSTURE: standard}
+    expect: {kind: refused, contains: "gdpr_posture is 'standard'"}

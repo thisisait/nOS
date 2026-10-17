@@ -5278,6 +5278,43 @@ fn a_cloud_pick_the_posture_forbids_is_refused_and_never_offered() {
     }
 }
 
+/// Ruling 2026-10-17: iris's two non-EU cloud rows, armed and keyed beside BOTH.
+fn cloud_rows(posture: &'static str) -> Vec<(&'static str, &'static str)> {
+    vec![("NOS_ARMED_BACKENDS", "mistral-eu ollama anthropic-api minimax-api"), ("NOS_MISTRAL_MODEL", "mistral-large-latest"),
+         ("nos:mistral_api_key", KEY), ("NOS_LOCAL_MODEL", "qwen3:14b"), ("NOS_ANTHROPIC_API_MODEL", "claude-haiku-5-5"),
+         ("nos:anthropic_api_key", "sk-ant"), ("NOS_MINIMAX_MODEL", "MiniMax-M2"), ("nos:minimax_api_key", "sk-mm"),
+         ("NOS_GDPR_POSTURE", posture)]
+}
+
+#[test]
+fn the_non_eu_cloud_rows_are_offered_when_armed_and_the_posture_allows() {
+    let rig = picker("mcloud", picks_of("iris", &cloud_rows("none")), vec![PULLED.into()]);
+    let s = connect(&rig.sock);
+    let mut r = BufReader::new(s.try_clone().unwrap());
+    let ToShell::ModelOptions { options, .. } = said_to(&s, &mut r, ToThalamus::ModelOptions) else { panic!("no options") };
+    let away: Vec<(&str, &str, bool)> = options.iter().filter(|o| o.transfers_outside_eu)
+        .map(|o| (o.backend.as_str(), o.model.as_str(), o.processor.contains(if o.backend == "minimax-api" { "MiniMax" } else { "Anthropic" }))).collect();
+    assert_eq!(away, [("anthropic-api", "claude-haiku-5-5", true), ("minimax-api", "MiniMax-M2", true)], "{options:?}");
+}
+
+#[test]
+fn the_non_eu_cloud_rows_are_never_offered_unarmed_or_at_posture_standard() {
+    let unarmed: Vec<_> = cloud_rows("none").into_iter().map(|(k, v)| if k == "NOS_ARMED_BACKENDS" { (k, "mistral-eu ollama") } else { (k, v) }).collect();
+    for (name, env) in [("mcloudoff", unarmed), ("mcloudstd", cloud_rows("standard"))] {
+        let rig = picker(name, picks_of("iris", &env), vec![PULLED.into()]);
+        let s = connect(&rig.sock);
+        let mut r = BufReader::new(s.try_clone().unwrap());
+        let ToShell::ModelOptions { options, refused, .. } = said_to(&s, &mut r, ToThalamus::ModelOptions) else { panic!("no options") };
+        assert!(options.iter().all(|o| !o.transfers_outside_eu), "{name}: {options:?}");
+        for row in ["anthropic-api", "minimax-api"] {
+            assert!(refused.iter().any(|w| w.starts_with(row)), "{name}: {row} is said as left out: {refused:?}");
+        }
+        if name == "mcloudstd" {
+            assert!(refused.iter().any(|w| w.starts_with("anthropic-api") && w.contains("gdpr_posture")), "{refused:?}");
+        }
+    }
+}
+
 #[test]
 fn a_pick_is_recorded_and_the_next_turn_uses_it() {
     let rig = picker("mpick", picks_of("iris", BOTH), vec![PULLED.into(), answer("ahoj")]);

@@ -106,6 +106,28 @@ def test_the_converge_refuses_iris_on_a_non_eu_row_at_posture_standard():
     assert why and "gdpr_posture" in why and "minimax" in why
 
 
+def test_iris_on_a_non_eu_cloud_row_is_recorded_only_where_the_posture_allows():
+    """Ruling 2026-10-17: iris may use anthropic-api / minimax-api; a client host on standard serves neither."""
+    for row, who in (("anthropic-api", "Anthropic"), ("minimax-api", "MiniMax")):
+        rec, names = _one("iris", armed={row}, cells={"iris": row}, posture="standard")
+        assert names == [] and rec["active"] is False, (row, names)
+        rec, names = _one("iris", armed={row}, cells={"iris": row}, posture="none")
+        assert len(names) == 1 and who in names[0], (row, names)
+        assert rec["transfers_outside_eu"] == 1 and rec["served_by"] == row
+
+
+def test_the_converge_refuses_iris_on_the_new_cloud_rows_at_posture_standard():
+    spec = importlib.util.spec_from_file_location("nos_cell_binding", REPO / "tools/nos_cell_binding.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    for row in ("anthropic-api", "minimax-api"):
+        env = {"NOS_CELL_BACKEND": row, "NOS_ARMED_BACKENDS": row, "NOS_GDPR_POSTURE": "standard"}
+        why = mod.requirement(REPO, "install_thalamus", "iris", env.get, 3)
+        assert why and "gdpr_posture" in why and row in why, (row, why)
+        assert mod.requirement(REPO, "install_thalamus", "iris", {**env, "NOS_GDPR_POSTURE": "none"}.get, 3) is None
+
+
 def test_the_records_tool_emits_the_resolved_host_set():
     out = subprocess.run([sys.executable, str(REPO / "tools/gdpr-records.py"), "--tier", "host", "--resolved"],
                          capture_output=True, text=True, timeout=120, check=True).stdout

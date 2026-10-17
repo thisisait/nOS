@@ -119,6 +119,39 @@ def test_the_role_renders_the_key_iris_binds_and_no_other():
     assert env.from_string(defaults["thalamus_model_token"]).render(thalamus_model_secret="") == ""
 
 
+def _key_facts(**held) -> tuple[list, dict]:
+    """The role's two set_facts (key vars, then their values) rendered as Ansible would, `held` = the vars."""
+    tasks = _tasks()
+    facts = {k: v for t in tasks for k, v in (t.get("ansible.builtin.set_fact") or {}).items()}
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    env.filters["from_yaml"] = yaml.safe_load
+    env.filters["bool"] = lambda v: str(v).lower() in ("true", "yes", "1")
+    env.globals["lookup"] = lambda kind, arg, default=None: (
+        pathlib.Path(arg).read_text() if kind == "file" else held.get(arg, default))
+    secrets = yaml.safe_load(env.from_string(facts["thalamus_model_secrets"]).render(nos_main_checkout=str(REPO)))
+    tokens = yaml.safe_load(env.from_string(facts["thalamus_model_tokens"]).render(thalamus_model_secrets=secrets))
+    return secrets, tokens
+
+
+def test_each_armed_cloud_row_of_iris_brings_its_key_and_no_other():
+    """Ruling 2026-10-17: anthropic-api and minimax-api join mistral-eu; a key rides only when its row is armed."""
+    keys = {"mistral_api_key": "sk-eu", "anthropic_api_key": "sk-ant", "minimax_api_key": "sk-mm", "xai_api_key": "sk-x"}
+    assert _key_facts(**keys) == ([], {}), "nothing armed, no key"
+    armed = _key_facts(**keys, anthropic_api_enabled=True, minimax_api_enabled=True, xai_enabled=True)
+    assert armed == (["anthropic_api_key", "minimax_api_key"], {"anthropic_api_key": "sk-ant", "minimax_api_key": "sk-mm"}), \
+        "xai is armed but iris does not allow it: its key stays out"
+    assert _key_facts(mistral_enabled=True)[1] == {"mistral_api_key": ""}, "armed and keyless renders empty; the binding refuses"
+    p = _plist(anthropic_api_enabled=True, anthropic_api_model="claude-haiku-5-5", minimax_api_enabled=True,
+               minimax_model="MiniMax-M2", thalamus_model_secrets=armed[0], thalamus_model_tokens=armed[1])
+    env = p["EnvironmentVariables"]
+    assert (env["NOS_SECRET_ANTHROPIC_API_KEY"], env["NOS_SECRET_MINIMAX_API_KEY"]) == ("sk-ant", "sk-mm")
+    assert {"anthropic-api", "minimax-api"} <= set(env["NOS_ARMED_BACKENDS"].split())
+    assert (env["NOS_ANTHROPIC_API_MODEL"], env["NOS_MINIMAX_MODEL"]) == ("claude-haiku-5-5", "MiniMax-M2")
+    off = _plist()["EnvironmentVariables"]
+    assert not {"anthropic-api", "minimax-api"} & set(off["NOS_ARMED_BACKENDS"].split()), "the flags default off"
+    assert not [k for k in off if k.startswith("NOS_SECRET_")]
+
+
 def test_the_key_never_reaches_a_log_or_the_preflight():
     """The plist render is no_log (--diff would print the key); the preflight's env holds no key."""
     render = next(t for t in _tasks() if "ansible.builtin.template" in t)

@@ -323,3 +323,30 @@ def test_a_declared_binding_agrees_with_the_agents_register_entry():
             "the positive control stopped objecting — the checks above have "
             "gone vacuous and a real binding would sail through them"
         )
+
+
+# Operator ruling 2026-10-17: Iris uses Anthropic and MiniMax exactly as it uses Mistral — an
+# OpenAI-compatible row the thalamus speaks (it speaks only chat-completions) — only residency differs.
+CLOUD_ROWS = {
+    "mistral-eu": ("https://api.eu.mistral.ai/v1", True, "nos:mistral_api_key", "mistral_enabled"),
+    "anthropic-api": ("https://api.anthropic.com/v1", False, "nos:anthropic_api_key", "anthropic_api_enabled"),
+    "minimax-api": ("https://api.minimax.io/v1", False, "nos:minimax_api_key", "minimax_api_enabled"),
+}
+
+
+def test_iris_cloud_rows_are_openai_rows_its_record_names():
+    backends = _registry()
+    iris = yaml.safe_load((AGENTS / "iris/agent.yml").read_text())
+    allowed = iris["model"]["backends_allowed"]
+    names = [p["name"] for p in iris["gdpr"]["processors"]]
+    cfg = ni.default_config()
+    for row, (url, eu, secret, flag) in CLOUD_ROWS.items():
+        b = backends.get(row) or {}
+        assert row in allowed, f"iris does not allow {row}"
+        assert (b.get("protocol"), b.get("base_url"), b.get("residency", {}).get("eu"), b.get("auth_secret"),
+                b.get("enabled_flag")) == ("openai", url, eu, secret, flag), row
+        assert b.get("residency", {}).get("country"), f"{row}: residency names no country"
+        assert b.get("model_env", {}).get("sonnet"), f"{row}: iris pins the sonnet tier"
+        assert any(b["processor_match"] in n for n in names), f"{row}: iris's record never names {b['processor_match']}"
+    assert cfg["anthropic_api_model"] == "claude-haiku-5-5"
+    assert cfg["minimax_model"] == "", "an empty MiniMax model id refuses; the operator picks one"

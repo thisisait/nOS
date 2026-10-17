@@ -256,3 +256,43 @@ fn a_non_eu_pick_is_refused_by_the_posture() {
     let why = minimax.bound.as_ref().unwrap_err();
     assert!(why.contains("gdpr_posture") && why.contains("'standard'") && why.contains("minimax"), "{why}");
 }
+
+/// Every row iris allows, armed and keyed (ruling 2026-10-17: the two non-EU cloud rows beside the EU ones).
+const ALL_ROWS: &[(&str, &str)] = &[("NOS_ARMED_BACKENDS", "mistral-eu ollama anthropic-api minimax-api"),
+    ("NOS_MISTRAL_MODEL", "mistral-large-latest"), ("nos:mistral_api_key", "sk-eu-test"), ("NOS_LOCAL_MODEL", "qwen3:14b"),
+    ("NOS_ANTHROPIC_API_MODEL", "claude-haiku-5-5"), ("nos:anthropic_api_key", "sk-ant-test"),
+    ("NOS_MINIMAX_MODEL", "MiniMax-M2"), ("nos:minimax_api_key", "sk-mm-test")];
+
+fn iris_picks(posture: &str) -> Vec<thalamus::binding::Pick> {
+    let iris = std::fs::read_to_string(repo().join("files/anatomy/agents/iris/agent.yml")).unwrap();
+    let e = [ALL_ROWS, &[("NOS_GDPR_POSTURE", posture)]].concat();
+    thalamus::binding::picks(&iris, &register(), env(&e))
+}
+
+#[test]
+fn iris_picks_the_non_eu_cloud_rows_only_at_posture_none() {
+    let p = iris_picks("none");
+    let row = |n: &str| p.iter().find(|p| p.row == n).unwrap_or_else(|| panic!("iris does not allow {n}: {p:?}"));
+    let a = row("anthropic-api");
+    assert!(a.outside_eu && a.processor.contains("Anthropic"), "{a:?}");
+    let b = a.bound.as_ref().unwrap();
+    assert_eq!((b.base_url.as_str(), b.model_id.as_str(), b.auth_token.as_str(), b.local),
+               ("https://api.anthropic.com/v1", "claude-haiku-5-5", "sk-ant-test", false));
+    let m = row("minimax-api");
+    assert!(m.outside_eu && m.processor.contains("MiniMax"), "{m:?}");
+    let b = m.bound.as_ref().unwrap();
+    assert_eq!((b.base_url.as_str(), b.model_id.as_str(), b.auth_token.as_str()), ("https://api.minimax.io/v1", "MiniMax-M2", "sk-mm-test"));
+    assert!(row("mistral-eu").bound.is_ok() && row("ollama").bound.is_ok(), "the EU rows still serve");
+}
+
+#[test]
+fn iris_refuses_the_non_eu_cloud_rows_at_posture_standard() {
+    let away: Vec<_> = iris_picks("standard").into_iter().filter(|p| p.row == "anthropic-api" || p.row == "minimax-api").collect();
+    assert_eq!(away.len(), 2, "iris allows both non-EU cloud rows");
+    for p in &away {
+        let why = p.bound.as_ref().unwrap_err();
+        assert!(why.contains("gdpr_posture") && why.contains("'standard'") && why.contains(&p.row), "{why}");
+    }
+    assert_eq!(iris_picks("standard").iter().filter(|p| p.bound.is_ok()).map(|p| p.row.as_str()).collect::<Vec<_>>(),
+               ["mistral-eu", "ollama"], "a client host on standard keeps only the EU rows");
+}
