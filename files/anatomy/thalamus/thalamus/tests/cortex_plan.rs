@@ -518,3 +518,26 @@ fn the_ast_schema_offers_each_opcode_only_what_the_registry_takes() {
 
 const DB: &str = "^db:[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*$";
 const DB_OR_NONE: &str = "^(db:[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*)?$";
+
+/// Organ probe 2026-10-17: a stage with a db: operand has open params at the organ, so
+/// get(db:todos, where="status eq open") | aggregate(op="count") is valid there - and the mapper,
+/// reading only limit and fields on get, dropped the where and counted every row as KEAP's number.
+/// A param the mapper does not read is refused by name, never dropped.
+#[test]
+fn a_param_the_mapper_does_not_read_is_refused_not_dropped() {
+    let stage = |op: &str, operand: Option<&str>, params: Value| cortex_plan::Stage {
+        op: op.into(), operand: operand.map(str::to_string), params: params.as_object().unwrap().clone() };
+    for (st, key) in [
+        (vec![stage("get", Some("db:todos"), json!({"where": "status eq open"})), stage("aggregate", None, json!({"op": "count"}))], "where"),
+        (vec![stage("aggregate", Some("db:todos"), json!({"op": "count", "where": "status eq open"}))], "where"),
+        (vec![stage("get", Some("db:todos"), json!({"colour": "red"}))], "colour"),
+        (vec![stage("get", Some("db:todos"), json!({})), stage("show", None, json!({"kind": "chart", "by": "status"}))], "by"),
+    ] {
+        let err = cortex_plan::plan(None, &st).err().unwrap_or_else(|| panic!("{key} was dropped: {st:?}"));
+        assert!(err.contains(&format!("`{key}`")), "the refusal names {key}: {err}");
+    }
+    // the card is the gate: a write's dry_run and commit are read as nothing, on purpose (module doc)
+    let w = vec![stage("get", Some("db:todos"), json!({})), stage("filter", None, json!({"where": "title eq Review"})),
+                 stage("delete", Some("db:todos"), json!({"dry_run": true}))];
+    assert!(cortex_plan::plan(None, &w).is_ok());
+}
