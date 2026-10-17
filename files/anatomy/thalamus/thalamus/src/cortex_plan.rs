@@ -173,6 +173,22 @@ Tables:
 {catalogue}")
 }
 
+/// sha256 of `s` as 64 lowercase hex.
+pub fn sha256_hex(s: &str) -> String {
+    ring::digest::digest(&ring::digest::SHA256, s.as_bytes()).as_ref().iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// What a run's plans were asked under (tools/iris-bench.py provenance): the primer without the host's
+/// catalogue, and the constraint sent - the GBNF, the AST schema, or none when unconstrained.
+pub fn fingerprint(engine: Engine, gbnf: Option<&str>) -> (String, Option<String>) {
+    let grammar = match engine {
+        Engine::Gbnf => gbnf.map(sha256_hex),
+        Engine::JsonSchema => Some(sha256_hex(&ast_schema().to_string())),
+        Engine::Free => None,
+    };
+    (sha256_hex(&primer(engine, "")), grammar)
+}
+
 /// `"<column> <op> <value>"`: (column, op, value); in and between give a list.
 /// The symbols a model writes for an op, as SQL does (probe 2026-10-17); no inclusive >= or <=.
 const SYMBOLS: [(&str, &str); 5] = [("!=", "neq"), ("<>", "neq"), ("=", "eq"), (">", "gt"), ("<", "lt")];

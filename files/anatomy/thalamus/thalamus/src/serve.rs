@@ -1424,25 +1424,31 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
     /// The cortex plan as one assistant message of mapped tool calls; None after the model heard why not.
     fn plan(&self, who: &Person, o: &mut Open, model: &Binding, c: &Cortex, text: &str) -> Option<Value> {
         let tool = Some("cortex_plan");
-        let refused = |o: &mut Open, why: String, rec: Value| {
-            let _ = self.record(o, Kind::ToolResult, tool, json!({"valid": false, "fallback": why}).as_object().into_iter().flatten()
+        // kind: "infra" (the estate failed: no verdict on the model) or "model" (its plan does not run)
+        let refused = |o: &mut Open, why: String, kind: &str, rec: Value| {
+            let _ = self.record(o, Kind::ToolResult, tool, json!({"valid": false, "fallback": why, "fallback_kind": kind}).as_object().into_iter().flatten()
                 .chain(rec.as_object().into_iter().flatten()).map(|(k, v)| (k.clone(), v.clone())).collect::<Map<_, _>>().into());
             o.messages.push(json!({"role": "user", "content": format!("[thalamus] cortex plan refused: {why}; answer with the tools")}));
             None
         };
         let catalogue = match self.catalogue(who) {
             Ok(c) => c,
-            Err(why) => return refused(o, format!("the table catalogue is unreadable ({why})"), json!({})),
+            Err(why) => return refused(o, format!("the table catalogue is unreadable ({why})"), "infra", json!({})),
         };
         let mut engine = Engine::of(&model.name);
         // ponytail: the plan sees this turn only, not the conversation; a follow-up ("now as a chart") falls back.
         let mut msgs = vec![json!({"role": "system", "content": cortex_plan::primer(engine, &catalogue)}), json!({"role": "user", "content": text})];
+        let mut gbnf: Option<String> = None;
+        let mut downgrade: Option<String> = None;
         for round in 0..2 {
             let mut body = json!({"model": model.model_id, "messages": msgs});
             match engine {
                 Engine::Gbnf => match std::fs::read_to_string(self.repo.join("state/cortex-lang.gbnf")) {
-                    Ok(g) => body["grammar"] = json!(g),
-                    Err(e) => return refused(o, format!("state/cortex-lang.gbnf is unreadable ({e})"), json!({})),
+                    Ok(g) => {
+                        body["grammar"] = json!(g);
+                        gbnf = Some(g);
+                    }
+                    Err(e) => return refused(o, format!("state/cortex-lang.gbnf is unreadable ({e})"), "infra", json!({})),
                 },
                 Engine::JsonSchema => body["response_format"] = json!({"type": "json_schema",
                     "json_schema": {"name": "cortex_plan", "schema": cortex_plan::ast_schema()}}),
@@ -1451,27 +1457,36 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             let answer = match self.chat(model, o, body) {
                 Ok(m) => m,
                 // Ollama MLX answers 501 to any format: the same request, unconstrained.
-                Err(_) if engine == Engine::JsonSchema => {
+                Err(why) if engine == Engine::JsonSchema => {
+                    // said on the plan row: a timeout or a 500 downgrades too, and a constrained run must show it
+                    downgrade = Some(why);
                     engine = Engine::Free;
                     msgs[0] = json!({"role": "system", "content": cortex_plan::primer(engine, &catalogue)});
                     match self.chat(model, o, json!({"model": model.model_id, "messages": msgs})) {
                         Ok(m) => m,
-                        Err(why) => return refused(o, why, json!({})),
+                        Err(why) => return refused(o, why, "infra", json!({})),
                     }
                 }
-                Err(why) => return refused(o, why, json!({})),
+                Err(why) => return refused(o, why, "infra", json!({})),
             };
             let said = answer.get("content").and_then(Value::as_str).unwrap_or("").to_string();
             let source = match engine {
                 Engine::JsonSchema => match serde_json::from_str::<Value>(&said).map_err(|e| e.to_string()).and_then(|v| cortex_plan::stages_of(&v)) {
                     Ok(st) => cortex_plan::render(&st),
-                    Err(why) => return refused(o, format!("the plan is not the AST JSON ({why})"), json!({})),
+                    Err(why) => return refused(o, format!("the plan is not the AST JSON ({why})"), "model", json!({})),
                 },
                 _ => cortex_plan::extract(&said),
             };
-            let _ = self.record(o, Kind::ToolUse, tool, json!({"source": source, "engine": engine.name(), "constrained": engine != Engine::Free}));
+            let (primer_sha, grammar_sha) = cortex_plan::fingerprint(engine, gbnf.as_deref());
+            let mut asked = json!({"source": source, "engine": engine.name(), "constrained": engine != Engine::Free,
+                                   "primer_sha256": primer_sha, "grammar_sha256": grammar_sha});
+            if let Some(d) = &downgrade {
+                asked["downgraded_from"] = json!(Engine::JsonSchema.name());
+                asked["downgrade"] = json!(d);
+            }
+            let _ = self.record(o, Kind::ToolUse, tool, asked);
             match cortex_plan::validate(c, &source) {
-                Err(why) => return refused(o, why, json!({})),
+                Err(why) => return refused(o, why, "infra", json!({})),
                 Ok(Err(errors)) if round == 0 => {
                     let _ = self.record(o, Kind::ToolResult, tool, json!({"valid": false, "errors": errors}));
                     msgs.push(json!({"role": "assistant", "content": said}));
@@ -1480,7 +1495,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                 }
                 Ok(Err(errors)) => {
                     let why = format!("the validator refused it twice: {}", errors.join("; "));
-                    return refused(o, why, json!({"errors": errors}));
+                    return refused(o, why, "model", json!({"errors": errors}));
                 }
                 Ok(Ok((stages, src, hash))) => {
                     let mapped = cortex_plan::plan(src.as_deref(), &stages).and_then(|p| cortex_plan::calls(&p,
@@ -1494,7 +1509,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
                             msgs.push(json!({"role": "user", "content": format!("The thalamus cannot run it: {why}. Answer with the corrected pipeline only.")}));
                             continue;
                         }
-                        Err(why) => refused(o, why, json!({"errors": [], "registry_hash": hash})),
+                        Err(why) => refused(o, why, "model", json!({"errors": [], "registry_hash": hash})),
                         Ok(calls) => {
                             let plan: Vec<Value> = calls.iter().map(|(n, a)| json!([n, a])).collect();
                             let _ = self.record(o, Kind::ToolResult, tool, json!({"valid": true, "errors": [], "registry_hash": hash, "plan": plan}));
