@@ -13,7 +13,7 @@ flag again under a longer name.
 
 Usage:
     tools/apex-sign.py            # what changed since the last signature
-    tools/apex-sign.py --confirm  # record the new digest
+    tools/apex-sign.py --confirm  # record the new digest and commit ruling.yml (only that file)
 
 Exit 0 when the ruling already matches its digest, 1 when it does not and no
 --confirm was given, 2 on a usage error.
@@ -89,8 +89,15 @@ def main() -> int:
     RULING.write_text(re.sub(rf"^{FIELD} .*$", f"{FIELD} {want}", text, flags=re.M),
                       encoding="utf-8")
     print(f"signed: {want}")
-    rel = RULING.relative_to(REPO)  # the digest counts once committed: a push without it carries the old one
-    print(f"\nnow record it (before any push):\n  git add {rel} && git commit -m \"chore(apex): re-sign\" -- {rel}")
+    rel = RULING.relative_to(REPO)  # the digest counts once committed: twice a push carried the old one
+    # only this path, whatever else is staged; the signature is the operator's act, the commit its record
+    done = subprocess.run(["git", "-C", str(REPO), "commit", "-q", "-m", "chore(apex): re-sign", "--", str(rel)],
+                          capture_output=True, text=True)
+    if done.returncode == 0:
+        print(f"committed {rel} (chore(apex): re-sign) - push as usual")
+    else:
+        print(f"\nnot committed ({(done.stderr or done.stdout).strip()[:200]}); record it before any push:\n"
+              f"  git add {rel} && git commit -m \"chore(apex): re-sign\" -- {rel}")
     return 0
 
 
