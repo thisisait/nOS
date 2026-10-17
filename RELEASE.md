@@ -20,7 +20,7 @@ Versioning is by git tag `v<semver>` cut from `master`. The prior tag was `v0.16
 > `tools/estate-status.py`, BLANK axis). `tools/nos-smoke.py --strict` run
 > afterwards: 32/32 OK, 0 failed. That strict run is not in the record
 > (`smoke_strict: null`), so the reader still says "release gate unmet".
-> PENDING: second-host converge (an M1 Max Mac, macOS 27, the pre-release) — result here.
+> Second host (an M1 Max Mac, macOS 27.0.1) converged the pre-release (`30e96791`): PLAY RECAP ok=748 changed=46 failed=0, `tools/nos-smoke.py --strict` 8/8 OK.
 > Offline at `57f9d8ad` (2026-10-17, PR #57 + the Iris cloud rows): pytest 9062
 > passed, 1 failed (`test_apex_ruling_is_signed` - the two new withheld rows were
 > unsigned; signed in `dabc7a48`), cargo thalamus + contract green, face vitest

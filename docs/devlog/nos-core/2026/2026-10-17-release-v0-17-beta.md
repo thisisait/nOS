@@ -22,7 +22,7 @@ blank record closed `failed: false`. `tools/nos-smoke.py --strict` afterwards:
 `tools/estate-status.py` still says the release gate is unmet — the reader is
 right about what it can see.
 
-PENDING: second-host converge (an M1 Max Mac, macOS 27, the pre-release) — result here.
+Second host (an M1 Max Mac, macOS 27.0.1) converged the pre-release (`30e96791`): PLAY RECAP ok=748 changed=46 failed=0, `tools/nos-smoke.py --strict` 8/8 OK.
 
 ## Iris at a terminal
 
