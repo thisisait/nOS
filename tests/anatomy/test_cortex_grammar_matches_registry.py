@@ -2,7 +2,7 @@
 
 WHY THIS GATE EXISTS. The grammar constrains a local model to emit only
 well-shaped cortex-lang, and it does that by hard-coding what `cortex-opcodes.ts`
-declares: the 15 opcode names, and per opcode both the operand arity and the
+declares: the 17 opcode names, and per opcode both the operand arity and the
 namespaces that opcode accepts. Two representations of one fact, which is the
 shape this estate has paid for repeatedly — the version pin declared twice, the
 `when` column split across two writers, the anatomy graph and its vendored copy.

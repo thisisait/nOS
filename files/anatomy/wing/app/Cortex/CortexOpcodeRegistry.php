@@ -29,8 +29,8 @@ use RuntimeException;
  * second — the reverse order takes the executor surface down, loudly, at the
  * door rather than at a caller.
  *
- * Mutating opcodes are excluded from coverage on purpose. KEAP publishes 14, of
- * which 7 mutate; the executor rejects every mutating stage at the door in P1,
+ * Mutating opcodes are excluded from coverage on purpose. KEAP publishes 17, of
+ * which 8 mutate; the executor rejects every mutating stage at the door in P1,
  * so it never accepts an AST it cannot dispatch. Requiring handlers for verbs it
  * refuses to run would be a gate demanding dead code.
  */
