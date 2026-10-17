@@ -144,7 +144,7 @@
     name: pazny.linux.systemd_user
     tasks_from: ensure_unit
   vars:
-    su_unit_name: "{{ backrest_launchd_label }}.service"
+    su_name: "{{ backrest_launchd_label }}"          # the role appends .service; su_unit_name was never read
     su_description: "nOS backrest — restic UI + scheduler"
     su_service_type: simple
     su_exec_start: "{{ backrest_bin }}"
