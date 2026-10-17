@@ -220,16 +220,28 @@ def validate_report(url: str, token: str, source: str) -> dict:
         raise Unjudged(f"validator unreachable ({type(e).__name__}: {e})") from e
 
 
-def _stages(ast: dict):
+def _stages(ast: dict, table: dict | None = None):
     # `?k=v` vs `k=v` (defaulted) and spans are spelling; opcode, operands and param values are the plan.
-    p = ast["pipeline"]
-    return p.get("source"), [(s["opcode"], [(o["ns"], o["surface"]) for o in s["operands"]],
-                              {k: v["value"] for k, v in s["params"].items() if k not in COSMETIC}) for s in p["stages"]]
+    # `table` is the plan row's resolution {said, id, title}: any of those names is the one table the
+    # mapper read; and a param the mapper fills when absent (cortex_plan.rs plan()/calls()) is that value.
+    names = {table[k] for k in ("said", "id", "title") if table and table.get(k)}
+    p, out, by = ast["pipeline"], [], None
+    for s in p["stages"]:
+        params = {k: v["value"] for k, v in s["params"].items() if k not in COSMETIC}
+        if s["opcode"] == "aggregate":
+            by = params.get("by")
+        if s["opcode"] == "rank":
+            params.setdefault("dir", "desc")
+        if s["opcode"] == "show" and params.get("kind") == "chart" and by is not None:
+            params.setdefault("x", by)
+        operands = [("db", "\0table") if o["ns"] == "db" and o["surface"] in names else (o["ns"], o["surface"]) for o in s["operands"]]
+        out.append((s["opcode"], operands, params))
+    return p.get("source"), out
 
 
-def same_pipeline(a: dict, b: dict) -> bool:
+def same_pipeline(a: dict, b: dict, table: dict | None = None) -> bool:
     """Two /validate ASTs plan the same thing, stage by stage."""
-    return _stages(a) == _stages(b)
+    return _stages(a, table) == _stages(b, table)
 
 
 def _ledger_open():
@@ -262,7 +274,8 @@ def read_plan(ledger: str, session):
     use, res = use or {}, res or {}
     return {k: use.get(k) for k in ("source", "engine", "constrained", "grammar_sha256", "primer_sha256")} | {
         "valid": res.get("valid"), "errors": res.get("errors"), "registry_hash": res.get("registry_hash"),
-        "fell_back": "plan" not in res, "fallback": res.get("fallback"), "fallback_kind": res.get("fallback_kind")}
+        "fell_back": "plan" not in res, "fallback": res.get("fallback"), "fallback_kind": res.get("fallback_kind"),
+        "table": res.get("table")}
 
 
 def _plan(got: dict):
@@ -309,7 +322,7 @@ def check(name: str, arg, got: dict, now: float) -> bool:
             if not want.get("valid"):
                 raise ValueError(f"expect_pipeline is not valid cortex-lang: {a!r}: {want.get('errors')}")
         have = got["validate"](plan["source"]) if plan and plan["source"] else {}
-        return bool(have.get("valid")) and any(same_pipeline(w["ast"], have["ast"]) for _, w in wants)
+        return bool(have.get("valid")) and any(same_pipeline(w["ast"], have["ast"], plan.get("table")) for _, w in wants)
     text = got["text"]
     kinds = [(r["component"].get("kind"), r["component"].get("props", {}).get("chart")) for r in got["renders"]]
     if name == "tools_called":  # a subsequence, in order
