@@ -29,6 +29,8 @@
 #                          Authorization bearer. The catalog stays committable;
 #                          the value never appears here.
 #   header_secrets map  — {Header-Name: secret_key}, resolved the same way
+#   skip_without_secret bool — POST only: a named secret missing from ~/.nos/secrets.yml
+#                          SKIPS the row with the reason (counted apart, never red/green)
 #   require_json string — dotted path into the response that must be truthy and,
 #                          for a list, non-empty (e.g. "data.stages[0].result.rows").
 #                          A 200 whose payload fails this is reported as a FAIL
@@ -234,6 +236,47 @@ smoke_endpoints:
     timeout: 30
     tier: 3
     note: "cortex chain executes end to end; stage 1 receives stage 0's rows"
+
+  # ── Iris's cloud LLM rows (state/habitat/llm-backends.yml; ruling 2026-10-17) ──
+  # One 1-token chat completion per ARMED row, with its key: proves the key and the base_url the
+  # thalamus will use. No key in ~/.nos/secrets.yml = SKIP with the reason (skip_without_secret),
+  # never a red and never a green. Gate: tests/anatomy/test_iris_cloud_rows_are_smoke_probed.py.
+  - id: llm-mistral-eu
+    url: "https://api.eu.mistral.ai/v1/chat/completions"
+    method: POST
+    body: {model: "{{ mistral_model }}", max_tokens: 1, messages: [{role: user, content: "ping"}]}
+    bearer_secret: mistral_api_key
+    skip_without_secret: true
+    require_json: "choices"
+    expect: [200]
+    when: "mistral_enabled"
+    timeout: 30
+    tier: 3
+    note: "Iris's cloud row mistral-eu answers one chat completion with its key"
+  - id: llm-anthropic-api
+    url: "https://api.anthropic.com/v1/chat/completions"
+    method: POST
+    body: {model: "{{ anthropic_api_model }}", max_tokens: 1, messages: [{role: user, content: "ping"}]}
+    bearer_secret: anthropic_api_key
+    skip_without_secret: true
+    require_json: "choices"
+    expect: [200]
+    when: "anthropic_api_enabled"
+    timeout: 30
+    tier: 3
+    note: "Iris's cloud row anthropic-api answers one chat completion with its key"
+  - id: llm-minimax-api
+    url: "https://api.minimax.io/v1/chat/completions"
+    method: POST
+    body: {model: "{{ minimax_model }}", max_tokens: 1, messages: [{role: user, content: "ping"}]}
+    bearer_secret: minimax_api_key
+    skip_without_secret: true
+    require_json: "choices"
+    expect: [200]
+    when: "minimax_api_enabled"
+    timeout: 30
+    tier: 3
+    note: "Iris's cloud row minimax-api answers one chat completion with its key"
 
   # ── manifest apps (populated by apps_runner once it lands) ──────────────────
   # Apps_runner appends entries here automatically per onboarded

@@ -138,18 +138,32 @@
   when: _thalamus_signing.stdout_lines | default([]) | length > 0  # --check mints nothing
   notify: Restart thalamus
 
-# The var behind the auth_secret (nos:<var>) of the row iris binds, read where the binary reads it;
-# "" for a keyless row. The plist renders that one var's value as NOS_SECRET_<VAR> (src/main.rs).
-- name: "[pazny.thalamus] The key var of the row iris binds"
+# The vars behind the auth_secret (nos:<var>) of each row iris may bind that is ARMED here (its
+# enabled_flag true); a keyless row has none. The plist renders each value as NOS_SECRET_<VAR>
+# (src/main.rs): an unarmed row's key never reaches the thalamus.
+- name: "[pazny.thalamus] The key vars of iris's armed rows"
   ansible.builtin.set_fact:
-    thalamus_model_secret: >-
-      {{ ((lookup('file', nos_main_checkout ~ '/state/habitat/llm-backends.yml') | from_yaml).backends
-      [(lookup('file', nos_main_checkout ~ '/files/anatomy/agents/iris/agent.yml') | from_yaml).model.backend]
-      .auth_secret | default('', true)) | regex_replace('^nos:', '') }}
+    thalamus_model_secrets: >-
+      {%- set reg = (lookup('file', nos_main_checkout ~ '/state/habitat/llm-backends.yml') | from_yaml).backends -%}
+      {%- set m = (lookup('file', nos_main_checkout ~ '/files/anatomy/agents/iris/agent.yml') | from_yaml).model -%}
+      {%- set ns = namespace(out=[]) -%}
+      {%- for row in m.backends_allowed | default([m.backend]) -%}
+      {%- set spec = reg[row] | default({}) -%}
+      {%- set ref = spec.auth_secret | default('', true) -%}
+      {%- if ref.startswith('nos:') and lookup('vars', spec.enabled_flag | default('_unflagged'), default=false) | bool -%}
+      {%- set ns.out = ns.out + [ref[4:]] -%}
+      {%- endif -%}
+      {%- endfor -%}
+      {{ ns.out }}
 
-- name: "[pazny.thalamus] Its value, for the plist only"
+- name: "[pazny.thalamus] Their values, for the plist only"
   ansible.builtin.set_fact:
-    thalamus_model_token: "{{ lookup('vars', thalamus_model_secret, default='') if thalamus_model_secret else '' }}"
+    thalamus_model_tokens: >-
+      {%- set ns = namespace(out={}) -%}
+      {%- for var in thalamus_model_secrets -%}
+      {%- set ns.out = dict(ns.out, **{var: lookup('vars', var, default='')}) -%}
+      {%- endfor -%}
+      {{ ns.out }}
   no_log: true
 
 # serve splits NOS_DECIDER_EXES on ':' and a mis-set entry admits nobody (src/serve.rs deciders):

@@ -525,7 +525,11 @@ nodes:
   # tool:/tool_ro:, judge capabilities → token:/token_ro:. Same 20 nodes, same
   # WITHHELD verdict; the rows below were renamed in place, nothing published.
   "backend:anthropic": withheld
+  # 2026-10-17 Iris's OpenAI-compatible Anthropic/MiniMax rows. Withheld like every
+  # backend row; NOT signed here — the signature is the operator's.
+  "backend:anthropic-api": withheld
   "backend:minimax": withheld
+  "backend:minimax-api": withheld
   "backend:mistral-eu": withheld
   "backend:ollama": withheld
   # 2026-10-01 openclaw row (the gateway's OpenAI surface). Withheld like

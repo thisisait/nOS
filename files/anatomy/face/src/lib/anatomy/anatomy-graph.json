@@ -4,7 +4,7 @@
   "doctrine": "docs/archive/nos-anatomy-graph.md",
   "layer_basis": "longest path over the service projection of the dependency edges: every service→service data edge, plus the SSO chain service:authentik → authentik:<slug> → service:<x> collapsed onto its endpoints (an authentik:<slug> is an object inside Authentik, not an actor). height = longest path to a leaf; L2 = no dependents, L1 = has dependents and upstreams, L0 = has dependents and no upstreams.",
   "counts": {
-    "nodes": 547,
+    "nodes": 549,
     "edges": 551,
     "nodes_pulse": 43,
     "nodes_judge": 5,
@@ -17,7 +17,7 @@
     "nodes_tool_ro": 4,
     "nodes_token": 1,
     "nodes_token_ro": 2,
-    "nodes_backend": 6,
+    "nodes_backend": 8,
     "nodes_repo": 4,
     "nodes_tofu": 1,
     "nodes_authentik": 60,
@@ -1214,6 +1214,16 @@
       "anchor": "02.02.09",
       "description": "LLM backend 'anthropic' — a permitted orchestrator row (protocol anthropic, eu_resident=False), armed by no flag — this is the default backend"
     },
+    "backend:anthropic-api": {
+      "kind": "backend",
+      "source": "state/habitat/llm-backends.yml",
+      "protocol": "openai",
+      "eu_resident": false,
+      "enabled_flag": "anthropic_api_enabled",
+      "is_default": false,
+      "anchor": "02.02.09",
+      "description": "LLM backend 'anthropic-api' — a permitted orchestrator row (protocol openai, eu_resident=False), armed by anthropic_api_enabled"
+    },
     "backend:minimax": {
       "kind": "backend",
       "source": "state/habitat/llm-backends.yml",
@@ -1223,6 +1233,16 @@
       "is_default": false,
       "anchor": "02.02.09",
       "description": "LLM backend 'minimax' — a permitted orchestrator row (protocol anthropic, eu_resident=False), armed by minimax_enabled"
+    },
+    "backend:minimax-api": {
+      "kind": "backend",
+      "source": "state/habitat/llm-backends.yml",
+      "protocol": "openai",
+      "eu_resident": false,
+      "enabled_flag": "minimax_api_enabled",
+      "is_default": false,
+      "anchor": "02.02.09",
+      "description": "LLM backend 'minimax-api' — a permitted orchestrator row (protocol openai, eu_resident=False), armed by minimax_api_enabled"
     },
     "backend:mistral-eu": {
       "kind": "backend",
@@ -2460,7 +2480,7 @@
       "source": "state/judge-sets.yml",
       "deterministic": false,
       "mutates_worktree": false,
-      "min_work": 15,
+      "min_work": 18,
       "argv": [
         "python3",
         "tools/nos-smoke.py",
@@ -2471,7 +2491,7 @@
         "live_estate"
       ],
       "anchor": "02.02.04",
-      "description": "Loop judge: gate command `python3 tools/nos-smoke.py --no-jsonl` — work floor min_work=15, deterministic=False"
+      "description": "Loop judge: gate command `python3 tools/nos-smoke.py --no-jsonl` — work floor min_work=18, deterministic=False"
     },
     "judge:pytest-anatomy": {
       "kind": "judge",
@@ -7681,7 +7701,7 @@
       "from": "gateset:live",
       "to": "doctrine:ssot/doctrine/loop-contract.md#M3",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:337",
+      "via": "cited at state/judge-sets.yml:338",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7699,7 +7719,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:313",
+      "via": "cited at state/judge-sets.yml:314",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7708,7 +7728,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2e",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:294",
+      "via": "cited at state/judge-sets.yml:295",
       "citations": 2,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7717,7 +7737,7 @@
       "from": "judge:cortex-corpus-diff",
       "to": "doctrine:ssot/doctrine/loop-contract.md#DECISION-2f",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:319",
+      "via": "cited at state/judge-sets.yml:320",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"
@@ -7762,7 +7782,7 @@
       "from": "judge:nos-smoke",
       "to": "doctrine:ssot/doctrine/loop-contract.md#5.1",
       "kind": "governed_by",
-      "via": "cited at state/judge-sets.yml:284",
+      "via": "cited at state/judge-sets.yml:285",
       "citations": 1,
       "derived": "doctrine-cite",
       "evidence": "derived"

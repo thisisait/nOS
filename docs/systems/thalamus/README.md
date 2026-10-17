@@ -149,9 +149,13 @@ with `install_ollama`, `ollama_enabled` and an `ollama_model` of at least
 of that with `qwen3:4b`; under `llm_cell_recommended_params_b` (8) the preflight and `serve`
 print a WARN. It is a choice the record allows (`model.backends_allowed`), not a fallback;
 the preflight then judges the local model, and `serve` judges it again at start.
-The key: the role renders the var behind the row's `auth_secret`
-(`mistral_api_key`) into the 0600 plist as `NOS_SECRET_MISTRAL_API_KEY`. The
-binary reads it once and removes it from its env. The key leaves only as the
+Ruling 2026-10-17 adds `anthropic-api` and `minimax-api` (Anthropic's and MiniMax's
+OpenAI-compatible endpoints; serve speaks only chat-completions). They are not EU-resident,
+so they serve iris only on a host at `gdpr_posture: none`; `standard` refuses them.
+The keys: for each `backends_allowed` row that is armed here, the role renders the var behind
+its `auth_secret` (`mistral_api_key`, `anthropic_api_key`, `minimax_api_key`) into the 0600
+plist as `NOS_SECRET_<VAR>`; an unarmed row's key is not rendered. The
+binary reads them once and removes them from its env. The key leaves only as the
 `Authorization: Bearer` on requests to the bound `base_url`.
 The system prompt starts with the imprint: `IMPRINT.md` for a cloud row,
 `IMPRINT.short.md` for a local one. If that file is missing or empty, turns

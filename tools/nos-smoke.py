@@ -330,8 +330,10 @@ def merge_catalog(manifest_entries: list[dict], extra_entries: list[dict],
         e["_source"] = "catalog"
         if "when" in e and not evaluate_when(e["when"], vars_dict):
             continue
-        # resolve Jinja in url
+        # resolve Jinja in url (and in a POST body: the cloud-row probes name the model id)
         e["url"] = resolve_jinja_lite(e["url"], vars_dict)
+        if "body" in e:
+            e["body"] = json.loads(resolve_jinja_lite(json.dumps(e["body"]), vars_dict))
         by_id[e["id"]] = e
     return sorted(by_id.values(), key=lambda x: (x["tier"], x["id"]))
 
@@ -341,14 +343,16 @@ def merge_catalog(manifest_entries: list[dict], extra_entries: list[dict],
 # ---------------------------------------------------------------------------
 
 class ProbeResult:
-    __slots__ = ("entry", "status", "duration_ms", "error", "ok")
+    __slots__ = ("entry", "status", "duration_ms", "error", "ok", "skipped")
 
-    def __init__(self, entry, status, duration_ms, error, ok):
+    def __init__(self, entry, status, duration_ms, error, ok, skipped=False):
         self.entry = entry
         self.status = status
         self.duration_ms = duration_ms
         self.error = error
         self.ok = ok
+        # Nothing was asked (skip_without_secret and no key): neither ok nor a failure.
+        self.skipped = skipped
 
 
 def _make_ssl_context(insecure: bool) -> ssl.SSLContext:
@@ -665,6 +669,12 @@ def probe(entry: dict, *, strict: bool = False, tester_user: str | None = None,
     # `bearer_secret` names a key in ~/.nos/secrets.yml rather than carrying a
     # value, so the catalog stays committable.
     if entry.get("method", "GET").upper() == "POST":
+        # skip_without_secret: an armed row whose key was never pasted is not broken, and not proven.
+        missing = [s for s in [entry.get("bearer_secret"), *(entry.get("header_secrets") or {}).values()]
+                   if s and not _secret(s)]
+        if missing and entry.get("skip_without_secret"):
+            return ProbeResult(entry, None, 0, f"skipped: secret '{missing[0]}' not in ~/.nos/secrets.yml",
+                               ok=False, skipped=True)
         status, err, detail = _probe_api(entry, ctx, timeout)
         elapsed = (time.monotonic() - started) * 1000
         # `ok` is the AND of both questions: did it answer with an accepted
@@ -858,12 +868,12 @@ def render_table(results: list[ProbeResult], failed_only: bool = False, strict: 
     width = [len(c) for c in rows[0]]
     body = []
     for r in results:
-        if failed_only and r.ok:
+        if failed_only and (r.ok or r.skipped):
             continue
         e = r.entry
         expect_str = ",".join(str(x) for x in sorted(effective_expect(e, strict)))
-        got = str(r.status) if r.status is not None else "UNREACH"
-        flag = "✅" if r.ok else "❌"
+        got = "SKIP" if r.skipped else (str(r.status) if r.status is not None else "UNREACH")
+        flag = "⏭" if r.skipped else ("✅" if r.ok else "❌")
         row = (
             e["id"],
             e["url"][:60],
@@ -905,6 +915,7 @@ def emit_jsonl(path: pathlib.Path, run_id: str, results: list[ProbeResult]) -> N
                 "status": r.status,
                 "duration_ms": r.duration_ms,
                 "ok": r.ok,
+                "skipped": r.skipped,
                 "error": r.error,
                 "tier": r.entry.get("tier", 3),
             }
@@ -1103,20 +1114,21 @@ def main() -> int:
                 "ts": ts, "run_id": run_id, "type": "smoke_result",
                 "id": r.entry["id"], "url": r.entry["url"],
                 "expect": r.entry["expect"], "status": r.status,
-                "duration_ms": r.duration_ms, "ok": r.ok, "error": r.error,
+                "duration_ms": r.duration_ms, "ok": r.ok, "skipped": r.skipped, "error": r.error,
                 "tier": r.entry.get("tier", 3),
             }, ensure_ascii=False))
     else:
         print(render_table(results, failed_only=args.failed_only, strict=args.strict))
         ok = sum(1 for r in results if r.ok)
+        skipped = sum(1 for r in results if r.skipped)
         # A probe that got no answer at all is UNREACHABLE, not a service that
         # answered wrongly. From the host those look identical and are not:
         # Docker's forwarder fails while every service is healthy (fee 43).
-        unreach = sum(1 for r in results if not r.ok and r.status is None)
-        bad = len(results) - ok - unreach
+        unreach = sum(1 for r in results if not r.ok and not r.skipped and r.status is None)
+        bad = len(results) - ok - unreach - skipped
         print()
-        summary = "%d / %d OK  ·  %d failed  ·  %d unreachable" % (
-            ok, len(results), bad, unreach)
+        summary = "%d / %d OK  ·  %d failed  ·  %d unreachable  ·  %d skipped" % (
+            ok, len(results), bad, unreach, skipped)
         if bad == 0 and unreach == 0:
             print(COLOR["green"] + "✅ " + summary + COLOR["reset"])
         else:
@@ -1137,7 +1149,7 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001
             sys.stderr.write("WARN: JSONL append to %s failed: %s\n" % (path, exc))
 
-    failed = sum(1 for r in results if not r.ok)
+    failed = sum(1 for r in results if not r.ok and not r.skipped)
     # Systemic-failure gate: when --fail-ratio is set, exit non-zero ONLY when a
     # large PROPORTION of probes fail (the "green != working" class — e.g. local
     # DNS down makes ~every service DEAD) while a couple of flaky probes stay

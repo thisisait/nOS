@@ -986,6 +986,15 @@ xai_enabled: false
 xai_model: ""                  # -> NOS_XAI_MODEL           (sonnet tier)
 xai_small_model: ""            # -> NOS_XAI_SMALL_MODEL     (haiku tier)
 
+# ── Anthropic / MiniMax, OpenAI-compatible — PREPARED, NOT ARMED (2026-10-17) ─
+# Rows anthropic-api and minimax-api in state/habitat/llm-backends.yml: Iris uses them like
+# mistral-eu (iris_backend or the picker). NON-EU: they serve Iris only under gdpr_posture: none.
+# Key: anthropic_api_key / minimax_api_key in credentials.yml. minimax-api reuses minimax_model.
+anthropic_api_enabled: false
+anthropic_api_model: "claude-haiku-5-5"        # -> NOS_ANTHROPIC_API_MODEL       (sonnet tier)
+anthropic_api_small_model: "claude-haiku-5-5"  # -> NOS_ANTHROPIC_API_SMALL_MODEL (haiku tier)
+minimax_api_enabled: false
+
 # ollama — the LOCAL backend, and the only one that can carry an agent's
 # `transfers_outside_eu: false` honestly: nothing leaves the host. Arming is
 # three edits, not five, because there is no key and no residency premium —

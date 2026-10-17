@@ -247,7 +247,7 @@
              open); NEVER the API key — that stays in ~/.nos/secrets.yml,
              resolved as nos:minimax_api_key at session open. -->
         <key>NOS_ARMED_BACKENDS</key>
-        <string>{{ (('minimax ' if minimax_enabled | default(false) | bool else '') ~ ('mistral-eu ' if mistral_enabled | default(false) | bool else '') ~ ('xai ' if xai_enabled | default(false) | bool else '') ~ ('ollama ' if ollama_enabled | default(false) | bool else '') ~ ('openclaw' if openclaw_backend_enabled | default(false) | bool else '')) | trim }}</string>
+        <string>{{ (('minimax ' if minimax_enabled | default(false) | bool else '') ~ ('mistral-eu ' if mistral_enabled | default(false) | bool else '') ~ ('xai ' if xai_enabled | default(false) | bool else '') ~ ('anthropic-api ' if anthropic_api_enabled | default(false) | bool else '') ~ ('minimax-api ' if minimax_api_enabled | default(false) | bool else '') ~ ('ollama ' if ollama_enabled | default(false) | bool else '') ~ ('openclaw' if openclaw_backend_enabled | default(false) | bool else '')) | trim }}</string>
         <!-- agents_backend: one row every agent binds to ("" = each agent's own). -->
         <key>NOS_AGENTS_BACKEND</key>
         <string>{{ agents_backend | default('') }}</string>
@@ -265,6 +265,11 @@
         <string>{{ xai_model | default('') }}</string>
         <key>NOS_XAI_SMALL_MODEL</key>
         <string>{{ xai_small_model | default('') }}</string>
+        <!-- anthropic-api: US processor, OpenAI-compatible (minimax-api reads the NOS_MINIMAX_* pair). -->
+        <key>NOS_ANTHROPIC_API_MODEL</key>
+        <string>{{ anthropic_api_model | default('') }}</string>
+        <key>NOS_ANTHROPIC_API_SMALL_MODEL</key>
+        <string>{{ anthropic_api_small_model | default('') }}</string>
         <!-- ollama: LOCAL, so no key renders here and none exists — the empty
              auth token is the honest value (BindingResolver gate 7), not a
              missing one. The ids must be models `ollama list` shows. -->

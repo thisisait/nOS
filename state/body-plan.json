@@ -10,7 +10,7 @@
     "organ": 80,
     "organ system": 13,
     "organism": 0,
-    "habitat": 6,
+    "habitat": 8,
     "sense": 79,
     "limb": 118,
     "memory": 41,
@@ -437,7 +437,15 @@
       "level": "habitat",
       "kind": "backend"
     },
+    "backend:anthropic-api": {
+      "level": "habitat",
+      "kind": "backend"
+    },
     "backend:minimax": {
+      "level": "habitat",
+      "kind": "backend"
+    },
+    "backend:minimax-api": {
       "level": "habitat",
       "kind": "backend"
     },

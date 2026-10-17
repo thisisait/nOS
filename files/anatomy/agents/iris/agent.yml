@@ -16,8 +16,10 @@ model:
   primary: openai-sonnet
   backend: mistral-eu
   # Ruling 2026-10-14: a host may choose the on-device row instead (iris_backend: ollama in
-  # config.yml -> NOS_CELL_BACKEND). A choice, never a fallback; both rows are EU-resident.
-  backends_allowed: [mistral-eu, ollama]
+  # config.yml -> NOS_CELL_BACKEND). A choice, never a fallback.
+  # Ruling 2026-10-17: also Anthropic's and MiniMax's OpenAI-compatible rows. They are NOT
+  # EU-resident, so they serve only on a host at gdpr_posture: none (gate 8); standard refuses.
+  backends_allowed: [mistral-eu, ollama, anthropic-api, minimax-api]
 
 audit:
   capability_scopes:
@@ -47,7 +49,7 @@ gdpr:
     read and write through KEAP's human door. Every read and write runs as
     that person; Iris adds no access. Legitimate interest, Art. 6(1)(f).
   legal_basis: legitimate_interests
-  # What reaches Mistral on each call: the person's turns and the row values
+  # What reaches the bound row's processor on each call: the person's turns and the row values
   # the tool results carry (query_rows, propose_row_edit).
   data_categories:
     - person_authored_prompts
@@ -79,9 +81,34 @@ gdpr:
         state/habitat/llm-backends.yml row ollama.
       country: "this host"
       safeguard: "Local processing; no processor outside the operator's control."
+    - name: "Anthropic PBC"
+      role: >-
+        Only when the host chose iris_backend: anthropic-api (or the person picked it) on a host at
+        gdpr_posture: none. LLM inference (Claude) through Anthropic's OpenAI-compatible endpoint
+        api.anthropic.com/v1; each call carries the person's turn and the row values Iris's tools
+        return. Bound by state/habitat/llm-backends.yml row anthropic-api.
+      country: "US — San Francisco"
+      safeguard: >-
+        Third-country transfer to the US. Anthropic's Data Processing Addendum incorporates the EU
+        SCCs, Modules Two/Three (anthropic.com/legal/data-processing-addendum, read 2026-10-17). Its
+        processor is the Anthropic entity that signed the operator's agreement (the site says EU
+        services come from Anthropic Ireland Limited); confirming which is the operator's. Never
+        served at gdpr_posture standard.
+    - name: "MiniMax (contracting entity UNVERIFIED)"
+      role: >-
+        Only when the host chose iris_backend: minimax-api (or the person picked it) on a host at
+        gdpr_posture: none. LLM inference through MiniMax's OpenAI-compatible endpoint
+        api.minimax.io/v1; each call carries the person's turn and the row values Iris's tools
+        return. Bound by state/habitat/llm-backends.yml row minimax-api.
+      country: "UNVERIFIED (non-EU)"
+      safeguard: >-
+        NONE FOUND: no DPA and no Art. 46 safeguard (SCCs) for api.minimax.io could be established,
+        and the contracting entity is unverified. Acceptable only for the operator's own and bench
+        data; the posture refuses it on every host that claims the EU (gdpr_posture standard).
   eu_residency: true
-  # False only because Iris's whole serving set is the EU row: gate 8 refuses
-  # a non-EU backend and refuses to degrade to the default when it is disarmed.
+  # False because every host at gdpr_posture standard is served by the EU rows alone: gate 8
+  # refuses a non-EU row there, and refuses to degrade to the default when one is disarmed. At
+  # posture none the effective record (nos_gdpr.effective_records) recomputes it from the row.
   transfers_outside_eu: false
   storage_location: "{nos_data_root}/platform/services/thalamus/data/ledger.db on this host"
 

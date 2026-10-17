@@ -258,3 +258,41 @@ backends:
     # (xAI Corp., and whether an Art. 46 safeguard covers the transfer) belongs
     # in the bound agent's own register entry, verified when it is written.
     processor_match: "xAI"
+
+  # Anthropic's and MiniMax's OpenAI-compatible endpoints — PREPARED, NOT ARMED (operator ruling
+  # 2026-10-17: Iris uses them exactly as it uses mistral-eu; only residency differs). They are new
+  # rows, not the `anthropic`/`minimax` ones, because the thalamus speaks only chat-completions and
+  # those rows are protocol anthropic. Same primary-URI convention as mistral-eu (`openai-sonnet`).
+  #
+  # anthropic-api: https://platform.claude.com/docs/en/api/openai-sdk — base_url api.anthropic.com/v1/,
+  # bearer = the API key, tools/tool_calls/parallel_tool_calls supported; `strict` is ignored (tool
+  # JSON is not schema-guaranteed), temperature is 0..1, and Anthropic calls the layer "not a
+  # long-term or production-ready solution for most use cases". Anthropic PBC, US; DPA with SCCs.
+  anthropic-api:
+    protocol: "openai"
+    residency: { country: "US", eu: false }
+    base_url: "https://api.anthropic.com/v1"
+    auth_secret: "nos:anthropic_api_key"
+    model_env:
+      haiku: "NOS_ANTHROPIC_API_SMALL_MODEL"
+      sonnet: "NOS_ANTHROPIC_API_MODEL"
+      opus: null
+    enabled_flag: "anthropic_api_enabled"
+    processor_match: "Anthropic"
+
+  # minimax-api: https://platform.minimax.io/docs/api-reference/text-openai-api — base_url
+  # api.minimax.io/v1, `tools` supported (not the deprecated function_call), temperature 0..2.
+  # Its own flag (minimax_api_enabled), not minimax_enabled: that flag also arms the `minimax`
+  # row for Wing, which would move jeff-cloud. The model ids are the same catalog, so it reuses
+  # minimax_model / minimax_small_model (empty = refuse). Entity UNVERIFIED, as on `minimax`.
+  minimax-api:
+    protocol: "openai"
+    residency: { country: "UNVERIFIED (non-EU)", eu: false }
+    base_url: "https://api.minimax.io/v1"
+    auth_secret: "nos:minimax_api_key"
+    model_env:
+      haiku: "NOS_MINIMAX_SMALL_MODEL"
+      sonnet: "NOS_MINIMAX_MODEL"
+      opus: null
+    enabled_flag: "minimax_api_enabled"
+    processor_match: "MiniMax"
