@@ -178,6 +178,7 @@ fn rig_deciders(name: &str, map: serde_json::Value, (keap_url, keap): (String, S
         log: Mutex::new(Box::new(log.clone())),
         picks: picks.into_iter().map(|p| thalamus::binding::Pick { bound: p.bound.map(|b| Binding { base_url: model_url.clone(), ..b }), ..p }).collect(),
         floors,
+        cortex: None,
     };
     let sock = d.join("t.sock");
     let listener = serve::bind(&sock).unwrap();

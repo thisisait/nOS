@@ -315,9 +315,11 @@ fn every_fixture_pipeline_runs_as_its_tool_calls_or_falls_back() {
             .map(|(t, v)| json!([t.rsplit(':').next().unwrap(), v["args"]])).collect();
         if let Some(why) = c["refused"].as_str() {
             assert!(last["fallback"].as_str().is_some_and(|f| f.contains(why)), "{name}: fallback {last}");
-            let heard = said[1 + usize::from(c.get("errors").is_some())].to_string();
+            let plans = 1 + usize::from(c.get("errors").is_some());
+            let heard: String = said[plans]["messages"].as_array().unwrap().iter()
+                .filter_map(|m| m["content"].as_str()).filter(|t| t.starts_with("[thalamus]")).collect();
             assert!(heard.contains(&format!("[thalamus] cortex plan refused: {why}")), "{name}: the model hears why: {heard}");
-            assert!(said[1..].iter().all(|b| b.get("tools").is_some()), "{name}: the fallback is plain tool calling");
+            assert!(said[plans..].iter().all(|b| b.get("tools").is_some()), "{name}: the fallback is plain tool calling");
             if c.get("same_as_tool").is_some() {
                 // The tool path's error for the same table, as the model heard it, is the same text.
                 let tool_err = said.last().unwrap()["messages"].as_array().unwrap().iter().rev()
@@ -331,6 +333,8 @@ fn every_fixture_pipeline_runs_as_its_tool_calls_or_falls_back() {
             assert_eq!(last["registry_hash"], json!(cortex_plan::REGISTRY_HASH), "{name}");
             assert_eq!(json!(ran), c["calls"], "{name}: the mapped calls ran, in order");
             assert_eq!(last["plan"], c["calls"], "{name}: the ledger keeps the plan");
+            let errs: Vec<&(String, Value)> = ev.iter().filter(|(t, v)| t.starts_with("agent_tool_result:") && v.get("error").is_some()).collect();
+            assert!(errs.is_empty(), "{name}: a mapped call failed: {errs:?}");
             assert_eq!(said.len(), 2, "{name}: one plan call and one answer call");
             assert!(said[0].get("tools").is_none(), "{name}: the plan call offers no tools");
         }

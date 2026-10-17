@@ -4,6 +4,7 @@
 //! only this process holds. A peer the map does not name is refused, never defaulted.
 
 use crate::binding::{self, Binding, Pick};
+use crate::cortex_plan::{self, Cortex, Engine};
 use crate::ledger::{Kind, Ledger, RowOp, Session};
 use crate::septum::Septum;
 use nos_contract::renderers::{is_date, ApprovalsList, Axis, CellChange, Chart, ChartKind, Choice, Component, Dashboard, DashboardWidget, Kpi,
@@ -52,6 +53,8 @@ pub struct Server {
     pub picks: Vec<Pick>,
     /// (llm_cell_min_params_b, llm_cell_recommended_params_b) a local pick is judged by; None judges none.
     pub floors: Option<(f64, f64)>,
+    /// NOS_CORTEX_URL with iris_plan: cortex: a turn first asks for one cortex-lang plan (cortex_plan.rs).
+    pub cortex: Option<Cortex>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -202,7 +205,7 @@ pub fn run(listener: UnixListener, srv: Arc<Server>) {
     }
 }
 
-fn agent(timeout: u64) -> ureq::Agent {
+pub(crate) fn agent(timeout: u64) -> ureq::Agent {
     // No env proxy, no redirects: the person's headers and the secret go to KEAP_URL only.
     ureq::Agent::config_builder()
         .proxy(None)
@@ -1402,11 +1405,116 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         o.read_free.clear();
         o.messages.push(json!({"role": "user", "content": text}));
         o.last_group = None;
-        self.think(who, out, o);
+        let planned = match (&self.cortex, o.model.clone()) {
+            (Some(c), Ok(m)) => {
+                activity(out, o, Phase::Thinking);
+                self.plan(who, o, &m, c, text)
+            }
+            _ => None,
+        };
+        self.think_from(who, out, o, planned);
+    }
+
+    /// The cortex plan as one assistant message of mapped tool calls; None after the model heard why not.
+    fn plan(&self, who: &Person, o: &mut Open, model: &Binding, c: &Cortex, text: &str) -> Option<Value> {
+        let tool = Some("cortex_plan");
+        let refused = |o: &mut Open, why: String, rec: Value| {
+            let _ = self.record(o, Kind::ToolResult, tool, json!({"valid": false, "fallback": why}).as_object().into_iter().flatten()
+                .chain(rec.as_object().into_iter().flatten()).map(|(k, v)| (k.clone(), v.clone())).collect::<Map<_, _>>().into());
+            o.messages.push(json!({"role": "user", "content": format!("[thalamus] cortex plan refused: {why}; answer with the tools")}));
+            None
+        };
+        let catalogue = match self.catalogue(who) {
+            Ok(c) => c,
+            Err(why) => return refused(o, format!("the table catalogue is unreadable ({why})"), json!({})),
+        };
+        let mut engine = Engine::of(&model.name);
+        // ponytail: the plan sees this turn only, not the conversation; a follow-up ("now as a chart") falls back.
+        let mut msgs = vec![json!({"role": "system", "content": cortex_plan::primer(engine, &catalogue)}), json!({"role": "user", "content": text})];
+        for round in 0..2 {
+            let mut body = json!({"model": model.model_id, "messages": msgs});
+            match engine {
+                Engine::Gbnf => match std::fs::read_to_string(self.repo.join("state/cortex-lang.gbnf")) {
+                    Ok(g) => body["grammar"] = json!(g),
+                    Err(e) => return refused(o, format!("state/cortex-lang.gbnf is unreadable ({e})"), json!({})),
+                },
+                Engine::JsonSchema => body["response_format"] = json!({"type": "json_schema",
+                    "json_schema": {"name": "cortex_plan", "schema": cortex_plan::ast_schema()}}),
+                Engine::Free => {}
+            }
+            let answer = match self.chat(model, o, body) {
+                Ok(m) => m,
+                // Ollama MLX answers 501 to any format: the same request, unconstrained.
+                Err(_) if engine == Engine::JsonSchema => {
+                    engine = Engine::Free;
+                    msgs[0] = json!({"role": "system", "content": cortex_plan::primer(engine, &catalogue)});
+                    match self.chat(model, o, json!({"model": model.model_id, "messages": msgs})) {
+                        Ok(m) => m,
+                        Err(why) => return refused(o, why, json!({})),
+                    }
+                }
+                Err(why) => return refused(o, why, json!({})),
+            };
+            let said = answer.get("content").and_then(Value::as_str).unwrap_or("").to_string();
+            let source = match engine {
+                Engine::JsonSchema => match serde_json::from_str::<Value>(&said).map_err(|e| e.to_string()).and_then(|v| cortex_plan::stages_of(&v)) {
+                    Ok(st) => cortex_plan::render(&st),
+                    Err(why) => return refused(o, format!("the plan is not the AST JSON ({why})"), json!({})),
+                },
+                _ => cortex_plan::extract(&said),
+            };
+            let _ = self.record(o, Kind::ToolUse, tool, json!({"source": source, "engine": engine.name(), "constrained": engine != Engine::Free}));
+            match cortex_plan::validate(c, &source) {
+                Err(why) => return refused(o, why, json!({})),
+                Ok(Err(errors)) if round == 0 => {
+                    let _ = self.record(o, Kind::ToolResult, tool, json!({"valid": false, "errors": errors}));
+                    msgs.push(json!({"role": "assistant", "content": said}));
+                    msgs.push(json!({"role": "user", "content": format!("The validator refused it: {}. Answer with the corrected pipeline only.",
+                                                                      errors.join("; "))}));
+                }
+                Ok(Err(errors)) => {
+                    let why = format!("the validator refused it twice: {}", errors.join("; "));
+                    return refused(o, why, json!({"errors": errors}));
+                }
+                Ok(Ok((stages, src, hash))) => {
+                    let mapped = cortex_plan::plan(src.as_deref(), &stages).and_then(|p| cortex_plan::calls(&p,
+                        |t| self.table_info(who, t),
+                        |args, read| self.matched(who, args, read).map(|m| m.hits.into_iter().map(|h| h.0).collect())));
+                    return match mapped {
+                        Err(why) => refused(o, why, json!({"errors": [], "registry_hash": hash})),
+                        Ok(calls) => {
+                            let plan: Vec<Value> = calls.iter().map(|(n, a)| json!([n, a])).collect();
+                            let _ = self.record(o, Kind::ToolResult, tool, json!({"valid": true, "errors": [], "registry_hash": hash, "plan": plan}));
+                            let tool_calls: Vec<Value> = calls.iter().enumerate().map(|(i, (n, a))| json!({"id": format!("cortex-{}", i + 1),
+                                "type": "function", "function": {"name": n, "arguments": a.to_string()}})).collect();
+                            Some(json!({"role": "assistant", "content": null, "tool_calls": tool_calls}))
+                        }
+                    };
+                }
+            }
+        }
+        None
+    }
+
+    /// The plan call's table lines: each table this scope shows, its id, title and column key:kind.
+    fn catalogue(&self, who: &Person) -> Result<String, String> {
+        // ponytail: 12 tables, one schema read each, every turn; cache per session if the primer gets slow.
+        let lines = self.tables(who)?.into_iter().filter(|(id, _)| self.hidden(who, id).is_none()).take(12).map(|(id, title)| {
+            let cols = self.table_info_any(who, &id).map(|(_, i)| i.pointer("/data/schema/columns").and_then(Value::as_array).into_iter().flatten()
+                .filter_map(|c| Some(format!("{}:{}", c["key"].as_str()?, c["kind"].as_str().unwrap_or("text")))).collect::<Vec<_>>().join(", "))
+                .unwrap_or_default();
+            format!("- {id} \"{title}\": {cols}")
+        }).collect::<Vec<_>>();
+        Ok(lines.join("\n"))
     }
 
     /// The model's turn over the conversation so far, tool calls and all, until it says text.
     fn think(&self, who: &Person, out: &mut UnixStream, o: &mut Open) {
+        self.think_from(who, out, o, None);
+    }
+
+    /// think(), with `first` (a planned message of tool calls) in place of the first model call.
+    fn think_from(&self, who: &Person, out: &mut UnixStream, o: &mut Open, mut first: Option<Value>) {
         let model = match o.model.clone() {
             Ok(m) => m,
             Err(why) => return refuse(out, &format!("iris has no model: {why}")),
@@ -1414,7 +1522,7 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         let mut calls = 0;
         loop {
             activity(out, o, Phase::Thinking);
-            let msg = match self.complete(&model, o) {
+            let msg = match first.take().map(Ok).unwrap_or_else(|| self.complete(&model, o)) {
                 Ok(m) => m,
                 Err(why) => return refuse(out, &why),
             };
@@ -1641,12 +1749,6 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
 
     /// One chat-completions call; the model gets the conversation, never a KEAP header.
     fn complete(&self, model: &Binding, o: &mut Open) -> Result<Value, String> {
-        let url = format!("{}/chat/completions", model.base_url.trim_end_matches('/'));
-        let a = agent(300);
-        let req = || {
-            let rb = a.post(&url);
-            if model.auth_token.is_empty() { rb } else { rb.header("Authorization", &format!("Bearer {}", model.auth_token)) }
-        };
         let mut body = json!({"model": model.model_id, "messages": o.messages, "tools": tools()});
         // A rebind is said until a request is answered; o.messages never keeps it.
         if let Some(from) = &o.moved {
@@ -1654,6 +1756,19 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
             let head = &mut body["messages"][0]["content"];
             *head = json!(format!("{}\n\n{line}", head.as_str().unwrap_or_default()));
         }
+        let msg = self.chat(model, o, body)?;
+        o.moved = None;
+        Ok(msg)
+    }
+
+    /// One chat-completions request as `body` says, the binding's sampling added; the message it answered.
+    fn chat(&self, model: &Binding, o: &mut Open, mut body: Value) -> Result<Value, String> {
+        let url = format!("{}/chat/completions", model.base_url.trim_end_matches('/'));
+        let a = agent(300);
+        let req = || {
+            let rb = a.post(&url);
+            if model.auth_token.is_empty() { rb } else { rb.header("Authorization", &format!("Bearer {}", model.auth_token)) }
+        };
         // Ollama maps "none" to think:false; a cloud row is left alone, it may refuse an unknown field.
         if model.local {
             body["reasoning_effort"] = json!("none");
@@ -1677,7 +1792,6 @@ client's, or one no def declares is hidden and said by name", s.said(), if s.cli
         if status != 200 {
             return Err(format!("model answered {status}"));
         }
-        o.moved = None;
         o.tokens.0 += v.pointer("/usage/prompt_tokens").and_then(Value::as_i64).unwrap_or(0);
         o.tokens.1 += v.pointer("/usage/completion_tokens").and_then(Value::as_i64).unwrap_or(0);
         v.pointer("/choices/0/message").cloned().ok_or_else(|| "model answered without a message".into())
