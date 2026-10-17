@@ -403,6 +403,32 @@ pub fn calls(p: &Plan, info: impl Fn(&str) -> Result<(String, Value), String>,
     Ok(vec![("query_rows".into(), q), card])
 }
 
+/// One organ issue as the repair round says it: where, which opcode and key, and what it takes; the
+/// generic `message` alone named none of them (cortex-lang.ts issue()).
+fn said_error(e: &Value) -> String {
+    let msg = e["message"].as_str().unwrap_or("?");
+    let (d, stage) = (&e["detail"], e["stage"].as_u64());
+    if !d.is_object() && stage.is_none() {
+        return msg.to_string();
+    }
+    let mut out = stage.map(|s| format!("stage {} ", s + 1)).unwrap_or_default();
+    if let Some(op) = d["opcode"].as_str() {
+        out.push_str(&format!("{op}(): "));
+    }
+    out.push_str(e["code"].as_str().unwrap_or("invalid"));
+    if let Some(k) = d["key"].as_str() {
+        out.push_str(&format!(" `{k}`"));
+    }
+    out.push_str(&format!(" ({msg})"));
+    if let Some(a) = d["allowed"].as_array() {
+        out.push_str(&format!("; allowed: {}", a.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(", ")));
+    }
+    if let Some(t) = d["expectedType"].as_str() {
+        out.push_str(&format!("; expected {t}, got {}", d["got"].as_str().unwrap_or("?")));
+    }
+    out
+}
+
 /// What the organ said of `source`: Ok(stages, source) valid, Err(errors) invalid; the outer Err
 /// is the organ unreachable or a registry this mapper was not built for.
 #[allow(clippy::type_complexity)]
@@ -415,7 +441,7 @@ pub fn validate(c: &Cortex, source: &str) -> Result<Result<(Vec<Stage>, Option<S
     let v: Value = r.body_mut().read_json().map_err(|e| format!("the cortex organ answered {status} with no JSON ({e})"))?;
     let d = v.get("data").filter(|_| status == 200).ok_or(format!("the cortex organ answered {status}"))?;
     if d["valid"] != json!(true) {
-        let errs = d["errors"].as_array().into_iter().flatten().map(|e| e["message"].as_str().unwrap_or("?").to_string()).collect();
+        let errs = d["errors"].as_array().into_iter().flatten().map(said_error).collect();
         return Ok(Err(errs));
     }
     let hash = d.pointer("/ast/binding/opcodeRegistryHash").and_then(Value::as_str).unwrap_or("").to_string();
