@@ -847,6 +847,7 @@ nodes:
   "reader:graph-report": withheld
   "reader:body": withheld
   "reader:identity-status": withheld
+  "reader:iris-trace": withheld
   "reader:loader-vars-report": withheld
   "reader:loop-status": withheld
   "reader:managed-status": withheld

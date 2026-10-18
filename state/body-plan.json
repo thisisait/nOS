@@ -11,7 +11,7 @@
     "organ system": 13,
     "organism": 0,
     "habitat": 8,
-    "sense": 79,
+    "sense": 80,
     "limb": 118,
     "memory": 41,
     "law": 52,
@@ -1414,6 +1414,10 @@
       "kind": "reader"
     },
     "reader:identity-status": {
+      "level": "sense",
+      "kind": "reader"
+    },
+    "reader:iris-trace": {
       "level": "sense",
       "kind": "reader"
     },
