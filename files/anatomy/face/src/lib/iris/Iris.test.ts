@@ -1,17 +1,15 @@
 // @vitest-environment happy-dom
 // Iris on a fake transport: what the face and the pupil both mount. The wire is the contract
 // fixture's, so a line the thalamus can send is a line this window draws.
-import { readFileSync } from 'node:fs';
 import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
+// Imported, not read: under happy-dom import.meta.url is not a file URL.
+import fixture from '../../../../contracts/thalamus-shell.fixture.json';
 import Iris from './Iris.svelte';
 import { fakeTransport } from './transport.fake';
 import type { ToShell } from './wire';
 
-const FIXTURE = new URL('../../../../contracts/thalamus-shell.fixture.json', import.meta.url);
-const fx = JSON.parse(readFileSync(FIXTURE, 'utf8')) as {
-	to_shell: { case: string; msg: ToShell }[];
-};
+const fx = fixture as unknown as { to_shell: { case: string; msg: ToShell }[] };
 const sample = (name: string) => fx.to_shell.find((c) => c.case === name)!.msg;
 
 let app: ReturnType<typeof mount> | null = null;
@@ -57,9 +55,12 @@ describe('Iris on a transport', () => {
 			(b) => b.textContent?.trim() === 'reject'
 		)!;
 		expect(reject).toBeTruthy();
+		// A browser renders between two clicks: the second lands on the card the first one closed.
 		reject.click();
+		flushSync();
 		reject.click();
 		await settle();
+		expect(document.querySelector(`[data-approval="${ask.approval}"]`)).toBeNull();
 		const decided = fake.sent.filter((m) => m.t === 'approval_decision');
 		expect(decided).toEqual([
 			{ t: 'approval_decision', approval: ask.approval, decision: 'reject', note: null }
