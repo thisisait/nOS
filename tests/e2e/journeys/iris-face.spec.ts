@@ -55,6 +55,20 @@ test.describe('Iris in the face', () => {
 		await expect(win.getByText('Stopped.')).toHaveCount(0);
 	});
 
+	// App limbs (writes:false, no card): tables.open_table runs in the face and the person sees it.
+	// The model may answer without acting; the journey then fails on the missing window.
+	test('"open my roadmap table" brings Tables forward with roadmap selected', async ({ page }: { page: Page }) => {
+		await page.goto(FACE_URL);
+		await page.getByRole('button', { name: 'Iris' }).first().click();
+		const box = page.getByRole('dialog', { name: 'Iris' }).locator('textarea').first();
+		await expect(box).toBeEnabled({ timeout: 20_000 });
+		await box.fill('Open my roadmap table.');
+		await box.press('Enter');
+		const tables = page.getByRole('dialog', { name: 'Tables' });
+		await expect(tables).toBeVisible({ timeout: 60_000 });
+		await expect(tables.locator('.t.sel')).toContainText(/roadmap/i, { timeout: 20_000 });
+	});
+
 	test('a cross-site POST to bff/iris/send is refused', async ({ page }: { page: Page }) => {
 		await page.goto(FACE_URL);
 		const status = await page.evaluate(async () => {

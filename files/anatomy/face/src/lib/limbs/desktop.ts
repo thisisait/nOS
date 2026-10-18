@@ -1,7 +1,7 @@
 /** The desktop's own limbs — the WM's mutators, all writes:false (visible, undoable). */
 import { get } from 'svelte/store';
 import { windows, focusApp, closeWindow } from '$lib/stores/desktop';
-import { launchNative } from '$lib/apps/native/registry';
+import { openApp } from '$lib/apps/native/registry';
 import { applyTiling, clearTiling, type TileMode } from '$lib/wm/tiling';
 import type { LimbDecl } from './types';
 
@@ -17,9 +17,7 @@ export const desktopLimbs: LimbDecl[] = [
 		params: { slug: { type: 'string', required: true } },
 		writes: false,
 		says: 'Open a face app, or bring its window to the front',
-		// Singleton rule as +page.svelte launchNativeApp: focus first, else open.
-		run: ({ slug }) =>
-			focusApp(slug as string) || launchNative(slug as string) || fail(`cannot open ${slug}`)
+		run: ({ slug }) => openApp(slug as string) || fail(`cannot open ${slug}`)
 	},
 	{
 		action: 'focus_window',

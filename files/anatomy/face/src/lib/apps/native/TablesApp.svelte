@@ -15,6 +15,7 @@
 	import DataTableApp from '$lib/components/DataTableApp.svelte';
 	import CreateTableModal from '$lib/components/CreateTableModal.svelte';
 	import { StatusNote } from '$lib/components/ui';
+	import { requests, consumed } from '$lib/limbs/request';
 
 	let tables = $state<TableSummary[]>([]);
 	let loadingList = $state(true);
@@ -46,12 +47,21 @@
 			// Default selection prefers a non-system table so the initial pick
 			// always matches what's shown (system stays hidden until toggled).
 			const first = tables.find((t) => t.visibility !== 'system') ?? tables[0];
-			if (first) void select(first.slug);
+			// A limb's request may have picked a table already; it wins.
+			if (first && selected === null) void select(first.slug);
 		} catch (e) {
 			listErr = e instanceof Error ? e.message : 'could not list tables';
 		} finally {
 			loadingList = false;
 		}
+	});
+
+	// tables.open_table (registry limbs): consumed + cleared, on mount too.
+	$effect(() => {
+		const req = $requests.tables;
+		if (!req) return;
+		consumed('tables');
+		void select(req.params.slug as string);
 	});
 
 	async function onCreated(slug: string) {

@@ -221,6 +221,23 @@
 	}
 
 	onMount(load);
+
+	/** planner.focus_row (via PlannerApp): open the row's detail once the table
+	 *  is here; a row the filters hide brings the filters down so it shows. */
+	let { focus }: { focus?: { slug: string; nonce: number } } = $props();
+	let focused = 0;
+	$effect(() => {
+		if (!focus || !table || focus.nonce === focused) return;
+		focused = focus.nonce;
+		const row = table.rows.find((r) => cellOf(r, 'slug') === focus.slug);
+		if (!row) return;
+		if (!nodes.some((n) => n.id === row.id)) {
+			hideDone = false;
+			trackFilter = 'all';
+			refilter();
+		}
+		selectedId = String(row.id);
+	});
 </script>
 
 <!-- Esc closes the detail panel — the × button had no keyboard equivalent. -->

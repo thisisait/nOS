@@ -34,7 +34,6 @@
 </script>
 
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import {
 		vfsList,
 		vfsRead,
@@ -60,6 +59,7 @@
 	import { Modal, StatusNote } from '$lib/components/ui';
 	import DocViewer from '$lib/components/DocViewer.svelte';
 	import { docKind } from '$lib/api/docview';
+	import { requests, consumed } from '$lib/limbs/request';
 
 	let cwd = $state('documents');
 	let entries = $state<VfsEntry[]>([]);
@@ -104,7 +104,24 @@
 		}
 	}
 
-	onMount(() => void load('documents', { auto: true }));
+	// The first run loads documents unless a limb asked for a path (files.reveal):
+	// one effect, so the default listing cannot land after the requested one.
+	let started = false;
+	$effect(() => {
+		const req = $requests.files;
+		if (req) {
+			consumed('files');
+			void reveal(req.params.path as string);
+		} else if (!started) void load('documents', { auto: true });
+		started = true;
+	});
+
+	/** List the path's folder and select the entry (a folder opens). */
+	async function reveal(path: string) {
+		await load(parentPath(path));
+		const entry = entries.find((e) => e.name === basename(path));
+		if (entry) await openEntry(entry);
+	}
 
 	/** Run a VFS mutation, surface its error, and refresh the listing once. */
 	async function act(what: string, fn: () => Promise<unknown>) {

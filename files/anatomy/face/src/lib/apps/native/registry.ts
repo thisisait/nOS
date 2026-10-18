@@ -31,10 +31,15 @@
  *   5. Widgets:      <WidgetLayer /> resolves appsOfForm('widget') itself
  */
 import type { Component } from 'svelte';
-import { openWindow } from '$lib/stores/desktop';
+import { openWindow, focusApp } from '$lib/stores/desktop';
 import { APP_FORMS } from '$lib/contracts';
 import type { AppBuild, AppForm, HubApp } from '$lib/contracts';
 import type { LimbDecl } from '$lib/limbs/types';
+import { request } from '$lib/limbs/request';
+import { requestAnatomy, type AnatomyView } from '$lib/anatomy/focus';
+import { listTables, loadTable } from '$lib/api/tables';
+import { vfsList } from '$lib/api/vfs';
+import { basename, parentPath } from './paths';
 
 /** A lazily-loaded native component (the default export of a `.svelte` file). */
 export type NativeComponentLoader = () => Promise<{ default: Component }>;
@@ -166,6 +171,22 @@ export function launchNative(slug: string): string | null {
 	});
 }
 
+/** Singleton rule (as +page.svelte launchNativeApp): focus first, else open. */
+export function openApp(slug: string): boolean {
+	return focusApp(slug) || launchNative(slug) !== null;
+}
+
+function fail(reason: string): never {
+	throw new Error(reason);
+}
+
+/** An app limb's run: bring the window forward, then leave the app a request. */
+function show(slug: string, action: string, params: Record<string, unknown>): true {
+	if (!openApp(slug)) fail(`cannot open ${slug}`);
+	request(slug, action, params);
+	return true;
+}
+
 /**
  * The component seam. Given a slug, returns a `Promise<Component>` for the
  * app's component, or `null` when the slug is unregistered or is a frame (the
@@ -191,7 +212,21 @@ export function registerBuiltinNativeApps(): void {
 		component: () => import('./FilesApp.svelte'),
 		defaultSize: { w: 760, h: 520 },
 		apiScopes: ['vfs'],
-		stateNamespace: 'app.files'
+		stateNamespace: 'app.files',
+		limbs: [
+			{
+				action: 'reveal',
+				params: { path: { type: 'string', required: true } },
+				writes: false,
+				says: 'Show a file or folder in Files (path from the home root)',
+				run: async ({ path }) => {
+					const name = basename(path as string);
+					const there = await vfsList(parentPath(path as string));
+					if (!name || !there.some((e) => e.name === name)) fail(`no such file ${path}`);
+					return show('files', 'reveal', { path });
+				}
+			}
+		]
 	});
 	registerNativeApp({
 		slug: 'tables',
@@ -202,7 +237,19 @@ export function registerBuiltinNativeApps(): void {
 		component: () => import('./TablesApp.svelte'),
 		defaultSize: { w: 920, h: 600 },
 		apiScopes: ['tables'],
-		stateNamespace: 'app.tables'
+		stateNamespace: 'app.tables',
+		limbs: [
+			{
+				action: 'open_table',
+				params: { slug: { type: 'string', required: true } },
+				writes: false,
+				says: 'Open a DataTable by its slug in Tables',
+				run: async ({ slug }) => {
+					if (!(await listTables()).some((t) => t.slug === slug)) fail(`no table ${slug}`);
+					return show('tables', 'open_table', { slug });
+				}
+			}
+		]
 	});
 	// Anatomy — Pulse / Wing / Bone as three views of ONE app. Tier-1 only;
 	// the BFF re-enforces that, so a non-admin who launches it gets a 403 in
@@ -215,7 +262,29 @@ export function registerBuiltinNativeApps(): void {
 		build: 'F3',
 		component: () => import('./anatomy/AnatomyApp.svelte'),
 		defaultSize: { w: 980, h: 660 },
-		apiScopes: ['pulse']
+		apiScopes: ['pulse'],
+		limbs: [
+			{
+				action: 'show',
+				params: {
+					view: {
+						type: 'enum',
+						values: ['pulse', 'wing', 'bone', 'graph', 'runs'],
+						required: true
+					},
+					thread: { type: 'string' },
+					node: { type: 'string' }
+				},
+				writes: false,
+				says: 'Show an Anatomy view; thread narrows Wing, node selects in Graph',
+				// The Anatomy app already consumes anatomyFocus; no request() needed.
+				run: ({ view, thread, node }) => {
+					if (!openApp('anatomy')) fail('cannot open anatomy');
+					requestAnatomy(view as AnatomyView, thread as string, node as string);
+					return true;
+				}
+			}
+		]
 	});
 	// Planner — the roadmap DataTable as an interactive Svelte Flow graph
 	// (face-planner). Read-only first; the editor slices add write-back through
@@ -228,7 +297,20 @@ export function registerBuiltinNativeApps(): void {
 		build: 'F3',
 		component: () => import('./planner/PlannerApp.svelte'),
 		defaultSize: { w: 1040, h: 700 },
-		apiScopes: ['tables']
+		apiScopes: ['tables'],
+		limbs: [
+			{
+				action: 'focus_row',
+				params: { slug: { type: 'string', required: true } },
+				writes: false,
+				says: 'Open a roadmap row in the Planner graph by its slug',
+				run: async ({ slug }) => {
+					const t = await loadTable('roadmap');
+					if (!t.rows.some((r) => r.slug === slug)) fail(`no roadmap row ${slug}`);
+					return show('planner', 'focus_row', { slug });
+				}
+			}
+		]
 	});
 	registerNativeApp({
 		slug: 'keap-explore',
@@ -249,7 +331,23 @@ export function registerBuiltinNativeApps(): void {
 		component: () => import('./BooksApp.svelte'),
 		defaultSize: { w: 960, h: 640 },
 		apiScopes: ['tables'],
-		stateNamespace: 'app.books'
+		stateNamespace: 'app.books',
+		limbs: [
+			{
+				action: 'show',
+				params: {
+					tab: {
+						type: 'enum',
+						values: ['queue', 'invoices', 'journals', 'parties'],
+						required: true
+					},
+					slug: { type: 'string' }
+				},
+				writes: false,
+				says: 'Show a Books tab; slug opens that queue row for review',
+				run: (params) => show('books', 'show', params)
+			}
+		]
 	});
 	// Iris: the conversation onto the thalamus, the pupil's components on the BFF's optic
 	// nerve (bff/iris). The layout is cached in app.iris; the thalamus holds the person's copy.

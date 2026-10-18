@@ -13,6 +13,7 @@
 	import { Tabs, StatusNote, Modal, type TabSpec } from '$lib/components/ui';
 	import DocViewer from '$lib/components/DocViewer.svelte';
 	import { openWindow, focusApp } from '$lib/stores/desktop';
+	import { requests, consumed } from '$lib/limbs/request';
 
 	const tabs: TabSpec[] = [
 		{ key: 'queue', label: 'Queue' },
@@ -34,6 +35,15 @@
 	let busy = $state('');
 	let crm = $state<HubApp | null>(null);
 	let bookOwner = $state('');
+
+	// books.show (registry limbs): switch tab; a slug opens that queue row.
+	$effect(() => {
+		const req = $requests.books;
+		if (!req) return;
+		consumed('books');
+		active = req.params.tab as string;
+		if (req.params.slug !== undefined) openSlug = req.params.slug as string;
+	});
 
 	onMount(async () => {
 		try {

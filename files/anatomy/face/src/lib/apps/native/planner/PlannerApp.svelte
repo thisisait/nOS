@@ -17,6 +17,7 @@
 	import RoadmapGraph from './RoadmapGraph.svelte';
 	import LoopsView from './LoopsView.svelte';
 	import RoutingView from './RoutingView.svelte';
+	import { requests, consumed } from '$lib/limbs/request';
 
 	const tabs: TabSpec[] = [
 		{ key: 'roadmap', label: 'Roadmap' },
@@ -24,13 +25,23 @@
 		{ key: 'routing', label: 'Routing' }
 	];
 	let active = $state('roadmap');
+	let focus = $state<{ slug: string; nonce: number } | undefined>();
+
+	// planner.focus_row (registry limbs): switch to Roadmap, hand the row down.
+	$effect(() => {
+		const req = $requests.planner;
+		if (!req) return;
+		consumed('planner');
+		active = 'roadmap';
+		focus = { slug: req.params.slug as string, nonce: req.nonce };
+	});
 </script>
 
 <div class="planner-shell">
 	<Tabs {tabs} bind:active label="Planner views" />
 	<div class="body" role="tabpanel" id="panel-{active}" aria-labelledby="tab-{active}">
 		{#if active === 'roadmap'}
-			<RoadmapGraph />
+			<RoadmapGraph {focus} />
 		{:else if active === 'loops'}
 			<LoopsView />
 		{:else if active === 'routing'}
